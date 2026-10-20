@@ -2,6 +2,8 @@
 .*~
 __pycache__/*
 .vscode/
+# Pre-existing binaries moved out of tools/ so they are not launched by accident.
+/quarantine/
 .[vV][sS]/
 
 *.rz
