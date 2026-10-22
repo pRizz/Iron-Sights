@@ -1,10 +1,10 @@
 # Project Midas ADS
 
-## Watch the gameplay demo
+## Watch the latest gameplay demo
 
-[![Watch Project Midas ADS: Dam gameplay and aim-down-sights demo at 60 FPS](.github/images/ads-gameplay-thumbnail.png)](https://youtu.be/pwP-z1nDtEo)
+[![Watch Project Midas ADS update: new hands, improved sights, and sniper scope zoom at 60 FPS](.github/images/ads-gameplay-thumbnail.png)](https://youtu.be/dI-G7Lo12hA)
 
-**[Watch on YouTube: Dam Gameplay & ADS Demo (60 FPS)](https://youtu.be/pwP-z1nDtEo)**
+**[Watch on YouTube: ADS Update — Hands, Better Sights & Sniper Scope Zoom (60 FPS)](https://youtu.be/dI-G7Lo12hA)**
 
 Project Midas ADS is an independent fork of [Project Midas](https://github.com/murkantor/Project-Midas), focused on adding aim-down-sights (ADS) controls to the GE PC port. This fork is maintained separately from the upstream Project Midas project.
 
