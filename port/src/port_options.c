@@ -275,6 +275,7 @@ static const struct PortOpt sOpts[] = {
     TOGGLE("auto_aim",           "[display]", "Auto-Aim\n",           PORTOPT_CAT_GAMEPLAY),
     ENUMR ("aim_control",        "[display]", "Aim Control\n",        PORTOPT_CAT_GAMEPLAY, sAimControlVals, sAimControlText, NULL),
     ENUMR ("aim_mode",           "[display]", "Aim Mode\n",           PORTOPT_CAT_GAMEPLAY, sAimModeVals, sAimModeText, NULL),
+    TOGGLE("sprint",             "[display]", "Sprint\n",             PORTOPT_CAT_GAMEPLAY),
     TOGGLE("sight_on_screen",    "[display]", "Sight on Screen\n",    PORTOPT_CAT_GAMEPLAY),
     TOGGLE("look_ahead",         "[display]", "Look Ahead\n",         PORTOPT_CAT_GAMEPLAY),
     TOGGLE("ammo_on_screen",     "[display]", "Ammo on Screen\n",     PORTOPT_CAT_GAMEPLAY),

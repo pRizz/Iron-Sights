@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include "../../port/src/joy_port.c"
 #include "../../port/src/ads_hands.c"
+#include "../../port/src/port_options.c"
 
 static struct player players[4];
 struct player *g_CurrentPlayer;
@@ -11,6 +12,23 @@ f32 g_GlobalTimerDelta;
 static s32 currentPlayer;
 static s32 controlsLive;
 static OSTime testTime = 1;
+static s32 savedSprint = -1;
+
+s32 portVideoOptionGet(const char *key, s32 *out) { (void) key; (void) out; return 0; }
+s32 portVideoOptionSet(const char *key, s32 v) { (void) key; (void) v; return 0; }
+s32 portInputOptionGet(const char *key, s32 *out) { (void) key; (void) out; return 0; }
+s32 portInputOptionSet(const char *key, s32 v) { (void) key; (void) v; return 0; }
+s32 portIniWriteStrs(const char *section, const char *const *keys, const char *const *vals, s32 n)
+{
+    s32 i;
+    for (i = 0; i < n; i++) {
+        if (strcmp(keys[i], "sprint") == 0) {
+            assert(strcmp(section, "[display]") == 0);
+            savedSprint = atoi(vals[i]);
+        }
+    }
+    return 1;
+}
 
 s32 get_cur_playernum(void) { return currentPlayer; }
 s32 portBondControlsLive(void) { return controlsLive; }
@@ -62,6 +80,63 @@ static void normalAim(s32 held, s32 pressed, s32 toggle)
     g_CurrentPlayer->insightaimmode = portAdsUpdateAim(held, pressed, toggle);
 }
 
+static void testSprint(void)
+{
+    s32 setting;
+    const s32 opt = portOptFind("sprint");
+    assert(opt >= 0 && portOptAvailable(opt) && portOptIsToggle(opt));
+    assert(portOptCategoryOf(opt) == PORTOPT_CAT_GAMEPLAY);
+    assert(portJoyPortOptionGet("sprint", &setting) && setting == 1);
+    assert(strcmp(portJoyPortBindDefault(PORTACT_WALK), "Left Shift") == 0);
+    assert(portJoyPortMoveScale(0) == 1.0f);
+    portJoyPortPadDown(0, PORTACT_WALK);
+    portJoyPortPollCommit();
+    assert(portJoyPortMoveScale(0) == 1.5f);
+    assert(portJoyPortMoveScale(1) == 1.0f); /* native crouch slowdown still applies */
+    g_CurrentPlayer->insightaimmode = 1;
+    assert(portJoyPortMoveScale(0) == 1.0f);
+    g_CurrentPlayer->insightaimmode = 0;
+    normalAim(1, 1, 0);
+    assert(portJoyPortMoveScale(0) == 0.5f); /* ADS wins over held sprint */
+    assert(portJoyPortMoveScale(1) == 0.5f);
+    normalAim(0, 0, 0);
+
+    selectPlayer(1);
+    assert(portJoyPortMoveScale(0) == 1.0f); /* player 1's key cannot sprint player 2 */
+    portJoyPortPadDown(1, PORTACT_WALK);
+    portJoyPortPollCommit();
+    assert(portJoyPortMoveScale(0) == 1.5f);
+    selectPlayer(0);
+    assert(portJoyPortMoveScale(0) == 1.0f);
+    portJoyPortPadDown(0, PORTACT_WALK);
+    portJoyPortPollCommit();
+    controlsLive = 0;
+    assert(portJoyPortMoveScale(0) == 1.0f);
+    controlsLive = 1;
+    g_PlayerIsInTank = 1;
+    assert(portJoyPortMoveScale(0) == 1.0f);
+    g_PlayerIsInTank = 0;
+    currentPlayer = -1;
+    assert(portJoyPortMoveScale(0) == 1.0f);
+    selectPlayer(0);
+
+    assert(portJoyPortSetOption("sprint", "0")); /* saved ini uses the string bridge */
+    assert(portJoyPortOptionGet("sprint", &setting) && setting == 0);
+    assert(portJoyPortMoveScale(0) == 0.5f);
+    assert(portJoyPortMoveScale(1) == 0.5f);
+    normalAim(1, 1, 0);
+    assert(portJoyPortMoveScale(0) == 0.5f); /* walk and ADS slowdowns do not stack */
+    normalAim(0, 0, 0);
+    portJoyPortPollCommit();
+    assert(portJoyPortMoveScale(0) == 1.0f);
+    assert(portJoyPortOptionSet("sprint", 1)); /* menus use the integer bridge */
+    assert(portJoyPortOptionGet("sprint", &setting) && setting == 1);
+    portOptStep(opt, 1);
+    assert(portOptGet(opt) == 0 && savedSprint == 0);
+    portOptStep(opt, -1);
+    assert(portOptGet(opt) == 1 && savedSprint == 1);
+}
+
 int main(void)
 {
     s32 i;
@@ -77,6 +152,7 @@ int main(void)
 
     controlsLive = 1;
     selectPlayer(0);
+    testSprint();
     assert(!portAdsActive());
     assert(PORTACT_CLASSIC_TOGGLE == 20);
     assert(strcmp(portJoyPortBindName(PORTACT_AIM_DOWN_SIGHTS), "aim_down_sights") == 0);
@@ -350,6 +426,6 @@ int main(void)
     pollAds(0, 1); /* the dedicated ADS button works in red-reticle mode too */
     assert(portAdsMouseWheel(1));
     assert(portAdsWheelZoom(15.0f, 45.0f) < 15.0f);
-    puts("ADS checks passed: movement, input, scope, wheel zoom, per-player state, 30/60/120/240 Hz.");
+    puts("ADS checks passed: sprint/walk/aim/crouch movement, input, scope, wheel zoom, per-player state, 30/60/120/240 Hz.");
     return 0;
 }

@@ -2263,6 +2263,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "stereo_pan=%d\n", s_CfgStereoPan);
     fprintf(f, "aim_lock=%d\n", s_CfgAimLock);
     fprintf(f, "aim_mode=1\n");
+    fprintf(f, "sprint=1\n");
     fprintf(f, "mp_aim_lock=%d\n", s_CfgMpAimLock);
     fprintf(f, "mp_sight_on_screen=%d\n", s_CfgMpSight);
     fprintf(f, "mp_no_auto_aim=%d\n", s_CfgMpAutoAim == 0);

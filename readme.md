@@ -57,6 +57,11 @@ the existing zoom controls still adjust magnification.
 While ADS with the sniper rifle, **Mouse Wheel Up/Down** zooms in/out instead
 of switching weapons. Outside sniper ADS, the wheel uses its normal bindings.
 
+Hold **Left Shift** while moving to sprint at 1.5 times normal speed.
+**Gameplay > General Settings > Sprint** is on by default; turn it off to
+restore Shift-to-walk at half speed. The **Walk / Sprint** control can be rebound.
+Aiming and crouching prevent the sprint boost; ADS keeps its half-speed movement.
+
 ## Building
 
 The build runs in Docker, which has every tool and library both builds need. You also need the GE (USA) cart as `baserom.u.z64` in the repository root:

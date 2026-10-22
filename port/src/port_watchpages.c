@@ -117,6 +117,7 @@ static const struct PortWatchRowDef sHud[] = {
  * already on the face */
 static const struct PortWatchRowDef sGenSettings[] = {
     { PWROW_OPT,       "aim_mode",         NULL, 0, 0 },
+    { PWROW_OPT,       "sprint",           NULL, 0, 0 },
     { PWROW_OPT,       "aim_lock",         NULL, 0, 0 },
     { PWROW_OPT,       "scope_steady",     NULL, 0, 0 },
     { PWROW_OPT,       "head_roll",        NULL, 0, 0 },
@@ -220,7 +221,7 @@ static const struct PortBindDef sBindsPort[] = {
     { "Zoom Out\n",          "zoom_out",       "zoom_out"       },
     { "Crouch (Hold)\n",     "crouch_hold",    "crouch_hold"    },
     { "Crouch (Toggle)\n",   "crouch_toggle",  "crouch_toggle"  },
-    { "Walk\n",              "walk",           "walk"           },
+    { "Walk / Sprint\n",     "walk",           "walk"           },
     /* No Run / Walk-Run rows: they only existed to leave or flip Always Walk, which is gone */
     /* The look rows (at the top) have their own keyboard binds, so binding W to "move forward"
      * does not also bind it to "look up". */

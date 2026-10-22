@@ -178,6 +178,8 @@ padN_stickmode.
                       |            | auto_aim or the multiplayer settings say
   aim_control         | 0          | 0 = hold to aim, 1 = toggle
   aim_mode            | 1          | 1 = ADS (default), 0 = original red reticle
+  sprint              | 1          | 1 = hold Walk / Sprint for 1.5x speed;
+                      |            | 0 = hold it to walk at half speed
   sight_on_screen     | 1          | Show the aiming sight
   look_ahead          | 1          | Look Ahead
   ammo_on_screen      | 1          | Show ammo on screen
@@ -293,7 +295,7 @@ Port actions (extra actions beyond the N64 pad)
   -----------------+------------------+--------------------------------------
   reload           | R                | Reload without using anything
   use              | E                | The B action: doors, pickups, tank
-  walk             | Left Shift       | Half speed while held
+  walk             | Left Shift       | Sprint while held (walk if sprint=0)
   prev_weapon      | Mouse Wheel Up   | Previous weapon
   next_weapon      | Mouse Wheel Down | Next weapon
   prev_inventory   | [                | Previous non-gun item (explosives,
@@ -323,6 +325,13 @@ Port actions (extra actions beyond the N64 pad)
   controllers can use padN_aim_down_sights with any free button or trigger.
 
 Retired keys (ignored): run, walk_toggle.
+
+  Sprint (Gameplay > General Settings) defaults to on, including with an
+  existing ini that has no sprint key. Walk / Sprint uses the existing walk
+  binding for keyboard and controllers. Aiming and crouching prevent the
+  sprint boost; ADS still moves at half speed, with no extra Shift slowdown.
+  Sprint does not change tank movement. Turning Sprint off restores the
+  original half-speed Walk binding.
 
 
 Other keys you may see are managed by the game; leave them as they are.

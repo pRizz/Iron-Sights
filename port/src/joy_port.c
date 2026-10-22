@@ -25,12 +25,11 @@
  *                  bondviewProcessInput), so tank enter/exit, doors and every other
  *                  B use path work, and suppresses only the lv.c "nothing to use ->
  *                  reload" fallback for that tap.
- *   walk / run     g_CurrentPlayer->speedforwards/sideways x 0.5 while "walking"
- *                  (MoveBond, next to the crouch 0.5), so it covers analog,
- *                  C-button digital steps and controllers. Always Run (default):
- *                  walk = hold Walk. Always Walk: walk unless Run is held.
- *                  walk_toggle flips the mode; midas.ini [input] always_walk=0/1 is the
- *                  boot value.
+ *   walk / sprint  the Walk / Sprint bind (Left Shift) multiplies on-foot
+ *                  forward/sideways speed by 1.5 with [display] sprint=1
+ *                  (default), or by 0.5 with sprint=0. Aiming and crouching
+ *                  prevent sprinting; ADS keeps its own half-speed movement.
+ *                  Applied in MoveBond before knockback, for all input devices.
  *   prev/next weapon  moveData.weaponBackOffset / weaponForwardOffset in
  *                  bondviewProcessInput, exactly the A-tap / A+Z paths (gun.c
  *                  backstep_/advance_through_inventory), so the MP golden-gun lock
@@ -176,6 +175,7 @@ static s32 sDetonateUseReload = 1;
  * bondviewProcessInput reports shoot each tick (portJoyPortShootChord). */
 static s32 sShootNextPrev = 1;
 static s32 sAimMode = 1; /* [display] aim_mode: 1 = ADS, 0 = red reticle */
+static s32 sSprint = 1;  /* [display] sprint: the Walk bind sprints instead */
 static s32 sShootPrev[4];   /* shoot was down last tick */
 static s32 sShootTap[4];    /* shoot went down this tick */
 static s32 joyPortPad(void);
@@ -253,7 +253,7 @@ s32 portJoyPortAlwaysWalk(void)
     return sAlwaysWalk[0]; /* ini / Port Options value = pad 0's; the bind is per pad */
 }
 
-/** Always Walk is retired: walk is just the Walk bind held. sAlwaysWalk stays
+/** Always Walk is retired: walk is the held Walk / Sprint bind. sAlwaysWalk stays
   * 0, the always_walk / padN_always_walk
  * keys from older midas.ini files or profiles are accepted and ignored, and the
  * PORTACT_* entries stay because the table is append-only. */
@@ -272,6 +272,10 @@ static s32 joyPortOwnValue(const char *value)
 /** midas.ini keys this module owns besides the binds; returns 1 when consumed. */
 s32 portJoyPortSetOption(const char *key, const char *value)
 {
+    if (strcmp(key, "sprint") == 0) {
+        sSprint = atoi(value) != 0;
+        return 1;
+    }
     if (strcmp(key, "aim_mode") == 0) {
         sAimMode = atoi(value) != 0;
         return 1;
@@ -398,6 +402,10 @@ void portJoyPortPadOptSet(s32 pad, s32 which, s32 v)
 /** Port Options bridge (port_options.c): the same keys as integers. */
 s32 portJoyPortOptionGet(const char *key, s32 *out)
 {
+    if (strcmp(key, "sprint") == 0) {
+        *out = sSprint;
+        return 1;
+    }
     if (strcmp(key, "aim_mode") == 0) {
         *out = sAimMode;
         return 1;
@@ -415,6 +423,10 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
 
 s32 portJoyPortOptionSet(const char *key, s32 v)
 {
+    if (strcmp(key, "sprint") == 0) {
+        sSprint = v != 0;
+        return 1;
+    }
     if (strcmp(key, "aim_mode") == 0) {
         sAimMode = v != 0;
         return 1;
@@ -956,14 +968,21 @@ s32 portJoyPortClassicTogglePressed(s32 pad)
 s32 portJoyPortActZoomIn(void)    { return PORTACT_ZOOM_IN; }
 s32 portJoyPortActZoomOut(void)   { return PORTACT_ZOOM_OUT; }
 
-/** MoveBond: 1 while Bond should move at half speed. */
-s32 portJoyPortWalkActive(void)
+/** MoveBond: scale voluntary on-foot movement, before crouch and knockback. */
+f32 portJoyPortMoveScale(s32 crouched)
 {
-    s32 pad = joyPortPad();
-    if (pad < 0) {
-        return 0;
+    const s32 pad = joyPortPad();
+    if (pad < 0 || g_CurrentPlayer == NULL || !joyPortPermitted() || g_PlayerIsInTank) {
+        return 1.0f;
     }
-    return sAlwaysWalk[pad] ? !sHeld[pad][PORTACT_RUN] : sHeld[pad][PORTACT_WALK];
+    if (portAdsActive()) {
+        return 0.5f;
+    }
+    if (sHeld[pad][PORTACT_WALK]) {
+        if (!sSprint) return 0.5f;
+        if (!crouched && !g_CurrentPlayer->insightaimmode) return 1.5f;
+    }
+    return 1.0f;
 }
 
 /**

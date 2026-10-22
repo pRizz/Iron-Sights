@@ -9459,15 +9459,12 @@ void MoveBond(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
     if (g_PlayerIsInTank == 0)
     {
 #ifndef TARGET_N64
-        { /* Port suite walk (joy_port.c): half speed, applied to the final
-           * scalars so analog, C-button digital steps and controllers all
-           * slow alike (the keyboard's WASD in style 1.2 is digital) */
-            extern s32 portJoyPortWalkActive(void);
-            if (portJoyPortWalkActive() || portAdsActive())
-            {
-                g_CurrentPlayer->speedforwards *= 0.5f;
-                g_CurrentPlayer->speedsideways *= 0.5f;
-            }
+        { /* Apply sprint / walk / ADS to every input path before knockback.
+           * The native crouch reduction below still applies independently. */
+            extern f32 portJoyPortMoveScale(s32 crouched);
+            const f32 moveScale = portJoyPortMoveScale(currentPlayerGetCrouchPos() != CROUCH_STAND);
+            g_CurrentPlayer->speedforwards *= moveScale;
+            g_CurrentPlayer->speedsideways *= moveScale;
         }
 #endif
         // This `if` block is Perfect Dark bwalkApplyCrouchSpeed.
