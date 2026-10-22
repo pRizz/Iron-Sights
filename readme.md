@@ -2,7 +2,7 @@
 
 ## Watch the gameplay demo
 
-[![Watch Project Midas ADS: Dam gameplay and aim-down-sights demo at 60 FPS](https://i.ytimg.com/vi/pwP-z1nDtEo/maxresdefault.jpg)](https://youtu.be/pwP-z1nDtEo)
+[![Watch Project Midas ADS: Dam gameplay and aim-down-sights demo at 60 FPS](.github/images/ads-gameplay-thumbnail.png)](https://youtu.be/pwP-z1nDtEo)
 
 **[Watch on YouTube: Dam Gameplay & ADS Demo (60 FPS)](https://youtu.be/pwP-z1nDtEo)**
 
