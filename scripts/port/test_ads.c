@@ -96,21 +96,27 @@ int main(void)
     }
 
     assert(portAdsWeaponPose(ITEM_AK47, &muzzle, &pose));
-    assert(pose.y < -8.0f && pose.y > -8.1f && pose.z == -42.0f);
+    assert(pose.y < -10.1f && pose.y > -10.2f && pose.z == -42.0f);
+    assert(portAdsWeaponPitch(ITEM_AK47) < -0.04f && portAdsWeaponPitch(ITEM_AK47) > -0.05f);
     muzzle.y = 57.956562f;
     assert(portAdsWeaponPose(ITEM_WPPK, &muzzle, &pose));
-    assert(pose.y < -6.7f && pose.y > -6.9f && pose.z == -33.5f);
+    assert(pose.y < -8.5f && pose.y > -8.7f && pose.z == -33.5f);
     for (i = ITEM_UNARMED; i <= ITEM_CAMERA; i++)
     {
         const s32 supported = (i >= ITEM_WPPK && i <= ITEM_LASER) || i == ITEM_GRENADELAUNCH;
         assert(!!portAdsWeaponPose(i, &muzzle, &pose) == supported);
-        if (supported) assert(pose.z <= -33.5f && pose.y < -muzzle.y * 0.1f);
+        if (supported) {
+            assert(pose.z <= -33.5f && pose.y < -muzzle.y * 0.1f);
+            assert(portAdsWeaponPitch(i) < 0.0f && portAdsWeaponPitch(i) >= -0.15f);
+        } else {
+            assert(portAdsWeaponPitch(i) == 0.0f);
+        }
     }
     muzzle.y = 77.935936f;
     muzzle.z = 648.51721f;
     assert(portAdsWeaponPose(ITEM_AUTOSHOT, &muzzle, &pose));
     assert(portAdsWeaponPitch(ITEM_AUTOSHOT) < -0.1f);
-    assert(pose.y < -16.2f && pose.y > -16.5f);
+    assert(pose.y < -18.5f && pose.y > -18.7f);
 
     assert(portJoyPortOptionGet("aim_mode", &mode) && mode == 1);
     normalAim(1, 1, 0);
@@ -227,6 +233,29 @@ int main(void)
     assert(portAdsBlend() == 0.5f);
     portAdsTick();
     assert(portAdsBlend() == 0.0f);
+
+    /* Scope presentation follows the sniper transition, including lowering,
+     * without entering the original manual-reticle aim mode. */
+    g_CurrentPlayer->hand_item[GUNRIGHT] = ITEM_SNIPERRIFLE;
+    normalAim(1, 1, 0);
+    portAdsTick();
+    assert(portAdsActive() && !g_CurrentPlayer->insightaimmode);
+    assert(portAdsScopeBlend() == 0.5f);
+    portAdsTick();
+    assert(portAdsScopeBlend() == 1.0f);
+    g_CurrentPlayer->hand_item[GUNRIGHT] = ITEM_AK47;
+    assert(portAdsScopeBlend() == 0.0f);
+    g_CurrentPlayer->hand_item[GUNRIGHT] = ITEM_SNIPERRIFLE;
+    normalAim(0, 0, 0);
+    portAdsTick();
+    assert(!portAdsActive() && portAdsScopeBlend() == 0.5f);
+    controlsLive = 0;
+    assert(portAdsScopeBlend() == 0.0f);
+    controlsLive = 1;
+    g_CurrentPlayer->hands[GUNRIGHT].weapon_action_state = GUN_ANIM_STATE_RELOAD_LOWER;
+    assert(portAdsScopeBlend() == 0.0f);
+    portAdsTick();
+    selectPlayer(0);
 
     for (i = 0; i < 4; i++)
     {

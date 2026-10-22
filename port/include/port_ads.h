@@ -7,6 +7,8 @@
 /* All queries refer to the current player. */
 s32 portAdsActive(void);
 f32 portAdsBlend(void);
+/* Sniper scope transition; zero for other weapons or unavailable controls. */
+f32 portAdsScopeBlend(void);
 void portAdsTick(void);
 s32 portAdsUpdateAim(s32 held, s32 pressed, s32 toggle);
 struct MoveData;

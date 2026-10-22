@@ -1677,6 +1677,9 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
         coord3d trigger, support;
         s32 adsHands = handnum == GUNRIGHT && portAdsBlend() > 0.0f
             && portAdsHandGrips(item, &trigger, &support);
+        /* Raise the rifle into the eye, then look through the optic. Keep the
+         * simulation and firing updates running while hiding gun and hands. */
+        if (handnum == GUNRIGHT && portAdsScopeBlend() == 1.0f) continue;
 #endif
 
         if (handptr->field_87F == 0)
@@ -7339,7 +7342,7 @@ static Gfx *portTargetRectQ(Gfx *g, s32 x1q, s32 y1q, s32 x2q, s32 y2q)
     return g + 1;
 }
 
-static void portDrawTargetPlus(s32 *gdl)
+static void portDrawTargetPlus(s32 *gdl, f32 scopeBlend)
 {
     extern f32 portAimReachX(void);
     extern f32 g_bondviewSceneWideFactor;
@@ -7351,6 +7354,15 @@ static void portDrawTargetPlus(s32 *gdl)
     extern s32 portPlayerCrosshairColor(s32 player); /* video.c: the player's own with 2+ players */
     s32 chcol = portPlayerCrosshairColor(get_cur_playernum()); /* midas.ini crosshair_color (or the player's), -1 = vanilla */
     s32 i;
+
+    if (scopeBlend > 0.0f)
+    {
+        /* The optic stays on the camera axis, independent of gun sway, recoil
+         * and the original freely moving red-reticle aiming mode. */
+        fx = viGetViewLeft() + viGetViewWidth() * 0.5f;
+        fy = viGetViewTop() + viGetViewHeight() * 0.5f;
+        chcol = -1;
+    }
 
     if (reachx > 1.001f)
     {
@@ -7372,6 +7384,9 @@ static void portDrawTargetPlus(s32 *gdl)
         s32 dx = t[0];
         s32 dy = -1 - t[1];
         s32 x0q, x1q, y0q, y1q;
+        u8 alpha = (u8)t[5];
+
+        if (scopeBlend > 0.0f) alpha = (u8)(alpha * scopeBlend * scopeBlend);
 
         if (dx == -8 || dx == 7 || dy == -8 || dy == 7)
         {
@@ -7390,7 +7405,7 @@ static void portDrawTargetPlus(s32 *gdl)
         gDPPipeSync(g++);
         if (chcol < 0)
         {
-            gDPSetPrimColor(g++, 0, 0, (u8) t[2], (u8) t[3], (u8) t[4], (u8) t[5]);
+            gDPSetPrimColor(g++, 0, 0, (u8) t[2], (u8) t[3], (u8) t[4], alpha);
         }
         else
         {
@@ -7411,7 +7426,7 @@ static void portDrawTargetPlus(s32 *gdl)
             if (cr > 255) { cr = 255; }
             if (cg > 255) { cg = 255; }
             if (cb > 255) { cb = 255; }
-            gDPSetPrimColor(g++, 0, 0, (u8) cr, (u8) cg, (u8) cb, (u8) t[5]);
+            gDPSetPrimColor(g++, 0, 0, (u8) cr, (u8) cg, (u8) cb, alpha);
         }
         g = portTargetRectQ(g, x0q, y0q, x1q, y1q);
     }
@@ -7432,6 +7447,15 @@ void gunDrawSight(s32 *gdl) {
     f32 halfedxy[2];
 
 #ifndef TARGET_N64
+    if (portAdsScopeBlend() > 0.0f)
+    {
+        if ((g_CurrentPlayer->gunsightmode & ~GUNSIGHTREASON_NOTAIMING) == 0
+            && !g_CurrentPlayer->mpmenuon && !g_CurrentPlayer->bonddead)
+        {
+            portDrawTargetPlus(gdl, portAdsScopeBlend());
+        }
+        return;
+    }
     if (portAdsActive()) return;
     {
         extern s32 portAlwaysCrosshair(void); /* video.c: midas.ini [display] always_crosshair; weak 0 headless */
@@ -7441,7 +7465,7 @@ void gunDrawSight(s32 *gdl) {
             && g_CurrentPlayer->bonddead == FALSE
             && portAlwaysCrosshair())
         {
-            portDrawTargetPlus(gdl);
+            portDrawTargetPlus(gdl, 0.0f);
             return;
         }
     }

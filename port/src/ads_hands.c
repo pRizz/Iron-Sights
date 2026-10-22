@@ -83,8 +83,9 @@ static Gfx *adsHandSection(Gfx *gdl, coord3d a, coord3d b,
 
     for (end = 0; end < 2; end++) {
         const coord3d *c = end ? &b : &a;
-        f32 width = end ? widthB : widthA;
-        f32 height = end ? heightB : heightA;
+        /* Fuller hands and forearms without moving either weapon grip. */
+        f32 width = (end ? widthB : widthA) * 1.35f;
+        f32 height = (end ? heightB : heightA) * 1.35f;
         for (i = 0; i < 8; i++) {
             Vtx *vertex = &vertices[end*8+i];
             f32 tone = shade[i] * light;
@@ -116,6 +117,7 @@ static Gfx *adsHandDrawGrip(Gfx *gdl, const Mtxf *gun, coord3d grip,
     s32 left, f32 blend, f32 light)
 {
     f32 side = left ? 1.0f : -1.0f;
+    const f32 armBulk = 1.30f;
     u8 alpha = (u8)(blend*255.0f);
     coord3d palm = grip;
     coord3d wrist, cuff, elbow, knuckle, tip;
@@ -133,9 +135,12 @@ static Gfx *adsHandDrawGrip(Gfx *gdl, const Mtxf *gun, coord3d grip,
     cuff.x = wrist.x + (elbow.x-wrist.x)*0.15f;
     cuff.y = wrist.y + (elbow.y-wrist.y)*0.15f;
     cuff.z = wrist.z + (elbow.z-wrist.z)*0.15f;
-    gdl = adsHandSection(gdl, elbow,cuff, 3.1f,2.7f, 1.65f,1.5f, TRUE,light,alpha);
-    gdl = adsHandSection(gdl, cuff,wrist, 1.65f,1.5f, 1.25f,1.1f, FALSE,light,alpha);
-    gdl = adsHandSection(gdl, wrist,palm, 1.25f,1.1f, 1.6f,1.35f, FALSE,light,alpha);
+    gdl = adsHandSection(gdl, elbow,cuff, 3.1f*armBulk,2.7f*armBulk,
+        1.65f*armBulk,1.5f*armBulk, TRUE,light,alpha);
+    gdl = adsHandSection(gdl, cuff,wrist, 1.65f*armBulk,1.5f*armBulk,
+        1.25f*armBulk,1.1f*armBulk, FALSE,light,alpha);
+    gdl = adsHandSection(gdl, wrist,palm, 1.25f*armBulk,1.1f*armBulk,
+        1.6f,1.35f, FALSE,light,alpha);
 
     for (finger = 0; finger < 4; finger++) {
         /* Four curled fingers and a separate thumb give the grip a readable silhouette. */

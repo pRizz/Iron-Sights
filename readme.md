@@ -49,6 +49,11 @@ controls menu, including for controllers.
 You can walk and strafe at half speed while aiming down sights.
 ADS adds basic low-poly hands and forearms to the 13 firearms that lack them,
 including the KF7 Soviet. Pistols retain their original hands.
+Each firearm's ADS pose has a slight upward angle to reveal its front sight
+and give a view along the top of the gun.
+Sniper ADS raises the rifle into a zoomed scope view with the gun and hands hidden
+and a centered red crosshair. Mouse movement turns the view while scoped;
+the existing zoom controls still adjust magnification.
 
 ## Building
 
