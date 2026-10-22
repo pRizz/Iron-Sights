@@ -1,10 +1,10 @@
-![Project Midas](port/include/presskit/PM%20thin%201%20-%20full.png)
+# Project Midas ADS
 
-# Project Midas
+Project Midas ADS is an independent fork of [Project Midas](https://github.com/murkantor/Project-Midas), focused on adding aim-down-sights (ADS) controls to the GE PC port. This fork is maintained separately from the upstream Project Midas project.
 
-This is a video game about Jimothy's presumed-dead best friend Jarvis turns out to be alive, and in possession of a space laser he intends to point at a city - so Jimothy goes to the Cuban jungle and drops Jarvis off a satellite dish.
+It adds ADS by default, a choice between ADS and the original red reticle aiming mode, half-speed movement while aiming, and individual sight alignment for 20 supported firearms.
 
-Project Midas is a work-in-progress PC port of GE, built from the N64 decompilation. It runs on Windows and Linux and reads its game data from your own copy of the US cart.
+The underlying port is a work in progress built from the N64 decompilation. It runs on Windows and Linux and reads its game data from your own copy of the US cart.
 
 ## AI Disclaimer
 
@@ -58,7 +58,7 @@ The commands below are for a Linux shell. On Windows, run them in WSL:
 2. Open the Ubuntu terminal and clone the repository inside WSL, not under `/mnt/c` (much faster):
    ```
    cd ~
-   git clone https://github.com/murkantor/Project-Midas.git
+   git clone https://github.com/pRizz/Project-Midas.git
    cd Project-Midas
    ```
 3. Copy your cart in, for example from your Windows Downloads folder:
@@ -114,15 +114,15 @@ sudo apt install libsdl2-2.0-0:i386 libgl1:i386
 
 ## Contributing
 
-Co-op, netplay and mod loading are already in progress. Please contribute here rather than forking; see [CONTRIBUTING.md](CONTRIBUTING.md) for what a good pull request looks like, including the rules for AI-assisted changes.
+For ADS changes and bug reports, use [this fork's issues](https://github.com/pRizz/Project-Midas/issues) and pull requests. The inherited [CONTRIBUTING.md](CONTRIBUTING.md) describes upstream contribution guidelines, including the rules for AI-assisted changes. General port development is coordinated in [upstream Project Midas](https://github.com/murkantor/Project-Midas).
 
 ## License
 
-The Project Midas port code is MIT licensed; see [LICENSE](LICENSE). The license does not cover the decompiled game code, GE itself or its assets. Bundled third-party code keeps its own license; see `tools/THIRD_PARTY_NOTICES.txt`.
+Project Midas ADS retains the upstream Project Midas port code's MIT license and attribution; see [LICENSE](LICENSE). The license does not cover the decompiled game code, GE itself or its assets. Bundled third-party code keeps its own license; see `tools/THIRD_PARTY_NOTICES.txt`.
 
 ## Acknowledgements
 
-Project Midas builds on the work of many people and projects.
+Project Midas ADS builds on [Project Midas](https://github.com/murkantor/Project-Midas) by murkantor and contributors, and the work of the people and projects credited below.
 
 - [GoldenEye decompilation](https://github.com/n64decomp/007) by KholdFuzion and contributors
 - [GoldenEye docs](https://github.com/kholdfuzion/goldeneye_docs)
