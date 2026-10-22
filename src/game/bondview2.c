@@ -52,6 +52,7 @@
  * the pin/unpin helpers (declared in bondview.h). */
 #include <stdio.h> /* stderr - port diagnostics */
 #include <stdlib.h> /* getenv - port diagnostics */
+#include "port_ads.h"
 extern f32 g_bondviewSceneWideFactor;
 extern s32 portAdzyMode(void); /* video.c: midas.ini [display] adzy - used twice in solo_char_load */
 extern s32 portReturnStartThisTick(void); /* video.c: START came from Return alone; weak 0 headless */
@@ -70,7 +71,7 @@ static s32 portAimLockActive(void)
      * user can want aim lock in MP but not in single player */
     /* never during demo playback - it rewrites what the recorded aim
      * stick means and where the recorded shots go, so the demo desyncs */
-    return ((getPlayerCount() >= 2) ? portMpAimLock() : portAimLock()) && g_PlayerIsInTank != 1
+    return (portAdsActive() || ((getPlayerCount() >= 2) ? portMpAimLock() : portAimLock())) && g_PlayerIsInTank != 1
         && get_is_ramrom_flag() == 0;
 }
 
@@ -1846,6 +1847,9 @@ bool currentPlayerGetYAutoAimEnabledRedirect(void)
 
 bool currentPlayerGetIsAiming(void)
 {
+#ifndef TARGET_N64
+  if (portAdsActive()) return TRUE;
+#endif
   return g_CurrentPlayer->insightaimmode;
 }
 
@@ -6755,6 +6759,9 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
 
             if (lvlGetControlsLockedFlag() == 0 && disablePlayerActionsWhenPausedOrInMpMenu())
             {
+#ifndef TARGET_N64
+                g_CurrentPlayer->insightaimmode = portAdsUpdateAim(sp104, sp100, cur_player_get_aim_control() != 0);
+#else
                 if (cur_player_get_aim_control() == 0)
                 {
                     g_CurrentPlayer->insightaimmode = sp104;
@@ -6763,6 +6770,7 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
                 {
                     g_CurrentPlayer->insightaimmode = !g_CurrentPlayer->insightaimmode;
                 }
+#endif
 
                 moveData.canSwivelGun = !g_CurrentPlayer->insightaimmode;
                 moveData.canAutoAim = !g_CurrentPlayer->insightaimmode;
@@ -6992,6 +7000,10 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
             {
                 if (disablePlayerActionsWhenPausedOrInMpMenu())
                 {
+#ifndef TARGET_N64
+                    g_CurrentPlayer->insightaimmode = portAdsUpdateAim((buttons & aimButtons) != 0,
+                        ((buttons & ~oldbuttons) & aimButtons) != 0, cur_player_get_aim_control() != 0);
+#else
                     if (cur_player_get_aim_control() == 0)
                     {
                         g_CurrentPlayer->insightaimmode = (buttons & aimButtons) != 0;
@@ -7000,6 +7012,7 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
                     {
                         g_CurrentPlayer->insightaimmode = !g_CurrentPlayer->insightaimmode;
                     }
+#endif
 
                     moveData.canSwivelGun = !g_CurrentPlayer->insightaimmode;
                     moveData.canAutoAim = !g_CurrentPlayer->insightaimmode;
@@ -7238,6 +7251,32 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
     }
 
 #ifndef TARGET_N64
+    portAdsTick();
+    if (portAdsActive())
+    {
+        /* ADS turns the view and leaves movement available, including when Aim is also held. */
+        g_CurrentPlayer->insightaimmode = FALSE;
+        moveData.canManualAim = 0;
+        moveData.canSwivelGun = 1;
+        moveData.canAutoAim = 0;
+        moveData.canNaturalTurn = 1;
+        moveData.canNaturalPitch = 1;
+        moveData.disableLookAhead = 1;
+        moveData.aiming = 0;
+        moveData.zooming = 1;
+        moveData.rLeanLeft = moveData.rLeanRight = 0;
+        moveData.crouchDown = moveData.crouchUp = 0;
+        moveData.aimTurnLeftSpeed = moveData.aimTurnRightSpeed = 0;
+        moveData.speedVertaUp = moveData.speedVertaDown = 0;
+        sub_GAME_7F067FBC(0.0f, 0.0f);
+        {
+            extern f32 portJoyPortLevel(s32 act);
+            extern s32 portJoyPortActZoomIn(void);
+            extern s32 portJoyPortActZoomOut(void);
+            moveData.zoomInFovPersec = portJoyPortLevel(portJoyPortActZoomIn());
+            moveData.zoomOutFovPersec = portJoyPortLevel(portJoyPortActZoomOut());
+        }
+    }
     /* For non-N64 devices the port drives movement and look itself: the move
      * stick walks and strafes, the look stick adds turn and pitch in degrees,
      * and the control style's own turn and step output is zeroed so nothing
@@ -7673,6 +7712,17 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
     }
 #endif
 
+#ifndef TARGET_N64
+    if (portAdsActive())
+    {
+        extern s32 portInputDigitalMove(s32 slot, s32 *dx, s32 *dy);
+        s32 dx = 0;
+        s32 dy = 0;
+        portInputDigitalMove(get_cur_playernum(), &dx, &dy);
+        portAdsConfigureMovement(&moveData, dx, dy);
+    }
+#endif
+
     g_CurrentPlayer->field_D0 = 0;
 #ifndef TARGET_N64
     { /* Port suite use (joy_port.c) = the game's own B tap: tank enter/exit
@@ -7922,6 +7972,12 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
             }
         }
 
+#ifndef TARGET_N64
+        if (portAdsActive() && ftemp_nostack_spE0 > GE_DEFAULT_FOV * 0.75f)
+        {
+            ftemp_nostack_spE0 = GE_DEFAULT_FOV * 0.75f;
+        }
+#endif
         bondviewTriggerWatchZoom(ftemp_nostack_spE0);
         bondviewUpdateWatchZoomIn();
     }
@@ -9389,7 +9445,7 @@ void MoveBond(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
            * scalars so analog, C-button digital steps and controllers all
            * slow alike (the keyboard's WASD in style 1.2 is digital) */
             extern s32 portJoyPortWalkActive(void);
-            if (portJoyPortWalkActive())
+            if (portJoyPortWalkActive() || portAdsActive())
             {
                 g_CurrentPlayer->speedforwards *= 0.5f;
                 g_CurrentPlayer->speedsideways *= 0.5f;

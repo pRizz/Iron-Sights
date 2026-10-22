@@ -35,6 +35,13 @@ Files next to the executable:
 
 An older `ge.ini` is renamed to `midas.ini` automatically on first run.
 
+**Mouse Right** aims down the sights by default. Change **Gameplay > General
+Settings > Aim Mode** to **Red Reticle** for the original aiming mode. The
+existing **Aim Control** setting selects hold or toggle for either mode.
+**Mouse Middle** remains a separate hold-to-ADS binding, configurable in the
+controls menu, including for controllers.
+You can walk and strafe at half speed while aiming down sights.
+
 ## Building
 
 The build runs in Docker, which has every tool and library both builds need. You also need the GE (USA) cart as `baserom.u.z64` in the repository root:

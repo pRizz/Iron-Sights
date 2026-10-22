@@ -4521,6 +4521,7 @@ static const struct PortSheetRow port_sheet_rows_general[] = {
      * DISPLAY menus already carry. Sight and ammo on
      * screen are on HUD. */
     { SHROW_OPT, "look_updown" }, { SHROW_OPT, "auto_aim" }, { SHROW_OPT, "aim_control" },
+    { SHROW_OPT, "aim_mode" },
     { SHROW_OPT, "look_ahead" },
     /* the view's three, moved here from HUD */
     { SHROW_OPT, "aim_lock" }, { SHROW_OPT, "scope_steady" }, { SHROW_OPT, "head_roll" },

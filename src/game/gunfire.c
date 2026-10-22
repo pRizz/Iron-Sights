@@ -79,6 +79,7 @@ extern u32 D_80035CC0;
  * directly, which upstream's extern list does not carry because its own
  * code only ever reaches them through D_80035CC0's adjacency. */
 #include <stdio.h> /* stderr - port diagnostics */
+#include "port_ads.h"
 extern u32 D_80035CC4[];
 #endif
 extern u32 D_80035D00;
@@ -388,12 +389,18 @@ void gunUpdateAndFire(GUNHAND handnum)
     s32 sw7mtxidx;
     s32 shellidx;
     u8 stackpad2[4];
+#ifndef TARGET_N64
+    f32 ads;
+#endif
 
     flashvisptr = NULL;
     flashdata = NULL;
     hand = &g_CurrentPlayer->hands[handnum];
     item = get_item_in_hand_or_watch_menu(handnum);
     itemstats = get_ptr_item_statistics(item);
+#ifndef TARGET_N64
+    ads = (handnum == GUNRIGHT) ? portAdsBlend() : 0.0f;
+#endif
 
     /**
      * When switching from a single weapon to dual wielding, both gun models interpolate a little to the sides of the screen
@@ -599,11 +606,51 @@ void gunUpdateAndFire(GUNHAND handnum)
         hand->field_8E4 = (-0.0f) + 0.0f;
     }
 
+#ifndef TARGET_N64
+    matrix_4x4_set_basis_and_position_target(&tmpmtx, 0.0f, 0.0f, 0.0f,
+        hand->sway_look_x * (1.0f - ads), hand->sway_look_y * (1.0f - ads),
+        hand->sway_look_z * (1.0f - ads) - ads,
+        hand->sway_up_x * (1.0f - ads), hand->sway_up_y * (1.0f - ads) + ads,
+        hand->sway_up_z * (1.0f - ads));
+#else
     matrix_4x4_set_basis_and_position_target(&tmpmtx, 0.0f, 0.0f, 0.0f, hand->sway_look_x, hand->sway_look_y, hand->sway_look_z, hand->sway_up_x, hand->sway_up_y, hand->sway_up_z);
+#endif
     matrix_4x4_multiply_homogeneous_in_place(&tmpmtx, &rotmtx);
+#ifndef TARGET_N64
+    matrix_4x4_align(&tmpmtx, 0.0f, (gunofs.x - hand->field_A38) * (1.0f - ads),
+        (gunofs.y - hand->field_A3C) * (1.0f - ads), gunofs.z - hand->field_A40);
+#else
     matrix_4x4_align(&tmpmtx, 0.0f, gunofs.x - hand->field_A38, gunofs.y - hand->field_A3C, gunofs.z - hand->field_A40);
+#endif
     matrix_4x4_multiply_homogeneous_in_place(&tmpmtx, &rotmtx);
     matrix_4x4_copy(&rotmtx, &gunmtx);
+#ifndef TARGET_N64
+    if (ads > 0.0f)
+    {
+        ModelFileHeader *header = &g_CurrentPlayer->copy_of_body_obj_header[handnum];
+        if (header->Switches != NULL && header->Switches[3] != NULL)
+        {
+            const coord3d *muzzle = (const coord3d *) header->Switches[3]->Data;
+            coord3d pose;
+            const f32 recoilx = hand->field_92C ? hand->field_8EC.m[3][0] : 0.0f;
+            const f32 recoily = hand->field_92C ? hand->field_8EC.m[3][1] : 0.0f;
+            const f32 recoilz = hand->field_92C ? hand->field_8EC.m[3][2] : 0.0f;
+            if (portAdsWeaponPose(item, muzzle, &pose))
+            {
+                const f32 pitch = portAdsWeaponPitch(item) * ads;
+                if (pitch != 0.0f)
+                {
+                    matrix_4x4_set_rotation_around_x(pitch, &tmpmtx);
+                    matrix_4x4_multiply_homogeneous(&gunmtx, &tmpmtx, &aimmtx);
+                    matrix_4x4_copy(&aimmtx, &gunmtx);
+                }
+                gunofs.x += (pose.x + hand->gunofs2_x + recoilx - gunofs.x) * ads;
+                gunofs.y += (pose.y + hand->gunofs2_y + recoily - gunofs.y) * ads;
+                gunofs.z += (pose.z + hand->gunofs2_z + recoilz - gunofs.z) * ads;
+            }
+        }
+    }
+#endif
     matrix_4x4_set_position(&gunofs, &gunmtx);
     matrix_4x4_copy(&gunmtx, &hand->gunmtx_camspace);
     matrix_4x4_copy(&hand->throw_item_pos_related, &hand->throw_item_pos_related_prev);
@@ -5182,6 +5229,12 @@ void caclulate_gun_crosshair_position_rotation(f32 turn_x, f32 turn_y, f32 guncr
     }
 
 #ifndef TARGET_N64
+    if (portAdsActive())
+    {
+        turn_x = turn_y = 0.0f;
+        g_CurrentPlayer->crosshair_x_pos = g_CurrentPlayer->crosshair_y_pos = 0.0f;
+        g_CurrentPlayer->gun_azimuth_angle = g_CurrentPlayer->gun_azimuth_turning = 0.0f;
+    }
     if (portTickHz() != 60)
     {
         gunCrossLagStep(&g_CurrentPlayer->crosshair_x_pos, &g_CurrentPlayer->crosshair_y_pos,
@@ -7356,6 +7409,7 @@ void gunDrawSight(s32 *gdl) {
     f32 halfedxy[2];
 
 #ifndef TARGET_N64
+    if (portAdsActive()) return;
     {
         extern s32 portAlwaysCrosshair(void); /* video.c: midas.ini [display] always_crosshair; weak 0 headless */
 

@@ -16,6 +16,7 @@
 
 static const char *const sPortConEnvNames[] = {
     "GE_ADZY",
+    "GE_ADS_AUDIT",
     "GE_AGRATE",
     "GE_AIDBG",
     "GE_AIMDBG",

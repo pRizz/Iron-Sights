@@ -69,6 +69,8 @@
 #include "game/gun.h"
 #include "game/player.h"
 #include "game/chrai.h"
+#include "game/lv.h"
+#include "port_ads.h"
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console ring (spec section 7). */
@@ -112,6 +114,7 @@ enum {
      * video.c takes the edge off the key (portVideoClassicTogglePressed) and
      * bondview2.c acts on it in play. */
     PORTACT_CLASSIC_TOGGLE,
+    PORTACT_AIM_DOWN_SIGHTS,
     PORTACT_COUNT
 };
 
@@ -158,6 +161,7 @@ static const struct {
     /* F1 has always been this key; it is now just a default */
     [PORTACT_MOUSE_UNLOCK]     = { "mouse_unlock",     "F1",       1 },
     [PORTACT_CLASSIC_TOGGLE]   = { "classic_toggle",   "Tab",      1 },
+    [PORTACT_AIM_DOWN_SIGHTS]  = { "aim_down_sights",  "Mouse Middle", 0 },
 };
 
 /* [input] detonate_use_reload (default ON): with remote mines in the right
@@ -171,6 +175,7 @@ static s32 sDetonateUseReload = 1;
  * prev_weapon / prev_inventory bind (Standard) can still go back.
  * bondviewProcessInput reports shoot each tick (portJoyPortShootChord). */
 static s32 sShootNextPrev = 1;
+static s32 sAimMode = 1; /* [display] aim_mode: 1 = ADS, 0 = red reticle */
 static s32 sShootPrev[4];   /* shoot was down last tick */
 static s32 sShootTap[4];    /* shoot went down this tick */
 static s32 joyPortPad(void);
@@ -267,6 +272,10 @@ static s32 joyPortOwnValue(const char *value)
 /** midas.ini keys this module owns besides the binds; returns 1 when consumed. */
 s32 portJoyPortSetOption(const char *key, const char *value)
 {
+    if (strcmp(key, "aim_mode") == 0) {
+        sAimMode = atoi(value) != 0;
+        return 1;
+    }
     if (strcmp(key, "always_walk") == 0) {
         joyPortSetAlwaysWalkAll(atoi(value) != 0);
         return 1;
@@ -389,6 +398,10 @@ void portJoyPortPadOptSet(s32 pad, s32 which, s32 v)
 /** Port Options bridge (port_options.c): the same keys as integers. */
 s32 portJoyPortOptionGet(const char *key, s32 *out)
 {
+    if (strcmp(key, "aim_mode") == 0) {
+        *out = sAimMode;
+        return 1;
+    }
     if (strcmp(key, "detonate_use_reload") == 0) {
         *out = sDetonateUseReload;
         return 1;
@@ -402,6 +415,10 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
 
 s32 portJoyPortOptionSet(const char *key, s32 v)
 {
+    if (strcmp(key, "aim_mode") == 0) {
+        sAimMode = v != 0;
+        return 1;
+    }
     if (strcmp(key, "always_walk") == 0) {
         joyPortSetAlwaysWalkAll(v != 0);
         return 1;
@@ -582,6 +599,214 @@ static s32 joyPortPad(void)
 static s32 joyPortPermitted(void)
 {
     return portBondControlsLive();
+}
+
+static f32 sAdsBlend[PORT_PADS];
+static s32 sAdsNormalAim[PORT_PADS];
+
+/* Sight height above the bore and eye distance, in view units. */
+static const struct {
+    s32 item;
+    f32 sightHeight;
+    f32 distance;
+    f32 pitch;
+} sAdsPoses[] = {
+    { ITEM_WPPK,          1.0f, 33.5f },
+    { ITEM_WPPKSIL,       1.0f, 33.5f },
+    { ITEM_TT33,          1.1f, 33.5f },
+    { ITEM_SKORPION,      3.2f, 36.0f },
+    { ITEM_AK47,          5.7f, 42.0f },
+    { ITEM_UZI,           4.4f, 40.0f },
+    { ITEM_MP5K,          6.3f, 42.0f },
+    { ITEM_MP5KSIL,       6.3f, 42.0f },
+    { ITEM_SPECTRE,       6.4f, 42.0f },
+    { ITEM_M16,          10.2f, 60.0f },
+    { ITEM_FNP90,        10.6f, 48.0f },
+    { ITEM_SHOTGUN,       3.7f, 42.0f },
+    { ITEM_AUTOSHOT,      1.8f, 56.0f, -0.105f },
+    { ITEM_SNIPERRIFLE,  10.7f, 70.0f },
+    { ITEM_RUGER,         4.0f, 36.0f },
+    { ITEM_GOLDENGUN,     1.7f, 33.5f },
+    { ITEM_SILVERWPPK,    1.0f, 33.5f },
+    { ITEM_GOLDWPPK,      1.0f, 33.5f },
+    { ITEM_LASER,         6.7f, 45.0f },
+    { ITEM_GRENADELAUNCH, 2.4f, 50.0f },
+};
+
+s32 portAdsWeaponPose(s32 item, const coord3d *muzzle, coord3d *pose)
+{
+    s32 i;
+    for (i = 0; i < sizeof(sAdsPoses) / sizeof(sAdsPoses[0]); i++)
+    {
+        if (sAdsPoses[i].item == item)
+        {
+            pose->x = -muzzle->x * 0.1f;
+            pose->y = -muzzle->y * 0.1f - sAdsPoses[i].sightHeight;
+            if (sAdsPoses[i].pitch != 0.0f)
+            {
+                extern float sinf(float);
+                extern float cosf(float);
+                pose->y = -(muzzle->y * cosf(sAdsPoses[i].pitch)
+                    - muzzle->z * sinf(sAdsPoses[i].pitch)) * 0.1f - sAdsPoses[i].sightHeight;
+            }
+            pose->z = -sAdsPoses[i].distance;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+f32 portAdsWeaponPitch(s32 item)
+{
+    s32 i;
+    for (i = 0; i < sizeof(sAdsPoses) / sizeof(sAdsPoses[0]); i++)
+    {
+        if (sAdsPoses[i].item == item) return sAdsPoses[i].pitch;
+    }
+    return 0.0f;
+}
+
+#ifdef GE_VIDEO
+/* GE_ADS_AUDIT=1 captures all guns; an item ID captures just that gun. */
+static void joyPortAdsAudit(void)
+{
+    static s32 enabled = -1;
+    static s32 index;
+    static f32 time;
+    static s32 equipped;
+    static s32 captured;
+    static s32 count;
+    static s32 end = sizeof(sAdsPoses) / sizeof(sAdsPoses[0]);
+
+    if (enabled < 0)
+    {
+        const char *value = getenv("GE_ADS_AUDIT");
+        enabled = value != NULL;
+        if (value != NULL && atoi(value) >= ITEM_WPPK)
+        {
+            for (index = 0; index < end && sAdsPoses[index].item != atoi(value); index++) {}
+            if (index == end) exit(2);
+            end = index + 1;
+        }
+    }
+    if (!enabled || get_cur_playernum() != 0 || !joyPortPermitted()) return;
+    if (index == end)
+    {
+        portConLogf("ge: ads-audit: complete (%d guns)\n", count);
+        exit(0);
+    }
+    sHeld[0][PORTACT_AIM_DOWN_SIGHTS] = 1;
+    if (!equipped)
+    {
+        bondinvSetAllGunsFlag(TRUE);
+        currentPlayerEquipWeaponWrapper(GUNLEFT, ITEM_UNARMED);
+        currentPlayerEquipWeaponWrapper(GUNRIGHT, sAdsPoses[index].item);
+        equipped = TRUE;
+    }
+    time += g_GlobalTimerDelta;
+    if (getCurrentPlayerWeaponId(GUNRIGHT) == sAdsPoses[index].item)
+    {
+        g_CurrentPlayer->hands[GUNRIGHT].weapon_ammo_in_magazine =
+            get_ptr_item_statistics(sAdsPoses[index].item)->MagSize;
+    }
+    if (time >= 120.0f && !captured && portAdsActive() && portAdsBlend() == 1.0f
+        && getCurrentPlayerWeaponId(GUNRIGHT) == sAdsPoses[index].item
+        && g_CurrentPlayer->hands[GUNRIGHT].weapon_action_state == GUN_ANIM_STATE_IDLE
+        && g_CurrentPlayer->hands[GUNRIGHT].weapon_current_animation == 0)
+    {
+        extern int ge_shot_force;
+        portConLogf("ge: ads-audit: capture item=%d\n", sAdsPoses[index].item);
+        ge_shot_force = 1;
+        captured = TRUE;
+        count++;
+    }
+    if (time >= 150.0f && captured)
+    {
+        index++;
+        time = 0.0f;
+        equipped = captured = FALSE;
+    }
+}
+#endif
+
+void portAdsConfigureMovement(struct MoveData *move, s32 digitalX, s32 digitalY)
+{
+    /* Keep movement independent of the original Aim control's lean/crouch mapping. */
+    move->analogWalk = move->controlStickYSafe;
+    move->analogStrafe = move->controlStickXSafe;
+    move->digitalStepForward = digitalY > 0;
+    move->digitalStepBack = digitalY < 0;
+    move->digitalStepRight = digitalX > 0;
+    move->digitalStepLeft = digitalX < 0;
+    move->canLookAhead = digitalY == 0;
+    move->canTurnTank = digitalX == 0;
+    move->rLeanLeft = move->rLeanRight = 0;
+    move->crouchUp = move->crouchDown = 0;
+}
+
+static s32 joyPortAdsSupported(void)
+{
+    const s32 item = getCurrentPlayerWeaponId(GUNRIGHT);
+
+    /* One sight at a time; gadgets, thrown weapons and the tank keep their own controls. */
+    return g_PlayerIsInTank != 1 && get_itemtype_in_hand(GUNLEFT) == 0
+        && get_itemtype_in_hand(GUNRIGHT) != 0
+        && ((item >= ITEM_WPPK && item <= ITEM_LASER) || item == ITEM_GRENADELAUNCH);
+}
+
+static s32 joyPortAdsWeapon(void)
+{
+    const s32 state = g_CurrentPlayer->hands[GUNRIGHT].weapon_action_state;
+    return joyPortAdsSupported()
+        && (state < GUN_ANIM_STATE_SWITCH_LOWER || state == GUN_ANIM_STATE_DRY_FIRE);
+}
+
+s32 portAdsUpdateAim(s32 held, s32 pressed, s32 toggle)
+{
+    const s32 pad = joyPortPad();
+    s32 wanted;
+
+    if (pad < 0) return g_CurrentPlayer->insightaimmode;
+    wanted = g_CurrentPlayer->insightaimmode || sAdsNormalAim[pad];
+    wanted = toggle ? (pressed ? !wanted : wanted) : held;
+    sAdsNormalAim[pad] = sAimMode && joyPortPermitted() && joyPortAdsSupported() && wanted;
+    /* Unsupported items retain their original aim behavior, including the camera and tank. */
+    return sAdsNormalAim[pad] ? FALSE : wanted;
+}
+
+s32 portAdsActive(void)
+{
+    const s32 pad = joyPortPad();
+    return pad >= 0 && joyPortPermitted() && joyPortAdsWeapon()
+        && (sAdsNormalAim[pad] || sHeld[pad][PORTACT_AIM_DOWN_SIGHTS] != 0);
+}
+
+f32 portAdsBlend(void)
+{
+    const s32 pad = joyPortPad();
+    return (pad >= 0 && joyPortPermitted() && joyPortAdsWeapon()) ? sAdsBlend[pad] : 0.0f;
+}
+
+void portAdsTick(void)
+{
+    const s32 pad = joyPortPad();
+    f32 step;
+
+    if (pad < 0) return;
+#ifdef GE_VIDEO
+    joyPortAdsAudit();
+#endif
+    if (!joyPortPermitted()) sAdsNormalAim[pad] = 0;
+    if (!joyPortPermitted() || !joyPortAdsWeapon())
+    {
+        sAdsBlend[pad] = 0.0f;
+        return;
+    }
+    /* A 150 ms raise/lower, independent of the simulation rate. */
+    step = g_GlobalTimerDelta / 9.0f;
+    sAdsBlend[pad] += portAdsActive() ? step : -step;
+    if (sAdsBlend[pad] < 0.0f) sAdsBlend[pad] = 0.0f;
+    if (sAdsBlend[pad] > 1.0f) sAdsBlend[pad] = 1.0f;
 }
 
 /**

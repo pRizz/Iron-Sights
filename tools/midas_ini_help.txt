@@ -177,6 +177,7 @@ padN_stickmode.
                       |            | mouse. 0 = never on the mouse, whatever
                       |            | auto_aim or the multiplayer settings say
   aim_control         | 0          | 0 = hold to aim, 1 = toggle
+  aim_mode            | 1          | 1 = ADS (default), 0 = original red reticle
   sight_on_screen     | 1          | Show the aiming sight
   look_ahead          | 1          | Look Ahead
   ammo_on_screen      | 1          | Show ammo on screen
@@ -257,7 +258,7 @@ Key name syntax
   - Mouse: "Mouse Left", "Mouse Right", "Mouse Middle", "Mouse X1",
     "Mouse X2", "Mouse Wheel Up", "Mouse Wheel Down".
   - The wheel cannot be used for held actions: walk, crouch_hold, zoom_in,
-    zoom_out.
+      zoom_out, aim_down_sights.
   - Escape and the backquote key are fixed and cannot be bound.
   - An unknown name is ignored and logged.
 
@@ -309,6 +310,17 @@ Port actions (extra actions beyond the N64 pad)
   menu_back        |                  | Menu-only back
   mouse_unlock     | F1               | Release or re-grab the mouse pointer
   classic_toggle   | Tab              | Switch Classic Mode on or off
+    aim_down_sights   | Mouse Middle     | Hold to raise a single firearm's sights
+
+  Aim Mode (Gameplay > General Settings) selects ADS or Red Reticle for Aim
+  (Mouse Right by default). ADS is the default, including with an existing ini
+  that has no aim_mode key. Aim Control selects Hold or Toggle for either mode.
+  The separate Aim Down Sights binding always uses hold-to-ADS. ADS keeps
+  walking and strafing available at half speed, centres the weapon, and zooms
+  the view. Holding Walk does not stack another slowdown; crouching still does.
+  Scoped weapons keep their stronger zoom. Dual wielding, gadgets, the tank,
+  reloading and weapon changes lower the sights. Bind it in the controls menu;
+  controllers can use padN_aim_down_sights with any free button or trigger.
 
 Retired keys (ignored): run, walk_toggle.
 

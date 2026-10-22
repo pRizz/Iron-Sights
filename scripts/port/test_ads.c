@@ -1,0 +1,223 @@
+/* ROM-free ADS input/state checks. Run with scripts/port/test_ads.sh. */
+#include <assert.h>
+#include <stdarg.h>
+#include "../../port/src/joy_port.c"
+
+static struct player players[4];
+struct player *g_CurrentPlayer;
+s32 g_PlayerIsInTank;
+f32 g_GlobalTimerDelta;
+static s32 currentPlayer;
+static s32 controlsLive;
+
+s32 get_cur_playernum(void) { return currentPlayer; }
+s32 portBondControlsLive(void) { return controlsLive; }
+ITEM_IDS getCurrentPlayerWeaponId(GUNHAND hand) { return g_CurrentPlayer->hand_item[hand]; }
+s32 get_itemtype_in_hand(GUNHAND hand) { return g_CurrentPlayer->hand_item[hand]; }
+OSTime osGetTime(void) { return 1; }
+void portInputRecActions(u8 *down, s32 count) { (void) down; (void) count; }
+void portConLogf(const char *fmt, ...) { (void) fmt; }
+s32 portProfileIniKey(const char *key, const char *value) { (void) key; (void) value; return 0; }
+/* The game's assert macro logs through osSyncPrintf; make failed checks fatal. */
+void osSyncPrintf(const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(stderr, fmt, args);
+    va_end(args);
+    abort();
+}
+
+static void selectPlayer(s32 player)
+{
+    currentPlayer = player;
+    g_CurrentPlayer = &players[player];
+    g_CurrentPlayer->hand_item[GUNRIGHT] = ITEM_WPPKSIL;
+    g_CurrentPlayer->hand_item[GUNLEFT] = ITEM_UNARMED;
+    g_CurrentPlayer->hands[GUNRIGHT].weapon_action_state = GUN_ANIM_STATE_IDLE;
+}
+
+static void pollAds(s32 pad, s32 held)
+{
+    if (held) portJoyPortPadDown(pad, PORTACT_AIM_DOWN_SIGHTS);
+    portJoyPortPollCommit();
+}
+
+static void normalAim(s32 held, s32 pressed, s32 toggle)
+{
+    g_CurrentPlayer->insightaimmode = portAdsUpdateAim(held, pressed, toggle);
+}
+
+int main(void)
+{
+    s32 i;
+    struct MoveData move;
+    s32 mode;
+    coord3d muzzle = { 0.0f, 23.273382f, 705.7365f };
+    coord3d pose;
+    const s32 rates[] = { 30, 60, 120, 240 };
+
+    controlsLive = 1;
+    selectPlayer(0);
+    assert(!portAdsActive());
+    assert(PORTACT_CLASSIC_TOGGLE == 20);
+    assert(strcmp(portJoyPortBindName(PORTACT_AIM_DOWN_SIGHTS), "aim_down_sights") == 0);
+    assert(strcmp(portJoyPortBindDefault(PORTACT_AIM_DOWN_SIGHTS), "Mouse Middle") == 0);
+
+    assert(portAdsWeaponPose(ITEM_AK47, &muzzle, &pose));
+    assert(pose.y < -8.0f && pose.y > -8.1f && pose.z == -42.0f);
+    muzzle.y = 57.956562f;
+    assert(portAdsWeaponPose(ITEM_WPPK, &muzzle, &pose));
+    assert(pose.y < -6.7f && pose.y > -6.9f && pose.z == -33.5f);
+    for (i = ITEM_UNARMED; i <= ITEM_CAMERA; i++)
+    {
+        const s32 supported = (i >= ITEM_WPPK && i <= ITEM_LASER) || i == ITEM_GRENADELAUNCH;
+        assert(!!portAdsWeaponPose(i, &muzzle, &pose) == supported);
+        if (supported) assert(pose.z <= -33.5f && pose.y < -muzzle.y * 0.1f);
+    }
+    muzzle.y = 77.935936f;
+    muzzle.z = 648.51721f;
+    assert(portAdsWeaponPose(ITEM_AUTOSHOT, &muzzle, &pose));
+    assert(portAdsWeaponPitch(ITEM_AUTOSHOT) < -0.1f);
+    assert(pose.y < -16.2f && pose.y > -16.5f);
+
+    assert(portJoyPortOptionGet("aim_mode", &mode) && mode == 1);
+    normalAim(1, 1, 0);
+    assert(portAdsActive() && !g_CurrentPlayer->insightaimmode);
+    normalAim(0, 0, 0);
+    assert(!portAdsActive());
+    normalAim(1, 1, 1);
+    normalAim(0, 0, 1);
+    assert(portAdsActive());
+    g_CurrentPlayer->hands[GUNRIGHT].weapon_action_state = GUN_ANIM_STATE_RELOAD_LOWER;
+    normalAim(0, 0, 1);
+    assert(!portAdsActive() && !g_CurrentPlayer->insightaimmode);
+    g_CurrentPlayer->hands[GUNRIGHT].weapon_action_state = GUN_ANIM_STATE_IDLE;
+    assert(portAdsActive());
+    normalAim(1, 1, 1);
+    assert(!portAdsActive());
+
+    assert(portJoyPortSetOption("aim_mode", "0"));
+    normalAim(1, 1, 0);
+    assert(g_CurrentPlayer->insightaimmode && !portAdsActive());
+    normalAim(0, 0, 0);
+    assert(!g_CurrentPlayer->insightaimmode);
+    normalAim(1, 1, 1);
+    normalAim(0, 0, 1);
+    assert(g_CurrentPlayer->insightaimmode && !portAdsActive());
+    pollAds(0, 1);
+    assert(portAdsActive());
+    pollAds(0, 0);
+    normalAim(1, 1, 1);
+    assert(!g_CurrentPlayer->insightaimmode);
+
+    assert(portJoyPortOptionSet("aim_mode", 1));
+    normalAim(1, 1, 1);
+    controlsLive = 0;
+    portAdsTick();
+    controlsLive = 1;
+    normalAim(0, 0, 1);
+    assert(!portAdsActive());
+    g_CurrentPlayer->hand_item[GUNRIGHT] = ITEM_CAMERA;
+    normalAim(1, 1, 0);
+    assert(g_CurrentPlayer->insightaimmode && !portAdsActive());
+    normalAim(0, 0, 0);
+    selectPlayer(0);
+
+    normalAim(1, 1, 0);
+    selectPlayer(1);
+    assert(!portAdsActive());
+    selectPlayer(0);
+    assert(portAdsActive());
+    normalAim(0, 0, 0);
+
+    memset(&move, 0, sizeof(move));
+    move.controlStickXSafe = -40;
+    move.controlStickYSafe = 65;
+    move.rLeanLeft = move.crouchDown = 1;
+    portAdsConfigureMovement(&move, 0, 0);
+    assert(move.canLookAhead && move.canTurnTank);
+    assert(move.analogWalk == 65 && move.analogStrafe == -40);
+    assert(!move.rLeanLeft && !move.crouchDown);
+    portAdsConfigureMovement(&move, 1, 1);
+    assert(move.digitalStepForward && move.digitalStepRight);
+    assert(!move.digitalStepBack && !move.digitalStepLeft);
+    assert(!move.canLookAhead && !move.canTurnTank);
+    portAdsConfigureMovement(&move, -1, -1);
+    assert(move.digitalStepBack && move.digitalStepLeft);
+    assert(!move.digitalStepForward && !move.digitalStepRight);
+    portAdsConfigureMovement(&move, 0, 1);
+    assert(!move.canLookAhead && move.canTurnTank);
+    assert(move.analogStrafe == -40);
+    portAdsConfigureMovement(&move, 1, 0);
+    assert(move.canLookAhead && !move.canTurnTank);
+    assert(move.analogWalk == 65);
+    portAdsConfigureMovement(&move, 0, 0);
+    assert(!move.digitalStepForward && !move.digitalStepBack);
+    assert(!move.digitalStepLeft && !move.digitalStepRight);
+
+    pollAds(0, 1);
+    assert(portAdsActive());
+    controlsLive = 0;
+    assert(!portAdsActive());
+    assert(portAdsBlend() == 0.0f);
+    portAdsTick();
+    controlsLive = 1;
+    assert(portAdsBlend() == 0.0f);
+    g_PlayerIsInTank = 1;
+    assert(!portAdsActive());
+    g_PlayerIsInTank = 0;
+    g_CurrentPlayer->hand_item[GUNLEFT] = ITEM_WPPKSIL;
+    assert(!portAdsActive());
+    g_CurrentPlayer->hand_item[GUNLEFT] = ITEM_UNARMED;
+
+    for (i = ITEM_UNARMED; i <= ITEM_CAMERA; i++)
+    {
+        g_CurrentPlayer->hand_item[GUNRIGHT] = i;
+        assert(!!portAdsActive() == ((i >= ITEM_WPPK && i <= ITEM_LASER) || i == ITEM_GRENADELAUNCH));
+    }
+    selectPlayer(0);
+    for (i = GUN_ANIM_STATE_SWITCH_LOWER; i <= GUN_ANIM_STATE_RELOAD_RAISE; i++)
+    {
+        g_CurrentPlayer->hands[GUNRIGHT].weapon_action_state = i;
+        assert(!portAdsActive());
+    }
+    g_CurrentPlayer->hands[GUNRIGHT].weapon_action_state = GUN_ANIM_STATE_DRY_FIRE;
+    assert(portAdsActive());
+    selectPlayer(0);
+
+    g_GlobalTimerDelta = 4.5f;
+    portAdsTick();
+    assert(portAdsBlend() == 0.5f);
+    portAdsTick();
+    assert(portAdsBlend() == 1.0f);
+    pollAds(0, 0);
+    portAdsTick();
+    assert(portAdsBlend() == 0.5f);
+    portAdsTick();
+    assert(portAdsBlend() == 0.0f);
+
+    for (i = 0; i < 4; i++)
+    {
+        s32 tick;
+        g_GlobalTimerDelta = 60.0f / rates[i];
+        pollAds(0, 1);
+        for (tick = 0; tick < rates[i]; tick++) portAdsTick();
+        assert(portAdsBlend() == 1.0f);
+        pollAds(0, 0);
+        assert(!portAdsActive());
+        for (tick = 0; tick < rates[i]; tick++) portAdsTick();
+        assert(portAdsBlend() == 0.0f);
+    }
+
+    pollAds(0, 1);
+    selectPlayer(1);
+    assert(!portAdsActive());
+    assert(portAdsBlend() == 0.0f);
+    pollAds(1, 1);
+    assert(portAdsActive());
+    selectPlayer(0);
+    assert(!portAdsActive());
+    puts("ADS checks passed: movement, input, eligibility, blocked controls, per-player state, 30/60/120/240 Hz.");
+    return 0;
+}

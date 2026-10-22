@@ -2124,7 +2124,8 @@ static int videoParseBindValue(char *value, SDL_Scancode *out, const char *bindn
                       || sc == (SDL_Scancode) (BIND_MOUSE_BASE + BIND_WHEEL_DOWN))
                      && bindname != NULL
                      && (SDL_strcasecmp(bindname, "zoom_in") == 0 || SDL_strcasecmp(bindname, "zoom_out") == 0
-                         || SDL_strcasecmp(bindname, "walk") == 0 || SDL_strcasecmp(bindname, "crouch_hold") == 0))
+                         || SDL_strcasecmp(bindname, "walk") == 0 || SDL_strcasecmp(bindname, "crouch_hold") == 0
+                         || SDL_strcasecmp(bindname, "aim_down_sights") == 0))
             {
                 /* A wheel notch is down for one poll, but these actions are
                  * held (joy_port.c sPortActs oneshot 0), so they would do
@@ -2260,6 +2261,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "mission_timer=%d\n", s_CfgMissionTimer);
     fprintf(f, "stereo_pan=%d\n", s_CfgStereoPan);
     fprintf(f, "aim_lock=%d\n", s_CfgAimLock);
+    fprintf(f, "aim_mode=1\n");
     fprintf(f, "mp_aim_lock=%d\n", s_CfgMpAimLock);
     fprintf(f, "mp_sight_on_screen=%d\n", s_CfgMpSight);
     fprintf(f, "mp_no_auto_aim=%d\n", s_CfgMpAutoAim == 0);

@@ -116,6 +116,7 @@ static const struct PortWatchRowDef sHud[] = {
 /* GENERAL SETTINGS: the folder's General Settings less Rare's four vanilla options, which are
  * already on the face */
 static const struct PortWatchRowDef sGenSettings[] = {
+    { PWROW_OPT,       "aim_mode",         NULL, 0, 0 },
     { PWROW_OPT,       "aim_lock",         NULL, 0, 0 },
     { PWROW_OPT,       "scope_steady",     NULL, 0, 0 },
     { PWROW_OPT,       "head_roll",        NULL, 0, 0 },
@@ -206,6 +207,7 @@ static const struct PortBindDef sBindsPort[] = {
     { "Look Down\n",         "look_down",      "look_down"      },
     { "Fire\n",              "z",              "z"              },
     { "Aim\n",               "r",              "r"              },
+    { "Aim Down Sights\n",   "aim_down_sights", "aim_down_sights" },
     { "Use\n",               "use",            "use"            },
     { "Reload\n",            "reload",         "reload"         },
     { "Next Weapon\n",       "next_weapon",    "next_weapon"    },

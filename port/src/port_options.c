@@ -126,6 +126,8 @@ static const s32 sLookUpDownVals[] = { 1, 0 };
 static const char *const sLookUpDownText[] = { "Upright\n", "Reverse\n" };
 static const s32 sAimControlVals[] = { 0, 1 };
 static const char *const sAimControlText[] = { "Hold\n", "Toggle\n" };
+static const s32 sAimModeVals[] = { 1, 0 };
+static const char *const sAimModeText[] = { "ADS\n", "Red Reticle\n" };
 /* health_wide: a separate 4:3 / Wide setting for the health / armour arcs, so
  * ammo and messages can sit at the screen edges while health stays centred
  * (options.c healthAnchorsToEdges) */
@@ -272,6 +274,7 @@ static const struct PortOpt sOpts[] = {
     ENUMR ("look_updown",        "[display]", "Look Up/Down\n",       PORTOPT_CAT_GAMEPLAY, sLookUpDownVals, sLookUpDownText, NULL),
     TOGGLE("auto_aim",           "[display]", "Auto-Aim\n",           PORTOPT_CAT_GAMEPLAY),
     ENUMR ("aim_control",        "[display]", "Aim Control\n",        PORTOPT_CAT_GAMEPLAY, sAimControlVals, sAimControlText, NULL),
+    ENUMR ("aim_mode",           "[display]", "Aim Mode\n",           PORTOPT_CAT_GAMEPLAY, sAimModeVals, sAimModeText, NULL),
     TOGGLE("sight_on_screen",    "[display]", "Sight on Screen\n",    PORTOPT_CAT_GAMEPLAY),
     TOGGLE("look_ahead",         "[display]", "Look Ahead\n",         PORTOPT_CAT_GAMEPLAY),
     TOGGLE("ammo_on_screen",     "[display]", "Ammo on Screen\n",     PORTOPT_CAT_GAMEPLAY),
