@@ -1,5 +1,11 @@
 # Project Midas ADS
 
+## Watch the gameplay demo
+
+[![Watch Project Midas ADS: Dam gameplay and aim-down-sights demo at 60 FPS](https://i.ytimg.com/vi/pwP-z1nDtEo/maxresdefault.jpg)](https://youtu.be/pwP-z1nDtEo)
+
+**[Watch on YouTube: Dam Gameplay & ADS Demo (60 FPS)](https://youtu.be/pwP-z1nDtEo)**
+
 Project Midas ADS is an independent fork of [Project Midas](https://github.com/murkantor/Project-Midas), focused on adding aim-down-sights (ADS) controls to the GE PC port. This fork is maintained separately from the upstream Project Midas project.
 
 It adds ADS by default, a choice between ADS and the original red reticle aiming mode, half-speed movement while aiming, and individual sight alignment for 20 supported firearms.
