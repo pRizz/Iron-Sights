@@ -54,6 +54,8 @@ and give a view along the top of the gun.
 Sniper ADS raises the rifle into a zoomed scope view with the gun and hands hidden
 and a centered red crosshair. Mouse movement turns the view while scoped;
 the existing zoom controls still adjust magnification.
+While ADS with the sniper rifle, **Mouse Wheel Up/Down** zooms in/out instead
+of switching weapons. Outside sniper ADS, the wheel uses its normal bindings.
 
 ## Building
 

@@ -10,12 +10,25 @@ s32 g_PlayerIsInTank;
 f32 g_GlobalTimerDelta;
 static s32 currentPlayer;
 static s32 controlsLive;
+static OSTime testTime = 1;
 
 s32 get_cur_playernum(void) { return currentPlayer; }
 s32 portBondControlsLive(void) { return controlsLive; }
 ITEM_IDS getCurrentPlayerWeaponId(GUNHAND hand) { return g_CurrentPlayer->hand_item[hand]; }
 s32 get_itemtype_in_hand(GUNHAND hand) { return g_CurrentPlayer->hand_item[hand]; }
-OSTime osGetTime(void) { return 1; }
+OSTime osGetTime(void) { return testTime; }
+s32 portAdsP1SniperActive(void)
+{
+    struct player *saved = g_CurrentPlayer;
+    s32 savedNum = currentPlayer;
+    s32 active;
+    currentPlayer = 0;
+    g_CurrentPlayer = &players[0];
+    active = portAdsActive() && getCurrentPlayerWeaponId(GUNRIGHT) == ITEM_SNIPERRIFLE;
+    currentPlayer = savedNum;
+    g_CurrentPlayer = saved;
+    return active;
+}
 void portInputRecActions(u8 *down, s32 count) { (void) down; (void) count; }
 void portConLogf(const char *fmt, ...) { (void) fmt; }
 s32 portProfileIniKey(const char *key, const char *value) { (void) key; (void) value; return 0; }
@@ -278,6 +291,65 @@ int main(void)
     assert(portAdsActive());
     selectPlayer(0);
     assert(!portAdsActive());
-    puts("ADS checks passed: movement, input, eligibility, blocked controls, per-player state, 30/60/120/240 Hz.");
+
+    /* Physical wheel routing is specific to player 1's live sniper ADS, and
+     * a burst is consumed once per tick without depending on the tick rate. */
+    g_CurrentPlayer->hand_item[GUNRIGHT] = ITEM_SNIPERRIFLE;
+    assert(!portAdsMouseWheel(1));
+    normalAim(1, 1, 0);
+    assert(portAdsMouseWheel(1));
+    assert(portAdsMouseWheel(1));
+    { const f32 zoom = portAdsWheelZoom(15.0f, 45.0f); assert(zoom > 11.34f && zoom < 11.35f); }
+    assert(portAdsWheelZoom(15.0f, 45.0f) == 15.0f);
+    for (i = 0; i < 4; i++) {
+        f32 zoom;
+        g_GlobalTimerDelta = 60.0f / rates[i];
+        assert(portAdsMouseWheel(2));
+        zoom = portAdsWheelZoom(15.0f, 45.0f);
+        assert(zoom > 11.34f && zoom < 11.35f);
+        assert(portAdsMouseWheel(-2));
+        zoom = portAdsWheelZoom(zoom, 45.0f);
+        assert(zoom > 14.999f && zoom < 15.001f);
+    }
+    assert(portAdsMouseWheel(1));
+    { const f32 zoom = portAdsWheelZoom(60.0f, 45.0f); assert(zoom > 39.13f && zoom < 39.14f); }
+    assert(portAdsMouseWheel(8));
+    assert(portAdsWheelZoom(8.0f, 45.0f) == 7.0f);
+    assert(portAdsMouseWheel(-8));
+    assert(portAdsWheelZoom(44.0f, 45.0f) == 45.0f);
+    for (i = 0; i < 40; i++) assert(portAdsMouseWheel(1));
+    { const f32 zoom = portAdsWheelZoom(45.0f, 45.0f); assert(zoom > 14.70f && zoom < 14.72f); }
+
+    selectPlayer(1);
+    assert(portAdsMouseWheel(1)); /* player 2 ticking must not redirect the mouse */
+    assert(portAdsWheelZoom(15.0f, 45.0f) == 15.0f);
+    currentPlayer = 0; g_CurrentPlayer = &players[0];
+    assert(portAdsWheelZoom(15.0f, 45.0f) < 15.0f);
+    assert(portAdsMouseWheel(1));
+    normalAim(0, 0, 0);
+    assert(!portAdsMouseWheel(1));
+    assert(portAdsWheelZoom(15.0f, 45.0f) == 15.0f);
+    normalAim(1, 1, 0);
+    assert(portAdsWheelZoom(15.0f, 45.0f) == 15.0f); /* no delayed step on re-entry */
+    g_CurrentPlayer->hand_item[GUNRIGHT] = ITEM_AK47;
+    assert(!portAdsMouseWheel(1));
+    g_CurrentPlayer->hand_item[GUNRIGHT] = ITEM_SNIPERRIFLE;
+    controlsLive = 0;
+    assert(!portAdsMouseWheel(1));
+    controlsLive = 1;
+    g_CurrentPlayer->hands[GUNRIGHT].weapon_action_state = GUN_ANIM_STATE_RELOAD_LOWER;
+    assert(!portAdsMouseWheel(1));
+    g_CurrentPlayer->hands[GUNRIGHT].weapon_action_state = GUN_ANIM_STATE_IDLE;
+    assert(portAdsMouseWheel(1));
+    testTime += 251ull * 46875ull;
+    assert(portAdsWheelZoom(15.0f, 45.0f) == 15.0f);
+    normalAim(0, 0, 0);
+    assert(portJoyPortOptionSet("aim_mode", 0));
+    normalAim(1, 1, 0);
+    assert(g_CurrentPlayer->insightaimmode && !portAdsMouseWheel(1));
+    pollAds(0, 1); /* the dedicated ADS button works in red-reticle mode too */
+    assert(portAdsMouseWheel(1));
+    assert(portAdsWheelZoom(15.0f, 45.0f) < 15.0f);
+    puts("ADS checks passed: movement, input, scope, wheel zoom, per-player state, 30/60/120/240 Hz.");
     return 0;
 }

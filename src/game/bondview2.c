@@ -6073,6 +6073,23 @@ s32 portP1ControlsLive(void)
     return portPlayerControlsLive(0);
 }
 
+/* Contextual mouse-wheel routing uses player 1's ADS state, even in split screen. */
+s32 portAdsP1SniperActive(void)
+{
+    extern s32 portStageRunning(void);
+    struct player *savedPlayer = g_CurrentPlayer;
+    struct player_data *savedPerm = g_playerPerm;
+    s32 savedNum = player_num;
+    s32 active;
+    if (!portStageRunning() || getPlayerCount() < 1 || g_playerPointers[0] == NULL) return FALSE;
+    set_cur_player(0);
+    active = portAdsActive() && getCurrentPlayerWeaponId(GUNRIGHT) == ITEM_SNIPERRIFLE;
+    g_CurrentPlayer = savedPlayer;
+    g_playerPerm = savedPerm;
+    player_num = savedNum;
+    return active;
+}
+
 /** The same for any player (input_pc.c: a port-mode pad's N64-only rows are
  * dropped while its player is in live play). Swapped and restored. */
 s32 portPlayerControlsLive(s32 p)
@@ -7252,6 +7269,7 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
 
 #ifndef TARGET_N64
     portAdsTick();
+    g_CurrentPlayer->sniper_zoom = portAdsWheelZoom(g_CurrentPlayer->sniper_zoom, GE_DEFAULT_FOV * 0.75f);
     if (portAdsActive())
     {
         /* ADS turns the view and leaves movement available, including when Aim is also held. */

@@ -9,6 +9,11 @@ s32 portAdsActive(void);
 f32 portAdsBlend(void);
 /* Sniper scope transition; zero for other weapons or unavailable controls. */
 f32 portAdsScopeBlend(void);
+/* Mouse input belongs to player 1, regardless of who ticked last. */
+s32 portAdsP1SniperActive(void);
+/* Returns true when the wheel was consumed by sniper ADS. */
+s32 portAdsMouseWheel(s32 notches);
+f32 portAdsWheelZoom(f32 fov, f32 maxFov);
 void portAdsTick(void);
 s32 portAdsUpdateAim(s32 held, s32 pressed, s32 toggle);
 struct MoveData;

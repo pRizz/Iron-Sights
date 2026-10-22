@@ -1815,6 +1815,7 @@ extern s32 portInputOptionGet(const char *key, s32 *out);
 extern s32 portJoyPortOptionGet(const char *key, s32 *out);
 extern s32 portJoyPortAlwaysWalk(void);
 extern void portJoyPortPoll(const u8 *down);
+extern s32 portAdsMouseWheel(s32 notches);
 extern s32 portConIsOpen(void); /* port_console.c - the tilde console */
 extern s32 portInputP1KbmMuted(void); /* input_pc.c - p1_hybrid off, a pad owns player 1 */
 
@@ -4002,22 +4003,25 @@ static void videoWheelDrain(void)
      * notches, so a notch is emitted only when the previous poll was up, giving
      * N edges over 2N polls instead of one held press. */
     { /* Diagnostics only: GE_AUTOWHEEL=n,poll queues n wheel-down notches on
-       * that poll, and GE_WHEELALT=0 drains one notch per poll. */
-        static long awn = -1, awpoll, awalt = 1;
+       * that poll (negative n = wheel up). GE_WHEELALT=0 drains one notch per poll. */
+        static long awn, awpoll, awalt = 1;
+        static int awparsed;
         static u32 awpolls;
-        if (awn < 0)
+        if (!awparsed)
         {
             const char *e = getenv("GE_AUTOWHEEL");
             const char *a = getenv("GE_WHEELALT");
             awn = 0;
+            awparsed = 1;
             if (e != NULL && sscanf(e, "%ld,%ld", &awn, &awpoll) != 2) awn = 0;
             if (a != NULL && a[0] == '0') awalt = 0;
         }
         awpolls++;
-        if (awn > 0 && awpolls == (u32) awpoll)
+        if (awn != 0 && awpolls == (u32) awpoll)
         {
             long i;
-            for (i = 0; i < awn; i++) videoMouseWheel(-1);
+            long count = awn > 0 ? awn : -awn;
+            for (i = 0; i < count; i++) videoMouseWheel(awn > 0 ? -1 : 1);
         }
         if (!awalt)
         {
@@ -4031,6 +4035,16 @@ static void videoWheelDrain(void)
     sWheelDownPrev = sWheelDownNow;
     if (sWheelUpNow) sWheelUpNotches--;
     if (sWheelDownNow) sWheelDownNotches--;
+}
+
+static void videoAdsWheelOverride(void)
+{
+    if ((sWheelUpNow || sWheelDownNow) && portAdsMouseWheel(sWheelUpNow - sWheelDownNow))
+    {
+        /* Consume physical wheel codes before ANY binding sees them. Other
+         * keys bound to weapon switching (or zoom) continue to work normally. */
+        sWheelUpNow = sWheelDownNow = 0;
+    }
 }
 
 void videoGetPad(OSContPad *pad)
@@ -4059,6 +4073,7 @@ void videoGetPad(OSContPad *pad)
             int n = portJoyPortBindCount();
             if (n > PORT_BIND_MAX) n = PORT_BIND_MAX;
             videoWheelDrain();
+            videoAdsWheelOverride();
             for (i = 0; i < n; i++)
             {
                 for (k = 0; k < BIND_MAX_KEYS; k++)
@@ -4242,6 +4257,7 @@ void videoGetPad(OSContPad *pad)
             sWheelUpNow = 0;
             sWheelDownNow = 0;
         }
+        videoAdsWheelOverride();
         if (sWheelUpNow) sWheelLatch++;       /* portMouseWheelSteps */
         if (sWheelDownNow) sWheelLatch--;
         { /* raw left button edge/level -> portMouseClick* */

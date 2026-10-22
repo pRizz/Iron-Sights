@@ -603,6 +603,9 @@ static s32 joyPortPermitted(void)
 
 static f32 sAdsBlend[PORT_PADS];
 static s32 sAdsNormalAim[PORT_PADS];
+/* Wheel steps survive polls between simulation ticks, unlike held zoom keys. */
+static s32 sAdsWheelNotches;
+static OSTime sAdsWheelTime;
 
 /* Sight height above the bore and eye distance, in view units. A small
  * muzzle-up pitch reveals the front sight above the rear of each gun;
@@ -792,6 +795,39 @@ f32 portAdsBlend(void)
 f32 portAdsScopeBlend(void)
 {
     return getCurrentPlayerWeaponId(GUNRIGHT) == ITEM_SNIPERRIFLE ? portAdsBlend() : 0.0f;
+}
+
+s32 portAdsMouseWheel(s32 notches)
+{
+    if (!portAdsP1SniperActive()) return FALSE;
+    sAdsWheelNotches += notches;
+    if (sAdsWheelNotches > PORT_LATCH_MAX_PENDING) sAdsWheelNotches = PORT_LATCH_MAX_PENDING;
+    if (sAdsWheelNotches < -PORT_LATCH_MAX_PENDING) sAdsWheelNotches = -PORT_LATCH_MAX_PENDING;
+    sAdsWheelTime = osGetTime();
+    return TRUE;
+}
+
+f32 portAdsWheelZoom(f32 fov, f32 maxFov)
+{
+    extern float powf(float, float);
+    s32 notches;
+    f32 zoom;
+    if (joyPortPad() != 0) return fov;
+    notches = sAdsWheelNotches;
+    sAdsWheelNotches = 0;
+    if (!notches || !portAdsActive() || getCurrentPlayerWeaponId(GUNRIGHT) != ITEM_SNIPERRIFLE
+        || osGetTime() - sAdsWheelTime > 250ull * 46875ull) return fov;
+
+    /* A fixed magnification step per notch at every tick rate. Start at the
+     * visible ADS limit so the first notch works even after zooming out fully. */
+    zoom = fov > maxFov ? maxFov : fov;
+    zoom *= powf(1.15f, (f32)-notches);
+    if (zoom < 7.0f) zoom = 7.0f;
+    if (zoom > maxFov) zoom = maxFov;
+    if (joyPortDbg()) {
+        portConLogf("ge: ads-wheel: notches=%d fov=%.3f -> %.3f\n", notches, fov, zoom);
+    }
+    return zoom;
 }
 
 void portAdsTick(void)
