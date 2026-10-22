@@ -672,6 +672,7 @@ f32 portAdsWeaponPitch(s32 item)
 }
 
 #ifdef GE_VIDEO
+static s32 sAdsAuditTransitions;
 /* GE_ADS_AUDIT=1 captures all guns; an item ID captures just that gun. */
 static void joyPortAdsAudit(void)
 {
@@ -687,6 +688,7 @@ static void joyPortAdsAudit(void)
     {
         const char *value = getenv("GE_ADS_AUDIT");
         enabled = value != NULL;
+        sAdsAuditTransitions = enabled && getenv("GE_ADS_AUDIT_TRANSITIONS") != NULL;
         if (value != NULL && atoi(value) >= ITEM_WPPK)
         {
             for (index = 0; index < end && sAdsPoses[index].item != atoi(value); index++) {}
@@ -700,7 +702,8 @@ static void joyPortAdsAudit(void)
         portConLogf("ge: ads-audit: complete (%d guns)\n", count);
         exit(0);
     }
-    sHeld[0][PORTACT_AIM_DOWN_SIGHTS] = 1;
+    /* Let the equipped gun settle, then capture a complete raise and lower. */
+    sHeld[0][PORTACT_AIM_DOWN_SIGHTS] = !sAdsAuditTransitions || (time >= 75.0f && time < 130.0f);
     if (!equipped)
     {
         bondinvSetAllGunsFlag(TRUE);
@@ -730,6 +733,26 @@ static void joyPortAdsAudit(void)
         index++;
         time = 0.0f;
         equipped = captured = FALSE;
+    }
+}
+
+static void joyPortAdsAuditTransitionFrame(void)
+{
+    static s32 lastItem = -1, lastPhase = -1;
+    s32 item, phase;
+    f32 blend;
+    if (!sAdsAuditTransitions || get_cur_playernum() != 0
+        || g_CurrentPlayer->hands[GUNRIGHT].weapon_action_state != GUN_ANIM_STATE_IDLE
+        || g_CurrentPlayer->hands[GUNRIGHT].weapon_current_animation != 0) return;
+    item = getCurrentPlayerWeaponId(GUNRIGHT);
+    blend = portAdsBlend();
+    phase = (blend == 0.0f ? 0 : blend == 1.0f ? 5 : (s32)(blend * 4.0f) + 1) * 2 + !!portAdsActive();
+    if (lastItem != item) { lastItem = item; lastPhase = -1; }
+    if (lastPhase != phase) {
+        extern int ge_shot_force;
+        portConLogf("ge: ads-audit: transition item=%d aiming=%d blend=%.4f\n", item, !!portAdsActive(), blend);
+        ge_shot_force = 1;
+        lastPhase = phase;
     }
 }
 #endif
@@ -850,6 +873,9 @@ void portAdsTick(void)
     sAdsBlend[pad] += portAdsActive() ? step : -step;
     if (sAdsBlend[pad] < 0.0f) sAdsBlend[pad] = 0.0f;
     if (sAdsBlend[pad] > 1.0f) sAdsBlend[pad] = 1.0f;
+#ifdef GE_VIDEO
+    joyPortAdsAuditTransitionFrame();
+#endif
 }
 
 /**

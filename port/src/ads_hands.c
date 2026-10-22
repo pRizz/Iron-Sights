@@ -199,19 +199,37 @@ Gfx *portAdsDrawHands(Gfx *gdl, s32 item, const Mtxf *gun)
         + g_CurrentPlayer->tileColor.b) * (0.45f/(255.0f*3.0f));
     gDPPipeSync(gdl++);
     gDPSetCycleType(gdl++, G_CYC_1CYCLE);
-    if (blend == 1.0f) {
-        gDPSetRenderMode(gdl++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
-    } else {
-        gDPSetRenderMode(gdl++, G_RM_AA_ZB_XLU_SURF, G_RM_AA_ZB_XLU_SURF2);
-    }
     gDPSetAlphaCompare(gdl++, G_AC_NONE);
     gDPSetCombineMode(gdl++, G_CC_SHADE, G_CC_SHADE);
     gSPClearGeometryMode(gdl++, G_CULL_BOTH | G_LIGHTING | G_TEXTURE_GEN | G_TEXTURE_GEN_LINEAR | G_FOG);
     gSPSetGeometryMode(gdl++, G_SHADE | G_SHADING_SMOOTH | G_ZBUFFER);
     gSPTexture(gdl++, 0, 0, 0, G_TX_RENDERTILE, G_OFF);
     gSPMatrix(gdl++, osVirtualToPhysical(matrix), G_MTX_MODELVIEW | G_MTX_LOAD | G_MTX_NOPUSH);
-    gdl = adsHandDrawGrip(gdl, gun,support, TRUE,blend,light);
-    gdl = adsHandDrawGrip(gdl, gun,trigger, FALSE,blend,light);
+    if (blend == 1.0f) {
+        gDPSetRenderMode(gdl++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
+        gdl = adsHandDrawGrip(gdl, gun,support, TRUE,blend,light);
+        gdl = adsHandDrawGrip(gdl, gun,trigger, FALSE,blend,light);
+    } else {
+        /* Two grips, each with eight sections of eight commands, plus END.
+         * Reuse identical vertices for depth and colour, avoiding fade-through
+         * between the fingers, palm, wrist and sleeve during the raise/lower. */
+        Gfx *mesh = dynAllocate((2 * 8 * 8 + 1) * sizeof(Gfx));
+        Gfx *end = adsHandDrawGrip(mesh, gun,support, TRUE,blend,light);
+        end = adsHandDrawGrip(end, gun,trigger, FALSE,blend,light);
+        gSPEndDisplayList(end);
+
+        /* The gun has already drawn. First write only the nearest hand depth,
+         * leaving its colour underneath the fading hands intact. INTER allows
+         * the colour pass to accept those exact same depths (LEQUAL on PC). */
+        gDPSetRenderMode(gdl++, G_RM_AA_ZB_XLU_INTER | Z_UPD, G_RM_AA_ZB_XLU_INTER2 | Z_UPD);
+        gDPSetCombineMode(gdl++, G_CC_PRIMITIVE, G_CC_PRIMITIVE);
+        gDPSetPrimColor(gdl++, 0, 0, 0, 0, 0, 0);
+        gSPDisplayList(gdl++, osVirtualToPhysical(mesh));
+        gDPPipeSync(gdl++);
+        gDPSetRenderMode(gdl++, G_RM_AA_ZB_XLU_INTER, G_RM_AA_ZB_XLU_INTER2);
+        gDPSetCombineMode(gdl++, G_CC_SHADE, G_CC_SHADE);
+        gSPDisplayList(gdl++, osVirtualToPhysical(mesh));
+    }
     gDPPipeSync(gdl++);
     return gdl;
 }

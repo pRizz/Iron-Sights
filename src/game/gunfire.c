@@ -1738,7 +1738,9 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
 #ifndef TARGET_N64
         if (adsHands) {
             renderdata.gdl = portAdsBeginHandLayer(renderdata.gdl);
-            renderdata.gdl = portAdsDrawHands(renderdata.gdl, item, &handptr->gunmtx_camspace);
+            if (portAdsBlend() == 1.0f) {
+                renderdata.gdl = portAdsDrawHands(renderdata.gdl, item, &handptr->gunmtx_camspace);
+            }
         }
 #endif
 
@@ -1774,6 +1776,11 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
 
 #ifndef TARGET_N64
         if (adsHands) {
+            /* Fading hands need the opaque gun underneath before their depth
+             * and colour passes; keep the established opaque ADS order. */
+            if (portAdsBlend() < 1.0f) {
+                gdl = portAdsDrawHands(gdl, item, &handptr->gunmtx_camspace);
+            }
             gSPClearGeometryMode(gdl++, G_ZBUFFER);
             gSPMatrix(gdl++, osVirtualToPhysical(currentPlayerGetProjectionMatrix()),
                 G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);
