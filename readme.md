@@ -47,6 +47,8 @@ existing **Aim Control** setting selects hold or toggle for either mode.
 **Mouse Middle** remains a separate hold-to-ADS binding, configurable in the
 controls menu, including for controllers.
 You can walk and strafe at half speed while aiming down sights.
+ADS adds basic low-poly hands and forearms to the 13 firearms that lack them,
+including the KF7 Soviet. Pistols retain their original hands.
 
 ## Building
 

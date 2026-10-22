@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include "../../port/src/joy_port.c"
+#include "../../port/src/ads_hands.c"
 
 static struct player players[4];
 struct player *g_CurrentPlayer;
@@ -55,6 +56,10 @@ int main(void)
     s32 mode;
     coord3d muzzle = { 0.0f, 23.273382f, 705.7365f };
     coord3d pose;
+    coord3d trigger, support;
+    Mtxf scene = { .m = { {1.5f,0,0,0}, {0,2,0,0}, {0,0,-1.2f,-1}, {0,0,-2.2f,0} } };
+    Mtxf handProjection;
+    f32 previousDepth = -1.0f;
     const s32 rates[] = { 30, 60, 120, 240 };
 
     controlsLive = 1;
@@ -63,6 +68,32 @@ int main(void)
     assert(PORTACT_CLASSIC_TOGGLE == 20);
     assert(strcmp(portJoyPortBindName(PORTACT_AIM_DOWN_SIGHTS), "aim_down_sights") == 0);
     assert(strcmp(portJoyPortBindDefault(PORTACT_AIM_DOWN_SIGHTS), "Mouse Middle") == 0);
+
+    adsHandProjection(&scene, &handProjection);
+    for (i = 0; i < 4; i++) {
+        assert(handProjection.m[i][0] == scene.m[i][0]);
+        assert(handProjection.m[i][1] == scene.m[i][1]);
+        assert(handProjection.m[i][3] == scene.m[i][3]);
+    }
+    for (i = 3; i <= 10; i++) {
+        const f32 z = -(f32)i;
+        const f32 clipZ = z*handProjection.m[2][2] + handProjection.m[3][2];
+        const f32 clipW = z*handProjection.m[2][3] + handProjection.m[3][3];
+        const f32 depth = (clipZ/clipW+1.0f)*0.5f;
+        assert(depth > previousDepth && depth > 0.0f && depth < 0.01f);
+        previousDepth = depth;
+    }
+
+    /* All thirteen firearms without original hands get grips; pistols and other items do not. */
+    for (i = ITEM_UNARMED; i <= ITEM_CAMERA; i++)
+    {
+        const s32 hands = (i >= ITEM_SKORPION && i <= ITEM_SNIPERRIFLE)
+            || i == ITEM_LASER || i == ITEM_GRENADELAUNCH;
+        assert(!!portAdsHandGrips(i, &trigger, &support) == hands);
+        if (hands) {
+            assert(support.z > trigger.z && trigger.x < 0.0f && support.x > 0.0f);
+        }
+    }
 
     assert(portAdsWeaponPose(ITEM_AK47, &muzzle, &pose));
     assert(pose.y < -8.0f && pose.y > -8.1f && pose.z == -42.0f);

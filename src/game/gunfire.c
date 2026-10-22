@@ -1673,6 +1673,11 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
     {
         struct hand *handptr = &g_CurrentPlayer->hands[handnum];
         s32 item = get_item_in_hand_or_watch_menu(handnum);
+#ifndef TARGET_N64
+        coord3d trigger, support;
+        s32 adsHands = handnum == GUNRIGHT && portAdsBlend() > 0.0f
+            && portAdsHandGrips(item, &trigger, &support);
+#endif
 
         if (handptr->field_87F == 0)
         {
@@ -1721,8 +1726,18 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
                                   | ((u32)g_CurrentPlayer->tileColor.g << 16)
                                   | ((u32)g_CurrentPlayer->tileColor.b << 8);
         renderdata.zbufferenabled = 0;
+#ifndef TARGET_N64
+        renderdata.zbufferenabled = adsHands;
+#endif
 
         matrix_4x4_7F058C64();
+
+#ifndef TARGET_N64
+        if (adsHands) {
+            renderdata.gdl = portAdsBeginHandLayer(renderdata.gdl);
+            renderdata.gdl = portAdsDrawHands(renderdata.gdl, item, &handptr->gunmtx_camspace);
+        }
+#endif
 
         if (item == ITEM_ROCKETLAUNCH && handptr->rocket != NULL)
         {
@@ -1753,6 +1768,14 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
 
         subdraw(&renderdata, (Model *)&handptr->field_B68);
         gdl = renderdata.gdl;
+
+#ifndef TARGET_N64
+        if (adsHands) {
+            gSPClearGeometryMode(gdl++, G_ZBUFFER);
+            gSPMatrix(gdl++, osVirtualToPhysical(currentPlayerGetProjectionMatrix()),
+                G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);
+        }
+#endif
 
         if (bondwalkItemCheckBitflags(item, WEAPONSTATBITFLAG_MIRROR_DUAL) != 0)
         {
