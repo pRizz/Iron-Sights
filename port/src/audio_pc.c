@@ -58,6 +58,12 @@ static SDL_AudioDeviceID s_AudioDev;
 static s32 s_AudioDead; /* init failed - stay silent, don't retry every frame */
 static s32 s_ForceOneFrame; /* portAudioPumpForce: bypass the queue-low gate */
 
+void portAudioStateReset(void)
+{
+    if (s_AudioDev) SDL_ClearQueuedAudio(s_AudioDev);
+    s_ForceOneFrame = 0;
+}
+
 /* ---- aspMain interpreter ------------------------------------------------ */
 
 #define DMEM_SIZE 0x1000

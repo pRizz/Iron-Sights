@@ -1,16 +1,27 @@
 # Project Midas ADS
 
+Project Midas ADS is an independent fork of [Project Midas](https://github.com/murkantor/Project-Midas), adding modern aiming, movement, and HUD options to the GE PC port. This fork is maintained separately from upstream.
+
+**[See the full list of changes from upstream →](FORK_CHANGES.md)** — the maintained inventory of this fork's additions, modifications, settings, and fixes.
+
 ## Watch the latest gameplay demo
 
 [![Watch Project Midas ADS update: new hands, improved sights, and sniper scope zoom at 60 FPS](.github/images/ads-gameplay-thumbnail.png)](https://youtu.be/dI-G7Lo12hA)
 
 **[Watch on YouTube: ADS Update — Hands, Better Sights & Sniper Scope Zoom (60 FPS)](https://youtu.be/dI-G7Lo12hA)**
 
-Project Midas ADS is an independent fork of [Project Midas](https://github.com/murkantor/Project-Midas), focused on adding aim-down-sights (ADS) controls to the GE PC port. This fork is maintained separately from the upstream Project Midas project.
+## What's different in this fork?
 
-It adds ADS by default, a choice between ADS and the original red reticle aiming mode, half-speed movement while aiming, and individual sight alignment for 20 supported firearms.
+- **Aim down sights (ADS):** right-click ADS by default, individual sight alignment for 20 supported firearms, and half-speed movement while aiming. Added hands and forearms support guns that originally lacked them. The original red reticle mode remains selectable.
+- **Sniper scope and wheel zoom:** aim through a centered scope, turn the whole view with the mouse, and adjust magnification with the mouse wheel.
+- **Shift to sprint:** hold Left Shift to sprint; a gameplay setting can restore the original slow-walk behavior.
+- **Sharper sights and combat feedback:** smooth reticles, optional hit markers, and directional damage indicators.
+- **Objective notifications:** named alerts show when mission objectives are completed or failed.
+- **Weapon inventory HUD:** a compact strip highlights your selected weapon, supports text or rendered model icons, and fades while idle.
+- **Always-visible health and armor:** persistent gauges become thinner and dimmer between hits; the original temporary display is also available.
+- **Suspend points:** four manual slots, quicksave/quickload, and undo-load for solo missions.
 
-See the [fork change inventory](FORK_CHANGES.md) for the maintained list of additions and modifications relative to the upstream version we forked from. Every repository change must update that inventory; see [AGENTS.md](AGENTS.md).
+See [Playing](#playing) below for controls and settings.
 
 The underlying port is a work in progress built from the N64 decompilation. It runs on Windows and Linux and reads its game data from your own copy of the US cart.
 
@@ -30,6 +41,7 @@ Files next to the executable:
 | `midas.ini` | Settings. Written on first run; delete it to restore the defaults. See `midas_ini_help.txt`. |
 | `Data/` | Your cart image goes here. |
 | `Data/Saves/eeprom.bin` | Save file. |
+| `Data/SaveStates/` | Solo suspend points, quicksave, and undo-load, separated by campaign folder. |
 | `Data/Profiles/` | Player profiles (`.geprofile`) and lifetime multiplayer stats (`.gestats`). |
 | `Data/WeaponSets/` | Custom multiplayer weapon sets (`.gewset`). |
 | `Data/MatchSettings/` | Saved multiplayer settings (`.gemp`), from Load / Save Settings. |
@@ -75,11 +87,35 @@ Aiming and crouching prevent the sprint boost; ADS keeps its half-speed movement
 - **Objective Alerts:** queued notifications show the objective name and its updated status. Turn this off for the original messages.
 - **Weapon Strip:** a compact list near the bottom, above the ammo counters, highlights your equipped weapon. Cards, icons and text are scaled down by 30%. Larger inventories scroll with selection; `+N` shows how many weapons are outside the visible strip. After three seconds without switching weapons, the strip smoothly fades to 20% opacity; switching weapons brings it back.
 
-**Weapon Strip Style** switches between **Text** (the default) and **Icons**. Icon mode shows full-colour, static renders of the actual weapon models, including silenced guns, rifles, launchers, and explosives; the selected weapon stays highlighted. Set `[display] weapon_hud_icons=1` in `midas.ini` to select icons directly. The images are generated ahead of time and embedded in the executable. See [the icon generation guide](scripts/port/weapon_icons.md) to regenerate them from your ROM. Builds without generated images use weapon names until the icons are generated and the game rebuilt.
+**Weapon Strip Style** switches between **Text** (the default) and **Icons**. Icon mode shows full-colour, static renders of the actual weapon models, including silenced guns, rifles, launchers, and explosives; the selected weapon stays highlighted. Its name appears underneath the selected icon, then fades out completely after three seconds without switching weapons (over a one-second transition). Set `[display] weapon_hud_icons=1` in `midas.ini` to select icons directly. The images are generated ahead of time and embedded in the executable. See [the icon generation guide](scripts/port/weapon_icons.md) to regenerate them from your ROM. Builds without generated images use weapon names until the icons are generated and the game rebuilt.
 
 **Health Display** defaults to **Always**, keeping slimmer health and armor arcs visible during gameplay. Damage or a health/armor change restores full opacity at 75% of the original thickness; after three quiet seconds, they smoothly fade to 25% opacity and 20% thickness. Select **Automatic** for the original temporary gauges, or set `[display] always_health=0` in `midas.ini`.
 
 These displays hide during menus, cutscenes, and death. Each setting can be changed independently.
+
+### Suspend points
+
+Press **F6** or open **Watch > Gameplay > Suspend Points** for four manual slots,
+a separate quicksave, and undo-load. Use arrows to choose a slot and Save/Load,
+then Enter to accept. Saving over an occupied manual slot asks for a second
+confirmation. Escape closes the menu. A controller can use its Move stick or
+D-pad, Use/Menu Accept, and Menu Back; the actions can be rebound in Controls.
+
+- **F5:** quicksave, replacing the previous quicksave.
+- **F9:** quickload.
+- **F8:** undo the last load and return to the mission state immediately before it.
+
+Loads return directly to gameplay. A small toast identifies the loaded slot
+and mission; saves and quicksaves show matching confirmations. Notifications
+last three seconds, fading over the last half-second. You can load after dying
+or from the title screen using the same campaign folder. Saving is
+limited to solo gameplay while Bond is alive, or the fully opened watch menu.
+Campaign progress and settings are not rolled back.
+
+**First-version compatibility:** keep the same executable and ROM. A rebuild or
+different executable makes existing suspend points incompatible; the game
+refuses those files. These are local game-state images, separate from ordinary
+campaign saves. See [save-state details and validation](scripts/port/save_states.md).
 
 ## Building
 
@@ -152,6 +188,8 @@ sudo apt install libsdl2-2.0-0:i386 libgl1:i386
   ```
 
 ## Contributing
+
+Every repository change must update the [fork change inventory](FORK_CHANGES.md); see [AGENTS.md](AGENTS.md).
 
 For ADS changes and bug reports, use [this fork's issues](https://github.com/pRizz/Project-Midas/issues) and pull requests. The inherited [CONTRIBUTING.md](CONTRIBUTING.md) describes upstream contribution guidelines, including the rules for AI-assisted changes. General port development is coordinated in [upstream Project Midas](https://github.com/murkantor/Project-Midas).
 

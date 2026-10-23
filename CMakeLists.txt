@@ -405,6 +405,16 @@ add_executable(ge ${GAME_SRC} ${ENGINE_SRC} ${GU_SRC} ${PORT_SRC}
 # The executable is named ProjectMidas, but the CMake target stays `ge` so build
 # scripts keep working, and ge_direct.log/Profiles keep their names.
 set_target_properties(ge PROPERTIES OUTPUT_NAME ProjectMidas)
+# The suspend-point serializer records only registered game-owned sections;
+# the linker map supplies their exact bounds for this particular executable.
+target_link_options(ge PRIVATE "-Wl,-Map=${CMAKE_BINARY_DIR}/ProjectMidas.map")
+find_program(STATE_PYTHON NAMES python3 REQUIRED)
+set_property(TARGET ge APPEND PROPERTY LINK_DEPENDS ${CMAKE_SOURCE_DIR}/scripts/port/embed_state_layout.py)
+add_custom_command(TARGET ge POST_BUILD
+    COMMAND ${STATE_PYTHON} ${CMAKE_SOURCE_DIR}/scripts/port/embed_state_layout.py
+        --exe $<TARGET_FILE:ge> --map ${CMAKE_BINARY_DIR}/ProjectMidas.map
+        --root ${CMAKE_SOURCE_DIR} --nm ${CMAKE_NM}
+    VERBATIM)
 # The exe's own icon (Explorer, a pinned taskbar entry): port/win/ProjectMidas.ico,
 # generated with the window icon by scripts/port/make_icon.py.
 if(WIN32)

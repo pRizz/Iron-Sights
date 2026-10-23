@@ -71,6 +71,8 @@
 #include "game/lv.h"
 #include "port_ads.h"
 #include "port_hud.h"
+#include "joy.h"
+#include <os_extension.h>
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console ring (spec section 7). */
@@ -115,6 +117,10 @@ enum {
      * bondview2.c acts on it in play. */
     PORTACT_CLASSIC_TOGGLE,
     PORTACT_AIM_DOWN_SIGHTS,
+    PORTACT_STATE_MENU,
+    PORTACT_QUICKSAVE,
+    PORTACT_QUICKLOAD,
+    PORTACT_UNDO_LOAD,
     PORTACT_COUNT
 };
 
@@ -162,6 +168,10 @@ static const struct {
     [PORTACT_MOUSE_UNLOCK]     = { "mouse_unlock",     "F1",       1 },
     [PORTACT_CLASSIC_TOGGLE]   = { "classic_toggle",   "Tab",      1 },
     [PORTACT_AIM_DOWN_SIGHTS]  = { "aim_down_sights",  "Mouse Middle", 0 },
+    [PORTACT_STATE_MENU]      = { "suspend_points", "F6", 1 },
+    [PORTACT_QUICKSAVE]       = { "quicksave", "F5", 1 },
+    [PORTACT_QUICKLOAD]       = { "quickload", "F9", 1 },
+    [PORTACT_UNDO_LOAD]       = { "undo_load", "F8", 1 },
 };
 
 /* [input] detonate_use_reload (default ON): with remote mines in the right
@@ -599,6 +609,36 @@ static void joyPortDrop(s32 pad, s32 act)
 }
 
 /* ---- game side ------------------------------------------------------------ */
+void portStateInput(void)
+{
+    static s32 stickHeld;
+    extern void portStateRequest(s32 slot, s32 load);
+    extern void portStateMenuOpen(void);
+    extern s32 portStatePaused(void);
+    extern s32 portStateMenuInput(s32 key);
+    s32 nav = 0, axis = 0, x, y, accept, back;
+    u16 pressed;
+    if (portJoyPortTake(0, PORTACT_STATE_MENU)) portStateMenuOpen();
+    if (portJoyPortTake(0, PORTACT_QUICKSAVE)) portStateRequest(4, 0);
+    if (portJoyPortTake(0, PORTACT_QUICKLOAD)) portStateRequest(4, 1);
+    if (portJoyPortTake(0, PORTACT_UNDO_LOAD)) portStateRequest(5, 1);
+    if (!portStatePaused()) { stickHeld=0; return; }
+    pressed=joyGetButtonsPressedThisFrame(0,ANY_BUTTON);
+    x=joyGetStickX(0); y=joyGetStickY(0);
+    if (x > 40) axis=4; else if (x < -40) axis=3;
+    else if (y > 40) axis=1; else if (y < -40) axis=2;
+    if (pressed&U_JPAD) nav=1;
+    else if (pressed&D_JPAD) nav=2;
+    else if (pressed&L_JPAD) nav=3;
+    else if (pressed&R_JPAD) nav=4;
+    else if (axis && !stickHeld) nav=axis;
+    stickHeld=axis!=0;
+    if (nav) portStateMenuInput(nav);
+    accept=portJoyPortTake(0,PORTACT_USE)|portJoyPortTake(0,PORTACT_MENU_ACCEPT);
+    back=portJoyPortTake(0,PORTACT_MENU_BACK)|portJoyPortTake(0,PORTACT_PREV_INV)|portJoyPortTake(0,PORTACT_NEXT_INV);
+    if (accept || (pressed&A_BUTTON)) portStateMenuInput(5);
+    else if (back || (pressed&(B_BUTTON|START_BUTTON))) portStateMenuInput(6);
+}
 
 extern s32 portBondControlsLive(void);  /* bondview2.c: the mouse-look permission predicate */
 extern int bondinvGetCurEquippedItem(void);
@@ -622,6 +662,17 @@ static s32 sAdsNormalAim[PORT_PADS];
 /* Wheel steps survive polls between simulation ticks, unlike held zoom keys. */
 static s32 sAdsWheelNotches;
 static OSTime sAdsWheelTime;
+
+void portStateResetInput(void)
+{
+    memset(sPending, 0, sizeof(sPending));
+    memset(sHeld, 0, sizeof(sHeld));
+    memset(sLatchPoll, 0, sizeof(sLatchPoll));
+    memset(sLatchN, 0, sizeof(sLatchN));
+    memset(sAdsBlend, 0, sizeof(sAdsBlend));
+    memset(sAdsNormalAim, 0, sizeof(sAdsNormalAim));
+    sAdsWheelNotches = 0;
+}
 
 /* Sight height above the bore and eye distance, in view units. A small
  * muzzle-up pitch reveals the front sight above the rear of each gun;

@@ -233,6 +233,13 @@ s32 portHudWeaponStripShown(void)
         && !g_CurrentPlayer->mpmenuon && !g_CurrentPlayer->hudmessoff;
 }
 
+s32 portHudWeaponStripTopInset(void)
+{
+    /* Reserve a small caption row above the original ammo counters. Keep the
+     * icon row stable when the caption fades or a gadget is equipped. */
+    return PORT_HUD_WEAPON_BOTTOM + (phOptions[4] && PORT_WEAPON_IMAGES_AVAILABLE ? 7 : 0);
+}
+
 s32 portHudAlwaysHealthShown(void)
 {
     return phOptions[5] && portBondControlsLive() && g_CurrentPlayer
@@ -261,6 +268,13 @@ void portHudStyleGauge(struct damage_display_val *vertices, s32 count)
 }
 
 typedef struct { s32 item, inventory; } HudWeapon;
+static const char *phWeaponName(const HudWeapon *weapon)
+{
+    const char *name = (const char *)bondinvGetNameByIndex(weapon->inventory);
+    if (!name || !name[0]) name = (const char *)get_ptr_short_watch_text_for_item(weapon->item);
+    return name && name[0] ? name : "Unarmed";
+}
+
 static s32 phWeaponIcon(s32 item)
 {
     return item >= 0 && item < 32 && portWeaponImages[item].size ? item : -1;
@@ -336,16 +350,23 @@ static Gfx *phRect(Gfx *g, f32 x, f32 y, f32 w, f32 h, u32 rgba)
     return g + 1;
 }
 
-static Gfx *phText(Gfx *g, const char *text, s32 x, s32 y, f32 scale, u32 color, s32 maxWidth)
+static Gfx *phTextAligned(Gfx *g, const char *text, s32 x, s32 y, f32 scale, u32 color, s32 maxWidth, s32 centered)
 {
     char line[196];
     s32 h, w;
+    if (!ptrFontBankGothicChars || !ptrFontBankGothic || maxWidth <= 0) return g;
     phCopyLine(line, sizeof(line)-2, text);
     portTextScale(scale);
     for (;;) {
         textMeasure(&h, &w, line, ptrFontBankGothicChars, ptrFontBankGothic, 0);
         if (w <= maxWidth || !line[0]) break;
         line[strlen(line)-1] = '\0';
+    }
+    if (centered) {
+        const s32 left = viGetViewLeft()+4, right = viGetViewLeft()+viGetViewWidth()-4;
+        x -= w/2;
+        if (x+w > right) x = right-w;
+        if (x < left) x = left;
     }
     strcat(line, "\n");
     if (dynGetFreeGfx2(g) < 540 + (s32)strlen(line)*12) { portTextScale(1); return g; }
@@ -357,6 +378,11 @@ static Gfx *phText(Gfx *g, const char *text, s32 x, s32 y, f32 scale, u32 color,
     return g;
 }
 
+static Gfx *phText(Gfx *g, const char *text, s32 x, s32 y, f32 scale, u32 color, s32 maxWidth)
+{
+    return phTextAligned(g, text, x, y, scale, color, maxWidth, FALSE);
+}
+
 static Gfx *phDrawStrip(Gfx *g)
 {
     HudWeapon weapons[HUD_WEAPONS];
@@ -364,8 +390,9 @@ static Gfx *phDrawStrip(Gfx *g)
     const f32 scale = 0.7f, pitch = 54 * scale;
     s32 width = viGetViewWidth(), slots = (s32)((width - 36 * scale) / pitch);
     s32 i, start;
-    f32 x, y = viGetViewTop() + viGetViewHeight() - PORT_HUD_WEAPON_BOTTOM;
+    f32 x, y = viGetViewTop() + viGetViewHeight() - portHudWeaponStripTopInset();
     const f32 opacity = phQuietScale(phState[get_cur_playernum()].weaponIdle, 0.2f);
+    const f32 captionOpacity = phQuietScale(phState[get_cur_playernum()].weaponIdle, 0.0f);
     char label[64];
     if (!n || slots < 1) return g;
     if (slots > 5) slots = 5;
@@ -381,9 +408,7 @@ static Gfx *phDrawStrip(Gfx *g)
             /* Native 512x160 RGBA model render, with its original colours. */
             g = phVector(g, 4, x+i*pitch+2*scale, y+scale, 48*scale, 14*scale, icon, 0, phOpacity(0xffffffff, opacity));
         } else {
-            const char *name = (const char *)bondinvGetNameByIndex(weapons[start+i].inventory);
-            if (!name || !name[0]) name = (const char *)get_ptr_short_watch_text_for_item(weapons[start+i].item);
-            g = phText(g, name ? name : "Unarmed", (s32)(x + i*pitch + 3*scale + 0.5f), (s32)(y+4*scale+0.5f), 0.65f*scale,
+            g = phText(g, phWeaponName(&weapons[start+i]), (s32)(x + i*pitch + 3*scale + 0.5f), (s32)(y+4*scale+0.5f), 0.65f*scale,
                 phOpacity(active ? 0xf2ffdcff : 0xc3ccd4ff, opacity), (s32)(46*scale));
         }
     }
@@ -395,7 +420,27 @@ static Gfx *phDrawStrip(Gfx *g)
         snprintf(label, sizeof(label), "+%d", n-start-slots);
         g = phText(g, label, (s32)(x+slots*pitch+2*scale+0.5f), (s32)(y+5*scale+0.5f), 0.6f*scale, phOpacity(0xc3ccd4ff, opacity), (s32)(18*scale));
     }
+    if (phOptions[4] && selected >= 0 && phWeaponIcon(weapons[selected].item) >= 0 && captionOpacity > 0) {
+        const s32 center = (s32)(x+(selected-start)*pitch+26*scale+0.5f);
+        const s32 top = (s32)(y+17*scale+1.5f);
+        const s32 maxWidth = width < 108 ? width-12 : 96;
+        const char *name = phWeaponName(&weapons[selected]);
+        g = phTextAligned(g, name, center+1, top+1, 0.5f,
+            phOpacity(0x000000dd, captionOpacity), maxWidth, TRUE);
+        g = phTextAligned(g, name, center, top, 0.5f,
+            phOpacity(0xf2ffdcff, captionOpacity), maxWidth, TRUE);
+    }
     return g;
+}
+
+Gfx *portHudPanel(Gfx *g, f32 x, f32 y, f32 w, f32 h, u32 color)
+{
+    return phRect(g, x, y, w, h, color);
+}
+
+Gfx *portHudLabel(Gfx *g, const char *text, s32 x, s32 y, f32 scale, u32 color, s32 maxWidth)
+{
+    return phText(g, text, x, y, scale, color, maxWidth);
 }
 
 Gfx *portHudDraw(Gfx *g)

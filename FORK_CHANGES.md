@@ -34,8 +34,21 @@ bytecode cache. Added an ignored `quarantine/` location for pre-existing binarie
 moved out of tools. The repository continues to exclude local executables,
 build output and ROM-derived assets from version control.
 
-**Sources:** [.gitignore](.gitignore). **History:** `29a9e6e`.
-**Verification:** Git tracked-file changes in that commit.
+Local rebuilds replace executables without retaining old-build backups. The
+user accepts losing compatibility with old suspend points. Obsolete game
+executables and suspend images matched to those builds may be purged without
+archiving or another confirmation. Keep the current main executable and its
+states, unknown images, normal campaign saves, profiles and settings. The state
+audit removes its temporary executable on exit and retains diagnostic logs
+and captures. This supersedes briefly retaining the pre-toast executable for
+older states.
+
+**Sources:** [.gitignore](.gitignore), [artifact rules](AGENTS.md),
+[state audit](scripts/port/audit_states.ps1),
+[state storage guide](scripts/port/save_states.md). **History:** `29a9e6e`.
+**Verification:** Git tracked-file changes in that commit. Local cleanup uses
+executable/state build fingerprints and workspace-confined file paths; the
+audit cleanup is checked with the isolated runtime audit.
 
 ### FORK-002 — Fork identity and gameplay documentation
 
@@ -45,6 +58,11 @@ Named this independent fork **Project Midas ADS**, retained its upstream link,
 and documented the added controls, settings and gameplay behavior. Put the
 latest gameplay video near the top of the README with a screenshot thumbnail
 and YouTube play badge; the newer video supersedes the original demo link.
+The README introduces the fork before the demo, prominently links this full
+inventory near the top, and summarizes ADS, sniper zoom, sprint, smoother
+sights/combat feedback, objective alerts, the weapon strip, adaptive
+health/armor and solo suspend points. Contributor inventory-maintenance instructions sit under
+Contributing, alongside the existing contribution links.
 
 **Sources:** [readme.md](readme.md),
 [gameplay thumbnail](.github/images/ads-gameplay-thumbnail.png),
@@ -219,6 +237,16 @@ separate silenced/gold/silver appearances. Unarmed uses the hand model.
 These images replace the initial hand-drawn vector silhouettes. Cached textures
 and a subtle edge keep the icons readable without extra model rendering in
 normal gameplay; the selection highlight and strip scrolling remain intact.
+The selected icon also shows its weapon name centered underneath, with a
+shadow for contrast and viewport-edge clamping. The caption stays opaque for
+three seconds after selection, then fades to zero over one second; the icon
+strip retains its separate 20% idle opacity. Icon mode reserves a small label
+row above the ammo counters, including after the name disappears, and pickup
+messages account for that row. Text fallback builds keep the text-only layout.
+HUD timing tests cover complete caption disappearance and restoration on
+weapon changes at 30/60/120/240 Hz. Solo wide/4:3 and four-player captures
+checked placement, idle disappearance and selection refresh; Windows/Linux
+builds and ADS/settings regression tests passed.
 
 The generation script runs an isolated exporter with fixed camera, part poses
 and metallic reflection vectors. Repeated black/white captures must match
@@ -248,7 +276,9 @@ every addition, modification, removal or replacement. Backfilled the existing
 fork work from Git history and the current implementation. Linked the inventory
 from the README and contributor guide, and added a PR checklist item. Future
 documentation and repository-rule changes update this entry or add a distinct
-entry when appropriate.
+entry when appropriate. AGENTS.md also records the user's standing permission
+to replace executables and purge obsolete builds and their matched suspend
+images, with normal campaign/profile/settings data excluded (FORK-001).
 
 **Sources:** [AGENTS.md](AGENTS.md), [FORK_CHANGES.md](FORK_CHANGES.md),
 [CONTRIBUTING.md](CONTRIBUTING.md), [readme.md](readme.md),
@@ -285,3 +315,66 @@ cover menu availability and setting persistence. The HUD audit supports
 Windows and Linux builds passed. Visual captures checked the HUD settings page,
 full/quiet gauges in solo and split-screen, and Automatic mode without
 persistent gauges.
+
+### FORK-014 — Solo suspend points and restore/undo controls
+
+**Status:** Implemented.
+
+Added four manual slots per campaign folder, a separate quicksave and one
+undo-load image. F6 opens Suspend Points, F5 quicksaves, F9 quickloads and F8
+undoes a load; all actions are rebindable for keyboard/controllers. The watch
+Gameplay page also opens the menu. Rows show mission, difficulty, save date/time
+and elapsed mission time. Manual overwrite requires confirmation. Loads first
+preserve the running mission as an undo point, then resume gameplay immediately.
+Compact three-second toasts identify saved/loaded manual slots, quicksave or
+undo-load and their mission, fading over the last half-second. A new action
+replaces the previous toast; the automatic pre-load undo capture is silent.
+This replaces the initial full-screen restored-state confirmation/pause.
+The fully opened watch can be saved; resuming a saved watch closes it through
+the existing animation. Saving is solo-only, alive, outside cutscenes/demo
+playback. Loading after death or from the title screen is supported. Campaign
+saves, profiles and settings are not rolled back.
+
+This is an exact-executable/ROM native memory-image format, with a generated
+registry of owned engine sections, fixed game/asset arenas and converted live
+ROM data, including its background conversion registry so later stage changes
+remain coherent. Native host state, renderer objects, stacks, diagnostic heap
+pointers, settings and campaign data are excluded. Link-map registration is embedded in
+Windows/Linux executables at build time. ROM directory storage is stable across
+processes, the original ROM fingerprint is retained before conversion, and the
+Linux main arena requests the same fixed address as Windows. Loads validate all
+headers, descriptors, sizes, build/ROM fingerprints and payload CRCs before
+applying. Writes sync a temporary file, preserve a backup and atomically replace
+the prior slot. Rendering is synchronized before replacing the world; graphics
+caches, queued PCM and input/HUD presentation reset afterwards.
+Menu keys are held out of ordinary gameplay bindings until released; closing
+the slot menu waits for a fresh input sample, preventing Enter/confirm from also pausing or
+switching weapons. No rewind, automatic checkpoint, thumbnails or cross-build
+migration in this version.
+Local images are ignored by Git.
+
+**Sources:** [save engine/menu](port/src/port_state.c),
+[API](port/include/port_state.h), [registry generator](scripts/port/embed_state_layout.py),
+[CMake](CMakeLists.txt), [frame integration](src/boss.c),
+[arena handling](port/src/pcsched.c), [ROM loader](port/src/romdata.c),
+[input actions](port/src/joy_port.c), [native input](port/src/input_pc.c),
+[watch pages](port/src/port_watchpages.c), [render barrier](port/src/video.c),
+[native audio](port/src/audio_pc.c), shared HUD panel/text helpers and aim gates,
+[README](readme.md), [INI reference](tools/midas_ini_help.txt),
+[format/validation guide](scripts/port/save_states.md), [.gitignore](.gitignore).
+**Checks:** ROM-free [codec/compatibility and input tests](scripts/port/test_states.sh),
+[layout tests](scripts/port/test_state_layout.py), and existing ADS/HUD tests
+passed. Windows and Linux builds passed; the main Windows executable was
+rebuilt. The isolated [runtime audit](scripts/port/audit_states.ps1) passed with
+synchronous and threaded rendering: four manual slot restores, quickload,
+undo-load, death recovery, watch-menu saves, fresh-process Dam/Facility and
+title-screen restores, movement after restore, returning to a previously loaded
+stage and restoring again, and damaged-file rejection without world changes.
+Probes compare player/character records, mission time, equipped weapon and RNG
+seeds at restore. Captures checked the slot menu and resumed gameplay. The toast
+revision adds unit coverage for immediate resumption, labels, replacement and
+real-time fade duration, and updates the runtime audit to resume without any
+confirmation input and capture save/load notifications. Revision unit tests,
+ADS/HUD tests, both builds and full Windows audits with synchronous/threaded rendering
+passed; captures checked manual-save, quicksave and loaded-slot toasts with
+gameplay visible. Linux was compile-checked; gameplay audits ran on Windows.

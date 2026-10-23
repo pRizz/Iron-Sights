@@ -40,6 +40,8 @@ s32 romdataLoaded(void);
 
 /* the whole normalised (z64 byte order) ROM; NULL when not loaded */
 const u8 *romdataRom(u32 *size);
+/* Fingerprint before any in-memory host conversion of ROM-backed data. */
+u32 romdataFingerprint(void);
 
 /* the file directory: count includes index 0 (NULL sentinel) and the
  * ob/ob_end.seg bound entry, like file_entry_max */

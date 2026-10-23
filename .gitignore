@@ -279,3 +279,9 @@ docs/devnotes/
 
 # the docs live in the private repo
 /docs/
+
+# Local suspend images contain live game data; never distribute or commit.
+*.mstate
+*.mstate.tmp
+*.mstate.bak
+**/Data/SaveStates/

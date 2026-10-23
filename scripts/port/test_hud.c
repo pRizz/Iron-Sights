@@ -123,12 +123,15 @@ int main(void)
         portHudTick(); /* seed the initial state */
         for (j = 0; j < rates[i]*3; j++) portHudTick();
         assert(phQuietScale(phState[0].weaponIdle, 0.2f) == 1);
+        assert(phQuietScale(phState[0].weaponIdle, 0) == 1); /* selected caption */
         assert(phQuietScale(phState[0].healthIdle, 0.25f) == 1);
         for (j = 0; j < rates[i]; j++) portHudTick();
         assert(phState[0].weaponIdle == 240 && phState[0].healthIdle == 240);
+        assert(phQuietScale(phState[0].weaponIdle, 0) == 0);
         assert(phQuietScale(210, 0.2f) > 0.59f && phQuietScale(210, 0.2f) < 0.61f);
         currentWeapon = ITEM_WPPK; portHudTick();
         assert(phState[0].weaponIdle == 0 && phState[0].healthIdle == 240);
+        assert(phQuietScale(phState[0].weaponIdle, 0) == 1);
         testPlayer.bondarmour = 0.75f; portHudTick();
         assert(phState[0].healthIdle == 0 && phState[0].weaponIdle > 0);
         phState[0].weaponIdle = phState[0].healthIdle = 210;

@@ -4958,6 +4958,7 @@ static SDL_cond *s_RtCondSlot;   /* slot emptied - submitter may refill */
 static SDL_cond *s_RtCondDone;   /* a frame finished (swap returned) - wakes the pump's vsync lock */
 static struct PortRtTask s_RtTask;
 static s32 s_RtTaskPending;
+static s32 s_RtExecuting;
 static s32 s_RtCompleted;        /* finished frames not yet drained by the pump */
 static s32 s_RtQuit;
 static s32 s_RtActive;
@@ -4996,6 +4997,7 @@ static int portRenderThreadProc(void *arg)
         }
         t = s_RtTask;
         s_RtTaskPending = 0;
+        s_RtExecuting = 1;
         SDL_CondSignal(s_RtCondSlot);
         SDL_UnlockMutex(s_RtMtx);
 
@@ -5015,6 +5017,7 @@ static int portRenderThreadProc(void *arg)
         gfx_end_frame();
 
         SDL_LockMutex(s_RtMtx);
+        s_RtExecuting = 0;
         s_RtCompleted++;
         if (s_RtCondDone != NULL)
         {
@@ -5076,6 +5079,19 @@ s32 portRenderDrainCompletions(void)
     s_RtCompleted = 0;
     SDL_UnlockMutex(s_RtMtx);
     return n;
+}
+
+/* No renderer may retain a pointer into the world while it is replaced.
+ * Leave completion accounting to the regular scheduler pump. */
+void portRenderStateBarrier(void)
+{
+    if (!s_RtActive || !s_RtMtx) return;
+    SDL_LockMutex(s_RtMtx);
+    while (s_RtTaskPending || s_RtExecuting) {
+        if (s_RtCondDone) SDL_CondWait(s_RtCondDone,s_RtMtx);
+        else { SDL_UnlockMutex(s_RtMtx); SDL_Delay(1); SDL_LockMutex(s_RtMtx); }
+    }
+    SDL_UnlockMutex(s_RtMtx);
 }
 
 /* vsync lock: the wait below can sleep (its condvar exists) - without it the

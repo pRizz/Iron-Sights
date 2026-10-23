@@ -182,6 +182,8 @@ padN_stickmode.
                       |            | switching weapons restores full opacity
   weapon_hud_icons    | 0          | Weapon Strip Style: 0 = text, 1 = static
                       |            | weapon model images. Requires weapon_hud=1
+                      |            | Selected icon shows its name underneath;
+                      |            | name fades to 0% after 3 seconds idle
   Sound
   music_volume        | 100        | 0 to 100 percent, from startup
   sfx_volume          | 100        | 0 to 100 percent, from startup
@@ -330,6 +332,25 @@ Port actions (extra actions beyond the N64 pad)
   mouse_unlock     | F1               | Release or re-grab the mouse pointer
   classic_toggle   | Tab              | Switch Classic Mode on or off
     aim_down_sights   | Mouse Middle     | Hold to raise a single firearm's sights
+  suspend_points   | F6               | Open the solo save/load slot menu
+  quicksave        | F5               | Replace the separate quicksave
+  quickload        | F9               | Load the quicksave and resume gameplay
+  undo_load        | F8               | Return to the state before the last load
+
+  Suspend Points is also under Watch > Gameplay. Four manual slots, quicksave,
+  and undo-load are stored separately for each campaign folder in Data/SaveStates.
+  Arrows choose a slot and Save/Load; Enter accepts; Escape resumes. Controllers
+  use Move/D-pad, Use/Menu Accept, and Menu Back. All four shortcut actions are
+  rebindable (including padN_<action>). Occupied manual slots require a second
+  Accept to overwrite. F5 overwrites the quicksave directly. Loads resume
+  gameplay immediately, including closing a saved watch normally. Save/load
+  toasts identify the slot and mission, then fade out after three seconds.
+  Solo only; save alive during ordinary play or with the watch fully opened.
+  Loading after death or from the title screen is supported. An undo point is
+  captured before a mission load; loading Undo does not create a redo point.
+  These local images require the exact executable, ROM, and arena layout.
+  Rebuilding invalidates older suspend points. Campaign saves/settings remain
+  separate and are not rolled back. See scripts/port/save_states.md in source.
 
   Aim Mode (Gameplay > General Settings) selects ADS or Red Reticle for Aim
   (Mouse Right by default). ADS is the default, including with an existing ini

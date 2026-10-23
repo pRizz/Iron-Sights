@@ -41,6 +41,7 @@
 #include "PR/R4300.h"
 #ifndef TARGET_N64
 #include <stdio.h> /* intro timing log */
+#include "port_state.h"
 #include <stdlib.h>
 #endif
 
@@ -563,6 +564,9 @@ void bossMainloop(void)
         if(1); // regalloc
         if(1);
 
+#ifndef TARGET_N64
+        portStateStageReady();
+#endif
         while (g_MainStageNum < 0 || pendingGfx != 0)
         {
             osRecvMesg(&gfxFrameMsgQ, (OSMesg *)&localGfxFrameMsg, OS_MESG_BLOCK);
@@ -699,6 +703,10 @@ void bossMainloop(void)
                             joyConsumeSamplesWrapper();
                             permit_stderr(0);
 
+#ifndef TARGET_N64
+                            portStateFrame();
+#endif
+
                             gdl = firstGdl = dynGetMasterDisplayList();
 
 #ifdef DEBUGMENU
@@ -724,11 +732,20 @@ void bossMainloop(void)
 			                }
 
                             // Primary game tick function.
+#ifndef TARGET_N64
+                            if (!portStatePaused()) lvlTick();
+                            else { g_ClockTimer = 0; g_GlobalTimerDelta = 0; }
+#else
                             lvlTick();
+#endif
 
                             shuffle_player_ids();
 
-                            if (g_StageNum != LEVELID_TITLE)
+                            if (g_StageNum != LEVELID_TITLE
+#ifndef TARGET_N64
+                                && !portStatePaused()
+#endif
+                                )
                             {
                                 for (i = 0; i < getPlayerCount(); i++)
                                 {
@@ -794,6 +811,7 @@ void bossMainloop(void)
                                * last so it covers every screen, and a no-op
                                * until opened or while fonts are unloaded. */
                                 extern Gfx *portConRender(Gfx *gdl);
+                                gdl = portStateRender(gdl);
                                 gdl = portConRender(gdl);
                             }
 #endif

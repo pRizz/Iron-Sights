@@ -399,7 +399,8 @@ void *portGetMempArena(u32 *outsize)
 #else
         /* glibc happens to mmap allocations this large (high addresses),
          * but make the >= 0x10000000 guarantee explicit. */
-        arena = portAllocHigh(PORT_MEMP_ARENA_SIZE);
+        arena = portAllocHighRaw((void *)0x20000000u, PORT_MEMP_ARENA_SIZE);
+        if (arena == NULL) arena = portAllocHighDedicated(PORT_MEMP_ARENA_SIZE);
 #endif
         if (arena == NULL)
         {
@@ -417,6 +418,18 @@ void *portGetMempArena(u32 *outsize)
     }
     *outsize = PORT_MEMP_ARENA_SIZE;
     return arena;
+}
+
+/* The snapshot engine owns no host allocations or graphics/audio handles. */
+void *portStateHighArena(u32 *used)
+{
+    *used = s_HighArenaUsed;
+    return s_HighArena;
+}
+
+void portStateHighWater(u32 used)
+{
+    if (used > s_HighArenaUsed && used <= PORT_HIGH_ARENA_SIZE) s_HighArenaUsed = used;
 }
 
 static OSScMsg s_PortRetraceMsg = { OS_SC_RETRACE_MSG };

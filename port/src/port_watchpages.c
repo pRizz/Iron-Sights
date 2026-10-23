@@ -89,6 +89,7 @@ static const struct PortWatchRowDef sGameplay[] = {
     { PWROW_SUBSCREEN, NULL, "General Settings\n", PORTWATCH_GENSETTINGS, 0 },
     { PWROW_SUBSCREEN, NULL, "HUD\n",              PORTWATCH_HUD,         0 },
     { PWROW_SUBSCREEN, NULL, "Port Options\n",     PORTWATCH_PORTOPTS,    0 },
+    { PWROW_ACTION,    NULL, "Suspend Points\n", 100, 0 },
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
 static const struct PortWatchRowDef sDisplay[] = {
@@ -374,6 +375,10 @@ static const struct PortBindDef sBindsKbmOnly[] = {
  * PORTACT_CLASSIC_TOGGLE). */
 static const struct PortBindDef sBindsAllExtra[] = {
     { "Classic Mode\n",      "classic_toggle", "classic_toggle" }, /* keyboard default Tab */
+    { "Suspend Points\n",    "suspend_points", "suspend_points" },
+    { "Quicksave\n",         "quicksave",      "quicksave" },
+    { "Quickload\n",         "quickload",      "quickload" },
+    { "Undo Load\n",         "undo_load",      "undo_load" },
 };
 #define PORTBIND_ALL_EXTRA ((s32) (sizeof(sBindsAllExtra) / sizeof(sBindsAllExtra[0])))
 
@@ -1765,6 +1770,10 @@ s32 portWatchRowAction(s32 page, s32 row)
     if (d == NULL || d->kind != PWROW_ACTION)
     {
         return 0;
+    }
+    if (d->arg == 100) {
+        extern void portStateMenuOpen(void);
+        portStateMenuOpen(); return 1;
     }
     if (!sResetArmed)
     {

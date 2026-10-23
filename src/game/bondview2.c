@@ -6024,7 +6024,9 @@ s32 g_portBondFrozenTick;
  */
 static s32 portMouseLookPermitted(void)
 {
+    extern s32 portStatePaused(void);
     static int gate = -1;   /* GE_MOUSEGATE=0: the older, narrower predicate only (A/B diag) */
+    if (portStatePaused()) return 0;
     if (gate < 0) {
         extern char *getenv(const char *);
         const char *e = getenv("GE_MOUSEGATE");
@@ -13795,8 +13797,8 @@ Gfx* hudmsgBottomRender(Gfx* arg0)
 #ifndef TARGET_N64
             /* Reserve the weapon strip above the original ammo counters. */
             if (portHudWeaponStripShown() && getPlayerCount() < 3
-                && view_top > viGetViewTop() + viGetViewHeight() - (PORT_HUD_WEAPON_BOTTOM + 5))
-                view_top = viGetViewTop() + viGetViewHeight() - (PORT_HUD_WEAPON_BOTTOM + 5);
+                && view_top > viGetViewTop() + viGetViewHeight() - (portHudWeaponStripTopInset() + 5))
+                view_top = viGetViewTop() + viGetViewHeight() - (portHudWeaponStripTopInset() + 5);
 #endif
             view_vert = view_top - view_top_offset;
 #ifndef TARGET_N64

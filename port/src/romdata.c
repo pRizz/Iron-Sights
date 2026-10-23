@@ -107,9 +107,13 @@ extern void portRomdataSegsApply(void);             /* segments.c: point segment
 
 static u8 *sRom;            /* normalised z64 bytes, high address */
 static u32 sRomSize;
+static u32 sRomFingerprint;
 static char sRomPath[1200];
 static enum romsource sRomSource;
 static u8 *sCdata;          /* the inflated data segment: it IS the directory */
+/* Directory strings are referenced by the engine. A module-owned buffer keeps
+ * those references stable across compatible-executable suspend restores. */
+static u8 sCdataStorage[ROMDATA_CDATA_ALLOC];
 static u32 sCdataSize;
 static struct romfile sFiles[ROMDATA_MAX_FILES];
 static s32 sFileCount;
@@ -467,7 +471,7 @@ static int romdataParseTables(const u8 *rom, u32 romsize)
                 ROMDATA_CDATA_ROMOFS, src[0], src[1]);
         return 0;
     }
-    sCdata = (u8 *) malloc(ROMDATA_CDATA_ALLOC);
+    sCdata = sCdataStorage;
     if (sCdata == NULL) {
         portConLogf("ge: romdata: out of memory for cdata\n");
         return 0;
@@ -482,7 +486,7 @@ static int romdataParseTables(const u8 *rom, u32 romsize)
     }
     if (n < ROMDATA_FILETABLE_OFS + 3 * ROMDATA_FILEENTRY_SIZE) {
         portConLogf("ge: romdata: cdata too small to hold the file table\n");
-        free(sCdata);
+        /* module-owned directory storage */
         sCdata = NULL;
         return 0;
     }
@@ -524,7 +528,7 @@ static int romdataParseTables(const u8 *rom, u32 romsize)
     sFileCount = i;
     if (sFileCount < 3) {
         portConLogf("ge: romdata: file table at cdata+0x%X did not parse (%d entries)\n", ROMDATA_FILETABLE_OFS, sFileCount);
-        free(sCdata);
+        /* module-owned directory storage */
         sCdata = NULL;
         sFileCount = 0;
         return 0;
@@ -570,7 +574,7 @@ static int romdataParseTables(const u8 *rom, u32 romsize)
     return 1;
 
 bad:
-    free(sCdata);
+    /* module-owned directory storage */
     sCdata = NULL;
     sFileCount = 0;
     return 0;
@@ -693,6 +697,7 @@ static int romdataTryLoad(const char *path, enum romsource source, int strict)
     }
     sRom = high;
     sRomSize = (u32) len;
+    sRomFingerprint = crc32;
     sRomSource = source;
     snprintf(sRomPath, sizeof(sRomPath), "%s", path);
 
@@ -1139,6 +1144,8 @@ u32 romdataCdataVaddr(void)
 {
     return ROMDATA_CDATA_VADDR;
 }
+
+u32 romdataFingerprint(void) { return sRomFingerprint; }
 
 const u8 *romdataRom(u32 *size)
 {

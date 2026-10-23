@@ -33,3 +33,17 @@ generation, tests, tooling, build configuration, and repository rules.
 Before handing off work or preparing a commit/PR, compare the changes with the
 inventory and ensure every changed area is covered. Updating the inventory is
 part of completing the requested work, not a separate optional follow-up.
+
+## Local build artifacts
+
+Do not keep previous executables as rebuild backups. The user accepts losing
+save-state compatibility when the executable changes. Obsolete local game
+executables and suspend images associated with those old builds may be purged
+without another confirmation; there is no need to archive them first.
+
+Keep the current main executable. Match suspend images to obsolete executable
+build fingerprints before purging them; leave unknown or current-build images
+alone. This permission concerns build artifacts and suspend images, not normal
+campaign saves (`Data/Saves`), profiles, settings, source files or other user data.
+Audit executables are temporary: remove the copied executable when the audit
+finishes, while keeping useful diagnostic logs and captures.

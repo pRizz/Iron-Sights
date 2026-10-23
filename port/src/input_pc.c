@@ -145,7 +145,7 @@ enum
      * joy_port's, checked at init),
      * +20 classic_toggle (Classic Mode bindable on a pad, as Tab is on the keyboard),
      * +21 aim_down_sights (held, separate from R's red-target Aim) */
-    PM_PORT_LAST = PM_PORT_FIRST + 21,
+    PM_PORT_LAST = PM_PORT_FIRST + 25,
     PM_COUNT
 };
 #define PM_PORT_COUNT (PM_PORT_LAST - PM_PORT_FIRST + 1)
@@ -167,6 +167,7 @@ static const char *sPadMapNames[PM_COUNT] =
     "menu_accept", "menu_back",
     "mouse_unlock", "classic_toggle",
     "aim_down_sights",
+    "suspend_points", "quicksave", "quickload", "undo_load",
 };
 /* The raw (unmapped DInput) fallback layout of portInputPadMerge expressed as
  * map tokens, so the launcher, first-rebind seed and bind rows can describe it.
@@ -1770,6 +1771,28 @@ static void inputConsoleToggle(void)
 /** 1 = the event was a fixed key and must not travel any further. */
 static int inputFixedKeyDown(const SDL_KeyboardEvent *key)
 {
+    {
+        extern s32 portStatePaused(void);
+        extern s32 portStateMenuInput(s32 key);
+        if (portStatePaused()) {
+            s32 nav = 0;
+            switch (key->keysym.scancode) {
+            case SDL_SCANCODE_UP: case SDL_SCANCODE_W: nav=1; break;
+            case SDL_SCANCODE_DOWN: case SDL_SCANCODE_S: nav=2; break;
+            case SDL_SCANCODE_LEFT: case SDL_SCANCODE_A: nav=3; break;
+            case SDL_SCANCODE_RIGHT: case SDL_SCANCODE_D: nav=4; break;
+            case SDL_SCANCODE_RETURN: case SDL_SCANCODE_KP_ENTER: case SDL_SCANCODE_SPACE: nav=5; break;
+            case SDL_SCANCODE_ESCAPE: nav=6; break;
+            default: break;
+            }
+            if (nav) {
+                extern void portVideoHoldOverKey(s32 sc);
+                portVideoHoldOverKey(key->keysym.scancode);
+                if (nav < 5 || !key->repeat) portStateMenuInput(nav);
+                return 1;
+            }
+        }
+    }
     const SDL_Scancode sc = key->keysym.scancode;
     const int repeat = key->repeat != 0;
 
