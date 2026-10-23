@@ -12,8 +12,51 @@ download link; they are development builds rather than manually certified
 stable versions. PRs run tests only, without publication
 permissions. The previous Linux/Windows three-day EXE-only artifact workflow
 has been replaced by windows-release.yml; Linux can still be built locally.
-The C test job only installs gcc-multilib. Dependency downloads have bounded
-network timeouts/retries so stalled mirrors fail clearly.
+The C test job only installs gcc-multilib. The Windows job installs the Win32
+MinGW flavor; the unused POSIX variant is no longer downloaded. Existing runner
+CMake/make tools are used when available. Dependency downloads use Ubuntu's
+official HTTPS archive/security servers instead of the slow Azure mirror,
+with bounded retries and step timeouts.
+
+## Build caches and clean compilation
+
+Every main push still configures, links, stamps, packages and attests a new
+executable. No previous EXE, build directory, ROM or generated game data is
+restored. Three independent caches avoid repeated work:
+
+- Ubuntu `.deb` downloads for tests and the Windows toolchain. Every run gets
+  fresh, signature-verified Ubuntu package indexes. Cached files must match the
+  resolved package's exact size and SHA256 from those indexes before installation.
+  Stale/corrupt archives are discarded and downloaded again. Cache keys include
+  the dependency helper, Ubuntu architecture/profile and resolved package plan;
+  fallback keys reuse only archives that still pass this validation. Installed
+  package databases and signed indexes are not cached.
+- The SDL development archive, keyed by version and SHA256 and checked again
+  before extraction, including on cache hits.
+- `ccache` C/C++ object files, capped at 256 MiB and keyed by runner image,
+  toolchain identity and compiler/frontend content. ccache checks source,
+  included headers and compiler flags and hashes compiler content. No unsafe
+  sloppiness settings are enabled. Run-specific immutable cache keys with a
+  toolchain prefix carry the latest objects forward. Only trusted main builds
+  save caches; PR tests can restore dependency downloads but cannot publish them.
+
+Fresh build metadata changes its own translation units even on a documentation
+push. Linking and release provenance always run again. Compiler hit/miss counts
+appear in the Actions summary; build-inputs.json records verified dependency
+hashes, package-download reuse, compiler-cache version/mode and statistics.
+Caches are disposable accelerators and may expire or be evicted; a miss builds
+normally. Release assets retain their separate immutable publication/retention.
+
+For independent source compilation, select **clean_build** in Run workflow, or:
+
+```sh
+gh workflow run windows-release.yml -R pRizz/Project-Midas-ADS --ref main -F clean_build=true
+```
+
+This bypasses object-cache restore/save and disables ccache for compilation;
+dependency archives are still authenticated and may be reused. Attestations
+continue to identify the producing source/workflow. Caching does not make a
+build hermetic or promise byte-identical output across compiler/runner changes.
 
 ## One-time repository setup
 

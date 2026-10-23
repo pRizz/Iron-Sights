@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      clean_build:
+        description: Compile every source file without the compiler object cache
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -14,6 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  SEGMENT_DOWNLOAD_TIMEOUT_MINS: 2
   SDL2_VERSION: 2.30.11
   SDL2_SHA256: 0590db0a47b564aab92499ed03eaa75db9aee17c371080caa3b05df9d49d9ff9
 
@@ -25,10 +31,26 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Install ROM-free test compiler
-        run: |
-          sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update
-          sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y --no-install-recommends gcc-multilib
+      - name: Resolve authenticated test dependencies
+        id: deps
+        timeout-minutes: 5
+        run: python3 scripts/port/ci_dependencies.py prepare --profile tests --root "$RUNNER_TEMP/midas-deps"
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: restore-deps
+        with:
+          path: ${{ runner.temp }}/midas-deps/archives/*.deb
+          key: ${{ steps.deps.outputs.cache_key }}
+          restore-keys: ${{ steps.deps.outputs.cache_prefix }}
+      - name: Verify cached archives and install test compiler
+        timeout-minutes: 10
+        env:
+          MIDAS_DEPENDENCY_CACHE_HIT: ${{ steps.restore-deps.outputs.cache-hit }}
+        run: python3 scripts/port/ci_dependencies.py install --root "$RUNNER_TEMP/midas-deps"
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && steps.restore-deps.outputs.cache-hit != 'true' && steps.deps.outputs.count != '0'
+        with:
+          path: ${{ runner.temp }}/midas-deps/archives/*.deb
+          key: ${{ steps.deps.outputs.cache_key }}
       - name: Test gameplay, cache and release tooling without a ROM
         run: |
           bash scripts/port/test_ads.sh
@@ -37,6 +59,7 @@ jobs:
           bash scripts/port/test_mission_cheats.sh
           bash scripts/port/test_states.sh
           python3 scripts/port/test_distribution.py
+          python3 scripts/port/test_ci_dependencies.py
 
   windows:
     needs: tests
@@ -50,28 +73,81 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Install cross compiler
-        run: |
-          sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 update
-          sudo apt-get -o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 install -y cmake make gcc-mingw-w64-i686 g++-mingw-w64-i686 binutils-mingw-w64-i686
-      - name: Fetch checksum-pinned build inputs
+      - name: Resolve authenticated Windows dependencies
+        id: deps
+        timeout-minutes: 5
+        run: python3 scripts/port/ci_dependencies.py prepare --profile windows --root "$RUNNER_TEMP/midas-deps"
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: restore-deps
+        with:
+          path: ${{ runner.temp }}/midas-deps/archives/*.deb
+          key: ${{ steps.deps.outputs.cache_key }}
+          restore-keys: ${{ steps.deps.outputs.cache_prefix }}
+      - name: Verify cached archives and install Win32 cross compiler
+        id: toolchain
+        timeout-minutes: 10
+        env:
+          MIDAS_DEPENDENCY_CACHE_HIT: ${{ steps.restore-deps.outputs.cache-hit }}
+        run: python3 scripts/port/ci_dependencies.py install --root "$RUNNER_TEMP/midas-deps"
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.restore-deps.outputs.cache-hit != 'true' && steps.deps.outputs.count != '0'
+        with:
+          path: ${{ runner.temp }}/midas-deps/archives/*.deb
+          key: ${{ steps.deps.outputs.cache_key }}
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: restore-sdl
+        with:
+          path: third_party/sdl2.tar.gz
+          key: sdl2-mingw-${{ env.SDL2_VERSION }}-${{ env.SDL2_SHA256 }}
+      - name: Fetch or verify checksum-pinned SDL input
         run: |
           set -euo pipefail
           mkdir -p third_party
-          curl --fail --silent --show-error --location "https://github.com/libsdl-org/SDL/releases/download/release-${SDL2_VERSION}/SDL2-devel-${SDL2_VERSION}-mingw.tar.gz" --output third_party/sdl2.tar.gz
+          if ! test -f third_party/sdl2.tar.gz || ! echo "$SDL2_SHA256  third_party/sdl2.tar.gz" | sha256sum -c - >/dev/null 2>&1; then
+            curl --fail --silent --show-error --location --retry 2 --connect-timeout 15 --max-time 180 "https://github.com/libsdl-org/SDL/releases/download/release-${SDL2_VERSION}/SDL2-devel-${SDL2_VERSION}-mingw.tar.gz" --output third_party/sdl2.tar.gz
+          fi
           echo "$SDL2_SHA256  third_party/sdl2.tar.gz" | sha256sum -c -
           tar -xzf third_party/sdl2.tar.gz -C third_party
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.restore-sdl.outputs.cache-hit != 'true'
+        with:
+          path: third_party/sdl2.tar.gz
+          key: sdl2-mingw-${{ env.SDL2_VERSION }}-${{ env.SDL2_SHA256 }}
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: inputs.clean_build != true
+        with:
+          path: ${{ runner.temp }}/midas-ccache
+          key: ccache-v1-${{ steps.toolchain.outputs.compiler_key }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ccache-v1-${{ steps.toolchain.outputs.compiler_key }}-
       - name: Choose build identity
         run: |
           echo "MIDAS_BUILD_TIME_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
           echo "MIDAS_RELEASE_TAG=build-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA:0:12}" >> "$GITHUB_ENV"
       - name: Compile exact checked-out commit
+        env:
+          CCACHE_DIR: ${{ runner.temp }}/midas-ccache
+          CCACHE_BASEDIR: ${{ github.workspace }}
+          CCACHE_COMPILERCHECK: content
+          CCACHE_MAXSIZE: 256M
+          CLEAN_BUILD: ${{ inputs.clean_build == true }}
         run: |
-          cmake -B build_win -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-i686.cmake -DCMAKE_BUILD_TYPE=Debug -DGE_VIDEO=ON -DGE_ROMDATA_FALLBACK=OFF
-          cmake --build build_win -j2
+          if [ "$CLEAN_BUILD" = true ]; then export CCACHE_DISABLE=1; fi
+          ccache --zero-stats
+          cmake -B build_win -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-i686.cmake -DCMAKE_BUILD_TYPE=Debug -DGE_VIDEO=ON -DGE_ROMDATA_FALLBACK=OFF -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build_win --parallel "$(nproc)"
+          ccache --show-stats | tee build_win/ccache-stats.txt
+          cat build_win/ccache-stats.txt >> "$GITHUB_STEP_SUMMARY"
           git diff --exit-code HEAD
           python3 -c "import json; m=json.load(open('build_win/generated/build-info.json')); assert m['ci'] and not m['dirty']"
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: inputs.clean_build != true
+        with:
+          path: ${{ runner.temp }}/midas-ccache
+          key: ccache-v1-${{ steps.toolchain.outputs.compiler_key }}-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Package only player files
+        env:
+          MIDAS_DEPENDENCIES_FILE: ${{ runner.temp }}/midas-deps/verified-inputs.json
+          MIDAS_CLEAN_BUILD: ${{ inputs.clean_build == true }}
         run: |
           python3 scripts/port/package_windows.py --build build_win --output dist --sdl-license third_party/SDL2-${SDL2_VERSION}/LICENSE.txt
           python3 scripts/port/release_inputs.py --output dist/build-inputs.json

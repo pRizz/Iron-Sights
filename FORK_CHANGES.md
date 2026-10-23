@@ -586,8 +586,26 @@ existing fork and the canonical origin URL; the local origin was updated from
 the renamed repository redirect. This is recorded provenance, not a claim of
 hermetic compilation. The fork-specific windows-release.yml supersedes the
 inherited main.yml workflow path; historical build 1 used main.yml. The ROM-free
-C test job installs only gcc-multilib, without unused C++/CMake packages. APT
-network timeouts and bounded retries prevent indefinite mirror waits.
+C test job installs only gcc-multilib, without unused C++/CMake packages.
+Windows now installs only the Win32 MinGW variant, preserves preinstalled
+CMake/make, and uses official Ubuntu HTTPS archive/security repositories rather
+than the slow Azure mirror. Fresh signed APT indexes resolve a per-profile
+package cache: every restored .deb must match the signed index's size/SHA256
+before installation. Stale/corrupt files are discarded. Only archive downloads
+are cached, with plan/helper/profile keys and validated fallback reuse; no
+installed package database or signed index is restored. Network and step
+timeouts bound dependency setup.
+
+SDL's archive has a separate version/SHA256 cache and is checked before each
+extraction. A 256 MiB ccache reuses unchanged C/C++ compilations, with compiler
+content checks, runner/toolchain identity and source/header/flag invalidation.
+No sloppiness is enabled. CMake uses available runner cores, fresh build
+directories, fresh linking/metadata and fresh packages/attestations on every
+run. Prior executables and ROM assets are never cached. Only main runs save
+caches; PR tests use dependency restores without publication. Manual
+clean_build disables object-cache restore/save and compilation reuse for an
+independent source build. Cache statistics go into the run summary and
+build-inputs.json alongside verified package fingerprints and reuse/mode data.
 
 The normal GE_ROMDATA_FALLBACK=OFF build now compiles without a ROM, extraction
 or private ROM secret. The three formerly retained inline menu/logo models
@@ -608,6 +626,7 @@ distinguish signed provenance from Windows Authenticode signing.
 
 **Sources:** [workflow](.github/workflows/windows-release.yml),
 [packager](scripts/port/package_windows.py), [input record](scripts/port/release_inputs.py),
+[dependency cache](scripts/port/ci_dependencies.py),
 [player instructions](scripts/port/release/START-HERE.txt),
 [verification](scripts/port/release/VERIFY.txt), [guide](scripts/port/releases.md),
 [build](CMakeLists.txt), [ROM loader](port/src/romdata.c),
@@ -629,6 +648,15 @@ push execution: [run 40019645555](https://github.com/pRizz/Project-Midas-ADS/act
 passed tests, compilation and immutable publication. Its ZIP/EXE attestations
 verified the expected workflow, main ref, exact commit and push trigger. The
 maintainer guide retains manual dispatch as a recovery path.
+The slow-run investigation measured 58m52s installing the compiler and 34s
+compiling in run 40020492518, with package downloads averaging 36.6 kB/s.
+Dependency-cache tests cover exact signed-metadata matching, SHA256/size and
+filename checks, same-size corruption, stale-file rejection and missing files.
+A fresh-container restore reused all 633,018 bytes of its needed archives with
+zero package-download bytes, and installed successfully. Both cold and warm
+MinGW builds completed locally; the warm build reused 254 of 257 cacheable
+compilations (98.8%). Eight other compiler calls fell back to ordinary
+compilation. Hosted timings remain to be measured after deployment.
 
 ### FORK-019 — Native first-launch weapon image cache
 

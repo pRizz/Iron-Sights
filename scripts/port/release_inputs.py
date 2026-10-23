@@ -24,4 +24,12 @@ if __name__ == "__main__":
               sdl2_version=os.environ["SDL2_VERSION"],sdl2_sha256=os.environ["SDL2_SHA256"],
               workflow=".github/workflows/windows-release.yml",
               generated_icons="Prepared on the player's Windows PC; not embedded in the release")
+    dependencies = os.environ.get("MIDAS_DEPENDENCIES_FILE")
+    if dependencies:
+        info["dependency_packages"] = json.loads(Path(dependencies).read_text())
+    info["compiler_cache"] = dict(
+        enabled=os.environ.get("MIDAS_CLEAN_BUILD") != "true",
+        version=command("ccache", "--version"),
+        compiler_check="content",
+        statistics=Path("build_win/ccache-stats.txt").read_text())
     args.output.write_text(json.dumps(info,indent=2)+"\n",encoding="utf-8")
