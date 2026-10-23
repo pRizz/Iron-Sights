@@ -109,6 +109,36 @@ try {
 }
 $captures | Export-Csv -LiteralPath (Join-Path $auditDir 'captures.csv') -NoTypeInformation
 Write-Output "Verified $expectedCount captures. Review: $auditDir\contact-sheet.png"
+# Preserve full captures, plus enlarged long-gun sights with an unambiguous
+# center reference. The magenta ticks stop short of the actual aiming point.
+$detailCaptures = @($captures | Where-Object { $_.Item -in @(7,8,9,10,11,12,13,14,15,16,17,22,24) })
+if ($detailCaptures.Count) {
+    $columns = [Math]::Min(3, $detailCaptures.Count)
+    $sheet = [Drawing.Bitmap]::new(540*$columns, 390*[int][Math]::Ceiling($detailCaptures.Count/$columns))
+    $graphics = [Drawing.Graphics]::FromImage($sheet)
+    $font = [Drawing.Font]::new('Arial', 12)
+    $pen = [Drawing.Pen]::new([Drawing.Color]::Magenta, 1)
+    try {
+        $graphics.Clear([Drawing.Color]::FromArgb(25,25,25))
+        $graphics.InterpolationMode = [Drawing.Drawing2D.InterpolationMode]::NearestNeighbor
+        for ($i=0; $i -lt $detailCaptures.Count; $i++) {
+            $capture = $detailCaptures[$i]
+            $x = ($i % $columns)*540; $y = [int][Math]::Floor($i/$columns)*390
+            $screenshot = [Drawing.Image]::FromFile((Join-Path $auditDir $capture.File))
+            try {
+                $source = [Drawing.Rectangle]::new([int]($screenshot.Width/2)-90, [int]($screenshot.Height/2)-45, 180, 120)
+                $target = [Drawing.Rectangle]::new($x, $y+30, 540, 360)
+                $graphics.DrawImage($screenshot, $target, $source, [Drawing.GraphicsUnit]::Pixel)
+            } finally { $screenshot.Dispose() }
+            $graphics.DrawString($names[$capture.Item], $font, [Drawing.Brushes]::White, [single]($x+12), [single]($y+5))
+            $graphics.DrawLine($pen, $x+225, $y+165, $x+255, $y+165)
+            $graphics.DrawLine($pen, $x+285, $y+165, $x+315, $y+165)
+            $graphics.DrawLine($pen, $x+270, $y+130, $x+270, $y+150)
+        }
+        $sheet.Save((Join-Path $auditDir 'sight-details.png'), [Drawing.Imaging.ImageFormat]::Png)
+    } finally { $graphics.Dispose(); $sheet.Dispose(); $font.Dispose(); $pen.Dispose() }
+    Write-Output "Sight details: $auditDir\sight-details.png"
+}
 if ($Transitions) {
     $transitionCaptures | Export-Csv -LiteralPath (Join-Path $auditDir 'transitions.csv') -NoTypeInformation
     if ($transitionCaptures.Count -lt 2) { throw 'Missing transition captures.' }

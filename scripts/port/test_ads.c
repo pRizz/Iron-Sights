@@ -214,6 +214,20 @@ int main(void)
     assert(portAdsWeaponPose(ITEM_AK47, &muzzle, &pose));
     assert(pose.y < -10.1f && pose.y > -10.2f && pose.z == -42.0f);
     assert(portAdsWeaponPitch(ITEM_AK47) < -0.04f && portAdsWeaponPitch(ITEM_AK47) > -0.05f);
+    {
+        /* Both D5Ks share the sight mesh. Their muzzle nodes differ by the
+         * suppressor length, which must not shift the common sight vertically. */
+        const coord3d shortMuzzle = {0.0f, 63.899998f, 338.669983f};
+        const coord3d longMuzzle = {0.0f, 63.899998f, 538.786316f};
+        coord3d shortPose, longPose;
+        f32 dy;
+        assert(portAdsWeaponPose(ITEM_MP5K, &shortMuzzle, &shortPose));
+        assert(portAdsWeaponPose(ITEM_MP5KSIL, &longMuzzle, &longPose));
+        assert(portAdsWeaponPitch(ITEM_MP5K) == portAdsWeaponPitch(ITEM_MP5KSIL));
+        assert(shortPose.x == longPose.x && shortPose.z == longPose.z);
+        dy = shortPose.y - longPose.y;
+        assert(dy > -0.01f && dy < 0.01f);
+    }
     muzzle.y = 57.956562f;
     assert(portAdsWeaponPose(ITEM_WPPK, &muzzle, &pose));
     assert(pose.y < -8.5f && pose.y > -8.7f && pose.z == -33.5f);

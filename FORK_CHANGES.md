@@ -67,7 +67,12 @@ Recalibrated the AR33/M4 square sight aperture and RC-P90 sight tip vertically
 against the centered shot ray after the perspective adjustment left them low.
 The correction changes only those ADS poses. The AR33 also uses a little more
 muzzle-up tilt to keep the receiver clear of its square opening; eye distances
-and the RC-P90's pitch are retained.
+and the RC-P90's pitch are retained. A subsequent long-gun audit also raised
+the Klobb, ZMG, both D5K variants and regular shotgun to correct smaller
+vertical sight offsets. These use individual height corrections; the other
+audited long-gun poses are retained.
+The silenced D5K explicitly compensates for its longer muzzle node so its
+shared sight mesh receives the same pose as the unsilenced D5K.
 
 **Sources:** [ADS interface](port/include/port_ads.h),
 [input/state and poses](port/src/joy_port.c), [mouse input](port/src/input_pc.c),
@@ -81,6 +86,13 @@ inspection; its contact sheet marks the screen center for calibration.
 Targeted captures checked both corrected sights at wide FOV 90/110, the AR33
 in 4:3, and raise/lower transitions for both weapons. ADS regression tests and
 Windows/Linux builds passed with the corrected poses.
+The [long-gun alignment audit](scripts/port/ads_alignment.md) records the
+remaining weapon review and per-weapon corrections. The audit tool also emits
+enlarged `sight-details.png` sheets. A ROM-free regression test checks matching
+D5K sight poses across the two different muzzle references.
+The final audit captured all 20 ADS weapons in wide/4:3 at 60 Hz and the five
+changed guns at wide FOV 110/120 Hz, with 11 transition captures each. Visual
+review, ADS regression tests, and Windows/Linux builds passed.
 
 ### FORK-004 — ADS hands, forearms and transition occlusion
 
