@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include "port_icon_cache.h"
+#include "port_modal.h"
 #include "port_icon_cache_format.h"
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -279,6 +280,7 @@ static bool generate(const fs::path &cache, const char *rom)
 extern "C" void portIconCacheInit(const char *rom, unsigned int fingerprint)
 {
     if (portIconWorkerEnabled()) return;
+    PortModalScope modal;
     romFingerprint=fingerprint;
     try {
         char *pref=SDL_GetPrefPath("ProjectMidasADS","ProjectMidasADS");

@@ -67,6 +67,9 @@ Both Port Options menus open the About dialog. Windows uses native hyperlink
 controls (blue underlined links), keyboard navigation and the default browser.
 Only baked HTTPS GitHub links are opened. Without a usable browser the dialog
 reports the failure. Linux provides native dialog buttons for the same links.
+Scoped intentional waits keep About, missing-ROM dialogs and first-launch
+preparation from tripping the Windows hang watchdog; normal monitoring resumes
+when they return.
 
 On Windows the first validated-ROM launch prepares icons using an isolated,
 temporary copy of the current executable and its SDL DLL. It uses the game's

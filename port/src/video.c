@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <ultra64.h>
+#include "port_modal.h"
 
 #ifdef GE_XBOX
 /* No SDL on the console: the string/keyboard/thread stand-ins live in the
@@ -2486,7 +2487,9 @@ void portShowErrorBox(const char *title, const char *text)
     {
         return;
     }
+    portModalBegin();
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title, text, NULL);
+    portModalEnd();
 }
 
 /* The Files screen's EXIT GAME button (front.c): pushes SDL_QUIT so the quit

@@ -12,6 +12,7 @@
 #include <signal.h>
 #include <stdarg.h>
 #include <ultra64.h>
+#include "port_modal.h"
 #ifdef _WIN32
 #include <direct.h>   /* _mkdir: portLogPath */
 #else
@@ -327,6 +328,14 @@ static DWORD WINAPI portStallWatchdog(LPVOID param)
         Sleep(2000);
         now = g_PortFramesPumped;
         nowTasks = g_PortGfxTasksSubmitted;
+        /* About/ROM dialogs and bounded first-launch preparation deliberately
+         * stop the game loop. Start fresh after those scoped waits finish. */
+        if (portModalActive()) {
+            last = now;
+            lastTasks = nowTasks;
+            frozen = tasksFrozen = modalEpisode = 0;
+            continue;
+        }
         if (nowTasks != lastTasks) {
             lastTasks = nowTasks;
             tasksFrozen = 0;

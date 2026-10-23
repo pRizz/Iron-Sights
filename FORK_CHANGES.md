@@ -611,7 +611,11 @@ ROM or extracted model/blob files and launched with runtime ROM data. Windows
 and Linux builds and gameplay/HUD/wardrobe/mission-cheat/suspend regressions
 passed. Five distribution tests cover truthful build identity, allow-listed
 deterministic ZIPs, bounded cache decoding and inline texture depths, shared
-references and invalid offsets/depths. Actionlint passed.
+references and invalid offsets/depths. Actionlint passed. The first hosted
+[run](https://github.com/pRizz/Project-Midas-ADS/actions/runs/40016371907)
+passed tests, compilation and publication. Its immutable release ZIP and EXE
+passed attestation verification against this main workflow and source commit;
+packaged metadata and all file checksums matched.
 
 ### FORK-019 — Native first-launch weapon image cache
 
@@ -622,7 +626,9 @@ copy of the current game's renderer. First launch with a validated ROM renders
 all 35 weapon/wardrobe images at 2048x1536, checks exact repeated black/white
 pixels, recovers transparency and downsamples with premultiplied area sampling
 to 512x160 RGBA. Players need no Python, compiler, admin rights or downloads.
-A progress window allows Esc/close to skip and continue with names. The helper
+A progress window allows Esc/close to skip and continue with names. Scoped
+intentional-wait tracking prevents the Windows hang watchdog from killing a
+healthy preparation that exceeds its normal startup grace. The helper
 uses neutral settings and no player campaign files, references the ROM without
 copying it, and removes temporary program files after exit.
 
@@ -668,12 +674,20 @@ Display metadata is informational; attestations verify downloaded bytes.
 
 **Sources:** [stamp generator](scripts/port/build_info.py),
 [CMake wrapper](scripts/port/buildinfo.cmake), [dialog](port/fast3d/about.cpp),
-[URL validation](port/src/port_about.c), [manifest](port/win/ProjectMidas.manifest),
+[URL validation](port/src/port_about.c), [modal tracking](port/src/port_modal.c),
+[watchdog](port/src/main.c), [error dialogs](port/src/video.c),
+[manifest](port/win/ProjectMidas.manifest),
 [frontend](src/game/front.c), [watch](port/src/port_watchpages.c).
 **Validation:** Identity tests use actual temporary commits and cover modified/
 untracked files, missing Git and fixed timestamps. Windows/Linux builds passed.
 The Windows dialog was visually inspected with the correct full commit,
 dirty/local label, timestamp, cache status and hyperlink controls. Desktop
-automation failed during the browser click check; that click was not confirmed.
+automation initially failed during the browser click check; a screenshot-based
+retry confirmed that Download releases opens the correct default-browser tab.
+About and the inherited missing-ROM error window now suspend hang detection
+while open, with counters reset before normal monitoring resumes. This fixes
+the watchdog treating a healthy, long-lived native dialog as a stalled game.
+A Windows audit kept About open beyond the 60-second startup grace (70 seconds)
+and verified it remained responsive.
 URL tests reject missing values, HTTP, lookalike domains and injected markup or
 control characters. Corrected the existing malformed inventory heading to UTF-8.

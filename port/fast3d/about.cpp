@@ -8,6 +8,7 @@ const char *portIconCacheStatus(void);
 #include <stddef.h>
 #include <string>
 #include "port_about.h"
+#include "port_modal.h"
 #include "port_buildinfo.h"
 #ifdef GE_VIDEO
 #include <SDL.h>
@@ -48,6 +49,7 @@ static HRESULT CALLBACK aboutLink(HWND window, UINT event, WPARAM w, LPARAM valu
 void portAboutOpen(void)
 {
 #ifdef GE_VIDEO
+    PortModalScope modal;
     char text[2400];
 
     snprintf(text, sizeof(text), "Built at: %s\nBuild: %s\nCommit: %s%s\nBranch: %s\nBuilder: %s\n\nWeapon icons: %s\n\n"
