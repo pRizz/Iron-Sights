@@ -36,5 +36,8 @@ It does NOT cover, and grants no rights to:
   Rare, Nintendo, MGM, EON and the other rights holders.
 - Third-party code bundled in this repository, which keeps its own license.
   See THIRD_PARTY_NOTICES.txt.
+- The community enhanced font masks in port/fast3d/fonts/gepd_font_data.inc,
+  published under CC0 by their contributor. See that folder's LICENSE.txt,
+  NOTICE.txt and sources.json; the surrounding port code remains MIT licensed.
 
 The name "Project Midas" is not licensed. Please give forks their own name.

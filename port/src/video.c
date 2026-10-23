@@ -154,6 +154,7 @@ static int s_CfgAnisotropy = 0;       /* 0/1 = off; 2..16 samples */
  * made OFF the default (spec 2.1) - crisp 2D is what the art was drawn for;
  * the Nintendo 64 preset turns it back on. */
 static int s_CfgFilter2D = 0;
+static int s_CfgEnhancedFonts = 1;
 static int s_CfgHighLod = 1;          /* 0 = use normal distance-based model LODs */
 static int s_CfgLowRes = 0;           /* [display] low_res: the level render's
                                        * line count - 0 off, 240 = "HW" (legacy
@@ -1037,6 +1038,7 @@ static int videoSetDisplayOption(const char *key, const char *value)
     if (SDL_strcasecmp(key, "msaa") == 0)          { s_CfgMsaa = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "anisotropy") == 0)    { s_CfgAnisotropy = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "filter_2d") == 0)     { s_CfgFilter2D = SDL_atoi(value); return 1; }
+    if (SDL_strcasecmp(key, "enhanced_fonts") == 0) { s_CfgEnhancedFonts = SDL_atoi(value) != 0; return 1; }
     if (SDL_strcasecmp(key, "high_lod") == 0)      { s_CfgHighLod = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "low_res") == 0)       { s_CfgLowRes = videoLowResLines(value); return 1; }
     /* "mipmaps" is the key the menu overhaul settled on (spec 2.1);
@@ -1402,6 +1404,7 @@ s32 portVideoOptionGet(const char *key, s32 *out)
     if (SDL_strcasecmp(key, "filtering") == 0)     { *out = videoFilteringIndex(); return 1; }
     if (SDL_strcasecmp(key, "anisotropy") == 0)    { *out = (s_CfgAnisotropy >= 2) ? s_CfgAnisotropy : 0; return 1; }
     if (SDL_strcasecmp(key, "filter_2d") == 0)     { *out = s_CfgFilter2D;     return 1; }
+    if (SDL_strcasecmp(key, "enhanced_fonts") == 0) { *out = s_CfgEnhancedFonts; return 1; }
     if (SDL_strcasecmp(key, "high_lod") == 0)      { *out = s_CfgHighLod;      return 1; }
     if (SDL_strcasecmp(key, "low_res") == 0)       { *out = s_CfgLowRes;       return 1; }
     if (SDL_strcasecmp(key, "mipmaps") == 0
@@ -1547,6 +1550,10 @@ s32 portVideoOptionSet(const char *key, s32 value)
     if (SDL_strcasecmp(key, "filter_2d") == 0)
     {
         gfx_filter_2d = s_CfgFilter2D != 0;
+    }
+    else if (SDL_strcasecmp(key, "enhanced_fonts") == 0)
+    {
+        gfx_enhanced_fonts = s_CfgEnhancedFonts != 0;
     }
     else if (SDL_strcasecmp(key, "low_res") == 0)
     {
@@ -2228,6 +2235,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "filtering=%s\n", s_CfgFiltering);
     fprintf(f, "anisotropy=%d\n", s_CfgAnisotropy);
     fprintf(f, "filter_2d=%d\n", s_CfgFilter2D);
+    fprintf(f, "enhanced_fonts=%d\n", s_CfgEnhancedFonts);
     fprintf(f, "low_res=%d\n", s_CfgLowRes);
     fprintf(f, "n64_aa=%d\n", s_CfgN64Aa ? 1 : 0);
     fprintf(f, "room_cache=%d\n", s_CfgRoomCache);
@@ -4759,6 +4767,7 @@ s32 videoInit(void)
         gfx_anisotropy = (s_CfgAnisotropy > 16) ? 16u : (uint32_t)s_CfgAnisotropy;
     }
     gfx_filter_2d = s_CfgFilter2D != 0;
+    gfx_enhanced_fonts = s_CfgEnhancedFonts != 0;
     { /* [display] low_res: whole-game 240p render scaled to the window (very low power machines).
        * GE_LOWRES=1/0 overrides the ini for A/B. */
         extern char *getenv(const char *);

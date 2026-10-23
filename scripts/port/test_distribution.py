@@ -69,6 +69,7 @@ class Distribution(unittest.TestCase):
                 names=archive.namelist()
                 self.assertIn("SDL2.dll",names);self.assertIn("Data/README.txt",names)
                 self.assertIn("build-info.json",names);self.assertIn("SHA256SUMS.txt",names)
+                self.assertIn("Enhanced-Fonts-LICENSE.txt",names);self.assertIn("Enhanced-Fonts-NOTICE.txt",names)
                 self.assertFalse(any(n.endswith((".z64",".bin",".geprofile")) for n in names))
                 self.assertNotIn("midas.ini",names);self.assertNotIn("previous.exe",names)
             previous=path.read_bytes();packager.package(build,out,sdl_license=license)

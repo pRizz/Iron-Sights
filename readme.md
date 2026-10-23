@@ -30,6 +30,7 @@ To update, replace the supplied program files while keeping **Data** and **midas
 - **Sniper scope and wheel zoom:** aim through a centered scope, turn the whole view with the mouse, and adjust magnification with the mouse wheel.
 - **Shift to sprint:** hold Left Shift to sprint; a gameplay setting can restore the original slow-walk behavior.
 - **Sharper sights and combat feedback:** smooth reticles, optional hit markers, and directional damage indicators.
+- **Enhanced fonts:** smooth, high-resolution community fonts for menus and HUD text, enabled by default in **Display > Video > Enhanced Fonts**. [Details and credits](scripts/port/enhanced_fonts.md).
 - **Objective notifications:** named alerts show when mission objectives are completed or failed.
 - **Weapon inventory HUD:** a compact strip highlights your selected weapon, supports text or rendered model icons, and fades while idle.
 - **Always-visible health and armor:** persistent gauges become thinner and dimmer between hits; the original temporary display is also available.

@@ -68,7 +68,8 @@ setup before the demo (FORK-018), prominently links this full
 inventory near the top, and summarizes ADS, sniper zoom, sprint, smoother
 sights/combat feedback, objective alerts, the weapon strip, adaptive
 health/armor, solo suspend points, and mission timer/selection cheat-target
-and earned-status hints. Contributor inventory-maintenance instructions sit under
+and earned-status hints. It also highlights enhanced community fonts (FORK-021).
+Contributor inventory-maintenance instructions sit under
 Contributing, alongside the existing contribution links.
 
 **Sources:** [readme.md](readme.md),
@@ -748,3 +749,63 @@ A Windows audit kept About open beyond the 60-second startup grace (70 seconds)
 and verified it remained responsive and resumed the normal game loop on close.
 URL tests reject missing values, HTTP, lookalike domains and injected markup or
 control characters. Corrected the existing malformed inventory heading to UTF-8.
+
+### FORK-021 — Enhanced community font textures
+
+**Status:** Implemented.
+
+Added default-on **Display > Video > Enhanced Fonts** (`enhanced_fonts=1`) to
+the frontend and watch, independently of 2D Filtering. Replaces matching Latin
+font textures with 186 eight-times-resolution community Bank Gothic/Zurich
+Bold masks from Carnivorous's CC0 GEPD texture pack, published by Graslu at
+`ca06e063f5b985cf59b1ed7a01d03ba3cf86ec63`. These community-authored replacement
+masks are embedded, with source fingerprints and licensed attribution; this
+addition does not embed the player's original ROM font pixels. No runtime
+download, external emulator or asset preparation is required. The Nintendo 64
+preset disables the feature and Modern enables it; Classic Mode remains an
+independent setting.
+
+The inherited glyph renderer retains spacing, baselines, colours, clipping,
+outlines and scaled HUD layout. Tagged I8 font draws match content fingerprints
+after inherited padding cleanup. Unknown/modified fonts, Japanese text and
+missing characters (both tildes) keep original rendering. Only matching fonts
+receive high-resolution images and smooth sampling; images/logos and ammo
+icons retain their existing behavior. Original and enhanced cache entries are
+distinct, and live setting changes invalidate the renderer's current bindings.
+The generator verifies a pinned source ZIP and records source-image hashes;
+it adapts pack padding and uses lossless RLE storage. Regeneration requires
+Pillow; ordinary builds do not. Release packages include CC0/credits and
+build-inputs.json fingerprints the embedded community masks. No emulator
+implementation code was copied.
+
+**Known visual difference; decision deferred (2026-10-23):** enhanced Bank
+Gothic digits are approximately 12% taller than sampled uppercase letters in
+the source artwork. Original sampled digits/capitals have matching visible
+heights and alignment; lowercase small capitals are a separate, shorter set.
+The pack author's intent is undocumented in the sources reviewed. The
+[font guide](scripts/port/enhanced_fonts.md#digit-height-decision-deferred)
+records measurements, comparison method and source references. Keep current
+proportions while deferring whether to normalize digits and the scope of any
+adjustment; this documentation does not change rendering or assets.
+
+**Sources:** [font replacement](port/fast3d/enhanced_fonts.cpp),
+[community masks and provenance](port/fast3d/fonts/sources.json),
+[renderer](port/fast3d/gfx_pc.cpp), [settings](port/src/video.c),
+[frontend](src/game/front.c), [watch](port/src/port_watchpages.c),
+[generator and regeneration guide](scripts/port/enhanced_fonts.md),
+[generator](scripts/port/generate_enhanced_fonts.py),
+[tests](scripts/port/test_enhanced_fonts.py),
+[visual audit](scripts/port/audit_fonts.ps1),
+[packaging](scripts/port/package_windows.py),
+[credits](tools/THIRD_PARTY_NOTICES.txt), [license scope](LICENSE).
+**Validation:** Windows MinGW and Linux video builds passed. ROM-free tests
+check all 186 native mappings, both absent tildes, bounded decoding, malformed
+RLE/size rejection and decoded antialiasing. Regeneration reproduced the output
+byte-for-byte. Isolated 1920x1080 audits compared enhanced/original video menus,
+mission difficulty/cheat hints and live objective/weapon HUD text. Runtime
+uploads confirmed replacement in both font families, with zero replacement
+uploads when disabled. Visual review corrected power-of-two padding adaptation
+that initially made some letters too narrow. Package tests require font license
+and attribution files. The new unit tests run in the release workflow. The main
+Windows executable was rebuilt, and its isolated startup audit confirmed that
+an existing configuration without the new key enables enhanced fonts by default.

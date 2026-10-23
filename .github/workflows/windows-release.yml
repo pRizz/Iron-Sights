@@ -60,6 +60,7 @@ jobs:
           bash scripts/port/test_states.sh
           python3 scripts/port/test_distribution.py
           python3 scripts/port/test_ci_dependencies.py
+          python3 scripts/port/test_enhanced_fonts.py
 
   windows:
     needs: tests

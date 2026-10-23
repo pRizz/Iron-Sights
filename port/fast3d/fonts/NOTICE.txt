@@ -1,0 +1,17 @@
+Enhanced fonts for Project Midas ADS
+
+GoldenEye/GoldFinger texture pack by Carnivorous, published by Graslu.
+Source: https://github.com/Graslu/GEPDTexturePacks
+Revision: ca06e063f5b985cf59b1ed7a01d03ba3cf86ec63
+License: Creative Commons CC0 1.0 Universal (see LICENSE.txt).
+
+The embedded font masks come from the community pack's Bank Gothic and Zurich
+Bold replacement images, rather than enlarged copies of the original ROM
+pixels. This port adapts their padding to native glyph cells and stores their
+intensity masks with lossless run-length encoding. Rare's original glyph
+pixels are read from the player's ROM and are not included in this addition.
+Original character spacing, baselines, outlines and clipping remain in use.
+
+Only community font masks are included; the pack's ammo icons, logos and
+Perfect Dark assets are not included. sources.json records per-image hashes.
+Regeneration: scripts/port/generate_enhanced_fonts.py

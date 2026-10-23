@@ -89,6 +89,10 @@ changes after compilation fail the job. No ROM, ROM URL or private asset secret
 is used by CI. `build-inputs.json` records actual
 compiler/runner versions and input hashes. This is recorded provenance, not
 a claim of hermetic or byte-reproducible compilation across runner updates.
+The executable also embeds the separately licensed CC0 community enhanced font
+masks described in [enhanced_fonts.md](enhanced_fonts.md), with their license
+and credits in the ZIP and mask/source fingerprints in build-inputs.json.
+These replacement masks require no player preparation or build-time downloads.
 The existing CMake Debug configuration retains crash symbols and assertions;
 the port's explicit -O2 optimization remains enabled, matching local builds.
 

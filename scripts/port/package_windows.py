@@ -24,6 +24,8 @@ def package(build, output, root=ROOT, sdl_license=None):
     if sdl_license is None:
         raise ValueError("The SDL2 license is required")
     inputs["SDL2-LICENSE.txt"] = sdl_license.read_bytes()
+    inputs["Enhanced-Fonts-LICENSE.txt"] = (root/"port/fast3d/fonts/LICENSE.txt").read_bytes()
+    inputs["Enhanced-Fonts-NOTICE.txt"] = (root/"port/fast3d/fonts/NOTICE.txt").read_bytes()
     hashes = "".join(f"{hashlib.sha256(data).hexdigest()}  {name}\n" for name, data in sorted(inputs.items()))
     inputs["SHA256SUMS.txt"] = hashes.encode("ascii")
     path = output/NAME

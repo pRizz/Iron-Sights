@@ -39,6 +39,7 @@
 #include "port_hostptr.h" /* PORT_IS_HOST_ADDR: the Xbox image sits below 0x10000000 */
 #include "port_weapon_images.h"
 #include "port_icon_decode.h"
+#include "enhanced_fonts.h"
 
 #include "port_icon_cache.h"
 static const uint8_t *gfx_weapon_image(int item) { return portIconPixels(item); }
@@ -373,6 +374,7 @@ static std::atomic<int> gfx_line_mode_req{0}; /* boss.c, every frame, sim thread
 extern "C" { uint32_t gfx_line_mode = 0; }    /* this frame's, render thread (gfx_opengl.cpp reads it) */
 uint32_t gfx_anisotropy = 1;
 uint32_t gfx_filter_2d = 1;
+uint32_t gfx_enhanced_fonts = 1;
 /* set by G_MIRRORPILLAR_EXT around an overlay wanting mirrored side bands -
  * blood_animation.c's death / gunbarrel blood, and title.c's untextured fade.
  * The sampler latch reads it as well: see the filter_2d rule there. */
@@ -2354,6 +2356,28 @@ static void import_texture_i8(int tile, const LoadedTexture& loaded_texture, boo
     const uint32_t line_size_bytes = loaded_texture.line_size_bytes;
     SUPPORT_CHECK(full_image_line_size_bytes == line_size_bytes);
 
+    const uint32_t glyph_width = rdp.texture_tile[tile].line_size_bytes;
+    if (s_GeTextGlyphs && gfx_enhanced_fonts && glyph_width != 0) {
+        const auto *font = enhanced_fonts::find(addr, size_bytes, glyph_width, size_bytes/glyph_width);
+        if (!font && getenv("GE_FONT_AUDIT")) {
+            uint64_t hash = 14695981039346656037ULL;
+            for (uint32_t k = 0; k < size_bytes; ++k) hash = (hash ^ addr[k]) * 1099511628211ULL;
+            fprintf(stderr, "font: fallback line=%u size=%u tileline=%u tileheight=%u fingerprint=%016llx\n",
+                line_size_bytes, size_bytes, (unsigned)rdp.texture_tile[tile].line_size_bytes,
+                (unsigned)rdp.texture_tile[tile].height, (unsigned long long)hash);
+        }
+        static std::vector<uint8_t> pixels;
+        if (font && enhanced_fonts::load(*font, pixels)) {
+            if (getenv("GE_FONT_AUDIT")) fprintf(stderr, "font: enhanced %ux%u fingerprint=%016llx\n",
+                (unsigned)font->width, (unsigned)font->height, (unsigned long long)font->fingerprint);
+            gfx_rapi->upload_texture(pixels.data(), font->width*8, font->height*8);
+            for (auto *node : rendering_state.textures) {
+                if (node && node->first.texture_addr == addr && node->first.enhanced_font) node->second.enhanced_font = true;
+            }
+            return;
+        }
+    }
+
     uint8_t *dest = tex_upload_buffer;
     for (uint32_t i = 0; i < size_bytes; i++, dest += 4) {
         const uint8_t intensity = addr[i];
@@ -2973,6 +2997,7 @@ static void import_texture(int i, int tile, bool importReplacement) {
     ge_composite_hash = 0;
     key.masks = rdp.texture_tile[tile].masks;
     key.maskt = rdp.texture_tile[tile].maskt;
+    key.enhanced_font = s_GeTextGlyphs && gfx_enhanced_fonts && fmt == G_IM_FMT_I && siz == G_IM_SIZ_8b;
 
     { /* GE_TEXDBG=1: report address collisions between
        * DIFFERENT geometries - the class that used to silently return
@@ -4282,14 +4307,15 @@ ndcprobe_done:;
             if (rendering_state.textures[i]) {
                 bool linear_filter = (rdp.other_mode_h & (3U << G_MDSFT_TEXTFILT)) != G_TF_POINT;
                 if (s_DrawingRect && !gfx_ge_mirror_pillars) {
-                    /* filter_2d owns the whole 2D layer: 1 smooths every 2D
-                     * draw, 0 keeps every one crisp, regardless of the game's
-                     * per-draw request. The exception is the death / gunbarrel
+                    /* filter_2d controls original 2D textures. Community HD
+                     * fonts and native HUD images keep smooth sampling. The
+                     * other exception is the death / gunbarrel
                      * blood, the only textured rects drawn inside
                      * G_MIRRORPILLAR_EXT; they skip this and follow the texture
                      * filter setting (point, bilinear or 3-point) via the 3D
                      * path below. */
-                    linear_filter = gfx_filter_2d != 0 || (rdp.loaded_texture[rdp.texture_tile[tile].tmem].tex_flags & 0x80000000u);
+                    linear_filter = gfx_filter_2d != 0 || rendering_state.textures[i]->second.enhanced_font
+                        || (rdp.loaded_texture[rdp.texture_tile[tile].tmem].tex_flags & 0x80000000u);
                 }
                 /* GE N64 mipmaps: when the game asked for per-pixel LOD over a
                  * mip chain (G_TL_LOD), use GL's own chain on the level-0
@@ -6096,11 +6122,12 @@ static void gfx_dp_texture_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int3
         return;
     }
 
-    /* Font glyphs under the 2D filter: grow the rect half a texel per side
+    /* Filtered original and enhanced glyphs: grow half a texel per side
      * with a transparent border, so bilinear can finish the edge fade that
      * the tight glyph cells cut off. GE_NOGLYPHPAD=1 turns it off. */
     s_RectGlyphBorder = false;
-    if (s_GeTextGlyphs && gfx_filter_2d != 0 && !flip && dsdx > 0 && dtdy > 0
+    if (s_GeTextGlyphs && (gfx_filter_2d != 0 || (gfx_enhanced_fonts && rdp.texture_tile[tile].fmt == G_IM_FMT_I
+        && rdp.texture_tile[tile].siz == G_IM_SIZ_8b)) && !flip && dsdx > 0 && dtdy > 0
         && (rdp.other_mode_h & (3U << G_MDSFT_CYCLETYPE)) != G_CYC_COPY) {
         static int glyphpad = -1;
         if (glyphpad < 0) {
@@ -7815,6 +7842,13 @@ extern "C" uint32_t gfx_real_window_width;  /* the real window width while a pil
 uint32_t gfx_real_window_width = 0;
 
 extern "C" void gfx_start_frame(void) {
+    static uint32_t previous_fonts = ~0u;
+    if (previous_fonts != gfx_enhanced_fonts) {
+        gfx_flush();
+        rdp.textures_changed[0] = rdp.textures_changed[1] = true;
+        ++ge_state_serial;
+        previous_fonts = gfx_enhanced_fonts;
+    }
     gfx_line_mode = (gfx_line_mode_req.load() != 0 && gfx_framebuffers_enabled) ? 1u : 0u;
     gfx_msaa_level = gfx_line_mode ? std::max<uint32_t>(gfx_msaa_user, 4u) : gfx_msaa_user;
     gfx_n64_aa = gfx_line_mode ? 1u : gfx_n64_aa_user;

@@ -194,6 +194,7 @@ static const struct PortOpt sOpts[] = {
     ENUMR ("anisotropy",    "[display]", "Anisotropy\n",      PORTOPT_CAT_DISPLAY, sAnisoVals, sAnisoText, NULL),
     ENUMR ("msaa",          "[display]", "MSAA\n",            PORTOPT_CAT_DISPLAY, sMsaaVals, sMsaaText, NULL),
     TOGGLE("filter_2d",     "[display]", "2D Filtering\n",    PORTOPT_CAT_DISPLAY),
+    TOGGLE("enhanced_fonts", "[display]", "Enhanced Fonts\n", PORTOPT_CAT_DISPLAY),
     TOGGLE("high_lod",      "[display]", "High Detail\n",     PORTOPT_CAT_DISPLAY),
     ENUMR ("low_res",       "[display]", "3D Resolution\n",   PORTOPT_CAT_DISPLAY, sLowResVals, sLowResText, NULL),
     TOGGLE("mipmaps",       "[display]", "Mipmaps\n",         PORTOPT_CAT_DISPLAY),

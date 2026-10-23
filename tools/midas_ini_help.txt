@@ -126,6 +126,9 @@ padN_stickmode.
                       |            | glancing angles
   filter_2d           | 0          | 0 = crisp HUD and menu graphics,
                       |            | 1 = smoothed
+  enhanced_fonts      | 1          | Community HD Bank Gothic/Zurich fonts;
+                      |            | 0 = original glyphs. Independent of 2D
+                      |            | filtering; missing/modded glyphs fall back.
   low_res             | 0          | Level render height in lines, scaled up
                       |            | to the window: 0 = window size,
                       |            | 240 = the N64's, or 480, 720, 1080.
