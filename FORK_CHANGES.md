@@ -598,7 +598,9 @@ timeouts bound dependency setup.
 
 SDL's archive has a separate version/SHA256 cache and is checked before each
 extraction. A 256 MiB ccache reuses unchanged C/C++ compilations, with compiler
-content checks, runner/toolchain identity and source/header/flag invalidation.
+content checks, Ubuntu/architecture/toolchain identity and source/header/flag
+invalidation. Unrelated runner-image revisions do not invalidate identical
+tools; each release still records its exact runner revision and tool hashes.
 No sloppiness is enabled. CMake uses available runner cores, fresh build
 directories, fresh linking/metadata and fresh packages/attestations on every
 run. Prior executables and ROM assets are never cached. Only main runs save
@@ -656,7 +658,13 @@ A fresh-container restore reused all 633,018 bytes of its needed archives with
 zero package-download bytes, and installed successfully. Both cold and warm
 MinGW builds completed locally; the warm build reused 254 of 257 cacheable
 compilations (98.8%). Eight other compiler calls fell back to ordinary
-compilation. Hosted timings remain to be measured after deployment.
+compilation because inherited generated-code line directives name missing
+virtual source paths. Hosted run 40035516033 completed all jobs in 2m12s;
+Windows dependency installation took 14s and cold compilation took 42s.
+Run 40035779322 restored all package and SDL downloads, but a concurrent
+GitHub runner-image rollout invalidated the original image-version object key.
+The revised key uses actual toolchain content to preserve reuse across those
+image updates. The cold release's ZIP attestation verified successfully.
 
 ### FORK-019 — Native first-launch weapon image cache
 

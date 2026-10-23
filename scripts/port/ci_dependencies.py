@@ -84,6 +84,20 @@ def verify_archives(folder, records, require=False):
     return removed
 
 
+def compiler_identity(plan):
+    # Hosted image rollouts can mix revisions between consecutive runs. Key the
+    # actual tools, not that unrelated image revision; ccache checks headers/flags.
+    identity = dict(requested=plan["requested"], ubuntu=plan["ubuntu"],
+                    architecture=plan["architecture"],
+                    ccache=run(["ccache", "--version"], True), binaries={})
+    for tool in ("gcc", "g++"):
+        compiler = "i686-w64-mingw32-"+tool
+        for path in [shutil.which(compiler),
+                     run([compiler, "-print-prog-name="+("cc1" if tool == "gcc" else "cc1plus")], True).strip()]:
+            identity["binaries"][Path(path).name] = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    return identity
+
+
 def prepare(root, profile):
     root.mkdir(parents=True, exist_ok=True)
     for directory in ("lists/partial", "archives/partial", "planning-empty/partial"):
@@ -151,14 +165,8 @@ def install(root):
         for compiler in ("gcc", "g++"):
             run([*prefix, "update-alternatives", "--set", "i686-w64-mingw32-"+compiler,
                  "/usr/bin/i686-w64-mingw32-"+compiler+"-win32"])
-        # Invalidate object caches on compiler/frontend/toolchain or runner changes.
-        identity = dict(requested=plan["requested"], image=os.environ.get("ImageVersion", "local"),
-                        ccache=run(["ccache", "--version"], True), binaries={})
-        for tool in ("gcc", "g++"):
-            compiler = "i686-w64-mingw32-"+tool
-            for path in [shutil.which(compiler),
-                         run([compiler, "-print-prog-name="+("cc1" if tool == "gcc" else "cc1plus")], True).strip()]:
-                identity["binaries"][Path(path).name] = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+        identity = compiler_identity(plan)
+        plan["compiler_identity"] = identity
         key = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
         if os.environ.get("GITHUB_OUTPUT"):
             with open(os.environ["GITHUB_OUTPUT"], "a") as stream:

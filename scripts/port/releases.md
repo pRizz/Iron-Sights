@@ -33,12 +33,15 @@ restored. Three independent caches avoid repeated work:
   package databases and signed indexes are not cached.
 - The SDL development archive, keyed by version and SHA256 and checked again
   before extraction, including on cache hits.
-- `ccache` C/C++ object files, capped at 256 MiB and keyed by runner image,
+- `ccache` C/C++ object files, capped at 256 MiB and keyed by Ubuntu/architecture,
   toolchain identity and compiler/frontend content. ccache checks source,
   included headers and compiler flags and hashes compiler content. No unsafe
   sloppiness settings are enabled. Run-specific immutable cache keys with a
   toolchain prefix carry the latest objects forward. Only trusted main builds
   save caches; PR tests can restore dependency downloads but cannot publish them.
+
+Unrelated hosted-image revision changes retain the same toolchain cache key;
+the exact runner revision is still recorded in each release's input metadata.
 
 Fresh build metadata changes its own translation units even on a documentation
 push. Linking and release provenance always run again. Compiler hit/miss counts
