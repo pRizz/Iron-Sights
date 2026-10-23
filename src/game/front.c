@@ -4386,7 +4386,7 @@ extern s32 portMouseWheelSteps(void);
 enum { SHROW_OPT, SHROW_RES, SHROW_XHAIR, SHROW_LAYOUT, SHROW_SAVELAYOUT, SHROW_DELLAYOUT,
        SHROW_MANAGELAYOUT, /* save / delete / cancel popup */
        SHROW_BINDDEV, SHROW_BINDMODE, SHROW_CTRLSTYLE, SHROW_BIND, SHROW_PLAYERPICK,
-       SHROW_GOBINDS, SHROW_GOSHEET,
+       SHROW_GOBINDS, SHROW_GOSHEET, SHROW_ABOUT,
        SHROW_DEVNAME, /* the device's name, on the line under Input Device - text, takes no input */
        SHROW_RESETBINDS, /* the rebind page's Reset to Default */
        SHROW_COLBREAK /* two-column sheets: the rows after it start the right column (no row of its own) */ };
@@ -4532,6 +4532,7 @@ static const struct PortSheetRow port_sheet_rows_general[] = {
 /* PORT OPTIONS: the port's own gameplay switches. p1 ends
  * match is ini-only (default on); play as ssf character is ini-only. */
 static const struct PortSheetRow port_sheet_rows_portopts[] = {
+    { SHROW_ABOUT, NULL, "About Project Midas ADS\n" },
     { SHROW_OPT, "unlock_all" },   /* first */
     { SHROW_OPT, "fix_shootthrough" }, { SHROW_OPT, "distance_fading" },
     { SHROW_OPT, "true_enemy_rockets" },
@@ -5222,6 +5223,7 @@ static s32 portSheetListCount(s32 row)
         || port_sheet_row_kind[row] == SHROW_CTRLSTYLE
         || port_sheet_row_kind[row] == SHROW_PLAYERPICK
         || port_sheet_row_kind[row] == SHROW_GOBINDS
+        || port_sheet_row_kind[row] == SHROW_ABOUT
         || port_sheet_row_kind[row] == SHROW_GOSHEET
         || port_sheet_row_kind[row] == SHROW_DEVNAME
         || port_sheet_row_kind[row] == SHROW_RESETBINDS)
@@ -5627,6 +5629,7 @@ static void portSheetStep(s32 row, s32 dir)
     if (port_sheet_row_kind[row] == SHROW_LAYOUT || port_sheet_row_kind[row] == SHROW_SAVELAYOUT
         || port_sheet_row_kind[row] == SHROW_DELLAYOUT || port_sheet_row_kind[row] == SHROW_BIND
         || port_sheet_row_kind[row] == SHROW_PLAYERPICK || port_sheet_row_kind[row] == SHROW_GOBINDS
+        || port_sheet_row_kind[row] == SHROW_ABOUT
         || port_sheet_row_kind[row] == SHROW_GOSHEET || port_sheet_row_kind[row] == SHROW_DEVNAME
         || port_sheet_row_kind[row] == SHROW_RESETBINDS)
     {
@@ -6088,6 +6091,7 @@ static const char *portSheetValueText(s32 row, s32 *colour)
         return "\n";
     }
     if (port_sheet_row_kind[row] == SHROW_GOBINDS || port_sheet_row_kind[row] == SHROW_GOSHEET
+        || port_sheet_row_kind[row] == SHROW_ABOUT
         || port_sheet_row_kind[row] == SHROW_DEVNAME || port_sheet_row_kind[row] == SHROW_RESETBINDS)
     {
         return "\n";   /* a page, not a value, so no "press A" text */
@@ -7956,6 +7960,11 @@ void interface_menu1C_portsheet(void)
             {   /* the Exit prompt's window; starts on No - it throws away every bind */
                 port_sheet_reset_open = TRUE;
                 portDlgOpen("Reset All Binds?\n", "Yes\n", "No\n", 0);
+            }
+            else if (port_sheet_row_kind[row] == SHROW_ABOUT)
+            {
+                extern void portAboutOpen(void);
+                portAboutOpen();
             }
             else if (port_sheet_row_kind[row] == SHROW_GOSHEET)
             {

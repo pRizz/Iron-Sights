@@ -40,23 +40,8 @@
 #include "port_weapon_images.h"
 #include "port_icon_decode.h"
 
-extern "C" const unsigned char port_weapon_images[];
-static const uint8_t *gfx_weapon_image(int item) {
-    static std::vector<uint8_t> decoded[PORT_WEAPON_IMAGE_COUNT];
-    if (item < 0 || item >= PORT_WEAPON_IMAGE_COUNT) return nullptr;
-    auto &pixels = decoded[item];
-    const auto &image = portWeaponImages[item];
-    if (!image.size || image.offset > PORT_WEAPON_IMAGE_BYTES
-        || image.size > PORT_WEAPON_IMAGE_BYTES-image.offset) return nullptr;
-    if (pixels.empty()) {
-        pixels.resize(PORT_WEAPON_IMAGE_WIDTH*PORT_WEAPON_IMAGE_HEIGHT*4);
-        if (!portIconDecode(port_weapon_images+image.offset, image.size, pixels.data(), pixels.size())) {
-            pixels.clear();
-            return nullptr;
-        }
-    }
-    return pixels.data();
-}
+#include "port_icon_cache.h"
+static const uint8_t *gfx_weapon_image(int item) { return portIconPixels(item); }
 
 uintptr_t gfxFramebuffer;
 

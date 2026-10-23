@@ -131,6 +131,7 @@ static const struct PortWatchRowDef sGenSettings[] = {
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
 static const struct PortWatchRowDef sPortOpts[] = {
+    { PWROW_ACTION, NULL, "About Project Midas ADS\n", 101, 0 },
     { PWROW_OPT,       "unlock_all",         NULL, 0, 0 },   /* first */
     { PWROW_OPT,       "fix_shootthrough",   NULL, 0, 0 },
     { PWROW_OPT,       "distance_fading",    NULL, 0, 0 },
@@ -1770,6 +1771,10 @@ s32 portWatchRowAction(s32 page, s32 row)
     if (d == NULL || d->kind != PWROW_ACTION)
     {
         return 0;
+    }
+    if (d->arg == 101) {
+        extern void portAboutOpen(void);
+        portAboutOpen(); return 1;
     }
     if (d->arg == 100) {
         extern void portStateMenuOpen(void);

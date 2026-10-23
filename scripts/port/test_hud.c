@@ -5,6 +5,9 @@
 #include "../../port/src/port_wardrobe.c"
 #include "port_icon_decode.h"
 
+static s32 iconFixtureReady = 1;
+s32 portIconCacheReady(void) { return iconFixtureReady; }
+s32 portIconAvailable(s32 icon) { return iconFixtureReady && icon >= 0 && icon < 38 && icon != 23 && icon != 30; }
 static struct player testPlayer;
 struct player *g_CurrentPlayer = &testPlayer;
 f32 g_GlobalTimerDelta;
@@ -239,16 +242,15 @@ int main(void)
     inventoryCount = 8; currentWeapon = ITEM_AK47;
     n = phWeapons(weapons, &selected);
     assert(n == 5 && selected == 2 && weapons[4].item == ITEM_REMOTEMINE);
-#if PORT_WEAPON_IMAGES_AVAILABLE
     for (i = ITEM_UNARMED; i <= ITEM_TASER; i++) {
         if (i == ITEM_WATCHLASER || i == ITEM_TRIGGER) continue;
-        assert(phWeaponIcon(i) >= 0 && phWeaponIcon(i) < PORT_WEAPON_IMAGE_COUNT);
+        assert(phWeaponIcon(i) >= 0 && phWeaponIcon(i) < 38);
     }
     assert(phWeaponIcon(ITEM_DOORDECODER) == -1);
     assert(phWeaponIcon(ITEM_WPPK) != phWeaponIcon(ITEM_WPPKSIL));
     assert(phWeaponIcon(ITEM_MP5K) != phWeaponIcon(ITEM_MP5KSIL));
     assert(phWeaponIcon(ITEM_TIMEDMINE) != phWeaponIcon(ITEM_REMOTEMINE));
-    if (PORT_WEAPON_IMAGE_COUNT >= 38) {
+    if (portIconCacheReady()) {
         for (i = 0; i < 6; i++) {
             testPlayer.bondtype = portWardrobeCuff(i);
             assert(phWeaponIcon(ITEM_FIST) == 32+i && phWeaponIcon(ITEM_UNARMED) == 32+i);
@@ -257,6 +259,7 @@ int main(void)
         assert(phWeaponIcon(ITEM_FIST) == 37);
         testPlayer.bondtype = CUFF_BLUE;
     }
+#if PORT_WEAPON_IMAGES_AVAILABLE
     {
         FILE *file = fopen("assets/port/weapon_icons/weapon_icons.rle", "rb");
         const s32 bytes = PORT_WEAPON_IMAGE_WIDTH*PORT_WEAPON_IMAGE_HEIGHT*4;
@@ -280,9 +283,10 @@ int main(void)
         assert(!portIconDecode(overflow, sizeof(overflow), pixels, 4));
         free(packed); free(pixels);
     }
-#else
-    assert(phWeaponIcon(ITEM_AK47) == -1); /* exporter bootstrap falls back to names */
 #endif
+    iconFixtureReady = 0;
+    assert(phWeaponIcon(ITEM_AK47) == -1); /* unavailable cache falls back to names */
+    iconFixtureReady = 1;
     currentWeapon = ITEM_DOORDECODER;
     phWeapons(weapons, &selected); assert(selected == -1);
     for (i = 0; i < 32; i++) for (j = 1; j <= 5; j++) {

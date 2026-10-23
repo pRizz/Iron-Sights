@@ -1,0 +1,26 @@
+PROJECT MIDAS ADS - BUILD PROVENANCE
+
+Download from https://github.com/pRizz/Project-Midas-ADS/releases
+Each release identifies its exact source commit and GitHub Actions run.
+build-info.json matches information stamped into the executable's About dialog.
+This metadata is informational, not itself a cryptographic signature.
+
+The release provides GitHub-signed build attestations for both the Windows ZIP
+and ProjectMidas.exe, plus a provenance bundle and SHA256 checksums.
+With GitHub CLI installed, verify the ZIP before extracting:
+
+  gh attestation verify Project-Midas-ADS-windows-x86.zip -R pRizz/Project-Midas-ADS
+
+Or verify the extracted executable:
+
+  gh attestation verify ProjectMidas.exe -R pRizz/Project-Midas-ADS
+
+Require the expected repository, workflow .github/workflows/main.yml, commit
+and push to refs/heads/main. Inspect the verification output for these fields.
+For offline verification, consult GitHub's attestation documentation and use
+the published bundle; do not trust an arbitrary repository's attestation.
+
+An attestation links exact downloaded bytes to the workflow and source commit.
+It is not a promise that the code, compiler or dependencies are free of bugs.
+This is not an Authenticode certificate or a claim of byte-identical builds
+across different compilers or GPUs. Local builds are labeled as local in About.

@@ -7,6 +7,9 @@
 #include "../../port/src/port_options.c"
 #include "../../port/src/port_hud.c"
 
+static s32 iconFixtureReady = 1;
+s32 portIconCacheReady(void) { return iconFixtureReady; }
+s32 portIconAvailable(s32 icon) { return iconFixtureReady && icon >= 0 && icon < 38 && icon != 23 && icon != 30; }
 static struct player players[4];
 struct player *g_CurrentPlayer;
 s32 g_PlayerIsInTank;

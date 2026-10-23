@@ -1,0 +1,90 @@
+# Windows distribution and build provenance
+
+The default branch is `main`. Every successful push (including documentation
+changes) runs ROM-free tests, builds Windows x86, packages player files and
+publishes a uniquely tagged GitHub Release. Manual dispatch on `main` supports
+retries. Tags include run number, attempt and commit, so a rerun never replaces
+an existing build. Releases are marked latest to support the README's simple
+download link; they are development builds rather than manually certified
+stable versions. PRs run tests only, without publication
+permissions. The previous Linux/Windows three-day EXE-only artifact workflow
+has been replaced; Linux can still be built locally.
+
+## One-time repository setup
+
+- Enable Actions and allow the checked-in pinned actions to run.
+- Enable **Settings > General > Releases > Enable release immutability**.
+  Releases are assembled as drafts, then published only when every asset has
+  been attached. Changing this setting requires repository administration.
+- Allow the publish job's scoped `contents: write`, `id-token: write` and
+  `attestations: write` permissions. Other jobs have read-only access.
+
+Actions artifacts are retained for 30 days. Release assets preserve the player
+ZIP, checksums, build identity, input fingerprint record and signed Sigstore
+provenance bundle beyond workflow/log retention. Immutable publication protects
+the release assets and tag from replacement; a self-reported build-info file
+alone does not provide that assurance.
+
+## What is built and shipped
+
+The build uses a fresh GitHub-hosted Ubuntu 24.04 runner, the checked-out
+commit, the SHA256-pinned SDL2 2.30.11 package, and runner-installed
+MinGW/CMake/Python. Actions are pinned to full commit hashes. Tracked source
+changes after compilation fail the job. No ROM, ROM URL or private asset secret
+is used by CI. `build-inputs.json` records actual
+compiler/runner versions and input hashes. This is recorded provenance, not
+a claim of hermetic or byte-reproducible compilation across runner updates.
+The existing CMake Debug configuration retains crash symbols and assertions;
+the port's explicit -O2 optimization remains enabled, matching local builds.
+
+`package_windows.py` uses an explicit file allow-list. It includes the EXE,
+SDL2 DLL/license, controller defaults, shader list, instructions and metadata;
+it never sweeps a local build directory or includes ROM files, personal settings,
+profiles or saves. `GE_ROMDATA_FALLBACK` is off and generated weapon images are
+not embedded. The three previously compiled menu/logo model files are now
+served from the user's ROM at runtime, including their inline textures.
+A clean checkout compiles without ROM extraction. Inherited checked-in
+scaffolding, tables, fonts and port resources remain part of the source tree;
+this is not a claim that every inherited source resource has been removed.
+
+The ZIP and executable are both attested by the publish job in the same run.
+The player downloads the ZIP; the separate executable is passed between jobs
+only for its own attestation. `VERIFY.txt` describes checking the expected
+repository, commit, workflow and branch. Provenance identifies the workflow
+that produced the bytes; it is not an Authenticode signature or a security audit.
+
+## Local preparation and About
+
+`scripts/port/build_info.py` stamps UTC time, build count, full commit, branch,
+dirty status and available GitHub run/release URLs into a generated header and
+matching JSON. CI status requires an exact matching commit and a clean tree.
+Local builds say local, and missing Git metadata never invents a commit/run.
+`MIDAS_BUILD_TIME_UTC` or `SOURCE_DATE_EPOCH` fixes the timestamp for controlled
+builds. These display fields are informational; use the attestation to verify
+downloaded bytes.
+
+Both Port Options menus open the About dialog. Windows uses native hyperlink
+controls (blue underlined links), keyboard navigation and the default browser.
+Only baked HTTPS GitHub links are opened. Without a usable browser the dialog
+reports the failure. Linux provides native dialog buttons for the same links.
+
+On Windows the first validated-ROM launch prepares icons using an isolated,
+temporary copy of the current executable and its SDL DLL. It uses the game's
+own OpenGL renderer and a neutral configuration, without Python or downloads.
+A progress window allows skipping. The helper is removed after exit. Normal
+game settings and campaign data are not used by the helper.
+
+The cache resides in SDL's per-user application-data directory, keyed by the
+normalized ROM fingerprint and generator version. It contains transparent
+512x160 renders of 29 weapons plus six wardrobe variants, never a ROM copy.
+Black/white renders must repeat exactly before native alpha recovery and
+premultiplied area downsampling. Cache headers, dimensions, sizes and CRCs are
+validated before use, with atomic publication and a per-user generation lock.
+Corrupt/stale caches regenerate; unwritable folders, generation failure or
+skipping fall back to weapon names. `last-preparation.log` preserves diagnostics.
+About reports readiness. Linux can read the same cache format; native automatic
+generation is currently Windows-only. Cross-GPU pixel identity is not promised.
+
+Keep the generator version in `port_icon_cache_format.h` current whenever
+rendering/material/camera changes require regeneration. ROMs, caches, helper
+files and other generated assets remain ignored.

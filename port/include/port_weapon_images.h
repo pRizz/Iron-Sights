@@ -2,7 +2,7 @@
  * The generated images and their metadata remain local, like other ROM assets. */
 #ifndef PORT_WEAPON_IMAGES_BRIDGE_H
 #define PORT_WEAPON_IMAGES_BRIDGE_H
-#if __has_include("assets/port/weapon_icons/weapon_icons.h")
+#if defined(GE_EMBED_WEAPON_ICONS) && __has_include("assets/port/weapon_icons/weapon_icons.h")
 #define PORT_WEAPON_IMAGES_AVAILABLE 1
 #include "assets/port/weapon_icons/weapon_icons.h"
 #else

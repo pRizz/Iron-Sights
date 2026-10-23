@@ -1,6 +1,7 @@
 #include <ultra64.h>
 #ifndef TARGET_N64
 #include <stdio.h>
+#include "romdata.h"
 #endif
 #include "chrobjdata.h"
 #include "image.h"
@@ -203,14 +204,14 @@ void sub_GAME_7F0762E0(ModelFileHeader *objheader, u8 *name, u8 *dst, struct tex
 
 static void *s_InlineTexSwapped[INLINE_TEX_SWAP_MAX];
 
-static void portSwapInlineTextures(struct ModelFileHeader *objheader, u8 *filedata)
+static void portSwapInlineTextures(struct ModelFileHeader *objheader, u8 *filedata, s32 fromRom)
 {
     s32 i;
     s32 slot;
 
     for (slot = 0; slot < INLINE_TEX_SWAP_MAX; slot++)
     {
-        if (s_InlineTexSwapped[slot] == filedata)
+        if (!fromRom && s_InlineTexSwapped[slot] == filedata)
         {
             return;
         }
@@ -259,7 +260,7 @@ static void portSwapInlineTextures(struct ModelFileHeader *objheader, u8 *fileda
         }
     }
 
-    if (slot < INLINE_TEX_SWAP_MAX)
+    if (!fromRom && slot < INLINE_TEX_SWAP_MAX)
     {
         s_InlineTexSwapped[slot] = filedata;
     }
@@ -372,7 +373,10 @@ void load_object_fill_header(struct ModelFileHeader *objheader, u8 *name, u8* ds
             sub_GAME_7F075A90(objheader, (s32) filedata, (u32) filedata);
         }
     }
-    portSwapInlineTextures(objheader, filedata);
+    /* ROM-backed model buffers are fresh each load, including when the stage
+     * arena reuses an address. The static compiled-asset cache cannot identify
+     * those buffers by pointer alone. */
+    portSwapInlineTextures(objheader, filedata, romdataFileServed(fileGetIndex(name)));
     /* PORT: GE_COLAUDIT=1 proves the collision-vertex byte-order fixups
      * stayed exact across reloads of this shared compiled-in blob. */
     portModelCollisionAudit(objheader->RootNode, (const char *) name);

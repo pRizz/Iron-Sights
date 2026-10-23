@@ -771,12 +771,6 @@ static enum romfileclass romdataClassOf(const char *name)
     {
         size_t l = strlen(name);
         if (l > 2 && name[l - 1] == 'Z' && (name[0] == 'C' || name[0] == 'G' || name[0] == 'P') && strchr(name, '/') == NULL) {
-            /* the three inline-texture menu models embed segment-5 texture
-             * blobs (objecthandler_2.c portSwapInlineTextures) that the model
-             * converter does not yet handle - keep them compiled for now */
-            if (strcmp(name, "PlegalpageZ") == 0 || strcmp(name, "PnintendologoZ") == 0 || strcmp(name, "PgoldeneyelogoZ") == 0) {
-                return CLASS_NONE;
-            }
             return CLASS_MODEL; /* C<name>Z chr, G<name>Z gun, P<name>Z prop - converted in load_object_fill_header */
         }
     }
@@ -1234,6 +1228,8 @@ static void romdataNoteRefusal(const char *path)
         sRefusedCarts++;
     }
 }
+
+const char *romdataPath(void) { return sRomPath; }
 
 s32 romdataInit(int argc, char **argv)
 {

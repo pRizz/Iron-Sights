@@ -52,7 +52,8 @@ older states.
 [state storage guide](scripts/port/save_states.md). **History:** `29a9e6e`.
 **Verification:** Git tracked-file changes in that commit. Local cleanup uses
 executable/state build fingerprints and workspace-confined file paths; the
-audit cleanup is checked with the isolated runtime audit.
+audit cleanup is checked with the isolated runtime audit. The native first-launch
+icon helper also removes its temporary executable and DLL (FORK-019).
 
 ### FORK-002 — Fork identity and gameplay documentation
 
@@ -62,7 +63,8 @@ Named this independent fork **Project Midas ADS**, retained its upstream link,
 and documented the added controls, settings and gameplay behavior. Put the
 latest gameplay video near the top of the README with a screenshot thumbnail
 and YouTube play badge; the newer video supersedes the original demo link.
-The README introduces the fork before the demo, prominently links this full
+The README introduces the fork, puts the Windows ZIP download and three-step
+setup before the demo (FORK-018), prominently links this full
 inventory near the top, and summarizes ADS, sniper zoom, sprint, smoother
 sights/combat feedback, objective alerts, the weapon strip, adaptive
 health/armor, solo suspend points, and mission timer/selection cheat-target
@@ -272,8 +274,8 @@ with Text as the default. Icon mode now uses 35 full-color, transparent
 512 x 160 renders of actual weapon models, retaining original materials and
 separate silenced/gold/silver appearances. Unarmed uses the hand/forearm model: six extra wardrobe variants match the
 current mission cuff, resolving Folder's Bond and changing immediately with
-player/stage changes or restores. The old 32-slot pack remains a bootstrap
-fallback until regeneration; current packs have 38 indexed slots.
+player/stage changes or restores. The native cache has 38 indexed slots;
+runtime preparation supersedes the older embedded/bootstrap packs (FORK-019).
 These images replace the initial hand-drawn vector silhouettes. Cached textures
 and a subtle edge keep the icons readable without extra model rendering in
 normal gameplay; the selection highlight and strip scrolling remain intact.
@@ -293,9 +295,12 @@ and metallic reflection vectors. Repeated black/white captures must match
 exactly before transparency recovery, downsampling, preview/manifest generation
 and bounded RGBA packet packing. Exporter slots 32..37 explicitly render each
 wardrobe without changing the mission's actual outfit; the native arm treatment
-is shared with gameplay. The local generated pack is embedded when the
-game is rebuilt. Fresh builds can run the exporter without generated images;
-icon mode falls back to names until generation and rebuild are complete.
+is shared with gameplay. The Python exporter's PNGs, preview/manifest and legacy
+packet/header outputs remain developer inspection tools. Player builds now use
+native runtime preparation and a per-user cache rather than embedding the pack;
+no generation/rebuild cycle is needed. Native preparation shares the exporter
+poses and uses premultiplied area downsampling instead of Python's Lanczos.
+Icon mode falls back to names when its native cache is unavailable.
 ROM-derived outputs remain ignored and are not committed.
 
 **Sources:** [generator](scripts/port/generate_weapon_icons.py),
@@ -510,7 +515,7 @@ executable was rebuilt and replaced without retaining its previous build.
 Linux was compile-checked; runtime visual review ran on Windows.
 
 
-### FORK-017 � Mission wardrobe on native arms and unarmed icons
+### FORK-017 — Mission wardrobe on native arms and unarmed icons
 
 **Status:** Implemented.
 
@@ -558,6 +563,117 @@ a capped 17:03+ record with a cheat target at widescreen, and missing-record
 omission on Surface. HUD, ADS, wardrobe, mission-cheat (both Unlock All modes),
 suspend-state and generator tests passed. Windows and Linux builds passed;
 Linux was compile-checked and runtime captures ran on Windows. The main Windows
-executable includes the generated wardrobe pack and replaces its prior build.
+executable included the generated wardrobe pack and replaced its prior build;
+runtime caching now supersedes embedding that pack (FORK-019).
 ROM-derived outputs remain ignored and copied audit/export executables are
 removed after exit.
+
+### FORK-018 — Windows player releases and recorded provenance
+
+**Status:** Implemented; publication is performed by the checked-in workflow.
+
+Replaced the inherited Linux/Windows EXE-only, three-day artifact workflow with
+ROM-free regression tests, a Windows x86 player ZIP and a versioned development
+GitHub Release on each successful main push or manual main dispatch. PRs run
+tests with read-only permissions. Full-SHA-pinned actions, checksum-pinned SDL2,
+exact checkout checks and recorded compiler/runner inputs identify the process.
+The publish job alone receives release/OIDC/attestation permissions. ZIP and EXE
+receive attestations; the bundle, checksums, identity and input record persist
+as release assets. Actions artifacts last 30 days. Unique immutable releases
+provide durable downloads; repository release immutability was enabled during
+setup. This is recorded provenance, not a claim of hermetic compilation.
+
+The normal GE_ROMDATA_FALLBACK=OFF build now compiles without a ROM, extraction
+or private ROM secret. The three formerly retained inline menu/logo models
+(legal page, Nintendo and GoldenEye logos) load from the user's ROM. Their
+inline texture words match the host representation before texel fixup; fresh
+ROM buffers bypass the compiled-pointer texture cache. Fallback-only assembler
+blobs are no longer unconditional build dependencies. Inherited checked-in
+scaffolding, tables, fonts and port resources remain; this does not claim
+removal of every inherited source resource.
+
+Packaging explicitly allows the program, SDL runtime/license, controller
+defaults, shader list, help, licenses and instructions/metadata. ROMs, icons,
+settings, saves, profiles and old executables are excluded. The README puts a
+latest Windows ZIP link and three-step setup near the top, covering extraction,
+the user's USA ROM in Data, local asset preparation, About and updating. The
+inherited native missing/invalid-ROM explanation remains in use. Instructions
+distinguish signed provenance from Windows Authenticode signing.
+
+**Sources:** [workflow](.github/workflows/main.yml),
+[packager](scripts/port/package_windows.py), [input record](scripts/port/release_inputs.py),
+[player instructions](scripts/port/release/START-HERE.txt),
+[verification](scripts/port/release/VERIFY.txt), [guide](scripts/port/releases.md),
+[build](CMakeLists.txt), [ROM loader](port/src/romdata.c),
+[conversion](port/src/romfile_model.c), [texture fixup](src/game/objecthandler_2.c).
+**Validation:** A source-only snapshot compiled and linked Windows without a
+ROM or extracted model/blob files and launched with runtime ROM data. Windows
+and Linux builds and gameplay/HUD/wardrobe/mission-cheat/suspend regressions
+passed. Five distribution tests cover truthful build identity, allow-listed
+deterministic ZIPs, bounded cache decoding and inline texture depths, shared
+references and invalid offsets/depths. Actionlint passed.
+
+### FORK-019 — Native first-launch weapon image cache
+
+**Status:** Implemented on Windows; Linux reads caches and otherwise uses names.
+
+Replaced rebuild-time embedding (FORK-011) with local preparation by an isolated
+copy of the current game's renderer. First launch with a validated ROM renders
+all 35 weapon/wardrobe images at 2048x1536, checks exact repeated black/white
+pixels, recovers transparency and downsamples with premultiplied area sampling
+to 512x160 RGBA. Players need no Python, compiler, admin rights or downloads.
+A progress window allows Esc/close to skip and continue with names. The helper
+uses neutral settings and no player campaign files, references the ROM without
+copying it, and removes temporary program files after exit.
+
+A per-user SDL application-data cache is keyed by ROM fingerprint and generator
+version. Headers, dimensions, complete slot coverage, sizes and CRC are checked.
+Generation is serialized per cache folder and published atomically. Invalid
+caches regenerate; storage errors, generation failure or skipping preserve text
+fallback. Wide Windows process/filesystem APIs and UTF-8 SDL paths support
+Unicode. Scoped locks/process/window cleanup handles exceptions. About reports
+readiness; last-preparation.log retains diagnostics. The HUD reads cached images,
+including all six wardrobe icons and the selected-weapon caption. Generated
+data stays out of Git. The optional Python PNG exporter remains for inspection.
+
+**Sources:** [cache](port/fast3d/weapon_cache.cpp),
+[format](port/include/port_icon_cache_format.h),
+[capture](port/fast3d/gfx_sdl2.cpp), [renderer](port/fast3d/gfx_pc.cpp),
+[startup](port/src/main.c), [HUD](port/src/port_hud.c),
+[guide](scripts/port/weapon_icons.md).
+**Validation:** Native generation rendered all 35 images with exact repeated
+pixels in a Unicode cache folder. Reuse, corrupt-cache regeneration and
+unwritable-folder fallback ran successfully on Windows. Regeneration matched
+the prior cache byte-for-byte on this laptop; cross-GPU identity is not assumed.
+The contact sheet was visually reviewed. Codec/HUD tests cover malformed
+cache cases and text layout without a cache. Python exporter tests passed.
+
+### FORK-020 — Embedded build identity and About links
+
+**Status:** Implemented.
+
+Frontend and watch Port Options pages offer **About Project Midas ADS**.
+The executable embeds UTC time, build number/date, full Git commit, branch,
+dirty status and available source, Actions run and release/download URLs, with
+matching packaged JSON. CI labeling requires an exact commit and clean tree.
+Local/modified/no-Git builds do not invent an attested run. Controlled builds
+can fix timestamps with MIDAS_BUILD_TIME_UTC or SOURCE_DATE_EPOCH.
+
+Windows uses native blue underlined hyperlinks and keyboard navigation; baked
+HTTPS GitHub links open through SDL in the default browser. A manifest enables
+common controls and UTF-8 paths without elevation. Text is escaped separately
+from link markup, and the game window owns the dialog. Closing resets activation
+input. Linux uses native buttons for the same links. About shows cache status.
+Display metadata is informational; attestations verify downloaded bytes.
+
+**Sources:** [stamp generator](scripts/port/build_info.py),
+[CMake wrapper](scripts/port/buildinfo.cmake), [dialog](port/fast3d/about.cpp),
+[URL validation](port/src/port_about.c), [manifest](port/win/ProjectMidas.manifest),
+[frontend](src/game/front.c), [watch](port/src/port_watchpages.c).
+**Validation:** Identity tests use actual temporary commits and cover modified/
+untracked files, missing Git and fixed timestamps. Windows/Linux builds passed.
+The Windows dialog was visually inspected with the correct full commit,
+dirty/local label, timestamp, cache status and hyperlink controls. Desktop
+automation failed during the browser click check; that click was not confirmed.
+URL tests reject missing values, HTTP, lookalike domains and injected markup or
+control characters. Corrected the existing malformed inventory heading to UTF-8.

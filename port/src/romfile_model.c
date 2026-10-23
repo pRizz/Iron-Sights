@@ -403,6 +403,19 @@ s32 romfileModelConvert(u8 *data, u32 size, s32 numSwitches, s32 numtextures, co
     /* Textures[]: TextureID u32 + 7 flag bytes + pad */
     for (i = 0; i < (u32) numtextures; i++) {
         u32 o = (u32) numSwitches * 4 + i * 12;
+        u32 texture = be32(data + o);
+        /* Inline menu/logo textures are authored as u32 words in compiled
+         * models. Match that representation before the existing texel-depth
+         * fixup, just as for a model compiled from its generated C source. */
+        if ((texture >> 24) == 5) {
+            u32 offset = texture & 0x00ffffffu;
+            u32 depth = data[o+8], length;
+            if (depth > 3) { c.bad++; continue; }
+            length = (((u32)data[o+4]*data[o+5]) << depth) >> 1;
+            length = (length+3)&~3u;
+            if (offset > size || length > size-offset) { c.bad++; continue; }
+            if (mark(&c,offset,length)) swap4run(data+offset,length/4);
+        }
         if (mark(&c, o, 12)) swap4run(data + o, 1);
     }
     walk(&c, rootoff);

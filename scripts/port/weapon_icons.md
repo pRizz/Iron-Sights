@@ -1,9 +1,34 @@
 # Weapon HUD image generation
 
-These transparent 512 x 160 PNGs are renders of the game's actual ROM-loaded
-weapon models, including their original textures and material variants. The
-runtime uses `weapon_icons.rle`, an RGBA packet pack embedded in the executable;
-the PNGs, preview sheet and manifest are inspectable generation outputs.
+Windows player builds generate transparent 512 x 160 icons from the actual
+ROM-loaded weapon models on first launch. The native helper uses the game's
+renderer, fixed camera/poses and repeated black/white captures. It recovers
+alpha and downsamples with premultiplied area sampling. No Python, compiler,
+network access or rebuild is needed by players.
+
+A progress window shows 35 images; Esc skips preparation. The per-user SDL
+application-data folder contains `weapon-icons-v1-<ROM fingerprint>.cache` and
+`last-preparation.log`. About shows readiness. Cache validation checks the ROM,
+generator version, dimensions, complete slot coverage, exact lengths and CRC.
+Invalid caches regenerate; errors or skipping fall back to weapon names.
+The helper uses neutral settings and temporary program files, leaves campaign
+saves/settings alone, and removes its temporary executable on exit. Unicode
+paths are supported. Linux can read this cache format; automatic generation
+currently targets Windows. Bump `PORT_ICON_CACHE_VERSION` when rendering changes
+need new images. Generated ROM-derived data must stay out of Git.
+
+The 38 indexed slots include aliases and empty entries, 29 weapon images and
+six wardrobe-specific unarmed images. The HUD chooses the current mission's
+outfit for unarmed and caches GPU textures for visible icons; ordinary gameplay
+does not rerender weapon models for the HUD. Cross-GPU byte identity is not
+promised; repeated captures must match exactly on the active rendering setup.
+
+## Optional developer PNG exports
+
+The existing Python exporter remains useful for inspecting models and making
+preview sheets. Its legacy RGBA packet/header outputs are diagnostic assets;
+normal player builds now use the native runtime cache instead of embedding them.
+Do not rebuild expecting these exports to replace the native cache.
 
 From the repository root, with a GE_VIDEO build, your `baserom.u.z64`, Python,
 Pillow and NumPy available:
@@ -13,12 +38,9 @@ python -m pip install Pillow==12.3.0 numpy==2.3.5
 python scripts/port/generate_weapon_icons.py --exe build_win/ProjectMidas.exe
 ```
 
-Rebuild the game after generation. CMake tracks the pack and generated header,
-so normal play needs no extra icon files beside the executable. A fresh checkout
-can build the exporter without these generated files; icon mode uses weapon
-names until generation and the following rebuild are complete. The images,
-pack and manifest remain ignored, consistent with the repository's policy for
-ROM-derived assets. Commit the generator and renderer code, not its outputs.
+The images, packet pack and manifest remain ignored. Commit generator and
+renderer code, not ROM-derived outputs. Delete the matching native cache to
+regenerate player icons with a changed exporter.
 
 The exporter opens an isolated copy of the game in an ignored `build_win`
 directory and leaves player settings and saves alone. The temporary copied executable is
@@ -38,8 +60,7 @@ first-person chopping. Six additional unarmed icons (IDs 32..37: blue, boiler,
 rolled jungle, snow, tuxedo and Connery) follow the current player's live mission
 cuff; Folder resolves the selected Bond just as the watch does. The complete
 pack has 35 images and 38 indexed slots including aliases/unused entries.
-Regenerate the entire pack with the updated exporter, then rebuild; older
-32-slot packs temporarily fall back to their original unarmed icon.
+This supersedes the earlier embedded 32-slot bootstrap pack.
 
 To inspect a single model or reprocess a complete capture set:
 

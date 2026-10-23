@@ -23,6 +23,7 @@
 #include "port_ads.h"
 #include "port_hud.h"
 #include "port_weapon_images.h"
+#include "port_icon_cache.h"
 #include "port_wardrobe.h"
 #include "game/file.h"
 #include "boss.h"
@@ -319,7 +320,7 @@ s32 portHudWeaponStripTopInset(void)
 {
     /* Reserve a small caption row above the original ammo counters. Keep the
      * icon row stable when the caption fades or a gadget is equipped. */
-    return PORT_HUD_WEAPON_BOTTOM + (phOptions[4] && PORT_WEAPON_IMAGES_AVAILABLE ? 7 : 0);
+    return PORT_HUD_WEAPON_BOTTOM + (phOptions[4] && portIconCacheReady() ? 7 : 0);
 }
 
 s32 portHudAlwaysHealthShown(void)
@@ -359,11 +360,11 @@ static const char *phWeaponName(const HudWeapon *weapon)
 
 static s32 phWeaponIcon(s32 item)
 {
-    if ((item == ITEM_UNARMED || item == ITEM_FIST) && PORT_WEAPON_IMAGE_COUNT >= 38) {
+    if (item == ITEM_UNARMED || item == ITEM_FIST) {
         s32 variant = 32 + portWardrobeVariant(g_CurrentPlayer->bondtype, fileGetBondForCurrentFolder());
-        if (portWeaponImages[variant].size) return variant;
+        if (portIconAvailable(variant)) return variant;
     }
-    return item >= 0 && item < 32 && portWeaponImages[item].size ? item : -1;
+    return item >= 0 && item < 32 && portIconAvailable(item) ? item : -1;
 }
 
 static s32 phWeapons(HudWeapon *weapons, s32 *selected)

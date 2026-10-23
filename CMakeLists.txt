@@ -48,7 +48,7 @@ if(WIN32)
     add_link_options(-m32 -static-libgcc -static-libstdc++
                      -Wl,--image-base=0x10000000 -Wl,--disable-dynamicbase
                      -Wl,--stack,16777216)
-    link_libraries(dbghelp)
+    link_libraries(dbghelp comctl32)
 else()
     add_link_options(-m32 -no-pie)
 endif()
@@ -211,10 +211,10 @@ endif()
 # object is stale.
 # Asset TU whose C defines the file symbol itself (stan/setup/brief/text):
 # localize everything else.
-# Every asset comes from the user's ROM except three inline-texture menu models
-# (PORT_ASSET_OBJS_KEEP); with GE_ROMDATA_FALLBACK=OFF the rest are dropped and
+# Every file asset, including inline-texture menu models, comes from the user's
+# ROM; with GE_ROMDATA_FALLBACK=OFF all generated asset objects are dropped and
 # their weak file symbols resolve to NULL (ob_end.seg always lives in ob_seg.s).
-set(PORT_ASSET_KEEP_SYMS PlegalpageZ PnintendologoZ PgoldeneyelogoZ)
+set(PORT_ASSET_KEEP_SYMS)
 function(port_asset_record obj sym)
     if(${sym} IN_LIST PORT_ASSET_KEEP_SYMS)
         set_property(GLOBAL APPEND PROPERTY PORT_ASSET_OBJS_KEEP ${obj})
@@ -378,12 +378,19 @@ if(GE_ROMDATA_FALLBACK)
     set_source_files_properties(port/src/segments.c port/src/ramrom_data.c port/src/romdata.c port/src/animdata.c
         PROPERTIES COMPILE_DEFINITIONS GE_ROMDATA_FALLBACK=1)
     list(APPEND ASSET_LOOSE_SRC ${ASSET_LOOSE_FALLBACK_SRC})
+else()
+    # The normal player build reads these blobs from the user's ROM at runtime.
+    # Do not require extracted files merely to compile the guarded .incbin TUs.
+    set_source_files_properties(port/src/segments.c port/src/ramrom_data.c
+        PROPERTIES OBJECT_DEPENDS "")
 endif()
 
 if(GE_VIDEO)
     enable_language(CXX)
     set(CMAKE_CXX_STANDARD 20) # gfx_cc.h uses operator<=> (PD builds C++20)
     set(FAST3D_SRC
+        port/fast3d/about.cpp
+        port/fast3d/weapon_cache.cpp
         port/fast3d/gfx_pc.cpp
         port/fast3d/gfx_cc.cpp
         port/fast3d/gfx_opengl.cpp

@@ -4,6 +4,20 @@ Project Midas ADS is an independent fork of [Project Midas](https://github.com/m
 
 **[See the full list of changes from upstream →](FORK_CHANGES.md)** — the maintained inventory of this fork's additions, modifications, settings, and fixes.
 
+## Download and play on Windows
+
+**[DOWNLOAD HERE — latest Windows ZIP](https://github.com/pRizz/Project-Midas-ADS/releases/latest/download/Project-Midas-ADS-windows-x86.zip)** · [Release details and provenance](https://github.com/pRizz/Project-Midas-ADS/releases/latest) · [Build status](https://github.com/pRizz/Project-Midas-ADS/actions/workflows/main.yml)
+
+1. Download **Project-Midas-ADS-windows-x86.zip** and **extract the entire ZIP** into a writable folder, such as Documents. Keep `SDL2.dll` beside the executable. GitHub's “Source code” archives are for building, not playing.
+2. Put your own **unmodified GoldenEye 007 USA ROM** (`.z64`, `.v64`, or `.n64`) in the extracted **Data** folder. Extract zipped ROMs first. No ROM is included or downloaded by the game.
+3. Double-click **ProjectMidas.exe**. On first launch, the game prepares weapon icons from your ROM and caches them locally. No Python, compiler, administrator access or asset downloads are required. You can skip preparation with Esc; the game uses weapon names if icons are unavailable.
+
+Windows 10/11, an x86-compatible CPU and an OpenGL 3.3-capable graphics driver are required. The 32-bit build also runs on 64-bit Windows. These are continuously published development builds from successful pushes to `main`. Until the first release is published, use the build-status link to check progress.
+
+For the embedded build time, commit and clickable source/build/release links, open **Options > Gameplay > Port Options > About Project Midas ADS**; the watch has the same entry. Windows links are blue and underlined and open in your default browser. Local or modified builds are labeled accordingly. The release page supplies signed provenance, hashes and build-input details; see [verification and maintainer instructions](scripts/port/releases.md).
+
+To update, replace the supplied program files while keeping **Data** and **midas.ini**. Normal campaign saves and profiles are separate from executable-specific suspend points.
+
 ## Watch the latest gameplay demo
 
 [![Watch Project Midas ADS update: new hands, improved sights, and sniper scope zoom at 60 FPS](.github/images/ads-gameplay-thumbnail.png)](https://youtu.be/dI-G7Lo12hA)
@@ -88,7 +102,7 @@ Aiming and crouching prevent the sprint boost; ADS keeps its half-speed movement
 - **Mission Timer:** enable this to show elapsed mission time with hundredths at the bottom left. On a mission/difficulty with a timed cheat unlock, its target appears beside your time (`00:42:50 / CHEAT 02:40`). The target is green while within time, amber with ten seconds remaining, and red once exceeded. Uses the same mission clock and whole-second deadline as the unlock check; pauses and suspend restores follow that clock. A saved best time for this mission and difficulty appears below as `BEST 02:03`; it is omitted if no record exists or in 007 mode. The campaign format stores whole seconds and caps records at 17:03, shown as `17:03+`. Difficulties without a cheat target still show elapsed time and any best record. Defaults to Off (`[display] mission_timer=1` enables it). Objectives and normal cheat-unlock eligibility still apply.
 - **Weapon Strip:** a compact list near the bottom, above the ammo counters, highlights your equipped weapon. Cards, icons and text are scaled down by 30%. Larger inventories scroll with selection; `+N` shows how many weapons are outside the visible strip. After three seconds without switching weapons, the strip smoothly fades to 20% opacity; switching weapons brings it back.
 
-**Weapon Strip Style** switches between **Text** (the default) and **Icons**. Icon mode shows full-colour, static renders of the actual weapon models, including silenced guns, rifles, launchers, and explosives; the selected weapon stays highlighted. Its name appears underneath the selected icon, then fades out completely after three seconds without switching weapons (over a one-second transition). Set `[display] weapon_hud_icons=1` in `midas.ini` to select icons directly. The images are generated ahead of time and embedded in the executable. See [the icon generation guide](scripts/port/weapon_icons.md) to regenerate them from your ROM. Builds without generated images use weapon names until the icons are generated and the game rebuilt.
+**Weapon Strip Style** switches between **Text** (the default) and **Icons**. Icon mode shows full-colour, static renders of the actual weapon models, including silenced guns, rifles, launchers, and explosives; the selected weapon stays highlighted. Its name appears underneath the selected icon, then fades out completely after three seconds without switching weapons (over a one-second transition). Set `[display] weapon_hud_icons=1` in `midas.ini` to select icons directly. Windows prepares these images from your ROM on first launch and reuses a per-user cache; no rebuild or external tools are needed. If preparation is skipped or unavailable, icon mode falls back to weapon names. See [the icon generation guide](scripts/port/weapon_icons.md) for cache details and optional developer exports.
 
 **Health Display** defaults to **Always**, keeping slimmer health and armor arcs visible during gameplay. Damage or a health/armor change restores full opacity at 75% of the original thickness; after three quiet seconds, they smoothly fade to 25% opacity and 20% thickness. Select **Automatic** for the original temporary gauges, or set `[display] always_health=0` in `midas.ini`.
 

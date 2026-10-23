@@ -1,3 +1,4 @@
+#include "port_icon_cache.h"
 #include <stdio.h>
 #include <SDL.h>
 #include <unistd.h>
@@ -800,6 +801,10 @@ static void gfx_sdl_maybe_screenshot(void) {
     if (!px) return;
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, px);
+    if (weapon_capture && portIconWorkerEnabled()) {
+        portIconWorkerCapture(weapon_capture >> 8, weapon_capture & 15, w, h, px);
+        SDL_free(px); return;
+    }
     /* repack in place bottom-up rows into padded stride, RGB->BGR */
     for (int y = h - 1; y >= 0; y--) {
         uint8_t *src = px + (size_t)y * stride;

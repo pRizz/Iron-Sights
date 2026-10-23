@@ -837,6 +837,12 @@ int main(int argc, char **argv)
     {
         extern s32 romdataInit(int argc, char **argv);
         romdataInit(argc, argv);
+#ifdef GE_VIDEO
+        { extern const char *romdataPath(void);
+          extern unsigned int romdataFingerprint(void);
+          extern void portIconCacheInit(const char *, unsigned int);
+          portIconCacheInit(romdataPath(),romdataFingerprint()); }
+#endif
     }
 
     osInitialize();
@@ -852,6 +858,11 @@ int main(int argc, char **argv)
     {
         extern s32 videoInit(void);
         videoInit();
+        /* Exercise the real native About dialog in isolated distribution audits. */
+        if (getenv("GE_ABOUT")) {
+            extern void portAboutOpen(void);
+            portAboutOpen();
+        }
     }
 #endif
 

@@ -259,6 +259,7 @@ __pycache__/
 build_pc/
 cmake_*.log
 third_party/
+/dist/
 build_win/
 build_pc_video/
 nm_v.log
