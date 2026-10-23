@@ -3,7 +3,7 @@
 The default branch is `main`. Every successful push (including documentation
 changes) runs ROM-free tests, builds Windows x86, packages player files and
 publishes a uniquely tagged GitHub Release. Manual dispatch on `main` supports
-retries (`gh workflow run main.yml -R pRizz/Project-Midas-ADS --ref main`).
+retries (`gh workflow run windows-release.yml -R pRizz/Project-Midas-ADS --ref main`).
 If a push does not create a run, inspect Actions settings/policies and use this
 manual main dispatch rather than uploading a locally modified executable.
 Tags include run number, attempt and commit, so a rerun never replaces
@@ -11,13 +11,15 @@ an existing build. Releases are marked latest to support the README's simple
 download link; they are development builds rather than manually certified
 stable versions. PRs run tests only, without publication
 permissions. The previous Linux/Windows three-day EXE-only artifact workflow
-has been replaced; Linux can still be built locally.
+has been replaced by windows-release.yml; Linux can still be built locally.
+The C test job only installs gcc-multilib. Dependency downloads have bounded
+network timeouts/retries so stalled mirrors fail clearly.
 
 ## One-time repository setup
 
 - Enable Actions and allow the checked-in pinned actions to run. For an existing
   fork, explicitly enable the workflow with
-  `gh workflow enable main.yml -R pRizz/Project-Midas-ADS`.
+  `gh workflow enable windows-release.yml -R pRizz/Project-Midas-ADS`.
 - Use the canonical `git@github.com:pRizz/Project-Midas-ADS.git` origin URL,
   rather than the old renamed repository redirect.
 - Enable **Settings > General > Releases > Enable release immutability**.

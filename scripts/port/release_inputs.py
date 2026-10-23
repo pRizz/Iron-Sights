@@ -22,6 +22,6 @@ if __name__ == "__main__":
               cmake=command("cmake","--version"), python=platform.python_version(),
               rom="No ROM used to compile or package; supplied by the player at runtime",
               sdl2_version=os.environ["SDL2_VERSION"],sdl2_sha256=os.environ["SDL2_SHA256"],
-              workflow=".github/workflows/main.yml",
+              workflow=".github/workflows/windows-release.yml",
               generated_icons="Prepared on the player's Windows PC; not embedded in the release")
     args.output.write_text(json.dumps(info,indent=2)+"\n",encoding="utf-8")

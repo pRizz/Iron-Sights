@@ -584,7 +584,10 @@ provide durable downloads; repository release immutability was enabled during
 setup. Maintainer setup also documents explicit workflow enablement for an
 existing fork and the canonical origin URL; the local origin was updated from
 the renamed repository redirect. This is recorded provenance, not a claim of
-hermetic compilation.
+hermetic compilation. The fork-specific windows-release.yml supersedes the
+inherited main.yml workflow path; historical build 1 used main.yml. The ROM-free
+C test job installs only gcc-multilib, without unused C++/CMake packages. APT
+network timeouts and bounded retries prevent indefinite mirror waits.
 
 The normal GE_ROMDATA_FALLBACK=OFF build now compiles without a ROM, extraction
 or private ROM secret. The three formerly retained inline menu/logo models
@@ -603,7 +606,7 @@ the user's USA ROM in Data, local asset preparation, About and updating. The
 inherited native missing/invalid-ROM explanation remains in use. Instructions
 distinguish signed provenance from Windows Authenticode signing.
 
-**Sources:** [workflow](.github/workflows/main.yml),
+**Sources:** [workflow](.github/workflows/windows-release.yml),
 [packager](scripts/port/package_windows.py), [input record](scripts/port/release_inputs.py),
 [player instructions](scripts/port/release/START-HERE.txt),
 [verification](scripts/port/release/VERIFY.txt), [guide](scripts/port/releases.md),

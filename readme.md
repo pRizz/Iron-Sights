@@ -6,7 +6,7 @@ Project Midas ADS is an independent fork of [Project Midas](https://github.com/m
 
 ## Download and play on Windows
 
-**[DOWNLOAD HERE — latest Windows ZIP](https://github.com/pRizz/Project-Midas-ADS/releases/latest/download/Project-Midas-ADS-windows-x86.zip)** · [Release details and provenance](https://github.com/pRizz/Project-Midas-ADS/releases/latest) · [Build status](https://github.com/pRizz/Project-Midas-ADS/actions/workflows/main.yml)
+**[DOWNLOAD HERE — latest Windows ZIP](https://github.com/pRizz/Project-Midas-ADS/releases/latest/download/Project-Midas-ADS-windows-x86.zip)** · [Release details and provenance](https://github.com/pRizz/Project-Midas-ADS/releases/latest) · [Build status](https://github.com/pRizz/Project-Midas-ADS/actions/workflows/windows-release.yml)
 
 1. Download **Project-Midas-ADS-windows-x86.zip** and **extract the entire ZIP** into a writable folder, such as Documents. Keep `SDL2.dll` beside the executable. GitHub's “Source code” archives are for building, not playing.
 2. Put your own **unmodified GoldenEye 007 USA ROM** (`.z64`, `.v64`, or `.n64`) in the extracted **Data** folder. Extract zipped ROMs first. No ROM is included or downloaded by the game.
