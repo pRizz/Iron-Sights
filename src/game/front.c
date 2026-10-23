@@ -4542,6 +4542,9 @@ static const struct PortSheetRow port_sheet_rows_hud[] = {
     { SHROW_OPT, "sight_on_screen" }, { SHROW_OPT, "always_crosshair" },
     { SHROW_XHAIR, NULL },   /* under Always Crosshair */
     { SHROW_OPT, "ammo_on_screen" }, { SHROW_OPT, "mission_timer" },
+    { SHROW_OPT, "hit_markers" }, { SHROW_OPT, "damage_indicators" },
+    { SHROW_OPT, "objective_notifications" }, { SHROW_OPT, "weapon_hud" },
+    { SHROW_OPT, "weapon_hud_icons" },
     /* center mission timer goes here - no such option exists yet */
     { SHROW_OPT, "pause_pillars" },
     /* aim lock, stamina sway and steady scope moved to General Settings */

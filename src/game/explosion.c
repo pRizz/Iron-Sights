@@ -648,7 +648,17 @@ void explosionInflictDamage(PropRecord *arg0, f32 horiz_range, f32 vert_range)
 
                         if (temp_s0->type == PROP_TYPE_CHR)
                         {
+#ifndef TARGET_N64
+                            const f32 before = temp_s0->chr->damage;
+#endif
                             chrlvExplosionDamage(temp_s0->chr, &arg0->pos, minfrac, 1);
+#ifndef TARGET_N64
+                            if (temp_s0->chr->damage > before)
+                            {
+                                extern void portHudHit(s32 attacker, s32 headshot);
+                                portHudHit((s32)temp_s2->player, 0);
+                            }
+#endif
                         }
                         else
                         {

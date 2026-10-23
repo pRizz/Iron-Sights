@@ -53,6 +53,7 @@
 #include <stdio.h> /* stderr - port diagnostics */
 #include <stdlib.h> /* getenv - port diagnostics */
 #include "port_ads.h"
+#include "port_hud.h"
 extern f32 g_bondviewSceneWideFactor;
 extern s32 portAdzyMode(void); /* video.c: midas.ini [display] adzy - used twice in solo_char_load */
 extern s32 portReturnStartThisTick(void); /* video.c: START came from Return alone; weak 0 headless */
@@ -7269,6 +7270,7 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
 
 #ifndef TARGET_N64
     portAdsTick();
+    portHudTick();
     g_CurrentPlayer->sniper_zoom = portAdsWheelZoom(g_CurrentPlayer->sniper_zoom, GE_DEFAULT_FOV * 0.75f);
     if (portAdsActive())
     {
@@ -12840,6 +12842,9 @@ blood_frame_held:;
     gdl = sub_GAME_7F08AAE8(gdl);
     gunDrawSight(&gdl);
     gdl = generate_ammo_total_microcode(gdl);
+#ifndef TARGET_N64
+    gdl = portHudDraw(gdl);
+#endif
     gdl = countdownTimerRender(gdl);
     gdl = display_red_blue_on_radar(gdl);
 #ifndef TARGET_N64
@@ -12853,6 +12858,13 @@ blood_frame_held:;
          * and pillars don't cover it */
         extern Gfx *portWatchMouseDraw(Gfx *gdl);
         gdl = portWatchMouseDraw(gdl);
+    }
+#endif
+#ifdef GE_VIDEO
+    {
+        extern s32 portWeaponExportEnabled(void);
+        extern Gfx *portWeaponExportDraw(Gfx *gdl);
+        if (portWeaponExportEnabled()) return portWeaponExportDraw(gdl);
     }
 #endif
     return currentPlayerDrawFade(gdl);
@@ -13167,6 +13179,17 @@ void record_damage_kills(f32 damage_amount, f32 vectorx, f32 vectorz, s32 player
                         bondviewKillCurrentPlayer();
                     }
                 }
+
+#ifndef TARGET_N64
+                /* Only accepted health / armour loss produces feedback. This
+                 * excludes invulnerability, damage immunity and zero-damage hits. */
+                if (g_CurrentPlayer->bondhealth < g_CurrentPlayer->oldhealth
+                    || g_CurrentPlayer->bondarmour < g_CurrentPlayer->oldarmour)
+                {
+                    portHudDamage(get_cur_playernum(), vectorx, vectorz);
+                    if (playerid != get_cur_playernum()) portHudHit(playerid, 0);
+                }
+#endif
 
 #if defined(VERSION_EU) || defined(VERSION_JP)
     #define ZERO_7F08991C 0.0f
@@ -13748,6 +13771,12 @@ Gfx* hudmsgBottomRender(Gfx* arg0)
                          + BONDVIEW_VIEW_TOP_OFFSET_3;
             }
 
+#ifndef TARGET_N64
+            /* Reserve the weapon strip above the original ammo counters. */
+            if (portHudWeaponStripShown() && getPlayerCount() < 3
+                && view_top > viGetViewTop() + viGetViewHeight() - 50)
+                view_top = viGetViewTop() + viGetViewHeight() - 50;
+#endif
             view_vert = view_top - view_top_offset;
 #ifndef TARGET_N64
             /* HUD Centering 16:9: the bottom-left message hugs the window's left

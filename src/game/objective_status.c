@@ -7,6 +7,9 @@
 #include "PR/os.h"
 #include "str.h"
 #include "bondview.h"
+#ifndef TARGET_N64
+#include "port_hud.h"
+#endif
 
 //Public variables - move to header
 // bss
@@ -391,10 +394,17 @@ void display_objective_status_text_on_status_change(void)
                 {
                     strcat(&buffer, langGet(getStringID(LMISC, MISC_STR_2F_FAILED_LF)));
                 }
+#ifndef TARGET_N64
+                if (!portHudObjective(i, availableindex, status, (const char *)get_text_for_objective(i)))
+                {
+#endif
 #ifdef VERSION_US
                 hudmsgBottomShow(&buffer);
 #else
                 jp_hudmsgBottomShow(&buffer);
+#endif
+#ifndef TARGET_N64
+                }
 #endif
             }
         }

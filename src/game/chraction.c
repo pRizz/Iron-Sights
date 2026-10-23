@@ -33,6 +33,7 @@
 #include "frametiming.h" /* portTickCadence - see the guard accuracy note in chrlvUpdateShotbondsum */
 #ifndef TARGET_N64
 #include "cheat.h" /* cheatIsActive(CHEAT_PORT_ENEMY_FF) - chrlvFireWeaponRelated */
+#include "port_hud.h"
 #endif
 
 #ifndef TARGET_N64
@@ -2632,16 +2633,32 @@ bool handles_shot_actors(ChrRecord *self, s32 hitpart, coord3d *vector, s32 weap
         {
             playerNum = get_cur_playernum();
             set_cur_player(getPlayerPointerIndex(self->prop));
+#ifndef TARGET_N64
+            {
+                const f32 before = g_CurrentPlayer->bondhealth + g_CurrentPlayer->bondarmour;
+                record_damage_kills(damageToCause * 0.125f, vector->x, vector->z, playerNum, 1);
+                if (isPlayer && before > g_CurrentPlayer->bondhealth + g_CurrentPlayer->bondarmour
+                    && playerNum != get_cur_playernum()) portHudHit(playerNum, hitpart == HIT_HEAD);
+            }
+#else
             record_damage_kills(damageToCause * 0.125f, vector->x, vector->z, playerNum, 1);
+#endif
             set_cur_player(playerNum);
         }
         else
         {
+#ifndef TARGET_N64
+            const f32 beforeDamage = self->damage;
+#endif
             self->chrflags |= CHRFLAG_WAS_DAMAGED;
 #    ifdef XBLA
             if (!cheatIsActive(76))
 #    endif
                 self->damage += damageToCause;
+
+#ifndef TARGET_N64
+            if (isPlayer && self->damage > beforeDamage) portHudHit(get_cur_playernum(), hitpart == HIT_HEAD);
+#endif
 
             if (self->damage < 0.0f)
             {

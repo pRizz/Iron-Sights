@@ -13,6 +13,10 @@
 void bondinvReinitInv(void)
 {
     s32 i;
+#ifndef TARGET_N64
+    extern void portHudReset(s32 player);
+    portHudReset(get_cur_playernum());
+#endif
 
     for (i = 0; i < g_CurrentPlayer->equipmaxitems; i++)
     {

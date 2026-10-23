@@ -128,6 +128,8 @@ static const s32 sAimControlVals[] = { 0, 1 };
 static const char *const sAimControlText[] = { "Hold\n", "Toggle\n" };
 static const s32 sAimModeVals[] = { 1, 0 };
 static const char *const sAimModeText[] = { "ADS\n", "Red Reticle\n" };
+static const s32 sWeaponStyleVals[] = { 0, 1 };
+static const char *const sWeaponStyleText[] = { "Text\n", "Icons\n" };
 /* health_wide: a separate 4:3 / Wide setting for the health / armour arcs, so
  * ammo and messages can sit at the screen edges while health stays centred
  * (options.c healthAnchorsToEdges) */
@@ -232,6 +234,11 @@ static const struct PortOpt sOpts[] = {
     /* adzy (play as ssf character) is ini-only */
     TOGGLE("unlock_all",         "[display]", "Unlock All\n",         PORTOPT_CAT_GAMEPLAY),
     TOGGLE("always_crosshair",   "[display]", "Always Crosshair\n",   PORTOPT_CAT_GAMEPLAY),
+    TOGGLE("hit_markers",        "[display]", "Hit Markers\n",        PORTOPT_CAT_GAMEPLAY),
+    TOGGLE("damage_indicators",  "[display]", "Damage Direction\n",   PORTOPT_CAT_GAMEPLAY),
+    TOGGLE("objective_notifications", "[display]", "Objective Alerts\n", PORTOPT_CAT_GAMEPLAY),
+    TOGGLE("weapon_hud",         "[display]", "Weapon Strip\n",       PORTOPT_CAT_GAMEPLAY),
+    ENUMR("weapon_hud_icons",    "[display]", "Weapon Strip Style\n", PORTOPT_CAT_GAMEPLAY, sWeaponStyleVals, sWeaponStyleText, NULL),
     /* shadow_alpha is ini-only - video.c still reads it */
     TOGGLE("aim_lock",           "[display]", "Aim Lock\n",           PORTOPT_CAT_GAMEPLAY),
     TOGGLE("head_roll",          "[display]", "Stamina Sway\n",       PORTOPT_CAT_GAMEPLAY), /* replaces the inverted no_head_roll;

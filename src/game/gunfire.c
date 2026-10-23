@@ -42,6 +42,10 @@
 #include "bondinv.h"
 #include "stan.h"
 #include "gbi_extension.h"
+#ifndef TARGET_N64
+#include "port_hud.h"
+#include "port_weapon_export.h"
+#endif
 
 
 #ifdef REFRESH_PAL
@@ -1880,7 +1884,11 @@ Gfx *set_enviro_fog_for_items_in_solo_watch_menu(Gfx *gdl, ITEM_IDS itemid, Mtxf
         goto earlyreturn;
     }
 
-    if (bondwalkItemCheckBitflags(itemid, WEAPONSTATBITFLAG_HIDE_FIRST_PERSON_MENU))
+    if (bondwalkItemCheckBitflags(itemid, WEAPONSTATBITFLAG_HIDE_FIRST_PERSON_MENU)
+#ifdef GE_VIDEO
+        && !(itemid == ITEM_FIST && portWeaponExportEnabled())
+#endif
+        )
     {
         goto earlyreturn;
     }
@@ -1889,6 +1897,12 @@ Gfx *set_enviro_fog_for_items_in_solo_watch_menu(Gfx *gdl, ITEM_IDS itemid, Mtxf
 
     for (i = 0; i < bodymodel->numMatrices; i++)
     {
+#ifdef GE_VIDEO
+        /* Compact explosive models address non-root matrices directly. The
+         * offline view fixes every unanimated part in the same model space. */
+        if (portWeaponExportEnabled()) matrix_4x4_copy(mtx, &matrices[i]);
+        else
+#endif
         matrix_4x4_set_identity(&matrices[i]);
     }
 
@@ -1899,7 +1913,11 @@ Gfx *set_enviro_fog_for_items_in_solo_watch_menu(Gfx *gdl, ITEM_IDS itemid, Mtxf
     sub_GAME_7F05E978((Model *) &model, 0);
     sub_GAME_7F05EA94((Model *) &model, 1);
 
-    if (bodymodel->Switches[1] != NULL)
+    if (bodymodel->Switches[1] != NULL
+#ifdef GE_VIDEO
+        && !(itemid == ITEM_FIST && portWeaponExportEnabled())
+#endif
+        )
     {
         rwdata = modelGetNodeRwData((Model *) &model, bodymodel->Switches[1]);
 
@@ -1979,6 +1997,10 @@ Gfx *set_enviro_fog_for_items_in_solo_watch_menu(Gfx *gdl, ITEM_IDS itemid, Mtxf
     if ((((((itemid == ITEM_GOLDENGUN) || (itemid == ITEM_RUGER)) || (itemid == ITEM_KNIFE)) || (itemid == ITEM_THROWKNIFE)) || (itemid == ITEM_SILVERWPPK)) || (itemid == ITEM_GOLDWPPK))
     {
         gSPSetLights1(gdl++, g_WeaponEnvmapLight);
+#ifdef GE_VIDEO
+        if (portWeaponExportEnabled()) { gSPLookAt(gdl++, portWeaponExportLookAt()); }
+        else
+#endif
         gSPLookAt(gdl++, sub_GAME_7F078474());
     }
 
@@ -2010,6 +2032,9 @@ Gfx *set_enviro_fog_for_items_in_solo_watch_menu(Gfx *gdl, ITEM_IDS itemid, Mtxf
     }
 
     renderdata.zbufferenabled = FALSE;
+#ifdef GE_VIDEO
+    if (portWeaponExportEnabled()) renderdata.zbufferenabled = TRUE;
+#endif
     subdraw(&renderdata, (Model *) &model);
 #ifndef TARGET_N64
     { /* diagnostic (GE_DUMP_BOND): how many Gfx words the watch item model
@@ -7254,325 +7279,81 @@ void gunSetSightVisible(s32 reason, bool visible)
 
 
 #ifndef TARGET_N64
-/**
- * PD-style always-on crosshair (midas.ini [display] always_crosshair): like
- * Perfect Dark's "Show Target", a small target is drawn at the aim point
- * whenever the player is NOT aiming, drawn in code with fill rects but shaped
- * like the inner cross of GE's own sight sprite.
- *
- * kTargetTexels is the part of crosshairimage (texture 2236, 32x32 RGBA32)
- * inside the ring: the vertical bar (cols 15-16, rows 8..23) and horizontal bar
- * (rows 15-16, cols 8..23), one entry per texel with its colour and alpha
- * already multiplied by the sprite's blit alpha 0x6E. Texel t sits at aim + (t
- * - 16), as in the sprite. The table was generated from a GE_TEXDUMP=2236 dump
- * (docs/port/input-and-display.md "Always-on crosshair"); regenerate it rather
- * than hand-editing.
- *
- * Position is GE's crosshair_angle, which stays live outside aim mode. It is
- * shown only when "not aiming" is the sole reason the sight is hidden, so the
- * Sight-on-screen option, damage flash and cutscene hides still win, and it
- * uses the same wide-aim span bracket as the sprite.
- *
- * Rects are raw G_FILLRECT with 10.2 corners for sub-pixel placement (the gbi
- * macro only takes whole pixels); 1-cycle edges are exclusive and corners clamp
- * at 0.
- */
-static const s8 kTargetTexels[][6] = { /* dx, dy, r, g, b, alpha (x 0x6E / 0xFF) */
-    { -1, -8, 0xEB, 0x00, 0x00, 0x58 },
-    { 0, -8, 0xF5, 0x00, 0x00, 0x6E },
-    { -1, -7, 0xEB, 0x00, 0x00, 0x58 },
-    { 0, -7, 0xF5, 0x02, 0x02, 0x6E },
-    { -1, -6, 0xEB, 0x00, 0x00, 0x58 },
-    { 0, -6, 0xF5, 0x02, 0x02, 0x6E },
-    { -1, -5, 0xEB, 0x00, 0x00, 0x58 },
-    { 0, -5, 0xF5, 0x02, 0x02, 0x6E },
-    { -1, -4, 0xEB, 0x00, 0x00, 0x58 },
-    { 0, -4, 0xF5, 0x04, 0x04, 0x6E },
-    { -1, -3, 0xAE, 0x00, 0x00, 0x4A },
-    { 0, -3, 0xC0, 0x1F, 0x1F, 0x68 },
-    { -1, -2, 0x0A, 0x00, 0x00, 0x14 },
-    { 0, -2, 0x11, 0x00, 0x00, 0x23 },
-    { -1, 1, 0x0A, 0x00, 0x00, 0x0F },
-    { 0, 1, 0x0C, 0x00, 0x00, 0x16 },
-    { -1, 2, 0x9E, 0x00, 0x00, 0x3B },
-    { 0, 2, 0xAB, 0x00, 0x00, 0x5B },
-    { -1, 3, 0xEB, 0x00, 0x00, 0x58 },
-    { 0, 3, 0xF5, 0x0A, 0x0A, 0x6E },
-    { -1, 4, 0xEB, 0x00, 0x00, 0x58 },
-    { 0, 4, 0xF5, 0x0B, 0x0B, 0x6E },
-    { -1, 5, 0xEB, 0x00, 0x00, 0x58 },
-    { 0, 5, 0xF5, 0x0D, 0x0D, 0x6E },
-    { -1, 6, 0xEB, 0x00, 0x00, 0x58 },
-    { 0, 6, 0xF5, 0x0E, 0x0E, 0x6E },
-    { -1, 7, 0xEB, 0x00, 0x00, 0x58 },
-    { 0, 7, 0xF5, 0x0E, 0x0E, 0x6E },
-    { -8, -1, 0xEB, 0x00, 0x00, 0x4F },
-    { -7, -1, 0xEB, 0x00, 0x00, 0x4F },
-    { -6, -1, 0xEB, 0x00, 0x00, 0x4F },
-    { -5, -1, 0xEB, 0x00, 0x00, 0x4F },
-    { -4, -1, 0xEB, 0x00, 0x00, 0x4F },
-    { -3, -1, 0x9E, 0x00, 0x00, 0x3F },
-    { -2, -1, 0x04, 0x00, 0x00, 0x04 },
-    { 1, -1, 0x0A, 0x00, 0x00, 0x0F },
-    { 2, -1, 0x9D, 0x00, 0x00, 0x3A },
-    { 3, -1, 0xEB, 0x00, 0x00, 0x4F },
-    { 4, -1, 0xEB, 0x00, 0x00, 0x4F },
-    { 5, -1, 0xEB, 0x00, 0x00, 0x4F },
-    { 6, -1, 0xEB, 0x00, 0x00, 0x4F },
-    { 7, -1, 0xEB, 0x00, 0x00, 0x4F },
-    { -8, 0, 0xF5, 0x27, 0x27, 0x6E },
-    { -7, 0, 0xF5, 0x2A, 0x2A, 0x6E },
-    { -6, 0, 0xF5, 0x2E, 0x2E, 0x6E },
-    { -5, 0, 0xF5, 0x32, 0x32, 0x6E },
-    { -4, 0, 0xF5, 0x35, 0x35, 0x6E },
-    { -3, 0, 0xAF, 0x3E, 0x3E, 0x68 },
-    { -2, 0, 0x10, 0x02, 0x02, 0x23 },
-    { 1, 0, 0x13, 0x00, 0x00, 0x19 },
-    { 2, 0, 0xBA, 0x00, 0x00, 0x5E },
-    { 3, 0, 0xF5, 0x4D, 0x4D, 0x6E },
-    { 4, 0, 0xF5, 0x54, 0x54, 0x6E },
-    { 5, 0, 0xF5, 0x58, 0x58, 0x6E },
-    { 6, 0, 0xF5, 0x5B, 0x5B, 0x6E },
-    { 7, 0, 0xF5, 0x5F, 0x5F, 0x6E },
-};
-
-static Gfx *portTargetRectQ(Gfx *g, s32 x1q, s32 y1q, s32 x2q, s32 y2q)
-{
-    if (x1q < 0) x1q = 0;
-    if (y1q < 0) y1q = 0;
-    if (x2q <= x1q || y2q <= y1q)
-    {
-        return g;
-    }
-    g->words.w0 = ((u32) G_FILLRECT << 24) | (((u32) x2q & 0xFFF) << 12) | ((u32) y2q & 0xFFF);
-    g->words.w1 = (((u32) x1q & 0xFFF) << 12) | ((u32) y1q & 0xFFF);
-    return g + 1;
-}
-
-static void portDrawTargetPlus(s32 *gdl, f32 scopeBlend)
+/* One vector sight path for the ring target, always-on cross, and sniper ADS.
+ * Keep the original visibility gates and wide-aim coordinate conversion. */
+static void portDrawTarget(s32 *gdl, s32 ring, f32 scopeBlend)
 {
     extern f32 portAimReachX(void);
     extern f32 g_bondviewSceneWideFactor;
+    extern s32 portPlayerCrosshairColor(s32 player);
     Gfx *g = (Gfx *) *gdl;
-    f32 reachx = portAimReachX();
-    f32 fx = g_CurrentPlayer->crosshair_angle.f[0];
-    f32 fy = g_CurrentPlayer->crosshair_angle.f[1];
-    f32 xs = 1.0f; /* screen-square px -> native x units (SPAN: 1 / wide) */
-    extern s32 portPlayerCrosshairColor(s32 player); /* video.c: the player's own with 2+ players */
-    s32 chcol = portPlayerCrosshairColor(get_cur_playernum()); /* midas.ini crosshair_color (or the player's), -1 = vanilla */
-    s32 i;
-
+    f32 x = g_CurrentPlayer->crosshair_angle.x;
+    f32 y = g_CurrentPlayer->crosshair_angle.y;
+    f32 scaleX = 1.0f;
+    const f32 reach = portAimReachX();
+    s32 color = portPlayerCrosshairColor(get_cur_playernum());
+    u32 alpha = 220;
     if (scopeBlend > 0.0f)
     {
-        /* The optic stays on the camera axis, independent of gun sway, recoil
-         * and the original freely moving red-reticle aiming mode. */
-        fx = viGetViewLeft() + viGetViewWidth() * 0.5f;
-        fy = viGetViewTop() + viGetViewHeight() * 0.5f;
-        chcol = -1;
+        x = viGetViewLeft() + viGetViewWidth() * 0.5f;
+        y = viGetViewTop() + viGetViewHeight() * 0.5f;
+        color = -1; /* the sniper optic retains its red aiming mark */
+        alpha = (u32)(alpha * scopeBlend * scopeBlend);
     }
-
-    if (reachx > 1.001f)
+    if (reach > 1.001f)
     {
         PORT_HUD_ANCHOR(g, PORT_HUD_ANCHOR_SPAN);
-        fx = bondviewAimUnpinX(fx);
-        xs = 1.0f / g_bondviewSceneWideFactor;
+        x = bondviewAimUnpinX(x);
+        scaleX = 1.0f / g_bondviewSceneWideFactor;
     }
-
-    gDPPipeSync(g++);
-    gDPSetCycleType(g++, G_CYC_1CYCLE);
-    gDPSetRenderMode(g++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
-    gDPSetCombineMode(g++, G_CC_PRIMITIVE, G_CC_PRIMITIVE);
-
-    for (i = 0; i < (s32) (sizeof(kTargetTexels) / sizeof(kTargetTexels[0])); i++)
-    {
-        const s8 *t = kTargetTexels[i];
-        /* Mirror the sprite vertically about the aim point (dy -> -1 - dy, so the
-         * bright row is above), and trim each arm's outermost texel (the tips at -8 and 7). */
-        s32 dx = t[0];
-        s32 dy = -1 - t[1];
-        s32 x0q, x1q, y0q, y1q;
-        u8 alpha = (u8)t[5];
-
-        if (scopeBlend > 0.0f) alpha = (u8)(alpha * scopeBlend * scopeBlend);
-
-        if (dx == -8 || dx == 7 || dy == -8 || dy == 7)
-        {
-            continue;
-        }
-        /* No net x offset: the cross sits exactly on the aim point in x. */
-        x0q = (s32) ((fx + (f32) dx * xs) * 4.0f + 0.5f);
-        x1q = (s32) ((fx + (f32) (dx + 1) * xs) * 4.0f + 0.5f);
-        y0q = (s32) ((fy + (f32) dy) * 4.0f + 0.5f);
-        y1q = y0q + 4;
-
-        if (x1q <= x0q)
-        {
-            x1q = x0q + 1; /* never thinner than a quarter pixel in x */
-        }
-        gDPPipeSync(g++);
-        if (chcol < 0)
-        {
-            gDPSetPrimColor(g++, 0, 0, (u8) t[2], (u8) t[3], (u8) t[4], alpha);
-        }
-        else
-        {
-            /* Crosshair colour: split each texel (red plus a white core, r >= g == b)
-             * into coloured and white parts and re-tint only the coloured part,
-             * keeping the shading. */
-            s32 white = (s32) (u8) t[3];
-            s32 pure = (s32) (u8) t[2] - white;
-            s32 cr, cg, cb;
-
-            if (pure < 0)
-            {
-                pure = 0;
-            }
-            cr = ((((chcol >> 16) & 0xFF) * pure) / 255) + white;
-            cg = ((((chcol >> 8) & 0xFF) * pure) / 255) + white;
-            cb = (((chcol & 0xFF) * pure) / 255) + white;
-            if (cr > 255) { cr = 255; }
-            if (cg > 255) { cg = 255; }
-            if (cb > 255) { cb = 255; }
-            gDPSetPrimColor(g++, 0, 0, (u8) cr, (u8) cg, (u8) cb, alpha);
-        }
-        g = portTargetRectQ(g, x0q, y0q, x1q, y1q);
-    }
-
-    gDPPipeSync(g++);
-    if (reachx > 1.001f)
-    {
-        PORT_HUD_ANCHOR_OFF(g);
-    }
-    *gdl = (s32) g;
+    g = portHudReticle(g, x, y, scaleX, 1.0f,
+        ((u32)(color < 0 ? 0xff3a32 : color) << 8) | alpha, ring);
+    if (reach > 1.001f) PORT_HUD_ANCHOR_OFF(g);
+    *gdl = (s32)g;
 }
 #endif
 
-void gunDrawSight(s32 *gdl) {
-
-    s32 sp54;
-    f32 xypos[2];
-    f32 halfedxy[2];
-
+void gunDrawSight(s32 *gdl)
+{
 #ifndef TARGET_N64
     if (portAdsScopeBlend() > 0.0f)
     {
         if ((g_CurrentPlayer->gunsightmode & ~GUNSIGHTREASON_NOTAIMING) == 0
             && !g_CurrentPlayer->mpmenuon && !g_CurrentPlayer->bonddead)
-        {
-            portDrawTargetPlus(gdl, portAdsScopeBlend());
-        }
+            portDrawTarget(gdl, FALSE, portAdsScopeBlend());
         return;
     }
     if (portAdsActive()) return;
+    if (g_CurrentPlayer->mpmenuon || g_CurrentPlayer->bonddead) return;
+    if (g_CurrentPlayer->gunsightmode == 0)
+        portDrawTarget(gdl, TRUE, 0.0f);
+    else if (g_CurrentPlayer->gunsightmode == GUNSIGHTREASON_NOTAIMING)
     {
-        extern s32 portAlwaysCrosshair(void); /* video.c: midas.ini [display] always_crosshair; weak 0 headless */
-
-        if (g_CurrentPlayer->gunsightmode == GUNSIGHTREASON_NOTAIMING
-            && g_CurrentPlayer->mpmenuon == FALSE
-            && g_CurrentPlayer->bonddead == FALSE
-            && portAlwaysCrosshair())
-        {
-            portDrawTargetPlus(gdl, 0.0f);
-            return;
-        }
+        extern s32 portAlwaysCrosshair(void);
+        if (portAlwaysCrosshair()) portDrawTarget(gdl, FALSE, 0.0f);
     }
-#endif
-    if ((g_CurrentPlayer->gunsightmode == 0) && (g_CurrentPlayer->mpmenuon == FALSE)) {
-        sp54 = *gdl;
-#ifndef TARGET_N64
-        { /* GE_XHAIRDBG: name the crosshair's IMAGE so the renderer's draw
-           * lines can be matched to it by address. Printed once. */
-            extern char *getenv(const char *);
-            extern int printf(const char *, ...);
-            static s32 said;
-
-            if (!said && getenv("GE_XHAIRDBG") != NULL)
-            {
-                said = 1;
-                printf("ge: xhairdbg: IMAGE index=%u w=%u h=%u level=%u fmt=%u depth=%u\n",
-                       (unsigned) crosshairimage->index, (unsigned) crosshairimage->width,
-                       (unsigned) crosshairimage->height, (unsigned) crosshairimage->level,
-                       (unsigned) crosshairimage->format, (unsigned) crosshairimage->depth);
-            }
-        }
-#endif
-#ifndef TARGET_N64
-        {   /* Per-player sight colour: a player whose colour differs from the
-             * pool's draws from a copy tinted for it (port_textures.c), by
-             * repointing the sight's SETTIMG at that copy. */
-            extern s32 portPlayerCrosshairColor(s32 player);
-            extern const void *portTexCrosshairCopyFor(s32 rgb);
-            Gfx *from = (Gfx *) sp54;
-            const s32 want = portPlayerCrosshairColor(get_cur_playernum());
-
-            texSelect(&sp54, crosshairimage, 4, 0, 0);
-            if (want != portCrosshairColor())
-            {
-                const void *copy = portTexCrosshairCopyFor(want);
-                Gfx *g;
-
-                for (g = from; copy != NULL && g < (Gfx *) sp54; g++)
-                {
-                    if ((g->words.w0 >> 24) == (u32) (u8) G_SETTIMG
-                        && g->words.w1 == (u32) (uintptr_t) crosshairimage->index)
-                    {
-                        g->words.w1 = (u32) (uintptr_t) copy;
-                    }
-                }
-            }
-        }
 #else
+    s32 sp54;
+    f32 xypos[2];
+    f32 halfedxy[2];
+    if (g_CurrentPlayer->gunsightmode == 0 && g_CurrentPlayer->mpmenuon == FALSE)
+    {
+        sp54 = *gdl;
         texSelect(&sp54, crosshairimage, 4, 0, 0);
-#endif
-
         xypos[0] = g_CurrentPlayer->crosshair_angle.f[0];
         xypos[1] = g_CurrentPlayer->crosshair_angle.f[1];
         halfedxy[0] = 16.0f;
         halfedxy[1] = 16.0f;
-
-#ifdef TARGET_N64 /* PORT: Ratio is HUD Centering on PC - the sight is never squeezed */
-        if (get_screen_ratio() == SCREEN_RATIO_16_9) {
-            halfedxy[0] = halfedxy[0] * 0.75f;
-        }
-#endif
+        if (get_screen_ratio() == SCREEN_RATIO_16_9) halfedxy[0] *= 0.75f;
 #ifdef VERSION_EU
-        halfedxy[1] = halfedxy[1] * g_GunSightAspectRatio;
+        halfedxy[1] *= g_GunSightAspectRatio;
 #endif
-#ifndef TARGET_N64
-        { /* Wide mouse aim (bondview2.c portAimReachX): outside the 4:3 band
-           * the pinned texrect mapping can't draw the sight, so draw it in the
-           * window mapping (PORT_HUD_ANCHOR_SPAN) at the unpinned x with the
-           * half-width divided by the wide factor. Skipped when the reach is 1. */
-            extern f32 portAimReachX(void);
-            extern f32 g_bondviewSceneWideFactor;
-            f32 reachx = portAimReachX();
-
-            if (reachx > 1.001f)
-            {
-                Gfx *agdl = (Gfx *) sp54;
-                PORT_HUD_ANCHOR(agdl, PORT_HUD_ANCHOR_SPAN);
-                sp54 = (s32) agdl;
-                xypos[0] = bondviewAimUnpinX(xypos[0]);
-                halfedxy[0] = halfedxy[0] / g_bondviewSceneWideFactor;
-            }
-            /* CROSSHAIR COLOUR: bondwalk2.c owns the tint-or-vanilla
-             * decision for every crosshair sprite in the game. */
-            portDisplayCrosshairImage((Gfx **) &sp54, xypos, halfedxy, 0x20, 0x20, 0x6E,
-                                      (crosshairimage->level > 0));
-            if (reachx > 1.001f)
-            {
-                Gfx *agdl = (Gfx *) sp54;
-                PORT_HUD_ANCHOR_OFF(agdl);
-                sp54 = (s32) agdl;
-            }
-        }
-#else
-        display_image_at_position(&sp54, &xypos, &halfedxy, 0x20, 0x20, 0, 0, 1, 0xFF, 0xFF, 0xFF, 0x6E, (crosshairimage->level > 0), 0);
-#endif
+        display_image_at_position(&sp54, &xypos, &halfedxy, 0x20, 0x20,
+            0, 0, 1, 0xFF, 0xFF, 0xFF, 0x6E, (crosshairimage->level > 0), 0);
         *gdl = sp54;
     }
+#endif
 }
-
 
 void inc_curplayer_hitcount_with_weapon(ITEM_IDS item, SHOT_REGISTER shot_register) {
 

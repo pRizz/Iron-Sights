@@ -70,6 +70,7 @@
 #include "game/chrai.h"
 #include "game/lv.h"
 #include "port_ads.h"
+#include "port_hud.h"
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console ring (spec section 7). */
@@ -272,6 +273,7 @@ static s32 joyPortOwnValue(const char *value)
 /** midas.ini keys this module owns besides the binds; returns 1 when consumed. */
 s32 portJoyPortSetOption(const char *key, const char *value)
 {
+    if (portHudOptionSet(key, atoi(value))) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = atoi(value) != 0;
         return 1;
@@ -402,6 +404,7 @@ void portJoyPortPadOptSet(s32 pad, s32 which, s32 v)
 /** Port Options bridge (port_options.c): the same keys as integers. */
 s32 portJoyPortOptionGet(const char *key, s32 *out)
 {
+    if (portHudOptionGet(key, out)) return 1;
     if (strcmp(key, "sprint") == 0) {
         *out = sSprint;
         return 1;
@@ -423,6 +426,7 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
 
 s32 portJoyPortOptionSet(const char *key, s32 v)
 {
+    if (portHudOptionSet(key, v)) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = v != 0;
         return 1;

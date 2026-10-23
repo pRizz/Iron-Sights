@@ -1,5 +1,20 @@
 # Contributing to Project Midas
 
+## Project Midas ADS fork: change inventory
+
+For work in this fork, update [FORK_CHANGES.md](FORK_CHANGES.md) in the same change
+whenever you add, modify, remove or replace repository content. This includes
+code, settings, fixes, documentation, tooling, tests, build configuration and
+repository rules. Update an existing entry for refinements, or add a stable
+`FORK-NNN` entry for a new area. Describe behavior/defaults, the difference from
+the inherited upstream baseline, main source paths and validation. Record
+replacements and removals so the inventory stays accurate. Generated ROM-derived
+outputs stay untracked; inventory their generator and workflow instead.
+
+The repository-wide agent instructions are in [AGENTS.md](AGENTS.md). The guidance
+below is inherited from upstream; its upstream project name and roadmap describe
+that project rather than additions made by this fork.
+
 Project Midas is a PC port of GE built with care: matching the original game where it matters, with every change tested in game. Contributions are welcome when they meet that bar. Please contribute here rather than starting a fork, so the work stays in one place.
 
 ## Already in progress

@@ -4,6 +4,7 @@
 #include "../../port/src/joy_port.c"
 #include "../../port/src/ads_hands.c"
 #include "../../port/src/port_options.c"
+#include "../../port/src/port_hud.c"
 
 static struct player players[4];
 struct player *g_CurrentPlayer;
@@ -13,6 +14,7 @@ static s32 currentPlayer;
 static s32 controlsLive;
 static OSTime testTime = 1;
 static s32 savedSprint = -1;
+static s32 savedHud[5] = {-1,-1,-1,-1,-1};
 
 s32 portVideoOptionGet(const char *key, s32 *out) { (void) key; (void) out; return 0; }
 s32 portVideoOptionSet(const char *key, s32 v) { (void) key; (void) v; return 0; }
@@ -22,6 +24,8 @@ s32 portIniWriteStrs(const char *section, const char *const *keys, const char *c
 {
     s32 i;
     for (i = 0; i < n; i++) {
+        s32 j;
+        for (j = 0; j < HUD_OPTIONS; j++) if (strcmp(keys[i], phKeys[j]) == 0) savedHud[j] = atoi(vals[i]);
         if (strcmp(keys[i], "sprint") == 0) {
             assert(strcmp(section, "[display]") == 0);
             savedSprint = atoi(vals[i]);
@@ -153,7 +157,22 @@ int main(void)
     controlsLive = 1;
     selectPlayer(0);
     testSprint();
+    for (i = 0; i < 4; i++) {
+        const s32 opt = portOptFind(phKeys[i]);
+        assert(opt >= 0 && portOptAvailable(opt) && portOptGet(opt) == 1);
+        portOptStep(opt, 1);
+        assert(portOptGet(opt) == 0 && savedHud[i] == 0);
+        assert(portJoyPortSetOption(phKeys[i], "1") && portOptGet(opt) == 1);
+    }
     assert(!portAdsActive());
+    {
+        const s32 opt = portOptFind("weapon_hud_icons");
+        assert(opt >= 0 && portOptAvailable(opt) && !portOptIsToggle(opt));
+        assert(portOptGet(opt) == 0);
+        portOptStep(opt, 1);
+        assert(portOptGet(opt) == 1 && savedHud[4] == 1);
+        assert(portJoyPortSetOption("weapon_hud_icons", "0") && portOptGet(opt) == 0);
+    }
     assert(PORTACT_CLASSIC_TOGGLE == 20);
     assert(strcmp(portJoyPortBindName(PORTACT_AIM_DOWN_SIGHTS), "aim_down_sights") == 0);
     assert(strcmp(portJoyPortBindDefault(PORTACT_AIM_DOWN_SIGHTS), "Mouse Middle") == 0);

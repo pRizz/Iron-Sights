@@ -153,6 +153,8 @@ static int borderless_extra_height(void) {
  * bar is kept inside the top of the work area (a client area the size of the
  * display, centred, otherwise puts the title bar above the screen). */
 static void fit_window_to_display(void) {
+    /* The asset exporter deliberately renders beyond the physical display. */
+    if (SDL_getenv("GE_WEAPON_ICON_EXPORT")) return;
     if (!wnd || fullscreen_state || borderless_state ||
         (SDL_GetWindowFlags(wnd) & (SDL_WINDOW_MAXIMIZED | SDL_WINDOW_MINIMIZED | SDL_WINDOW_FULLSCREEN))) {
         return;
@@ -488,7 +490,7 @@ static void gfx_sdl_init(const struct GfxWindowInitSettings *set) {
     SDL_GL_MakeCurrent(wnd, ctx);
     SDL_GL_SetSwapInterval(1);
 
-    SDL_ShowWindow(wnd);
+    if (!SDL_getenv("GE_WEAPON_ICON_EXPORT")) SDL_ShowWindow(wnd);
     if (fullscreen_state && fullscreen_flag == SDL_WINDOW_FULLSCREEN) {
         /* the display lines above were logged before an exclusive-fullscreen boot
          * switched modes, so also log the mode actually in use (its refresh caps the frame rate) */
@@ -769,6 +771,7 @@ static inline void sync_framerate_with_timer(void) {
  * what each menu shows at the transition. */
 extern "C" int ge_shot_force;
 int ge_shot_force;
+int ge_weapon_icon_capture;
 
 static void gfx_sdl_maybe_screenshot(void) {
     static int interval = -2;
@@ -779,7 +782,9 @@ static void gfx_sdl_maybe_screenshot(void) {
         interval = s ? SDL_atoi(s) : -1;
     }
     framenum++;
-    forced = ge_shot_force;
+    const int weapon_capture = ge_weapon_icon_capture;
+    ge_weapon_icon_capture = 0;
+    forced = ge_shot_force || weapon_capture;
     ge_shot_force = 0;
     if (!forced && (interval <= 0 || framenum % interval != 0)) {
         return;
@@ -809,6 +814,8 @@ static void gfx_sdl_maybe_screenshot(void) {
     }
     char name[64];
     SDL_snprintf(name, sizeof(name), "shot_%05d.bmp", framenum);
+    if (weapon_capture) SDL_snprintf(name, sizeof(name), "weapon_%02d_%d.bmp",
+        weapon_capture >> 8, weapon_capture & 15);
     FILE *f = fopen(name, "wb");
     if (f) {
         uint32_t imgsize = (uint32_t)(padded * h);

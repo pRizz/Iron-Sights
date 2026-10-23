@@ -30,6 +30,7 @@ Please describe the tests that you ran to verify your changes. Provide instructi
 Please describe every way you've tried to break the game. How did this not break other features the game has?
 
 ## Checklist
+- [ ] I updated [FORK_CHANGES.md](../FORK_CHANGES.md) for every added, modified, removed or replaced area, including documentation and tooling
 - [ ] My code has been thoroughly tested and is free of bugs
 - [ ] I have performed a self-review of my code
 - [ ] I have commented my code, particularly in hard-to-understand areas

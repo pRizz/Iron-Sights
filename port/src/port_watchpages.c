@@ -107,6 +107,11 @@ static const struct PortWatchRowDef sHud[] = {
      * folder's named list shared through front.c portXhair*, shown under Always Crosshair. */
     { PWROW_XHAIR,     NULL, "Crosshair Colour\n", 0, 0 },
     { PWROW_OPT,       "mission_timer",    NULL, 0, 0 },
+    { PWROW_OPT,       "hit_markers",      NULL, 0, 0 },
+    { PWROW_OPT,       "damage_indicators", NULL, 0, 0 },
+    { PWROW_OPT,       "objective_notifications", NULL, 0, 0 },
+    { PWROW_OPT,       "weapon_hud",       NULL, 0, 0 },
+    { PWROW_OPT,       "weapon_hud_icons", NULL, 0, 0 },
     { PWROW_OPT,       "pause_pillars",    NULL, 0, 0 },
     /* aim lock, stamina sway and steady scope moved to General Settings */
     { PWROW_PLAYEROPT, NULL, NULL, PLAYER_OPTION_RATIO, 0 }, /* lodger: "hud" (romdata.c relabel) */

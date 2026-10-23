@@ -2264,6 +2264,11 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "aim_lock=%d\n", s_CfgAimLock);
     fprintf(f, "aim_mode=1\n");
     fprintf(f, "sprint=1\n");
+    fprintf(f, "hit_markers=1\n");
+    fprintf(f, "damage_indicators=1\n");
+    fprintf(f, "objective_notifications=1\n");
+    fprintf(f, "weapon_hud=1\n");
+    fprintf(f, "weapon_hud_icons=0\n");
     fprintf(f, "mp_aim_lock=%d\n", s_CfgMpAimLock);
     fprintf(f, "mp_sight_on_screen=%d\n", s_CfgMpSight);
     fprintf(f, "mp_no_auto_aim=%d\n", s_CfgMpAutoAim == 0);

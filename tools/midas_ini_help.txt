@@ -157,7 +157,7 @@ padN_stickmode.
                       |            | zoomed: no zoom drift, no head sway
   HUD
   crosshair_color     | default    | Hex RRGGBB (e.g. FF8000) for both
-                      |            | crosshairs; default = original red
+                      |            | crosshairs; default = red
   health_wide         | 0          | 1 = health and armour arcs at the screen
                       |            | edges; 0 = centred 4:3 area
   always_crosshair    | 0          | 1 = small target at the gun's aim point
@@ -165,6 +165,14 @@ padN_stickmode.
   mission_timer       | 1          | Elapsed time (MM:SS:MS) bottom-left in
                       |            | solo missions
   watch_static        | 1          | 0 removes the watch's static and sound
+  hit_markers         | 1          | Brief marker on confirmed character damage
+  damage_indicators   | 1          | Red arcs toward the source of damage
+  objective_notifications | 1     | Named objective status alerts; 0 = original
+                      |            | bottom-left messages. Solo only
+  weapon_hud          | 1          | Bottom weapon strip; selected weapon is
+                      |            | highlighted. Scrolls for large inventories
+  weapon_hud_icons    | 0          | Weapon Strip Style: 0 = text, 1 = static
+                      |            | weapon model images. Requires weapon_hud=1
   Sound
   music_volume        | 100        | 0 to 100 percent, from startup
   sfx_volume          | 100        | 0 to 100 percent, from startup

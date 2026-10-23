@@ -10,6 +10,8 @@ Project Midas ADS is an independent fork of [Project Midas](https://github.com/m
 
 It adds ADS by default, a choice between ADS and the original red reticle aiming mode, half-speed movement while aiming, and individual sight alignment for 20 supported firearms.
 
+See the [fork change inventory](FORK_CHANGES.md) for the maintained list of additions and modifications relative to the upstream version we forked from. Every repository change must update that inventory; see [AGENTS.md](AGENTS.md).
+
 The underlying port is a work in progress built from the N64 decompilation. It runs on Windows and Linux and reads its game data from your own copy of the US cart.
 
 ## AI Disclaimer
@@ -57,10 +59,25 @@ the existing zoom controls still adjust magnification.
 While ADS with the sniper rifle, **Mouse Wheel Up/Down** zooms in/out instead
 of switching weapons. Outside sniper ADS, the wheel uses its normal bindings.
 
+Aiming reticles, the sniper crosshair, the optional always-on crosshair,
+and the menu/watch target cursor use thin, smoothed lines and circles.
+Custom crosshair colors still apply. Directional damage indicators use smooth curves.
+
 Hold **Left Shift** while moving to sprint at 1.5 times normal speed.
 **Gameplay > General Settings > Sprint** is on by default; turn it off to
 restore Shift-to-walk at half speed. The **Walk / Sprint** control can be rebound.
 Aiming and crouching prevent the sprint boost; ADS keeps its half-speed movement.
+
+**Gameplay > HUD** includes four new options, all on by default:
+
+- **Hit Markers:** thin, smoothed white lines confirm damage to a character; headshots use gold.
+- **Damage Direction:** short red arcs point toward incoming damage and follow your view as you turn.
+- **Objective Alerts:** queued notifications show the objective name and its updated status. Turn this off for the original messages.
+- **Weapon Strip:** a compact list above the ammo counters highlights your equipped weapon. Larger inventories scroll with selection; `+N` shows how many weapons are outside the visible strip.
+
+**Weapon Strip Style** switches between **Text** (the default) and **Icons**. Icon mode shows full-colour, static renders of the actual weapon models, including silenced guns, rifles, launchers, and explosives; the selected weapon stays highlighted. Set `[display] weapon_hud_icons=1` in `midas.ini` to select icons directly. The images are generated ahead of time and embedded in the executable. See [the icon generation guide](scripts/port/weapon_icons.md) to regenerate them from your ROM. Builds without generated images use weapon names until the icons are generated and the game rebuilt.
+
+These displays hide during menus, cutscenes, and death. Each can be disabled independently.
 
 ## Building
 

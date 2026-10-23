@@ -13,6 +13,10 @@
 void something_with_stage_objectives(void)
 {
     s32 i;
+#ifndef TARGET_N64
+    extern void portHudReset(s32 player);
+    for (i = 0; i < 4; i++) portHudReset(i);
+#endif
 
     OBJECTIVESTATUS *start;
     OBJECTIVESTATUS *end;

@@ -292,6 +292,10 @@ set_source_files_properties(assets/animationtable_data.c assets/animationtable_e
 
 # Port layer (grows as PD-derived pieces land; see docs/port/).
 file(GLOB PORT_SRC CONFIGURE_DEPENDS port/src/*.c)
+file(GLOB WEAPON_IMAGE_PACK CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/assets/port/weapon_icons/weapon_icons.rle")
+set_source_files_properties(port/src/port_weapon_images.c PROPERTIES
+    OBJECT_DEPENDS "${WEAPON_IMAGE_PACK}"
+    COMPILE_OPTIONS "-Wa,-I${CMAKE_SOURCE_DIR}")
 
 # GE_HEADLESS: no SDL at all (null renderer, silent audio), for the Linux -m32
 # ASan build where no 32-bit SDL exists. GE_SANITIZE adds ASan+UBSan (Linux gcc

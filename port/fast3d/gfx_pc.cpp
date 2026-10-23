@@ -37,6 +37,26 @@
 #include "gfx_rendering_api.h"
 #include "gfx_screen_config.h"
 #include "port_hostptr.h" /* PORT_IS_HOST_ADDR: the Xbox image sits below 0x10000000 */
+#include "port_weapon_images.h"
+#include "port_icon_decode.h"
+
+extern "C" const unsigned char port_weapon_images[];
+static const uint8_t *gfx_weapon_image(int item) {
+    static std::vector<uint8_t> decoded[32];
+    if (item < 0 || item >= 32) return nullptr;
+    auto &pixels = decoded[item];
+    const auto &image = portWeaponImages[item];
+    if (!image.size || image.offset > PORT_WEAPON_IMAGE_BYTES
+        || image.size > PORT_WEAPON_IMAGE_BYTES-image.offset) return nullptr;
+    if (pixels.empty()) {
+        pixels.resize(PORT_WEAPON_IMAGE_WIDTH*PORT_WEAPON_IMAGE_HEIGHT*4);
+        if (!portIconDecode(port_weapon_images+image.offset, image.size, pixels.data(), pixels.size())) {
+            pixels.clear();
+            return nullptr;
+        }
+    }
+    return pixels.data();
+}
 
 uintptr_t gfxFramebuffer;
 
@@ -3038,6 +3058,14 @@ static void import_texture(int i, int tile, bool importReplacement) {
         }
     } ge_hitch_upload(fmt, siz);
 
+    /* Generated HUD images are native RGBA bytes, outside the emulated TMEM
+     * format. They still use the normal texture cache and sampler lifetime. */
+    if (tex_flags & 0x80000000u) {
+        gfx_rapi->upload_texture(loaded_texture.addr, loaded_texture.raw_tex_metadata.width,
+                                loaded_texture.raw_tex_metadata.height);
+        return;
+    }
+
     { /* GE bring-up (GE_TRACE_TEX=1): one line per unique texture import -
        * names what each surface actually samples (the flat-world hunt). */
         static int trace = -1;
@@ -4276,7 +4304,7 @@ ndcprobe_done:;
                      * G_MIRRORPILLAR_EXT; they skip this and follow the texture
                      * filter setting (point, bilinear or 3-point) via the 3D
                      * path below. */
-                    linear_filter = gfx_filter_2d != 0;
+                    linear_filter = gfx_filter_2d != 0 || (rdp.loaded_texture[rdp.texture_tile[tile].tmem].tex_flags & 0x80000000u);
                 }
                 /* GE N64 mipmaps: when the game asked for per-pixel LOD over a
                  * mip chain (G_TL_LOD), use GL's own chain on the level-0
@@ -5747,6 +5775,181 @@ static void gfx_draw_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lr
     if (cycle_type == G_CYC_COPY) {
         rdp.other_mode_h = saved_other_mode_h;
     }
+}
+
+/* Shared screen-space line/curve renderer. Shape 0 is the hit marker, 1 the
+ * small cross, 2 GE's ring target, and 3 a directional damage arc. */
+static void gfx_ge_vector_overlay(float x, float y, uint32_t rgba, int shape = 0,
+                                  float size_x = 1, float size_y = 1, float start = 0, float end = 0) {
+    if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(size_x) || !std::isfinite(size_y)
+        || !std::isfinite(start) || !std::isfinite(end) || !(rgba & 0xffu) || size_x <= 0 || size_y <= 0) return;
+    gfx_flush();
+    const auto saved_viewport = rdp.viewport;
+    const auto saved_geometry = rsp.geometry_mode;
+    const auto saved_high = rdp.other_mode_h, saved_low = rdp.other_mode_l;
+    const auto saved_combine = rdp.combine_mode;
+    const auto saved_force_center = s_GeAspectForceCenter;
+    const bool saved_rect = s_DrawingRect, saved_glyphs = s_GeTextGlyphs;
+    LoadedVertex saved_vertices[4];
+    memcpy(saved_vertices, &rsp.loaded_vertices[MAX_VERTICES], sizeof(saved_vertices));
+
+    s_GeAspectForceCenter = gfx_ge_aspect_pin != 0;
+    gfx_update_aspect_mode();
+    XYWidthHeight viewport = {0, (int16_t)SCREEN_HEIGHT, (uint32_t)SCREEN_WIDTH, (uint32_t)SCREEN_HEIGHT};
+    gfx_adjust_viewport_or_scissor(&viewport);
+    rdp.viewport = viewport;
+    rdp.viewport_or_scissor_changed = true;
+    rsp.geometry_mode = 0;
+    rdp.other_mode_h = (saved_high & ~(3u << G_MDSFT_CYCLETYPE)) | G_CYC_1CYCLE;
+    rdp.other_mode_l = G_RM_XLU_SURF | G_RM_XLU_SURF2;
+    gfx_dp_set_combine_mode(color_comb(0, 0, 0, G_CCMUX_SHADE), alpha_comb(0, 0, 0, G_ACMUX_SHADE), 0, 0);
+    s_DrawingRect = true;
+    s_GeTextGlyphs = false;
+    ge_state_serial++;
+
+    const float scale = std::max(0.01f, (float)gfx_current_dimensions.height / SCREEN_HEIGHT);
+    /* Work in actual raster pixels for equal stroke width and edge softness
+     * under both the pinned HUD and full-width mouse-aim mapping. */
+    const float scale_x = std::max(0.01f, std::abs(gfx_adjust_x_for_aspect_ratio(1)-gfx_adjust_x_for_aspect_ratio(0))
+                                  * (float)gfx_current_dimensions.width / SCREEN_WIDTH);
+    const float marker_size = shape == 1 || shape == 2 ? size_y : 1.0f;
+    const float half_width = std::max(1.0f, (shape == 3 ? 0.50f : 0.30f) * scale * marker_size) * 0.5f;
+    const float feather = 0.7f;
+    const RGBA color = {(uint8_t)(rgba >> 24), (uint8_t)(rgba >> 16), (uint8_t)(rgba >> 8), (uint8_t)rgba};
+    auto vertex_at = [&](int index, float px, float py, float alpha) {
+        auto &vertex = rsp.loaded_vertices[MAX_VERTICES+index];
+        vertex = {};
+        vertex.x = gfx_adjust_x_for_aspect_ratio((px / scale_x) / HALF_SCREEN_WIDTH - 1.0f);
+        vertex.y = 1.0f - (py / scale) / HALF_SCREEN_HEIGHT;
+        vertex.z = -1.0f;
+        vertex.w = 1.0f;
+        vertex.color = color;
+        vertex.color.a = (uint8_t)(color.a * alpha);
+    };
+    auto quad = [&]() {
+        gfx_sp_tri1(MAX_VERTICES, MAX_VERTICES+1, MAX_VERTICES+2, true);
+        gfx_sp_tri1(MAX_VERTICES, MAX_VERTICES+2, MAX_VERTICES+3, true);
+    };
+    auto line = [&](float x0, float y0, float x1, float y1) {
+        x0 *= scale_x; x1 *= scale_x; y0 *= scale; y1 *= scale;
+        const float length = std::hypot(x1-x0, y1-y0);
+        if (length < 0.001f) return;
+        const float dx = (x1-x0)/length, dy = (y1-y0)/length;
+        const float along[4] = {-feather, 0, length, length+feather};
+        const float across[4] = {-half_width-feather, -half_width, half_width, half_width+feather};
+        for (int u = 0; u < 3; u++) for (int v = 0; v < 3; v++) {
+            const int corners[4][2] = {{u,v}, {u+1,v}, {u+1,v+1}, {u,v+1}};
+            for (int k = 0; k < 4; k++) {
+                const int a = corners[k][0], b = corners[k][1];
+                vertex_at(k, x0+dx*along[a]-dy*across[b], y0+dy*along[a]+dx*across[b],
+                          a == 0 || a == 3 || b == 0 || b == 3 ? 0 : 1);
+            }
+            quad();
+        }
+    };
+    auto arc = [&](float rx, float ry, float angle0, float angle1, bool closed) {
+        const float radius_x = rx*scale_x, radius_y = ry*scale;
+        const float span = angle1-angle0;
+        const int steps = std::clamp((int)std::ceil(std::abs(span)*std::max(radius_x,radius_y)/4), closed ? 24 : 4, 256);
+        const float radial[] = {-half_width-feather, -half_width, half_width, half_width+feather};
+        const float cap = feather / std::max(radius_x, radius_y);
+        const int count = steps + (closed ? 0 : 2);
+        auto sample = [&](int n, int r, int vertex) {
+            const float t = closed ? angle0+span*n/steps
+                : n == 0 ? angle0-cap : n == count ? angle1+cap : angle0+span*(n-1)/steps;
+            const float ct = std::cos(t), st = std::sin(t);
+            float nx = ct/radius_x, ny = st/radius_y;
+            const float norm = std::hypot(nx, ny); nx /= norm; ny /= norm;
+            vertex_at(vertex, x*scale_x+ct*radius_x+nx*radial[r], y*scale+st*radius_y+ny*radial[r],
+                      r == 0 || r == 3 || (!closed && (n == 0 || n == count)) ? 0 : 1);
+        };
+        for (int n = 0; n < count; n++) for (int r = 0; r < 3; r++) {
+            sample(n,r,0); sample(n+1,r,1); sample(n+1,r+1,2); sample(n,r+1,3); quad();
+        }
+    };
+    if (shape == 0) {
+        for (int sx : {-1,1}) for (int sy : {-1,1}) line(x+sx*5, y+sy*5, x+sx*8.5f, y+sy*8.5f);
+    } else if (shape == 1 || shape == 2) {
+        const float extent = shape == 2 ? 14.5f : 7.0f;
+        for (int sign : {-1,1}) {
+            line(x+sign*1.75f*size_x, y, x+sign*extent*size_x, y);
+            line(x, y+sign*1.75f*size_y, x, y+sign*extent*size_y);
+        }
+        if (shape == 2) arc(9.5f*size_x, 9.5f*size_y, 0, 6.28318530718f, true);
+    } else if (shape == 3) {
+        arc(size_x, size_y, start, end, false);
+    } else if (shape == 5) {
+        vertex_at(0, x*scale_x, y*scale, 1);
+        vertex_at(1, (x+size_x)*scale_x, y*scale, 1);
+        vertex_at(2, (x+size_x)*scale_x, (y+size_y)*scale, 1);
+        vertex_at(3, x*scale_x, (y+size_y)*scale, 1);
+        quad();
+    } else if (shape == 4) {
+        if (const uint8_t *image = gfx_weapon_image((int)start)) {
+            /* Save the emulated texture state; the normal importer takes
+             * care of GPU binding/cache state when the following HUD draws. */
+            const auto saved_rdp = rdp;
+            auto &tile = rdp.texture_tile[0];
+            tile = {};
+            tile.fmt = G_IM_FMT_RGBA;
+            tile.siz = G_IM_SIZ_32b;
+            tile.cms = tile.cmt = G_TX_CLAMP;
+            tile.width = PORT_WEAPON_IMAGE_WIDTH;
+            tile.height = PORT_WEAPON_IMAGE_HEIGHT;
+            tile.lrs = (tile.width-1)*4;
+            tile.lrt = (tile.height-1)*4;
+            tile.line_size_bytes = tile.width*2;
+            auto &texture = rdp.loaded_texture[0];
+            texture = {};
+            texture.addr = image;
+            texture.orig_size_bytes = texture.full_size_bytes = texture.size_bytes = tile.width*tile.height*4;
+            texture.full_image_line_size_bytes = texture.line_size_bytes = tile.line_size_bytes;
+            texture.tex_flags = 0x80000000u;
+            texture.raw_tex_metadata.width = tile.width;
+            texture.raw_tex_metadata.height = tile.height;
+            rdp.first_tile_index = 0;
+            rdp.tex_lod = rdp.tex_detail = false;
+            rdp.textures_changed[0] = rdp.textures_changed[1] = true;
+            rdp.other_mode_h = G_CYC_1CYCLE | G_TF_BILERP | G_TP_NONE;
+            const float xy[4][2] = {{x,y},{x+size_x,y},{x+size_x,y+size_y},{x,y+size_y}};
+            const float uv[4][2] = {{0,0},{1,0},{1,1},{0,1}};
+            auto image_quad = [&](float dx, float dy, bool rim) {
+                for (int k = 0; k < 4; k++) {
+                    vertex_at(k, (xy[k][0]+dx)*scale_x, (xy[k][1]+dy)*scale, 1);
+                    auto &v = rsp.loaded_vertices[MAX_VERTICES+k];
+                    v.u = uv[k][0]*tile.width*32;
+                    v.v = uv[k][1]*tile.height*32;
+                    if (rim) v.color = {170,180,190,130};
+                }
+                quad();
+            };
+            /* A subtle alpha-derived edge keeps black metal readable against
+             * the translucent cards, especially in small split-screen views. */
+            gfx_dp_set_combine_mode(color_comb(0,0,0,G_CCMUX_SHADE), alpha_comb(G_ACMUX_TEXEL0,0,G_ACMUX_SHADE,0), 0, 0);
+            ge_state_serial++;
+            image_quad(-0.25f,0,true); image_quad(0.25f,0,true);
+            image_quad(0,-0.25f,true); image_quad(0,0.25f,true);
+            gfx_dp_set_combine_mode(color_comb(0,0,0,G_CCMUX_TEXEL0), alpha_comb(0,0,0,G_ACMUX_TEXEL0), 0, 0);
+            ge_state_serial++;
+            image_quad(0,0,false);
+            gfx_flush();
+            rdp = saved_rdp;
+            rdp.textures_changed[0] = rdp.textures_changed[1] = true;
+        }
+    }
+    gfx_flush();
+    memcpy(&rsp.loaded_vertices[MAX_VERTICES], saved_vertices, sizeof(saved_vertices));
+    s_DrawingRect = saved_rect;
+    s_GeTextGlyphs = saved_glyphs;
+    rsp.geometry_mode = saved_geometry;
+    rdp.other_mode_h = saved_high;
+    rdp.other_mode_l = saved_low;
+    rdp.combine_mode = saved_combine;
+    rdp.viewport = saved_viewport;
+    rdp.viewport_or_scissor_changed = true;
+    s_GeAspectForceCenter = saved_force_center;
+    gfx_update_aspect_mode();
+    ge_state_serial++;
 }
 
 /**
@@ -7486,6 +7689,36 @@ static void gfx_run_dl(Gfx* cmd) {
                 roc_next_kind = (int)((cmd->words.w1 >> 16) & 0xffu);
                 roc_next_arg = (int)(cmd->words.w1 & 0xffffu);
                 break;
+            case G_HITMARKER_EXT: {
+                float x, y;
+                const uint32_t color = cmd->words.w1;
+                ++cmd;
+                memcpy(&x, &cmd->words.w0, sizeof(x));
+                memcpy(&y, &cmd->words.w1, sizeof(y));
+                gfx_ge_vector_overlay(x, y, color);
+                break;
+            }
+            case G_WEAPON_EXPORT_EXT: {
+                gfx_flush();
+                gfx_rapi->clear_framebuffer(true, true);
+                gfx_ge_vector_overlay(0, 0, cmd->words.w1 & 16 ? 0xffffffff : 0x000000ff,
+                                      5, SCREEN_WIDTH, SCREEN_HEIGHT);
+                extern int ge_weapon_icon_capture;
+                ge_weapon_icon_capture = (cmd->words.w1 & 15) ? cmd->words.w1 : 0;
+                break;
+            }
+            case G_HUD_VECTOR_EXT: {
+                const int shape = cmd->words.w0 & 0xffu;
+                const uint32_t color = cmd->words.w1;
+                float params[6];
+                for (int i = 0; i < 6; i += 2) {
+                    ++cmd;
+                    memcpy(&params[i], &cmd->words.w0, sizeof(float));
+                    memcpy(&params[i+1], &cmd->words.w1, sizeof(float));
+                }
+                gfx_ge_vector_overlay(params[0], params[1], color, shape, params[2], params[3], params[4], params[5]);
+                break;
+            }
             case G_CONSOLE2D_EXT:
                 gfx_flush();
                 gfx_ge_con2d_set((uint32_t) (cmd->words.w1 >> 16), (uint32_t) (cmd->words.w1 & 0xffffu));
