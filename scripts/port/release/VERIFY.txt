@@ -16,7 +16,8 @@ Or verify the extracted executable:
   gh attestation verify ProjectMidas.exe -R pRizz/Project-Midas-ADS
 
 Require the expected repository, workflow .github/workflows/main.yml, commit
-and push to refs/heads/main. Inspect the verification output for these fields.
+and refs/heads/main. Expected triggers are push or workflow_dispatch (a manual
+main build/retry). Inspect the verification output for these fields.
 For offline verification, consult GitHub's attestation documentation and use
 the published bundle; do not trust an arbitrary repository's attestation.
 

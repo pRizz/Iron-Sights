@@ -618,7 +618,10 @@ references and invalid offsets/depths. Actionlint passed. The first hosted
 [run](https://github.com/pRizz/Project-Midas-ADS/actions/runs/40016371907)
 passed tests, compilation and publication. Its immutable release ZIP and EXE
 passed attestation verification against this main workflow and source commit;
-packaged metadata and all file checksums matched.
+packaged metadata and all file checksums matched. Verification instructions
+accept both configured push builds and deliberate manual main dispatch/retries.
+Initial SSH push probes did not create Actions runs despite enabled settings
+and no event policy; the maintainer guide documents the manual fallback.
 
 ### FORK-019 — Native first-launch weapon image cache
 

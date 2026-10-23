@@ -3,7 +3,10 @@
 The default branch is `main`. Every successful push (including documentation
 changes) runs ROM-free tests, builds Windows x86, packages player files and
 publishes a uniquely tagged GitHub Release. Manual dispatch on `main` supports
-retries. Tags include run number, attempt and commit, so a rerun never replaces
+retries (`gh workflow run main.yml -R pRizz/Project-Midas-ADS --ref main`).
+If a push does not create a run, inspect Actions settings/policies and use this
+manual main dispatch rather than uploading a locally modified executable.
+Tags include run number, attempt and commit, so a rerun never replaces
 an existing build. Releases are marked latest to support the README's simple
 download link; they are development builds rather than manually certified
 stable versions. PRs run tests only, without publication
