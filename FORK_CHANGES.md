@@ -654,6 +654,8 @@ The slow-run investigation measured 58m52s installing the compiler and 34s
 compiling in run 40020492518, with package downloads averaging 36.6 kB/s.
 Dependency-cache tests cover exact signed-metadata matching, SHA256/size and
 filename checks, same-size corruption, stale-file rejection and missing files.
+The toolchain-identity test checks reuse across hosted-image rollouts and
+invalidation when compiler/frontend content or package versions change.
 A fresh-container restore reused all 633,018 bytes of its needed archives with
 zero package-download bytes, and installed successfully. Both cold and warm
 MinGW builds completed locally; the warm build reused 254 of 257 cacheable
@@ -664,7 +666,12 @@ Windows dependency installation took 14s and cold compilation took 42s.
 Run 40035779322 restored all package and SDL downloads, but a concurrent
 GitHub runner-image rollout invalidated the original image-version object key.
 The revised key uses actual toolchain content to preserve reuse across those
-image updates. The cold release's ZIP attestation verified successfully.
+image updates. Hosted run 40036110183 restored that revised cache, reused
+254/257 cacheable compilations (98.8%), compiled/linked in 5s, and installed the
+Windows toolchain in 9s with all 75,538,348 package bytes reused. The warm run
+completed tests through publication in 1m22s, excluding its intentional queue
+behind the cold run. Cold and warm release ZIP attestations verified; the warm
+release recorded a fresh timestamp/run identity for the same source commit.
 
 ### FORK-019 — Native first-launch weapon image cache
 
