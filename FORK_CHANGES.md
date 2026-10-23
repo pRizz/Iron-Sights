@@ -624,7 +624,11 @@ passed attestation verification against this main workflow and source commit;
 packaged metadata and all file checksums matched. Verification instructions
 accept both configured push builds and deliberate manual main dispatch/retries.
 Initial SSH push probes did not create Actions runs despite enabled settings
-and no event policy; the maintainer guide documents the manual fallback.
+and no event policy. Registering the fork-specific workflow restored automatic
+push execution: [run 40019645555](https://github.com/pRizz/Project-Midas-ADS/actions/runs/40019645555)
+passed tests, compilation and immutable publication. Its ZIP/EXE attestations
+verified the expected workflow, main ref, exact commit and push trigger. The
+maintainer guide retains manual dispatch as a recovery path.
 
 ### FORK-019 — Native first-launch weapon image cache
 
@@ -660,7 +664,8 @@ data stays out of Git. The optional Python PNG exporter remains for inspection.
 pixels in a Unicode cache folder. Reuse, corrupt-cache regeneration and
 unwritable-folder fallback ran successfully on Windows. Regeneration matched
 the prior cache byte-for-byte on this laptop; cross-GPU identity is not assumed.
-The contact sheet was visually reviewed. Codec/HUD tests cover malformed
+The contact sheet was visually reviewed; an isolated gameplay audit of the
+downloaded, attested ZIP also displayed the cached icons correctly. Codec/HUD tests cover malformed
 cache cases and text layout without a cache. Python exporter tests passed.
 
 ### FORK-020 — Embedded build identity and About links
@@ -697,6 +702,6 @@ About and the inherited missing-ROM error window now suspend hang detection
 while open, with counters reset before normal monitoring resumes. This fixes
 the watchdog treating a healthy, long-lived native dialog as a stalled game.
 A Windows audit kept About open beyond the 60-second startup grace (70 seconds)
-and verified it remained responsive.
+and verified it remained responsive and resumed the normal game loop on close.
 URL tests reject missing values, HTTP, lookalike domains and injected markup or
 control characters. Corrected the existing malformed inventory heading to UTF-8.
