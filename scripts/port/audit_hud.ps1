@@ -5,6 +5,7 @@ param(
     [string]$Resolution,
     [switch]$BodyHit,
     [switch]$Icons,
+    [switch]$AutomaticHealth,
     [int]$Item = 8,
     [switch]$Disabled,
     [switch]$Menu,
@@ -20,7 +21,8 @@ Copy-Item -LiteralPath $Executable -Destination (Join-Path $dir 'ProjectMidas.ex
 Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
 $ini = @('[display]', 'fullscreen=window', 'vsync=0', 'maxfps=60', 'tickhz=60', 'msaa=0', 'aim_mode=1', '[input]', 'mouse=1')
 if ($Icons) { $ini = @('[display]', 'weapon_hud_icons=1') + $ini }
-if ($Disabled) { $ini = @('[display]', 'hit_markers=0', 'damage_indicators=0', 'objective_notifications=0', 'weapon_hud=0') + $ini }
+if ($AutomaticHealth) { $ini = @('[display]', 'always_health=0') + $ini }
+if ($Disabled) { $ini = @('[display]', 'hit_markers=0', 'damage_indicators=0', 'objective_notifications=0', 'weapon_hud=0', 'always_health=0') + $ini }
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value $ini
 $auditEnv = @{
     GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$(if ($Resolution) {$Resolution} elseif ($Aspect -eq 'Wide') {'960x540'} else {'800x600'});

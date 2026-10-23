@@ -20,11 +20,18 @@ Copy-Item -LiteralPath $Executable -Destination (Join-Path $auditDir 'ProjectMid
 Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $auditDir
 $resolution = if ($Aspect -eq 'Wide') { '960x540' } else { '800x600' }
 $settings = @('[display]', 'fullscreen=window', 'vsync=0', "maxfps=$([Math]::Max(60,$TickHz))", "tickhz=$TickHz",
-    "hfov_wide=$Fov", 'aim_mode=1', 'sight_on_screen=1', '[input]', 'mouse=1')
+    "hfov_wide=$Fov", 'aim_mode=1', 'sight_on_screen=1', 'always_crosshair=1',
+    'weapon_hud=0', 'always_health=0', '[input]', 'mouse=1')
 Set-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value $settings
+# Skip the intro before the gun settles; no input is replayed during aiming.
+$inputFile = Join-Path $auditDir 'input.txt'
+Set-Content -LiteralPath $inputFile -Value @('P 0 0 0 0',
+    'P 80 8000 0 0', 'P 82 0 0 0', 'P 120 8000 0 0', 'P 122 0 0 0',
+    'P 160 8000 0 0', 'P 162 0 0 0', 'P 2200 0 0 0')
 $auditEnv = @{
     GE_ROM=$Rom; GE_WINDOW=$resolution; GE_NOINPUT='1'; GE_STAGE='dam'; GE_STAGE_AFTER='1';
     GE_CHEATS='invuln,invis,guns'; GE_ADS_AUDIT='1';
+    GE_INPUTPLAY=$inputFile;
     GE_FRAMES=[string][Math]::Ceiling(8000 * [Math]::Max(1, $TickHz / 60.0)); GE_SEED='1'
 }
 $previousEnv = @{}

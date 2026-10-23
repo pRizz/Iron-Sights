@@ -73,11 +73,13 @@ Aiming and crouching prevent the sprint boost; ADS keeps its half-speed movement
 - **Hit Markers:** thin, smoothed white lines confirm damage to a character; headshots use gold.
 - **Damage Direction:** short red arcs point toward incoming damage and follow your view as you turn.
 - **Objective Alerts:** queued notifications show the objective name and its updated status. Turn this off for the original messages.
-- **Weapon Strip:** a compact list above the ammo counters highlights your equipped weapon. Larger inventories scroll with selection; `+N` shows how many weapons are outside the visible strip.
+- **Weapon Strip:** a compact list near the bottom, above the ammo counters, highlights your equipped weapon. Cards, icons and text are scaled down by 30%. Larger inventories scroll with selection; `+N` shows how many weapons are outside the visible strip. After three seconds without switching weapons, the strip smoothly fades to 20% opacity; switching weapons brings it back.
 
 **Weapon Strip Style** switches between **Text** (the default) and **Icons**. Icon mode shows full-colour, static renders of the actual weapon models, including silenced guns, rifles, launchers, and explosives; the selected weapon stays highlighted. Set `[display] weapon_hud_icons=1` in `midas.ini` to select icons directly. The images are generated ahead of time and embedded in the executable. See [the icon generation guide](scripts/port/weapon_icons.md) to regenerate them from your ROM. Builds without generated images use weapon names until the icons are generated and the game rebuilt.
 
-These displays hide during menus, cutscenes, and death. Each can be disabled independently.
+**Health Display** defaults to **Always**, keeping slimmer health and armor arcs visible during gameplay. Damage or a health/armor change restores full opacity at 75% of the original thickness; after three quiet seconds, they smoothly fade to 25% opacity and 20% thickness. Select **Automatic** for the original temporary gauges, or set `[display] always_health=0` in `midas.ini`.
+
+These displays hide during menus, cutscenes, and death. Each setting can be changed independently.
 
 ## Building
 

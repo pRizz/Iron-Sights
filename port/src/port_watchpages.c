@@ -112,6 +112,7 @@ static const struct PortWatchRowDef sHud[] = {
     { PWROW_OPT,       "objective_notifications", NULL, 0, 0 },
     { PWROW_OPT,       "weapon_hud",       NULL, 0, 0 },
     { PWROW_OPT,       "weapon_hud_icons", NULL, 0, 0 },
+    { PWROW_OPT,       "always_health",    NULL, 0, 0 },
     { PWROW_OPT,       "pause_pillars",    NULL, 0, 0 },
     /* aim lock, stamina sway and steady scope moved to General Settings */
     { PWROW_PLAYEROPT, NULL, NULL, PLAYER_OPTION_RATIO, 0 }, /* lodger: "hud" (romdata.c relabel) */

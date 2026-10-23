@@ -160,6 +160,12 @@ padN_stickmode.
                       |            | crosshairs; default = red
   health_wide         | 0          | 1 = health and armour arcs at the screen
                       |            | edges; 0 = centred 4:3 area
+  always_health       | 1          | Health Display: 1 = always show health and
+                      |            | armour; after 3 quiet seconds, fade to 25%
+                      |            | opacity and 20% of the original thickness.
+                      |            | Active gauges use 75% of original thickness.
+                      |            | Damage or health/armour changes restore them.
+                      |            | 0 = original automatic, temporary gauges
   always_crosshair    | 0          | 1 = small target at the gun's aim point
                       |            | when not aiming
   mission_timer       | 1          | Elapsed time (MM:SS:MS) bottom-left in
@@ -171,6 +177,9 @@ padN_stickmode.
                       |            | bottom-left messages. Solo only
   weapon_hud          | 1          | Bottom weapon strip; selected weapon is
                       |            | highlighted. Scrolls for large inventories
+                      |            | Cards/icons/text are scaled down by 30%.
+                      |            | Fades to 20% after 3 seconds without switching;
+                      |            | switching weapons restores full opacity
   weapon_hud_icons    | 0          | Weapon Strip Style: 0 = text, 1 = static
                       |            | weapon model images. Requires weapon_hud=1
   Sound

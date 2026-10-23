@@ -32,13 +32,15 @@ extern void *memmove(void *dst, const void *src, size_t size);
 #define HUD_TOASTS 8
 #define HUD_WEAPONS 32
 #define HUD_PI 3.14159265358979323846f
-static const char *const phKeys[] = { "hit_markers", "damage_indicators", "objective_notifications", "weapon_hud", "weapon_hud_icons" };
-static s32 phOptions[] = { 1, 1, 1, 1, 0 };
+static const char *const phKeys[] = { "hit_markers", "damage_indicators", "objective_notifications", "weapon_hud", "weapon_hud_icons", "always_health" };
+static s32 phOptions[] = { 1, 1, 1, 1, 0, 1 };
 #define HUD_OPTIONS (sizeof(phOptions) / sizeof(phOptions[0]))
 typedef struct { f32 time, bearing; s32 directional; } HudDamage;
 typedef struct { s32 index, letter, status; char text[192]; } HudToast;
 typedef struct {
     f32 hitTime, toastTime;
+    f32 weaponIdle, healthIdle, health, armour;
+    s32 observed, weapon;
     s32 headshot, toastCount;
     HudDamage damage[4];
     HudToast toasts[HUD_TOASTS];
@@ -57,6 +59,10 @@ s32 portHudOptionSet(const char *key, s32 value)
     s32 i, p;
     for (i = 0; i < HUD_OPTIONS; i++) if (strcmp(key, phKeys[i]) == 0) {
         phOptions[i] = value != 0;
+        for (p = 0; p < 4; p++) {
+            if (i == 3 || i == 4) phState[p].weaponIdle = 0;
+            if (i == 5) phState[p].healthIdle = 0;
+        }
         if (!value) for (p = 0; p < 4; p++) {
             if (i == 0) phState[p].hitTime = 0;
             if (i == 1) memset(phState[p].damage, 0, sizeof(phState[p].damage));
@@ -84,8 +90,10 @@ void portHudDamage(s32 victim, f32 incomingX, f32 incomingZ)
 {
     s32 i, slot = 0;
     HudState *h;
-    if (!phOptions[1] || victim < 0 || victim >= 4) return;
+    if (victim < 0 || victim >= 4) return;
     h = &phState[victim];
+    h->healthIdle = 0; /* Gauge emphasis is independent of damage indicators. */
+    if (!phOptions[1]) return;
     for (i = 1; i < 4; i++) if (h->damage[i].time < h->damage[slot].time) slot = i;
     h->damage[slot].time = 60.0f;
     h->damage[slot].directional = incomingX * incomingX + incomingZ * incomingZ > 0.0001f;
@@ -129,6 +137,8 @@ static void phAdvance(HudState *h, f32 dt)
 {
     s32 i;
     if (dt <= 0) return;
+    h->weaponIdle = h->weaponIdle + dt < 240 ? h->weaponIdle + dt : 240;
+    h->healthIdle = h->healthIdle + dt < 240 ? h->healthIdle + dt : 240;
     h->hitTime = h->hitTime > dt ? h->hitTime - dt : 0;
     for (i = 0; i < 4; i++) h->damage[i].time = h->damage[i].time > dt ? h->damage[i].time - dt : 0;
     while (h->toastCount && dt > 0) {
@@ -139,16 +149,40 @@ static void phAdvance(HudState *h, f32 dt)
     }
 }
 
+static void phObserve(HudState *h, s32 weapon, f32 health, f32 armour)
+{
+    if (!h->observed || h->weapon != weapon) h->weaponIdle = 0;
+    if (!h->observed || h->health != health || h->armour != armour) h->healthIdle = 0;
+    h->weapon = weapon; h->health = health; h->armour = armour; h->observed = 1;
+}
+
+/* Hold full emphasis for three seconds, then ease to the idle style over one. */
+static f32 phQuietScale(f32 idle, f32 quiet)
+{
+    f32 t = (idle-180.0f)/60.0f;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    t = t*t*(3.0f-2.0f*t);
+    return 1.0f + (quiet-1.0f)*t;
+}
+
+static u32 phOpacity(u32 rgba, f32 opacity)
+{
+    return (rgba & 0xffffff00u) | (u32)((rgba & 255)*opacity+0.5f);
+}
+
 void portHudTick(void)
 {
     const s32 p = get_cur_playernum();
-    if (p < 0 || p >= 4 || !portBondControlsLive()) return;
+    if (p < 0 || p >= 4 || !portBondControlsLive() || !g_CurrentPlayer) return;
     phAdvance(&phState[p], g_GlobalTimerDelta);
+    phObserve(&phState[p], getCurrentPlayerWeaponId(GUNRIGHT),
+        g_CurrentPlayer->bondhealth, g_CurrentPlayer->bondarmour);
 #ifdef GE_VIDEO
     { /* Isolated visual audit: no input or gameplay changes without this knob. */
         static f32 time;
         static s32 fired;
         static s32 equipped;
+        static s32 switched;
         const char *audit = getenv("GE_HUD_AUDIT");
         if (p == 0 && audit && fired < 4) {
             if (!equipped && atoi(audit) >= ITEM_WPPK && atoi(audit) <= ITEM_TASER
@@ -161,6 +195,8 @@ void portHudTick(void)
             if (!fired && time >= 100.0f) {
                 extern void portConLogf(const char *fmt, ...);
                 portHudHit(0, getenv("GE_HUD_AUDIT_BODY") == NULL);
+                g_CurrentPlayer->bondhealth = 0.625f;
+                g_CurrentPlayer->bondarmour = 0.5f;
                 /* Known attacker on Bond's right, using the game's movement
                  * basis: right = (-cos(heading), -sin(heading)). */
                 const f32 heading = g_CurrentPlayer->vv_theta * HUD_PI / 180.0f;
@@ -177,6 +213,9 @@ void portHudTick(void)
                 extern int ge_shot_force;
                 ge_shot_force = 1;
                 fired = 3;
+            } else if (fired == 3 && !switched && time >= 650.0f) {
+                currentPlayerEquipWeaponWrapper(GUNRIGHT, atoi(audit) == ITEM_WPPK ? ITEM_AK47 : ITEM_WPPK);
+                switched = 1;
             } else if (fired == 3 && time >= 670.0f) {
                 extern int ge_shot_force;
                 ge_shot_force = 1;
@@ -192,6 +231,33 @@ s32 portHudWeaponStripShown(void)
 {
     return phOptions[3] && portBondControlsLive() && g_CurrentPlayer
         && !g_CurrentPlayer->mpmenuon && !g_CurrentPlayer->hudmessoff;
+}
+
+s32 portHudAlwaysHealthShown(void)
+{
+    return phOptions[5] && portBondControlsLive() && g_CurrentPlayer
+        && !g_CurrentPlayer->bonddead && !g_CurrentPlayer->mpmenuon && !g_CurrentPlayer->hudmessoff;
+}
+
+void portHudStyleGauge(struct damage_display_val *vertices, s32 count)
+{
+    const s32 p = get_cur_playernum();
+    f32 thickness, opacity;
+    s32 i;
+    if (!portHudAlwaysHealthShown() || p < 0 || p >= 4) return;
+    /* Slimmer even when emphasized; quiet gauges retain only a fine trace. */
+    thickness = phQuietScale(phState[p].healthIdle, 0.2f / 0.75f) * 0.75f;
+    opacity = phQuietScale(phState[p].healthIdle, 0.25f);
+    for (i = 0; i+1 < count; i += 2) {
+        struct damage_display_val *a = &vertices[i], *b = &vertices[i+1];
+        const f32 cx = (a->pos.x+b->pos.x)*0.5f, cz = (a->pos.z+b->pos.z)*0.5f;
+        a->pos.x = (s16)(cx+(a->pos.x-cx)*thickness);
+        b->pos.x = (s16)(cx+(b->pos.x-cx)*thickness);
+        a->pos.z = (s16)(cz+(a->pos.z-cz)*thickness);
+        b->pos.z = (s16)(cz+(b->pos.z-cz)*thickness);
+        a->colour.a = (u8)(a->colour.a*opacity+0.5f);
+        b->colour.a = (u8)(b->colour.a*opacity+0.5f);
+    }
 }
 
 typedef struct { s32 item, inventory; } HudWeapon;
@@ -295,36 +361,39 @@ static Gfx *phDrawStrip(Gfx *g)
 {
     HudWeapon weapons[HUD_WEAPONS];
     s32 selected, n = phWeapons(weapons, &selected);
-    s32 width = viGetViewWidth(), slots = (width - 36) / 54;
-    s32 i, start, x, y = viGetViewTop() + viGetViewHeight() - 45;
+    const f32 scale = 0.7f, pitch = 54 * scale;
+    s32 width = viGetViewWidth(), slots = (s32)((width - 36 * scale) / pitch);
+    s32 i, start;
+    f32 x, y = viGetViewTop() + viGetViewHeight() - PORT_HUD_WEAPON_BOTTOM;
+    const f32 opacity = phQuietScale(phState[get_cur_playernum()].weaponIdle, 0.2f);
     char label[64];
     if (!n || slots < 1) return g;
     if (slots > 5) slots = 5;
     if (slots > n) slots = n;
     start = phStripStart(n, selected, slots);
-    x = viGetViewLeft() + (width - slots * 54) / 2;
+    x = viGetViewLeft() + (width - slots * pitch) / 2;
     for (i = 0; i < slots; i++) {
         const s32 active = start + i == selected;
         const s32 icon = phOptions[4] ? phWeaponIcon(weapons[start+i].item) : -1;
-        g = phRect(g, x + i*54, y, 52, 17, active ? 0x53683cce : 0x10171cb0);
-        if (active) g = phRect(g, x + i*54, y+15, 52, 2, 0xd7f3a9ff);
+        g = phRect(g, x + i*pitch, y, 52*scale, 17*scale, phOpacity(active ? 0x53683cce : 0x10171cb0, opacity));
+        if (active) g = phRect(g, x + i*pitch, y+15*scale, 52*scale, 2*scale, phOpacity(0xd7f3a9ff, opacity));
         if (icon >= 0) {
             /* Native 512x160 RGBA model render, with its original colours. */
-            g = phVector(g, 4, x+i*54+2, y+1, 48, 14, icon, 0, 0xffffffff);
+            g = phVector(g, 4, x+i*pitch+2*scale, y+scale, 48*scale, 14*scale, icon, 0, phOpacity(0xffffffff, opacity));
         } else {
             const char *name = (const char *)bondinvGetNameByIndex(weapons[start+i].inventory);
             if (!name || !name[0]) name = (const char *)get_ptr_short_watch_text_for_item(weapons[start+i].item);
-            g = phText(g, name ? name : "Unarmed", x + i*54 + 3, y+4, 0.65f,
-                active ? 0xf2ffdcff : 0xc3ccd4ff, 46);
+            g = phText(g, name ? name : "Unarmed", (s32)(x + i*pitch + 3*scale + 0.5f), (s32)(y+4*scale+0.5f), 0.65f*scale,
+                phOpacity(active ? 0xf2ffdcff : 0xc3ccd4ff, opacity), (s32)(46*scale));
         }
     }
     if (start) {
         snprintf(label, sizeof(label), "+%d", start);
-        g = phText(g, label, x-17, y+5, 0.6f, 0xc3ccd4ff, 17);
+        g = phText(g, label, (s32)(x-17*scale+0.5f), (s32)(y+5*scale+0.5f), 0.6f*scale, phOpacity(0xc3ccd4ff, opacity), (s32)(17*scale));
     }
     if (start+slots < n) {
         snprintf(label, sizeof(label), "+%d", n-start-slots);
-        g = phText(g, label, x+slots*54+2, y+5, 0.6f, 0xc3ccd4ff, 18);
+        g = phText(g, label, (s32)(x+slots*pitch+2*scale+0.5f), (s32)(y+5*scale+0.5f), 0.6f*scale, phOpacity(0xc3ccd4ff, opacity), (s32)(18*scale));
     }
     return g;
 }

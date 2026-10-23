@@ -5919,7 +5919,7 @@ static void gfx_ge_vector_overlay(float x, float y, uint32_t rgba, int shape = 0
                     auto &v = rsp.loaded_vertices[MAX_VERTICES+k];
                     v.u = uv[k][0]*tile.width*32;
                     v.v = uv[k][1]*tile.height*32;
-                    if (rim) v.color = {170,180,190,130};
+                    if (rim) v.color = {170,180,190,static_cast<uint8_t>(130*color.a/255)};
                 }
                 quad();
             };
@@ -5929,7 +5929,7 @@ static void gfx_ge_vector_overlay(float x, float y, uint32_t rgba, int shape = 0
             ge_state_serial++;
             image_quad(-0.25f,0,true); image_quad(0.25f,0,true);
             image_quad(0,-0.25f,true); image_quad(0,0.25f,true);
-            gfx_dp_set_combine_mode(color_comb(0,0,0,G_CCMUX_TEXEL0), alpha_comb(0,0,0,G_ACMUX_TEXEL0), 0, 0);
+            gfx_dp_set_combine_mode(color_comb(0,0,0,G_CCMUX_TEXEL0), alpha_comb(G_ACMUX_TEXEL0,0,G_ACMUX_SHADE,0), 0, 0);
             ge_state_serial++;
             image_quad(0,0,false);
             gfx_flush();

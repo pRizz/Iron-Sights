@@ -11956,11 +11956,25 @@ Gfx *bondviewRenderGaugeBars(Gfx *gdl)
 #endif
 
     //Set up armor bars.
-    hudMakeDamageSegments(&g_CurrentPlayer->armor_display_values[0].items[0], 0x2e, 1, g_CurrentPlayer->apparentarmour);
+    hudMakeDamageSegments(&g_CurrentPlayer->armor_display_values[0].items[0], 0x2e, 1,
+#ifndef TARGET_N64
+        portHudAlwaysHealthShown() ? g_CurrentPlayer->bondarmour :
+#endif
+        g_CurrentPlayer->apparentarmour);
+#ifndef TARGET_N64
+    portHudStyleGauge(&g_CurrentPlayer->armor_display_values[0].items[0], 0x2e);
+#endif
     buildGaugeBarDL((Gfx *)&g_CurrentPlayer->watch_body_armor_bar_gdl, OS_PHYSICAL_TO_K0(&g_CurrentPlayer->armor_display_values[0].items[0]), 0x2e);
 
     // Set up health bars.
-    hudMakeDamageSegments(&g_CurrentPlayer->health_display_values[0].items[0], 0x2e, -1, g_CurrentPlayer->apparenthealth);
+    hudMakeDamageSegments(&g_CurrentPlayer->health_display_values[0].items[0], 0x2e, -1,
+#ifndef TARGET_N64
+        portHudAlwaysHealthShown() ? g_CurrentPlayer->bondhealth :
+#endif
+        g_CurrentPlayer->apparenthealth);
+#ifndef TARGET_N64
+    portHudStyleGauge(&g_CurrentPlayer->health_display_values[0].items[0], 0x2e);
+#endif
     buildGaugeBarDL((Gfx *)&g_CurrentPlayer->watch_health_bar_gdl, OS_PHYSICAL_TO_K0(&g_CurrentPlayer->health_display_values[0].items[0]), 0x2e);
 
     // Create an orthographic render state for the gauge.
@@ -12677,7 +12691,7 @@ Gfx *maybe_mp_interface(Gfx *gdl)
             gaugeforce = (e != NULL && e[0] != '0') ? 1 : 0;
         }
         if (gaugeforce && (g_CurrentPlayer->watch_animation_state == 0) &&
-            !bondviewGetIfCurrentPlayerHealthShowTime())
+            !bondviewGetIfCurrentPlayerHealthShowTime() && !portHudAlwaysHealthShown())
         {
             g_CurrentPlayer->apparenthealth = g_CurrentPlayer->bondhealth;
             g_CurrentPlayer->apparentarmour = g_CurrentPlayer->bondarmour;
@@ -12702,6 +12716,13 @@ Gfx *maybe_mp_interface(Gfx *gdl)
             g_CurrentPlayer->healthdisplaytime = 0;
         }
     }
+
+#ifndef TARGET_N64
+    else if (portHudAlwaysHealthShown())
+    {
+        gdl = bondviewRenderGaugeBars(gdl);
+    }
+#endif
 
     if (getPlayerCount() == 1)
     {
@@ -13774,8 +13795,8 @@ Gfx* hudmsgBottomRender(Gfx* arg0)
 #ifndef TARGET_N64
             /* Reserve the weapon strip above the original ammo counters. */
             if (portHudWeaponStripShown() && getPlayerCount() < 3
-                && view_top > viGetViewTop() + viGetViewHeight() - 50)
-                view_top = viGetViewTop() + viGetViewHeight() - 50;
+                && view_top > viGetViewTop() + viGetViewHeight() - (PORT_HUD_WEAPON_BOTTOM + 5))
+                view_top = viGetViewTop() + viGetViewHeight() - (PORT_HUD_WEAPON_BOTTOM + 5);
 #endif
             view_vert = view_top - view_top_offset;
 #ifndef TARGET_N64

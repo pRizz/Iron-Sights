@@ -63,6 +63,11 @@ applies to either mode. Middle mouse remains a separate, rebindable hold-to-ADS
 action. Players can walk and strafe at half speed while aiming. Per-player ADS
 state and simulation-time transitions support different tick rates. Refined the
 view to reveal front sights with a slight perspective along the top of each gun.
+Recalibrated the AR33/M4 square sight aperture and RC-P90 sight tip vertically
+against the centered shot ray after the perspective adjustment left them low.
+The correction changes only those ADS poses. The AR33 also uses a little more
+muzzle-up tilt to keep the receiver clear of its square opening; eye distances
+and the RC-P90's pitch are retained.
 
 **Sources:** [ADS interface](port/include/port_ads.h),
 [input/state and poses](port/src/joy_port.c), [mouse input](port/src/input_pc.c),
@@ -71,6 +76,11 @@ the shared port settings table and frontend/watch settings pages.
 **History:** `d017318`, `79d3892`.
 **Checks:** [ADS tests](scripts/port/test_ads.sh),
 [ADS visual audit](scripts/port/audit_ads.ps1).
+The audit skips the intro and hides persistent HUD elements for clear sight
+inspection; its contact sheet marks the screen center for calibration.
+Targeted captures checked both corrected sights at wide FOV 90/110, the AR33
+in 4:3, and raise/lower transitions for both weapons. ADS regression tests and
+Windows/Linux builds passed with the corrected poses.
 
 ### FORK-004 — ADS hands, forearms and transition occlusion
 
@@ -154,13 +164,21 @@ reset with mission state and do not run as multiplayer objective alerts.
 Added default-on **Weapon Strip** above the ammo counters. It lists owned
 weapons, filters out gadgets and duplicate weapon entries, highlights the
 selected weapon, and scrolls larger inventories with `+N` overflow counts.
-The layout supports solo and split-screen viewports. Pickup messages account
-for the strip's position. Menus, cutscenes and death hide the strip.
+The layout supports solo and split-screen viewports. The strip sits closer to
+the bottom while leaving room for ammo counters. Cards, icons, text, padding
+and selection marks are scaled to 70% of their initial size, keeping the lower
+edge in place; smaller viewports can fit more cards. After three seconds without
+a weapon change, the entire strip (text, model images, image rims and selection)
+smoothly fades over one second to 20% opacity. Switching weapons restores full
+emphasis. Pickup messages account for the strip's position. Menus, cutscenes
+and death hide the strip.
 
 **Sources:** [inventory strip](port/src/port_hud.c),
 [inventory reset](src/game/bondinv.c), [HUD integration](src/game/bondview2.c),
 [message positioning](port/src/joy_port.c).
-**Checks:** HUD inventory filtering/selection/scrolling tests and visual audits.
+**Checks:** HUD inventory filtering/selection/scrolling and idle timing tests;
+visual captures checked active, quiet and weapon-switch states, text/icon
+styles, and ammo/player-name spacing in solo, two- and four-player layouts.
 
 ### FORK-010 — Smooth aiming reticles and cursors
 
@@ -225,3 +243,33 @@ entry when appropriate.
 [PR template](.github/pull_request_template.md).
 **Verification:** Local Markdown paths and Git whitespace checks; no runtime
 behavior changed by the inventory/rule addition.
+
+### FORK-013 — Persistent adaptive health and armor gauges
+
+**Status:** Implemented.
+
+Added **Gameplay > HUD > Health Display: Automatic / Always**, defaulting to
+**Always** (`[display] always_health=1`). Always keeps the native curved gauges
+visible during live gameplay, showing actual health and armor at 75% of the
+original thickness when emphasized. After three quiet seconds, they smoothly
+fade to 25% opacity and 20% of the original thickness over one
+second, preserving their placement and arc radius. Accepted damage and health
+or armor changes restore full emphasis, independently of damage indicators.
+State and timing are per player and pause with gameplay. The setting works
+independently of the weapon strip; menus, cutscenes and death do not gain
+persistent gauges. Automatic retains the original temporary gauge behavior,
+and watch-menu gauges retain their original presentation. Damage/immunity
+timers are unchanged.
+
+**Sources:** [HUD state and gauge styling](port/src/port_hud.c),
+[gauge rendering](src/game/bondview2.c), [settings](port/src/port_options.c),
+frontend/watch HUD pages, [README](readme.md),
+[INI reference](tools/midas_ini_help.txt).
+**Checks:** [HUD tests](scripts/port/test_hud.sh) cover idle timing at
+30/60/120/240 Hz, pause/player isolation, damage refresh with indicators off,
+visibility gates and gauge geometry/alpha. [ADS tests](scripts/port/test_ads.sh)
+cover menu availability and setting persistence. The HUD audit supports
+`-AutomaticHealth` and captures active/idle health with a refreshed weapon strip.
+Windows and Linux builds passed. Visual captures checked the HUD settings page,
+full/quiet gauges in solo and split-screen, and Automatic mode without
+persistent gauges.

@@ -14,7 +14,7 @@ static s32 currentPlayer;
 static s32 controlsLive;
 static OSTime testTime = 1;
 static s32 savedSprint = -1;
-static s32 savedHud[5] = {-1,-1,-1,-1,-1};
+static s32 savedHud[6] = {-1,-1,-1,-1,-1,-1};
 
 s32 portVideoOptionGet(const char *key, s32 *out) { (void) key; (void) out; return 0; }
 s32 portVideoOptionSet(const char *key, s32 v) { (void) key; (void) v; return 0; }
@@ -172,6 +172,14 @@ int main(void)
         portOptStep(opt, 1);
         assert(portOptGet(opt) == 1 && savedHud[4] == 1);
         assert(portJoyPortSetOption("weapon_hud_icons", "0") && portOptGet(opt) == 0);
+    }
+    {
+        const s32 opt = portOptFind("always_health");
+        assert(opt >= 0 && portOptAvailable(opt) && !portOptIsToggle(opt));
+        assert(portOptGet(opt) == 1);
+        portOptStep(opt, 1);
+        assert(portOptGet(opt) == 0 && savedHud[5] == 0);
+        assert(portJoyPortSetOption("always_health", "1") && portOptGet(opt) == 1);
     }
     assert(PORTACT_CLASSIC_TOGGLE == 20);
     assert(strcmp(portJoyPortBindName(PORTACT_AIM_DOWN_SIGHTS), "aim_down_sights") == 0);

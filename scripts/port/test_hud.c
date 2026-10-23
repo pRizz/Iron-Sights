@@ -113,6 +113,63 @@ int main(void)
     assert(portHudWeaponStripShown());
     live = 0; assert(!portHudWeaponStripShown()); live = 1;
 
+    /* Idle presentation uses simulation time, pauses, and stays per player. */
+    assert(portHudOptionGet("always_health", &value) && value == 1);
+    for (i = 0; i < 4; i++) {
+        portHudReset(0);
+        currentWeapon = ITEM_AK47;
+        testPlayer.bondhealth = 0.75f; testPlayer.bondarmour = 0.5f;
+        g_GlobalTimerDelta = 60.0f/rates[i];
+        portHudTick(); /* seed the initial state */
+        for (j = 0; j < rates[i]*3; j++) portHudTick();
+        assert(phQuietScale(phState[0].weaponIdle, 0.2f) == 1);
+        assert(phQuietScale(phState[0].healthIdle, 0.25f) == 1);
+        for (j = 0; j < rates[i]; j++) portHudTick();
+        assert(phState[0].weaponIdle == 240 && phState[0].healthIdle == 240);
+        assert(phQuietScale(210, 0.2f) > 0.59f && phQuietScale(210, 0.2f) < 0.61f);
+        currentWeapon = ITEM_WPPK; portHudTick();
+        assert(phState[0].weaponIdle == 0 && phState[0].healthIdle == 240);
+        testPlayer.bondarmour = 0.75f; portHudTick();
+        assert(phState[0].healthIdle == 0 && phState[0].weaponIdle > 0);
+        phState[0].weaponIdle = phState[0].healthIdle = 210;
+        live = 0; portHudTick(); live = 1;
+        assert(phState[0].weaponIdle == 210 && phState[0].healthIdle == 210);
+        portHudReset(1); testSeat = 1; portHudTick(); testSeat = 0;
+        assert(phState[1].weaponIdle == 0 && phState[0].weaponIdle == 210);
+    }
+    portHudOptionSet("damage_indicators", 0);
+    portHudDamage(0, 1, 0);
+    assert(phState[0].healthIdle == 0 && phState[0].damage[0].time == 0);
+    portHudOptionSet("damage_indicators", 1);
+    portHudOptionSet("weapon_hud", 0);
+    assert(portHudAlwaysHealthShown()); /* independent of the weapon strip */
+    portHudOptionSet("weapon_hud", 1);
+    testPlayer.bonddead = 1; assert(!portHudAlwaysHealthShown()); testPlayer.bonddead = 0;
+    testPlayer.mpmenuon = 1; assert(!portHudAlwaysHealthShown()); testPlayer.mpmenuon = 0;
+    testPlayer.hudmessoff = 1; assert(!portHudAlwaysHealthShown()); testPlayer.hudmessoff = 0;
+    {
+        struct damage_display_val gauge[2] = {0};
+        gauge[0].pos.x = 624; gauge[1].pos.x = 520;
+        gauge[0].colour.a = 255; gauge[1].colour.a = 48;
+        phState[0].healthIdle = 0;
+        portHudStyleGauge(gauge, 2);
+        assert(gauge[0].pos.x == 611 && gauge[1].pos.x == 533 && gauge[0].colour.a == 255);
+        /* Rendering regenerates the native geometry before applying the style. */
+        gauge[0].pos.x = 624; gauge[1].pos.x = 520;
+        phState[0].healthIdle = 240;
+        portHudStyleGauge(gauge, 2);
+        assert(gauge[0].pos.x == 582 && gauge[1].pos.x == 561);
+        assert(gauge[0].colour.a == 64 && gauge[1].colour.a == 12);
+        portHudOptionSet("always_health", 0);
+        assert(!portHudAlwaysHealthShown());
+        portHudStyleGauge(gauge, 2);
+        assert(gauge[0].pos.x == 582 && gauge[0].colour.a == 64);
+        portHudOptionSet("always_health", 1);
+    }
+    assert(phOpacity(0xabcdef80, 1) == 0xabcdef80);
+    assert(phOpacity(0xabcdef80, 0.2f) == 0xabcdef1a);
+    assert(phOpacity(0xabcdef80, 0) == 0xabcdef00);
+
     inventory[0] = ITEM_UNARMED; inventory[1] = ITEM_WPPK; inventory[2] = ITEM_AK47;
     inventory[3] = ITEM_WPPK; inventory[4] = ITEM_DOORDECODER; inventory[5] = ITEM_SNIPERRIFLE;
     inventory[6] = ITEM_REMOTEMINE; inventory[7] = ITEM_TRIGGER;
@@ -162,6 +219,6 @@ int main(void)
     }
     portHudReset(1); assert(phState[1].hitTime == 0);
     assert(portHudOptionGet("hit_markers", &value) && value == 1);
-    puts("HUD checks passed: settings, real-model icon coverage/decoding, per-player feedback, direction, queued objectives, inventory filtering/scrolling, 30/60/120/240 Hz.");
+    puts("HUD checks passed: settings, idle fading/gauge geometry, icon coverage/decoding, per-player feedback, direction, queued objectives, inventory filtering/scrolling, 30/60/120/240 Hz.");
     return 0;
 }

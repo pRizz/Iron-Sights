@@ -641,8 +641,10 @@ static const struct {
     { ITEM_MP5K,          6.3f, 42.0f, -0.040f },
     { ITEM_MP5KSIL,       6.3f, 42.0f, -0.040f },
     { ITEM_SPECTRE,       6.4f, 42.0f, -0.040f },
-    { ITEM_M16,          10.2f, 60.0f, -0.035f },
-    { ITEM_FNP90,        10.6f, 48.0f, -0.030f },
+    /* Raise the AR33's square aperture and the RC-P90's sight tip onto the
+     * centered shot ray. The AR33 also needs clearance above its receiver. */
+    { ITEM_M16,          6.85f, 60.0f, -0.060f },
+    { ITEM_FNP90,        9.85f, 48.0f, -0.030f },
     { ITEM_SHOTGUN,       3.7f, 42.0f, -0.040f },
     { ITEM_AUTOSHOT,      1.8f, 56.0f, -0.140f },
     { ITEM_SNIPERRIFLE,  10.7f, 70.0f, -0.035f },
