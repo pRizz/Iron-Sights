@@ -10,6 +10,7 @@
 #include "game/options.h"
 #include "game/player.h"
 #include "port_weapon_export.h"
+#include "port_wardrobe.h"
 
 s32 portWeaponExportEnabled(void)
 {
@@ -28,6 +29,7 @@ Gfx *portWeaponExportDraw(Gfx *gdl)
     static s32 frame;
     const s32 slot = frame / 32, phase = frame % 32;
     s32 item = slot + ITEM_FIST;
+    s32 icon, oldCuff;
     s32 capture = 0, white;
     f32 depth, horizontal, vertical;
     Mtxf rotation, tilt, view, transform;
@@ -41,7 +43,9 @@ Gfx *portWeaponExportDraw(Gfx *gdl)
     if (only) item = atoi(only);
     if (!only && item >= ITEM_WATCHLASER) item++;
     if (!only && item >= ITEM_TRIGGER) item++;
-    if (item > ITEM_TASER || item < ITEM_FIST || (only && slot)) return gdl;
+    icon = item;
+    if (!only && slot >= 29 && slot < 35) { item = ITEM_FIST; icon = 32+slot-29; }
+    if (slot >= 35 || item > ITEM_TASER || item < ITEM_FIST || (only && slot)) return gdl;
     if (item == ITEM_FIST) g_CurrentPlayer->cur_item_weapon_getname = ITEM_FIST;
     frame++;
     white = phase == 10 || phase == 14;
@@ -52,7 +56,7 @@ Gfx *portWeaponExportDraw(Gfx *gdl)
     /* Capture names are assigned when this list executes, so queued simulation
      * frames cannot mislabel a weapon's pixels. */
     gdl->words.w0 = (u32)0x4f << 24;
-    gdl->words.w1 = (item << 8) | (white << 4) | capture;
+    gdl->words.w1 = (icon << 8) | (white << 4) | capture;
     gdl++;
     gdl = sub_GAME_7F0A6EE8(gdl);
     gSPClearGeometryMode(gdl++, G_FOG | G_CULL_BOTH);
@@ -74,7 +78,13 @@ Gfx *portWeaponExportDraw(Gfx *gdl)
     /* matrixmath's arguments use column-major multiplication: view must be
      * the left operand so watch rotations do not rotate the camera offset. */
     matrix_4x4_multiply(&view, &rotation, &transform);
-    return set_enviro_fog_for_items_in_solo_watch_menu(gdl, item, &transform, 255, 0x00000000);
+    oldCuff = g_CurrentPlayer->bondtype;
+    if (icon >= 32) g_CurrentPlayer->bondtype = portWardrobeCuff(icon-32);
+    /* Base unarmed stays blue, independent of the stage used for exporting. */
+    else if (item == ITEM_FIST) g_CurrentPlayer->bondtype = portWardrobeCuff(0);
+    gdl = set_enviro_fog_for_items_in_solo_watch_menu(gdl, item, &transform, 255, 0x00000000);
+    g_CurrentPlayer->bondtype = oldCuff;
+    return gdl;
 #else
     return gdl;
 #endif

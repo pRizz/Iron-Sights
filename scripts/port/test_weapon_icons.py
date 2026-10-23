@@ -29,6 +29,12 @@ def unpack(data):
 
 
 class WeaponIcons(unittest.TestCase):
+    def test_wardrobe_slot_contract(self):
+        self.assertEqual(len(icons.NAMES), 38)
+        self.assertEqual(icons.NAMES[32:], ["unarmed_"+name for name in
+                         ("blue", "boiler", "jungle", "snow", "tuxedo", "connery")])
+        self.assertEqual(sum(name is not None for name in icons.NAMES), 35)
+
     def test_packet_boundaries_and_repeatability(self):
         rng = random.Random(317)
         for raw in (b"", b"\0"*4, b"\0"*(32770*4), bytes(range(256))*600,

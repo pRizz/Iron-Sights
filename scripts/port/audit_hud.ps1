@@ -10,6 +10,8 @@ param(
     [switch]$Disabled,
     [switch]$Menu,
     [switch]$MissionTimer,
+    [switch]$Chop,
+    [ValidateRange(0,1023)][int]$BestSeconds = 0,
     [string]$Stage = 'dam',
     [ValidateRange(0,3)][int]$Difficulty = 0,
     [ValidateSet(1,2,4)][int]$Players = 1
@@ -36,12 +38,26 @@ $auditEnv = @{
     GE_HUD_AUDIT=[string]$Item; GE_FRAMES='2100'; GE_SEED='1'
 }
 if ($BodyHit) { $auditEnv.GE_HUD_AUDIT_BODY = '1' }
+if ($Chop) {
+    $auditEnv.GE_HUD_AUDIT = '1'
+    $auditEnv.GE_HUD_AUDIT_CHOP = '1'
+    # Owning the sniper replaces upstream's chop with its rifle-butt attack.
+    $auditEnv.GE_CHEATS = 'invuln,invis'
+    $auditEnv.GE_SHOT = '10'
+    $auditEnv.GE_FRAMES = '700'
+}
+if ($BestSeconds) { $auditEnv.GE_HUD_AUDIT_BEST = [string]$BestSeconds }
 # Fresh intro-skip taps stop before live play, so they cannot cycle weapons.
 if (!$Menu -and $Players -eq 1) {
     Set-Content -LiteralPath (Join-Path $dir 'input.txt') -Value @('P 0 0 0 0',
         'P 80 8000 0 0', 'P 82 0 0 0', 'P 120 8000 0 0', 'P 122 0 0 0',
         'P 160 8000 0 0', 'P 162 0 0 0', 'P 2200 0 0 0')
     $auditEnv.GE_INPUTPLAY = Join-Path $dir 'input.txt'
+    if ($Chop) {
+        Set-Content -LiteralPath (Join-Path $dir 'input.txt') -Value @('P 0 0 0 0',
+            'P 80 8000 0 0', 'P 82 0 0 0', 'P 120 8000 0 0', 'P 122 0 0 0',
+            'P 160 8000 0 0', 'P 162 0 0 0', 'P 320 2000 0 0','P 440 0 0 0','P 2200 0 0 0')
+    }
 }
 if ($Menu) { $auditEnv.Remove('GE_STAGE'); $auditEnv.Remove('GE_HUD_AUDIT'); $auditEnv.GE_MENU='hud'; $auditEnv.GE_SHOT='500'; $auditEnv.GE_FRAMES='650' }
 if ($Players -gt 1) { $auditEnv.Remove('GE_STAGE'); $auditEnv.GE_MP='temple'; $auditEnv.GE_MPPLAYERS=[string]$Players; $auditEnv.GE_SKIPINTRO='1' }
@@ -63,4 +79,5 @@ finally {
 if ($p.ExitCode -ne 0) { throw "Game exited with code $($p.ExitCode)." }
 $captures = @(Get-ChildItem -LiteralPath $dir -Filter 'shot_*.bmp')
 if ($captures.Count -lt $(if ($Menu) {1} else {3})) { throw "Missing HUD captures ($($captures.Count))." }
-$captures | Select-Object -ExpandProperty FullName
+if ($Chop) { Write-Output "Verified $($captures.Count) captures, including chop motion: $dir" }
+else { $captures | Select-Object -ExpandProperty FullName }

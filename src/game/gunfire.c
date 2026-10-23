@@ -46,6 +46,7 @@
 #include "port_hud.h"
 #include "boss.h"
 #include "port_weapon_export.h"
+#include "port_wardrobe.h"
 #endif
 
 
@@ -1776,7 +1777,13 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
             }
         }
 
+#ifndef TARGET_N64
+        portWardrobeBegin(item);
+#endif
         subdraw(&renderdata, (Model *)&handptr->field_B68);
+#ifndef TARGET_N64
+        portWardrobeEnd();
+#endif
         gdl = renderdata.gdl;
 
 #ifndef TARGET_N64
@@ -2036,7 +2043,13 @@ Gfx *set_enviro_fog_for_items_in_solo_watch_menu(Gfx *gdl, ITEM_IDS itemid, Mtxf
 #ifdef GE_VIDEO
     if (portWeaponExportEnabled()) renderdata.zbufferenabled = TRUE;
 #endif
+#ifndef TARGET_N64
+    if (portWeaponExportEnabled() && itemid == ITEM_FIST) portWardrobeBegin(itemid);
+#endif
     subdraw(&renderdata, (Model *) &model);
+#ifndef TARGET_N64
+    portWardrobeEnd();
+#endif
 #ifndef TARGET_N64
     { /* diagnostic (GE_DUMP_BOND): how many Gfx words the watch item model
        * emitted; 0 = the node walk bailed, >0 = emitted but invisible. */
@@ -6727,6 +6740,7 @@ static Gfx *portDrawMissionTimer(Gfx *gdl, s32 x0)
     s32 h;
     s32 w;
     s32 target = portHudMissionTargetSeconds(bossGetStageNum(), lvlGetSelectedDifficulty());
+    s32 best = portHudMissionBestSeconds(bossGetStageNum(), lvlGetSelectedDifficulty());
     s32 targetText = FALSE;
     u32 targetColor;
 
@@ -6758,6 +6772,7 @@ static Gfx *portDrawMissionTimer(Gfx *gdl, s32 x0)
     y = (viGetViewTop() + viGetViewHeight()) - 14;
 #endif
 
+    if (best > 0) y -= 9;
     if (hudAnchorsToEdges())
     {
         PORT_HUD_ANCHOR(gdl, PORT_HUD_ANCHOR_LEFT);
@@ -6782,6 +6797,14 @@ static Gfx *portDrawMissionTimer(Gfx *gdl, s32 x0)
             gdl = gunDrawHudString(gdl, (s8 *) glyph, x + (cell + 1) / 2, HUDHALIGN_MIDDLE, y, HUDVALIGN_MIDDLE, 1);
         }
         x += cell + 1;
+    }
+    if (best > 0) {
+        /* A second row keeps both comparisons inside a 4:3 viewport. The
+         * campaign format caps records at 1023 whole seconds. */
+        sprintf(timerbuf, "BEST %02d:%02d%s", best/60, best%60, best == 1023 ? "+" : "");
+        x = x0;
+        y += 9;
+        gdl = gunDrawHudString(gdl, (s8 *)timerbuf, x, HUDHALIGN_LEFT, y, HUDVALIGN_MIDDLE, 1);
     }
     gdl = combiner_bayer_lod_perspective(gdl);
     if (hudAnchorsToEdges())

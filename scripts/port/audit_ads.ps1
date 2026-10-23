@@ -5,6 +5,8 @@ param(
     [ValidateSet('Wide', 'Classic')][string]$Aspect = 'Wide',
     [int]$Fov = 90,
     [int]$Item = 0,
+    [string]$Stage = 'dam',
+    [switch]$Adzy,
     [switch]$Transitions,
     [ValidateSet(30,60,120,240)][int]$TickHz = 60
 )
@@ -15,6 +17,8 @@ if (!$Rom) { $Rom = Join-Path $repoDir 'baserom.u.z64' }
 $Executable = (Resolve-Path -LiteralPath $Executable).Path
 $Rom = (Resolve-Path -LiteralPath $Rom).Path
 $auditDir = Join-Path $repoDir ('build_win\ads-audit-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8))
+$auditExe = [IO.Path]::GetFullPath((Join-Path $auditDir 'ProjectMidas.exe'))
+if (!$auditExe.StartsWith($repoDir+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw 'Audit executable must stay inside the workspace.' }
 New-Item -ItemType Directory -Path $auditDir | Out-Null
 Copy-Item -LiteralPath $Executable -Destination (Join-Path $auditDir 'ProjectMidas.exe')
 Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $auditDir
@@ -23,13 +27,14 @@ $settings = @('[display]', 'fullscreen=window', 'vsync=0', "maxfps=$([Math]::Max
     "hfov_wide=$Fov", 'aim_mode=1', 'sight_on_screen=1', 'always_crosshair=1',
     'weapon_hud=0', 'always_health=0', '[input]', 'mouse=1')
 Set-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value $settings
+if ($Adzy) { Add-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value @('[display]','adzy=1') }
 # Skip the intro before the gun settles; no input is replayed during aiming.
 $inputFile = Join-Path $auditDir 'input.txt'
 Set-Content -LiteralPath $inputFile -Value @('P 0 0 0 0',
     'P 80 8000 0 0', 'P 82 0 0 0', 'P 120 8000 0 0', 'P 122 0 0 0',
     'P 160 8000 0 0', 'P 162 0 0 0', 'P 2200 0 0 0')
 $auditEnv = @{
-    GE_ROM=$Rom; GE_WINDOW=$resolution; GE_NOINPUT='1'; GE_STAGE='dam'; GE_STAGE_AFTER='1';
+    GE_ROM=$Rom; GE_WINDOW=$resolution; GE_NOINPUT='1'; GE_STAGE=$Stage; GE_STAGE_AFTER='1';
     GE_CHEATS='invuln,invis,guns'; GE_ADS_AUDIT='1';
     GE_INPUTPLAY=$inputFile;
     GE_FRAMES=[string][Math]::Ceiling(8000 * [Math]::Max(1, $TickHz / 60.0)); GE_SEED='1'
@@ -51,7 +56,10 @@ try {
     }
 }
 Write-Output "Auditing ADS: $auditDir"
-$auditProcess.WaitForExit()
+try { $auditProcess.WaitForExit() }
+finally {
+    if ($auditProcess.HasExited -and (Test-Path -LiteralPath $auditExe)) { Remove-Item -LiteralPath $auditExe }
+}
 if ($auditProcess.ExitCode -ne 0) { throw "Game exited with code $($auditProcess.ExitCode)." }
 $log = Get-Content -LiteralPath (Join-Path $auditDir 'Data\Logs\ge_direct.log')
 if (!($log -match "ads-audit: complete \($expectedCount guns\)")) { throw 'ADS audit did not finish.' }

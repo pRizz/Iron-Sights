@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include "../../port/src/port_hud.c"
+#include "../../port/src/port_wardrobe.c"
 #include "port_icon_decode.h"
 
 static struct player testPlayer;
@@ -9,6 +10,13 @@ struct player *g_CurrentPlayer = &testPlayer;
 f32 g_GlobalTimerDelta;
 static s32 testSeat, live = 1, playerCount = 1;
 static s32 inventory[40], inventoryCount, currentWeapon;
+static save_data bestSave;
+static s32 bestTimes[3][3];
+s32 selected_folder_num;
+s32 fileGetBondForCurrentFolder(void) { return BOND_CONNERY; }
+save_data *fileGetSaveForFoldernum(u32 folder) { return folder == 0 ? &bestSave : NULL; }
+s32 fileGetSaveStageDifficultyTime(save_data *save, LEVEL_SOLO_SEQUENCE level, DIFFICULTY difficulty)
+{ assert(save == &bestSave); return bestTimes[level][difficulty]; }
 /* Deliberately shuffled IDs and header rows catch stage/index confusion. */
 struct mission_folder_setup mission_folder_setup_entries[] = {
     {.folder_text_preset=1, .stage_id=LEVELID_NONE, .mission_num=-1},
@@ -36,6 +44,17 @@ int main(void)
     HudWeapon weapons[HUD_WEAPONS];
     {
         char timer[64], tiny[5];
+        bestTimes[0][DIFFICULTY_SECRET] = 123;
+        bestTimes[1][DIFFICULTY_AGENT] = 1023;
+        assert(portHudMissionBestSeconds(LEVELID_DAM, DIFFICULTY_SECRET) == 123);
+        assert(portHudMissionBestSeconds(LEVELID_FACILITY, DIFFICULTY_AGENT) == 1023);
+        assert(portHudMissionBestSeconds(LEVELID_DAM, DIFFICULTY_AGENT) == 0);
+        assert(portHudMissionBestSeconds(LEVELID_DAM, DIFFICULTY_007) == 0);
+        assert(portHudMissionBestSeconds(LEVELID_TITLE, DIFFICULTY_AGENT) == 0);
+        assert(portHudMissionBestSeconds(LEVELID_DAM, -1) == 0);
+        selected_folder_num = 1;
+        assert(portHudMissionBestSeconds(LEVELID_DAM, DIFFICULTY_SECRET) == 0);
+        selected_folder_num = 0;
         assert(portHudMissionTargetSeconds(LEVELID_DAM, DIFFICULTY_SECRET) == 160);
         assert(portHudMissionTargetSeconds(LEVELID_FACILITY, DIFFICULTY_00) == 125);
         assert(portHudMissionTargetSeconds(LEVELID_RUNWAY, DIFFICULTY_AGENT) == 300);
@@ -223,12 +242,21 @@ int main(void)
 #if PORT_WEAPON_IMAGES_AVAILABLE
     for (i = ITEM_UNARMED; i <= ITEM_TASER; i++) {
         if (i == ITEM_WATCHLASER || i == ITEM_TRIGGER) continue;
-        assert(phWeaponIcon(i) >= 0 && phWeaponIcon(i) < 32);
+        assert(phWeaponIcon(i) >= 0 && phWeaponIcon(i) < PORT_WEAPON_IMAGE_COUNT);
     }
     assert(phWeaponIcon(ITEM_DOORDECODER) == -1);
     assert(phWeaponIcon(ITEM_WPPK) != phWeaponIcon(ITEM_WPPKSIL));
     assert(phWeaponIcon(ITEM_MP5K) != phWeaponIcon(ITEM_MP5KSIL));
     assert(phWeaponIcon(ITEM_TIMEDMINE) != phWeaponIcon(ITEM_REMOTEMINE));
+    if (PORT_WEAPON_IMAGE_COUNT >= 38) {
+        for (i = 0; i < 6; i++) {
+            testPlayer.bondtype = portWardrobeCuff(i);
+            assert(phWeaponIcon(ITEM_FIST) == 32+i && phWeaponIcon(ITEM_UNARMED) == 32+i);
+        }
+        testPlayer.bondtype = CUFF_FOLDER;
+        assert(phWeaponIcon(ITEM_FIST) == 37);
+        testPlayer.bondtype = CUFF_BLUE;
+    }
     {
         FILE *file = fopen("assets/port/weapon_icons/weapon_icons.rle", "rb");
         const s32 bytes = PORT_WEAPON_IMAGE_WIDTH*PORT_WEAPON_IMAGE_HEIGHT*4;
@@ -237,7 +265,7 @@ int main(void)
         assert(file && packed && pixels);
         assert(fread(packed, 1, PORT_WEAPON_IMAGE_BYTES, file) == PORT_WEAPON_IMAGE_BYTES);
         fclose(file);
-        for (i = 0; i < 32; i++) if (portWeaponImages[i].size) {
+        for (i = 0; i < PORT_WEAPON_IMAGE_COUNT; i++) if (portWeaponImages[i].size) {
             const PortWeaponImage *image = &portWeaponImages[i];
             s32 visible = 0;
             assert(image->offset <= PORT_WEAPON_IMAGE_BYTES && image->size <= PORT_WEAPON_IMAGE_BYTES-image->offset);

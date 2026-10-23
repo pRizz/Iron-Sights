@@ -31,6 +31,8 @@ NAMES = [None, "unarmed", "knife", "throwing_knife", "pp7", "pp7_silenced", "dd4
          "shotgun", "automatic_shotgun", "sniper_rifle", "cougar_magnum", "golden_gun",
          "silver_pp7", "gold_pp7", "laser", None, "grenade_launcher", "rocket_launcher",
          "grenade", "timed_mine", "proximity_mine", "remote_mine", None, "taser"]
+WARDROBES = ("blue", "boiler", "jungle", "snow", "tuxedo", "connery")
+NAMES += ["unarmed_"+wardrobe for wardrobe in WARDROBES]
 WIDTH, HEIGHT = 512, 160
 
 
@@ -55,16 +57,19 @@ def capture(exe, rom, resolution, item=None):
         "P 122 0 0 0\nP 160 8000 0 0\nP 162 0 0 0\nP 2000 0 0 0\n")
     env = {k: v for k, v in os.environ.items() if not k.startswith("GE_")}
     env.update(GE_ROM=str(rom), GE_STAGE="dam", GE_STAGE_AFTER="1", GE_WINDOW=resolution,
-               GE_NOINPUT="1", GE_SEED="1", GE_CHEATS="invuln,invis,guns", GE_FRAMES="1500",
+               GE_NOINPUT="1", GE_SEED="1", GE_CHEATS="invuln,invis,guns", GE_FRAMES="1800",
                GE_INPUTPLAY=str(work / "input.txt"), GE_WEAPON_ICON_EXPORT="1", GE_DUMP_BOND="1")
     if item is not None:
         env["GE_WEAPON_ICON_ITEM"] = str(item)
         env["GE_FRAMES"] = "400"
     print(f"Capturing actual weapon models: {work}", flush=True)
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-    with (work / "capture.log").open("wb") as log:
-        subprocess.run([str(target)], cwd=work, env=env, stdout=log, stderr=log,
-                       creationflags=flags, check=True, timeout=240)
+    try:
+        with (work / "capture.log").open("wb") as log:
+            subprocess.run([str(target)], cwd=work, env=env, stdout=log, stderr=log,
+                           creationflags=flags, check=True, timeout=240)
+    finally:
+        target.unlink(missing_ok=True)
     return work
 
 
@@ -123,7 +128,7 @@ def process_staged(captures, output, rom, exe):
     packed = bytearray()
     rows = [(0, 0)] * len(NAMES)
     entries = []
-    sheet = Image.new("RGB", (WIDTH*4, (HEIGHT+34)*8), "#10171c")
+    sheet = Image.new("RGB", (WIDTH*4, (HEIGHT+34)*((sum(name is not None for name in NAMES)+3)//4)), "#10171c")
     draw = ImageDraw.Draw(sheet)
     for item, name in enumerate(NAMES):
         if name is None:
@@ -146,12 +151,13 @@ def process_staged(captures, output, rom, exe):
               "#ifndef PORT_WEAPON_IMAGES_H", "#define PORT_WEAPON_IMAGES_H",
               f"#define PORT_WEAPON_IMAGE_WIDTH {WIDTH}", f"#define PORT_WEAPON_IMAGE_HEIGHT {HEIGHT}",
               f"#define PORT_WEAPON_IMAGE_BYTES {len(packed)}",
+              f"#define PORT_WEAPON_IMAGE_COUNT {len(NAMES)}",
               "typedef struct { unsigned int offset, size; } PortWeaponImage;",
-              "static const PortWeaponImage portWeaponImages[32] = {"]
+              f"static const PortWeaponImage portWeaponImages[{len(NAMES)}] = {{"]
     header += [f"    {{{off}, {size}}}, /* {item}: {NAMES[item] or 'alias/unused'} */" for item, (off, size) in enumerate(rows)]
     header += ["};", "#endif", ""]
     (output/"weapon_icons.h").write_text("\n".join(header), encoding="utf-8", newline="\n")
-    manifest = dict(format=1, dimensions=[WIDTH, HEIGHT], capture_size=list(Image.open(captures/"weapon_04_1.bmp").size),
+    manifest = dict(format=2, dimensions=[WIDTH, HEIGHT], capture_size=list(Image.open(captures/"weapon_04_1.bmp").size),
                     camera="watch model origin; 35 degree FOV; depth x1.6; side/top offsets 0.18/0.16",
                     materials="original textures; neutral fog; fixed export-camera metallic reflection basis",
                     transparency="black/white matte recovery; repeated captures must match pixel-for-pixel",
@@ -191,7 +197,7 @@ def main():
             raise ValueError()
     except ValueError:
         parser.error("--resolution must be 4:3, between 1024 and 4096 pixels wide")
-    if args.item is not None and (args.item < 1 or args.item >= len(NAMES) or NAMES[args.item] is None):
+    if args.item is not None and (args.item < 1 or args.item >= 32 or NAMES[args.item] is None):
         parser.error("--item must name a model-backed inventory weapon (1..31, except 23 and 30)")
     exe, rom = args.exe.resolve(), args.rom.resolve()
     if not exe.is_file() or not rom.is_file():

@@ -14,6 +14,7 @@
 #include "game/dyn.h"
 #include "game/gun.h"
 #include "game/front.h"
+#include "game/file2.h"
 #include "game/lv.h"
 #include "game/math_atan2f.h"
 #include "game/options.h"
@@ -22,6 +23,9 @@
 #include "port_ads.h"
 #include "port_hud.h"
 #include "port_weapon_images.h"
+#include "port_wardrobe.h"
+#include "game/file.h"
+#include "boss.h"
 
 extern s32 portBondControlsLive(void);
 extern s32 bondinvGetTextbyInvIndex(s32 index);
@@ -47,6 +51,22 @@ typedef struct {
     HudToast toasts[HUD_TOASTS];
 } HudState;
 static HudState phState[4];
+
+s32 portHudMissionBestSeconds(s32 stage, s32 difficulty)
+{
+    s32 i;
+    save_data *save;
+    /* 007's saved 0x3ff is an unlock flag, not a completion time. */
+    if (difficulty < DIFFICULTY_AGENT || difficulty > DIFFICULTY_00) return 0;
+    save = fileGetSaveForFoldernum(selected_folder_num);
+    if (!save) return 0;
+    for (i = 0; mission_folder_setup_entries[i].folder_text_preset; i++) {
+        const struct mission_folder_setup *entry = &mission_folder_setup_entries[i];
+        if (entry->stage_id == stage && entry->mission_num >= 0 && entry->mission_num < 20)
+            return fileGetSaveStageDifficultyTime(save, entry->mission_num, difficulty);
+    }
+    return 0;
+}
 
 s32 portHudMissionTargetSeconds(s32 stage, s32 difficulty)
 {
@@ -223,8 +243,32 @@ void portHudTick(void)
         static s32 switched;
         const char *audit = getenv("GE_HUD_AUDIT");
         if (p == 0 && audit && fired < 4) {
-            if (!equipped && atoi(audit) >= ITEM_WPPK && atoi(audit) <= ITEM_TASER
+            if (!equipped && atoi(audit) >= ITEM_FIST && atoi(audit) <= ITEM_TASER
                 && atoi(audit) != ITEM_TRIGGER) {
+                const char *best = getenv("GE_HUD_AUDIT_BEST");
+                /* RAM-only record fixture in isolated audit processes. */
+                if (best && atoi(best) > 0 && atoi(best) <= 1023) {
+                    s32 entry;
+                    extern void fileSetDifficultyStageTime(save_data *, LEVEL_SOLO_SEQUENCE, DIFFICULTY, s32);
+                    save_data *save = fileGetSaveForFoldernum(selected_folder_num);
+                    if (!save) {
+                        save = &saves[SAVESLOT1];
+                        memset(save, 0, sizeof(*save));
+                        save->completion_bitflags = selected_folder_num;
+                    }
+                    for (entry = 0; mission_folder_setup_entries[entry].folder_text_preset; entry++) {
+                        const struct mission_folder_setup *mission = &mission_folder_setup_entries[entry];
+                        if (mission->stage_id == bossGetStageNum() && mission->mission_num >= 0 && mission->mission_num < 20)
+                            fileSetDifficultyStageTime(save, mission->mission_num, lvlGetSelectedDifficulty(), atoi(best));
+                    }
+                }
+                if (getenv("GE_HUD_AUDIT_CHOP")) {
+                    /* Surface starts with a sniper even without the guns
+                     * cheat; remove it so this fixture exercises real chops. */
+                    bondinvSetAllGunsFlag(FALSE);
+                    bondinvRemoveItemByID(ITEM_SNIPERRIFLE);
+                    g_CurrentPlayer->cur_item_weapon_getname = ITEM_FIST;
+                }
                 currentPlayerEquipWeaponWrapper(GUNLEFT, ITEM_UNARMED);
                 currentPlayerEquipWeaponWrapper(GUNRIGHT, atoi(audit));
                 equipped = 1;
@@ -315,6 +359,10 @@ static const char *phWeaponName(const HudWeapon *weapon)
 
 static s32 phWeaponIcon(s32 item)
 {
+    if ((item == ITEM_UNARMED || item == ITEM_FIST) && PORT_WEAPON_IMAGE_COUNT >= 38) {
+        s32 variant = 32 + portWardrobeVariant(g_CurrentPlayer->bondtype, fileGetBondForCurrentFolder());
+        if (portWeaponImages[variant].size) return variant;
+    }
     return item >= 0 && item < 32 && portWeaponImages[item].size ? item : -1;
 }
 

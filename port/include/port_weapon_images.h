@@ -13,4 +13,8 @@
 typedef struct { unsigned int offset, size; } PortWeaponImage;
 static const PortWeaponImage portWeaponImages[32] = {{0,0}};
 #endif
+/* Existing local packs can bootstrap the new exporter. */
+#ifndef PORT_WEAPON_IMAGE_COUNT
+#define PORT_WEAPON_IMAGE_COUNT 32
+#endif
 #endif

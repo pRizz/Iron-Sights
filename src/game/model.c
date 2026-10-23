@@ -14,6 +14,9 @@
 #include "objecthandler.h"
 #include "quaternion.h"
 #include "random.h"
+#ifndef TARGET_N64
+#include "port_wardrobe.h"
+#endif
 
 
 typedef struct ModelGroupMtxBuildArg {
@@ -4225,6 +4228,10 @@ extern Gfx *portPartCacheEmit(Gfx *gdl, s32 vtxseg);
 void modelRenderNodeGundl(ModelRenderData* renderdata, ModelNode* arg1)
 {
     ModelRoData_DisplayListRecord* rodata = &arg1->Data->DisplayList;
+
+#ifndef TARGET_N64
+    if (portWardrobeRenderNode(renderdata, arg1)) return;
+#endif
 
     if (renderdata->unk18 == 0)
     {

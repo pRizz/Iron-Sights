@@ -21,7 +21,8 @@ pack and manifest remain ignored, consistent with the repository's policy for
 ROM-derived assets. Commit the generator and renderer code, not its outputs.
 
 The exporter opens an isolated copy of the game in an ignored `build_win`
-directory and leaves player settings and saves alone. It uses a fixed near-side
+directory and leaves player settings and saves alone. The temporary copied executable is
+removed after capture; diagnostic logs and images remain. It uses a fixed near-side
 camera, the watch inventory's model origins, fixed part poses and metallic
 reflection vectors, no scene fog,
 and no screen overlays. Every model is captured twice on black and twice on
@@ -32,7 +33,13 @@ missing models or models touching the image border are generation errors.
 `preview.png` shows every output on a dark background. `manifest.json` records
 the ROM/exporter hashes, source pixel hashes, image hashes, capture dimensions
 and processing versions. The RGB pixels retain original weapon colours, so gold
-and silver weapons have their own images. Unarmed uses the actual hand model.
+and silver weapons have their own images. Unarmed uses the actual hand/forearm model with the same wardrobe treatment as
+first-person chopping. Six additional unarmed icons (IDs 32..37: blue, boiler,
+rolled jungle, snow, tuxedo and Connery) follow the current player's live mission
+cuff; Folder resolves the selected Bond just as the watch does. The complete
+pack has 35 images and 38 indexed slots including aliases/unused entries.
+Regenerate the entire pack with the updated exporter, then rebuild; older
+32-slot packs temporarily fall back to their original unarmed icon.
 
 To inspect a single model or reprocess a complete capture set:
 

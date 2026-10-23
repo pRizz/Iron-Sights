@@ -39,14 +39,16 @@ user accepts losing compatibility with old suspend points. Obsolete game
 executables and suspend images matched to those builds may be purged without
 archiving or another confirmation. Keep the current main executable and its
 states, unknown images, normal campaign saves, profiles and settings. The state
-and HUD/mission-cheat audits remove their temporary executable on exit and retain diagnostic logs
-and captures. This supersedes briefly retaining the pre-toast executable for
+and HUD/mission-cheat/ADS audits and the weapon-icon generator remove their
+temporary executable on exit and retain diagnostic logs and captures. This supersedes briefly retaining the pre-toast executable for
 older states.
 
 **Sources:** [.gitignore](.gitignore), [artifact rules](AGENTS.md),
 [state audit](scripts/port/audit_states.ps1),
 [HUD audit](scripts/port/audit_hud.ps1),
 [mission-cheat audit](scripts/port/audit_mission_cheats.ps1),
+[ADS audit](scripts/port/audit_ads.ps1),
+[icon generator](scripts/port/generate_weapon_icons.py),
 [state storage guide](scripts/port/save_states.md). **History:** `29a9e6e`.
 **Verification:** Git tracked-file changes in that commit. Local cleanup uses
 executable/state build fingerprints and workspace-confined file paths; the
@@ -125,10 +127,42 @@ through subsequent refinements. Pistols retain their original hands. Corrected
 the rendering order/depth treatment so the original hand and added forearm
 occlude correctly while ADS animates in, including during partial blends.
 
+The added ADS arms now select their wardrobe from the current player's live
+`bondtype`, the same mission cuff selector used by the watch. They load the original watch-arm fabric, cuff and skin textures from the
+user's ROM through the native texture pipeline, replacing the initial uniform
+flat olive sleeve and skin colors. Blue/formal, boiler, jungle, snow and tuxedo
+variants follow the watch's selections; Folder resolves Connery vs other Bonds
+in the same way as the watch. Jungle has rolled cuffs and exposed forearms;
+long-sleeved outfits retain their trim, with snow sleeves reaching nearer the
+wrist. The fuller proportions, grips, lighting and ADS poses remain. Material
+lists contain geometry only so the transition's depth-only pass cannot be
+overridden by texture setup. Texture binding retains the authored mip-chain
+lengths so indexed-color palettes are read at their proper offsets, then samples
+the base tile on these close arms. Wardrobe is resolved each draw without a cache,
+following player changes, mission loads, Adzy's snow-cuff override and restores.
+Native pistol forearms now use the same shared wardrobe mapping and sleeve/
+cuff coverage (FORK-017). Their original distal hand/finger shapes, grip bones,
+weapon poses and animations remain; the original models have no functioning
+wardrobe switches. This also applies outside ADS, keeping the outfit consistent.
+
 **Sources:** [hands and grips](port/src/ads_hands.c),
 [ADS pose data](port/src/joy_port.c), [gun rendering](src/game/gunfire.c).
 **History:** `2fcbb39`, `79d3892`, `599173d`.
 **Checks:** ADS pose/hand-layer regression tests and visual audits.
+Wardrobe tests cover every cuff, Folder's Bond variants, sleeve coverage,
+authored texture/mip metadata and per-player/cuff changes. Geometry checks cover
+both grips' list capacities, vertex UV/alpha bounds, and geometry-only opcodes
+for depth-pass reuse. The ADS audit accepts a stage and Adzy switch to check
+actual mission outfits and removes its copied executable after exit.
+The revised ADS and existing HUD tests and Windows/Linux builds passed. Windows
+visual review checked all 20 guns and a 40-frame transition overview from 220
+raise/lower captures on Dam, plus the AK47 in Jungle (11 transition captures),
+Surface, Archives (4:3), Egyptian and Dam with Adzy, and the AR33 on Cradle in
+4:3. These cover boiler, rolled jungle, snow, blue and tuxedo wardrobes and the
+snow override; pistols retain their native geometry and the sniper still
+finishes in its gun-free scope view. The main Windows executable was replaced
+without retaining a backup. Linux was compile-checked; gameplay captures ran
+on Windows. Original ROM textures remain local and are not committed.
 
 ### FORK-005 — Sniper scope presentation and contextual wheel zoom
 
@@ -234,9 +268,12 @@ aiming, menu cursors and split-screen layouts.
 **Status:** Implemented.
 
 Added **Gameplay > HUD > Weapon Strip Style: Text / Icons** (`weapon_hud_icons`),
-with Text as the default. Icon mode now uses 29 full-color, transparent
+with Text as the default. Icon mode now uses 35 full-color, transparent
 512 x 160 renders of actual weapon models, retaining original materials and
-separate silenced/gold/silver appearances. Unarmed uses the hand model.
+separate silenced/gold/silver appearances. Unarmed uses the hand/forearm model: six extra wardrobe variants match the
+current mission cuff, resolving Folder's Bond and changing immediately with
+player/stage changes or restores. The old 32-slot pack remains a bootstrap
+fallback until regeneration; current packs have 38 indexed slots.
 These images replace the initial hand-drawn vector silhouettes. Cached textures
 and a subtle edge keep the icons readable without extra model rendering in
 normal gameplay; the selection highlight and strip scrolling remain intact.
@@ -254,7 +291,9 @@ builds and ADS/settings regression tests passed.
 The generation script runs an isolated exporter with fixed camera, part poses
 and metallic reflection vectors. Repeated black/white captures must match
 exactly before transparency recovery, downsampling, preview/manifest generation
-and bounded RGBA packet packing. The local generated pack is embedded when the
+and bounded RGBA packet packing. Exporter slots 32..37 explicitly render each
+wardrobe without changing the mission's actual outfit; the native arm treatment
+is shared with gameplay. The local generated pack is embedded when the
 game is rebuilt. Fresh builds can run the exporter without generated images;
 icon mode falls back to names until generation and rebuild are complete.
 ROM-derived outputs remain ignored and are not committed.
@@ -267,7 +306,8 @@ ROM-derived outputs remain ignored and are not committed.
 **Regeneration guide:** [weapon_icons.md](scripts/port/weapon_icons.md).
 **Checks:** [generator tests](scripts/port/test_weapon_icons.py), HUD pack decoding
 and coverage tests, solo/split-screen captures, Windows/Linux builds. Two full
-generation runs matched all 33 output files byte-for-byte on the tested machine;
+generation runs of the earlier 29-image pack matched all 33 output files
+byte-for-byte on the tested machine;
 cross-GPU byte identity is not assumed.
 
 ### FORK-012 — Fork inventory maintenance rule
@@ -388,12 +428,19 @@ gameplay visible. Linux was compile-checked; gameplay audits ran on Windows.
 
 Extended the inherited **Gameplay > HUD > Mission Timer** toggle rather than
 adding a second timer. The inherited solo elapsed clock and fixed digit cells
-remain; an applicable timed cheat-unlock target appears beside it as
+remain; a saved best time for the live mission/difficulty appears beneath it
+as `BEST 02:03`. No record and 007 mode omit that row (007's saved flag is not
+a time). Campaign times have whole-second precision and a 1023-second ceiling,
+shown as `BEST 17:03+` when capped. Records come from the selected campaign
+folder, not a menu hover or a suspend point's older campaign contents. The
+second row fits the existing bottom margin at 4:3 and wide aspect ratios.
+An applicable timed cheat-unlock target appears beside elapsed time as
 `00:42:50 / CHEAT 02:40`. The target is green within time, amber during the last
 ten whole seconds, and red beyond the deadline. Lookup uses the live stage and
 difficulty with upstream's mission-folder mapping and target-time table, so
-only the matching difficulty shows a target; 007 mode and other difficulties
-retain elapsed time alone. Already unlocked cheats still have a practice target.
+only the matching difficulty shows a target. Other difficulties omit that
+target; supported difficulties can still show a best record. Already unlocked
+cheats still have a practice target.
 The comparison follows the existing whole-second inclusive unlock deadline.
 This changes presentation, not objective, cheat eligibility or unlock rules.
 The inherited mission clock supplies pause and suspend-restore behavior.
@@ -403,12 +450,15 @@ now matches the actual video default, correcting its inherited claim of 1.
 
 **Sources:** [timer rendering](src/game/gunfire.c),
 [target lookup/format/colors](port/src/port_hud.c), [HUD API](port/include/port_hud.h),
+[campaign time API](src/game/file2.h),
 [setting/default](port/src/video.c), [README](readme.md),
 [INI guide](tools/midas_ini_help.txt).
 **Checks:** [HUD tests](scripts/port/test_hud.c) cover stage/index resolution,
-difficulty exclusions, formatting, deadline boundaries, warning colors and
+difficulty exclusions, saved-record stage/folder lookup and missing records,
+formatting, deadline boundaries, warning colors and
 restored-clock comparisons. [HUD audit](scripts/port/audit_hud.ps1) accepts a
-mission, difficulty and timer switch for targeted captures; temporary audit
+mission, difficulty and timer switch plus an optional RAM-only `-BestSeconds`
+fixture (`GE_HUD_AUDIT_BEST`) for targeted captures; temporary audit
 executables are removed after exit (FORK-001). HUD, ADS and suspend-state
 regression tests and Windows/Linux builds passed. Windows captures checked
 the Dam Secret Agent 02:40 target at wide and 4:3 aspect ratios alongside text
@@ -458,3 +508,56 @@ summaries, badges on Secret Agent and 00 Agent, an Agent target while hovering
 All copied audit executables were removed after exit. The main Windows
 executable was rebuilt and replaced without retaining its previous build.
 Linux was compile-checked; runtime visual review ran on Windows.
+
+
+### FORK-017 � Mission wardrobe on native arms and unarmed icons
+
+**Status:** Implemented.
+
+The native first-person karate-chop and all seven pistol variants now dress
+Bond's original forearm geometry using the same live cuff selector, original
+watch-arm textures and sleeve coverage as the added ADS arms (FORK-004).
+This replaces the upstream models' uniformly bare forearms; their cuff-switch
+entries are empty. Native hand/finger meshes, bone matrices, grip positions,
+chop/reload/raise animations and weapon sights remain intact. Jungle exposes
+the forearm with a rolled sleeve boundary; other outfits have long sleeves
+and their own cuff fabric. Both hands are supported, including dual pistols.
+The six wardrobe-specific unarmed HUD images (FORK-011) are deterministic
+renders of this same native model treatment, rather than invented silhouettes.
+No new setting is required.
+
+A scoped model-render hook runs only around native first-person pistol/chop
+draws and offline unarmed exports. It identifies the native proximal forearm,
+validates its vertex references, preserves its authored bone matrix and clips
+triangles at the wrist/cuff/sleeve boundaries, interpolating lighting and UVs.
+Generated vertices belong to the current frame; shared ROM assets are never
+modified or retained in a model cache. Unrecognized lists fall back to the
+original draw. World/NPC/watch models retain their normal render path.
+The shared wardrobe mapping prevents rifles, native arms and icons diverging.
+
+**Sources:** [wardrobe mapping](port/src/port_wardrobe.c),
+[API](port/include/port_wardrobe.h), [native arms](port/src/port_native_arms.c),
+[scoped draws](src/game/gunfire.c), [model hook](src/game/model.c),
+[ADS arms](port/src/ads_hands.c), [icon selection](port/src/port_hud.c),
+[exporter](port/src/port_weapon_export.c), [generator guide](scripts/port/weapon_icons.md).
+**Checks:** [ROM-free wardrobe tests](scripts/port/test_wardrobe.sh) exercise all
+six outfits, Folder resolution, pistol/chop scope, clipping bounds, native bone
+preservation, invalid vertex rejection and immutable source vertices. HUD tests
+check all six icon indices and decode every generated image. Generator tests
+check the slot contract alongside matte validation and packet round trips.
+
+The updated HUD audit accepts `-Chop` for repeated native melee captures; it
+removes the sniper only in the isolated RAM fixture (`GE_HUD_AUDIT_CHOP`), since
+upstream substitutes a rifle-butt attack whenever Bond owns that weapon,
+including Surface's starting inventory. Normal attack selection is unchanged.
+The regenerated 35-image pack passed exact repeated black/white pixel checks
+for every image. Windows gameplay review checked all 20 ADS guns with 217
+transition captures, DD44 Jungle and Magnum Surface transitions, plus native
+chops on Jungle, Archives and Surface (rolled, blue and snow sleeves). Best-time captures checked a 02:03 record at 4:3,
+a capped 17:03+ record with a cheat target at widescreen, and missing-record
+omission on Surface. HUD, ADS, wardrobe, mission-cheat (both Unlock All modes),
+suspend-state and generator tests passed. Windows and Linux builds passed;
+Linux was compile-checked and runtime captures ran on Windows. The main Windows
+executable includes the generated wardrobe pack and replaces its prior build.
+ROM-derived outputs remain ignored and copied audit/export executables are
+removed after exit.

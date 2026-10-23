@@ -6,7 +6,23 @@
 #include "game/player.h"
 #include "game/bondview.h"
 #include "game/matrixmath.h"
+#include "game/file.h"
+#include "game/othermodemicrocode.h"
 #include "gbi_extension.h"
+
+#include "port_wardrobe.h"
+#define ADS_SKIN PORT_SKIN
+#define ADS_SLEEVE PORT_SLEEVE
+#define ADS_CUFF PORT_CUFF
+#define ADS_MATERIALS PORT_MATERIALS
+typedef PortWardrobe AdsWardrobe;
+#define adsHandWardrobe portWardrobeStyle
+
+static coord3d adsHandLerp(coord3d a, coord3d b, f32 t)
+{
+    coord3d p = {a.x+(b.x-a.x)*t, a.y+(b.y-a.y)*t, a.z+(b.z-a.z)*t};
+    return p;
+}
 
 /* Grip centres in weapon-local view units (the original models use ten times these). */
 static const struct {
@@ -55,7 +71,7 @@ static coord3d adsHandPoint(const Mtxf *gun, const coord3d *p)
 
 /* An eight-sided tapered section, shaded to match the original low-poly hands. */
 static Gfx *adsHandSection(Gfx *gdl, coord3d a, coord3d b,
-    f32 widthA, f32 heightA, f32 widthB, f32 heightB, s32 sleeve, f32 light, u8 alpha)
+    f32 widthA, f32 heightA, f32 widthB, f32 heightB, const sImageTableEntry *material, f32 light, u8 alpha)
 {
     static const f32 ring[8][2] = {
         {1.0f, 0.4f}, {0.4f, 1.0f}, {-0.4f, 1.0f}, {-1.0f, 0.4f},
@@ -95,10 +111,10 @@ static Gfx *adsHandSection(Gfx *gdl, coord3d a, coord3d b,
                     + v.f[k]*ring[i][1]*height)*16.0f);
             }
             vertex->v.flag = 0;
-            vertex->v.tc[0] = vertex->v.tc[1] = 0;
-            vertex->v.cn[0] = (u8)((sleeve ? 70 : 211)*tone);
-            vertex->v.cn[1] = (u8)((sleeve ? 77 : 169)*tone);
-            vertex->v.cn[2] = (u8)((sleeve ? 70 : 126)*tone);
+            vertex->v.tc[0] = (s16)(i*(material->width-1)*32/7);
+            vertex->v.tc[1] = end ? (material->height-1)*32 : 0;
+            /* The original wardrobe texture supplies color, including skin. */
+            vertex->v.cn[0] = vertex->v.cn[1] = vertex->v.cn[2] = (u8)(255*tone);
             vertex->v.cn[3] = alpha;
         }
     }
@@ -113,14 +129,14 @@ static Gfx *adsHandSection(Gfx *gdl, coord3d a, coord3d b,
     return gdl;
 }
 
-static Gfx *adsHandDrawGrip(Gfx *gdl, const Mtxf *gun, coord3d grip,
-    s32 left, f32 blend, f32 light)
+static void adsHandDrawGrip(Gfx **meshes, const Mtxf *gun, coord3d grip,
+    s32 left, f32 blend, f32 light, const AdsWardrobe *style)
 {
     f32 side = left ? 1.0f : -1.0f;
     const f32 armBulk = 1.30f;
     u8 alpha = (u8)(blend*255.0f);
     coord3d palm = grip;
-    coord3d wrist, cuff, elbow, knuckle, tip;
+    coord3d wrist, cuff, cuffEnd, elbow, knuckle, tip;
     s32 finger;
 
     palm.x += side*1.25f;
@@ -132,15 +148,23 @@ static Gfx *adsHandDrawGrip(Gfx *gdl, const Mtxf *gun, coord3d grip,
     elbow.x = -side*(left ? 20.0f : 17.0f);
     elbow.y = -28.0f - (1.0f-blend)*18.0f;
     elbow.z = -12.0f;
-    cuff.x = wrist.x + (elbow.x-wrist.x)*0.15f;
-    cuff.y = wrist.y + (elbow.y-wrist.y)*0.15f;
-    cuff.z = wrist.z + (elbow.z-wrist.z)*0.15f;
-    gdl = adsHandSection(gdl, elbow,cuff, 3.1f*armBulk,2.7f*armBulk,
-        1.65f*armBulk,1.5f*armBulk, TRUE,light,alpha);
-    gdl = adsHandSection(gdl, cuff,wrist, 1.65f*armBulk,1.5f*armBulk,
-        1.25f*armBulk,1.1f*armBulk, FALSE,light,alpha);
-    gdl = adsHandSection(gdl, wrist,palm, 1.25f*armBulk,1.1f*armBulk,
-        1.6f,1.35f, FALSE,light,alpha);
+    cuff = adsHandLerp(wrist, elbow, style->sleeveEnd);
+    cuffEnd = adsHandLerp(wrist, elbow, style->cuffEnd);
+    {
+        const f32 w = (1.25f+1.85f*style->sleeveEnd)*armBulk;
+        const f32 h = (1.10f+1.60f*style->sleeveEnd)*armBulk;
+        const f32 ew = (1.25f+1.85f*style->cuffEnd)*armBulk;
+        const f32 eh = (1.10f+1.60f*style->cuffEnd)*armBulk;
+        const f32 hem = style->rolled ? 1.12f : 1.0f;
+        meshes[ADS_SLEEVE] = adsHandSection(meshes[ADS_SLEEVE], elbow,cuff,
+            3.1f*armBulk,2.7f*armBulk,w,h,&style->material[ADS_SLEEVE],light,alpha);
+        meshes[ADS_CUFF] = adsHandSection(meshes[ADS_CUFF], cuff,cuffEnd,
+            w*hem,h*hem,ew*hem,eh*hem,&style->material[ADS_CUFF],light,alpha);
+        meshes[ADS_SKIN] = adsHandSection(meshes[ADS_SKIN], cuffEnd,wrist,
+            ew,eh,1.25f*armBulk,1.1f*armBulk,&style->material[ADS_SKIN],light,alpha);
+    }
+    meshes[ADS_SKIN] = adsHandSection(meshes[ADS_SKIN], wrist,palm, 1.25f*armBulk,1.1f*armBulk,
+        1.6f,1.35f, &style->material[ADS_SKIN],light,alpha);
 
     for (finger = 0; finger < 4; finger++) {
         /* Four curled fingers and a separate thumb give the grip a readable silhouette. */
@@ -153,13 +177,15 @@ static Gfx *adsHandDrawGrip(Gfx *gdl, const Mtxf *gun, coord3d grip,
             tip.x += 1.3f; tip.y = knuckle.y; tip.z += 1.4f;
         }
         knuckle = adsHandPoint(gun, &knuckle); tip = adsHandPoint(gun, &tip);
-        gdl = adsHandSection(gdl, knuckle,tip, 0.42f,0.48f, 0.35f,0.4f, FALSE,light,alpha);
+        meshes[ADS_SKIN] = adsHandSection(meshes[ADS_SKIN], knuckle,tip,
+            0.42f,0.48f,0.35f,0.4f,&style->material[ADS_SKIN],light,alpha);
     }
     knuckle = grip; tip = grip;
     knuckle.x += side*1.6f; knuckle.y += 0.8f; knuckle.z -= 1.2f;
     tip.x += side*1.0f; tip.y += 2.2f; tip.z += 0.8f;
     knuckle = adsHandPoint(gun, &knuckle); tip = adsHandPoint(gun, &tip);
-    return adsHandSection(gdl, knuckle,tip, 0.65f,0.6f, 0.45f,0.45f, FALSE,light,alpha);
+    meshes[ADS_SKIN] = adsHandSection(meshes[ADS_SKIN], knuckle,tip,
+        0.65f,0.6f,0.45f,0.45f,&style->material[ADS_SKIN],light,alpha);
 }
 
 static void adsHandProjection(const Mtxf *scene, Mtxf *projection)
@@ -189,7 +215,12 @@ Gfx *portAdsDrawHands(Gfx *gdl, s32 item, const Mtxf *gun)
     Mtx *matrix;
     f32 blend = portAdsBlend();
     f32 light;
+    AdsWardrobe style;
+    Gfx *meshes[ADS_MATERIALS], *ends[ADS_MATERIALS];
+    s32 i;
     if (blend <= 0.0f || !portAdsHandGrips(item, &trigger, &support)) return gdl;
+
+    style = adsHandWardrobe(g_CurrentPlayer->bondtype, fileGetBondForCurrentFolder());
 
     matrix = dynAllocateMatrix();
     matrix_4x4_set_identity(&identity);
@@ -205,30 +236,44 @@ Gfx *portAdsDrawHands(Gfx *gdl, s32 item, const Mtxf *gun)
     gSPSetGeometryMode(gdl++, G_SHADE | G_SHADING_SMOOTH | G_ZBUFFER);
     gSPTexture(gdl++, 0, 0, 0, G_TX_RENDERTILE, G_OFF);
     gSPMatrix(gdl++, osVirtualToPhysical(matrix), G_MTX_MODELVIEW | G_MTX_LOAD | G_MTX_NOPUSH);
-    if (blend == 1.0f) {
-        gDPSetRenderMode(gdl++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
-        gdl = adsHandDrawGrip(gdl, gun,support, TRUE,blend,light);
-        gdl = adsHandDrawGrip(gdl, gun,trigger, FALSE,blend,light);
-    } else {
-        /* Two grips, each with eight sections of eight commands, plus END.
-         * Reuse identical vertices for depth and colour, avoiding fade-through
-         * between the fingers, palm, wrist and sleeve during the raise/lower. */
-        Gfx *mesh = dynAllocate((2 * 8 * 8 + 1) * sizeof(Gfx));
-        Gfx *end = adsHandDrawGrip(mesh, gun,support, TRUE,blend,light);
-        end = adsHandDrawGrip(end, gun,trigger, FALSE,blend,light);
-        gSPEndDisplayList(end);
+    /* Per-material lists contain geometry only. Texture binding belongs to
+     * the color pass, so it cannot override the transition's depth-only pass.
+     * Each section emits eight commands; skin has seven sections per grip. */
+    for (i = 0; i < ADS_MATERIALS; i++) {
+        const s32 sections = i == ADS_SKIN ? 7 : 1;
+        meshes[i] = ends[i] = dynAllocate((2*sections*8+1)*sizeof(Gfx));
+    }
+    adsHandDrawGrip(ends, gun,support, TRUE,blend,light, &style);
+    adsHandDrawGrip(ends, gun,trigger, FALSE,blend,light, &style);
+    for (i = 0; i < ADS_MATERIALS; i++) gSPEndDisplayList(ends[i]);
 
+    if (blend < 1.0f) {
         /* The gun has already drawn. First write only the nearest hand depth,
          * leaving its colour underneath the fading hands intact. INTER allows
          * the colour pass to accept those exact same depths (LEQUAL on PC). */
         gDPSetRenderMode(gdl++, G_RM_AA_ZB_XLU_INTER | Z_UPD, G_RM_AA_ZB_XLU_INTER2 | Z_UPD);
         gDPSetCombineMode(gdl++, G_CC_PRIMITIVE, G_CC_PRIMITIVE);
         gDPSetPrimColor(gdl++, 0, 0, 0, 0, 0, 0);
-        gSPDisplayList(gdl++, osVirtualToPhysical(mesh));
+        for (i = 0; i < ADS_MATERIALS; i++) gSPDisplayList(gdl++, osVirtualToPhysical(meshes[i]));
         gDPPipeSync(gdl++);
-        gDPSetRenderMode(gdl++, G_RM_AA_ZB_XLU_INTER, G_RM_AA_ZB_XLU_INTER2);
-        gDPSetCombineMode(gdl++, G_CC_SHADE, G_CC_SHADE);
-        gSPDisplayList(gdl++, osVirtualToPhysical(mesh));
+    }
+    for (i = 0; i < ADS_MATERIALS; i++) {
+        sImageTableEntry material = style.material[i];
+        texSelect(&gdl, &material, 4, 0, 0);
+        /* texSelect supplies the native format/palette and loads ROM pixels;
+         * restore this layer's depth/blending after its generic setup. */
+        gDPSetCycleType(gdl++, G_CYC_1CYCLE);
+        /* Bind the complete authored mip chain so CI palettes are read at
+         * their correct offset, then sample tile zero for these close arms. */
+        gDPSetTextureLOD(gdl++, G_TL_TILE);
+        gSPTexture(gdl++, 0xffff, 0xffff, 0, G_TX_RENDERTILE, G_ON);
+        gDPSetCombineMode(gdl++, G_CC_MODULATEIA, G_CC_MODULATEIA);
+        if (blend == 1.0f) {
+            gDPSetRenderMode(gdl++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2);
+        } else {
+            gDPSetRenderMode(gdl++, G_RM_AA_ZB_XLU_INTER, G_RM_AA_ZB_XLU_INTER2);
+        }
+        gSPDisplayList(gdl++, osVirtualToPhysical(meshes[i]));
     }
     gDPPipeSync(gdl++);
     return gdl;

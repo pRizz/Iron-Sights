@@ -42,8 +42,8 @@
 
 extern "C" const unsigned char port_weapon_images[];
 static const uint8_t *gfx_weapon_image(int item) {
-    static std::vector<uint8_t> decoded[32];
-    if (item < 0 || item >= 32) return nullptr;
+    static std::vector<uint8_t> decoded[PORT_WEAPON_IMAGE_COUNT];
+    if (item < 0 || item >= PORT_WEAPON_IMAGE_COUNT) return nullptr;
     auto &pixels = decoded[item];
     const auto &image = portWeaponImages[item];
     if (!image.size || image.offset > PORT_WEAPON_IMAGE_BYTES

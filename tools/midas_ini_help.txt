@@ -173,6 +173,8 @@ padN_stickmode.
                       |            | this stage/difficulty has an unlock target.
                       |            | Green within time, amber in the last 10s,
                       |            | red after exceeding the target. CC = hundredths.
+                      |            | BEST MM:SS below when this mission/difficulty
+                      |            | has a saved record (except 007). 17:03+ = save cap.
   watch_static        | 1          | 0 removes the watch's static and sound
   hit_markers         | 1          | Brief marker on confirmed character damage
   damage_indicators   | 1          | Red arcs toward the source of damage

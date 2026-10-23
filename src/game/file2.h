@@ -24,6 +24,9 @@
 
 extern ChrRecord *g_CurModelChr;
 
+save_data *fileGetSaveForFoldernum(u32 folder);
+s32 fileGetSaveStageDifficultyTime(save_data *save, LEVEL_SOLO_SEQUENCE levelid, DIFFICULTY difficulty);
+
 u8 fileGetBondForFolder(u32 folder);
 void fileValidateSaves(void);
 bool fileGetIsCheatUnlocked(save_data *save, s32 cheat);
