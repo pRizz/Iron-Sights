@@ -94,6 +94,17 @@ Aiming and crouching prevent the sprint boost; ADS keeps its half-speed movement
 
 These displays hide during menus, cutscenes, and death. Each setting can be changed independently.
 
+### Mission cheat hints
+
+The mission grid shows the highlighted mission's cheat status, required difficulty,
+and target time. On the difficulty screen, a **Cheat target** badge marks the row
+that can unlock it. **Cheat unlocked** (green) means the selected campaign save
+has earned it; **Cheat to unlock** (amber) means it is still to be earned. Blue
+**Cheat available - Unlock All** distinguishes temporary availability through
+that setting. The footer also identifies a required difficulty that is still
+locked. Completion checkmarks retain their original meaning; 007 has no timed
+cheat target. These hints are always shown and do not require the HUD timer.
+
 ### Suspend points
 
 Press **F6** or open **Watch > Gameplay > Suspend Points** for four manual slots,

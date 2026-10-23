@@ -39,13 +39,14 @@ user accepts losing compatibility with old suspend points. Obsolete game
 executables and suspend images matched to those builds may be purged without
 archiving or another confirmation. Keep the current main executable and its
 states, unknown images, normal campaign saves, profiles and settings. The state
-and HUD audits remove their temporary executable on exit and retain diagnostic logs
+and HUD/mission-cheat audits remove their temporary executable on exit and retain diagnostic logs
 and captures. This supersedes briefly retaining the pre-toast executable for
 older states.
 
 **Sources:** [.gitignore](.gitignore), [artifact rules](AGENTS.md),
 [state audit](scripts/port/audit_states.ps1),
 [HUD audit](scripts/port/audit_hud.ps1),
+[mission-cheat audit](scripts/port/audit_mission_cheats.ps1),
 [state storage guide](scripts/port/save_states.md). **History:** `29a9e6e`.
 **Verification:** Git tracked-file changes in that commit. Local cleanup uses
 executable/state build fingerprints and workspace-confined file paths; the
@@ -62,7 +63,8 @@ and YouTube play badge; the newer video supersedes the original demo link.
 The README introduces the fork before the demo, prominently links this full
 inventory near the top, and summarizes ADS, sniper zoom, sprint, smoother
 sights/combat feedback, objective alerts, the weapon strip, adaptive
-health/armor and solo suspend points. Contributor inventory-maintenance instructions sit under
+health/armor, solo suspend points, and mission timer/selection cheat-target
+and earned-status hints. Contributor inventory-maintenance instructions sit under
 Contributing, alongside the existing contribution links.
 
 **Sources:** [readme.md](readme.md),
@@ -414,3 +416,45 @@ and icon weapon strips, and elapsed-only output on Facility Agent. Warning
 and expired colors are covered by unit tests; runtime captures cover the green
 target. Linux was compile-checked. The main Windows executable was replaced
 without retaining a previous build.
+
+### FORK-016 — Mission-selection cheat status and difficulty hints
+
+**Status:** Implemented.
+
+Added an always-visible summary for the highlighted mission on the solo mission
+grid and for the chosen mission on the difficulty screen. It shows the timed
+cheat's required difficulty and target, and distinguishes amber **Cheat to
+unlock**, green **Cheat unlocked** (earned in the selected campaign save), and
+blue **Cheat available - Unlock All**. A required difficulty still locked by
+progress is identified in the summary. The matching visible difficulty row
+also has a target/unlocked/available badge and time; other rows, including 007,
+receive no badge. Existing completion checkmarks and selection hit areas retain
+their meaning. The hints are independent of the optional in-game mission timer.
+
+Uses upstream's target table and the selected folder's saved earned bits. The
+raw earned-bit reader now also bypasses compile-time Unlock All, matching its
+existing handling of the runtime option, so convenience unlocks are not labeled
+as earned. Mission access, cheat unlock requirements and campaign writes are
+unchanged by these indicators.
+
+**Sources:** [menu integration](src/game/front.c),
+[status/requirements](port/src/port_mission_cheats.c),
+[API](port/include/port_mission_cheats.h), [earned-bit reader](src/game/file2.c),
+[save API](src/game/file2.h), [README](readme.md).
+**Checks:** [ROM-free status tests](scripts/port/test_mission_cheats.sh) exercise
+the actual save-bit reader with runtime and compile-time Unlock All, earned vs
+available labels, selected-folder isolation, absent saves, target difficulty/time,
+locked requirements and invalid entries. The isolated
+[menu audit](scripts/port/audit_mission_cheats.ps1) uses RAM-only diagnostic save
+fixtures via `GE_MISSION_CHEAT_AUDIT=mission,earned,completed` and
+`GE_MENU=imissions|jdifficulty`; it removes its copied executable after exit.
+The diagnostic knob is listed by the console's harness command
+([environment inventory](port/src/port_console_env.h)). The status tests passed
+in both override configurations, along with HUD and ADS regression tests and
+Windows/Linux builds. Six Windows captures checked earned and pending mission
+summaries, badges on Secret Agent and 00 Agent, an Agent target while hovering
+007, blue Unlock All availability, and a locked required difficulty. Wide and
+4:3 layouts were visually reviewed, including the final Egyptian grid tile.
+All copied audit executables were removed after exit. The main Windows
+executable was rebuilt and replaced without retaining its previous build.
+Linux was compile-checked; runtime visual review ran on Windows.

@@ -120,6 +120,7 @@ static const char *const sPortConEnvNames[] = {
     "GE_LOSDBG",
     "GE_LOWRES",
     "GE_MENU",
+    "GE_MISSION_CHEAT_AUDIT",
     "GE_MISSIONTIMER",
     "GE_MODEL_AUDIT",
     "GE_MOUSEGATE",

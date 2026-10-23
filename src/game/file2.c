@@ -391,7 +391,11 @@ bool fileGetIsCheatUnlocked(save_data *save, s32 cheat)
     s32 bits;
 
 #ifdef GE_UNLOCK_ALL
+#ifdef TARGET_N64
     return TRUE;
+#else
+    if (!sPortRawSave) { return TRUE; }
+#endif
 #endif
 #ifndef TARGET_N64
     {

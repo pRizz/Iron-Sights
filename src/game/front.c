@@ -1,6 +1,8 @@
 #include <os_extension.h>
 #ifndef TARGET_N64
 #include <stdio.h> /* frontDrawCursor GE_DUMP_BOND probe */
+#include "port_hud.h"
+#include "port_mission_cheats.h"
 #endif
 #include <assets/oddtextures.h>
 #include "assets/image_externs.h"
@@ -8762,6 +8764,21 @@ void set_cursor_to_stage_solo(LEVEL_SOLO_SEQUENCE level)
     }
 }
 
+#ifndef TARGET_N64
+/* A stable footer leaves the filmstrip pictures and their hit areas intact. */
+static Gfx *portFrontMissionCheatSummary(Gfx *dl, s32 mission)
+{
+    PortMissionCheatInfo info;
+    char requirement[96];
+    const s32 x = 38, y = viGetY()-24, width = viGetX()-76;
+    if (!portMissionCheatInfo(mission, selected_folder_num, &info)) return dl;
+    portMissionCheatRequirement(&info, get_highest_unlocked_difficulty_for_level(mission), requirement, sizeof(requirement));
+    dl = portHudPanel(dl, x, y, width, 22, 0x10171ce8);
+    dl = portHudLabel(dl, portMissionCheatStatus(&info), x+5, y+2, 0.65f, portMissionCheatColor(&info), width-10);
+    return portHudLabel(dl, requirement, x+5, y+12, 0.65f, 0xe1e5eaff, width-10);
+}
+#endif
+
 // Address 0x7F00E458 NTSC
 Gfx *constructor_menu07_missionsel(Gfx *DL)
 {
@@ -8847,6 +8864,9 @@ Gfx *constructor_menu07_missionsel(Gfx *DL)
     }
 
     DL = frontAddPreviousTabText(DL);
+#ifndef TARGET_N64
+    DL = portFrontMissionCheatSummary(DL, mission_difficulty_highlighted);
+#endif
     DL = frontDrawCursor(DL);
 
     return DL;
@@ -9027,6 +9047,10 @@ const struct MatchHack_front_rodata_3000 asc_D_8004F4B4 = { "\n" };
 
 Gfx *constructor_menu08_difficulty(Gfx *DL)
 {
+#ifndef TARGET_N64
+    PortMissionCheatInfo cheatInfo;
+    s32 hasCheatInfo = portMissionCheatInfo(mission_folder_setup_entries[briefingpage].mission_num, selected_folder_num, &cheatInfo);
+#endif
     u8 *text_sp3180;
     s32 unlockedDifficulty; // sp3176
     u8 *text_sp3172;
@@ -9149,6 +9173,17 @@ Gfx *constructor_menu08_difficulty(Gfx *DL)
             x = 0x96;
             y = (i * 0x1E) + 0xB4;
             DL = frontPrintText(DL, &x, &y, text_sp160, ptrFontZurichBoldChars, ptrFontZurichBold, 0xFF, viGetX(), viGetY(), 0, 0);
+#ifndef TARGET_N64
+            if (hasCheatInfo && cheatInfo.difficulty == i) {
+                char badge[64];
+                const s32 bx = 150, by = (i * 0x1E) + 194;
+                snprintf(badge, sizeof(badge), "%s %02d:%02d",
+                    cheatInfo.earned ? "CHEAT UNLOCKED" : cheatInfo.available ? "CHEAT AVAILABLE" : "CHEAT TARGET",
+                    cheatInfo.seconds/60, cheatInfo.seconds%60);
+                DL = portHudPanel(DL, bx-3, by-1, 126, 11, 0x10171ce8);
+                DL = portHudLabel(DL, badge, bx, by, 0.60f, portMissionCheatColor(&cheatInfo), 120);
+            }
+#endif
         }
     }
 
@@ -9175,6 +9210,9 @@ Gfx *constructor_menu08_difficulty(Gfx *DL)
         }
     }
 
+#ifndef TARGET_N64
+    DL = portFrontMissionCheatSummary(DL, mission_folder_setup_entries[briefingpage].mission_num);
+#endif
     DL = frontDrawCursor(DL);
 
     return DL;
@@ -18583,6 +18621,7 @@ static void portMenuHarnessTick(void)
         {
             if (e[0] == 'f') target = MENU_MODE_SELECT;
             else if (e[0] == 'i') target = MENU_MISSION_SELECT;   /* GE_MENU=imissions: the solo mission grid */
+            else if (e[0] == 'j') target = MENU_DIFFICULTY; /* GE_MENU=jdifficulty: Dam unless an audit mission is supplied */
             else if (e[0] == 's') target = MENU_FILE_SELECT;  /* GE_MENU=select: the Files screen */
             else if (e[0] == 'o') target = MENU_PORT_OPTIONS; /* GE_MENU=options: the OPTIONS page */
             else if (e[0] == 'x')
@@ -18706,6 +18745,29 @@ static void portMenuHarnessTick(void)
         return;
     }
     selected_folder_num = FOLDER1;
+    if (target == MENU_MISSION_SELECT || target == MENU_DIFFICULTY) {
+        const char *audit = getenv("GE_MISSION_CHEAT_AUDIT");
+        s32 mission = 0, earned = 0, complete = 0;
+        if (audit && sscanf(audit, "%d,%d,%d", &mission, &earned, &complete) == 3 && mission >= 0 && mission < 20) {
+            /* Isolated screenshot fixtures only: replace RAM, never write the
+             * campaign file or pretend Unlock All earned these cheats. */
+            save_data fixture = {0};
+            extern void fileSetSaveCheatUnlocked(save_data *save, s32 cheat);
+            extern void fileSetDifficultyStageTime(save_data *save, LEVEL_SOLO_SEQUENCE level, DIFFICULTY difficulty, s32 seconds);
+            s32 i;
+            fixture.completion_bitflags = FOLDER1;
+            fixture.flag_007 = complete ? 1 : 0;
+            if (complete) for (i = 0; i < sizeof(fixture.times); i++) fixture.times[i] = 0xff;
+            else for (i = 0; i < mission; i++) fileSetDifficultyStageTime(&fixture, i, DIFFICULTY_AGENT, 600);
+            if (earned) fileSetSaveCheatUnlocked(&fixture, mission);
+            saves[SAVESLOT1] = fixture;
+        }
+        if (mission < 0 || mission >= 20) mission = 0;
+        if (target == MENU_DIFFICULTY) {
+            briefingpage = pull_and_display_text_for_folder_a0(mission);
+            selected_stage = mission_folder_setup_entries[briefingpage].stage_id;
+        }
+    }
     frontChangeMenu(target, FALSE);
     printf("ge: GE_MENU harness: menu=%d\n", target);
     state = 2;

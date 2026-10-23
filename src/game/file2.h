@@ -27,6 +27,10 @@ extern ChrRecord *g_CurModelChr;
 u8 fileGetBondForFolder(u32 folder);
 void fileValidateSaves(void);
 bool fileGetIsCheatUnlocked(save_data *save, s32 cheat);
+#ifndef TARGET_N64
+/* Read the save's earned bit, independently of Unlock All. */
+bool portFileGetIsCheatUnlockedRaw(save_data *save, s32 cheat);
+#endif
 STAGESTATUS fileIsStageUnlockedAtDifficulty(s32 foldernum, LEVEL_SOLO_SEQUENCE levelid, DIFFICULTY difficulty);
 void fileUnlockStageInFolderAtDifficulty(s32 foldernum, LEVEL_SOLO_SEQUENCE levelid, DIFFICULTY difficulty, s32 newtime);
 void fileSaveFolderUnlockCheat(s32 foldernum, s32 cheat);
