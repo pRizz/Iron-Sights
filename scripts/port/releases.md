@@ -12,7 +12,11 @@ has been replaced; Linux can still be built locally.
 
 ## One-time repository setup
 
-- Enable Actions and allow the checked-in pinned actions to run.
+- Enable Actions and allow the checked-in pinned actions to run. For an existing
+  fork, explicitly enable the workflow with
+  `gh workflow enable main.yml -R pRizz/Project-Midas-ADS`.
+- Use the canonical `git@github.com:pRizz/Project-Midas-ADS.git` origin URL,
+  rather than the old renamed repository redirect.
 - Enable **Settings > General > Releases > Enable release immutability**.
   Releases are assembled as drafts, then published only when every asset has
   been attached. Changing this setting requires repository administration.

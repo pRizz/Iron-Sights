@@ -581,7 +581,10 @@ The publish job alone receives release/OIDC/attestation permissions. ZIP and EXE
 receive attestations; the bundle, checksums, identity and input record persist
 as release assets. Actions artifacts last 30 days. Unique immutable releases
 provide durable downloads; repository release immutability was enabled during
-setup. This is recorded provenance, not a claim of hermetic compilation.
+setup. Maintainer setup also documents explicit workflow enablement for an
+existing fork and the canonical origin URL; the local origin was updated from
+the renamed repository redirect. This is recorded provenance, not a claim of
+hermetic compilation.
 
 The normal GE_ROMDATA_FALLBACK=OFF build now compiles without a ROM, extraction
 or private ROM secret. The three formerly retained inline menu/logo models
