@@ -9,6 +9,15 @@ struct player *g_CurrentPlayer = &testPlayer;
 f32 g_GlobalTimerDelta;
 static s32 testSeat, live = 1, playerCount = 1;
 static s32 inventory[40], inventoryCount, currentWeapon;
+/* Deliberately shuffled IDs and header rows catch stage/index confusion. */
+struct mission_folder_setup mission_folder_setup_entries[] = {
+    {.folder_text_preset=1, .stage_id=LEVELID_NONE, .mission_num=-1},
+    {.folder_text_preset=2, .stage_id=LEVELID_FACILITY, .mission_num=1},
+    {.folder_text_preset=3, .stage_id=LEVELID_DAM, .mission_num=0},
+    {.folder_text_preset=4, .stage_id=LEVELID_RUNWAY, .mission_num=2},
+    {0}
+};
+s16 solo_target_time_array[20][3] = {{0,160,0}, {0,0,125}, {300,0,0}};
 s32 get_cur_playernum(void) { return testSeat; }
 s32 getPlayerCount(void) { return playerCount; }
 s32 portBondControlsLive(void) { return live; }
@@ -25,6 +34,38 @@ int main(void)
     s32 i, j, value, selected, n;
     const s32 rates[] = {30,60,120,240};
     HudWeapon weapons[HUD_WEAPONS];
+    {
+        char timer[64], tiny[5];
+        assert(portHudMissionTargetSeconds(LEVELID_DAM, DIFFICULTY_SECRET) == 160);
+        assert(portHudMissionTargetSeconds(LEVELID_FACILITY, DIFFICULTY_00) == 125);
+        assert(portHudMissionTargetSeconds(LEVELID_RUNWAY, DIFFICULTY_AGENT) == 300);
+        assert(portHudMissionTargetSeconds(LEVELID_DAM, DIFFICULTY_AGENT) == 0);
+        assert(portHudMissionTargetSeconds(LEVELID_DAM, DIFFICULTY_007) == 0);
+        assert(portHudMissionTargetSeconds(LEVELID_NONE, DIFFICULTY_AGENT) == 0);
+        assert(portHudMissionTargetSeconds(LEVELID_TITLE, DIFFICULTY_SECRET) == 0);
+        assert(portHudMissionTargetSeconds(LEVELID_DAM, -1) == 0);
+        assert(portHudMissionTargetSeconds(LEVELID_DAM, 999) == 0);
+        portHudMissionTimerText(42*60+30, 160, timer, sizeof(timer));
+        assert(strcmp(timer, "00:42:50 / CHEAT 02:40") == 0);
+        portHudMissionTimerText(60*60, 0, timer, sizeof(timer));
+        assert(strcmp(timer, "01:00:00") == 0);
+        portHudMissionTimerText(59, 0, timer, sizeof(timer));
+        assert(strcmp(timer, "00:00:98") == 0);
+        portHudMissionTimerText(-1, 0, timer, sizeof(timer));
+        assert(strcmp(timer, "00:00:00") == 0);
+        portHudMissionTimerText(100*3600, 160, timer, sizeof(timer));
+        assert(strcmp(timer, "100:00:00 / CHEAT 02:40") == 0);
+        portHudMissionTimerText(42*60, 160, tiny, sizeof(tiny));
+        assert(tiny[sizeof(tiny)-1] == '\0');
+        portHudMissionTimerText(0, 0, NULL, 0);
+        assert(portHudMissionTargetColor(149*60+59, 160) == 0xb9ed9fff);
+        assert(portHudMissionTargetColor(150*60, 160) == 0xf0d994ff);
+        assert(portHudMissionTargetColor(160*60+59, 160) == 0xf0d994ff);
+        assert(portHudMissionTargetColor(161*60, 160) == 0xff9d91ff);
+        /* Restoring the mission clock immediately restores the comparison. */
+        assert(portHudMissionTargetColor(42*60, 160) == 0xb9ed9fff);
+        assert(portHudMissionTargetColor(999999, 0) == 0xffffffff);
+    }
     for (i = 0; i < 4; i++) assert(portHudOptionGet(phKeys[i], &value) && value == 1);
     assert(portHudOptionGet("weapon_hud_icons", &value) && value == 0);
     assert(portHudOptionSet("weapon_hud_icons", 1));

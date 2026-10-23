@@ -5369,7 +5369,7 @@ s32 portShadowAlphaPct(void)
 
 /** midas.ini [display] mission_timer (GE_MISSIONTIMER=0/1 forces): the solo
   * elapsed-time readout (gunfire.c portDrawMissionTimer). Read live; default
-  * on. */
+  * off. The HUD appends the current stage/difficulty's cheat target. */
 s32 portMissionTimer(void)
 {
     static s32 env = -1;

@@ -13,6 +13,7 @@
 #include "game/bondinv.h"
 #include "game/dyn.h"
 #include "game/gun.h"
+#include "game/front.h"
 #include "game/lv.h"
 #include "game/math_atan2f.h"
 #include "game/options.h"
@@ -46,6 +47,43 @@ typedef struct {
     HudToast toasts[HUD_TOASTS];
 } HudState;
 static HudState phState[4];
+
+s32 portHudMissionTargetSeconds(s32 stage, s32 difficulty)
+{
+    s32 i;
+    if (difficulty < DIFFICULTY_AGENT || difficulty > DIFFICULTY_00) return 0;
+    /* Stage IDs and mission indices differ. Resolve the live stage, not the
+     * currently highlighted folder/briefing row (also valid after a restore). */
+    for (i = 0; mission_folder_setup_entries[i].folder_text_preset; i++) {
+        const struct mission_folder_setup *entry = &mission_folder_setup_entries[i];
+        if (entry->stage_id == stage && entry->mission_num >= 0 && entry->mission_num < 20)
+            return solo_target_time_array[entry->mission_num][difficulty];
+    }
+    return 0;
+}
+
+void portHudMissionTimerText(s32 ticks, s32 target, char *text, s32 size)
+{
+    if (size <= 0) return;
+    if (ticks < 0) ticks = 0;
+    if (target > 0)
+        snprintf(text, size, "%02d:%02d:%02d / CHEAT %02d:%02d", ticks/3600,
+            (ticks/60)%60, ((ticks%60)*100)/60, target/60, target%60);
+    else
+        snprintf(text, size, "%02d:%02d:%02d", ticks/3600,
+            (ticks/60)%60, ((ticks%60)*100)/60);
+}
+
+u32 portHudMissionTargetColor(s32 ticks, s32 target)
+{
+    const s32 seconds = ticks > 0 ? ticks/60 : 0;
+    /* Match file.c's whole-second <= comparison, including the full final
+     * second. Color describes time only; objectives/cheat rules still apply. */
+    if (target <= 0) return 0xffffffff;
+    if (seconds > target) return 0xff9d91ff;
+    if (target-seconds <= 10) return 0xf0d994ff;
+    return 0xb9ed9fff;
+}
 
 s32 portHudOptionGet(const char *key, s32 *value)
 {

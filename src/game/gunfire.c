@@ -44,6 +44,7 @@
 #include "gbi_extension.h"
 #ifndef TARGET_N64
 #include "port_hud.h"
+#include "boss.h"
 #include "port_weapon_export.h"
 #endif
 
@@ -6704,7 +6705,8 @@ u32 portAmmoIconPtr(u32 icon)
 
 #ifndef TARGET_N64
 /**
- * Mission timer: elapsed mission time as MM:SS:CC, shown at the bottom-left in
+ * Mission timer: elapsed mission time as MM:SS:CC and the applicable cheat
+ * target, shown at the bottom-left in
  * solo one line below the left-hand ammo row, in the same Gothic HUD font as
  * the gadget name. getMissiontimer() is the same PAL-normalised 60Hz source as
  * the endscreen, so the two always match. Each character is centred in a
@@ -6714,7 +6716,7 @@ u32 portAmmoIconPtr(u32 icon)
  */
 static Gfx *portDrawMissionTimer(Gfx *gdl, s32 x0)
 {
-    char timerbuf[12];
+    char timerbuf[64];
     char glyph[2];
     s32 ticks;
     s32 x;
@@ -6724,10 +6726,13 @@ static Gfx *portDrawMissionTimer(Gfx *gdl, s32 x0)
     s32 coloncell;
     s32 h;
     s32 w;
+    s32 target = portHudMissionTargetSeconds(bossGetStageNum(), lvlGetSelectedDifficulty());
+    s32 targetText = FALSE;
+    u32 targetColor;
 
     ticks = getMissiontimer();
-    sprintf(timerbuf, "%02d:%02d:%02d",
-        ticks / 3600, (ticks / 60) % 60, ((ticks % 60) * 100) / 60);
+    portHudMissionTimerText(ticks, target, timerbuf, sizeof(timerbuf));
+    targetColor = portHudMissionTargetColor(ticks, target);
 
     digitcell = 0;
     glyph[1] = '\0';
@@ -6760,10 +6765,22 @@ static Gfx *portDrawMissionTimer(Gfx *gdl, s32 x0)
     gdl = microcode_constructor(gdl);
     for (i = 0; timerbuf[i] != '\0'; i++)
     {
-        s32 cell = (timerbuf[i] == ':') ? coloncell : digitcell;
+        s32 cell;
 
         glyph[0] = timerbuf[i];
-        gdl = gunDrawHudString(gdl, (s8 *) glyph, x + (cell + 1) / 2, HUDHALIGN_MIDDLE, y, HUDVALIGN_MIDDLE, 1);
+        h = w = 0;
+        textMeasure(&h, &w, glyph, ptrFontBankGothicChars, ptrFontBankGothic, 0);
+        cell = (glyph[0] >= '0' && glyph[0] <= '9') ? digitcell : glyph[0] == ':' ? coloncell : w;
+        if (glyph[0] == '/') targetText = TRUE;
+        if (targetText) {
+            s32 gx = x + (cell + 1) / 2 + w / 2 - w;
+            s32 gy = y + h / 2 - h;
+            gdl = textRenderOutlined(gdl, &gx, &gy, (s8 *)glyph,
+                ptrFontBankGothicChars, ptrFontBankGothic, targetColor, 0x202020ff,
+                (s32)viGetX(), viGetY(), 0, 0);
+        } else {
+            gdl = gunDrawHudString(gdl, (s8 *) glyph, x + (cell + 1) / 2, HUDHALIGN_MIDDLE, y, HUDVALIGN_MIDDLE, 1);
+        }
         x += cell + 1;
     }
     gdl = combiner_bayer_lod_perspective(gdl);

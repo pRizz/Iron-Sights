@@ -168,8 +168,11 @@ padN_stickmode.
                       |            | 0 = original automatic, temporary gauges
   always_crosshair    | 0          | 1 = small target at the gun's aim point
                       |            | when not aiming
-  mission_timer       | 1          | Elapsed time (MM:SS:MS) bottom-left in
-                      |            | solo missions
+  mission_timer       | 0          | Mission Timer: elapsed MM:SS:CC bottom-left
+                      |            | in solo missions. Shows / CHEAT MM:SS when
+                      |            | this stage/difficulty has an unlock target.
+                      |            | Green within time, amber in the last 10s,
+                      |            | red after exceeding the target. CC = hundredths.
   watch_static        | 1          | 0 removes the watch's static and sound
   hit_markers         | 1          | Brief marker on confirmed character damage
   damage_indicators   | 1          | Red arcs toward the source of damage

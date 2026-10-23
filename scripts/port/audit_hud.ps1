@@ -9,6 +9,9 @@ param(
     [int]$Item = 8,
     [switch]$Disabled,
     [switch]$Menu,
+    [switch]$MissionTimer,
+    [string]$Stage = 'dam',
+    [ValidateRange(0,3)][int]$Difficulty = 0,
     [ValidateSet(1,2,4)][int]$Players = 1
 )
 $ErrorActionPreference = 'Stop'
@@ -16,17 +19,20 @@ $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 if (!$Executable) { $Executable = Join-Path $repoDir 'build_win\ProjectMidas.exe' }
 $Executable = (Resolve-Path -LiteralPath $Executable).Path
 $dir = Join-Path $repoDir ('build_win\hud-audit-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8))
+$auditExe = [IO.Path]::GetFullPath((Join-Path $dir 'ProjectMidas.exe'))
+if (!$auditExe.StartsWith($repoDir+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw 'Audit executable must stay inside the workspace.' }
 New-Item -ItemType Directory -Path $dir | Out-Null
 Copy-Item -LiteralPath $Executable -Destination (Join-Path $dir 'ProjectMidas.exe')
 Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
 $ini = @('[display]', 'fullscreen=window', 'vsync=0', 'maxfps=60', 'tickhz=60', 'msaa=0', 'aim_mode=1', '[input]', 'mouse=1')
 if ($Icons) { $ini = @('[display]', 'weapon_hud_icons=1') + $ini }
 if ($AutomaticHealth) { $ini = @('[display]', 'always_health=0') + $ini }
+if ($MissionTimer) { $ini = @('[display]', 'mission_timer=1') + $ini }
 if ($Disabled) { $ini = @('[display]', 'hit_markers=0', 'damage_indicators=0', 'objective_notifications=0', 'weapon_hud=0', 'always_health=0') + $ini }
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value $ini
 $auditEnv = @{
     GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$(if ($Resolution) {$Resolution} elseif ($Aspect -eq 'Wide') {'960x540'} else {'800x600'});
-    GE_NOINPUT='1'; GE_STAGE='dam'; GE_STAGE_AFTER='1'; GE_CHEATS='invuln,invis,guns';
+    GE_NOINPUT='1'; GE_STAGE=$Stage; GE_DIFF=[string]$Difficulty; GE_STAGE_AFTER='1'; GE_CHEATS='invuln,invis,guns';
     GE_HUD_AUDIT=[string]$Item; GE_FRAMES='2100'; GE_SEED='1'
 }
 if ($BodyHit) { $auditEnv.GE_HUD_AUDIT_BODY = '1' }
@@ -50,7 +56,10 @@ try {
     foreach ($key in $saved.Keys) { [Environment]::SetEnvironmentVariable($key, $saved[$key], 'Process') }
 }
 Write-Output "HUD audit: $dir"
-$p.WaitForExit()
+try { $p.WaitForExit() }
+finally {
+    if ($p.HasExited -and (Test-Path -LiteralPath $auditExe)) { Remove-Item -LiteralPath $auditExe }
+}
 if ($p.ExitCode -ne 0) { throw "Game exited with code $($p.ExitCode)." }
 $captures = @(Get-ChildItem -LiteralPath $dir -Filter 'shot_*.bmp')
 if ($captures.Count -lt $(if ($Menu) {1} else {3})) { throw "Missing HUD captures ($($captures.Count))." }

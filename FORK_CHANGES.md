@@ -39,12 +39,13 @@ user accepts losing compatibility with old suspend points. Obsolete game
 executables and suspend images matched to those builds may be purged without
 archiving or another confirmation. Keep the current main executable and its
 states, unknown images, normal campaign saves, profiles and settings. The state
-audit removes its temporary executable on exit and retains diagnostic logs
+and HUD audits remove their temporary executable on exit and retain diagnostic logs
 and captures. This supersedes briefly retaining the pre-toast executable for
 older states.
 
 **Sources:** [.gitignore](.gitignore), [artifact rules](AGENTS.md),
 [state audit](scripts/port/audit_states.ps1),
+[HUD audit](scripts/port/audit_hud.ps1),
 [state storage guide](scripts/port/save_states.md). **History:** `29a9e6e`.
 **Verification:** Git tracked-file changes in that commit. Local cleanup uses
 executable/state build fingerprints and workspace-confined file paths; the
@@ -378,3 +379,38 @@ confirmation input and capture save/load notifications. Revision unit tests,
 ADS/HUD tests, both builds and full Windows audits with synchronous/threaded rendering
 passed; captures checked manual-save, quicksave and loaded-slot toasts with
 gameplay visible. Linux was compile-checked; gameplay audits ran on Windows.
+
+### FORK-015 — Mission timer cheat-target comparison
+
+**Status:** Implemented.
+
+Extended the inherited **Gameplay > HUD > Mission Timer** toggle rather than
+adding a second timer. The inherited solo elapsed clock and fixed digit cells
+remain; an applicable timed cheat-unlock target appears beside it as
+`00:42:50 / CHEAT 02:40`. The target is green within time, amber during the last
+ten whole seconds, and red beyond the deadline. Lookup uses the live stage and
+difficulty with upstream's mission-folder mapping and target-time table, so
+only the matching difficulty shows a target; 007 mode and other difficulties
+retain elapsed time alone. Already unlocked cheats still have a practice target.
+The comparison follows the existing whole-second inclusive unlock deadline.
+This changes presentation, not objective, cheat eligibility or unlock rules.
+The inherited mission clock supplies pause and suspend-restore behavior.
+The existing solo/HUD visibility and pickup-message spacing remain intact.
+The setting remains off by default (`[display] mission_timer=0`); the INI guide
+now matches the actual video default, correcting its inherited claim of 1.
+
+**Sources:** [timer rendering](src/game/gunfire.c),
+[target lookup/format/colors](port/src/port_hud.c), [HUD API](port/include/port_hud.h),
+[setting/default](port/src/video.c), [README](readme.md),
+[INI guide](tools/midas_ini_help.txt).
+**Checks:** [HUD tests](scripts/port/test_hud.c) cover stage/index resolution,
+difficulty exclusions, formatting, deadline boundaries, warning colors and
+restored-clock comparisons. [HUD audit](scripts/port/audit_hud.ps1) accepts a
+mission, difficulty and timer switch for targeted captures; temporary audit
+executables are removed after exit (FORK-001). HUD, ADS and suspend-state
+regression tests and Windows/Linux builds passed. Windows captures checked
+the Dam Secret Agent 02:40 target at wide and 4:3 aspect ratios alongside text
+and icon weapon strips, and elapsed-only output on Facility Agent. Warning
+and expired colors are covered by unit tests; runtime captures cover the green
+target. Linux was compile-checked. The main Windows executable was replaced
+without retaining a previous build.

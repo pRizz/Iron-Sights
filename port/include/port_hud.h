@@ -20,6 +20,10 @@ Gfx *portHudDraw(Gfx *gdl);
 /* Shared port overlay primitives, in native viewport coordinates. */
 Gfx *portHudPanel(Gfx *gdl, f32 x, f32 y, f32 w, f32 h, u32 color);
 Gfx *portHudLabel(Gfx *gdl, const char *text, s32 x, s32 y, f32 scale, u32 color, s32 maxWidth);
+/* Cheat targets apply only to the corresponding solo stage and difficulty. */
+s32 portHudMissionTargetSeconds(s32 stage, s32 difficulty);
+void portHudMissionTimerText(s32 ticks, s32 target, char *text, s32 size);
+u32 portHudMissionTargetColor(s32 ticks, s32 target);
 /* Shared smooth strokes for gameplay sights and menu/watch cursors. */
 Gfx *portHudReticle(Gfx *gdl, f32 x, f32 y, f32 scaleX, f32 scaleY, u32 color, s32 ring);
 #endif
