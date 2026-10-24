@@ -8,9 +8,13 @@ param(
     [string]$Stage = 'dam',
     [switch]$Adzy,
     [switch]$Transitions,
+    [switch]$Dual,
     [ValidateSet(30,60,120,240)][int]$TickHz = 60
 )
 $ErrorActionPreference = 'Stop'
+if ($Dual -and ($Item -notin @(4,5,6,18,19,20,21) -or $Transitions)) {
+    throw '-Dual checks native left wrists in hip fire (ADS requires one gun); select one pistol item without -Transitions.'
+}
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 if (!$Executable) { $Executable = Join-Path $repoDir 'build_win\ProjectMidas.exe' }
 if (!$Rom) { $Rom = Join-Path $repoDir 'baserom.u.z64' }
@@ -28,20 +32,17 @@ $settings = @('[display]', 'fullscreen=window', 'vsync=0', "maxfps=$([Math]::Max
     'weapon_hud=0', 'always_health=0', '[input]', 'mouse=1')
 Set-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value $settings
 if ($Adzy) { Add-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value @('[display]','adzy=1') }
-# Skip the intro before the gun settles; no input is replayed during aiming.
-$inputFile = Join-Path $auditDir 'input.txt'
-Set-Content -LiteralPath $inputFile -Value @('P 0 0 0 0',
-    'P 80 8000 0 0', 'P 82 0 0 0', 'P 120 8000 0 0', 'P 122 0 0 0',
-    'P 160 8000 0 0', 'P 162 0 0 0', 'P 2200 0 0 0')
+# The intro harness stops automatically once live gameplay owns input.
 $auditEnv = @{
     GE_ROM=$Rom; GE_WINDOW=$resolution; GE_NOINPUT='1'; GE_STAGE=$Stage; GE_STAGE_AFTER='1';
     GE_CHEATS='invuln,invis,guns'; GE_ADS_AUDIT='1';
-    GE_INPUTPLAY=$inputFile;
+    GE_SKIPINTRO='1'; GE_ARM_AUDIT='1';
     GE_FRAMES=[string][Math]::Ceiling(8000 * [Math]::Max(1, $TickHz / 60.0)); GE_SEED='1'
 }
 $previousEnv = @{}
 if ($Item -ne 0) { $auditEnv.GE_ADS_AUDIT = [string]$Item }
 if ($Transitions) { $auditEnv.GE_ADS_AUDIT_TRANSITIONS = '1' }
+if ($Dual) { $auditEnv.GE_ADS_AUDIT_DUAL = '1' }
 $expectedCount = if ($Item -eq 0) { 20 } else { 1 }
 try {
     foreach ($key in $auditEnv.Keys) {

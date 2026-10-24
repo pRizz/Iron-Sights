@@ -19,13 +19,6 @@ static s32 controlsLive;
 static OSTime testTime = 1;
 static s32 savedSprint = -1;
 static s32 savedHud[6] = {-1,-1,-1,-1,-1,-1};
-static Vtx handVertices[18][16];
-static s32 handVertexSections;
-Vtx *dynAllocateVertices(s32 count)
-{
-    assert(count == 16 && handVertexSections < 18);
-    return handVertices[handVertexSections++];
-}
 u32 osVirtualToPhysical(void *address) { return (u32)address; }
 
 s32 portVideoOptionGet(const char *key, s32 *out) { (void) key; (void) out; return 0; }
@@ -169,65 +162,24 @@ int main(void)
     controlsLive = 1;
     selectPlayer(0);
     testSprint();
-    { /* Wardrobe follows the watch's cuff selection, not a stage-name table. */
-        AdsWardrobe blue = adsHandWardrobe(CUFF_BLUE, BOND_BROSNAN);
-        AdsWardrobe boiler = adsHandWardrobe(CUFF_BOILER, BOND_BROSNAN);
-        AdsWardrobe jungle = adsHandWardrobe(CUFF_JUNGLE, BOND_BROSNAN);
-        AdsWardrobe snow = adsHandWardrobe(CUFF_SNOW, BOND_BROSNAN);
-        AdsWardrobe tux = adsHandWardrobe(CUFF_BROSNAN, BOND_BROSNAN);
-        AdsWardrobe folder = adsHandWardrobe(CUFF_FOLDER, BOND_CONNERY);
-        assert(blue.material[ADS_SLEEVE].index == 1639 && boiler.material[ADS_SLEEVE].index == 1598);
-        assert(jungle.material[ADS_SLEEVE].index == 1644 && jungle.rolled);
-        assert(jungle.cuffEnd > 0.6f && blue.cuffEnd < 0.1f);
-        assert(snow.material[ADS_SLEEVE].index == 1632 && snow.cuffEnd < blue.cuffEnd);
-        assert(tux.material[ADS_SLEEVE].index == 1597 && tux.material[ADS_CUFF].index == 1605);
-        assert(folder.material[ADS_SLEEVE].index == 1695);
-        for (i = CUFF_BLUE; i <= CUFF_FOLDER; i++) {
-            AdsWardrobe a = adsHandWardrobe(i, BOND_BROSNAN);
-            s32 m;
-            assert(a.cuffEnd > 0 && a.cuffEnd < a.sleeveEnd && a.sleeveEnd < 1);
-            for (m = 0; m < ADS_MATERIALS; m++) {
-                assert(a.material[m].index > 0 && a.material[m].width && a.material[m].height);
-                assert(a.material[m].level == (a.material[m].index == 1651 ? 0 : m == ADS_SKIN || a.material[m].index == 1605 ? 6 : 4));
-            }
-            assert(a.material[ADS_SKIN].index == 1796);
-        }
-        folder = adsHandWardrobe(CUFF_FOLDER, BOND_MOORE);
-        assert(folder.material[ADS_SLEEVE].index == tux.material[ADS_SLEEVE].index);
-        folder = adsHandWardrobe(999, BOND_BROSNAN);
-        assert(folder.material[ADS_SLEEVE].index == blue.material[ADS_SLEEVE].index);
-        /* Switching/restoring the per-player cuff resolves immediately. */
-        players[0].bondtype = CUFF_JUNGLE; players[1].bondtype = CUFF_SNOW;
-        selectPlayer(0); folder = adsHandWardrobe(g_CurrentPlayer->bondtype, BOND_BROSNAN);
-        assert(folder.rolled);
-        selectPlayer(1); folder = adsHandWardrobe(g_CurrentPlayer->bondtype, BOND_BROSNAN);
-        assert(folder.material[ADS_SLEEVE].index == snow.material[ADS_SLEEVE].index);
-        players[0].bondtype = CUFF_BOILER; selectPlayer(0);
-        folder = adsHandWardrobe(g_CurrentPlayer->bondtype, BOND_BROSNAN);
-        assert(folder.material[ADS_SLEEVE].index == boiler.material[ADS_SLEEVE].index);
-        { /* Both grips must fit the allocated lists. Geometry-only lists are
-           * reused by the depth-only transition pass before texture binding. */
-            Gfx skin[114], sleeve[18], cuff[18];
-            Gfx *meshes[ADS_MATERIALS] = {skin,sleeve,cuff};
-            Mtxf identity = {.m={{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}}};
-            s32 m, v;
-            skin[113].words.w0 = sleeve[17].words.w0 = cuff[17].words.w0 = 0x12345678;
-            handVertexSections = 0;
-            assert(portAdsHandGrips(ITEM_AK47, &trigger, &support));
-            adsHandDrawGrip(meshes, &identity, support, TRUE, 0.5f, 1.0f, &jungle);
-            adsHandDrawGrip(meshes, &identity, trigger, FALSE, 0.5f, 1.0f, &jungle);
-            assert(meshes[ADS_SKIN] == skin+112 && meshes[ADS_SLEEVE] == sleeve+16 && meshes[ADS_CUFF] == cuff+16);
-            for (m = 0; m < ADS_MATERIALS; m++) gSPEndDisplayList(meshes[m]);
-            assert(skin[113].words.w0 == 0x12345678 && sleeve[17].words.w0 == 0x12345678 && cuff[17].words.w0 == 0x12345678);
-            assert(handVertexSections == 18);
-            for (m = 0; m < handVertexSections; m++) for (v = 0; v < 16; v++) {
-                assert(handVertices[m][v].v.cn[3] == 127);
-                assert(handVertices[m][v].v.tc[0] >= 0 && handVertices[m][v].v.tc[0] <= 31*32);
-                assert(handVertices[m][v].v.tc[1] >= 0 && handVertices[m][v].v.tc[1] <= 47*32);
-            }
-            for (m = 0; m < 112; m++) {
-                const u32 op = skin[m].words.w0 >> 24;
-                assert(op == (u8)G_VTX || op == (u8)G_TRI4);
+    { /* The support palm faces under/into the gun. The watch follows that
+       * roll rather than being billboarded towards the camera. */
+        Mtxf gun = {.m={{-1,0,0,0},{0,1,0,0},{0,0,-1,0},{0,-4,-42,1}}};
+        s32 grip, phase, left, k;
+        for (grip = 0; grip < sizeof(sAdsGrips)/sizeof(sAdsGrips[0]); grip++) {
+            for (phase = 0; phase <= 10; phase++) for (left = 0; left < 2; left++) {
+                AdsArmPose arm = adsNativePose(&gun,left ? sAdsGrips[grip].support : sAdsGrips[grip].trigger,left,phase/10.0f);
+                f32 backLength=0, sideLength=0, dot=0;
+                for (k = 0; k < 3; k++) {
+                    backLength += arm.back.f[k]*arm.back.f[k];
+                    sideLength += arm.side.f[k]*arm.side.f[k];
+                    dot += arm.back.f[k]*arm.axis.f[k];
+                }
+                assert(backLength > 0.999f && backLength < 1.001f);
+                assert(sideLength > 0.999f && sideLength < 1.001f);
+                assert(dot > -0.001f && dot < 0.001f);
+                if (left) { assert(arm.back.x < 0 && arm.back.y < 0 && arm.back.z < 0); }
+                else { assert(arm.back.x > 0); }
             }
         }
     }

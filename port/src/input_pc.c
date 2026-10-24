@@ -7677,11 +7677,14 @@ void portInputPadMerge(s32 idx, OSContPad *pad)
         }
         if (s_SkipIntro && idx == 0)
         {   /* GE_SKIPINTRO=1: tap A through the mission intro cameras
-             * (2-tick presses, one per ~2/3s, first 15s only - stops
-             * before it could cycle weapons in gameplay) */
+             * (2-tick presses, one per ~2/3s, first 15s only). Stop as
+             * soon as gameplay owns input so audits cannot cycle guns. */
+            extern s32 portStageRunning(void);
+            extern s32 portPlayerControlsLive(s32 p);
             static u32 sitick;
             u32 t = sitick++;
-            if (t > 60u && t < 900u && (t % 40u) < 2u)
+            if (portStageRunning() && portPlayerControlsLive(0)) s_SkipIntro = 0;
+            if (s_SkipIntro && t > 60u && t < 900u && (t % 40u) < 2u)
             {
                 pad->button |= CONT_A;
             }

@@ -752,12 +752,14 @@ static void joyPortAdsAudit(void)
     static s32 equipped;
     static s32 captured;
     static s32 count;
+    static s32 dual;
     static s32 end = sizeof(sAdsPoses) / sizeof(sAdsPoses[0]);
 
     if (enabled < 0)
     {
         const char *value = getenv("GE_ADS_AUDIT");
         enabled = value != NULL;
+        dual = getenv("GE_ADS_AUDIT_DUAL") != NULL;
         sAdsAuditTransitions = enabled && getenv("GE_ADS_AUDIT_TRANSITIONS") != NULL;
         if (value != NULL && atoi(value) >= ITEM_WPPK)
         {
@@ -773,11 +775,11 @@ static void joyPortAdsAudit(void)
         exit(0);
     }
     /* Let the equipped gun settle, then capture a complete raise and lower. */
-    sHeld[0][PORTACT_AIM_DOWN_SIGHTS] = !sAdsAuditTransitions || (time >= 75.0f && time < 130.0f);
+    sHeld[0][PORTACT_AIM_DOWN_SIGHTS] = !dual && (!sAdsAuditTransitions || (time >= 75.0f && time < 130.0f));
     if (!equipped)
     {
         bondinvSetAllGunsFlag(TRUE);
-        currentPlayerEquipWeaponWrapper(GUNLEFT, ITEM_UNARMED);
+        currentPlayerEquipWeaponWrapper(GUNLEFT, dual ? sAdsPoses[index].item : ITEM_UNARMED);
         currentPlayerEquipWeaponWrapper(GUNRIGHT, sAdsPoses[index].item);
         equipped = TRUE;
     }
@@ -787,7 +789,7 @@ static void joyPortAdsAudit(void)
         g_CurrentPlayer->hands[GUNRIGHT].weapon_ammo_in_magazine =
             get_ptr_item_statistics(sAdsPoses[index].item)->MagSize;
     }
-    if (time >= 120.0f && !captured && portAdsActive() && portAdsBlend() == 1.0f
+    if (time >= 120.0f && !captured && (dual || (portAdsActive() && portAdsBlend() == 1.0f))
         && getCurrentPlayerWeaponId(GUNRIGHT) == sAdsPoses[index].item
         && g_CurrentPlayer->hands[GUNRIGHT].weapon_action_state == GUN_ANIM_STATE_IDLE
         && g_CurrentPlayer->hands[GUNRIGHT].weapon_current_animation == 0)

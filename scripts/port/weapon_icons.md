@@ -7,7 +7,7 @@ alpha and downsamples with premultiplied area sampling. No Python, compiler,
 network access or rebuild is needed by players.
 
 A progress window shows 35 images; Esc skips preparation. The per-user SDL
-application-data folder contains `weapon-icons-v1-<ROM fingerprint>.cache` and
+application-data folder contains `weapon-icons-v6-<ROM fingerprint>.cache` and
 `last-preparation.log`. About shows readiness. Cache validation checks the ROM,
 generator version, dimensions, complete slot coverage, exact lengths and CRC.
 Invalid caches regenerate; errors or skipping fall back to weapon names.
@@ -15,7 +15,16 @@ The helper uses neutral settings and temporary program files, leaves campaign
 saves/settings alone, and removes its temporary executable on exit. Unicode
 paths are supported. Linux can read this cache format; automatic generation
 currently targets Windows. Bump `PORT_ICON_CACHE_VERSION` when rendering changes
-need new images. Generated ROM-derived data must stay out of Git.
+need new images. Version 2 introduced the authored pause-watch forearm meshes
+and UVs in place of estimated sleeve coverage. Version 4 supersedes version 3
+arm-body thickening: it fits the wrist to the retained native hand independently
+of arm length, blends the cuff/forearm profile and refits the watch. Version 5
+lightens the watch model's exposed-skin materials to match the native hand,
+preserving sleeves, watch materials and texture detail. Version 6 measures the
+actual shared wrist seam and stitches forearm edge triangles directly to the
+native chopping hand's polygon outline, closing gaps throughout the animation.
+It also closes the open clothing rim around the exposed wrist. Generated ROM-derived
+data must stay out of Git.
 
 The 38 indexed slots include aliases and empty entries, 29 weapon images and
 six wardrobe-specific unarmed images. The HUD chooses the current mission's

@@ -1778,7 +1778,7 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
         }
 
 #ifndef TARGET_N64
-        portWardrobeBegin(item);
+        portWardrobeBeginHand(item, handnum);
 #endif
         subdraw(&renderdata, (Model *)&handptr->field_B68);
 #ifndef TARGET_N64
