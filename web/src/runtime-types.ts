@@ -31,6 +31,7 @@ export type GameModule = {
   _portWebSetPaused(paused: number): void;
   _portWebControlsLive(): number;
   _portWebCaptureMouse(): number;
+  _portWebGetGfxTasks(): number;
 };
 
 export type GameOptions = {
@@ -44,6 +45,6 @@ export type GameOptions = {
   onExit(code: number): void;
   preRun?(module: GameModule): void;
   locateFile?(name: string): string;
-  wasmBinary?: ArrayBuffer;
+  instantiateWasm?(imports: WebAssembly.Imports, ready: (instance: WebAssembly.Instance) => void): WebAssembly.Exports;
 };
 export type CreateGame = (options: GameOptions) => Promise<GameModule>;

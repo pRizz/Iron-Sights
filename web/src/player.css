@@ -1,0 +1,240 @@
+.player-card {
+    min-width: 0;
+    background: #191e16;
+    border: 1px solid #3a4233;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.player-toolbar {
+    height: 47px;
+    padding: 0 18px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #b3beaa;
+    font-size: 12px;
+    border-bottom: 1px solid #30382a;
+}
+.status-dot {
+    width: 6px;
+    height: 6px;
+    background: #b4c18d;
+    border-radius: 50%;
+}
+.toolbar-spacer {
+    flex: 1;
+}
+.quiet {
+    padding: 5px 8px;
+    border-color: transparent;
+    font-size: 11px;
+    background: transparent;
+}
+.game-stage {
+    position: relative;
+    background: #0a0e09;
+    aspect-ratio: 16/9;
+}
+#canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16/9;
+    height: auto;
+    background: #000;
+}
+.welcome-overlay,
+.pause-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    text-align: center;
+}
+.welcome-overlay {
+    background:
+        radial-gradient(ellipse at 50% 30%, #323d2238, transparent 68%),
+        repeating-linear-gradient(0deg, transparent 0 39px, #3b4b2a18 39px 40px),
+        repeating-linear-gradient(90deg, transparent 0 39px, #3b4b2a18 39px 40px), #10160d;
+}
+.welcome-overlay::before,
+.welcome-overlay::after {
+    content: '';
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-color: #8a946a;
+    pointer-events: none;
+}
+.welcome-overlay::before {
+    top: 21px;
+    left: 21px;
+    border-top: 1px solid;
+    border-left: 1px solid;
+}
+.welcome-overlay::after {
+    bottom: 21px;
+    right: 21px;
+    border-bottom: 1px solid;
+    border-right: 1px solid;
+}
+.welcome-overlay h2 {
+    font-size: clamp(20px, 2.3vw, 29px);
+    margin: 9px 0 10px;
+    letter-spacing: -0.8px;
+}
+.welcome-overlay > p:not(.eyebrow),
+.pause-overlay > p:not(.eyebrow) {
+    color: #a7b29a;
+    font-size: 13px;
+}
+.welcome-overlay small {
+    color: #7f8e71;
+    font-size: 10px;
+    margin-top: 14px;
+}
+.reticle {
+    position: relative;
+    width: 77px;
+    height: 77px;
+    margin-bottom: 20px;
+    display: grid;
+    place-items: center;
+    color: #c6af77;
+    font-size: 12px;
+    letter-spacing: 2px;
+    font-weight: 500;
+    border: 1px solid #51613d;
+    border-radius: 50%;
+}
+.reticle:before,
+.reticle:after {
+    content: '';
+    position: absolute;
+    background: #71805b;
+}
+.reticle:before {
+    width: 105px;
+    height: 1px;
+}
+.reticle:after {
+    height: 105px;
+    width: 1px;
+}
+.reticle span {
+    z-index: 1;
+    background: #151d11;
+    padding: 7px 3px;
+}
+.reticle i {
+    position: absolute;
+    inset: 7px;
+    border: 1px solid #37452b;
+    border-radius: 50%;
+}
+.file-button {
+    background: #d5b77a;
+    color: #1b2116;
+    font-weight: 600;
+    font-size: 12px;
+    margin-top: 24px;
+    min-width: 150px;
+    border-color: #dfc58d;
+    display: flex;
+    gap: 28px;
+    align-items: center;
+    justify-content: center;
+}
+.file-button:hover:not(:disabled) {
+    background: #ebce92;
+    border-color: #e5cb8d;
+}
+.dragging .welcome-overlay {
+    outline: 2px dashed #d8b577;
+    outline-offset: -9px;
+    background-color: #2d3821;
+}
+.pause-overlay {
+    background: #0c120ce8;
+    z-index: 2;
+    backdrop-filter: blur(5px);
+}
+.pause-overlay h2 {
+    font-size: 30px;
+    margin: 12px 0;
+}
+.pause-overlay .primary {
+    margin-top: 25px;
+}
+.primary {
+    min-height: 43px;
+    min-width: 175px;
+    color: #181d13 !important;
+    font-size: 12px;
+    font-weight: 700;
+    gap: 25px;
+    flex-shrink: 0;
+}
+.primary:hover:not(:disabled) {
+    border-color: #f0d59b;
+}
+.launch-bar {
+    min-height: 86px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    gap: 20px;
+    border-top: 1px solid #35402c;
+}
+.launch-bar strong {
+    display: block;
+    color: #b8c2ab;
+    font-size: 12px;
+    font-weight: 500;
+}
+progress {
+    display: block;
+    width: 190px;
+    height: 4px;
+    margin-top: 10px;
+    border: 0;
+    accent-color: #d8b577;
+    background: #343f29;
+    border-radius: 3px;
+}
+progress::-webkit-progress-bar {
+    background: #343f29;
+    border-radius: 3px;
+}
+progress::-webkit-progress-value {
+    background: #d8b577;
+    border-radius: 3px;
+}
+.game-stage:fullscreen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+}
+.game-stage:fullscreen #canvas {
+    width: min(100vw, calc(100vh * 16 / 9));
+    aspect-ratio: 16/9;
+    height: auto;
+}
+.fullscreen-exit {
+    display: none;
+}
+.game-stage:fullscreen .fullscreen-exit {
+    display: block;
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    z-index: 5;
+    font-size: 12px;
+    background: #172013cc;
+}

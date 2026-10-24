@@ -7,9 +7,10 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
     "types": ["vite/client", "bun"]
   },
-  "include": ["src", "vite.config.ts", "playwright.config.ts", "tests", "tools/*.ts"]
+  "include": ["src", "vite.config.ts", "tailwind.config.ts", "playwright.config.ts", "tests", "tools/*.ts"]
 }

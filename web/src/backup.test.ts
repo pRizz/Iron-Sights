@@ -57,9 +57,16 @@ describe('save backup boundary', () => {
   });
 
   test.each(['Data/Profiles/Agent 007.geprofile', 'Data/Devices/kbm.gedevice',
-    'gamecontrolleruser.txt'])('allows %s', path => {
+    'gamecontrolleruser.txt', 'Data/Profiles/Web.Audit!.geprofile', 'Data/Profiles/Météore.geprofile'])('allows %s', path => {
     // Arrange / Act / Assert
     expect(allowedUserPath(path)).toBe(true);
+  });
+
+  test.each(['Data/Profiles/CON.geprofile', 'Data/Profiles/NUL.any.geprofile',
+    'Data/Profiles/none.geprofile', 'Data/Profiles/ A.geprofile', 'Data/Profiles/A .geprofile',
+    'Data/Profiles/A..geprofile', 'Data/Profiles/A:B.geprofile', 'Data/Profiles/A\\B.geprofile',
+    `Data/Profiles/${'é'.repeat(12)}.geprofile`])('rejects an unsupported native profile %s', path => {
+    expect(allowedUserPath(path)).toBe(false);
   });
 
   test.each(['null', '[]', '"string"'])('rejects a non-object envelope %s', async text => {

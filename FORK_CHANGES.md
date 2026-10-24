@@ -1231,7 +1231,7 @@ syntax validation passed. No game rebuild or render regeneration was needed.
 ### FORK-024 — Browser target plan and portability groundwork
 
 **Status:** Plan accepted on 2026-10-24; Wasm core portability and playable
-prototype gates achieved. Storage/launcher integration follows; no Pages release.
+prototype, persistence and local launcher gates achieved; no Pages release.
 
 The root CMake project now has Emscripten core and SDL2/WebGL 2 configurations.
 It keeps native flags/link processing separate, uses the verified high data
@@ -1298,15 +1298,15 @@ runtime audit. No ROM is copied into the output directory or uploaded. A pinned
 `web/` Bun subpackage adds strict source type checking and synthetic ROM/backup
 boundary tests. The backup format allowlists campaign EEPROM, profiles, device
 bindings, settings and custom controller layouts; it rejects ROMs, suspend
-images, traversal, duplicates, invalid sizes and checksum damage. This is codec
-and adapter groundwork, not implemented game-file durability or launcher UI.
+images, traversal, duplicates, invalid sizes and checksum damage. The launcher
+now connects these adapters to actual game-file durability.
 The separate IndexedDB ROM adapter snapshots original byte order in a Blob;
 deleting it is independent of save files. A named Web Lock excludes a second
 save writer, and a serialized synchronization queue retains dirty revisions
 after errors, reports failure and supports retry. ROM-free browser integration
 passed reload/original-byte preservation, aborted-write preservation, deletion
-and cross-tab lock transfer; three queue tests passed. IDBFS/game integration
-and actual campaign persistence remain open.
+and cross-tab lock transfer; three queue tests passed. Actual campaign/profile/
+settings reload now passes the private launcher audit.
 The IDBFS adapter now mounts/restores before creating the runtime alias and
 tracks writable closes, renames and deletes. Monotonic modification times keep
 same-millisecond writes distinct. Backup replacement rolls back the prior memory
@@ -1318,6 +1318,28 @@ files in memory and after reload. These are synthetic-data tests, not actual
 campaign or host-quota-exhaustion validation. The video target exports IDBFS.
 The inherited compiled logo payload remains a packaging follow-up before Pages
 publication; the deployment milestone records the required ROM-backed replacement.
+The following launcher slice now builds locally with SolidJS and commit-pinned
+MysticUI/Tailwind. It adds file/drop selection and ROM remembering, typed engine
+and capture states, visible download/compile/save stages, backup controls with
+replacement confirmation, storage protection and fullscreen. A static assembler
+allowlists the runtime/config outputs, uses immutable content-versioned paths,
+records the game's existing generated build metadata and verifies the downloaded
+Wasm size/digest. Native profile filename rules now preserve valid dots,
+punctuation and Unicode within the native byte limit. Manifest parsing rejects
+malformed provenance and unsafe link schemes. Empty restores regain browser
+defaults when Play starts. The launcher surfaces game-start failures and retains
+save downloads. New sources use pinned Prettier 3.9.10 with a local configuration.
+ROM-free UX acceptance passes invalid files, restore/cancel/download, denied
+storage protection, fullscreen, cross-tab retry, remember preference reload and
+damaged-ROM removal. An injected quota-style IDBFS abort preserves the prior
+snapshot and exposes working Retry; actual host quota exhaustion is not claimed.
+The private launcher audit has preserved real campaign/profile/settings bytes
+across reload. Edge 156 and Chrome 155 pass normal-menu Dam startup, capture,
+nonzero audio, focus pause/resume and watch release/recovery. Chrome additionally
+round-trips the actual game backup through the restore UI. Real ROM removal
+preserves save files. Launcher/game/watch/repeat-launch screenshots were reviewed;
+private evidence stays local. No deployed site is claimed. Strict TypeScript,
+62 unit tests, storage/IDBFS integrations, formatting and static assembly pass.
 AGENTS now documents the root CMake versus browser subpackage commands.
 
 Recorded the user-approved browser target design and six milestones so later
@@ -1363,6 +1385,8 @@ Existing native and asset ownership contracts continue to apply.
 [sync queue](web/src/sync-queue.ts), [browser storage audit](web/tools/storage-audit.mjs),
 [persistent files](web/src/persistent-files.ts), [runtime boundary](web/src/runtime-types.ts),
 [filesystem fixture](web/tests/filesystem.c), [filesystem audit](web/tools/filesystem-audit.mjs),
+[launcher](web/src/app.tsx), [engine](web/src/engine.ts), [capture controller](web/src/capture.ts),
+[ROM lifecycle](web/src/rom-manager.ts), [site assembler](web/tools/build-site.ts),
 [sampler GLSL](port/web/sampler.glsl), [focus adapter](port/web/lifecycle.c),
 [runtime audit](web/tools/runtime-audit.mjs), [menu audit](web/tools/menu-audit.mjs),
 [collision regression](scripts/port/test_stan_callbacks.c),

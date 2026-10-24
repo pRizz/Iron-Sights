@@ -10,8 +10,15 @@ const MAX_TOTAL_BYTES = 4 * 1024 * 1024;
 
 export function allowedUserPath(path: string): boolean {
   if (path === 'Data/Saves/eeprom.bin' || path === 'midas.ini' || path === 'gamecontrolleruser.txt') return true;
-  return /^Data\/Profiles\/[A-Za-z0-9 _-]{1,63}\.geprofile$/.test(path)
-    || /^Data\/Devices\/[A-Za-z0-9_-]{1,128}\.gedevice$/.test(path);
+  const maybeProfile = /^Data\/Profiles\/([^/]+)\.geprofile$/.exec(path);
+  if (!maybeProfile) return /^Data\/Devices\/[A-Za-z0-9_-]{1,128}\.gedevice$/.test(path);
+  // Match port_profiles.c's portable names, including the watch keyboard's !
+  // and dots. PROFILE_NAME_MAX is 24 bytes including the terminating NUL.
+  const name = maybeProfile[1];
+  const base = name.split('.')[0].replace(/ +$/, '').toLowerCase();
+  return new TextEncoder().encode(name).length <= 23 && name !== 'none'
+    && !name.startsWith(' ') && !/[ .]$/.test(name) && !/[\x00-\x1f\\:*?"<>|]/.test(name)
+    && !/^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/.test(base);
 }
 
 export function validateUserFiles(files: UserFile[]): void {

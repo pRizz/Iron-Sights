@@ -187,8 +187,8 @@ Broader browser/mission and performance acceptance remains WEB-006.
 
 ## WEB-003 | 2026-10-24 | Save persistence and backups
 
-**Status:** ROM cache, writer lock, IDBFS adapter and backup transactions pass
-ROM-free integration tests. Actual campaign/launcher integration remains open.
+**Status:** Complete. Actual campaign/profile/settings reload and backup restore
+pass through the launcher, alongside storage failure/retry and concurrent-tab checks.
 
 **Completion:** Campaign saves, profiles and settings survive fresh launches;
 backup export/import round-trips and failures preserve existing data.
@@ -202,7 +202,8 @@ canonical base64 and per-file SHA-256. Synthetic unit tests round-trip binary
 campaign/text settings and reject traversal, ROM/suspend files, duplicates,
 truncation, damage and unsupported versions. A real SDK filesystem fixture now
 tests C writes through IDBFS, reload, transaction sequencing and backup rollback.
-Actual game campaign durability and user-facing storage errors remain unverified.
+The earlier synthetic checkpoint is superseded by the real-game launcher
+evidence below. Actual host quota exhaustion is not claimed.
 
 **Decisions:** Use the stable IDBFS mount `/midas-ads-user` with `/user` as its
 runtime alias; this isolates the game from other projects on the same Pages
@@ -211,9 +212,8 @@ writer session. Use a separate IndexedDB database `project-midas-ads:rom`, schem
 version 1, for the original ROM Blob. Keep these identities stable across app
 deployments and perform explicit migrations for future schema changes.
 
-**Next action:** Connect the adapter to game initialization and launcher status;
-verify real campaign/profile/settings changes after fresh launches, denied
-persistence and user-facing error/retry controls. Keep suspend images disabled.
+**Next action:** Preserve these storage identities during WEB-005 deployment and
+verify an actual deployed update. Keep suspend images disabled.
 
 **Session notes:**
 
@@ -236,11 +236,23 @@ persistence and user-facing error/retry controls. Keep suspend images disabled.
   injected sync and partial memory-write failure rollback, durable prior-file
   preservation after reload and the running-game import guard. These tests use
   synthetic bytes, not an actual campaign or a real quota exhaustion event.
+- 2026-10-24 completion: the actual launcher in Edge 156 and Chrome 155 created
+  a 512-byte campaign EEPROM, device bindings, `Web.Audit!.geprofile` and settings
+  changed through the native console, then reproduced all backup bytes after
+  fresh page initialization. Chrome additionally restored that actual backup
+  through confirmation and reproduced its files exactly. Forgetting the real
+  remembered ROM and reloading disabled Play while preserving all save files.
+  The native profile filename policy now retains valid punctuation/Unicode with
+  its 23-byte limit. The ROM-free launcher audit passed invalid backup rejection,
+  cancel/restore/export, denied storage protection, second-writer rejection and
+  lock transfer/retry. An injected quota-style abort of the real IDBFS transaction
+  rolled back memory files, retained durable data, exposed a save error and
+  recovered with Retry. Storage/IDBFS fixture reruns and 62 unit tests passed.
 
 ## WEB-004 | 2026-10-24 | Browser launcher
 
-**Status:** Tooling and ROM validation groundwork implemented. Launcher UI still
-depends on the runtime/storage interfaces from WEB-002 and WEB-003.
+**Status:** Complete for the local desktop launcher. First/repeat launch,
+storage/error flows and normal Dam capture/audio/focus/watch checks pass.
 
 **Completion:** First/repeat launch, remembered ROM, staged loading, Play/Resume,
 fullscreen, storage controls and recoverable errors work without ROM uploads.
@@ -254,12 +266,47 @@ three byte orders without mutating stored originals, checks exact size before
 reading and validates normalized SHA-256. Combined ROM/backup tests: 33 passed.
 Private local validation also accepted the user's real ROM in all three byte
 orders, using in-memory swapped copies.
-This package currently exposes tests/typechecking/auditing, not a production
-frontend build. No remembered-ROM, loading, fullscreen or storage-control UX
-acceptance is claimed.
+The initial codec checkpoint exposed tests/typechecking/auditing without a
+frontend. The local build and accepted browser flows below supersede that
+limitation. Deployed-site acceptance remains WEB-005.
 
-**Next action:** Define explicit launch states and typed runtime/storage
-interfaces; implement file/drop selection and browser capability checks.
+**Next action:** Continue WEB-005 packaging and Pages deployment, then WEB-006's
+broader mission/browser compatibility and performance acceptance.
+
+**Session notes:**
+
+- 2026-10-24: pushed prototype/storage checkpoint `9e725cb`; both Windows
+  builds/provenance and Bright Builds workflows passed. Added a SolidJS page,
+  typed engine/ROM/capture controllers, file/drop selection, remembered-ROM
+  preference, engine download/initialization stages, save status and retry,
+  backup download/confirmed restore, storage protection and fullscreen controls.
+  The engine restores IDBFS before Play; saves can be backed up without starting
+  a mission. These flows are implemented, not yet accepted by browser tests.
+  The static build passes TypeScript and Vite (84 kB JS / 49 kB CSS before gzip).
+  MysticUI follows the managed Solid default and its official README setup,
+  pinned to `d36017757708ed01ef2b3b47beb14f294726411c`; Tailwind 3.4.19, PostCSS
+  8.5.31 and Autoprefixer 10.6.1 are exact pins. Its unused particle dependency's
+  install script remains blocked; the selected button builds without it.
+  Assembly allowlists runtime/config files, hashes an immutable runtime path,
+  verifies the downloaded Wasm digest, and uses the game's generated build-info
+  metadata rather than attributing an old binary to the current frontend HEAD.
+  No Pages deployment exists yet; the compiled-logo follow-up remains WEB-005.
+- 2026-10-24 completion: the assembled site passed real-ROM launch/reload/removal,
+  native campaign/profile/settings durability, normal-menu Dam startup, nonzero
+  Web Audio, capture, focus pause/resume, watch release/recovery and independent
+  save backup checks in Edge 156 and Chrome 155. Outgoing requests were GET only;
+  no page errors occurred. Private evidence stays under `build/web-ui`.
+  Reviewed the launcher, Dam, watch and repeat-launch screenshots. The ROM-free
+  UI audit additionally passed invalid drop/import, confirmed restore/cancel,
+  export, declined protection, fullscreen enter/exit, concurrent-tab retry,
+  damaged-ROM removal, preference reload and IDBFS failure/retry. Manifest
+  metadata is validated before rendering provenance links. Main startup repairs
+  missing default settings after an empty restore and surfaces fatal startup
+  errors. The page uses component-specific CSS and pinned Prettier 3.9.10;
+  strict TypeScript, 62 unit tests, storage/IDBFS tests, scoped formatting and
+  Bright Builds checks passed. Static output is 86 kB JS / 49 kB CSS before gzip.
+  No game/render source changed in this launcher slice, so the committed native
+  gallery remains current. Commands are in `web/README.md`; deployment is next.
 
 ## WEB-005 | 2026-10-24 | GitHub Pages deployment
 

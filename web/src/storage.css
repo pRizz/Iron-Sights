@@ -1,0 +1,139 @@
+.sidebar {
+    display: grid;
+    gap: 18px;
+}
+.storage-card,
+.controls-card {
+    background: #1b2117;
+    padding: 23px 21px;
+    border: 1px solid #39432f;
+    border-radius: 10px;
+}
+.storage-card h2 {
+    margin: 7px 0 25px;
+    font-size: 20px;
+}
+.data-row {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+}
+.data-icon {
+    display: grid;
+    place-items: center;
+    width: 33px;
+    height: 36px;
+    color: #c4b07f;
+    background: #293023;
+    border: 1px solid #424c35;
+    font-size: 23px;
+    flex-shrink: 0;
+}
+.data-row strong {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+}
+.data-row p {
+    color: #98a58a;
+    font-size: 11px;
+    margin-top: 5px;
+    line-height: 1.5;
+}
+.filename {
+    max-width: 195px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.remembered {
+    display: block;
+    margin: 14px 0 0 46px;
+    color: #b2ca8b;
+    font-size: 10px;
+}
+.check-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 11px;
+    margin-top: 21px;
+    cursor: pointer;
+}
+.check-row input {
+    accent-color: #c3ad79;
+    width: 14px;
+    height: 14px;
+}
+.text-button {
+    padding: 0;
+    background: transparent;
+    border: 0;
+    font-size: 10px;
+    color: #acb59d;
+    margin-top: 12px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.text-button:hover:not(:disabled) {
+    background: transparent;
+    color: #e5cb92;
+}
+hr {
+    border: 0;
+    height: 1px;
+    background: #39422f;
+    margin: 23px 0;
+}
+.wide-button {
+    display: block;
+    width: 100%;
+    text-align: center;
+    font-size: 11px;
+    padding: 11px 5px;
+    margin-top: 17px;
+    background: #323d26;
+    border-color: #546340;
+    color: #d4dfc3;
+}
+.wide-button.secondary {
+    background: transparent;
+    margin-top: 8px;
+    border-color: #445135;
+    color: #aebda0;
+}
+.fine-print {
+    color: #87977a;
+    font-size: 10px;
+    line-height: 1.7;
+    margin-top: 12px;
+}
+.protection {
+    color: #b9c5a8;
+    font-size: 11px;
+    line-height: 1.6;
+}
+.controls-card .eyebrow {
+    margin-bottom: 18px;
+}
+.controls-card > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 11px 0;
+}
+.controls-card > div > span {
+    font-size: 11px;
+    color: #a9b99b;
+}
+kbd {
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    color: #d0d8c4;
+    border: 1px solid #465138;
+    background: #252e1e;
+    padding: 4px 6px;
+    border-radius: 4px;
+}
