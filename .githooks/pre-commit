@@ -1,5 +1,10 @@
 #!/bin/sh
 set -eu
+if ! command -v bun >/dev/null 2>&1; then
+  printf '%s\n' 'Bun is required for Bright Builds checks. Install Bun globally, then retry.' >&2
+  exit 1
+fi
+bun scripts/bright-builds-check.ts all
 python=$(git config --get midas.galleryPython || true)
 if [ -z "$python" ]; then python=python3; fi
 exec "$python" scripts/port/hand_gallery.py pre-commit

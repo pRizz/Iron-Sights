@@ -295,3 +295,6 @@ docs/devnotes/
 !/review/hand-gallery/images/
 /review/hand-gallery/**/*.bmp
 /review/hand-gallery/**/*.cache
+
+# Local standards installation backups; the original project checklist is preserved in source.
+/.bright-builds-rules-backups/

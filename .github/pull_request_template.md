@@ -1,42 +1,28 @@
-## Goal
+# Pull Request Template
 
-Why are you doing this PR?
+<!-- bright-builds-rules-managed-file: .github/pull_request_template.md -->
 
-Please also include your motivation and context. 
+This template is managed upstream by `bright-builds-rules`. If it needs a fix, open an upstream PR or issue instead of editing the downstream managed copy.
 
-Did you create an issue first? Was the approach to the fix or the feature discussed before you created this PR?
+## Summary
 
-## Description
+Describe the behavior change and why it is needed.
 
-Please include a summary of the changes and the related issue.
+## Standards impact
 
-Fixes # (link your issue here) if applicable
+- [ ] Business logic still follows the intended functional core / imperative shell shape.
+- [ ] New or changed pure/business logic has unit tests.
+- [ ] Unit tests remain focused on one concern and use clear Arrange / Act / Assert structure.
+- [ ] Any repo-specific exception has been recorded in `standards-overrides.md`.
+- [ ] When plan, review, or audit work relied on Bright Builds Rules guidance, the summary briefly names the local guidance, sidecar, overrides, or standards pages that materially informed it.
 
-## Type of Change
+## Verification
 
-Please delete options that are not relevant.
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Documentation update
-- [ ] Other
+- [ ] Relevant repo-native verification ran and passed when applicable
+- [ ] `bun scripts/bright-builds-check.ts all` ran and passed, or every intentional exact-file or trailing-slash directory exception has a reason in `.bright-builds-rules-checks.tsv`
+- [ ] Any CI-only or hook-owned verification exception is documented
+- [ ] Changed paths were validated manually when appropriate
 
-## How Has This Been Tested?
+## Risks
 
-Please describe the tests that you ran to verify your changes. Provide instructions so we can reproduce.
-- [ ] Test Case A
-- [ ] Test Case B
-
-Please describe every way you've tried to break the game. How did this not break other features the game has?
-
-## Checklist
-- [ ] I updated [FORK_CHANGES.md](../FORK_CHANGES.md) for every added, modified, removed or replaced area, including documentation and tooling
-- [ ] My code has been thoroughly tested and is free of bugs
-- [ ] I have performed a self-review of my code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] The commits I've made a clean, small and easy to understand
-- [ ] My changes generate no compiler warnings
-- [ ] My Code is AI-Generated or AI-assisted (please specify which AI model you are using)
-- [ ] My PR contains no AI-generated images, textures, models, sound or music (these are never accepted)
-- [ ] I am an AI (please specify which AI model you are)
-- [ ] I have reviewed my PR to make sure the above is truthful and accurate. I understand my PR can be rejected if it doesn't meet this project's standards. 
+Document any residual risk, rollout concern, or follow-up work.

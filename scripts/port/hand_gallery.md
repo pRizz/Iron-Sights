@@ -63,6 +63,9 @@ This installs the repository's `.githooks/pre-commit` through this clone's local
 Git configuration and records the Python interpreter. Git does not activate
 hooks automatically on clone. The installer refuses to replace another hooks
 directory or an existing custom pre-commit hook.
+The hook also runs `bun scripts/bright-builds-check.ts all` before gallery
+verification, so install Bun globally before enabling it. See the
+[Bright Builds workflow](bright_builds_rules.md) for the legacy source baseline.
 
 On every commit the hook checks the **staged** gallery against staged source
 inputs and validates all image hashes. An unchanged, fresh gallery needs no

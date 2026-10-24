@@ -1,5 +1,16 @@
 # Project Midas ADS
 
+<!-- bright-builds-rules-readme-badges:begin -->
+
+<!-- Managed upstream by bright-builds-rules. If this badge block needs a fix, open an upstream PR or issue instead of editing the downstream managed block. Keep repo-local README content outside this managed badge block. -->
+
+[![GitHub Stars](https://img.shields.io/github/stars/pRizz/Project-Midas-ADS)](https://github.com/pRizz/Project-Midas-ADS)
+[![License](https://img.shields.io/github/license/pRizz/Project-Midas-ADS?style=flat-square)](./LICENSE)
+[![Bright Builds: Rules](https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/public/badges/bright-builds-rules-flat.svg)](https://github.com/bright-builds-llc/bright-builds-rules)
+[![OpenLinks profile](https://img.shields.io/badge/OpenLinks-profile-0F172A)](https://openlinks.us/)
+
+<!-- bright-builds-rules-readme-badges:end -->
+
 Project Midas ADS is an independent fork of [Project Midas](https://github.com/murkantor/Project-Midas), adding modern aiming, movement, and HUD options to the GE PC port. This fork is maintained separately from upstream.
 
 **[See the full list of changes from upstream →](FORK_CHANGES.md)** — the maintained inventory of this fork's additions, modifications, settings, and fixes.

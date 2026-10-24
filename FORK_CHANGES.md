@@ -72,7 +72,7 @@ and earned-status hints. It also highlights enhanced community fonts (FORK-021).
 Contributor inventory-maintenance instructions sit under
 Contributing, alongside the existing contribution links.
 
-**Sources:** [readme.md](readme.md),
+**Sources:** [README.md](README.md),
 [gameplay thumbnail](.github/images/ads-gameplay-thumbnail.png),
 [settings reference](tools/midas_ini_help.txt).
 **History:** `9e46d0d`, `aefb55a`, `74ce634`, `5edcf1a`, `4e37864`.
@@ -452,9 +452,11 @@ The versioned review gallery (FORK-022) is a narrow, user-authorized exception
 to the generated-image exclusion: final reference HTML/PNG/manifest only,
 without ROMs, extracted assets, caches or raw captures. Repository instructions
 require fresh references alongside rendering changes and explicit image review.
+Bright Builds adoption (FORK-023) preserves these rules and the former project
+PR checklist while installing managed standards and extending the existing hook.
 
 **Sources:** [AGENTS.md](AGENTS.md), [FORK_CHANGES.md](FORK_CHANGES.md),
-[CONTRIBUTING.md](CONTRIBUTING.md), [readme.md](readme.md),
+[CONTRIBUTING.md](CONTRIBUTING.md), [README.md](README.md),
 [PR template](.github/pull_request_template.md),
 [arm rendering contracts](scripts/port/arm_rendering.md).
 **Verification:** Local Markdown paths and Git whitespace checks; no runtime
@@ -479,7 +481,7 @@ timers are unchanged.
 
 **Sources:** [HUD state and gauge styling](port/src/port_hud.c),
 [gauge rendering](src/game/bondview2.c), [settings](port/src/port_options.c),
-frontend/watch HUD pages, [README](readme.md),
+frontend/watch HUD pages, [README](README.md),
 [INI reference](tools/midas_ini_help.txt).
 **Checks:** [HUD tests](scripts/port/test_hud.sh) cover idle timing at
 30/60/120/240 Hz, pause/player isolation, damage refresh with indicators off,
@@ -534,7 +536,7 @@ Local images are ignored by Git.
 [input actions](port/src/joy_port.c), [native input](port/src/input_pc.c),
 [watch pages](port/src/port_watchpages.c), [render barrier](port/src/video.c),
 [native audio](port/src/audio_pc.c), shared HUD panel/text helpers and aim gates,
-[README](readme.md), [INI reference](tools/midas_ini_help.txt),
+[README](README.md), [INI reference](tools/midas_ini_help.txt),
 [format/validation guide](scripts/port/save_states.md), [.gitignore](.gitignore).
 **Checks:** ROM-free [codec/compatibility and input tests](scripts/port/test_states.sh),
 [layout tests](scripts/port/test_state_layout.py), and existing ADS/HUD tests
@@ -582,7 +584,7 @@ now matches the actual video default, correcting its inherited claim of 1.
 **Sources:** [timer rendering](src/game/gunfire.c),
 [target lookup/format/colors](port/src/port_hud.c), [HUD API](port/include/port_hud.h),
 [campaign time API](src/game/file2.h),
-[setting/default](port/src/video.c), [README](readme.md),
+[setting/default](port/src/video.c), [README](README.md),
 [INI guide](tools/midas_ini_help.txt).
 **Checks:** [HUD tests](scripts/port/test_hud.c) cover stage/index resolution,
 difficulty exclusions, saved-record stage/folder lookup and missing records,
@@ -621,7 +623,7 @@ unchanged by these indicators.
 **Sources:** [menu integration](src/game/front.c),
 [status/requirements](port/src/port_mission_cheats.c),
 [API](port/include/port_mission_cheats.h), [earned-bit reader](src/game/file2.c),
-[save API](src/game/file2.h), [README](readme.md).
+[save API](src/game/file2.h), [README](README.md).
 **Checks:** [ROM-free status tests](scripts/port/test_mission_cheats.sh) exercise
 the actual save-bit reader with runtime and compile-time Unlock All, earned vs
 available labels, selected-folder isolation, absent saves, target difficulty/time,
@@ -1131,6 +1133,7 @@ interpreter without replacing a custom hook. Every commit verifies staged
 references; unchanged input needs no ROM or render. Changed input regenerates
 when necessary, then stops for review and explicit staging. Nothing is staged
 automatically. Partially staged rendering inputs are rejected before capture.
+The same hook also runs the Bright Builds starter checks (FORK-023).
 CI performs ROM-free gallery integrity/freshness and workflow tests. The README
 links to the gallery and setup guide. This supplements the hand/arm contracts
 and geometry/material regressions (FORK-004/FORK-017), not automatic visual approval.
@@ -1156,3 +1159,64 @@ Working-tree and staged integrity/freshness passed. The HTML parsed successfully
 and Node.js syntax validation of the embedded gallery script passed.
 Browser automation rejected the local file URL by policy, so interactive browser
 validation was not completed; the gallery can be opened manually offline.
+
+### FORK-023 — Bright Builds standards adoption and Bun checks
+
+**Status:** Installed locally.
+
+Adopted the managed Bright Builds Rules corpus from
+`bright-builds-llc/bright-builds-rules`, requested ref `main`, resolved commit
+`a1acfa84acf49d4fd6fbc0b00ad7dfa97e1e2c36`. This adds standards and verification
+guidance absent from the inherited upstream baseline, without changing gameplay
+or the comparison ref. The managed sidecar, contribution block, PR template,
+local standards pages, Bun checker, README badges and read-only GitHub checks
+workflow retain upstream ownership/markers and an audit trail. Upstream MIT
+copyright and permission text are retained separately.
+
+The existing AGENTS and CONTRIBUTING content is preserved outside managed
+blocks. The inherited project PR template was backed up before replacement and
+preserved as `scripts/port/project_pr_checklist.md`; local guidance requires it
+alongside the managed template and fork inventory. `readme.md` is renamed to
+`README.md` for case-sensitive managed updates, with inventory links corrected.
+Managed badges include the owner-specific OpenLinks badge; local overrides keep
+the game/fork identity primary and avoid unrelated in-game branding changes or
+mandatory global skill installation. No optional Codex skill was installed.
+
+The existing pre-commit hook now runs the managed Bun checker before staged
+gallery verification; its Python configuration, freshness checks, review stop
+and partial-staging protection remain. The starter checker runs in its own
+GitHub workflow on pushes/PRs/manual dispatch, without adding a package manifest,
+lockfile or application dependency. Bun is a development tool only. On the
+audited Windows machine its existing npm-managed global installation was
+upgraded from 1.1.16 to stable 1.4.4 and verified in PowerShell and Git Bash.
+
+The initial checker reported 195 pre-existing file-length findings. The
+user-owned TSV records 96 exact-file exceptions and five generated/vendor
+directories, with reasons. New source files outside those directories remain
+checked; this is a documented adoption baseline, not a whole-game refactor or
+claim of complete standards compliance. The managed checker is unchanged.
+The overrides preserve native interfaces and the scoped verification workflow.
+
+Unattended rules updates are explicitly disabled: future updates must preserve
+the fork inventory and review requirements. The manual status/update guide
+records the pinned formatter stack, isolated Windows formatter environment,
+managed-file ownership and local exception policy. Local installer backups are
+ignored; the project checklist remains versioned. Rules/docs-only work does not
+require a game rebuild or render regeneration.
+
+**Sources:** [local guidance](AGENTS.md), [managed sidecar](AGENTS.bright-builds.md),
+[standards index](standards/index.md), [overrides](standards-overrides.md),
+[adoption audit](bright-builds-rules.audit.md),
+[checker](scripts/bright-builds-check.ts),
+[checks workflow](.github/workflows/bright-builds-checks.yml),
+[hook](.githooks/pre-commit), [baseline](.bright-builds-rules-checks.tsv),
+[project checklist](scripts/port/project_pr_checklist.md),
+[maintenance guide](scripts/port/bright_builds_rules.md),
+[upstream license](tools/BRIGHT_BUILDS_RULES_LICENSE.txt).
+**Validation:** Installer status reports `installed` without managed drift,
+auto-update disabled and checks CI enabled. The combined pre-commit hook passed:
+Bun checked 704 source files with 101 reasoned exceptions and zero findings;
+staged gallery freshness/integrity also passed. Existing project guidance,
+README content, checklist and root license preservation were checked. New
+user-owned rules docs passed the pinned GFM/frontmatter Markdown check; shell
+syntax validation passed. No game rebuild or render regeneration was needed.

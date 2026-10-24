@@ -1,0 +1,103 @@
+# Deliberate adoption baseline; see standards-overrides.md.
+# New files are checked. Remove an exception when its file is split or no longer needs it.
+file-lengths	assets/	Inherited generated/reference asset C data; file-size refactoring belongs in its generators, not game-data edits.
+file-lengths	include/CPPLib.h	Pre-adoption cdd6b5f baseline: 759 lines. Inherited SDK/game declarations; preserve public layouts and upstream correspondence.
+file-lengths	include/PR/gbi.h	Pre-adoption cdd6b5f baseline: 4801 lines. Inherited SDK/game declarations; preserve public layouts and upstream correspondence.
+file-lengths	include/PR/libaudio.h	Pre-adoption cdd6b5f baseline: 946 lines. Inherited SDK/game declarations; preserve public layouts and upstream correspondence.
+file-lengths	include/PR/os.h	Pre-adoption cdd6b5f baseline: 1041 lines. Inherited SDK/game declarations; preserve public layouts and upstream correspondence.
+file-lengths	include/PR/rcp.h	Pre-adoption cdd6b5f baseline: 881 lines. Inherited SDK/game declarations; preserve public layouts and upstream correspondence.
+file-lengths	port/fast3d/gfx_opengl.cpp	Pre-adoption cdd6b5f baseline: 3121 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/fast3d/gfx_pc.cpp	Pre-adoption cdd6b5f baseline: 8267 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/fast3d/gfx_sdl2.cpp	Pre-adoption cdd6b5f baseline: 1177 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/fast3d/glad/	Vendored generated GL loader and declarations; preserve upstream layout.
+file-lengths	port/generated/	Generated port declarations; maintain generator output rather than manually splitting it.
+file-lengths	port/include/icon_rgba.h	Pre-adoption cdd6b5f baseline: 1035 lines. Existing generated icon data; change through its generator.
+file-lengths	port/src/audio_pc.c	Pre-adoption cdd6b5f baseline: 774 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/input_pc.c	Pre-adoption cdd6b5f baseline: 8921 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/joy_port.c	Pre-adoption cdd6b5f baseline: 1888 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/libultra_shim.c	Pre-adoption cdd6b5f baseline: 1712 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/main.c	Pre-adoption cdd6b5f baseline: 883 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/pcsched.c	Pre-adoption cdd6b5f baseline: 1062 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/port_arm_mesh.c	Pre-adoption cdd6b5f baseline: 870 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/port_console.c	Pre-adoption cdd6b5f baseline: 1276 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/port_options.c	Pre-adoption cdd6b5f baseline: 1554 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/port_profiles.c	Pre-adoption cdd6b5f baseline: 983 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/port_state.c	Pre-adoption cdd6b5f baseline: 666 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/port_textures.c	Pre-adoption cdd6b5f baseline: 1211 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/port_watchpages.c	Pre-adoption cdd6b5f baseline: 2736 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/raphnet.c	Pre-adoption cdd6b5f baseline: 1221 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/romdata.c	Pre-adoption cdd6b5f baseline: 1390 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/segments.c	Pre-adoption cdd6b5f baseline: 695 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	port/src/video.c	Pre-adoption cdd6b5f baseline: 5740 lines. Existing port/render integration; split only with focused behavioral and render validation.
+file-lengths	scripts/generate_prop_model_c.py	Pre-adoption cdd6b5f baseline: 2251 lines. Existing upstream tooling; restructure in a dedicated verified maintenance change.
+file-lengths	src/aicommands2.h	Pre-adoption cdd6b5f baseline: 8534 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/audi.c	Pre-adoption cdd6b5f baseline: 840 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/bondaicommands.h	Pre-adoption cdd6b5f baseline: 4560 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/bondconstants.h	Pre-adoption cdd6b5f baseline: 4981 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/bondtypes.h	Pre-adoption cdd6b5f baseline: 4267 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/boss.c	Pre-adoption cdd6b5f baseline: 983 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/crash.c	Pre-adoption cdd6b5f baseline: 1052 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/fr.c	Pre-adoption cdd6b5f baseline: 1138 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/bg.c	Pre-adoption cdd6b5f baseline: 7133 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/bgfog.c	Pre-adoption cdd6b5f baseline: 914 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/bondinv.c	Pre-adoption cdd6b5f baseline: 1493 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/bondview.c	Pre-adoption cdd6b5f baseline: 1841 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/bondview.h	Pre-adoption cdd6b5f baseline: 2852 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/bondview2.c	Pre-adoption cdd6b5f baseline: 14753 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/bondview_r.c	Pre-adoption cdd6b5f baseline: 734 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/cheat.c	Pre-adoption cdd6b5f baseline: 1817 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/chr.c	Pre-adoption cdd6b5f baseline: 4121 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/chraction.c	Pre-adoption cdd6b5f baseline: 11545 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/chrai.c	Pre-adoption cdd6b5f baseline: 4611 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/chraidata.c	Pre-adoption cdd6b5f baseline: 841 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/chrprop.c	Pre-adoption cdd6b5f baseline: 4010 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/debugmenu_handler.c	Pre-adoption cdd6b5f baseline: 1194 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/explosion.c	Pre-adoption cdd6b5f baseline: 2565 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/file2.c	Pre-adoption cdd6b5f baseline: 1582 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/frametiming.c	Pre-adoption cdd6b5f baseline: 1260 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/front.c	Pre-adoption cdd6b5f baseline: 19476 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/glass2.c	Pre-adoption cdd6b5f baseline: 894 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/gun.c	Pre-adoption cdd6b5f baseline: 2641 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/gunfire.c	Pre-adoption cdd6b5f baseline: 7669 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/image.c	Pre-adoption cdd6b5f baseline: 2774 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/indy_commands.c	Pre-adoption cdd6b5f baseline: 1072 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/lightfixture.c	Pre-adoption cdd6b5f baseline: 775 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/lv.c	Pre-adoption cdd6b5f baseline: 2392 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/matrixmath.c	Pre-adoption cdd6b5f baseline: 1018 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/model.c	Pre-adoption cdd6b5f baseline: 6837 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/mpmenu.c	Pre-adoption cdd6b5f baseline: 2007 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/objecthandler.c	Pre-adoption cdd6b5f baseline: 1299 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/options.c	Pre-adoption cdd6b5f baseline: 8342 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/othermodemicrocode.c	Pre-adoption cdd6b5f baseline: 723 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/padhalllv.c	Pre-adoption cdd6b5f baseline: 696 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/player.c	Pre-adoption cdd6b5f baseline: 680 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/prop.c	Pre-adoption cdd6b5f baseline: 2838 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/propobj.c	Pre-adoption cdd6b5f baseline: 15591 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/ramromreplay.c	Pre-adoption cdd6b5f baseline: 896 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/sky.c	Pre-adoption cdd6b5f baseline: 2993 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/spectrum.c	Pre-adoption cdd6b5f baseline: 8901 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/spectrum_hw.h	Pre-adoption cdd6b5f baseline: 797 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/stan.c	Pre-adoption cdd6b5f baseline: 3792 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/tex.c	Pre-adoption cdd6b5f baseline: 1199 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/textrelated.c	Pre-adoption cdd6b5f baseline: 1125 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/title.c	Pre-adoption cdd6b5f baseline: 842 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/zlib.c	Pre-adoption cdd6b5f baseline: 748 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/joy.c	Pre-adoption cdd6b5f baseline: 955 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/libultra/audio/csplayer.c	Pre-adoption cdd6b5f baseline: 860 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/libultra/audio/seqplayer.c	Pre-adoption cdd6b5f baseline: 1206 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/libultra/gu/sintable.h	Pre-adoption cdd6b5f baseline: 1031 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/libultrare/io/vitbl.c	Pre-adoption cdd6b5f baseline: 1467 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/mema.c	Pre-adoption cdd6b5f baseline: 647 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/music.c	Pre-adoption cdd6b5f baseline: 1648 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/snd.c	Pre-adoption cdd6b5f baseline: 1575 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/usb.c	Pre-adoption cdd6b5f baseline: 1462 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	tools/GELauncher.cs	Pre-adoption cdd6b5f baseline: 3089 lines. Existing upstream tooling; restructure in a dedicated verified maintenance change.
+file-lengths	tools/aiParse.c	Pre-adoption cdd6b5f baseline: 4252 lines. Existing upstream tooling; restructure in a dedicated verified maintenance change.
+file-lengths	tools/armips.cpp	Pre-adoption cdd6b5f baseline: 19907 lines. Existing upstream tooling; restructure in a dedicated verified maintenance change.
+file-lengths	tools/diff.py	Pre-adoption cdd6b5f baseline: 4102 lines. Existing upstream tooling; restructure in a dedicated verified maintenance change.
+file-lengths	tools/extractor/puff.c	Pre-adoption cdd6b5f baseline: 843 lines. Existing upstream tooling; restructure in a dedicated verified maintenance change.
+file-lengths	tools/ge-stats.py	Pre-adoption cdd6b5f baseline: 748 lines. Existing upstream tooling; restructure in a dedicated verified maintenance change.
+file-lengths	tools/gzipsrc/	Vendored gzip implementation; preserve upstream layout and licensing.
+file-lengths	tools/ido5.3_recomp/	Vendored IDO recompilation toolchain and Rabbitizer dependency; maintain through upstream tool updates.
+file-lengths	tools/mktex/src/libpdtex/reader.c	Pre-adoption cdd6b5f baseline: 877 lines. Existing upstream tooling; restructure in a dedicated verified maintenance change.
+file-lengths	tools/report/objectives.h	Pre-adoption cdd6b5f baseline: 814 lines. Existing upstream tooling; restructure in a dedicated verified maintenance change.
