@@ -138,16 +138,55 @@ and could fold skin around the wrist. Only main-bone skin triangles are used;
 weapon metal and reload-only hands are excluded. The same measured native wrist
 interface joins the hand and wardrobe forearm. The hand stays rigid, and only
 the proximal arm stretches toward the elbow. Its body now smoothly increases
-to 1.75 times the native width/depth behind the protected wrist/cuff region,
+to 2.3 times the native width/depth behind the protected wrist/cuff region,
 restoring rifle forearm volume without enlarging fingers, moving the wrist
 join or distorting the watch. Hand scale, protected wrist length, bulk ramp
 and body multiplier now have a
 single named profile (`sAdsArmProfile`); pose tests lock the protected transforms,
-body radius and continuity at the boundary independently. The original weapon
-poses, sight alignment and recoil anchors remain. The original watch body, strap,
+body radius and continuity at the boundary independently.
+The body multiplier increases the preceding 1.75 profile by approximately 31%
+in width and depth. This is confined to the generated long-gun ADS arm transform;
+native pistol/chopping arms and weapon icons do not use this shaping profile.
+Hand scale, the protected 40-native-unit wrist band and 35-unit bulk ramp are
+unchanged, preserving grip, joint and watch proportions.
+Shaping writes frame-owned generated arm vertices; the shared wardrobe source
+model stays immutable, so separate duplicated source models are unnecessary.
+The original weapon poses, sight alignment and recoil anchors remain.
+The original watch body, strap,
 face and moving hands accompany every added left ADS arm, driven by the same
 clock as the pause animation; the right arm has no watch.
 Native pistol/chop arms use the same forearm source (FORK-017).
+
+The pause model's bracelet has an open underside; a generated back completes
+it for left long-gun grips, using the original metal texture setup and measured
+attachment edges. Its inner/outer surfaces and rims follow a convex envelope
+of the entire wardrobe-arm slab beneath the band, including intermediate
+bulges, with clearance. Original case/face/clock geometry, UVs and natural grip
+roll, arm/cuff placement and hand/seam are retained. Right arms, pistol/chopping
+arms and icon transforms retain their existing fit. Unknown bracelet materials
+retain the authored bracelet. The face can remain out of sight when turned
+away; the band now has geometry on that visible side of the wrist.
+ROM-free fixtures cover six wardrobes, full-slab band clearance, alpha,
+identical fade-depth topology and source immutability. Attempts to expose the watch by changing wrist spacing
+exposed shirt-cuff polygons through the blue jacket and were discarded; the
+current fix adds the missing bracelet geometry without changing the arm fit.
+Wardrobe/ADS regressions and Windows/Linux builds passed. The final Windows
+audit captured all 20 guns and 220 ADS transition frames in the blue wardrobe,
+plus Jungle and Snow Klobb raise/lower checks. Overview and sleeve/watch crops
+were visually reviewed. All 72 gallery views matched repeated samples and an
+independent process pass. Compared with the preceding thickness-only gallery,
+the 12 long-gun ADS image differences are confined to the watch area; the other
+60 views and all 35 icons are byte-identical. The version-6 icon cache also
+matches its preceding bytes. The main executable and gallery were rebuilt.
+
+The thickness-only refinement passed the wardrobe and ADS regressions and
+Windows/Linux builds. A Runway gameplay audit captured all 20 guns and 219 ADS
+transition frames, with the overview and AK47 raise/lower details visually
+reviewed. Gallery regeneration matched all 72 views across successive samples
+and independent processes. Exactly the 12 fork AK47/Klobb ADS views changed
+across six wardrobes; the other 60 weapon views and all 35 icons remained
+byte-identical. The native version-6 icon cache also reproduced its previous
+bytes. The updated main Windows executable and gallery are available locally.
 
 The rifle wrist roll now follows the weapon grip instead of aiming the watch
 face at the camera. The support palm faces inward/up beneath the fore-end,

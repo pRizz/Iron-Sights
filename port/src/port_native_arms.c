@@ -544,7 +544,7 @@ static void paGripSurface(const coord3d *source,u32 image,Vtx *vertex,f32 light,
 s32 portWardrobeBuildGrip(PortArmMesh *mesh,s32 cuff,s32 bond,s32 left,f32 light,u8 alpha,PortGripMap map,void *context)
 {
     const PortGripSource *source=portArmGripSource();
-    NativeGrip grip; PortArmMesh parts[25]; s32 i,count=0;
+    NativeGrip grip; PortArmMesh parts[26]; s32 i,count=0;
     f32 minZ=32767;
     Gfx *color,*depth;
     if (!source || !map || !paLayout(source->arm,&grip.layout)) return FALSE;
@@ -570,6 +570,7 @@ s32 portWardrobeBuildGrip(PortArmMesh *mesh,s32 cuff,s32 bond,s32 left,f32 light
     }
     if (!portArmMeshBuildJoinedSurface(parts+count,cuff,bond,PORT_ARM_FOREARM|(left ? PORT_ARM_WATCH : 0),paGripArm,&grip,light,alpha,paGripJoin,paGripSurface)) return FALSE;
     ++count;
+    if(left && portArmMeshBuildWatchBack(parts+count,cuff,bond,paGripArm,&grip,light,alpha)) ++count;
     mesh->color=color=dynAllocate((count+1)*sizeof(Gfx));
     mesh->depth=depth=alpha<255 ? dynAllocate((count+1)*sizeof(Gfx)) : NULL;
     for (i=0;i<count;i++) {

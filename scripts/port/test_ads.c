@@ -203,7 +203,7 @@ int main(void)
                     adsGripPoint(&a,&pa,PORT_ARM_FOREARM,&space,&arm);
                     posedLength=0;
                     for (s32 d=0;d<3;d++) posedLength+=(pa.f[d]-elbow.f[d])*(pa.f[d]-elbow.f[d]);
-                    assert(posedLength>158.74f && posedLength<158.78f); /* (10*.045*16*1.75)^2 */
+                    assert(posedLength>274.21f && posedLength<274.26f); /* (10*.045*16*2.3)^2 */
                     /* Forearm shaping must never change a hand or watch,
                      * even for points outside the protected wrist band. */
                     adsGripPoint(&a,&pa,PORT_ARM_HAND,&space,&arm);

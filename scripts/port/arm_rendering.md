@@ -10,8 +10,8 @@ fix one pose while breaking another.
 | Wrist interface | `port_native_arms.c` measured joint | Fit the added arm to the native hand, never enlarge or move the native hand to fit the arm. Both sides must use the same nonplanar ring, including inserted edge corners. |
 | Wardrobe forearm/cuff | Pause-watch model and shared mesh builder | Retarget the arm behind its measured wrist. Preserve UVs/material ownership; clothing must not become skin. Close the clothing rim with its own material. |
 | Rifle grip hand | Closed PP7 hand plus rigid pose | One rigid transform and fixed hand scale. No independent finger curl or forearm bulk applied to hand vertices. |
-| Rifle forearm body | `sAdsArmProfile` in `ads_hands.c` | Body bulk ramps to 1.75 after a protected 40-native-unit wrist band, over 35 units. The hand, wrist seam and watch must not change when tuning this profile. |
-| Left watch | Original watch meshes and grip roll | Fit the strap to the wrist; preserve the case/face proportions and moving clock hands. Right hands have no watch. |
+| Rifle forearm body | `sAdsArmProfile` in `ads_hands.c` | Body bulk ramps to 2.3 after a protected 40-native-unit wrist band, over 35 units. This profile is used only for added long-gun ADS arms; pistols, chopping arms and icons use separate transforms. The hand, wrist seam and watch must not change when tuning this profile. |
+| Left watch | Original watch meshes and grip roll | Preserve case/face proportions, moving clock hands, arm/cuff fit and grip orientation. Complete the pause model's missing bracelet underside on left long-gun arms from the arm-slab hull and original metal material. Right hands have no watch. Native pistol/chop/icon transforms stay separate. |
 | Skin shading | Native forearm material mapping | Match generated wrist UV/RGB to the original weapon's same-material skin triangles; keep geometry and alpha fixed. Never recolor/remap the stock hand or change clothing/watch UVs to hide a skin seam. |
 | Pistol hand/sleeve occlusion | First-person weapon depth layer | Both native hands and added arms use depth testing in the same near projection. A sleeve in front must cover skin regardless of display-list order. Restore the scene projection and clear weapon depth state after each weapon draw. |
 | ADS fade | Shared color/depth topology | Same triangles in both passes; depth lists contain geometry only. Opaque draws omit unused depth lists. |
@@ -37,6 +37,24 @@ slots. Every retained index and every non-triangle command remains identical to
 the source. This avoids losing palm triangles from mixed hand/arm nodes and
 avoids changing the hand's appearance through the shared arm material renderer.
 The rifle grip renderer remains separate because it needs retargeting and fades.
+Its body multiplier is applied when constructing frame-owned long-gun ADS arm
+vertices. The shared wardrobe mesh stays immutable; native pistols, chopping
+arms and icon generation do not use `adsGripPoint` or `sAdsArmProfile`. This
+allows independent rifle proportions while retaining consistent wardrobe
+textures and wrist/watch interfaces, without separate duplicated source models.
+
+The original pause bracelet models its upper surface and sides, leaving an
+open underside. `portArmMeshBuildWatchBack` completes that underside for long-gun
+grips. It derives attachment edges, width and texture setup from the original
+bracelet. A convex hull of the wardrobe arm over the band's full longitudinal
+slab includes both end intersections and intermediate bulges. The added band
+has clearance, inner/outer surfaces and side rims, with matching color/depth
+topology through fades. Source vertices, case/face/clock geometry and UVs remain
+unchanged. Unrecognized materials retain the authored bracelet. Keep the
+existing arm/cuff transforms; rescaling the wrist to expose the watch can make
+shirt-cuff polygons intersect the jacket. Keep the natural grip roll: seeing
+the band instead of the watch face is expected when the face points away from
+the camera.
 
 `paNativeSurface` finds the closest point on the native forearm's same-material
 triangles and interpolates its UVs and RGB. Sampling uses the undeformed native
@@ -67,6 +85,8 @@ Both already run in the Windows release workflow without a ROM. Tests cover:
   plus geometry-only fade depth lists.
 - Native skin UV/RGB sampling, light scaling and unknown-material fallback;
   per-material ownership, clothing/watch preservation and unchanged geometry/alpha.
+- Bracelet clearance around end sections and intermediate bulges in all six wardrobes;
+  complete opaque/fading geometry, alpha and original source preservation.
 
 These tests enforce data and geometry contracts. They do not prove that every
 pose looks natural. Review actual ROM renders after material, fit or pose edits:

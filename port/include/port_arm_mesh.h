@@ -19,6 +19,9 @@ s32 portArmWristContains(const coord3d *point);
 s32 portArmElbowBounds(s32 cuff, s32 bond, coord3d *minimum, coord3d *maximum);
 s32 portArmSectionBounds(s32 cuff, s32 bond, f32 x, coord3d *minimum, coord3d *maximum);
 f32 portArmWatchCenter(void);
+/* Complete the pause model's open bracelet underside on generated ADS arms. */
+s32 portArmMeshBuildWatchBack(PortArmMesh *mesh,s32 cuff,s32 bond,
+    PortArmMap map,void *context,f32 light,u8 alpha);
 typedef struct { coord3d target; f32 fraction; } PortArmJoinPoint;
 /* Intermediate native wrist corners along a source forearm edge, in order. */
 typedef s32 (*PortArmJoin)(const coord3d *a, const coord3d *b, PortArmJoinPoint *points, void *context);

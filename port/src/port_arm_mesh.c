@@ -15,6 +15,10 @@
 #include "port_ads.h"
 extern float sinf(float);
 extern float cosf(float);
+extern float fabsf(float);
+extern float sqrtf(float);
+extern float fminf(float,float);
+extern float fmaxf(float,float);
 extern void *memset(void *, int, size_t);
 extern int memcmp(const void *, const void *, size_t);
 #if defined(VERSION_JP) || defined(VERSION_EU)
@@ -160,6 +164,16 @@ f32 portArmWatchCenter(void)
     if (clock && clock->Data && (clock->Opcode&255) == MODELNODE_OPCODE_GROUPSIMPLE)
         return clock->Data->GroupSimple.Origin.x;
     return -420;
+}
+
+static const ModelRoData_DisplayListRecord *armWatchBody(void)
+{
+    ModelFileHeader *header=armSource();
+    ModelNode *hand=header ? armFirstDisplay(header->RootNode) : NULL;
+    ModelNode *node=hand ? hand->Next : NULL;
+    s32 budget=16;
+    while(node && (node->Opcode&255)!=MODELNODE_OPCODE_DL && budget--) node=node->Next;
+    return node && budget && node->Data ? &node->Data->DisplayList : NULL;
 }
 
 s32 portArmElbowBounds(s32 cuff, s32 bond, coord3d *minimum, coord3d *maximum)
@@ -683,5 +697,174 @@ s32 portArmMeshBuildFiltered(PortArmMesh *mesh,const ModelRoData_DisplayListReco
     mesh->depth=depth=alpha<255 ? dynAllocate(commands*sizeof(Gfx)) : NULL;
     armCopyPart(source,length,&origin,0,part,map,context,light,alpha,&color,&depth,NULL,keep,TRUE,NULL,FALSE);
     gSPEndDisplayList(color++); if (depth) { gSPEndDisplayList(depth++); }
+    return TRUE;
+}
+
+/* The authored bracelet stops at the sides: the pause pose never shows its
+ * underside. Complete only that missing surface for left long-gun wrists.
+ * A projected convex hull encloses the whole arm slab beneath the band, so
+ * neither a corner nor a wardrobe change can poke through the new bracelet. */
+typedef struct {
+    s32 count,prefix;
+    coord3d path[64],center;
+    f32 x0,x1,thickness;
+    Vtx sample;
+} ArmWatchBack;
+static ArmWatchBack armWatchBacks[6];
+
+static void armBandAdd(coord3d *points,s32 *count,coord3d point)
+{
+    s32 i;
+    if(*count>256) return;
+    for(i=0;i<*count;i++) if(fabsf(points[i].y-point.y)<.01f && fabsf(points[i].z-point.z)<.01f) return;
+    if(*count<256) points[(*count)++]=point;
+    else *count=257;
+}
+
+static int armBandCompare(const void *a,const void *b)
+{
+    const coord3d *p=a,*q=b;
+    if(p->z!=q->z) return p->z<q->z ? -1 : 1;
+    return p->y<q->y ? -1 : p->y>q->y;
+}
+
+static f32 armBandTurn(coord3d a,coord3d b,coord3d c)
+{ return (b.z-a.z)*(c.y-a.y)-(b.y-a.y)*(c.z-a.z); }
+
+static s32 armBandSlab(const ModelRoData_DisplayListRecord *data,f32 x0,f32 x1,coord3d *points)
+{
+    const Vtx *cache[16]={0}; s32 count=0,length=armListLength(data),i,j,k;
+    if(!length) return 0;
+    for(i=0;i<length;i++) {
+        const Gfx *cmd=data->Primary+i;u32 op=cmd->words.w0>>24,w0=cmd->words.w0,w1=cmd->words.w1;
+        if(op==G_VTX) {
+            s32 n=(w0&65535)/sizeof(Vtx),first=(w0>>16)&15;
+            const Vtx *v=(const Vtx *)((uintptr_t)data->BaseAddr+(w1&0xffffff));
+            for(j=0;j<n;j++) cache[first+j]=v+j;
+        } else if(op==(u8)G_TRI1 || op==(u8)G_TRI4) for(j=0;j<(op==(u8)G_TRI4 ? 4 : 1);j++) {
+            s32 ids[3];armTriangleIndices(cmd,j,ids);
+            if(ids[0]==ids[1] || ids[0]==ids[2] || ids[1]==ids[2]) continue;
+            for(k=0;k<3;k++) {
+                const Vtx *a=cache[ids[k]],*b=cache[ids[(k+1)%3]];
+                coord3d p={a->v.ob[0],a->v.ob[1],a->v.ob[2]},q={b->v.ob[0],b->v.ob[1],b->v.ob[2]};
+                if(p.x>=x0 && p.x<=x1) armBandAdd(points,&count,p);
+                for(s32 end=0;end<2;end++) {
+                    f32 x=end ? x1 : x0;
+                    if(p.x!=q.x && x>=fminf(p.x,q.x) && x<=fmaxf(p.x,q.x)) {
+                        f32 t=(x-p.x)/(q.x-p.x);
+                        armBandAdd(points,&count,(coord3d){x,p.y+t*(q.y-p.y),p.z+t*(q.z-p.z)});
+                    }
+                }
+                if(count>256) return 0;
+            }
+        }
+    }
+    return count;
+}
+
+static s32 armWatchBackLayout(s32 cuff,s32 bond,ArmWatchBack *back)
+{
+    extern struct texpool *portModelTexPool(void);
+    struct tex *texture=texFindInPool(1507,portModelTexPool());
+    const ModelRoData_DisplayListRecord *body=armWatchBody();
+    ModelFileHeader *header=armSource();
+    ModelNode *arm=header ? armFirstDisplay(header->Switches[armCuffSwitch[portWardrobeVariant(cuff,bond)]]) : NULL;
+    coord3d points[256],hull[256],low={32767,32767,32767},high={-32768,-32768,-32768};
+    const Vtx *cache[16]={0};u8 used[ARM_SOURCE_VERTICES]={0};
+    u32 image=0; s32 length=armListLength(body),i,j,k,n=0,h=0;Vtx left={0},right={0};
+    if(!texture || !texture->data || !body || !length || !arm || !arm->Data) return FALSE;
+    back->prefix=0;
+    for(i=0;i<length;i++) {
+        const Gfx *cmd=body->Primary+i;u32 op=cmd->words.w0>>24,w0=cmd->words.w0,w1=cmd->words.w1;
+        if(op==G_SETTIMG) image=w1;
+        else if(op==G_VTX) {
+            s32 count=(w0&65535)/sizeof(Vtx),first=(w0>>16)&15;
+            const Vtx *v=(const Vtx *)((uintptr_t)body->BaseAddr+(w1&0xffffff));
+            if(!back->prefix) {
+                if(image!=(u32)(uintptr_t)texture->data) return FALSE;
+                back->prefix=i;
+            }
+            for(j=0;j<count;j++) cache[first+j]=v+j;
+        } else if(image==(u32)(uintptr_t)texture->data && (op==(u8)G_TRI1 || op==(u8)G_TRI4)) {
+            for(j=0;j<(op==(u8)G_TRI4 ? 4 : 1);j++) {
+                s32 ids[3];armTriangleIndices(cmd,j,ids);
+                for(k=0;k<3;k++) if(cache[ids[k]]) used[cache[ids[k]]-(const Vtx *)body->Vertices]=1;
+            }
+        }
+    }
+    for(i=0;i<body->numVertices;i++) if(used[i]) for(k=0;k<3;k++) {
+        f32 value=((const Vtx *)body->Vertices)[i].v.ob[k];
+        if(value<low.f[k]) low.f[k]=value;if(value>high.f[k]) high.f[k]=value;
+    }
+    if(high.x<=low.x || high.y<=low.y || high.z<=low.z) return FALSE;
+    left.v.ob[2]=32767;right.v.ob[2]=-32768;
+    for(i=0;i<body->numVertices;i++) if(used[i]) {
+        const Vtx *v=(const Vtx *)body->Vertices+i;
+        if(v->v.ob[1]>low.y+(high.y-low.y)*.01f) continue;
+        if(v->v.ob[2]<left.v.ob[2]) left=*v;
+        if(v->v.ob[2]>right.v.ob[2]) right=*v;
+    }
+    if(right.v.ob[2]<=left.v.ob[2]) return FALSE;
+    n=armBandSlab(&arm->Data->DisplayList,low.x,high.x,points);
+    if(n<3) return FALSE;
+    qsort(points,n,sizeof(coord3d),armBandCompare);
+    back->center=(coord3d){0,0,(points[0].z+points[n-1].z)*.5f};
+    {f32 y0=32767,y1=-32768;for(i=0;i<n;i++) {if(points[i].y<y0)y0=points[i].y;if(points[i].y>y1)y1=points[i].y;}
+     back->center.y=(y0+y1)*.5f;}
+    for(i=0;i<n;i++) {
+        while(h>=2 && armBandTurn(hull[h-2],hull[h-1],points[i])<=.01f) --h;
+        hull[h++]=points[i];
+    }
+    back->path[0]=(coord3d){0,left.v.ob[1],left.v.ob[2]};back->count=1;
+    for(i=0;i<h;i++) if(hull[i].y<fminf(left.v.ob[1],right.v.ob[1])) {
+        coord3d p=hull[i];
+        if(back->count>=63) {back->count=0;return FALSE;}
+        p.y=back->center.y+(p.y-back->center.y)*1.08f;
+        p.z=back->center.z+(p.z-back->center.z)*1.08f;
+        back->path[back->count++]=p;
+    }
+    if(back->count==1) {back->count=0;return FALSE;}
+    back->path[back->count++]=(coord3d){0,right.v.ob[1],right.v.ob[2]};
+    back->x0=low.x;back->x1=high.x;back->thickness=(high.z-low.z)*.015f;back->sample=left;
+    return TRUE;
+}
+
+s32 portArmMeshBuildWatchBack(PortArmMesh *mesh,s32 cuff,s32 bond,PortArmMap map,void *context,f32 light,u8 alpha)
+{
+    ArmWatchBack *back=&armWatchBacks[portWardrobeVariant(cuff,bond)];
+    const ModelRoData_DisplayListRecord *body=armWatchBody();
+    ModelRoData_DisplayListRecord data;
+    coord3d origin={0};Gfx *commands,*p,*color,*depth;Vtx *vertices;s32 segments,i,j,length;
+    if(!map || (!back->count && !armWatchBackLayout(cuff,bond,back))) return FALSE;
+    segments=back->count-1;length=back->prefix+segments*9+1;
+    vertices=dynAllocate(segments*16*sizeof(Vtx));commands=p=dynAllocate(length*sizeof(Gfx));
+    memcpy(p,body->Primary,back->prefix*sizeof(Gfx));p+=back->prefix;
+    for(i=0;i<segments;i++) {
+        coord3d ring[2][4];
+        for(j=0;j<2;j++) {
+            coord3d a=back->path[i+j],inner=a;
+            f32 y=back->center.y-a.y,z=back->center.z-a.z,n=sqrtf(y*y+z*z);
+            if(n>0) {inner.y+=y/n*back->thickness;inner.z+=z/n*back->thickness;}
+            ring[j][0]=ring[j][1]=a;ring[j][2]=ring[j][3]=inner;
+            ring[j][0].x=ring[j][3].x=back->x0;ring[j][1].x=ring[j][2].x=back->x1;
+        }
+        for(j=0;j<4;j++) {
+            s32 next=(j+1)%4;coord3d q[4]={ring[0][j],ring[1][j],ring[1][next],ring[0][next]};
+            for(s32 k=0;k<4;k++) {
+                Vtx *v=vertices+i*16+j*4+k;*v=back->sample;
+                for(s32 d=0;d<3;d++) v->v.ob[d]=(s16)q[k].f[d];
+                v->v.tc[0]=q[k].x==back->x0 ? 64 : 1984;
+                v->v.tc[1]=(s16)((i+(k==1 || k==2))*1024/segments);
+            }
+        }
+        gSPVertex(p++,0x05000000+i*16*sizeof(Vtx),16,0);
+        for(j=0;j<4;j++) {gSP1Triangle(p++,j*4,j*4+1,j*4+2,0);gSP1Triangle(p++,j*4,j*4+2,j*4+3,0);}
+    }
+    gSPEndDisplayList(p++);
+    data=*body;data.Primary=commands;data.Vertices=(Vertex *)vertices;data.BaseAddr=vertices;data.numVertices=segments*16;
+    mesh->color=color=dynAllocate((length+4)*sizeof(Gfx));
+    mesh->depth=depth=alpha<255 ? dynAllocate((length+1)*sizeof(Gfx)) : NULL;
+    armCopyPart(&data,length,&origin,0,PORT_ARM_WATCH,map,context,light,alpha,&color,&depth,NULL,NULL,FALSE,NULL,FALSE);
+    gSPEndDisplayList(color++);if(depth)gSPEndDisplayList(depth++);
     return TRUE;
 }

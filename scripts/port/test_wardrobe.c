@@ -27,11 +27,13 @@ s32 portHandGalleryStock(void) {return FALSE;}
 Gfx *portPartCacheEmit(Gfx *gdl,s32 segment) { assert(segment==5); ++nativeCacheMarks; return gdl; }
 static Vtx *copied[16];
 static struct tex skinTextures[2];
+static struct tex bandTexture;
 struct texpool *portModelTexPool(void) { static struct texpool pool; return &pool; }
 struct tex *texFindInPool(s32 id, struct texpool *pool) {
     assert(pool==portModelTexPool());
     if (id==1793) return &skinTextures[0];
     if (id==1796) return &skinTextures[1];
+    if (id==1507) return &bandTexture;
     return NULL;
 }
 void osSyncPrintf(const char *fmt, ...) {
@@ -538,6 +540,68 @@ int main(void) {
         }
         assert(!memcmp(saved,vertices,sizeof(vertices)));
     }
-    puts("Wardrobe checks passed: six outfits, preserved mixed-node palms, rigid native grip source, joined fade depth, stitched wrists, closed clothing rims, skin-only light correction/state reset, UV/alpha/source preservation, left-only watch, native bones, depth-only lists and invalid vertex rejection.");
+    { /* The pause bracelet has no underside. Fit a closed, textured back
+       * around the entire arm slab, including a bulge between its ends. */
+        Vtx tube[9]={0},band[8]={0},savedBand[8];Gfx tubeDL[13],bandDL[7],savedDL[7];
+        ModelRoData_DisplayListRecord oldBody=meshData[7].DisplayList,oldArms[6],data={0};
+        coord3d slab[256];s32 n;
+        for(i=0;i<8;i++) {
+            tube[i].v.ob[0]=i<4 ? -600 : -200;
+            tube[i].v.ob[1]=(i%4==0 || i%4==1) ? -150 : 150;
+            tube[i].v.ob[2]=(i%4==0 || i%4==3) ? -300 : 300;
+        }
+        tube[8].v.ob[0]=-400;tube[8].v.ob[1]=-220;
+        gSPVertex(&tubeDL[0],0x05000000,9,0);
+        gSP4Triangles(&tubeDL[1],0,1,8,1,5,8,5,4,8,4,0,8);
+        for(i=1;i<4;i++) {
+            s32 next=(i+1)%4;
+            gSP1Triangle(&tubeDL[i*2],i,next,i+4,0);gSP1Triangle(&tubeDL[i*2+1],next,next+4,i+4,0);
+        }
+        gSPEndDisplayList(&tubeDL[8]);
+        data.Primary=tubeDL;data.Vertices=(Vertex *)tube;data.BaseAddr=tube;data.numVertices=9;
+        n=armBandSlab(&data,-500,-300,slab);assert(n>=5 && n<=256);
+        { s32 bulge=0;for(i=0;i<n;i++) if(slab[i].y==-220) bulge=1;assert(bulge); }
+        for(i=0;i<8;i++) {
+            band[i].v.ob[0]=i%4==0 || i%4==3 ? -500 : -300;
+            band[i].v.ob[1]=i%4<2 ? 0 : 80;
+            band[i].v.ob[2]=(i<4 ? -1 : 1)*(i%4<2 ? 400 : 350);
+            band[i].v.tc[0]=i*111;band[i].v.tc[1]=i*77;memset(band[i].v.cn,255,4);
+        }
+        bandTexture.data=(u8 *)1070;
+        gDPSetTextureImage(&bandDL[0],G_IM_FMT_RGBA,G_IM_SIZ_16b,1,1070);
+        gSPVertex(&bandDL[1],0x05000000,8,0);
+        gSP1Triangle(&bandDL[2],0,1,2,0);gSP1Triangle(&bandDL[3],0,2,3,0);
+        gSP1Triangle(&bandDL[4],4,5,6,0);gSP1Triangle(&bandDL[5],4,6,7,0);gSPEndDisplayList(&bandDL[6]);
+        meshData[7].DisplayList=data;meshData[7].DisplayList.Primary=bandDL;
+        meshData[7].DisplayList.Vertices=(Vertex *)band;meshData[7].DisplayList.BaseAddr=band;meshData[7].DisplayList.numVertices=8;
+        memcpy(savedBand,band,sizeof(band));memcpy(savedDL,bandDL,sizeof(bandDL));
+        memset(armWatchBacks,0,sizeof(armWatchBacks));
+        for(i=0;i<6;i++) {oldArms[i]=meshData[selected[i]].DisplayList;meshData[selected[i]].DisplayList=data;}
+        for(variant=0;variant<6;variant++) {
+            ArmWatchBack *back=armWatchBacks+variant;
+            assert(armWatchBackLayout(portWardrobeCuff(variant),BOND_CONNERY,back));
+            assert(back->path[0].z==-400 && back->path[back->count-1].z==400 && back->count>=5);
+            for(i=0;i<n;i++) if(slab[i].y<=0) for(j=0;j<back->count-1;j++) {
+                coord3d a=back->path[j],b=back->path[j+1];
+                assert(armBandTurn(a,b,slab[i])>0);
+                for(s32 end=0;end<2;end++) {
+                    coord3d *p=end ? &b : &a;f32 y=back->center.y-p->y,z=back->center.z-p->z,len=sqrtf(y*y+z*z);
+                    p->y+=y/len*back->thickness;p->z+=z/len*back->thickness;
+                }
+                assert(armBandTurn(a,b,slab[i])>0); /* Inner band stays outside skin too. */
+            }
+            for(j=0;j<2;j++) {
+                reset();assert(portArmMeshBuildWatchBack(&mesh,portWardrobeCuff(variant),BOND_CONNERY,identity,NULL,.75f,j ? 127 : 255));
+                assert(gripTriangles(mesh.color,0,0)==(back->count-1)*8);
+                assert(images(mesh.color,ids)==1 && ids[0]==1070);
+                if(j) {assert(gripTriangles(mesh.depth,1,0)==(back->count-1)*8);} else {assert(!mesh.depth);}
+                for(i=0;i<(back->count-1)*16;i++) assert(copied[0][i].v.cn[3]==(j ? 127 : 255));
+            }
+        }
+        assert(!memcmp(savedBand,band,sizeof(band)) && !memcmp(savedDL,bandDL,sizeof(bandDL)));
+        for(i=0;i<6;i++) meshData[selected[i]].DisplayList=oldArms[i];
+        meshData[7].DisplayList=oldBody;memset(armWatchBacks,0,sizeof(armWatchBacks));
+    }
+    puts("Wardrobe checks passed: six outfits, preserved mixed-node palms, rigid native grip source, joined fade depth, stitched wrists, closed clothing rims, skin-only light correction/state reset, UV/alpha/source preservation, left-only watch, complete bracelet clearance, native bones, depth-only lists and invalid vertex rejection.");
     return 0;
 }
