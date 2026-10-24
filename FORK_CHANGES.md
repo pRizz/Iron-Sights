@@ -1220,3 +1220,30 @@ staged gallery freshness/integrity also passed. Existing project guidance,
 README content, checklist and root license preservation were checked. New
 user-owned rules docs passed the pinned GFM/frontmatter Markdown check; shell
 syntax validation passed. No game rebuild or render regeneration was needed.
+
+### FORK-024 — Browser target plan and milestone handoffs
+
+**Status:** Plan accepted on 2026-10-24; web implementation not started.
+
+Recorded the user-approved browser target design and six milestones so later
+sessions can continue from repository-owned evidence. The planned target keeps
+CMake, uses Emscripten/Wasm32 and WebGL 2, starts single-threaded, accepts a local
+ROM, persists campaign/profile/settings data in browser storage, supports backup
+download/restore and deploys successful `main` builds to GitHub Pages. Native
+suspend points require separate browser work; optional icons/offline support
+follow the playable/persistence/deployment gates. These are planned fork
+additions, not inherited upstream capabilities or a working browser release.
+
+The tracker uses stable milestone blocks with explicit completion criteria,
+status, evidence and next actions. AGENTS links the plan and requires relevant
+progress updates before handoff. This documentation does not change gameplay,
+rendering, builds or publication. Existing native and asset ownership contracts
+continue to apply.
+
+**Sources:** [accepted plan](scripts/port/web_target_plan.md),
+[milestone tracker](scripts/port/web_target_progress.md),
+[session guidance](AGENTS.md#repo-local-guidance).
+**Validation:** The pinned GFM/frontmatter formatter check passed for both new
+guides; local relative links and Git whitespace checks passed. Bun standards
+checks reported zero findings. No web compile or gameplay validation is claimed.
+Documentation-only work requires no game rebuild or render regeneration.
