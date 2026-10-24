@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+python=$(git config --get midas.galleryPython || true)
+if [ -z "$python" ]; then python=python3; fi
+exec "$python" scripts/port/hand_gallery.py pre-commit

@@ -127,12 +127,24 @@ review, ADS regression tests, and Windows/Linux builds passed.
 Added hands and forearms for the 13 firearms that lack them during ADS, with
 per-weapon trigger/support grips. The current implementation supersedes the
 initial octagonal procedural hands and estimated sleeve/cuff percentages: it
-loads the original pause-watch hand, forearm, cuff and watch meshes from the
-player's ROM, preserving their authored material assignments and UVs. Those
+loads the original pause-watch forearm, cuff and watch meshes from the
+player's ROM, preserving their clothing/watch material assignments and UVs. Those
 meshes supply the actual wrist openings, rolled jungle sleeves, snow gear and
 formal cuffs, rather than stretching jacket textures over the wrist/hand.
-The watch-pose fingers bend around the rifle grips; the original weapon poses,
-sight alignment and recoil anchors remain. The original watch body, strap,
+The current rifle/SMG/shotgun grip hand comes from the ROM's closed PP7 hand,
+retaining its actual fingers, thumb, palm, textures and UVs. This replaces the
+single curl previously applied to the open watch hand, which distorted fingers
+and could fold skin around the wrist. Only main-bone skin triangles are used;
+weapon metal and reload-only hands are excluded. The same measured native wrist
+interface joins the hand and wardrobe forearm. The hand stays rigid, and only
+the proximal arm stretches toward the elbow. Its body now smoothly increases
+to 1.75 times the native width/depth behind the protected wrist/cuff region,
+restoring rifle forearm volume without enlarging fingers, moving the wrist
+join or distorting the watch. Hand scale, protected wrist length, bulk ramp
+and body multiplier now have a
+single named profile (`sAdsArmProfile`); pose tests lock the protected transforms,
+body radius and continuity at the boundary independently. The original weapon
+poses, sight alignment and recoil anchors remain. The original watch body, strap,
 face and moving hands accompany every added left ADS arm, driven by the same
 clock as the pause animation; the right arm has no watch.
 Native pistol/chop arms use the same forearm source (FORK-017).
@@ -142,10 +154,9 @@ face at the camera. The support palm faces inward/up beneath the fore-end,
 placing the watch on the outside/downward side of the wrist; its band can be
 the only visible part. The trigger hand rolls outward around its grip as well.
 Skin, sleeve, cuff and watch geometry rotate together, retaining their original
-texture mapping. The current proportion correction replaces the earlier thick
-arm-body/thin-wrist profile: ADS wrists and hand heels widen together, blend
-smoothly into the original fingers and use a moderated forearm taper. The watch
-band, case and clock hands refit together, keeping the face's proportions and
+texture mapping. Measured native wrist/arm proportions now supersede the earlier
+hand-heel bulk curve and separately bent watch-hand profile. The watch band,
+case and clock hands refit together, keeping the face's proportions and
 the grip-driven roll. Native arms use measured source/target wrist joints rather
 than sizing their width/depth from arm length (FORK-017). This keeps the hand,
 cuff and forearm connected without the narrow peg visible in the previous icons.
@@ -153,15 +164,24 @@ Wardrobe icons share the same correction (FORK-019).
 The shared sleeve-rim closure (FORK-017) also keeps coat cuffs solid through
 ADS transitions, using the same geometry in the color and depth-only passes.
 
-The shared arm renderer lifts only the watch model's two exposed-skin materials
-(1793/1796), including the matching hand heel, to blend their darker texture
-tones into the native hand. A small warm-neutral additive correction follows
-scene brightness and preserves texture detail and transition alpha. Sleeves,
-cuffs, watch materials, source pixels and arm proportions remain unchanged;
-material state is restored between parts. Native pistol/chop arms and wardrobe
-icons use the same correction (FORK-017/FORK-019).
+Pistol and rifle wrist skin now samples UVs and vertex shade from the original
+weapon forearm's triangles of the same skin material (1793/1796). Closest-surface
+barycentric sampling transfers native mapping onto the established watch-model
+geometry without changing positions, alpha, sleeves, cuffs, watch UVs or source
+pixels. Shared skin/clothing vertices are excluded from remapping. Rifle grip
+hands retain their native UV/RGB without the former additive skin lift; their
+wrists use the same original skin source and scene brightness. The earlier warm
+brightness correction remains only on native chopping/wardrobe icon forearms,
+whose rendering is unchanged (FORK-017/FORK-019).
 Skin-material regression fixtures cover mixed skin/clothing lists, watch
 exclusion, full/dim scene light, alpha preservation and terminal state reset.
+Filtered rifle-grip fixtures also check the selective correction and state
+reset in color draws while keeping fade depth lists geometry-only. The pistol
+lighting and rifle bulk refinement passed wardrobe/ADS regressions and
+Windows/Linux builds. Windows review covered all 20 guns and 220 raise/lower
+captures on Runway, Jungle AK47/PP7 and Surface PP7 transitions, and all seven dual
+pistols. A fresh 35-image preparation matched the preceding version-6 cache
+byte-for-byte, confirming native chopping/icon lighting stays intact.
 Windows/Linux builds and wardrobe/ADS/HUD/distribution checks passed. Windows
 captures covered 20 guns and 220 ADS transition frames on Runway, Jungle rifle
 transitions and Surface chopping. Version-5 icon generation completed all 35
@@ -181,8 +201,10 @@ still finishes in its gun-free scope view. No new setting is required.
 
 **Sources:** [hands and grips](port/src/ads_hands.c),
 [shared authored mesh renderer](port/src/port_arm_mesh.c),
+[closed hand source](port/src/port_grip_mesh.c),
 [wardrobe selector](port/src/port_wardrobe.c), [ADS pose data](port/src/joy_port.c),
-[gun rendering](src/game/gunfire.c).
+[gun rendering](src/game/gunfire.c), [visual audit](scripts/port/audit_ads.ps1),
+[diagnostic environment inventory](port/src/port_console_env.h).
 **History:** `2fcbb39`, `79d3892`, `599173d`; subsequent authored-mesh replacement.
 **Checks:** ROM-free ADS and wardrobe regressions pass. Synthetic authored-mesh
 fixtures check all six selectors, native UV/source preservation, left-only watch
@@ -190,7 +212,9 @@ parts, original pistol/chop bone matrices, geometry-only depth lists and invalid
 vertex rejection, clock-hand transforms, opaque-list memory savings and signed
 GBI opcode handling. Pose regressions cover both hands on all 13 grip pairs
 through the raise/lower blend, checking orthonormal axes and an outward/downward
-support wrist rather than a camera-facing watch. Proportion checks cover a continuous wrist-to-palm profile, independently fitted
+support wrist rather than a camera-facing watch. Rigid-grip checks preserve hand
+distances and exact hand/forearm wrist transforms, and assert the thicker proximal
+forearm radius independently of its centerline. Proportion checks cover independently fitted
 native wrist width/depth, the tilted seam, elbow fit, triangle cross-section
 interpolation and watch-face scale. The current joint correction passes the
 ADS/wardrobe/HUD and distribution/cache tests and Windows/Linux video builds.
@@ -217,7 +241,8 @@ additional AK47 transitions on Surface (4:3) and Jungle. Frame-pool audits on
 Runway and Surface reported no overflow. Native dual PP7 and Surface chopping
 were checked, and the original Runway pause arm was captured for comparison.
 Windows and Linux video builds pass; Linux was compile-checked. The main Windows
-executable was replaced without a backup. ROM-derived models, textures, generated icons and audit captures remain local.
+executable was replaced without a backup. ROM-derived models, textures, caches
+and audit captures remain local, except final rendered review PNGs in FORK-022.
 
 ### FORK-005 — Sniper scope presentation and contextual wheel zoom
 
@@ -354,7 +379,8 @@ native runtime preparation and a per-user cache rather than embedding the pack;
 no generation/rebuild cycle is needed. Native preparation shares the exporter
 poses and uses premultiplied area downsampling instead of Python's Lanczos.
 Icon mode falls back to names when its native cache is unavailable.
-ROM-derived outputs remain ignored and are not committed.
+ROM-derived output packs remain ignored. FORK-022 later adds a narrow exception
+for final rendered review PNGs, not caches or extracted assets.
 
 **Sources:** [generator](scripts/port/generate_weapon_icons.py),
 [export harness](port/src/port_weapon_export.c), [model drawing](src/game/gunfire.c),
@@ -380,10 +406,18 @@ documentation and repository-rule changes update this entry or add a distinct
 entry when appropriate. AGENTS.md also records the user's standing permission
 to replace executables and purge obsolete builds and their matched suspend
 images, with normal campaign/profile/settings data excluded (FORK-001).
+The first-person arm rule and [rendering contracts](scripts/port/arm_rendering.md)
+record protected stock pistol data/rendering, independent rifle forearm shaping,
+wrist/watch/material boundaries and the required synthetic/visual checks.
+The versioned review gallery (FORK-022) is a narrow, user-authorized exception
+to the generated-image exclusion: final reference HTML/PNG/manifest only,
+without ROMs, extracted assets, caches or raw captures. Repository instructions
+require fresh references alongside rendering changes and explicit image review.
 
 **Sources:** [AGENTS.md](AGENTS.md), [FORK_CHANGES.md](FORK_CHANGES.md),
 [CONTRIBUTING.md](CONTRIBUTING.md), [readme.md](readme.md),
-[PR template](.github/pull_request_template.md).
+[PR template](.github/pull_request_template.md),
+[arm rendering contracts](scripts/port/arm_rendering.md).
 **Verification:** Local Markdown paths and Git whitespace checks; no runtime
 behavior changed by the inventory/rule addition.
 
@@ -585,7 +619,7 @@ watch hand/forearm opening supplies source bounds; the native arm supplies targe
 A short fit across the tilted wrist seam joins the retained native hand. Wrist
 bounds and seam membership now come from vertices shared by the authored hand
 and forearm, rather than an approximate proximal-X band.
-The chopping hand and watch forearm have different polygon outlines at the seam.
+The native hand and watch forearm have different polygon outlines at the seam.
 The forearm boundary now uses actual native wrist vertices, including their
 authored tilt. Edge triangles split at the remaining native corners, retaining
 the forearm's skin materials and interpolating its UVs/colors. Both meshes thus
@@ -593,8 +627,17 @@ share exactly the same outline without a separate patch, enlarged wrist or
 changes to the hand. Split draws restore the original vertex-cache bindings;
 allocations account for the added commands/vertices. This closes background
 wedges through the chop animation and applies to both hands and all six wardrobe
-icons. Pistol poses retain their existing fit; they do not use the chop's seam
-topology. The shared renderer also closes the nearest substantial open clothing
+icons. Pistol nodes contain palm surfaces as well as the forearm: replacing the
+whole node previously removed those palm triangles, producing see-through hand
+patches. The current implementation detects the long wrist-to-elbow strip from
+the native mesh's separated longitudinal rings, preserves every distal triangle
+with its original positions/materials/UVs/vertex shade, and replaces only the proximal
+arm triangles. Their actual shared wrist boundary supplies the fit and stitch,
+including its nonplanar tilt; there is no assumed pistol wrist plane at Z=0.
+The same closed PP7 hand is reused by the rifle grip renderer (FORK-004), with
+the source weapon and reload-bone geometry excluded. Generated rifle grip hands and
+split wrist triangles also produce complete geometry-only ADS fade depth lists.
+The shared renderer also closes the nearest substantial open clothing
 rim with a fan using its existing boundary positions, UVs, colors and material.
 This fills the annular opening around the wrist inside the cuff, which the
 inherited watch pose normally hides but chopping and ADS angles can expose.
@@ -616,6 +659,53 @@ meshes, bone matrices, grip positions, chop/reload/raise animations and sights r
 are supported, including dual pistols; left-hand draws also carry the watch's
 actual body, strap, face and hands. No new setting is required.
 
+Native pistol hands now have a separate protected render path: a frame-owned
+copy of the original display list suppresses only proximal forearm triangles
+with degenerate TRI1/TRI4 slots, preserving every retained index and every
+non-triangle command. It references the unchanged original vertex buffer, so
+positions, UVs and RGBA cannot be enlarged, remapped or recolored by the generated
+arm renderer. The hand draws last through the original model type/culling/fog/
+environment/material setup in `model.c`, with native mip LOD restored. Its
+dynamic filtered list bypasses the retained GPU part cache. This supersedes the
+shared copied-hand renderer and wrist brightness lift, which preserved shape
+data but changed the stock palm's shading and made it appear chunky.
+The added pistol wrist now uses UVs and vertex shade sampled from the native
+forearm's same-material triangles, retaining its fitted geometry. This replaces
+the watch wrist's separate skin mapping and uniform brightness adjustments.
+The added arm also uses the native two-cycle material and authored mip/texture
+commands, matching the stock hand's sampling and shading. Clothing and watch
+mapping stay authored; only exclusively skin-owned vertices can be remapped.
+Geometry and fade alpha are unchanged. The retained stock hand is never
+recolored or remapped to hide the seam. The arm fits its measured wrist.
+Surface-mapping regressions check native barycentric UV/RGB sampling, scene-light
+scaling, unknown-material fallback, and preservation of geometry/alpha. Mixed
+material fixtures cover skin ownership, sleeve/watch UV preservation, shared
+vertices and matching color/depth topology. Native-material fixtures also
+require the source mip LOD and texture commands rather than a single-tile
+override. The stock hand remains on its original renderer with immutable data.
+The skin-mapping correction passed wardrobe/ADS regressions and Windows/Linux
+builds. Windows review covered all 20 guns on Runway and Surface/Snow (220
+transition captures each), all seven dual pistols, and PP7 samples in the other
+four outfits. The wrist color seam is removed while retaining the sleeve depth
+fix and existing forearm proportions. No new setting is required.
+Native pistols now share the near weapon depth layer between the retained hand,
+gun and added sleeve/watch, including hip fire, ADS transitions and dual wield.
+The sleeve writes depth and the native hand compares against it; skin drawn
+later can no longer cover a cuff that is physically in front. This supersedes
+the previous painter ordering for these seven pistols. The layer retains the
+scene's XY projection and restores scene projection/depth state after each draw.
+Stock hand data and material colors remain untouched. Rifle grip shaping and
+native chopping/icon rendering retain their existing paths.
+The actual-model regression requires arm depth writes, native hand depth
+comparisons and the geometry depth-enable bit while retaining the native
+two-cycle material setup. The occlusion fix passed wardrobe/ADS regressions
+and Windows/Linux builds. Windows audits covered all 20 guns on Runway (219
+sampled transitions) and Surface/Snow (220), all seven dual pistols, and PP7
+transitions in the other four outfits. Before/after review confirmed that skin
+strips no longer overpaint the sleeve; stock hand vertices, UVs and colors are
+unchanged. The guide and repository rule now protect cuff occlusion alongside
+the stock hand data contract.
+
 A scoped model hook runs only around first-person pistol/chop draws and offline
 unarmed exports. It validates the proximal forearm's vertex/matrix references,
 retargets the authored watch forearm into its original bone space and emits a
@@ -630,6 +720,7 @@ are never committed. Wardrobe selection follows player changes and restores.
 
 **Sources:** [wardrobe mapping](port/src/port_wardrobe.c),
 [API](port/include/port_wardrobe.h), [native arms](port/src/port_native_arms.c),
+[closed grip source](port/src/port_grip_mesh.c),
 [scoped draws](src/game/gunfire.c), [model hook](src/game/model.c),
 [ADS arms](port/src/ads_hands.c), [icon selection](port/src/port_hud.c),
 [exporter](port/src/port_weapon_export.c), [generator guide](scripts/port/weapon_icons.md).
@@ -641,8 +732,49 @@ shared seam membership, a complete seven-to-twelve-sided synthetic join in both
 directions, native-corner coverage/tilt, split vertex-cache restoration and
 material/UV preservation. A hollow sleeve fixture checks the clothing rim cap,
 excludes skin and elbow caps, and verifies its color/depth geometry and alpha.
+Native-pistol preservation fixtures require unchanged vertex-buffer references,
+all non-triangle commands, retained packed triangle indices, record metadata
+and source bytes. They also check the neutral pistol-arm material policy cannot
+inherit the generated-arm skin lift. These contracts are documented in
+[the rendering guide](scripts/port/arm_rendering.md); the existing release CI runs
+the wardrobe and ADS regressions without requiring a ROM.
+The wardrobe test links the actual `model.c` renderer and verifies the retained
+hand receives its native two-cycle material setup and bypasses immutable-part
+caching, rather than testing a duplicate rendering wrapper.
 The test compiles without builtins, rejects implicit function declarations and
 links the game's actual `atan2f`, matching its runtime angle convention.
+Additional fixtures preserve palm triangles from a mixed node, exclude source
+weapon/reload-hand branches, check rigid hand placement and identical wrist
+transforms, and compare complete color/depth geometry during ADS fading.
+The ADS audit supports isolated wardrobe overrides for all six outfits and
+per-gun hand crops of ADS/raising/lowering views; the override changes only the
+RAM fixture while `GE_ADS_AUDIT` is active, not campaign wardrobe or settings.
+`-Dual` without an item audits all seven dual-capable pistols, including both
+native palms and their left watches. Runtime arm diagnostics report preserved
+palm/replaced arm triangle counts and the measured interface for each pistol.
+`-StockHands` supplies an isolated native-pistol reference for matched camera/
+pose comparisons. An initial PP7 comparison matched all 9,589 skin pixels in a
+distal-hand crop exactly after restoring the native render path; the wardrobe
+arm below the wrist is intentionally different. This is a local reference,
+not a portable cross-GPU pixel guarantee.
+Optional audit environment values treat empty strings as disabled, preventing
+a preceding dual/stock-reference/wardrobe run from affecting a later audit in
+the same PowerShell session.
+The protected native-hand refactor passed wardrobe/ADS and distribution/cache
+regressions and Windows/Linux video builds. Windows review covered 20 guns with
+220 transition captures, all seven dual pistols, matched stock/wardrobe Jungle
+PP7 transitions and Surface PP7 transitions. All 35 regenerated icon images
+again matched the preceding version-6 cache byte-for-byte. Reference captures
+and generated game data remain ignored local artifacts, except the final
+rendered review PNGs explicitly covered by FORK-022.
+The palm/grip fixes passed the 20-gun audit in all six outfits (120 combinations,
+1,319 transition captures), plus all seven dual pistols. A separate Surface/Snow
+run passed all 20 guns and 220 transitions; dynamic frame-pool checks reported
+no overflow, with vertex/auxiliary usage peaking at 76,352 of 102,400 bytes.
+Enlarged hand crops were reviewed. Wardrobe/ADS/HUD/distribution checks and
+Windows/Linux video builds passed. Native icon regeneration completed all 35
+repeated-pixel checks and matched the preceding cache byte-for-byte, so the
+version-6 icon cache remains compatible.
 The correction passes wardrobe/ADS/HUD/distribution tests and Windows/Linux
 video builds. Windows checks cover the 20-gun Runway audit with 213 sampled
 raise/lower frames and denser Surface chopping captures, including palm/back
@@ -663,7 +795,8 @@ upstream substitutes a rifle-butt attack whenever Bond owns that weapon,
 including Surface's starting inventory. Normal attack selection is unchanged.
 Windows and Linux builds passed; runtime captures ran on Windows. Native
 caching supersedes the previous embedded wardrobe pack (FORK-019). Generated
-ROM-derived outputs remain ignored and temporary audit executables are removed.
+ROM-derived output packs remain ignored, with the final review-PNG exception in
+FORK-022. Temporary audit executables are removed.
 
 ### FORK-018 — Windows player releases and recorded provenance
 
@@ -804,7 +937,16 @@ fallback. Wide Windows process/filesystem APIs and UTF-8 SDL paths support
 Unicode. Scoped locks/process/window cleanup handles exceptions. About reports
 readiness; last-preparation.log retains diagnostics. The HUD reads cached images,
 including all six wardrobe icons and the selected-weapon caption. Generated
-data stays out of Git. The optional Python PNG exporter remains for inspection.
+cache data stays out of Git. FORK-022 commits final rendered review PNGs under
+its narrow exception. The optional Python PNG exporter remains for inspection.
+The later first-person palm/grip fixes (FORK-004/FORK-017) retain cache version 6:
+regenerating all 35 images after those fixes matched the preceding cache
+byte-for-byte on the audited laptop, including the six unarmed wardrobe icons.
+The exporter now explicitly enables geometry depth testing before drawing its
+fixed model view, rather than inheriting the preceding gameplay gun's depth
+state. This prevents the pistol depth-layer restoration from changing icon
+occlusion. A fresh 35-image preparation after the wrist skin-mapping fix matched
+the preceding version-6 cache byte-for-byte; no cache version change is needed.
 
 **Sources:** [cache](port/fast3d/weapon_cache.cpp),
 [format](port/include/port_icon_cache_format.h),
@@ -916,3 +1058,62 @@ that initially made some letters too narrow. Package tests require font license
 and attribution files. The new unit tests run in the release workflow. The main
 Windows executable was rebuilt, and its isolated startup audit confirmed that
 an existing configuration without the new key enables enhanced fonts by default.
+
+### FORK-022 — Versioned hand and weapon review gallery
+
+**Status:** Implemented.
+
+Added a local HTML review tool and generator absent from upstream. The matrix
+has 72 views: PP7, AK47/KF7 and Klobb; regular and settled ADS; original and fork
+models; blue, boiler, jungle, snow, tuxedo and Connery wardrobes. It includes all
+35 native generated weapon icons, grouping wardrobe-specific chopping arms.
+Filters, enlarged inspection, stock/fork switching and pixel inspection support
+reviews of hands, wrists, cuffs, watch, grip and sight alignment.
+
+The stock control disables fork arm replacement and added rifle hands under the
+same fixed fork camera/ADS pose. It is not an upstream ADS implementation or an
+old executable. The environment-only `GE_HAND_GALLERY` audit fixes pose, wardrobe,
+lighting and clock hands, with a neutral backdrop; normal gameplay is unaffected.
+The generator rebuilds current sources, uses isolated settings and caches, then
+requires exact repeated samples and a second independent 72-view process pass
+before publishing. Icon preparation retains its own repeated-pixel check.
+The manifest records recipe, normalized source-input fingerprint, ROM hash,
+renderer identity and image/file hashes. Pixels are tested on the recorded
+renderer; cross-GPU identity is not assumed. Output has no build timestamps or
+absolute local paths. Python uses only its standard library.
+
+The requested committed reference images are a narrow policy exception in
+AGENTS.md/CONTRIBUTING.md and `.gitignore`. Only final HTML, manifest and PNGs in
+`review/hand-gallery` qualify. ROMs, extracted models/textures, raw BMPs, binary
+caches and copied executables remain excluded. Other audits remain local.
+
+The opt-in installer configures this clone's `.githooks/pre-commit` and Python
+interpreter without replacing a custom hook. Every commit verifies staged
+references; unchanged input needs no ROM or render. Changed input regenerates
+when necessary, then stops for review and explicit staging. Nothing is staged
+automatically. Partially staged rendering inputs are rejected before capture.
+CI performs ROM-free gallery integrity/freshness and workflow tests. The README
+links to the gallery and setup guide. This supplements the hand/arm contracts
+and geometry/material regressions (FORK-004/FORK-017), not automatic visual approval.
+
+**Sources:** [generator](scripts/port/hand_gallery.py),
+[template](scripts/port/hand_gallery_template.html),
+[guide](scripts/port/hand_gallery.md), [tests](scripts/port/test_hand_gallery.py),
+[hook](.githooks/pre-commit), [gallery](review/hand-gallery/index.html),
+[capture driver](port/src/joy_port.c), [fixed gun pose](src/game/gunfire.c),
+[stock arm control](port/src/port_native_arms.c),
+[rifle control](port/src/ads_hands.c), [clock](port/src/port_arm_mesh.c),
+[backdrop](port/fast3d/gfx_pc.cpp),
+[CI](.github/workflows/windows-release.yml).
+**Validation:** Seven ROM-free gallery tests passed, covering coverage/index
+mapping, BMP/PNG pixels and checksums, repeated-capture rejection, normalized
+source fingerprints, staged freshness, partial staging and custom-hook safety.
+Windows MinGW and Linux video builds, wardrobe and ADS regressions passed.
+All 72 real views matched their successive samples and the independent process
+pass exactly. All 35 native icons regenerated successfully, reproducing the
+preceding version-6 cache byte-for-byte. The rendered PP7/AK47/Klobb stock/fork
+contact sheet and all six wardrobe hand icons were visually reviewed.
+Working-tree and staged integrity/freshness passed. The HTML parsed successfully
+and Node.js syntax validation of the embedded gallery script passed.
+Browser automation rejected the local file URL by policy, so interactive browser
+validation was not completed; the gallery can be opened manually offline.

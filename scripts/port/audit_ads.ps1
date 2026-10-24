@@ -9,10 +9,13 @@ param(
     [switch]$Adzy,
     [switch]$Transitions,
     [switch]$Dual,
+    [ValidateSet('Mission','Blue','Boiler','Jungle','Snow','Tuxedo','Connery')][string]$Wardrobe='Mission',
+    [switch]$HandDetails,
+    [switch]$StockHands,
     [ValidateSet(30,60,120,240)][int]$TickHz = 60
 )
 $ErrorActionPreference = 'Stop'
-if ($Dual -and ($Item -notin @(4,5,6,18,19,20,21) -or $Transitions)) {
+if ($Dual -and (($Item -ne 0 -and $Item -notin @(4,5,6,18,19,20,21)) -or $Transitions)) {
     throw '-Dual checks native left wrists in hip fire (ADS requires one gun); select one pistol item without -Transitions.'
 }
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -43,7 +46,9 @@ $previousEnv = @{}
 if ($Item -ne 0) { $auditEnv.GE_ADS_AUDIT = [string]$Item }
 if ($Transitions) { $auditEnv.GE_ADS_AUDIT_TRANSITIONS = '1' }
 if ($Dual) { $auditEnv.GE_ADS_AUDIT_DUAL = '1' }
-$expectedCount = if ($Item -eq 0) { 20 } else { 1 }
+if ($Wardrobe -ne 'Mission') { $auditEnv.GE_ADS_AUDIT_WARDROBE=[string](@('blue','boiler','jungle','snow','tuxedo','connery').IndexOf($Wardrobe.ToLowerInvariant())) }
+if ($StockHands) { $auditEnv.GE_ARM_AUDIT_STOCK='1' }
+$expectedCount = if ($Item -eq 0) { if ($Dual) {7} else {20} } else { 1 }
 try {
     foreach ($key in $auditEnv.Keys) {
         $previousEnv[$key] = [Environment]::GetEnvironmentVariable($key, 'Process')
@@ -56,6 +61,7 @@ try {
         [Environment]::SetEnvironmentVariable($key, $previousEnv[$key], 'Process')
     }
 }
+
 Write-Output "Auditing ADS: $auditDir"
 try { $auditProcess.WaitForExit() }
 finally {
@@ -178,4 +184,31 @@ if ($Transitions) {
         $sheet.Save((Join-Path $auditDir 'transitions.png'), [Drawing.Imaging.ImageFormat]::Png)
     } finally { $graphics.Dispose(); $sheet.Dispose(); $font.Dispose() }
     Write-Output "Verified $($transitionCaptures.Count) transition captures. Review: $auditDir\transitions.png"
+}
+if ($HandDetails) {
+    foreach ($capture in $captures) {
+        $frames=@($capture)
+        if ($Transitions) {
+            foreach ($direction in @(1,0)) {
+                $frames+=@($transitionCaptures | Where-Object { $_.Item -eq $capture.Item -and $_.Aiming -eq $direction -and [double]$_.Blend -gt 0 -and [double]$_.Blend -lt 1 } |
+                    Sort-Object { [Math]::Abs([double]$_.Blend-.5) } | Select-Object -First 1)
+            }
+        }
+        $details=[Drawing.Bitmap]::new(672*$frames.Count,376)
+        $g=[Drawing.Graphics]::FromImage($details); $f=[Drawing.Font]::new('Arial',12)
+        try {
+            $g.Clear([Drawing.Color]::FromArgb(25,25,25))
+            for ($j=0;$j -lt $frames.Count;$j++) {
+                $source=[Drawing.Image]::FromFile((Join-Path $auditDir $frames[$j].File))
+                try {
+                    $crop=[Drawing.Rectangle]::new([int]($source.Width*.15),[int]($source.Height*.35),[int]($source.Width*.70),[int]($source.Height*.65))
+                    $g.DrawImage($source,[Drawing.Rectangle]::new($j*672,25,672,351),$crop,[Drawing.GraphicsUnit]::Pixel)
+                } finally { $source.Dispose() }
+                $label=if ($j -eq 0 -and $Dual) {'Dual wield'} elseif ($j -eq 0) {'ADS'} elseif ($j -eq 1) {'Raising'} else {'Lowering'}
+                $g.DrawString(($names[$capture.Item]+' - '+$label),$f,[Drawing.Brushes]::White,[single]($j*672+8),[single]2)
+            }
+            $details.Save((Join-Path $auditDir ('hand-details-'+$capture.Item+'.png')),[Drawing.Imaging.ImageFormat]::Png)
+        } finally { $g.Dispose(); $f.Dispose(); $details.Dispose() }
+    }
+    Write-Output "Hand detail crops: $auditDir\hand-details-*.png"
 }

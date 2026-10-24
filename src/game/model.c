@@ -4230,7 +4230,10 @@ void modelRenderNodeGundl(ModelRenderData* renderdata, ModelNode* arg1)
     ModelRoData_DisplayListRecord* rodata = &arg1->Data->DisplayList;
 
 #ifndef TARGET_N64
-    if (portWardrobeRenderNode(renderdata, arg1)) return;
+    ModelRoData_DisplayListRecord nativeHand;
+    s32 wardrobeDraw = portWardrobeRenderNode(renderdata, arg1, &nativeHand);
+    if (wardrobeDraw == PORT_WARDROBE_DRAWN) return;
+    if (wardrobeDraw == PORT_WARDROBE_NATIVE_HAND) rodata = &nativeHand;
 #endif
 
     if (renderdata->unk18 == 0)
@@ -4263,7 +4266,8 @@ void modelRenderNodeGundl(ModelRenderData* renderdata, ModelNode* arg1)
 
 #ifndef TARGET_N64
             /* the gun-DL node's lists address their vertices through SPSEGMENT_MODEL_COL1 = the model's base */
-            renderdata->gdl = portPartCacheEmit(renderdata->gdl, SPSEGMENT_MODEL_COL1);
+            if (wardrobeDraw != PORT_WARDROBE_NATIVE_HAND)
+                renderdata->gdl = portPartCacheEmit(renderdata->gdl, SPSEGMENT_MODEL_COL1);
 #endif
             gSPDisplayList(renderdata->gdl++, rodata->Primary);
 

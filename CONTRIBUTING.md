@@ -9,7 +9,10 @@ repository rules. Update an existing entry for refinements, or add a stable
 `FORK-NNN` entry for a new area. Describe behavior/defaults, the difference from
 the inherited upstream baseline, main source paths and validation. Record
 replacements and removals so the inventory stays accurate. Generated ROM-derived
-outputs stay untracked; inventory their generator and workflow instead.
+outputs stay untracked; inventory their generator and workflow instead. The
+explicit exception is the rendered review gallery under `review/hand-gallery`:
+its HTML, manifest and generated PNG references are versioned for visual review.
+This exception does not allow ROMs, extracted models/textures or binary caches.
 
 The repository-wide agent instructions are in [AGENTS.md](AGENTS.md). The guidance
 below is inherited from upstream; its upstream project name and roadmap describe
@@ -38,7 +41,8 @@ Once Lua modding is developed and released, minor changes (tweaks to weapons, ru
 2. **Builds on both platforms.** CI builds Linux and Windows; it must pass.
 3. **Tested in game.** Say what you tested and on which level or menu. "It compiles" is not enough.
 4. **Matches the code around it.** Keep the decompiled names. Keep comments short: what the code does and why, in at most two plain sentences.
-5. **No game assets.** Never commit ROM data or extracted assets.
+5. **No game assets.** Never commit ROM data or extracted assets. Rendered PNG
+   references in `review/hand-gallery` are the fork's limited review exception.
 
 ## AI-assisted contributions
 

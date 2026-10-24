@@ -286,3 +286,12 @@ docs/devnotes/
 *.mstate.tmp
 *.mstate.bak
 **/Data/SaveStates/
+
+# Versioned review renders are an explicit, narrow exception to asset hygiene.
+# Raw captures, executables, ROMs and caches stay in ignored build directories.
+/review/hand-gallery/*
+!/review/hand-gallery/index.html
+!/review/hand-gallery/manifest.json
+!/review/hand-gallery/images/
+/review/hand-gallery/**/*.bmp
+/review/hand-gallery/**/*.cache

@@ -657,6 +657,27 @@ void gunUpdateAndFire(GUNHAND handnum)
         }
     }
 #endif
+#ifndef TARGET_N64
+    if(portHandGalleryActive()) {
+        /* Review only: remove breathing/recoil/crosshair drift, retaining the
+         * same weapon offsets, ADS alignment and first-person model renderer. */
+        matrix_4x4_set_identity(&gunmtx);
+        gunmtx.m[0][0]=gunmtx.m[2][2]=-1;
+        gunofs=(coord3d){itemstats->PosX,itemstats->PosY,itemstats->PosZ};
+        if(ads>0) {
+            ModelFileHeader *header=&g_CurrentPlayer->copy_of_body_obj_header[handnum];
+            if(header->Switches && header->Switches[3]) {
+                coord3d pose;
+                if(portAdsWeaponPose(item,(const coord3d *)header->Switches[3]->Data,&pose)) {
+                    f32 pitch=portAdsWeaponPitch(item);
+                    matrix_4x4_set_rotation_around_x(pitch,&tmpmtx);
+                    matrix_4x4_multiply_homogeneous(&gunmtx,&tmpmtx,&aimmtx);
+                    matrix_4x4_copy(&aimmtx,&gunmtx);gunofs=pose;
+                }
+            }
+        }
+    }
+#endif
     matrix_4x4_set_position(&gunofs, &gunmtx);
     matrix_4x4_copy(&gunmtx, &hand->gunmtx_camspace);
     matrix_4x4_copy(&hand->throw_item_pos_related, &hand->throw_item_pos_related_prev);
@@ -1649,6 +1670,14 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
     ModelRenderData renderdata;
     s32 handnum;
     Model *model;
+#ifndef TARGET_N64
+    if(portHandGalleryActive()) {
+        /* Clear only the review frame, after the world and before the gun. */
+        gdl->words.w0=(u32)0x4f<<24;gdl->words.w1=32;gdl++;
+        /* Tile alpha is the fog amount, not surface opacity. */
+        g_CurrentPlayer->tileColor=(struct rgba_u8){255,255,255,0};
+    }
+#endif
     /* Weapon FOV: the hands and guns draw under the scene projection (as in
      * vanilla), so the fov setting widens the weapon too and the barrel points
      * at the crosshair, because the gun's aim direction is derived through the
@@ -1683,6 +1712,7 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
         coord3d trigger, support;
         s32 adsHands = handnum == GUNRIGHT && portAdsBlend() > 0.0f
             && portAdsHandGrips(item, &trigger, &support);
+        s32 armDepth = adsHands || portWardrobeDepthRequired(item);
         /* Raise the rifle into the eye, then look through the optic. Keep the
          * simulation and firing updates running while hiding gun and hands. */
         if (handnum == GUNRIGHT && portAdsScopeBlend() == 1.0f) continue;
@@ -1736,15 +1766,18 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
                                   | ((u32)g_CurrentPlayer->tileColor.b << 8);
         renderdata.zbufferenabled = 0;
 #ifndef TARGET_N64
-        renderdata.zbufferenabled = adsHands;
+        renderdata.zbufferenabled = armDepth;
 #endif
 
         matrix_4x4_7F058C64();
 
 #ifndef TARGET_N64
-        if (adsHands) {
+        if (armDepth) {
+            /* The sleeve can cover native wrist triangles. Resolve their
+             * actual surfaces in the weapon's near depth range. */
+            gSPSetGeometryMode(renderdata.gdl++, G_ZBUFFER);
             renderdata.gdl = portAdsBeginHandLayer(renderdata.gdl);
-            if (portAdsBlend() == 1.0f) {
+            if (adsHands && portAdsBlend() == 1.0f) {
                 renderdata.gdl = portAdsDrawHands(renderdata.gdl, item, &handptr->gunmtx_camspace);
             }
         }
@@ -1793,6 +1826,8 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
             if (portAdsBlend() < 1.0f) {
                 gdl = portAdsDrawHands(gdl, item, &handptr->gunmtx_camspace);
             }
+        }
+        if (armDepth) {
             gSPClearGeometryMode(gdl++, G_ZBUFFER);
             gSPMatrix(gdl++, osVirtualToPhysical(currentPlayerGetProjectionMatrix()),
                 G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);

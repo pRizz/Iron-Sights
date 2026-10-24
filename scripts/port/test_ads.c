@@ -180,6 +180,43 @@ int main(void)
                 assert(dot > -0.001f && dot < 0.001f);
                 if (left) { assert(arm.back.x < 0 && arm.back.y < 0 && arm.back.z < 0); }
                 else { assert(arm.back.x > 0); }
+                { /* Closed-hand geometry stays rigid; its exact wrist points
+                   * use the same transform as the attached forearm/watch. */
+                    PortGripSpace space={{-6,-25,-67},{-3,-54,-182}};
+                    coord3d a={-10,2,10},b={10,5,30},pa,pb,join,elbow;
+                    f32 nativeLength=0,posedLength=0;
+                    adsGripPoint(&a,&pa,PORT_ARM_HAND,&space,&arm);
+                    adsGripPoint(&b,&pb,PORT_ARM_HAND,&space,&arm);
+                    for (s32 d=0;d<3;d++) {
+                        nativeLength+=(a.f[d]-b.f[d])*(a.f[d]-b.f[d]);
+                        posedLength+=(pa.f[d]-pb.f[d])*(pa.f[d]-pb.f[d]);
+                    }
+                    assert(posedLength/nativeLength>.517f && posedLength/nativeLength<.520f);
+                    adsGripPoint(&space.wrist,&pa,PORT_ARM_HAND,&space,&arm);
+                    adsGripPoint(&space.wrist,&join,PORT_ARM_FOREARM,&space,&arm);
+                    assert(!memcmp(&pa,&join,sizeof(pa)));
+                    adsGripPoint(&space.elbow,&elbow,PORT_ARM_FOREARM,&space,&arm);
+                    for (s32 d=0;d<3;d++) assert(elbow.f[d]-16*arm.elbow.f[d]>.001f*-1 && elbow.f[d]-16*arm.elbow.f[d]<.001f);
+                    /* Bulk increases the arm body, leaving its center and
+                     * the rigid hand/wrist transform untouched. */
+                    a=space.elbow; a.x+=10;
+                    adsGripPoint(&a,&pa,PORT_ARM_FOREARM,&space,&arm);
+                    posedLength=0;
+                    for (s32 d=0;d<3;d++) posedLength+=(pa.f[d]-elbow.f[d])*(pa.f[d]-elbow.f[d]);
+                    assert(posedLength>158.74f && posedLength<158.78f); /* (10*.045*16*1.75)^2 */
+                    /* Forearm shaping must never change a hand or watch,
+                     * even for points outside the protected wrist band. */
+                    adsGripPoint(&a,&pa,PORT_ARM_HAND,&space,&arm);
+                    adsGripPoint(&a,&pb,PORT_ARM_WATCH,&space,&arm);
+                    assert(!memcmp(&pa,&pb,sizeof(pa)));
+                    a=space.wrist; a.z-=40;
+                    adsGripPoint(&a,&pa,PORT_ARM_HAND,&space,&arm);
+                    adsGripPoint(&a,&pb,PORT_ARM_FOREARM,&space,&arm);
+                    assert(!memcmp(&pa,&pb,sizeof(pa)));
+                    a.z-=.0001f;
+                    adsGripPoint(&a,&pb,PORT_ARM_FOREARM,&space,&arm);
+                    for (s32 d=0;d<3;d++) assert(pa.f[d]-pb.f[d]>-.02f && pa.f[d]-pb.f[d]<.02f);
+                }
             }
         }
     }

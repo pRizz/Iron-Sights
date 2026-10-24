@@ -61,6 +61,8 @@ jobs:
           python3 scripts/port/test_distribution.py
           python3 scripts/port/test_ci_dependencies.py
           python3 scripts/port/test_enhanced_fonts.py
+          python3 scripts/port/test_hand_gallery.py
+          python3 scripts/port/hand_gallery.py verify
 
   windows:
     needs: tests

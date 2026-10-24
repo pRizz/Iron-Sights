@@ -1,0 +1,100 @@
+# First-person arm rendering contracts
+
+Hands, wardrobe arms and rifle poses have different owners. Keep these boundaries
+when adjusting their appearance; a uniform scale or shared material override can
+fix one pose while breaking another.
+
+| Region | Owner | Changes allowed |
+| --- | --- | --- |
+| Native pistol palm/fingers | Original weapon model and `model.c` | Suppress only proximal forearm triangles in a frame-owned display-list copy. Retain original vertices, UVs, RGBA, matrix/material/LOD commands, triangle order and native model render setup. |
+| Wrist interface | `port_native_arms.c` measured joint | Fit the added arm to the native hand, never enlarge or move the native hand to fit the arm. Both sides must use the same nonplanar ring, including inserted edge corners. |
+| Wardrobe forearm/cuff | Pause-watch model and shared mesh builder | Retarget the arm behind its measured wrist. Preserve UVs/material ownership; clothing must not become skin. Close the clothing rim with its own material. |
+| Rifle grip hand | Closed PP7 hand plus rigid pose | One rigid transform and fixed hand scale. No independent finger curl or forearm bulk applied to hand vertices. |
+| Rifle forearm body | `sAdsArmProfile` in `ads_hands.c` | Body bulk ramps to 1.75 after a protected 40-native-unit wrist band, over 35 units. The hand, wrist seam and watch must not change when tuning this profile. |
+| Left watch | Original watch meshes and grip roll | Fit the strap to the wrist; preserve the case/face proportions and moving clock hands. Right hands have no watch. |
+| Skin shading | Native forearm material mapping | Match generated wrist UV/RGB to the original weapon's same-material skin triangles; keep geometry and alpha fixed. Never recolor/remap the stock hand or change clothing/watch UVs to hide a skin seam. |
+| Pistol hand/sleeve occlusion | First-person weapon depth layer | Both native hands and added arms use depth testing in the same near projection. A sleeve in front must cover skin regardless of display-list order. Restore the scene projection and clear weapon depth state after each weapon draw. |
+| ADS fade | Shared color/depth topology | Same triangles in both passes; depth lists contain geometry only. Opaque draws omit unused depth lists. |
+
+## Protected native pistol path
+
+`portWardrobeRenderNode` draws the added arm first, then returns
+`PORT_WARDROBE_NATIVE_HAND` with a copied display-list record. The original
+`modelRenderNodeGundl` path draws the retained hand using its native model type,
+culling, fog/environment colors and texture setup. The added wrist samples its
+UVs and vertex shade from native forearm triangles of the same skin material.
+The pistol arm also uses the native two-cycle shader and authored mip/texture
+commands, then restores native mip LOD before the hand draw. Native pistols use the weapon's near depth layer in hip
+fire, ADS and transitions: the added arm writes depth and native hand materials
+test it, so drawing the hand last cannot paint it over the sleeve. This changes
+occlusion, not the hand's vertices, texture/shader colors or XY projection.
+The frame-owned filtered list bypasses the retained GPU part
+cache, whose keys assume immutable display lists.
+
+`paStockHandList` copies commands without copying or mapping any stock vertices.
+Removed arm triangles become degenerate triangles in the existing TRI1/TRI4
+slots. Every retained index and every non-triangle command remains identical to
+the source. This avoids losing palm triangles from mixed hand/arm nodes and
+avoids changing the hand's appearance through the shared arm material renderer.
+The rifle grip renderer remains separate because it needs retargeting and fades.
+
+`paNativeSurface` finds the closest point on the native forearm's same-material
+triangles and interpolates its UVs and RGB. Sampling uses the undeformed native
+bone space, so forearm extension does not distort the mapping. `armSurfaceOwners`
+limits the transfer to vertices belonging exclusively to one skin material;
+clothing, watch parts and shared material vertices retain their authored UVs.
+Only frame-owned generated wrist attributes change. The stock hand's vertex
+buffer, texture pixels, geometry and material commands remain immutable.
+Rifle wrists use this same mapping under their existing fade renderer, with
+the same scene lighting as the native grip hand and no additive brightness lift.
+
+## Regression checks
+
+Run `bash scripts/port/test_wardrobe.sh` and `bash scripts/port/test_ads.sh`.
+Both already run in the Windows release workflow without a ROM. Tests cover:
+
+- Original pistol vertex-buffer identity, unchanged record metadata/material
+  commands, preserved packed triangle indices and immutable source data.
+- Integration with the actual `model.c` renderer: native two-cycle hand
+  materials, original model setup and no immutable-part caching of filtered lists.
+- Native pistol classification, arm depth writes, native hand depth comparisons
+  and the geometry depth-enable bit, alongside the stock material checks.
+- All six wardrobes, seven pistol variants and both native hands.
+- Nonplanar wrist joins, intermediate edge corners and closed clothing rims.
+- Rigid hand/watch transforms, protected wrist continuity and the rifle body's
+  radius independently of its centerline, across all 13 grip pairs and blends.
+- Skin-only corrections and terminal material reset on generated arm meshes,
+  plus geometry-only fade depth lists.
+- Native skin UV/RGB sampling, light scaling and unknown-material fallback;
+  per-material ownership, clothing/watch preservation and unchanged geometry/alpha.
+
+These tests enforce data and geometry contracts. They do not prove that every
+pose looks natural. Review actual ROM renders after material, fit or pose edits:
+
+```powershell
+# Matched stock reference and wardrobe treatment, same camera/seed/ADS poses.
+./scripts/port/audit_ads.ps1 -Item 4 -Stage runway -Transitions -HandDetails -StockHands
+./scripts/port/audit_ads.ps1 -Item 4 -Stage runway -Transitions -HandDetails
+# All weapons and transitions; dual pistols; bare and snow forearm samples.
+./scripts/port/audit_ads.ps1 -Stage runway -Transitions -HandDetails
+./scripts/port/audit_ads.ps1 -Stage runway -Dual -HandDetails
+./scripts/port/audit_ads.ps1 -Item 8 -Stage jungle -Transitions -HandDetails
+./scripts/port/audit_ads.ps1 -Item 4 -Stage surface -Transitions -HandDetails
+```
+
+`-StockHands` disables wardrobe replacement for native pistols only while the
+ADS audit is active. It is not a player setting. Compare palm/finger shape and
+material appearance against this reference, then examine cuffs, exposed skin,
+left watch and intermediate poses separately. Keep useful local captures/logs;
+audit executables are removed automatically. The versioned
+[review gallery](hand_gallery.md) is the explicit exception for generated review
+PNGs; other captures, extracted models/textures and caches remain out of Git.
+Optional audit flags treat empty environment values as disabled so consecutive
+stock/wardrobe/dual runs cannot inherit a mode solely from an empty variable.
+
+If an export's pixels change, bump `PORT_ICON_CACHE_VERSION`, regenerate all 35
+images and review the six wardrobe variants. Do not use a cache version bump to
+hide a regression. When changing an invariant deliberately, document the reason
+in this guide and `FORK_CHANGES.md` and update the corresponding regression.
+The exporter explicitly enables its own geometry depth state, so a gameplay
+weapon restoring its depth layer cannot alter the next icon's occlusion.

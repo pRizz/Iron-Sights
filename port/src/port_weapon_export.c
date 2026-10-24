@@ -60,6 +60,9 @@ Gfx *portWeaponExportDraw(Gfx *gdl)
     gdl++;
     gdl = sub_GAME_7F0A6EE8(gdl);
     gSPClearGeometryMode(gdl++, G_FOG | G_CULL_BOTH);
+    /* Gameplay weapons restore their own depth state. Icon rendering owns
+     * its depth setup rather than inheriting it from the preceding gun. */
+    gSPSetGeometryMode(gdl++, G_ZBUFFER);
     gDPSetColorDither(gdl++, G_CD_DISABLE);
     gDPSetAlphaDither(gdl++, G_AD_DISABLE);
     projection = dynAllocateMatrix();

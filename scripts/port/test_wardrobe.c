@@ -3,13 +3,17 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include "game/model.h"
 #include "../../port/src/port_wardrobe.c"
 #include "../../port/src/port_arm_mesh.c"
 #include "../../port/src/port_native_arms.c"
+#include "../../port/src/port_grip_mesh.c"
 extern int strcmp(const char *, const char *);
 static struct player player;
 struct player *g_CurrentPlayer = &player;
 ModelFileHeader suit_lf_hand_header = {.numSwitches=10};
+ModelFileHeader wppk_header;
+static ModelNode testGripNodes[3];
 s32 watch_time_0;
 static ModelNode meshNodes[12], selectors[10], *switches[10];
 static union ModelRoData meshData[12], selectorData[10];
@@ -17,6 +21,10 @@ static Vtx source[12][5], original[12][5];
 static Gfx lists[12][11];
 static union { u64 align; u8 bytes[131072]; } arena;
 static s32 used, copies, loads;
+static s32 nativeCacheMarks;
+s32 portHandGalleryActive(void) {return FALSE;}
+s32 portHandGalleryStock(void) {return FALSE;}
+Gfx *portPartCacheEmit(Gfx *gdl,s32 segment) { assert(segment==5); ++nativeCacheMarks; return gdl; }
 static Vtx *copied[16];
 static struct tex skinTextures[2];
 struct texpool *portModelTexPool(void) { static struct texpool pool; return &pool; }
@@ -36,9 +44,17 @@ u32 osVirtualToPhysical(void *p) { return (u32)p; }
 void *portAllocHigh(u32 size) { static u8 model[65536]; assert(size<=sizeof(model)); return model; }
 s32 fileGetBondForCurrentFolder(void) { return BOND_CONNERY; }
 void load_object_fill_header(ModelFileHeader *header, u8 *name, u8 *dst, s32 size, struct texpool *pool)
-{ assert(!strcmp((char *)name,"Csuit_lf_handZ")); header->RootNode=meshNodes; header->Switches=switches; ++loads; }
+{ if (!strcmp((char *)name,"GwppkZ")) { header->RootNode=testGripNodes; return; }
+  assert(!strcmp((char *)name,"Csuit_lf_handZ")); header->RootNode=meshNodes; header->Switches=switches; ++loads; }
 static void identity(const coord3d *s, coord3d *d, s32 part, void *context) { *d=*s; }
 static void reset(void) { used=copies=0; }
+static s32 surfaceCalls;
+static void testSurface(const coord3d *point,u32 image,Vtx *vertex,f32 light,void *context)
+{
+    assert(image==1001 || image==1002); ++surfaceCalls;
+    vertex->v.tc[0]=17;vertex->v.tc[1]=29;
+    vertex->v.cn[0]=50;vertex->v.cn[1]=60;vertex->v.cn[2]=70;
+}
 static s32 images(const Gfx *dl, s32 *ids) {
     s32 n=0, i;
     Gfx skin, normal;
@@ -102,19 +118,38 @@ static void fixture(void) {
     for (i=4;i<9;i++) selectors[i].Next=selectors+i+1;
     selectors[9].Next=meshNodes+7;
 }
+static void gripIdentity(const coord3d *source,coord3d *target,s32 part,const PortGripSpace *space,void *context)
+{ assert(space->wrist.z>-10 && space->elbow.z==-200); *target=*source; }
+static s32 gripTriangles(const Gfx *dl,s32 depth,s32 level)
+{
+    s32 i,count=0; assert(level<8);
+    for (i=0;i<4096;i++) {
+        u32 op=dl[i].words.w0>>24;
+        if (op==(u8)G_ENDDL) return count;
+        if (op==G_DL) count+=gripTriangles((const Gfx *)(uintptr_t)dl[i].words.w1,depth,level+1);
+        else if (op==(u8)G_TRI1) ++count;
+        else if (op==(u8)G_TRI4) ++count;
+        else if (depth) assert(op==G_VTX);
+    }
+    assert(0); return 0;
+}
+
 int main(void) {
     static const s32 selected[6]={4,1,5,6,2,3}; /* mesh IDs reached by actual cuff switches */
     static const s32 items[]={ITEM_FIST,ITEM_WPPK,ITEM_WPPKSIL,ITEM_TT33,ITEM_RUGER,ITEM_GOLDENGUN,ITEM_SILVERWPPK,ITEM_GOLDWPPK};
     PortArmMesh mesh;
     s32 variant,i,j,ids[16];
-    Gfx nativeList[4],output[32];
+    Gfx nativeList[7],output[32];
     Vtx nativeVertices[7]={{{{-20,-20,-200},0,{0,0},{255,255,255,255}}},
         {{{20,20,0},0,{512,512},{180,180,180,255}}},{{{-20,-20,0},0,{0,512},{220,220,220,255}}},
         {{{40,30,-200},0,{0,0},{255,255,255,255}}},{{{-40,-30,-200},0,{0,0},{255,255,255,255}}},
         {{{20,-20,0},0,{0,0},{255,255,255,255}}},{{{-20,20,0},0,{0,0},{255,255,255,255}}}};
     union ModelRoData nativeData={0}; ModelNode nativeNode={.Data=&nativeData};
+    ModelRoData_DisplayListRecord stockHand;
     ModelRenderData render={.flags=1,.gdl=output};
     fixture();
+    for (i=0;i<8;i++) assert(portWardrobeDepthRequired(items[i])==(items[i]!=ITEM_FIST));
+    assert(!portWardrobeDepthRequired(ITEM_AK47) && !portWardrobeDepthRequired(ITEM_WATCHLASER));
     { coord3d low,high;
       assert(portArmWristBounds(&low,&high));
       assert(low.x==-280 && high.x==-180 && low.y==0 && high.y==30 && low.z==0 && high.z==20); }
@@ -136,7 +171,7 @@ int main(void) {
             f32 light=n ? 1 : 0.5f;
             coord3d origin={0};
             reset(); color=dynAllocate((8+12)*sizeof(Gfx)); mesh.color=color;
-            armCopyPart(&data,8,&origin,0,PORT_ARM_HAND,identity,NULL,light,127,&color,&depth,NULL);
+            armCopyPart(&data,8,&origin,0,PORT_ARM_HAND,identity,NULL,light,127,&color,&depth,NULL,NULL,TRUE,NULL,FALSE);
             assert(color==mesh.color+19); gSPEndDisplayList(color);
             assert(images(mesh.color,ids)==3 && ids[0]==1001 && ids[1]==1040 && ids[2]==1002);
             prims=combos=0;
@@ -157,19 +192,8 @@ int main(void) {
             assert(!memcmp(mesh.color+18,&expected,sizeof(Gfx)));
         }
         reset(); color=dynAllocate(8*sizeof(Gfx)); mesh.color=color;
-        armCopyPart(&data,8,&(coord3d){0},0,PORT_ARM_WATCH,identity,NULL,1,255,&color,&depth,NULL);
+        armCopyPart(&data,8,&(coord3d){0},0,PORT_ARM_WATCH,identity,NULL,1,255,&color,&depth,NULL,NULL,TRUE,NULL,FALSE);
         assert(color==mesh.color+7 && !memcmp(original,source,sizeof(source)));
-    }
-    { /* The broader wrist blends into the palm and a moderated forearm. */
-        s32 x;
-        assert(portArmForearmBulk(-180)==1.25f);
-        assert(portArmForearmBulk(-800)==1.25f);
-        assert(portArmForearmBulk(650)==1 && portArmForearmBulk(-3707)==1);
-        for (x=-4000;x<1600;x++) {
-            f32 bulk=portArmForearmBulk(x), next=portArmForearmBulk(x+1);
-            assert(bulk>=1 && bulk<=1.25f);
-            assert(next-bulk<0.002f && next-bulk>-0.002f);
-        }
     }
     for (variant=0;variant<6;variant++) {
         reset();
@@ -203,7 +227,10 @@ int main(void) {
     nativeData.DisplayList.Primary=nativeList; nativeData.DisplayList.Vertices=(Vertex *)nativeVertices;
     nativeData.DisplayList.BaseAddr=nativeVertices; nativeData.DisplayList.numVertices=7;
     gSPMatrix(&nativeList[0],0x03000040,G_MTX_MODELVIEW|G_MTX_LOAD|G_MTX_NOPUSH);
-    gSPVertex(&nativeList[1],0x05000000,3,0); gSP1Triangle(&nativeList[2],0,1,2,0); gSPEndDisplayList(&nativeList[3]);
+    gSPVertex(&nativeList[1],0x05000000,7,0);
+    gSP1Triangle(&nativeList[2],0,1,5,0); gSP1Triangle(&nativeList[3],0,5,2,0);
+    gSP1Triangle(&nativeList[4],0,2,6,0); gSP1Triangle(&nativeList[5],0,6,1,0);
+    gSPEndDisplayList(&nativeList[6]);
     player.tileColor.r=player.tileColor.g=player.tileColor.b=255;
     for (variant=0;variant<6;variant++) for (i=0;i<8;i++) for (j=0;j<2;j++) {
         reset(); player.bondtype=portWardrobeCuff(variant); render.gdl=output;
@@ -237,11 +264,40 @@ int main(void) {
               assert(length-(pb.y-pa.y)<0.001f && length-(pb.y-pa.y)>-0.001f); }
         }
         portWardrobeBeginHand(items[i],j);
-        assert(portWardrobeRenderNode(&render,&nativeNode));
-        assert(copies==(j==GUNLEFT ? 6 : 1)); /* Joined forearm; watch only on left. */
+        assert(portWardrobeRenderNode(&render,&nativeNode,&stockHand)==
+            (items[i]==ITEM_FIST ? PORT_WARDROBE_DRAWN : PORT_WARDROBE_NATIVE_HAND));
+        assert(copies==(j==GUNLEFT ? 6 : 1)); /* Stock pistol vertices are never copied/retargeted. */
+        if (items[i]!=ITEM_FIST) {
+            ModelRoData_DisplayListRecord expected=nativeData.DisplayList;
+            expected.Primary=stockHand.Primary;
+            assert(!memcmp(&stockHand,&expected,sizeof(expected)));
+            assert(!memcmp(stockHand.Primary,nativeList,2*sizeof(Gfx)));
+            /* Exercise the actual model renderer, including its native
+             * type-3 two-cycle setup, not a duplicate test wrapper. */
+            reset(); render.gdl=output; nativeCacheMarks=0;
+            nativeData.DisplayList.ModelType=3;
+            render.PropType=PROP_TYPE_WEAPON+1; render.envcolour.word=255; render.zbufferenabled=1;
+            modelRenderNodeGundl(&render,&nativeNode);
+            assert(nativeCacheMarks==0);
+            assert(((render.gdl-1)->words.w0>>24)==G_DL);
+            { Gfx expected,depthMode,armMode; s32 found=0,depth=0,armDepth=0,zGeometry=0;
+                gDPSetCombineMode(&expected,G_CC_TRILERP,G_CC_MODULATEIA2);
+                gDPSetRenderMode(&depthMode,G_RM_FOG_PRIM_A,G_RM_AA_ZB_XLU_SURF2);
+                gDPSetRenderMode(&armMode,G_RM_FOG_PRIM_A|Z_UPD,G_RM_AA_ZB_OPA_SURF2);
+                for (Gfx *command=output;command<render.gdl;command++) {
+                    if (!memcmp(command,&expected,sizeof(expected))) found++;
+                    if (!memcmp(command,&depthMode,sizeof(depthMode))) depth++;
+                    if (!memcmp(command,&armMode,sizeof(armMode))) armDepth++;
+                    if ((command->words.w0>>24)==(u8)G_SETGEOMETRYMODE && (command->words.w1&G_ZBUFFER)) zGeometry++;
+                }
+                assert(found==2 && depth==2 && armDepth==1 && zGeometry==1);
+            }
+            render.zbufferenabled=0;
+            nativeData.DisplayList.ModelType=0;
+        }
         assert(output[1].words.w1==0x03000040 && render.gdl<output+32);
         assert(copied[0][0].v.ob[2]==(items[i]==ITEM_FIST ? 50 : 0));
-        portWardrobeEnd(); assert(!portWardrobeRenderNode(&render,&nativeNode));
+        portWardrobeEnd(); assert(!portWardrobeRenderNode(&render,&nativeNode,&stockHand));
     }
     { /* Stitch a different native polygon outline without changing its hand,
        * adding skin patches or losing material/vertex-cache state. */
@@ -330,7 +386,7 @@ int main(void) {
         savedCap=armCuffs[0]; cap.key=dl; armCuffs[0]=cap;
         reset(); color=dynAllocate(22*sizeof(Gfx)); depth=dynAllocate(22*sizeof(Gfx));
         mesh.color=color; mesh.depth=depth;
-        armCopyPart(&data,9,&(coord3d){0},0,PORT_ARM_FOREARM,identity,NULL,.5f,127,&color,&depth,NULL);
+        armCopyPart(&data,9,&(coord3d){0},0,PORT_ARM_FOREARM,identity,NULL,.5f,127,&color,&depth,NULL,NULL,TRUE,NULL,FALSE);
         gSPEndDisplayList(color); gSPEndDisplayList(depth);
         assert(color==mesh.color+21 && images(mesh.color,ids)==1 && ids[0]==1050);
         assert(depth==mesh.depth+20);
@@ -343,10 +399,145 @@ int main(void) {
         gDPSetTextureImage(&dl[0],G_IM_FMT_RGBA,G_IM_SIZ_16b,1,1001);
         armFindCuff(&data,9,&cap); assert(cap.count==0);
     }
-    portWardrobeBegin(ITEM_AK47); assert(!portWardrobeRenderNode(&render,&nativeNode));
+    { /* Mixed pistol nodes retain the complete palm and its authored seams;
+       * only the long triangles to the elbow are replaced. */
+        Vtx mixed[8]={0},saved[8]; Gfx dl[6],reload[6],metal[6];
+        union ModelRoData data[3]={0}; NativeArmLayout layout;
+        const PortGripSource *grip; Gfx *color;
+        for (i=0;i<8;i++) { mixed[i].v.ob[0]=(i%2)*40-20; mixed[i].v.ob[1]=(i%3)*20-20;
+            mixed[i].v.ob[2]=i==0 ? -200 : i<5 ? 0 : 20;
+            mixed[i].v.tc[0]=i*70; mixed[i].v.tc[1]=i*30; memset(mixed[i].v.cn,255,4); }
+        mixed[1].v.ob[0]=-20; mixed[1].v.ob[1]=-20;
+        mixed[2].v.ob[0]=20; mixed[2].v.ob[1]=-20;
+        mixed[3].v.ob[0]=20; mixed[3].v.ob[1]=20;
+        mixed[4].v.ob[0]=-20; mixed[4].v.ob[1]=20;
+        /* Two proximal vertices are needed to measure the elbow's width/depth. */
+        mixed[7].v.ob[0]=30; mixed[7].v.ob[1]=30; mixed[7].v.ob[2]=-200;
+        memcpy(saved,mixed,sizeof(mixed));
+        gSPMatrix(&dl[0],0x03000000,G_MTX_MODELVIEW|G_MTX_LOAD|G_MTX_NOPUSH);
+        gDPSetTextureImage(&dl[1],G_IM_FMT_RGBA,G_IM_SIZ_16b,1,1001);
+        gSPVertex(&dl[2],0x05000000,8,0);
+        gSP4Triangles(&dl[3],0,1,2,0,2,3,0,3,4,0,4,1);
+        gSP2Triangles(&dl[4],1,5,6,0,2,3,6,0); gSPEndDisplayList(&dl[5]);
+        data[0].DisplayList.Primary=dl; data[0].DisplayList.Vertices=(Vertex *)mixed;
+        data[0].DisplayList.BaseAddr=mixed; data[0].DisplayList.numVertices=8;
+        assert(paLayout(&data[0].DisplayList,&layout) && layout.count==4 && layout.cutoff==-100);
+    { /* Original hand commands/vertices remain untouched by skin matching. */
+            Gfx authored[11],savedCommands[11];
+            union ModelRoData authoredData={0}; ModelNode authoredNode={.Data=&authoredData};
+            gSPSetGeometryMode(&authored[0],G_CULL_BACK|G_LIGHTING);
+            gDPSetCombineMode(&authored[1],G_CC_TRILERP,G_CC_MODULATEIA2);
+            gSPTexture(&authored[2],1234,2345,5,0,G_ON);
+            gDPSetRenderMode(&authored[3],G_RM_FOG_PRIM_A,G_RM_AA_OPA_SURF2);
+            gDPSetPrimColor(&authored[4],0,0,19,23,29,31);
+            memcpy(authored+5,dl,sizeof(dl)); memcpy(savedCommands,authored,sizeof(authored));
+            authoredData.DisplayList=data[0].DisplayList; authoredData.DisplayList.Primary=authored;
+            portWardrobeBeginHand(ITEM_WPPK,GUNRIGHT); reset(); render.gdl=output;
+            assert(portWardrobeRenderNode(&render,&authoredNode,&stockHand)==PORT_WARDROBE_NATIVE_HAND);
+            ModelRoData_DisplayListRecord expected=authoredData.DisplayList; expected.Primary=stockHand.Primary;
+            assert(!memcmp(&stockHand,&expected,sizeof(stockHand)));
+            assert(!memcmp(authored,savedCommands,sizeof(authored)) && !memcmp(mixed,saved,sizeof(mixed)));
+            portWardrobeEnd();
+        }
+        reset(); assert(portArmMeshBuildFiltered(&mesh,&data[0].DisplayList,identity,&layout,1,127,paKeepHand,FALSE));
+        assert(gripTriangles(mesh.color,0,0)==2 && gripTriangles(mesh.depth,1,0)==2);
+        for (i=0;i<8;i++) {
+            assert(!memcmp(copied[0][i].v.ob,mixed[i].v.ob,6));
+            assert(!memcmp(copied[0][i].v.tc,mixed[i].v.tc,4));
+            assert(copied[0][i].v.cn[0]==255 && copied[0][i].v.cn[3]==127);
+        }
+        for (color=mesh.color;(color->words.w0>>24)!=(u8)G_ENDDL;color++) assert((color->words.w0>>24)!=G_SETCOMBINE);
+        reset(); assert(portArmMeshBuildFiltered(&mesh,&data[0].DisplayList,identity,&layout,1,127,paKeepHand,TRUE));
+        assert(gripTriangles(mesh.color,0,0)==2 && gripTriangles(mesh.depth,1,0)==2);
+        { s32 warm=0,restore=0;
+            for (color=mesh.color;(color->words.w0>>24)!=(u8)G_ENDDL;color++)
+                if ((color->words.w0>>24)==G_SETPRIMCOLOR) {
+                    if (color->words.w1==0x1c191600) warm++;
+                    if (!color->words.w1) restore++;
+                }
+            assert(warm==1 && restore==1);
+        }
+        memcpy(reload,dl,sizeof(dl)); gSPMatrix(&reload[0],0x03000140,G_MTX_MODELVIEW|G_MTX_LOAD|G_MTX_NOPUSH);
+        memcpy(metal,dl,sizeof(dl)); gDPSetTextureImage(&metal[1],G_IM_FMT_RGBA,G_IM_SIZ_16b,1,1050);
+        for (i=0;i<3;i++) { data[i].DisplayList=data[0].DisplayList;
+            testGripNodes[i].Opcode=MODELNODE_OPCODE_DL; testGripNodes[i].Data=data+i;
+            testGripNodes[i].Next=i<2 ? testGripNodes+i+1 : NULL;
+        }
+        data[1].DisplayList.Primary=reload; data[2].DisplayList.Primary=metal;
+        grip=portArmGripSource(); assert(grip && grip->count==1 && grip->arm==&data[0].DisplayList);
+        for (i=0;i<2;i++) {
+            reset(); assert(portWardrobeBuildGrip(&mesh,CUFF_BOILER,BOND_BROSNAN,i,1,127,gripIdentity,NULL));
+            assert(mesh.depth && gripTriangles(mesh.color,0,0)==gripTriangles(mesh.depth,1,0));
+
+        }
+        assert(!memcmp(saved,mixed,sizeof(mixed)));
+    }
+    portWardrobeBegin(ITEM_AK47); assert(!portWardrobeRenderNode(&render,&nativeNode,&stockHand));
     portWardrobeBegin(ITEM_WPPK); nativeList[1].words.w1+=128;
-    assert(!portWardrobeRenderNode(&render,&nativeNode));
+    assert(!portWardrobeRenderNode(&render,&nativeNode,&stockHand));
     assert(!memcmp(original,source,sizeof(source)));
-    puts("Wardrobe checks passed: six outfits, shared wrist bounds, stitched irregular native wrists, closed clothing rims, skin-only light correction/state reset, UV/alpha/source preservation, left-only watch, native bones, depth-only lists and invalid vertex rejection.");
+    { /* Native skin matching never inherits the generated-arm additive lift. */
+        Gfx *command; s32 nativeTexture=0,nativeLod=0;
+        reset(); assert(portArmMeshBuild(&mesh,CUFF_BLUE,BOND_BROSNAN,
+            PORT_ARM_FOREARM|PORT_ARM_NATIVE_SKIN,identity,NULL,1,255));
+        for (command=mesh.color;(command->words.w0>>24)!=(u8)G_ENDDL;command++) {
+            assert((command->words.w0>>24)!=G_SETPRIMCOLOR);
+            if(!memcmp(command,&lists[4][3],sizeof(Gfx))) nativeTexture++;
+            if(!memcmp(command,&lists[4][1],sizeof(Gfx))) nativeLod++;
+        }
+        assert(nativeTexture==1 && nativeLod==1);
+        assert(copied[0][0].v.cn[0]==source[1][0].v.cn[0]);
+    }
+    { /* Skin sampling transfers UV/RGB from the same original material,
+       * while geometry and alpha remain unchanged. Unknown materials are inert. */
+        NativeArmPose fit; coord3d point; Vtx mapped={0},saved;
+        assert(paNativeFit(&nativeData.DisplayList,-200,0,CUFF_BLUE,BOND_BROSNAN,&fit));
+        paNativePoint(&fit.sourceMin,&point,PORT_ARM_FOREARM,&fit);
+        fit.skinCount=1;fit.skin[0].image=1001;
+        for(i=0;i<3;i++) for(j=0;j<3;j++) fit.skin[0].v[i].v.ob[j]=(s16)point.f[j];
+        fit.skin[0].v[1].v.ob[0]+=10;fit.skin[0].v[2].v.ob[1]+=10;
+        fit.skin[0].v[0].v.tc[0]=1000;fit.skin[0].v[0].v.tc[1]=2000;
+        fit.skin[0].v[0].v.cn[0]=100;fit.skin[0].v[0].v.cn[1]=150;fit.skin[0].v[0].v.cn[2]=200;
+        mapped.v.ob[0]=123;mapped.v.ob[1]=456;mapped.v.ob[2]=-789;mapped.v.cn[3]=127;
+        saved=mapped;paNativeSurface(&fit.sourceMin,1001,&mapped,.5f,&fit);
+        assert(!memcmp(mapped.v.ob,saved.v.ob,sizeof(mapped.v.ob)) && mapped.v.cn[3]==127);
+        assert(mapped.v.tc[0]==1000 && mapped.v.tc[1]==2000);
+        assert(mapped.v.cn[0]==50 && mapped.v.cn[1]==75 && mapped.v.cn[2]==100);
+        saved=mapped;paNativeSurface(&fit.sourceMin,1040,&mapped,1,&fit);assert(!memcmp(&saved,&mapped,sizeof(mapped)));
+        {f32 weights[3]; coord3d p={point.x+2,point.y+3,point.z+5};
+         f32 distance=paSkinWeights(&fit.skin[0],p,weights);
+         assert(distance>24.99f && distance<25.01f && weights[0]>.499f && weights[0]<.501f);
+         assert(weights[1]>.199f && weights[1]<.201f && weights[2]>.299f && weights[2]<.301f);}
+    }
+    { /* Material ownership protects sleeve/watch UVs, even when an unexpected
+       * source reuses a vertex across skin and clothing materials. */
+        Gfx dl[8],*color,*depth; Vtx vertices[9],saved[9];
+        ModelRoData_DisplayListRecord data=meshData[0].DisplayList;
+        for(i=0;i<9;i++) vertices[i]=source[0][i%3];memcpy(saved,vertices,sizeof(vertices));
+        data.Vertices=(Vertex *)vertices;data.BaseAddr=vertices;data.numVertices=9;data.Primary=dl;
+        gSPVertex(&dl[0],0x05000000,9,0);
+        gDPSetTextureImage(&dl[1],G_IM_FMT_RGBA,G_IM_SIZ_16b,1,1001);gSP1Triangle(&dl[2],0,1,2,0);
+        gDPSetTextureImage(&dl[3],G_IM_FMT_RGBA,G_IM_SIZ_16b,1,1040);gSP1Triangle(&dl[4],3,4,5,0);
+        gDPSetTextureImage(&dl[5],G_IM_FMT_RGBA,G_IM_SIZ_16b,1,1002);gSP1Triangle(&dl[6],6,7,8,0);
+        gSPEndDisplayList(&dl[7]);
+        for(j=0;j<3;j++) {
+            reset();surfaceCalls=0;mesh.color=color=dynAllocate(256*sizeof(Gfx));mesh.depth=depth=dynAllocate(256*sizeof(Gfx));
+            if(j==1) {gSP1Triangle(&dl[4],0,1,2,0);}
+            armCopyPart(&data,8,&(coord3d){0},0,j==2 ? PORT_ARM_WATCH : PORT_ARM_FOREARM,
+                identity,NULL,1,127,&color,&depth,NULL,NULL,FALSE,testSurface,FALSE);
+            gSPEndDisplayList(color++);gSPEndDisplayList(depth++);
+            assert(surfaceCalls==(j==0 ? 6 : j==1 ? 3 : 0));
+            assert(gripTriangles(mesh.color,0,0)==3 && gripTriangles(mesh.depth,1,0)==3);
+            for(i=0;i<9;i++) {
+                assert(!memcmp(copied[0][i].v.ob,vertices[i].v.ob,sizeof(vertices[i].v.ob)));
+                assert(copied[0][i].v.cn[3]==127);
+                if(j==2 || (i>=3 && i<6) || (j==1 && i<3)) {
+                    assert(!memcmp(copied[0][i].v.tc,vertices[i].v.tc,sizeof(vertices[i].v.tc)));
+                } else {assert(copied[0][i].v.tc[0]==17 && copied[0][i].v.cn[0]==50);}
+            }
+        }
+        assert(!memcmp(saved,vertices,sizeof(vertices)));
+    }
+    puts("Wardrobe checks passed: six outfits, preserved mixed-node palms, rigid native grip source, joined fade depth, stitched wrists, closed clothing rims, skin-only light correction/state reset, UV/alpha/source preservation, left-only watch, native bones, depth-only lists and invalid vertex rejection.");
     return 0;
 }

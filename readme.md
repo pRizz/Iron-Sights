@@ -218,6 +218,8 @@ sudo apt install libsdl2-2.0-0:i386 libgl1:i386
 
 Every repository change must update the [fork change inventory](FORK_CHANGES.md); see [AGENTS.md](AGENTS.md).
 
+For hands, arms and weapon rendering, open the [visual review gallery](review/hand-gallery/index.html) locally in a browser. It compares PP7, AK47/KF7 and Klobb in regular/ADS poses across six wardrobes, plus all generated weapon icons. See [generation and pre-commit setup](scripts/port/hand_gallery.md).
+
 For ADS changes and bug reports, use [this fork's issues](https://github.com/pRizz/Project-Midas/issues) and pull requests. The inherited [CONTRIBUTING.md](CONTRIBUTING.md) describes upstream contribution guidelines, including the rules for AI-assisted changes. General port development is coordinated in [upstream Project Midas](https://github.com/murkantor/Project-Midas).
 
 ## License
@@ -244,4 +246,4 @@ Project Midas ADS builds on [Project Midas](https://github.com/murkantor/Project
 - The 1964 emulator and its GE/Perfect Dark mouse injector
 - [pj64raphnetraw](https://github.com/raphnet/pj64raphnetraw) by Raphael Assenat ([raphnet-tech](https://www.raphnet-tech.com)), the reference for the raphnet adapter protocol
 
-GE is owned by Rare, Nintendo and the Bond rights holders. This project contains no game assets.
+GE is owned by Rare, Nintendo and the Bond rights holders. No ROM or extracted game assets are distributed. The review gallery contains rendered gameplay-model references; the underlying artwork belongs to its rights holders.

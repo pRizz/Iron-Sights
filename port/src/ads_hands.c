@@ -77,7 +77,7 @@ static void adsHandProjection(const Mtxf *scene, Mtxf *projection)
     }
 }
 
-typedef struct { coord3d wrist, palm, elbow, axis, back, side; f32 watchCenter; } AdsArmPose;
+typedef struct { coord3d wrist, palm, elbow, axis, back, side; } AdsArmPose;
 
 static void adsUnit(coord3d *v)
 {
@@ -85,42 +85,37 @@ static void adsUnit(coord3d *v)
     if (length > 0.0001f) { v->x /= length; v->y /= length; v->z /= length; }
 }
 
-static void adsNativePoint(const coord3d *source, coord3d *target, s32 part, void *context)
+/* The authored closed PP7 hand remains rigid: no single curl is applied
+ * across fingertips, thumb and palm. Only the proximal forearm stretches. */
+static const struct {
+    f32 handScale,protectedWrist,bulkRamp,forearmBulk;
+} sAdsArmProfile={.045f,40,35,1.75f};
+
+static void adsGripPoint(const coord3d *source,coord3d *target,s32 part,const PortGripSpace *space,void *context)
 {
-    const AdsArmPose *pose = context;
-    f32 x = source->x, y = source->y;
-    f32 radial = 0.0045f*portArmForearmBulk(x);
-    /* The watch is uniformly refitted to the wider wrist, including its
-     * case and clock hands. Its face keeps its aspect ratio. */
-    if (part == PORT_ARM_WATCH) {
-        f32 scale = portArmForearmBulk(-180);
-        f32 watchX = pose->watchCenter+(x-pose->watchCenter)*scale;
-        for (s32 k = 0; k < 3; k++) target->f[k] = 16*(pose->wrist.f[k]
-            + (watchX+180)*0.0045f*pose->axis.f[k]
-            + y*0.0045f*scale*pose->back.f[k] + source->z*0.0045f*scale*pose->side.f[k]);
-        return;
-    }
-    /* Blend the broader hand heel into the original knuckles and fingers. */
-    if (part == PORT_ARM_HAND && x > 350) {
-        f32 angle = (x-350)*0.002f;
-        x = 350+sinf(angle)/0.002f;
-        y += (cosf(angle)-1)/0.002f;
-    }
-    f32 t = (x+180.0f)/880.0f;
-    coord3d center;
+    const AdsArmPose *pose=context;
+    const f32 scale=sAdsArmProfile.handScale;
+    f32 nearZ=space->wrist.z-sAdsArmProfile.protectedWrist;
     s32 k;
-    if (source->x < -180.0f) {
-        coord3d near;
-        f32 distance = -180-source->x;
-        for (k = 0; k < 3; k++) near.f[k] = pose->wrist.f[k]-pose->axis.f[k]*1400*0.0045f;
-        /* Keep the wrist/watch at uniform source scale. Only the proximal
-         * sleeve stretches to meet the elbow below the viewport. */
-        if (distance <= 1400) {
-            for (k = 0; k < 3; k++) center.f[k] = pose->wrist.f[k]-pose->axis.f[k]*distance*0.0045f;
-        } else center = adsHandLerp(near, pose->elbow, (distance-1400)/(3527-1400));
-    } else center = adsHandLerp(pose->wrist, pose->palm, t);
-    for (k = 0; k < 3; k++) target->f[k] = 16.0f*(center.f[k]
-        + y*radial*pose->back.f[k] + source->z*radial*pose->side.f[k]);
+    if (part==PORT_ARM_FOREARM && source->z<nearZ && nearZ>space->elbow.z) {
+        f32 t=(nearZ-source->z)/(nearZ-space->elbow.z);
+        f32 nearT=(space->wrist.z-nearZ)/(space->wrist.z-space->elbow.z);
+        f32 nativeT=(space->wrist.z-source->z)/(space->wrist.z-space->elbow.z);
+        coord3d near=adsHandLerp(space->wrist,space->elbow,nearT);
+        coord3d center=adsHandLerp(space->wrist,space->elbow,nativeT);
+        /* Restore forearm volume without scaling the grip, wrist seam or
+         * watch. Smoothly widen both radial axes behind the protected cuff. */
+        f32 grow=(nearZ-source->z)/sAdsArmProfile.bulkRamp;
+        f32 bulk;
+        if (grow>1) grow=1;
+        bulk=1+(sAdsArmProfile.forearmBulk-1)*grow*grow*(3-2*grow);
+        for (k=0;k<3;k++) {
+            f32 start=pose->palm.f[k]+scale*(nearZ*pose->axis.f[k]-near.x*pose->back.f[k]+near.y*pose->side.f[k]);
+            target->f[k]=16*(start+(pose->elbow.f[k]-start)*t
+                +scale*bulk*(-(source->x-center.x)*pose->back.f[k]+(source->y-center.y)*pose->side.f[k]));
+        }
+    } else for (k=0;k<3;k++) target->f[k]=16*(pose->palm.f[k]+scale*
+        (source->z*pose->axis.f[k]-source->x*pose->back.f[k]+source->y*pose->side.f[k]));
 }
 
 static AdsArmPose adsNativePose(const Mtxf *gun, coord3d grip, s32 left, f32 blend)
@@ -161,9 +156,7 @@ static s32 adsNativeGrip(PortArmMesh *mesh, const Mtxf *gun, coord3d grip,
     s32 left, f32 blend, f32 light)
 {
     AdsArmPose pose = adsNativePose(gun, grip, left, blend);
-    pose.watchCenter = portArmWatchCenter();
-    return portArmMeshBuild(mesh, g_CurrentPlayer->bondtype, fileGetBondForCurrentFolder(),
-        PORT_ARM_FOREARM|PORT_ARM_HAND|(left ? PORT_ARM_WATCH : 0), adsNativePoint, &pose, light, (u8)(blend*255));
+    return portWardrobeBuildGrip(mesh,g_CurrentPlayer->bondtype,fileGetBondForCurrentFolder(),left,light,(u8)(blend*255),adsGripPoint,&pose);
 }
 
 Gfx *portAdsBeginHandLayer(Gfx *gdl)
@@ -185,6 +178,7 @@ Gfx *portAdsDrawHands(Gfx *gdl, s32 item, const Mtxf *gun)
     f32 light;
     PortArmMesh native[2];
     s32 i;
+    if(portHandGalleryStock()) return gdl;
     if (blend <= 0.0f || !portAdsHandGrips(item, &trigger, &support)) return gdl;
     matrix = dynAllocateMatrix();
     matrix_4x4_set_identity(&identity);

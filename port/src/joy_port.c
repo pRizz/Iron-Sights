@@ -70,6 +70,7 @@
 #include "game/chrai.h"
 #include "game/lv.h"
 #include "port_ads.h"
+#include "port_wardrobe.h"
 #include "port_hud.h"
 #include "joy.h"
 #include <os_extension.h>
@@ -741,7 +742,50 @@ f32 portAdsWeaponPitch(s32 item)
     return 0.0f;
 }
 
+static s32 sHandGalleryCase;
+s32 portHandGalleryActive(void)
+{
 #ifdef GE_VIDEO
+    static s32 enabled=-1;
+    if(enabled<0) {const char *value=getenv("GE_HAND_GALLERY");enabled=value && *value;}
+    return enabled;
+#else
+    return FALSE;
+#endif
+}
+s32 portHandGalleryStock(void) {return portHandGalleryActive() && !(sHandGalleryCase&1);}
+
+#ifdef GE_VIDEO
+static void joyPortHandGallery(void)
+{
+    static const s32 weapons[3]={ITEM_WPPK,ITEM_AK47,ITEM_SKORPION};
+    static s32 configured=-1,samples,advance;
+    static f32 time;
+    s32 item,aiming;
+    if(!portHandGalleryActive() || get_cur_playernum()!=0 || !joyPortPermitted()) return;
+    if(advance) {sHandGalleryCase++;time=0;samples=advance=0;}
+    if(sHandGalleryCase==72) {portConLogf("ge: hand-gallery complete cases=72 samples=144\n");exit(0);}
+    item=weapons[(sHandGalleryCase/4)%3];aiming=(sHandGalleryCase/2)%2;
+    sHeld[0][PORTACT_AIM_DOWN_SIGHTS]=aiming;
+    g_CurrentPlayer->bondtype=portWardrobeCuff(sHandGalleryCase/12);
+    if(configured!=sHandGalleryCase) {
+        bondinvSetAllGunsFlag(TRUE);
+        currentPlayerEquipWeaponWrapper(GUNLEFT,ITEM_UNARMED);
+        currentPlayerEquipWeaponWrapper(GUNRIGHT,item);
+        configured=sHandGalleryCase;
+    }
+    time+=g_GlobalTimerDelta;
+    if(getCurrentPlayerWeaponId(GUNRIGHT)==item) g_CurrentPlayer->hands[GUNRIGHT].weapon_ammo_in_magazine=get_ptr_item_statistics(item)->MagSize;
+    if(time>=120 && getCurrentPlayerWeaponId(GUNRIGHT)==item
+        && g_CurrentPlayer->hands[GUNRIGHT].weapon_action_state==GUN_ANIM_STATE_IDLE
+        && g_CurrentPlayer->hands[GUNRIGHT].weapon_current_animation==0
+        && portAdsBlend()==(aiming?1.0f:0.0f)) {
+        extern int ge_shot_force;
+        portConLogf("ge: hand-gallery capture case=%d sample=%d item=%d wardrobe=%d ads=%d stock=%d\n",
+            sHandGalleryCase,++samples,item,sHandGalleryCase/12,aiming,portHandGalleryStock());
+        ge_shot_force=1;if(samples==2) advance=1;
+    }
+}
 static s32 sAdsAuditTransitions;
 /* GE_ADS_AUDIT=1 captures all guns; an item ID captures just that gun. */
 static void joyPortAdsAudit(void)
@@ -758,9 +802,11 @@ static void joyPortAdsAudit(void)
     if (enabled < 0)
     {
         const char *value = getenv("GE_ADS_AUDIT");
-        enabled = value != NULL;
-        dual = getenv("GE_ADS_AUDIT_DUAL") != NULL;
-        sAdsAuditTransitions = enabled && getenv("GE_ADS_AUDIT_TRANSITIONS") != NULL;
+        const char *dualValue = getenv("GE_ADS_AUDIT_DUAL");
+        const char *transitionsValue = getenv("GE_ADS_AUDIT_TRANSITIONS");
+        enabled = value && *value;
+        dual = dualValue && *dualValue;
+        sAdsAuditTransitions = enabled && transitionsValue && *transitionsValue;
         if (value != NULL && atoi(value) >= ITEM_WPPK)
         {
             for (index = 0; index < end && sAdsPoses[index].item != atoi(value); index++) {}
@@ -769,6 +815,10 @@ static void joyPortAdsAudit(void)
         }
     }
     if (!enabled || get_cur_playernum() != 0 || !joyPortPermitted()) return;
+    if (dual) while (index<end && sAdsPoses[index].item!=ITEM_WPPK && sAdsPoses[index].item!=ITEM_WPPKSIL
+        && sAdsPoses[index].item!=ITEM_TT33 && sAdsPoses[index].item!=ITEM_RUGER
+        && sAdsPoses[index].item!=ITEM_GOLDENGUN && sAdsPoses[index].item!=ITEM_SILVERWPPK
+        && sAdsPoses[index].item!=ITEM_GOLDWPPK) ++index;
     if (index == end)
     {
         portConLogf("ge: ads-audit: complete (%d guns)\n", count);
@@ -778,6 +828,9 @@ static void joyPortAdsAudit(void)
     sHeld[0][PORTACT_AIM_DOWN_SIGHTS] = !dual && (!sAdsAuditTransitions || (time >= 75.0f && time < 130.0f));
     if (!equipped)
     {
+        const char *wardrobe=getenv("GE_ADS_AUDIT_WARDROBE");
+        if (wardrobe && *wardrobe && atoi(wardrobe)>=0 && atoi(wardrobe)<6)
+            g_CurrentPlayer->bondtype=portWardrobeCuff(atoi(wardrobe));
         bondinvSetAllGunsFlag(TRUE);
         currentPlayerEquipWeaponWrapper(GUNLEFT, dual ? sAdsPoses[index].item : ITEM_UNARMED);
         currentPlayerEquipWeaponWrapper(GUNRIGHT, sAdsPoses[index].item);
@@ -932,7 +985,7 @@ void portAdsTick(void)
 
     if (pad < 0) return;
 #ifdef GE_VIDEO
-    joyPortAdsAudit();
+    if(portHandGalleryActive()) joyPortHandGallery(); else joyPortAdsAudit();
 #endif
     if (!joyPortPermitted()) sAdsNormalAim[pad] = 0;
     if (!joyPortPermitted() || !joyPortAdsWeapon())

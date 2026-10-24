@@ -7,5 +7,5 @@ trap 'rm -f "$test_bin"' EXIT
     -fno-builtin -Werror=implicit-function-declaration -ffunction-sections -fdata-sections -Wl,--gc-sections \
     -DVERSION_US -DLANG_US -DREFRESH_NTSC -D_LANGUAGE_C \
     -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \
-    scripts/port/test_wardrobe.c src/game/math_atan2f.c -lm -o "$test_bin"
+    scripts/port/test_wardrobe.c src/game/model.c src/game/math_atan2f.c -lm -o "$test_bin"
 "$test_bin"

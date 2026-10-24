@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Midas ADS · Hand render gallery</title>
+<style>
+:root{color-scheme:dark;--bg:#101317;--panel:#1a2028;--line:#333e4b;--muted:#a6b3c4;--ink:#edf3fa;--accent:#77d5b0}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}main{max-width:1560px;margin:auto;padding:36px 28px 80px}a{color:var(--accent)}h1{font-size:clamp(26px,3.5vw,42px);margin:6px 0 8px;letter-spacing:-.04em}h2{font-size:24px;margin:38px 0 12px}.eyebrow{color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:.17em}p{max-width:950px;color:var(--muted);margin:8px 0 18px}.stats{display:flex;gap:12px;flex-wrap:wrap;margin:22px 0}.stats span,button,select{border:1px solid var(--line);background:var(--panel);border-radius:7px;color:var(--ink);padding:8px 12px;font:inherit}.stats strong{color:var(--accent)}nav{display:flex;gap:22px;font-size:13px;margin:22px 0}.notice{border-left:3px solid #d9b46b;padding:10px 16px;background:#242219;font-size:13px;color:#e2d4b6}.controls{position:sticky;top:0;z-index:2;display:flex;flex-wrap:wrap;align-items:end;gap:12px;padding:15px 0;background:var(--bg);border-bottom:1px solid var(--line)}label{display:grid;gap:4px;color:var(--muted);font-size:12px}select{min-width:135px;cursor:pointer}button{cursor:pointer}button:hover,select:hover{border-color:var(--accent)}button:focus-visible,a:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}#count{margin-left:auto;color:var(--muted);font-size:13px;padding:9px}.scroll{overflow:auto;margin-top:18px}table{border-collapse:separate;border-spacing:6px;width:100%;min-width:870px;table-layout:fixed}th{font-weight:500;color:var(--muted);font-size:12px}thead th{padding:6px}thead .group{color:var(--ink);font-size:14px;text-align:left;padding-left:12px}th.row-label{width:135px;text-align:left;vertical-align:top;padding:14px 9px}th.row-label strong{display:block;color:var(--ink);font-size:14px}th.row-label small{display:block;font-size:12px}td{padding:0;background:var(--panel);border:1px solid var(--line);border-radius:7px;overflow:hidden}td.fork{border-top-color:var(--accent)}.shot{display:block;padding:0;border:0;border-radius:0;width:100%;background:#30343c}.shot img{display:block;width:100%;aspect-ratio:16/9;object-fit:contain}.caption{padding:6px 10px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between}.caption code{font-size:10px}.pixel img{image-rendering:pixelated}.icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}.icon-card{margin:0;border:1px solid var(--line);background:var(--panel);border-radius:9px;overflow:hidden}.checker{background-color:#30343c;background-image:linear-gradient(45deg,#3b424b 25%,transparent 25%),linear-gradient(-45deg,#3b424b 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#3b424b 75%),linear-gradient(-45deg,transparent 75%,#3b424b 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0}.icon-card button{display:block;padding:14px 4px;width:100%;border:0;border-radius:0;background-color:transparent}.icon-card img{width:100%;aspect-ratio:512/160;object-fit:contain}.icon-card figcaption{padding:10px 14px;font-size:13px}.icon-card small{display:block;color:var(--muted);font-size:11px}details{border:1px solid var(--line);border-radius:7px;padding:12px 16px;margin-top:22px;color:var(--muted)}summary{cursor:pointer}pre{white-space:pre-wrap;font-size:12px;overflow-wrap:anywhere}dialog{width:min(1400px,96vw);max-height:94vh;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);padding:18px}dialog::backdrop{background:#000b}.dialog-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.dialog-head strong{flex:1}#viewer{overflow:auto;max-height:70vh;margin-top:14px;text-align:center;background:#30343c}#viewer img{display:block;margin:auto;max-width:none;width:100%}#view-meta{font-size:12px;overflow-wrap:anywhere;color:var(--muted)}.empty{text-align:center;padding:40px;color:var(--muted)}footer{margin-top:30px;color:var(--muted);font-size:12px}@media(max-width:650px){main{padding:24px 12px}.controls{gap:8px}select{min-width:110px}#count{margin-left:0}table{min-width:800px}nav{gap:14px}}
+</style>
+<main>
+<div class="eyebrow">Project Midas ADS / render review</div>
+<h1>Hands, wrists &amp; weapons</h1>
+<p>A repeatable visual matrix for checking grip shape, skin continuity, sleeve coverage and weapon alignment. Click an image for full-resolution inspection; use the filters to narrow the comparison.</p>
+<nav aria-label="Gallery sections"><a href="#matrix">Weapon matrix</a><a href="#hands">Wardrobe hand icons</a><a href="#icons">Other weapon icons</a><a href="#provenance">Render provenance</a></nav>
+<div class="stats"><span><strong>72</strong> weapon views</span><span><strong>6</strong> wardrobes</span><span><strong>35</strong> native icon renders</span><span><strong>2 × 2</strong> repeat checks</span></div>
+<div class="notice">Stock is a native-model control rendered in the same fork camera and aim pose. Upstream has no ADS mode. “Fork” shows the current wardrobe/arm treatment; this is not a comparison with a separately built upstream executable.</div>
+<section id="matrix" aria-label="Weapon comparison matrix">
+<div class="controls">
+<label>Weapon<select id="weapon"><option value="all">All weapons</option><option value="pp7">PP7 pistol</option><option value="ak47">AK47 / KF7</option><option value="klobb">Klobb</option></select></label>
+<label>Wardrobe<select id="wardrobe"><option value="all">All wardrobes</option><option>blue</option><option>boiler</option><option>jungle</option><option>snow</option><option>tuxedo</option><option>connery</option></select></label>
+<label>Aim mode<select id="mode"><option value="all">Regular + ADS</option><option value="regular">Regular</option><option value="ads">ADS</option></select></label>
+<label>Reference<select id="variant"><option value="all">Stock + fork</option><option value="stock">Stock only</option><option value="fork">Fork only</option></select></label>
+<button id="pixels" type="button" aria-pressed="false">Pixel inspection</button><span id="count" aria-live="polite"></span>
+</div>
+<div class="scroll"><table id="matrix-table"><caption class="empty">Loading matrix…</caption></table></div>
+</section>
+<section id="hands"><h2>Wardrobe hand icons</h2><p>The six wardrobe-specific karate-chop icons use the same native renderer and cache as the game. The base unarmed icon is included for comparison.</p><div id="hand-icons" class="icon-grid"></div></section>
+<section id="icons"><h2>Other weapon icons</h2><p>All remaining generated weapon and gadget icons, shown at their original transparent aspect ratio.</p><div id="other-icons" class="icon-grid"></div></section>
+<details id="provenance"><summary>Render provenance &amp; regeneration</summary><pre id="provenance-data"></pre><p>Regenerate with <code>python scripts/port/hand_gallery.py generate</code>. Verify without a ROM with <code>python scripts/port/hand_gallery.py verify</code>. Source inputs and image pixels are hashed; no wall-clock timestamps or local user paths are embedded.</p></details>
+<footer>Local ROM-derived review renders. The gallery exception covers these rendered references only; ROMs, extracted textures/models and binary caches are not included.</footer>
+</main>
+<dialog id="dialog"><div class="dialog-head"><strong id="view-title"></strong><button id="peer" type="button">Switch stock / fork</button><label>Zoom<input id="zoom" type="range" min="50" max="300" value="100" step="25"></label><button id="close" type="button">Close</button></div><div id="viewer" class="checker"><img id="view-image" alt=""></div><p id="view-meta"></p></dialog>
+<script id="gallery-data" type="application/json">@@MANIFEST@@</script>
+<script>
+'use strict';
+const data=JSON.parse(document.getElementById('gallery-data').textContent);
+const $=id=>document.getElementById(id), title=s=>s.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
+let selected=null;
+function element(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
+function openImage(row){selected=row;$('view-title').textContent=row.label?`${title(row.wardrobe)} / ${row.label} / ${title(row.mode)} / ${title(row.variant)}`:title(row.name);$('view-image').src=row.file;$('view-image').alt=$('view-title').textContent;$('view-image').style.width='100%';$('zoom').value=100;$('view-meta').textContent=`${row.width} × ${row.height} · pixel SHA256 ${row.pixels_sha256}`;$('peer').hidden=!row.variant;if(!$('dialog').open)$('dialog').showModal();}
+function render(){
+ const modes=$('mode').value==='all'?['regular','ads']:[$('mode').value],variants=$('variant').value==='all'?['stock','fork']:[$('variant').value];
+ const rows=data.cases.filter(r=>($('weapon').value==='all'||r.weapon===$('weapon').value)&&($('wardrobe').value==='all'||r.wardrobe===$('wardrobe').value)&&modes.includes(r.mode)&&variants.includes(r.variant));
+ const table=$('matrix-table');table.replaceChildren();const head=document.createElement('thead'),line=document.createElement('tr');line.append(element('th','Wardrobe / weapon'));
+ for(const mode of modes)for(const variant of variants)line.append(element('th',`${title(mode)} · ${variant==='fork'?'Fork':'Stock model'}`,'group'));head.append(line);table.append(head);
+ const body=document.createElement('tbody'),groups=new Map();for(const row of rows){const key=row.wardrobe+'/'+row.weapon;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);}
+ for(const group of groups.values()){
+  const tr=document.createElement('tr'),label=element('th',undefined,'row-label');label.scope='row';label.append(element('strong',title(group[0].wardrobe)),element('small',group[0].label));tr.append(label);
+  for(const mode of modes)for(const variant of variants){const row=group.find(r=>r.mode===mode&&r.variant===variant),td=element('td',undefined,variant),button=element('button',undefined,'shot');button.type='button';button.title=`Inspect ${row.label}, ${row.wardrobe}, ${row.mode}, ${row.variant}`;const image=document.createElement('img');image.src=row.file;image.alt=button.title;image.loading='lazy';image.width=row.width;image.height=row.height;button.append(image);button.addEventListener('click',()=>openImage(row));const caption=element('div',undefined,'caption');caption.append(element('span',variant==='fork'?'Current fork':'Native model control'),element('code',row.pixels_sha256.slice(0,8)));td.append(button,caption);tr.append(td);}body.append(tr);
+ }table.append(body);$('count').textContent=`${rows.length} views · ${groups.size} comparisons`;
+}
+for(const id of ['weapon','wardrobe','mode','variant'])$(id).addEventListener('change',render);
+function icon(row){const card=element('figure',undefined,'icon-card'),button=element('button',undefined,'checker');button.type='button';const image=document.createElement('img');image.src=row.file;image.alt=title(row.name);image.loading='lazy';image.width=row.width;image.height=row.height;button.append(image);button.addEventListener('click',()=>openImage(row));const caption=element('figcaption',title(row.name));caption.append(element('small',`Native slot ${row.id} · ${row.width} × ${row.height}`));card.append(button,caption);return card;}
+for(const row of data.icons)(row.id===1||row.id>=32?$('hand-icons'):$('other-icons')).append(icon(row));
+$('pixels').addEventListener('click',()=>{document.body.classList.toggle('pixel');$('pixels').setAttribute('aria-pressed',String(document.body.classList.contains('pixel')));});
+$('close').addEventListener('click',()=>$('dialog').close());$('zoom').addEventListener('input',()=>$('view-image').style.width=$('zoom').value+'%');
+$('peer').addEventListener('click',()=>{const other=data.cases.find(r=>r.wardrobe===selected.wardrobe&&r.weapon===selected.weapon&&r.mode===selected.mode&&r.variant!==selected.variant);if(other)openImage(other);});
+$('dialog').addEventListener('click',e=>{if(e.target===$('dialog'))$('dialog').close();});
+document.addEventListener('keydown',e=>{if($('dialog').open&&(e.key==='ArrowLeft'||e.key==='ArrowRight'))$('peer').click();});
+$('provenance-data').textContent=JSON.stringify({render_inputs_sha256:data.inputs_sha256,recipe:data.recipe,renderer:data.renderer,repeat_verified:data.repeat_verified,independent_pass_verified:data.independent_pass_verified,rom_sha256:data.rom_sha256},null,2);
+render();
+</script>
+</html>

@@ -3,6 +3,17 @@
 #include <bondconstants.h>
 #include "port_wardrobe.h"
 
+/* Native pistol skin must not paint over an added sleeve drawn earlier. */
+s32 portWardrobeDepthRequired(s32 item)
+{
+    switch (item) {
+    case ITEM_WPPK: case ITEM_WPPKSIL: case ITEM_TT33: case ITEM_RUGER:
+    case ITEM_GOLDENGUN: case ITEM_SILVERWPPK: case ITEM_GOLDWPPK:
+        return TRUE;
+    default: return FALSE;
+    }
+}
+
 /* Matches the six authored watch-arm switches in bondviewSelectCuff. */
 s32 portWardrobeVariant(s32 cuff, s32 folderBond)
 {

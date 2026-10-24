@@ -7713,7 +7713,7 @@ static void gfx_run_dl(Gfx* cmd) {
             case G_WEAPON_EXPORT_EXT: {
                 gfx_flush();
                 gfx_rapi->clear_framebuffer(true, true);
-                gfx_ge_vector_overlay(0, 0, cmd->words.w1 & 16 ? 0xffffffff : 0x000000ff,
+                gfx_ge_vector_overlay(0, 0, cmd->words.w1 & 32 ? 0x30343cff : cmd->words.w1 & 16 ? 0xffffffff : 0x000000ff,
                                       5, SCREEN_WIDTH, SCREEN_HEIGHT);
                 extern int ge_weapon_icon_capture;
                 ge_weapon_icon_capture = (cmd->words.w1 & 15) ? cmd->words.w1 : 0;

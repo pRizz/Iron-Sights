@@ -7,10 +7,14 @@
 #include "game/dyn.h"
 #include "game/file.h"
 #include "game/player.h"
+#include "game/model.h"
 #include "game/math_atan2f.h"
 #include "gbi_extension.h"
 #include "port_wardrobe.h"
 #include "port_arm_mesh.h"
+#include "port_ads.h"
+#include "port_console.h"
+#include <stdlib.h>
 extern f32 fabsf(f32);
 
 static s32 paItem, paHand, paFirstPerson;
@@ -78,6 +82,93 @@ static s32 paDecode(const ModelRoData_DisplayListRecord *data, u32 *matrix)
     return -1;
 }
 
+typedef struct { f32 cutoff; coord3d ring[32]; s32 count,kept,removed; } NativeArmLayout;
+
+static s32 paKeepHand(const Vtx *a,const Vtx *b,const Vtx *c,u32 image,void *context)
+{
+    const NativeArmLayout *layout=context;
+    return a->v.ob[2]>=layout->cutoff && b->v.ob[2]>=layout->cutoff && c->v.ob[2]>=layout->cutoff;
+}
+
+/* Retain stock hand commands and vertices; only suppress proximal arm triangles. */
+static Gfx *paStockHandList(const ModelRoData_DisplayListRecord *data,const NativeArmLayout *layout)
+{
+    const Vtx *cache[16]={0}; Gfx *copy; s32 length,i,j;
+    for(length=0;length<4096;length++) if((data->Primary[length].words.w0>>24)==(u8)G_ENDDL) break;
+    if(length==4096) return NULL;
+    copy=dynAllocate((length+1)*sizeof(Gfx)); memcpy(copy,data->Primary,(length+1)*sizeof(Gfx));
+    for(i=0;i<length;i++) {
+        u32 w0=copy[i].words.w0,w1=copy[i].words.w1,op=w0>>24;
+        if(op==G_VTX) {
+            s32 n=(w0&65535)/sizeof(Vtx),first=(w0>>16)&15;
+            const Vtx *v=(const Vtx *)((uintptr_t)data->BaseAddr+(w1&0xffffff));
+            for(j=0;j<n;j++) cache[first+j]=v+j;
+        } else if(op==(u8)G_TRI1 || op==(u8)G_TRI4) for(j=0;j<(op==(u8)G_TRI4?4:1);j++) {
+            s32 a,b,c;
+            if(op==(u8)G_TRI1) {a=((w1>>16)&255)/10;b=((w1>>8)&255)/10;c=(w1&255)/10;}
+            else {a=(w1>>(j*8))&15;b=(w1>>(j*8+4))&15;c=(w0>>(j*4))&15;}
+            if(a==b || b==c || a==c || paKeepHand(cache[a],cache[b],cache[c],0,(void *)layout)) continue;
+            if(op==(u8)G_TRI1) copy[i].words.w1=0;
+            else {copy[i].words.w0&=~(15u<<(j*4));copy[i].words.w1&=~(255u<<(j*8));}
+        }
+    }
+    return copy;
+}
+
+/* Pistol palms share their DL with the arm. The large empty interval between
+ * wrist and elbow rings identifies the long forearm triangles, not the palm's
+ * many nonplanar edges. Preserve everything distal to that interface. */
+static s32 paLayout(const ModelRoData_DisplayListRecord *data,NativeArmLayout *layout)
+{
+    s16 sorted[1024]; const Vtx *cache[16]={0};
+    s32 i,j,n=0,gap=0; layout->count=layout->kept=layout->removed=0;
+    if (!data->numVertices || data->numVertices>1024) return FALSE;
+    for (i=0;i<data->numVertices;i++) {
+        s16 z=data->Vertices[i].coord.z;
+        for (j=0;j<n && sorted[j]<z;j++);
+        if (j<n && sorted[j]==z) continue;
+        for (s32 k=n;k>j;k--) sorted[k]=sorted[k-1]; sorted[j]=z; ++n;
+    }
+    for (i=1;i<n;i++) if (sorted[i]<=0 && sorted[i-1]-sorted[0]<(sorted[n-1]-sorted[0])*.5f
+        && sorted[i]-sorted[i-1]>gap) {
+        gap=sorted[i]-sorted[i-1]; layout->cutoff=(sorted[i]+sorted[i-1])*.5f;
+    }
+    if (gap<30) return FALSE;
+    for (i=0;i<4096;i++) {
+        const Gfx *command=data->Primary+i; u32 w0=command->words.w0,w1=command->words.w1,op=w0>>24;
+        if (op==(u8)G_ENDDL) return layout->count>=3;
+        if (op==G_VTX) {
+            s32 count=(w0&65535)/sizeof(Vtx),first=(w0>>16)&15;
+            const Vtx *v=(const Vtx *)((uintptr_t)data->BaseAddr+(w1&0xffffff));
+            for (j=0;j<count;j++) cache[first+j]=v+j;
+        } else if (op==(u8)G_TRI1 || op==(u8)G_TRI4) {
+            s32 triangles=op==(u8)G_TRI4 ? 4 : 1;
+            for (j=0;j<triangles;j++) {
+                s32 ids[3],k;
+                if (op==(u8)G_TRI1) { ids[0]=((w1>>16)&255)/10; ids[1]=((w1>>8)&255)/10; ids[2]=(w1&255)/10; }
+                else { ids[0]=(w1>>(8*j))&15; ids[1]=(w1>>(8*j+4))&15; ids[2]=(w0>>(4*j))&15; }
+                if (ids[0]==ids[1] || ids[0]==ids[2] || ids[1]==ids[2]) continue;
+                if (paKeepHand(cache[ids[0]],cache[ids[1]],cache[ids[2]],0,layout)) { ++layout->kept; continue; }
+                ++layout->removed;
+                for (k=0;k<3;k++) {
+                    const Vtx *a=cache[ids[k]],*b=cache[ids[(k+1)%3]];
+                    if (a->v.ob[2]<layout->cutoff || b->v.ob[2]<layout->cutoff) continue;
+                    for (s32 end=0;end<2;end++) {
+                        const Vtx *v=end ? b : a; s32 r;
+                        for (r=0;r<layout->count;r++) if (layout->ring[r].x==v->v.ob[0] && layout->ring[r].y==v->v.ob[1] && layout->ring[r].z==v->v.ob[2]) break;
+                        if (r==layout->count) {
+                            if (r==32) return FALSE;
+                            layout->ring[layout->count++]=(coord3d){v->v.ob[0],v->v.ob[1],v->v.ob[2]};
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return FALSE;
+}
+
+typedef struct { Vtx v[3]; u32 image; } NativeSkinTriangle;
 typedef struct {
     coord3d sourceMin, sourceMax, targetMin, targetMax;
     coord3d sourceElbowMin, sourceElbowMax, targetElbowMin, targetElbowMax;
@@ -85,14 +176,16 @@ typedef struct {
     s32 cuff,bond,ringCount,stitch;
     coord3d ring[32];
     f32 angles[32];
+    NativeSkinTriangle skin[64];
+    s32 skinCount;
 } NativeArmPose;
 
-static s32 paNativeFit(const ModelRoData_DisplayListRecord *data, f32 minZ, f32 wrist,
-    s32 cuff, s32 bond, NativeArmPose *pose)
+static s32 paNativeFitWithLayout(const ModelRoData_DisplayListRecord *data, f32 minZ, f32 wrist,
+    s32 cuff, s32 bond, NativeArmPose *pose,const NativeArmLayout *layout)
 {
     f32 band = (wrist-minZ)*0.04f;
     s32 i, k;
-    pose->ringCount=0; pose->stitch=FALSE;
+    pose->ringCount=pose->skinCount=0; pose->stitch=FALSE;
     if (!portArmWristBounds(&pose->sourceMin,&pose->sourceMax)) return FALSE;
     if (!portArmElbowBounds(cuff,bond,&pose->sourceElbowMin,&pose->sourceElbowMax)) return FALSE;
     if (band < 4) band = 4;
@@ -106,7 +199,11 @@ static s32 paNativeFit(const ModelRoData_DisplayListRecord *data, f32 minZ, f32 
             if (vertex->v.ob[k]<pose->targetElbowMin.f[k]) pose->targetElbowMin.f[k]=vertex->v.ob[k];
             if (vertex->v.ob[k]>pose->targetElbowMax.f[k]) pose->targetElbowMax.f[k]=vertex->v.ob[k];
         }
-        if (vertex->v.ob[2] < wrist-band || vertex->v.ob[2] > wrist+band) continue;
+        if (layout) {
+            s32 r;
+            for (r=0;r<layout->count;r++) if (layout->ring[r].x==vertex->v.ob[0] && layout->ring[r].y==vertex->v.ob[1] && layout->ring[r].z==vertex->v.ob[2]) break;
+            if (r==layout->count) continue;
+        } else if (vertex->v.ob[2] < wrist-band || vertex->v.ob[2] > wrist+band) continue;
         for (k=0;k<pose->ringCount;k++) if (pose->ring[k].x==vertex->v.ob[0]
             && pose->ring[k].y==vertex->v.ob[1] && pose->ring[k].z==vertex->v.ob[2]) break;
         if (k==pose->ringCount) {
@@ -149,6 +246,9 @@ static s32 paNativeFit(const ModelRoData_DisplayListRecord *data, f32 minZ, f32 
     pose->extension=paFirstPerson ? 2.5f : 1;
     return TRUE;
 }
+
+static s32 paNativeFit(const ModelRoData_DisplayListRecord *data,f32 minZ,f32 wrist,s32 cuff,s32 bond,NativeArmPose *pose)
+{ return paNativeFitWithLayout(data,minZ,wrist,cuff,bond,pose,NULL); }
 
 static f32 paNativeLength(const NativeArmPose *pose, f32 x)
 {
@@ -251,17 +351,100 @@ static void paNativePoint(const coord3d *source, coord3d *target, s32 part, void
 }
 
 
-s32 portWardrobeRenderNode(ModelRenderData *renderdata, ModelNode *node)
+/* Sample the native forearm's material mapping, never its deformed geometry.
+ * The watch wrist keeps its fitted shape, while UVs and vertex shade agree
+ * with the unchanged hand on the other side of their shared interface. */
+static void paSkinSetup(NativeArmPose *pose,const ModelRoData_DisplayListRecord *data,const NativeArmLayout *layout)
+{
+    const Vtx *cache[16]={0}; u32 image=0; s32 i,j;
+    pose->skinCount=0;
+    for(i=0;i<4096;i++) {
+        const Gfx *cmd=data->Primary+i; u32 op=cmd->words.w0>>24,w0=cmd->words.w0,w1=cmd->words.w1;
+        if(op==(u8)G_ENDDL) return;
+        if(op==G_SETTIMG) image=w1;
+        else if(op==G_VTX) {
+            s32 n=(w0&65535)/sizeof(Vtx),first=(w0>>16)&15;
+            const Vtx *v=(const Vtx *)((uintptr_t)data->BaseAddr+(w1&0xffffff));
+            for(j=0;j<n;j++) cache[first+j]=v+j;
+        } else if(op==(u8)G_TRI1 || op==(u8)G_TRI4) for(j=0;j<(op==(u8)G_TRI4?4:1);j++) {
+            s32 a,b,c;
+            if(op==(u8)G_TRI1) {a=((w1>>16)&255)/10;b=((w1>>8)&255)/10;c=(w1&255)/10;}
+            else {a=(w1>>(j*8))&15;b=(w1>>(j*8+4))&15;c=(w0>>(j*4))&15;}
+            if(a==b || b==c || a==c || paKeepHand(cache[a],cache[b],cache[c],0,(void *)layout)) continue;
+            if(pose->skinCount==64) {pose->skinCount=0;return;}
+            NativeSkinTriangle *triangle=pose->skin+pose->skinCount++;
+            triangle->image=image; triangle->v[0]=*cache[a];triangle->v[1]=*cache[b];triangle->v[2]=*cache[c];
+        }
+    }
+    pose->skinCount=0;
+}
+
+static f32 paDot(const coord3d *a,const coord3d *b) {return a->x*b->x+a->y*b->y+a->z*b->z;}
+static coord3d paSubtract(coord3d a,coord3d b) {return (coord3d){a.x-b.x,a.y-b.y,a.z-b.z};}
+static f32 paSkinWeights(const NativeSkinTriangle *triangle,coord3d point,f32 *weights)
+{
+    coord3d v[3],ab,ac,ap; f32 best=1e30f; s32 i,k;
+    for(i=0;i<3;i++) for(k=0;k<3;k++) v[i].f[k]=triangle->v[i].v.ob[k];
+    ab=paSubtract(v[1],v[0]);ac=paSubtract(v[2],v[0]);ap=paSubtract(point,v[0]);
+    { f32 aa=paDot(&ab,&ab),cc=paDot(&ac,&ac),cross=paDot(&ab,&ac),d=aa*cc-cross*cross;
+      if(d>.0001f) {
+        f32 u=(cc*paDot(&ab,&ap)-cross*paDot(&ac,&ap))/d;
+        f32 w=(aa*paDot(&ac,&ap)-cross*paDot(&ab,&ap))/d;
+        if(u>=0 && w>=0 && u+w<=1) {
+            coord3d delta={ap.x-u*ab.x-w*ac.x,ap.y-u*ab.y-w*ac.y,ap.z-u*ab.z-w*ac.z};
+            best=paDot(&delta,&delta);weights[0]=1-u-w;weights[1]=u;weights[2]=w;
+        }
+      }
+    }
+    for(i=0;i<3;i++) {
+        s32 next=(i+1)%3; coord3d edge=paSubtract(v[next],v[i]),offset=paSubtract(point,v[i]),delta;
+        f32 length=paDot(&edge,&edge),t=length>0 ? paDot(&edge,&offset)/length : 0,distance;
+        if(t<0)t=0;if(t>1)t=1;
+        delta=(coord3d){offset.x-t*edge.x,offset.y-t*edge.y,offset.z-t*edge.z};distance=paDot(&delta,&delta);
+        if(distance<best) {best=distance;weights[0]=weights[1]=weights[2]=0;weights[i]=1-t;weights[next]=t;}
+    }
+    return best;
+}
+
+static void paNativeSurface(const coord3d *source,u32 image,Vtx *vertex,f32 light,void *context)
+{
+    const NativeArmPose *pose=context; NativeArmPose sample; coord3d point;
+    f32 best=1e30f,weights[3]; const NativeSkinTriangle *selected=NULL; s32 i,j;
+    if(!pose->skinCount) return;
+    sample=*pose;sample.extension=1;paNativePoint(source,&point,PORT_ARM_FOREARM,&sample);
+    for(i=0;i<pose->skinCount;i++) if(pose->skin[i].image==image) {
+        f32 candidate[3],distance=paSkinWeights(pose->skin+i,point,candidate);
+        if(distance<best) {best=distance;selected=pose->skin+i;memcpy(weights,candidate,sizeof(weights));}
+    }
+    if(!selected) return;
+    for(i=0;i<2;i++) {
+        f32 value=0;for(j=0;j<3;j++) value+=weights[j]*selected->v[j].v.tc[i];
+        vertex->v.tc[i]=(s16)value;
+    }
+    for(i=0;i<3;i++) {
+        f32 value=0;for(j=0;j<3;j++) value+=weights[j]*selected->v[j].v.cn[i];
+        value*=light;if(value<0)value=0;if(value>255)value=255;vertex->v.cn[i]=(u8)value;
+    }
+}
+
+s32 portWardrobeRenderNode(ModelRenderData *renderdata, ModelNode *node,
+    ModelRoData_DisplayListRecord *nativeHand)
 {
     ModelRoData_DisplayListRecord *data = &node->Data->DisplayList;
     f32 minZ = 32767, maxZ = -32768, light;
     s32 i;
     u32 matrix;
     NativeArmPose pose;
-    PortArmMesh native;
+    Gfx *stockHand;
+    PortArmMesh native; NativeArmLayout layout;
+    const char *stockAudit=getenv("GE_ARM_AUDIT_STOCK"),*adsAudit=getenv("GE_ADS_AUDIT");
+    s32 preserve=paItem!=ITEM_FIST;
     Gfx *gdl;
     if (!paItem || renderdata->unk18 || !(renderdata->flags&1) || !data->Primary
         || !data->Vertices || !data->numVertices || data->Secondary) return FALSE;
+    if(portHandGalleryStock()) return FALSE;
+    /* Paired local comparisons only; never a persisted gameplay setting. */
+    if (paItem!=ITEM_FIST && stockAudit && *stockAudit && adsAudit && *adsAudit) return FALSE;
     for (i = 0; i < data->numVertices; i++) {
         f32 z = data->Vertices[i].coord.z;
         if (z < minZ) minZ = z;
@@ -270,24 +453,129 @@ s32 portWardrobeRenderNode(ModelRenderData *renderdata, ModelNode *node)
     /* Only proximal forearms extend behind -150. Distal hands/fingers and
      * weapon metal keep their native geometry, grip bones and animations. */
     if (minZ >= -150 || maxZ > 50 || paDecode(data, &matrix) <= 0) return FALSE;
-    if (!paNativeFit(data,minZ,paItem == ITEM_FIST ? 50 : 0,
-        g_CurrentPlayer->bondtype,fileGetBondForCurrentFolder(),&pose)) return FALSE;
-    pose.stitch=paItem==ITEM_FIST;
-    light = 0.55f+(g_CurrentPlayer->tileColor.r+g_CurrentPlayer->tileColor.g
+    if (preserve && !paLayout(data,&layout)) return FALSE;
+    if (preserve && !(stockHand=paStockHandList(data,&layout))) return FALSE;
+    if (!paNativeFitWithLayout(data,minZ,paItem==ITEM_FIST ? 50 : 0,
+        g_CurrentPlayer->bondtype,fileGetBondForCurrentFolder(),&pose,preserve ? &layout : NULL)) return FALSE;
+    pose.stitch=TRUE;
+    if(preserve) paSkinSetup(&pose,data,&layout);
+    if (getenv("GE_ARM_AUDIT") && preserve) {
+        static u32 seen[32];
+        s32 variant=portWardrobeVariant(g_CurrentPlayer->bondtype,fileGetBondForCurrentFolder());
+        u32 flag=1u<<(variant*2+(paHand==GUNLEFT));
+        if (!(seen[paItem]&flag)) {
+            seen[paItem]|=flag;
+            portConLogf("ge: native-skin: item=%d wardrobe=%d left=%d hand_triangles=%d forearm_triangles=%d corners=%d cutoff=%.1f\n",
+                paItem,variant,paHand==GUNLEFT,layout.kept,layout.removed,layout.count,layout.cutoff);
+        }
+    }
+    /* Native pistol fingers use authored viewmodel lighting. Match that on
+     * their replacement arm; retain the existing chopping/export lighting. */
+    light = preserve ? 1 : 0.55f+(g_CurrentPlayer->tileColor.r+g_CurrentPlayer->tileColor.g
         +g_CurrentPlayer->tileColor.b)*(0.45f/(255.0f*3.0f));
-    if (!portArmMeshBuildJoined(&native, g_CurrentPlayer->bondtype, fileGetBondForCurrentFolder(),
-        PORT_ARM_FOREARM|(paHand == GUNLEFT ? PORT_ARM_WATCH : 0), paNativePoint, &pose, light, 255, pose.stitch ? paWristJoin : NULL)) return FALSE;
+    if (!portArmMeshBuildJoinedSurface(&native, g_CurrentPlayer->bondtype, fileGetBondForCurrentFolder(),
+        PORT_ARM_FOREARM|(paHand == GUNLEFT ? PORT_ARM_WATCH : 0)|(preserve ? PORT_ARM_NATIVE_SKIN : 0),
+        paNativePoint, &pose, light, 255, pose.stitch ? paWristJoin : NULL,preserve ? paNativeSurface : NULL)) return FALSE;
     gdl = renderdata->gdl;
     gDPPipeSync(gdl++);
     gSPMatrix(gdl++, matrix, G_MTX_MODELVIEW|G_MTX_LOAD|G_MTX_NOPUSH);
     gSPClearGeometryMode(gdl++, G_CULL_BOTH|G_LIGHTING|G_TEXTURE_GEN|G_TEXTURE_GEN_LINEAR|G_FOG);
-    gSPSetGeometryMode(gdl++, G_SHADE|G_SHADING_SMOOTH);
-    gDPSetCycleType(gdl++, G_CYC_1CYCLE);
-    gDPSetTextureLOD(gdl++, G_TL_TILE);
-    gDPSetCombineMode(gdl++, G_CC_MODULATEIA, G_CC_MODULATEIA);
-    if (renderdata->zbufferenabled) { gDPSetRenderMode(gdl++, G_RM_AA_ZB_OPA_SURF,G_RM_AA_ZB_OPA_SURF2); }
-    else { gDPSetRenderMode(gdl++, G_RM_AA_OPA_SURF,G_RM_AA_OPA_SURF2); }
+    gSPSetGeometryMode(gdl++, G_SHADE|G_SHADING_SMOOTH|(renderdata->zbufferenabled ? G_ZBUFFER : 0));
+    if(preserve) {
+        renderdata->gdl=gdl;modelApplyRenderModeType3(renderdata,TRUE);gdl=renderdata->gdl;
+        if(renderdata->zbufferenabled) {gDPSetRenderMode(gdl++,G_RM_FOG_PRIM_A|Z_UPD,G_RM_AA_ZB_OPA_SURF2);}
+        else {gDPSetRenderMode(gdl++,G_RM_FOG_PRIM_A,G_RM_AA_OPA_SURF2);}
+    } else {
+        gDPSetCycleType(gdl++, G_CYC_1CYCLE);
+        gDPSetTextureLOD(gdl++, G_TL_TILE);
+        gDPSetCombineMode(gdl++, G_CC_MODULATEIA, G_CC_MODULATEIA);
+        if (renderdata->zbufferenabled) { gDPSetRenderMode(gdl++, G_RM_AA_ZB_OPA_SURF,G_RM_AA_ZB_OPA_SURF2); }
+        else { gDPSetRenderMode(gdl++, G_RM_AA_OPA_SURF,G_RM_AA_OPA_SURF2); }
+    }
     gSPDisplayList(gdl++, osVirtualToPhysical(native.color));
+    if (preserve) {
+        /* Render the hand last through model.c's unchanged native setup,
+         * retaining authored mip sampling after the matched wrist draw. */
+        gDPPipeSync(gdl++);
+        gDPSetTextureLOD(gdl++,G_TL_LOD);
+        *nativeHand=*data; nativeHand->Primary=stockHand;
+    }
     renderdata->gdl = gdl;
+    return preserve ? PORT_WARDROBE_NATIVE_HAND : PORT_WARDROBE_DRAWN;
+}
+
+typedef struct {
+    NativeArmPose pose;
+    NativeArmLayout layout;
+    PortGripSpace space;
+    PortGripMap map;
+    void *context;
+} NativeGrip;
+
+static void paGripHand(const coord3d *source,coord3d *target,s32 part,void *context)
+{
+    NativeGrip *grip=context;
+    grip->map(source,target,PORT_ARM_HAND,&grip->space,grip->context);
+}
+static void paGripArm(const coord3d *source,coord3d *target,s32 part,void *context)
+{
+    NativeGrip *grip=context; coord3d native;
+    paNativePoint(source,&native,part,&grip->pose);
+    grip->map(&native,target,part,&grip->space,grip->context);
+}
+static s32 paGripJoin(const coord3d *a,const coord3d *b,PortArmJoinPoint *points,void *context)
+{
+    NativeGrip *grip=context; s32 i,count=paWristJoin(a,b,points,&grip->pose);
+    for (i=0;i<count;i++) { coord3d native=points[i].target;
+        grip->map(&native,&points[i].target,PORT_ARM_FOREARM,&grip->space,grip->context);
+    }
+    return count;
+}
+static s32 paGripKeep(const Vtx *a,const Vtx *b,const Vtx *c,u32 image,void *context)
+{
+    NativeGrip *grip=context;
+    return portArmGripSkin(image) && paKeepHand(a,b,c,image,&grip->layout);
+}
+static void paGripSurface(const coord3d *source,u32 image,Vtx *vertex,f32 light,void *context)
+{
+    NativeGrip *grip=context;paNativeSurface(source,image,vertex,light,&grip->pose);
+}
+
+s32 portWardrobeBuildGrip(PortArmMesh *mesh,s32 cuff,s32 bond,s32 left,f32 light,u8 alpha,PortGripMap map,void *context)
+{
+    const PortGripSource *source=portArmGripSource();
+    NativeGrip grip; PortArmMesh parts[25]; s32 i,count=0;
+    f32 minZ=32767;
+    Gfx *color,*depth;
+    if (!source || !map || !paLayout(source->arm,&grip.layout)) return FALSE;
+    for (i=0;i<source->arm->numVertices;i++) if (source->arm->Vertices[i].coord.z<minZ) minZ=source->arm->Vertices[i].coord.z;
+    if (!paNativeFitWithLayout(source->arm,minZ,0,cuff,bond,&grip.pose,&grip.layout)) {
+        if (getenv("GE_ARM_AUDIT")) portConLogf("ge: grip fit failed ring=%d minz=%.1f\n",grip.layout.count,minZ);
+        return FALSE;
+    }
+    grip.pose.stitch=TRUE; grip.pose.extension=1;
+    paSkinSetup(&grip.pose,source->arm,&grip.layout);
+    grip.map=map; grip.context=context;
+    for (i=0;i<3;i++) {
+        grip.space.wrist.f[i]=(grip.pose.targetMin.f[i]+grip.pose.targetMax.f[i])*.5f;
+        grip.space.elbow.f[i]=(grip.pose.targetElbowMin.f[i]+grip.pose.targetElbowMax.f[i])*.5f;
+    }
+    grip.space.elbow.z=minZ;
+    for (i=0;i<source->count;i++) {
+        if (!portArmMeshBuildFiltered(parts+count,source->parts[i],paGripHand,&grip,light,alpha,paGripKeep,FALSE)) {
+            if (getenv("GE_ARM_AUDIT")) portConLogf("ge: grip part rejected index=%d vertices=%d\n",i,source->parts[i]->numVertices);
+            return FALSE;
+        }
+        ++count;
+    }
+    if (!portArmMeshBuildJoinedSurface(parts+count,cuff,bond,PORT_ARM_FOREARM|(left ? PORT_ARM_WATCH : 0),paGripArm,&grip,light,alpha,paGripJoin,paGripSurface)) return FALSE;
+    ++count;
+    mesh->color=color=dynAllocate((count+1)*sizeof(Gfx));
+    mesh->depth=depth=alpha<255 ? dynAllocate((count+1)*sizeof(Gfx)) : NULL;
+    for (i=0;i<count;i++) {
+        gSPDisplayList(color++,osVirtualToPhysical(parts[i].color));
+        if (depth) { gSPDisplayList(depth++,osVirtualToPhysical(parts[i].depth)); }
+    }
+    gSPEndDisplayList(color++); if (depth) { gSPEndDisplayList(depth++); }
     return TRUE;
 }

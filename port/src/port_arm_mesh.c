@@ -12,6 +12,7 @@
 #include "port_wardrobe.h"
 #include "gbi_extension.h"
 #include "port_console.h"
+#include "port_ads.h"
 extern float sinf(float);
 extern float cosf(float);
 extern void *memset(void *, int, size_t);
@@ -37,7 +38,7 @@ static s32 armSkinImage(u32 address, s32 part)
     static u32 pixels[2];
     static const s32 textures[2] = {1793,1796};
     s32 i;
-    if (part == PORT_ARM_WATCH) return FALSE;
+    if (!(part & (PORT_ARM_HAND|PORT_ARM_FOREARM))) return FALSE;
     for (i = 0; i < 2; i++) {
         if (!pixels[i]) {
             struct tex *texture = texFindInPool(textures[i], portModelTexPool());
@@ -74,21 +75,6 @@ static s32 armSkinCommands(const ModelRoData_DisplayListRecord *source, s32 leng
         if (next != skin) { commands += 3; skin = next; }
     }
     return commands + (skin ? 3 : 0);
-}
-
-f32 portArmForearmBulk(f32 sourceX)
-{
-    f32 distance = -180-sourceX;
-    f32 t;
-    if (distance < 0) {
-        t = -distance/830;
-        if (t > 1) t = 1;
-        return 1.25f-0.25f*t*t*(3-2*t);
-    }
-    if (distance <= 900) return 1.25f;
-    t = (distance-900)/(3527-900);
-    if (t > 1) t = 1;
-    return 1.25f-0.25f*t*t*(3-2*t);
 }
 
 static ModelFileHeader *armSource(void)
@@ -132,9 +118,8 @@ s32 portArmWristBounds(coord3d *minimum, coord3d *maximum)
             || !forearm->Vertices || !forearm->numVertices || forearm->numVertices > ARM_SOURCE_VERTICES) return FALSE;
         for (k = 0; k < 3; k++) { low.f[k] = 32767; high.f[k] = -32768; }
         armWristCount = 0;
-        /* The opening is the common ring of the authored hand and forearm.
-         * A proximal-X band also includes a palm vertex outside that ring,
-         * shrinking the replacement wrist and exposing a gap during chops. */
+        /* Shared positions identify the actual tilted interface. A coordinate
+         * slab cannot distinguish its vertices from nearby palm geometry. */
         for (i = 0; i < forearm->numVertices; i++) {
             const Vtx *vertex = (const Vtx *)forearm->Vertices+i;
             for (j = 0; j < data->numVertices; j++) {
@@ -443,15 +428,42 @@ static void armJoinCounts(const ModelRoData_DisplayListRecord *source, s32 lengt
     }
 }
 
+/* Authored UV vertices have one material owner. Never resample a vertex also
+ * used by clothing or by a different skin texture. */
+static void armSurfaceOwners(const ModelRoData_DisplayListRecord *source,s32 length,u32 *owners)
+{
+    s32 cache[16]={0},i,j; u32 image=0;
+    memset(owners,0,source->numVertices*sizeof(u32));
+    for(i=0;i<length;i++) {
+        const Gfx *command=source->Primary+i; u32 op=command->words.w0>>24;
+        if(op==G_SETTIMG) image=command->words.w1;
+        else if(op==G_VTX) {
+            s32 n=(command->words.w0&65535)/sizeof(Vtx),first=(command->words.w0>>16)&15;
+            s32 offset=((uintptr_t)source->BaseAddr+(command->words.w1&0xffffff)-(uintptr_t)source->Vertices)/sizeof(Vtx);
+            for(j=0;j<n;j++) cache[first+j]=offset+j;
+        } else if(op==(u8)G_TRI1 || op==(u8)G_TRI4) for(j=0;j<(op==(u8)G_TRI4?4:1);j++) {
+            s32 ids[3],k; u32 owner=armSkinImage(image,PORT_ARM_FOREARM)?image:1;
+            armTriangleIndices(command,j,ids);
+            if(ids[0]==ids[1] || ids[1]==ids[2] || ids[0]==ids[2]) continue;
+            for(k=0;k<3;k++) {
+                u32 *entry=owners+cache[ids[k]];
+                if(!*entry) *entry=owner; else if(*entry!=owner) *entry=1;
+            }
+        }
+    }
+}
+
 static void armCopyPart(const ModelRoData_DisplayListRecord *source, s32 length,
     const coord3d *origin, f32 angle, s32 part, PortArmMap map, void *context, f32 light, u8 alpha,
-    Gfx **color, Gfx **depth, PortArmJoin join)
+    Gfx **color, Gfx **depth, PortArmJoin join, PortArmKeepTriangle keep,s32 matchSkinTone,PortArmSurface surface,s32 nativeMaterial)
 {
     s32 i, k, skin = FALSE;
     f32 sine = sinf(angle), cosine = cosf(angle);
     const Vtx *cache[16]={0}, *mapped[16]={0};
     const ArmCuffCap *cap=part==PORT_ARM_FOREARM ? armCuff(source,length) : NULL;
     Vtx *cuff=NULL,*joined=NULL; s32 capped=FALSE; u32 image=0;
+    u32 owners[ARM_SOURCE_VERTICES];
+    if(surface && part==PORT_ARM_FOREARM) armSurfaceOwners(source,length,owners);
     if (cap && cap->count) {
         cuff=dynAllocate((cap->count*3+16)*sizeof(Vtx));
         for (i=0;i<cap->count;i++) {
@@ -465,7 +477,14 @@ static void armCopyPart(const ModelRoData_DisplayListRecord *source, s32 length,
     }
     Vtx *vertices = dynAllocateVertices(source->numVertices);
     memcpy(vertices, source->Vertices, source->numVertices*sizeof(Vtx));
-    for (i=0;i<source->numVertices;i++) armMapVertex(vertices+i,origin,sine,cosine,part,map,context,light,alpha);
+    for (i=0;i<source->numVertices;i++) {
+        armMapVertex(vertices+i,origin,sine,cosine,part,map,context,light,alpha);
+        if(surface && part==PORT_ARM_FOREARM && owners[i]>1) {
+            const Vtx *v=(const Vtx *)source->Vertices+i;
+            coord3d point={v->v.ob[0],v->v.ob[1],v->v.ob[2]};
+            surface(&point,owners[i],vertices+i,light,context);
+        }
+    }
     for (i = 0; i < length; i++) {
         Gfx command = source->Primary[i];
         u32 op = command.words.w0 >> 24;
@@ -474,9 +493,9 @@ static void armCopyPart(const ModelRoData_DisplayListRecord *source, s32 length,
             || op == G_SETCOMBINE || op == (u8)G_SETOTHERMODE_L) continue;
         if (op == (u8)G_SETOTHERMODE_H) {
             u32 shift = (command.words.w0 >> 8)&255;
-            if (shift == G_MDSFT_CYCLETYPE || shift == G_MDSFT_TEXTLOD) continue;
+            if (shift == G_MDSFT_CYCLETYPE || (!nativeMaterial && shift == G_MDSFT_TEXTLOD)) continue;
         }
-        if (op == (u8)G_TEXTURE) {
+        if (op == (u8)G_TEXTURE && !nativeMaterial) {
             gSPTexture((*color)++, 0xffff, 0xffff, 0, G_TX_RENDERTILE, G_ON);
             continue;
         }
@@ -493,19 +512,26 @@ static void armCopyPart(const ModelRoData_DisplayListRecord *source, s32 length,
         if (op == G_VTX) {
             uintptr_t address = (uintptr_t)source->BaseAddr+(command.words.w1 & 0xffffff);
             s32 offset = (address-(uintptr_t)source->Vertices)/sizeof(Vtx);
-            if (join || cuff) {
+            if (join || cuff || keep) {
                 s32 n=(command.words.w0&65535)/sizeof(Vtx),first=(command.words.w0>>16)&15,j;
                 for (j=0;j<n;j++) { cache[first+j]=(const Vtx *)source->Vertices+offset+j; mapped[first+j]=vertices+offset+j; }
             }
             command.words.w1 = osVirtualToPhysical(vertices+offset);
         }
-        if (join && (op==(u8)G_TRI1 || op==(u8)G_TRI4)) {
+        if ((join || keep) && (op==(u8)G_TRI1 || op==(u8)G_TRI4)) {
             s32 triangle,triangles=op==(u8)G_TRI4 ? 4 : 1;
             for (triangle=0;triangle<triangles;triangle++) {
                 PortArmJoinPoint points[32]; s32 indices[3],count,p;
                 armTriangleIndices(&command,triangle,indices);
-                count=armJoinTriangle(cache,indices,join,context,points);
-                if (!count) { gSP1Triangle((*color)++,indices[0],indices[1],indices[2],0); continue; }
+                if (indices[0]==indices[1] || indices[0]==indices[2] || indices[1]==indices[2]) continue;
+                if (keep && (indices[0]>=16 || indices[1]>=16 || indices[2]>=16 || !cache[indices[0]] || !cache[indices[1]] || !cache[indices[2]]
+                    || !keep(cache[indices[0]],cache[indices[1]],cache[indices[2]],image,context))) continue;
+                count=join ? armJoinTriangle(cache,indices,join,context,points) : 0;
+                if (!count) {
+                    gSP1Triangle((*color)++,indices[0],indices[1],indices[2],0);
+                    if (*depth) { gSP1Triangle((*depth)++,indices[0],indices[1],indices[2],0); }
+                    continue;
+                }
                 for (p=0;p<=count;p++) {
                     s32 end;
                     const Vtx *a=mapped[indices[0]], *b=mapped[indices[1]];
@@ -524,17 +550,21 @@ static void armCopyPart(const ModelRoData_DisplayListRecord *source, s32 length,
                     }
                     joined[2]=*mapped[indices[2]];
                     gSPVertex((*color)++,osVirtualToPhysical(joined),3,0);
-                    gSP1Triangle((*color)++,0,1,2,0); joined+=3;
+                    gSP1Triangle((*color)++,0,1,2,0);
+                    if (*depth) { gSPVertex((*depth)++,osVirtualToPhysical(joined),3,0); gSP1Triangle((*depth)++,0,1,2,0); }
+                    joined+=3;
                 }
                 /* Splits use slots 0..2. Restore the original vertex cache so
                  * subsequent authored triangles retain their exact bindings. */
                 for (k=0;k<16;k++) { if (mapped[k]) joined[k]=*mapped[k]; else memset(joined+k,0,sizeof(Vtx)); }
-                gSPVertex((*color)++,osVirtualToPhysical(joined),16,0); joined+=16;
+                gSPVertex((*color)++,osVirtualToPhysical(joined),16,0);
+                if (*depth) { gSPVertex((*depth)++,osVirtualToPhysical(joined),16,0); }
+                joined+=16;
             }
             continue;
         }
         if (op == G_SETTIMG) {
-            s32 next = armSkinImage(command.words.w1, part);
+            s32 next = armSkinImage(command.words.w1, matchSkinTone ? part : 0);
             image=command.words.w1;
             if (next != skin) { armSkinMaterial(color, next, light); skin = next; }
         }
@@ -544,8 +574,8 @@ static void armCopyPart(const ModelRoData_DisplayListRecord *source, s32 length,
     if (skin) armSkinMaterial(color, FALSE, light);
 }
 
-s32 portArmMeshBuildJoined(PortArmMesh *mesh, s32 cuff, s32 bond, s32 parts,
-    PortArmMap map, void *context, f32 light, u8 alpha, PortArmJoin join)
+s32 portArmMeshBuildJoinedSurface(PortArmMesh *mesh, s32 cuff, s32 bond, s32 parts,
+    PortArmMap map, void *context, f32 light, u8 alpha, PortArmJoin join,PortArmSurface surface)
 {
     ModelFileHeader *header = armSource();
     ModelNode *nodes[ARM_PARTS], *hand, *node;
@@ -553,8 +583,10 @@ s32 portArmMeshBuildJoined(PortArmMesh *mesh, s32 cuff, s32 bond, s32 parts,
     coord3d origins[ARM_PARTS];
     f32 angles[ARM_PARTS] = {0};
     s32 lengths[ARM_PARTS], count = 0, commands = 1, skinCommands = 0, i;
+    s32 nativeMaterial=(parts&PORT_ARM_NATIVE_SKIN)!=0;
+    s32 matchSkinTone=!nativeMaterial && !surface;
     Gfx *color, *depth;
-    if (!header || !map || (join && alpha<255)) return FALSE;
+    if (!header || !map) return FALSE;
     hand = armFirstDisplay(header->RootNode);
     if (!hand) return FALSE;
     if (parts & PORT_ARM_HAND) { kinds[count] = PORT_ARM_HAND; nodes[count++] = hand; }
@@ -591,7 +623,7 @@ s32 portArmMeshBuildJoined(PortArmMesh *mesh, s32 cuff, s32 bond, s32 parts,
             s32 extra,vertices; armJoinCounts(&nodes[i]->Data->DisplayList,lengths[i],join,context,&extra,&vertices);
             commands+=extra;
         }
-        skinCommands += armSkinCommands(&nodes[i]->Data->DisplayList, lengths[i], kinds[i]);
+        skinCommands += armSkinCommands(&nodes[i]->Data->DisplayList, lengths[i], matchSkinTone ? kinds[i] : 0);
         parent = nodes[i]->Parent;
         if (parent && (parent->Opcode & 255) == MODELNODE_OPCODE_GROUPSIMPLE) {
             s32 clock;
@@ -600,6 +632,7 @@ s32 portArmMeshBuildJoined(PortArmMesh *mesh, s32 cuff, s32 bond, s32 parts,
                 /* Same watch clock as the pause animation, rotating in its
                  * authored local plane before retargeting to the wrist. */
                 s32 frames = (s32)watch_time_0;
+                if(portHandGalleryActive()) frames=0;
                 f32 seconds = (frames%3600)/60.0f;
                 f32 minutes = (frames/3600)%60;
                 f32 secondAngle = -seconds*M_TAU_F/60;
@@ -612,7 +645,7 @@ s32 portArmMeshBuildJoined(PortArmMesh *mesh, s32 cuff, s32 bond, s32 parts,
     mesh->color = color = dynAllocate((commands+count+skinCommands)*sizeof(Gfx));
     mesh->depth = depth = alpha < 255 ? dynAllocate(commands*sizeof(Gfx)) : NULL;
     for (i = 0; i < count; i++) armCopyPart(&nodes[i]->Data->DisplayList, lengths[i],
-        &origins[i], angles[i], kinds[i], map, context, light, alpha, &color, &depth, kinds[i]==PORT_ARM_FOREARM ? join : NULL);
+        &origins[i], angles[i], kinds[i], map, context, light, alpha, &color, &depth, kinds[i]==PORT_ARM_FOREARM ? join : NULL,NULL,matchSkinTone,surface,nativeMaterial);
     gSPEndDisplayList(color++);
     if (depth) gSPEndDisplayList(depth++);
     if (getenv("GE_ARM_AUDIT")) {
@@ -626,8 +659,29 @@ s32 portArmMeshBuildJoined(PortArmMesh *mesh, s32 cuff, s32 bond, s32 parts,
     return TRUE;
 }
 
+s32 portArmMeshBuildJoined(PortArmMesh *mesh,s32 cuff,s32 bond,s32 parts,
+    PortArmMap map,void *context,f32 light,u8 alpha,PortArmJoin join)
+{
+    return portArmMeshBuildJoinedSurface(mesh,cuff,bond,parts,map,context,light,alpha,join,NULL);
+}
+
 s32 portArmMeshBuild(PortArmMesh *mesh, s32 cuff, s32 bond, s32 parts,
     PortArmMap map, void *context, f32 light, u8 alpha)
 {
     return portArmMeshBuildJoined(mesh,cuff,bond,parts,map,context,light,alpha,NULL);
+}
+
+s32 portArmMeshBuildFiltered(PortArmMesh *mesh,const ModelRoData_DisplayListRecord *source,
+    PortArmMap map,void *context,f32 light,u8 alpha,PortArmKeepTriangle keep,s32 matchSkinTone)
+{
+    s32 length=armListLength(source),commands,i; Gfx *color,*depth; coord3d origin={0};
+    s32 part=matchSkinTone ? PORT_ARM_HAND : 0;
+    if (!length || !map || !keep) return FALSE;
+    commands=length+armSkinCommands(source,length,part);
+    for (i=0;i<length;i++) if ((source->Primary[i].words.w0>>24)==(u8)G_TRI4) commands+=3;
+    mesh->color=color=dynAllocate(commands*sizeof(Gfx));
+    mesh->depth=depth=alpha<255 ? dynAllocate(commands*sizeof(Gfx)) : NULL;
+    armCopyPart(source,length,&origin,0,part,map,context,light,alpha,&color,&depth,NULL,keep,TRUE,NULL,FALSE);
+    gSPEndDisplayList(color++); if (depth) { gSPEndDisplayList(depth++); }
+    return TRUE;
 }

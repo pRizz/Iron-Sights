@@ -24,5 +24,8 @@ f32 portAdsWeaponPitch(s32 item);
 s32 portAdsHandGrips(s32 item, struct coord3d *trigger, struct coord3d *support);
 Gfx *portAdsBeginHandLayer(Gfx *gdl);
 Gfx *portAdsDrawHands(Gfx *gdl, s32 item, const Mtxf *gun);
+/* Isolated deterministic review harness; always false in ordinary gameplay. */
+s32 portHandGalleryActive(void);
+s32 portHandGalleryStock(void);
 
 #endif
