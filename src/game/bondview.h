@@ -3,6 +3,7 @@
 
 #include <ultra64.h>
 #include <bondtypes.h>
+void bondviewKillCurrentPlayer(void);
 #include "chr.h"
 #include "matrixmath.h"
 #include "options.h"

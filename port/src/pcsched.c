@@ -16,6 +16,9 @@
 #include <stdlib.h>
 #include <time.h>
 #include <errno.h>
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -43,7 +46,11 @@ extern void portConLogf(const char *fmt, ...);
 static void *portAllocHighRaw(void *hint, u32 size)
 {
     void *p;
-#ifdef _WIN32
+#if defined(__EMSCRIPTEN__)
+    /* GLOBAL_BASE keeps real data disjoint from N64 segment words. */
+    (void)hint;
+    p = calloc(1, size);
+#elif defined(_WIN32)
     p = VirtualAlloc(hint, size, 0x3000 /* MEM_COMMIT|MEM_RESERVE */, 0x04 /* PAGE_READWRITE */);
 #else
     p = mmap(hint, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -672,6 +679,10 @@ void portPumpEvents(void)
 
     static unsigned long long s_PumpExitUs, s_PumpExitSleepUs;
 
+#ifdef __EMSCRIPTEN__
+    { extern void portWebWaitIfPaused(void); portWebWaitIfPaused(); }
+    if (getenv("GE_NOSLEEP") != NULL) emscripten_sleep(0);
+#endif
     if (s_PumpDepth++ == 0)
     {
         s_PumpEntryUs = portProfNow();
@@ -698,6 +709,9 @@ void portPumpEvents(void)
     }
     if (framelimit != 0 && g_PortFramesPumped >= framelimit)
     {
+#ifdef __EMSCRIPTEN__
+        { extern void portWebAuditFrameLimit(void); portWebAuditFrameLimit(); }
+#endif
         printf("ge: frame limit reached: frames=%u gfxtasks=%u\n",
                g_PortFramesPumped, g_PortGfxTasksSubmitted);
         exit(0);
@@ -722,7 +736,14 @@ void portPumpEvents(void)
         const s32 vlock = portVsyncLock(pacehz, &pacehz);
         const s32 vwait = vlock && portVsyncLockFull();
         portVsyncLockDbg(vlock, vwait, pacehz);
-#ifdef _WIN32
+#if defined(__EMSCRIPTEN__)
+        static double target;
+        double now = emscripten_get_now();
+        double interval = 1000.0 / pacehz;
+        if (target == 0 || now > target + 2 * interval) target = now;
+        target += interval;
+        emscripten_sleep((unsigned int)(target > now + 1 ? target - now : 1));
+#elif defined(_WIN32)
         static LARGE_INTEGER s_PaceFreq;
         static LONGLONG s_PaceTarget;
         static LONGLONG s_PaceWake;  /* when the last pump woke ~ the last tick */

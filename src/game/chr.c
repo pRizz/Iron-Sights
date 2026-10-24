@@ -1232,9 +1232,9 @@ s32 get_numguards(void)
 }
 
 
-void get_ptr_allocated_block_for_vertices(int param_1)
+struct Vertex *get_ptr_allocated_block_for_vertices(s32 numvertices)
 {
-  dynAllocate(param_1 << 4);
+  return dynAllocate(numvertices << 4);
 }
 
 

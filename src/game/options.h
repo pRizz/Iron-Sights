@@ -3,6 +3,11 @@
 #include <ultra64.h>
 #include <bondconstants.h>
 
+void reset_watch_item_is_actively_selected(void);
+void set_controlstick_lr_disabled(void);
+void sub_GAME_7F0A5210(void);
+void disable_watch_stick_y_nav_ready(void);
+
 #ifdef VERSION_EU
 #define XOFFSET_1 65
 #define YOFFSET_1 90

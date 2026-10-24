@@ -1223,7 +1223,48 @@ syntax validation passed. No game rebuild or render regeneration was needed.
 
 ### FORK-024 — Browser target plan and portability groundwork
 
-**Status:** Plan accepted on 2026-10-24; WEB-001 portability tooling in progress.
+**Status:** Plan accepted on 2026-10-24; full Wasm core portability gate achieved,
+playable-prototype acceptance in progress. No Pages release yet.
+
+The root CMake project now has Emscripten core and SDL2/WebGL 2 configurations.
+It keeps native flags/link processing separate, uses the verified high data
+base as the initial correctness layout, and excludes native suspend snapshots
+from browser builds. Wasm section syntax, explicit C declarations and local
+alias spellings address the first survey failures. Browser arena allocation
+uses linear-memory allocation and scheduler waits yield through Asyncify.
+The optimized core reaches Dam and its explicit frame limit. A temporary local
+browser harness renders Dam and resumes simulation after mouse capture; menu,
+active input/audio and focus-reset acceptance remain open. Browser font-border/
+sampler and initial mipmap warnings still need correction.
+
+The first full core link exposed cross-translation-unit signature mismatches
+that trap under Wasm. A Clang AST recovery tool records real definition types
+in generated browser declarations instead of relying on implicit C calls.
+The platform also declares missing hosted-library interfaces and separates the
+engine's `strtol`, ctype and fixed-point inverse-trig symbols from hosted SDK
+functions. Corrected the vertex allocator
+callback's declaration and pointer return, watch model transform wrappers'
+floating-point returns, and unused extra/missing arguments in legacy ROM/debug
+calls, including the positioned-joint callback. Texture-bank stage restoration
+now snapshots each declared object with its real size instead of relying on
+GCC's ordering of independent globals; Clang/Wasm exposed the prior pointer-as-ID
+corruption. Added texture/DMA boundary checks and Wasm symbol-size contracts.
+These are ABI/layout corrections; native hand geometry/material contracts and
+the fork's comparison baseline remain unchanged. Native ADS, wardrobe, HUD,
+state and the new image-bank regressions passed for the combined changes.
+The full Windows rebuild and required native gallery regeneration passed: all
+72 views/35 icons were repeatable with zero changed image cells; representative
+pistol/rifle ADS references were visually reviewed and staged freshness verified.
+
+New browser tooling supplies immutable SDK builds, optional private-ROM core
+smokes, CMake presets, real-Clang declaration recovery and a local Playwright
+runtime audit. No ROM is copied into the output directory or uploaded. A pinned
+`web/` Bun subpackage adds strict source type checking and synthetic ROM/backup
+boundary tests. The backup format allowlists campaign EEPROM, profiles, device
+bindings, settings and custom controller layouts; it rejects ROMs, suspend
+images, traversal, duplicates, invalid sizes and checksum damage. This is codec
+and tooling groundwork, not implemented browser durability or launcher UI.
+AGENTS now documents the root CMake versus browser subpackage commands.
 
 Recorded the user-approved browser target design and six milestones so later
 sessions can continue from repository-owned evidence. The planned target keeps
@@ -1247,7 +1288,24 @@ the results do not establish link or gameplay compatibility. Runs disable
 container networking and retain local logs under ignored `build/web-spike`.
 Existing native and asset ownership contracts continue to apply.
 
-**Sources:** [accepted plan](scripts/port/web_target_plan.md),
+**Sources:** [root CMake](CMakeLists.txt), [presets](CMakePresets.json),
+[Emscripten platform](cmake/emscripten.cmake),
+[browser adapters](port/web/runtime.c), [suspend gate](port/web/state.c),
+[ABI declarations](port/generated/web_prototypes.h),
+[declaration generator](scripts/port/web_prototypes.py),
+[runtime builder](scripts/port/web_build.py),
+[core smoke](scripts/port/web_core_smoke.mjs),
+[runtime runbook](scripts/port/web_runtime.md),
+[native symbol/segment adapters](port/src/segments.c),
+[scheduler](port/src/pcsched.c), [startup](port/src/main.c),
+[GL backend](port/fast3d/gfx_opengl.cpp),
+[SDL backend](port/fast3d/gfx_sdl2.cpp),
+[bank reset](src/game/image_bank.c), [bank objects](assets/oddtextures.c),
+[model ABI](src/game/model.c), [vertex callback](src/game/chr.c),
+[watch transforms](src/game/bondinv.c),
+[browser tooling](web/README.md), [ROM codec](web/src/rom.ts),
+[backup codec](web/src/backup.ts),
+[accepted plan](scripts/port/web_target_plan.md),
 [milestone tracker](scripts/port/web_target_progress.md),
 [spike runbook](scripts/port/web_target_spike.md),
 [spike runner](scripts/port/web_spike.py),
@@ -1257,12 +1315,36 @@ Existing native and asset ownership contracts continue to apply.
 [ABI/address probe](scripts/port/web_probe/probe.c),
 [tooling tests](scripts/port/test_web_spike.py),
 [session guidance](AGENTS.md#repo-local-guidance).
-**Validation:** The pinned Wasm ABI/address probes passed under Node. The
+**Validation:** Root Wasm core and video targets compile/link. Both final link
+optimization levels 0 and 2 passed the private stock-ROM Dam smoke for 360 pumps
+(62 and 59 graphics tasks respectively), with startup layout checks and
+536870912-byte linear capacity. Linker signature warnings are fatal. The video
+prototype ran in Windows Edge 156/SwiftShader past 720 pumps/713 graphics tasks,
+sampled 57 fps/57 tps after startup and used 730726400-byte linear capacity;
+these are local observations, not browser-matrix or resident-RAM claims. Native
+ADS/wardrobe/HUD/state tests, native and Wasm image-bank reset tests, 15 Python
+tooling tests and 33 browser codec tests passed. Private local ROM validation
+passed all three byte orders with in-memory copies. Strict TypeScript checking
+passed; dependency declaration checking is skipped for Bun/Vite's conflicting
+ImportMeta declarations, as documented in `web/README.md`. The Windows native
+build, repeated native gallery, seven gallery tests and gallery integrity/
+freshness checks passed. A fresh AST scan reproduced the 205-record generated
+header/report exactly. The web preset configured with the SDK toolchain; its
+generator uses ordinary platform discovery because the pinned SDK image does
+not include Ninja. Documentation formatting, local links and whitespace checks
+passed. The standards checker passed with documented inherited size exceptions.
+The current ROM-free survey passed its ordinary root build and 259/259 source
+compilations, superseding the initial 246/257 compile-only result. Its build
+result field is now `root_cmake_build_returncode`, replacing the misleading
+native-prefixed name from before the root Emscripten branch existed.
+
+The initial pinned Wasm ABI/address probes passed under Node. The
 diagnostic headless-source survey compiled 246/257 units and recorded 11 failures;
-the unmodified root build fails on native SSE flags. These checks do not claim a
+the unmodified root build failed on native SSE flags. Those initial checks did not claim a
 full Wasm link, browser gameplay or deployment. Seven ROM-free tooling tests
 passed, including command preservation, immutable SDK validation and failed
 survey reporting. Both probes reproduced their results on a repeated run.
 Python compilation, pinned GFM/frontmatter formatting, relative links and Git
-whitespace checks passed. No native game or render inputs changed in this
-tooling slice, so no native rebuild or gallery regeneration is required.
+whitespace checks passed for that earlier tooling-only commit. It changed no
+native game/render inputs; the current runtime/shared ABI work does and follows
+the required native build/gallery workflow.

@@ -25,9 +25,13 @@ extern "C" {
 
 #ident "$Revision: 1.4 $"
 
+#ifdef __EMSCRIPTEN__
+#include <strings.h>
+#else
 extern void    bcopy(const void *, void *, int);
 extern int    bcmp(const void *, const void *, int);
 extern void    bzero(void *, int);
+#endif
 
 #ifdef __cplusplus
 }

@@ -79,7 +79,7 @@ u8 _bssSegmentEnd[0x800000];
  * osPiRawStartDma branch that would use _alt_start* can never be taken.
  */
 __asm__(
-    "    .section .bss\n"
+    ASM_BSS
     "    .balign 16\n"
     "    .globl " ASM_SYM("_codeSegmentRomStart") "\n"
     ASM_SYM("_codeSegmentRomStart") ":\n"
@@ -88,6 +88,8 @@ __asm__(
     ASM_SYM("_inflateSegmentRomStart") ":\n"
     "    .space 16\n"
     "    .text\n"
+    ASM_SIZE("_codeSegmentRomStart", 16)
+    ASM_SIZE("_inflateSegmentRomStart", 16)
 );
 
 u8 _alt_startSegmentRomStart[16]; /* DMA source of the never-taken branch */
@@ -109,7 +111,7 @@ u8 _alt_startSegmentStart[16];    /* DMA dest of the never-taken branch */
  * Offsets: 0x000, then 0x078 + n*0xA8 (matches map:6617-6633).
  */
 __asm__(
-    "    .section .bss\n"
+    ASM_BSS
     "    .balign 16\n"
     "    .globl " ASM_SYM("_GlobalimagetableSegmentStart") "\n"
     ASM_SYM("_GlobalimagetableSegmentStart") ":\n"
@@ -118,10 +120,12 @@ __asm__(
     ASM_SYM("_GlobalimagetableSegmentEnd") ":\n"
     "    .space 16\n"
     "    .text\n"
+    ASM_SIZE("_GlobalimagetableSegmentStart", 0x1400)
+    ASM_SIZE("_GlobalimagetableSegmentEnd", 16)
 );
 
 __asm__(
-    "    .section .data\n"
+    ASM_DATA
     "    .balign 16\n"
     "    .globl " ASM_SYM("_GlobalimagetableSegmentRomStart") "\n"
     ASM_SYM("_GlobalimagetableSegmentRomStart") ":\n"
@@ -133,6 +137,7 @@ __asm__(
     "    .endr\n"
     "    .space 0x908\n"         /* pad to 0x1400 */
     "    .text\n"
+    ASM_SIZE("_GlobalimagetableSegmentRomStart", 0x1400)
 );
 
 /* ---- animation segments (initanitable.c) ------------------------------- */
@@ -152,7 +157,7 @@ __asm__(
  * (phase2-decisions.md D9) replaces this path with real data.
  */
 __asm__(
-    "    .section .bss\n"
+    ASM_BSS
     "    .balign 16\n"
     "    .globl " ASM_SYM("_animation_dataSegmentStart") "\n"
     ASM_SYM("_animation_dataSegmentStart") ":\n"
@@ -161,6 +166,8 @@ __asm__(
     ASM_SYM("_animation_dataSegmentEnd") ":\n"
     "    .space 16\n"
     "    .text\n"
+    ASM_SIZE("_animation_dataSegmentStart", 0xE7E0)
+    ASM_SIZE("_animation_dataSegmentEnd", 16)
 );
 
 u8 _animation_dataSegmentRomStart[0xE7E0];
@@ -178,7 +185,7 @@ u8 _animation_entriesSegmentRomStart[0x169EC0];
  * RDP-only (never software-parsed), zeros are fine.
  */
 __asm__(
-    "    .section .bss\n"
+    ASM_BSS
     "    .balign 16\n"
     "    .globl " ASM_SYM("_fontbankgothicSegmentStart") "\n"
     ASM_SYM("_fontbankgothicSegmentStart") ":\n"
@@ -201,6 +208,12 @@ __asm__(
     ASM_SYM("_fontdlSegmentRomEnd") ":\n"
     "    .space 16\n"
     "    .text\n"
+    ASM_SIZE("_fontbankgothicSegmentStart", 0x24B0)
+    ASM_SIZE("_fontbankgothicSegmentEnd", 16)
+    ASM_SIZE("_fontzurichboldSegmentStart", 0x3540)
+    ASM_SIZE("_fontzurichboldSegmentEnd", 16)
+    ASM_SIZE("_fontdlSegmentRomStart", 0xC0)
+    ASM_SIZE("_fontdlSegmentRomEnd", 16)
 );
 
 u8 _fontbankgothicSegmentRomStart[0x24B0];
@@ -386,7 +399,7 @@ void portFontBuildSegments(void)
  * absolute D_02004xxx symbols. Zeros -> black logo, no crash.
  */
 __asm__(
-    "    .section .bss\n"
+    ASM_BSS
     "    .balign 16\n"
     "    .globl " ASM_SYM("_rarewarelogoSegmentStart") "\n"
     ASM_SYM("_rarewarelogoSegmentStart") ":\n"
@@ -395,6 +408,8 @@ __asm__(
     ASM_SYM("_rarewarelogoSegmentEnd") ":\n"
     "    .space 64\n"             /* ALIGN64 slack for the copy length */
     "    .text\n"
+    ASM_SIZE("_rarewarelogoSegmentStart", 0x67F0)
+    ASM_SIZE("_rarewarelogoSegmentEnd", 64)
 );
 
 u8 _rarewarelogoSegmentRomStart[0x6800]; /* 0x67F0 rounded to ALIGN64 */
@@ -501,7 +516,7 @@ u8 _efontchardataSegmentRomStart[0x1A80];
  */
 #ifdef GE_ROMDATA_FALLBACK
 __asm__(
-    "    .section .data\n"
+    ASM_DATA
     "    .balign 16\n"
     "    .globl " ASM_SYM("port_imagesBlob") "\n"
     ASM_SYM("port_imagesBlob") ":\n"
@@ -558,7 +573,7 @@ u8 *port_imagesSegmentRomStart; /* romdata fills it, or the build refuses to run
  */
 #ifdef GE_ROMDATA_FALLBACK
 __asm__(
-    "    .section .data\n"
+    ASM_DATA
     "    .balign 16\n"
     "    .globl " ASM_SYM("port_sfxctlBlob") "\n"
     ASM_SYM("port_sfxctlBlob") ":\n"

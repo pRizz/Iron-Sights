@@ -1,9 +1,12 @@
 #ifndef _BG_H_
 #define _BG_H_
+
 #include <ultra64.h>
 #include <bondgame.h>
 #include <bondtypes.h>
 #include <bondconstants.h>
+
+void bgGetRoomCenter(s32 roomnum, coord3d *dst);
 
 struct levelentry
 {

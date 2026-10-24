@@ -3636,7 +3636,7 @@ s32 getTileRoom(StandTile *tile)
 
 
 //incorrect here so that both this and sub_GAME_7F0B4F9C match
-extern s32 sub_GAME_7F0B4F9C(u8 arg0) ;
+extern f32 sub_GAME_7F0B4F9C(s32 room);
 
 s32 sub_GAME_7F0B2FE0(StandTile *tile)
 {
@@ -3668,12 +3668,12 @@ Gfx * sub_GAME_7F0B303C(Gfx * arg0) {
     return arg0;
 }
 
-s32 sub_GAME_7F0B3044(void) {
+s32 sub_GAME_7F0B3044(Gfx *gdl) {
     s32 sp1C;
     f32 temp_f0;
 
     sp1C = 0;
-    if (((dynGetFreeGfx() < 0x1000) || (dynGetFreeVtx() < 0x1000)) && (*D_800413D0 == 0)) {
+    if (((dynGetFreeGfx(gdl) < 0x1000) || (dynGetFreeVtx() < 0x1000)) && (*D_800413D0 == 0)) {
         D_800413C0 = 0.0f;
         D_800413C4 = 0.0f;
         D_800413C8 = D_800413CC;
@@ -3737,14 +3737,14 @@ Gfx * sub_GAME_7F0B312C(Gfx *arg0, s32 arg1)
         } while (*psStack0000001c >> 0xf == cStack00000027);
         *psStack0000001c = *psStack0000001c ^ 0x8000;
         stanTileHasZeroArea(psStack0000001c);
-        iVar3 = sub_GAME_7F0B3044();
+        iVar3 = sub_GAME_7F0B3044(arg0);
         if (iVar3 != 0) {
           Function_8238AC90(psStack0000001c,uStack00000014,uVar5,param_4,param_5,param_6,uVar6);
         }
         for (local_28 = 0; cVar4 = getsides(psStack0000001c), local_28 < cVar4; local_28 = local_28 + 1)
         {
           if (psStack0000001c[local_28 + 1].tail >> 4 == 0) {
-            iVar3 = sub_GAME_7F0B3044();
+            iVar3 = sub_GAME_7F0B3044(arg0);
             if (iVar3 != 0) {
               uVar5 = local_28 + 1;
               cVar4 = getsides(psStack0000001c);

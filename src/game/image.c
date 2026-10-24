@@ -2542,6 +2542,12 @@ void texLoad(s32 *updateword, struct texpool *pool)
     }
 
     g_TexNumToLoad = *updateword & 0xffff;
+#ifdef __EMSCRIPTEN__
+    if (g_TexNumToLoad >= PORT_TEXTURES_MAX-1) {
+        fprintf(stderr, "ge: web invalid texture ID: word=%08x update=%p\n", *updateword, updateword);
+        __builtin_trap();
+    }
+#endif
     tex = texFindInPool(g_TexNumToLoad, pool);
 
     if (tex == NULL)
@@ -2569,6 +2575,13 @@ void texLoad(s32 *updateword, struct texpool *pool)
          * (port/src/segments.c), so the decompressors below run unmodified. */
         thisoffset = g_Textures[g_TexNumToLoad].dataoffset;
         nextoffset = g_Textures[g_TexNumToLoad + 1].dataoffset;
+#ifdef __EMSCRIPTEN__
+        if (nextoffset < thisoffset || nextoffset-thisoffset > sizeof(compbuffer)-16) {
+            fprintf(stderr, "ge: web invalid texture span: num=%d start=%d next=%d update=%p word=%08x\n",
+                    g_TexNumToLoad, thisoffset, nextoffset, updateword, *updateword);
+            __builtin_trap();
+        }
+#endif
 #endif
 
 #ifndef TARGET_N64
@@ -2657,8 +2670,10 @@ void texLoad(s32 *updateword, struct texpool *pool)
                * floor hunt). */
                 extern char *getenv(const char *);
                 extern void *portRootFopen(const char *name, const char *mode);
+#ifndef __EMSCRIPTEN__
                 extern u32 fwrite(const void *, u32, u32, void *);
                 extern s32 fclose(void *);
+#endif
                 extern int sprintf(char *, const char *, ...);
                 static s32 wantnum = -2;
                 if (wantnum == -2)

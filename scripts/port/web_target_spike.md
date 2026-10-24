@@ -1,10 +1,11 @@
 # Browser portability spike
 
-The first WEB-001 implementation slice provides an executable Wasm ABI/address
-probe and a compile-only survey of the existing headless game. The production
-browser game target still needs platform adapters, a memory design and a full
-link. Follow the [accepted plan](web_target_plan.md) and
-[milestone tracker](web_target_progress.md) for the remaining gates.
+The first WEB-001 implementation slice provided an executable Wasm ABI/address
+probe and a compile-only survey of the existing headless game. The historical
+measurements below explain the initial failures. The root Wasm core now links
+and passes a private-ROM Dam smoke; see the [runtime runbook](web_runtime.md) for
+the current build. Follow the [accepted plan](web_target_plan.md) and
+[milestone tracker](web_target_progress.md) for acceptance status.
 
 ## Run the checks
 
@@ -24,8 +25,9 @@ python scripts/port/web_spike.py audit --jobs 4
 
 Use `all` to run the probe and audit together. Exit status 0 means the selected
 checks completed without failures, 1 means the source survey found compile
-failures, and 2 means setup or a probe failed. An audit finding is expected while
-WEB-001 is unfinished; it must not be represented as a passing game build.
+failures, and 2 means setup or a probe failed. A source survey failure must not
+be represented as a passing game build. Later root-platform fixes can change
+these survey results; compare current logs rather than assuming 11 failures.
 
 Commands can be rerun. Logs and summaries are overwritten for the selected mode;
 other modes may retain earlier results. Use the matching `summary-probe.json`,
@@ -34,8 +36,8 @@ to individual logs under `audit/`. Objects, JavaScript, Wasm and logs remain in
 the ignored build directory. They are diagnostic artifacts, not a deployment.
 
 The probe has its own CMake project under `scripts/port/web_probe`; no native
-target or render inputs are changed. The production web target will still use
-the existing root CMake project and `ge` target once its platform work lands.
+target or render inputs are changed by running it. The browser game now uses
+the existing root CMake project and `ge` target through its Emscripten branch.
 
 ## ABI and address experiment
 
@@ -78,17 +80,19 @@ proof that every legacy pointer/address operation is valid under Wasm.
 
 The runner configures the real root CMake project with `GE_HEADLESS=ON`,
 `GE_VIDEO=OFF`, `GE_ROMDATA_FALLBACK=OFF` and compile-command export enabled. It
-generates the build-info header and records the ordinary build failure first.
-The initial failure is the inherited x86 SSE compiler configuration.
+generates the build-info header and records the ordinary root build result
+first, with fast final linking for iteration. The initial failure, before the
+Emscripten branch existed, was the inherited x86 SSE compiler configuration.
 
 It then compiles each selected translation unit to a Wasm object with that
 source's defines and includes, removing only `-m32`, `-msse2`, `-mfpmath=sse`,
 `-fno-toplevel-reorder`, `-malign-data=abi` and assembler include-path flags.
 The survey demotes three inherited C diagnostic classes from errors to warnings:
 implicit function declarations, integer conversions and incompatible pointer
-types. This diagnostic accommodation is recorded in the output and is not a
-production compiler policy. Existing native `-w` remains in the selected flags.
-Successful compilation therefore does not establish type or runtime correctness.
+types. These survey flags are recorded in the output. The current root target
+separately retains legacy C allowances described in the runtime runbook, with
+linker signature warnings fatal. Existing `-w` remains in the selected flags.
+Successful compilation alone does not establish type or runtime correctness.
 
 The initial survey compiled 246 of 257 translation units and failed 11:
 
@@ -106,11 +110,12 @@ compile database derives from CMake rather than a separately maintained game
 source list. Read the current logs when fixing a failure; this baseline is not
 an exception list that makes failures acceptable in a production build.
 
-## Next implementation step
+## Superseded initial implementation step
 
 Introduce the root CMake Emscripten platform branch with explicit browser
 startup/segment adapters and suspend-feature gating, then address the reported
 Clang declaration/anonymous-field errors. Preserve native behavior and run the
 applicable native tests and gallery workflow for shared inputs. Link the full
 headless core, measure its real static/arena requirements and choose an address
-strategy before advancing to WEB-002 rendering and browser scheduling.
+strategy before advancing to WEB-002 rendering and browser scheduling. This
+step is now implemented; continue from the milestone tracker's current gate.

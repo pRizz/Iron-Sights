@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Midas browser prototype</title>
+<style>
+  body { background:#14171c; color:#e6e9ee; font:16px system-ui; margin:24px; }
+  button,input { font:inherit; margin:8px; }
+  canvas { display:block; width:min(960px,100%); background:#000; margin:16px 0; }
+  pre { max-height:260px; overflow:auto; font-size:12px; white-space:pre-wrap; }
+</style>
+<h1>Project Midas browser prototype</h1>
+<p>Select your stock US GoldenEye ROM. The file stays in this browser session.</p>
+<input id="rom" type="file" accept=".z64,.v64,.n64">
+<label><input id="dam" type="checkbox" checked>Start in Dam</label>
+<button id="play" disabled>Play</button>
+<button id="resume" disabled>Resume and capture mouse</button>
+<p id="status">Choose your ROM, then play</p>
+<canvas id="canvas" width="960" height="540" tabindex="0"></canvas>
+<pre id="log"></pre>
+<script type="module">
+  import createMidas from './ProjectMidas.mjs';
+  const canvas = document.querySelector('#canvas');
+  const status = document.querySelector('#status');
+  const play = document.querySelector('#play');
+  const resume = document.querySelector('#resume');
+  const log = document.querySelector('#log');
+  const write = line => { log.textContent += line + '\n'; log.scrollTop = log.scrollHeight; };
+  let running = false;
+  let maybeGame;
+  let maybeRom;
+  document.querySelector('#rom').addEventListener('change', async event => {
+    const [file] = event.target.files;
+    if (!file) return;
+    maybeRom = new Uint8Array(await file.arrayBuffer());
+    play.disabled = false;
+    status.textContent = 'ROM selected locally';
+  });
+  play.addEventListener('click', async () => {
+    play.disabled = true;
+    document.querySelector('#rom').disabled = true;
+    status.textContent = 'Downloading and compiling WebAssembly';
+    const game = await createMidas({ canvas, noInitialRun:true, noExitRuntime:true,
+      print:write, printErr:write,
+      preRun(module) {
+        if (document.querySelector('#dam').checked) Object.assign(module.ENV,
+          {GE_STAGE:'dam', GE_STAGE_AFTER:'1', GE_SKIPINTRO:'1'});
+      },
+      onAbort:reason => { status.textContent = 'Game stopped: ' + reason; },
+      onExit:code => { status.textContent = 'Game exited: ' + code; } });
+    maybeGame = game;
+    game.FS.mkdir('/user');
+    game.FS.writeFile('/user/midas.ini', '[display]\nfullscreen=window\nrender_thread=0\nvsync=0\nmaxfps=60\ntickhz=60\nmsaa=1\n[input]\nmouse=1\n');
+    for (const name of ['gamecontrollerdb.txt','gamecontrollerdefault.txt']) {
+      game.FS.writeFile('/user/' + name, new Uint8Array(await (await fetch(name)).arrayBuffer()));
+    }
+    game.FS.mkdir('/user/Data');
+    game.FS.writeFile('/user/Data/shaders_base.txt', new Uint8Array(await (await fetch('Data/shaders_base.txt')).arrayBuffer()));
+    game.FS.writeFile('/rom.z64', maybeRom);
+    running = true;
+    canvas.focus();
+    resume.disabled = false;
+    status.textContent = 'Starting game';
+    game.callMain(['--rom-file','/rom.z64']);
+    globalThis.midasPrototype = game;
+  });
+  const capture = async () => {
+    canvas.focus();
+    await canvas.requestPointerLock();
+    maybeGame._portWebSetPaused(0);
+    status.textContent = 'Playing. Escape releases the mouse.';
+  };
+  resume.addEventListener('click', capture);
+  canvas.addEventListener('click', () => { if (running) capture().catch(write); });
+  document.addEventListener('pointerlockchange', () => {
+    if (running && document.pointerLockElement !== canvas) {
+      maybeGame._portWebSetPaused(1); status.textContent = 'Paused. Click Resume to continue.';
+    }
+  });
+  window.addEventListener('blur', () => { if (running) maybeGame._portWebSetPaused(1); });
+  document.addEventListener('visibilitychange', () => {
+    if (running && document.hidden) maybeGame._portWebSetPaused(1);
+  });
+</script>
+</html>

@@ -1014,6 +1014,10 @@ s32 osSetTimer(OSTimer *timer, OSTime countdown, OSTime interval, OSMesgQueue *m
 s32 osPiStartDma(OSIoMesg *mb, s32 pri, s32 direction, u32 devAddr, void *vAddr, u32 nbytes, OSMesgQueue *mq)
 {
     (void)pri;
+#ifdef __EMSCRIPTEN__
+    { extern void portWebCheckDma(u32 device, void *memory, u32 size);
+      portWebCheckDma(devAddr, vAddr, nbytes); }
+#endif
 
     if (direction == OS_READ) {
         memcpy(vAddr, (const void *)devAddr, nbytes);

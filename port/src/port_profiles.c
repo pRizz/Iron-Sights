@@ -63,6 +63,7 @@
 
 extern const char *portRootPath(const char *name); /* main.c: <exe dir>/name */
 extern void portConLogf(const char *fmt, ...);       /* port_console.c */
+void portProfileClear(s32 player);
 extern s32 portVideoIniSetKey(const char *key, const char *value);
 
 /* input_pc.c - by pad SLOT, which is what a player is */

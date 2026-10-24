@@ -241,6 +241,9 @@ typedef struct OSTimer_s {
 #ifndef TARGET_N64
 /* MinGW defines errno as the macro (*_errno()); GE's field name predates
  * that. The port never uses libc errno by name after this header. */
+#if defined(__EMSCRIPTEN__) && defined(__cplusplus)
+#pragma push_macro("errno")
+#endif
 #undef errno
 #endif
 
@@ -265,7 +268,9 @@ typedef struct {
 	u8	errno;
 } OSContRamIo;
 
-#if !defined(TARGET_N64) && defined(__GLIBC__) && defined(__cplusplus)
+#if !defined(TARGET_N64) && defined(__EMSCRIPTEN__) && defined(__cplusplus)
+#pragma pop_macro("errno")
+#elif !defined(TARGET_N64) && defined(__GLIBC__) && defined(__cplusplus)
 /* Restore the glibc errno macro for hosted C++ TUs (libstdc++'s
  * atomic_wait uses it; the undef above only exists so the struct fields
  * can be DECLARED). The only C++ TUs are fast3d, which never touch the
@@ -1005,7 +1010,7 @@ extern void		osAckRamromWrite(void);
 
 /* byte string operations */
 
-#if defined(__GLIBC__) && !defined(TARGET_N64)
+#if (defined(__GLIBC__) || defined(__EMSCRIPTEN__)) && !defined(TARGET_N64)
 /* Linux port builds: SDL.h drags in <strings.h>, whose size_t prototypes
  * conflict with the N64 int forms below. Take the host's declarations
  * everywhere on glibc so TUs that include both agree. */

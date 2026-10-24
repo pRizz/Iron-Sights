@@ -20,6 +20,18 @@
 #define PORT_ASMSYM_STR_(x) #x
 #define PORT_ASMSYM_STR(x) PORT_ASMSYM_STR_(x)
 
+#ifdef __EMSCRIPTEN__
+#define ASM_BSS ".section .bss.midas,\"\",@\n"
+#define ASM_DATA ".section .data.midas,\"\",@\n"
+#define ASM_RODATA ".section .rodata.midas,\"\",@\n"
+#define ASM_SIZE(name, size) ".size " ASM_SYM(name) ", " PORT_ASMSYM_STR(size) "\n"
+#else
+#define ASM_BSS ".section .bss\n"
+#define ASM_DATA ".section .data\n"
+#define ASM_RODATA ".section .rodata\n"
+#define ASM_SIZE(name, size) ""
+#endif
+
 #ifdef __USER_LABEL_PREFIX__
 #define ASM_SYM(name) PORT_ASMSYM_STR(__USER_LABEL_PREFIX__) name
 #else

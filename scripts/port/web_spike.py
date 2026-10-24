@@ -26,10 +26,10 @@ def load_toolchain(path=TOOLCHAIN):
     return config
 
 
-def run_logged(command, log, expected_failure=False):
+def run_logged(command, log, expected_failure=False, timeout=300):
     print('RUN ' + shlex.join(map(str, command)), flush=True)
     result = subprocess.run(command, text=True, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT, timeout=300, check=False)
+                            stderr=subprocess.STDOUT, timeout=timeout, check=False)
     log.parent.mkdir(parents=True, exist_ok=True)
     log.write_text(shlex.join(map(str, command)) + '\n' + result.stdout,
                    encoding='utf-8')
@@ -57,14 +57,15 @@ def audit(output, jobs):
     build = output / 'core'
     run_logged(['emcmake', 'cmake', '-S', str(ROOT), '-B', str(build),
                 '-DGE_HEADLESS=ON', '-DGE_VIDEO=OFF', '-DGE_ROMDATA_FALLBACK=OFF',
-                '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON'], output / 'core-configure.log')
+                '-DCMAKE_EXPORT_COMPILE_COMMANDS=ON', '-DGE_WEB_LINK_OPT=0'],
+               output / 'core-configure.log')
     # Generate the header without attempting the native-only executable overlay.
     run_logged(['cmake', '--build', str(build), '--target', 'ge_buildinfo'],
                output / 'core-buildinfo.log')
     baseline = run_logged(['cmake', '--build', str(build), '--parallel', str(jobs)],
                           output / 'core-baseline.log', expected_failure=True)
     result = run_audit(build / 'compile_commands.json', output / 'audit', ROOT, jobs)
-    result['native_cmake_build_returncode'] = baseline.returncode
+    result['root_cmake_build_returncode'] = baseline.returncode
     return result
 
 

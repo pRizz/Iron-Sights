@@ -1,4 +1,4 @@
-#if !defined(TARGET_N64) && defined(__linux__)
+#if !defined(TARGET_N64) && (defined(__linux__) || defined(__EMSCRIPTEN__))
 /* This header shadows glibc's <sched.h> via the global -Isrc, which breaks
  * libstdc++'s pthread layer in the Linux video build. Chain to the real one
  * first (same pattern as include/string.h); harmless for C files that want the

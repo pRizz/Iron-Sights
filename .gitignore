@@ -298,3 +298,10 @@ docs/devnotes/
 
 # Local standards installation backups; the original project checklist is preserved in source.
 /.bright-builds-rules-backups/
+
+# Browser launcher dependencies, runtime binaries and local browser reports.
+node_modules/
+/web/dist/
+/web/public/runtime/
+/web/test-results/
+/web/playwright-report/

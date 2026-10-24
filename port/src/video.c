@@ -5162,10 +5162,14 @@ static void portRenderThreadStop(void)
 /* the [display] render_thread rule, one copy: -1 auto = ON when tickhz != 60 */
 static s32 portRenderThreadWanted(void)
 {
+#ifdef __EMSCRIPTEN__
+    return 0; /* No SharedArrayBuffer/COOP/COEP requirement for the Pages target. */
+#else
     const char *e = getenv("GE_RENDERTHREAD");
     s32 mode = (e != NULL) ? atoi(e) : s_CfgRenderThread;
 
     return (mode == 1) || (mode != 0 && portTickHz() != 60);
+#endif
 }
 
 /* called from the tail of videoInit, after every init-time GL call - and

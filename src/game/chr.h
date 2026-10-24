@@ -8,6 +8,7 @@
 #define EXPLOSION_ANIMATION_TABLE_LEN 8
 
 struct StruckAnim;
+struct Vertex *get_ptr_allocated_block_for_vertices(s32 numvertices);
 
 // Per-body-part hits and deaths reaction descriptor.
 struct ChrHitReaction

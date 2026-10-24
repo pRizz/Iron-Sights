@@ -221,8 +221,8 @@ void sub_GAME_7F06C418(Vew4s32 *src, Vew4s32 *dst) {
 }
 
 
-void set_vtxallocator(s32 param_1) {
-  vtxallocator = param_1;
+void set_vtxallocator(struct Vertex *(*allocate)(s32 numvertices)) {
+  vtxallocator = allocate;
 }
 
 
@@ -1367,7 +1367,7 @@ void sub_GAME_7F06DB5C(ModelRenderData *arg0, Model *arg1, ModelNode *arg2, quat
         sp1C = (s32)&sp48[sp54];
         matrix_4x4_multiply_homogeneous(sp9C, &sp58, (Mtxf *)sp1C);
         if (g_ModelJointPositionedFunc != NULL) {
-            ((void (*)(s32, s32, s32)) g_ModelJointPositionedFunc)(sp54, sp1C, sp1C);
+            g_ModelJointPositionedFunc(sp54, (Mtxf *)sp1C);
         }
     } else {
         quaternion_to_transform_matrix(&spA0->Origin, arg3, (Mtxf *)&sp48[sp54]);

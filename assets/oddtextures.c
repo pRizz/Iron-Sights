@@ -758,3 +758,78 @@ sImageTableEntry s_mpstageselimages[] = {
 
 
 
+
+#ifndef TARGET_N64
+/* Explicit objects avoid GCC/Clang/linker ordering assumptions at stage reset. */
+#include <string.h>
+#define IMAGE_BANK_OBJECTS(X) \
+    X(globalDL_0x000) \
+    X(globalDL_0x078) \
+    X(globalDL_0x120) \
+    X(globalDL_0x1c8) \
+    X(globalDL_0x270) \
+    X(globalDL_0x318) \
+    X(globalDL_0x3c0) \
+    X(globalDL_0x468) \
+    X(globalDL_0x510) \
+    X(globalDL_0x5b8) \
+    X(globalDL_0x660) \
+    X(globalDL_0x708) \
+    X(globalDL_0x7b0) \
+    X(globalDL_0x858) \
+    X(globalDL_0x900) \
+    X(globalDL_0x9a8) \
+    X(globalDL_0xa50) \
+    X(s_genericimage) \
+    X(s_impactimages) \
+    X(s_explosion_smokeimages) \
+    X(s_scattered_explosions) \
+    X(s_flareimage1) \
+    X(s_flareimage2) \
+    X(s_flareimage3) \
+    X(s_flareimage4) \
+    X(s_flareimage5) \
+    X(s_ammo9mmimage) \
+    X(s_rifleammoimage) \
+    X(s_shotgunammoimage) \
+    X(s_knifeammoimage) \
+    X(s_glammoimage) \
+    X(s_rocketammoimage) \
+    X(s_genericmineammoimage) \
+    X(s_grenadeammoimage) \
+    X(s_magnumammoimage) \
+    X(s_goldengunammoimage) \
+    X(s_remotemineammoimage) \
+    X(s_timedmineammoimage) \
+    X(s_proxmineammoimage) \
+    X(s_tankammoimage) \
+    X(s_crosshairimage) \
+    X(s_betacrosshairimage) \
+    X(s_glassoverlayimage) \
+    X(s_monitorimages) \
+    X(s_skywaterimages) \
+    X(s_mainfolderimages) \
+    X(s_mpradarimages) \
+    X(s_mpcharselimages) \
+    X(s_mpstageselimages)
+#define IMAGE_BANK_BLOCK(name) {name, sizeof(name)},
+#define IMAGE_BANK_SIZE(name) + sizeof(name)
+void portResetImageBank(void)
+{
+    struct image_block { void *data; size_t size; };
+    static const struct image_block blocks[] = { IMAGE_BANK_OBJECTS(IMAGE_BANK_BLOCK) };
+    static u8 pristine[0 IMAGE_BANK_OBJECTS(IMAGE_BANK_SIZE)];
+    static s32 captured;
+    u8 *cursor = pristine;
+    u32 index;
+    for (index = 0; index < sizeof(blocks)/sizeof(blocks[0]); index++) {
+        if (captured) memcpy(blocks[index].data, cursor, blocks[index].size);
+        else memcpy(cursor, blocks[index].data, blocks[index].size);
+        cursor += blocks[index].size;
+    }
+    captured = 1;
+}
+#undef IMAGE_BANK_SIZE
+#undef IMAGE_BANK_BLOCK
+#undef IMAGE_BANK_OBJECTS
+#endif

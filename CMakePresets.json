@@ -1,0 +1,30 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "web",
+      "displayName": "Browser game (run through emcmake)",
+      "toolchainFile": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+      "binaryDir": "${sourceDir}/build/web/local-video",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "GE_VIDEO": "ON",
+        "GE_HEADLESS": "OFF",
+        "GE_ROMDATA_FALLBACK": "OFF",
+        "GE_WEB_LINK_OPT": "2"
+      }
+    },
+    {
+      "name": "web-core",
+      "inherits": "web",
+      "displayName": "Browser core smoke target (run through emcmake)",
+      "binaryDir": "${sourceDir}/build/web/local-core",
+      "cacheVariables": { "GE_VIDEO": "OFF", "GE_HEADLESS": "ON" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "web", "configurePreset": "web", "targets": ["ge"] },
+    { "name": "web-core", "configurePreset": "web-core", "targets": ["ge"] }
+  ]
+}

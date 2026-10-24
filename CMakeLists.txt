@@ -3,17 +3,20 @@ project(ge007 C)
 
 # GoldenEye PC port build (docs/port/PORT-PLAN.md). Built 32-bit first, which
 # defuses the codebase's pointer<->s32 casts and keeps Gfx 8 bytes.
-# The N64 ROM build stays on the classic Makefile; this file is PC-only.
+# The N64 ROM build stays on the classic Makefile; this builds native and Wasm.
 
 set(CMAKE_C_STANDARD 11)
 
+if(EMSCRIPTEN)
+    include(cmake/emscripten.cmake)
+else()
+    add_compile_options(-m32 -msse2 -mfpmath=sse)
+endif()
+
 add_compile_options(
-    -m32
     # Use SSE scalar floats so every operation rounds to single precision like
     # the N64 FPU; x87's 80-bit excess precision flips borderline comparisons
     # (it broke the stan.c tile-walk edge test and room visibility in Egypt).
-    -msse2
-    -mfpmath=sse
     -fno-strict-aliasing
     -fwrapv
     -funsigned-char
@@ -49,7 +52,7 @@ if(WIN32)
                      -Wl,--image-base=0x10000000 -Wl,--disable-dynamicbase
                      -Wl,--stack,16777216)
     link_libraries(dbghelp comctl32)
-else()
+elseif(NOT EMSCRIPTEN)
     add_link_options(-m32 -no-pie)
 endif()
 
@@ -67,7 +70,12 @@ endif()
 # port/include: shim<->scheduler interface (port_libultra.h). src/libultra:
 # lets vitbl.c resolve <io/viint.h>. Both appended LAST, so no include that
 # resolved before can be shadowed.
-include_directories(. include include/ultra64 include/PR src src/game src/inflate
+set(PORT_PUBLIC_INCLUDE include)
+if(EMSCRIPTEN)
+    # libc++ must find its standard-header wrappers before the N64 headers.
+    set(PORT_PUBLIC_INCLUDE $<$<COMPILE_LANGUAGE:C>:${CMAKE_SOURCE_DIR}/include>)
+endif()
+include_directories(. ${PORT_PUBLIC_INCLUDE} include/ultra64 include/PR src src/game src/inflate
                     port/include src/libultra)
 
 # Game logic: everything in src/game.
@@ -385,6 +393,10 @@ else()
         PROPERTIES OBJECT_DEPENDS "")
 endif()
 
+if(EMSCRIPTEN)
+    midas_web_sources(PORT_SRC)
+endif()
+
 if(GE_VIDEO)
     enable_language(CXX)
     set(CMAKE_CXX_STANDARD 20) # gfx_cc.h uses operator<=> (PD builds C++20)
@@ -413,6 +425,9 @@ add_executable(ge ${GAME_SRC} ${ENGINE_SRC} ${GU_SRC} ${PORT_SRC}
 # The executable is named ProjectMidas, but the CMake target stays `ge` so build
 # scripts keep working, and ge_direct.log/Profiles keep their names.
 set_target_properties(ge PROPERTIES OUTPUT_NAME ProjectMidas)
+if(EMSCRIPTEN)
+    midas_web_target(ge)
+else()
 # The suspend-point serializer records only registered game-owned sections;
 # the linker map supplies their exact bounds for this particular executable.
 target_link_options(ge PRIVATE "-Wl,-Map=${CMAKE_BINARY_DIR}/ProjectMidas.map")
@@ -423,6 +438,7 @@ add_custom_command(TARGET ge POST_BUILD
         --exe $<TARGET_FILE:ge> --map ${CMAKE_BINARY_DIR}/ProjectMidas.map
         --root ${CMAKE_SOURCE_DIR} --nm ${CMAKE_NM}
     VERBATIM)
+endif()
 # The exe's own icon (Explorer, a pinned taskbar entry): port/win/ProjectMidas.ico,
 # generated with the window icon by scripts/port/make_icon.py.
 if(WIN32)
@@ -450,7 +466,7 @@ target_include_directories(ge PRIVATE ${CMAKE_BINARY_DIR}/generated)
 # libm: sinf/cosf/sqrtf (math_sincos.s and gu asm on N64; libm on PC).
 target_link_libraries(ge m)
 
-if(GE_VIDEO)
+if(GE_VIDEO AND NOT EMSCRIPTEN)
     if(WIN32)
         # the SDL2 MinGW development package: third_party/ by default, or
         # SDL2_MINGW_ROOT (the Docker image unpacks it in the home folder)

@@ -1,4 +1,5 @@
 #include <ultra64.h>
+#include "math_asinacos.h"
 
 //data 
 //D:80032320

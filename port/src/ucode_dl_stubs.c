@@ -39,7 +39,7 @@
 
 /* ---- microcode chain (zeros; .bss) ------------------------------------- */
 __asm__(
-    "    .section .bss\n"
+    ASM_BSS
     "    .balign 16\n"
     "    .globl " ASM_SYM("rspbootTextStart") "\n"
     ASM_SYM("rspbootTextStart") ":\n"
@@ -59,6 +59,12 @@ __asm__(
     ASM_SYM("aspMainDataStart") ":\n"
     "    .space 32\n"
     "    .text\n"
+    ASM_SIZE("rspbootTextStart", 32)
+    ASM_SIZE("rspbootTextEnd", 32)
+    ASM_SIZE("gsp3DTextStart", 32)
+    ASM_SIZE("gsp3DDataStart", 32)
+    ASM_SIZE("aspMainTextStart", 32)
+    ASM_SIZE("aspMainDataStart", 32)
 );
 
 /* fontdl / Globalimagetable / rarewarelogo DL and texture symbols:
@@ -77,10 +83,16 @@ __asm__(
  * whatever ROM addresses the table carries until the compile-in wave
  * replaces the size scheme.
  */
+#ifdef __EMSCRIPTEN__
+/* ROM-served files receive explicit sizes; the native numeric marker is unused. */
+u8 ob__ob_end_seg;
+#else
 __asm__(
     "    .globl " ASM_SYM("ob__ob_end_seg") "\n"
     "    .set " ASM_SYM("ob__ob_end_seg") ", 0x008f8100\n"
+    ASM_SIZE("ob__ob_end_seg", 0)
 );
+#endif
 
 /* ---- boot-chain function stragglers ------------------------------------ */
 

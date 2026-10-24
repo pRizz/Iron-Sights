@@ -175,28 +175,9 @@ void texReset(void)
     s32 i;
 
 #ifndef TARGET_N64
-    /* The PC texture bank is compiled in and texLoad/texSelect overwrite its ids
-     * with pointers in place, so snapshot the pristine bytes on first call and
-     * restore them on every later stage load (otherwise the second load reads
-     * pointers as ids and crashes). The bounds rely on oddtextures.c being one
-     * TU built -fno-toplevel-reorder, contiguous from s_mpstageselimages to
-     * globalDL_0x000 (+0x78). */
-    {
-        extern void *s_mpstageselimages;
-        extern Gfx *globalDL_0x000;
-        static u8 *pristine;
-        u8 *lo = (u8 *) &s_mpstageselimages;
-        u8 *hi = (u8 *) &globalDL_0x000 + 0x78;
-
-        if (pristine == NULL) {
-            pristine = malloc(hi - lo);
-            if (pristine != NULL) {
-                memcpy(pristine, lo, hi - lo);
-            }
-        } else {
-            memcpy(lo, pristine, hi - lo);
-        }
-    }
+    /* texLoad replaces IDs with pointers. Snapshot each real object, because
+     * compilers/linkers may order or align the bank objects differently. */
+    { extern void portResetImageBank(void); portResetImageBank(); }
 
     /* Stage boundary = the moment pool addresses start getting recycled
      * with new pixels; fast3d's address-keyed texture cache must drop its

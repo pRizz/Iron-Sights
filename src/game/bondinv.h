@@ -6,6 +6,14 @@
 #include "bondtypes.h"
 
 void bondinvReinitInv(void);
+f32 bondinvGetHoffsetForIndex(int index);
+f32 bondinvGetVoffsetForIndex(int index);
+f32 bondinvGetDepthForIndex(int index);
+f32 bondinvGetVposWatchForIndex(int index);
+f32 bondinvGetHposWatchForIndex(int index);
+f32 bondinvGetDepthWatchForIndex(int index);
+f32 bondinvGetXrotWatchForIndex(int index);
+f32 bondinvGetYrotWatchForIndex(int index);
 s32 bondinvIsAliveWithFlag(void);
 s32 bondinvCountTotalItemsInInv(void);
 

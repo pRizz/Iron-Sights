@@ -86,7 +86,9 @@ finishes, while keeping useful diagnostic logs and captures.
   [milestone progress](scripts/port/web_target_progress.md). Read both before
   resuming; update only the relevant stable milestone block with changes,
   verification evidence, blockers and the next action before handing off.
-- This is a C/C++ CMake game port. Bun runs development standards checks; there is no Bun application package to install.
+- This is a C/C++ CMake game port. Bun runs development standards checks and the
+  browser tooling subpackage under `web/`. Use `bun install --frozen-lockfile`
+  inside `web/` for its tests/audit tooling; the repository root has no Bun package.
 - `.githooks/pre-commit` runs `bun scripts/bright-builds-check.ts all`, then staged gallery verification. Manual runs for installation, debugging or review are allowed; a commit hook rerun needs no separate confirmation.
 - Source changes use the relevant `scripts/port/test_*.sh` checks. Wardrobe/render changes require the arm contracts and gallery workflow above. Documentation/rules-only changes need no game rebuild or render regeneration.
 - Existing long files have a documented adoption baseline in `.bright-builds-rules-checks.tsv`; new source files remain checked. See `standards-overrides.md` before changing an exempt file.

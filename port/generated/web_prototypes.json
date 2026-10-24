@@ -1,0 +1,1027 @@
+[
+  [
+    "add_ammo_to_inventory",
+    "void (AMMOTYPE, int, int, int)",
+    "src/game/propobj.c"
+  ],
+  [
+    "ai",
+    "void (PropDefHeaderRecord *, PROP_TYPE)",
+    "src/game/chrai.c"
+  ],
+  [
+    "alloc_false_GUARDdata_to_exec_global_action",
+    "void (void)",
+    "src/game/deb_loadallmodels.c"
+  ],
+  [
+    "alloc_init_GUARDdata_entries",
+    "void (s32)",
+    "src/game/initguards.c"
+  ],
+  [
+    "alloc_load_expand_ani_table",
+    "void (void)",
+    "src/game/initanitable.c"
+  ],
+  [
+    "bgFindRoomsAlongSegment",
+    "void (coord3d *, coord3d *, u8 *, u8 *, s32 *, s32 *, s32)",
+    "src/game/bg.c"
+  ],
+  [
+    "bondinvAddTextOverride",
+    "void (textoverride *)",
+    "src/game/bondinv.c"
+  ],
+  [
+    "bondinvDetermineEquippedItem",
+    "void (void)",
+    "src/game/bondinv.c"
+  ],
+  [
+    "bondinvGetDepthForIndex",
+    "f32 (int)",
+    "src/game/bondinv.c"
+  ],
+  [
+    "bondinvGetDepthWatchForIndex",
+    "f32 (int)",
+    "src/game/bondinv.c"
+  ],
+  [
+    "bondinvGetHoffsetForIndex",
+    "f32 (int)",
+    "src/game/bondinv.c"
+  ],
+  [
+    "bondinvGetHposWatchForIndex",
+    "f32 (int)",
+    "src/game/bondinv.c"
+  ],
+  [
+    "bondinvGetVoffsetForIndex",
+    "f32 (int)",
+    "src/game/bondinv.c"
+  ],
+  [
+    "bondinvGetVposWatchForIndex",
+    "f32 (int)",
+    "src/game/bondinv.c"
+  ],
+  [
+    "bondinvGetXrotWatchForIndex",
+    "f32 (int)",
+    "src/game/bondinv.c"
+  ],
+  [
+    "bondinvGetYrotWatchForIndex",
+    "f32 (int)",
+    "src/game/bondinv.c"
+  ],
+  [
+    "bondinvIncrementHeldTime",
+    "void (s32, s32)",
+    "src/game/bondinv.c"
+  ],
+  [
+    "bondinvSetAllGunsFlag",
+    "void (s32)",
+    "src/game/bondinv.c"
+  ],
+  [
+    "bondinvSetCurEquippedItem",
+    "void (int)",
+    "src/game/bondinv.c"
+  ],
+  [
+    "bondviewKillCurrentPlayer",
+    "void (void)",
+    "src/game/bondview2.c"
+  ],
+  [
+    "bondviewRemovePlayerBody",
+    "void (void)",
+    "src/game/bondview2.c"
+  ],
+  [
+    "bondviewSetCameraMode",
+    "void (s32)",
+    "src/game/bondview2.c"
+  ],
+  [
+    "bondviewSetCurrentPlayerPosition",
+    "void (coord3d *, coord3d *, coord3d *, StandTile *, coord3d *)",
+    "src/game/bondview.c"
+  ],
+  [
+    "bondviewSetVisibleToGuardsFlag",
+    "void (s32)",
+    "src/game/bondview2.c"
+  ],
+  [
+    "bondviewUpdateCameraMatrices",
+    "void (coord3d *, coord3d *, coord3d *)",
+    "src/game/bondview2.c"
+  ],
+  [
+    "bondviewUpdateFrustumPlanes",
+    "void ()",
+    "src/game/bondview.c"
+  ],
+  [
+    "bossEntry",
+    "void (void)",
+    "src/boss.c"
+  ],
+  [
+    "bullet_path_from_screen_center",
+    "void (coord3d *, coord3d *, enum GUNHAND)",
+    "src/game/gunfire.c"
+  ],
+  [
+    "casingsInit",
+    "void (void)",
+    "src/game/initactorpropstuff.c"
+  ],
+  [
+    "chrObjRandomSetSeed",
+    "void (u32)",
+    "port/src/n64_random.c"
+  ],
+  [
+    "chrSetWeaponFlag4",
+    "void (ChrRecord *, GUNHAND)",
+    "src/game/propobj.c"
+  ],
+  [
+    "chrobjSndCreatePostEventDefault",
+    "void (ALSoundState *, coord3d *)",
+    "src/game/propobj.c"
+  ],
+  [
+    "chrpropDeregisterRoom",
+    "void (PropRecord *, s16)",
+    "src/game/chrprop.c"
+  ],
+  [
+    "chrpropDetach",
+    "void (PropRecord *)",
+    "src/game/chrprop.c"
+  ],
+  [
+    "cleanupAlarms",
+    "void (void)",
+    "src/game/cleanup_alarms.c"
+  ],
+  [
+    "cleanupExplosions",
+    "void (void)",
+    "src/game/cleanexplosions.c"
+  ],
+  [
+    "cleanupGuardData",
+    "void (void)",
+    "src/game/cleanup_guard_data.c"
+  ],
+  [
+    "cleanupObjectSounds",
+    "void (void)",
+    "src/game/cleanup_object_sounds.c"
+  ],
+  [
+    "cleanupObjectives",
+    "void (void)",
+    "src/game/cleanup_objectives.c"
+  ],
+  [
+    "cleanupSFXRelated",
+    "void (void)",
+    "src/game/cleanupSFXRelated.c"
+  ],
+  [
+    "cleanup_REMOVED_",
+    "void (void)",
+    "src/game/null_007970.c"
+  ],
+  [
+    "cleanup_rooms",
+    "void (void)",
+    "src/game/bg.c"
+  ],
+  [
+    "cleanup_window_pieces",
+    "void (void)",
+    "src/game/cleanwindowpieces.c"
+  ],
+  [
+    "cleanupplayersoundrelated",
+    "void (void)",
+    "src/game/cleanplayersound.c"
+  ],
+  [
+    "clearChrGunModelInstances",
+    "void (void)",
+    "src/game/title.c"
+  ],
+  [
+    "clear_light_fixturetable_in_room",
+    "void (s32)",
+    "src/game/lightfixture.c"
+  ],
+  [
+    "clear_ramrom_block_buffer_heading_ptrs",
+    "void (void)",
+    "src/game/ramromreplay.c"
+  ],
+  [
+    "cur_player_set_aim_control",
+    "void (u32)",
+    "src/game/options.c"
+  ],
+  [
+    "cur_player_set_ammo_onscreen_setting",
+    "void (u32)",
+    "src/game/options.c"
+  ],
+  [
+    "cur_player_set_lookahead",
+    "void (u32)",
+    "src/game/options.c"
+  ],
+  [
+    "cur_player_set_screen_setting",
+    "void (u32)",
+    "src/game/options.c"
+  ],
+  [
+    "cur_player_set_sight_onscreen_control",
+    "void (u32)",
+    "src/game/options.c"
+  ],
+  [
+    "currentPlayerCreateRocket",
+    "void (GUNHAND)",
+    "src/game/gun.c"
+  ],
+  [
+    "currentPlayerSetCameraMode",
+    "void (s32)",
+    "src/game/bondview.c"
+  ],
+  [
+    "currentPlayerSetMatrix10C4",
+    "void (Mtx *)",
+    "src/game/bondview.c"
+  ],
+  [
+    "currentPlayerSetMatrix10C8",
+    "void (Mtx *)",
+    "src/game/bondview.c"
+  ],
+  [
+    "currentPlayerSetProjectionMatrix",
+    "void (Mtx *)",
+    "src/game/bondview.c"
+  ],
+  [
+    "currentPlayerSetProjectionMatrixF",
+    "void (Mtxf *)",
+    "src/game/bondview.c"
+  ],
+  [
+    "currentPlayerSetViewToWorldMtxf",
+    "void (Mtxf *)",
+    "src/game/bondview.c"
+  ],
+  [
+    "currentPlayerSetXAutoAimEnabled",
+    "void (bool)",
+    "src/game/bondview2.c"
+  ],
+  [
+    "currentPlayerSetYAutoAimEnabled",
+    "void (s32)",
+    "src/game/bondview2.c"
+  ],
+  [
+    "currentPlayerUnEquipWeaponWrapper",
+    "void (enum GUNHAND, enum ITEM_IDS)",
+    "src/game/gun.c"
+  ],
+  [
+    "debTryAdd",
+    "void (void *, const char *)",
+    "src/deb.c"
+  ],
+  [
+    "debmenuPrintString",
+    "void (const unsigned char *)",
+    "src/debugmenu.c"
+  ],
+  [
+    "debmenuResetBuffer",
+    "void (void)",
+    "src/debugmenu.c"
+  ],
+  [
+    "debmenuSetFgColour",
+    "void (s32, s32, s32, s32)",
+    "src/debugmenu.c"
+  ],
+  [
+    "debmenuSetMenu",
+    "void (char **, s32 (*)[2], s32 *)",
+    "src/game/debugmenu_08FE00.c"
+  ],
+  [
+    "debmenuSetPos",
+    "void (s32, s32)",
+    "src/debugmenu.c"
+  ],
+  [
+    "debug_object_load_all_models",
+    "void (void)",
+    "src/game/deb_loadallmodels.c"
+  ],
+  [
+    "debug_weapon_load_table",
+    "void (void)",
+    "src/game/deb_loadallmodels.c"
+  ],
+  [
+    "default_player_perspective_and_height",
+    "void (void)",
+    "src/game/player.c"
+  ],
+  [
+    "display_text_for_weapon_in_lower_left_corner",
+    "void (ITEM_IDS)",
+    "src/game/propobj.c"
+  ],
+  [
+    "doorDeactivatePortal",
+    "void (DoorRecord *)",
+    "src/game/propobj.c"
+  ],
+  [
+    "dynGetFreeGfx",
+    "s32 (Gfx *)",
+    "src/game/dyn.c"
+  ],
+  [
+    "explosionClearBulletImpactRoom",
+    "void (PropRecord *)",
+    "src/game/explosion.c"
+  ],
+  [
+    "explosionClearBulletImpactRoomByFlag",
+    "void (PropRecord *, s8)",
+    "src/game/explosion.c"
+  ],
+  [
+    "fileClearSavefileForFolder",
+    "void (s32)",
+    "src/game/file2.c"
+  ],
+  [
+    "fileCopyDemoSaveToRamRomSave",
+    "void (u32, save_data *)",
+    "src/game/file2.c"
+  ],
+  [
+    "fileCopyFolderToFirstFree",
+    "void (s32)",
+    "src/game/file2.c"
+  ],
+  [
+    "fileCopySave",
+    "void (s32, save_data *)",
+    "src/game/file2.c"
+  ],
+  [
+    "fileGenerateCRC",
+    "void (u8 *, u8 *, save_data *)",
+    "src/game/crc.c"
+  ],
+  [
+    "fileLoad",
+    "void (ModelFileHeader *, char *)",
+    "src/game/objecthandler_2.c"
+  ],
+  [
+    "fileResetRamRomSave",
+    "void (void)",
+    "src/game/file2.c"
+  ],
+  [
+    "fileUpdateSelectedBondInSave",
+    "void (s32)",
+    "src/game/file2.c"
+  ],
+  [
+    "fogLoadLevelEnvironment",
+    "void (s32, s32)",
+    "src/game/bgfog.c"
+  ],
+  [
+    "generate_player_thrown_grenade",
+    "void (s32)",
+    "src/game/gun.c"
+  ],
+  [
+    "generate_player_thrown_knife",
+    "void (s32)",
+    "src/game/gun.c"
+  ],
+  [
+    "generate_player_thrown_object",
+    "void (s32)",
+    "src/game/gun.c"
+  ],
+  [
+    "get_depth_offset_solo_watch_menu_inventory_page_for_item",
+    "f32 (ITEM_IDS)",
+    "src/game/gunfire.c"
+  ],
+  [
+    "get_depth_on_solo_watch_menu_page_for_item",
+    "f32 (ITEM_IDS)",
+    "src/game/gunfire.c"
+  ],
+  [
+    "get_horizontal_offset_on_solo_watch_menu_for_item",
+    "f32 (ITEM_IDS)",
+    "src/game/gunfire.c"
+  ],
+  [
+    "get_lateral_position_solo_watch_menu_main_page_for_item",
+    "f32 (ITEM_IDS)",
+    "src/game/gunfire.c"
+  ],
+  [
+    "get_vertical_offset_on_solo_watch_menu_for_item",
+    "f32 (ITEM_IDS)",
+    "src/game/gunfire.c"
+  ],
+  [
+    "get_vertical_position_solo_watch_menu_main_page_for_item",
+    "f32 (ITEM_IDS)",
+    "src/game/gunfire.c"
+  ],
+  [
+    "get_xrotation_solo_watch_menu_for_item",
+    "f32 (ITEM_IDS)",
+    "src/game/gunfire.c"
+  ],
+  [
+    "get_yrotation_solo_watch_menu_for_item",
+    "f32 (ITEM_IDS)",
+    "src/game/gunfire.c"
+  ],
+  [
+    "gotoAboveDebugOption",
+    "void (void)",
+    "src/game/debugmenu_08FE00.c"
+  ],
+  [
+    "gotoBelowDebugOption",
+    "void (void)",
+    "src/game/debugmenu_08FE00.c"
+  ],
+  [
+    "gotoLeftDebugOption",
+    "void (void)",
+    "src/game/debugmenu_08FE00.c"
+  ],
+  [
+    "gotoRightDebugOption",
+    "void (void)",
+    "src/game/debugmenu_08FE00.c"
+  ],
+  [
+    "gunSpawnGLGrenade",
+    "void (s32)",
+    "src/game/gun.c"
+  ],
+  [
+    "gunUpdateAttachedRocket",
+    "void (s32)",
+    "src/game/gun.c"
+  ],
+  [
+    "handle_alarm_gas_timer_calldamage",
+    "void (void)",
+    "src/game/propobj.c"
+  ],
+  [
+    "hatAssignToChr",
+    "void (HatRecord *, ChrRecord *)",
+    "src/game/propobj.c"
+  ],
+  [
+    "image_entries_load",
+    "void (void)",
+    "src/game/initimages.c"
+  ],
+  [
+    "increment_num_deaths",
+    "void (void)",
+    "src/game/gunfire.c"
+  ],
+  [
+    "increment_num_suicides_display_MP",
+    "void (void)",
+    "src/game/gunfire.c"
+  ],
+  [
+    "increment_num_times_killed_MwtGC",
+    "void (void)",
+    "src/game/gunfire.c"
+  ],
+  [
+    "indycommHostRamRomLoad",
+    "void (char *, u8 *, s32)",
+    "src/game/indy_comms.c"
+  ],
+  [
+    "indycommHostSaveFile",
+    "void (char *, s32, u8 *)",
+    "src/game/indy_comms.c"
+  ],
+  [
+    "initAnimationsBuffer",
+    "void (struct bondstruct_unk_animation_related *, OSMesgQueue *, s32)",
+    "src/game/initunk_0009E0.c"
+  ],
+  [
+    "initGameData",
+    "void (void)",
+    "src/game/initgamedata.c"
+  ],
+  [
+    "initWeaponAnimGroups",
+    "void (void)",
+    "src/game/initactorpropstuff.c"
+  ],
+  [
+    "init_player_gait_object",
+    "void (void)",
+    "src/game/initplayergaitobject.c"
+  ],
+  [
+    "init_weapon_animation_groups_maybe",
+    "void (void)",
+    "src/game/initweaponanigroups.c"
+  ],
+  [
+    "initializeDebugCameraPosition",
+    "void (void)",
+    "src/game/debug_camera.c"
+  ],
+  [
+    "initializeGunBarrelIntro",
+    "void (u8 *, s32)",
+    "src/game/title.c"
+  ],
+  [
+    "initializeRoomData",
+    "void (void)",
+    "src/game/bgroomtrans.c"
+  ],
+  [
+    "langClearBank",
+    "void (s32)",
+    "src/game/language.c"
+  ],
+  [
+    "langInit",
+    "void (void)",
+    "src/game/language.c"
+  ],
+  [
+    "lightFixtureBreak",
+    "void (Gfx *, u32, s32)",
+    "src/game/lightfixture.c"
+  ],
+  [
+    "lightFixtureInitTables",
+    "void (void)",
+    "src/game/lightfixture.c"
+  ],
+  [
+    "load_ramrom_from_devtool",
+    "void (void)",
+    "src/game/ramromreplay.c"
+  ],
+  [
+    "loop_set_sound_effect_all_slots",
+    "void (void)",
+    "src/game/chrai.c"
+  ],
+  [
+    "matrix_4x4_7F058C64",
+    "void (void)",
+    "src/game/matrixmath.c"
+  ],
+  [
+    "matrix_4x4_7F058C88",
+    "void (void)",
+    "src/game/matrixmath.c"
+  ],
+  [
+    "matrix_4x4_invert_affine",
+    "void (Mtxf *, Mtxf *)",
+    "src/game/matrixmath.c"
+  ],
+  [
+    "memaFree",
+    "void (void *, s32)",
+    "src/mema.c"
+  ],
+  [
+    "modelGetXYExtents",
+    "void (Model *, f32 *, f32 *, f32 *, f32 *)",
+    "src/game/chrprop.c"
+  ],
+  [
+    "modelmgrAllocateAnimModelSlots",
+    "void (s32)",
+    "src/game/initunk_005520.c"
+  ],
+  [
+    "modelmgrAllocateModelSlots",
+    "void (s32)",
+    "src/game/initunk_005520.c"
+  ],
+  [
+    "mpwatchMenuTick",
+    "void (void)",
+    "src/game/mpmenu.c"
+  ],
+  [
+    "mtxLoadRandomRotation",
+    "void (Mtxf *)",
+    "src/game/objective_status2.c"
+  ],
+  [
+    "null_init_main_1",
+    "void (void)",
+    "src/game/vtxstore.c"
+  ],
+  [
+    "null_init_main_2",
+    "void (void)",
+    "src/game/initnull_000BC0.c"
+  ],
+  [
+    "null_init_main_3",
+    "void (void)",
+    "src/game/initnull_0009D0.c"
+  ],
+  [
+    "obInit",
+    "void (void)",
+    "src/game/ob.c"
+  ],
+  [
+    "obLoadBGFileBytesAtOffset",
+    "void (u8 *, u8 *, s32, s32)",
+    "src/game/ob.c"
+  ],
+  [
+    "objHit",
+    "void (ShotData *, BulletHit *)",
+    "src/game/propobj.c"
+  ],
+  [
+    "objectivestatusCheckRoomEntered",
+    "void (s32)",
+    "src/game/objective_status.c"
+  ],
+  [
+    "piCreateManager",
+    "void (void)",
+    "src/pi.c"
+  ],
+  [
+    "portDisplayCrosshairImage",
+    "void (Gfx **, f32 *, f32 *, s32, s32, u32, u32)",
+    "src/game/bondwalk2.c"
+  ],
+  [
+    "redarken_lights_in_room",
+    "void (s32)",
+    "src/game/lightfixture.c"
+  ],
+  [
+    "removed_debug_roomblocks_feature",
+    "void (void)",
+    "src/game/chrprop.c"
+  ],
+  [
+    "replay_recorded_ramrom_from_indy",
+    "void (void)",
+    "src/game/ramromreplay.c"
+  ],
+  [
+    "resetDebugCameraToPlayerPosition",
+    "void (void)",
+    "src/game/debug_camera.c"
+  ],
+  [
+    "reset_counter_rand_body_head",
+    "void (void)",
+    "src/game/initactorpropstuff.c"
+  ],
+  [
+    "rle_expand_8bit",
+    "void (u8 *, u8 *)",
+    "src/game/rle.c"
+  ],
+  [
+    "save_img_index_to_obj_ani_slot",
+    "void (MonitorRecord *, void *)",
+    "src/game/propobj.c"
+  ],
+  [
+    "save_ramrom_to_devtool",
+    "void (void)",
+    "src/game/ramromreplay.c"
+  ],
+  [
+    "select_ramrom_to_play",
+    "void (void)",
+    "src/game/ramromreplay.c"
+  ],
+  [
+    "setMPWeaponSet",
+    "void (s32)",
+    "src/game/mp_weapon.c"
+  ],
+  [
+    "setRamRomRecordSlot",
+    "void (s32)",
+    "src/game/ramromreplay.c"
+  ],
+  [
+    "setSixExplosionAndSmokeEntries",
+    "void (void)",
+    "src/game/explosion.c"
+  ],
+  [
+    "setTextOrientation",
+    "void (s32)",
+    "src/game/textrelated.c"
+  ],
+  [
+    "set_BONDdata_field_10E0",
+    "void (s32)",
+    "src/game/bondview.c"
+  ],
+  [
+    "set_BONDdata_outside_watch_menu_flag",
+    "void (s32)",
+    "src/game/bondview2.c"
+  ],
+  [
+    "set_bondata_invincible_flag",
+    "void (u32)",
+    "src/game/bondview2.c"
+  ],
+  [
+    "set_cur_player",
+    "void (s32)",
+    "src/game/player.c"
+  ],
+  [
+    "set_cur_player_look_vertical_inverted",
+    "void (u32)",
+    "src/game/options.c"
+  ],
+  [
+    "set_favorite_weapon_for_every_player",
+    "void (void)",
+    "src/game/playerstats_007770.c"
+  ],
+  [
+    "set_gu_scale",
+    "void (void)",
+    "src/game/setguscale.c"
+  ],
+  [
+    "set_max_ammo_for_cur_player",
+    "void (void)",
+    "src/game/gunfire.c"
+  ],
+  [
+    "set_missionstate",
+    "void (MISSION_STATE_ID)",
+    "src/game/mp_music.c"
+  ],
+  [
+    "set_missionstate_zero",
+    "void (void)",
+    "src/game/mp_music.c"
+  ],
+  [
+    "set_obj_collision_flag",
+    "void (s32)",
+    "src/game/bondview2.c"
+  ],
+  [
+    "set_players_team_or_scenario_item_flag",
+    "void (int, s32)",
+    "src/game/front.c"
+  ],
+  [
+    "set_show_patrols_flag",
+    "void (s32)",
+    "src/game/chr.c"
+  ],
+  [
+    "set_sound_effect_for_weapontype_collection",
+    "void (ITEM_IDS)",
+    "src/game/propobj.c"
+  ],
+  [
+    "setupRarewareLogoData",
+    "void (s32, s32)",
+    "src/game/title.c"
+  ],
+  [
+    "setupUpdateObjectRoomPosition",
+    "void (struct ObjectRecord *)",
+    "src/game/loadobjectmodel.c"
+  ],
+  [
+    "skySetStageNum",
+    "void (s32)",
+    "src/game/sky.c"
+  ],
+  [
+    "skyTick",
+    "void (void)",
+    "src/game/sky.c"
+  ],
+  [
+    "speedgraphInit",
+    "void (void)",
+    "src/speed_graph.c"
+  ],
+  [
+    "speedgraphMarkerUpdate",
+    "void (void)",
+    "src/speed_graph.c"
+  ],
+  [
+    "stanDetermineEOF",
+    "void (struct StanPrefixRecord *, s32, u8 *)",
+    "src/game/stan.c"
+  ],
+  [
+    "stanLoadFile",
+    "void (struct StanPrefixRecord *)",
+    "src/game/stan.c"
+  ],
+  [
+    "stop_recording_ramrom",
+    "void (void)",
+    "src/game/ramromreplay.c"
+  ],
+  [
+    "store_favorite_weapon_current_player",
+    "void (u32, u32)",
+    "src/game/file.c"
+  ],
+  [
+    "store_osgetcount",
+    "void (void)",
+    "src/game/frametiming.c"
+  ],
+  [
+    "sub_GAME_7F008DE4",
+    "void (u8 **, s32 *)",
+    "src/game/title.c"
+  ],
+  [
+    "sub_GAME_7F04E9BC",
+    "void (PropRecord *, struct ShotData *)",
+    "src/game/propobj.c"
+  ],
+  [
+    "sub_GAME_7F057DF8",
+    "void (struct Mtxf *, struct Mtxf *, s32)",
+    "src/game/objective_status2.c"
+  ],
+  [
+    "sub_GAME_7F059334",
+    "void (Mtx *, Mtx *)",
+    "src/game/matrixmath.c"
+  ],
+  [
+    "sub_GAME_7F05C614",
+    "void (void)",
+    "src/game/gun.c"
+  ],
+  [
+    "sub_GAME_7F05D690",
+    "void (void)",
+    "src/game/gun.c"
+  ],
+  [
+    "sub_GAME_7F05E6B4",
+    "void (enum GUNHAND, s32)",
+    "src/game/gun.c"
+  ],
+  [
+    "sub_GAME_7F05E83C",
+    "void (GUNHAND)",
+    "src/game/gun.c"
+  ],
+  [
+    "sub_GAME_7F05E978",
+    "void (Model *, s32)",
+    "src/game/gun.c"
+  ],
+  [
+    "sub_GAME_7F078464",
+    "void (s32)",
+    "src/game/bondview.c"
+  ],
+  [
+    "sub_GAME_7F0A6A80",
+    "void (void)",
+    "src/game/options.c"
+  ],
+  [
+    "sub_GAME_7F0B4F9C",
+    "f32 (s32)",
+    "src/game/bg.c"
+  ],
+  [
+    "sub_GAME_7F0BD8FC",
+    "void (s32)",
+    "src/game/lv.c"
+  ],
+  [
+    "sub_GAME_7F0C1310",
+    "void (void)",
+    "src/game/mp_music.c"
+  ],
+  [
+    "texCopyGdls",
+    "void (Gfx *, Gfx *, s32)",
+    "src/game/tex.c"
+  ],
+  [
+    "texLoadFromDisplayList",
+    "void (Gfx *, struct texpool *)",
+    "src/game/image.c"
+  ],
+  [
+    "texSelect",
+    "void (Gfx **, struct sImageTableEntry *, u32, s32, u32)",
+    "src/game/othermodemicrocode.c"
+  ],
+  [
+    "transform3Dto2DWithZScaling",
+    "void (coord3d *, coord3d *)",
+    "src/game/bondview.c"
+  ],
+  [
+    "updateDebugCameraWorldPosition",
+    "void (void)",
+    "src/game/debug_camera.c"
+  ],
+  [
+    "updateFrameCounters",
+    "void (s32)",
+    "src/game/frametiming.c"
+  ],
+  [
+    "used_to_load_1st_person_model_on_demand",
+    "void (GUNHAND)",
+    "src/game/gun.c"
+  ],
+  [
+    "viDebugRemoved",
+    "void (void)",
+    "src/vi.c"
+  ],
+  [
+    "viSetColorMode16Bit",
+    "void (void)",
+    "src/fr.c"
+  ],
+  [
+    "viSetColorMode32Bit",
+    "void (void)",
+    "src/fr.c"
+  ],
+  [
+    "zbufSetBuffer",
+    "void (s32, s32, s32)",
+    "src/game/viewport.c"
+  ]
+]

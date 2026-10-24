@@ -5,6 +5,15 @@
 #include <bondconstants.h>
 #include <bondtypes.h>
 
+f32 get_horizontal_offset_on_solo_watch_menu_for_item(ITEM_IDS item);
+f32 get_vertical_offset_on_solo_watch_menu_for_item(ITEM_IDS item);
+f32 get_depth_offset_solo_watch_menu_inventory_page_for_item(ITEM_IDS item);
+f32 get_vertical_position_solo_watch_menu_main_page_for_item(ITEM_IDS item);
+f32 get_lateral_position_solo_watch_menu_main_page_for_item(ITEM_IDS item);
+f32 get_depth_on_solo_watch_menu_page_for_item(ITEM_IDS item);
+f32 get_xrotation_solo_watch_menu_for_item(ITEM_IDS item);
+f32 get_yrotation_solo_watch_menu_for_item(ITEM_IDS item);
+
 /**
  * Pool of AlSoundState slots for impact and ricochet SFX.
  */

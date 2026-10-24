@@ -521,6 +521,8 @@ static void portArmWatchpoints(void)
         CloseHandle(th);
     }
 }
+#elif defined(__EMSCRIPTEN__)
+static void portCrashHandler(int sig) { exit(128 + sig); }
 #else
 #include <execinfo.h>
 
@@ -607,6 +609,10 @@ static void portInitRootDir(const char *argv0)
         return;
     }
     (void) argv0;
+#elif defined(__EMSCRIPTEN__)
+    (void)argv0;
+    mkdir("/user", 0755);
+    snprintf(sPortRootDir, sizeof(sPortRootDir), "/user/");
 #else
     /* argv[0] is not authoritative on Linux (PATH launches have no slash,
      * launchers/symlinks point elsewhere), and a cwd fallback scattered
@@ -875,6 +881,9 @@ int main(int argc, char **argv)
     }
 #endif
 
+#ifdef __EMSCRIPTEN__
+    { extern void portWebCheckLayout(void); portWebCheckLayout(); }
+#endif
     mainproc(NULL);
 
     /* mainproc only returns if the game's main loop exits */

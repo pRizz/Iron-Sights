@@ -1,6 +1,7 @@
 #include <ultra64.h>
 #include "macro.h"
 #include "ob.h"
+#include "ramrom.h"
 #include <deb.h>
 #include <memp.h>
 #include <assets/obseg/obseg.h>
@@ -258,7 +259,7 @@ void obLoadBGFileBytesAtOffset(u8 *bgname, u8 *target, s32 offset, s32 len)
       return;
     }
   }
-  romCopy(target, &fileentry->hw_address[offset], len, fileentry);
+  romCopy(target, &fileentry->hw_address[offset], len);
   return;
 #endif
 
@@ -269,7 +270,7 @@ void obLoadBGFileBytesAtOffset(u8 *bgname, u8 *target, s32 offset, s32 len)
     {
       while (1){};
     }
-    romCopy(target, &fileentry->hw_address[offset], len, fileentry);
+    romCopy(target, &fileentry->hw_address[offset], len);
   }
 
 }
