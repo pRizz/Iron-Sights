@@ -163,7 +163,7 @@ const char aStanlinelog[] = "-stanlinelog";
 // forward declarations
 
 s32 stanIsSpecialBit1Set(StandTile *arg0, struct StandTileLocusCallbackRecord* arg1);
-s32 stanCheckLinkedSpecialTile(StandTile *tile, s32 pointIdx, s32 arg2, s32 arg3, s32 arg4, s32 *outFlags);
+s32 stanCheckLinkedSpecialTile(StandTile *tile, s32 pointIdx, f32 arg2, f32 arg3, f32 arg4, struct StandTileLocusCallbackRecord *record);
 s32 sub_GAME_7F0B21B0(StandTile **tileStack, f32 target_x, f32 target_z, f32 radius, s32 *rooms, s32 *count_rtn, s32 bufMax);
 f32 getShortest2dDispToInfTripleEdge(StandTile *tile, s32 start3index, f32 p_x, f32 p_z);
 StanCollisionResult sub_GAME_7F0B1DDC(struct StandTile**, f32, f32, f32, standTileLocusCallback_A_t, standTileLocusCallback_B_t, standTileLocusCallback_C_t, struct StandTileLocusCallbackRecord*);
@@ -2716,8 +2716,10 @@ s32 stanIsSpecialBit1Set(StandTile *arg0, struct StandTileLocusCallbackRecord *a
 /**
  * Address: 7F0B2274
  */
-s32 stanCheckLinkedSpecialTile(StandTile *tile, s32 pointIdx, s32 arg2, s32 arg3, s32 arg4, s32 *outFlags)
+s32 stanCheckLinkedSpecialTile(StandTile *tile, s32 pointIdx, f32 arg2, f32 arg3, f32 arg4, struct StandTileLocusCallbackRecord *record)
 {
+    /* The walker supplies three floats even though this callback ignores them. */
+    s32 *outFlags = (s32 *)record;
     u16 link;
     StandTile *target;
     s32 mid;
@@ -2968,6 +2970,13 @@ bool stanLocusEdgeIsAboveY(StandTile *tile, s32 edgeIndex, f32 edgeDist, f32 dis
 /**
  * US address 7F0B26B8.
 */
+static s32 stanLocusEdgeAboveYCallback(StandTile *tile, s32 edgeIndex, f32 edgeDist,
+        f32 distToPointA, f32 distToPointB, struct StandTileLocusCallbackRecord *record)
+{
+    /* This caller's context is a Y threshold, carried through the legacy ABI. */
+    return stanLocusEdgeIsAboveY(tile, edgeIndex, edgeDist, distToPointA, distToPointB, (f32 *)record);
+}
+
 s32 stanTestLocusEdgeAboveY(StandTile **tile, f32 target_x, f32 target_z, f32 radius, f32 yThreshold)
 {
     f32 data;
@@ -2976,7 +2985,7 @@ s32 stanTestLocusEdgeAboveY(StandTile **tile, f32 target_x, f32 target_z, f32 ra
 
     /// TODO: Why is this cast wrong?
 
-    return sub_GAME_7F0B1DDC(tile, target_x, target_z, radius, NULL, stanLocusEdgeIsAboveY, NULL, (struct StandTileLocusCallbackRecord*)&data);
+    return sub_GAME_7F0B1DDC(tile, target_x, target_z, radius, NULL, stanLocusEdgeAboveYCallback, NULL, (struct StandTileLocusCallbackRecord*)&data);
 }
 
 

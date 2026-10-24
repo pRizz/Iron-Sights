@@ -1118,6 +1118,10 @@ lighting and clock hands, with a neutral backdrop; normal gameplay is unaffected
 The generator rebuilds current sources, uses isolated settings and caches, then
 requires exact repeated samples and a second independent 72-view process pass
 before publishing. Icon preparation retains its own repeated-pixel check.
+The input fingerprint also covers CMake presets, generated-header templates
+under the source roots and the three always-linked asset C objects, including
+the texture bank; Clang/WebGL work made those dependencies explicit. It still
+excludes launcher documentation, local binaries and captures.
 The manifest records recipe, normalized source-input fingerprint, ROM hash,
 renderer identity and image/file hashes. Pixels are tested on the recorded
 renderer; cross-GPU identity is not assumed. Output has no build timestamps or
@@ -1157,6 +1161,9 @@ preceding version-6 cache byte-for-byte. The rendered PP7/AK47/Klobb stock/fork
 contact sheet and all six wardrobe hand icons were visually reviewed.
 Working-tree and staged integrity/freshness passed. The HTML parsed successfully
 and Node.js syntax validation of the embedded gallery script passed.
+The browser prototype slice extended fingerprint coverage for CMake presets,
+header templates and always-linked asset objects; all eight gallery tests and
+both full capture passes passed with zero changed image cells.
 Browser automation rejected the local file URL by policy, so interactive browser
 validation was not completed; the gallery can be opened manually offline.
 
@@ -1223,8 +1230,8 @@ syntax validation passed. No game rebuild or render regeneration was needed.
 
 ### FORK-024 — Browser target plan and portability groundwork
 
-**Status:** Plan accepted on 2026-10-24; full Wasm core portability gate achieved,
-playable-prototype acceptance in progress. No Pages release yet.
+**Status:** Plan accepted on 2026-10-24; Wasm core portability and playable
+prototype gates achieved. Storage/launcher integration follows; no Pages release.
 
 The root CMake project now has Emscripten core and SDL2/WebGL 2 configurations.
 It keeps native flags/link processing separate, uses the verified high data
@@ -1233,9 +1240,38 @@ from browser builds. Wasm section syntax, explicit C declarations and local
 alias spellings address the first survey failures. Browser arena allocation
 uses linear-memory allocation and scheduler waits yield through Asyncify.
 The optimized core reaches Dam and its explicit frame limit. A temporary local
-browser harness renders Dam and resumes simulation after mouse capture; menu,
-active input/audio and focus-reset acceptance remain open. Browser font-border/
-sampler and initial mipmap warnings still need correction.
+browser harness renders Dam, measures keyboard/mouse control and sound, and
+recovers focus without stuck movement. It is not the persistent launcher.
+
+The playable prototype adds transparent-border GLSL
+sampling because WebGL lacks native border-clamp sampling. Border flags reach
+both ordinary and retained shader programs, nearest/linear sampling includes
+correct edge coverage, supported mirror-clamp is enabled explicitly and mipmaps
+are generated only after texture upload. Ten synthetic GPU sampling cases pass;
+the corresponding real-ROM run emitted no sampler/mipmap warnings. Keyboard
+walking exposed a collision callback accepting integers in place of three
+floats; its contract is corrected and exercised with synthetic geometry under
+native GCC and Wasm. Typed adapters preserve the model-joint enum boundary,
+threshold context and debug-thread entrypoint. The optional strict callback
+audit passed all 271 video translation units with function-pointer warnings
+enabled/fatal. Browser focus recovery resets SDL keys/buttons, relative motion,
+port pad caches and queued audio. The page follows menu pointer ownership,
+distinguishes intentional menu releases from unexpected lock loss, and resets
+input before requesting capture. Browser initial settings additionally bind P
+to the watch (Return still confirms); native defaults are unchanged. Explicit
+CSS aspect ratio avoids SDL's 1x1 sizing probe producing a square canvas.
+Only a page gesture requests capture through a C entrypoint that updates SDL's
+mouse focus/relative-mode bookkeeping. Automatic SDL deferred capture requests
+are disabled on web: a pending automatic request could collide with Resume.
+The page waits for confirmed capture and handles intentional menu releases.
+The private direct-stage harness waits for normal menu initialization instead
+of adopting uninitialized zero volumes at tick 1. Optimized Edge testing passed
+movement, turning, nonzero Web Audio, focus pause/resume without a stuck key and
+watch input recovery. Installed Chrome 155 passed the same optimized checks.
+Normal Edge startup/menu navigation rendered 780 frames without a runtime error;
+the file/mission menu screenshots were visually reviewed.
+New runtime counters/coordinate getters and an isolated QA audio tap support
+these measurements; the audio observer never enters the public runtime bundle.
 
 The first full core link exposed cross-translation-unit signature mismatches
 that trap under Wasm. A Clang AST recovery tool records real definition types
@@ -1263,7 +1299,25 @@ runtime audit. No ROM is copied into the output directory or uploaded. A pinned
 boundary tests. The backup format allowlists campaign EEPROM, profiles, device
 bindings, settings and custom controller layouts; it rejects ROMs, suspend
 images, traversal, duplicates, invalid sizes and checksum damage. This is codec
-and tooling groundwork, not implemented browser durability or launcher UI.
+and adapter groundwork, not implemented game-file durability or launcher UI.
+The separate IndexedDB ROM adapter snapshots original byte order in a Blob;
+deleting it is independent of save files. A named Web Lock excludes a second
+save writer, and a serialized synchronization queue retains dirty revisions
+after errors, reports failure and supports retry. ROM-free browser integration
+passed reload/original-byte preservation, aborted-write preservation, deletion
+and cross-tab lock transfer; three queue tests passed. IDBFS/game integration
+and actual campaign persistence remain open.
+The IDBFS adapter now mounts/restores before creating the runtime alias and
+tracks writable closes, renames and deletes. Monotonic modification times keep
+same-millisecond writes distinct. Backup replacement rolls back the prior memory
+snapshot on failure and is refused after main starts, since the game caches its
+EEPROM independently. A small ROM-free CMake fixture proves real C stdio writes
+through the SDK filesystem, reload, writes during synchronization and backup
+round trips. Injected synchronization/partial-write failures preserve the prior
+files in memory and after reload. These are synthetic-data tests, not actual
+campaign or host-quota-exhaustion validation. The video target exports IDBFS.
+The inherited compiled logo payload remains a packaging follow-up before Pages
+publication; the deployment milestone records the required ROM-backed replacement.
 AGENTS now documents the root CMake versus browser subpackage commands.
 
 Recorded the user-approved browser target design and six milestones so later
@@ -1305,6 +1359,13 @@ Existing native and asset ownership contracts continue to apply.
 [watch transforms](src/game/bondinv.c),
 [browser tooling](web/README.md), [ROM codec](web/src/rom.ts),
 [backup codec](web/src/backup.ts),
+[ROM storage](web/src/rom-storage.ts), [writer lock](web/src/user-lock.ts),
+[sync queue](web/src/sync-queue.ts), [browser storage audit](web/tools/storage-audit.mjs),
+[persistent files](web/src/persistent-files.ts), [runtime boundary](web/src/runtime-types.ts),
+[filesystem fixture](web/tests/filesystem.c), [filesystem audit](web/tools/filesystem-audit.mjs),
+[sampler GLSL](port/web/sampler.glsl), [focus adapter](port/web/lifecycle.c),
+[runtime audit](web/tools/runtime-audit.mjs), [menu audit](web/tools/menu-audit.mjs),
+[collision regression](scripts/port/test_stan_callbacks.c),
 [accepted plan](scripts/port/web_target_plan.md),
 [milestone tracker](scripts/port/web_target_progress.md),
 [spike runbook](scripts/port/web_target_spike.md),
@@ -1337,6 +1398,23 @@ The current ROM-free survey passed its ordinary root build and 259/259 source
 compilations, superseding the initial 246/257 compile-only result. Its build
 result field is now `root_cmake_build_returncode`, replacing the misleading
 native-prefixed name from before the root Emscripten branch existed.
+The following prototype slice also passed all 271 strict callback-audit units,
+17 Python tooling tests, eight gallery tests and ten GPU sampler cases. Native
+ADS/wardrobe/HUD/state/image-bank/collision regressions and the Wasm collision
+regression passed. Windows rebuilt and the 72-view/35-icon gallery repeated with
+zero changed cells. Optimized Edge 156 measured 443 units of keyboard motion,
+1.2 degrees of mouse turn, Web Audio peak 0.21, zero unfocused simulation steps,
+31 resumed steps and 1.19 units idle drift; watch capture recovered. These are
+local headless software-renderer observations, not a complete browser matrix.
+After the capture-owner correction, three fast-link runs, two optimized Edge
+runs and one optimized Chrome 155 run passed the complete audit with no rejected
+capture requests. The final optimized measurements were about 435 units of
+motion, a 1.2-degree turn, audio peak 0.22, zero unfocused steps, 31 resumed steps
+and 0.70–1.32 units idle drift. The audit uses existing invisible/invulnerable
+diagnostics and a fixed seed to isolate input from enemy impulses; normal
+launches retain ordinary gameplay. All 36 codec/queue tests, browser ROM/lock
+tests and the real IDBFS fixture passed. Native references were regenerated
+again after the final C changes, with zero changed cells and fresh metadata.
 
 The initial pinned Wasm ABI/address probes passed under Node. The
 diagnostic headless-source survey compiled 246/257 units and recorded 11 failures;

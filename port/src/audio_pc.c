@@ -57,6 +57,32 @@ extern u32 g_FrameSize;
 static SDL_AudioDeviceID s_AudioDev;
 static s32 s_AudioDead; /* init failed - stay silent, don't retry every frame */
 static s32 s_ForceOneFrame; /* portAudioPumpForce: bypass the queue-low gate */
+#ifdef __EMSCRIPTEN__
+static s32 webAudioSignal, webAudioPumps, webAudioFrames, webAudioCommands;
+static s32 webAudioBadOp, webAudioBadPointer, webAudioExecuted;
+void portAudioWebPause(s32 paused)
+{
+    if (!s_AudioDev) return;
+    SDL_PauseAudioDevice(s_AudioDev, paused != 0);
+    if (paused) SDL_ClearQueuedAudio(s_AudioDev);
+}
+s32 portAudioWebMetric(s32 index)
+{
+    switch (index) {
+    case 0: return webAudioSignal;
+    case 1: return s_AudioDev ? SDL_GetQueuedAudioSize(s_AudioDev) : 0;
+    case 2: return webAudioFrames;
+    case 3: return webAudioPumps;
+    case 4: return s_AudioDead ? -1 : s_AudioDev != 0;
+    case 5: return alGlobals && alGlobals->drvr.head != NULL;
+    case 6: return webAudioCommands;
+    case 7: return webAudioBadOp;
+    case 8: return webAudioBadPointer;
+    case 9: return webAudioExecuted;
+    default: return 0;
+    }
+}
+#endif
 
 void portAudioStateReset(void)
 {
@@ -383,6 +409,10 @@ static s32 portAcmdValidate(Acmd *list, s32 count)
         }
 
         if (bad) {
+#ifdef __EMSCRIPTEN__
+            webAudioBadOp = op;
+            webAudioBadPointer = w1;
+#endif
             static s32 shot;
 
             if (!shot) {
@@ -412,6 +442,9 @@ void portAcmdRun(Acmd *list, s32 count)
     if (!portAcmdValidate(list, count)) {
         return; /* skip the whole frame - diagnosis over crash */
     }
+#ifdef __EMSCRIPTEN__
+    webAudioExecuted++;
+#endif
 
     for (c = 0; c < count; c++) {
         u32 w0 = list[c].words.w0;
@@ -684,6 +717,10 @@ void portAudioPump(void)
     static s32 s_InPump;
     s32 guard;
 
+#ifdef __EMSCRIPTEN__
+    webAudioPumps++;
+#endif
+
     if (s_AudioDead) {
         return;
     }
@@ -727,6 +764,10 @@ void portAudioPump(void)
             break; /* no clients / nothing to render */
         }
         portAcmdRun(cmdList, cmdLen);
+#ifdef __EMSCRIPTEN__
+        webAudioCommands = cmdLen;
+        webAudioFrames++;
+#endif
 
         { /* bring-up (GE_DUMP_BOND): digital proof of synthesis - report
            * the first frame that contains a nonzero sample */
@@ -740,6 +781,9 @@ void portAudioPump(void)
                         f32 v[2];
 
                         heard = 1;
+#ifdef __EMSCRIPTEN__
+                        webAudioSignal = frameBuf[i] < 0 ? -(s32)frameBuf[i] : frameBuf[i];
+#endif
                         v[0] = (f32)frameBuf[i];
                         v[1] = (f32)cmdLen;
                         ge_dbg_vec("audio: FIRST NONZERO sample/cmds", v, 2);

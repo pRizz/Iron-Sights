@@ -20,7 +20,9 @@ python -m http.server 4174 --bind 127.0.0.1 --directory build/web/video
 
 Open `http://127.0.0.1:4174`, choose the original US ROM and press Play. Press
 Resume after startup to capture the mouse. Escape releases it and pauses;
-Resume continues. This temporary harness has no persistent storage. Serve only
+Resume continues. P opens/closes the watch without using the browser's reserved
+Escape key; Return still confirms menu choices. This browser-only initial binding
+does not change native defaults. This temporary harness has no persistent storage. Serve only
 the output directory, never the repository root or a directory containing ROMs.
 The Node smoke mounts the selected ROM read-only and copies it into ephemeral
 MEMFS. Its output directory contains no ROM copy.
@@ -30,6 +32,14 @@ must be retested before treating an optimized build as verified. The complete
 legacy engine still compiles with the root Release settings; this option selects
 the final Wasm optimization/Asyncify pass. Independent Make errors can be
 collected with `--keep-going`. Logs remain in `build/web/core` or `video`.
+Do not run a browser audit while relinking the directory it serves: the loader
+and Wasm can briefly belong to different builds. Audit only a completed build.
+
+`--callback-types` additionally recompiles the selected translation units with
+function-pointer diagnostics enabled and fatal, overriding the inherited `-w`.
+Its JSON/logs are under `build/web/video/callback-types`; all 271 current video
+units passed. This catches local callback assignments that cross-unit linker
+signature checks cannot see.
 
 With the pinned SDK installed and its environment activated (`EMSDK` set), the
 same `ge` target can use presets. The preset explicitly selects the SDK toolchain:
@@ -68,6 +78,18 @@ Do not enable `GE_ROMDATA_FALLBACK` for either browser configuration.
   smoke keeps the runtime alive so Asyncify faults surface rather than being
   masked by an implicit exit; success requires the explicit frame-limit report
   with Dam's actual level ID, not merely process exit status zero.
+- Let the normal menu initialization settle before a diagnostic direct stage
+  launch (`GE_STAGE_AFTER=120`). Launching at tick 1 can adopt uninitialized zero
+  volume settings. The final launcher must use the normal game menus.
+- Give the canvas an explicit CSS aspect ratio. SDL probes its CSS size with a
+  1-by-1 backing canvas; width-only CSS accidentally makes the game square.
+- Browser focus reset clears SDL keyboard/buttons, relative deltas and port pad
+  caches, and pauses/clears queued audio. The page distinguishes an intentional
+  menu pointer release from an unexpected lock loss, and follows the actual
+  Pointer Lock state. Resume resets input before requesting capture.
+  Only the page's Play/Resume gesture calls the web capture entrypoint: automatic
+  SDL deferred requests are disabled on web to avoid two requests colliding.
+  The page waits for an actual capture event and observes rejection.
 
 The port previously depended on several native ABI accidents: missing float/
 pointer returns, implicit function declarations, ignored callback arguments and
@@ -110,9 +132,12 @@ set; that diagnostic mode does not automatically retain earlier records.
 ```sh
 python scripts/port/test_web_spike.py
 python scripts/port/test_web_prototypes.py
+python scripts/port/web_build.py files
 bash scripts/port/test_image_bank.sh
+bash scripts/port/test_stan_callbacks.sh
 # Inside the pinned SDK:
 bash scripts/port/test_image_bank.sh --web
+bash scripts/port/test_stan_callbacks.sh --web
 ```
 
 The image-bank regression runs real bank objects through repeated mutation/
@@ -121,7 +146,13 @@ changes also require the applicable ADS, wardrobe, HUD, state and native build/
 gallery checks. The [browser tools](../../web/README.md) include private local
 runtime captures and ROM-free ROM/backup boundary tests.
 
-The initial browser run renders Dam, resumes after mouse capture and continues
-simulation. WebGL sampler/border and mipmap warnings, menu/input/audio checks,
-save durability and the final launcher/deployment still need acceptance work.
+The optimized Edge prototype now demonstrates Dam movement, mouse turning,
+nonzero Web Audio, zero simulation steps while unfocused, resumed simulation
+without a stuck key, and watch pointer release/recovery. Ten ROM-free GPU
+sampling cases pass with no real-ROM sampler/mipmap warnings. Native regressions
+and the repeated 72-view/35-icon gallery pass with zero changed image cells.
+Save durability and the final launcher/deployment still need acceptance work.
 Screenshots and other ROM-derived runtime evidence stay in ignored build paths.
+The private runtime audit's `audit=1` query enables existing invisibility and
+invulnerability diagnostics plus a fixed seed to isolate focus/input checks
+from enemy knockback. Normal prototype launches do not enable them.

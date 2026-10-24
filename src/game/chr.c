@@ -2316,6 +2316,12 @@ void chrHandleJointPositioned(enum CHR_RENDER_PART bodypart, Mtxf *matrix)
 #undef PI_OVER_3
 #undef FIVEPI_OVER_18
 
+/* Model joints use integer matrix indices; character logic uses body-part enums. */
+static void chrModelJointPositioned(s32 index, Mtxf *matrix)
+{
+    chrHandleJointPositioned((enum CHR_RENDER_PART)index, matrix);
+}
+
 
 /**
  * Address 0x7F020D94.
@@ -2618,7 +2624,7 @@ after_position_update:
         }
 #endif
 
-        g_ModelJointPositionedFunc = chrHandleJointPositioned;
+        g_ModelJointPositionedFunc = chrModelJointPositioned;
         g_CurModelChr = chr;
 
         renderdata.basemtx = camGetWorldToScreenMtxf();

@@ -7,10 +7,18 @@ import shutil
 import sys
 
 from web_spike import ROOT, load_toolchain, run_logged
+from web_spike_audit import run_audit
 
 
 def inside(options):
     output = Path('/out')
+    if options.mode == 'files':
+        run_logged(['emcmake', 'cmake', '-S', str(ROOT / 'scripts/port/web_probe'),
+                    '-B', str(output), '-DCMAKE_BUILD_TYPE=Release',
+                    '-DGE_WEB_LINK_OPT=' + str(options.link_opt)], output / 'configure.log')
+        run_logged(['cmake', '--build', str(output), '--target', 'web_fs_probe',
+                    '--parallel', str(options.jobs)], output / 'build.log')
+        return 0
     video = options.mode == 'video'
     run_logged(['emcmake', 'cmake', '-S', str(ROOT), '-B', str(output),
                 '-DCMAKE_BUILD_TYPE=Release', '-DGE_ROMDATA_FALLBACK=OFF',
@@ -24,6 +32,11 @@ def inside(options):
     run_logged(build_command, output / 'build.log', timeout=900)
     if video:
         shutil.copyfile(ROOT / 'scripts/port/web_probe/play.html', output / 'index.html')
+    if options.callback_types:
+        report = run_audit(output / 'compile_commands.json',
+                           output / 'callback-types/audit', ROOT, options.jobs, callback_types=True)
+        if report['failed']:
+            raise RuntimeError('Callback declaration audit failed; see /out/callback-types/audit.json')
     if options.smoke:
         run_logged(['node', str(ROOT / 'scripts/port/web_core_smoke.mjs'),
                     str(output / 'ProjectMidas.mjs'), '/rom.z64', str(options.frames)],
@@ -59,6 +72,8 @@ def outside(options):
         command.extend(['--smoke', '--rom', '/rom.z64'])
     if options.keep_going:
         command.append('--keep-going')
+    if options.callback_types:
+        command.append('--callback-types')
     print('Web build outputs: ' + str(output), flush=True)
     with (output / 'run.log').open('w', encoding='utf-8') as capture:
         process = subprocess.Popen(command, stdout=subprocess.PIPE,
@@ -72,12 +87,14 @@ def outside(options):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('core', 'video'))
+    parser.add_argument('mode', choices=('core', 'video', 'files'))
     parser.add_argument('--jobs', type=int, default=8)
     parser.add_argument('--link-opt', type=int, choices=range(4), default=2,
                         help='Use 0 for fast runtime debugging; release defaults to 2')
     parser.add_argument('--smoke', action='store_true')
     parser.add_argument('--keep-going', action='store_true', help='Collect independent Make build failures')
+    parser.add_argument('--callback-types', action='store_true',
+                        help='Audit all selected sources with function-pointer warnings enabled and fatal')
     parser.add_argument('--rom')
     parser.add_argument('--frames', type=int, default=360)
     parser.add_argument('--inside', action='store_true', help=argparse.SUPPRESS)
@@ -86,6 +103,8 @@ def main():
         parser.error('Use 1..32 jobs and 1..36000 smoke frames')
     if options.smoke and (not options.rom or options.mode != 'core'):
         parser.error('--smoke requires core mode and --rom pointing to your local ROM')
+    if options.callback_types and options.mode == 'files':
+        parser.error('--callback-types audits the core/video game targets, not the filesystem fixture')
     try:
         return inside(options) if options.inside else outside(options)
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:

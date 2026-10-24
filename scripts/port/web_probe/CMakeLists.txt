@@ -31,3 +31,13 @@ foreach(layout compact high)
             -sINITIAL_MEMORY=33554432)
     endif()
 endforeach()
+
+# Small real-FS fixture for browser persistence tests. No game or ROM data.
+set(GE_WEB_LINK_OPT "2" CACHE STRING "Wasm fixture link optimization")
+add_executable(web_fs_probe EXCLUDE_FROM_ALL ${MIDAS_ROOT}/web/tests/filesystem.c)
+target_compile_options(web_fs_probe PRIVATE -O2)
+target_link_options(web_fs_probe PRIVATE -O${GE_WEB_LINK_OPT} -lidbfs.js
+    -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createFilesystemTest
+    -sENVIRONMENT=web,node -sFORCE_FILESYSTEM=1 -sASSERTIONS=1
+    -sINVOKE_RUN=0 -sEXPORTED_RUNTIME_METHODS=FS,IDBFS)
+set_target_properties(web_fs_probe PROPERTIES SUFFIX ".mjs")

@@ -27,6 +27,8 @@ function(midas_web_sources source_variable)
     else()
         list(REMOVE_ITEM sources ${CMAKE_SOURCE_DIR}/port/src/raphnet.c)
         list(APPEND sources ${CMAKE_SOURCE_DIR}/port/web/devices.c)
+        list(APPEND sources ${CMAKE_SOURCE_DIR}/port/web/sampler.cpp)
+        list(APPEND sources ${CMAKE_SOURCE_DIR}/port/web/lifecycle.c)
     endif()
     set(${source_variable} ${sources} PARENT_SCOPE)
     # These TUs synthesize segments; Wasm's assembler has no native -Wa,-I path.
@@ -35,20 +37,30 @@ function(midas_web_sources source_variable)
 endfunction()
 
 function(midas_web_target target)
+    set(runtime_methods "FS,callMain,ENV")
+    if(GE_VIDEO)
+        string(APPEND runtime_methods ",IDBFS")
+    endif()
     set_target_properties(${target} PROPERTIES SUFFIX ".mjs")
     target_link_options(${target} PRIVATE
         -O${GE_WEB_LINK_OPT} -g2 -Wl,--error-limit=0 -Wl,--fatal-warnings
         -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createMidas
         -sENVIRONMENT=web,node -sFORCE_FILESYSTEM=1
-        -sEXPORTED_RUNTIME_METHODS=FS,callMain,ENV
+        -sEXPORTED_RUNTIME_METHODS=${runtime_methods}
         -sINVOKE_RUN=0 -sEXIT_RUNTIME=1 -sASSERTIONS=1
         -sASYNCIFY=1 -sASYNCIFY_STACK_SIZE=1048576
         -sGLOBAL_BASE=268435456 -sSTACK_SIZE=16777216
         -sINITIAL_MEMORY=536870912 -sMAXIMUM_MEMORY=1073741824
         -sALLOW_MEMORY_GROWTH=1 -Wl,-Map=${CMAKE_BINARY_DIR}/ProjectMidas.map)
     if(GE_VIDEO)
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+            ${CMAKE_SOURCE_DIR}/port/web/sampler.glsl)
+        file(READ ${CMAKE_SOURCE_DIR}/port/web/sampler.glsl MIDAS_WEB_SAMPLER_GLSL)
+        configure_file(${CMAKE_SOURCE_DIR}/port/web/sampler_shader.h.in
+            ${CMAKE_BINARY_DIR}/generated/web_sampler_shader.h @ONLY)
+        target_include_directories(${target} PRIVATE ${CMAKE_BINARY_DIR}/generated)
         target_compile_options(${target} PRIVATE --use-port=sdl2)
-        target_link_options(${target} PRIVATE --use-port=sdl2
+        target_link_options(${target} PRIVATE --use-port=sdl2 -lidbfs.js
             -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2)
         add_custom_command(TARGET ${target} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different

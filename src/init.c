@@ -221,9 +221,15 @@ void idleCreateThread(void)
  * rmonCreateThread - remote communication thread
  * rmonMain now forcably returns INDI_NOT_DETECTED (1)
  */
+static void rmonThreadEntry(void *argument)
+{
+    (void)argument;
+    rmonMain();
+}
+
 void rmonCreateThread(void)
 {
-    osCreateThread(&rmonThread, RMON_THREAD_ID, rmonMain, NULL, setSPToEnd(&sp_rmon, sizeof(sp_rmon)), RMON_THREAD_PRIORITY);
+    osCreateThread(&rmonThread, RMON_THREAD_ID, rmonThreadEntry, NULL, setSPToEnd(&sp_rmon, sizeof(sp_rmon)), RMON_THREAD_PRIORITY);
     osStartThread(&rmonThread);
 }
 

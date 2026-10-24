@@ -801,6 +801,21 @@ static int s_MouseMovedTick;  /* ...latched for the whole tick, see portInputMou
  * so the pointer can leave. */
 static int s_PollX, s_PollY, s_PollPrevX, s_PollPrevY, s_PollValid;
 
+#ifdef __EMSCRIPTEN__
+void portInputWebFocus(s32 paused)
+{
+    extern void portInputPadNeutral(s32 slot);
+    s32 slot;
+    s_MouseDX = s_MouseDY = s_MouseAccDX = s_MouseAccDY = 0;
+    s_MouseButtons = 0;
+    s_MouseMoved = s_MouseMovedAcc = s_MouseMovedTick = 0;
+    s_MouseLocked = 0;
+    s_MouseFreed = paused != 0;
+    s_WarpPending = s_FreeLastValid = s_PollValid = 0;
+    for (slot = 0; slot < INPUT_MAX_PADS; slot++) portInputPadNeutral(slot);
+}
+#endif
+
 /* ---- controller open/close/hotplug -------------------------------------- */
 
 static void inputOpenController(int cidx, int jidx)
@@ -8324,11 +8339,20 @@ void portInputStickGate(OSContPad *pad, s32 slot)
  * anything that re-shows the arrow is corrected. */
 static void portMouseApplyCapture(int on)
 {
+#ifdef __EMSCRIPTEN__
+    if (!on) { extern void portWebPointerRelease(void); portWebPointerRelease(); }
+#endif
     if (on)
     {
         s_WarpPending = 0;   /* a warp issued as the lock flipped must not be judged later */
     }
+#ifdef __EMSCRIPTEN__
+    /* Only the page's Play/Resume gesture may request browser capture. SDL's
+     * deferred auto-request otherwise races that gesture and can unlock it. */
+    if (!on) SDL_SetRelativeMouseMode(SDL_FALSE);
+#else
     SDL_SetRelativeMouseMode(on ? SDL_TRUE : SDL_FALSE);
+#endif
     SDL_ShowCursor(s_OptMouse ? SDL_DISABLE : SDL_ENABLE);
 }
 

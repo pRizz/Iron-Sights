@@ -41,8 +41,10 @@ def git(*args, root=ROOT):
 def input_path(name):
     suffix = Path(name).suffix
     return ((name.startswith(('src/', 'include/', 'port/', 'cmake/')) and
-             suffix in ('.c', '.cpp', '.h', '.inl', '.cmake', '.glsl', '.json')) or
-            name in ('CMakeLists.txt', '.github/workflows/windows-release.yml',
+             (suffix in ('.c', '.cpp', '.h', '.inl', '.cmake', '.glsl', '.json') or name.endswith('.h.in'))) or
+            name in ('CMakeLists.txt', 'CMakePresets.json',
+                     'assets/oddtextures.c', 'assets/rarewarelogo.c', 'assets/font_dl.c',
+                     '.github/workflows/windows-release.yml',
                      'scripts/port/ci_dependencies.py', 'scripts/port/hand_gallery.py',
                      'scripts/port/hand_gallery_template.html'))
 

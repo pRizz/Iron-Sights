@@ -45,6 +45,16 @@ def references(root):
 
 
 class Gallery(unittest.TestCase):
+    def test_build_templates_and_live_asset_objects_are_render_inputs(self):
+        # Arrange
+        paths = ['CMakePresets.json', 'port/web/sampler.glsl', 'port/web/sampler_shader.h.in',
+                 'assets/oddtextures.c', 'assets/rarewarelogo.c', 'assets/font_dl.c']
+        # Act / Assert
+        for path in paths:
+            self.assertTrue(gallery.input_path(path), path)
+        self.assertFalse(gallery.input_path('web/README.md'))
+        self.assertFalse(gallery.input_path('build/web/ProjectMidas.wasm'))
+
     def test_matrix_coordinates(self):
         rows = gallery.cases()
         self.assertEqual(len(rows), 72)

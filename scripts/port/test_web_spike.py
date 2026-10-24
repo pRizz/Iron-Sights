@@ -12,6 +12,27 @@ from web_spike_audit import DIAGNOSTIC_COMPATIBILITY, diagnostics, run_audit, su
 
 
 class WebSpikeTests(unittest.TestCase):
+    def test_callback_audit_removes_warning_suppression_and_rejects_wrong_function_types(self):
+        # Arrange
+        entry = dict(command='emcc -w -Wno-error=incompatible-pointer-types -c /src/model.c -o old.o')
+        # Act
+        command, removed = survey_command(entry, Path('/out/model.o'), callback_types=True)
+        # Assert
+        self.assertIn('-w', removed)
+        self.assertNotIn('-w', command)
+        self.assertEqual(command[-3], '-Werror=incompatible-function-pointer-types')
+        self.assertLess(command.index('-Wno-error=incompatible-pointer-types'),
+                        command.index('-Werror=incompatible-function-pointer-types'))
+
+    def test_ordinary_survey_preserves_its_inherited_warning_policy(self):
+        # Arrange
+        entry = dict(command='emcc -w -c /src/model.c')
+        # Act
+        command, removed = survey_command(entry, Path('/out/model.o'))
+        # Assert
+        self.assertIn('-w', command)
+        self.assertNotIn('-w', removed)
+
     def test_survey_preserves_source_defines_and_quoted_include(self):
         # Arrange
         entry = dict(command='emcc -DVERSION_US -I"/src/path with spaces" '

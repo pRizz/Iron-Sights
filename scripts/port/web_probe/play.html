@@ -6,7 +6,7 @@
 <style>
   body { background:#14171c; color:#e6e9ee; font:16px system-ui; margin:24px; }
   button,input { font:inherit; margin:8px; }
-  canvas { display:block; width:min(960px,100%); background:#000; margin:16px 0; }
+  canvas { display:block; width:min(960px,100%); aspect-ratio:16/9; background:#000; margin:16px 0; }
   pre { max-height:260px; overflow:auto; font-size:12px; white-space:pre-wrap; }
 </style>
 <h1>Project Midas browser prototype</h1>
@@ -29,6 +29,12 @@
   let running = false;
   let maybeGame;
   let maybeRom;
+  let menuRelease = false;
+  let capturing = false;
+  let hadCapture = false;
+  globalThis.midasLifecycleTrace = [];
+  const trace = event => globalThis.midasLifecycleTrace.push({ event, frames:maybeGame?._portWebGetFrames(),
+    live:maybeGame?._portWebControlsLive(), locked:document.pointerLockElement === canvas, menuRelease, capturing });
   document.querySelector('#rom').addEventListener('change', async event => {
     const [file] = event.target.files;
     if (!file) return;
@@ -42,15 +48,22 @@
     status.textContent = 'Downloading and compiling WebAssembly';
     const game = await createMidas({ canvas, noInitialRun:true, noExitRuntime:true,
       print:write, printErr:write,
+      onPointerRelease() {
+        trace('native-release');
+        if (document.pointerLockElement === canvas) { menuRelease = true; document.exitPointerLock(); }
+      },
       preRun(module) {
+        if (new URLSearchParams(location.search).get('audit') === '1') {
+          Object.assign(module.ENV, { GE_INVIS:'1', GE_CHEATS:'invuln', GE_SEED:'1' });
+        }
         if (document.querySelector('#dam').checked) Object.assign(module.ENV,
-          {GE_STAGE:'dam', GE_STAGE_AFTER:'1', GE_SKIPINTRO:'1'});
+          {GE_STAGE:'dam', GE_STAGE_AFTER:'120', GE_SKIPINTRO:'1'});
       },
       onAbort:reason => { status.textContent = 'Game stopped: ' + reason; },
       onExit:code => { status.textContent = 'Game exited: ' + code; } });
     maybeGame = game;
     game.FS.mkdir('/user');
-    game.FS.writeFile('/user/midas.ini', '[display]\nfullscreen=window\nrender_thread=0\nvsync=0\nmaxfps=60\ntickhz=60\nmsaa=1\n[input]\nmouse=1\n');
+    game.FS.writeFile('/user/midas.ini', '[display]\nfullscreen=windowed\nwindow_width=960\nwindow_height=540\nrender_thread=0\nvsync=0\nmaxfps=60\ntickhz=60\nmsaa=1\n[input]\nmouse=1\n[controls]\nstart=Return,P\n');
     for (const name of ['gamecontrollerdb.txt','gamecontrollerdefault.txt']) {
       game.FS.writeFile('/user/' + name, new Uint8Array(await (await fetch(name)).arrayBuffer()));
     }
@@ -63,21 +76,67 @@
     status.textContent = 'Starting game';
     game.callMain(['--rom-file','/rom.z64']);
     globalThis.midasPrototype = game;
+    const followMenu = () => {
+      if (!capturing && !menuRelease && document.pointerLockElement === canvas && !game._portWebControlsLive()) {
+        menuRelease = true;
+        document.exitPointerLock();
+      }
+      requestAnimationFrame(followMenu);
+    };
+    requestAnimationFrame(followMenu);
   });
   const capture = async () => {
+    if (capturing) return;
+    trace('capture-start');
     canvas.focus();
-    await canvas.requestPointerLock();
-    maybeGame._portWebSetPaused(0);
-    status.textContent = 'Playing. Escape releases the mouse.';
+    const live = maybeGame._portWebControlsLive();
+    capturing = true;
+    try {
+      maybeGame._portWebSetPaused(0);
+      if (live) {
+        const captured = new Promise((resolve, reject) => {
+          const done = error => {
+            clearTimeout(timeout);
+            document.removeEventListener('pointerlockchange', changed);
+            document.removeEventListener('pointerlockerror', failed);
+            error ? reject(error) : resolve();
+          };
+          const changed = () => { if (document.pointerLockElement === canvas) done(); };
+          const failed = () => done(new Error('Mouse capture was refused. Click Resume to try again.'));
+          const timeout = setTimeout(failed, 5000);
+          document.addEventListener('pointerlockchange', changed);
+          document.addEventListener('pointerlockerror', failed);
+        });
+        maybeGame._portWebCaptureMouse();
+        await captured;
+      }
+    } catch (error) {
+      maybeGame._portWebSetPaused(1);
+      write(String(error)); status.textContent = String(error); return;
+    }
+    finally { capturing = false; }
+    trace('capture-complete');
+    status.textContent = live ? 'Playing. Escape releases the mouse.' : 'Game menu. Mouse is free.';
   };
   resume.addEventListener('click', capture);
-  canvas.addEventListener('click', () => { if (running) capture().catch(write); });
+  canvas.addEventListener('click', () => {
+    if (running && maybeGame._portWebControlsLive() && document.pointerLockElement !== canvas) capture().catch(write);
+  });
   document.addEventListener('pointerlockchange', () => {
-    if (running && document.pointerLockElement !== canvas) {
+    trace('pointerlockchange');
+    const lostCapture = hadCapture;
+    hadCapture = document.pointerLockElement === canvas;
+    if (document.pointerLockElement !== canvas && menuRelease) {
+      menuRelease = false;
+      return;
+    }
+    if (capturing) return;
+    if (running && lostCapture && !hadCapture && maybeGame._portWebControlsLive()) {
+      trace('unexpected-loss-pause');
       maybeGame._portWebSetPaused(1); status.textContent = 'Paused. Click Resume to continue.';
     }
   });
-  window.addEventListener('blur', () => { if (running) maybeGame._portWebSetPaused(1); });
+  window.addEventListener('blur', () => { trace('blur'); if (running) maybeGame._portWebSetPaused(1); });
   document.addEventListener('visibilitychange', () => {
     if (running && document.hidden) maybeGame._portWebSetPaused(1);
   });

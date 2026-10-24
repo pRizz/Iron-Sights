@@ -1,4 +1,5 @@
 /* Browser platform contracts and lifecycle. No native rendering behavior. */
+#include "game/player.h" /* engine bool declarations precede SDK stdbool macros */
 #include <stdlib.h>
 #include <emscripten.h>
 #include <emscripten/heap.h>
@@ -48,7 +49,15 @@ void portWebCheckLayout(void)
     printf("ge: web: layout contracts passed; linear memory %zu bytes\n", emscripten_get_heap_size());
 }
 
-EMSCRIPTEN_KEEPALIVE void portWebSetPaused(s32 paused) { webPaused = paused != 0; }
+EMSCRIPTEN_KEEPALIVE void portWebSetPaused(s32 paused)
+{
+    const s32 next = paused != 0;
+    if (next && webPaused) return;
+    webPaused = next;
+#ifdef GE_VIDEO
+    { extern void portWebApplyFocus(s32 value); portWebApplyFocus(next); }
+#endif
+}
 EMSCRIPTEN_KEEPALIVE s32 portWebGetStage(void) { return bossGetStageNum(); }
 EMSCRIPTEN_KEEPALIVE u32 portWebGetMemoryBytes(void) { return (u32)emscripten_get_heap_size(); }
 EMSCRIPTEN_KEEPALIVE u32 portWebGetFrames(void)
@@ -60,6 +69,31 @@ EMSCRIPTEN_KEEPALIVE u32 portWebGetGfxTasks(void)
 {
     extern u32 g_PortGfxTasksSubmitted;
     return g_PortGfxTasksSubmitted;
+}
+EMSCRIPTEN_KEEPALIVE f32 portWebGetPlayerPosition(s32 axis)
+{
+    if (axis < 0 || axis > 2 || !g_CurrentPlayer || !g_CurrentPlayer->prop) return 0;
+    return g_CurrentPlayer->prop->pos.f[axis];
+}
+EMSCRIPTEN_KEEPALIVE f32 portWebGetPlayerHeading(void)
+{
+    return g_CurrentPlayer ? g_CurrentPlayer->vv_theta : 0;
+}
+EMSCRIPTEN_KEEPALIVE s32 portWebControlsLive(void)
+{
+    extern s32 portPlayerControlsLive(s32 player);
+    extern s32 portStageRunning(void);
+    return portStageRunning() && g_CurrentPlayer && g_CurrentPlayer->prop && portPlayerControlsLive(0);
+}
+EMSCRIPTEN_KEEPALIVE s32 portWebGetAudioMetric(s32 metric)
+{
+#ifdef GE_VIDEO
+    extern s32 portAudioWebMetric(s32 index);
+    return portAudioWebMetric(metric);
+#else
+    (void)metric;
+    return 0;
+#endif
 }
 
 void portWebWaitIfPaused(void)

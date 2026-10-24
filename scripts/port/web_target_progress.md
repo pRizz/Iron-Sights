@@ -98,7 +98,8 @@ resident-memory optimization require separate measured work.
 
 ## WEB-002 | 2026-10-24 | Playable prototype
 
-**Status:** In progress. SDL2/WebGL 2 target links and renders Dam locally.
+**Status:** Complete. Optimized SDL2/WebGL 2 prototype reaches normal menus and
+playable Dam; repeated Chrome/Edge input/audio/focus/watch checks pass.
 
 **Completion:** A supplied ROM reaches the menu and playable Dam with correct
 rendering, sound, mouse and keyboard; focus loss recovers safely.
@@ -117,29 +118,91 @@ Local screenshots/logs stay under `build/web-audit/edge`; they are not published
 GLSL ES rejected an integer `mix` factor; explicit float conversion fixed shader
 compilation. Startup and continued character simulation no longer trap.
 
-**Next action:** Correct WebGL font-border/sampler and initial mipmap warnings;
-validate menus, active keyboard/mouse movement, sound output and input reset on
-focus loss. The temporary file-picker harness is not the final launcher. Resume
-works, but an early capture can be released by startup's SDL mouse-mode change;
-the final launcher must present the appropriate gesture after initialization.
+**Next action:** Continue WEB-003 game persistence and its launcher integration.
+Broader browser/mission and performance acceptance remains WEB-006.
+
+**Session notes:**
+
+- 2026-10-24 after `e3f7b5e`: implemented WebGL transparent-border sampling in
+  language-aware GLSL, per-program/per-draw border uniforms (including retained
+  draws), explicit mirror-clamp extension negotiation and mip generation only
+  after real texture upload. Ten ROM-free GPU cases passed for point/linear
+  edges/corners; the next real-ROM run had no WebGL sampler/mipmap warnings.
+  Desktop shader precision is highp; native shader precision stays unchanged.
+- 2026-10-24 active input audit: real keyboard input moved Bond about 88 units
+  before exposing a float/integer callback mismatch in the collision walker.
+  Corrected the callback's three float parameters and added a typed threshold
+  adapter. Native and Wasm synthetic-geometry regressions pass. A new optional
+  `web_build.py --callback-types` audit enables/fails function-pointer warnings
+  despite the inherited `-w`; it additionally found enum/index and debug-thread
+  entrypoint type mismatches, now adapted explicitly. All 270/270 video target
+  units passed this stricter declaration audit. Runtime input/audio/focus checks
+  are being rerun; audio measurements taken after the trap were inconclusive.
+  New read-only runtime counters/player-coordinate exports and a QA-only Web
+  Audio analyser allow measured checks. These changes are currently uncommitted.
+- 2026-10-24 prototype verification: all 271/271 video units passed the strict
+  callback audit, including the new focus adapter. The optimized Edge 156 build
+  moved Bond 443 units, turned 1.2 degrees, produced Web Audio peak 0.21, held
+  simulation at zero steps on focus loss and resumed 31 steps during the next
+  half-second interval; idle drift was 1.19 units (below the 5-unit stuck-key
+  threshold). The watch released capture, continued animation and recovered
+  gameplay capture. Canvas size is 960x540. Earlier silent measurements came
+  from tick-1 direct launch bypassing menu initialization, not a broken browser
+  audio device; a 120-tick startup delay preserves real initialization. The page
+  distinguishes menu releases from unexpected lock loss and resets input before
+  requesting capture. Browser-only P opens/closes the watch; Return confirms.
+  Native ADS/wardrobe/HUD/state/image-bank/collision regressions passed, as did
+  native/Wasm collision checks, 17 Python tooling tests and eight gallery tests.
+  The full Windows rebuild and two complete native gallery passes reproduced
+  all 72 views/35 icons with zero changed image cells; pistol/rifle ADS reviewed.
+  Ten GPU sampler cases passed in Edge and Playwright Chromium. Playwright's
+  Windows headless shell did not produce the required focus change in its first
+  runtime audit; installed Chrome is being checked separately. Its full bundled
+  Chromium executable failed to launch with `spawn UNKNOWN` on this host.
+- 2026-10-24 completion: installed Chrome 155 passed the optimized audit (443
+  units of motion, 1.2-degree turn, audio peak 0.22, zero unfocused steps,
+  31 resumed steps, idle drift 0.60 and watch capture recovery). Edge's normal
+  startup/menu navigation rendered 780 frames without a runtime error; local
+  screenshots of the file/mission menus were reviewed. The successful Dam
+  screenshots and native pistol/rifle gallery references were also reviewed.
+  These observations complete the prototype gate; they do not claim full
+  missions, hardware performance, Firefox or Safari compatibility.
+- 2026-10-24 repeat-check correction: the preceding completion conclusion was
+  premature. SDL queued automatic pointer requests that could collide with the
+  page's Resume request. Web capture now has one owner: the page's gesture calls
+  a C entrypoint that updates SDL focus/relative mode; automatic native capture
+  requests are disabled only on web. Intentional releases notify the page first,
+  and the page waits for confirmed capture. Three consecutive fast-link audits
+  passed after this correction. The focus-motion audit now uses the existing
+  invisibility/invulnerability diagnostics to isolate input from enemy impulses;
+  normal menu/game launches do not enable them. Optimized repeat checks follow.
+- 2026-10-24 final completion: the corrected source passed three consecutive
+  fast-link audits, then two optimized Edge 156 audits and one optimized Chrome
+  155 audit. Optimized runs measured 435 units of motion, a 1.2-degree turn,
+  audio peak about 0.22, zero unfocused steps, 31 resumed steps, 0.70–1.32 units
+  idle drift, continued watch animation and recovered capture. No browser API
+  capture request was rejected. The strict audit again passed all 271 units.
+  The final native rebuild/gallery repeated both full passes with zero changed
+  cells; settled pistol/rifle ADS and the browser watch/menu views were reviewed.
 
 ## WEB-003 | 2026-10-24 | Save persistence and backups
 
-**Status:** Backup codec groundwork implemented; filesystem persistence and
-actual campaign validation still depend on WEB-002.
+**Status:** ROM cache, writer lock, IDBFS adapter and backup transactions pass
+ROM-free integration tests. Actual campaign/launcher integration remains open.
 
 **Completion:** Campaign saves, profiles and settings survive fresh launches;
 backup export/import round-trips and failures preserve existing data.
 
 **Starting paths:** `port/src/libultra_shim.c`, `port/src/main.c`,
-`port/src/video.c`, browser storage adapter to be added.
+`port/src/video.c`, `web/src/persistent-files.ts` and `web/src/rom-storage.ts`.
 
 **Evidence:** `web/src/backup.ts` defines a version-1 backup envelope with
 allowlisted relative paths, file/total limits, exact 512-byte EEPROM validation,
 canonical base64 and per-file SHA-256. Synthetic unit tests round-trip binary
 campaign/text settings and reject traversal, ROM/suspend files, duplicates,
-truncation, damage and unsupported versions. No actual browser filesystem,
-storage-failure or campaign persistence test is claimed yet.
+truncation, damage and unsupported versions. A real SDK filesystem fixture now
+tests C writes through IDBFS, reload, transaction sequencing and backup rollback.
+Actual game campaign durability and user-facing storage errors remain unverified.
 
 **Decisions:** Use the stable IDBFS mount `/midas-ads-user` with `/user` as its
 runtime alias; this isolates the game from other projects on the same Pages
@@ -148,10 +211,31 @@ writer session. Use a separate IndexedDB database `project-midas-ads:rom`, schem
 version 1, for the original ROM Blob. Keep these identities stable across app
 deployments and perform explicit migrations for future schema changes.
 
-**Next action:** Mount/restore before game startup, synchronize closed user-file
-writes with a serialized queue and visible durability/error status, then add
-backup import rollback while the game is idle. Verify errors, concurrent tabs
-and restoration after reload. Keep exact-build suspend images disabled.
+**Next action:** Connect the adapter to game initialization and launcher status;
+verify real campaign/profile/settings changes after fresh launches, denied
+persistence and user-facing error/retry controls. Keep suspend images disabled.
+
+**Session notes:**
+
+- 2026-10-24: added a separate original-ROM IndexedDB Blob adapter and the named
+  Web Lock. ROM-free real-browser integration passed original-byte preservation
+  after working-buffer mutation/reload, aborted-write preservation, deletion,
+  second-tab rejection and lock transfer. Three queue tests passed serialization
+  of writes during a transaction, dirty-data retention/error reporting/retry and
+  burst coalescing. Strict TypeScript checking passed. These adapters are not yet
+  wired to IDBFS or game writes; actual campaign durability remains unverified.
+- 2026-10-24 filesystem adapter: mount/restore precedes `/user` alias creation.
+  Successful writable closes/renames/deletes schedule serialized synchronization;
+  monotonic modification times preserve successive writes within one millisecond.
+  Validate campaign/backup boundaries before persistence, retain dirty data on
+  failure, and prohibit import after the game starts because its EEPROM cache
+  would otherwise overwrite imported data. Replacement restores the prior memory
+  snapshot on failure. The video target links/exports IDBFS. The separate
+  `web_build.py files` CMake target builds a tiny ROM-free SDK fixture; it passed
+  real C stdio save/reload, writes during sync, profile/backup round trip,
+  injected sync and partial memory-write failure rollback, durable prior-file
+  preservation after reload and the running-game import guard. These tests use
+  synthetic bytes, not an actual campaign or a real quota exhaustion event.
 
 ## WEB-004 | 2026-10-24 | Browser launcher
 
@@ -180,6 +264,13 @@ interfaces; implement file/drop selection and browser capability checks.
 ## WEB-005 | 2026-10-24 | GitHub Pages deployment
 
 **Status:** Not started. Depends on WEB-004 and passing earlier gates.
+
+**Packaging follow-up:** The inherited always-linked `assets/rarewarelogo.c`
+contains initialized logo textures/vertices even with `GE_ROMDATA_FALLBACK=OFF`.
+Before publishing, replace those web payloads with ROM-populated backing data
+and verify the site contains only approved runtime/configuration outputs. Native
+logo behavior must remain unchanged. The optional generated weapon-icon pack is
+not enabled in the current web compiler definitions, even when a local pack exists.
 
 **Completion:** PR builds verify without publishing; successful `main` runs
 deploy the site. Production base paths work, active sessions continue and

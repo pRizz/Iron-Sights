@@ -16,7 +16,7 @@ DIAGNOSTIC_COMPATIBILITY = ['-Wno-error=implicit-function-declaration',
                             '-Wno-error=incompatible-pointer-types']
 
 
-def survey_command(entry, destination):
+def survey_command(entry, destination, callback_types=False):
     """Preserve CMake's source/defines/includes; remove documented native flags."""
     tokens = shlex.split(entry['command'])
     command, removed = [tokens[0]], []
@@ -26,12 +26,14 @@ def survey_command(entry, destination):
         if token == '-o':
             position += 2
             continue
-        if token in NATIVE_FLAGS or token.startswith('-Wa,-I'):
+        if token in NATIVE_FLAGS or token.startswith('-Wa,-I') or (callback_types and token == '-w'):
             removed.append(token)
         else:
             command.append(token)
         position += 1
     command.extend(DIAGNOSTIC_COMPATIBILITY)
+    if callback_types:
+        command.append('-Werror=incompatible-function-pointer-types')
     command.extend(['-o', destination.as_posix()])
     return command, removed
 
@@ -41,10 +43,10 @@ def diagnostics(output):
     return sorted(set(re.findall(r'(?:fatal )?error: (.+)', output)))
 
 
-def compile_entry(entry, output, root):
+def compile_entry(entry, output, root, callback_types=False):
     source = Path(entry['file']).relative_to(root).as_posix()
     token = hashlib.sha256(source.encode()).hexdigest()[:16]
-    command, removed = survey_command(entry, output / (token + '.o'))
+    command, removed = survey_command(entry, output / (token + '.o'), callback_types)
     result = subprocess.run(command, cwd=entry['directory'], text=True,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                             timeout=180, check=False)
@@ -55,14 +57,14 @@ def compile_entry(entry, output, root):
                 log='audit/' + log.name)
 
 
-def run_audit(database, output, root, jobs):
+def run_audit(database, output, root, jobs, callback_types=False):
     output.mkdir(parents=True, exist_ok=True)
     entries = json.loads(database.read_text(encoding='utf-8'))
     if not entries:
         raise ValueError('CMake selected no sources for the compile survey')
     results = []
     with ThreadPoolExecutor(max_workers=jobs) as executor:
-        futures = {executor.submit(compile_entry, entry, output, root): entry
+        futures = {executor.submit(compile_entry, entry, output, root, callback_types): entry
                    for entry in entries}
         for future in as_completed(futures):
             entry = futures[future]
@@ -80,6 +82,7 @@ def run_audit(database, output, root, jobs):
     failures = sum(item['returncode'] != 0 for item in results)
     summary = dict(total=len(results), compiled=len(results)-failures,
                    failed=failures, compatibility_flags=DIAGNOSTIC_COMPATIBILITY,
+                   callback_types_checked=callback_types,
                    scope='Compile only; no link, ROM, renderer or gameplay proof',
                    sources=results)
     (output.parent / 'audit.json').write_text(

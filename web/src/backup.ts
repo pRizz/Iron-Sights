@@ -5,7 +5,7 @@ type BackupFile = { path: string; data: string; sha256: string };
 export type Backup = { format: 'project-midas-saves'; version: 1; createdAt: string; files: BackupFile[] };
 export const MAX_BACKUP_TEXT = 8 * 1024 * 1024;
 const MAX_FILES = 256;
-const MAX_FILE_BYTES = 256 * 1024;
+export const MAX_USER_FILE_BYTES = 256 * 1024;
 const MAX_TOTAL_BYTES = 4 * 1024 * 1024;
 
 export function allowedUserPath(path: string): boolean {
@@ -14,7 +14,7 @@ export function allowedUserPath(path: string): boolean {
     || /^Data\/Devices\/[A-Za-z0-9_-]{1,128}\.gedevice$/.test(path);
 }
 
-function validateFiles(files: UserFile[]): void {
+export function validateUserFiles(files: UserFile[]): void {
   if (files.length > MAX_FILES) throw new Error('The backup contains too many files.');
   const paths = new Set<string>();
   let total = 0;
@@ -24,7 +24,7 @@ function validateFiles(files: UserFile[]): void {
     }
     paths.add(file.path);
     total += file.bytes.length;
-    if (file.bytes.length > MAX_FILE_BYTES || total > MAX_TOTAL_BYTES) throw new Error('The backup is too large.');
+    if (file.bytes.length > MAX_USER_FILE_BYTES || total > MAX_TOTAL_BYTES) throw new Error('The backup is too large.');
     if (file.path === 'Data/Saves/eeprom.bin' && file.bytes.length !== 512) {
       throw new Error('The campaign save must contain exactly 512 bytes.');
     }
@@ -40,7 +40,7 @@ function base64(bytes: Uint8Array): string {
 }
 
 function decodeBase64(text: string): Uint8Array<ArrayBuffer> {
-  if (text.length > 4 * Math.ceil(MAX_FILE_BYTES / 3)
+  if (text.length > 4 * Math.ceil(MAX_USER_FILE_BYTES / 3)
       || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(text)) {
     throw new Error('The backup contains invalid or oversized file data.');
   }
@@ -50,7 +50,7 @@ function decodeBase64(text: string): Uint8Array<ArrayBuffer> {
 }
 
 export async function createBackup(files: UserFile[], createdAt: string): Promise<string> {
-  validateFiles(files);
+  validateUserFiles(files);
   const encoded = await Promise.all([...files].sort((a, b) => a.path.localeCompare(b.path)).map(async file => ({
     path: file.path, data: base64(file.bytes), sha256: await sha256(file.bytes),
   })));
@@ -80,6 +80,6 @@ export async function parseBackup(text: string): Promise<UserFile[]> {
     if (await sha256(bytes) !== file.sha256) throw new Error('The backup is damaged: a file checksum does not match.');
     files.push({ path: file.path, bytes });
   }
-  validateFiles(files);
+  validateUserFiles(files);
   return files;
 }

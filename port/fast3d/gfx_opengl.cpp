@@ -17,6 +17,10 @@
 #include <PR/gbi.h>
 
 #include "glad/glad.h"
+#ifdef __EMSCRIPTEN__
+#include "../web/sampler.h"
+#include "web_sampler_shader.h"
+#endif
 
 #include "gfx_cc.h"
 #include "gfx_rendering_api.h"
@@ -67,6 +71,9 @@ struct ShaderProgram {
     GLint frame_count_location;
     GLint noise_scale_location;
     GLint three_point_filter_locations[2];
+#ifdef __EMSCRIPTEN__
+    GLint web_border_locations[2];
+#endif
     /* GE retained geometry (below): the fragment shader object outlives the
      * link so the twin program can share it, plus the ids its features come from */
     GLuint fragment_shader;
@@ -124,6 +131,14 @@ static bool gl_has_mips(GLuint id) {
     return id < gl_tex_has_mips.size() && gl_tex_has_mips[id] != 0;
 }
 
+static void gfx_opengl_generate_mipmap(GLuint id) {
+#ifdef __EMSCRIPTEN__
+    if (!portWebTextureHasPixels(id)) return;
+#endif
+    glGenerateMipmap(GL_TEXTURE_2D);
+    gl_set_has_mips(id, 1);
+}
+
 static int gl_glsl_version = 130;
 static char gl_glsl_version_str[16] = "130";
 static GLenum gl_mirror_clamp = GL_MIRROR_CLAMP_TO_EDGE;
@@ -162,6 +177,9 @@ static void gfx_opengl_vertex_array_set_attribs(struct ShaderProgram* prg) {
 }
 
 static void gfx_opengl_set_uniforms(struct ShaderProgram* prg) {
+#ifdef __EMSCRIPTEN__
+    portWebSamplerSync(prg->web_border_locations);
+#endif
     if (prg->frame_count_location >= 0) {
         glUniform1i(prg->frame_count_location, frame_count);
     }
@@ -340,7 +358,11 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
     gfx_cc_get_features(shader_id0, shader_id1, &cc_features);
 
     char vs_buf[2048];
+#ifdef __EMSCRIPTEN__
+    char fs_buf[16384]; /* includes transparent-border sampling helpers */
+#else
     char fs_buf[8192];
+#endif
     size_t vs_len = 0;
     size_t fs_len = 0;
     size_t num_floats = 4;
@@ -464,7 +486,11 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
     fs_len += sprintf(fs_buf + fs_len, "#version %s\n", gl_glsl_version_str);
 
     if (gl_es) {
+#ifdef __EMSCRIPTEN__
+        append_line(fs_buf, &fs_len, "precision highp float;");
+#else
         append_line(fs_buf, &fs_len, "precision mediump float;");
+#endif
     }
 
     if (gl_glsl_version >= 130) {
@@ -477,6 +503,14 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
         append_line(fs_buf, &fs_len, "#define SAMPLE_TEX(tex, uv) texture2D(tex, uv)");
     }
 
+#ifdef __EMSCRIPTEN__
+    append_line(fs_buf, &fs_len, midasWebSamplerSource);
+#else
+    append_line(fs_buf, &fs_len, "#define BORDER_PARAM");
+    append_line(fs_buf, &fs_len, "#define BORDER_ARG");
+    append_line(fs_buf, &fs_len, "#define WEB_BORDER0");
+    append_line(fs_buf, &fs_len, "#define WEB_BORDER1");
+#endif
     // Reference approach to color wrapping as per GLideN64
     // Return wrapped value of x in interval [low, high)
     append_line(fs_buf, &fs_len, "#define WRAP(x, low, high) mod((x)-(low), (high)-(low)) + (low)");
@@ -533,7 +567,7 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
     append_line(fs_buf, &fs_len, "}");
 
     if (current_filter_mode == FILTER_THREE_POINT) {
-        append_line(fs_buf, &fs_len, "vec4 filter3point(in sampler2D tex, in vec2 texCoord, in vec2 texSize) {");
+        append_line(fs_buf, &fs_len, "vec4 filter3point(in sampler2D tex, in vec2 texCoord, in vec2 texSize BORDER_PARAM) {");
         append_line(fs_buf, &fs_len, "    vec2 offset = fract(texCoord*texSize - vec2(0.5));");
         append_line(fs_buf, &fs_len, "    offset -= step(1.0, offset.x + offset.y);");
         append_line(fs_buf, &fs_len, "    vec4 c0 = TEX_OFFSET(tex, texCoord, texSize, offset);");
@@ -549,9 +583,9 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
         // used to have a const weight array, but apparently drivers for the GT620 don't like const array initializers
 
         if (current_filter_mode == FILTER_THREE_POINT)
-            append_line(fs_buf, &fs_len, "lowp vec4 hookTexture2D(in sampler2D t, in vec2 uv, in vec2 texSize, in int three_point_filter) {");
+            append_line(fs_buf, &fs_len, "lowp vec4 hookTexture2D(in sampler2D t, in vec2 uv, in vec2 texSize, in int three_point_filter BORDER_PARAM) {");
         else
-            append_line(fs_buf, &fs_len, "lowp vec4 hookTexture2D(in sampler2D t, in vec2 uv, in vec2 texSize) {");
+            append_line(fs_buf, &fs_len, "lowp vec4 hookTexture2D(in sampler2D t, in vec2 uv, in vec2 texSize BORDER_PARAM) {");
 
         append_line(fs_buf, &fs_len, "    lowp vec4 cw = vec4(0.0);");
         append_line(fs_buf, &fs_len, "    for (int i = 0; i < 16; ++i) {");
@@ -560,7 +594,7 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
         append_line(fs_buf, &fs_len, "        vec2 scaled_uv = uv + (vec2(-1.5) + xy) / texSize;");
 
         if (current_filter_mode == FILTER_THREE_POINT)
-            append_line(fs_buf, &fs_len, "        lowp vec4 tex = mix(SAMPLE_TEX(t, scaled_uv), filter3point(t, scaled_uv, texSize), float(three_point_filter));");
+            append_line(fs_buf, &fs_len, "        lowp vec4 tex = mix(SAMPLE_TEX(t, scaled_uv), filter3point(t, scaled_uv, texSize BORDER_ARG), float(three_point_filter));");
         else
             append_line(fs_buf, &fs_len, "        lowp vec4 tex = SAMPLE_TEX(t, scaled_uv);");
 
@@ -570,11 +604,11 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
         append_line(fs_buf, &fs_len, "}");
     } else {
         if (current_filter_mode == FILTER_THREE_POINT) {
-            append_line(fs_buf, &fs_len, "vec4 hookTexture2D(in sampler2D tex, in vec2 uv, in vec2 texSize, in int three_point_filter) {");
-            append_line(fs_buf, &fs_len, "    return mix(SAMPLE_TEX(tex, uv), filter3point(tex, uv, texSize), float(three_point_filter));");
+            append_line(fs_buf, &fs_len, "vec4 hookTexture2D(in sampler2D tex, in vec2 uv, in vec2 texSize, in int three_point_filter BORDER_PARAM) {");
+            append_line(fs_buf, &fs_len, "    return mix(SAMPLE_TEX(tex, uv), filter3point(tex, uv, texSize BORDER_ARG), float(three_point_filter));");
             append_line(fs_buf, &fs_len, "}");
         } else {
-            append_line(fs_buf, &fs_len, "vec4 hookTexture2D(in sampler2D tex, in vec2 uv, in vec2 texSize) {");
+            append_line(fs_buf, &fs_len, "vec4 hookTexture2D(in sampler2D tex, in vec2 uv, in vec2 texSize BORDER_PARAM) {");
             append_line(fs_buf, &fs_len, "    return SAMPLE_TEX(tex, uv);");
             append_line(fs_buf, &fs_len, "}");
         }
@@ -629,9 +663,9 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
             }
 
             if (current_filter_mode == FILTER_THREE_POINT)
-                fs_len += sprintf(fs_buf + fs_len, "    vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d, three_point_filter%d);\n", i, i, i, i, i);
+                fs_len += sprintf(fs_buf + fs_len, "    vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d, three_point_filter%d WEB_BORDER%d);\n", i, i, i, i, i, i);
             else
-                fs_len += sprintf(fs_buf + fs_len, "    vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d);\n", i, i, i, i);
+                fs_len += sprintf(fs_buf + fs_len, "    vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d WEB_BORDER%d);\n", i, i, i, i, i);
         }
     }
 
@@ -858,6 +892,9 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
     prg->noise_scale_location = glGetUniformLocation(shader_program, "noise_scale");
     prg->three_point_filter_locations[0] = glGetUniformLocation(shader_program, "three_point_filter0");
     prg->three_point_filter_locations[1] = glGetUniformLocation(shader_program, "three_point_filter1");
+#ifdef __EMSCRIPTEN__
+    portWebSamplerFind(shader_program, prg->web_border_locations);
+#endif
 
     gfx_opengl_load_shader(prg);
 
@@ -894,6 +931,9 @@ static GLuint gfx_opengl_new_texture(void) {
 }
 
 static void gfx_opengl_delete_texture(uint32_t texID) {
+#ifdef __EMSCRIPTEN__
+    portWebTextureDeleted(texID);
+#endif
     glDeleteTextures(1, &texID);
     gl_set_has_mips(texID, 0);
 }
@@ -1002,14 +1042,16 @@ static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, uint32_t width,
     g_GfxUpDrainUs = portProfNow() - up_t;
     up_t += g_GfxUpDrainUs;
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rgba32_buf);
+#ifdef __EMSCRIPTEN__
+    portWebTextureUploaded(current_texture_ids[last_selected_tile]);
+#endif
     g_GfxUpTexUs = portProfNow() - up_t;
     up_t += g_GfxUpTexUs;
     /* a fresh level 0 invalidates any older chain on this object; the N64
      * mipmap sampler regenerates on demand (or right here under aniso) */
     gl_set_has_mips(current_texture_ids[last_selected_tile], 0);
     if (gfx_opengl_anisotropy() > 1.0f) {
-        glGenerateMipmap(GL_TEXTURE_2D); /* aniso acts on minification mips */
-        gl_set_has_mips(current_texture_ids[last_selected_tile], 1);
+        gfx_opengl_generate_mipmap(current_texture_ids[last_selected_tile]);
     }
     g_GfxUpMipUs = portProfNow() - up_t;
     up_t += g_GfxUpMipUs;
@@ -1053,7 +1095,11 @@ static uint32_t gfx_cm_to_opengl(uint32_t val) {
     switch (val) {
         case 0x10: /* GE_TX_BORDER (gfx_pc.cpp): a grown font glyph - outside the
                     * texture is GL's default border colour, transparent black */
+#ifdef __EMSCRIPTEN__
+            return GL_CLAMP_TO_EDGE; /* transparent border is sampled in GLSL */
+#else
             return GL_CLAMP_TO_BORDER;
+#endif
         case G_TX_NOMIRROR | G_TX_CLAMP:
             return GL_CLAMP_TO_EDGE;
         case G_TX_MIRROR | G_TX_WRAP:
@@ -1070,6 +1116,10 @@ extern "C" int ge_sky_tri_active; /* gfx_pc: inside an RDP-triangle (sky/water) 
 extern "C" int ge_mip_active;     /* gfx_pc: this sampler serves a G_TL_LOD draw - minify through mips */
 
 static void gfx_opengl_set_sampler_parameters(int tile, bool linear_filter, uint32_t cms, uint32_t cmt) {
+#ifdef __EMSCRIPTEN__
+    portWebSamplerFlags(tile, cms, cmt, linear_filter && current_filter_mode == FILTER_LINEAR);
+    if (gl_current_prg && !gl_ret_active) portWebSamplerSync(gl_current_prg->web_border_locations);
+#endif
     const GLint filter = linear_filter && (current_filter_mode == FILTER_LINEAR) ? GL_LINEAR : GL_NEAREST;
     /* THIS is the value the draw actually wants - gfx_pc computes it per draw
      * and calls here, while select_texture only ever saw the texture's CACHED
@@ -1094,8 +1144,7 @@ static void gfx_opengl_set_sampler_parameters(int tile, bool linear_filter, uint
          * texture is incomplete. */
         const GLuint id = current_texture_ids[tile];
         if (!gl_has_mips(id)) {
-            glGenerateMipmap(GL_TEXTURE_2D);
-            gl_set_has_mips(id, 1);
+            gfx_opengl_generate_mipmap(id);
         }
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
@@ -1111,8 +1160,7 @@ static void gfx_opengl_set_sampler_parameters(int tile, bool linear_filter, uint
          * magnification is untouched. */
         const GLuint id = current_texture_ids[tile];
         if (!gl_has_mips(id)) {
-            glGenerateMipmap(GL_TEXTURE_2D);
-            gl_set_has_mips(id, 1);
+            gfx_opengl_generate_mipmap(id);
         }
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
                         (filter == GL_LINEAR) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_LINEAR);
@@ -1141,8 +1189,7 @@ static void gfx_opengl_set_sampler_parameters(int tile, bool linear_filter, uint
         if (skynomip) {
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
         } else {
-            glGenerateMipmap(GL_TEXTURE_2D);
-            gl_set_has_mips(current_texture_ids[tile], 1);
+            gfx_opengl_generate_mipmap(current_texture_ids[tile]);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         }
     } else {
@@ -1536,6 +1583,9 @@ static void gfx_opengl_init(void) {
         // GL_MIRROR_CLAMP_TO_EDGE unsupported
         gl_mirror_clamp = GL_MIRRORED_REPEAT;
     }
+#ifdef __EMSCRIPTEN__
+    gl_mirror_clamp = portWebMirrorClamp();
+#endif
 
     // determine GLSL version
     if (gl_es) {
@@ -2038,6 +2088,9 @@ struct GlRetainedProgram {
     int num_attribs = 0;
     GLint u_mats, u_mats1, u_fixup, u_fogp, u_fogsel, u_fogrgb, u_decal, u_light, u_shade, u_kind, u_prim, u_env, u_lod;
     GLint frame_count_location, noise_scale_location, three_point_filter_locations[2];
+#ifdef __EMSCRIPTEN__
+    GLint web_border_locations[2];
+#endif
     /* uniform value cache: a program object keeps its uniforms between binds,
      * so a retained draw uploads only what changed since this program's last
      * one (the per-draw GL call count is the PC's cost, not the triangles) */
@@ -2319,6 +2372,9 @@ static GlRetainedProgram* gl_ret_program_get(struct ShaderProgram* prg) {
     rp.noise_scale_location = glGetUniformLocation(program, "noise_scale");
     rp.three_point_filter_locations[0] = glGetUniformLocation(program, "three_point_filter0");
     rp.three_point_filter_locations[1] = glGetUniformLocation(program, "three_point_filter1");
+#ifdef __EMSCRIPTEN__
+    portWebSamplerFind(program, rp.web_border_locations);
+#endif
     /* back to the interpreter's program: the caller expects it current */
     if (gl_current_prg != nullptr) {
         glUseProgram(gl_current_prg->opengl_program_id);
@@ -2501,6 +2557,9 @@ static void gl_ret_draw(int desc, const uint16_t* idx, uint32_t nidx, const floa
         gl_ret_bound = rp;
     }
     gl_ret_active = true;
+#ifdef __EMSCRIPTEN__
+    portWebSamplerSync(rp->web_border_locations);
+#endif
     if (gl_ret_vaos) {
         if (d.vao == 0) {
             glGenVertexArrays(1, &d.vao);
