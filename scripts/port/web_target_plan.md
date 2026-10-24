@@ -150,6 +150,11 @@ updates require no game rebuild or gallery regeneration.
 
 ## Session handoff
 
+The first WEB-001 tooling slice is described in the
+[portability spike runbook](web_target_spike.md). It builds the ROM-free probe
+and surveys the real CMake source set; it is separate from the eventual browser
+game target and does not satisfy the full WEB-001 completion gate.
+
 Before work, read repository instructions, this plan and the relevant progress
 blocks; inspect Git state and refresh remote refs without overwriting other
 work. Continue the first unfinished technical gate. Resolve routine choices

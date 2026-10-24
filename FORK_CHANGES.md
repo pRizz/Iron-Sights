@@ -1221,9 +1221,9 @@ README content, checklist and root license preservation were checked. New
 user-owned rules docs passed the pinned GFM/frontmatter Markdown check; shell
 syntax validation passed. No game rebuild or render regeneration was needed.
 
-### FORK-024 — Browser target plan and milestone handoffs
+### FORK-024 — Browser target plan and portability groundwork
 
-**Status:** Plan accepted on 2026-10-24; web implementation not started.
+**Status:** Plan accepted on 2026-10-24; WEB-001 portability tooling in progress.
 
 Recorded the user-approved browser target design and six milestones so later
 sessions can continue from repository-owned evidence. The planned target keeps
@@ -1236,14 +1236,33 @@ additions, not inherited upstream capabilities or a working browser release.
 
 The tracker uses stable milestone blocks with explicit completion criteria,
 status, evidence and next actions. AGENTS links the plan and requires relevant
-progress updates before handoff. This documentation does not change gameplay,
-rendering, builds or publication. Existing native and asset ownership contracts
-continue to apply.
+progress updates before handoff. A separate ROM-free CMake probe and Docker
+entrypoint now investigate the Wasm ABI and address-layout constraints without
+changing the native game target. The SDK is pinned to Emscripten 6.0.13 and its
+image digest. A compile-only survey uses the real headless CMake source set,
+records native-build errors, removes explicitly listed native-only flags for
+the survey and records remaining failures per source. Three inherited C warning
+classes are demoted for this diagnostic survey and reported in its summary;
+the results do not establish link or gameplay compatibility. Runs disable
+container networking and retain local logs under ignored `build/web-spike`.
+Existing native and asset ownership contracts continue to apply.
 
 **Sources:** [accepted plan](scripts/port/web_target_plan.md),
 [milestone tracker](scripts/port/web_target_progress.md),
+[spike runbook](scripts/port/web_target_spike.md),
+[spike runner](scripts/port/web_spike.py),
+[compile survey](scripts/port/web_spike_audit.py),
+[SDK pin](scripts/port/web_toolchain.json),
+[probe build](scripts/port/web_probe/CMakeLists.txt),
+[ABI/address probe](scripts/port/web_probe/probe.c),
+[tooling tests](scripts/port/test_web_spike.py),
 [session guidance](AGENTS.md#repo-local-guidance).
-**Validation:** The pinned GFM/frontmatter formatter check passed for both new
-guides; local relative links and Git whitespace checks passed. Bun standards
-checks reported zero findings. No web compile or gameplay validation is claimed.
-Documentation-only work requires no game rebuild or render regeneration.
+**Validation:** The pinned Wasm ABI/address probes passed under Node. The
+diagnostic headless-source survey compiled 246/257 units and recorded 11 failures;
+the unmodified root build fails on native SSE flags. These checks do not claim a
+full Wasm link, browser gameplay or deployment. Seven ROM-free tooling tests
+passed, including command preservation, immutable SDK validation and failed
+survey reporting. Both probes reproduced their results on a repeated run.
+Python compilation, pinned GFM/frontmatter formatting, relative links and Git
+whitespace checks passed. No native game or render inputs changed in this
+tooling slice, so no native rebuild or gallery regeneration is required.
