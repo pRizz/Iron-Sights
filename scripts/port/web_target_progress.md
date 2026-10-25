@@ -655,10 +655,21 @@ The rule is persisted in AGENTS/CONTRIBUTING and the local standards overrides.
 PR #2 was opened before that request; it is superseded by direct-main delivery
 of the verified commits, with normal push-triggered CI/Pages acceptance retained.
 
-**Lifecycle publication follow-up:** Local exit/auto-start acceptance is recorded
-in WEB-009. Exact assembly/allowlist, 112 unit tests, TypeScript and Windows WebKit
-ROM-free room/fallback checks pass. Final direct-main CI and live-site native-exit
-acceptance are the next action before marking this follow-up published.
+**Lifecycle publication acceptance, 2026-10-25:** Source `ea804df` was committed
+and pushed directly to main. Pages `40167224238`, Windows builds/provenance
+`40167224278` and Bright Builds `40167224228` passed. The public manifest reports
+clean Actions source `ea804dfefe1d0b763b99ebfe61b38f71e2632f18` and runtime
+`04853c2b485e431a`. Public Wasm (3,918,950 bytes), SHA-256, MIME and validation,
+frontend chunks, both model GLBs and artwork hashes match the exact artifact.
+The live Edge audit passes native Exit Game No/Yes, reverse flight, frozen
+frames, silent audio/released input, physical warm power resume, repeated exit,
+identical save backups and management restart. The separate live Chrome audit
+passes first insertion/flight, normal Dam movement/audio/P watch/focus/capture,
+stable canvas, GPU teardown and unchanged saves after a reload that automatically
+starts without room/prop downloads. No page errors occurred. Private evidence is
+`published-exit`, `published-autostart` and `public-artifact-report.json` under
+`build/web-room`. The requested lifecycle follow-up is complete; the checks in
+WEB-009 and experimental Safari status remain applicable.
 
 **Completion:** Keyboard/reduced-motion/responsive/failure paths, production
 allowlist and browser verification, measured scene cost and verified deployment.

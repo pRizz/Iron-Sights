@@ -1283,7 +1283,16 @@ restore and ROM removal. The room gameplay audit verifies cached auto-start and
 no prop downloads after reload. Windows WebKit's ROM-free room/fallback checks
 pass; actual Safari remains experimental. New `room-exit-audit.mjs` and the Linux
 helper's `exit` mode keep private evidence under `build/web-room/exit-*`; no ROM
-or private captures enter Git. Final publication acceptance follows in WEB-010.
+or private captures enter Git.
+
+Lifecycle source `ea804df` passed Pages `40167224238`, Windows builds/provenance
+`40167224278` and Bright Builds `40167224228`, then deployed clean runtime
+`04853c2b485e431a`. The public Wasm size/digest/MIME, frontend graph, models and
+artwork match the artifact. Live Edge passes native Exit Game/reverse/warm-resume,
+repeated exit, stable saves and management restart. Live Chrome passes normal
+Dam movement/audio/watch/focus/capture and unchanged save backups after cached
+auto-start, without loading room props. WEB-010 records final acceptance and
+private evidence locations. This documentation update persists those results.
 
 The user requested a canvas-only initial experience with realistic room props,
 a CRT, rotating cartridge ROM selection and an animated insertion/power/TV

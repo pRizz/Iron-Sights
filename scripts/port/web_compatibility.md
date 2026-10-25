@@ -1,11 +1,20 @@
 # Browser preview compatibility
 
 The desktop preview is live at <https://prizz.github.io/Project-Midas-ADS/>.
-These results were recorded on 2026-10-24. Safari remains experimental by the
+These results were recorded on 2026-10-24/25. Safari remains experimental by the
 user's explicit decision; WebKit automation is not actual macOS Safari testing.
 The [milestone tracker](web_target_progress.md) owns completion and handoff status.
 
 ## Browser evidence
+
+The lifecycle follow-up `ea804df` is published and verified against its clean
+Actions artifact. Edge and isolated Linux Firefox pass native Exit Game No/Yes,
+reverse TV flight, frozen frames/silent audio/released input, physical warm power
+resume, repeated exit, stable saves and save-management restart. Chrome passes
+that cycle with reduced motion. The live site repeats the Exit Game cycle in
+Edge and normal Dam/audio/watch/focus/capture plus cached automatic startup in
+Chrome. Reload preserves backup bytes and does not fetch the room props. Windows
+WebKit's ROM-free room/fallback audit passes; Safari remains experimental.
 
 The immersive-room revision adds a separately tested Three.js entrypoint. Edge
 and Chrome pass its first/repeat ROM, insertion/flight, actual-game audio, save
@@ -107,7 +116,13 @@ borders with point/linear filtering; they are not exhaustive material coverage.
 
 ## Deployment and data acceptance
 
-The immersive room source `08a07d8` passed
+Lifecycle source `ea804df` passed
+[Pages run 40167224238](https://github.com/pRizz/Project-Midas-ADS/actions/runs/40167224238)
+and deployed clean runtime `04853c2b485e431a`. Its public Wasm, frontend, models
+and artwork match the exact artifact. Live native exit/resume and cached startup
+acceptance are recorded above and in WEB-010.
+
+The earlier immersive room source `08a07d8` passed
 [Pages run 40160374496](https://github.com/pRizz/Project-Midas-ADS/actions/runs/40160374496).
 The published runtime `faad72845829175b` has clean Actions provenance; its Wasm
 size/hash/MIME, dynamic frontend chunks and both artwork hashes were verified.
