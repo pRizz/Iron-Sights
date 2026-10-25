@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { launchAuditBrowser } from './browser-choice.mjs';
 import { observeAudio, readAudio } from './audio-observer.mjs';
 import { checkRoomGameplay } from './room-gameplay-check.mjs';
+import { checkPresentation } from './presentation-check.mjs';
 
 const [romPath, outputPath = '../build/web-room/game', origin = 'http://127.0.0.1:4176'] =
     process.argv.slice(2);
@@ -21,6 +22,19 @@ const context = await browser.newContext({
 });
 const page = await context.newPage();
 await page.addInitScript(observeAudio);
+await page.addInitScript(() => {
+    const observer = new MutationObserver((records) => {
+        for (const record of records) {
+            const value = record.target.dataset?.roomScreenCorners;
+            if (value) globalThis.roomFinalCorners = JSON.parse(value);
+        }
+    });
+    observer.observe(document, {
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['data-room-screen-corners'],
+    });
+});
 const errors = [];
 const requests = [];
 page.on('pageerror', (error) => errors.push(String(error)));
@@ -64,6 +78,33 @@ try {
         await page.screenshot({ path: resolve(output, 'flying.png') });
     }
     await waitForGame();
+    await checkPresentation(page);
+    await page.keyboard.press('F2');
+    for (const viewport of [
+        { width: 1920, height: 800 },
+        { width: 800, height: 1000 },
+        { width: 1440, height: 900 },
+    ]) {
+        await page.setViewportSize(viewport);
+        await checkPresentation(page);
+    }
+    await page.screenshot({ path: resolve(output, 'letterboxed-game.png') });
+    await page.keyboard.press('Alt+Enter');
+    await page.waitForFunction(() => !!document.fullscreenElement);
+    await checkPresentation(page);
+    await page.keyboard.press('Alt+Enter');
+    await page.waitForFunction(() => !document.fullscreenElement);
+    await page.keyboard.press('F2');
+    if (!reduced) {
+        const corners = await page.evaluate(() => globalThis.roomFinalCorners);
+        assert.equal(corners?.length, 4, 'TV endpoint was not observed');
+        const edges = corners.flatMap(([x, y]) => [Math.abs(x), Math.abs(y)]);
+        assert.ok(
+            edges.every((edge) => edge <= 1.00001),
+            'TV screen cropped at the flight endpoint',
+        );
+        assert.ok(Math.abs(Math.max(...edges) - 1) < 0.00001, 'TV does not meet a canvas edge');
+    }
     assert.ok(
         await roomCanvas.evaluate((element) => element.getContext('webgl2').isContextLost()),
         'Room GPU context survived handoff',

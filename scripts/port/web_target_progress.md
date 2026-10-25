@@ -499,10 +499,27 @@ F2 entry. Opening controls pauses/releases gameplay; closing requires Resume.
 **Next action:** Preserve these canvas/storage boundaries in future room work.
 WEB-010 records the final publication and update-preservation evidence.
 
+**Framing refinement:** `presentation.ts` now fits the actual native framebuffer
+to a centered black game stage in viewport, controls and fullscreen. Resizing
+does not alter the buffer or mouse-coordinate bounds. DOM/native-game audits
+cover wide and portrait windows, fullscreen and F2 toggles. The canvas is removed
+from layout flow and size writes are deferred/deduplicated after WebKit exposed
+resize-observer feedback in the initial implementation.
+
 ## WEB-008 | 2026-10-24 | Room scene and assets
 
-**Status:** Complete for the desktop preview's original prop models. Initial box
-stand-ins have been replaced and the refined scene/cinematic visually reviewed.
+**Status:** Published baseline complete; the requested licensed console/controller
+replacements are implemented and visually verified locally. Publication is WEB-010.
+
+**Requested refinement:** `codex/room-models-and-framing` vendors Swayne's CC BY
+4.0 console and Marshle's CC BY 4.0 controller. `MODELS.md` records pinned public
+redistributions, original attribution, source/output hashes and modifications.
+The deterministic preparation script keeps only the console, isolates its actual
+power switch, preserves normalized vertex colors and packages the controller's
+unchanged mesh/normals/UVs/PNG. Regeneration twice reproduces the same outputs:
+203,896-byte console and 1,204,348-byte controller. These supersede the procedural
+console/controller, retain original cables/LED and ship no unrelated cartridge.
+Final room/returning/insertion captures were reviewed in `build/web-room/framing-*`.
 
 **Completion:** Visually reviewed room/CRT/console/cartridge, hover/click targets,
 candidate asset inspection and attribution with explicit stand-in tracking.
@@ -518,10 +535,10 @@ replaces the text-only label with their supplied 1000x1000 AVIF. Its unchanged
 68,421 bytes, SHA-256, label UV rectangle and separate artwork notice are in
 `web/src/room/ARTWORK.md`. Build verification checks the exact public image.
 
-**Next action:** Preserve the original-model/asset provenance. The authenticated
+**Next action:** Preserve the licensed-model/asset provenance. The authenticated
 candidate remains an optional future replacement, not a preview dependency.
 
-**Continuation:** The desktop preview ships refined original procedural props.
+**Continuation:** The first desktop preview shipped refined original procedural props.
 The completed pass adds shaped console/cartridge bodies, detailed controls,
 glass/screen effects and room materials, reviewed in the complete insertion/TV
 sequence. This is an original reconstruction, not the Joseph Rohm candidate.
@@ -530,13 +547,27 @@ recessed ports/vents/switches, a three-prong controller, curved physical CRT gla
 native screen shaders and deterministic surface grain/reflection lighting.
 The supplied label remains unchanged. Windows WebKit's AVIF decoder failure
 motivated a lossless PNG retry: 588,603 bytes, identical decoded RGBA data,
-separately hashed/allowlisted and documented in ARTWORK.md. No candidate model,
-ROM-extracted asset or local diagnostic capture is shipped.
+separately hashed/allowlisted and documented in ARTWORK.md. Neither earlier
+candidate, ROM-extracted assets nor local diagnostic captures were shipped.
 
 ## WEB-009 | 2026-10-24 | Cartridge onboarding and game handoff
 
 **Status:** Desktop interaction/handoff acceptance complete. Edge, Chrome and
 Linux Firefox pass; published-site acceptance is recorded in WEB-010.
+
+**Requested refinement:** Background dragging now pivots the floating cartridge,
+with bounded pitch, pointer capture/cancellation and suppression of the release
+click. Direct cartridge selection remains intact; a browser regression ends a
+background drag over the cartridge without opening its dialog. Insertion eases
+manual tilt/yaw into alignment; returning users still click the physical switch.
+The camera endpoint now derives from the screen dimensions, aspect and field of
+view. Four unit-tested ratios and actual production-scene landscape/portrait
+captures contain every screen corner, with one axis flush and no overshoot.
+The actual-ROM audit checks projected corners before GPU teardown, then normal
+Dam/audio/P watch/focus/capture, native canvas sizing, reload and switch startup.
+Evidence: `framing-final-game`, `framing-final-ui` and `framing-firefox-game`.
+Chrome also passes actual reduced-motion handoff/reload/power startup with the
+licensed props and native sizing checks in `framing-reduced-game`.
 
 **Completion:** First/repeat ROM flows, insertion/power/flight, loading/errors and
 actual-game handoff with audio, capture/watch and durable saves.
@@ -573,6 +604,20 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 **Status:** Desktop compatibility, packaging and Pages publication pass. Actual
 Safari remains explicitly experimental.
+
+**Requested refinement:** Local acceptance passes with 104 unit tests, strict
+TypeScript, assembly/allowlist and deterministic model regeneration. The model
+GLBs are exact size/hash additions with embedded resources only; third-party
+notices include complete credits/change records. Edge, Chrome, Windows WebKit
+and Linux Firefox pass room/drag/framing/fallback checks; Edge and Linux Firefox
+pass actual-ROM handoff, proportionate viewport/fullscreen/control sizing,
+durable reload and physical switch startup. Edge also passes normal Dam movement,
+P watch and capture/focus after the cinematic. Existing Edge launcher backup/
+quota/tab-lock checks pass. Private evidence is `build/web-room/framing-*`.
+An idle Edge sample shows 38 draws/30,500 triangles and about 28 fps at full scale;
+this remains software-host evidence. The launcher is about 100 kB JS (36 kB gzip),
+the lazy scene 668 kB (172 kB gzip), plus 1,408,244 bytes of model GLBs. Vite's
+scene-size advisory remains. Final CI/publication acceptance follows.
 
 **Completion:** Keyboard/reduced-motion/responsive/failure paths, production
 allowlist and browser verification, measured scene cost and verified deployment.

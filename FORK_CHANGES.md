@@ -1233,6 +1233,11 @@ syntax validation passed. No game rebuild or render regeneration was needed.
 **Status:** Refined desktop room and cinematic are implemented, verified and
 published on GitHub Pages. Safari remains experimental.
 
+The requested follow-up on `codex/room-models-and-framing` adds licensed console/
+controller replacements, background-drag cartridge pivoting, proportional game
+presentation and a screen-fitted TV-flight endpoint. Local verification is
+recorded below; final publication acceptance is tracked in WEB-010.
+
 The user requested a canvas-only initial experience with realistic room props,
 a CRT, rotating cartridge ROM selection and an animated insertion/power/TV
 transition. Returning users have an inserted cartridge and click the power switch.
@@ -1245,19 +1250,19 @@ chrome override persist scope for later sessions. Candidate models are tracked
 with their licenses; the console download currently requires authentication.
 
 `web/src/room/` now contains a pinned Three.js scene and pure transition module.
-The full-window entrypoint shows an original procedural CRT, console, cables and
-cartridge, with a blue signal screen, wood floor, illumination, hover targets,
+The full-window entrypoint shows an original CRT, cables and cartridge with
+licensed console/controller models, a blue signal screen, wood floor, hover targets,
 insertion, red power switch/LED and TV camera flight. F2 reveals the retained
 Solid launcher without remounting the game canvas; Alt+Enter requests fullscreen
 on the shared container. Errors/save failures reopen controls. Room rendering
 pauses while hidden or covered and is disposed after game graphics begin.
 Reduced motion suppresses idle movement/flicker and substitutes a short fade.
-The initial `props.ts` box stand-ins are superseded by original shaped prop
-modules: `console.ts`, `cartridge.ts`, `controller.ts` and `television.ts`.
-Recessed ports/switches/vents, shell profiles, curved reflective CRT glass and
-deterministic material grain improve fidelity without downloading the candidate
-models. The authenticated console candidate is optional; these are original
-reconstructions for the preview, not scans/exact industrial replicas. Native
+The initial `props.ts` box stand-ins were superseded by shaped prop modules.
+The procedural console/controller are now replaced by Swayne's console and
+Marshle's controller, both CC BY 4.0. `models.ts` loads only local, self-contained
+GLBs; `console.ts` retains the physical switch/LED and original cables, while
+`controller.ts` uniformly fits the controller. The CRT/cartridge remain original.
+The Joseph Rohm candidate remains optional and is not claimed as shipped. Native
 GLSL CRT effects include restrained tracking/noise, scanlines and a power-on
 phosphor line. Reduced motion disables those temporal effects. `cinematic.ts`
 aligns the cartridge over the slot before descent and eases the TV approach;
@@ -1272,13 +1277,41 @@ covers the modal-to-controls route rather than relying on cache timing.
 Sustained slow room frames reduce its pixel ratio to 75%, then 50%, with smaller
 shadows; isolated hitches and the game renderer/settings are unaffected.
 
+`pivot.ts` adds primary-pointer background dragging only for the floating
+cartridge. Direct cartridge selection remains clickable, six pixels distinguish
+dragging from clicking, pitch is bounded to 60 degrees and yaw follows horizontal
+movement. Pointer capture and cancellation handle leaving the canvas, lost focus,
+controls/dialogs and transitions; a completed drag cannot activate a prop.
+Manual tilt/yaw ease into slot alignment. Reduced motion permits direct dragging.
+`framing.ts` and `cinematic.ts` fit the camera to the 2.35-by-1.7 screen and 42-degree
+field of view, face it head-on and contain all corners at the end of the flight.
+This replaces the fixed destination that approached too far into the screen.
+
+`presentation.ts`, `player.tsx` and the player/room styles replace viewport
+stretching with a centered canvas fitted to the actual framebuffer ratio.
+Black bars fill the remaining space in viewport, controls and fullscreen; buffer
+resolution is unchanged and mouse mapping uses the same visible element bounds.
+Native resolution changes are observed. Absolute positioning and deferred,
+deduplicated size writes avoid WebKit resize-observer feedback.
+
+`tools/prepare-room-models.mjs` verifies pinned acquisition hashes and regenerates
+the console-only GLB (203,896 bytes) and controller GLB (1,204,348 bytes).
+`tools/model-geometry.mjs` preserves normalized vertex attributes when isolating
+the console's existing switch; a regression prevents overbright packed colors.
+The controller retains its source mesh, normals, UVs and unchanged PNG. Both props
+are exact size/hash additions to `room-assets.ts`; `MODELS.md` records authors,
+CC BY links, redistribution sources, changes and output hashes. Site assembly
+includes that notice alongside the cartridge artwork notice. No external model
+or texture download occurs at runtime. GLB texture ImageBitmaps are closed at
+teardown, and model-load failures retain the standard launcher.
+
 The user's later artwork request supersedes the original text-only cartridge
 label. Their supplied AVIF is copied unchanged to
 `web/public/room/cartridge-art.avif`; UV cropping and a material mask select the
 printed label. [Artwork provenance](web/src/room/ARTWORK.md) records the source,
 size, hash and explicit user request. It is not ROM-extracted data. Site assembly
-includes Three.js/artwork notices, and `tools/room-assets.ts` adds only this named,
-size/hash-checked image to the exact publication allowlist. A lossless PNG copy
+includes Three.js/artwork notices, and `tools/room-assets.ts` records exact
+size/hash checks for the approved images and model GLBs. A lossless PNG copy
 with identical decoded pixels is also explicitly hashed/allowlisted for backends
 without AVIF decoding (observed in Windows WebKit); capable browsers use AVIF.
 A lazy scene chunk
@@ -1288,8 +1321,9 @@ validates the Vite chunk graph, with tests for traversal/non-code/dangling paths
 New ROM-free scene and private actual-ROM audits cover viewport/controls,
 selection, insertion/flight, cached-cartridge power startup and stable saves;
 the previous launcher audits now explicitly enter F2 controls. The Pages workflow
-also runs the room audit under the production project prefix. TypeScript, 94 unit
-tests, scoped formatting and assembly/allowlist pass. Edge and Chrome passed the
+also runs the room audit under the production project prefix. The first refined
+preview passed TypeScript, 94 unit tests, formatting and assembly/allowlist.
+Edge and Chrome passed the
 ROM-free room checks; Edge passed actual-ROM insertion/handoff/audio/reload/power
 startup. The retained launcher's full Dam audio/capture/focus/watch/campaign/profile/
 settings/backup regression passed in Edge. Private captures stay in build/.
@@ -1299,11 +1333,27 @@ release. The initial renderer had 307 draws/177,510 triangles; batching/reduced
 subdivision brought the tested scene to 86/52,710. An isolated Edge sample reached
 28 fps at the intentional 30 fps idle cap, with about 1.2 ms average JS render
 submission after warm-up; this is software-host evidence, not a hardware promise.
-The initial launcher is about 98 kB JS (35 kB gzip) plus a lazy 603 kB scene
+The first refined launcher was about 98 kB JS (35 kB gzip) plus a lazy 603 kB scene
 (154 kB gzip), versus the original single 654 kB bundle. Vite's scene-chunk size
 advisory remains visible. Native game/render source and ROM storage identity
 are unchanged. WEB-007 through WEB-010 record the completed preview acceptance
 and optional future hardware/Safari/model work.
+
+The licensed-model/framing follow-up passes 104 unit tests, TypeScript, exact
+artifact checks and repeatable model regeneration. Room/drag/framing/failure
+audits pass in Edge, Chrome, Windows WebKit and Linux Firefox; the actual-ROM
+handoff/reload/power audit passes Edge and Linux Firefox with native proportional
+sizing in wide/portrait windows, controls and fullscreen. Edge additionally
+verifies normal Dam movement/audio/P watch/focus/capture and the full viewport.
+The retained launcher's backup/quota/tab-lock audit passes. An idle Edge sample
+records 38 draws/30,500 triangles and about 28 fps at full scale. The current
+launcher is about 100 kB JS (36 kB gzip), the lazy scene 668 kB (172 kB gzip), plus
+1,408,244 bytes of model GLBs. These are local software-host measurements; the
+scene chunk still has Vite's size advisory. `room-framing-check.mjs` renders the
+actual production scene at the fitted endpoint in landscape and portrait;
+`presentation-check.mjs` checks actual canvas bounds/ratio/background. Captures
+and reports stay private in `build/web-room/framing-*`. No native render/gallery
+input or storage identity changed.
 
 PR #1 merged as `b38a21c`; the first main Pages run caught the remembered-ROM
 modal/F2 race and withheld deployment. Repair `08a07d8` passed all main workflows:

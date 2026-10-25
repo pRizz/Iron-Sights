@@ -1,8 +1,9 @@
-import { createMemo, createSignal, Show, type Accessor } from 'solid-js';
+import { createMemo, createSignal, onMount, onCleanup, Show, type Accessor } from 'solid-js';
 import { ShimmerButton } from 'mystic-ui';
 import type { Engine } from './engine';
 import type { RomManager } from './rom-manager';
 import type { Capture } from './capture';
+import { observeGameSize } from './presentation';
 
 type PlayerProps = {
     engine: Engine;
@@ -21,6 +22,8 @@ export function Player(props: PlayerProps) {
     const { engine, rom, capture, started, ready } = props;
     const [dragging, setDragging] = createSignal(false);
     let canvas!: HTMLCanvasElement;
+    let stage!: HTMLDivElement;
+    onMount(() => onCleanup(observeGameSize(canvas, stage)));
     const maybeError = createMemo(() => {
         const value = engine.status();
         return value.kind === 'error' ? value : undefined;
@@ -68,6 +71,7 @@ export function Player(props: PlayerProps) {
                 </button>
             </div>
             <div
+                ref={stage}
                 class="game-stage"
                 classList={{ dragging: dragging() }}
                 onDragOver={(event) => {

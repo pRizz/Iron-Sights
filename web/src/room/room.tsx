@@ -4,6 +4,7 @@ import type { RomManager } from '../rom-manager';
 import { advanceRoom, roomAction, type RoomFlow } from './flow';
 import type { createRoomScene, RoomTarget } from './scene';
 import { RomDialog } from './rom-dialog';
+import { bindCartridgeDrag } from './pivot';
 
 type Props = {
     engine: Engine;
@@ -25,9 +26,11 @@ export function Room(props: Props) {
     const [selecting, setSelecting] = createSignal(false);
     const [dragging, setDragging] = createSignal(false);
     const [revealing, setRevealing] = createSignal(false);
+    const [pivoting, setPivoting] = createSignal(false);
     let canvas!: HTMLCanvasElement;
     let dialog!: HTMLDialogElement;
-    let maybeScene: ReturnType<typeof createRoomScene> | undefined;
+    let maybeScene: Awaited<ReturnType<typeof createRoomScene>> | undefined;
+    let maybeDrag: ReturnType<typeof bindCartridgeDrag> | undefined;
     let entering = false;
     let disposed = false;
     let maybeReportedError: string | undefined;
@@ -46,6 +49,7 @@ export function Room(props: Props) {
         return 'Starting GoldenEye';
     };
     createEffect(() => {
+        if (props.controls() || flow().phase !== 'empty' || selecting()) maybeDrag?.cancel();
         if (props.controls() && dialog?.open) dialog.close();
         const status = props.rom.status();
         if (status.kind !== 'error') maybeReportedError = undefined;
@@ -95,6 +99,16 @@ export function Room(props: Props) {
     }
 
     onMount(() => {
+        maybeDrag = bindCartridgeDrag(canvas, {
+            enabled: () =>
+                flow().phase === 'empty' && !props.controls() && !selecting() && !dialog.open,
+            hitCartridge: (x, y) => maybeScene?.hit(x, y) === 'cartridge',
+            pivot: (dx, dy) => maybeScene?.pivot(dx, dy),
+            active: (active) => {
+                setPivoting(active);
+                maybeScene?.dragging(active);
+            },
+        });
         const motion = matchMedia('(prefers-reduced-motion: reduce)');
         let frame = 0;
         let previous = performance.now();
@@ -147,6 +161,7 @@ export function Room(props: Props) {
             disposed = true;
             cancelAnimationFrame(frame);
             clearTimeout(maybeRevealTimer);
+            maybeDrag?.dispose();
             canvas.removeEventListener('webglcontextlost', contextLost);
             maybeScene?.dispose();
             maybeScene = undefined;
@@ -155,13 +170,18 @@ export function Room(props: Props) {
             if (loadingScene || maybeScene || disposed) return;
             loadingScene = true;
             void import('./scene')
-                .then((module) => {
+                .then(async (module) => {
                     if (disposed) return;
                     if (props.controls()) {
                         loadingScene = false;
                         return;
                     }
-                    maybeScene = module.createRoomScene(canvas);
+                    const scene = await module.createRoomScene(canvas);
+                    if (disposed) {
+                        scene.dispose();
+                        return;
+                    }
+                    maybeScene = scene;
                     canvas.dataset.roomState = 'ready';
                     previous = performance.now();
                     frame = requestAnimationFrame(render);
@@ -215,8 +235,12 @@ export function Room(props: Props) {
                 ref={canvas}
                 class="room-canvas"
                 aria-label="A CRT television, Nintendo 64 console and GoldenEye cartridge in a dark room"
-                style={{ cursor: hovered() ? 'pointer' : 'default' }}
+                style={{ cursor: pivoting() ? 'grabbing' : hovered() ? 'pointer' : 'default' }}
                 onPointerMove={(event) => {
+                    if (pivoting()) {
+                        setHovered('');
+                        return;
+                    }
                     const maybeTarget = maybeScene?.hit(event.clientX, event.clientY);
                     setHovered(maybeTarget === 'controls' || idle() ? (maybeTarget ?? '') : '');
                 }}

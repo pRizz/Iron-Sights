@@ -25,6 +25,7 @@ const types = {
     '.txt': 'text/plain',
     '.avif': 'image/avif',
     '.png': 'image/png',
+    '.glb': 'model/gltf-binary',
 };
 const server = createServer(async (request, response) => {
     try {

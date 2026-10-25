@@ -41,11 +41,6 @@
     height: 100dvh;
     aspect-ratio: auto;
 }
-.experience:not(.controls-open) #canvas {
-    width: 100%;
-    height: 100%;
-    aspect-ratio: auto;
-}
 .controls-open {
     overflow: auto;
     background: #121511;

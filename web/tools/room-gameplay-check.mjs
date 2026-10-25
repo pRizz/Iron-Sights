@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import { readAudio } from './audio-observer.mjs';
+import { checkPresentation } from './presentation-check.mjs';
 
 export async function checkRoomGameplay(page, context, output) {
     for (let step = 0; step < 7; step++) {
@@ -25,6 +26,12 @@ export async function checkRoomGameplay(page, context, output) {
     await page.keyboard.press('w', { delay: 250 });
     await page.screenshot({ path: resolve(output, 'dam.png') });
     const audio = await page.evaluate(readAudio);
+    await page.keyboard.press('F2');
+    await checkPresentation(page);
+    await page.screenshot({ path: resolve(output, 'dam-viewport.png') });
+    await page.keyboard.press('F2');
+    await page.getByRole('button', { name: 'Resume game' }).click();
+    await page.waitForFunction(() => !!document.pointerLockElement);
     await page.keyboard.press('p', { delay: 120 });
     await page.waitForFunction(() => !document.pointerLockElement);
     await page.waitForTimeout(1000);

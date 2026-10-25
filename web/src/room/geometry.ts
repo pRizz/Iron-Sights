@@ -63,7 +63,11 @@ export function disposeScene(scene: THREE.Scene): void {
     });
     for (const geometry of geometries) geometry.dispose();
     for (const material of materials) material.dispose();
-    for (const texture of textures) texture.dispose();
+    for (const texture of textures) {
+        texture.dispose();
+        if (typeof ImageBitmap !== 'undefined' && texture.image instanceof ImageBitmap)
+            texture.image.close();
+    }
     scene.traverse((object) => {
         if (object instanceof THREE.Light) object.dispose();
     });

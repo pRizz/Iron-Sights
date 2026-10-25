@@ -7,17 +7,19 @@ introductory scene. The game canvas remains mounted across both presentations.
 
 ## Current prop provenance
 
-`geometry.ts`, the named prop modules and `scene.ts` create original procedural geometry,
-materials, cable curves, wood grain and the CRT signal. The cartridge now uses
+`geometry.ts`, the cartridge/TV modules and `scene.ts` create original geometry,
+materials, cable curves, wood grain and the CRT signal. The cartridge uses
 the [user-supplied label image](ARTWORK.md), mapped directly from the unchanged
 product photograph. No assets are extracted from the ROM.
-The first box stand-ins have been replaced by original shaped shells, recessed
-ports/controls, cartridge bevels, a three-prong controller, curved CRT glass and
-procedural surface detail. These are the desktop preview's original prop models,
-not scans or the downloaded candidate models, and do not claim exact industrial
-dimensions. Their construction stays reproducible in source.
-Their source follows the repository license. Three.js is MIT licensed; assembly
-includes its installed LICENSE in THIRD_PARTY_NOTICES.txt.
+The original procedural console/controller are superseded by Swayne's console
+and Marshle's controller, both CC BY 4.0. [Model provenance](MODELS.md) records
+their pinned redistribution sources, original author/license links, modifications,
+source/output hashes and reproducible preparation command. The existing console
+switch is isolated for animation; the controller retains its mesh, normals, UVs
+and unchanged embedded PNG. Runtime downloads use only the site's local GLBs.
+The CRT and cartridge remain original models with reproducible source geometry.
+Three.js is MIT licensed; assembly includes its LICENSE and the complete model
+attribution/change notice in THIRD_PARTY_NOTICES.txt.
 
 The approved Joseph Rohm console candidate's official Sketchfab download endpoint
 returns HTTP 401 without authentication. It remains an optional alternative; no
@@ -41,12 +43,18 @@ requested label artwork. The earlier text-only placeholder is superseded.
 
 - `flow.ts`: pure action/timing decisions; no DOM, ROM bytes or storage.
 - `scene.ts`: scene lighting, rendering, CRT painting, raycasting and teardown.
-- `console.ts`, `cartridge.ts`, `controller.ts`, `television.ts`: prop geometry.
+- `models.ts`: asynchronous local GLB loading, shadow setup and failed-load cleanup.
+- `console.ts`, `controller.ts`: licensed-model placement and switch/LED/cable setup.
+- `cartridge.ts`, `television.ts`: original prop geometry.
 - `materials.ts`, `environment.ts`: deterministic grain/bump detail, wood, room
   lighting and a generated low-resolution reflection environment.
 - `crt.*.glsl`: rounded phosphor screen, scanlines/noise/tracking and cold-power
   effect; reduced motion disables flicker/noise/boot flashing.
-- `cinematic.ts`: tested alignment/descent and eased camera path.
+- `cinematic.ts`, `framing.ts`: tested alignment/descent and a screen-fitted camera
+  endpoint. The final view faces the glass head-on and contains all screen corners;
+  one axis reaches the viewport edge and differing aspect ratios are not cropped.
+- `pivot.ts`: background-pointer drag capture, bounded tilt/yaw, click suppression
+  and cancellation; direct cartridge clicks keep the ROM dialog interaction.
 - `batch.ts`: tested opaque static batching; interactive parts, glass and the
   emissive LED stay independent. The flat `props.ts` prototype is removed.
 - `room.tsx`: browser gestures, ROM dialog and runtime handoff orchestration.
@@ -68,6 +76,14 @@ frame intervals above 80 ms; fast intervals reduce the slow-frame score and
 isolated compilation hitches do not trigger it.
 At reduced room quality the shadow map is 512 pixels. The game canvas/settings
 are untouched. Original AVIF artwork retries the lossless PNG when unsupported.
+
+`../presentation.ts` observes the game stage and actual framebuffer dimensions.
+It centers a proportionally fitted canvas against black bars without changing
+buffer resolution; mouse coordinates use that same visible element rectangle.
+This applies to viewport, retained controls and fullscreen, including native
+resolution changes. Background dragging affects only the floating cartridge;
+insertion eases its manual tilt/yaw back into alignment. Reduced motion disables
+automatic spin but still permits deliberate direct dragging.
 
 Room construction/context failure opens the retained standard launcher. F2 never
 automatically recaptures the mouse after closing controls; Resume remains a
@@ -97,3 +113,9 @@ normal-menu Dam, movement, P watch and focus/capture recovery after the cinemati
 `MIDAS_REDUCED_MOTION=1` verifies the short fade path with the actual ROM.
 `tools/linux-game-audit.sh` accepts an optional `room` or `ui` audit mode for the
 isolated Firefox/Xvfb/PulseAudio host described in the compatibility runbook.
+
+The ROM-free audit also covers background pivoting, click/drag separation,
+letterboxing and failed model loads. `room-framing-check.mjs` renders the actual
+production scene at its endpoint in landscape and portrait for projected-corner
+assertions and private visual captures. The actual-game audit checks native
+framebuffer sizing through controls, wide/portrait viewport changes and fullscreen.

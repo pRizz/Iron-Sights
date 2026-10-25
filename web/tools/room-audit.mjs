@@ -4,6 +4,8 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect } from '@playwright/test';
 import { launchAuditBrowser } from './browser-choice.mjs';
+import { checkPresentation } from './presentation-check.mjs';
+import { checkRoomFraming } from './room-framing-check.mjs';
 
 const origin = process.argv[2] || 'http://127.0.0.1:4176';
 const output = resolve(process.env.MIDAS_AUDIT_OUTPUT || '../build/web-room/audit');
@@ -69,11 +71,44 @@ try {
     assert.equal(bounds.width, 1440);
     assert.equal(bounds.height, 900);
     await page.screenshot({ path: resolve(output, 'room.png') });
+    await checkPresentation(page);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.waitForTimeout(100);
+    const initialPitch = Number(await page.locator('.room-canvas').getAttribute('data-room-pitch'));
+    const initialYaw = Number(await page.locator('.room-canvas').getAttribute('data-room-yaw'));
+    await page.mouse.move(100, 700);
+    await page.mouse.down();
+    // End over the cartridge: releasing a background drag must not choose a ROM.
+    await page.mouse.move(550, 460, { steps: 10 });
+    await expect(page.locator('.room-canvas')).toHaveCSS('cursor', 'grabbing');
+    await page.mouse.up();
+    await page.waitForTimeout(100);
+    assert.ok(
+        Number(await page.locator('.room-canvas').getAttribute('data-room-pitch')) <
+            initialPitch - 0.1,
+    );
+    assert.ok(
+        Number(await page.locator('.room-canvas').getAttribute('data-room-yaw')) > initialYaw + 1,
+    );
+    await expect(page.locator('.rom-dialog')).toBeHidden();
+    await page.screenshot({ path: resolve(output, 'pivot.png') });
+    await page.mouse.move(1100, 100);
+    await page.mouse.down();
+    await page.mouse.move(650, 340, { steps: 10 });
+    await page.mouse.up();
+    await page.waitForTimeout(100);
+    assert.ok(
+        Math.abs(
+            Number(await page.locator('.room-canvas').getAttribute('data-room-pitch')) -
+                initialPitch,
+        ) < 0.001,
+    );
     await page.mouse.move(550, 460);
     await expect(page.locator('.room-canvas')).toHaveCSS('cursor', 'pointer');
     await page.mouse.click(550, 460);
     await expect(page.getByRole('dialog', { name: 'Insert your GoldenEye ROM' })).toBeVisible();
     await page.getByRole('button', { name: 'Back to the room' }).click();
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
     const cartridge = page.getByRole('button', { name: 'Insert GoldenEye cartridge' });
     await cartridge.focus();
     await page.keyboard.press('Enter');
@@ -113,10 +148,12 @@ try {
     await page.evaluate(() => globalThis.restoreFullscreenRequest());
     await page.keyboard.press('Alt+Enter');
     await page.waitForFunction(() => !!document.fullscreenElement);
+    await checkPresentation(page);
     await page.keyboard.press('Alt+Enter');
     await page.waitForFunction(() => !document.fullscreenElement);
     await page.setViewportSize({ width: 800, height: 1000 });
     await page.waitForTimeout(500);
+    await checkPresentation(page);
     await page.screenshot({ path: resolve(output, 'portrait-room.png') });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.waitForTimeout(500);
@@ -149,6 +186,14 @@ try {
         { timeout: 60_000 },
     );
     await imageFallbackContext.close();
+    const modelFallbackContext = await browser.newContext();
+    const modelFallback = await modelFallbackContext.newPage();
+    await modelFallback.route('**/room/controller.glb', (route) => route.abort());
+    await modelFallback.goto(origin);
+    await expect(modelFallback.locator('.site-header')).toBeVisible({ timeout: 60_000 });
+    await expect(modelFallback.locator('.controls-close')).toBeDisabled();
+    await modelFallbackContext.close();
+    await checkRoomFraming(browser, origin, output);
 } finally {
     await browser.close();
 }

@@ -24,6 +24,7 @@ const notices = [
     ['SolidJS', '../node_modules/solid-js/LICENSE'],
     ['Three.js', '../node_modules/three/LICENSE'],
     ['User-supplied cartridge label artwork', '../src/room/ARTWORK.md'],
+    ['Licensed room console and controller models', '../src/room/MODELS.md'],
     ['MysticUI', '../node_modules/mystic-ui/LICENSE.md'],
     ['clsx', '../node_modules/clsx/license'],
     ['tailwind-merge', '../node_modules/tailwind-merge/LICENSE.md'],

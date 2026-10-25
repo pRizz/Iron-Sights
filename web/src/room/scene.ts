@@ -4,11 +4,14 @@ import { createConsole } from './console';
 import { createCartridge } from './cartridge';
 import { createTelevision } from './television';
 import { furnishRoom } from './environment';
-import { cameraPose, insertionPose } from './cinematic';
+import { cameraPose, insertionPose, smooth } from './cinematic';
 import { createController } from './controller';
 import { batchStaticProps } from './batch';
 import { advanceQuality } from './quality';
 import { easeOut, roomDuration, type RoomFlow } from './flow';
+import { ROOM_FOV, TV_SCREEN } from './framing';
+import { pivotRotation } from './pivot';
+import { loadRoomModels } from './models';
 
 export type RoomTarget = 'cartridge' | 'power' | 'controls';
 
@@ -37,41 +40,50 @@ function paintScreen(
     tv.texture.needsUpdate = true;
 }
 
-export function createRoomScene(canvas: HTMLCanvasElement) {
-    const renderer = new THREE.WebGLRenderer({
-        canvas,
-        antialias: true,
-        powerPreference: 'low-power',
-    });
+export async function createRoomScene(canvas: HTMLCanvasElement) {
+    const models = await loadRoomModels();
+    const scene = new THREE.Scene();
+    scene.add(models.console, models.controller);
+    let maybeRenderer: THREE.WebGLRenderer | undefined;
     try {
-        return initializeScene(canvas, renderer);
+        maybeRenderer = new THREE.WebGLRenderer({
+            canvas,
+            antialias: true,
+            powerPreference: 'low-power',
+        });
+        return initializeScene(canvas, maybeRenderer, scene, models);
     } catch (error) {
-        renderer.dispose();
-        renderer.forceContextLoss();
+        disposeScene(scene);
+        maybeRenderer?.dispose();
+        maybeRenderer?.forceContextLoss();
         throw error;
     }
 }
 
-function initializeScene(canvas: HTMLCanvasElement, renderer: THREE.WebGLRenderer) {
+function initializeScene(
+    canvas: HTMLCanvasElement,
+    renderer: THREE.WebGLRenderer,
+    scene: THREE.Scene,
+    models: Awaited<ReturnType<typeof loadRoomModels>>,
+) {
     renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.1;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.shadowMap.autoUpdate = false;
-    const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x080a0e);
     scene.fog = new THREE.FogExp2(0x080a0e, 0.065);
-    const camera = new THREE.PerspectiveCamera(42, 1, 0.05, 35);
+    const camera = new THREE.PerspectiveCamera(ROOM_FOV, 1, 0.05, 35);
     const disposeEnvironment = furnishRoom(scene, renderer);
-    const consoleProp = createConsole(scene);
-    createController(scene);
+    const consoleProp = createConsole(scene, models.console);
+    createController(scene, models.controller);
     const cartridge = createCartridge(scene);
     const tv = createTelevision(scene);
     // Larger invisible hit surfaces retain the physical switches' visual size.
     const hitMaterial = new THREE.MeshBasicMaterial({ visible: false });
-    const powerHit = box(consoleProp.group, [0.4, 0.16, 0.35], [-0.57, 0.35, 0.28], hitMaterial);
+    const powerHit = consoleProp.powerHit;
     powerHit.name = 'power';
     const controlsHit = box(tv.knob, [0.2, 0.2, 0.2], [0, 0, 0], hitMaterial);
     controlsHit.name = 'controls';
@@ -83,6 +95,9 @@ function initializeScene(canvas: HTMLCanvasElement, renderer: THREE.WebGLRendere
     let lastScreen = -1;
     let idleAngle = 0.28;
     let insertionAngle = idleAngle;
+    let idlePitch = 0;
+    let insertionPitch = 0;
+    let dragging = false;
     let previousPhase = 'empty';
     let width = 0;
     let height = 0;
@@ -125,19 +140,19 @@ function initializeScene(canvas: HTMLCanvasElement, renderer: THREE.WebGLRendere
             camera.updateProjectionMatrix();
         }
         if (state.phase === 'empty') {
-            if (!reduced) idleAngle += delta * 0.3;
+            if (!reduced && !dragging) idleAngle += delta * 0.3;
             cartridge.position.copy(floating);
             cartridge.position.y += reduced ? 0 : Math.sin(seconds * 1.4) * 0.035;
-            cartridge.rotation.set(0, idleAngle, 0);
+            cartridge.rotation.set(idlePitch, idleAngle, 0);
         } else if (state.phase === 'inserting') {
-            if (previousPhase !== 'inserting')
+            if (previousPhase !== 'inserting') {
                 insertionAngle = Math.atan2(Math.sin(idleAngle), Math.cos(idleAngle));
-            const pose = insertionPose(
-                state.elapsed / roomDuration('inserting', reduced),
-                insertionAngle,
-            );
+                insertionPitch = idlePitch;
+            }
+            const progress = state.elapsed / roomDuration('inserting', reduced);
+            const pose = insertionPose(progress, insertionAngle);
             cartridge.position.set(...pose.position);
-            cartridge.rotation.set(0, pose.yaw, 0);
+            cartridge.rotation.set(insertionPitch * (1 - smooth(progress / 0.55)), pose.yaw, 0);
         } else {
             cartridge.position.copy(inserted);
             cartridge.rotation.set(0, 0, 0);
@@ -149,7 +164,7 @@ function initializeScene(canvas: HTMLCanvasElement, renderer: THREE.WebGLRendere
                 : powered
                   ? 1
                   : 0;
-        consoleProp.power.position.z = 0.28 - powerProgress * 0.07;
+        consoleProp.setPower(powerProgress);
         consoleProp.ledMaterial.emissiveIntensity = powered ? 2 : 0;
         tv.glow.intensity = 12 + (reduced ? 0 : Math.sin(seconds * 23) * 0.12);
         tv.signal.uniforms.time.value = reduced ? 0 : seconds;
@@ -164,6 +179,24 @@ function initializeScene(canvas: HTMLCanvasElement, renderer: THREE.WebGLRendere
         const pose = cameraPose(reduced ? 0 : flight, camera.aspect);
         camera.position.set(...pose.position);
         camera.lookAt(...pose.look);
+        camera.updateMatrixWorld();
+        if (flight >= 1 && !reduced) {
+            const corners = [-1, 1].flatMap((x) =>
+                [-1, 1].map((y) =>
+                    new THREE.Vector3(...TV_SCREEN.center)
+                        .add(
+                            new THREE.Vector3(
+                                (x * TV_SCREEN.width) / 2,
+                                (y * TV_SCREEN.height) / 2,
+                                0,
+                            ),
+                        )
+                        .project(camera)
+                        .toArray(),
+                ),
+            );
+            canvas.dataset.roomScreenCorners = JSON.stringify(corners);
+        }
         if (seconds - lastScreen > 1 / 15 || previousPhase !== state.phase) {
             paintScreen(tv, seconds, label, powered, reduced);
             lastScreen = seconds;
@@ -184,6 +217,8 @@ function initializeScene(canvas: HTMLCanvasElement, renderer: THREE.WebGLRendere
         canvas.dataset.roomDrawCalls = String(renderer.info.render.calls);
         canvas.dataset.roomTriangles = String(renderer.info.render.triangles);
         canvas.dataset.roomScale = String(quality.scale);
+        canvas.dataset.roomYaw = String(cartridge.rotation.y);
+        canvas.dataset.roomPitch = String(cartridge.rotation.x);
         previousPhase = state.phase;
     }
 
@@ -207,6 +242,21 @@ function initializeScene(canvas: HTMLCanvasElement, renderer: THREE.WebGLRendere
     return {
         render,
         hit,
+        dragging(active: boolean) {
+            dragging = active;
+        },
+        pivot(dx: number, dy: number) {
+            const rotation = pivotRotation(
+                idleAngle,
+                idlePitch,
+                dx,
+                dy,
+                Math.max(1, width),
+                Math.max(1, height),
+            );
+            idleAngle = rotation.yaw;
+            idlePitch = rotation.pitch;
+        },
         hover(target: RoomTarget | undefined) {
             for (const [object, active] of [
                 [cartridge, target === 'cartridge'],

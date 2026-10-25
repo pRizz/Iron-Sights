@@ -3,6 +3,7 @@ import { box, canvasTexture, plastic } from './geometry';
 import { lettering, texturedPlastic, woodMaterial } from './materials';
 import vertexShader from './crt.vert.glsl?raw';
 import fragmentShader from './crt.frag.glsl?raw';
+import { TV_SCREEN } from './framing';
 
 export function createTelevision(scene: THREE.Scene) {
     const tv = new THREE.Group();
@@ -14,11 +15,11 @@ export function createTelevision(scene: THREE.Scene) {
     box(tv, [2.77, 2.01, 0.13], [0, 0.01, 0.57], bezel, 0.06);
     box(tv, [2.61, 1.88, 0.08], [-0.06, 0.05, 0.65], plastic(0x252923), 0.03);
     const screen = canvasTexture(640, 480);
-    const geometry = new THREE.PlaneGeometry(2.35, 1.7, 40, 32);
+    const geometry = new THREE.PlaneGeometry(TV_SCREEN.width, TV_SCREEN.height, 40, 32);
     const positions = geometry.attributes.position;
     for (let index = 0; index < positions.count; index++) {
-        const x = positions.getX(index) / 1.175;
-        const y = positions.getY(index) / 0.85;
+        const x = positions.getX(index) / (TV_SCREEN.width / 2);
+        const y = positions.getY(index) / (TV_SCREEN.height / 2);
         positions.setZ(index, 0.13 * (1 - x * x) * (1 - y * y));
     }
     geometry.computeVertexNormals();

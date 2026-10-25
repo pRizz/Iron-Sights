@@ -7,8 +7,14 @@ Track implementation in WEB-007 through WEB-010 of
 
 WEB-007 through WEB-010 are complete for the published desktop preview. The
 tracker records clean-source CI, actual published gameplay and save preservation
-across deployment. Actual Safari, hardware-GPU measurements and optional future
-candidate-model replacements remain outside this preview's completed acceptance.
+across deployment. Actual Safari and hardware-GPU measurements remain outside
+this preview's completed acceptance.
+
+The accepted follow-up replaces the procedural console/controller with
+permissively licensed, attributed third-party models, adds background-drag
+cartridge pivoting while it floats, preserves the game's native canvas aspect
+ratio with black bars, and fits the TV-flight endpoint to its visible screen.
+Track these additions in the existing WEB-007 through WEB-010 blocks.
 
 ## Experience and decisions
 
@@ -22,10 +28,19 @@ candidate-model replacements remain outside this preview's completed acceptance.
   and slowly turns around its vertical axis (a turntable spin, not a roll).
   Hover changes the cursor and highlights the interactive prop. Clicking opens
   a ROM dialog with drop and file-picker paths; dropping onto the room also works.
+- Primary-pointer dragging that starts off the cartridge pivots the floating
+  prop, with bounded vertical tilt. Direct cartridge clicks retain ROM selection;
+  drag release must never activate an underlying prop. Insertion eases manual
+  rotation back into alignment. Do not pivot an inserted cartridge or steal input
+  during transitions, dialogs or gameplay. Deliberate dragging works with reduced
+  motion while automatic rotation stays disabled.
 - Validate through the existing ROM parser. Reject invalid files without
   inserting the cartridge. A valid selection aligns and inserts it with eased
   settling, moves the power switch and illuminates a red LED. Then fly into the
   TV and hand off to the game when the runtime is ready.
+  Finish facing the screen head-on at a distance calculated from its dimensions,
+  viewport aspect and camera field of view. Contain every screen corner and fit
+  one axis flush; aspect differences must not crop or stretch the glass.
 - Returning players see the cartridge already inserted after cache validation.
   Clicking the console power switch starts a shorter power-on/TV transition.
   Never start automatically or request the ROM again while the cached one works.
@@ -35,6 +50,9 @@ candidate-model replacements remain outside this preview's completed acceptance.
 - Alt+Enter requests/exits browser fullscreen from the key gesture. The viewport
   fills the page independently of fullscreen permission. P retains the native
   watch binding; Escape keeps normal browser pointer/fullscreen release behavior.
+- Preserve the actual game framebuffer aspect ratio in viewport, controls and
+  fullscreen. Center the canvas against black letterbox/pillarbox bars, track
+  native resolution changes and keep visible bounds correct for mouse mapping.
 - Brief post-interaction hints explain F2, Alt+Enter and P. No initial HTML banner.
   Honor reduced motion with no idle spin/flicker and a short fade instead of flight.
   Errors and permission recovery may use accessible HTML dialogs/overlays.
@@ -56,6 +74,18 @@ is allowed if audio or Pointer Lock needs a fresh gesture. Fullscreen requests
 must happen inside the actual gesture, not after a multi-second animation.
 
 ## Assets and ownership
+
+Selected replacements for the procedural console/controller:
+
+- [Simple N64 model by Swayne](https://sketchfab.com/3d-models/simple-n64-model-a17efae58ebd4f1d8e7db0f5cf6f0023),
+  CC BY 4.0, selected console geometry with an isolated/red power switch.
+- [N64 Controller by Marshle](https://sketchfab.com/3d-models/n64-controller-8fb694b8c4bf4bbb8bc66f38503f4ffb),
+  CC BY 4.0, compact redistributed mesh and unchanged embedded base-color texture.
+
+These are independently authored hardware models, not official Nintendo files.
+[Model provenance](../../web/src/room/MODELS.md) records pinned public acquisition
+sources, original credits, transformations, hashes and regeneration. The earlier
+procedural console/controller are superseded; the original CRT/cartridge remain.
 
 Approved candidate references, subject to actual-file inspection:
 
@@ -79,8 +109,8 @@ If an approved model download requires login, record that dependency and use an
 explicitly documented original procedural stand-in to prove the interaction.
 Do not claim that the stand-in is the downloaded candidate or final prop art.
 
-The continuation refines the original reconstruction into the desktop preview's
-shipped props: shaped console/cartridge shells, detailed controls, a controller,
+The first continuation refined the original reconstruction into the preview's
+props: shaped console/cartridge shells, detailed controls, a controller,
 curved CRT glass and generated material grain. The authenticated candidate is an
 optional future replacement, not a release dependency. This choice avoids
 shipping the unsuitable flat-TV candidate and keeps all geometry reproducible;

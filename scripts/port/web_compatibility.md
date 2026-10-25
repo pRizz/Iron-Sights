@@ -15,6 +15,20 @@ cinematic and verifies movement, P watch and focus/capture recovery; Chrome
 passes the actual reduced-motion/fade route. The room GPU context is released
 after handoff, while the game canvas stays mounted.
 
+The licensed-console/controller follow-up retains those contracts. Edge and
+Linux Firefox pass actual-ROM insertion/handoff, the physical returning switch,
+save reload and proportional native-canvas sizing through wide/portrait windows,
+F2 controls and fullscreen. Edge also passes normal Dam movement/audio/watch/
+focus/capture and a reviewed full-viewport capture with black bars. Room UI checks
+in Edge/Chrome/Windows WebKit/Linux Firefox exercise background dragging, direct
+cartridge clicks, model-load failure and actual scene endpoint framing. The final
+camera contains every TV screen corner and fits one axis flush without cropping.
+The first fitting implementation exposed WebKit resize-observer feedback; the
+fixed absolute/deferred layout passes that runner without page errors. This is
+WebKit automation, not actual Safari acceptance. Evidence is private under
+`build/web-room/framing-*`; [model credits](../../web/src/room/MODELS.md) identify
+the independently authored CC BY 4.0 props and their public acquisition sources.
+
 Room-only audits pass in Edge, Chrome, Linux Firefox/Chromium and Windows
 WebKit, including viewport, file validation, F2 controls, fullscreen, portrait,
 reduced motion, context/chunk failure and forced PNG retry. This WebKit runner
