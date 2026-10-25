@@ -121,6 +121,20 @@ compilation. Startup and continued character simulation no longer trap.
 **Next action:** Continue WEB-003 game persistence and its launcher integration.
 Broader browser/mission and performance acceptance remains WEB-006.
 
+**2026-10-25 Enter/Start extension:** Enter/Return already had the browser Start
+binding, but the inherited Return-only watch suppression prevented its full
+Start behavior. Web builds now bypass that suppression through its existing
+platform hook; native builds retain the same rule. Saved bindings are not
+rewritten. Enter is excluded from mouse-recapture gestures like P, and the
+browser hints document Enter/P watch control. TypeScript and 138 unit tests pass;
+the private `audit:start` checks normal Enter menu navigation, Enter watch
+open/close, P interoperability, held-key edges, Alt+Enter isolation and HTML
+Resume activation without leaking Enter into the game. Chrome 155 and Edge 156
+pass that actual-ROM audit. Optimized Wasm/native Windows builds, native ADS
+regression and independent native gallery refresh pass with zero changed image
+cells. Private evidence is under `build/web-mouse`. Next action: retain these
+Start/menu/capture boundaries in future input changes.
+
 **Session notes:**
 
 - 2026-10-24 after `e3f7b5e`: implemented WebGL transparent-border sampling in

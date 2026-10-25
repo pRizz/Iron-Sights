@@ -91,6 +91,7 @@ function captureFixture(touch = false, pointerLock = true, browserRequests = '')
         requests,
         pauses,
         window,
+        canvas,
         lock,
         release: () => release(),
         deferCapture: () => {
@@ -233,6 +234,19 @@ test('terminal promise rejection still reports capture failure', async () => {
         expect(fixture.requests).toEqual([{ unadjustedMovement: true }]);
         expect(fixture.capture.state().kind).toBe('mouse-free');
         expect(fixture.capture.notice()).toContain('capture was refused');
+    } finally {
+        fixture.dispose();
+    }
+});
+
+test('Enter remains a native Start gesture instead of requesting mouse capture', () => {
+    const fixture = captureFixture();
+    try {
+        fixture.live(true);
+        fixture.step();
+        fixture.canvas.dispatchEvent(Object.assign(new Event('keydown'), { key: 'Enter' }));
+        expect(fixture.capture.state().kind).toBe('mouse-free');
+        expect(fixture.pauses).toEqual([]);
     } finally {
         fixture.dispose();
     }

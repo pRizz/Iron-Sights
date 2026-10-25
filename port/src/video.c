@@ -2000,10 +2000,14 @@ void portReturnStartTickConsume(void)
     sReturnStartPolled = 0;
 }
 
-/** 1 = some sample of this tick had START held by the Return key alone. */
+/** Native Return-only watch suppression. Web Enter acts as the full Start button. */
 s32 portReturnStartThisTick(void)
 {
+#ifdef __EMSCRIPTEN__
+    return 0;
+#else
     return sReturnStartTick;
+#endif
 }
 
 /* [controls] marker - this file has been through the one-time Move-stick

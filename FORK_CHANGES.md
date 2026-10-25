@@ -1708,7 +1708,17 @@ enabled/fatal. Browser focus recovery resets SDL keys/buttons, relative motion,
 port pad caches and queued audio. The page follows menu pointer ownership,
 distinguishes intentional menu releases from unexpected lock loss, and resets
 input before requesting capture. Browser initial settings additionally bind P
-to the watch (Return still confirms); native defaults are unchanged. Explicit
+to the watch; Enter/Return now acts as the full Start button on web, including
+opening and closing the watch. A browser-only branch in the existing Return-only
+watch suppression hook permits this for new and remembered configurations
+without rewriting saved bindings. Native confirm-only Return behavior stays
+unchanged. The browser capture handler leaves Enter to native Start processing,
+matching P, while Alt+Enter remains the fullscreen shortcut.
+Enter activation of the HTML Resume button is kept out of SDL's global key
+handler, preserving button activation without an extra in-game Start press.
+The Enter extension passes 138 unit tests, TypeScript, native ADS regression,
+optimized Wasm/native Windows builds and Chrome/Edge actual-ROM Start/Watch/
+Resume/fullscreen checks. Independent gallery refresh changes zero image cells.
 CSS aspect ratio avoids SDL's 1x1 sizing probe producing a square canvas.
 Only a page gesture requests capture through a C entrypoint that updates SDL's
 mouse focus/relative-mode bookkeeping. Automatic SDL deferred capture requests
@@ -1962,6 +1972,7 @@ Existing native and asset ownership contracts continue to apply.
 [mouse unit regressions](web/src/mouse-lock.test.ts),
 [capture regressions](web/src/capture.test.ts),
 [mouse gameplay audit](web/tools/mouse-input-audit.mjs),
+[Start/Enter gameplay audit](web/tools/start-input-audit.mjs),
 [player controls](web/src/player.tsx), [player layout](web/src/player.css),
 [runtime interface](web/src/runtime-types.ts), [capture lifecycle](web/src/capture.ts),
 [backup codec](web/src/backup.ts),

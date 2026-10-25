@@ -52,7 +52,7 @@ export function Player(props: PlayerProps) {
         if (status.kind === 'loading') return status.label;
         if (status.kind === 'error') return 'Game unavailable';
         if (rom.status().kind === 'checking') return 'Checking ROM';
-        if (started()) return 'Escape releases the mouse. P opens the watch.';
+        if (started()) return 'Escape releases the mouse. Enter or P opens the watch.';
         return ready() ? 'All set. Start your mission.' : 'Choose your ROM to begin.';
     };
     const playbackLabel = () =>
@@ -187,6 +187,11 @@ export function Player(props: PlayerProps) {
                             shimmerColor="#fff0c4"
                             borderRadius="8px"
                             disabled={capture.state().kind === 'capturing'}
+                            onKeyDown={(event) => {
+                                // Preserve HTML activation; SDL's window handler
+                                // otherwise consumes Enter or leaks it into Start.
+                                if (event.key === 'Enter') event.stopPropagation();
+                            }}
                             onClick={() => void props.resume()}
                         >
                             Resume game

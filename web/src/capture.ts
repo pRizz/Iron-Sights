@@ -157,7 +157,7 @@ export function createCapture(
                     event.altKey ||
                     event.ctrlKey ||
                     event.metaKey ||
-                    ['Escape', 'F2', 'p', 'P'].includes(event.key)
+                    ['Escape', 'F2', 'Enter', 'p', 'P'].includes(event.key)
                 )
                     return;
                 if (state().kind === 'mouse-free') requestResume();

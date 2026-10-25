@@ -20,8 +20,10 @@ python -m http.server 4174 --bind 127.0.0.1 --directory build/web/video
 
 Open `http://127.0.0.1:4174`, choose the original US ROM and press Play. Press
 Resume after startup to capture the mouse. Escape releases it and pauses;
-Resume continues. P opens/closes the watch without using the browser's reserved
-Escape key; Return still confirms menu choices. This browser-only initial binding
+Resume continues. Enter or P acts as Start, opening/closing the watch without
+using the browser's reserved Escape key; Return also confirms menu choices.
+The browser permits Return's full Start behavior while native builds retain
+their confirm-only Return watch rule. This browser-only initial binding
 does not change native defaults. This temporary harness has no persistent storage. Serve only
 the output directory, never the repository root or a directory containing ROMs.
 The Node smoke mounts the selected ROM read-only and copies it into ephemeral

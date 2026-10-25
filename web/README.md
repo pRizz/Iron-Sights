@@ -8,7 +8,8 @@ Safari remains experimental by the user's decision.
 The immersive room revision is tracked separately in the
 [accepted room plan](../scripts/port/web_room_plan.md) and WEB-007 through WEB-010.
 Its entrypoint fills the viewport; F2 opens the retained launcher, saves and
-About controls, Alt+Enter toggles fullscreen, and P remains the native watch.
+About controls, Alt+Enter toggles fullscreen, and Enter or P acts as Start
+(including opening and closing the watch). Existing saved bindings are respected.
 A validated remembered ROM starts immediately on normal page loads. The native
 Exit Game confirmation returns through a reverse TV transition to the room;
 its power switch resumes the paused game. To restore a backup after startup,

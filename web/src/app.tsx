@@ -545,7 +545,7 @@ export function App() {
                     {action() ||
                         (touch.enabled()
                             ? 'Move with your left thumb · drag right to look · Watch and Options are on screen'
-                            : 'Alt+Enter fullscreen · P watch · F2 controls · Escape may exit fullscreen')}
+                            : 'Alt+Enter fullscreen · Enter / P watch · F2 controls · Escape may exit fullscreen')}
                 </p>
             </Show>
         </div>
