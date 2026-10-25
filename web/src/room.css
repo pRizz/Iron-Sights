@@ -60,6 +60,14 @@
 .room-layer[hidden] {
     display: none;
 }
+.room-resume {
+    position: absolute;
+    bottom: max(24px, env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    background: #172013e6;
+}
 .room-layer[data-returning='true'] {
     background: transparent;
 }

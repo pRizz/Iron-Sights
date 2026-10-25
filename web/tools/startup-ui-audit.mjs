@@ -43,27 +43,30 @@ try {
     });
     await page.goto(origin);
     const loading = page.locator('.startup-screen');
-    await expect(loading.getByRole('heading', { name: 'Downloading game' })).toBeVisible({
+    const crt = page.locator('.room-canvas');
+    await expect(crt).toHaveAttribute('data-room-loading-label', 'Downloading game', {
         timeout: 60_000,
     });
-    await expect(loading.getByRole('progressbar')).toHaveAttribute('value', '0');
+    await expect(crt).toHaveAttribute('data-room-loading-percent', '0');
+    await expect(loading).toHaveCount(0);
     await page.screenshot({ path: resolve(output, 'download.png') });
     await page.keyboard.press('F2');
     await expect(loading).toHaveCount(0);
     await page.keyboard.press('F2');
-    await expect(loading).toBeVisible();
+    await expect(crt).toBeVisible();
     releaseDownload();
-    await expect(loading.getByRole('heading', { name: 'Compiling WebAssembly' })).toBeVisible({
+    await expect(crt).toHaveAttribute('data-room-loading-label', 'Compiling WebAssembly', {
         timeout: 60_000,
     });
     assert.equal(
-        await loading.getByRole('progressbar').getAttribute('value'),
-        null,
+        await crt.getAttribute('data-room-loading-percent'),
+        '',
         'Compilation invented a percentage',
     );
     await page.screenshot({ path: resolve(output, 'compiling.png') });
     await page.evaluate(() => globalThis.releaseStartupCompile());
     await expect(loading).toHaveCount(0, { timeout: 60_000 });
+    await expect(crt).toHaveAttribute('data-room-loading-label', '', { timeout: 60_000 });
     await expect(page.locator('.room-canvas')).toHaveAttribute('data-room-state', 'ready', {
         timeout: 60_000,
     });

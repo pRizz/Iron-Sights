@@ -6,15 +6,13 @@ import type { CreateGame, GameModule } from './runtime-types';
 import type { SaveStatus } from './sync-queue';
 import { acquireUserFilesLock, UserFilesInUse } from './user-lock';
 import { workProgress, type StartupProgress } from './startup-progress';
+import { ensureBrowserSettings } from './browser-settings';
+export { ensureBrowserSettings } from './browser-settings';
 
 export type EngineStatus =
     | { kind: 'loading'; label: string; maybePercent: number | null }
     | { kind: 'ready' }
     | { kind: 'error'; message: string; needsReload: boolean; reason: 'other-tab' | 'startup' };
-const DEFAULT_SETTINGS =
-    '[display]\nfullscreen=windowed\nwindow_width=960\nwindow_height=540\n' +
-    'render_thread=0\nvsync=0\nmaxfps=60\ntickhz=60\nmsaa=1\nmusic_volume=70\nsfx_volume=70\n' +
-    '[input]\nmouse=1\n[controls]\nstart=Return,P\n';
 
 function browserSupport(pointerless: boolean): void {
     if (
@@ -35,12 +33,6 @@ function browserSupport(pointerless: boolean): void {
             'WebGL 2 is unavailable. Enable graphics acceleration or try another desktop browser.',
         );
     probe.getExtension('WEBGL_lose_context')?.loseContext();
-}
-
-export function ensureBrowserSettings(game: GameModule): void {
-    game.FS.mkdirTree('/user/Data/Saves');
-    if (!game.FS.analyzePath('/user/midas.ini').exists)
-        game.FS.writeFile('/user/midas.ini', DEFAULT_SETTINGS);
 }
 
 async function downloadWasm(

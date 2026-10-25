@@ -696,6 +696,41 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**CRT startup refinement, 2026-10-25:** First-visit native preparation now starts
+as soon as ROM/runtime validation permits, overlapping insertion and TV flight.
+Real byte/program progress and indeterminate stages render on the CRT through
+`room/loading-screen.ts`, with restrained interlacing/scanlines and reduced-motion
+support. A fitted-screen phase waits for slow work; the game's initial frames
+wait for the cinematic, then fresh frames drive handoff. Room drawing continues
+at a capped preparation rate, superseding the static-TV hold described below.
+Remembered-ROM launches retain full-page progress. Startup interruptions resume
+inside the room without losing the cinematic; errors retain centered recovery.
+
+`browser-settings.ts` extracts the bootstrap configuration and explicitly supplies
+Upright when the key is absent, preserving explicit choices. Upstream 1.0.2b's
+array already defaults Upright; the fork's partial INI omitted its override bit
+and exposed the original N64 Reverse setting. Touch pitch also respects this
+choice (WEB-011). No upstream-owned source changes were needed.
+
+**Local verification:** 144 unit tests, TypeScript, optimized Wasm, synthetic C
+touch bridge, exact public artifact and standards pass. Edge's held-download/
+compilation audit verifies actual CRT feedback, no first-visit full-page takeover,
+F2 and centered save-lock/retry; its room/fallback audit passes. Chrome's slowed
+real-ROM startup proves native preparation overlaps insertion, progress remains
+visible through the fitted zoom and handoff waits for readiness; first/cached
+startup traces are private in `build/web-startup/mobile-*`. Final Chrome checks
+also pass F2/resume during preparation and focus-loss/resume during handoff, and
+verify native-written Upright settings on first and cached starts. Edge's native
+Exit Game/reverse-flight/warm-power/save-management cycle passes. Native gallery
+regeneration changes zero image cells and freshness/integrity pass. WEB-011
+records mobile focus/gameplay evidence. Audio-enabled Linux WebKit also passes
+the slowed first/cached startup, fitted CRT wait, preparation/handoff interruption
+recovery and native Upright settings checks (`mobile-webkit`). These are browser
+automation results, not physical iPhone/Safari acceptance.
+
+**Next action:** Confirm the reporting iPhone's controls and first-launch CRT
+flow on hardware; retain Safari/mobile experimental status until that evidence.
+
 **iPhone ROM picker follow-up, 2026-10-25:** Removed extension-based HTML `accept`
 filters from both `web/src/app.tsx` and `web/src/room/rom-dialog.tsx`. iOS Files
 can disable an unfamiliar `.z64` despite its presence in that list. Both pickers
@@ -906,6 +941,17 @@ accepted desktop preview. Later documentation-only publication refreshes do not
 change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
+
+**Focus and look correction, 2026-10-25:** Canvas-only blur from touching an
+on-screen button no longer becomes Ready to continue. Window blur and hidden-page
+events still pause/reset input. Touch pitch now follows mouse Upright/Reverse
+policy, including the explicit Upright bootstrap fix in WEB-010. The unit focus
+regression and synthetic C bridge check both behaviors. Chrome and audio-enabled
+Linux WebKit actual-ROM audits inject canvas blur on every control press and
+pass touch menus into Dam, movement, Watch, manual Pause/Resume, Options, audio
+and portrait/tablet layouts. Chrome additionally passes simultaneous movement,
+look and Fire, plus window-blur pause. Evidence is private under
+`build/web-touch/focus-{chrome,webkit}`. Physical iOS remains experimental.
 
 **Status:** Implemented; automated acceptance passes. Physical-device preview
 remains experimental.

@@ -128,6 +128,7 @@ void portWebTouchApplyMove(struct MoveData *move)
     if (dx != 0 || dy != 0) {
         g_portMouseDirect = 1;
         g_portMouseYawDeg += dx;
-        g_portMousePitchDeg += dy;
+        /* Same screen-Y convention and Upright/Reverse policy as mouse look. */
+        g_portMousePitchDeg += move->invertPitch ? dy : -dy;
     }
 }

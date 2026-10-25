@@ -23,6 +23,16 @@ const context = await browser.newContext({
 });
 await context.addInitScript(() => {
     delete HTMLCanvasElement.prototype.requestPointerLock;
+    // Reproduce iOS transferring canvas focus to native on-screen buttons.
+    // The page remains focused; this must not become a focus-loss pause.
+    document.addEventListener(
+        'pointerdown',
+        (event) => {
+            if (event.target.closest?.('.touch-controls'))
+                document.querySelector('#canvas')?.dispatchEvent(new FocusEvent('blur'));
+        },
+        true,
+    );
 });
 if (kind === 'webkit')
     await context.addInitScript(() => {

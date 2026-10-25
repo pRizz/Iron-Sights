@@ -46,6 +46,9 @@ Controls respect safe-area insets and the game's aspect; browser panning is
 disabled on the game surface while touch mode is enabled. Layout follows the
 smaller visible/layout viewport during rotation or browser-chrome changes.
 Pointer gestures resume the pinned SDK's suspended SDL Web Audio context.
+Canvas-only blur from touching native on-screen buttons no longer pauses touch
+play; window blur and document hiding still pause/reset input. Touch pitch uses
+the same Upright/Reverse policy as mouse look instead of bypassing inversion.
 
 `port/web/touch.c` owns player-one input, bounded motion and reset state, maps
 semantic actions by existing binding names and combines with the ordinary game
@@ -82,6 +85,11 @@ thumbstick, Watch, Pause/Resume, Options, audio and layout integration using its
 documented single-pointer/resize-driver accommodations. Native ADS/HUD/wardrobe/upstream-merge/state regressions
 pass; isolated native gallery regeneration changes no image cells. Physical
 iOS/Android acceptance remains distinct from these automated checks.
+The focus regression additionally dispatches canvas blur on every on-screen
+pointer press: Chrome and audio-enabled Linux WebKit still reach Dam, move,
+use Watch/Pause/Options and retain audio/layout. Chrome covers simultaneous
+move/look/fire and genuine window-blur pause. The C fixture checks both pitch
+directions; native gallery regeneration changes zero image cells.
 
 ### FORK-026 — Upstream 1.0.2b integration
 
@@ -1432,10 +1440,26 @@ verified room refinements in `ed459f2`. PR #2 was closed rather than merged.
 
 ### FORK-025 — Immersive browser room
 
-Startup/feedback follow-up is published from direct-main source `ce782cb`;
-CI/publication acceptance is recorded in WEB-010. `startup-screen.tsx`/`startup.css`
-show centered download/initialization feedback, actual download percentages and
-completed graphics-preparation progress; unknown work remains indeterminate.
+Current first-visit startup prepares the native game as soon as a valid ROM and
+runtime are available, overlapping cartridge insertion, power and flight.
+`room/loading-screen.ts` draws real download/initialization stages and progress
+into the TV texture. Existing CRT noise/scanlines gain subtle alternating fields;
+reduced motion disables these animations. `flow.ts` holds a screen-fitted phase
+until preparation completes. The first game frames wait behind the cinematic;
+handoff resumes the same instance and waits for fresh graphics before fading.
+The room keeps rendering, capped at 30 fps while preparing, replacing the prior
+static-TV hold. Actual pauses offer Resume startup within the room, including an
+interruption during handoff. The game canvas/storage lifecycle stays intact.
+Chrome and audio-enabled Linux WebKit pass deliberately slowed actual-ROM
+first/cached startup, overlapping preparation/insertion, fitted-screen progress,
+F2 and handoff focus recovery, and native Upright settings checks. Edge passes
+the room/fallback and native Exit Game/warm-power/save-management regressions.
+
+The earlier centered-feedback slice shipped in `ce782cb`; acceptance history is
+WEB-010. `startup-screen.tsx`/`startup.css` retain centered download/initialization
+feedback for remembered-ROM launches that skip the room, plus actionable errors.
+Progress uses actual download percentages and completed graphics-preparation
+counts; unknown work remains indeterminate on either surface.
 `engine.ts` paints before entering Wasm and keeps feedback until graphics begin.
 Real pauses during preparation expose **Resume startup**, so an F2/focus
 interruption cannot strand initialization behind its progress screen.
@@ -1443,8 +1467,8 @@ The existing native incremental prewarm of 87 known shader programs stalled
 visible browser logos because a single compile can exceed its 3 ms budget.
 Browser-only preparation in `port/fast3d/gfx_pc.cpp`, `port/src/main.c` and
 `port/web/lifecycle.c` now finishes that list before animation, yielding and
-reporting each completed program. `room.tsx` holds the final TV frame without
-competing room draws during preparation. Desktop scheduling/rendering is unchanged.
+reporting each completed program. `room.tsx` now animates the CRT during that
+preparation. Desktop scheduling/rendering is unchanged.
 
 `UserFilesInUse` distinguishes another tab's save-writer lock. Startup failures
 now open an accessible centered dialog with explanation, Retry and controls;
@@ -1714,6 +1738,15 @@ watch suppression hook permits this for new and remembered configurations
 without rewriting saved bindings. Native confirm-only Return behavior stays
 unchanged. The browser capture handler leaves Enter to native Start processing,
 matching P, while Alt+Enter remains the fullscreen shortcut.
+`web/src/browser-settings.ts` owns the browser bootstrap INI and supplies
+`look_updown=1` (Upright), including migration of partial configs missing the
+key. Explicit saved Reverse/Upright choices remain intact. Upstream 1.0.2b
+already initializes its player-option array to Upright; our partial precreated
+INI omitted the option's override-mask bit, allowing the original N64 Reverse
+default through. This corrects browser bootstrap rather than changing upstream
+options code. Tests cover missing keys, explicit choices, CRLF and idempotence;
+the private startup audit checks the native-written settings on first and cached
+launches. Touch inversion follows the same option as recorded in FORK-028.
 Enter activation of the HTML Resume button is kept out of SDL's global key
 handler, preserving button activation without an extra in-game Start press.
 The Enter extension passes 138 unit tests, TypeScript, native ADS regression,

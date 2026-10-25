@@ -8,13 +8,14 @@ test('a cartridge in the returned room waits for the power gesture', () => {
     expect(roomAction(restored, 'activate').phase).toBe('waiting');
 });
 
-test('selection inserts before waiting for engine readiness', () => {
-    const selected = roomAction({ phase: 'empty', elapsed: 0 }, 'select');
-    let state = selected;
-    for (let index = 0; index < 22; index++) state = advanceRoom(state, 0.1, false, false);
-    expect(state.phase).toBe('waiting');
-    expect(advanceRoom(state, 0.1, false, false)).toEqual(state);
-    expect(advanceRoom(state, 0.1, true, false).phase).toBe('powering');
+test('insertion and flight overlap preparation, then hold at the screen until ready', () => {
+    for (const reduced of [false, true]) {
+        let state = roomAction({ phase: 'empty', elapsed: 0 }, 'select');
+        for (let index = 0; index < 70; index++) state = advanceRoom(state, 0.1, false, reduced);
+        expect(state.phase).toBe('screen');
+        expect(advanceRoom(state, 100, false, reduced)).toEqual(state);
+        expect(advanceRoom(state, 0.1, true, reduced).phase).toBe('complete');
+    }
 });
 
 test('duplicate interactions cannot restart insertion or flight', () => {
@@ -23,6 +24,7 @@ test('duplicate interactions cannot restart insertion or flight', () => {
         'waiting',
         'powering',
         'flying',
+        'screen',
         'complete',
         'retreating',
     ] as const) {

@@ -12,6 +12,8 @@ void main() {
     color.r = texture2D(screen, uv + vec2(0.0008, 0.0)).r;
     color.b = texture2D(screen, uv - vec2(0.0008, 0.0)).b;
     float scan = 0.94 + 0.06 * sin(vUv.y * 480.0 * 3.14159265);
+    float field = mod(floor(time * 30.0), 2.0);
+    scan *= 1.0 - motion * 0.035 * mod(floor(vUv.y * 480.0) + field, 2.0);
     float vignette = 1.0 - 0.35 * pow(length(vUv - 0.5), 1.5);
     float noise = fract(sin(dot(vUv + fract(time), vec2(12.9898, 78.233))) * 43758.5453);
     color *= scan * vignette * (1.0 + sin(time * 23.0) * 0.012 * motion);

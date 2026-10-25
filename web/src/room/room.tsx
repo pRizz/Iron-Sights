@@ -1,4 +1,5 @@
-import { createEffect, createSignal, onCleanup, onMount, type Accessor } from 'solid-js';
+import { createEffect, createSignal, onCleanup, onMount, Show, type Accessor } from 'solid-js';
+import type { StartupProgress } from '../startup-progress';
 import type { Engine } from '../engine';
 import type { RomManager } from '../rom-manager';
 import { advanceRoom, roomAction, type RoomFlow } from './flow';
@@ -12,6 +13,9 @@ type Props = {
     rom: RomManager;
     controls: Accessor<boolean>;
     ready: () => boolean;
+    progress: Accessor<StartupProgress | undefined>;
+    paused: Accessor<boolean>;
+    resume: () => Promise<void>;
     openControls: () => void;
     play: () => Promise<void>;
     finish: () => void;
@@ -43,6 +47,15 @@ export function Room(props: Props) {
     let maybeReportedError: string | undefined;
     const idle = () => ['empty', 'inserted'].includes(flow().phase);
     const hasRom = () => props.rom.status().kind === 'ready';
+    const paused = () => !props.returning && props.paused();
+    const progress = (): StartupProgress | undefined => {
+        if (props.returning) return undefined;
+        if (paused()) return { label: 'Startup paused · resume below', maybePercent: null };
+        return (
+            props.progress() ??
+            (props.ready() ? { label: 'Ready to play', maybePercent: 100 } : undefined)
+        );
+    };
     const label = () => {
         if (selecting() || props.rom.status().kind === 'checking') return 'Checking cartridge';
         const phase = flow().phase;
@@ -106,6 +119,13 @@ export function Room(props: Props) {
             setFlow((state) => roomAction(state, 'activate'));
     }
 
+    async function resumeStartup(): Promise<void> {
+        await props.resume();
+        // A ready game waits for the cinematic, but a handoff already in
+        // progress needs fresh graphics tasks to complete its crossfade.
+        if (!disposed && props.ready() && !entering) props.engine.maybeGame()?._portWebSetPaused(1);
+    }
+
     onMount(() => {
         maybeDrag = bindCartridgeDrag(canvas, {
             enabled: () =>
@@ -134,7 +154,7 @@ export function Room(props: Props) {
         canvas.addEventListener('webglcontextlost', contextLost);
         const render = (now: number) => {
             const idleScene = ['empty', 'inserted', 'waiting'].includes(flow().phase);
-            if ((idleScene || motion.matches) && now - previous < 1000 / 30) {
+            if ((idleScene || motion.matches || !props.ready()) && now - previous < 1000 / 30) {
                 frame = requestAnimationFrame(render);
                 return;
             }
@@ -142,13 +162,12 @@ export function Room(props: Props) {
             const frameMS = now - previous;
             previous = now;
             if (!props.controls() && !document.hidden && !dialog.open) {
-                const next = advanceRoom(flow(), delta, props.ready(), motion.matches);
+                const next = paused()
+                    ? flow()
+                    : advanceRoom(flow(), delta, props.ready(), motion.matches);
                 setFlow(next);
                 try {
-                    // Hold the fitted TV frame while Wasm prepares graphics. Avoid
-                    // competing room draws during shader compilation and startup.
-                    if (!entering)
-                        maybeScene?.render(next, delta, motion.matches, label(), frameMS);
+                    maybeScene?.render(next, delta, motion.matches, label(), frameMS, progress());
                     setSceneReady(true);
                 } catch {
                     props.notify(
@@ -157,7 +176,7 @@ export function Room(props: Props) {
                     props.unavailable();
                     return;
                 }
-                if (next.phase === 'complete' && !entering) {
+                if (next.phase === 'complete' && !entering && !paused()) {
                     entering = true;
                     beginGfx = props.engine.maybeGame()?._portWebGetGfxTasks() ?? 0;
                     void props.play().then(() => {
@@ -277,8 +296,13 @@ export function Room(props: Props) {
                 <button onClick={props.openControls}>Open controls (F2)</button>
             </div>
             <span class="visually-hidden" role="status">
-                {label()}
+                {progress()?.label ?? label()}
             </span>
+            <Show when={paused() && hasRom()}>
+                <button class="room-resume" onClick={() => void resumeStartup()}>
+                    Resume startup
+                </button>
+            </Show>
             <RomDialog
                 rom={props.rom}
                 selecting={selecting}

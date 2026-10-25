@@ -24,12 +24,21 @@ pause the live instance, release input/audio, flush saves and reverse the TV
 flight into an inserted-cartridge room. Its power switch resumes that instance;
 an explicit exit must not trigger automatic re-entry. Reduced motion uses a fade.
 
-The accepted startup follow-up adds centered loading feedback while the game
+The accepted startup follow-up adds loading feedback while the game
 downloads and initializes, including remembered-ROM launches. Percentages report
 actual download bytes or completed graphics-preparation work; unmeasured stages
 remain indeterminate. Browser shader preparation finishes before visible logos,
-yielding between programs so progress paints. Hold the room's final TV frame
-without further room draws during this work. Center startup failures, especially
+yielding between programs so progress paints. The owner's next refinement starts
+native preparation as soon as a valid ROM and runtime are available, overlapping
+insertion and flight. Show those real stages and progress on the CRT texture,
+with restrained scanlines/interlacing, and hold at the fitted screen if work
+outlasts the zoom. Hold the game's first rendered frames until the cinematic
+finishes, then resume and crossfade after fresh frames arrive. Continue room
+drawing at a capped rate while preparing; this supersedes the earlier static-TV
+hold and full-page first-visit loading surface. Remembered-ROM launches retain
+the centered loading surface because they skip the room. Real interruptions
+expose Resume startup without skipping the room, including during final handoff.
+Center startup failures, especially
 another tab's save-writer lock, with explanation and retry rather than requiring
 scrolling. Remove the game canvas's decorative gold focus outline while preserving
 keyboard focus indicators on UI controls. Reaching gameplay from a cutscene/watch

@@ -5,6 +5,7 @@ export type RoomPhase =
     | 'waiting'
     | 'powering'
     | 'flying'
+    | 'screen'
     | 'complete'
     | 'retreating';
 export type RoomFlow = { phase: RoomPhase; elapsed: number };
@@ -35,14 +36,15 @@ export function advanceRoom(
     ready: boolean,
     reduced: boolean,
 ): RoomFlow {
-    if (state.phase === 'waiting') return ready ? { phase: 'powering', elapsed: 0 } : state;
+    if (state.phase === 'waiting') return { phase: 'powering', elapsed: 0 };
+    if (state.phase === 'screen') return ready ? { phase: 'complete', elapsed: 0 } : state;
     if (!['inserting', 'powering', 'flying', 'retreating'].includes(state.phase)) return state;
     const elapsed = state.elapsed + Math.max(0, Math.min(seconds, 0.1));
     if (elapsed < roomDuration(state.phase, reduced)) return { ...state, elapsed };
     const next = {
         inserting: 'waiting',
         powering: 'flying',
-        flying: 'complete',
+        flying: ready ? 'complete' : 'screen',
         retreating: 'inserted',
     } as const;
     return { phase: next[state.phase as keyof typeof next], elapsed: 0 };

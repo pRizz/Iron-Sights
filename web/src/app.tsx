@@ -19,6 +19,7 @@ export function App() {
     const touch = createTouchInput(engine, firstTouch);
     const rom = createRomManager();
     const [started, setStarted] = createSignal(false);
+    const [prepared, setPrepared] = createSignal(false);
     const [controls, setControls] = createSignal(
         new URL(location.href).searchParams.has('controls'),
     );
@@ -92,6 +93,8 @@ export function App() {
     createEffect(() => {
         if (entry() === 'cached' && rom.status().kind === 'error') setEntry('room');
         if (shouldAutoLaunch(entry(), ready(), controls(), started())) void play('cached');
+        // First-visit game preparation overlaps cartridge insertion and flight.
+        if (entry() === 'room' && ready() && !controls() && !started()) void play('room');
     });
 
     onMount(() => {
@@ -203,8 +206,11 @@ export function App() {
             if (!fromRoom) setEntry('game');
             setStarted(true);
             capture.starting();
-            canvas.focus();
+            if (!fromRoom) canvas.focus();
             await engine.start();
+            // Hold the first actual game frames until the room reaches the TV.
+            if (fromRoom && roomVisible() && !roomFailed()) game._portWebSetPaused(1);
+            setPrepared(true);
             if (source === 'cached') showHint();
         } catch {
             engine.failed(
@@ -494,7 +500,7 @@ export function App() {
             </div>
             <StartupScreen
                 engine={engine}
-                progress={maybeLoading}
+                progress={() => (roomVisible() && !roomFailed() ? undefined : maybeLoading())}
                 showControls={openControls}
                 paused={() => capture.state().kind === 'paused'}
                 resume={() => void resumeGame()}
@@ -513,7 +519,13 @@ export function App() {
                     engine={engine}
                     rom={rom}
                     controls={controls}
-                    ready={ready}
+                    ready={prepared}
+                    progress={maybeLoading}
+                    paused={() => capture.state().kind === 'paused'}
+                    resume={async () => {
+                        if (touch.enabled()) touch.gesture();
+                        await capture.resume();
+                    }}
                     openControls={openControls}
                     play={() => play('room')}
                     hint={showHint}

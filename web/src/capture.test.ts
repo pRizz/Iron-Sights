@@ -251,3 +251,17 @@ test('Enter remains a native Start gesture instead of requesting mouse capture',
         fixture.dispose();
     }
 });
+
+test('touch controls can take canvas focus without pausing; page focus loss still pauses', async () => {
+    const fixture = captureFixture(true, false);
+    try {
+        fixture.live(true);
+        await fixture.capture.resume();
+        fixture.canvas.dispatchEvent(new Event('blur'));
+        expect(fixture.capture.state().kind).toBe('playing');
+        fixture.window.dispatchEvent(new Event('blur'));
+        expect(fixture.capture.state()).toEqual({ kind: 'paused', reason: 'focus' });
+    } finally {
+        fixture.dispose();
+    }
+});

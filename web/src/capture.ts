@@ -138,7 +138,9 @@ export function createCapture(
         canvas.addEventListener(
             'blur',
             () => {
-                if (!pending) pause('focus');
+                // Touch buttons may take DOM focus from the canvas on iOS.
+                // Window blur/visibility still pause when the page loses focus.
+                if (!pending && !touch()) pause('focus');
             },
             listen,
         );

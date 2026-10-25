@@ -12,6 +12,8 @@ import { easeOut, roomDuration, type RoomFlow } from './flow';
 import { ROOM_FOV, TV_SCREEN } from './framing';
 import { pivotRotation } from './pivot';
 import { loadRoomModels } from './models';
+import { paintCrtScreen } from './loading-screen';
+import type { StartupProgress } from '../startup-progress';
 
 export type RoomTarget = 'cartridge' | 'power' | 'controls';
 
@@ -21,22 +23,9 @@ function paintScreen(
     label: string,
     powered: boolean,
     reduced: boolean,
+    progress?: StartupProgress,
 ) {
-    const ctx = tv.context;
-    ctx.fillStyle = 'rgb(12,27,112)';
-    ctx.fillRect(0, 0, 640, 480);
-    ctx.fillStyle = '#d0d9ff';
-    ctx.font = '23px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText('VIDEO 3', 42, 60);
-    ctx.textAlign = 'center';
-    ctx.font = '26px monospace';
-    ctx.fillText(powered ? 'SIGNAL FOUND' : 'NO SIGNAL', 320, 220);
-    ctx.font = '17px monospace';
-    ctx.fillStyle = '#aebdea';
-    ctx.fillText(label.toUpperCase().slice(0, 52), 320, 270);
-    ctx.font = '14px monospace';
-    ctx.fillText('F2  CONTROLS', 320, 420);
+    paintCrtScreen(tv.context, seconds, label, powered, reduced, progress);
     tv.texture.needsUpdate = true;
 }
 
@@ -111,6 +100,7 @@ function initializeScene(
         reduced: boolean,
         label: string,
         frameMS = delta * 1000,
+        progress?: StartupProgress,
     ): void {
         if (scene.userData.assetError) throw new Error(scene.userData.assetError);
         if (scene.userData.artworkFormat) canvas.dataset.roomArtwork = scene.userData.artworkFormat;
@@ -157,7 +147,9 @@ function initializeScene(
             cartridge.position.copy(inserted);
             cartridge.rotation.set(0, 0, 0);
         }
-        const powered = ['powering', 'flying', 'complete', 'retreating'].includes(state.phase);
+        const powered = ['powering', 'flying', 'screen', 'complete', 'retreating'].includes(
+            state.phase,
+        );
         const powerProgress =
             state.phase === 'powering'
                 ? easeOut(state.elapsed / roomDuration('powering', reduced))
@@ -177,7 +169,7 @@ function initializeScene(
                 ? state.elapsed / roomDuration('flying', reduced)
                 : state.phase === 'retreating'
                   ? retreatFlight(state.elapsed)
-                  : state.phase === 'complete'
+                  : state.phase === 'complete' || state.phase === 'screen'
                     ? 1
                     : 0;
         const pose = cameraPose(reduced ? 0 : flight, camera.aspect);
@@ -202,7 +194,9 @@ function initializeScene(
             canvas.dataset.roomScreenCorners = JSON.stringify(corners);
         }
         if (seconds - lastScreen > 1 / 15 || previousPhase !== state.phase) {
-            paintScreen(tv, seconds, label, powered, reduced);
+            paintScreen(tv, seconds, label, powered, reduced, progress);
+            canvas.dataset.roomLoadingLabel = progress?.label ?? '';
+            canvas.dataset.roomLoadingPercent = progress?.maybePercent?.toString() ?? '';
             lastScreen = seconds;
         }
         renderer.shadowMap.needsUpdate =

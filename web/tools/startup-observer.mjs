@@ -49,6 +49,8 @@ export function observeStartup() {
                 room: !!document.querySelector('.room-layer'),
                 resume: !!document.querySelector('.pause-overlay'),
                 loading: !!document.querySelector('.startup-screen'),
+                roomLabel: document.querySelector('.room-canvas')?.dataset.roomLoadingLabel,
+                phase: document.querySelector('.room-layer')?.dataset.phase,
             });
         requestAnimationFrame(frame);
     };

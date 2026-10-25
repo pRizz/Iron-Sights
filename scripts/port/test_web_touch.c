@@ -59,9 +59,13 @@ int main(void)
     portWebTouchApplyMove(&move);
     assert(move.analogWalk == 70 && move.analogStrafe == 35);
     assert(move.canLookAhead && move.canTurnTank);
-    assert(g_portMouseYawDeg == 10 && g_portMousePitchDeg == -8 && g_portMouseDirect);
+    assert(g_portMouseYawDeg == 10 && g_portMousePitchDeg == 8 && g_portMouseDirect);
     portWebTouchApplyMove(&move);
     assert(g_portMouseYawDeg == 10); /* Once per simulation tick, no repeated motion. */
+    move.invertPitch = 1;
+    portWebTouchLook(0, -8);
+    portWebTouchApplyMove(&move);
+    assert(g_portMousePitchDeg == 0); /* Reverse flips the same swipe. */
 
     portWebTouchMove(__builtin_nanf(""), 999);
     assert(moveX == 0 && moveY == 1);
