@@ -6,9 +6,10 @@
     overflow: hidden;
 }
 .player-toolbar {
-    height: 47px;
-    padding: 0 18px;
+    min-height: 47px;
+    padding: 8px 18px;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 9px;
     color: #b3beaa;

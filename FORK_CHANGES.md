@@ -1710,6 +1710,30 @@ Only a page gesture requests capture through a C entrypoint that updates SDL's
 mouse focus/relative-mode bookkeeping. Automatic SDL deferred capture requests
 are disabled on web: a pending automatic request could collide with Resume.
 The page waits for confirmed capture and handles intentional menu releases.
+Browser capture now explicitly requests `unadjustedMovement`; SDL's native
+raw-input hints do not configure the browser's Pointer Lock options. Unsupported
+raw input retries ordinary capture, and intermediate error events do not abort
+that retry. Permission failures still reach the normal recovery UI. Native
+input and touch controls retain their existing paths; mouse deltas are neither
+clamped nor smoothed by this change.
+
+F2's retained player toolbar offers **Download mouse diagnostics**. A passive,
+session-only recorder keeps at most 1,024 locked mouse events and 512 frame
+samples (at most about 60 per second), recording delivery age, deltas, heading,
+frame gaps, canvas scaling, request mode and runtime identity. Pausing freezes
+frame history until resume, so opening controls cannot erase the incident.
+High-frequency motion reuses typed-array storage. No keys, world positions,
+ROM/save contents or uploads are involved; nothing persists across reload.
+The toolbar wraps on narrow screens.
+
+Investigation: both normal 40-count movement and the same input across a 250 ms
+main-thread hitch turn Bond about 2.6 degrees, with no motion replay afterward.
+This does not reproduce the reported intermittent physical-mouse snap or prove
+that acceleration caused it. The raw-input setup mismatch is corrected; the
+downloadable trace supports identifying browser spikes versus game rotation
+if it recurs. Unit checks cover raw/legacy/unsupported/denied capture and error
+ordering; private real-ROM audits exercise conservation, Watch recapture and
+diagnostic export. Evidence is local under `build/web-mouse`.
 The private direct-stage harness waits for normal menu initialization instead
 of adopting uninitialized zero volumes at tick 1. Optimized Edge testing passed
 movement, turning, nonzero Web Audio, focus pause/resume without a stuck key and
@@ -1929,6 +1953,13 @@ Existing native and asset ownership contracts continue to apply.
 [model ABI](src/game/model.c), [vertex callback](src/game/chr.c),
 [watch transforms](src/game/bondinv.c),
 [browser tooling](web/README.md), [ROM codec](web/src/rom.ts),
+[raw mouse capture](web/src/mouse-lock.ts),
+[mouse diagnostics](web/src/mouse-diagnostics.ts),
+[mouse unit regressions](web/src/mouse-lock.test.ts),
+[capture regressions](web/src/capture.test.ts),
+[mouse gameplay audit](web/tools/mouse-input-audit.mjs),
+[player controls](web/src/player.tsx), [player layout](web/src/player.css),
+[runtime interface](web/src/runtime-types.ts), [capture lifecycle](web/src/capture.ts),
 [backup codec](web/src/backup.ts),
 [ROM storage](web/src/rom-storage.ts), [writer lock](web/src/user-lock.ts),
 [sync queue](web/src/sync-queue.ts), [browser storage audit](web/tools/storage-audit.mjs),

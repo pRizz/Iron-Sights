@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createCapture } from './capture';
 import type { Engine } from './engine';
 
-function captureFixture(touch = false, pointerLock = true) {
+function captureFixture(touch = false, pointerLock = true, browserRequests = '') {
     const saved = new Map<string, PropertyDescriptor | undefined>();
     const replace = (name: string, value: unknown) => {
         saved.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
@@ -15,9 +15,26 @@ function captureFixture(touch = false, pointerLock = true) {
         exitPointerLock: () => lock(false),
     });
     const window = new EventTarget();
+    const requests: unknown[] = [];
     const canvas = Object.assign(new EventTarget(), {
         focus: () => {},
-        requestPointerLock: () => Promise.resolve(),
+        requestPointerLock: (options?: PointerLockOptions) => {
+            requests.push(options);
+            if (
+                browserRequests === 'denied' ||
+                (browserRequests === 'unsupported' && options?.unadjustedMovement)
+            ) {
+                page.dispatchEvent(new Event('pointerlockerror'));
+                return Promise.reject(
+                    new DOMException(
+                        'capture failed',
+                        browserRequests === 'denied' ? 'NotAllowedError' : 'NotSupportedError',
+                    ),
+                );
+            }
+            lock(true);
+            return Promise.resolve();
+        },
     });
     function lock(value: boolean) {
         page.pointerLockElement = value ? canvas : null;
@@ -31,6 +48,13 @@ function captureFixture(touch = false, pointerLock = true) {
     const pauses: number[] = [];
     replace('document', page);
     replace('window', window);
+    replace(
+        'ResizeObserver',
+        class {
+            observe() {}
+            disconnect() {}
+        },
+    );
     replace('requestAnimationFrame', (callback: FrameRequestCallback) => {
         frames.set(++next, callback);
         return next;
@@ -46,6 +70,10 @@ function captureFixture(touch = false, pointerLock = true) {
             _portWebControlsLive: () => Number(live),
             _portWebGetGfxTasks: () => 100,
             _portWebCaptureMouse: () => {
+                if (browserRequests) {
+                    void canvas.requestPointerLock();
+                    return 0;
+                }
                 if (!deferCapture) lock(true);
                 return 0;
             },
@@ -60,6 +88,7 @@ function captureFixture(touch = false, pointerLock = true) {
     const detach = capture.attach(canvas as unknown as HTMLCanvasElement);
     return {
         capture,
+        requests,
         pauses,
         window,
         lock,
@@ -178,6 +207,32 @@ test('capture rejection cannot overwrite a real focus pause that arrived while c
         fixture.rejectCapture();
         await pending;
         expect(fixture.capture.state()).toEqual({ kind: 'paused', reason: 'focus' });
+    } finally {
+        fixture.dispose();
+    }
+});
+
+test('raw-mode pointerlockerror does not abort a successful compatibility retry', async () => {
+    const fixture = captureFixture(false, true, 'unsupported');
+    try {
+        fixture.live(true);
+        await fixture.capture.resume();
+        expect(fixture.requests).toEqual([{ unadjustedMovement: true }, undefined]);
+        expect(fixture.capture.state().kind).toBe('playing');
+        expect(fixture.capture.notice()).toBe('');
+    } finally {
+        fixture.dispose();
+    }
+});
+
+test('terminal promise rejection still reports capture failure', async () => {
+    const fixture = captureFixture(false, true, 'denied');
+    try {
+        fixture.live(true);
+        await fixture.capture.resume();
+        expect(fixture.requests).toEqual([{ unadjustedMovement: true }]);
+        expect(fixture.capture.state().kind).toBe('mouse-free');
+        expect(fixture.capture.notice()).toContain('capture was refused');
     } finally {
         fixture.dispose();
     }

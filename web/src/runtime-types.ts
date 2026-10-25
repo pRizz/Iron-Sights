@@ -36,6 +36,8 @@ export type GameModule = {
     _portWebCaptureMouse(): number;
     _portWebGetGfxTasks(): number;
     _portWebReturnToRoom(): void;
+    _portWebGetFrames(): number;
+    _portWebGetPlayerHeading(): number;
     _portWebTouchEnable(enabled: number): void;
     _portWebTouchReset(): void;
     _portWebTouchMove(x: number, y: number): void;

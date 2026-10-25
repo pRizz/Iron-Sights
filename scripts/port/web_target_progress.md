@@ -490,6 +490,33 @@ Optimized Wasm and native Windows builds pass. Two independent gallery passes
 change zero image cells. This fixes browser scheduling tolerance without
 changing mixer synthesis, campaign storage or input policy.
 
+**2026-10-25 mouse snap investigation:** The user reports intermittent jumps
+during normal keyboard/mouse play without a capture/focus transition. Measured
+40 browser movement counts turn Bond about 2.6 degrees both normally and across
+a deliberately blocked 250 ms main thread, including an eight-tick catch-up.
+Native latch/accumulator inspection finds no duplicate application in that
+case. The exact physical-mouse incident remains unconfirmed.
+
+A concrete platform mismatch is corrected: the SDL path's native raw-input
+hints did not request browser `unadjustedMovement`. Capture now requests it,
+retries compatible capture only for `NotSupportedError`, preserves terminal
+permission errors and ignores intermediate error events until the owned
+request settles. No clamp, smoothing or altered mouse sensitivity is added.
+F2 offers a bounded, session-only mouse diagnostic JSON with arrival/event
+times, deltas, heading, frame gaps, scaling, request mode and runtime identity;
+frame history freezes on pause. The recorder uses preallocated motion storage
+and samples frames at most about 60 Hz. Source ownership is FORK-024.
+Unit tests and a real-ROM hitch/Watch/diagnostic-export audit cover the change;
+browser captures remain private under `build/web-mouse`. Physical reproduction
+with a trace is the next step if raw input does not resolve the reported snap.
+Local acceptance: TypeScript, 137 unit tests, exact public-artifact verification
+and standards checks pass. Chrome 155 and Edge 156 pass raw capture, simultaneous
+keyboard movement/known mouse input, hitch conservation, no delayed replay,
+Watch recapture and bounded report export. Edge also passes forced unsupported
+raw fallback. Narrow toolbar bounds pass at 390 px; Chrome's separate real
+focus/Escape and cutscene-to-control regression passes. No native/render input
+changes are made; the existing gallery remains fresh.
+
 **Next action:** Preserve the published storage/deployment contracts and use
 the render-thread quality audit for future audio changes. Future
 macOS Safari/hardware-GPU/full-mission testing and optional enhancements require

@@ -51,6 +51,21 @@ gunshot/music classifier. Nonzero ScriptProcessor callback/analyser samples
 alone do not prove that the browser met playback deadlines. The browser's
 512-sample SDL period is configured separately from native audio.
 
+Mouse capture requests unaccelerated browser movement, with an automatic
+compatibility retry if raw input is unsupported. No motion clamp or smoothing
+is applied. For an intermittent mouse snap, press F2 immediately afterward and
+choose **Download mouse diagnostics** in the player toolbar. The session-only
+report contains the latest bounded movement/timing/heading/scaling samples and
+build identity; paused frame history freezes until resume. It contains no key,
+ROM/save or world-position data and is never uploaded automatically.
+
+`MIDAS_BROWSER=chrome bun run audit:mouse ../baserom.u.z64 ../build/web-mouse/game http://127.0.0.1:4177/Project-Midas-ADS/`
+checks known movement with and without a 250 ms hitch, no subsequent replay,
+Watch recapture and exported diagnostics. Set `MIDAS_MOUSE_FALLBACK=1` to test
+unsupported-raw fallback; use `MIDAS_BROWSER=msedge` for Edge. Controlled browser
+injection does not reproduce hardware acceleration or prove a physical snap's
+cause.
+
 ```sh
 bun install --frozen-lockfile
 bun run typecheck

@@ -1,5 +1,7 @@
 import { createSignal } from 'solid-js';
 import type { Engine } from './engine';
+import { installMouseLock } from './mouse-lock';
+import { createMouseDiagnostics } from './mouse-diagnostics';
 
 export type Playback =
     | { kind: 'stopped' | 'starting' | 'menu' | 'playing' | 'capturing' | 'mouse-free' }
@@ -16,6 +18,9 @@ export function createCapture(
     let intentional = false;
     let wasLocked = false;
     let pending = false;
+    const diagnostics = createMouseDiagnostics(() => engine.maybeManifest?.());
+    let maybeLock: ReturnType<typeof installMouseLock> | undefined;
+    let maybeCaptureFailure: ((error: unknown) => void) | undefined;
     let requestResume = () => {
         void resume();
     };
@@ -57,7 +62,8 @@ export function createCapture(
                 const done = (maybeError?: Error) => {
                     clearTimeout(timer);
                     document.removeEventListener('pointerlockchange', changed);
-                    document.removeEventListener('pointerlockerror', failed);
+                    document.removeEventListener('pointerlockerror', lockError);
+                    maybeCaptureFailure = undefined;
                     maybeError ? reject(maybeError) : resolve();
                 };
                 const changed = () => {
@@ -65,9 +71,13 @@ export function createCapture(
                 };
                 const failed = () =>
                     done(new Error('Mouse capture was refused. Click Resume to try again.'));
+                const lockError = () => {
+                    if (!maybeLock?.pending()) failed();
+                };
                 const timer = setTimeout(failed, 5000);
                 document.addEventListener('pointerlockchange', changed);
-                document.addEventListener('pointerlockerror', failed);
+                document.addEventListener('pointerlockerror', lockError);
+                maybeCaptureFailure = failed;
                 if (game._portWebCaptureMouse() < 0) failed();
             });
             const current = state();
@@ -100,14 +110,9 @@ export function createCapture(
         const listen = { signal: events.signal };
         // SDL's pinned SDK ignores the returned Promise; handle rejection on this
         // canvas while retaining pointerlockerror for the capture state machine.
-        const originalRequest = canvas.requestPointerLock;
-        const request = originalRequest?.bind(canvas);
-        if (request)
-            canvas.requestPointerLock = (options) => {
-                const result = request(options);
-                void result?.catch(() => {});
-                return result;
-            };
+        const lock = installMouseLock(canvas, (error) => maybeCaptureFailure?.(error));
+        maybeLock = lock;
+        const detachDiagnostics = diagnostics.attach(canvas, lock.mode);
         document.addEventListener(
             'pointerlockchange',
             () => {
@@ -163,6 +168,7 @@ export function createCapture(
         const monitor = () => {
             const game = engine.maybeGame();
             const current = state();
+            diagnostics.sample(started() ? game : undefined, current.kind);
             if (
                 started() &&
                 game &&
@@ -188,12 +194,15 @@ export function createCapture(
         return () => {
             events.abort();
             cancelAnimationFrame(frame);
-            if (originalRequest) canvas.requestPointerLock = originalRequest;
+            lock.dispose();
+            detachDiagnostics();
+            maybeLock = undefined;
         };
     }
     return {
         state,
         notice,
+        downloadMouseDiagnostics: diagnostics.download,
         attach,
         pause,
         resume,

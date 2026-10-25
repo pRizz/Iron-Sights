@@ -71,6 +71,13 @@ export function Player(props: PlayerProps) {
                 <span class="status-dot" />
                 <span>{playbackLabel()}</span>
                 <span class="toolbar-spacer" />
+                <button
+                    class="quiet"
+                    disabled={!started()}
+                    onClick={capture.downloadMouseDiagnostics}
+                >
+                    Download mouse diagnostics
+                </button>
                 <button class="quiet" disabled={!started()} onClick={() => capture.pause('manual')}>
                     Pause
                 </button>
