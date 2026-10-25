@@ -58,9 +58,34 @@ try {
   });
   assert.ok(aborted, 'An aborted storage transaction must reject');
   assert.equal(await page.evaluate(async () => (await storageTest.recalledRom()).name), original.name);
+  const fallback = await page.evaluate(async () => {
+    const put = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (value, ...args) {
+      if (value?.blob instanceof Blob) {
+        this.transaction.abort();
+        throw new DOMException('Synthetic Blob preparation failure', 'DataCloneError');
+      }
+      return Reflect.apply(put, this, [value, ...args]);
+    };
+    try {
+      const bytes = Uint8Array.from([0x37, 0x80, 0x40, 0x12, 9, 8, 7, 6]);
+      const pending = storageTest.rememberRom({ bytes, name: 'byte-fallback.v64', order: 'v64' });
+      bytes.fill(0);
+      await pending;
+      const recalled = await storageTest.recalledRom();
+      return { name: recalled.name, bytes: Array.from(new Uint8Array(await recalled.arrayBuffer())) };
+    } finally { IDBObjectStore.prototype.put = put; }
+  });
+  assert.deepEqual(fallback, { name: 'byte-fallback.v64', bytes: original.bytes });
+  await page.reload();
+  await page.evaluate(initialize);
+  assert.deepEqual(await page.evaluate(async () => {
+    const rom = await storageTest.recalledRom();
+    return Array.from(new Uint8Array(await rom.arrayBuffer()));
+  }), original.bytes, 'Byte fallback changed across reload');
   await page.evaluate(() => storageTest.forgetRom());
   assert.equal(await page.evaluate(() => storageTest.recalledRom()), undefined);
-  console.log('Browser storage: original-byte reload, aborted-write preservation, delete and concurrent-tab lock passed');
+  console.log('Browser storage: original-byte reload, Blob-to-byte fallback/reload, aborted-write preservation, delete and concurrent-tab lock passed');
 } finally {
   await browser.close();
   await new Promise(resolve => server.close(resolve));

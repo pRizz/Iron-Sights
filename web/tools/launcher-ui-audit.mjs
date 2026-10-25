@@ -154,7 +154,7 @@ try {
                     const transaction = database.transaction('rom', 'readwrite');
                     transaction
                         .objectStore('rom')
-                        .put({ blob: new Blob(['bad']), name: 'broken.z64' }, 'original');
+                        .put({ bytes: new Uint8Array([1, 2, 3]), name: 'broken.z64' }, 'original');
                     transaction.oncomplete = () => {
                         database.close();
                         resolve();

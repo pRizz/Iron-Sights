@@ -41,17 +41,28 @@ async function romTransaction(mode: IDBTransactionMode, operation: (store: IDBOb
 export async function rememberRom(rom: ValidatedRom): Promise<void> {
   // Blob snapshots the original byte order before the game can mutate a copy.
   const value = { blob: new Blob([rom.bytes]), name: rom.name };
-  await romTransaction('readwrite', store => store.put(value, KEY));
+  try {
+    await romTransaction('readwrite', store => store.put(value, KEY));
+  } catch (error) {
+    // Some WebKit backends cannot prepare Blob data for IndexedDB. Preserve
+    // the same original snapshot as bytes; quota/permission failures still fail.
+    if (!error || typeof error !== 'object' || !('name' in error) ||
+        !['DataCloneError', 'UnknownError', 'NotSupportedError'].includes(String(error.name))) throw error;
+    const bytes = new Uint8Array(await value.blob.arrayBuffer());
+    await romTransaction('readwrite', store => store.put({ bytes, name: rom.name }, KEY));
+  }
 }
 
 export async function recalledRom(): Promise<(Blob & { name: string }) | undefined> {
   const maybeValue = await romTransaction('readonly', store => store.get(KEY));
   if (maybeValue === undefined) return undefined;
-  if (!maybeValue || typeof maybeValue !== 'object' || !('blob' in maybeValue) || !('name' in maybeValue)
-      || !(maybeValue.blob instanceof Blob) || typeof maybeValue.name !== 'string') {
+  if (!maybeValue || typeof maybeValue !== 'object' || !('name' in maybeValue) || typeof maybeValue.name !== 'string') {
     throw new Error('The remembered ROM is damaged. Forget it and choose your original ROM again.');
   }
-  return Object.assign(maybeValue.blob, { name: maybeValue.name });
+  const blob = 'blob' in maybeValue && maybeValue.blob instanceof Blob ? maybeValue.blob
+    : 'bytes' in maybeValue && maybeValue.bytes instanceof Uint8Array ? new Blob([new Uint8Array(maybeValue.bytes)]) : undefined;
+  if (!blob) throw new Error('The remembered ROM is damaged. Forget it and choose your original ROM again.');
+  return Object.assign(blob, { name: maybeValue.name });
 }
 
 export async function forgetRom(): Promise<void> {

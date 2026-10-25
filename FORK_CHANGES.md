@@ -1341,7 +1341,10 @@ The final project-path artifact passes Edge's full real-ROM launcher/storage/
 capture/audio/focus/watch audit and confirms the ROM-backed logo initialized.
 Actions-based Pages configuration is enabled at
 `https://prizz.github.io/Project-Midas-ADS/` with HTTPS enforced. First CI
-publication and deployed update validation remain pending. An isolated Linux
+publication succeeded in run `40145610255` at clean commit `2360bc8`; the Windows
+and Bright Builds workflows also passed. Its live manifest carries truthful CI
+provenance. A live-game update audit is active; deployed update validation remains
+pending. An isolated Linux
 Chromium run also passes the project-path launcher, ROM storage, C/IDBFS and ten
 GPU sampler checks with container networking disabled.
 Browser audit tools select Chromium/installed Chrome/Edge, Firefox or WebKit,
@@ -1350,6 +1353,19 @@ capability initialization passes. Firefox 157 initializes under Linux Xvfb/Mesa
 llvmpipe after its Windows executable failed to launch and its Linux headless
 run lacked WebGL. Neither is claimed as completed browser/gameplay compatibility
 yet. The tracker records the isolated browser image digest and environment.
+The next compatibility slice fixes Gecko's global report of an expected Web
+Locks callback throw by rejecting the caller directly. Firefox's full launcher
+UX passes under Linux Xvfb; actual Dam reaches gameplay but isolated audio is
+still under investigation. WebKit's Windows IndexedDB backend rejects Blob/File
+preparation, so remembered ROMs prefer Blob and retry clone/unsupported/unknown
+preparation errors as an original-byte snapshot in the same schema-1 row.
+Quota, permission and explicit abort failures do not trigger that fallback.
+Existing Blob rows remain readable; byte rows reconstruct a Blob for normal ROM
+validation. Browser storage tests preserve original bytes after mutation/reload,
+and WebKit's complete ROM-free UX now passes. An opt-in private deployment audit
+keeps an actual watch animating through a changed runtime version and then
+requires capture recovery and identical reloaded save files. Its outcome is
+still pending; it is not part of the public launcher.
 The following launcher slice now builds locally with SolidJS and commit-pinned
 MysticUI/Tailwind. It adds file/drop selection and ROM remembering, typed engine
 and capture states, visible download/compile/save stages, backup controls with

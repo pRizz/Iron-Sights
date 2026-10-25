@@ -1,6 +1,7 @@
 // Private actual-ROM launcher acceptance. Never upload these captures/backups.
 import { expect } from '@playwright/test';
 import { launchAuditBrowser } from './browser-choice.mjs';
+import { waitForDeployment } from './deployment-watch.mjs';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -136,6 +137,7 @@ try {
         'Watch was mistaken for unexpected capture loss',
     );
     await page.screenshot({ path: resolve(output, 'watch.png') });
+    const deployment = await waitForDeployment(page, origin);
     await page.keyboard.press('p', { delay: 120 });
     await page.getByRole('button', { name: 'Resume game' }).click();
     await page.waitForFunction(() => !!document.pointerLockElement);
@@ -200,6 +202,7 @@ try {
             {
                 checks: 'first/repeat ROM, game files, capture/focus/watch passed',
                 audio,
+                deployment,
                 requests,
                 errors,
             },

@@ -349,14 +349,20 @@ reload, actual backup restore and ROM removal without save loss. An audit race
 was fixed by waiting for Play readiness after restoring saves; configuration
 downloads may still be finishing when save data is already available.
 Pages is configured for Actions at `https://prizz.github.io/Project-Midas-ADS/`
-with HTTPS enforced. First CI publication and deployed update acceptance remain
-pending. The launcher checkpoint `d6ed43d` passed both existing CI workflows.
+with HTTPS enforced. Commit `2360bc8` passed Browser build and Pages run
+`40145610255`, Windows builds/provenance `40145610266` and Bright Builds
+`40145610338`. The live manifest identifies that clean commit and its GitHub
+Actions build truthfully. Its private live-site audit has reached Dam, created
+real user files and is keeping the watch animating while awaiting a second
+deployment. The opt-in `MIDAS_WAIT_FOR_DEPLOY=1` audit compares runtime versions,
+requires continued native frame logging and then checks recovery/reloaded files.
+Deployed update acceptance remains pending.
 The Linux Playwright 1.64.1 image additionally passed the production project-path
 UI audit, ROM storage, C/IDBFS filesystem and all ten GPU sampler cases against
 the assembled local artifact, with container networking disabled.
 
-**Next action:** Push the workflow, verify its first publication and run a real
-deployed update/persistence test before completion.
+**Next action:** Deploy the compatibility fixes while the live update audit is
+active, then verify continued gameplay and reloaded user files.
 
 ## WEB-006 | 2026-10-24 | Browser compatibility and polish
 
@@ -380,6 +386,24 @@ llvmpipe and no page errors. Its headless Linux run had no WebGL 2 and showed th
 intended graphics-availability error. The browser image is pinned to
 `mcr.microsoft.com/playwright:v1.64.1-noble@sha256:d65108d1a8095d8b0c4a5e32bf1807a40a5ce90ff0c78473e1116b1c243235e8`.
 No mission/effects matrix or new performance acceptance yet.
+
+**Session notes:**
+
+- 2026-10-24: Firefox 157's full ROM-free launcher UX passes under Linux Xvfb
+  after replacing a thrown Web Locks callback error with direct caller rejection;
+  Gecko reported the throw globally despite the request promise's catch. Its
+  real-ROM audit reaches normal Dam, creates campaign/profile/settings files and
+  initializes the ROM-backed logo, but audio output is not yet demonstrated in
+  the isolated Linux environment. Continue investigating the sound backend.
+- 2026-10-24: Windows WebKit's full ROM-free launcher UX passes after adding an
+  IndexedDB byte fallback for backends that cannot prepare Blob/File storage.
+  Blob remains the preferred original-ROM representation. Only clone/unsupported/
+  unknown preparation errors retry as bytes; quota/permission/abort failures
+  remain failures. The fallback snapshots the immutable original Blob, uses the
+  same schema-1 row key and reconstructs a Blob on recall. Browser integration
+  verifies original bytes after immediate working-buffer mutation and reload.
+  This is compatible with existing Blob rows and needs no destructive migration.
+  Actual WebKit ROM/gameplay acceptance is next; real macOS Safari is unverified.
 
 **Next action:** Define a representative mission/effects matrix for current
 Chrome/Edge, Firefox and Safari. Keep unsupported browsers/features visible;

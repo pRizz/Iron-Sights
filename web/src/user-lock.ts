@@ -8,7 +8,10 @@ export function acquireUserFilesLock(): Promise<() => void> {
     let release!: () => void;
     const held = new Promise<void>(finished => { release = finished; });
     void navigator.locks.request(LOCK, { ifAvailable: true }, maybeLock => {
-      if (!maybeLock) throw new Error('Another Project Midas tab owns your saves. Close it before starting here.');
+      if (!maybeLock) {
+        reject(new Error('Another Project Midas tab owns your saves. Close it before starting here.'));
+        return;
+      }
       resolve(release);
       return held;
     }).catch(reject);

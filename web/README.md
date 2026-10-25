@@ -76,7 +76,10 @@ rejects ROM/suspend paths, traversal, duplicate paths, oversized data, damaged
 checksums and unsupported schema versions. Native profile names, including dots,
 punctuation and valid Unicode, retain the native 23-byte filename limit.
 The ROM store snapshots original bytes into a separate IndexedDB Blob and
-survives reload; its real-browser test verifies failed-transaction preservation
+survives reload. Backends that reject Blob preparation with `DataCloneError`,
+`UnknownError` or `NotSupportedError` retry the immutable snapshot as bytes in
+the same schema-1 row; recall reconstructs a Blob. Quota/permission/abort errors
+remain visible failures. Its real-browser test verifies failed-transaction preservation
 and deletion. A Web Lock prevents concurrent save writers. The serialized sync
 queue retains pending changes after errors and exposes retry/status. These
 adapters now back the actual launcher. A private real-ROM audit creates campaign,
@@ -89,6 +92,13 @@ damaged remembered-ROM removal, preference reload and an aborted IDBFS write.
 Failed restoration preserves memory files and durable files; Retry commits the
 preserved snapshot. The failure tests inject errors; they do not exhaust the
 host browser's quota.
+
+For an actual deployed update check, set `MIDAS_WAIT_FOR_DEPLOY=1` and run
+`audit:launcher` against the live site. Wait for `READY_FOR_DEPLOY_UPDATE`, then
+push the reviewed next change. The private audit keeps the watch animating,
+requires a new deployed runtime and continued frames, then verifies recovery,
+ROM recall and unchanged save backups after reload. It fails after 15 minutes
+without an update. Captures/backups remain in the ignored local output directory.
 
 Dependencies are pinned in `package.json` and `bun.lock`. SolidJS, Vite, MysticUI
 (exact GitHub commit) and its documented Tailwind 3 setup implement the accepted
