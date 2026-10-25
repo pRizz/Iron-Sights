@@ -49,5 +49,5 @@ export default defineConfig({
         },
     ],
     optimizeDeps: { exclude: ['mystic-ui'] },
-    build: { outDir: '../build/web-site', emptyOutDir: true },
+    build: { outDir: '../build/web-site', emptyOutDir: true, manifest: 'frontend-manifest.json' },
 });

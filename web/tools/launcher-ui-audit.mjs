@@ -12,6 +12,7 @@ await context.addInitScript(() => {
     navigator.storage.persisted = async () => false;
 });
 const page = await context.newPage();
+let diagnosticPage = page;
 const errors = [];
 context.on('page', (target) => target.on('pageerror', (error) => errors.push(String(error))));
 page.on('pageerror', (error) => errors.push(String(error)));
@@ -39,6 +40,7 @@ const restore = JSON.stringify({
 });
 try {
     await page.goto(origin);
+    await page.keyboard.press('F2');
     await page.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
     const before = await download(page);
     assert.ok(await page.getByRole('button', { name: 'Play GoldenEye' }).isDisabled());
@@ -130,6 +132,7 @@ try {
     await page.getByRole('button', { name: 'Exit fullscreen', exact: true }).click();
     await page.waitForFunction(() => !document.fullscreenElement);
     const second = await context.newPage();
+    diagnosticPage = second;
     await second.goto(origin);
     await second.getByRole('alert').filter({ hasText: 'Another Project Midas tab' }).waitFor();
     await page.close();
@@ -139,6 +142,7 @@ try {
     assert.deepEqual((await download(second)).files, JSON.parse(restore).files);
     await second.getByRole('checkbox', { name: 'Remember ROM on this device' }).uncheck();
     await second.reload();
+    await second.keyboard.press('F2');
     await second.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
     assert.ok(
         !(await second.getByRole('checkbox', { name: 'Remember ROM on this device' }).isChecked()),
@@ -164,6 +168,7 @@ try {
             }),
     );
     await second.reload();
+    await second.keyboard.press('F2');
     await second
         .getByRole('alert')
         .filter({ hasText: 'different size' })
@@ -186,12 +191,13 @@ try {
 } catch (error) {
     console.error(
         'Launcher failure state:',
-        await page
+        await diagnosticPage
             .evaluate(() => ({
                 alerts: [...document.querySelectorAll('[role="alert"]')].map(
                     (element) => element.textContent,
                 ),
                 status: document.querySelector('.launch-bar')?.textContent,
+                log: document.querySelector('pre')?.textContent,
             }))
             .catch(() => null),
     );

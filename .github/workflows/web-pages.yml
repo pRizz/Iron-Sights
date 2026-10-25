@@ -34,7 +34,7 @@ jobs:
           python3 scripts/port/test_web_spike.py
           cd web
           bun run typecheck
-          bun test src tools/runtime-policy.test.ts
+          bun run test
       - name: Build pinned SDK game and filesystem fixture without a ROM
         run: |
           python3 scripts/port/web_build.py video --jobs 4 --callback-types
@@ -57,6 +57,7 @@ jobs:
           trap 'kill "$preview_pid"' EXIT
           bun tools/wait-for-site.ts http://127.0.0.1:4177/Project-Midas-ADS/
           bun run test:launcher http://127.0.0.1:4177/Project-Midas-ADS/
+          bun run test:room http://127.0.0.1:4177/Project-Midas-ADS/
           bun run test:storage
           bun run test:filesystem
           bun run test:sampler

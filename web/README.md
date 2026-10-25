@@ -5,6 +5,12 @@ codec, storage adapters, tests and private runtime/menu audits. The launcher is
 [live on Pages](https://prizz.github.io/Project-Midas-ADS/), with deployment/update
 preservation verified. See [browser compatibility and measured limits](../scripts/port/web_compatibility.md);
 Safari remains experimental by the user's decision.
+The immersive room revision is tracked separately in the
+[accepted room plan](../scripts/port/web_room_plan.md) and WEB-007 through WEB-010.
+Its entrypoint fills the viewport; F2 opens the retained launcher, saves and
+About controls, Alt+Enter toggles fullscreen, and P remains the native watch.
+See [room implementation and prop provenance](src/room/README.md) for local
+checks, original prop models and candidate-source decisions.
 See the [runtime runbook](../scripts/port/web_runtime.md) and
 [milestone tracker](../scripts/port/web_target_progress.md).
 

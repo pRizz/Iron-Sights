@@ -1,0 +1,178 @@
+.experience {
+    min-height: 100dvh;
+    background: #000;
+}
+.experience:not(.controls-open) {
+    height: 100dvh;
+    overflow: hidden;
+}
+.experience:not(.controls-open) .app-shell {
+    max-width: none;
+    padding: 0;
+}
+.experience:not(.controls-open)
+    :is(
+        .site-header,
+        .page-intro,
+        .sidebar,
+        .about-build,
+        footer,
+        .action-notice,
+        .player-toolbar,
+        .launch-bar,
+        .welcome-overlay,
+        .error-panel,
+        .fullscreen-exit
+    ) {
+    display: none;
+}
+.experience:not(.controls-open) .workspace {
+    display: block;
+    margin: 0;
+}
+.experience:not(.controls-open) .player-card {
+    border: 0;
+    border-radius: 0;
+}
+.experience:not(.controls-open) .game-stage {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    aspect-ratio: auto;
+}
+.experience:not(.controls-open) #canvas {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+}
+.controls-open {
+    overflow: auto;
+    background: #121511;
+}
+.experience:fullscreen .fullscreen-exit {
+    display: block;
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    z-index: 5;
+}
+.controls-close {
+    position: fixed;
+    right: 20px;
+    top: 16px;
+    z-index: 30;
+    background: #242a21ed;
+}
+.room-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    background: #080a0e;
+}
+.room-layer[hidden] {
+    display: none;
+}
+.room-layer[data-revealing='true'] {
+    opacity: 0;
+    transition: opacity 0.35s;
+}
+@media (prefers-reduced-motion: reduce) {
+    .room-layer[data-revealing='true'] {
+        opacity: 0;
+        transition: opacity 0.16s !important;
+    }
+}
+.room-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+}
+.room-dragging::after {
+    content: 'Drop your GoldenEye ROM to insert the cartridge';
+    position: absolute;
+    inset: 20px;
+    border: 1px dashed #d9b775;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    color: #f7e3b2;
+    background: #080c14c9;
+    pointer-events: none;
+}
+.room-keyboard-actions button,
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+.room-keyboard-actions button:focus-visible {
+    width: auto;
+    height: auto;
+    margin: 0;
+    padding: 14px 22px;
+    clip-path: none;
+    left: 24px;
+    bottom: 24px;
+    z-index: 15;
+}
+.rom-dialog {
+    width: min(480px, calc(100vw - 36px));
+    padding: 32px;
+    color: #ece9db;
+    background: #171d1bed;
+    border: 1px solid #686756;
+    border-radius: 14px;
+    box-shadow: 0 24px 100px #000c;
+}
+.rom-dialog::backdrop {
+    background: #03060ba8;
+    backdrop-filter: blur(5px);
+}
+.rom-dialog h2 {
+    margin: 12px 0;
+}
+.rom-dialog > p:not(.eyebrow) {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #bbc1b2;
+}
+.rom-dialog [role='alert'] {
+    color: #eac5a5 !important;
+    margin: 16px 0;
+}
+.rom-drop-zone {
+    border: 1px dashed #666d5a;
+    border-radius: 8px;
+    margin: 22px 0;
+    padding: 24px;
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+}
+.rom-drop-zone small {
+    font-size: 11px;
+    color: #9ca591;
+}
+.experience-hint {
+    position: fixed;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 40;
+    padding: 13px 20px;
+    max-width: calc(100vw - 32px);
+    background: #121915eb;
+    border: 1px solid #657052;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #e6dfc9;
+    text-align: center;
+}

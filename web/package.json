@@ -9,22 +9,25 @@
     "build": "bun tools/build-site.ts",
     "verify:site": "bun tools/verify-site.ts",
     "typecheck": "tsc --noEmit",
-    "test": "bun test src tools/runtime-policy.test.ts",
+    "test": "bun test src tools/runtime-policy.test.ts tools/frontend-files.test.ts",
     "audit:runtime": "node tools/runtime-audit.mjs",
     "audit:menus": "node tools/menu-audit.mjs",
     "audit:launcher": "node tools/launcher-game-audit.mjs",
     "test:launcher": "node tools/launcher-ui-audit.mjs",
+    "test:room": "node tools/room-audit.mjs",
     "test:sampler": "node tools/sampler-audit.mjs",
     "test:storage": "bun tools/build-storage-test.ts && node tools/storage-audit.mjs",
     "test:filesystem": "bun tools/build-storage-test.ts && node tools/filesystem-audit.mjs"
   },
   "dependencies": {
     "mystic-ui": "github:pRizz/mystic-ui#d36017757708ed01ef2b3b47beb14f294726411c",
-    "solid-js": "1.9.17"
+    "solid-js": "1.9.17",
+    "three": "0.186.1"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",
     "@types/bun": "1.4.4",
+    "@types/three": "0.186.0",
     "autoprefixer": "10.6.1",
     "postcss": "8.5.31",
     "prettier": "3.9.10",

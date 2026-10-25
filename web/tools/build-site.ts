@@ -22,6 +22,8 @@ const notices = [
     ['Enhanced fonts: notice', '../../port/fast3d/fonts/NOTICE.txt'],
     ['Emscripten / C / C++ / SDL2 runtime', '../../build/web/video/runtime-notices.txt'],
     ['SolidJS', '../node_modules/solid-js/LICENSE'],
+    ['Three.js', '../node_modules/three/LICENSE'],
+    ['User-supplied cartridge label artwork', '../src/room/ARTWORK.md'],
     ['MysticUI', '../node_modules/mystic-ui/LICENSE.md'],
     ['clsx', '../node_modules/clsx/license'],
     ['tailwind-merge', '../node_modules/tailwind-merge/LICENSE.md'],

@@ -475,3 +475,149 @@ matrix, measured limits, tested environments and explicit feature deferrals.
 **Next action:** Preserve the published storage/deployment contracts. Future
 macOS Safari/hardware-GPU/full-mission testing and optional enhancements require
 separate follow-up scope; the accepted desktop preview milestones are complete.
+
+## WEB-007 | 2026-10-24 | Immersive viewport and controls
+
+**Status:** First slice complete locally; implementation is on
+`codex/immersive-web-room` and has not replaced the deployed main site.
+
+**Completion:** Full-viewport entrypoint, retained controls on F2, Alt+Enter,
+stable game canvas and tested transition decisions.
+
+**Evidence:** [Room plan](web_room_plan.md) records realistic props, returning
+power-switch interaction, vertical turntable spin and P retaining the watch.
+AGENTS routes later sessions here; the chrome exception is documented.
+`web/src/app.tsx` retains the Solid shell/game canvas and adds F2 controls,
+Alt+Enter fullscreen and post-interaction hints. `web/src/room/flow.ts` has six
+pure transition tests; all 73 package tests and strict TypeScript pass.
+Edge/Chrome ROM-free room audits cover viewport, physical cartridge hover/click,
+keyboard selection, invalid ROM, stable canvas through F2, fullscreen, portrait,
+reduced motion and graphics-context fallback. The production project prefix
+works. Existing Edge launcher UX and actual-ROM Dam/save regressions pass with
+F2 entry. Opening controls pauses/releases gameplay; closing requires Resume.
+
+**Next action:** Preserve these canvas/storage boundaries while completing
+WEB-008 prop fidelity and WEB-010 compatibility/polish.
+
+## WEB-008 | 2026-10-24 | Room scene and assets
+
+**Status:** Complete for the desktop preview's original prop models. Initial box
+stand-ins have been replaced and the refined scene/cinematic visually reviewed.
+
+**Completion:** Visually reviewed room/CRT/console/cartridge, hover/click targets,
+candidate asset inspection and attribution with explicit stand-in tracking.
+
+**Evidence:** Candidate links/licenses are in the room plan. The console's official
+download endpoint requires authentication (HTTP 401); the TV has a public GLB.
+The inspected TV is only 100 triangles with plain materials and does not supply
+the requested realistic CRT. Its 9,292-byte local GLB/hash and candidate licenses
+are recorded in `web/src/room/README.md`; neither candidate is shipped.
+Landscape, portrait, insertion, flight and inserted-cartridge captures were
+visually reviewed under `build/web-room`. The user's subsequent explicit request
+replaces the text-only label with their supplied 1000x1000 AVIF. Its unchanged
+68,421 bytes, SHA-256, label UV rectangle and separate artwork notice are in
+`web/src/room/ARTWORK.md`. Build verification checks the exact public image.
+
+**Next action:** Preserve the original-model/asset provenance. The authenticated
+candidate remains an optional future replacement, not a preview dependency.
+
+**Continuation:** Refining the original procedural props for the desktop preview
+rather than blocking on the authenticated model download. The next pass adds
+shaped console/cartridge bodies, detailed controls, glass/screen effects and
+room materials, then reviews them in the complete insertion/TV sequence. This
+is an original reconstruction, not the Joseph Rohm candidate.
+The refined modules replace `props.ts` with shaped console/cartridge shells,
+recessed ports/vents/switches, a three-prong controller, curved physical CRT glass,
+native screen shaders and deterministic surface grain/reflection lighting.
+The supplied label remains unchanged. Windows WebKit's AVIF decoder failure
+motivated a lossless PNG retry: 588,603 bytes, identical decoded RGBA data,
+separately hashed/allowlisted and documented in ARTWORK.md. No candidate model,
+ROM-extracted asset or local diagnostic capture is shipped.
+
+## WEB-009 | 2026-10-24 | Cartridge onboarding and game handoff
+
+**Status:** Desktop interaction/handoff acceptance complete locally. Edge,
+Chrome and Linux Firefox pass; publication is recorded in WEB-010.
+
+**Completion:** First/repeat ROM flows, insertion/power/flight, loading/errors and
+actual-game handoff with audio, capture/watch and durable saves.
+
+**Evidence:** Existing ROM/storage/game interfaces are accepted in WEB-003/004.
+The private `web/tools/room-game-audit.mjs` passes first selection, eased insertion,
+power/TV flight, stable game-canvas handoff, actual native startup and nonzero
+audio after a menu gesture, identical save files after reload, an already-inserted
+returning cartridge and startup through the physical power-switch raycast target.
+No page errors or non-GET requests occurred. The room RAF/resources are disposed
+after the game's first graphics tasks. Private evidence is `build/web-room/game`;
+the retained launcher's full normal Dam/save audit is `build/web-room/shell-game`.
+The final-artwork flow also passed against the production prefix in
+`build/web-room/game-final`, and its inserted-cartridge screenshot was reviewed.
+One initial audit incorrectly paused via F2 before waiting for native frame 240;
+the audit now waits for startup frames before opening controls. That test failure
+was not evidence of an engine startup failure.
+
+**Next action:** Preserve the verified handoff/storage/capture contracts during
+WEB-010 publication; use the private cinematic/gameplay audits for future changes.
+
+**Continuation acceptance:** Edge and Chrome and isolated Linux Firefox passed
+actual-ROM selection/insertion/flight/audio, unchanged reloaded save files and
+the physical returning power switch. The room WebGL context is confirmed lost
+after handoff and the game canvas remains the same node. Edge additionally
+passed normal-menu Dam movement, P watch, focus freeze/recovery and capture after
+the cinematic; Chrome passed the actual reduced-motion/fade route. Evidence is
+in `build/web-room/polish-*-game`, `final-edge-game` and `final-reduced-game`.
+The gameplay audit samples sound before deliberately pausing; its earlier
+post-pause sample correctly saw a suspended context and was fixed in the audit.
+Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
+
+## WEB-010 | 2026-10-24 | Immersive compatibility and publication
+
+**Status:** Local desktop compatibility and packaging pass; final CI and Pages
+publication are in progress. Actual Safari remains explicitly experimental.
+
+**Completion:** Keyboard/reduced-motion/responsive/failure paths, production
+allowlist and browser verification, measured scene cost and verified deployment.
+
+**Evidence:** Prior desktop acceptance is WEB-006, not acceptance of this new scene.
+Three.js 0.186.1 and types 0.186.0 are exact pins. The initial scene is bundled
+with the frontend (approximately 654 kB JS / 176 kB gzip, 52 kB CSS); the supplied
+AVIF adds 68,421 bytes. Vite flags the JS chunk above 500 kB; code splitting and
+hardware frame-cost measurement remain follow-ups, not completed optimization.
+Assembly adds dependency/artwork notices, explicitly hashes the artwork and
+retains the existing exact artifact/Wasm verifier. The workflow adds the ROM-free
+room audit under `/Project-Midas-ADS/`; no ROM is supplied to CI. Local screenshots
+are in ignored `build/web-room`; no native gallery input changed.
+
+**Next action:** Run final fallback/CI checks, publish the verified branch and
+verify the deployed artifact and active-session/save preservation.
+
+**Continuation evidence:** 94 unit tests and strict TypeScript pass. Dynamic
+scene loading leaves about 98 kB initial JS (35 kB gzip) plus a 603 kB scene
+(154 kB gzip); the Vite scene-size advisory remains, while the shell is usable
+without that chunk. A tested parser validates the complete Vite output graph
+before allowing dynamic chunks into the exact public artifact. Static batching
+and lower subdivision reduce the sampled scene from 307 draws/177,510 triangles
+to 86/52,710. Idle drawing is intentionally capped at 30 fps. An isolated Edge
+1440x900/SwiftShader sample measured 28 fps and about 1.2 ms mean JS render
+submission after shader warm-up; this is not GPU-timer or hardware evidence.
+The updated audit records metrics, verifies no drawing behind F2 controls and
+tests failed-chunk recovery. Initial PNG-fallback/source equality is verified;
+final cross-browser fallback checks and publication are next. Linux Chromium's
+ROM-free production-prefix room audit passes, as does Linux Firefox's scene and
+actual-ROM flow. No native render/gallery input changed.
+Edge, Firefox and Windows WebKit now pass the final room UI/fallback checks.
+WebKit uses the lossless PNG; this remains WebKit automation, not macOS Safari
+acceptance. Forced AVIF-fetch failure also verifies PNG retry in a capable
+browser. The standard launcher stays available after a missing scene chunk,
+and failed-room return is disabled rather than exposing a blank canvas.
+Resource-stressed Linux software samples were slow despite batching, so a tested
+room-only quality controller reduces pixel ratio to 75% then 50% after eight
+net slow frame intervals over 80 ms. Fast frames reduce the score; it ignores
+isolated hitches and does not
+change the game canvas. Final adaptive checks and CI/publication are next.
+Final Chrome and Linux Firefox adaptive room audits pass. The sampled Chrome
+run retained full resolution at 28 fps; the constrained Linux Firefox sample
+engaged 75% scale and measured 5.3 fps, so it is functional software-host
+acceptance rather than a smooth hardware-performance claim. Published users
+should keep browser hardware acceleration enabled. Windows WebKit room-only
+checks pass with PNG retry; actual Safari/gameplay status remains experimental.

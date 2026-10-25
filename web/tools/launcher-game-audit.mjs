@@ -45,6 +45,7 @@ async function backup(name) {
 }
 try {
     await page.goto(origin);
+    await page.keyboard.press('F2');
     await page.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
     await expect(page.getByRole('button', { name: 'Choose ROM', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Play', exact: true })).toHaveCount(0);
@@ -182,6 +183,7 @@ try {
     await page.getByText('Saved on this device', { exact: true }).waitFor();
     const beforeReload = await backup('before-reload.json');
     await page.reload();
+    await page.keyboard.press('F2');
     await page.getByText('✓ Remembered for next time').waitFor({ timeout: 60_000 });
     await page.getByText('Saved on this device', { exact: true }).waitFor();
     // Restored saves can be ready before configuration downloads finish.
@@ -216,6 +218,7 @@ try {
     await page.getByRole('button', { name: 'Forget remembered ROM' }).click();
     await page.getByText('The remembered ROM was removed. Saves are unchanged.').waitFor();
     await page.reload();
+    await page.keyboard.press('F2');
     await page.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
     await expect(page.getByRole('button', { name: 'Choose ROM', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Play', exact: true })).toHaveCount(0);
