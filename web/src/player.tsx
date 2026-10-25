@@ -128,9 +128,6 @@ export function Player(props: PlayerProps) {
                     tabIndex={started() ? 0 : -1}
                     aria-label="Project Midas game canvas"
                 />
-                <button class="fullscreen-exit" onClick={() => void props.fullscreen()}>
-                    Exit fullscreen
-                </button>
                 <Show when={started() && props.touch.enabled()}>
                     <TouchControls
                         engine={engine}

@@ -1549,6 +1549,10 @@ cached auto-start behavior above; explicit exit still presents the inserted prop
 This replaces the initial visible launcher presentation introduced by FORK-024;
 its storage/game interfaces and retained HTML controls remain authoritative.
 F2 opens controls, Alt+Enter toggles fullscreen and P remains the native watch.
+The upper-right Exit fullscreen overlay button is removed at the owner's
+request; Alt+Enter and the browser's Escape behavior provide fullscreen exit.
+The retained launcher's Fullscreen control remains available. The launcher UI
+audit checks the overlay is absent and Alt+Enter exits fullscreen.
 The [room plan](scripts/port/web_room_plan.md), WEB-007 through WEB-010 in
 [progress](scripts/port/web_target_progress.md), AGENTS routing and the documented
 chrome override persist scope for later sessions. Candidate models are tracked

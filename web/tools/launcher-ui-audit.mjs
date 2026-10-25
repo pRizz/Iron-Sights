@@ -144,7 +144,11 @@ try {
     await page.getByText('Protection declined · backups remain available').waitFor();
     await page.getByRole('button', { name: 'Fullscreen', exact: true }).click();
     await page.waitForFunction(() => !!document.fullscreenElement);
-    await page.getByRole('button', { name: 'Exit fullscreen', exact: true }).click();
+    assert.equal(
+        await page.getByRole('button', { name: 'Exit fullscreen', exact: true }).count(),
+        0,
+    );
+    await page.keyboard.press('Alt+Enter');
     await page.waitForFunction(() => !document.fullscreenElement);
     const second = await context.newPage();
     diagnosticPage = second;

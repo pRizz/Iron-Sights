@@ -246,15 +246,3 @@ progress::-webkit-progress-value {
     height: 100vh;
     background: #000;
 }
-.fullscreen-exit {
-    display: none;
-}
-.game-stage:fullscreen .fullscreen-exit {
-    display: block;
-    position: absolute;
-    right: 18px;
-    top: 18px;
-    z-index: 5;
-    font-size: 12px;
-    background: #172013cc;
-}

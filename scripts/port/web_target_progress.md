@@ -530,6 +530,11 @@ room replaces the initial visible launcher; F2 retains access to its controls.
 **Completion:** Full-viewport entrypoint, retained controls on F2, Alt+Enter,
 stable game canvas and tested transition decisions.
 
+**2026-10-25 fullscreen cleanup:** Removed the upper-right Exit fullscreen
+overlay button and its unused styles. Alt+Enter and browser Escape behavior
+remain the exit routes; the retained launcher still offers Fullscreen. The
+launcher UI audit now verifies the overlay is absent and exits with Alt+Enter.
+
 **Evidence:** [Room plan](web_room_plan.md) records realistic props, returning
 power-switch interaction, vertical turntable spin and P retaining the watch.
 AGENTS routes later sessions here; the chrome exception is documented.

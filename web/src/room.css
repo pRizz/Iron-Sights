@@ -21,8 +21,7 @@
         .player-toolbar,
         .launch-bar,
         .welcome-overlay,
-        .error-panel,
-        .fullscreen-exit
+        .error-panel
     ) {
     display: none;
 }
@@ -44,13 +43,6 @@
 .controls-open {
     overflow: auto;
     background: #121511;
-}
-.experience:fullscreen .fullscreen-exit {
-    display: block;
-    position: absolute;
-    right: 18px;
-    top: 18px;
-    z-index: 5;
 }
 .controls-close {
     position: fixed;
