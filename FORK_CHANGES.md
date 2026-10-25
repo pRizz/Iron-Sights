@@ -128,6 +128,8 @@ feedback HUD, mission/cheat hints, suspend points, fonts and web lifecycle/stora
   deadlines, rather than treating nonzero callback samples as continuity proof.
   It checks idle Dam, Watch, pause silence and sound recovery; WAV evidence stays
   local. ROM-free continuity-metric regressions run with the web unit suite.
+  The audit asserts native Watch state and holds its P-key pulse across input
+  polls so a same-tick key-down/up pair cannot silently skip that coverage.
 - The fork's uppercase `README.md` supersedes upstream's lowercase filename,
   avoiding a Windows case collision while retaining fork setup and identity.
   The fork's mission timer stays off by default with cheat/best-time detail;

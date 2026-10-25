@@ -118,11 +118,11 @@ try {
     header.write('data', 36);
     header.writeUInt32LE(pcm.length, 40);
     await writeFile(resolve(output, 'audio.wav'), Buffer.concat([header, pcm]));
-    await page.keyboard.press('P');
+    await page.keyboard.press('P', { delay: 120 });
     await page.waitForFunction(() => !midasAuditGame._portWebControlsLive());
     await page.waitForTimeout(500);
     result.watch = audioContinuity(await page.evaluate(() => captureRenderedAudio(3)), result.rate);
-    await page.keyboard.press('P');
+    await page.keyboard.press('P', { delay: 120 });
     await page.waitForFunction(() => midasAuditGame._portWebControlsLive());
     await page.waitForTimeout(500);
     await page.evaluate(() => midasAuditGame._portWebSetPaused(1));

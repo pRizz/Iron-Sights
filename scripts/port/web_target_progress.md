@@ -484,6 +484,8 @@ sample jumps. Both browsers pass Watch and pause/resume audio checks, with
 exactly silent paused output. Native audio retains upstream's 256-sample period.
 The quality audit writes private WAV/JSON/log evidence under `build/web-audio`;
 its continuity-metric tests run in the web unit suite (130 tests pass).
+The Watch audit explicitly checks native control state and holds P across an
+input poll; a zero-duration synthetic tap can otherwise miss the native input.
 Optimized Wasm and native Windows builds pass. Two independent gallery passes
 change zero image cells. This fixes browser scheduling tolerance without
 changing mixer synthesis, campaign storage or input policy.
