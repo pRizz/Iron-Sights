@@ -24,6 +24,9 @@ export type GameFS = {
 };
 
 export type GameModule = {
+    // Pinned SDL2 exposes this context on Module; touch gestures must resume it
+    // directly when WebKit suppresses compatibility mouse events.
+    SDL2?: { audioContext?: AudioContext };
     FS: GameFS;
     IDBFS: unknown;
     ENV: Record<string, string>;
@@ -33,6 +36,11 @@ export type GameModule = {
     _portWebCaptureMouse(): number;
     _portWebGetGfxTasks(): number;
     _portWebReturnToRoom(): void;
+    _portWebTouchEnable(enabled: number): void;
+    _portWebTouchReset(): void;
+    _portWebTouchMove(x: number, y: number): void;
+    _portWebTouchLook(yaw: number, pitch: number): void;
+    _portWebTouchButton(action: number, down: number): void;
 };
 
 export type GameOptions = {

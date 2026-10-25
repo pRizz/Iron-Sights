@@ -1,0 +1,263 @@
+// Private real-ROM acceptance using only on-screen controls after file selection.
+import assert from 'node:assert/strict';
+import { expect } from '@playwright/test';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { launchAuditBrowser } from './browser-choice.mjs';
+import { installGameProbe } from './native-game-audit.mjs';
+import { observeAudio, readAudio } from './audio-observer.mjs';
+
+const [
+    rom,
+    outputPath = '../build/web-touch/game',
+    origin = 'http://127.0.0.1:4177/Project-Midas-ADS/',
+] = process.argv.slice(2);
+if (!rom) throw new Error('Usage: touch-game-audit.mjs private-rom private-output [origin]');
+const output = resolve(outputPath);
+await mkdir(output, { recursive: true });
+const { browser, kind } = await launchAuditBrowser();
+const context = await browser.newContext({
+    viewport: { width: 844, height: 390 },
+    isMobile: true,
+    hasTouch: true,
+});
+await context.addInitScript(() => {
+    delete HTMLCanvasElement.prototype.requestPointerLock;
+});
+if (kind === 'webkit')
+    await context.addInitScript(() => {
+        // Desktop WebKit's mobile viewport driver does not expose iOS hardware points.
+        Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 5 });
+    });
+const page = await context.newPage();
+if (kind === 'chromium') {
+    const focus = await context.newCDPSession(page);
+    await focus.send('Emulation.setFocusEmulationEnabled', { enabled: false });
+}
+await installGameProbe(page);
+await page.addInitScript(observeAudio);
+const errors = [];
+page.on('pageerror', (error) => errors.push(String(error)));
+const tap = async (locator) => {
+    await expect(locator).toBeVisible();
+    await locator.scrollIntoViewIfNeeded();
+    const box = await locator.boundingBox();
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+};
+const action = (name) => page.locator(`[data-touch-action="${name}"]`);
+const sample = () =>
+    page.evaluate(() => ({
+        position: [0, 1, 2].map((axis) => midasAuditGame._portWebGetPlayerPosition(axis)),
+        heading: midasAuditGame._portWebGetPlayerHeading(),
+        frames: midasAuditGame._portWebGetFrames(),
+    }));
+const resize = async (width, height) => {
+    await page.setViewportSize({ width, height });
+    if (kind === 'webkit') {
+        // Desktop WebKit's mobile driver changes innerWidth without dispatching
+        // the rotation resize event, and retains the old visualViewport size.
+        await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+    }
+    await page.waitForTimeout(400);
+};
+try {
+    await page.goto(origin + '?controls');
+    await expect(page.getByLabel('On-screen touch controls')).toBeChecked();
+    await page.locator('#rom-file').setInputFiles(resolve(rom));
+    await expect(page.getByRole('button', { name: 'Play GoldenEye' })).toBeEnabled({
+        timeout: 90000,
+    });
+    await tap(page.getByRole('button', { name: 'Play GoldenEye' }));
+    await page.waitForFunction(
+        () => globalThis.midasAuditGame?._portWebGetGfxTasks() >= 240,
+        undefined,
+        { timeout: 120000 },
+    );
+    await expect(page.locator('.touch-controls')).toBeVisible();
+    for (let step = 0; step < 14; step++) {
+        if (await page.evaluate(() => midasAuditGame._portWebGetStage() === 33)) break;
+        await tap(action('accept'));
+        await page.waitForTimeout(1800);
+    }
+    assert.equal(
+        await page.evaluate(() => midasAuditGame._portWebGetStage()),
+        33,
+        'Touch Select did not reach Dam',
+    );
+    await page.waitForFunction(() => midasAuditGame._portWebControlsLive(), undefined, {
+        timeout: 90000,
+    });
+    await expect(page.locator('.touch-controls')).toHaveAttribute('data-mode', 'game');
+    assert.equal(await page.evaluate(() => !!document.pointerLockElement), false);
+    await expect(page.locator('.pause-overlay')).toHaveCount(0);
+    await expect(page.locator('.mouse-capture-hint')).toHaveCount(0);
+    const before = await sample();
+    await tap(action('aim'));
+    await expect(action('aim')).toHaveAttribute('aria-pressed', 'true');
+    await page.waitForTimeout(350);
+    if (kind === 'chromium') {
+        const session = await context.newCDPSession(page);
+        const points = new Map();
+        const update = async (id, x, y, down) => {
+            const existed = points.has(id);
+            const ending = points.get(id);
+            down ? points.set(id, { id, x, y }) : points.delete(id);
+            await session.send('Input.dispatchTouchEvent', {
+                type: down ? (existed ? 'touchMove' : 'touchStart') : 'touchEnd',
+                touchPoints: down ? [...points.values()] : [ending],
+            });
+        };
+        const stick = await page.locator('.touch-stick').boundingBox();
+        const fire = await action('fire').boundingBox();
+        const look = await page.locator('.touch-look').boundingBox();
+        const sx = stick.x + stick.width / 2,
+            sy = stick.y + stick.height / 2;
+        await update(1, sx, sy - stick.height * 0.35, true);
+        await update(2, look.x + 80, look.y + 40, true);
+        await update(3, fire.x + 24, fire.y + 24, true);
+        await page.waitForTimeout(1200);
+        await update(2, look.x + 160, look.y + 40, true);
+        await page.waitForTimeout(250);
+        await update(3, 0, 0, false);
+        await update(2, 0, 0, false);
+        await update(1, 0, 0, false);
+    } else {
+        // The WebKit driver has no multi-contact touchscreen API; exercise real
+        // DOM touch-pointer handlers without claiming native iOS input coverage.
+        const box = await page.locator('.touch-stick').boundingBox();
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(box.x + box.width / 2, box.y + 12);
+        await page.waitForTimeout(500);
+        await page.mouse.up();
+    }
+    const moved = await sample();
+    assert.ok(
+        Math.hypot(...moved.position.map((value, i) => value - before.position[i])) > 25,
+        'Thumbstick did not move Bond',
+    );
+    if (kind === 'chromium') {
+        assert.ok(Math.abs(moved.heading - before.heading) > 2, 'Touch drag did not turn Bond');
+    }
+    await tap(action('aim'));
+    await tap(action('watch'));
+    await expect(page.locator('.touch-controls')).toHaveAttribute('data-mode', 'menu', {
+        timeout: 10000,
+    });
+    await expect(page.locator('.pause-overlay')).toHaveCount(0);
+    await tap(action('down'));
+    await tap(action('watch'));
+    await expect(page.locator('.touch-controls')).toHaveAttribute('data-mode', 'game', {
+        timeout: 10000,
+    });
+    await tap(page.getByRole('button', { name: 'Pause', exact: true }).filter({ visible: true }));
+    await expect(page.locator('.pause-overlay')).toBeVisible();
+    await expect(page.locator('.touch-controls')).toHaveCount(0);
+    const paused = await sample();
+    await page.waitForTimeout(700);
+    assert.equal((await sample()).frames, paused.frames, 'Touch pause did not stop simulation');
+    await tap(page.getByRole('button', { name: 'Resume game' }));
+    await expect(page.locator('.touch-controls')).toBeVisible();
+    if (kind === 'chromium') {
+        // Mobile emulation can retain synthetic focus across bringToFront.
+        // The desktop control audit separately verifies real tab focus changes.
+        await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+        await expect(page.locator('.pause-overlay')).toBeVisible();
+        const unfocused = await sample();
+        await page.waitForTimeout(700);
+        assert.equal((await sample()).frames, unfocused.frames);
+        await tap(page.getByRole('button', { name: 'Resume game' }));
+    }
+    await tap(page.getByRole('button', { name: 'Options', exact: true }));
+    await expect(page.getByLabel('On-screen touch controls')).toBeVisible();
+    await tap(page.locator('.controls-close'));
+    await tap(page.getByRole('button', { name: 'Resume game' }));
+    await expect(page.locator('.touch-controls')).toBeVisible();
+    await page.waitForTimeout(1200);
+    const audio = await page.evaluate(readAudio);
+    const audioAvailable = await page.evaluate(
+        () => !!(window.AudioContext || window.webkitAudioContext),
+    );
+    if (audioAvailable)
+        assert.ok(
+            audio.some((s) => s.state === 'running' && Math.max(s.peak, s.outputPeak) > 0.00001),
+            'Touch gestures did not unlock game audio',
+        );
+    await resize(390, 844);
+    for (const element of [page.locator('.touch-stick'), action('fire'), action('watch')]) {
+        const box = await element.boundingBox();
+        assert.ok(
+            box.x >= 0 && box.y >= 0 && box.x + box.width <= 391 && box.y + box.height <= 845,
+            'Portrait control cropped',
+        );
+    }
+    await page.screenshot({ path: resolve(output, 'portrait.png') });
+    await resize(1024, 768);
+    await page.screenshot({ path: resolve(output, 'tablet.png') });
+    assert.deepEqual(errors, []);
+    await writeFile(
+        resolve(output, 'report.json'),
+        JSON.stringify(
+            {
+                before,
+                moved,
+                audio,
+                audioAvailable,
+                errors,
+                checks: 'pointerless startup, touch menu navigation to Dam, thumbstick, watch, pause/resume, options, audio, portrait/tablet bounds',
+                driver:
+                    kind === 'webkit'
+                        ? 'desktop WebKit: simulated touch capability/resize; single pointer drag'
+                        : 'Chromium: simultaneous touch contacts',
+            },
+            null,
+            2,
+        ),
+    );
+    console.log(
+        'Touch game: pointerless menus/Dam, native actions, pause/options, audio and portrait/tablet bounds passed',
+    );
+} catch (error) {
+    await writeFile(
+        resolve(output, 'layout.json'),
+        JSON.stringify(
+            await page
+                .evaluate(() => ({
+                    inner: [innerWidth, innerHeight],
+                    visual: [visualViewport?.width, visualViewport?.height],
+                    stage: document.querySelector('.game-stage')?.getBoundingClientRect().toJSON(),
+                    controls: [...document.querySelectorAll('.touch-controls button')].map((e) => ({
+                        name: e.textContent,
+                        box: e.getBoundingClientRect().toJSON(),
+                    })),
+                }))
+                .catch(() => ({})),
+        ),
+    );
+    await writeFile(
+        resolve(output, 'native-log.txt'),
+        await page
+            .locator('pre')
+            .textContent()
+            .catch(() => ''),
+    );
+    await writeFile(
+        resolve(output, 'audio.json'),
+        JSON.stringify(
+            await page
+                .evaluate(() => ({
+                    samples: globalThis.midasAudioObservers,
+                    state: globalThis.midasAuditGame?.SDL2?.audioContext?.state,
+                    metrics: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) =>
+                        globalThis.midasAuditGame?._portWebGetAudioMetric(i),
+                    ),
+                }))
+                .catch(() => ({})),
+        ),
+    );
+    await page.screenshot({ path: resolve(output, 'failure.png') }).catch(() => {});
+    await writeFile(resolve(output, 'failure.txt'), String(error));
+    throw error;
+} finally {
+    await browser.close();
+}

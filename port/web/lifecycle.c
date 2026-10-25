@@ -46,9 +46,11 @@ EMSCRIPTEN_KEEPALIVE s32 portWebCaptureMouse(void)
 
 void portWebApplyFocus(s32 paused)
 {
+    extern void portWebTouchReset(void);
     SDL_Window *window = SDL_GL_GetCurrentWindow();
     Uint32 buttons = SDL_GetMouseState(NULL, NULL);
     Uint8 button;
+    portWebTouchReset();
     SDL_ResetKeyboard();
     for (button = 1; button <= 32; button++) {
         if (buttons & (1u << (button-1))) SDL_SendMouseButton(window, 0, SDL_RELEASED, button);

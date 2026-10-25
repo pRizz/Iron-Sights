@@ -38,6 +38,20 @@ the target compiles or that browser gameplay has been validated.
   until the basic game, persistence and deployment are proven. Mobile/touch,
   netplay and cloud saves are outside the initial delivery.
 
+## Touch extension accepted 2026-10-25
+
+The owner requested keyboard-free play on iPhone, iPad and Android after the
+desktop preview. WEB-011 extends the original desktop-only scope with automatic
+touch detection and a saved manual switch, analog movement, drag-to-look,
+multi-finger Fire, toggle ADS and use/reload/crouch, weapon/gadget/zoom/detonate controls,
+native menu/watch navigation and on-screen pause/options. Keep proportional game
+presentation and safe-area insets in portrait and landscape. Touch play must not
+require Pointer Lock or fullscreen, and input must reset on pause, visibility
+loss, cancellation, rotation and returning to the room. Use a browser-only input
+adapter and small shared hooks; preserve native keyboard/mouse/controller and
+ADS behavior. Automate mobile viewport/multi-pointer and real-ROM input checks;
+distinguish those checks from physical iOS/Android acceptance.
+
 ## Build and runtime design
 
 Select browser configuration with CMake's `EMSCRIPTEN` condition, keeping

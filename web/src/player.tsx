@@ -4,11 +4,17 @@ import type { Engine } from './engine';
 import type { RomManager } from './rom-manager';
 import type { Capture } from './capture';
 import { observeGameSize } from './presentation';
+import { TouchControls } from './touch-controls';
+import type { TouchInput } from './touch-input';
+import { observeTouchViewport } from './touch-viewport';
 
 type PlayerProps = {
     engine: Engine;
     rom: RomManager;
     capture: Capture;
+    touch: TouchInput;
+    touchVisible: Accessor<boolean>;
+    openControls: () => void;
     started: Accessor<boolean>;
     presenting: Accessor<boolean>;
     resume: () => Promise<void>;
@@ -26,6 +32,7 @@ export function Player(props: PlayerProps) {
     let canvas!: HTMLCanvasElement;
     let stage!: HTMLDivElement;
     onMount(() => onCleanup(observeGameSize(canvas, stage)));
+    onMount(() => onCleanup(observeTouchViewport(stage)));
     const maybeError = createMemo(() => {
         const value = engine.status();
         return value.kind === 'error' ? value : undefined;
@@ -78,7 +85,7 @@ export function Player(props: PlayerProps) {
             <div
                 ref={stage}
                 class="game-stage"
-                classList={{ dragging: dragging() }}
+                classList={{ dragging: dragging(), 'touch-mode': props.touch.enabled() }}
                 onDragOver={(event) => {
                     event.preventDefault();
                     if (!started()) setDragging(true);
@@ -117,6 +124,15 @@ export function Player(props: PlayerProps) {
                 <button class="fullscreen-exit" onClick={() => void props.fullscreen()}>
                     Exit fullscreen
                 </button>
+                <Show when={started() && props.touch.enabled()}>
+                    <TouchControls
+                        engine={engine}
+                        capture={capture}
+                        input={props.touch}
+                        visible={props.touchVisible}
+                        options={props.openControls}
+                    />
+                </Show>
                 <Show when={!started()}>
                     <div class="welcome-overlay">
                         <div class="reticle" aria-hidden="true">
@@ -156,7 +172,11 @@ export function Player(props: PlayerProps) {
                     <div class="pause-overlay">
                         <p class="eyebrow">GAME PAUSED</p>
                         <h2>Ready to continue?</h2>
-                        <p>Resume to return to the game and capture your mouse.</p>
+                        <p>
+                            {props.touch.enabled()
+                                ? 'Resume to return to touch controls.'
+                                : 'Resume to return to the game and capture your mouse.'}
+                        </p>
                         <ShimmerButton
                             class="primary"
                             background="#d9b775"

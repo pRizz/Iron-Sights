@@ -839,3 +839,42 @@ identical; actual restore and ROM removal also passed. Evidence is private in
 `build/web-room/live-update-final`. WEB-007 through WEB-010 are complete for the
 accepted desktop preview. Later documentation-only publication refreshes do not
 change the accepted feature behavior.
+
+## WEB-011 | 2026-10-25 | Touch controls
+
+**Status:** Implemented; automated acceptance passes. Physical-device preview
+remains experimental.
+
+User-approved extension to the desktop preview: on-screen controls for iPhone,
+iPad and Android without keyboard/mouse. Added a browser-only virtual input
+adapter and small controller/movement hooks, analog movement, drag-to-look,
+multi-pointer actions, toggle ADS, fire-and-drag turning, watch/menu navigation
+and pause/options. Touch mode has a
+saved override, bypasses Pointer Lock, respects safe areas and resets on
+cancellation/focus/mode/room transitions. Native input and storage remain intact.
+Visible/layout viewport bounds contain controls during rotation/browser chrome
+changes; touch gestures resume the SDK's suspended audio context. Source
+ownership and paths are FORK-028.
+
+**Verification:** 127 unit tests, TypeScript, site allowlist/Wasm digest and the
+synthetic Wasm touch bridge pass. Edge and Windows WebKit ROM-free UI checks
+cover pointer ownership/cancellation, menu mode, toggle Aim, More/Pause/Options
+and portrait/tablet bounds. Chrome real-ROM acceptance enters Dam using only
+touch menus, verifies simultaneous movement/look/fire, Watch, manual and focus
+pause/resume, Options, sound and layout. The desktop control-transition audit
+also passes genuine tab-focus and cutscene/control transitions. Optimized Wasm
+and 275/275 strict-callback translation units pass. Native ADS, HUD, wardrobe,
+upstream-merge and state regressions pass. The native gallery regenerated in an
+isolated checkout with zero changed image cells; staged freshness verifies.
+Private evidence is under `build/web-touch`; ROMs and captures are not published.
+The Pages workflow now includes the touch bridge and ROM-free UI regressions.
+
+**Limits / next action:** Physical iPhone/iPad/Android testing is still needed
+for device performance, OS interruptions and real safe-area/browser-chrome
+behavior. Desktop WebKit requires simulated touch capability and resize events;
+its driver cannot establish physical iOS support or simultaneous touch gameplay.
+Windows WebKit exposes no Web Audio API; Linux WebKit provides an audio-enabled
+additional test host and passes the real-ROM menu, movement, Watch,
+Pause/Resume, Options, audio and layout integration checks. Continue with
+physical-device acceptance and tune controls
+from that evidence without changing campaign storage or desktop capture policy.

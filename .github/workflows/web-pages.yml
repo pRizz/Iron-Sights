@@ -43,6 +43,7 @@ jobs:
         run: |
           sdk_image=$(python3 -c 'import json; print(json.load(open("scripts/port/web_toolchain.json"))["image"])')
           docker run --rm --network=none --mount "type=bind,source=$PWD,target=/src,readonly" -w /src "$sdk_image" bash scripts/port/test_web_logo.sh --web
+          docker run --rm --network=none --mount "type=bind,source=$PWD,target=/src,readonly" -w /src "$sdk_image" bash scripts/port/test_web_touch.sh
       - name: Assemble and verify the public artifact
         working-directory: web
         run: |
@@ -59,6 +60,7 @@ jobs:
           bun run test:launcher http://127.0.0.1:4177/Project-Midas-ADS/
           bun run test:room http://127.0.0.1:4177/Project-Midas-ADS/
           bun run test:startup http://127.0.0.1:4177/Project-Midas-ADS/
+          bun run test:touch
           bun run test:storage
           bun run test:filesystem
           bun run test:sampler

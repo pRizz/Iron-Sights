@@ -19,6 +19,8 @@
     "test:startup": "node tools/startup-ui-audit.mjs",
     "test:launcher": "node tools/launcher-ui-audit.mjs",
     "test:room": "node tools/room-audit.mjs",
+    "test:touch": "bun tools/build-touch-test.ts && node tools/touch-ui-audit.mjs",
+    "audit:touch": "node tools/touch-game-audit.mjs",
     "test:sampler": "node tools/sampler-audit.mjs",
     "test:storage": "bun tools/build-storage-test.ts && node tools/storage-audit.mjs",
     "test:filesystem": "bun tools/build-storage-test.ts && node tools/filesystem-audit.mjs"

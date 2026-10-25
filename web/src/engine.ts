@@ -16,7 +16,7 @@ const DEFAULT_SETTINGS =
     'render_thread=0\nvsync=0\nmaxfps=60\ntickhz=60\nmsaa=1\nmusic_volume=70\nsfx_volume=70\n' +
     '[input]\nmouse=1\n[controls]\nstart=Return,P\n';
 
-function browserSupport(): void {
+function browserSupport(pointerless: boolean): void {
     if (
         !globalThis.WebAssembly ||
         !globalThis.indexedDB ||
@@ -27,7 +27,7 @@ function browserSupport(): void {
             'This browser cannot run the game with local saves. Try a current desktop Chrome, Edge or Firefox.',
         );
     }
-    if (!('requestPointerLock' in HTMLCanvasElement.prototype))
+    if (!pointerless && !('requestPointerLock' in HTMLCanvasElement.prototype))
         throw new Error('Mouse capture is unavailable in this browser.');
     const probe = document.createElement('canvas').getContext('webgl2');
     if (!probe)
@@ -69,7 +69,7 @@ async function downloadWasm(
     return bytes.buffer;
 }
 
-export function createEngine() {
+export function createEngine(pointerless: () => boolean = () => false) {
     const [status, setStatus] = createSignal<EngineStatus>({
         kind: 'loading',
         label: 'Checking browser',
@@ -110,7 +110,7 @@ export function createEngine() {
         if (initializing || maybeGame()) return;
         initializing = true;
         try {
-            browserSupport();
+            browserSupport(pointerless());
             loading('Opening local saves');
             maybeRelease = await acquireUserFilesLock();
             const manifestURL = new URL(

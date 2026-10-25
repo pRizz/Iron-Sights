@@ -1,0 +1,83 @@
+/* Synthetic browser bridge regression: no ROM or renderer. */
+#include <assert.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include "../../port/web/touch.c"
+
+s32 g_portMouseDirect, g_PlayerIsInTank;
+f32 g_portMouseYawDeg, g_portMousePitchDeg;
+static s32 live, consoleOpen, playerNum;
+static u32 actionBits;
+static const char *const bindings[] = {
+    "reload", "use", "aim_down_sights", "prev_weapon", "next_weapon",
+    "crouch_toggle", "zoom_in", "zoom_out", "detonate", "walk",
+    "prev_inventory", "next_inventory"
+};
+s32 get_cur_playernum(void) { return playerNum; }
+s32 portBondControlsLive(void) { return live; }
+s32 portConIsOpen(void) { return consoleOpen; }
+s32 portJoyPortBindCount(void) { return sizeof(bindings) / sizeof(bindings[0]); }
+const char *portJoyPortBindName(s32 index) { return bindings[index]; }
+void portJoyPortPadDown(s32 pad, s32 action) { assert(pad == 0); actionBits |= 1u << action; }
+void osSyncPrintf(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format); vfprintf(stderr, format, args); va_end(args);
+    abort();
+}
+
+int main(void)
+{
+    OSContPad pad = {0};
+    struct MoveData move = {0};
+    portWebTouchEnable(1);
+    portWebTouchButton(TOUCH_FIRE, 1);
+    portWebTouchButton(TOUCH_AIM, 1);
+    portWebTouchButton(TOUCH_RELOAD, 1);
+    portWebTouchPoll(&pad);
+    assert(pad.button & Z_TRIG);
+    assert((actionBits & 5) == 5); /* Name mapping, independent of saved numeric IDs. */
+    pad.button = 0; actionBits = 0;
+    portWebTouchButton(TOUCH_FIRE, 0);
+    portWebTouchPoll(&pad);
+    assert(!(pad.button & Z_TRIG));
+    assert(actionBits & 4); /* Releasing fire does not release ADS. */
+    portWebTouchReset();
+    pad.button = 0; actionBits = 0;
+    portWebTouchPoll(&pad);
+    assert(!pad.button && !actionBits);
+
+    portWebTouchMove(0.5f, 1.0f);
+    portWebTouchPoll(&pad);
+    assert(pad.stick_x == 40 && pad.stick_y == 80);
+    portWebTouchLook(10, -8);
+    portWebTouchApplyMove(&move); /* Intro/watch discard pending look. */
+    assert(g_portMouseYawDeg == 0 && yaw == 0);
+    live = 1;
+    portWebTouchLook(10, -8);
+    portWebTouchApplyMove(&move);
+    assert(move.analogWalk == 70 && move.analogStrafe == 35);
+    assert(move.canLookAhead && move.canTurnTank);
+    assert(g_portMouseYawDeg == 10 && g_portMousePitchDeg == -8 && g_portMouseDirect);
+    portWebTouchApplyMove(&move);
+    assert(g_portMouseYawDeg == 10); /* Once per simulation tick, no repeated motion. */
+
+    portWebTouchMove(__builtin_nanf(""), 999);
+    assert(moveX == 0 && moveY == 1);
+    portWebTouchLook(999, -999);
+    portWebTouchLook(999, -999);
+    assert(yaw == 45 && pitch == -45);
+    portWebTouchEnable(0);
+    assert(held == 0 && yaw == 0 && moveY == 0);
+    portWebTouchButton(TOUCH_FIRE, 1);
+    assert(held == 0);
+    portWebTouchEnable(1);
+    consoleOpen = 1;
+    portWebTouchButton(TOUCH_FIRE, 1);
+    pad.button = 0;
+    portWebTouchPoll(&pad);
+    assert(pad.button == 0);
+    puts("Touch bridge: semantic buttons, independent holds, analog movement, menu sticks, reset, bounds and locked-look discard passed.");
+    return 0;
+}

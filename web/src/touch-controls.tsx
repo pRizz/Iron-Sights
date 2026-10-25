@@ -1,0 +1,251 @@
+import { createEffect, createSignal, onCleanup, onMount, Show, For, type Accessor } from 'solid-js';
+import type { Engine } from './engine';
+import type { Capture } from './capture';
+import { stickVector, type TouchAction, type TouchInput } from './touch-input';
+import './touch.css';
+
+type Props = {
+    engine: Engine;
+    capture: Capture;
+    input: TouchInput;
+    visible: Accessor<boolean>;
+    options: () => void;
+};
+const extra: [TouchAction, string][] = [
+    ['previousWeapon', 'Weapon −'],
+    ['nextWeapon', 'Weapon +'],
+    ['previousGadget', 'Gadget −'],
+    ['nextGadget', 'Gadget +'],
+    ['zoomIn', 'Zoom +'],
+    ['zoomOut', 'Zoom −'],
+    ['detonate', 'Detonate'],
+    ['sprint', 'Sprint'],
+];
+
+export function TouchControls(props: Props) {
+    const [menu, setMenu] = createSignal(true);
+    const [more, setMore] = createSignal(false);
+    const [aiming, setAiming] = createSignal(false);
+    const [stick, setStick] = createSignal({ x: 0, y: 0 });
+    let maybeMove: number | undefined;
+    let maybeLook: { id: number; x: number; y: number } | undefined;
+    let maybeFireLook: { id: number; x: number; y: number } | undefined;
+    const active = () =>
+        props.visible() && props.input.enabled() && props.capture.state().kind !== 'paused';
+    const clear = () => {
+        maybeMove = undefined;
+        maybeLook = undefined;
+        maybeFireLook = undefined;
+        setAiming(false);
+        setStick({ x: 0, y: 0 });
+        setMore(false);
+        props.input.reset();
+    };
+    createEffect(() => {
+        if (!active()) clear();
+    });
+    onMount(() => {
+        let frame = 0;
+        const monitor = () => {
+            const next = !props.engine.maybeGame()?._portWebControlsLive();
+            if (next !== menu()) {
+                clear();
+                setMenu(next);
+            }
+            frame = requestAnimationFrame(monitor);
+        };
+        frame = requestAnimationFrame(monitor);
+        window.addEventListener('blur', clear);
+        window.addEventListener('orientationchange', clear);
+        onCleanup(() => {
+            cancelAnimationFrame(frame);
+            window.removeEventListener('blur', clear);
+            window.removeEventListener('orientationchange', clear);
+            clear();
+        });
+    });
+    const begin = (event: PointerEvent) => {
+        props.input.gesture();
+        event.preventDefault();
+        event.stopPropagation();
+        (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    };
+    const TapButton = (button: { label: string; activate: () => void; expanded?: boolean }) => (
+        <button
+            type="button"
+            aria-expanded={button.expanded}
+            onPointerDown={(event) => {
+                begin(event);
+                button.activate();
+            }}
+            onClick={(event) => {
+                if (event.detail === 0) button.activate();
+            }}
+        >
+            {button.label}
+        </button>
+    );
+    const Button = (button: { action: TouchAction; label: string }) => (
+        <button
+            type="button"
+            data-touch-action={button.action}
+            aria-label={button.label}
+            aria-pressed={button.action === 'aim' ? aiming() : undefined}
+            onContextMenu={(event) => event.preventDefault()}
+            onPointerDown={(event) => {
+                begin(event);
+                if (button.action === 'aim') {
+                    if (aiming()) props.input.state.release(-1);
+                    else props.input.state.press(-1, 'aim');
+                    setAiming(!aiming());
+                } else props.input.state.press(event.pointerId, button.action);
+                if (button.action === 'fire')
+                    maybeFireLook = { id: event.pointerId, x: event.clientX, y: event.clientY };
+            }}
+            onPointerMove={(event) => {
+                if (maybeFireLook?.id !== event.pointerId) return;
+                const scale = 120 / Math.min(innerWidth, innerHeight);
+                props.input.look(
+                    (event.clientX - maybeFireLook.x) * scale,
+                    (event.clientY - maybeFireLook.y) * scale,
+                );
+                maybeFireLook = { id: event.pointerId, x: event.clientX, y: event.clientY };
+            }}
+            onPointerUp={(event) => releaseButton(event)}
+            onPointerCancel={(event) => releaseButton(event)}
+            onLostPointerCapture={(event) => releaseButton(event)}
+        >
+            {button.label}
+        </button>
+    );
+    function releaseButton(event: PointerEvent) {
+        props.input.state.release(event.pointerId);
+        if (maybeFireLook?.id === event.pointerId) maybeFireLook = undefined;
+    }
+    const move = (event: PointerEvent) => {
+        if (maybeMove !== event.pointerId) return;
+        const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
+        const vector = stickVector(
+            event.clientX - box.x - box.width / 2,
+            event.clientY - box.y - box.height / 2,
+            box.width * 0.4,
+        );
+        setStick(vector);
+        props.input.move(vector.x, vector.y);
+    };
+    const endMove = (event: PointerEvent) => {
+        if (maybeMove !== event.pointerId) return;
+        maybeMove = undefined;
+        setStick({ x: 0, y: 0 });
+        props.input.move(0, 0);
+    };
+    const endLook = (event: PointerEvent) => {
+        if (maybeLook?.id === event.pointerId) maybeLook = undefined;
+    };
+    return (
+        <Show when={active()}>
+            <div
+                class="touch-controls"
+                aria-label="Touch game controls"
+                data-mode={menu() ? 'menu' : 'game'}
+            >
+                <div class="touch-top">
+                    <Button action="watch" label="Watch" />
+                    <TapButton label="Pause" activate={() => props.capture.pause('manual')} />
+                    <TapButton label="Options" activate={props.options} />
+                </div>
+                <Show
+                    when={!menu()}
+                    fallback={
+                        <>
+                            <div class="touch-dpad">
+                                <Button action="up" label="Up" />
+                                <Button action="left" label="Left" />
+                                <Button action="down" label="Down" />
+                                <Button action="right" label="Right" />
+                            </div>
+                            <div class="touch-menu-actions">
+                                <Button action="accept" label="Select" />
+                                <Button action="back" label="Back" />
+                            </div>
+                            <span class="touch-menu-hint">
+                                Tap a menu or use arrows · Select to continue
+                            </span>
+                        </>
+                    }
+                >
+                    <div
+                        class="touch-look"
+                        aria-label="Drag to look"
+                        onContextMenu={(event) => event.preventDefault()}
+                        onPointerDown={(event) => {
+                            begin(event);
+                            if (!maybeLook)
+                                maybeLook = {
+                                    id: event.pointerId,
+                                    x: event.clientX,
+                                    y: event.clientY,
+                                };
+                        }}
+                        onPointerMove={(event) => {
+                            if (maybeLook?.id !== event.pointerId) return;
+                            const scale = 120 / Math.min(innerWidth, innerHeight);
+                            props.input.look(
+                                (event.clientX - maybeLook.x) * scale,
+                                (event.clientY - maybeLook.y) * scale,
+                            );
+                            maybeLook = { id: event.pointerId, x: event.clientX, y: event.clientY };
+                        }}
+                        onPointerUp={endLook}
+                        onPointerCancel={endLook}
+                        onLostPointerCapture={endLook}
+                    >
+                        <span>Drag to look</span>
+                    </div>
+                    <div
+                        class="touch-stick"
+                        role="group"
+                        aria-label="Move thumbstick"
+                        onPointerDown={(event) => {
+                            begin(event);
+                            if (maybeMove === undefined) {
+                                maybeMove = event.pointerId;
+                                move(event);
+                            }
+                        }}
+                        onPointerMove={move}
+                        onPointerUp={endMove}
+                        onPointerCancel={endMove}
+                        onLostPointerCapture={endMove}
+                    >
+                        <span>MOVE</span>
+                        <i
+                            style={{
+                                transform: `translate(${stick().x * 38}px, ${-stick().y * 38}px)`,
+                            }}
+                        />
+                    </div>
+                    <div class="touch-actions">
+                        <Button action="aim" label="Aim" />
+                        <Button action="fire" label="Fire" />
+                        <Button action="reload" label="Reload" />
+                        <Button action="use" label="Use" />
+                        <Button action="crouch" label="Crouch" />
+                        <TapButton
+                            label="More"
+                            expanded={more()}
+                            activate={() => setMore(!more())}
+                        />
+                    </div>
+                    <Show when={more()}>
+                        <div class="touch-extra">
+                            <For each={extra}>
+                                {([action, label]) => <Button action={action} label={label} />}
+                            </For>
+                        </div>
+                    </Show>
+                </Show>
+            </div>
+        </Show>
+    );
+}

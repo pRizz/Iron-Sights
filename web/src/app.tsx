@@ -6,6 +6,7 @@ import { StoragePanel } from './storage-panel';
 import { createBackup, parseBackup, MAX_BACKUP_TEXT, type UserFile } from './backup';
 import { createCapture } from './capture';
 import { createEngine, ensureBrowserSettings } from './engine';
+import { createTouchInput, initialTouch } from './touch-input';
 import { createRomManager } from './rom-manager';
 import { Room } from './room/room';
 import { restoredEntry, shouldAutoLaunch, type EntryMode } from './room/session';
@@ -13,7 +14,9 @@ import { restoredEntry, shouldAutoLaunch, type EntryMode } from './room/session'
 const SOURCE = 'https://github.com/pRizz/Project-Midas-ADS';
 
 export function App() {
-    const engine = createEngine();
+    const firstTouch = initialTouch();
+    const engine = createEngine(() => touch.enabled());
+    const touch = createTouchInput(engine, firstTouch);
     const rom = createRomManager();
     const [started, setStarted] = createSignal(false);
     const [controls, setControls] = createSignal(
@@ -24,7 +27,7 @@ export function App() {
     const roomVisible = () => entry() === 'room' || entry() === 'returning';
     const [hint, setHint] = createSignal(false);
     const [roomFailed, setRoomFailed] = createSignal(false);
-    const capture = createCapture(engine, started);
+    const capture = createCapture(engine, started, touch.enabled);
     const [action, setAction] = createSignal('');
     const [busy, setBusy] = createSignal(false);
     const [maybeImport, setImport] = createSignal<UserFile[]>();
@@ -82,6 +85,9 @@ export function App() {
     createEffect(() => {
         if (engine.status().kind === 'error' || engine.saveStatus().kind === 'error')
             openControls();
+    });
+    createEffect(() => {
+        engine.maybeGame()?._portWebTouchEnable(Number(touch.enabled()));
     });
     createEffect(() => {
         if (entry() === 'cached' && rom.status().kind === 'error') setEntry('room');
@@ -180,6 +186,7 @@ export function App() {
         if (!ready() || selected.kind !== 'ready' || !game || !files || launching) return;
         launching = true;
         try {
+            if (touch.enabled() && source === 'controls') closeControls();
             if (started()) {
                 await files.flush();
                 if (!fromRoom) setEntry('game');
@@ -210,6 +217,7 @@ export function App() {
 
     async function resumeGame(): Promise<void> {
         if (!started()) return;
+        if (touch.enabled()) touch.gesture();
         setEntry('game');
         await capture.resume();
     }
@@ -314,17 +322,31 @@ export function App() {
                             <p class="eyebrow">YOUR COPY. YOUR MISSION.</p>
                             <h1>GoldenEye. In your browser.</h1>
                             <p>
-                                Solo campaign, mouse and keyboard. Your ROM and saves stay on this
-                                device.
+                                Solo campaign with touch, mouse or keyboard. Your ROM and saves stay
+                                on this device.
                             </p>
                         </div>
-                        <span class="preview-tag">DESKTOP PREVIEW</span>
+                        <span class="preview-tag">BROWSER PREVIEW</span>
                     </div>
+                    <label class="check-row touch-setting">
+                        <input
+                            type="checkbox"
+                            checked={touch.enabled()}
+                            onChange={(event) => {
+                                if (started()) capture.pause('manual');
+                                touch.setEnabled(event.currentTarget.checked);
+                            }}
+                        />
+                        On-screen touch controls
+                    </label>
                     <div class="workspace">
                         <Player
                             engine={engine}
                             rom={rom}
                             capture={capture}
+                            touch={touch}
+                            touchVisible={() => entered() && !controls()}
+                            openControls={openControls}
                             presenting={() => entered() || controls()}
                             resume={resumeGame}
                             started={started}
@@ -521,7 +543,9 @@ export function App() {
             <Show when={hint() && !controls()}>
                 <p class="experience-hint" role="status">
                     {action() ||
-                        'Alt+Enter fullscreen · P watch · F2 controls · Escape may exit fullscreen'}
+                        (touch.enabled()
+                            ? 'Move with your left thumb · drag right to look · Watch and Options are on screen'
+                            : 'Alt+Enter fullscreen · P watch · F2 controls · Escape may exit fullscreen')}
                 </p>
             </Show>
         </div>

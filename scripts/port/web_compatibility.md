@@ -86,9 +86,13 @@ PulseAudio Unix socket/null sink made that probe and the game audit pass. This
 measures real Web Audio processing, not audible output through physical speakers.
 
 Secure-origin WebAssembly, WebGL 2, IndexedDB, Web Crypto, Web Locks and Pointer
-Lock are required. Pages uses HTTPS; localhost works for development. Gamepads
-are optional for keyboard/mouse play. Mobile/touch and netplay are outside this
-preview's accepted scope.
+Lock are required for the original mouse-capture mode. Touch mode (WEB-011)
+uses the same storage/WebGL requirements and runs without Pointer Lock or
+fullscreen. Pages uses HTTPS; localhost works for development. Gamepads are
+optional. The user extended scope to on-screen controls for phones/tablets on
+2026-10-25; physical iOS/Android compatibility and performance remain
+experimental, with desktop mobile-viewport evidence recorded in WEB-011.
+Netplay remains outside the accepted scope.
 
 ## Representative mission and effect smoke
 
@@ -206,6 +210,17 @@ PulseAudio packages use Ubuntu's signed apt metadata; the observed server was
 16.1. This image is a test host, not a game build/publication input. The audio
 helper refuses to run outside a container and opens only a local Unix socket.
 `tools/audio-capability-audit.mjs` can independently check the sound backend.
+
+## Touch preview extension (WEB-011)
+
+Chrome mobile-viewport real-ROM checks reach Dam with on-screen menu input,
+simultaneous move/look/fire, Watch, Pause/Resume, Options and running audio.
+Portrait phone and tablet bounds pass. Edge and Windows WebKit ROM-free overlay
+checks pass; WebKit's desktop mobile driver requires simulated touch capability
+and resize events and does not exercise simultaneous contacts. Physical iPhone,
+iPad and Android acceptance remains experimental. Windows WebKit does not expose
+Web Audio in this host; Linux WebKit is the additional audio-enabled test host.
+Native render gallery regeneration changes no image cells.
 
 ## Explicit deferrals
 

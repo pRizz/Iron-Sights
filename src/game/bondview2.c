@@ -7901,6 +7901,9 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
         portAdsConfigureMovement(&moveData, dx, dy);
     }
 #endif
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    { extern void portWebTouchApplyMove(struct MoveData *move); portWebTouchApplyMove(&moveData); }
+#endif
 
     g_CurrentPlayer->field_D0 = 0;
 #ifndef TARGET_N64

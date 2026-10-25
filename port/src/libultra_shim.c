@@ -1398,6 +1398,9 @@ void osContGetReadData(OSContPad *data)
             }
         }
 
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+        { extern void portWebTouchPoll(OSContPad *pad); portWebTouchPoll(&data[0]); }
+#endif
         { /* Port suite (joy_port.c): every source has ORed its "down" bits
            * (keyboard -> pad 0 in videoGetPad, controller custom maps -> their
            * slot in portInputPadMerge) - commit = edge/latch per pad, once per

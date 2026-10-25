@@ -5,7 +5,11 @@ export type Playback =
     | { kind: 'stopped' | 'starting' | 'menu' | 'playing' | 'capturing' | 'mouse-free' }
     | { kind: 'paused'; reason: 'focus' | 'mouse' | 'manual' };
 
-export function createCapture(engine: Engine, started: () => boolean) {
+export function createCapture(
+    engine: Engine,
+    started: () => boolean,
+    touch: () => boolean = () => false,
+) {
     const [state, setState] = createSignal<Playback>({ kind: 'stopped' });
     const [notice, setNotice] = createSignal('');
     let maybeCanvas: HTMLCanvasElement | undefined;
@@ -40,6 +44,10 @@ export function createCapture(engine: Engine, started: () => boolean) {
         canvas.focus();
         try {
             game._portWebSetPaused(0);
+            if (touch()) {
+                setState({ kind: game._portWebControlsLive() ? 'playing' : 'menu' });
+                return;
+            }
             if (!game._portWebControlsLive()) {
                 setState({ kind: 'menu' });
                 return;
@@ -92,12 +100,14 @@ export function createCapture(engine: Engine, started: () => boolean) {
         const listen = { signal: events.signal };
         // SDL's pinned SDK ignores the returned Promise; handle rejection on this
         // canvas while retaining pointerlockerror for the capture state machine.
-        const request = canvas.requestPointerLock.bind(canvas);
-        canvas.requestPointerLock = (options) => {
-            const result = request(options);
-            void result?.catch(() => {});
-            return result;
-        };
+        const originalRequest = canvas.requestPointerLock;
+        const request = originalRequest?.bind(canvas);
+        if (request)
+            canvas.requestPointerLock = (options) => {
+                const result = request(options);
+                void result?.catch(() => {});
+                return result;
+            };
         document.addEventListener(
             'pointerlockchange',
             () => {
@@ -164,7 +174,8 @@ export function createCapture(engine: Engine, started: () => boolean) {
                 if (!live) {
                     setState({ kind: game._portWebGetGfxTasks() > 0 ? 'menu' : 'starting' });
                     if (document.pointerLockElement === canvas) releaseFromGame();
-                } else if (document.pointerLockElement === canvas) setState({ kind: 'playing' });
+                } else if (touch() || document.pointerLockElement === canvas)
+                    setState({ kind: 'playing' });
                 else {
                     // Arriving from a cutscene/watch is not focus loss. If the
                     // browser wants a capture gesture, keep keyboard play live.
@@ -177,7 +188,7 @@ export function createCapture(engine: Engine, started: () => boolean) {
         return () => {
             events.abort();
             cancelAnimationFrame(frame);
-            canvas.requestPointerLock = request;
+            if (originalRequest) canvas.requestPointerLock = originalRequest;
         };
     }
     return {

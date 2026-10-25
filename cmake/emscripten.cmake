@@ -30,6 +30,7 @@ function(midas_web_sources source_variable)
         list(APPEND sources ${CMAKE_SOURCE_DIR}/port/web/devices.c)
         list(APPEND sources ${CMAKE_SOURCE_DIR}/port/web/sampler.cpp)
         list(APPEND sources ${CMAKE_SOURCE_DIR}/port/web/lifecycle.c)
+        list(APPEND sources ${CMAKE_SOURCE_DIR}/port/web/touch.c)
     endif()
     set(${source_variable} ${sources} PARENT_SCOPE)
     # These TUs synthesize segments; Wasm's assembler has no native -Wa,-I path.

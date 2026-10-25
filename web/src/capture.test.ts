@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createCapture } from './capture';
 import type { Engine } from './engine';
 
-function captureFixture() {
+function captureFixture(touch = false, pointerLock = true) {
     const saved = new Map<string, PropertyDescriptor | undefined>();
     const replace = (name: string, value: unknown) => {
         saved.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
@@ -51,7 +51,12 @@ function captureFixture() {
             },
         }),
     } as unknown as Engine;
-    const capture = createCapture(engine, () => true);
+    if (!pointerLock) delete (canvas as Partial<typeof canvas>).requestPointerLock;
+    const capture = createCapture(
+        engine,
+        () => true,
+        () => touch,
+    );
     const detach = capture.attach(canvas as unknown as HTMLCanvasElement);
     return {
         capture,
@@ -90,6 +95,25 @@ test('cutscene-to-control arrival keeps simulation live while waiting for a capt
         fixture.step();
         expect(fixture.capture.state().kind).toBe('mouse-free');
         expect(fixture.pauses).toEqual([]);
+    } finally {
+        fixture.dispose();
+    }
+});
+
+test('touch resumes without Pointer Lock and keeps real focus pause', async () => {
+    const fixture = captureFixture(true, false);
+    try {
+        fixture.live(true);
+        await fixture.capture.resume();
+        fixture.step();
+        expect(fixture.capture.state()).toEqual({ kind: 'playing' });
+        fixture.window.dispatchEvent(new Event('blur'));
+        expect(fixture.capture.state()).toEqual({ kind: 'paused', reason: 'focus' });
+        await fixture.capture.resume();
+        expect(fixture.capture.state()).toEqual({ kind: 'playing' });
+        fixture.live(false);
+        fixture.step();
+        expect(fixture.capture.state()).toEqual({ kind: 'menu' });
     } finally {
         fixture.dispose();
     }

@@ -24,6 +24,24 @@ checks, original prop models and candidate-source decisions.
 See the [runtime runbook](../scripts/port/web_runtime.md) and
 [milestone tracker](../scripts/port/web_target_progress.md).
 
+Touch controls (WEB-011) auto-enable on coarse touchscreens and touch devices
+without Pointer Lock. The launcher checkbox saves an explicit override. On-screen
+Options opens the launcher; Pause/Resume does not need mouse capture. Use the
+analog left thumbstick, drag right to look, hold/drag Fire to shoot and turn, and
+tap Aim to toggle ADS. More provides weapon/gadget selection, zoom, sprint and
+detonation. Watch and menu Select/Back/directions use native game actions. Safe-area
+insets and proportional canvas fitting apply in portrait and landscape. Pausing,
+focus loss, cancelled touches, rotation, mode changes and room return clear input.
+
+`bun run test:touch` builds a ROM-free Solid fixture and verifies actual
+multi-pointer capture/cancellation and layout at the native boundary. The Pages
+workflow also runs the synthetic Wasm bridge regression. For private real-ROM
+mobile-viewport acceptance, use `MIDAS_BROWSER=chrome bun run audit:touch ../baserom.u.z64 ../build/web-touch/game http://127.0.0.1:4177/Project-Midas-ADS/`.
+Desktop WebKit emulation needs a simulated touch-capability property and cannot
+establish physical iOS support. Its mobile viewport driver also needs an explicit
+resize event after changing emulated orientation and uses single-pointer drags;
+Chromium verifies simultaneous contacts. Keep ROMs, screenshots and backups local.
+
 ```sh
 bun install --frozen-lockfile
 bun run typecheck

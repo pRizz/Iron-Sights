@@ -30,6 +30,59 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-028 — Browser touch controls
+
+**Status:** Implemented; browser acceptance recorded in WEB-011.
+
+Adds keyboard-free browser input requested for iPhone, iPad and Android. Touch
+mode defaults on for coarse touchscreens or touch devices without Pointer Lock;
+an on-screen checkbox saves an explicit override independently of game files.
+The overlay provides analog movement, relative drag-to-look, independent held
+Fire, toggle ADS, Use/Reload/Crouch, Watch/Pause/Options, and a More tray for weapon/gadget
+cycling, zoom, detonation and sprint. Native menus get Select/Back and directional
+controls. Touch mode bypasses mouse capture; keyboard/mouse mode keeps its
+existing capture policy. Dragging Fire turns while firing for two-thumb play.
+Controls respect safe-area insets and the game's aspect; browser panning is
+disabled on the game surface while touch mode is enabled. Layout follows the
+smaller visible/layout viewport during rotation or browser-chrome changes.
+Pointer gestures resume the pinned SDK's suspended SDL Web Audio context.
+
+`port/web/touch.c` owns player-one input, bounded motion and reset state, maps
+semantic actions by existing binding names and combines with the ordinary game
+input path. Small browser-only hooks in `libultra_shim.c` and `bondview2.c` merge
+button/actions and analog movement/look. Keyboard bindings and saved action IDs
+do not change. Reset on pause/focus loss, pointer cancellation, rotation, mode
+changes and room return prevents stuck input; look is discarded during locked
+controls. The module is selected only by the CMake web video target.
+
+**Sources:** [touch state](web/src/touch-input.ts),
+[overlay](web/src/touch-controls.tsx), [layout](web/src/touch.css),
+[viewport fitting](web/src/touch-viewport.ts),
+[capture](web/src/capture.ts), [browser capability gate](web/src/engine.ts),
+[native bridge](port/web/touch.c), [bridge header](port/web/touch.h),
+[bridge regression](scripts/port/test_web_touch.c),
+[bridge runner](scripts/port/test_web_touch.sh),
+[UI fixture](web/tests/touch-driver.tsx), [fixture page](web/tests/touch.html),
+[fixture build](web/tools/build-touch-test.ts),
+[UI audit](web/tools/touch-ui-audit.mjs),
+[private game audit](web/tools/touch-game-audit.mjs),
+[Linux game runner](web/tools/linux-game-audit.sh),
+[Pages checks](.github/workflows/web-pages.yml),
+[web CMake](cmake/emscripten.cmake), [focus reset](port/web/lifecycle.c),
+[input hook](port/src/libultra_shim.c), [movement hook](src/game/bondview2.c),
+[accepted extension](scripts/port/web_target_plan.md),
+[milestone](scripts/port/web_target_progress.md).
+**Validation:** Synthetic Wasm bridge, TypeScript and unit checks pass. Edge and
+WebKit ROM-free UI checks cover independent contacts, cancellation, menu actions,
+mode changes and portrait/tablet bounds. Chrome real-ROM acceptance reaches Dam
+through touch menus, verifies simultaneous movement/look/fire, watch,
+pause/resume, Options and live audio. Optimized Wasm and all 275 strict-callback
+translation units pass. Linux WebKit additionally passes real-ROM menus,
+thumbstick, Watch, Pause/Resume, Options, audio and layout integration using its
+documented single-pointer/resize-driver accommodations. Native ADS/HUD/wardrobe/upstream-merge/state regressions
+pass; isolated native gallery regeneration changes no image cells. Physical
+iOS/Android acceptance remains distinct from these automated checks.
+
 ### FORK-026 — Upstream 1.0.2b integration
 
 **Status:** Implemented; local acceptance passes.
