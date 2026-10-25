@@ -120,6 +120,14 @@ feedback HUD, mission/cheat hints, suspend points, fonts and web lifecycle/stora
   Browser metrics report retry failures, and pause/resume/suspend restore clear
   queue, field/clock credits, stall tracking and drift trim before restarting.
   Instrumentation records one execution per mixer frame.
+  Browser output retains the pre-merge 512-sample SDL period through
+  `port/web/audio_config.h`; upstream's new 256-sample native period gives only
+  5.3 ms at a 48 kHz Web Audio context and caused audio-block discontinuities.
+  Native device timing stays upstream-owned. Private real-ROM audio-quality
+  tooling records rendered samples in an AudioWorklet, after ScriptProcessor
+  deadlines, rather than treating nonzero callback samples as continuity proof.
+  It checks idle Dam, Watch, pause silence and sound recovery; WAV evidence stays
+  local. ROM-free continuity-metric regressions run with the web unit suite.
 - The fork's uppercase `README.md` supersedes upstream's lowercase filename,
   avoiding a Windows case collision while retaining fork setup and identity.
   The fork's mission timer stays off by default with cheat/best-time detail;
@@ -129,6 +137,11 @@ feedback HUD, mission/cheat hints, suspend points, fonts and web lifecycle/stora
 [upstream ABI guide](docs/port/abi-and-portability.md),
 [input](port/src/input_pc.c), [actions](port/src/joy_port.c),
 [audio](port/src/audio_pc.c), [gun projection](src/game/gunfire.c),
+[browser audio period](port/web/audio_config.h),
+[audio quality audit](web/tools/audio-quality-audit.mjs),
+[render-thread probe](web/tools/audio-quality-worklet.js),
+[continuity metrics](web/tools/audio-quality.mjs),
+[continuity regression](web/tools/audio-quality.test.mjs),
 [sight policy](port/src/port_sight.c), [renderer](port/fast3d/gfx_pc.cpp),
 [settings](port/src/video.c), [option help](port/src/port_option_help.c),
 [INI help](tools/midas_ini_help.txt), [notices](tools/THIRD_PARTY_NOTICES.txt),
@@ -156,6 +169,14 @@ reload/restore, ROM recall/removal, Dam capture/audio/focus/watch. TypeScript,
 119 browser unit tests, Python tooling checks and artifact allowlist/hash policy
 pass. Safari remains experimental. Private evidence is in `build/merge` and
 `build_win/hand-gallery-337riqu0`; local checks are not a publication claim.
+Audio follow-up: the 48 kHz Chrome comparison found 34 sample jumps above 0.15
+over 12 seconds in the 256-sample build, all on 128-sample render boundaries.
+The pre-merge and restored 512-sample builds had zero such jumps. Final Chrome
+has no silent gaps; Edge's final run has two isolated 128-sample silent quanta
+(2.7 ms each), with zero large sample jumps. Watch/pause/resume checks
+pass in both browsers, including exactly silent paused output. TypeScript and 130 web unit tests
+pass; optimized Wasm and native Windows builds pass. Fresh independent gallery
+passes change no image cells. Private evidence is in `build/web-audio`.
 
 ### FORK-027 — Small upstream hooks and focused fork modules
 

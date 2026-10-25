@@ -42,6 +42,15 @@ establish physical iOS support. Its mobile viewport driver also needs an explici
 resize event after changing emulated orientation and uses single-pointer drags;
 Chromium verifies simultaneous contacts. Keep ROMs, screenshots and backups local.
 
+For audio changes, run `MIDAS_BROWSER=chrome bun run audit:audio ../baserom.u.z64 ../build/web-audio/current http://127.0.0.1:4177/Project-Midas-ADS/`
+(or `MIDAS_BROWSER=msedge`). The private real-ROM audit reaches Dam, records a
+12-second mono WAV and continuity/queue metrics on the audio render thread,
+then checks Watch, pause silence and resumed sound. It requires AudioWorklet
+and measures a quiet reference scene; its sample-jump threshold is not a general
+gunshot/music classifier. Nonzero ScriptProcessor callback/analyser samples
+alone do not prove that the browser met playback deadlines. The browser's
+512-sample SDL period is configured separately from native audio.
+
 ```sh
 bun install --frozen-lockfile
 bun run typecheck

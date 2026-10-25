@@ -48,7 +48,11 @@
 /* ---- config ------------------------------------------------------------ */
 
 #define PORT_AUDIO_RATE      22050  /* both GE banks; alSynConfig outputRate */
+#ifdef __EMSCRIPTEN__
+#include "../web/audio_config.h"
+#else
 #define PORT_AUDIO_DEV_SAMPLES 256       /* device period, 11.6 ms */
+#endif
 #define PORT_AUDIO_QUEUE_MAX (16 * 1024)
 #define PORT_AUDIO_TARGET    3584        /* lowest queue level the drift trim aims for (41 ms) */
 #define PORT_AUDIO_TARGET_MAX (6 * 1024) /* raised this far by queues that ran dry */

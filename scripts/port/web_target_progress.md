@@ -472,7 +472,24 @@ matrix, measured limits, tested environments and explicit feature deferrals.
   campaign/profile/settings/backup/ROM-recall-and-removal audit without page
   errors or uploads. Private evidence is in `build/web-ui/final-published`.
 
-**Next action:** Preserve the published storage/deployment contracts. Future
+**2026-10-25 audio continuity follow-up:** The upstream 1.0.2b merge reduced
+SDL's device period from 512 to 256 samples. At Chrome's 48 kHz Web Audio rate,
+that leaves only 5.3 ms for a main-thread ScriptProcessor callback. Nonzero
+callback/analyser output had hidden render-thread discontinuities. A private
+AudioWorklet capture measured 34 jumps above 0.15 over 12 seconds, all on
+128-sample render boundaries. The pre-merge build and browser-only 512-sample
+restoration have zero such jumps. The final Chrome capture has no silent gaps;
+Edge has two isolated 128-sample silent quanta (2.7 ms each) and zero large
+sample jumps. Both browsers pass Watch and pause/resume audio checks, with
+exactly silent paused output. Native audio retains upstream's 256-sample period.
+The quality audit writes private WAV/JSON/log evidence under `build/web-audio`;
+its continuity-metric tests run in the web unit suite (130 tests pass).
+Optimized Wasm and native Windows builds pass. Two independent gallery passes
+change zero image cells. This fixes browser scheduling tolerance without
+changing mixer synthesis, campaign storage or input policy.
+
+**Next action:** Preserve the published storage/deployment contracts and use
+the render-thread quality audit for future audio changes. Future
 macOS Safari/hardware-GPU/full-mission testing and optional enhancements require
 separate follow-up scope; the accepted desktop preview milestones are complete.
 

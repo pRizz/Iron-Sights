@@ -211,6 +211,20 @@ PulseAudio packages use Ubuntu's signed apt metadata; the observed server was
 helper refuses to run outside a container and opens only a local Unix socket.
 `tools/audio-capability-audit.mjs` can independently check the sound backend.
 
+## Audio continuity follow-up
+
+The 1.0.2b merge's 256-sample native SDL period was too short for the browser's
+main-thread ScriptProcessor path (5.3 ms at 48 kHz). Browser builds now retain
+the pre-merge 512-sample period; native output keeps upstream's setting.
+AudioWorklet recording after the browser's render deadlines measured 34 large
+sample jumps over 12 seconds before the fix, versus zero after it and in the
+pre-merge build. Final Chrome's idle Dam capture has no silent gaps; Edge has
+two isolated 128-sample silent quanta (2.7 ms each) and zero large sample jumps.
+Both pass Watch and pause/resume checks, including silent paused output.
+These are measured desktop captures, not a guarantee against arbitrary
+host load or untested audio devices. See `bun run audit:audio` in the web runbook;
+recordings and detailed reports remain local.
+
 ## Touch preview extension (WEB-011)
 
 Chrome mobile-viewport real-ROM checks reach Dam with on-screen menu input,
