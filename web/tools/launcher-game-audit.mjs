@@ -1,5 +1,6 @@
 // Private actual-ROM launcher acceptance. Never upload these captures/backups.
-import { chromium } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { launchAuditBrowser } from './browser-choice.mjs';
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -10,16 +11,13 @@ const [romPath, outputPath = '../build/web-ui/game', origin = 'http://127.0.0.1:
 if (!romPath) throw new Error('Usage: launcher-game-audit.mjs local-rom output-directory [origin]');
 const output = resolve(outputPath);
 await mkdir(output, { recursive: true });
-const maybeChannel = process.env.MIDAS_BROWSER;
-const browser = await chromium.launch({
-    headless: true,
-    ...(maybeChannel && maybeChannel !== 'chromium' ? { channel: maybeChannel } : {}),
-    args: ['--enable-unsafe-swiftshader'],
-});
+const { browser, kind } = await launchAuditBrowser();
 const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
 const page = await context.newPage();
-const focusSession = await context.newCDPSession(page);
-await focusSession.send('Emulation.setFocusEmulationEnabled', { enabled: false });
+if (kind === 'chromium') {
+    const focusSession = await context.newCDPSession(page);
+    await focusSession.send('Emulation.setFocusEmulationEnabled', { enabled: false });
+}
 await page.addInitScript(observeAudio);
 const errors = [];
 const requests = [];
@@ -41,6 +39,14 @@ try {
     await page.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
     await page.locator('#rom-file').setInputFiles(resolve(romPath));
     await page.getByText('✓ Remembered for next time').waitFor({ timeout: 60_000 });
+    await page.evaluate(() => {
+        globalThis.midasSawRomLogo = false;
+        const log = document.querySelector('pre');
+        new MutationObserver(() => {
+            if (log.textContent.includes('logo textures and vertices loaded from the player ROM'))
+                globalThis.midasSawRomLogo = true;
+        }).observe(log, { childList: true, subtree: true, characterData: true });
+    });
     await page.getByRole('button', { name: 'Play GoldenEye' }).click();
     await page.waitForFunction(
         () => document.querySelector('pre').textContent.includes('frame 240'),
@@ -72,6 +78,10 @@ try {
     const first = await backup('first-backup.json');
     await writeFile(resolve(output, 'first-log.txt'), await page.locator('pre').textContent());
     console.log('Saved paths: ' + first.files.map((file) => file.path).join(', '));
+    assert.ok(
+        await page.evaluate(() => globalThis.midasSawRomLogo),
+        'ROM-backed title logo was not initialized',
+    );
     const campaign = first.files.find((file) => file.path === 'Data/Saves/eeprom.bin');
     assert.ok(campaign, 'The actual game did not create its campaign EEPROM');
     assert.equal(Buffer.from(campaign.data, 'base64').length, 512);
@@ -140,10 +150,10 @@ try {
     await page.reload();
     await page.getByText('✓ Remembered for next time').waitFor({ timeout: 60_000 });
     await page.getByText('Saved on this device', { exact: true }).waitFor();
-    assert.ok(
-        await page.getByRole('button', { name: 'Play GoldenEye' }).isEnabled(),
-        'Repeat launch required another ROM',
-    );
+    // Restored saves can be ready before configuration downloads finish.
+    await expect(page.getByRole('button', { name: 'Play GoldenEye' })).toBeEnabled({
+        timeout: 60_000,
+    });
     const second = await backup('after-reload.json');
     assert.deepEqual(
         second.files,

@@ -7,8 +7,9 @@
   "scripts": {
     "dev": "bun --bun vite --host 127.0.0.1 --port 4175",
     "build": "bun tools/build-site.ts",
+    "verify:site": "bun tools/verify-site.ts",
     "typecheck": "tsc --noEmit",
-    "test": "bun test src",
+    "test": "bun test src tools/runtime-policy.test.ts",
     "audit:runtime": "node tools/runtime-audit.mjs",
     "audit:menus": "node tools/menu-audit.mjs",
     "audit:launcher": "node tools/launcher-game-audit.mjs",

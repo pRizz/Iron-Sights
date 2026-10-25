@@ -447,6 +447,12 @@ void portRarewareLogoFixTexels(void)
     if (done) {
         return;
     }
+#ifdef GE_WEB
+    {
+        extern void portWebLoadRarewareLogo(void);
+        portWebLoadRarewareLogo();
+    }
+#endif
     done = 1;
 
     for (i = 0; i < sizeof(blobs) / sizeof(blobs[0]); i++) {

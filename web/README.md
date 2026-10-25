@@ -9,7 +9,7 @@ See the [runtime runbook](../scripts/port/web_runtime.md) and
 ```sh
 bun install --frozen-lockfile
 bun run typecheck
-bun test src
+bun run test
 bunx playwright install chromium firefox webkit
 bun run test:sampler
 bun run test:storage
@@ -17,6 +17,7 @@ bun run test:storage
 bun run test:filesystem
 bun run dev
 bun run build
+bun run verify:site
 # Serve ../build/web-site on 127.0.0.1:4176, then:
 bun run test:launcher
 bun run audit:launcher ../baserom.u.z64 ../build/web-ui/game
@@ -42,11 +43,30 @@ Input/focus measurements enable the existing invisible/invulnerable diagnostics
 and a fixed seed through the prototype's private audit query, isolating them
 from enemy impulses. Normal launches keep ordinary gameplay.
 
+`node tools/serve-site.mjs 4176 /Project-Midas-ADS/` serves only the assembled site
+for local/container audits. Launcher audits also accept `MIDAS_BROWSER=firefox`
+or `webkit`; `MIDAS_HEADED=1` uses a display server. The ROM-free
+`node tools/capability-audit.mjs <preview-url>` reports initialization and graphics
+capabilities. A WebKit run is engine evidence, not macOS Safari certification.
+
 The dev server serves the existing `build/web/video` runtime through an explicit
 allowlist. The static build assembles `build/web-site` with a content-versioned
 runtime directory, a Wasm size/digest manifest and the game's actual generated
 build metadata. It includes no private diagnostic captures. Do not publish this
-preview until the deployment packaging/compatibility gates pass.
+preview until the deployment packaging/compatibility gates pass. Assembly checks
+the selected CMake source set and rejects compiled ROM fallback/icon flags or
+the inherited initialized logo. The web logo source is generated without
+texture/vertex bytes; runtime fills its 38 backing arrays from the player ROM.
+`verify:site` checks an exact public file allowlist and the assembled Wasm digest.
+The site carries port/runtime/frontend licenses in `THIRD_PARTY_NOTICES.txt`.
+
+`.github/workflows/web-pages.yml` uses the pinned SDK and locked Bun dependencies,
+builds/tests PRs without publishing, and uploads/deploys successful `main` runs.
+Its deploy job alone has Pages write/OIDC permissions. The game builder forwards
+only explicit public GitHub provenance fields into Docker. No ROM is needed in CI.
+Local URLs and the stable browser storage identities remain separate from each
+content-versioned runtime directory; an active game owns its already-loaded
+Wasm and virtual filesystem across site updates.
 
 The test fixtures contain synthetic bytes, never a ROM or extracted assets.
 Validation accepts only the original 12 MiB US ROM, including byte-swapped file

@@ -1,0 +1,83 @@
+name: Browser build and Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.4.4
+      - name: Install locked launcher dependencies
+        working-directory: web
+        run: bun install --frozen-lockfile
+      - name: Test ROM-free generation and launcher boundaries
+        run: |
+          python3 scripts/port/test_web_logo.py
+          python3 scripts/port/test_web_spike.py
+          cd web
+          bun run typecheck
+          bun test src tools/runtime-policy.test.ts
+      - name: Build pinned SDK game and filesystem fixture without a ROM
+        run: |
+          python3 scripts/port/web_build.py video --jobs 4 --callback-types
+          python3 scripts/port/web_build.py files --jobs 4
+      - name: Check Wasm logo conversion
+        run: |
+          sdk_image=$(python3 -c 'import json; print(json.load(open("scripts/port/web_toolchain.json"))["image"])')
+          docker run --rm --network=none --mount "type=bind,source=$PWD,target=/src,readonly" -w /src "$sdk_image" bash scripts/port/test_web_logo.sh --web
+      - name: Assemble and verify the public artifact
+        working-directory: web
+        run: |
+          bun run build
+          bun run verify:site
+          bunx playwright install --with-deps chromium
+      - name: Test production project paths and browser storage
+        working-directory: web
+        run: |
+          bun --bun vite preview --host 127.0.0.1 --port 4177 --base /Project-Midas-ADS/ > ../build/web/preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid"' EXIT
+          bun tools/wait-for-site.ts http://127.0.0.1:4177/Project-Midas-ADS/
+          bun run test:launcher http://127.0.0.1:4177/Project-Midas-ADS/
+          bun run test:storage
+          bun run test:filesystem
+          bun run test:sampler
+      - name: Upload verified Pages artifact
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: build/web-site
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - name: Deploy verified site
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

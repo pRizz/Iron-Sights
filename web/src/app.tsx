@@ -235,6 +235,9 @@ export function App() {
                     <a href={SOURCE} target="_blank" rel="noreferrer">
                         Source
                     </a>
+                    <a href="./THIRD_PARTY_NOTICES.txt" target="_blank" rel="noreferrer">
+                        Third-party notices
+                    </a>
                     <a href="https://openlinks.us/" target="_blank" rel="noreferrer">
                         Peter Ryszkiewicz ↗
                     </a>

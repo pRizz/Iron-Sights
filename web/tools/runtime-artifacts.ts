@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import type { BuildInfo, RuntimeManifest } from '../src/runtime-manifest.ts';
+import { parseRuntimeManifest } from '../src/runtime-manifest.ts';
+import { verifyRuntimePolicy } from './runtime-policy.ts';
 
 export const GAME_FILES = [
     'ProjectMidas.mjs',
@@ -12,6 +14,11 @@ export const GAME_FILES = [
 const source = new URL('../../build/web/video/', import.meta.url);
 
 export async function runtimeArtifacts() {
+    const [commands, logo] = await Promise.all([
+        readFile(new URL('compile_commands.json', source), 'utf8').then((text) => JSON.parse(text)),
+        readFile(new URL('generated/web_logo.c', source), 'utf8'),
+    ]);
+    verifyRuntimePolicy(commands, logo);
     const [files, build] = await Promise.all([
         Promise.all(
             GAME_FILES.map(async (name) => [name, await readFile(new URL(name, source))] as const),
@@ -32,5 +39,5 @@ export async function runtimeArtifacts() {
         wasmSHA256: createHash('sha256').update(wasm).digest('hex'),
         build,
     };
-    return { files: new Map<string, Buffer>(files), manifest };
+    return { files: new Map<string, Buffer>(files), manifest: parseRuntimeManifest(manifest) };
 }

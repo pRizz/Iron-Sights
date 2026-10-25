@@ -43,8 +43,16 @@ def diagnostics(output):
     return sorted(set(re.findall(r'(?:fatal )?error: (.+)', output)))
 
 
+def source_name(entry, root):
+    source = Path(entry['file'])
+    if source.is_relative_to(root):
+        return source.relative_to(root).as_posix()
+    # CMake-generated sources live in the separate build tree, not the checkout.
+    return '<build>/' + source.relative_to(Path(entry['directory'])).as_posix()
+
+
 def compile_entry(entry, output, root, callback_types=False):
-    source = Path(entry['file']).relative_to(root).as_posix()
+    source = source_name(entry, root)
     token = hashlib.sha256(source.encode()).hexdigest()[:16]
     command, removed = survey_command(entry, output / (token + '.o'), callback_types)
     result = subprocess.run(command, cwd=entry['directory'], text=True,
@@ -71,7 +79,7 @@ def run_audit(database, output, root, jobs, callback_types=False):
             try:
                 result = future.result()
             except (subprocess.TimeoutExpired, OSError) as error:
-                result = dict(source=Path(entry['file']).relative_to(root).as_posix(),
+                result = dict(source=source_name(entry, root),
                               returncode=-1, errors=[str(error)], log=None)
             results.append(result)
             if result['returncode']:

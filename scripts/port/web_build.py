@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Build the real CMake web target with the pinned SDK; optionally smoke a local ROM."""
 import argparse
+import os
 from pathlib import Path
 import subprocess
 import shutil
@@ -8,6 +9,17 @@ import sys
 
 from web_spike import ROOT, load_toolchain, run_logged
 from web_spike_audit import run_audit
+
+
+def copy_runtime_notices(output):
+    sdk = Path('/emsdk/upstream/emscripten')
+    names = ['LICENSE', 'system/lib/libc/musl/COPYRIGHT',
+             'system/lib/libcxx/LICENSE.TXT', 'system/lib/libcxxabi/LICENSE.TXT',
+             'system/lib/compiler-rt/LICENSE.TXT']
+    text = '\n\n'.join(name + '\n' + (sdk / name).read_text(encoding='utf-8') for name in names)
+    sdl = sdk / 'cache/ports/sdl2/SDL-release-2.32.10/LICENSE.txt'
+    text += '\n\nSDL2 2.32.10\n' + sdl.read_text(encoding='utf-8')
+    (output / 'runtime-notices.txt').write_text(text, encoding='utf-8')
 
 
 def inside(options):
@@ -32,6 +44,9 @@ def inside(options):
     run_logged(build_command, output / 'build.log', timeout=900)
     if video:
         shutil.copyfile(ROOT / 'scripts/port/web_probe/play.html', output / 'index.html')
+        copy_runtime_notices(output)
+        run_logged(['python3', str(ROOT / 'scripts/port/web_logo.py'),
+                    '--audit-wasm', str(output / 'ProjectMidas.wasm')], output / 'logo-policy.log')
     if options.callback_types:
         report = run_audit(output / 'compile_commands.json',
                            output / 'callback-types/audit', ROOT, options.jobs, callback_types=True)
@@ -60,6 +75,10 @@ def outside(options):
                '--mount', f'type=bind,source={output},target=/out',
                '--mount', f'type=volume,source={cache},target=/emsdk/upstream/emscripten/cache',
                '-w', '/src']
+    for name in ('GITHUB_ACTIONS', 'GITHUB_SHA', 'GITHUB_REPOSITORY', 'GITHUB_RUN_ID',
+                 'GITHUB_REF_NAME', 'SOURCE_DATE_EPOCH', 'MIDAS_BUILD_TIME_UTC'):
+        if os.environ.get(name):
+            command.extend(['-e', name + '=' + os.environ[name]])
     if options.smoke:
         rom = Path(options.rom).resolve()
         if not rom.is_file():

@@ -395,6 +395,7 @@ endif()
 
 if(EMSCRIPTEN)
     midas_web_sources(PORT_SRC)
+    midas_web_assets(ASSET_LOOSE_SRC)
 endif()
 
 if(GE_VIDEO)

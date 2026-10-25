@@ -1316,8 +1316,40 @@ through the SDK filesystem, reload, writes during synchronization and backup
 round trips. Injected synchronization/partial-write failures preserve the prior
 files in memory and after reload. These are synthetic-data tests, not actual
 campaign or host-quota-exhaustion validation. The video target exports IDBFS.
-The inherited compiled logo payload remains a packaging follow-up before Pages
-publication; the deployment milestone records the required ROM-backed replacement.
+The inherited compiled logo payload required a ROM-backed replacement before
+Pages publication.
+The deployment slice now replaces that payload for web only: a ROM-free generator
+retains typed display-list commands but creates 38 uninitialized texture/color/
+vertex arrays. Startup copies their data from the player's ROM with validated
+bounds and host endian conversion before the existing texel fixups. Native
+builds still select the original asset source. All 38 arrays matched the private
+stock ROM; five generator/binary-policy tests and native/Wasm converter checks
+passed. Original signatures for all 32 substantial texture/vertex arrays are
+absent in the final Wasm in both byte orders. The strict audit passes 272/272
+sources, including build-tree generated files; ten audit/tooling tests pass.
+Native ADS/wardrobe/HUD/state/image-bank/collision/logo regressions pass. Both
+full native gallery passes reproduced every view/icon with zero changed image
+cells; representative pistol/rifle ADS and freshness/integrity were reviewed.
+Assembly now rejects original-logo source selection, compiled ROM fallback or
+weapon-icon definitions and initialized generated logo arrays. A separate exact
+public-file allowlist/digest verifier excludes local captures, ROMs and extra
+build files. Runtime, renderer, font and frontend dependency notices are assembled
+with the site. The pinned Pages workflow builds/tests PRs and deploys successful
+main builds with write/OIDC permissions confined to its deployment job. Only
+explicit public build-provenance environment fields enter the SDK container.
+The final project-path artifact passes Edge's full real-ROM launcher/storage/
+capture/audio/focus/watch audit and confirms the ROM-backed logo initialized.
+Actions-based Pages configuration is enabled at
+`https://prizz.github.io/Project-Midas-ADS/` with HTTPS enforced. First CI
+publication and deployed update validation remain pending. An isolated Linux
+Chromium run also passes the project-path launcher, ROM storage, C/IDBFS and ten
+GPU sampler checks with container networking disabled.
+Browser audit tools select Chromium/installed Chrome/Edge, Firefox or WebKit,
+and an isolated local server serves only the assembled site. Initial WebKit
+capability initialization passes. Firefox 157 initializes under Linux Xvfb/Mesa
+llvmpipe after its Windows executable failed to launch and its Linux headless
+run lacked WebGL. Neither is claimed as completed browser/gameplay compatibility
+yet. The tracker records the isolated browser image digest and environment.
 The following launcher slice now builds locally with SolidJS and commit-pinned
 MysticUI/Tailwind. It adds file/drop selection and ROM remembering, typed engine
 and capture states, visible download/compile/save stages, backup controls with
@@ -1387,6 +1419,10 @@ Existing native and asset ownership contracts continue to apply.
 [filesystem fixture](web/tests/filesystem.c), [filesystem audit](web/tools/filesystem-audit.mjs),
 [launcher](web/src/app.tsx), [engine](web/src/engine.ts), [capture controller](web/src/capture.ts),
 [ROM lifecycle](web/src/rom-manager.ts), [site assembler](web/tools/build-site.ts),
+[ROM-backed logo](port/web/logo.c), [logo generator](scripts/port/web_logo.py),
+[logo regressions](scripts/port/test_web_logo.py),
+[runtime policy](web/tools/runtime-policy.ts), [public artifact check](web/tools/verify-site.ts),
+[Pages workflow](.github/workflows/web-pages.yml),
 [sampler GLSL](port/web/sampler.glsl), [focus adapter](port/web/lifecycle.c),
 [runtime audit](web/tools/runtime-audit.mjs), [menu audit](web/tools/menu-audit.mjs),
 [collision regression](scripts/port/test_stan_callbacks.c),

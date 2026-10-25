@@ -1,15 +1,10 @@
 // ROM-free browser UX regression against the assembled site.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { chromium } from '@playwright/test';
+import { launchAuditBrowser } from './browser-choice.mjs';
 
 const origin = process.argv[2] || 'http://127.0.0.1:4176';
-const maybeChannel = process.env.MIDAS_BROWSER;
-const browser = await chromium.launch({
-    headless: true,
-    ...(maybeChannel && maybeChannel !== 'chromium' ? { channel: maybeChannel } : {}),
-    args: ['--enable-unsafe-swiftshader'],
-});
+const { browser } = await launchAuditBrowser();
 const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
 await context.addInitScript(() => {
     if (!navigator.storage) return;
@@ -188,6 +183,19 @@ try {
     console.log(
         'Launcher UX: invalid drop/import, cancel/restore, quota rollback/retry, download, denied protection, fullscreen, tab lock/retry and preference reload passed',
     );
+} catch (error) {
+    console.error(
+        'Launcher failure state:',
+        await page
+            .evaluate(() => ({
+                alerts: [...document.querySelectorAll('[role="alert"]')].map(
+                    (element) => element.textContent,
+                ),
+                status: document.querySelector('.launch-bar')?.textContent,
+            }))
+            .catch(() => null),
+    );
+    throw error;
 } finally {
     await browser.close();
 }

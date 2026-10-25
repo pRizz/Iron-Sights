@@ -29,7 +29,7 @@ function isBuildInfo(value: unknown): value is BuildInfo {
         build.schema === 1 &&
         textFields.every((key) => typeof build[key] === 'string' && build[key].length > 0) &&
         typeof build.commit === 'string' &&
-        /^[a-f0-9]{40}$/.test(build.commit) &&
+        /^(?:[a-f0-9]{40}|nogit)$/.test(build.commit) &&
         typeof build.dirty === 'boolean' &&
         typeof build.build_number === 'number' &&
         Number.isSafeInteger(build.build_number) &&

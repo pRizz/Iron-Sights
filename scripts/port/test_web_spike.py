@@ -122,6 +122,21 @@ class WebSpikeTests(unittest.TestCase):
             self.assertIn('missing declaration', (root / failure['log']).read_text())
             self.assertEqual(json.loads((root / 'audit.json').read_text())['failed'], 1)
 
+    def test_generated_build_source_is_audited_outside_checkout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            build = Path(directory) / 'output'
+            build.mkdir()
+            source = build / 'generated/logo.c'
+            entry = dict(file=str(source), directory=str(build),
+                         command=shlex.join(['emcc', '-c', str(source)]))
+            database = build / 'compile_commands.json'
+            database.write_text(json.dumps([entry]), encoding='utf-8')
+            with patch('web_spike_audit.subprocess.run', return_value=subprocess.CompletedProcess([], 0, stdout='')) as compiler:
+                result = run_audit(database, build / 'audit', Path(directory) / 'checkout', 1)
+            self.assertEqual(result['compiled'], 1)
+            self.assertEqual(result['sources'][0]['source'], '<build>/generated/logo.c')
+            self.assertIn(str(source), compiler.call_args.args[0])
+
 
 if __name__ == '__main__':
     unittest.main()

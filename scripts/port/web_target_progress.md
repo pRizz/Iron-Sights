@@ -310,14 +310,14 @@ broader mission/browser compatibility and performance acceptance.
 
 ## WEB-005 | 2026-10-24 | GitHub Pages deployment
 
-**Status:** Not started. Depends on WEB-004 and passing earlier gates.
+**Status:** In progress. ROM-free logo replacement, packaging verification,
+runtime notices and pinned build/deployment workflow are implemented locally.
 
-**Packaging follow-up:** The inherited always-linked `assets/rarewarelogo.c`
+**Packaging decision:** The inherited always-linked `assets/rarewarelogo.c`
 contains initialized logo textures/vertices even with `GE_ROMDATA_FALLBACK=OFF`.
-Before publishing, replace those web payloads with ROM-populated backing data
-and verify the site contains only approved runtime/configuration outputs. Native
-logo behavior must remain unchanged. The optional generated weapon-icon pack is
-not enabled in the current web compiler definitions, even when a local pack exists.
+Web now replaces those payloads with ROM-populated backing arrays; native builds
+retain the original source. The optional generated weapon-icon pack remains
+disabled. Source-selection and binary-payload checks gate assembly/publication.
 
 **Completion:** PR builds verify without publishing; successful `main` runs
 deploy the site. Production base paths work, active sessions continue and
@@ -326,14 +326,42 @@ deployment updates preserve user files.
 **Starting paths:** `.github/workflows/windows-release.yml`, existing provenance
 and packaging tools, new web build/deployment workflow and packaging entrypoint.
 
-**Evidence:** No Pages workflow, publication or update test yet.
+**Evidence:** The replacement generator creates 38 uninitialized arrays,
+removing 23,496 bytes of texture/color/vertex payload from compiled web sources.
+All 38 original arrays matched the corresponding private ROM bytes. Five
+generator/binary-policy tests and native/Wasm synthetic endian/bounds/atomicity
+tests passed. The final Wasm excludes original payload signatures for all 32
+substantial texture/vertex arrays in both byte orders. Tiny color constants are
+covered by source/BSS checks rather than ambiguous four-byte binary matching.
+The packaging policy rejects the original logo, compiled ROM fallback/icons
+and initialized generated arrays. Strict TypeScript and 67 unit tests passed.
+The optimized build and strict callback audit pass all 272 selected sources,
+including the generated logo. The auditor now labels generated sources in the
+build tree; ten tooling tests pass. Native ADS/wardrobe/HUD/state/image-bank/
+collision/logo checks pass. The full native rebuild and two gallery passes
+reproduced all 72 views/35 icons with zero changed image cells; representative
+pistol/rifle ADS reviewed, freshness and eight gallery tests passed. The assembled
+site passes exact file/digest verification and rejects an injected extra file.
+Actionlint 1.7.12 validates the new workflow. The final project-path artifact
+passed Edge's ROM-free UX and real-ROM launcher audit, including ROM-backed logo
+initialization, normal Dam, audio/capture/focus/watch, campaign/profile/settings
+reload, actual backup restore and ROM removal without save loss. An audit race
+was fixed by waiting for Play readiness after restoring saves; configuration
+downloads may still be finishing when save data is already available.
+Pages is configured for Actions at `https://prizz.github.io/Project-Midas-ADS/`
+with HTTPS enforced. First CI publication and deployed update acceptance remain
+pending. The launcher checkpoint `d6ed43d` passed both existing CI workflows.
+The Linux Playwright 1.64.1 image additionally passed the production project-path
+UI audit, ROM storage, C/IDBFS filesystem and all ten GPU sampler cases against
+the assembled local artifact, with container networking disabled.
 
-**Next action:** Build a ROM-free web artifact with pinned inputs; validate
-packaging and run a real deployed update/persistence test before completion.
+**Next action:** Push the workflow, verify its first publication and run a real
+deployed update/persistence test before completion.
 
 ## WEB-006 | 2026-10-24 | Browser compatibility and polish
 
-**Status:** Not started. Depends on WEB-005 for deployed-site validation.
+**Status:** Initial capability probes started; deployed-site and mission/effect
+acceptance depend on WEB-005.
 
 **Completion:** Mission/effect coverage, browser support matrix and performance
 results are recorded. Optional icons/offline support and browser suspend points
@@ -342,7 +370,16 @@ have explicit implementation or deferral decisions.
 **Starting paths:** Shared renderer/game code, browser launcher, local audit
 tooling and `scripts/port/save_states.md` for snapshot design constraints.
 
-**Evidence:** No cross-browser or performance measurements yet.
+**Evidence:** Windows WebKit (Playwright 1.64.1) exposes WebGL 2, Web Locks and
+Pointer Lock and initializes the launcher/saves without a page error. This is
+WebKit automation, not actual macOS Safari acceptance. Playwright Firefox fails
+to launch on this Windows host with `spawn UNKNOWN`, as did the bundled full
+Chromium earlier; installed Chrome/Edge work. An isolated Linux browser image
+was tested instead: Firefox 157 initializes successfully under Xvfb with Mesa
+llvmpipe and no page errors. Its headless Linux run had no WebGL 2 and showed the
+intended graphics-availability error. The browser image is pinned to
+`mcr.microsoft.com/playwright:v1.64.1-noble@sha256:d65108d1a8095d8b0c4a5e32bf1807a40a5ce90ff0c78473e1116b1c243235e8`.
+No mission/effects matrix or new performance acceptance yet.
 
 **Next action:** Define a representative mission/effects matrix for current
 Chrome/Edge, Firefox and Safari. Keep unsupported browsers/features visible;
