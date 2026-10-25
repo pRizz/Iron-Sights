@@ -85,8 +85,10 @@ try {
     });
     await expect(page.locator('.rom-dialog [role=alert]')).toContainText('different size');
     await expect(page.locator('.room-layer')).toHaveAttribute('data-phase', 'empty');
-    await page.getByRole('button', { name: 'Back to the room' }).click();
+    // Cached-ROM errors may open this modal before the first F2 gesture.
+    // F2 must still reveal the full controls and their Forget-ROM action.
     await page.keyboard.press('F2');
+    await expect(page.getByRole('dialog', { name: 'Insert your GoldenEye ROM' })).toBeHidden();
     await expect(page.locator('.site-header')).toBeVisible();
     await expect(page.locator('.room-layer')).toBeHidden();
     const beforePause = await page.locator('.room-canvas').getAttribute('data-room-frames');

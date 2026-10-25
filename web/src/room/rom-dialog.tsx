@@ -21,6 +21,7 @@ export function RomDialog(props: Props) {
                 props.onDialog(element);
             }}
             class="rom-dialog"
+            data-busy={props.selecting()}
             aria-labelledby="rom-dialog-title"
             onCancel={(event) => {
                 if (props.selecting()) event.preventDefault();

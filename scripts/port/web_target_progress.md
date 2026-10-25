@@ -621,3 +621,11 @@ engaged 75% scale and measured 5.3 fps, so it is functional software-host
 acceptance rather than a smooth hardware-performance claim. Published users
 should keep browser hardware acceleration enabled. Windows WebKit room-only
 checks pass with PNG retry; actual Safari/gameplay status remains experimental.
+
+**Publication race repair:** PR #1 and its checks passed, and merge `b38a21c`
+passed the main Windows/standards workflows. Pages run `40159647626` then caught
+a fast-cache race in the launcher audit: a damaged ROM's modal could appear
+before F2 and block the Forget-ROM controls. Deployment was correctly withheld.
+F2 now closes an idle ROM/error modal and opens controls; active validation and
+backup-confirmation modals remain guarded. The room audit explicitly exercises
+this route. Re-run local browser/CI acceptance before publication.

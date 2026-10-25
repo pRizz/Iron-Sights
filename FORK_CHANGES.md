@@ -1265,6 +1265,10 @@ the room crossfades only after game graphics begin. Idle room drawing is capped
 at 30 fps, static geometry is batched without absorbing interactive/LED parts,
 and stationary shadows are reused. Tests cover transform preservation and the
 keyframe endpoints. Context/chunk/image failures retain the standard launcher.
+F2 can close an idle ROM/error modal to reach those controls, including when a
+damaged remembered ROM restores before the first key gesture. Busy validation
+and backup-confirmation dialogs remain protected. A direct browser regression
+covers the modal-to-controls route rather than relying on cache timing.
 Sustained slow room frames reduce its pixel ratio to 75%, then 50%, with smaller
 shadows; isolated hitches and the game renderer/settings are unaffected.
 

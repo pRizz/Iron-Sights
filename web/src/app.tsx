@@ -86,7 +86,17 @@ export function App() {
             if (event.key === 'F2') {
                 event.preventDefault();
                 event.stopImmediatePropagation();
-                if (document.querySelector('dialog[open]')) return;
+                const maybeModal = document.querySelector<HTMLDialogElement>('dialog[open]');
+                if (maybeModal) {
+                    if (
+                        !maybeModal.classList.contains('rom-dialog') ||
+                        maybeModal.dataset.busy === 'true'
+                    )
+                        return;
+                    maybeModal.close();
+                    openControls();
+                    return;
+                }
                 controls() ? closeControls() : openControls();
             }
             if (event.altKey && event.key === 'Enter') {
