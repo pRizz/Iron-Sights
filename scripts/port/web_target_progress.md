@@ -569,6 +569,35 @@ Evidence: `framing-final-game`, `framing-final-ui` and `framing-firefox-game`.
 Chrome also passes actual reduced-motion handoff/reload/power startup with the
 licensed props and native sizing checks in `framing-reduced-game`.
 
+**Exit/startup follow-up, 2026-10-25:** Implemented directly on `main`. Native
+Files-screen Exit Game now pauses the live browser instance, releases input and
+audio, flushes saves and reverses the camera/power sequence into the room. The
+paused game remains visible while room assets reconstruct; a crossfade precedes
+retreat. The inserted cartridge and physical power switch resume the same native
+instance, without a second `main` call or replacement canvas, and handoff waits
+for new graphics tasks. The save-writer lock stays held. Native desktop quit is
+unchanged. Reduced motion uses the short fade route.
+
+Fresh page loads auto-start a validated remembered ROM after engine readiness,
+without loading the room or prop GLBs. Explicit exit stays in the room. F2 and
+**Restart to manage saves** retain pre-start backup restoration: the latter
+flushes and reloads into `?controls=1`, holding startup until Play or closing
+controls. The query is removed when controls close. `session.ts` tests entry
+decisions; 112 unit tests and strict TypeScript pass. Edge and isolated Linux
+Firefox pass actual native No/Yes, reverse transition, paused frames, silent
+audio, released input, physical warm power resume, repeated exit, stable saves
+and management restart. Chrome passes that cycle with reduced motion. The full Edge launcher actual-ROM audit also passes
+Dam/audio/capture/watch/focus, campaign/profile/settings reload, actual backup
+restore and remembered-ROM removal. Evidence: `lifecycle-game`,
+`lifecycle-saves-fixed`, `exit-final-edge`, `exit-firefox` and `exit-reduced-chrome`.
+
+The optimized Wasm and all 272 strict callback compilations pass. The native
+gallery's two independent capture passes reproduce all views/icons with zero
+changed image cells; source fingerprint/HTML are refreshed, verify and eight
+gallery tests pass. Desktop game rendering is unchanged. Publication acceptance
+is recorded in WEB-010; earlier fresh cached-cartridge power requirements below
+are historical and are superseded by this follow-up.
+
 **Completion:** First/repeat ROM flows, insertion/power/flight, loading/errors and
 actual-game handoff with audio, capture/watch and durable saves.
 
@@ -617,12 +646,19 @@ quota/tab-lock checks pass. Private evidence is `build/web-room/framing-*`.
 An idle Edge sample shows 38 draws/30,500 triangles and about 28 fps at full scale;
 this remains software-host evidence. The launcher is about 100 kB JS (36 kB gzip),
 the lazy scene 668 kB (172 kB gzip), plus 1,408,244 bytes of model GLBs. Vite's
-scene-size advisory remains. Final CI/publication acceptance follows.
+scene-size advisory remains. These changes shipped directly in `ed459f2` and
+`69842af`; Pages `40164551815`, Windows builds/provenance `40164551755` and Bright
+Builds `40164551825` all passed.
 
 **Delivery correction, 2026-10-25:** The owner requested direct-to-main delivery.
 The rule is persisted in AGENTS/CONTRIBUTING and the local standards overrides.
 PR #2 was opened before that request; it is superseded by direct-main delivery
 of the verified commits, with normal push-triggered CI/Pages acceptance retained.
+
+**Lifecycle publication follow-up:** Local exit/auto-start acceptance is recorded
+in WEB-009. Exact assembly/allowlist, 112 unit tests, TypeScript and Windows WebKit
+ROM-free room/fallback checks pass. Final direct-main CI and live-site native-exit
+acceptance are the next action before marking this follow-up published.
 
 **Completion:** Keyboard/reduced-motion/responsive/failure paths, production
 allowlist and browser verification, measured scene cost and verified deployment.

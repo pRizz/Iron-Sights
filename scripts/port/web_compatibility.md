@@ -139,6 +139,11 @@ Content-versioned application downloads are separate from the stable user-file
 mount, Web Lock and ROM database. Backup replacement remains restricted to before
 main starts because the game caches its EEPROM. Browser storage can be cleared;
 downloaded backups remain the portable recovery path.
+Normal launches now start immediately when the remembered ROM validates. Use F2
+and **Restart to manage saves** to reload with automatic startup held for backup
+restoration. Native Exit Game returns to a paused room through a reverse TV
+transition; the console power switch resumes the same instance. The save-writer
+lock remains held while that instance is paused.
 
 ## Reproduce locally
 

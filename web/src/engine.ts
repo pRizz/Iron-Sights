@@ -82,6 +82,7 @@ export function createEngine() {
     let maybeRelease: (() => void) | undefined;
     let initializing = false;
     let pointerRelease = () => {};
+    let roomRequested = () => {};
     const log = (line: string) => setLogs((previous) => [...previous.slice(-99), line]);
     const loading = (label: string, maybePercent: number | null = null) =>
         setStatus({ kind: 'loading', label, maybePercent });
@@ -131,6 +132,7 @@ export function createEngine() {
                 print: log,
                 printErr: log,
                 onPointerRelease: () => pointerRelease(),
+                onRoomRequested: () => roomRequested(),
                 onAbort: (reason) => {
                     log(String(reason));
                     failed('The game stopped. Download a save backup, then reload to try again.');
@@ -182,6 +184,9 @@ export function createEngine() {
         logs,
         onPointerRelease: (callback: () => void) => {
             pointerRelease = callback;
+        },
+        onRoomRequested: (callback: () => void) => {
+            roomRequested = callback;
         },
     };
 }

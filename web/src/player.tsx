@@ -10,6 +10,8 @@ type PlayerProps = {
     rom: RomManager;
     capture: Capture;
     started: Accessor<boolean>;
+    presenting: Accessor<boolean>;
+    resume: () => Promise<void>;
     ready: () => boolean;
     onCanvas: (canvas: HTMLCanvasElement) => void;
     chooseROM: () => void;
@@ -150,6 +152,7 @@ export function Player(props: PlayerProps) {
                 <Show
                     when={
                         started() &&
+                        props.presenting() &&
                         (capture.state().kind === 'paused' || capture.state().kind === 'capturing')
                     }
                 >
@@ -167,7 +170,7 @@ export function Player(props: PlayerProps) {
                             shimmerColor="#fff0c4"
                             borderRadius="8px"
                             disabled={capture.state().kind === 'capturing'}
-                            onClick={() => void capture.resume()}
+                            onClick={() => void props.resume()}
                         >
                             Resume game
                         </ShimmerButton>

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { cameraPose, insertionPose, smooth } from './cinematic';
+import { cameraPose, insertionPose, smooth, retreatFlight } from './cinematic';
 import { PerspectiveCamera, Vector3 } from 'three';
 import { ROOM_FOV, TV_SCREEN } from './framing';
 
@@ -23,6 +23,14 @@ test('camera approaches the screen with bounded endpoints and zero endpoint velo
 test('portrait framing backs away to contain the complete TV screen', () => {
     expect(cameraPose(0, 0.7).position[2]).toBeGreaterThan(cameraPose(0, 1.7).position[2]);
     expect(cameraPose(1, 0.7).position[2]).toBeGreaterThan(cameraPose(1, 1.7).position[2]);
+});
+
+test('retreat holds the screen for crossfade and returns to the original camera', () => {
+    expect(retreatFlight(-1)).toBe(1);
+    expect(retreatFlight(0.3)).toBe(1);
+    expect(retreatFlight(1.7)).toBeCloseTo(0.5);
+    expect(retreatFlight(3.1)).toBe(0);
+    expect(retreatFlight(10)).toBe(0);
 });
 
 for (const aspect of [0.5, 4 / 3, 16 / 9, 21 / 9]) {

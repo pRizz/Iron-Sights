@@ -4,7 +4,7 @@ import { createConsole } from './console';
 import { createCartridge } from './cartridge';
 import { createTelevision } from './television';
 import { furnishRoom } from './environment';
-import { cameraPose, insertionPose, smooth } from './cinematic';
+import { cameraPose, insertionPose, smooth, retreatFlight } from './cinematic';
 import { createController } from './controller';
 import { batchStaticProps } from './batch';
 import { advanceQuality } from './quality';
@@ -157,13 +157,15 @@ function initializeScene(
             cartridge.position.copy(inserted);
             cartridge.rotation.set(0, 0, 0);
         }
-        const powered = ['powering', 'flying', 'complete'].includes(state.phase);
+        const powered = ['powering', 'flying', 'complete', 'retreating'].includes(state.phase);
         const powerProgress =
             state.phase === 'powering'
                 ? easeOut(state.elapsed / roomDuration('powering', reduced))
-                : powered
-                  ? 1
-                  : 0;
+                : state.phase === 'retreating'
+                  ? 1 - smooth(state.elapsed / roomDuration('retreating', reduced))
+                  : powered
+                    ? 1
+                    : 0;
         consoleProp.setPower(powerProgress);
         consoleProp.ledMaterial.emissiveIntensity = powered ? 2 : 0;
         tv.glow.intensity = 12 + (reduced ? 0 : Math.sin(seconds * 23) * 0.12);
@@ -173,9 +175,11 @@ function initializeScene(
         const flight =
             state.phase === 'flying'
                 ? state.elapsed / roomDuration('flying', reduced)
-                : state.phase === 'complete'
-                  ? 1
-                  : 0;
+                : state.phase === 'retreating'
+                  ? retreatFlight(state.elapsed)
+                  : state.phase === 'complete'
+                    ? 1
+                    : 0;
         const pose = cameraPose(reduced ? 0 : flight, camera.aspect);
         camera.position.set(...pose.position);
         camera.lookAt(...pose.look);
@@ -207,6 +211,7 @@ function initializeScene(
             state.phase !== previousPhase ||
             state.phase === 'inserting' ||
             state.phase === 'powering' ||
+            state.phase === 'retreating' ||
             (state.phase === 'empty' && !reduced && frames % 3 === 0);
         const before = performance.now();
         renderer.render(scene, camera);

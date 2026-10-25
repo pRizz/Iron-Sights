@@ -1237,19 +1237,58 @@ the fork workflow, preserves normal checks/protections and leaves managed upstre
 files intact. The in-progress web refinement is moved to direct-main delivery;
 its existing PR is closed without using a PR merge.
 
+The rules change passed the scoped Markdown check and pre-commit standards/
+gallery checks and was pushed directly to main as `69842af`, together with the
+verified room refinements in `ed459f2`. PR #2 was closed rather than merged.
+
 ### FORK-025 — Immersive browser room
 
 **Status:** Refined desktop room and cinematic are implemented, verified and
 published on GitHub Pages. Safari remains experimental.
 
-The requested follow-up on `codex/room-models-and-framing` adds licensed console/
-controller replacements, background-drag cartridge pivoting, proportional game
-presentation and a screen-fitted TV-flight endpoint. Local verification is
-recorded below; final publication acceptance is tracked in WEB-010.
+The licensed console/controller, background-drag cartridge pivoting, proportional
+game presentation and screen-fitted TV-flight endpoint shipped directly on main
+in `ed459f2`/`69842af`. Pages `40164551815`, Windows builds/provenance `40164551755`
+and Bright Builds `40164551825` passed. Publication acceptance is tracked in WEB-010.
+
+The lifecycle follow-up on `main` makes native EXIT GAME return to a paused
+browser room with a reverse TV transition. `port/src/video.c` routes only web
+quit requests through `port/web/lifecycle.c`; desktop SDL_QUIT/atexit behavior
+remains inherited. `engine.ts`/`app.tsx` pause and release input/audio, flush saves
+and retain the live native instance and its save-writer lock. `flow.ts`,
+`cinematic.ts`, `scene.ts` and `room.tsx` rebuild the room over the paused
+framebuffer, crossfade and reverse the flight/power sequence. The inserted
+cartridge's power switch resumes that same instance; handoff waits for new
+graphics tasks, without a second `main` call or new game canvas. Reduced motion
+uses a short fade. Explicit exit cannot automatically re-enter the game.
+
+Ordinary fresh page loads now auto-start a successfully validated remembered ROM
+without constructing the room or fetching prop GLBs. `rom-manager.ts` reports
+restore success; `session.ts` makes entry decisions explicit and waits for engine
+readiness. F2 holds startup while controls are open. Storage controls add
+**Restart to manage saves**, which flushes and reloads into `?controls=1` so
+backup restoration remains available before native EEPROM initialization. Closing
+controls removes the query and allows startup. This supersedes the earlier fresh
+returning-player power prompt; room power resume remains after explicit exit.
+
+Lifecycle verification: 112 unit tests, strict TypeScript, optimized Wasm and all
+272 strict callback compilations pass. Both native gallery capture passes produce
+zero changed image cells; the source fingerprint/HTML are refreshed, integrity
+and eight gallery tests pass. Edge's actual native No/Yes confirmation, reverse
+flight, frozen frames/silent audio/released input, physical warm power resume,
+repeated exit, unchanged save files and management restart pass. The same native
+exit cycle passes isolated Linux Firefox and Chrome with reduced motion. The full Edge launcher audit passes
+Dam/audio/capture/focus/watch, campaign/profile/settings reload, actual backup
+restore and ROM removal. The room gameplay audit verifies cached auto-start and
+no prop downloads after reload. Windows WebKit's ROM-free room/fallback checks
+pass; actual Safari remains experimental. New `room-exit-audit.mjs` and the Linux
+helper's `exit` mode keep private evidence under `build/web-room/exit-*`; no ROM
+or private captures enter Git. Final publication acceptance follows in WEB-010.
 
 The user requested a canvas-only initial experience with realistic room props,
 a CRT, rotating cartridge ROM selection and an animated insertion/power/TV
-transition. Returning users have an inserted cartridge and click the power switch.
+transition. Its original returning-player power prompt is superseded by the
+cached auto-start behavior above; explicit exit still presents the inserted prop.
 This replaces the initial visible launcher presentation introduced by FORK-024;
 its storage/game interfaces and retained HTML controls remain authoritative.
 F2 opens controls, Alt+Enter toggles fullscreen and P remains the native watch.

@@ -38,7 +38,7 @@ await page.addInitScript(() => {
 const errors = [];
 const requests = [];
 page.on('pageerror', (error) => errors.push(String(error)));
-page.on('request', (request) => requests.push(request.method()));
+page.on('request', (request) => requests.push({ method: request.method(), url: request.url() }));
 async function download() {
     const pending = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Download save backup' }).click();
@@ -127,33 +127,34 @@ try {
     await page.getByRole('button', { name: 'Pause', exact: true }).click();
     await page.getByText('Saved on this device', { exact: true }).waitFor();
     const before = await download();
+    const beforeReloadRequests = requests.length;
     await page.reload();
-    await expect(page.locator('.room-layer')).toHaveAttribute('data-phase', 'inserted', {
-        timeout: 60_000,
-    });
-    await page.waitForTimeout(700);
-    await expect(page.locator('.room-layer')).toHaveAttribute('data-phase', 'inserted');
-    await page.screenshot({ path: resolve(output, 'returning.png') });
+    // No click, key or power gesture may be needed for remembered-ROM startup.
+    await page.waitForFunction(
+        () => document.querySelector('pre').textContent.includes('frame 240'),
+        undefined,
+        { timeout: 90_000 },
+    );
+    await expect(page.locator('.room-layer')).toHaveCount(0);
+    assert.ok(
+        requests
+            .slice(beforeReloadRequests)
+            .every((request) => !/\/room\/(?:console|controller)\.glb/.test(request.url)),
+        'Cached startup downloaded room props',
+    );
     await page.keyboard.press('F2');
     await page.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
     assert.deepEqual((await download()).files, before.files, 'Room reload changed the saved files');
-    await page.keyboard.press('F2');
-    // Physical power-switch hit target, rather than the accessibility alternative.
-    await page.mouse.move(488, 610);
-    await expect(page.locator('.room-canvas')).toHaveCSS('cursor', 'pointer');
-    await page.mouse.click(488, 610);
-    await expect(page.locator('.room-layer')).not.toHaveAttribute('data-phase', 'inserted');
-    await waitForGame();
     assert.deepEqual(errors, []);
     assert.ok(
-        requests.every((method) => method === 'GET'),
+        requests.every((request) => request.method === 'GET'),
         'Unexpected outgoing request',
     );
     await writeFile(
         resolve(output, 'report.json'),
         JSON.stringify(
             {
-                checks: 'insertion, flight, stable canvas, actual game/audio, durable reload, physical returning power switch',
+                checks: 'insertion, flight, stable canvas, actual game/audio, durable reload, cached automatic startup without room props',
                 audio,
                 reduced,
                 gameplay,
@@ -164,7 +165,7 @@ try {
         ),
     );
     console.log(
-        'Room actual ROM: insertion/flight, game/audio, durable reload and returning power-switch startup passed',
+        'Room actual ROM: insertion/flight, game/audio, durable reload and cached automatic startup passed',
     );
 } catch (error) {
     await page.screenshot({ path: resolve(output, 'failure.png'), fullPage: true }).catch(() => {});

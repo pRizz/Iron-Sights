@@ -1,5 +1,12 @@
 export type RoomPhase =
-    'empty' | 'inserted' | 'inserting' | 'waiting' | 'powering' | 'flying' | 'complete';
+    | 'empty'
+    | 'inserted'
+    | 'inserting'
+    | 'waiting'
+    | 'powering'
+    | 'flying'
+    | 'complete'
+    | 'retreating';
 export type RoomFlow = { phase: RoomPhase; elapsed: number };
 export type RoomAction = 'restore' | 'select' | 'activate' | 'reset';
 
@@ -18,6 +25,7 @@ export function roomDuration(phase: RoomPhase, reduced: boolean): number {
     if (phase === 'inserting') return 1.9;
     if (phase === 'powering') return 0.9;
     if (phase === 'flying') return 2.8;
+    if (phase === 'retreating') return 3.1;
     return Infinity;
 }
 
@@ -28,10 +36,15 @@ export function advanceRoom(
     reduced: boolean,
 ): RoomFlow {
     if (state.phase === 'waiting') return ready ? { phase: 'powering', elapsed: 0 } : state;
-    if (!['inserting', 'powering', 'flying'].includes(state.phase)) return state;
+    if (!['inserting', 'powering', 'flying', 'retreating'].includes(state.phase)) return state;
     const elapsed = state.elapsed + Math.max(0, Math.min(seconds, 0.1));
     if (elapsed < roomDuration(state.phase, reduced)) return { ...state, elapsed };
-    const next = { inserting: 'waiting', powering: 'flying', flying: 'complete' } as const;
+    const next = {
+        inserting: 'waiting',
+        powering: 'flying',
+        flying: 'complete',
+        retreating: 'inserted',
+    } as const;
     return { phase: next[state.phase as keyof typeof next], elapsed: 0 };
 }
 

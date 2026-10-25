@@ -9,6 +9,12 @@ The immersive room revision is tracked separately in the
 [accepted room plan](../scripts/port/web_room_plan.md) and WEB-007 through WEB-010.
 Its entrypoint fills the viewport; F2 opens the retained launcher, saves and
 About controls, Alt+Enter toggles fullscreen, and P remains the native watch.
+A validated remembered ROM starts immediately on normal page loads. The native
+Exit Game confirmation returns through a reverse TV transition to the room;
+its power switch resumes the paused game. To restore a backup after startup,
+open F2 and choose **Restart to manage saves**. This reloads with controls open
+and holds automatic startup until Play or closing controls. Save restoration
+still occurs before the native game starts, so its cached EEPROM stays coherent.
 See [room implementation and prop provenance](src/room/README.md) for local
 checks, original prop models and candidate-source decisions.
 See the [runtime runbook](../scripts/port/web_runtime.md) and

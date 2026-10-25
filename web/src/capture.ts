@@ -13,6 +13,9 @@ export function createCapture(engine: Engine, started: () => boolean) {
     let wasLocked = false;
     let liveSince = 0;
     let pending = false;
+    let requestResume = () => {
+        void resume();
+    };
 
     function releaseFromGame(): void {
         if (document.pointerLockElement !== maybeCanvas) return;
@@ -118,7 +121,7 @@ export function createCapture(engine: Engine, started: () => boolean) {
         canvas.addEventListener(
             'click',
             () => {
-                if (state().kind === 'paused') void resume();
+                if (state().kind === 'paused') requestResume();
             },
             listen,
         );
@@ -153,6 +156,16 @@ export function createCapture(engine: Engine, started: () => boolean) {
             canvas.requestPointerLock = request;
         };
     }
-    return { state, notice, attach, pause, resume, starting: () => setState({ kind: 'starting' }) };
+    return {
+        state,
+        notice,
+        attach,
+        pause,
+        resume,
+        onResumeRequest: (callback: () => void) => {
+            requestResume = callback;
+        },
+        starting: () => setState({ kind: 'starting' }),
+    };
 }
 export type Capture = ReturnType<typeof createCapture>;

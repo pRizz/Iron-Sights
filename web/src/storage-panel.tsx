@@ -10,6 +10,7 @@ type StorageProps = {
     downloadBackup: () => Promise<void>;
     chooseBackup: () => void;
     protectStorage: () => Promise<void>;
+    manageSaves: () => Promise<void>;
     notify: (message: string) => void;
 };
 
@@ -122,10 +123,15 @@ export function StoragePanel(props: StorageProps) {
                 </button>
                 <p class="fine-print">
                     {started()
-                        ? 'Reload before restoring a backup.'
+                        ? 'Restart to manage saves before the game loads.'
                         : 'Backups include saves, profiles and settings.'}{' '}
                     ROMs are kept separately.
                 </p>
+                <Show when={started()}>
+                    <button class="text-button" onClick={() => void props.manageSaves()}>
+                        Restart to manage saves
+                    </button>
+                </Show>
                 <hr />
                 <p class="protection">{protection()}</p>
                 <p class="fine-print">

@@ -16,9 +16,17 @@ cartridge pivoting while it floats, preserves the game's native canvas aspect
 ratio with black bars, and fits the TV-flight endpoint to its visible screen.
 Track these additions in the existing WEB-007 through WEB-010 blocks.
 
+The owner's 2026-10-25 follow-up supersedes the earlier fresh returning-player
+power prompt: a validated remembered ROM starts the game directly on a normal
+page load. F2 and an explicit reload-to-manage-saves path can hold startup for
+backup restoration. Native EXIT GAME maps to a browser return-to-room action:
+pause the live instance, release input/audio, flush saves and reverse the TV
+flight into an inserted-cartridge room. Its power switch resumes that instance;
+an explicit exit must not trigger automatic re-entry. Reduced motion uses a fade.
+
 ## Experience and decisions
 
-- Open into a full-viewport 3D room, without the current visible HTML launcher.
+- First visits open into a full-viewport 3D room, without the visible HTML launcher.
   Realistic prop materials, a CRT on a stand, an N64 on the floor and connected
   cables establish a dark room lit mainly by the blue television.
 - The initial CRT displays VIDEO 3 / NO SIGNAL with restrained scanlines,
@@ -41,9 +49,11 @@ Track these additions in the existing WEB-007 through WEB-010 blocks.
   Finish facing the screen head-on at a distance calculated from its dimensions,
   viewport aspect and camera field of view. Contain every screen corner and fit
   one axis flush; aspect differences must not crop or stretch the glass.
-- Returning players see the cartridge already inserted after cache validation.
-  Clicking the console power switch starts a shorter power-on/TV transition.
-  Never start automatically or request the ROM again while the cached one works.
+- A normal fresh launch with a validated remembered ROM starts directly in the
+  game, without constructing the room or requesting the ROM again. Native
+  EXIT GAME pauses that instance and reverses the TV flight into the room with
+  its cartridge inserted and power off. Clicking the power switch resumes the
+  same game through the shorter power-on/TV transition.
 - F2 opens/closes the retained HTML controls and pauses/releases gameplay when
   opened. Preserve saves, backup import/export, errors, source, provenance and
   credits there. Provide an in-scene controls affordance and keyboard access.

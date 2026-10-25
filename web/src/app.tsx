@@ -6,6 +6,7 @@ import { createCapture } from './capture';
 import { createEngine, ensureBrowserSettings } from './engine';
 import { createRomManager } from './rom-manager';
 import { Room } from './room/room';
+import { restoredEntry, shouldAutoLaunch, type EntryMode } from './room/session';
 
 const SOURCE = 'https://github.com/pRizz/Project-Midas-ADS';
 
@@ -13,8 +14,12 @@ export function App() {
     const engine = createEngine();
     const rom = createRomManager();
     const [started, setStarted] = createSignal(false);
-    const [controls, setControls] = createSignal(false);
-    const [entered, setEntered] = createSignal(false);
+    const [controls, setControls] = createSignal(
+        new URL(location.href).searchParams.has('controls'),
+    );
+    const [entry, setEntry] = createSignal<EntryMode>('restoring');
+    const entered = () => entry() === 'game';
+    const roomVisible = () => entry() === 'room' || entry() === 'returning';
     const [hint, setHint] = createSignal(false);
     const [roomFailed, setRoomFailed] = createSignal(false);
     const capture = createCapture(engine, started);
@@ -27,6 +32,7 @@ export function App() {
     let backupInput!: HTMLInputElement;
     let dialog!: HTMLDialogElement;
     let experience!: HTMLDivElement;
+    let launching = false;
     let maybeHintTimer: ReturnType<typeof setTimeout> | undefined;
     const ready = () => engine.status().kind === 'ready' && rom.status().kind === 'ready';
     const build = () => engine.maybeManifest()?.build;
@@ -41,6 +47,11 @@ export function App() {
     function closeControls(): void {
         if (!canCloseControls()) return;
         setControls(false);
+        const url = new URL(location.href);
+        if (url.searchParams.has('controls')) {
+            url.searchParams.delete('controls');
+            history.replaceState(null, '', url);
+        }
         requestAnimationFrame(() => {
             window.dispatchEvent(new Event('resize'));
             // Keep the explicit Resume gesture after interacting with controls.
@@ -60,11 +71,33 @@ export function App() {
         if (engine.status().kind === 'error' || engine.saveStatus().kind === 'error')
             openControls();
     });
+    createEffect(() => {
+        if (entry() === 'cached' && rom.status().kind === 'error') setEntry('room');
+        if (shouldAutoLaunch(entry(), ready(), controls(), started())) void play('cached');
+    });
 
     onMount(() => {
         const detach = capture.attach(canvas);
+        capture.onResumeRequest(() => void resumeGame());
+        engine.onRoomRequested(() => {
+            if (!started()) return;
+            capture.pause('manual');
+            setRoomFailed(false);
+            setControls(false);
+            setEntry('returning');
+            showHint('Console off · click its power switch to return to the game');
+            void engine
+                .maybeFiles()
+                ?.flush()
+                .catch((error) => {
+                    setAction(String(error));
+                    openControls();
+                });
+        });
         void engine.initialize(canvas);
-        void rom.restore();
+        void rom.restore().then((remembered) => {
+            if (entry() === 'restoring') setEntry(restoredEntry(remembered));
+        });
         void navigator.storage
             ?.persisted?.()
             .then((value) =>
@@ -122,26 +155,58 @@ export function App() {
         });
     });
 
-    async function play(fromRoom = false): Promise<void> {
+    async function play(source: 'controls' | 'room' | 'cached' = 'controls'): Promise<void> {
+        const fromRoom = source === 'room';
         const selected = rom.status();
         const game = engine.maybeGame();
         const files = engine.maybeFiles();
-        if (!ready() || selected.kind !== 'ready' || !game || !files || started()) return;
+        if (!ready() || selected.kind !== 'ready' || !game || !files || launching) return;
+        launching = true;
         try {
+            if (started()) {
+                await files.flush();
+                if (!fromRoom) setEntry('game');
+                await capture.resume();
+                return;
+            }
             ensureBrowserSettings(game);
             await files.flush();
+            const latest = rom.status();
+            if (latest.kind !== 'ready' || latest.rom !== selected.rom || !ready()) return;
+            if (source === 'cached' && controls()) return;
             game.FS.writeFile('/rom.z64', selected.rom.bytes.slice());
             files.markStarted();
-            if (!fromRoom) setEntered(true);
+            if (!fromRoom) setEntry('game');
             setStarted(true);
             capture.starting();
             canvas.focus();
             await new Promise(requestAnimationFrame);
             game.callMain(['--rom-file', '/rom.z64']);
+            if (source === 'cached') showHint();
         } catch {
             engine.failed(
                 'The game could not start. Download your saves, then reload to try again.',
             );
+        } finally {
+            launching = false;
+        }
+    }
+
+    async function resumeGame(): Promise<void> {
+        if (!started()) return;
+        setEntry('game');
+        await capture.resume();
+    }
+
+    async function manageSaves(): Promise<void> {
+        capture.pause('manual');
+        try {
+            await engine.maybeFiles()?.flush();
+            const url = new URL(location.href);
+            url.searchParams.set('controls', '1');
+            location.assign(url);
+        } catch (error) {
+            setAction(`Could not restart for save management. ${String(error)}`);
         }
     }
 
@@ -244,6 +309,8 @@ export function App() {
                             engine={engine}
                             rom={rom}
                             capture={capture}
+                            presenting={() => entered() || controls()}
+                            resume={resumeGame}
                             started={started}
                             ready={ready}
                             onCanvas={(element) => {
@@ -262,6 +329,7 @@ export function App() {
                             downloadBackup={downloadBackup}
                             chooseBackup={() => backupInput.click()}
                             protectStorage={protectStorage}
+                            manageSaves={manageSaves}
                             notify={setAction}
                         />
                     </div>
@@ -386,23 +454,24 @@ export function App() {
                     </div>
                 </dialog>
             </div>
-            <Show when={!entered()}>
+            <Show when={roomVisible()}>
                 <Room
+                    returning={entry() === 'returning'}
                     engine={engine}
                     rom={rom}
                     controls={controls}
                     ready={ready}
                     openControls={openControls}
-                    play={() => play(true)}
+                    play={() => play('room')}
                     hint={showHint}
                     notify={setAction}
                     unavailable={() => {
                         setRoomFailed(true);
-                        if (started()) setEntered(true);
+                        if (started()) setEntry('game');
                         openControls();
                     }}
                     finish={() => {
-                        setEntered(true);
+                        setEntry('game');
                         showHint();
                     }}
                 />
@@ -414,7 +483,7 @@ export function App() {
                     onClick={closeControls}
                 >
                     {canCloseControls()
-                        ? `Return to ${started() ? 'game' : 'room'} · F2`
+                        ? `Return to ${entered() || entry() === 'cached' ? 'game' : 'room'} · F2`
                         : 'Standard launcher'}
                 </button>
             </Show>

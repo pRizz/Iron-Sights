@@ -9,6 +9,14 @@ void portWebPointerRelease(void)
     EM_ASM({ if (typeof Module['onPointerRelease'] === 'function') Module['onPointerRelease'](); });
 }
 
+/* A browser returns to its room instead of terminating the page's runtime. */
+EMSCRIPTEN_KEEPALIVE void portWebReturnToRoom(void)
+{
+    extern void portWebSetPaused(s32 paused);
+    portWebSetPaused(1);
+    EM_ASM({ if (typeof Module['onRoomRequested'] === 'function') Module['onRoomRequested'](); });
+}
+
 /* Internal SDL 2.32.10 contracts from the immutable Emscripten port. */
 extern void SDL_ResetKeyboard(void);
 extern void SDL_SetKeyboardFocus(SDL_Window *window);

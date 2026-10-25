@@ -68,11 +68,24 @@
 .room-layer[hidden] {
     display: none;
 }
+.room-layer[data-returning='true'] {
+    background: transparent;
+}
+.room-layer[data-returning='true'] .room-canvas {
+    opacity: 0;
+    transition: opacity 0.25s;
+}
+.room-layer[data-returning='true'][data-scene-ready='true'] .room-canvas {
+    opacity: 1;
+}
 .room-layer[data-revealing='true'] {
     opacity: 0;
     transition: opacity 0.35s;
 }
 @media (prefers-reduced-motion: reduce) {
+    .room-layer[data-returning='true'] .room-canvas {
+        transition-duration: 0.16s;
+    }
     .room-layer[data-revealing='true'] {
         opacity: 0;
         transition: opacity 0.16s !important;

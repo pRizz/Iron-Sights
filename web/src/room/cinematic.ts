@@ -9,6 +9,9 @@ export const smooth = (value: number) => {
 const blend = (start: Point3, end: Point3, t: number): Point3 =>
     start.map((value, index) => value + (end[index] - value) * t) as Point3;
 
+// Hold the fitted screen during the return crossfade, then retrace the flight.
+export const retreatFlight = (elapsed: number) => 1 - clamp((elapsed - 0.3) / 2.8);
+
 export function insertionPose(progress: number, yaw: number) {
     const t = clamp(progress);
     const floating: Point3 = [-0.2, 1.35, 1.65];

@@ -7,6 +7,7 @@ import { RomDialog } from './rom-dialog';
 import { bindCartridgeDrag } from './pivot';
 
 type Props = {
+    returning: boolean;
     engine: Engine;
     rom: RomManager;
     controls: Accessor<boolean>;
@@ -20,18 +21,24 @@ type Props = {
 };
 
 export function Room(props: Props) {
-    const [flow, setFlow] = createSignal<RoomFlow>({ phase: 'empty', elapsed: 0 });
+    const [flow, setFlow] = createSignal<RoomFlow>({
+        phase: props.returning ? 'retreating' : 'empty',
+        elapsed: 0,
+    });
     const [maybeError, setError] = createSignal<string>();
     const [hovered, setHovered] = createSignal('');
     const [selecting, setSelecting] = createSignal(false);
     const [dragging, setDragging] = createSignal(false);
     const [revealing, setRevealing] = createSignal(false);
     const [pivoting, setPivoting] = createSignal(false);
+    const [sceneReady, setSceneReady] = createSignal(false);
     let canvas!: HTMLCanvasElement;
     let dialog!: HTMLDialogElement;
     let maybeScene: Awaited<ReturnType<typeof createRoomScene>> | undefined;
     let maybeDrag: ReturnType<typeof bindCartridgeDrag> | undefined;
     let entering = false;
+    let handoffReady = false;
+    let beginGfx = 0;
     let disposed = false;
     let maybeReportedError: string | undefined;
     const idle = () => ['empty', 'inserted'].includes(flow().phase);
@@ -46,6 +53,7 @@ export function Room(props: Props) {
         if (phase === 'inserted') return 'Click the power switch';
         if (phase === 'empty') return 'Insert your cartridge';
         if (phase === 'inserting') return 'Cartridge detected';
+        if (phase === 'retreating') return 'Returning to the room';
         return 'Starting GoldenEye';
     };
     createEffect(() => {
@@ -138,6 +146,7 @@ export function Room(props: Props) {
                 setFlow(next);
                 try {
                     maybeScene?.render(next, delta, motion.matches, label(), frameMS);
+                    setSceneReady(true);
                 } catch {
                     props.notify(
                         'The room could not render. The standard launcher remains available.',
@@ -147,9 +156,15 @@ export function Room(props: Props) {
                 }
                 if (next.phase === 'complete' && !entering) {
                     entering = true;
-                    void props.play();
+                    beginGfx = props.engine.maybeGame()?._portWebGetGfxTasks() ?? 0;
+                    void props.play().then(() => {
+                        handoffReady = true;
+                    });
                 }
-                if (entering && (props.engine.maybeGame()?._portWebGetGfxTasks() ?? 0) > 2) {
+                if (
+                    handoffReady &&
+                    (props.engine.maybeGame()?._portWebGetGfxTasks() ?? 0) > beginGfx + 2
+                ) {
                     setRevealing(true);
                     maybeRevealTimer = setTimeout(props.finish, motion.matches ? 180 : 360);
                     return;
@@ -206,6 +221,8 @@ export function Room(props: Props) {
             hidden={props.controls()}
             data-phase={flow().phase}
             data-revealing={revealing()}
+            data-returning={props.returning}
+            data-scene-ready={sceneReady()}
             classList={{ 'room-dragging': dragging() }}
             onDragOver={(event) => {
                 event.preventDefault();

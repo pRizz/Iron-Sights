@@ -2500,16 +2500,19 @@ void portShowErrorBox(const char *title, const char *text)
     portModalEnd();
 }
 
-/* The Files screen's EXIT GAME button (front.c): pushes SDL_QUIT so the quit
- * takes the close box's exact path (the event pump's exit(0), then the atexit
- * ini saver). SDL_PushEvent is thread-safe; see
- * docs/port/files-screen-buttons.md. */
+/* Files screen EXIT GAME returns to the room in a browser. Native retains
+ * the close box's SDL_QUIT/atexit path, including its ini saver. */
 void portRequestQuit(void)
 {
+#ifdef __EMSCRIPTEN__
+    extern void portWebReturnToRoom(void);
+    portWebReturnToRoom();
+#else
     SDL_Event ev;
     SDL_zero(ev);
     ev.type = SDL_QUIT;
     SDL_PushEvent(&ev);
+#endif
 }
 
 /**

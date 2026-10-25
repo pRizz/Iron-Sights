@@ -55,7 +55,7 @@ export function createRomManager() {
         }
     }
 
-    async function restore(): Promise<void> {
+    async function restore(): Promise<boolean> {
         try {
             try {
                 setRemember(localStorage.getItem(PREFERENCE) !== 'false');
@@ -68,14 +68,17 @@ export function createRomManager() {
             if (maybeRom && !remember()) {
                 await serialize(forgetRom);
                 setCanForget(false);
-                return;
+                return false;
             }
-            if (selection === pendingSelection && maybeRom && remember())
+            if (selection === pendingSelection && maybeRom && remember()) {
                 await select(maybeRom, true);
+                return status().kind === 'ready' && remembered();
+            }
         } catch {
             setCanForget(true);
             setNotice('The remembered ROM could not be read. Choose your original ROM again.');
         }
+        return false;
     }
 
     async function toggleRemember(value: boolean): Promise<void> {

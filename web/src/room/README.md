@@ -42,6 +42,8 @@ requested label artwork. The earlier text-only placeholder is superseded.
 ## Boundaries
 
 - `flow.ts`: pure action/timing decisions; no DOM, ROM bytes or storage.
+- `session.ts`: remembered-ROM entry and automatic-start decisions. A normal
+  cached launch skips the scene; an explicit native exit stays in the room.
 - `scene.ts`: scene lighting, rendering, CRT painting, raycasting and teardown.
 - `models.ts`: asynchronous local GLB loading, shadow setup and failed-load cleanup.
 - `console.ts`, `controller.ts`: licensed-model placement and switch/LED/cable setup.
@@ -85,6 +87,20 @@ resolution changes. Background dragging affects only the floating cartridge;
 insertion eases its manual tilt/yaw back into alignment. Reduced motion disables
 automatic spin but still permits deliberate direct dragging.
 
+The native Files screen's Exit Game confirmation calls a browser-only lifecycle
+bridge rather than terminating Wasm. It pauses simulation/audio, releases input
+and requests a save flush. The paused framebuffer stays visible while the room
+rebuilds, then crossfades into a reverse flight ending with the cartridge inserted
+and power off. Power resumes the same instance and handoff waits for new graphics
+tasks. No second `main` call or replacement game canvas is involved. Native desktop
+quit behavior is unchanged. Reduced motion uses a short fade.
+
+Fresh page loads auto-start a validated remembered ROM without loading the room
+models. F2 still opens controls; **Restart to manage saves** reloads into
+`?controls=1`, holding automatic startup so backup restoration remains available
+before native EEPROM initialization. Closing controls removes the query and
+allows startup. The live game keeps its save-writer lock while paused in the room.
+
 Room construction/context failure opens the retained standard launcher. F2 never
 automatically recaptures the mouse after closing controls; Resume remains a
 gesture. P continues through the native watch binding. Reduced motion suppresses
@@ -100,6 +116,7 @@ bun run verify:site
 bun run test:room http://127.0.0.1:4176
 bun run test:launcher http://127.0.0.1:4176
 node tools/room-game-audit.mjs ../baserom.u.z64 ../build/web-room/game
+node tools/room-exit-audit.mjs ../baserom.u.z64 ../build/web-room/exit
 ```
 
 Run the fixed-root `tools/serve-site.mjs` first. Set `MIDAS_BROWSER=msedge` or
@@ -111,7 +128,7 @@ after initial shader warm-up; these are host-specific software-renderer samples,
 not GPU timer queries or hardware guarantees. Set `MIDAS_ROOM_GAMEPLAY=1` for
 normal-menu Dam, movement, P watch and focus/capture recovery after the cinematic;
 `MIDAS_REDUCED_MOTION=1` verifies the short fade path with the actual ROM.
-`tools/linux-game-audit.sh` accepts an optional `room` or `ui` audit mode for the
+`tools/linux-game-audit.sh` accepts optional `room`, `exit` or `ui` audit modes for the
 isolated Firefox/Xvfb/PulseAudio host described in the compatibility runbook.
 
 The ROM-free audit also covers background pivoting, click/drag separation,
