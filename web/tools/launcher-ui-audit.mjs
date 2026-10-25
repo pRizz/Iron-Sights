@@ -38,6 +38,16 @@ const restore = JSON.stringify({
         },
     ],
 });
+// Restoring is byte-preserving. The next engine initialization supplies the
+// missing browser default once, while keeping the imported maxfps preference.
+const migratedData = Buffer.from('[display]\nlook_updown=1\nmaxfps=50\n');
+const migratedFiles = [
+    {
+        path: 'midas.ini',
+        data: migratedData.toString('base64'),
+        sha256: createHash('sha256').update(migratedData).digest('hex'),
+    },
+];
 try {
     await page.goto(origin);
     await page.keyboard.press('F2');
@@ -170,7 +180,11 @@ try {
     await warning.waitFor({ state: 'detached' });
     await second.keyboard.press('F2');
     await second.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
-    assert.deepEqual((await download(second)).files, JSON.parse(restore).files);
+    assert.deepEqual(
+        (await download(second)).files,
+        migratedFiles,
+        'Partial browser settings did not gain only the missing Upright default',
+    );
     await second.getByRole('checkbox', { name: 'Remember ROM on this device' }).uncheck();
     await second.reload();
     await second.keyboard.press('F2');
@@ -212,7 +226,7 @@ try {
     await second.getByText('The remembered ROM was removed. Saves are unchanged.').waitFor();
     assert.deepEqual(
         (await download(second)).files,
-        JSON.parse(restore).files,
+        migratedFiles,
         'Forgetting a bad ROM changed saves',
     );
     assert.deepEqual(errors, []);

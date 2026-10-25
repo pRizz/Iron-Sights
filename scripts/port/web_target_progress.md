@@ -731,6 +731,15 @@ automation results, not physical iPhone/Safari acceptance.
 **Next action:** Confirm the reporting iPhone's controls and first-launch CRT
 flow on hardware; retain Safari/mobile experimental status until that evidence.
 
+**Publication test correction:** Source `7ce7722` passed standards and Windows
+builds/provenance. Pages `40246378150` correctly withheld deployment when the
+launcher backup audit expected the old partial INI to remain byte-identical
+after initialization. The audit now checks byte-preserving restore, the exact
+missing-Upright-key migration on initialization and stable files afterward.
+The corrected launcher audit passes Edge and Linux Chromium. The remaining
+Linux Chromium room/startup/touch/storage/IDBFS/sampler sequence also passes
+(`build/web-startup/mobile-ci-regressions.log`); no production change was needed.
+
 **iPhone ROM picker follow-up, 2026-10-25:** Removed extension-based HTML `accept`
 filters from both `web/src/app.tsx` and `web/src/room/rom-dialog.tsx`. iOS Files
 can disable an unfamiliar `.z64` despite its presence in that list. Both pickers

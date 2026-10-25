@@ -1747,6 +1747,11 @@ default through. This corrects browser bootstrap rather than changing upstream
 options code. Tests cover missing keys, explicit choices, CRLF and idempotence;
 the private startup audit checks the native-written settings on first and cached
 launches. Touch inversion follows the same option as recorded in FORK-028.
+`launcher-ui-audit.mjs` checks byte-preserving restore, then the exact missing-key
+migration at engine initialization and stable migrated files after reload/ROM
+removal. This replaces its pre-migration expectation that a partial INI remain
+byte-identical across initialization; the first Pages run caught that stale
+expectation and withheld deployment.
 Enter activation of the HTML Resume button is kept out of SDL's global key
 handler, preserving button activation without an extra in-game Start press.
 The Enter extension passes 138 unit tests, TypeScript, native ADS regression,
