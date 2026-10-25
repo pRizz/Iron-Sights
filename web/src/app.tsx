@@ -201,6 +201,16 @@ export function App() {
                 </Show>
                 <details class="about-build">
                     <summary>About this build</summary>
+                    <p>
+                        Tested desktop browsers: Chrome, Edge and Firefox. Safari is experimental.{' '}
+                        <a
+                            href={SOURCE + '/blob/main/scripts/port/web_compatibility.md'}
+                            target="_blank"
+                            rel="noreferrer"
+                        >
+                            Compatibility notes
+                        </a>
+                    </p>
                     <Show when={build()}>
                         {(info) => (
                             <p>

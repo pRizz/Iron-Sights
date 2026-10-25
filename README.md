@@ -29,6 +29,12 @@ For the embedded build time, commit and clickable source/build/release links, op
 
 To update, replace the supplied program files while keeping **Data** and **midas.ini**. Normal campaign saves and profiles are separate from executable-specific suspend points.
 
+## Play the browser preview
+
+**[PLAY IN YOUR BROWSER](https://prizz.github.io/Project-Midas-ADS/)** with your own stock US ROM. The desktop preview runs locally through WebAssembly and remembers your ROM, campaign saves, profiles and settings on this device. Save backups can be downloaded and restored. Chrome, Edge and Firefox have been tested; Safari is experimental.
+
+Successful `main` builds deploy automatically to GitHub Pages. See [compatibility and measured limits](scripts/port/web_compatibility.md), [browser build instructions](web/README.md) and [milestone evidence](scripts/port/web_target_progress.md). Browser suspend points and offline application support are deferred.
+
 ## Watch the latest gameplay demo
 
 [![Watch Project Midas ADS update: new hands, improved sights, and sniper scope zoom at 60 FPS](.github/images/ads-gameplay-thumbnail.png)](https://youtu.be/dI-G7Lo12hA)

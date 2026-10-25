@@ -1230,8 +1230,9 @@ syntax validation passed. No game rebuild or render regeneration was needed.
 
 ### FORK-024 — Browser target plan and portability groundwork
 
-**Status:** Plan accepted on 2026-10-24; Wasm core portability and playable
-prototype, persistence and local launcher gates achieved; no Pages release.
+**Status:** Desktop browser preview is live on GitHub Pages. The accepted core,
+launcher, persistence, deployment/update and measured compatibility gates pass.
+Safari remains experimental by the user's explicit decision.
 
 The root CMake project now has Emscripten core and SDL2/WebGL 2 configurations.
 It keeps native flags/link processing separate, uses the verified high data
@@ -1343,8 +1344,11 @@ Actions-based Pages configuration is enabled at
 `https://prizz.github.io/Project-Midas-ADS/` with HTTPS enforced. First CI
 publication succeeded in run `40145610255` at clean commit `2360bc8`; the Windows
 and Bright Builds workflows also passed. Its live manifest carries truthful CI
-provenance. A live-game update audit is active; deployed update validation remains
-pending. An isolated Linux
+provenance. A real update to `e4a81be` (Pages run `40146369375`) advanced the active
+watch from frame 2,820 to 32,820, recovered gameplay capture and exactly preserved
+campaign/profile/settings files across fresh initialization. Actual backup restore,
+ROM recall/removal and save preservation passed without uploads/page errors.
+An isolated Linux
 Chromium run also passes the project-path launcher, ROM storage, C/IDBFS and ten
 GPU sampler checks with container networking disabled.
 Browser audit tools select Chromium/installed Chrome/Edge, Firefox or WebKit,
@@ -1366,6 +1370,31 @@ and WebKit's complete ROM-free UX now passes. An opt-in private deployment audit
 keeps an actual watch animating through a changed runtime version and then
 requires capture recovery and identical reloaded save files. Its outcome is
 still pending; it is not part of the public launcher.
+The next compatibility checks identified a separate browser input failure:
+SDL gamepad initialization could return before installing the keyboard/console
+event watch. Web builds now continue keyboard/mouse assignment when the optional
+Gamepad API is unavailable; native initialization behavior remains unchanged.
+Private launcher QA can remove that API (`MIDAS_NO_GAMEPADS=1`) and requires the
+fallback log plus working native profile/capture/watch behavior. The optimized
+build passes all 272 strict callback checks and the full actual-ROM audit with
+the Gamepad API deliberately removed. Firefox repeats its full actual-ROM audit
+through the checked-in container/audio helpers. Native regressions pass, and
+both complete gallery passes reproduce every view/icon with zero changed image
+cells; freshness/integrity and eight gallery tests pass. WebKit's native profile
+input is repaired, but that Windows runner lacks Web Audio and cannot complete
+capture recovery; its gameplay remains unaccepted. A private mission sampler and whitelist-only
+prototype stage query cover eight representative solo spawns, ADS, firing,
+audio and rendering. The first sweep passed all eight in Edge, with local
+software-renderer samples of roughly 49–60 rendered tasks per second and
+730726400-byte linear capacity. These are short smoke checks, not mission
+completion, resident-memory measurements or hardware performance promises.
+A pinned optional browser-test image adds a local PulseAudio null sink; its
+explicit Unix socket enables Firefox audio in isolation. A standalone oscillator
+probe separates host-audio readiness from the game's mixer. A compatibility
+runbook records the tested browser/mission matrix, measured limits and explicit
+icon/offline/suspend/threading deferrals. Root README and About chrome link the
+live preview and notes; Safari is visibly experimental. Final compatibility
+publication follows the normal main workflow; no private evidence is published.
 The following launcher slice now builds locally with SolidJS and commit-pinned
 MysticUI/Tailwind. It adds file/drop selection and ROM remembering, typed engine
 and capture states, visible download/compile/save stages, backup controls with
@@ -1439,6 +1468,10 @@ Existing native and asset ownership contracts continue to apply.
 [logo regressions](scripts/port/test_web_logo.py),
 [runtime policy](web/tools/runtime-policy.ts), [public artifact check](web/tools/verify-site.ts),
 [Pages workflow](.github/workflows/web-pages.yml),
+[compatibility evidence](scripts/port/web_compatibility.md),
+[mission audit](web/tools/mission-audit.mjs), [audio probe](web/tools/audio-capability-audit.mjs),
+[isolated audio helper](web/tools/with-browser-audio.sh),
+[Linux game audit](web/tools/linux-game-audit.sh), [test-host image](web/tests/Dockerfile.browser-audio),
 [sampler GLSL](port/web/sampler.glsl), [focus adapter](port/web/lifecycle.c),
 [runtime audit](web/tools/runtime-audit.mjs), [menu audit](web/tools/menu-audit.mjs),
 [collision regression](scripts/port/test_stan_callbacks.c),

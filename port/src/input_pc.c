@@ -2157,9 +2157,19 @@ void portInputInit(void)
         if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER) != 0)
         {
             portConLogf("ge: input: SDL controller init failed: %s\n", SDL_GetError());
+#ifdef GE_WEB
+            /* Gamepad API availability must not suppress keyboard/mouse
+             * assignment or their event watch (including console/watch keys). */
+            portConLogf("ge: input: browser gamepads unavailable; continuing with keyboard and mouse\n");
+            SDL_ClearError();
+#else
             return;
+#endif
         }
-        portConLogf("ge: input: controller backends up\n");
+        else
+        {
+            portConLogf("ge: input: controller backends up\n");
+        }
     }
     /* the device records' first path: moves an old ./Devices under Data/ now,
      * at boot, not whenever player 1's device first changes */

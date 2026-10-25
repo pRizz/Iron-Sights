@@ -1,8 +1,10 @@
 # Browser launcher and tooling
 
 This subpackage supplies a SolidJS launcher, ROM validation, the versioned save-backup
-codec, storage adapters, tests and private runtime/menu audits. The launcher now
-builds locally; deployment and broader browser compatibility remain in progress.
+codec, storage adapters, tests and private runtime/menu audits. The launcher is
+[live on Pages](https://prizz.github.io/Project-Midas-ADS/), with deployment/update
+preservation verified. See [browser compatibility and measured limits](../scripts/port/web_compatibility.md);
+Safari remains experimental by the user's decision.
 See the [runtime runbook](../scripts/port/web_runtime.md) and
 [milestone tracker](../scripts/port/web_target_progress.md).
 
@@ -52,8 +54,7 @@ capabilities. A WebKit run is engine evidence, not macOS Safari certification.
 The dev server serves the existing `build/web/video` runtime through an explicit
 allowlist. The static build assembles `build/web-site` with a content-versioned
 runtime directory, a Wasm size/digest manifest and the game's actual generated
-build metadata. It includes no private diagnostic captures. Do not publish this
-preview until the deployment packaging/compatibility gates pass. Assembly checks
+build metadata. It includes no private diagnostic captures. Assembly checks
 the selected CMake source set and rejects compiled ROM fallback/icon flags or
 the inherited initialized logo. The web logo source is generated without
 texture/vertex bytes; runtime fills its 38 backing arrays from the player ROM.

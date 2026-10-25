@@ -25,6 +25,10 @@
   const play = document.querySelector('#play');
   const resume = document.querySelector('#resume');
   const log = document.querySelector('#log');
+  const stage = new URLSearchParams(location.search).get('stage') || 'dam';
+  if (!['dam','facility','surface2','jungle','frigate','caverns','cradle','egypt'].includes(stage))
+    throw new Error('Unknown private audit stage');
+  document.querySelector('#dam').parentElement.lastChild.textContent = 'Start mission: ' + stage;
   const write = line => { log.textContent += line + '\n'; log.scrollTop = log.scrollHeight; };
   let running = false;
   let maybeGame;
@@ -57,7 +61,7 @@
           Object.assign(module.ENV, { GE_INVIS:'1', GE_CHEATS:'invuln', GE_SEED:'1' });
         }
         if (document.querySelector('#dam').checked) Object.assign(module.ENV,
-          {GE_STAGE:'dam', GE_STAGE_AFTER:'120', GE_SKIPINTRO:'1'});
+          {GE_STAGE:stage, GE_STAGE_AFTER:'120', GE_SKIPINTRO:'1'});
       },
       onAbort:reason => { status.textContent = 'Game stopped: ' + reason; },
       onExit:code => { status.textContent = 'Game exited: ' + code; } });

@@ -1,0 +1,6 @@
+FROM mcr.microsoft.com/playwright:v1.64.1-noble@sha256:d65108d1a8095d8b0c4a5e32bf1807a40a5ce90ff0c78473e1116b1c243235e8
+
+# Optional local browser-audio test environment, not a game build/publish input.
+# Ubuntu authenticates these test-host packages through its signed apt metadata.
+RUN apt-get update && apt-get install -y --no-install-recommends pulseaudio \
+    && rm -rf /var/lib/apt/lists/*

@@ -143,6 +143,7 @@ try {
     JSON.stringify({ error: String(error), audio }, null, 2))).catch(() => {});
   await page.evaluate(() => ({
     controls: globalThis.midasPrototype?._portWebControlsLive(),
+    audioMetrics: globalThis.midasPrototype ? Array.from({ length: 10 }, (_, metric) => globalThis.midasPrototype._portWebGetAudioMetric(metric)) : [],
     locked: !!document.pointerLockElement, focus: document.hasFocus(), hidden: document.hidden,
     focusTrace: globalThis.midasFocusTrace, log: document.querySelector('#log').textContent,
   })).then(report => writeFile(resolve(output, 'failure-runtime.json'), JSON.stringify(report, null, 2))).catch(() => {});

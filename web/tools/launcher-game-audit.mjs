@@ -14,6 +14,14 @@ const output = resolve(outputPath);
 await mkdir(output, { recursive: true });
 const { browser, kind } = await launchAuditBrowser();
 const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
+if (process.env.MIDAS_NO_GAMEPADS === '1') {
+    await context.addInitScript(() => {
+        Object.defineProperty(Navigator.prototype, 'getGamepads', {
+            value: undefined,
+            configurable: true,
+        });
+    });
+}
 const page = await context.newPage();
 if (kind === 'chromium') {
     const focusSession = await context.newCDPSession(page);
@@ -42,10 +50,17 @@ try {
     await page.getByText('✓ Remembered for next time').waitFor({ timeout: 60_000 });
     await page.evaluate(() => {
         globalThis.midasSawRomLogo = false;
+        globalThis.midasSawNoGamepads = false;
         const log = document.querySelector('pre');
         new MutationObserver(() => {
             if (log.textContent.includes('logo textures and vertices loaded from the player ROM'))
                 globalThis.midasSawRomLogo = true;
+            if (
+                log.textContent.includes(
+                    'browser gamepads unavailable; continuing with keyboard and mouse',
+                )
+            )
+                globalThis.midasSawNoGamepads = true;
         }).observe(log, { childList: true, subtree: true, characterData: true });
     });
     await page.getByRole('button', { name: 'Play GoldenEye' }).click();
@@ -54,16 +69,12 @@ try {
         undefined,
         { timeout: 90_000 },
     );
-    for (let step = 0; step < 8; step++) {
-        if (await page.getByRole('button', { name: 'Resume game' }).isVisible())
-            await page.getByRole('button', { name: 'Resume game' }).click();
-        await page.keyboard.press('Enter', { delay: 120 });
-        await page.waitForTimeout(1800);
-        await page.screenshot({ path: resolve(output, `menu-${step}.png`) });
-    }
+    // Edit preferences while still in the startup menu, before timing can
+    // carry faster engines from the briefing into gameplay/capture.
     if (await page.getByRole('button', { name: 'Resume game' }).isVisible())
         await page.getByRole('button', { name: 'Resume game' }).click();
-    await page.keyboard.press('Backquote');
+    await page.keyboard.press('Backquote', { delay: 120 });
+    await page.waitForTimeout(200);
     for (const command of [
         'set maxfps 59',
         'set player1_profile Web.Audit!',
@@ -73,7 +84,14 @@ try {
         await page.keyboard.press('Enter');
         await page.waitForTimeout(500);
     }
-    await page.keyboard.press('Backquote');
+    await page.keyboard.press('Backquote', { delay: 120 });
+    for (let step = 0; step < 8; step++) {
+        if (await page.getByRole('button', { name: 'Resume game' }).isVisible())
+            await page.getByRole('button', { name: 'Resume game' }).click();
+        await page.keyboard.press('Enter', { delay: 120 });
+        await page.waitForTimeout(1800);
+        await page.screenshot({ path: resolve(output, `menu-${step}.png`) });
+    }
     await page.waitForTimeout(1200);
     await page.getByText('Saved on this device', { exact: true }).waitFor();
     const first = await backup('first-backup.json');
@@ -83,6 +101,11 @@ try {
         await page.evaluate(() => globalThis.midasSawRomLogo),
         'ROM-backed title logo was not initialized',
     );
+    if (process.env.MIDAS_NO_GAMEPADS === '1')
+        assert.ok(
+            await page.evaluate(() => globalThis.midasSawNoGamepads),
+            'The unsupported-gamepad regression path was not exercised',
+        );
     const campaign = first.files.find((file) => file.path === 'Data/Saves/eeprom.bin');
     assert.ok(campaign, 'The actual game did not create its campaign EEPROM');
     assert.equal(Buffer.from(campaign.data, 'base64').length, 512);
@@ -101,8 +124,13 @@ try {
     // Downloading moves focus into the page controls, so resume the menu first.
     await page.getByRole('button', { name: 'Resume game' }).click();
     await page.getByRole('button', { name: 'Resume game' }).waitFor({ state: 'hidden' });
-    await page.keyboard.press('p', { delay: 120 });
-    await page.getByRole('button', { name: 'Resume game' }).click({ timeout: 60_000 });
+    await page.waitForTimeout(300);
+    if (
+        !(await page.locator('.player-toolbar').getByText('Playing', { exact: true }).isVisible())
+    ) {
+        await page.keyboard.press('p', { delay: 120 });
+        await page.getByRole('button', { name: 'Resume game' }).click({ timeout: 60_000 });
+    }
     await page.waitForFunction(() => !!document.pointerLockElement);
     await page.waitForTimeout(1000);
     await page.screenshot({ path: resolve(output, 'dam.png') });
@@ -214,6 +242,12 @@ try {
         'Launcher: ROM recall/removal, campaign/profile/settings reload, Dam capture/audio/focus/watch passed; no upload requests',
     );
 } catch (error) {
+    await page
+        .evaluate(readAudio)
+        .then((audio) =>
+            writeFile(resolve(output, 'failure-audio.json'), JSON.stringify(audio, null, 2)),
+        )
+        .catch(() => {});
     await page.screenshot({ path: resolve(output, 'failure.png'), fullPage: true }).catch(() => {});
     await writeFile(
         resolve(output, 'failure-log.txt'),

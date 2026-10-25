@@ -310,8 +310,8 @@ broader mission/browser compatibility and performance acceptance.
 
 ## WEB-005 | 2026-10-24 | GitHub Pages deployment
 
-**Status:** In progress. ROM-free logo replacement, packaging verification,
-runtime notices and pinned build/deployment workflow are implemented locally.
+**Status:** Complete. Main CI builds/deploys the ROM-free site; real deployed
+update, continued gameplay and unchanged reloaded user files pass.
 
 **Packaging decision:** The inherited always-linked `assets/rarewarelogo.c`
 contains initialized logo textures/vertices even with `GE_ROMDATA_FALLBACK=OFF`.
@@ -361,13 +361,25 @@ The Linux Playwright 1.64.1 image additionally passed the production project-pat
 UI audit, ROM storage, C/IDBFS filesystem and all ten GPU sampler cases against
 the assembled local artifact, with container networking disabled.
 
-**Next action:** Deploy the compatibility fixes while the live update audit is
-active, then verify continued gameplay and reloaded user files.
+**Next action:** Preserve the deployment/storage contracts while completing
+WEB-006 compatibility and mission/effect coverage.
+
+**Session notes:**
+
+- 2026-10-24 completion: `e4a81be` passed Browser build and Pages run
+  `40146369375`. The live audit observed runtime `d18363106e416351` at `2360bc8`
+  change to `721967491085aad2` at `e4a81be` after 511 seconds. Native watch frame
+  logging advanced from 2,820 to 32,820 while the deployment changed. Closing the
+  watch recovered gameplay capture. Fresh initialization then recalled the ROM
+  and exactly reproduced campaign/profile/settings backup files. Actual backup
+  restore and forgetting the ROM preserved saves. No page errors or upload
+  requests occurred. Private evidence stays in `build/web-ui/live-update`.
 
 ## WEB-006 | 2026-10-24 | Browser compatibility and polish
 
-**Status:** Initial capability probes started; deployed-site and mission/effect
-acceptance depend on WEB-005.
+**Status:** Desktop preview acceptance complete. Chrome/Edge and Linux Firefox
+are tested; Safari remains experimental by the user's explicit decision. Final
+controller-fallback publication is being verified through the normal workflow.
 
 **Completion:** Mission/effect coverage, browser support matrix and performance
 results are recorded. Optional icons/offline support and browser suspend points
@@ -385,7 +397,8 @@ was tested instead: Firefox 157 initializes successfully under Xvfb with Mesa
 llvmpipe and no page errors. Its headless Linux run had no WebGL 2 and showed the
 intended graphics-availability error. The browser image is pinned to
 `mcr.microsoft.com/playwright:v1.64.1-noble@sha256:d65108d1a8095d8b0c4a5e32bf1807a40a5ce90ff0c78473e1116b1c243235e8`.
-No mission/effects matrix or new performance acceptance yet.
+The [compatibility notes](web_compatibility.md) now record the eight-mission
+matrix, measured limits, tested environments and explicit feature deferrals.
 
 **Session notes:**
 
@@ -404,7 +417,38 @@ No mission/effects matrix or new performance acceptance yet.
   verifies original bytes after immediate working-buffer mutation and reload.
   This is compatible with existing Blob rows and needs no destructive migration.
   Actual WebKit ROM/gameplay acceptance is next; real macOS Safari is unverified.
+- 2026-10-24: an explicit PulseAudio Unix socket/null sink resolved the isolated
+  Firefox host-audio limitation. The standalone oscillator and then the complete
+  actual-ROM launcher audit passed: normal Dam, audio, capture/focus/watch,
+  profile/settings/campaign durability, backups and ROM recall/removal. Its
+  analyser measured peak 0.113 with a running AudioContext. WebKit's actual ROM
+  cache now works, but missing Gamepad API support exposed a real early return
+  before the keyboard/console event watch was installed. A web-only fallback is
+  implemented; optimized build, negative gamepad-path audit and native gallery
+  verification are in progress. Native gamepad-init behavior remains unchanged.
+- 2026-10-24: added a private stage-query whitelist and mission audit. The first
+  Edge sweep passed Dam, Facility, Surface 2, Jungle, Frigate, Caverns, Cradle and
+  Egypt for spawning, short movement, ADS, firing, continued graphics and audio,
+  without shader/GL/runtime errors. Reviewed representative scenes, ADS and fired
+  weapon images. Samples ran roughly 49–60 graphics tasks per second, 19–31 s to
+  stable gameplay, and 730726400-byte linear capacity throughout. These are short
+  local SwiftShader observations, not completed missions or resident-memory/
+  hardware benchmarks. Evidence remains private under `build/web-compat`.
+- 2026-10-24 final local acceptance: the optimized gamepad fallback passes all
+  272 strict callback checks. With the Gamepad API deliberately removed, Edge's
+  full actual-ROM audit observes the fallback log and passes native profile/
+  settings edits, audio, capture/focus/watch, durable saves, backups and ROM
+  recall/removal. Firefox repeats its full real-ROM audit on this build through
+  the checked-in audio/container helpers. Native ADS/wardrobe/HUD/state/image-bank/
+  collision checks pass. Both native gallery passes reproduce all views/icons
+  with zero changed image cells; freshness/integrity and eight gallery tests pass.
+  WebKit now accepts native profile/settings input, confirming the input repair,
+  but its Windows runner lacks Web Audio and cannot complete capture recovery.
+  It is not advertised as accepted gameplay. The user explicitly chose to keep
+  actual Safari experimental. About/build chrome and the root README link the
+  browser preview and compatibility notes. Icons, offline support, suspend points
+  and threading remain explicitly deferred as documented; no new scope is implied.
 
-**Next action:** Define a representative mission/effects matrix for current
-Chrome/Edge, Firefox and Safari. Keep unsupported browsers/features visible;
-scope optional enhancements separately after core acceptance.
+**Next action:** Verify the final compatibility commit's CI publication. Future
+macOS Safari/hardware-GPU/full-mission testing and optional enhancements are
+separate follow-up scope; preserve the published storage/deployment contracts.
