@@ -12,6 +12,7 @@ param(
     [ValidateSet('Mission','Blue','Boiler','Jungle','Snow','Tuxedo','Connery')][string]$Wardrobe='Mission',
     [switch]$HandDetails,
     [switch]$StockHands,
+    [switch]$WeaponFov,
     [ValidateSet(30,60,120,240)][int]$TickHz = 60
 )
 $ErrorActionPreference = 'Stop'
@@ -35,6 +36,7 @@ $settings = @('[display]', 'fullscreen=window', 'vsync=0', "maxfps=$([Math]::Max
     'weapon_hud=0', 'always_health=0', '[input]', 'mouse=1')
 Set-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value $settings
 if ($Adzy) { Add-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value @('[display]','adzy=1') }
+if ($WeaponFov) { Add-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value @('[display]','weapon_fov=1') }
 # The intro harness stops automatically once live gameplay owns input.
 $auditEnv = @{
     GE_ROM=$Rom; GE_WINDOW=$resolution; GE_NOINPUT='1'; GE_STAGE=$Stage; GE_STAGE_AFTER='1';

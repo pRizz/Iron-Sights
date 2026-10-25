@@ -22,7 +22,8 @@ struct coord3d;
 s32 portAdsWeaponPose(s32 item, const struct coord3d *muzzle, struct coord3d *pose);
 f32 portAdsWeaponPitch(s32 item);
 s32 portAdsHandGrips(s32 item, struct coord3d *trigger, struct coord3d *support);
-Gfx *portAdsBeginHandLayer(Gfx *gdl);
+/* Preserve the selected gun pass's XY projection when reserving near depth. */
+Gfx *portAdsBeginHandLayer(Gfx *gdl, const Mtxf *gunProjection);
 Gfx *portAdsDrawHands(Gfx *gdl, s32 item, const Mtxf *gun);
 /* Isolated deterministic review harness; always false in ordinary gameplay. */
 s32 portHandGalleryActive(void);

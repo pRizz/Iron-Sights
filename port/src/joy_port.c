@@ -122,6 +122,10 @@ enum {
     PORTACT_QUICKSAVE,
     PORTACT_QUICKLOAD,
     PORTACT_UNDO_LOAD,
+    /* Appended: watch (pause) menu up / down, the vertical twin of watch_prev /
+     * watch_next, injected as D-pad up / down edges while the watch is open. */
+    PORTACT_WATCH_UP,
+    PORTACT_WATCH_DOWN,
     PORTACT_COUNT
 };
 
@@ -173,6 +177,10 @@ static const struct {
     [PORTACT_QUICKSAVE]       = { "quicksave", "F5", 1 },
     [PORTACT_QUICKLOAD]       = { "quickload", "F9", 1 },
     [PORTACT_UNDO_LOAD]       = { "undo_load", "F8", 1 },
+    /* The arrow keys are free on the shipped layout (look_* ship unbound), and
+     * nothing outside the watch takes these presses. */
+    [PORTACT_WATCH_UP]         = { "watch_up",         "Up",       1 },
+    [PORTACT_WATCH_DOWN]       = { "watch_down",       "Down",     1 },
 };
 
 /* [input] detonate_use_reload (default ON): with remote mines in the right
@@ -190,6 +198,9 @@ static s32 sAimMode = 1; /* [display] aim_mode: 1 = ADS, 0 = red reticle */
 static s32 sSprint = 1;  /* [display] sprint: the Walk bind sprints instead */
 static s32 sShootPrev[4];   /* shoot was down last tick */
 static s32 sShootTap[4];    /* shoot went down this tick */
+/* [input] no_aim_crouch (default OFF = vanilla): 1 = aim + down no longer
+ * crouches (bondview2.c); the crouch binds still do. */
+static s32 sNoAimCrouch = 0;
 static s32 joyPortPad(void);
 
 /* Per pad: the keyboard feeds pad 0 (video.c portJoyPortPoll) and a controller
@@ -305,6 +316,10 @@ s32 portJoyPortSetOption(const char *key, const char *value)
         sShootNextPrev = atoi(value) != 0;
         return 1;
     }
+    if (strcmp(key, "no_aim_crouch") == 0) {
+        sNoAimCrouch = atoi(value) != 0;
+        return 1;
+    }
     /* padN_<the same two>: input_pc.c's padN_ arm is asked first and turns
      * these down (they are not pad controls), so they arrive here */
     if (strncmp(key, "pad", 3) == 0 && key[3] >= '1' && key[3] <= '4' && key[4] == '_') {
@@ -345,6 +360,11 @@ s32 portJoyPortDetonateUseReload(void)
 s32 portJoyPortShootNextPrev(void)
 {
     return sShootNextPrev;
+}
+
+s32 portJoyPortNoAimCrouch(void)
+{
+    return sNoAimCrouch;
 }
 
 /** bondviewProcessInput, every tick before the trigger is used: `held` = this
@@ -432,6 +452,10 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
         *out = sShootNextPrev;
         return 1;
     }
+    if (strcmp(key, "no_aim_crouch") == 0) {
+        *out = sNoAimCrouch;
+        return 1;
+    }
     return 0;
 }
 
@@ -456,6 +480,10 @@ s32 portJoyPortOptionSet(const char *key, s32 v)
     }
     if (strcmp(key, "shoot_next_prev") == 0) {
         sShootNextPrev = v != 0;
+        return 1;
+    }
+    if (strcmp(key, "no_aim_crouch") == 0) {
+        sNoAimCrouch = v != 0;
         return 1;
     }
     return 0;
@@ -1021,6 +1049,33 @@ s32 portJoyPortWatchStep(void)
 }
 
 /**
+ * options.c watch mouse tick: -1 = watch_up, +1 = watch_down, 0 = none, the
+ * caller injecting the matching D-pad edge as for portJoyPortWatchStep.
+ */
+s32 portJoyPortWatchStepUpDown(void)
+{
+    s32 up, down;
+    s32 pad = joyPortPad();
+    if (pad < 0) {
+        return 0;
+    }
+    up = portJoyPortTake(pad, PORTACT_WATCH_UP);
+    down = portJoyPortTake(pad, PORTACT_WATCH_DOWN);
+    return down ? 1 : (up ? -1 : 0);
+}
+
+/** options.c portWatchHoldRepeatTick: whether watch_up / watch_down are held now. */
+void portJoyPortWatchHeldUpDown(s32 *up, s32 *down)
+{
+    s32 pad = joyPortPad();
+    if (pad < 0) {
+        return;
+    }
+    *up |= sPrevDown[pad][PORTACT_WATCH_UP] != 0;
+    *down |= sPrevDown[pad][PORTACT_WATCH_DOWN] != 0;
+}
+
+/**
  * bondviewProcessInput, aim mode: 1 while the player is asking to lean or
  * zoom with a PORT binding rather than a C button. `act` is a PORTACT_*.
  */
@@ -1299,8 +1354,12 @@ s32 portJoyPortSkipPressed(s32 pad)
     }
     /* Every one-shot Port action counts as a skip (reload, use, walk toggle,
      * weapon and gadget cycling, crouch toggle, watch pages, objectives); held
-     * movement modifiers (walk / run / crouch hold) and the sticks do not. */
+     * movement modifiers (walk / run / crouch hold) and the sticks do not.
+     * watch_up / watch_down act only in the watch, so they do not skip either. */
     for (i = 0; i < PORTACT_COUNT; i++) {
+        if (i == PORTACT_WATCH_UP || i == PORTACT_WATCH_DOWN) {
+            continue;
+        }
         if (sPortActs[i].oneshot && portJoyPortTake(pad, i)) {
             hit = 1;
         }

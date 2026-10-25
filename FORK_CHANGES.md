@@ -7,13 +7,18 @@ area, following [AGENTS.md](AGENTS.md) and [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Comparison baseline and scope
 
 - **Upstream project:** [murkantor/Project-Midas](https://github.com/murkantor/Project-Midas).
-- **Inherited baseline:** Project Midas 1.0.1,
+- **Current inherited baseline:** Project Midas 1.0.2b,
+  [`9062f9f120b7f64d39e5db59500ed50e8e7a6686`](https://github.com/murkantor/Project-Midas/commit/9062f9f120b7f64d39e5db59500ed50e8e7a6686).
+- **Previous baseline:** Project Midas 1.0.1,
   [`6be5920beed453b6a81fdf9935fb9851928b718d`](https://github.com/murkantor/Project-Midas/commit/6be5920beed453b6a81fdf9935fb9851928b718d).
 - **Initial inventory:** 2026-10-22, covering the fork commits after that baseline
   and the working tree at initialization. At that point, several HUD/rendering/
   icon changes were uncommitted; inclusion here does not imply a release, commit,
   or push.
 
+The baseline advances deliberately from 1.0.1 to 1.0.2b with FORK-026 on
+2026-10-25. Earlier entries retain their implementation history; imported 1.0.2b
+work belongs to upstream. FORK-026 records overlaps and fork-specific resolutions.
 This describes our differences from the inherited baseline, rather than a live
 comparison with upstream's latest branch. The original PC port, its existing
 menus, multiplayer features, ROM loaders and other inherited functionality are
@@ -24,6 +29,108 @@ changes, retain useful replacement/history notes, and add separate entries for
 new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
+
+### FORK-026 — Upstream 1.0.2b integration
+
+**Status:** Implemented; local acceptance passes.
+
+Merged upstream `9062f9f120b7f64d39e5db59500ed50e8e7a6686` into the fork
+based on `dde3aaa63b8aeb427d9212f0521ae12e8b98cd3f`. This deliberately advances
+the comparison baseline from 1.0.1 `6be5920beed453b6a81fdf9935fb9851928b718d`
+to 1.0.2b. The original fork history is retained by a merge, rather than copied
+or squashed upstream patches.
+
+The imported audio retry/pacing rewrite, high-tick aiming/zoom/effect fixes,
+collision fixes, startup swirl fix, controller improvements, Project64 EEPROM
+import, optional Weapon FOV/HUD Scale/armor pickup HUD, setting help, FPS display,
+fast watch and new watch up/down controls are **upstream work**. Their inherited
+source, changelog, ABI guide, launcher/settings documentation and expanded
+dependency notices remain attributed to upstream. The browser's supported
+campaign-backup boundary does not gain raw EEPROM upload UI from that import.
+
+Fork resolutions preserve ADS/sprint, calibrated hands/arms, vector sights,
+feedback HUD, mission/cheat hints, suspend points, fonts and web lifecycle/storage:
+
+- Existing fork action IDs 21–25 retain their meanings; upstream watch up/down
+  append at 26/27 in both action tables. Keyboard defaults are Up/Down.
+- Optional Weapon FOV retains upstream hip-fire presentation and projectile
+  placement. Its projection blends back to the world projection during ADS,
+  preserving the fork's fully raised sight calibration and watch face mapping.
+  The near-depth hand/sleeve pass receives the same selected gun projection,
+  retaining its XY aim correction instead of overwriting it with the world view.
+  Weapon FOV remains off by default. HUD Scale scales vector sight strokes
+  around the same aim point; it remains off by default.
+- The vector sight path supersedes upstream's sprite/texel construction; no
+  ROM-derived target table is embedded. Enhanced font upload remains before
+  upstream's dynamic ordinary-texture buffer allocation.
+- Audio uses upstream retry/pacing instead of the former permanent-failure flag.
+  Browser metrics report retry failures, and pause/resume/suspend restore clear
+  queue, field/clock credits, stall tracking and drift trim before restarting.
+  Instrumentation records one execution per mixer frame.
+- The fork's uppercase `README.md` supersedes upstream's lowercase filename,
+  avoiding a Windows case collision while retaining fork setup and identity.
+  The fork's mission timer stays off by default with cheat/best-time detail;
+  other deliberate fork defaults remain unchanged.
+
+**Sources:** [upstream changelog](CHANGELOG.md),
+[upstream ABI guide](docs/port/abi-and-portability.md),
+[input](port/src/input_pc.c), [actions](port/src/joy_port.c),
+[audio](port/src/audio_pc.c), [gun projection](src/game/gunfire.c),
+[sight policy](port/src/port_sight.c), [renderer](port/fast3d/gfx_pc.cpp),
+[settings](port/src/video.c), [option help](port/src/port_option_help.c),
+[INI help](tools/midas_ini_help.txt), [notices](tools/THIRD_PARTY_NOTICES.txt),
+[integration regression](scripts/port/test_upstream_merge.c),
+[regression runner](scripts/port/test_upstream_merge.sh),
+[arm contracts](scripts/port/arm_rendering.md),
+[visual audit](scripts/port/audit_ads.ps1),
+[native CI](.github/workflows/windows-release.yml).
+**Validation:** Native Windows build and optimized Wasm build pass; strict Wasm
+callback compilation passes 274/274 C units. ROM-free ADS, wardrobe, HUD, mission
+cheat, suspend, image-bank and collision checks pass. New integration checks cover
+Weapon FOV/ADS/watch projection and vector sight visibility/colour/HUD scale;
+ADS tests lock action IDs and exercise upstream watch navigation. Actual-ROM
+native suspend write/restore/relaunch passes. Windows and Linux video builds
+pass. Fresh Clang recovery reproduces all 205 generated declarations exactly.
+The final gallery passes two independent processes for 72 views and 35 icons,
+with zero changed image cells. Weapon FOV at wide FOV 110 passes PP7/AR33
+raise/lower and dual-PP7 captures; wrist joins and sight alignment were reviewed.
+Edge passes real-ROM insertion/flight, Dam movement/audio/watch/focus, durable
+reload and cached automatic startup, plus native Exit Game/retreat/warm resume
+and save-management restart. Chrome passes uninterrupted cutscene-to-control,
+watch/capture/focus recovery, loading UI and first/cached shader preparation
+before graphics. Linux Firefox passes actual campaign/profile/settings backup,
+reload/restore, ROM recall/removal, Dam capture/audio/focus/watch. TypeScript,
+119 browser unit tests, Python tooling checks and artifact allowlist/hash policy
+pass. Safari remains experimental. Private evidence is in `build/merge` and
+`build_win/hand-gallery-337riqu0`; local checks are not a publication claim.
+
+### FORK-027 — Small upstream hooks and focused fork modules
+
+**Status:** Implemented.
+
+Repo guidance now prefers focused fork/platform files and small explicit hooks
+in upstream-owned code, preserving upstream layout and names and avoiding
+unrelated formatting/refactors. Separation is conditional on a clear boundary
+and equivalent behavior; it must not add needless indirection or weaken ABI or
+render contracts. This is fork-local guidance outside the managed standards.
+
+Applied that rule during FORK-026: PC sight policy moves from `gunfire.c` into
+`port/src/port_sight.c`, using the existing fork HUD interface; the original N64
+path stays in place. Browser shader preparation moves from `gfx_pc.cpp` into
+`port/web/shader_prewarm.inl`; SDL browser pause/metric functions move from
+`audio_pc.c` into `port/web/audio_bridge.inl`. These two private includes retain
+access to renderer/audio static state without exposing engine internals through
+new public APIs. Their narrow include sites are intentional shared-file hooks.
+The native audio-reset hook stays beside upstream pacing state; small metrics
+hooks remain at validation, command execution and first nonzero output.
+The common CMake port-source glob picks up the sight module automatically.
+
+**Sources:** [agent guidance](AGENTS.md), [contributing](CONTRIBUTING.md),
+[sights](port/src/port_sight.c), [HUD interface](port/include/port_hud.h),
+[browser shader helper](port/web/shader_prewarm.inl),
+[browser audio bridge](port/web/audio_bridge.inl).
+**Validation:** FORK-026 build, sight/projection, native render and browser
+lifecycle checks cover these boundaries. No unrelated game subsystem is split.
 
 ### FORK-001 — Repository binary hygiene
 
@@ -377,8 +484,12 @@ crosshair colors, fractional aim positions, off-center/wide aiming and
 split-screen positioning. The N64 sight path remains separate.
 
 **Sources:** [overlay commands](port/fast3d/gbiex_compat.h),
-[PC renderer](port/fast3d/gfx_pc.cpp), [sights](src/game/gunfire.c),
+[PC renderer](port/fast3d/gfx_pc.cpp), [sights](port/src/port_sight.c),
 [menu/watch cursor wrapper](src/game/bondwalk2.c), [shared HUD API](port/include/port_hud.h).
+The 1.0.2b integration moves sight policy into `port_sight.c` behind the existing
+game hook and supports upstream HUD Scale around the same aim point. It replaces
+upstream's new sprite/texel sight implementation with this fork's vector path;
+no ROM-derived texel table is added to the browser artifact.
 **Checks:** Sight captures with multisampling off, custom colors, off-center
 aiming, menu cursors and split-screen layouts.
 
@@ -734,7 +845,9 @@ gun and added sleeve/watch, including hip fire, ADS transitions and dual wield.
 The sleeve writes depth and the native hand compares against it; skin drawn
 later can no longer cover a cuff that is physically in front. This supersedes
 the previous painter ordering for these seven pistols. The layer retains the
-scene's XY projection and restores scene projection/depth state after each draw.
+selected gun pass's XY projection (the scene projection by default) and restores
+scene projection/depth state after each draw. FORK-026 carries upstream's optional
+Weapon FOV through this layer so hands, sleeves and gun stay aligned.
 Stock hand data and material colors remain untouched. Rifle grip shaping and
 native chopping/icon rendering retain their existing paths.
 The actual-model regression requires arm depth writes, native hand depth

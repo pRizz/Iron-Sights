@@ -54,6 +54,7 @@ jobs:
       - name: Test gameplay, cache and release tooling without a ROM
         run: |
           bash scripts/port/test_ads.sh
+          bash scripts/port/test_upstream_merge.sh
           bash scripts/port/test_hud.sh
           bash scripts/port/test_wardrobe.sh
           bash scripts/port/test_mission_cheats.sh

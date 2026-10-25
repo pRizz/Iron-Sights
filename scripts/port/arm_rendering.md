@@ -28,6 +28,11 @@ commands, then restores native mip LOD before the hand draw. Native pistols use 
 fire, ADS and transitions: the added arm writes depth and native hand materials
 test it, so drawing the hand last cannot paint it over the sleeve. This changes
 occlusion, not the hand's vertices, texture/shader colors or XY projection.
+With upstream's optional `weapon_fov=1`, this depth remap receives the selected
+gun projection, including its aim correction, rather than reloading the world
+projection. Gun, native hand and generated sleeve use the same XY transform.
+The option remains off by default; fully raised ADS blends back to the calibrated
+world projection. Restore the world projection after the complete hand pass.
 The frame-owned filtered list bypasses the retained GPU part
 cache, whose keys assume immutable display lists.
 

@@ -245,6 +245,16 @@ int main(void)
         assert(portJoyPortSetOption("always_health", "1") && portOptGet(opt) == 1);
     }
     assert(PORTACT_CLASSIC_TOGGLE == 20);
+    /* Appending upstream watch controls must not renumber saved fork bindings. */
+    assert(PORTACT_AIM_DOWN_SIGHTS == 21 && PORTACT_STATE_MENU == 22);
+    assert(PORTACT_QUICKSAVE == 23 && PORTACT_QUICKLOAD == 24 && PORTACT_UNDO_LOAD == 25);
+    assert(PORTACT_WATCH_UP == 26 && PORTACT_WATCH_DOWN == 27 && PORTACT_COUNT == 28);
+    assert(strcmp(portJoyPortBindDefault(PORTACT_WATCH_UP), "Up") == 0);
+    portJoyPortPadDown(0, PORTACT_WATCH_DOWN);
+    portJoyPortPollCommit();
+    assert(portJoyPortWatchStepUpDown() == 1);
+    assert(portJoyPortWatchStepUpDown() == 0);
+    portJoyPortPollCommit();
     assert(strcmp(portJoyPortBindName(PORTACT_AIM_DOWN_SIGHTS), "aim_down_sights") == 0);
     assert(strcmp(portJoyPortBindDefault(PORTACT_AIM_DOWN_SIGHTS), "Mouse Middle") == 0);
 

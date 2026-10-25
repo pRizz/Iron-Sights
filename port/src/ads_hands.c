@@ -71,7 +71,7 @@ static void adsHandProjection(const Mtxf *scene, Mtxf *projection)
 {
     s32 i;
     *projection = *scene;
-    /* Reserve a near depth range for hands and gun, preserving the scene's XY projection. */
+    /* Reserve near depth without changing the selected gun pass's XY projection. */
     for (i = 0; i < 4; i++) {
         projection->m[i][2] = scene->m[i][2]*0.01f - scene->m[i][3]*0.99f;
     }
@@ -160,11 +160,11 @@ static s32 adsNativeGrip(PortArmMesh *mesh, const Mtxf *gun, coord3d grip,
     return portWardrobeBuildGrip(mesh,g_CurrentPlayer->bondtype,fileGetBondForCurrentFolder(),left,light,(u8)(blend*255),adsGripPoint,&pose);
 }
 
-Gfx *portAdsBeginHandLayer(Gfx *gdl)
+Gfx *portAdsBeginHandLayer(Gfx *gdl, const Mtxf *gunProjection)
 {
     Mtxf projection;
     Mtx *matrix = dynAllocateMatrix();
-    adsHandProjection(currentPlayerGetProjectionMatrixF(), &projection);
+    adsHandProjection(gunProjection, &projection);
     matrix_4x4_f32_to_s32(projection.m, (s32 (*)[4])matrix);
     gSPMatrix(gdl++, osVirtualToPhysical(matrix), G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);
     return gdl;

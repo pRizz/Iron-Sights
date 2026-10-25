@@ -31,6 +31,13 @@ default. Use a PR when the maintainer asks or an external requirement needs one;
 the template and preserved checklist apply in that case. Keep normal checks and
 fork inventory updates, preserve unrelated work and respect branch protections.
 
+Keep fork additions in focused, separate files when practical, with small hooks
+in upstream-owned code. Preserve upstream layout and names; avoid unrelated
+formatting and broad refactors. Extract existing fork behavior when the boundary
+is clear and tests/render checks can establish equivalence. Do not add needless
+indirection or weaken ABI/render contracts just to move code. Record deliberate
+shared-file changes and upstream overlaps in the fork inventory.
+
 Project Midas is a PC port of GE built with care: matching the original game where it matters, with every change tested in game. Contributions are welcome when they meet that bar. Please contribute here rather than starting a fork, so the work stays in one place.
 
 ## Already in progress

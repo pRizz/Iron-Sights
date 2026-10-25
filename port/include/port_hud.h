@@ -17,6 +17,7 @@ s32 portHudAlwaysHealthShown(void);
 struct damage_display_val;
 void portHudStyleGauge(struct damage_display_val *vertices, s32 count);
 Gfx *portHudDraw(Gfx *gdl);
+void portHudGunSight(s32 *gdl);
 /* Shared port overlay primitives, in native viewport coordinates. */
 Gfx *portHudPanel(Gfx *gdl, f32 x, f32 y, f32 w, f32 h, u32 color);
 Gfx *portHudLabel(Gfx *gdl, const char *text, s32 x, s32 y, f32 scale, u32 color, s32 maxWidth);

@@ -82,6 +82,13 @@ finishes, while keeping useful diagnostic logs and captures.
 
 ## Repo-Local Guidance
 
+- Minimize changes in upstream-owned files. Put new fork behavior in focused
+  files under existing fork/platform directories, connected through small,
+  explicit hooks. Preserve upstream layout and names; avoid unrelated formatting
+  and broad refactors. Extract existing fork code when the boundary is clear and
+  verification can establish equivalent behavior. Do not force separation that
+  adds needless indirection or weakens rendering/ABI contracts. Document shared
+  hooks and overlapping upstream behavior in `FORK_CHANGES.md` for later merges.
 - Default delivery is direct to `main`: sync remote state, complete the requested
   work, run the relevant checks, then commit and push to `main`. Do not create a
   feature branch or pull request by default. Use a PR only when the user requests

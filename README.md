@@ -15,6 +15,12 @@ Project Midas ADS is an independent fork of [Project Midas](https://github.com/m
 
 **[See the full list of changes from upstream →](FORK_CHANGES.md)** — the maintained inventory of this fork's additions, modifications, settings, and fixes.
 
+This fork includes upstream **1.0.2b** at `9062f9f120b7`, including its audio,
+high-tick aiming, collision and controller fixes. See the inherited
+[changelog](CHANGELOG.md). Optional Weapon FOV applies in hip fire and blends
+back to the calibrated scene projection for ADS; HUD Scale also scales our
+vector sights. Existing ADS, HUD and browser controls retain their defaults.
+
 ## Download and play on Windows
 
 **[DOWNLOAD HERE — latest Windows ZIP](https://github.com/pRizz/Project-Midas-ADS/releases/latest/download/Project-Midas-ADS-windows-x86.zip)** · [Release details and provenance](https://github.com/pRizz/Project-Midas-ADS/releases/latest) · [Build status](https://github.com/pRizz/Project-Midas-ADS/actions/workflows/windows-release.yml)

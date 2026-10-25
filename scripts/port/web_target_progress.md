@@ -631,6 +631,24 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**Upstream 1.0.2b integration, 2026-10-25:** Integrated pinned upstream
+`9062f9f120b7f64d39e5db59500ed50e8e7a6686`; FORK-026/027 record ownership,
+conflict decisions and the deliberate baseline advance. Browser shader prewarm
+and audio pause/metrics move into private platform includes. Audio pause/resume
+now resets upstream's field/clock/stall/drift pacing state. ROM storage, save
+schema, room flow, input capture, loading surface and multi-tab ownership retain
+their existing behavior. Optimized Wasm and 274/274 strict callback units pass;
+TypeScript and all 119 browser unit tests pass. Real-ROM Edge room/Dam/audio,
+reload/remembered startup, native Exit Game/retreat/warm resume and save-management
+restart pass. Chrome passes loading UI, first/cached shader preparation before
+graphics, uninterrupted cutscene/control/watch and real focus/capture recovery.
+Linux Firefox passes campaign/profile/settings backup, reload/restore, ROM
+recall/removal and Dam capture/audio/focus/watch. Windows/Linux native builds and
+the independent 72-view/35-icon gallery pass with zero changed image cells.
+Private evidence is `build/merge` and `build_win/hand-gallery-337riqu0`.
+Next action: preserve these contracts on future work; verify main CI and the
+published artifact after pushing this integration. Safari remains experimental.
+
 **Status:** Desktop compatibility, packaging and Pages publication pass. Actual
 Safari remains explicitly experimental.
 
