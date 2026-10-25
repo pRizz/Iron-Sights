@@ -478,8 +478,8 @@ separate follow-up scope; the accepted desktop preview milestones are complete.
 
 ## WEB-007 | 2026-10-24 | Immersive viewport and controls
 
-**Status:** First slice complete locally; implementation is on
-`codex/immersive-web-room` and has not replaced the deployed main site.
+**Status:** Complete and published in the desktop preview. The full-viewport
+room replaces the initial visible launcher; F2 retains access to its controls.
 
 **Completion:** Full-viewport entrypoint, retained controls on F2, Alt+Enter,
 stable game canvas and tested transition decisions.
@@ -496,8 +496,8 @@ reduced motion and graphics-context fallback. The production project prefix
 works. Existing Edge launcher UX and actual-ROM Dam/save regressions pass with
 F2 entry. Opening controls pauses/releases gameplay; closing requires Resume.
 
-**Next action:** Preserve these canvas/storage boundaries while completing
-WEB-008 prop fidelity and WEB-010 compatibility/polish.
+**Next action:** Preserve these canvas/storage boundaries in future room work.
+WEB-010 records the final publication and update-preservation evidence.
 
 ## WEB-008 | 2026-10-24 | Room scene and assets
 
@@ -521,11 +521,10 @@ replaces the text-only label with their supplied 1000x1000 AVIF. Its unchanged
 **Next action:** Preserve the original-model/asset provenance. The authenticated
 candidate remains an optional future replacement, not a preview dependency.
 
-**Continuation:** Refining the original procedural props for the desktop preview
-rather than blocking on the authenticated model download. The next pass adds
-shaped console/cartridge bodies, detailed controls, glass/screen effects and
-room materials, then reviews them in the complete insertion/TV sequence. This
-is an original reconstruction, not the Joseph Rohm candidate.
+**Continuation:** The desktop preview ships refined original procedural props.
+The completed pass adds shaped console/cartridge bodies, detailed controls,
+glass/screen effects and room materials, reviewed in the complete insertion/TV
+sequence. This is an original reconstruction, not the Joseph Rohm candidate.
 The refined modules replace `props.ts` with shaped console/cartridge shells,
 recessed ports/vents/switches, a three-prong controller, curved physical CRT glass,
 native screen shaders and deterministic surface grain/reflection lighting.
@@ -536,8 +535,8 @@ ROM-extracted asset or local diagnostic capture is shipped.
 
 ## WEB-009 | 2026-10-24 | Cartridge onboarding and game handoff
 
-**Status:** Desktop interaction/handoff acceptance complete locally. Edge,
-Chrome and Linux Firefox pass; publication is recorded in WEB-010.
+**Status:** Desktop interaction/handoff acceptance complete. Edge, Chrome and
+Linux Firefox pass; published-site acceptance is recorded in WEB-010.
 
 **Completion:** First/repeat ROM flows, insertion/power/flight, loading/errors and
 actual-game handoff with audio, capture/watch and durable saves.
@@ -556,8 +555,8 @@ One initial audit incorrectly paused via F2 before waiting for native frame 240;
 the audit now waits for startup frames before opening controls. That test failure
 was not evidence of an engine startup failure.
 
-**Next action:** Preserve the verified handoff/storage/capture contracts during
-WEB-010 publication; use the private cinematic/gameplay audits for future changes.
+**Next action:** Preserve the verified handoff/storage/capture contracts; use
+the private cinematic/gameplay audits for future changes.
 
 **Continuation acceptance:** Edge and Chrome and isolated Linux Firefox passed
 actual-ROM selection/insertion/flight/audio, unchanged reloaded save files and
@@ -572,24 +571,26 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
-**Status:** Local desktop compatibility and packaging pass; final CI and Pages
-publication are in progress. Actual Safari remains explicitly experimental.
+**Status:** Desktop compatibility, packaging and Pages publication pass. Actual
+Safari remains explicitly experimental.
 
 **Completion:** Keyboard/reduced-motion/responsive/failure paths, production
 allowlist and browser verification, measured scene cost and verified deployment.
 
 **Evidence:** Prior desktop acceptance is WEB-006, not acceptance of this new scene.
-Three.js 0.186.1 and types 0.186.0 are exact pins. The initial scene is bundled
+Three.js 0.186.1 and types 0.186.0 are exact pins. The first scene was bundled
 with the frontend (approximately 654 kB JS / 176 kB gzip, 52 kB CSS); the supplied
 AVIF adds 68,421 bytes. Vite flags the JS chunk above 500 kB; code splitting and
-hardware frame-cost measurement remain follow-ups, not completed optimization.
+hardware frame-cost measurement were follow-ups at that checkpoint. The
+continuation below records the completed code splitting and software metrics.
 Assembly adds dependency/artwork notices, explicitly hashes the artwork and
 retains the existing exact artifact/Wasm verifier. The workflow adds the ROM-free
 room audit under `/Project-Midas-ADS/`; no ROM is supplied to CI. Local screenshots
 are in ignored `build/web-room`; no native gallery input changed.
 
-**Next action:** Run final fallback/CI checks, publish the verified branch and
-verify the deployed artifact and active-session/save preservation.
+**Next action:** Maintain the accepted preview. Actual macOS Safari,
+hardware-GPU performance measurements and optional candidate-model replacements
+remain future scope; no accepted room milestone depends on them.
 
 **Continuation evidence:** 94 unit tests and strict TypeScript pass. Dynamic
 scene loading leaves about 98 kB initial JS (35 kB gzip) plus a 603 kB scene
@@ -602,7 +603,7 @@ to 86/52,710. Idle drawing is intentionally capped at 30 fps. An isolated Edge
 submission after shader warm-up; this is not GPU-timer or hardware evidence.
 The updated audit records metrics, verifies no drawing behind F2 controls and
 tests failed-chunk recovery. Initial PNG-fallback/source equality is verified;
-final cross-browser fallback checks and publication are next. Linux Chromium's
+the final cross-browser and publication results follow. Linux Chromium's
 ROM-free production-prefix room audit passes, as does Linux Firefox's scene and
 actual-ROM flow. No native render/gallery input changed.
 Edge, Firefox and Windows WebKit now pass the final room UI/fallback checks.
@@ -614,7 +615,7 @@ Resource-stressed Linux software samples were slow despite batching, so a tested
 room-only quality controller reduces pixel ratio to 75% then 50% after eight
 net slow frame intervals over 80 ms. Fast frames reduce the score; it ignores
 isolated hitches and does not
-change the game canvas. Final adaptive checks and CI/publication are next.
+change the game canvas. The final adaptive checks and publication results follow.
 Final Chrome and Linux Firefox adaptive room audits pass. The sampled Chrome
 run retained full resolution at 28 fps; the constrained Linux Firefox sample
 engaged 75% scale and measured 5.3 fps, so it is functional software-host
@@ -628,4 +629,24 @@ a fast-cache race in the launcher audit: a damaged ROM's modal could appear
 before F2 and block the Forget-ROM controls. Deployment was correctly withheld.
 F2 now closes an idle ROM/error modal and opens controls; active validation and
 backup-confirmation modals remain guarded. The room audit explicitly exercises
-this route. Re-run local browser/CI acceptance before publication.
+this route. Repair `08a07d8` passed local browser checks and all main workflows.
+
+**Publication acceptance:** Clean source
+`08a07d82c107365c7999dda104fd475058d96179` passed Pages `40160374496`, Windows
+builds/provenance `40160374470` and Bright Builds `40160374431`. The live manifest
+reports Actions provenance and runtime `faad72845829175b`. Public Wasm size
+(3,918,755 bytes), SHA-256, MIME type and validation match that manifest; all
+frontend chunks load, and both artwork files match their recorded hashes.
+The published site's real-ROM audit passes insertion/flight, normal Dam with
+movement/audio/P watch/focus/capture, stable game canvas, room GPU teardown,
+unchanged save files after reload and physical returning power-switch startup.
+No page error or upload request occurred. Private evidence is
+`build/web-room/published-room` and `public-artifact-report.json`.
+
+A separate game left running across deployment from `03aa3b6`/runtime
+`91ba238318cd2da6` continued from graphics frame 2,400 to 22,020 over 334.6 seconds.
+After reload into the new room, campaign/profile/settings backup bytes remained
+identical; actual restore and ROM removal also passed. Evidence is private in
+`build/web-room/live-update-final`. WEB-007 through WEB-010 are complete for the
+accepted desktop preview. Later documentation-only publication refreshes do not
+change the accepted feature behavior.

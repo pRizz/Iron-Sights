@@ -5,6 +5,11 @@ the existing storage identities, ROM policy and native game remain intact.
 Track implementation in WEB-007 through WEB-010 of
 [milestone progress](web_target_progress.md).
 
+WEB-007 through WEB-010 are complete for the published desktop preview. The
+tracker records clean-source CI, actual published gameplay and save preservation
+across deployment. Actual Safari, hardware-GPU measurements and optional future
+candidate-model replacements remain outside this preview's completed acceptance.
+
 ## Experience and decisions
 
 - Open into a full-viewport 3D room, without the current visible HTML launcher.

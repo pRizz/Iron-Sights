@@ -1230,8 +1230,8 @@ syntax validation passed. No game rebuild or render regeneration was needed.
 
 ### FORK-025 — Immersive browser room
 
-**Status:** Refined desktop room and cinematic are locally implemented and
-verified on `codex/immersive-web-room`; publication is in progress.
+**Status:** Refined desktop room and cinematic are implemented, verified and
+published on GitHub Pages. Safari remains experimental.
 
 The user requested a canvas-only initial experience with realistic room props,
 a CRT, rotating cartridge ROM selection and an animated insertion/power/TV
@@ -1288,7 +1288,7 @@ validates the Vite chunk graph, with tests for traversal/non-code/dangling paths
 New ROM-free scene and private actual-ROM audits cover viewport/controls,
 selection, insertion/flight, cached-cartridge power startup and stable saves;
 the previous launcher audits now explicitly enter F2 controls. The Pages workflow
-also runs the room audit under the production project prefix. TypeScript, 73 unit
+also runs the room audit under the production project prefix. TypeScript, 94 unit
 tests, scoped formatting and assembly/allowlist pass. Edge and Chrome passed the
 ROM-free room checks; Edge passed actual-ROM insertion/handoff/audio/reload/power
 startup. The retained launcher's full Dam audio/capture/focus/watch/campaign/profile/
@@ -1302,8 +1302,21 @@ submission after warm-up; this is software-host evidence, not a hardware promise
 The initial launcher is about 98 kB JS (35 kB gzip) plus a lazy 603 kB scene
 (154 kB gzip), versus the original single 654 kB bundle. Vite's scene-chunk size
 advisory remains visible. Native game/render source and ROM storage identity
-are unchanged. WEB-008 through WEB-010 record remaining verification/publication;
-Safari retains its experimental status.
+are unchanged. WEB-007 through WEB-010 record the completed preview acceptance
+and optional future hardware/Safari/model work.
+
+PR #1 merged as `b38a21c`; the first main Pages run caught the remembered-ROM
+modal/F2 race and withheld deployment. Repair `08a07d8` passed all main workflows:
+Pages `40160374496`, Windows builds/provenance `40160374470` and Bright Builds
+`40160374431`. The live runtime `faad72845829175b` identifies that clean source;
+public Wasm size/hash/MIME and frontend/artwork files were verified. The actual
+published room passes insertion/flight, normal Dam movement/audio/P watch/focus/
+capture, durable reload, GPU teardown and physical returning power-switch startup.
+A separate active session kept advancing across deployment, then preserved every
+campaign/profile/settings backup byte after reload, restore and ROM removal.
+Private evidence remains in `build/web-room/published-room`, `live-update-final`
+and `public-artifact-report.json`. The plan, compatibility notes and stable
+milestone blocks persist these final results for later sessions.
 
 ### FORK-024 — Browser target plan and portability groundwork
 

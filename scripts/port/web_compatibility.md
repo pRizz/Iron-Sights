@@ -93,6 +93,17 @@ borders with point/linear filtering; they are not exhaustive material coverage.
 
 ## Deployment and data acceptance
 
+The immersive room source `08a07d8` passed
+[Pages run 40160374496](https://github.com/pRizz/Project-Midas-ADS/actions/runs/40160374496).
+The published runtime `faad72845829175b` has clean Actions provenance; its Wasm
+size/hash/MIME, dynamic frontend chunks and both artwork hashes were verified.
+Actual published insertion/flight, normal Dam movement/audio/P watch/focus/capture,
+room teardown, unchanged saved files after reload and returning power-switch
+startup pass. A separate game kept advancing across the old-to-new deployment
+(frames 2,400 to 22,020 over 334.6 seconds). Campaign/profile/settings backup bytes
+remained identical after reload; actual restore and ROM removal also pass, with
+no page errors or uploads. Evidence is private under `build/web-room`.
+
 Commit `2360bc8` passed the first Pages workflow
 [40145610255](https://github.com/pRizz/Project-Midas-ADS/actions/runs/40145610255).
 The subsequent `e4a81be` deployment passed
