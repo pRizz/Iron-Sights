@@ -3,26 +3,11 @@ import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import { readAudio } from './audio-observer.mjs';
 import { checkPresentation } from './presentation-check.mjs';
+import { navigateToDam, captureGameplay } from './native-game-audit.mjs';
 
 export async function checkRoomGameplay(page, context, output) {
-    for (let step = 0; step < 7; step++) {
-        if (await page.getByRole('button', { name: 'Resume game' }).isVisible())
-            await page.getByRole('button', { name: 'Resume game' }).click();
-        await page.keyboard.press('Enter', { delay: 120 });
-        await page.waitForTimeout(1800);
-    }
-    await page.evaluate(() => document.exitPointerLock());
-    // Ensure the game is paused even when the current native screen is a menu.
-    await page.getByRole('button', { name: 'Pause', exact: true }).click();
-    await page.getByRole('button', { name: 'Resume game' }).click();
-    await page.waitForTimeout(300);
-    if (
-        !(await page.locator('.player-toolbar').getByText('Playing', { exact: true }).isVisible())
-    ) {
-        await page.keyboard.press('p', { delay: 120 });
-        await page.getByRole('button', { name: 'Resume game' }).click({ timeout: 60_000 });
-    }
-    await page.waitForFunction(() => !!document.pointerLockElement);
+    await navigateToDam(page);
+    await captureGameplay(page);
     await page.keyboard.press('w', { delay: 250 });
     await page.screenshot({ path: resolve(output, 'dam.png') });
     const audio = await page.evaluate(readAudio);
@@ -41,7 +26,15 @@ export async function checkRoomGameplay(page, context, output) {
     );
     await page.screenshot({ path: resolve(output, 'watch.png') });
     await page.keyboard.press('p', { delay: 120 });
-    await page.getByRole('button', { name: 'Resume game' }).click();
+    await page.waitForFunction(
+        () => !!document.pointerLockElement || !!document.querySelector('.mouse-capture-hint'),
+    );
+    assert.ok(
+        !(await page.getByRole('button', { name: 'Resume game' }).isVisible()),
+        'Closing the watch incorrectly paused gameplay',
+    );
+    if (!(await page.evaluate(() => !!document.pointerLockElement)))
+        await page.locator('.mouse-capture-hint').click();
     await page.waitForFunction(() => !!document.pointerLockElement);
     const other = await context.newPage();
     await other.goto('about:blank');

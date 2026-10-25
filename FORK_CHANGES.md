@@ -1243,6 +1243,54 @@ verified room refinements in `ed459f2`. PR #2 was closed rather than merged.
 
 ### FORK-025 — Immersive browser room
 
+Startup/feedback follow-up is implemented and locally verified on main; final
+CI/publication acceptance follows in WEB-010. `startup-screen.tsx`/`startup.css`
+show centered download/initialization feedback, actual download percentages and
+completed graphics-preparation progress; unknown work remains indeterminate.
+`engine.ts` paints before entering Wasm and keeps feedback until graphics begin.
+Real pauses during preparation expose **Resume startup**, so an F2/focus
+interruption cannot strand initialization behind its progress screen.
+The existing native incremental prewarm of 87 known shader programs stalled
+visible browser logos because a single compile can exceed its 3 ms budget.
+Browser-only preparation in `port/fast3d/gfx_pc.cpp`, `port/src/main.c` and
+`port/web/lifecycle.c` now finishes that list before animation, yielding and
+reporting each completed program. `room.tsx` holds the final TV frame without
+competing room draws during preparation. Desktop scheduling/rendering is unchanged.
+
+`UserFilesInUse` distinguishes another tab's save-writer lock. Startup failures
+now open an accessible centered dialog with explanation, Retry and controls;
+no scrolling is needed, and retry can acquire the lock after the other tab closes.
+The save protection itself is unchanged. `player.css` removes the game canvas's
+gold focus outline while keeping UI keyboard-focus indicators.
+`capture.ts` replaces its 100 ms gameplay-arrival pause with a live mouse-free
+state and a small capture affordance. Cutscene/watch transitions keep keyboard
+play running; click/key gestures can capture the mouse. Real focus loss, manual
+pause and unexpected pointer release still pause, including focus loss during a
+pending capture request. `capture.test.ts` covers those boundaries.
+
+The private startup observer/report/audit records actual program progress,
+frame counters, browser focus and GL stalls. In comparable Edge/SwiftShader
+cold samples, the first eight logo seconds improve from about 8-11 graphics fps
+to 57-60 fps; observed long stalls move behind approximately 7 seconds of cold
+preparation, or 0.92 seconds on a cached reload. This moves startup work before
+animation rather than claiming to eliminate compilation or establish hardware
+performance. Traces remain under `build/web-startup/{baseline-sources,prepared}`.
+Actual control-transition audits pass in Edge and isolated Linux Firefox. The
+full Edge room/Dam/audio/watch/focus/capture/reload audit, Chrome launcher
+campaign/profile/settings/backup/ROM removal, and repeated native Exit Game/warm
+resume pass. Existing private game audits now navigate by exported native stage/
+control counters instead of assuming fixed logo timing or a false Resume overlay.
+`startup-ui-audit.mjs` holds real download/compilation to test progress and F2;
+the Pages workflow runs it without a ROM. The gallery's two independent passes
+reproduce all 72 views and 35 icons with zero changed image cells; its source
+fingerprint/HTML are refreshed. Optimized Wasm, 272 strict callback compilations,
+logo/spike and gallery regressions pass. All 119 unit tests, strict TypeScript,
+formatting and exact artifact checks pass. Edge and Windows WebKit pass loading/
+compilation/F2, centered-lock/retry and room/fallback checks. Chrome also passes
+reduced-motion cutscene/control/watch/focus acceptance. The final startup audit
+asserts preparation finishes before graphics, with loading feedback throughout.
+No private captures or ROM data are added; Safari remains experimental.
+
 **Status:** Refined desktop room and cinematic are implemented, verified and
 published on GitHub Pages. Safari remains experimental.
 

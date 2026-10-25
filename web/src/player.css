@@ -51,6 +51,20 @@
     max-height: 100%;
     flex-shrink: 0;
     background: #000;
+    outline: none;
+}
+.mouse-capture-hint {
+    position: absolute;
+    z-index: 4;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: calc(100% - 32px);
+    padding: 10px 16px;
+    font-size: 12px;
+    color: #eef0e9;
+    background: #141b13de;
+    border-color: #59674c;
 }
 .welcome-overlay,
 .pause-overlay {

@@ -134,10 +134,22 @@ try {
     const second = await context.newPage();
     diagnosticPage = second;
     await second.goto(origin);
-    await second.getByRole('alert').filter({ hasText: 'Another Project Midas tab' }).waitFor();
+    const warning = second
+        .getByRole('dialog')
+        .filter({ hasText: 'Your game is open in another tab' });
+    await warning.waitFor();
+    const warningBox = await warning.boundingBox();
+    const viewport = second.viewportSize();
+    assert.ok(
+        warningBox.y >= 0 && warningBox.y + warningBox.height <= viewport.height,
+        'Save-lock warning was not within the initial viewport',
+    );
+    assert.equal(await second.evaluate(() => scrollY), 0, 'Save-lock warning needed scrolling');
     await page.close();
     await second.waitForFunction(async () => !(await navigator.locks.query()).held.length);
-    await second.getByRole('button', { name: 'Try again' }).click();
+    await warning.getByRole('button', { name: 'Try again' }).click();
+    await warning.waitFor({ state: 'detached' });
+    await second.keyboard.press('F2');
     await second.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
     assert.deepEqual((await download(second)).files, JSON.parse(restore).files);
     await second.getByRole('checkbox', { name: 'Remember ROM on this device' }).uncheck();

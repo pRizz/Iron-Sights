@@ -21,4 +21,8 @@ export async function checkPresentation(page) {
         .locator('.game-stage')
         .evaluate((element) => getComputedStyle(element).backgroundColor);
     assert.equal(color, 'rgb(0, 0, 0)');
+    const outline = await page
+        .locator('#canvas')
+        .evaluate((element) => getComputedStyle(element).outlineStyle);
+    assert.equal(outline, 'none', 'Canvas inherited the gold focus outline');
 }

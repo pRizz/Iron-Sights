@@ -1,5 +1,7 @@
 import { createEffect, createSignal, onCleanup, onMount, Show } from 'solid-js';
 import { Player } from './player';
+import { StartupScreen } from './startup-screen';
+import type { StartupProgress } from './startup-progress';
 import { StoragePanel } from './storage-panel';
 import { createBackup, parseBackup, MAX_BACKUP_TEXT, type UserFile } from './backup';
 import { createCapture } from './capture';
@@ -37,6 +39,16 @@ export function App() {
     const ready = () => engine.status().kind === 'ready' && rom.status().kind === 'ready';
     const build = () => engine.maybeManifest()?.build;
     const canCloseControls = () => engine.status().kind !== 'error' && (entered() || !roomFailed());
+    const maybeLoading = (): StartupProgress | undefined => {
+        if (controls()) return undefined;
+        if (engine.status().kind === 'error') return undefined;
+        if (engine.maybeStartup()) return engine.maybeStartup();
+        const status = engine.status();
+        if (status.kind === 'loading') return status;
+        if (entry() === 'restoring')
+            return { label: 'Checking saved cartridge', maybePercent: null };
+        return undefined;
+    };
 
     function openControls(): void {
         capture.pause('manual');
@@ -121,6 +133,11 @@ export function App() {
                 event.stopImmediatePropagation();
                 const maybeModal = document.querySelector<HTMLDialogElement>('dialog[open]');
                 if (maybeModal) {
+                    if (maybeModal.classList.contains('startup-error')) {
+                        maybeModal.close();
+                        openControls();
+                        return;
+                    }
                     if (
                         !maybeModal.classList.contains('rom-dialog') ||
                         maybeModal.dataset.busy === 'true'
@@ -180,8 +197,7 @@ export function App() {
             setStarted(true);
             capture.starting();
             canvas.focus();
-            await new Promise(requestAnimationFrame);
-            game.callMain(['--rom-file', '/rom.z64']);
+            await engine.start();
             if (source === 'cached') showHint();
         } catch {
             engine.failed(
@@ -454,6 +470,21 @@ export function App() {
                     </div>
                 </dialog>
             </div>
+            <StartupScreen
+                engine={engine}
+                progress={maybeLoading}
+                showControls={openControls}
+                paused={() => capture.state().kind === 'paused'}
+                resume={() => void resumeGame()}
+                retry={() => {
+                    const status = engine.status();
+                    if (status.kind === 'error' && status.needsReload) location.reload();
+                    else {
+                        setControls(false);
+                        void engine.initialize(canvas);
+                    }
+                }}
+            />
             <Show when={roomVisible()}>
                 <Room
                     returning={entry() === 'returning'}

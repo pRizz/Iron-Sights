@@ -145,7 +145,10 @@ export function Room(props: Props) {
                 const next = advanceRoom(flow(), delta, props.ready(), motion.matches);
                 setFlow(next);
                 try {
-                    maybeScene?.render(next, delta, motion.matches, label(), frameMS);
+                    // Hold the fitted TV frame while Wasm prepares graphics. Avoid
+                    // competing room draws during shader compilation and startup.
+                    if (!entering)
+                        maybeScene?.render(next, delta, motion.matches, label(), frameMS);
                     setSceneReady(true);
                 } catch {
                     props.notify(

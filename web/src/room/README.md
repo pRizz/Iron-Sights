@@ -130,6 +130,12 @@ normal-menu Dam, movement, P watch and focus/capture recovery after the cinemati
 `MIDAS_REDUCED_MOTION=1` verifies the short fade path with the actual ROM.
 `tools/linux-game-audit.sh` accepts optional `room`, `exit` or `ui` audit modes for the
 isolated Firefox/Xvfb/PulseAudio host described in the compatibility runbook.
+Its `control` mode verifies an uninterrupted native Dam cutscene/watch return,
+capture gestures and real focus/Escape pauses. `audit:startup` records private
+cold/remembered initialization timings; `test:startup` holds download/compilation
+to check the loading UI without a ROM.
+`MIDAS_PAUSE_STARTUP=1` adds an F2 interruption during preparation and verifies
+the centered Resume-startup recovery before the natural cutscene/control checks.
 
 The ROM-free audit also covers background pivoting, click/drag separation,
 letterboxing and failed model loads. `room-framing-check.mjs` renders the actual

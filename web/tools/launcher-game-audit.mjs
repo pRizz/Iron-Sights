@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { observeAudio, readAudio } from './audio-observer.mjs';
+import { installGameProbe, navigateToDam, captureGameplay } from './native-game-audit.mjs';
 
 const [romPath, outputPath = '../build/web-ui/game', origin = 'http://127.0.0.1:4176'] =
     process.argv.slice(2);
@@ -23,6 +24,7 @@ if (process.env.MIDAS_NO_GAMEPADS === '1') {
     });
 }
 const page = await context.newPage();
+await installGameProbe(page);
 if (kind === 'chromium') {
     const focusSession = await context.newCDPSession(page);
     await focusSession.send('Emulation.setFocusEmulationEnabled', { enabled: false });
@@ -90,13 +92,7 @@ try {
         await page.waitForTimeout(500);
     }
     await page.keyboard.press('Backquote', { delay: 120 });
-    for (let step = 0; step < 8; step++) {
-        if (await page.getByRole('button', { name: 'Resume game' }).isVisible())
-            await page.getByRole('button', { name: 'Resume game' }).click();
-        await page.keyboard.press('Enter', { delay: 120 });
-        await page.waitForTimeout(1800);
-        await page.screenshot({ path: resolve(output, `menu-${step}.png`) });
-    }
+    await navigateToDam(page);
     await page.waitForTimeout(1200);
     await page.getByText('Saved on this device', { exact: true }).waitFor();
     const first = await backup('first-backup.json');
@@ -125,18 +121,8 @@ try {
         ).toString(),
         /maxfps=59/,
     );
-    // Continue through the normal briefing into Dam. No direct-stage diagnostics.
-    // Downloading moves focus into the page controls, so resume the menu first.
-    await page.getByRole('button', { name: 'Resume game' }).click();
-    await page.getByRole('button', { name: 'Resume game' }).waitFor({ state: 'hidden' });
-    await page.waitForTimeout(300);
-    if (
-        !(await page.locator('.player-toolbar').getByText('Playing', { exact: true }).isVisible())
-    ) {
-        await page.keyboard.press('p', { delay: 120 });
-        await page.getByRole('button', { name: 'Resume game' }).click({ timeout: 60_000 });
-    }
-    await page.waitForFunction(() => !!document.pointerLockElement);
+    // Resume after the backup gesture, then let the full intro finish.
+    await captureGameplay(page);
     await page.waitForTimeout(1000);
     await page.screenshot({ path: resolve(output, 'dam.png') });
     const audio = await page.evaluate(readAudio);
@@ -172,7 +158,15 @@ try {
     await page.screenshot({ path: resolve(output, 'watch.png') });
     const deployment = await waitForDeployment(page, origin);
     await page.keyboard.press('p', { delay: 120 });
-    await page.getByRole('button', { name: 'Resume game' }).click();
+    await page.waitForFunction(
+        () => !!document.pointerLockElement || !!document.querySelector('.mouse-capture-hint'),
+    );
+    assert.ok(
+        !(await page.getByRole('button', { name: 'Resume game' }).isVisible()),
+        'Watch return incorrectly paused gameplay',
+    );
+    if (!(await page.evaluate(() => !!document.pointerLockElement)))
+        await page.locator('.mouse-capture-hint').click();
     await page.waitForFunction(() => !!document.pointerLockElement);
     await other.close();
     // Menu/mission startup may update the EEPROM; compare the final flushed data.

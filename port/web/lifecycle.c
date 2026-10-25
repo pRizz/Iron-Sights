@@ -9,6 +9,16 @@ void portWebPointerRelease(void)
     EM_ASM({ if (typeof Module['onPointerRelease'] === 'function') Module['onPointerRelease'](); });
 }
 
+/* Yield between actual startup work items so the page can paint its progress. */
+void portWebStartupProgress(const char *label, unsigned completed, unsigned total)
+{
+    EM_ASM({
+        if (typeof Module['onStartupProgress'] === 'function')
+            Module['onStartupProgress'](UTF8ToString($0), $1, $2);
+    }, label, completed, total);
+    emscripten_sleep(0);
+}
+
 /* A browser returns to its room instead of terminating the page's runtime. */
 EMSCRIPTEN_KEEPALIVE void portWebReturnToRoom(void)
 {

@@ -43,6 +43,7 @@ export type GameOptions = {
     printErr(line: string): void;
     onPointerRelease(): void;
     onRoomRequested(): void;
+    onStartupProgress(label: string, completed: number, total: number): void;
     onAbort(reason: unknown): void;
     onExit(code: number): void;
     preRun?(module: GameModule): void;

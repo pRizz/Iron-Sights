@@ -7,6 +7,7 @@ import { launchAuditBrowser } from './browser-choice.mjs';
 import { observeAudio, readAudio } from './audio-observer.mjs';
 import { checkRoomGameplay } from './room-gameplay-check.mjs';
 import { checkPresentation } from './presentation-check.mjs';
+import { installGameProbe } from './native-game-audit.mjs';
 
 const [romPath, outputPath = '../build/web-room/game', origin = 'http://127.0.0.1:4176'] =
     process.argv.slice(2);
@@ -21,6 +22,7 @@ const context = await browser.newContext({
     reducedMotion: reduced ? 'reduce' : 'no-preference',
 });
 const page = await context.newPage();
+await installGameProbe(page);
 await page.addInitScript(observeAudio);
 await page.addInitScript(() => {
     const observer = new MutationObserver((records) => {

@@ -845,6 +845,11 @@ int main(int argc, char **argv)
     printf("ge007 pc port: booting (GE_FRAMES=n limits the run)\n");
     fflush(stdout);
 
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    { extern void portWebStartupProgress(const char *, unsigned, unsigned);
+      portWebStartupProgress("Opening cartridge", 0, 0); }
+#endif
+
     /* The user's ROM (port/src/romdata.c): argv[1] drag-and-drop, --rom-file,
      * GE_ROM, midas.ini [data] rom=, or ./Data. Runs after the arena reservations
      * (the ROM takes its own high mapping next) and before anything that
@@ -883,6 +888,9 @@ int main(int argc, char **argv)
 
 #ifdef __EMSCRIPTEN__
     { extern void portWebCheckLayout(void); portWebCheckLayout(); }
+#ifdef GE_VIDEO
+    { extern void portWebPrepareShaders(void); portWebPrepareShaders(); }
+#endif
 #endif
     mainproc(NULL);
 

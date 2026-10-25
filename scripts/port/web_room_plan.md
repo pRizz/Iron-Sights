@@ -24,6 +24,19 @@ pause the live instance, release input/audio, flush saves and reverse the TV
 flight into an inserted-cartridge room. Its power switch resumes that instance;
 an explicit exit must not trigger automatic re-entry. Reduced motion uses a fade.
 
+The accepted startup follow-up adds centered loading feedback while the game
+downloads and initializes, including remembered-ROM launches. Percentages report
+actual download bytes or completed graphics-preparation work; unmeasured stages
+remain indeterminate. Browser shader preparation finishes before visible logos,
+yielding between programs so progress paints. Hold the room's final TV frame
+without further room draws during this work. Center startup failures, especially
+another tab's save-writer lock, with explanation and retry rather than requiring
+scrolling. Remove the game canvas's decorative gold focus outline while preserving
+keyboard focus indicators on UI controls. Reaching gameplay from a cutscene/watch
+must not pause merely because mouse capture needs a gesture; keep keyboard play
+live with a small capture affordance. Actual focus loss, explicit pause and
+unexpected pointer release still require Resume.
+
 ## Experience and decisions
 
 - First visits open into a full-viewport 3D room, without the visible HTML launcher.
@@ -80,8 +93,9 @@ Use a pure transition/timing module for idle, insertion, loading, power, flight
 and handoff decisions. Treat ROM readiness, engine readiness, animation and
 permissions separately. Downloads start in the background; the TV shows actual
 loading stages instead of fictitious percentage progress. A later click/Resume
-is allowed if audio or Pointer Lock needs a fresh gesture. Fullscreen requests
-must happen inside the actual gesture, not after a multi-second animation.
+is allowed for real pauses; a capture gesture by itself must not force a pause.
+Fullscreen requests must happen inside the actual gesture, not after a
+multi-second animation.
 
 ## Assets and ownership
 

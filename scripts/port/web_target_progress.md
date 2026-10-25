@@ -634,6 +634,50 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 **Status:** Desktop compatibility, packaging and Pages publication pass. Actual
 Safari remains explicitly experimental.
 
+**Startup/feedback follow-up, 2026-10-25:** Implemented and locally verified on
+main. A centered loading surface covers download and runtime initialization,
+including remembered-ROM launches. Download percentages use actual bytes;
+graphics preparation uses completed program counts; other stages are indeterminate.
+Real pauses during preparation expose **Resume startup**; Chrome's reduced-motion
+audit interrupts preparation through F2, resumes and completes the natural Dam
+cutscene/watch/focus checks (`control-startup-paused`).
+The native browser path prepares the existing 87-program shader list before
+visible logos and yields between programs. The room holds its final TV frame
+without drawing during preparation. Native desktop scheduling/rendering is unchanged.
+
+Cold Edge/SwiftShader traces show the initial logo sequence improving from
+roughly 8-11 graphics fps to 57-60 fps. A cold main-to-first-frame preparation
+sample takes 6.97 s, versus 0.92 s after cache warm-up. The work moves behind
+progress; no hardware-GPU or overall compilation-elimination claim is made.
+Evidence is private in `build/web-startup/baseline-sources` and `prepared`.
+
+The canvas's gold focus outline is removed; UI controls retain focus indicators.
+Startup failures, especially another tab's save-writer lock, open a centered
+accessible retry dialog. The protection remains, with recovery after closing the
+other tab. Cutscene/watch arrivals no longer trigger the capture monitor's
+100 ms false pause: keyboard play stays live, with a small capture affordance
+when needed. Actual focus loss, manual pause and unexpected pointer release still
+pause, including capture rejection after a focus event. Unit regressions cover
+those distinctions. Actual Dam cutscene/control/watch/focus acceptance passes
+in Edge and isolated Linux Firefox (`control-edge-fixed`, `control-firefox`).
+The Edge room/game/reload, Chrome full launcher saves/backup/ROM removal and
+repeated native Exit Game/warm-resume audits pass (`room-game-edge-final`,
+`launcher-game-chrome-final`, `exit-edge-final`). Menu audits now use native
+stage/control counters and Files initialization instead of fixed logo timing or
+expecting an artificial Resume overlay.
+
+Optimized Wasm and all 272 strict callback compilations pass; logo/spike and
+eight gallery regressions pass. Both native gallery captures reproduce every
+view/icon with zero changed image cells; source fingerprints/HTML are refreshed.
+119 unit tests, strict TypeScript, scoped formatting and exact public-artifact
+verification pass. Edge and Windows WebKit pass loading/compilation/F2,
+centered-lock/retry and room/fallback checks. Chrome reduced-motion cutscene/
+control/watch/focus acceptance also passes (`control-reduced-chrome`); the final
+startup audit proves all listed programs finish before graphics and loading stays
+visible until then (`final-startup-proof`). The ROM-free feedback audit is part
+of Pages CI. Final direct-main CI and live-site checks are next before marking
+this follow-up published. Safari remains experimental.
+
 **Requested refinement:** Local acceptance passes with 104 unit tests, strict
 TypeScript, assembly/allowlist and deterministic model regeneration. The model
 GLBs are exact size/hash additions with embedded resources only; third-party

@@ -89,11 +89,17 @@ try {
     );
     if (await page.getByRole('button', { name: 'Resume game' }).isVisible())
         await page.getByRole('button', { name: 'Resume game' }).click();
-    for (let step = 0; step < 4; step++) {
+    // Stop at actual Files initialization; logo timing differs after prewarming.
+    for (let step = 0; step < 9; step++) {
+        if ((await page.locator('pre').textContent()).includes('model PwalletbondZ')) break;
         await page.keyboard.press('Enter', { delay: 120 });
         await page.waitForTimeout(1800);
         await page.screenshot({ path: resolve(output, `menu-${step}.png`) });
     }
+    assert.ok(
+        (await page.locator('pre').textContent()).includes('model PwalletbondZ'),
+        'Files screen was not reached',
+    );
     // Native No leaves the Files screen running; Yes must return to the room.
     await menuClick(390, 298);
     await menuClick(255, 170);

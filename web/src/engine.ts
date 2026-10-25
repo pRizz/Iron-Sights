@@ -4,12 +4,13 @@ import { sha256 } from './rom';
 import { parseRuntimeManifest, type RuntimeManifest } from './runtime-manifest';
 import type { CreateGame, GameModule } from './runtime-types';
 import type { SaveStatus } from './sync-queue';
-import { acquireUserFilesLock } from './user-lock';
+import { acquireUserFilesLock, UserFilesInUse } from './user-lock';
+import { workProgress, type StartupProgress } from './startup-progress';
 
 export type EngineStatus =
     | { kind: 'loading'; label: string; maybePercent: number | null }
     | { kind: 'ready' }
-    | { kind: 'error'; message: string; needsReload: boolean };
+    | { kind: 'error'; message: string; needsReload: boolean; reason: 'other-tab' | 'startup' };
 const DEFAULT_SETTINGS =
     '[display]\nfullscreen=windowed\nwindow_width=960\nwindow_height=540\n' +
     'render_thread=0\nvsync=0\nmaxfps=60\ntickhz=60\nmsaa=1\nmusic_volume=70\nsfx_volume=70\n' +
@@ -79,6 +80,7 @@ export function createEngine() {
     const [maybeFiles, setFiles] = createSignal<PersistentFiles>();
     const [maybeManifest, setManifest] = createSignal<RuntimeManifest>();
     const [logs, setLogs] = createSignal<string[]>([]);
+    const [maybeStartup, setStartup] = createSignal<StartupProgress>();
     let maybeRelease: (() => void) | undefined;
     let initializing = false;
     let pointerRelease = () => {};
@@ -86,8 +88,23 @@ export function createEngine() {
     const log = (line: string) => setLogs((previous) => [...previous.slice(-99), line]);
     const loading = (label: string, maybePercent: number | null = null) =>
         setStatus({ kind: 'loading', label, maybePercent });
-    const failed = (message: string) =>
-        setStatus({ kind: 'error', message, needsReload: !!maybeGame() });
+    const failed = (message: string, reason: 'other-tab' | 'startup' = 'startup') =>
+        setStatus({ kind: 'error', message, needsReload: !!maybeGame(), reason });
+
+    async function start(): Promise<void> {
+        const game = maybeGame();
+        if (!game) throw new Error('The game is unavailable');
+        setStartup(workProgress('Preparing cartridge', 0, 0));
+        // Paint feedback before entering potentially expensive synchronous Wasm work.
+        await new Promise(requestAnimationFrame);
+        await new Promise(requestAnimationFrame);
+        game.callMain(['--rom-file', '/rom.z64']);
+        while (game._portWebGetGfxTasks() < 3) {
+            if (status().kind === 'error') throw new Error('Game initialization failed');
+            await new Promise(requestAnimationFrame);
+        }
+        setStartup(undefined);
+    }
 
     async function initialize(canvas: HTMLCanvasElement): Promise<void> {
         if (initializing || maybeGame()) return;
@@ -133,6 +150,8 @@ export function createEngine() {
                 printErr: log,
                 onPointerRelease: () => pointerRelease(),
                 onRoomRequested: () => roomRequested(),
+                onStartupProgress: (label, completed, total) =>
+                    setStartup(workProgress(label, completed, total)),
                 onAbort: (reason) => {
                     log(String(reason));
                     failed('The game stopped. Download a save backup, then reload to try again.');
@@ -164,6 +183,7 @@ export function createEngine() {
                 error instanceof Error
                     ? error.message
                     : 'Local storage could not be opened. Try a normal browsing window.',
+                error instanceof UserFilesInUse ? 'other-tab' : 'startup',
             );
             if (!maybeGame()) {
                 maybeRelease?.();
@@ -175,6 +195,8 @@ export function createEngine() {
     }
     return {
         initialize,
+        start,
+        maybeStartup,
         failed,
         status,
         saveStatus,

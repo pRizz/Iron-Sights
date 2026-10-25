@@ -58,6 +58,7 @@ jobs:
           bun tools/wait-for-site.ts http://127.0.0.1:4177/Project-Midas-ADS/
           bun run test:launcher http://127.0.0.1:4177/Project-Midas-ADS/
           bun run test:room http://127.0.0.1:4177/Project-Midas-ADS/
+          bun run test:startup http://127.0.0.1:4177/Project-Midas-ADS/
           bun run test:storage
           bun run test:filesystem
           bun run test:sampler

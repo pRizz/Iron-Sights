@@ -15,6 +15,10 @@ its power switch resumes the paused game. To restore a backup after startup,
 open F2 and choose **Restart to manage saves**. This reloads with controls open
 and holds automatic startup until Play or closing controls. Save restoration
 still occurs before the native game starts, so its cached EEPROM stays coherent.
+Download and startup stages appear centrally; graphics preparation completes
+before the logos animate. Another tab's save lock opens a centered retry dialog.
+Cutscene/watch transitions keep keyboard play live; a small capture control
+appears if the browser needs a mouse gesture. Real focus loss still pauses.
 See [room implementation and prop provenance](src/room/README.md) for local
 checks, original prop models and candidate-source decisions.
 See the [runtime runbook](../scripts/port/web_runtime.md) and

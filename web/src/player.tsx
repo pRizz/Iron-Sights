@@ -39,6 +39,8 @@ export function Player(props: PlayerProps) {
         return value.kind === 'loading' ? value.maybePercent : null;
     });
     const launchLabel = () => {
+        const maybeStartup = engine.maybeStartup();
+        if (maybeStartup) return maybeStartup.label;
         const status = engine.status();
         if (status.kind === 'loading') return status.label;
         if (status.kind === 'error') return 'Game unavailable';
@@ -54,6 +56,7 @@ export function Player(props: PlayerProps) {
             playing: 'Playing',
             paused: 'Paused',
             capturing: 'Capturing mouse',
+            'mouse-free': 'Mouse free',
         })[capture.state().kind];
     return (
         <section class="player-card" aria-label="Game player">
@@ -149,19 +152,9 @@ export function Player(props: PlayerProps) {
                         <small>Original US release · 12 MiB · .z64 / .v64 / .n64</small>
                     </div>
                 </Show>
-                <Show
-                    when={
-                        started() &&
-                        props.presenting() &&
-                        (capture.state().kind === 'paused' || capture.state().kind === 'capturing')
-                    }
-                >
+                <Show when={started() && props.presenting() && capture.state().kind === 'paused'}>
                     <div class="pause-overlay">
-                        <p class="eyebrow">
-                            {capture.state().kind === 'capturing'
-                                ? 'TAKING CONTROL'
-                                : 'GAME PAUSED'}
-                        </p>
+                        <p class="eyebrow">GAME PAUSED</p>
                         <h2>Ready to continue?</h2>
                         <p>Resume to return to the game and capture your mouse.</p>
                         <ShimmerButton
@@ -178,6 +171,17 @@ export function Player(props: PlayerProps) {
                             <p role="alert">{capture.notice()}</p>
                         </Show>
                     </div>
+                </Show>
+                <Show
+                    when={started() && props.presenting() && capture.state().kind === 'mouse-free'}
+                >
+                    <button
+                        class="mouse-capture-hint"
+                        onPointerDown={(event) => event.preventDefault()}
+                        onClick={() => void props.resume()}
+                    >
+                        Click to capture the mouse · keyboard controls are ready
+                    </button>
                 </Show>
             </div>
             <div class="launch-bar" aria-live="polite">

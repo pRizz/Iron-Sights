@@ -2,8 +2,8 @@ import { createSignal } from 'solid-js';
 import type { Engine } from './engine';
 
 export type Playback =
-    | { kind: 'stopped' | 'starting' | 'menu' | 'playing' | 'capturing' }
-    | { kind: 'paused'; reason: 'focus' | 'mouse' | 'ready' | 'manual' };
+    | { kind: 'stopped' | 'starting' | 'menu' | 'playing' | 'capturing' | 'mouse-free' }
+    | { kind: 'paused'; reason: 'focus' | 'mouse' | 'manual' };
 
 export function createCapture(engine: Engine, started: () => boolean) {
     const [state, setState] = createSignal<Playback>({ kind: 'stopped' });
@@ -11,7 +11,6 @@ export function createCapture(engine: Engine, started: () => boolean) {
     let maybeCanvas: HTMLCanvasElement | undefined;
     let intentional = false;
     let wasLocked = false;
-    let liveSince = 0;
     let pending = false;
     let requestResume = () => {
         void resume();
@@ -24,7 +23,7 @@ export function createCapture(engine: Engine, started: () => boolean) {
     }
     engine.onPointerRelease(releaseFromGame);
 
-    function pause(reason: 'focus' | 'mouse' | 'ready' | 'manual'): void {
+    function pause(reason: 'focus' | 'mouse' | 'manual'): void {
         if (!started() || engine.status().kind === 'error') return;
         releaseFromGame();
         engine.maybeGame()?._portWebSetPaused(1);
@@ -36,6 +35,7 @@ export function createCapture(engine: Engine, started: () => boolean) {
         const canvas = maybeCanvas;
         if (!game || !canvas || !started() || pending) return;
         pending = true;
+        const wasPaused = state().kind === 'paused';
         setNotice('');
         canvas.focus();
         try {
@@ -62,7 +62,12 @@ export function createCapture(engine: Engine, started: () => boolean) {
                 document.addEventListener('pointerlockerror', failed);
                 if (game._portWebCaptureMouse() < 0) failed();
             });
-            if (state().kind === 'paused' || document.hidden || !document.hasFocus()) {
+            const current = state();
+            if (current.kind === 'paused') {
+                pause(current.reason);
+                return;
+            }
+            if (document.hidden || !document.hasFocus()) {
                 pause('focus');
                 return;
             }
@@ -71,7 +76,11 @@ export function createCapture(engine: Engine, started: () => boolean) {
             setNotice(
                 error instanceof Error ? error.message : 'Mouse capture failed. Try Resume again.',
             );
-            pause('mouse');
+            const current = state();
+            if (current.kind === 'paused') pause(current.reason);
+            else if (document.hidden || !document.hasFocus()) pause('focus');
+            else if (wasPaused) pause('mouse');
+            else setState({ kind: 'mouse-free' });
         } finally {
             pending = false;
         }
@@ -121,7 +130,22 @@ export function createCapture(engine: Engine, started: () => boolean) {
         canvas.addEventListener(
             'click',
             () => {
-                if (state().kind === 'paused') requestResume();
+                if (state().kind === 'paused' || state().kind === 'mouse-free') requestResume();
+            },
+            listen,
+        );
+        canvas.addEventListener(
+            'keydown',
+            (event) => {
+                if (
+                    event.repeat ||
+                    event.altKey ||
+                    event.ctrlKey ||
+                    event.metaKey ||
+                    ['Escape', 'F2', 'p', 'P'].includes(event.key)
+                )
+                    return;
+                if (state().kind === 'mouse-free') requestResume();
             },
             listen,
         );
@@ -138,13 +162,13 @@ export function createCapture(engine: Engine, started: () => boolean) {
             ) {
                 const live = game._portWebControlsLive();
                 if (!live) {
-                    liveSince = 0;
                     setState({ kind: game._portWebGetGfxTasks() > 0 ? 'menu' : 'starting' });
                     if (document.pointerLockElement === canvas) releaseFromGame();
                 } else if (document.pointerLockElement === canvas) setState({ kind: 'playing' });
                 else {
-                    liveSince ||= performance.now();
-                    if (performance.now() - liveSince > 100) pause('ready');
+                    // Arriving from a cutscene/watch is not focus loss. If the
+                    // browser wants a capture gesture, keep keyboard play live.
+                    setState({ kind: 'mouse-free' });
                 }
             }
             frame = requestAnimationFrame(monitor);

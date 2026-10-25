@@ -2,13 +2,14 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 if [[ $# -lt 2 || $# -gt 3 ]]; then
-    printf 'Usage: linux-game-audit.sh local-rom output-directory [launcher|room|exit|ui]\n' >&2
+    printf 'Usage: linux-game-audit.sh local-rom output-directory [launcher|room|exit|control|ui]\n' >&2
     exit 1
 fi
 case "${3:-launcher}" in
     launcher) audit=tools/launcher-game-audit.mjs ;;
     room) audit=tools/room-game-audit.mjs ;;
     exit) audit=tools/room-exit-audit.mjs ;;
+    control) audit=tools/control-transition-audit.mjs ;;
     ui) audit=tools/room-audit.mjs ;;
     *) printf 'Unknown browser audit mode\n' >&2; exit 1 ;;
 esac
