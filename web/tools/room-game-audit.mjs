@@ -5,6 +5,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { launchAuditBrowser } from './browser-choice.mjs';
 import { observeAudio, readAudio } from './audio-observer.mjs';
+import { checkRoomGameplay } from './room-gameplay-check.mjs';
 
 const [romPath, outputPath = '../build/web-room/game', origin = 'http://127.0.0.1:4176'] =
     process.argv.slice(2);
@@ -12,7 +13,12 @@ if (!romPath) throw new Error('Usage: room-game-audit.mjs local-rom [private-out
 const output = resolve(outputPath);
 await mkdir(output, { recursive: true });
 const { browser } = await launchAuditBrowser();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const reduced = process.env.MIDAS_REDUCED_MOTION === '1';
+const gameplay = process.env.MIDAS_ROOM_GAMEPLAY === '1';
+const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    reducedMotion: reduced ? 'reduce' : 'no-preference',
+});
 const page = await context.newPage();
 await page.addInitScript(observeAudio);
 const errors = [];
@@ -39,25 +45,37 @@ async function waitForGame() {
 try {
     await page.goto(origin);
     await expect(page.locator('.room-canvas')).toBeVisible();
+    await expect(page.locator('.room-canvas')).toHaveAttribute('data-room-state', 'ready', {
+        timeout: 60_000,
+    });
+    const roomCanvas = await page.locator('.room-canvas').elementHandle();
     const canvas = await page.locator('#canvas').elementHandle();
     await page.getByRole('button', { name: 'Insert GoldenEye cartridge' }).focus();
     await page.keyboard.press('Enter');
     await page.locator('.rom-dialog input[type=file]').setInputFiles(resolve(romPath));
-    await expect(page.locator('.room-layer')).toHaveAttribute('data-phase', 'inserting');
-    await page.waitForTimeout(600);
-    await page.screenshot({ path: resolve(output, 'inserting.png') });
-    await expect(page.locator('.room-layer')).toHaveAttribute('data-phase', 'flying', {
-        timeout: 60_000,
-    });
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: resolve(output, 'flying.png') });
+    if (!reduced) {
+        await expect(page.locator('.room-layer')).toHaveAttribute('data-phase', 'inserting');
+        await page.waitForTimeout(600);
+        await page.screenshot({ path: resolve(output, 'inserting.png') });
+        await expect(page.locator('.room-layer')).toHaveAttribute('data-phase', 'flying', {
+            timeout: 60_000,
+        });
+        await page.waitForTimeout(500);
+        await page.screenshot({ path: resolve(output, 'flying.png') });
+    }
     await waitForGame();
+    assert.ok(
+        await roomCanvas.evaluate((element) => element.getContext('webgl2').isContextLost()),
+        'Room GPU context survived handoff',
+    );
     assert.ok(await canvas.evaluate((element) => element === document.querySelector('#canvas')));
     await page.getByRole('button', { name: 'Resume game' }).click();
     // A native menu gesture also unlocks browser audio after the cinematic.
     await page.keyboard.press('Enter', { delay: 150 });
     await page.waitForTimeout(1500);
-    const audio = await page.evaluate(readAudio);
+    const audio = gameplay
+        ? await checkRoomGameplay(page, context, output)
+        : await page.evaluate(readAudio);
     assert.ok(
         audio.some(
             (sample) =>
@@ -96,6 +114,8 @@ try {
             {
                 checks: 'insertion, flight, stable canvas, actual game/audio, durable reload, physical returning power switch',
                 audio,
+                reduced,
+                gameplay,
                 errors,
             },
             null,

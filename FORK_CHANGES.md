@@ -1230,8 +1230,8 @@ syntax validation passed. No game rebuild or render regeneration was needed.
 
 ### FORK-025 — Immersive browser room
 
-**Status:** Working local first slice on `codex/immersive-web-room`; final prop
-fidelity and broader compatibility/publication remain in progress.
+**Status:** Refined desktop room and cinematic are locally implemented and
+verified on `codex/immersive-web-room`; publication is in progress.
 
 The user requested a canvas-only initial experience with realistic room props,
 a CRT, rotating cartridge ROM selection and an animated insertion/power/TV
@@ -1252,7 +1252,21 @@ Solid launcher without remounting the game canvas; Alt+Enter requests fullscreen
 on the shared container. Errors/save failures reopen controls. Room rendering
 pauses while hidden or covered and is disposed after game graphics begin.
 Reduced motion suppresses idle movement/flicker and substitutes a short fade.
-The console/CRT are documented stand-ins, not the downloaded final candidates.
+The initial `props.ts` box stand-ins are superseded by original shaped prop
+modules: `console.ts`, `cartridge.ts`, `controller.ts` and `television.ts`.
+Recessed ports/switches/vents, shell profiles, curved reflective CRT glass and
+deterministic material grain improve fidelity without downloading the candidate
+models. The authenticated console candidate is optional; these are original
+reconstructions for the preview, not scans/exact industrial replicas. Native
+GLSL CRT effects include restrained tracking/noise, scanlines and a power-on
+phosphor line. Reduced motion disables those temporal effects. `cinematic.ts`
+aligns the cartridge over the slot before descent and eases the TV approach;
+the room crossfades only after game graphics begin. Idle room drawing is capped
+at 30 fps, static geometry is batched without absorbing interactive/LED parts,
+and stationary shadows are reused. Tests cover transform preservation and the
+keyframe endpoints. Context/chunk/image failures retain the standard launcher.
+Sustained slow room frames reduce its pixel ratio to 75%, then 50%, with smaller
+shadows; isolated hitches and the game renderer/settings are unaffected.
 
 The user's later artwork request supersedes the original text-only cartridge
 label. Their supplied AVIF is copied unchanged to
@@ -1260,7 +1274,12 @@ label. Their supplied AVIF is copied unchanged to
 printed label. [Artwork provenance](web/src/room/ARTWORK.md) records the source,
 size, hash and explicit user request. It is not ROM-extracted data. Site assembly
 includes Three.js/artwork notices, and `tools/room-assets.ts` adds only this named,
-size/hash-checked image to the exact publication allowlist.
+size/hash-checked image to the exact publication allowlist. A lossless PNG copy
+with identical decoded pixels is also explicitly hashed/allowlisted for backends
+without AVIF decoding (observed in Windows WebKit); capable browsers use AVIF.
+A lazy scene chunk
+keeps Three.js out of the initial launcher bundle; `tools/frontend-files.ts`
+validates the Vite chunk graph, with tests for traversal/non-code/dangling paths.
 
 New ROM-free scene and private actual-ROM audits cover viewport/controls,
 selection, insertion/flight, cached-cartridge power startup and stable saves;
@@ -1270,9 +1289,17 @@ tests, scoped formatting and assembly/allowlist pass. Edge and Chrome passed the
 ROM-free room checks; Edge passed actual-ROM insertion/handoff/audio/reload/power
 startup. The retained launcher's full Dam audio/capture/focus/watch/campaign/profile/
 settings/backup regression passed in Edge. Private captures stay in build/.
-No native game/render source or ROM storage identity changed. Final prop assets,
-cinematic polish, Firefox/Safari scene validation and publication remain tracked
-in WEB-008 through WEB-010; Safari retains its experimental status.
+The refined scene also passes actual-ROM insertion/flight/audio/reload/power
+startup in Chrome and isolated Linux Firefox, including verified room GPU-context
+release. The initial renderer had 307 draws/177,510 triangles; batching/reduced
+subdivision brought the tested scene to 86/52,710. An isolated Edge sample reached
+28 fps at the intentional 30 fps idle cap, with about 1.2 ms average JS render
+submission after warm-up; this is software-host evidence, not a hardware promise.
+The initial launcher is about 98 kB JS (35 kB gzip) plus a lazy 603 kB scene
+(154 kB gzip), versus the original single 654 kB bundle. Vite's scene-chunk size
+advisory remains visible. Native game/render source and ROM storage identity
+are unchanged. WEB-008 through WEB-010 record remaining verification/publication;
+Safari retains its experimental status.
 
 ### FORK-024 — Browser target plan and portability groundwork
 

@@ -73,12 +73,12 @@
 .room-layer[hidden] {
     display: none;
 }
-.room-layer[data-phase='complete'] {
+.room-layer[data-revealing='true'] {
     opacity: 0;
-    transition: opacity 0.2s;
+    transition: opacity 0.35s;
 }
 @media (prefers-reduced-motion: reduce) {
-    .room-layer:is([data-phase='flying'], [data-phase='complete']) {
+    .room-layer[data-revealing='true'] {
         opacity: 0;
         transition: opacity 0.16s !important;
     }

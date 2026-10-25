@@ -74,6 +74,13 @@ If an approved model download requires login, record that dependency and use an
 explicitly documented original procedural stand-in to prove the interaction.
 Do not claim that the stand-in is the downloaded candidate or final prop art.
 
+The continuation refines the original reconstruction into the desktop preview's
+shipped props: shaped console/cartridge shells, detailed controls, a controller,
+curved CRT glass and generated material grain. The authenticated candidate is an
+optional future replacement, not a release dependency. This choice avoids
+shipping the unsuitable flat-TV candidate and keeps all geometry reproducible;
+the result is identified as an original model rather than a scan/exact replica.
+
 ## Milestones and acceptance
 
 1. WEB-007: persist this plan; introduce the viewport/controls architecture,

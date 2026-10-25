@@ -24,6 +24,7 @@ const types = {
     '.html': 'text/html',
     '.txt': 'text/plain',
     '.avif': 'image/avif',
+    '.png': 'image/png',
 };
 const server = createServer(async (request, response) => {
     try {

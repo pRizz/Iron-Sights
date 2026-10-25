@@ -9,7 +9,7 @@
     "build": "bun tools/build-site.ts",
     "verify:site": "bun tools/verify-site.ts",
     "typecheck": "tsc --noEmit",
-    "test": "bun test src tools/runtime-policy.test.ts",
+    "test": "bun test src tools/runtime-policy.test.ts tools/frontend-files.test.ts",
     "audit:runtime": "node tools/runtime-audit.mjs",
     "audit:menus": "node tools/menu-audit.mjs",
     "audit:launcher": "node tools/launcher-game-audit.mjs",

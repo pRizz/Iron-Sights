@@ -5,6 +5,18 @@ requested its GoldenEye label artwork on the model, superseding the original
 text-only placeholder decision. The file is copied unchanged to
 `web/public/room/cartridge-art.avif`.
 
+Browsers without AVIF decoding retry `cartridge-art.png`, a lossless format
+conversion of that source: 588,603 bytes, SHA-256
+`5325d67f6436c6e350c76d436b6de1f976a2209077e97f31c13022f695688ca9`.
+Decoded RGBA bytes were compared and are identical. It uses the same UVs/mask;
+supported browsers fetch only the smaller AVIF. The fallback is explicitly
+allowlisted/hashed and is not an AI-generated or repainted version of the image.
+Regenerate with Pillow's AVIF decoder from the checked-in source:
+
+```sh
+python -c 'from PIL import Image; Image.open("web/public/room/cartridge-art.avif").save("web/public/room/cartridge-art.png")'
+```
+
 Original filename:
 `GoldenEye-007-Games-Cartridge-Card-for-N64-US-Version_895eb79e-2b52-419d-a398-49f4dad0f55d.08de6c96b98c0ceafb207635563a4e86.avif`.
 

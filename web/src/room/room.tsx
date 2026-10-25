@@ -2,7 +2,7 @@ import { createEffect, createSignal, onCleanup, onMount, type Accessor } from 's
 import type { Engine } from '../engine';
 import type { RomManager } from '../rom-manager';
 import { advanceRoom, roomAction, type RoomFlow } from './flow';
-import { createRoomScene, type RoomTarget } from './scene';
+import type { createRoomScene, RoomTarget } from './scene';
 import { RomDialog } from './rom-dialog';
 
 type Props = {
@@ -15,6 +15,7 @@ type Props = {
     finish: () => void;
     hint: () => void;
     notify: (message: string) => void;
+    unavailable: () => void;
 };
 
 export function Room(props: Props) {
@@ -23,6 +24,7 @@ export function Room(props: Props) {
     const [hovered, setHovered] = createSignal('');
     const [selecting, setSelecting] = createSignal(false);
     const [dragging, setDragging] = createSignal(false);
+    const [revealing, setRevealing] = createSignal(false);
     let canvas!: HTMLCanvasElement;
     let dialog!: HTMLDialogElement;
     let maybeScene: ReturnType<typeof createRoomScene> | undefined;
@@ -96,47 +98,85 @@ export function Room(props: Props) {
         const motion = matchMedia('(prefers-reduced-motion: reduce)');
         let frame = 0;
         let previous = performance.now();
-        try {
-            maybeScene = createRoomScene(canvas);
-        } catch {
-            props.notify('The 3D room is unavailable. You can use the standard launcher below.');
-            props.openControls();
-            return;
-        }
+        let maybeRevealTimer: ReturnType<typeof setTimeout> | undefined;
+        let loadingScene = false;
+        canvas.dataset.roomState = 'loading';
         const contextLost = (event: Event) => {
             event.preventDefault();
             if (disposed) return;
             props.notify(
                 'The room lost its graphics context. The standard launcher remains available.',
             );
-            props.openControls();
+            props.unavailable();
         };
         canvas.addEventListener('webglcontextlost', contextLost);
         const render = (now: number) => {
+            const idleScene = ['empty', 'inserted', 'waiting'].includes(flow().phase);
+            if ((idleScene || motion.matches) && now - previous < 1000 / 30) {
+                frame = requestAnimationFrame(render);
+                return;
+            }
             const delta = Math.max(0, Math.min((now - previous) / 1000, 0.1));
+            const frameMS = now - previous;
             previous = now;
             if (!props.controls() && !document.hidden && !dialog.open) {
                 const next = advanceRoom(flow(), delta, props.ready(), motion.matches);
                 setFlow(next);
-                maybeScene?.render(next, delta, motion.matches, label());
+                try {
+                    maybeScene?.render(next, delta, motion.matches, label(), frameMS);
+                } catch {
+                    props.notify(
+                        'The room could not render. The standard launcher remains available.',
+                    );
+                    props.unavailable();
+                    return;
+                }
                 if (next.phase === 'complete' && !entering) {
                     entering = true;
                     void props.play();
                 }
                 if (entering && (props.engine.maybeGame()?._portWebGetGfxTasks() ?? 0) > 2) {
-                    props.finish();
+                    setRevealing(true);
+                    maybeRevealTimer = setTimeout(props.finish, motion.matches ? 180 : 360);
                     return;
                 }
             }
             frame = requestAnimationFrame(render);
         };
-        frame = requestAnimationFrame(render);
         onCleanup(() => {
             disposed = true;
             cancelAnimationFrame(frame);
+            clearTimeout(maybeRevealTimer);
             canvas.removeEventListener('webglcontextlost', contextLost);
             maybeScene?.dispose();
             maybeScene = undefined;
+        });
+        const loadScene = () => {
+            if (loadingScene || maybeScene || disposed) return;
+            loadingScene = true;
+            void import('./scene')
+                .then((module) => {
+                    if (disposed) return;
+                    if (props.controls()) {
+                        loadingScene = false;
+                        return;
+                    }
+                    maybeScene = module.createRoomScene(canvas);
+                    canvas.dataset.roomState = 'ready';
+                    previous = performance.now();
+                    frame = requestAnimationFrame(render);
+                })
+                .catch(() => {
+                    if (disposed) return;
+                    canvas.dataset.roomState = 'failed';
+                    props.notify(
+                        'The 3D room is unavailable. You can use the standard launcher below.',
+                    );
+                    props.unavailable();
+                });
+        };
+        createEffect(() => {
+            if (!props.controls()) loadScene();
         });
     });
 
@@ -145,6 +185,7 @@ export function Room(props: Props) {
             class="room-layer"
             hidden={props.controls()}
             data-phase={flow().phase}
+            data-revealing={revealing()}
             classList={{ 'room-dragging': dragging() }}
             onDragOver={(event) => {
                 event.preventDefault();

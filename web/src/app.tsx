@@ -16,6 +16,7 @@ export function App() {
     const [controls, setControls] = createSignal(false);
     const [entered, setEntered] = createSignal(false);
     const [hint, setHint] = createSignal(false);
+    const [roomFailed, setRoomFailed] = createSignal(false);
     const capture = createCapture(engine, started);
     const [action, setAction] = createSignal('');
     const [busy, setBusy] = createSignal(false);
@@ -29,6 +30,7 @@ export function App() {
     let maybeHintTimer: ReturnType<typeof setTimeout> | undefined;
     const ready = () => engine.status().kind === 'ready' && rom.status().kind === 'ready';
     const build = () => engine.maybeManifest()?.build;
+    const canCloseControls = () => engine.status().kind !== 'error' && (entered() || !roomFailed());
 
     function openControls(): void {
         capture.pause('manual');
@@ -37,6 +39,7 @@ export function App() {
     }
 
     function closeControls(): void {
+        if (!canCloseControls()) return;
         setControls(false);
         requestAnimationFrame(() => {
             window.dispatchEvent(new Event('resize'));
@@ -46,7 +49,8 @@ export function App() {
         });
     }
 
-    function showHint(): void {
+    function showHint(maybeMessage?: string): void {
+        setAction(maybeMessage ?? '');
         setHint(true);
         clearTimeout(maybeHintTimer);
         maybeHintTimer = setTimeout(() => setHint(false), 9000);
@@ -192,7 +196,7 @@ export function App() {
             if (document.fullscreenElement) await document.exitFullscreen();
             else await experience.requestFullscreen();
         } catch {
-            setAction('Fullscreen was refused. You can continue in the page.');
+            showHint('Fullscreen was refused. You can continue in the page.');
         }
     }
 
@@ -382,6 +386,11 @@ export function App() {
                     play={() => play(true)}
                     hint={showHint}
                     notify={setAction}
+                    unavailable={() => {
+                        setRoomFailed(true);
+                        if (started()) setEntered(true);
+                        openControls();
+                    }}
                     finish={() => {
                         setEntered(true);
                         showHint();
@@ -389,13 +398,20 @@ export function App() {
                 />
             </Show>
             <Show when={controls()}>
-                <button class="controls-close" onClick={closeControls}>
-                    Return to {started() ? 'game' : 'room'} · F2
+                <button
+                    class="controls-close"
+                    disabled={!canCloseControls()}
+                    onClick={closeControls}
+                >
+                    {canCloseControls()
+                        ? `Return to ${started() ? 'game' : 'room'} · F2`
+                        : 'Standard launcher'}
                 </button>
             </Show>
             <Show when={hint() && !controls()}>
                 <p class="experience-hint" role="status">
-                    Alt+Enter fullscreen · P watch · F2 controls · Escape releases the mouse
+                    {action() ||
+                        'Alt+Enter fullscreen · P watch · F2 controls · Escape may exit fullscreen'}
                 </p>
             </Show>
         </div>

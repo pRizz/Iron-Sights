@@ -7,6 +7,29 @@ The [milestone tracker](web_target_progress.md) owns completion and handoff stat
 
 ## Browser evidence
 
+The immersive-room revision adds a separately tested Three.js entrypoint. Edge
+and Chrome pass its first/repeat ROM, insertion/flight, actual-game audio, save
+reload and returning power switch. Linux Firefox passes the same room/game flow
+under the isolated audio host. Edge additionally reaches normal Dam after the
+cinematic and verifies movement, P watch and focus/capture recovery; Chrome
+passes the actual reduced-motion/fade route. The room GPU context is released
+after handoff, while the game canvas stays mounted.
+
+Room-only audits pass in Edge, Chrome, Linux Firefox/Chromium and Windows
+WebKit, including viewport, file validation, F2 controls, fullscreen, portrait,
+reduced motion, context/chunk failure and forced PNG retry. This WebKit runner
+cannot decode the supplied AVIF and uses the lossless PNG fallback. It still
+does not establish actual macOS Safari or WebKit gameplay/audio acceptance.
+
+Idle room drawing is capped at 30 fps and can reduce its own pixel ratio to
+75%/50% after sustained slow frames. A Windows Chrome/SwiftShader 1440x900 sample
+measured 28 fps at full scale. Resource-constrained Linux software samples were
+much slower (one Firefox run measured 5.3 fps at 75% scale); they validate
+functionality, not a hardware performance target. Keep browser acceleration
+enabled. The game renderer/settings are unaffected by this room-only policy.
+Private captures and metrics are under `build/web-room`; no hardware-GPU timing
+or actual macOS testing is claimed.
+
 | Browser                 | Environment                                      | Evidence                                                                                                                                                                                           |
 | ----------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Edge 156                | Windows, headless SwiftShader                    | Full real-ROM launcher, campaign/profile/settings reload, actual backup restore, capture/audio/focus/watch; eight representative mission smokes; live deployment/update preservation.              |

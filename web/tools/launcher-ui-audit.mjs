@@ -12,6 +12,7 @@ await context.addInitScript(() => {
     navigator.storage.persisted = async () => false;
 });
 const page = await context.newPage();
+let diagnosticPage = page;
 const errors = [];
 context.on('page', (target) => target.on('pageerror', (error) => errors.push(String(error))));
 page.on('pageerror', (error) => errors.push(String(error)));
@@ -131,6 +132,7 @@ try {
     await page.getByRole('button', { name: 'Exit fullscreen', exact: true }).click();
     await page.waitForFunction(() => !document.fullscreenElement);
     const second = await context.newPage();
+    diagnosticPage = second;
     await second.goto(origin);
     await second.getByRole('alert').filter({ hasText: 'Another Project Midas tab' }).waitFor();
     await page.close();
@@ -189,12 +191,13 @@ try {
 } catch (error) {
     console.error(
         'Launcher failure state:',
-        await page
+        await diagnosticPage
             .evaluate(() => ({
                 alerts: [...document.querySelectorAll('[role="alert"]')].map(
                     (element) => element.textContent,
                 ),
                 status: document.querySelector('.launch-bar')?.textContent,
+                log: document.querySelector('pre')?.textContent,
             }))
             .catch(() => null),
     );

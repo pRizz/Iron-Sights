@@ -1,12 +1,12 @@
 // ROM-free immersive-entrypoint checks. Screenshots stay in ignored build/.
 import assert from 'node:assert/strict';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect } from '@playwright/test';
 import { launchAuditBrowser } from './browser-choice.mjs';
 
 const origin = process.argv[2] || 'http://127.0.0.1:4176';
-const output = resolve('../build/web-room/audit');
+const output = resolve(process.env.MIDAS_AUDIT_OUTPUT || '../build/web-room/audit');
 await mkdir(output, { recursive: true });
 const { browser } = await launchAuditBrowser();
 try {
@@ -16,16 +16,52 @@ try {
     page.on('pageerror', (error) => errors.push(String(error)));
     await page.goto(origin);
     await expect(page.locator('.room-canvas')).toBeVisible();
+    await expect(page.locator('.room-canvas')).toHaveAttribute('data-room-state', 'ready', {
+        timeout: 60_000,
+    });
+    await expect(page.locator('.room-canvas')).toHaveAttribute(
+        'data-room-artwork',
+        /^(avif|png)$/,
+        { timeout: 60_000 },
+    );
     const imageSize = await page.evaluate(async () => {
-        const response = await fetch(new URL('room/cartridge-art.avif', document.baseURI));
+        const canvas = document.querySelector('.room-canvas');
+        const format = canvas.dataset.roomArtwork;
+        const response = await fetch(new URL('room/cartridge-art.' + format, document.baseURI));
         if (!response.ok) throw new Error('Cartridge artwork did not load');
-        const image = await createImageBitmap(await response.blob());
-        const size = [image.width, image.height];
-        image.close();
+        const image = new Image();
+        const url = URL.createObjectURL(await response.blob());
+        image.src = url;
+        await image.decode();
+        const size = [image.naturalWidth, image.naturalHeight];
+        URL.revokeObjectURL(url);
         return size;
     });
     assert.deepEqual(imageSize, [1000, 1000]);
     await page.waitForTimeout(2000);
+    await page.waitForFunction(
+        () => Number(document.querySelector('.room-canvas').dataset.roomFrames) >= 12,
+        undefined,
+        { timeout: 60_000 },
+    );
+    const firstFrame = await page.locator('.room-canvas').evaluate((element) => ({
+        frames: Number(element.dataset.roomFrames),
+        at: performance.now(),
+    }));
+    await page.waitForTimeout(2000);
+    const measured = await page.locator('.room-canvas').evaluate((element) => ({
+        frames: Number(element.dataset.roomFrames),
+        submissionMS: Number(element.dataset.roomSubmitMs),
+        drawCalls: Number(element.dataset.roomDrawCalls),
+        triangles: Number(element.dataset.roomTriangles),
+        scale: Number(element.dataset.roomScale),
+        at: performance.now(),
+    }));
+    const idleFPS = ((measured.frames - firstFrame.frames) * 1000) / (measured.at - firstFrame.at);
+    await writeFile(
+        resolve(output, 'metrics.json'),
+        JSON.stringify({ ...measured, idleFPS }, null, 2),
+    );
     await expect(page.locator('.site-header')).toBeHidden();
     const canvas = await page.locator('#canvas').elementHandle();
     assert.ok(canvas);
@@ -53,12 +89,26 @@ try {
     await page.keyboard.press('F2');
     await expect(page.locator('.site-header')).toBeVisible();
     await expect(page.locator('.room-layer')).toBeHidden();
+    const beforePause = await page.locator('.room-canvas').getAttribute('data-room-frames');
+    await page.waitForTimeout(250);
+    assert.equal(await page.locator('.room-canvas').getAttribute('data-room-frames'), beforePause);
     await expect(page.getByRole('button', { name: 'Download save backup' })).toBeEnabled({
         timeout: 60_000,
     });
     assert.ok(await canvas.evaluate((element) => element === document.querySelector('#canvas')));
     await page.keyboard.press('F2');
     await expect(page.locator('.room-canvas')).toBeVisible();
+    await page.evaluate(() => {
+        globalThis.restoreFullscreenRequest = () => {
+            Element.prototype.requestFullscreen = original;
+        };
+        const original = Element.prototype.requestFullscreen;
+        Element.prototype.requestFullscreen = () =>
+            Promise.reject(new DOMException('Synthetic refusal', 'NotAllowedError'));
+    });
+    await page.keyboard.press('Alt+Enter');
+    await expect(page.locator('.experience-hint')).toContainText('Fullscreen was refused');
+    await page.evaluate(() => globalThis.restoreFullscreenRequest());
     await page.keyboard.press('Alt+Enter');
     await page.waitForFunction(() => !!document.fullscreenElement);
     await page.keyboard.press('Alt+Enter');
@@ -77,6 +127,26 @@ try {
         'Room: viewport, keyboard ROM dialog, invalid ROM, stable canvas/F2, fullscreen, portrait, reduced motion and context-loss fallback passed',
     );
     await context.close();
+    const fallbackContext = await browser.newContext();
+    const fallback = await fallbackContext.newPage();
+    await fallback.route('**/assets/scene-*.js', (route) => route.abort());
+    await fallback.goto(origin);
+    await expect(fallback.locator('.site-header')).toBeVisible({ timeout: 60_000 });
+    await expect(fallback.locator('.controls-close')).toBeDisabled();
+    await expect(
+        fallback.getByRole('status').filter({ hasText: '3D room is unavailable' }),
+    ).toBeVisible();
+    await fallbackContext.close();
+    const imageFallbackContext = await browser.newContext();
+    const imageFallback = await imageFallbackContext.newPage();
+    await imageFallback.route('**/room/cartridge-art.avif', (route) => route.abort());
+    await imageFallback.goto(origin);
+    await expect(imageFallback.locator('.room-canvas')).toHaveAttribute(
+        'data-room-artwork',
+        'png',
+        { timeout: 60_000 },
+    );
+    await imageFallbackContext.close();
 } finally {
     await browser.close();
 }

@@ -10,7 +10,7 @@ The immersive room revision is tracked separately in the
 Its entrypoint fills the viewport; F2 opens the retained launcher, saves and
 About controls, Alt+Enter toggles fullscreen, and P remains the native watch.
 See [room implementation and prop provenance](src/room/README.md) for local
-checks, candidate download dependencies and procedural stand-ins.
+checks, original prop models and candidate-source decisions.
 See the [runtime runbook](../scripts/port/web_runtime.md) and
 [milestone tracker](../scripts/port/web_target_progress.md).
 

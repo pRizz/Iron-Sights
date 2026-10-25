@@ -12,7 +12,8 @@ export function box(
     material: THREE.Material,
     radius = 0.03,
 ) {
-    const mesh = new THREE.Mesh(new RoundedBoxGeometry(...dimensions, 3, radius), material);
+    const segments = Math.min(...dimensions) > 0.1 ? 2 : 1;
+    const mesh = new THREE.Mesh(new RoundedBoxGeometry(...dimensions, segments, radius), material);
     mesh.position.set(...position);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -47,7 +48,7 @@ export function disposeScene(scene: THREE.Scene): void {
     const materials = new Set<THREE.Material>();
     const textures = new Set<THREE.Texture>();
     scene.traverse((object) => {
-        if (!(object instanceof THREE.Mesh)) return;
+        if (!(object instanceof THREE.Mesh) && !(object instanceof THREE.Sprite)) return;
         geometries.add(object.geometry);
         for (const material of Array.isArray(object.material)
             ? object.material
@@ -55,6 +56,9 @@ export function disposeScene(scene: THREE.Scene): void {
             materials.add(material);
             for (const value of Object.values(material))
                 if (value instanceof THREE.Texture) textures.add(value);
+            if (material instanceof THREE.ShaderMaterial)
+                for (const uniform of Object.values(material.uniforms))
+                    if (uniform.value instanceof THREE.Texture) textures.add(uniform.value);
         }
     });
     for (const geometry of geometries) geometry.dispose();
