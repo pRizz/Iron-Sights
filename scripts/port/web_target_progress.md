@@ -675,8 +675,23 @@ centered-lock/retry and room/fallback checks. Chrome reduced-motion cutscene/
 control/watch/focus acceptance also passes (`control-reduced-chrome`); the final
 startup audit proves all listed programs finish before graphics and loading stays
 visible until then (`final-startup-proof`). The ROM-free feedback audit is part
-of Pages CI. Final direct-main CI and live-site checks are next before marking
-this follow-up published. Safari remains experimental.
+of Pages CI. Safari remains experimental.
+
+**Startup publication acceptance:** Direct-main source
+`ce782cb561ee121daa27171df21028b0779de58c` passed Pages `40223366320`, Windows
+builds/provenance `40223366337` and Bright Builds `40223366331`. The live manifest
+reports clean Actions runtime `653be0dbfb70c828`. Public Wasm is 3,920,098 bytes,
+SHA-256 `49c91ddd60012af64578dd6397734f7a8a62d527b5b20b7ac5fc23005a0f269c`;
+size/digest/MIME/validation, frontend chunks, models and artwork match the artifact.
+Live Edge passes download/compilation/F2, centered other-tab warning and retry.
+Live Chrome verifies first and remembered-ROM startup: every listed program is
+prepared before graphics, and loading stays visible throughout initialization.
+Live Edge also passes reduced-motion F2 interruption/Resume startup, a complete
+natural Dam cutscene/control/watch transition without false pause, and capture/
+real focus/Escape recovery. No page errors occurred. Evidence is private in
+`build/web-startup/published-ui`, `published-startup`, `published-control` and
+`build/web-room/public-artifact-report.json`. The startup/feedback follow-up is
+complete; preserve these contracts in later changes.
 
 **Requested refinement:** Local acceptance passes with 104 unit tests, strict
 TypeScript, assembly/allowlist and deterministic model regeneration. The model

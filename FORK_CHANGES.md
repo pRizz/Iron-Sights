@@ -1243,8 +1243,8 @@ verified room refinements in `ed459f2`. PR #2 was closed rather than merged.
 
 ### FORK-025 — Immersive browser room
 
-Startup/feedback follow-up is implemented and locally verified on main; final
-CI/publication acceptance follows in WEB-010. `startup-screen.tsx`/`startup.css`
+Startup/feedback follow-up is published from direct-main source `ce782cb`;
+CI/publication acceptance is recorded in WEB-010. `startup-screen.tsx`/`startup.css`
 show centered download/initialization feedback, actual download percentages and
 completed graphics-preparation progress; unknown work remains indeterminate.
 `engine.ts` paints before entering Wasm and keeps feedback until graphics begin.
@@ -1290,6 +1290,17 @@ compilation/F2, centered-lock/retry and room/fallback checks. Chrome also passes
 reduced-motion cutscene/control/watch/focus acceptance. The final startup audit
 asserts preparation finishes before graphics, with loading feedback throughout.
 No private captures or ROM data are added; Safari remains experimental.
+
+Source `ce782cb` passed Pages `40223366320`, Windows builds/provenance
+`40223366337` and Bright Builds `40223366331`, deploying clean runtime
+`653be0dbfb70c828`. Public Wasm size/digest/MIME, frontend chunks, models and
+artwork match the exact artifact. The live Edge UI audit passes progress/F2 and
+centered save-lock recovery; live Chrome traces prove preparation finishes before
+graphics and loading remains visible for both first and remembered-ROM startup.
+Live Edge also passes reduced-motion startup interruption/resume, the complete
+Dam cutscene/control/watch transition, capture and real focus/Escape pauses.
+Evidence is private in `build/web-startup/published-{ui,startup,control}` and
+`build/web-room/public-artifact-report.json`. This documentation records acceptance.
 
 **Status:** Refined desktop room and cinematic are implemented, verified and
 published on GitHub Pages. Safari remains experimental.

@@ -7,6 +7,19 @@ The [milestone tracker](web_target_progress.md) owns completion and handoff stat
 
 ## Browser evidence
 
+Startup/feedback source `ce782cb` is published with clean Actions provenance and
+verified Wasm/frontend/model/artwork hashes. Loading feedback covers download,
+compilation and real graphics-preparation counts, including remembered-ROM starts.
+The existing 87-program prewarm now finishes before visible logos; comparable
+Edge/SwiftShader cold samples improve from about 8-11 to 57-60 graphics fps during
+the initial logo sequence, with roughly seven seconds of cold work moved behind
+progress (0.92 s after cache warm-up). These are software-host measurements.
+The live site passes centered other-tab warning/retry, startup interruption/resume,
+first/cached startup feedback and the complete Dam cutscene/watch/control handoff
+without false pause. Actual focus/Escape pauses still work. Local Edge/Chrome,
+isolated Linux Firefox and Windows WebKit evidence is recorded in WEB-010;
+actual Safari remains experimental. The game canvas no longer has a gold outline.
+
 The lifecycle follow-up `ea804df` is published and verified against its clean
 Actions artifact. Edge and isolated Linux Firefox pass native Exit Game No/Yes,
 reverse TV flight, frozen frames/silent audio/released input, physical warm power
