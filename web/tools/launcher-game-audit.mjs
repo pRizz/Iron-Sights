@@ -46,8 +46,12 @@ async function backup(name) {
 try {
     await page.goto(origin);
     await page.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
+    await expect(page.getByRole('button', { name: 'Choose ROM', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Play', exact: true })).toHaveCount(0);
     await page.locator('#rom-file').setInputFiles(resolve(romPath));
     await page.getByText('✓ Remembered for next time').waitFor({ timeout: 60_000 });
+    await expect(page.getByRole('button', { name: 'Choose ROM', exact: true })).toHaveCount(0);
+    await expect(page.getByText('Drop it here, or choose a file to get started.')).toHaveCount(0);
     await page.evaluate(() => {
         globalThis.midasSawRomLogo = false;
         globalThis.midasSawNoGamepads = false;
@@ -63,7 +67,7 @@ try {
                 globalThis.midasSawNoGamepads = true;
         }).observe(log, { childList: true, subtree: true, characterData: true });
     });
-    await page.getByRole('button', { name: 'Play GoldenEye' }).click();
+    await page.getByRole('button', { name: 'Play', exact: true }).click();
     await page.waitForFunction(
         () => document.querySelector('pre').textContent.includes('frame 240'),
         undefined,
@@ -184,6 +188,9 @@ try {
     await expect(page.getByRole('button', { name: 'Play GoldenEye' })).toBeEnabled({
         timeout: 60_000,
     });
+    await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Choose ROM', exact: true })).toHaveCount(0);
+    await expect(page.getByText("Your ROM is loaded. Start when you're ready.")).toBeVisible();
     const second = await backup('after-reload.json');
     assert.deepEqual(
         second.files,
@@ -210,6 +217,8 @@ try {
     await page.getByText('The remembered ROM was removed. Saves are unchanged.').waitFor();
     await page.reload();
     await page.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
+    await expect(page.getByRole('button', { name: 'Choose ROM', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Play', exact: true })).toHaveCount(0);
     assert.ok(
         await page.getByRole('button', { name: 'Play GoldenEye' }).isDisabled(),
         'The forgotten ROM was loaded again',

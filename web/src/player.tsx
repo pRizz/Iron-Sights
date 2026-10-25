@@ -120,10 +120,26 @@ export function Player(props: PlayerProps) {
                                 ? 'Your mission is ready.'
                                 : 'Bring your GoldenEye ROM.'}
                         </h2>
-                        <p>Drop it here, or choose a file to get started.</p>
-                        <button class="file-button" onClick={() => props.chooseROM()}>
-                            Choose ROM <span aria-hidden="true">↗</span>
-                        </button>
+                        <Show
+                            when={rom.status().kind === 'ready'}
+                            fallback={
+                                <>
+                                    <p>Drop it here, or choose a file to get started.</p>
+                                    <button class="file-button" onClick={() => props.chooseROM()}>
+                                        Choose ROM <span aria-hidden="true">↗</span>
+                                    </button>
+                                </>
+                            }
+                        >
+                            <p>Your ROM is loaded. Start when you're ready.</p>
+                            <button
+                                class="file-button"
+                                disabled={!ready()}
+                                onClick={() => void props.play()}
+                            >
+                                Play <span aria-hidden="true">→</span>
+                            </button>
+                        </Show>
                         <small>Original US release · 12 MiB · .z64 / .v64 / .n64</small>
                     </div>
                 </Show>

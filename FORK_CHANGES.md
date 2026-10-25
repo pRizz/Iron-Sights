@@ -1301,6 +1301,14 @@ boundary tests. The backup format allowlists campaign EEPROM, profiles, device
 bindings, settings and custom controller layouts; it rejects ROMs, suspend
 images, traversal, duplicates, invalid sizes and checksum damage. The launcher
 now connects these adapters to actual game-file durability.
+The launcher's central action changes from Choose ROM to Play as soon as a
+selected or remembered ROM passes validation. Its copy confirms the ROM is
+loaded, and Play uses the same engine-readiness gate and startup handler as the
+lower launch bar. `web/src/player.tsx` owns this UI; the private
+`web/tools/launcher-game-audit.mjs` covers first selection, central-button startup,
+recall after refresh and returning to Choose ROM after removal. TypeScript,
+production assembly/allowlist, launcher UX and actual-ROM checks validate this
+follow-up; no game/render source changes are involved.
 The separate IndexedDB ROM adapter snapshots original byte order in a Blob;
 deleting it is independent of save files. A named Web Lock excludes a second
 save writer, and a serialized synchronization queue retains dirty revisions

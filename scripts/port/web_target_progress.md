@@ -270,8 +270,9 @@ The initial codec checkpoint exposed tests/typechecking/auditing without a
 frontend. The local build and accepted browser flows below supersede that
 limitation. Deployed-site acceptance remains WEB-005.
 
-**Next action:** Continue WEB-005 packaging and Pages deployment, then WEB-006's
-broader mission/browser compatibility and performance acceptance.
+**Next action:** Keep the validated-ROM and engine-readiness gates aligned across
+both Play controls when extending the launcher. Deployment and compatibility
+acceptance are recorded in the completed WEB-005/WEB-006 blocks below.
 
 **Session notes:**
 
@@ -291,6 +292,7 @@ broader mission/browser compatibility and performance acceptance.
   verifies the downloaded Wasm digest, and uses the game's generated build-info
   metadata rather than attributing an old binary to the current frontend HEAD.
   No Pages deployment exists yet; the compiled-logo follow-up remains WEB-005.
+
 - 2026-10-24 completion: the assembled site passed real-ROM launch/reload/removal,
   native campaign/profile/settings durability, normal-menu Dam startup, nonzero
   Web Audio, capture, focus pause/resume, watch release/recovery and independent
@@ -307,6 +309,19 @@ broader mission/browser compatibility and performance acceptance.
   Bright Builds checks passed. Static output is 86 kB JS / 49 kB CSS before gzip.
   No game/render source changed in this launcher slice, so the committed native
   gallery remains current. Commands are in `web/README.md`; deployment is next.
+
+- 2026-10-24 launcher follow-up: `web/src/player.tsx` replaces the central
+  Choose ROM action and drop instructions with Play and loaded-ROM copy after
+  validation, including remembered ROMs restored on refresh. Play stays disabled
+  until the engine is ready and uses the existing startup handler. The private
+  launcher audit now checks selection, central-button startup, remembered-ROM
+  refresh and the return to Choose ROM after forgetting/reloading. TypeScript,
+  scoped Prettier, production assembly/allowlist, Bright Builds and Edge launcher
+  UX checks passed. The Edge actual-ROM audit passed central Play startup,
+  remembered-ROM refresh/removal, campaign/profile/settings durability and Dam
+  audio/capture/focus/watch recovery with no page errors or upload requests.
+  The repeat-launch screenshot was reviewed; private evidence is under
+  `build/web-ui/central-play`. No engine or native render inputs changed.
 
 ## WEB-005 | 2026-10-24 | GitHub Pages deployment
 
