@@ -1228,6 +1228,15 @@ README content, checklist and root license preservation were checked. New
 user-owned rules docs passed the pinned GFM/frontmatter Markdown check; shell
 syntax validation passed. No game rebuild or render regeneration was needed.
 
+The owner's 2026-10-25 delivery preference is now recorded in the repo-local
+AGENTS/CONTRIBUTING guidance and `standards-overrides.md`: validated authorized
+work is committed and pushed directly to `main`, without creating a feature
+branch or PR by default. Explicit user requests and external requirements remain
+exceptions; PR templates/checklists apply only when a PR is needed. This changes
+the fork workflow, preserves normal checks/protections and leaves managed upstream
+files intact. The in-progress web refinement is moved to direct-main delivery;
+its existing PR is closed without using a PR merge.
+
 ### FORK-025 — Immersive browser room
 
 **Status:** Refined desktop room and cinematic are implemented, verified and

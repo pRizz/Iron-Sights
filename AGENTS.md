@@ -82,6 +82,12 @@ finishes, while keeping useful diagnostic logs and captures.
 
 ## Repo-Local Guidance
 
+- Default delivery is direct to `main`: sync remote state, complete the requested
+  work, run the relevant checks, then commit and push to `main`. Do not create a
+  feature branch or pull request by default. Use a PR only when the user requests
+  one or an external requirement makes it necessary, such as an upstream
+  contribution or branch protection. Preserve unrelated work and never bypass
+  protections or force-push to satisfy this preference.
 - Web target work follows the accepted [plan](scripts/port/web_target_plan.md) and
   [milestone progress](scripts/port/web_target_progress.md). Read both before
   resuming; update only the relevant stable milestone block with changes,
@@ -96,7 +102,7 @@ finishes, while keeping useful diagnostic logs and captures.
 - `.githooks/pre-commit` runs `bun scripts/bright-builds-check.ts all`, then staged gallery verification. Manual runs for installation, debugging or review are allowed; a commit hook rerun needs no separate confirmation.
 - Source changes use the relevant `scripts/port/test_*.sh` checks. Wardrobe/render changes require the arm contracts and gallery workflow above. Documentation/rules-only changes need no game rebuild or render regeneration.
 - Existing long files have a documented adoption baseline in `.bright-builds-rules-checks.tsv`; new source files remain checked. See `standards-overrides.md` before changing an exempt file.
-- Use the managed PR template together with [the preserved project checklist](scripts/port/project_pr_checklist.md), `CONTRIBUTING.md` and the fork inventory requirement.
+- When a PR is needed, use the managed PR template together with [the preserved project checklist](scripts/port/project_pr_checklist.md), `CONTRIBUTING.md` and the fork inventory requirement.
 - Standards maintenance and Windows setup: [Bright Builds workflow](scripts/port/bright_builds_rules.md). Managed file updates are reviewed manually and update `FORK_CHANGES.md`; unattended updates are disabled.
 
 <!-- bright-builds-rules-managed:begin -->

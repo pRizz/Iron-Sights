@@ -619,6 +619,11 @@ this remains software-host evidence. The launcher is about 100 kB JS (36 kB gzip
 the lazy scene 668 kB (172 kB gzip), plus 1,408,244 bytes of model GLBs. Vite's
 scene-size advisory remains. Final CI/publication acceptance follows.
 
+**Delivery correction, 2026-10-25:** The owner requested direct-to-main delivery.
+The rule is persisted in AGENTS/CONTRIBUTING and the local standards overrides.
+PR #2 was opened before that request; it is superseded by direct-main delivery
+of the verified commits, with normal push-triggered CI/Pages acceptance retained.
+
 **Completion:** Keyboard/reduced-motion/responsive/failure paths, production
 allowlist and browser verification, measured scene cost and verified deployment.
 

@@ -25,6 +25,12 @@ existing pre-commit hook also checks staged render references. Use the managed
 PR template with [the preserved project checklist](scripts/port/project_pr_checklist.md).
 See [installation and maintenance](scripts/port/bright_builds_rules.md).
 
+For authorized work in this fork, the default delivery is a validated commit
+pushed directly to `main`. Do not create a feature branch or pull request by
+default. Use a PR when the maintainer asks or an external requirement needs one;
+the template and preserved checklist apply in that case. Keep normal checks and
+fork inventory updates, preserve unrelated work and respect branch protections.
+
 Project Midas is a PC port of GE built with care: matching the original game where it matters, with every change tested in game. Contributions are welcome when they meet that bar. Please contribute here rather than starting a fork, so the work stays in one place.
 
 ## Already in progress

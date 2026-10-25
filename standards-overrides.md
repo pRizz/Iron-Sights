@@ -50,6 +50,19 @@ Auto-update is explicitly disabled. Every repository change must update
 managed-file commits do not maintain those local contracts. Use the documented
 manual status/update flow, review changes, update the inventory and run checks.
 
+## Direct-to-main delivery
+
+Standard: inherited contribution/PR guidance and repository delivery workflow.
+
+The owner requested direct-to-main delivery on 2026-10-25. For authorized work
+in this fork, sync first, implement and validate, then commit and push directly
+to `main`. Feature branches and PRs are not the default. Use them when explicitly
+requested or needed for an external requirement, including upstream contribution
+or branch protection. The managed PR template and preserved checklist apply only
+when a PR is actually needed. Keep normal verification, inventory, provenance and
+deployment checks; preserve unrelated work and do not bypass protections or
+force-push. This preference does not change the managed upstream files.
+
 ## Identity placement and optional skills
 
 Standard: the sidecar's owner-specific skill default and frontend identity guidance.
