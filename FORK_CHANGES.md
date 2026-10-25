@@ -1678,6 +1678,19 @@ lower launch bar. `web/src/player.tsx` owns this UI; the private
 recall after refresh and returning to Choose ROM after removal. TypeScript,
 production assembly/allowlist, launcher UX and actual-ROM checks validate this
 follow-up; no game/render source changes are involved.
+Both the launcher and room ROM inputs omit HTML `accept` filters: iOS Files can
+disable unregistered `.z64`/`.v64`/`.n64` extensions when a filter also includes a
+recognized extension such as `.bin`. Selection permits any file; the existing
+12 MiB size, N64 header/byte-order and normalized US-release SHA-256 checks
+remain authoritative before a ROM can be remembered or played. Save-backup JSON
+selection keeps its separate filter. The UI audits exercise both real chooser
+buttons, assert no `accept` attribute and verify invalid files still fail.
+Synthetic ROM tests also reject misleading `.z64` names across cloud MIME types.
+TypeScript, 122 unit tests, production assembly/allowlist and scoped formatting
+pass, as do the updated Edge launcher and desktop WebKit room audits.
+This fixes the site's picker restriction; actual iPhone/iCloud selection still
+requires device confirmation and does not imply mobile gameplay acceptance.
+
 The separate IndexedDB ROM adapter snapshots original byte order in a Blob;
 deleting it is independent of save files. A named Web Lock excludes a second
 save writer, and a serialized synchronization queue retains dirty revisions

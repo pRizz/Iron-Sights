@@ -413,12 +413,12 @@ export function App() {
                         </a>
                     </div>
                 </footer>
+                {/* Keep ROM selection unfiltered: iOS can disable unknown extensions. */}
                 <input
                     ref={romInput}
                     id="rom-file"
                     type="file"
                     hidden
-                    accept=".z64,.v64,.n64,.rom,.bin"
                     onChange={(event) => {
                         const maybeFile = event.currentTarget.files?.[0];
                         if (maybeFile) void rom.select(maybeFile);

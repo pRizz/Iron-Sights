@@ -113,7 +113,15 @@ try {
     await cartridge.focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('dialog', { name: 'Insert your GoldenEye ROM' })).toBeVisible();
-    await page.locator('.rom-dialog input[type=file]').setInputFiles({
+    const choosingRom = page.waitForEvent('filechooser');
+    await page.getByRole('dialog').getByRole('button', { name: 'Choose ROM', exact: true }).click();
+    const chooser = await choosingRom;
+    assert.equal(
+        await chooser.element().getAttribute('accept'),
+        null,
+        'Room ROM picker must allow unfamiliar iCloud file types',
+    );
+    await chooser.setFiles({
         name: 'invalid.z64',
         mimeType: 'application/octet-stream',
         buffer: Buffer.from('invalid'),

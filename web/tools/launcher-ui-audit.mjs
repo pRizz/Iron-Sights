@@ -44,6 +44,21 @@ try {
     await page.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
     const before = await download(page);
     assert.ok(await page.getByRole('button', { name: 'Play GoldenEye' }).isDisabled());
+    const choosingRom = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Choose ROM', exact: true }).click();
+    const chooser = await choosingRom;
+    assert.equal(
+        await chooser.element().getAttribute('accept'),
+        null,
+        'ROM picker must allow unfamiliar iCloud file types',
+    );
+    await chooser.setFiles({
+        name: 'unrelated.txt',
+        mimeType: 'text/plain',
+        buffer: Buffer.from('not a ROM'),
+    });
+    await page.getByRole('alert').filter({ hasText: 'different size' }).waitFor();
+    assert.ok(await page.getByRole('button', { name: 'Play GoldenEye' }).isDisabled());
     const transfer = await page.evaluateHandle(() => {
         const value = new DataTransfer();
         value.items.add(new File(['not a ROM'], 'wrong.z64'));

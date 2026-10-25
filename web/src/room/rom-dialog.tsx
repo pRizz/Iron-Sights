@@ -59,11 +59,11 @@ export function RomDialog(props: Props) {
             <button class="text-button" disabled={props.selecting()} onClick={() => dialog.close()}>
                 Back to the room
             </button>
+            {/* iOS Files may disable .z64 with an accept filter; validate the contents. */}
             <input
                 ref={input}
                 type="file"
                 hidden
-                accept=".z64,.v64,.n64,.rom,.bin"
                 onChange={(event) => {
                     const maybeFile = event.currentTarget.files?.[0];
                     if (maybeFile) void props.select(maybeFile);

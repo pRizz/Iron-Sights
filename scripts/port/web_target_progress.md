@@ -631,6 +631,21 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**iPhone ROM picker follow-up, 2026-10-25:** Removed extension-based HTML `accept`
+filters from both `web/src/app.tsx` and `web/src/room/rom-dialog.tsx`. iOS Files
+can disable an unfamiliar `.z64` despite its presence in that list. Both pickers
+now allow selection and defer to the unchanged size/header/normalized SHA-256
+validator. Chooser regressions assert no filter and reject invalid contents;
+synthetic tests cover misleading names and MIME types. TypeScript, all 122 unit
+tests, production assembly/allowlist and scoped formatting pass. Edge launcher
+and desktop WebKit room audits pass chooser invocation and invalid-file rejection,
+alongside their existing storage/room checks. The diagnosis is consistent with
+[the iOS mixed-extension filter report](https://github.com/mdn/browser-compat-data/issues/26043).
+Actual iPhone/iCloud selection and mobile gameplay remain unverified;
+desktop WebKit automation cannot reproduce Apple's native Files picker.
+Next action: confirm `.z64` selection from iCloud on the reporting iPhone after
+deployment. No native or Wasm source/render input changed.
+
 **Upstream 1.0.2b integration, 2026-10-25:** Integrated pinned upstream
 `9062f9f120b7f64d39e5db59500ed50e8e7a6686`; FORK-026/027 record ownership,
 conflict decisions and the deliberate baseline advance. Browser shader prewarm
