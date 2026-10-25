@@ -61,3 +61,13 @@ as a side effect of standards maintenance. The `openlinks-identity-presence`
 skill may be used when available for an explicitly requested identity task;
 its absence does not block ordinary code/docs maintenance or require global
 skill installation. Preserve existing About/build-provenance behavior.
+
+## Immersive browser entrypoint
+
+Standard: `standards/core/frontend-ui.md` (normal visible product chrome).
+
+The user explicitly requested a canvas-only initial room on 2026-10-24. The
+retained HTML launcher, source, provenance, maintainer link and model credits
+remain accessible through F2 and an in-scene controls affordance rather than a
+permanent initial header/footer. Keep accessible controls and error recovery.
+See `scripts/port/web_room_plan.md` for the accepted experience and milestones.

@@ -1,6 +1,7 @@
 @import 'mystic-ui/tailwind/theme.css';
 @import './player.css';
 @import './storage.css';
+@import './room.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

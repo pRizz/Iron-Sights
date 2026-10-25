@@ -102,7 +102,7 @@ export function Player(props: PlayerProps) {
                     }}
                     width="960"
                     height="540"
-                    tabIndex="0"
+                    tabIndex={started() ? 0 : -1}
                     aria-label="Project Midas game canvas"
                 />
                 <button class="fullscreen-exit" onClick={() => void props.fullscreen()}>

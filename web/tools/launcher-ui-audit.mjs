@@ -39,6 +39,7 @@ const restore = JSON.stringify({
 });
 try {
     await page.goto(origin);
+    await page.keyboard.press('F2');
     await page.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
     const before = await download(page);
     assert.ok(await page.getByRole('button', { name: 'Play GoldenEye' }).isDisabled());
@@ -139,6 +140,7 @@ try {
     assert.deepEqual((await download(second)).files, JSON.parse(restore).files);
     await second.getByRole('checkbox', { name: 'Remember ROM on this device' }).uncheck();
     await second.reload();
+    await second.keyboard.press('F2');
     await second.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
     assert.ok(
         !(await second.getByRole('checkbox', { name: 'Remember ROM on this device' }).isChecked()),
@@ -164,6 +166,7 @@ try {
             }),
     );
     await second.reload();
+    await second.keyboard.press('F2');
     await second
         .getByRole('alert')
         .filter({ hasText: 'different size' })

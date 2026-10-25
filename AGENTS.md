@@ -86,6 +86,10 @@ finishes, while keeping useful diagnostic logs and captures.
   [milestone progress](scripts/port/web_target_progress.md). Read both before
   resuming; update only the relevant stable milestone block with changes,
   verification evidence, blockers and the next action before handing off.
+- The immersive browser room follows its accepted
+  [experience plan](scripts/port/web_room_plan.md) and WEB-007 through WEB-010 in
+  the same progress file. Keep the game canvas/storage lifecycle intact; record
+  model licenses and distinguish procedural stand-ins from approved final props.
 - This is a C/C++ CMake game port. Bun runs development standards checks and the
   browser tooling subpackage under `web/`. Use `bun install --frozen-lockfile`
   inside `web/` for its tests/audit tooling; the repository root has no Bun package.

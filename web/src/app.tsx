@@ -1,10 +1,11 @@
-import { createSignal, onCleanup, onMount, Show } from 'solid-js';
+import { createEffect, createSignal, onCleanup, onMount, Show } from 'solid-js';
 import { Player } from './player';
 import { StoragePanel } from './storage-panel';
 import { createBackup, parseBackup, MAX_BACKUP_TEXT, type UserFile } from './backup';
 import { createCapture } from './capture';
 import { createEngine, ensureBrowserSettings } from './engine';
 import { createRomManager } from './rom-manager';
+import { Room } from './room/room';
 
 const SOURCE = 'https://github.com/pRizz/Project-Midas-ADS';
 
@@ -12,6 +13,9 @@ export function App() {
     const engine = createEngine();
     const rom = createRomManager();
     const [started, setStarted] = createSignal(false);
+    const [controls, setControls] = createSignal(false);
+    const [entered, setEntered] = createSignal(false);
+    const [hint, setHint] = createSignal(false);
     const capture = createCapture(engine, started);
     const [action, setAction] = createSignal('');
     const [busy, setBusy] = createSignal(false);
@@ -21,8 +25,37 @@ export function App() {
     let romInput!: HTMLInputElement;
     let backupInput!: HTMLInputElement;
     let dialog!: HTMLDialogElement;
+    let experience!: HTMLDivElement;
+    let maybeHintTimer: ReturnType<typeof setTimeout> | undefined;
     const ready = () => engine.status().kind === 'ready' && rom.status().kind === 'ready';
     const build = () => engine.maybeManifest()?.build;
+
+    function openControls(): void {
+        capture.pause('manual');
+        setControls(true);
+        requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+    }
+
+    function closeControls(): void {
+        setControls(false);
+        requestAnimationFrame(() => {
+            window.dispatchEvent(new Event('resize'));
+            // Keep the explicit Resume gesture after interacting with controls.
+            if (!started()) return;
+            canvas.focus();
+        });
+    }
+
+    function showHint(): void {
+        setHint(true);
+        clearTimeout(maybeHintTimer);
+        maybeHintTimer = setTimeout(() => setHint(false), 9000);
+    }
+
+    createEffect(() => {
+        if (engine.status().kind === 'error' || engine.saveStatus().kind === 'error')
+            openControls();
+    });
 
     onMount(() => {
         const detach = capture.attach(canvas);
@@ -44,16 +77,38 @@ export function App() {
             event.preventDefault();
             event.returnValue = '';
         };
+        const keyboard = (event: KeyboardEvent) => {
+            if (event.repeat || event.isComposing) return;
+            if (event.key === 'F2') {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                if (document.querySelector('dialog[open]')) return;
+                controls() ? closeControls() : openControls();
+            }
+            if (event.altKey && event.key === 'Enter') {
+                if (
+                    event.target instanceof HTMLInputElement ||
+                    event.target instanceof HTMLTextAreaElement
+                )
+                    return;
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                void fullscreen();
+            }
+        };
+        window.addEventListener('keydown', keyboard, true);
         window.addEventListener('beforeunload', beforeClose);
         onCleanup(() => {
             detach();
             window.removeEventListener('dragover', preventNavigation);
             window.removeEventListener('drop', preventNavigation);
             window.removeEventListener('beforeunload', beforeClose);
+            window.removeEventListener('keydown', keyboard, true);
+            clearTimeout(maybeHintTimer);
         });
     });
 
-    async function play(): Promise<void> {
+    async function play(fromRoom = false): Promise<void> {
         const selected = rom.status();
         const game = engine.maybeGame();
         const files = engine.maybeFiles();
@@ -63,6 +118,7 @@ export function App() {
             await files.flush();
             game.FS.writeFile('/rom.z64', selected.rom.bytes.slice());
             files.markStarted();
+            if (!fromRoom) setEntered(true);
             setStarted(true);
             capture.starting();
             canvas.focus();
@@ -134,181 +190,214 @@ export function App() {
     async function fullscreen(): Promise<void> {
         try {
             if (document.fullscreenElement) await document.exitFullscreen();
-            else await canvas.parentElement!.requestFullscreen();
+            else await experience.requestFullscreen();
         } catch {
             setAction('Fullscreen was refused. You can continue in the page.');
         }
     }
 
     return (
-        <div class="app-shell" id="top">
-            <header class="site-header">
-                <a class="brand" href="#top">
-                    <span class="brand-mark" aria-hidden="true">
-                        M
-                    </span>
-                    <span>
-                        PROJECT MIDAS <b>ADS</b>
-                        <small>THE BROWSER PREVIEW</small>
-                    </span>
-                </a>
-                <a class="source-link" href={SOURCE} target="_blank" rel="noreferrer">
-                    <span aria-hidden="true">&lt;/&gt;</span> Source code
-                </a>
-            </header>
-            <main>
-                <div class="page-intro">
-                    <div>
-                        <p class="eyebrow">YOUR COPY. YOUR MISSION.</p>
-                        <h1>GoldenEye. In your browser.</h1>
-                        <p>
-                            Solo campaign, mouse and keyboard. Your ROM and saves stay on this
-                            device.
-                        </p>
-                    </div>
-                    <span class="preview-tag">DESKTOP PREVIEW</span>
-                </div>
-                <div class="workspace">
-                    <Player
-                        engine={engine}
-                        rom={rom}
-                        capture={capture}
-                        started={started}
-                        ready={ready}
-                        onCanvas={(element) => {
-                            canvas = element;
-                        }}
-                        chooseROM={() => romInput.click()}
-                        fullscreen={fullscreen}
-                        play={play}
-                        notify={setAction}
-                    />
-                    <StoragePanel
-                        engine={engine}
-                        rom={rom}
-                        started={started}
-                        protection={protection}
-                        downloadBackup={downloadBackup}
-                        chooseBackup={() => backupInput.click()}
-                        protectStorage={protectStorage}
-                        notify={setAction}
-                    />
-                </div>
-                <Show when={action()}>
-                    <p class="action-notice" role="status">
-                        {action()}
-                    </p>
-                </Show>
-                <details class="about-build">
-                    <summary>About this build</summary>
-                    <p>
-                        Tested desktop browsers: Chrome, Edge and Firefox. Safari is experimental.{' '}
-                        <a
-                            href={SOURCE + '/blob/main/scripts/port/web_compatibility.md'}
-                            target="_blank"
-                            rel="noreferrer"
-                        >
-                            Compatibility notes
-                        </a>
-                    </p>
-                    <Show when={build()}>
-                        {(info) => (
+        <div ref={experience} class="experience" classList={{ 'controls-open': controls() }}>
+            <div class="app-shell" id="top">
+                <header class="site-header">
+                    <a class="brand" href="#top">
+                        <span class="brand-mark" aria-hidden="true">
+                            M
+                        </span>
+                        <span>
+                            PROJECT MIDAS <b>ADS</b>
+                            <small>THE BROWSER PREVIEW</small>
+                        </span>
+                    </a>
+                    <a class="source-link" href={SOURCE} target="_blank" rel="noreferrer">
+                        <span aria-hidden="true">&lt;/&gt;</span> Source code
+                    </a>
+                </header>
+                <main>
+                    <div class="page-intro">
+                        <div>
+                            <p class="eyebrow">YOUR COPY. YOUR MISSION.</p>
+                            <h1>GoldenEye. In your browser.</h1>
                             <p>
-                                Game build {info().build_number}-{info().build_date} ·{' '}
-                                {info().builder}
-                                {info().dirty ? ' with local changes' : ''} ·{' '}
-                                <a href={info().source_url} target="_blank" rel="noreferrer">
-                                    {info().commit.slice(0, 9)}
-                                </a>
-                                <Show when={info().workflow_url}>
-                                    {' '}
-                                    ·{' '}
-                                    <a href={info().workflow_url} target="_blank" rel="noreferrer">
-                                        Build run
-                                    </a>
-                                </Show>
+                                Solo campaign, mouse and keyboard. Your ROM and saves stay on this
+                                device.
                             </p>
-                        )}
+                        </div>
+                        <span class="preview-tag">DESKTOP PREVIEW</span>
+                    </div>
+                    <div class="workspace">
+                        <Player
+                            engine={engine}
+                            rom={rom}
+                            capture={capture}
+                            started={started}
+                            ready={ready}
+                            onCanvas={(element) => {
+                                canvas = element;
+                            }}
+                            chooseROM={() => romInput.click()}
+                            fullscreen={fullscreen}
+                            play={() => play()}
+                            notify={setAction}
+                        />
+                        <StoragePanel
+                            engine={engine}
+                            rom={rom}
+                            started={started}
+                            protection={protection}
+                            downloadBackup={downloadBackup}
+                            chooseBackup={() => backupInput.click()}
+                            protectStorage={protectStorage}
+                            notify={setAction}
+                        />
+                    </div>
+                    <Show when={action()}>
+                        <p class="action-notice" role="status">
+                            {action()}
+                        </p>
                     </Show>
-                    <details>
-                        <summary>Technical details</summary>
-                        <pre>{engine.logs().join('\n')}</pre>
+                    <details class="about-build">
+                        <summary>About this build</summary>
+                        <p>
+                            Tested desktop browsers: Chrome, Edge and Firefox. Safari is
+                            experimental.{' '}
+                            <a
+                                href={SOURCE + '/blob/main/scripts/port/web_compatibility.md'}
+                                target="_blank"
+                                rel="noreferrer"
+                            >
+                                Compatibility notes
+                            </a>
+                        </p>
+                        <Show when={build()}>
+                            {(info) => (
+                                <p>
+                                    Game build {info().build_number}-{info().build_date} ·{' '}
+                                    {info().builder}
+                                    {info().dirty ? ' with local changes' : ''} ·{' '}
+                                    <a href={info().source_url} target="_blank" rel="noreferrer">
+                                        {info().commit.slice(0, 9)}
+                                    </a>
+                                    <Show when={info().workflow_url}>
+                                        {' '}
+                                        ·{' '}
+                                        <a
+                                            href={info().workflow_url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                        >
+                                            Build run
+                                        </a>
+                                    </Show>
+                                </p>
+                            )}
+                        </Show>
+                        <details>
+                            <summary>Technical details</summary>
+                            <pre>{engine.logs().join('\n')}</pre>
+                        </details>
                     </details>
-                </details>
-            </main>
-            <footer>
-                <span>Project Midas ADS · Browser preview</span>
-                <div>
-                    <a href={SOURCE + '/blob/main/LICENSE'} target="_blank" rel="noreferrer">
-                        Port code &amp; licenses
-                    </a>
-                    <a href={SOURCE} target="_blank" rel="noreferrer">
-                        Source
-                    </a>
-                    <a href="./THIRD_PARTY_NOTICES.txt" target="_blank" rel="noreferrer">
-                        Third-party notices
-                    </a>
-                    <a href="https://openlinks.us/" target="_blank" rel="noreferrer">
-                        Peter Ryszkiewicz ↗
-                    </a>
-                </div>
-            </footer>
-            <input
-                ref={romInput}
-                id="rom-file"
-                type="file"
-                hidden
-                accept=".z64,.v64,.n64,.rom,.bin"
-                onChange={(event) => {
-                    const maybeFile = event.currentTarget.files?.[0];
-                    if (maybeFile) void rom.select(maybeFile);
-                    event.currentTarget.value = '';
-                }}
-            />
-            <input
-                ref={backupInput}
-                id="backup-file"
-                type="file"
-                hidden
-                accept=".json"
-                onChange={(event) => {
-                    const maybeFile = event.currentTarget.files?.[0];
-                    if (maybeFile) void chooseBackup(maybeFile);
-                    event.currentTarget.value = '';
-                }}
-            />
-            <dialog
-                ref={dialog}
-                onCancel={(event) => {
-                    if (busy()) event.preventDefault();
-                    else setImport(undefined);
-                }}
-            >
-                <p class="eyebrow">RESTORE BACKUP</p>
-                <h2>Replace local saves?</h2>
-                <p>
-                    This backup contains {maybeImport()?.length || 0} files. Your current campaign,
-                    profiles and settings will be replaced.
+                </main>
+                <footer>
+                    <span>Project Midas ADS · Browser preview</span>
+                    <div>
+                        <a href={SOURCE + '/blob/main/LICENSE'} target="_blank" rel="noreferrer">
+                            Port code &amp; licenses
+                        </a>
+                        <a href={SOURCE} target="_blank" rel="noreferrer">
+                            Source
+                        </a>
+                        <a href="./THIRD_PARTY_NOTICES.txt" target="_blank" rel="noreferrer">
+                            Third-party notices
+                        </a>
+                        <a href="https://openlinks.us/" target="_blank" rel="noreferrer">
+                            Peter Ryszkiewicz ↗
+                        </a>
+                    </div>
+                </footer>
+                <input
+                    ref={romInput}
+                    id="rom-file"
+                    type="file"
+                    hidden
+                    accept=".z64,.v64,.n64,.rom,.bin"
+                    onChange={(event) => {
+                        const maybeFile = event.currentTarget.files?.[0];
+                        if (maybeFile) void rom.select(maybeFile);
+                        event.currentTarget.value = '';
+                    }}
+                />
+                <input
+                    ref={backupInput}
+                    id="backup-file"
+                    type="file"
+                    hidden
+                    accept=".json"
+                    onChange={(event) => {
+                        const maybeFile = event.currentTarget.files?.[0];
+                        if (maybeFile) void chooseBackup(maybeFile);
+                        event.currentTarget.value = '';
+                    }}
+                />
+                <dialog
+                    ref={dialog}
+                    onCancel={(event) => {
+                        if (busy()) event.preventDefault();
+                        else setImport(undefined);
+                    }}
+                >
+                    <p class="eyebrow">RESTORE BACKUP</p>
+                    <h2>Replace local saves?</h2>
+                    <p>
+                        This backup contains {maybeImport()?.length || 0} files. Your current
+                        campaign, profiles and settings will be replaced.
+                    </p>
+                    <div class="dialog-actions">
+                        <button
+                            disabled={busy()}
+                            onClick={() => {
+                                dialog.close();
+                                setImport(undefined);
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            class="solid-primary"
+                            disabled={busy()}
+                            onClick={() => void restoreBackup()}
+                        >
+                            {busy() ? 'Restoring…' : 'Restore backup'}
+                        </button>
+                    </div>
+                </dialog>
+            </div>
+            <Show when={!entered()}>
+                <Room
+                    engine={engine}
+                    rom={rom}
+                    controls={controls}
+                    ready={ready}
+                    openControls={openControls}
+                    play={() => play(true)}
+                    hint={showHint}
+                    notify={setAction}
+                    finish={() => {
+                        setEntered(true);
+                        showHint();
+                    }}
+                />
+            </Show>
+            <Show when={controls()}>
+                <button class="controls-close" onClick={closeControls}>
+                    Return to {started() ? 'game' : 'room'} · F2
+                </button>
+            </Show>
+            <Show when={hint() && !controls()}>
+                <p class="experience-hint" role="status">
+                    Alt+Enter fullscreen · P watch · F2 controls · Escape releases the mouse
                 </p>
-                <div class="dialog-actions">
-                    <button
-                        disabled={busy()}
-                        onClick={() => {
-                            dialog.close();
-                            setImport(undefined);
-                        }}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        class="solid-primary"
-                        disabled={busy()}
-                        onClick={() => void restoreBackup()}
-                    >
-                        {busy() ? 'Restoring…' : 'Restore backup'}
-                    </button>
-                </div>
-            </dialog>
+            </Show>
         </div>
     );
 }

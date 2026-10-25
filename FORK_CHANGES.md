@@ -1228,6 +1228,52 @@ README content, checklist and root license preservation were checked. New
 user-owned rules docs passed the pinned GFM/frontmatter Markdown check; shell
 syntax validation passed. No game rebuild or render regeneration was needed.
 
+### FORK-025 — Immersive browser room
+
+**Status:** Working local first slice on `codex/immersive-web-room`; final prop
+fidelity and broader compatibility/publication remain in progress.
+
+The user requested a canvas-only initial experience with realistic room props,
+a CRT, rotating cartridge ROM selection and an animated insertion/power/TV
+transition. Returning users have an inserted cartridge and click the power switch.
+This replaces the initial visible launcher presentation introduced by FORK-024;
+its storage/game interfaces and retained HTML controls remain authoritative.
+F2 opens controls, Alt+Enter toggles fullscreen and P remains the native watch.
+The [room plan](scripts/port/web_room_plan.md), WEB-007 through WEB-010 in
+[progress](scripts/port/web_target_progress.md), AGENTS routing and the documented
+chrome override persist scope for later sessions. Candidate models are tracked
+with their licenses; the console download currently requires authentication.
+
+`web/src/room/` now contains a pinned Three.js scene and pure transition module.
+The full-window entrypoint shows an original procedural CRT, console, cables and
+cartridge, with a blue signal screen, wood floor, illumination, hover targets,
+insertion, red power switch/LED and TV camera flight. F2 reveals the retained
+Solid launcher without remounting the game canvas; Alt+Enter requests fullscreen
+on the shared container. Errors/save failures reopen controls. Room rendering
+pauses while hidden or covered and is disposed after game graphics begin.
+Reduced motion suppresses idle movement/flicker and substitutes a short fade.
+The console/CRT are documented stand-ins, not the downloaded final candidates.
+
+The user's later artwork request supersedes the original text-only cartridge
+label. Their supplied AVIF is copied unchanged to
+`web/public/room/cartridge-art.avif`; UV cropping and a material mask select the
+printed label. [Artwork provenance](web/src/room/ARTWORK.md) records the source,
+size, hash and explicit user request. It is not ROM-extracted data. Site assembly
+includes Three.js/artwork notices, and `tools/room-assets.ts` adds only this named,
+size/hash-checked image to the exact publication allowlist.
+
+New ROM-free scene and private actual-ROM audits cover viewport/controls,
+selection, insertion/flight, cached-cartridge power startup and stable saves;
+the previous launcher audits now explicitly enter F2 controls. The Pages workflow
+also runs the room audit under the production project prefix. TypeScript, 73 unit
+tests, scoped formatting and assembly/allowlist pass. Edge and Chrome passed the
+ROM-free room checks; Edge passed actual-ROM insertion/handoff/audio/reload/power
+startup. The retained launcher's full Dam audio/capture/focus/watch/campaign/profile/
+settings/backup regression passed in Edge. Private captures stay in build/.
+No native game/render source or ROM storage identity changed. Final prop assets,
+cinematic polish, Firefox/Safari scene validation and publication remain tracked
+in WEB-008 through WEB-010; Safari retains its experimental status.
+
 ### FORK-024 — Browser target plan and portability groundwork
 
 **Status:** Desktop browser preview is live on GitHub Pages. The accepted core,

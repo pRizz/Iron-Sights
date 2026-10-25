@@ -3,6 +3,7 @@ import { readdir, readFile, lstat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { parseRuntimeManifest } from '../src/runtime-manifest.ts';
 import { GAME_FILES } from './runtime-artifacts.ts';
+import { ROOM_ASSETS } from './room-assets.ts';
 
 const root = new URL('../../build/web-site/', import.meta.url);
 const manifest = parseRuntimeManifest(
@@ -23,6 +24,7 @@ const allowed = new Set([
     'LICENSE.txt',
     'THIRD_PARTY_NOTICES.txt',
     ...frontend,
+    ...ROOM_ASSETS.map((file) => file.path),
     ...GAME_FILES.map((file) => manifest.base + file),
 ]);
 async function walk(relative = ''): Promise<void> {
@@ -43,4 +45,12 @@ if (
 )
     throw new Error('The assembled Wasm does not match its manifest');
 if (!WebAssembly.validate(wasm)) throw new Error('Invalid compiled Wasm');
+for (const asset of ROOM_ASSETS) {
+    const bytes = await readFile(new URL(asset.path, root));
+    if (
+        bytes.length !== asset.bytes ||
+        createHash('sha256').update(bytes).digest('hex') !== asset.sha256
+    )
+        throw new Error('The public room asset does not match its recorded source: ' + asset.path);
+}
 console.log(`Verified exact public allowlist and Wasm digest (${manifest.version})`);
