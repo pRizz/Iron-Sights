@@ -1394,7 +1394,12 @@ probe separates host-audio readiness from the game's mixer. A compatibility
 runbook records the tested browser/mission matrix, measured limits and explicit
 icon/offline/suspend/threading deferrals. Root README and About chrome link the
 live preview and notes; Safari is visibly experimental. Final compatibility
-publication follows the normal main workflow; no private evidence is published.
+commit `2c890b2` passed Pages `40148810530`, Windows builds/provenance `40148810523`
+and Bright Builds `40148810562`. Its clean CI runtime `6521ef4a7a8c672b` passes
+the full live-site actual-ROM audit with gamepads deliberately unavailable:
+audio/capture/focus/watch, durable campaign/profile/settings, backups and ROM
+recall/removal all pass without page errors or uploads. The accepted preview
+milestones are complete; no private evidence is published.
 The following launcher slice now builds locally with SolidJS and commit-pinned
 MysticUI/Tailwind. It adds file/drop selection and ROM remembering, typed engine
 and capture states, visible download/compile/save stages, backup controls with
@@ -1453,6 +1458,7 @@ Existing native and asset ownership contracts continue to apply.
 [scheduler](port/src/pcsched.c), [startup](port/src/main.c),
 [GL backend](port/fast3d/gfx_opengl.cpp),
 [SDL backend](port/fast3d/gfx_sdl2.cpp),
+[keyboard/controller startup](port/src/input_pc.c),
 [bank reset](src/game/image_bank.c), [bank objects](assets/oddtextures.c),
 [model ABI](src/game/model.c), [vertex callback](src/game/chr.c),
 [watch transforms](src/game/bondinv.c),

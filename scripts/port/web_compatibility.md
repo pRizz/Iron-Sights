@@ -80,6 +80,13 @@ capture recovered afterward. Fresh initialization recalled the ROM and preserved
 every campaign/profile/settings backup byte; confirmed restore and ROM removal
 also passed. No ROM upload or page error occurred.
 
+The final compatibility source `2c890b2` passed
+[Pages run 40148810530](https://github.com/pRizz/Project-Midas-ADS/actions/runs/40148810530).
+Its published runtime `6521ef4a7a8c672b` also passed the full actual-ROM audit
+with the Gamepad API deliberately removed, proving keyboard/profile/capture/watch
+startup survives that optional API's absence. Audio, save reload, actual backup
+restore and remembered-ROM removal all passed on the live site.
+
 Content-versioned application downloads are separate from the stable user-file
 mount, Web Lock and ROM database. Backup replacement remains restricted to before
 main starts because the game caches its EEPROM. Browser storage can be cleared;

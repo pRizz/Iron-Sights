@@ -379,7 +379,7 @@ WEB-006 compatibility and mission/effect coverage.
 
 **Status:** Desktop preview acceptance complete. Chrome/Edge and Linux Firefox
 are tested; Safari remains experimental by the user's explicit decision. Final
-controller-fallback publication is being verified through the normal workflow.
+controller-fallback publication and live-site acceptance are verified.
 
 **Completion:** Mission/effect coverage, browser support matrix and performance
 results are recorded. Optional icons/offline support and browser suspend points
@@ -448,7 +448,15 @@ matrix, measured limits, tested environments and explicit feature deferrals.
   actual Safari experimental. About/build chrome and the root README link the
   browser preview and compatibility notes. Icons, offline support, suspend points
   and threading remain explicitly deferred as documented; no new scope is implied.
+- 2026-10-24 publication acceptance: compatibility commit `2c890b2` passed Pages
+  run `40148810530`, Windows builds/provenance `40148810523` and Bright Builds
+  `40148810562`. The live manifest identifies clean commit
+  `2c890b2445ba357231f126bf594a3ac0fae3b542`, runtime `6521ef4a7a8c672b`, and GitHub
+  Actions provenance. With Gamepad API support deliberately removed, the actual
+  published site passes the complete real-ROM launch/audio/capture/focus/watch/
+  campaign/profile/settings/backup/ROM-recall-and-removal audit without page
+  errors or uploads. Private evidence is in `build/web-ui/final-published`.
 
-**Next action:** Verify the final compatibility commit's CI publication. Future
-macOS Safari/hardware-GPU/full-mission testing and optional enhancements are
-separate follow-up scope; preserve the published storage/deployment contracts.
+**Next action:** Preserve the published storage/deployment contracts. Future
+macOS Safari/hardware-GPU/full-mission testing and optional enhancements require
+separate follow-up scope; the accepted desktop preview milestones are complete.
