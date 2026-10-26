@@ -709,6 +709,24 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**Closer long-gun ADS, 2026-10-25:** The fork-owned pose data in `joy_port.c`
+moves 12 unscoped long-gun ADS origins 20% closer along view Z, so gun and grip
+hands appear larger together. The 0.052 hand scale/2.5 arm-body multiplier remain
+intact. Sight heights/pitches, world FOV, hip fire, pistol poses and sniper scope
+distance are retained. ADS/wardrobe regressions and the native build pass.
+All 20 weapons were captured in wide/4:3; the wide run includes 220 transition
+frames. Sight openings remain centered in the reviewed sheets, and selected
+both-hand/transition crops show no new near-plane artifacts or joint gaps. The
+larger KF7 receiver leaves less trigger hand visible at the bottom frame edge.
+KF7 FOV 110/120 Hz and 4:3 AR33 checks pass with optional weapon FOV enabled,
+including 11 transition frames each. Optimized Wasm, logo/site policy, gallery
+integrity and eight workflow tests pass. Both independent gallery passes reproduce
+72 views: only the expected 24 long-gun ADS stock/fork views change across six
+outfits; the other 48 views and all 35 icons remain byte-identical. Changed
+outfit/control views were reviewed. `ads_alignment.md` records distances and
+evidence is private under `build/ads-proximity`. Next action: maintain the
+calibrated sight references and verify the normal main/Pages publication.
+
 **Shared rifle ADS proportions, 2026-10-25:** The requested thicker hands/arms
 use the existing fork-owned `ads_hands.c` profile on desktop and web. Grip scale
 0.045→0.052 enlarges hands, wrist/cuff and watch together by about 16%; body bulk

@@ -28,30 +28,69 @@ clearance review rather than an invented optical reticle.
 
 Height values are the `sightHeight` entries in
 [joy_port.c](../../port/src/joy_port.c), in view units. Reducing a value raises
-the rendered weapon. These corrections retain each weapon's pitch and eye
-distance.
+the rendered weapon. The earlier height corrections retained each weapon's
+pitch and eye distance; the proximity refinement below separately changes
+unscoped long-gun distance.
 
-| Weapon | Result |
-| --- | --- |
-| KF7 / AK47 | Sight hood already centered; retained. |
-| Klobb | Raised the end of the sight channel: height 3.2 → 2.7. |
-| ZMG | Raised the open notch: height 4.4 → 4.0. |
-| D5K | Raised the circular sight: height 6.3 → 5.8. |
-| Silenced D5K | Raised the shared sight geometry: height 6.3 → 5.0. Its longer muzzle node needs a different compensation from the unsilenced gun. |
-| Phantom | Forked sight tips already meet the reference; retained. |
-| Shotgun | Raised the barrel-top aiming reference: height 3.7 → 2.6. |
-| Automatic shotgun | Existing raised-barrel reference retained. |
-| Sniper rifle | Scope crosshair centered, weapon hidden in full ADS; retained. |
-| Laser | Open ladder leaves the reference visible; retained. |
-| Grenade launcher | Visual barrel/receiver clearance reviewed; retained. Projectile trajectory is not calibrated as a hitscan sight. |
-| AR33/M4 and RC-P90 | Rechecked the previous aperture/tip corrections; retained. |
+| Weapon             | Result                                                                                                                             |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| KF7 / AK47         | Sight hood already centered; retained.                                                                                             |
+| Klobb              | Raised the end of the sight channel: height 3.2 → 2.7.                                                                             |
+| ZMG                | Raised the open notch: height 4.4 → 4.0.                                                                                           |
+| D5K                | Raised the circular sight: height 6.3 → 5.8.                                                                                       |
+| Silenced D5K       | Raised the shared sight geometry: height 6.3 → 5.0. Its longer muzzle node needs a different compensation from the unsilenced gun. |
+| Phantom            | Forked sight tips already meet the reference; retained.                                                                            |
+| Shotgun            | Raised the barrel-top aiming reference: height 3.7 → 2.6.                                                                          |
+| Automatic shotgun  | Existing raised-barrel reference retained.                                                                                         |
+| Sniper rifle       | Scope crosshair centered, weapon hidden in full ADS; retained.                                                                     |
+| Laser              | Open ladder leaves the reference visible; retained.                                                                                |
+| Grenade launcher   | Visual barrel/receiver clearance reviewed; retained. Projectile trajectory is not calibrated as a hitscan sight.                   |
+| AR33/M4 and RC-P90 | Rechecked the previous aperture/tip corrections; retained.                                                                         |
 
 The D5K regression test uses the two actual muzzle-node coordinates and checks
 that the shared sight mesh receives the same final pose despite the suppressor
 length. It checks the relationship, rather than pinning two independent tuning
 constants. See [test_ads.c](test_ads.c).
 
-## Validation
+## Closer unscoped ADS, 2026-10-25
+
+The owner requested bringing the rifle assembly closer to the camera while
+keeping the recent larger hands/forearms. The 12 unscoped long-gun pose origins
+move 20% closer along view Z. Sight heights/pitches, world/ADS FOV, grip offsets,
+recoil and simulation-time interpolation stay intact. Gun and hands share the
+resulting pose; the existing 0.052 hand scale and 2.5 body multiplier are retained.
+Pistols keep their previous positions, and the sniper retains its 70-unit scope
+transition distance.
+The closer KF7 receiver fills more of the lower frame and leaves less of the
+trigger hand visible at the bottom edge; support-hand attachment stays intact.
+
+| Weapon                                   | Previous distance | Current distance |
+| ---------------------------------------- | ----------------: | ---------------: |
+| Klobb                                    |                36 |             28.8 |
+| KF7, D5K, silenced D5K, Phantom, shotgun |                42 |             33.6 |
+| ZMG                                      |                40 |               32 |
+| AR33                                     |                60 |               48 |
+| RC-P90                                   |                48 |             38.4 |
+| Automatic shotgun                        |                56 |             44.8 |
+| Laser                                    |                45 |               36 |
+| Grenade launcher                         |                50 |               40 |
+
+The wide and 4:3 audits capture all 20 weapons, and the wide pass includes
+220 raise/lower frames. Sight-detail sheets confirm the existing centered
+openings/tips remain visible, including the AR33 receiver clearance and matching
+D5K pair. KF7/Klobb/AR33/RC-P90 hand/transition crops were reviewed for clipping.
+Private evidence is indexed in `build/ads-proximity/*-audit.log`; the earlier
+sight sheet is retained there for comparison. Additional 11-frame checks pass
+for KF7 at FOV 110/120 Hz with weapon FOV enabled, and AR33 in 4:3 with weapon
+FOV enabled. Their settled sights and raise/lower crops were visually reviewed.
+Both independent gallery passes reproduce all 72 views. The 24 KF7/Klobb ADS
+views change across stock/fork controls and all six outfits; the other 48 views
+and all 35 icons remain byte-identical. Changed outfit views and the common
+stock-model controls were reviewed. Native Windows/optimized Wasm builds,
+ADS/wardrobe regressions, logo/site policy, gallery integrity and its eight
+workflow tests pass.
+
+## Earlier height-correction validation
 
 - Captured all 20 supported ADS firearms at default wide FOV 90/60 Hz and
   Classic 4:3/60 Hz, before and after the corrections.

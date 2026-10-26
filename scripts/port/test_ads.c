@@ -290,7 +290,7 @@ int main(void)
     }
 
     assert(portAdsWeaponPose(ITEM_AK47, &muzzle, &pose));
-    assert(pose.y < -10.1f && pose.y > -10.2f && pose.z == -42.0f);
+    assert(pose.x == 0 && pose.y < -10.1f && pose.y > -10.2f && pose.z == -33.6f);
     assert(portAdsWeaponPitch(ITEM_AK47) < -0.04f && portAdsWeaponPitch(ITEM_AK47) > -0.05f);
     {
         /* Both D5Ks share the sight mesh. Their muzzle nodes differ by the
@@ -309,12 +309,15 @@ int main(void)
     muzzle.y = 57.956562f;
     assert(portAdsWeaponPose(ITEM_WPPK, &muzzle, &pose));
     assert(pose.y < -8.5f && pose.y > -8.7f && pose.z == -33.5f);
+    /* The scoped rifle retains its own camera/scope transition distance. */
+    assert(portAdsWeaponPose(ITEM_SNIPERRIFLE, &muzzle, &pose));
+    assert(pose.z == -70.0f);
     for (i = ITEM_UNARMED; i <= ITEM_CAMERA; i++)
     {
         const s32 supported = (i >= ITEM_WPPK && i <= ITEM_LASER) || i == ITEM_GRENADELAUNCH;
         assert(!!portAdsWeaponPose(i, &muzzle, &pose) == supported);
         if (supported) {
-            assert(pose.z <= -33.5f && pose.y < -muzzle.y * 0.1f);
+            assert(pose.z <= -28.0f && pose.y < -muzzle.y * 0.1f);
             assert(portAdsWeaponPitch(i) < 0.0f && portAdsWeaponPitch(i) >= -0.15f);
         } else {
             assert(portAdsWeaponPitch(i) == 0.0f);

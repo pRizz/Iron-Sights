@@ -290,21 +290,40 @@ state and simulation-time transitions support different tick rates. Refined the
 view to reveal front sights with a slight perspective along the top of each gun.
 Recalibrated the AR33/M4 square sight aperture and RC-P90 sight tip vertically
 against the centered shot ray after the perspective adjustment left them low.
-The correction changes only those ADS poses. The AR33 also uses a little more
-muzzle-up tilt to keep the receiver clear of its square opening; eye distances
-and the RC-P90's pitch are retained. A subsequent long-gun audit also raised
+That earlier correction changed only those ADS poses. The AR33 also uses a little more
+muzzle-up tilt to keep the receiver clear of its square opening; it retained eye
+distances and the RC-P90's pitch at that checkpoint. A subsequent long-gun audit also raised
 the Klobb, ZMG, both D5K variants and regular shotgun to correct smaller
 vertical sight offsets. These use individual height corrections; the other
 audited long-gun poses are retained.
 The silenced D5K explicitly compensates for its longer muzzle node so its
 shared sight mesh receives the same pose as the unsilenced D5K.
 
+The owner's camera-proximity refinement moves the 12 unscoped long-gun ADS
+origins 20% closer along camera Z. It retains each calibrated sight height/pitch,
+the world/ADS FOV and the existing interpolation/recoil path, so the centered
+aiming reference is preserved while the gun and its attached grip hands occupy
+more of the view. KF7 distance is now 33.6 rather than 42 view units; AR33 is 48
+rather than 60. Pistols and the scoped sniper retain their previous poses.
+The hand/arm size increases in FORK-004 remain intact. This is a small data-only
+change within the fork's existing pose table, without new upstream hooks.
+The closer KF7 receiver occupies more of the lower frame, leaving less trigger
+hand visible at its bottom edge. The support hand keeps its grip connection.
+Proximity validation passes ADS/wardrobe regressions, native Windows/optimized
+Wasm builds, Wasm logo policy and site allowlist. All 20 guns were captured in
+wide/4:3; wide includes 220 transitions. Further 11-frame checks cover KF7 at
+FOV 110/120 Hz and AR33 in 4:3, both with optional weapon FOV enabled. Sight and
+hand/transition crops were reviewed. Both gallery passes reproduce all 72 views;
+the 24 KF7/Klobb ADS stock/fork views change across six outfits, while the other
+48 views and all 35 icons stay byte-identical. Changed outfit views and the
+stock controls were reviewed, and the eight gallery workflow tests pass.
+
 **Sources:** [ADS interface](port/include/port_ads.h),
 [input/state and poses](port/src/joy_port.c), [mouse input](port/src/input_pc.c),
 [camera and movement](src/game/bondview2.c), [gun rendering](src/game/gunfire.c),
 the shared port settings table and frontend/watch settings pages.
 **History:** `d017318`, `79d3892`.
-**Checks:** [ADS tests](scripts/port/test_ads.sh),
+**Earlier height-correction checks:** [ADS tests](scripts/port/test_ads.sh),
 [ADS visual audit](scripts/port/audit_ads.ps1).
 The audit skips the intro and hides persistent HUD elements for clear sight
 inspection; its contact sheet marks the screen center for calibration.
@@ -357,15 +376,16 @@ regression deliberately adopt the new hand scale and body radius, including an
 explicit grip-origin anchor check for both hands and all 13 grip pairs/blends.
 Shaping writes frame-owned generated arm vertices; the shared wardrobe source
 model stays immutable, so separate duplicated source models are unnecessary.
-The original weapon poses, sight alignment and recoil anchors remain.
-The current thickness refinement passes the ROM-free ADS/wardrobe regressions,
+The hand-size adjustment itself leaves weapon poses, sight alignment and recoil
+anchors intact; FORK-003 separately owns the closer unscoped ADS placement.
+At the hand-size-only checkpoint, the thickness refinement passed the ROM-free ADS/wardrobe regressions,
 native Windows and optimized Wasm builds, Wasm logo policy and public-site
 allowlist. The Windows Runway audit verifies 20 weapons and 220 raise/lower
 frames; additional Jungle/Snow KF7 audits verify 11 transition frames each.
 Overview, both-hand and intermediate-pose crops were visually reviewed.
-The regenerated gallery reproduces all 72 views across repeated samples and
-an independent second process. Exactly the 12 fork KF7/Klobb ADS views change
-across six outfits; the other 60 views and all 35 icons remain byte-identical.
+That gallery reproduced all 72 views across repeated samples and
+an independent second process. Exactly the 12 fork KF7/Klobb ADS views changed
+across six outfits; the other 60 views and all 35 icons were byte-identical.
 All changed views and the native PP7 stock/fork comparison were reviewed.
 Private captures/logs stay under `build/ads-thickness` and the audit directories
 referenced there; the approved final gallery is updated alongside its sources.

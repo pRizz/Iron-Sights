@@ -715,26 +715,27 @@ static const struct {
     { ITEM_WPPK,          1.0f, 33.5f, -0.025f },
     { ITEM_WPPKSIL,       1.0f, 33.5f, -0.025f },
     { ITEM_TT33,          1.1f, 33.5f, -0.025f },
-    { ITEM_SKORPION,      2.7f, 36.0f, -0.035f },
-    { ITEM_AK47,         4.65f, 42.0f, -0.045f },
-    { ITEM_UZI,           4.0f, 40.0f, -0.035f },
-    { ITEM_MP5K,          5.8f, 42.0f, -0.040f },
+    /* Unscoped long guns sit 20% closer; preserve their calibrated sight ray. */
+    { ITEM_SKORPION,      2.7f, 28.8f, -0.035f },
+    { ITEM_AK47,         4.65f, 33.6f, -0.045f },
+    { ITEM_UZI,           4.0f, 32.0f, -0.035f },
+    { ITEM_MP5K,          5.8f, 33.6f, -0.040f },
     /* Same sight geometry as the D5K; compensate for its longer muzzle node. */
-    { ITEM_MP5KSIL,       5.0f, 42.0f, -0.040f },
-    { ITEM_SPECTRE,       6.4f, 42.0f, -0.040f },
+    { ITEM_MP5KSIL,       5.0f, 33.6f, -0.040f },
+    { ITEM_SPECTRE,       6.4f, 33.6f, -0.040f },
     /* Raise the AR33's square aperture and the RC-P90's sight tip onto the
      * centered shot ray. The AR33 also needs clearance above its receiver. */
-    { ITEM_M16,          6.85f, 60.0f, -0.060f },
-    { ITEM_FNP90,        9.85f, 48.0f, -0.030f },
-    { ITEM_SHOTGUN,       2.6f, 42.0f, -0.040f },
-    { ITEM_AUTOSHOT,      1.8f, 56.0f, -0.140f },
+    { ITEM_M16,          6.85f, 48.0f, -0.060f },
+    { ITEM_FNP90,        9.85f, 38.4f, -0.030f },
+    { ITEM_SHOTGUN,       2.6f, 33.6f, -0.040f },
+    { ITEM_AUTOSHOT,      1.8f, 44.8f, -0.140f },
     { ITEM_SNIPERRIFLE,  10.7f, 70.0f, -0.035f },
     { ITEM_RUGER,         4.0f, 36.0f, -0.030f },
     { ITEM_GOLDENGUN,     1.7f, 33.5f, -0.025f },
     { ITEM_SILVERWPPK,    1.0f, 33.5f, -0.025f },
     { ITEM_GOLDWPPK,      1.0f, 33.5f, -0.025f },
-    { ITEM_LASER,         6.7f, 45.0f, -0.045f },
-    { ITEM_GRENADELAUNCH, 2.4f, 50.0f, -0.040f },
+    { ITEM_LASER,         6.7f, 36.0f, -0.045f },
+    { ITEM_GRENADELAUNCH, 2.4f, 40.0f, -0.040f },
 };
 
 s32 portAdsWeaponPose(s32 item, const coord3d *muzzle, coord3d *pose)

@@ -58,6 +58,13 @@ the combined scale change. Protected-band/ramp lengths in source space and elbow
 targets remain unchanged. This intentional size adjustment supersedes the older
 fixed-scale value; native pistol/chop/icon transforms retain their existing size.
 
+Long-gun camera proximity is a separate pose-table control in `joy_port.c`.
+Unscoped ADS origins move 20% closer along camera Z, with calibrated sight
+heights/pitches and world FOV retained. Gun and grip hands share that transform;
+the forearms still fit their camera-space elbow targets. This does not change
+the 0.052 hand scale or 2.5 body multiplier above. Pistol poses and the sniper's
+scope transition keep their separate eye distances.
+
 The original pause bracelet models its upper surface and sides, leaving an
 open underside. `portArmMeshBuildWatchBack` completes that underside for long-gun
 grips. It derives attachment edges, width and texture setup from the original
