@@ -1,4 +1,4 @@
-# Project Midas ADS: fork change inventory
+# Iron Sights: fork change inventory
 
 This is the maintained inventory of additions and modifications made by this
 fork. Update it whenever repository work changes an entry or introduces a new
@@ -43,8 +43,10 @@ overrides remain authoritative. This differs from inherited centered HUDs,
 disabled AA/anisotropy and point-filtered 2D. The browser bootstrap no longer
 overrides common 2x MSAA with its former off setting.
 
-Video's middle tab now shows Next while another settings page exists, then
-Classic on the last page. Previously Classic occupied the tab unconditionally,
+Video's middle tab now shows Next while another settings page exists. Classic
+is a sibling of Video and Audio in Options > Audio Visual, with matching label
+and help. This supersedes the brief last-Video-page Classic tab. Previously
+Classic occupied the tab unconditionally,
 leaving Video 2/2 (Max FPS) unreachable after the fork added Enhanced Fonts.
 Previous still returns to earlier pages and pending values survive page turns;
 Apply Changes remains available on both pages. Classic retains its existing
@@ -302,9 +304,39 @@ icon helper also removes its temporary executable and DLL (FORK-019).
 
 **Status:** Implemented.
 
-Named this independent fork **Project Midas ADS**, retained its upstream link,
-and documented the added controls, settings and gameplay behavior. Put the
-latest gameplay video near the top of the README with a screenshot thumbnail
+Named this independent fork **Iron Sights** (formerly **Project Midas ADS**),
+retaining its Project Midas upstream link, license/credits and documented aiming,
+movement and HUD features. The repository is `pRizz/Iron-Sights` and its Pages
+path is `/Iron-Sights/`. Current README/contribution/release/browser references,
+repo-specific badge URLs, source/provenance links, ZIP name, Windows manifest,
+native window/About/icon-preparation/startup copy, browser metadata/chrome/CRT
+and gallery title use the new identity. The ZIP is
+`Iron-Sights-windows-x86.zip`; upstream engine artifact/target names remain
+stable, including `ProjectMidas.exe`, `ge` and the Wasm loader filenames.
+Project Midas fork attribution remains visible in native startup/About and
+browser startup/footer. Older dated evidence below retains its historical name.
+
+The browser's deployed ROM database, remember preference, user-files mount,
+lock and backup-format identities are deliberately unchanged. Both Pages paths
+share the `https://prizz.github.io` origin, preserving cached ROMs, campaign saves,
+settings and old backups without migration code. The private
+[rename audit](web/tools/rename-storage-audit.mjs) exercises old/new paths on one
+origin, byte-preserving export/restore and remembered-ROM autostart. The accepted
+web plan and WEB-010 track this follow-up and verification. GitHub repository
+redirects preserve source links; former Pages paths are not assumed to redirect.
+
+Rename validation passes Windows/optimized Wasm builds, 146 browser unit tests,
+type checking, exact public allowlist/Wasm digest, native Start/HUD/ADS/upstream
+integration checks and five distribution tests with the new ZIP/metadata names.
+Edge's private real-ROM rename audit preserves exact EEPROM/settings exports
+across both paths, reads the deployed ROM namespace and automatically starts the
+remembered ROM at the new path. Windows UI review confirms the Iron Sights title,
+Classic hub entry/back route and reachable Video 2/2 without a Classic tab.
+The gallery's two independent passes reproduce all 72 views and 35 icons unchanged;
+only its title and source fingerprint change. Diagnostics remain private under
+`build/iron-sights` and `build_win/iron-sights-menu-audit`.
+
+The README places the latest gameplay video near the top with a screenshot thumbnail
 and YouTube play badge; the newer video supersedes the original demo link.
 The README introduces the fork, puts the Windows ZIP download and three-step
 setup before the demo (FORK-018), prominently links this full
@@ -1302,14 +1334,14 @@ and Linux builds and gameplay/HUD/wardrobe/mission-cheat/suspend regressions
 passed. Five distribution tests cover truthful build identity, allow-listed
 deterministic ZIPs, bounded cache decoding and inline texture depths, shared
 references and invalid offsets/depths. Actionlint passed. The first hosted
-[run](https://github.com/pRizz/Project-Midas-ADS/actions/runs/40016371907)
+[run](https://github.com/pRizz/Iron-Sights/actions/runs/40016371907)
 passed tests, compilation and publication. Its immutable release ZIP and EXE
 passed attestation verification against this main workflow and source commit;
 packaged metadata and all file checksums matched. Verification instructions
 accept both configured push builds and deliberate manual main dispatch/retries.
 Initial SSH push probes did not create Actions runs despite enabled settings
 and no event policy. Registering the fork-specific workflow restored automatic
-push execution: [run 40019645555](https://github.com/pRizz/Project-Midas-ADS/actions/runs/40019645555)
+push execution: [run 40019645555](https://github.com/pRizz/Iron-Sights/actions/runs/40019645555)
 passed tests, compilation and immutable publication. Its ZIP/EXE attestations
 verified the expected workflow, main ref, exact commit and push trigger. The
 maintainer guide retains manual dispatch as a recovery path.
@@ -1408,7 +1440,7 @@ matching packaged JSON. CI labeling requires an exact commit and clean tree.
 Local/modified/no-Git builds do not invent an attested run. Controlled builds
 can fix timestamps with MIDAS_BUILD_TIME_UTC or SOURCE_DATE_EPOCH.
 
-The startup legal screen identifies **Project Midas ADS - a fork of Project
+The startup legal screen identifies **Iron Sights - a fork of Project
 Midas**, retaining the inherited Nintendo/Rare, film and music credits. Its
 footer shows build number/date, short commit, modified status when applicable,
 and the baked UTC build time, matching About rather than the player's clock.
@@ -2194,8 +2226,9 @@ main builds with write/OIDC permissions confined to its deployment job. Only
 explicit public build-provenance environment fields enter the SDK container.
 The final project-path artifact passes Edge's full real-ROM launcher/storage/
 capture/audio/focus/watch audit and confirms the ROM-backed logo initialized.
-Actions-based Pages configuration is enabled at
-`https://prizz.github.io/Project-Midas-ADS/` with HTTPS enforced. First CI
+Actions-based Pages configuration originally used
+`https://prizz.github.io/Project-Midas-ADS/` with HTTPS enforced; FORK-002 records
+its rename to `https://prizz.github.io/Iron-Sights/`. First CI
 publication succeeded in run `40145610255` at clean commit `2360bc8`; the Windows
 and Bright Builds workflows also passed. Its live manifest carries truthful CI
 provenance. A real update to `e4a81be` (Pages run `40146369375`) advanced the active

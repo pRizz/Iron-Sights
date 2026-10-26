@@ -1,17 +1,17 @@
-# Project Midas ADS
+# Iron Sights
 
 <!-- bright-builds-rules-readme-badges:begin -->
 
 <!-- Managed upstream by bright-builds-rules. If this badge block needs a fix, open an upstream PR or issue instead of editing the downstream managed block. Keep repo-local README content outside this managed badge block. -->
 
-[![GitHub Stars](https://img.shields.io/github/stars/pRizz/Project-Midas-ADS)](https://github.com/pRizz/Project-Midas-ADS)
-[![License](https://img.shields.io/github/license/pRizz/Project-Midas-ADS?style=flat-square)](./LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/pRizz/Iron-Sights)](https://github.com/pRizz/Iron-Sights)
+[![License](https://img.shields.io/github/license/pRizz/Iron-Sights?style=flat-square)](./LICENSE)
 [![Bright Builds: Rules](https://raw.githubusercontent.com/bright-builds-llc/bright-builds-rules/main/public/badges/bright-builds-rules-flat.svg)](https://github.com/bright-builds-llc/bright-builds-rules)
 [![OpenLinks profile](https://img.shields.io/badge/OpenLinks-profile-0F172A)](https://openlinks.us/)
 
 <!-- bright-builds-rules-readme-badges:end -->
 
-Project Midas ADS is an independent fork of [Project Midas](https://github.com/murkantor/Project-Midas), adding modern aiming, movement, and HUD options to the GE PC port. This fork is maintained separately from upstream.
+Iron Sights is an independent fork of [Project Midas](https://github.com/murkantor/Project-Midas), adding modern aiming, movement, and HUD options to the GE PC port. This fork is maintained separately from upstream.
 
 **[See the full list of changes from upstream →](FORK_CHANGES.md)** — the maintained inventory of this fork's additions, modifications, settings, and fixes.
 
@@ -23,21 +23,21 @@ vector sights. Existing ADS, HUD and browser controls retain their defaults.
 
 ## Download and play on Windows
 
-**[DOWNLOAD HERE — latest Windows ZIP](https://github.com/pRizz/Project-Midas-ADS/releases/latest/download/Project-Midas-ADS-windows-x86.zip)** · [Release details and provenance](https://github.com/pRizz/Project-Midas-ADS/releases/latest) · [Build status](https://github.com/pRizz/Project-Midas-ADS/actions/workflows/windows-release.yml)
+**[DOWNLOAD HERE — latest Windows ZIP](https://github.com/pRizz/Iron-Sights/releases/latest/download/Iron-Sights-windows-x86.zip)** · [Release details and provenance](https://github.com/pRizz/Iron-Sights/releases/latest) · [Build status](https://github.com/pRizz/Iron-Sights/actions/workflows/windows-release.yml)
 
-1. Download **Project-Midas-ADS-windows-x86.zip** and **extract the entire ZIP** into a writable folder, such as Documents. Keep `SDL2.dll` beside the executable. GitHub's “Source code” archives are for building, not playing.
+1. Download **Iron-Sights-windows-x86.zip** and **extract the entire ZIP** into a writable folder, such as Documents. Keep `SDL2.dll` beside the executable. GitHub's “Source code” archives are for building, not playing.
 2. Put your own **unmodified GoldenEye 007 USA ROM** (`.z64`, `.v64`, or `.n64`) in the extracted **Data** folder. Extract zipped ROMs first. No ROM is included or downloaded by the game.
 3. Double-click **ProjectMidas.exe**. On first launch, the game prepares weapon icons from your ROM and caches them locally. No Python, compiler, administrator access or asset downloads are required. You can skip preparation with Esc; the game uses weapon names if icons are unavailable.
 
 Windows 10/11, an x86-compatible CPU and an OpenGL 3.3-capable graphics driver are required. The 32-bit build also runs on 64-bit Windows. These are continuously published development builds from successful pushes to `main`.
 
-For the embedded build time, commit and clickable source/build/release links, open **Options > Gameplay > Port Options > About Project Midas ADS**; the watch has the same entry. Windows links are blue and underlined and open in your default browser. Local or modified builds are labeled accordingly. The release page supplies signed provenance, hashes and build-input details; see [verification and maintainer instructions](scripts/port/releases.md).
+For the embedded build time, commit and clickable source/build/release links, open **Options > Gameplay > Port Options > About / Build Info**; the watch has the same entry. Windows links are blue and underlined and open in your default browser. Local or modified builds are labeled accordingly. The release page supplies signed provenance, hashes and build-input details; see [verification and maintainer instructions](scripts/port/releases.md).
 
 To update, replace the supplied program files while keeping **Data** and **midas.ini**. Normal campaign saves and profiles are separate from executable-specific suspend points.
 
 ## Play the browser preview
 
-**[PLAY IN YOUR BROWSER](https://prizz.github.io/Project-Midas-ADS/)** with your own stock US ROM. The desktop preview runs locally through WebAssembly and remembers your ROM, campaign saves, profiles and settings on this device. Save backups can be downloaded and restored. Chrome, Edge and Firefox have been tested; Safari is experimental.
+**[PLAY IN YOUR BROWSER](https://prizz.github.io/Iron-Sights/)** with your own stock US ROM. The desktop preview runs locally through WebAssembly and remembers your ROM, campaign saves, profiles and settings on this device. Save backups can be downloaded and restored. Chrome, Edge and Firefox have been tested; Safari is experimental.
 
 On phones and tablets, touch controls turn on automatically. Move with the left
 thumbstick and drag the right side to look. **Fire** can also be dragged to turn
@@ -51,7 +51,7 @@ Successful `main` builds deploy automatically to GitHub Pages. See [compatibilit
 
 ## Watch the latest gameplay demo
 
-[![Watch Project Midas ADS update: new hands, improved sights, and sniper scope zoom at 60 FPS](.github/images/ads-gameplay-thumbnail.png)](https://youtu.be/dI-G7Lo12hA)
+[![Watch Iron Sights update: new hands, improved sights, and sniper scope zoom at 60 FPS](.github/images/ads-gameplay-thumbnail.png)](https://youtu.be/dI-G7Lo12hA)
 
 **[Watch on YouTube: ADS Update — Hands, Better Sights & Sniper Scope Zoom (60 FPS)](https://youtu.be/dI-G7Lo12hA)**
 
@@ -191,8 +191,8 @@ The commands below are for a Linux shell. On Windows, run them in WSL:
 2. Open the Ubuntu terminal and clone the repository inside WSL, not under `/mnt/c` (much faster):
    ```
    cd ~
-   git clone https://github.com/pRizz/Project-Midas.git
-   cd Project-Midas
+   git clone https://github.com/pRizz/Iron-Sights.git
+   cd Iron-Sights
    ```
 3. Copy your cart in, for example from your Windows Downloads folder:
    ```
@@ -251,15 +251,15 @@ Every repository change must update the [fork change inventory](FORK_CHANGES.md)
 
 For hands, arms and weapon rendering, open the [visual review gallery](review/hand-gallery/index.html) locally in a browser. It compares PP7, AK47/KF7 and Klobb in regular/ADS poses across six wardrobes, plus all generated weapon icons. See [generation and pre-commit setup](scripts/port/hand_gallery.md).
 
-For ADS changes and bug reports, use [this fork's issues](https://github.com/pRizz/Project-Midas/issues) and pull requests. The inherited [CONTRIBUTING.md](CONTRIBUTING.md) describes upstream contribution guidelines, including the rules for AI-assisted changes. General port development is coordinated in [upstream Project Midas](https://github.com/murkantor/Project-Midas).
+For aiming changes and bug reports, use [this fork's issues](https://github.com/pRizz/Iron-Sights/issues) and pull requests. The inherited [CONTRIBUTING.md](CONTRIBUTING.md) describes upstream contribution guidelines, including the rules for AI-assisted changes. General port development is coordinated in [upstream Project Midas](https://github.com/murkantor/Project-Midas).
 
 ## License
 
-Project Midas ADS retains the upstream Project Midas port code's MIT license and attribution; see [LICENSE](LICENSE). The license does not cover the decompiled game code, GE itself or its assets. Bundled third-party code keeps its own license; see `tools/THIRD_PARTY_NOTICES.txt`.
+Iron Sights retains the upstream Project Midas port code's MIT license and attribution; see [LICENSE](LICENSE). The license does not cover the decompiled game code, GE itself or its assets. Bundled third-party code keeps its own license; see `tools/THIRD_PARTY_NOTICES.txt`.
 
 ## Acknowledgements
 
-Project Midas ADS builds on [Project Midas](https://github.com/murkantor/Project-Midas) by murkantor and contributors, and the work of the people and projects credited below.
+Iron Sights builds on [Project Midas](https://github.com/murkantor/Project-Midas) by murkantor and contributors, and the work of the people and projects credited below.
 
 - [GoldenEye decompilation](https://github.com/n64decomp/007) by KholdFuzion and contributors
 - [GoldenEye docs](https://github.com/kholdfuzion/goldeneye_docs)

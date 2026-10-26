@@ -1,6 +1,6 @@
 # Browser preview compatibility
 
-The desktop preview is live at <https://prizz.github.io/Project-Midas-ADS/>.
+The desktop preview is live at <https://prizz.github.io/Iron-Sights/>.
 These results were recorded on 2026-10-24/25. Safari remains experimental by the
 user's explicit decision; WebKit automation is not actual macOS Safari testing.
 The [milestone tracker](web_target_progress.md) owns completion and handoff status.
@@ -134,13 +134,13 @@ borders with point/linear filtering; they are not exhaustive material coverage.
 ## Deployment and data acceptance
 
 Lifecycle source `ea804df` passed
-[Pages run 40167224238](https://github.com/pRizz/Project-Midas-ADS/actions/runs/40167224238)
+[Pages run 40167224238](https://github.com/pRizz/Iron-Sights/actions/runs/40167224238)
 and deployed clean runtime `04853c2b485e431a`. Its public Wasm, frontend, models
 and artwork match the exact artifact. Live native exit/resume and cached startup
 acceptance are recorded above and in WEB-010.
 
 The earlier immersive room source `08a07d8` passed
-[Pages run 40160374496](https://github.com/pRizz/Project-Midas-ADS/actions/runs/40160374496).
+[Pages run 40160374496](https://github.com/pRizz/Iron-Sights/actions/runs/40160374496).
 The published runtime `faad72845829175b` has clean Actions provenance; its Wasm
 size/hash/MIME, dynamic frontend chunks and both artwork hashes were verified.
 Actual published insertion/flight, normal Dam movement/audio/P watch/focus/capture,
@@ -151,9 +151,9 @@ remained identical after reload; actual restore and ROM removal also pass, with
 no page errors or uploads. Evidence is private under `build/web-room`.
 
 Commit `2360bc8` passed the first Pages workflow
-[40145610255](https://github.com/pRizz/Project-Midas-ADS/actions/runs/40145610255).
+[40145610255](https://github.com/pRizz/Iron-Sights/actions/runs/40145610255).
 The subsequent `e4a81be` deployment passed
-[40146369375](https://github.com/pRizz/Project-Midas-ADS/actions/runs/40146369375).
+[40146369375](https://github.com/pRizz/Iron-Sights/actions/runs/40146369375).
 A private live-site audit kept the watch animating while the runtime version
 changed: frame logging advanced from 2,820 to 32,820 over 511 seconds. Gameplay
 capture recovered afterward. Fresh initialization recalled the ROM and preserved
@@ -161,7 +161,7 @@ every campaign/profile/settings backup byte; confirmed restore and ROM removal
 also passed. No ROM upload or page error occurred.
 
 The final compatibility source `2c890b2` passed
-[Pages run 40148810530](https://github.com/pRizz/Project-Midas-ADS/actions/runs/40148810530).
+[Pages run 40148810530](https://github.com/pRizz/Iron-Sights/actions/runs/40148810530).
 Its published runtime `6521ef4a7a8c672b` also passed the full actual-ROM audit
 with the Gamepad API deliberately removed, proving keyboard/profile/capture/watch
 startup survives that optional API's absence. Audio, save reload, actual backup

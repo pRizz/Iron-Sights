@@ -129,7 +129,7 @@ export function Player(props: PlayerProps) {
                     width="960"
                     height="540"
                     tabIndex={started() ? 0 : -1}
-                    aria-label="Project Midas game canvas"
+                    aria-label="Iron Sights game canvas"
                 />
                 <Show when={started() && props.touch.enabled()}>
                     <TouchControls

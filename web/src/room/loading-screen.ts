@@ -54,7 +54,7 @@ function paintMission(
     ctx.fillStyle = theme.muted;
     ctx.textAlign = 'left';
     ctx.font = `15px ${theme.font}`;
-    ctx.fillText('PROJECT MIDAS ADS', 44, 414);
+    ctx.fillText('IRON SIGHTS', 44, 414);
     ctx.textAlign = 'right';
     ctx.fillText('F2  CONTROLS', 596, 414);
 }

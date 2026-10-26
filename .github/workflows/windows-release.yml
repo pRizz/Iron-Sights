@@ -182,7 +182,7 @@ jobs:
         with:
           subject-path: |
             dist/ProjectMidas.exe
-            dist/Project-Midas-ADS-windows-x86.zip
+            dist/Iron-Sights-windows-x86.zip
       - name: Preserve provenance and publish versioned release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -197,7 +197,7 @@ jobs:
           from pathlib import Path
           m=json.loads(Path('dist/build-info.json').read_text())
           assert m['commit']==os.environ['GITHUB_SHA'] and m['ci'] and not m['dirty']
-          text=f'''Download **Project-Midas-ADS-windows-x86.zip**, extract the entire ZIP, put your own stock USA ROM in its Data folder, then run ProjectMidas.exe.
+          text=f'''Download **Iron-Sights-windows-x86.zip**, extract the entire ZIP, put your own stock USA ROM in its Data folder, then run ProjectMidas.exe.
 
           This is a continuously published development build. Weapon icons are prepared locally on first launch; no Python or asset downloads are required.
 
@@ -206,13 +206,13 @@ jobs:
           - GitHub Actions: [build run]({m['workflow_url']})
           - Signed provenance: [attestation]({os.environ['ATTESTATION_URL']})
 
-          Verify with `gh attestation verify Project-Midas-ADS-windows-x86.zip -R {m['repository']}`. Build metadata, input fingerprints, checksums and the provenance bundle are preserved below. The ROM is not included.
+          Verify with `gh attestation verify Iron-Sights-windows-x86.zip -R {m['repository']}`. Build metadata, input fingerprints, checksums and the provenance bundle are preserved below. The ROM is not included.
 
           Preserve Data and midas.ini when updating. Suspend points require their original executable; campaign saves are separate.
           '''
           Path('notes.md').write_text(text)
           PY
-          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --title "Windows build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} (${GITHUB_SHA:0:9})" --notes-file notes.md dist/Project-Midas-ADS-windows-x86.zip dist/SHA256SUMS.txt dist/build-info.json dist/build-inputs.json dist/build-provenance.sigstore.json
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --title "Windows build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} (${GITHUB_SHA:0:9})" --notes-file notes.md dist/Iron-Sights-windows-x86.zip dist/SHA256SUMS.txt dist/build-info.json dist/build-inputs.json dist/build-provenance.sigstore.json
           gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --latest
           echo "## Windows download" >> "$GITHUB_STEP_SUMMARY"
           echo "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/$tag" >> "$GITHUB_STEP_SUMMARY"

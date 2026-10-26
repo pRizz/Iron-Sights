@@ -723,6 +723,28 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**Iron Sights rename and Classic navigation, 2026-10-26:** The accepted identity
+is Iron Sights, a fork of Project Midas, at `pRizz/Iron-Sights` and
+`https://prizz.github.io/Iron-Sights/`. Visible browser/native startup/About/window/
+icon-preparation branding, metadata, source/release links, ZIP names, docs,
+repo-specific badges and CI project-path checks use the new identity. Historical
+engine artifact/target names stay stable. The deployed ROM database, remember
+preference, user-files mount/lock and backup codec identities stay unchanged;
+the Pages origin also stays unchanged, requiring no migration layer. The private
+real-ROM rename audit passes exact campaign/settings exports across the old/new
+paths, old-format backup restore, ROM recall and automatic startup at the new
+path. Classic is now beside Video and Audio in the Audio Visual hub; Windows UI
+review verifies entry/back and Video 2/2 without its former Classic tab.
+Windows/optimized Wasm builds, type checking, 146 browser tests, native Start/HUD/
+ADS/upstream checks, five distribution tests, site policy verification and Edge
+launcher/startup checks pass. The two-pass gallery reproduces all 107 images
+unchanged; only its title/fingerprint change. Evidence is private under
+`build/iron-sights` and `build_win/iron-sights-menu-audit`.
+The GitHub rename retains repository identity `R_kgDOVO_XrA`; its homepage and
+workflow-based Pages configuration now use the new URL with HTTPS enforced.
+Next action: push main and verify CI/Pages at the new URL. Actual Safari remains
+experimental.
+
 **Shared presentation defaults and Start behavior, 2026-10-26:** All platforms
 now default the solo HUD, health/armor layout and multiplayer HUD to Wide, MSAA
 and anisotropy to 2x, and 2D filtering to ON. The browser bootstrap's former

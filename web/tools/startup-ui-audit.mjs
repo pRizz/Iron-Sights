@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { expect } from '@playwright/test';
 import { launchAuditBrowser } from './browser-choice.mjs';
 
-const origin = process.argv[2] || 'http://127.0.0.1:4178/Project-Midas-ADS/';
+const origin = process.argv[2] || 'http://127.0.0.1:4178/Iron-Sights/';
 const output = resolve(process.env.MIDAS_AUDIT_OUTPUT || '../build/web-startup/ui');
 await mkdir(output, { recursive: true });
 const { browser } = await launchAuditBrowser();

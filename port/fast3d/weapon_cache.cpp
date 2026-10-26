@@ -248,7 +248,7 @@ static bool generate(const fs::path &cache, const char *rom)
     auto &window=progressWindow.window;
     auto &renderer=progressWindow.renderer;
     if (SDL_InitSubSystem(SDL_INIT_VIDEO)==0) {
-        window=SDL_CreateWindow("Project Midas ADS - Preparing weapon icons (first launch)",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,560,90,0);
+        window=SDL_CreateWindow("Iron Sights - Preparing weapon icons (first launch)",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,560,90,0);
         if (window) renderer=SDL_CreateRenderer(window,-1,SDL_RENDERER_SOFTWARE);
     }
     DWORD start=GetTickCount(), exit=4;
@@ -258,7 +258,7 @@ static bool generate(const fs::path &cache, const char *rom)
         if (cancel || GetTickCount()-start>180000) { TerminateProcess(process.hProcess,4); WaitForSingleObject(process.hProcess,5000); break; }
         auto progress=readFile(files.dir/"progress.bin",1); int count=progress.empty()?0:progress[0];
         if (window) {
-            std::string title="Project Midas ADS - Preparing icons "+std::to_string(count)+"/35 (first launch; Esc to skip)";
+            std::string title="Iron Sights - Preparing icons "+std::to_string(count)+"/35 (first launch; Esc to skip)";
             SDL_SetWindowTitle(window,title.c_str());
         }
         if (renderer) {
@@ -283,7 +283,7 @@ extern "C" void portIconCacheInit(const char *rom, unsigned int fingerprint)
     PortModalScope modal;
     romFingerprint=fingerprint;
     try {
-        char *pref=SDL_GetPrefPath("ProjectMidasADS","ProjectMidasADS");
+        char *pref=SDL_GetPrefPath("IronSights","IronSights");
         if (!pref) { cacheStatus="Weapon names (cache folder unavailable)";return; }
         fs::path folder=fs::u8path(pref);SDL_free(pref);
         if (const char *overridePath=SDL_getenv("GE_ICON_CACHE_DIR")) folder=fs::u8path(overridePath);
@@ -301,7 +301,7 @@ extern "C" void portIconCacheInit(const char *rom, unsigned int fingerprint)
         /* A per-user cache lock keeps simultaneous launches from duplicating
          * generation or racing an atomic cache replacement. */
         auto key=utf8(folder); auto hash=portIconCrc((const unsigned char*)key.data(),key.size());
-        std::wstring lock=L"Local\\ProjectMidasADSIcons-"+std::to_wstring(hash);
+        std::wstring lock=L"Local\\IronSightsIcons-"+std::to_wstring(hash);
         CacheLock mutex{CreateMutexW(nullptr,FALSE,lock.c_str())};
         if (!mutex.handle) return;
         DWORD acquired=WaitForSingleObject(mutex.handle,185000);

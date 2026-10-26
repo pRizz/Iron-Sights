@@ -74,7 +74,7 @@ export async function parseBackup(text: string): Promise<UserFile[]> {
   if (text.length > MAX_BACKUP_TEXT) throw new Error('The backup is too large.');
   const backup = object(JSON.parse(text));
   if (backup.format !== 'project-midas-saves' || backup.version !== 1 || !Array.isArray(backup.files)) {
-    throw new Error('Choose a Project Midas save backup with supported format version 1.');
+    throw new Error('Choose an Iron Sights or Project Midas save backup with supported format version 1.');
   }
   if (backup.files.length > MAX_FILES) throw new Error('The backup contains too many files.');
   const files: UserFile[] = [];

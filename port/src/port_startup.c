@@ -20,7 +20,7 @@ static Gfx *startupLine(Gfx *gdl, s32 y, const char *text)
 Gfx *portStartupAttribution(Gfx *gdl)
 {
     char line[128];
-    gdl = startupLine(gdl, 16, "Project Midas ADS - a fork of Project Midas\n");
+    gdl = startupLine(gdl, 16, "Iron Sights - a fork of Project Midas\n");
     snprintf(line, sizeof(line), "Build %s - %s%s\n", PORT_BUILD_STRING,
         PORT_BUILD_COMMIT, PORT_BUILD_DIRTY ? " (modified)" : "");
     gdl = startupLine(gdl, 300, line);

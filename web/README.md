@@ -2,9 +2,17 @@
 
 This subpackage supplies a SolidJS launcher, ROM validation, the versioned save-backup
 codec, storage adapters, tests and private runtime/menu audits. The launcher is
-[live on Pages](https://prizz.github.io/Project-Midas-ADS/), with deployment/update
+[live on Pages](https://prizz.github.io/Iron-Sights/), with deployment/update
 preservation verified. See [browser compatibility and measured limits](../scripts/port/web_compatibility.md);
 Safari remains experimental by the user's decision.
+
+The Iron Sights rename changes the project path, not the Pages origin. Keep the
+deployed storage identifiers stable (`project-midas-ads:rom`, remember preference,
+`/midas-ads-user`, user-files lock and `project-midas-saves` backup format) so ROMs,
+campaign saves and settings remain available. These internal keys are not network
+paths. With a private ROM, run `node tools/rename-storage-audit.mjs ../baserom.u.z64`
+against the assembled site at `http://127.0.0.1:4179/Iron-Sights/` to verify old/new
+paths, exact exported save bytes and remembered-ROM autostart.
 The immersive room revision is tracked separately in the
 [accepted room plan](../scripts/port/web_room_plan.md) and WEB-007 through WEB-010.
 Its entrypoint fills the viewport; F2 opens the retained launcher, saves and
@@ -37,13 +45,13 @@ focus loss, cancelled touches, rotation, mode changes and room return clear inpu
 `bun run test:touch` builds a ROM-free Solid fixture and verifies actual
 multi-pointer capture/cancellation and layout at the native boundary. The Pages
 workflow also runs the synthetic Wasm bridge regression. For private real-ROM
-mobile-viewport acceptance, use `MIDAS_BROWSER=chrome bun run audit:touch ../baserom.u.z64 ../build/web-touch/game http://127.0.0.1:4177/Project-Midas-ADS/`.
+mobile-viewport acceptance, use `MIDAS_BROWSER=chrome bun run audit:touch ../baserom.u.z64 ../build/web-touch/game http://127.0.0.1:4177/Iron-Sights/`.
 Desktop WebKit emulation needs a simulated touch-capability property and cannot
 establish physical iOS support. Its mobile viewport driver also needs an explicit
 resize event after changing emulated orientation and uses single-pointer drags;
 Chromium verifies simultaneous contacts. Keep ROMs, screenshots and backups local.
 
-For audio changes, run `MIDAS_BROWSER=chrome bun run audit:audio ../baserom.u.z64 ../build/web-audio/current http://127.0.0.1:4177/Project-Midas-ADS/`
+For audio changes, run `MIDAS_BROWSER=chrome bun run audit:audio ../baserom.u.z64 ../build/web-audio/current http://127.0.0.1:4177/Iron-Sights/`
 (or `MIDAS_BROWSER=msedge`). The private real-ROM audit reaches Dam, records a
 12-second mono WAV and continuity/queue metrics on the audio render thread,
 then checks Watch, pause silence and resumed sound. It requires AudioWorklet
@@ -60,7 +68,7 @@ report contains the latest bounded movement/timing/heading/scaling samples and
 build identity; paused frame history freezes until resume. It contains no key,
 ROM/save or world-position data and is never uploaded automatically.
 
-`MIDAS_BROWSER=chrome bun run audit:mouse ../baserom.u.z64 ../build/web-mouse/game http://127.0.0.1:4177/Project-Midas-ADS/`
+`MIDAS_BROWSER=chrome bun run audit:mouse ../baserom.u.z64 ../build/web-mouse/game http://127.0.0.1:4177/Iron-Sights/`
 checks known movement with and without a 250 ms hitch, no subsequent replay,
 Watch recapture and exported diagnostics. Set `MIDAS_MOUSE_FALLBACK=1` to test
 unsupported-raw fallback; use `MIDAS_BROWSER=msedge` for Edge. Controlled browser
@@ -104,7 +112,7 @@ Input/focus measurements enable the existing invisible/invulnerable diagnostics
 and a fixed seed through the prototype's private audit query, isolating them
 from enemy impulses. Normal launches keep ordinary gameplay.
 
-`node tools/serve-site.mjs 4176 /Project-Midas-ADS/` serves only the assembled site
+`node tools/serve-site.mjs 4176 /Iron-Sights/` serves only the assembled site
 for local/container audits. Launcher audits also accept `MIDAS_BROWSER=firefox`
 or `webkit`; `MIDAS_HEADED=1` uses a display server. The ROM-free
 `node tools/capability-audit.mjs <preview-url>` reports initialization and graphics

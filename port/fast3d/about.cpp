@@ -40,7 +40,7 @@ static HRESULT CALLBACK aboutLink(HWND window, UINT event, WPARAM w, LPARAM valu
         char url[1024];
         WideCharToMultiByte(CP_UTF8, 0, (const WCHAR *)value, -1, url, sizeof(url), NULL, NULL);
         if (portAboutUrlAllowed(url) && SDL_OpenURL(url) < 0)
-            MessageBoxW(window, L"Windows could not open your web browser.", L"Project Midas ADS", MB_OK|MB_ICONINFORMATION);
+            MessageBoxW(window, L"Windows could not open your web browser.", L"Iron Sights", MB_OK|MB_ICONINFORMATION);
     }
     return S_OK;
 }
@@ -52,7 +52,7 @@ void portAboutOpen(void)
     PortModalScope modal;
     char text[2400];
 
-    snprintf(text, sizeof(text), "Built at: %s\nBuild: %s\nCommit: %s%s\nBranch: %s\nBuilder: %s\n\nWeapon icons: %s\n\n"
+    snprintf(text, sizeof(text), "Iron Sights - a fork of Project Midas\n\nBuilt at: %s\nBuild: %s\nCommit: %s%s\nBranch: %s\nBuilder: %s\n\nWeapon icons: %s\n\n"
         "Build details identify this executable. Verify the download's signed GitHub attestation for provenance.",
         PORT_BUILD_TIME, PORT_BUILD_STRING, PORT_BUILD_SHA, PORT_BUILD_DIRTY ? " (modified source)" : "",
         PORT_BUILD_BRANCH, PORT_BUILD_CI ? "GitHub Actions" : "Local build - no CI attestation", portIconCacheStatus());
@@ -79,18 +79,18 @@ void portAboutOpen(void)
         if (owner && SDL_GetWindowWMInfo(owner,&native)) dialog.hwndParent=native.info.win.window;
         dialog.dwFlags = TDF_ENABLE_HYPERLINKS | TDF_ALLOW_DIALOG_CANCELLATION | TDF_SIZE_TO_CONTENT;
         dialog.dwCommonButtons = TDCBF_CLOSE_BUTTON;
-        dialog.pszWindowTitle = L"About Project Midas ADS";
-        dialog.pszMainInstruction = L"Project Midas ADS";
+        dialog.pszWindowTitle = L"About Iron Sights";
+        dialog.pszMainInstruction = L"Iron Sights";
         dialog.pszContent = wide;
         dialog.pfCallback = aboutLink;
         if (FAILED(TaskDialogIndirect(&dialog, NULL, NULL, NULL)))
-            MessageBoxW(NULL, wide, L"About Project Midas ADS", MB_OK|MB_ICONINFORMATION);
+            MessageBoxW(NULL, wide, L"About Iron Sights", MB_OK|MB_ICONINFORMATION);
     }
 #else
     {
         const SDL_MessageBoxButtonData buttons[] = {{SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT,0,"Close"},
             {0,1,"Source"},{0,2,"Build"},{0,3,"Releases"}};
-        SDL_MessageBoxData box = {SDL_MESSAGEBOX_INFORMATION,NULL,"About Project Midas ADS",text,4,buttons,NULL};
+        SDL_MessageBoxData box = {SDL_MESSAGEBOX_INFORMATION,NULL,"About Iron Sights",text,4,buttons,NULL};
         int choice;
         while (SDL_ShowMessageBox(&box, &choice) == 0 && choice > 0) {
             const char *url = choice == 1 ? PORT_BUILD_SOURCE_URL : choice == 2 ? PORT_BUILD_RUN_URL : PORT_BUILD_DOWNLOADS_URL;

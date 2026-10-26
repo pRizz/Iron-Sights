@@ -17,7 +17,7 @@ export function acquireUserFilesLock(): Promise<() => void> {
                 if (!maybeLock) {
                     reject(
                         new UserFilesInUse(
-                            'Another Project Midas tab owns your saves. Close it before starting here.',
+                            'Another Iron Sights tab owns your saves. Close it before starting here.',
                         ),
                     );
                     return;

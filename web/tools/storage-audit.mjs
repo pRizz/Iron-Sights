@@ -31,7 +31,7 @@ try {
   assert.match(await second.evaluate(async () => {
     try { await storageTest.acquireUserFilesLock(); return 'incorrectly acquired'; }
     catch (error) { return error.message; }
-  }), /Another Project Midas tab/);
+  }), /Another Iron Sights tab/);
   await page.evaluate(() => releaseSaveLock());
   await page.waitForFunction(async () => !(await navigator.locks.query()).held.length);
   await second.evaluate(async () => { globalThis.releaseSaveLock = await storageTest.acquireUserFilesLock(); });

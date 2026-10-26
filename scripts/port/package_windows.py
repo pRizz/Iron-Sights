@@ -6,7 +6,7 @@ from pathlib import Path
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
-NAME = "Project-Midas-ADS-windows-x86.zip"
+NAME = "Iron-Sights-windows-x86.zip"
 FILES = {"ProjectMidas.exe": "ProjectMidas.exe", "SDL2.dll": "SDL2.dll",
          "gamecontrollerdb.txt": "gamecontrollerdb.txt", "gamecontrollerdefault.txt": "gamecontrollerdefault.txt",
          "midas_ini_help.txt": "midas_ini_help.txt", "Data/shaders_base.txt": "Data/shaders_base.txt"}

@@ -1,4 +1,4 @@
-Enhanced fonts for Project Midas ADS
+Enhanced fonts for Iron Sights
 
 GoldenEye/GoldFinger texture pack by Carnivorous, published by Graslu.
 Source: https://github.com/Graslu/GEPDTexturePacks

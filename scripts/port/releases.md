@@ -3,7 +3,7 @@
 The default branch is `main`. Every successful push (including documentation
 changes) runs ROM-free tests, builds Windows x86, packages player files and
 publishes a uniquely tagged GitHub Release. Manual dispatch on `main` supports
-retries (`gh workflow run windows-release.yml -R pRizz/Project-Midas-ADS --ref main`).
+retries (`gh workflow run windows-release.yml -R pRizz/Iron-Sights --ref main`).
 If a push does not create a run, inspect Actions settings/policies and use this
 manual main dispatch rather than uploading a locally modified executable.
 Tags include run number, attempt and commit, so a rerun never replaces
@@ -53,7 +53,7 @@ normally. Release assets retain their separate immutable publication/retention.
 For independent source compilation, select **clean_build** in Run workflow, or:
 
 ```sh
-gh workflow run windows-release.yml -R pRizz/Project-Midas-ADS --ref main -F clean_build=true
+gh workflow run windows-release.yml -R pRizz/Iron-Sights --ref main -F clean_build=true
 ```
 
 This bypasses object-cache restore/save and disables ccache for compilation;
@@ -65,8 +65,8 @@ build hermetic or promise byte-identical output across compiler/runner changes.
 
 - Enable Actions and allow the checked-in pinned actions to run. For an existing
   fork, explicitly enable the workflow with
-  `gh workflow enable windows-release.yml -R pRizz/Project-Midas-ADS`.
-- Use the canonical `git@github.com:pRizz/Project-Midas-ADS.git` origin URL,
+  `gh workflow enable windows-release.yml -R pRizz/Iron-Sights`.
+- Use the canonical `git@github.com:pRizz/Iron-Sights.git` origin URL,
   rather than the old renamed repository redirect.
 - Enable **Settings > General > Releases > Enable release immutability**.
   Releases are assembled as drafts, then published only when every asset has

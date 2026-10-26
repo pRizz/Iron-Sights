@@ -4816,10 +4816,10 @@ static void videoIniWritableCheck(void)
         return;
     }
     portConLogf("ge: midas.ini: the game folder is not writable, settings will not be saved\n");
-    portShowErrorBox("Project Midas: settings will not be saved",
-                     "Project Midas cannot write midas.ini in its own folder, so any settings you change "
+    portShowErrorBox("Iron Sights: settings will not be saved",
+                     "Iron Sights cannot write midas.ini in its own folder, so any settings you change "
                      "will be lost when you quit.\n\n"
-                     "Move the game folder somewhere you can write to, such as C:\\Games\\ProjectMidas. "
+                     "Move the game folder somewhere you can write to, such as C:\\Games\\IronSights. "
                      "Avoid Program Files. If the folder is under Documents or Desktop, Windows "
                      "Controlled Folder Access may be blocking it.");
 }
@@ -4852,12 +4852,12 @@ s32 videoInit(void)
 
     set.wapi = &gfx_sdl;
     set.rapi = &gfx_opengl_api;
-    {   /* "Project Midas - <branch> - Build <count>-<date>" (sysstubs.c) */
+    {   /* "Iron Sights - <branch> - Build <count>-<date>" */
         extern const char *portPlatformName(void);
         extern const char *portBuildString(void);
         static char title[128];
 
-        snprintf(title, sizeof(title), "Project Midas - %s - Build %s", portPlatformName(), portBuildString());
+        snprintf(title, sizeof(title), "Iron Sights - %s - Build %s", portPlatformName(), portBuildString());
         set.window_settings.title = title;
     }
     set.window_settings.width = (s_CfgWindowW > 0) ? s_CfgWindowW : 640;

@@ -7,9 +7,9 @@ static void put(unsigned char *p, uint32_t value)
 { int i;for(i=0;i<4;i++)p[i]=(unsigned char)(value>>(8*i)); }
 int main(void)
 {
-    assert(portAboutUrlAllowed("https://github.com/pRizz/Project-Midas-ADS/releases"));
+    assert(portAboutUrlAllowed("https://github.com/pRizz/Iron-Sights/releases"));
     assert(!portAboutUrlAllowed(NULL));
-    assert(!portAboutUrlAllowed("http://github.com/pRizz/Project-Midas-ADS"));
+    assert(!portAboutUrlAllowed("http://github.com/pRizz/Iron-Sights"));
     assert(!portAboutUrlAllowed("https://github.com.example.org/release"));
     assert(!portAboutUrlAllowed("https://github.com/release\nanything"));
     assert(!portAboutUrlAllowed("https://github.com/\"bad"));

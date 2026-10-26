@@ -151,6 +151,7 @@ static const struct PortOptHelp sHelp[] = {
     { "@page_portopts",     "The port's own gameplay switches." },
     { "@page_video",        "Display mode, resolution and picture quality." },
     { "@page_audio",        "Volume and sound options." },
+    { "@page_classic",      "Choose which settings Classic Mode overrides." },
 };
 
 /** The help line for a row's key, or NULL (no box). padN_ keys read as pad1_. */

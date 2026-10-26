@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 import subprocess
 
-REPOSITORY = "pRizz/Project-Midas-ADS"
+REPOSITORY = "pRizz/Iron-Sights"
 
 
 def metadata(root, env):
@@ -37,7 +37,7 @@ def metadata(root, env):
         when = dt.datetime.fromtimestamp(int(env["SOURCE_DATE_EPOCH"]), dt.timezone.utc)
     else:
         when = dt.datetime.now(dt.timezone.utc)
-    return dict(schema=1, project="Project Midas ADS", repository=repo,
+    return dict(schema=1, project="Iron Sights", repository=repo,
                 commit=sha, branch=branch, dirty=dirty, ci=ci,
                 build_number=int(count or 0), build_date=when.strftime("%Y%m%d"),
                 built_at=when.strftime("%Y-%m-%dT%H:%M:%SZ"),

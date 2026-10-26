@@ -1,6 +1,6 @@
-PROJECT MIDAS ADS - BUILD PROVENANCE
+IRON SIGHTS - BUILD PROVENANCE
 
-Download from https://github.com/pRizz/Project-Midas-ADS/releases
+Download from https://github.com/pRizz/Iron-Sights/releases
 Each release identifies its exact source commit and GitHub Actions run.
 build-info.json matches information stamped into the executable's About dialog.
 This metadata is informational, not itself a cryptographic signature.
@@ -9,11 +9,11 @@ The release provides GitHub-signed build attestations for both the Windows ZIP
 and ProjectMidas.exe, plus a provenance bundle and SHA256 checksums.
 With GitHub CLI installed, verify the ZIP before extracting:
 
-  gh attestation verify Project-Midas-ADS-windows-x86.zip -R pRizz/Project-Midas-ADS
+  gh attestation verify Iron-Sights-windows-x86.zip -R pRizz/Iron-Sights
 
 Or verify the extracted executable:
 
-  gh attestation verify ProjectMidas.exe -R pRizz/Project-Midas-ADS
+  gh attestation verify ProjectMidas.exe -R pRizz/Iron-Sights
 
 Require the expected repository, workflow .github/workflows/windows-release.yml, commit
 and refs/heads/main. Expected triggers are push or workflow_dispatch (a manual

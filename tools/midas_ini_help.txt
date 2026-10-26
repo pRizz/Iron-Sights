@@ -1,4 +1,4 @@
-PROJECT MIDAS - midas.ini HELP
+IRON SIGHTS - midas.ini HELP (a fork of Project Midas)
 ==============================
 
 midas.ini is the settings file for Project Midas. It sits next to the game

@@ -53,13 +53,13 @@ jobs:
       - name: Test production project paths and browser storage
         working-directory: web
         run: |
-          bun --bun vite preview --host 127.0.0.1 --port 4177 --base /Project-Midas-ADS/ > ../build/web/preview.log 2>&1 &
+          bun --bun vite preview --host 127.0.0.1 --port 4177 --base /Iron-Sights/ > ../build/web/preview.log 2>&1 &
           preview_pid=$!
           trap 'kill "$preview_pid"' EXIT
-          bun tools/wait-for-site.ts http://127.0.0.1:4177/Project-Midas-ADS/
-          bun run test:launcher http://127.0.0.1:4177/Project-Midas-ADS/
-          bun run test:room http://127.0.0.1:4177/Project-Midas-ADS/
-          bun run test:startup http://127.0.0.1:4177/Project-Midas-ADS/
+          bun tools/wait-for-site.ts http://127.0.0.1:4177/Iron-Sights/
+          bun run test:launcher http://127.0.0.1:4177/Iron-Sights/
+          bun run test:room http://127.0.0.1:4177/Iron-Sights/
+          bun run test:startup http://127.0.0.1:4177/Iron-Sights/
           bun run test:touch
           bun run test:storage
           bun run test:filesystem

@@ -10,7 +10,7 @@ import { audioContinuity } from './audio-quality.mjs';
 const [
     rom,
     folder = '../build/web-audio/current',
-    origin = 'http://127.0.0.1:4177/Project-Midas-ADS/',
+    origin = 'http://127.0.0.1:4177/Iron-Sights/',
 ] = process.argv.slice(2);
 if (!rom) throw new Error('Usage: audio-quality-audit.mjs private-rom private-output [origin]');
 const output = resolve(folder);

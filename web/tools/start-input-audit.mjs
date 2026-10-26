@@ -9,7 +9,7 @@ import { installGameProbe, navigateToDam, captureGameplay } from './native-game-
 const [
     rom,
     folder = '../build/web-start-input/game',
-    origin = 'http://127.0.0.1:4177/Project-Midas-ADS/',
+    origin = 'http://127.0.0.1:4177/Iron-Sights/',
 ] = process.argv.slice(2);
 if (!rom) throw new Error('Usage: start-input-audit.mjs private-rom private-output [origin]');
 const output = resolve(folder);

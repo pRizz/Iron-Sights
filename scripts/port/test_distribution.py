@@ -33,7 +33,7 @@ class Distribution(unittest.TestCase):
             (root/"source.c").write_text("int main(void) {return 0;}\n")
             git("add","source.c");git("-c","core.hooksPath=/dev/null","commit","-m","fixture")
             sha=git("rev-parse","HEAD")
-            env=dict(GITHUB_ACTIONS="true",GITHUB_SHA=sha,GITHUB_RUN_ID="123",GITHUB_REPOSITORY="pRizz/Project-Midas-ADS",
+            env=dict(GITHUB_ACTIONS="true",GITHUB_SHA=sha,GITHUB_RUN_ID="123",GITHUB_REPOSITORY="pRizz/Iron-Sights",
                      MIDAS_RELEASE_TAG="build-12.1-"+sha[:12],MIDAS_BUILD_TIME_UTC="2026-10-23T17:00:00Z")
             info=build_info.metadata(root,env)
             self.assertTrue(info['ci']);self.assertFalse(info['dirty'])

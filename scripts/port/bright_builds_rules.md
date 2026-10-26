@@ -1,4 +1,4 @@
-# Bright Builds Rules in Project Midas ADS
+# Bright Builds Rules in Iron Sights
 
 The managed standards start at [standards/index.md](../../standards/index.md).
 Read `AGENTS.md`, `AGENTS.bright-builds.md`, `standards-overrides.md`, then the

@@ -12,7 +12,7 @@ async function openRomDatabase(): Promise<IDBDatabase> {
     request.onerror = () => reject(request.error);
     request.onblocked = () => {
       abandoned = true;
-      reject(new Error('Close other Project Midas tabs before updating ROM storage.'));
+      reject(new Error('Close other Iron Sights tabs before updating ROM storage.'));
     };
     request.onsuccess = () => {
       const database = request.result;

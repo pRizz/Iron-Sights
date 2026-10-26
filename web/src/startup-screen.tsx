@@ -87,7 +87,7 @@ export function StartupScreen(props: Props) {
                                 <span>Mission preparation</span>
                                 <span class="startup-mark">007</span>
                             </div>
-                            <p class="eyebrow">GOLDENEYE · PROJECT MIDAS ADS</p>
+                            <p class="eyebrow">GOLDENEYE · IRON SIGHTS</p>
                             <p class="startup-attribution">A fork of Project Midas</p>
                             <h1>{props.paused() ? 'Startup paused' : progress().label}</h1>
                             <Show

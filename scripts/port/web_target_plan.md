@@ -1,9 +1,15 @@
 # Browser build plan
 
-The browser target will run Project Midas ADS locally through WebAssembly,
+The browser target will run Iron Sights locally through WebAssembly,
 with a user-supplied GoldenEye ROM, persistent campaign saves and downloadable
 backups. GitHub Actions will build and deploy successful pushes to `main` to
 GitHub Pages. The user accepted the design and six milestones on 2026-10-24.
+
+The accepted 2026-10-26 rename is **Iron Sights**, a fork of Project Midas, with
+repository `pRizz/Iron-Sights` and Pages path `/Iron-Sights/`. Keep the existing
+ROM/database, preferences, user-files mount/lock and backup format identifiers:
+the origin stays `https://prizz.github.io`, so no migration layer is needed.
+Preserve upstream attribution throughout the browser and native product.
 
 Use [milestone progress](web_target_progress.md) for implementation status,
 verification and session handoffs. Approval of this plan is not evidence that

@@ -1,7 +1,7 @@
 # Standards Overrides
 
-These are deliberate Project Midas ADS decisions alongside the managed corpus.
-Owner: Project Midas ADS maintainers. Review date: 2026-10-24.
+These are deliberate Iron Sights decisions alongside the managed corpus.
+Owner: Iron Sights maintainers. Review date: 2026-10-24.
 
 ## Existing source size and native interfaces
 
@@ -68,7 +68,7 @@ force-push. This preference does not change the managed upstream files.
 Standard: the sidecar's owner-specific skill default and frontend identity guidance.
 
 The installer-managed OpenLinks README badge is the identity placement for this
-adoption. Keep Project Midas ADS, its download link and upstream/game attribution
+adoption. Keep Iron Sights, its download link and upstream/game attribution
 primary. Do not add profile branding to the HUD, watch or other in-game surfaces
 as a side effect of standards maintenance. The `openlinks-identity-presence`
 skill may be used when available for an explicitly requested identity task;

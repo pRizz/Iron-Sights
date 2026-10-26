@@ -9,7 +9,7 @@ import { installStartupProbe, readStartup } from './startup-observer.mjs';
 const [
     romPath,
     outputPath = '../build/web-startup/audit',
-    origin = 'http://127.0.0.1:4178/Project-Midas-ADS/',
+    origin = 'http://127.0.0.1:4178/Iron-Sights/',
 ] = process.argv.slice(2);
 if (!romPath) throw new Error('Usage: startup-audit.mjs local-rom private-output [origin]');
 const output = resolve(outputPath);

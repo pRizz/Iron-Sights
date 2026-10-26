@@ -3937,12 +3937,12 @@ enum { PORT_SHEET_GAMEPLAY, PORT_SHEET_CONTROL, PORT_SHEET_DISPLAY, PORT_SHEET_C
         * screen's last row, NOT from the Options folder - portSheetLeave sends
         * it back there. The settings multiplayer keeps apart from solo. */
        PORT_SHEET_MPOPTS,
-       /* CLASSIC: which parts Classic Mode applies, opened from VIDEO's middle tab */
+       /* CLASSIC: which parts Classic Mode applies, alongside Video and Audio */
        PORT_SHEET_CLASSIC, PORT_SHEET_COUNT };
 /* The Options folder's rows, top to bottom, at the Files menu's own row
  * coordinates (y 0xDC, pitch 0x20). Each is a submenu:
  *
- *   DISPLAY  -> VIDEO, AUDIO, GRAPHICS
+ *   DISPLAY  -> VIDEO, AUDIO, CLASSIC
  *   GAMEPLAY -> GENERAL SETTINGS, HUD
  *   CONTROL  -> PLAYER n -> MOUSE AND KEYBOARD or CONTROLLER (whichever the
  *               device is), GENERAL CONTROL OPTIONS
@@ -4017,40 +4017,8 @@ s32 portMenuHarnessSheet(char first, char second)
  * the Options folder, OPTIONS on every sheet (where it backs out to the Options
  * folder) */
 /* The Credits sheet's top tab reads "1997" and plays the in-game credits
- * with the cast parade. The Video sheet's middle tab reads "CLASSIC" and opens
- * the CLASSIC sheet; keep a middle tab label under eight letters, since the
- * middle tab is the shortest (drawn with frontAddNextTabText's geometry and our
- * own string). */
+ * with the cast parade. Classic is a sibling of Video and Audio in their hub. */
 #define PORT_CREDITS_TAB_TEXT "1997\n"
-#define PORT_CLASSIC_TAB_TEXT "CLASSIC\n"
-
-static Gfx *portAddMiddleTabText(Gfx *DL, char *text)
-{
-    s32 v;
-    s32 h;
-    s32 textWidth;
-    s32 textHeight;
-
-    setTextSpacingInverted(TRUE);
-    textHeight = 0;
-    textWidth = 0;
-    //text is sideways so textWidth and textHeight are flipped
-    textMeasure(&textWidth, &textHeight, text, ptrFontBankGothicChars, ptrFontBankGothic, 0);
-    h = TABS_RIGHT_EDGE - (textWidth / 2);
-
-    if (tab_next_highlight)
-    {
-        DL = microcode_constructor_related_to_menus(DL, (h - textWidth) + 1, NEXTTAB_TEXT_TOP, h, NEXTTAB_TEXT_BOTTOM, 50);
-    }
-
-    setTextOrientation(ROT_90CW);
-
-    v = NEXTTAB_TEXT_HALF - (textHeight / 2);
-    DL = textRender(DL, &v, &h, text, ptrFontBankGothicChars, ptrFontBankGothic, 0xFF, viGetY(), viGetX(), 0, 0);
-    setTextOrientation(ROT_NORMAL);
-    setTextSpacingInverted(FALSE);
-    return DL;
-}
 
 /* 1 while the end credits were started from the CREDITS sheet rather than
  * earned: the cast parade then comes back to the sheet, not to a mission list
@@ -4646,7 +4614,7 @@ static const struct PortSheetRow port_sheet_rows_ctlgeneral[] = {
 /* THE TWO PICKERS: each folder row that is a submenu, and its pages top to
  * bottom. A SHROW_GOSHEET row carries the page it opens in port_sheet_row_bind. */
 static const s32 port_sheet_gameplay_pages[] = { PORT_SHEET_GENERAL, PORT_SHEET_HUD, PORT_SHEET_PORTOPTS };
-static const s32 port_sheet_display_pages[] = { PORT_SHEET_VIDEO, PORT_SHEET_AUDIO };   /* GRAPHICS is empty */
+static const s32 port_sheet_display_pages[] = { PORT_SHEET_VIDEO, PORT_SHEET_AUDIO, PORT_SHEET_CLASSIC };
 
 /** The Options folder screen's rows: its own three, or a hub's pages. */
 static s32 portOptionsRowCount(void)
@@ -4685,6 +4653,7 @@ static const char *portSheetPageLabel(s32 kind)
         case PORT_SHEET_PORTOPTS: return "Port Options\n";
         case PORT_SHEET_VIDEO:    return "Video\n";
         case PORT_SHEET_AUDIO:    return "Audio\n";
+        case PORT_SHEET_CLASSIC:  return "Classic\n";
         case PORT_SHEET_GRAPHICS: return "Graphics\n";
         case PORT_SHEET_MOUSEKB:    return "Mouse and Keyboard\n";
         case PORT_SHEET_PAD:        return "Controller\n";
@@ -7395,6 +7364,7 @@ static const char *portSheetHelpKey(s32 row)
                 case PORT_SHEET_PORTOPTS:   return "@page_portopts";
                 case PORT_SHEET_VIDEO:      return "@page_video";
                 case PORT_SHEET_AUDIO:      return "@page_audio";
+                case PORT_SHEET_CLASSIC:    return "@page_classic";
             }
             break;
     }
@@ -8127,19 +8097,6 @@ void interface_menu1C_portsheet(void)
             return;
         }
     }
-    else if (port_sheet_kind == PORT_SHEET_VIDEO && port_sheet_page == port_sheet_pages - 1
-        && frontCheckCursorOnNextTab())
-    {   /* the CLASSIC tab (middle): which parts Classic Mode applies. Picks not
-         * yet applied here are dropped, as leaving the page does. */
-        tab_next_highlight = TRUE;
-        if (press)
-        {
-            sndPlaySfx((struct ALBankAlt_s *) g_musicSfxBufferPtr, DOOR_METAL_CLOSE_SFX, NULL);
-            portSheetPendingClear();
-            portSheetOpen(PORT_SHEET_CLASSIC);
-            return;
-        }
-    }
     else if (port_sheet_page < port_sheet_pages - 1 && frontCheckCursorOnNextTab())
     {
         tab_next_highlight = TRUE;
@@ -8750,11 +8707,7 @@ Gfx *constructor_menu1C_portsheet(Gfx *DL)
     {   /* no OPTIONS tab on Gameplay Options */
         DL = portAddTopTabText(DL, "OPTIONS\n");
     }
-    if (port_sheet_kind == PORT_SHEET_VIDEO && port_sheet_page == port_sheet_pages - 1)
-    {
-        DL = portAddMiddleTabText(DL, PORT_CLASSIC_TAB_TEXT);
-    }
-    else if (port_sheet_page < port_sheet_pages - 1)
+    if (port_sheet_page < port_sheet_pages - 1)
     {
         DL = frontAddNextTabText(DL);
     }

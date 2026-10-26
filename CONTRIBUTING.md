@@ -1,6 +1,6 @@
 # Contributing to Project Midas
 
-## Project Midas ADS fork: change inventory
+## Iron Sights fork: change inventory
 
 For work in this fork, update [FORK_CHANGES.md](FORK_CHANGES.md) in the same change
 whenever you add, modify, remove or replace repository content. This includes

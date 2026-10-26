@@ -15,7 +15,7 @@ case "${3:-launcher}" in
     ui) audit=tools/room-audit.mjs ;;
     *) printf 'Unknown browser audit mode\n' >&2; exit 1 ;;
 esac
-node tools/serve-site.mjs 4176 /Project-Midas-ADS/ &
+node tools/serve-site.mjs 4176 /Iron-Sights/ &
 preview_pid=$!
 trap 'kill "$preview_pid"' EXIT
 export MIDAS_BROWSER=${MIDAS_BROWSER:-firefox}
@@ -23,7 +23,7 @@ export MIDAS_HEADED=1
 export LIBGL_ALWAYS_SOFTWARE=1
 if [[ "${3:-launcher}" == ui ]]; then
     export MIDAS_AUDIT_OUTPUT="$2"
-    xvfb-run -a node "$audit" http://127.0.0.1:4176/Project-Midas-ADS/
+    xvfb-run -a node "$audit" http://127.0.0.1:4176/Iron-Sights/
 else
-    xvfb-run -a node "$audit" "$1" "$2" http://127.0.0.1:4176/Project-Midas-ADS/
+    xvfb-run -a node "$audit" "$1" "$2" http://127.0.0.1:4176/Iron-Sights/
 fi

@@ -1,4 +1,4 @@
-PROJECT MIDAS ADS - WINDOWS
+IRON SIGHTS - WINDOWS
 
 1. Extract the entire ZIP into a folder you can write to, such as Documents.
    Do not run the executable from inside the ZIP. Keep SDL2.dll next to it.
@@ -14,7 +14,7 @@ Mouse: left click fires, right click aims down sights, Shift sprints.
 With the sniper in ADS, the mouse wheel adjusts zoom.
 
 Build details and blue, underlined links are available under:
-Options > Gameplay > Port Options > About Project Midas ADS
+Options > Gameplay > Port Options > About / Build Info
 The same entry is available in the watch's Port Options page.
 
 UPDATING
@@ -31,4 +31,4 @@ About shows icon-cache status; Data/Logs/ge_direct.log contains diagnostics.
 The executable is not Windows Authenticode-signed. Its GitHub build provenance
 is a separate verification mechanism; see VERIFY.txt and the release page.
 
-Downloads: https://github.com/pRizz/Project-Midas-ADS/releases/latest
+Downloads: https://github.com/pRizz/Iron-Sights/releases/latest

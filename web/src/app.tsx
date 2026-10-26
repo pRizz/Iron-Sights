@@ -12,7 +12,7 @@ import { Room } from './room/room';
 import { restoredEntry, shouldAutoLaunch, type EntryMode } from './room/session';
 import { missionStyle } from './mission-theme';
 
-const SOURCE = 'https://github.com/pRizz/Project-Midas-ADS';
+const SOURCE = 'https://github.com/pRizz/Iron-Sights';
 
 export function App() {
     const firstTouch = initialTouch();
@@ -249,7 +249,7 @@ export function App() {
             const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
             const link = document.createElement('a');
             link.href = url;
-            link.download = `midas-saves-${new Date().toISOString().slice(0, 10)}.json`;
+            link.download = `iron-sights-saves-${new Date().toISOString().slice(0, 10)}.json`;
             link.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
             setAction('Save backup downloaded. It contains no ROM.');
@@ -317,10 +317,10 @@ export function App() {
                 <header class="site-header">
                     <a class="brand" href="#top">
                         <span class="brand-mark" aria-hidden="true">
-                            M
+                            IS
                         </span>
                         <span>
-                            PROJECT MIDAS <b>ADS</b>
+                            IRON <b>SIGHTS</b>
                             <small>THE BROWSER PREVIEW</small>
                         </span>
                     </a>
@@ -430,7 +430,7 @@ export function App() {
                     </details>
                 </main>
                 <footer>
-                    <span>Project Midas ADS · Browser preview</span>
+                    <span>Iron Sights · A fork of Project Midas</span>
                     <div>
                         <a href={SOURCE + '/blob/main/LICENSE'} target="_blank" rel="noreferrer">
                             Port code &amp; licenses
