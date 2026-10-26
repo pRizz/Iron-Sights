@@ -1256,6 +1256,16 @@ matching packaged JSON. CI labeling requires an exact commit and clean tree.
 Local/modified/no-Git builds do not invent an attested run. Controlled builds
 can fix timestamps with MIDAS_BUILD_TIME_UTC or SOURCE_DATE_EPOCH.
 
+The startup legal screen identifies **Project Midas ADS - a fork of Project
+Midas**, retaining the inherited Nintendo/Rare, film and music credits. Its
+footer shows build number/date, short commit, modified status when applicable,
+and the baked UTC build time, matching About rather than the player's clock.
+A focused port helper owns the copy/layout through a small `front.c` hook.
+The browser's returning-player loading screen uses the same fork attribution
+and shows the runtime manifest's baked UTC time once available.
+Compact spacing on short browser viewports keeps this copy visible in phone
+landscape; overflow remains scrollable at smaller sizes.
+
 Windows uses native blue underlined hyperlinks and keyboard navigation; baked
 HTTPS GitHub links open through SDL in the default browser. A manifest enables
 common controls and UTF-8 paths without elevation. Text is escaped separately
@@ -1268,7 +1278,10 @@ Display metadata is informational; attestations verify downloaded bytes.
 [URL validation](port/src/port_about.c), [modal tracking](port/src/port_modal.c),
 [watchdog](port/src/main.c), [error dialogs](port/src/video.c),
 [manifest](port/win/ProjectMidas.manifest),
-[frontend](src/game/front.c), [watch](port/src/port_watchpages.c).
+[frontend](src/game/front.c), [startup attribution](port/src/port_startup.c),
+[startup interface](port/include/port_startup.h),
+[browser loading screen](web/src/startup-screen.tsx),
+[loading styles](web/src/startup.css), [watch](port/src/port_watchpages.c).
 **Validation:** Identity tests use actual temporary commits and cover modified/
 untracked files, missing Git and fixed timestamps. Windows/Linux builds passed.
 The Windows dialog was visually inspected with the correct full commit,
@@ -1282,6 +1295,15 @@ A Windows audit kept About open beyond the 60-second startup grace (70 seconds)
 and verified it remained responsive and resumed the normal game loop on close.
 URL tests reject missing values, HTTP, lookalike domains and injected markup or
 control characters. Corrected the existing malformed inventory heading to UTF-8.
+The startup attribution refinement passes native Windows/optimized Wasm builds,
+all five distribution/metadata tests in Linux, browser type checking and 144
+unit tests. Real-ROM native and Edge startup captures were reviewed in wide/4:3;
+the cached-ROM browser audit checks manifest timestamp equality and loading
+content bounds at desktop, portrait-phone and landscape-phone sizes. Private
+evidence is under `build/startup-attribution`; no ROM/captures are packaged.
+Startup download/retry checks and eight gallery workflow tests pass. Both
+independent gallery passes reproduce all 72 views and 35 icons unchanged;
+gallery metadata tracks the updated sources.
 
 ### FORK-021 — Enhanced community font textures
 

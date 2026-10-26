@@ -5,6 +5,7 @@
     display: grid;
     place-items: center;
     padding: 28px;
+    overflow-y: auto;
     color: #eef0e9;
     background: radial-gradient(ellipse at 50% 45%, #192119, #080b09 70%);
     text-align: center;
@@ -44,6 +45,11 @@
     display: block;
     margin-top: 12px;
 }
+.startup-attribution {
+    font-size: 12px;
+    color: #a3b09b;
+    overflow-wrap: anywhere;
+}
 .startup-error {
     width: min(510px, calc(100% - 40px));
     padding: 32px;
@@ -76,4 +82,19 @@
 }
 .startup-content .startup-actions {
     justify-content: center;
+}
+@media (max-height: 500px) {
+    .startup-screen {
+        padding: 16px;
+    }
+    .startup-mark {
+        margin-bottom: 8px;
+        font-size: 28px;
+    }
+    .startup-content h1 {
+        margin: 8px 0 16px;
+    }
+    .startup-help {
+        margin-top: 12px;
+    }
 }

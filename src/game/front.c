@@ -3,6 +3,7 @@
 #include <stdio.h> /* frontDrawCursor GE_DUMP_BOND probe */
 #include "port_hud.h"
 #include "port_mission_cheats.h"
+#include "port_startup.h"
 #endif
 #include <assets/oddtextures.h>
 #include "assets/image_externs.h"
@@ -1857,18 +1858,7 @@ Gfx *constructor_menu00_legalscreen(Gfx *DL)
     while (legal_text_ptr < legal_text_end);
 
 #ifndef TARGET_N64
-    {   /* PORT: the "Project Midas: Build ..." line, centred one line above the
-         * heading (16 units, mirroring the old offset below it). The stamp is
-         * sysstubs.c's (git commit count + build date), the same string the log
-         * prints, so it is not a lang string. */
-        extern const char *portBuildString(void);
-        extern const char *portPlatformName(void);   /* the git branch, else "PC-Port" (sysstubs.c) */
-        char line[96];
-
-        sprintf(line, "Project Midas %s: Build %s\n", portPlatformName(), portBuildString());
-        DL = display_aligned_white_text_to_screen(DL, 220, 16, CENTER_ALIGN, CENTER_ALIGN, (u8 *) line,
-                                                  (s32) ptrFontZurichBoldChars, (s32) ptrFontZurichBold);
-    }
+    DL = portStartupAttribution(DL);
 #endif
 
     return DL;

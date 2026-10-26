@@ -709,6 +709,21 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**Startup attribution, 2026-10-25:** The shared native legal screen now names
+Project Midas ADS as a fork of Project Midas, preserving original game credits.
+Build number, short commit/modified status and baked UTC build time appear in
+the footer. A focused port helper keeps the upstream hook small. Returning-player
+browser loading copy uses the same attribution and the manifest's build time.
+Native Windows/optimized Wasm builds, all five Linux metadata/distribution tests,
+browser type checking, 144 unit tests and site allowlist/logo-policy checks pass.
+Native/Edge wide and 4:3 startup captures were reviewed. The remembered-ROM audit
+verifies timestamp equality with the runtime manifest and content bounds at
+desktop/portrait-phone/landscape-phone sizes; short-view spacing prevents clipping.
+Startup download/retry checks and the eight gallery workflow tests pass. Both
+independent gallery passes reproduce all 72 views and 35 icons without changed
+image cells; only source fingerprint metadata changes. Private evidence is under
+`build/startup-attribution`. Next action: verify the normal main/Pages publication.
+
 **Closer long-gun ADS, 2026-10-25:** The fork-owned pose data in `joy_port.c`
 moves 12 unscoped long-gun ADS origins 20% closer along view Z, so gun and grip
 hands appear larger together. The 0.052 hand scale/2.5 arm-body multiplier remain

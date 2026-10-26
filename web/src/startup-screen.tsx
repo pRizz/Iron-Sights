@@ -85,7 +85,8 @@ export function StartupScreen(props: Props) {
                             <span class="startup-mark" aria-hidden="true">
                                 007
                             </span>
-                            <p class="eyebrow">GOLDENEYE · PROJECT MIDAS</p>
+                            <p class="eyebrow">GOLDENEYE · PROJECT MIDAS ADS</p>
+                            <p class="startup-attribution">A fork of Project Midas</p>
                             <h1>{props.paused() ? 'Startup paused' : progress().label}</h1>
                             <Show
                                 when={props.paused()}
@@ -120,6 +121,13 @@ export function StartupScreen(props: Props) {
                             <p class="startup-help">
                                 Your ROM and saves stay on this device. <span>F2 · Controls</span>
                             </p>
+                            <Show when={props.engine.maybeManifest()}>
+                                {(manifest) => (
+                                    <p class="startup-attribution">
+                                        Built at: {manifest().build.built_at}
+                                    </p>
+                                )}
+                            </Show>
                         </div>
                     </section>
                 )}
