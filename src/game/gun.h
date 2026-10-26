@@ -415,7 +415,7 @@ void gunRenderFirstPersonGunModels(Gfx **gdl);
 Gfx *generate_ammo_total_microcode(Gfx *gdl);
 #ifndef TARGET_N64
 s32 portGadgetHudNameShown(void); /* gadget name drawn in the left-hand ammo slot (joy_port whitelist) */
-s32 portMissionTimerShown(void); /* solo mission timer under that slot - lifts the bottom-left message too */
+s32 portMissionTimerShown(void); /* solo clock in its own top-left HUD area */
 s32 gunWeaponFovLaunch(s32 handnum, coord3d *spawnpos, coord3d *aimdir); /* gunfire.c: Weapon FOV, a projectile leaves the drawn gun */
 #endif
 

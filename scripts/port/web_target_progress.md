@@ -723,6 +723,30 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**Objective typography and clock spacing, 2026-10-25:** Actual-ROM native/Edge
+captures reproduce the taller initial capital in sentence-case objective text:
+Bank Gothic's lowercase glyphs are small capitals. The toast description now
+normalizes only its display copy to lowercase, retaining original localized
+strings and native two-byte glyph codes. The heading keeps larger capitals.
+The optional mission clock moves from the overlapping gadget/ammo rows into
+its own top-left area; measured line heights reserve room for Best Time and
+the objective panel. Dialogue temporarily takes priority over the clock.
+Fork-owned `port_mission_clock.c` holds layout/rendering behind small native
+hooks, shared unchanged by Wasm. The HUD audit supports whitelisted gadgets
+and delayed equipment selection after opening mission AI, with isolated logs.
+HUD/ADS regressions, native Windows/optimized Wasm builds, 146 browser unit tests,
+type checking and site allowlist/logo audits pass. Native wide/4:3 and Edge
+captures check Bunker's watch magnet with elapsed/cheat/best rows; browser checks
+also cover half-size HUD, Ammo On Screen off and no saved best time. Matched
+Edge pixel bounds show a five-screen-pixel raised initial before the change,
+and uniform top/bottom bounds afterward. Existing clock lookup/format/color
+helpers are verified unchanged after extraction. Private evidence stays under
+`build/hud-layout`. Both independent gallery passes reproduce 72 views/35 icons
+unchanged; only source fingerprint metadata changes. Gallery integrity, eight
+workflow tests and Bright Builds checks pass.
+Next action: preserve the uniform small-cap copy/clock clearance and normal
+main/Pages publication gates.
+
 **Weapon-caption shadow, 2026-10-25:** The selected weapon-icon caption replaces
 its enlarged one-HUD-unit drop shadow with a one-framebuffer-pixel right/down
 offset, applied only to a scoped glyph run after aspect/HUD projection. Shared

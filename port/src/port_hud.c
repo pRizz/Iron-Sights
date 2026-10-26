@@ -22,6 +22,7 @@
 #include "game/textrelated.h"
 #include "port_ads.h"
 #include "port_hud.h"
+#include "port_mission_clock.h"
 #include "port_weapon_images.h"
 #include "port_icon_cache.h"
 #include "port_wardrobe.h"
@@ -53,59 +54,6 @@ typedef struct {
     HudToast toasts[HUD_TOASTS];
 } HudState;
 static HudState phState[4];
-
-s32 portHudMissionBestSeconds(s32 stage, s32 difficulty)
-{
-    s32 i;
-    save_data *save;
-    /* 007's saved 0x3ff is an unlock flag, not a completion time. */
-    if (difficulty < DIFFICULTY_AGENT || difficulty > DIFFICULTY_00) return 0;
-    save = fileGetSaveForFoldernum(selected_folder_num);
-    if (!save) return 0;
-    for (i = 0; mission_folder_setup_entries[i].folder_text_preset; i++) {
-        const struct mission_folder_setup *entry = &mission_folder_setup_entries[i];
-        if (entry->stage_id == stage && entry->mission_num >= 0 && entry->mission_num < 20)
-            return fileGetSaveStageDifficultyTime(save, entry->mission_num, difficulty);
-    }
-    return 0;
-}
-
-s32 portHudMissionTargetSeconds(s32 stage, s32 difficulty)
-{
-    s32 i;
-    if (difficulty < DIFFICULTY_AGENT || difficulty > DIFFICULTY_00) return 0;
-    /* Stage IDs and mission indices differ. Resolve the live stage, not the
-     * currently highlighted folder/briefing row (also valid after a restore). */
-    for (i = 0; mission_folder_setup_entries[i].folder_text_preset; i++) {
-        const struct mission_folder_setup *entry = &mission_folder_setup_entries[i];
-        if (entry->stage_id == stage && entry->mission_num >= 0 && entry->mission_num < 20)
-            return solo_target_time_array[entry->mission_num][difficulty];
-    }
-    return 0;
-}
-
-void portHudMissionTimerText(s32 ticks, s32 target, char *text, s32 size)
-{
-    if (size <= 0) return;
-    if (ticks < 0) ticks = 0;
-    if (target > 0)
-        snprintf(text, size, "%02d:%02d:%02d / CHEAT %02d:%02d", ticks/3600,
-            (ticks/60)%60, ((ticks%60)*100)/60, target/60, target%60);
-    else
-        snprintf(text, size, "%02d:%02d:%02d", ticks/3600,
-            (ticks/60)%60, ((ticks%60)*100)/60);
-}
-
-u32 portHudMissionTargetColor(s32 ticks, s32 target)
-{
-    const s32 seconds = ticks > 0 ? ticks/60 : 0;
-    /* Match file.c's whole-second <= comparison, including the full final
-     * second. Color describes time only; objectives/cheat rules still apply. */
-    if (target <= 0) return 0xffffffff;
-    if (seconds > target) return 0xff9d91ff;
-    if (target-seconds <= 10) return 0xf0d994ff;
-    return 0xb9ed9fff;
-}
 
 s32 portHudOptionGet(const char *key, s32 *value)
 {
@@ -165,6 +113,7 @@ void portHudDamage(s32 victim, f32 incomingX, f32 incomingZ)
 static void phCopyLine(char *out, s32 size, const char *text)
 {
     s32 n = 0;
+    if (size <= 0) return;
     if (text) while (*text && n < size - 1) {
         char c = *text++;
         if (c == '\n' || c == '\r' || c == '\t') c = ' ';
@@ -172,6 +121,20 @@ static void phCopyLine(char *out, s32 size, const char *text)
     }
     while (n && out[n-1] == ' ') n--;
     out[n] = '\0';
+}
+
+static void phCopySmallCaps(char *out, s32 size, const char *text)
+{
+    s32 i;
+    phCopyLine(out, size, text);
+    if (size <= 0) return;
+    /* Bank Gothic's lowercase glyphs are small capitals. Normalize only this
+     * display copy; preserve source spelling and native two-byte glyph codes. */
+    for (i = 0; out[i]; i++) {
+        if ((u8)out[i] >= 0x80) {
+            if (out[i+1]) i++;
+        } else if (out[i] >= 'A' && out[i] <= 'Z') out[i] += 'a' - 'A';
+    }
 }
 
 s32 portHudObjective(s32 index, s32 letter, s32 status, const char *text)
@@ -243,10 +206,13 @@ void portHudTick(void)
         static s32 fired;
         static s32 equipped;
         static s32 switched;
+        extern s32 portJoyPortInvScrollItem(s32 id);
         const char *audit = getenv("GE_HUD_AUDIT");
         if (p == 0 && audit && fired < 4) {
-            if (!equipped && atoi(audit) >= ITEM_FIST && atoi(audit) <= ITEM_TASER
-                && atoi(audit) != ITEM_TRIGGER) {
+            time += g_GlobalTimerDelta;
+            /* Let opening AI finish resetting inventory (notably Bunker 2). */
+            if (!equipped && time >= 60 && ((atoi(audit) >= ITEM_FIST && atoi(audit) <= ITEM_TASER
+                && atoi(audit) != ITEM_TRIGGER) || portJoyPortInvScrollItem(atoi(audit)))) {
                 const char *best = getenv("GE_HUD_AUDIT_BEST");
                 /* RAM-only record fixture in isolated audit processes. */
                 if (best && atoi(best) > 0 && atoi(best) <= 1023) {
@@ -271,11 +237,17 @@ void portHudTick(void)
                     bondinvRemoveItemByID(ITEM_SNIPERRIFLE);
                     g_CurrentPlayer->cur_item_weapon_getname = ITEM_FIST;
                 }
-                currentPlayerEquipWeaponWrapper(GUNLEFT, ITEM_UNARMED);
-                currentPlayerEquipWeaponWrapper(GUNRIGHT, atoi(audit));
+                if (portJoyPortInvScrollItem(atoi(audit))) {
+                    /* Match direct watch selection for model-less gadgets. */
+                    bondinvAddInvItem(atoi(audit));
+                    currentPlayerUnEquipWeaponWrapper(GUNRIGHT, atoi(audit));
+                    currentPlayerUnEquipWeaponWrapper(GUNLEFT, ITEM_UNARMED);
+                } else {
+                    currentPlayerEquipWeaponWrapper(GUNLEFT, ITEM_UNARMED);
+                    currentPlayerEquipWeaponWrapper(GUNRIGHT, atoi(audit));
+                }
                 equipped = 1;
             }
-            time += g_GlobalTimerDelta;
             if (!fired && time >= 100.0f) {
                 extern void portConLogf(const char *fmt, ...);
                 portHudHit(0, getenv("GE_HUD_AUDIT_BODY") == NULL);
@@ -295,6 +267,13 @@ void portHudTick(void)
                 fired = 2;
             } else if (fired == 2 && time >= 380.0f) {
                 extern int ge_shot_force;
+                extern const char *portJoyPortGadgetHudName(void);
+                extern void portConLogf(const char *fmt, ...);
+                const char *maybeName = portJoyPortGadgetHudName();
+                portConLogf("ge: hud-audit: right=%d left=%d ammo-hide=%x action=%d gadget=%s visible=%d\n",
+                    getCurrentPlayerWeaponId(GUNRIGHT), getCurrentPlayerWeaponId(GUNLEFT),
+                    g_CurrentPlayer->gunammooff, g_CurrentPlayer->hands[GUNRIGHT].weapon_action_state,
+                    maybeName ? maybeName : "(none)", portGadgetHudNameShown());
                 ge_shot_force = 1;
                 fired = 3;
             } else if (fired == 3 && !switched && time >= 650.0f) {
@@ -564,14 +543,15 @@ Gfx *portHudDraw(Gfx *g)
         const s32 complete = t->status == OBJECTIVESTATUS_COMPLETE;
         const s32 failed = t->status == OBJECTIVESTATUS_FAILED;
         const u32 color = complete ? 0xb9ed9fff : failed ? 0xff9d91ff : 0xf0d994ff;
-        const s32 w = viGetViewWidth() - 48, x = viGetViewLeft()+24, y = viGetViewTop()+28;
-        char title[64];
+        const s32 w = viGetViewWidth() - 48, x = viGetViewLeft()+24, y = portHudObjectiveTop();
+        char title[64], description[sizeof(t->text)];
+        phCopySmallCaps(description, sizeof(description), t->text);
         snprintf(title, sizeof(title), "OBJECTIVE %c %s", 'A'+t->letter,
             complete ? "COMPLETED" : failed ? "FAILED" : "UPDATED");
         g = phRect(g, x, y, w, 30, 0x10171cda);
         g = phRect(g, x, y, 2, 30, color);
         g = phText(g, title, x+8, y+4, 0.8f, color, w-16);
-        g = phText(g, t->text, x+8, y+17, 0.75f, 0xe1e5eaff, w-16);
+        g = phText(g, description, x+8, y+17, 0.75f, 0xe1e5eaff, w-16);
     }
     for (i = 0; phOptions[1] && i < 4; i++) if (h->damage[i].time > 0) {
         const HudDamage *d = &h->damage[i];

@@ -181,7 +181,7 @@ padN_stickmode.
                       |            | 0 = original automatic, temporary gauges
   always_crosshair    | 0          | 1 = small target at the gun's aim point
                       |            | when not aiming
-  mission_timer       | 0          | Mission Timer: elapsed MM:SS:CC bottom-left
+  mission_timer       | 0          | Mission Timer: elapsed MM:SS:CC top-left
                       |            | in solo missions. Shows / CHEAT MM:SS when
                       |            | this stage/difficulty has an unlock target.
                       |            | Green within time, amber in the last 10s,

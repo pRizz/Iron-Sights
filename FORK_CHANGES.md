@@ -623,10 +623,20 @@ Added default-on **Objective Alerts** for solo missions. Queued notifications
 show the objective letter, name and updated status, with completion/failure
 colors. Disabling the setting restores the original messages. Notifications
 reset with mission state and do not run as multiplayer objective alerts.
+The description is normalized to lowercase only in its display copy: Bank
+Gothic renders these as uniform small capitals, avoiding the taller initial
+capital in sentence-case objective names. Original localized strings and queue
+contents keep their spelling; native two-byte glyph codes are preserved. The
+panel leaves space below the optional mission clock, including taller font
+metrics (FORK-015).
 
 **Sources:** [objective updates](src/game/objective_status.c),
 [mission reset](src/game/objective.c), [notification queue](port/src/port_hud.c).
-**Checks:** HUD queue/filter/timing tests and completed/failed objective captures.
+**Checks:** HUD queue/filter/timing and display-case/buffer/native-glyph tests;
+completed/failed objective captures. The raised-initial appearance was reproduced
+in native and Edge actual-ROM captures before the presentation fix. Matched Edge
+pixel bounds show the first capital five screen pixels higher before the fix;
+the normalized description's measured letters share top/bottom bounds afterward.
 
 ### FORK-009 — Weapon inventory HUD strip
 
@@ -874,7 +884,13 @@ as `BEST 02:03`. No record and 007 mode omit that row (007's saved flag is not
 a time). Campaign times have whole-second precision and a 1023-second ceiling,
 shown as `BEST 17:03+` when capped. Records come from the selected campaign
 folder, not a menu hover or a suspend point's older campaign contents. The
-second row fits the existing bottom margin at 4:3 and wide aspect ratios.
+clock now occupies a dedicated top-left area at 4:3 and wide aspect ratios.
+This replaces the inherited bottom-left placement, where elapsed/best rows
+overlapped gadget names such as Bunker's watch magnet. Measured font height
+(including the required trailing newline) determines row spacing and objective
+panel clearance. The clock temporarily hides while upper dialogue is active;
+its underlying time keeps advancing. Legacy half-size HUD scaling shrinks the
+clock about the top-left corner.
 An applicable timed cheat-unlock target appears beside elapsed time as
 `00:42:50 / CHEAT 02:40`. The target is green within time, amber during the last
 ten whole seconds, and red beyond the deadline. Lookup uses the live stage and
@@ -885,21 +901,32 @@ cheats still have a practice target.
 The comparison follows the existing whole-second inclusive unlock deadline.
 This changes presentation, not objective, cheat eligibility or unlock rules.
 The inherited mission clock supplies pause and suspend-restore behavior.
-The existing solo/HUD visibility and pickup-message spacing remain intact.
+Existing solo/HUD visibility rules remain, including drawing independently of
+Ammo On Screen. Pickup messages no longer reserve bottom space for the relocated
+clock; gadget/ammo/weapon-strip spacing still applies.
 The setting remains off by default (`[display] mission_timer=0`); the INI guide
 now matches the actual video default, correcting its inherited claim of 1.
 
-**Sources:** [timer rendering](src/game/gunfire.c),
-[target lookup/format/colors](port/src/port_hud.c), [HUD API](port/include/port_hud.h),
+**Sources:** [timer rendering/layout](port/src/port_mission_clock.c),
+[clock interface](port/include/port_mission_clock.h),
+[small ammo-render hook](src/game/gunfire.c),
+[pickup-message spacing](src/game/bondview2.c),
+[target lookup/format/colors](port/src/port_mission_clock.c), [HUD API](port/include/port_hud.h),
 [campaign time API](src/game/file2.h),
 [setting/default](port/src/video.c), [README](README.md),
 [INI guide](tools/midas_ini_help.txt).
 **Checks:** [HUD tests](scripts/port/test_hud.c) cover stage/index resolution,
 difficulty exclusions, saved-record stage/folder lookup and missing records,
 formatting, deadline boundaries, warning colors and
-restored-clock comparisons. [HUD audit](scripts/port/audit_hud.ps1) accepts a
+restored-clock comparisons. Clock layout/visibility regressions cover regular
+and taller fonts, saved-best presence, shifted viewports, Ammo On Screen off,
+menu/multiplayer gating and dialogue priority. [HUD audit](scripts/port/audit_hud.ps1)
+accepts a
 mission, difficulty and timer switch plus an optional RAM-only `-BestSeconds`
-fixture (`GE_HUD_AUDIT_BEST`) for targeted captures; temporary audit
+fixture (`GE_HUD_AUDIT_BEST`) for targeted captures. Whitelisted gadgets can be
+equipped through the native watch-selection path in this isolated diagnostic,
+after opening AI finishes resetting equipment. Explicit ammo visibility and
+retained stdout/stderr make gadget captures reviewable; temporary audit
 executables are removed after exit (FORK-001). HUD, ADS and suspend-state
 regression tests and Windows/Linux builds passed. Windows captures checked
 the Dam Secret Agent 02:40 target at wide and 4:3 aspect ratios alongside text
@@ -907,6 +934,17 @@ and icon weapon strips, and elapsed-only output on Facility Agent. Warning
 and expired colors are covered by unit tests; runtime captures cover the green
 target. Linux was compile-checked. The main Windows executable was replaced
 without retaining a previous build.
+
+The 2026-10-25 spacing/typography follow-up passes HUD/ADS regressions and native
+Windows/optimized Wasm builds. Native wide/4:3 and Edge captures verify Bunker's
+watch magnet with elapsed/cheat/best rows separated above the objective panel.
+Edge also checks half-size HUD, Ammo On Screen off and no saved best time,
+without page errors. All four clock lookup/format/color helpers are unchanged
+after extraction. Type checking, 146 browser unit tests and site/logo policy
+checks pass. Both independent gallery passes reproduce 72 views/35 icons
+unchanged; gallery integrity and eight workflow tests pass, with only source
+fingerprint metadata refreshed. Private reproduction/capture evidence stays
+under `build/hud-layout`.
 
 ### FORK-016 — Mission-selection cheat status and difficulty hints
 

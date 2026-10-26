@@ -14014,7 +14014,6 @@ Gfx* hudmsgBottomRender(Gfx* arg0)
                     /* the gadget name in the left-hand ammo slot (gunfire.c
                      * generate_ammo_total_microcode) counts as that counter */
                     && !portGadgetHudNameShown()
-                    && !portMissionTimerShown()
 #endif
                     )
                 {

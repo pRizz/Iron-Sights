@@ -44,6 +44,7 @@
 #include "gbi_extension.h"
 #ifndef TARGET_N64
 #include "port_hud.h"
+#include "port_mission_clock.h"
 #include "boss.h"
 #include "port_weapon_export.h"
 #include "port_wardrobe.h"
@@ -7145,105 +7146,6 @@ u32 portAmmoIconPtr(u32 icon)
 
 #ifndef TARGET_N64
 /**
- * Mission timer: elapsed mission time as MM:SS:CC and the applicable cheat
- * target, shown at the bottom-left in
- * solo one line below the left-hand ammo row, in the same Gothic HUD font as
- * the gadget name. getMissiontimer() is the same PAL-normalised 60Hz source as
- * the endscreen, so the two always match. Each character is centred in a
- * fixed-width cell so the proportional font doesn't shift as digits change, and
- * hudmsgBottomRender lifts the bottom-left pickup message clear of it
- * (portMissionTimerShown).
- */
-static Gfx *portDrawMissionTimer(Gfx *gdl, s32 x0)
-{
-    char timerbuf[64];
-    char glyph[2];
-    s32 ticks;
-    s32 x;
-    s32 y;
-    s32 i;
-    s32 digitcell;
-    s32 coloncell;
-    s32 h;
-    s32 w;
-    s32 target = portHudMissionTargetSeconds(bossGetStageNum(), lvlGetSelectedDifficulty());
-    s32 best = portHudMissionBestSeconds(bossGetStageNum(), lvlGetSelectedDifficulty());
-    s32 targetText = FALSE;
-    u32 targetColor;
-
-    ticks = getMissiontimer();
-    portHudMissionTimerText(ticks, target, timerbuf, sizeof(timerbuf));
-    targetColor = portHudMissionTargetColor(ticks, target);
-
-    digitcell = 0;
-    glyph[1] = '\0';
-    for (i = 0; i <= 9; i++)
-    {
-        glyph[0] = (char) ('0' + i);
-        h = w = 0;
-        textMeasure(&h, &w, glyph, ptrFontBankGothicChars, ptrFontBankGothic, 0);
-        if (w > digitcell)
-        {
-            digitcell = w;
-        }
-    }
-    glyph[0] = ':';
-    h = w = 0;
-    textMeasure(&h, &w, glyph, ptrFontBankGothicChars, ptrFontBankGothic, 0);
-    coloncell = w;
-
-    x = x0; /* the left ammo digits' column, past the icon (see the call) */
-#if defined(VERSION_EU)
-    y = (viGetViewTop() + viGetViewHeight()) - 24;
-#else
-    y = (viGetViewTop() + viGetViewHeight()) - 14;
-#endif
-
-    if (best > 0) y -= 9;
-    if (hudAnchorsToEdges())
-    {
-        PORT_HUD_ANCHOR(gdl, PORT_HUD_ANCHOR_LEFT);
-    }
-    gdl = portHudScaleBegin(gdl, (f32) viGetViewLeft(), (f32) (viGetViewTop() + viGetViewHeight()));
-    gdl = microcode_constructor(gdl);
-    for (i = 0; timerbuf[i] != '\0'; i++)
-    {
-        s32 cell;
-
-        glyph[0] = timerbuf[i];
-        h = w = 0;
-        textMeasure(&h, &w, glyph, ptrFontBankGothicChars, ptrFontBankGothic, 0);
-        cell = (glyph[0] >= '0' && glyph[0] <= '9') ? digitcell : glyph[0] == ':' ? coloncell : w;
-        if (glyph[0] == '/') targetText = TRUE;
-        if (targetText) {
-            s32 gx = x + (cell + 1) / 2 + w / 2 - w;
-            s32 gy = y + h / 2 - h;
-            gdl = textRenderOutlined(gdl, &gx, &gy, (s8 *)glyph,
-                ptrFontBankGothicChars, ptrFontBankGothic, targetColor, 0x202020ff,
-                (s32)viGetX(), viGetY(), 0, 0);
-        } else {
-            gdl = gunDrawHudString(gdl, (s8 *) glyph, x + (cell + 1) / 2, HUDHALIGN_MIDDLE, y, HUDVALIGN_MIDDLE, 1);
-        }
-        x += cell + 1;
-    }
-    if (best > 0) {
-        /* A second row keeps both comparisons inside a 4:3 viewport. The
-         * campaign format caps records at 1023 whole seconds. */
-        sprintf(timerbuf, "BEST %02d:%02d%s", best/60, best%60, best == 1023 ? "+" : "");
-        x = x0;
-        y += 9;
-        gdl = gunDrawHudString(gdl, (s8 *)timerbuf, x, HUDHALIGN_LEFT, y, HUDVALIGN_MIDDLE, 1);
-    }
-    gdl = combiner_bayer_lod_perspective(gdl);
-    gdl = portHudScaleEnd(gdl);
-    if (hudAnchorsToEdges())
-    {
-        PORT_HUD_ANCHOR_OFF(gdl);
-    }
-    return gdl;
-}
-
-/**
  * Multiplayer: this viewport's player name in its bottom-right corner
  * ([display] mp_show_names, on the Multiplayer Options sheet). The name is the
  * player's profile (port_profiles.c), else "Player N", drawn in capitals in the
@@ -7321,20 +7223,6 @@ static Gfx *portDrawMpPlayerName(Gfx *gdl)
     return gdl;
 }
 
-/**
- * 1 while the solo mission timer is on screen - hudmsgBottomRender treats
- * it like a left-hand ammo counter and lifts the bottom-left message
- * clear of it (same contract as portGadgetHudNameShown).
- */
-s32 portMissionTimerShown(void)
-{
-    extern s32 portMissionTimer(void); /* video.c: midas.ini [display] mission_timer; weak 1 headless */
-
-    return portMissionTimer()
-        && (g_CurrentPlayer->gunammooff & ~GUNAMMOREASON_OPTION) == 0
-        && g_CurrentPlayer->mpmenuon == 0
-        && getPlayerCount() == 1;
-}
 #endif
 
 Gfx *generate_ammo_total_microcode(Gfx *gdl)
@@ -7349,7 +7237,7 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
     u32 imageoffset_r;
     s32 textwidth_r;
     u32 imageoffset_l;
-    s32 textwidth_l = 0; /* read at the mission-timer call even with no left icon */
+    s32 textwidth_l;
 
     if (g_CurrentPlayer->gunammooff == 0)
     {
@@ -7593,29 +7481,11 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
                 }
             }
 #endif
-
-#ifndef TARGET_N64
-            if (portMissionTimerShown())
-            {   /* Mission timer (Extended Option, solo only): starts where the
-                 * left-hand magazine digits start (icon's right edge plus their
-                 * 3 px gap) so it lines up and isn't clipped by the ammo icon;
-                 * with no left icon a nominal 24 px icon keeps it from jumping
-                 * when one appears. */
-                s32 iconw = (textwidth_l > 5) ? textwidth_l : 24;
-                gdl = portDrawMissionTimer(gdl, (viGetViewLeft() + leftx) + (iconw / 2) + 3);
-            }
-#endif
         }
     }
 #ifndef TARGET_N64
-    else if (portMissionTimerShown())
-    {   /* Ammo On Screen off hides the counter, not the timer: draw it alone
-         * at the solo left column (leftx 59) with the nominal 24 px icon. */
-        gdl = portDrawMissionTimer(gdl, (viGetViewLeft() + 59) + (24 / 2) + 3);
-    }
-#endif
-
-#ifndef TARGET_N64
+    /* Independent of Ammo On Screen; no longer shares the gadget/ammo rows. */
+    if (portMissionTimerShown()) gdl = portHudDrawMissionTimer(gdl);
     /* The name isn't part of the ammo counter, so the counter's hide reasons
      * (Ammo On Screen option, hit blink) don't apply; it still hides with the
      * MP menu and locked-controls cutscenes. */

@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include "../../port/src/port_hud.c"
+#include "../../port/src/port_mission_clock.c"
 #include "../../port/src/port_wardrobe.c"
 #include "port_icon_decode.h"
 
@@ -12,6 +13,9 @@ static struct player testPlayer;
 struct player *g_CurrentPlayer = &testPlayer;
 f32 g_GlobalTimerDelta;
 static s32 testSeat, live = 1, playerCount = 1;
+static s32 missionClockEnabled = 1;
+s32 g_UpperTextDisplayFlag, upper_text_window_timer = -1;
+s32 portMissionTimer(void) { return missionClockEnabled; }
 static s32 inventory[40], inventoryCount, currentWeapon;
 static save_data bestSave;
 static s32 bestTimes[3][3];
@@ -40,11 +44,89 @@ void osSyncPrintf(const char *fmt, ...)
     va_list args; va_start(args, fmt); vfprintf(stderr, fmt, args); va_end(args); abort();
 }
 
+static void testToastSmallCaps(void)
+{
+    /* Arrange: native strings retain their spelling, including two-byte glyphs. */
+    const char source[] = "Neutralise ALL alarms\t\n";
+    const char native[] = {'A', (char)0x84, 'B', 'C', '\0'};
+    char text[64], tiny[3], one[1], untouched = '!';
+
+    /* Act / assert: uniform small capitals in the display copy only. */
+    phCopySmallCaps(text, sizeof(text), source);
+    assert(strcmp(text, "neutralise all alarms") == 0);
+    assert(strcmp(source, "Neutralise ALL alarms\t\n") == 0);
+    phCopySmallCaps(text, sizeof(text), native);
+    assert(text[0] == 'a' && (u8)text[1] == 0x84 && text[2] == 'B' && text[3] == 'c');
+    phCopySmallCaps(tiny, sizeof(tiny), "ABCD");
+    assert(strcmp(tiny, "ab") == 0);
+    phCopySmallCaps(one, sizeof(one), "A");
+    assert(one[0] == '\0');
+    phCopySmallCaps(&untouched, 0, "A");
+    assert(untouched == '!');
+    phCopySmallCaps(text, sizeof(text), NULL);
+    assert(text[0] == '\0');
+}
+
+static void testClockClearance(void)
+{
+    /* Arrange: regular and taller regional font metrics, shifted viewports. */
+    const s32 heights[] = {8, 14, 20, 0};
+    s32 i, best;
+    for (i = 0; i < 4; i++) for (best = 0; best <= 1; best++) {
+        const s32 height = heights[i] > 0 ? heights[i] : 8;
+        /* Act. */
+        const PortMissionClockLayout layout = portMissionClockLayout(10, 12, heights[i], best);
+        /* Assert: complete rows fit above the objective panel, with a gap.
+         * No clock row consumes the bottom gadget/ammo/message area. */
+        assert(layout.x > 10);
+        assert(layout.elapsedY - (height + 1)/2 >= 12 + 4);
+        assert(!best || layout.bestY - (height + 1)/2 >= layout.elapsedY + height/2 + 2);
+        assert(layout.bottom >= (best ? layout.bestY : layout.elapsedY) + height/2);
+        assert(layout.toastY >= layout.bottom + 4);
+        assert(layout.toastY >= 12 + 28);
+        assert(layout.toastY + 30 < 12 + 180); /* shortest normal solo viewport */
+    }
+}
+
+static void testClockVisibility(void)
+{
+    /* Arrange: an unobstructed solo HUD. */
+    testPlayer.gunammooff = testPlayer.mpmenuon = 0;
+    playerCount = missionClockEnabled = 1;
+    g_UpperTextDisplayFlag = 0;
+    upper_text_window_timer = -1;
+    /* Act / assert: disabling ammo does not disable the clock. */
+    assert(portMissionTimerShown());
+    testPlayer.gunammooff = GUNAMMOREASON_OPTION;
+    assert(portMissionTimerShown());
+    testPlayer.gunammooff |= GUNAMMOREASON_DAMAGE;
+    assert(!portMissionTimerShown());
+    testPlayer.gunammooff = 0;
+    testPlayer.mpmenuon = 1;
+    assert(!portMissionTimerShown());
+    testPlayer.mpmenuon = 0;
+    playerCount = 2;
+    assert(!portMissionTimerShown());
+    playerCount = 1;
+    missionClockEnabled = 0;
+    assert(!portMissionTimerShown());
+    missionClockEnabled = 1;
+    upper_text_window_timer = 30;
+    assert(!portMissionTimerShown()); /* yield to dialogue */
+    g_UpperTextDisplayFlag = 1;
+    assert(portMissionTimerShown()); /* hidden dialogue doesn't reserve space */
+    g_UpperTextDisplayFlag = 0;
+    upper_text_window_timer = -1;
+}
+
 int main(void)
 {
     s32 i, j, value, selected, n;
     const s32 rates[] = {30,60,120,240};
     HudWeapon weapons[HUD_WEAPONS];
+    testToastSmallCaps();
+    testClockClearance();
+    testClockVisibility();
     {
         char timer[64], tiny[5];
         bestTimes[0][DIFFICULTY_SECRET] = 123;
