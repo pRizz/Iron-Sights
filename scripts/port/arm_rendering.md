@@ -90,6 +90,11 @@ the same scene lighting as the native grip hand and no additive brightness lift.
 
 ## Regression checks
 
+Throwing-knife ADS keeps its original native hand geometry/materials and uses
+temporary knife-only matrix-list copies for its optional handle-grip animation.
+See [knife ADS contracts and validation](knife_ads.md). It does not use the
+generated rifle grips or alter native pistol paths.
+
 Run `bash scripts/port/test_wardrobe.sh` and `bash scripts/port/test_ads.sh`.
 Both already run in the Windows release workflow without a ROM. Tests cover:
 

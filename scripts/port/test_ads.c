@@ -1,7 +1,10 @@
 /* ROM-free ADS input/state checks. Run with scripts/port/test_ads.sh. */
 #include <assert.h>
 #include <stdarg.h>
+#include <stddef.h>
+extern void *memset(void *dst, int value, size_t size);
 #include "../../port/src/joy_port.c"
+#include "../../port/src/port_knife_ads.c"
 #include "../../port/src/port_wardrobe.c"
 #include "../../port/src/ads_hands.c"
 #include "../../port/src/port_options.c"
@@ -18,6 +21,7 @@ static s32 currentPlayer;
 static s32 controlsLive;
 static OSTime testTime = 1;
 static s32 savedSprint = -1;
+static s32 savedKnifeStyle = -1;
 static s32 savedHud[6] = {-1,-1,-1,-1,-1,-1};
 u32 osVirtualToPhysical(void *address) { return (u32)address; }
 
@@ -29,6 +33,7 @@ s32 portIniWriteStrs(const char *section, const char *const *keys, const char *c
 {
     s32 i;
     for (i = 0; i < n; i++) {
+        if (strcmp(keys[i], "knife_ads") == 0) savedKnifeStyle = atoi(vals[i]);
         s32 j;
         for (j = 0; j < HUD_OPTIONS; j++) if (strcmp(keys[i], phKeys[j]) == 0) savedHud[j] = atoi(vals[i]);
         if (strcmp(keys[i], "sprint") == 0) {
@@ -146,6 +151,8 @@ static void testSprint(void)
     assert(portOptGet(opt) == 1 && savedSprint == 1);
 }
 
+#include "test_knife_ads.c"
+
 int main(void)
 {
     s32 i;
@@ -161,6 +168,7 @@ int main(void)
 
     controlsLive = 1;
     selectPlayer(0);
+    testKnifeAds();
     testSprint();
     { /* The support palm faces under/into the gun. The watch follows that
        * roll rather than being billboarded towards the camera. */
@@ -422,7 +430,7 @@ int main(void)
     for (i = ITEM_UNARMED; i <= ITEM_CAMERA; i++)
     {
         g_CurrentPlayer->hand_item[GUNRIGHT] = i;
-        assert(!!portAdsActive() == ((i >= ITEM_WPPK && i <= ITEM_LASER) || i == ITEM_GRENADELAUNCH));
+        assert(!!portAdsActive() == ((i >= ITEM_WPPK && i <= ITEM_LASER) || i == ITEM_GRENADELAUNCH || i == ITEM_THROWKNIFE));
     }
     selectPlayer(0);
     for (i = GUN_ANIM_STATE_SWITCH_LOWER; i <= GUN_ANIM_STATE_RELOAD_RAISE; i++)

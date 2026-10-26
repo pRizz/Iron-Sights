@@ -127,6 +127,7 @@ static const struct PortWatchRowDef sHud[] = {
  * already on the face */
 static const struct PortWatchRowDef sGenSettings[] = {
     { PWROW_OPT,       "aim_mode",         NULL, 0, 0 },
+    { PWROW_OPT,       "knife_ads",        NULL, 0, 0 },
     { PWROW_OPT,       "sprint",           NULL, 0, 0 },
     { PWROW_OPT,       "aim_lock",         NULL, 0, 0 },
     { PWROW_OPT,       "scope_steady",     NULL, 0, 0 },

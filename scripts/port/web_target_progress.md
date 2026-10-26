@@ -723,6 +723,27 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**Throwing-knife ADS, 2026-10-25:** Shared C presentation adds Butt Centered
+(default) and Tip Centered under Gameplay > General Settings > Knife ADS,
+persisted as `[display] knife_ads=0/1` in the existing native/browser settings.
+The simple style translates the stock pose; the advanced style centers the tip,
+keeps its grip visible and flips to the stock blade grip before native release.
+Raise/lower, regrip and recovery are simulation-time driven; native throw/ammo/
+trajectory behavior remains authoritative. Focused port files own behavior,
+temporary knife-only matrix copies and private real-throw auditing.
+ADS/wardrobe/HUD regressions, Windows/optimized Wasm builds, all 278 strict
+callback compilations, five Linux metadata/distribution tests and 146 browser
+unit tests pass. Native simple/tip raise/lower was reviewed in wide/4:3; the 4:3
+samples include HFOV 110, alternate weapon FOV and 120 Hz. Wide captures cover
+committed/interrupted throws; a no-reserve native check confirms clean
+last-knife auto-switching.
+All 20 existing firearm captures pass. Edge renders both actual-ROM styles;
+touch-accept on the native General Settings page changes the mode and the saved
+Tip Centered selection survives a cached-ROM reload. Both independent gallery
+passes reproduce 72 views/35 icons unchanged; integrity and eight workflow tests
+pass. Evidence stays private under `build/knife-ads`. Next action: preserve the
+calibrated references and verify normal main/Pages publication.
+
 **Startup attribution, 2026-10-25:** The shared native legal screen now names
 Project Midas ADS as a fork of Project Midas, preserving original game credits.
 Build number, short commit/modified status and baked UTC build time appear in

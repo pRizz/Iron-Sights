@@ -70,6 +70,7 @@
 #include "game/chrai.h"
 #include "game/lv.h"
 #include "port_ads.h"
+#include "port_knife_ads.h"
 #include "port_wardrobe.h"
 #include "port_hud.h"
 #include "joy.h"
@@ -295,6 +296,7 @@ static s32 joyPortOwnValue(const char *value)
 /** midas.ini keys this module owns besides the binds; returns 1 when consumed. */
 s32 portJoyPortSetOption(const char *key, const char *value)
 {
+    if (portKnifeAdsOptionSet(key, atoi(value))) return 1;
     if (portHudOptionSet(key, atoi(value))) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = atoi(value) != 0;
@@ -435,6 +437,7 @@ void portJoyPortPadOptSet(s32 pad, s32 which, s32 v)
 /** Port Options bridge (port_options.c): the same keys as integers. */
 s32 portJoyPortOptionGet(const char *key, s32 *out)
 {
+    if (portKnifeAdsOptionGet(key, out)) return 1;
     if (portHudOptionGet(key, out)) return 1;
     if (strcmp(key, "sprint") == 0) {
         *out = sSprint;
@@ -461,6 +464,7 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
 
 s32 portJoyPortOptionSet(const char *key, s32 v)
 {
+    if (portKnifeAdsOptionSet(key, v)) return 1;
     if (portHudOptionSet(key, v)) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = v != 0;
@@ -699,6 +703,7 @@ void portStateResetInput(void)
     memset(sLatchPoll, 0, sizeof(sLatchPoll));
     memset(sLatchN, 0, sizeof(sLatchN));
     memset(sAdsBlend, 0, sizeof(sAdsBlend));
+    portKnifeAdsReset();
     memset(sAdsNormalAim, 0, sizeof(sAdsNormalAim));
     sAdsWheelNotches = 0;
 }
@@ -819,6 +824,13 @@ static s32 sAdsAuditTransitions;
 /* GE_ADS_AUDIT=1 captures all guns; an item ID captures just that gun. */
 static void joyPortAdsAudit(void)
 {
+    s32 knifeAim;
+    if (portKnifeAdsAudit(joyPortPermitted(), &knifeAim)) {
+        const char *transitions = getenv("GE_ADS_AUDIT_TRANSITIONS");
+        sAdsAuditTransitions = transitions && *transitions;
+        sHeld[0][PORTACT_AIM_DOWN_SIGHTS] = knifeAim;
+        return;
+    }
     static s32 enabled = -1;
     static s32 index;
     static f32 time;
@@ -930,17 +942,19 @@ static s32 joyPortAdsSupported(void)
 {
     const s32 item = getCurrentPlayerWeaponId(GUNRIGHT);
 
-    /* One sight at a time; gadgets, thrown weapons and the tank keep their own controls. */
+    /* One sight at a time; other thrown weapons/gadgets and the tank keep their controls. */
     return g_PlayerIsInTank != 1 && get_itemtype_in_hand(GUNLEFT) == 0
         && get_itemtype_in_hand(GUNRIGHT) != 0
-        && ((item >= ITEM_WPPK && item <= ITEM_LASER) || item == ITEM_GRENADELAUNCH);
+        && ((item >= ITEM_WPPK && item <= ITEM_LASER) || item == ITEM_GRENADELAUNCH || item == ITEM_THROWKNIFE);
 }
 
 static s32 joyPortAdsWeapon(void)
 {
     const s32 state = g_CurrentPlayer->hands[GUNRIGHT].weapon_action_state;
     return joyPortAdsSupported()
-        && (state < GUN_ANIM_STATE_SWITCH_LOWER || state == GUN_ANIM_STATE_DRY_FIRE);
+        && (state < GUN_ANIM_STATE_SWITCH_LOWER || state == GUN_ANIM_STATE_DRY_FIRE
+            || (getCurrentPlayerWeaponId(GUNRIGHT) == ITEM_THROWKNIFE
+                && state >= GUN_ANIM_STATE_THROWKNIFE_DRAW && state <= GUN_ANIM_STATE_THROWKNIFE_RECOVER));
 }
 
 s32 portAdsUpdateAim(s32 held, s32 pressed, s32 toggle)
@@ -1020,6 +1034,7 @@ void portAdsTick(void)
     if (!joyPortPermitted() || !joyPortAdsWeapon())
     {
         sAdsBlend[pad] = 0.0f;
+        portKnifeAdsTick(pad, FALSE, 0, 0);
         return;
     }
     /* A 150 ms raise/lower, independent of the simulation rate. */
@@ -1027,6 +1042,7 @@ void portAdsTick(void)
     sAdsBlend[pad] += portAdsActive() ? step : -step;
     if (sAdsBlend[pad] < 0.0f) sAdsBlend[pad] = 0.0f;
     if (sAdsBlend[pad] > 1.0f) sAdsBlend[pad] = 1.0f;
+    portKnifeAdsTick(pad, TRUE, sAdsBlend[pad], g_GlobalTimerDelta);
 #ifdef GE_VIDEO
     joyPortAdsAuditTransitionFrame();
 #endif

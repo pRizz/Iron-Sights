@@ -13,7 +13,9 @@ param(
     [switch]$HandDetails,
     [switch]$StockHands,
     [switch]$WeaponFov,
-    [ValidateSet(30,60,120,240)][int]$TickHz = 60
+    [ValidateSet(30,60,120,240)][int]$TickHz = 60,
+    [ValidateSet('Butt','Tip')][string]$KnifeStyle = 'Butt',
+    [switch]$KnifeThrows
 )
 $ErrorActionPreference = 'Stop'
 if ($Dual -and (($Item -ne 0 -and $Item -notin @(4,5,6,18,19,20,21)) -or $Transitions)) {
@@ -35,6 +37,7 @@ $settings = @('[display]', 'fullscreen=window', 'vsync=0', "maxfps=$([Math]::Max
     "hfov_wide=$Fov", 'aim_mode=1', 'sight_on_screen=1', 'always_crosshair=1',
     'weapon_hud=0', 'always_health=0', '[input]', 'mouse=1')
 Set-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value $settings
+if ($Item -eq 3) { Add-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value @('[display]', ('knife_ads='+[int]($KnifeStyle -eq 'Tip'))) }
 if ($Adzy) { Add-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value @('[display]','adzy=1') }
 if ($WeaponFov) { Add-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value @('[display]','weapon_fov=1') }
 # The intro harness stops automatically once live gameplay owns input.
@@ -47,6 +50,7 @@ $auditEnv = @{
 $previousEnv = @{}
 if ($Item -ne 0) { $auditEnv.GE_ADS_AUDIT = [string]$Item }
 if ($Transitions) { $auditEnv.GE_ADS_AUDIT_TRANSITIONS = '1' }
+if ($KnifeThrows) { $auditEnv.GE_KNIFE_ADS_THROWS = '1' }
 if ($Dual) { $auditEnv.GE_ADS_AUDIT_DUAL = '1' }
 if ($Wardrobe -ne 'Mission') { $auditEnv.GE_ADS_AUDIT_WARDROBE=[string](@('blue','boiler','jungle','snow','tuxedo','connery').IndexOf($Wardrobe.ToLowerInvariant())) }
 if ($StockHands) { $auditEnv.GE_ARM_AUDIT_STOCK='1' }
@@ -93,6 +97,7 @@ foreach ($line in $log) {
 }
 if ($captures.Count -ne $expectedCount) { throw "Expected $expectedCount screenshots, found $($captures.Count)." }
 $names = @{
+    3='Throwing Knife';
     4='PP7'; 5='Silenced PP7'; 6='DD44'; 7='Klobb'; 8='KF7 / AK47'; 9='ZMG';
     10='D5K'; 11='Silenced D5K'; 12='Phantom'; 13='AR33'; 14='RC-P90';
     15='Shotgun'; 16='Auto Shotgun'; 17='Sniper'; 18='Cougar Magnum';

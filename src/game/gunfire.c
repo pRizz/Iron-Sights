@@ -86,6 +86,7 @@ extern u32 D_80035CC0;
  * code only ever reaches them through D_80035CC0's adjacency. */
 #include <stdio.h> /* stderr - port diagnostics */
 #include "port_ads.h"
+#include "port_knife_ads.h"
 extern u32 D_80035CC4[];
 #endif
 extern u32 D_80035D00;
@@ -996,6 +997,9 @@ void gunUpdateAndFire(GUNHAND handnum)
             }
         }
     }
+#endif
+#ifndef TARGET_N64
+    portKnifeAdsPose(handnum, item, &gunmtx, &gunofs);
 #endif
     matrix_4x4_set_position(&gunofs, &gunmtx);
     matrix_4x4_copy(&gunmtx, &hand->gunmtx_camspace);
@@ -2158,7 +2162,11 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
 #ifndef TARGET_N64
         portWardrobeBeginHand(item, handnum);
 #endif
+#ifndef TARGET_N64
+        portKnifeAdsDraw(&renderdata, (Model *)&handptr->field_B68, item, handnum);
+#else
         subdraw(&renderdata, (Model *)&handptr->field_B68);
+#endif
 #ifndef TARGET_N64
         portWardrobeEnd();
 #endif
@@ -5382,6 +5390,9 @@ void gunTickGameplay(s32 triggerOn)
     enum GUNHAND hand = GUNLEFT;
     struct rgba_u8 weapon_color;
 
+#ifndef TARGET_N64
+    triggerOn = portKnifeAdsAuditTrigger(triggerOn);
+#endif
     trigger_state = g_ZeroTriggerState;
 
     // Save previous trigger state.

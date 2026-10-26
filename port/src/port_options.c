@@ -131,6 +131,8 @@ static const s32 sAimControlVals[] = { 0, 1 };
 static const char *const sAimControlText[] = { "Hold\n", "Toggle\n" };
 static const s32 sAimModeVals[] = { 1, 0 };
 static const char *const sAimModeText[] = { "ADS\n", "Red Reticle\n" };
+static const s32 sKnifeAdsVals[] = { 0, 1 };
+static const char *const sKnifeAdsText[] = { "Butt Centered\n", "Tip Centered\n" };
 static const s32 sWeaponStyleVals[] = { 0, 1 };
 static const char *const sWeaponStyleText[] = { "Text\n", "Icons\n" };
 static const s32 sHealthDisplayVals[] = { 0, 1 };
@@ -298,6 +300,7 @@ static const struct PortOpt sOpts[] = {
     TOGGLE("auto_aim",           "[display]", "Auto-Aim\n",           PORTOPT_CAT_GAMEPLAY),
     ENUMR ("aim_control",        "[display]", "Aim Control\n",        PORTOPT_CAT_GAMEPLAY, sAimControlVals, sAimControlText, NULL),
     ENUMR ("aim_mode",           "[display]", "Aim Mode\n",           PORTOPT_CAT_GAMEPLAY, sAimModeVals, sAimModeText, NULL),
+    ENUMR ("knife_ads",          "[display]", "Knife ADS\n",          PORTOPT_CAT_GAMEPLAY, sKnifeAdsVals, sKnifeAdsText, NULL),
     TOGGLE("sprint",             "[display]", "Sprint\n",             PORTOPT_CAT_GAMEPLAY),
     TOGGLE("sight_on_screen",    "[display]", "Sight on Screen\n",    PORTOPT_CAT_GAMEPLAY),
     TOGGLE("look_ahead",         "[display]", "Look Ahead\n",         PORTOPT_CAT_GAMEPLAY),

@@ -281,6 +281,54 @@ Contributing, alongside the existing contribution links.
 
 **Status:** Implemented.
 
+Throwing knives now also support single-hand ADS. **Gameplay > General Settings
+> Knife ADS** selects **Butt Centered** (default, `[display] knife_ads=0`) or
+**Tip Centered** (`knife_ads=1`) in the frontend and watch. The simple style
+retains the stock blade grip/orientation and depth, translating the handle butt
+onto the center ray. The advanced style moves the knife within the unchanged
+native hand into a handle grip, centers its actual tip and exposes a little blade
+face. Its view distance leaves the grip visible. Both styles use continuous,
+simulation-time raise/lower transitions and the existing hold/toggle/dedicated
+ADS controls. Red-reticle aiming, dual wielding and other thrown items retain
+their inherited behavior.
+
+The tip style flips back into the native blade grip during the original wind-up;
+releasing aim cannot unwind a committed throw. Native release timing, ammo,
+gravity/upward launch bias and inherited player velocity remain authoritative.
+The tip is a direction reference, not a promise of impact at every distance.
+Recovery returns to the requested aim state; switch/watch/death/input reset clear
+transient presentation per player. Focused `port_knife_ads.c` owns settings,
+presentation and temporary knife-only matrix-list copies. Small existing fork
+hooks in `joy_port.c`/`gunfire.c` connect it; no model renderer refactor is needed.
+Original knife/hand vertices, UVs, materials and display lists remain immutable,
+and temporary node pointers are restored after drawing. Unknown list layouts
+fall back to the native draw. `port_knife_ads_audit.c` exercises real native throws
+only under the private `GE_ADS_AUDIT=3` harness.
+
+Knife regressions run inside `test_ads.sh` and cover defaults/persistence,
+projection, rigid grip transforms, four tick rates, reversals, committed-throw
+interruption/recovery, player isolation/input reset, immutable lists and partial
+patch rollback. The ADS test disables compiler builtins to catch legacy-header
+ABI discrepancies that native Windows exposes. Early native captures found that
+issue in float min/max calls; the final bounded interpolation uses plain C.
+Native simple/tip raise/lower is captured and reviewed in wide/4:3, with alternate
+weapon FOV/HFOV 110 at 120 Hz. Wide native throw captures include aim release
+during the second wind-up. A no-reserve case verifies the last knife releases and
+auto-switches cleanly to the pistol. All 20 existing firearm captures still pass.
+Native Windows/optimized Wasm builds, all 278 strict callback compilations,
+ADS/wardrobe/HUD checks, five Linux distribution/metadata tests and 146 browser
+unit tests pass. Edge renders both actual-ROM styles and its native menu's
+touch-accept input changes Butt Centered to Tip Centered; the saved choice
+survives a cached-ROM reload. Gallery integrity/eight workflow tests pass and
+both independent passes reproduce all 72 views/35 icons without changed pixels.
+Private evidence is under `build/knife-ads`; raw captures/ROM data are not staged.
+Main sources: [knife implementation](port/src/port_knife_ads.c),
+[interface](port/include/port_knife_ads.h),
+[throw audit](port/src/port_knife_ads_audit.c),
+[regressions](scripts/port/test_knife_ads.c),
+[pose/validation guide](scripts/port/knife_ads.md), shared option/help tables,
+frontend/watch settings and [capture driver](scripts/port/audit_ads.ps1).
+
 Added aim-down-sights for 20 supported firearms with individual weapon poses
 and sight alignment. Right mouse defaults to ADS; **Gameplay > General Settings
 > Aim Mode** can restore the red reticle. The existing hold/toggle aim setting
