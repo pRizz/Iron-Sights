@@ -1,4 +1,5 @@
 .touch-controls {
+    --touch-stick-size: clamp(110px, calc(var(--touch-view-width, 100vw) * 0.24), 150px);
     position: absolute;
     inset: 0;
     z-index: 8;
@@ -53,7 +54,7 @@
     position: absolute;
     left: max(16px, env(safe-area-inset-left));
     bottom: max(20px, env(safe-area-inset-bottom));
-    width: clamp(110px, calc(var(--touch-view-width, 100vw) * 0.24), 150px);
+    width: var(--touch-stick-size);
     aspect-ratio: 1;
     border-radius: 50%;
     background: #111a1970;
@@ -102,6 +103,19 @@
 .touch-actions button[data-touch-action='fire'] {
     border-color: #f4bd76;
     background: #74412fa6;
+}
+.touch-weapon {
+    position: absolute;
+    left: max(16px, env(safe-area-inset-left));
+    bottom: calc(max(20px, env(safe-area-inset-bottom)) + var(--touch-stick-size) + 10px);
+    z-index: 3;
+}
+.touch-weapon button {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    padding: 6px;
 }
 .touch-extra {
     position: absolute;
@@ -161,5 +175,10 @@
     }
     .touch-controls button {
         padding: 5px;
+    }
+}
+@media (max-width: 360px) {
+    .touch-extra {
+        grid-template-columns: repeat(3, 48px);
     }
 }

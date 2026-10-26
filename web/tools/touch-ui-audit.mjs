@@ -45,6 +45,18 @@ try {
     await aim.tap();
     await expect(aim).toHaveAttribute('aria-pressed', 'false');
     const snapshot = () => page.evaluate(() => touchFixture.snapshot());
+    const weapon = page.getByRole('button', { name: 'Switch weapon', exact: true });
+    await expect(weapon.locator('svg')).toBeVisible();
+    // The primary icon uses the native next-weapon action, with independent
+    // press/release ownership on every tap, without opening More.
+    for (let tap = 0; tap < 2; tap++) {
+        await weapon.hover();
+        await page.mouse.down();
+        assert.ok((await snapshot()).held.includes(9));
+        await page.mouse.up();
+        assert.ok(!(await snapshot()).held.includes(9));
+    }
+    await expect(page.locator('.touch-extra')).toHaveCount(0);
     if (kind === 'chromium') {
         const session = await context.newCDPSession(page);
         const fingers = new Map();
@@ -84,9 +96,11 @@ try {
     }
     await page.evaluate(() => touchFixture.menu(true));
     await expect(page.locator('[data-touch-action=accept]')).toBeVisible();
+    await expect(weapon).toHaveCount(0);
     await page.evaluate(() => touchFixture.menu(false));
     await expect(page.locator('[data-touch-action=fire]')).toBeVisible();
     for (const size of [
+        { width: 320, height: 568 },
         { width: 390, height: 844 },
         { width: 1024, height: 768 },
     ]) {
@@ -95,6 +109,7 @@ try {
             '.touch-stick',
             '[data-touch-action=fire]',
             '[data-touch-action=watch]',
+            '.touch-weapon button',
         ]) {
             const box = await page.locator(selector).boundingBox();
             assert.ok(
@@ -104,6 +119,18 @@ try {
                     box.y + box.height <= size.height + 1,
             );
         }
+        await page.getByRole('button', { name: 'More', exact: true }).tap();
+        await expect(page.getByRole('button', { name: 'Weapon +', exact: true })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Weapon −', exact: true })).toBeVisible();
+        const icon = await weapon.boundingBox();
+        const tray = await page.locator('.touch-extra').boundingBox();
+        assert.ok(
+            icon.x + icon.width <= tray.x ||
+                icon.y + icon.height <= tray.y ||
+                icon.y >= tray.y + tray.height,
+            'Weapon icon overlapped the More controls',
+        );
+        await page.getByRole('button', { name: 'More', exact: true }).tap();
         await page.screenshot({ path: resolve(output, `layout-${size.width}.png`) });
     }
     await page.getByRole('button', { name: 'More', exact: true }).tap();
@@ -120,7 +147,7 @@ try {
     assert.deepEqual((await snapshot()).held, []);
     assert.deepEqual(errors, []);
     console.log(
-        'Touch UI: independent move/look/fire, pointer cancellation, focus reset, menu mode, portrait/tablet bounds and disable passed',
+        'Touch UI: weapon icon/More controls, independent move/look/fire, pointer cancellation, focus reset, menu mode, portrait/tablet bounds and disable passed',
     );
 } finally {
     await browser.close();

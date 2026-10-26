@@ -51,6 +51,10 @@ loss, cancellation, rotation and returning to the room. Use a browser-only input
 adapter and small shared hooks; preserve native keyboard/mouse/controller and
 ADS behavior. Automate mobile viewport/multi-pointer and real-ROM input checks;
 distinguish those checks from physical iOS/Android acceptance.
+The accepted convenience refinement adds a gun-icon weapon-cycle button to the
+main gameplay overlay while retaining Weapon + and Weapon − in More. Reuse the
+existing forward-cycle action on all touch devices rather than adding a separate
+iOS input path.
 
 ## Build and runtime design
 

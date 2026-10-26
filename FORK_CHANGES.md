@@ -38,8 +38,11 @@ Adds keyboard-free browser input requested for iPhone, iPad and Android. Touch
 mode defaults on for coarse touchscreens or touch devices without Pointer Lock;
 an on-screen checkbox saves an explicit override independently of game files.
 The overlay provides analog movement, relative drag-to-look, independent held
-Fire, toggle ADS, Use/Reload/Crouch, Watch/Pause/Options, and a More tray for weapon/gadget
-cycling, zoom, detonation and sprint. Native menus get Select/Back and directional
+Fire, toggle ADS, Use/Reload/Crouch, Watch/Pause/Options, and a gun-icon **Switch
+weapon** button above the movement stick that cycles forward using the existing
+next-weapon action. The More tray retains both **Weapon +** and **Weapon −**,
+gadget cycling, zoom, detonation and sprint. Below 361 CSS pixels the tray uses
+three columns to avoid the primary weapon button. Native menus get Select/Back and directional
 controls. Touch mode bypasses mouse capture; keyboard/mouse mode keeps its
 existing capture policy. Dragging Fire turns while firing for two-thumb play.
 Controls respect safe-area insets and the game's aspect; browser panning is
@@ -90,6 +93,11 @@ pointer press: Chrome and audio-enabled Linux WebKit still reach Dam, move,
 use Watch/Pause/Options and retain audio/layout. Chrome covers simultaneous
 move/look/fire and genuine window-blur pause. The C fixture checks both pitch
 directions; native gallery regeneration changes zero image cells.
+The primary weapon-button refinement passes 144 unit tests, TypeScript,
+production assembly/allowlist and Edge/WebKit pointer UI checks. Those checks
+cover repeated next-weapon press/release without opening More, retained +/−
+buttons, hidden gameplay actions in menus and non-overlapping phone/tablet
+layouts, including 320-pixel portrait. No native/render inputs changed.
 
 ### FORK-026 — Upstream 1.0.2b integration
 

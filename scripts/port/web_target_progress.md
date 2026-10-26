@@ -951,6 +951,18 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**Primary weapon switch, 2026-10-25:** Added an accessible gun-icon Switch weapon
+button above the movement stick, using the existing next-weapon action on all
+touch devices. More retains Weapon + and Weapon −. Shared stick sizing keeps
+the button separated from movement; the More grid uses three columns below
+361 CSS pixels to avoid overlap. Gameplay-only actions remain hidden in menus.
+Changes stay in `touch-controls.tsx`, `touch.css` and the existing pointer audit;
+no native, storage or render inputs change. TypeScript, 144 unit tests, production
+assembly/allowlist and Edge/WebKit fixture checks pass, including repeated
+press/release, retained More buttons and 320/390/1024-pixel layouts. Private
+screenshots are `build/web-touch/weapon-ui-{edge,webkit}`. Next action: confirm
+thumb reach on physical phones/tablets; the existing device-preview limits apply.
+
 **Focus and look correction, 2026-10-25:** Canvas-only blur from touching an
 on-screen button no longer becomes Ready to continue. Window blur and hidden-page
 events still pause/reset input. Touch pitch now follows mouse Upright/Reverse

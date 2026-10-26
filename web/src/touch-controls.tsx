@@ -1,4 +1,13 @@
-import { createEffect, createSignal, onCleanup, onMount, Show, For, type Accessor } from 'solid-js';
+import {
+    createEffect,
+    createSignal,
+    onCleanup,
+    onMount,
+    Show,
+    For,
+    type Accessor,
+    type JSX,
+} from 'solid-js';
 import type { Engine } from './engine';
 import type { Capture } from './capture';
 import { stickVector, type TouchAction, type TouchInput } from './touch-input';
@@ -85,7 +94,7 @@ export function TouchControls(props: Props) {
             {button.label}
         </button>
     );
-    const Button = (button: { action: TouchAction; label: string }) => (
+    const Button = (button: { action: TouchAction; label: string; children?: JSX.Element }) => (
         <button
             type="button"
             data-touch-action={button.action}
@@ -115,7 +124,7 @@ export function TouchControls(props: Props) {
             onPointerCancel={(event) => releaseButton(event)}
             onLostPointerCapture={(event) => releaseButton(event)}
         >
-            {button.label}
+            {button.children ?? button.label}
         </button>
     );
     function releaseButton(event: PointerEvent) {
@@ -224,6 +233,23 @@ export function TouchControls(props: Props) {
                                 transform: `translate(${stick().x * 38}px, ${-stick().y * 38}px)`,
                             }}
                         />
+                    </div>
+                    <div class="touch-weapon">
+                        <Button action="nextWeapon" label="Switch weapon">
+                            <svg
+                                viewBox="0 0 32 32"
+                                width="28"
+                                height="28"
+                                aria-hidden="true"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M4 8h24v7H16l-3 11H6l3-11H4z" />
+                                <path d="M16 15v5h5l2-5M7 11h17" />
+                            </svg>
+                        </Button>
                     </div>
                     <div class="touch-actions">
                         <Button action="aim" label="Aim" />
