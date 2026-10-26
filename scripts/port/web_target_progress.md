@@ -573,6 +573,20 @@ resize-observer feedback in the initial implementation.
 
 ## WEB-008 | 2026-10-24 | Room scene and assets
 
+**Controller plug refinement, 2026-10-25:** `controller-plug.ts` replaces the
+undersized/off-center cylinder with a rounded shell seated on the licensed
+console's measured player-one socket center, face plane and rim radius. Adds a
+sculpted thumb recess and smaller rounded gray cable collar before the black
+strain relief, using the owner's photo as a shape reference without bundling it.
+The controller cable exits along the plug axis before bending to the floor.
+The pinned licensed GLBs remain unchanged. Actual-model rim/geometry regressions
+pass, and neutral-light front/side plus powered/unpowered room closeups are
+reviewed locally. TypeScript, 146 unit tests, production assembly/allowlist and
+Edge room interaction/responsive/framing/reduced-motion/context-loss checks pass.
+Native/gallery inputs are unchanged; gallery freshness verification passes.
+Next action: preserve the measured fit and normal Pages publication gates;
+evidence stays private under `build/web-room/plug-detail` and `console-details`.
+
 **Console front details, 2026-10-25:** `console.ts` moves the powered red LED
 from player one's socket to the front center, between the sockets. Adds an
 original gray cylindrical plug with black strain relief; the controller cable

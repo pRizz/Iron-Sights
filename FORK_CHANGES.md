@@ -1663,10 +1663,23 @@ The procedural console/controller are now replaced by Swayne's console and
 Marshle's controller, both CC BY 4.0. `models.ts` loads only local, self-contained
 GLBs; `console.ts` retains the physical switch and places the red power LED at
 the front center between the controller sockets, replacing its incorrect
-player-one-port location. An original gray cylindrical controller plug and
-black strain relief sit in that port; the cable starts at their transformed
-exit rather than entering the socket directly. The model-local attachment keeps
-the plug/cable aligned with console placement. Other cables retain their curves.
+player-one-port location. An original gray controller plug seats flush at the
+measured player-one socket center/face/rim radius. Its rounded shell has a
+sculpted thumb recess and a smaller rounded gray cable collar before the black
+strain relief. `controller-plug.ts` owns these procedural details, using the
+owner's real-plug photo only as a shape reference. The cable starts inside the
+relief and follows its axis before bending toward the floor. The model-local
+attachment keeps the plug/cable aligned with console placement. Other cables
+retain their curves. Geometry regressions compare the seating ring with the
+actual licensed GLB's rim vertices and check normals/transformed cable alignment.
+The refined plug passes TypeScript, all 146 unit tests, production assembly/
+allowlist and Edge's interaction, responsive, reduced-motion, framing and
+context-loss room audit. Front/side neutral-light and powered/unpowered room
+captures were visually reviewed under ignored `build/web-room/plug-detail` and
+`console-details`. Native/gallery inputs are unchanged; gallery verification
+passes without regeneration. Sources include
+[plug geometry](web/src/room/controller-plug.ts) and its
+[actual-model regressions](web/src/room/controller-plug.test.ts).
 The procedural additions leave the licensed GLBs and their hashes unchanged;
 `MODELS.md` includes them in the runtime modification notice. `controller.ts`
 uniformly fits the controller. The CRT/cartridge remain original.

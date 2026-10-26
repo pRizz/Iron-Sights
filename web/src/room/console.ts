@@ -1,27 +1,6 @@
 import * as THREE from 'three';
-import { box, cable, plastic } from './geometry';
-
-function createControllerPlug(model: THREE.Group) {
-    // Console-local +Z points out of player one's socket; the cable shares its exit.
-    const plug = new THREE.Group();
-    plug.name = 'ControllerPlug';
-    plug.position.set(-0.067, 0.035, 0.093);
-    model.add(plug);
-    for (const [radius, length, z, color] of [
-        [0.0105, 0.026, 0.013, 0xa3a5a2],
-        [0.0045, 0.014, 0.031, 0x111213],
-    ]) {
-        const barrel = new THREE.Mesh(
-            new THREE.CylinderGeometry(radius, radius, length, 16),
-            plastic(color),
-        );
-        barrel.rotation.x = Math.PI / 2;
-        barrel.position.z = z;
-        barrel.castShadow = barrel.receiveShadow = true;
-        plug.add(barrel);
-    }
-    return plug.localToWorld(new THREE.Vector3(0, 0, 0.038)).toArray();
-}
+import { box, cable } from './geometry';
+import { createControllerPlug } from './controller-plug';
 
 // Swayne's attributed model replaces the procedural shell. See MODELS.md.
 export function createConsole(scene: THREE.Scene, model: THREE.Group) {
@@ -61,7 +40,13 @@ export function createConsole(scene: THREE.Scene, model: THREE.Group) {
             [1.6, 0.03, 0.8],
             [2.3, 0.03, -2.8],
         ],
-        [controllerLead, [-0.85, 0.065, 2.1], [-1.5, 0.035, 2.4], [-1.2, 0.09, 2.4]],
+        [
+            controllerLead.exit,
+            controllerLead.lead,
+            [-0.85, 0.065, 2.35],
+            [-1.5, 0.035, 2.4],
+            [-1.2, 0.09, 2.4],
+        ],
     ])
         cable(scene, points);
     return {

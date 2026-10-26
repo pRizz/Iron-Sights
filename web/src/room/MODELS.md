@@ -23,9 +23,13 @@ Changes: keep only the console, normalize its plastic to the room's standard
 material and dark expansion cover, isolate the existing 72-triangle power switch
 and recolor it red for the accepted interaction; re-export as an embedded GLB.
 The application fits it uniformly to the room, animates that switch, adds the
-front-center power LED and original procedural gray controller-plug barrel with
-black strain relief. The controller cable starts at the plug's outer end; other
-cable curves are retained. These additions are runtime geometry; the pinned GLB
+front-center power LED and original procedural gray controller plug. The plug
+matches the player-one socket's measured center, face plane and rim radius,
+with rounded shell/collar edges, a sculpted thumb recess and a smaller gray cable
+collar before the black strain relief. The owner's reference photo informs the
+shape; it is not shipped as a texture or bundled asset. The controller cable
+starts inside the relief and leaves along its axis before bending to the floor;
+other cable curves are retained. These additions are runtime geometry; the pinned GLB
 is unchanged. The source cartridge/controller
 are excluded. Joseph Rohm's earlier candidate still requires an authenticated
 Sketchfab download; no files from that candidate are used or claimed here.
