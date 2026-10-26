@@ -2,7 +2,7 @@ import type { GameModule } from './runtime-types';
 
 const DEFAULT_SETTINGS =
     '[display]\nfullscreen=windowed\nwindow_width=960\nwindow_height=540\n' +
-    'render_thread=0\nvsync=0\nmaxfps=60\ntickhz=60\nmsaa=1\nmusic_volume=70\nsfx_volume=70\nlook_updown=1\n' +
+    'render_thread=0\nvsync=0\nmaxfps=60\ntickhz=60\nmsaa=2\nmusic_volume=70\nsfx_volume=70\nlook_updown=1\n' +
     '[input]\nmouse=1\n[controls]\nstart=Return,P\n';
 
 export function browserLookDefault(settings: string): string {

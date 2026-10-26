@@ -110,6 +110,7 @@ static const struct PortOptHelp sHelp[] = {
     { "filter_2d",          "Smooths HUD and menu graphics." },
     { "maxfps",             "Frame rate cap." },
     { "@apply",             "Applies the changes on this page." },
+    { "@about",             "Build version, commit, timestamp and source links." },
 
     /* CLASSIC: what Classic Mode forces while it is on */
     { "classic_res",        "Classic Mode renders 3D at the N64's 240 lines." },

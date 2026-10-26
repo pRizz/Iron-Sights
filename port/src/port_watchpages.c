@@ -135,7 +135,7 @@ static const struct PortWatchRowDef sGenSettings[] = {
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
 static const struct PortWatchRowDef sPortOpts[] = {
-    { PWROW_ACTION, NULL, "About Project Midas ADS\n", 101, 0 },
+    { PWROW_ACTION, NULL, "About / Build Info\n", 101, 0 },
     { PWROW_OPT,       "unlock_all",         NULL, 0, 0 },   /* first */
     { PWROW_OPT,       "fix_shootthrough",   NULL, 0, 0 },
     { PWROW_OPT,       "distance_fading",    NULL, 0, 0 },

@@ -30,6 +30,50 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-029 — Shared presentation defaults and usable Video pagination
+
+**Status:** Implemented.
+
+New/default settings use Wide for solo HUD ammo/messages, health/armor arcs and
+multiplayer HUD layout (`hud_wide`, `health_wide`, `mp_hud_wide` = 1). MSAA and
+anisotropy start at 2x (`msaa=2`, `anisotropy=2`), and 2D filtering starts enabled
+(`filter_2d=1`) on every platform. Explicit saved INI values still override
+these defaults; existing hardware capability fallbacks and Classic Mode
+overrides remain authoritative. This differs from inherited centered HUDs,
+disabled AA/anisotropy and point-filtered 2D. The browser bootstrap no longer
+overrides common 2x MSAA with its former off setting.
+
+Video's middle tab now shows Next while another settings page exists, then
+Classic on the last page. Previously Classic occupied the tab unconditionally,
+leaving Video 2/2 (Max FPS) unreachable after the fork added Enhanced Fonts.
+Previous still returns to earlier pages and pending values survive page turns;
+Apply Changes remains available on both pages. Classic retains its existing
+leave-sheet/apply semantics. About discovery and desktop Start behavior are
+covered by FORK-020 and FORK-024 below.
+
+**Sources:** [shared defaults/input hook](port/src/video.c),
+[browser bootstrap](web/src/browser-settings.ts),
+[frontend labels/navigation](src/game/front.c),
+[INI reference](tools/midas_ini_help.txt),
+[native Start regression](scripts/port/test_start_input.c) and
+[SDL2 test runner](scripts/port/test_start_input.sh). The runner needs the native
+32-bit SDL2 development build; set `SDL2_CONFIG` to its `sdl2-config` path.
+
+**Validation:** Windows and optimized Wasm builds pass. An isolated native
+load/save audit verifies all six new defaults and retention of explicit older
+values. Windows UI review reaches Video 2/2, Classic and both solo Wide HUD rows;
+About opens the existing build dialog and its helper text fits. The native Start
+regression verifies the compiled Return binding, removal of Return-only watch
+suppression, tick reset, custom rebinding and blanked input. The desktop input
+automation could not reliably trigger gameplay keys (including the old pause
+key), so it is not claimed as an end-to-end keyboard pass. Edge's actual-ROM
+Start audit passes Enter/P watch interoperability, held-key behavior, Alt+Enter
+isolation and HTML Resume. Type checking, 146 browser tests, site allowlist,
+HUD/ADS/upstream-integration and distribution checks pass. Gallery regeneration
+passes both independent captures of 72 views and 35 icons. All 107 images reflect
+the new anisotropy default and were compared visually; private diagnostics are
+under `build/ui-defaults` and `build_win/options-audit-20261026`.
+
 ### FORK-028 — Browser touch controls
 
 **Status:** Implemented; browser acceptance recorded in WEB-011.
@@ -1354,7 +1398,10 @@ cache cases and text layout without a cache. Python exporter tests passed.
 
 **Status:** Implemented.
 
-Frontend and watch Port Options pages offer **About Project Midas ADS**.
+Frontend and watch Port Options pages offer **About / Build Info**.
+The frontend now honors the action row's label instead of falling through to
+the invalid-option `?` fallback; its helper explains build version, commit,
+timestamp and source links through `port_option_help.c`.
 The executable embeds UTC time, build number/date, full Git commit, branch,
 dirty status and available source, Actions run and release/download URLs, with
 matching packaged JSON. CI labeling requires an exact commit and clean tree.
@@ -1997,10 +2044,11 @@ port pad caches and queued audio. The page follows menu pointer ownership,
 distinguishes intentional menu releases from unexpected lock loss, and resets
 input before requesting capture. Browser initial settings additionally bind P
 to the watch; Enter/Return now acts as the full Start button on web, including
-opening and closing the watch. A browser-only branch in the existing Return-only
-watch suppression hook permits this for new and remembered configurations
-without rewriting saved bindings. Native confirm-only Return behavior stays
-unchanged. The browser capture handler leaves Enter to native Start processing,
+opening and closing the watch. The former browser-only exception in the shared
+Return-only suppression hook now applies on desktop too: Enter's existing Start
+binding opens/closes the watch on every platform. Explicit custom Start bindings
+still win; no fixed shortcut or saved-binding rewrite is introduced. The native
+regression and FORK-029 record this extension. The browser capture handler leaves Enter to native Start processing,
 matching P, while Alt+Enter remains the fullscreen shortcut.
 `web/src/browser-settings.ts` owns the browser bootstrap INI and supplies
 `look_updown=1` (Upright), including migration of partial configs missing the

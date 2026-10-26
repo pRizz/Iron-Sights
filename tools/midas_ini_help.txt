@@ -129,12 +129,12 @@ padN_stickmode.
   render_thread       | -1         | Draw on its own thread. -1 = auto,
                       |            | 0 = off, 1 = on
   Graphics
-  msaa                | 1          | 1 = off; 2, 4 or 8 = samples
+  msaa                | 2          | 1 = off; 2, 4 or 8 = samples
   filtering           | trilinear  | point, bilinear, 3point (N64-style) or
                       |            | trilinear
-  anisotropy          | 0          | 0 = off; 2 to 16 = sharper textures at
+  anisotropy          | 2          | 0 = off; 2 to 16 = sharper textures at
                       |            | glancing angles
-  filter_2d           | 0          | 0 = crisp HUD and menu graphics,
+  filter_2d           | 1          | 0 = crisp HUD and menu graphics,
                       |            | 1 = smoothed
   enhanced_fonts      | 1          | Community HD Bank Gothic/Zurich fonts;
                       |            | 0 = original glyphs. Independent of 2D
@@ -171,7 +171,9 @@ padN_stickmode.
   HUD
   crosshair_color     | default    | Hex RRGGBB (e.g. FF8000) for both
                       |            | crosshairs; default = red
-  health_wide         | 0          | 1 = health and armour arcs at the screen
+  hud_wide            | 1          | 1 = ammo/messages at the screen edges;
+                      |            | 0 = centred 4:3 area
+  health_wide         | 1          | 1 = health and armour arcs at the screen
                       |            | edges; 0 = centred 4:3 area
   always_health       | 1          | Health Display: 1 = always show health and
                       |            | armour; after 3 quiet seconds, fade to 25%
@@ -263,7 +265,7 @@ padN_stickmode.
   mp_sight_on_screen  | 1          | Same as sight_on_screen
   mp_no_auto_aim      | 0          | 1 = auto-aim off for all players
   mp_show_names       | 1          | Player name in each view's corner
-  mp_hud_wide         | 0          | HUD at viewport edges, not centred 4:3
+  mp_hud_wide         | 1          | HUD at viewport edges, not centred 4:3
   mp_pillarbox        | 0          | Match in a centred 4:3, black side bars
   mp_always_crosshair | 0          | Same as always_crosshair
   mp_fix_shootthrough | 1          | Same as fix_shootthrough
@@ -330,7 +332,7 @@ N64 controls
   z             | Mouse Left  | Z trigger (fire)
   l             |             | L button
   r             | Mouse Right | R button (aim)
-  start         | Return      | Start
+  start         | Return      | Start, including opening/closing the watch
   c_up          | W           | C buttons (lean and zoom in aim mode)
   c_down        | S           |
   c_left        | A           |

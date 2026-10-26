@@ -4539,7 +4539,7 @@ static const struct PortSheetRow port_sheet_rows_general[] = {
 /* PORT OPTIONS: the port's own gameplay switches. p1 ends
  * match is ini-only (default on); play as ssf character is ini-only. */
 static const struct PortSheetRow port_sheet_rows_portopts[] = {
-    { SHROW_ABOUT, NULL, "About Project Midas ADS\n" },
+    { SHROW_ABOUT, NULL, "About / Build Info\n" },
     { SHROW_OPT, "unlock_all" },   /* first */
     { SHROW_OPT, "fix_shootthrough" }, { SHROW_OPT, "distance_fading" },
     { SHROW_OPT, "true_enemy_rockets" },
@@ -6288,7 +6288,8 @@ static const char *portSheetLabel(s32 row)
     if (port_sheet_row_kind[row] == SHROW_BIND) return portBindLabel(port_sheet_bind_dev, port_sheet_row_bind[row]);
     if (port_sheet_row_kind[row] == SHROW_XHAIR) return "Crosshair Colour\n";
     if (port_sheet_row_kind[row] == SHROW_RES) return "Resolution\n";
-    if (port_sheet_row_kind[row] == SHROW_OPT && port_sheet_row_label[row] != NULL) return port_sheet_row_label[row];
+    if ((port_sheet_row_kind[row] == SHROW_OPT || port_sheet_row_kind[row] == SHROW_ABOUT)
+        && port_sheet_row_label[row] != NULL) return port_sheet_row_label[row];
     return portOptLabel(port_sheet_row_opt[row]);
 }
 
@@ -7372,6 +7373,7 @@ static const char *portSheetHelpKey(s32 row)
     {
         case SHROW_OPT:          return portOptKey(port_sheet_row_opt[row]);
         case SHROW_RES:          return "@resolution";
+        case SHROW_ABOUT:        return "@about";
         case SHROW_XHAIR:        return "crosshair_color";
         case SHROW_BINDDEV:      return "@input_device";
         case SHROW_GOBINDS:      return "@rebind";
@@ -8125,7 +8127,8 @@ void interface_menu1C_portsheet(void)
             return;
         }
     }
-    else if (port_sheet_kind == PORT_SHEET_VIDEO && frontCheckCursorOnNextTab())
+    else if (port_sheet_kind == PORT_SHEET_VIDEO && port_sheet_page == port_sheet_pages - 1
+        && frontCheckCursorOnNextTab())
     {   /* the CLASSIC tab (middle): which parts Classic Mode applies. Picks not
          * yet applied here are dropped, as leaving the page does. */
         tab_next_highlight = TRUE;
@@ -8747,7 +8750,7 @@ Gfx *constructor_menu1C_portsheet(Gfx *DL)
     {   /* no OPTIONS tab on Gameplay Options */
         DL = portAddTopTabText(DL, "OPTIONS\n");
     }
-    if (port_sheet_kind == PORT_SHEET_VIDEO)
+    if (port_sheet_kind == PORT_SHEET_VIDEO && port_sheet_page == port_sheet_pages - 1)
     {
         DL = portAddMiddleTabText(DL, PORT_CLASSIC_TAB_TEXT);
     }

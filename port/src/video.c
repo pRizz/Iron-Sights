@@ -77,8 +77,8 @@ static int s_CfgAdzy = 0;        /* [display] adzy: Siberian Special Forces + sn
 static int s_CfgUnlockAll = 0;   /* [display] unlock_all: every mission/difficulty/cheat available */
 static int s_CfgPausePillars = 0; /* [display] pause_pillars: animated 4:3 pillarbox while the watch is up */
 static int s_CfgHudScale = 0;     /* [display] hud_scale: 1 = the in-game HUD on a 640x480 canvas (half size) */
-static int s_CfgHealthWide = 0;   /* [display] health_wide: the health / armour arcs at the edges (1) or centred (0) */
-static int s_CfgHudWide = -1;     /* [display] hud_wide: Rare's ratio option kept global (-1 = not set yet: the save's stands) */
+static int s_CfgHealthWide = 1;   /* [display] health_wide: the health / armour arcs at the edges (1) or centred (0) */
+static int s_CfgHudWide = 1;      /* [display] hud_wide: Wide by default; an explicit ini preference still wins */
 static int s_CfgAlwaysCrosshair = 0; /* [display] always_crosshair: PD "Show Target" plus while not aiming (gunfire.c gunDrawSight) */
 static int s_CfgShadowAlpha = 65;    /* [display] shadow_alpha: character/prop drop-shadow strength, % of vanilla (model.c) */
 static int s_CfgMissionTimer = 0; /* [display] mission_timer: elapsed MM:SS:MS bottom-left in solo (gunfire.c portDrawMissionTimer) */
@@ -120,7 +120,7 @@ static int s_CfgMpPaintball = 0;     /* [display] mp_paintball     = CHEAT_PAINT
 static int s_CfgMpNoRadar = 0;       /* [display] mp_no_radar      = CHEAT_NO_RADAR_MP */
 static int s_CfgMpTurbo = 0;         /* [display] mp_turbo_mode    = CHEAT_TURBO_MODE */
 static int s_CfgMpUnlimitedAmmo = 0; /* [display] mp_unlimited_ammo = CHEAT_INFINITE_AMMO */
-static int s_CfgMpHudWide = 0;       /* [display] mp_hud_wide: MP's own HUD Layout 4:3 / Wide (options.c hudAnchorsToEdges) */
+static int s_CfgMpHudWide = 1;       /* [display] mp_hud_wide: MP's own HUD Layout 4:3 / Wide (options.c hudAnchorsToEdges) */
 static int s_CfgMpPillarbox = 0;     /* [display] mp_pillarbox: MP gameplay in a centred 4:3, black side bars (portPillarboxFrame) */
 static int s_CfgMpAlwaysCrosshair = 0; /* [display] mp_always_crosshair: always_crosshair, 2+ players */
 static int s_CfgMpFixShootThrough = 1; /* [display] mp_fix_shootthrough: fix_shootthrough, 2+ players */
@@ -155,14 +155,12 @@ static int s_CfgScopeSteady = 0; /* [display] scope_steady: 1 = anchor the head
                                   * basis as the fov narrows (kills the sniper-zoom
                                   * cloud slide, but also kills the head sway while
                                   * scoped). 0 = authentic sway at every zoom. */
-static int s_CfgMsaa = 1;             /* 1 = off; 2/4/8 = MSAA samples */
+static int s_CfgMsaa = 2;             /* 1 = off; 2/4/8 = MSAA samples */
 static int s_CfgMaxFps = 120;         /* render pace cap; 0 = uncapped */
 static int s_CfgVsync = 1;            /* 0 = never wait for vblank */
-static int s_CfgAnisotropy = 0;       /* 0/1 = off; 2..16 samples */
-/* [display] filter_2d: 0 = point-sample HUD/menu texrects. The menu overhaul
- * made OFF the default (spec 2.1) - crisp 2D is what the art was drawn for;
- * the Nintendo 64 preset turns it back on. */
-static int s_CfgFilter2D = 0;
+static int s_CfgAnisotropy = 2;       /* 0/1 = off; 2..16 samples */
+/* [display] filter_2d: smooth HUD/menu texrects by default on every platform. */
+static int s_CfgFilter2D = 1;
 static int s_CfgEnhancedFonts = 1;
 static int s_CfgHighLod = 1;          /* 0 = use normal distance-based model LODs */
 static int s_CfgLowRes = 0;           /* [display] low_res: the level render's
@@ -2000,14 +1998,10 @@ void portReturnStartTickConsume(void)
     sReturnStartPolled = 0;
 }
 
-/** Native Return-only watch suppression. Web Enter acts as the full Start button. */
+/** Compatibility hook: Return's Start binding toggles the watch on every platform. */
 s32 portReturnStartThisTick(void)
 {
-#ifdef __EMSCRIPTEN__
     return 0;
-#else
-    return sReturnStartTick;
-#endif
 }
 
 /* [controls] marker - this file has been through the one-time Move-stick

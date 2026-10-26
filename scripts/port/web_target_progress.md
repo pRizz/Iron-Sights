@@ -723,6 +723,24 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**Shared presentation defaults and Start behavior, 2026-10-26:** All platforms
+now default the solo HUD, health/armor layout and multiplayer HUD to Wide, MSAA
+and anisotropy to 2x, and 2D filtering to ON. The browser bootstrap's former
+`msaa=1` override is replaced by 2x; explicit saved values remain intact. Desktop
+Return now shares web Start/watch behavior through the existing small hook.
+Video pagination and About labeling/help are repaired in the shared native UI
+(FORK-029/FORK-020). Windows and optimized Wasm builds, 146 browser unit tests,
+type checking, site verification and Edge's actual-ROM Enter/P/held-key/fullscreen/
+Resume checks pass. Native load/save checks cover all six defaults and explicit
+older settings; a ROM-free native SDL regression covers Return eligibility,
+rebinding and blanked input. Windows menu review covers both Video pages, Classic,
+Wide solo layouts and About/help. Native synthetic gameplay key presses were not
+reliably observed, so that UI path is not claimed as verified. The gallery's two
+independent passes reproduce the updated 72 views/35 icons; visual comparisons
+cover the filtering change. Evidence stays private under `build/ui-defaults`
+and `build_win/options-audit-20261026`.
+Next action: deliver through main/CI/Pages; retain actual Safari as experimental.
+
 **ROM dialog and loading presentation, 2026-10-26:** Removed the former tagline
 from ROM selection/retained launcher; outside clicks/taps dismiss the idle modal,
 with inside/drag guards and native focus restoration. A 160 ms panel/backdrop
