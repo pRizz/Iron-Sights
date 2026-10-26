@@ -33,7 +33,20 @@ bool decode(const uint8_t *encoded, size_t size, unsigned width, unsigned height
 
 bool load(const FontRecord& record, std::vector<uint8_t>& rgba)
 {
+    if (!record.glyph_width || record.glyph_width > record.width || !record.ink_width
+        || record.ink_width > std::min(unsigned(record.width)*8, (unsigned(record.glyph_width)+1)*8)) return false;
     if (record.offset > sizeof(font_masks) || record.size > sizeof(font_masks)-record.offset) return false;
     return decode(font_masks+record.offset, record.size, record.width*8, record.height*8, rgba);
+}
+
+int32_t drawExtent(const FontRecord& record, int32_t extent, int32_t step, int32_t origin)
+{
+    if (extent <= 0 || step <= 0 || origin != 0 || record.ink_width <= record.glyph_width*8
+        || record.ink_width > record.width*8) return extent;
+    const int32_t full = record.glyph_width*4096 / step;
+    /* Scaled native rectangles and reciprocal steps each truncate once.
+     * Partial/repeated texture spans must not grow like complete glyphs. */
+    if (extent < full-1 || extent > full+1) return extent;
+    return std::max(extent, (record.ink_width*512 + step-1) / step);
 }
 }

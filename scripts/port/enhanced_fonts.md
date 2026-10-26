@@ -38,6 +38,37 @@ modified ROM fonts fall back to original rendering. Picture text/logos and
 ammo icons are not replaced. Switching the setting keeps original and enhanced
 textures in separate cache entries.
 
+## Horizontal stroke preservation
+
+The importer preserves authored horizontal pixel coordinates, using spare tile
+columns for up to one native pixel of ink beyond the original glyph width.
+The renderer extends only matching enhanced glyph rectangles and their UV spans,
+including scaled and rotated text. Native cursor advances, kerning, measured
+line widths, baselines and wrapping are unchanged. Original-font and unknown-font
+draws retain their existing path.
+
+This corrects horizontal squeezing found on 2026-10-25 in 99 imported masks
+(54 Bank Gothic, 45 Zurich Bold). At the 128/255 intensity threshold, uppercase
+Bank Gothic `I` now retains its source's 11-pixel stroke instead of 7; the
+source `T` stem remains 13 pixels. Lowercase `i` and other overhanging letters
+receive the same correction. This changes imported artwork, not the source pack.
+
+There are two bounded horizontal fitting exceptions: Bank Gothic dash and
+underscore are too long for their unchanged advances and a one-pixel overhang.
+The generator also checks the complete native kerning table before publishing:
+it trims one overhanging texture column from Bank Gothic `p` and three from
+Zurich Bold `r`, preventing opaque ink from touching in `pJ`, `rp` and `ry`.
+This trims only protruding fringe without rescaling their stems. Metadata records
+source ink bounds, prepared ink width, native kerning class and fitting/trimming.
+ROM-free tests independently check all 17,298 supported ordered glyph pairs in
+both families at normal spacing; the menus' extra-spacing mode adds clearance.
+
+The existing vertical fitting policy remains, including 13 source images that
+exceed native cell height. The separate digit-height decision below is deferred.
+Tests cover mask hashes/bounds, narrow strokes, native mappings and fallback,
+scaled drawing extents and invalid/partial spans. Regeneration remains lossless
+after preparation and reproducible from the pinned CC0 source archive.
+
 ## Digit height: decision deferred
 
 The enhanced Bank Gothic digits appear taller than uppercase letters in mixed
@@ -83,7 +114,7 @@ python scripts/port/test_enhanced_fonts.py
 ```
 
 The generator verifies the archive SHA256, maps Rice-format pack identifiers
-to the inherited font tables, adapts power-of-two padding to native cells,
+to the inherited font tables, adapts power-of-two padding with bounded ink overhang,
 and losslessly encodes the high-resolution intensity masks. It writes no
 original glyph pixels into its output. Builds and CI use checked-in community
 masks without requiring Pillow or a ROM. `GE_FONT_AUDIT=1` logs successful

@@ -11,11 +11,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 3454221991,
       "key": 3865784417698051827,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#CDE33EA7#4#1_rgb.png",
       "png_sha256": "c2a37fc59ec6e6318200b64e605d15b295789872dc0ad37c01770f48a2401e97",
-      "mask_sha256": "10c0148548ab9a0d5786a26b5d7884a0104b4c8c46eef314b38714d6c824d175"
+      "mask_sha256": "10c0148548ab9a0d5786a26b5d7884a0104b4c8c46eef314b38714d6c824d175",
+      "source_ink_box": [
+        0,
+        1,
+        16,
+        58
+      ],
+      "ink_width": 16,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -24,11 +35,22 @@
       "height": 5,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3621510054,
       "key": 337159848793294361,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#D7DBDBA6#4#1_rgb.png",
       "png_sha256": "845709344bd91d14dafc39dd02b66c86f321a507bbab98663c8c1a88a7ad7927",
-      "mask_sha256": "054691f64178c1ac913ae43ba604f10cc280f59c3862346b89a677f3ad35265e"
+      "mask_sha256": "054691f64178c1ac913ae43ba604f10cc280f59c3862346b89a677f3ad35265e",
+      "source_ink_box": [
+        0,
+        10,
+        8,
+        56
+      ],
+      "ink_width": 8,
+      "horizontal_fit": false,
+      "vertical_fit": true,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -37,11 +59,22 @@
       "height": 10,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 2195490618,
       "key": 13615875312316057585,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#82DC873A#4#1_rgb.png",
       "png_sha256": "a426abb53b1da3244757f009556d292d358e150fcc9dae2cd0bb07f6c97e5b61",
-      "mask_sha256": "986f7bfbcbdda74893e73b63e37743e545861f83e50808da01a49553c7deb3cb"
+      "mask_sha256": "986f7bfbcbdda74893e73b63e37743e545861f83e50808da01a49553c7deb3cb",
+      "source_ink_box": [
+        1,
+        6,
+        62,
+        77
+      ],
+      "ink_width": 62,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -50,11 +83,22 @@
       "height": 10,
       "stride": 8,
       "baseline": 1,
+      "kerningindex": 0,
       "rice": 3856255227,
       "key": 1544182844184041608,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#E5D9C8FB#4#1_rgb.png",
       "png_sha256": "681f7766ba777474b3812b9c676d00ff45790e12fb31af06a2838932d612f419",
-      "mask_sha256": "63d96b2b1a21cba28d8f2411b6582a72d8b3a6f1caa2236d1549450359ab17e3"
+      "mask_sha256": "63d96b2b1a21cba28d8f2411b6582a72d8b3a6f1caa2236d1549450359ab17e3",
+      "source_ink_box": [
+        0,
+        5,
+        55,
+        70
+      ],
+      "ink_width": 55,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -63,11 +107,22 @@
       "height": 8,
       "stride": 16,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 3453730003,
       "key": 2388765434186380628,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#CDDBBCD3#4#1_rgb.png",
       "png_sha256": "dfa5a5d5abe66226d7fb017565319d263f37f467f5d1558a65f9eb8bae10a3fc",
-      "mask_sha256": "71555d4c47c14edcba98e30012dd0b78496229a3f4982861af9d4cdc44f05e0d"
+      "mask_sha256": "71555d4c47c14edcba98e30012dd0b78496229a3f4982861af9d4cdc44f05e0d",
+      "source_ink_box": [
+        0,
+        3,
+        72,
+        59
+      ],
+      "ink_width": 72,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -76,11 +131,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 4290877349,
       "key": 6441942851829219249,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#FFC197A5#4#1_rgb.png",
       "png_sha256": "2ac30c8e282a3cdb0aae8b9e33e84db7c1b5ba1932000666589a877d16fcdbb9",
-      "mask_sha256": "70abbbf9d19ccba71d9facf6f20e2ba38bded2f2d578820cfdd00d8d34c97165"
+      "mask_sha256": "70abbbf9d19ccba71d9facf6f20e2ba38bded2f2d578820cfdd00d8d34c97165",
+      "source_ink_box": [
+        0,
+        5,
+        64,
+        59
+      ],
+      "ink_width": 64,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -89,11 +155,22 @@
       "height": 5,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3907807671,
       "key": 3300606717660264684,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#E8EC69B7#4#1_rgb.png",
       "png_sha256": "845709344bd91d14dafc39dd02b66c86f321a507bbab98663c8c1a88a7ad7927",
-      "mask_sha256": "054691f64178c1ac913ae43ba604f10cc280f59c3862346b89a677f3ad35265e"
+      "mask_sha256": "054691f64178c1ac913ae43ba604f10cc280f59c3862346b89a677f3ad35265e",
+      "source_ink_box": [
+        0,
+        10,
+        8,
+        56
+      ],
+      "ink_width": 8,
+      "horizontal_fit": false,
+      "vertical_fit": true,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -102,11 +179,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 3382144152,
       "key": 10302394332985011659,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#C9976C98#4#1_rgb.png",
       "png_sha256": "4f4d6e881baf19e74ddac913e8c78b8997c3995f0a72d90ddb386be491850ffc",
-      "mask_sha256": "61be196a16b58591e0a905b43fa93630d9699558c8c65af30d134490571b4dcb"
+      "mask_sha256": "61be196a16b58591e0a905b43fa93630d9699558c8c65af30d134490571b4dcb",
+      "source_ink_box": [
+        0,
+        1,
+        16,
+        63
+      ],
+      "ink_width": 16,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -115,11 +203,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 278266748,
       "key": 8404650541609547734,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#1096037C#4#1_rgb.png",
       "png_sha256": "34f34b6b9b15e7b4fafa0fd315842788db5dd6846dc9a146c5bad564c7c6b2b6",
-      "mask_sha256": "d4d4ecb03d146eae653daaa89ed6732ddffcfb1c31b525b7420a6df1ad437553"
+      "mask_sha256": "d4d4ecb03d146eae653daaa89ed6732ddffcfb1c31b525b7420a6df1ad437553",
+      "source_ink_box": [
+        0,
+        1,
+        16,
+        63
+      ],
+      "ink_width": 16,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -128,11 +227,22 @@
       "height": 5,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 2694234140,
       "key": 18282128531210482311,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#A096C01C#4#1_rgb.png",
       "png_sha256": "2ff109a495a0427dd66bd77158540ab1ff99b434c575961297c6d21fffa2f11e",
-      "mask_sha256": "29213cf75674967b10bda843c56f73af4f576f4465a50f31c8f247da9c5815cf"
+      "mask_sha256": "7d5b10c0c19ee5867f7094ae23ca99b1dbccb4e73028cd71df8f3b3f0398079f",
+      "source_ink_box": [
+        0,
+        3,
+        34,
+        37
+      ],
+      "ink_width": 34,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -141,11 +251,22 @@
       "height": 9,
       "stride": 8,
       "baseline": 1,
+      "kerningindex": 0,
       "rice": 2872334566,
       "key": 11612729425738779535,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#AB3458E6#4#1_rgb.png",
       "png_sha256": "6c8a348d757f06d79c54be2a49bdb431324966701bdd18001d2844cc207b3643",
-      "mask_sha256": "36ca335677838a5b2bc82026c998322e821ea130e283f085a50f3e7826d52d3f"
+      "mask_sha256": "36ca335677838a5b2bc82026c998322e821ea130e283f085a50f3e7826d52d3f",
+      "source_ink_box": [
+        0,
+        7,
+        55,
+        69
+      ],
+      "ink_width": 55,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -154,11 +275,22 @@
       "height": 4,
       "stride": 8,
       "baseline": 7,
+      "kerningindex": 3,
       "rice": 372040649,
       "key": 12601301787544743116,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#162CE3C9#4#1_rgb.png",
       "png_sha256": "7a5d86a361c487c922902a27f4c9fe062813800223453ee730e544eb2625d72f",
-      "mask_sha256": "20669418f43a8b0ec3e37d667825f13647ab4bdc0cc5a127b92ea0ec482d48d9"
+      "mask_sha256": "7c89ad2bd20f2ac3a9d469731758f42b6bd7c1f36ef01fb9f255ca49f3bcd720",
+      "source_ink_box": [
+        0,
+        3,
+        17,
+        32
+      ],
+      "ink_width": 17,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -167,11 +299,22 @@
       "height": 2,
       "stride": 8,
       "baseline": 5,
+      "kerningindex": 0,
       "rice": 2811048772,
       "key": 12481359468954952637,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#A78D3344#4#1_rgb.png",
       "png_sha256": "4419de254e2d64f716b382046d6fafdd34361b94ac2e22f7aa499b172a64c7a2",
-      "mask_sha256": "6eac08ce8f6df6a0302591ddd36f321112b824187e1f7baa40556106b832a66c"
+      "mask_sha256": "781fd677b23b87cda255df6d047b705d595598125273d67073c88067c5372b16",
+      "source_ink_box": [
+        3,
+        4,
+        51,
+        13
+      ],
+      "ink_width": 32,
+      "horizontal_fit": true,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -180,11 +323,22 @@
       "height": 3,
       "stride": 8,
       "baseline": 7,
+      "kerningindex": 3,
       "rice": 1965443719,
       "key": 1014541530209466882,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#75264A87#4#1_rgb.png",
       "png_sha256": "b229a6e211939074d34d1d283ef6be1687da4c6446d6e3347c62e1bc92cd21b3",
-      "mask_sha256": "c2a07da1f050171b97f7916ae2ec767bf354136d386b2d00295f08c9e5ae5bb9"
+      "mask_sha256": "c2a07da1f050171b97f7916ae2ec767bf354136d386b2d00295f08c9e5ae5bb9",
+      "source_ink_box": [
+        0,
+        1,
+        16,
+        17
+      ],
+      "ink_width": 16,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -193,11 +347,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 2035428035,
       "key": 3223910184425669583,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#79522AC3#4#1_rgb.png",
       "png_sha256": "68ba911c8b3312a4b59005a3c51e264a6c2835c35e8926e5012140f32379d0ef",
-      "mask_sha256": "541f2532b94bc0f15ad6a7656aa69d2d181a80b01d6bd30a2a079d231790346f"
+      "mask_sha256": "1c0f2d6faacea08a7ad77e68ae8c6c40336ecc6fdde32ab1c6c9efa9a8129885",
+      "source_ink_box": [
+        0,
+        3,
+        34,
+        61
+      ],
+      "ink_width": 34,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -206,11 +371,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 4000570090,
       "key": 9215627698063422986,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#EE73DAEA#4#1_rgb.png",
       "png_sha256": "94432912c31ad482b7c14e42bb27a506d394e2b99b451dec98c2548f96b1c9fe",
-      "mask_sha256": "d87a5ea232fff9ed2238371a121644b6b8250220f4e99609cbff9bc8a63eed76"
+      "mask_sha256": "d87a5ea232fff9ed2238371a121644b6b8250220f4e99609cbff9bc8a63eed76",
+      "source_ink_box": [
+        1,
+        3,
+        55,
+        61
+      ],
+      "ink_width": 55,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -219,11 +395,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 2821093091,
       "key": 16461601322579244071,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#A82676E3#4#1_rgb.png",
       "png_sha256": "d39c0bab9d230337e44991050e1f46ecbced4ab7c02f2e49f0e9c447ffd04ec5",
-      "mask_sha256": "6bc76858b870a1afaeeee962af1afbbabf9a92cb536c9733cd195b28ca933db1"
+      "mask_sha256": "3b683322b28b9e16b8c08766b007ad65fb0b5d19f72532496eea2888e1d6722b",
+      "source_ink_box": [
+        0,
+        3,
+        17,
+        61
+      ],
+      "ink_width": 17,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -232,11 +419,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 3038800122,
       "key": 11436576980224861196,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#B52068FA#4#1_rgb.png",
       "png_sha256": "1941325b1bae0fffac164bc48efccdfd4b0ee5a079ad8072a359a852b55f9600",
-      "mask_sha256": "9068690055651f639cee8b4a9213355250e9043039cffc7afd98e7643e7a79db"
+      "mask_sha256": "73e8e21f488467a5391894d497da3a4603de1fdb21671a9c335395debb18b4fb",
+      "source_ink_box": [
+        0,
+        3,
+        50,
+        61
+      ],
+      "ink_width": 50,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -245,11 +443,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 809615851,
       "key": 16870397397797442106,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#3041C1EB#4#1_rgb.png",
       "png_sha256": "857040e7f4c9f015934d61207e91b9cf7a1d5d0126052d762c3b83c500b3c896",
-      "mask_sha256": "4dc283e238058154d59fcf8a6c96ee6c055f033de4631a15cbec5ab29b8754e1"
+      "mask_sha256": "4dc283e238058154d59fcf8a6c96ee6c055f033de4631a15cbec5ab29b8754e1",
+      "source_ink_box": [
+        0,
+        3,
+        47,
+        61
+      ],
+      "ink_width": 47,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -258,11 +467,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 985228442,
       "key": 5267773023954470160,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#3AB9649A#4#1_rgb.png",
       "png_sha256": "e350626860315c3736224a5caaf697e526a5f1ed769019e232bcdf409d40dea5",
-      "mask_sha256": "574f1e4a4231ee022e575612376fdca48ef748075f1b8cbf8f403edd5cfe8db2"
+      "mask_sha256": "574f1e4a4231ee022e575612376fdca48ef748075f1b8cbf8f403edd5cfe8db2",
+      "source_ink_box": [
+        0,
+        3,
+        56,
+        61
+      ],
+      "ink_width": 56,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -271,11 +491,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 53035942,
       "key": 2354921586016681579,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#032943A6#4#1_rgb.png",
       "png_sha256": "985e49a68774bf4448a26de1e8b45a0149a25cd7aeba6f2ce7dcef4adc229724",
-      "mask_sha256": "0a7a08abccefd342722e61bfe6e503e1c42c00dcca7c3188de98458275296815"
+      "mask_sha256": "0e90623370075fe32dcee1487e9266da7dd2b7d35f9fb0206ff2c317c3a1e041",
+      "source_ink_box": [
+        0,
+        3,
+        50,
+        61
+      ],
+      "ink_width": 50,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -284,11 +515,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 3084447541,
       "key": 16044291632135503242,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#B7D8EF35#4#1_rgb.png",
       "png_sha256": "b3fe13f90fd3336eed6d94666dd5ec8e316a601a11279105622b035baf882a0f",
-      "mask_sha256": "7ced03bfce044d32b7688f9474067c6d0d3e7b6ee0d9280e60874ecac3e31957"
+      "mask_sha256": "5e0a9d390a66a5b2f3b84da843be38e6963e32dde4b1a039c57b0f0af972d04e",
+      "source_ink_box": [
+        0,
+        3,
+        50,
+        61
+      ],
+      "ink_width": 50,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -297,11 +539,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 2832982949,
       "key": 4346831690934993875,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#A8DBE3A5#4#1_rgb.png",
       "png_sha256": "23787fae2df314bab3d5929cbff7bda6d6d49666a5798215dd7c477295719eeb",
-      "mask_sha256": "18305ee0b2ba3b49b91fb6c47754d3a419e583f08f45375cd23bbfea76d0b23a"
+      "mask_sha256": "18305ee0b2ba3b49b91fb6c47754d3a419e583f08f45375cd23bbfea76d0b23a",
+      "source_ink_box": [
+        0,
+        3,
+        56,
+        61
+      ],
+      "ink_width": 56,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -310,11 +563,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 1919793712,
       "key": 4165821952029391502,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#726DBA30#4#1_rgb.png",
       "png_sha256": "e2e1769478015ccbcd5521da0eb0e147a56e104e825daff100321fd9c02aac2b",
-      "mask_sha256": "81d0797c6778342b8affb137e4f9a18ff6b28ee58b1b5adb76a687d2eae46973"
+      "mask_sha256": "09947dce92bb634a49484bd6f2357a133773c4b494c2581ca45cd48bf7cc5a8b",
+      "source_ink_box": [
+        0,
+        3,
+        57,
+        61
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -323,11 +587,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 2916719622,
       "key": 5340280709179196950,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#ADD99C06#4#1_rgb.png",
       "png_sha256": "11a0872d33c9810022f28cac39ba542c12ced71df03fc69d4715d4fba7830f28",
-      "mask_sha256": "3b36811853ab11e38587b3528cf5e4687813045b4f89b19db64f4c6a34c01a99"
+      "mask_sha256": "3b36811853ab11e38587b3528cf5e4687813045b4f89b19db64f4c6a34c01a99",
+      "source_ink_box": [
+        0,
+        3,
+        47,
+        61
+      ],
+      "ink_width": 47,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -336,11 +611,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 3340064415,
       "key": 2155576590050952447,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#C715569F#4#1_rgb.png",
       "png_sha256": "90e3f467da4424bd5fa92278b11ae886bb21487c7d97617ea89ab45eaeda3d33",
-      "mask_sha256": "be05cebd285d8123a58f5da6a23985c95ed491b7207cefedae63dcaf5dc801d7"
+      "mask_sha256": "be05cebd285d8123a58f5da6a23985c95ed491b7207cefedae63dcaf5dc801d7",
+      "source_ink_box": [
+        0,
+        4,
+        14,
+        53
+      ],
+      "ink_width": 14,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -349,11 +635,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 1755464645,
       "key": 7842808277299055118,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#68A243C5#4#1_rgb.png",
       "png_sha256": "75a96a85b51428b2ec97dc039ba7eaf45cc55ec0ba6a3b9963f549338b34877e",
-      "mask_sha256": "9b56cba89333d354cfbcb66316d1c396646f8279ff2673d0f308a62f58cab61c"
+      "mask_sha256": "9b56cba89333d354cfbcb66316d1c396646f8279ff2673d0f308a62f58cab61c",
+      "source_ink_box": [
+        0,
+        4,
+        14,
+        64
+      ],
+      "ink_width": 14,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -362,11 +659,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 1981528933,
       "key": 11627032373096457106,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#761BBB65#4#1_rgb.png",
       "png_sha256": "45d4a687dcbf36d3fe7b9c49c3b3a9a990fb9bbaed8725a7a68a8bbf6c338dd5",
-      "mask_sha256": "faa95c62c84be0d933aa371f5ff81971ab17f8c40a290cf98a33c0625e36d3be"
+      "mask_sha256": "3072cbc7df84892cbe0586ec73f634959993c33e30e9715e5c5dd23017142180",
+      "source_ink_box": [
+        0,
+        2,
+        57,
+        58
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": true,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -375,11 +683,22 @@
       "height": 5,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 1960667929,
       "key": 7759044427036295345,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#74DD6B19#4#1_rgb.png",
       "png_sha256": "1c1f93a867f99dbae44908672b4427eaaa632c599e6f1259a00676343f3055db",
-      "mask_sha256": "ec9df2ce1b97deda00fa6b65bb67b3fe482a03730218e03ef8aba054973fdd01"
+      "mask_sha256": "becb7e20100e13d1350bacb5bf5208d69029e6e2ca1b620f6c2b272bf10eb233",
+      "source_ink_box": [
+        0,
+        15,
+        59,
+        42
+      ],
+      "ink_width": 59,
+      "horizontal_fit": false,
+      "vertical_fit": true,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -388,11 +707,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 1793439193,
       "key": 9099854302434774780,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#6AE5B5D9#4#1_rgb.png",
       "png_sha256": "7e9255fea5b2badeee21e93bd2d3f47003e389d5e199b430a0b78ed7dab8a8af",
-      "mask_sha256": "36ffa030935bc43aa8214cbd90d049b5574ab573562a4af6d3103ee9a659652f"
+      "mask_sha256": "46fd848c2443c43e3038d617fcd815817f77f9620d4c710ae380e636d132670f",
+      "source_ink_box": [
+        0,
+        2,
+        57,
+        58
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": true,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -401,11 +731,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 1934561837,
       "key": 13749321654537325652,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#734F122D#4#1_rgb.png",
       "png_sha256": "3ab11509cc68745fd4cc0cc3d7bd49b1e3f52a85e302896fb77fd1be899596b1",
-      "mask_sha256": "067573a19859dd41a3bd87ebb25c16b46f7cbb9aaeae0a29a1d80a3f27338e1f"
+      "mask_sha256": "ced4079b6e1f5a1153e2618eacde5564bd0e3c599f80338b36ed4dd06d58784e",
+      "source_ink_box": [
+        0,
+        5,
+        42,
+        59
+      ],
+      "ink_width": 42,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -414,11 +755,22 @@
       "height": 5,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 1446133547,
       "key": 1352226862392904582,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#56323F2B#4#1_rgb.png",
       "png_sha256": "76e1782e815cc894bc148b8332ceb3fd3665f520ccd02de801345ac6d4c00dd8",
-      "mask_sha256": "7bd613d9ea6e92642b245c26705e51c29f9db5406a88cd0dcf00cf06fc347b3b"
+      "mask_sha256": "33c4b06fe635a4e99d045f7d06e587b60c94a3346111895038d2d1256dcc6c95",
+      "source_ink_box": [
+        0,
+        6,
+        57,
+        36
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -427,11 +779,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 1,
       "rice": 1199878841,
       "key": 5966266565684044632,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#4784B2B9#4#1_rgb.png",
       "png_sha256": "6ef040db078e0f556bdb711e0f1d0e08264b129a137749c6e9b8ab8c3149e80d",
-      "mask_sha256": "98b0c4733973314114e50173f441ca38cf05695f83d205d4d8796bdd99373728"
+      "mask_sha256": "98b0c4733973314114e50173f441ca38cf05695f83d205d4d8796bdd99373728",
+      "source_ink_box": [
+        0,
+        5,
+        64,
+        57
+      ],
+      "ink_width": 64,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -440,11 +803,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 2973413916,
       "key": 13037069144622937955,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#B13AB21C#4#1_rgb.png",
       "png_sha256": "7a51877a44a280dbef0676f047ace2464f31534cbef652623a36a96c0619f413",
-      "mask_sha256": "1456b12fb7b318ad0f6b67f7945381ffe3eabcd16da74827598cfe07b00d8d4d"
+      "mask_sha256": "06fac959b68a9f759ef7bab9c2cf0aa00215f889d72e4f2525c96f9199123e99",
+      "source_ink_box": [
+        0,
+        5,
+        49,
+        56
+      ],
+      "ink_width": 49,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -453,11 +827,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 1408765143,
       "key": 4595127253379215630,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#53F80CD7#4#1_rgb.png",
       "png_sha256": "b74b55cf1a5c37dbdfff96ca46ee421bf98414fcc2a172c834e5c0cfbbfd48af",
-      "mask_sha256": "517ac626c7bf80faf36f6e8bf206a17bc8f0db782ddf3373f3b089f8bc1a2ed0"
+      "mask_sha256": "517ac626c7bf80faf36f6e8bf206a17bc8f0db782ddf3373f3b089f8bc1a2ed0",
+      "source_ink_box": [
+        0,
+        4,
+        56,
+        57
+      ],
+      "ink_width": 56,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -466,11 +851,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 3817792074,
       "key": 15670734456806738369,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#E38EE24A#4#1_rgb.png",
       "png_sha256": "7498e06c8b59e5ed3a1a1df6dbca4e7367d2c7390f416689acf894df5ec8d6b1",
-      "mask_sha256": "fdc70437c2ae8fba7bfb37383694d6c9e47f020d23cff714596e6cb2edcc7db1"
+      "mask_sha256": "fdc70437c2ae8fba7bfb37383694d6c9e47f020d23cff714596e6cb2edcc7db1",
+      "source_ink_box": [
+        0,
+        4,
+        56,
+        57
+      ],
+      "ink_width": 56,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -479,11 +875,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 3481436587,
       "key": 5228021141005915998,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#CF8281AB#4#1_rgb.png",
       "png_sha256": "04c249bedb9e2dc9547204be1ec8144c2db4a0d6085a1cfd394f78d1a0aa877a",
-      "mask_sha256": "db6d8ba1b0cdf7500f2ff5161f228b47792ccf551d01ee0b2c013c10dec47730"
+      "mask_sha256": "db6d8ba1b0cdf7500f2ff5161f228b47792ccf551d01ee0b2c013c10dec47730",
+      "source_ink_box": [
+        0,
+        4,
+        47,
+        57
+      ],
+      "ink_width": 47,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -492,11 +899,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 5,
       "rice": 3378136279,
       "key": 10239254097749097989,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#C95A44D7#4#1_rgb.png",
       "png_sha256": "ac56d7cc9e2a6b8a8d503f5b0d71eb2e6a43f8334f5b5497a373b0607663bc98",
-      "mask_sha256": "e54b4789dcf68dd845dac4e79d7972bcb3360eeeed5857f65397a67dbf2277ed"
+      "mask_sha256": "e54b4789dcf68dd845dac4e79d7972bcb3360eeeed5857f65397a67dbf2277ed",
+      "source_ink_box": [
+        0,
+        4,
+        46,
+        57
+      ],
+      "ink_width": 46,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -505,11 +923,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 482379355,
       "key": 8560650369729271991,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#1CC0865B#4#1_rgb.png",
       "png_sha256": "d80f6d36dc87a399cfef7beb58ace19d6f64c66424387cea6f99ebe50e441b19",
-      "mask_sha256": "d999d36370192ba80e074512694a35fce1caa5615a497a9e33ada61595acb674"
+      "mask_sha256": "d999d36370192ba80e074512694a35fce1caa5615a497a9e33ada61595acb674",
+      "source_ink_box": [
+        0,
+        4,
+        56,
+        57
+      ],
+      "ink_width": 56,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -518,11 +947,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 2781722413,
       "key": 12402220433608847264,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#A5CDB72D#4#1_rgb.png",
       "png_sha256": "d897965fd6f88d44ba5bfb82d9e57c67411b24678245c8d40ec68bda9fc9dbe9",
-      "mask_sha256": "e258d0a4f20f985cebfd78df1ab6f9959024ad639880a40f37617d71daad2ccd"
+      "mask_sha256": "e258d0a4f20f985cebfd78df1ab6f9959024ad639880a40f37617d71daad2ccd",
+      "source_ink_box": [
+        0,
+        4,
+        56,
+        57
+      ],
+      "ink_width": 56,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -531,11 +971,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 12,
       "rice": 2494570778,
       "key": 16536422881262541197,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#94B0211A#4#1_rgb.png",
       "png_sha256": "26ab3a5d497347e75b26ab7d537c19b976501029b4f17c4407e49c57048dd982",
-      "mask_sha256": "458e22f3669ef280fc713b01ff9637eafe548c644106ec42115201247d03be5b"
+      "mask_sha256": "d1a3e58db35f6eeda177ecdf7aaefc0d514529c6dd7279a6501406e6e3ce4fc8",
+      "source_ink_box": [
+        0,
+        4,
+        12,
+        57
+      ],
+      "ink_width": 12,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -544,11 +995,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 3,
       "rice": 583589715,
       "key": 16525459128480845193,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#22C8DF53#4#1_rgb.png",
       "png_sha256": "91681cb6529da15a02638db2977285505ad9de78c27b81548e606a7eec21b9f8",
-      "mask_sha256": "42571686e744b4ff856bec78631e5928507a1265ff6b1aac82c6ba76a2ad51e2"
+      "mask_sha256": "42571686e744b4ff856bec78631e5928507a1265ff6b1aac82c6ba76a2ad51e2",
+      "source_ink_box": [
+        0,
+        4,
+        48,
+        57
+      ],
+      "ink_width": 48,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -557,11 +1019,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 145178803,
       "key": 16793154529975043603,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#08A740B3#4#1_rgb.png",
       "png_sha256": "40e2c30423422af313aad41c4b7249c607fef0814e5e7d29e60bcdf4bc314775",
-      "mask_sha256": "2ef5a7b8803847d50d545bb9ef89c04985cedfdf134d74a79ea000bc6c53077e"
+      "mask_sha256": "c954654bccaddf48415116741516d47e8e3e04e3034282bee4e5ccaadb7102ed",
+      "source_ink_box": [
+        0,
+        4,
+        60,
+        57
+      ],
+      "ink_width": 60,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -570,11 +1043,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 2,
       "rice": 2799055219,
       "key": 15722228822120092411,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#A6D63173#4#1_rgb.png",
       "png_sha256": "dcab79f29fd075b58b262817e94a5ca98db06fd0ec4b9f9c47f235469723658d",
-      "mask_sha256": "2a42c4e6ee50df2127f77365330f7eb4ceea398a44d8b6b79b536b758b3dec98"
+      "mask_sha256": "b3bebef839b03963bad81b78ecfe84d595caea6e0cacb0a0e26ee25e5e867aeb",
+      "source_ink_box": [
+        0,
+        4,
+        49,
+        57
+      ],
+      "ink_width": 49,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -583,11 +1067,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 3361203213,
       "key": 15617359443699958780,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#C857E40D#4#1_rgb.png",
       "png_sha256": "45a6d3c1e35f27db394c89c29eab1bee00f7ab1f023a5e361236fb6be133fd74",
-      "mask_sha256": "c12e45af5ad1ec9e5bda865722ce77674ce25950ed773a968ca56b3700a7e8b8"
+      "mask_sha256": "c12e45af5ad1ec9e5bda865722ce77674ce25950ed773a968ca56b3700a7e8b8",
+      "source_ink_box": [
+        0,
+        4,
+        64,
+        57
+      ],
+      "ink_width": 64,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -596,11 +1091,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 220927641,
       "key": 9350165613106952694,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#0D2B1699#4#1_rgb.png",
       "png_sha256": "e020b778e87a7c2296e41424d7418dd2574e9fe1ec6e36fee63193bf8fc2645a",
-      "mask_sha256": "5cdda8c96d02d7ba67b76ad58ae801844af09b234899af345ed7cc73f2e3ee82"
+      "mask_sha256": "2234595e82ffb7296ac591f868a63d90ffe5c122593ed0d04347f85aeee1b211",
+      "source_ink_box": [
+        0,
+        4,
+        59,
+        57
+      ],
+      "ink_width": 59,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -609,11 +1115,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 3936436711,
       "key": 18006806717204246255,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#EAA141E7#4#1_rgb.png",
       "png_sha256": "2e79c7c6bd451bfac117349572d8d874be993cb49531e2681068191fea7d9ba2",
-      "mask_sha256": "73121dd3952d6f8c66cfa1a73d64fe9b9c6712c01f8a9fa9d63cdd4f57e69f1b"
+      "mask_sha256": "661b3e71dd802d9e3ad3329a8995909e79c340e43cc11f1f2d3c473a21dd39ea",
+      "source_ink_box": [
+        0,
+        4,
+        57,
+        57
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -622,11 +1139,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 5,
       "rice": 2914022808,
       "key": 2547008057005216360,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#ADB07598#4#1_rgb.png",
       "png_sha256": "1707d5760a913ebf49030f29c30acf9c889afc6195fde2b8b557c04d26a5cc80",
-      "mask_sha256": "e11ebcdd4731d00a842a8c684161d344a6585f1bbfe602c6074823c1db0bf89d"
+      "mask_sha256": "6614661dd401c20bacb5dc29cf908c8b72e7aa5d39b66b238d968a2dfce2cc2e",
+      "source_ink_box": [
+        0,
+        4,
+        49,
+        57
+      ],
+      "ink_width": 49,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -635,11 +1163,22 @@
       "height": 9,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 2777842557,
       "key": 8281931565180092868,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#A592837D#4#1_rgb.png",
       "png_sha256": "025a378d1153f0c8a108aa5cb765fe77285e174525ccd2c668c24cfe1abd75ff",
-      "mask_sha256": "b98e7b7973522ac68d672f663258dff202422bcdbf890d8ba2307217e65b5d04"
+      "mask_sha256": "54f424a8bdb1a2e5f18546caaa3b69581fa75ab70a02f6efbaddc58793c1b027",
+      "source_ink_box": [
+        0,
+        5,
+        57,
+        88
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": true,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -648,11 +1187,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 4027137033,
       "key": 11627243088597180050,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#F0093C09#4#1_rgb.png",
       "png_sha256": "c218a397ca8328f4b8f46b6f73cffb1ea00023cac454a4ef4031096904b71eed",
-      "mask_sha256": "cc90f9298b9a4657888bcfc9be36c302750fb45ed26b1e800cb8b88a93beef68"
+      "mask_sha256": "4a12d307fb8803ed016ae4a1a319a8ef52f30a272da46234d2abf7739a25ebea",
+      "source_ink_box": [
+        0,
+        4,
+        60,
+        57
+      ],
+      "ink_width": 60,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -661,11 +1211,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 332040511,
       "key": 12409865542021885811,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#13CA893F#4#1_rgb.png",
       "png_sha256": "cd0e9882f1db1b837598baae1ba4f33a9dafeb22db1e47de7f612c87b5bb3b45",
-      "mask_sha256": "7c569b5dfefd1041b8f8c75732d6712ebdaccd70d89a13788d79a2b81bac1a31"
+      "mask_sha256": "c1c814aece2b6b74fe08d1bda1867d78c1c4583c76c99e73cfbc0e834b0668ff",
+      "source_ink_box": [
+        0,
+        4,
+        57,
+        57
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -674,11 +1235,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 4,
       "rice": 211177660,
       "key": 236219512168767035,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#0C9650BC#4#1_rgb.png",
       "png_sha256": "25029b4aa18c60c724db946b962d1ede70458e1125a900bacdf9739342e83557",
-      "mask_sha256": "b548e66294e406d1e2206ea233d46e78e79a15660bc6c9e2a2a9368aefda6d7d"
+      "mask_sha256": "ea664d3629fd770a42616541ab9ba3ede1cb8c0f9cfa9fa52595074976bff107",
+      "source_ink_box": [
+        0,
+        4,
+        58,
+        57
+      ],
+      "ink_width": 58,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -687,11 +1259,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 1587975682,
       "key": 5722481062450039551,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#5EA69602#4#1_rgb.png",
       "png_sha256": "f0820ef22ae16dc730f0b5578cff8498faa0fb6d7bc106774db6e1e4d8794acd",
-      "mask_sha256": "2db45277addffa1e9122783bc23e9112710b18e46cb70439d8d4b9d7f6c8309d"
+      "mask_sha256": "08b569da4c5e6e082c45703ff5c8b6e59c3289df39fa1cead5f50581327e18b2",
+      "source_ink_box": [
+        0,
+        4,
+        57,
+        57
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -700,11 +1283,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 4,
       "rice": 1453687544,
       "key": 2268695521204172864,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#56A582F8#4#1_rgb.png",
       "png_sha256": "c47be89e0a5d1bf485ee5407746a2ffd2eab3af8a72d69268cc4b0e301bd5087",
-      "mask_sha256": "9c187272cf1fa0e23e797b8a0053c873f0a854f18a36b92295a5dc0072b74695"
+      "mask_sha256": "3b62455c6f4a98dd95d129cf2a1609a2b170f2acc8029b455bcb622ecd57d11d",
+      "source_ink_box": [
+        0,
+        4,
+        58,
+        57
+      ],
+      "ink_width": 58,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -713,11 +1307,22 @@
       "height": 8,
       "stride": 16,
       "baseline": 2,
+      "kerningindex": 4,
       "rice": 3022948178,
       "key": 4039341852853275991,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#B42E8752#4#1_rgb.png",
       "png_sha256": "265c2e5ced8762a7feefcb7e2ddbdca6fccc94e3ee4422b53d47a88b1b0dacf4",
-      "mask_sha256": "7719f0e40c7dfd0f6466e884eff2ce6d1089351a5a5b2586319510ad1a52ae6a"
+      "mask_sha256": "8a48d03343953b5a36381cbd2bc16a1666f66426d262bd2edb57482b20fbfcee",
+      "source_ink_box": [
+        0,
+        4,
+        73,
+        57
+      ],
+      "ink_width": 73,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -726,11 +1331,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 805303798,
       "key": 1690186906525933463,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#2FFFF5F6#4#1_rgb.png",
       "png_sha256": "a94cdc08219bc7103cc2589751ab7c86db08f1a4e9126dd6e57de825cffc1eed",
-      "mask_sha256": "e68ac59c98febd56d8d27f385c9b76e14da29cbe2cdd9dbd6139dca07de92225"
+      "mask_sha256": "c1bc393ebecd77cd10ba18451a7148cd7125b4eab7f862c84caa1702f8b8048d",
+      "source_ink_box": [
+        0,
+        4,
+        60,
+        57
+      ],
+      "ink_width": 60,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -739,11 +1355,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 4,
       "rice": 1873008251,
       "key": 17450678269995483413,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#6FA3D67B#4#1_rgb.png",
       "png_sha256": "7c3d9225c275426789411dd947af71929c8db4b969101e8961a8265191d6ece1",
-      "mask_sha256": "ed4b80c54a5af0464a2386e25ac303a8912d3e8638e6f7598280dedf1820587d"
+      "mask_sha256": "16980dab0f85ad7f60dece1d246adfa1617ba17cc8cc1588ec7c54c65fec1557",
+      "source_ink_box": [
+        0,
+        4,
+        57,
+        57
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -752,11 +1379,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 2386758364,
       "key": 7081642403690052687,
       "source": "GoldenEye Texture Pack/Bank Gothic/Upper Case/GOLDENEYE#8E430ADC#4#1_rgb.png",
       "png_sha256": "a0ed2f1c1379e3314596b3c066eb8dbcf26baf9c3b8a192eced70aeb813d6bcb",
-      "mask_sha256": "beed8a39c96ec83d7cc972fd30ee3dcc0decfa466f2fef191dd714e43c25eca8"
+      "mask_sha256": "005d3352f3ee9f5eaa67867651aa283de85a1a73676f83cdd5ccd29caefbdd2e",
+      "source_ink_box": [
+        0,
+        4,
+        49,
+        57
+      ],
+      "ink_width": 49,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -765,11 +1403,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 2068625359,
       "key": 15234691057478453051,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#7B4CB7CF#4#1_rgb.png",
       "png_sha256": "b899fb6745e14634e3ff99c93452c1d44919c59038ffd68036afaeb2bd7375d3",
-      "mask_sha256": "79af046b03d40130dbf8dad643fe50be45780bd31a9952259b76606fc27b7dcc"
+      "mask_sha256": "79af046b03d40130dbf8dad643fe50be45780bd31a9952259b76606fc27b7dcc",
+      "source_ink_box": [
+        0,
+        2,
+        18,
+        61
+      ],
+      "ink_width": 18,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -778,11 +1427,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 1266460901,
       "key": 1170777836162094045,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#4B7CA8E5#4#1_rgb.png",
       "png_sha256": "2a2b397498bb8c621de0b0157a4b01d24ae3283835d0656b6046e55e1ca7f183",
-      "mask_sha256": "8aea39ec496d05cbc013e9dbecd9d6522fcdfa06319a96d84eff5ac13b81cb5f"
+      "mask_sha256": "6a7637e1c2bf2ab389d6383e89dac807d126cca20994c8dd7d3af74c3e6f59cb",
+      "source_ink_box": [
+        0,
+        4,
+        60,
+        59
+      ],
+      "ink_width": 60,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -791,11 +1451,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 2396732786,
       "key": 4999409714538549711,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#8EDB3D72#4#1_rgb.png",
       "png_sha256": "dc0344e36232e8873b3ed4f9c6e615b91469e8cb78596c0d7d9e9428b8be1ccf",
-      "mask_sha256": "5f8fd4dfe90da90d9ea0bb33afe06193b59817fcf21097a55016b2d11dc92529"
+      "mask_sha256": "c0d566ef370c597f2a4820a958758afd8cf40659daa5413a66f53e49fe98c653",
+      "source_ink_box": [
+        0,
+        2,
+        17,
+        61
+      ],
+      "ink_width": 17,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -804,11 +1475,22 @@
       "height": 5,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3461071393,
       "key": 12017540792211467426,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#CE4BC221#4#1_rgb.png",
       "png_sha256": "a13de8e3b150bfd36b9500ac47653e259f39d32f136ca1bd88e77278bb4f1e3f",
-      "mask_sha256": "6b1e7a7829f5ed0fc0c1e25be12454f64c32e88eacb4149dc4f608c757a08a67"
+      "mask_sha256": "044a6eeb4b723032bb8b9995a2490077739764c10f74505811bf309055f2ee2b",
+      "source_ink_box": [
+        0,
+        4,
+        57,
+        34
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -817,11 +1499,22 @@
       "height": 3,
       "stride": 8,
       "baseline": 10,
+      "kerningindex": 0,
       "rice": 3314158019,
       "key": 18384738966895543246,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#C58A09C3#4#1_rgb.png",
       "png_sha256": "0b07fbf478f9295505b26a99765f4195d7bf341cd315c6a13f1d38cfc4af5aa0",
-      "mask_sha256": "30a83c5e2ca8967ad615412b617a07fcf9a70620cd6abbf5a6006d16cda387f3"
+      "mask_sha256": "00a5459ef7d3b29579c7fc0aa9729524c8b64eba255ecbdd8016eb7c8d98b437",
+      "source_ink_box": [
+        1,
+        7,
+        62,
+        17
+      ],
+      "ink_width": 56,
+      "horizontal_fit": true,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -830,11 +1523,22 @@
       "height": 3,
       "stride": 8,
       "baseline": 1,
+      "kerningindex": 0,
       "rice": 1637419971,
       "key": 15134279752827267441,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#61990BC3#4#1_rgb.png",
       "png_sha256": "93eb96e161071db1870095178c03fd1602ae2dba145c60f007ab33a39f6cd939",
-      "mask_sha256": "bfa399725be1d799896592d670920af5743743950872f1f142994254da03b62a"
+      "mask_sha256": "394b98f35b9f9e8cccd6aa08ddf3b0861185ebb2097b1247fc99ba720514ca75",
+      "source_ink_box": [
+        0,
+        2,
+        20,
+        20
+      ],
+      "ink_width": 20,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -843,11 +1547,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 1,
       "rice": 4038537158,
       "key": 15986310400349255394,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#F0B72FC6#4#1_rgb.png",
       "png_sha256": "738cb784106562796e7379d6e0aaff6f74ce3b37206c034568fd38b93d94a1fe",
-      "mask_sha256": "41911fc9e407e407f41f1ddc3d38bee3bf177029db936f5173c46d48dc722c12"
+      "mask_sha256": "41911fc9e407e407f41f1ddc3d38bee3bf177029db936f5173c46d48dc722c12",
+      "source_ink_box": [
+        0,
+        6,
+        56,
+        56
+      ],
+      "ink_width": 56,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -856,11 +1571,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 984521784,
       "key": 4054719634971117185,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#3AAE9C38#4#1_rgb.png",
       "png_sha256": "1ce11bd39f0494b400948f7b5e69bec0be0f0ca71868e5db6ab1c52fab2589a5",
-      "mask_sha256": "b835ebc830ac4e305fb26231dcb9b56346c46b81b27a3f91c31a5fd94520664d"
+      "mask_sha256": "b835ebc830ac4e305fb26231dcb9b56346c46b81b27a3f91c31a5fd94520664d",
+      "source_ink_box": [
+        0,
+        6,
+        48,
+        56
+      ],
+      "ink_width": 48,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -869,11 +1595,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 2245064833,
       "key": 1693970154882999787,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#85D0F881#4#1_rgb.png",
       "png_sha256": "caebfdce2ab17f68267c46f948da587b961db491cde98934858d7210009c85b9",
-      "mask_sha256": "97ed5288f15500c5a583f6f8ada5670d792c2241b56231de6609e857baed8d70"
+      "mask_sha256": "97ed5288f15500c5a583f6f8ada5670d792c2241b56231de6609e857baed8d70",
+      "source_ink_box": [
+        0,
+        6,
+        48,
+        56
+      ],
+      "ink_width": 48,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -882,11 +1619,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 2688219636,
       "key": 6428078649328537437,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#A03AF9F4#4#1_rgb.png",
       "png_sha256": "d9410fe5a232c6760abf9fd59f159a3fe93e138dcbeed4fe57169370d7066dc3",
-      "mask_sha256": "a3aeab535f5f30ad580cf6f65c6f6f765715b4b618e74e1906383e66fdea2c26"
+      "mask_sha256": "00d1fc6762e63e932061753735eb46fcbc143ed283f59dfd17af117be879b3ff",
+      "source_ink_box": [
+        0,
+        6,
+        49,
+        56
+      ],
+      "ink_width": 49,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -895,11 +1643,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 191867373,
       "key": 197596399955606873,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#0B6FA9ED#4#1_rgb.png",
       "png_sha256": "2295e8890d07592151b242dc4153dd3c70386ca9699b546e06cc6a6358c79bff",
-      "mask_sha256": "9251ef3382ef056c6f7426cea68ed132117f965cc4b06d42f7a59c187e9ce68a"
+      "mask_sha256": "df2891b9026af5bb0c895a0b180001ff5e0e8e9269ff9fbae81caf84a53ee63b",
+      "source_ink_box": [
+        0,
+        6,
+        41,
+        56
+      ],
+      "ink_width": 41,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -908,11 +1667,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 5,
       "rice": 5606275,
       "key": 387150002032959184,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#00558B83#4#1_rgb.png",
       "png_sha256": "d454f7276137aa9620d726418762d71390b07b802c9398c7bd8955fd26ed7086",
-      "mask_sha256": "5f64365f9c81b7fa5172024a55410d8829b219b953371363fb2a7407d52d3ac6"
+      "mask_sha256": "5f64365f9c81b7fa5172024a55410d8829b219b953371363fb2a7407d52d3ac6",
+      "source_ink_box": [
+        0,
+        6,
+        40,
+        56
+      ],
+      "ink_width": 40,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -921,11 +1691,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 1700913819,
       "key": 10033076023715032912,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#6561E29B#4#1_rgb.png",
       "png_sha256": "b37d8152a0f8f5e62beaeefea06dc70514fee7b31bcf86368357a6212852c661",
-      "mask_sha256": "24babf07346e300014688b7042087bb6072fd54242252b95b8e88ec236fe1bb7"
+      "mask_sha256": "24babf07346e300014688b7042087bb6072fd54242252b95b8e88ec236fe1bb7",
+      "source_ink_box": [
+        0,
+        6,
+        48,
+        56
+      ],
+      "ink_width": 48,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -934,11 +1715,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 1438576199,
       "key": 10135730901619689560,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#55BEEE47#4#1_rgb.png",
       "png_sha256": "c2b0bcdcfe64efc6fe264cb2b3df11e7257c67aa47ee0eb5a21d1b66a772e7a3",
-      "mask_sha256": "d93c125a1672cf552147f1c83de5fb53d77e3e47c56f96bc12ba3d3213fc6428"
+      "mask_sha256": "d93c125a1672cf552147f1c83de5fb53d77e3e47c56f96bc12ba3d3213fc6428",
+      "source_ink_box": [
+        0,
+        6,
+        47,
+        56
+      ],
+      "ink_width": 47,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -947,11 +1739,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 2959664105,
       "key": 5456000359326356371,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#B068E3E9#4#1_rgb.png",
       "png_sha256": "0e98923b83bd63fe6b02c2e0181f0cd7cab4e781de18ac09957558debbce99f9",
-      "mask_sha256": "7dc1b5740efcf8c8525a9a3d5b1a53f6d6ddd6ccdee9f384b76a2eb50f5a3675"
+      "mask_sha256": "12557d82e990e248b3610735d99a48bc2aae0f4bb64e4f6dca3851c529df7db1",
+      "source_ink_box": [
+        0,
+        6,
+        10,
+        56
+      ],
+      "ink_width": 10,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -960,11 +1763,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 3,
       "rice": 1718029984,
       "key": 4314628544827624172,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#66670EA0#4#1_rgb.png",
       "png_sha256": "b7141dc1383f528ace0d348ef046daef72e74e518aa747b8a6ff13b4d7aa0d69",
-      "mask_sha256": "91f87a7fedcdc9835797a9bf9bc7c478a54dc8c4c8494f282ae74000d244ce0a"
+      "mask_sha256": "bdf7b593f5dcf90db717790827ea7711086c36ecd61b69ec4b965517a6cd4813",
+      "source_ink_box": [
+        0,
+        6,
+        41,
+        56
+      ],
+      "ink_width": 41,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -973,11 +1787,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 3340154512,
       "key": 4173145641625438545,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#C716B690#4#1_rgb.png",
       "png_sha256": "dd98e2593ab72ecdf1af284061b64c1ae6dd194ed4ce427993aeaa63a6c3b582",
-      "mask_sha256": "8900e838b10680fe846108d5241ce1f674e9918741c8f73a3a8c937c40058db8"
+      "mask_sha256": "d2736235a53f7df2e5b7f6bee9396dc7116a5b53d9f6b46c10f2e9300f12daa3",
+      "source_ink_box": [
+        0,
+        6,
+        53,
+        56
+      ],
+      "ink_width": 53,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -986,11 +1811,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 2,
       "rice": 173200182,
       "key": 17593194556793502114,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#0A52D336#4#1_rgb.png",
       "png_sha256": "c7fd7380f8c5049f447e2d4de41c6b480630c738a9046e58db68b666a7605338",
-      "mask_sha256": "cda3925243568d1057b68a30d99067d4d630257d8c9196db451e39daa14987bb"
+      "mask_sha256": "8e995aacf55d7ce183d736bffdcc1078759dfb8626fd80c318b4a0ff5d9cc112",
+      "source_ink_box": [
+        0,
+        6,
+        44,
+        56
+      ],
+      "ink_width": 44,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -999,11 +1835,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 2367043760,
       "key": 4893223900050476458,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#8D1638B0#4#1_rgb.png",
       "png_sha256": "04e1d0e9a60ef87f7b43ee5ddc3794023f76055b634fdf6b0ca8ed0471fc8f1b",
-      "mask_sha256": "c0f29f1779cd95723bfd95ebbdb75798d7ed349ee9da01af86521b75bd3eddce"
+      "mask_sha256": "c0f29f1779cd95723bfd95ebbdb75798d7ed349ee9da01af86521b75bd3eddce",
+      "source_ink_box": [
+        0,
+        6,
+        56,
+        56
+      ],
+      "ink_width": 56,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -1012,11 +1859,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 2167153155,
       "key": 10897642039727902066,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#812C2203#4#1_rgb.png",
       "png_sha256": "c5e36c6904550110f4330b7413679bce1b85a25637e61c4210b6f144e5c688a4",
-      "mask_sha256": "9a25ac5ccf47e811266bd0fbc8b6fc5f39ee90982dbcc737221bed4223c28131"
+      "mask_sha256": "e9df47389ecc227740716d2eb9b79756b8b41a932506afc685a6ccc8c6564de9",
+      "source_ink_box": [
+        0,
+        6,
+        50,
+        56
+      ],
+      "ink_width": 50,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -1025,11 +1883,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 3366651687,
       "key": 12652816094701593275,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#C8AB0727#4#1_rgb.png",
       "png_sha256": "38f659dbd54b086236ae209dc53c5f730ed692db9e67fbf5e03f66659a23a67e",
-      "mask_sha256": "33daaa8d9a3b244a1214ca93f7a9fda9515f3b3170bff7d10e129f58386755a1"
+      "mask_sha256": "dca5972c64a106d1a986a8c5a4134eb4979afc2d0ca4e5d60863d0dd233249ee",
+      "source_ink_box": [
+        0,
+        6,
+        49,
+        56
+      ],
+      "ink_width": 49,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -1038,11 +1907,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 5,
       "rice": 2562864373,
       "key": 5832407279701067766,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#98C234F5#4#1_rgb.png",
       "png_sha256": "a1ec7a7bbc4dc5b33fde4203c41649b650fdc07539890355f114de44a1cae8d7",
-      "mask_sha256": "9920fb0e54596e33f168e2b3ea1d337cd681a2cea73e81b8b3d7cd5e5bba1e5a"
+      "mask_sha256": "cb9715f5474ec10d82a916385fd94a765ff67279ffa88e8bbd4903259f149a2f",
+      "source_ink_box": [
+        0,
+        6,
+        41,
+        56
+      ],
+      "ink_width": 40,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 1
     },
     {
       "font": "BankGothic",
@@ -1051,11 +1931,22 @@
       "height": 8,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 3673932672,
       "key": 14544382791078971975,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#DAFBC380#4#1_rgb.png",
       "png_sha256": "6b3cae957ee3cb63386c6cab7a471032237b3d95a5f5e53bcb6624da43415c2f",
-      "mask_sha256": "7a65bf3912ad8d926ed66aebf136fe9312f731736327281f6fc6560898d2ae0a"
+      "mask_sha256": "7a65bf3912ad8d926ed66aebf136fe9312f731736327281f6fc6560898d2ae0a",
+      "source_ink_box": [
+        0,
+        4,
+        48,
+        61
+      ],
+      "ink_width": 48,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -1064,11 +1955,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 1292488891,
       "key": 9225455546295048921,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#4D09D0BB#4#1_rgb.png",
       "png_sha256": "df368249d00194be1211eabefead450d4c466c0938967a0cf5701556a79e3b80",
-      "mask_sha256": "9a66c6c6385aa8454665dde571b27da0e0883b1ed999d9f607140a41ed2fc372"
+      "mask_sha256": "38d25fd22e71e5d373c8e86e79ff7ccb15673cb7e3fb909ddd5aedebe8cc8dc8",
+      "source_ink_box": [
+        0,
+        6,
+        50,
+        56
+      ],
+      "ink_width": 50,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -1077,11 +1979,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 2269523359,
       "key": 1380445987637219101,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#87462D9F#4#1_rgb.png",
       "png_sha256": "df5d36a4f148cbda4b994b90c3a0ca2978b3db3340d13eaa0d868ee9da38bc04",
-      "mask_sha256": "73e0625dba849ccd4ca180a1ce11a40d709021cf61fb9086e8a8c544cb828c28"
+      "mask_sha256": "73e0625dba849ccd4ca180a1ce11a40d709021cf61fb9086e8a8c544cb828c28",
+      "source_ink_box": [
+        0,
+        6,
+        47,
+        56
+      ],
+      "ink_width": 47,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -1090,11 +2003,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 4,
       "rice": 3544406317,
       "key": 5830152030680330620,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#D343592D#4#1_rgb.png",
       "png_sha256": "d8f1fe3964e32e1322370ca748aaf940a6054dba5cc637292239ccc613c124b1",
-      "mask_sha256": "e3565926787d19a9a00042e9b418686aed82dee1be71bb61aeecfad92df7bf32"
+      "mask_sha256": "c5d3eb3d925a9c7ebfe67b5da9b42d2c37ba77a359d8623dc6cc44657f1a3cc9",
+      "source_ink_box": [
+        0,
+        6,
+        52,
+        56
+      ],
+      "ink_width": 52,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -1103,11 +2027,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 2991722592,
       "key": 12701220963174055454,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#B2521060#4#1_rgb.png",
       "png_sha256": "b8abc9fab8e19bcb8fc62c22987d38fd923a498646a49c58de41ecce3797d918",
-      "mask_sha256": "613e1a8af0aadf3830d02523d0529e0089c0cd2ff4f54e8f4557795e42d0aec6"
+      "mask_sha256": "8edb46f64a3a144f2fc75091895571315c63a9a023f13efe2143d246e0737c72",
+      "source_ink_box": [
+        0,
+        6,
+        49,
+        56
+      ],
+      "ink_width": 49,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -1116,11 +2051,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 4,
       "rice": 3970985111,
       "key": 6877297199160167809,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#ECB06C97#4#1_rgb.png",
       "png_sha256": "49aa75c3e44a4e80d59ca8554e5bc5c006361456547034d67d89093c9e4829b1",
-      "mask_sha256": "ea4825c863ebd9f1364ca6772f98f73764473c269d14b42ae98d23ffdc10cb30"
+      "mask_sha256": "364167aaa7d69b69de945615906c587e802e374276ee399eba19d4a5210994ca",
+      "source_ink_box": [
+        0,
+        6,
+        50,
+        56
+      ],
+      "ink_width": 50,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -1129,11 +2075,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 4,
       "rice": 632604636,
       "key": 9542432856780999018,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#25B4C7DC#4#1_rgb.png",
       "png_sha256": "4e68e813b7ab141b051f0d5b343bcda6dfd9bdedbcd4585191bd7a9bca3c0f42",
-      "mask_sha256": "e64c18667051aa888145fa847cc5ed936221e0d01ea62c609533e94e4d1c2477"
+      "mask_sha256": "e64c18667051aa888145fa847cc5ed936221e0d01ea62c609533e94e4d1c2477",
+      "source_ink_box": [
+        0,
+        6,
+        64,
+        56
+      ],
+      "ink_width": 64,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -1142,11 +2099,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 3917876772,
       "key": 5432688193108028124,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#E9860E24#4#1_rgb.png",
       "png_sha256": "2c69d789f9d67be9050c68c02e331761068cc17343d15f3ccd5ef7a2ef3aa452",
-      "mask_sha256": "7f3a3b6bebd78d032a6eef9db0a0bcacce2deeb81ca24df52bc980fe1ae55a3b"
+      "mask_sha256": "75d1254a8459cd8c6eb8c572e29ec2eef8e0b88136d876a5b643b1c3b015e39d",
+      "source_ink_box": [
+        0,
+        6,
+        52,
+        56
+      ],
+      "ink_width": 52,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -1155,11 +2123,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 4,
       "rice": 3733904188,
       "key": 17308296979319837151,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#DE8EDB3C#4#1_rgb.png",
       "png_sha256": "79db5cc3afaf241de61e3bfef49dc48deac3828774ef1f6026efa865c77c9e2c",
-      "mask_sha256": "f08e7014b30c220acd609599160504d464f128811eb9f520ed9ec192f7293853"
+      "mask_sha256": "a1367c9cbaa856e3c37c89b2653019d4e6b2fc94fc2bc4a51c3b3c6d6bd2c067",
+      "source_ink_box": [
+        0,
+        6,
+        51,
+        56
+      ],
+      "ink_width": 51,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -1168,11 +2147,22 @@
       "height": 7,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 1826314947,
       "key": 9064975269431431587,
       "source": "GoldenEye Texture Pack/Bank Gothic/Lower Case/GOLDENEYE#6CDB5AC3#4#1_rgb.png",
       "png_sha256": "8a1888d2e50cacb0619d4b46a5480145fc7c229992eee96ba9f51754fa36c049",
-      "mask_sha256": "7cf82ef0ca0f4dd93d63876bb04be2c43fe8cee2d7b0a73e0656a33ac25133e9"
+      "mask_sha256": "7cf82ef0ca0f4dd93d63876bb04be2c43fe8cee2d7b0a73e0656a33ac25133e9",
+      "source_ink_box": [
+        0,
+        6,
+        48,
+        56
+      ],
+      "ink_width": 48,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -1181,11 +2171,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 316227903,
       "key": 10176860243189886354,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#12D9413F#4#1_rgb.png",
       "png_sha256": "27bcc8ea2d19583a79995eebf5224cc211c9094b91f003c15a0009d5ceb5829d",
-      "mask_sha256": "2cd7da47270cdc5e8fc5f05f2b3bb011315126b1b7236943ae5bd64d3f3db11b"
+      "mask_sha256": "924f5971c7690955eda8b7dc740fee9c643bd6bfaaf3b55025c996788cc79a62",
+      "source_ink_box": [
+        0,
+        2,
+        33,
+        96
+      ],
+      "ink_width": 33,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -1194,11 +2195,22 @@
       "height": 14,
       "stride": 8,
       "baseline": 4294967295,
+      "kerningindex": 0,
       "rice": 1549844763,
       "key": 15407117384798417648,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#5C60C11B#4#1_rgb.png",
       "png_sha256": "a740ee88b90bf05352e0aa0ac326b91042d130755ad9f8f79638624e24d71be0",
-      "mask_sha256": "ae1c61a26ab7214234f632d7ffeb985120c5ab56884c3196eb5872f95af2b6e0"
+      "mask_sha256": "c25d2cefda1b658627884a1720aea0c194df2609d23527e8ee5697d366ecdb70",
+      "source_ink_box": [
+        1,
+        7,
+        10,
+        106
+      ],
+      "ink_width": 10,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "BankGothic",
@@ -1207,11 +2219,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 632082325,
       "key": 5807477476215663221,
       "source": "GoldenEye Texture Pack/Bank Gothic/Misc/GOLDENEYE#25ACCF95#4#1_rgb.png",
       "png_sha256": "be4c32c422c96d660b397aaa0c2518822f5e46bfe1b1ddb1e5cbeccc0321fd2b",
-      "mask_sha256": "57377e748773b5c0e990022d574445ea6c727be45a5351c010a122e098514f2f"
+      "mask_sha256": "c85266dbb24d0019dbab8fef2e01abb23d58f1f8f7eaa0f28be45f4fbe21fb59",
+      "source_ink_box": [
+        0,
+        2,
+        33,
+        96
+      ],
+      "ink_width": 33,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1220,11 +2243,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3416712169,
       "key": 7454814630685167011,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#CBA6E3E9#4#1_rgb.png",
       "png_sha256": "c7541344d6941c795c7b7da72e5649cb409c98a64dbeb62e357f3a07c7509519",
-      "mask_sha256": "0d28eca508865396963a256679e9c863020b4f57cffc500e40e77c88257f5d5b"
+      "mask_sha256": "0d28eca508865396963a256679e9c863020b4f57cffc500e40e77c88257f5d5b",
+      "source_ink_box": [
+        4,
+        5,
+        16,
+        93
+      ],
+      "ink_width": 16,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1233,11 +2267,22 @@
       "height": 6,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 4143099195,
       "key": 7937767977981661110,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#F6F2AD3B#4#1_rgb.png",
       "png_sha256": "58c1bb1c3cb9df2d344e2bfe3c1ce0a72a1f7d66ceee6338178dfcf8b34501bb",
-      "mask_sha256": "52cc23ddc17b1a8d07a3d0ecf14779acdc29432671d3428007bf6ae98c33945b"
+      "mask_sha256": "52cc23ddc17b1a8d07a3d0ecf14779acdc29432671d3428007bf6ae98c33945b",
+      "source_ink_box": [
+        1,
+        5,
+        16,
+        35
+      ],
+      "ink_width": 16,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1246,11 +2291,22 @@
       "height": 12,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3100403720,
       "key": 9019968536659241741,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#B8CC6808#4#1_rgb.png",
       "png_sha256": "95352805d0c7391168e1905f397c3e82d544efecc09769b4389a913ce2575a96",
-      "mask_sha256": "2e6e40ba36d900a43a1b99a72e85fa2d7215b27f0469b7885030841a4374d153"
+      "mask_sha256": "014d5730a1fc72975de78d7cdc1e0917251b257c7d2819bc01f0853795615bd9",
+      "source_ink_box": [
+        4,
+        5,
+        81,
+        94
+      ],
+      "ink_width": 81,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1259,11 +2315,22 @@
       "height": 13,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 4250654011,
       "key": 11602121762417993843,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#FD5BD53B#4#1_rgb.png",
       "png_sha256": "54394c5a8b57c48f11cb70d16cc2a1d2c133e20e27a8195dd37962f9435c6faa",
-      "mask_sha256": "3b03b17d1934dad54b73386b505de53a77b08ddb519fb07c8bc636774ae2bdce"
+      "mask_sha256": "3b03b17d1934dad54b73386b505de53a77b08ddb519fb07c8bc636774ae2bdce",
+      "source_ink_box": [
+        4,
+        0,
+        63,
+        103
+      ],
+      "ink_width": 63,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1272,11 +2339,22 @@
       "height": 12,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3978186316,
       "key": 934384345995647371,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#ED1E4E4C#4#1_rgb.png",
       "png_sha256": "72d4b16caa6c5599f2636c9bb43c5c3469f579f305325033130aba927a09c3bb",
-      "mask_sha256": "97164e2a878330aa14fde3a1e8e96abcae668a6d03229919aa1f55c26f748dfa"
+      "mask_sha256": "42477c2f5b6d2f79842d9eca1d3c9ff344a034563820fcf76f7014758fc4e84b",
+      "source_ink_box": [
+        4,
+        5,
+        97,
+        94
+      ],
+      "ink_width": 97,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1285,11 +2363,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 1530079294,
       "key": 16404444301855234871,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#5B33283E#4#1_rgb.png",
       "png_sha256": "a7fc17804175cdd8a445bb8cf6176b3f56c94434036685f41c9274f1befa4b8f",
-      "mask_sha256": "2ba3be9072b36e5e33d6b674111dff9309c5d13f349ca9c261c8e39dbc4db82d"
+      "mask_sha256": "2ba3be9072b36e5e33d6b674111dff9309c5d13f349ca9c261c8e39dbc4db82d",
+      "source_ink_box": [
+        3,
+        5,
+        64,
+        93
+      ],
+      "ink_width": 64,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1298,11 +2387,22 @@
       "height": 6,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 184989009,
       "key": 8486053144686222652,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#0B06B551#4#1_rgb.png",
       "png_sha256": "58c1bb1c3cb9df2d344e2bfe3c1ce0a72a1f7d66ceee6338178dfcf8b34501bb",
-      "mask_sha256": "52cc23ddc17b1a8d07a3d0ecf14779acdc29432671d3428007bf6ae98c33945b"
+      "mask_sha256": "52cc23ddc17b1a8d07a3d0ecf14779acdc29432671d3428007bf6ae98c33945b",
+      "source_ink_box": [
+        1,
+        5,
+        16,
+        35
+      ],
+      "ink_width": 16,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1311,11 +2411,22 @@
       "height": 14,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3988118043,
       "key": 17519050995375925319,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#EDB5DA1B#4#1_rgb.png",
       "png_sha256": "1bb6f7060951188e7fc0f069ee292832de517d4b96f1eadaf6e69db18e4a10cf",
-      "mask_sha256": "e428d215e871bfae6f1a70ac490295e813faacb998e8e2a70257bec7c7384ad8"
+      "mask_sha256": "e428d215e871bfae6f1a70ac490295e813faacb998e8e2a70257bec7c7384ad8",
+      "source_ink_box": [
+        4,
+        5,
+        24,
+        101
+      ],
+      "ink_width": 24,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1324,11 +2435,22 @@
       "height": 14,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 59057496,
       "key": 342040284888965223,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#03852558#4#1_rgb.png",
       "png_sha256": "7a5923a9b1300e6d9c750a31f1667625c440948f5caecd3c6aff6fded19e1366",
-      "mask_sha256": "6853de50e99b4931de2e8fd772ee002f62223fb2f13bd24ea2fc6eca79687b39"
+      "mask_sha256": "6853de50e99b4931de2e8fd772ee002f62223fb2f13bd24ea2fc6eca79687b39",
+      "source_ink_box": [
+        4,
+        5,
+        24,
+        101
+      ],
+      "ink_width": 24,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1337,11 +2459,22 @@
       "height": 6,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 6818129,
       "key": 10176137317771505233,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#00680951#4#1_rgb.png",
       "png_sha256": "3e136fa0c3d585312219e5488c967248df3469746eb3ac5ed7a6b764f2fcb824",
-      "mask_sha256": "c881eebdce0a0c560fe81333379401604ddf76175ae9287ece5870fe0fb5daab"
+      "mask_sha256": "cc892a45e1687fc306235b28873964b87ab35cb2c3aa6db709a20ee12304525e",
+      "source_ink_box": [
+        5,
+        1,
+        49,
+        48
+      ],
+      "ink_width": 49,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1350,11 +2483,22 @@
       "height": 10,
       "stride": 16,
       "baseline": 2,
+      "kerningindex": 0,
       "rice": 4131116414,
       "key": 12825635564479930313,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#F63BD57E#4#1_rgb.png",
       "png_sha256": "8fbb6694f067780f54239ceaaa13d4b1171b834c5a4f31c960b2306d1f280e7e",
-      "mask_sha256": "1c5a1f8124a3d5f3cc7385197073d84956322804f881a69018ed9b8e879af324"
+      "mask_sha256": "1c5a1f8124a3d5f3cc7385197073d84956322804f881a69018ed9b8e879af324",
+      "source_ink_box": [
+        4,
+        4,
+        69,
+        77
+      ],
+      "ink_width": 69,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1363,11 +2507,22 @@
       "height": 4,
       "stride": 8,
       "baseline": 9,
+      "kerningindex": 0,
       "rice": 3556612463,
       "key": 3596491495385691802,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#D3FD996F#4#1_rgb.png",
       "png_sha256": "9a9414dae01c4495c4cb475c79adac8515f57820df87768f004933008fa80c20",
-      "mask_sha256": "f52ddb7e84ac1c6337f65584f7dc5977faa844c8a3defb516b224a6b85c5eaed"
+      "mask_sha256": "f52ddb7e84ac1c6337f65584f7dc5977faa844c8a3defb516b224a6b85c5eaed",
+      "source_ink_box": [
+        5,
+        6,
+        24,
+        32
+      ],
+      "ink_width": 24,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1376,11 +2531,22 @@
       "height": 3,
       "stride": 8,
       "baseline": 6,
+      "kerningindex": 0,
       "rice": 2284151689,
       "key": 13320599507770265191,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#88256389#4#1_rgb.png",
       "png_sha256": "57ac0f9a1ff705dadc1f9ca20a3433f451495ca4087e2f3d4e6c6c1763543f9c",
-      "mask_sha256": "38f6347e15bf8e0296bdb19e3627adff77598bbb5759d37b2c48c103824388d4"
+      "mask_sha256": "38f6347e15bf8e0296bdb19e3627adff77598bbb5759d37b2c48c103824388d4",
+      "source_ink_box": [
+        4,
+        8,
+        39,
+        20
+      ],
+      "ink_width": 39,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1389,11 +2555,22 @@
       "height": 3,
       "stride": 8,
       "baseline": 9,
+      "kerningindex": 0,
       "rice": 4090843893,
       "key": 12526476822906759949,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#F3D552F5#4#1_rgb.png",
       "png_sha256": "456a3391668b8d53dfec18b26ea208c0cee8a1e41ada7df5846ff6e123d1e639",
-      "mask_sha256": "560364eb2393369647549440a972720c28826d7b7411d73a20c3080f5744921d"
+      "mask_sha256": "c75f80c21358d4084099924b718bece18d5ae02c562dd3a2c6c491fcc81cd61f",
+      "source_ink_box": [
+        4,
+        6,
+        17,
+        21
+      ],
+      "ink_width": 17,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1402,11 +2579,22 @@
       "height": 13,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3745560556,
       "key": 7002429593455537593,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#DF40B7EC#4#1_rgb.png",
       "png_sha256": "b7b23f983318e7d2d1c97e8d19efe846a407cdbbf40bf7e199bad682e85f2fe6",
-      "mask_sha256": "e0bd71d8881f7e5ccde1cc7e3e7671f6befed7674134da301ea9922f0ac722d7"
+      "mask_sha256": "d7081b70801e0d2cd28da9b6d5ad23a03849ff787fc5b10aa6a450e6ddc33600",
+      "source_ink_box": [
+        2,
+        5,
+        41,
+        93
+      ],
+      "ink_width": 41,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1415,11 +2603,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 206007213,
       "key": 17150788577697980115,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#0C476BAD#4#1_rgb.png",
       "png_sha256": "daef6dca264c806cb27cfc76febb65d51bae0cca532ccb628536593b5ffdbbd7",
-      "mask_sha256": "9d11661e1c55c0775f637cac59398e57c0f914967f57514839d1c9ecc610bafa"
+      "mask_sha256": "9d11661e1c55c0775f637cac59398e57c0f914967f57514839d1c9ecc610bafa",
+      "source_ink_box": [
+        5,
+        6,
+        56,
+        128
+      ],
+      "ink_width": 56,
+      "horizontal_fit": false,
+      "vertical_fit": true,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1428,11 +2627,22 @@
       "height": 11,
       "stride": 8,
       "baseline": 1,
+      "kerningindex": 0,
       "rice": 638859702,
       "key": 1827957716095319803,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#261439B6#4#1_rgb.png",
       "png_sha256": "99726e2336cd7a09ef110fb401f2e1c507af9f512247e4749238139bf5cc287f",
-      "mask_sha256": "c49e8b75ef9e5986aff64f310b1df79f0d0b31ef70077060ec49548bc04c4476"
+      "mask_sha256": "c600107d8821a583e1f601505f70a55f29bc66fa68d8dc7b08acfcfb66c9ed6f",
+      "source_ink_box": [
+        5,
+        1,
+        33,
+        125
+      ],
+      "ink_width": 33,
+      "horizontal_fit": false,
+      "vertical_fit": true,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1441,11 +2651,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 224969609,
       "key": 6917674506723901580,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#0D68C389#4#1_rgb.png",
       "png_sha256": "7377c78f69e99eb5853b730d9cbedb06b839f1a036049f4687d0fded0e736c6a",
-      "mask_sha256": "47127ec7bb7a7b793a90010ba84505eee6b85fbea4db6c1c6e7962c56562b91f"
+      "mask_sha256": "47127ec7bb7a7b793a90010ba84505eee6b85fbea4db6c1c6e7962c56562b91f",
+      "source_ink_box": [
+        4,
+        8,
+        54,
+        127
+      ],
+      "ink_width": 54,
+      "horizontal_fit": false,
+      "vertical_fit": true,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1454,11 +2675,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 1501925835,
       "key": 8679782424829253789,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#598591CB#4#1_rgb.png",
       "png_sha256": "edc48ea85e17524eade6c6bc5ce4380717eb698c77335a997a658855da0651f2",
-      "mask_sha256": "1cf31ac22c0044f0c5410fa42768fdb464cf617db72c6ab75f3bd2eba9a88791"
+      "mask_sha256": "46469e96b52d965559cc698fffc80a25f5d4b109830e113fb47de62835881a80",
+      "source_ink_box": [
+        4,
+        7,
+        57,
+        96
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1467,11 +2699,22 @@
       "height": 11,
       "stride": 8,
       "baseline": 1,
+      "kerningindex": 0,
       "rice": 3037333478,
       "key": 12289081100286015998,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#B50A07E6#4#1_rgb.png",
       "png_sha256": "e28c7a650c43d38e2266f28fd89fe06713ca5372ef97d9c82e731de887360018",
-      "mask_sha256": "b576e34e5123e4691bc2abe06f80982c1a132b3555209a4644a448d3d39e74b0"
+      "mask_sha256": "b576e34e5123e4691bc2abe06f80982c1a132b3555209a4644a448d3d39e74b0",
+      "source_ink_box": [
+        5,
+        1,
+        64,
+        126
+      ],
+      "ink_width": 64,
+      "horizontal_fit": false,
+      "vertical_fit": true,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1480,11 +2723,22 @@
       "height": 11,
       "stride": 8,
       "baseline": 1,
+      "kerningindex": 0,
       "rice": 1919114647,
       "key": 12515892763499946572,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#72635D97#4#1_rgb.png",
       "png_sha256": "ce27bc48f868ebd0438ddde7c7190a25b2d4507cdb47baec8f3b8b18b13f05c4",
-      "mask_sha256": "506ffaea1df3c1c217a04656d708aab17d5754470723b353d00c20ed2aa3d86a"
+      "mask_sha256": "506ffaea1df3c1c217a04656d708aab17d5754470723b353d00c20ed2aa3d86a",
+      "source_ink_box": [
+        5,
+        1,
+        56,
+        128
+      ],
+      "ink_width": 56,
+      "horizontal_fit": false,
+      "vertical_fit": true,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1493,11 +2747,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 1111323577,
       "key": 11805552439898456715,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#423D73B9#4#1_rgb.png",
       "png_sha256": "a6fd8af234690e29546585a67f0777ce593a011a853f61f09d3ff36783d9d6fd",
-      "mask_sha256": "185d890f9335ee1427cbba75e501e6c528ec670bdd440ed015dd322cd99adbdd"
+      "mask_sha256": "b32412f52a10db417acb4ee92e359484691afbc162d9916bb1358290868880d9",
+      "source_ink_box": [
+        4,
+        7,
+        57,
+        96
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1506,11 +2771,22 @@
       "height": 11,
       "stride": 8,
       "baseline": 1,
+      "kerningindex": 0,
       "rice": 3220203190,
       "key": 13623565873703245930,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#BFF066B6#4#1_rgb.png",
       "png_sha256": "7e91e876680fd29d7f468bf83262636c67818c8747015e19ef1ee1434218e8ef",
-      "mask_sha256": "c6369406991310f51eb518d6141720c2cc10bd70bac22fce5d8f325f326bbe8a"
+      "mask_sha256": "c6369406991310f51eb518d6141720c2cc10bd70bac22fce5d8f325f326bbe8a",
+      "source_ink_box": [
+        5,
+        1,
+        56,
+        126
+      ],
+      "ink_width": 56,
+      "horizontal_fit": false,
+      "vertical_fit": true,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1519,11 +2795,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 2148239103,
       "key": 8526972080606741440,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#800B86FF#4#1_rgb.png",
       "png_sha256": "1eb4fa4497041ee4daa441a031cc543cdeac37f736edf680b0bdd98a857a2270",
-      "mask_sha256": "548561586219601ebfb8b6869ad6f94ce87e87ad912759984a6bdf3f70ce1848"
+      "mask_sha256": "548561586219601ebfb8b6869ad6f94ce87e87ad912759984a6bdf3f70ce1848",
+      "source_ink_box": [
+        5,
+        9,
+        64,
+        128
+      ],
+      "ink_width": 64,
+      "horizontal_fit": false,
+      "vertical_fit": true,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1532,11 +2819,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3246345110,
       "key": 9727834915220765254,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#C17F4B96#4#1_rgb.png",
       "png_sha256": "3486034262f801560f52de154172e51285e4d8169b065c3983aa4757d405bfc2",
-      "mask_sha256": "14e6df74a639e00f88152345f4bbd2c089f456c3b0763030199bc5994a8a135b"
+      "mask_sha256": "14e6df74a639e00f88152345f4bbd2c089f456c3b0763030199bc5994a8a135b",
+      "source_ink_box": [
+        5,
+        7,
+        63,
+        96
+      ],
+      "ink_width": 63,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1545,11 +2843,22 @@
       "height": 9,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 4131311791,
       "key": 6343698686774393802,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#F63ED0AF#4#1_rgb.png",
       "png_sha256": "2e9b7ac25130ba3a3a3e549b5a3d7b6da7688d26d305028746c5a23e6a399fd9",
-      "mask_sha256": "44fc2cfb6638821be311d1c740d819aa885d37be7db6c95f7e81ffdf04c7ac92"
+      "mask_sha256": "633980973fc648537da4d0a436381228d69598533140e18fa1d06c34970cd070",
+      "source_ink_box": [
+        5,
+        4,
+        17,
+        69
+      ],
+      "ink_width": 17,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1558,11 +2867,22 @@
       "height": 10,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 3108841711,
       "key": 18274291634435925323,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#B94D28EF#4#1_rgb.png",
       "png_sha256": "1c40128e42e08d95c2634f7edb8f0db650406c1becf7576a6061bf1d140956cf",
-      "mask_sha256": "750b2a7918b42f7c62e39cef06f0bb7a7052c50848d28774527147958eb98da9"
+      "mask_sha256": "7aeffbbec33cb3a2c6d24ff4729a4ef945353a9d59c357b976a8f87f7a354077",
+      "source_ink_box": [
+        7,
+        4,
+        26,
+        80
+      ],
+      "ink_width": 26,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1571,11 +2891,22 @@
       "height": 8,
       "stride": 16,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 2016351775,
       "key": 9697497603223453372,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#782F161F#4#1_rgb.png",
       "png_sha256": "db5bbbdd471ee844cdb80721c2d2797b85659f2c65e532d5c6ed42f6cdc82836",
-      "mask_sha256": "0eade4134000a5d5b069dc32ab1916a700d037ad367cdc44b4661b032cab7998"
+      "mask_sha256": "0eade4134000a5d5b069dc32ab1916a700d037ad367cdc44b4661b032cab7998",
+      "source_ink_box": [
+        5,
+        0,
+        72,
+        64
+      ],
+      "ink_width": 72,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1584,11 +2915,22 @@
       "height": 5,
       "stride": 16,
       "baseline": 4,
+      "kerningindex": 0,
       "rice": 3406015992,
       "key": 4872449973832430081,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#CB03ADF8#4#1_rgb.png",
       "png_sha256": "667ffa23063358c9fae9c53af071c0cfd2367afb10e47acecaf567c72636ac24",
-      "mask_sha256": "69b58607e277139f0ca10d95819b0a9356fbb0e59936be3e54c26cc70c4e8e38"
+      "mask_sha256": "69b58607e277139f0ca10d95819b0a9356fbb0e59936be3e54c26cc70c4e8e38",
+      "source_ink_box": [
+        3,
+        6,
+        72,
+        40
+      ],
+      "ink_width": 72,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1597,11 +2939,22 @@
       "height": 8,
       "stride": 16,
       "baseline": 3,
+      "kerningindex": 0,
       "rice": 2070758323,
       "key": 826220387369232648,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#7B6D43B3#4#1_rgb.png",
       "png_sha256": "3dd1ae05242593b873411e4b7c54cf3e7fee5023dfe4c248b1fdf74a4ced55da",
-      "mask_sha256": "4b0c0f6864f4e3bfb3f999424cb93772d9600763412b5fa718188e16fffb05fc"
+      "mask_sha256": "4b0c0f6864f4e3bfb3f999424cb93772d9600763412b5fa718188e16fffb05fc",
+      "source_ink_box": [
+        5,
+        0,
+        72,
+        64
+      ],
+      "ink_width": 72,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1610,11 +2963,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 1562928749,
       "key": 15979145546385536192,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#5D28666D#4#1_rgb.png",
       "png_sha256": "aa4c686d40f04bdbe6a0716542dfe2d8063496d4800c637303fb9a77d8dedd45",
-      "mask_sha256": "93cff68402a29a1164375baa141c1dd7947c27075af307cfb8e28a1571ad9a0f"
+      "mask_sha256": "93cff68402a29a1164375baa141c1dd7947c27075af307cfb8e28a1571ad9a0f",
+      "source_ink_box": [
+        1,
+        5,
+        40,
+        93
+      ],
+      "ink_width": 40,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1623,11 +2987,22 @@
       "height": 14,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 2113622735,
       "key": 11841073115690511082,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#7DFB52CF#4#1_rgb.png",
       "png_sha256": "53e406d202153aeb3660d84c1e068fa50e8cde0ebea1d9ba42ad6668726ce037",
-      "mask_sha256": "21cdffc0570cfbea154eaa35c71a60e89ef92a7a34b63b5360a1ff4113a09e96"
+      "mask_sha256": "21cdffc0570cfbea154eaa35c71a60e89ef92a7a34b63b5360a1ff4113a09e96",
+      "source_ink_box": [
+        4,
+        5,
+        104,
+        110
+      ],
+      "ink_width": 104,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1636,11 +3011,22 @@
       "height": 12,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 1,
       "rice": 3077023492,
       "key": 9170515102577263923,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#B767A704#4#1_rgb.png",
       "png_sha256": "dc0088da923b19475ceb70ee92c4d48624d8daee2c4743280af641b1f99feac6",
-      "mask_sha256": "e41d3cbb698004aead7f292bb7b91dd70bf18cc1cb935aa2da9da5df511d2ae7"
+      "mask_sha256": "0c624268e3ffb301fc50ec1bdce1548302a475cf9ec9804774df5fd7114d2d90",
+      "source_ink_box": [
+        4,
+        5,
+        81,
+        93
+      ],
+      "ink_width": 81,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1649,11 +3035,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 2610287440,
       "key": 16136288471041990097,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#9B95D350#4#1_rgb.png",
       "png_sha256": "3ee26eed258bbc984d9f0ce017c4b409e88caee25a425829c7992d4b1e7c3735",
-      "mask_sha256": "2018e4d2e4f5d5a9fc5e9e9989a047670cbe5da2a79bfed6b68cdf2299ae29a2"
+      "mask_sha256": "2018e4d2e4f5d5a9fc5e9e9989a047670cbe5da2a79bfed6b68cdf2299ae29a2",
+      "source_ink_box": [
+        5,
+        5,
+        63,
+        93
+      ],
+      "ink_width": 63,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1662,11 +3059,22 @@
       "height": 12,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 2818236887,
       "key": 12053741878803758597,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#A7FAE1D7#4#1_rgb.png",
       "png_sha256": "0791eb99b2950ea142797a08123ca92823dc036a0d6ab4edac71d793b9d91eea",
-      "mask_sha256": "ba0da4eff55ad89da0133c226db0b1973cf3d2b740623b56ca2621b2de95fe1c"
+      "mask_sha256": "808f4a96cd510f04a0bce739affcb86ec541f6b0484f855240d26fe3f139b5f8",
+      "source_ink_box": [
+        4,
+        5,
+        73,
+        94
+      ],
+      "ink_width": 73,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1675,11 +3083,22 @@
       "height": 12,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3207123912,
       "key": 5407868298860081130,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#BF28D3C8#4#1_rgb.png",
       "png_sha256": "be63b6a995fea0fec754aa03b04d5fc070c3936fba0d7e59978fff8114494ba7",
-      "mask_sha256": "6686924859d2048a04bc509a5e795482c6c5d105f046f58939e427bee7772d70"
+      "mask_sha256": "423de9d4851b92ed5e443522784c0a93fa8ab4eec9c1fb9ce915748f1c1f14be",
+      "source_ink_box": [
+        4,
+        5,
+        73,
+        93
+      ],
+      "ink_width": 73,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1688,11 +3107,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3155987880,
       "key": 5078029445221609866,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#BC1C8DA8#4#1_rgb.png",
       "png_sha256": "a27da8f445f82d8786c090919442f7b345df2ec3d0bdd8f9252db904c9f812a1",
-      "mask_sha256": "5a5278fcc0f8e5a62da9a91009f362f6d17e325f964da53f2691d0e6b936b532"
+      "mask_sha256": "de6814d6086c89ca277d2e8713f8a831c23b8592dd35387a1b08920da60bafde",
+      "source_ink_box": [
+        4,
+        5,
+        57,
+        93
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1701,11 +3131,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 5,
       "rice": 1157406291,
       "key": 1597440234587396601,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#44FC9E53#4#1_rgb.png",
       "png_sha256": "74eb6c5ecc5e7434a1aa536caa3620c7819fa8ed1c141f95d134c108abf09be2",
-      "mask_sha256": "cb6a08e46711a97117abc53d345fc6270c50afc34ab2a3dcfd3c784cf5577d80"
+      "mask_sha256": "cb6a08e46711a97117abc53d345fc6270c50afc34ab2a3dcfd3c784cf5577d80",
+      "source_ink_box": [
+        5,
+        5,
+        56,
+        93
+      ],
+      "ink_width": 56,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1714,11 +3155,22 @@
       "height": 12,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3665041522,
       "key": 16564377026253404154,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#DA741872#4#1_rgb.png",
       "png_sha256": "c11f956822529a474b99a459b8c64412e525dc736ff7a842c1b2723fee65fc47",
-      "mask_sha256": "d955454df01683b680477e8445aabca5efdd73ec0196355a7eb7ac4c335732f5"
+      "mask_sha256": "d955454df01683b680477e8445aabca5efdd73ec0196355a7eb7ac4c335732f5",
+      "source_ink_box": [
+        4,
+        5,
+        72,
+        94
+      ],
+      "ink_width": 72,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1727,11 +3179,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 1749291814,
       "key": 4370929227851573385,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#68441326#4#1_rgb.png",
       "png_sha256": "02a93c7e0d7fdbeb6e0198f4acb32a10b6154bd696dca46ed62c075d18fc6bc8",
-      "mask_sha256": "71070e5053c1c31f114326353863738b09f171bf8cf521bf3be3655b178c0678"
+      "mask_sha256": "71070e5053c1c31f114326353863738b09f171bf8cf521bf3be3655b178c0678",
+      "source_ink_box": [
+        5,
+        5,
+        63,
+        93
+      ],
+      "ink_width": 63,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1740,11 +3203,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 1387843290,
       "key": 18190918776372853439,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#52B8CEDA#4#1_rgb.png",
       "png_sha256": "6f9cbcd06f5967794ee9211b87477531314c649137ccadaf35bcc685cda8cf7e",
-      "mask_sha256": "30174d6248a5894cf94ab09b92d853fe2376349334831ce9bd5783bd20dc1ad8"
+      "mask_sha256": "30174d6248a5894cf94ab09b92d853fe2376349334831ce9bd5783bd20dc1ad8",
+      "source_ink_box": [
+        5,
+        5,
+        16,
+        93
+      ],
+      "ink_width": 16,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1753,11 +3227,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 3,
       "rice": 2654765130,
       "key": 3506750324749967406,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#9E3C804A#4#1_rgb.png",
       "png_sha256": "3c2b57faa9289b0eb290a6ba9179cb921c52b64328e2665636bc74fd9263708b",
-      "mask_sha256": "e40ec1dc5049ac6dc949f92dfc55ba022f0bab5f3a2e38ef1be9f3f5601bbce0"
+      "mask_sha256": "e40ec1dc5049ac6dc949f92dfc55ba022f0bab5f3a2e38ef1be9f3f5601bbce0",
+      "source_ink_box": [
+        5,
+        5,
+        47,
+        94
+      ],
+      "ink_width": 47,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1766,11 +3251,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 2298558319,
       "key": 17756908555173610780,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#8901376F#4#1_rgb.png",
       "png_sha256": "93c36578747bdff21a2f0a4fcf3936b9c6d5ca4b80eddc768154e62481a04c16",
-      "mask_sha256": "d25b12bbdc3a5c8f1f6f81c6c3e74779bf09014580deca2c7599e4c938e7e1db"
+      "mask_sha256": "d25b12bbdc3a5c8f1f6f81c6c3e74779bf09014580deca2c7599e4c938e7e1db",
+      "source_ink_box": [
+        4,
+        5,
+        64,
+        93
+      ],
+      "ink_width": 64,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1779,11 +3275,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 2,
       "rice": 2959680148,
       "key": 6649879999103268871,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#B0692294#4#1_rgb.png",
       "png_sha256": "22a2520b450ad9d5d17290813c8c4dcb2e15c79513d2ad15c1256e5bac7f3dc8",
-      "mask_sha256": "b1e04ac71b5a47815744133b188ac7e5148aa17aafa40f16d395e3f6d1bf487f"
+      "mask_sha256": "d1cfb0691604099d345a099fc422d6d9a7feb6fd5dfe71f13e6379353a7bc4b0",
+      "source_ink_box": [
+        5,
+        5,
+        57,
+        93
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1792,11 +3299,22 @@
       "height": 12,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3996132452,
       "key": 5961824154003220941,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#EE302464#4#1_rgb.png",
       "png_sha256": "91659bef2f141cceaecc832de73b82f79b44393364316a4fefea0f68521641f8",
-      "mask_sha256": "9022543d528ab732ab242698c0dd3ad17c6307d1ff1b1e4225f17d6d85252091"
+      "mask_sha256": "20b4b3e5afab764e47005cc32b22b71002aad947d3defaf113258149cfa0cd9f",
+      "source_ink_box": [
+        4,
+        5,
+        89,
+        93
+      ],
+      "ink_width": 89,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1805,11 +3323,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 2859963981,
       "key": 13418217624867508785,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#AA77964D#4#1_rgb.png",
       "png_sha256": "2e038e58936f17604f4f1936ec547d0a5c56ec16277a68b305008adfe34c31d6",
-      "mask_sha256": "e5d853d4d796e858a857496a3ba306506b0e29f93080d57dd6fb4ddee68ebc1c"
+      "mask_sha256": "e5d853d4d796e858a857496a3ba306506b0e29f93080d57dd6fb4ddee68ebc1c",
+      "source_ink_box": [
+        4,
+        5,
+        64,
+        93
+      ],
+      "ink_width": 64,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1818,11 +3347,22 @@
       "height": 12,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 817087861,
       "key": 17782839094457532507,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#30B3C575#4#1_rgb.png",
       "png_sha256": "7776e81ebae49efc30e479c1cccd08943a4396b859823cd4c39bf81b14d0c797",
-      "mask_sha256": "51805b96f976cd0949dbeab22b5c060731e54ae2e9604be88dc82b84b61450d5"
+      "mask_sha256": "51805b96f976cd0949dbeab22b5c060731e54ae2e9604be88dc82b84b61450d5",
+      "source_ink_box": [
+        4,
+        5,
+        80,
+        94
+      ],
+      "ink_width": 80,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1831,11 +3371,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 5,
       "rice": 4190877171,
       "key": 3559549560058781954,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#F9CBB5F3#4#1_rgb.png",
       "png_sha256": "87875c21af35bcf8dd2885e2a40dafd0688486aac3231bcd499ad81c668eec29",
-      "mask_sha256": "35f180013b4d73b0cb4730251a56999f04fead1bf8963cc987dd9d29d7a6857c"
+      "mask_sha256": "35f180013b4d73b0cb4730251a56999f04fead1bf8963cc987dd9d29d7a6857c",
+      "source_ink_box": [
+        5,
+        5,
+        64,
+        93
+      ],
+      "ink_width": 64,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1844,11 +3395,22 @@
       "height": 12,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3281585522,
       "key": 14439930081896835367,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#C3990572#4#1_rgb.png",
       "png_sha256": "80ad48da9d9ed80d842ab91368d78064c7ea8b7ee585aff7dffdfa49415a0b7f",
-      "mask_sha256": "9865a1e02e7d3e74b766ebb1b6286408beeb64b05f5041bf1d073436fbca6b69"
+      "mask_sha256": "9cc71763ed657b0f3abea0b01249ae3d3004e527fc62bc5a1bc6328e6b072f76",
+      "source_ink_box": [
+        4,
+        5,
+        86,
+        94
+      ],
+      "ink_width": 86,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1857,11 +3419,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 2754646165,
       "key": 17463888485248824699,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#A4309095#4#1_rgb.png",
       "png_sha256": "5b954a945b148e03db2e3b44d142dffa8450d1625012c2d39735a6029562da01",
-      "mask_sha256": "ead157f4ec2b8b4907f2e76da5ecc9506e1fbd3ed8b55e4af916ba3561120f70"
+      "mask_sha256": "ead157f4ec2b8b4907f2e76da5ecc9506e1fbd3ed8b55e4af916ba3561120f70",
+      "source_ink_box": [
+        4,
+        5,
+        63,
+        93
+      ],
+      "ink_width": 63,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1870,11 +3443,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3358374202,
       "key": 4597357815721225319,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#C82CB93A#4#1_rgb.png",
       "png_sha256": "32a138494d0f727f464fb14067e4f715266757aa0aa1e99178bbce6749e34060",
-      "mask_sha256": "aa8a4e4de3184c36927eb4651d2f20d2e0da6fcc03651ec786028ea30915cca7"
+      "mask_sha256": "aa8a4e4de3184c36927eb4651d2f20d2e0da6fcc03651ec786028ea30915cca7",
+      "source_ink_box": [
+        4,
+        5,
+        63,
+        94
+      ],
+      "ink_width": 63,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1883,11 +3467,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 4,
       "rice": 2974474213,
       "key": 10666781250838358252,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#B14ADFE5#4#1_rgb.png",
       "png_sha256": "38a74076ad98a28b693d78cbec613f0e21868562cf530d4f1098ef95db5c0db1",
-      "mask_sha256": "ef73c1f6d79234c1165ace354ddff5279604152bcdb7dc6d6f2c5da1e25adc08"
+      "mask_sha256": "ef73c1f6d79234c1165ace354ddff5279604152bcdb7dc6d6f2c5da1e25adc08",
+      "source_ink_box": [
+        4,
+        5,
+        64,
+        93
+      ],
+      "ink_width": 64,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1896,11 +3491,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 4212743501,
       "key": 12550258599075285876,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#FB195D4D#4#1_rgb.png",
       "png_sha256": "8a61a1e92edf8b62a8c1545e9755988b5dff8dffc54f3ecb639bf8e3f9ea8e69",
-      "mask_sha256": "fe320fd6b8dde7589f8b7b0a7727da3ba6a0171d3fd58e99a52ee94c541fd92b"
+      "mask_sha256": "fe320fd6b8dde7589f8b7b0a7727da3ba6a0171d3fd58e99a52ee94c541fd92b",
+      "source_ink_box": [
+        4,
+        5,
+        63,
+        94
+      ],
+      "ink_width": 63,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1909,11 +3515,22 @@
       "height": 12,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 4,
       "rice": 2582506579,
       "key": 12280662207901268277,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#99EDEC53#4#1_rgb.png",
       "png_sha256": "96c4e290b1e71e1b9132fdce84ec0afcefc8dda0e35d4d791812c8a9f79c8df5",
-      "mask_sha256": "e16586f15eb8faf353a74f2f91ab4419ff70bb935230af55ed47df72852bb109"
+      "mask_sha256": "e2e190554078231b2e6c02ff80fadbed4a8247ae9fa623f58b8015e5c790872a",
+      "source_ink_box": [
+        4,
+        5,
+        73,
+        93
+      ],
+      "ink_width": 73,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1922,11 +3539,22 @@
       "height": 12,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 4,
       "rice": 3145030101,
       "key": 8068898824500288854,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#BB7559D5#4#1_rgb.png",
       "png_sha256": "d9c6aeb8bd2a790d7037fd2e6c937fd3b1337fe6470329a44c428f86f15ecf80",
-      "mask_sha256": "0e15f4c9ea8af64fd059e12e0495f01fd5a525a57eb531c243f1ba3ce750367f"
+      "mask_sha256": "8e92a24a5e7f73ddb7926a1c9551dd2e55a5891625a2cdc6dcc3e818ec41d268",
+      "source_ink_box": [
+        4,
+        5,
+        113,
+        93
+      ],
+      "ink_width": 113,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1935,11 +3563,22 @@
       "height": 12,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 1076786906,
       "key": 6865743655314873470,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#402E76DA#4#1_rgb.png",
       "png_sha256": "723aeba102ecdc7f0fb607004ac332d3801836f01b217d82c9a82c05cf446e8c",
-      "mask_sha256": "348dd50c6c421c1edf761c62bfcaddaecc95c7d2c5e8bf1328d9fae041d8b329"
+      "mask_sha256": "9037457ba4f2aec9573c0d66e7e63326fa0cf0287a50253f1f4008f7385d918a",
+      "source_ink_box": [
+        4,
+        5,
+        73,
+        93
+      ],
+      "ink_width": 73,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1948,11 +3587,22 @@
       "height": 12,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 4,
       "rice": 637121710,
       "key": 17935186278633074190,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#25F9B4AE#4#1_rgb.png",
       "png_sha256": "603be4a5ffbdcc76b2b32428e5d1c0b30e124633fc26fec5888ba11b68001702",
-      "mask_sha256": "b3a92be3356931edef55370b6758f499e717b194bed54ffe994b711e920c1c5b"
+      "mask_sha256": "b3a92be3356931edef55370b6758f499e717b194bed54ffe994b711e920c1c5b",
+      "source_ink_box": [
+        3,
+        5,
+        72,
+        93
+      ],
+      "ink_width": 72,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1961,11 +3611,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 1255495691,
       "key": 12009158907287829319,
       "source": "GoldenEye Texture Pack/Zurich/Upper Case/GOLDENEYE#4AD5580B#4#1_rgb.png",
       "png_sha256": "57fed87e3044b4762449fdf1192189921ca6d5bb250b362c97b2b907fbc12c14",
-      "mask_sha256": "c4dbd2a83bba43063793bfef1b9890c998e63419be0b17055095bf4bad7a14ee"
+      "mask_sha256": "c4dbd2a83bba43063793bfef1b9890c998e63419be0b17055095bf4bad7a14ee",
+      "source_ink_box": [
+        4,
+        5,
+        63,
+        93
+      ],
+      "ink_width": 63,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1974,11 +3635,22 @@
       "height": 14,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3194413339,
       "key": 11982618837589462934,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#BE66E11B#4#1_rgb.png",
       "png_sha256": "0c634270cc7ca8f06a6930edd5ca504add4190a8a7b91d0deee0132120fe4c12",
-      "mask_sha256": "f041003f32660f74cba20533c35cf841de58fd4a1269b6376768cbf9dc5cb1d2"
+      "mask_sha256": "f041003f32660f74cba20533c35cf841de58fd4a1269b6376768cbf9dc5cb1d2",
+      "source_ink_box": [
+        6,
+        5,
+        24,
+        108
+      ],
+      "ink_width": 24,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -1987,11 +3659,22 @@
       "height": 12,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 2516165682,
       "key": 8171628999778538652,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#95F9A432#4#1_rgb.png",
       "png_sha256": "ca274fa1360161850d55c59f4350f7ea3c8cefd2acf62397f38c7908c6e6725d",
-      "mask_sha256": "348dd50c6c421c1edf761c62bfcaddaecc95c7d2c5e8bf1328d9fae041d8b329"
+      "mask_sha256": "9037457ba4f2aec9573c0d66e7e63326fa0cf0287a50253f1f4008f7385d918a",
+      "source_ink_box": [
+        4,
+        5,
+        73,
+        93
+      ],
+      "ink_width": 73,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2000,11 +3683,22 @@
       "height": 14,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3539889417,
       "key": 3541049137895162321,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#D2FE6D09#4#1_rgb.png",
       "png_sha256": "f81c8f7e3b102203522f655aa03fb55201ec8a16f527640bf64f9a9a53228972",
-      "mask_sha256": "ba754de92c4f03ff5c84e6a2755d734bd4176ff93182628791251a15d26556d3"
+      "mask_sha256": "e12d720666e5391841724310e1472fd25004171f7b11aabb7faf26c03fae91f5",
+      "source_ink_box": [
+        6,
+        5,
+        25,
+        108
+      ],
+      "ink_width": 25,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2013,11 +3707,22 @@
       "height": 6,
       "stride": 16,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 1819899345,
       "key": 15232518090269658552,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#6C7975D1#4#1_rgb.png",
       "png_sha256": "45d6ae96dbf9bfe3ee94736e28c28832f11316e1f4ba762ab59745bd28562fef",
-      "mask_sha256": "67b9e4a88e627d810c922485ea8eacfdad74f1c8591874c6dcc9429ade8e8365"
+      "mask_sha256": "67b9e4a88e627d810c922485ea8eacfdad74f1c8591874c6dcc9429ade8e8365",
+      "source_ink_box": [
+        3,
+        5,
+        72,
+        46
+      ],
+      "ink_width": 72,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2026,11 +3731,22 @@
       "height": 2,
       "stride": 8,
       "baseline": 13,
+      "kerningindex": 0,
       "rice": 3611842796,
       "key": 4056774267360319533,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#D74858EC#4#1_rgb.png",
       "png_sha256": "bbec065c87db4958b4bb52078d5e3904207449670f328483c58338276f7ff310",
-      "mask_sha256": "ddbc47aff32468b95dbcb631c0bc41c0adfef8adec5d22776cccfcbb06684cda"
+      "mask_sha256": "ddbc47aff32468b95dbcb631c0bc41c0adfef8adec5d22776cccfcbb06684cda",
+      "source_ink_box": [
+        5,
+        1,
+        64,
+        10
+      ],
+      "ink_width": 64,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2039,11 +3755,22 @@
       "height": 4,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 3895320148,
       "key": 6304702888241650633,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#E82DDE54#4#1_rgb.png",
       "png_sha256": "c91e5087108004740de262bf482331a9c961770e161492af72e2a40a209d1151",
-      "mask_sha256": "f52e9ae6a0fc58cdc33f0120d3daadb69e3dc67d1350a13b3a215858cd801b8c"
+      "mask_sha256": "21f131e6fd8e459f231e58f8bfa967dcd059a7a2012f345db49c8c07a7f9b3c4",
+      "source_ink_box": [
+        3,
+        5,
+        25,
+        28
+      ],
+      "ink_width": 25,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2052,11 +3779,22 @@
       "height": 9,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 8,
       "rice": 3015672098,
       "key": 18202564238483696098,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#B3BF8122#4#1_rgb.png",
       "png_sha256": "bf5a8032fd5a7169cd19e26c61cf07f763f617564f31010541274c4c5c2e7154",
-      "mask_sha256": "a207a1886fd3fcd017712c5f42e58197322df0430e27748d876deb97b9985e5d"
+      "mask_sha256": "84fdc7bf03a19fc44dc2f780533930d291153bf5d4c3498a3584863286e097d7",
+      "source_ink_box": [
+        2,
+        6,
+        50,
+        71
+      ],
+      "ink_width": 50,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2065,11 +3803,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 2,
       "rice": 3633101236,
       "key": 260697097024367398,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#D88CB9B4#4#1_rgb.png",
       "png_sha256": "cea8257e00ed12401fe03e852fd7df82991df1754902e09f3a5e013006f810ca",
-      "mask_sha256": "a82ee74480d14f551f0f47ed99a2903fe2febd7fac5e2b33bc342cc398bb788c"
+      "mask_sha256": "ea49c05aef3c360cfaeb68945617138cfb814900534590bc008f10010b77efce",
+      "source_ink_box": [
+        4,
+        6,
+        57,
+        95
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2078,11 +3827,22 @@
       "height": 9,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 8,
       "rice": 391786546,
       "key": 7333407060921891572,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#175A3032#4#1_rgb.png",
       "png_sha256": "b7608fb8ebde682883c8a97446d667fb6aeddb22a1c6cc8cf806dc2917b9b315",
-      "mask_sha256": "61ab915f31d9cce4ebbb36cfe48f81fd178767f58d0d0350f32ac09501cb8e4c"
+      "mask_sha256": "f50acb6c76448874a9e154ad7d4424c96f76cc9076701ee6f7ac53f38dd61d1c",
+      "source_ink_box": [
+        5,
+        5,
+        57,
+        70
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2091,11 +3851,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 3,
       "rice": 3527356191,
       "key": 15203729250599763984,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#D23F2F1F#4#1_rgb.png",
       "png_sha256": "0b78f8aec4632d64b10ac18730eec8b72f0f8b9ab42d2019ca339294f4a09724",
-      "mask_sha256": "1c16e04265ce53d28b237277fb38d451516450e19f8625f1b78381f378ae1a6d"
+      "mask_sha256": "6f4624789aaa12fa61326b7c17eb09adb4f8dfbda729220a5c8038c232e79f1d",
+      "source_ink_box": [
+        4,
+        6,
+        57,
+        95
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2104,11 +3875,22 @@
       "height": 9,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 8,
       "rice": 91288714,
       "key": 6193971164286195262,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#0570F48A#4#1_rgb.png",
       "png_sha256": "835dadf846a956e467e2fa66dd4528e0f18a207501f7074f9eade442d63782be",
-      "mask_sha256": "e98588a21271d43b4ea2a9588513a6e8863e4bb565527e20848b5e81db96cb53"
+      "mask_sha256": "2e513c6efcc7804a45503e942d2c8a95a04d63aa40416f4008dca773dadcfffd",
+      "source_ink_box": [
+        5,
+        5,
+        57,
+        70
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2117,11 +3899,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 9,
       "rice": 4279235495,
       "key": 15895174205955718167,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#FF0FF3A7#4#1_rgb.png",
       "png_sha256": "baecb10f85e9693fb7c9220b71ddd75ed1d21828288ef39959e8ebf261362261",
-      "mask_sha256": "34ee33395c5ef8f23f596af4e76a84ae0d333aae9ba7fa45a718b2bee9c80b2b"
+      "mask_sha256": "c4930d5da85b45520f4af1b4f3a800c046175f2da00ea7c161df620debedbddb",
+      "source_ink_box": [
+        6,
+        4,
+        41,
+        93
+      ],
+      "ink_width": 41,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2130,11 +3923,22 @@
       "height": 11,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 8,
       "rice": 4271024812,
       "key": 15816308061619166140,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#FE92AAAC#4#1_rgb.png",
       "png_sha256": "e363fcc6871242add58e6238c0df4277a662e5004504094c8a0cc14e99be1218",
-      "mask_sha256": "7d3cd1402dd9f470dcddaacd6297f8003a4a6725be135553051563c022f65e99"
+      "mask_sha256": "7d3cd1402dd9f470dcddaacd6297f8003a4a6725be135553051563c022f65e99",
+      "source_ink_box": [
+        4,
+        5,
+        56,
+        88
+      ],
+      "ink_width": 56,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2143,11 +3947,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 2,
       "rice": 669988297,
       "key": 6437320065512448956,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#27EF35C9#4#1_rgb.png",
       "png_sha256": "fadb2bf3d56da238a92487ab153dcaa607f047df1afb134ce5ea56c052d9c762",
-      "mask_sha256": "52b214749125c03815ce2fd9d731c265e0335a739a8f9cb0ee25384852996f9c"
+      "mask_sha256": "f98d2e222bd8bad9359a5ed5df3477e37e9a647fd6bbe2491fe5094e14cfbf67",
+      "source_ink_box": [
+        6,
+        6,
+        49,
+        93
+      ],
+      "ink_width": 49,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2156,11 +3971,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 7,
       "rice": 734699210,
       "key": 9409642018355731760,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#2BCA9ECA#4#1_rgb.png",
       "png_sha256": "294606aa9f2c6b10a1efff251ee1f1ab1c09ddd49a17b02105ded562f60af2e4",
-      "mask_sha256": "25b62984a17ffaacefea0f91fd4d3448409d2b514121fbc216a8165a9f80eed3"
+      "mask_sha256": "c7e9f9c8daf195ecf1c323bcf204eab72f1c058ec93dc94e73f2cb97ad682d69",
+      "source_ink_box": [
+        5,
+        6,
+        17,
+        93
+      ],
+      "ink_width": 17,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2169,11 +3995,22 @@
       "height": 14,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 6,
       "rice": 1118270340,
       "key": 8906326103977472175,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#42A77384#4#1_rgb.png",
       "png_sha256": "c97b4127d8e888ba41b27ec17524861ed4e50f772747981b4d8364700a9eace7",
-      "mask_sha256": "4a739dcd7e45e9b45fa50584bc0007161d17951b6d3c7dc1f327f9440eddafa0"
+      "mask_sha256": "ef38420344b799ab77a1ebdb31ec6ddf9852460cfe227f1664db6e43aed3ab4d",
+      "source_ink_box": [
+        5,
+        5,
+        25,
+        112
+      ],
+      "ink_width": 25,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2182,11 +4019,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 2,
       "rice": 1635783643,
       "key": 2396771189634575751,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#618013DB#4#1_rgb.png",
       "png_sha256": "f0f3d82c8ce1afec9363d2c2a2c949373e5f0d215ed53dab28c9903950b1c2ef",
-      "mask_sha256": "171115dc8631074f7cf46f55b06e81196561b9a213ac328b0ca7a7a0aefa3d45"
+      "mask_sha256": "171115dc8631074f7cf46f55b06e81196561b9a213ac328b0ca7a7a0aefa3d45",
+      "source_ink_box": [
+        5,
+        6,
+        48,
+        93
+      ],
+      "ink_width": 48,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2195,11 +4043,22 @@
       "height": 12,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 7,
       "rice": 1110124576,
       "key": 11435438892148788696,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#422B2820#4#1_rgb.png",
       "png_sha256": "150696cc1e7afee643a18e6f515d1c899cc2abcce5ea45d2565eb49960575646",
-      "mask_sha256": "3adbb04e46c8c9e8db42c23221bd3e7a845c81a95b915dc1849c050dfccf1a9c"
+      "mask_sha256": "3adbb04e46c8c9e8db42c23221bd3e7a845c81a95b915dc1849c050dfccf1a9c",
+      "source_ink_box": [
+        6,
+        4,
+        16,
+        93
+      ],
+      "ink_width": 16,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2208,11 +4067,22 @@
       "height": 9,
       "stride": 16,
       "baseline": 3,
+      "kerningindex": 12,
       "rice": 679896341,
       "key": 6215686065069681239,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#28866515#4#1_rgb.png",
       "png_sha256": "21f5f675148b81062ba71a75d2d2316d83bd83437fee4260eaac54dbc14d6e05",
-      "mask_sha256": "8f4520e6c5575a362f5e3e34afa2eb9b53045db60a318283d27ff201071894a8"
+      "mask_sha256": "8f4520e6c5575a362f5e3e34afa2eb9b53045db60a318283d27ff201071894a8",
+      "source_ink_box": [
+        4,
+        6,
+        87,
+        69
+      ],
+      "ink_width": 87,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2221,11 +4091,22 @@
       "height": 9,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 12,
       "rice": 1584589787,
       "key": 6488214110860370454,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#5E72EBDB#4#1_rgb.png",
       "png_sha256": "0f514a9e7c116bd25bc25b2510cdce9a4d7488f387c112eae53ae3a34ff5a5a1",
-      "mask_sha256": "4367a9c23b1ef456f4961692c7fcb60130163137ed40a05583524335aea01490"
+      "mask_sha256": "33c3ba2a10704b366e0f4f88918680ddd192a7c16bf1f8d24bcc8f3ebeaa6034",
+      "source_ink_box": [
+        4,
+        5,
+        49,
+        69
+      ],
+      "ink_width": 49,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2234,11 +4115,22 @@
       "height": 9,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 8,
       "rice": 78060849,
       "key": 15392834086063321683,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#04A71D31#4#1_rgb.png",
       "png_sha256": "43b72df58d73b6ef47f7a94941783c85408be7e00e4848151f4210adde33bab1",
-      "mask_sha256": "0e42d9c34a91d2246870105e57021e5e6e8e56ecdc89d5fb4c1f6648f772f8a0"
+      "mask_sha256": "0e42d9c34a91d2246870105e57021e5e6e8e56ecdc89d5fb4c1f6648f772f8a0",
+      "source_ink_box": [
+        5,
+        5,
+        64,
+        70
+      ],
+      "ink_width": 64,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2247,11 +4139,22 @@
       "height": 11,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 8,
       "rice": 1690154391,
       "key": 18263966740296497871,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#64BDB597#4#1_rgb.png",
       "png_sha256": "0ad7361afbdba639443e1777eadfd81c09446e5463007b03af43a4bb25115c5d",
-      "mask_sha256": "7f685e0a5407a00adabaf13722a7a1ed7ff84a407bc5d4393d2e13f2f228c8c9"
+      "mask_sha256": "a12627cd53910e9d6d530fd51eaea1b19368cd00360adb61ee9b4086f379d021",
+      "source_ink_box": [
+        3,
+        5,
+        57,
+        87
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2260,11 +4163,22 @@
       "height": 11,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 8,
       "rice": 614879601,
       "key": 2041288916746685822,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#24A65171#4#1_rgb.png",
       "png_sha256": "56a9435dff82dcec9abc514df763dc8f2211b89d948759dad5e7552f7690c6d1",
-      "mask_sha256": "63471f9ff48423f73f580fa27c762d783348967c4d3d1872a0c4e74bfdae5688"
+      "mask_sha256": "4659426b32c1a545579edc06bd5c6b6b32f84d1d30ffa5c414ad8c7a5774b22b",
+      "source_ink_box": [
+        5,
+        5,
+        58,
+        87
+      ],
+      "ink_width": 58,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2273,11 +4187,22 @@
       "height": 9,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 11,
       "rice": 3684265717,
       "key": 8663208882096589985,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#DB996EF5#4#1_rgb.png",
       "png_sha256": "a60523bd882afd1c1605bf8754fa33a0c324e688a010d1a35662b156411d50bc",
-      "mask_sha256": "bdab66fac6b1164bbad3afab89d25016c2967ef1d208661fa48c728547fce589"
+      "mask_sha256": "6cb7685419a6fcb2bb2c603c36a6bb4ee403a7be0073f2cb0945bbfe2d73806b",
+      "source_ink_box": [
+        5,
+        5,
+        37,
+        69
+      ],
+      "ink_width": 34,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 3
     },
     {
       "font": "ZurichBold",
@@ -2286,11 +4211,22 @@
       "height": 9,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 8,
       "rice": 111861557,
       "key": 4270746037167649306,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#06AADF35#4#1_rgb.png",
       "png_sha256": "5f637a3931f3cc97985dffc11a5bf88e47be7aa87be9688c768f6aba78ec140b",
-      "mask_sha256": "68a953f9b0f0958d6a9286c93d46efe6273e318e2dde7ce699014bfb68f03f1c"
+      "mask_sha256": "092010cfbbcd0d36d2683792cddcc2a8859696272625e524ebbddee42996a188",
+      "source_ink_box": [
+        4,
+        5,
+        49,
+        70
+      ],
+      "ink_width": 49,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2299,11 +4235,22 @@
       "height": 10,
       "stride": 8,
       "baseline": 2,
+      "kerningindex": 9,
       "rice": 3686394089,
       "key": 8967386811743177964,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#DBB9E8E9#4#1_rgb.png",
       "png_sha256": "af919e8d3ec306c7c86819c6c9378d7fe3223713ed2c4a1b2de7cf30d3ad2da4",
-      "mask_sha256": "b47d3cbf4cee8fcdba0f34fcc2415324cfb1dda07e382c9b65d2129778abc565"
+      "mask_sha256": "b47d3cbf4cee8fcdba0f34fcc2415324cfb1dda07e382c9b65d2129778abc565",
+      "source_ink_box": [
+        7,
+        1,
+        39,
+        78
+      ],
+      "ink_width": 39,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2312,11 +4259,22 @@
       "height": 9,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 12,
       "rice": 2251152234,
       "key": 17423221101748087186,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#862DDB6A#4#1_rgb.png",
       "png_sha256": "c94a2856edbc27d78a2b41dad99dc148622aee00261f3c9e60332c8590f42bdc",
-      "mask_sha256": "043740f3b259f3aceece9d2178e25d932977ed9cd6e764bb4a1d5c21f89fe2a4"
+      "mask_sha256": "7c70fc46b4d513031343d0ae29cac0182040611a4b0134ddb24c84971dd8af82",
+      "source_ink_box": [
+        5,
+        6,
+        49,
+        71
+      ],
+      "ink_width": 49,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2325,11 +4283,22 @@
       "height": 9,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 10,
       "rice": 1272765102,
       "key": 7059979792583754074,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#4BDCDAAE#4#1_rgb.png",
       "png_sha256": "703c4a2816197cfb978bf04b9faa42bddcaff3d1051ce965ba7de3c9c38cea70",
-      "mask_sha256": "49d4063d384497176350af8549fe5d284d11462b5c093f7a1e9fb72d3a32f15b"
+      "mask_sha256": "49d4063d384497176350af8549fe5d284d11462b5c093f7a1e9fb72d3a32f15b",
+      "source_ink_box": [
+        4,
+        5,
+        56,
+        70
+      ],
+      "ink_width": 56,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2338,11 +4307,22 @@
       "height": 9,
       "stride": 16,
       "baseline": 3,
+      "kerningindex": 10,
       "rice": 2715329889,
       "key": 7149844615085482562,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#A1D8A561#4#1_rgb.png",
       "png_sha256": "97f645f527493444d2c3774a3eda5382cefe3230566dbe11a45f814a9c601976",
-      "mask_sha256": "d18566295f8b6752af71ab5b936a2b66765edbeecccbb3bae1d32485210105f6"
+      "mask_sha256": "cb3bace64221890129d15160d95bc15925cc87036f1b3302bc49e107d50adafc",
+      "source_ink_box": [
+        4,
+        7,
+        97,
+        69
+      ],
+      "ink_width": 97,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2351,11 +4331,22 @@
       "height": 9,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 8,
       "rice": 4019745036,
       "key": 2588950160031581114,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#EF98710C#4#1_rgb.png",
       "png_sha256": "8fc3bcf8fc4bcc9ab3df36ea069628a9630a798e659725b09a431229c71ea44c",
-      "mask_sha256": "93ec4b3731f198c45ffa4092f6d9c3a616b1aa1b3342cd0884aaa78e83104e78"
+      "mask_sha256": "995c963f72442dcd82d2c541d92e1ded76160b97006176955c5e274a49de7e6c",
+      "source_ink_box": [
+        3,
+        7,
+        58,
+        69
+      ],
+      "ink_width": 58,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2364,11 +4355,22 @@
       "height": 11,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 8,
       "rice": 1613757686,
       "key": 1596169411925195389,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#602FFCF6#4#1_rgb.png",
       "png_sha256": "79687be63fd6e135afed9dbc504cf0c56aa3b7d121c1648582f0dcaab662741d",
-      "mask_sha256": "72ec216eb1d98042a02a14ab3d19bf13a79429494cff180352076fd6b04eaa27"
+      "mask_sha256": "4b9f787a303b87ce66e8f31d9446ba3d1c655f7929e5f14b92871b0ede5f279d",
+      "source_ink_box": [
+        1,
+        5,
+        57,
+        86
+      ],
+      "ink_width": 57,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2377,11 +4379,22 @@
       "height": 9,
       "stride": 8,
       "baseline": 3,
+      "kerningindex": 8,
       "rice": 89441419,
       "key": 12934022109602124497,
       "source": "GoldenEye Texture Pack/Zurich/Lower Case/GOLDENEYE#0554C48B#4#1_rgb.png",
       "png_sha256": "0c00d097c779de10259b411f027f6a8ef2769cae5968fa5f5713758bb7a60fba",
-      "mask_sha256": "72ceb17480d5fac58c2d3ba6bb8478adb4cd5d62228b3f4472ca83cdab4dee51"
+      "mask_sha256": "d08d8d305c7966356ced5e240d042937ba19cf257359a71a39947ace71401aef",
+      "source_ink_box": [
+        5,
+        7,
+        49,
+        69
+      ],
+      "ink_width": 49,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2390,11 +4403,22 @@
       "height": 15,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 4206308731,
       "key": 13497675610933171407,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#FAB72D7B#4#1_rgb.png",
       "png_sha256": "ba5751bfe9e5e4fb17960cd2f0aa3fd1d60c8640dfae1120f3d949fe58634ffc",
-      "mask_sha256": "ca6084274b71c0e71ee07bdd53a2e3e100a384103fb62e122c4e02695474820d"
+      "mask_sha256": "db61d3b242de933a9a6626b44595f7615b740704f67024ce3898e97b7b212e5a",
+      "source_ink_box": [
+        5,
+        5,
+        49,
+        109
+      ],
+      "ink_width": 49,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2403,11 +4427,22 @@
       "height": 15,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 2258691737,
       "key": 14778978103464875402,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#86A0E699#4#1_rgb.png",
       "png_sha256": "a6b14c100b9ab683c58d46ad90b8fb4d45140b4df07901455f470903febbf7f4",
-      "mask_sha256": "45af0a22514338493e0d0ae1a621a037833d7c65db47efb0e67d47d4b5cd1cc1"
+      "mask_sha256": "9efff08ed4b13a482db7ee0cae2c7edd43bfb8b4a553df6f7a4401572818a746",
+      "source_ink_box": [
+        7,
+        4,
+        17,
+        117
+      ],
+      "ink_width": 17,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     },
     {
       "font": "ZurichBold",
@@ -2416,11 +4451,22 @@
       "height": 14,
       "stride": 8,
       "baseline": 0,
+      "kerningindex": 0,
       "rice": 2922606776,
       "key": 10187824623126793608,
       "source": "GoldenEye Texture Pack/Zurich/Misc/GOLDENEYE#AE3370B8#4#1_rgb.png",
       "png_sha256": "4e902224d85e81a2397837858c16fe6841380533941ca594aa4d6396a8c7262a",
-      "mask_sha256": "66c220c9c7de7795a669b3c94378cf66c792bb37a6a3adfafb4f670150e096e2"
+      "mask_sha256": "f55a90f48580dc826b74d3b02350ce974a83d6b56d4c50fe5da44753a55d19a4",
+      "source_ink_box": [
+        5,
+        5,
+        50,
+        109
+      ],
+      "ink_width": 50,
+      "horizontal_fit": false,
+      "vertical_fit": false,
+      "overhang_clip": 0
     }
   ]
 }

@@ -1432,6 +1432,22 @@ missing characters (both tildes) keep original rendering. Only matching fonts
 receive high-resolution images and smooth sampling; images/logos and ammo
 icons retain their existing behavior. Original and enhanced cache entries are
 distinct, and live setting changes invalidate the renderer's current bindings.
+
+Horizontal preparation preserves authored stroke coordinates within a bounded
+one-native-pixel ink overhang. Matching enhanced glyph quads/UV spans grow to
+show that ink, including scaled/rotated draws; native advances, kerning, measured
+line widths and wrapping stay unchanged. This replaces squeezing all ink into
+the original width, which reduced Bank Gothic `I` from an 11-texture-pixel source
+stroke to 7 (128/255 threshold). The correction affects 99 masks: 54 Bank Gothic
+and 45 Zurich Bold, including lowercase `i` and other letters. Two long
+punctuation masks (Bank Gothic dash/underscore) retain bounded horizontal fitting.
+Automatic full-font kerning checks trim only protruding fringe from Bank Gothic
+`p` (one texture column) and Zurich Bold `r` (three) to avoid touching ink in
+`pJ`, `rp` and `ry`; their stems are not rescaled. Source bounds, native kerning
+class and preparation decisions are recorded in `sources.json`. Existing vertical
+fitting remains, including 13 over-height source images; digit-height policy below
+is still deferred. Original/unknown fonts and Japanese fallback are unchanged.
+
 The generator verifies a pinned source ZIP and records source-image hashes;
 it adapts pack padding and uses lossless RLE storage. Regeneration requires
 Pillow; ordinary builds do not. Release packages include CC0/credits and
@@ -1449,16 +1465,32 @@ proportions while deferring whether to normalize digits and the scope of any
 adjustment; this documentation does not change rendering or assets.
 
 **Sources:** [font replacement](port/fast3d/enhanced_fonts.cpp),
+[glyph metrics API](port/fast3d/enhanced_fonts.h),
+[generated masks](port/fast3d/fonts/gepd_font_data.inc),
 [community masks and provenance](port/fast3d/fonts/sources.json),
 [renderer](port/fast3d/gfx_pc.cpp), [settings](port/src/video.c),
 [frontend](src/game/front.c), [watch](port/src/port_watchpages.c),
 [generator and regeneration guide](scripts/port/enhanced_fonts.md),
 [generator](scripts/port/generate_enhanced_fonts.py),
 [tests](scripts/port/test_enhanced_fonts.py),
+[C++ extent/decoder tests](scripts/port/test_enhanced_fonts.cpp),
 [visual audit](scripts/port/audit_fonts.ps1),
 [packaging](scripts/port/package_windows.py),
 [credits](tools/THIRD_PARTY_NOTICES.txt), [license scope](LICENSE).
-**Validation:** Windows MinGW and Linux video builds passed. ROM-free tests
+**Validation:** Horizontal-preservation regressions check all 186 mask hashes,
+width bounds, authored narrow strokes and all 17,298 ordered glyph pairs using
+native kerning/baselines. C++ tests cover drawing extents across HUD/menu scales,
+invalid/partial spans and bounded decoding. The ten font tests pass and regeneration
+reproduces masks/provenance byte-for-byte from the SHA256-verified source archive.
+Native Windows/optimized Wasm builds, ADS/wardrobe regressions, TypeScript,
+146 browser unit tests and site allowlist/logo checks pass. Native wide/4:3
+toast and video/difficulty-menu captures plus Edge toast/menu captures are
+visually reviewed, including rotated tabs. Native setting-off audits produce
+zero enhanced uploads; setting-on menu audits confirm replacements. Both
+independent gallery passes reproduce 72 views/35 icons unchanged; integrity and
+eight workflow tests pass. Private evidence is under `build/font-stroke-audit`,
+with browser acceptance recorded in WEB-010.
+Earlier Windows MinGW and Linux video builds passed. ROM-free tests
 check all 186 native mappings, both absent tildes, bounded decoding, malformed
 RLE/size rejection and decoded antialiasing. Regeneration reproduced the output
 byte-for-byte. Isolated 1920x1080 audits compared enhanced/original video menus,

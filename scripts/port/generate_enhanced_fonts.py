@@ -44,15 +44,22 @@ def native_glyphs(font):
     table, pixels = words("fontchartable"), words("fontbytes")
     image = bytes(169*4) + struct.pack(">"+str(len(table))+"I", *table) + struct.pack(">"+str(len(pixels))+"I", *pixels)
     for index in range(94):
-        _, baseline, height, width, _, offset = table[index*6:index*6+6]
+        _, baseline, height, width, kerningindex, offset = table[index*6:index*6+6]
         stride = (width+7) & ~7
         raw = image[offset:offset+stride*height]
         cleaned = bytearray(raw)
         for row in range(height):
             cleaned[row*stride+width:(row+1)*stride] = bytes(stride-width)
         yield dict(font=font, character=chr(index+33), width=width, height=height, stride=stride,
-                   baseline=baseline, rice=rice_fingerprint(raw, stride, height),
+                   baseline=baseline, kerningindex=kerningindex, rice=rice_fingerprint(raw, stride, height),
                    key=fingerprint(cleaned))
+
+
+def native_kerning(font):
+    text = (ROOT/"assets/font"/("font"+font+".c")).read_text(encoding="utf-8")
+    body = re.search(r"font"+font+r"_kerning\[[^\]]*\]\s*=\s*\{(.*?)\}", text, re.S)[1]
+    return [int(word,16) if int(word,16) < 0x80000000 else int(word,16)-0x100000000
+            for word in re.findall(r"0x[0-9A-Fa-f]+", body)]
 
 
 def encode(data):
@@ -65,6 +72,61 @@ def encode(data):
     return result
 
 
+def mask_layout(source_size, ink_box, glyph):
+    """Keep authored X coordinates, allowing one native pixel of ink overhang.
+
+    Cursor advances/kerning remain native. Bound exceptional long punctuation
+    to that spare pixel, and retain the existing vertical fitting policy.
+    """
+    width, height = glyph["stride"]*8, glyph["height"]*8
+    limit = min(width, (glyph["width"]+1)*8)
+    box = ink_box or (0, 0, 0, 0)
+    crop = (min(source_size[0], max(limit, box[2])),
+            min(source_size[1], max(height, box[3])))
+    fit = (min(crop[0], limit), min(crop[1], height))
+    return dict(canvas=(width, height), crop=crop, fit=fit,
+                horizontal_fit=box[2] > limit, vertical_fit=box[3] > height)
+
+
+def prepare_mask(mask, glyph):
+    from PIL import Image
+    layout = mask_layout(mask.size, mask.getbbox(), glyph)
+    mask = mask.crop((0, 0, *layout["crop"]))
+    if layout["fit"] != layout["crop"]:
+        mask = mask.resize(layout["fit"], Image.Resampling.LANCZOS)
+    canvas = Image.new("L", layout["canvas"])
+    canvas.paste(mask, (0, 0))
+    return canvas, layout
+
+
+def ink_rows(data, stride, baseline):
+    """Opaque ink in native-baseline-aligned rows, independent of Pillow."""
+    return {y+baseline*8: sum(1 << x for x,value in enumerate(data[y*stride:(y+1)*stride]) if value >= 128)
+            for y in range(len(data)//stride)}
+
+
+def overhang_limits(glyphs, kerning):
+    """Trim only protruding fringe that would touch a tightly kerned neighbor.
+
+    Never rescale the letter's stem or change advances. Compare the complete
+    font before trimming, so output does not depend on glyph iteration order.
+    """
+    limits = []
+    for first in glyphs:
+        a = first["glyph"]
+        limit = first["ink_width"]
+        native = a["width"]*8
+        for second in glyphs:
+            b = second["glyph"]
+            advance = (a["width"]+1-kerning[a["kerningindex"]*13+b["kerningindex"]])*8
+            for y,row in first["rows"].items():
+                overlap = (row & (second["rows"].get(y,0) << advance)) >> native
+                if overlap:
+                    limit = min(limit, native+(overlap & -overlap).bit_length()-1)
+        limits.append(limit)
+    return limits
+
+
 def generate(pack, output, manifest):
     from PIL import Image
     if hashlib.sha256(pack.read_bytes()).hexdigest() != PACK_SHA256:
@@ -74,6 +136,7 @@ def generate(pack, output, manifest):
         names = {int(name.split("#")[1],16): name for name in archive.namelist()
                  if "/GoldenEye Texture Pack/" in name and name.endswith("#4#1_rgb.png")}
         for font in ("BankGothic", "ZurichBold"):
+            prepared = []
             for glyph in native_glyphs(font):
                 name = names.get(glyph["rice"])
                 if not name:
@@ -83,29 +146,33 @@ def generate(pack, output, manifest):
                     continue
                 png = archive.read(name)
                 mask = Image.open(io.BytesIO(png)).convert("RGB").getchannel("R")
-                width, height = glyph["stride"]*8, glyph["height"]*8
-                # Packs include power-of-two padding. Preserve the authored 8x
-                # coordinates, fitting rare overhanging ink into its native cell.
                 box = mask.getbbox()
-                ink_width = glyph["width"]*8
-                if box and (box[2] > ink_width or box[3] > height):
-                    # Exclude unused power-of-two padding before fitting ink;
-                    # shrinking the whole padded tile would make letters narrow.
-                    mask = mask.crop((0, 0, min(mask.width, max(ink_width, box[2])),
-                                      min(mask.height, max(height, box[3]))))
-                    mask = mask.resize((min(mask.width, ink_width), min(mask.height, height)), Image.Resampling.LANCZOS)
-                canvas = Image.new("L", (width, height))
-                canvas.paste(mask.crop((0, 0, min(mask.width, ink_width), min(mask.height, height))), (0, 0))
+                canvas, layout = prepare_mask(mask, glyph)
+                prepared.append(dict(glyph=glyph, canvas=canvas, layout=layout, box=box, name=name, png=png,
+                                     ink_width=canvas.getbbox()[2],
+                                     rows=ink_rows(canvas.tobytes(), canvas.width, glyph["baseline"])))
+            for entry,limit in zip(prepared, overhang_limits(prepared, native_kerning(font))):
+                glyph = entry["glyph"]
+                canvas, layout, png, name, box = (entry[key] for key in ("canvas", "layout", "png", "name", "box"))
+                clipped = entry["ink_width"]-limit
+                if clipped:
+                    canvas.paste(0, (limit, 0, canvas.width, canvas.height))
+                ink_width = canvas.getbbox()[2]
                 encoded = encode(canvas.tobytes())
-                records.append((glyph["key"], glyph["stride"], glyph["height"], len(payload), len(encoded)))
+                records.append((glyph["key"], glyph["stride"], glyph["height"],
+                                glyph["width"], ink_width, len(payload), len(encoded)))
                 sources.append(dict(glyph, source=name.split("/",1)[1], png_sha256=hashlib.sha256(png).hexdigest(),
-                                    mask_sha256=hashlib.sha256(canvas.tobytes()).hexdigest()))
+                                    mask_sha256=hashlib.sha256(canvas.tobytes()).hexdigest(),
+                                    source_ink_box=box, ink_width=ink_width,
+                                    horizontal_fit=layout["horizontal_fit"], vertical_fit=layout["vertical_fit"],
+                                    overhang_clip=clipped))
                 payload.extend(encoded)
     if len({record[0] for record in records}) != len(records):
         raise ValueError("Ambiguous native glyph fingerprints")
     lines = ["// Generated by scripts/port/generate_enhanced_fonts.py; community masks, CC0.",
              "// Source: "+SOURCE+" @ "+COMMIT, "static const FontRecord font_records[] = {"]
-    lines += [f"    {{0x{key:016x}ULL, {w}, {h}, {offset}, {size}}}," for key,w,h,offset,size in sorted(records)]
+    lines += [f"    {{0x{key:016x}ULL, {w}, {h}, {gw}, {iw}, {offset}, {size}}},"
+              for key,w,h,gw,iw,offset,size in sorted(records)]
     lines += ["};", "static const uint8_t font_masks[] = {"]
     lines += ["    "+",".join(str(b) for b in payload[i:i+32])+"," for i in range(0,len(payload),32)]
     lines += ["};", ""]

@@ -723,6 +723,29 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**Enhanced font stroke preservation, 2026-10-25:** Shared font preparation now
+preserves authored horizontal strokes with bounded ink overhang instead of
+squeezing them into native glyph widths. A small renderer hook extends only
+matching enhanced glyph quads/UVs; native advances, kerning, wrapping, vertical
+metrics and font fallback remain. Bank Gothic `I` retains its 11-texture-pixel
+source stroke (previously 7); 99 masks across both font families are corrected.
+Dash/underscore fitting and kerning-aware fringe trimming keep native spacing
+clear; independent tests check all 17,298 supported ordered glyph pairs.
+Ten font tests and deterministic mask/provenance regeneration pass, as do native
+Windows/optimized Wasm builds, ADS/wardrobe regressions, TypeScript, 146 browser
+unit tests and site allowlist/logo audits. Native wide/4:3 toast and video/
+difficulty-menu captures are reviewed, including original-font fallback with
+zero enhanced uploads. Edge renders the actual-ROM failed-objective toast and
+both menu pages without page errors; rotated tab lettering is reviewed too.
+Both independent gallery passes reproduce 72 views/35 icons unchanged; integrity,
+eight workflow tests and Bright Builds checks pass. Evidence remains private
+under `build/font-stroke-audit`.
+The isolated Bunker audit also logs the transient GL `0x0502` diagnostic present
+in the pre-change `build/hud-layout/web-before` capture; neither browser menu
+audit logs it. No JavaScript page errors occur in the three current audits.
+Next action: preserve authored stroke widths/native spacing when updating fonts,
+and verify normal main/Pages publication gates.
+
 **Objective typography and clock spacing, 2026-10-25:** Actual-ROM native/Edge
 captures reproduce the taller initial capital in sentence-case objective text:
 Bank Gothic's lowercase glyphs are small capitals. The toast description now

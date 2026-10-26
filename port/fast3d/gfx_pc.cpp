@@ -6208,7 +6208,7 @@ static void gfx_ge_draw_rect_pinned(int32_t ulx, int32_t uly, int32_t lrx, int32
 
 static void gfx_dp_texture_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry, uint8_t tile, int16_t uls,
                                      int16_t ult, int16_t dsdx, int16_t dtdy, bool flip) {
-    const bool precise = s_GeRectFracPending; /* one-shot: this rect only */
+    bool precise = s_GeRectFracPending; /* one-shot: this rect only */
     s_GeRectFracPending = false;
 
     /* GE: zero-extent texrects occur (text path with bailed textures); the
@@ -6216,6 +6216,22 @@ static void gfx_dp_texture_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int3
      * extent - SIGFPE. Match hardware: draw nothing. */
     if (lrx <= ulx || lry <= uly) {
         return;
+    }
+
+    /* Enhanced ink may overhang its native advance box. Grow only the quad
+     * and matching UV span; the game's pen positions/measurements stay native. */
+    if (s_GeTextGlyphs && gfx_enhanced_fonts && rdp.texture_tile[tile].fmt == G_IM_FMT_I
+        && rdp.texture_tile[tile].siz == G_IM_SIZ_8b) {
+        const auto& load = rdp.loaded_texture[rdp.texture_tile[tile].tmem];
+        const auto stride = rdp.texture_tile[tile].line_size_bytes;
+        const auto *maybeFont = stride ? enhanced_fonts::find(load.addr, load.size_bytes, stride, load.size_bytes/stride) : nullptr;
+        if (maybeFont) {
+            auto& edge = flip ? lry : lrx;
+            const auto start = flip ? uly : ulx;
+            const auto extent = enhanced_fonts::drawExtent(*maybeFont, edge-start, dsdx, uls-rdp.texture_tile[tile].uls*8);
+            precise |= extent != edge-start;
+            edge = start+extent;
+        }
     }
 
     /* Filtered original and enhanced glyphs: grow half a texel per side
