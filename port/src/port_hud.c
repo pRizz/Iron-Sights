@@ -25,6 +25,7 @@
 #include "port_weapon_images.h"
 #include "port_icon_cache.h"
 #include "port_wardrobe.h"
+#include "port/fast3d/hud_text_offset.h"
 #include "game/file.h"
 #include "boss.h"
 
@@ -512,8 +513,11 @@ static Gfx *phDrawStrip(Gfx *g)
         const s32 top = (s32)(y+17*scale+1.5f);
         const s32 maxWidth = width < 108 ? width-12 : 96;
         const char *name = phWeaponName(&weapons[selected]);
-        g = phTextAligned(g, name, center+1, top+1, 0.5f,
+        /* Shift after viewport/HUD scaling: one physical framebuffer pixel. */
+        gDPNoOpTag(g++, portHudTextOffsetTag(1, 1));
+        g = phTextAligned(g, name, center, top, 0.5f,
             phOpacity(0x000000dd, captionOpacity), maxWidth, TRUE);
+        gDPNoOpTag(g++, portHudTextOffsetTag(0, 0));
         g = phTextAligned(g, name, center, top, 0.5f,
             phOpacity(0xf2ffdcff, captionOpacity), maxWidth, TRUE);
     }

@@ -28,6 +28,7 @@
 #endif
 #include <PR/gbi.h>
 #include "gbiex_compat.h" // PD EXT opcodes/bits absent from GE's gbi.h
+#include "hud_text_offset.h"
 
 #include "platform.h"
 
@@ -469,6 +470,7 @@ static float s_GeHudPivotX = 0.f, s_GeHudPivotY = 0.f;
  * so the crosshair is not snapped to the 10.2 grid. */
 static bool s_GeRectFracPending = false, s_GeRectFracOn = false;
 static float s_GeRectFrac[4];
+static PortHudTextOffset s_GeTextPixelOffset = {0, 0};
 /* a wrap mode of our own, beside G_TX_WRAP / MIRROR / CLAMP: outside the
  * texture is TRANSPARENT (gfx_opengl.cpp maps it to GL_CLAMP_TO_BORDER) */
 #define GE_TX_BORDER 0x10
@@ -5822,6 +5824,13 @@ static void gfx_draw_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lr
     ulxf = gfx_adjust_x_for_aspect_ratio(ulxf);
     lrxf = gfx_adjust_x_for_aspect_ratio(lrxf);
 
+    if (s_GeTextGlyphs) {
+        const float dx = portHudTextOffsetNdc(s_GeTextPixelOffset.x, gfx_current_dimensions.width);
+        const float dy = portHudTextOffsetNdc(s_GeTextPixelOffset.y, gfx_current_dimensions.height);
+        ulxf += dx; lrxf += dx;
+        ulyf -= dy; lryf -= dy;
+    }
+
     struct LoadedVertex* ul = &rsp.loaded_vertices[MAX_VERTICES + 0];
     struct LoadedVertex* ll = &rsp.loaded_vertices[MAX_VERTICES + 1];
     struct LoadedVertex* lr = &rsp.loaded_vertices[MAX_VERTICES + 2];
@@ -7463,6 +7472,8 @@ static void gfx_run_dl(Gfx* cmd) {
                     s_GeHudScale = (cmd->words.w1 & 0x00FFFFFFu) != 0x00FFFFFFu;
                     s_GeHudPivotX = (float) ((cmd->words.w1 >> 12) & 0xFFFu);
                     s_GeHudPivotY = (float) (cmd->words.w1 & 0xFFFu);
+                } else if ((cmd->words.w1 & 0xff000000u) == PORT_HUD_TEXT_OFFSET_TAG) {
+                    s_GeTextPixelOffset = portHudTextOffsetDecode(cmd->words.w1);
                 } else if ((cmd->words.w1 >> 24) == 0x59u) {
                     /* the next rect's edge fractions (bondwalk2.c portRectPreciseTag) */
                     for (int i = 0; i < 4; i++) {
@@ -8090,6 +8101,7 @@ extern "C" void gfx_run(Gfx* commands) {
     s_GeRectFracPending = false;
 
     // puts("New frame");
+    s_GeTextPixelOffset = {0, 0};
 
     if (!gfx_wapi->start_frame()) {
         dropped_frame = true;

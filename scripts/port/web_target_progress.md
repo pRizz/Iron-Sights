@@ -723,6 +723,21 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**Weapon-caption shadow, 2026-10-25:** The selected weapon-icon caption replaces
+its enlarged one-HUD-unit drop shadow with a one-framebuffer-pixel right/down
+offset, applied only to a scoped glyph run after aspect/HUD projection. Shared
+encoding/projection lives in `port/fast3d/hud_text_offset.h`, connected by small
+HUD/renderer hooks. Foreground layout, font size and caption fading are retained;
+browser CSS scaling still scales the complete framebuffer. HUD/ADS regressions
+and native/optimized Wasm builds pass, as do TypeScript, 146 browser unit tests
+and site allowlist/logo checks. Matched 1600x900 before/after and actual
+1920x1080/3840x2160 drawable captures are visually reviewed; the isolated capture
+overrides SDL's initial display clamp and verifies BMP dimensions. Edge renders
+the actual-ROM icon caption using a validated private icon cache without page
+errors. Both gallery passes reproduce 72 views/35 icons unchanged; integrity and
+eight workflow tests pass. Evidence stays private under `build/text-shadow`.
+Next action: preserve scoped offset/reset behavior and normal main/Pages gates.
+
 **Throwing-knife ADS, 2026-10-25:** Shared C presentation adds Butt Centered
 (default) and Tip Centered under Gameplay > General Settings > Knife ADS,
 persisted as `[display] knife_ads=0/1` in the existing native/browser settings.

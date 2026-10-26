@@ -294,6 +294,19 @@ int main(void)
         assert(start >= 0 && start + j <= 32 && start <= i && start + j > i);
     }
     portHudReset(1); assert(phState[1].hitTime == 0);
+    {
+        const unsigned extents[] = {320, 540, 1080, 1920, 2160, 3840};
+        const PortHudTextOffset offset = portHudTextOffsetDecode(portHudTextOffsetTag(1, 1));
+        const PortHudTextOffset reset = portHudTextOffsetDecode(portHudTextOffsetTag(0, 0));
+        const PortHudTextOffset negative = portHudTextOffsetDecode(portHudTextOffsetTag(-1, -2));
+        assert(offset.x == 1 && offset.y == 1 && reset.x == 0 && reset.y == 0);
+        assert(negative.x == -1 && negative.y == -2);
+        for (i = 0; i < sizeof(extents)/sizeof(extents[0]); i++) {
+            const f32 pixels = portHudTextOffsetNdc(offset.x, extents[i]) * extents[i] * .5f;
+            assert(pixels > .99999f && pixels < 1.00001f);
+        }
+        assert(portHudTextOffsetNdc(1, 0) == 0);
+    }
     assert(portHudOptionGet("hit_markers", &value) && value == 1);
     puts("HUD checks passed: settings, idle fading/gauge geometry, icon coverage/decoding, per-player feedback, direction, queued objectives, inventory filtering/scrolling, 30/60/120/240 Hz.");
     return 0;

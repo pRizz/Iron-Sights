@@ -686,7 +686,13 @@ These images replace the initial hand-drawn vector silhouettes. Cached textures
 and a subtle edge keep the icons readable without extra model rendering in
 normal gameplay; the selection highlight and strip scrolling remain intact.
 The selected icon also shows its weapon name centered underneath, with a
-shadow for contrast and viewport-edge clamping. The caption stays opaque for
+shadow for contrast and viewport-edge clamping. That shadow now shifts one
+framebuffer pixel right/down after projection, aspect and HUD scaling, replacing
+the original one-HUD-unit offset that expanded several pixels on large displays.
+Shadow/foreground share the same centered/clamped layout. The scoped font-only
+`G_NOOP` tag is decoded by the PC/WebGL renderer, reset before foreground text
+and at frame start, and does not shift other glyph runs or non-font rectangles.
+Browser CSS scaling still scales the complete framebuffer. The caption stays opaque for
 three seconds after selection, then fades to zero over one second; the icon
 strip retains its separate 20% idle opacity. Icon mode reserves a small label
 row above the ammo counters, including after the name disappears, and pickup
@@ -694,7 +700,20 @@ messages account for that row. Text fallback builds keep the text-only layout.
 HUD timing tests cover complete caption disappearance and restoration on
 weapon changes at 30/60/120/240 Hz. Solo wide/4:3 and four-player captures
 checked placement, idle disappearance and selection refresh; Windows/Linux
-builds and ADS/settings regression tests passed.
+builds and ADS/settings regression tests passed. The tighter shadow's shared
+[offset encoding/projection helper](port/fast3d/hud_text_offset.h),
+[HUD emission](port/src/port_hud.c) and small
+[renderer hook](port/fast3d/gfx_pc.cpp) keep layout/font sizing intact. HUD
+regressions check signed tag/reset decoding and a one-framebuffer-pixel shift
+across 320–3840 output extents, including zero-size handling. Native Windows/
+optimized Wasm builds, HUD/ADS checks, TypeScript, 146 browser unit tests and site
+allowlist/logo checks pass. A matched 1600x900 before/after crop and verified
+1920x1080/3840x2160 drawable captures show the tighter shadow. The isolated
+capture resizes the actual SDL game window after its display-size clamp, with
+BMP dimensions verified. Edge's actual-ROM caption check uses a validated local
+icon cache; no cache/ROM/captures enter Git. Both gallery passes reproduce all
+72 views and 35 icons unchanged; integrity/eight workflow tests pass. Evidence
+is private under `build/text-shadow`, with publication tracked in WEB-010.
 
 The generation script runs an isolated exporter with fixed camera, part poses
 and metallic reflection vectors. Repeated black/white captures must match
