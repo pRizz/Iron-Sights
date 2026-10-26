@@ -696,6 +696,22 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**Shared rifle ADS proportions, 2026-10-25:** The requested thicker hands/arms
+use the existing fork-owned `ads_hands.c` profile on desktop and web. Grip scale
+0.045→0.052 enlarges hands, wrist/cuff and watch together by about 16%; body bulk
+2.3→2.5 makes the forearm about 26% wider/deeper overall. Grip anchors, watch
+proportions, native pistol/chop/icon transforms and source UV/material data stay
+intact. The arm guide and ADS regression adopt the deliberate size change.
+ADS/wardrobe regressions, native Windows and optimized Wasm builds, logo policy
+and site allowlist pass. A native 20-gun/220-transition audit and Jungle/Snow KF7
+raise/lower samples were visually reviewed; private evidence is indexed by
+`build/ads-thickness/*-audit.log`. Both independent gallery passes reproduce all
+72 views. All 12 changed six-outfit KF7/Klobb ADS views were reviewed; the other
+60 views and all 35 icons remain byte-identical. Gallery integrity and its eight
+workflow tests pass. No upstream-owned source file changed. Next action: confirm
+the proportions during ordinary play on physical mobile/desktop hardware;
+retain the normal Pages publication checks.
+
 **CRT startup refinement, 2026-10-25:** First-visit native preparation now starts
 as soon as ROM/runtime validation permits, overlapping insertion and TV flight.
 Real byte/program progress and indeterminate stages render on the CRT through

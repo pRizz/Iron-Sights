@@ -4,17 +4,17 @@ Hands, wardrobe arms and rifle poses have different owners. Keep these boundarie
 when adjusting their appearance; a uniform scale or shared material override can
 fix one pose while breaking another.
 
-| Region | Owner | Changes allowed |
-| --- | --- | --- |
-| Native pistol palm/fingers | Original weapon model and `model.c` | Suppress only proximal forearm triangles in a frame-owned display-list copy. Retain original vertices, UVs, RGBA, matrix/material/LOD commands, triangle order and native model render setup. |
-| Wrist interface | `port_native_arms.c` measured joint | Fit the added arm to the native hand, never enlarge or move the native hand to fit the arm. Both sides must use the same nonplanar ring, including inserted edge corners. |
-| Wardrobe forearm/cuff | Pause-watch model and shared mesh builder | Retarget the arm behind its measured wrist. Preserve UVs/material ownership; clothing must not become skin. Close the clothing rim with its own material. |
-| Rifle grip hand | Closed PP7 hand plus rigid pose | One rigid transform and fixed hand scale. No independent finger curl or forearm bulk applied to hand vertices. |
-| Rifle forearm body | `sAdsArmProfile` in `ads_hands.c` | Body bulk ramps to 2.3 after a protected 40-native-unit wrist band, over 35 units. This profile is used only for added long-gun ADS arms; pistols, chopping arms and icons use separate transforms. The hand, wrist seam and watch must not change when tuning this profile. |
-| Left watch | Original watch meshes and grip roll | Preserve case/face proportions, moving clock hands, arm/cuff fit and grip orientation. Complete the pause model's missing bracelet underside on left long-gun arms from the arm-slab hull and original metal material. Right hands have no watch. Native pistol/chop/icon transforms stay separate. |
-| Skin shading | Native forearm material mapping | Match generated wrist UV/RGB to the original weapon's same-material skin triangles; keep geometry and alpha fixed. Never recolor/remap the stock hand or change clothing/watch UVs to hide a skin seam. |
-| Pistol hand/sleeve occlusion | First-person weapon depth layer | Both native hands and added arms use depth testing in the same near projection. A sleeve in front must cover skin regardless of display-list order. Restore the scene projection and clear weapon depth state after each weapon draw. |
-| ADS fade | Shared color/depth topology | Same triangles in both passes; depth lists contain geometry only. Opaque draws omit unused depth lists. |
+| Region                       | Owner                                     | Changes allowed                                                                                                                                                                                                                                                                                     |
+| ---------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Native pistol palm/fingers   | Original weapon model and `model.c`       | Suppress only proximal forearm triangles in a frame-owned display-list copy. Retain original vertices, UVs, RGBA, matrix/material/LOD commands, triangle order and native model render setup.                                                                                                       |
+| Wrist interface              | `port_native_arms.c` measured joint       | Fit the added arm to the native hand, never enlarge or move the native hand to fit the arm. Both sides must use the same nonplanar ring, including inserted edge corners.                                                                                                                           |
+| Wardrobe forearm/cuff        | Pause-watch model and shared mesh builder | Retarget the arm behind its measured wrist. Preserve UVs/material ownership; clothing must not become skin. Close the clothing rim with its own material.                                                                                                                                           |
+| Rifle grip hand              | Closed PP7 hand plus rigid pose           | One rigid transform and fixed 0.052 hand scale. No independent finger curl or forearm bulk applied to hand vertices. The palm origin remains anchored to the weapon's grip.                                                                                                                         |
+| Rifle forearm body           | `sAdsArmProfile` in `ads_hands.c`         | Body bulk ramps to 2.5 after a protected 40-native-unit wrist band, over 35 units. This profile is used only for added long-gun ADS arms; pistols, chopping arms and icons use separate transforms. Body-bulk tuning must not change the hand, wrist seam or watch.                                 |
+| Left watch                   | Original watch meshes and grip roll       | Preserve case/face proportions, moving clock hands, arm/cuff fit and grip orientation. Complete the pause model's missing bracelet underside on left long-gun arms from the arm-slab hull and original metal material. Right hands have no watch. Native pistol/chop/icon transforms stay separate. |
+| Skin shading                 | Native forearm material mapping           | Match generated wrist UV/RGB to the original weapon's same-material skin triangles; keep geometry and alpha fixed. Never recolor/remap the stock hand or change clothing/watch UVs to hide a skin seam.                                                                                             |
+| Pistol hand/sleeve occlusion | First-person weapon depth layer           | Both native hands and added arms use depth testing in the same near projection. A sleeve in front must cover skin regardless of display-list order. Restore the scene projection and clear weapon depth state after each weapon draw.                                                               |
+| ADS fade                     | Shared color/depth topology               | Same triangles in both passes; depth lists contain geometry only. Opaque draws omit unused depth lists.                                                                                                                                                                                             |
 
 ## Protected native pistol path
 
@@ -47,6 +47,16 @@ vertices. The shared wardrobe mesh stays immutable; native pistols, chopping
 arms and icon generation do not use `adsGripPoint` or `sAdsArmProfile`. This
 allows independent rifle proportions while retaining consistent wardrobe
 textures and wrist/watch interfaces, without separate duplicated source models.
+
+The owner's 2026-10-25 request explicitly enlarges the added long-gun ADS hands
+as well as their arms. The fixed grip scale increases from 0.045 to 0.052
+(about 16%), uniformly including the connected wrist, cuff and watch. Hand and
+watch proportions, UVs/materials, finger poses and source vertices remain intact;
+the generated instances grow together around the same grip origin. The body
+multiplier increases from 2.3 to 2.5, for about 26% more forearm width/depth after
+the combined scale change. Protected-band/ramp lengths in source space and elbow
+targets remain unchanged. This intentional size adjustment supersedes the older
+fixed-scale value; native pistol/chop/icon transforms retain their existing size.
 
 The original pause bracelet models its upper surface and sides, leaving an
 open underside. `portArmMeshBuildWatchBack` completes that underside for long-gun

@@ -191,7 +191,12 @@ int main(void)
                         nativeLength+=(a.f[d]-b.f[d])*(a.f[d]-b.f[d]);
                         posedLength+=(pa.f[d]-pb.f[d])*(pa.f[d]-pb.f[d]);
                     }
-                    assert(posedLength/nativeLength>.517f && posedLength/nativeLength<.520f);
+                    assert(posedLength/nativeLength>.691f && posedLength/nativeLength<.694f); /* (.052*16)^2 */
+                    /* Enlarging the rigid grip keeps the palm origin anchored
+                     * to the weapon instead of shifting its contact point. */
+                    a=(coord3d){0,0,0};
+                    adsGripPoint(&a,&pa,PORT_ARM_HAND,&space,&arm);
+                    for (s32 d=0;d<3;d++) assert(fabsf(pa.f[d]-16*arm.palm.f[d])<.001f);
                     adsGripPoint(&space.wrist,&pa,PORT_ARM_HAND,&space,&arm);
                     adsGripPoint(&space.wrist,&join,PORT_ARM_FOREARM,&space,&arm);
                     assert(!memcmp(&pa,&join,sizeof(pa)));
@@ -203,7 +208,7 @@ int main(void)
                     adsGripPoint(&a,&pa,PORT_ARM_FOREARM,&space,&arm);
                     posedLength=0;
                     for (s32 d=0;d<3;d++) posedLength+=(pa.f[d]-elbow.f[d])*(pa.f[d]-elbow.f[d]);
-                    assert(posedLength>274.21f && posedLength<274.26f); /* (10*.045*16*2.3)^2 */
+                    assert(posedLength>432.62f && posedLength<432.66f); /* (10*.052*16*2.5)^2 */
                     /* Forearm shaping must never change a hand or watch,
                      * even for points outside the protected wrist band. */
                     adsGripPoint(&a,&pa,PORT_ARM_HAND,&space,&arm);

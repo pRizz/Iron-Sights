@@ -87,10 +87,11 @@ static void adsUnit(coord3d *v)
 
 /* Rifle/SMG/shotgun ADS shaping only; native pistol/chop arms and icon
  * generation do not use this profile. The authored closed PP7 hand remains
- * rigid: only the proximal forearm stretches and widens behind the cuff. */
+ * uniformly scaled with its wrist/cuff/watch: only the proximal forearm
+ * stretches and widens independently behind the cuff. */
 static const struct {
     f32 handScale,protectedWrist,bulkRamp,forearmBulk;
-} sAdsArmProfile={.045f,40,35,2.3f};
+} sAdsArmProfile={.052f,40,35,2.5f};
 
 static void adsGripPoint(const coord3d *source,coord3d *target,s32 part,const PortGripSpace *space,void *context)
 {

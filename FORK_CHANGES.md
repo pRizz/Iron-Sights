@@ -336,21 +336,39 @@ single curl previously applied to the open watch hand, which distorted fingers
 and could fold skin around the wrist. Only main-bone skin triangles are used;
 weapon metal and reload-only hands are excluded. The same measured native wrist
 interface joins the hand and wardrobe forearm. The hand stays rigid, and only
-the proximal arm stretches toward the elbow. Its body now smoothly increases
-to 2.3 times the native width/depth behind the protected wrist/cuff region,
-restoring rifle forearm volume without enlarging fingers, moving the wrist
-join or distorting the watch. Hand scale, protected wrist length, bulk ramp
+the proximal arm stretches toward the elbow. The owner's additional thickness
+request increases the rigid grip scale from 0.045 to 0.052 (about 16% larger
+hands), with wrist, cuff and watch scaled uniformly alongside it to retain their
+joint and case/face proportions. Its body now smoothly increases
+to 2.5 times the native width/depth behind the protected wrist/cuff region,
+making forearms about 26% wider/deeper than the previous 0.045/2.3 profile.
+The palm origin stays anchored to the weapon; authored finger shapes, UVs,
+materials and source vertices are preserved. Hand scale, protected wrist length, bulk ramp
 and body multiplier now have a
 single named profile (`sAdsArmProfile`); pose tests lock the protected transforms,
 body radius and continuity at the boundary independently.
-The body multiplier increases the preceding 1.75 profile by approximately 31%
-in width and depth. This is confined to the generated long-gun ADS arm transform;
+The preceding body-only refinement increased 1.75 to 2.3 (approximately 31%
+in width/depth) while retaining the old hand scale. The new hand/body adjustment
+supersedes those size values and is confined to the generated long-gun ADS arm transform;
 native pistol/chopping arms and weapon icons do not use this shaping profile.
-Hand scale, the protected 40-native-unit wrist band and 35-unit bulk ramp are
-unchanged, preserving grip, joint and watch proportions.
+The protected 40-native-unit wrist band and 35-unit bulk ramp remain unchanged
+in source space; elbow targets stay fixed. The rendering contract and pose
+regression deliberately adopt the new hand scale and body radius, including an
+explicit grip-origin anchor check for both hands and all 13 grip pairs/blends.
 Shaping writes frame-owned generated arm vertices; the shared wardrobe source
 model stays immutable, so separate duplicated source models are unnecessary.
 The original weapon poses, sight alignment and recoil anchors remain.
+The current thickness refinement passes the ROM-free ADS/wardrobe regressions,
+native Windows and optimized Wasm builds, Wasm logo policy and public-site
+allowlist. The Windows Runway audit verifies 20 weapons and 220 raise/lower
+frames; additional Jungle/Snow KF7 audits verify 11 transition frames each.
+Overview, both-hand and intermediate-pose crops were visually reviewed.
+The regenerated gallery reproduces all 72 views across repeated samples and
+an independent second process. Exactly the 12 fork KF7/Klobb ADS views change
+across six outfits; the other 60 views and all 35 icons remain byte-identical.
+All changed views and the native PP7 stock/fork comparison were reviewed.
+Private captures/logs stay under `build/ads-thickness` and the audit directories
+referenced there; the approved final gallery is updated alongside its sources.
 The original watch body, strap,
 face and moving hands accompany every added left ADS arm, driven by the same
 clock as the pause animation; the right arm has no watch.
@@ -369,8 +387,8 @@ ROM-free fixtures cover six wardrobes, full-slab band clearance, alpha,
 identical fade-depth topology and source immutability. Attempts to expose the watch by changing wrist spacing
 exposed shirt-cuff polygons through the blue jacket and were discarded; the
 current fix adds the missing bracelet geometry without changing the arm fit.
-Wardrobe/ADS regressions and Windows/Linux builds passed. The final Windows
-audit captured all 20 guns and 220 ADS transition frames in the blue wardrobe,
+At the bracelet-only checkpoint, wardrobe/ADS regressions and Windows/Linux
+builds passed. Its Windows audit captured all 20 guns and 220 ADS transition frames in the blue wardrobe,
 plus Jungle and Snow Klobb raise/lower checks. Overview and sleeve/watch crops
 were visually reviewed. All 72 gallery views matched repeated samples and an
 independent process pass. Compared with the preceding thickness-only gallery,
