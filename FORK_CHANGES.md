@@ -1619,8 +1619,21 @@ Reduced motion suppresses idle movement/flicker and substitutes a short fade.
 The initial `props.ts` box stand-ins were superseded by shaped prop modules.
 The procedural console/controller are now replaced by Swayne's console and
 Marshle's controller, both CC BY 4.0. `models.ts` loads only local, self-contained
-GLBs; `console.ts` retains the physical switch/LED and original cables, while
-`controller.ts` uniformly fits the controller. The CRT/cartridge remain original.
+GLBs; `console.ts` retains the physical switch and places the red power LED at
+the front center between the controller sockets, replacing its incorrect
+player-one-port location. An original gray cylindrical controller plug and
+black strain relief sit in that port; the cable starts at their transformed
+exit rather than entering the socket directly. The model-local attachment keeps
+the plug/cable aligned with console placement. Other cables retain their curves.
+The procedural additions leave the licensed GLBs and their hashes unchanged;
+`MODELS.md` includes them in the runtime modification notice. `controller.ts`
+uniformly fits the controller. The CRT/cartridge remain original.
+
+The front-detail correction passes TypeScript, 144 unit tests, site assembly/
+allowlist and Edge room interaction/responsive/framing/fallback checks. Powered
+and unpowered console closeups are visually reviewed in ignored
+`build/web-room/console-details`; native rendering inputs do not change.
+
 The Joseph Rohm candidate remains optional and is not claimed as shipped. Native
 GLSL CRT effects include restrained tracking/noise, scanlines and a power-on
 phosphor line. Reduced motion disables those temporal effects. `cinematic.ts`

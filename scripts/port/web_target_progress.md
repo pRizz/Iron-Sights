@@ -573,6 +573,18 @@ resize-observer feedback in the initial implementation.
 
 ## WEB-008 | 2026-10-24 | Room scene and assets
 
+**Console front details, 2026-10-25:** `console.ts` moves the powered red LED
+from player one's socket to the front center, between the sockets. Adds an
+original gray cylindrical plug with black strain relief; the controller cable
+starts at the same model-local exit transformed into the room. Other cable
+curves, switch interaction and power lifecycle remain intact. The licensed GLBs
+and their hashes are unchanged; `MODELS.md` records the runtime additions.
+TypeScript, 144 unit tests and production assembly/allowlist pass. Edge powered/
+unpowered closeups confirm LED position and a continuous plug/cable connection
+(`build/web-room/console-details`). The Edge room interaction, responsive,
+reduced-motion, framing and context-loss fallback audit passes. Next action:
+preserve the licensed props and normal publication gates.
+
 **Status:** Published baseline complete; the requested licensed console/controller
 replacements are implemented and visually verified locally. Publication is WEB-010.
 
@@ -583,7 +595,8 @@ The deterministic preparation script keeps only the console, isolates its actual
 power switch, preserves normalized vertex colors and packages the controller's
 unchanged mesh/normals/UVs/PNG. Regeneration twice reproduces the same outputs:
 203,896-byte console and 1,204,348-byte controller. These supersede the procedural
-console/controller, retain original cables/LED and ship no unrelated cartridge.
+console/controller and ship no unrelated cartridge. Runtime cable/LED details
+are refined by the follow-up above.
 Final room/returning/insertion captures were reviewed in `build/web-room/framing-*`.
 
 **Completion:** Visually reviewed room/CRT/console/cartridge, hover/click targets,
