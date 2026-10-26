@@ -10,6 +10,7 @@ import { createTouchInput, initialTouch } from './touch-input';
 import { createRomManager } from './rom-manager';
 import { Room } from './room/room';
 import { restoredEntry, shouldAutoLaunch, type EntryMode } from './room/session';
+import { missionStyle } from './mission-theme';
 
 const SOURCE = 'https://github.com/pRizz/Project-Midas-ADS';
 
@@ -306,7 +307,12 @@ export function App() {
     }
 
     return (
-        <div ref={experience} class="experience" classList={{ 'controls-open': controls() }}>
+        <div
+            ref={experience}
+            class="experience"
+            classList={{ 'controls-open': controls() }}
+            style={missionStyle}
+        >
             <div class="app-shell" id="top">
                 <header class="site-header">
                     <a class="brand" href="#top">
@@ -325,7 +331,6 @@ export function App() {
                 <main>
                     <div class="page-intro">
                         <div>
-                            <p class="eyebrow">YOUR COPY. YOUR MISSION.</p>
                             <h1>GoldenEye. In your browser.</h1>
                             <p>
                                 Solo campaign with touch, mouse or keyboard. Your ROM and saves stay

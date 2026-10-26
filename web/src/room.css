@@ -133,32 +133,66 @@
 }
 .rom-dialog {
     width: min(480px, calc(100vw - 36px));
+    max-height: calc(100dvh - 32px);
+    overflow: auto;
     padding: 32px;
-    color: #ece9db;
-    background: #171d1bed;
-    border: 1px solid #686756;
-    border-radius: 14px;
-    box-shadow: 0 24px 100px #000c;
+    color: var(--mission-text);
+    background: var(--mission-panel);
+    border: 1px solid var(--mission-edge);
+    border-radius: 3px;
+    box-shadow:
+        inset 0 0 0 4px #080e113b,
+        0 24px 100px #000c;
+    opacity: 0;
+    transition:
+        opacity 160ms ease-out,
+        display 160ms allow-discrete,
+        overlay 160ms allow-discrete;
+}
+.rom-dialog[open] {
+    opacity: 1;
 }
 .rom-dialog::backdrop {
-    background: #03060ba8;
+    background: #03060b00;
     backdrop-filter: blur(5px);
+    transition:
+        background-color 160ms ease-out,
+        display 160ms allow-discrete,
+        overlay 160ms allow-discrete;
+}
+.rom-dialog[open]::backdrop {
+    background: #03060ba8;
+}
+@starting-style {
+    .rom-dialog[open] {
+        opacity: 0;
+    }
+    .rom-dialog[open]::backdrop {
+        background: #03060b00;
+    }
 }
 .rom-dialog h2 {
-    margin: 12px 0;
+    margin: 0 0 18px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--mission-edge);
+    font: 500 24px var(--mission-font);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    text-wrap: balance;
 }
 .rom-dialog > p:not(.eyebrow) {
     font-size: 14px;
     line-height: 1.6;
-    color: #bbc1b2;
+    color: var(--mission-muted);
 }
 .rom-dialog [role='alert'] {
     color: #eac5a5 !important;
     margin: 16px 0;
 }
 .rom-drop-zone {
-    border: 1px dashed #666d5a;
-    border-radius: 8px;
+    border: 1px dashed var(--mission-edge);
+    border-radius: 2px;
+    background: var(--mission-background);
     margin: 22px 0;
     padding: 24px;
     display: grid;
@@ -168,6 +202,12 @@
 .rom-drop-zone small {
     font-size: 11px;
     color: #9ca591;
+}
+@media (prefers-reduced-motion: reduce) {
+    .rom-dialog,
+    .rom-dialog::backdrop {
+        transition: none;
+    }
 }
 .experience-hint {
     position: fixed;

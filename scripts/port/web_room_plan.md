@@ -48,6 +48,19 @@ unexpected pointer release still require Resume.
 
 ## Experience and decisions
 
+The accepted ROM/loading refinement removes the selection dialog's marketing
+tagline, allows an outside click/tap to dismiss it, and uses a quick 160 ms fade
+for its panel/backdrop. Inside clicks and drags that begin inside must not dismiss;
+keep native focus restoration and the existing validation-in-progress guard.
+Reduced motion removes the fade. Fullscreen remembered-ROM loading, retained
+launcher progress and the CRT share a dark watch/HUD palette, compact capitals,
+gold headings and segmented green gauges. Measured percentages stay real;
+unmeasured work remains indeterminate with a still indicator under reduced motion.
+Keep CRT scanlines/interlacing, the idle blue no-signal screen, first-visit loading
+inside the TV, attribution/build time and existing interruption/retry recovery.
+Paint active cartridge checking beneath the fading dialog; stage/percentage
+changes update the TV immediately. An idle open dialog still suspends the room.
+
 - First visits open into a full-viewport 3D room, without the visible HTML launcher.
   Realistic prop materials, a CRT on a stand, an N64 on the floor and connected
   cables establish a dark room lit mainly by the blue television.

@@ -14,6 +14,16 @@ type Props = {
 export function RomDialog(props: Props) {
     let dialog!: HTMLDialogElement;
     let input!: HTMLInputElement;
+    let pressedOutside = false;
+    const outside = (event: MouseEvent) => {
+        const bounds = dialog.getBoundingClientRect();
+        return (
+            event.clientX < bounds.left ||
+            event.clientX > bounds.right ||
+            event.clientY < bounds.top ||
+            event.clientY > bounds.bottom
+        );
+    };
     return (
         <dialog
             ref={(element) => {
@@ -23,6 +33,19 @@ export function RomDialog(props: Props) {
             class="rom-dialog"
             data-busy={props.selecting()}
             aria-labelledby="rom-dialog-title"
+            onPointerDown={(event) => {
+                pressedOutside = event.isPrimary && event.button === 0 && outside(event);
+            }}
+            onPointerCancel={() => {
+                pressedOutside = false;
+            }}
+            onClick={(event) => {
+                if (pressedOutside && outside(event) && !props.selecting()) {
+                    event.stopPropagation();
+                    dialog.close();
+                }
+                pressedOutside = false;
+            }}
             onCancel={(event) => {
                 if (props.selecting()) event.preventDefault();
             }}
@@ -35,7 +58,6 @@ export function RomDialog(props: Props) {
                 else props.error('Drop one GoldenEye ROM at a time.');
             }}
         >
-            <p class="eyebrow">YOUR COPY. YOUR MISSION.</p>
             <h2 id="rom-dialog-title">Insert your GoldenEye ROM</h2>
             <p>Drop your original US ROM here. Your file stays on this device.</p>
             <div class="rom-drop-zone">

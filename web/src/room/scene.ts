@@ -82,6 +82,7 @@ function initializeScene(
     const inserted = new THREE.Vector3(-0.2, 0.66, 0.98);
     let seconds = 0;
     let lastScreen = -1;
+    let maybeScreenProgress: StartupProgress | undefined;
     let idleAngle = 0.28;
     let insertionAngle = idleAngle;
     let idlePitch = 0;
@@ -193,11 +194,17 @@ function initializeScene(
             );
             canvas.dataset.roomScreenCorners = JSON.stringify(corners);
         }
-        if (seconds - lastScreen > 1 / 15 || previousPhase !== state.phase) {
+        if (
+            seconds - lastScreen > 1 / 15 ||
+            previousPhase !== state.phase ||
+            maybeScreenProgress?.label !== progress?.label ||
+            maybeScreenProgress?.maybePercent !== progress?.maybePercent
+        ) {
             paintScreen(tv, seconds, label, powered, reduced, progress);
             canvas.dataset.roomLoadingLabel = progress?.label ?? '';
             canvas.dataset.roomLoadingPercent = progress?.maybePercent?.toString() ?? '';
             lastScreen = seconds;
+            maybeScreenProgress = progress;
         }
         renderer.shadowMap.needsUpdate =
             quality.scale !== previousScale ||

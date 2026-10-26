@@ -7,6 +7,7 @@ import { observeGameSize } from './presentation';
 import { TouchControls } from './touch-controls';
 import type { TouchInput } from './touch-input';
 import { observeTouchViewport } from './touch-viewport';
+import { MissionProgress } from './mission-progress';
 
 type PlayerProps = {
     engine: Engine;
@@ -41,9 +42,11 @@ export function Player(props: PlayerProps) {
         const value = rom.status();
         return value.kind === 'error' ? value : undefined;
     });
-    const maybePercent = createMemo(() => {
+    const maybeProgress = createMemo(() => {
+        const startup = engine.maybeStartup();
+        if (startup) return startup;
         const value = engine.status();
-        return value.kind === 'loading' ? value.maybePercent : null;
+        return value.kind === 'loading' ? value : undefined;
     });
     const launchLabel = () => {
         const maybeStartup = engine.maybeStartup();
@@ -216,12 +219,13 @@ export function Player(props: PlayerProps) {
             <div class="launch-bar" aria-live="polite">
                 <div>
                     <strong>{launchLabel()}</strong>
-                    <Show when={maybePercent() !== null}>
-                        <progress
-                            aria-label="Game download"
-                            max="100"
-                            value={maybePercent() ?? 0}
-                        />
+                    <Show when={maybeProgress()}>
+                        {(progress) => (
+                            <MissionProgress
+                                label={progress().label}
+                                maybePercent={progress().maybePercent}
+                            />
+                        )}
                     </Show>
                 </div>
                 <Show when={!started()}>

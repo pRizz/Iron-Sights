@@ -35,6 +35,7 @@ async function record(name) {
         { timeout: 120_000 },
     );
     const trace = await page.evaluate(readStartup);
+    await writeFile(resolve(output, name + '.json'), JSON.stringify(trace, null, 2));
     const settings = await page.evaluate(() =>
         new TextDecoder().decode(globalThis.midasStartupGame.FS.readFile('/user/midas.ini')),
     );
@@ -53,7 +54,6 @@ async function record(name) {
             .every((frame) => frame.loading || (frame.room && frame.roomLabel)),
         'Initialization exposed a blank canvas without loading feedback',
     );
-    await writeFile(resolve(output, name + '.json'), JSON.stringify(trace, null, 2));
     await page.screenshot({ path: resolve(output, name + '.png') });
 }
 try {
@@ -119,7 +119,46 @@ try {
     await page.getByRole('button', { name: 'Resume startup' }).click();
     await expect(page.locator('.room-layer')).toHaveCount(0, { timeout: 90_000 });
     await record('first');
+    await page.addInitScript(() => {
+        if (sessionStorage.getItem('midas-audit-hold-compile') !== '1') return;
+        const compile = WebAssembly.compile;
+        WebAssembly.compile = async (...args) => {
+            await new Promise((resolve) => {
+                globalThis.releaseLoadingStyleAudit = resolve;
+            });
+            return compile(...args);
+        };
+    });
+    await page.evaluate(() => sessionStorage.setItem('midas-audit-hold-compile', '1'));
     await page.reload();
+    const loading = page.locator('.startup-screen');
+    await expect(loading).toBeVisible({ timeout: 60_000 });
+    await expect(loading.locator('h1')).toHaveText('Compiling WebAssembly', { timeout: 60_000 });
+    await expect(loading.getByRole('progressbar')).not.toHaveAttribute('value');
+    await expect(loading.locator('.mission-gauge')).toBeVisible();
+    for (const viewport of [
+        { width: 1440, height: 900 },
+        { width: 390, height: 844 },
+        { width: 844, height: 390 },
+    ]) {
+        await page.setViewportSize(viewport);
+        const panel = await loading.locator('.startup-content').boundingBox();
+        assert.ok(
+            panel.x >= 0 &&
+                panel.y >= 0 &&
+                panel.x + panel.width <= viewport.width &&
+                panel.y + panel.height <= viewport.height,
+            'Loading panel overflowed the viewport',
+        );
+        await page.screenshot({ path: resolve(output, `cached-loading-${viewport.width}.png`) });
+    }
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(loading.locator('.mission-gauge span')).toHaveCSS('animation-name', 'none');
+    await page.evaluate(() => {
+        sessionStorage.removeItem('midas-audit-hold-compile');
+        globalThis.releaseLoadingStyleAudit();
+    });
+    await page.setViewportSize({ width: 1440, height: 900 });
     await record('cached');
     console.log('Startup timing traces recorded: ' + output);
 } finally {

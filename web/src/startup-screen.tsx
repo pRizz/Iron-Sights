@@ -9,6 +9,7 @@ import {
 } from 'solid-js';
 import type { Engine } from './engine';
 import type { StartupProgress } from './startup-progress';
+import { MissionProgress } from './mission-progress';
 
 type Props = {
     engine: Engine;
@@ -82,34 +83,20 @@ export function StartupScreen(props: Props) {
                         aria-busy="true"
                     >
                         <div class="startup-content">
-                            <span class="startup-mark" aria-hidden="true">
-                                007
-                            </span>
+                            <div class="mission-topline" aria-hidden="true">
+                                <span>Mission preparation</span>
+                                <span class="startup-mark">007</span>
+                            </div>
                             <p class="eyebrow">GOLDENEYE · PROJECT MIDAS ADS</p>
                             <p class="startup-attribution">A fork of Project Midas</p>
                             <h1>{props.paused() ? 'Startup paused' : progress().label}</h1>
                             <Show
                                 when={props.paused()}
                                 fallback={
-                                    <>
-                                        <Show
-                                            when={progress().maybePercent !== null}
-                                            fallback={
-                                                <progress aria-label={progress().label} max="100" />
-                                            }
-                                        >
-                                            <progress
-                                                aria-label={progress().label}
-                                                max="100"
-                                                value={progress().maybePercent ?? 0}
-                                            />
-                                        </Show>
-                                        <p class="startup-measure">
-                                            {progress().maybePercent === null
-                                                ? 'Please wait'
-                                                : `${progress().maybePercent}%`}
-                                        </p>
-                                    </>
+                                    <MissionProgress
+                                        label={progress().label}
+                                        maybePercent={progress().maybePercent}
+                                    />
                                 }
                             >
                                 <div class="startup-actions">

@@ -723,6 +723,26 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**ROM dialog and loading presentation, 2026-10-26:** Removed the former tagline
+from ROM selection/retained launcher; outside clicks/taps dismiss the idle modal,
+with inside/drag guards and native focus restoration. A 160 ms panel/backdrop
+fade respects reduced motion. Shared theme/meter components style fullscreen,
+launcher and CRT loading as watch/HUD panels with segmented green gauges and
+gold labels; real progress/indeterminate semantics, scanlines and startup recovery
+remain. Type checking, 146 unit tests, site allowlist and ROM-free Edge startup
+checks pass. Extended room checks pass fade entry/exit, focus, padding/drag guards
+and portrait/landscape touch dismissal/reduced motion. The room paints active
+cartridge checking beneath the fade and repaints stage/percentage changes
+immediately, fixing a fast-selection gap found by the startup trace. Actual-ROM
+first/cached startup checks pass continuous loading feedback, preparation during
+insertion, fitted-screen hold and interrupted handoff recovery. Remembered-ROM
+loading panels fit 1440×900, 390×844 and 844×390; indeterminate progress omits its
+value and stops animating under reduced motion. Captures were visually reviewed;
+evidence is private under `build/web-ui-refresh`. Standards and gallery freshness
+verification pass; no native/runtime or render-gallery inputs changed.
+Next action: monitor clean-source CI/Pages after delivery through the normal main
+gates. Actual Safari remains experimental pending a Mac test environment.
+
 **Enhanced font stroke preservation, 2026-10-25:** Shared font preparation now
 preserves authored horizontal strokes with bounded ink overhang instead of
 squeezing them into native glyph widths. A small renderer hook extends only

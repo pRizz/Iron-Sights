@@ -161,7 +161,8 @@ export function Room(props: Props) {
             const delta = Math.max(0, Math.min((now - previous) / 1000, 0.1));
             const frameMS = now - previous;
             previous = now;
-            if (!props.controls() && !document.hidden && !dialog.open) {
+            // Keep cartridge checking/preparation visible beneath the modal fade.
+            if (!props.controls() && !document.hidden && (!dialog.open || selecting())) {
                 const next = paused()
                     ? flow()
                     : advanceRoom(flow(), delta, props.ready(), motion.matches);

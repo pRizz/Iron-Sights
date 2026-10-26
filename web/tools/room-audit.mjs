@@ -107,12 +107,37 @@ try {
     await expect(page.locator('.room-canvas')).toHaveCSS('cursor', 'pointer');
     await page.mouse.click(550, 460);
     await expect(page.getByRole('dialog', { name: 'Insert your GoldenEye ROM' })).toBeVisible();
+    const romDialog = page.locator('.rom-dialog');
+    await expect(romDialog).not.toContainText('YOUR COPY. YOUR MISSION.');
+    const modalBounds = await romDialog.boundingBox();
+    await page.mouse.click(modalBounds.x + 8, modalBounds.y + 8);
+    await expect(romDialog).toBeVisible(); // Padding is inside the modal.
+    await page.mouse.move(modalBounds.x + 8, modalBounds.y + 8);
+    await page.mouse.down();
+    await page.mouse.move(1, 1);
+    await page.mouse.up();
+    await expect(romDialog).toBeVisible(); // Dragging out is not an outside click.
     await page.getByRole('button', { name: 'Back to the room' }).click();
     await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await romDialog.evaluate((dialog) => {
+        dialog.addEventListener('transitionrun', (event) => {
+            if (event.target === dialog && event.propertyName === 'opacity')
+                dialog.dataset[dialog.open ? 'fadedIn' : 'fadedOut'] = 'true';
+        });
+    });
     const cartridge = page.getByRole('button', { name: 'Insert GoldenEye cartridge' });
     await cartridge.focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('dialog', { name: 'Insert your GoldenEye ROM' })).toBeVisible();
+    await expect(romDialog).toHaveCSS('opacity', '1');
+    await expect(romDialog).toHaveAttribute('data-faded-in', 'true');
+    await page.screenshot({ path: resolve(output, 'rom-modal.png') });
+    await page.mouse.click(1, 1);
+    await expect(romDialog).toBeHidden();
+    await expect(romDialog).toHaveAttribute('data-faded-out', 'true');
+    await expect(cartridge).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(romDialog).toBeVisible();
     const choosingRom = page.waitForEvent('filechooser');
     await page.getByRole('dialog').getByRole('button', { name: 'Choose ROM', exact: true }).click();
     const chooser = await choosingRom;
@@ -201,6 +226,38 @@ try {
     await expect(modelFallback.locator('.site-header')).toBeVisible({ timeout: 60_000 });
     await expect(modelFallback.locator('.controls-close')).toBeDisabled();
     await modelFallbackContext.close();
+    const touchContext = await browser.newContext({ hasTouch: true, reducedMotion: 'reduce' });
+    const touchPage = await touchContext.newPage();
+    touchPage.on('pageerror', (error) => errors.push(String(error)));
+    await touchPage.goto(origin);
+    await expect(touchPage.locator('.room-canvas')).toHaveAttribute('data-room-state', 'ready', {
+        timeout: 60_000,
+    });
+    for (const viewport of [
+        { width: 390, height: 844 },
+        { width: 844, height: 390 },
+    ]) {
+        await touchPage.setViewportSize(viewport);
+        await touchPage.getByRole('button', { name: 'Insert GoldenEye cartridge' }).focus();
+        await touchPage.keyboard.press('Enter');
+        const modal = touchPage.locator('.rom-dialog');
+        await expect(modal).toBeVisible();
+        await expect(modal).toHaveCSS('transition-duration', '0s');
+        const bounds = await modal.boundingBox();
+        assert.ok(
+            bounds.x >= 0 &&
+                bounds.y >= 0 &&
+                bounds.x + bounds.width <= viewport.width &&
+                bounds.y + bounds.height <= viewport.height,
+        );
+        await touchPage.screenshot({
+            path: resolve(output, `rom-modal-touch-${viewport.width}.png`),
+        });
+        await touchPage.touchscreen.tap(1, 1);
+        await expect(modal).toBeHidden();
+    }
+    await touchContext.close();
+    assert.deepEqual(errors, []);
     await checkRoomFraming(browser, origin, output);
 } finally {
     await browser.close();

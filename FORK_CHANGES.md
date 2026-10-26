@@ -1645,6 +1645,39 @@ verified room refinements in `ed459f2`. PR #2 was closed rather than merged.
 
 ### FORK-025 — Immersive browser room
 
+The ROM dialog and retained launcher no longer show the former marketing
+tagline. Outside clicks/taps dismiss the idle dialog, while padding clicks and
+drags beginning inside leave it open; the existing validation guard remains.
+Native dialog focus restoration is preserved. Panel/backdrop use a 160 ms
+crossfade through discrete top-layer/display transitions, removed under reduced
+motion. The dialog fits portrait and short landscape viewports.
+
+Fullscreen startup, retained launcher progress and in-TV startup share a dark
+watch/HUD treatment: beveled panels, compact capitals, gold headings and segmented
+green gauges. [Shared theme](web/src/mission-theme.ts),
+[accessible meter](web/src/mission-progress.tsx) and [styles](web/src/mission.css)
+keep DOM/CRT palette and progress presentation consistent. Real percentages and
+indeterminate native progress semantics remain; reduced motion holds the activity
+indicator still. Existing scanlines/interlacing, blue idle no-signal, loading stages,
+startup pause/retry, attribution/build time and storage/game lifecycle stay intact.
+The [ROM dialog](web/src/room/rom-dialog.tsx), [dialog CSS](web/src/room.css),
+[startup panel](web/src/startup-screen.tsx), [startup CSS](web/src/startup.css),
+[launcher](web/src/player.tsx) and [CRT painter](web/src/room/loading-screen.ts)
+own the presentation. The accepted room plan and WEB-010 record scope/verification.
+The room paints during active cartridge checking beneath the dialog fade, and
+stage/percentage changes invalidate the CRT immediately rather than waiting for
+its normal 15 Hz texture refresh. This closes a fast-selection gap in initial
+loading feedback; an idle open dialog still suspends room rendering.
+
+Validation: browser type checking, 146 unit tests, production assembly and exact
+site allowlist/Wasm digest verification passed. Edge room checks cover outside
+mouse/touch dismissal, inside/drag guards, fade entry/exit, focus restoration and
+reduced motion. Actual-ROM first/cached startup checks pass uninterrupted loading
+feedback, overlapping preparation/insertion, fitted-screen hold and interrupted
+handoff recovery. Remembered-ROM loading panels fit 1440×900, 390×844 and 844×390;
+indeterminate progress has no percentage value and stops animating under reduced
+motion. Captures/traces remain private under `build/web-ui-refresh`.
+
 Current first-visit startup prepares the native game as soon as a valid ROM and
 runtime are available, overlapping cartridge insertion, power and flight.
 `room/loading-screen.ts` draws real download/initialization stages and progress
