@@ -53,6 +53,11 @@ export function stickVector(x: number, y: number, radius: number) {
     return { x: x * scale, y: -y * scale };
 }
 
+// A tap may wobble, but a drag (even one that returns to its origin) never selects.
+export function menuTapMoved(x: number, y: number, startX: number, startY: number): boolean {
+    return Math.hypot(x - startX, y - startY) > 10;
+}
+
 // Each finger owns one control. Two fingers holding the same button release independently.
 export function createTouchState(send: (action: TouchAction, down: boolean) => void) {
     const fingers = new Map<number, TouchAction>();

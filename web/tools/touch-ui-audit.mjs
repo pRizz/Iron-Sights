@@ -45,6 +45,33 @@ try {
     await aim.tap();
     await expect(aim).toHaveAttribute('aria-pressed', 'false');
     const snapshot = () => page.evaluate(() => touchFixture.snapshot());
+    const scale = await page.evaluate(() => visualViewport.scale);
+    assert.equal(
+        await page.evaluate(() => {
+            // Gaps near buttons must hit the guarded overlay, never SDL's canvas.
+            return document.elementFromPoint(10, 100)?.classList.contains('touch-controls');
+        }),
+        true,
+        'A gap in the controls bypassed the touch gesture guard',
+    );
+    for (let tap = 0; tap < 8; tap++) await page.locator('[data-touch-action=fire]').tap();
+    assert.equal(
+        await page.evaluate(() => visualViewport.scale),
+        scale,
+        'Repeated fire zoomed page',
+    );
+    assert.deepEqual((await snapshot()).held, []);
+    assert.equal(
+        await page.locator('[data-touch-action=fire]').evaluate((surface) => {
+            const event = new Event('touchend', { bubbles: true, cancelable: true });
+            // Native touchend carries a TouchList; leave the document fallback inert.
+            Object.defineProperty(event, 'touches', { value: [{}] });
+            surface.dispatchEvent(event);
+            return event.defaultPrevented;
+        }),
+        true,
+        'Safari touchend zoom fallback was passive or missing',
+    );
     const weapon = page.getByRole('button', { name: 'Switch weapon', exact: true });
     await expect(weapon.locator('svg')).toBeVisible();
     // The primary icon uses the native next-weapon action, with independent
@@ -57,6 +84,58 @@ try {
         assert.ok(!(await snapshot()).held.includes(9));
     }
     await expect(page.locator('.touch-extra')).toHaveCount(0);
+    // Exercise missing pointer terminals in both engines, including WebKit's
+    // desktop driver, which cannot inject a native multi-contact touch stream.
+    await page.locator('.touch-stick').evaluate((stick) => {
+        const box = stick.getBoundingClientRect();
+        stick.dispatchEvent(
+            new PointerEvent('pointerdown', {
+                bubbles: true,
+                cancelable: true,
+                pointerId: 77,
+                pointerType: 'touch',
+                clientX: box.x + box.width / 2,
+                clientY: box.y + 15,
+            }),
+        );
+        // Losing a descendant's implicit capture must not release its owner.
+        stick.querySelector('i').dispatchEvent(
+            new PointerEvent('lostpointercapture', {
+                bubbles: true,
+                pointerId: 77,
+                pointerType: 'touch',
+            }),
+        );
+    });
+    assert.ok((await snapshot()).movement[1] > 0.5, 'Descendant capture loss released the stick');
+    await page.evaluate(() => {
+        const event = new Event('touchend');
+        Object.defineProperty(event, 'touches', { value: [] });
+        document.dispatchEvent(event);
+    });
+    assert.deepEqual(
+        (await snapshot()).movement,
+        [0, 0],
+        'Missing pointer terminal left stick held',
+    );
+    await page.locator('.touch-stick').evaluate((stick) => {
+        const box = stick.getBoundingClientRect();
+        stick.dispatchEvent(
+            new PointerEvent('pointerdown', {
+                bubbles: true,
+                cancelable: true,
+                pointerId: 78,
+                pointerType: 'touch',
+                clientX: box.x + box.width / 2,
+                clientY: box.y + 15,
+            }),
+        );
+    });
+    assert.ok((await snapshot()).movement[1] > 0.5, 'Recovered stick refused a fresh contact');
+    await page.evaluate(() =>
+        document.dispatchEvent(new PointerEvent('pointerup', { pointerId: 78 })),
+    );
+    assert.deepEqual((await snapshot()).movement, [0, 0], 'Document release left stick held');
     if (kind === 'chromium') {
         const session = await context.newCDPSession(page);
         const fingers = new Map();
@@ -89,6 +168,19 @@ try {
         assert.deepEqual(value.movement, [0, 0]);
         assert.deepEqual(value.held, []);
         fingers.clear();
+        // A touch stream can end without pointerup/cancel reaching its owner.
+        await update(1, stick.x + stick.width / 2, stick.y + 15, true);
+        assert.ok((await snapshot()).movement[1] > 0.5);
+        await page.evaluate(() =>
+            document.dispatchEvent(new TouchEvent('touchend', { touches: [] })),
+        );
+        assert.deepEqual((await snapshot()).movement, [0, 0], 'Orphaned stick was not released');
+        await session.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
+        fingers.clear();
+        await update(1, stick.x + stick.width / 2, stick.y + 15, true);
+        assert.ok((await snapshot()).movement[1] > 0.5, 'Stick could not be used after recovery');
+        await update(1, 0, 0, false);
+        assert.deepEqual((await snapshot()).movement, [0, 0]);
         await update(1, fire.x + 24, fire.y + 24, true);
         await page.evaluate(() => window.dispatchEvent(new Event('blur')));
         assert.deepEqual((await snapshot()).held, [], 'Focus loss left fire held');
@@ -97,6 +189,43 @@ try {
     await page.evaluate(() => touchFixture.menu(true));
     await expect(page.locator('[data-touch-action=accept]')).toBeVisible();
     await expect(weapon).toHaveCount(0);
+    const menuSurface = page.locator('.touch-menu-surface');
+    const accepts = (await snapshot()).accepts;
+    await page.mouse.move(400, 150);
+    await page.mouse.down();
+    assert.equal((await snapshot()).accepts, accepts, 'Menu selected on finger-down');
+    await page.mouse.move(480, 160);
+    assert.deepEqual((await snapshot()).cursor, [480, 160]);
+    await page.mouse.move(400, 150);
+    await page.mouse.up();
+    assert.equal((await snapshot()).accepts, accepts, 'Menu drag selected on release');
+    await menuSurface.tap({ position: { x: 400, y: 150 } });
+    assert.equal(
+        (await snapshot()).accepts,
+        accepts + 1,
+        'Stationary menu tap did not select once',
+    );
+    await menuSurface.evaluate((surface) => {
+        surface.dispatchEvent(
+            new PointerEvent('pointerdown', {
+                pointerId: 99,
+                pointerType: 'touch',
+                clientX: 400,
+                clientY: 150,
+                bubbles: true,
+                cancelable: true,
+            }),
+        );
+        document.dispatchEvent(new PointerEvent('pointercancel', { pointerId: 99 }));
+        document.dispatchEvent(new PointerEvent('pointerup', { pointerId: 99 }));
+    });
+    assert.equal((await snapshot()).accepts, accepts + 1, 'Cancelled menu contact selected');
+    // Document capture releases input even if a target swallows the up event.
+    await page.locator('[data-touch-action=up]').evaluate((button) => {
+        button.addEventListener('pointerup', (event) => event.stopPropagation(), { once: true });
+    });
+    await page.locator('[data-touch-action=up]').tap();
+    assert.deepEqual((await snapshot()).held, [], 'Stopped propagation left a menu direction held');
     await page.evaluate(() => touchFixture.menu(false));
     await expect(page.locator('[data-touch-action=fire]')).toBeVisible();
     for (const size of [
@@ -147,7 +276,7 @@ try {
     assert.deepEqual((await snapshot()).held, []);
     assert.deepEqual(errors, []);
     console.log(
-        'Touch UI: weapon icon/More controls, independent move/look/fire, pointer cancellation, focus reset, menu mode, portrait/tablet bounds and disable passed',
+        'Touch UI: repeated fire/zoom prevention, menu tap vs drag, orphaned stick recovery, independent move/look/fire, cancellation, focus reset, layouts and disable passed',
     );
 } finally {
     await browser.close();

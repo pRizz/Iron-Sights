@@ -3,9 +3,11 @@
     position: absolute;
     inset: 0;
     z-index: 8;
-    pointer-events: none;
+    pointer-events: auto;
     user-select: none;
     -webkit-user-select: none;
+    touch-action: none;
+    -webkit-touch-callout: none;
 }
 .game-stage.touch-mode {
     touch-action: none;
@@ -20,6 +22,13 @@
 .touch-controls button,
 .touch-stick,
 .touch-look {
+    pointer-events: auto;
+    touch-action: none;
+    -webkit-touch-callout: none;
+}
+.touch-menu-surface {
+    position: absolute;
+    inset: 0;
     pointer-events: auto;
     touch-action: none;
     -webkit-touch-callout: none;
@@ -162,6 +171,7 @@
     font-size: 11px;
     color: #e4e8d1bb;
     text-shadow: 0 1px 3px #000;
+    pointer-events: none;
 }
 @media (orientation: portrait) {
     .touch-look {

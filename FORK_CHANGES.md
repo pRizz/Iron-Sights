@@ -99,6 +99,21 @@ Canvas-only blur from touching native on-screen buttons no longer pauses touch
 play; window blur and document hiding still pause/reset input. Touch pitch uses
 the same Upright/Reverse policy as mouse look instead of bypassing inversion.
 
+The menu touch surface forwards cursor motion without SDL's immediate synthetic
+mouse press. A stationary release selects through the native Accept action;
+movement beyond 10 CSS pixels cancels selection for that entire gesture, even
+when the finger returns to its starting point. Arrows and Select remain available.
+Non-passive touch/gesture cancellation on the overlay supplements `touch-action`
+to prevent repeated Fire taps from zooming Safari; launcher zoom remains available.
+The active overlay also owns gaps between controls so near-button taps cannot
+fall through to SDL or bypass gesture cancellation.
+Contact ownership now releases at document capture phase on pointer up/cancel
+and owner capture loss. An empty touch stream recovers missing pointer terminals;
+fresh downs reclaim stale uncaptured owners. Page hiding, pagehide, rotation,
+pause and mode changes clear contacts and release captures. This closes the
+missed-release path that could leave the movement owner and analog vector latched;
+the exact interruption behind the reported physical-iPhone incident is unconfirmed.
+
 `port/web/touch.c` owns player-one input, bounded motion and reset state, maps
 semantic actions by existing binding names and combines with the ordinary game
 input path. Small browser-only hooks in `libultra_shim.c` and `bondview2.c` merge
@@ -108,6 +123,8 @@ changes and room return prevents stuck input; look is discarded during locked
 controls. The module is selected only by the CMake web video target.
 
 **Sources:** [touch state](web/src/touch-input.ts),
+[contact lifecycle](web/src/touch-contacts.ts), [menu gestures](web/src/touch-menu.tsx),
+[menu tap tests](web/src/touch-menu.test.ts),
 [overlay](web/src/touch-controls.tsx), [layout](web/src/touch.css),
 [viewport fitting](web/src/touch-viewport.ts),
 [capture](web/src/capture.ts), [browser capability gate](web/src/engine.ts),
@@ -144,6 +161,14 @@ production assembly/allowlist and Edge/WebKit pointer UI checks. Those checks
 cover repeated next-weapon press/release without opening More, retained +/−
 buttons, hidden gameplay actions in menus and non-overlapping phone/tablet
 layouts, including 320-pixel portrait. No native/render inputs changed.
+The iPhone gesture corrections pass 148 unit tests, TypeScript, production
+assembly/allowlist and Chromium/WebKit UI regressions for rapid Fire taps,
+cancelled touch defaults, menu tap versus drag, missing pointer terminals,
+descendant capture loss, document releases and successful stick reuse. These
+automated checks do not establish physical iOS acceptance.
+Chrome real-ROM touch acceptance also passes menus into Dam, simultaneous
+movement/look/fire, Watch, pause/resume, Options, audio and portrait/tablet bounds
+against the assembled frontend with the existing optimized runtime.
 
 ### FORK-026 — Upstream 1.0.2b integration
 

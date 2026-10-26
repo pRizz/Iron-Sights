@@ -11,6 +11,8 @@ import {
 import type { Engine } from './engine';
 import type { Capture } from './capture';
 import { stickVector, type TouchAction, type TouchInput } from './touch-input';
+import { createTouchContacts, suppressTouchGestures } from './touch-contacts';
+import { TouchMenu } from './touch-menu';
 import './touch.css';
 
 type Props = {
@@ -19,6 +21,7 @@ type Props = {
     input: TouchInput;
     visible: Accessor<boolean>;
     options: () => void;
+    canvas: () => HTMLCanvasElement;
 };
 const extra: [TouchAction, string][] = [
     ['previousWeapon', 'Weapon −'],
@@ -41,7 +44,18 @@ export function TouchControls(props: Props) {
     let maybeFireLook: { id: number; x: number; y: number } | undefined;
     const active = () =>
         props.visible() && props.input.enabled() && props.capture.state().kind !== 'paused';
+    const contacts = createTouchContacts((id) => {
+        props.input.state.release(id);
+        if (maybeMove === id) {
+            maybeMove = undefined;
+            setStick({ x: 0, y: 0 });
+            props.input.move(0, 0);
+        }
+        if (maybeLook?.id === id) maybeLook = undefined;
+        if (maybeFireLook?.id === id) maybeFireLook = undefined;
+    });
     const clear = () => {
+        contacts.clear();
         maybeMove = undefined;
         maybeLook = undefined;
         maybeFireLook = undefined;
@@ -54,6 +68,7 @@ export function TouchControls(props: Props) {
         if (!active()) clear();
     });
     onMount(() => {
+        const detachContacts = contacts.attach();
         let frame = 0;
         const monitor = () => {
             const next = !props.engine.maybeGame()?._portWebControlsLive();
@@ -66,10 +81,18 @@ export function TouchControls(props: Props) {
         frame = requestAnimationFrame(monitor);
         window.addEventListener('blur', clear);
         window.addEventListener('orientationchange', clear);
+        window.addEventListener('pagehide', clear);
+        const hidden = () => {
+            if (document.hidden) clear();
+        };
+        document.addEventListener('visibilitychange', hidden);
         onCleanup(() => {
+            detachContacts();
             cancelAnimationFrame(frame);
             window.removeEventListener('blur', clear);
             window.removeEventListener('orientationchange', clear);
+            window.removeEventListener('pagehide', clear);
+            document.removeEventListener('visibilitychange', hidden);
             clear();
         });
     });
@@ -77,7 +100,7 @@ export function TouchControls(props: Props) {
         props.input.gesture();
         event.preventDefault();
         event.stopPropagation();
-        (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+        contacts.begin(event);
     };
     const TapButton = (button: { label: string; activate: () => void; expanded?: boolean }) => (
         <button
@@ -120,17 +143,10 @@ export function TouchControls(props: Props) {
                 );
                 maybeFireLook = { id: event.pointerId, x: event.clientX, y: event.clientY };
             }}
-            onPointerUp={(event) => releaseButton(event)}
-            onPointerCancel={(event) => releaseButton(event)}
-            onLostPointerCapture={(event) => releaseButton(event)}
         >
             {button.children ?? button.label}
         </button>
     );
-    function releaseButton(event: PointerEvent) {
-        props.input.state.release(event.pointerId);
-        if (maybeFireLook?.id === event.pointerId) maybeFireLook = undefined;
-    }
     const move = (event: PointerEvent) => {
         if (maybeMove !== event.pointerId) return;
         const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
@@ -142,21 +158,14 @@ export function TouchControls(props: Props) {
         setStick(vector);
         props.input.move(vector.x, vector.y);
     };
-    const endMove = (event: PointerEvent) => {
-        if (maybeMove !== event.pointerId) return;
-        maybeMove = undefined;
-        setStick({ x: 0, y: 0 });
-        props.input.move(0, 0);
-    };
-    const endLook = (event: PointerEvent) => {
-        if (maybeLook?.id === event.pointerId) maybeLook = undefined;
-    };
     return (
         <Show when={active()}>
             <div
+                ref={(surface) => onCleanup(suppressTouchGestures(surface))}
                 class="touch-controls"
                 aria-label="Touch game controls"
                 data-mode={menu() ? 'menu' : 'game'}
+                onContextMenu={(event) => event.preventDefault()}
             >
                 <div class="touch-top">
                     <Button action="watch" label="Watch" />
@@ -167,6 +176,7 @@ export function TouchControls(props: Props) {
                     when={!menu()}
                     fallback={
                         <>
+                            <TouchMenu canvas={props.canvas} input={props.input} />
                             <div class="touch-dpad">
                                 <Button action="up" label="Up" />
                                 <Button action="left" label="Left" />
@@ -178,7 +188,7 @@ export function TouchControls(props: Props) {
                                 <Button action="back" label="Back" />
                             </div>
                             <span class="touch-menu-hint">
-                                Tap a menu or use arrows · Select to continue
+                                Drag to move cursor · Tap to select · Or use arrows
                             </span>
                         </>
                     }
@@ -205,9 +215,6 @@ export function TouchControls(props: Props) {
                             );
                             maybeLook = { id: event.pointerId, x: event.clientX, y: event.clientY };
                         }}
-                        onPointerUp={endLook}
-                        onPointerCancel={endLook}
-                        onLostPointerCapture={endLook}
                     >
                         <span>Drag to look</span>
                     </div>
@@ -223,9 +230,6 @@ export function TouchControls(props: Props) {
                             }
                         }}
                         onPointerMove={move}
-                        onPointerUp={endMove}
-                        onPointerCancel={endMove}
-                        onLostPointerCapture={endMove}
                     >
                         <span>MOVE</span>
                         <i

@@ -9,10 +9,23 @@ let live = true;
 let movement = [0, 0],
     look = [0, 0];
 const held = new Set<number>();
+let accepts = 0;
+let cursor = [0, 0];
+const canvas = document.createElement('canvas');
+canvas.addEventListener('mousemove', (event) => {
+    cursor = [event.clientX, event.clientY];
+});
+canvas.addEventListener('mousedown', () => {
+    throw new Error('Menu synthesized a mouse press');
+});
+document.body.append(canvas);
 const [state, setState] = createSignal<Playback>({ kind: 'playing' });
 const game = {
     _portWebControlsLive: () => Number(live),
-    _portWebTouchButton: (id: number, down: number) => (down ? held.add(id) : held.delete(id)),
+    _portWebTouchButton: (id: number, down: number) => {
+        if (id === 5 && down) accepts++;
+        down ? held.add(id) : held.delete(id);
+    },
     _portWebTouchMove: (x: number, y: number) => {
         movement = [x, y];
     },
@@ -33,7 +46,7 @@ const capture = {
 const input = createTouchInput(engine, true);
 Object.assign(globalThis, {
     touchFixture: {
-        snapshot: () => ({ movement, look, held: [...held], state: state().kind }),
+        snapshot: () => ({ movement, look, held: [...held], state: state().kind, accepts, cursor }),
         menu: (value: boolean) => {
             live = !value;
         },
@@ -49,6 +62,7 @@ render(
             input={input}
             visible={() => true}
             options={() => capture.pause('manual')}
+            canvas={() => canvas}
         />
     ),
     document.body,

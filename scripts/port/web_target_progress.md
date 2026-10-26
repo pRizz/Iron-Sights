@@ -1186,6 +1186,33 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**iPhone gesture corrections, 2026-10-26:** Added a menu gesture surface that
+forwards SDL cursor motion without a mouse press. Native Accept is pulsed on
+stationary release only; moving more than 10 CSS pixels cancels selection for
+the whole gesture. Added non-passive touch/gesture cancellation on the overlay
+to supplement CSS zoom prevention without restricting launcher zoom. Extended
+the active overlay's hit area so gaps between controls cannot bypass that guard.
+Centralized contact cleanup at document capture phase, including owner capture
+loss, an empty-touch-stream fallback for missing pointer terminals, stale-owner recovery
+and explicit capture release. Hiding/pagehide now also clears the overlay state.
+The previous element-only release path could latch both the stick owner and
+movement after a missed terminal event; the exact physical-iPhone interruption
+is not reproduced. Focused sources are `touch-contacts.ts`, `touch-menu.tsx`,
+`touch-controls.tsx`, `touch-input.ts`, `touch.css` and the fixture/audit; `player.tsx`
+passes the existing canvas. No engine or rendering inputs change.
+TypeScript, 148 unit tests, production assembly/allowlist and Chromium/WebKit
+fixture checks pass. Regressions cover repeated Fire taps and stable page scale,
+non-passive touchend prevention, pan-out-and-back without selection, tap-up
+selection, missing pointer terminals, descendant capture loss, document releases,
+stick reuse, multi-contact independence and retained phone/tablet layouts.
+Private fixture captures remain under `build/web-touch/ui`.
+Chrome real-ROM touch acceptance passes menus into Dam, simultaneous movement,
+look and Fire, Watch, manual/focus Pause/Resume, Options, audio and layouts;
+private evidence is `build/web-touch/iphone-fixes-final`. This uses the existing
+optimized runtime with the rebuilt frontend. Standards checks report zero
+findings. Next action: confirm repeated firing, menu panning and interruption
+recovery on a physical iPhone.
+
 **Primary weapon switch, 2026-10-25:** Added an accessible gun-icon Switch weapon
 button above the movement stick, using the existing next-weapon action on all
 touch devices. More retains Weapon + and Weapon −. Shared stick sizing keeps

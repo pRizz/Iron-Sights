@@ -138,6 +138,7 @@ export function Player(props: PlayerProps) {
                         input={props.touch}
                         visible={props.touchVisible}
                         options={props.openControls}
+                        canvas={() => canvas}
                     />
                 </Show>
                 <Show when={!started()}>
