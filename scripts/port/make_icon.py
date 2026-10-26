@@ -7,7 +7,7 @@ Usage (from the repo root, with Pillow installed):
 Writes:
     port/include/icon_rgba.h   64 x 64 RGBA pixels for SDL_SetWindowIcon
                                (the window and taskbar icon on every platform)
-    port/win/ProjectMidas.ico  16..256 px, compiled into ProjectMidas.exe by
+    port/win/ProjectMidas.ico  16..256 px, compiled into IronSights.exe by
                                port/win/ProjectMidas.rc (the file's own icon)
 
 Run it again after changing icon.png and commit the outputs; the build only

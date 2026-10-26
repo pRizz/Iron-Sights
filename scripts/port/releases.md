@@ -1,5 +1,10 @@
 # Windows distribution and build provenance
 
+The player executable is `IronSights.exe` inside `Iron-Sights-windows-x86.zip`.
+EXE attestations and launch/verification instructions use that filename. Older
+immutable releases retain their original executable name; updating means replacing
+program files while keeping `Data` and `midas.ini`.
+
 The default branch is `main`. Every successful push (including documentation
 changes) runs ROM-free tests, builds Windows x86, packages player files and
 publishes a uniquely tagged GitHub Release. Manual dispatch on `main` supports

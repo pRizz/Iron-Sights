@@ -9,11 +9,11 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-if (!$Executable) { $Executable = Join-Path $repoDir 'build_win\ProjectMidas.exe' }
+if (!$Executable) { $Executable = Join-Path $repoDir 'build_win\IronSights.exe' }
 $Executable = (Resolve-Path -LiteralPath $Executable).Path
 $dir = Join-Path $repoDir ('build_win\sight-audit-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8))
 New-Item -ItemType Directory -Path $dir | Out-Null
-Copy-Item -LiteralPath $Executable -Destination (Join-Path $dir 'ProjectMidas.exe')
+Copy-Item -LiteralPath $Executable -Destination (Join-Path $dir 'IronSights.exe')
 Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
 $aimMode = if ($Mode -eq 'RedReticle') {'0'} else {'1'}
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]', 'fullscreen=window', 'vsync=0',
@@ -44,7 +44,7 @@ try {
         $saved[$key] = [Environment]::GetEnvironmentVariable($key, 'Process')
         [Environment]::SetEnvironmentVariable($key, $testEnv[$key], 'Process')
     }
-    $p = Start-Process -FilePath (Join-Path $dir 'ProjectMidas.exe') -WorkingDirectory $dir -WindowStyle Hidden -PassThru
+    $p = Start-Process -FilePath (Join-Path $dir 'IronSights.exe') -WorkingDirectory $dir -WindowStyle Hidden -PassThru
 } finally {
     foreach ($key in $saved.Keys) { [Environment]::SetEnvironmentVariable($key, $saved[$key], 'Process') }
 }

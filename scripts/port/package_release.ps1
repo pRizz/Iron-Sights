@@ -3,18 +3,18 @@
 # Usage (from the repo root):  powershell -File scripts\port\package_release.ps1 [-Name <folder>]
 #
 # Layout, the same one the earlier GE-menu-overhaul-*.7z drops used:
-#   releases\<name>\windows\    ProjectMidas.exe SDL2.dll gamecontrollerdb.txt gamecontrollerdefault.txt midas_ini_help.txt Data\ Mods\
+#   releases\<name>\windows\    IronSights.exe SDL2.dll gamecontrollerdb.txt gamecontrollerdefault.txt midas_ini_help.txt Data\ Mods\
 #   releases\<name>\linux\      ProjectMidas (build_deck) libSDL2-2.0.so.0 (i386) gamecontrollerdb.txt gamecontrollerdefault.txt midas_ini_help.txt Data\ Mods\
 #   releases\<name>\steamdeck\  the linux set + libSDL2-2.0.so.0 (i386) + run.sh
-#   releases\<name>\ProjectMidas-<name>-{windows,linux,steamdeck}.zip
+#   releases\<name>\IronSights-<name>-{windows,linux,steamdeck}.zip
 #
 # Name it after the version for a release, e.g. -Name v1.0.2b gives
-# ProjectMidas-v1.0.2b-windows.zip. Zips, not 7z: some players could not open 7z.
+# IronSights-v1.0.2b-windows.zip. Zips, not 7z: some players could not open 7z.
 #
 # RUNTIME payload only: never a ROM, midas.ini, eeprom.bin, gamecontrolleruser.txt
 # or logs. The launcher is NOT bundled. Build first - this
 # does not compile:
-#   wsl -e bash -lc "cmake --build build_win -j 8"      (ProjectMidas.exe, mingw i686)
+#   wsl -e bash -lc "cmake --build build_win -j 8"      (IronSights.exe, mingw i686)
 #   wsl -e bash -lc "cmake --build build_linux -j 8"    (ge, Linux i686)
 #   wsl -e bash -lc "cmake --build build_deck -j 8"     (ge, Linux i686 + RUNPATH $ORIGIN, so it
 #                                                         finds the bundled SDL however it is started; G220)
@@ -33,7 +33,7 @@ $hash = (git -C $root rev-parse --short HEAD).Trim()
 $dirty = if ((git -C $root status --porcelain --untracked-files=no).Length -gt 0) { " (+ uncommitted changes)" } else { "" }
 $stamp = "built from $hash$dirty on $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
 
-foreach ($f in @("build_win\ProjectMidas.exe", "build_win\SDL2.dll", "build_linux\ProjectMidas", "build_deck\ProjectMidas",
+foreach ($f in @("build_win\IronSights.exe", "build_win\SDL2.dll", "build_linux\ProjectMidas", "build_deck\ProjectMidas",
                  "tools\gamecontrollerdb.txt", "tools\gamecontrollerdefault.txt",
                  "tools\Data_README.txt", "tools\Mods_README.txt", "tools\midas_ini_help.txt", "tools\shaders_base.txt",
                  "LICENSE", "tools\THIRD_PARTY_NOTICES.txt")) {
@@ -82,12 +82,12 @@ function Common([string]$dir) {
     Copy-Item (Join-Path $root "tools\midas_ini_help.txt")  $dir
     Copy-Item (Join-Path $root "LICENSE") (Join-Path $dir "LICENSE.txt")
     Copy-Item (Join-Path $root "tools\THIRD_PARTY_NOTICES.txt") $dir
-    "Project Midas - $Name`r`n$stamp`r`n`r`nProject Midas is a PC port of GoldenEye 007. It needs your own GoldenEye 007 (USA) cart image.`r`n`r`n1. Put the cart image in the Data folder (see Data/README.txt).`r`n2. Run the game.`r`n`r`nSettings are in midas.ini, written on first run. Delete it to restore the defaults. See midas_ini_help.txt for every setting.`r`n`r`nLICENSE.txt covers the Project Midas code. Third-party code keeps its own license; see THIRD_PARTY_NOTICES.txt.`r`n" |
+    "Iron Sights - $Name`r`n$stamp`r`n`r`nIron Sights is a fork of the Project Midas PC port of GoldenEye 007. It needs your own GoldenEye 007 (USA) cart image.`r`n`r`n1. Put the cart image in the Data folder (see Data/README.txt).`r`n2. Run the game.`r`n`r`nSettings are in midas.ini, written on first run. Delete it to restore the defaults. See midas_ini_help.txt for every setting.`r`n`r`nLICENSE.txt covers the Project Midas code. Third-party code keeps its own license; see THIRD_PARTY_NOTICES.txt.`r`n" |
         Set-Content -Encoding ASCII (Join-Path $dir "README.txt")
 }
 
 $win = Join-Path $out "windows"; Common $win
-Copy-Item (Join-Path $root "build_win\ProjectMidas.exe") $win
+Copy-Item (Join-Path $root "build_win\IronSights.exe") $win
 Copy-Item (Join-Path $root "build_win\SDL2.dll") $win
 
 $lin = Join-Path $out "linux"; Common $lin
@@ -110,7 +110,7 @@ Copy-Item $sdlso (Join-Path $deck "libSDL2-2.0.so.0")
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 foreach ($p in @("windows", "linux", "steamdeck")) {
-    $base = "ProjectMidas-$Name-$p"
+    $base = "IronSights-$Name-$p"
     $arc = Join-Path $out "$base.zip"
     $src = Join-Path $out $p
     $zip = [IO.Compression.ZipFile]::Open($arc, [IO.Compression.ZipArchiveMode]::Create)

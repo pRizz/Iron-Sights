@@ -723,6 +723,22 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**Windows filename and remaining branding, 2026-10-26:** Windows CMake output,
+packaging/attestation, first-launch worker/crash reporting, audit/icon/shader/gallery
+tools and current instructions now use `IronSights.exe`. The `ge` target, Linux/
+Wasm artifacts and browser storage identities stay stable. Credits now lead with
+Iron Sights and explicitly retain the Project Midas fork attribution alongside
+all original contributors/artwork/testers. Prototype/support/contribution headings
+use Iron Sights. Native Windows/optimized Wasm builds, 146 browser tests, type/site
+checks and Edge startup recovery pass. Five distribution tests reject a stale
+old executable; the actual local ZIP's name, instructions and all checksums pass.
+The renamed native helper prepares 35 images; the two-pass gallery reproduces
+all 107 images unchanged. Credits fit with original/enhanced fonts; native Start/
+HUD/upstream and eight gallery workflow checks pass. Evidence is private under
+`build/ironsights-exe*` and `build_win/font-audit-Credits-*`.
+Next action: deliver through main and verify the Windows release/attestation and
+Pages workflows. Actual Safari remains experimental.
+
 **Iron Sights rename and Classic navigation, 2026-10-26:** The accepted identity
 is Iron Sights, a fork of Project Midas, at `pRizz/Iron-Sights` and
 `https://prizz.github.io/Iron-Sights/`. Visible browser/native startup/About/window/

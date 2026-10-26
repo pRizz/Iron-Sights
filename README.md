@@ -27,7 +27,7 @@ vector sights. Existing ADS, HUD and browser controls retain their defaults.
 
 1. Download **Iron-Sights-windows-x86.zip** and **extract the entire ZIP** into a writable folder, such as Documents. Keep `SDL2.dll` beside the executable. GitHub's “Source code” archives are for building, not playing.
 2. Put your own **unmodified GoldenEye 007 USA ROM** (`.z64`, `.v64`, or `.n64`) in the extracted **Data** folder. Extract zipped ROMs first. No ROM is included or downloaded by the game.
-3. Double-click **ProjectMidas.exe**. On first launch, the game prepares weapon icons from your ROM and caches them locally. No Python, compiler, administrator access or asset downloads are required. You can skip preparation with Esc; the game uses weapon names if icons are unavailable.
+3. Double-click **IronSights.exe**. On first launch, the game prepares weapon icons from your ROM and caches them locally. No Python, compiler, administrator access or asset downloads are required. You can skip preparation with Esc; the game uses weapon names if icons are unavailable.
 
 Windows 10/11, an x86-compatible CPU and an OpenGL 3.3-capable graphics driver are required. The 32-bit build also runs on 64-bit Windows. These are continuously published development builds from successful pushes to `main`.
 
@@ -78,7 +78,7 @@ Claude was used in the making of this project. If you don't agree with this, ple
 ## Playing
 
 1. Put your GE (USA) cart image in the `Data` folder next to the executable. See `Data/README.txt` for the accepted formats and other ways to point the game at it.
-2. Run `ProjectMidas.exe` (Windows) or `ProjectMidas` (Linux).
+2. Run `IronSights.exe` (Windows) or `ProjectMidas` (Linux).
 
 Files next to the executable:
 
@@ -227,10 +227,10 @@ The commands below are for a Linux shell. On Windows, run them in WSL:
 
 | Build | Game | Next to it |
 | --- | --- | --- |
-| Windows | `build_win/ProjectMidas.exe` | `SDL2.dll`, the controller files, `Data/` |
+| Windows | `build_win/IronSights.exe` | `SDL2.dll`, the controller files, `Data/` |
 | Linux | `build_pc/ProjectMidas` | the controller files, `Data/` |
 
-To play, put a copy of `baserom.u.z64` in that build's `Data/` folder. On Windows, copy the whole `build_win` folder somewhere in Windows (from WSL: `explorer.exe build_win`) and run `ProjectMidas.exe` there. The Linux build needs 32-bit SDL2 and OpenGL on the machine that runs it. On Ubuntu or Debian:
+To play, put a copy of `baserom.u.z64` in that build's `Data/` folder. On Windows, copy the whole `build_win` folder somewhere in Windows (from WSL: `explorer.exe build_win`) and run `IronSights.exe` there. The Linux build needs 32-bit SDL2 and OpenGL on the machine that runs it. On Ubuntu or Debian:
 
 ```
 sudo dpkg --add-architecture i386

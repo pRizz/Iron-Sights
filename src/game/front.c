@@ -8434,15 +8434,14 @@ static Gfx *portSheetDrawList(Gfx *DL)
 #define PORT_CREDITS_GAP        6
 
 static const char *const port_credits_text[] = {
-    "Project Midas",
+    "Iron Sights",
     NULL,   /* "<platform> Build <stamp>" - see portSheetDrawCredits */
     "",
     "James Bond has returned August 17th 2026.",
     "",
     "A port based on the GoldenEye 007 decompilation by kholdfuzion.",
     "With contributions by Luchador, Trevor, AXDOOMER and many others.",
-    "",
-    "",
+    "A fork of Project Midas.",
     "",
     "Developed by Murk17 and AXDOOMER.",
     "",

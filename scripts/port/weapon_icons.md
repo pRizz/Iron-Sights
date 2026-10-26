@@ -44,7 +44,7 @@ Pillow and NumPy available:
 
 ```powershell
 python -m pip install Pillow==12.3.0 numpy==2.3.5
-python scripts/port/generate_weapon_icons.py --exe build_win/ProjectMidas.exe
+python scripts/port/generate_weapon_icons.py --exe build_win/IronSights.exe
 ```
 
 The images, packet pack and manifest remain ignored. Commit generator and

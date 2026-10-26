@@ -2,12 +2,12 @@
 param([string]$Executable,[switch]$CrossProcessOnly,[switch]$RenderThread)
 $ErrorActionPreference='Stop'
 $repoDir=(Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-if (!$Executable) { $Executable=Join-Path $repoDir 'build_win/ProjectMidas.exe' }
+if (!$Executable) { $Executable=Join-Path $repoDir 'build_win/IronSights.exe' }
 $dir=Join-Path $repoDir ('build_win/state-audit-'+(Get-Date -Format 'yyyyMMdd-HHmmss-fff'))
-$auditExe=[IO.Path]::GetFullPath((Join-Path $dir 'ProjectMidas.exe'))
+$auditExe=[IO.Path]::GetFullPath((Join-Path $dir 'IronSights.exe'))
 if (!$auditExe.StartsWith($repoDir+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw 'Audit executable must stay inside the workspace.' }
 New-Item -ItemType Directory -Path $dir | Out-Null
-Copy-Item -LiteralPath $Executable -Destination (Join-Path $dir 'ProjectMidas.exe')
+Copy-Item -LiteralPath $Executable -Destination (Join-Path $dir 'IronSights.exe')
 Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]','fullscreen=window','vsync=0','maxfps=60','tickhz=60','msaa=0','[input]','mouse=1')
 Add-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]',"render_thread=$(if ($RenderThread) {1} else {0})")
@@ -35,7 +35,7 @@ try {
         }
         $proof=Join-Path $dir 'state-audit-ok.txt'
         if (Test-Path -LiteralPath $proof) { Remove-Item -LiteralPath $proof }
-        $p=Start-Process -FilePath (Join-Path $dir 'ProjectMidas.exe') -WorkingDirectory $dir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $dir "$mode.stdout.txt") -RedirectStandardError (Join-Path $dir "$mode.stderr.txt")
+        $p=Start-Process -FilePath (Join-Path $dir 'IronSights.exe') -WorkingDirectory $dir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $dir "$mode.stdout.txt") -RedirectStandardError (Join-Path $dir "$mode.stderr.txt")
         $null=$p.Handle
         if (!$p.WaitForExit(90000)) { $p.Kill(); throw "State audit timed out: $mode ($dir)" }
         if ($p.ExitCode -ne 0 -or !(Test-Path -LiteralPath $proof)) { throw "State audit failed: $mode, exit $($p.ExitCode) ($dir)" }

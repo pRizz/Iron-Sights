@@ -1,23 +1,23 @@
 # Compare real font rendering in isolated folders, leaving player data untouched.
 param(
     [string]$Executable,
-    [ValidateSet('Video','Difficulty','Hud')][string]$Mode = 'Video',
+    [ValidateSet('Video','Difficulty','Hud','Credits')][string]$Mode = 'Video',
     [string]$Resolution = '1920x1080',
     [switch]$DefaultEnabled
 )
 $ErrorActionPreference = 'Stop'
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-if (!$Executable) { $Executable = Join-Path $repoDir 'build_win/ProjectMidas.exe' }
+if (!$Executable) { $Executable = Join-Path $repoDir 'build_win/IronSights.exe' }
 $Executable = (Resolve-Path -LiteralPath $Executable).Path
 foreach ($enabled in @(0,1)) {
     $dir = Join-Path $repoDir ('build_win/font-audit-' + $Mode + '-' + $enabled + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8))
     New-Item -ItemType Directory -Path $dir | Out-Null
-    $auditExe = [IO.Path]::GetFullPath((Join-Path $dir 'ProjectMidas.exe'))
+    $auditExe = [IO.Path]::GetFullPath((Join-Path $dir 'IronSights.exe'))
     if (!$auditExe.StartsWith($repoDir+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw 'Audit must stay in the workspace.' }
     Copy-Item -LiteralPath $Executable -Destination $auditExe
     Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
     $ini = @('[display]','fullscreen=window','vsync=0','maxfps=120',
-        'tickhz=60','msaa=0','filter_2d=0',"enhanced_fonts=$enabled",'mission_timer=1','weapon_hud_icons=0')
+        'tickhz=60','render_thread=0','msaa=0','filter_2d=0',"enhanced_fonts=$enabled",'mission_timer=1','weapon_hud_icons=0')
     if ($DefaultEnabled -and $enabled) { $ini = @($ini | Where-Object { $_ -notmatch '^enhanced_fonts=' }) }
     Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value $ini
     $auditEnv = @{
@@ -28,7 +28,7 @@ foreach ($enabled in @(0,1)) {
         $auditEnv.GE_STAGE='dam'; $auditEnv.GE_STAGE_AFTER='1'; $auditEnv.GE_CHEATS='invuln,invis,guns'
         $auditEnv.GE_HUD_AUDIT='8'; $auditEnv.GE_FRAMES='2100'; $auditEnv.GE_SKIPINTRO='1'
     } else {
-        $auditEnv.GE_MENU=$(if ($Mode -eq 'Video') {'video'} else {'jdifficulty'})
+        $auditEnv.GE_MENU=$(if ($Mode -eq 'Video') {'video'} elseif ($Mode -eq 'Credits') {'credits'} else {'jdifficulty'})
         if ($Mode -eq 'Difficulty') {
             $auditEnv.GE_CURSOR='200,216'; $auditEnv.GE_MISSION_CHEAT_AUDIT='0,0,1'
         }

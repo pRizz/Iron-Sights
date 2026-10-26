@@ -18,13 +18,13 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-if (!$Executable) { $Executable = Join-Path $repoDir 'build_win\ProjectMidas.exe' }
+if (!$Executable) { $Executable = Join-Path $repoDir 'build_win\IronSights.exe' }
 $Executable = (Resolve-Path -LiteralPath $Executable).Path
 $dir = Join-Path $repoDir ('build_win\hud-audit-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8))
-$auditExe = [IO.Path]::GetFullPath((Join-Path $dir 'ProjectMidas.exe'))
+$auditExe = [IO.Path]::GetFullPath((Join-Path $dir 'IronSights.exe'))
 if (!$auditExe.StartsWith($repoDir+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw 'Audit executable must stay inside the workspace.' }
 New-Item -ItemType Directory -Path $dir | Out-Null
-Copy-Item -LiteralPath $Executable -Destination (Join-Path $dir 'ProjectMidas.exe')
+Copy-Item -LiteralPath $Executable -Destination (Join-Path $dir 'IronSights.exe')
 Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
 $ini = @('[display]', 'fullscreen=window', 'vsync=0', 'maxfps=60', 'tickhz=60', 'msaa=0', 'aim_mode=1', 'ammo_on_screen=1', '[input]', 'mouse=1')
 if ($Icons) { $ini = @('[display]', 'weapon_hud_icons=1') + $ini }
@@ -67,7 +67,7 @@ try {
         $saved[$key] = [Environment]::GetEnvironmentVariable($key, 'Process')
         [Environment]::SetEnvironmentVariable($key, $auditEnv[$key], 'Process')
     }
-    $p = Start-Process -FilePath (Join-Path $dir 'ProjectMidas.exe') -WorkingDirectory $dir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $dir 'stdout.log') -RedirectStandardError (Join-Path $dir 'stderr.log')
+    $p = Start-Process -FilePath (Join-Path $dir 'IronSights.exe') -WorkingDirectory $dir -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $dir 'stdout.log') -RedirectStandardError (Join-Path $dir 'stderr.log')
     # Cache the process handle so Windows PowerShell retains the redirected child's exit code.
     $null = $p.Handle
 } finally {

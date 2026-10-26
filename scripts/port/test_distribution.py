@@ -61,13 +61,14 @@ class Distribution(unittest.TestCase):
             (build/"generated/build-info.json").write_text(json.dumps(info))
             for source in packager.FILES:
                 path=build/source;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b"test file")
-            for source in ("Data/user.z64","Data/Saves/eeprom.bin","Data/Profiles/user.geprofile","midas.ini","previous.exe"):
+            for source in ("Data/user.z64","Data/Saves/eeprom.bin","Data/Profiles/user.geprofile","midas.ini","previous.exe","ProjectMidas.exe"):
                 path=build/source;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b"must not ship")
             license=root/"SDL-LICENSE";license.write_text("license fixture")
             path=packager.package(build,out,sdl_license=license)
             with zipfile.ZipFile(path) as archive:
                 names=archive.namelist()
                 self.assertIn("SDL2.dll",names);self.assertIn("Data/README.txt",names)
+                self.assertIn("IronSights.exe",names);self.assertNotIn("ProjectMidas.exe",names)
                 self.assertIn("build-info.json",names);self.assertIn("SHA256SUMS.txt",names)
                 self.assertIn("Enhanced-Fonts-LICENSE.txt",names);self.assertIn("Enhanced-Fonts-NOTICE.txt",names)
                 self.assertFalse(any(n.endswith((".z64",".bin",".geprofile")) for n in names))

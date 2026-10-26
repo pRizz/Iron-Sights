@@ -13,13 +13,13 @@ BUILD="$1"; OUT="$2"
 R="$(cd "$(dirname "$0")/../.." && pwd)"
 ROM="$(cygpath -m "$R/baserom.u.z64")"   # the exe needs a Windows path
 rm -rf "$OUT"; mkdir -p "$OUT/Data"
-cp "$BUILD/ProjectMidas.exe" "$BUILD/SDL2.dll" "$R/tools/gamecontrollerdb.txt" "$R/tools/gamecontrollerdefault.txt" "$OUT/"
+cp "$BUILD/IronSights.exe" "$BUILD/SDL2.dll" "$R/tools/gamecontrollerdb.txt" "$R/tools/gamecontrollerdefault.txt" "$OUT/"
 cd "$OUT"
 run() { # name, env...
   local name=$1; shift
   rm -f Data/Saves/eeprom.bin
   env GE_ROM="$ROM" GE_SEED=1 GE_NOINISAVE=1 GE_WINDOW=640x360 GE_NOINPUT=1 "$@" \
-      timeout 400 ./ProjectMidas.exe > "$name.log" 2>&1
+      timeout 400 ./IronSights.exe > "$name.log" 2>&1
   echo "$name exit $? shaders $(wc -l < Data/shaders.txt 2>/dev/null || echo 0)"
 }
 run frontend GE_FRAMES=1500

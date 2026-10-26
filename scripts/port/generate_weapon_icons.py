@@ -2,7 +2,7 @@
 """Render real ROM weapon models into transparent, supersampled HUD PNGs.
 
 Requires a GE_VIDEO build, the user's baserom.u.z64, Pillow and NumPy.
-    python scripts/port/generate_weapon_icons.py --exe build_win/ProjectMidas.exe
+    python scripts/port/generate_weapon_icons.py --exe build_win/IronSights.exe
     python scripts/port/generate_weapon_icons.py --captures build_win/weapon-icons-...
 
 The executable's offline export harness fixes camera/pose/material state and
@@ -184,7 +184,7 @@ def process(captures, output, rom, exe):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--exe", type=Path, default=ROOT/"build_win/ProjectMidas.exe")
+    parser.add_argument("--exe", type=Path, default=ROOT/"build_win/IronSights.exe")
     parser.add_argument("--rom", type=Path, default=ROOT/"baserom.u.z64")
     parser.add_argument("--captures", type=Path, help="Reprocess existing black/white captures without launching the game")
     parser.add_argument("--output", type=Path, default=ROOT/"assets/port/weapon_icons")

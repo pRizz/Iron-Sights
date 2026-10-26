@@ -1,4 +1,4 @@
-Project Midas - Data folder
+Iron Sights - Data folder
 ===========================
 
 Put your own GoldenEye 007 (USA) cart image in this folder. The game also
@@ -21,11 +21,11 @@ another region or a bad dump is rejected at startup, and the log says why.
 Where the game looks, in order
 ------------------------------
 
-  1. A file dropped onto ProjectMidas.exe
-  2. ProjectMidas.exe --rom-file <path>
+  1. A file dropped onto IronSights.exe
+  2. IronSights.exe --rom-file <path>
   3. The GE_ROM=<path> environment variable
   4. rom=<path> in the [data] section of midas.ini
-     (relative paths start next to ProjectMidas.exe)
+     (relative paths start next to IronSights.exe)
   5. The first usable file in this folder, alphabetically
   6. baserom.u.z64 next to the executable, or one folder up
 

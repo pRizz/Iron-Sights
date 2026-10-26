@@ -155,7 +155,7 @@ jobs:
         run: |
           python3 scripts/port/package_windows.py --build build_win --output dist --sdl-license third_party/SDL2-${SDL2_VERSION}/LICENSE.txt
           python3 scripts/port/release_inputs.py --output dist/build-inputs.json
-          cp build_win/ProjectMidas.exe dist/ProjectMidas.exe
+          cp build_win/IronSights.exe dist/IronSights.exe
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: windows-player-package
@@ -181,7 +181,7 @@ jobs:
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-path: |
-            dist/ProjectMidas.exe
+            dist/IronSights.exe
             dist/Iron-Sights-windows-x86.zip
       - name: Preserve provenance and publish versioned release
         env:
@@ -197,7 +197,7 @@ jobs:
           from pathlib import Path
           m=json.loads(Path('dist/build-info.json').read_text())
           assert m['commit']==os.environ['GITHUB_SHA'] and m['ci'] and not m['dirty']
-          text=f'''Download **Iron-Sights-windows-x86.zip**, extract the entire ZIP, put your own stock USA ROM in its Data folder, then run ProjectMidas.exe.
+          text=f'''Download **Iron-Sights-windows-x86.zip**, extract the entire ZIP, put your own stock USA ROM in its Data folder, then run IronSights.exe.
 
           This is a continuously published development build. Weapon icons are prepared locally on first launch; no Python or asset downloads are required.
 

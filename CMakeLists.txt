@@ -424,9 +424,13 @@ endif()
 
 add_executable(ge ${GAME_SRC} ${ENGINE_SRC} ${GU_SRC} ${PORT_SRC}
                ${ASSET_LOOSE_SRC} ${ASSET_OBJS} ${FAST3D_SRC})
-# The executable is named ProjectMidas, but the CMake target stays `ge` so build
-# scripts keep working, and ge_direct.log/Profiles keep their names.
-set_target_properties(ge PROPERTIES OUTPUT_NAME ProjectMidas)
+# Windows branding changes only the artifact name; the `ge` target, logs and
+# profile identities stay stable, as do Linux and Wasm runtime artifact names.
+if(WIN32)
+    set_target_properties(ge PROPERTIES OUTPUT_NAME IronSights)
+else()
+    set_target_properties(ge PROPERTIES OUTPUT_NAME ProjectMidas)
+endif()
 if(EMSCRIPTEN)
     midas_web_target(ge)
 else()

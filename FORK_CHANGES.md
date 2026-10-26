@@ -311,10 +311,32 @@ path is `/Iron-Sights/`. Current README/contribution/release/browser references,
 repo-specific badge URLs, source/provenance links, ZIP name, Windows manifest,
 native window/About/icon-preparation/startup copy, browser metadata/chrome/CRT
 and gallery title use the new identity. The ZIP is
-`Iron-Sights-windows-x86.zip`; upstream engine artifact/target names remain
-stable, including `ProjectMidas.exe`, `ge` and the Wasm loader filenames.
+`Iron-Sights-windows-x86.zip`; its Windows player is `IronSights.exe`, superseding
+the earlier `ProjectMidas.exe` filename. The `ge` target, Linux `ProjectMidas`
+binary and Wasm loader filenames remain stable.
 Project Midas fork attribution remains visible in native startup/About and
 browser startup/footer. Older dated evidence below retains its historical name.
+
+The Windows filename follow-up updates the CMake output, release allowlist and
+EXE attestation, first-launch worker copy/command, crash module name, shader/icon/
+gallery/runtime audit tools and current player/developer instructions together.
+The credits heading, prototype page, contribution heading, Data/Mods instructions,
+settings help and notice headings identify Iron Sights. Credits explicitly say
+it is a Project Midas fork, retaining the original developer, artwork and tester
+attributions; inherited contribution guidance and license notices remain credited.
+The font audit includes Credits and disables its render thread so a simulation
+frame limit cannot finish before the requested rendered capture.
+
+Validation passes native Windows and optimized Wasm builds, 146 browser tests,
+type/site-policy checks and browser startup recovery. Five distribution tests
+require `IronSights.exe` and reject a stale `ProjectMidas.exe`; the actual local
+player ZIP has the new executable/instructions and every checksum verifies.
+The renamed helper successfully prepares all 35 native images. Both independent
+gallery passes reproduce all 107 game images unchanged, with fresh source metadata.
+Credits captures fit both native and enhanced fonts, preserving every attribution.
+The native Start/HUD/upstream regressions and eight gallery workflow tests pass.
+Private logs/captures are under `build/ironsights-exe*` and
+`build_win/font-audit-Credits-*`.
 
 The browser's deployed ROM database, remember preference, user-files mount,
 lock and backup-format identities are deliberately unchanged. Both Pages paths
@@ -1266,6 +1288,15 @@ FORK-022. Temporary audit executables are removed.
 ### FORK-018 — Windows player releases and recorded provenance
 
 **Status:** Implemented; publication is performed by the checked-in workflow.
+
+The Windows player/attested EXE is now `IronSights.exe`. CMake changes the Windows
+output only; `ge` stays the build target. The allowlisted ZIP, standalone
+attestation subject, release copy/notes and verification instructions use that
+name. The package regression deliberately puts the retired `ProjectMidas.exe`
+beside the current build and verifies it cannot leak into a player ZIP. Current
+manual packaging/audit/shader/icon/gallery tools use the new Windows filename;
+Linux and Wasm artifacts retain their inherited internal names. See FORK-002 for
+visible branding and attribution preservation.
 
 Replaced the inherited Linux/Windows EXE-only, three-day artifact workflow with
 ROM-free regression tests, a Windows x86 player ZIP and a versioned development

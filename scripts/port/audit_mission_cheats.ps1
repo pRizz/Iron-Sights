@@ -11,10 +11,10 @@ param(
 $ErrorActionPreference='Stop'
 $repoDir=(Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $dir=Join-Path $repoDir ('build_win/mission-cheat-audit-'+(Get-Date -Format 'yyyyMMdd-HHmmss-fff')+'-'+[Guid]::NewGuid().ToString('N').Substring(0,8))
-$auditExe=[IO.Path]::GetFullPath((Join-Path $dir 'ProjectMidas.exe'))
+$auditExe=[IO.Path]::GetFullPath((Join-Path $dir 'IronSights.exe'))
 if (!$auditExe.StartsWith($repoDir+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw 'Audit executable must stay inside the workspace.' }
 New-Item -ItemType Directory -Path $dir | Out-Null
-Copy-Item -LiteralPath (Join-Path $repoDir 'build_win/ProjectMidas.exe') -Destination $auditExe
+Copy-Item -LiteralPath (Join-Path $repoDir 'build_win/IronSights.exe') -Destination $auditExe
 Copy-Item -LiteralPath (Join-Path $repoDir 'build_win/SDL2.dll') -Destination $dir
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]','fullscreen=window','vsync=0','maxfps=60',"unlock_all=$([int][bool]$UnlockAll)")
 $xs=@(73,142,212,282,352)

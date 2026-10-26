@@ -22,15 +22,15 @@ if ($Dual -and (($Item -ne 0 -and $Item -notin @(4,5,6,18,19,20,21)) -or $Transi
     throw '-Dual checks native left wrists in hip fire (ADS requires one gun); select one pistol item without -Transitions.'
 }
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-if (!$Executable) { $Executable = Join-Path $repoDir 'build_win\ProjectMidas.exe' }
+if (!$Executable) { $Executable = Join-Path $repoDir 'build_win\IronSights.exe' }
 if (!$Rom) { $Rom = Join-Path $repoDir 'baserom.u.z64' }
 $Executable = (Resolve-Path -LiteralPath $Executable).Path
 $Rom = (Resolve-Path -LiteralPath $Rom).Path
 $auditDir = Join-Path $repoDir ('build_win\ads-audit-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8))
-$auditExe = [IO.Path]::GetFullPath((Join-Path $auditDir 'ProjectMidas.exe'))
+$auditExe = [IO.Path]::GetFullPath((Join-Path $auditDir 'IronSights.exe'))
 if (!$auditExe.StartsWith($repoDir+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw 'Audit executable must stay inside the workspace.' }
 New-Item -ItemType Directory -Path $auditDir | Out-Null
-Copy-Item -LiteralPath $Executable -Destination (Join-Path $auditDir 'ProjectMidas.exe')
+Copy-Item -LiteralPath $Executable -Destination (Join-Path $auditDir 'IronSights.exe')
 Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $auditDir
 $resolution = if ($Aspect -eq 'Wide') { '960x540' } else { '800x600' }
 $settings = @('[display]', 'fullscreen=window', 'vsync=0', "maxfps=$([Math]::Max(60,$TickHz))", "tickhz=$TickHz",
@@ -60,7 +60,7 @@ try {
         $previousEnv[$key] = [Environment]::GetEnvironmentVariable($key, 'Process')
         [Environment]::SetEnvironmentVariable($key, $auditEnv[$key], 'Process')
     }
-    $auditProcess = Start-Process -FilePath (Join-Path $auditDir 'ProjectMidas.exe') `
+    $auditProcess = Start-Process -FilePath (Join-Path $auditDir 'IronSights.exe') `
         -WorkingDirectory $auditDir -WindowStyle Hidden -PassThru
 } finally {
     foreach ($key in $previousEnv.Keys) {

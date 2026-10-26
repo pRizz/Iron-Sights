@@ -1,7 +1,7 @@
 IRON SIGHTS - midas.ini HELP (a fork of Project Midas)
 ==============================
 
-midas.ini is the settings file for Project Midas. It sits next to the game
+midas.ini is the settings file for Iron Sights. It sits next to the game
 executable and holds plain key=value lines in the sections [input],
 [display] and an optional [data]. It has no comments; this file explains
 the keys. Keyboard and mouse binds are kept separately, in

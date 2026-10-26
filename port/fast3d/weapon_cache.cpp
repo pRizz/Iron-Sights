@@ -214,7 +214,7 @@ static bool generate(const fs::path &cache, const char *rom)
     fs::path source(module), base=source.parent_path();
     ChildFiles files {cache.parent_path()/("worker-"+std::to_string(GetCurrentProcessId())+"-"+std::to_string(GetTickCount()))};
     fs::create_directory(files.dir);
-    fs::copy_file(source,files.dir/"ProjectMidas.exe");
+    fs::copy_file(source,files.dir/"IronSights.exe");
     fs::copy_file(base/"SDL2.dll",files.dir/"SDL2.dll");
     std::string ini="[display]\nfullscreen=window\nvsync=0\nmaxfps=60\ntickhz=60\nmsaa=1\nwidescreen=0\nlow_res=0\nfiltering=bilinear\nfilter_2d=1\nrender_thread=0\nweapon_hud=0\nmission_timer=0\nalways_health=0\n[input]\nmouse=1\n";
     if (!writeFile(files.dir/"midas.ini",Bytes(ini.begin(),ini.end()))) return false;
@@ -241,7 +241,7 @@ static bool generate(const fs::path &cache, const char *rom)
     STARTUPINFOW startup={sizeof(startup)};
     ChildProcess child;
     auto &process=child.value;
-    std::wstring command=quoted(files.dir/"ProjectMidas.exe");
+    std::wstring command=quoted(files.dir/"IronSights.exe");
     if (!CreateProcessW(nullptr,command.data(),nullptr,nullptr,FALSE,CREATE_UNICODE_ENVIRONMENT|CREATE_NO_WINDOW,
         environment.data(),files.dir.c_str(),&startup,&process)) return false;
     PreparationWindow progressWindow;

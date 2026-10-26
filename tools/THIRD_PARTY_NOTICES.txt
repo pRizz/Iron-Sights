@@ -1,7 +1,7 @@
-Project Midas - third-party notices
+Iron Sights - third-party notices
 ===================================
 
-Project Midas includes code from the projects below. Each keeps its own
+Iron Sights is a fork of Project Midas and includes the code below. Each keeps its own
 license, reproduced here as its terms require.
 
   Component                          License     Used in

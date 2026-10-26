@@ -98,7 +98,7 @@ static const char *portModuleFor(unsigned long addr, unsigned long *offset)
     base = (const unsigned char *) mbi.AllocationBase;
     if ((HMODULE) mbi.AllocationBase == GetModuleHandleA(NULL)) {
         *offset = addr - (unsigned long) (uintptr_t) base;
-        return "ProjectMidas.exe";
+        return "IronSights.exe";
     }
     if (!portPtrReadable(base, 0x40) || base[0] != 'M' || base[1] != 'Z') {
         return "?";

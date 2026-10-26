@@ -1,4 +1,4 @@
-Project Midas - Mods folder
+Iron Sights - Mods folder
 ===========================
 
 This folder is reserved for modded cart images. This build loads the stock
