@@ -785,7 +785,9 @@ panel leaves space below the optional mission clock, including taller font
 metrics (FORK-015). Alerts appear immediately during dialogue, below the actual
 measured subtitle bar with a four-unit gap, so multiline subtitles (including
 Statue Park's Janus conversation) stay unobscured without delaying the completion
-signal used by speedrunners. Native subtitle rendering reports its final bar
+signal used by speedrunners. With Mission Timer enabled, subtitles sit below
+the complete elapsed/cheat-target/BEST block (FORK-015), and alerts sit below
+those subtitles. Native subtitle rendering reports its final bar
 bottom after HUD scaling, including regional fonts and camera offsets, and resets
 that bound each render so hidden/expired dialogue reserves no space. Queue order,
 alert lifetime and other HUD timers keep their normal behavior.
@@ -1095,9 +1097,14 @@ clock now occupies a dedicated top-left area at 4:3 and wide aspect ratios.
 This replaces the inherited bottom-left placement, where elapsed/best rows
 overlapped gadget names such as Bunker's watch magnet. Measured font height
 (including the required trailing newline) determines row spacing and objective
-panel clearance. The clock temporarily hides while upper dialogue is active;
-its underlying time keeps advancing. Legacy half-size HUD scaling shrinks the
-clock about the top-left corner.
+panel clearance. The clock remains visible at its fixed top-left position during
+dialogue. Native subtitles move below the complete clock block, including the
+optional BEST row, with a four-unit visible gap above their background bar;
+objective alerts appear immediately below the subtitles (FORK-008). This replaces
+the earlier dialogue-time hiding behavior for speedrun timing. With the timer
+disabled, subtitles retain their native position. Legacy half-size HUD scaling
+shrinks the clock about the top-left corner; clearance rounds its bottom outward
+before reserving the gap, so odd font heights cannot produce an overlap.
 An applicable timed cheat-unlock target appears beside elapsed time as
 `00:42:50 / CHEAT 02:40`. The target is green within time, amber during the last
 ten whole seconds, and red beyond the deadline. Lookup uses the live stage and
@@ -1127,7 +1134,14 @@ difficulty exclusions, saved-record stage/folder lookup and missing records,
 formatting, deadline boundaries, warning colors and
 restored-clock comparisons. Clock layout/visibility regressions cover regular
 and taller fonts, saved-best presence, shifted viewports, Ammo On Screen off,
-menu/multiplayer gating and dialogue priority. [HUD audit](scripts/port/audit_hud.ps1)
+menu/multiplayer gating and visibility during dialogue. Full-stack layout tests
+cover odd/even font metrics, one to six subtitle lines, saved-best presence,
+shifted viewports, both HUD scales, native camera offsets and timer-off placement.
+Native Statue Park captures verify simultaneous elapsed/cheat target, BEST,
+three-line Trevelyan dialogue and immediate objective completion at 960x540 and
+800x600 with the small HUD. A timer-disabled capture retains the native subtitle
+position. The Windows build and HUD regressions pass.
+[HUD audit](scripts/port/audit_hud.ps1)
 accepts a
 mission, difficulty and timer switch plus an optional RAM-only `-BestSeconds`
 fixture (`GE_HUD_AUDIT_BEST`) for targeted captures. Whitelisted gadgets can be

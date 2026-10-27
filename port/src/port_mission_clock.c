@@ -89,9 +89,7 @@ s32 portMissionTimerShown(void)
     return portMissionTimer()
         && (g_CurrentPlayer->gunammooff & ~GUNAMMOREASON_OPTION) == 0
         && g_CurrentPlayer->mpmenuon == 0
-        && getPlayerCount() == 1
-        /* Dialogue owns the upper HUD while its text window is active. */
-        && (g_UpperTextDisplayFlag != 0 || upper_text_window_timer < 0);
+        && getPlayerCount() == 1;
 }
 
 static PortMissionClockLayout clockLayout(s32 hasBest)
@@ -100,6 +98,25 @@ static PortMissionClockLayout clockLayout(s32 hasBest)
     /* textMeasure accumulates height only at a newline, like ammo digits. */
     textMeasure(&height, &width, "0\n", ptrFontBankGothicChars, ptrFontBankGothic, 0);
     return portMissionClockLayout(viGetViewLeft(), viGetViewTop(), height, hasBest);
+}
+
+s32 portHudSubtitleLayoutTop(s32 viewTop, s32 textY, s32 clockBottom, s32 smallHud)
+{
+    const s32 scale = smallHud ? 2 : 1;
+    s32 minimumY;
+    if (clockBottom <= viewTop) return textY;
+    /* The subtitle bar starts two units above its text. Round the scaled
+     * clock bottom outward, then leave four visible units before that bar. */
+    minimumY = viewTop + (((clockBottom - viewTop + scale - 1) / scale + 4) * scale) + 2;
+    return textY > minimumY ? textY : minimumY;
+}
+
+s32 portHudSubtitleTop(s32 textY)
+{
+    PortMissionClockLayout clock;
+    if (!ptrFontBankGothic || !ptrFontBankGothicChars || !portMissionTimerShown()) return textY;
+    clock = clockLayout(portHudMissionBestSeconds(bossGetStageNum(), lvlGetSelectedDifficulty()) > 0);
+    return portHudSubtitleLayoutTop(viGetViewTop(), textY, clock.bottom, portHudScaleOn());
 }
 
 static s32 objectiveSubtitleBottom;

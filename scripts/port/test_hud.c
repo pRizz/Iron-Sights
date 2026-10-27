@@ -113,11 +113,39 @@ static void testClockVisibility(void)
     assert(!portMissionTimerShown());
     missionClockEnabled = 1;
     upper_text_window_timer = 30;
-    assert(!portMissionTimerShown()); /* yield to dialogue */
+    assert(portMissionTimerShown()); /* dialogue leaves the speedrun clock visible */
     g_UpperTextDisplayFlag = 1;
-    assert(portMissionTimerShown()); /* hidden dialogue doesn't reserve space */
+    assert(portMissionTimerShown()); /* hidden dialogue also leaves it visible */
     g_UpperTextDisplayFlag = 0;
     upper_text_window_timer = -1;
+}
+
+static void testTimerSubtitleObjectiveStack(void)
+{
+    /* Arrange: odd/even regional metrics, saved best, shifted and scaled HUDs. */
+    const s32 heights[] = {8, 9, 11, 14, 20};
+    s32 origin, small, font, best, rows;
+    for (origin = 0; origin <= 12; origin += 12)
+    for (small = 0; small <= 1; small++)
+    for (font = 0; font < 5; font++)
+    for (best = 0; best <= 1; best++)
+    for (rows = 1; rows <= 6; rows++) {
+        const s32 scale = small ? 2 : 1;
+        const PortMissionClockLayout clock = portMissionClockLayout(0, origin, heights[font], best);
+        const s32 clockBottom = origin + (clock.bottom - origin + scale - 1) / scale;
+        /* Act: position native text, then use its final bar bottom for the toast. */
+        const s32 y = portHudSubtitleLayoutTop(origin, origin + 13, clock.bottom, small);
+        const s32 barTop = origin + (y - 2 - origin) / scale;
+        const s32 barBottom = origin + (y + rows * heights[font] - origin + scale - 1) / scale;
+        const s32 toastY = portHudObjectiveLayoutTop(origin, clock.toastY, barBottom);
+        /* Assert: clock, complete subtitle bar and objective panel have gaps. */
+        assert(barTop >= clockBottom + 4);
+        assert(toastY >= barBottom + 4 && toastY >= clock.toastY);
+        assert(clock.elapsedY == origin + 4 + (heights[font] + 1) / 2);
+        assert(portHudSubtitleLayoutTop(origin, origin + 90, clock.bottom, small) >= origin + 90);
+        assert(portHudSubtitleLayoutTop(origin, origin + 13, 0, small) == origin + 13);
+    }
+    assert(portHudSubtitleLayoutTop(0, 90, 12, 0) == 90); /* preserve lower camera text */
 }
 
 static void testObjectiveSubtitleClearance(void)
@@ -171,6 +199,7 @@ int main(void)
     testToastSmallCaps();
     testClockClearance();
     testClockVisibility();
+    testTimerSubtitleObjectiveStack();
     testObjectiveSubtitleClearance();
     testObjectiveTimingDuringDialogue();
     {

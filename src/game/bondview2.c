@@ -14219,6 +14219,9 @@ Gfx *sub_GAME_7F08AAE8(Gfx *gdl)
 #endif
                     }
 
+#ifndef TARGET_N64
+                    msg.y = portHudSubtitleTop(msg.y);
+#endif
                     msg.bottom = msg.y + msg.textheight;
 #ifndef TARGET_N64
                     /* Objective alerts stay immediate, below the actual subtitle bar. */
