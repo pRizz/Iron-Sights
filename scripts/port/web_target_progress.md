@@ -201,6 +201,26 @@ Start/menu/capture boundaries in future input changes.
 
 ## WEB-003 | 2026-10-24 | Save persistence and backups
 
+**Opening save shortcuts, 2026-10-27:** Added visible Import Save / Export Save
+buttons to the idle opening room, reusing existing JSON backup handlers and
+replacement confirmation. Import holds automatic startup by opening controls;
+after game startup it exposes restart/restore options without opening a picker
+or replacing live files. The shortcuts wait for local-file availability and hide
+during the cinematic/gameplay. The accepted room plan and local chrome override
+now record this user-requested refinement. No storage format/identity, ROM,
+engine or native rendering inputs change. Edge checks pass direct export/import,
+cancel, invalid-data preservation, exact synthetic 512-byte campaign/profile/
+settings round trips and reload, stable canvas and phone/desktop bounds. Unit,
+type and production assembly checks pass. WebKit's focused save-transfer checks
+also pass; its wider room suite hits the same missing ROM-dialog fade-out marker
+as the unmodified audit against published `aaab15a`. This is a documented baseline
+limitation, not a passing full WebKit-room claim. `web/tools/room-save-audit.mjs`
+provides focused acceptance. Chrome actual-ROM checks pass the returned-room
+export, live import restart guard, stable canvas/saves and warm power resume.
+Private evidence is `build/web-room/save-actions-{edge,webkit,game}`. No native
+render inputs change and gallery freshness passes. Next action: publish, preserving
+the existing Safari/physical-device acceptance limits.
+
 **Status:** Complete. Actual campaign/profile/settings reload and backup restore
 pass through the launcher, alongside storage failure/retry and concurrent-tab checks.
 

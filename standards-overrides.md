@@ -84,3 +84,9 @@ retained HTML launcher, source, provenance, maintainer link and model credits
 remain accessible through F2 and an in-scene controls affordance rather than a
 permanent initial header/footer. Keep accessible controls and error recovery.
 See `scripts/port/web_room_plan.md` for the accepted experience and milestones.
+
+On 2026-10-27 the user explicitly requested visible Import Save and Export Save
+shortcuts on the initial web screen. The idle room now exposes those two controls
+through the retained backup handlers; they hide during startup/gameplay. This
+refines the earlier canvas-only preference while preserving the existing source,
+provenance and credits access through F2.

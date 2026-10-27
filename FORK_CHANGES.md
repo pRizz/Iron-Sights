@@ -1905,6 +1905,32 @@ verified room refinements in `ed459f2`. PR #2 was closed rather than merged.
 
 ### FORK-025 — Immersive browser room
 
+The opening idle room now exposes **Import Save** and **Export Save** in a compact
+upper-right toolbar requested by the owner. They reuse the retained launcher's
+portable JSON backup and confirmation flow; saves, profiles and settings travel
+without a ROM. Export opens save management and downloads the backup. Import
+opens the picker before the game starts; after startup it opens the existing
+restart/restore controls instead of bypassing the live game's EEPROM-cache guard.
+Both actions wait for local files to open and hide during the cinematic and
+gameplay. The game canvas and storage identities remain unchanged. This refines
+the earlier canvas-only entry request; the accepted room plan and
+`standards-overrides.md` record the explicit UI exception.
+Focused sources are [save shortcuts](web/src/room/save-actions.tsx),
+[styles](web/src/room/save-actions.css), [room](web/src/room/room.tsx),
+[backup handlers](web/src/app.tsx), [shortcut audit](web/tools/room-save-audit.mjs)
+and [live-game guard audit](web/tools/room-exit-audit.mjs).
+Validation: 154 unit tests, TypeScript, production assembly/allowlist, standards
+and native gallery freshness pass. Edge's room suite and Edge/WebKit save-transfer
+checks pass confirmation/cancel, invalid-file protection, exact synthetic binary
+campaign/profile/settings round trips, reload and desktop/phone bounds. Chrome's
+actual-ROM Exit Game audit passes Export Save, the live Import Save restart guard,
+stable canvas/save bytes and warm resume. Private evidence is under
+`build/web-room/save-actions-{edge,webkit,game}`. The broader Windows WebKit room
+suite stops at a missing ROM-dialog fade-out transition marker; the same failure
+reproduces with the unmodified audit against published baseline `aaab15a`.
+From `web/`, `node tools/room-save-audit.mjs` provides the independently passing
+save flow; physical Safari acceptance is not claimed.
+
 The controller GLB's generator label now identifies Iron Sights. Regenerated it
 from the same pinned/hash-checked sources and updated the public allowlist and
 model digest table. Geometry, texture bytes, source authors and CC BY 4.0

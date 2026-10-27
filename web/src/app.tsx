@@ -10,6 +10,7 @@ import { createTouchInput, initialTouch } from './touch-input';
 import { TouchLayoutSetting } from './touch-layout-setting';
 import { createRomManager } from './rom-manager';
 import { Room } from './room/room';
+import { RoomSaveActions } from './room/save-actions';
 import { restoredEntry, shouldAutoLaunch, type EntryMode } from './room/session';
 import { missionStyle } from './mission-theme';
 
@@ -540,6 +541,20 @@ export function App() {
                     }}
                     openControls={openControls}
                     play={() => play('room')}
+                    saveActions={
+                        <RoomSaveActions
+                            ready={!!engine.maybeFiles()}
+                            started={started()}
+                            importSave={() => {
+                                openControls();
+                                if (!started()) backupInput.click();
+                            }}
+                            exportSave={() => {
+                                openControls();
+                                void downloadBackup();
+                            }}
+                        />
+                    }
                     hint={showHint}
                     notify={setAction}
                     unavailable={() => {

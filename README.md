@@ -37,7 +37,7 @@ To update, replace the supplied program files while keeping **Data** and **midas
 
 ## Play the browser preview
 
-**[PLAY IN YOUR BROWSER](https://prizz.github.io/Iron-Sights/)** with your own stock US ROM. The desktop preview runs locally through WebAssembly and remembers your ROM, campaign saves, profiles and settings on this device. Save backups can be downloaded and restored. Chrome, Edge and Firefox have been tested; Safari is experimental.
+**[PLAY IN YOUR BROWSER](https://prizz.github.io/Iron-Sights/)** with your own stock US ROM. The desktop preview runs locally through WebAssembly and remembers your ROM, campaign saves, profiles and settings on this device. The opening room has **Import Save** and **Export Save** buttons for portable backups of campaign saves, profiles and settings; the ROM stays separate. Chrome, Edge and Firefox have been tested; Safari is experimental.
 
 On phones and tablets, touch controls turn on automatically. Move with the left
 thumbstick and drag the right side to look. **Touch layout** defaults to **N64

@@ -18,6 +18,13 @@ The immersive room revision is tracked separately in the
 Its entrypoint fills the viewport; F2 opens the retained launcher, saves and
 About controls, Alt+Enter toggles fullscreen, and Enter or P acts as Start
 (including opening and closing the watch). Existing saved bindings are respected.
+The idle opening room also exposes **Import Save** and **Export Save**. These use
+the portable JSON backup for campaign saves, profiles and settings, excluding
+the ROM. Import asks before replacing local data. After the game has started,
+Import opens the existing restart/restore options to protect the live save cache.
+Run `MIDAS_BROWSER=msedge node tools/room-save-audit.mjs http://127.0.0.1:4177/Iron-Sights/`
+(or `MIDAS_BROWSER=webkit`) for direct export/import, cancel/invalid-file protection,
+campaign/profile/settings byte preservation, reload and responsive shortcut checks.
 A validated remembered ROM starts immediately on normal page loads. The native
 Exit Game confirmation returns through a reverse TV transition to the room;
 its power switch resumes the paused game. To restore a backup after startup,

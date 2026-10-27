@@ -1,4 +1,12 @@
-import { createEffect, createSignal, onCleanup, onMount, Show, type Accessor } from 'solid-js';
+import {
+    createEffect,
+    createSignal,
+    onCleanup,
+    onMount,
+    Show,
+    type Accessor,
+    type JSX,
+} from 'solid-js';
 import type { StartupProgress } from '../startup-progress';
 import type { Engine } from '../engine';
 import type { RomManager } from '../rom-manager';
@@ -22,6 +30,7 @@ type Props = {
     hint: () => void;
     notify: (message: string) => void;
     unavailable: () => void;
+    saveActions: JSX.Element;
 };
 
 export function Room(props: Props) {
@@ -299,6 +308,7 @@ export function Room(props: Props) {
             <span class="visually-hidden" role="status">
                 {progress()?.label ?? label()}
             </span>
+            <Show when={idle() && !selecting()}>{props.saveActions}</Show>
             <Show when={paused() && hasRom()}>
                 <button class="room-resume" onClick={() => void resumeStartup()}>
                     Resume startup

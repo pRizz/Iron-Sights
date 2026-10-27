@@ -6,12 +6,14 @@ import { expect } from '@playwright/test';
 import { launchAuditBrowser } from './browser-choice.mjs';
 import { checkPresentation } from './presentation-check.mjs';
 import { checkRoomFraming } from './room-framing-check.mjs';
+import { auditRoomSaves } from './room-save-audit.mjs';
 
 const origin = process.argv[2] || 'http://127.0.0.1:4176';
 const output = resolve(process.env.MIDAS_AUDIT_OUTPUT || '../build/web-room/audit');
 await mkdir(output, { recursive: true });
 const { browser } = await launchAuditBrowser();
 try {
+    await auditRoomSaves(browser, origin, output);
     const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
     const page = await context.newPage();
     const errors = [];
@@ -92,9 +94,9 @@ try {
     );
     await expect(page.locator('.rom-dialog')).toBeHidden();
     await page.screenshot({ path: resolve(output, 'pivot.png') });
-    await page.mouse.move(1100, 100);
+    await page.mouse.move(1100, 140);
     await page.mouse.down();
-    await page.mouse.move(650, 340, { steps: 10 });
+    await page.mouse.move(650, 380, { steps: 10 });
     await page.mouse.up();
     await page.waitForTimeout(100);
     assert.ok(

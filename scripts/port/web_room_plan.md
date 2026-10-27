@@ -64,6 +64,12 @@ changes update the TV immediately. An idle open dialog still suspends the room.
 - First visits open into a full-viewport 3D room, without the visible HTML launcher.
   Realistic prop materials, a CRT on a stand, an N64 on the floor and connected
   cables establish a dark room lit mainly by the blue television.
+  The owner's 2026-10-27 refinement adds visible **Import Save** and **Export Save**
+  shortcuts in the idle room. They reuse the portable JSON backup, confirmation
+  and restart-before-restore flow in the retained launcher. This supersedes the
+  canvas-only entry for these two controls; hide them during the startup
+  cinematic and gameplay. Game canvas, storage identities and ROM handling stay
+  intact.
 - The initial CRT displays VIDEO 3 / NO SIGNAL with restrained scanlines,
   flicker, noise and tracking distortion. Keep effects on the introductory TV;
   gameplay becomes the clean existing game canvas.

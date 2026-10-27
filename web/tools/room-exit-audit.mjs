@@ -39,9 +39,9 @@ async function menuClick(x, y) {
     await page.mouse.click(clientX, clientY, { delay: 120 });
     await page.waitForTimeout(500);
 }
-async function backup() {
+async function backup(button = 'Download save backup') {
     const pending = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Download save backup' }).click();
+    await page.getByRole('button', { name: button }).click();
     const download = await pending;
     const chunks = [];
     for await (const chunk of await download.createReadStream()) chunks.push(chunk);
@@ -106,9 +106,19 @@ try {
     await expect(page.locator('.room-layer')).toHaveCount(0);
     const canvas = await page.locator('#canvas').elementHandle();
     const frozen = await confirmExit();
-    await page.keyboard.press('F2');
+    const before = await backup('Export Save');
     await page.getByText('Saved on this device', { exact: true }).waitFor();
-    const before = await backup();
+    await page.keyboard.press('F2');
+    let picked = false;
+    const picker = () => {
+        picked = true;
+    };
+    page.on('filechooser', picker);
+    await page.getByRole('button', { name: 'Import Save', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Restore save backup' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Restart to manage saves' })).toBeVisible();
+    assert.equal(picked, false, 'Running-game import bypassed the restart guard');
+    page.off('filechooser', picker);
     await page.keyboard.press('F2');
     // Use the physical switch raycast rather than the accessible button.
     await page.mouse.move(488, 610);
