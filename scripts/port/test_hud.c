@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include "../../port/src/port_hud.c"
+#include "../../port/src/port_crosshair.c"
 #include "../../port/src/port_mission_clock.c"
 #include "../../port/src/port_wardrobe.c"
 #include "port_icon_decode.h"

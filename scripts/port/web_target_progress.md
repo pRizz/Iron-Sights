@@ -735,6 +735,26 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**Shared crosshair-size control, 2026-10-26:** Gameplay > HUD and the watch HUD
+page gain a 10%-200% always-on crosshair size slider with a live vector preview.
+The default 100% preserves current sizing. The shared C implementation composes
+with HUD Scale and wide/split viewports, preserves the scope/aim/cursor sizes,
+and saves through the existing INI/backup path without changing storage IDs.
+Windows, Linux i386 and optimized Wasm builds pass, along with native ADS/HUD/
+Start/upstream checks, browser type checking, 152 unit tests and exact public
+artifact verification. Native menu/watch/gameplay captures review the minimum,
+default, maximum and custom colour/High HUD Scale. The final two-pass gallery
+reproduces all 107 PNGs unchanged. A private real-ROM browser audit exercises
+pointer input and save export/reload with read-only virtual-cursor observation.
+Edge's real-ROM acceptance passes pointer drag through 100%/200%/10%, live
+preview captures, backup export and remembered-ROM reload with 10% retained.
+Synthetic frontend keyboard presses were not reliably observed; stepping/clamps
+are covered by native value regressions rather than claimed as hardware UI tests.
+Next action: deliver on main and check release/Pages workflows.
+Evidence remains under `build/crosshair-size`
+and `build_win/sight-audit-*`; storage identifiers and Safari's experimental
+status are unchanged.
+
 **Reference-audit cleanup, 2026-10-26:** Browser package/plugin and controller
 generator labels now use Iron Sights. The licensed controller is regenerated
 from the same pinned sources; only generator metadata changes, with unchanged

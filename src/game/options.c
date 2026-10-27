@@ -22,6 +22,7 @@
 #include "assets/obseg/text/LoptionE.h"
 #ifndef TARGET_N64
 #include "port_watchpages.h" /* the port watch pages */
+#include "port_crosshair.h"
 /* Defined further down, next to the vanilla page drawer they replace; the
  * watch MOUSE layer needs them a few thousand lines earlier. */
 extern s32 g_portWatchPage;
@@ -1909,6 +1910,15 @@ void portWatchMouseTick(void)
                 else if (click && row >= 2 && portWatchRowLocked(g_portWatchPage, row - 2))
                 {   /* a row greyed by Classic Mode - no list, no value,
                      * so no open beep or change click either */
+                    reset_watch_item_is_actively_selected();
+                    game_options_index = row;
+                    sPortWatchAteClick = 1;
+                }
+                else if (row >= 2 && portCrosshairSliderPick(
+                            portWatchRowOpt(g_portWatchPage, row - 2), mx, my, 165,
+                            portWatchRowY0() + YINC * (row - 2 - portWatchScrollOffset()) + 7,
+                            50, held))
+                {
                     reset_watch_item_is_actively_selected();
                     game_options_index = row;
                     sPortWatchAteClick = 1;
@@ -6748,6 +6758,11 @@ static Gfx *portWatchDrawRowValue(Gfx *gdl, s32 y, s32 row, s32 state)
     const s32 live = portWatchRowValueIndex(page, row);
     const u32 activeColour = (state == 2) ? PORTWATCH_COL_SELECTED : PORTWATCH_COL_VALUE_ON;
 
+    if (portCrosshairSizeOption(portWatchRowOpt(page, row)))
+    {
+        return portWatchDrawValueAt(gdl, 244, y, portWatchRowValueText(page, row), activeColour);
+    }
+
     if (kind == PWROW_SUBSCREEN || PWROW_BACK == kind || kind == PWROW_ACTION)
     {
         return gdl; /* buttons carry no value; the label is the whole row */
@@ -6897,6 +6912,7 @@ Gfx *portWatchDrawRows(Gfx *gdl)
     const s32 vis = portWatchVisibleRows();
     s32 v;
     s32 y = portWatchRowY0();
+    s32 maybeCrosshairY = -1;
 
     portWatchScrollFollow();
     gdl = microcode_constructor(gdl);
@@ -6995,6 +7011,16 @@ Gfx *portWatchDrawRows(Gfx *gdl)
         }
 
         gdl = portWatchDrawRowValue(gdl, y, i, state);
+        if (portCrosshairSizeOption(portWatchRowOpt(page, i))) maybeCrosshairY = y + 7;
+    }
+
+    if (maybeCrosshairY >= 0)
+    {
+        extern s32 portPlayerCrosshairColor(s32 player);
+        extern s32 portHudScaleActive(void);
+        gdl = portCrosshairSliderDraw(gdl, 165, maybeCrosshairY, 50, 278,
+            portPlayerCrosshairColor(get_cur_playernum()), portHudScaleActive());
+        gdl = microcode_constructor(gdl); /* solid fills must not leak into later text */
     }
 
     if (page == PORTWATCH_CONTROLLER)

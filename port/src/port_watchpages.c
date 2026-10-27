@@ -104,6 +104,7 @@ static const struct PortWatchRowDef sHud[] = {
     /* sight on-screen and ammo on-screen lead and follow this row in the
      * folder; on the watch they are on the face, where Rare had them */
     { PWROW_OPT,       "always_crosshair", NULL, 0, 0 },
+    { PWROW_OPT,       "always_crosshair_size", NULL, 0, 0 },
     /* Crosshair colour, where the folder has it. It is a STRING key, so it has its own kind: the
      * folder's named list shared through front.c portXhair*, shown under Always Crosshair. */
     { PWROW_XHAIR,     NULL, "Crosshair Colour\n", 0, 0 },

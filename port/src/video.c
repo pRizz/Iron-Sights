@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <ultra64.h>
 #include "port_modal.h"
+#include "port_crosshair.h"
 
 #ifdef GE_XBOX
 /* No SDL on the console: the string/keyboard/thread stand-ins live in the
@@ -2324,6 +2325,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "health_wide=%d\n", s_CfgHealthWide);
     fprintf(f, "shadow_alpha=%d\n", s_CfgShadowAlpha);
     fprintf(f, "always_crosshair=%d\n", s_CfgAlwaysCrosshair);
+    fprintf(f, "always_crosshair_size=%d\n", portCrosshairSize());
     fprintf(f, "mission_timer=%d\n", s_CfgMissionTimer);
     fprintf(f, "stereo_pan=%d\n", s_CfgStereoPan);
     fprintf(f, "aim_lock=%d\n", s_CfgAimLock);

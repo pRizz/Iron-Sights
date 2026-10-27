@@ -819,6 +819,39 @@ styles, and ammo/player-name spacing in solo, two- and four-player layouts.
 
 **Status:** Implemented.
 
+**Gameplay > HUD > Crosshair Size** now adjusts the always-on target from 10%
+to 200% in five-point steps; 100% preserves the existing default. The watch HUD
+page exposes the same setting. A live vector preview sits beside each slider,
+using the current crosshair colour and HUD Scale. Mouse dragging, wheel, keys
+and controller editing share the same grid; endpoints clamp rather than wrap.
+`[display] always_crosshair_size` persists through the existing options/INI and
+browser save-backup paths. Missing keys retain 100%; out-of-range values clamp.
+It affects solo and multiplayer always-on targets, preserving their visibility,
+colour, fractional aim position, wide-aim mapping and HUD Scale. The red aiming
+reticle, sniper optic and menu/watch cursors retain their original sizing.
+The focused [size/slider helper](port/src/port_crosshair.c) and
+[interface](port/include/port_crosshair.h) own policy and presentation, with small
+hooks in the existing HUD setting bridge, sight path and two menu drawers.
+The [sight audit](scripts/port/audit_sights.ps1) covers HUD-menu/watch previews,
+size and HUD Scale alongside existing gameplay modes. It disables watch static
+for stable glyph review and removes temporary executables even after startup
+failures. The [private browser audit](web/tools/crosshair-size-audit.mjs) uses
+the matching local linker map to observe the virtual cursor without writing
+native state, and drives real browser input rather than assuming an OS warp.
+Windows, Linux i386 and optimized Wasm builds pass. Native ADS/HUD/Start/upstream
+regressions cover defaults, INI loading/saving, range clamps, pointer bounds,
+preview parity and composition with HUD Scale/wide aim; other sight sizes remain
+unchanged. Native captures review the 10% minimum, 100% default, 200% maximum,
+custom cyan and High HUD Scale in both menus and gameplay. Type checking, 152
+browser unit tests, public allowlist/digest and standards checks pass. The final
+two-pass gallery reproduces all 107 PNGs byte-for-byte. Diagnostics stay private
+under `build/crosshair-size` and `build_win/sight-audit-*`.
+Edge's real-ROM audit passes actual pointer drags through 100%/200%/10%, preview
+captures, export of the selected INI value in the existing backup format, and
+remembered-ROM reload with 10% restored. Synthetic frontend key presses were not
+reliably observed in headless acceptance; native value-step regressions cover
+the shared grid, without claiming a physical keyboard/controller UI test.
+
 Replaced the PC red target's pixel/sprite construction with thin, smoothed
 lines and a circle. The same renderer supports sniper and always-on crosshairs,
 menu/watch target cursors, hit markers and damage arcs. Preserved custom

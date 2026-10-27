@@ -2,6 +2,7 @@
 #ifndef TARGET_N64
 #include <stdio.h> /* frontDrawCursor GE_DUMP_BOND probe */
 #include "port_hud.h"
+#include "port_crosshair.h"
 #include "port_mission_cheats.h"
 #include "port_startup.h"
 #endif
@@ -4520,6 +4521,7 @@ static const struct PortSheetRow port_sheet_rows_portopts[] = {
 };
 static const struct PortSheetRow port_sheet_rows_hud[] = {
     { SHROW_OPT, "sight_on_screen" }, { SHROW_OPT, "always_crosshair" },
+    { SHROW_OPT, "always_crosshair_size" },
     { SHROW_XHAIR, NULL },   /* under Always Crosshair */
     { SHROW_OPT, "ammo_on_screen" }, { SHROW_OPT, "mission_timer" },
     { SHROW_OPT, "hit_markers" }, { SHROW_OPT, "damage_indicators" },
@@ -8209,6 +8211,16 @@ void interface_menu1C_portsheet(void)
     row = (slot >= 0) ? portSheetSlotRow(slot) : -2;
     if (row != -2 && !page_back && !page_on && !leave && !portSheetRowDisabled(row))
     {
+#ifdef GE_VIDEO
+        extern s32 portMouseClickHeld(void);
+        if (row >= 0 && port_sheet_row_kind[row] == SHROW_OPT
+            && portCrosshairSliderPick(port_sheet_row_opt[row], cursor_h_pos, cursor_v_pos,
+                240, portSheetSlotY(slot) + 7, 52, portMouseClickHeld()))
+        {
+            frontUpdateControlStickPosition();
+            return;
+        }
+#endif
         if (press)
         {
             if (row == -1)
@@ -8673,6 +8685,20 @@ Gfx *constructor_menu1C_portsheet(Gfx *DL)
         }
     }
 
+    /* Keep the preview in the row's free right-hand space, clear of the value. */
+    for (slot = 0; slot < portSheetSlotCount(); slot++)
+    {
+        const s32 row = portSheetSlotRow(slot);
+        if (row >= 0 && port_sheet_row_kind[row] == SHROW_OPT
+            && portCrosshairSizeOption(port_sheet_row_opt[row]))
+        {
+            extern s32 portCrosshairColor(void);
+            extern s32 portHudScaleActive(void);
+            DL = portCrosshairSliderDraw(DL, 240, portSheetSlotY(slot) + 7, 52, 324,
+                portCrosshairColor(), portHudScaleActive());
+            DL = microcode_constructor(DL);
+        }
+    }
     DL = portSheetDrawHelp(DL);   /* under the list, which may reach down over it */
     if (port_sheet_list_row >= 0)
     {

@@ -9,6 +9,7 @@ extern void *memset(void *dst, int value, size_t size);
 #include "../../port/src/ads_hands.c"
 #include "../../port/src/port_options.c"
 #include "../../port/src/port_hud.c"
+#include "../../port/src/port_crosshair.c"
 
 static s32 iconFixtureReady = 1;
 s32 portIconCacheReady(void) { return iconFixtureReady; }
@@ -22,6 +23,7 @@ static s32 controlsLive;
 static OSTime testTime = 1;
 static s32 savedSprint = -1;
 static s32 savedKnifeStyle = -1;
+static s32 savedCrosshairSize = -1;
 static s32 savedHud[6] = {-1,-1,-1,-1,-1,-1};
 u32 osVirtualToPhysical(void *address) { return (u32)address; }
 
@@ -34,6 +36,7 @@ s32 portIniWriteStrs(const char *section, const char *const *keys, const char *c
     s32 i;
     for (i = 0; i < n; i++) {
         if (strcmp(keys[i], "knife_ads") == 0) savedKnifeStyle = atoi(vals[i]);
+        if (strcmp(keys[i], "always_crosshair_size") == 0) savedCrosshairSize = atoi(vals[i]);
         s32 j;
         for (j = 0; j < HUD_OPTIONS; j++) if (strcmp(keys[i], phKeys[j]) == 0) savedHud[j] = atoi(vals[i]);
         if (strcmp(keys[i], "sprint") == 0) {
@@ -239,6 +242,33 @@ int main(void)
         portOptStep(opt, 1);
         assert(portOptGet(opt) == 0 && savedHud[i] == 0);
         assert(portJoyPortSetOption(phKeys[i], "1") && portOptGet(opt) == 1);
+    }
+    /* Arrange: absent old INI keys retain the original size, independently of visibility. */
+    {
+        const s32 opt = portOptFind("always_crosshair_size");
+        assert(opt >= 0 && portOptAvailable(opt) && portOptIsRanged(opt));
+        assert(portOptGet(opt) == 100 && portCrosshairSizeScale(0) == 1.0f);
+        /* Act/assert: menu stepping saves, and the actual INI boundary reloads/clamps. */
+        portOptStep(opt, -1);
+        assert(portOptGet(opt) == 95 && savedCrosshairSize == 95);
+        assert(portJoyPortSetOption("always_crosshair_size", "25"));
+        assert(portOptGet(opt) == 25 && portCrosshairSizeScale(1) == 0.125f);
+        assert(portJoyPortSetOption("always_crosshair_size", "-9") && portOptGet(opt) == 10);
+        assert(portJoyPortSetOption("always_crosshair_size", "999") && portOptGet(opt) == 200);
+        /* Pointer movement outside the track and an unheld pointer never change it. */
+        assert(!portCrosshairSliderPick(opt, 100, 20, 0, 20, 52, 1));
+        assert(!portCrosshairSliderPick(opt, 0, 20, 0, 20, 52, 0));
+        assert(portCrosshairSliderPick(opt, 0, 20, 0, 20, 52, 1));
+        assert(portOptGet(opt) == 10 && savedCrosshairSize == 10);
+        assert(portCrosshairSliderPick(opt, 52, 20, 0, 20, 52, 1));
+        assert(portOptGet(opt) == 200 && savedCrosshairSize == 200);
+        portOptStep(opt, 1);
+        assert(portOptGet(opt) == 200);
+        portOptSetValue(opt, 10);
+        portOptStep(opt, -1);
+        assert(portOptGet(opt) == 10); /* slider endpoints never wrap */
+        portOptSetValue(opt, 100);
+        assert(savedCrosshairSize == 100);
     }
     assert(!portAdsActive());
     {

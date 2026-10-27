@@ -26,6 +26,7 @@
 #include <stdlib.h> /* atexit: portOptSaveHold's quit-time flush */
 #include <string.h>
 #include <ultra64.h>
+#include "port_crosshair.h"
 
 /* strong on the owning side, weak no-op in libultra_shim.c */
 extern s32 portVideoOptionGet(const char *key, s32 *out);
@@ -247,6 +248,8 @@ static const struct PortOpt sOpts[] = {
     /* adzy (play as ssf character) is ini-only */
     TOGGLE("unlock_all",         "[display]", "Unlock All\n",         PORTOPT_CAT_GAMEPLAY),
     TOGGLE("always_crosshair",   "[display]", "Always Crosshair\n",   PORTOPT_CAT_GAMEPLAY),
+    INTR("always_crosshair_size", "[display]", "Crosshair Size\n", PORTOPT_CAT_GAMEPLAY,
+         PORT_CROSSHAIR_SIZE_MIN, PORT_CROSSHAIR_SIZE_MAX, PORT_CROSSHAIR_SIZE_STEP, "%"),
     TOGGLE("hit_markers",        "[display]", "Hit Markers\n",        PORTOPT_CAT_GAMEPLAY),
     TOGGLE("damage_indicators",  "[display]", "Damage Direction\n",   PORTOPT_CAT_GAMEPLAY),
     TOGGLE("objective_notifications", "[display]", "Objective Alerts\n", PORTOPT_CAT_GAMEPLAY),
@@ -631,8 +634,8 @@ void portOptStep(s32 i, s32 dir)
         {
             off = (v - o->min) % o->step;   /* >= 0: v >= min here */
             v += (off == 0) ? dir * o->step : (dir > 0) ? o->step - off : -off;
-            if (v > o->max) v = o->min;
-            if (v < o->min) v = o->max;
+            if (v > o->max) v = portCrosshairSizeOption(i) ? o->max : o->min;
+            if (v < o->min) v = portCrosshairSizeOption(i) ? o->min : o->max;
         }
         if (o->kind == KIND_PCT)
         {

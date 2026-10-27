@@ -183,6 +183,11 @@ padN_stickmode.
                       |            | 0 = original automatic, temporary gauges
   always_crosshair    | 0          | 1 = small target at the gun's aim point
                       |            | when not aiming
+  always_crosshair_size | 100      | Size in percent, 10-200 (menu steps of 5).
+                      |            | 100 preserves the original size. Live slider
+                      |            | and preview in Gameplay > HUD and watch HUD.
+                      |            | Shared in solo/multiplayer; does not resize
+                      |            | the aiming reticle, scope or menu cursor.
   mission_timer       | 0          | Mission Timer: elapsed MM:SS:CC top-left
                       |            | in solo missions. Shows / CHEAT MM:SS when
                       |            | this stage/difficulty has an unlock target.

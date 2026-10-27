@@ -38,6 +38,7 @@ static const struct PortOptHelp sHelp[] = {
     /* HUD */
     { "sight_on_screen",    "Shows the aiming sight." },
     { "always_crosshair",   "Small target at the gun's aim point." },
+    { "always_crosshair_size", "Size of the always-on crosshair. 100% is the original size." },
     { "crosshair_color",    "Colour of both crosshairs." },
     { "ammo_on_screen",     "Shows your ammo count." },
     { "mission_timer",      "Shows elapsed mission time." },

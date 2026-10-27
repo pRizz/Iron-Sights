@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "../../src/game/gunfire.c"
 #include "../../port/src/port_sight.c"
+#include "../../port/src/port_crosshair.c"
 
 static struct player player;
 struct player *g_CurrentPlayer = &player;
@@ -35,6 +36,7 @@ Gfx *portHudReticle(Gfx *g, f32 x, f32 y, f32 sx, f32 sy, u32 color, s32 ring)
     drawnColor = color; ringDrawn = ring;
     return g;
 }
+Gfx *portHudPanel(Gfx *g, f32 x, f32 y, f32 w, f32 h, u32 color) { return g; }
 void osSyncPrintf(const char *format, ...)
 {
     va_list args;
@@ -87,10 +89,48 @@ static void sightChecks(void)
     portHudGunSight(&gdl); assert(calls == 3);
 }
 
+static void crosshairSizingChecks(void)
+{
+    /* Arrange: always-on target with fractional aim position and a custom colour. */
+    Gfx commands[32];
+    s32 gdl = (s32)commands, i, high, wide;
+    const s32 sizes[] = {10, 25, 50, 100, 200};
+    player.mpmenuon = player.bonddead = 0;
+    player.gunsightmode = GUNSIGHTREASON_NOTAIMING;
+    player.crosshair_angle.x = 100.25f; player.crosshair_angle.y = 90.5f;
+    adsBlend = scopeBlend = 0;
+    for (i = 0; i < 5; i++) for (high = 0; high < 2; high++) for (wide = 0; wide < 2; wide++) {
+        const f32 expected = ((f32)sizes[i] / 100.0f) * (high ? 0.5f : 1.0f);
+        hudScale = high; reach = wide ? 2.0f : 1.0f;
+        portCrosshairSizeSet(sizes[i]);
+        /* Act/assert: the target stays put and composes with HUD and widescreen scaling. */
+        portHudGunSight(&gdl);
+        assert(drawnX == (wide ? 200.5f : 100.25f) && drawnY == 90.5f);
+        assert(drawnScaleY == expected && drawnScaleX == expected * (wide ? 0.5f : 1));
+        assert(drawnColor == 0x123456dc && !ringDrawn);
+        portCrosshairSliderDraw(commands, 175, 27, 65, 304, 0x123456, high);
+        assert(drawnScaleX == expected && drawnScaleY == expected && drawnX == 304);
+        assert(drawnColor == 0x123456dc && !ringDrawn);
+    }
+    /* Other sights/cursors retain their original size, even at the minimum. */
+    portCrosshairSizeSet(10); hudScale = 0; reach = 1;
+    player.gunsightmode = 0;
+    portHudGunSight(&gdl);
+    assert(ringDrawn && drawnScaleY == 1);
+    scopeBlend = 1;
+    portHudGunSight(&gdl);
+    assert(!ringDrawn && drawnScaleY == 1 && drawnColor == 0xff3a32dc);
+    assert(portCrosshairSizeFromFraction(-1) == 10);
+    assert(portCrosshairSizeFromFraction(1) == 200);
+    assert(portCrosshairSizeFromFraction(0.5f) == 105);
+    portCrosshairSizeSet(100);
+}
+
 int main(void)
 {
     projectionChecks();
     sightChecks();
+    crosshairSizingChecks();
     puts("Upstream merge checks passed: optional weapon FOV, calibrated ADS, watch projection, vector sights and HUD scale.");
     return 0;
 }

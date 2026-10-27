@@ -6,6 +6,7 @@
 #include "game/bondview.h"
 #include "port_ads.h"
 #include "port_hud.h"
+#include "port_crosshair.h"
 #include "gbi_extension.h"
 
 extern s32 portHudScaleActive(void);
@@ -37,7 +38,9 @@ static void portDrawTarget(s32 *gdl, s32 ring, f32 scopeBlend)
         x = bondviewAimUnpinX(x);
         scaleX = 1.0f / g_bondviewSceneWideFactor;
     }
-    const f32 hudScale = portHudScaleActive() ? 0.5f : 1.0f;
+    const f32 hudScale = !ring && scopeBlend == 0.0f
+        ? portCrosshairSizeScale(portHudScaleActive())
+        : (portHudScaleActive() ? 0.5f : 1.0f);
     g = portHudReticle(g, x, y, scaleX * hudScale, hudScale,
         ((u32)(color < 0 ? 0xff3a32 : color) << 8) | alpha, ring);
     if (reach > 1.001f) PORT_HUD_ANCHOR_OFF(g);
