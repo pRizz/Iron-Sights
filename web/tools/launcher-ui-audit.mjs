@@ -1,6 +1,7 @@
 // ROM-free browser UX regression against the assembled site.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { launchAuditBrowser } from './browser-choice.mjs';
 
 const origin = process.argv[2] || 'http://127.0.0.1:4176';
@@ -50,6 +51,15 @@ const migratedFiles = [
 ];
 try {
     await page.goto(origin);
+    const favicon = await page.locator('link[rel="icon"]').getAttribute('href');
+    assert.match(favicon, /^\.\/assets\/ProjectMidas-[a-zA-Z0-9_-]+\.ico$/);
+    const iconResponse = await page.request.get(new URL(favicon, page.url()).href);
+    assert.ok(iconResponse.ok(), 'Project favicon did not load under the deployment path');
+    assert.match(iconResponse.headers()['content-type'], /^image\/(?:x-icon|vnd\.microsoft\.icon)/);
+    assert.deepEqual(
+        await iconResponse.body(),
+        await readFile(new URL('../../port/win/ProjectMidas.ico', import.meta.url)),
+    );
     await page.keyboard.press('F2');
     await page.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
     const before = await download(page);

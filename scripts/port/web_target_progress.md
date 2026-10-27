@@ -265,6 +265,18 @@ verify an actual deployed update. Keep suspend images disabled.
 
 ## WEB-004 | 2026-10-24 | Browser launcher
 
+**Project favicon, 2026-10-26:** `web/index.html` now reuses the inherited native
+Project Midas icon from `port/win/ProjectMidas.ico`. Vite emits the existing
+multi-resolution ICO with a hashed relative URL, keeping `/Iron-Sights/` paths
+working without a second checked-in image. The frontend manifest parser permits
+only that explicit non-code source; artifact verification compares the emitted
+bytes and HTML link, and the launcher audit requests it beneath the project path.
+The audit server has an ICO image MIME mapping. TypeScript, 152 web tests
+(including 17 manifest checks), production assembly, exact-artifact verification
+and Chrome's launcher audit under `/Iron-Sights/` pass; the browser verifies the
+favicon response, MIME type and exact inherited bytes. Next action: publish on
+main and confirm the favicon after a browser tab reload.
+
 **Status:** Complete for the local desktop launcher. First/repeat launch,
 storage/error flows and normal Dam capture/audio/focus/watch checks pass.
 

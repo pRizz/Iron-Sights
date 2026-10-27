@@ -14,6 +14,17 @@ const html = await readFile(new URL('index.html', root), 'utf8');
 const frontend = frontendFiles(
     JSON.parse(await readFile(new URL('frontend-manifest.json', root), 'utf8')),
 );
+const maybeFavicon = html.match(
+    /<link rel="icon" type="image\/x-icon" href="\.\/(assets\/[^"/]+\.ico)"/,
+)?.[1];
+if (!maybeFavicon || !frontend.includes(maybeFavicon))
+    throw new Error('The site is missing its project favicon');
+const [favicon, originalIcon] = await Promise.all([
+    readFile(new URL(maybeFavicon, root)),
+    readFile(new URL('../../port/win/ProjectMidas.ico', import.meta.url)),
+]);
+if (!favicon.equals(originalIcon))
+    throw new Error('The favicon differs from the native project icon');
 const linked = [...html.matchAll(/(?:src|href)="\.\/(assets\/[a-zA-Z0-9_-]+\.(?:js|css))"/g)].map(
     (match) => match[1],
 );

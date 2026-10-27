@@ -2150,6 +2150,16 @@ milestone blocks persist these final results for later sessions.
 launcher, persistence, deployment/update and measured compatibility gates pass.
 Safari remains experimental by the user's explicit decision.
 
+The browser tab uses the inherited Project Midas application icon from
+`port/win/ProjectMidas.ico`, referenced by `web/index.html` and emitted by Vite
+under a hashed, deployment-relative asset path. No duplicate logo or ROM-derived
+art is introduced. `frontend-files.ts` explicitly allows only that non-code
+asset; `verify-site.ts` checks its HTML link and exact native-icon bytes, and
+the launcher browser audit verifies its response beneath the Pages project path.
+The local audit server serves ICO files with their image MIME type. TypeScript,
+152 web tests (including 17 manifest checks), production assembly, the exact
+artifact policy and Chrome's launcher audit under `/Iron-Sights/` pass.
+
 The root CMake project now has Emscripten core and SDL2/WebGL 2 configurations.
 It keeps native flags/link processing separate, uses the verified high data
 base as the initial correctness layout, and excludes native suspend snapshots

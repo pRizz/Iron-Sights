@@ -25,6 +25,7 @@ const types = {
     '.txt': 'text/plain',
     '.avif': 'image/avif',
     '.png': 'image/png',
+    '.ico': 'image/vnd.microsoft.icon',
     '.glb': 'model/gltf-binary',
 };
 const server = createServer(async (request, response) => {
