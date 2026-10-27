@@ -15,7 +15,7 @@ struct player *g_CurrentPlayer = &testPlayer;
 f32 g_GlobalTimerDelta;
 static s32 testSeat, live = 1, playerCount = 1;
 static s32 missionClockEnabled = 1;
-s32 g_UpperTextDisplayFlag, upper_text_window_timer = -1;
+s32 g_UpperTextDisplayFlag, display_upper_text_window, upper_text_window_timer = -1;
 s32 portMissionTimer(void) { return missionClockEnabled; }
 static s32 inventory[40], inventoryCount, currentWeapon;
 static save_data bestSave;
@@ -120,6 +120,49 @@ static void testClockVisibility(void)
     upper_text_window_timer = -1;
 }
 
+static void testObjectiveSubtitleClearance(void)
+{
+    /* Arrange: shifted viewports, regional metrics, one to six subtitle rows. */
+    const s32 heights[] = {8, 11, 14, 20};
+    s32 origin, scaled, row, font, best;
+    for (origin = 0; origin <= 12; origin += 12)
+    for (scaled = 0; scaled <= 1; scaled++)
+    for (row = 1; row <= 6; row++)
+    for (font = 0; font < 4; font++)
+    for (best = 0; best <= 1; best++) {
+        const s32 subtitleBottom = origin + (13 + row * heights[font] + scaled) / (scaled ? 2 : 1);
+        const PortMissionClockLayout clock = portMissionClockLayout(0, origin, heights[font], best);
+        /* Act: use the subtitle renderer's measured and scaled bottom edge. */
+        const s32 y = portHudObjectiveLayoutTop(origin, clock.toastY, subtitleBottom);
+        /* Assert: the complete panel clears text, its bar and the optional clock. */
+        assert(y >= origin + 28 && y >= clock.toastY && y >= subtitleBottom + 4);
+        assert(y + 30 <= origin + 180);
+        assert(portHudObjectiveLayoutTop(origin, 0, subtitleBottom) >= subtitleBottom + 4);
+    }
+    assert(portHudObjectiveLayoutTop(12, 0, 0) == 40); /* no displayed subtitle */
+    assert(portHudObjectiveLayoutTop(0, 0, 20) == 28); /* short line needs no move */
+    assert(portHudObjectiveLayoutTop(0, 0, 46) == 50); /* Janus's three-line dialogue */
+}
+
+static void testObjectiveTimingDuringDialogue(void)
+{
+    /* Arrange: the objective changes during visible Janus dialogue. */
+    portHudReset(0);
+    display_upper_text_window = 1;
+    upper_text_window_timer = 60;
+    portHudSubtitleBottom(46);
+    /* Act / assert: immediately queued, with the normal uninterrupted lifetime. */
+    assert(portHudObjective(1, 1, OBJECTIVESTATUS_COMPLETE, "Confront and unmask Janus"));
+    assert(phState[0].toastCount == 1 && phState[0].toastTime == 270);
+    phAdvance(&phState[0], 30);
+    assert(phState[0].toastCount == 1 && phState[0].toastTime == 240);
+    phAdvance(&phState[0], 240);
+    assert(phState[0].toastCount == 0);
+    portHudSubtitleBottom(0);
+    display_upper_text_window = 0;
+    upper_text_window_timer = -1;
+}
+
 int main(void)
 {
     s32 i, j, value, selected, n;
@@ -128,6 +171,8 @@ int main(void)
     testToastSmallCaps();
     testClockClearance();
     testClockVisibility();
+    testObjectiveSubtitleClearance();
+    testObjectiveTimingDuringDialogue();
     {
         char timer[64], tiny[5];
         bestTimes[0][DIFFICULTY_SECRET] = 123;
@@ -391,6 +436,6 @@ int main(void)
         assert(portHudTextOffsetNdc(1, 0) == 0);
     }
     assert(portHudOptionGet("hit_markers", &value) && value == 1);
-    puts("HUD checks passed: settings, idle fading/gauge geometry, icon coverage/decoding, per-player feedback, direction, queued objectives, inventory filtering/scrolling, 30/60/120/240 Hz.");
+    puts("HUD checks passed: settings, idle fading/gauge geometry, icon coverage/decoding, per-player feedback, direction, immediate objectives/subtitle clearance, inventory filtering/scrolling, 30/60/120/240 Hz.");
     return 0;
 }

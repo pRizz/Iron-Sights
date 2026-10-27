@@ -54,6 +54,7 @@
 #include <stdlib.h> /* getenv - port diagnostics */
 #include "port_ads.h"
 #include "port_hud.h"
+#include "port_mission_clock.h"
 extern f32 g_bondviewSceneWideFactor;
 extern s32 portAdzyMode(void); /* video.c: midas.ini [display] adzy - used twice in solo_char_load */
 extern s32 portReturnStartThisTick(void); /* video.c: START came from Return alone; weak 0 headless */
@@ -14176,6 +14177,9 @@ Gfx *sub_GAME_7F08AAE8(Gfx *gdl)
         s16 pad;
     } sw;
 
+#ifndef TARGET_N64
+    portHudSubtitleBottom(0);
+#endif
     if (g_UpperTextDisplayFlag == 0)
     {
         if (upper_text_window_timer >= 0)
@@ -14217,6 +14221,9 @@ Gfx *sub_GAME_7F08AAE8(Gfx *gdl)
 
                     msg.bottom = msg.y + msg.textheight;
 #ifndef TARGET_N64
+                    /* Objective alerts stay immediate, below the actual subtitle bar. */
+                    portHudSubtitleBottom(portHudScaleOn()
+                        ? viGetViewTop() + (msg.bottom - viGetViewTop() + 1) / 2 : msg.bottom);
                     if (portHudScaleOn())
                     {   /* HUD Scale: the bar keeps the full width at the text's
                          * halved rows, and the text is laid out from the view's

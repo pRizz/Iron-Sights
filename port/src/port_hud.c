@@ -16,6 +16,7 @@
 #include "game/front.h"
 #include "game/file2.h"
 #include "game/lv.h"
+#include "game/language.h"
 #include "game/math_atan2f.h"
 #include "game/options.h"
 #include "game/player.h"
@@ -260,8 +261,15 @@ void portHudTick(void)
                  * basis: right = (-cos(heading), -sin(heading)). */
                 const f32 heading = g_CurrentPlayer->vv_theta * HUD_PI / 180.0f;
                 portHudDamage(0, cosf(heading), sinf(heading));
-                portHudObjective(0, 0, OBJECTIVESTATUS_COMPLETE, "Neutralise all alarms");
-                portHudObjective(1, 1, OBJECTIVESTATUS_FAILED, "Install covert modem");
+                if (getenv("GE_HUD_AUDIT_DIALOGUE") && bossGetStageNum() == LEVELID_STATUE) {
+                    /* Real localized Janus dialogue through the native queue. */
+                    hudmsgTopShow((char *)langGet(getStringID(LSTAT, 25)));
+                    portHudObjective(1, 1, OBJECTIVESTATUS_COMPLETE,
+                        (const char *)langGet(getStringID(LSTAT, 5)));
+                } else {
+                    portHudObjective(0, 0, OBJECTIVESTATUS_COMPLETE, "Neutralise all alarms");
+                    portHudObjective(1, 1, OBJECTIVESTATUS_FAILED, "Install covert modem");
+                }
                 fired = 1;
                 portConLogf("ge: hud-audit: hit, direction, completed objective, weapon strip\n");
             } else if (fired == 1 && time >= 104.0f) {

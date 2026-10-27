@@ -10,6 +10,8 @@ param(
     [switch]$Disabled,
     [switch]$Menu,
     [switch]$MissionTimer,
+    [switch]$Dialogue,
+    [switch]$SmallHud,
     [switch]$Chop,
     [ValidateRange(0,1023)][int]$BestSeconds = 0,
     [string]$Stage = 'dam',
@@ -17,6 +19,7 @@ param(
     [ValidateSet(1,2,4)][int]$Players = 1
 )
 $ErrorActionPreference = 'Stop'
+if ($Dialogue) { $Stage = 'statue' }
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 if (!$Executable) { $Executable = Join-Path $repoDir 'build_win\IronSights.exe' }
 $Executable = (Resolve-Path -LiteralPath $Executable).Path
@@ -30,6 +33,7 @@ $ini = @('[display]', 'fullscreen=window', 'vsync=0', 'maxfps=60', 'tickhz=60', 
 if ($Icons) { $ini = @('[display]', 'weapon_hud_icons=1') + $ini }
 if ($AutomaticHealth) { $ini = @('[display]', 'always_health=0') + $ini }
 if ($MissionTimer) { $ini = @('[display]', 'mission_timer=1') + $ini }
+if ($SmallHud) { $ini = @('[display]', 'hud_scale=1') + $ini }
 if ($Disabled) { $ini = @('[display]', 'hit_markers=0', 'damage_indicators=0', 'objective_notifications=0', 'weapon_hud=0', 'always_health=0') + $ini }
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value $ini
 $auditEnv = @{
@@ -38,6 +42,7 @@ $auditEnv = @{
     GE_HUD_AUDIT=[string]$Item; GE_FRAMES='2100'; GE_SEED='1'
 }
 if ($BodyHit) { $auditEnv.GE_HUD_AUDIT_BODY = '1' }
+if ($Dialogue) { $auditEnv.GE_HUD_AUDIT_DIALOGUE = '1' }
 if ($Chop) {
     $auditEnv.GE_HUD_AUDIT = '1'
     $auditEnv.GE_HUD_AUDIT_CHOP = '1'

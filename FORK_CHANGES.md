@@ -782,13 +782,31 @@ Gothic renders these as uniform small capitals, avoiding the taller initial
 capital in sentence-case objective names. Original localized strings and queue
 contents keep their spelling; native two-byte glyph codes are preserved. The
 panel leaves space below the optional mission clock, including taller font
-metrics (FORK-015).
+metrics (FORK-015). Alerts appear immediately during dialogue, below the actual
+measured subtitle bar with a four-unit gap, so multiline subtitles (including
+Statue Park's Janus conversation) stay unobscured without delaying the completion
+signal used by speedrunners. Native subtitle rendering reports its final bar
+bottom after HUD scaling, including regional fonts and camera offsets, and resets
+that bound each render so hidden/expired dialogue reserves no space. Queue order,
+alert lifetime and other HUD timers keep their normal behavior.
 
 **Sources:** [objective updates](src/game/objective_status.c),
-[mission reset](src/game/objective.c), [notification queue](port/src/port_hud.c).
-**Checks:** HUD queue/filter/timing and display-case/buffer/native-glyph tests;
-completed/failed objective captures. The raised-initial appearance was reproduced
-in native and Edge actual-ROM captures before the presentation fix. Matched Edge
+[mission reset](src/game/objective.c), [notification queue](port/src/port_hud.c),
+[shared layout](port/src/port_mission_clock.c),
+[native subtitle bounds hook](src/game/bondview2.c).
+**Checks:** HUD queue/filter/timing, display-case/buffer/native-glyph tests and
+completed/failed objective captures. Subtitle/clock clearance across font metrics,
+line counts, HUD scales and viewport offsets, plus immediate queueing and normal
+alert duration during dialogue, have regressions in `scripts/port/test_hud.sh`.
+`scripts/port/audit_hud.ps1 -Dialogue` reproduces simultaneous native Statue Park
+dialogue and its objective alert in an isolated capture; add `-MissionTimer`,
+`-SmallHud` or `-Aspect Classic` to check the adjacent clock, scaled subtitles
+and alternate viewport.
+Native Statue Park captures at 960x540 and 800x600 (small HUD) verify the actual
+three-line Trevelyan subtitle and completion panel are visible together, with
+clear space between them. The Windows build and HUD regressions pass.
+The raised-initial appearance was reproduced in native and Edge actual-ROM
+captures before the presentation fix. Matched Edge
 pixel bounds show the first capital five screen pixels higher before the fix;
 the normalized description's measured letters share top/bottom bounds afterward.
 

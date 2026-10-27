@@ -102,11 +102,27 @@ static PortMissionClockLayout clockLayout(s32 hasBest)
     return portMissionClockLayout(viGetViewLeft(), viGetViewTop(), height, hasBest);
 }
 
+static s32 objectiveSubtitleBottom;
+
+void portHudSubtitleBottom(s32 bottom)
+{
+    objectiveSubtitleBottom = bottom;
+}
+
+s32 portHudObjectiveLayoutTop(s32 viewTop, s32 clockToastY, s32 subtitleBottom)
+{
+    s32 top = viewTop + 28;
+    if (clockToastY > top) top = clockToastY;
+    if (subtitleBottom > 0 && subtitleBottom + 4 > top) top = subtitleBottom + 4;
+    return top;
+}
+
 s32 portHudObjectiveTop(void)
 {
-    const s32 top = viGetViewTop() + 28;
-    if (!portMissionTimerShown() || !ptrFontBankGothic || !ptrFontBankGothicChars) return top;
-    return clockLayout(portHudMissionBestSeconds(bossGetStageNum(), lvlGetSelectedDifficulty()) > 0).toastY;
+    s32 clockToastY = 0;
+    if (portMissionTimerShown() && ptrFontBankGothic && ptrFontBankGothicChars)
+        clockToastY = clockLayout(portHudMissionBestSeconds(bossGetStageNum(), lvlGetSelectedDifficulty()) > 0).toastY;
+    return portHudObjectiveLayoutTop(viGetViewTop(), clockToastY, objectiveSubtitleBottom);
 }
 
 Gfx *portHudDrawMissionTimer(Gfx *gdl)
