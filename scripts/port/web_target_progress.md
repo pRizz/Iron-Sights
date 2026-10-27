@@ -1263,6 +1263,17 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**Translucent N64 buttons, 2026-10-27:** Replaced the opaque A/B/Z/Start color
+fills with 50% alpha, retaining the existing highlights, solid white labels,
+controller colors, shapes and hit areas. This is confined to `web/src/touch.css`;
+input behavior and native render inputs do not change. The background rule wins
+over generic hover styling to preserve transparency while hovered or held.
+Edge/WebKit control checks and production assembly/allowlist pass; Chrome's
+actual-ROM touch audit passes and its game captures show the translucent buttons
+with solid labels. Private evidence is `build/web-touch/opacity-{edge,webkit,game}`.
+Native gallery freshness is unchanged. Next action: confirm readability and
+visibility on physical iPhone/iPad hardware within the existing preview limits.
+
 **N64 controller layout, 2026-10-27:** Added a saved Touch layout selector beside
 the touch-control toggle. N64 controller is the default, with blue circular A,
 green circular B, red circular Start and gray rectangular Z on the right.

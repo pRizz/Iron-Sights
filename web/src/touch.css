@@ -90,7 +90,6 @@
     padding: 0;
     border: 2px solid #ffffff65;
     border-radius: 50%;
-    background: linear-gradient(#ffffff24, #00000024), var(--n64-color);
     color: #fff;
     font-size: 23px;
     font-weight: 700;
@@ -98,6 +97,9 @@
     box-shadow:
         inset 0 2px 2px #ffffff30,
         0 3px 5px #0008;
+}
+.touch-controls .touch-n64 button[data-controller-button] {
+    background: linear-gradient(#ffffff24, #00000024), var(--n64-color);
 }
 .touch-n64 button[data-controller-button]:active {
     filter: brightness(1.25);
@@ -108,24 +110,24 @@
     width: 48px;
 }
 .touch-n64 button[data-controller-button='start'] {
-    --n64-color: #c8333b;
+    --n64-color: #c8333b80;
     grid-area: 1 / 2;
     width: 48px;
     height: 48px;
     font-size: 11px;
 }
 .touch-n64 button[data-controller-button='b'] {
-    --n64-color: #208d4c;
+    --n64-color: #208d4c80;
     grid-area: 2 / 1;
     width: 56px;
     height: 56px;
 }
 .touch-n64 button[data-controller-button='a'] {
-    --n64-color: #2465ce;
+    --n64-color: #2465ce80;
     grid-area: 2 / 2;
 }
 .touch-n64 button[data-controller-button='z'] {
-    --n64-color: #777e87;
+    --n64-color: #777e8780;
     grid-area: 3 / 1 / 4 / 3;
     width: 104px;
     height: 48px;

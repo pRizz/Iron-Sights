@@ -85,10 +85,16 @@ mode defaults on for coarse touchscreens or touch devices without Pointer Lock;
 an on-screen checkbox saves an explicit override independently of game files.
 The saved **Touch layout** selector defaults to **N64 controller** for new or
 unset preferences. Its right-hand cluster has a circular blue A, circular green
-B, circular red Start and gray rectangular Z. These use existing raw native
-A/B/Start/Z button bits in gameplay and menus, respecting the game's controller
-mapping. Aim remains a toggle during gameplay; the left analog movement stick,
-right-side drag-to-look and gun-icon **Switch weapon** convenience remain.
+B, circular red Start and gray rectangular Z. Their colored fills use 50% alpha
+beneath the existing highlight/shadow treatment so the game remains visible
+through them, while white labels retain full opacity. This replaces the original
+opaque fills, preserving controller colors, shapes and hit areas.
+The controller background rule also wins over generic button-hover styling,
+so hovering or holding a button keeps its translucent controller color.
+These use existing raw native A/B/Start/Z button bits in gameplay and menus,
+respecting the game's controller mapping. Aim remains a toggle during gameplay;
+the left analog movement stick, right-side drag-to-look and gun-icon **Switch
+weapon** convenience remain.
 Dragging Z turns while firing. Browser Pause/Options remain accessible at the top.
 **Modern actions** restores the previous Fire/Aim/Use/Reload/Crouch/Watch layout,
 Select/Back menu buttons and More tray with weapon/gadget cycling, zoom,
