@@ -248,7 +248,7 @@ static const struct PortOpt sOpts[] = {
     /* adzy (play as ssf character) is ini-only */
     TOGGLE("unlock_all",         "[display]", "Unlock All\n",         PORTOPT_CAT_GAMEPLAY),
     TOGGLE("always_crosshair",   "[display]", "Always Crosshair\n",   PORTOPT_CAT_GAMEPLAY),
-    INTR("always_crosshair_size", "[display]", "Crosshair Size\n", PORTOPT_CAT_GAMEPLAY,
+    INTR("always_crosshair_size", "[display]", "Always Crosshair Size\n", PORTOPT_CAT_GAMEPLAY,
          PORT_CROSSHAIR_SIZE_MIN, PORT_CROSSHAIR_SIZE_MAX, PORT_CROSSHAIR_SIZE_STEP, "%"),
     TOGGLE("hit_markers",        "[display]", "Hit Markers\n",        PORTOPT_CAT_GAMEPLAY),
     TOGGLE("damage_indicators",  "[display]", "Damage Direction\n",   PORTOPT_CAT_GAMEPLAY),

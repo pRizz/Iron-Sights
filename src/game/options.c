@@ -1915,9 +1915,9 @@ void portWatchMouseTick(void)
                     sPortWatchAteClick = 1;
                 }
                 else if (row >= 2 && portCrosshairSliderPick(
-                            portWatchRowOpt(g_portWatchPage, row - 2), mx, my, 165,
+                            portWatchRowOpt(g_portWatchPage, row - 2), mx, my, 200,
                             portWatchRowY0() + YINC * (row - 2 - portWatchScrollOffset()) + 7,
-                            50, held))
+                            30, held))
                 {
                     reset_watch_item_is_actively_selected();
                     game_options_index = row;
@@ -6760,7 +6760,7 @@ static Gfx *portWatchDrawRowValue(Gfx *gdl, s32 y, s32 row, s32 state)
 
     if (portCrosshairSizeOption(portWatchRowOpt(page, row)))
     {
-        return portWatchDrawValueAt(gdl, 244, y, portWatchRowValueText(page, row), activeColour);
+        return portWatchDrawValueAt(gdl, 252, y, portWatchRowValueText(page, row), activeColour);
     }
 
     if (kind == PWROW_SUBSCREEN || PWROW_BACK == kind || kind == PWROW_ACTION)
@@ -7018,7 +7018,7 @@ Gfx *portWatchDrawRows(Gfx *gdl)
     {
         extern s32 portPlayerCrosshairColor(s32 player);
         extern s32 portHudScaleActive(void);
-        gdl = portCrosshairSliderDraw(gdl, 165, maybeCrosshairY, 50, 278,
+        gdl = portCrosshairSliderDraw(gdl, 200, maybeCrosshairY, 30, 286,
             portPlayerCrosshairColor(get_cur_playernum()), portHudScaleActive());
         gdl = microcode_constructor(gdl); /* solid fills must not leak into later text */
     }

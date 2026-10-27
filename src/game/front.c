@@ -8215,7 +8215,7 @@ void interface_menu1C_portsheet(void)
         extern s32 portMouseClickHeld(void);
         if (row >= 0 && port_sheet_row_kind[row] == SHROW_OPT
             && portCrosshairSliderPick(port_sheet_row_opt[row], cursor_h_pos, cursor_v_pos,
-                240, portSheetSlotY(slot) + 7, 52, portMouseClickHeld()))
+                270, portSheetSlotY(slot) + 7, 34, portMouseClickHeld()))
         {
             frontUpdateControlStickPosition();
             return;
@@ -8660,7 +8660,8 @@ Gfx *constructor_menu1C_portsheet(Gfx *DL)
 
         if (value[0] != '\0')
         {
-            x = PORT_SHEET_VALUE_X;
+            x = (row >= 0 && port_sheet_row_kind[row] == SHROW_OPT
+                && portCrosshairSizeOption(port_sheet_row_opt[row])) ? 228 : PORT_SHEET_VALUE_X;
             if (port_sheet_twocol)
             {   /* right-aligned to the column's edge (see port_sheet_twocol) */
                 s32 vh = 0, vw = 0;
@@ -8694,7 +8695,7 @@ Gfx *constructor_menu1C_portsheet(Gfx *DL)
         {
             extern s32 portCrosshairColor(void);
             extern s32 portHudScaleActive(void);
-            DL = portCrosshairSliderDraw(DL, 240, portSheetSlotY(slot) + 7, 52, 324,
+            DL = portCrosshairSliderDraw(DL, 270, portSheetSlotY(slot) + 7, 34, 324,
                 portCrosshairColor(), portHudScaleActive());
             DL = microcode_constructor(DL);
         }

@@ -737,6 +737,10 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 **Shared crosshair-size control, 2026-10-26:** Gameplay > HUD and the watch HUD
 page gain a 10%-200% always-on crosshair size slider with a live vector preview.
+Both menus label it **Always Crosshair Size** to make its scope explicit, with
+space reserved for the longer label. The browser audit uses the updated track
+coordinates; its formatting and syntax checks pass. Native ADS/HUD regressions
+and main-menu/watch layout captures pass for this label refinement.
 The default 100% preserves current sizing. The shared C implementation composes
 with HUD Scale and wide/split viewports, preserves the scope/aim/cursor sizes,
 and saves through the existing INI/backup path without changing storage IDs.

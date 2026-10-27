@@ -113,17 +113,17 @@ try {
             return { x, y };
         });
         assert.ok(Number.isFinite(current.x) && Number.isFinite(current.y));
-        if (Math.abs(current.x - 265) < 1 && Math.abs(current.y - 100) < 1) break;
-        pointer.x += (265 - current.x) * scale;
+        if (Math.abs(current.x - 286) < 1 && Math.abs(current.y - 100) < 1) break;
+        pointer.x += (286 - current.x) * scale;
         pointer.y += (100 - current.y) * scale;
         await page.mouse.move(pointer.x, pointer.y);
         await page.waitForTimeout(150);
     }
-    const point = (x) => ({ x: pointer.x + (x - 265) * scale, y: pointer.y });
+    const point = (x) => ({ x: pointer.x + (x - 286) * scale, y: pointer.y });
     await page.screenshot({ path: resolve(output, 'default.png') });
     await page.mouse.down();
     await page.waitForTimeout(100);
-    const maximum = point(292);
+    const maximum = point(304);
     await page.mouse.move(maximum.x, maximum.y, { steps: 20 });
     await page.waitForTimeout(120);
     await page.mouse.up();
@@ -131,7 +131,7 @@ try {
     await page.screenshot({ path: resolve(output, 'maximum.png') });
     await page.mouse.down();
     await page.waitForTimeout(100);
-    const minimum = point(240);
+    const minimum = point(270);
     await page.mouse.move(minimum.x, minimum.y, { steps: 20 });
     await page.waitForTimeout(120);
     await page.mouse.up();

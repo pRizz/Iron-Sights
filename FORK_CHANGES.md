@@ -819,9 +819,11 @@ styles, and ammo/player-name spacing in solo, two- and four-player layouts.
 
 **Status:** Implemented.
 
-**Gameplay > HUD > Crosshair Size** now adjusts the always-on target from 10%
+**Gameplay > HUD > Always Crosshair Size** adjusts the always-on target from 10%
 to 200% in five-point steps; 100% preserves the existing default. The watch HUD
-page exposes the same setting. A live vector preview sits beside each slider,
+page exposes the same explicit label, clarifying that other sights are unaffected;
+both menus leave room for the longer label beside the slider and percentage.
+A live vector preview sits beside each slider,
 using the current crosshair colour and HUD Scale. Mouse dragging, wheel, keys
 and controller editing share the same grid; endpoints clamp rather than wrap.
 `[display] always_crosshair_size` persists through the existing options/INI and
