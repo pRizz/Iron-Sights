@@ -10,8 +10,9 @@ repository `pRizz/Iron-Sights` and Pages path `/Iron-Sights/`. Keep the existing
 ROM/database, preferences, user-files mount/lock and backup format identifiers:
 the origin stays `https://prizz.github.io`, so no migration layer is needed.
 Preserve upstream attribution throughout the browser and native product.
-The Windows player filename is `IronSights.exe`; the `ge` target and Linux/Wasm
-runtime filenames remain stable. This filename change does not alter web storage.
+Native player filenames are `IronSights.exe` on Windows and `IronSights` on
+Linux/Steam Deck. The `ge` target and deployed Wasm filenames remain stable.
+These filename changes do not alter web storage.
 
 Use [milestone progress](web_target_progress.md) for implementation status,
 verification and session handoffs. Approval of this plan is not evidence that

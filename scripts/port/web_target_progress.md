@@ -723,6 +723,27 @@ Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
 
+**Reference-audit cleanup, 2026-10-26:** Browser package/plugin and controller
+generator labels now use Iron Sights. The licensed controller is regenerated
+from the same pinned sources; only generator metadata changes, with unchanged
+geometry/texture/attribution and an updated allowlist/digest table. README media
+uses an Iron Sights filename. Native Linux/Deck players now use `IronSights`
+alongside Windows `IronSights.exe`; the deployed Wasm artifact names and browser
+storage/backup contracts stay stable. This supersedes the earlier Linux filename
+decision below. The optional native launcher, AI linter and Natalya rig now find
+current builds; the Deck launcher is a separately checked-in shell file.
+Windows, Linux i386 and optimized Wasm builds pass; the deployed Wasm filenames
+remain unchanged. All 148 browser tests, type checking and exact public allowlist/
+digest checks pass. Edge room and startup audits pass, including prop loading,
+portrait/reduced-motion/failure paths and room handoff. Native launcher discovery,
+seven shell subprocess cases, five distribution tests and native Start/upstream
+checks pass. The current Windows ZIP's executable/help/checksums verify. Both
+independent gallery passes reproduce all 107 images byte-for-byte; native/room
+visual review and eight gallery workflow tests pass. Next action: deliver through
+main and verify CI/Pages. Application icon redesign is deferred; Safari stays
+experimental. Diagnostics are private under `build/reference-cleanup`,
+`build/web-room/audit` and `build_win/hand-gallery-sa3sq9ti`.
+
 **Windows filename and remaining branding, 2026-10-26:** Windows CMake output,
 packaging/attestation, first-launch worker/crash reporting, audit/icon/shader/gallery
 tools and current instructions now use `IronSights.exe`. The `ge` target, Linux/

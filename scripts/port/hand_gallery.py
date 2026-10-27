@@ -374,7 +374,7 @@ def build(root, work):
     print('Building current rendering inputs...', flush=True)
     with (work/'build.log').open('wb') as log:
         subprocess.run(command, cwd=root, stdout=log, stderr=log, check=True, timeout=1200)
-    return root/('build_win/IronSights.exe' if os.name == 'nt' else 'build_pc_video/ProjectMidas')
+    return root/('build_win/IronSights.exe' if os.name == 'nt' else 'build_pc_video/IronSights')
 
 
 def generate(root=ROOT):

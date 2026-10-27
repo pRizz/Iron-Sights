@@ -1,7 +1,7 @@
-// GE Launcher - mission/difficulty/cheat picker for ge.exe.
+// GE Launcher - mission/difficulty/cheat picker for the game executable.
 // Build: csc /target:winexe /out:GELauncher.exe GELauncher.cs
 // (csc.exe ships with the .NET Framework: C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe)
-// Place GELauncher.exe next to ge.exe. Selections map to the GE_STAGE /
+// Place GELauncher.exe next to the game executable. Selections map to the GE_STAGE /
 // GE_DIFF / GE_CHEATS environment variables the port understands.
 
 using System;
@@ -154,7 +154,7 @@ class GELauncher : Form
             Location = new Point(90, 293),
             Width = 178,
         };
-        tip.SetToolTip(extraenv, "Extra environment variables for ge.exe, space-separated KEY=VALUE, e.g. GE_BLOCKDBG=1 GE_CLIPDBG=1 GE_ROM=<path to a .z64>. Applied last.");
+        tip.SetToolTip(extraenv, "Extra environment variables for the game executable, space-separated KEY=VALUE, e.g. GE_BLOCKDBG=1 GE_CLIPDBG=1 GE_ROM=<path to a .z64>. Applied last.");
 
         ClientSize = new Size(280, 418);
         launch = new Button { Text = "Launch", Location = new Point(40, 326), Width = 95, Height = 30 };
@@ -177,7 +177,7 @@ class GELauncher : Form
         // for the two sources the launcher can see (midas.ini [data] rom=, then
         // Data\*); argv/GE_ROM overrides are the game's business.
         romstatus = new Label { Text = "", Location = new Point(12, 362), AutoSize = true, ForeColor = Color.DimGray, MaximumSize = new Size(260, 0) };
-        tip.SetToolTip(romstatus, "The game reads all its data from your own GoldenEye 007 (U) cart image. Put the .z64/.v64/.n64 in the Data folder next to ge.exe, or set [data] rom=<path> in midas.ini, or drop the file onto ge.exe.");
+        tip.SetToolTip(romstatus, "The game reads all its data from your own GoldenEye 007 (U) cart image. Put the .z64/.v64/.n64 in the Data folder next to the game executable, or set [data] rom=<path> in midas.ini, or drop the file onto the game executable.");
         status = new Label { Text = "", Location = new Point(12, 396), AutoSize = true, ForeColor = Color.DimGray };
         RefreshRomStatus();
 
@@ -269,11 +269,11 @@ class GELauncher : Form
         romstatus.Text = "ROM: " + Path.GetFileName(rom) + " from " + how;
     }
 
-    // Windows builds ship ge.exe; the Linux build is plain "ge" (run via mono)
+    // Native player artifacts: Windows IronSights.exe, Linux/Steam Deck IronSights.
     public static string FindGe(string dir)
     {
-        string exe = Path.Combine(dir, "ge" + ".exe");
-        return File.Exists(exe) ? exe : Path.Combine(dir, "ge");
+        string exe = Path.Combine(dir, "IronSights.exe");
+        return File.Exists(exe) ? exe : Path.Combine(dir, "IronSights");
     }
 
     bool IsMpMode()
@@ -314,7 +314,7 @@ class GELauncher : Form
         if (!File.Exists(exe))
         {
             status.ForeColor = Color.Firebrick;
-            status.Text = "ge.exe / ge not found next to the launcher";
+            status.Text = "IronSights.exe / IronSights not found next to the launcher";
             return;
         }
         RefreshRomStatus(); // the user may have dropped a file into Data\ since
@@ -415,7 +415,7 @@ class GELauncher : Form
             log.WriteLine("[launcher] " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                 + " steam overlay in launcher: " + (SteamOverlayLoaded() ? "yes" : "no")
                 + (Environment.GetEnvironmentVariable("SteamGameId") != null ? " (SteamGameId set)" : "")
-                + (SteamBlockedBackend != null ? " probe bisect: " + SteamBlockedBackend + "=0 passed to ge.exe" : ""));
+                + (SteamBlockedBackend != null ? " probe bisect: " + SteamBlockedBackend + "=0 passed to the game executable" : ""));
 
             var proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
 
@@ -445,7 +445,7 @@ class GELauncher : Form
                     status.ForeColor = Color.Firebrick;
                     status.Text = "Crashed: " + FormatExitCode(code);
                     MessageBox.Show(this,
-                        "ge.exe exited with " + FormatExitCode(code) + "\n\n"
+                        "Iron Sights exited with " + FormatExitCode(code) + "\n\n"
                         + "Log: " + logPath + "\n\n"
                         + "--- last lines ---\n" + TailOfLog(logPath, 15),
                         "GE crashed",
@@ -478,7 +478,7 @@ class GELauncher : Form
     }
 
     // gameoverlayrenderer.dll in OUR process = Steam started us (it hooks
-    // CreateProcess here and injects into ge.exe too).
+    // CreateProcess here and injects into the game executable too).
     public static bool SteamOverlayLoaded()
     {
         try
@@ -535,7 +535,7 @@ class GELauncher : Form
 }
 
 // ---------------------------------------------------------------------------
-// Options dialog: edits midas.ini next to ge.exe - display/input options plus
+// Options dialog: edits midas.ini next to the game executable - display/input options plus
 // the [controls] key bindings with press-to-rebind capture. The file is
 // REGENERATED in the port's own canonical format on save (midas.ini is a
 // generated file; the port writes the same shape when it is missing), so
@@ -628,7 +628,7 @@ class OptionsForm : Form
         public Dictionary<string, string> Sdl = new Dictionary<string, string>();
     }
 
-    // ---- LAYOUT PRESETS from gamecontrollerdefault.txt next to ge.exe (murkantor
+    // ---- LAYOUT PRESETS from gamecontrollerdefault.txt next to the game executable (murkantor
     // 2026-08-25: "so a user can add and share their own bindings"). The same
     // file the game seeds new pads from. One layout per line:
     //   Name | match terms | key=value; key=value; ...
@@ -672,7 +672,7 @@ class OptionsForm : Form
         {
             layoutSel.Items.Clear();
             foreach (string n in layoutNames) layoutSel.Items.Add(n);
-            if (layoutNames.Count == 0) layoutSel.Items.Add("(no gamecontrollerdefault.txt next to ge.exe)");
+            if (layoutNames.Count == 0) layoutSel.Items.Add("(no gamecontrollerdefault.txt next to the game executable)");
             layoutSel.SelectedIndex = 0;
         }
     }
@@ -1284,7 +1284,7 @@ class OptionsForm : Form
         RefreshPads();
     }
 
-    // ge.exe GE_LISTPADS=1, optionally with one GE_<BACKEND>=0; null = no answer in
+    // GE_LISTPADS=1, optionally with one GE_<BACKEND>=0; null = no answer in
     // 8 s (probe killed). Async read: ReadToEnd() blocked until the child closed
     // stdout, i.e. forever when Steam's hook froze SDL's init inside the probe.
     string RunPadProbe(string exe, string disableEnv)
@@ -1317,7 +1317,7 @@ class OptionsForm : Form
         }
     }
 
-    // ---- controller probe (ge.exe GE_LISTPADS=1) ----
+    // ---- controller probe (GE_LISTPADS=1) ----
     void RefreshPads()
     {
         padDevices.Clear();
@@ -1343,7 +1343,7 @@ class OptionsForm : Form
                     }
                     GELauncher.SteamBlockedBackend = found;
                     bool steam = GELauncher.SteamOverlayLoaded();
-                    string msg = "The controller probe (ge.exe GE_LISTPADS=1) gave no answer in 8 seconds and was stopped.\n\n";
+                    string msg = "The controller probe (GE_LISTPADS=1) gave no answer in 8 seconds and was stopped.\n\n";
                     if (found != null)
                     {
                         msg += "Retried with one SDL controller backend off at a time: it answers with " + found + "=0.\n\n"
@@ -1454,7 +1454,7 @@ class OptionsForm : Form
         }
         else
         {
-            padProbeStatus.Text = "ge.exe not found - device list unavailable";
+            padProbeStatus.Text = "Iron Sights executable not found - device list unavailable";
         }
 
         FillDeviceCombo();
@@ -1876,7 +1876,7 @@ class OptionsForm : Form
         }
     }
 
-    /* The 8-step calibration wizard: drives ge.exe GE_CALIBRATE=<jidx>,
+    /* The 8-step calibration wizard: drives the game with GE_CALIBRATE=<jidx>,
      * shows its step prompts, stores the resulting 16-int csv. */
     void RunCalibration()
     {
@@ -1989,7 +1989,7 @@ class OptionsForm : Form
         RenderRows();
     }
 
-    /* Rebind one controller control: run ge.exe GE_CAPTUREPAD=<jidx> and
+    /* Rebind one controller control: run the game with GE_CAPTUREPAD=<jidx> and
      * wait for the press. Seeds the full custom map from the device's
      * defaults on first edit so every other control stays bound. */
     /* append = Add: keep the row's existing inputs and add this one (up to 4,

@@ -138,7 +138,7 @@ function prepareController(bytes, texture) {
     const json = {
         asset: {
             version: '2.0',
-            generator: 'Project Midas room model preparation',
+            generator: 'Iron Sights room model preparation',
             copyright:
                 'N64 Controller by Marshle (formerly CodySmith1), CC BY 4.0; compact mesh/texture redistribution by maxnau89.',
         },

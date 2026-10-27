@@ -29,7 +29,7 @@ extern void portConLogf(const char *fmt, ...);
 #include <io.h> /* _dup2/_fileno: portDirectLaunchLog */
 
 /* Windows backtrace via dbghelp (SEH catches faults signal() misses on
- * MinGW). addr2line -e build_win/ge.exe on the printed addresses.
+ * MinGW). addr2line -e build_win/IronSights.exe on the printed addresses.
  *
  * Rare-logo crash diagnostic (guMtxF2L +0x6a, video-only): also prints the
  * fault address + access type, an EBP-chain walk (StackWalk64 stalls without

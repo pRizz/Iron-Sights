@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "project-midas-browser",
+      "name": "iron-sights-browser",
       "dependencies": {
         "mystic-ui": "github:pRizz/mystic-ui#d36017757708ed01ef2b3b47beb14f294726411c",
         "solid-js": "1.9.17",

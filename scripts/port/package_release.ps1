@@ -4,7 +4,7 @@
 #
 # Layout, the same one the earlier GE-menu-overhaul-*.7z drops used:
 #   releases\<name>\windows\    IronSights.exe SDL2.dll gamecontrollerdb.txt gamecontrollerdefault.txt midas_ini_help.txt Data\ Mods\
-#   releases\<name>\linux\      ProjectMidas (build_deck) libSDL2-2.0.so.0 (i386) gamecontrollerdb.txt gamecontrollerdefault.txt midas_ini_help.txt Data\ Mods\
+#   releases\<name>\linux\      IronSights (build_deck) libSDL2-2.0.so.0 (i386) gamecontrollerdb.txt gamecontrollerdefault.txt midas_ini_help.txt Data\ Mods\
 #   releases\<name>\steamdeck\  the linux set + libSDL2-2.0.so.0 (i386) + run.sh
 #   releases\<name>\IronSights-<name>-{windows,linux,steamdeck}.zip
 #
@@ -15,8 +15,8 @@
 # or logs. The launcher is NOT bundled. Build first - this
 # does not compile:
 #   wsl -e bash -lc "cmake --build build_win -j 8"      (IronSights.exe, mingw i686)
-#   wsl -e bash -lc "cmake --build build_linux -j 8"    (ge, Linux i686)
-#   wsl -e bash -lc "cmake --build build_deck -j 8"     (ge, Linux i686 + RUNPATH $ORIGIN, so it
+#   wsl -e bash -lc "cmake --build build_linux -j 8"    (IronSights, Linux i686)
+#   wsl -e bash -lc "cmake --build build_deck -j 8"     (IronSights, Linux i686 + RUNPATH $ORIGIN, so it
 #                                                         finds the bundled SDL however it is started; G220)
 param(
     [string]$Name = ""
@@ -27,13 +27,20 @@ if ($Name -eq "") {
     $branch = (git -C $root rev-parse --abbrev-ref HEAD).Trim()
     $Name = (Get-Date -Format "yyyy-MM-dd") + "-" + $branch
 }
-$out = Join-Path (Join-Path $root "releases") $Name
+$releaseRoot = [IO.Path]::GetFullPath((Join-Path $root "releases"))
+if ([IO.Path]::GetFileName($Name) -ne $Name -or $Name -in @(".", "..")) {
+    throw "Name must be a single release folder name"
+}
+$out = [IO.Path]::GetFullPath((Join-Path $releaseRoot $Name))
+if (-not $out.StartsWith($releaseRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+    throw "Release output must stay inside $releaseRoot"
+}
 $hash = (git -C $root rev-parse --short HEAD).Trim()
 # tracked files only: build folders and other untracked files are not part of the build
 $dirty = if ((git -C $root status --porcelain --untracked-files=no).Length -gt 0) { " (+ uncommitted changes)" } else { "" }
 $stamp = "built from $hash$dirty on $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
 
-foreach ($f in @("build_win\IronSights.exe", "build_win\SDL2.dll", "build_linux\ProjectMidas", "build_deck\ProjectMidas",
+foreach ($f in @("build_win\IronSights.exe", "build_win\SDL2.dll", "build_linux\IronSights", "build_deck\IronSights",
                  "tools\gamecontrollerdb.txt", "tools\gamecontrollerdefault.txt",
                  "tools\Data_README.txt", "tools\Mods_README.txt", "tools\midas_ini_help.txt", "tools\shaders_base.txt",
                  "LICENSE", "tools\THIRD_PARTY_NOTICES.txt")) {
@@ -63,12 +70,12 @@ wsl -e bash -lc "cp `$(readlink -f ~/sdl2deck/inst/lib/libSDL2-2.0.so.0) '$(($sd
 if (-not (Test-Path $sdlso)) { throw "could not fetch ~/sdl2deck/inst/lib/libSDL2-2.0.so.0 from WSL - build the portable SDL2 first" }
 # G288: ge and that SDL need the BUILD host's glibc (2.38 on Ubuntu 24.04), not
 # "any Linux" - read the real floor from their imports and say it in the bundles
-$wslge = ((Join-Path $root "build_linux\ProjectMidas") -replace '\\','/') -replace '^C:','/mnt/c'
+$wslge = ((Join-Path $root "build_linux\IronSights") -replace '\\','/') -replace '^C:','/mnt/c'
 $wslso = ($sdlso -replace '\\','/') -replace '^C:','/mnt/c'
 $glibc = "$(wsl -e bash -lc "objdump -T '$wslge' '$wslso' 2>/dev/null | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1")".Trim() -replace '^GLIBC_',''
 $glibcNote = if ($glibc -ne "") { "glibc $glibc or newer" } else { "the build machine's glibc or newer" }
 
-if (Test-Path $out) { Remove-Item -Recurse -Force $out }
+if (Test-Path -LiteralPath $out) { Remove-Item -LiteralPath $out -Recurse -Force }
 
 function Common([string]$dir) {
     New-Item -ItemType Directory -Force (Join-Path $dir "Data\Textures\Base") | Out-Null
@@ -93,17 +100,16 @@ Copy-Item (Join-Path $root "build_win\SDL2.dll") $win
 $lin = Join-Path $out "linux"; Common $lin
 # 2026-10-18: a Linux user got 'libSDL2-2.0.so.0 missing' (a 64-bit distro has no
 # i386 SDL2). Ship the deck's RUNPATH $ORIGIN exe and the portable SDL2 here too.
-Copy-Item (Join-Path $root "build_deck\ProjectMidas") $lin
+Copy-Item (Join-Path $root "build_deck\IronSights") $lin
 Copy-Item $sdlso (Join-Path $lin "libSDL2-2.0.so.0")
-"Needs a 32-bit-capable Linux with $glibcNote. SDL2 is bundled.`r`nIf ./ProjectMidas says 'Permission denied': chmod +x ProjectMidas (the archive does not keep the exec bit).`r`n" | Add-Content -Encoding ASCII (Join-Path $lin "README.txt")
+"Needs a 32-bit-capable Linux with $glibcNote. SDL2 is bundled.`r`nIf ./IronSights says 'Permission denied': chmod +x IronSights (the archive does not keep the exec bit).`r`n" | Add-Content -Encoding ASCII (Join-Path $lin "README.txt")
 
 $deck = Join-Path $out "steamdeck"; Common $deck
-Copy-Item (Join-Path $root "build_deck\ProjectMidas") $deck
+Copy-Item (Join-Path $root "build_deck\IronSights") $deck
 Copy-Item $sdlso (Join-Path $deck "libSDL2-2.0.so.0")
-"Needs $glibcNote (an older SteamOS fails with 'GLIBC_... not found').`r`nStart it with: sh run.sh  (or chmod +x run.sh ProjectMidas once - the archive does not keep the exec bit).`r`n" | Add-Content -Encoding ASCII (Join-Path $deck "README.txt")
-# LF line endings: this runs on the deck
-[IO.File]::WriteAllText((Join-Path $deck "run.sh"),
-    "#!/bin/sh`n# Steam Deck / 32-bit-capable Linux with ${glibcNote}: run the game with the bundled SDL.`n# If the bundled SDL needs a library this system lacks, fall back to the`n# system 32-bit SDL2 (lib32-sdl2) if it has one.`ncd `"`$(dirname `"`$0`")`"`nchmod +x ./ProjectMidas 2>/dev/null`nif LD_LIBRARY_PATH=. ldd ./ProjectMidas 2>/dev/null | grep -q `"not found`"; then`n    echo `"run.sh: bundled SDL2 is missing a dependency here; using the system SDL2`" >&2`n    exec ./ProjectMidas `"`$@`"`nfi`nLD_LIBRARY_PATH=.; export LD_LIBRARY_PATH`nexec ./ProjectMidas `"`$@`"`n")
+"Needs $glibcNote (an older SteamOS fails with 'GLIBC_... not found').`r`nStart it with: sh run.sh  (or chmod +x run.sh IronSights once - the archive does not keep the exec bit).`r`n" | Add-Content -Encoding ASCII (Join-Path $deck "README.txt")
+# The checked-in launcher has LF endings and is shared with local smoke checks.
+Copy-Item (Join-Path $root "scripts\port\steamdeck_run.sh") (Join-Path $deck "run.sh")
 
 # each zip holds one top folder named like the zip; entry names use '/' so
 # Linux unzip sees folders (Compress-Archive on PowerShell 5 writes '\')

@@ -51,7 +51,7 @@ Successful `main` builds deploy automatically to GitHub Pages. See [compatibilit
 
 ## Watch the latest gameplay demo
 
-[![Watch Iron Sights update: new hands, improved sights, and sniper scope zoom at 60 FPS](.github/images/ads-gameplay-thumbnail.png)](https://youtu.be/dI-G7Lo12hA)
+[![Watch Iron Sights update: new hands, improved sights, and sniper scope zoom at 60 FPS](.github/images/iron-sights-gameplay-thumbnail.png)](https://youtu.be/dI-G7Lo12hA)
 
 **[Watch on YouTube: ADS Update — Hands, Better Sights & Sniper Scope Zoom (60 FPS)](https://youtu.be/dI-G7Lo12hA)**
 
@@ -78,7 +78,7 @@ Claude was used in the making of this project. If you don't agree with this, ple
 ## Playing
 
 1. Put your GE (USA) cart image in the `Data` folder next to the executable. See `Data/README.txt` for the accepted formats and other ways to point the game at it.
-2. Run `IronSights.exe` (Windows) or `ProjectMidas` (Linux).
+2. Run `IronSights.exe` (Windows) or `IronSights` (Linux).
 
 Files next to the executable:
 
@@ -228,7 +228,7 @@ The commands below are for a Linux shell. On Windows, run them in WSL:
 | Build | Game | Next to it |
 | --- | --- | --- |
 | Windows | `build_win/IronSights.exe` | `SDL2.dll`, the controller files, `Data/` |
-| Linux | `build_pc/ProjectMidas` | the controller files, `Data/` |
+| Linux | `build_pc/IronSights` | the controller files, `Data/` |
 
 To play, put a copy of `baserom.u.z64` in that build's `Data/` folder. On Windows, copy the whole `build_win` folder somewhere in Windows (from WSL: `explorer.exe build_win`) and run `IronSights.exe` there. The Linux build needs 32-bit SDL2 and OpenGL on the machine that runs it. On Ubuntu or Debian:
 
@@ -242,7 +242,7 @@ sudo apt install libsdl2-2.0-0:i386 libgl1:i386
 
 - On some Linux systems, levels draw as a few large blank triangles. Starting the game with these environment variables works around it:
   ```
-  GE_FULLHEIGHT=0 GE_EDGEINSET=1 ./ProjectMidas
+  GE_FULLHEIGHT=0 GE_EDGEINSET=1 ./IronSights
   ```
 
 ## Contributing

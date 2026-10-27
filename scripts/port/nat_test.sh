@@ -8,8 +8,10 @@
 #   scripts/port/nat_test.sh                     # Archives default spot
 #   scripts/port/nat_test.sh archives "x,y,z,h,p"
 #
-# It refuses to launch while another ge.exe is running, because a second window
+# It refuses to launch while another Iron Sights process is running, because a second window
 # steals input focus from a live play session.
+# Windows/Git Bash defaults to build_win/IronSights.exe; Linux defaults to
+# build_pc_video/IronSights. GE_TEST_EXE can select another build explicitly.
 #
 # Reading the output:
 #   ge: bond:  ... prop_stan=X tile=X            <- must change as Bond moves.
@@ -31,22 +33,40 @@
 #        no line at all for her chr    -> her AI never runs the sight test:
 #                                         the bug is her script, not vision
 set -u
-cd /c/Users/tidbu/source/repos/goldeneye_src_pcport || exit 1
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT" || exit 1
 
 STAGE="${1:-archives}"
 SPAWN="${2:--1449,132,-3157,183,0}"
 FRAMES="${3:-2600}"
-LOG="nat_test_${STAGE}.log"
+mkdir -p build || exit 1
+LOG="$ROOT/build/nat-test.log"
 
-if tasklist 2>/dev/null | grep -qi '^ge\.exe'; then
-    echo "ge.exe is already running - not launching a second window. Close the game first."
+if command -v tasklist >/dev/null 2>&1; then
+    EXE="${GE_TEST_EXE:-$ROOT/build_win/IronSights.exe}"
+    RUNNING="$(tasklist 2>/dev/null | grep -i '^IronSights\.exe[[:space:]]' || true)"
+else
+    EXE="${GE_TEST_EXE:-$ROOT/build_pc_video/IronSights}"
+    if ! command -v pgrep >/dev/null 2>&1; then
+        echo "pgrep is required to check for an existing game process." >&2
+        exit 1
+    fi
+    RUNNING="$(pgrep -x IronSights || true)"
+fi
+if [ -n "$RUNNING" ]; then
+    echo "Iron Sights is already running - not launching a second window. Close the game first."
+    exit 1
+fi
+if [ ! -f "$EXE" ]; then
+    echo "Game executable not found: $EXE - build first or set GE_TEST_EXE." >&2
     exit 1
 fi
 
 GE_LOSDBG=1 GE_CHRDUMP=1 GE_AIDBG=1 GE_STAGE="$STAGE" GE_SKIPINTRO=1 \
   GE_SPAWNXYZ="$SPAWN" GE_FRAMES="$FRAMES" \
-  ./build_win/ge.exe > "$LOG" 2>&1
-echo "exit=$? log=$LOG"
+  "$EXE" > "$LOG" 2>&1
+GAME_STATUS=$?
+echo "exit=$GAME_STATUS log=$LOG"
 
 echo
 echo "--- spawn (floor must be sane, dy small) ---"
@@ -73,3 +93,4 @@ echo
 echo "--- AI list switches (id=1 is m_DeadAI = parked forever) ---"
 grep "ge: ai:" "$LOG" | sort -u | head -12
 echo "trigger fired: $(grep -c 'PRINT saw bond' "$LOG") time(s)"
+exit "$GAME_STATUS"

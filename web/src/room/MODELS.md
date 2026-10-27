@@ -69,7 +69,7 @@ explicit `tools/room-assets.ts` allowlist when deliberately regenerating.
 | Public file           |   Bytes | SHA-256                                                            |
 | --------------------- | ------: | ------------------------------------------------------------------ |
 | `room/console.glb`    |  203896 | `26ea8b9dae78d1d377923bd87b0034633e0e78c0f4303217bf29ad53f25a7c78` |
-| `room/controller.glb` | 1204348 | `a4edc2ac9dc2907c9bd1a14b22c3c8ed794ded27f11e02c4d168edf7a10cad6a` |
+| `room/controller.glb` | 1204344 | `d707d6a1b67218dd5239984ad95e716a769b03359655fc255a16196c6a5fb58d` |
 
 Site assembly includes this complete attribution/change notice in
 `THIRD_PARTY_NOTICES.txt`, accessible from the retained F2 controls.

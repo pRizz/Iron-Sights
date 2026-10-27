@@ -2437,7 +2437,7 @@ static int inputIsN64Pad(SDL_GameController *c)
 }
 
 /* COMPILED FALLBACK, used only when gamecontrollerdefault.txt is missing
- * (the file next to ge.exe is the real source of every layout now - see
+ * (the file next to the game executable is the real source of every layout now - see
  * inputDefaultTokens below). */
 static void inputDefaultTokensBuiltin(SDL_GameController *c, char tok[][16])
 {
@@ -2585,7 +2585,7 @@ static void inputDefaultTokensBuiltin(SDL_GameController *c, char tok[][16])
 
 /* ---- gamecontrollerdefault.txt ------------------------------------------ */
 /*
- * gamecontrollerdefault.txt (next to ge.exe) holds every shipped layout so
+ * gamecontrollerdefault.txt (next to the game executable) holds every shipped layout so
  * users can add and share their own, one per line:
  *     Name | match terms | key=value; key=value; ...
  * Match terms (comma separated, all must hold): type=xbox|ps|switch|any,

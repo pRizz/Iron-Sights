@@ -7,8 +7,8 @@ export const ROOM_ASSETS = [
     },
     {
         path: 'room/controller.glb',
-        bytes: 1204348,
-        sha256: 'a4edc2ac9dc2907c9bd1a14b22c3c8ed794ded27f11e02c4d168edf7a10cad6a',
+        bytes: 1204344,
+        sha256: 'd707d6a1b67218dd5239984ad95e716a769b03359655fc255a16196c6a5fb58d',
     },
     {
         path: 'room/cartridge-art.avif',

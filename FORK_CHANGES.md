@@ -337,10 +337,41 @@ repo-specific badge URLs, source/provenance links, ZIP name, Windows manifest,
 native window/About/icon-preparation/startup copy, browser metadata/chrome/CRT
 and gallery title use the new identity. The ZIP is
 `Iron-Sights-windows-x86.zip`; its Windows player is `IronSights.exe`, superseding
-the earlier `ProjectMidas.exe` filename. The `ge` target, Linux `ProjectMidas`
-binary and Wasm loader filenames remain stable.
+the earlier `ProjectMidas.exe` filename. Linux/Steam Deck now produce `IronSights`,
+superseding `ProjectMidas`; README, gallery capture and manual release bundles/
+Deck launcher use that filename together. The `ge` target, internal map/resource
+names and deployed Wasm filenames remain stable.
 Project Midas fork attribution remains visible in native startup/About and
 browser startup/footer. Older dated evidence below retains its historical name.
+
+The reference-audit follow-up repairs the optional C# launcher's native artifact
+discovery and messages, the AI linter's default Windows path, and the Natalya
+vision rig's checkout root, executable/process guard and ignored log location.
+The rig supports Windows/Git Bash and Linux, accepts `GE_TEST_EXE` for another
+build, and propagates game failures. Portable controller/ROM/input comments now
+refer to the game executable; Windows crash-debugging examples use its actual
+filename. The README image is `iron-sights-gameplay-thumbnail.png`, removing its
+old project-name fragment without changing the image. Browser package/plugin
+names use Iron Sights. Existing upstream attribution, history, file-format and
+storage identities remain intact; the inherited application icon is deliberately
+unchanged for a later asset discussion. Room-model metadata is covered by FORK-025.
+The [optional launcher](tools/GELauncher.cs), [AI linter](scripts/port/ai_lint.py),
+[Natalya rig](scripts/port/nat_test.sh) and
+[launcher regressions](scripts/port/test_native_tool_launchers.py) retain their
+existing debug environment contracts. Local validation passes Windows, Linux
+i386 and optimized Wasm builds, 148 browser tests, type checking, exact public
+allowlist/digest verification, seven launcher subprocess tests, five distribution
+tests and native Start/upstream checks. The C# launcher compiles and passes
+Windows/Linux/missing-build discovery fixtures; the AI linter checks 18 lists
+without errors. The current Windows ZIP has the renamed executable and corrected
+shipped help, with every checksum verified. Edge room/startup audits pass; model
+comparison proves only the controller generator label changed. Full manual
+Linux/Deck packaging and physical Steam Deck execution are not claimed.
+Private evidence is under `build/reference-cleanup`, `build/web-room/audit` and
+the ignored gallery capture directory. Both independent gallery passes reproduce
+all 107 PNGs byte-for-byte; the source fingerprint is refreshed and visual review
+confirms the unchanged room and native presentation. Eight gallery workflow
+tests pass. Release-path traversal/rooted-name rejection checks also pass.
 
 The Windows filename follow-up updates the CMake output, release allowlist and
 EXE attestation, first-launch worker copy/command, crash module name, shader/icon/
@@ -395,7 +426,7 @@ Contributor inventory-maintenance instructions sit under
 Contributing, alongside the existing contribution links.
 
 **Sources:** [README.md](README.md),
-[gameplay thumbnail](.github/images/ads-gameplay-thumbnail.png),
+[gameplay thumbnail](.github/images/iron-sights-gameplay-thumbnail.png),
 [settings reference](tools/midas_ini_help.txt).
 **History:** `9e46d0d`, `aefb55a`, `74ce634`, `5edcf1a`, `4e37864`.
 **Verification:** README video/image targets and documented settings.
@@ -1315,13 +1346,20 @@ FORK-022. Temporary audit executables are removed.
 **Status:** Implemented; publication is performed by the checked-in workflow.
 
 The Windows player/attested EXE is now `IronSights.exe`. CMake changes the Windows
-output only; `ge` stays the build target. The allowlisted ZIP, standalone
+artifact name; Linux/Steam Deck now output `IronSights`, while `ge` stays the build
+target. The allowlisted ZIP, standalone
 attestation subject, release copy/notes and verification instructions use that
 name. The package regression deliberately puts the retired `ProjectMidas.exe`
 beside the current build and verifies it cannot leak into a player ZIP. Current
 manual packaging/audit/shader/icon/gallery tools use the new Windows filename;
-Linux and Wasm artifacts retain their inherited internal names. See FORK-002 for
-visible branding and attribution preservation.
+Wasm artifacts retain their deployed names. Manual Linux/Deck packaging uses the
+renamed player and copies the checked-in LF-only
+[Deck launcher](scripts/port/steamdeck_run.sh) instead of embedding shell source
+inside PowerShell. The packager checks its resolved output stays inside
+`releases/` before replacing a release directory. Seven ROM-free subprocess
+checks exercise diagnostic process guards, argument/environment forwarding,
+failure propagation and both bundled/system SDL launch paths; the release test
+job runs them. See FORK-002 for visible branding and attribution preservation.
 
 Replaced the inherited Linux/Windows EXE-only, three-day artifact workflow with
 ROM-free regression tests, a Windows x86 player ZIP and a versioned development
@@ -1779,6 +1817,12 @@ gallery checks and was pushed directly to main as `69842af`, together with the
 verified room refinements in `ed459f2`. PR #2 was closed rather than merged.
 
 ### FORK-025 — Immersive browser room
+
+The controller GLB's generator label now identifies Iron Sights. Regenerated it
+from the same pinned/hash-checked sources and updated the public allowlist and
+model digest table. Geometry, texture bytes, source authors and CC BY 4.0
+attribution remain unchanged; the console GLB is byte-identical. This supersedes
+the old Project Midas generator label without changing prop appearance.
 
 The ROM dialog and retained launcher no longer show the former marketing
 tagline. Outside clicks/taps dismiss the idle dialog, while padding clicks and

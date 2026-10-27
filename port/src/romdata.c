@@ -15,7 +15,7 @@
  * assets.
  *
  * ROM resolution order (first that loads wins, always logged):
- *   1. argv[1] not starting with '-'   (drag-and-drop onto ge.exe)
+ *   1. argv[1] not starting with '-'   (drag-and-drop onto the game executable)
  *   2. --rom-file <path> / --rom-file=<path>
  *   3. GE_ROM=<path>                    (env var, e.g. the launcher's env box)
  *   4. midas.ini [data] rom=<path>         (relative = next to the exe)

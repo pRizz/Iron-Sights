@@ -1,6 +1,6 @@
 # gamecontrollerdefault.txt - GoldenEye PC port controller LAYOUTS
 #
-# Lives next to ge.exe (like gamecontrollerdb.txt). Add your own lines, share
+# Lives next to the game executable (like gamecontrollerdb.txt). Add your own lines, share
 # the file. Both the game and GE Launcher read it:
 #   - the game seeds a newly connected pad with the FIRST layout whose match
 #     holds (top to bottom - put specific pads above generic ones);

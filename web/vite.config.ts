@@ -7,7 +7,7 @@ export default defineConfig({
     plugins: [
         solid(),
         {
-            name: 'midas-local-runtime',
+            name: 'iron-sights-local-runtime',
             configureServer(server) {
                 server.middlewares.use(async (request, response, next) => {
                     const path = new URL(request.url || '/', 'http://localhost').pathname;

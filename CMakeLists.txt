@@ -424,12 +424,12 @@ endif()
 
 add_executable(ge ${GAME_SRC} ${ENGINE_SRC} ${GU_SRC} ${PORT_SRC}
                ${ASSET_LOOSE_SRC} ${ASSET_OBJS} ${FAST3D_SRC})
-# Windows branding changes only the artifact name; the `ge` target, logs and
-# profile identities stay stable, as do Linux and Wasm runtime artifact names.
-if(WIN32)
-    set_target_properties(ge PROPERTIES OUTPUT_NAME IronSights)
-else()
+# Native player filenames use the fork identity. Keep the `ge` target, logs,
+# profile identities and deployed Wasm runtime filenames stable.
+if(EMSCRIPTEN)
     set_target_properties(ge PROPERTIES OUTPUT_NAME ProjectMidas)
+else()
+    set_target_properties(ge PROPERTIES OUTPUT_NAME IronSights)
 endif()
 if(EMSCRIPTEN)
     midas_web_target(ge)

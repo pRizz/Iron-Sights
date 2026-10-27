@@ -17,14 +17,14 @@ part of its list. Two such bugs shipped in Archives alone (2026-08-18):
 Both are visible statically: walk each list the way chraiitemsize does and
 check that every branch target resolves and the stream ends on EndList.
 
-Usage:  python scripts/port/ai_lint.py [path/to/ge.exe]
+Usage:  python scripts/port/ai_lint.py [path/to/IronSights.exe]
 Exit code is 1 if any list is broken, so it can gate a build.
 """
 import re, subprocess, sys, os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ARGS = [a for a in sys.argv[1:] if not a.startswith("-")]
-EXE  = ARGS[0] if ARGS else os.path.join(ROOT, "build_win", "ge.exe")
+EXE  = ARGS[0] if ARGS else os.path.join(ROOT, "build_win", "IronSights.exe")
 NM   = "i686-w64-mingw32-nm"
 OBJD = "i686-w64-mingw32-objdump"
 
@@ -32,7 +32,7 @@ PSIZE = {"BYTE": 1, "DBYTE": 2, "TBYTE": 3, "QBYTE": 4}
 
 
 def wslpath(p):
-    """C:\dir\file -> /mnt/c/dir/file (only WSL sees the MinGW binutils here)."""
+    r"""C:\dir\file -> /mnt/c/dir/file (only WSL sees the MinGW binutils here)."""
     if len(p) > 2 and p[1] == ":":
         return "/mnt/" + p[0].lower() + p[2:].replace(chr(92), "/")
     return p
