@@ -1020,7 +1020,10 @@ behavior changed by the inventory/rule addition.
 **Status:** Implemented.
 
 Added **Gameplay > HUD > Health Display: Automatic / Always**, defaulting to
-**Always** (`[display] always_health=1`). Always keeps the native curved gauges
+**Automatic** (`[display] always_health=0`) on all platforms. Both the shared
+in-memory default and first-run INI writer use Automatic; existing saved choices
+remain authoritative. This supersedes the fork's earlier Always default.
+Always keeps the native curved gauges
 visible during live gameplay, showing actual health and armor at 75% of the
 original thickness when emphasized. After three quiet seconds, they smoothly
 fade to 25% opacity and 20% of the original thickness over one
@@ -1034,16 +1037,27 @@ timers are unchanged.
 
 **Sources:** [HUD state and gauge styling](port/src/port_hud.c),
 [gauge rendering](src/game/bondview2.c), [settings](port/src/port_options.c),
+[first-run defaults](port/src/video.c),
 frontend/watch HUD pages, [README](README.md),
 [INI reference](tools/midas_ini_help.txt).
 **Checks:** [HUD tests](scripts/port/test_hud.sh) cover idle timing at
 30/60/120/240 Hz, pause/player isolation, damage refresh with indicators off,
 visibility gates and gauge geometry/alpha. [ADS tests](scripts/port/test_ads.sh)
-cover menu availability and setting persistence. The HUD audit supports
-`-AutomaticHealth` and captures active/idle health with a refreshed weapon strip.
+cover menu availability and setting persistence, including the Automatic default
+and explicit Always/Automatic choices. The HUD audit explicitly opts into Always
+for persistent-gauge captures, supports `-AutomaticHealth` for the default mode,
+and captures active/idle health with a refreshed weapon strip.
 Windows and Linux builds passed. Visual captures checked the HUD settings page,
 full/quiet gauges in solo and split-screen, and Automatic mode without
 persistent gauges.
+The default-off refinement passes the HUD/ADS regressions, Windows and optimized
+Wasm builds, all 154 browser unit tests, type checking and public-artifact
+verification. An isolated first-run Windows launch writes `always_health=0`;
+its HUD settings capture shows Health Display: Automatic. The required two-pass
+gallery refresh reproduces all 72 views and 35 icons with zero changed pixels;
+freshness/integrity and eight gallery workflow tests pass. Saved options remain
+covered by the existing settings regression. Evidence stays local in
+`build/health-default-*` and `build_win/health-default-first-run-*`.
 
 ### FORK-014 — Solo suspend points and restore/undo controls
 

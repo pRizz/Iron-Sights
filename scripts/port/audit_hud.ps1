@@ -31,6 +31,7 @@ Copy-Item -LiteralPath $Executable -Destination (Join-Path $dir 'IronSights.exe'
 Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
 $ini = @('[display]', 'fullscreen=window', 'vsync=0', 'maxfps=60', 'tickhz=60', 'msaa=0', 'aim_mode=1', 'ammo_on_screen=1', '[input]', 'mouse=1')
 if ($Icons) { $ini = @('[display]', 'weapon_hud_icons=1') + $ini }
+if (!$AutomaticHealth -and !$Disabled) { $ini = @('[display]', 'always_health=1') + $ini }
 if ($AutomaticHealth) { $ini = @('[display]', 'always_health=0') + $ini }
 if ($MissionTimer) { $ini = @('[display]', 'mission_timer=1') + $ini }
 if ($SmallHud) { $ini = @('[display]', 'hud_scale=1') + $ini }

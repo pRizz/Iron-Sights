@@ -448,6 +448,19 @@ WEB-006 compatibility and mission/effect coverage.
 
 ## WEB-006 | 2026-10-24 | Browser compatibility and polish
 
+**Automatic health/armor default, 2026-10-27:** Shared native/Wasm HUD defaults
+and the first-run INI writer now use `always_health=0` (Health Display:
+Automatic). This turns off persistent health and armor gauges on all platforms;
+temporary native gauges and the optional Always mode remain available. Existing
+saved preferences are preserved, and the browser bootstrap adds no override.
+The native HUD/ADS regressions, Windows and optimized Wasm builds, 154 browser
+unit tests, type checking and public-artifact verification pass. An isolated
+fresh Windows launch writes the expected INI and its HUD settings capture shows
+Automatic. The two-pass gallery refresh reproduces all 107 images unchanged;
+freshness/integrity and eight gallery workflow tests pass. Private evidence is
+`build/health-default-*` and `build_win/health-default-first-run-*`.
+Next action: publish through main and verify CI/Pages.
+
 **Status:** Desktop preview acceptance complete. Chrome/Edge and Linux Firefox
 are tested; Safari remains experimental by the user's explicit decision. Final
 controller-fallback publication and live-site acceptance are verified.

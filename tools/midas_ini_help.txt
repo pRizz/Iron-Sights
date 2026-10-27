@@ -175,7 +175,7 @@ padN_stickmode.
                       |            | 0 = centred 4:3 area
   health_wide         | 1          | 1 = health and armour arcs at the screen
                       |            | edges; 0 = centred 4:3 area
-  always_health       | 1          | Health Display: 1 = always show health and
+  always_health       | 0          | Health Display: 1 = always show health and
                       |            | armour; after 3 quiet seconds, fade to 25%
                       |            | opacity and 20% of the original thickness.
                       |            | Active gauges use 75% of original thickness.

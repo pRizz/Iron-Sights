@@ -282,9 +282,10 @@ int main(void)
     {
         const s32 opt = portOptFind("always_health");
         assert(opt >= 0 && portOptAvailable(opt) && !portOptIsToggle(opt));
-        assert(portOptGet(opt) == 1);
+        assert(portOptGet(opt) == 0);
         portOptStep(opt, 1);
-        assert(portOptGet(opt) == 0 && savedHud[5] == 0);
+        assert(portOptGet(opt) == 1 && savedHud[5] == 1);
+        assert(portJoyPortSetOption("always_health", "0") && portOptGet(opt) == 0);
         assert(portJoyPortSetOption("always_health", "1") && portOptGet(opt) == 1);
     }
     assert(PORTACT_CLASSIC_TOGGLE == 20);

@@ -43,7 +43,7 @@ extern void *memmove(void *dst, const void *src, size_t size);
 #define HUD_WEAPONS 32
 #define HUD_PI 3.14159265358979323846f
 static const char *const phKeys[] = { "hit_markers", "damage_indicators", "objective_notifications", "weapon_hud", "weapon_hud_icons", "always_health" };
-static s32 phOptions[] = { 1, 1, 1, 1, 0, 1 };
+static s32 phOptions[] = { 1, 1, 1, 1, 0, 0 };
 #define HUD_OPTIONS (sizeof(phOptions) / sizeof(phOptions[0]))
 typedef struct { f32 time, bearing; s32 directional; } HudDamage;
 typedef struct { s32 index, letter, status; char text[192]; } HudToast;
