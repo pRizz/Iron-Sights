@@ -7,9 +7,9 @@ import { expect } from '@playwright/test';
 import { launchAuditBrowser } from './browser-choice.mjs';
 
 async function downloadedBackup(page, button) {
-    const pending = page.waitForEvent('download');
-    await button.click();
-    const download = await pending;
+    await expect(button).toBeVisible({ timeout: 60_000 });
+    await expect(button).toBeEnabled({ timeout: 60_000 });
+    const [download] = await Promise.all([page.waitForEvent('download'), button.click()]);
     const chunks = [];
     for await (const chunk of await download.createReadStream()) chunks.push(chunk);
     return JSON.parse(Buffer.concat(chunks).toString('utf8'));

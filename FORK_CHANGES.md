@@ -1936,6 +1936,12 @@ suite stops at a missing ROM-dialog fade-out transition marker; the same failure
 reproduces with the unmodified audit against published baseline `aaab15a`.
 From `web/`, `node tools/room-save-audit.mjs` provides the independently passing
 save flow; physical Safari acceptance is not claimed.
+The save audit waits for the export button to become visible and enabled before
+starting its download-event timeout, including after reload. Click/download
+promises are observed together. This prevents slow engine initialization from
+consuming the download deadline; Edge passes with the reload's Wasm response
+deliberately held for 32 seconds, and the focused WebKit save audit passes.
+Private timing evidence is `build/web-room/opacity-slow-save`.
 
 The controller GLB's generator label now identifies Iron Sights. Regenerated it
 from the same pinned/hash-checked sources and updated the public allowlist and

@@ -201,6 +201,16 @@ Start/menu/capture boundaries in future input changes.
 
 ## WEB-003 | 2026-10-24 | Save persistence and backups
 
+**Save audit initialization timing, 2026-10-27:** The room-save audit now waits
+for the export button's visibility and file-readiness before starting the
+download-event timeout; click/download promises are observed together. Pages
+run `40459633568` exhausted that timeout after reloading, where the audit had
+skipped its initial readiness assertion. Edge passes the complete save flow with
+the reload's Wasm response deliberately delayed 32 seconds, and focused WebKit
+save checks pass. Formatting passes; private timing evidence is
+`build/web-room/opacity-slow-save`. Product save behavior and storage identities
+are unchanged. Next action: rerun publication checks with this timing correction.
+
 **Opening save shortcuts, 2026-10-27:** Added visible Import Save / Export Save
 buttons to the idle opening room, reusing existing JSON backup handlers and
 replacement confirmation. Import holds automatic startup by opening controls;
