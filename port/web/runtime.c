@@ -10,6 +10,20 @@
 
 static s32 webPaused;
 
+/* The headless web core has no browser UI callback. */
+void portWebFileMenuRequest(s32 exporting)
+{
+#ifdef GE_VIDEO
+    extern f32 frontWebFileMenuMetric(s32 metric);
+    if (!frontWebFileMenuMetric(0)) return;
+    EM_ASM({
+        if (typeof Module['onSaveTransfer'] === 'function') Module['onSaveTransfer']($0 !== 0);
+    }, exporting);
+#else
+    (void)exporting;
+#endif
+}
+
 void portWebCheckDma(u32 device, void *memory, u32 size)
 {
     const u32 address = (u32)memory;

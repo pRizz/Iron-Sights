@@ -9,6 +9,12 @@ void portWebPointerRelease(void)
     EM_ASM({ if (typeof Module['onPointerRelease'] === 'function') Module['onPointerRelease'](); });
 }
 
+EMSCRIPTEN_KEEPALIVE f32 portWebFileMenuMetric(s32 metric)
+{
+    extern f32 frontWebFileMenuMetric(s32 metric);
+    return frontWebFileMenuMetric(metric);
+}
+
 /* Yield between actual startup work items so the page can paint its progress. */
 void portWebStartupProgress(const char *label, unsigned completed, unsigned total)
 {

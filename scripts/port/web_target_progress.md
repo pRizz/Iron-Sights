@@ -211,25 +211,40 @@ save checks pass. Formatting passes; private timing evidence is
 `build/web-room/opacity-slow-save`. Product save behavior and storage identities
 are unchanged. Next action: rerun publication checks with this timing correction.
 
-**Opening save shortcuts, 2026-10-27:** Added visible Import Save / Export Save
-buttons to the idle opening room, reusing existing JSON backup handlers and
-replacement confirmation. Import holds automatic startup by opening controls;
-after game startup it exposes restart/restore options without opening a picker
-or replacing live files. The shortcuts wait for local-file availability and hide
-during the cinematic/gameplay. The accepted room plan and local chrome override
-now record this user-requested refinement. No storage format/identity, ROM,
-engine or native rendering inputs change. Edge checks pass direct export/import,
-cancel, invalid-data preservation, exact synthetic 512-byte campaign/profile/
-settings round trips and reload, stable canvas and phone/desktop bounds. Unit,
-type and production assembly checks pass. WebKit's focused save-transfer checks
-also pass; its wider room suite hits the same missing ROM-dialog fade-out marker
-as the unmodified audit against published `aaab15a`. This is a documented baseline
-limitation, not a passing full WebKit-room claim. `web/tools/room-save-audit.mjs`
-provides focused acceptance. Chrome actual-ROM checks pass the returned-room
-export, live import restart guard, stable canvas/saves and warm power resume.
-Private evidence is `build/web-room/save-actions-{edge,webkit,game}`. No native
-render inputs change and gallery freshness passes. Next action: publish, preserving
-the existing Safari/physical-device acceptance limits.
+**Native Files-screen save transfer, 2026-10-27:** The owner clarified that the
+two direct Import Save / Export Save buttons belong beside Copy, Erase, Options
+and Exit Game in GoldenEye's four-campaign Files screen. The web action area is
+two rows/three columns; the earlier room toolbar/component/styles are removed.
+Native labels/cursor actions have small `GE_WEB` hooks; accessible browser hit
+targets follow their measured bounds and the native 4:3 menu band, preserving a
+direct file-picker gesture. Desktop native builds retain four actions.
+Import confirms replacement of all campaign/profile/settings files and restart.
+A private pending marker uses the existing IDBFS mount but stays outside exports;
+the fresh runtime applies it before native startup and removes it in the same
+transaction. The live EEPROM cache/files and ordinary restore guard stay intact.
+Real IDBFS checks pass live-file preservation, staging-quota rollback, failed
+application/retry, exact campaign/profile/settings reload and marker cleanup.
+Retained launcher acceptance passes cancel/invalid/restore/reload and no room
+toolbar. Optimized actual-game Edge checks pass native placement, direct/native-
+cursor export, confirmation/cancel, invalid-file protection, safe restart, exact
+campaign/profile reload and preservation of an imported Automatic HUD setting.
+Touch-mode checks pass the same flow and phone/tablet target bounds without N64
+control overlap. Chrome's native Exit Game/room retreat/warm power resume and
+legacy management restart pass. All 155 browser unit tests, type/site checks,
+Windows/optimized Wasm builds, native HUD/ADS/upstream checks, and the unchanged
+107-image gallery refresh/freshness/eight workflow tests pass.
+Edge/WebKit ROM-free fixtures also pass the actual browser target's touch-end
+file-picker gesture, single export activation and menu-only visibility; this
+corrects WebKit's suppressed compatibility-click path without waiting for a
+native frame to invoke the picker.
+Native controller/cursor import uses an explicit Choose backup file prompt;
+direct browser pointer/touch buttons retain immediate picking. The focused
+`web/src/save-transfer-dialogs.tsx` preserves the shared confirmation/cancel flow.
+Sources/evidence are FORK-025, `web/tools/file-menu-save-audit.mjs`,
+`build/file-menu-*` and `build/web-files`. Next action: publish through main and
+verify CI/Pages, preserving the existing browser/device acceptance limits.
+Actual Safari remains experimental; the older broad WebKit room fade-marker
+limitation is separate from focused save-transfer checks.
 
 **Status:** Complete. Actual campaign/profile/settings reload and backup restore
 pass through the launcher, alongside storage failure/retry and concurrent-tab checks.
@@ -448,18 +463,17 @@ WEB-006 compatibility and mission/effect coverage.
 
 ## WEB-006 | 2026-10-24 | Browser compatibility and polish
 
-**Automatic health/armor default, 2026-10-27:** Shared native/Wasm HUD defaults
-and the first-run INI writer now use `always_health=0` (Health Display:
-Automatic). This turns off persistent health and armor gauges on all platforms;
-temporary native gauges and the optional Always mode remain available. Existing
-saved preferences are preserved, and the browser bootstrap adds no override.
-The native HUD/ADS regressions, Windows and optimized Wasm builds, 154 browser
-unit tests, type checking and public-artifact verification pass. An isolated
-fresh Windows launch writes the expected INI and its HUD settings capture shows
-Automatic. The two-pass gallery refresh reproduces all 107 images unchanged;
-freshness/integrity and eight gallery workflow tests pass. Private evidence is
-`build/health-default-*` and `build_win/health-default-first-run-*`.
-Next action: publish through main and verify CI/Pages.
+**Restored Always health/armor default, 2026-10-27:** At the owner's request,
+shared native/Wasm HUD defaults and the first-run INI writer again use
+`always_health=1` (Health Display: Always) on all platforms. This supersedes the
+temporary Automatic default in `2680157`. Explicit saved Automatic choices stay
+intact; the browser bootstrap adds no override. HUD/ADS/upstream regressions,
+Windows/optimized Wasm builds, 155 browser unit tests and type/site checks pass.
+An isolated first-run Windows INI and HUD capture verify Always; actual web
+import/restart retains an explicit Automatic choice. The two-pass gallery
+reproduces all 107 images unchanged; freshness/integrity and eight gallery tests
+pass. Evidence is `build/file-menu-*`, `build/web-files` and
+`build_win/health-default-first-run-*`; next action: publish through main/CI/Pages.
 
 **Status:** Desktop preview acceptance complete. Chrome/Edge and Linux Firefox
 are tested; Safari remains experimental by the user's explicit decision. Final
@@ -1285,6 +1299,20 @@ accepted desktop preview. Later documentation-only publication refreshes do not
 change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
+
+**Upright Z target, 2026-10-27:** The N64 Z button is now a much larger upright
+rectangle at the right edge, retaining the gray translucent fill and drag-to-
+fire/look behavior. Wider layouts use an 80-pixel-wide, 160–240-high Z with A/B
+and Start/Aim beside it. Phones up to 420 CSS pixels use a 72-pixel-wide Z beside
+a vertical column of the other buttons, preserving separate left-stick space.
+This supersedes the former 104×48 horizontal Z. On the native Files screen the
+N64 cluster docks above the action area to avoid covering its buttons.
+Edge/WebKit touch acceptance passes upright size, 320/390/844/1024 viewport bounds
+and input/release behavior; Edge checks also exercise both ends of Z. Chrome's
+optimized actual-ROM touch audit passes menus/Dam, movement, firing/drag look,
+watch, pause/options, audio and phone/tablet bounds. Evidence is
+`build/file-menu-touch-*` and `build/web-files/touch-game`; next action: publish
+through main, retaining physical iPhone/iPad acceptance as a separate limit.
 
 **Translucent N64 buttons, 2026-10-27:** Replaced the opaque A/B/Z/Start color
 fills with 50% alpha, retaining the existing highlights, solid white labels,

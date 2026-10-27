@@ -41,8 +41,8 @@ export async function auditN64Layout(page, output) {
                 'Z must be gray',
             );
             assert.ok(
-                style.width > style.height && style.radius === '8px',
-                'Z must be rectangular',
+                style.height >= 160 && style.height > style.width * 1.8 && style.radius === '8px',
+                'Z must be a large upright rectangle',
             );
         } else {
             assert.equal(style.width, style.height);
@@ -67,6 +67,16 @@ export async function auditN64Layout(page, output) {
             const box = await page.locator(`[data-controller-button=${name}]`).boundingBox();
             assert.ok(box.x >= size.width / 2 && box.y >= 0);
             assert.ok(box.x + box.width <= size.width + 1 && box.y + box.height <= size.height + 1);
+            if (name === 'z')
+                for (const fraction of [0.1, 0.9]) {
+                    await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * fraction);
+                    await page.mouse.down();
+                    assert.ok(
+                        (await page.evaluate(() => touchFixture.snapshot())).held.includes(0),
+                        'Z edge does not fire',
+                    );
+                    await page.mouse.up();
+                }
         }
         await page.screenshot({ path: resolve(output, `n64-layout-${size.width}.png`) });
     }

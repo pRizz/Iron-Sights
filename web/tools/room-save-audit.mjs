@@ -22,10 +22,10 @@ export async function auditRoomSaves(browser, origin, output) {
     page.on('pageerror', (error) => errors.push(String(error)));
     try {
         await page.goto(origin);
-        const actions = page.getByRole('region', { name: 'Save transfer' });
-        const importer = actions.getByRole('button', { name: 'Import Save', exact: true });
-        const exporter = actions.getByRole('button', { name: 'Export Save', exact: true });
-        await expect(actions).toBeVisible();
+        await expect(page.getByRole('region', { name: 'Save transfer' })).toHaveCount(0);
+        await page.keyboard.press('F2');
+        const importer = page.getByRole('button', { name: 'Restore save backup' });
+        const exporter = page.getByRole('button', { name: 'Download save backup' });
         await expect(importer).toBeEnabled({ timeout: 60_000 });
         await expect(exporter).toBeEnabled();
         const canvas = await page.locator('#canvas').elementHandle();
@@ -34,7 +34,6 @@ export async function auditRoomSaves(browser, origin, output) {
         assert.equal(original.version, 1);
         assert.ok(original.files.every((file) => !/rom|\.z64|\.mstate/i.test(file.path)));
         await expect(page.getByText('Save backup downloaded. It contains no ROM.')).toBeVisible();
-        await page.locator('.controls-close').click();
 
         const data = [
             ['Data/Saves/eeprom.bin', Buffer.from(Array.from({ length: 512 }, (_, i) => i % 256))],
@@ -74,7 +73,6 @@ export async function auditRoomSaves(browser, origin, output) {
             original.files,
             'Cancelled import changed saves',
         );
-        await page.locator('.controls-close').click();
         await choose(JSON.stringify({ ...JSON.parse(backup), version: 99 }));
         await expect(page.getByRole('status').filter({ hasText: 'version 1' })).toBeVisible();
         assert.deepEqual(
@@ -82,7 +80,6 @@ export async function auditRoomSaves(browser, origin, output) {
             original.files,
             'Invalid import changed saves',
         );
-        await page.locator('.controls-close').click();
         await choose(backup);
         await confirm.getByRole('button', { name: 'Restore backup', exact: true }).click();
         await expect(page.getByText('Backup restored. Your saved data is ready.')).toBeVisible();
@@ -98,6 +95,7 @@ export async function auditRoomSaves(browser, origin, output) {
             'Save actions remounted the game canvas',
         );
         await page.goto(origin);
+        await page.keyboard.press('F2');
         const reloaded = await downloadedBackup(page, exporter);
         for (const file of files)
             assert.deepEqual(
@@ -118,19 +116,12 @@ export async function auditRoomSaves(browser, origin, output) {
             await page.setViewportSize(size);
             if (browser.browserType().name() === 'webkit')
                 await page.evaluate(() => window.dispatchEvent(new Event('resize')));
-            await expect(actions).toBeVisible();
-            const box = await actions.boundingBox();
-            assert.ok(
-                box.x >= 0 &&
-                    box.y >= 0 &&
-                    box.x + box.width <= size.width + 1 &&
-                    box.y + box.height <= size.height + 1,
-            );
+            await expect(page.getByRole('region', { name: 'Save transfer' })).toHaveCount(0);
             await page.screenshot({ path: resolve(output, `save-actions-${size.width}.png`) });
         }
         assert.deepEqual(errors, []);
         console.log(
-            'Room saves: direct import/export, confirmation/cancel, invalid-data protection, exact campaign/profile/settings reload and responsive shortcuts passed',
+            'Launcher saves: backup/restore, confirmation/cancel, invalid-data protection, exact campaign/profile/settings reload and no room shortcuts passed',
         );
     } finally {
         await context.close();

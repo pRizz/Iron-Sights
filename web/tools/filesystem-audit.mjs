@@ -22,11 +22,15 @@ try {
   maybeBrowser = await chromium.launch({ headless: true,
     ...(maybeChannel && maybeChannel !== 'chromium' ? { channel: maybeChannel } : {}) });
   const page = await maybeBrowser.newPage();
-  const initialize = async () => {
+  const initialize = async (failRestore = false) => {
     const api = await import('/driver.js');
     const { default: create } = await import('/web_fs_probe.mjs');
     globalThis.fixture = await create({ noInitialRun: true });
     globalThis.saveStatuses = [];
+    if (failRestore) {
+      const sync = fixture.FS.syncfs;
+      fixture.FS.syncfs = (populate, done) => populate ? sync(populate, done) : done(new Error('Synthetic restore commit failure'));
+    }
     globalThis.files = await api.mountPersistentFiles(fixture.FS, fixture.IDBFS, status => saveStatuses.push(status));
     globalThis.backups = api;
     fixture.FS.mkdirTree('/user/Data/Saves');
@@ -101,7 +105,43 @@ try {
   assert.equal(await page.evaluate(() => fixture.FS.readFile('/user/Data/Saves/eeprom.bin')[0]), 19);
   assert.equal(await page.evaluate(() => new TextDecoder().decode(fixture.FS.readFile('/user/Data/Profiles/Test.geprofile'))),
     'synthetic profile');
-  console.log('IDBFS: C save/reload, writes during sync, backup round trip, failed-import rollback and running-game guard passed');
+  // A confirmed in-game import stages a backup without touching the old game's
+  // files; a fresh runtime applies it before it can cache campaign data.
+  assert.ok(await page.evaluate(async () => {
+    const sync = fixture.FS.syncfs;
+    fixture.FS.syncfs = (_populate, finished) => finished(new DOMException('Synthetic staging quota failure', 'QuotaExceededError'));
+    let rejected = false;
+    try { await files.stageRestore([{ path: 'midas.ini', bytes: new TextEncoder().encode('[display]\nalways_health=0\n') }]); }
+    catch { rejected = true; }
+    finally { fixture.FS.syncfs = sync; }
+    await files.flush();
+    return rejected && !fixture.FS.analyzePath('/user/.pending-save-restore.json').exists
+      && fixture.FS.readFile('/user/Data/Saves/eeprom.bin')[0] === 19;
+  }), 'A failed staging sync must leave the live campaign intact without a pending import');
+  await page.evaluate(async () => {
+    files.markStarted();
+    await files.stageRestore([
+      { path: 'Data/Saves/eeprom.bin', bytes: new Uint8Array(512).fill(37) },
+      { path: 'Data/Profiles/Imported.geprofile', bytes: new TextEncoder().encode('imported profile') },
+      { path: 'midas.ini', bytes: new TextEncoder().encode('[display]\nalways_health=1\n') },
+    ]);
+  });
+  assert.equal(await page.evaluate(() => fixture.FS.readFile('/user/Data/Saves/eeprom.bin')[0]), 19);
+  assert.ok(await page.evaluate(() => files.snapshot().every(file => !file.path.includes('pending'))));
+  await page.reload();
+  await assert.rejects(page.evaluate(initialize, true), /Synthetic restore commit failure/);
+  assert.equal(await page.evaluate(() => fixture.FS.readFile('/user/Data/Saves/eeprom.bin')[0]), 19);
+  assert.equal(await page.evaluate(() => fixture.FS.analyzePath('/user/.pending-save-restore.json').exists), true);
+  await page.reload();
+  await page.evaluate(initialize);
+  assert.equal(await page.evaluate(() => fixture.FS.readFile('/user/Data/Saves/eeprom.bin')[0]), 37);
+  assert.equal(await page.evaluate(() => new TextDecoder().decode(fixture.FS.readFile('/user/Data/Profiles/Imported.geprofile'))), 'imported profile');
+  assert.equal(await page.evaluate(() => fixture.FS.analyzePath('/user/Data/Profiles/Test.geprofile').exists), false);
+  assert.equal(await page.evaluate(() => fixture.FS.analyzePath('/user/.pending-save-restore.json').exists), false);
+  await page.reload();
+  await page.evaluate(initialize);
+  assert.equal(await page.evaluate(() => fixture.FS.readFile('/user/Data/Saves/eeprom.bin')[0]), 37);
+  console.log('IDBFS: C save/reload, writes during sync, backup round trip, rollback, running-game guard and staged import/reload passed');
 } finally {
   await maybeBrowser?.close();
   await new Promise(resolve => server.close(resolve));

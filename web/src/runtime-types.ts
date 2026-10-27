@@ -36,6 +36,7 @@ export type GameModule = {
     _portWebCaptureMouse(): number;
     _portWebGetGfxTasks(): number;
     _portWebReturnToRoom(): void;
+    _portWebFileMenuMetric(metric: number): number;
     _portWebGetFrames(): number;
     _portWebGetPlayerHeading(): number;
     _portWebTouchEnable(enabled: number): void;
@@ -53,6 +54,7 @@ export type GameOptions = {
     printErr(line: string): void;
     onPointerRelease(): void;
     onRoomRequested(): void;
+    onSaveTransfer(exporting: boolean): void;
     onStartupProgress(label: string, completed: number, total: number): void;
     onAbort(reason: unknown): void;
     onExit(code: number): void;

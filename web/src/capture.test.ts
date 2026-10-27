@@ -46,6 +46,15 @@ function captureFixture(touch = false, pointerLock = true, browserRequests = '')
     let deferCapture = false;
     let release = () => {};
     const pauses: number[] = [];
+    class ElementStub extends EventTarget {
+        constructor(private files: boolean) {
+            super();
+        }
+        closest(selector: string) {
+            return this.files && selector === '.file-save-actions' ? this : null;
+        }
+    }
+    replace('Element', ElementStub);
     replace('document', page);
     replace('window', window);
     replace(
@@ -92,6 +101,7 @@ function captureFixture(touch = false, pointerLock = true, browserRequests = '')
         pauses,
         window,
         canvas,
+        target: (files: boolean) => new ElementStub(files),
         lock,
         release: () => release(),
         deferCapture: () => {
@@ -260,6 +270,26 @@ test('touch controls can take canvas focus without pausing; page focus loss stil
         fixture.canvas.dispatchEvent(new Event('blur'));
         expect(fixture.capture.state().kind).toBe('playing');
         fixture.window.dispatchEvent(new Event('blur'));
+        expect(fixture.capture.state()).toEqual({ kind: 'paused', reason: 'focus' });
+    } finally {
+        fixture.dispose();
+    }
+});
+
+test('Files action focus stays in the native menu while unrelated canvas blur still pauses', async () => {
+    // Arrange: native menus do not need Pointer Lock.
+    const fixture = captureFixture();
+    try {
+        await fixture.capture.resume();
+        // Act: focus a browser target belonging to the native Files menu.
+        fixture.canvas.dispatchEvent(
+            Object.assign(new Event('blur'), { relatedTarget: fixture.target(true) }),
+        );
+        // Assert: only the scoped menu target is exempt from focus pause.
+        expect(fixture.capture.state().kind).toBe('menu');
+        fixture.canvas.dispatchEvent(
+            Object.assign(new Event('blur'), { relatedTarget: fixture.target(false) }),
+        );
         expect(fixture.capture.state()).toEqual({ kind: 'paused', reason: 'focus' });
     } finally {
         fixture.dispose();

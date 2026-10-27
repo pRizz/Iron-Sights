@@ -334,9 +334,7 @@ int main(void)
     live = 0; assert(!portHudWeaponStripShown()); live = 1;
 
     /* Idle presentation uses simulation time, pauses, and stays per player. */
-    assert(portHudOptionGet("always_health", &value) && value == 0);
-    assert(!portHudAlwaysHealthShown());
-    portHudOptionSet("always_health", 1);
+    assert(portHudOptionGet("always_health", &value) && value == 1);
     for (i = 0; i < 4; i++) {
         portHudReset(0);
         currentWeapon = ITEM_AK47;

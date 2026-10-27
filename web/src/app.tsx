@@ -10,7 +10,8 @@ import { createTouchInput, initialTouch } from './touch-input';
 import { TouchLayoutSetting } from './touch-layout-setting';
 import { createRomManager } from './rom-manager';
 import { Room } from './room/room';
-import { RoomSaveActions } from './room/save-actions';
+import { FileSaveActions } from './file-save-actions';
+import { SaveTransferDialogs } from './save-transfer-dialogs';
 import { restoredEntry, shouldAutoLaunch, type EntryMode } from './room/session';
 import { missionStyle } from './mission-theme';
 
@@ -35,6 +36,8 @@ export function App() {
     const [action, setAction] = createSignal('');
     const [busy, setBusy] = createSignal(false);
     const [maybeImport, setImport] = createSignal<UserFile[]>();
+    const [fileImport, setFileImport] = createSignal(false);
+    const [pickRequested, setPickRequested] = createSignal(false);
     const [protection, setProtection] = createSignal('Checking storage protection');
     let canvas!: HTMLCanvasElement;
     let romInput!: HTMLInputElement;
@@ -103,6 +106,7 @@ export function App() {
     onMount(() => {
         const detach = capture.attach(canvas);
         capture.onResumeRequest(() => void resumeGame());
+        engine.onSaveTransfer((exporting) => transferFromFiles(exporting, true));
         engine.onRoomRequested(() => {
             if (!started()) return;
             capture.pause('manual');
@@ -260,6 +264,24 @@ export function App() {
         }
     }
 
+    function transferFromFiles(exporting: boolean, nativeRequest = false): void {
+        if (!engine.maybeGame()?._portWebFileMenuMetric(0)) return;
+        if (exporting) {
+            void downloadBackup();
+            return;
+        }
+        setFileImport(true);
+        capture.pause('manual');
+        if (nativeRequest) setPickRequested(true);
+        else backupInput.click();
+    }
+
+    function cancelFileImport(): void {
+        if (fileImport()) void resumeGame();
+        setFileImport(false);
+        setPickRequested(false);
+    }
+
     async function chooseBackup(file: File): Promise<void> {
         try {
             if (file.size > MAX_BACKUP_TEXT) throw new Error('The backup is too large.');
@@ -267,6 +289,10 @@ export function App() {
             dialog.showModal();
         } catch (error) {
             setAction(error instanceof Error ? error.message : String(error));
+            if (fileImport()) {
+                showHint(error instanceof Error ? error.message : String(error));
+                cancelFileImport();
+            }
         }
     }
 
@@ -276,10 +302,19 @@ export function App() {
         if (!files || !replacement) return;
         setBusy(true);
         try {
+            if (started() && fileImport()) {
+                await files.stageRestore(replacement);
+                location.reload();
+                return;
+            }
             await files.replace(replacement);
             setAction('Backup restored. Your saved data is ready.');
         } catch (error) {
             setAction(`Backup could not be restored. ${String(error)}`);
+            if (fileImport()) {
+                showHint(`Backup could not be restored. ${String(error)}`);
+                cancelFileImport();
+            }
         } finally {
             setBusy(false);
             dialog.close();
@@ -472,44 +507,31 @@ export function App() {
                     type="file"
                     hidden
                     accept=".json"
+                    onCancel={cancelFileImport}
                     onChange={(event) => {
                         const maybeFile = event.currentTarget.files?.[0];
                         if (maybeFile) void chooseBackup(maybeFile);
                         event.currentTarget.value = '';
                     }}
                 />
-                <dialog
-                    ref={dialog}
-                    onCancel={(event) => {
-                        if (busy()) event.preventDefault();
-                        else setImport(undefined);
+                <SaveTransferDialogs
+                    maybeImport={maybeImport}
+                    busy={busy}
+                    fromGame={fileImport}
+                    pickRequested={pickRequested}
+                    dialog={(element) => {
+                        dialog = element;
                     }}
-                >
-                    <p class="eyebrow">RESTORE BACKUP</p>
-                    <h2>Replace local saves?</h2>
-                    <p>
-                        This backup contains {maybeImport()?.length || 0} files. Your current
-                        campaign, profiles and settings will be replaced.
-                    </p>
-                    <div class="dialog-actions">
-                        <button
-                            disabled={busy()}
-                            onClick={() => {
-                                dialog.close();
-                                setImport(undefined);
-                            }}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            class="solid-primary"
-                            disabled={busy()}
-                            onClick={() => void restoreBackup()}
-                        >
-                            {busy() ? 'Restoring…' : 'Restore backup'}
-                        </button>
-                    </div>
-                </dialog>
+                    choose={() => {
+                        setPickRequested(false);
+                        backupInput.click();
+                    }}
+                    cancel={() => {
+                        setImport(undefined);
+                        cancelFileImport();
+                    }}
+                    restore={() => void restoreBackup()}
+                />
             </div>
             <StartupScreen
                 engine={engine}
@@ -541,20 +563,6 @@ export function App() {
                     }}
                     openControls={openControls}
                     play={() => play('room')}
-                    saveActions={
-                        <RoomSaveActions
-                            ready={!!engine.maybeFiles()}
-                            started={started()}
-                            importSave={() => {
-                                openControls();
-                                if (!started()) backupInput.click();
-                            }}
-                            exportSave={() => {
-                                openControls();
-                                void downloadBackup();
-                            }}
-                        />
-                    }
                     hint={showHint}
                     notify={setAction}
                     unavailable={() => {
@@ -568,6 +576,12 @@ export function App() {
                     }}
                 />
             </Show>
+            <FileSaveActions
+                engine={engine}
+                canvas={() => canvas}
+                visible={() => entered() && !controls() && capture.state().kind !== 'paused'}
+                transfer={transferFromFiles}
+            />
             <Show when={controls()}>
                 <button
                     class="controls-close"

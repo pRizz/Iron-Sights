@@ -88,7 +88,14 @@ unset preferences. Its right-hand cluster has a circular blue A, circular green
 B, circular red Start and gray rectangular Z. Their colored fills use 50% alpha
 beneath the existing highlight/shadow treatment so the game remains visible
 through them, while white labels retain full opacity. This replaces the original
-opaque fills, preserving controller colors, shapes and hit areas.
+opaque fills, preserving controller colors and shapes. Z is now a much larger
+upright rectangle at the right edge: 80 CSS pixels wide and 160–240 high on wider
+viewports, or 72 wide beside a vertical A/B/Start/Aim column on narrow phones.
+This replaces the former 104×48 horizontal Z; the stick, safe areas and remaining
+button hit targets stay separate. Existing press/release and drag-to-fire/look
+behavior is retained. On the Files screen the N64 cluster docks above the native
+action bar so it cannot cover Import/Export or the other menu actions. Touch
+regressions exercise both ends of the enlarged Z hit target.
 The controller background rule also wins over generic button-hover styling,
 so hovering or holding a button keeps its translucent controller color.
 These use existing raw native A/B/Start/Z button bits in gameplay and menus,
@@ -1020,9 +1027,10 @@ behavior changed by the inventory/rule addition.
 **Status:** Implemented.
 
 Added **Gameplay > HUD > Health Display: Automatic / Always**, defaulting to
-**Automatic** (`[display] always_health=0`) on all platforms. Both the shared
-in-memory default and first-run INI writer use Automatic; existing saved choices
-remain authoritative. This supersedes the fork's earlier Always default.
+**Always** (`[display] always_health=1`) on all platforms. Both the shared
+in-memory default and first-run INI writer use Always; existing saved choices
+remain authoritative. This restores the original fork default and supersedes
+the temporary Automatic default shipped in `2680157` at the owner's request.
 Always keeps the native curved gauges
 visible during live gameplay, showing actual health and armor at 75% of the
 original thickness when emphasized. After three quiet seconds, they smoothly
@@ -1043,21 +1051,20 @@ frontend/watch HUD pages, [README](README.md),
 **Checks:** [HUD tests](scripts/port/test_hud.sh) cover idle timing at
 30/60/120/240 Hz, pause/player isolation, damage refresh with indicators off,
 visibility gates and gauge geometry/alpha. [ADS tests](scripts/port/test_ads.sh)
-cover menu availability and setting persistence, including the Automatic default
+cover menu availability and setting persistence, including the Always default
 and explicit Always/Automatic choices. The HUD audit explicitly opts into Always
-for persistent-gauge captures, supports `-AutomaticHealth` for the default mode,
+for persistent-gauge captures, supports `-AutomaticHealth` for temporary gauges,
 and captures active/idle health with a refreshed weapon strip.
 Windows and Linux builds passed. Visual captures checked the HUD settings page,
 full/quiet gauges in solo and split-screen, and Automatic mode without
 persistent gauges.
-The default-off refinement passes the HUD/ADS regressions, Windows and optimized
-Wasm builds, all 154 browser unit tests, type checking and public-artifact
-verification. An isolated first-run Windows launch writes `always_health=0`;
-its HUD settings capture shows Health Display: Automatic. The required two-pass
-gallery refresh reproduces all 72 views and 35 icons with zero changed pixels;
-freshness/integrity and eight gallery workflow tests pass. Saved options remain
-covered by the existing settings regression. Evidence stays local in
-`build/health-default-*` and `build_win/health-default-first-run-*`.
+The restored default passes HUD/ADS/upstream regressions, Windows and optimized
+Wasm builds, 155 browser unit tests and type/site checks. An isolated first-run
+Windows INI and HUD settings capture verify Always; imported Automatic stays
+intact through the actual-game backup restart. The two-pass gallery reproduces
+all 107 images unchanged; freshness/integrity and eight gallery workflow tests
+pass. Evidence is private under `build/file-menu-*`, `build/web-files` and
+`build_win/health-default-first-run-*`. Publication is tracked in WEB-006.
 
 ### FORK-014 — Solo suspend points and restore/undo controls
 
@@ -1925,31 +1932,59 @@ verified room refinements in `ed459f2`. PR #2 was closed rather than merged.
 
 ### FORK-025 — Immersive browser room
 
-The opening idle room now exposes **Import Save** and **Export Save** in a compact
-upper-right toolbar requested by the owner. They reuse the retained launcher's
-portable JSON backup and confirmation flow; saves, profiles and settings travel
-without a ROM. Export opens save management and downloads the backup. Import
-opens the picker before the game starts; after startup it opens the existing
-restart/restore controls instead of bypassing the live game's EEPROM-cache guard.
-Both actions wait for local files to open and hide during the cinematic and
-gameplay. The game canvas and storage identities remain unchanged. This refines
-the earlier canvas-only entry request; the accepted room plan and
-`standards-overrides.md` record the explicit UI exception.
-Focused sources are [save shortcuts](web/src/room/save-actions.tsx),
-[styles](web/src/room/save-actions.css), [room](web/src/room/room.tsx),
-[backup handlers](web/src/app.tsx), [shortcut audit](web/tools/room-save-audit.mjs)
-and [live-game guard audit](web/tools/room-exit-audit.mjs).
-Validation: 154 unit tests, TypeScript, production assembly/allowlist, standards
-and native gallery freshness pass. Edge's room suite and Edge/WebKit save-transfer
-checks pass confirmation/cancel, invalid-file protection, exact synthetic binary
-campaign/profile/settings round trips, reload and desktop/phone bounds. Chrome's
-actual-ROM Exit Game audit passes Export Save, the live Import Save restart guard,
-stable canvas/save bytes and warm resume. Private evidence is under
-`build/web-room/save-actions-{edge,webkit,game}`. The broader Windows WebKit room
-suite stops at a missing ROM-dialog fade-out transition marker; the same failure
-reproduces with the unmodified audit against published baseline `aaab15a`.
-From `web/`, `node tools/room-save-audit.mjs` provides the independently passing
-save flow; physical Safari acceptance is not claimed.
+**Import Save** and **Export Save** now belong to GoldenEye's four-campaign
+Files screen, as clarified by the owner. The web-only action area has two rows
+and three columns alongside Copy, Erase, Options and Exit Game. This replaces
+the earlier upper-right room toolbar, whose component/styles are removed; the
+room returns to its canvas-only presentation. Native labels and cursor actions
+use small `GE_WEB` hooks in `src/game/front.c`, `port/web/runtime.c` and
+`port/web/lifecycle.c`; `web/src/engine.ts` and `web/src/runtime-types.ts` carry
+the typed callback/metric boundary.
+Accessible transparent browser targets follow the measured native bounds and
+the 4:3 menu band, preserving direct file-picker gestures on touch devices.
+The scoped focus hook in `web/src/capture.ts` permits focus on these game-menu
+targets; real window blur/visibility loss still pauses the game.
+`web/src/capture.test.ts` covers that scoped exception and unrelated focus pause.
+They are absent outside the idle Files screen, including copy/erase/exit modals.
+Desktop native builds retain their four-button action area.
+
+Both actions reuse the portable JSON codec: all campaigns, profiles and settings
+travel without a ROM. Import confirms full replacement and restart. The backup
+is staged as `.pending-save-restore.json` in the existing IDBFS mount, outside the
+export allowlist; the running game's campaign files and cached EEPROM stay
+intact. A fresh runtime validates/applies the marker before native startup,
+then clears it durably. Failed staging rolls back the marker; failure during
+application stops initialization for safe retry. The ordinary live-file restore
+guard, database/mount/lock identities and existing backup format remain intact.
+Legacy F2 backup and restart/restore controls remain available.
+
+Focused sources are [browser targets](web/src/file-save-actions.tsx),
+[styles](web/src/file-save-actions.css), [backup handlers](web/src/app.tsx),
+[browser dialogs](web/src/save-transfer-dialogs.tsx),
+[staging/persistence](web/src/persistent-files.ts),
+[actual-game audit](web/tools/file-menu-save-audit.mjs),
+[launcher audit](web/tools/room-save-audit.mjs) and
+[live-game lifecycle audit](web/tools/room-exit-audit.mjs).
+The real IDBFS regression passes staged import/reload, marker exclusion/cleanup,
+quota-failure rollback, failed application/retry, exact campaign/profile
+replacement and the live-file guard. The retained launcher audit passes confirmation/cancel, invalid-data
+preservation and exact reload while asserting the room has no transfer toolbar.
+Actual optimized-game Edge checks pass direct and native-cursor export, import
+confirmation/cancel, invalid-data preservation, exact campaign/profile reload,
+imported HUD preference and phone/tablet bounds. Touch-mode checks pass the same
+flow with controls clear of the action area. Chrome's native Exit Game audit
+passes return-to-room, warm power resume and legacy save management. The touch
+fixture also exercises the actual browser targets and direct file-picker gesture
+without a ROM (`web/tests/touch-driver.tsx`, `web/tools/touch-ui-audit.mjs`).
+WebKit's touch-end gesture opens the picker directly; compatibility clicks are
+suppressed to avoid double activation. Edge/WebKit fixture acceptance covers
+touch import, single export activation and hiding the targets outside Files.
+Native controller/cursor import opens a small Choose backup file prompt to
+obtain the browser gesture; direct pointer/touch targets open the picker
+immediately. Its confirmation UI is extracted into the focused dialogs module.
+Current publication is tracked in WEB-003. Physical Safari
+acceptance is not claimed; the older broad Windows WebKit room fade-marker
+limitation remains separate from these save-transfer checks.
 The save audit waits for the export button to become visible and enabled before
 starting its download-event timeout, including after reload. Click/download
 promises are observed together. This prevents slow engine initialization from

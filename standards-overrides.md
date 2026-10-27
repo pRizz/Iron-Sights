@@ -85,8 +85,10 @@ remain accessible through F2 and an in-scene controls affordance rather than a
 permanent initial header/footer. Keep accessible controls and error recovery.
 See `scripts/port/web_room_plan.md` for the accepted experience and milestones.
 
-On 2026-10-27 the user explicitly requested visible Import Save and Export Save
-shortcuts on the initial web screen. The idle room now exposes those two controls
-through the retained backup handlers; they hide during startup/gameplay. This
-refines the earlier canvas-only preference while preserving the existing source,
-provenance and credits access through F2.
+On 2026-10-27 the user clarified that Import Save and Export Save belong in
+GoldenEye's four-campaign Files screen, alongside Copy, Erase, Options and Exit
+Game, as two direct buttons in a two-row/three-column web action area. This
+supersedes the earlier room toolbar interpretation; the opening room returns to
+its canvas-only presentation. Source, provenance and credits remain available
+through F2. Import confirms the full backup and stages it for a fresh runtime;
+the live game's cached EEPROM is never replaced.

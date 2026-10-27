@@ -77,8 +77,8 @@
     right: max(12px, env(safe-area-inset-right));
     bottom: max(20px, env(safe-area-inset-bottom));
     display: grid;
-    grid-template-columns: repeat(2, 64px);
-    grid-template-rows: 48px 64px 48px;
+    grid-template-columns: 56px 64px 80px;
+    grid-template-rows: 48px 64px;
     gap: 8px;
     place-items: center;
     z-index: 3;
@@ -128,10 +128,15 @@
 }
 .touch-n64 button[data-controller-button='z'] {
     --n64-color: #777e8780;
-    grid-area: 3 / 1 / 4 / 3;
-    width: 104px;
-    height: 48px;
+    grid-area: 1 / 3 / 3 / 4;
+    align-self: end;
+    width: 80px;
+    height: clamp(160px, calc(var(--touch-view-height, 100dvh) * 0.45), 240px);
     border-radius: 8px;
+}
+.touch-controls[data-file-screen='true'] .touch-n64 {
+    top: max(90px, env(safe-area-inset-top));
+    bottom: auto;
 }
 .touch-stick {
     position: absolute;
@@ -264,5 +269,28 @@
 @media (max-width: 360px) {
     .touch-extra {
         grid-template-columns: repeat(3, 48px);
+    }
+}
+@media (max-width: 420px) {
+    .touch-n64 {
+        grid-template-columns: 64px 72px;
+        grid-template-rows: 48px 48px 56px 64px;
+    }
+    .touch-n64 button[data-touch-action='aim'] {
+        grid-area: 1 / 1;
+    }
+    .touch-n64 button[data-controller-button='start'] {
+        grid-area: 2 / 1;
+    }
+    .touch-n64 button[data-controller-button='b'] {
+        grid-area: 3 / 1;
+    }
+    .touch-n64 button[data-controller-button='a'] {
+        grid-area: 4 / 1;
+    }
+    .touch-n64 button[data-controller-button='z'] {
+        grid-area: 1 / 2 / 5 / 3;
+        width: 72px;
+        height: 100%;
     }
 }

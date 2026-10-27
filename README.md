@@ -37,7 +37,7 @@ To update, replace the supplied program files while keeping **Data** and **midas
 
 ## Play the browser preview
 
-**[PLAY IN YOUR BROWSER](https://prizz.github.io/Iron-Sights/)** with your own stock US ROM. The desktop preview runs locally through WebAssembly and remembers your ROM, campaign saves, profiles and settings on this device. The opening room has **Import Save** and **Export Save** buttons for portable backups of campaign saves, profiles and settings; the ROM stays separate. Chrome, Edge and Firefox have been tested; Safari is experimental.
+**[PLAY IN YOUR BROWSER](https://prizz.github.io/Iron-Sights/)** with your own stock US ROM. The desktop preview runs locally through WebAssembly and remembers your ROM, campaign saves, profiles and settings on this device. GoldenEye's four-save Files screen has **Import Save** and **Export Save** beside Copy, Erase, Options and Exit Game. Backups include all campaigns, profiles and settings; importing confirms replacement and restarts safely. The ROM stays separate. Chrome, Edge and Firefox have been tested; Safari is experimental.
 
 On phones and tablets, touch controls turn on automatically. Move with the left
 thumbstick and drag the right side to look. **Touch layout** defaults to **N64
@@ -66,7 +66,7 @@ Successful `main` builds deploy automatically to GitHub Pages. See [compatibilit
 - **Enhanced fonts:** smooth, high-resolution community fonts for menus and HUD text, enabled by default in **Display > Video > Enhanced Fonts**. [Details and credits](scripts/port/enhanced_fonts.md).
 - **Objective notifications:** named alerts show when mission objectives are completed or failed.
 - **Weapon inventory HUD:** a compact strip highlights your selected weapon, supports text or rendered model icons, and fades while idle.
-- **Optional always-visible health and armor:** persistent gauges become thinner and dimmer between hits; the original temporary display is the default.
+- **Always-visible health and armor:** persistent gauges become thinner and dimmer between hits; the original temporary display is also available.
 - **Suspend points:** four manual slots, quicksave/quickload, and undo-load for solo missions.
 
 See [Playing](#playing) below for controls and settings.
@@ -138,7 +138,7 @@ Aiming and crouching prevent the sprint boost; ADS keeps its half-speed movement
 
 **Weapon Strip Style** switches between **Text** (the default) and **Icons**. Icon mode shows full-colour, static renders of the actual weapon models, including silenced guns, rifles, launchers, and explosives; the selected weapon stays highlighted. Its name appears underneath the selected icon, then fades out completely after three seconds without switching weapons (over a one-second transition). Set `[display] weapon_hud_icons=1` in `midas.ini` to select icons directly. Windows prepares these images from your ROM on first launch and reuses a per-user cache; no rebuild or external tools are needed. If preparation is skipped or unavailable, icon mode falls back to weapon names. See [the icon generation guide](scripts/port/weapon_icons.md) for cache details and optional developer exports.
 
-**Health Display** defaults to **Automatic** on all platforms, using the original temporary health and armor gauges. Select **Always**, or set `[display] always_health=1` in `midas.ini`, to keep slimmer arcs visible during gameplay. Damage or a health/armor change restores full opacity at 75% of the original thickness; after three quiet seconds, they smoothly fade to 25% opacity and 20% thickness. Existing saved preferences are preserved.
+**Health Display** defaults to **Always** on all platforms, keeping slimmer health and armor arcs visible during gameplay. Damage or a health/armor change restores full opacity at 75% of the original thickness; after three quiet seconds, they smoothly fade to 25% opacity and 20% thickness. Select **Automatic** for the original temporary gauges, or set `[display] always_health=0` in `midas.ini`. Existing saved preferences are preserved.
 
 These displays hide during menus, cutscenes, and death. Each setting can be changed independently.
 

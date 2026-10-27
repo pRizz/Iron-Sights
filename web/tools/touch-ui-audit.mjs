@@ -276,9 +276,23 @@ try {
     await page.evaluate(() => touchFixture.enabled(false));
     await expect(page.locator('.touch-controls')).toHaveCount(0);
     assert.deepEqual((await snapshot()).held, []);
+    await page.evaluate(() => touchFixture.fileMenu(true));
+    const importer = page.getByRole('button', { name: 'Import Save', exact: true });
+    await expect(importer).toBeVisible();
+    const [picker] = await Promise.all([page.waitForEvent('filechooser'), importer.tap()]);
+    await picker.setFiles({
+        name: 'touch-save.json',
+        mimeType: 'application/json',
+        buffer: Buffer.from('{}'),
+    });
+    assert.equal((await snapshot()).imported, 'touch-save.json');
+    await page.getByRole('button', { name: 'Export Save', exact: true }).tap();
+    assert.equal((await snapshot()).exported, 1);
+    await page.evaluate(() => touchFixture.fileMenu(false));
+    await expect(importer).toHaveCount(0);
     assert.deepEqual(errors, []);
     console.log(
-        'Touch UI: repeated fire/zoom prevention, menu tap vs drag, orphaned stick recovery, independent move/look/fire, cancellation, focus reset, layouts and disable passed',
+        'Touch UI: repeated fire/zoom prevention, menu tap vs drag, orphaned stick recovery, independent move/look/fire, cancellation, focus reset, layouts, disable and direct save-picker gesture passed',
     );
 } finally {
     await browser.close();

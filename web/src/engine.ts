@@ -77,6 +77,7 @@ export function createEngine(pointerless: () => boolean = () => false) {
     let initializing = false;
     let pointerRelease = () => {};
     let roomRequested = () => {};
+    let saveTransfer = (_exporting: boolean) => {};
     const log = (line: string) => setLogs((previous) => [...previous.slice(-99), line]);
     const loading = (label: string, maybePercent: number | null = null) =>
         setStatus({ kind: 'loading', label, maybePercent });
@@ -142,6 +143,7 @@ export function createEngine(pointerless: () => boolean = () => false) {
                 printErr: log,
                 onPointerRelease: () => pointerRelease(),
                 onRoomRequested: () => roomRequested(),
+                onSaveTransfer: (exporting) => saveTransfer(exporting),
                 onStartupProgress: (label, completed, total) =>
                     setStartup(workProgress(label, completed, total)),
                 onAbort: (reason) => {
@@ -201,6 +203,9 @@ export function createEngine(pointerless: () => boolean = () => false) {
         },
         onRoomRequested: (callback: () => void) => {
             roomRequested = callback;
+        },
+        onSaveTransfer: (callback: (exporting: boolean) => void) => {
+            saveTransfer = callback;
         },
     };
 }

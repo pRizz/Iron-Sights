@@ -48,7 +48,7 @@ async function backup(button = 'Download save backup') {
     return JSON.parse(Buffer.concat(chunks).toString());
 }
 async function confirmExit() {
-    await menuClick(390, 298);
+    await menuClick(280, 298);
     await page.screenshot({ path: resolve(output, 'exit-confirm.png') });
     await menuClick(185, 170);
     await expect(page.locator('.room-layer')).toHaveAttribute('data-returning', 'true', {
@@ -101,24 +101,17 @@ try {
         'Files screen was not reached',
     );
     // Native No leaves the Files screen running; Yes must return to the room.
-    await menuClick(390, 298);
+    await menuClick(280, 298);
     await menuClick(255, 170);
     await expect(page.locator('.room-layer')).toHaveCount(0);
     const canvas = await page.locator('#canvas').elementHandle();
     const frozen = await confirmExit();
-    const before = await backup('Export Save');
-    await page.getByText('Saved on this device', { exact: true }).waitFor();
     await page.keyboard.press('F2');
-    let picked = false;
-    const picker = () => {
-        picked = true;
-    };
-    page.on('filechooser', picker);
-    await page.getByRole('button', { name: 'Import Save', exact: true }).click();
+    await page.getByText('Saved on this device', { exact: true }).waitFor();
+    const before = await backup();
+    await expect(page.getByRole('button', { name: 'Import Save', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Restore save backup' })).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Restart to manage saves' })).toBeVisible();
-    assert.equal(picked, false, 'Running-game import bypassed the restart guard');
-    page.off('filechooser', picker);
     await page.keyboard.press('F2');
     // Use the physical switch raycast rather than the accessible button.
     await page.mouse.move(488, 610);

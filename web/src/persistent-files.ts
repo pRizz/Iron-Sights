@@ -1,8 +1,9 @@
-import { allowedUserPath, MAX_USER_FILE_BYTES, validateUserFiles, type UserFile } from './backup';
+import { allowedUserPath, MAX_USER_FILE_BYTES, MAX_BACKUP_TEXT, createBackup, parseBackup, validateUserFiles, type UserFile } from './backup';
 import type { GameFS } from './runtime-types';
 import { createSyncQueue, type SaveStatus } from './sync-queue';
 
 export const USER_MOUNT = '/midas-ads-user';
+const PENDING_RESTORE = USER_MOUNT + '/.pending-save-restore.json';
 
 function synchronize(fs: GameFS, populate: boolean): Promise<void> {
   return new Promise((resolve, reject) => fs.syncfs(populate, maybeError => {
@@ -93,25 +94,54 @@ export async function mountPersistentFiles(fs: GameFS, idbfs: unknown, report: (
     }
   }
 
-  async function replace(files: UserFile[]): Promise<void> {
+  async function replace(files: UserFile[], consumePending = false): Promise<void> {
     if (started) throw new Error('Reload the page before restoring a backup; the running game holds its own save data.');
     validateUserFiles(files);
     await queue.flush();
     const previous = snapshot();
+    const maybePending = consumePending ? fs.readFile(PENDING_RESTORE) : undefined;
     tracking = false;
     try {
       writeSnapshot(files);
+      if (consumePending) fs.unlink(PENDING_RESTORE);
       queue.changed();
       await queue.flush();
     } catch (error) {
       writeSnapshot(previous);
+      if (maybePending) fs.writeFile(PENDING_RESTORE, maybePending);
       throw error;
     } finally {
       tracking = true;
     }
   }
 
-  return { snapshot, replace, flush: queue.flush, pending: queue.pending,
+  // Stage outside the backup allowlist. The live game's cached EEPROM is never
+  // replaced: only a fresh runtime applies this file, before native startup.
+  async function stageRestore(files: UserFile[]): Promise<void> {
+    const text = await createBackup(files, new Date().toISOString());
+    await queue.flush();
+    if (fs.analyzePath(PENDING_RESTORE).exists) throw new Error('A save import is already pending. Reload to finish it.');
+    try {
+      fs.writeFile(PENDING_RESTORE, text);
+      queue.changed();
+      await queue.flush();
+    } catch (error) {
+      if (fs.analyzePath(PENDING_RESTORE).exists) fs.unlink(PENDING_RESTORE);
+      queue.changed();
+      await queue.flush().catch(() => {});
+      throw error;
+    }
+  }
+
+  if (fs.analyzePath(PENDING_RESTORE).exists) {
+    if (fs.lstat(PENDING_RESTORE).size > MAX_BACKUP_TEXT) throw new Error('Pending save import is too large.');
+    const files = await parseBackup(new TextDecoder().decode(fs.readFile(PENDING_RESTORE)));
+    // Replacement and marker removal share one IDBFS transaction. Failure
+    // restores the prior files/marker and stops startup for a safe retry.
+    await replace(files, true);
+  }
+
+  return { snapshot, replace: (files: UserFile[]) => replace(files), stageRestore, flush: queue.flush, pending: queue.pending,
     markStarted: () => { started = true; }, stopTracking };
 }
 export type PersistentFiles = Awaited<ReturnType<typeof mountPersistentFiles>>;

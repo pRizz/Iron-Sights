@@ -36,6 +36,7 @@ const extra: [TouchAction, string][] = [
 
 export function TouchControls(props: Props) {
     const [menu, setMenu] = createSignal(true);
+    const [files, setFiles] = createSignal(false);
     const [more, setMore] = createSignal(false);
     const [aiming, setAiming] = createSignal(false);
     const [stick, setStick] = createSignal({ x: 0, y: 0 });
@@ -75,6 +76,7 @@ export function TouchControls(props: Props) {
         const detachContacts = contacts.attach();
         let frame = 0;
         const monitor = () => {
+            setFiles(!!props.engine.maybeGame()?._portWebFileMenuMetric?.(0));
             const next = !props.engine.maybeGame()?._portWebControlsLive();
             if (next !== menu()) {
                 clear();
@@ -176,6 +178,7 @@ export function TouchControls(props: Props) {
                 aria-label="Touch game controls"
                 data-mode={menu() ? 'menu' : 'game'}
                 data-layout={props.input.layout()}
+                data-file-screen={files() ? 'true' : undefined}
                 onContextMenu={(event) => event.preventDefault()}
             >
                 <div class="touch-top">

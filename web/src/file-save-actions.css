@@ -1,0 +1,18 @@
+.file-save-actions button {
+    position: fixed;
+    z-index: 9;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    touch-action: manipulation;
+}
+.file-save-actions button:hover:not(:disabled) {
+    background: #ffffff18;
+}
+.file-save-actions button:focus-visible {
+    outline: 2px solid #e8d779;
+    outline-offset: 2px;
+}
