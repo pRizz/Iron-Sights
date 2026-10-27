@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import { expect } from '@playwright/test';
 import { launchAuditBrowser } from './browser-choice.mjs';
+import { auditN64Layout } from './touch-n64-audit.mjs';
 
 const assets = new Map(
     await Promise.all(
@@ -38,6 +39,7 @@ try {
     page.on('pageerror', (error) => errors.push(String(error)));
     await page.goto(`http://127.0.0.1:${server.address().port}`);
     await expect(page.locator('.touch-controls')).toHaveAttribute('data-mode', 'game');
+    await auditN64Layout(page, output);
     const aim = page.locator('[data-touch-action=aim]');
     await aim.tap();
     await expect(aim).toHaveAttribute('aria-pressed', 'true');

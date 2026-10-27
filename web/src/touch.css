@@ -59,6 +59,78 @@
     gap: 8px;
     z-index: 4;
 }
+.touch-layout-setting {
+    gap: 12px;
+}
+.touch-layout-setting select {
+    min-height: 44px;
+    padding: 8px 12px;
+    color: #fff1d6;
+    background: #141a18;
+    border: 1px solid #d9b77580;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 16px;
+}
+.touch-n64 {
+    position: absolute;
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(20px, env(safe-area-inset-bottom));
+    display: grid;
+    grid-template-columns: repeat(2, 64px);
+    grid-template-rows: 48px 64px 48px;
+    gap: 8px;
+    place-items: center;
+    z-index: 3;
+}
+.touch-n64 button[data-controller-button] {
+    width: 64px;
+    height: 64px;
+    min-width: 48px;
+    padding: 0;
+    border: 2px solid #ffffff65;
+    border-radius: 50%;
+    background: linear-gradient(#ffffff24, #00000024), var(--n64-color);
+    color: #fff;
+    font-size: 23px;
+    font-weight: 700;
+    text-shadow: 0 1px 2px #0009;
+    box-shadow:
+        inset 0 2px 2px #ffffff30,
+        0 3px 5px #0008;
+}
+.touch-n64 button[data-controller-button]:active {
+    filter: brightness(1.25);
+    box-shadow: inset 0 2px 4px #0006;
+}
+.touch-n64 button[data-touch-action='aim'] {
+    grid-area: 1 / 1;
+    width: 48px;
+}
+.touch-n64 button[data-controller-button='start'] {
+    --n64-color: #c8333b;
+    grid-area: 1 / 2;
+    width: 48px;
+    height: 48px;
+    font-size: 11px;
+}
+.touch-n64 button[data-controller-button='b'] {
+    --n64-color: #208d4c;
+    grid-area: 2 / 1;
+    width: 56px;
+    height: 56px;
+}
+.touch-n64 button[data-controller-button='a'] {
+    --n64-color: #2465ce;
+    grid-area: 2 / 2;
+}
+.touch-n64 button[data-controller-button='z'] {
+    --n64-color: #777e87;
+    grid-area: 3 / 1 / 4 / 3;
+    width: 104px;
+    height: 48px;
+    border-radius: 8px;
+}
 .touch-stick {
     position: absolute;
     left: max(16px, env(safe-area-inset-left));

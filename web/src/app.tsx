@@ -7,6 +7,7 @@ import { createBackup, parseBackup, MAX_BACKUP_TEXT, type UserFile } from './bac
 import { createCapture } from './capture';
 import { createEngine, ensureBrowserSettings } from './engine';
 import { createTouchInput, initialTouch } from './touch-input';
+import { TouchLayoutSetting } from './touch-layout-setting';
 import { createRomManager } from './rom-manager';
 import { Room } from './room/room';
 import { restoredEntry, shouldAutoLaunch, type EntryMode } from './room/session';
@@ -350,6 +351,12 @@ export function App() {
                         />
                         On-screen touch controls
                     </label>
+                    <TouchLayoutSetting
+                        input={touch}
+                        beforeChange={() => {
+                            if (started()) capture.pause('manual');
+                        }}
+                    />
                     <div class="workspace">
                         <Player
                             engine={engine}

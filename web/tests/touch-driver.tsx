@@ -2,6 +2,7 @@ import { createSignal } from 'solid-js';
 import { render } from 'solid-js/web';
 import { TouchControls } from '../src/touch-controls';
 import { createTouchInput } from '../src/touch-input';
+import { TouchLayoutSetting } from '../src/touch-layout-setting';
 import type { Engine } from '../src/engine';
 import type { Capture, Playback } from '../src/capture';
 
@@ -52,18 +53,24 @@ Object.assign(globalThis, {
         },
         resume: () => setState({ kind: 'playing' }),
         enabled: input.setEnabled,
+        layout: input.setLayout,
     },
 });
 render(
     () => (
-        <TouchControls
-            engine={engine}
-            capture={capture}
-            input={input}
-            visible={() => true}
-            options={() => capture.pause('manual')}
-            canvas={() => canvas}
-        />
+        <>
+            <div style="position:fixed;top:70px;left:12px;z-index:12;color:white">
+                <TouchLayoutSetting input={input} beforeChange={() => {}} />
+            </div>
+            <TouchControls
+                engine={engine}
+                capture={capture}
+                input={input}
+                visible={() => true}
+                options={() => capture.pause('manual')}
+                canvas={() => canvas}
+            />
+        </>
     ),
     document.body,
 );

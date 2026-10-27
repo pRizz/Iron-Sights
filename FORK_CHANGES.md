@@ -83,14 +83,20 @@ under `build/ui-defaults` and `build_win/options-audit-20261026`.
 Adds keyboard-free browser input requested for iPhone, iPad and Android. Touch
 mode defaults on for coarse touchscreens or touch devices without Pointer Lock;
 an on-screen checkbox saves an explicit override independently of game files.
-The overlay provides analog movement, relative drag-to-look, independent held
-Fire, toggle ADS, Use/Reload/Crouch, Watch/Pause/Options, and a gun-icon **Switch
-weapon** button above the movement stick that cycles forward using the existing
-next-weapon action. The More tray retains both **Weapon +** and **Weapon −**,
-gadget cycling, zoom, detonation and sprint. Below 361 CSS pixels the tray uses
-three columns to avoid the primary weapon button. Native menus get Select/Back and directional
-controls. Touch mode bypasses mouse capture; keyboard/mouse mode keeps its
-existing capture policy. Dragging Fire turns while firing for two-thumb play.
+The saved **Touch layout** selector defaults to **N64 controller** for new or
+unset preferences. Its right-hand cluster has a circular blue A, circular green
+B, circular red Start and gray rectangular Z. These use existing raw native
+A/B/Start/Z button bits in gameplay and menus, respecting the game's controller
+mapping. Aim remains a toggle during gameplay; the left analog movement stick,
+right-side drag-to-look and gun-icon **Switch weapon** convenience remain.
+Dragging Z turns while firing. Browser Pause/Options remain accessible at the top.
+**Modern actions** restores the previous Fire/Aim/Use/Reload/Crouch/Watch layout,
+Select/Back menu buttons and More tray with weapon/gadget cycling, zoom,
+detonation and sprint. Below 361 CSS pixels that tray uses three columns.
+Both layouts retain directional menu controls and direct menu taps. Layout
+changes release held buttons, movement, look and latched Aim; the preference
+persists separately from game files and safely defaults to N64 if unavailable.
+Touch mode bypasses mouse capture; keyboard/mouse mode keeps its existing policy.
 Controls respect safe-area insets and the game's aspect; browser panning is
 disabled on the game surface while touch mode is enabled. Layout follows the
 smaller visible/layout viewport during rotation or browser-chrome changes.
@@ -102,7 +108,8 @@ the same Upright/Reverse policy as mouse look instead of bypassing inversion.
 The menu touch surface forwards cursor motion without SDL's immediate synthetic
 mouse press. A stationary release selects through the native Accept action;
 movement beyond 10 CSS pixels cancels selection for that entire gesture, even
-when the finger returns to its starting point. Arrows and Select remain available.
+when the finger returns to its starting point. Arrows and native A (Modern Select)
+remain available.
 Non-passive touch/gesture cancellation on the overlay supplements `touch-action`
 to prevent repeated Fire taps from zooming Safari; launcher zoom remains available.
 The active overlay also owns gaps between controls so near-button taps cannot
@@ -123,6 +130,8 @@ changes and room return prevents stuck input; look is discarded during locked
 controls. The module is selected only by the CMake web video target.
 
 **Sources:** [touch state](web/src/touch-input.ts),
+[layout setting](web/src/touch-layout-setting.tsx),
+[launcher settings](web/src/app.tsx), [player guide](README.md), [web guide](web/README.md),
 [contact lifecycle](web/src/touch-contacts.ts), [menu gestures](web/src/touch-menu.tsx),
 [menu tap tests](web/src/touch-menu.test.ts),
 [overlay](web/src/touch-controls.tsx), [layout](web/src/touch.css),
@@ -134,6 +143,7 @@ controls. The module is selected only by the CMake web video target.
 [UI fixture](web/tests/touch-driver.tsx), [fixture page](web/tests/touch.html),
 [fixture build](web/tools/build-touch-test.ts),
 [UI audit](web/tools/touch-ui-audit.mjs),
+[N64 layout audit](web/tools/touch-n64-audit.mjs),
 [private game audit](web/tools/touch-game-audit.mjs),
 [Linux game runner](web/tools/linux-game-audit.sh),
 [Pages checks](.github/workflows/web-pages.yml),
@@ -169,6 +179,16 @@ automated checks do not establish physical iOS acceptance.
 Chrome real-ROM touch acceptance also passes menus into Dam, simultaneous
 movement/look/fire, Watch, pause/resume, Options, audio and portrait/tablet bounds
 against the assembled frontend with the existing optimized runtime.
+
+The N64-default refinement passes 154 unit tests, TypeScript, production
+assembly/allowlist, native A/B/Z/Start tap-bit regressions in both game and menu
+modes, and Edge/WebKit fixture checks for colors/shapes, saved layout reload,
+layout changes while inputs are held, both menu layouts and phone/tablet bounds.
+Chrome actual-ROM acceptance passes N64 A navigation into Dam, simultaneous
+movement/look/Z, Aim, Start watch, Pause/Resume, Options, audio and portrait/tablet
+layouts. Private evidence is `build/web-touch/n64-{edge,webkit,game}`. The existing
+optimized runtime is reused; no native render inputs change and gallery freshness
+verifies. These checks do not establish physical iPhone acceptance.
 
 ### FORK-026 — Upstream 1.0.2b integration
 

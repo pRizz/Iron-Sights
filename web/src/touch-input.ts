@@ -26,6 +26,20 @@ export const TOUCH_ACTIONS = [
 ] as const;
 export type TouchAction = (typeof TOUCH_ACTIONS)[number];
 const KEY = 'midas-ads-touch-v1';
+const LAYOUT_KEY = 'midas-ads-touch-layout-v1';
+export type TouchLayout = 'n64' | 'modern';
+
+export function touchLayoutPreference(value: unknown): TouchLayout {
+    return value === 'modern' ? 'modern' : 'n64';
+}
+
+export function initialTouchLayout(): TouchLayout {
+    try {
+        return touchLayoutPreference(localStorage.getItem(LAYOUT_KEY));
+    } catch {
+        return 'n64';
+    }
+}
 
 export function defaultTouch(points: number, coarse: boolean, pointerLock: boolean): boolean {
     return points > 0 && (coarse || !pointerLock);
@@ -79,8 +93,13 @@ export function createTouchState(send: (action: TouchAction, down: boolean) => v
     };
 }
 
-export function createTouchInput(engine: Engine, initial: boolean) {
+export function createTouchInput(
+    engine: Engine,
+    initial: boolean,
+    initialLayout = initialTouchLayout(),
+) {
     const [enabled, setEnabled] = createSignal(initial);
+    const [layout, setLayout] = createSignal<TouchLayout>(initialLayout);
     const state = createTouchState((action, down) =>
         engine.maybeGame()?._portWebTouchButton(TOUCH_ACTIONS.indexOf(action), Number(down)),
     );
@@ -90,6 +109,7 @@ export function createTouchInput(engine: Engine, initial: boolean) {
     };
     return {
         enabled,
+        layout,
         reset,
         state,
         gesture() {
@@ -104,6 +124,15 @@ export function createTouchInput(engine: Engine, initial: boolean) {
                 localStorage.setItem(KEY, value ? 'on' : 'off');
             } catch {
                 /* Optional preference. */
+            }
+        },
+        setLayout(value: TouchLayout) {
+            reset();
+            setLayout(value);
+            try {
+                localStorage.setItem(LAYOUT_KEY, value);
+            } catch {
+                /* The selected layout still works for this session. */
             }
         },
         move(x: number, y: number) {

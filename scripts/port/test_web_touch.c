@@ -27,11 +27,39 @@ void osSyncPrintf(const char *format, ...)
     abort();
 }
 
+static void testNativeN64Buttons(void)
+{
+    /* Arrange: both gameplay and native menus use the same physical buttons. */
+    const s32 buttons[] = {TOUCH_ACCEPT, TOUCH_BACK, TOUCH_FIRE, TOUCH_WATCH};
+    const u16 masks[] = {A_BUTTON, B_BUTTON, Z_TRIG, START_BUTTON};
+    s32 mode, i;
+    for (mode = 0; mode <= 1; mode++) {
+        live = mode;
+        for (i = 0; i < 4; i++) {
+            OSContPad pad = {0};
+            portWebTouchReset();
+            actionBits = 0;
+            /* Act: even a tap between native polls is preserved for one tick. */
+            portWebTouchButton(buttons[i], 1);
+            portWebTouchButton(buttons[i], 0);
+            portWebTouchPoll(&pad);
+            /* Assert: exact N64 bit, with no semantic binding substitution. */
+            assert(pad.button == masks[i] && actionBits == 0);
+            pad.button = 0;
+            portWebTouchPoll(&pad);
+            assert(pad.button == 0);
+        }
+    }
+    live = 0;
+    portWebTouchReset();
+}
+
 int main(void)
 {
     OSContPad pad = {0};
     struct MoveData move = {0};
     portWebTouchEnable(1);
+    testNativeN64Buttons();
     portWebTouchButton(TOUCH_FIRE, 1);
     portWebTouchButton(TOUCH_AIM, 1);
     portWebTouchButton(TOUCH_RELOAD, 1);

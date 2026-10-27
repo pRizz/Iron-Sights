@@ -7,11 +7,8 @@ import { launchAuditBrowser } from './browser-choice.mjs';
 import { installGameProbe } from './native-game-audit.mjs';
 import { observeAudio, readAudio } from './audio-observer.mjs';
 
-const [
-    rom,
-    outputPath = '../build/web-touch/game',
-    origin = 'http://127.0.0.1:4177/Iron-Sights/',
-] = process.argv.slice(2);
+const [rom, outputPath = '../build/web-touch/game', origin = 'http://127.0.0.1:4177/Iron-Sights/'] =
+    process.argv.slice(2);
 if (!rom) throw new Error('Usage: touch-game-audit.mjs private-rom private-output [origin]');
 const output = resolve(outputPath);
 await mkdir(output, { recursive: true });
@@ -73,6 +70,7 @@ const resize = async (width, height) => {
 try {
     await page.goto(origin + '?controls');
     await expect(page.getByLabel('On-screen touch controls')).toBeChecked();
+    await expect(page.getByLabel('Touch layout', { exact: true })).toHaveValue('n64');
     await page.locator('#rom-file').setInputFiles(resolve(rom));
     await expect(page.getByRole('button', { name: 'Play GoldenEye' })).toBeEnabled({
         timeout: 90000,
@@ -84,6 +82,7 @@ try {
         { timeout: 120000 },
     );
     await expect(page.locator('.touch-controls')).toBeVisible();
+    await expect(page.locator('.touch-controls')).toHaveAttribute('data-layout', 'n64');
     for (let step = 0; step < 14; step++) {
         if (await page.evaluate(() => midasAuditGame._portWebGetStage() === 33)) break;
         await tap(action('accept'));
@@ -214,7 +213,7 @@ try {
                 audio,
                 audioAvailable,
                 errors,
-                checks: 'pointerless startup, touch menu navigation to Dam, thumbstick, watch, pause/resume, options, audio, portrait/tablet bounds',
+                checks: 'default N64 layout, native A menu navigation to Dam, Z firing, thumbstick, Start watch, pause/resume, options, audio, portrait/tablet bounds',
                 driver:
                     kind === 'webkit'
                         ? 'desktop WebKit: simulated touch capability/resize; single pointer drag'

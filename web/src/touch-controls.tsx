@@ -67,6 +67,10 @@ export function TouchControls(props: Props) {
     createEffect(() => {
         if (!active()) clear();
     });
+    createEffect(() => {
+        props.input.layout();
+        clear();
+    });
     onMount(() => {
         const detachContacts = contacts.attach();
         let frame = 0;
@@ -117,10 +121,16 @@ export function TouchControls(props: Props) {
             {button.label}
         </button>
     );
-    const Button = (button: { action: TouchAction; label: string; children?: JSX.Element }) => (
+    const Button = (button: {
+        action: TouchAction;
+        label: string;
+        children?: JSX.Element;
+        maybeController?: 'a' | 'b' | 'z' | 'start';
+    }) => (
         <button
             type="button"
             data-touch-action={button.action}
+            data-controller-button={button.maybeController}
             aria-label={button.label}
             aria-pressed={button.action === 'aim' ? aiming() : undefined}
             onContextMenu={(event) => event.preventDefault()}
@@ -165,10 +175,13 @@ export function TouchControls(props: Props) {
                 class="touch-controls"
                 aria-label="Touch game controls"
                 data-mode={menu() ? 'menu' : 'game'}
+                data-layout={props.input.layout()}
                 onContextMenu={(event) => event.preventDefault()}
             >
                 <div class="touch-top">
-                    <Button action="watch" label="Watch" />
+                    <Show when={props.input.layout() === 'modern'}>
+                        <Button action="watch" label="Watch" />
+                    </Show>
                     <TapButton label="Pause" activate={() => props.capture.pause('manual')} />
                     <TapButton label="Options" activate={props.options} />
                 </div>
@@ -183,10 +196,12 @@ export function TouchControls(props: Props) {
                                 <Button action="down" label="Down" />
                                 <Button action="right" label="Right" />
                             </div>
-                            <div class="touch-menu-actions">
-                                <Button action="accept" label="Select" />
-                                <Button action="back" label="Back" />
-                            </div>
+                            <Show when={props.input.layout() === 'modern'}>
+                                <div class="touch-menu-actions">
+                                    <Button action="accept" label="Select" />
+                                    <Button action="back" label="Back" />
+                                </div>
+                            </Show>
                             <span class="touch-menu-hint">
                                 Drag to move cursor · Tap to select · Or use arrows
                             </span>
@@ -255,25 +270,46 @@ export function TouchControls(props: Props) {
                             </svg>
                         </Button>
                     </div>
-                    <div class="touch-actions">
-                        <Button action="aim" label="Aim" />
-                        <Button action="fire" label="Fire" />
-                        <Button action="reload" label="Reload" />
-                        <Button action="use" label="Use" />
-                        <Button action="crouch" label="Crouch" />
-                        <TapButton
-                            label="More"
-                            expanded={more()}
-                            activate={() => setMore(!more())}
-                        />
-                    </div>
-                    <Show when={more()}>
-                        <div class="touch-extra">
-                            <For each={extra}>
-                                {([action, label]) => <Button action={action} label={label} />}
-                            </For>
+                    <Show when={props.input.layout() === 'modern'}>
+                        <div class="touch-actions">
+                            <Button action="aim" label="Aim" />
+                            <Button action="fire" label="Fire" />
+                            <Button action="reload" label="Reload" />
+                            <Button action="use" label="Use" />
+                            <Button action="crouch" label="Crouch" />
+                            <TapButton
+                                label="More"
+                                expanded={more()}
+                                activate={() => setMore(!more())}
+                            />
                         </div>
+                        <Show when={more()}>
+                            <div class="touch-extra">
+                                <For each={extra}>
+                                    {([action, label]) => <Button action={action} label={label} />}
+                                </For>
+                            </div>
+                        </Show>
                     </Show>
+                </Show>
+                <Show when={props.input.layout() === 'n64'}>
+                    <div class="touch-n64" role="group" aria-label="N64 controller buttons">
+                        <Show when={!menu()}>
+                            <Button action="aim" label="Aim" />
+                        </Show>
+                        <Button action="watch" label="N64 Start" maybeController="start">
+                            Start
+                        </Button>
+                        <Button action="back" label="N64 B" maybeController="b">
+                            B
+                        </Button>
+                        <Button action="accept" label="N64 A" maybeController="a">
+                            A
+                        </Button>
+                        <Button action="fire" label="N64 Z" maybeController="z">
+                            Z
+                        </Button>
+                    </div>
                 </Show>
             </div>
         </Show>

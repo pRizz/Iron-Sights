@@ -1243,6 +1243,27 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**N64 controller layout, 2026-10-27:** Added a saved Touch layout selector beside
+the touch-control toggle. N64 controller is the default, with blue circular A,
+green circular B, red circular Start and gray rectangular Z on the right.
+The existing native button bridge supplies their actual N64 bits; no runtime
+enum, engine, desktop or render inputs change. Left analog movement, right
+drag-to-look, Z-and-drag firing, toggle Aim and weapon switching remain.
+Modern actions retains the previous bespoke controls and More tray. Both layouts
+retain menu navigation and browser Pause/Options. Switching layouts clears
+contacts and latched input; both preferences persist independently of game files.
+TypeScript, 154 unit tests, the synthetic Wasm button bridge, production site
+assembly/allowlist and Edge/WebKit fixture checks pass. The fixtures cover native
+button IDs, colors/shapes, menu mode, independent inputs, switching while held,
+preference reload and 320/390/844/1024-pixel layouts. Private fixture evidence is
+`build/web-touch/n64-{edge,webkit}`. Chrome actual-ROM acceptance also passes
+native A menus into Dam, simultaneous movement/look/Z, Aim, Start watch,
+Pause/Resume, Options, audio and portrait/tablet bounds. Evidence is private under
+`build/web-touch/n64-game`, using the assembled frontend and existing optimized
+runtime. Standards and unchanged native gallery freshness pass. Next action:
+confirm reach/interruptions on physical iPhone/iPad/Android; desktop WebKit
+automation remains distinct from physical-device support.
+
 **iPhone gesture corrections, 2026-10-26:** Added a menu gesture surface that
 forwards SDL cursor motion without a mouse press. Native Accept is pulsed on
 stationary release only; moving more than 10 CSS pixels cancels selection for

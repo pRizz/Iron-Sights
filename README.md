@@ -40,11 +40,13 @@ To update, replace the supplied program files while keeping **Data** and **midas
 **[PLAY IN YOUR BROWSER](https://prizz.github.io/Iron-Sights/)** with your own stock US ROM. The desktop preview runs locally through WebAssembly and remembers your ROM, campaign saves, profiles and settings on this device. Save backups can be downloaded and restored. Chrome, Edge and Firefox have been tested; Safari is experimental.
 
 On phones and tablets, touch controls turn on automatically. Move with the left
-thumbstick and drag the right side to look. **Fire** can also be dragged to turn
-while shooting, and **Aim** toggles ADS. **Watch**, **Pause** and **Options** are on
-screen; **More** contains weapon/gadget switching, zoom, sprint and detonation.
-Menus have **Select**, **Back** and directional buttons. The retained launcher
-has an **On-screen touch controls** switch. Mobile viewport tests are automated;
+thumbstick and drag the right side to look. **Touch layout** defaults to **N64
+controller**, with blue A, green B, red Start and gray Z buttons on the right.
+Hold/drag Z to shoot and turn; **Aim** toggles ADS, and the weapon icon switches
+weapons. Start opens the watch; A/B navigate menus. Choose **Modern actions** in
+settings for the previous Fire/Use/Reload controls and More tray. **Pause** and
+**Options** remain available in both layouts. The retained launcher has an
+**On-screen touch controls** switch and saves the chosen layout. Mobile viewport tests are automated;
 physical iPhone/iPad/Android performance and compatibility remain experimental.
 
 Successful `main` builds deploy automatically to GitHub Pages. See [compatibility and measured limits](scripts/port/web_compatibility.md), [browser build instructions](web/README.md) and [milestone evidence](scripts/port/web_target_progress.md). Browser suspend points and offline application support are deferred.

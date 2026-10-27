@@ -1,5 +1,11 @@
 import { expect, test } from 'bun:test';
-import { createTouchInput, createTouchState, defaultTouch, stickVector } from './touch-input';
+import {
+    createTouchInput,
+    createTouchState,
+    defaultTouch,
+    stickVector,
+    touchLayoutPreference,
+} from './touch-input';
 import type { Engine } from './engine';
 
 test('touch defaults support phones and pointerless tablets without changing desktop defaults', () => {
@@ -7,6 +13,41 @@ test('touch defaults support phones and pointerless tablets without changing des
     expect(defaultTouch(5, false, false)).toBe(true);
     expect(defaultTouch(0, false, true)).toBe(false);
     expect(defaultTouch(5, false, true)).toBe(false);
+});
+
+test('touch layout defaults to N64 while preserving an explicit Modern preference', () => {
+    // Arrange / act / assert: absent and invalid stored values use the new default.
+    for (const value of [null, undefined, '', 'n64', 'old', 1]) {
+        expect(touchLayoutPreference(value)).toBe('n64');
+    }
+    expect(touchLayoutPreference('modern')).toBe('modern');
+});
+
+test('changing touch layout releases held actions and resets native input', () => {
+    // Arrange: toggle Aim and hold Z before changing to the other layout.
+    const buttons: unknown[] = [];
+    let resets = 0;
+    const engine = {
+        maybeGame: () => ({
+            _portWebTouchButton: (id: number, down: number) => buttons.push([id, down]),
+            _portWebTouchReset: () => resets++,
+        }),
+    } as unknown as Engine;
+    const input = createTouchInput(engine, true, 'n64');
+    input.state.press(-1, 'aim');
+    input.state.press(2, 'fire');
+    // Act.
+    input.setLayout('modern');
+    // Assert: both actions release independently, even without browser storage.
+    expect(input.layout()).toBe('modern');
+    expect(input.enabled()).toBe(true);
+    expect(buttons).toEqual([
+        [1, 1],
+        [0, 1],
+        [1, 0],
+        [0, 0],
+    ]);
+    expect(resets).toBe(1);
 });
 
 test('a touch gesture resumes SDL audio without an unhandled rejection', async () => {

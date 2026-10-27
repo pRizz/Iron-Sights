@@ -36,9 +36,14 @@ See the [runtime runbook](../scripts/port/web_runtime.md) and
 Touch controls (WEB-011) auto-enable on coarse touchscreens and touch devices
 without Pointer Lock. The launcher checkbox saves an explicit override. On-screen
 Options opens the launcher; Pause/Resume does not need mouse capture. Use the
-analog left thumbstick, drag right to look, hold/drag Fire to shoot and turn, and
-tap Aim to toggle ADS. More provides weapon/gadget selection, zoom, sprint and
-detonation. Watch and menu Select/Back/directions use native game actions. Safe-area
+analog left thumbstick and drag right to look. **Touch layout** defaults to
+**N64 controller**: blue circular A, green circular B, red circular Start and a
+gray rectangular Z on the right send native controller buttons. Hold/drag Z to
+shoot and turn, tap Aim to toggle ADS, and use the weapon icon to cycle weapons.
+Start opens the watch; A/B also navigate native menus. **Modern actions** retains
+Fire/Use/Reload/Crouch/Watch and the More tray for weapon/gadget selection, zoom,
+sprint and detonation. The layout choice is saved separately from game files;
+switching releases held controls and Aim. Safe-area
 insets and proportional canvas fitting apply in portrait and landscape. Pausing,
 focus loss, cancelled touches, rotation, mode changes and room return clear input.
 
