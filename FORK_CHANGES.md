@@ -205,9 +205,14 @@ upright rectangle at the right edge: 80 CSS pixels wide and 160–240 high on wi
 viewports, or 72 wide beside a vertical A/B/Start/Aim column on narrow phones.
 This replaces the former 104×48 horizontal Z; the stick, safe areas and remaining
 button hit targets stay separate. Existing press/release and drag-to-fire/look
-behavior is retained. On the Files screen the N64 cluster docks above the native
-action bar so it cannot cover Import/Export or the other menu actions. Touch
-regressions exercise both ends of the enlarged Z hit target.
+behavior is retained. On the Files screen the N64 cluster and Modern Select/Back
+buttons are hidden, superseding the earlier upper docking that made the N64
+buttons jump. Direct cursor/tap navigation, directional controls, Pause/Options
+and Import/Export remain available. Entering/leaving Files clears held actions
+and latched Aim. Right-side buttons and the More tray have 10 additional CSS
+pixels of right/bottom spacing beyond their previous safe-area-aware offsets;
+320-pixel layouts tighten the N64 column gap to retain separate thumbstick space.
+Touch regressions exercise both ends of the enlarged Z hit target.
 The controller background rule also wins over generic button-hover styling,
 so hovering or holding a button keeps its translucent controller color.
 These use existing raw native A/B/Start/Z button bits in gameplay and menus,
@@ -222,6 +227,22 @@ Both layouts retain directional menu controls and direct menu taps. Layout
 changes release held buttons, movement, look and latched Aim; the preference
 persists separately from game files and safely defaults to N64 if unavailable.
 Touch mode bypasses mouse capture; keyboard/mouse mode keeps its existing policy.
+Touch-enabled browser startup inserts `mouse_auto_aim=1` when absent, preserving
+explicit saved On/Off values and the game's other auto-aim rules. Mobile defaults
+fit the visible viewport to the existing 16:9 presentation and multiply by full
+device pixel ratio (including 3x), rather than always rendering at 960x540.
+A one-time browser-preference migration upgrades exactly that old resolution;
+custom dimensions and explicit render-quality settings remain. The migration
+marker is saved only after user-file synchronization succeeds. Fresh settings
+receive the mobile defaults even if a previous migration marker remains.
+The browser-only SDL window-fit bypass prevents CSS display bounds from clamping
+the physical-pixel framebuffer. Touch-enabled browser windows also disable SDL resizability,
+which otherwise replaces requested render dimensions with the canvas's CSS size;
+the frontend owns responsive presentation. Both hooks use the browser-only
+`GE_WEB_FIXED_FRAMEBUFFER` startup flag; desktop browser/native fitting stays intact.
+CSS presentation and pointer coordinates retain their existing scale; rotation
+fits the framebuffer without selecting a new render resolution. The separate
+introductory room keeps its existing pixel-ratio cap.
 Controls respect safe-area insets and the game's aspect; browser panning is
 disabled on the game surface while touch mode is enabled. Layout follows the
 smaller visible/layout viewport during rotation or browser-chrome changes.
@@ -261,6 +282,8 @@ controls. The module is selected only by the CMake web video target.
 [menu tap tests](web/src/touch-menu.test.ts),
 [overlay](web/src/touch-controls.tsx), [layout](web/src/touch.css),
 [viewport fitting](web/src/touch-viewport.ts),
+[mobile settings defaults](web/src/browser-settings.ts),
+[SDL framebuffer hooks](port/fast3d/gfx_sdl2.cpp),
 [capture](web/src/capture.ts), [browser capability gate](web/src/engine.ts),
 [native bridge](port/web/touch.c), [bridge header](port/web/touch.h),
 [bridge regression](scripts/port/test_web_touch.c),
@@ -276,7 +299,17 @@ controls. The module is selected only by the CMake web video target.
 [input hook](port/src/libultra_shim.c), [movement hook](src/game/bondview2.c),
 [accepted extension](scripts/port/web_target_plan.md),
 [milestone](scripts/port/web_target_progress.md).
-**Validation:** Synthetic Wasm bridge, TypeScript and unit checks pass. Edge and
+**Validation:** Edge and WebKit fixtures pass the 2026-10-28 Files hiding,
+state release, restored controls
+and additional margins. The mobile refinement passes 161 browser unit tests,
+Windows/optimized Wasm builds, production packaging, desktop launcher storage
+checks and actual-ROM Chrome/WebKit touch acceptance. Measured canvas/WebGL
+dimensions match full-DPR startup requests and survive rotation; the emulated
+iPad case is 2048x1152 at DPR 2. Edge's actual-ROM save import/export/restart
+regression also passes. Physical iPad sharpness/performance remain unverified;
+WEB-011 records local headless measurements and private evidence paths.
+Native gallery regeneration and verification pass with zero changed image cells.
+Earlier acceptance includes the synthetic Wasm bridge, TypeScript and unit checks. Edge and
 WebKit ROM-free UI checks cover independent contacts, cancellation, menu actions,
 mode changes and portrait/tablet bounds. Chrome real-ROM acceptance reaches Dam
 through touch menus, verifies simultaneous movement/look/fire, watch,

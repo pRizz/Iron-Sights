@@ -63,6 +63,8 @@ export async function auditN64Layout(page, output) {
         const stick = await page.locator('.touch-stick').boundingBox();
         const cluster = await page.locator('.touch-n64').boundingBox();
         assert.ok(stick.x + stick.width <= cluster.x, 'Stick overlaps N64 buttons');
+        assert.ok(size.width - cluster.x - cluster.width >= 21, 'Missing extra right margin');
+        assert.ok(size.height - cluster.y - cluster.height >= 29, 'Missing extra bottom margin');
         for (const [name] of buttons) {
             const box = await page.locator(`[data-controller-button=${name}]`).boundingBox();
             assert.ok(box.x >= size.width / 2 && box.y >= 0);
@@ -86,6 +88,12 @@ export async function auditN64Layout(page, output) {
     await expect(page.getByRole('button', { name: 'N64 A', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Select', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Aim', exact: true })).toHaveCount(0);
+    await page.evaluate(() => touchFixture.fileMenu(true));
+    await expect(page.locator('.touch-n64')).toHaveCount(0);
+    await expect(page.locator('.touch-menu-surface')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Import Save', exact: true })).toBeVisible();
+    await page.evaluate(() => touchFixture.fileMenu(false));
+    await expect(page.locator('.touch-n64')).toBeVisible();
     await page.evaluate(() => touchFixture.menu(false));
     await expect(overlay).toHaveAttribute('data-mode', 'game');
     await page.getByRole('button', { name: 'Aim', exact: true }).tap();
@@ -100,8 +108,26 @@ export async function auditN64Layout(page, output) {
         );
     });
     assert.ok((await page.evaluate(() => touchFixture.snapshot())).held.includes(0));
+    await page.evaluate(() => touchFixture.fileMenu(true));
+    await expect(page.locator('.touch-n64')).toHaveCount(0);
+    assert.deepEqual((await page.evaluate(() => touchFixture.snapshot())).held, []);
+    await page.evaluate(() => touchFixture.fileMenu(false));
+    await expect(page.locator('.touch-n64')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Aim', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+    );
     await setting.selectOption('modern');
     await expect(overlay).toHaveAttribute('data-layout', 'modern');
+    await page.evaluate(() => {
+        touchFixture.menu(true);
+        touchFixture.fileMenu(true);
+    });
+    await expect(page.locator('.touch-menu-actions')).toHaveCount(0);
+    await expect(page.locator('.touch-menu-surface')).toBeVisible();
+    await page.evaluate(() => touchFixture.fileMenu(false));
+    await expect(page.locator('.touch-menu-actions')).toBeVisible();
+    await page.evaluate(() => touchFixture.menu(false));
     assert.deepEqual(
         (await page.evaluate(() => touchFixture.snapshot())).held,
         [],

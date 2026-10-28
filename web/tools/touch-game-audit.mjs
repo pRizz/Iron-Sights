@@ -14,7 +14,11 @@ const output = resolve(outputPath);
 await mkdir(output, { recursive: true });
 const { browser, kind } = await launchAuditBrowser();
 const context = await browser.newContext({
-    viewport: { width: 844, height: 390 },
+    viewport:
+        process.env.MIDAS_TABLET === '1'
+            ? { width: 1024, height: 768 }
+            : { width: 844, height: 390 },
+    deviceScaleFactor: Number(process.env.MIDAS_DPR || 2),
     isMobile: true,
     hasTouch: true,
 });
@@ -76,6 +80,7 @@ try {
         timeout: 90000,
     });
     await tap(page.getByRole('button', { name: 'Play GoldenEye' }));
+    console.log('Waiting for native frames at full device pixel ratio');
     await page.waitForFunction(
         () => globalThis.midasAuditGame?._portWebGetGfxTasks() >= 240,
         undefined,
@@ -83,9 +88,53 @@ try {
     );
     await expect(page.locator('.touch-controls')).toBeVisible();
     await expect(page.locator('.touch-controls')).toHaveAttribute('data-layout', 'n64');
+    const resolution = await page.evaluate(() => {
+        const canvas = document.querySelector('#canvas');
+        const viewport = window.visualViewport;
+        const width = Math.min(innerWidth, viewport?.width || innerWidth);
+        const height = Math.min(innerHeight, viewport?.height || innerHeight);
+        const fittedWidth = Math.min(width, (height * 16) / 9);
+        return {
+            expected: [
+                Math.round(fittedWidth * devicePixelRatio),
+                Math.round(((fittedWidth * 9) / 16) * devicePixelRatio),
+            ],
+            actual: [canvas.width, canvas.height],
+            css: [canvas.clientWidth, canvas.clientHeight],
+            dpr: devicePixelRatio,
+            settings: new TextDecoder().decode(midasAuditGame.FS.readFile('/user/midas.ini')),
+            drawable: [
+                canvas.getContext('webgl2').drawingBufferWidth,
+                canvas.getContext('webgl2').drawingBufferHeight,
+            ],
+        };
+    });
+    assert.deepEqual(
+        resolution.actual,
+        resolution.expected,
+        'SDL clamped or double-scaled the Retina framebuffer',
+    );
+    assert.deepEqual(resolution.drawable, resolution.actual);
+    console.log('Retina framebuffer', resolution.actual, 'CSS presentation', resolution.css);
+    assert.match(resolution.settings, /mouse_auto_aim=1/);
+    let filesChecked = false;
     for (let step = 0; step < 14; step++) {
         if (await page.evaluate(() => midasAuditGame._portWebGetStage() === 33)) break;
-        await tap(action('accept'));
+        if (await page.evaluate(() => midasAuditGame._portWebFileMenuMetric(0))) {
+            filesChecked = true;
+            await expect(page.locator('.touch-n64')).toHaveCount(0);
+            await expect(
+                page.getByRole('button', { name: 'Import Save', exact: true }),
+            ).toBeVisible();
+            await page.screenshot({ path: resolve(output, 'files.png') });
+            const box = await page.locator('#canvas').boundingBox();
+            // The first campaign folder is centered within the 4:3 menu band.
+            const menuWidth = Math.min(box.width, (box.height * 4) / 3);
+            await page.touchscreen.tap(
+                box.x + box.width / 2 - menuWidth * 0.25,
+                box.y + box.height * 0.32,
+            );
+        } else await tap(action('accept'));
         await page.waitForTimeout(1800);
     }
     assert.equal(
@@ -97,6 +146,8 @@ try {
         timeout: 90000,
     });
     await expect(page.locator('.touch-controls')).toHaveAttribute('data-mode', 'game');
+    assert.ok(filesChecked, 'Files-screen touch navigation was not exercised');
+    await expect(page.locator('.touch-n64')).toBeVisible();
     assert.equal(await page.evaluate(() => !!document.pointerLockElement), false);
     await expect(page.locator('.pause-overlay')).toHaveCount(0);
     await expect(page.locator('.mouse-capture-hint')).toHaveCount(0);
@@ -182,7 +233,18 @@ try {
     await tap(page.locator('.controls-close'));
     await tap(page.getByRole('button', { name: 'Resume game' }));
     await expect(page.locator('.touch-controls')).toBeVisible();
+    const performanceStart = await page.evaluate(() => ({
+        time: performance.now(),
+        frames: midasAuditGame._portWebGetGfxTasks(),
+    }));
     await page.waitForTimeout(1200);
+    const performanceEnd = await page.evaluate(() => ({
+        time: performance.now(),
+        frames: midasAuditGame._portWebGetGfxTasks(),
+    }));
+    const renderedFps =
+        ((performanceEnd.frames - performanceStart.frames) * 1000) /
+        (performanceEnd.time - performanceStart.time);
     const audio = await page.evaluate(readAudio);
     const audioAvailable = await page.evaluate(
         () => !!(window.AudioContext || window.webkitAudioContext),
@@ -202,6 +264,11 @@ try {
     }
     await page.screenshot({ path: resolve(output, 'portrait.png') });
     await resize(1024, 768);
+    assert.deepEqual(
+        await page.locator('#canvas').evaluate((canvas) => [canvas.width, canvas.height]),
+        resolution.actual,
+        'Rotation changed the chosen framebuffer resolution',
+    );
     await page.screenshot({ path: resolve(output, 'tablet.png') });
     assert.deepEqual(errors, []);
     await writeFile(
@@ -209,6 +276,8 @@ try {
         JSON.stringify(
             {
                 before,
+                resolution,
+                renderedFps,
                 moved,
                 audio,
                 audioAvailable,

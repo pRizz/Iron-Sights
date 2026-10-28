@@ -201,14 +201,7 @@ try {
                     box.y + box.height <= size.height + 1,
             );
             if (process.env.MIDAS_TOUCH === '1') {
-                const cluster = await page.locator('.touch-n64').boundingBox();
-                assert.ok(
-                    box.y >= cluster.y + cluster.height ||
-                        box.y + box.height <= cluster.y ||
-                        box.x >= cluster.x + cluster.width ||
-                        box.x + box.width <= cluster.x,
-                    'File actions overlap N64 controls',
-                );
+                await expect(page.locator('.touch-n64')).toHaveCount(0);
             }
         }
         await page.screenshot({ path: resolve(output, `files-${size.width}.png`) });

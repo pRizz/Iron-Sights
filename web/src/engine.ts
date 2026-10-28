@@ -156,7 +156,9 @@ export function createEngine(pointerless: () => boolean = () => false) {
             loading('Restoring local saves');
             const files = await mountPersistentFiles(game.FS, game.IDBFS, setSaveStatus);
             setFiles(files);
-            ensureBrowserSettings(game);
+            // Seed settings at Play, when the touch choice and viewport are final.
+            game.FS.mkdirTree('/user/Data/Saves');
+            if (game.FS.analyzePath('/user/midas.ini').exists) ensureBrowserSettings(game);
             for (const name of [
                 'gamecontrollerdb.txt',
                 'gamecontrollerdefault.txt',

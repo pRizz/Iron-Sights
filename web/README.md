@@ -53,11 +53,23 @@ sprint and detonation. The layout choice is saved separately from game files;
 switching releases held controls and Aim. Safe-area
 insets and proportional canvas fitting apply in portrait and landscape. Pausing,
 focus loss, cancelled touches, rotation, mode changes and room return clear input.
+The right-side controls hide on the Files screen; use the cursor and tap to select
+a campaign or menu action. They return on other screens, with an additional 10 CSS
+pixels of right/bottom spacing. Touch-enabled startup defaults Mouse Auto Aim to
+On when unset, preserving saved choices. Mobile render resolution uses the full
+device pixel ratio within the existing 16:9 presentation. A one-time migration
+upgrades the previous 960×540 default; custom resolutions and explicit quality
+settings remain. Rotation fits the existing framebuffer without changing its
+resolution. Physical iPad performance and Safari acceptance remain device checks.
 
 `bun run test:touch` builds a ROM-free Solid fixture and verifies actual
 multi-pointer capture/cancellation and layout at the native boundary. The Pages
 workflow also runs the synthetic Wasm bridge regression. For private real-ROM
 mobile-viewport acceptance, use `MIDAS_BROWSER=chrome bun run audit:touch ../baserom.u.z64 ../build/web-touch/game http://127.0.0.1:4177/Iron-Sights/`.
+The audit defaults to DPR 2; set `MIDAS_DPR=3` for a 3× screen or `MIDAS_TABLET=1`
+for the 1024×768 iPad viewport. It checks requested versus actual canvas/WebGL
+dimensions, Files-screen cursor/taps, restored controls and retained resolution
+after rotation, and records a local rendered-frame-rate sample.
 Desktop WebKit emulation needs a simulated touch-capability property and cannot
 establish physical iOS support. Its mobile viewport driver also needs an explicit
 resize event after changing emulated orientation and uses single-pointer drags;

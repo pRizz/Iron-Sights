@@ -1328,13 +1328,45 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**Mobile defaults and Files controls, 2026-10-28:** Replaced the special upper
+N64 docking on Files with hidden right-side N64/Modern menu controls. Cursor/tap,
+directional controls, Pause/Options and save transfers remain accessible; screen
+transitions reset held actions and Aim. Added 10 CSS pixels to the existing
+safe-area-aware right/bottom offsets, tightening only narrow-phone N64 column
+spacing. Touch-enabled startup defaults Mouse Auto Aim to On only when unset.
+Initial mobile render dimensions fit 16:9 inside the visible viewport at full
+device pixel ratio. Exactly 960x540 migrates once; custom dimensions, saved aim
+choices and quality settings are retained. Browser preference bookkeeping follows
+successful file synchronization. The SDL browser path skips desktop window-fit
+clamping of physical pixels against CSS bounds and disables SDL resizability,
+which otherwise replaces requested framebuffer dimensions with CSS dimensions.
+Frontend presentation still handles resizing. Native presentation is unchanged.
+Verification: optimized Wasm/Windows builds, 161 browser unit tests, type checking,
+production assembly/allowlist and Edge/WebKit touch fixtures pass. Chrome actual-ROM
+acceptance measures a 2048x1152 canvas/WebGL buffer at 1024x576 CSS presentation
+(DPR 2), reaches Dam through Files cursor/taps, and verifies restored controls,
+movement/look/fire, Watch, pause/options, audio and rotation retaining resolution.
+Windows WebKit passes the same menu/game/rotation checks at 1387x780 (DPR 2),
+with its existing single-pointer and unavailable-Web-Audio limits. Local headless
+gameplay samples measured about 58 rendered fps in Chrome and 17 in WebKit;
+these are test-host observations, not physical iPad performance. Edge's real-ROM
+save-transfer audit passes direct import/export, cancel/invalid preservation,
+restart and exact campaign/profile reload. Private evidence is
+`build/web-touch/mobile-retina-{game,webkit}` and `mobile-files-saves`.
+The native gallery regenerated and verified with zero changed image cells.
+Desktop launcher storage/settings/fullscreen checks and standards checks pass.
+This locally verified change is ready for the normal main/Pages publication flow.
+Next action: confirm sharpness, performance and real safe-area/browser-chrome
+behavior on physical iPad hardware after publication; retain experimental status
+for physical Safari until that evidence exists.
+
 **Upright Z target, 2026-10-27:** The N64 Z button is now a much larger upright
 rectangle at the right edge, retaining the gray translucent fill and drag-to-
 fire/look behavior. Wider layouts use an 80-pixel-wide, 160–240-high Z with A/B
 and Start/Aim beside it. Phones up to 420 CSS pixels use a 72-pixel-wide Z beside
 a vertical column of the other buttons, preserving separate left-stick space.
-This supersedes the former 104×48 horizontal Z. On the native Files screen the
-N64 cluster docks above the action area to avoid covering its buttons.
+This supersedes the former 104×48 horizontal Z. The original upper docking on
+Files is superseded by the hidden right-side controls described above.
 Edge/WebKit touch acceptance passes upright size, 320/390/844/1024 viewport bounds
 and input/release behavior; Edge checks also exercise both ends of Z. Chrome's
 optimized actual-ROM touch audit passes menus/Dam, movement, firing/drag look,

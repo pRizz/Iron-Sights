@@ -1,4 +1,6 @@
 .touch-controls {
+    --touch-right: calc(max(12px, env(safe-area-inset-right)) + 10px);
+    --touch-bottom: calc(max(20px, env(safe-area-inset-bottom)) + 10px);
     --touch-stick-size: clamp(110px, calc(var(--touch-view-width, 100vw) * 0.24), 150px);
     position: absolute;
     inset: 0;
@@ -74,8 +76,8 @@
 }
 .touch-n64 {
     position: absolute;
-    right: max(12px, env(safe-area-inset-right));
-    bottom: max(20px, env(safe-area-inset-bottom));
+    right: var(--touch-right);
+    bottom: var(--touch-bottom);
     display: grid;
     grid-template-columns: 56px 64px 80px;
     grid-template-rows: 48px 64px;
@@ -134,10 +136,6 @@
     height: clamp(160px, calc(var(--touch-view-height, 100dvh) * 0.45), 240px);
     border-radius: 8px;
 }
-.touch-controls[data-file-screen='true'] .touch-n64 {
-    top: max(90px, env(safe-area-inset-top));
-    bottom: auto;
-}
 .touch-stick {
     position: absolute;
     left: max(16px, env(safe-area-inset-left));
@@ -181,8 +179,8 @@
 .touch-actions,
 .touch-menu-actions {
     position: absolute;
-    right: max(12px, env(safe-area-inset-right));
-    bottom: max(20px, env(safe-area-inset-bottom));
+    right: var(--touch-right);
+    bottom: var(--touch-bottom);
     display: grid;
     grid-template-columns: repeat(3, minmax(48px, 62px));
     gap: 6px;
@@ -207,8 +205,8 @@
 }
 .touch-extra {
     position: absolute;
-    right: max(12px, env(safe-area-inset-right));
-    bottom: calc(max(20px, env(safe-area-inset-bottom)) + 114px);
+    right: var(--touch-right);
+    bottom: calc(var(--touch-bottom) + 114px);
     display: grid;
     grid-template-columns: repeat(4, minmax(48px, 62px));
     gap: 6px;
@@ -292,5 +290,10 @@
         grid-area: 1 / 2 / 5 / 3;
         width: 72px;
         height: 100%;
+    }
+}
+@media (max-width: 360px) {
+    .touch-n64 {
+        column-gap: 2px;
     }
 }

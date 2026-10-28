@@ -76,7 +76,11 @@ export function TouchControls(props: Props) {
         const detachContacts = contacts.attach();
         let frame = 0;
         const monitor = () => {
-            setFiles(!!props.engine.maybeGame()?._portWebFileMenuMetric?.(0));
+            const nextFiles = !!props.engine.maybeGame()?._portWebFileMenuMetric?.(0);
+            if (nextFiles !== files()) {
+                clear();
+                setFiles(nextFiles);
+            }
             const next = !props.engine.maybeGame()?._portWebControlsLive();
             if (next !== menu()) {
                 clear();
@@ -199,7 +203,7 @@ export function TouchControls(props: Props) {
                                 <Button action="down" label="Down" />
                                 <Button action="right" label="Right" />
                             </div>
-                            <Show when={props.input.layout() === 'modern'}>
+                            <Show when={props.input.layout() === 'modern' && !files()}>
                                 <div class="touch-menu-actions">
                                     <Button action="accept" label="Select" />
                                     <Button action="back" label="Back" />
@@ -295,7 +299,7 @@ export function TouchControls(props: Props) {
                         </Show>
                     </Show>
                 </Show>
-                <Show when={props.input.layout() === 'n64'}>
+                <Show when={props.input.layout() === 'n64' && !files()}>
                     <div class="touch-n64" role="group" aria-label="N64 controller buttons">
                         <Show when={!menu()}>
                             <Button action="aim" label="Aim" />

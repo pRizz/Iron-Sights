@@ -203,8 +203,10 @@ export function App() {
                 await capture.resume();
                 return;
             }
-            ensureBrowserSettings(game);
+            const rememberSettings = ensureBrowserSettings(game, touch.enabled());
+            game.ENV.GE_WEB_FIXED_FRAMEBUFFER = touch.enabled() ? '1' : '0';
             await files.flush();
+            rememberSettings();
             const latest = rom.status();
             if (latest.kind !== 'ready' || latest.rom !== selected.rom || !ready()) return;
             if (source === 'cached' && controls()) return;
