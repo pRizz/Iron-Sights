@@ -100,26 +100,20 @@ try {
     await size(100);
     const bounds = await page.locator('#canvas').boundingBox();
     assert.ok(bounds);
-    // Browsers cannot warp the OS pointer. Observe the virtual cursor and drive
-    // the real mouse by the remaining delta, rather than assuming it is absolute.
-    const pointer = { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+    // Native 440x330 menu coordinates map directly through the centred 4:3 band.
+    const band = Math.min(bounds.width, (bounds.height * 4) / 3);
+    const pointer = {
+        x: bounds.x + (bounds.width - band) / 2 + (286 * band) / 440,
+        y: bounds.y + (100 * bounds.height) / 330,
+    };
     await page.mouse.move(pointer.x, pointer.y);
     await page.waitForTimeout(200);
-    // The stock frontend uses a centred 440x330 canvas; help is off in this fixture.
-    const scale = bounds.height / 330;
-    for (let attempt = 0; attempt < 5; attempt++) {
-        const current = await page.evaluate(() => {
-            const [x, y] = crosshairAuditGame.auditCursor();
-            return { x, y };
-        });
-        assert.ok(Number.isFinite(current.x) && Number.isFinite(current.y));
-        if (Math.abs(current.x - 286) < 1 && Math.abs(current.y - 100) < 1) break;
-        pointer.x += (286 - current.x) * scale;
-        pointer.y += (100 - current.y) * scale;
-        await page.mouse.move(pointer.x, pointer.y);
-        await page.waitForTimeout(150);
-    }
-    const point = (x) => ({ x: pointer.x + (x - 286) * scale, y: pointer.y });
+    const current = await page.evaluate(() => crosshairAuditGame.auditCursor());
+    assert.ok(
+        Math.abs(current[0] - 286) < 1.6 && Math.abs(current[1] - 100) < 1.6,
+        'Slider requires a cursor offset workaround',
+    );
+    const point = (x) => ({ x: pointer.x + ((x - 286) * band) / 440, y: pointer.y });
     await page.screenshot({ path: resolve(output, 'default.png') });
     await page.mouse.down();
     await page.waitForTimeout(100);

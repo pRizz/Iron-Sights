@@ -26,15 +26,8 @@ async function menuClick(x, y) {
     const band = Math.min(rect.width, (rect.height * 4) / 3);
     const clientX = rect.x + (rect.width - band) / 2 + (x / 440) * band;
     const clientY = rect.y + (y / 330) * rect.height;
-    // Browsers cannot warp the OS pointer. Native menu handoff therefore uses
-    // deltas after reseating; traverse both bounds to align its virtual cursor.
-    await page.mouse.move(clientX - 8, clientY - 5);
-    await page.waitForTimeout(120);
-    await page.mouse.move(rect.x + rect.width - 1, rect.y + rect.height - 1);
-    await page.waitForTimeout(120);
-    await page.mouse.move(rect.x + 1, rect.y + 1);
-    await page.waitForTimeout(120);
-    await page.mouse.move(clientX, clientY, { steps: 20 });
+    // A single absolute move must work, including immediately after a menu snap.
+    await page.mouse.move(clientX, clientY);
     await page.waitForTimeout(120);
     await page.mouse.click(clientX, clientY, { delay: 120 });
     await page.waitForTimeout(500);

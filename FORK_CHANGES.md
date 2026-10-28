@@ -893,6 +893,9 @@ for stable glyph review and removes temporary executables even after startup
 failures. The [private browser audit](web/tools/crosshair-size-audit.mjs) uses
 the matching local linker map to observe the virtual cursor without writing
 native state, and drives real browser input rather than assuming an OS warp.
+It now targets the slider directly through the centred 4:3 menu band and asserts
+cursor agreement; the former iterative offset compensation is removed as part
+of the browser menu-pointer correction in FORK-024.
 Windows, Linux i386 and optimized Wasm builds pass. Native ADS/HUD/Start/upstream
 regressions cover defaults, INI loading/saving, range clamps, pointer bounds,
 preview parity and composition with HUD Scale/wide aim; other sight sizes remain
@@ -1965,6 +1968,8 @@ Focused sources are [browser targets](web/src/file-save-actions.tsx),
 [actual-game audit](web/tools/file-menu-save-audit.mjs),
 [launcher audit](web/tools/room-save-audit.mjs) and
 [live-game lifecycle audit](web/tools/room-exit-audit.mjs).
+The native Files/Exit audit clicks now use direct screen coordinates, without
+the former edge-sweep resynchronization workaround (FORK-024).
 The real IDBFS regression passes staged import/reload, marker exclusion/cleanup,
 quota-failure rollback, failed application/retry, exact campaign/profile
 replacement and the live-file guard. The retained launcher audit passes confirmation/cancel, invalid-data
@@ -2323,6 +2328,39 @@ milestone blocks persist these final results for later sessions.
 **Status:** Desktop browser preview is live on GitHub Pages. The accepted core,
 launcher, persistence, deployment/update and measured compatibility gates pass.
 Safari remains experimental by the user's explicit decision.
+
+Unlocked browser menus now follow absolute SDL pointer coordinates. Native
+menu/controller snaps remain virtual until actual mouse motion or a fresh
+button press takes ownership, including the first motion after focus recovery.
+This replaces the browser's inherited ignored-warp fallback, which integrated
+physical deltas around a virtual snap and retained an offset until the pointer
+was swept to window edges. An actual-ROM baseline reproduced offsets of up to
+88 native menu pixels. The frontend's small `GE_WEB` hook avoids swallowing
+the first absolute handoff; native desktop warp/Wayland fallback and captured
+gameplay deltas retain their existing behavior. An ungranted legacy capture
+request cannot force a free browser menu back into relative tracking, including
+with a saved `smart_mouse_lock=0` preference. No preferences are rewritten.
+
+The focused policy is [menu_pointer.h](port/web/menu_pointer.h), connected in
+`port/src/input_pc.c` and `src/game/front.c`. The ROM-free
+[C regression](scripts/port/test_web_menu_pointer.c) covers repeated snaps,
+stationary clicks, ownership, focus reset, first-motion delivery and reentry;
+its [runner](scripts/port/test_web_menu_pointer.sh) runs in Pages CI. The private
+[actual-ROM audit](web/tools/menu-pointer-audit.mjs) requires a matching local
+Wasm digest/linker map and observes native state without writing it. It drives
+Files, mode, mission, difficulty and briefing screens, rightmost mission
+selection, native back/forward navigation, resize, canvas reentry, F2 and
+fullscreen with direct coordinates. Prior compensating edge sweeps/offset loops
+are removed from the Files, Exit and crosshair-slider audits. Private evidence
+stays under `build/web-menu-pointer` and `build/menu-pointer-*`. Both debug lock
+settings and optimized Edge/Chrome (including double pixel density) pass all
+32 menu samples. Captured mouse conservation/Watch recapture, direct slider
+dragging/backup/reload, native Files transfer and Exit Game/room resume pass.
+Native Start/HUD/ADS/
+upstream checks, 155 web unit tests, TypeScript, site allowlist/digest and standards
+checks pass. The Windows rebuild and independent gallery passes reproduce all
+107 images unchanged; freshness/integrity and eight workflow tests pass.
+Publication is tracked in WEB-006.
 
 The browser tab uses the inherited Project Midas application icon from
 `port/win/ProjectMidas.ico`, referenced by `web/index.html` and emitted by Vite

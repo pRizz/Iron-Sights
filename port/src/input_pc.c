@@ -31,6 +31,9 @@
 
 #include <SDL.h>
 #include "port_console.h" /* the tilde console: fixed keys feed it below */
+#ifdef __EMSCRIPTEN__
+#include "../web/menu_pointer.h"
+#endif
 static const char *inputDevRecPath(const char *id);   /* per-device records, below */
 
 #define INPUT_MAX_PADS 4
@@ -786,9 +789,13 @@ static volatile int s_WindowFocused = 1;
  * edge, so detect an ignored warp and drive the free cursor from OS deltas from
  * then on. */
 static int s_WarpPending = 0;
+#ifndef __EMSCRIPTEN__
 static int s_WarpFromX, s_WarpFromY, s_WarpToX, s_WarpToY;
 static int s_FreeDelta = 0;   /* 1 = free pointer tracked by deltas (warps ignored here) */
 static int s_FreeLastX, s_FreeLastY, s_FreeLastValid = 0;
+#else
+static PortWebMenuPointer s_WebMenuPointer;
+#endif
 static int s_MouseDX, s_MouseDY;     /* motion the CURRENT SIM TICK sees (portInputMouseTickConsume) */
 /* Mouse motion accumulated across polls until the next sim tick consumes it,
  * since several polls can land between ticks in render-thread mode and keeping
@@ -818,7 +825,8 @@ void portInputWebFocus(s32 paused)
     s_MouseMoved = s_MouseMovedAcc = s_MouseMovedTick = 0;
     s_MouseLocked = 0;
     s_MouseFreed = paused != 0;
-    s_WarpPending = s_FreeLastValid = s_PollValid = 0;
+    s_WarpPending = s_PollValid = 0;
+    portWebMenuPointerReset(&s_WebMenuPointer);
     for (slot = 0; slot < INPUT_MAX_PADS; slot++) portInputPadNeutral(slot);
 }
 #endif
@@ -1934,6 +1942,11 @@ static int inputEventWatch(void *userdata, SDL_Event *event)
      * so that is harmless. */
     switch (event->type)
     {
+#ifdef __EMSCRIPTEN__
+    case SDL_MOUSEMOTION:
+        if (s_OptMouse && !SDL_GetRelativeMouseMode()) portWebMenuPointerMotion(&s_WebMenuPointer);
+        break;
+#endif
     case SDL_JOYDEVICEADDED:
         /* fill EMPTY slots only - a device arriving (or waking) must never
          * renumber players already in a match */
@@ -8450,6 +8463,9 @@ void portInputMouseUpdate(void)
 
     if (!s_OptMouse)
     {
+#ifdef __EMSCRIPTEN__
+        portWebMenuPointerReset(&s_WebMenuPointer);
+#endif
         if (s_MouseLocked)
         {
             s_MouseLocked = 0;
@@ -8540,9 +8556,26 @@ void portInputMouseUpdate(void)
         }
     }
 
+#ifdef __EMSCRIPTEN__
+    {
+        extern s32 portGameplayHasPointer(void);
+        /* A legacy lock preference can claim capture before the browser grants
+         * it. Free browser menus must still use their physical coordinates. */
+        if (!SDL_GetRelativeMouseMode() && !portGameplayHasPointer())
+        {
+            s_MouseLocked = 0;
+        }
+    }
+#endif
+
     if (s_MouseLocked)
     {
         int ww = 0, wh = 0;
+#ifdef __EMSCRIPTEN__
+        s_WebMenuPointer.valid = 0;
+        s_WebMenuPointer.motion = 0;
+        s_WebMenuPointer.buttons = s_MouseButtons;
+#endif
         /* re-assert relative mode per poll while gameplay owns the pointer
          * (the cursor-visibility re-assert above covers the arrow) */
         if (!SDL_GetRelativeMouseMode())
@@ -8566,6 +8599,14 @@ void portInputMouseUpdate(void)
     }
     else
     {
+#ifdef __EMSCRIPTEN__
+        /* A browser cannot reseat its OS cursor. Virtual snaps/clamps must not
+         * become a persistent offset from the next physical point or click. */
+        s_WarpPending = 0;
+        s_MouseMoved = portWebMenuPointerRead(&s_WebMenuPointer, ax, ay,
+                s_MouseButtons, &s_MouseVX, &s_MouseVY)
+            && !(s_OptBgInput && !s_WindowFocused);
+#else
         if (s_WarpPending)
         {
             s_WarpPending = 0;
@@ -8609,6 +8650,7 @@ void portInputMouseUpdate(void)
             s_MouseVX = ax;
             s_MouseVY = ay;
         }
+#endif
     }
     s_MouseAccDX += dx; /* consumed (and zeroed) once per sim tick, see above */
     s_MouseAccDY += dy;
@@ -8687,6 +8729,13 @@ void portInputMouseWindowPos(s32 *x, s32 *y, s32 *moved)
  */
 static void mouseWarpFree(s32 x, s32 y, s32 parkaxes)
 {
+#ifdef __EMSCRIPTEN__
+    /* Keep the native/controller snap virtual until the mouse takes ownership.
+     * SDL/browser warps cannot move the real pointer and corrupt its baseline. */
+    (void)x;
+    (void)y;
+    (void)parkaxes;
+#else
     extern SDL_Window *gfx_sdl_get_window(void); /* see focus note above */
     SDL_Window *w = gfx_sdl_get_window();
     Uint32 fl;
@@ -8725,6 +8774,7 @@ static void mouseWarpFree(s32 x, s32 y, s32 parkaxes)
     s_WarpToY = y;
     s_WarpPending = 1;   /* judged on the next poll, see s_FreeDelta */
     SDL_WarpMouseInWindow(w, x, y);
+#endif
 }
 
 void portInputMouseWarp(s32 x, s32 y)

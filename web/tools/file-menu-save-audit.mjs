@@ -74,17 +74,12 @@ async function reachFiles() {
 
 async function nativeClick(button) {
     const box = await button.boundingBox();
-    const canvas = await page.locator('#canvas').boundingBox();
     const element = await button.elementHandle();
     await element.evaluate((button) => {
         button.style.pointerEvents = 'none';
     });
     try {
-        await page.mouse.move(canvas.x + canvas.width - 1, canvas.y + canvas.height - 1);
-        await page.waitForTimeout(120);
-        await page.mouse.move(canvas.x + 1, canvas.y + 1);
-        await page.waitForTimeout(120);
-        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 20 });
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
         await page.waitForTimeout(120);
         await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { delay: 120 });
     } finally {

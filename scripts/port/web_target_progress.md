@@ -463,6 +463,34 @@ WEB-006 compatibility and mission/effect coverage.
 
 ## WEB-006 | 2026-10-24 | Browser compatibility and polish
 
+**Absolute menu pointer, 2026-10-27:** Investigation reproduced the reported
+drift: the inherited ignored-warp fallback accumulated physical deltas around
+native menu snaps, leaving offsets up to 88 menu pixels until an edge sweep.
+Free browser menus now take absolute physical coordinates on real motion or a
+fresh click. Controller snaps remain virtual while the mouse is stationary;
+first motion after focus reset is latched. The frontend skips its native warp
+handoff only for free browser pointers. An ungranted legacy capture request
+also stays absolute in menus, preserving saved preferences and the existing
+captured-gameplay/native input paths. FORK-024 owns the change.
+
+The ROM-free C policy regression runs in Pages CI. A private actual-ROM audit
+observes a digest-matched native linker map without changing game state and
+checks direct positioning/clicks throughout Files/mode/mission/difficulty/
+briefing, the rightmost mission, native back/forward, resize, reentry, F2 and
+fullscreen. Existing Files, Exit and crosshair audits drop their compensating
+edge sweeps/offset loops. Both debug lock settings pass all 32 samples, as do
+optimized Edge and Chrome at double pixel density with the alternate setting.
+Captured gameplay preserves the measured 2.6-degree turn for the same input,
+including across a deliberate 250 ms hitch, with no replay; Watch recapture and
+diagnostic export pass. Direct slider dragging, backup/reload and native-cursor
+Files import/export and Exit Game No/Yes, room return/warm resume and save
+management restart pass. Native Start/HUD/ADS/upstream checks, 155 browser unit
+tests, TypeScript, public allowlist/digest and standards checks pass. The Windows
+build and both gallery passes reproduce all 107 images unchanged; freshness and
+eight gallery workflow tests pass. Evidence: `build/web-menu-pointer`,
+`build/menu-pointer-*`.
+Next action: publish through main/CI/Pages and verify the live runtime identity.
+
 **Restored Always health/armor default, 2026-10-27:** At the owner's request,
 shared native/Wasm HUD defaults and the first-run INI writer again use
 `always_health=1` (Health Display: Always) on all platforms. This supersedes the

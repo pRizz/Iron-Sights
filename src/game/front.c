@@ -1348,6 +1348,9 @@ void frontUpdateControlStickPosition(void) {
        * edge travel doesn't re-seat every tick. */
         extern s32 portMouseMenuPos(f32 *gx, f32 *gy, f32 left, f32 top, f32 width, f32 height);
         extern void portMouseMenuWarp(f32 gx, f32 gy, f32 left, f32 top, f32 width, f32 height);
+#ifdef GE_WEB
+        extern s32 portInputMouseLocked(void);
+#endif
         static f32 mouse_last_h = 1.0e9f; /* sentinel: first move re-seats */
         static f32 mouse_last_v;
         /* Ownership flips to the stick on any deflection and back to the mouse
@@ -1371,7 +1374,11 @@ void frontUpdateControlStickPosition(void) {
                              getPlayer_c_screenleft(), getPlayer_c_screentop(),
                              getPlayer_c_screenwidth(), getPlayer_c_screenheight()))
         {
-            if ((cursor_h_pos != mouse_last_h || cursor_v_pos != mouse_last_v) && !g_portMenuMouseOwns)
+            if ((cursor_h_pos != mouse_last_h || cursor_v_pos != mouse_last_v) && !g_portMenuMouseOwns
+#ifdef GE_WEB
+                && portInputMouseLocked() /* unlocked browser motion already is an absolute target */
+#endif
+            )
             {
                 portMouseMenuWarp(cursor_h_pos, cursor_v_pos,
                                   getPlayer_c_screenleft(), getPlayer_c_screentop(),
