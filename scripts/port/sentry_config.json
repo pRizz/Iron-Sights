@@ -1,0 +1,8 @@
+{
+  "sdk_version": "0.17.4",
+  "sdk_commit": "740313523edd50e3a0cfe2f8f931e893ed7423a5",
+  "cli_version": "3.8.2",
+  "organization": "bright-builds-llc",
+  "project": "iron-sights",
+  "dsn": "https://adf0168b01e05000b328a968dd878538@o4508882504450048.ingest.us.sentry.io/4512331665637376"
+}

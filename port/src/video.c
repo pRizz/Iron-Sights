@@ -3288,7 +3288,8 @@ static void videoLoadConfig(void)
             char *val = iniTrim(eq + 1);
 
             if (!videoSetDisplayOption(key, val) && !portInputSetOption(key, val) && !portJoyPortSetOption(key, val)
-                && !romdataIsIniKey(key) /* [data] rom=: romdata.c reads it itself, section-aware */)
+                && !romdataIsIniKey(key) /* [data] rom=: romdata.c reads it itself, section-aware */
+                && SDL_strcasecmp(key, "crash_reporting") != 0 /* early, section-aware Windows diagnostics */)
             {
                 portConLogf("ge: midas.ini: unknown control \"%s\"\n", key);
             }

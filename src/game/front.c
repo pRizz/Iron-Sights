@@ -4564,6 +4564,9 @@ static const struct PortSheetRow port_sheet_rows_general[] = {
  * match is ini-only (default on); play as ssf character is ini-only. */
 static const struct PortSheetRow port_sheet_rows_portopts[] = {
     { SHROW_ABOUT, NULL, "About / Build Info\n" },
+#ifdef _WIN32
+    { SHROW_OPT, "crash_reporting" },
+#endif
     { SHROW_OPT, "unlock_all" },   /* first */
     { SHROW_OPT, "fix_shootthrough" }, { SHROW_OPT, "distance_fading" },
     { SHROW_OPT, "true_enemy_rockets" },

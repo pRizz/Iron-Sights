@@ -34,6 +34,7 @@ static const struct PortOptHelp sHelp[] = {
     { "mouse_auto_aim",     "Lets Auto-Aim work with the mouse." },
     { "high_lod",           "Always draws the most detailed models." },
     { "setting_help",       "Shows this help box." },
+    { "crash_reporting",    "Sends technical crash reports to Sentry. OFF stops uploads." },
 
     /* HUD */
     { "sight_on_screen",    "Shows the aiming sight." },

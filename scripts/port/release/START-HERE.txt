@@ -32,3 +32,9 @@ The executable is not Windows Authenticode-signed. Its GitHub build provenance
 is a separate verification mechanism; see VERIFY.txt and the release page.
 
 Downloads: https://github.com/pRizz/Iron-Sights/releases/latest
+
+Windows crash reporting is ON by default. Disable it in Port Options > Crash
+Reporting or in midas.ini: [diagnostics] crash_reporting=0. Reports include
+technical system/build/stack information, module paths and an installation ID.
+No ROMs, saves, logs or minidumps are attached. See the repository's
+scripts/port/crash_reporting.md for payload, queue and privacy details.

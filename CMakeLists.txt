@@ -424,6 +424,7 @@ endif()
 
 add_executable(ge ${GAME_SRC} ${ENGINE_SRC} ${GU_SRC} ${PORT_SRC}
                ${ASSET_LOOSE_SRC} ${ASSET_OBJS} ${FAST3D_SRC})
+include(scripts/port/sentry.cmake)
 # Native player filenames use the fork identity. Keep the `ge` target, logs,
 # profile identities and deployed Wasm runtime filenames stable.
 if(EMSCRIPTEN)

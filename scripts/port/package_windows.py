@@ -8,6 +8,8 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[2]
 NAME = "Iron-Sights-windows-x86.zip"
 FILES = {"IronSights.exe": "IronSights.exe", "SDL2.dll": "SDL2.dll",
+         "sentry.dll": "sentry.dll", "sentry-crash.exe": "sentry-crash.exe", "sentry-wer.dll": "sentry-wer.dll",
+         "Sentry-LICENSE.txt": "Sentry-LICENSE.txt", "sentry-build.json": "sentry-build.json",
          "gamecontrollerdb.txt": "gamecontrollerdb.txt", "gamecontrollerdefault.txt": "gamecontrollerdefault.txt",
          "midas_ini_help.txt": "midas_ini_help.txt", "Data/shaders_base.txt": "Data/shaders_base.txt"}
 

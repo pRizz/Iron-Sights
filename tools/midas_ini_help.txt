@@ -223,6 +223,11 @@ padN_stickmode.
   setting_help        | 1          | 1 = a box under the folder's option
                       |            | pages says what the highlighted
                       |            | setting does. Not on the watch
+  Diagnostics (Windows, [diagnostics])
+  crash_reporting     | 1          | ON sends technical crash reports to Sentry.
+                      |            | 0 stops uploads and discards queued reports.
+                      |            | No ROMs, saves or memory dumps are attached.
+                      |            | See scripts/port/crash_reporting.md for details.
   armor_hud           | 0          | 1 = health and armour arcs show briefly
                       |            | when you pick up body armour (as XBLA)
   Sound

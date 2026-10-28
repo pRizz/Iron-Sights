@@ -27,6 +27,9 @@
 #include <string.h>
 #include <ultra64.h>
 #include "port_crosshair.h"
+#ifdef _WIN32
+#include "port_crash.h"
+#endif
 
 /* strong on the owning side, weak no-op in libultra_shim.c */
 extern s32 portVideoOptionGet(const char *key, s32 *out);
@@ -361,11 +364,14 @@ static const struct PortOpt sOpts[] = {
     TOGGLE("background_input",  "[input]", "BG Input\n", PORTOPT_CAT_CONTROLLER),
     /* the folder sheets' help box (front.c portSheetDrawHelp), Port Options */
     TOGGLE("setting_help",      "[display]", "Setting Help\n", PORTOPT_CAT_GAMEPLAY),
+#ifdef _WIN32
+    TOGGLE("crash_reporting", "[diagnostics]", "Crash Reporting\n", PORTOPT_CAT_GAMEPLAY),
+#endif
 };
 
 #define PORTOPT_COUNT ((s32)(sizeof(sOpts) / sizeof(sOpts[0])))
 
-/* every section named in the table, in save order */
+/* Video/input batch saves; diagnostics owns its immediate, early-safe write. */
 static const char *const sSections[] = { "[display]", "[input]" };
 
 void portOptSave(void);
@@ -374,6 +380,9 @@ void portOptSave(void);
 
 static s32 optGet(const char *key, s32 *out)
 {
+#ifdef _WIN32
+    if (portCrashOptionGet(key, out)) return 1;
+#endif
     return portVideoOptionGet(key, out) || portInputOptionGet(key, out) || portJoyPortOptionGet(key, out);
 }
 
@@ -381,6 +390,9 @@ static void classicPartChanged(const char *key, s32 on);   /* "classic mode" bel
 
 static s32 optSet(const char *key, s32 v)
 {
+#ifdef _WIN32
+    if (portCrashOptionSet(key, v)) return 1;
+#endif
     if (portVideoOptionSet(key, v) || portInputOptionSet(key, v) || portJoyPortOptionSet(key, v))
     {
         classicPartChanged(key, v != 0);

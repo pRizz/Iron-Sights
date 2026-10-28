@@ -96,6 +96,12 @@ function Common([string]$dir) {
 $win = Join-Path $out "windows"; Common $win
 Copy-Item (Join-Path $root "build_win\IronSights.exe") $win
 Copy-Item (Join-Path $root "build_win\SDL2.dll") $win
+foreach ($reporterFile in @("sentry.dll", "sentry-crash.exe", "sentry-wer.dll", "Sentry-LICENSE.txt", "sentry-build.json")) {
+    Copy-Item (Join-Path $root "build_win\$reporterFile") $win
+}
+Copy-Item (Join-Path $root "scripts\port\crash_reporting.md") (Join-Path $win "Crash-Reporting.md")
+"Windows crash reporting defaults ON. Opt out in Port Options > Crash Reporting or [diagnostics] crash_reporting=0 in midas.ini. See Crash-Reporting.md.`r`n" |
+    Add-Content -Encoding ASCII (Join-Path $win "README.txt")
 
 $lin = Join-Path $out "linux"; Common $lin
 # 2026-10-18: a Linux user got 'libSDL2-2.0.so.0 missing' (a 64-bit distro has no

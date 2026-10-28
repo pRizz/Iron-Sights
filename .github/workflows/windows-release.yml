@@ -61,13 +61,31 @@ jobs:
           bash scripts/port/test_mission_cheats.sh
           bash scripts/port/test_states.sh
           python3 scripts/port/test_distribution.py
+          python3 scripts/port/test_sentry_tools.py
           python3 scripts/port/test_ci_dependencies.py
           python3 scripts/port/test_enhanced_fonts.py
           python3 scripts/port/test_hand_gallery.py
           python3 scripts/port/hand_gallery.py verify
 
-  windows:
+  sentry-sdk:
     needs: tests
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Build pinned MSVC x86 Sentry runtime
+        run: python scripts/port/sentry_tools.py build --work build/sentry-sdk --output build/sentry-runtime
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sentry-msvc-x86
+          path: build/sentry-runtime
+          if-no-files-found: error
+          retention-days: 30
+
+  windows:
+    needs: [tests, sentry-sdk]
     # Publishing is restricted to main; compilation itself needs no ROM or secrets.
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
@@ -78,7 +96,12 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: sentry-msvc-x86
+          path: build/sentry-runtime
       - name: Resolve authenticated Windows dependencies
+        # The reporter is built separately; game compilation stays on GCC x86.
         id: deps
         timeout-minutes: 5
         run: python3 scripts/port/ci_dependencies.py prepare --profile windows --root "$RUNNER_TEMP/midas-deps"
@@ -138,12 +161,16 @@ jobs:
         run: |
           if [ "$CLEAN_BUILD" = true ]; then export CCACHE_DISABLE=1; fi
           ccache --zero-stats
-          cmake -B build_win -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-i686.cmake -DCMAKE_BUILD_TYPE=Debug -DGE_VIDEO=ON -DGE_ROMDATA_FALLBACK=OFF -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake -B build_win -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-i686.cmake -DCMAKE_BUILD_TYPE=Debug -DGE_VIDEO=ON -DGE_ROMDATA_FALLBACK=OFF -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DMIDAS_SENTRY_INCLUDE_DIR="$PWD/build/sentry-runtime/include"
           cmake --build build_win --parallel "$(nproc)"
           ccache --show-stats | tee build_win/ccache-stats.txt
           cat build_win/ccache-stats.txt >> "$GITHUB_STEP_SUMMARY"
           git diff --exit-code HEAD
           python3 -c "import json; m=json.load(open('build_win/generated/build-info.json')); assert m['ci'] and not m['dirty']"
+      - name: Upload exact Windows debug information and source context
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: python3 scripts/port/sentry_tools.py upload --exe build_win/IronSights.exe --sdk build/sentry-runtime --work build/sentry-cli
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: inputs.clean_build != true
         with:
@@ -154,6 +181,7 @@ jobs:
           MIDAS_DEPENDENCIES_FILE: ${{ runner.temp }}/midas-deps/verified-inputs.json
           MIDAS_CLEAN_BUILD: ${{ inputs.clean_build == true }}
         run: |
+          python3 scripts/port/sentry_tools.py stage --source build/sentry-runtime --destination build_win
           python3 scripts/port/package_windows.py --build build_win --output dist --sdl-license third_party/SDL2-${SDL2_VERSION}/LICENSE.txt
           python3 scripts/port/release_inputs.py --output dist/build-inputs.json
           cp build_win/IronSights.exe dist/IronSights.exe
@@ -164,8 +192,29 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  publish:
+  sentry-smoke:
     needs: windows
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: windows-player-package
+          path: build/player-package
+      - name: Test packaged reporting, opt-out and crash capture without a ROM
+        run: python scripts/port/test_sentry_windows.py --package build/player-package/Iron-Sights-windows-x86.zip --output build/sentry-smoke
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: sentry-smoke-diagnostics
+          path: build/sentry-smoke
+          if-no-files-found: ignore
+          retention-days: 7
+
+  publish:
+    needs: [windows, sentry-smoke]
     runs-on: ubuntu-24.04
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     permissions:
@@ -210,6 +259,8 @@ jobs:
           Verify with `gh attestation verify Iron-Sights-windows-x86.zip -R {m['repository']}`. Build metadata, input fingerprints, checksums and the provenance bundle are preserved below. The ROM is not included.
 
           Preserve Data and midas.ini when updating. Suspend points require their original executable; campaign saves are separate.
+
+          Windows crash reporting is ON by default. Turn it off in Port Options > Crash Reporting or set `[diagnostics] crash_reporting=0` in midas.ini. Reports contain technical diagnostics; no minidumps, ROMs or saves are attached. See scripts/port/crash_reporting.md for payload and privacy details.
           '''
           Path('notes.md').write_text(text)
           PY

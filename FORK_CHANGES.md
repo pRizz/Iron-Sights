@@ -30,6 +30,52 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-030 — Windows Sentry crash reporting and symbol uploads
+
+**Status:** Implemented.
+
+Adds Windows-only reporting, default ON, with a persistent Port Options toggle
+and early section-aware `[diagnostics] crash_reporting=0` opt-out. OFF stops the
+SDK and clears its dedicated queue; `GE_CRASH_REPORTING=0` suppresses a process.
+Render/audit runs suppress reporting. The inherited local crash log remains;
+its stack walker now receives a context copy before forwarding the original
+exception to Sentry. Persistent watchdog stalls produce an explicit error.
+
+The GCC x86 game optionally loads a matching, unmodified MSVC x86 Sentry DLL and
+native crash helper. Missing reporter files leave gameplay available. GNU PE
+build IDs make embedded DWARF matchable. Trusted main CI builds the pinned SDK,
+records runtime hashes/license, uploads exact game/SDK symbols and source context
+with a CI-only secret, and tests the packaged executable with a loopback crash
+receiver before publishing. This is new fork behavior, not inherited upstream
+telemetry. Existing main-build provenance and packaging remain the delivery path.
+
+Only structured events are enabled; no minidumps, ROMs, saves, screenshots or raw
+logs are attached. Default native events contain module paths, a generated
+installation ID and technical system/CPU state; see the payload disclosure.
+Offline retry uses a dedicated queue with startup pruning of ten events, 5 MiB
+and seven days. Opt-out deletes pending data without traversing reparse points.
+
+**Sources:** [Windows adapter](port/crash/reporting_win.c),
+[public API](port/include/port_crash.h), [startup/logger](port/src/main.c),
+[menu table](port/src/port_options.c), [menu row](src/game/front.c),
+[help](port/src/port_option_help.c), [build integration](scripts/port/sentry.cmake),
+[pins/public DSN](scripts/port/sentry_config.json),
+[SDK/symbol tooling](scripts/port/sentry_tools.py),
+[workflow](.github/workflows/windows-release.yml),
+[packager](scripts/port/package_windows.py),
+[manual packager](scripts/port/package_release.ps1),
+[input metadata](scripts/port/release_inputs.py),
+[reporting guide](scripts/port/crash_reporting.md).
+
+**Validation:** Tooling/distribution tests, ADS, wardrobe, HUD, Windows compilation
+and all nine packaged Windows reporting scenarios pass locally. These cover
+access violations, early and live opt-out (including a read-only INI), missing-DLL
+fallback, process suppression, healthy shutdown, explicit watchdog error delivery
+and exactly-once retry after a connection failure. Watchdog reporting is bounded
+so an unavailable SDK cannot prevent its existing forced exit. Standards report
+zero findings. Cloud source-line verification uses the exact CI executable and
+its debug ID, following the reporting guide; receipt logs remain local.
+
 ### FORK-029 — Shared presentation defaults and usable Video pagination
 
 **Status:** Implemented.
@@ -1461,6 +1507,11 @@ FORK-022. Temporary audit executables are removed.
 ### FORK-018 — Windows player releases and recorded provenance
 
 **Status:** Implemented; publication is performed by the checked-in workflow.
+
+FORK-030 adds a separate MSVC x86 reporter build, exact symbol/source uploads and
+a packaged Windows crash-reporting smoke gate. The game itself remains a GCC x86
+build. The player ZIP now includes the optional Sentry runtime, license and
+recorded SDK hashes; existing attestation and immutable-release behavior remains.
 
 The Windows player/attested EXE is now `IronSights.exe`. CMake changes the Windows
 artifact name; Linux/Steam Deck now output `IronSights`, while `ge` stays the build

@@ -99,6 +99,7 @@ Files next to the executable:
 | `gamecontrolleruser.txt` | Your saved controller layouts. |
 | `Data/Logs/ge_direct.log` | The run log on Windows (the game opens no console window). |
 | `Data/Logs/crash.log` | Written if the game crashes. |
+| `Data/CrashReports` | Windows crash-report queue. Reporting defaults ON; opt out in Port Options or `[diagnostics] crash_reporting=0` in `midas.ini`. [Payload and privacy details](scripts/port/crash_reporting.md). |
 | `Mods/` | Reserved for modded carts. This build loads the stock cart only. |
 
 An older `ge.ini` is renamed to `midas.ini` automatically on first run.

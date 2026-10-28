@@ -27,6 +27,7 @@ extern void portConLogf(const char *fmt, ...);
 #include <windows.h>
 #include <dbghelp.h>
 #include <io.h> /* _dup2/_fileno: portDirectLaunchLog */
+#include "port_crash.h"
 
 /* Windows backtrace via dbghelp (SEH catches faults signal() misses on
  * MinGW). addr2line -e build_win/IronSights.exe on the printed addresses.
@@ -137,7 +138,8 @@ static LONG WINAPI portSehHandler(EXCEPTION_POINTERS *ep)
     extern Mtx *matrixBufferIntroBackdrop, *matrixBufferIntroBond;
     extern u32 D_8002A7D0;
     void *portGetMempArena(u32 *outsize);
-    CONTEXT *ctx = ep->ContextRecord;
+    CONTEXT contextCopy = *ep->ContextRecord;
+    CONTEXT *ctx = &contextCopy;
     STACKFRAME64 sf;
     HANDLE proc = GetCurrentProcess();
     HANDLE thr = GetCurrentThread();
@@ -453,6 +455,7 @@ static DWORD WINAPI portStallWatchdog(LPVOID param)
         }
         crashPrintf("ge: STALL: frame counter frozen - exiting after dump\n");
         fflush(NULL);
+        portCrashReportStall();
         _exit(3);
     }
 }
@@ -835,6 +838,8 @@ int main(int argc, char **argv)
     }
 
 #ifdef _WIN32
+    portCrashInit(portSehHandler);
+    if (portCrashTestMode(argc, argv)) return 0;
     /* always-on: Steam's injected overlay is a prime suspect in crash
      * reports - say whether it is inside this process. GetModuleHandle
      * does not load anything. */
