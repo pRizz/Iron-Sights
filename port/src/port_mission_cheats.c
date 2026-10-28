@@ -4,6 +4,7 @@
 #include <bondconstants.h>
 #include "game/front.h"
 #include "game/file2.h"
+#include "game/cheat.h"
 #include "port_mission_cheats.h"
 
 extern save_data *fileGetSaveForFoldernum(u32 folder);
@@ -35,6 +36,28 @@ s32 portMissionCheatInfo(s32 mission, s32 folder, PortMissionCheatInfo *info)
 const char *portMissionCheatStatus(const PortMissionCheatInfo *info)
 {
     return info->earned ? "CHEAT UNLOCKED" : info->available ? "CHEAT AVAILABLE - UNLOCK ALL" : "CHEAT TO UNLOCK";
+}
+
+void portMissionCheatSummary(s32 mission, const PortMissionCheatInfo *info, char *text, s32 size)
+{
+    /* Same mission order as the inherited target table and earned save bits. */
+    static const CHEAT_ID cheats[] = {
+        CHEAT_PAINTBALL, CHEAT_INVINCIBILITY, CHEAT_DK_MODE, CHEAT_2X_GRENADE_LAUNCHER,
+        CHEAT_2X_ROCKET_LAUNCHER, CHEAT_TURBO_MODE, CHEAT_NO_RADAR_MP, CHEAT_TINY_BOND,
+        CHEAT_2X_THROWING_KNIFE, CHEAT_FAST_ANIMATION, CHEAT_INVISIBILITY, CHEAT_ENEMY_ROCKETS,
+        CHEAT_SLOW_ANIMATION, CHEAT_SILVER_PP7, CHEAT_2X_HUNTING_KNIFE, CHEAT_INFINITE_AMMO,
+        CHEAT_2X_RCP90, CHEAT_GOLD_PP7, CHEAT_2X_LASER, CHEAT_ALLGUNS
+    };
+    const char *name;
+    s32 length;
+    if (size <= 0) return;
+    if (!info->earned || mission < SP_LEVEL_DAM || mission > SP_LEVEL_EGYPT) {
+        snprintf(text, size, "%s", portMissionCheatStatus(info));
+        return;
+    }
+    name = cheatGetMenuTextPointer(cheats[mission]);
+    for (length = 0; name[length] && name[length] != '\n' && name[length] != '\r'; length++) {}
+    snprintf(text, size, "%s - %.*s", portMissionCheatStatus(info), length, name);
 }
 
 void portMissionCheatRequirement(const PortMissionCheatInfo *info, s32 highestDifficulty, char *text, s32 size)

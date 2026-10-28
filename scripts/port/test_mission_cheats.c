@@ -14,6 +14,49 @@ extern int strcmp(const char *, const char *);
 #pragma GCC diagnostic pop
 #include "../../port/src/port_mission_cheats.c"
 static s32 unlockAll;
+static s32 nameLookups;
+char *cheatGetMenuTextPointer(CHEAT_ID cheat)
+{
+    nameLookups++;
+    switch (cheat) {
+        case CHEAT_PAINTBALL: return "Paintball Mode\n";
+        case CHEAT_INVINCIBILITY: return "Invincibility\n";
+        case CHEAT_2X_GRENADE_LAUNCHER: return "2x Grenade Launchers\r\n";
+        case CHEAT_ALLGUNS: return "All Guns";
+        default: assert(0); return "";
+    }
+}
+
+static void testSummary(void)
+{
+    PortMissionCheatInfo info = {0};
+    char text[96];
+    portMissionCheatSummary(SP_LEVEL_DAM, &info, text, sizeof(text));
+    assert(strcmp(text, "CHEAT TO UNLOCK") == 0 && nameLookups == 0);
+    info.available = 1;
+    portMissionCheatSummary(SP_LEVEL_DAM, &info, text, sizeof(text));
+    assert(strcmp(text, "CHEAT AVAILABLE - UNLOCK ALL") == 0 && nameLookups == 0);
+    info.earned = 1;
+    portMissionCheatSummary(SP_LEVEL_DAM, &info, text, sizeof(text));
+    assert(strcmp(text, "CHEAT UNLOCKED - Paintball Mode") == 0);
+    portMissionCheatSummary(SP_LEVEL_FACILITY, &info, text, sizeof(text));
+    assert(strcmp(text, "CHEAT UNLOCKED - Invincibility") == 0);
+    portMissionCheatSummary(SP_LEVEL_SURFACE1, &info, text, sizeof(text));
+    assert(strcmp(text, "CHEAT UNLOCKED - 2x Grenade Launchers") == 0);
+    portMissionCheatSummary(SP_LEVEL_EGYPT, &info, text, sizeof(text));
+    assert(strcmp(text, "CHEAT UNLOCKED - All Guns") == 0);
+    portMissionCheatSummary(-1, &info, text, sizeof(text));
+    assert(strcmp(text, "CHEAT UNLOCKED") == 0);
+    portMissionCheatSummary(20, &info, text, sizeof(text));
+    assert(strcmp(text, "CHEAT UNLOCKED") == 0 && nameLookups == 4);
+    portMissionCheatSummary(SP_LEVEL_DAM, &info, text, 8);
+    assert(strcmp(text, "CHEAT U") == 0);
+    portMissionCheatSummary(SP_LEVEL_DAM, &info, text, 1);
+    assert(text[0] == '\0');
+    text[0] = '!';
+    portMissionCheatSummary(SP_LEVEL_DAM, &info, text, 0);
+    assert(text[0] == '!');
+}
 s32 portUnlockAll(void) { return unlockAll; }
 s16 solo_target_time_array[20][3] = {{0,160,0}, {0,0,125}, {300,0,0}};
 void osSyncPrintf(const char *fmt, ...)
@@ -25,6 +68,7 @@ int main(void)
     PortMissionCheatInfo info;
     char text[96];
     s32 i;
+    testSummary();
     for (i = 0; i < SAVESLOTMAX; i++) saves[i].completion_bitflags = SAVEFLAG_DORESET;
     saves[0].completion_bitflags = FOLDER1;
     saves[1].completion_bitflags = FOLDER2;

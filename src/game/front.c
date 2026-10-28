@@ -9105,12 +9105,14 @@ void set_cursor_to_stage_solo(LEVEL_SOLO_SEQUENCE level)
 static Gfx *portFrontMissionCheatSummary(Gfx *dl, s32 mission)
 {
     PortMissionCheatInfo info;
+    char summary[128];
     char requirement[96];
     const s32 x = 38, y = viGetY()-24, width = viGetX()-76;
     if (!portMissionCheatInfo(mission, selected_folder_num, &info)) return dl;
+    portMissionCheatSummary(mission, &info, summary, sizeof(summary));
     portMissionCheatRequirement(&info, get_highest_unlocked_difficulty_for_level(mission), requirement, sizeof(requirement));
     dl = portHudPanel(dl, x, y, width, 22, 0x10171ce8);
-    dl = portHudLabel(dl, portMissionCheatStatus(&info), x+5, y+2, 0.65f, portMissionCheatColor(&info), width-10);
+    dl = portHudLabel(dl, summary, x+5, y+2, 0.65f, portMissionCheatColor(&info), width-10);
     return portHudLabel(dl, requirement, x+5, y+12, 0.65f, 0xe1e5eaff, width-10);
 }
 #endif

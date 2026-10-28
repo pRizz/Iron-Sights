@@ -1271,9 +1271,18 @@ Added an always-visible summary for the highlighted mission on the solo mission
 grid and for the chosen mission on the difficulty screen. It shows the timed
 cheat's required difficulty and target, and distinguishes amber **Cheat to
 unlock**, green **Cheat unlocked** (earned in the selected campaign save), and
-blue **Cheat available - Unlock All**. A required difficulty still locked by
-progress is identified in the summary. The matching visible difficulty row
-also has a target/unlocked/available badge and time; other rows, including 007,
+blue **Cheat available - Unlock All**.
+
+Earned bottom banners on both screens also name the unlocked cheat using its
+existing localized cheat-menu label, for example **Cheat unlocked - Paintball
+Mode**. Trailing line endings are omitted so the name stays on the status row.
+Pending and Unlock All availability labels retain their existing wording.
+The shared footer retains its difficulty/time row and green earned color.
+The mission-to-cheat mapping matches upstream's unlock cases in `front.c`.
+
+A required difficulty still locked by progress is identified in the summary.
+The matching visible difficulty row also has a target/unlocked/available badge
+and time; other rows, including 007,
 receive no badge. Existing completion checkmarks and selection hit areas retain
 their meaning. The hints are independent of the optional in-game mission timer.
 
@@ -1290,7 +1299,9 @@ unchanged by these indicators.
 **Checks:** [ROM-free status tests](scripts/port/test_mission_cheats.sh) exercise
 the actual save-bit reader with runtime and compile-time Unlock All, earned vs
 available labels, selected-folder isolation, absent saves, target difficulty/time,
-locked requirements and invalid entries. The isolated
+locked requirements and invalid entries. Summary tests also cover representative
+mission-to-name mappings, name line endings, pending/available states, invalid
+missions and bounded output buffers. The isolated
 [menu audit](scripts/port/audit_mission_cheats.ps1) uses RAM-only diagnostic save
 fixtures via `GE_MISSION_CHEAT_AUDIT=mission,earned,completed` and
 `GE_MENU=imissions|jdifficulty`; it removes its copied executable after exit.
@@ -1304,6 +1315,15 @@ summaries, badges on Secret Agent and 00 Agent, an Agent target while hovering
 All copied audit executables were removed after exit. The main Windows
 executable was rebuilt and replaced without retaining its previous build.
 Linux was compile-checked; runtime visual review ran on Windows.
+
+The named-banner refinement passed the runtime/compile-time status regressions,
+Windows and Linux builds, and six isolated Windows captures: earned Dam and
+Surface on the mission grid, earned Facility and Egyptian on the difficulty
+screen, plus pending and Unlock All states. The 960x540 and 800x600 captures
+confirmed readable names on the status row with requirements retained below.
+The required gallery regeneration verified both independent render passes;
+all 72 image cells and 35 icons retained their pixels, with only the source
+fingerprint updated. Gallery workflow tests passed all eight cases.
 
 
 ### FORK-017 — Mission wardrobe on native arms and unarmed icons

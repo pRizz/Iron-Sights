@@ -6,6 +6,7 @@ typedef struct {
 } PortMissionCheatInfo;
 s32 portMissionCheatInfo(s32 mission, s32 folder, PortMissionCheatInfo *info);
 const char *portMissionCheatStatus(const PortMissionCheatInfo *info);
+void portMissionCheatSummary(s32 mission, const PortMissionCheatInfo *info, char *text, s32 size);
 void portMissionCheatRequirement(const PortMissionCheatInfo *info, s32 highestDifficulty, char *text, s32 size);
 u32 portMissionCheatColor(const PortMissionCheatInfo *info);
 #endif
