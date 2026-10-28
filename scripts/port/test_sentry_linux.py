@@ -10,6 +10,7 @@ import tarfile
 import tempfile
 import threading
 import time
+import zipfile
 from http.server import ThreadingHTTPServer
 
 from test_sentry_windows import Receiver
@@ -111,9 +112,16 @@ def check(package, appimage, output):
         print(json.dumps(result, indent=2))
     finally:
         server.shutdown()
-        for name in ("IronSights", "sentry-crash"):
-            for path in work.rglob(name):
-                if path.is_file(): path.unlink()
+        # mkdtemp/SDK queues are private (0700). Preserve useful diagnostics in
+        # one readable artifact; do not leave root-owned runtime copies for the
+        # host Actions uploader to traverse after a Docker test.
+        with zipfile.ZipFile(output / ("logs-" + work.name + ".zip"), "w", zipfile.ZIP_DEFLATED) as archive:
+            for path in work.rglob("*"):
+                if path.is_file() and (path.suffix in (".log", ".json", ".envelope") or path.name == "__sentry-event"):
+                    archive.write(path, path.relative_to(work))
+        if work.parent != output.resolve():
+            raise RuntimeError("Unexpected smoke directory; refusing cleanup")
+        shutil.rmtree(work)
 
 
 if __name__ == "__main__":

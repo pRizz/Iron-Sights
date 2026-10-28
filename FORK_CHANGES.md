@@ -83,7 +83,11 @@ regenerated with zero changed cells. A private ROM-loaded softpipe smoke reached
 active. Local llvmpipe/LLVM 15 also failed with reporting disabled; this is not
 a hardware-driver or Steam Deck certification. Final rebuilt tarball/AppImage
 packages repeated all nine reporting scenarios successfully. Hosted CI and
-dashboard verification follow the same exact-artifact release workflow.
+dashboard verification follow the same exact-artifact release workflow. The
+first hosted run passed Linux compilation, symbol uploads and all nine tests,
+then exposed an artifact-uploader permission mismatch with Docker's private
+temporary directories. Tests now preserve logs/event JSON in a readable ZIP and
+remove their isolated runtime copies before the host uploads diagnostics.
 
 ### FORK-030 — Native Sentry crash reporting and symbol uploads
 

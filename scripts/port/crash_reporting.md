@@ -140,6 +140,8 @@ port or a guarantee of Steam Deck compatibility. Its 20251108 runtime and licens
 CI uploads exact ELF debug files with source context before packaging. It tests
 real faults, startup/live/process opt-out, missing-SDK fallback, symlink-safe
 cache handling, offline retry and AppImage writable-root behavior without a ROM.
+Linux test logs/event JSON are retained in a readable ZIP; private temporary
+directories and runtime copies are removed before CI artifact upload.
 Publication waits for Windows and Linux checks and attests both Linux packages.
 For a local reproduction, use a fresh output directory:
 
