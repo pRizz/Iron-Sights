@@ -30,14 +30,69 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
-### FORK-030 — Windows Sentry crash reporting and symbol uploads
+### FORK-031 — Linux i686 portable releases and AppImage
 
 **Status:** Implemented.
 
-Adds Windows-only reporting, default ON, with a persistent Port Options toggle
+Adds trusted-main Linux i686 compilation, a portable tar.gz and a type-2
+AppImage to the existing native release workflow. All game/SDL/Sentry ELF files
+are built in a digest-pinned Ubuntu 22.04 container. SDL source and the AppImage
+runtime are SHA256 pinned; the Sentry source remains commit pinned. The tarball
+preserves executable permissions. Allow-listed packaging excludes ROMs, saves,
+INI files, crash queues, extracted assets and debug companions. Non-system
+runtime dependencies and license notices are bundled; the 32-bit loader, glibc
+2.35+ and OpenGL driver stack remain distribution requirements. AppImage does
+not remove these requirements or claim verified Steam Deck support.
+
+The AppImage launcher seeds missing packaged defaults into
+`${XDG_DATA_HOME:-$HOME/.local/share}/iron-sights`. A small Linux-only root hook
+accepts an absolute `GE_DATA_ROOT`; tarball launches retain executable-relative
+data by default. The SDK/helper still load relative to the executable, separate
+from this writable root. This is fork distribution work, replacing the prior
+local-only status for Linux; the historical PowerShell three-platform packager
+remains a manual legacy path. Native publication waits for Windows and Linux
+smoke tests, uploads exact ELF symbols/source context, attests both Linux
+formats and publishes one commit-tagged release. Compiler-object caching is
+separate from packages; a clean-build dispatch bypasses it.
+
+A Linux-only ELF export rule keeps the game's N64 libc/math replacements
+private, so shared graphics/audio/reporting libraries use standard libc calls.
+It retains the private symbol table and DWARF companions for source resolution.
+
+The requested native x86_64 port was assessed and deferred as substantial engine
+work: an ABI probe changes pointer size from 4 to 8 and `Gfx` from 8 to 16 bytes;
+texture paths explicitly reject 64-bit host pointers. No unverified x86_64
+binary is published. ROM layouts, address conversions, graphics parsing and
+state serialization require a coordinated audit before changing that ABI.
+
+**Sources:** [baseline container](scripts/port/linux-release.Dockerfile),
+[build](scripts/port/linux_build.py), [packager](scripts/port/package_linux.py),
+[AppImage launcher](scripts/port/linux/AppRun),
+[ELF export boundary](port/crash/linux_game_symbols.map),
+[player instructions](scripts/port/linux/START-HERE.txt),
+[workflow](.github/workflows/windows-release.yml), [root hook](port/src/main.c),
+[release guide](scripts/port/releases.md),
+[packaged tests](scripts/port/test_sentry_linux.py), [reporting](#fork-030--native-sentry-crash-reporting-and-symbol-uploads).
+
+**Validation:** The 32/64-bit ABI probe reproduced the sizes above. Linux
+reporter syntax, Sentry tooling, ADS/wardrobe/HUD and distribution/launcher tests
+pass. All nine packaged reporting scenarios passed, including a real AppImage
+fault and its writable-root behavior. The Windows 72-view/35-icon gallery was
+regenerated with zero changed cells. A private ROM-loaded softpipe smoke reached
+6000 frame pumps/13 submitted graphics tasks and exited normally with Sentry
+active. Local llvmpipe/LLVM 15 also failed with reporting disabled; this is not
+a hardware-driver or Steam Deck certification. Final rebuilt tarball/AppImage
+packages repeated all nine reporting scenarios successfully. Hosted CI and
+dashboard verification follow the same exact-artifact release workflow.
+
+### FORK-030 — Native Sentry crash reporting and symbol uploads
+
+**Status:** Implemented.
+
+Adds Windows and Linux reporting, default ON, with a persistent Port Options toggle
 and early section-aware `[diagnostics] crash_reporting=0` opt-out. OFF stops the
 SDK and clears its dedicated queue; `GE_CRASH_REPORTING=0` suppresses a process.
-Render/audit runs suppress reporting. The inherited local crash log remains;
+Render/audit runs suppress reporting. The inherited Windows crash log remains;
 its stack walker now receives a context copy before forwarding the original
 exception to Sentry. Persistent watchdog stalls produce an explicit error.
 
@@ -49,6 +104,12 @@ with a CI-only secret, and tests the packaged executable with a loopback crash
 receiver before publishing. This is new fork behavior, not inherited upstream
 telemetry. Existing main-build provenance and packaging remain the delivery path.
 
+Linux uses a focused POSIX adapter with executable-relative optional SDK loading,
+early section-aware INI parsing and descriptor-relative no-follow queue cleanup.
+It shares the menu toggle and project, uses `linux-release` for CI builds, and
+restores the prior local signal handlers on shutdown. AppImage queues follow its
+writable root. FORK-031 records the Linux release build and package formats.
+
 Only structured events are enabled; no minidumps, ROMs, saves, screenshots or raw
 logs are attached. Default native events contain module paths, a generated
 installation ID and technical system/CPU state; see the payload disclosure.
@@ -56,6 +117,7 @@ Offline retry uses a dedicated queue with startup pruning of ten events, 5 MiB
 and seven days. Opt-out deletes pending data without traversing reparse points.
 
 **Sources:** [Windows adapter](port/crash/reporting_win.c),
+[Linux adapter](port/crash/reporting_linux.c),
 [public API](port/include/port_crash.h), [startup/logger](port/src/main.c),
 [menu table](port/src/port_options.c), [menu row](src/game/front.c),
 [help](port/src/port_option_help.c), [build integration](scripts/port/sentry.cmake),
@@ -1528,6 +1590,7 @@ FORK-022. Temporary audit executables are removed.
 
 **Status:** Implemented; publication is performed by the checked-in workflow.
 
+FORK-031 extends publication to Linux tar.gz/AppImage packages.
 FORK-030 adds a separate MSVC x86 reporter build, exact symbol/source uploads and
 a packaged Windows crash-reporting smoke gate. The game itself remains a GCC x86
 build. The player ZIP now includes the optional Sentry runtime, license and

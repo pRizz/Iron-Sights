@@ -1,0 +1,30 @@
+Iron Sights for Linux i686
+
+This is an optimized 32-bit build. Requires an x86 Linux system with the
+32-bit ELF loader, glibc 2.35 or newer and working 32-bit OpenGL drivers.
+SDL2, Sentry and their non-system dependencies are bundled. glibc and GPU
+drivers are provided by your distribution. This is not a native x86_64 port.
+
+tar.gz: Extract, put your own stock USA ROM in Data, then run ./IronSights.
+Keep the entire folder together. Saves and midas.ini live beside the executable.
+
+AppImage: chmod +x Iron-Sights-linux-i686.AppImage, then run it. Writable data
+and the ROM belong in ${XDG_DATA_HOME:-$HOME/.local/share}/iron-sights/Data.
+Settings live in the parent iron-sights folder. GE_DATA_ROOT can override the
+absolute writable root. FUSE is optional with --appimage-extract-and-run.
+An AppImage still requires the system's 32-bit loader and OpenGL drivers.
+
+Crash reporting is ON by default. Disable it in Port Options > Crash Reporting
+or set crash_reporting=0 under [diagnostics] in midas.ini before launching.
+Reports contain technical stack/system data, paths (possibly account names)
+and a generated installation ID. Sentry receives the network connection IP.
+No minidumps, ROMs, saves, screenshots or raw logs are attached. See
+Crash-Reporting.md for the complete payload and queue description.
+
+No ROM or extracted game data is included. Never copy Data/CrashReports into
+a bug report. Keep Data and midas.ini when updating. Suspend states require
+their original executable; campaign saves are separate.
+
+Verify the package with the release's SHA256SUMS-linux.txt, or run:
+gh attestation verify Iron-Sights-linux-i686.tar.gz -R pRizz/Iron-Sights
+Use the AppImage filename instead to verify that package's signed provenance.

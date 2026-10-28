@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Iron Sights
+Exec=AppRun
+Icon=iron-sights
+Categories=Game;
+Terminal=false

@@ -1,4 +1,4 @@
-# Windows distribution and build provenance
+# Native distribution and build provenance
 
 The player executable is `IronSights.exe` inside `Iron-Sights-windows-x86.zip`.
 EXE attestations and launch/verification instructions use that filename. Older
@@ -16,7 +16,13 @@ an existing build. Releases are marked latest to support the README's simple
 download link; they are development builds rather than manually certified
 stable versions. PRs run tests only, without publication
 permissions. The previous Linux/Windows three-day EXE-only artifact workflow
-has been replaced by windows-release.yml; Linux can still be built locally.
+has been replaced by windows-release.yml. It also builds Linux i686 tar.gz and
+AppImage packages against a pinned Ubuntu 22.04 baseline, uploads exact Sentry
+symbols/source context, runs packaged crash tests, and includes both platforms
+in one attested release. See [crash reporting](crash_reporting.md#linux-releases)
+for the Linux build, packaging, writable-root and runtime requirements. The
+historical PowerShell three-platform packager remains a manual legacy path;
+the allow-listed Python packagers define current CI releases.
 The C test job only installs gcc-multilib. The Windows job installs the Win32
 MinGW flavor; the unused POSIX variant is no longer downloaded. Existing runner
 CMake/make tools are used when available. Dependency downloads use Ubuntu's
@@ -27,7 +33,7 @@ with bounded retries and step timeouts.
 
 Every main push still configures, links, stamps, packages and attests a new
 executable. No previous EXE, build directory, ROM or generated game data is
-restored. Three independent caches avoid repeated work:
+restored. The Windows path uses three independent caches:
 
 - Ubuntu `.deb` downloads for tests and the Windows toolchain. Every run gets
   fresh, signature-verified Ubuntu package indexes. Cached files must match the
@@ -54,6 +60,12 @@ appear in the Actions summary; build-inputs.json records verified dependency
 hashes, package-download reuse, compiler-cache version/mode and statistics.
 Caches are disposable accelerators and may expire or be evicted; a miss builds
 normally. Release assets retain their separate immutable publication/retention.
+
+Linux has a separate compiler-object cache keyed by its baseline Dockerfile and
+build script. It uses content-based compiler checks and a fixed container path;
+SDK/SDL/game sources and headers still determine object reuse. It does not
+restore release executables, SDK runtime artifacts or player data. The same
+clean-build dispatch disables compiler caching for Linux as well as Windows.
 
 For independent source compilation, select **clean_build** in Run workflow, or:
 

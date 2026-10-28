@@ -30,18 +30,34 @@ def header(output, dsn=""):
         output.write_text(content, encoding="utf-8")
 
 
-def build(work, output):
+def checkout_source(work):
     work.mkdir(parents=True, exist_ok=True)
     source, build_dir = work / "source", work / "build"
     if not source.exists():
         run("git", "clone", "--filter=blob:none", "--no-checkout",
             "https://github.com/getsentry/sentry-native.git", source)
-    run("git", "-C", source, "fetch", "--depth=1", "origin", CONFIG["sdk_commit"])
-    run("git", "-C", source, "checkout", "--detach", CONFIG["sdk_commit"])
-    if subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip() != CONFIG["sdk_commit"]:
+    git = ["git", "-c", "safe.directory=" + source.resolve().as_posix(), "-C", str(source)]
+    run(*git, "fetch", "--depth=1", "origin", CONFIG["sdk_commit"])
+    run(*git, "checkout", "--detach", CONFIG["sdk_commit"])
+    if subprocess.check_output([*git, "rev-parse", "HEAD"], text=True).strip() != CONFIG["sdk_commit"]:
         raise ValueError("Sentry source revision mismatch")
-    if subprocess.check_output(["git", "-C", str(source), "status", "--porcelain"], text=True).strip():
+    if subprocess.check_output([*git, "status", "--porcelain"], text=True).strip():
         raise ValueError("Refusing to build a modified Sentry SDK")
+    return source, build_dir
+
+
+def licenses(source, output):
+    license_text = (source / "LICENSE").read_text()
+    mpack = (source / "vendor/mpack.h").read_text().split("*/", 1)[0] + "*/\n"
+    jsmn = (source / "vendor/jsmn.h").read_text().split("*/", 1)[0] + "*/\n"
+    stb = (source / "vendor/stb_sprintf.h").read_text().split("ALTERNATIVE A - MIT License\n", 1)[1]
+    stb = stb.split("------------------------------------------------------------------------------", 1)[0]
+    (output / "Sentry-LICENSE.txt").write_text(license_text + "\nMPack\n" + mpack +
+        "\njsmn\n" + jsmn + "\nstb_sprintf (MIT)\n" + stb)
+
+
+def build(work, output):
+    source, build_dir = checkout_source(work)
     run("cmake", "-S", source, "-B", build_dir, "-G", "Visual Studio 17 2022", "-A", "Win32",
         "-DCMAKE_SYSTEM_VERSION=10.0", "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
         "-DSENTRY_BACKEND=native", "-DSENTRY_BUILD_SHARED_LIBS=ON",
@@ -50,13 +66,7 @@ def build(work, output):
     output.mkdir(parents=True, exist_ok=True)
     (output / "include").mkdir(exist_ok=True)
     shutil.copy2(source / "include/sentry.h", output / "include/sentry.h")
-    license_text = (source / "LICENSE").read_text()
-    mpack = (source / "vendor/mpack.h").read_text().split("*/", 1)[0] + "*/\n"
-    jsmn = (source / "vendor/jsmn.h").read_text().split("*/", 1)[0] + "*/\n"
-    stb = (source / "vendor/stb_sprintf.h").read_text().split("ALTERNATIVE A - MIT License\n", 1)[1]
-    stb = stb.split("------------------------------------------------------------------------------", 1)[0]
-    (output / "Sentry-LICENSE.txt").write_text(license_text + "\nMPack\n" + mpack +
-        "\njsmn\n" + jsmn + "\nstb_sprintf (MIT)\n" + stb)
+    licenses(source, output)
     for name in RUNTIME_FILES:
         shutil.copy2(build_dir / "RelWithDebInfo" / name, output / name)
     # Keep SDK PDBs for symbol upload, outside the player ZIP.

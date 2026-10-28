@@ -622,7 +622,13 @@ static void portInitRootDir(const char *argv0)
      * eeprom.bin/midas.ini across directories. So use /proc/self/exe, the Linux
      * equivalent of GetModuleFileNameA, and keep argv[0] only as the fallback
      * for other POSIX. */
-    ssize_t n = readlink("/proc/self/exe", sPortRootDir, sizeof(sPortRootDir) - 1);
+    const char *maybe_data_root = getenv("GE_DATA_ROOT");
+    ssize_t n;
+    if (maybe_data_root && maybe_data_root[0] == '/') {
+        n = snprintf(sPortRootDir, sizeof(sPortRootDir), "%s/IronSights", maybe_data_root);
+    } else {
+        n = readlink("/proc/self/exe", sPortRootDir, sizeof(sPortRootDir) - 1);
+    }
     if (n > 0 && (size_t) n < sizeof(sPortRootDir) - 1) {
         sPortRootDir[n] = '\0';
     } else if (argv0 == NULL ||
@@ -755,6 +761,10 @@ static void portDirectLaunchLog(void)
 }
 #endif
 
+#if defined(MIDAS_LINUX_CRASH)
+#include "port_crash.h"
+#endif
+
 int main(int argc, char **argv)
 {
     { /* before the first log line, so the tilde console's ring holds the
@@ -837,6 +847,10 @@ int main(int argc, char **argv)
         portAllocHighReserve();
     }
 
+#if defined(MIDAS_LINUX_CRASH)
+    portCrashInit();
+    if (portCrashTestMode(argc, argv)) return 0;
+#endif
 #ifdef _WIN32
     portCrashInit(portSehHandler);
     if (portCrashTestMode(argc, argv)) return 0;

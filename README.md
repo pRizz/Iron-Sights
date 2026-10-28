@@ -21,7 +21,7 @@ high-tick aiming, collision and controller fixes. See the inherited
 back to the calibrated scene projection for ADS; HUD Scale also scales our
 vector sights. Existing ADS, HUD and browser controls retain their defaults.
 
-## Download and play on Windows
+## Download and play
 
 **[DOWNLOAD HERE — latest Windows ZIP](https://github.com/pRizz/Iron-Sights/releases/latest/download/Iron-Sights-windows-x86.zip)** · [Release details and provenance](https://github.com/pRizz/Iron-Sights/releases/latest) · [Build status](https://github.com/pRizz/Iron-Sights/actions/workflows/windows-release.yml)
 
@@ -30,6 +30,8 @@ vector sights. Existing ADS, HUD and browser controls retain their defaults.
 3. Double-click **IronSights.exe**. On first launch, the game prepares weapon icons from your ROM and caches them locally. No Python, compiler, administrator access or asset downloads are required. You can skip preparation with Esc; the game uses weapon names if icons are unavailable.
 
 Windows 10/11, an x86-compatible CPU and an OpenGL 3.3-capable graphics driver are required. The 32-bit build also runs on 64-bit Windows. These are continuously published development builds from successful pushes to `main`.
+
+**Linux i686:** [portable tar.gz](https://github.com/pRizz/Iron-Sights/releases/latest/download/Iron-Sights-linux-i686.tar.gz) · [AppImage](https://github.com/pRizz/Iron-Sights/releases/latest/download/Iron-Sights-linux-i686.AppImage). Both require glibc 2.35+ and a 32-bit loader/OpenGL driver stack. Extract the tarball and run `./IronSights`, with your ROM in its `Data` folder. The AppImage uses `${XDG_DATA_HOME:-$HOME/.local/share}/iron-sights` for writable data and the ROM; mark it executable before launching. See the included `START-HERE.txt`. AppImage packages the same 32-bit game; no native x86_64 release is provided.
 
 For the embedded build time, commit and clickable source/build/release links, open **Options > Gameplay > Port Options > About / Build Info**; the watch has the same entry. Windows links are blue and underlined and open in your default browser. Local or modified builds are labeled accordingly. The release page supplies signed provenance, hashes and build-input details; see [verification and maintainer instructions](scripts/port/releases.md).
 
@@ -99,7 +101,7 @@ Files next to the executable:
 | `gamecontrolleruser.txt` | Your saved controller layouts. |
 | `Data/Logs/ge_direct.log` | The run log on Windows (the game opens no console window). |
 | `Data/Logs/crash.log` | Written if the game crashes. |
-| `Data/CrashReports` | Windows crash-report queue. Reporting defaults ON; opt out in Port Options or `[diagnostics] crash_reporting=0` in `midas.ini`. [Payload and privacy details](scripts/port/crash_reporting.md). |
+| `Data/CrashReports` | Windows/Linux crash-report queue under the writable data root. Reporting defaults ON; opt out in Port Options or `[diagnostics] crash_reporting=0` in `midas.ini`. [Payload and privacy details](scripts/port/crash_reporting.md). |
 | `Mods/` | Reserved for modded carts. This build loads the stock cart only. |
 
 An older `ge.ini` is renamed to `midas.ini` automatically on first run.

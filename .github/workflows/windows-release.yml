@@ -192,6 +192,66 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  linux:
+    needs: tests
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build pinned Linux baseline image
+        run: docker build -t midas-linux-release -f scripts/port/linux-release.Dockerfile .
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: inputs.clean_build != true
+        with:
+          path: ${{ runner.temp }}/midas-linux-ccache
+          key: linux-ccache-${{ hashFiles('scripts/port/linux-release.Dockerfile', 'scripts/port/linux_build.py') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: linux-ccache-${{ hashFiles('scripts/port/linux-release.Dockerfile', 'scripts/port/linux_build.py') }}-
+      - name: Compile optimized i686 game and pinned reporter without a ROM
+        env:
+          CLEAN_BUILD: ${{ inputs.clean_build == true }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/midas-linux-ccache"
+          export MIDAS_BUILD_TIME_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          export MIDAS_RELEASE_TAG="build-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA:0:12}"
+          docker run --rm -v "$PWD:/src" -v "$RUNNER_TEMP/midas-linux-ccache:/ccache" -e CCACHE_DIR=/ccache -e CCACHE_BASEDIR=/src -e CCACHE_COMPILERCHECK=content -e CCACHE_MAXSIZE=256M -e MIDAS_CLEAN_BUILD="$CLEAN_BUILD" -e GITHUB_ACTIONS -e GITHUB_SHA -e GITHUB_REF_NAME -e GITHUB_REPOSITORY -e GITHUB_RUN_ID -e MIDAS_BUILD_TIME_UTC -e MIDAS_RELEASE_TAG midas-linux-release python3 scripts/port/linux_build.py --work /src/build_linux_ci/deps --output /src/build_linux_ci
+          git diff --exit-code HEAD
+          python3 -c "import json; m=json.load(open('build_linux_ci/generated/build-info.json')); assert m['ci'] and not m['dirty']"
+      - name: Upload exact Linux debug information and source context
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          docker run --rm -v "$PWD:/src" -e SENTRY_AUTH_TOKEN midas-linux-release python3 scripts/port/sentry_tools.py upload --exe build_linux_ci/symbols/IronSights.debug --sdk build_linux_ci/symbols --work build_linux_ci/sentry-cli
+      - name: Package tarball and AppImage and test real crashes
+        run: |
+          docker run --rm -v "$PWD:/src" midas-linux-release python3 scripts/port/package_linux.py --build build_linux_ci --output build_linux_ci/dist
+          docker run --rm -v "$PWD:/src" midas-linux-release python3 scripts/port/test_sentry_linux.py --package build_linux_ci/dist/Iron-Sights-linux-i686.tar.gz --appimage build_linux_ci/dist/Iron-Sights-linux-i686.AppImage --output build_linux_ci/smoke
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: inputs.clean_build != true
+        with:
+          path: ${{ runner.temp }}/midas-linux-ccache
+          key: linux-ccache-${{ hashFiles('scripts/port/linux-release.Dockerfile', 'scripts/port/linux_build.py') }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: linux-player-package
+          path: |
+            build_linux_ci/dist/*.tar.gz
+            build_linux_ci/dist/*.AppImage
+            build_linux_ci/dist/SHA256SUMS-linux.txt
+            build_linux_ci/dist/linux-build-*.json
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: linux-smoke-diagnostics
+          path: build_linux_ci/smoke
+          if-no-files-found: ignore
+          retention-days: 7
+
   sentry-smoke:
     needs: windows
     runs-on: windows-2022
@@ -214,7 +274,7 @@ jobs:
           retention-days: 7
 
   publish:
-    needs: [windows, sentry-smoke]
+    needs: [windows, sentry-smoke, linux]
     runs-on: ubuntu-24.04
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     permissions:
@@ -226,13 +286,19 @@ jobs:
         with:
           name: windows-player-package
           path: dist
-      - name: Attest exact executable and player ZIP
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: linux-player-package
+          path: dist
+      - name: Attest native player packages
         id: attest
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-path: |
             dist/IronSights.exe
             dist/Iron-Sights-windows-x86.zip
+            dist/Iron-Sights-linux-i686.tar.gz
+            dist/Iron-Sights-linux-i686.AppImage
       - name: Preserve provenance and publish versioned release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -247,7 +313,11 @@ jobs:
           from pathlib import Path
           m=json.loads(Path('dist/build-info.json').read_text())
           assert m['commit']==os.environ['GITHUB_SHA'] and m['ci'] and not m['dirty']
+          linux=json.loads(Path('dist/linux-build-info.json').read_text())
+          assert linux['commit']==m['commit'] and linux['ci'] and not linux['dirty']
           text=f'''Download **Iron-Sights-windows-x86.zip**, extract the entire ZIP, put your own stock USA ROM in its Data folder, then run IronSights.exe.
+
+          Linux: download **Iron-Sights-linux-i686.tar.gz** or **Iron-Sights-linux-i686.AppImage**. Both require a 32-bit-capable x86 Linux with glibc 2.35+ and 32-bit OpenGL drivers. AppImage data lives in `~/.local/share/iron-sights` (or XDG_DATA_HOME); the tarball keeps data beside the executable. See START-HERE.txt.
 
           This is a continuously published development build. Weapon icons are prepared locally on first launch; no Python or asset downloads are required.
 
@@ -260,11 +330,11 @@ jobs:
 
           Preserve Data and midas.ini when updating. Suspend points require their original executable; campaign saves are separate.
 
-          Windows crash reporting is ON by default. Turn it off in Port Options > Crash Reporting or set `[diagnostics] crash_reporting=0` in midas.ini. Reports contain technical diagnostics; no minidumps, ROMs or saves are attached. See scripts/port/crash_reporting.md for payload and privacy details.
+          Windows and Linux crash reporting is ON by default. Turn it off in Port Options > Crash Reporting or set `[diagnostics] crash_reporting=0` in midas.ini. Reports contain technical diagnostics; no minidumps, ROMs or saves are attached. See scripts/port/crash_reporting.md for payload and privacy details.
           '''
           Path('notes.md').write_text(text)
           PY
-          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --title "Windows build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} (${GITHUB_SHA:0:9})" --notes-file notes.md dist/Iron-Sights-windows-x86.zip dist/SHA256SUMS.txt dist/build-info.json dist/build-inputs.json dist/build-provenance.sigstore.json
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --title "Native build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} (${GITHUB_SHA:0:9})" --notes-file notes.md dist/Iron-Sights-windows-x86.zip dist/SHA256SUMS.txt dist/build-info.json dist/build-inputs.json dist/build-provenance.sigstore.json dist/Iron-Sights-linux-i686.tar.gz dist/Iron-Sights-linux-i686.AppImage dist/SHA256SUMS-linux.txt dist/linux-build-info.json dist/linux-build-inputs.json
           gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --latest
-          echo "## Windows download" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Native downloads" >> "$GITHUB_STEP_SUMMARY"
           echo "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/$tag" >> "$GITHUB_STEP_SUMMARY"

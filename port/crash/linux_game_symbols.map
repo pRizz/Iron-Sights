@@ -1,0 +1,5 @@
+/* Keep the game's N64 libc/math replacements private. Shared graphics, audio
+ * and reporting libraries must resolve their own standard libc interfaces. */
+{
+    local: *;
+};
