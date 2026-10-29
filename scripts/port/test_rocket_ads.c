@@ -1,29 +1,44 @@
-/* Included by test_ads.c: the native sight openings must share the aim ray. */
+/* Included by test_ads.c: the near aiming pin needs clear background. */
+static coord3d rocketAdsViewPoint(coord3d p, coord3d pose, f32 pitch)
+{
+    return (coord3d){
+        -p.x*0.1f + pose.x,
+        (p.y*cosf(pitch) - p.z*sinf(pitch))*0.1f + pose.y,
+        -(p.y*sinf(pitch) + p.z*cosf(pitch))*0.1f + pose.z
+    };
+}
+
 static void testRocketAds(void)
 {
-    /* Arrange: measured native muzzle and the two textured sight openings.
+    /* Arrange: measured native muzzle and the two textured sight pins.
      * Model X/Z face away from the camera in the settled weapon basis. */
     const coord3d muzzle = {-3.076880f, 127.545708f, 436.002136f};
-    const coord3d sights[] = {{-3,200,25}, {-3,190,399}};
+    const coord3d nearPin = {-3,200,25}, farPin = {-3,190,399};
+    /* Native loaded rocket's upper shoulder: muzzle plus (0,62,152).
+     * Its upper silhouette previously overlapped the centered pins. */
+    const coord3d noseTop = {-3.076880f,189.545708f,588.002136f};
+    const coord3d rearRim = {-3,196,-532};
     const s32 rates[] = {30,60,120,240};
-    coord3d pose;
+    coord3d pose, pin, forwardPin, nose, rim;
     f32 pitch;
-    s32 i, rate, tick;
+    s32 rate, tick;
 
     /* Act: use the same pose and pitch supplied to the game renderer. */
     assert(portAdsWeaponPose(ITEM_ROCKETLAUNCH, &muzzle, &pose));
     pitch = portAdsWeaponPitch(ITEM_ROCKETLAUNCH);
 
-    /* Assert: both openings project onto the center, at positive eye distance.
-     * This catches relative sight/pitch drift as well as a misplaced assembly. */
-    for (i = 0; i < 2; i++) {
-        const f32 x = -sights[i].x * 0.1f + pose.x;
-        const f32 y = (sights[i].y*cosf(pitch) - sights[i].z*sinf(pitch))*0.1f + pose.y;
-        const f32 z = -(sights[i].y*sinf(pitch) + sights[i].z*cosf(pitch))*0.1f + pose.z;
-        assert(fabsf(x) < 0.001f && fabsf(y) < 0.002f && z < -50.0f);
-    }
-    /* The tube's rearmost authored vertex must not cross the eye plane. */
-    assert(pose.z + 53.2f < -5.0f);
+    /* Assert: near pin stays on the ray, with clear air above both the far
+     * pin and loaded nose; the rear tube also remains below it and ahead of us.
+     * Normalized clearance checks remain meaningful across aspect/FOV changes. */
+    pin = rocketAdsViewPoint(nearPin, pose, pitch);
+    forwardPin = rocketAdsViewPoint(farPin, pose, pitch);
+    nose = rocketAdsViewPoint(noseTop, pose, pitch);
+    rim = rocketAdsViewPoint(rearRim, pose, pitch);
+    assert(fabsf(pin.x) < 0.001f && fabsf(pin.y) < 0.002f && pin.z < -50.0f);
+    assert(forwardPin.z < -50.0f && nose.z < -50.0f);
+    assert(forwardPin.y / -forwardPin.z < -0.007f);
+    assert(nose.y / -nose.z < -0.006f);
+    assert(rim.y < -0.5f && rim.z < -5.0f);
 
     /* Arrange/act/assert: normal hold/toggle aim and the dedicated binding all
      * admit the launcher, while tank/dual/reload retain their existing gates. */
@@ -66,5 +81,5 @@ static void testRocketAds(void)
     }
     portStateResetInput();
     selectPlayer(0);
-    puts("Rocket ADS checks passed: native sight ray, eye clearance, aim modes, tank/dual/reload gates and four tick rates.");
+    puts("Rocket ADS checks passed: centered pin, nose/tube clearance, aim modes, tank/dual/reload gates and four tick rates.");
 }

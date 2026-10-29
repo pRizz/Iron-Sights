@@ -741,9 +741,9 @@ static const struct {
     { ITEM_GOLDWPPK,      1.0f, 33.5f, -0.025f },
     { ITEM_LASER,         6.7f, 36.0f, -0.045f },
     { ITEM_GRENADELAUNCH, 2.4f, 40.0f, -0.040f },
-    /* Native rear/front sight openings: (-3,200,25), (-3,190,399).
-     * Level their common sight line; keep the long rear tube ahead of the eye. */
-    { ITEM_ROCKETLAUNCH, 6.143f, 60.0f, -0.026732f },
+    /* Center the near sight's pin (-3,200,25), tilting the loaded muzzle
+     * below it so the aiming tip has open background rather than rocket body. */
+    { ITEM_ROCKETLAUNCH, 7.040f, 60.0f, -0.005f },
 };
 
 s32 portAdsWeaponPose(s32 item, const coord3d *muzzle, coord3d *pose)

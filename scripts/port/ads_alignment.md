@@ -93,13 +93,17 @@ workflow tests pass.
 ## Rocket launcher sights, 2026-10-28
 
 The rocket launcher now supports single-weapon ADS through the existing hold,
-toggle and dedicated ADS controls. Its native textured rear/front sight openings
-are centered near model coordinates `(-3,200,25)` and `(-3,190,399)`. Their
-10-unit height difference over a 374-unit sight radius calls for a
-`-0.026732` radian pitch. A `6.143` sight height puts that line on the screen
-center; the launcher alone uses X offset `-0.3` because its sights are off the
-model origin. A 60-unit eye distance keeps the long rear tube ahead of the eye.
-The front aiming tip is visible through the rear opening in wide and 4:3 views.
+toggle and dedicated ADS controls. Its textured near/far sight pins sit near
+model coordinates `(-3,200,25)` and `(-3,190,399)`. The initial `-0.026732`
+radian pitch and `6.143` sight height centered both pins, but the loaded rocket
+nose overlapped the aiming reference. The clearance refinement tilts the loaded
+muzzle down about 1.25 degrees to `-0.005` radians, pivoting around the near pin.
+The `7.040` sight height keeps that pin at screen center while the farther pin
+and rocket nose drop below it, leaving clear background around its tip.
+This intentionally supersedes the two-pin common ray: the near pin is the
+aiming reference. The launcher alone uses X offset `-0.3` because its sights
+are off the model origin. The 60-unit eye distance keeps the rear tube ahead
+of the eye, and its upper rim stays below the aiming pin.
 Original model vertices, textures, sight geometry and loaded rocket are retained.
 
 Trigger and support grips use the existing rigid hand/wardrobe renderer; no hand,
@@ -109,15 +113,21 @@ and native rocket launch speed, spread and inherited player velocity remain
 unchanged. As with other projectile weapons, the sights provide a direction
 reference rather than a guarantee of impact at every range.
 
-`test_rocket_ads.c`, included by `test_ads.sh`, projects both measured openings
-onto the center ray, checks rear-tube eye clearance, and exercises aim modes,
-tank/dual/reload gates and 30/60/120/240 Hz transitions. The capture driver now
+`test_rocket_ads.c`, included by `test_ads.sh`, projects the near pin onto the
+center ray, checks normalized farther-pin/loaded-nose clearance and rear-tube
+eye/height clearance, and exercises aim modes, tank/dual/reload gates and
+30/60/120/240 Hz transitions. The capture driver now
 includes item 25 in its 21-firearm matrix and enlarged sight details.
-Windows captures verify the launcher in wide/4:3 and FOV 110 at 120 Hz with
+Initial Windows captures verify the launcher in wide/4:3 and FOV 110 at 120 Hz with
 weapon FOV enabled (snow wardrobe), each with 11 transition frames. The complete
 wide audit captures 21 firearms and 231 transitions. Rocket/ADS and wardrobe
 regressions, Windows/optimized Wasm builds and Wasm logo-payload policy pass.
 Private logs/captures are indexed by `build_win/rocket-ads-*.log`.
+The pin-clearance refinement passes ADS/wardrobe regressions, native Windows and
+optimized Wasm builds. Native wide/4:3 and FOV 110/120 Hz with weapon FOV enabled
+in the snow wardrobe each capture 11 raise/lower frames. The near pin has clear
+background above the loaded nose in all three settled views. These captures are
+indexed by `build_win/rocket-clearance-*.log`.
 Both independent gallery processes reproduce all 72 views/35 icons with no image
 changes; the regenerated manifest/HTML updates their rendering-input fingerprint.
 Gallery integrity and all eight workflow tests pass.

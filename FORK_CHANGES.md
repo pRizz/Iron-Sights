@@ -661,23 +661,29 @@ Main sources: [knife implementation](port/src/port_knife_ads.c),
 [pose/validation guide](scripts/port/knife_ads.md), shared option/help tables,
 frontend/watch settings and [capture driver](scripts/port/audit_ads.ps1).
 
-The rocket launcher now joins the supported ADS weapons. Its native front aiming
-tip is centered through the rear sight opening using a measured -0.026732 radian
-pitch, 6.143 sight height, launcher-only -0.3 lateral offset and 60-unit eye
-distance. This keeps its long rear tube ahead of the eye and preserves original
-model/sight geometry, materials and the loaded rocket. It shares the existing
-hold/toggle/dedicated controls and smooth transitions; dual wield, tank controls,
+The rocket launcher now joins the supported ADS weapons. Its native near sight's
+aiming pin is centered using a -0.005 radian pitch, 7.040 sight height,
+launcher-only -0.3 lateral offset and 60-unit eye distance. This tilts the loaded
+muzzle down about 1.25 degrees from the initial -0.026732/6.143 pose, which
+centered both sight pins but let the rocket nose overlap the aiming reference.
+The near pin now has clear background above the farther sight and loaded nose.
+This supersedes the original two-pin alignment while keeping the long rear tube
+ahead of the eye and preserving original model/sight geometry, materials and
+the loaded rocket. It shares the existing hold/toggle/dedicated controls and
+smooth transitions; dual wield, tank controls,
 reload/switch gates and native projectile behavior are retained. The existing
 rigid grip renderer supplies trigger and tube-support hands (FORK-004).
-The focused [rocket regressions](scripts/port/test_rocket_ads.c) check both sight
-openings against the center ray, eye clearance, aim modes, exclusion gates and
-four tick rates. The [alignment guide](scripts/port/ads_alignment.md) records the
-measurements; the visual audit now includes all 21 firearms and launcher details.
-Rocket/ADS and wardrobe regressions pass, as do native Windows and optimized
-Wasm builds and Wasm logo-payload policy. Native visual review covers wide/4:3
-launcher sights and 11 raise/lower frames per run, plus FOV 110 at 120 Hz with
-weapon FOV enabled in the snow wardrobe. The full wide audit captures all 21
-firearms and 231 transition frames.
+The focused [rocket regressions](scripts/port/test_rocket_ads.c) check the near
+pin against the center ray, farther-pin/nose/rear-tube clearance, aim modes,
+exclusion gates and four tick rates. The
+[alignment guide](scripts/port/ads_alignment.md) records the measurements; the
+visual audit now includes all 21 firearms and launcher details. The initial
+full wide audit captures all 21 firearms and 231 transition frames.
+The pin-clearance refinement passes the ADS/wardrobe regressions and native
+Windows/optimized Wasm builds. Its wide and 4:3 native captures, plus FOV 110 at
+120 Hz with weapon FOV and snow wardrobe, each include 11 raise/lower frames.
+These views confirm that the centered near pin clears the loaded nose. Private
+evidence is indexed by `build_win/rocket-clearance-*.log`.
 Both independent gallery passes reproduce all 72 views and all 35 icons with
 zero changed image cells; the refreshed manifest/HTML records the new rendering
 inputs. Gallery integrity and all eight workflow tests pass.
