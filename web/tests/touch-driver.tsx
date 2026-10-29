@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js';
+import { createSignal, Show } from 'solid-js';
 import { render } from 'solid-js/web';
 import { TouchControls } from '../src/touch-controls';
 import { createTouchInput } from '../src/touch-input';
@@ -6,6 +6,7 @@ import { TouchLayoutSetting } from '../src/touch-layout-setting';
 import { FileSaveActions } from '../src/file-save-actions';
 import type { Engine } from '../src/engine';
 import type { Capture, Playback } from '../src/capture';
+import '../src/room.css';
 
 let live = true;
 let movement = [0, 0],
@@ -17,6 +18,7 @@ let exported = 0,
     imported = '';
 let picker!: HTMLInputElement;
 const [fileMenu, setFileMenu] = createSignal(false);
+const [message, setMessage] = createSignal(false);
 const canvas = document.createElement('canvas');
 canvas.addEventListener('mousemove', (event) => {
     cursor = [event.clientX, event.clientY];
@@ -72,6 +74,7 @@ Object.assign(globalThis, {
         },
         resume: () => setState({ kind: 'playing' }),
         pause: capture.pause,
+        message: setMessage,
         enabled: input.setEnabled,
         layout: input.setLayout,
     },
@@ -79,7 +82,13 @@ Object.assign(globalThis, {
 render(
     () => (
         <>
-            <div style="position:fixed;top:70px;left:12px;z-index:12;color:white">
+            <Show when={message()}>
+                <p class="experience-hint touch-message">Touch hint passthrough check</p>
+            </Show>
+            <div
+                data-fixture-settings
+                style="position:fixed;top:70px;left:12px;z-index:12;color:white"
+            >
                 <TouchLayoutSetting input={input} beforeChange={() => {}} />
             </div>
             <TouchControls

@@ -1,6 +1,9 @@
 // Capture is best effort on mobile: terminal events can target the document or
 // disappear during an OS gesture. Keep ownership independent of DOM bubbling.
-export function createTouchContacts(ended: (id: number, maybeEvent?: PointerEvent) => void) {
+export function createTouchContacts(
+    ended: (id: number, maybeEvent?: PointerEvent) => void,
+    maybeMoved?: (id: number, event: PointerEvent, target: HTMLElement) => void,
+) {
     const contacts = new Map<number, { target: HTMLElement; type: string }>();
     const end = (id: number, maybeEvent?: PointerEvent) => {
         const maybeContact = contacts.get(id);
@@ -36,6 +39,14 @@ export function createTouchContacts(ended: (id: number, maybeEvent?: PointerEven
             const finish = (event: PointerEvent) => end(event.pointerId, event);
             document.addEventListener('pointerup', finish, options);
             document.addEventListener('pointercancel', finish, options);
+            document.addEventListener(
+                'pointermove',
+                (event) => {
+                    const maybeContact = contacts.get(event.pointerId);
+                    if (maybeContact) maybeMoved?.(event.pointerId, event, maybeContact.target);
+                },
+                options,
+            );
             document.addEventListener(
                 'lostpointercapture',
                 (event) => {

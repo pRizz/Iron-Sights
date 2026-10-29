@@ -29,6 +29,15 @@
     touch-action: none;
     -webkit-touch-callout: none;
 }
+.touch-top,
+.touch-n64,
+.touch-actions,
+.touch-menu-actions,
+.touch-weapon,
+.touch-extra,
+.touch-dpad {
+    pointer-events: none;
+}
 .touch-menu-surface {
     position: absolute;
     inset: 0;
@@ -165,13 +174,13 @@
 }
 .touch-look {
     position: absolute;
-    inset: 65px 0 135px 40%;
+    inset: 0;
     z-index: 1;
 }
 .touch-look span {
     position: absolute;
-    top: 20%;
-    right: 20%;
+    top: calc(env(safe-area-inset-top, 0px) + 8px);
+    right: max(12px, env(safe-area-inset-right));
     color: #e7eadc65;
     font-size: 11px;
     pointer-events: none;
@@ -239,24 +248,22 @@
 .touch-menu-actions {
     grid-template-columns: repeat(2, 64px);
 }
-.touch-menu-hint {
+.touch-menu-hint,
+.touch-game-hint {
     position: absolute;
-    top: 70px;
-    left: 0;
-    right: 0;
+    top: calc(env(safe-area-inset-top, 0px) + 8px);
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
     text-align: center;
     font-size: 11px;
     color: #e4e8d1bb;
     text-shadow: 0 1px 3px #000;
     pointer-events: none;
 }
+.touch-game-hint {
+    right: calc(max(12px, env(safe-area-inset-right)) + 90px);
+}
 @media (orientation: portrait) {
-    .touch-look {
-        inset: 85px 0 155px 38%;
-    }
-    .touch-menu-hint {
-        top: 75px;
-    }
     .touch-actions {
         grid-template-columns: repeat(3, 48px);
     }

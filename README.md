@@ -42,14 +42,16 @@ To update, replace the supplied program files while keeping **Data** and **midas
 **[PLAY IN YOUR BROWSER](https://prizz.github.io/Iron-Sights/)** with your own stock US ROM. The desktop preview runs locally through WebAssembly and remembers your ROM, campaign saves, profiles and settings on this device. GoldenEye's four-save Files screen has **Import Save** and **Export Save** beside Copy, Erase, Options and Exit Game. Backups include all campaigns, profiles and settings; importing confirms replacement and restarts safely. The ROM stays separate. Chrome, Edge and Firefox have been tested; Safari is experimental.
 
 On phones and tablets, touch controls turn on automatically. Move with the left
-thumbstick and drag the right side to look. **Touch layout** defaults to **N64
+thumbstick and drag any free screen area to look. **Touch layout** defaults to **N64
 controller**, with blue A, green B and red Start in a vertical column (Start on
 top, A on the bottom), beside gray Z on the right.
 Hold/drag Z to shoot and turn; **Aim** toggles ADS, and the weapon icon switches
 weapons. Start opens the watch; A/B navigate menus. Choose **Modern actions** in
 settings for the previous Fire/Use/Reload controls and More tray. Touch controls
 sit farther inside the safe screen edges. The mobile overlay omits browser
-**Pause** and **Options**; use Start or Watch for the native pause menu. The
+Pause/Options buttons and leaves gaps between controls available for gestures.
+Hints near the top disappear after five seconds in missions or three in menus.
+Use Start or Watch for the native pause menu. The
 retained launcher has an
 **On-screen touch controls** switch and saves the chosen layout. Mobile viewport tests are automated;
 physical iPhone/iPad/Android performance and compatibility remain experimental.

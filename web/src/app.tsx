@@ -594,12 +594,14 @@ export function App() {
                         : 'Standard launcher'}
                 </button>
             </Show>
-            <Show when={hint() && !controls()}>
-                <p class="experience-hint" role="status">
+            <Show when={hint() && !controls() && (!touch.enabled() || !!action())}>
+                <p
+                    class="experience-hint"
+                    classList={{ 'touch-message': touch.enabled() }}
+                    role="status"
+                >
                     {action() ||
-                        (touch.enabled()
-                            ? 'Move with your left thumb · drag right to look · Start or Watch opens the pause menu'
-                            : 'Alt+Enter fullscreen · Enter / P watch · F2 controls · Escape may exit fullscreen')}
+                        'Alt+Enter fullscreen · Enter / P watch · F2 controls · Escape may exit fullscreen'}
                 </p>
             </Show>
         </div>

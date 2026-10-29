@@ -1328,6 +1328,37 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**Full gesture surface and temporary hints, 2026-10-28:** Reproduced dead input
+space outside the old look rectangle and within transparent button groups. The
+gameplay look surface now fills the viewport; group wrappers, instructional text
+and app status messages pass pointer input through to the gesture surface.
+Only actual buttons and the stick own control hit areas. Menu panning receives
+the same free space. Per-contact movement routes at document capture phase,
+remaining independent of the DOM target when native capture is unavailable.
+Release/cancel/focus cleanup and native input bindings remain unchanged.
+Top instructions move to eight pixels below the safe top; gameplay, look and
+stick hints hide after five seconds, menus/Files after three. Semantic context
+memoization prevents ordinary playing snapshots from restarting their timer.
+The actual-game audit caught that restart before the memoization fix. Generic
+mobile app instructions no longer duplicate the overlay; status/error messages
+retain their own lifecycle and never intercept gestures. Sources include
+`touch-controls.tsx`, `touch-menu.tsx`, `touch-contacts.ts`, `touch-hints.ts`,
+`touch.css`, App/room message styling and `touch-surface-audit.mjs`.
+Verification: the new sampled hit test fails on the previous build (113 dead
+sample points in its first wide gameplay case) and passes after the fix for both
+layouts in gameplay, menus and Files at phone/wide sizes. Chromium's real
+multi-contact stream keeps walking while repeated right drags start at the top,
+bottom and N64 grid gaps. Chromium/Windows WebKit also pass non-primary and
+uncaptured cross-button look/menu drags, input release/reset, top placement,
+three/five-second deadlines, timer cleanup and repeated playing snapshots.
+TypeScript, 161 unit tests, formatting and production assembly/allowlist pass.
+Chrome's real-ROM audit passes bottom-edge look while walking/firing, native
+A/Start navigation, Watch, real five-second hint dismissal, focus pause/Resume,
+audio and rotation. Evidence is `build_win/mobile-look-*.log` and
+`build/web-touch/mobile-look-*`. Native gallery freshness is unchanged.
+Next action: confirm the main/Pages publication on physical iPhone hardware;
+browser emulation does not establish physical Safari/OS interruption behavior.
+
 **Mobile overlay cleanup, 2026-10-28:** Removed the browser Pause and Options
 buttons from both touch layouts in gameplay and menus. Start/Watch remains the
 native pause control, and focus-loss pause/Resume retains its existing lifecycle.

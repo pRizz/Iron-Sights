@@ -223,4 +223,9 @@
     font-size: 12px;
     color: #e6dfc9;
     text-align: center;
+    pointer-events: none;
+}
+.experience-hint.touch-message {
+    top: calc(env(safe-area-inset-top, 0px) + 8px);
+    bottom: auto;
 }

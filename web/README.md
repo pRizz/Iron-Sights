@@ -44,7 +44,7 @@ Touch controls (WEB-011) auto-enable on coarse touchscreens and touch devices
 without Pointer Lock. The launcher checkbox saves an explicit override. The touch
 overlay omits browser Pause and Options; Start/Watch opens the native pause menu.
 Focus-loss pause/resume does not need mouse capture. Use the
-analog left thumbstick and drag right to look. **Touch layout** defaults to
+analog left thumbstick and drag any free screen area to look. **Touch layout** defaults to
 **N64 controller**: blue circular A, green circular B, red circular Start and a
 gray rectangular Z on the right send native controller buttons. Start, B and A
 share one vertical column on phones and tablets, with A at the bottom. Hold/drag Z to
@@ -64,7 +64,12 @@ On when unset, preserving saved choices. Mobile render resolution uses the full
 device pixel ratio within the existing 16:9 presentation. A one-time migration
 upgrades the previous 960×540 default; custom resolutions and explicit quality
 settings remain. Rotation fits the existing framebuffer without changing its
-resolution. Physical iPad performance and Safari acceptance remain device checks.
+resolution. Only real buttons and the stick claim touch areas; transparent
+control groups and helper/status text pass gestures through. Look and cursor
+movement follow their pointer IDs even if capture fails or a drag crosses a
+button. Instructions sit near the safe top and disappear after five seconds in
+gameplay or three seconds in menus/Files, including the right-side look hint.
+Physical iPad performance and Safari acceptance remain device checks.
 
 `bun run test:touch` builds a ROM-free Solid fixture and verifies actual
 multi-pointer capture/cancellation and layout at the native boundary. The Pages

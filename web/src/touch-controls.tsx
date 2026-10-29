@@ -13,6 +13,7 @@ import type { Capture } from './capture';
 import { stickVector, type TouchAction, type TouchInput } from './touch-input';
 import { createTouchContacts, suppressTouchGestures } from './touch-contacts';
 import { TouchMenu } from './touch-menu';
+import { createTouchHints } from './touch-hints';
 import './touch.css';
 
 type Props = {
@@ -44,16 +45,38 @@ export function TouchControls(props: Props) {
     let maybeFireLook: { id: number; x: number; y: number } | undefined;
     const active = () =>
         props.visible() && props.input.enabled() && props.capture.state().kind !== 'paused';
-    const contacts = createTouchContacts((id) => {
-        props.input.state.release(id);
-        if (maybeMove === id) {
-            maybeMove = undefined;
-            setStick({ x: 0, y: 0 });
-            props.input.move(0, 0);
-        }
-        if (maybeLook?.id === id) maybeLook = undefined;
-        if (maybeFireLook?.id === id) maybeFireLook = undefined;
-    });
+    const hints = createTouchHints(() =>
+        !active() ? 'inactive' : files() ? 'files' : menu() ? 'menu' : 'game',
+    );
+    const contacts = createTouchContacts(
+        (id) => {
+            props.input.state.release(id);
+            if (maybeMove === id) {
+                maybeMove = undefined;
+                setStick({ x: 0, y: 0 });
+                props.input.move(0, 0);
+            }
+            if (maybeLook?.id === id) maybeLook = undefined;
+            if (maybeFireLook?.id === id) maybeFireLook = undefined;
+        },
+        (id, event, target) => {
+            if (maybeMove === id) move(event, target);
+            const maybeDrag =
+                maybeLook?.id === id
+                    ? maybeLook
+                    : maybeFireLook?.id === id
+                      ? maybeFireLook
+                      : undefined;
+            if (!maybeDrag) return;
+            const scale = 120 / Math.min(innerWidth, innerHeight);
+            props.input.look(
+                (event.clientX - maybeDrag.x) * scale,
+                (event.clientY - maybeDrag.y) * scale,
+            );
+            maybeDrag.x = event.clientX;
+            maybeDrag.y = event.clientY;
+        },
+    );
     const clear = () => {
         contacts.clear();
         maybeMove = undefined;
@@ -149,22 +172,13 @@ export function TouchControls(props: Props) {
                 if (button.action === 'fire')
                     maybeFireLook = { id: event.pointerId, x: event.clientX, y: event.clientY };
             }}
-            onPointerMove={(event) => {
-                if (maybeFireLook?.id !== event.pointerId) return;
-                const scale = 120 / Math.min(innerWidth, innerHeight);
-                props.input.look(
-                    (event.clientX - maybeFireLook.x) * scale,
-                    (event.clientY - maybeFireLook.y) * scale,
-                );
-                maybeFireLook = { id: event.pointerId, x: event.clientX, y: event.clientY };
-            }}
         >
             {button.children ?? button.label}
         </button>
     );
-    const move = (event: PointerEvent) => {
+    const move = (event: PointerEvent, target: HTMLElement) => {
         if (maybeMove !== event.pointerId) return;
-        const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
+        const box = target.getBoundingClientRect();
         const vector = stickVector(
             event.clientX - box.x - box.width / 2,
             event.clientY - box.y - box.height / 2,
@@ -206,9 +220,6 @@ export function TouchControls(props: Props) {
                                     <Button action="back" label="Back" />
                                 </div>
                             </Show>
-                            <span class="touch-menu-hint">
-                                Drag to move cursor · Tap to select · Or use arrows
-                            </span>
                         </>
                     }
                 >
@@ -225,17 +236,10 @@ export function TouchControls(props: Props) {
                                     y: event.clientY,
                                 };
                         }}
-                        onPointerMove={(event) => {
-                            if (maybeLook?.id !== event.pointerId) return;
-                            const scale = 120 / Math.min(innerWidth, innerHeight);
-                            props.input.look(
-                                (event.clientX - maybeLook.x) * scale,
-                                (event.clientY - maybeLook.y) * scale,
-                            );
-                            maybeLook = { id: event.pointerId, x: event.clientX, y: event.clientY };
-                        }}
                     >
-                        <span>Drag to look</span>
+                        <Show when={hints()}>
+                            <span>Drag to look</span>
+                        </Show>
                     </div>
                     <div
                         class="touch-stick"
@@ -245,12 +249,13 @@ export function TouchControls(props: Props) {
                             begin(event);
                             if (maybeMove === undefined) {
                                 maybeMove = event.pointerId;
-                                move(event);
+                                move(event, event.currentTarget);
                             }
                         }}
-                        onPointerMove={move}
                     >
-                        <span>MOVE</span>
+                        <Show when={hints()}>
+                            <span>MOVE</span>
+                        </Show>
                         <i
                             style={{
                                 transform: `translate(${stick().x * 38}px, ${-stick().y * 38}px)`,
@@ -314,6 +319,13 @@ export function TouchControls(props: Props) {
                             Z
                         </Button>
                     </div>
+                </Show>
+                <Show when={hints()}>
+                    <span class={menu() ? 'touch-menu-hint' : 'touch-game-hint'}>
+                        {menu()
+                            ? 'Drag to move cursor · Tap to select · Or use arrows'
+                            : 'Move left · Start/Watch pauses'}
+                    </span>
                 </Show>
             </div>
         </Show>

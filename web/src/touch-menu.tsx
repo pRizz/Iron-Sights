@@ -15,16 +15,24 @@ export function TouchMenu(props: { canvas: () => HTMLCanvasElement; input: Touch
             }),
         );
     };
-    const contacts = createTouchContacts((id, maybeEvent) => {
-        if (maybePan?.id !== id) return;
-        const pan = maybePan;
-        maybePan = undefined;
-        if (!maybeEvent || maybeEvent.type !== 'pointerup') return;
-        position(maybeEvent);
-        if (pan.moved || menuTapMoved(maybeEvent.clientX, maybeEvent.clientY, pan.x, pan.y)) return;
-        props.input.state.press(id, 'accept');
-        props.input.state.release(id);
-    });
+    const contacts = createTouchContacts(
+        (id, maybeEvent) => {
+            if (maybePan?.id !== id) return;
+            const pan = maybePan;
+            maybePan = undefined;
+            if (!maybeEvent || maybeEvent.type !== 'pointerup') return;
+            position(maybeEvent);
+            if (pan.moved || menuTapMoved(maybeEvent.clientX, maybeEvent.clientY, pan.x, pan.y))
+                return;
+            props.input.state.press(id, 'accept');
+            props.input.state.release(id);
+        },
+        (id, event) => {
+            if (maybePan?.id !== id) return;
+            maybePan.moved ||= menuTapMoved(event.clientX, event.clientY, maybePan.x, maybePan.y);
+            position(event);
+        },
+    );
     onMount(() => {
         const detach = contacts.attach();
         const clear = () => contacts.clear();
@@ -59,16 +67,6 @@ export function TouchMenu(props: { canvas: () => HTMLCanvasElement; input: Touch
                     y: event.clientY,
                     moved: false,
                 };
-                position(event);
-            }}
-            onPointerMove={(event) => {
-                if (maybePan?.id !== event.pointerId) return;
-                maybePan.moved ||= menuTapMoved(
-                    event.clientX,
-                    event.clientY,
-                    maybePan.x,
-                    maybePan.y,
-                );
                 position(event);
             }}
             onContextMenu={(event) => event.preventDefault()}

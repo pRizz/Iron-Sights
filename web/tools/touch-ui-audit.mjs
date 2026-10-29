@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { expect } from '@playwright/test';
 import { launchAuditBrowser } from './browser-choice.mjs';
 import { auditN64Layout } from './touch-n64-audit.mjs';
+import { auditTouchSurface, auditTouchGestures, auditTouchHints } from './touch-surface-audit.mjs';
 
 const assets = new Map(
     await Promise.all(
@@ -35,10 +36,14 @@ try {
         hasTouch: true,
     });
     const page = await context.newPage();
+    await page.clock.install();
     const errors = [];
     page.on('pageerror', (error) => errors.push(String(error)));
     await page.goto(`http://127.0.0.1:${server.address().port}`);
     await expect(page.locator('.touch-controls')).toHaveAttribute('data-mode', 'game');
+    await auditTouchSurface(page);
+    await auditTouchGestures(page, context, kind);
+    await auditTouchHints(page);
     await auditN64Layout(page, output);
     const aim = page.locator('[data-touch-action=aim]');
     await aim.tap();
@@ -51,7 +56,7 @@ try {
     assert.equal(
         await page.evaluate(() => {
             // Gaps near buttons must hit the guarded overlay, never SDL's canvas.
-            return document.elementFromPoint(10, 100)?.classList.contains('touch-controls');
+            return !!document.elementFromPoint(10, 150)?.closest('.touch-look');
         }),
         true,
         'A gap in the controls bypassed the touch gesture guard',
@@ -296,7 +301,7 @@ try {
     await expect(importer).toHaveCount(0);
     assert.deepEqual(errors, []);
     console.log(
-        'Touch UI: repeated fire/zoom prevention, menu tap vs drag, orphaned stick recovery, independent move/look/fire, cancellation, focus reset, layouts, disable and direct save-picker gesture passed',
+        'Touch UI: free-surface hit coverage, uncaptured/non-primary gestures, hint deadlines, repeated fire/zoom prevention, menu tap vs drag, orphaned stick recovery, independent move/look/fire, cancellation, focus reset, layouts, disable and direct save-picker gesture passed',
     );
 } finally {
     await browser.close();

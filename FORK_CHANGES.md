@@ -219,6 +219,22 @@ left/right/bottom. These replace the earlier extra 10-pixel right/bottom rule
 and also inset the stick, weapon button and menu arrows. On 320-pixel phones,
 a 96-pixel stick, tighter N64 column gap and higher menu arrows keep targets
 separate. The Modern Watch button is inset at the upper left.
+The gesture background now fills the viewport in gameplay and menus. Transparent
+button-group containers and helper/status text pass touches through; only the
+actual buttons and movement stick claim their visible control areas. This
+supersedes the restricted right-side look rectangle, which excluded the top and
+bottom and left dead space between controls. Owned movement is routed by pointer
+ID at document capture phase, so walking, look/fire dragging and menu panning
+remain independent when native pointer capture fails or the finger crosses a
+button. Existing release, cancellation and focus-reset rules remain.
+
+Instruction text sits eight CSS pixels below the top safe area and dismisses
+after five seconds of gameplay or three seconds in menus/Files. The right-side
+look hint and stick instruction share the gameplay deadline. Timers follow
+semantic context changes, preserving their deadline across ordinary playing
+state updates; pause/resume and mode changes reset them. Generic mobile startup
+instructions use this overlay instead of a duplicate app banner. Status/error
+messages retain their message lifecycle but also pass input through.
 Touch regressions exercise both ends of the enlarged Z hit target.
 The controller background rule also wins over generic button-hover styling,
 so hovering or holding a button keeps its translucent controller color.
@@ -286,6 +302,7 @@ controls. The module is selected only by the CMake web video target.
 [layout setting](web/src/touch-layout-setting.tsx),
 [launcher settings](web/src/app.tsx), [player guide](README.md), [web guide](web/README.md),
 [contact lifecycle](web/src/touch-contacts.ts), [menu gestures](web/src/touch-menu.tsx),
+[hint lifecycle](web/src/touch-hints.ts),
 [menu tap tests](web/src/touch-menu.test.ts),
 [overlay](web/src/touch-controls.tsx), [layout](web/src/touch.css),
 [viewport fitting](web/src/touch-viewport.ts),
@@ -299,6 +316,7 @@ controls. The module is selected only by the CMake web video target.
 [fixture build](web/tools/build-touch-test.ts),
 [UI audit](web/tools/touch-ui-audit.mjs),
 [N64 layout audit](web/tools/touch-n64-audit.mjs),
+[gesture-surface audit](web/tools/touch-surface-audit.mjs),
 [private game audit](web/tools/touch-game-audit.mjs),
 [Linux game runner](web/tools/linux-game-audit.sh),
 [Pages checks](.github/workflows/web-pages.yml),
@@ -306,6 +324,19 @@ controls. The module is selected only by the CMake web video target.
 [input hook](port/src/libultra_shim.c), [movement hook](src/game/bondview2.c),
 [accepted extension](scripts/port/web_target_plan.md),
 [milestone](scripts/port/web_target_progress.md).
+**Gesture/hint refinement validation:** The new free-space grid check fails on
+the previous layout with 113 dead sample points in its first wide gameplay
+case and passes after the fix. Chromium/Windows WebKit fixtures cover both
+layouts in gameplay/menu/Files, non-primary and uncaptured cross-button drags,
+release/reset, top hint placement, three/five-second deadlines and playing-state
+updates that must not restart them. Chromium's native multi-contact stream
+keeps walking through repeated right-thumb drags at the top/bottom and N64 grid
+gaps. Chrome real-ROM acceptance verifies bottom-edge look while walking/firing,
+A/Start menus, Watch, actual five-second hint dismissal, focus resume, audio and
+rotation. TypeScript, 161 unit tests, formatting, site assembly/allowlist and
+native gallery freshness pass. Evidence is `build_win/mobile-look-*.log` and
+`build/web-touch/mobile-look-*`; physical iPhone Safari remains a device check.
+
 **Overlay cleanup validation:** TypeScript, 161 browser unit tests, formatting,
 production assembly/allowlist and Chromium/Windows WebKit touch fixtures pass.
 The fixtures check hidden Pause/Options, vertical Start/B/A, shared insets and

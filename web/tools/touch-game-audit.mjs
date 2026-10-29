@@ -177,10 +177,10 @@ try {
         const sx = stick.x + stick.width / 2,
             sy = stick.y + stick.height / 2;
         await update(1, sx, sy - stick.height * 0.35, true);
-        await update(2, look.x + 80, look.y + 40, true);
+        await update(2, look.x + look.width * 0.55, look.y + look.height - 12, true);
         await update(3, fire.x + 24, fire.y + 24, true);
         await page.waitForTimeout(1200);
-        await update(2, look.x + 160, look.y + 40, true);
+        await update(2, look.x + look.width * 0.55 + 80, look.y + look.height - 12, true);
         await page.waitForTimeout(250);
         await update(3, 0, 0, false);
         await update(2, 0, 0, false);
@@ -214,6 +214,10 @@ try {
     await expect(page.locator('.touch-controls')).toHaveAttribute('data-mode', 'game', {
         timeout: 10000,
     });
+    await expect(page.locator('.touch-game-hint')).toBeVisible();
+    await page.waitForTimeout(5200);
+    await expect(page.locator('.touch-game-hint')).toHaveCount(0);
+    await expect(page.locator('.touch-look span')).toHaveCount(0);
     await expect(
         page.locator('.touch-controls').getByRole('button', { name: /^(Pause|Options)$/ }),
     ).toHaveCount(0);

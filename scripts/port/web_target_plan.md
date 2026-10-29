@@ -67,6 +67,10 @@ iOS input path.
 The 2026-10-28 mobile refinement removes browser Pause/Options from both touch
 layouts; Start/Watch remains the native pause control. It also increases safe-area
 insets and aligns Start, B and A vertically, with A at the bottom, on all sizes.
+The accepted gesture refinement makes all unoccupied viewport space available
+for look/menu panning, with blocking limited to actual buttons and the stick.
+Instruction hints move near the top and dismiss after five seconds of gameplay
+or three seconds in menus; hint text must never intercept input.
 
 ## Build and runtime design
 
