@@ -1,4 +1,4 @@
-# Capture mission/difficulty cheat hints with RAM-only save fixtures in an isolated directory.
+# Capture mission/difficulty hints and best times with isolated RAM-only saves.
 param(
     [ValidateSet('Missions','Difficulty')][string]$Menu = 'Difficulty',
     [ValidateRange(0,19)][int]$Mission = 0,
@@ -6,9 +6,11 @@ param(
     [switch]$Earned,
     [switch]$UnlockAll,
     [switch]$LockedDifficulty,
-    [string]$Resolution = '960x540'
+    [string]$Resolution = '960x540',
+    [ValidateRange(1,1023)][int[]]$BestTimes = @(1023,1023,1023)
 )
 $ErrorActionPreference='Stop'
+if ($BestTimes.Count -ne 3) { throw 'BestTimes needs Agent, Secret Agent and 00 Agent seconds; 1023 means no measured record.' }
 $repoDir=(Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $dir=Join-Path $repoDir ('build_win/mission-cheat-audit-'+(Get-Date -Format 'yyyyMMdd-HHmmss-fff')+'-'+[Guid]::NewGuid().ToString('N').Substring(0,8))
 $auditExe=[IO.Path]::GetFullPath((Join-Path $dir 'IronSights.exe'))
@@ -23,7 +25,7 @@ $cursor=if ($Menu -eq 'Missions') { "$($xs[$Mission%5]),$($ys[[int][Math]::Floor
 $auditEnv=@{
     GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$Resolution; GE_NOINPUT='1';
     GE_MENU=$(if ($Menu -eq 'Missions') {'imissions'} else {'jdifficulty'}); GE_CURSOR=$cursor;
-    GE_MISSION_CHEAT_AUDIT="$Mission,$([int][bool]$Earned),$([int](!$LockedDifficulty))";
+    GE_MISSION_CHEAT_AUDIT="$Mission,$([int][bool]$Earned),$([int](!$LockedDifficulty)),$($BestTimes -join ',')";
     GE_SHOT='500'; GE_FRAMES='650'
 }
 $saved=@{}

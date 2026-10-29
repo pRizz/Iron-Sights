@@ -30,6 +30,51 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-032 — Best-time column on mission difficulty pages
+
+**Status:** Implemented.
+
+The selected mission's difficulty page now shows an always-visible **Best Time**
+column beside the inherited Agent, Secret Agent, 00 Agent and optional 007 rows.
+A narrow dark panel, dark native-font heading, muted gold rule and right-aligned times
+fit beside the existing completion checkmarks and cheat-target badges. Only
+available difficulty rows appear. This adds a fork presentation of the upstream
+campaign's packed time records; the upstream briefing already displayed a best
+time after choosing a difficulty, but the difficulty list had no record column.
+
+Measured records use `MM:SS` from the selected campaign and mission. Unplayed
+records, absent saves and the inherited 1023-second completion/overflow sentinel
+show a muted `--:--`. Custom 007 also shows `--:--` because the inherited save
+does not store a measured 007 time. Unlock All never supplies a synthetic record.
+The column needs no setting and does not write saves or change selection areas.
+The shared native/browser port uses one focused drawing hook in `front.c`;
+the original N64 path is unchanged.
+
+**Sources:** [record lookup and column](port/src/port_mission_times.c),
+[API](port/include/port_mission_times.h), [menu hook](src/game/front.c),
+[inherited packed save codec](src/game/file2.c),
+[release regression gate](.github/workflows/windows-release.yml).
+**Checks:** [ROM-free regressions](scripts/port/test_mission_times.sh) pass with
+runtime and compile-time Unlock All, exercising the actual save codec for all
+20 missions and three standard difficulties, campaign isolation, missing saves,
+zero/sentinel records, 007, invalid inputs and bounded buffers. Existing mission
+cheat regressions also pass in both variants. The isolated
+[menu audit](scripts/port/audit_mission_cheats.ps1) accepts three `-BestTimes`
+values in Agent/Secret Agent/00 Agent order, with 1023 meaning no measured record.
+Its optional fixture fields extend `GE_MISSION_CHEAT_AUDIT` in RAM only and keep
+the existing three-field fixture compatible. Captures/logs remain ignored and
+copied audit executables are removed after exit.
+
+Windows compilation, the existing HUD regressions and release-workflow
+`actionlint` validation pass. Four final isolated Windows captures at 960x540
+and 800x600 verify measured records through 17:02, minute-boundary formatting,
+mixed and entirely absent records, 007, Unlock All, cheat-badge/checkmark spacing,
+and an Aztec page with only Agent unlocked. The heading uses dark native text
+against the dossier paper; recorded times use light text inside the dark panel.
+Both independent gallery passes verified all 72 views and 35 icons with zero
+changed image cells; only source-fingerprint metadata was refreshed. All eight
+gallery workflow tests and the standards checks pass.
+
 ### FORK-031 — Linux i686 portable releases and AppImage
 
 **Status:** Implemented.

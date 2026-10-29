@@ -4,6 +4,7 @@
 #include "port_hud.h"
 #include "port_crosshair.h"
 #include "port_mission_cheats.h"
+#include "port_mission_times.h"
 #include "port_startup.h"
 #endif
 #include <assets/oddtextures.h>
@@ -9549,6 +9550,7 @@ Gfx *constructor_menu08_difficulty(Gfx *DL)
     }
 
 #ifndef TARGET_N64
+    DL = portMissionBestTimesDraw(DL, mission_folder_setup_entries[briefingpage].mission_num, selected_folder_num, unlockedDifficulty);
     DL = portFrontMissionCheatSummary(DL, mission_folder_setup_entries[briefingpage].mission_num);
 #endif
     DL = frontDrawCursor(DL);
@@ -19098,7 +19100,8 @@ static void portMenuHarnessTick(void)
     if (target == MENU_MISSION_SELECT || target == MENU_DIFFICULTY) {
         const char *audit = getenv("GE_MISSION_CHEAT_AUDIT");
         s32 mission = 0, earned = 0, complete = 0;
-        if (audit && sscanf(audit, "%d,%d,%d", &mission, &earned, &complete) == 3 && mission >= 0 && mission < 20) {
+        s32 best[3] = {0x3ff, 0x3ff, 0x3ff};
+        if (audit && sscanf(audit, "%d,%d,%d,%d,%d,%d", &mission, &earned, &complete, &best[0], &best[1], &best[2]) >= 3 && mission >= 0 && mission < 20) {
             /* Isolated screenshot fixtures only: replace RAM, never write the
              * campaign file or pretend Unlock All earned these cheats. */
             save_data fixture = {0};
@@ -19109,6 +19112,8 @@ static void portMenuHarnessTick(void)
             fixture.flag_007 = complete ? 1 : 0;
             if (complete) for (i = 0; i < sizeof(fixture.times); i++) fixture.times[i] = 0xff;
             else for (i = 0; i < mission; i++) fileSetDifficultyStageTime(&fixture, i, DIFFICULTY_AGENT, 600);
+            for (i = 0; i < 3; i++) if (best[i] > 0 && best[i] < 0x3ff)
+                fileSetDifficultyStageTime(&fixture, mission, i, best[i]);
             if (earned) fileSetSaveCheatUnlocked(&fixture, mission);
             saves[SAVESLOT1] = fixture;
         }

@@ -59,6 +59,7 @@ jobs:
           bash scripts/port/test_hud.sh
           bash scripts/port/test_wardrobe.sh
           bash scripts/port/test_mission_cheats.sh
+          bash scripts/port/test_mission_times.sh
           bash scripts/port/test_states.sh
           python3 scripts/port/test_distribution.py
           python3 scripts/port/test_sentry_tools.py
