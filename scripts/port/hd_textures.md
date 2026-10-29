@@ -67,6 +67,8 @@ or visually similar textures are not deleted. Decode validates bounds, filters,
 length and checksum with Mark Adler's bounded puff decoder. No runtime PNG DLL
 or extraction directory is needed. CPU decoding holds one replacement at a time;
 HD GPU cache retention has a byte budget in addition to the inherited count cap.
+The native loader and codec compile in a separate CMake object target with only
+their public port headers, keeping N64 SDK header names out of hosted C++ includes.
 
 ## Attribution
 

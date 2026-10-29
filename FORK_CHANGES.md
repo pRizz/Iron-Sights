@@ -30,7 +30,7 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
-### FORK-032 — Native Dam HD texture-pack prototype
+### FORK-033 — Native Dam HD texture-pack prototype
 
 **Status:** Native Windows/OpenGL prototype; Original remains the default.
 
@@ -72,6 +72,8 @@ with Mark Adler's license retained and packaged. The pinned source archive SHA25
 is recorded in the preparer and guide. Downloaded/prepared art and raw captures
 stay out of Git. Windows release CI prepares and explicitly packages the Dam
 subset, its analysis/provenance and notices; web artifacts contain none of it.
+The loader/codec use an isolated CMake object target so hosted Linux standard
+headers cannot accidentally include the N64 SDK's `sched.h` or `limits.h`.
 
 Current preparation selects 100 source keys and adds 15 native aliases. Two exact
 decoded-image duplicates share payloads, leaving 98 unique images. Source PNG
@@ -114,6 +116,8 @@ changed image cells; all nine gallery workflow tests pass. Web video compilation
 and the Wasm asset exclusion audit pass with HD loading/UI excluded. Native
 release-workflow lint, scoped Markdown checks and the actual local package's
 23 input checksums pass; no ROM, campaign or profile data is bundled.
+Complete isolated Windows and Linux GCC 11 builds pass after correcting the
+hosted-header collision detected by Linux CI; all 115 payloads also pass there.
 Private evidence is `build_win/hd-research` and isolated `build_win/hd-audit-*`.
 This is prototype coverage, not evidence that every Dam camera/palette variant
 or a complete 4K pack has been accepted. Main player builds remain separate from

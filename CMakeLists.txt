@@ -413,8 +413,13 @@ if(GE_VIDEO)
         port/fast3d/glad/glad.c
     )
     if(NOT EMSCRIPTEN AND NOT GE_XBOX)
-        list(APPEND FAST3D_SRC port/fast3d/hd_textures.cpp
+        # Hosted C++ headers must not resolve sched.h/limits.h to the N64 SDK.
+        # Keep this standard-library-only loader outside the game's include paths.
+        add_library(ge_hd_textures OBJECT port/fast3d/hd_textures.cpp
             port/fast3d/hd_texture_format.cpp port/fast3d/third_party/puff/puff.c)
+        set_target_properties(ge_hd_textures PROPERTIES
+            INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/port/include")
+        list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_hd_textures>)
     endif()
     add_compile_definitions(GE_VIDEO=1)
 else()
