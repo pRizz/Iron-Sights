@@ -64,6 +64,9 @@ The accepted convenience refinement adds a gun-icon weapon-cycle button to the
 main gameplay overlay while retaining Weapon + and Weapon − in More. Reuse the
 existing forward-cycle action on all touch devices rather than adding a separate
 iOS input path.
+The 2026-10-28 mobile refinement removes browser Pause/Options from both touch
+layouts; Start/Watch remains the native pause control. It also increases safe-area
+insets and aligns Start, B and A vertically, with A at the bottom, on all sizes.
 
 ## Build and runtime design
 

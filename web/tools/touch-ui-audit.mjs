@@ -233,6 +233,8 @@ try {
     for (const size of [
         { width: 320, height: 568 },
         { width: 390, height: 844 },
+        { width: 844, height: 390 },
+        { width: 568, height: 280 },
         { width: 1024, height: 768 },
     ]) {
         await page.setViewportSize(size);
@@ -244,12 +246,16 @@ try {
         ]) {
             const box = await page.locator(selector).boundingBox();
             assert.ok(
-                box.x >= 0 &&
+                box.x >= 27 &&
                     box.y >= 0 &&
-                    box.x + box.width <= size.width + 1 &&
-                    box.y + box.height <= size.height + 1,
+                    box.x + box.width <= size.width - 35 &&
+                    box.y + box.height <= size.height - 39,
+                'Modern controls need the larger shared edge insets',
             );
         }
+        const stick = await page.locator('.touch-stick').boundingBox();
+        const actions = await page.locator('.touch-actions').boundingBox();
+        assert.ok(stick.x + stick.width <= actions.x, 'Stick overlaps Modern buttons');
         await page.getByRole('button', { name: 'More', exact: true }).tap();
         await expect(page.getByRole('button', { name: 'Weapon +', exact: true })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Weapon −', exact: true })).toBeVisible();
@@ -266,13 +272,11 @@ try {
     }
     await page.getByRole('button', { name: 'More', exact: true }).tap();
     await expect(page.locator('[data-touch-action=previousWeapon]')).toBeVisible();
-    await page.getByRole('button', { name: 'Pause', exact: true }).tap();
+    await expect(page.getByRole('button', { name: /^(Pause|Options)$/ })).toHaveCount(0);
+    await page.evaluate(() => touchFixture.pause());
     await expect(page.locator('.touch-controls')).toHaveCount(0);
     await page.evaluate(() => touchFixture.resume());
     await expect(page.locator('.touch-controls')).toBeVisible();
-    await page.getByRole('button', { name: 'Options', exact: true }).tap();
-    await expect(page.locator('.touch-controls')).toHaveCount(0);
-    await page.evaluate(() => touchFixture.resume());
     await page.evaluate(() => touchFixture.enabled(false));
     await expect(page.locator('.touch-controls')).toHaveCount(0);
     assert.deepEqual((await snapshot()).held, []);

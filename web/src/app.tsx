@@ -402,7 +402,6 @@ export function App() {
                             capture={capture}
                             touch={touch}
                             touchVisible={() => entered() && !controls()}
-                            openControls={openControls}
                             presenting={() => entered() || controls()}
                             resume={resumeGame}
                             started={started}
@@ -599,7 +598,7 @@ export function App() {
                 <p class="experience-hint" role="status">
                     {action() ||
                         (touch.enabled()
-                            ? 'Move with your left thumb · drag right to look · Watch and Options are on screen'
+                            ? 'Move with your left thumb · drag right to look · Start or Watch opens the pause menu'
                             : 'Alt+Enter fullscreen · Enter / P watch · F2 controls · Escape may exit fullscreen')}
                 </p>
             </Show>

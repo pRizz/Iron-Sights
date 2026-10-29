@@ -201,17 +201,24 @@ B, circular red Start and gray rectangular Z. Their colored fills use 50% alpha
 beneath the existing highlight/shadow treatment so the game remains visible
 through them, while white labels retain full opacity. This replaces the original
 opaque fills, preserving controller colors and shapes. Z is now a much larger
-upright rectangle at the right edge: 80 CSS pixels wide and 160–240 high on wider
-viewports, or 72 wide beside a vertical A/B/Start/Aim column on narrow phones.
+upright rectangle at the right edge: 80 CSS pixels wide and 184 high on wider
+viewports, or 72 wide and 240 high on narrow phones. Start, B and A share a
+vertical centerline at every size, with Start on top and A at the bottom. Aim
+sits beside Start on wider layouts and above it on narrow phones.
 This replaces the former 104×48 horizontal Z; the stick, safe areas and remaining
 button hit targets stay separate. Existing press/release and drag-to-fire/look
 behavior is retained. On the Files screen the N64 cluster and Modern Select/Back
 buttons are hidden, superseding the earlier upper docking that made the N64
-buttons jump. Direct cursor/tap navigation, directional controls, Pause/Options
-and Import/Export remain available. Entering/leaving Files clears held actions
-and latched Aim. Right-side buttons and the More tray have 10 additional CSS
-pixels of right/bottom spacing beyond their previous safe-area-aware offsets;
-320-pixel layouts tighten the N64 column gap to retain separate thumbstick space.
+buttons jump. Direct cursor/tap navigation, directional controls and Import/Export
+remain available. Entering/leaving Files clears held actions and latched Aim.
+The touch overlay never renders browser Pause or Options in either layout or
+menu mode; Start/Watch opens the native pause menu, while browser focus-loss
+pause and Resume remain. This supersedes the original top Pause/Options pair.
+Shared safe-area-aware insets now leave at least 28/36/40 CSS pixels on the
+left/right/bottom. These replace the earlier extra 10-pixel right/bottom rule
+and also inset the stick, weapon button and menu arrows. On 320-pixel phones,
+a 96-pixel stick, tighter N64 column gap and higher menu arrows keep targets
+separate. The Modern Watch button is inset at the upper left.
 Touch regressions exercise both ends of the enlarged Z hit target.
 The controller background rule also wins over generic button-hover styling,
 so hovering or holding a button keeps its translucent controller color.
@@ -219,7 +226,7 @@ These use existing raw native A/B/Start/Z button bits in gameplay and menus,
 respecting the game's controller mapping. Aim remains a toggle during gameplay;
 the left analog movement stick, right-side drag-to-look and gun-icon **Switch
 weapon** convenience remain.
-Dragging Z turns while firing. Browser Pause/Options remain accessible at the top.
+Dragging Z turns while firing.
 **Modern actions** restores the previous Fire/Aim/Use/Reload/Crouch/Watch layout,
 Select/Back menu buttons and More tray with weapon/gadget cycling, zoom,
 detonation and sprint. Below 361 CSS pixels that tray uses three columns.
@@ -299,7 +306,18 @@ controls. The module is selected only by the CMake web video target.
 [input hook](port/src/libultra_shim.c), [movement hook](src/game/bondview2.c),
 [accepted extension](scripts/port/web_target_plan.md),
 [milestone](scripts/port/web_target_progress.md).
-**Validation:** Edge and WebKit fixtures pass the 2026-10-28 Files hiding,
+**Overlay cleanup validation:** TypeScript, 161 browser unit tests, formatting,
+production assembly/allowlist and Chromium/Windows WebKit touch fixtures pass.
+The fixtures check hidden Pause/Options, vertical Start/B/A, shared insets and
+separate targets across 320/390/568/844/1024 widths, including short landscape.
+Chrome's assembled real-ROM check passes Files cursor/taps, native A/Start
+navigation to Dam, movement/look/fire, Start watch, focus pause/Resume, audio and
+portrait/tablet rotation. The audit now uses Start to launch from mission briefing
+directly rather than relying only on repeated A presses. Native gallery freshness
+remains verified; no native rendering inputs changed. Private evidence is under
+`build/web-touch/mobile-layout-*` and `build_win/mobile-controls-*.log`.
+
+**Earlier mobile-defaults validation:** Edge and WebKit fixtures pass the 2026-10-28 Files hiding,
 state release, restored controls
 and additional margins. The mobile refinement passes 161 browser unit tests,
 Windows/optimized Wasm builds, production packaging, desktop launcher storage

@@ -7,6 +7,7 @@ export async function auditN64Layout(page, output) {
     const overlay = page.locator('.touch-controls');
     await expect(setting).toHaveValue('n64');
     await expect(overlay).toHaveAttribute('data-layout', 'n64');
+    await expect(overlay.getByRole('button', { name: /^(Pause|Options)$/ })).toHaveCount(0);
     const buttons = [
         ['a', 'accept', 5],
         ['b', 'back', 6],
@@ -57,17 +58,34 @@ export async function auditN64Layout(page, output) {
         { width: 320, height: 568 },
         { width: 390, height: 844 },
         { width: 844, height: 390 },
+        { width: 568, height: 280 },
         { width: 1024, height: 768 },
     ]) {
         await page.setViewportSize(size);
         const stick = await page.locator('.touch-stick').boundingBox();
         const cluster = await page.locator('.touch-n64').boundingBox();
         assert.ok(stick.x + stick.width <= cluster.x, 'Stick overlaps N64 buttons');
-        assert.ok(size.width - cluster.x - cluster.width >= 21, 'Missing extra right margin');
-        assert.ok(size.height - cluster.y - cluster.height >= 29, 'Missing extra bottom margin');
+        assert.ok(stick.x >= 27, 'Missing extra left margin');
+        assert.ok(size.width - cluster.x - cluster.width >= 35, 'Missing extra right margin');
+        assert.ok(size.height - cluster.y - cluster.height >= 39, 'Missing extra bottom margin');
+        assert.ok(size.height - stick.y - stick.height >= 39, 'Stick needs the same bottom inset');
+        const [start, b, a] = await Promise.all(
+            ['start', 'b', 'a'].map((name) =>
+                page.locator(`[data-controller-button=${name}]`).boundingBox(),
+            ),
+        );
+        assert.ok(
+            start.y + start.height <= b.y && b.y + b.height <= a.y,
+            'Start, B, A must be ordered top to bottom',
+        );
+        assert.ok(
+            Math.abs(start.x + start.width / 2 - a.x - a.width / 2) < 1 &&
+                Math.abs(b.x + b.width / 2 - a.x - a.width / 2) < 1,
+            'Start, B, A must share one vertical centerline',
+        );
         for (const [name] of buttons) {
             const box = await page.locator(`[data-controller-button=${name}]`).boundingBox();
-            assert.ok(box.x >= size.width / 2 && box.y >= 0);
+            assert.ok(box.x >= stick.x + stick.width && box.y >= 0);
             assert.ok(box.x + box.width <= size.width + 1 && box.y + box.height <= size.height + 1);
             if (name === 'z')
                 for (const fraction of [0.1, 0.9]) {
@@ -88,6 +106,21 @@ export async function auditN64Layout(page, output) {
     await expect(page.getByRole('button', { name: 'N64 A', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Select', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Aim', exact: true })).toHaveCount(0);
+    await page.setViewportSize({ width: 320, height: 568 });
+    for (const direction of await page.locator('.touch-dpad button').all()) {
+        const pad = await direction.boundingBox();
+        for (const [name] of buttons) {
+            const button = await page.locator(`[data-controller-button=${name}]`).boundingBox();
+            assert.ok(
+                pad.x + pad.width <= button.x ||
+                    pad.x >= button.x + button.width ||
+                    pad.y + pad.height <= button.y ||
+                    pad.y >= button.y + button.height,
+                'Menu directions overlap N64 buttons on a small phone',
+            );
+        }
+    }
+    await page.setViewportSize({ width: 844, height: 390 });
     await page.evaluate(() => touchFixture.fileMenu(true));
     await expect(page.locator('.touch-n64')).toHaveCount(0);
     await expect(page.locator('.touch-menu-surface')).toBeVisible();
@@ -119,6 +152,7 @@ export async function auditN64Layout(page, output) {
     );
     await setting.selectOption('modern');
     await expect(overlay).toHaveAttribute('data-layout', 'modern');
+    await expect(overlay.getByRole('button', { name: /^(Pause|Options)$/ })).toHaveCount(0);
     await page.evaluate(() => {
         touchFixture.menu(true);
         touchFixture.fileMenu(true);

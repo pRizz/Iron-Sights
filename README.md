@@ -43,11 +43,14 @@ To update, replace the supplied program files while keeping **Data** and **midas
 
 On phones and tablets, touch controls turn on automatically. Move with the left
 thumbstick and drag the right side to look. **Touch layout** defaults to **N64
-controller**, with blue A, green B, red Start and gray Z buttons on the right.
+controller**, with blue A, green B and red Start in a vertical column (Start on
+top, A on the bottom), beside gray Z on the right.
 Hold/drag Z to shoot and turn; **Aim** toggles ADS, and the weapon icon switches
 weapons. Start opens the watch; A/B navigate menus. Choose **Modern actions** in
-settings for the previous Fire/Use/Reload controls and More tray. **Pause** and
-**Options** remain available in both layouts. The retained launcher has an
+settings for the previous Fire/Use/Reload controls and More tray. Touch controls
+sit farther inside the safe screen edges. The mobile overlay omits browser
+**Pause** and **Options**; use Start or Watch for the native pause menu. The
+retained launcher has an
 **On-screen touch controls** switch and saves the chosen layout. Mobile viewport tests are automated;
 physical iPhone/iPad/Android performance and compatibility remain experimental.
 

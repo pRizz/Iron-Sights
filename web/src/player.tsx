@@ -15,7 +15,6 @@ type PlayerProps = {
     capture: Capture;
     touch: TouchInput;
     touchVisible: Accessor<boolean>;
-    openControls: () => void;
     started: Accessor<boolean>;
     presenting: Accessor<boolean>;
     resume: () => Promise<void>;
@@ -137,7 +136,6 @@ export function Player(props: PlayerProps) {
                         capture={capture}
                         input={props.touch}
                         visible={props.touchVisible}
-                        options={props.openControls}
                         canvas={() => canvas}
                     />
                 </Show>

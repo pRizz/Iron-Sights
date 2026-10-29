@@ -1328,6 +1328,33 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**Mobile overlay cleanup, 2026-10-28:** Removed the browser Pause and Options
+buttons from both touch layouts in gameplay and menus. Start/Watch remains the
+native pause control, and focus-loss pause/Resume retains its existing lifecycle.
+This supersedes earlier references below to the top Pause/Options buttons.
+The N64 Start/B/A buttons share a vertical centerline at every viewport size,
+ordered top to bottom. Aim sits beside Start in landscape/tablet layouts and
+above it on narrow phones; Z stays upright beside the column. Shared safe-area
+offsets leave at least 28/36/40 CSS pixels on the left/right/bottom, including
+the stick, weapon cycle, menu arrows and Modern tray. At 320 pixels a 96-pixel
+stick and raised menu arrows avoid overlapping the right-side buttons. Modern
+Watch is inset at the upper left, clear of the weapon cycle and More tray.
+Sources are `web/src/touch-controls.tsx`, `touch.css`, the Player/app wiring,
+touch fixture/audits and the player guides. Existing game input, storage and
+desktop capture behavior remain unchanged. TypeScript, all 161 browser unit
+tests, formatting, production assembly/allowlist and Chromium/Windows WebKit
+fixtures pass. The fixtures check hidden Pause/Options, vertical Start/B/A,
+insets and non-overlap at 320/390/568/844/1024 CSS-pixel widths, including a
+280-pixel-high landscape viewport. Chrome's assembled actual-ROM audit passes
+Files cursor/taps, native A/Start navigation to Dam, movement/look/fire, Start
+watch, focus-loss pause/Resume, audio and portrait/tablet rotation. The audit
+now uses Start as well as A when advancing to briefing/mission start, avoiding
+an A-only briefing stall. Private evidence is `build/web-touch/mobile-layout-*`
+and `build_win/mobile-controls-*.log`. Native gallery freshness is unchanged.
+Next action: confirm the main/Pages publication on physical hardware;
+physical iPhone/iPad/Android safe-area and browser-chrome acceptance remains
+separate from browser emulation.
+
 **Mobile defaults and Files controls, 2026-10-28:** Replaced the special upper
 N64 docking on Files with hidden right-side N64/Modern menu controls. Cursor/tap,
 directional controls, Pause/Options and save transfers remain accessible; screen

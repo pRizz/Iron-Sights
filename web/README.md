@@ -41,11 +41,13 @@ See the [runtime runbook](../scripts/port/web_runtime.md) and
 [milestone tracker](../scripts/port/web_target_progress.md).
 
 Touch controls (WEB-011) auto-enable on coarse touchscreens and touch devices
-without Pointer Lock. The launcher checkbox saves an explicit override. On-screen
-Options opens the launcher; Pause/Resume does not need mouse capture. Use the
+without Pointer Lock. The launcher checkbox saves an explicit override. The touch
+overlay omits browser Pause and Options; Start/Watch opens the native pause menu.
+Focus-loss pause/resume does not need mouse capture. Use the
 analog left thumbstick and drag right to look. **Touch layout** defaults to
 **N64 controller**: blue circular A, green circular B, red circular Start and a
-gray rectangular Z on the right send native controller buttons. Hold/drag Z to
+gray rectangular Z on the right send native controller buttons. Start, B and A
+share one vertical column on phones and tablets, with A at the bottom. Hold/drag Z to
 shoot and turn, tap Aim to toggle ADS, and use the weapon icon to cycle weapons.
 Start opens the watch; A/B also navigate native menus. **Modern actions** retains
 Fire/Use/Reload/Crouch/Watch and the More tray for weapon/gadget selection, zoom,
@@ -54,8 +56,10 @@ switching releases held controls and Aim. Safe-area
 insets and proportional canvas fitting apply in portrait and landscape. Pausing,
 focus loss, cancelled touches, rotation, mode changes and room return clear input.
 The right-side controls hide on the Files screen; use the cursor and tap to select
-a campaign or menu action. They return on other screens, with an additional 10 CSS
-pixels of right/bottom spacing. Touch-enabled startup defaults Mouse Auto Aim to
+a campaign or menu action. They return on other screens. Larger shared insets
+leave at least 28/36/40 CSS pixels on the left/right/bottom, with extra protection
+for device safe areas. Narrow phones keep the stick and menu arrows separate
+from the right-side buttons. Touch-enabled startup defaults Mouse Auto Aim to
 On when unset, preserving saved choices. Mobile render resolution uses the full
 device pixel ratio within the existing 16:9 presentation. A one-time migration
 upgrades the previous 960×540 default; custom resolutions and explicit quality

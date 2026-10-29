@@ -71,6 +71,7 @@ Object.assign(globalThis, {
             live = !value;
         },
         resume: () => setState({ kind: 'playing' }),
+        pause: capture.pause,
         enabled: input.setEnabled,
         layout: input.setLayout,
     },
@@ -86,7 +87,6 @@ render(
                 capture={capture}
                 input={input}
                 visible={() => true}
-                options={() => capture.pause('manual')}
                 canvas={() => canvas}
             />
             <input

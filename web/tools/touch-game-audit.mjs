@@ -134,13 +134,17 @@ try {
                 box.x + box.width / 2 - menuWidth * 0.25,
                 box.y + box.height * 0.32,
             );
-        } else await tap(action('accept'));
+        } else {
+            // Exercise both visible native controls: A advances/selects; Start
+            // starts the mission directly from briefing without paging it.
+            await tap(action(step % 2 === 0 ? 'accept' : 'watch'));
+        }
         await page.waitForTimeout(1800);
     }
     assert.equal(
         await page.evaluate(() => midasAuditGame._portWebGetStage()),
         33,
-        'Touch Select did not reach Dam',
+        'Touch A/Start did not reach Dam',
     );
     await page.waitForFunction(() => midasAuditGame._portWebControlsLive(), undefined, {
         timeout: 90000,
@@ -210,7 +214,12 @@ try {
     await expect(page.locator('.touch-controls')).toHaveAttribute('data-mode', 'game', {
         timeout: 10000,
     });
-    await tap(page.getByRole('button', { name: 'Pause', exact: true }).filter({ visible: true }));
+    await expect(
+        page.locator('.touch-controls').getByRole('button', { name: /^(Pause|Options)$/ }),
+    ).toHaveCount(0);
+    // The overlay deliberately has no browser Pause/Options buttons. Window
+    // focus loss must still suspend simulation and offer the normal Resume.
+    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
     await expect(page.locator('.pause-overlay')).toBeVisible();
     await expect(page.locator('.touch-controls')).toHaveCount(0);
     const paused = await sample();
@@ -218,20 +227,6 @@ try {
     assert.equal((await sample()).frames, paused.frames, 'Touch pause did not stop simulation');
     await tap(page.getByRole('button', { name: 'Resume game' }));
     await expect(page.locator('.touch-controls')).toBeVisible();
-    if (kind === 'chromium') {
-        // Mobile emulation can retain synthetic focus across bringToFront.
-        // The desktop control audit separately verifies real tab focus changes.
-        await page.evaluate(() => window.dispatchEvent(new Event('blur')));
-        await expect(page.locator('.pause-overlay')).toBeVisible();
-        const unfocused = await sample();
-        await page.waitForTimeout(700);
-        assert.equal((await sample()).frames, unfocused.frames);
-        await tap(page.getByRole('button', { name: 'Resume game' }));
-    }
-    await tap(page.getByRole('button', { name: 'Options', exact: true }));
-    await expect(page.getByLabel('On-screen touch controls')).toBeVisible();
-    await tap(page.locator('.controls-close'));
-    await tap(page.getByRole('button', { name: 'Resume game' }));
     await expect(page.locator('.touch-controls')).toBeVisible();
     const performanceStart = await page.evaluate(() => ({
         time: performance.now(),
@@ -282,7 +277,7 @@ try {
                 audio,
                 audioAvailable,
                 errors,
-                checks: 'default N64 layout, native A menu navigation to Dam, Z firing, thumbstick, Start watch, pause/resume, options, audio, portrait/tablet bounds',
+                checks: 'default N64 layout, native A/Start menu navigation to Dam, Z firing, thumbstick, Start watch, hidden Pause/Options, focus pause/resume, audio, portrait/tablet bounds',
                 driver:
                     kind === 'webkit'
                         ? 'desktop WebKit: simulated touch capability/resize; single pointer drag'
@@ -293,7 +288,7 @@ try {
         ),
     );
     console.log(
-        'Touch game: pointerless menus/Dam, native actions, pause/options, audio and portrait/tablet bounds passed',
+        'Touch game: pointerless menus/Dam, native actions, hidden Pause/Options, focus resume, audio and portrait/tablet bounds passed',
     );
 } catch (error) {
     await writeFile(

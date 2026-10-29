@@ -20,7 +20,6 @@ type Props = {
     capture: Capture;
     input: TouchInput;
     visible: Accessor<boolean>;
-    options: () => void;
     canvas: () => HTMLCanvasElement;
 };
 const extra: [TouchAction, string][] = [
@@ -185,13 +184,11 @@ export function TouchControls(props: Props) {
                 data-file-screen={files() ? 'true' : undefined}
                 onContextMenu={(event) => event.preventDefault()}
             >
-                <div class="touch-top">
-                    <Show when={props.input.layout() === 'modern'}>
+                <Show when={props.input.layout() === 'modern'}>
+                    <div class="touch-top">
                         <Button action="watch" label="Watch" />
-                    </Show>
-                    <TapButton label="Pause" activate={() => props.capture.pause('manual')} />
-                    <TapButton label="Options" activate={props.options} />
-                </div>
+                    </div>
+                </Show>
                 <Show
                     when={!menu()}
                     fallback={
