@@ -54,7 +54,7 @@ if ($KnifeThrows) { $auditEnv.GE_KNIFE_ADS_THROWS = '1' }
 if ($Dual) { $auditEnv.GE_ADS_AUDIT_DUAL = '1' }
 if ($Wardrobe -ne 'Mission') { $auditEnv.GE_ADS_AUDIT_WARDROBE=[string](@('blue','boiler','jungle','snow','tuxedo','connery').IndexOf($Wardrobe.ToLowerInvariant())) }
 if ($StockHands) { $auditEnv.GE_ARM_AUDIT_STOCK='1' }
-$expectedCount = if ($Item -eq 0) { if ($Dual) {7} else {20} } else { 1 }
+$expectedCount = if ($Item -eq 0) { if ($Dual) {7} else {21} } else { 1 }
 try {
     foreach ($key in $auditEnv.Keys) {
         $previousEnv[$key] = [Environment]::GetEnvironmentVariable($key, 'Process')
@@ -101,7 +101,7 @@ $names = @{
     4='PP7'; 5='Silenced PP7'; 6='DD44'; 7='Klobb'; 8='KF7 / AK47'; 9='ZMG';
     10='D5K'; 11='Silenced D5K'; 12='Phantom'; 13='AR33'; 14='RC-P90';
     15='Shotgun'; 16='Auto Shotgun'; 17='Sniper'; 18='Cougar Magnum';
-    19='Golden Gun'; 20='Silver PP7'; 21='Gold PP7'; 22='Laser'; 24='Grenade Launcher'
+    19='Golden Gun'; 20='Silver PP7'; 21='Gold PP7'; 22='Laser'; 24='Grenade Launcher'; 25='Rocket Launcher'
 }
 Add-Type -AssemblyName System.Drawing
 $height = if ($Aspect -eq 'Wide') { 225 } else { 300 }
@@ -133,7 +133,7 @@ $captures | Export-Csv -LiteralPath (Join-Path $auditDir 'captures.csv') -NoType
 Write-Output "Verified $expectedCount captures. Review: $auditDir\contact-sheet.png"
 # Preserve full captures, plus enlarged long-gun sights with an unambiguous
 # center reference. The magenta ticks stop short of the actual aiming point.
-$detailCaptures = @($captures | Where-Object { $_.Item -in @(7,8,9,10,11,12,13,14,15,16,17,22,24) })
+$detailCaptures = @($captures | Where-Object { $_.Item -in @(7,8,9,10,11,12,13,14,15,16,17,22,24,25) })
 if ($detailCaptures.Count) {
     $columns = [Math]::Min(3, $detailCaptures.Count)
     $sheet = [Drawing.Bitmap]::new(540*$columns, 390*[int][Math]::Ceiling($detailCaptures.Count/$columns))

@@ -661,7 +661,28 @@ Main sources: [knife implementation](port/src/port_knife_ads.c),
 [pose/validation guide](scripts/port/knife_ads.md), shared option/help tables,
 frontend/watch settings and [capture driver](scripts/port/audit_ads.ps1).
 
-Added aim-down-sights for 20 supported firearms with individual weapon poses
+The rocket launcher now joins the supported ADS weapons. Its native front aiming
+tip is centered through the rear sight opening using a measured -0.026732 radian
+pitch, 6.143 sight height, launcher-only -0.3 lateral offset and 60-unit eye
+distance. This keeps its long rear tube ahead of the eye and preserves original
+model/sight geometry, materials and the loaded rocket. It shares the existing
+hold/toggle/dedicated controls and smooth transitions; dual wield, tank controls,
+reload/switch gates and native projectile behavior are retained. The existing
+rigid grip renderer supplies trigger and tube-support hands (FORK-004).
+The focused [rocket regressions](scripts/port/test_rocket_ads.c) check both sight
+openings against the center ray, eye clearance, aim modes, exclusion gates and
+four tick rates. The [alignment guide](scripts/port/ads_alignment.md) records the
+measurements; the visual audit now includes all 21 firearms and launcher details.
+Rocket/ADS and wardrobe regressions pass, as do native Windows and optimized
+Wasm builds and Wasm logo-payload policy. Native visual review covers wide/4:3
+launcher sights and 11 raise/lower frames per run, plus FOV 110 at 120 Hz with
+weapon FOV enabled in the snow wardrobe. The full wide audit captures all 21
+firearms and 231 transition frames.
+Both independent gallery passes reproduce all 72 views and all 35 icons with
+zero changed image cells; the refreshed manifest/HTML records the new rendering
+inputs. Gallery integrity and all eight workflow tests pass.
+
+Added aim-down-sights for 21 supported firearms with individual weapon poses
 and sight alignment. Right mouse defaults to ADS; **Gameplay > General Settings
 > Aim Mode** can restore the red reticle. The existing hold/toggle aim setting
 applies to either mode. Middle mouse remains a separate, rebindable hold-to-ADS
@@ -722,7 +743,7 @@ review, ADS regression tests, and Windows/Linux builds passed.
 
 **Status:** Implemented.
 
-Added hands and forearms for the 13 firearms that lack them during ADS, with
+Added hands and forearms for the 14 firearms that lack them during ADS, with
 per-weapon trigger/support grips. The current implementation supersedes the
 initial octagonal procedural hands and estimated sleeve/cuff percentages: it
 loads the original pause-watch forearm, cuff and watch meshes from the

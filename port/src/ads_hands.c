@@ -41,6 +41,7 @@ static const struct {
     { ITEM_SNIPERRIFLE,  { -1.2f, 5.0f,-2.0f }, { 1.7f, 6.0f, 35.0f } },
     { ITEM_LASER,        { -0.6f,-1.0f,-2.0f }, { 1.1f, 1.0f, 15.0f } },
     { ITEM_GRENADELAUNCH,{ -0.6f,-1.0f,-2.0f }, { 1.1f, 0.5f, 25.0f } },
+    { ITEM_ROCKETLAUNCH, { -0.6f, 0.0f,-1.0f }, { 1.1f, 9.0f, 25.0f } },
 };
 
 s32 portAdsHandGrips(s32 item, coord3d *trigger, coord3d *support)

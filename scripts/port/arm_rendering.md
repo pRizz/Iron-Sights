@@ -107,7 +107,8 @@ Both already run in the Windows release workflow without a ROM. Tests cover:
 - All six wardrobes, seven pistol variants and both native hands.
 - Nonplanar wrist joins, intermediate edge corners and closed clothing rims.
 - Rigid hand/watch transforms, protected wrist continuity and the rifle body's
-  radius independently of its centerline, across all 13 grip pairs and blends.
+  radius independently of its centerline, across all 14 grip pairs and blends,
+  including the rocket launcher's trigger grip and tube support.
 - Skin-only corrections and terminal material reset on generated arm meshes,
   plus geometry-only fade depth lists.
 - Native skin UV/RGB sampling, light scaling and unknown-material fallback;

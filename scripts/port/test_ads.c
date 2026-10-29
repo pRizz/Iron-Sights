@@ -155,6 +155,7 @@ static void testSprint(void)
 }
 
 #include "test_knife_ads.c"
+#include "test_rocket_ads.c"
 
 int main(void)
 {
@@ -172,6 +173,7 @@ int main(void)
     controlsLive = 1;
     selectPlayer(0);
     testKnifeAds();
+    testRocketAds();
     testSprint();
     { /* The support palm faces under/into the gun. The watch follows that
        * roll rather than being billboarded towards the camera. */
@@ -316,11 +318,11 @@ int main(void)
         previousDepth = depth;
     }
 
-    /* All thirteen firearms without original hands get grips; pistols and other items do not. */
+    /* All fourteen firearms without original hands get grips; pistols and other items do not. */
     for (i = ITEM_UNARMED; i <= ITEM_CAMERA; i++)
     {
         const s32 hands = (i >= ITEM_SKORPION && i <= ITEM_SNIPERRIFLE)
-            || i == ITEM_LASER || i == ITEM_GRENADELAUNCH;
+            || i == ITEM_LASER || i == ITEM_GRENADELAUNCH || i == ITEM_ROCKETLAUNCH;
         assert(!!portAdsHandGrips(i, &trigger, &support) == hands);
         if (hands) {
             assert(support.z > trigger.z && trigger.x < 0.0f && support.x > 0.0f);
@@ -352,7 +354,8 @@ int main(void)
     assert(pose.z == -70.0f);
     for (i = ITEM_UNARMED; i <= ITEM_CAMERA; i++)
     {
-        const s32 supported = (i >= ITEM_WPPK && i <= ITEM_LASER) || i == ITEM_GRENADELAUNCH;
+        const s32 supported = (i >= ITEM_WPPK && i <= ITEM_LASER)
+            || i == ITEM_GRENADELAUNCH || i == ITEM_ROCKETLAUNCH;
         assert(!!portAdsWeaponPose(i, &muzzle, &pose) == supported);
         if (supported) {
             assert(pose.z <= -28.0f && pose.y < -muzzle.y * 0.1f);
@@ -460,7 +463,8 @@ int main(void)
     for (i = ITEM_UNARMED; i <= ITEM_CAMERA; i++)
     {
         g_CurrentPlayer->hand_item[GUNRIGHT] = i;
-        assert(!!portAdsActive() == ((i >= ITEM_WPPK && i <= ITEM_LASER) || i == ITEM_GRENADELAUNCH || i == ITEM_THROWKNIFE));
+        assert(!!portAdsActive() == ((i >= ITEM_WPPK && i <= ITEM_LASER)
+            || i == ITEM_GRENADELAUNCH || i == ITEM_ROCKETLAUNCH || i == ITEM_THROWKNIFE));
     }
     selectPlayer(0);
     for (i = GUN_ANIM_STATE_SWITCH_LOWER; i <= GUN_ANIM_STATE_RELOAD_RAISE; i++)

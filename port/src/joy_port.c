@@ -741,6 +741,9 @@ static const struct {
     { ITEM_GOLDWPPK,      1.0f, 33.5f, -0.025f },
     { ITEM_LASER,         6.7f, 36.0f, -0.045f },
     { ITEM_GRENADELAUNCH, 2.4f, 40.0f, -0.040f },
+    /* Native rear/front sight openings: (-3,200,25), (-3,190,399).
+     * Level their common sight line; keep the long rear tube ahead of the eye. */
+    { ITEM_ROCKETLAUNCH, 6.143f, 60.0f, -0.026732f },
 };
 
 s32 portAdsWeaponPose(s32 item, const coord3d *muzzle, coord3d *pose)
@@ -751,6 +754,8 @@ s32 portAdsWeaponPose(s32 item, const coord3d *muzzle, coord3d *pose)
         if (sAdsPoses[i].item == item)
         {
             pose->x = -muzzle->x * 0.1f;
+            /* This model's sights sit at X=-3, off the root/muzzle axis. */
+            if (item == ITEM_ROCKETLAUNCH) pose->x = -0.3f;
             pose->y = -muzzle->y * 0.1f - sAdsPoses[i].sightHeight;
             if (sAdsPoses[i].pitch != 0.0f)
             {
@@ -945,7 +950,8 @@ static s32 joyPortAdsSupported(void)
     /* One sight at a time; other thrown weapons/gadgets and the tank keep their controls. */
     return g_PlayerIsInTank != 1 && get_itemtype_in_hand(GUNLEFT) == 0
         && get_itemtype_in_hand(GUNRIGHT) != 0
-        && ((item >= ITEM_WPPK && item <= ITEM_LASER) || item == ITEM_GRENADELAUNCH || item == ITEM_THROWKNIFE);
+        && ((item >= ITEM_WPPK && item <= ITEM_LASER) || item == ITEM_GRENADELAUNCH
+            || item == ITEM_ROCKETLAUNCH || item == ITEM_THROWKNIFE);
 }
 
 static s32 joyPortAdsWeapon(void)
