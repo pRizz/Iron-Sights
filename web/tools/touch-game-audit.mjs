@@ -88,6 +88,20 @@ try {
     );
     await expect(page.locator('.touch-controls')).toBeVisible();
     await expect(page.locator('.touch-controls')).toHaveAttribute('data-layout', 'n64');
+    await page.evaluate(() => {
+        globalThis.touchContextAudit = [];
+        const overlay = document.querySelector('.touch-controls');
+        const record = () =>
+            touchContextAudit.push({
+                context: overlay.dataset.context,
+                buttons: overlay.querySelectorAll('button').length,
+            });
+        record();
+        new MutationObserver(record).observe(overlay, {
+            attributes: true,
+            attributeFilter: ['data-context'],
+        });
+    });
     const resolution = await page.evaluate(() => {
         const canvas = document.querySelector('#canvas');
         const viewport = window.visualViewport;
@@ -118,8 +132,10 @@ try {
     console.log('Retina framebuffer', resolution.actual, 'CSS presentation', resolution.css);
     assert.match(resolution.settings, /mouse_auto_aim=1/);
     let filesChecked = false;
-    for (let step = 0; step < 14; step++) {
+    for (let step = 0; step < 24; step++) {
         if (await page.evaluate(() => midasAuditGame._portWebGetStage() === 33)) break;
+        await expect(page.locator('.touch-controls button')).toHaveCount(0);
+        if (step < 10) await page.screenshot({ path: resolve(output, `navigation-${step}.png`) });
         if (await page.evaluate(() => midasAuditGame._portWebFileMenuMetric(0))) {
             filesChecked = true;
             await expect(page.locator('.touch-n64')).toHaveCount(0);
@@ -135,21 +151,41 @@ try {
                 box.y + box.height * 0.32,
             );
         } else {
-            // Exercise both visible native controls: A advances/selects; Start
-            // starts the mission directly from briefing without paging it.
-            await tap(action(step % 2 === 0 ? 'accept' : 'watch'));
+            const box = await page.locator('#canvas').boundingBox();
+            const menuWidth = Math.min(box.width, (box.height * 4) / 3);
+            // Native 448x336 cursor coordinates: first mission tile. The same
+            // upper-left point selects Agent and advances the briefing pages.
+            await page.touchscreen.tap(
+                box.x + box.width / 2 - menuWidth / 2 + (menuWidth * 73) / 448,
+                box.y + (box.height * 62) / 336,
+            );
         }
         await page.waitForTimeout(1800);
     }
     assert.equal(
         await page.evaluate(() => midasAuditGame._portWebGetStage()),
         33,
-        'Touch A/Start did not reach Dam',
+        'Cursor-only touch navigation did not reach Dam',
     );
     await page.waitForFunction(() => midasAuditGame._portWebControlsLive(), undefined, {
         timeout: 90000,
     });
     await expect(page.locator('.touch-controls')).toHaveAttribute('data-mode', 'game');
+    await expect(page.locator('.touch-controls')).toHaveAttribute('data-context', 'game');
+    const contexts = await page.evaluate(() => touchContextAudit);
+    assert.ok(
+        contexts.some((entry) => entry.context === 'cinematic'),
+        'Intro context was not observed',
+    );
+    assert.ok(
+        contexts
+            .filter((entry) => ['navigation', 'cinematic'].includes(entry.context))
+            .every((entry) => entry.buttons === 0),
+        'HUD appeared before live mission input',
+    );
+    await expect(page.locator('.touch-n64')).toHaveCSS('animation-name', 'touch-hud-enter');
+    await expect(page.locator('.touch-n64')).toHaveCSS('opacity', '1');
+    await page.screenshot({ path: resolve(output, 'game-ready.png') });
     assert.ok(filesChecked, 'Files-screen touch navigation was not exercised');
     await expect(page.locator('.touch-n64')).toBeVisible();
     assert.equal(await page.evaluate(() => !!document.pointerLockElement), false);
@@ -208,6 +244,7 @@ try {
     await expect(page.locator('.touch-controls')).toHaveAttribute('data-mode', 'menu', {
         timeout: 10000,
     });
+    await expect(page.locator('.touch-controls')).toHaveAttribute('data-context', 'watch');
     await expect(page.locator('.pause-overlay')).toHaveCount(0);
     await tap(action('down'));
     await tap(action('watch'));
@@ -281,7 +318,8 @@ try {
                 audio,
                 audioAvailable,
                 errors,
-                checks: 'default N64 layout, native A/Start menu navigation to Dam, Z firing, thumbstick, Start watch, hidden Pause/Options, focus pause/resume, audio, portrait/tablet bounds',
+                contexts,
+                checks: 'cursor-only startup/menus to Dam, hidden HUD during intro, native input-ready fade, Z firing, thumbstick, Start watch, hidden Pause/Options, focus pause/resume, audio, portrait/tablet bounds',
                 driver:
                     kind === 'webkit'
                         ? 'desktop WebKit: simulated touch capability/resize; single pointer drag'
@@ -292,7 +330,7 @@ try {
         ),
     );
     console.log(
-        'Touch game: pointerless menus/Dam, native actions, hidden Pause/Options, focus resume, audio and portrait/tablet bounds passed',
+        'Touch game: cursor-only menus, hidden intro HUD, engine-ready fade, native actions, watch, audio and portrait/tablet bounds passed',
     );
 } catch (error) {
     await writeFile(

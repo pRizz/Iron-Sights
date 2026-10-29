@@ -209,8 +209,17 @@ This replaces the former 104×48 horizontal Z; the stick, safe areas and remaini
 button hit targets stay separate. Existing press/release and drag-to-fire/look
 behavior is retained. On the Files screen the N64 cluster and Modern Select/Back
 buttons are hidden, superseding the earlier upper docking that made the N64
-buttons jump. Direct cursor/tap navigation, directional controls and Import/Export
-remain available. Entering/leaving Files clears held actions and latched Aim.
+buttons jump. Direct cursor/tap navigation and Import/Export remain available.
+All controller buttons and the stick now stay hidden throughout startup,
+Files/mission selection, briefings and cutscenes in both layouts. The full cursor
+surface handles menu taps and permitted intro skipping. A browser-only
+`portWebTouchContext` query uses existing stage/watch/live-input predicates;
+gameplay controls fade in over 240 ms when native input becomes live, including
+after later cinematics. Reduced motion disables the animation. The fully open
+in-mission watch retains directional and action buttons for navigation/resume.
+This supersedes controller arrows/A/Start on premission screens. Context or Files
+changes release held actions/Aim and cancel old menu gestures, preventing a
+release from selecting or skipping in a new context. Cinematics suppress hints.
 The touch overlay never renders browser Pause or Options in either layout or
 menu mode; Start/Watch opens the native pause menu, while browser focus-loss
 pause and Resume remain. This supersedes the original top Pause/Options pair.
@@ -238,7 +247,7 @@ messages retain their message lifecycle but also pass input through.
 Touch regressions exercise both ends of the enlarged Z hit target.
 The controller background rule also wins over generic button-hover styling,
 so hovering or holding a button keeps its translucent controller color.
-These use existing raw native A/B/Start/Z button bits in gameplay and menus,
+These use existing raw native A/B/Start/Z button bits in gameplay and the watch,
 respecting the game's controller mapping. Aim remains a toggle during gameplay;
 the left analog movement stick, right-side drag-to-look and gun-icon **Switch
 weapon** convenience remain.
@@ -246,7 +255,7 @@ Dragging Z turns while firing.
 **Modern actions** restores the previous Fire/Aim/Use/Reload/Crouch/Watch layout,
 Select/Back menu buttons and More tray with weapon/gadget cycling, zoom,
 detonation and sprint. Below 361 CSS pixels that tray uses three columns.
-Both layouts retain directional menu controls and direct menu taps. Layout
+Both layouts retain directional watch controls and direct menu taps. Layout
 changes release held buttons, movement, look and latched Aim; the preference
 persists separately from game files and safely defaults to N64 if unavailable.
 Touch mode bypasses mouse capture; keyboard/mouse mode keeps its existing policy.
@@ -278,7 +287,7 @@ The menu touch surface forwards cursor motion without SDL's immediate synthetic
 mouse press. A stationary release selects through the native Accept action;
 movement beyond 10 CSS pixels cancels selection for that entire gesture, even
 when the finger returns to its starting point. Arrows and native A (Modern Select)
-remain available.
+remain available in the watch.
 Non-passive touch/gesture cancellation on the overlay supplements `touch-action`
 to prevent repeated Fire taps from zooming Safari; launcher zoom remains available.
 The active overlay also owns gaps between controls so near-button taps cannot
@@ -303,6 +312,8 @@ controls. The module is selected only by the CMake web video target.
 [launcher settings](web/src/app.tsx), [player guide](README.md), [web guide](web/README.md),
 [contact lifecycle](web/src/touch-contacts.ts), [menu gestures](web/src/touch-menu.tsx),
 [hint lifecycle](web/src/touch-hints.ts),
+[native context decoder](web/src/touch-context.ts),
+[context unit tests](web/src/touch-context.test.ts),
 [menu tap tests](web/src/touch-menu.test.ts),
 [overlay](web/src/touch-controls.tsx), [layout](web/src/touch.css),
 [viewport fitting](web/src/touch-viewport.ts),
@@ -315,6 +326,7 @@ controls. The module is selected only by the CMake web video target.
 [UI fixture](web/tests/touch-driver.tsx), [fixture page](web/tests/touch.html),
 [fixture build](web/tools/build-touch-test.ts),
 [UI audit](web/tools/touch-ui-audit.mjs),
+[context transition audit](web/tools/touch-context-audit.mjs),
 [N64 layout audit](web/tools/touch-n64-audit.mjs),
 [gesture-surface audit](web/tools/touch-surface-audit.mjs),
 [private game audit](web/tools/touch-game-audit.mjs),
@@ -324,6 +336,18 @@ controls. The module is selected only by the CMake web video target.
 [input hook](port/src/libultra_shim.c), [movement hook](src/game/bondview2.c),
 [accepted extension](scripts/port/web_target_plan.md),
 [milestone](scripts/port/web_target_progress.md).
+**Context visibility validation:** Synthetic Wasm tests cover every combination
+of stage/watch/live-input flags. TypeScript, 163 unit tests, formatting,
+production assembly/allowlist and Chromium/Windows WebKit fixtures pass. Both
+layouts hide controls in navigation/cinematics, clear held actions and stale
+menu gestures on transitions, retain watch controls and respect reduced motion.
+Chrome real-ROM acceptance reaches Dam using cursor-only menus, observes zero
+buttons before gameplay, checks the engine-ready fade and verifies movement,
+look/fire, Watch, hint deadlines, focus resume, audio and rotation. Gallery
+regeneration changes zero image cells; freshness/integrity pass. Private evidence
+is `build/web-touch/mobile-context-*` and `build_win/mobile-context-*.log`;
+physical iPhone remains a device check.
+
 **Gesture/hint refinement validation:** The new free-space grid check fails on
 the previous layout with 113 dead sample points in its first wide gameplay
 case and passes after the fix. Chromium/Windows WebKit fixtures cover both

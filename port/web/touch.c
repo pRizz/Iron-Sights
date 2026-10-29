@@ -16,6 +16,18 @@ extern void portJoyPortPadDown(s32 pad, s32 action);
 extern s32 g_portMouseDirect;
 extern f32 g_portMouseYawDeg, g_portMousePitchDeg;
 extern s32 g_PlayerIsInTank;
+extern s32 portStageRunning(void);
+extern s32 portWebControlsLive(void);
+extern s32 portWatchMenuUp(void);
+
+/* Presentation follows real engine permission, never an intro-duration timer.
+ * Keep the watch distinct so its native lists can still be closed/navigated. */
+EMSCRIPTEN_KEEPALIVE s32 portWebTouchContext(void)
+{
+    if (!portStageRunning()) return WEB_TOUCH_NAVIGATION;
+    if (portWatchMenuUp()) return WEB_TOUCH_WATCH;
+    return portWebControlsLive() ? WEB_TOUCH_GAME : WEB_TOUCH_CINEMATIC;
+}
 
 enum { TOUCH_FIRE, TOUCH_AIM, TOUCH_USE, TOUCH_RELOAD, TOUCH_WATCH, TOUCH_ACCEPT, TOUCH_BACK, TOUCH_CROUCH, TOUCH_PREV_WEAPON,
     TOUCH_NEXT_WEAPON, TOUCH_PREV_GADGET, TOUCH_NEXT_GADGET, TOUCH_DETONATE, TOUCH_ZOOM_IN, TOUCH_ZOOM_OUT,

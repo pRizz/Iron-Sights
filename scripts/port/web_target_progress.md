@@ -1328,6 +1328,30 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**Cursor-only startup and cinematic HUD, 2026-10-28:** Both layouts now hide every
+controller button and the stick throughout startup, Files/mission selection,
+briefings and cutscenes. The full cursor/tap surface remains, including native
+intro skipping. A browser-only `portWebTouchContext` query combines the existing
+stage, fully open watch and live-input predicates. Gameplay controls fade in over
+240 ms when the engine grants control; reduced motion removes the animation.
+The in-mission watch retains its navigation buttons. Context changes release
+held actions/Aim and remount the menu surface so an old gesture cannot select
+or skip after a transition. Cinematics suppress helper text. This supersedes
+earlier references below to A/Start/arrows on premission screens.
+Sources: `port/web/touch.c`/`.h`, `touch-context.ts`, `touch-controls.tsx`,
+`touch.css`, runtime types, context/bridge tests and touch fixtures/audits.
+Verification: synthetic Wasm tests cover all stage/watch/live combinations;
+163 browser unit tests, TypeScript, Chromium/Windows WebKit fixtures, formatting
+and production assembly/allowlist pass. Fixtures cover hidden controls in both
+layouts, transition cleanup, watch access, fade and reduced motion. Chrome's
+actual-ROM audit reaches Dam using only cursor taps, observes zero controller
+buttons in navigation/cinematic contexts, then verifies the gameplay fade,
+movement/look/fire, watch, hints, focus resume, audio and rotation. Private evidence:
+`build/web-touch/mobile-context-*` and `build_win/mobile-context-*.log`.
+Gallery regeneration changes zero image cells; freshness/integrity pass.
+Next action: publish main/Pages and confirm the transition on physical iPhone;
+browser emulation does not establish physical iOS support.
+
 **Full gesture surface and temporary hints, 2026-10-28:** Reproduced dead input
 space outside the old look rectangle and within transparent button groups. The
 gameplay look surface now fills the viewport; group wrappers, instructional text

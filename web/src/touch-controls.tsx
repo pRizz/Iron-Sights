@@ -14,6 +14,7 @@ import { stickVector, type TouchAction, type TouchInput } from './touch-input';
 import { createTouchContacts, suppressTouchGestures } from './touch-contacts';
 import { TouchMenu } from './touch-menu';
 import { createTouchHints } from './touch-hints';
+import { touchContext, type TouchContext } from './touch-context';
 import './touch.css';
 
 type Props = {
@@ -35,7 +36,10 @@ const extra: [TouchAction, string][] = [
 ];
 
 export function TouchControls(props: Props) {
-    const [menu, setMenu] = createSignal(true);
+    const [context, setContext] = createSignal<TouchContext>('navigation');
+    const menu = () => context() !== 'game';
+    const watch = () => context() === 'watch';
+    const hud = () => context() === 'game' || watch();
     const [files, setFiles] = createSignal(false);
     const [more, setMore] = createSignal(false);
     const [aiming, setAiming] = createSignal(false);
@@ -46,7 +50,13 @@ export function TouchControls(props: Props) {
     const active = () =>
         props.visible() && props.input.enabled() && props.capture.state().kind !== 'paused';
     const hints = createTouchHints(() =>
-        !active() ? 'inactive' : files() ? 'files' : menu() ? 'menu' : 'game',
+        !active() || context() === 'cinematic'
+            ? 'inactive'
+            : files()
+              ? 'files'
+              : menu()
+                ? 'menu'
+                : 'game',
     );
     const contacts = createTouchContacts(
         (id) => {
@@ -103,10 +113,10 @@ export function TouchControls(props: Props) {
                 clear();
                 setFiles(nextFiles);
             }
-            const next = !props.engine.maybeGame()?._portWebControlsLive();
-            if (next !== menu()) {
+            const next = touchContext(props.engine.maybeGame()?._portWebTouchContext?.());
+            if (next !== context()) {
                 clear();
-                setMenu(next);
+                setContext(next);
             }
             frame = requestAnimationFrame(monitor);
         };
@@ -194,11 +204,12 @@ export function TouchControls(props: Props) {
                 class="touch-controls"
                 aria-label="Touch game controls"
                 data-mode={menu() ? 'menu' : 'game'}
+                data-context={context()}
                 data-layout={props.input.layout()}
                 data-file-screen={files() ? 'true' : undefined}
                 onContextMenu={(event) => event.preventDefault()}
             >
-                <Show when={props.input.layout() === 'modern'}>
+                <Show when={hud() && props.input.layout() === 'modern'}>
                     <div class="touch-top">
                         <Button action="watch" label="Watch" />
                     </div>
@@ -207,18 +218,24 @@ export function TouchControls(props: Props) {
                     when={!menu()}
                     fallback={
                         <>
-                            <TouchMenu canvas={props.canvas} input={props.input} />
-                            <div class="touch-dpad">
-                                <Button action="up" label="Up" />
-                                <Button action="left" label="Left" />
-                                <Button action="down" label="Down" />
-                                <Button action="right" label="Right" />
-                            </div>
-                            <Show when={props.input.layout() === 'modern' && !files()}>
-                                <div class="touch-menu-actions">
-                                    <Button action="accept" label="Select" />
-                                    <Button action="back" label="Back" />
+                            <Show when={`${context()}:${files()}`} keyed>
+                                {(_contextKey) => (
+                                    <TouchMenu canvas={props.canvas} input={props.input} />
+                                )}
+                            </Show>
+                            <Show when={watch()}>
+                                <div class="touch-dpad">
+                                    <Button action="up" label="Up" />
+                                    <Button action="left" label="Left" />
+                                    <Button action="down" label="Down" />
+                                    <Button action="right" label="Right" />
                                 </div>
+                                <Show when={props.input.layout() === 'modern' && !files()}>
+                                    <div class="touch-menu-actions">
+                                        <Button action="accept" label="Select" />
+                                        <Button action="back" label="Back" />
+                                    </div>
+                                </Show>
                             </Show>
                         </>
                     }
@@ -301,7 +318,7 @@ export function TouchControls(props: Props) {
                         </Show>
                     </Show>
                 </Show>
-                <Show when={props.input.layout() === 'n64' && !files()}>
+                <Show when={hud() && props.input.layout() === 'n64' && !files()}>
                     <div class="touch-n64" role="group" aria-label="N64 controller buttons">
                         <Show when={!menu()}>
                             <Button action="aim" label="Aim" />
@@ -323,7 +340,9 @@ export function TouchControls(props: Props) {
                 <Show when={hints()}>
                     <span class={menu() ? 'touch-menu-hint' : 'touch-game-hint'}>
                         {menu()
-                            ? 'Drag to move cursor · Tap to select · Or use arrows'
+                            ? watch()
+                                ? 'Drag to move cursor · Tap to select · Or use arrows'
+                                : 'Drag to move cursor · Tap to select'
                             : 'Move left · Start/Watch pauses'}
                     </span>
                 </Show>

@@ -71,6 +71,11 @@ The accepted gesture refinement makes all unoccupied viewport space available
 for look/menu panning, with blocking limited to actual buttons and the stick.
 Instruction hints move near the top and dismiss after five seconds of gameplay
 or three seconds in menus; hint text must never intercept input.
+The accepted presentation refinement hides every controller button and the stick
+during startup, mission selection, briefings and cutscenes. Use cursor/tap input
+until the native engine grants gameplay control, then fade the HUD in. Keep the
+in-mission watch navigable, respect reduced motion and cancel held gestures when
+the native context changes; do not estimate cutscene completion with a timer.
 
 ## Build and runtime design
 

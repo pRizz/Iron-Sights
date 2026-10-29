@@ -49,14 +49,18 @@ analog left thumbstick and drag any free screen area to look. **Touch layout** d
 gray rectangular Z on the right send native controller buttons. Start, B and A
 share one vertical column on phones and tablets, with A at the bottom. Hold/drag Z to
 shoot and turn, tap Aim to toggle ADS, and use the weapon icon to cycle weapons.
-Start opens the watch; A/B also navigate native menus. **Modern actions** retains
+Start opens the watch; A/B also navigate its native menus. **Modern actions** retains
 Fire/Use/Reload/Crouch/Watch and the More tray for weapon/gadget selection, zoom,
 sprint and detonation. The layout choice is saved separately from game files;
 switching releases held controls and Aim. Safe-area
 insets and proportional canvas fitting apply in portrait and landscape. Pausing,
 focus loss, cancelled touches, rotation, mode changes and room return clear input.
-The right-side controls hide on the Files screen; use the cursor and tap to select
-a campaign or menu action. They return on other screens. Larger shared insets
+All controller buttons and the stick stay hidden during startup, mission selection,
+briefings and cutscenes. Drag the cursor and tap to select; taps can skip permitted
+intros. The engine's live-input permission triggers a 240 ms control fade when
+gameplay starts, including after later cutscenes. Reduced motion skips the fade.
+The in-mission watch keeps its navigation buttons. Context changes release held
+actions and cancel old menu gestures. Larger shared insets
 leave at least 28/36/40 CSS pixels on the left/right/bottom, with extra protection
 for device safe areas. Narrow phones keep the stick and menu arrows separate
 from the right-side buttons. Touch-enabled startup defaults Mouse Auto Aim to
@@ -77,7 +81,8 @@ workflow also runs the synthetic Wasm bridge regression. For private real-ROM
 mobile-viewport acceptance, use `MIDAS_BROWSER=chrome bun run audit:touch ../baserom.u.z64 ../build/web-touch/game http://127.0.0.1:4177/Iron-Sights/`.
 The audit defaults to DPR 2; set `MIDAS_DPR=3` for a 3× screen or `MIDAS_TABLET=1`
 for the 1024×768 iPad viewport. It checks requested versus actual canvas/WebGL
-dimensions, Files-screen cursor/taps, restored controls and retained resolution
+dimensions, cursor-only menus into Dam, hidden intro controls, the engine-ready
+fade, watch navigation, restored controls and retained resolution
 after rotation, and records a local rendered-frame-rate sample.
 Desktop WebKit emulation needs a simulated touch-capability property and cannot
 establish physical iOS support. Its mobile viewport driver also needs an explicit

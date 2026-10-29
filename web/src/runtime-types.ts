@@ -33,6 +33,7 @@ export type GameModule = {
     callMain(args: string[]): void;
     _portWebSetPaused(paused: number): void;
     _portWebControlsLive(): number;
+    _portWebTouchContext(): number;
     _portWebCaptureMouse(): number;
     _portWebGetGfxTasks(): number;
     _portWebReturnToRoom(): void;

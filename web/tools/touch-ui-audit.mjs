@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { expect } from '@playwright/test';
 import { launchAuditBrowser } from './browser-choice.mjs';
 import { auditN64Layout } from './touch-n64-audit.mjs';
+import { auditTouchContext } from './touch-context-audit.mjs';
 import { auditTouchSurface, auditTouchGestures, auditTouchHints } from './touch-surface-audit.mjs';
 
 const assets = new Map(
@@ -41,6 +42,7 @@ try {
     page.on('pageerror', (error) => errors.push(String(error)));
     await page.goto(`http://127.0.0.1:${server.address().port}`);
     await expect(page.locator('.touch-controls')).toHaveAttribute('data-mode', 'game');
+    await auditTouchContext(page);
     await auditTouchSurface(page);
     await auditTouchGestures(page, context, kind);
     await auditTouchHints(page);

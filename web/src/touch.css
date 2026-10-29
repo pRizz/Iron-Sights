@@ -260,6 +260,30 @@
     text-shadow: 0 1px 3px #000;
     pointer-events: none;
 }
+.touch-controls[data-context='game'] .touch-stick,
+.touch-controls[data-context='game'] .touch-weapon,
+.touch-controls[data-context='game'] .touch-n64,
+.touch-controls[data-context='game'] .touch-actions,
+.touch-controls[data-context='game'] .touch-top {
+    animation: touch-hud-enter 240ms ease-out both;
+}
+@keyframes touch-hud-enter {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .touch-controls[data-context='game'] .touch-stick,
+    .touch-controls[data-context='game'] .touch-weapon,
+    .touch-controls[data-context='game'] .touch-n64,
+    .touch-controls[data-context='game'] .touch-actions,
+    .touch-controls[data-context='game'] .touch-top {
+        animation: none;
+    }
+}
 .touch-game-hint {
     right: calc(max(12px, env(safe-area-inset-right)) + 90px);
 }

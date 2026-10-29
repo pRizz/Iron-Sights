@@ -8,6 +8,7 @@
 s32 g_portMouseDirect, g_PlayerIsInTank;
 f32 g_portMouseYawDeg, g_portMousePitchDeg;
 static s32 live, consoleOpen, playerNum;
+static s32 stageRunning, watchOpen;
 static u32 actionBits;
 static const char *const bindings[] = {
     "reload", "use", "aim_down_sights", "prev_weapon", "next_weapon",
@@ -16,6 +17,9 @@ static const char *const bindings[] = {
 };
 s32 get_cur_playernum(void) { return playerNum; }
 s32 portBondControlsLive(void) { return live; }
+s32 portStageRunning(void) { return stageRunning; }
+s32 portWatchMenuUp(void) { return watchOpen; }
+s32 portWebControlsLive(void) { return live; }
 s32 portConIsOpen(void) { return consoleOpen; }
 s32 portJoyPortBindCount(void) { return sizeof(bindings) / sizeof(bindings[0]); }
 const char *portJoyPortBindName(s32 index) { return bindings[index]; }
@@ -25,6 +29,20 @@ void osSyncPrintf(const char *format, ...)
     va_list args;
     va_start(args, format); vfprintf(stderr, format, args); va_end(args);
     abort();
+}
+
+static void testTouchContext(void)
+{
+    /* Arrange/act/assert: stale gameplay/watch state cannot show a frontend HUD;
+     * cutscenes stay hidden, actual permission reveals it, and watch stays usable. */
+    for (stageRunning = 0; stageRunning <= 1; stageRunning++)
+        for (watchOpen = 0; watchOpen <= 1; watchOpen++)
+            for (live = 0; live <= 1; live++) {
+                const s32 expected = !stageRunning ? WEB_TOUCH_NAVIGATION
+                    : watchOpen ? WEB_TOUCH_WATCH : live ? WEB_TOUCH_GAME : WEB_TOUCH_CINEMATIC;
+                assert(portWebTouchContext() == expected);
+            }
+    stageRunning = watchOpen = live = 0;
 }
 
 static void testNativeN64Buttons(void)
@@ -58,6 +76,7 @@ int main(void)
 {
     OSContPad pad = {0};
     struct MoveData move = {0};
+    testTouchContext();
     portWebTouchEnable(1);
     testNativeN64Buttons();
     portWebTouchButton(TOUCH_FIRE, 1);
