@@ -741,6 +741,19 @@ candidate, ROM-extracted assets nor local diagnostic captures were shipped.
 
 ## WEB-009 | 2026-10-24 | Cartridge onboarding and game handoff
 
+**Faster room transitions, 2026-10-29:** Accepted timings are 0.9 seconds for
+insertion, 0.3 for power-on, 1.3 for TV flight and 1.5 for return. The return
+camera derives its travel time from the shared phase duration after the existing
+0.3-second crossfade hold, so it reaches its starting pose before interaction
+resumes. Slow idle rotation, easing, reduced motion and readiness gating are
+preserved. Validation: 167 Bun tests, TypeScript, scoped Prettier, production
+assembly and exact public-artifact verification pass. Edge ROM-free room checks
+and actual-ROM entry/Exit Game audits pass normal and reduced motion, physical
+warm power resume, stable canvas and exact saves with the existing local optimized
+runtime. Native/gallery inputs are unchanged and gallery verification passes.
+Private evidence: `build/web-room/faster-timings-*`. No known blockers.
+Next action: deliver on main and check the clean Pages build/publication.
+
 **Status:** Desktop interaction/handoff acceptance complete. Edge, Chrome and
 Linux Firefox pass; published-site acceptance is recorded in WEB-010.
 

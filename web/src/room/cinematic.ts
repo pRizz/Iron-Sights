@@ -1,4 +1,5 @@
 import { screenDistance, TV_SCREEN } from './framing';
+import { roomDuration } from './flow';
 
 export type Point3 = [number, number, number];
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
@@ -10,7 +11,8 @@ const blend = (start: Point3, end: Point3, t: number): Point3 =>
     start.map((value, index) => value + (end[index] - value) * t) as Point3;
 
 // Hold the fitted screen during the return crossfade, then retrace the flight.
-export const retreatFlight = (elapsed: number) => 1 - clamp((elapsed - 0.3) / 2.8);
+export const retreatFlight = (elapsed: number) =>
+    1 - clamp((elapsed - 0.3) / (roomDuration('retreating', false) - 0.3));
 
 export function insertionPose(progress: number, yaw: number) {
     const t = clamp(progress);

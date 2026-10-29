@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { cameraPose, insertionPose, smooth, retreatFlight } from './cinematic';
 import { PerspectiveCamera, Vector3 } from 'three';
 import { ROOM_FOV, TV_SCREEN } from './framing';
+import { roomDuration } from './flow';
 
 test('cartridge aligns above the slot before descending straight into it', () => {
     expect(insertionPose(0, 2)).toEqual({ position: [-0.2, 1.35, 1.65], yaw: 2 });
@@ -26,10 +27,14 @@ test('portrait framing backs away to contain the complete TV screen', () => {
 });
 
 test('retreat holds the screen for crossfade and returns to the original camera', () => {
+    // Arrange
+    const duration = roomDuration('retreating', false);
+    // Act / Assert: finish the camera retreat before the room becomes interactive.
     expect(retreatFlight(-1)).toBe(1);
     expect(retreatFlight(0.3)).toBe(1);
-    expect(retreatFlight(1.7)).toBeCloseTo(0.5);
-    expect(retreatFlight(3.1)).toBe(0);
+    expect(retreatFlight(0.9)).toBeCloseTo(0.5);
+    expect(retreatFlight(duration)).toBe(0);
+    expect(cameraPose(retreatFlight(duration), 16 / 9)).toEqual(cameraPose(0, 16 / 9));
     expect(retreatFlight(10)).toBe(0);
 });
 

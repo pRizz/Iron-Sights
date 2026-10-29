@@ -1,6 +1,22 @@
 import { expect, test } from 'bun:test';
 import { advanceRoom, easeOut, roomAction, type RoomFlow } from './flow';
 
+for (const [phase, duration, next] of [
+    ['inserting', 0.9, 'waiting'],
+    ['powering', 0.3, 'flying'],
+    ['flying', 1.3, 'screen'],
+    ['retreating', 1.5, 'inserted'],
+] as const) {
+    test(`${phase} finishes at the agreed ${duration}-second boundary`, () => {
+        // Arrange / Act
+        const before = advanceRoom({ phase, elapsed: duration - 0.02 }, 0.01, false, false);
+        const after = advanceRoom(before, 0.02, false, false);
+        // Assert: loading still holds at the screen after the shorter flight.
+        expect(before.phase).toBe(phase);
+        expect(after.phase).toBe(next);
+    });
+}
+
 test('a cartridge in the returned room waits for the power gesture', () => {
     const initial: RoomFlow = { phase: 'empty', elapsed: 0 };
     const restored = roomAction(initial, 'restore');

@@ -2369,6 +2369,20 @@ verified room refinements in `ed459f2`. PR #2 was closed rather than merged.
 
 ### FORK-025 — Immersive browser room
 
+Room transitions use 0.9-second cartridge insertion, 0.3-second power-on,
+1.3-second TV flight and 1.5-second return to the room. The return camera retains
+its 0.3-second crossfade hold and completes its retreat within the shared phase
+duration, avoiding a camera snap when interaction resumes. This replaces the
+earlier 1.9/0.9/2.8/3.1-second sequence. Slow idle cartridge rotation, easing,
+reduced-motion fades and the real engine-readiness gate remain intact. Sources:
+`web/src/room/flow.ts`, `cinematic.ts` and their boundary/endpoint regressions.
+Validation: 167 Bun tests, TypeScript, scoped Prettier, production assembly and
+exact public-artifact verification pass. Edge room checks pass responsive,
+reduced-motion and fallback behavior; actual-ROM entry/Exit Game audits pass
+normal and reduced motion, warm power resume and exact save preservation using
+the existing local optimized runtime. Native sources are unchanged and the
+gallery freshness check passes. Private evidence: `build/web-room/faster-timings-*`.
+
 **Import Save** and **Export Save** now belong to GoldenEye's four-campaign
 Files screen, as clarified by the owner. The web-only action area has two rows
 and three columns alongside Copy, Erase, Options and Exit Game. This replaces

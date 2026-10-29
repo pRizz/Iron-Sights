@@ -23,10 +23,10 @@ export function roomAction(state: RoomFlow, action: RoomAction): RoomFlow {
 
 export function roomDuration(phase: RoomPhase, reduced: boolean): number {
     if (reduced) return 0.16;
-    if (phase === 'inserting') return 1.9;
-    if (phase === 'powering') return 0.9;
-    if (phase === 'flying') return 2.8;
-    if (phase === 'retreating') return 3.1;
+    if (phase === 'inserting') return 0.9;
+    if (phase === 'powering') return 0.3;
+    if (phase === 'flying') return 1.3;
+    if (phase === 'retreating') return 1.5;
     return Infinity;
 }
 
