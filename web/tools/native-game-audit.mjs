@@ -1,10 +1,19 @@
 // Private audit access to existing exported counters. Never bundled in the site.
 import assert from 'node:assert/strict';
 
-export async function installGameProbe(page) {
+export async function installGameProbe(page, { readMemory = false } = {}) {
     await page.route('**/runtime/*/ProjectMidas.mjs', async (route) => {
         const response = await route.fetch();
-        const source = await response.text();
+        let source = await response.text();
+        if (readMemory) {
+            const marker = 'function getMemoryBuffer() {';
+            assert.ok(source.includes(marker), 'Runtime memory reader marker was not found');
+            source = source.replace(
+                marker,
+                `${marker}
+    globalThis.midasAuditReadU32 = (address) => new Uint32Array(wasmMemory.buffer)[address >>> 2];`,
+            );
+        }
         await route.fulfill({
             response,
             body: source.replace(

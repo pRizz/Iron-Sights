@@ -9,7 +9,7 @@ export function createTouchHints(context: Accessor<TouchHintContext>): Accessor<
         const current = currentContext();
         setVisible(current !== 'inactive');
         if (current === 'inactive') return;
-        const timer = setTimeout(() => setVisible(false), current === 'game' ? 5000 : 3000);
+        const timer = setTimeout(() => setVisible(false), 5000);
         onCleanup(() => clearTimeout(timer));
     });
     return visible;

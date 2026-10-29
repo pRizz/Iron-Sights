@@ -15,6 +15,7 @@ import { createTouchContacts, suppressTouchGestures } from './touch-contacts';
 import { TouchMenu } from './touch-menu';
 import { createTouchHints } from './touch-hints';
 import { touchContext, type TouchContext } from './touch-context';
+import { HelperText } from './helper-text';
 import './touch.css';
 
 type Props = {
@@ -254,9 +255,7 @@ export function TouchControls(props: Props) {
                                 };
                         }}
                     >
-                        <Show when={hints()}>
-                            <span>Drag to look</span>
-                        </Show>
+                        <HelperText when={hints()}>Drag to look</HelperText>
                     </div>
                     <div
                         class="touch-stick"
@@ -270,17 +269,15 @@ export function TouchControls(props: Props) {
                             }
                         }}
                     >
-                        <Show when={hints()}>
-                            <span>MOVE</span>
-                        </Show>
+                        <HelperText when={hints()}>MOVE</HelperText>
                         <i
                             style={{
-                                transform: `translate(${stick().x * 38}px, ${-stick().y * 38}px)`,
+                                transform: `translate(${stick().x * 65}%, ${-stick().y * 65}%)`,
                             }}
                         />
                     </div>
-                    <div class="touch-weapon">
-                        <Button action="nextWeapon" label="Switch weapon">
+                    <div class="touch-gadget">
+                        <Button action="nextGadget" label="Switch gadget">
                             <svg
                                 viewBox="0 0 32 32"
                                 width="28"
@@ -291,8 +288,8 @@ export function TouchControls(props: Props) {
                                 stroke-width="2"
                                 stroke-linejoin="round"
                             >
-                                <path d="M4 8h24v7H16l-3 11H6l3-11H4z" />
-                                <path d="M16 15v5h5l2-5M7 11h17" />
+                                <rect x="8" y="7" width="16" height="22" rx="3" />
+                                <path d="M12 7V3h8v4M12 12h8M12 17h3M19 17h1M12 23h8" />
                             </svg>
                         </Button>
                     </div>
@@ -339,15 +336,13 @@ export function TouchControls(props: Props) {
                         </Button>
                     </div>
                 </Show>
-                <Show when={hints()}>
-                    <span class={menu() ? 'touch-menu-hint' : 'touch-game-hint'}>
-                        {menu()
-                            ? watch()
-                                ? 'Drag to move cursor · Tap to select · Or use arrows'
-                                : 'Drag to move cursor · Tap to select'
-                            : 'Move left · Start/Watch pauses'}
-                    </span>
-                </Show>
+                <HelperText when={hints()} class={menu() ? 'touch-menu-hint' : 'touch-game-hint'}>
+                    {menu()
+                        ? watch()
+                            ? 'Drag to move cursor · Tap to select · Or use arrows'
+                            : 'Drag to move cursor · Tap to select'
+                        : 'Move left · Start/Watch pauses'}
+                </HelperText>
             </div>
         </Show>
     );

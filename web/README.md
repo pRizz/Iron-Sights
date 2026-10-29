@@ -49,7 +49,9 @@ analog left thumbstick and drag any free screen area to look. **Touch layout** d
 gray rectangular Z on the right send native controller buttons. Start, B and A
 share one vertical column on phones and tablets, with A at the bottom. Hold/drag Z to
 shoot and turn, tap the gray rounded rectangular R to toggle ADS, and use the
-weapon icon to cycle weapons. R keeps a highlighted border while aiming.
+gadget icon to cycle gadgets; A cycles weapons. R spans both columns above Start
+and Z and keeps a highlighted border while aiming. Buttons, labels, gaps and
+the stick grow on tablet-sized screens, up to 150% of the phone button sizes.
 Start opens the watch; A/B also navigate its native menus. **Modern actions** retains
 Fire/Use/Reload/Crouch/Watch and the More tray for weapon/gadget selection, zoom,
 sprint and detonation. The layout choice is saved separately from game files;
@@ -60,7 +62,8 @@ All controller buttons and the stick stay hidden during startup, mission selecti
 briefings and cutscenes. Drag the cursor and tap to select; taps can skip permitted
 intros. The engine's live-input permission triggers a 240 ms control fade when
 gameplay starts, including after later cutscenes. Reduced motion skips the fade.
-The in-mission watch keeps its navigation buttons. Context changes release held
+The in-mission watch keeps its navigation buttons; each arrow contact moves one
+item even when held. Context changes release held
 actions and cancel old menu gestures. Larger shared insets
 leave at least 28/36/40 CSS pixels on the left/right/bottom, with extra protection
 for device safe areas. Narrow phones keep the stick and menu arrows separate
@@ -72,14 +75,18 @@ settings remain. Rotation fits the existing framebuffer without changing its
 resolution. Only real buttons and the stick claim touch areas; transparent
 control groups and helper/status text pass gestures through. Look and cursor
 movement follow their pointer IDs even if capture fails or a drag crosses a
-button. Instructions sit near the safe top and disappear after five seconds in
-gameplay or three seconds in menus/Files, including the right-side look hint.
+button. Instructions sit near the safe top, remain for five seconds in gameplay
+and menus/Files, then fade out over 350 ms, including the look and stick labels.
+App status hints also fade; reduced motion uses a shorter 80 ms opacity fade.
 Physical iPad performance and Safari acceptance remain device checks.
 
 `bun run test:touch` builds a ROM-free Solid fixture and verifies actual
 multi-pointer capture/cancellation and layout at the native boundary. The Pages
 workflow also runs the synthetic Wasm bridge regression. For private real-ROM
 mobile-viewport acceptance, use `MIDAS_BROWSER=chrome bun run audit:touch ../baserom.u.z64 ../build/web-touch/game http://127.0.0.1:4177/Iron-Sights/`.
+Set `MIDAS_TOUCH_WATCH_MAP=../build/web/video/ProjectMidas.map` for Chromium-only
+read-only verification that all four watch arrows move one item and never repeat
+while held. The map must match the locally assembled runtime under test.
 The audit defaults to DPR 2; set `MIDAS_DPR=3` for a 3× screen or `MIDAS_TABLET=1`
 for the 1024×768 iPad viewport. It checks requested versus actual canvas/WebGL
 dimensions, cursor-only menus into Dam, hidden intro controls, the engine-ready

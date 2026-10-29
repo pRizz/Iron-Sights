@@ -81,16 +81,16 @@ try {
         true,
         'Safari touchend zoom fallback was passive or missing',
     );
-    const weapon = page.getByRole('button', { name: 'Switch weapon', exact: true });
-    await expect(weapon.locator('svg')).toBeVisible();
-    // The primary icon uses the native next-weapon action, with independent
+    const gadget = page.getByRole('button', { name: 'Switch gadget', exact: true });
+    await expect(gadget.locator('svg')).toBeVisible();
+    // The primary icon uses the native next-inventory action, with independent
     // press/release ownership on every tap, without opening More.
     for (let tap = 0; tap < 2; tap++) {
-        await weapon.hover();
+        await gadget.hover();
         await page.mouse.down();
-        assert.ok((await snapshot()).held.includes(9));
+        assert.ok((await snapshot()).held.includes(11));
         await page.mouse.up();
-        assert.ok(!(await snapshot()).held.includes(9));
+        assert.ok(!(await snapshot()).held.includes(11));
     }
     await expect(page.locator('.touch-extra')).toHaveCount(0);
     // Exercise missing pointer terminals in both engines, including WebKit's
@@ -197,7 +197,7 @@ try {
     }
     await page.evaluate(() => touchFixture.menu(true));
     await expect(page.locator('[data-touch-action=accept]')).toBeVisible();
-    await expect(weapon).toHaveCount(0);
+    await expect(gadget).toHaveCount(0);
     const menuSurface = page.locator('.touch-menu-surface');
     const accepts = (await snapshot()).accepts;
     await page.mouse.move(400, 150);
@@ -249,7 +249,7 @@ try {
             '.touch-stick',
             '[data-touch-action=fire]',
             '[data-touch-action=watch]',
-            '.touch-weapon button',
+            '.touch-gadget button',
         ]) {
             const box = await page.locator(selector).boundingBox();
             assert.ok(
@@ -266,7 +266,7 @@ try {
         await page.getByRole('button', { name: 'More', exact: true }).tap();
         await expect(page.getByRole('button', { name: 'Weapon +', exact: true })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Weapon −', exact: true })).toBeVisible();
-        const icon = await weapon.boundingBox();
+        const icon = await gadget.boundingBox();
         const tray = await page.locator('.touch-extra').boundingBox();
         assert.ok(
             icon.x + icon.width <= tray.x ||

@@ -60,17 +60,18 @@ loss, cancellation, rotation and returning to the room. Use a browser-only input
 adapter and small shared hooks; preserve native keyboard/mouse/controller and
 ADS behavior. Automate mobile viewport/multi-pointer and real-ROM input checks;
 distinguish those checks from physical iOS/Android acceptance.
-The accepted convenience refinement adds a gun-icon weapon-cycle button to the
-main gameplay overlay while retaining Weapon + and Weapon − in More. Reuse the
-existing forward-cycle action on all touch devices rather than adding a separate
-iOS input path.
+The accepted convenience refinement now uses a gadget-icon next-inventory button
+on the main gameplay overlay, superseding the gun-icon weapon-cycle shortcut;
+A already cycles weapons in N64 mode. More retains weapon and gadget cycling.
 The 2026-10-28 mobile refinement removes browser Pause/Options from both touch
 layouts; Start/Watch remains the native pause control. It also increases safe-area
 insets and aligns Start, B and A vertically, with A at the bottom, on all sizes.
 The accepted gesture refinement makes all unoccupied viewport space available
 for look/menu panning, with blocking limited to actual buttons and the stick.
-Instruction hints move near the top and dismiss after five seconds of gameplay
-or three seconds in menus; hint text must never intercept input.
+Instruction hints move near the top, stay visible for five seconds in gameplay
+and menus, then fade out. Helper text must never intercept input. The accepted
+2026-10-29 refinement also makes watch arrows single-step per contact, scales
+the controls on larger touchscreens and spans R above both the Start and Z columns.
 The accepted presentation refinement hides every controller button and the stick
 during startup, mission selection, briefings and cutscenes. Use cursor/tap input
 until the native engine grants gameplay control, then fade the HUD in. Keep the

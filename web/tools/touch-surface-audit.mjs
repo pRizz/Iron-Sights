@@ -195,7 +195,12 @@ export async function auditTouchHints(page) {
     // The real capture state emits fresh playing snapshots during a mission.
     // Refreshing that snapshot must not restart the five-second hint deadline.
     await page.evaluate(() => touchFixture.resume());
-    await page.clock.fastForward(1200);
+    await page.clock.fastForward(1000);
+    await expect(game).toHaveClass(/helper-text-fading/);
+    await expect(game).toHaveCount(1);
+    await expect(game).toHaveCSS('transition-property', 'opacity');
+    await expect(game).toHaveCSS('transition-duration', '0.35s');
+    await page.clock.fastForward(360);
     await expect(game).toHaveCount(0);
     await expect(page.locator('.touch-look span')).toHaveCount(0);
     await page.evaluate(() => touchFixture.menu(true));
@@ -210,11 +215,17 @@ export async function auditTouchHints(page) {
     await expect(game).toHaveCount(0);
     await page.evaluate(() => touchFixture.menu(true));
     await expect(menu).toBeVisible();
-    await page.clock.fastForward(3100);
+    await page.clock.fastForward(4000);
+    await expect(menu).toBeVisible();
+    await page.clock.fastForward(1000);
+    await expect(menu).toHaveClass(/helper-text-fading/);
+    await page.clock.fastForward(360);
     await expect(menu).toHaveCount(0);
     await page.evaluate(() => touchFixture.fileMenu(true));
     await expect(menu).toBeVisible();
-    await page.clock.fastForward(3100);
+    await page.clock.fastForward(5000);
+    await expect(menu).toHaveClass(/helper-text-fading/);
+    await page.clock.fastForward(360);
     await expect(menu).toHaveCount(0);
     await page.evaluate(() => {
         touchFixture.fileMenu(false);
@@ -232,4 +243,16 @@ export async function auditTouchHints(page) {
         'Status hint intercepted the gesture surface',
     );
     await page.evaluate(() => touchFixture.message(false));
+    await expect(page.locator('.experience-hint')).toHaveClass(/helper-text-fading/);
+    await page.clock.fastForward(150);
+    await page.evaluate(() => touchFixture.message(true));
+    await expect(page.locator('.experience-hint')).not.toHaveClass(/helper-text-fading/);
+    await page.clock.fastForward(360);
+    await expect(page.locator('.experience-hint')).toBeVisible();
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(page.locator('.experience-hint')).toHaveCSS('transition-duration', '0.08s');
+    await page.evaluate(() => touchFixture.message(false));
+    await page.clock.fastForward(360);
+    await expect(page.locator('.experience-hint')).toHaveCount(0);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
 }

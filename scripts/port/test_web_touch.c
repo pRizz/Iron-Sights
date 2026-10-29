@@ -45,6 +45,36 @@ static void testTouchContext(void)
     stageRunning = watchOpen = live = 0;
 }
 
+static void testWatchDirections(void)
+{
+    /* Arrange: all four directions, with a finger held across many polls. */
+    const s32 directions[] = {TOUCH_UP, TOUCH_DOWN, TOUCH_LEFT, TOUCH_RIGHT};
+    const u16 masks[] = {U_JPAD, D_JPAD, L_JPAD, R_JPAD};
+    s32 i, tick;
+    watchOpen = 1;
+    for (i = 0; i < 4; i++) {
+        OSContPad pad = {0};
+        portWebTouchReset();
+        /* Act / Assert: one digital edge, no second analog navigation source. */
+        portWebTouchButton(directions[i], 1);
+        portWebTouchPoll(&pad);
+        assert(pad.button == masks[i] && pad.stick_x == 0 && pad.stick_y == 0);
+        for (tick = 0; tick < 120; tick++) {
+            pad.button = 0;
+            portWebTouchButton(directions[i], 1);
+            portWebTouchPoll(&pad);
+            assert(pad.button == 0 && pad.stick_x == 0 && pad.stick_y == 0);
+        }
+        portWebTouchButton(directions[i], 0);
+        portWebTouchButton(directions[i], 1);
+        portWebTouchButton(directions[i], 0);
+        portWebTouchPoll(&pad);
+        assert(pad.button == masks[i]);
+    }
+    watchOpen = 0;
+    portWebTouchReset();
+}
+
 static void testNativeN64Buttons(void)
 {
     /* Arrange: both gameplay and native menus use the same physical buttons. */
@@ -79,6 +109,7 @@ int main(void)
     testTouchContext();
     portWebTouchEnable(1);
     testNativeN64Buttons();
+    testWatchDirections();
     portWebTouchButton(TOUCH_FIRE, 1);
     portWebTouchButton(TOUCH_AIM, 1);
     portWebTouchButton(TOUCH_RELOAD, 1);

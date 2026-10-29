@@ -82,7 +82,7 @@ EMSCRIPTEN_KEEPALIVE void portWebTouchButton(s32 action, s32 down)
     u32 bit;
     if (!enabled || action < 0 || action >= TOUCH_COUNT) return;
     bit = 1u << action;
-    if (down) { pressed |= bit; held |= bit; }
+    if (down) { if (!(held & bit)) pressed |= bit; held |= bit; }
     else held &= ~bit;
 }
 
@@ -93,7 +93,10 @@ void portWebTouchPoll(OSContPad *pad)
         [TOUCH_BACK] = B_BUTTON, [TOUCH_UP] = U_JPAD, [TOUCH_DOWN] = D_JPAD,
         [TOUCH_LEFT] = L_JPAD, [TOUCH_RIGHT] = R_JPAD
     };
-    u32 down = held | pressed;
+    /* Watch arrows are one digital step per contact, never an analog hold. */
+    const u32 directions = (1u << TOUCH_UP) | (1u << TOUCH_DOWN)
+        | (1u << TOUCH_LEFT) | (1u << TOUCH_RIGHT);
+    u32 down = (held & ~directions) | pressed;
     s32 i, action;
     pressed = 0;
     if (!enabled || portConIsOpen()) return;
@@ -111,10 +114,12 @@ void portWebTouchPoll(OSContPad *pad)
     if (!portBondControlsLive() || g_PlayerIsInTank) {
         /* Native menus include both cursor-driven folders and D-pad watch lists. */
         f32 x = moveX, y = moveY;
-        if (down & (1u << TOUCH_LEFT)) x = -1;
-        if (down & (1u << TOUCH_RIGHT)) x = 1;
-        if (down & (1u << TOUCH_UP)) y = 1;
-        if (down & (1u << TOUCH_DOWN)) y = -1;
+        if (!portWatchMenuUp()) {
+            if (down & (1u << TOUCH_LEFT)) x = -1;
+            if (down & (1u << TOUCH_RIGHT)) x = 1;
+            if (down & (1u << TOUCH_UP)) y = 1;
+            if (down & (1u << TOUCH_DOWN)) y = -1;
+        }
         if (x != 0) pad->stick_x = (s8)(x * 80);
         if (y != 0) pad->stick_y = (s8)(y * 80);
     }

@@ -1,0 +1,13 @@
+.helper-text {
+    opacity: 1;
+    transition: opacity 350ms ease-out;
+    pointer-events: none;
+}
+.helper-text.helper-text-fading {
+    opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+    .helper-text {
+        transition-duration: 80ms;
+    }
+}

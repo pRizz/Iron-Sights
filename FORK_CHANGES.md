@@ -346,18 +346,24 @@ B, circular red Start and gray rectangular Z. Their colored fills use 50% alpha
 beneath the existing highlight/shadow treatment so the game remains visible
 through them, while white labels retain full opacity. This replaces the original
 opaque fills, preserving controller colors and shapes. Z is now a much larger
-upright rectangle at the right edge: 80 CSS pixels wide and 184 high on wider
-viewports, or 72 wide and 240 high on narrow phones. Start, B and A share a
+upright rectangle at the right edge: 80 CSS pixels wide and 184 high at the base
+size, or 72 wide on narrow phones. Start, B and A share a
 vertical centerline at every size, with Start on top and A at the bottom. A gray
-64×48 rounded rectangular **R** replaces the N64 layout's former Aim button,
-beside Start on wider layouts and above it on narrow phones. It retains the same
+rounded rectangular **R** spans both columns above Start and Z, replacing the
+former 64×48 placement beside Start (or above only Start on narrow phones).
+It retains the same
 ADS toggle action and pressed state, with a highlighted border while aiming.
 Modern actions retains its Aim label. R shares the translucent gray controller
-finish used by Z; the wider first grid column keeps its hit area separate.
-R presentation validation: TypeScript, scoped formatting, production assembly/
+finish used by Z. All touch buttons, the gadget icon, gaps, labels and stick grow
+with the shorter viewport dimension above 600 CSS pixels, capped at 150% of the
+phone button sizes. A 1024×768 tablet uses 128% button sizing; phone-sized
+landscape viewports retain their base targets. R spans 152 pixels at the base
+size, or 144 on narrow phones, before tablet scaling.
+Initial R-only presentation validation: TypeScript, scoped formatting, production assembly/
 allowlist and Chromium/Windows WebKit touch fixtures pass; portrait/landscape
 captures and existing toggle/reset checks were reviewed. Native render inputs
-are unchanged. Evidence is `build_win/mobile-r-*.log` and private touch captures.
+were unchanged in that presentation-only update. Evidence is
+`build_win/mobile-r-*.log` and private touch captures.
 This replaces the former 104×48 horizontal Z; the stick, safe areas and remaining
 button hit targets stay separate. Existing press/release and drag-to-fire/look
 behavior is retained. On the Files screen the N64 cluster and Modern Select/Back
@@ -378,7 +384,7 @@ menu mode; Start/Watch opens the native pause menu, while browser focus-loss
 pause and Resume remain. This supersedes the original top Pause/Options pair.
 Shared safe-area-aware insets now leave at least 28/36/40 CSS pixels on the
 left/right/bottom. These replace the earlier extra 10-pixel right/bottom rule
-and also inset the stick, weapon button and menu arrows. On 320-pixel phones,
+and also inset the stick, gadget button and menu arrows. On 320-pixel phones,
 a 96-pixel stick, tighter N64 column gap and higher menu arrows keep targets
 separate. The Modern Watch button is inset at the upper left.
 The gesture background now fills the viewport in gameplay and menus. Transparent
@@ -390,20 +396,43 @@ ID at document capture phase, so walking, look/fire dragging and menu panning
 remain independent when native pointer capture fails or the finger crosses a
 button. Existing release, cancellation and focus-reset rules remain.
 
-Instruction text sits eight CSS pixels below the top safe area and dismisses
-after five seconds of gameplay or three seconds in menus/Files. The right-side
+Instruction text sits eight CSS pixels below the top safe area and stays visible
+for five seconds in gameplay and menus/Files, replacing the three-second menu
+deadline. The right-side
 look hint and stick instruction share the gameplay deadline. Timers follow
 semantic context changes, preserving their deadline across ordinary playing
 state updates; pause/resume and mode changes reset them. Generic mobile startup
 instructions use this overlay instead of a duplicate app banner. Status/error
 messages retain their message lifecycle but also pass input through.
+Timed helper text uses the shared `HelperText` component to fade out over 350 ms
+before removal, including app status hints, look and stick labels. Reduced
+motion shortens the opacity fade to 80 ms; hidden hints stop announcing at the
+start of the fade. A new hint cancels pending removal.
+Watch arrows now issue one digital direction edge per contact, with no repeated
+hold or duplicate full-strength stick input in the watch. Fire/other holds and
+analog movement retain their ownership. The Wasm bridge regression covers all
+four directions held for 120 polls, duplicate downs and a subsequent short tap.
+Current validation: TypeScript, 167 unit tests, formatting, optimized Wasm build,
+ROM-free logo exclusion and exact public-artifact verification pass. Edge and
+Windows WebKit fixtures pass five-second hints/fades, gadget action and target
+geometry through 1366×1024. Edge's actual-ROM audit reads watch indices through
+an optional private heap observer and matching linker map: all four arrows move
+one item and remain stable throughout 1.2-second holds. Gameplay, focus/audio and
+rotation pass. Both gallery passes reproduce all 107 PNGs unchanged; standards
+and freshness checks pass. Sources include `helper-text.tsx`/`.css`,
+`touch-controls.tsx`, `touch-hints.ts`, `touch.css`, `port/web/touch.c`,
+`test_web_touch.c`, and `touch-watch-audit.mjs`. Evidence remains private under
+`build/web-touch/refinement-*` and `build/touch-refinement-*.log`; physical
+iPad/Safari acceptance is not inferred from emulation.
 Touch regressions exercise both ends of the enlarged Z hit target.
 The controller background rule also wins over generic button-hover styling,
 so hovering or holding a button keeps its translucent controller color.
 These use existing raw native A/B/Start/Z button bits in gameplay and the watch,
 respecting the game's controller mapping. Aim remains a toggle during gameplay;
-the left analog movement stick, right-side drag-to-look and gun-icon **Switch
-weapon** convenience remain.
+the left analog movement stick and right-side drag-to-look remain. A gadget-icon
+**Switch gadget** button calls the existing next-inventory action, replacing
+the gun-icon weapon-cycle shortcut; A still cycles weapons in N64 mode. The
+Modern More tray retains both weapon and gadget cycling actions.
 Dragging Z turns while firing.
 **Modern actions** restores the previous Fire/Aim/Use/Reload/Crouch/Watch layout,
 Select/Back menu buttons and More tray with weapon/gadget cycling, zoom,

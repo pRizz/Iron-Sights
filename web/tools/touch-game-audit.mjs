@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { launchAuditBrowser } from './browser-choice.mjs';
 import { installGameProbe } from './native-game-audit.mjs';
 import { observeAudio, readAudio } from './audio-observer.mjs';
+import { auditTouchWatch } from './touch-watch-audit.mjs';
 
 const [rom, outputPath = '../build/web-touch/game', origin = 'http://127.0.0.1:4177/Iron-Sights/'] =
     process.argv.slice(2);
@@ -45,7 +46,7 @@ if (kind === 'chromium') {
     const focus = await context.newCDPSession(page);
     await focus.send('Emulation.setFocusEmulationEnabled', { enabled: false });
 }
-await installGameProbe(page);
+await installGameProbe(page, { readMemory: !!process.env.MIDAS_TOUCH_WATCH_MAP });
 await page.addInitScript(observeAudio);
 const errors = [];
 page.on('pageerror', (error) => errors.push(String(error)));
@@ -246,13 +247,14 @@ try {
     });
     await expect(page.locator('.touch-controls')).toHaveAttribute('data-context', 'watch');
     await expect(page.locator('.pause-overlay')).toHaveCount(0);
+    await auditTouchWatch(page, context);
     await tap(action('down'));
     await tap(action('watch'));
     await expect(page.locator('.touch-controls')).toHaveAttribute('data-mode', 'game', {
         timeout: 10000,
     });
     await expect(page.locator('.touch-game-hint')).toBeVisible();
-    await page.waitForTimeout(5200);
+    await page.waitForTimeout(5500);
     await expect(page.locator('.touch-game-hint')).toHaveCount(0);
     await expect(page.locator('.touch-look span')).toHaveCount(0);
     await expect(

@@ -1341,6 +1341,28 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**Touch usability refinement, 2026-10-29:** Menu/Files hints now last five seconds;
+shared helper text fades out over 350 ms (80 ms with reduced motion), including
+app status hints and look/stick labels. The left shortcut now cycles gadgets
+through next-inventory; A still cycles weapons. R spans both columns above Start
+and Z. Controls grow with the shorter viewport dimension above 600 CSS pixels,
+capped at 150% phone sizing, with a proportionally larger stick.
+Watch directions use a single digital edge per contact and no duplicate analog
+stick input; held/duplicate downs cannot repeat through the watch list.
+TypeScript, 167 unit tests and the Wasm bridge regression pass. Edge and Windows
+WebKit fixtures pass five-second deadlines/fades, ownership/reset, gadget action,
+R geometry and responsive targets through 1366×1024; phone/tablet captures were
+reviewed. Production Wasm compilation, ROM-free logo policy and exact assembled
+artifact verification pass. Edge's actual-ROM audit verifies all four directions
+move one tab/briefing item and stay stable during 1.2-second browser touch holds,
+using a read-only heap observer and the matching local linker map. Movement,
+fire/look, Watch, five-second hint/fade, focus recovery, audio and phone/tablet
+rotation also pass. The two-pass gallery changes zero images; integrity and
+standards checks pass. Physical iPad/Safari acceptance remains a device check.
+Private evidence:
+`build/web-touch/refinement-*`, `build/touch-refinement-*.log`.
+Next action: deliver main and check Pages publication.
+
 **N64 R presentation, 2026-10-28:** Replaced the N64 layout's Aim label with a
 gray 64×48 rounded rectangular R, matching Z's translucent controller finish.
 The existing ADS toggle/pressed state and transition resets remain; a highlighted

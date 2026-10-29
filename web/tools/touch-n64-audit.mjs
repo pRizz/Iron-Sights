@@ -53,13 +53,17 @@ export async function auditN64Layout(page, output) {
     await expect(page.getByRole('button', { name: 'Fire', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'More', exact: true })).toHaveCount(0);
     await expect(page.locator('[data-controller-button=r]')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Switch weapon', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Switch gadget', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Switch weapon', exact: true })).toHaveCount(0);
+    let phoneButtonWidth;
     for (const size of [
         { width: 320, height: 568 },
         { width: 390, height: 844 },
         { width: 844, height: 390 },
         { width: 568, height: 280 },
         { width: 1024, height: 768 },
+        { width: 768, height: 1024 },
+        { width: 1366, height: 1024 },
     ]) {
         await page.setViewportSize(size);
         const stick = await page.locator('.touch-stick').boundingBox();
@@ -74,6 +78,26 @@ export async function auditN64Layout(page, output) {
                 page.locator(`[data-controller-button=${name}]`).boundingBox(),
             ),
         );
+        const r = await page.locator('[data-controller-button=r]').boundingBox();
+        const z = await page.locator('[data-controller-button=z]').boundingBox();
+        const gadget = await page.getByRole('button', { name: 'Switch gadget' }).boundingBox();
+        assert.ok(
+            r.y >= 0 && r.y + r.height <= Math.min(start.y, z.y),
+            'R must sit above Start and Z',
+        );
+        assert.ok(
+            Math.abs(r.x - cluster.x) < 1 && Math.abs(r.width - cluster.width) < 1,
+            'R must span both columns',
+        );
+        if (size.width === 844) phoneButtonWidth = a.width;
+        if (Math.min(size.width, size.height) >= 768) {
+            assert.ok(
+                a.width >= 80 && start.width >= 60 && gadget.width >= 60,
+                'Tablet controls must grow with the shorter viewport dimension',
+            );
+            assert.ok(a.width > phoneButtonWidth, 'Tablet A must be larger than phone A');
+            assert.ok(stick.width > 150, 'Tablet stick must grow with its buttons');
+        }
         assert.ok(
             start.y + start.height <= b.y && b.y + b.height <= a.y,
             'Start, B, A must be ordered top to bottom',

@@ -14,6 +14,7 @@ import { FileSaveActions } from './file-save-actions';
 import { SaveTransferDialogs } from './save-transfer-dialogs';
 import { restoredEntry, shouldAutoLaunch, type EntryMode } from './room/session';
 import { missionStyle } from './mission-theme';
+import { HelperText } from './helper-text';
 
 const SOURCE = 'https://github.com/pRizz/Iron-Sights';
 
@@ -594,16 +595,15 @@ export function App() {
                         : 'Standard launcher'}
                 </button>
             </Show>
-            <Show when={hint() && !controls() && (!touch.enabled() || !!action())}>
-                <p
-                    class="experience-hint"
-                    classList={{ 'touch-message': touch.enabled() }}
-                    role="status"
-                >
-                    {action() ||
-                        'Alt+Enter fullscreen · Enter / P watch · F2 controls · Escape may exit fullscreen'}
-                </p>
-            </Show>
+            <HelperText
+                when={hint() && !controls() && (!touch.enabled() || !!action())}
+                as="p"
+                class={`experience-hint${touch.enabled() ? ' touch-message' : ''}`}
+                role="status"
+            >
+                {action() ||
+                    'Alt+Enter fullscreen · Enter / P watch · F2 controls · Escape may exit fullscreen'}
+            </HelperText>
         </div>
     );
 }

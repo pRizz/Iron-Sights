@@ -4,6 +4,7 @@ import { TouchControls } from '../src/touch-controls';
 import { createTouchInput } from '../src/touch-input';
 import { TouchLayoutSetting } from '../src/touch-layout-setting';
 import { FileSaveActions } from '../src/file-save-actions';
+import { HelperText } from '../src/helper-text';
 import type { Engine } from '../src/engine';
 import type { Capture, Playback } from '../src/capture';
 import '../src/room.css';
@@ -89,9 +90,9 @@ Object.assign(globalThis, {
 render(
     () => (
         <>
-            <Show when={message()}>
-                <p class="experience-hint touch-message">Touch hint passthrough check</p>
-            </Show>
+            <HelperText when={message()} as="p" class="experience-hint touch-message">
+                Touch hint passthrough check
+            </HelperText>
             <div
                 data-fixture-settings
                 style="position:fixed;top:70px;left:12px;z-index:12;color:white"
