@@ -129,9 +129,11 @@ the isolated development executable and audit copies.
 
 The selected mission's difficulty page now shows an always-visible **Best Time**
 column beside the inherited Agent, Secret Agent, 00 Agent and optional 007 rows.
-The heading and right-aligned times use the difficulty labels' native Zurich Bold
+The heading and centered times use the difficulty labels' native Zurich Bold
 font, size, black ink and menu text renderer directly on the dossier paper, with
-no added background panel or rule. They fit beside the existing completion
+no added background panel or rule. Each label shares a column center halfway
+between the red completion checkmark's right edge and the dossier paper's right
+edge, giving equal space on either side. They fit beside the existing completion
 checkmarks and cheat-target badges. Only
 available difficulty rows appear. This adds a fork presentation of the upstream
 campaign's packed time records; the upstream briefing already displayed a best
@@ -158,9 +160,10 @@ cheat regressions also pass in both variants. The isolated
 values in Agent/Secret Agent/00 Agent order, with 1023 meaning no measured record.
 Its optional fixture fields extend `GE_MISSION_CHEAT_AUDIT` in RAM only and keep
 the existing three-field fixture compatible. Captures/logs remain ignored and
-copied audit executables are removed after exit. A Windows capture with measured
-and missing records across all four rows verifies the background-free native
-menu text styling and alignment.
+copied audit executables are removed after exit. Windows captures at 960x540 and
+800x600 with measured and missing records across all four rows verify the
+background-free native menu text, common column center and equal spacing between
+the checkmark and paper edge.
 
 Windows compilation, the existing HUD regressions and release-workflow
 `actionlint` validation pass. Four final isolated Windows captures at 960x540

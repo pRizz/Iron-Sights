@@ -31,9 +31,11 @@ s32 portMissionBestTimeText(s32 mission, s32 folder, s32 difficulty, char *text,
 
 static Gfx *portMissionTimeLabel(Gfx *dl, char *text, s32 y)
 {
+    /* Checkmarks end at x=290 and the dossier paper at x=388. */
+    const s32 columnCenterX = (290 + 388) / 2;
     s32 height, width, x;
     textMeasure(&height, &width, text, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
-    x = 382 - width;
+    x = columnCenterX - width / 2;
     dl = microcode_constructor(dl);
     return frontPrintText(dl, &x, &y, text, (s32)ptrFontZurichBoldChars, (s32)ptrFontZurichBold,
         0x000000ff, viGetX(), viGetY(), 0, 0);
