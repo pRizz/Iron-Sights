@@ -80,6 +80,16 @@ campaign saves (`Data/Saves`), profiles, settings, source files or other user da
 Audit executables are temporary: remove the copied executable when the audit
 finishes, while keeping useful diagnostic logs and captures.
 
+The user may play/debug the main Windows executable during development. Before
+building or replacing an executable, check running game processes and their
+resolved executable paths. Use a separate CMake binary directory and isolated
+runtime directory when a build or audit could collide with a running instance
+(for example `build_win/hd-prototype`). Keep the main executable, settings,
+saves, logs and crash output untouched. Do not stop a user's game to make a
+build succeed. Audit only task-owned processes and remove only their temporary
+executable copies after they exit. This also applies to gallery regeneration;
+pass its isolated executable rather than rebuilding an active player binary.
+
 ## Repo-Local Guidance
 
 - Minimize changes in upstream-owned files. Put new fork behavior in focused

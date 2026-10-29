@@ -70,6 +70,7 @@ struct TextureCacheValue {
     bool enhanced_font;
 
     std::list<struct TextureCacheMapIter>::iterator lru_location;
+    uint32_t hd_bytes; /* RGBA + complete mip chain upper bound; native-only budget */
 };
 
 struct TextureCacheMapIter {

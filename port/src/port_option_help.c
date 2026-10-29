@@ -24,6 +24,7 @@ static const struct PortOptHelp sHelp[] = {
     { "head_roll",          "Camera tilt and breathing sway." },
 
     /* PORT OPTIONS */
+    { "texture_pack",       "Original, HD or 4K. Missing pack textures use the originals. HD covers Dam scenery." },
     { "unlock_all",         "Unlocks all missions and cheats, still saves progress." },
     { "fix_shootthrough",   "Fixes shots passing through some walls." },
     { "distance_fading",    "Distant props and characters fade out." },

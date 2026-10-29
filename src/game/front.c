@@ -4565,6 +4565,9 @@ static const struct PortSheetRow port_sheet_rows_general[] = {
  * match is ini-only (default on); play as ssf character is ini-only. */
 static const struct PortSheetRow port_sheet_rows_portopts[] = {
     { SHROW_ABOUT, NULL, "About / Build Info\n" },
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    { SHROW_OPT, "texture_pack" },
+#endif
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     { SHROW_OPT, "crash_reporting" },
 #endif

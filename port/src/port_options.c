@@ -88,6 +88,10 @@ struct PortOpt {
 static const s32 sFilterVals[] = { 0, 1, 2, 3 };
 static const char *const sFilterText[] = { "Point\n", "Bilinear\n", "3-Point\n", "Trilinear\n" };
 static const char *const sFilterIni[]  = { "point", "bilinear", "3point", "trilinear" };
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+static const s32 sTexturePackVals[] = { 0, 1, 2 };
+static const char *const sTexturePackText[] = { "Original\n", "HD\n", "4K\n" };
+#endif
 
 /* Display mode: windowed, "fullscreen" (a borderless window covering the display) or "exclusive"
  * (SDL_WINDOW_FULLSCREEN); the old numeric 0 / 1 values still parse with their old meaning. */
@@ -204,6 +208,9 @@ static const struct PortOpt sOpts[] = {
     ENUMR ("msaa",          "[display]", "MSAA\n",            PORTOPT_CAT_DISPLAY, sMsaaVals, sMsaaText, NULL),
     TOGGLE("filter_2d",     "[display]", "2D Filtering\n",    PORTOPT_CAT_DISPLAY),
     TOGGLE("enhanced_fonts", "[display]", "Enhanced Fonts\n", PORTOPT_CAT_DISPLAY),
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    ENUMR ("texture_pack", "[display]", "Texture Pack\n", PORTOPT_CAT_DISPLAY, sTexturePackVals, sTexturePackText, NULL),
+#endif
     TOGGLE("high_lod",      "[display]", "High Detail\n",     PORTOPT_CAT_DISPLAY),
     ENUMR ("low_res",       "[display]", "3D Resolution\n",   PORTOPT_CAT_DISPLAY, sLowResVals, sLowResText, NULL),
     TOGGLE("mipmaps",       "[display]", "Mipmaps\n",         PORTOPT_CAT_DISPLAY),

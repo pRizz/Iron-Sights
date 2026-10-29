@@ -33,7 +33,11 @@ python scripts/port/test_hand_gallery.py
 The script builds current sources before rendering. A different local build
 command can be configured as a JSON argv array in Git config `midas.galleryBuild`;
 it must rebuild the same configured executable. Do not point it at a stale build.
-Close the main game before rebuilding on Windows. The script copies the rebuilt
+When the main game is running, build current sources into a separate CMake binary
+directory and use `generate --executable build_win/hd-prototype/IronSights.exe`.
+This skips the default build and leaves the running player executable untouched.
+The supplied executable must already contain the current rendering sources.
+The script copies the rebuilt
 executable and DLLs into an isolated, ignored directory, creates its own settings
 and icon cache, and leaves campaign saves, profiles and normal settings alone.
 It removes its executable copy when capture finishes or fails. Diagnostic logs

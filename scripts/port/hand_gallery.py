@@ -360,6 +360,13 @@ def verify(root=ROOT, staged=False):
 
 
 def build(root, work):
+    if os.name == 'nt':
+        player = str((root/'build_win/IronSights.exe').resolve()).replace("'", "''")
+        check = subprocess.run(['powershell', '-NoProfile', '-Command',
+            "$active = @(Get-Process IronSights -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq '"+player+"' }); if ($active.Count) { exit 1 }"],
+            capture_output=True, timeout=30)
+        if check.returncode:
+            raise ValueError('Player executable is running or could not be checked. Build separately and use generate --executable <isolated exe>.')
     configured = git('config', '--get', 'midas.galleryBuild', root=root).decode().strip() if subprocess.run(
         ['git', '-C', str(root), 'config', '--get', 'midas.galleryBuild'], capture_output=True).returncode == 0 else ''
     if configured:
@@ -377,7 +384,7 @@ def build(root, work):
     return root/('build_win/IronSights.exe' if os.name == 'nt' else 'build_pc_video/IronSights')
 
 
-def generate(root=ROOT):
+def generate(root=ROOT, executable=None):
     fingerprint = source_fingerprint(root)
     rom = root/'baserom.u.z64'
     if not rom.is_file():
@@ -385,7 +392,7 @@ def generate(root=ROOT):
     (root/'build_win').mkdir(exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix='hand-gallery-', dir=root/'build_win'))
     print('Local capture logs: '+str(work), flush=True)
-    exe = build(root, work)
+    exe = Path(executable).resolve(strict=True) if executable else build(root, work)
     game = work/'game'
     game.mkdir()
     target = game/exe.name
@@ -484,10 +491,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=('generate', 'verify', 'install-hook', 'pre-commit'))
     parser.add_argument('--index', action='store_true', help='Verify the staged gallery and staged inputs')
+    parser.add_argument('--executable', type=Path, help='Use an already built isolated executable; never rebuild the player binary')
     args = parser.parse_args()
     try:
         if args.command == 'generate':
-            generate()
+            generate(executable=args.executable)
         elif args.command == 'verify':
             verify(staged=args.index)
             print('Gallery verified: 72 matrix cells, 35 icons, input/pixel/file hashes and generated HTML.')

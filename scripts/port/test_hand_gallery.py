@@ -45,6 +45,17 @@ def references(root):
 
 
 class Gallery(unittest.TestCase):
+    def test_default_windows_build_refuses_a_running_player(self):
+        # Arrange: the process check reports an active player. No builder may run.
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            with mock.patch.object(gallery.os, 'name', 'nt'), mock.patch.object(gallery.subprocess, 'run',
+                    return_value=mock.Mock(returncode=1)) as process_check:
+                # Act / Assert
+                with self.assertRaisesRegex(ValueError, 'Player executable is running'):
+                    gallery.build(root, root)
+                self.assertEqual(process_check.call_count, 1)
+
     def test_build_templates_and_live_asset_objects_are_render_inputs(self):
         # Arrange
         paths = ['CMakePresets.json', 'port/web/sampler.glsl', 'port/web/sampler_shader.h.in',

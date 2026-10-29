@@ -30,6 +30,95 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-032 — Native Dam HD texture-pack prototype
+
+**Status:** Native Windows/OpenGL prototype; Original remains the default.
+
+Adds an optional HD environment replacement path beyond upstream's inherited
+BMP pool-byte rewrites, which retain N64 resolution/palettes. **Port Options >
+Texture Pack** in the frontend and watch selects Original/HD/4K through saved
+`[display] texture_pack=0/1/2`. Web/Xbox omit this setting and replacement path.
+HD uses the supplied Dam subset; 4K accepts a separately prepared pack rather
+than claiming bundled 4K artwork. Missing, corrupt, incompatible or unmatched
+textures retain their original rendering. Existing font selection is independent.
+
+Texture identity reconstructs the N64 alternate-row swaps omitted by the native
+inflater, plus native u16/u32 byte ordering, without rewriting game texture
+pools. CI also requires a palette identity. The preparer includes a reviewed
+stock-USA Dam native-palette crosswalk for 15 source identities; it does not pick
+arbitrary artwork by index hash alone. Unverified palette variants remain
+original. Native-bottom-up row preparation and scaled wrap-mask cropping keep
+the authored art aligned with existing UVs. Special composite/water addressing
+stays on the inherited path. No hand vertices, materials, UVs, wardrobe mapping,
+weapon geometry or text glyphs are redesigned by this feature.
+
+`Data/TexturePacks/hd.istex` and `4k.istex` are replaceable compressed sidecars
+beside the executable. Each image is independently DEFLATE-compressed with PNG's
+lossless RGBA row filters and a decoded Adler32. Bounds and checksums are checked
+before upload. GPU cache retention has a 128 MiB HD-image budget (including a
+mip-chain allowance; currently bound textures survive until unbound), and CPU
+decode holds one replacement at a time. A render-thread boundary applies mode
+and high-resolution file-timestamp changes, invalidating GPU and retained draw
+caches. Windows read handles allow atomic pack replacement while a snapshot is
+open. Artwork updates and higher-resolution versions require no executable rebuild.
+
+The source is intermissionfb's GoldenEye 007 HD v2025.12.30, with font textures
+and technical assistance credited to GhostlyDark. About / Build Info, the native
+player guide, pack provenance and separate notices retain attribution. The pack
+has no explicit redistribution license in its source release; this records the
+owner's requested bundled subset and does not relicense artwork under the port's
+MIT license. Unmodified puff 2.3 from zlib v1.3.1 supplies bounded DEFLATE decode
+with Mark Adler's license retained and packaged. The pinned source archive SHA256
+is recorded in the preparer and guide. Downloaded/prepared art and raw captures
+stay out of Git. Windows release CI prepares and explicitly packages the Dam
+subset, its analysis/provenance and notices; web artifacts contain none of it.
+
+Current preparation selects 100 source keys and adds 15 native aliases. Two exact
+decoded-image duplicates share payloads, leaving 98 unique images. Source PNG
+data is 15,150,002 bytes; the prepared pack is 13,375,283 bytes, preserving RGBA
+values with a reversible row-order change. The report identifies 68 images with
+constant alpha as potential future codec work, without dropping their alpha or
+evicting visually similar but nonidentical art.
+
+**Sources:** [guide](scripts/port/hd_textures.md),
+[renderer adapter](port/fast3d/hd_texture_import.inl),
+[format/identity](port/fast3d/hd_texture_format.cpp),
+[native loader](port/fast3d/hd_textures.cpp),
+[renderer hooks](port/fast3d/gfx_pc.cpp), [cache metadata](port/fast3d/gfx_pc.h),
+[settings bridge](port/src/video.c), [shared options](port/src/port_options.c),
+[setting help](port/src/port_option_help.c), [watch](port/src/port_watchpages.c),
+[frontend row](src/game/front.c), [About credits](port/fast3d/about.cpp),
+[preparer](scripts/port/prepare_texture_pack.py),
+[Dam scope](scripts/port/hd_dam_sources.json),
+[reviewed palette identities](scripts/port/hd_dam_native_aliases.json),
+[decoder and license](port/fast3d/third_party/puff/puff.h),
+[native unit runner](scripts/port/test_hd_textures.sh),
+[preparation tests](scripts/port/test_texture_pack_preparation.py),
+[capture audit](scripts/port/audit_hd_textures.ps1),
+[Windows packaging](scripts/port/package_windows.py),
+[package tests](scripts/port/test_distribution.py),
+[release input provenance](scripts/port/release_inputs.py),
+[Windows CI](.github/workflows/windows-release.yml), [CMake](CMakeLists.txt),
+[INI guide](tools/midas_ini_help.txt), [player guide](scripts/port/release/START-HERE.txt).
+
+**Validation:** ROM-free native identity/decode/lifecycle tests, five synthetic
+preparation tests, distribution tests, wardrobe and ADS regressions pass.
+Seeded Original/HD native Dam intro captures show 31 exact replacements including
+reviewed CI scenery; the native Port Options screenshot shows the HD selector.
+The gameplay/reload route observes 39 distinct keyed replacements, successfully
+removes the copied pack while Windows holds it open, renders the original
+fallback, and restores/reloads HD in the same process. Every one of the 115
+prepared records passes the native decoder/checksum test, including off-route
+images. Both independent gallery passes verify 72 views and 35 icons with zero
+changed image cells; all nine gallery workflow tests pass. Web video compilation
+and the Wasm asset exclusion audit pass with HD loading/UI excluded. Native
+release-workflow lint, scoped Markdown checks and the actual local package's
+23 input checksums pass; no ROM, campaign or profile data is bundled.
+Private evidence is `build_win/hd-research` and isolated `build_win/hd-audit-*`.
+This is prototype coverage, not evidence that every Dam camera/palette variant
+or a complete 4K pack has been accepted. Main player builds remain separate from
+the isolated development executable and audit copies.
+
 ### FORK-032 — Best-time column on mission difficulty pages
 
 **Status:** Implemented.
@@ -2214,11 +2303,21 @@ audited Windows machine its existing npm-managed global installation was
 upgraded from 1.1.16 to stable 1.4.4 and verified in PowerShell and Git Bash.
 
 The initial checker reported 195 pre-existing file-length findings. The
-user-owned TSV records 96 exact-file exceptions and five generated/vendor
+user-owned TSV records 96 exact-file exceptions and six generated/vendor
 directories, with reasons. New source files outside those directories remain
 checked; this is a documented adoption baseline, not a whole-game refactor or
 claim of complete standards compliance. The managed checker is unchanged.
 The overrides preserve native interfaces and the scoped verification workflow.
+
+The owner's concurrent-play rule now requires checking running executable paths
+and using separate build/runtime directories when development could collide
+with a live Windows player. The main executable and player data must remain
+untouched; task-owned audit processes/copies are separate. Gallery generation
+accepts `--executable` for an already built isolated binary and refuses its
+default Windows player build while that binary is running. The unmodified puff
+vendor directory has a narrowly scoped file-length exception. Sources include
+AGENTS.md, the gallery script/guide and the user-owned checker baseline; HD
+prototype delivery and validation are FORK-033.
 
 Unattended rules updates are explicitly disabled: future updates must preserve
 the fork inventory and review requirements. The manual status/update guide

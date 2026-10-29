@@ -412,6 +412,10 @@ if(GE_VIDEO)
         port/fast3d/gfx_sdl2.cpp
         port/fast3d/glad/glad.c
     )
+    if(NOT EMSCRIPTEN AND NOT GE_XBOX)
+        list(APPEND FAST3D_SRC port/fast3d/hd_textures.cpp
+            port/fast3d/hd_texture_format.cpp port/fast3d/third_party/puff/puff.c)
+    endif()
     add_compile_definitions(GE_VIDEO=1)
 else()
     set(FAST3D_SRC)

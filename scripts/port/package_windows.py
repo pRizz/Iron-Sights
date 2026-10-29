@@ -28,6 +28,18 @@ def package(build, output, root=ROOT, sdl_license=None):
     inputs["SDL2-LICENSE.txt"] = sdl_license.read_bytes()
     inputs["Enhanced-Fonts-LICENSE.txt"] = (root/"port/fast3d/fonts/LICENSE.txt").read_bytes()
     inputs["Enhanced-Fonts-NOTICE.txt"] = (root/"port/fast3d/fonts/NOTICE.txt").read_bytes()
+    # Deliberate artwork allowlist, independent of saves/ROMs and unrelated packs.
+    textures = build/"Data/TexturePacks"
+    installed = [name for name in ("hd.istex", "4k.istex") if (textures/name).is_file()]
+    if installed:
+        for name in installed:
+            data = (textures/name).read_bytes()
+            if len(data) < 16 or data[:8] != b"ISTEX001" or int.from_bytes(data[12:16],"little") != len(data):
+                raise ValueError("Invalid native texture pack: "+name)
+            inputs["Data/TexturePacks/"+name] = data
+            inputs["Data/TexturePacks/"+name.replace(".istex", ".json")] = (textures/name.replace(".istex", ".json")).read_bytes()
+        for name in ("HD-Textures-NOTICE.txt", "puff-LICENSE.txt"):
+            inputs["Data/TexturePacks/"+name] = (textures/name).read_bytes()
     hashes = "".join(f"{hashlib.sha256(data).hexdigest()}  {name}\n" for name, data in sorted(inputs.items()))
     inputs["SHA256SUMS.txt"] = hashes.encode("ascii")
     path = output/NAME

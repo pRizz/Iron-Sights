@@ -137,6 +137,9 @@ static const struct PortWatchRowDef sGenSettings[] = {
 };
 static const struct PortWatchRowDef sPortOpts[] = {
     { PWROW_ACTION, NULL, "About / Build Info\n", 101, 0 },
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    { PWROW_OPT, "texture_pack", NULL, 0, 0 },
+#endif
     { PWROW_OPT,       "unlock_all",         NULL, 0, 0 },   /* first */
     { PWROW_OPT,       "fix_shootthrough",   NULL, 0, 0 },
     { PWROW_OPT,       "distance_fading",    NULL, 0, 0 },

@@ -13,6 +13,7 @@
 #include <ultra64.h>
 #include "port_modal.h"
 #include "port_crosshair.h"
+#include "port_hd_textures.h"
 
 #ifdef GE_XBOX
 /* No SDL on the console: the string/keyboard/thread stand-ins live in the
@@ -1076,6 +1077,12 @@ static int videoSetDisplayOption(const char *key, const char *value)
     if (SDL_strcasecmp(key, "anisotropy") == 0)    { s_CfgAnisotropy = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "filter_2d") == 0)     { s_CfgFilter2D = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "enhanced_fonts") == 0) { s_CfgEnhancedFonts = SDL_atoi(value) != 0; return 1; }
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    if (SDL_strcasecmp(key, "texture_pack") == 0) {
+        portTexturePackSet(SDL_strcasecmp(value, "hd") == 0 ? 1 : SDL_strcasecmp(value, "4k") == 0 ? 2 : SDL_atoi(value));
+        return 1;
+    }
+#endif
     if (SDL_strcasecmp(key, "high_lod") == 0)      { s_CfgHighLod = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "low_res") == 0)       { s_CfgLowRes = videoLowResLines(value); return 1; }
     /* "mipmaps" is the key the menu overhaul settled on (spec 2.1);
@@ -1449,6 +1456,9 @@ s32 portVideoOptionGet(const char *key, s32 *out)
     if (SDL_strcasecmp(key, "anisotropy") == 0)    { *out = (s_CfgAnisotropy >= 2) ? s_CfgAnisotropy : 0; return 1; }
     if (SDL_strcasecmp(key, "filter_2d") == 0)     { *out = s_CfgFilter2D;     return 1; }
     if (SDL_strcasecmp(key, "enhanced_fonts") == 0) { *out = s_CfgEnhancedFonts; return 1; }
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    if (SDL_strcasecmp(key, "texture_pack") == 0) { *out = portTexturePackGet(); return 1; }
+#endif
     if (SDL_strcasecmp(key, "high_lod") == 0)      { *out = s_CfgHighLod;      return 1; }
     if (SDL_strcasecmp(key, "low_res") == 0)       { *out = s_CfgLowRes;       return 1; }
     if (SDL_strcasecmp(key, "mipmaps") == 0
@@ -2291,6 +2301,9 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "anisotropy=%d\n", s_CfgAnisotropy);
     fprintf(f, "filter_2d=%d\n", s_CfgFilter2D);
     fprintf(f, "enhanced_fonts=%d\n", s_CfgEnhancedFonts);
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    fprintf(f, "texture_pack=%d\n", portTexturePackGet());
+#endif
     fprintf(f, "low_res=%d\n", s_CfgLowRes);
     fprintf(f, "n64_aa=%d\n", s_CfgN64Aa ? 1 : 0);
     fprintf(f, "room_cache=%d\n", s_CfgRoomCache);
@@ -4917,6 +4930,12 @@ s32 videoInit(void)
     }
     gfx_filter_2d = s_CfgFilter2D != 0;
     gfx_enhanced_fonts = s_CfgEnhancedFonts != 0;
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    {
+        extern const char *portRootPath(const char *name);
+        portTexturePackRoot(portRootPath("Data/TexturePacks"));
+    }
+#endif
     { /* [display] low_res: whole-game 240p render scaled to the window (very low power machines).
        * GE_LOWRES=1/0 overrides the ini for A/B. */
         extern char *getenv(const char *);
