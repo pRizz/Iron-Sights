@@ -163,7 +163,7 @@ export function TouchControls(props: Props) {
         action: TouchAction;
         label: string;
         children?: JSX.Element;
-        maybeController?: 'a' | 'b' | 'z' | 'start';
+        maybeController?: 'a' | 'b' | 'z' | 'r' | 'start';
     }) => (
         <button
             type="button"
@@ -321,7 +321,9 @@ export function TouchControls(props: Props) {
                 <Show when={hud() && props.input.layout() === 'n64' && !files()}>
                     <div class="touch-n64" role="group" aria-label="N64 controller buttons">
                         <Show when={!menu()}>
-                            <Button action="aim" label="Aim" />
+                            <Button action="aim" label="N64 R (toggle aim)" maybeController="r">
+                                R
+                            </Button>
                         </Show>
                         <Button action="watch" label="N64 Start" maybeController="start">
                             Start

@@ -48,7 +48,7 @@ hands control to you. Move with the left
 thumbstick and drag any free screen area to look. **Touch layout** defaults to **N64
 controller**, with blue A, green B and red Start in a vertical column (Start on
 top, A on the bottom), beside gray Z on the right.
-Hold/drag Z to shoot and turn; **Aim** toggles ADS, and the weapon icon switches
+Hold/drag Z to shoot and turn; the gray rectangular **R** toggles ADS, and the weapon icon switches
 weapons. Start opens the watch; A/B navigate its menus. Choose **Modern actions** in
 settings for the previous Fire/Use/Reload controls and More tray. Touch controls
 sit farther inside the safe screen edges. The mobile overlay omits browser

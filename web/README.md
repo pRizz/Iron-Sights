@@ -48,7 +48,8 @@ analog left thumbstick and drag any free screen area to look. **Touch layout** d
 **N64 controller**: blue circular A, green circular B, red circular Start and a
 gray rectangular Z on the right send native controller buttons. Start, B and A
 share one vertical column on phones and tablets, with A at the bottom. Hold/drag Z to
-shoot and turn, tap Aim to toggle ADS, and use the weapon icon to cycle weapons.
+shoot and turn, tap the gray rounded rectangular R to toggle ADS, and use the
+weapon icon to cycle weapons. R keeps a highlighted border while aiming.
 Start opens the watch; A/B also navigate its native menus. **Modern actions** retains
 Fire/Use/Reload/Crouch/Watch and the More tray for weapon/gadget selection, zoom,
 sprint and detonation. The layout choice is saved separately from game files;

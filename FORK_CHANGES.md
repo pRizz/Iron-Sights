@@ -203,8 +203,16 @@ through them, while white labels retain full opacity. This replaces the original
 opaque fills, preserving controller colors and shapes. Z is now a much larger
 upright rectangle at the right edge: 80 CSS pixels wide and 184 high on wider
 viewports, or 72 wide and 240 high on narrow phones. Start, B and A share a
-vertical centerline at every size, with Start on top and A at the bottom. Aim
-sits beside Start on wider layouts and above it on narrow phones.
+vertical centerline at every size, with Start on top and A at the bottom. A gray
+64×48 rounded rectangular **R** replaces the N64 layout's former Aim button,
+beside Start on wider layouts and above it on narrow phones. It retains the same
+ADS toggle action and pressed state, with a highlighted border while aiming.
+Modern actions retains its Aim label. R shares the translucent gray controller
+finish used by Z; the wider first grid column keeps its hit area separate.
+R presentation validation: TypeScript, scoped formatting, production assembly/
+allowlist and Chromium/Windows WebKit touch fixtures pass; portrait/landscape
+captures and existing toggle/reset checks were reviewed. Native render inputs
+are unchanged. Evidence is `build_win/mobile-r-*.log` and private touch captures.
 This replaces the former 104×48 horizontal Z; the stick, safe areas and remaining
 button hit targets stay separate. Existing press/release and drag-to-fire/look
 behavior is retained. On the Files screen the N64 cluster and Modern Select/Back

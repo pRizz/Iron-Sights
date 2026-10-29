@@ -1328,6 +1328,19 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**N64 R presentation, 2026-10-28:** Replaced the N64 layout's Aim label with a
+gray 64×48 rounded rectangular R, matching Z's translucent controller finish.
+The existing ADS toggle/pressed state and transition resets remain; a highlighted
+border marks latched aiming. The wider first grid column keeps R separate from
+Start; narrow phones retain R above the Start/B/A column. Modern actions retains
+its Aim button. Sources: `touch-controls.tsx`, `touch.css`, the N64 fixture audit
+and player guides; inventory: FORK-028. TypeScript, scoped formatting, production
+assembly/allowlist and Chromium/Windows WebKit touch fixtures pass. Reviewed
+320-pixel portrait and 844-pixel landscape captures; the existing toggle/reset
+checks pass with R. Native rendering inputs are unchanged. Evidence:
+`build_win/mobile-r-*.log`, `build/web-touch/ui` and `mobile-r-webkit`.
+Next action: publish main through the automatic Pages workflow.
+
 **Cursor-only startup and cinematic HUD, 2026-10-28:** Both layouts now hide every
 controller button and the stick throughout startup, Files/mission selection,
 briefings and cutscenes. The full cursor/tap surface remains, including native

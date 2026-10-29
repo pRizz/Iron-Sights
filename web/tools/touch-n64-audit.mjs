@@ -52,7 +52,7 @@ export async function auditN64Layout(page, output) {
     }
     await expect(page.getByRole('button', { name: 'Fire', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'More', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Aim', exact: true })).toBeVisible();
+    await expect(page.locator('[data-controller-button=r]')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Switch weapon', exact: true })).toBeVisible();
     for (const size of [
         { width: 320, height: 568 },
@@ -105,7 +105,7 @@ export async function auditN64Layout(page, output) {
     await expect(overlay).toHaveAttribute('data-mode', 'menu');
     await expect(page.getByRole('button', { name: 'N64 A', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Select', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Aim', exact: true })).toHaveCount(0);
+    await expect(page.locator('[data-controller-button=r]')).toHaveCount(0);
     await page.setViewportSize({ width: 320, height: 568 });
     for (const direction of await page.locator('.touch-dpad button').all()) {
         const pad = await direction.boundingBox();
@@ -129,7 +129,7 @@ export async function auditN64Layout(page, output) {
     await expect(page.locator('.touch-n64')).toBeVisible();
     await page.evaluate(() => touchFixture.menu(false));
     await expect(overlay).toHaveAttribute('data-mode', 'game');
-    await page.getByRole('button', { name: 'Aim', exact: true }).tap();
+    await page.locator('[data-controller-button=r]').tap();
     await page.locator('[data-controller-button=z]').evaluate((button) => {
         button.dispatchEvent(
             new PointerEvent('pointerdown', {
@@ -146,7 +146,7 @@ export async function auditN64Layout(page, output) {
     assert.deepEqual((await page.evaluate(() => touchFixture.snapshot())).held, []);
     await page.evaluate(() => touchFixture.fileMenu(false));
     await expect(page.locator('.touch-n64')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Aim', exact: true })).toHaveAttribute(
+    await expect(page.locator('[data-controller-button=r]')).toHaveAttribute(
         'aria-pressed',
         'false',
     );
