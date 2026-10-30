@@ -419,6 +419,10 @@ if(GE_VIDEO)
             port/fast3d/hd_texture_format.cpp port/fast3d/third_party/puff/puff.c)
         set_target_properties(ge_hd_textures PROPERTIES
             INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/port/include")
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            # i686 stat otherwise rejects large inode numbers on modern mounts.
+            target_compile_definitions(ge_hd_textures PRIVATE _FILE_OFFSET_BITS=64 _TIME_BITS=64)
+        endif()
         list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_hd_textures>)
     endif()
     add_compile_definitions(GE_VIDEO=1)

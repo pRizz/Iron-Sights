@@ -9,6 +9,8 @@ import tempfile
 import unittest
 import zipfile
 
+from test_texture_pack_distribution import fixture as texture_fixture
+
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[1]
 
@@ -64,9 +66,8 @@ class Distribution(unittest.TestCase):
             for source in ("Data/user.z64","Data/Saves/eeprom.bin","Data/Profiles/user.geprofile","midas.ini","previous.exe","ProjectMidas.exe"):
                 path=build/source;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b"must not ship")
             textures=build/"Data/TexturePacks";textures.mkdir(parents=True)
-            (textures/"hd.istex").write_bytes(b"ISTEX001"+bytes((0,0,0,0,16,0,0,0)))
-            for name in ("hd.json","HD-Textures-NOTICE.txt","puff-LICENSE.txt","unrelated.zip"):
-                (textures/name).write_text("fixture")
+            texture_fixture(textures)
+            (textures/"unrelated.zip").write_text("must not ship")
             license=root/"SDL-LICENSE";license.write_text("license fixture")
             path=packager.package(build,out,sdl_license=license)
             with zipfile.ZipFile(path) as archive:

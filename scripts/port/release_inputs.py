@@ -7,6 +7,8 @@ from pathlib import Path
 import platform
 import subprocess
 
+from texture_pack_distribution import hd_provenance
+
 
 def command(*args):
     return subprocess.check_output(args, text=True).strip()
@@ -32,10 +34,7 @@ if __name__ == "__main__":
         masks_sha256=hashlib.sha256((fonts/"gepd_font_data.inc").read_bytes()).hexdigest())
     pack = Path("build_win/Data/TexturePacks/hd.istex")
     if pack.is_file():
-        report = json.loads(pack.with_suffix(".json").read_text())
-        info["hd_textures"] = dict(source=report["source"], source_sha256=report["source_sha256"],
-            pack_sha256=hashlib.sha256(pack.read_bytes()).hexdigest(), scope=report["scope"],
-            keys=report["keys"], unique_images=report["unique_images"], rgba_pixels_preserved=report["rgba_pixels_preserved"])
+        info["hd_textures"] = hd_provenance(pack.parent)
     dependencies = os.environ.get("MIDAS_DEPENDENCIES_FILE")
     if dependencies:
         info["dependency_packages"] = json.loads(Path(dependencies).read_text())

@@ -1,5 +1,6 @@
 #Git and VS files
 /build_linux_ci/
+/build_hd/
 .*~
 __pycache__/*
 .vscode/

@@ -4934,6 +4934,21 @@ s32 videoInit(void)
     {
         extern const char *portRootPath(const char *name);
         portTexturePackRoot(portRootPath("Data/TexturePacks"));
+#ifndef _WIN32
+        {
+            const char *maybe_bundle = getenv("GE_BUNDLED_TEXTURE_ROOT");
+            char *maybe_base = SDL_GetBasePath();
+            char bundled_root[1200];
+            if (maybe_bundle && maybe_bundle[0] == '/')
+                portTexturePackBundleRoot(maybe_bundle);
+            else if (maybe_base)
+            {
+                snprintf(bundled_root, sizeof(bundled_root), "%sData/TexturePacks", maybe_base);
+                portTexturePackBundleRoot(bundled_root);
+            }
+            SDL_free(maybe_base);
+        }
+#endif
     }
 #endif
     { /* [display] low_res: whole-game 240p render scaled to the window (very low power machines).

@@ -23,7 +23,7 @@ def run(args, capture=False):
 
 def packages(profile):
     if profile == "tests":
-        return ["gcc-multilib"]
+        return ["gcc-multilib", "g++-multilib"]
     result = ["gcc-mingw-w64-i686-win32", "g++-mingw-w64-i686-win32",
               "binutils-mingw-w64-i686", "ccache"]
     # Hosted runners provide these outside dpkg; don't download another CMake.

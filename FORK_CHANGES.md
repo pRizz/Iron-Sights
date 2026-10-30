@@ -32,7 +32,7 @@ new areas. Status describes implementation state, not Git publication state.
 
 ### FORK-033 — Native campaign HD texture packs
 
-**Status:** Native Windows/OpenGL environment pack; HD is the fresh-config default.
+**Status:** Native Windows/Linux OpenGL environment pack; HD is the fresh-config default.
 
 Adds an optional HD environment replacement path beyond upstream's inherited
 BMP pool-byte rewrites, which retain N64 resolution/palettes. **Port Options >
@@ -61,7 +61,19 @@ stays on the inherited path. No hand vertices, materials, UVs, wardrobe mapping,
 weapon geometry or text glyphs are redesigned by this feature.
 
 `Data/TexturePacks/hd.istex` and `4k.istex` are replaceable compressed sidecars
-beside the executable. Each image is independently DEFLATE-compressed with PNG's
+beside the executable, or under Linux's writable `GE_DATA_ROOT`. AppImage checks
+user overrides first, then its read-only artwork root supplied by AppRun through
+`GE_BUNDLED_TEXTURE_ROOT`; it never copies the bundled pack into player data.
+Present invalid overrides retain originals; removing an override restores the
+bundle. Reload compares the selected path as well as file size/timestamp, so
+switching roots also invalidates identical-metadata packs. HD and 4K resolve
+independently. Linux direct launches also resolve bundled artwork beside the
+actual executable when writable data is redirected. The i686 loader uses
+64-bit file offsets/timestamps: ordinary 32-bit `stat` rejected large inode
+numbers on the local filesystem and falsely reported an installed pack absent.
+Linux compile-time ABI assertions and an i686 ROM-free test pass protect this
+interface. CI test dependencies include GCC/G++ multilib.
+Each image is independently DEFLATE-compressed with PNG's
 lossless RGBA row filters and a decoded Adler32. Bounds and checksums are checked
 before upload. GPU cache retention has a 128 MiB HD-image budget (including a
 mip-chain allowance; currently bound textures survive until unbound), and CPU
@@ -81,8 +93,11 @@ is recorded in the preparer and guide. Three Egyptian textures missing from that
 ZIP are fetched from a pinned artist repository revision with Git-blob hash/size
 verification. Cached/downloaded art is reverified before preparation; custom
 offline ZIPs do not implicitly add network artwork. Downloaded/prepared art and raw captures
-stay out of Git. Windows release CI prepares and explicitly packages the campaign
-subset, its analysis/provenance and notices; web artifacts contain none of it.
+stay out of Git. A shared trusted-main CI job prepares and verifies the campaign
+subset once for Windows and both Linux formats. Shared packaging validation
+requires HD artwork, matching report counts/sizes and artist/decoder notices;
+Linux provenance/checksums include the exact shipped pack hash. Web artifacts
+contain none of it.
 The loader/codec use an isolated CMake object target so hosted Linux standard
 headers cannot accidentally include the N64 SDK's `sched.h` or `limits.h`.
 
@@ -122,9 +137,13 @@ art and unreviewed native palettes retain original rendering.
 [capture audit](scripts/port/audit_hd_textures.ps1),
 [all-mission audit](scripts/port/audit_hd_levels.ps1),
 [Windows packaging](scripts/port/package_windows.py),
+[Linux packaging](scripts/port/package_linux.py),
+[shared artwork validation](scripts/port/texture_pack_distribution.py),
+[artwork distribution tests](scripts/port/test_texture_pack_distribution.py),
+[Linux launcher tests](scripts/port/test_linux_hd_launcher.py),
 [package tests](scripts/port/test_distribution.py),
 [release input provenance](scripts/port/release_inputs.py),
-[Windows CI](.github/workflows/windows-release.yml), [CMake](CMakeLists.txt),
+[native release CI](.github/workflows/windows-release.yml), [CMake](CMakeLists.txt),
 [INI guide](tools/midas_ini_help.txt), [player guide](scripts/port/release/START-HERE.txt).
 
 Default-HD regression checks cover absent-pack startup, recovery when a pack is
@@ -135,6 +154,20 @@ The default-mode Windows audit loads 35 Dam replacements with the pack present;
 without a pack, the fixed terrain comparison matches explicit Original rendering
 and no replacements load. Independent hand-gallery passes retain all 72 views
 and 35 icons with zero changed image cells after the default change.
+
+**Linux bundling validation:** Host and i686 loader regressions pass default HD,
+read-only bundle access, missing/corrupt pack fallback, explicit Original/4K,
+user override insertion/removal and identical-metadata source switches. All 616
+keyed payloads pass native decode in both ABIs. Artwork allowlist/provenance,
+AppRun, distribution and dependency-tool tests pass. Windows and Linux builds,
+ADS/wardrobe regressions and both independent gallery passes pass with zero
+changed image cells. Final tarball/AppImage contents pass hashes/report/notices
+checks and all nine packaged reporting scenarios. Isolated Linux softpipe Dam
+captures show 47 replacements from the tarball and 46 with either a separate
+data root or AppImage; explicit Original renders none. AppImage's user root
+contains no copied pack. These are software-renderer checks, not hardware/Deck
+certification. Logs/captures remain ignored under `build_win/hd-linux` and
+`build_linux_ci/hd-render-final` / `hd-smoke-final`.
 
 **Validation:** Campaign expansion: preparation tests cover scope selection,
 source-order rows, verified supplement bytes and exact native palette aliases.
@@ -241,6 +274,13 @@ remains a manual legacy path. Native publication waits for Windows and Linux
 smoke tests, uploads exact ELF symbols/source context, attests both Linux
 formats and publishes one commit-tagged release. Compiler-object caching is
 separate from packages; a clean-build dispatch bypasses it.
+
+FORK-033 adds the same verified HD artwork artifact to the tarball and AppImage,
+with shared explicit allowlisting, matching report checks and notices. AppRun
+sets the read-only bundled texture root separately from `GE_DATA_ROOT`, retaining
+user overrides and saved mode choices without copying artwork into user storage.
+Packaged smoke tests verify pack hashes, report counts and notices in both
+formats, including extraction of the actual AppImage squashfs.
 
 A Linux-only ELF export rule keeps the game's N64 libc/math replacements
 private, so shared graphics/audio/reporting libraries use standard libc calls.

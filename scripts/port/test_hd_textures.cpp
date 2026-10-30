@@ -115,14 +115,18 @@ static void filters()
         assert(!unpack(encoded.data(),encoded.size(),2,2,0,rgba) && rgba.empty());
     }
 }
-static void lifecycle(const std::string& root)
+static void writeTestPack(const std::string& root)
 {
-    // Arrange: one valid test-only pack, no ROM/artwork.
     std::filesystem::create_directories(root);
     std::ofstream f(root+"/hd.istex",std::ios::binary);
     f.write("ISTEX001",8);
     for (auto v : {1u,52u+unsigned(compressed.size()),0x8d8e8f90u,0u,4u,1u,16u,8u,52u,unsigned(compressed.size()),pixelHash(pixels.data(),pixels.size())}) write32(f,v);
     f.write(reinterpret_cast<const char *>(compressed.data()),compressed.size()); f.close();
+}
+static void lifecycle(const std::string& root)
+{
+    // Arrange: one valid test-only pack, no ROM/artwork.
+    writeTestPack(root);
     portTexturePackRoot(root.c_str());
     std::array<uint8_t,32> data; Tile tile = source(data); Image image;
     // A pack installed after default-mode fallback is picked up without a toggle.
@@ -137,6 +141,46 @@ static void lifecycle(const std::string& root)
     for (unsigned i=0;i<61;++i) beginFrame();
     assert(!lookup(tile,image));
     portTexturePackSet(99); assert(portTexturePackGet() == 0);
+}
+static bool pollPack()
+{
+    bool changed = false;
+    for (unsigned i=0; i<61; ++i) changed = beginFrame() || changed;
+    return changed;
+}
+static void bundledPacks(const std::string& root)
+{
+    // Arrange: read-only application art and a separate, absent writable root.
+    const std::string bundle = root+"/bundle", user = root+"/user";
+    writeTestPack(bundle);
+    std::filesystem::permissions(bundle+"/hd.istex", std::filesystem::perms::owner_read);
+    portTexturePackRoot(user.c_str()); portTexturePackBundleRoot(bundle.c_str());
+    std::array<uint8_t,32> data; Tile tile = source(data); Image image;
+    // Act / Assert: default HD reads the bundle without copying it to user data.
+    portTexturePackSet(1); assert(pollPack() && lookup(tile,image) && image.rgba == pixels);
+    assert(!std::filesystem::exists(user));
+    // Identical size AND timestamp must still invalidate when the source changes.
+    writeTestPack(user);
+    std::filesystem::last_write_time(user+"/hd.istex", std::filesystem::last_write_time(bundle+"/hd.istex"));
+    assert(pollPack() && lookup(tile,image));
+    std::filesystem::remove(user+"/hd.istex");
+    assert(pollPack() && lookup(tile,image));
+    // Invalid override retains originals, rather than silently hiding the error.
+    { std::ofstream bad(user+"/hd.istex"); bad << "invalid"; }
+    assert(pollPack() && !lookup(tile,image) && portTexturePackGet() == 1);
+    std::filesystem::remove(user+"/hd.istex");
+    assert(pollPack() && lookup(tile,image));
+    portTexturePackSet(0); assert(beginFrame() && !lookup(tile,image));
+    portTexturePackSet(2); assert(beginFrame() && !lookup(tile,image));
+    portTexturePackSet(1); assert(beginFrame() && lookup(tile,image));
+    // Neither missing nor damaged bundled art prevents original rendering.
+    std::filesystem::permissions(bundle+"/hd.istex", std::filesystem::perms::owner_all);
+    { std::ofstream bad(bundle+"/hd.istex"); bad << "invalid"; }
+    assert(pollPack() && !lookup(tile,image));
+    std::filesystem::remove(bundle+"/hd.istex");
+    assert(pollPack() && !lookup(tile,image));
+    writeTestPack(bundle); assert(pollPack() && lookup(tile,image));
+    portTexturePackSet(0); beginFrame(); portTexturePackBundleRoot(nullptr);
 }
 static uint32_t get32(const uint8_t *p)
 {
@@ -165,6 +209,6 @@ int main(int argc,char **argv)
 {
     if (argc == 3 && std::string(argv[1]) == "--pack") { verifyPack(argv[2]); return 0; }
     assert(argc == 2);
-    defaultWithoutPack(argv[1]); identity(); nativeWords(); palettes(); decode(); filters(); lifecycle(argv[1]);
-    std::puts("HD textures: default HD, missing-pack fallback/recovery, explicit opt-out, identity and lossless decode passed");
+    defaultWithoutPack(argv[1]); identity(); nativeWords(); palettes(); decode(); filters(); lifecycle(argv[1]); bundledPacks(argv[1]);
+    std::puts("HD textures: defaults, bundled/user roots, fallback/reload, opt-out, identity and lossless decode passed");
 }

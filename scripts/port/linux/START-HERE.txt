@@ -14,6 +14,19 @@ Settings live in the parent iron-sights folder. GE_DATA_ROOT can override the
 absolute writable root. FUSE is optional with --appimage-extract-and-run.
 An AppImage still requires the system's 32-bit loader and OpenGL drivers.
 
+Campaign HD environment artwork is bundled and enabled for fresh settings.
+Existing Texture Pack preferences are preserved. Choose Original in Port
+Options > Texture Pack to opt out. Missing, invalid or unmatched artwork uses
+standard textures. 4K artwork is not bundled.
+
+The tarball reads Data/TexturePacks/hd.istex beside IronSights. AppImage uses
+its read-only bundled artwork without copying it into your writable data.
+Install an override at Data/TexturePacks/hd.istex beneath the writable root
+above. Remove an override to return to bundled artwork. A present but invalid
+override uses standard textures. Changes are detected about every 60 rendered
+frames; switching Original then HD forces a reload. Keep the separate artwork
+notice, provenance report and decoder license with redistributed packages.
+
 Crash reporting is ON by default. Disable it in Port Options > Crash Reporting
 or set crash_reporting=0 under [diagnostics] in midas.ini before launching.
 Reports contain technical stack/system data, paths (possibly account names)

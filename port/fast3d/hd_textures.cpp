@@ -9,6 +9,9 @@
 #include <cstdlib>
 #include <sys/stat.h>
 #include <filesystem>
+#ifdef __linux__
+static_assert(sizeof(off_t) >= 8 && sizeof(time_t) >= 8, "HD loader requires Linux large-file/time metadata");
+#endif
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -18,6 +21,7 @@
 namespace {
 std::atomic<int> requested{1};
 std::string directory;
+std::string bundledDirectory, currentPath;
 int current = -1;
 unsigned frames;
 FILE *file;
@@ -64,6 +68,7 @@ bool openPack(const std::string& path)
 }
 }
 extern "C" void portTexturePackRoot(const char *root) { directory = root ? root : ""; }
+extern "C" void portTexturePackBundleRoot(const char *root) { bundledDirectory = root ? root : ""; }
 extern "C" void portTexturePackSet(int mode) { requested.store(mode >= 0 && mode <= 2 ? mode : 0); }
 extern "C" int portTexturePackGet(void) { return requested.load(); }
 namespace hd_textures {
@@ -72,15 +77,22 @@ bool beginFrame()
     const int mode = requested.load();
     const bool changed = mode != current;
     if (!changed && ++frames % 60 != 0) return false;
-    const std::string path = directory + (mode == 2 ? "/4k.istex" : "/hd.istex");
+    const char *name = mode == 2 ? "/4k.istex" : "/hd.istex";
+    std::string path = directory + name;
     struct stat st{};
-    const bool exists = mode && !directory.empty() && stat(path.c_str(), &st) == 0;
+    bool exists = mode && !directory.empty() && stat(path.c_str(), &st) == 0;
+    // A present user override owns the selection, even if it is invalid. Only
+    // an absent override falls through to the read-only application bundle.
+    if (mode && !exists && !bundledDirectory.empty()) {
+        path = bundledDirectory + name;
+        exists = stat(path.c_str(), &st) == 0;
+    }
     std::error_code timeError;
     const auto written = exists ? std::filesystem::last_write_time(path, timeError) : std::filesystem::file_time_type{};
     const int64_t nextTime = exists && !timeError ? written.time_since_epoch().count() : -1;
     const int64_t nextSize = exists ? st.st_size : -1;
-    if (!changed && nextTime == timestamp && nextSize == fileSize) return false;
-    closePack(); current = mode; timestamp = nextTime; fileSize = nextSize;
+    if (!changed && path == currentPath && nextTime == timestamp && nextSize == fileSize) return false;
+    closePack(); current = mode; currentPath = path; timestamp = nextTime; fileSize = nextSize;
     if (exists && !openPack(path)) { closePack(); std::fprintf(stderr, "hd: invalid pack %s; original textures retained\n", path.c_str()); }
     if (mode && !exists) std::fprintf(stderr, "hd: %s is not installed; original textures retained\n", path.c_str());
     std::fflush(stderr);

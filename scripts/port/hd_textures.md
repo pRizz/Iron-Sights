@@ -1,6 +1,6 @@
 # Native HD texture packs
 
-This is a campaign environment pack for the Windows/OpenGL player. Web and Xbox
+This is a campaign environment pack for the Windows and Linux/OpenGL players. Web and Xbox
 graphics are unchanged. HD is the default for fresh native configurations;
 existing saved choices are preserved, and missing packs fall back to originals.
 First-run INI generation reads the same runtime preference (`texture_pack=1`).
@@ -15,7 +15,19 @@ Existing enhanced fonts remain independent; weapon and hand geometry is unchange
 
 ## Pack preparation and swapping
 
-The executable reads `Data/TexturePacks/hd.istex` or `4k.istex` beside itself.
+Windows and Linux tarball launches read `Data/TexturePacks/hd.istex` or
+`4k.istex` beside the executable (Linux's absolute `GE_DATA_ROOT` can override
+the writable root). The AppImage reads user overrides from
+`${XDG_DATA_HOME:-$HOME/.local/share}/iron-sights/Data/TexturePacks`, or beneath
+`GE_DATA_ROOT`, then uses its bundled pack when no user override exists.
+AppRun sets the absolute `GE_BUNDLED_TEXTURE_ROOT` to the read-only bundle;
+artwork is never copied into writable player data. A present but invalid user
+pack falls back to originals. Removing it restores bundled artwork on the next
+reload check. HD and 4K are resolved independently; missing 4K does not select HD.
+Direct Linux launches also search beside the actual executable for bundled art
+when `GE_DATA_ROOT` redirects writable data elsewhere.
+The i686 loader uses 64-bit file offsets and timestamps so modern filesystem
+inode numbers do not make installed artwork appear missing.
 These are compressed sidecar files, not executable resources. Replace either
 file to update artwork without recompiling. Changes are detected at a safe
 frame boundary, approximately once per 60 rendered frames; choosing Original
@@ -58,6 +70,12 @@ shared across missions, and a folder with zero imports can still use HD artwork
 from another environment. No source pixels are put
 in Git. Native release packaging explicitly allowlists the prepared packs,
 reports and notices; it never sweeps ROMs, user saves or unrelated archives.
+One trusted-main CI job prepares and losslessly verifies the campaign pack,
+then Windows and Linux download that exact artifact. Both Linux tar.gz and
+AppImage include the pack, JSON report, artist notice and decoder license.
+Native release packaging rejects missing HD artwork, malformed pack headers,
+mismatched report counts/sizes and missing notices. Linux build inputs and
+package checksums record the shipped pack hash; no artist pixels enter Git.
 
 ## Identity and rendering
 
@@ -125,9 +143,15 @@ live fallback/reload and Windows file sharing. `-Menu` checks the Port Options
 sheet. Captures, diagnostic texture dumps and copied artwork stay ignored.
 Audit executables are removed after their task-owned processes finish.
 
-ROM-free checks: `test_hd_textures.sh`, `test_texture_pack_preparation.py` and
-`test_distribution.py`. Shared rendering changes also require wardrobe/ADS
+ROM-free checks: `test_hd_textures.sh`, `test_texture_pack_preparation.py`,
+`test_texture_pack_distribution.py`, `test_linux_hd_launcher.py` and
+`test_distribution.py`. Packaged Linux smoke tests inspect both tarball and
+AppImage artwork against their provenance/checksums. Shared rendering changes also require wardrobe/ADS
 regressions and the review gallery. Generate the latter with
 `hand_gallery.py generate --executable <isolated exe>` so the player build is
 untouched. Diagnostics `GE_HD_TRACE=1` log matches/misses; `GE_HD_DUMP=1` adds local
 raw tile dumps only when tracing is active. These dumps must never be committed.
+
+`MIDAS_HD_TEST_I686=1 bash scripts/port/test_hd_textures.sh [pack]` also runs
+the loader under the shipping 32-bit ABI; it requires GCC/G++ multilib. Native
+CI enables this alongside its ordinary host tests.
