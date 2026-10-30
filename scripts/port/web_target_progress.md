@@ -310,6 +310,21 @@ verify an actual deployed update. Keep suspend images disabled.
 
 ## WEB-004 | 2026-10-24 | Browser launcher
 
+**Localized build time, 2026-10-29:** The loading screen formats its baked build
+instant using the browser's locale and time zone, including a zone label. The
+`time` element's `datetime` and tooltip preserve the original ISO UTC value;
+runtime manifests and native build metadata remain UTC. `web/src/build-time.ts`
+owns presentation, with tests for daylight saving, date rollover, locale and
+non-hour zones, plus missing/invalid timestamps. All 176 Bun tests, TypeScript,
+optimized Wasm compilation, production assembly and exact site verification
+pass. Edge's actual-ROM first/cached startup audit passes on retry, including
+localized loading text, preserved ISO metadata/tooltips and content bounds at
+desktop, portrait-phone and landscape-phone sizes. The initial run sampled one
+progress-label gap during the visible insertion animation. Native wide/4:3
+captures fit; both gallery passes preserve all 72 views/35 icons unchanged.
+Private evidence: `build/build-time/browser-retry`. No timestamp blockers.
+Next action: publish the checked change on main and verify clean build provenance.
+
 **Project favicon, 2026-10-26:** `web/index.html` now reuses the inherited native
 Project Midas icon from `port/win/ProjectMidas.ico`. Vite emits the existing
 multi-resolution ICO with a hashed relative URL, keeping `/Iron-Sights/` paths

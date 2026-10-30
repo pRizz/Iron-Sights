@@ -10,6 +10,7 @@ const char *portIconCacheStatus(void);
 #include "port_about.h"
 #include "port_modal.h"
 #include "port_buildinfo.h"
+#include "port_build_time.h"
 #ifdef GE_VIDEO
 #include <SDL.h>
 #ifdef _WIN32
@@ -51,6 +52,8 @@ void portAboutOpen(void)
 #ifdef GE_VIDEO
     PortModalScope modal;
     char text[2400];
+    char builtAt[96];
+    portFormatBuildTime(builtAt, sizeof(builtAt), PORT_BUILD_TIME);
 
     snprintf(text, sizeof(text), "Iron Sights - a fork of Project Midas\n\nBuilt at: %s\nBuild: %s\nCommit: %s%s\nBranch: %s\nBuilder: %s\n\nWeapon icons: %s\n\n"
         "Build details identify this executable. Verify the download's signed GitHub attestation for provenance."
@@ -63,7 +66,7 @@ void portAboutOpen(void)
         "\nDEFLATE decoder: puff by Mark Adler."
 #endif
         ,
-        PORT_BUILD_TIME, PORT_BUILD_STRING, PORT_BUILD_SHA, PORT_BUILD_DIRTY ? " (modified source)" : "",
+        builtAt, PORT_BUILD_STRING, PORT_BUILD_SHA, PORT_BUILD_DIRTY ? " (modified source)" : "",
         PORT_BUILD_BRANCH, PORT_BUILD_CI ? "GitHub Actions" : "Local build - no CI attestation", portIconCacheStatus());
 #ifdef _WIN32
     {

@@ -2151,10 +2151,17 @@ can fix timestamps with MIDAS_BUILD_TIME_UTC or SOURCE_DATE_EPOCH.
 The startup legal screen identifies **Iron Sights - a fork of Project
 Midas**, retaining the inherited Nintendo/Rare, film and music credits. Its
 footer shows build number/date, short commit, modified status when applicable,
-and the baked UTC build time, matching About rather than the player's clock.
+and the baked build instant converted to the player's local time zone. Native
+startup/About use a readable month/day/year and 12-hour clock with an explicit
+UTC offset, including daylight saving at the build instant. Windows uses 64-bit
+time conversion in the x86 player. Missing timestamps show `Unavailable`;
+invalid or unconvertible timestamps retain their exact UTC source value.
 A focused port helper owns the copy/layout through a small `front.c` hook.
 The browser's returning-player loading screen uses the same fork attribution
-and shows the runtime manifest's baked UTC time once available.
+and formats the runtime manifest's build instant with the browser's locale and
+time zone, including a zone label. Its semantic `time` element and tooltip retain
+the exact ISO timestamp. Packaged JSON, generated headers and crash tags remain
+UTC for reproducible provenance; display localization does not change the stamp.
 Compact spacing on short browser viewports keeps this copy visible in phone
 landscape; overflow remains scrollable at smaller sizes.
 
@@ -2172,6 +2179,11 @@ Display metadata is informational; attestations verify downloaded bytes.
 [manifest](port/win/ProjectMidas.manifest),
 [frontend](src/game/front.c), [startup attribution](port/src/port_startup.c),
 [startup interface](port/include/port_startup.h),
+[local time formatter](port/src/port_build_time.c),
+[time interface](port/include/port_build_time.h),
+[native time tests](scripts/port/test_build_time.sh),
+[browser time formatter/tests](web/src/build-time.ts),
+[browser startup audit](web/tools/startup-audit.mjs),
 [browser loading screen](web/src/startup-screen.tsx),
 [loading styles](web/src/startup.css), [watch](port/src/port_watchpages.c).
 **Validation:** Identity tests use actual temporary commits and cover modified/
@@ -2196,6 +2208,17 @@ evidence is under `build/startup-attribution`; no ROM/captures are packaged.
 Startup download/retry checks and eight gallery workflow tests pass. Both
 independent gallery passes reproduce all 72 views and 35 icons unchanged;
 gallery metadata tracks the updated sources.
+The local-time refinement passes Linux and Windows formatter tests covering
+standard/daylight offsets, date/year rollover, non-hour zones, invalid inputs,
+bounded buffers and Windows dates after 2038. CI includes the native formatter
+regression. Windows and optimized Wasm builds, browser locale/time-zone tests,
+all 176 Bun tests, strict TypeScript and exact site allowlisting pass. Native
+wide/4:3 startup captures and Edge desktop/portrait/landscape loading captures
+show readable local times without clipping; the browser checks raw ISO metadata
+and its UTC tooltip as well. The broader startup audit passed on retry after
+one initial progress-label sampling gap during visible cartridge insertion.
+Both independent gallery passes reproduce all 72 views and 35 icons unchanged.
+Private evidence is under `build/build-time` and ignored `build_win` logs.
 
 ### FORK-021 — Enhanced community font textures
 

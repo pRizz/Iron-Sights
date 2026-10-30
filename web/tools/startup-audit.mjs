@@ -15,7 +15,11 @@ if (!romPath) throw new Error('Usage: startup-audit.mjs local-rom private-output
 const output = resolve(outputPath);
 await mkdir(output, { recursive: true });
 const { browser } = await launchAuditBrowser();
-const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    locale: 'en-US',
+    timezoneId: 'America/Chicago',
+});
 const page = await context.newPage();
 await installStartupProbe(page);
 // Make real cooperative preparation slow enough to exercise the fitted-screen
@@ -136,6 +140,14 @@ try {
     await expect(loading.locator('h1')).toHaveText('Compiling WebAssembly', { timeout: 60_000 });
     await expect(loading.getByRole('progressbar')).not.toHaveAttribute('value');
     await expect(loading.locator('.mission-gauge')).toBeVisible();
+    const manifest = await (await page.request.get(origin + 'runtime-manifest.json')).json();
+    const stamp = manifest.build.built_at;
+    const timestamp = loading.locator('time');
+    await expect(timestamp).toHaveAttribute('datetime', stamp);
+    await expect(timestamp).toHaveAttribute('title', stamp);
+    const shown = (await timestamp.innerText()).replace(/\s+/g, ' ');
+    assert.match(shown, /^Built at: [A-Z][a-z]{2} \d{1,2}, \d{4}, \d{1,2}:\d{2} [AP]M C[DS]T$/);
+    assert.ok(!shown.includes(stamp), 'Loading screen exposed the raw UTC stamp');
     for (const viewport of [
         { width: 1440, height: 900 },
         { width: 390, height: 844 },

@@ -10,6 +10,7 @@ import {
 import type { Engine } from './engine';
 import type { StartupProgress } from './startup-progress';
 import { MissionProgress } from './mission-progress';
+import { formatBuildTime } from './build-time';
 
 type Props = {
     engine: Engine;
@@ -111,7 +112,12 @@ export function StartupScreen(props: Props) {
                             <Show when={props.engine.maybeManifest()}>
                                 {(manifest) => (
                                     <p class="startup-attribution">
-                                        Built at: {manifest().build.built_at}
+                                        <time
+                                            dateTime={manifest().build.built_at}
+                                            title={manifest().build.built_at}
+                                        >
+                                            Built at: {formatBuildTime(manifest().build.built_at)}
+                                        </time>
                                     </p>
                                 )}
                             </Show>

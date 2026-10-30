@@ -4,6 +4,7 @@
 #include <bondconstants.h>
 #include "game/textrelated.h"
 #include "port_buildinfo.h"
+#include "port_build_time.h"
 #include "port_startup.h"
 
 /* front.c's legal-screen primitive, in its 440 x 330 logical viewport. */
@@ -19,11 +20,12 @@ static Gfx *startupLine(Gfx *gdl, s32 y, const char *text)
 
 Gfx *portStartupAttribution(Gfx *gdl)
 {
-    char line[128];
+    char line[128], builtAt[96];
     gdl = startupLine(gdl, 16, "Iron Sights - a fork of Project Midas\n");
     snprintf(line, sizeof(line), "Build %s - %s%s\n", PORT_BUILD_STRING,
         PORT_BUILD_COMMIT, PORT_BUILD_DIRTY ? " (modified)" : "");
     gdl = startupLine(gdl, 300, line);
-    snprintf(line, sizeof(line), "Built at: %s\n", PORT_BUILD_TIME);
+    portFormatBuildTime(builtAt, sizeof(builtAt), PORT_BUILD_TIME);
+    snprintf(line, sizeof(line), "Built at: %s\n", builtAt);
     return startupLine(gdl, 315, line);
 }
