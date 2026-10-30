@@ -56,7 +56,10 @@ const tap = async (locator) => {
     const box = await locator.boundingBox();
     await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
 };
-const action = (name) => page.locator(`[data-touch-action="${name}"]`);
+const action = (name) =>
+    page.locator(
+        `[data-touch-action="${name}"]${name === 'fire' ? ':not([data-touch-side=left])' : ''}`,
+    );
 const sample = () =>
     page.evaluate(() => ({
         position: [0, 1, 2].map((axis) => midasAuditGame._portWebGetPlayerPosition(axis)),
@@ -209,19 +212,22 @@ try {
             });
         };
         const stick = await page.locator('.touch-stick').boundingBox();
-        const fire = await action('fire').boundingBox();
-        const look = await page.locator('.touch-look').boundingBox();
+        const fire = await page
+            .getByRole('button', { name: 'Left Z (fire)', exact: true })
+            .boundingBox();
+        const look = await action('aim').boundingBox();
         const sx = stick.x + stick.width / 2,
             sy = stick.y + stick.height / 2;
         await update(1, sx, sy - stick.height * 0.35, true);
-        await update(2, look.x + look.width * 0.55, look.y + look.height - 12, true);
+        await update(2, look.x + look.width / 2, look.y + look.height / 2, true);
         await update(3, fire.x + 24, fire.y + 24, true);
         await page.waitForTimeout(1200);
-        await update(2, look.x + look.width * 0.55 + 80, look.y + look.height - 12, true);
+        await update(2, look.x + look.width / 2 + 80, look.y + look.height / 2, true);
         await page.waitForTimeout(250);
         await update(3, 0, 0, false);
         await update(2, 0, 0, false);
         await update(1, 0, 0, false);
+        await expect(action('aim')).toHaveAttribute('aria-pressed', 'true');
     } else {
         // The WebKit driver has no multi-contact touchscreen API; exercise real
         // DOM touch-pointer handlers without claiming native iOS input coverage.

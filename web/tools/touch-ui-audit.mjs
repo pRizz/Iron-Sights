@@ -7,6 +7,7 @@ import { expect } from '@playwright/test';
 import { launchAuditBrowser } from './browser-choice.mjs';
 import { auditN64Layout } from './touch-n64-audit.mjs';
 import { auditTouchContext } from './touch-context-audit.mjs';
+import { auditTouchButtons } from './touch-button-audit.mjs';
 import { auditTouchSurface, auditTouchGestures, auditTouchHints } from './touch-surface-audit.mjs';
 
 const assets = new Map(
@@ -47,6 +48,7 @@ try {
     await auditTouchGestures(page, context, kind);
     await auditTouchHints(page);
     await auditN64Layout(page, output);
+    await auditTouchButtons(page);
     const aim = page.locator('[data-touch-action=aim]');
     await aim.tap();
     await expect(aim).toHaveAttribute('aria-pressed', 'true');
@@ -63,7 +65,8 @@ try {
         true,
         'A gap in the controls bypassed the touch gesture guard',
     );
-    for (let tap = 0; tap < 8; tap++) await page.locator('[data-touch-action=fire]').tap();
+    for (let tap = 0; tap < 8; tap++)
+        await page.locator('[data-touch-action=fire]:not([data-touch-side=left])').tap();
     assert.equal(
         await page.evaluate(() => visualViewport.scale),
         scale,
@@ -71,13 +74,15 @@ try {
     );
     assert.deepEqual((await snapshot()).held, []);
     assert.equal(
-        await page.locator('[data-touch-action=fire]').evaluate((surface) => {
-            const event = new Event('touchend', { bubbles: true, cancelable: true });
-            // Native touchend carries a TouchList; leave the document fallback inert.
-            Object.defineProperty(event, 'touches', { value: [{}] });
-            surface.dispatchEvent(event);
-            return event.defaultPrevented;
-        }),
+        await page
+            .locator('[data-touch-action=fire]:not([data-touch-side=left])')
+            .evaluate((surface) => {
+                const event = new Event('touchend', { bubbles: true, cancelable: true });
+                // Native touchend carries a TouchList; leave the document fallback inert.
+                Object.defineProperty(event, 'touches', { value: [{}] });
+                surface.dispatchEvent(event);
+                return event.defaultPrevented;
+            }),
         true,
         'Safari touchend zoom fallback was passive or missing',
     );
@@ -86,10 +91,13 @@ try {
     // The primary icon uses the native next-inventory action, with independent
     // press/release ownership on every tap, without opening More.
     for (let tap = 0; tap < 2; tap++) {
+        const count = (await snapshot()).presses.length;
         await gadget.hover();
         await page.mouse.down();
-        assert.ok((await snapshot()).held.includes(11));
+        assert.ok(!(await snapshot()).held.includes(11));
         await page.mouse.up();
+        assert.equal((await snapshot()).presses.length, count + 1);
+        assert.equal((await snapshot()).presses.at(-1), 11);
         assert.ok(!(await snapshot()).held.includes(11));
     }
     await expect(page.locator('.touch-extra')).toHaveCount(0);
@@ -102,21 +110,23 @@ try {
                 pointerType: 'touch',
             }),
         );
-        document.querySelector('[data-touch-action=fire]').dispatchEvent(
-            new PointerEvent('pointerdown', {
-                bubbles: true,
-                cancelable: true,
-                pointerId: 772,
-                pointerType: 'touch',
-            }),
-        );
+        document
+            .querySelector('[data-touch-action=fire]:not([data-touch-side=left])')
+            .dispatchEvent(
+                new PointerEvent('pointerdown', {
+                    bubbles: true,
+                    cancelable: true,
+                    pointerId: 772,
+                    pointerType: 'touch',
+                }),
+            );
     });
     await page.evaluate(() => touchFixture.gadgets(false));
     await expect(gadget).toHaveCount(0);
     assert.deepEqual(
         (await snapshot()).held,
         [0],
-        'Hiding an empty gadget control released Fire or kept gadget held',
+        'Hiding an empty gadget control released Fire or activated the cancelled gadget tap',
     );
     await page.evaluate(() => {
         document.dispatchEvent(new PointerEvent('pointerup', { pointerId: 771 }));
@@ -190,7 +200,9 @@ try {
             });
         };
         const stick = await page.locator('.touch-stick').boundingBox();
-        const fire = await page.locator('[data-touch-action=fire]').boundingBox();
+        const fire = await page
+            .locator('[data-touch-action=fire]:not([data-touch-side=left])')
+            .boundingBox();
         const look = await page.locator('.touch-look').boundingBox();
         await update(1, stick.x + stick.width / 2, stick.y + 15, true);
         await update(2, fire.x + 24, fire.y + 24, true);
@@ -268,7 +280,9 @@ try {
     await page.locator('[data-touch-action=up]').tap();
     assert.deepEqual((await snapshot()).held, [], 'Stopped propagation left a menu direction held');
     await page.evaluate(() => touchFixture.menu(false));
-    await expect(page.locator('[data-touch-action=fire]')).toBeVisible();
+    await expect(
+        page.locator('[data-touch-action=fire]:not([data-touch-side=left])'),
+    ).toBeVisible();
     for (const size of [
         { width: 320, height: 568 },
         { width: 390, height: 844 },
@@ -279,7 +293,7 @@ try {
         await page.setViewportSize(size);
         for (const selector of [
             '.touch-stick',
-            '[data-touch-action=fire]',
+            '[data-touch-action=fire]:not([data-touch-side=left])',
             '[data-touch-action=watch]',
             '.touch-gadget button',
         ]) {
@@ -300,6 +314,15 @@ try {
         await expect(page.getByRole('button', { name: 'Weapon −', exact: true })).toBeVisible();
         const icon = await gadget.boundingBox();
         const tray = await page.locator('.touch-extra').boundingBox();
+        const leftFire = await page
+            .getByRole('button', { name: 'Left Z (fire)', exact: true })
+            .boundingBox();
+        assert.ok(
+            leftFire.x + leftFire.width <= tray.x ||
+                leftFire.y >= tray.y + tray.height ||
+                leftFire.y + leftFire.height <= tray.y,
+            'More tray overlaps left Z',
+        );
         assert.ok(
             icon.x + icon.width <= tray.x ||
                 icon.y + icon.height <= tray.y ||

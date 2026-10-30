@@ -47,8 +47,10 @@ Focus-loss pause/resume does not need mouse capture. Use the
 analog left thumbstick and drag any free screen area to look. **Touch layout** defaults to
 **N64 controller**: blue circular A, green circular B, red circular Start and a
 gray rectangular Z on the right send native controller buttons. Start, B and A
-share one vertical column on phones and tablets, with A at the bottom. Hold/drag Z to
-shoot and turn, tap the gray rounded rectangular R to toggle ADS, and use the
+share one vertical column on phones and tablets, with A at the bottom. Hold/drag
+right Z to shoot and turn, or hold the second Z above the left stick while the
+right finger looks. Left Z does not turn the camera. Either trigger can remain
+held when the other is released. Tap the gray rounded rectangular R to toggle ADS, and use the
 gadget icon to cycle gadgets; it appears only when a usable gadget is available.
 Keys and documents do not enable it. A cycles weapons. R spans both columns above Start
 and Z and keeps a highlighted border while aiming. Buttons, labels, gaps and
@@ -76,7 +78,11 @@ settings remain. Rotation fits the existing framebuffer without changing its
 resolution. Only real buttons and the stick claim touch areas; transparent
 control groups and helper/status text pass gestures through. Look and cursor
 movement follow their pointer IDs even if capture fails or a drag crosses a
-button. Pre-mission menu/Files instructions sit near the safe top, remain for five
+button. During gameplay, swiping from A/B/R/Start, Gadget or other discrete action
+buttons looks without activating them; a short tap activates on release. A drag
+stays a look gesture even if it returns to its origin. Fire and continuous
+Sprint/Zoom controls retain immediate holds; watch-menu arrows retain navigation.
+Pre-mission menu/Files instructions sit near the safe top, remain for five
 seconds, then fade out over 350 ms. Missions and the in-mission watch have no
 helper instructions, including look and movement labels.
 App status hints also fade; reduced motion uses a shorter 80 ms opacity fade.

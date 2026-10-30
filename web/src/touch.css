@@ -43,6 +43,7 @@
 .touch-actions,
 .touch-menu-actions,
 .touch-gadget,
+.touch-left-actions,
 .touch-extra,
 .touch-dpad {
     pointer-events: none;
@@ -74,7 +75,10 @@
 .touch-top {
     position: absolute;
     top: calc(max(10px, env(safe-area-inset-top)) + 16px);
-    left: calc(var(--touch-left) + 60 * var(--touch-unit));
+    left: calc(
+        var(--touch-left) + max(var(--touch-stick-size), 104 * var(--touch-unit)) + 12 *
+            var(--touch-unit)
+    );
     display: flex;
     gap: calc(8 * var(--touch-unit));
     z-index: 4;
@@ -205,11 +209,30 @@
     border-color: #f4bd76;
     background: #74412fa6;
 }
-.touch-gadget {
+.touch-left-actions {
     position: absolute;
     left: var(--touch-left);
     bottom: calc(var(--touch-bottom) + var(--touch-stick-size) + 10 * var(--touch-unit));
+    width: max(var(--touch-stick-size), calc(104 * var(--touch-unit)));
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: calc(8 * var(--touch-unit));
+    align-items: center;
     z-index: 3;
+}
+.touch-left-actions[data-gadgets='true'] {
+    grid-template-columns: calc(48 * var(--touch-unit)) 1fr;
+}
+.touch-left-fire button {
+    width: 100%;
+    height: calc(56 * var(--touch-unit));
+    padding: 0;
+    border-radius: 8px;
+    border: 2px solid #ffffff65;
+    background: linear-gradient(#ffffff24, #00000024), #777e8780;
+    color: #fff;
+    font-size: calc(23 * var(--touch-unit));
+    font-weight: 700;
 }
 .touch-gadget button {
     display: grid;
@@ -273,7 +296,7 @@
     pointer-events: none;
 }
 .touch-controls[data-context='game'] .touch-stick,
-.touch-controls[data-context='game'] .touch-gadget,
+.touch-controls[data-context='game'] .touch-left-actions,
 .touch-controls[data-context='game'] .touch-n64,
 .touch-controls[data-context='game'] .touch-actions,
 .touch-controls[data-context='game'] .touch-top {
@@ -289,7 +312,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
     .touch-controls[data-context='game'] .touch-stick,
-    .touch-controls[data-context='game'] .touch-gadget,
+    .touch-controls[data-context='game'] .touch-left-actions,
     .touch-controls[data-context='game'] .touch-n64,
     .touch-controls[data-context='game'] .touch-actions,
     .touch-controls[data-context='game'] .touch-top {
@@ -307,6 +330,11 @@
 @media (max-width: 360px) {
     .touch-extra {
         grid-template-columns: repeat(3, 48px);
+    }
+}
+@media (max-width: 440px) {
+    .touch-extra {
+        bottom: calc(var(--touch-bottom) + var(--touch-stick-size) + 74 * var(--touch-unit));
     }
 }
 @media (max-width: 420px) {

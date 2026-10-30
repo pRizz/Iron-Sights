@@ -16,6 +16,7 @@ import { TouchMenu } from './touch-menu';
 import { createTouchHints } from './touch-hints';
 import { touchContext, type TouchContext } from './touch-context';
 import { HelperText } from './helper-text';
+import { createTouchButtonGestures } from './touch-button-gestures';
 import './touch.css';
 
 type Props = {
@@ -48,14 +49,25 @@ export function TouchControls(props: Props) {
     const [stick, setStick] = createSignal({ x: 0, y: 0 });
     let maybeMove: number | undefined;
     let maybeLook: { id: number; x: number; y: number } | undefined;
-    let maybeFireLook: { id: number; x: number; y: number } | undefined;
+    let maybeHeldLook: { id: number; x: number; y: number } | undefined;
+    const buttonGestures = createTouchButtonGestures<{
+        maybeAction?: TouchAction;
+        activate: () => void;
+    }>();
     const active = () =>
         props.visible() && props.input.enabled() && props.capture.state().kind !== 'paused';
     const hints = createTouchHints(() =>
         !active() || context() !== 'navigation' ? 'inactive' : files() ? 'files' : 'menu',
     );
     const contacts = createTouchContacts(
-        (id) => {
+        (id, maybeEvent) => {
+            const maybeTap = buttonGestures.maybeTakeTap(
+                id,
+                maybeEvent?.type === 'pointerup'
+                    ? { x: maybeEvent.clientX, y: maybeEvent.clientY }
+                    : undefined,
+            );
+            maybeTap?.activate();
             props.input.state.release(id);
             if (maybeMove === id) {
                 maybeMove = undefined;
@@ -63,15 +75,20 @@ export function TouchControls(props: Props) {
                 props.input.move(0, 0);
             }
             if (maybeLook?.id === id) maybeLook = undefined;
-            if (maybeFireLook?.id === id) maybeFireLook = undefined;
+            if (maybeHeldLook?.id === id) maybeHeldLook = undefined;
         },
         (id, event, target) => {
             if (maybeMove === id) move(event, target);
+            const delta = buttonGestures.move(id, event.clientX, event.clientY);
+            if (delta.x !== 0 || delta.y !== 0) {
+                const scale = 120 / Math.min(innerWidth, innerHeight);
+                props.input.look(delta.x * scale, delta.y * scale);
+            }
             const maybeDrag =
                 maybeLook?.id === id
                     ? maybeLook
-                    : maybeFireLook?.id === id
-                      ? maybeFireLook
+                    : maybeHeldLook?.id === id
+                      ? maybeHeldLook
                       : undefined;
             if (!maybeDrag) return;
             const scale = 120 / Math.min(innerWidth, innerHeight);
@@ -85,9 +102,10 @@ export function TouchControls(props: Props) {
     );
     const clear = () => {
         contacts.clear();
+        buttonGestures.clear();
         maybeMove = undefined;
         maybeLook = undefined;
-        maybeFireLook = undefined;
+        maybeHeldLook = undefined;
         setAiming(false);
         setStick({ x: 0, y: 0 });
         setMore(false);
@@ -106,7 +124,10 @@ export function TouchControls(props: Props) {
         const monitor = () => {
             const available = !!props.engine.maybeGame()?._portWebTouchHasGadgets?.();
             if (available !== hasGadgets()) {
-                if (!available) props.input.state.releaseAction('nextGadget');
+                if (!available) {
+                    props.input.state.releaseAction('nextGadget');
+                    buttonGestures.cancelWhere((intent) => intent.maybeAction === 'nextGadget');
+                }
                 setHasGadgets(available);
             }
             const nextFiles = !!props.engine.maybeGame()?._portWebFileMenuMetric?.(0);
@@ -151,7 +172,17 @@ export function TouchControls(props: Props) {
             aria-expanded={button.expanded}
             onPointerDown={(event) => {
                 begin(event);
-                button.activate();
+                const origin = event.currentTarget;
+                buttonGestures.begin(
+                    event.pointerId,
+                    {
+                        activate: () => {
+                            if (origin.isConnected && !menu()) button.activate();
+                        },
+                    },
+                    event.clientX,
+                    event.clientY,
+                );
             }}
             onClick={(event) => {
                 if (event.detail === 0) button.activate();
@@ -160,28 +191,53 @@ export function TouchControls(props: Props) {
             {button.label}
         </button>
     );
+    const activateButton = (id: number, action: TouchAction) => {
+        if (action === 'nextGadget' && !hasGadgets()) return;
+        if (action === 'aim') {
+            if (aiming()) props.input.state.release(-1);
+            else props.input.state.press(-1, 'aim');
+            setAiming(!aiming());
+        } else props.input.state.press(id, action);
+    };
     const Button = (button: {
         action: TouchAction;
         label: string;
         children?: JSX.Element;
         maybeController?: 'a' | 'b' | 'z' | 'r' | 'start';
+        side?: 'left';
     }) => (
         <button
             type="button"
             data-touch-action={button.action}
             data-controller-button={button.maybeController}
+            data-touch-side={button.side}
             aria-label={button.label}
             aria-pressed={button.action === 'aim' ? aiming() : undefined}
             onContextMenu={(event) => event.preventDefault()}
             onPointerDown={(event) => {
                 begin(event);
-                if (button.action === 'aim') {
-                    if (aiming()) props.input.state.release(-1);
-                    else props.input.state.press(-1, 'aim');
-                    setAiming(!aiming());
-                } else props.input.state.press(event.pointerId, button.action);
-                if (button.action === 'fire')
-                    maybeFireLook = { id: event.pointerId, x: event.clientX, y: event.clientY };
+                const hold = ['fire', 'sprint', 'zoomIn', 'zoomOut'].includes(button.action);
+                if (!menu() && !hold) {
+                    const id = event.pointerId;
+                    const origin = event.currentTarget;
+                    buttonGestures.begin(
+                        id,
+                        {
+                            maybeAction: button.action,
+                            activate: () => {
+                                if (!origin.isConnected || menu()) return;
+                                activateButton(id, button.action);
+                                if (button.action !== 'aim') props.input.state.release(id);
+                            },
+                        },
+                        event.clientX,
+                        event.clientY,
+                    );
+                    return;
+                }
+                activateButton(event.pointerId, button.action);
+                if (!menu() && hold && button.side !== 'left')
+                    maybeHeldLook = { id: event.pointerId, x: event.clientX, y: event.clientY };
             }}
         >
             {button.children ?? button.label}
@@ -273,25 +329,35 @@ export function TouchControls(props: Props) {
                             }}
                         />
                     </div>
-                    <Show when={hasGadgets()}>
-                        <div class="touch-gadget">
-                            <Button action="nextGadget" label="Switch gadget">
-                                <svg
-                                    viewBox="0 0 32 32"
-                                    width="28"
-                                    height="28"
-                                    aria-hidden="true"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linejoin="round"
-                                >
-                                    <rect x="8" y="7" width="16" height="22" rx="3" />
-                                    <path d="M12 7V3h8v4M12 12h8M12 17h3M19 17h1M12 23h8" />
-                                </svg>
+                    <div
+                        class="touch-left-actions"
+                        data-gadgets={hasGadgets() ? 'true' : undefined}
+                    >
+                        <Show when={hasGadgets()}>
+                            <div class="touch-gadget">
+                                <Button action="nextGadget" label="Switch gadget">
+                                    <svg
+                                        viewBox="0 0 32 32"
+                                        width="28"
+                                        height="28"
+                                        aria-hidden="true"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linejoin="round"
+                                    >
+                                        <rect x="8" y="7" width="16" height="22" rx="3" />
+                                        <path d="M12 7V3h8v4M12 12h8M12 17h3M19 17h1M12 23h8" />
+                                    </svg>
+                                </Button>
+                            </div>
+                        </Show>
+                        <div class="touch-left-fire">
+                            <Button action="fire" label="Left Z (fire)" side="left">
+                                Z
                             </Button>
                         </div>
-                    </Show>
+                    </div>
                     <Show when={props.input.layout() === 'modern'}>
                         <div class="touch-actions">
                             <Button action="aim" label="Aim" />

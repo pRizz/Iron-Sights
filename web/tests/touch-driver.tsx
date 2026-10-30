@@ -15,6 +15,7 @@ let gadgets = true;
 let movement = [0, 0],
     look = [0, 0];
 const held = new Set<number>();
+const presses: number[] = [];
 let accepts = 0;
 let cursor = [0, 0];
 let exported = 0,
@@ -40,6 +41,7 @@ const game = {
     _portWebTouchContext: () => (fileMenu() ? 0 : context),
     _portWebTouchHasGadgets: () => Number(gadgets && context === 2 && !fileMenu()),
     _portWebTouchButton: (id: number, down: number) => {
+        if (down) presses.push(id);
         if (id === 5 && down) accepts++;
         down ? held.add(id) : held.delete(id);
     },
@@ -67,6 +69,7 @@ Object.assign(globalThis, {
             movement,
             look,
             held: [...held],
+            presses: [...presses],
             state: state().kind,
             accepts,
             cursor,

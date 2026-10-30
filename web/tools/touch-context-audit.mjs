@@ -56,16 +56,18 @@ export async function auditTouchContext(page) {
         await expect(group).toHaveCSS('animation-name', 'touch-hud-enter');
         await expect(group).toHaveCSS('opacity', '1');
         await page.locator('[data-touch-action=aim]').tap();
-        await page.locator('[data-touch-action=fire]').evaluate((button) =>
-            button.dispatchEvent(
-                new PointerEvent('pointerdown', {
-                    pointerId: 902,
-                    pointerType: 'touch',
-                    bubbles: true,
-                    cancelable: true,
-                }),
-            ),
-        );
+        await page
+            .locator('[data-touch-action=fire]:not([data-touch-side=left])')
+            .evaluate((button) =>
+                button.dispatchEvent(
+                    new PointerEvent('pointerdown', {
+                        pointerId: 902,
+                        pointerType: 'touch',
+                        bubbles: true,
+                        cancelable: true,
+                    }),
+                ),
+            );
         await page.evaluate(() => touchFixture.context(1));
         await expect(overlay.locator('button')).toHaveCount(0);
         assert.deepEqual((await page.evaluate(() => touchFixture.snapshot())).held, []);

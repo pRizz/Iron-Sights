@@ -413,6 +413,33 @@ Watch arrows now issue one digital direction edge per contact, with no repeated
 hold or duplicate full-strength stick input in the watch. Fire/other holds and
 analog movement retain their ownership. The Wasm bridge regression covers all
 four directions held for 120 polls, duplicate downs and a subsequent short tap.
+Gameplay buttons distinguish taps from looking: A/B/R/Start, Gadget, More and
+discrete Modern actions activate only on tap-up within a 10 CSS-pixel slop.
+Moving farther latches a look gesture, so returning to the starting point cannot
+activate the button. Drags continue across other controls by contact ID. Fire,
+Sprint and Zoom retain immediate held behavior; right Fire retains drag-look.
+Watch-menu buttons keep their existing digital navigation rather than looking.
+Cancellation, lifecycle changes, disappearing gadgets and removed More buttons
+cannot activate stale taps. Focused sources are `touch-button-gestures.ts`, its
+unit tests, `touch-controls.tsx` and `touch-button-audit.mjs`.
+
+A second gray Z trigger appears above the left stick in both layouts, beside the
+conditional gadget shortcut. It fills the row when no gadget is available. Its
+contact fires immediately without moving the camera; the right finger can look
+from free space or a button. Both Fire contacts share an independent hold, so
+releasing either trigger cannot stop the other. The row follows tablet scaling
+and safe-area insets. Modern Watch moves clear of that row on short landscapes.
+Sources: `touch-controls.tsx`, `touch.css` and touch layout/contact audits.
+Validation: 173 unit tests, TypeScript, scoped formatting, production assembly
+and exact artifact verification pass. Edge/Windows WebKit fixtures verify swipe
+versus tap, independent trigger release, left-trigger aim isolation, hidden-target
+cancellation and non-overlap through 1366×1024. The Modern More tray lifts clear
+of left Z on narrow phones. Edge's actual-ROM audit holds left Fire while a
+right-finger swipe from R turns and walks, preserving the existing aim latch;
+watch navigation, focus/audio and rotation also pass. Native rendering inputs
+are unchanged; gallery freshness/integrity pass. Private evidence:
+`build/left-z-*.log` and `build/web-touch/left-z-*`. Physical iPad/Safari checks
+remain distinct from browser emulation.
 Controller/fade refinement validation: TypeScript, 167 unit tests, formatting, optimized Wasm build,
 ROM-free logo exclusion and exact public-artifact verification pass. Edge and
 Windows WebKit fixtures pass five-second hints/fades, gadget action and target
@@ -450,7 +477,7 @@ visibility against the live getter, plus watch directions, movement/fire, audio,
 focus recovery and responsive bounds. Both gallery passes leave all 107 PNGs
 unchanged; standards and freshness pass. Evidence is private under
 `build/mission-ui-*.log` and `build/web-touch/mission-ui-*`.
-Dragging Z turns while firing.
+Dragging right Z turns while firing; left Z leaves aiming to the other finger.
 **Modern actions** restores the previous Fire/Aim/Use/Reload/Crouch/Watch layout,
 Select/Back menu buttons and More tray with weapon/gadget cycling, zoom,
 detonation and sprint. Below 361 CSS pixels that tray uses three columns.

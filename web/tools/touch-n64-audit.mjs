@@ -18,9 +18,16 @@ export async function auditN64Layout(page, output) {
         const button = page.locator(`[data-controller-button=${name}]`);
         await expect(button).toHaveAttribute('data-touch-action', action);
         await button.hover();
+        const count = (await page.evaluate(() => touchFixture.snapshot())).presses.length;
         await page.mouse.down();
-        assert.ok((await page.evaluate(() => touchFixture.snapshot())).held.includes(id));
+        assert.equal(
+            (await page.evaluate(() => touchFixture.snapshot())).held.includes(id),
+            name === 'z',
+        );
         await page.mouse.up();
+        const value = await page.evaluate(() => touchFixture.snapshot());
+        assert.equal(value.presses.length, count + 1);
+        assert.equal(value.presses.at(-1), id);
         assert.deepEqual((await page.evaluate(() => touchFixture.snapshot())).held, []);
         const style = await button.evaluate((element) => {
             const css = getComputedStyle(element),
@@ -81,6 +88,18 @@ export async function auditN64Layout(page, output) {
         const r = await page.locator('[data-controller-button=r]').boundingBox();
         const z = await page.locator('[data-controller-button=z]').boundingBox();
         const gadget = await page.getByRole('button', { name: 'Switch gadget' }).boundingBox();
+        const leftZ = await page
+            .getByRole('button', { name: 'Left Z (fire)', exact: true })
+            .boundingBox();
+        assert.ok(
+            leftZ.width >= 48 && leftZ.height >= 48 && leftZ.y >= 0,
+            'Left Z must remain tappable',
+        );
+        assert.ok(
+            leftZ.y + leftZ.height <= stick.y && leftZ.x + leftZ.width <= cluster.x,
+            'Left Z overlaps the stick or right buttons',
+        );
+        assert.ok(gadget.x + gadget.width <= leftZ.x, 'Left Z overlaps the gadget button');
         assert.ok(
             r.y >= 0 && r.y + r.height <= Math.min(start.y, z.y),
             'R must sit above Start and Z',

@@ -69,7 +69,13 @@ The 2026-10-28 mobile refinement removes browser Pause/Options from both touch
 layouts; Start/Watch remains the native pause control. It also increases safe-area
 insets and aligns Start, B and A vertically, with A at the bottom, on all sizes.
 The accepted gesture refinement makes all unoccupied viewport space available
-for look/menu panning, with blocking limited to actual buttons and the stick.
+for look/menu panning. Gameplay discrete buttons now use the accepted tap/swipe
+policy: taps activate on release within 10 CSS pixels; swipes look without
+activating, including after returning to the starting point. Fire and continuous
+Sprint/Zoom controls retain immediate held behavior; watch-menu navigation stays
+digital. A second Z above the left stick fires independently without moving the
+camera, so the right finger can look. Keep both triggers' holds independent and
+fit the left trigger beside the conditional gadget shortcut at phone/tablet sizes.
 Pre-mission instruction hints move near the top, stay visible for five seconds,
 then fade out. Missions and the in-mission watch have no helper instructions.
 Helper text must never intercept input. The accepted

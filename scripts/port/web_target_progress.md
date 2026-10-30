@@ -1341,6 +1341,28 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**Button look gestures and left Z, 2026-10-29:** The owner selected tap activation
+versus swipe-only look. Discrete gameplay buttons activate on release within a
+10-pixel slop; swipes look and never activate after returning to their origin.
+Fire/Sprint/Zoom remain immediate holds; menu/watch controls retain navigation.
+Per-contact gestures handle failed capture, cancellation, context changes,
+disappearing gadgets and removed More controls without stale activation.
+The extra left Z in both layouts sits above the stick beside Gadget, expanding
+when Gadget is absent. It fires without moving the camera; either Fire contact
+can release independently. Modern Watch clears the row on short landscapes.
+TypeScript and 173 unit tests pass; the production site and exact public allowlist
+verify with the current local runtime. Edge fixtures pass swipe-vs-tap actions,
+dual Fire ownership, left-Z aim isolation, lifecycle resets and responsive bounds
+through 1366×1024; Windows WebKit passes the same checks. Reviewed phone/tablet
+captures. Modern More lifts above left Z on narrow screens to avoid overlap.
+Edge's actual-ROM audit holds left Fire while the right finger swipes from R to
+turn, with movement active and the aim latch unchanged. Watch navigation,
+focus/audio and responsive checks also pass. Native render inputs are unchanged;
+gallery freshness/integrity and standards checks pass. Evidence:
+`build/left-z-*.log`, `build/web-touch/left-z-*`.
+Next action: deliver main and check Pages publication. Physical iPad/Safari
+acceptance remains a device check.
+
 **Quiet mission HUD and available gadgets, 2026-10-29:** Removed the in-mission
 movement/watch banner, Drag to look and MOVE labels; watch/cinematic contexts
 also suppress helper instructions. Pre-mission menus/Files retain their
