@@ -139,8 +139,8 @@ padN_stickmode.
   enhanced_fonts      | 1          | Community HD Bank Gothic/Zurich fonts;
                       |            | 0 = original glyphs. Independent of 2D
                       |            | filtering; missing/modded glyphs fall back.
-  texture_pack        | 0          | Native: 0 Original, 1 HD, 2 4K. Dam HD
-                      |            | prototype; missing textures stay original.
+  texture_pack        | 0          | Native: 0 Original, 1 HD, 2 4K. Campaign
+                      |            | scenery; missing textures stay original.
   low_res             | 0          | Level render height in lines, scaled up
                       |            | to the window: 0 = window size,
                       |            | 240 = the N64's, or 480, 720, 1080.

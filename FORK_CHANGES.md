@@ -30,24 +30,27 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
-### FORK-033 — Native Dam HD texture-pack prototype
+### FORK-033 — Native campaign HD texture packs
 
-**Status:** Native Windows/OpenGL prototype; Original remains the default.
+**Status:** Native Windows/OpenGL environment pack; Original remains the default.
 
 Adds an optional HD environment replacement path beyond upstream's inherited
 BMP pool-byte rewrites, which retain N64 resolution/palettes. **Port Options >
 Texture Pack** in the frontend and watch selects Original/HD/4K through saved
 `[display] texture_pack=0/1/2`. Web/Xbox omit this setting and replacement path.
-HD uses the supplied Dam subset; 4K accepts a separately prepared pack rather
+HD uses a campaign environment subset, expanded from the original Dam prototype;
+Surface II and Bunker II share their earlier missions' environment art.
+4K accepts a separately prepared pack rather
 than claiming bundled 4K artwork. Missing, corrupt, incompatible or unmatched
 textures retain their original rendering. Existing font selection is independent.
 
 Texture identity reconstructs the N64 alternate-row swaps omitted by the native
 inflater, plus native u16/u32 byte ordering, without rewriting game texture
 pools. CI also requires a palette identity. The preparer includes a reviewed
-stock-USA Dam native-palette crosswalk for 15 source identities; it does not pick
+stock-USA Dam native-palette crosswalk for 15 source identities and 132 additional
+reviewed campaign mappings; it does not pick
 arbitrary artwork by index hash alone. Unverified palette variants remain
-original. Native-bottom-up row preparation and scaled wrap-mask cropping keep
+original. Source-order row preparation and scaled wrap-mask cropping keep
 the authored art aligned with existing UVs. Special composite/water addressing
 stays on the inherited path. No hand vertices, materials, UVs, wardrobe mapping,
 weapon geometry or text glyphs are redesigned by this feature.
@@ -66,21 +69,32 @@ The source is intermissionfb's GoldenEye 007 HD v2025.12.30, with font textures
 and technical assistance credited to GhostlyDark. About / Build Info, the native
 player guide, pack provenance and separate notices retain attribution. The pack
 has no explicit redistribution license in its source release; this records the
-owner's requested bundled subset and does not relicense artwork under the port's
+owner's requested bundled environment subset and does not relicense artwork under the port's
 MIT license. Unmodified puff 2.3 from zlib v1.3.1 supplies bounded DEFLATE decode
 with Mark Adler's license retained and packaged. The pinned source archive SHA256
-is recorded in the preparer and guide. Downloaded/prepared art and raw captures
-stay out of Git. Windows release CI prepares and explicitly packages the Dam
+is recorded in the preparer and guide. Three Egyptian textures missing from that
+ZIP are fetched from a pinned artist repository revision with Git-blob hash/size
+verification. Cached/downloaded art is reverified before preparation; custom
+offline ZIPs do not implicitly add network artwork. Downloaded/prepared art and raw captures
+stay out of Git. Windows release CI prepares and explicitly packages the campaign
 subset, its analysis/provenance and notices; web artifacts contain none of it.
 The loader/codec use an isolated CMake object target so hosted Linux standard
 headers cannot accidentally include the N64 SDK's `sched.h` or `limits.h`.
 
-Current preparation selects 100 source keys and adds 15 native aliases. Two exact
-decoded-image duplicates share payloads, leaving 98 unique images. Source PNG
-data is 15,150,002 bytes; the prepared pack is 13,375,283 bytes, preserving RGBA
-values with a reversible row-order change. The report identifies 68 images with
+Current preparation selects 469 source keys and adds 147 native aliases, compared
+with the original 100-source-key Dam subset. Twelve exact decoded-image duplicates
+share payloads, leaving 457 unique images. Source PNG data is 112,393,785 bytes;
+the prepared pack is 103,178,825 bytes, preserving RGBA values and source row
+order. This corrects the prototype's vertical flip for asymmetric braces and
+labels. The report identifies 362 images with
 constant alpha as potential future codec work, without dropping their alpha or
-evicting visually similar but nonidentical art.
+evicting visually similar but nonidentical art. The default `levels` scope uses a
+pinned campaign environment inventory; `dam` remains available for compatibility
+and `all` is an explicit opt-in to non-environment artwork. Schema 2 provenance
+records inventory revision, missing keys and per-source-folder import counts;
+those counts are not unique per-mission runtime coverage because art is shared.
+The published source archive does not contain every inventory texture. Missing
+art and unreviewed native palettes retain original rendering.
 
 **Sources:** [guide](scripts/port/hd_textures.md),
 [renderer adapter](port/fast3d/hd_texture_import.inl),
@@ -92,18 +106,32 @@ evicting visually similar but nonidentical art.
 [frontend row](src/game/front.c), [About credits](port/fast3d/about.cpp),
 [preparer](scripts/port/prepare_texture_pack.py),
 [Dam scope](scripts/port/hd_dam_sources.json),
+[campaign scope](scripts/port/hd_level_sources.json),
+[pinned supplement](scripts/port/hd_level_supplement.json),
+[supplement verifier](scripts/port/texture_pack_supplement.py),
 [reviewed palette identities](scripts/port/hd_dam_native_aliases.json),
+[campaign palette identities](scripts/port/hd_level_native_aliases.json),
 [decoder and license](port/fast3d/third_party/puff/puff.h),
 [native unit runner](scripts/port/test_hd_textures.sh),
 [preparation tests](scripts/port/test_texture_pack_preparation.py),
 [capture audit](scripts/port/audit_hd_textures.ps1),
+[all-mission audit](scripts/port/audit_hd_levels.ps1),
 [Windows packaging](scripts/port/package_windows.py),
 [package tests](scripts/port/test_distribution.py),
 [release input provenance](scripts/port/release_inputs.py),
 [Windows CI](.github/workflows/windows-release.yml), [CMake](CMakeLists.txt),
 [INI guide](tools/midas_ini_help.txt), [player guide](scripts/port/release/START-HERE.txt).
 
-**Validation:** ROM-free native identity/decode/lifecycle tests, five synthetic
+**Validation:** Campaign expansion: preparation tests cover scope selection,
+source-order rows, verified supplement bytes and exact native palette aliases.
+All 11 preparation tests, distribution tests and an isolated Windows build pass.
+Seeded Original/HD captures for all 20 campaign missions pass and were visually
+reviewed, including Statue and Egyptian. All 616 keyed payloads pass the native
+decoder/checksum validation. Both independent hand-gallery passes verify 72 views
+and 35 icons with zero changed image cells; wardrobe/ADS regressions and standards
+checks pass. This samples entry views, not every camera or palette in each mission.
+
+Original Dam prototype validation: ROM-free native identity/decode/lifecycle tests, five synthetic
 preparation tests, distribution tests, wardrobe and ADS regressions pass.
 Seeded Original/HD native Dam intro captures show 31 exact replacements including
 reviewed CI scenery; the native Port Options screenshot shows the HD selector.

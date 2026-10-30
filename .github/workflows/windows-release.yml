@@ -170,11 +170,11 @@ jobs:
           cat build_win/ccache-stats.txt >> "$GITHUB_STEP_SUMMARY"
           git diff --exit-code HEAD
           python3 -c "import json; m=json.load(open('build_win/generated/build-info.json')); assert m['ci'] and not m['dirty']"
-      - name: Prepare compressed Dam HD artwork
+      - name: Prepare compressed campaign HD artwork
         run: |
           python3 -m pip install --target "$RUNNER_TEMP/texture-tools" Pillow==12.0.0
           PYTHONPATH="$RUNNER_TEMP/texture-tools" python3 scripts/port/test_texture_pack_preparation.py
-          PYTHONPATH="$RUNNER_TEMP/texture-tools" python3 scripts/port/prepare_texture_pack.py --download --archive "$RUNNER_TEMP/ge007-hd.zip" --output build_win/Data/TexturePacks/hd.istex
+          PYTHONPATH="$RUNNER_TEMP/texture-tools" python3 scripts/port/prepare_texture_pack.py --download --scope levels --archive "$RUNNER_TEMP/ge007-hd.zip" --output build_win/Data/TexturePacks/hd.istex
           bash scripts/port/test_hd_textures.sh build_win/Data/TexturePacks/hd.istex
       - name: Upload exact Windows debug information and source context
         env:

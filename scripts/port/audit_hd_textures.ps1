@@ -2,6 +2,8 @@
 param(
     [Parameter(Mandatory=$true)][string]$Executable,
     [string]$Pack,
+    [string]$Stage = 'dam',
+    [switch]$AllowMissingMatches,
     [switch]$Menu,
     [switch]$Gameplay,
     [switch]$Reload
@@ -27,7 +29,7 @@ foreach ($mode in @(0,1)) {
         GE_HD_TRACE='1'; GE_HD_DUMP='1'; GE_SEED='1'; GE_FRAMES='650'; GE_SHOT='500'; GE_SKIPINTRO='1'
     }
     if ($Menu) { $auditEnv.GE_MENU='portopts' }
-    else { $auditEnv.GE_STAGE='dam'; $auditEnv.GE_STAGE_AFTER='1'; $auditEnv.GE_CHEATS='invuln,invis' }
+    else { $auditEnv.GE_STAGE=$Stage; $auditEnv.GE_STAGE_AFTER='1'; $auditEnv.GE_CHEATS='invuln,invis' }
     if ($Gameplay) {
         Set-Content -LiteralPath (Join-Path $dir 'input.txt') -Value @('P 0 0 0 0',
             'P 80 8000 0 0','P 82 0 0 0','P 120 8000 0 0','P 122 0 0 0',
@@ -76,7 +78,7 @@ foreach ($mode in @(0,1)) {
     $capture = @(Get-ChildItem -LiteralPath $dir -Filter 'shot_*.bmp')
     if (!$capture.Count) { throw "Missing capture: $dir" }
     $matches = @(Select-String -LiteralPath (Join-Path $dir 'stderr.txt') -Pattern '^hd: match ')
-    if (!$Menu -and $mode -and !$matches.Count) { throw "No HD matches: $dir" }
+    if (!$Menu -and $mode -and !$matches.Count -and !$AllowMissingMatches) { throw "No HD matches: $dir" }
     if ($Reload -and $mode -and @(Select-String -LiteralPath (Join-Path $dir 'stderr.txt') -Pattern '^hd: loaded ').Count -lt 2) { throw 'Pack did not reload' }
-    [PSCustomObject]@{ Mode=$mode; Directory=$dir; Matches=$matches.Count; Capture=$capture[-1].FullName }
+    [PSCustomObject]@{ Stage=$Stage; Mode=$mode; Directory=$dir; Matches=$matches.Count; Capture=$capture[-1].FullName }
 }

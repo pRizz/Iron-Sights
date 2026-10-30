@@ -17,11 +17,11 @@ Build details and blue, underlined links are available under:
 Options > Gameplay > Port Options > About / Build Info
 The same entry is available in the watch's Port Options page.
 
-HD DAM PROTOTYPE
+HD CAMPAIGN ENVIRONMENTS
 Port Options > Texture Pack selects Original (default), HD or 4K.
-The compressed Dam HD artwork is in Data/TexturePacks/hd.istex. Keep that
+The compressed campaign HD artwork is in Data/TexturePacks/hd.istex. Keep that
 directory and its attribution notices when extracting the ZIP. Missing or
-unmatched textures use the originals; this is not a full-game remaster.
+unmatched textures use the originals; source-art coverage remains incomplete.
 4K is available for separately prepared packs; 4K artwork is not bundled.
 GoldenEye 007 HD textures: intermissionfb; technical assistance: GhostlyDark.
 See Data/TexturePacks/HD-Textures-NOTICE.txt and About / Build Info.

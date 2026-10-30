@@ -1,0 +1,22 @@
+{
+  "source": "https://github.com/GhostlyDark/GoldenEye-007-HD",
+  "revision": "f16ed0acb0b9b5ca5f7dad90dc6d5ae0f18c0ead",
+  "reason": "Egyptian environment artwork is present in pinned source but absent from the HD release archive",
+  "textures": [
+    {
+      "path": "GOLDENEYE/Areas/Mission 20 - Egyptian/GOLDENEYE#1AA14C7C#2#1#F67C45E4_ciByRGBA.png",
+      "git_blob_sha1": "90bb3ed79ac77ff6673301285d17f6284678a6ff",
+      "size": 980101
+    },
+    {
+      "path": "GOLDENEYE/Areas/Mission 20 - Egyptian/GOLDENEYE#6F6FF03F#2#1#8901ED54_ciByRGBA.png",
+      "git_blob_sha1": "607362e62105ade199e8e2bf8e27376cb965b5dd",
+      "size": 7042567
+    },
+    {
+      "path": "GOLDENEYE/Areas/Mission 20 - Egyptian/GOLDENEYE#79A7995C#2#1#9C0E73FE_ciByRGBA.png",
+      "git_blob_sha1": "af52970d16e0080a54f0ed5d37ec880fee0915d8",
+      "size": 7126484
+    }
+  ]
+}
