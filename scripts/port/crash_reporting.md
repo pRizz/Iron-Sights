@@ -58,7 +58,10 @@ The GitHub Actions repository secret `SENTRY_AUTH_TOKEN` must hold a Sentry
 organization CI token (`org:ci`) permitted to upload debug files for this project.
 The upload step runs only in the trusted main build, before publication, and fails
 if the secret or usable symbols are missing. PR checks do not receive the token.
-The pinned CLI download is checked against GitHub's asset SHA256 digest.
+CLI downloads use direct versioned release URLs and SHA256 values pinned in
+`sentry_config.json`, verified against GitHub's upstream asset digests. Cached
+binaries are checked against the same pins and need no release-metadata API call.
+When updating the CLI version, update both Linux and Windows SHA256 pins together.
 
 GNU ld's `--build-id` emits the PE CodeView identifier needed to match this GCC
 executable to its embedded DWARF information. CI uploads the exact executable,

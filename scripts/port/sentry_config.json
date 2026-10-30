@@ -2,6 +2,10 @@
   "sdk_version": "0.17.4",
   "sdk_commit": "740313523edd50e3a0cfe2f8f931e893ed7423a5",
   "cli_version": "3.8.2",
+  "cli_sha256": {
+    "sentry-cli-Linux-x86_64": "c958865f9d4000183509ea21b1f04925d5390de6d8d87386b9e69f2b305070c3",
+    "sentry-cli-Windows-x86_64.exe": "50009f23c49d6e9ff7624204c7035855303b49c5e326708ee783c1fdf783ac83"
+  },
   "organization": "bright-builds-llc",
   "project": "iron-sights",
   "dsn": "https://adf0168b01e05000b328a968dd878538@o4508882504450048.ingest.us.sentry.io/4512331665637376"

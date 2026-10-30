@@ -232,6 +232,11 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      # Create these directories as the runner before Docker creates build output as root.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: native-hd-artwork
+          path: build_linux_ci/Data/TexturePacks
       - name: Build pinned Linux baseline image
         run: docker build -t midas-linux-release -f scripts/port/linux-release.Dockerfile .
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -255,10 +260,6 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
           docker run --rm -v "$PWD:/src" -e SENTRY_AUTH_TOKEN midas-linux-release python3 scripts/port/sentry_tools.py upload --exe build_linux_ci/symbols/IronSights.debug --sdk build_linux_ci/symbols --work build_linux_ci/sentry-cli
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: native-hd-artwork
-          path: build_linux_ci/Data/TexturePacks
       - name: Package tarball and AppImage and test real crashes
         run: |
           docker run --rm -v "$PWD:/src" midas-linux-release python3 scripts/port/package_linux.py --build build_linux_ci --output build_linux_ci/dist

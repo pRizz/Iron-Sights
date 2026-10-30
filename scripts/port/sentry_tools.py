@@ -97,19 +97,16 @@ def stage(source, destination):
 
 def cli(work):
     filename = "sentry-cli-Windows-x86_64.exe" if os.name == "nt" else "sentry-cli-Linux-x86_64"
-    url = f"https://api.github.com/repos/getsentry/sentry-cli/releases/tags/{CONFIG['cli_version']}"
-    with urllib.request.urlopen(url, timeout=30) as response:
-        assets = json.load(response)["assets"]
-    asset = next(item for item in assets if item["name"] == filename)
-    digest = asset.get("digest", "")
-    if not digest.startswith("sha256:"):
-        raise ValueError("GitHub did not supply a SHA256 digest for the Sentry CLI asset")
+    digest = CONFIG["cli_sha256"][filename]
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise ValueError("Expected a pinned SHA256 digest for the Sentry CLI asset")
+    url = f"https://github.com/getsentry/sentry-cli/releases/download/{CONFIG['cli_version']}/{filename}"
     work.mkdir(parents=True, exist_ok=True)
     target = work / ("sentry-cli.exe" if os.name == "nt" else "sentry-cli")
-    if not target.exists() or hashlib.sha256(target.read_bytes()).hexdigest() != digest[7:]:
-        with urllib.request.urlopen(asset["browser_download_url"], timeout=60) as response:
+    if not target.exists() or hashlib.sha256(target.read_bytes()).hexdigest() != digest:
+        with urllib.request.urlopen(url, timeout=60) as response:
             data = response.read()
-        if hashlib.sha256(data).hexdigest() != digest[7:]:
+        if hashlib.sha256(data).hexdigest() != digest:
             raise ValueError("Sentry CLI checksum mismatch")
         target.write_bytes(data)
         target.chmod(0o755)

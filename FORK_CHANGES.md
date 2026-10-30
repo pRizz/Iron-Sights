@@ -281,6 +281,12 @@ sets the read-only bundled texture root separately from `GE_DATA_ROOT`, retainin
 user overrides and saved mode choices without copying artwork into user storage.
 Packaged smoke tests verify pack hashes, report counts and notices in both
 formats, including extraction of the actual AppImage squashfs.
+The runner downloads shared HD artwork immediately after checkout, before
+Docker creates any Linux build output. This keeps the destination directories
+runner-owned and avoids the hosted `EACCES` failure from downloading into a
+root-owned `build_linux_ci/Data` after compilation.
+A POSIX UID-1001/root fixture reproduces the old permission failure and confirms
+the reordered download retains runner write access after root-created output.
 
 A Linux-only ELF export rule keeps the game's N64 libc/math replacements
 private, so shared graphics/audio/reporting libraries use standard libc calls.
@@ -341,6 +347,14 @@ It shares the menu toggle and project, uses `linux-release` for CI builds, and
 restores the prior local signal handlers on shutdown. AppImage queues follow its
 writable root. FORK-031 records the Linux release build and package formats.
 
+Symbol-upload tooling pins both supported Sentry CLI 3.8.2 asset SHA256 values
+in `sentry_config.json` and downloads from the versioned release URLs directly.
+Every cached/downloaded binary is checked before use; a valid cached binary
+needs no network access. This removes the unauthenticated GitHub release-metadata
+API lookup that hit a hosted-runner 403 rate limit and blocked Windows release
+publication. Pins were verified against the upstream release asset digests;
+missing or malformed pins and mismatched downloads fail closed.
+
 Only structured events are enabled; no minidumps, ROMs, saves, screenshots or raw
 logs are attached. Default native events contain module paths, a generated
 installation ID and technical system/CPU state; see the payload disclosure.
@@ -368,6 +382,12 @@ and exactly-once retry after a connection failure. Watchdog reporting is bounded
 so an unavailable SDK cannot prevent its existing forced exit. Standards report
 zero findings. Cloud source-line verification uses the exact CI executable and
 its debug ID, following the reporting guide; receipt logs remain local.
+The CLI download refinement passes eight ROM-free tooling tests, including
+offline cache reuse, direct repair of corrupt caches and rejected mismatched
+downloads. Real Linux/Windows downloads match the pins and report version 3.8.2;
+the native release workflow passes actionlint.
+Both independent gallery passes retain all 72 views and 35 icons with zero
+changed image cells after the CI ordering fix; nine gallery workflow tests pass.
 
 ### FORK-029 — Shared presentation defaults and usable Video pagination
 
