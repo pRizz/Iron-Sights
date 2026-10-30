@@ -188,38 +188,35 @@ export async function auditTouchHints(page) {
     await page.evaluate(() => touchFixture.resume());
     const game = page.locator('.touch-game-hint');
     const menu = page.locator('.touch-menu-hint');
-    await expect(game).toBeVisible();
-    assert.ok((await game.boundingBox()).y <= 10, 'Game hint is not near the screen top');
-    await page.clock.fastForward(4000);
-    await expect(game).toBeVisible();
-    // The real capture state emits fresh playing snapshots during a mission.
-    // Refreshing that snapshot must not restart the five-second hint deadline.
-    await page.evaluate(() => touchFixture.resume());
-    await page.clock.fastForward(1000);
-    await expect(game).toHaveClass(/helper-text-fading/);
-    await expect(game).toHaveCount(1);
-    await expect(game).toHaveCSS('transition-property', 'opacity');
-    await expect(game).toHaveCSS('transition-duration', '0.35s');
-    await page.clock.fastForward(360);
     await expect(game).toHaveCount(0);
-    await expect(page.locator('.touch-look span')).toHaveCount(0);
+    await expect(page.locator('.touch-look span, .touch-stick span')).toHaveCount(0);
+    await page.clock.fastForward(6000);
+    await page.evaluate(() => touchFixture.resume());
+    await expect(game).toHaveCount(0);
     await page.evaluate(() => touchFixture.menu(true));
+    await expect(page.locator('.touch-controls')).toHaveAttribute('data-context', 'watch');
+    await expect(menu).toHaveCount(0); // The in-mission watch is quiet too.
+    await page.evaluate(() => touchFixture.context(0));
+    await expect(page.locator('.touch-controls')).toHaveAttribute('data-context', 'navigation');
     await expect(menu).toBeVisible();
     assert.ok((await menu.boundingBox()).y <= 10, 'Menu hint is not near the screen top');
-    await page.clock.fastForward(2000);
-    await page.evaluate(() => touchFixture.menu(false));
-    await expect(game).toBeVisible();
-    await page.clock.fastForward(1200);
-    await expect(game).toBeVisible(); // The previous menu's timer must have been cancelled.
-    await page.clock.fastForward(4000);
-    await expect(game).toHaveCount(0);
-    await page.evaluate(() => touchFixture.menu(true));
-    await expect(menu).toBeVisible();
     await page.clock.fastForward(4000);
     await expect(menu).toBeVisible();
+    await page.evaluate(() => touchFixture.resume());
     await page.clock.fastForward(1000);
     await expect(menu).toHaveClass(/helper-text-fading/);
+    await expect(menu).toHaveCSS('transition-property', 'opacity');
+    await expect(menu).toHaveCSS('transition-duration', '0.35s');
     await page.clock.fastForward(360);
+    await expect(menu).toHaveCount(0);
+    await page.evaluate(() => touchFixture.menu(false));
+    await expect(page.locator('.touch-controls')).toHaveAttribute('data-context', 'game');
+    await expect(game).toHaveCount(0);
+    await page.evaluate(() => touchFixture.context(0));
+    await expect(menu).toBeVisible();
+    await page.clock.fastForward(2000);
+    await page.evaluate(() => touchFixture.menu(false));
+    await page.clock.fastForward(4000);
     await expect(menu).toHaveCount(0);
     await page.evaluate(() => touchFixture.fileMenu(true));
     await expect(menu).toBeVisible();

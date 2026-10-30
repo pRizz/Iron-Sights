@@ -98,3 +98,24 @@ test('simultaneous fingers release independently and reset releases every held a
     expect(events.at(-1)).toEqual(['aim', false]);
     expect(events.length).toBe(4);
 });
+
+test('a disappearing gadget control releases only its own contacts', () => {
+    // Arrange: a held gadget shortcut must not own the fire contact.
+    const events: unknown[] = [];
+    const state = createTouchState((action, down) => events.push([action, down]));
+    state.press(1, 'fire');
+    state.press(2, 'nextGadget');
+    state.press(3, 'nextGadget');
+    // Act: inventory changes while both gadget fingers are still down.
+    state.releaseAction('nextGadget');
+    state.release(2);
+    state.release(3);
+    // Assert: one gadget release; fire stays held until its own finger releases.
+    expect(events).toEqual([
+        ['fire', true],
+        ['nextGadget', true],
+        ['nextGadget', false],
+    ]);
+    state.release(1);
+    expect(events.at(-1)).toEqual(['fire', false]);
+});

@@ -93,6 +93,38 @@ try {
         assert.ok(!(await snapshot()).held.includes(11));
     }
     await expect(page.locator('.touch-extra')).toHaveCount(0);
+    await gadget.evaluate((button) => {
+        button.dispatchEvent(
+            new PointerEvent('pointerdown', {
+                bubbles: true,
+                cancelable: true,
+                pointerId: 771,
+                pointerType: 'touch',
+            }),
+        );
+        document.querySelector('[data-touch-action=fire]').dispatchEvent(
+            new PointerEvent('pointerdown', {
+                bubbles: true,
+                cancelable: true,
+                pointerId: 772,
+                pointerType: 'touch',
+            }),
+        );
+    });
+    await page.evaluate(() => touchFixture.gadgets(false));
+    await expect(gadget).toHaveCount(0);
+    assert.deepEqual(
+        (await snapshot()).held,
+        [0],
+        'Hiding an empty gadget control released Fire or kept gadget held',
+    );
+    await page.evaluate(() => {
+        document.dispatchEvent(new PointerEvent('pointerup', { pointerId: 771 }));
+        document.dispatchEvent(new PointerEvent('pointerup', { pointerId: 772 }));
+        touchFixture.gadgets(true);
+    });
+    await expect(gadget).toBeVisible();
+    assert.deepEqual((await snapshot()).held, []);
     // Exercise missing pointer terminals in both engines, including WebKit's
     // desktop driver, which cannot inject a native multi-contact touch stream.
     await page.locator('.touch-stick').evaluate((stick) => {

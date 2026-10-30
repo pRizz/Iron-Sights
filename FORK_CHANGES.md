@@ -397,22 +397,23 @@ remain independent when native pointer capture fails or the finger crosses a
 button. Existing release, cancellation and focus-reset rules remain.
 
 Instruction text sits eight CSS pixels below the top safe area and stays visible
-for five seconds in gameplay and menus/Files, replacing the three-second menu
-deadline. The right-side
-look hint and stick instruction share the gameplay deadline. Timers follow
+for five seconds on pre-mission menus/Files, replacing the three-second menu
+deadline. Missions, cutscenes and the in-mission watch have no instructional
+helper text; this removes the former movement/watch banner, Drag to look label
+and MOVE stick label. Timers follow
 semantic context changes, preserving their deadline across ordinary playing
 state updates; pause/resume and mode changes reset them. Generic mobile startup
 instructions use this overlay instead of a duplicate app banner. Status/error
 messages retain their message lifecycle but also pass input through.
-Timed helper text uses the shared `HelperText` component to fade out over 350 ms
-before removal, including app status hints, look and stick labels. Reduced
+Timed menu helper text and app status hints use the shared `HelperText` component
+to fade out over 350 ms before removal. Reduced
 motion shortens the opacity fade to 80 ms; hidden hints stop announcing at the
 start of the fade. A new hint cancels pending removal.
 Watch arrows now issue one digital direction edge per contact, with no repeated
 hold or duplicate full-strength stick input in the watch. Fire/other holds and
 analog movement retain their ownership. The Wasm bridge regression covers all
 four directions held for 120 polls, duplicate downs and a subsequent short tap.
-Current validation: TypeScript, 167 unit tests, formatting, optimized Wasm build,
+Controller/fade refinement validation: TypeScript, 167 unit tests, formatting, optimized Wasm build,
 ROM-free logo exclusion and exact public-artifact verification pass. Edge and
 Windows WebKit fixtures pass five-second hints/fades, gadget action and target
 geometry through 1366×1024. Edge's actual-ROM audit reads watch indices through
@@ -433,6 +434,22 @@ the left analog movement stick and right-side drag-to-look remain. A gadget-icon
 **Switch gadget** button calls the existing next-inventory action, replacing
 the gun-icon weapon-cycle shortcut; A still cycles weapons in N64 mode. The
 Modern More tray retains both weapon and gadget cycling actions.
+The primary gadget shortcut appears only when the live inventory contains an
+item on that cycle action's existing usable-gadget whitelist. A browser-only
+`portWebTouchHasGadgets` query shares that whitelist, excluding guns, keys and
+documents and hiding the shortcut outside gameplay or while driving the tank.
+Availability is read each frame so item gains/removals update immediately. Losing
+the last usable gadget releases that action alone, preserving held Fire, movement
+and other contacts. Unknown/older runtimes conservatively hide the shortcut.
+Availability/quiet-HUD validation: TypeScript, 168 unit tests, the Wasm bridge,
+scoped formatting, optimized Wasm/site build and exact artifact checks pass.
+Edge and Windows WebKit fixtures verify empty/restored inventory, hiding while
+held without releasing Fire, quiet gameplay/watch and retained five-second menu
+hints. Edge's actual-game audit verifies the quiet mission HUD and shortcut
+visibility against the live getter, plus watch directions, movement/fire, audio,
+focus recovery and responsive bounds. Both gallery passes leave all 107 PNGs
+unchanged; standards and freshness pass. Evidence is private under
+`build/mission-ui-*.log` and `build/web-touch/mission-ui-*`.
 Dragging Z turns while firing.
 **Modern actions** restores the previous Fire/Aim/Use/Reload/Crouch/Watch layout,
 Select/Back menu buttons and More tray with weapon/gadget cycling, zoom,
@@ -579,7 +596,7 @@ pointer press: Chrome and audio-enabled Linux WebKit still reach Dam, move,
 use Watch/Pause/Options and retain audio/layout. Chrome covers simultaneous
 move/look/fire and genuine window-blur pause. The C fixture checks both pitch
 directions; native gallery regeneration changes zero image cells.
-The primary weapon-button refinement passes 144 unit tests, TypeScript,
+The earlier primary weapon-button refinement passed 144 unit tests, TypeScript,
 production assembly/allowlist and Edge/WebKit pointer UI checks. Those checks
 cover repeated next-weapon press/release without opening More, retained +/−
 buttons, hidden gameplay actions in menus and non-overlapping phone/tablet

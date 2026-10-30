@@ -11,6 +11,7 @@ import '../src/room.css';
 
 let live = true;
 let context = 2;
+let gadgets = true;
 let movement = [0, 0],
     look = [0, 0];
 const held = new Set<number>();
@@ -37,6 +38,7 @@ const game = {
             : [0.7, 0.2, 0.25, 0.12, 0.7, 0.8, 0.25, 0.12][metric - 1],
     _portWebControlsLive: () => Number(live),
     _portWebTouchContext: () => (fileMenu() ? 0 : context),
+    _portWebTouchHasGadgets: () => Number(gadgets && context === 2 && !fileMenu()),
     _portWebTouchButton: (id: number, down: number) => {
         if (id === 5 && down) accepts++;
         down ? held.add(id) : held.delete(id);
@@ -72,6 +74,9 @@ Object.assign(globalThis, {
             imported,
         }),
         fileMenu: setFileMenu,
+        gadgets: (value: boolean) => {
+            gadgets = value;
+        },
         menu: (value: boolean) => {
             live = !value;
             context = value ? 3 : 2;

@@ -253,10 +253,18 @@ try {
     await expect(page.locator('.touch-controls')).toHaveAttribute('data-mode', 'game', {
         timeout: 10000,
     });
-    await expect(page.locator('.touch-game-hint')).toBeVisible();
-    await page.waitForTimeout(5500);
     await expect(page.locator('.touch-game-hint')).toHaveCount(0);
+    await expect(page.locator('.touch-menu-hint')).toHaveCount(0);
     await expect(page.locator('.touch-look span')).toHaveCount(0);
+    await expect(page.locator('.touch-stick span')).toHaveCount(0);
+    const gadgetsAvailable = await page.evaluate(() => midasAuditGame._portWebTouchHasGadgets());
+    await expect(page.getByRole('button', { name: 'Switch gadget', exact: true })).toHaveCount(
+        gadgetsAvailable ? 1 : 0,
+    );
+    console.log(
+        'Mission HUD: no helper instructions; gadget shortcut matches live availability',
+        gadgetsAvailable,
+    );
     await expect(
         page.locator('.touch-controls').getByRole('button', { name: /^(Pause|Options)$/ }),
     ).toHaveCount(0);

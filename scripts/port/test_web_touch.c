@@ -10,6 +10,7 @@ f32 g_portMouseYawDeg, g_portMousePitchDeg;
 static s32 live, consoleOpen, playerNum;
 static s32 stageRunning, watchOpen;
 static u32 actionBits;
+static s32 inventory[8], inventoryCount, inventoryReads;
 static const char *const bindings[] = {
     "reload", "use", "aim_down_sights", "prev_weapon", "next_weapon",
     "crouch_toggle", "zoom_in", "zoom_out", "detonate", "walk",
@@ -21,6 +22,9 @@ s32 portStageRunning(void) { return stageRunning; }
 s32 portWatchMenuUp(void) { return watchOpen; }
 s32 portWebControlsLive(void) { return live; }
 s32 portConIsOpen(void) { return consoleOpen; }
+s32 bondinvCountTotalItemsInInv(void) { inventoryReads++; return inventoryCount; }
+s32 bondinvGetTextbyInvIndex(s32 index) { assert(index >= 0 && index < inventoryCount); return inventory[index]; }
+s32 portJoyPortInvScrollItem(s32 item) { return item == ITEM_BUG || item == ITEM_CAMERA; }
 s32 portJoyPortBindCount(void) { return sizeof(bindings) / sizeof(bindings[0]); }
 const char *portJoyPortBindName(s32 index) { return bindings[index]; }
 void portJoyPortPadDown(s32 pad, s32 action) { assert(pad == 0); actionBits |= 1u << action; }
@@ -43,6 +47,40 @@ static void testTouchContext(void)
                 assert(portWebTouchContext() == expected);
             }
     stageRunning = watchOpen = live = 0;
+}
+
+static void testAvailableGadgets(void)
+{
+    /* Arrange: ordinary weapons and non-usable mission inventory are not gadgets. */
+    inventory[0] = ITEM_UNARMED;
+    inventory[1] = ITEM_WPPK;
+    inventory[2] = ITEM_KEYCARD;
+    inventoryCount = 3;
+    stageRunning = live = 1;
+    watchOpen = playerNum = g_PlayerIsInTank = 0;
+    /* Act / Assert: availability follows current inventory without a cached result. */
+    assert(!portWebTouchHasGadgets());
+    inventory[3] = ITEM_BUG;
+    inventoryCount = 4;
+    assert(portWebTouchHasGadgets());
+    inventory[3] = ITEM_CAMERA;
+    assert(portWebTouchHasGadgets());
+    inventoryCount = 3;
+    assert(!portWebTouchHasGadgets());
+    inventoryCount = 0;
+    assert(!portWebTouchHasGadgets());
+    inventoryReads = 0;
+    stageRunning = 0;
+    assert(!portWebTouchHasGadgets() && !inventoryReads);
+    stageRunning = 1; watchOpen = 1;
+    assert(!portWebTouchHasGadgets() && !inventoryReads);
+    watchOpen = 0; live = 0;
+    assert(!portWebTouchHasGadgets() && !inventoryReads);
+    live = 1; g_PlayerIsInTank = 1;
+    assert(!portWebTouchHasGadgets() && !inventoryReads);
+    g_PlayerIsInTank = 0; playerNum = -1;
+    assert(!portWebTouchHasGadgets() && !inventoryReads);
+    stageRunning = live = playerNum = 0;
 }
 
 static void testWatchDirections(void)
@@ -109,6 +147,7 @@ int main(void)
     testTouchContext();
     portWebTouchEnable(1);
     testNativeN64Buttons();
+    testAvailableGadgets();
     testWatchDirections();
     portWebTouchButton(TOUCH_FIRE, 1);
     portWebTouchButton(TOUCH_AIM, 1);

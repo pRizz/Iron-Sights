@@ -1341,6 +1341,26 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**Quiet mission HUD and available gadgets, 2026-10-29:** Removed the in-mission
+movement/watch banner, Drag to look and MOVE labels; watch/cinematic contexts
+also suppress helper instructions. Pre-mission menus/Files retain their
+five-second hints and fade. The primary gadget shortcut appears only when the
+live inventory contains an item on next-inventory's usable-gadget whitelist.
+The read-only browser query excludes guns/keys/documents and tank/non-gameplay
+contexts. Inventory loss releases only the gadget action, preserving other held
+contacts; unknown/older runtimes hide the shortcut. Bridge regressions cover
+empty/non-gadget inventory, gains/removals and guarded contexts; TypeScript and
+168 unit tests pass. Edge/Windows WebKit fixtures pass conditional visibility,
+held-input release, quiet mission/watch and retained five-second menu hints.
+Optimized Wasm/site builds and exact artifact verification pass. Edge's actual
+Agent Dam audit verifies the quiet HUD and shortcut visibility against the live
+getter (Dam does carry a usable gadget), plus all four watch directions,
+movement/fire, audio, focus recovery and responsive bounds. Both gallery passes
+reproduce all 107 PNGs unchanged; standards/freshness checks pass. Evidence:
+`build/mission-ui-*.log`, `build/web-touch/mission-ui-*`.
+Next action: deliver main and check Pages publication. No known blockers;
+physical iPad/Safari acceptance remains a device check.
+
 **Touch usability refinement, 2026-10-29:** Menu/Files hints now last five seconds;
 shared helper text fades out over 350 ms (80 ms with reduced motion), including
 app status hints and look/stick labels. The left shortcut now cycles gadgets

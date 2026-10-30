@@ -19,6 +19,9 @@ extern s32 g_PlayerIsInTank;
 extern s32 portStageRunning(void);
 extern s32 portWebControlsLive(void);
 extern s32 portWatchMenuUp(void);
+extern s32 bondinvCountTotalItemsInInv(void);
+extern s32 bondinvGetTextbyInvIndex(s32 index);
+extern s32 portJoyPortInvScrollItem(s32 item);
 
 /* Presentation follows real engine permission, never an intro-duration timer.
  * Keep the watch distinct so its native lists can still be closed/navigated. */
@@ -27,6 +30,18 @@ EMSCRIPTEN_KEEPALIVE s32 portWebTouchContext(void)
     if (!portStageRunning()) return WEB_TOUCH_NAVIGATION;
     if (portWatchMenuUp()) return WEB_TOUCH_WATCH;
     return portWebControlsLive() ? WEB_TOUCH_GAME : WEB_TOUCH_CINEMATIC;
+}
+
+/* Match next-inventory's usable-item whitelist, not every watch inventory row. */
+EMSCRIPTEN_KEEPALIVE s32 portWebTouchHasGadgets(void)
+{
+    s32 i, count;
+    if (portWebTouchContext() != WEB_TOUCH_GAME || get_cur_playernum() != 0 || g_PlayerIsInTank) return 0;
+    count = bondinvCountTotalItemsInInv();
+    for (i = 0; i < count; i++) {
+        if (portJoyPortInvScrollItem(bondinvGetTextbyInvIndex(i))) return 1;
+    }
+    return 0;
 }
 
 enum { TOUCH_FIRE, TOUCH_AIM, TOUCH_USE, TOUCH_RELOAD, TOUCH_WATCH, TOUCH_ACCEPT, TOUCH_BACK, TOUCH_CROUCH, TOUCH_PREV_WEAPON,

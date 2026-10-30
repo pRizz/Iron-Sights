@@ -63,13 +63,16 @@ distinguish those checks from physical iOS/Android acceptance.
 The accepted convenience refinement now uses a gadget-icon next-inventory button
 on the main gameplay overlay, superseding the gun-icon weapon-cycle shortcut;
 A already cycles weapons in N64 mode. More retains weapon and gadget cycling.
+Hide the primary gadget shortcut unless the current inventory has a usable item
+on the same whitelist as next-inventory; keys/documents do not count.
 The 2026-10-28 mobile refinement removes browser Pause/Options from both touch
 layouts; Start/Watch remains the native pause control. It also increases safe-area
 insets and aligns Start, B and A vertically, with A at the bottom, on all sizes.
 The accepted gesture refinement makes all unoccupied viewport space available
 for look/menu panning, with blocking limited to actual buttons and the stick.
-Instruction hints move near the top, stay visible for five seconds in gameplay
-and menus, then fade out. Helper text must never intercept input. The accepted
+Pre-mission instruction hints move near the top, stay visible for five seconds,
+then fade out. Missions and the in-mission watch have no helper instructions.
+Helper text must never intercept input. The accepted
 2026-10-29 refinement also makes watch arrows single-step per contact, scales
 the controls on larger touchscreens and spans R above both the Start and Z columns.
 The accepted presentation refinement hides every controller button and the stick

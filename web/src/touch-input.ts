@@ -86,6 +86,15 @@ export function createTouchState(send: (action: TouchAction, down: boolean) => v
             fingers.delete(id);
             if (action && ![...fingers.values()].includes(action)) send(action, false);
         },
+        releaseAction(action: TouchAction) {
+            let released = false;
+            for (const [id, held] of fingers) {
+                if (held !== action) continue;
+                fingers.delete(id);
+                released = true;
+            }
+            if (released) send(action, false);
+        },
         clear() {
             for (const action of new Set(fingers.values())) send(action, false);
             fingers.clear();

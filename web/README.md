@@ -49,7 +49,8 @@ analog left thumbstick and drag any free screen area to look. **Touch layout** d
 gray rectangular Z on the right send native controller buttons. Start, B and A
 share one vertical column on phones and tablets, with A at the bottom. Hold/drag Z to
 shoot and turn, tap the gray rounded rectangular R to toggle ADS, and use the
-gadget icon to cycle gadgets; A cycles weapons. R spans both columns above Start
+gadget icon to cycle gadgets; it appears only when a usable gadget is available.
+Keys and documents do not enable it. A cycles weapons. R spans both columns above Start
 and Z and keeps a highlighted border while aiming. Buttons, labels, gaps and
 the stick grow on tablet-sized screens, up to 150% of the phone button sizes.
 Start opens the watch; A/B also navigate its native menus. **Modern actions** retains
@@ -75,8 +76,9 @@ settings remain. Rotation fits the existing framebuffer without changing its
 resolution. Only real buttons and the stick claim touch areas; transparent
 control groups and helper/status text pass gestures through. Look and cursor
 movement follow their pointer IDs even if capture fails or a drag crosses a
-button. Instructions sit near the safe top, remain for five seconds in gameplay
-and menus/Files, then fade out over 350 ms, including the look and stick labels.
+button. Pre-mission menu/Files instructions sit near the safe top, remain for five
+seconds, then fade out over 350 ms. Missions and the in-mission watch have no
+helper instructions, including look and movement labels.
 App status hints also fade; reduced motion uses a shorter 80 ms opacity fade.
 Physical iPad performance and Safari acceptance remain device checks.
 

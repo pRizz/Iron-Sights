@@ -42,6 +42,7 @@ export function TouchControls(props: Props) {
     const watch = () => context() === 'watch';
     const hud = () => context() === 'game' || watch();
     const [files, setFiles] = createSignal(false);
+    const [hasGadgets, setHasGadgets] = createSignal(false);
     const [more, setMore] = createSignal(false);
     const [aiming, setAiming] = createSignal(false);
     const [stick, setStick] = createSignal({ x: 0, y: 0 });
@@ -51,13 +52,7 @@ export function TouchControls(props: Props) {
     const active = () =>
         props.visible() && props.input.enabled() && props.capture.state().kind !== 'paused';
     const hints = createTouchHints(() =>
-        !active() || context() === 'cinematic'
-            ? 'inactive'
-            : files()
-              ? 'files'
-              : menu()
-                ? 'menu'
-                : 'game',
+        !active() || context() !== 'navigation' ? 'inactive' : files() ? 'files' : 'menu',
     );
     const contacts = createTouchContacts(
         (id) => {
@@ -109,6 +104,11 @@ export function TouchControls(props: Props) {
         const detachContacts = contacts.attach();
         let frame = 0;
         const monitor = () => {
+            const available = !!props.engine.maybeGame()?._portWebTouchHasGadgets?.();
+            if (available !== hasGadgets()) {
+                if (!available) props.input.state.releaseAction('nextGadget');
+                setHasGadgets(available);
+            }
             const nextFiles = !!props.engine.maybeGame()?._portWebFileMenuMetric?.(0);
             if (nextFiles !== files()) {
                 clear();
@@ -254,9 +254,7 @@ export function TouchControls(props: Props) {
                                     y: event.clientY,
                                 };
                         }}
-                    >
-                        <HelperText when={hints()}>Drag to look</HelperText>
-                    </div>
+                    ></div>
                     <div
                         class="touch-stick"
                         role="group"
@@ -269,30 +267,31 @@ export function TouchControls(props: Props) {
                             }
                         }}
                     >
-                        <HelperText when={hints()}>MOVE</HelperText>
                         <i
                             style={{
                                 transform: `translate(${stick().x * 65}%, ${-stick().y * 65}%)`,
                             }}
                         />
                     </div>
-                    <div class="touch-gadget">
-                        <Button action="nextGadget" label="Switch gadget">
-                            <svg
-                                viewBox="0 0 32 32"
-                                width="28"
-                                height="28"
-                                aria-hidden="true"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linejoin="round"
-                            >
-                                <rect x="8" y="7" width="16" height="22" rx="3" />
-                                <path d="M12 7V3h8v4M12 12h8M12 17h3M19 17h1M12 23h8" />
-                            </svg>
-                        </Button>
-                    </div>
+                    <Show when={hasGadgets()}>
+                        <div class="touch-gadget">
+                            <Button action="nextGadget" label="Switch gadget">
+                                <svg
+                                    viewBox="0 0 32 32"
+                                    width="28"
+                                    height="28"
+                                    aria-hidden="true"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linejoin="round"
+                                >
+                                    <rect x="8" y="7" width="16" height="22" rx="3" />
+                                    <path d="M12 7V3h8v4M12 12h8M12 17h3M19 17h1M12 23h8" />
+                                </svg>
+                            </Button>
+                        </div>
+                    </Show>
                     <Show when={props.input.layout() === 'modern'}>
                         <div class="touch-actions">
                             <Button action="aim" label="Aim" />
@@ -336,12 +335,8 @@ export function TouchControls(props: Props) {
                         </Button>
                     </div>
                 </Show>
-                <HelperText when={hints()} class={menu() ? 'touch-menu-hint' : 'touch-game-hint'}>
-                    {menu()
-                        ? watch()
-                            ? 'Drag to move cursor · Tap to select · Or use arrows'
-                            : 'Drag to move cursor · Tap to select'
-                        : 'Move left · Start/Watch pauses'}
+                <HelperText when={hints()} class="touch-menu-hint">
+                    Drag to move cursor · Tap to select
                 </HelperText>
             </div>
         </Show>

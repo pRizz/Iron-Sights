@@ -9,6 +9,7 @@ enum WebTouchContext {
     WEB_TOUCH_WATCH = 3
 };
 s32 portWebTouchContext(void);
+s32 portWebTouchHasGadgets(void);
 /* Browser-local virtual controls, player one only. No saved bind IDs change. */
 void portWebTouchReset(void);
 void portWebTouchPoll(OSContPad *pad);
