@@ -13,6 +13,18 @@ static Tile source(std::array<uint8_t,32>& data)
     for (unsigned i = 0; i < data.size(); ++i) data[i] = i;
     return {data.data(), data.size(), 8, 4, 8, 4, 1, nullptr, 0, false};
 }
+static void defaultWithoutPack(const std::string& root)
+{
+    // Arrange: fresh native settings, no HD files installed.
+    assert(portTexturePackGet() == 1);
+    portTexturePackRoot((root+"/missing").c_str());
+    std::array<uint8_t,32> data;
+    Tile tile = source(data);
+    Image image;
+    // Act / Assert: retain the HD preference while the caller renders stock.
+    assert(beginFrame() && !lookup(tile,image));
+    assert(portTexturePackGet() == 1);
+}
 static void identity()
 {
     // Arrange: independently known Rice I8 fingerprint, including row order.
@@ -113,8 +125,11 @@ static void lifecycle(const std::string& root)
     f.write(reinterpret_cast<const char *>(compressed.data()),compressed.size()); f.close();
     portTexturePackRoot(root.c_str());
     std::array<uint8_t,32> data; Tile tile = source(data); Image image;
+    // A pack installed after default-mode fallback is picked up without a toggle.
+    for (unsigned i=0;i<61;++i) beginFrame();
+    assert(portTexturePackGet() == 1 && lookup(tile,image) && image.rgba == pixels);
     // Act / Assert: apply on the owning thread; absent 4K and Original fall back.
-    portTexturePackSet(0); assert(beginFrame() && !lookup(tile,image));
+    portTexturePackSet(0); assert(beginFrame() && !lookup(tile,image) && portTexturePackGet() == 0);
     portTexturePackSet(1); assert(beginFrame() && lookup(tile,image) && image.rgba == pixels);
     portTexturePackSet(2); assert(beginFrame() && !lookup(tile,image));
     portTexturePackSet(1); assert(beginFrame() && lookup(tile,image));
@@ -150,6 +165,6 @@ int main(int argc,char **argv)
 {
     if (argc == 3 && std::string(argv[1]) == "--pack") { verifyPack(argv[2]); return 0; }
     assert(argc == 2);
-    identity(); nativeWords(); palettes(); decode(); filters(); lifecycle(argv[1]);
-    std::puts("HD textures: Rice/native words/palettes, bounded lossless decode, selection and missing-pack fallback passed");
+    defaultWithoutPack(argv[1]); identity(); nativeWords(); palettes(); decode(); filters(); lifecycle(argv[1]);
+    std::puts("HD textures: default HD, missing-pack fallback/recovery, explicit opt-out, identity and lossless decode passed");
 }

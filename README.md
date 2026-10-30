@@ -74,7 +74,7 @@ Successful `main` builds deploy automatically to GitHub Pages. See [compatibilit
 - **Shift to sprint:** hold Left Shift to sprint; a gameplay setting can restore the original slow-walk behavior.
 - **Sharper sights and combat feedback:** smooth reticles, optional hit markers, and directional damage indicators.
 - **Enhanced fonts:** smooth, high-resolution community fonts for menus and HUD text, enabled by default in **Display > Video > Enhanced Fonts**. [Details and credits](scripts/port/enhanced_fonts.md).
-- **Native campaign HD textures:** choose **Port Options > Texture Pack > HD** for compressed environment artwork by intermissionfb across the campaign. Original remains the default; coverage follows the available artwork and unsupported textures fall back safely. HD and optional 4K packs can be replaced without rebuilding the executable. [Scope, preparation and credits](scripts/port/hd_textures.md).
+- **Native campaign HD textures:** HD is enabled by default for compressed environment artwork by intermissionfb across the campaign. Missing packs and unsupported textures fall back to the originals; existing saved preferences are preserved. Choose **Port Options > Texture Pack > Original** to opt out. HD and optional 4K packs can be replaced without rebuilding the executable. [Scope, preparation and credits](scripts/port/hd_textures.md).
 - **Objective notifications:** named alerts show when mission objectives are completed or failed.
 - **Weapon inventory HUD:** a compact strip highlights your selected weapon, supports text or rendered model icons, and fades while idle.
 - **Always-visible health and armor:** persistent gauges become thinner and dimmer between hits; the original temporary display is also available.

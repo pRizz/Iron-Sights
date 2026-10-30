@@ -4,15 +4,18 @@ param(
     [string]$Pack,
     [string]$Stage = 'dam',
     [switch]$AllowMissingMatches,
+    [switch]$DefaultMode,
+    [switch]$MissingPack,
     [switch]$Menu,
     [switch]$Gameplay,
     [switch]$Reload
 )
 $ErrorActionPreference = 'Stop'
+if ($MissingPack -and $Reload) { throw '-MissingPack and -Reload are separate audit cases.' }
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $Executable = (Resolve-Path -LiteralPath $Executable).Path
 if (!$Pack) { $Pack = Join-Path (Split-Path $Executable) 'Data/TexturePacks/hd.istex' }
-$Pack = (Resolve-Path -LiteralPath $Pack).Path
+if (!$MissingPack) { $Pack = (Resolve-Path -LiteralPath $Pack).Path }
 foreach ($mode in @(0,1)) {
     $dir = Join-Path $repoDir ('build_win/hd-audit-' + $mode + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8))
     New-Item -ItemType Directory -Path $dir | Out-Null
@@ -21,9 +24,11 @@ foreach ($mode in @(0,1)) {
     Copy-Item -LiteralPath $Executable -Destination $auditExe
     Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
     New-Item -ItemType Directory -Path (Join-Path $dir 'Data/TexturePacks') -Force | Out-Null
-    Copy-Item -LiteralPath $Pack -Destination (Join-Path $dir 'Data/TexturePacks/hd.istex')
-    Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]','fullscreen=window','vsync=0',
-        'maxfps=120','tickhz=60','render_thread=0','msaa=0','filtering=bilinear','weapon_hud_icons=0',"texture_pack=$mode")
+    if (!$MissingPack) { Copy-Item -LiteralPath $Pack -Destination (Join-Path $dir 'Data/TexturePacks/hd.istex') }
+    $settings = @('[display]','fullscreen=window','vsync=0',
+        'maxfps=120','tickhz=60','render_thread=0','msaa=0','filtering=bilinear','weapon_hud_icons=0')
+    if (!$DefaultMode -or !$mode) { $settings += "texture_pack=$mode" }
+    Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value $settings
     $auditEnv = @{
         GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW='1280x720'; GE_NOINPUT='1';
         GE_HD_TRACE='1'; GE_HD_DUMP='1'; GE_SEED='1'; GE_FRAMES='650'; GE_SHOT='500'; GE_SKIPINTRO='1'
@@ -78,7 +83,12 @@ foreach ($mode in @(0,1)) {
     $capture = @(Get-ChildItem -LiteralPath $dir -Filter 'shot_*.bmp')
     if (!$capture.Count) { throw "Missing capture: $dir" }
     $matches = @(Select-String -LiteralPath (Join-Path $dir 'stderr.txt') -Pattern '^hd: match ')
-    if (!$Menu -and $mode -and !$matches.Count -and !$AllowMissingMatches) { throw "No HD matches: $dir" }
+    if (!$Menu -and $mode -and !$matches.Count -and !$AllowMissingMatches -and !$MissingPack) { throw "No HD matches: $dir" }
+    if ($MissingPack -and $mode) {
+        if ($matches.Count -or !(Select-String -LiteralPath (Join-Path $dir 'stderr.txt') -Pattern 'not installed; original textures retained')) {
+            throw "Missing-pack fallback was not exercised: $dir"
+        }
+    }
     if ($Reload -and $mode -and @(Select-String -LiteralPath (Join-Path $dir 'stderr.txt') -Pattern '^hd: loaded ').Count -lt 2) { throw 'Pack did not reload' }
     [PSCustomObject]@{ Stage=$Stage; Mode=$mode; Directory=$dir; Matches=$matches.Count; Capture=$capture[-1].FullName }
 }

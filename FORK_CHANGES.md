@@ -32,12 +32,17 @@ new areas. Status describes implementation state, not Git publication state.
 
 ### FORK-033 — Native campaign HD texture packs
 
-**Status:** Native Windows/OpenGL environment pack; Original remains the default.
+**Status:** Native Windows/OpenGL environment pack; HD is the fresh-config default.
 
 Adds an optional HD environment replacement path beyond upstream's inherited
 BMP pool-byte rewrites, which retain N64 resolution/palettes. **Port Options >
 Texture Pack** in the frontend and watch selects Original/HD/4K through saved
 `[display] texture_pack=0/1/2`. Web/Xbox omit this setting and replacement path.
+Native startup now requests HD (`1`) unless an existing saved value overrides it.
+First-run INI generation writes that same live preference, rather than a second
+hardcoded default. Missing packs retain original rendering while keeping the HD
+preference, so installing a pack later is detected automatically. Saved Original
+(`0`) and 4K (`2`) choices remain respected; users can opt out through the selector.
 HD uses a campaign environment subset, expanded from the original Dam prototype;
 Surface II and Bunker II share their earlier missions' environment art.
 4K accepts a separately prepared pack rather
@@ -121,6 +126,15 @@ art and unreviewed native palettes retain original rendering.
 [release input provenance](scripts/port/release_inputs.py),
 [Windows CI](.github/workflows/windows-release.yml), [CMake](CMakeLists.txt),
 [INI guide](tools/midas_ini_help.txt), [player guide](scripts/port/release/START-HERE.txt).
+
+Default-HD regression checks cover absent-pack startup, recovery when a pack is
+installed later and explicit Original opt-out. The native audit supports
+`-DefaultMode` (omit the saved preference) and `-MissingPack` for isolated startup
+and pixel comparison with stock rendering.
+The default-mode Windows audit loads 35 Dam replacements with the pack present;
+without a pack, the fixed terrain comparison matches explicit Original rendering
+and no replacements load. Independent hand-gallery passes retain all 72 views
+and 35 icons with zero changed image cells after the default change.
 
 **Validation:** Campaign expansion: preparation tests cover scope selection,
 source-order rows, verified supplement bytes and exact native palette aliases.

@@ -16,7 +16,7 @@
 #include <fcntl.h>
 #endif
 namespace {
-std::atomic<int> requested{0};
+std::atomic<int> requested{1};
 std::string directory;
 int current = -1;
 unsigned frames;

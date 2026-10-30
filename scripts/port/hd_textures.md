@@ -1,7 +1,10 @@
 # Native HD texture packs
 
 This is a campaign environment pack for the Windows/OpenGL player. Web and Xbox
-graphics are unchanged. Original textures remain the default. In the frontend
+graphics are unchanged. HD is the default for fresh native configurations;
+existing saved choices are preserved, and missing packs fall back to originals.
+First-run INI generation reads the same runtime preference (`texture_pack=1`).
+In the frontend
 or pause watch, open **Port Options > Texture Pack** and choose Original, HD or
 4K. Missing packs and unmatched or invalid textures fall back to the originals.
 The supplied HD pack includes available environment artwork across the campaign,
@@ -113,7 +116,10 @@ Do not terminate a player process or replace its executable, settings or saves.
 and compares seeded Original/HD captures; select a mission with `-Stage facility`
 (default `dam`). `audit_hd_levels.ps1 -Executable <isolated exe> -Pack <pack>`
 runs all 20 campaign missions and persists per-mission evidence under
-`build_win/hd-levels/campaign-audit.json`. `-Gameplay` skips the intro;
+`build_win/hd-levels/campaign-audit.json`. `-DefaultMode` omits the saved HD
+preference to exercise runtime defaults; add `-MissingPack` to compare default-HD
+fallback against explicit Original without installing artwork in the audit.
+`-Gameplay` skips the intro;
 `-Reload` removes/restores only the audit's copied pack while rendering to verify
 live fallback/reload and Windows file sharing. `-Menu` checks the Port Options
 sheet. Captures, diagnostic texture dumps and copied artwork stay ignored.
