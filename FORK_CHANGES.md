@@ -45,9 +45,17 @@ is not packaged into the public site. The investigation record explains why
 these diagnostics are needed and distinguishes measured intervals at SDL swap
 from an unproven GPU/driver cause. This extends the existing browser audit
 surface in FORK-024 and audio continuity work in FORK-026 without changing them.
+An optional browser-level CDP controller now keeps rolling main/compositor/GPU
+traces after each stable phase, saves gzip streams and per-incident reports,
+and retries data-losing phases with a larger buffer. Timing marks align frame,
+native, audio, focus and save events. The reports record build/browser/renderer,
+canvas, focus, trace loss, CPU samples and nearby thread activity, and reject
+software rendering as hardware evidence. This remains private tooling only.
 
 **Sources:** [runner](web/tools/hitch-audit.mjs),
 [browser probe](web/tools/hitch-observer.mjs),
+[CDP controller](web/tools/hitch-cdp-trace.mjs),
+[ROM-free CDP smoke](web/tools/hitch-cdp-trace.test.mjs),
 [audio probe](web/tools/hitch-audio-worklet.js),
 [script entrypoint](web/package.json), [run instructions](web/README.md),
 [investigation](scripts/port/web_hitch_investigation.md),
@@ -59,6 +67,13 @@ queue underruns recurred; memory did not grow and no save sync overlapped a
 captured gameplay hitch. A later short audit passed on the combined main source
 after its Files/context-menu change. The private traces remain in ignored
 `build/web-hitches/`.
+The ROM-free CDP stream/compression/mark test passes. Headless and headed Chrome
+156 lossless menu and Dam traces on the same local runtime reproduce 1–6 s gaps;
+first Dam traces with data loss are superseded by larger-buffer retries. The
+headed Dam retry overlaps a long browser-main task and native swap interval,
+without an identified long GPU task. The root cause remains unresolved.
+A final short actual-ROM menu/Dam smoke passes the completed no-incident path
+without trace loss; its 10-second windows do not change the longer findings.
 
 ### FORK-036 — Buffer and memory-safety audit
 

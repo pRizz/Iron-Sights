@@ -23,6 +23,7 @@
     "audit:touch": "node tools/touch-game-audit.mjs",
     "audit:audio": "node tools/audio-quality-audit.mjs",
     "audit:hitches": "node tools/hitch-audit.mjs",
+    "test:hitch-cdp": "node --test tools/hitch-cdp-trace.test.mjs",
     "audit:mouse": "node tools/mouse-input-audit.mjs",
     "audit:start": "node tools/start-input-audit.mjs",
     "test:sampler": "node tools/sampler-audit.mjs",

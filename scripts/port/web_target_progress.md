@@ -599,6 +599,24 @@ render or audio architecture. After syncing the later Files/context-menu change,
 the combined optimized site and a short menu/Dam audit also pass; that brief run
 does not replace the longer performance samples.
 
+**Browser-wide hitch traces, 2026-10-31:** The private audit now optionally
+streams browser-level Chrome CDP traces to ignored gzip files with timing-marked
+menu and Dam phases, a 500 ms incident trigger, two-second aftermath, 60-second
+search cap, and larger-buffer 30-second data-loss retry. ROM-free stream,
+compression and timing alignment passed. On the same completed local runtime,
+lossless NVIDIA/ANGLE headless traces captured 1.17 s menu and 1.03 s Dam gaps;
+headed traces captured 3.18 s and 6.05 s. Both first Dam traces lost data and
+were superseded by lossless retries; the first headless Dam search had no gap.
+The headed Dam retry overlaps a 5.89 s browser-main task and 6.73 s native swap,
+with audio queue exhaustion. Compositor/GPU tracks remained active with short
+events. This is evidence for a presentation/scheduling investigation, not a
+driver-root-cause finding. [The investigation](web_hitch_investigation.md)
+records all limits and private paths. Next action: isolate the browser-main
+task and SDL swap/yield interaction before attempting a runtime fix.
+A final 10-second actual-ROM menu/Dam smoke on the completed runner exercised
+the no-incident trace path without data loss; it found no qualifying gap in
+that short window.
+
 **Absolute menu pointer, 2026-10-27:** Investigation reproduced the reported
 drift: the inherited ignored-warp fallback accumulated physical deltas around
 native menu snaps, leaving offsets up to 88 menu pixels until an edge sweep.

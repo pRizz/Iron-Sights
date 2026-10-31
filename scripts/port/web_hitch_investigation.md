@@ -56,15 +56,55 @@ diagnostic runner. That short run checks integration, not hitch frequency.
   menu/gameplay hitch windows. Neither memory growth nor IDBFS sync explains
   these captured pauses.
 
+## Browser-wide trace capture, 2026-10-31
+
+The optional CDP audit captured separate menu and Dam traces in dedicated
+headless and headed Chrome 156.0.8078.79 sessions against the same completed
+local runtime `c1ce09118bbc0768`. Both reported the NVIDIA GeForce RTX 3070
+Laptop GPU through ANGLE/D3D11. The headless canvas was 853×480; the headed
+window yielded 839×471, so these are diagnostic comparisons rather than matched
+resolution benchmarks. The tab stayed focused. Traces and adjacent JSON reports
+are private under `build/web-hitches/cdp-{headless,headed}`. The runner records
+no screenshots, resource contents, ROM bytes or raw sound.
+
+| Mode     | Phase     | First gap | Gaps ≥500 ms | Lossless trace | Relevant tracks                      |
+| -------- | --------- | --------- | ------------ | -------------- | ------------------------------------ |
+| Headless | Menu      | 1.17 s    | 1            | Yes            | Main, compositor, viz, GPU, profiler |
+| Headless | Dam retry | 1.03 s    | 3            | Yes            | Main, compositor, viz, GPU, profiler |
+| Headed   | Menu      | 3.18 s    | 1            | Yes            | Main, compositor, viz, GPU, profiler |
+| Headed   | Dam retry | 6.05 s    | 2            | Yes            | Main, compositor, viz, GPU, profiler |
+
+The first Dam capture in each mode lost trace data. The automatic larger-buffer,
+30-second retries above were lossless. The headless first Dam search had no
+qualifying gap before its 60-second cap; it is a nonreproduction for that window,
+not a negative result for the later retry. Both headed captures and the
+headless menu/retry captures reproduced. Every accepted trace retained the
+phase-start timing mark, browser version/build identity and browser tracks.
+A final 10-second menu/Dam smoke on the completed runner produced two lossless
+no-incident traces with the correct phase/build metadata; that short window
+does not revise the longer reproduction above.
+
+In the headless menu gap, native timing showed about 1.19 s of renderer idle
+with a 4 ms swap. In the headless Dam retry, the main renderer had no extended
+visible task, while GPU vsync activity continued; the native audio log also
+reported a queue underrun. The headed menu gap coincided with a roughly 1.57 s
+browser-main `RunTask`, a native 3.20 s swap, and audio queue exhaustion. The
+headed Dam retry coincided with a roughly 5.89 s browser-main `RunTask`, a
+native 6.73 s swap, and audio queue exhaustion. Viz/GPU threads continued to
+emit short events during these windows; no multi-second GL or GPU task is
+identified in the lossless traces. The game renderer CPU profile has idle and
+`dynCall` samples, but those samples do not resolve what the opaque browser-main
+task was doing. The differing swap/idle attribution across modes suggests a
+browser presentation/scheduling interaction; it does not establish a GPU driver
+fault or a specific Chrome internal root cause. Browser-wide tracing may add
+overhead, so the earlier minimal-probe reproduction remains an important check.
+
 ## Next diagnostic step
 
-Capture a short Chrome DevTools/CDP performance trace centered on one recurring
-hitch, including main, compositor and GPU activity, then compare a headed
-hardware run with the headless measurements. Preserve browser version,
-GPU/driver, display mode and runtime identity. If presentation is waiting on
-browser scheduling, inspect the Emscripten SDL swap/yield path; if the GPU or
-compositor is blocked, inspect driver/WebGL submission separately. Change one
-cause at a time and repeat the same menu and Dam sample, tracking gaps over
-100/250 ms, worst gap and audio underruns. Do not infer a fix from average FPS.
+Inspect Chrome's browser-main task and synchronous swap/yield path with a
+targeted Chromium/ANGLE comparison or external OS scheduler trace, keeping the
+same build and phase script. Then change one cause at a time and repeat menu
+and Dam samples, tracking gaps over 100/250 ms, worst gap and audio underruns.
+Do not infer a fix from average FPS.
 
 The reports are diagnostic evidence, not a gameplay or audio quality pass.

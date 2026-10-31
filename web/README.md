@@ -138,6 +138,23 @@ run before treating small differences as regressions. Set `MIDAS_HITCH_AUDIO=0`
 and `MIDAS_HITCH_WEBGL=0` to disable both probes for that comparison; frame,
 native-log and game-counter sampling remain. Keep private logs local.
 
+For browser main/compositor/GPU traces, use `MIDAS_HITCH_CDP=1` with
+`MIDAS_BROWSER=chrome`. Run once headless and once with `MIDAS_HEADED=1`, using
+separate output directories and the same assembled site. Each phase starts
+tracing after the menu or playable Dam is ready, keeps a rolling Chrome buffer,
+and stops two seconds after the first frame gap of at least 500 ms. The search
+cap is 60 seconds (`MIDAS_HITCH_TRACE_SECONDS` can shorten it). If the buffer
+loses data, that phase retries for up to 30 seconds with a larger buffer.
+`menu.cdp.json.gz` and `gameplay.cdp.json.gz` (or `-retry`) are Chrome trace
+streams; adjacent `.report.json` files contain build/browser/GPU/canvas/focus
+metadata, trace track checks, frame-gap counts and nearby browser activity.
+`accepted` rejects data loss, missing timing marks/tracks, focus loss, wrong
+mission stage and software rendering as hardware evidence. Traces contain
+browser timing and CPU profiler data, but no screenshots, resource contents,
+ROM bytes or raw audio. They remain ignored under `build/web-hitches/` and are
+never included in the site. Run `bun run test:hitch-cdp` for the ROM-free CDP
+stream/compression/timing smoke test.
+
 Mouse capture requests unaccelerated browser movement, with an automatic
 compatibility retry if raw input is unsupported. No motion clamp or smoothing
 is applied. For an intermittent mouse snap, press F2 immediately afterward and

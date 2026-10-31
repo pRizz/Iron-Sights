@@ -6,6 +6,7 @@ import { expect } from '@playwright/test';
 import { launchAuditBrowser } from './browser-choice.mjs';
 import { navigateToDam, captureGameplay } from './native-game-audit.mjs';
 import { observeHitches, installHitchAudio } from './hitch-observer.mjs';
+import { startBrowserTrace, reportBrowserTrace } from './hitch-cdp-trace.mjs';
 
 const [rom, folder = '../build/web-hitches/current', origin = 'http://127.0.0.1:4177/Iron-Sights/'] =
     process.argv.slice(2);
@@ -17,10 +18,15 @@ const gameSeconds = Number(process.env.MIDAS_HITCH_GAME_SECONDS || 120);
 const invulnerable = process.env.MIDAS_HITCH_INVULN === '1';
 const audioEnabled = process.env.MIDAS_HITCH_AUDIO !== '0';
 const graphicsEnabled = process.env.MIDAS_HITCH_WEBGL !== '0';
+const cdpEnabled = process.env.MIDAS_HITCH_CDP === '1';
+const traceSeconds = Number(process.env.MIDAS_HITCH_TRACE_SECONDS || 60);
 if (![menuSeconds, gameSeconds].every((seconds) => Number.isInteger(seconds) && seconds >= 1 && seconds <= 600))
     throw new Error('Hitch phase durations must be whole seconds from 1 to 600');
+if (!Number.isInteger(traceSeconds) || traceSeconds < 1 || traceSeconds > 60)
+    throw new Error('CDP search duration must be a whole number of seconds from 1 to 60');
 
-const { browser } = await launchAuditBrowser();
+const { browser, kind } = await launchAuditBrowser();
+if (cdpEnabled && kind !== 'chromium') throw new Error('CDP tracing requires Chromium or Chrome');
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 await page.addInitScript(observeHitches, { graphics: graphicsEnabled, invulnerable });
 await page.route('**/runtime/*/ProjectMidas.mjs', async (route) => {
@@ -45,7 +51,12 @@ page.on('console', (message) => {
 page.on('pageerror', (error) => messages.push({ at: Date.now(), type: 'pageerror', text: String(error) }));
 
 async function mark(name) {
-    await page.evaluate((label) => globalThis.midasHitchTrace.markers.push({ at: performance.now(), label }), name);
+    return page.evaluate((label) => {
+        const at = performance.now();
+        performance.mark(`midas-hitch:${label.replaceAll(' ', ':')}`);
+        globalThis.midasHitchTrace.markers.push({ at, label });
+        return at;
+    }, name);
 }
 
 function phaseStats(data, name) {
@@ -63,10 +74,10 @@ function phaseStats(data, name) {
     };
 }
 
-async function driveGameplay(seconds) {
+async function driveGameplay(seconds, stopped = () => false) {
     const until = Date.now() + seconds * 1000;
     let pass = 0;
-    while (Date.now() < until) {
+    while (Date.now() < until && !stopped()) {
         await mark(`gameplay pass ${++pass}`);
         await page.keyboard.down('w');
         await page.waitForTimeout(650);
@@ -80,6 +91,89 @@ async function driveGameplay(seconds) {
         await page.mouse.up({ button: 'right' });
         await page.waitForTimeout(2200);
     }
+}
+
+const browserReports = [];
+let buildIdentity;
+async function captureTracePhase(phase, seconds, retry = false) {
+    const duration = Math.min(seconds, retry ? 30 : traceSeconds);
+    const path = resolve(output, `${phase}${retry ? '-retry' : ''}.cdp.json.gz`);
+    const controller = await startBrowserTrace(browser, path, retry ? 131072 : 65536);
+    const anchorAt = await mark(`${phase} start`);
+    const watch = page.evaluate(({ start, limit }) => new Promise((resolve) => {
+        const deadline = performance.now() + limit * 1000;
+        let found;
+        const timer = setInterval(() => {
+            if (!found) {
+                found = globalThis.midasHitchTrace.frames.find((frame) =>
+                    frame.at >= start && frame.gap >= 500);
+                if (found) {
+                    setTimeout(() => { clearInterval(timer); resolve(found); }, 2000);
+                    clearInterval(timer);
+                    return;
+                }
+            }
+            if (performance.now() >= deadline) { clearInterval(timer); resolve(null); }
+        }, 50);
+    }), { start: anchorAt, limit: duration });
+    let finished = false;
+    const observed = watch.then((gap) => { finished = true; return gap; });
+    let drivingError;
+    const driving = phase === 'gameplay'
+        ? driveGameplay(duration + 3, () => finished).catch((caught) => { drivingError = caught; })
+        : null;
+    let gap;
+    let phaseError;
+    let endAt;
+    let recording;
+    try {
+        gap = await observed;
+    } catch (caught) {
+        phaseError = caught;
+    } finally {
+        endAt = await mark(`${phase} end`).catch(() => undefined);
+        recording = await controller.stop();
+    }
+    if (driving) await driving;
+    if (phaseError) throw phaseError;
+    if (drivingError) throw drivingError;
+    const state = await page.evaluate(({ start, end }) => {
+        const canvas = document.querySelector('#canvas');
+        const gl = canvas?.getContext('webgl2');
+        const info = gl?.getExtension('WEBGL_debug_renderer_info');
+        return {
+            renderer: gl && (info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)),
+            canvas: canvas && { width: canvas.width, height: canvas.height },
+            focused: document.hasFocus(), hidden: document.hidden,
+            focusEvents: globalThis.midasHitchTrace.focus.filter((event) =>
+                event.at >= start && event.at <= end),
+            frameGapsOver500: globalThis.midasHitchTrace.frames.filter((frame) =>
+                frame.at >= start && frame.at <= end && frame.gap >= 500).length,
+            stage: globalThis.midasAuditGame?._portWebGetStage(),
+        };
+    }, { start: anchorAt, end: endAt });
+    const hardwareComparisonEligible = !!state.renderer &&
+        !/swiftshader|software|llvmpipe|microsoft basic render/i.test(state.renderer);
+    const focusLost = !state.focused || state.hidden ||
+        state.focusEvents.some((event) => event.name === 'blur' || event.hidden);
+    const report = await reportBrowserTrace(path, phase, gap && { ...gap, anchorAt }, {
+        phase, retry, searchCapSeconds: duration,
+        capturedSeconds: (endAt - anchorAt) / 1000, incident: !!gap,
+        build: buildIdentity, browser: await browser.version(), state, recording,
+        hardwareComparisonEligible, focusLost,
+    });
+    report.accepted = !recording.dataLoss && report.analysis.anchorFound &&
+        ['devtools.timeline', 'cc', 'viz', 'gpu'].every((track) =>
+            report.analysis.tracks.includes(track)) &&
+        !!buildIdentity?.version && hardwareComparisonEligible && !focusLost &&
+        (phase === 'menu' ? state.stage === 90 : (gap?.stage || state.stage) === 33);
+    await writeFile(path.replace(/\.json\.gz$/, '.report.json'), JSON.stringify(report, null, 2));
+    browserReports.push(report);
+    console.log(JSON.stringify({ phase, retry, incident: !!gap,
+        gapMs: gap?.gap, dataLoss: recording.dataLoss,
+        tracks: report.analysis.tracks, path }));
+    if (recording.dataLoss && !retry) return captureTracePhase(phase, seconds, true);
+    return report;
 }
 
 let error;
@@ -98,15 +192,25 @@ try {
         ? await page.evaluate(installHitchAudio,
             await readFile(new URL('./hitch-audio-worklet.js', import.meta.url), 'utf8'))
         : 'disabled';
-    await mark('menu start');
-    await page.waitForTimeout(menuSeconds * 1000);
-    await mark('menu end');
+    buildIdentity = await page.evaluate(async () =>
+        (await fetch('runtime-manifest.json', { cache: 'no-store' })).json());
+    if (cdpEnabled) await captureTracePhase('menu', menuSeconds);
+    else {
+        await mark('menu start');
+        await page.waitForTimeout(menuSeconds * 1000);
+        await mark('menu end');
+    }
     await navigateToDam(page);
     await captureGameplay(page);
-    await mark('gameplay start');
-    await driveGameplay(gameSeconds);
-    await mark('gameplay end');
-    console.log(`Hitch audit targeted ${menuSeconds}s menu and at least ${gameSeconds}s scripted gameplay; audio ${audioProbe}`);
+    if (cdpEnabled) await captureTracePhase('gameplay', gameSeconds);
+    else {
+        await mark('gameplay start');
+        await driveGameplay(gameSeconds);
+        await mark('gameplay end');
+    }
+    console.log(cdpEnabled
+        ? `CDP hitch audit captured menu and Dam with ${traceSeconds}s search caps; audio ${audioProbe}`
+        : `Hitch audit targeted ${menuSeconds}s menu and at least ${gameSeconds}s scripted gameplay; audio ${audioProbe}`);
 } catch (caught) {
     error = caught;
 } finally {
@@ -128,6 +232,7 @@ try {
     }).catch(() => null);
     await writeFile(resolve(output, 'trace.json'), JSON.stringify({
         menuSeconds, gameSeconds, invulnerable, audioEnabled, graphicsEnabled,
+        cdpEnabled, buildIdentity, browserReports,
         trace, messages, error: error ? String(error) : null,
     }, null, 2));
     if (trace?.trace) {
@@ -135,6 +240,7 @@ try {
         const worst = [...data.frames].sort((a, b) => b.gap - a.gap).slice(0, 20);
         const summary = {
             browser: trace.browser, renderer: trace.renderer, canvas: trace.canvas,
+            build: buildIdentity, browserVersion: await browser.version(), browserReports,
             invulnerable, audioEnabled, graphicsEnabled,
             audioState: trace.audioState, audioClock: trace.audioClock,
             markers: data.markers, worstFrames: worst,
