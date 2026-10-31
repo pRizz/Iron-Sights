@@ -1,10 +1,29 @@
 // Private browser timing probe. Reports timing and counters, never game data.
-export function observeHitches({ graphics = true, invulnerable = false, swapYield = true } = {}) {
+export function observeHitches({ graphics = true, invulnerable = false, swapYield = true,
+    countMouse = false } = {}) {
     const trace = {
         frames: [], longTasks: [], samples: [], graphics: [], syncs: [],
         audio: [], logs: [], markers: [], focus: [],
     };
     globalThis.midasHitchTrace = trace;
+    if (countMouse) {
+        const bins = new Int32Array(8192);
+        const counts = new Uint32Array(8192);
+        bins.fill(-1);
+        window.addEventListener('mousemove', () => {
+            if (!document.pointerLockElement) return;
+            const bin = Math.floor(performance.now() / 100);
+            const slot = bin % bins.length;
+            if (bins[slot] !== bin) {
+                bins[slot] = bin;
+                counts[slot] = 0;
+            }
+            counts[slot]++;
+        }, { capture: true, passive: true });
+        globalThis.midasHitchMouseCounts = () => Array.from(bins, (bin, slot) =>
+            bin < 0 ? null : { at: bin * 100, events: counts[slot] })
+            .filter(Boolean).sort((a, b) => a.at - b.at);
+    }
     const add = (name, value, limit = 4096) => {
         if (trace[name].length < limit) trace[name].push(value);
     };

@@ -658,18 +658,39 @@ D3D11 for about a minute each. OpenGL had worst gaps of 0.93 and 0.25 s;
 D3D11 had 7.19 and 5.04 s. The first D3D11 run lost pointer lock late, but
 its first two gaps and the entire repeated D3D11 run preceded or avoided that
 loss. A further 122.7-second OpenGL run had one 1.28-second Dam gap and native
-audio queue-dry reports despite low paging/CPU nearby. OpenGL is a mitigation
-lead, not a verified fix. Its matched 122.0-second D3D11 run had five gaps
+audio queue-dry reports despite low paging/CPU nearby. The scripted runs
+suggested a backend mitigation lead, later superseded by manual captures.
+Its matched 122.0-second D3D11 run had five gaps
 ≥500 ms, worst 2.45 s, without focus loss or sustained paging/CPU pressure.
-A D3D11 run with no
-scripted pointer motion still had four gaps ≥500 ms, while 32 events per pass
-did not increase severity in a short sample. Mouse motion is not required for
-these hitches; continuous physical movement remains untested. Streaming ETW
+A D3D11 run with no scripted pointer motion still had four gaps ≥500 ms,
+while 32 events per pass did not increase severity in a short sample. Mouse
+motion is not required for these hitches; the manual captures below test
+physical movement. Streaming ETW
 event names show DWM drawing/presents nearly stopping while vertical sync
-continued during the shared Chrome/Codex freeze. [The investigation](web_hitch_investigation.md)
+continued during the shared Chrome/Codex freeze. A read-only input-path review
+found only per-tick scalar mouse accumulation and a bounded diagnostics ring;
+it found no growing game-side mouse queue. [The investigation](web_hitch_investigation.md)
 records counts, host limits and private evidence. Next action: inspect ETL
-present queues/waits and repeat a longer, interleaved backend comparison
-before recommending a browser workaround or changing the game renderer.
+present queues/waits and test both backends under physical play before
+recommending a browser workaround or changing the game renderer.
+
+**Manual physical-mouse captures, 2026-10-31:** A private headed audit mode
+records only 100 ms counts of locked mouse events, frame gaps, native timing
+and host counters. A ROM-free count check and five-second actual-ROM smoke
+passed. The user played roughly two minutes each on D3D11 and OpenGL,
+reporting Codex Desktop freezes in both. D3D11 had four Dam gaps ≥500 ms,
+worst 7.05 s; OpenGL also had four, worst 5.93 s. Both large D3D11 stops
+coincided with Codex freezes. The first followed 183 mouse events in one
+second, the second 67 (near the run median of 66); OpenGL's 5.93 s stop
+followed 14 (below its median of 59). Native logs place the large intervals
+in swap, while nearby host samples show no sustained CPU/disk/paging
+saturation. The user's OpenGL Codex freezes affected more than one stop;
+exact event pairing was not marked. OpenGL is not a reliable workaround for
+normal play, and no mouse-count threshold or game-side growing queue was
+found. [The investigation](web_hitch_investigation.md) records private paths,
+focus caveats and timing. Next action: inspect synchronized ETL presents and
+wait chains, then capture WPR during a manual freeze on either backend to
+test whether the same host signature recurs.
 
 **Absolute menu pointer, 2026-10-27:** Investigation reproduced the reported
 drift: the inherited ignored-warp fallback accumulated physical deltas around

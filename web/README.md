@@ -149,6 +149,12 @@ renderer in each summary; this does not change the user's normal browser.
 `MIDAS_HITCH_MOUSE_STEPS` controls pointer-move events per gameplay pass
 (0–128, default 4). Zero keeps movement, ADS and firing but skips pointer
 motion. The runner marks the start and end of each scripted pointer move.
+For a user-driven mouse comparison, set `MIDAS_HITCH_MANUAL=1` with
+`MIDAS_HEADED=1` and a bounded `MIDAS_HITCH_GAME_SECONDS`; CDP tracing must
+be off. The runner enters playable Dam, announces readiness in the terminal,
+then records while the user plays in its temporary window. It stores only
+100 ms bins of pointer-move counts while locked, alongside the usual frame
+and native timing logs. It does not store mouse coordinates or raw input.
 
 For browser main/compositor/GPU traces, use `MIDAS_HITCH_CDP=1` with
 `MIDAS_BROWSER=chrome`. Run once headless and once with `MIDAS_HEADED=1`, using

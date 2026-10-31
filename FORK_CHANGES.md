@@ -32,9 +32,9 @@ new areas. Status describes implementation state, not Git publication state.
 
 ### FORK-037 — Private browser hitch diagnostics
 
-**Status:** Scripted local diagnostic, synchronized host reproduction and
-backend mitigation lead; root cause not yet isolated. This adds no shipped
-runtime behavior, settings or asset changes.
+**Status:** Scripted and manual local diagnostics with synchronized cross-app
+reproduction; root cause not yet isolated and no backend workaround validated.
+This adds no shipped runtime behavior, settings or asset changes.
 
 The browser tooling now offers a repeatable menu/Dam timing audit with movement,
 ADS and firing. It records bounded frame gaps, browser long tasks, selected
@@ -62,6 +62,11 @@ temporary browser and records the requested backend alongside the actual WebGL
 renderer. It can vary scripted pointer-move event counts from zero to 128 per
 gameplay pass, with timing marks around each move. These are diagnostic options,
 not site or saved game settings.
+An optional headed manual phase allows physical mouse play after scripted Dam
+entry. A bounded 100 ms count ring records the frequency of locked pointer
+events without coordinates or raw inputs, alongside the existing frame timing.
+This observer is armed only for the private manual audit and does not change
+ordinary game sessions.
 
 **Sources:** [runner](web/tools/hitch-audit.mjs),
 [audit browser launcher](web/tools/browser-choice.mjs),
@@ -106,14 +111,27 @@ requested hardware ANGLE backends. Two roughly one-minute OpenGL Dam runs had
 worst gaps of 0.93 and 0.25 seconds; interleaved D3D11 runs had 7.19 and
 5.04 seconds. The first D3D11 run lost pointer lock late, while the repeated
 run remained focused. A longer OpenGL run had a 1.28-second gap and audio
-queue-dry reports, so it did not eliminate the symptom. OpenGL is an
-unverified mitigation lead; a matched longer D3D11 run had five gaps of at
-least 500 ms, worst 2.45 seconds, without focus loss or sustained host
-CPU/paging pressure. A D3D11 run
-without scripted pointer motion still had four gaps of at least 500 ms, so
-those hitches do not require pointer movement; a 32-step sample did not show
-a dose response. Streaming ETW provider counts identified DWM drawing and
-present submission falling sharply while vertical sync events continued.
+queue-dry reports, so it did not eliminate the symptom. Scripted samples
+initially suggested a backend mitigation; a matched longer D3D11 run had
+five gaps of at least 500 ms, worst 2.45 seconds, without focus loss or
+sustained host CPU/paging pressure. A D3D11 run without scripted pointer
+motion still had four gaps of at least 500 ms, so those hitches do not require
+pointer movement; a 32-step sample did not show a dose response. Streaming ETW
+provider counts identified DWM drawing and
+present submission falling sharply while vertical sync events continued. A
+read-only mouse path review found fixed per-tick scalars and a bounded browser
+diagnostics ring, not a growing game-side mouse queue.
+A ROM-free synthetic-event check confirmed that the manual probe emits counts
+and timing only. A five-second actual-ROM headed manual-mode smoke reached Dam,
+recorded its phase/build/backend metadata and completed without input or focus
+errors. The user then played two manual 120-second sessions and reported
+Codex Desktop freezes in both. D3D11 recorded 8,995 locked pointer events,
+four Dam gaps of at least 500 ms and a worst gap of 7.05 seconds. OpenGL
+recorded 8,025 events, four such gaps and a worst gap of 5.93 seconds.
+Both backends had severe freezes without sustained CPU/disk/paging saturation;
+OpenGL is not a reliable workaround in manual play. Mouse-event rates before
+the largest stops ranged from below to above the run median, without a clear
+threshold. The manual traces remain local and ignored.
 
 ### FORK-036 — Buffer and memory-safety audit
 

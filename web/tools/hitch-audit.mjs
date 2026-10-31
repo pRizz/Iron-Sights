@@ -21,6 +21,7 @@ const graphicsEnabled = process.env.MIDAS_HITCH_WEBGL !== '0';
 const swapYield = process.env.MIDAS_HITCH_SWAP_YIELD !== '0';
 const angleBackend = process.env.MIDAS_HITCH_ANGLE_BACKEND || undefined;
 const mouseSteps = Number(process.env.MIDAS_HITCH_MOUSE_STEPS ?? 4);
+const manual = process.env.MIDAS_HITCH_MANUAL === '1';
 const cdpEnabled = process.env.MIDAS_HITCH_CDP === '1';
 const traceSeconds = Number(process.env.MIDAS_HITCH_TRACE_SECONDS || 60);
 if (![menuSeconds, gameSeconds].every((seconds) => Number.isInteger(seconds) && seconds >= 1 && seconds <= 600))
@@ -29,11 +30,14 @@ if (!Number.isInteger(traceSeconds) || traceSeconds < 1 || traceSeconds > 60)
     throw new Error('CDP search duration must be a whole number of seconds from 1 to 60');
 if (!Number.isInteger(mouseSteps) || mouseSteps < 0 || mouseSteps > 128)
     throw new Error('Mouse steps per gameplay pass must be a whole number from 0 to 128');
+if (manual && (process.env.MIDAS_HEADED !== '1' || cdpEnabled))
+    throw new Error('Manual hitch capture requires a headed browser without CDP');
 
 const { browser, kind } = await launchAuditBrowser({ angleBackend });
 if (cdpEnabled && kind !== 'chromium') throw new Error('CDP tracing requires Chromium or Chrome');
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-await page.addInitScript(observeHitches, { graphics: graphicsEnabled, invulnerable, swapYield });
+await page.addInitScript(observeHitches, { graphics: graphicsEnabled, invulnerable, swapYield,
+    countMouse: manual });
 await page.route('**/runtime/*/ProjectMidas.mjs', async (route) => {
     const response = await route.fetch();
     const source = await response.text();
@@ -240,12 +244,15 @@ try {
     if (cdpEnabled) await captureTracePhase('gameplay', gameSeconds);
     else {
         await mark('gameplay start');
-        await driveGameplay(gameSeconds);
+        if (manual) {
+            console.log(`Manual Dam capture ready for ${gameSeconds} seconds; move and play in the audit Chrome window`);
+            await page.waitForTimeout(gameSeconds * 1000);
+        } else await driveGameplay(gameSeconds);
         await mark('gameplay end');
     }
     console.log(cdpEnabled
         ? `CDP hitch audit captured menu and Dam with ${traceSeconds}s search caps; audio ${audioProbe}`
-        : `Hitch audit targeted ${menuSeconds}s menu and at least ${gameSeconds}s scripted gameplay; audio ${audioProbe}`);
+        : `Hitch audit targeted ${menuSeconds}s menu and at least ${gameSeconds}s ${manual ? 'manual' : 'scripted'} gameplay; audio ${audioProbe}`);
 } catch (caught) {
     error = caught;
 } finally {
@@ -263,12 +270,13 @@ try {
             canvas: canvas && { width: canvas.width, height: canvas.height },
             audioState: context?.state,
             audioClock: globalThis.midasHitchAudioClock?.(),
+            mouseCounts: globalThis.midasHitchMouseCounts?.() || [],
             trace: globalThis.midasHitchTrace,
         };
     }).catch(() => null);
     await writeFile(resolve(output, 'trace.json'), JSON.stringify({
         menuSeconds, gameSeconds, invulnerable, audioEnabled, graphicsEnabled, swapYield,
-        angleBackend, mouseSteps,
+        angleBackend, mouseSteps, manual,
         cdpEnabled, buildIdentity, browserReports,
         trace, messages, error: error ? String(error) : null,
     }, null, 2));
@@ -278,7 +286,8 @@ try {
         const summary = {
             browser: trace.browser, renderer: trace.renderer, canvas: trace.canvas,
             build: buildIdentity, browserVersion: await browser.version(), browserReports,
-            invulnerable, audioEnabled, graphicsEnabled, swapYield, angleBackend, mouseSteps,
+            invulnerable, audioEnabled, graphicsEnabled, swapYield, angleBackend, mouseSteps, manual,
+            mouseCountBins: trace.mouseCounts.length,
             audioState: trace.audioState, audioClock: trace.audioClock,
             markers: data.markers, worstFrames: worst,
             phases: { menu: phaseStats(data, 'menu'), gameplay: phaseStats(data, 'gameplay') },

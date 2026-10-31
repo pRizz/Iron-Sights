@@ -231,8 +231,8 @@ OpenGL run had a
 1.28-second Dam gap and four native queue-dry reports, without focus loss.
 That gap had about 2 GB available, zero sampled page reads and at most 20.3%
 total CPU nearby. OpenGL therefore did not eliminate the hitch or audio
-symptom. Its shorter severe-gap tail in these samples is a **mitigation lead**,
-not proof that the backend fixes the host-wide problem.
+symptom. The scripted samples suggested a backend effect, but the manual
+captures below did not support OpenGL as a reliable workaround.
 The matching 122.0-second D3D11 run had five Dam gaps of at least 500 ms and
 no focus loss. Its worst gameplay gap was 2.45 seconds with about 1.84 GB
 available memory, roughly one page read/s and 19% total CPU nearby. A
@@ -258,18 +258,75 @@ had variable host paging/CPU, so it cannot rule out movement as an amplifier.
 It gives no support for a simple accumulation-and-flush path tied to these
 scripted move events.
 
+The input-path review found no growing game-side mouse queue. In captured
+gameplay, `portInputMouseUpdate` adds SDL relative deltas to two scalar
+accumulators; `portInputMouseTickConsume` transfers and clears them each
+simulation tick. The launcher mouse-diagnostics listener writes into a fixed
+1,024-event `Float64Array` ring and allocates export objects only on download.
+It does call `performance.now()` for each event, so extremely high physical
+event rates could add some main-thread cost, but that path does not explain the
+captured no-motion gaps or the simultaneous DWM/Codex freeze. Browser/SDL
+event buffering outside this code remains possible and would need a separate
+physical-mouse capture to evaluate.
+
+## Physical mouse and cross-app captures, 2026-10-31
+
+The private runner now has a headed manual Dam phase. Its optional mouse probe
+records locked `mousemove` counts in fixed 100 ms bins, without coordinates,
+button data or raw input. A ROM-free synthetic-event check counted three
+moves without storing positions; a five-second actual-ROM OpenGL smoke reached
+Dam and wrote matching phase/build/renderer metadata. The user then played
+two roughly two-minute sessions, first in ANGLE/D3D11 and then ANGLE/OpenGL,
+and confirmed a Codex Desktop freeze during each session. All captures remain
+private under ignored `build/web-hitches/manual-*`.
+
+| Manual run | Dam duration | Mouse events | Gaps ≥250 ms | Gaps ≥500 ms | Worst Dam gap |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| D3D11 | 121.2 s | 8,995 | 8 | 4 | 7.05 s |
+| OpenGL | 120.0 s | 8,025 | 7 | 4 | 5.93 s |
+
+The user confirmed Codex froze during both the 2.04-second and 7.05-second
+D3D11 game stops. They began at 22:54:32.817 and 22:56:05.706 UTC. The
+preceding second contained 183 and 67 mouse events respectively; the manual
+run's median one-second count was 66 and its 90th percentile was 167. The
+native renderer logged 2.80 and 7.34 seconds in `SDL_GL_SwapWindow`, with
+about 3 and 1 ms of GL work and about 10 ms of simulation work. Nearby host
+samples showed 1.95 and 1.70 GB available, at most 1 and 23 page reads/s,
+and 19.4% and 32.1% total CPU. Pointer lock was briefly lost and reacquired
+between the stops; neither stop overlapped a focus event.
+
+The OpenGL manual session had a 5.93-second Dam frame gap beginning at
+23:00:05.063 UTC. Only 14 mouse events arrived in the preceding second,
+versus a median of 59 for that run. Native timing placed 5.97 seconds in
+swap. Nearby host samples showed 1.63 GB available, at most four page
+reads/s and 15.1% total CPU. The user reported Codex freezes during more than
+one OpenGL game stop, though exact event-to-event mapping was not recorded.
+OpenGL also had 2.38-, 1.49- and 1.36-second Dam gaps.
+It lost and regained pointer lock before the 5.93-second gap, but no focus
+event overlapped that gap. The OpenGL manual result **withdraws the proposed
+backend mitigation**: both hardware backends can reproduce severe freezes
+under physical play.
+
+Neither manual run shows a consistent high mouse-event rate immediately before
+large gaps. The D3D11 probe recorded no move events during its two largest
+frame gaps and only three in the first second afterward; there was no visible
+burst of accumulated events. This does not prove browser/SDL never queues
+motion, and camera movement can change scene workload, but it argues against
+a simple mouse-count threshold or a game-side queue flush as the cause of the
+shared freezes.
+
 ## Next diagnostic step
 
 Open the synchronized ETL in Windows Performance Analyzer and inspect GPU
 queues/presents, DWM frame history and wait chains at 21:40:21.530–23.764 UTC.
 Correlate the first blocked present with the Chrome and Codex GPU/compositor
-threads before assigning a driver or DWM cause. Repeat the backend comparison
-over longer, interleaved headed runs with matched host conditions; track severe
-gaps and audio queue-dry reports, not average FPS. If OpenGL continues to
-reduce severe gaps, test it in a temporary user-visible game session before
-offering it as a workaround. A separate sustained physical-mouse test can
-measure motion-event rate and frame gaps without recording coordinates. An
-idle/no-game interval can test whether the shared freeze requires the game.
+threads before assigning a driver or DWM cause. The manual comparison rules
+out a reliable OpenGL workaround on this host; do not change the game's
+renderer or advise a browser flag on these results. A fresh synchronized WPR
+capture during a manual freeze can test whether the same DWM present/wait
+signature recurs under OpenGL. An idle/no-game interval can test whether the
+shared freeze requires the game at all. Track severe gaps and audio queue-dry
+reports, not average FPS.
 Keep ETL local because it can contain process and file metadata. The 2.35 GB
 available in the synchronized capture shows low available RAM is not required
 for that shared freeze.
