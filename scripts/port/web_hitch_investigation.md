@@ -315,23 +315,62 @@ motion, and camera movement can change scene workload, but it argues against
 a simple mouse-count threshold or a game-side queue flush as the cause of the
 shared freezes.
 
+## Short synchronized OpenGL capture, 2026-10-31
+
+The user played another 85-second headed OpenGL Dam run with physical mouse
+input and started a 45-second elevated WPR recording after Dam was ready. The
+same optimized build and RTX 3070 OpenGL renderer were recorded. The browser
+run counted 2,383 locked mouse moves and 14 Dam frame gaps of at least 250 ms;
+only one reached 500 ms, with a worst gap of 543 ms. The WPR trace covers
+23:17:41.688–23:18:27.722 UTC and includes that gap, which ran roughly
+23:17:44.853–45.396 UTC. The user noticed a Codex freeze during the run but
+could not estimate its duration or pair it with a specific game gap. They
+closed their regular Chrome windows **after** WPR finished. The private data
+are `build/web-hitches/manual-gl-wpr-short/`,
+`build/web-hitches/host-opengl-short.etl` and
+`build/web-hitches/manual-gl-wpr-short-host.csv`.
+
+The browser reported a 524 ms long task at about 23:17:45.105–45.628 UTC,
+overlapping but not exactly matching the 543 ms animation-frame gap. A
+streaming scheduler pass found a 524.1 ms `UserRequest` wait on an active
+Chrome renderer main thread (PID 52368, TID 4816), awakened by its Chrome
+child I/O thread. The trace does not map that PID conclusively to the game
+tab or identify the upstream request. CPU samples during the frame gap showed
+only 43 samples on that renderer thread, versus 541 on a Chrome GPU main
+thread and 281 on DWM's compositor thread. These are sample counts, not
+millisecond durations or proof of a GPU fault.
+
+Unlike the earlier multi-second shared freeze, DWM work continued through
+this shorter game gap: draw events were 272 in the preceding second and 108
+in the 543 ms gap; Dxg present events were 37 before and 26 during; vertical
+sync events were 300 before and 163 during. The latter two rates did not
+collapse. Nearby host samples showed about 1.25 GB available, 44–163 page
+reads/s across the gap, and up to 999 page reads/s within a few seconds of
+it. Thus memory pressure is plausible for **some short stutters**, but it
+cannot explain the earlier synchronized multi-second freeze that had about
+2.35 GB available and negligible paging. The two captures should not be
+combined into one asserted root cause.
+
 ## Next diagnostic step
 
 Windows Performance Analyzer 11.8 was installed locally after user approval.
 Its command-line exporter loaded the existing roughly 1 GB ETL but raised its
 working set to 1.72 GB and reduced free physical memory to about 0.4 GB, so
 that task-owned export was stopped before it could add another host hitch.
+Even the shorter 259 MB ETL raised the exporter working set above 2 GB and
+left about 0.56 GB free; that export was stopped too. In contrast, the local
+TraceProcessing CPU sample and scheduling readers completed on the short ETL.
 The desktop control bridge failed before opening WPA. The headless ETW preview
 tool also requires symbol configuration that was not supplied. The original
 ETL remains intact, and the streaming ETW reader still processes it with low
 memory use. A shorter WPR recording centered on a manually observed hitch
 should make WPA's detailed queue and wait views practical on this laptop.
 
-Capture a short WPR trace during a manual freeze, then inspect GPU
-queues/presents, DWM frame history and wait chains in WPA. Compare with the
-existing synchronized ETL at 21:40:21.530–23.764 UTC using the streaming
-reader. Correlate the first blocked present with Chrome and Codex
-GPU/compositor threads before assigning a driver or DWM cause. The manual
+Capture a short WPR trace during a **multi-second** manually observed freeze,
+then use low-memory ETW passes to compare its DWM, present and scheduler
+signature with the existing synchronized ETL at 21:40:21.530–23.764 UTC.
+Correlate the first blocked present with Chrome and Codex GPU/compositor
+threads before assigning a driver or DWM cause. The manual
 comparison rules out a reliable OpenGL workaround on this host; do not change
 the game's renderer or advise a browser flag on these results. A fresh
 synchronized WPR capture under OpenGL can test whether the same DWM

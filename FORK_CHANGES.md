@@ -135,7 +135,13 @@ threshold. The manual traces remain local and ignored.
 WPA 11.8 was installed locally with user approval for trace inspection. Its
 exporter exhausted practical free memory on the roughly 1 GB synchronized
 ETL, so that export was stopped; the unchanged trace remains available for
-streaming analysis. A shorter synchronized WPR capture is the next diagnostic.
+streaming analysis. A shorter 259 MB WPR capture overlapped a 543 ms OpenGL
+game gap, with a 524 ms Chrome renderer wait and browser long task while DWM
+and Dxg present events continued. The user noticed a Codex freeze but could
+not map it to that gap. Host paging was elevated, unlike the earlier
+multi-second shared freeze. WPAExporter also strained memory on the smaller
+ETL, while low-memory ETW CPU/scheduler readers completed. A short WPR capture
+of a multi-second shared freeze remains the next diagnostic.
 
 ### FORK-036 — Buffer and memory-safety audit
 

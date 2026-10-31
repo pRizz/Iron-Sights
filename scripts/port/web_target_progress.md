@@ -694,6 +694,21 @@ the ETL remains intact. Next action: capture a short WPR interval during
 manual OpenGL play, inspect its present queues and wait chains, and compare
 the host signature with the earlier D3D11 freeze.
 
+**Short synchronized OpenGL interval, 2026-10-31:** The user completed an
+85-second manual OpenGL Dam run with a 45-second WPR recording. The worst Dam
+gap was 543 ms, and the user noticed a Codex freeze but could not time it.
+The ETL covers the game gap. Its 524 ms Chrome renderer main-thread wait
+overlapped a browser long task, while DWM drawing and Dxg presents continued.
+The host had about 1.25 GB available and elevated page reads nearby, unlike
+the earlier multi-second freeze with about 2.35 GB available and negligible
+paging. This shorter run does not reproduce the earlier presentation-collapse
+signature or settle whether resource pressure contributes to it. Even this
+259 MB ETL caused WPAExporter to exceed 2 GB working set, so it was stopped;
+low-memory ETW readers completed. [The investigation](web_hitch_investigation.md)
+records timing and private evidence. Next action: capture a short WPR interval
+that contains a multi-second shared freeze, or extract the relevant wait and
+present chain from the original ETL without buffering the entire GPU trace.
+
 **Absolute menu pointer, 2026-10-27:** Investigation reproduced the reported
 drift: the inherited ignored-warp fallback accumulated physical deltas around
 native menu snaps, leaving offsets up to 88 menu pixels until an edge sweep.
