@@ -3622,9 +3622,13 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
         selecthalfsize.f[0] = (mainfolderimages + IMG_SEL)->width * 0.5f;
         selecthalfsize.f[1] = (mainfolderimages + IMG_SEL)->height * 0.5f;
 #ifdef GE_WEB
-        selectpos.f[0] = 62.0f;
         selecthalfsize.f[0] *= 0.55f;
         selecthalfsize.f[1] *= 0.55f;
+#endif
+#ifndef TARGET_N64
+        /* Left-align about 10 menu pixels inside the leftmost folder.
+         * Anchor the edge rather than the centre, including web's smaller art. */
+        selectpos.f[0] = 40.0f + selecthalfsize.f[0];
 #endif
 
         texSelect(&DL, mainfolderimages + IMG_SEL, 4, 0, 0);

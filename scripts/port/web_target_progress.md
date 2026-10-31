@@ -233,6 +233,15 @@ menu-pointer regression pass. Both independent gallery runs reproduce all
 72 views/35 icons with zero changed image cells; staged freshness is verified.
 Next action: verify the main release/Pages workflows after publication.
 
+**Files-heading alignment, 2026-10-30:** Anchors the SELECT FILE left edge at x=40
+menu pixels, roughly ten pixels inside the leftmost folder, while retaining
+desktop/web sizing and vertical placement. Native widescreen/4:3 and browser
+desktop/phone captures were reviewed. Optimized Windows/Wasm builds, production
+assembly/allowlist, ROM-free pointer checks and the actual-game Edge Files
+transfer/restart/responsive-target audit pass. Both gallery runs reproduce all
+72 views/35 icons without changed image cells; staged freshness is verified.
+Next action: verify the main release/Pages workflows after publication.
+
 **Save audit initialization timing, 2026-10-27:** The room-save audit now waits
 for the export button's visibility and file-readiness before starting the
 download-event timeout; click/download promises are observed together. Pages

@@ -38,8 +38,12 @@ action layout. Columns now read Import/Export, Copy/Options, Erase/Exit Game
 from left to right. This replaces the original rightmost transfer column and
 shortens its visible labels from Import Save / Export Save, saving horizontal
 space on desktop and web. Compact column spacing keeps the leftmost icons and
-labels clear of the SELECT FILE title. Browser accessibility names retain the
-save context, and measured hit targets follow the new positions and label widths.
+labels clear of the SELECT FILE title. The title is now left-aligned at menu
+x=40, approximately ten menu pixels inside the leftmost folder's edge. This
+replaces the inherited desktop centre anchor and browser-specific centre
+offset, preserving the existing title sizes and vertical placement. Browser
+accessibility names retain the save context, and measured hit targets follow
+the new positions and label widths.
 The inherited upstream desktop menu has no portable JSON save
 transfer. Windows uses native Open/Save dialogs; Linux launches `zenity`, falling
 back to `kdialog` when unavailable, with direct argv calls and no shell. Xbox,
@@ -97,6 +101,10 @@ optimized native/Wasm builds, actual-game Edge native/direct and touch-mode
 transfer checks, responsive hit targets, production artifact verification and
 the ROM-free menu-pointer regression. Its gallery refresh again reproduces all
 107 references across both independent runs without changed image cells.
+The heading's left alignment was reviewed in native widescreen/4:3 and browser
+desktop/phone captures. Native/Wasm builds, browser Files transfer acceptance,
+artifact verification and pointer checks pass; its refreshed gallery again
+matches both independent passes with zero changed image cells.
 
 ### FORK-033 — Native campaign HD texture packs
 
