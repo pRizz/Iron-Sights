@@ -1839,6 +1839,23 @@ switching weapons. No rewind, automatic checkpoint, thumbnails or cross-build
 migration in this version.
 Local images are ignored by Git.
 
+The issue #4 investigation reproduced green/gray striped textures on Aztec smoke
+after quickload. The saved texture bytes already contained frame display-list
+commands: AR33 ADS transitions had exhausted the auxiliary frame pool
+(FORK-017). Quickload's existing GPU-cache invalidation exposed those damaged
+CPU pixels. The allocator fix prevents this overwrite; it does not change the
+snapshot format or weaken exact-build compatibility. The opt-in
+[effect audit](port/src/port_state_effects_audit.c), called at the existing
+save-command boundary, checks effect texture bytes before/after ADS and repeated
+loads, then captures baseline and two restored sequences. Its
+[isolated launcher](scripts/port/audit_state_effects.ps1) supports stage/spawn,
+tick rate, threaded rendering, MSAA and active effects at save time.
+At the recorded Aztec camera, 60 Hz synchronous and 120 Hz threaded/MSAA-2
+same-session runs passed all 24 captures and source-byte checks. Fresh-process
+restoration is a separate scenario; this investigation also observed an
+existing native arm-rendering crash when restoring Dam from Facility in a fresh
+process, which this frame-pool change does not address.
+
 **Sources:** [save engine/menu](port/src/port_state.c),
 [API](port/include/port_state.h), [registry generator](scripts/port/embed_state_layout.py),
 [CMake](CMakeLists.txt), [frame integration](src/boss.c),
@@ -2130,6 +2147,32 @@ exposed-skin tone to match the retained hand. Version 4 invalidated the
 thin-wrist proportions. Version 2 introduced authored forearms, and version 3
 expanded their bodies; the measured-joint fit supersedes that profile (FORK-019). Source ROM assets stay immutable and
 are never committed. Wardrobe selection follows player changes and restores.
+
+Generated arm commands, vertices and transition depth lists now receive a
+native auxiliary frame-buffer floor of 256 KiB per player per half, retaining
+larger inherited stage budgets. The inherited PC doubling alone allowed Aztec's
+AR33 transition to use 93,504 bytes in an 81,920-byte half and overwrite the
+following smoke/fire texture pool. GPU texture caching could hide that damage
+until a quickload cleared the cache (FORK-014). All four dynamic allocation
+entry points now reject exhausted/invalid requests before advancing or writing
+outside the active half. Native hand geometry, materials and arm fits are
+unchanged; N64 keeps its inherited allocator. The shared non-N64 path also
+protects browser frame data, without claiming to resolve issue #3's flicker.
+The focused [capacity/allocator module](port/src/port_dyn.c) and
+[API](port/include/port_dyn.h) attach through small hooks in
+[dyn.c](src/game/dyn.c). The [ROM-free regression](scripts/port/test_dyn.sh)
+links the real allocator and covers per-player capacity, larger budgets,
+alignment, vertices/matrices/lights, exact exhaustion, negative/overflowing
+requests, swapping halves and untouched texture sentinels. Existing ADS test
+runs invoke this allocator regression, including existing release CI. It and
+wardrobe, ADS, HUD and suspend regressions passed. Both Aztec stress runs reached
+the formerly overflowing 93,504-byte usage within the new 262,144-byte budget,
+preserved effect bytes and rendered normal smoke after repeated quickloads.
+The same camera passed all 21 supported gun captures and 231 raise/lower
+transition captures, with peak auxiliary usage of 114,624/262,144 bytes and no
+pool-overflow reports. Windows/Linux video and optimized Wasm builds passed.
+The review gallery regenerated 72 views and 35 icons, checked repeated samples
+and an independent second pass, and reported zero changed image cells.
 
 **Sources:** [wardrobe mapping](port/src/port_wardrobe.c),
 [API](port/include/port_wardrobe.h), [native arms](port/src/port_native_arms.c),
@@ -3136,6 +3179,10 @@ milestone blocks persist these final results for later sessions.
 **Status:** Desktop browser preview is live on GitHub Pages. The accepted core,
 launcher, persistence, deployment/update and measured compatibility gates pass.
 Safari remains experimental by the user's explicit decision.
+
+The shared native frame-data capacity/guard fix in FORK-017 also compiles in
+the browser target. Optimized Wasm compilation passed; no browser flicker fix
+or new browser gameplay acceptance is claimed by the native Aztec investigation.
 
 Unlocked browser menus now follow absolute SDL pointer coordinates. Native
 menu/controller snaps remain virtual until actual mouse motion or a fresh

@@ -9,3 +9,4 @@ trap 'rm -f "$test_bin"' EXIT
     -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \
     scripts/port/test_ads.c -lm -o "$test_bin"
 "$test_bin"
+bash scripts/port/test_dyn.sh

@@ -98,6 +98,15 @@ resident-memory optimization require separate measured work.
 
 ## WEB-002 | 2026-10-24 | Playable prototype
 
+**Shared frame-buffer guard, 2026-10-30:** The native issue #4 investigation
+reproduced AR33 ADS auxiliary-data overflow into effect textures on Aztec.
+Shared non-N64 allocation now has a 256 KiB/player/half floor and checks bounds
+before writing. Optimized Wasm compilation passed alongside native allocator,
+ADS, wardrobe, HUD and suspend regressions. Actual smoke/quickload captures ran
+on Windows at 60/120 Hz; browser flicker issue #3 remains unconfirmed by this
+fix. Next action: include this capacity change in browser gameplay validation;
+do not treat native captures as browser acceptance evidence.
+
 **ADS mouse defaults, 2026-10-30:** Desktop and web now leave the optional
 dedicated ADS action unbound. Ordinary Aim retains its right-mouse default
 and Hold remains the initial aim-control setting. A keyboard-device marker

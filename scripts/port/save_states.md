@@ -134,3 +134,27 @@ The Windows audits passed with synchronous and threaded rendering, including
 Dam/Facility transitions and a second restore after revisiting Facility.
 Windows and Linux builds and the ROM-free state, ADS and HUD tests passed.
 Linux was compile-checked; runtime captures and gameplay checks ran on Windows.
+
+## Smoke and explosion regression
+
+Issue #4's Aztec recording exposed an auxiliary frame-buffer overflow during
+AR33 ADS transitions. Frame display-list commands overwrote smoke/fire pixels;
+quickload then invalidated GPU textures and uploaded the damaged bytes. The
+native allocator now reserves at least 256 KiB per player in each frame half
+and checks allocations before they can reach the following texture pool.
+
+The isolated effect audit equips the AR33, raises/lowers ADS before saving,
+checks the original effect texture bytes, and captures eight samples each from
+the baseline and two quickloads:
+
+```powershell
+./scripts/port/audit_state_effects.ps1 -Stage aztec -Spawn '-3022.62,313.22,1721.83,185.73' -StressAds -DelaySeconds 4
+./scripts/port/audit_state_effects.ps1 -Stage aztec -Spawn '-3022.62,313.22,1721.83,185.73' -StressAds -DelaySeconds 4 -TickHz 120 -RenderThread -RoomCache 0 -Msaa 2 -WeaponHud
+```
+
+Use `-Executable` for an isolated build. The launcher keeps its own settings,
+snapshots, logs and captures and removes its copied executable after exit.
+These same-session Aztec checks passed at 60 Hz synchronous and 120 Hz threaded.
+They do not exercise the separate fresh-process native arm-rendering failure found
+when restoring Dam from Facility during this investigation. Ordinary campaign
+saves and user snapshots were left untouched.

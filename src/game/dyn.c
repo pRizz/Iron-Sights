@@ -7,6 +7,7 @@
 
 #ifndef TARGET_N64
 #include <stdio.h> /* GE_ROOM_AUDIT dyn-pool watch (see bg.c) */
+#include "port_dyn.h"
 #endif
 
 /**
@@ -61,6 +62,8 @@ void dynInitMemory(void) {
     // Double graphics buffers size on PC to avoid graphics corruption bugs
     g_GfxSizesByPlayerCount[getPlayerCount() - 1] *= 2;
     g_VtxSizesByPlayerCount[getPlayerCount() - 1] *= 2;
+    g_VtxSizesByPlayerCount[getPlayerCount() - 1] = portDynVertexCapacity(
+        g_VtxSizesByPlayerCount[getPlayerCount() - 1], getPlayerCount());
 #endif
 
     g_GfxBuffers[0] = mempAllocBytesInBank(g_GfxSizesByPlayerCount[getPlayerCount() - 1] * 2, MEMPOOL_STAGE);
@@ -107,16 +110,24 @@ s32 dynGetFreeGfx2(Gfx *gdl) {
  */
 Vtx *dynAllocateVertices(s32 count) 
 {
+#ifndef TARGET_N64
+    return portDynAllocate(count, sizeof(Vtx), 1);
+#else
     void *ptr = g_GfxMemPos;
 	g_GfxMemPos += count * sizeof(Vtx);
 	return ptr;
+#endif
 }
 
 Mtx *dynAllocateMatrix(void)
 {
+#ifndef TARGET_N64
+    return portDynAllocate(1, sizeof(Mtx), 1);
+#else
 	void *ptr = g_GfxMemPos;
 	g_GfxMemPos += sizeof(Mtx);
 	return ptr;
+#endif
 }
 
 /**
@@ -124,16 +135,24 @@ Mtx *dynAllocateMatrix(void)
  */
 Light *dynAllocateLights(s32 count)
 {
+#ifndef TARGET_N64
+    return portDynAllocate(count, sizeof(Light), 1);
+#else
     void *ptr = g_GfxMemPos;
     g_GfxMemPos += count * sizeof(Light);
     return ptr;
+#endif
 }
 
 void *dynAllocate(s32 size) {
+#ifndef TARGET_N64
+    return portDynAllocate(size, 1, 16);
+#else
     void *ptr = g_GfxMemPos;
 	size = ALIGN16_a(size);
 	g_GfxMemPos += size;
 	return ptr;
+#endif
 }
 
 #ifndef TARGET_N64

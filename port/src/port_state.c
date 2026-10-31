@@ -524,6 +524,7 @@ void portStateFrame(void)
     }
     portStateInput();
 #ifdef GE_VIDEO
+    { extern void portStateEffectsAudit(u32); portStateEffectsAudit(stateRestoreSerial); }
     stateAudit();
 #endif
     slot = stateCommand;
