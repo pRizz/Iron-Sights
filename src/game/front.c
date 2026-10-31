@@ -490,7 +490,7 @@ struct rectbbox folder_option_ERASE_bound = { 0 };
 /* PORT: the Files screen's bottom bar has four buttons (Copy / Erase / Options
  * / Exit Game) instead of Rare's two (docs/port/files-screen-buttons.md); like
  * the vanilla ones, their hit boxes are rebuilt every frame. Desktop and web
- * add two save-transfer buttons in a third column. */
+ * add Import/Export as the leftmost of three columns. */
 enum { PORT_FSBTN_COPY, PORT_FSBTN_ERASE, PORT_FSBTN_OPTIONS, PORT_FSBTN_EXIT,
 #if defined(GE_WEB) || defined(GE_SAVE_TRANSFER)
        PORT_FSBTN_IMPORT, PORT_FSBTN_EXPORT,
@@ -3486,7 +3486,9 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
            * scaled to match), its label at the same scale to the right,
            * centred on its row */
 #if defined(GE_WEB) || defined(GE_SAVE_TRANSFER)
-            static const s32 btn_x[PORT_FSBTN_COUNT] = { 146, 245, 146, 245, 344, 344 };
+            /* Compact columns leave SELECT FILE clear: Import/Export,
+             * Copy/Options, Erase/Exit Game. */
+            static const s32 btn_x[PORT_FSBTN_COUNT] = { 280, 360, 280, 360, 200, 200 };
             static const s32 btn_y[PORT_FSBTN_COUNT] = { 270, 270, 298, 298, 270, 298 };
             static const s32 btn_img[PORT_FSBTN_COUNT] = { IMG_COPY, IMG_DEL, IMG_CHECK, IMG_X, IMG_COPY, IMG_COPY };
 #else
@@ -3523,8 +3525,8 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
                 case PORT_FSBTN_ERASE:   label = langGet(getStringID(LTITLE, TITLE_STR_28_ERASE)); break; /* Erase */
                 case PORT_FSBTN_OPTIONS: label = "Options\n"; break;
 #if defined(GE_WEB) || defined(GE_SAVE_TRANSFER)
-                case PORT_FSBTN_IMPORT:  label = "Import Save\n"; break;
-                case PORT_FSBTN_EXPORT:  label = "Export Save\n"; break;
+                case PORT_FSBTN_IMPORT:  label = "Import\n"; break;
+                case PORT_FSBTN_EXPORT:  label = "Export\n"; break;
 #endif
                 default:                 label = "Exit Game\n"; break;
                 }

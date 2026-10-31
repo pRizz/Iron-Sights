@@ -34,8 +34,8 @@ Suspend points require the same executable and will not load on a newer build.
 Normal campaign saves and profiles remain separate.
 
 SAVE TRANSFER
-On the four-campaign Files screen, Export Save writes a portable JSON backup.
-Use Import Save on desktop or web to load it, then confirm Import and restart.
+On the four-campaign Files screen, Export writes a portable JSON backup.
+Use Import on desktop or web to load it, then confirm Import and restart.
 This replaces all campaigns, profiles, settings and custom controller mappings.
 Export the destination's current saves first if you want to keep them.
 ROMs, textures and suspend points are not transferred. Each instance needs a ROM.

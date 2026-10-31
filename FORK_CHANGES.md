@@ -32,9 +32,15 @@ new areas. Status describes implementation state, not Git publication state.
 
 ### FORK-034 — Portable desktop save import and export
 
-Windows and Linux add **Import Save** and **Export Save** directly to the
+Windows and Linux add **Import** and **Export** directly to the
 four-campaign Files screen, sharing the web target's two-row/three-column
-action layout. The inherited upstream desktop menu has no portable JSON save
+action layout. Columns now read Import/Export, Copy/Options, Erase/Exit Game
+from left to right. This replaces the original rightmost transfer column and
+shortens its visible labels from Import Save / Export Save, saving horizontal
+space on desktop and web. Compact column spacing keeps the leftmost icons and
+labels clear of the SELECT FILE title. Browser accessibility names retain the
+save context, and measured hit targets follow the new positions and label widths.
+The inherited upstream desktop menu has no portable JSON save
 transfer. Windows uses native Open/Save dialogs; Linux launches `zenity`, falling
 back to `kdialog` when unavailable, with direct argv calls and no shell. Xbox,
 N64, headless and web builds do not compile this desktop adapter. No setting or
@@ -86,6 +92,11 @@ blocked by a read-only file. All 36 web backup boundary tests, packaging checks,
 type/scoped-format checks, nine gallery workflow tests and the standards checker
 pass. The refreshed 72-view/35-icon gallery passes two independent render runs
 with zero changed image cells; its source fingerprint is current.
+The column/label refinement also passes widescreen/4:3 native capture review,
+optimized native/Wasm builds, actual-game Edge native/direct and touch-mode
+transfer checks, responsive hit targets, production artifact verification and
+the ROM-free menu-pointer regression. Its gallery refresh again reproduces all
+107 references across both independent runs without changed image cells.
 
 ### FORK-033 — Native campaign HD texture packs
 
@@ -2638,9 +2649,10 @@ normal and reduced motion, warm power resume and exact save preservation using
 the existing local optimized runtime. Native sources are unchanged and the
 gallery freshness check passes. Private evidence: `build/web-room/faster-timings-*`.
 
-**Import Save** and **Export Save** now belong to GoldenEye's four-campaign
+**Import** and **Export** now belong to GoldenEye's four-campaign
 Files screen, as clarified by the owner. The web action area has two rows
-and three columns alongside Copy, Erase, Options and Exit Game. This replaces
+and three columns: Import/Export at left, Copy/Options in the middle and
+Erase/Exit Game at right (FORK-034). This replaces
 the earlier upper-right room toolbar, whose component/styles are removed; the
 room returns to its canvas-only presentation. Native labels and cursor actions
 use small `GE_WEB` hooks in `src/game/front.c`, `port/web/runtime.c` and

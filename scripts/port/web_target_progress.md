@@ -202,7 +202,7 @@ Start/menu/capture boundaries in future input changes.
 ## WEB-003 | 2026-10-24 | Save persistence and backups
 
 **Desktop interoperability, 2026-10-30:** FORK-034 extends the Files-screen
-Import Save / Export Save layout to Windows and Linux using the unchanged
+Import / Export layout to Windows and Linux using the unchanged
 version-1 backup envelope. Desktop imports stage until process restart, then
 apply before settings/profile/EEPROM initialization, with pre-image/journal
 recovery. The browser codec and storage identities are unchanged. Host/i686
@@ -220,6 +220,18 @@ passes both independent runs with zero changed image cells; web backup boundary,
 type/format, packaging, gallery workflow and standards checks pass. Next action:
 verify main's release/Pages CI and retain Linux picker acceptance as a manual
 platform check. See `scripts/port/save_transfer.md` for usage and verification.
+
+**Files-layout refinement, 2026-10-30:** Moves Import/Export to the left of
+Copy/Options, with Erase/Exit Game at right, and removes Save from the visible
+transfer labels on both desktop and web. Browser accessibility names keep the
+save context; targets continue to follow native measured positions and widths.
+Widescreen/4:3 native captures and actual-game Edge direct/native-cursor and
+touch-mode checks pass, including cancel/invalid preservation, restart, exact
+EEPROM/profile reload, imported settings and responsive hit targets. Optimized
+native/Wasm builds, production assembly/allowlist, type checks and the ROM-free
+menu-pointer regression pass. Both independent gallery runs reproduce all
+72 views/35 icons with zero changed image cells; staged freshness is verified.
+Next action: verify the main release/Pages workflows after publication.
 
 **Save audit initialization timing, 2026-10-27:** The room-save audit now waits
 for the export button's visibility and file-readiness before starting the

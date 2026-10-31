@@ -38,8 +38,8 @@ No ROM or extracted game data is included. Never copy Data/CrashReports into
 a bug report. Keep Data and midas.ini when updating. Suspend states require
 their original executable; campaign saves are separate.
 
-On the four-campaign Files screen, Export Save writes a JSON backup for desktop
-or web. Import Save confirms full replacement of campaigns, profiles, settings
+On the four-campaign Files screen, Export writes a JSON backup for desktop
+or web. Import confirms full replacement of campaigns, profiles, settings
 and custom controller mappings, then restarts the game. Export current progress
 first to keep it. ROMs, textures and suspend points are not transferred.
 File selection requires zenity or kdialog installed through your distribution.

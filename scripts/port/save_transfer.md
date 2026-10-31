@@ -1,9 +1,12 @@
 # Desktop and web save transfer
 
-On the four-campaign **Files** screen, choose **Export Save** to write a JSON
-backup. On the other desktop installation or web instance, choose **Import
-Save**, select that file, then confirm **Import and restart**. Export first if
+On the four-campaign **Files** screen, choose **Export** to write a JSON
+backup. On the other desktop installation or web instance, choose **Import**,
+select that file, then confirm **Import and restart**. Export first if
 you want to keep the destination's current progress.
+
+Import/Export form the leftmost action column, followed by Copy/Options and
+Erase/Exit Game.
 
 Import replaces all supported files, rather than merging individual campaigns.
 The version-1 `project-midas-saves` format is shared with the existing browser
