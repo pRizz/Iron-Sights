@@ -83,10 +83,17 @@ Matched 10-second-menu/roughly-120-second-Dam headed Chrome comparisons on one
 optimized NVIDIA/ANGLE build reproduced multi-second gaps with SDL's swap yield
 enabled and disabled. The toggle is diagnostic, not a verified mitigation.
 Concurrent private Windows counters found example gaps without sustained CPU,
-disk, paging, DPC or interrupt saturation. The host-wide cause remains open;
-Windows Performance Recorder could not start under this session's profiling
-policy. Web tests, ROM-free CDP smoke, typecheck, exact site verification and
-repository standards checks pass for the updated audit and record.
+disk, paging, DPC or interrupt saturation. The first Windows Performance
+Recorder attempt failed under this session's profiling policy; the user later
+captured a synchronized elevated ETW trace. A lossless headed Chrome/Dam trace
+recorded a 2.0355-second gap while the user observed a Codex Desktop spinner
+freeze. Streaming ETW analysis found reduced Chrome, Codex and DWM CPU activity
+and a sharp drop in DWM-Core events during the gap, while other system work
+continued. The shared graphics presentation cause remains to be isolated;
+this evidence does not establish a driver fault. The ETW trace and analysis
+stay private under ignored `build/web-hitches/`. Web tests, ROM-free CDP smoke,
+typecheck, exact site verification and repository standards checks passed for
+the earlier audit implementation; this documentation update has its own checks.
 
 ### FORK-036 — Buffer and memory-safety audit
 

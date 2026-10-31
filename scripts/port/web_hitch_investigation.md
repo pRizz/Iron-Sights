@@ -139,28 +139,70 @@ miss shorter spikes and aggregate CPU can hide a single blocked thread; these
 readings only rule out obvious sustained saturation during those examples.
 The private host CSVs and audit JSON remain ignored under `build/web-hitches/`.
 
-The user also reported that a game-audio glitch coincided with a frozen
-Codex Desktop spinner, and has seen hitches in other Chrome pages, while the
-native game has not reproduced. That is a strong reason to test a shared
-host/browser presentation path, but the message receipt time was not an exact
-onset mark and does not prove frame-level simultaneity. Windows Performance
-Recorder is installed, but an attempt to start the light general, GPU,
-desktop-composition and audio profiles failed with `0xc5585011` because this
-session cannot enable the required system profiling policy. No ETW trace was
-captured. The filtered Windows System event log showed no matching WHEA,
-display-reset, disk or storage event in this sample interval.
+The user also reported hitches in other Chrome pages while the native game has
+not reproduced. The earlier attempt to start Windows Performance Recorder from
+this session failed with `0xc5585011` because it lacked the system profiling
+policy. The user then started and stopped WPR in an elevated PowerShell window,
+allowing the synchronized capture below. The filtered Windows System event log
+showed no matching WHEA, display-reset, disk or storage event in the earlier
+sample interval.
+
+## Synchronized Chrome, Codex and Windows trace, 2026-10-31
+
+The user confirmed that **both** the game and Codex Desktop spinner froze in
+the same capture. The scripted headed Chrome/Dam run, on optimized runtime
+`c1ce09118bbc0768`, had one 2,035.5 ms frame gap from
+21:40:21.530–21:40:23.566 UTC (4:40:21.530–4:40:23.566 p.m. CDT). Its CDP
+trace is lossless, has the expected browser GPU/viz/compositor/profiler tracks,
+and reports Chrome 156.0.8078.79, NVIDIA RTX 3070 Laptop GPU via ANGLE/D3D11,
+839×471 canvas, Dam stage 33, and no focus loss. The menu's shorter trace had
+no qualifying gap. The CDP renderer-main track contains no multi-second task
+during this Dam gap; its longest reported `RunTask` is 8.1 ms. This differs
+from the earlier headed incident with a long browser-main task, so the two
+stalls should not be collapsed into one mechanism.
+
+The concurrent one-second host samples near the Dam gap showed roughly
+2.35 GB available memory, 12–44 page reads/s, 0.25–0.49 ms average disk
+transfer time and 12.5–30.5% total CPU. They do not show sustained machine-wide
+CPU, disk or paging saturation during this incident; their resolution cannot
+exclude a short spike. The traces remain private and ignored under
+`build/web-hitches/etw-headed/`, with host counters in
+`build/web-hitches/etw-headed-host.csv` and the elevated WPR recording in
+`build/web-hitches/host-repro.etl`.
+
+Streaming ETW scheduling analysis compared equal 2.036-second windows before,
+during and after the marked gap. Chrome process CPU time fell from 2,675.6 to
+445.6 ms, DWM from 940.0 to 50.7 ms and Codex `ChatGPT.exe` from 642.9 to
+140.5 ms; they returned to 2,615.6, 688.8 and 668.0 ms afterward. The
+Windows `System` process continued to receive about 2.18 seconds of CPU time
+during the gap. Chrome's compositor thread was switched out at 21:40:21.533
+and did not run again until 21:40:23.764 (2,230.5 ms); its decoded state was
+`Ready` with `WrPreempted`. Chrome's GPU main thread waited 1,894.3 ms with
+`UserRequest`; Codex's viz compositor thread waited 2,210.6 ms with
+`WrPushLock`. These are scheduling clues, not proof of the lock owner or a
+driver defect. The ETW reader warned about one invalid classic event in the
+trace, so individual wait classifications warrant visual confirmation
+in Windows Performance Analyzer.
+
+Raw ETW event counts add an independent display signal: DWM-Core emitted about
+2,400–2,900 events per 100 ms before the gap, dropped to zero in many 100 ms
+bins during it, then returned to about 2,400 per bin. DxgKrnl continued
+emitting events throughout. Together with the user's simultaneous observation,
+this makes a shared Windows graphics presentation/composition stall the leading
+hypothesis for this capture. It does not distinguish DWM, the graphics driver,
+GPU scheduling, a cross-process lock, or another dependency upstream of them.
 
 ## Next diagnostic step
 
-Capture a short, elevated Windows Performance Recorder trace with CPU,
-GPU, desktop-composition and audio profiles during a user-marked synchronized
-freeze, then inspect scheduling, DWM, GPU and audio tracks alongside the CDP
-timing marks. Keep the trace local because ETW can contain process and file
-metadata. If no system trace is available, repeat a bounded headed audit with
-one-second host and per-process GPU counters while recording an exact user
-marker, then compare with an idle/no-game interval. A separate lower-memory
-experiment can test whether freeing RAM changes hitch frequency. Change one
-condition at a time and track gaps over 100/250 ms, worst gap and audio
-underruns; do not infer a fix from average FPS.
+Open the synchronized ETL in Windows Performance Analyzer and inspect the GPU
+queues/presents, DWM frame history and wait chains at 21:40:21.530–23.764 UTC.
+Correlate the first blocked present with the Chrome and Codex GPU/compositor
+threads before assigning a driver or DWM cause. A controlled follow-up should
+compare the same headed Chrome build and scripted Dam sequence under one
+alternate ANGLE backend, with all other audit settings fixed, while collecting
+frame gaps and underruns. Repeat an idle/no-game interval if the freeze also
+appears there. A lower-memory experiment is separate: this capture shows that
+low available RAM is not required for a shared freeze. Keep ETL local because
+it can contain process and file metadata; do not infer a fix from average FPS.
 
 The reports are diagnostic evidence, not a gameplay or audio quality pass.

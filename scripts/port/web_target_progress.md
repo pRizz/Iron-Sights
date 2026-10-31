@@ -635,6 +635,21 @@ counts, limits and local evidence. Next action: obtain a short elevated
 CPU/GPU/desktop-composition/audio trace around an exactly marked synchronized
 freeze, then decide whether a browser or host mitigation is justified.
 
+**Synchronized Windows trace, 2026-10-31:** The user ran the WPR general,
+GPU, desktop-composition and audio profiles from elevated PowerShell during a
+headed Chrome/Dam audit and confirmed that the game and Codex Desktop spinner
+froze together. A lossless browser trace marked a 2.0355-second Dam gap at
+21:40:21.530 UTC on the same optimized NVIDIA/ANGLE build, without focus loss
+or a long renderer-main task. ETW showed Chrome, Codex and DWM CPU activity
+fall sharply while other system work continued; DWM-Core event volume also
+collapsed for the gap, then recovered. Nearby counters showed about 2.35 GB
+available memory and no sustained CPU/disk/paging saturation. This favors a
+shared graphics presentation/composition stall for this incident, without
+identifying its owner or proving a driver fault. [The investigation](web_hitch_investigation.md)
+records the timing, private trace locations and ETW reader caveat. Next action:
+inspect GPU queues, presents and wait chains in Windows Performance Analyzer,
+then run a single-variable browser graphics-backend comparison if warranted.
+
 **Absolute menu pointer, 2026-10-27:** Investigation reproduced the reported
 drift: the inherited ignored-warp fallback accumulated physical deltas around
 native menu snaps, leaving offsets up to 88 menu pixels until an edge sweep.
