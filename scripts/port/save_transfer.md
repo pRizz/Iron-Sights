@@ -5,6 +5,10 @@ backup. On the other desktop installation or web instance, choose **Import**,
 select that file, then confirm **Import and restart**. Export first if
 you want to keep the destination's current progress.
 
+The suggested filename includes local date and time, for example
+`iron-sights-saves-2026-10-30T19-45-09.json`, on Windows, Linux and web.
+Desktop Save dialogs let you edit it. Backup metadata keeps its ISO UTC time.
+
 Import/Export form the leftmost action column, followed by Copy/Options and
 Erase/Exit Game.
 

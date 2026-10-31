@@ -4,6 +4,7 @@ import { StartupScreen } from './startup-screen';
 import type { StartupProgress } from './startup-progress';
 import { StoragePanel } from './storage-panel';
 import { createBackup, parseBackup, MAX_BACKUP_TEXT, type UserFile } from './backup';
+import { backupFilename } from './backup-filename';
 import { createCapture } from './capture';
 import { createEngine, ensureBrowserSettings } from './engine';
 import { createTouchInput, initialTouch } from './touch-input';
@@ -254,11 +255,12 @@ export function App() {
         const files = engine.maybeFiles();
         if (!files) return;
         try {
-            const text = await createBackup(files.snapshot(), new Date().toISOString());
+            const date = new Date();
+            const text = await createBackup(files.snapshot(), date.toISOString());
             const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
             const link = document.createElement('a');
             link.href = url;
-            link.download = `iron-sights-saves-${new Date().toISOString().slice(0, 10)}.json`;
+            link.download = backupFilename(date);
             link.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
             setAction('Save backup downloaded. It contains no ROM.');

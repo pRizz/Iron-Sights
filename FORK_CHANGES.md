@@ -50,6 +50,14 @@ back to `kdialog` when unavailable, with direct argv calls and no shell. Xbox,
 N64, headless and web builds do not compile this desktop adapter. No setting or
 fresh-install default is added.
 
+Exports on Windows, Linux (both zenity and kdialog) and web now suggest
+`iron-sights-saves-YYYY-MM-DDThh-mm-ss.json`, using local date/time with
+zero-padded month, day, hour, minute and second fields. This replaces the fixed
+native filename and web's date-only filename. Desktop Save dialogs still allow
+editing the suggested name. JSON `createdAt` remains ISO UTC; the web filename
+and metadata describe the same export instant. The web formatter is isolated in
+`web/src/backup-filename.ts`, shared by Files and legacy storage-panel exports.
+
 The existing browser version-1 `project-midas-saves` envelope transfers exact
 EEPROM, profile, device-binding, INI and custom-controller bytes both ways.
 Exports flush pending profile/settings writes. ROMs, texture packs, logs,
@@ -105,6 +113,12 @@ The heading's left alignment was reviewed in native widescreen/4:3 and browser
 desktop/phone captures. Native/Wasm builds, browser Files transfer acceptance,
 artifact verification and pointer checks pass; its refreshed gallery again
 matches both independent passes with zero changed image cells.
+Timestamped filenames pass Windows/Linux builds, Windows Save-dialog review,
+web type/format/build/artifact checks and all 36 backup boundary tests. An actual
+Edge download verifies the local timestamp against its unchanged UTC metadata;
+manual formatter checks cover zero padding and a year boundary.
+Its gallery refresh matches all 72 views and 35 icons across two independent
+passes with zero changed image cells.
 
 ### FORK-033 — Native campaign HD texture packs
 

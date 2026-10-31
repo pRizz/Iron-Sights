@@ -201,6 +201,19 @@ Start/menu/capture boundaries in future input changes.
 
 ## WEB-003 | 2026-10-24 | Save persistence and backups
 
+**Timestamped export filenames, 2026-10-30:** Windows, Linux (zenity/kdialog)
+and web exports now suggest `iron-sights-saves-YYYY-MM-DDThh-mm-ss.json` in local
+time. Files and legacy web storage controls share the formatter; UTC backup
+metadata and the portable envelope remain unchanged. Windows/Linux builds,
+Windows Save-dialog review, web type/format/build/artifact checks and all 36
+backup boundary tests pass. An actual Edge download verifies the local filename
+against the UTC metadata from the same instant; manual formatter checks cover
+zero padding and a year boundary. Linux interactive pickers remain unverified
+on this Windows host. The required native gallery refresh reproduces all
+72 views and 35 icons across two independent passes with zero changed image
+cells. Next action: retain this filename format in future save
+transfer changes.
+
 **Desktop interoperability, 2026-10-30:** FORK-034 extends the Files-screen
 Import / Export layout to Windows and Linux using the unchanged
 version-1 backup envelope. Desktop imports stage until process restart, then

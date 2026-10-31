@@ -7,6 +7,8 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <cerrno>
+#include <algorithm>
+#include <ctime>
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -87,11 +89,23 @@ int portSaveTransferStartup(int argc, char **argv)
     }
 }
 
+static std::string exportFilename()
+{
+    const auto now = std::time(nullptr);
+    const auto *maybeLocal = std::localtime(&now);
+    char filename[80];
+    if (!maybeLocal || !std::strftime(filename, sizeof(filename),
+            "iron-sights-saves-%Y-%m-%dT%H-%M-%S.json", maybeLocal))
+        throw std::runtime_error("Could not determine the local time for the backup filename.");
+    return filename;
+}
+
 static fs::path chooseFile(bool exporting)
 {
+    const std::string filename = exporting ? exportFilename() : "";
 #ifdef _WIN32
-    wchar_t path[32768] = L"iron-sights-saves.json";
-    if (!exporting) path[0] = 0;
+    wchar_t path[32768] = {};
+    std::copy(filename.begin(), filename.end(), path);
     OPENFILENAMEW picker = {};
     picker.lStructSize = sizeof(picker);
     SDL_SysWMinfo native;
@@ -108,6 +122,7 @@ static fs::path chooseFile(bool exporting)
     if (CommDlgExtendedError()) throw std::runtime_error("Windows could not open the file picker.");
     return {};
 #else
+    const std::string filenameOption = "--filename=" + filename;
     // Exec argv directly: file paths and labels never become shell commands.
     int pipes[2];
     if (pipe(pipes)) throw std::runtime_error("Could not open the file picker.");
@@ -116,10 +131,10 @@ static fs::path chooseFile(bool exporting)
         close(pipes[0]); dup2(pipes[1], STDOUT_FILENO); close(pipes[1]);
         if (exporting)
             execlp("zenity", "zenity", "--file-selection", "--save", "--confirm-overwrite",
-                "--title=Export Save", "--filename=iron-sights-saves.json", "--file-filter=*.json", nullptr);
+                "--title=Export Save", filenameOption.c_str(), "--file-filter=*.json", nullptr);
         else execlp("zenity", "zenity", "--file-selection", "--title=Import Save", "--file-filter=*.json", nullptr);
         if (exporting)
-            execlp("kdialog", "kdialog", "--getsavefilename", "iron-sights-saves.json", "*.json", nullptr);
+            execlp("kdialog", "kdialog", "--getsavefilename", filename.c_str(), "*.json", nullptr);
         else execlp("kdialog", "kdialog", "--getopenfilename", ".", "*.json", nullptr);
         _exit(127);
     }
