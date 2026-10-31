@@ -1,5 +1,5 @@
 // Private browser timing probe. Reports timing and counters, never game data.
-export function observeHitches({ graphics = true, invulnerable = false } = {}) {
+export function observeHitches({ graphics = true, invulnerable = false, swapYield = true } = {}) {
     const trace = {
         frames: [], longTasks: [], samples: [], graphics: [], syncs: [],
         audio: [], logs: [], markers: [], focus: [],
@@ -10,12 +10,15 @@ export function observeHitches({ graphics = true, invulnerable = false } = {}) {
     };
 
     globalThis.midasHitchBeforeCreate = (options) => {
-        if (invulnerable) {
+        if (invulnerable || !swapYield) {
             const previousPreRun = options.preRun;
             options.preRun = (module) => {
                 previousPreRun?.(module);
-                module.ENV.GE_CHEATS = 'invuln';
-                module.ENV.GE_SEED = '1';
+                if (invulnerable) {
+                    module.ENV.GE_CHEATS = 'invuln';
+                    module.ENV.GE_SEED = '1';
+                }
+                if (!swapYield) module.ENV.SDL_EMSCRIPTEN_ASYNCIFY = '0';
             };
         }
         for (const name of ['print', 'printErr']) {
@@ -68,7 +71,7 @@ export function observeHitches({ graphics = true, invulnerable = false } = {}) {
         };
     }
 
-    for (const name of ['focus', 'blur', 'visibilitychange', 'pointerlockchange'])
+    for (const name of ['focus', 'blur', 'visibilitychange', 'pointerlockchange', 'pointerlockerror'])
         window.addEventListener(name, () => add('focus', {
             at: performance.now(), name, hidden: document.hidden,
             focused: document.hasFocus(), locked: !!document.pointerLockElement,

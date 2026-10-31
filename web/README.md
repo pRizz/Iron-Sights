@@ -137,6 +137,12 @@ and possible effect on performance should be checked against an uninstrumented
 run before treating small differences as regressions. Set `MIDAS_HITCH_AUDIO=0`
 and `MIDAS_HITCH_WEBGL=0` to disable both probes for that comparison; frame,
 native-log and game-counter sampling remain. Keep private logs local.
+Set `MIDAS_HITCH_SWAP_YIELD=0` to disable SDL's Asyncify yield after WebGL
+swap for a diagnostic comparison. This affects only the audit page and is not
+a game setting. Record the option with each run; the report includes it and a
+browser `performance.timeOrigin` for aligning frame timestamps with host logs.
+The headed runner retries the trusted gameplay capture gesture if pointer lock
+does not arrive on the first attempt.
 
 For browser main/compositor/GPU traces, use `MIDAS_HITCH_CDP=1` with
 `MIDAS_BROWSER=chrome`. Run once headless and once with `MIDAS_HEADED=1`, using

@@ -617,6 +617,24 @@ A final 10-second actual-ROM menu/Dam smoke on the completed runner exercised
 the no-incident trace path without data loss; it found no qualifying gap in
 that short window.
 
+**Swap-yield and host triage, 2026-10-31:** The private audit now records an
+optional SDL post-swap Asyncify-yield toggle, browser time origin, pointer-lock
+errors and headed capture retries. Matched headed Chrome/Dam runs on the same
+optimized NVIDIA/ANGLE build had 10 gaps ≥250 ms in 125 s with the default
+yield (worst 8.00 s) and 9 in 122 s with it disabled (worst 2.96 s). Disabling
+the yield moved long native intervals from swap to renderer idle but did not
+eliminate freezes; this single pair cannot establish an improvement. Concurrent
+one-second Windows counters found several multi-second gaps without sustained
+CPU, disk, page-read, DPC or interrupt saturation, although available memory
+was often below 1 GB. The user reported a coincident frozen Codex Desktop
+spinner and game-audio glitch, which raises the priority of host/browser
+presentation analysis. This session could not start Windows Performance
+Recorder (`0xc5585011`, system profiling policy), so no ETW root-cause claim is
+made. [The investigation](web_hitch_investigation.md) records timestamps,
+counts, limits and local evidence. Next action: obtain a short elevated
+CPU/GPU/desktop-composition/audio trace around an exactly marked synchronized
+freeze, then decide whether a browser or host mitigation is justified.
+
 **Absolute menu pointer, 2026-10-27:** Investigation reproduced the reported
 drift: the inherited ignored-warp fallback accumulated physical deltas around
 native menu snaps, leaving offsets up to 88 menu pixels until an edge sweep.

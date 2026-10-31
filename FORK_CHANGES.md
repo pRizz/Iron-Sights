@@ -51,6 +51,11 @@ and retries data-losing phases with a larger buffer. Timing marks align frame,
 native, audio, focus and save events. The reports record build/browser/renderer,
 canvas, focus, trace loss, CPU samples and nearby thread activity, and reject
 software rendering as hardware evidence. This remains private tooling only.
+An audit-only `MIDAS_HITCH_SWAP_YIELD=0` option disables SDL's post-swap
+Asyncify yield to compare pacing on the same build. Reports include that option
+and the browser time origin for correlation with host counters. Headed gameplay
+capture retries a trusted pointer-lock gesture and logs failures; the focus
+probe also records pointer-lock errors. No shipped game setting changes.
 
 **Sources:** [runner](web/tools/hitch-audit.mjs),
 [browser probe](web/tools/hitch-observer.mjs),
@@ -74,6 +79,14 @@ headed Dam retry overlaps a long browser-main task and native swap interval,
 without an identified long GPU task. The root cause remains unresolved.
 A final short actual-ROM menu/Dam smoke passes the completed no-incident path
 without trace loss; its 10-second windows do not change the longer findings.
+Matched 10-second-menu/roughly-120-second-Dam headed Chrome comparisons on one
+optimized NVIDIA/ANGLE build reproduced multi-second gaps with SDL's swap yield
+enabled and disabled. The toggle is diagnostic, not a verified mitigation.
+Concurrent private Windows counters found example gaps without sustained CPU,
+disk, paging, DPC or interrupt saturation. The host-wide cause remains open;
+Windows Performance Recorder could not start under this session's profiling
+policy. Web tests, ROM-free CDP smoke, typecheck, exact site verification and
+repository standards checks pass for the updated audit and record.
 
 ### FORK-036 — Buffer and memory-safety audit
 

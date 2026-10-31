@@ -99,12 +99,68 @@ browser presentation/scheduling interaction; it does not establish a GPU driver
 fault or a specific Chrome internal root cause. Browser-wide tracing may add
 overhead, so the earlier minimal-probe reproduction remains an important check.
 
+## SDL swap-yield and host comparison, 2026-10-31
+
+The pinned Emscripten SDK's SDL2 2.32.10 implementation performs an Asyncify
+`emscripten_sleep(0)` after `SDL_EGL_SwapBuffers` unless
+`SDL_EMSCRIPTEN_ASYNCIFY=0`. The private audit can now set that environment
+variable before module creation with `MIDAS_HITCH_SWAP_YIELD=0`; the ordinary
+site and default audit keep SDL's behavior. All comparisons below used the same
+optimized runtime `c1ce09118bbc0768`, headed Chrome, an 839×471 canvas,
+NVIDIA ANGLE/D3D11, scripted Dam movement/ADS/firing, invulnerability, and
+disabled audio/WebGL probes. Reports retain the option and `performance.timeOrigin`
+to align browser frame gaps with one-second Windows counters.
+
+| Run | Menu window | Dam window | Dam gaps ≥250 ms | Dam gaps ≥500 ms | Worst Dam gap |
+| --- | ----------- | ---------- | ---------------- | ---------------- | ------------- |
+| Default yield | 10 s | 125 s | 10 | 8 | 8.00 s |
+| Yield disabled | 10 s | 122 s | 9 | 7 | 2.96 s |
+
+The disabled-yield run still had multi-second Dam freezes. Native hitch logs
+confirmed that disabling the yield moved long elapsed intervals from the swap
+timer to renderer idle; it did not remove them. This single sequential pair is
+not a performance improvement claim. Earlier 30-second pilots also froze in
+both modes. A 120-second default-yield menu run entered the game's Facility
+attract/demo stage partway through; only its stage-90 portion is a title-menu
+sample. Its subsequent Dam capture failed the first pointer-lock gesture, so
+it is excluded from the matched gameplay comparison. The runner now retries
+the trusted capture gesture and records pointer-lock errors.
+
+The laptop has 16 GB RAM and had roughly 0.5–1 GB available during many audit
+samples, so resource pressure is real. It does not coincide with every stall:
+the default-yield 2.03-second Dam gap at 20:22:00 UTC had 692 MB available,
+zero sampled page reads, at most 0.21 ms average disk transfer time, and at
+most 22.8% total CPU in nearby one-second samples. In the disabled-yield run,
+a 2.96-second gap at 20:28:04 UTC had at least 902 MB available, at most six
+page reads/s, 0.33 ms disk transfer time, and 17.9% total CPU. Concurrent
+scheduler counters for that latter gap showed at most 0.19% DPC time, 0.29%
+interrupt time and a processor queue length of one. One-second counters can
+miss shorter spikes and aggregate CPU can hide a single blocked thread; these
+readings only rule out obvious sustained saturation during those examples.
+The private host CSVs and audit JSON remain ignored under `build/web-hitches/`.
+
+The user also reported that a game-audio glitch coincided with a frozen
+Codex Desktop spinner, and has seen hitches in other Chrome pages, while the
+native game has not reproduced. That is a strong reason to test a shared
+host/browser presentation path, but the message receipt time was not an exact
+onset mark and does not prove frame-level simultaneity. Windows Performance
+Recorder is installed, but an attempt to start the light general, GPU,
+desktop-composition and audio profiles failed with `0xc5585011` because this
+session cannot enable the required system profiling policy. No ETW trace was
+captured. The filtered Windows System event log showed no matching WHEA,
+display-reset, disk or storage event in this sample interval.
+
 ## Next diagnostic step
 
-Inspect Chrome's browser-main task and synchronous swap/yield path with a
-targeted Chromium/ANGLE comparison or external OS scheduler trace, keeping the
-same build and phase script. Then change one cause at a time and repeat menu
-and Dam samples, tracking gaps over 100/250 ms, worst gap and audio underruns.
-Do not infer a fix from average FPS.
+Capture a short, elevated Windows Performance Recorder trace with CPU,
+GPU, desktop-composition and audio profiles during a user-marked synchronized
+freeze, then inspect scheduling, DWM, GPU and audio tracks alongside the CDP
+timing marks. Keep the trace local because ETW can contain process and file
+metadata. If no system trace is available, repeat a bounded headed audit with
+one-second host and per-process GPU counters while recording an exact user
+marker, then compare with an idle/no-game interval. A separate lower-memory
+experiment can test whether freeing RAM changes hitch frequency. Change one
+condition at a time and track gaps over 100/250 ms, worst gap and audio
+underruns; do not infer a fix from average FPS.
 
 The reports are diagnostic evidence, not a gameplay or audio quality pass.

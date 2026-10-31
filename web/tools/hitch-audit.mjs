@@ -4,7 +4,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { expect } from '@playwright/test';
 import { launchAuditBrowser } from './browser-choice.mjs';
-import { navigateToDam, captureGameplay } from './native-game-audit.mjs';
+import { navigateToDam } from './native-game-audit.mjs';
 import { observeHitches, installHitchAudio } from './hitch-observer.mjs';
 import { startBrowserTrace, reportBrowserTrace } from './hitch-cdp-trace.mjs';
 
@@ -18,6 +18,7 @@ const gameSeconds = Number(process.env.MIDAS_HITCH_GAME_SECONDS || 120);
 const invulnerable = process.env.MIDAS_HITCH_INVULN === '1';
 const audioEnabled = process.env.MIDAS_HITCH_AUDIO !== '0';
 const graphicsEnabled = process.env.MIDAS_HITCH_WEBGL !== '0';
+const swapYield = process.env.MIDAS_HITCH_SWAP_YIELD !== '0';
 const cdpEnabled = process.env.MIDAS_HITCH_CDP === '1';
 const traceSeconds = Number(process.env.MIDAS_HITCH_TRACE_SECONDS || 60);
 if (![menuSeconds, gameSeconds].every((seconds) => Number.isInteger(seconds) && seconds >= 1 && seconds <= 600))
@@ -28,7 +29,7 @@ if (!Number.isInteger(traceSeconds) || traceSeconds < 1 || traceSeconds > 60)
 const { browser, kind } = await launchAuditBrowser();
 if (cdpEnabled && kind !== 'chromium') throw new Error('CDP tracing requires Chromium or Chrome');
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-await page.addInitScript(observeHitches, { graphics: graphicsEnabled, invulnerable });
+await page.addInitScript(observeHitches, { graphics: graphicsEnabled, invulnerable, swapYield });
 await page.route('**/runtime/*/ProjectMidas.mjs', async (route) => {
     const response = await route.fetch();
     const source = await response.text();
@@ -91,6 +92,32 @@ async function driveGameplay(seconds, stopped = () => false) {
         await page.mouse.up({ button: 'right' });
         await page.waitForTimeout(2200);
     }
+}
+
+async function captureHitchGameplay() {
+    await page.waitForFunction(() => globalThis.midasAuditGame._portWebControlsLive(), undefined, {
+        timeout: 90_000,
+    });
+    for (let attempt = 0; attempt < 3; attempt++) {
+        await page.bringToFront();
+        if (await page.evaluate(() => !!document.pointerLockElement)) return;
+        const resume = page.getByRole('button', { name: 'Resume game' });
+        if (await resume.isVisible()) await resume.click();
+        else await page.locator('#canvas').click();
+        try {
+            await page.waitForFunction(() => !!document.pointerLockElement, undefined, { timeout: 8_000 });
+            return;
+        } catch {
+            const state = await page.evaluate(() => ({
+                stage: globalThis.midasAuditGame._portWebGetStage(),
+                live: !!globalThis.midasAuditGame._portWebControlsLive(),
+                focused: document.hasFocus(), hidden: document.hidden,
+                notice: document.querySelector('[role="alert"]')?.textContent,
+            }));
+            messages.push({ at: Date.now(), type: 'capture-retry', text: JSON.stringify(state) });
+        }
+    }
+    throw new Error('Gameplay pointer lock was not acquired after three gestures');
 }
 
 const browserReports = [];
@@ -201,7 +228,7 @@ try {
         await mark('menu end');
     }
     await navigateToDam(page);
-    await captureGameplay(page);
+    await captureHitchGameplay();
     if (cdpEnabled) await captureTracePhase('gameplay', gameSeconds);
     else {
         await mark('gameplay start');
@@ -222,6 +249,7 @@ try {
         const info = gl?.getExtension('WEBGL_debug_renderer_info');
         return {
             capturedAt: new Date().toISOString(),
+            timeOrigin: performance.timeOrigin,
             browser: navigator.userAgent,
             renderer: gl && (info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)),
             canvas: canvas && { width: canvas.width, height: canvas.height },
@@ -231,7 +259,7 @@ try {
         };
     }).catch(() => null);
     await writeFile(resolve(output, 'trace.json'), JSON.stringify({
-        menuSeconds, gameSeconds, invulnerable, audioEnabled, graphicsEnabled,
+        menuSeconds, gameSeconds, invulnerable, audioEnabled, graphicsEnabled, swapYield,
         cdpEnabled, buildIdentity, browserReports,
         trace, messages, error: error ? String(error) : null,
     }, null, 2));
@@ -241,7 +269,7 @@ try {
         const summary = {
             browser: trace.browser, renderer: trace.renderer, canvas: trace.canvas,
             build: buildIdentity, browserVersion: await browser.version(), browserReports,
-            invulnerable, audioEnabled, graphicsEnabled,
+            invulnerable, audioEnabled, graphicsEnabled, swapYield,
             audioState: trace.audioState, audioClock: trace.audioClock,
             markers: data.markers, worstFrames: worst,
             phases: { menu: phaseStats(data, 'menu'), gameplay: phaseStats(data, 'gameplay') },
