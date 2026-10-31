@@ -201,6 +201,26 @@ Start/menu/capture boundaries in future input changes.
 
 ## WEB-003 | 2026-10-24 | Save persistence and backups
 
+**Desktop interoperability, 2026-10-30:** FORK-034 extends the Files-screen
+Import Save / Export Save layout to Windows and Linux using the unchanged
+version-1 backup envelope. Desktop imports stage until process restart, then
+apply before settings/profile/EEPROM initialization, with pre-image/journal
+recovery. The browser codec and storage identities are unchanged. Host/i686
+storage regressions, Windows driver tests, both native video builds and the
+actual web-codec/native-driver round trip pass with exact binary/settings bytes
+and UTF-8 profile names. Native release CI runs storage checks; Pages CI runs the
+codec interoperability audit. Actual-ROM Windows acceptance passes export parsed
+in the real browser codec, invalid/canceled imports with unchanged local data,
+full-replacement confirmation and automatic restart with exact EEPROM/profile/INI
+bytes and marker cleanup. Widescreen and 4:3 Files layouts were reviewed; Linux
+interactive picker acceptance remains unverified on this Windows host.
+Windows-specific tests also cover non-ASCII filename aliases and recovery after
+partial replacement hits a read-only file. The 72-view/35-icon gallery refresh
+passes both independent runs with zero changed image cells; web backup boundary,
+type/format, packaging, gallery workflow and standards checks pass. Next action:
+verify main's release/Pages CI and retain Linux picker acceptance as a manual
+platform check. See `scripts/port/save_transfer.md` for usage and verification.
+
 **Save audit initialization timing, 2026-10-27:** The room-save audit now waits
 for the export button's visibility and file-readiness before starting the
 download-event timeout; click/download promises are observed together. Pages
@@ -217,7 +237,8 @@ and Exit Game in GoldenEye's four-campaign Files screen. The web action area is
 two rows/three columns; the earlier room toolbar/component/styles are removed.
 Native labels/cursor actions have small `GE_WEB` hooks; accessible browser hit
 targets follow their measured bounds and the native 4:3 menu band, preserving a
-direct file-picker gesture. Desktop native builds retain four actions.
+direct file-picker gesture. Desktop native builds now expose six actions through
+FORK-034; the accessible browser targets and callback remain web-only.
 Import confirms replacement of all campaign/profile/settings files and restart.
 A private pending marker uses the existing IDBFS mount but stays outside exports;
 the fresh runtime applies it before native startup and removes it in the same

@@ -773,6 +773,12 @@ int main(int argc, char **argv)
         portConInit();
     }
     portInitRootDir(argv[0]);
+#ifdef GE_SAVE_TRANSFER
+    { /* Apply staged imports before any settings, profiles or EEPROM are read. */
+        extern int portSaveTransferStartup(int argc, char **argv);
+        if (!portSaveTransferStartup(argc, argv)) return 1;
+    }
+#endif
     portMigrateIni();
 
 #ifdef GE_VIDEO

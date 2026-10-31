@@ -33,6 +33,13 @@ Keep your Data folder and midas.ini: they contain your ROM, saves and settings.
 Suspend points require the same executable and will not load on a newer build.
 Normal campaign saves and profiles remain separate.
 
+SAVE TRANSFER
+On the four-campaign Files screen, Export Save writes a portable JSON backup.
+Use Import Save on desktop or web to load it, then confirm Import and restart.
+This replaces all campaigns, profiles, settings and custom controller mappings.
+Export the destination's current saves first if you want to keep them.
+ROMs, textures and suspend points are not transferred. Each instance needs a ROM.
+
 REQUIREMENTS AND TROUBLESHOOTING
 Windows 10/11 on an x86-compatible PC, with an OpenGL 3.3-capable driver.
 This is a 32-bit game and also runs on 64-bit Windows.

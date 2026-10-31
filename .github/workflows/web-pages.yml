@@ -33,7 +33,9 @@ jobs:
           python3 scripts/port/test_web_logo.py
           python3 scripts/port/test_web_spike.py
           bash scripts/port/test_web_menu_pointer.sh
+          bash scripts/port/test_save_transfer.sh
           cd web
+          bun tools/native-backup-audit.ts ../build/save-transfer-tests/driver
           bun run typecheck
           bun run test
       - name: Build pinned SDK game and filesystem fixture without a ROM

@@ -11,6 +11,7 @@ file-lengths	port/fast3d/gfx_pc.cpp	Pre-adoption cdd6b5f baseline: 8267 lines. E
 file-lengths	port/fast3d/gfx_sdl2.cpp	Pre-adoption cdd6b5f baseline: 1177 lines. Existing port/render integration; split only with focused behavioral and render validation.
 file-lengths	port/fast3d/glad/	Vendored generated GL loader and declarations; preserve upstream layout.
 file-lengths	port/fast3d/third_party/puff/	Unmodified zlib 1.3.1 puff decoder with retained license; update from its upstream source.
+file-lengths	port/fast3d/third_party/picojson/	Unmodified pinned picojson header with BSD license; preserve upstream layout and update from its source.
 file-lengths	port/generated/	Generated port declarations; maintain generator output rather than manually splitting it.
 file-lengths	port/include/icon_rgba.h	Pre-adoption cdd6b5f baseline: 1035 lines. Existing generated icon data; change through its generator.
 file-lengths	port/src/audio_pc.c	Pre-adoption cdd6b5f baseline: 774 lines. Existing port/render integration; split only with focused behavioral and render validation.

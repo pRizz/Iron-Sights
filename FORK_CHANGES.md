@@ -30,6 +30,63 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-034 — Portable desktop save import and export
+
+Windows and Linux add **Import Save** and **Export Save** directly to the
+four-campaign Files screen, sharing the web target's two-row/three-column
+action layout. The inherited upstream desktop menu has no portable JSON save
+transfer. Windows uses native Open/Save dialogs; Linux launches `zenity`, falling
+back to `kdialog` when unavailable, with direct argv calls and no shell. Xbox,
+N64, headless and web builds do not compile this desktop adapter. No setting or
+fresh-install default is added.
+
+The existing browser version-1 `project-midas-saves` envelope transfers exact
+EEPROM, profile, device-binding, INI and custom-controller bytes both ways.
+Exports flush pending profile/settings writes. ROMs, texture packs, logs,
+statistics and executable-specific suspend images remain excluded. Import
+validates the allowlisted paths, 512-byte EEPROM, file/total limits, canonical
+base64 and per-file SHA-256, rejects conflicting Windows filename aliases, and
+requires explicit full-replacement/restart confirmation. Cancellation and
+invalid input leave the live data intact.
+
+Confirmed imports are staged privately, outside the export allowlist. Restart
+occurs after exit handlers have saved the old session; the next process applies
+the marker before settings/profiles/EEPROM initialization. A pre-image and
+journal support interrupted-restore recovery and retry; uncommitted marker
+temporaries are discarded at startup. Collection/application refuse linked save
+directories. An unresolved restore failure stops startup and keeps recovery
+data. Desktop instances sharing one save folder must be closed before import.
+
+Focused sources: [codec](port/fast3d/save_backup.cpp),
+[storage/recovery](port/fast3d/save_restore.cpp),
+[dialogs/restart](port/fast3d/save_transfer.cpp),
+[C interface](port/include/port_save_transfer.h),
+[startup](port/src/main.c), [menu hooks](src/game/front.c) and [CMake](CMakeLists.txt).
+The hosted C++ object target avoids inherited SDK header collisions. The pinned,
+unmodified picojson/PicoSHA2 headers and retained notices live under
+`port/fast3d/third_party`; `.gitignore` permits that focused vendor directory,
+and the file-size checker excludes the upstream picojson header. Both native
+packages carry `Save-Transfer-LICENSE.txt`; packaged start guides describe
+replacement semantics and Linux picker prerequisites.
+
+[Usage and verification](scripts/port/save_transfer.md) document the public flow.
+[ROM-free storage checks](scripts/port/test_save_transfer.py) and
+[actual web/native interoperability](web/tools/native-backup-audit.ts) use
+synthetic temporary files. Native-release CI runs host/i686 storage checks;
+Pages CI additionally runs the actual codec comparison. Windows and Linux video
+builds, host/i686 storage checks, the Windows driver and real browser codec
+round trips pass locally. Actual-ROM Windows UI acceptance passes native-cursor
+and mouse activation, desktop export parsed by the web codec, picker/confirmation
+cancellation, invalid-input preservation, and confirmed web import with automatic
+process restart, exact EEPROM/profile/INI bytes and marker cleanup. Widescreen
+and 4:3 Files layouts were reviewed. Linux interactive picker acceptance remains
+unverified on this Windows host. Windows-specific regressions also pass
+non-ASCII filename-alias rejection and recovery after a partial replacement
+blocked by a read-only file. All 36 web backup boundary tests, packaging checks,
+type/scoped-format checks, nine gallery workflow tests and the standards checker
+pass. The refreshed 72-view/35-icon gallery passes two independent render runs
+with zero changed image cells; its source fingerprint is current.
+
 ### FORK-033 — Native campaign HD texture packs
 
 **Status:** Native Windows/Linux OpenGL environment pack; HD is the fresh-config default.
@@ -2582,7 +2639,7 @@ the existing local optimized runtime. Native sources are unchanged and the
 gallery freshness check passes. Private evidence: `build/web-room/faster-timings-*`.
 
 **Import Save** and **Export Save** now belong to GoldenEye's four-campaign
-Files screen, as clarified by the owner. The web-only action area has two rows
+Files screen, as clarified by the owner. The web action area has two rows
 and three columns alongside Copy, Erase, Options and Exit Game. This replaces
 the earlier upper-right room toolbar, whose component/styles are removed; the
 room returns to its canvas-only presentation. Native labels and cursor actions
@@ -2595,7 +2652,8 @@ The scoped focus hook in `web/src/capture.ts` permits focus on these game-menu
 targets; real window blur/visibility loss still pauses the game.
 `web/src/capture.test.ts` covers that scoped exception and unrelated focus pause.
 They are absent outside the idle Files screen, including copy/erase/exit modals.
-Desktop native builds retain their four-button action area.
+Desktop native builds now share the six-button layout through FORK-034's
+`GE_SAVE_TRANSFER` adapter; browser callbacks and accessible targets stay web-only.
 
 Both actions reuse the portable JSON codec: all campaigns, profiles and settings
 travel without a ROM. Import confirms full replacement and restart. The backup

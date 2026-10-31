@@ -261,6 +261,7 @@ __pycache__/
 build_pc/
 cmake_*.log
 third_party/
+!/port/fast3d/third_party/
 /dist/
 build_win/
 build_pc_video/

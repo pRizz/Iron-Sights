@@ -489,10 +489,10 @@ struct rectbbox folder_option_ERASE_bound = { 0 };
 #ifndef TARGET_N64
 /* PORT: the Files screen's bottom bar has four buttons (Copy / Erase / Options
  * / Exit Game) instead of Rare's two (docs/port/files-screen-buttons.md); like
- * the vanilla ones, their hit boxes are rebuilt every frame. Web adds two
- * save-transfer buttons in a third column; native platforms retain four. */
+ * the vanilla ones, their hit boxes are rebuilt every frame. Desktop and web
+ * add two save-transfer buttons in a third column. */
 enum { PORT_FSBTN_COPY, PORT_FSBTN_ERASE, PORT_FSBTN_OPTIONS, PORT_FSBTN_EXIT,
-#ifdef GE_WEB
+#if defined(GE_WEB) || defined(GE_SAVE_TRANSFER)
        PORT_FSBTN_IMPORT, PORT_FSBTN_EXPORT,
 #endif
        PORT_FSBTN_COUNT };
@@ -2916,12 +2916,18 @@ s32 interface_menu05_fileselect(void)
                 portDlgOpen("Are you sure?\n", "Yes\n", "No\n", 0);
                 sndPlaySfx((struct ALBankAlt_s *)g_musicSfxBufferPtr, OPTION_CLICK2_SFX, NULL);
             }
-#ifdef GE_WEB
+#if defined(GE_WEB) || defined(GE_SAVE_TRANSFER)
             else if (hit == PORT_FSBTN_IMPORT || hit == PORT_FSBTN_EXPORT)
             {
+#ifdef GE_WEB
                 extern void portWebFileMenuRequest(s32 exporting);
                 folder_selection_screen_option_icon = 0;
                 portWebFileMenuRequest(hit == PORT_FSBTN_EXPORT);
+#else
+                extern void portSaveTransferRequest(int exporting);
+                folder_selection_screen_option_icon = 0;
+                portSaveTransferRequest(hit == PORT_FSBTN_EXPORT);
+#endif
             }
 #endif
             else if (folder_selection_screen_option_icon != 0)
@@ -3479,7 +3485,7 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
            * of the Copy icon's height (the X is a smaller texture, so it is
            * scaled to match), its label at the same scale to the right,
            * centred on its row */
-#ifdef GE_WEB
+#if defined(GE_WEB) || defined(GE_SAVE_TRANSFER)
             static const s32 btn_x[PORT_FSBTN_COUNT] = { 146, 245, 146, 245, 344, 344 };
             static const s32 btn_y[PORT_FSBTN_COUNT] = { 270, 270, 298, 298, 270, 298 };
             static const s32 btn_img[PORT_FSBTN_COUNT] = { IMG_COPY, IMG_DEL, IMG_CHECK, IMG_X, IMG_COPY, IMG_COPY };
@@ -3516,7 +3522,7 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
                 case PORT_FSBTN_COPY:    label = langGet(getStringID(LTITLE, TITLE_STR_27_COPY));  break; /* Copy */
                 case PORT_FSBTN_ERASE:   label = langGet(getStringID(LTITLE, TITLE_STR_28_ERASE)); break; /* Erase */
                 case PORT_FSBTN_OPTIONS: label = "Options\n"; break;
-#ifdef GE_WEB
+#if defined(GE_WEB) || defined(GE_SAVE_TRANSFER)
                 case PORT_FSBTN_IMPORT:  label = "Import Save\n"; break;
                 case PORT_FSBTN_EXPORT:  label = "Export Save\n"; break;
 #endif

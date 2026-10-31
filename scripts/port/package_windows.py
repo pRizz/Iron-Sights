@@ -30,6 +30,7 @@ def package(build, output, root=ROOT, sdl_license=None):
     inputs["SDL2-LICENSE.txt"] = sdl_license.read_bytes()
     inputs["Enhanced-Fonts-LICENSE.txt"] = (root/"port/fast3d/fonts/LICENSE.txt").read_bytes()
     inputs["Enhanced-Fonts-NOTICE.txt"] = (root/"port/fast3d/fonts/NOTICE.txt").read_bytes()
+    inputs["Save-Transfer-LICENSE.txt"] = (root/"port/fast3d/third_party/save-backup-LICENSE.txt").read_bytes()
     # Deliberate artwork allowlist, independent of saves/ROMs and unrelated packs.
     textures = build/"Data/TexturePacks"
     for name, path in texture_files(textures).items():

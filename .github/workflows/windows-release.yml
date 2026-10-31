@@ -55,6 +55,7 @@ jobs:
         run: |
           bash scripts/port/test_ads.sh
           bash scripts/port/test_build_time.sh
+          MIDAS_SAVE_TEST_I686=1 bash scripts/port/test_save_transfer.sh
           MIDAS_HD_TEST_I686=1 bash scripts/port/test_hd_textures.sh
           bash scripts/port/test_upstream_merge.sh
           python3 scripts/port/test_native_tool_launchers.py

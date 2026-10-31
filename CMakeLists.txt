@@ -51,7 +51,7 @@ if(WIN32)
     add_link_options(-m32 -static-libgcc -static-libstdc++
                      -Wl,--image-base=0x10000000 -Wl,--disable-dynamicbase
                      -Wl,--stack,16777216)
-    link_libraries(dbghelp comctl32)
+    link_libraries(dbghelp comctl32 comdlg32)
 elseif(NOT EMSCRIPTEN)
     add_link_options(-m32 -no-pie)
 endif()
@@ -413,6 +413,27 @@ if(GE_VIDEO)
         port/fast3d/glad/glad.c
     )
     if(NOT EMSCRIPTEN AND NOT GE_XBOX)
+        add_compile_definitions(GE_SAVE_TRANSFER=1)
+        add_library(ge_save_transfer OBJECT port/fast3d/save_backup.cpp
+            port/fast3d/save_restore.cpp port/fast3d/save_transfer.cpp)
+        set_target_properties(ge_save_transfer PROPERTIES
+            INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/port/include")
+        if(WIN32)
+            if(SDL2_MINGW_ROOT)
+                target_include_directories(ge_save_transfer PRIVATE ${SDL2_MINGW_ROOT}/include/SDL2)
+            else()
+                target_include_directories(ge_save_transfer PRIVATE
+                    ${CMAKE_SOURCE_DIR}/third_party/SDL2-2.30.11/i686-w64-mingw32/include/SDL2)
+            endif()
+        elseif(SDL2_LINUX_ROOT)
+            target_include_directories(ge_save_transfer PRIVATE ${SDL2_LINUX_ROOT}/include/SDL2)
+        else()
+            target_include_directories(ge_save_transfer PRIVATE /usr/include/SDL2)
+        endif()
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            target_compile_definitions(ge_save_transfer PRIVATE _FILE_OFFSET_BITS=64 _TIME_BITS=64)
+        endif()
+        list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_save_transfer>)
         # Hosted C++ headers must not resolve sched.h/limits.h to the N64 SDK.
         # Keep this standard-library-only loader outside the game's include paths.
         add_library(ge_hd_textures OBJECT port/fast3d/hd_textures.cpp
