@@ -317,14 +317,25 @@ shared freezes.
 
 ## Next diagnostic step
 
-Open the synchronized ETL in Windows Performance Analyzer and inspect GPU
-queues/presents, DWM frame history and wait chains at 21:40:21.530–23.764 UTC.
-Correlate the first blocked present with the Chrome and Codex GPU/compositor
-threads before assigning a driver or DWM cause. The manual comparison rules
-out a reliable OpenGL workaround on this host; do not change the game's
-renderer or advise a browser flag on these results. A fresh synchronized WPR
-capture during a manual freeze can test whether the same DWM present/wait
-signature recurs under OpenGL. An idle/no-game interval can test whether the
+Windows Performance Analyzer 11.8 was installed locally after user approval.
+Its command-line exporter loaded the existing roughly 1 GB ETL but raised its
+working set to 1.72 GB and reduced free physical memory to about 0.4 GB, so
+that task-owned export was stopped before it could add another host hitch.
+The desktop control bridge failed before opening WPA. The headless ETW preview
+tool also requires symbol configuration that was not supplied. The original
+ETL remains intact, and the streaming ETW reader still processes it with low
+memory use. A shorter WPR recording centered on a manually observed hitch
+should make WPA's detailed queue and wait views practical on this laptop.
+
+Capture a short WPR trace during a manual freeze, then inspect GPU
+queues/presents, DWM frame history and wait chains in WPA. Compare with the
+existing synchronized ETL at 21:40:21.530–23.764 UTC using the streaming
+reader. Correlate the first blocked present with Chrome and Codex
+GPU/compositor threads before assigning a driver or DWM cause. The manual
+comparison rules out a reliable OpenGL workaround on this host; do not change
+the game's renderer or advise a browser flag on these results. A fresh
+synchronized WPR capture under OpenGL can test whether the same DWM
+present/wait signature recurs. An idle/no-game interval can test whether the
 shared freeze requires the game at all. Track severe gaps and audio queue-dry
 reports, not average FPS.
 Keep ETL local because it can contain process and file metadata. The 2.35 GB

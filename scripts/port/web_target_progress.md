@@ -688,9 +688,11 @@ saturation. The user's OpenGL Codex freezes affected more than one stop;
 exact event pairing was not marked. OpenGL is not a reliable workaround for
 normal play, and no mouse-count threshold or game-side growing queue was
 found. [The investigation](web_hitch_investigation.md) records private paths,
-focus caveats and timing. Next action: inspect synchronized ETL presents and
-wait chains, then capture WPR during a manual freeze on either backend to
-test whether the same host signature recurs.
+focus caveats and timing. WPA 11.8 was installed locally, but a full export
+of the existing roughly 1 GB ETL raised memory use enough that it was stopped;
+the ETL remains intact. Next action: capture a short WPR interval during
+manual OpenGL play, inspect its present queues and wait chains, and compare
+the host signature with the earlier D3D11 freeze.
 
 **Absolute menu pointer, 2026-10-27:** Investigation reproduced the reported
 drift: the inherited ignored-warp fallback accumulated physical deltas around

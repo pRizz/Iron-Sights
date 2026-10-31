@@ -132,6 +132,10 @@ Both backends had severe freezes without sustained CPU/disk/paging saturation;
 OpenGL is not a reliable workaround in manual play. Mouse-event rates before
 the largest stops ranged from below to above the run median, without a clear
 threshold. The manual traces remain local and ignored.
+WPA 11.8 was installed locally with user approval for trace inspection. Its
+exporter exhausted practical free memory on the roughly 1 GB synchronized
+ETL, so that export was stopped; the unchanged trace remains available for
+streaming analysis. A shorter synchronized WPR capture is the next diagnostic.
 
 ### FORK-036 — Buffer and memory-safety audit
 
