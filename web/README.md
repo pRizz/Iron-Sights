@@ -114,6 +114,30 @@ gunshot/music classifier. Nonzero ScriptProcessor callback/analyser samples
 alone do not prove that the browser met playback deadlines. The browser's
 512-sample SDL period is configured separately from native audio.
 
+For recurring browser freezes, run the private long-session audit against a
+completed, locally assembled site and a local ROM:
+
+```sh
+MIDAS_BROWSER=chrome bun run audit:hitches ../baserom.u.z64 ../build/web-hitches/current http://127.0.0.1:4177/Iron-Sights/
+```
+
+Serve the assembled site with `node tools/serve-site.mjs 4177 /Iron-Sights/`.
+The default capture spends 60 seconds in the menu, then runs scripted movement,
+ADS and firing for at least 120 seconds after entering Dam. If Bond dies, later
+samples belong to the menu. Set `MIDAS_HITCH_MENU_SECONDS` and
+`MIDAS_HITCH_GAME_SECONDS` to change either duration (1–600 seconds). Use
+`MIDAS_BROWSER=msedge` to compare installed Edge. The ignored output directory
+contains `trace.json` and a per-phase `summary.json`: timestamped frame gaps, long tasks,
+selected WebGL calls, save synchronization, game/audio counters, native logs and
+quarter-second audio render summaries. It does not store ROM bytes, screenshots
+or raw sound. Set `MIDAS_HITCH_INVULN=1` for a long combat sample that retains
+enemies but prevents Bond from dying; label that run separately from ordinary
+gameplay. The audio probe passes samples through an AudioWorklet; its timing
+and possible effect on performance should be checked against an uninstrumented
+run before treating small differences as regressions. Set `MIDAS_HITCH_AUDIO=0`
+and `MIDAS_HITCH_WEBGL=0` to disable both probes for that comparison; frame,
+native-log and game-counter sampling remain. Keep private logs local.
+
 Mouse capture requests unaccelerated browser movement, with an automatic
 compatibility retry if raw input is unsupported. No motion clamp or smoothing
 is applied. For an intermittent mouse snap, press F2 immediately afterward and

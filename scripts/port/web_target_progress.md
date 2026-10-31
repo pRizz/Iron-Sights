@@ -583,6 +583,22 @@ it, passing 34 cursor samples in Chromium. TypeScript, 176 web tests,
 production site assembly and exact artifact verification pass.
 Next action: verify the Pages build after publication.
 
+**Recurring hitch investigation, 2026-10-31:** An isolated optimized Wasm/site
+build and private scripted Chrome/Edge runs reproduced multi-second menu and
+Dam stalls with audio queue underruns on an NVIDIA/ANGLE host. The new bounded
+timing audit records RAF gaps, long tasks, selected WebGL calls, native hitch/
+audio logs, Wasm memory, save syncs and audio render summaries without ROM or
+raw audio data. A minimal-probe run also reproduced the stalls. Linear memory
+stayed at 512 MiB; save syncs were outside the captured hitch windows. Native
+timers often place the elapsed interval in SDL swap, sometimes in renderer idle;
+this does not yet identify the browser/driver or scheduling root cause. The
+[investigation](web_hitch_investigation.md) records counts, limits and private
+trace locations. Next action: capture a short browser main/compositor/GPU trace
+around a reproduced hitch and compare headed hardware behavior before changing
+render or audio architecture. After syncing the later Files/context-menu change,
+the combined optimized site and a short menu/Dam audit also pass; that brief run
+does not replace the longer performance samples.
+
 **Absolute menu pointer, 2026-10-27:** Investigation reproduced the reported
 drift: the inherited ignored-warp fallback accumulated physical deltas around
 native menu snaps, leaving offsets up to 88 menu pixels until an edge sweep.

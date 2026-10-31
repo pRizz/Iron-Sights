@@ -30,6 +30,36 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-037 — Private browser hitch diagnostics
+
+**Status:** Scripted local diagnostic and initial reproduction; root cause not
+yet isolated. This adds no shipped runtime behavior, settings or asset changes.
+
+The browser tooling now offers a repeatable menu/Dam timing audit with movement,
+ADS and firing. It records bounded frame gaps, browser long tasks, selected
+WebGL call times, game/audio counters, native logs, save synchronization and
+aggregate audio output into ignored local JSON. Durations, Chrome/Edge selection,
+an optional mission invulnerability control and disabled-probe comparison are
+runner-only options. It does not write ROM bytes, raw sound or screenshots and
+is not packaged into the public site. The investigation record explains why
+these diagnostics are needed and distinguishes measured intervals at SDL swap
+from an unproven GPU/driver cause. This extends the existing browser audit
+surface in FORK-024 and audio continuity work in FORK-026 without changing them.
+
+**Sources:** [runner](web/tools/hitch-audit.mjs),
+[browser probe](web/tools/hitch-observer.mjs),
+[audio probe](web/tools/hitch-audio-worklet.js),
+[script entrypoint](web/package.json), [run instructions](web/README.md),
+[investigation](scripts/port/web_hitch_investigation.md),
+[WEB-006](scripts/port/web_target_progress.md).
+**Validation:** Optimized isolated web build, assembled site and exact public
+artifact verification passed. Private actual-ROM Chrome, Edge and minimal-probe
+Chrome audits reached normal menus and Dam. Multi-second frame gaps and audio
+queue underruns recurred; memory did not grow and no save sync overlapped a
+captured gameplay hitch. A later short audit passed on the combined main source
+after its Files/context-menu change. The private traces remain in ignored
+`build/web-hitches/`.
+
 ### FORK-036 — Buffer and memory-safety audit
 
 **Status:** Repository-wide audit completed with targeted fixes and explicit
