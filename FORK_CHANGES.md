@@ -105,7 +105,11 @@ Installed headed Chrome/RTX 3070 runs on one optimized build confirmed the
 requested hardware ANGLE backends. Two roughly one-minute OpenGL Dam runs had
 worst gaps of 0.93 and 0.25 seconds; interleaved D3D11 runs had 7.19 and
 5.04 seconds. The first D3D11 run lost pointer lock late, while the repeated
-run remained focused. OpenGL is an unverified mitigation lead. A D3D11 run
+run remained focused. A longer OpenGL run had a 1.28-second gap and audio
+queue-dry reports, so it did not eliminate the symptom. OpenGL is an
+unverified mitigation lead; a matched longer D3D11 run had five gaps of at
+least 500 ms, worst 2.45 seconds, without focus loss or sustained host
+CPU/paging pressure. A D3D11 run
 without scripted pointer motion still had four gaps of at least 500 ms, so
 those hitches do not require pointer movement; a 32-step sample did not show
 a dose response. Streaming ETW provider counts identified DWM drawing and

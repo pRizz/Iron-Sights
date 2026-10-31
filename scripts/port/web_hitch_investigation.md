@@ -219,13 +219,27 @@ remain ignored under `build/web-hitches/angle-*` and `mouse-*`.
 | B repeat | D3D11 | 4 | 61.3 | 6 | 4 | 5.04 s |
 | No pointer motion | D3D11 | 0 | 62.7 | 10 | 4 | 1.03 s |
 | More pointer events | D3D11 | 32 | 61.5 | 3 | 3 | 0.57 s |
+| Longer OpenGL | OpenGL | 4 | 122.7 | 3 | 1 | 1.28 s |
+| Longer D3D11 | D3D11 | 4 | 122.0 | 5 | 5 | 2.45 s |
 
 The first D3D11 run lost pointer lock late, after its first two qualifying
 gaps, and its later gaps should be treated cautiously. The repeated D3D11 run
-had no focus or pointer-lock loss and still had multi-second gaps. Neither
-OpenGL run had a multi-second Dam gap, but one had 0.65- and 0.93-second gaps
-and native audio queue-dry reports. The OpenGL result is a **mitigation lead**,
-not proof that the backend fixes the host-wide problem or every audio glitch.
+had no focus or pointer-lock loss and still had multi-second gaps. The two
+one-minute OpenGL runs had no multi-second Dam gap, but one had 0.65- and
+0.93-second gaps and native audio queue-dry reports. The later 122.7-second
+OpenGL run had a
+1.28-second Dam gap and four native queue-dry reports, without focus loss.
+That gap had about 2 GB available, zero sampled page reads and at most 20.3%
+total CPU nearby. OpenGL therefore did not eliminate the hitch or audio
+symptom. Its shorter severe-gap tail in these samples is a **mitigation lead**,
+not proof that the backend fixes the host-wide problem.
+The matching 122.0-second D3D11 run had five Dam gaps of at least 500 ms and
+no focus loss. Its worst gameplay gap was 2.45 seconds with about 1.84 GB
+available memory, roughly one page read/s and 19% total CPU nearby. A
+6.20-second stage-33 gap before D3D11's gameplay-start mark is excluded
+from the table. The longer pair preserves the same direction as the
+short interleaved runs without establishing a statistically reliable hitch
+rate from these few samples.
 In the repeated D3D11 run, 2.40- and 2.54-second gaps had about 0.93–1.00 GB
 available, at most 12 page reads/s and at most 21% total CPU in adjacent
 one-second samples. Some longer gaps coincided with heavier paging; neither

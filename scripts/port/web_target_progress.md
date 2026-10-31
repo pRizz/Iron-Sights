@@ -657,7 +657,11 @@ headed Dam runs on the same optimized RTX 3070 build alternated OpenGL and
 D3D11 for about a minute each. OpenGL had worst gaps of 0.93 and 0.25 s;
 D3D11 had 7.19 and 5.04 s. The first D3D11 run lost pointer lock late, but
 its first two gaps and the entire repeated D3D11 run preceded or avoided that
-loss. OpenGL is a mitigation lead, not a verified fix. A D3D11 run with no
+loss. A further 122.7-second OpenGL run had one 1.28-second Dam gap and native
+audio queue-dry reports despite low paging/CPU nearby. OpenGL is a mitigation
+lead, not a verified fix. Its matched 122.0-second D3D11 run had five gaps
+≥500 ms, worst 2.45 s, without focus loss or sustained paging/CPU pressure.
+A D3D11 run with no
 scripted pointer motion still had four gaps ≥500 ms, while 32 events per pass
 did not increase severity in a short sample. Mouse motion is not required for
 these hitches; continuous physical movement remains untested. Streaming ETW
