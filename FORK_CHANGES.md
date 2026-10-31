@@ -61,7 +61,8 @@ vertically centered and starts slightly inside the left health arc. Its anchor
 follows health centering/edge transitions independently of the ammo HUD, at wide
 and 4:3 aspect ratios. Friendly mouse names include **Right Mouse Button**;
 Mouse X1/X2 remain distinct as Mouse Button 4/5. Display aliases do not change
-saved binding tokens. Text uses uniform small capitals at 0.65 scale and a
+saved binding tokens. Text uses uniform small capitals at 0.60 scale (reduced
+from 0.65 for a further, roughly eight-percent size reduction) and a
 six-framebuffer-pixel rightward inset, including a matching shadow offset.
 
 **Sources:** [overlay and timing](port/src/port_mission_hints.c),
@@ -88,6 +89,10 @@ the overlay. Browser artifact integrity, touch-bridge and menu-pointer checks
 pass. The gallery fixture explicitly disables onboarding with its other HUD
 overlays; its nine workflow tests pass. Both independent gallery passes reproduce
 all 72 views and 35 icons with zero changed image cells, and integrity verification passes.
+The additional 0.60 font-size refinement passes the hint regression and Windows
+build, with legibility/alignment reviewed in wide and 4:3 mission captures.
+Its gallery refresh again matches both independent passes with zero changed
+image cells.
 
 ### FORK-034 — Portable desktop save import and export
 

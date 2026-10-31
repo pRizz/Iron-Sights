@@ -54,7 +54,7 @@ Gfx *portHudPanel(Gfx *g, f32 x, f32 y, f32 w, f32 h, u32 color)
 { assert(!"Mission hints must not draw a panel"); return g; }
 Gfx *portHudLabel(Gfx *g, const char *text, s32 x, s32 y, f32 scale, u32 color, s32 width)
 {
-    assert(x == 56 && y >= 110 && y <= 122 && x + width <= 320 && scale == .65f);
+    assert(x == 56 && y >= 110 && y <= 122 && x + width <= 320 && scale == .6f);
     if (color >> 8) { assert(lines < 2); snprintf(shown[lines++], sizeof(shown[0]), "%s", text); textAlpha = color & 255; }
     return g;
 }

@@ -165,9 +165,9 @@ Gfx *portMissionHintsDraw(Gfx *gdl)
         hintSmallCaps(rows[i]);
         /* One framebuffer-pixel shadow keeps bare text legible without a panel. */
         gDPNoOpTag(gdl++, portHudTextOffsetTag(7, 1));
-        gdl = portHudLabel(gdl, rows[i], x, y + i * 12, 0.65f, alpha, width);
+        gdl = portHudLabel(gdl, rows[i], x, y + i * 12, 0.6f, alpha, width);
         gDPNoOpTag(gdl++, portHudTextOffsetTag(6, 0));
-        gdl = portHudLabel(gdl, rows[i], x, y + i * 12, 0.65f, 0xe1e5ea00 | alpha, width);
+        gdl = portHudLabel(gdl, rows[i], x, y + i * 12, 0.6f, 0xe1e5ea00 | alpha, width);
     }
     gDPNoOpTag(gdl++, portHudTextOffsetTag(0, 0));
     PORT_HUD_ANCHOR_OFF(gdl);
