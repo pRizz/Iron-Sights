@@ -4,6 +4,9 @@
 #include "game/language.h"
 #include "rmon.h" /*<PR/rmon.h>*/
 #include "str.h"
+#ifndef TARGET_N64
+#include <stdio.h>
+#endif
 
 /**
  * EU .data, offset from start of data_seg : 0x36b0
@@ -26,9 +29,15 @@ unsigned char *tokenSplit(unsigned char *str)
     g_Tokens[0] = "";
     g_TokenCount = 1;
     while ((s32)*str) {
+#ifndef TARGET_N64
+        if (g_TokenCount >= sizeof(g_Tokens) / sizeof(g_Tokens[0])) break;
+#endif
         while (*str == ' ') {
             *str++ = '\0';
         }
+#ifndef TARGET_N64
+        if (!*str) break;
+#endif
         g_Tokens[g_TokenCount++] = str;
         while (*str > ' ') {
             str++; 
@@ -39,7 +48,11 @@ unsigned char *tokenSplit(unsigned char *str)
 
 // Sets a new token string.
 void tokenSetString(const char *str) {
+#ifndef TARGET_N64
+    snprintf((char *)g_TokenString, sizeof(g_TokenString), "%s", str);
+#else
     strcpy(g_TokenString, str);
+#endif
     tokenSplit(g_TokenString);
 }
 

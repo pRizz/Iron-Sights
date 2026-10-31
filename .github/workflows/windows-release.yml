@@ -54,6 +54,7 @@ jobs:
       - name: Test gameplay, cache and release tooling without a ROM
         run: |
           bash scripts/port/test_ads.sh
+          MIDAS_BUFFER_SANITIZE=1 bash scripts/port/test_buffers.sh
           bash scripts/port/test_build_time.sh
           MIDAS_SAVE_TEST_I686=1 bash scripts/port/test_save_transfer.sh
           MIDAS_HD_TEST_I686=1 bash scripts/port/test_hd_textures.sh

@@ -2469,8 +2469,16 @@ void proplvreset2(enum LEVELID stageId)
                             struct s_mp_weapon_set *mpweapon = &getPtrMPWeaponSetData()[lastmpweaponnum];
                             
                             ammoqty = mpweapon->ammoamount;
+#ifndef TARGET_N64
+                            if (mpweapon->ammotype > 0 && mpweapon->ammotype <= AMMOTYPE_GLOBAL_MAX) {
+                                pdef_macr->slots[mpweapon->ammotype - 1].quantity = ammoqty;
+                            } else {
+                                ammoqty = 0;
+                            }
+#else
                             if (mpweapon->ammotype);
                             pdef_macr->slots[mpweapon->ammotype - 1].quantity = ammoqty;
+#endif
                         }
 
                         if (((ammoqty > 0) && withobjs) && (!(pdef_macr->flags2 & flags)))

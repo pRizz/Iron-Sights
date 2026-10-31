@@ -53,6 +53,7 @@ uintptr_t gfxFramebuffer;
 #define ALIGN(x, a) (((x) + (a - 1)) & ~(a - 1))
 
 #define SUPPORT_CHECK(x) assert(x)
+#include "gfx_memory.h"
 
 // SCALE_M_N: upscale/downscale M-bit integer to N-bit
 #define SCALE_5_8(VAL_) (((VAL_)*0xFF) / 0x1F)
@@ -3383,6 +3384,9 @@ static void gfx_sp_matrix(uint8_t parameters, const int32_t* addr) {
             gfx_matrix_mul(rsp.P_matrix, matrix, rsp.P_matrix);
         }
     } else { // G_MTX_MODELVIEW
+        if (!rsp.modelview_matrix_stack_size || rsp.modelview_matrix_stack_size > 11
+            || ((parameters & G_MTX_PUSH) && rsp.modelview_matrix_stack_size == 11))
+            sysFatalError("Graphics matrix stack exhausted or invalid");
         if ((parameters & G_MTX_PUSH) && rsp.modelview_matrix_stack_size < 11) {
             ++rsp.modelview_matrix_stack_size;
             memcpy(rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1],
@@ -3400,6 +3404,7 @@ static void gfx_sp_matrix(uint8_t parameters, const int32_t* addr) {
 }
 
 static void gfx_sp_pop_matrix(uint32_t count) {
+    if (count >= rsp.modelview_matrix_stack_size) sysFatalError("Graphics matrix stack underflow");
     roc_mtx_gen++;
     while (count--) {
         if (rsp.modelview_matrix_stack_size > 0) {
@@ -3441,7 +3446,8 @@ static void gfx_adjust_width_height_for_scale(uint32_t& width, uint32_t& height)
 }
 
 static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* vertices) {
-    SUPPORT_CHECK(n_vertices <= MAX_VERTICES);
+    if (!gfx_span_fits(dest_index, n_vertices, MAX_VERTICES))
+        sysFatalError("Graphics vertex load exceeds the vertex cache");
 
     for (size_t i = 0; i < n_vertices; i++, dest_index++) {
         // GE uses the stock 16-byte F3D Vtx union: Vtx_t (colors) / Vtx_tn
@@ -3713,6 +3719,9 @@ static int gfx_ge_farclip_mode(void) {
 #include "gfx_roomcache.inl"
 
 static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bool is_rect) {
+    const unsigned capacity = is_rect ? MAX_VERTICES + 4 : MAX_VERTICES;
+    if (vtx1_idx >= capacity || vtx2_idx >= capacity || vtx3_idx >= capacity)
+        sysFatalError("Graphics triangle references an invalid vertex slot");
     ge_flush_origin = is_rect ? 1u : (ge_tri_origin & 15u);
     roc_stat_tri_origin[ge_flush_origin]++;
     struct LoadedVertex* v1 = &rsp.loaded_vertices[vtx1_idx];
@@ -5338,8 +5347,12 @@ static void gfx_sp_movemem(uint8_t index, uint8_t offset, const void* data) {
         case G_MV_L0:
         case G_MV_L1:
         case G_MV_L2:
-            // NOTE: reads out of bounds if it is an ambient light
-            memcpy(rsp.current_lights + (index - G_MV_L0) / 2, data, sizeof(Light_t));
+            {
+                const unsigned slot = (index - G_MV_L0) / 2;
+                if (!rsp.current_num_lights || rsp.current_num_lights > MAX_LIGHTS + 1)
+                    sysFatalError("Graphics light load has no valid light count");
+                gfx_copy_light(rsp.current_lights[slot], data, slot + 1 == rsp.current_num_lights);
+            }
             break;
     }
 }
@@ -5349,6 +5362,9 @@ static void gfx_sp_moveword(uint8_t index, uint16_t offset, uintptr_t data) {
         case G_MW_NUMLIGHT:
             // Ambient light is included
             // The 31th bit is a flag that lights should be recalculated
+            if (data < 0x80000000U || (data - 0x80000000U) % 32
+                || (data - 0x80000000U) / 32 < 1 || (data - 0x80000000U) / 32 > MAX_LIGHTS + 1)
+                sysFatalError("Graphics light count exceeds the light arrays");
             rsp.current_num_lights = (data - 0x80000000U) / 32;
             rsp.lights_changed = 1;
             break;

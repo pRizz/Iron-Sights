@@ -2,6 +2,9 @@
 #include <deb.h>
 #include "memp.h"
 #include "game/language.h"
+#ifndef TARGET_N64
+#include "port_memp.h"
+#endif
 
 /**
  * EU .data, offset from start of data_seg : 0x3640
@@ -138,6 +141,9 @@ void mempSetBankStarts(s32 poolSizes[MEMPOOL_COUNT+1])
 
 void *mempAllocBytesInBank(u32 bytes, u8 poolnum)
 {
+#ifndef TARGET_N64
+    return portMempAllocate(bytes, poolnum);
+#else
     /*
      * Retain this address expression. Using
      * &g_mempPools[poolnum] changes regalloc.
@@ -195,6 +201,7 @@ void *mempAllocBytesInBank(u32 bytes, u8 poolnum)
     if (needmemallocation);
 
     return allocation;
+#endif
 }
 
 
@@ -203,6 +210,9 @@ void *mempAllocBytesInBank(u32 bytes, u8 poolnum)
  */
 MEMP_ADD_ENTRY_RESULT mempAddEntryOfSizeToBank(void *allocation, s32 newsize, u8 poolnum)
 {
+#ifndef TARGET_N64
+    return portMempResize(allocation, newsize, poolnum);
+#else
     MemoryPool *pool;
     s32 origsize;
     s32 growsize;
@@ -248,6 +258,7 @@ MEMP_ADD_ENTRY_RESULT mempAddEntryOfSizeToBank(void *allocation, s32 newsize, u8
 
     pool->pos += growsize;
     return MEMP_ADD_ENTRY_SUCCESS;
+#endif
 }
 
 void nulled_mempLoopAllMemBanks(void) {
@@ -258,6 +269,9 @@ void nulled_mempLoopAllMemBanks(void) {
 }
 
 s32 mempGetBankSizeLeft(u8 bank) {
+#ifndef TARGET_N64
+    portMempPool(bank);
+#endif
     if (needmemallocation) {
         bank = MEMPOOL_PERMANENT;
     }
@@ -277,6 +291,7 @@ u32 mempAllocPackedBytesInBank(u32 sizeandbank) {
 
 void mempResetBank(u8 bank) {
 #ifndef TARGET_N64
+    portMempPool(bank);
     { /* the frontend's crosshair copy lives here; crosshair_color must forget it */
         extern void portTexCrosshairForget(const void *lo, const void *hi);
 
@@ -288,6 +303,9 @@ void mempResetBank(u8 bank) {
 }
 
 void mempNullNextEntryInBank(u8 bank) {
+#ifndef TARGET_N64
+    portMempPool(bank);
+#endif
     nulled_mempLoopAllMemBanks();
     if (g_mempPools[bank].pos != 0) {
         g_mempPools[bank].pos = 0;

@@ -25,6 +25,7 @@
 #include <stdio.h>  /* GE_ROOM_AUDIT portal-corruption diagnostic */
 #include <stdlib.h>
 #include <string.h>
+extern void sysFatalError(const char *format, ...);
 #endif
 
 
@@ -76,7 +77,13 @@ extern s32 ptr_bgdata_offsets;
 extern s32 dword_CODE_bss_8007FF88;
 extern s32 *dword_CODE_bss_8007FF90;
 extern f32 *dword_CODE_bss_8007FF94;
+#if !defined(TARGET_N64) && defined(VERSION_EU)
+extern s_bound_info dword_CODE_bss_8007FFA0[124];
+#elif !defined(TARGET_N64)
+extern s_bound_info dword_CODE_bss_8007FFA0[204];
+#else
 extern s_bound_info dword_CODE_bss_8007FFA0[];
+#endif
 #ifndef VERSION_EU
 extern s32 dword_CODE_bss_8007FF98;
 extern s32 dword_CODE_bss_8007FF9C;
@@ -444,6 +451,13 @@ s32 sub_GAME_7F0B39BC(int curroom,int unk1, bbox2d * screensize, s32 next)
     int i;
     int temp;
 
+#ifndef TARGET_N64
+    if (curroom < 0 || curroom >= MAXROOMCOUNT || g_BgNumberOfRoomsDrawn < 0
+        || g_BgNumberOfRoomsDrawn > sizeof(dword_CODE_bss_8007FFA0) / sizeof(dword_CODE_bss_8007FFA0[0])) {
+        sysFatalError("Invalid visible-room index or count");
+        return 0;
+    }
+#endif
     g_BgRoomInfo[curroom].room_rendered = '\x01';
 
     if (g_BgRoomInfo[curroom].room_loaded_mask != '\0') {
@@ -489,6 +503,12 @@ s32 sub_GAME_7F0B39BC(int curroom,int unk1, bbox2d * screensize, s32 next)
     return 0;
 #else
     i = g_BgNumberOfRoomsDrawn;
+#ifndef TARGET_N64
+    if (i >= sizeof(dword_CODE_bss_8007FFA0) / sizeof(dword_CODE_bss_8007FFA0[0])) {
+        sysFatalError("Visible-room table exhausted");
+        return 0;
+    }
+#endif
     dword_CODE_bss_8007FFA0[i].roomid = curroom;
     dword_CODE_bss_8007FFA0[i].unk1 = unk1;
     dword_CODE_bss_8007FFA0[i].bbox.min.x = screensize->min.x;
@@ -3240,7 +3260,7 @@ s32 bgCheckIfRoomModelNeedsLoad(s32 roomID)
  * place (sect=vtx, small range); anything else is the bug. Output goes to
  * stderr with prefix "roomaudit:". */
 
-#define ROOMAUDIT_MAX_ROOMS 512
+#define ROOMAUDIT_MAX_ROOMS MAXROOMCOUNT
 
 static struct {
     u8 *base;

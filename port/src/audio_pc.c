@@ -39,11 +39,14 @@
  * to native s16s. RSP state sizes (32/40/80 bytes) are respected.
  */
 
+#ifndef PORT_AUDIO_INTERPRETER_ONLY
 #include <SDL.h>
+#endif
 
 #include <ultra64.h>
 #include <PR/libaudio.h>
 #include <PR/abi.h>
+#include "port_audio_bounds.h"
 
 /* ---- config ------------------------------------------------------------ */
 
@@ -73,6 +76,7 @@ extern void portConLogf(const char *fmt, ...); /* port_console.c */
 /* audi.c globals we drive directly (the amMain thread never runs) */
 extern u32 g_FrameSize;
 
+#ifndef PORT_AUDIO_INTERPRETER_ONLY
 static SDL_AudioDeviceID s_AudioDev;
 static u32 s_AudioRetryTick; /* SDL_GetTicks() of the next open attempt */
 static u32 s_AudioFails;     /* failed opens in a row */
@@ -80,6 +84,7 @@ static u32 s_AudioReopens;   /* stalled devices closed for a reopen */
 static s32 s_AudioSubsys;    /* SDL_InitSubSystem(SDL_INIT_AUDIO) holds a reference */
 static s32 s_AudioLogOpen;   /* this open attempt logs its details */
 static s32 s_ForceOneFrame; /* portAudioPumpForce: one frame, whatever the queue */
+#endif
 
 /* Output health, summarised in the log every ~10 s when any is nonzero. */
 static u32 s_StatSkipped;  /* frames portAcmdValidate refused (played as silence) */
@@ -203,6 +208,10 @@ static void portAcmdAdpcm(u32 flags, void *stateAddr)
     s32 nbytes = (s_BufCount + 31) & ~31;
     s16 *state = (s16 *)stateAddr;
 
+    for (s32 block = 0; block < nbytes / 32; block++) {
+        if ((in[block * 9] & 15) >= 8) { s_StatSkipped++; return; }
+    }
+
     if (flags & A_INIT) {
         memset(out, 0, 16 * sizeof(s16));
     } else if (flags & A_LOOP) {
@@ -267,9 +276,21 @@ static void portAcmdResample(u32 flags, u32 pitch, void *stateAddr)
     s32 i;
 
     if (flags & A_INIT) {
-        memset(tmp, 0, 5 * sizeof(s16));
+        memset(tmp, 0, sizeof(tmp));
     } else {
         memcpy(tmp, state, 16 * sizeof(s16));
+    }
+    if (nbytes <= 0) return;
+    {
+        const s32 initial = s_BufIn & 0xffe;
+        const s32 rewind = (flags & 2) ? tmp[5] : 0;
+        const s32 start = initial - rewind - 8;
+        const u32 advanced = ((u64)(u16)tmp[4] + (u64)(pitch << 1) * (nbytes / 2)) >> 16;
+        const s32 after = start + advanced * 2;
+        const s32 tail = after - (((after - initial) / 2 + 4) & 7) * 2;
+        if (rewind > 0 || rewind < -32 || start < 0 || tail < 0
+            || !portAudioSpan(start, advanced * 2 + 8, DMEM_SIZE + 64)
+            || !portAudioSpan(tail, 16, DMEM_SIZE + 64)) { s_StatSkipped++; return; }
     }
     if (flags & 2) {
         memcpy(in - 8, tmp + 8, 8 * sizeof(s16));
@@ -388,6 +409,8 @@ static void portAcmdEnvMixer(u32 flags, void *stateAddr)
 static s32 portAcmdValidate(Acmd *list, s32 count)
 {
     s32 c;
+    PortAudioBuffers buffers = {s_BufIn, s_BufOut, s_BufCount, s_MixMainR, s_MixAuxL, s_MixAuxR};
+    if (!list || count < 0 || count > 3072 * 4) return 0;
 
     for (c = 0; c < count; c++) {
         u32 w0 = list[c].words.w0;
@@ -410,7 +433,7 @@ static s32 portAcmdValidate(Acmd *list, s32 count)
             break;
         }
 
-        if (bad) {
+        if (bad || !portAudioCommandFits(&buffers, w0, w1)) {
 #ifdef __EMSCRIPTEN__
             webAudioBadOp = op;
             webAudioBadPointer = w1;
@@ -418,14 +441,14 @@ static s32 portAcmdValidate(Acmd *list, s32 count)
             static s32 shot;
 
             if (!shot) {
-                f32 v[16];
+                f32 v[16] = {0};
                 s32 k;
                 s32 lo = (c >= 7) ? c - 7 : 0;
 
                 shot = 1;
                 v[0] = (f32)op;
                 v[1] = (f32)c;
-                for (k = 0; k < 7; k++) {
+                for (k = 0; k < 7 && lo + k < count; k++) {
                     v[2 + k * 2] = (f32)list[lo + k].words.w0;
                     v[3 + k * 2] = (f32)list[lo + k].words.w1;
                 }
@@ -466,7 +489,7 @@ void portAcmdRun(Acmd *list, s32 count)
             u32 n = w1;
 
             if (n > 0 && d < DMEM_SIZE) {
-                if (d + n > DMEM_SIZE) {
+                if (n > DMEM_SIZE - d) {
                     n = DMEM_SIZE - d;
                 }
                 memset(&s_Dmem[d], 0, n);
@@ -522,14 +545,14 @@ void portAcmdRun(Acmd *list, s32 count)
                 static s32 warned2;
 
                 if (!warned2) {
-                    f32 v[14];
+                    f32 v[14] = {0};
                     s32 k;
                     s32 lo = (c >= 6) ? c - 6 : 0;
 
                     warned2 = 1;
                     v[0] = (f32)op;
                     v[1] = (f32)c;
-                    for (k = 0; k < 6; k++) {
+                    for (k = 0; k < 6 && lo + k < count; k++) {
                         v[2 + k * 2] = (f32)list[lo + k].words.w0;
                         v[3 + k * 2] = (f32)list[lo + k].words.w1;
                     }
@@ -583,13 +606,13 @@ void portAcmdRun(Acmd *list, s32 count)
                 static s32 warned;
 
                 if (!warned) {
-                    f32 v[13];
+                    f32 v[13] = {0};
                     s32 k;
                     s32 lo = (c >= 6) ? c - 6 : 0;
 
                     warned = 1;
                     v[0] = (f32)c;
-                    for (k = 0; k < 6; k++) {
+                    for (k = 0; k < 6 && lo + k < count; k++) {
                         v[1 + k * 2] = (f32)list[lo + k].words.w0;
                         v[2 + k * 2] = (f32)list[lo + k].words.w1;
                     }
@@ -675,6 +698,8 @@ void portAcmdRun(Acmd *list, s32 count)
 }
 
 /* ---- SDL device + frame pump ------------------------------------------- */
+
+#ifndef PORT_AUDIO_INTERPRETER_ONLY
 
 #if defined(__linux__) && defined(__i386__)
 static s32 portAudioFileExists(const char *path)
@@ -1260,3 +1285,4 @@ void portAudioPumpForce(void)
     portAudioPump();
     s_ForceOneFrame = 0;
 }
+#endif

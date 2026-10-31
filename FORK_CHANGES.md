@@ -30,6 +30,71 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-036 — Buffer and memory-safety audit
+
+**Status:** Repository-wide audit completed with targeted fixes and explicit
+remaining risks; this is not a whole-program memory-safety guarantee.
+
+The repository-wide [audit record](scripts/port/buffer_audit.md) separates
+confirmed defects, defensive gaps and tool/runtime coverage. The reproducible
+[inventory](scripts/port/audit_buffers.py) classifies tracked engine, platform,
+renderer, audio, web, tooling, generated and vendor sources and records sites
+for unbounded text, memory operations, allocation, binary I/O and fixed arrays.
+Reports are ignored local artifacts; lexical matches do not establish defects.
+Cppcheck used actual Linux/Windows video compilation databases (287/288 units).
+Parser gaps and untriaged legacy candidates remain documented rather than
+being reported as clean. The audit preserves upstream/N64 layout and the
+hand/arm contracts; it adds no new settings or geometry changes.
+
+Native bank allocation and resize now use checked remaining capacity, validate
+bank indices and fail diagnostically rather than wrap or spin. Both high-arena
+alignment paths reject wraparound. Model conversion validates complete node
+metadata before reading fields, and audio preflights DMEM spans, short-list
+diagnostics, predictor indices and derived resampler/history accesses.
+Capacity-preserving shader helpers replace unbounded appends. The renderer
+checks vertex/triangle, matrix and light limits in release builds and copies
+only the eight bytes actually owned by ambient lights. Native token buffers,
+character exhaustion, visible-room insertion/diagnostics and multiplayer
+ammo-slot indices are bounded; a missing Files controller return is supplied.
+
+The fresh-process arm failure found during issue #4 was a separate ownership
+gap: restored high-arena bytes did not restore their model-header/cache owners.
+Arm/grip state and explicitly selected arena-backed texture/crosshair symbols
+now travel with the world; host heap copies, settings, files and GPU state stay
+process-owned (FORK-014/FORK-017). The headless adapter supplies the missing
+no-device stubs needed to link and run the sanitizer target.
+
+**Sources:** [bank guards](port/src/port_memp.c), [bank API](port/include/port_memp.h),
+[engine hooks](src/memp.c), [high mappings](port/src/pcsched.c),
+[model conversion](port/src/romfile_model.c), [audio spans](port/include/port_audio_bounds.h),
+[audio interpreter](port/src/audio_pc.c), [shader text](port/fast3d/shader_text.h),
+[shader builder](port/fast3d/gfx_opengl.cpp), [graphics spans/light copy](port/fast3d/gfx_memory.h),
+[renderer hooks](port/fast3d/gfx_pc.cpp), [tokens](src/token.c),
+[characters](src/game/chr.c), [ammo](src/game/prop.c), [visibility](src/game/bg.c),
+[Files controller](src/game/front.c), [snapshot ownership](scripts/port/embed_state_layout.py),
+[headless defaults](port/src/headless_stubs.c), [weak adapters](port/src/libultra_shim.c).
+
+**Validation:** [ROM-free regression runner](scripts/port/test_buffers.sh)
+executes real implementations under optional 32-bit ASan/UBSan, including
+10,000 malformed model inputs, overflow/one-past/canary cases and
+[audit-tool tests](scripts/port/test_audit_buffers.py). The
+[Windows workflow](.github/workflows/windows-release.yml) runs it with sanitizers.
+The report records successful all-20-mission headless startup samples and the
+sanitizer exclusions. Existing ADS, wardrobe, HUD, suspend, merge, campaign
+backup and HD-texture checks passed; backup/HD codecs also ran in both native
+word sizes under ASan/UBSan. Native Aztec ADS/quickload effect checks passed all
+24 captures and source-byte checks; representative fire/smoke was inspected.
+Fresh-process Dam restoration from Facility passed with threaded rendering.
+Windows/Linux video and optimized Wasm builds passed, along with 176 browser
+unit tests. The reference gallery regenerated all 72 views and 35 icons with
+repeated samples and an independent second pass: zero changed image cells.
+The final executable passed full synchronous suspend checks (all slots,
+quick/undo/death, watch save, cross-mission/title restore and truncated-image
+rejection) and threaded fresh-process Dam/Facility restoration.
+The final 120 Hz threaded/MSAA-2 Aztec effect audit and a fresh Facility-process
+restore of that Aztec snapshot each passed all 24 captures and texture-byte
+checks; a restored fire/smoke capture was visually reviewed.
+
 ### FORK-035 — Desktop mission-start control hints
 
 Desktop solo missions show compact gadget and aim-down-sights hints for eight
@@ -1851,10 +1916,11 @@ loads, then captures baseline and two restored sequences. Its
 [isolated launcher](scripts/port/audit_state_effects.ps1) supports stage/spawn,
 tick rate, threaded rendering, MSAA and active effects at save time.
 At the recorded Aztec camera, 60 Hz synchronous and 120 Hz threaded/MSAA-2
-same-session runs passed all 24 captures and source-byte checks. Fresh-process
-restoration is a separate scenario; this investigation also observed an
-existing native arm-rendering crash when restoring Dam from Facility in a fresh
-process, which this frame-pool change does not address.
+same-session runs passed all 24 captures and source-byte checks. The separate
+fresh-process Dam/Facility native arm crash observed during that investigation
+was subsequently fixed by FORK-036's arena-backed cache ownership registration;
+the threaded fresh-process audit now passes. This does not change the snapshot
+format or relax exact-build compatibility.
 
 **Sources:** [save engine/menu](port/src/port_state.c),
 [API](port/include/port_state.h), [registry generator](scripts/port/embed_state_layout.py),
@@ -2173,6 +2239,11 @@ transition captures, with peak auxiliary usage of 114,624/262,144 bytes and no
 pool-overflow reports. Windows/Linux video and optimized Wasm builds passed.
 The review gallery regenerated 72 views and 35 icons, checked repeated samples
 and an independent second pass, and reported zero changed image cells.
+
+FORK-036 also registers the native arm/grip model cache owners with the saved
+world image. Those headers reference the restored high arena and must not
+remain attached to the pre-load world; fresh-process cross-mission restoration
+now passes. This is an ownership fix with no model, fit or material changes.
 
 **Sources:** [wardrobe mapping](port/src/port_wardrobe.c),
 [API](port/include/port_wardrobe.h), [native arms](port/src/port_native_arms.c),

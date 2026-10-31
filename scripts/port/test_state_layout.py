@@ -24,8 +24,12 @@ class LayoutTests(unittest.TestCase):
                       ' COMMON 0xb00000 0x1000 objects.a(world0.c.obj)',
                       ' .data 0xc00000 0x1000 asset_obj/setup.o',
                       ' .bss 0xd00000 0x1000 objects.a(romdata.c.obj)',
-                      ' .bss 0xe00000 0x1000 objects.a(romfile_bg.c.obj)']
-            syms='00100000 b _game_value\n00100004 b _saved.0\n00100010 b _world_value\n'
+                      ' .bss 0xe00000 0x1000 objects.a(romfile_bg.c.obj)',
+                      ' .bss 0xf00000 0x1000 objects.a(port_arm_mesh.c.obj)',
+                      ' .bss 0x1000000 0x1000 objects.a(port_grip_mesh.c.obj)',
+                      ' .bss 0x1100000 0x1000 objects.a(port_textures.c.obj)']
+            syms=('00100000 b _game_value\n00100004 b _saved.0\n00100010 b _world_value\n'
+                  '01100000 b _sTex\n01100020 b _hostHeapPointer\n')
             result=regions('\n'.join(lines),root,syms)
             self.assertIn((0x100000,4),result)
             self.assertIn((0x100010,0xff0),result)
@@ -33,6 +37,9 @@ class LayoutTests(unittest.TestCase):
             self.assertIn((0xc00000,0x1000),result)
             self.assertIn((0xd00000,0x1000),result)
             self.assertIn((0xe00000,0x1000),result)
+            self.assertIn((0xf00000,0x1000),result)
+            self.assertIn((0x1000000,0x1000),result)
+            self.assertIn((0x1100000,0x20),result)
             self.assertFalse(any(addr in (0x900000,0xa00000) for addr,_ in result))
             with self.assertRaises(ValueError): regions('',root,'')
 

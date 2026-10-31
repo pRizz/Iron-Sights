@@ -18,7 +18,13 @@ EXCLUDE = {'boss.c', 'init.c', 'joy.c', 'sched.c', 'pi.c', 'rom.c', 'ramrom.c',
            'vi.c', 'rsp.c', 'deb.c', 'debugmenu.c', 'file2.c', 'options.c',
            'frametiming.c', 'speedgraphrenderer.c', 'token.c'}
 PORT = {'n64_random.c', 'segments.c', 'animdata.c', 'romdata.c', 'audio_stubs.c',
-        'romfile_bg.c'}  # converted-ROM cache must travel with the ROM bytes
+        'romfile_bg.c', 'port_arm_mesh.c', 'port_grip_mesh.c'}
+# Converted model headers/texture pointers in the arm modules reference the
+# snapshotted high arena. Restoring its bytes must also restore those owners.
+WORLD_SYMBOLS = {'port_textures.c': {
+    'sTex', 'sTexCount', 'sCtx', 'sXhairTex', 'sXhairData', 'sXhairTints',
+    'sXhairTintCount', 'sXhairNum', 'sXhairTinted',
+}}  # Heap-backed BMP originals/encoded copies and host file state stay out.
 SKIP_SYMBOL = re.compile(r'^(?:_?)(?:saved(?:count)?\.|pristine\.|wd_log\.|s_RoomAudit)')
 
 
@@ -41,10 +47,17 @@ def regions(map_text, source_root, symbols):
         start, size = int(m[1], 16), int(m[2], 16)
         owner = m[3].strip()
         obj = re.search(r'(?:\(|/)([^/()]+)\.c\.(?:obj|o)\)?$', owner)
+        selected = WORLD_SYMBOLS.get(obj[1]+'.c') if obj else None
         asset = 'asset_obj/' in owner or '/assets/' in owner
-        if not size or not (asset or obj and obj[1]+'.c' in names):
+        if not size or not (asset or selected or obj and obj[1]+'.c' in names):
             continue
         inside = [(addr, name) for addr, name in syms if start <= addr < start+size]
+        if selected:
+            for i, (addr, name) in enumerate(inside):
+                if name.lstrip('_') in selected:
+                    end = next((a for a, _ in inside[i+1:] if a > addr), start+size)
+                    entries.append((addr, end-addr))
+            continue
         cut = start
         for i, (addr, name) in enumerate(inside):
             if not SKIP_SYMBOL.match(name):

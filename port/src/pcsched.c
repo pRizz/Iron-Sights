@@ -198,6 +198,7 @@ void *portAllocHigh(u32 size)
     u8 *arena;
     int attempt;
 
+    if (size > 0xffffffffu - 15u) return NULL;
     size = (size + 15u) & ~15u;
 
     if (size <= PORT_HIGH_ARENA_SIZE)
@@ -259,6 +260,7 @@ void *portAllocHighDedicated(u32 size)
 {
     int attempt;
 
+    if (size > 0xffffffffu - 0xffffu) return NULL;
     size = (size + 0xFFFFu) & ~0xFFFFu;
     for (attempt = 0; attempt < 8 && !portAllocHighSkipHints(); attempt++)
     {

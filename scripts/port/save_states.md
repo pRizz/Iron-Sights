@@ -75,6 +75,13 @@ module-owned storage rather than a relocatable host heap allocation. The high
 arena's allocation watermark never moves backwards, preserving space still
 owned by process-side caches.
 
+Native arm/grip model headers and the selected texture/crosshair pointers into
+that arena are world-owned too. The registry restores these cache owners with
+the arena bytes; otherwise a fresh-process cross-mission load could pair a
+model header with another mission's memory. Mixed texture modules use an
+explicit symbol allowlist, leaving heap-backed originals, encoded copies and
+host file state outside the image. Registry tests cover this boundary.
+
 The background conversion registry travels with the ROM bytes: revisiting a
 previously loaded mission after restoring must convert its now-raw background
 again, rather than relying on the previous process-side conversion record.
@@ -155,6 +162,8 @@ the baseline and two quickloads:
 Use `-Executable` for an isolated build. The launcher keeps its own settings,
 snapshots, logs and captures and removes its copied executable after exit.
 These same-session Aztec checks passed at 60 Hz synchronous and 120 Hz threaded.
-They do not exercise the separate fresh-process native arm-rendering failure found
-when restoring Dam from Facility during this investigation. Ordinary campaign
-saves and user snapshots were left untouched.
+The later buffer audit fixed the separate fresh-process native arm-rendering
+failure by restoring arena-backed cache owners as described above. The
+Dam/Facility fresh-process audit now passes with threaded rendering. See the
+[audit record](buffer_audit.md) for coverage and remaining memory-safety limits.
+Ordinary campaign saves and user snapshots were left untouched.

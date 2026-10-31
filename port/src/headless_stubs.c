@@ -85,3 +85,15 @@ f32 portInputMouseAimScale(void)
 {
     return 1.0f;
 }
+
+/* Native option/input adapters have no devices or persistent settings here. */
+s32 portPlayerCrosshairOwn(s32 player) { (void)player; return -2; }
+void portPlayerCrosshairSet(s32 player, s32 rgb) { (void)player; (void)rgb; }
+s32 portInputDeviceModeRaw(s32 device) { (void)device; return 0; }
+s32 portInputLayoutInUse(s32 device) { (void)device; return -1; }
+const char *portInputLayoutShown(s32 device) { (void)device; return "None\n"; }
+void portVideoBindsResetDefaults(void) {}
+s32 portInputPadResetDefaults(s32 device) { (void)device; return 0; }
+void portVideoKbdDigitalMove(s32 *x, s32 *y) { *x = *y = 0; }
+s32 portHudWideCfg(void) { return -1; }
+void portHudWideAdopt(s32 wide) { (void)wide; }

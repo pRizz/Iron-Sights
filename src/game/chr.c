@@ -30,6 +30,7 @@
 #include "player.h"
 #ifndef TARGET_N64
 #include <stdio.h> /* GE_INTRODBG diag in chrRenderProp */
+extern void sysFatalError(const char *format, ...);
 #endif
 #include "propobj.h"
 #include "stan.h"
@@ -1681,6 +1682,12 @@ PropRecord *init_GUARDdata_with_set_values(PropRecord *arg0, Model *arg1, struct
         }
     }
 
+#ifndef TARGET_N64
+    if (var_s0 == NULL) {
+        sysFatalError("Character pool exhausted (%d slots)", g_NumChrSlots);
+        return NULL;
+    }
+#endif
     arg0->type = PROP_TYPE_CHR;
     arg0->chr = var_s0;
     arg0->pos.f[0] = arg2->f[0];

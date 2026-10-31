@@ -792,6 +792,12 @@ __attribute__((weak)) s32 portCrosshairColor(void)
     return -1;
 }
 
+__attribute__((weak)) s32 portPlayerCrosshairColor(s32 player)
+{
+    (void)player;
+    return portCrosshairColor();
+}
+
 /* GLOBAL VOLUMES: headless has no midas.ini, so full volume - the vanilla
  * behaviour these replace. options.c / front.c call them every menu init. */
 __attribute__((weak)) s32 portMusicVolumeRaw(void)

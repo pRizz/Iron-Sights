@@ -31,33 +31,8 @@
 
 using namespace std;
 
-/* GE links the game's own sprintf (src/sprintf.c), whose return value is
- * written-1 by original-game quirk. This file accumulates shader text via
- * sprintf return values, so that off-by-one overlaps every appended line and
- * corrupts the GLSL ("invalid atom" driver errors). Route this file's calls
- * through libc vsnprintf semantics instead.
- *
- * A bounded scratch buffer, NOT vsnprintf straight into dst: the port is
- * -m32, and on Linux the main thread's stack sits at the top of the 4 GB
- * address space (vs_buf observed at 0xffffa5fc), so the old `dst + 0x10000`
- * size lie wrapped the address space and glibc silently dropped the LAST
- * character of every chunk - including the newline closing "#version 130",
- * which left an embedded NUL and killed every shader compile. Windows never
- * saw it: 32-bit PE stacks live below 2 GB. */
-static int f3d_sprintf(char *dst, const char *fmt, ...)
-{
-    char tmp[1024];
-    va_list ap;
-    va_start(ap, fmt);
-    int n = vsnprintf(tmp, sizeof(tmp), fmt, ap);
-    va_end(ap);
-    if (n >= 0) {
-        size_t copy = ((size_t) n < sizeof(tmp) ? (size_t) n : sizeof(tmp) - 1);
-        memcpy(dst, tmp, copy);
-        dst[copy] = '\0';
-    }
-    return n;
-}
+/* Capacity-aware native-libc formatting, independent of game sprintf. */
+#include "shader_text.h"
 #define sprintf f3d_sprintf
 
 struct ShaderProgram {
@@ -239,19 +214,6 @@ static void gfx_opengl_load_shader(struct ShaderProgram* new_prg) {
     gfx_opengl_set_uniforms(new_prg);
 }
 
-static void append_str(char* buf, size_t* len, const char* str) {
-    while (*str != '\0') {
-        buf[(*len)++] = *str++;
-    }
-}
-
-static void append_line(char* buf, size_t* len, const char* str) {
-    while (*str != '\0') {
-        buf[(*len)++] = *str++;
-    }
-    buf[(*len)++] = '\n';
-}
-
 #define RAND_NOISE "((random(vec3(floor(gl_FragCoord.xy * noise_scale), float(frame_count))) + 1.0) / 2.0)"
 
 static const char* shader_item_to_str(uint32_t item, bool with_alpha, bool only_alpha, bool inputs_have_alpha,
@@ -321,7 +283,8 @@ static const char* shader_item_to_str(uint32_t item, bool with_alpha, bool only_
 
 #undef RAND_NOISE
 
-static void append_formula(char* buf, size_t* len, uint8_t c[2][4], bool do_single, bool do_multiply, bool do_mix,
+template<size_t N>
+static void append_formula(char (&buf)[N], size_t* len, uint8_t c[2][4], bool do_single, bool do_multiply, bool do_mix,
                            bool with_alpha, bool only_alpha, bool opt_alpha) {
     if (do_single) {
         append_str(buf, len, shader_item_to_str(c[only_alpha][3], with_alpha, only_alpha, opt_alpha, false));
@@ -369,7 +332,7 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
 
     // Vertex shader
 
-    vs_len += sprintf(vs_buf + vs_len, "#version %s\n", gl_glsl_version_str);
+    vs_len += shader_appendf(vs_buf, vs_len, "#version %s\n", gl_glsl_version_str);
 
     if (gl_es) {
         append_line(vs_buf, &vs_len, "precision mediump float;");
@@ -387,13 +350,13 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
 
     for (int i = 0; i < 2; i++) {
         if (cc_features.used_textures[i]) {
-            vs_len += sprintf(vs_buf + vs_len, "INPUT vec2 aTexCoord%d;\n", i);
-            vs_len += sprintf(vs_buf + vs_len, "OUTPUT vec2 vTexCoord%d;\n", i);
+            vs_len += shader_appendf(vs_buf, vs_len, "INPUT vec2 aTexCoord%d;\n", i);
+            vs_len += shader_appendf(vs_buf, vs_len, "OUTPUT vec2 vTexCoord%d;\n", i);
             num_floats += 2;
             for (int j = 0; j < 2; j++) {
                 if (cc_features.clamp[i][j]) {
-                    vs_len += sprintf(vs_buf + vs_len, "INPUT float aTexClamp%s%d;\n", j == 0 ? "S" : "T", i);
-                    vs_len += sprintf(vs_buf + vs_len, "OUTPUT float vTexClamp%s%d;\n", j == 0 ? "S" : "T", i);
+                    vs_len += shader_appendf(vs_buf, vs_len, "INPUT float aTexClamp%s%d;\n", j == 0 ? "S" : "T", i);
+                    vs_len += shader_appendf(vs_buf, vs_len, "OUTPUT float vTexClamp%s%d;\n", j == 0 ? "S" : "T", i);
                     num_floats += 1;
                 }
             }
@@ -438,18 +401,18 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
      * core equivalent, it silently keeps perspective there). */
     const char* shade_qual = (cc_features.opt_nopersp_shade && gl_glsl_version >= 130 && !gl_es) ? "noperspective " : "";
     for (int i = 0; i < cc_features.num_inputs; i++) {
-        vs_len += sprintf(vs_buf + vs_len, "INPUT vec%d aInput%d;\n", cc_features.opt_alpha ? 4 : 3, i + 1);
-        vs_len += sprintf(vs_buf + vs_len, "%sOUTPUT vec%d vInput%d;\n", shade_qual, cc_features.opt_alpha ? 4 : 3, i + 1);
+        vs_len += shader_appendf(vs_buf, vs_len, "INPUT vec%d aInput%d;\n", cc_features.opt_alpha ? 4 : 3, i + 1);
+        vs_len += shader_appendf(vs_buf, vs_len, "%sOUTPUT vec%d vInput%d;\n", shade_qual, cc_features.opt_alpha ? 4 : 3, i + 1);
         num_floats += cc_features.opt_alpha ? 4 : 3;
     }
 
     append_line(vs_buf, &vs_len, "void main() {");
     for (int i = 0; i < 2; i++) {
         if (cc_features.used_textures[i]) {
-            vs_len += sprintf(vs_buf + vs_len, "    vTexCoord%d = aTexCoord%d;\n", i, i);
+            vs_len += shader_appendf(vs_buf, vs_len, "    vTexCoord%d = aTexCoord%d;\n", i, i);
             for (int j = 0; j < 2; j++) {
                 if (cc_features.clamp[i][j]) {
-                    vs_len += sprintf(vs_buf + vs_len, "    vTexClamp%s%d = aTexClamp%s%d;\n", j == 0 ? "S" : "T", i,
+                    vs_len += shader_appendf(vs_buf, vs_len, "    vTexClamp%s%d = aTexClamp%s%d;\n", j == 0 ? "S" : "T", i,
                                       j == 0 ? "S" : "T", i);
                 }
             }
@@ -462,7 +425,7 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
         append_line(vs_buf, &vs_len, "    vGrayscaleColor = aGrayscaleColor;");
     }
     for (int i = 0; i < cc_features.num_inputs; i++) {
-        vs_len += sprintf(vs_buf + vs_len, "    vInput%d = aInput%d;\n", i + 1, i + 1);
+        vs_len += shader_appendf(vs_buf, vs_len, "    vInput%d = aInput%d;\n", i + 1, i + 1);
     }
 
     if (cc_features.opt_ge_farclip || cc_features.opt_ge_pixfog) {
@@ -483,7 +446,7 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
 
     // Fragment shader
 
-    fs_len += sprintf(fs_buf + fs_len, "#version %s\n", gl_glsl_version_str);
+    fs_len += shader_appendf(fs_buf, fs_len, "#version %s\n", gl_glsl_version_str);
 
     if (gl_es) {
 #ifdef __EMSCRIPTEN__
@@ -520,10 +483,10 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
     // append_line(fs_buf, &fs_len, "precision mediump float;");
     for (int i = 0; i < 2; i++) {
         if (cc_features.used_textures[i]) {
-            fs_len += sprintf(fs_buf + fs_len, "INPUT vec2 vTexCoord%d;\n", i);
+            fs_len += shader_appendf(fs_buf, fs_len, "INPUT vec2 vTexCoord%d;\n", i);
             for (int j = 0; j < 2; j++) {
                 if (cc_features.clamp[i][j]) {
-                    fs_len += sprintf(fs_buf + fs_len, "INPUT float vTexClamp%s%d;\n", j == 0 ? "S" : "T", i);
+                    fs_len += shader_appendf(fs_buf, fs_len, "INPUT float vTexClamp%s%d;\n", j == 0 ? "S" : "T", i);
                 }
             }
         }
@@ -544,7 +507,7 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
         append_line(fs_buf, &fs_len, "INPUT vec4 vGrayscaleColor;");
     }
     for (int i = 0; i < cc_features.num_inputs; i++) {
-        fs_len += sprintf(fs_buf + fs_len, "%sINPUT vec%d vInput%d;\n", shade_qual, cc_features.opt_alpha ? 4 : 3, i + 1);
+        fs_len += shader_appendf(fs_buf, fs_len, "%sINPUT vec%d vInput%d;\n", shade_qual, cc_features.opt_alpha ? 4 : 3, i + 1);
     }
 
     if (cc_features.used_textures[0]) {
@@ -630,7 +593,7 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
         if (cc_features.used_textures[i]) {
             bool s = cc_features.clamp[i][0], t = cc_features.clamp[i][1];
 
-            fs_len += sprintf(fs_buf + fs_len, "    vec2 texSize%d = vec2(textureSize(uTex%d, 0));\n", i, i);
+            fs_len += shader_appendf(fs_buf, fs_len, "    vec2 texSize%d = vec2(textureSize(uTex%d, 0));\n", i, i);
 
             /* GE sky/water per-pixel divide: S/W and T/W by 1/W at this pixel,
              * as the RDP does (the old CPU grid only approximated it). q is
@@ -638,24 +601,24 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
              * horizon line itself. */
             const char* tc = cc_features.opt_ge_sky_pixdiv ? "geSkyTc" : "vTexCoord";
             if (cc_features.opt_ge_sky_pixdiv) {
-                fs_len += sprintf(fs_buf + fs_len, "    vec2 geSkyTc%d = vTexCoord%d / max(vGeSkyQ, 1e-7);\n", i, i);
+                fs_len += shader_appendf(fs_buf, fs_len, "    vec2 geSkyTc%d = vTexCoord%d / max(vGeSkyQ, 1e-7);\n", i, i);
             }
 
             if (!s && !t) {
-                fs_len += sprintf(fs_buf + fs_len, "    vec2 vTexCoordAdj%d = %s%d;\n", i, tc, i);
+                fs_len += shader_appendf(fs_buf, fs_len, "    vec2 vTexCoordAdj%d = %s%d;\n", i, tc, i);
             } else {
                 if (s && t) {
-                    fs_len += sprintf(fs_buf + fs_len,
+                    fs_len += shader_appendf(fs_buf, fs_len,
                                       "    vec2 vTexCoordAdj%d = clamp(%s%d, 0.5 / texSize%d, "
                                       "vec2(vTexClampS%d, vTexClampT%d));\n",
                                       i, tc, i, i, i, i);
                 } else if (s) {
-                    fs_len += sprintf(fs_buf + fs_len,
+                    fs_len += shader_appendf(fs_buf, fs_len,
                                       "    vec2 vTexCoordAdj%d = vec2(clamp(%s%d.s, 0.5 / "
                                       "texSize%d.s, vTexClampS%d), %s%d.t);\n",
                                       i, tc, i, i, i, tc, i);
                 } else {
-                    fs_len += sprintf(fs_buf + fs_len,
+                    fs_len += shader_appendf(fs_buf, fs_len,
                                       "    vec2 vTexCoordAdj%d = vec2(%s%d.s, clamp(%s%d.t, "
                                       "0.5 / texSize%d.t, vTexClampT%d));\n",
                                       i, tc, i, tc, i, i, i);
@@ -663,9 +626,9 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
             }
 
             if (current_filter_mode == FILTER_THREE_POINT)
-                fs_len += sprintf(fs_buf + fs_len, "    vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d, three_point_filter%d WEB_BORDER%d);\n", i, i, i, i, i, i);
+                fs_len += shader_appendf(fs_buf, fs_len, "    vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d, three_point_filter%d WEB_BORDER%d);\n", i, i, i, i, i, i);
             else
-                fs_len += sprintf(fs_buf + fs_len, "    vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d WEB_BORDER%d);\n", i, i, i, i, i);
+                fs_len += shader_appendf(fs_buf, fs_len, "    vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d WEB_BORDER%d);\n", i, i, i, i, i);
         }
     }
 
@@ -2160,7 +2123,7 @@ static GlRetainedProgram* gl_ret_program_get(struct ShaderProgram* prg) {
 
     char vs_buf[8192];
     size_t vs_len = 0;
-    vs_len += sprintf(vs_buf + vs_len, "#version %s\n", gl_glsl_version_str);
+    vs_len += shader_appendf(vs_buf, vs_len, "#version %s\n", gl_glsl_version_str);
     if (gl_es) {
         append_line(vs_buf, &vs_len, "precision mediump float;");
     }
@@ -2175,10 +2138,10 @@ static GlRetainedProgram* gl_ret_program_get(struct ShaderProgram* prg) {
     append_line(vs_buf, &vs_len, "INPUT vec4 aRetNrm;");
     for (int i = 0; i < 2; i++) {
         if (cc.used_textures[i]) {
-            vs_len += sprintf(vs_buf + vs_len, "INPUT vec2 aTexCoord%d;\nOUTPUT vec2 vTexCoord%d;\n", i, i);
+            vs_len += shader_appendf(vs_buf, vs_len, "INPUT vec2 aTexCoord%d;\nOUTPUT vec2 vTexCoord%d;\n", i, i);
             for (int j = 0; j < 2; j++) {
                 if (cc.clamp[i][j]) {
-                    vs_len += sprintf(vs_buf + vs_len, "INPUT float aTexClamp%s%d;\nOUTPUT float vTexClamp%s%d;\n",
+                    vs_len += shader_appendf(vs_buf, vs_len, "INPUT float aTexClamp%s%d;\nOUTPUT float vTexClamp%s%d;\n",
                                       j == 0 ? "S" : "T", i, j == 0 ? "S" : "T", i);
                 }
             }
@@ -2202,7 +2165,7 @@ static GlRetainedProgram* gl_ret_program_get(struct ShaderProgram* prg) {
     const char* shade_qual = (cc.opt_nopersp_shade && gl_glsl_version >= 130 && !gl_es) ? "noperspective " : "";
     const int iw = cc.opt_alpha ? 4 : 3;
     for (int i = 0; i < cc.num_inputs; i++) {
-        vs_len += sprintf(vs_buf + vs_len, "INPUT vec%d aInput%d;\n%sOUTPUT vec%d vInput%d;\n", iw, i + 1, shade_qual, iw, i + 1);
+        vs_len += shader_appendf(vs_buf, vs_len, "INPUT vec%d aInput%d;\n%sOUTPUT vec%d vInput%d;\n", iw, i + 1, shade_qual, iw, i + 1);
     }
     append_line(vs_buf, &vs_len, "uniform vec4 uMats[64];");
     append_line(vs_buf, &vs_len, "uniform vec4 uFixup;");   /* (x scale, x offset, z scale, z offset) in NDC */
@@ -2213,7 +2176,7 @@ static GlRetainedProgram* gl_ret_program_get(struct ShaderProgram* prg) {
     append_line(vs_buf, &vs_len, "uniform vec4 uLight[5];"); /* ambient, l0 dir, l0 col, l1 dir, l1 col */
     append_line(vs_buf, &vs_len, "uniform int uShadeSlot;"); /* the combiner input the lighting replaces, -1 = unlit */
     if (cc.num_inputs > 0) {
-        vs_len += sprintf(vs_buf + vs_len, "uniform int uInputKind[%d];\n", cc.num_inputs);
+        vs_len += shader_appendf(vs_buf, vs_len, "uniform int uInputKind[%d];\n", cc.num_inputs);
     }
     append_line(vs_buf, &vs_len, "uniform vec4 uPrim;");
     append_line(vs_buf, &vs_len, "uniform vec4 uEnv;");
@@ -2236,10 +2199,10 @@ static GlRetainedProgram* gl_ret_program_get(struct ShaderProgram* prg) {
     append_line(vs_buf, &vs_len, "    vec3 lit = min(uLight[0].xyz + max(0.0, dot(aRetNrm.xyz, uLight[1].xyz)) * uLight[2].xyz + max(0.0, dot(aRetNrm.xyz, uLight[3].xyz)) * uLight[4].xyz, 1.0);");
     for (int i = 0; i < 2; i++) {
         if (cc.used_textures[i]) {
-            vs_len += sprintf(vs_buf + vs_len, "    vTexCoord%d = aTexCoord%d;\n", i, i);
+            vs_len += shader_appendf(vs_buf, vs_len, "    vTexCoord%d = aTexCoord%d;\n", i, i);
             for (int j = 0; j < 2; j++) {
                 if (cc.clamp[i][j]) {
-                    vs_len += sprintf(vs_buf + vs_len, "    vTexClamp%s%d = aTexClamp%s%d;\n", j == 0 ? "S" : "T", i, j == 0 ? "S" : "T", i);
+                    vs_len += shader_appendf(vs_buf, vs_len, "    vTexClamp%s%d = aTexClamp%s%d;\n", j == 0 ? "S" : "T", i, j == 0 ? "S" : "T", i);
                 }
             }
         }
@@ -2254,7 +2217,7 @@ static GlRetainedProgram* gl_ret_program_get(struct ShaderProgram* prg) {
         /* input kinds (gfx_rendering_api retained_build): 1 prim, 2 env, 3 prim
          * alpha as rgb, 4 env alpha as rgb, 5 prim lod fraction rgb, 6 prim lod
          * fraction alpha; the shade slot takes the lighting */
-        vs_len += sprintf(vs_buf + vs_len, "    { vec%d v = aInput%d; int k = uInputKind[%d];\n", iw, i + 1, i);
+        vs_len += shader_appendf(vs_buf, vs_len, "    { vec%d v = aInput%d; int k = uInputKind[%d];\n", iw, i + 1, i);
         if (cc.opt_alpha) {
             append_line(vs_buf, &vs_len, "      if (k == 1) v = uPrim; else if (k == 2) v = uEnv;");
             append_line(vs_buf, &vs_len, "      else if (k == 3) v.rgb = vec3(uPrim.a); else if (k == 4) v.rgb = vec3(uEnv.a);");
@@ -2264,7 +2227,7 @@ static GlRetainedProgram* gl_ret_program_get(struct ShaderProgram* prg) {
             append_line(vs_buf, &vs_len, "      else if (k == 3) v = vec3(uPrim.a); else if (k == 4) v = vec3(uEnv.a);");
             append_line(vs_buf, &vs_len, "      else if (k == 5) v = vec3(uLod);");
         }
-        vs_len += sprintf(vs_buf + vs_len, "      if (uShadeSlot == %d) v.rgb = lit;\n      vInput%d = v; }\n", i, i + 1);
+        vs_len += shader_appendf(vs_buf, vs_len, "      if (uShadeSlot == %d) v.rgb = lit;\n      vInput%d = v; }\n", i, i + 1);
     }
     if (cc.opt_ge_farclip || cc.opt_ge_pixfog) {
         append_line(vs_buf, &vs_len, "    vGeZw = clip.zw;");

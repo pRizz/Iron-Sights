@@ -3001,6 +3001,9 @@ s32 interface_menu05_fileselect(void)
     {
         frontChangeMenu(MENU_LEGAL_SCREEN, TRUE);
     }
+#ifndef TARGET_N64
+    return 0;
+#endif
 }
 
 

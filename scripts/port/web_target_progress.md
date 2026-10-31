@@ -98,6 +98,17 @@ resident-memory optimization require separate measured work.
 
 ## WEB-002 | 2026-10-24 | Playable prototype
 
+**Shared buffer audit, 2026-10-30:** The repository-wide audit adds checked
+memory-bank/high-mapping arithmetic, model-record spans, audio DMEM/history
+checks, capacity-preserving shader text and renderer/engine index guards.
+The optimized SDL2/WebGL Wasm target builds successfully; all 176 browser unit
+tests pass. Native sanitizer startup samples cover all 20 solo missions, and
+Windows effect/restore captures provide separate native evidence. The
+[audit report](buffer_audit.md) records remaining raw command writers, trusted
+ROM decoders and static-analysis gaps. Next action: validate shared guards in
+actual browser gameplay and continue issue #3 investigation; native captures
+do not establish browser flicker acceptance.
+
 **Shared frame-buffer guard, 2026-10-30:** The native issue #4 investigation
 reproduced AR33 ADS auxiliary-data overflow into effect textures on Aztec.
 Shared non-N64 allocation now has a 256 KiB/player/half floor and checks bounds
