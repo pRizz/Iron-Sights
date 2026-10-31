@@ -4599,7 +4599,11 @@ static const struct PortSheetRow port_sheet_rows_hud[] = {
     { SHROW_XHAIR, NULL },   /* under Always Crosshair */
     { SHROW_OPT, "ammo_on_screen" }, { SHROW_OPT, "mission_timer" },
     { SHROW_OPT, "hit_markers" }, { SHROW_OPT, "damage_indicators" },
-    { SHROW_OPT, "objective_notifications" }, { SHROW_OPT, "weapon_hud" },
+    { SHROW_OPT, "objective_notifications" },
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    { SHROW_OPT, "mission_hints" },
+#endif
+    { SHROW_OPT, "weapon_hud" },
     { SHROW_OPT, "weapon_hud_icons" },
     { SHROW_OPT, "always_health" },
     /* center mission timer goes here - no such option exists yet */

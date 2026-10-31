@@ -98,6 +98,18 @@ resident-memory optimization require separate measured work.
 
 ## WEB-002 | 2026-10-24 | Playable prototype
 
+**ADS mouse defaults, 2026-10-30:** Desktop and web now leave the optional
+dedicated ADS action unbound. Ordinary Aim retains its right-mouse default
+and Hold remains the initial aim-control setting. A keyboard-device marker
+removes the former middle-mouse ADS default once while preserving other custom
+keys and subsequent intentional rebindings. Touch retains its semantic ADS
+action. The new mission-start onboarding and HUD menu toggle are desktop-only;
+their INI fields remain portable without consuming displays in the browser.
+Optimized Wasm compilation, exact-artifact verification, touch-bridge and
+menu-pointer checks pass. Windows captures and saved-device migration checks
+also pass; the native hint quota remains outside browser rendering.
+Next action: retain the shared default/migration policy across targets.
+
 **Status:** Complete. Optimized SDL2/WebGL 2 prototype reaches normal menus and
 playable Dam; repeated Chrome/Edge input/audio/focus/watch checks pass.
 

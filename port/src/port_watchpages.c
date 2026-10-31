@@ -112,6 +112,9 @@ static const struct PortWatchRowDef sHud[] = {
     { PWROW_OPT,       "hit_markers",      NULL, 0, 0 },
     { PWROW_OPT,       "damage_indicators", NULL, 0, 0 },
     { PWROW_OPT,       "objective_notifications", NULL, 0, 0 },
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    { PWROW_OPT,       "mission_hints", NULL, 0, 0 },
+#endif
     { PWROW_OPT,       "weapon_hud",       NULL, 0, 0 },
     { PWROW_OPT,       "weapon_hud_icons", NULL, 0, 0 },
     { PWROW_OPT,       "always_health",    NULL, 0, 0 },

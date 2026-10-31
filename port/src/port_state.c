@@ -28,6 +28,7 @@ extern void *memset(void *, int, size_t);
 #include "romdata.h"
 #include "port_state.h"
 #include "port_hud.h"
+#include "port_mission_hints.h"
 #include "fr.h"
 extern void *memset(void *, int, size_t);
 extern int memcmp(const void *, const void *, size_t);
@@ -560,6 +561,7 @@ void portStatePresentationReset(void)
     portStateResetInput();
     portBindCooldownStart();
     portHudReset(0);
+    portMissionHintsDismiss();
     if (g_CurrentPlayer) {
         g_CurrentPlayer->insightaimmode = 0;
     }

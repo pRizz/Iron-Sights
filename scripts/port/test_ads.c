@@ -301,7 +301,7 @@ int main(void)
     assert(portJoyPortWatchStepUpDown() == 0);
     portJoyPortPollCommit();
     assert(strcmp(portJoyPortBindName(PORTACT_AIM_DOWN_SIGHTS), "aim_down_sights") == 0);
-    assert(strcmp(portJoyPortBindDefault(PORTACT_AIM_DOWN_SIGHTS), "Mouse Middle") == 0);
+    assert(strcmp(portJoyPortBindDefault(PORTACT_AIM_DOWN_SIGHTS), "") == 0);
 
     adsHandProjection(&scene, &handProjection);
     for (i = 0; i < 4; i++) {

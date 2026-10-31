@@ -30,6 +30,65 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-035 — Desktop mission-start control hints
+
+Desktop solo missions show compact gadget and aim-down-sights hints for eight
+seconds of controllable gameplay, fading smoothly during the last two seconds.
+The inherited upstream HUD has no such onboarding. The timer waits for Bond's
+actual control-unlock predicate, pauses while the watch, menus, console or
+cutscenes take control, and hides with the HUD or on death. Mission starts and
+restarts rearm it; generic HUD/inventory resets do not. Suspend-point restores
+dismiss it. Multiplayer, browser, Xbox and headless targets omit the overlay.
+**Gameplay > HUD > Mission Start Hints** is available in the desktop folder
+and watch menus. It defaults on (`[display] mission_hints=1`) with a saved
+completed-display count (`mission_hints_shown=0`). After three complete windows
+that actually rendered a hint, the setting automatically turns off. Shortened
+missions, hidden/unbound hints and suspend restores do not consume a display.
+Explicitly re-enabling resets the count for the next mission. Counts/settings
+stay outside suspend images, so loading an older image cannot reset the quota.
+
+The two rows describe tapping the live `next_inventory` binding and aiming down
+sights through the current `r` (Aim) binding in ADS mode. They respect the
+player's Hold/Toggle setting; a separately mapped `aim_down_sights` action is
+the fallback when normal Aim uses the red reticle or is unbound. They use the
+existing watch binding readback,
+including mouse-button names and remapped keys. Keyboard alternatives show the
+first mapped key; unbound actions disappear. A controller that claimed player
+one uses its current device's friendly button labels instead. N64-mode pads
+omit these direct-action hints because their controls do not consume those
+actions. Bare text, with a one-pixel shadow and no rectangular background, is
+vertically centered and starts slightly inside the left health arc. Its anchor
+follows health centering/edge transitions independently of the ammo HUD, at wide
+and 4:3 aspect ratios. Friendly mouse names include **Right Mouse Button**;
+Mouse X1/X2 remain distinct as Mouse Button 4/5. Display aliases do not change
+saved binding tokens. Text uses uniform small capitals at 0.65 scale and a
+six-framebuffer-pixel rightward inset, including a matching shadow offset.
+
+**Sources:** [overlay and timing](port/src/port_mission_hints.c),
+[interface](port/include/port_mission_hints.h), small lifecycle/draw hooks in
+`src/game/objective.c`, `src/game/bondview2.c` and `port/src/port_state.c`.
+`port_options.c`, `port_watchpages.c`, `front.c`, `joy_port.c` and `video.c`
+connect the menu setting, runtime defaults and persisted fields.
+The renderer reuses `portHudLabel`; input labels come from the
+existing `video.c`/`input_pc.c` binding APIs rather than a second key table.
+**Validation:** [ROM-free checks](scripts/port/test_mission_hints.sh) pass
+control-lock timing, pause/resume without rearming, eight-second duration at
+30/60/120/240 Hz, smooth final fade, live custom keyboard/mouse/controller
+labels, unbound actions, health anchoring, uniform typography, quota persistence
+and stage/HUD/death/multiplayer/restore gates. Existing
+HUD, ADS and suspend-state regressions pass. The native release workflow runs
+the new hint checks. [Isolated Windows captures](scripts/port/audit_mission_hints.ps1)
+cover default/remapped/unbound hints. An isolated four-process mission audit
+verifies saved counts 1/2/3, automatic Off and continued Off after relaunch,
+alongside the one-time ADS mouse migration retaining a custom alternative.
+Windows/Linux and optimized Wasm builds pass. Windows wide/4:3 captures verify
+the final inset, small-cap text, friendly/default/remapped bindings, fade and
+disappearance; the folder HUD menu shows the new toggle. Unbound captures omit
+the overlay. Browser artifact integrity, touch-bridge and menu-pointer checks
+pass. The gallery fixture explicitly disables onboarding with its other HUD
+overlays; its nine workflow tests pass. Both independent gallery passes reproduce
+all 72 views and 35 icons with zero changed image cells, and integrity verification passes.
+
 ### FORK-034 — Portable desktop save import and export
 
 Windows and Linux add **Import** and **Export** directly to the
@@ -1182,8 +1241,14 @@ inputs. Gallery integrity and all eight workflow tests pass.
 Added aim-down-sights for 21 supported firearms with individual weapon poses
 and sight alignment. Right mouse defaults to ADS; **Gameplay > General Settings
 > Aim Mode** can restore the red reticle. The existing hold/toggle aim setting
-applies to either mode. Middle mouse remains a separate, rebindable hold-to-ADS
-action. Players can walk and strafe at half speed while aiming. Per-player ADS
+applies to either mode, with Hold as the default. The separate hold-to-ADS
+action is now unbound by default on desktop and web, replacing its middle-mouse
+default. An `ads_mouse_upgraded` marker in the keyboard device's binds section
+removes that old mouse key once from loaded bindings, retaining other custom
+keys and later intentional rebindings. The ordinary Aim binding remains Mouse
+Right by default. The optional dedicated action remains available to custom
+keyboard/controller layouts and the browser touch adapter. Documentation and
+the ADS default regression now match this policy. Players can walk and strafe at half speed while aiming. Per-player ADS
 state and simulation-time transitions support different tick rates. Refined the
 view to reveal front sights with a slight perspective along the top of each gun.
 Recalibrated the AR33/M4 square sight aperture and RC-P90 sight tip vertically

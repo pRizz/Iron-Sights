@@ -60,6 +60,7 @@ jobs:
           bash scripts/port/test_upstream_merge.sh
           python3 scripts/port/test_native_tool_launchers.py
           bash scripts/port/test_hud.sh
+          bash scripts/port/test_mission_hints.sh
           bash scripts/port/test_wardrobe.sh
           bash scripts/port/test_mission_cheats.sh
           bash scripts/port/test_mission_times.sh

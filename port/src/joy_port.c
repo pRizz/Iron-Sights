@@ -173,7 +173,7 @@ static const struct {
     /* F1 has always been this key; it is now just a default */
     [PORTACT_MOUSE_UNLOCK]     = { "mouse_unlock",     "F1",       1 },
     [PORTACT_CLASSIC_TOGGLE]   = { "classic_toggle",   "Tab",      1 },
-    [PORTACT_AIM_DOWN_SIGHTS]  = { "aim_down_sights",  "Mouse Middle", 0 },
+    [PORTACT_AIM_DOWN_SIGHTS]  = { "aim_down_sights",  "", 0 }, /* Aim (Mouse Right) already supplies ADS. */
     [PORTACT_STATE_MENU]      = { "suspend_points", "F6", 1 },
     [PORTACT_QUICKSAVE]       = { "quicksave", "F5", 1 },
     [PORTACT_QUICKLOAD]       = { "quickload", "F9", 1 },
@@ -296,6 +296,10 @@ static s32 joyPortOwnValue(const char *value)
 /** midas.ini keys this module owns besides the binds; returns 1 when consumed. */
 s32 portJoyPortSetOption(const char *key, const char *value)
 {
+#ifdef GE_VIDEO
+    extern s32 portMissionHintsOptionSet(const char *, s32);
+    if (portMissionHintsOptionSet(key, atoi(value))) return 1;
+#endif
     if (portKnifeAdsOptionSet(key, atoi(value))) return 1;
     if (portHudOptionSet(key, atoi(value))) return 1;
     if (strcmp(key, "sprint") == 0) {
@@ -437,6 +441,10 @@ void portJoyPortPadOptSet(s32 pad, s32 which, s32 v)
 /** Port Options bridge (port_options.c): the same keys as integers. */
 s32 portJoyPortOptionGet(const char *key, s32 *out)
 {
+#ifdef GE_VIDEO
+    extern s32 portMissionHintsOptionGet(const char *, s32 *);
+    if (portMissionHintsOptionGet(key, out)) return 1;
+#endif
     if (portKnifeAdsOptionGet(key, out)) return 1;
     if (portHudOptionGet(key, out)) return 1;
     if (strcmp(key, "sprint") == 0) {
@@ -464,6 +472,10 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
 
 s32 portJoyPortOptionSet(const char *key, s32 v)
 {
+#ifdef GE_VIDEO
+    extern s32 portMissionHintsOptionSet(const char *, s32);
+    if (portMissionHintsOptionSet(key, v)) return 1;
+#endif
     if (portKnifeAdsOptionSet(key, v)) return 1;
     if (portHudOptionSet(key, v)) return 1;
     if (strcmp(key, "sprint") == 0) {

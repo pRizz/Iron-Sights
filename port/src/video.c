@@ -2018,6 +2018,7 @@ s32 portReturnStartThisTick(void)
 /* [controls] marker - this file has been through the one-time Move-stick
  * upgrade (videoLoadConfig), so four empty analog_* are the player's choice */
 #define VIDEO_MOVE_UPGRADE_KEY "move_stick_upgraded"
+#define VIDEO_ADS_MOUSE_UPGRADE_KEY "ads_mouse_upgraded"
 
 enum {
     BIND_A, BIND_B, BIND_Z, BIND_L, BIND_R, BIND_START,
@@ -2347,6 +2348,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "hit_markers=1\n");
     fprintf(f, "damage_indicators=1\n");
     fprintf(f, "objective_notifications=1\n");
+    fprintf(f, "mission_hints=1\nmission_hints_shown=0\n");
     fprintf(f, "weapon_hud=1\n");
     fprintf(f, "weapon_hud_icons=0\n");
     fprintf(f, "always_health=1\n");
@@ -2894,6 +2896,7 @@ extern void portInputDevRecHeader(FILE *f, const char *id); /* input_pc.c */
 /* Port actions whose line was in the loaded binds (videoApplyBindLine), so an
  * action added since the file was written can be told from one the player set. */
 static u8 sPortBindSeen[PORT_BIND_MAX];
+static int sAdsMouseUpgraded;
 
 void portVideoKbmBindsAppend(FILE *f)
 {
@@ -2912,6 +2915,7 @@ void portVideoKbmBindsAppend(FILE *f)
         fprintf(f, "%s=%s\n", portJoyPortBindName(i), buf);
     }
     fprintf(f, "%s=1\n", VIDEO_MOVE_UPGRADE_KEY);
+    fprintf(f, "%s=1\n", VIDEO_ADS_MOUSE_UPGRADE_KEY);
 }
 
 /** Rewrites the record's [binds] section from the live binds, keeping every
@@ -2990,6 +2994,11 @@ static int videoApplyBindLine(const char *key, char *value, int *moveUpgraded)
 {
     int i;
 
+    if (SDL_strcasecmp(key, VIDEO_ADS_MOUSE_UPGRADE_KEY) == 0)
+    {
+        sAdsMouseUpgraded = SDL_atoi(value) != 0;
+        return 1;
+    }
     if (SDL_strcasecmp(key, VIDEO_MOVE_UPGRADE_KEY) == 0)
     {
         *moveUpgraded = 1;
@@ -3056,9 +3065,28 @@ static int videoKbmBindsLoad(int *moveUpgraded)
  * keeps its default keys, except a key the player already has on another bind:
  * that key is dropped, so a new default never doubles up a custom bind.
  * 1 = something was dropped. */
+static int videoUpgradeAdsMouse(void)
+{
+    int i, k, used;
+    if (sAdsMouseUpgraded) return 0;
+    sAdsMouseUpgraded = 1;
+    for (i = 0; i < portJoyPortBindCount() && i < PORT_BIND_MAX; i++) {
+        if (SDL_strcmp(portJoyPortBindName(i), "aim_down_sights") != 0) continue;
+        used = 0;
+        for (k = 0; k < BIND_MAX_KEYS; k++) {
+            const SDL_Scancode code = sPortBindings[i][k];
+            if (code != SDL_SCANCODE_UNKNOWN && code != BIND_MOUSE_BASE + 1)
+                sPortBindings[i][used++] = code; /* Mouse Middle's SDL button slot. */
+        }
+        while (used < BIND_MAX_KEYS) sPortBindings[i][used++] = SDL_SCANCODE_UNKNOWN;
+    }
+    portConLogf("ge: input: retired middle-mouse ADS default; Aim uses the existing right-mouse binding\n");
+    return 1; /* Persist the upgrade marker, including when already unbound. */
+}
+
 static int videoPortBindNewDefaults(void)
 {
-    int changed = 0;
+    int changed = videoUpgradeAdsMouse();
     int i, j, k, m;
 
     for (i = 0; i < portJoyPortBindCount() && i < PORT_BIND_MAX; i++)
@@ -3237,6 +3265,7 @@ static void videoLoadConfig(void)
 
     videoBindCountCheck();
     SDL_memset(sPortBindSeen, 0, sizeof(sPortBindSeen));
+    sAdsMouseUpgraded = 0;
 
     /* code defaults first: a missing/partial/broken ini leaves these live */
     for (i = 0; i < BIND_COUNT; i++)

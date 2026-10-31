@@ -402,7 +402,7 @@ def generate(root=ROOT, executable=None):
     (game/'midas.ini').write_text('[display]\nfullscreen=window\nvsync=0\nmaxfps=60\ntickhz=60\n'
         'msaa=1\nrender_thread=0\nwidescreen=1\nhfov_wide=90\nlow_res=0\nfiltering=bilinear\nfilter_2d=1\n'
         'aim_mode=1\nsight_on_screen=0\nalways_crosshair=0\nweapon_hud=0\nalways_health=0\n'
-        'mission_timer=0\nhit_markers=0\ndamage_indicators=0\nobjective_notifications=0\n[input]\nmouse=1\n', encoding='utf-8')
+        'mission_timer=0\nhit_markers=0\ndamage_indicators=0\nobjective_notifications=0\nmission_hints=0\n[input]\nmouse=1\n', encoding='utf-8')
     output = work/'published'
     output.mkdir()
     try:

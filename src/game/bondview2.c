@@ -54,6 +54,7 @@
 #include <stdlib.h> /* getenv - port diagnostics */
 #include "port_ads.h"
 #include "port_hud.h"
+#include "port_mission_hints.h"
 #include "port_mission_clock.h"
 extern f32 g_bondviewSceneWideFactor;
 extern s32 portAdzyMode(void); /* video.c: midas.ini [display] adzy - used twice in solo_char_load */
@@ -7394,6 +7395,7 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
 #ifndef TARGET_N64
     portAdsTick();
     portHudTick();
+    portMissionHintsTick();
     g_CurrentPlayer->sniper_zoom = portAdsWheelZoom(g_CurrentPlayer->sniper_zoom, GE_DEFAULT_FOV * 0.75f);
     if (portAdsActive())
     {
@@ -13067,6 +13069,7 @@ blood_frame_held:;
     gdl = generate_ammo_total_microcode(gdl);
 #ifndef TARGET_N64
     gdl = portHudDraw(gdl);
+    gdl = portMissionHintsDraw(gdl);
 #endif
     gdl = countdownTimerRender(gdl);
     gdl = display_red_blue_on_radar(gdl);

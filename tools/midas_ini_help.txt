@@ -201,6 +201,12 @@ padN_stickmode.
   hit_markers         | 1          | Brief marker on confirmed character damage
   damage_indicators   | 1          | Red arcs toward the source of damage
   objective_notifications | 1     | Named objective status alerts; 0 = original
+  mission_hints       | 1          | Desktop solo mission-start control hints.
+                      |            | Gameplay > HUD > Mission Start Hints.
+                      |            | Eight seconds; fades over the final two.
+                      |            | Turns off after three complete displays.
+                      |            | Re-enable to reset the count (next mission).
+  mission_hints_shown | 0          | Saved completed-display count (0 to 3).
                       |            | bottom-left messages. Solo only
   weapon_hud          | 1          | Bottom weapon strip; selected weapon is
                       |            | highlighted. Scrolls for large inventories
@@ -386,7 +392,7 @@ Port actions (extra actions beyond the N64 pad)
   menu_back        |                  | Menu-only back
   mouse_unlock     | F1               | Release or re-grab the mouse pointer
   classic_toggle   | Tab              | Switch Classic Mode on or off
-    aim_down_sights   | Mouse Middle     | Hold to raise a single firearm's sights
+  aim_down_sights   |                  | Optional dedicated hold-to-ADS action
   suspend_points   | F6               | Open the solo save/load slot menu
   quicksave        | F5               | Replace the separate quicksave
   quickload        | F9               | Load the quicksave and resume gameplay
@@ -410,7 +416,10 @@ Port actions (extra actions beyond the N64 pad)
   Aim Mode (Gameplay > General Settings) selects ADS or Red Reticle for Aim
   (Mouse Right by default). ADS is the default, including with an existing ini
   that has no aim_mode key. Aim Control selects Hold or Toggle for either mode.
-  The separate Aim Down Sights binding always uses hold-to-ADS. ADS keeps
+  Hold Mouse Right with the default Hold setting; Mouse Middle has no default
+  ADS binding. Older saved keyboard bindings drop that middle-mouse ADS key
+  once, retaining other custom keys. The separate Aim Down Sights action is
+  unbound by default and always uses hold-to-ADS when explicitly mapped. ADS keeps
   walking and strafing available at half speed, centres the weapon, and zooms
   the view. Holding Walk does not stack another slowdown; crouching still does.
   Scoped weapons keep their stronger zoom. Dual wielding, gadgets, the tank,

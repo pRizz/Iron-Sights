@@ -44,7 +44,8 @@ It removes its executable copy when capture finishes or fails. Diagnostic logs
 and raw captures remain under `build_win/hand-gallery-*` for troubleshooting.
 
 Every view has a fixed camera, neutral background, seed, FOV, wardrobe, gun,
-lighting and settled pose. Watch clock hands are frozen for review only. Two
+lighting and settled pose. Mission-start hints are disabled in this isolated
+fixture, alongside the other HUD overlays. Watch clock hands are frozen for review only. Two
 successive samples must have identical pixels; the entire matrix is then
 captured by a second game process and compared again. Native icon generation
 performs its existing repeated-sample check. The script publishes output only

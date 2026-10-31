@@ -118,9 +118,15 @@ An older `ge.ini` is renamed to `midas.ini` automatically on first run.
 **Mouse Right** aims down the sights by default. Change **Gameplay > General
 Settings > Aim Mode** to **Red Reticle** for the original aiming mode. The
 existing **Aim Control** setting selects hold or toggle for either mode.
-**Mouse Middle** remains a separate hold-to-ADS binding, configurable in the
-controls menu, including for controllers.
+Hold **Mouse Right** for ADS with the default Hold setting. The separate
+hold-to-ADS action is unbound by default and remains available for custom
+keyboard/controller layouts; the former middle-mouse default is removed from
+older saved keyboard bindings once, preserving other custom keys.
 You can walk and strafe at half speed while aiming down sights.
+Desktop missions briefly show the current gadget/ADS bindings when control
+begins. **Gameplay > HUD > Mission Start Hints** turns them off manually;
+after three complete displays they turn off automatically. Re-enabling resets
+the count for subsequent missions.
 ADS adds basic low-poly hands and forearms to the 13 firearms that lack them,
 including the KF7 Soviet. Pistols retain their original hands.
 Each firearm's ADS pose has a slight upward angle to reveal its front sight
