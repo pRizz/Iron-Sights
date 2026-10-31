@@ -690,9 +690,8 @@ normal play, and no mouse-count threshold or game-side growing queue was
 found. [The investigation](web_hitch_investigation.md) records private paths,
 focus caveats and timing. WPA 11.8 was installed locally, but a full export
 of the existing roughly 1 GB ETL raised memory use enough that it was stopped;
-the ETL remains intact. Next action: capture a short WPR interval during
-manual OpenGL play, inspect its present queues and wait chains, and compare
-the host signature with the earlier D3D11 freeze.
+the ETL remains intact. The short capture and lower Chrome-load comparison
+below supersede that next action.
 
 **Short synchronized OpenGL interval, 2026-10-31:** The user completed an
 85-second manual OpenGL Dam run with a 45-second WPR recording. The worst Dam
@@ -705,9 +704,27 @@ paging. This shorter run does not reproduce the earlier presentation-collapse
 signature or settle whether resource pressure contributes to it. Even this
 259 MB ETL caused WPAExporter to exceed 2 GB working set, so it was stopped;
 low-memory ETW readers completed. [The investigation](web_hitch_investigation.md)
-records timing and private evidence. Next action: capture a short WPR interval
-that contains a multi-second shared freeze, or extract the relevant wait and
-present chain from the original ETL without buffering the entire GPU trace.
+records timing and private evidence.
+
+**Background Chrome load comparison, 2026-10-31:** With the game and regular
+Chrome windows closed, a five-minute ordinary Codex interval produced no
+reported freeze; available RAM ranged 2.71–3.48 GB. Page reads briefly
+spiked without a freeze, so paging alone is insufficient. The user then
+played matched two-minute physical-mouse Dam runs on both hardware backends,
+with the same build, canvas, probe settings and roughly 8,000 locked mouse
+events per run. Both new runs had **zero** Dam gaps ≥100 ms and no perceived
+game/Codex freeze. Earlier, with regular Chrome open, each backend had four
+Dam gaps ≥500 ms, worst 7.05 s on D3D11 and 5.93 s on OpenGL. Median free
+RAM during play rose from 1.61–1.90 GB to 2.73–2.75 GB; Chrome process count
+fell from 48 to 23–25. The D3D11 closed run lost pointer lock for its final
+13 seconds, but its first 107 seconds were clean; OpenGL briefly lost and
+regained lock without a hitch. [The investigation](web_hitch_investigation.md)
+has counts, audio and host caveats. Closing extra Chrome windows is a
+reversible **mitigation lead**, not a proven fix or root cause. Next action:
+observe a longer normal play session with those windows closed. If a
+multi-second shared freeze recurs, capture a short synchronized WPR interval
+under the lower load and use low-memory ETW readers to compare the present
+and scheduler signature with the original trace.
 
 **Absolute menu pointer, 2026-10-27:** Investigation reproduced the reported
 drift: the inherited ignored-warp fallback accumulated physical deltas around

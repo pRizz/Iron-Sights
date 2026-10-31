@@ -351,6 +351,57 @@ cannot explain the earlier synchronized multi-second freeze that had about
 2.35 GB available and negligible paging. The two captures should not be
 combined into one asserted root cause.
 
+## Background Chrome load comparison, 2026-10-31
+
+The user closed their regular Chrome windows after the short WPR run. An
+unloaded five-minute interval with no game then produced **no observed Codex
+freeze**. Its 310 one-second host samples had 2.71–3.48 GB available
+(median 3.15 GB), median page reads of one/s, 95th percentile 106/s and an
+isolated maximum of 2,598/s without a reported UI freeze. Thus a page-read
+spike by itself is not a sufficient explanation. The private counter file is
+`build/web-hitches/idle-codex-chrome-closed-host.csv`.
+
+The user then played two more 120-second physical-mouse Dam runs with the
+regular Chrome windows still closed. Build `c1ce09118bbc0768`, RTX 3070,
+839×471 canvas, invulnerability, SDL swap yield, and disabled audio/WebGL
+probes matched the earlier manual runs. The user confirmed normal play and no
+game or Codex freeze in either new run.
+
+| Backend | Regular Chrome | Locked mouse moves | Dam gaps ≥100 ms | Dam gaps ≥500 ms | Worst recorded Dam gap |
+| --- | --- | ---: | ---: | ---: | ---: |
+| D3D11 | Open | 8,995 | 9 | 4 | 7.05 s |
+| D3D11 | Closed | 8,268 | 0 | 0 | 53 ms |
+| OpenGL | Open | 8,025 | 7 | 4 | 5.93 s |
+| OpenGL | Closed | 8,408 | 0 | 0 | <35 ms |
+
+The observer stores frame gaps from 35 ms upward, so `<35 ms` means no
+qualifying frame was recorded. In the D3D11 closed run, pointer lock ended
+about 107 seconds into gameplay and was not reacquired, leaving the last
+13 seconds without locked movement. The first 107 seconds were clean. The
+OpenGL closed run briefly lost pointer lock at about 93 seconds and reacquired
+it about three seconds later, without a frame gap. Both runs retained ample
+locked mouse movement and playable Dam samples.
+
+Median available RAM during Dam rose from 1.90 to 2.73 GB for D3D11 and
+from 1.61 to 2.75 GB for OpenGL. Median Chrome process counts fell from 48
+to 23/25 respectively, and aggregate Chrome working sets fell from roughly
+3.2–3.4 GB to 1.5–1.7 GB. CPU medians stayed near 23% across the pairs.
+The OpenGL closed run had **higher** 95th-percentile page reads than its
+open-window run (92 versus 26/s) despite having no hitch, another reason not
+to assign a simple paging threshold. Native audio queue-dry reports fell
+from several in each open-window run to none in closed-window OpenGL and one
+minor 77 ms pump gap in closed-window D3D11. Private evidence is under
+`build/web-hitches/manual-gl-chrome-closed/` and
+`build/web-hitches/manual-d3d11-chrome-closed/` with adjacent host CSVs.
+
+Closing the extra Chrome windows is a **promising, reversible mitigation** on
+this host. The matched build, renderer, canvas, probe settings and comparable
+mouse counts support it. These are single two-minute samples, separated in
+time with uncontrolled scene and background activity; they do not establish
+whether RAM headroom, another Chrome tab/extension, graphics contention, or
+chance caused the improvement. The earlier low-paging shared freeze also
+shows that RAM pressure alone is not a complete root-cause explanation.
+
 ## Next diagnostic step
 
 Windows Performance Analyzer 11.8 was installed locally after user approval.
@@ -363,20 +414,24 @@ TraceProcessing CPU sample and scheduling readers completed on the short ETL.
 The desktop control bridge failed before opening WPA. The headless ETW preview
 tool also requires symbol configuration that was not supplied. The original
 ETL remains intact, and the streaming ETW reader still processes it with low
-memory use. A shorter WPR recording centered on a manually observed hitch
-should make WPA's detailed queue and wait views practical on this laptop.
+memory use. Further ETL analysis on this laptop should use targeted streaming
+readers or an externally available machine with more free RAM.
 
-Capture a short WPR trace during a **multi-second** manually observed freeze,
-then use low-memory ETW passes to compare its DWM, present and scheduler
-signature with the existing synchronized ETL at 21:40:21.530–23.764 UTC.
+For immediate mitigation, play with the regular Chrome windows closed and
+watch whether the severe game/Codex freezes recur in a longer session. If
+they do, note the time and repeat a short synchronized WPR capture while
+keeping the lower Chrome load. If they do not, a later controlled one-window
+at-a-time restoration can distinguish a specific background Chrome workload
+from general process/memory pressure.
+
+If a **multi-second** manually observed freeze recurs, use low-memory ETW
+passes to compare its DWM, present and scheduler signature with the existing
+synchronized ETL at 21:40:21.530–23.764 UTC.
 Correlate the first blocked present with Chrome and Codex GPU/compositor
-threads before assigning a driver or DWM cause. The manual
-comparison rules out a reliable OpenGL workaround on this host; do not change
-the game's renderer or advise a browser flag on these results. A fresh
-synchronized WPR capture under OpenGL can test whether the same DWM
-present/wait signature recurs. An idle/no-game interval can test whether the
-shared freeze requires the game at all. Track severe gaps and audio queue-dry
-reports, not average FPS.
+threads before assigning a driver or DWM cause. The manual comparison rules
+out a reliable OpenGL-only workaround on this host; do not change the game's
+renderer or advise a browser flag on these results. Track severe gaps and
+audio queue-dry reports, not average FPS.
 Keep ETL local because it can contain process and file metadata. The 2.35 GB
 available in the synchronized capture shows low available RAM is not required
 for that shared freeze.

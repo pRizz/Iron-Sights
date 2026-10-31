@@ -33,7 +33,8 @@ new areas. Status describes implementation state, not Git publication state.
 ### FORK-037 — Private browser hitch diagnostics
 
 **Status:** Scripted and manual local diagnostics with synchronized cross-app
-reproduction; root cause not yet isolated and no backend workaround validated.
+reproduction and a lower Chrome-load mitigation lead; root cause not yet
+isolated and no backend workaround validated.
 This adds no shipped runtime behavior, settings or asset changes.
 
 The browser tooling now offers a repeatable menu/Dam timing audit with movement,
@@ -141,7 +142,16 @@ and Dxg present events continued. The user noticed a Codex freeze but could
 not map it to that gap. Host paging was elevated, unlike the earlier
 multi-second shared freeze. WPAExporter also strained memory on the smaller
 ETL, while low-memory ETW CPU/scheduler readers completed. A short WPR capture
-of a multi-second shared freeze remains the next diagnostic.
+of a multi-second shared freeze remains useful if the symptom recurs.
+After the user closed regular Chrome windows, a five-minute no-game Codex
+interval had no reported freeze. Matched two-minute manual Dam runs on both
+D3D11 and OpenGL then recorded about 8,000 locked mouse events each, no Dam
+gap of at least 100 ms and no perceived game/Codex freeze. Earlier runs with
+48 Chrome processes had four gaps of at least 500 ms per backend; the new
+runs had 23–25 Chrome processes and about 1 GB more median available RAM.
+Closing extra Chrome windows is a reversible mitigation lead, not a validated
+root-cause fix; longer play and, if needed, a synchronized recurrence are
+still required. The new private evidence remains ignored by Git.
 
 ### FORK-036 — Buffer and memory-safety audit
 
