@@ -278,6 +278,14 @@ menu-pointer regression pass. Both independent gallery runs reproduce all
 72 views/35 icons with zero changed image cells; staged freshness is verified.
 Next action: verify the main release/Pages workflows after publication.
 
+**Files hover refinement, 2026-10-31:** The browser Import/Export hit targets
+stay transparent on hover, leaving the native menu to show the same highlight
+used by Copy/Options and Erase/Exit Game. The actual-ROM browser Files audit
+checks both hover backgrounds and preserves the export/import, restart and
+responsive-target checks. TypeScript, 176 web tests, scoped formatting,
+production site assembly and exact artifact verification pass. Next action:
+verify the Pages build after publication.
+
 **Files-heading alignment, 2026-10-30:** Anchors the SELECT FILE left edge at x=40
 menu pixels, roughly ten pixels inside the leftmost folder, while retaining
 desktop/web sizing and vertical placement. Native widescreen/4:3 and browser
@@ -565,6 +573,16 @@ WEB-006 compatibility and mission/effect coverage.
 
 ## WEB-006 | 2026-10-24 | Browser compatibility and polish
 
+**Game context menu, 2026-10-31:** Right-click still reaches the native main
+menu's back action while the browser context menu is canceled on the game
+stage and Files transfer targets. The surrounding page retains normal browser
+menus. The actual-ROM Files audit checks canceled context-menu events on the
+canvas and both targets, plus uncanceled events outside the game. The native
+menu-pointer audit right-clicks from the mode menu back to Files and reopens
+it, passing 34 cursor samples in Chromium. TypeScript, 176 web tests,
+production site assembly and exact artifact verification pass.
+Next action: verify the Pages build after publication.
+
 **Absolute menu pointer, 2026-10-27:** Investigation reproduced the reported
 drift: the inherited ignored-warp fallback accumulated physical deltas around
 native menu snaps, leaving offsets up to 88 menu pixels until an edge sweep.
@@ -580,7 +598,7 @@ observes a digest-matched native linker map without changing game state and
 checks direct positioning/clicks throughout Files/mode/mission/difficulty/
 briefing, the rightmost mission, native back/forward, resize, reentry, F2 and
 fullscreen. Existing Files, Exit and crosshair audits drop their compensating
-edge sweeps/offset loops. Both debug lock settings pass all 32 samples, as do
+edge sweeps/offset loops. Earlier debug lock settings passed 32 baseline samples, as did
 optimized Edge and Chrome at double pixel density with the alternate setting.
 Captured gameplay preserves the measured 2.6-degree turn for the same input,
 including across a deliberate 250 ms hitch, with no replay; Watch recapture and

@@ -10,7 +10,7 @@
     touch-action: manipulation;
 }
 .file-save-actions button:hover:not(:disabled) {
-    background: #ffffff18;
+    background: transparent;
 }
 .file-save-actions button:focus-visible {
     outline: 2px solid #e8d779;

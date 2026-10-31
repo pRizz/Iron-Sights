@@ -2866,6 +2866,9 @@ use small `GE_WEB` hooks in `src/game/front.c`, `port/web/runtime.c` and
 the typed callback/metric boundary.
 Accessible transparent browser targets follow the measured native bounds and
 the 4:3 menu band, preserving direct file-picker gestures on touch devices.
+Their hover state remains transparent so the native menu supplies the same
+highlight as Copy, Options, Erase and Exit Game. Browser context menus are
+suppressed on these targets while ordinary browser UI keeps its own menu.
 The scoped focus hook in `web/src/capture.ts` permits focus on these game-menu
 targets; real window blur/visibility loss still pauses the game.
 `web/src/capture.test.ts` covers that scoped exception and unrelated focus pause.
@@ -2885,6 +2888,7 @@ Legacy F2 backup and restart/restore controls remain available.
 
 Focused sources are [browser targets](web/src/file-save-actions.tsx),
 [styles](web/src/file-save-actions.css), [backup handlers](web/src/app.tsx),
+[game stage](web/src/player.tsx),
 [browser dialogs](web/src/save-transfer-dialogs.tsx),
 [staging/persistence](web/src/persistent-files.ts),
 [actual-game audit](web/tools/file-menu-save-audit.mjs),
@@ -2892,6 +2896,8 @@ Focused sources are [browser targets](web/src/file-save-actions.tsx),
 [live-game lifecycle audit](web/tools/room-exit-audit.mjs).
 The native Files/Exit audit clicks now use direct screen coordinates, without
 the former edge-sweep resynchronization workaround (FORK-024).
+The actual-game Files audit checks transparent hovered targets and scoped
+context-menu cancellation alongside the existing save transfer flow.
 The real IDBFS regression passes staged import/reload, marker exclusion/cleanup,
 quota-failure rollback, failed application/retry, exact campaign/profile
 replacement and the live-file guard. The retained launcher audit passes confirmation/cancel, invalid-data
@@ -3266,6 +3272,11 @@ the first absolute handoff; native desktop warp/Wayland fallback and captured
 gameplay deltas retain their existing behavior. An ungranted legacy capture
 request cannot force a free browser menu back into relative tracking, including
 with a saved `smart_mouse_lock=0` preference. No preferences are rewritten.
+The browser game stage cancels the browser context menu on right-click, leaving
+the native menu's back action available. This applies only inside the game;
+the surrounding page retains its normal context menu.
+The actual-ROM menu-pointer audit right-clicks from the mode menu back to Files,
+then reopens the mode menu; its Chromium run passes all 34 cursor samples.
 
 The focused policy is [menu_pointer.h](port/web/menu_pointer.h), connected in
 `port/src/input_pc.c` and `src/game/front.c`. The ROM-free
@@ -3278,9 +3289,9 @@ Files, mode, mission, difficulty and briefing screens, rightmost mission
 selection, native back/forward navigation, resize, canvas reentry, F2 and
 fullscreen with direct coordinates. Prior compensating edge sweeps/offset loops
 are removed from the Files, Exit and crosshair-slider audits. Private evidence
-stays under `build/web-menu-pointer` and `build/menu-pointer-*`. Both debug lock
-settings and optimized Edge/Chrome (including double pixel density) pass all
-32 menu samples. Captured mouse conservation/Watch recapture, direct slider
+stays under `build/web-menu-pointer` and `build/menu-pointer-*`. Earlier debug lock
+settings and optimized Edge/Chrome (including double pixel density) passed all
+32 baseline menu samples. Captured mouse conservation/Watch recapture, direct slider
 dragging/backup/reload, native Files transfer and Exit Game/room resume pass.
 Native Start/HUD/ADS/
 upstream checks, 155 web unit tests, TypeScript, site allowlist/digest and standards

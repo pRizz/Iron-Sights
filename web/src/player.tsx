@@ -95,6 +95,7 @@ export function Player(props: PlayerProps) {
                 ref={stage}
                 class="game-stage"
                 classList={{ dragging: dragging(), 'touch-mode': props.touch.enabled() }}
+                onContextMenu={(event) => event.preventDefault()}
                 onDragOver={(event) => {
                     event.preventDefault();
                     if (!started()) setDragging(true);

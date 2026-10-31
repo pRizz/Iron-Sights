@@ -41,7 +41,11 @@ export function FileSaveActions(props: Props) {
     });
     return (
         <Show when={bounds().length === 8}>
-            <section class="file-save-actions" aria-label="Save transfer">
+            <section
+                class="file-save-actions"
+                aria-label="Save transfer"
+                onContextMenu={(event) => event.preventDefault()}
+            >
                 {['Import Save', 'Export Save'].map((label, index) => {
                     let touchHandled = false;
                     return (

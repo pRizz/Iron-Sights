@@ -135,6 +135,36 @@ try {
         await page.locator('.controls-close').click();
     await reachFiles();
     const canvas = await page.locator('#canvas').elementHandle();
+    for (const button of [importer, exporter]) {
+        await button.hover();
+        assert.equal(
+            await button.evaluate((element) => getComputedStyle(element).backgroundColor),
+            'rgba(0, 0, 0, 0)',
+            'Save transfer target adds a hover tint over the native menu',
+        );
+    }
+    for (const target of [page.locator('#canvas'), importer, exporter])
+        assert.ok(
+            await target.evaluate((element) => {
+                const event = new MouseEvent('contextmenu', {
+                    bubbles: true,
+                    cancelable: true,
+                    button: 2,
+                });
+                element.dispatchEvent(event);
+                return event.defaultPrevented;
+            }),
+            'Game right-click opened the browser context menu',
+        );
+    assert.equal(
+        await page.locator('.page-intro').evaluate((element) => {
+            const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+            element.dispatchEvent(event);
+            return event.defaultPrevented;
+        }),
+        false,
+        'Browser context menu was disabled outside the game',
+    );
     await page.screenshot({ path: resolve(output, 'files-desktop.png') });
     const original = await backup();
     if (process.env.MIDAS_TOUCH !== '1')
@@ -210,7 +240,7 @@ try {
     await expect(importer).toHaveCount(0, { timeout: 15_000 });
     assert.deepEqual(errors, []);
     console.log(
-        'Files saves: native menu placement, direct export/import, cancel/invalid preservation, safe restart, exact campaign/profile reload, saved preference and responsive targets passed',
+        'Files saves: transparent hover, scoped context menus, native placement, export/import, restart, exact reload, saved preference and responsive targets passed',
     );
 } catch (error) {
     await page.screenshot({ path: resolve(output, 'failure.png') }).catch(() => {});

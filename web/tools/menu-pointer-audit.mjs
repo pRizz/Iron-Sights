@@ -189,6 +189,11 @@ try {
     } else {
         await click(160, 100, 'Select campaign without edge sweep');
         await menu(6);
+        const back = await point(220, 230, 'Right-click back');
+        await page.mouse.click(back.x, back.y, { button: 'right', delay: 120 });
+        await menu(5);
+        await click(160, 100, 'Select campaign after right-click back');
+        await menu(6);
         for (const [x, y] of [
             [40, 40],
             [400, 300],
@@ -258,7 +263,7 @@ try {
         assert.deepEqual(errors, []);
         await page.screenshot({ path: resolve(output, 'briefing.png') });
         console.log(
-            `${kind} menu pointer: ${samples.length} exact absolute samples, Files/mode/mission/difficulty/briefing clicks, resize, reentry, focus and fullscreen passed without edge sweeps`,
+            `${kind} menu pointer: ${samples.length} exact absolute samples, right-click back, Files/mode/mission/difficulty/briefing clicks, resize, reentry, focus and fullscreen passed without edge sweeps`,
         );
     }
 } catch (error) {
