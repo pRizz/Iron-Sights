@@ -187,22 +187,77 @@ in Windows Performance Analyzer.
 Raw ETW event counts add an independent display signal: DWM-Core emitted about
 2,400–2,900 events per 100 ms before the gap, dropped to zero in many 100 ms
 bins during it, then returned to about 2,400 per bin. DxgKrnl continued
-emitting events throughout. Together with the user's simultaneous observation,
-this makes a shared Windows graphics presentation/composition stall the leading
-hypothesis for this capture. It does not distinguish DWM, the graphics driver,
-GPU scheduling, a cross-process lock, or another dependency upstream of them.
+emitting events throughout. The installed provider metadata identifies the
+falling DWM event IDs as drawing and visual-render-content work: DWM draw
+events fell from 795 in the preceding second to 22 in the 2.036-second gap;
+visual-render-content events fell from 5,792 to 92. DxgKrnl Present events
+fell from 97 to 13, while VSync DPC and DWM VSync-signal events stayed near
+300 per second (301 before, 611 during). Thus vertical sync continued while
+composition and present submissions nearly stopped. Together with the user's
+simultaneous observation, this makes a shared Windows graphics
+presentation/composition stall the leading hypothesis for this capture. It
+does not distinguish DWM, the graphics driver, GPU scheduling, a cross-process
+lock, or another dependency upstream of them.
+
+## ANGLE backend and pointer-motion comparisons, 2026-10-31
+
+An audit-only switch now selects Chrome's ANGLE backend in its temporary
+process, and another sets pointer-move steps per gameplay pass. Every run below
+used the same optimized runtime `c1ce09118bbc0768`, installed headed Chrome
+156.0.8078.79, 839×471 canvas, NVIDIA RTX 3070 hardware, 10-second menu,
+roughly 60-second Dam phase, scripted forward movement/ADS/firing,
+invulnerability, ordinary SDL swap yield and disabled audio/WebGL probes.
+The actual renderer strings confirmed ANGLE/OpenGL or ANGLE/D3D11; no
+software-rendered run was accepted. The private JSON and one-second host CSVs
+remain ignored under `build/web-hitches/angle-*` and `mouse-*`.
+
+| Run | ANGLE | Pointer steps/pass | Dam seconds | Gaps ≥250 ms | Gaps ≥500 ms | Worst Dam gap |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| A | OpenGL | 4 | 62.7 | 3 | 2 | 0.93 s |
+| B | D3D11 | 4 | 63.6 | 5 | 5 | 7.19 s |
+| A repeat | OpenGL | 4 | 62.8 | 0 | 0 | 0.25 s |
+| B repeat | D3D11 | 4 | 61.3 | 6 | 4 | 5.04 s |
+| No pointer motion | D3D11 | 0 | 62.7 | 10 | 4 | 1.03 s |
+| More pointer events | D3D11 | 32 | 61.5 | 3 | 3 | 0.57 s |
+
+The first D3D11 run lost pointer lock late, after its first two qualifying
+gaps, and its later gaps should be treated cautiously. The repeated D3D11 run
+had no focus or pointer-lock loss and still had multi-second gaps. Neither
+OpenGL run had a multi-second Dam gap, but one had 0.65- and 0.93-second gaps
+and native audio queue-dry reports. The OpenGL result is a **mitigation lead**,
+not proof that the backend fixes the host-wide problem or every audio glitch.
+In the repeated D3D11 run, 2.40- and 2.54-second gaps had about 0.93–1.00 GB
+available, at most 12 page reads/s and at most 21% total CPU in adjacent
+one-second samples. Some longer gaps coincided with heavier paging; neither
+obvious sustained resource saturation nor the swap-yield toggle explains all
+incidents.
+
+The user's observation that physical mouse movement may increase hitches
+motivated the second comparison. With scripted pointer motion disabled, four
+Dam gaps still exceeded 500 ms; one 1.03-second gap had about 2 GB available
+memory. Thus pointer motion is not required for these hitches. Increasing
+`page.mouse.move` from 4 to 32 steps per pass did not make the short sample
+worse. Sixteen marked high-step moves averaged about 156 ms; the three Dam
+gaps started more than one second after the nearest completed move. This test
+does not reproduce continuous hand-driven mouse motion and the no-motion run
+had variable host paging/CPU, so it cannot rule out movement as an amplifier.
+It gives no support for a simple accumulation-and-flush path tied to these
+scripted move events.
 
 ## Next diagnostic step
 
-Open the synchronized ETL in Windows Performance Analyzer and inspect the GPU
+Open the synchronized ETL in Windows Performance Analyzer and inspect GPU
 queues/presents, DWM frame history and wait chains at 21:40:21.530–23.764 UTC.
 Correlate the first blocked present with the Chrome and Codex GPU/compositor
-threads before assigning a driver or DWM cause. A controlled follow-up should
-compare the same headed Chrome build and scripted Dam sequence under one
-alternate ANGLE backend, with all other audit settings fixed, while collecting
-frame gaps and underruns. Repeat an idle/no-game interval if the freeze also
-appears there. A lower-memory experiment is separate: this capture shows that
-low available RAM is not required for a shared freeze. Keep ETL local because
-it can contain process and file metadata; do not infer a fix from average FPS.
+threads before assigning a driver or DWM cause. Repeat the backend comparison
+over longer, interleaved headed runs with matched host conditions; track severe
+gaps and audio queue-dry reports, not average FPS. If OpenGL continues to
+reduce severe gaps, test it in a temporary user-visible game session before
+offering it as a workaround. A separate sustained physical-mouse test can
+measure motion-event rate and frame gaps without recording coordinates. An
+idle/no-game interval can test whether the shared freeze requires the game.
+Keep ETL local because it can contain process and file metadata. The 2.35 GB
+available in the synchronized capture shows low available RAM is not required
+for that shared freeze.
 
 The reports are diagnostic evidence, not a gameplay or audio quality pass.

@@ -143,6 +143,12 @@ a game setting. Record the option with each run; the report includes it and a
 browser `performance.timeOrigin` for aligning frame timestamps with host logs.
 The headed runner retries the trusted gameplay capture gesture if pointer lock
 does not arrive on the first attempt.
+For a graphics-backend comparison in the audit's temporary Chrome process,
+set `MIDAS_HITCH_ANGLE_BACKEND=gl` or `d3d11`. Confirm the actual hardware
+renderer in each summary; this does not change the user's normal browser.
+`MIDAS_HITCH_MOUSE_STEPS` controls pointer-move events per gameplay pass
+(0–128, default 4). Zero keeps movement, ADS and firing but skips pointer
+motion. The runner marks the start and end of each scripted pointer move.
 
 For browser main/compositor/GPU traces, use `MIDAS_HITCH_CDP=1` with
 `MIDAS_BROWSER=chrome`. Run once headless and once with `MIDAS_HEADED=1`, using

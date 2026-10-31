@@ -650,6 +650,23 @@ records the timing, private trace locations and ETW reader caveat. Next action:
 inspect GPU queues, presents and wait chains in Windows Performance Analyzer,
 then run a single-variable browser graphics-backend comparison if warranted.
 
+**Graphics backend and mouse-motion triage, 2026-10-31:** The audit can now
+select ANGLE/OpenGL or D3D11 in its temporary Chrome process and vary scripted
+pointer-move steps, recording the requested setting and actual renderer. Four
+headed Dam runs on the same optimized RTX 3070 build alternated OpenGL and
+D3D11 for about a minute each. OpenGL had worst gaps of 0.93 and 0.25 s;
+D3D11 had 7.19 and 5.04 s. The first D3D11 run lost pointer lock late, but
+its first two gaps and the entire repeated D3D11 run preceded or avoided that
+loss. OpenGL is a mitigation lead, not a verified fix. A D3D11 run with no
+scripted pointer motion still had four gaps ≥500 ms, while 32 events per pass
+did not increase severity in a short sample. Mouse motion is not required for
+these hitches; continuous physical movement remains untested. Streaming ETW
+event names show DWM drawing/presents nearly stopping while vertical sync
+continued during the shared Chrome/Codex freeze. [The investigation](web_hitch_investigation.md)
+records counts, host limits and private evidence. Next action: inspect ETL
+present queues/waits and repeat a longer, interleaved backend comparison
+before recommending a browser workaround or changing the game renderer.
+
 **Absolute menu pointer, 2026-10-27:** Investigation reproduced the reported
 drift: the inherited ignored-warp fallback accumulated physical deltas around
 native menu snaps, leaving offsets up to 88 menu pixels until an edge sweep.

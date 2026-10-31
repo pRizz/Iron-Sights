@@ -19,14 +19,18 @@ const invulnerable = process.env.MIDAS_HITCH_INVULN === '1';
 const audioEnabled = process.env.MIDAS_HITCH_AUDIO !== '0';
 const graphicsEnabled = process.env.MIDAS_HITCH_WEBGL !== '0';
 const swapYield = process.env.MIDAS_HITCH_SWAP_YIELD !== '0';
+const angleBackend = process.env.MIDAS_HITCH_ANGLE_BACKEND || undefined;
+const mouseSteps = Number(process.env.MIDAS_HITCH_MOUSE_STEPS ?? 4);
 const cdpEnabled = process.env.MIDAS_HITCH_CDP === '1';
 const traceSeconds = Number(process.env.MIDAS_HITCH_TRACE_SECONDS || 60);
 if (![menuSeconds, gameSeconds].every((seconds) => Number.isInteger(seconds) && seconds >= 1 && seconds <= 600))
     throw new Error('Hitch phase durations must be whole seconds from 1 to 600');
 if (!Number.isInteger(traceSeconds) || traceSeconds < 1 || traceSeconds > 60)
     throw new Error('CDP search duration must be a whole number of seconds from 1 to 60');
+if (!Number.isInteger(mouseSteps) || mouseSteps < 0 || mouseSteps > 128)
+    throw new Error('Mouse steps per gameplay pass must be a whole number from 0 to 128');
 
-const { browser, kind } = await launchAuditBrowser();
+const { browser, kind } = await launchAuditBrowser({ angleBackend });
 if (cdpEnabled && kind !== 'chromium') throw new Error('CDP tracing requires Chromium or Chrome');
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 await page.addInitScript(observeHitches, { graphics: graphicsEnabled, invulnerable, swapYield });
@@ -83,7 +87,11 @@ async function driveGameplay(seconds, stopped = () => false) {
         await page.keyboard.down('w');
         await page.waitForTimeout(650);
         await page.keyboard.up('w');
-        await page.mouse.move(600 + (pass % 3) * 35, 390, { steps: 4 });
+        if (mouseSteps) {
+            await mark(`gameplay mouse start ${pass}`);
+            await page.mouse.move(600 + (pass % 3) * 35, 390, { steps: mouseSteps });
+            await mark(`gameplay mouse end ${pass}`);
+        }
         await page.mouse.down({ button: 'right' });
         await page.waitForTimeout(650);
         await page.mouse.down({ button: 'left' });
@@ -260,6 +268,7 @@ try {
     }).catch(() => null);
     await writeFile(resolve(output, 'trace.json'), JSON.stringify({
         menuSeconds, gameSeconds, invulnerable, audioEnabled, graphicsEnabled, swapYield,
+        angleBackend, mouseSteps,
         cdpEnabled, buildIdentity, browserReports,
         trace, messages, error: error ? String(error) : null,
     }, null, 2));
@@ -269,7 +278,7 @@ try {
         const summary = {
             browser: trace.browser, renderer: trace.renderer, canvas: trace.canvas,
             build: buildIdentity, browserVersion: await browser.version(), browserReports,
-            invulnerable, audioEnabled, graphicsEnabled, swapYield,
+            invulnerable, audioEnabled, graphicsEnabled, swapYield, angleBackend, mouseSteps,
             audioState: trace.audioState, audioClock: trace.audioClock,
             markers: data.markers, worstFrames: worst,
             phases: { menu: phaseStats(data, 'menu'), gameplay: phaseStats(data, 'gameplay') },

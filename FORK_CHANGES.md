@@ -32,8 +32,9 @@ new areas. Status describes implementation state, not Git publication state.
 
 ### FORK-037 — Private browser hitch diagnostics
 
-**Status:** Scripted local diagnostic and initial reproduction; root cause not
-yet isolated. This adds no shipped runtime behavior, settings or asset changes.
+**Status:** Scripted local diagnostic, synchronized host reproduction and
+backend mitigation lead; root cause not yet isolated. This adds no shipped
+runtime behavior, settings or asset changes.
 
 The browser tooling now offers a repeatable menu/Dam timing audit with movement,
 ADS and firing. It records bounded frame gaps, browser long tasks, selected
@@ -56,8 +57,14 @@ Asyncify yield to compare pacing on the same build. Reports include that option
 and the browser time origin for correlation with host counters. Headed gameplay
 capture retries a trusted pointer-lock gesture and logs failures; the focus
 probe also records pointer-lock errors. No shipped game setting changes.
+The private runner can select Chrome's `gl` or `d3d11` ANGLE backend in its
+temporary browser and records the requested backend alongside the actual WebGL
+renderer. It can vary scripted pointer-move event counts from zero to 128 per
+gameplay pass, with timing marks around each move. These are diagnostic options,
+not site or saved game settings.
 
 **Sources:** [runner](web/tools/hitch-audit.mjs),
+[audit browser launcher](web/tools/browser-choice.mjs),
 [browser probe](web/tools/hitch-observer.mjs),
 [CDP controller](web/tools/hitch-cdp-trace.mjs),
 [ROM-free CDP smoke](web/tools/hitch-cdp-trace.test.mjs),
@@ -94,6 +101,15 @@ this evidence does not establish a driver fault. The ETW trace and analysis
 stay private under ignored `build/web-hitches/`. Web tests, ROM-free CDP smoke,
 typecheck, exact site verification and repository standards checks passed for
 the earlier audit implementation; this documentation update has its own checks.
+Installed headed Chrome/RTX 3070 runs on one optimized build confirmed the
+requested hardware ANGLE backends. Two roughly one-minute OpenGL Dam runs had
+worst gaps of 0.93 and 0.25 seconds; interleaved D3D11 runs had 7.19 and
+5.04 seconds. The first D3D11 run lost pointer lock late, while the repeated
+run remained focused. OpenGL is an unverified mitigation lead. A D3D11 run
+without scripted pointer motion still had four gaps of at least 500 ms, so
+those hitches do not require pointer movement; a 32-step sample did not show
+a dose response. Streaming ETW provider counts identified DWM drawing and
+present submission falling sharply while vertical sync events continued.
 
 ### FORK-036 — Buffer and memory-safety audit
 
