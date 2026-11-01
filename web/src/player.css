@@ -54,6 +54,22 @@
     background: #000;
     outline: none;
 }
+.hitch-notice {
+    position: absolute;
+    z-index: 5;
+    top: 12px;
+    right: 12px;
+    max-width: min(360px, calc(100% - 24px));
+    margin: 0;
+    padding: 10px 12px;
+    color: #f3e6c3;
+    background: #222015eb;
+    border: 1px solid #a28b58;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    pointer-events: none;
+}
 .mouse-capture-hint {
     position: absolute;
     z-index: 4;

@@ -341,8 +341,8 @@ thread and 281 on DWM's compositor thread. These are sample counts, not
 millisecond durations or proof of a GPU fault.
 
 Unlike the earlier multi-second shared freeze, DWM work continued through
-this shorter game gap: draw events were 272 in the preceding second and 108
-in the 543 ms gap; Dxg present events were 37 before and 26 during; vertical
+this shorter game gap: draw events were 182 in the preceding second and 222
+in the 543 ms gap; Dxg present events were 38 before and 20 during; vertical
 sync events were 300 before and 163 during. The latter two rates did not
 collapse. Nearby host samples showed about 1.25 GB available, 44–163 page
 reads/s across the gap, and up to 999 page reads/s within a few seconds of
@@ -408,7 +408,7 @@ Windows Performance Analyzer 11.8 was installed locally after user approval.
 Its command-line exporter loaded the existing roughly 1 GB ETL but raised its
 working set to 1.72 GB and reduced free physical memory to about 0.4 GB, so
 that task-owned export was stopped before it could add another host hitch.
-Even the shorter 259 MB ETL raised the exporter working set above 2 GB and
+Even the shorter 441 MiB ETL raised the exporter working set above 2 GB and
 left about 0.56 GB free; that export was stopped too. In contrast, the local
 TraceProcessing CPU sample and scheduling readers completed on the short ETL.
 The desktop control bridge failed before opening WPA. The headless ETW preview

@@ -2,6 +2,7 @@ import { createSignal } from 'solid-js';
 import type { Engine } from './engine';
 import { installMouseLock } from './mouse-lock';
 import { createMouseDiagnostics } from './mouse-diagnostics';
+import { createHitchNotice } from './hitch-notice';
 
 export type Playback =
     | { kind: 'stopped' | 'starting' | 'menu' | 'playing' | 'capturing' | 'mouse-free' }
@@ -14,11 +15,17 @@ export function createCapture(
 ) {
     const [state, setState] = createSignal<Playback>({ kind: 'stopped' });
     const [notice, setNotice] = createSignal('');
+    const [hitchNotice, setHitchNotice] = createSignal(false);
     let maybeCanvas: HTMLCanvasElement | undefined;
     let intentional = false;
     let wasLocked = false;
     let pending = false;
     const diagnostics = createMouseDiagnostics(() => engine.maybeManifest?.());
+    let maybeHitchTimer: ReturnType<typeof setTimeout> | undefined;
+    const observeHitch = createHitchNotice(() => {
+        setHitchNotice(true);
+        maybeHitchTimer = setTimeout(() => setHitchNotice(false), 12000);
+    });
     let maybeLock: ReturnType<typeof installMouseLock> | undefined;
     let maybeCaptureFailure: ((error: unknown) => void) | undefined;
     let requestResume = () => {
@@ -34,6 +41,9 @@ export function createCapture(
 
     function pause(reason: 'focus' | 'mouse' | 'manual'): void {
         if (!started() || engine.status().kind === 'error') return;
+        clearTimeout(maybeHitchTimer);
+        setHitchNotice(false);
+        observeHitch(performance.now(), false);
         releaseFromGame();
         engine.maybeGame()?._portWebSetPaused(1);
         setState({ kind: 'paused', reason });
@@ -170,7 +180,7 @@ export function createCapture(
             listen,
         );
         let frame = 0;
-        const monitor = () => {
+        const monitor = (now: number) => {
             const game = engine.maybeGame();
             const current = state();
             diagnostics.sample(started() ? game : undefined, current.kind);
@@ -193,6 +203,15 @@ export function createCapture(
                     setState({ kind: 'mouse-free' });
                 }
             }
+            const playback = state().kind;
+            observeHitch(
+                now,
+                !pending &&
+                    !document.hidden &&
+                    document.hasFocus() &&
+                    engine.status().kind === 'ready' &&
+                    (playback === 'playing' || playback === 'mouse-free'),
+            );
             frame = requestAnimationFrame(monitor);
         };
         frame = requestAnimationFrame(monitor);
@@ -201,12 +220,15 @@ export function createCapture(
             cancelAnimationFrame(frame);
             lock.dispose();
             detachDiagnostics();
+            clearTimeout(maybeHitchTimer);
+            setHitchNotice(false);
             maybeLock = undefined;
         };
     }
     return {
         state,
         notice,
+        hitchNotice,
         downloadMouseDiagnostics: diagnostics.download,
         attach,
         pause,

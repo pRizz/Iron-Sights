@@ -701,8 +701,8 @@ overlapped a browser long task, while DWM drawing and Dxg presents continued.
 The host had about 1.25 GB available and elevated page reads nearby, unlike
 the earlier multi-second freeze with about 2.35 GB available and negligible
 paging. This shorter run does not reproduce the earlier presentation-collapse
-signature or settle whether resource pressure contributes to it. Even this
-259 MB ETL caused WPAExporter to exceed 2 GB working set, so it was stopped;
+signature or settle whether resource pressure contributes to it. The finalized
+441 MiB ETL caused WPAExporter to exceed 2 GB working set, so it was stopped;
 low-memory ETW readers completed. [The investigation](web_hitch_investigation.md)
 records timing and private evidence.
 
@@ -725,6 +725,16 @@ observe a longer normal play session with those windows closed. If a
 multi-second shared freeze recurs, capture a short synchronized WPR interval
 under the lower load and use low-memory ETW readers to compare the present
 and scheduler signature with the original trace.
+
+**In-game hitch notice, 2026-10-31:** FORK-038 uses the existing player frame
+monitor to show one brief warning during active play after a one-second gap or
+two 500 ms gaps within a minute. It ignores page hiding, focus loss, pause and
+initial play warmup, then shows at most once per page session. The wording
+suggests closing extra tabs or apps as a possible mitigation without claiming
+to measure memory or identify the cause. No extra frame loop or resource probe
+is used. Web tests, typecheck, site assembly and exact artifact verification,
+Prettier and repository standards checks pass. Next action:
+observe whether the warning is useful in a longer normal play session.
 
 **Absolute menu pointer, 2026-10-27:** Investigation reproduced the reported
 drift: the inherited ignored-warp fallback accumulated physical deltas around

@@ -30,6 +30,29 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-038 — In-game browser hitch notice
+
+**Status:** Implemented for active browser gameplay; the notice is a timing
+signal, not a diagnosis of memory pressure or graphics hardware.
+
+The browser player uses its existing animation-frame monitor to detect one
+gap of at least one second or two gaps of at least 500 ms within a minute
+after five seconds of active play. It resets the baseline while the game is
+paused, loading, hidden or unfocused, and warns once per page session. The
+non-interactive notice disappears after 12 seconds and suggests closing extra
+browser tabs or apps if hitches continue. No system resource probe, saved
+setting, network request or additional frame loop is added. This is a fork
+browser UI addition over the inherited game and complements the private
+diagnostics in FORK-037.
+
+**Sources:** [detector](web/src/hitch-notice.ts),
+[capture hook](web/src/capture.ts), [player notice](web/src/player.tsx),
+[styling](web/src/player.css), [tests](web/src/hitch-notice.test.ts),
+[WEB-006](scripts/port/web_target_progress.md).
+**Validation:** Web tests and typecheck, production site assembly, exact public
+artifact verification, Prettier and repository standards checks passed. Unit
+and capture tests cover thresholds, inactive reset and one notice per session.
+
 ### FORK-037 — Private browser hitch diagnostics
 
 **Status:** Scripted and manual local diagnostics with synchronized cross-app
@@ -136,7 +159,7 @@ threshold. The manual traces remain local and ignored.
 WPA 11.8 was installed locally with user approval for trace inspection. Its
 exporter exhausted practical free memory on the roughly 1 GB synchronized
 ETL, so that export was stopped; the unchanged trace remains available for
-streaming analysis. A shorter 259 MB WPR capture overlapped a 543 ms OpenGL
+streaming analysis. A shorter 441 MiB WPR capture overlapped a 543 ms OpenGL
 game gap, with a 524 ms Chrome renderer wait and browser long task while DWM
 and Dxg present events continued. The user noticed a Codex freeze but could
 not map it to that gap. Host paging was elevated, unlike the earlier

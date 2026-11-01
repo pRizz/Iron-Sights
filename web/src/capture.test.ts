@@ -111,10 +111,10 @@ function captureFixture(touch = false, pointerLock = true, browserRequests = '')
         live: (value: boolean) => {
             live = value;
         },
-        step: () => {
+        step: (now = performance.now()) => {
             const pending = [...frames.values()];
             frames.clear();
-            for (const callback of pending) callback(performance.now());
+            for (const callback of pending) callback(now);
         },
         dispose: () => {
             detach();
@@ -135,6 +135,22 @@ test('cutscene-to-control arrival keeps simulation live while waiting for a capt
         fixture.step();
         expect(fixture.capture.state().kind).toBe('mouse-free');
         expect(fixture.pauses).toEqual([]);
+    } finally {
+        fixture.dispose();
+    }
+});
+
+test('active play exposes one temporary hitch notice after a long frame', () => {
+    const fixture = captureFixture(true, false);
+    try {
+        fixture.live(true);
+        fixture.step(0);
+        fixture.step(5000);
+        fixture.step(5016);
+        fixture.step(6016);
+        expect(fixture.capture.hitchNotice()).toBe(true);
+        fixture.step(8016);
+        expect(fixture.capture.hitchNotice()).toBe(true);
     } finally {
         fixture.dispose();
     }

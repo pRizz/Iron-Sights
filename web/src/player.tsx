@@ -131,6 +131,12 @@ export function Player(props: PlayerProps) {
                     tabIndex={started() ? 0 : -1}
                     aria-label="Iron Sights game canvas"
                 />
+                <Show when={capture.hitchNotice()}>
+                    <p class="hitch-notice" role="status">
+                        Performance hitch detected. If this keeps happening, closing extra browser
+                        tabs or apps may help.
+                    </p>
+                </Show>
                 <Show when={started() && props.touch.enabled()}>
                     <TouchControls
                         engine={engine}
