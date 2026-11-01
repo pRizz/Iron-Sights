@@ -3407,6 +3407,19 @@ The shared native frame-data capacity/guard fix in FORK-017 also compiles in
 the browser target. Optimized Wasm compilation passed; no browser flicker fix
 or new browser gameplay acceptance is claimed by the native Aztec investigation.
 
+The browser renderer still shows issue #3's intermittent Dam
+texture flicker. A headed Chrome audit of the optimized web runtime captured
+single-frame black reservoir patches during the aerial cutscene and flat blue
+sky patches during scripted early-gameplay firing. A movement/aim control with
+no shots did not show the latter patch. The reported gate/mountain-wall flicker
+remains to be isolated. Diagnostic `GE_SKY_QUANT=1` avoided the reservoir flash
+in one comparable aerial run but did not remove the gameplay patch;
+`GE_GLPOLL=0` did not remove the gameplay patch. Neither is a shipped setting
+or fix. The investigation changed documentation only; private ROM-derived
+captures stay ignored in `build/web-flicker/`. Optimized Wasm compilation,
+site-artifact verification and web typecheck passed. See WEB-002 in
+`scripts/port/web_target_progress.md` for evidence and the next action.
+
 Unlocked browser menus now follow absolute SDL pointer coordinates. Native
 menu/controller snaps remain virtual until actual mouse motion or a fresh
 button press takes ownership, including the first motion after focus recovery.

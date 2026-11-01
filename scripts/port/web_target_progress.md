@@ -98,6 +98,24 @@ resident-memory optimization require separate measured work.
 
 ## WEB-002 | 2026-10-24 | Playable prototype
 
+**Dam texture flicker investigation, 2026-10-31:** A locally built optimized
+web runtime reproduced issue #3 in headed Chrome on an NVIDIA RTX 3070 Laptop
+GPU through ANGLE/D3D11. Full-rate cutscene captures show the reservoir becoming
+black for one presented frame between normal water frames on the aerial Dam
+shot. Scripted early gameplay captures show a flat blue sky patch for one
+captured frame while firing; a 20-second movement/aim control without shots did
+not show that patch. The game canvas remained 839x471, with no page error in
+these runs. A diagnostic `GE_SKY_QUANT=1` run avoided the reservoir flash in
+one comparable aerial capture but still showed the gameplay sky patch.
+`GE_GLPOLL=0` also left a gameplay patch, so neither setting is a validated
+fix. The reported gate/mountain-wall texture flicker was not isolated as a
+single-frame failure in the gate-shot capture. Private ROM-derived captures and
+reports remain ignored under `build/web-flicker/`; no runtime behavior changed.
+The optimized Wasm build, site artifact verification and web typecheck passed.
+Next action: capture the gate/wall symptom at full rate, correlate the confirmed
+water and firing frames with texture binds and sky/RDP draw state, then validate
+a focused renderer fix across cutscene, shooting and movement.
+
 **Shared buffer audit, 2026-10-30:** The repository-wide audit adds checked
 memory-bank/high-mapping arithmetic, model-record spans, audio DMEM/history
 checks, capacity-preserving shader text and renderer/engine index guards.
