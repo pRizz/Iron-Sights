@@ -926,6 +926,9 @@ void musicSeqPlayerInit(void)
     }
 #endif
     amStartAudioThread();
+#ifndef TARGET_N64
+    { extern void portMusicExportMaybe(void); portMusicExportMaybe(); }
+#endif
 }
 
 /**

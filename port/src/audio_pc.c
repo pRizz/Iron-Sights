@@ -1089,6 +1089,26 @@ static void portAudioTrim(u32 q)
     }
 }
 
+/* Render one mixer frame without opening or queuing to an SDL device. The
+ * music exporter runs before the game loop, with no gameplay/SFX clients. */
+s32 portAudioRenderOffline(s16 *output, s32 samples)
+{
+    static Acmd commands[3072 * 4];
+    s32 count = 0;
+    u32 skipped = s_StatSkipped;
+
+    if (samples <= 0 || samples > PORT_MAX_FRAME_SAMPLES ||
+        alGlobals == NULL || alGlobals->drvr.head == NULL) {
+        return 0;
+    }
+    alAudioFrame(commands, &count, output, samples);
+    if (count <= 0) {
+        return 0;
+    }
+    portAcmdRun(commands, count);
+    return s_StatSkipped == skipped ? samples : -1;
+}
+
 /**
  * Called once per video frame from the main loop (pcsched). Replaces the
  * N64 audio thread: builds and executes as many audio frames as needed to

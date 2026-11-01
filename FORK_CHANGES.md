@@ -30,6 +30,36 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-040 — Local mission music WAV export
+
+**Status:** Implemented for desktop builds; generated audio remains local.
+
+An opt-in offline mode renders a named ROM music sequence through the PC port's
+existing N64 instrument bank and audio interpreter directly to 22,050 Hz,
+16-bit stereo PCM WAV. Set `GE_MUSIC_EXPORT=dam|facility|damx|facilityx|wind`
+and `GE_MUSIC_EXPORT_WAV=<path>` when launching an isolated Windows build with
+the user's ROM. Rendering starts after the audio bank is initialized and before
+the game loop, so menu and mission effects are absent. The first synchronized
+repeat in at least three quarters of the sequence's channels ends an export;
+this accommodates Dam's one nonrepeating channel. A naturally ending sequence
+also stops when all channels end. The 10-minute cap fails rather than writing
+an unbounded loop. Normal launches, settings and audio-device output are
+unchanged. Upstream has ROM sequence extraction but no standalone mission WAV
+export. Regenerate privately with the two environment variables; WAVs, logs
+and the isolated build under `build_win/music-export*` are ignored and must not
+be committed.
+
+**Sources:** [music initialization hook](src/music.c),
+[offline audio frame](port/src/audio_pc.c),
+[WAV exporter](port/src/port_music_export.c),
+[stage music mapping](src/game/music_0D2720.c).
+**Validation:** Isolated Windows desktop build succeeded. Stock USA ROM runs
+rendered Dam (145.76 s) and Facility (120.05 s) through their first shared
+repeat. `ffprobe` confirms 22,050 Hz stereo 16-bit PCM and expected sizes;
+`ffmpeg` volume checks find nonzero audio with peaks below clipping. No ROM or
+rendered audio was staged. The isolated two-pass hand gallery regeneration
+changed zero image cells; gallery freshness and workflow tests passed.
+
 ### FORK-039 — Archived upstream PR #104 gameplay capture harness
 
 **Status:** Removed from fork `main`; no game behavior or default changes.
