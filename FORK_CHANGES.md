@@ -43,7 +43,12 @@ and Facility runs. The runner uses a local ROM by path, leaves ordinary Iron
 Sights settings and saves untouched, and removes each temporary executable
 after the session. Videos and logs remain ignored local evidence. This is fork
 contribution tooling; upstream 1.0.2b has no equivalent audit runner. A scripted
-capture does not by itself satisfy upstream's contributor-play checkbox.
+capture does not by itself satisfy upstream's contributor-play checkbox. Manual
+capture removes the automated input variables so keyboard and mouse controls
+remain live, leaves synthetic intro-skip taps off, and uses elapsed time for a
+clean window close because the game pump counter can advance faster than
+rendered gameplay. Its isolated INI pins Upright mouse look for a conventional
+test session without changing saved preferences or upstream game code.
 
 **Sources:** [runner](scripts/port/audit_upstream_pr104.ps1),
 [instructions](scripts/port/pr104_gameplay.md).
@@ -53,9 +58,12 @@ Facility H.264 videos at 960×540 with process samples. Both scripted runs
 logged direct stage launch and their frame limit, exited zero and left no
 crash log. The Dam video reached first-person play; sampled Facility footage
 remained near its starting view. These scripted captures are not contributor
-hands-on play or full visual acceptance. A separate 30-second manual-mode
-capture verified the recording path without a human play pass. Local media
-stays ignored.
+hands-on play or full visual acceptance. Later 180-second manual Dam and
+Facility captures on the same PR head both exited cleanly, with 178 process
+samples each and no crash log. Sampled frames show different Dam and Facility
+areas; the user reported no lighting, geometry or crash issue during play. A
+30-second follow-up confirmed manual mode omits synthetic intro taps and still
+records and closes cleanly. Local media stays ignored.
 
 ### FORK-038 — In-game browser hitch notice
 

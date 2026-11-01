@@ -81,13 +81,14 @@ foreach ($stage in $Stages) {
     $metadataPath = Join-Path $runDir 'session.json'
     Set-Content -LiteralPath $csv -Value 'utc,elapsed_s,cpu_total_s,cpu_pct_one_core,working_set_mb,private_mb,handles,threads'
     Set-Content -LiteralPath (Join-Path $runDir 'midas.ini') -Value @(
-        '[display]', 'fullscreen=window', 'maxfps=60', 'vsync=0'
+        '[display]', 'fullscreen=window', 'maxfps=60', 'vsync=0', 'look_updown=1'
     )
-    $frameCap = $Seconds * 120
+    $frameCap = if ($Mode -eq 'Auto') { $Seconds * 120 } else { $null }
     $envValues = @{
         GE_ROM = $RomPath; GE_NOINISAVE = '1'; GE_WINDOW = '960x540'
-        GE_STAGE = $stage; GE_STAGE_AFTER = '1'; GE_SKIPINTRO = '1'
-        GE_SEED = '1'; GE_FRAMES = [string]$frameCap
+        GE_STAGE = $stage; GE_STAGE_AFTER = '1'
+        GE_SKIPINTRO = if ($Mode -eq 'Auto') { '1' } else { $null }
+        GE_SEED = '1'; GE_FRAMES = if ($null -ne $frameCap) { [string]$frameCap } else { $null }
         GE_NOINPUT = $null; GE_DRIVE = $null; GE_INPUTPLAY = $null
         GE_MP = $null; GE_MENU = $null; GE_NOSLEEP = $null; GE_SHOT = $null
     }
@@ -100,18 +101,28 @@ foreach ($stage in $Stages) {
     $captureExit = $null
     $gameExit = $null
     $captureStarted = $null
+    $closeRequested = $false
+    $closeDeadline = $null
     try {
         foreach ($key in $envValues.Keys) {
             $previous[$key] = [Environment]::GetEnvironmentVariable($key, 'Process')
-            [Environment]::SetEnvironmentVariable($key, $envValues[$key], 'Process')
+            if ($null -eq $envValues[$key]) {
+                Remove-Item -LiteralPath "Env:$key" -ErrorAction SilentlyContinue
+            } else {
+                [Environment]::SetEnvironmentVariable($key, $envValues[$key], 'Process')
+            }
         }
         try {
-            Write-Host "Starting $Mode gameplay in $stage (at least $Seconds seconds; frame cap $frameCap)..."
+            Write-Host "Starting $Mode gameplay in $stage (at least $Seconds seconds)..."
             $game = Start-Process -FilePath $auditExe -WorkingDirectory $runDir -PassThru `
                 -RedirectStandardOutput $stdout -RedirectStandardError $stderr -WindowStyle Normal
         } finally {
             foreach ($key in $envValues.Keys) {
-                [Environment]::SetEnvironmentVariable($key, $previous[$key], 'Process')
+                if ($null -eq $previous[$key]) {
+                    Remove-Item -LiteralPath "Env:$key" -ErrorAction SilentlyContinue
+                } else {
+                    [Environment]::SetEnvironmentVariable($key, $previous[$key], 'Process')
+                }
             }
         }
         $window = [intptr]::Zero
@@ -170,6 +181,16 @@ foreach ($stage in $Stages) {
             if (([datetime]::UtcNow - $started).TotalSeconds -gt $limit) {
                 throw "Game exceeded the $limit-second audit limit."
             }
+            if ($Mode -eq 'Manual' -and !$closeRequested -and
+                ([datetime]::UtcNow - $captureStarted).TotalSeconds -ge $Seconds) {
+                if (!$game.CloseMainWindow()) { throw 'Could not request a clean game-window close.' }
+                $closeRequested = $true
+                $closeDeadline = (Get-Date).AddSeconds(15)
+                Write-Host "Requested clean $stage exit after $Seconds seconds."
+            }
+            if ($closeRequested -and (Get-Date) -gt $closeDeadline) {
+                throw 'The game did not close within 15 seconds of the exit request.'
+            }
             Start-Sleep -Seconds 1
             $game.Refresh()
         }
@@ -215,7 +236,9 @@ foreach ($stage in $Stages) {
         ended_utc = [datetime]::UtcNow.ToString('o')
         requested_capture_seconds = $Seconds; frame_cap = $frameCap
         configured_maxfps = 60
+        configured_look_updown = 1
         scripted_drive = if ($Mode -eq 'Auto') { 1 } else { $null }
+        wallclock_close_requested = $closeRequested
         game_exit_code = $gameExit; ffmpeg_exit_code = $captureExit
         process_samples = $sampleCount; recorded_seconds = $recordedSeconds
         stage_launch_logged = $stdoutText.Contains('GE_STAGE direct launch:')
