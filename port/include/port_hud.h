@@ -1,6 +1,7 @@
 #ifndef PORT_HUD_H
 #define PORT_HUD_H
 #include <ultra64.h>
+#include <bondtypes.h>
 #define PORT_HUD_WEAPON_BOTTOM 36
 
 s32 portHudOptionGet(const char *key, s32 *value);
@@ -10,6 +11,9 @@ void portHudTick(void);
 void portHudHit(s32 attacker, s32 headshot);
 void portHudDamage(s32 victim, f32 incomingX, f32 incomingZ);
 s32 portHudObjective(s32 index, s32 letter, s32 status, const char *text);
+struct objective_entry;
+void portHudObjectiveProgress(s32 stage, s32 difficulty, s32 count,
+    struct objective_entry *const *objectives, const OBJECTIVESTATUS *statuses);
 s32 portHudWeaponStripShown(void);
 /* Distance from the viewport bottom to the top of the strip. */
 s32 portHudWeaponStripTopInset(void);

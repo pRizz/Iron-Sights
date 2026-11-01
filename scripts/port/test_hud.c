@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include "../../port/src/port_hud.c"
+#include "../../port/src/port_objective_progress.c"
 #include "../../port/src/port_crosshair.c"
 #include "../../port/src/port_mission_clock.c"
 #include "../../port/src/port_wardrobe.c"
@@ -191,6 +192,72 @@ static void testObjectiveTimingDuringDialogue(void)
     upper_text_window_timer = -1;
 }
 
+static void testMainObjectiveCue(void)
+{
+    struct objective_entry entries[5] = {0};
+    struct objective_entry *objectives[5] = {&entries[0], &entries[1], &entries[2], &entries[3], &entries[4]};
+    OBJECTIVESTATUS statuses[5] = {
+        OBJECTIVESTATUS_COMPLETE, OBJECTIVESTATUS_COMPLETE, OBJECTIVESTATUS_COMPLETE,
+        OBJECTIVESTATUS_COMPLETE, OBJECTIVESTATUS_INCOMPLETE
+    };
+    s32 i;
+    for (i = 0; i < 5; i++) entries[i].difficulty = DIFFICULTY_AGENT;
+
+    /* Dam's jump and Depot's train are final actions, not prerequisites. */
+    assert(!portMainObjectivesComplete(LEVELID_DAM, DIFFICULTY_AGENT, 1, objectives, statuses));
+    assert(portMainObjectivesComplete(LEVELID_DAM, DIFFICULTY_AGENT, 4, objectives, statuses));
+    assert(portMainObjectivesComplete(LEVELID_DEPOT, DIFFICULTY_AGENT, 5, objectives, statuses));
+    statuses[2] = OBJECTIVESTATUS_INCOMPLETE;
+    assert(!portMainObjectivesComplete(LEVELID_DEPOT, DIFFICULTY_AGENT, 5, objectives, statuses));
+    statuses[2] = OBJECTIVESTATUS_COMPLETE;
+
+    /* A live casualty safeguard is permitted; a failed one blocks the cue. */
+    assert(portMainObjectivesComplete(LEVELID_FACILITY, DIFFICULTY_AGENT, 5, objectives, statuses));
+    assert(portMainObjectivesComplete(LEVELID_SILO, DIFFICULTY_AGENT, 5, objectives, statuses));
+    assert(portMainObjectivesComplete(LEVELID_CAVERNS, DIFFICULTY_AGENT, 5, objectives, statuses));
+    statuses[4] = OBJECTIVESTATUS_FAILED;
+    assert(!portMainObjectivesComplete(LEVELID_FACILITY, DIFFICULTY_AGENT, 5, objectives, statuses));
+    statuses[4] = OBJECTIVESTATUS_INCOMPLETE;
+    statuses[1] = OBJECTIVESTATUS_INCOMPLETE;
+    assert(portMainObjectivesComplete(LEVELID_STREETS, DIFFICULTY_AGENT, 3, objectives, statuses));
+    statuses[1] = OBJECTIVESTATUS_FAILED;
+    assert(!portMainObjectivesComplete(LEVELID_STREETS, DIFFICULTY_AGENT, 3, objectives, statuses));
+    statuses[1] = OBJECTIVESTATUS_COMPLETE;
+    assert(!portMainObjectivesComplete(LEVELID_STREETS, DIFFICULTY_AGENT, 2, objectives, statuses));
+
+    /* Ordinary missions still require every difficulty-active objective. */
+    statuses[1] = OBJECTIVESTATUS_INCOMPLETE;
+    assert(!portMainObjectivesComplete(LEVELID_FRIGATE, DIFFICULTY_AGENT, 2, objectives, statuses));
+    entries[1].difficulty = DIFFICULTY_SECRET;
+    assert(portMainObjectivesComplete(LEVELID_FRIGATE, DIFFICULTY_AGENT, 2, objectives, statuses));
+    entries[1].difficulty = DIFFICULTY_AGENT;
+    statuses[1] = OBJECTIVESTATUS_COMPLETE;
+
+    portHudReset(0);
+    portHudObjectiveProgress(LEVELID_DEPOT, DIFFICULTY_AGENT, 5, objectives, statuses);
+    assert(phState[0].toastCount == 1 && phState[0].toasts[0].index == -1);
+    assert(phState[0].mainObjectivesNotified);
+    portHudObjectiveProgress(LEVELID_DEPOT, DIFFICULTY_AGENT, 5, objectives, statuses);
+    assert(phState[0].toastCount == 1);
+    statuses[0] = OBJECTIVESTATUS_INCOMPLETE;
+    portHudObjectiveProgress(LEVELID_DEPOT, DIFFICULTY_AGENT, 5, objectives, statuses);
+    assert(!phState[0].mainObjectivesNotified);
+    assert(!phState[0].toastCount);
+    statuses[0] = OBJECTIVESTATUS_COMPLETE;
+    portHudReset(0);
+    assert(!phState[0].mainObjectivesNotified);
+    portHudObjective(0, 0, OBJECTIVESTATUS_COMPLETE, "first");
+    portHudObjective(1, 1, OBJECTIVESTATUS_COMPLETE, "pending");
+    portHudObjectiveProgress(LEVELID_DEPOT, DIFFICULTY_AGENT, 5, objectives, statuses);
+    assert(phState[0].toastCount == 3);
+    assert(phState[0].toasts[0].index == 0);
+    assert(phState[0].toasts[1].index == -1);
+    assert(phState[0].toasts[2].index == 1);
+    portHudOptionSet("objective_notifications", 0);
+    assert(!phState[0].toastCount && !phState[0].mainObjectivesNotified);
+    portHudOptionSet("objective_notifications", 1);
+}
+
 int main(void)
 {
     s32 i, j, value, selected, n;
@@ -202,6 +269,7 @@ int main(void)
     testTimerSubtitleObjectiveStack();
     testObjectiveSubtitleClearance();
     testObjectiveTimingDuringDialogue();
+    testMainObjectiveCue();
     {
         char timer[64], tiny[5];
         bestTimes[0][DIFFICULTY_SECRET] = 123;

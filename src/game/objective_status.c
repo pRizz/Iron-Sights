@@ -1,6 +1,7 @@
 #include <ultra64.h>
 #include <bondconstants.h>
 #include <bondtypes.h>
+#include <boss.h>
 #include "objective_status.h"
 #include "assets/obseg/text/LmiscE.h"
 #include "language.h"
@@ -412,6 +413,10 @@ void display_objective_status_text_on_status_change(void)
             availableindex++;
         }
     }
+#ifndef TARGET_N64
+    portHudObjectiveProgress(bossGetStageNum(), lvlGetSelectedDifficulty(),
+        objectiveGetCount(), objective_ptrs, objectiveStatuses);
+#endif
 }
 
 

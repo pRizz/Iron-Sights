@@ -23,6 +23,7 @@
 #include "game/textrelated.h"
 #include "port_ads.h"
 #include "port_hud.h"
+#include "port_objective_progress.h"
 #include "port_crosshair.h"
 #include "port_mission_clock.h"
 #include "port_weapon_images.h"
@@ -51,7 +52,7 @@ typedef struct {
     f32 hitTime, toastTime;
     f32 weaponIdle, healthIdle, health, armour;
     s32 observed, weapon;
-    s32 headshot, toastCount;
+    s32 headshot, toastCount, mainObjectivesNotified;
     HudDamage damage[4];
     HudToast toasts[HUD_TOASTS];
 } HudState;
@@ -78,7 +79,7 @@ s32 portHudOptionSet(const char *key, s32 value)
         if (!value) for (p = 0; p < 4; p++) {
             if (i == 0) phState[p].hitTime = 0;
             if (i == 1) memset(phState[p].damage, 0, sizeof(phState[p].damage));
-            if (i == 2) phState[p].toastCount = 0;
+            if (i == 2) { phState[p].toastCount = 0; phState[p].mainObjectivesNotified = 0; }
         }
         return 1;
     }
@@ -158,6 +159,36 @@ s32 portHudObjective(s32 index, s32 letter, s32 status, const char *text)
     t->index = index; t->letter = letter; t->status = status;
     phCopyLine(t->text, sizeof(t->text), text);
     return 1;
+}
+
+void portHudObjectiveProgress(s32 stage, s32 difficulty, s32 count,
+    struct objective_entry *const *objectives, const OBJECTIVESTATUS *statuses)
+{
+    HudState *h = &phState[0];
+    const s32 ready = portMainObjectivesComplete(stage, difficulty, count, objectives, statuses);
+    HudToast summary;
+    s32 i;
+    if (!ready) {
+        for (i = 0; i < h->toastCount; i++) if (h->toasts[i].index == -1) {
+            memmove(&h->toasts[i], &h->toasts[i+1], sizeof(HudToast) * (h->toastCount - i - 1));
+            h->toastCount--;
+            if (!i) h->toastTime = 270.0f;
+            break;
+        }
+        h->mainObjectivesNotified = 0; return;
+    }
+    if (h->mainObjectivesNotified || !phOptions[2] || getPlayerCount() != 1) return;
+    if (portHudObjective(-1, 0, OBJECTIVESTATUS_COMPLETE, "Finish the mission when ready")) {
+        /* Leave the visible objective alert in place, but show this cue before
+         * older pending alerts so it arrives while the final action matters. */
+        if (h->toastCount > 2) {
+            summary = h->toasts[h->toastCount - 1];
+            memmove(&h->toasts[2], &h->toasts[1],
+                sizeof(HudToast) * (h->toastCount - 2));
+            h->toasts[1] = summary;
+        }
+        h->mainObjectivesNotified = 1;
+    }
 }
 
 static void phAdvance(HudState *h, f32 dt)
@@ -557,7 +588,8 @@ Gfx *portHudDraw(Gfx *g)
         const s32 w = viGetViewWidth() - 48, x = viGetViewLeft()+24, y = portHudObjectiveTop();
         char title[64], description[sizeof(t->text)];
         phCopySmallCaps(description, sizeof(description), t->text);
-        snprintf(title, sizeof(title), "OBJECTIVE %c %s", 'A'+t->letter,
+        if (t->index < 0) snprintf(title, sizeof(title), "ALL MAIN OBJECTIVES COMPLETE");
+        else snprintf(title, sizeof(title), "OBJECTIVE %c %s", 'A'+t->letter,
             complete ? "COMPLETED" : failed ? "FAILED" : "UPDATED");
         g = phRect(g, x, y, w, 30, 0x10171cda);
         g = phRect(g, x, y, 2, 30, color);

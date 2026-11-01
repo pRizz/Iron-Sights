@@ -1754,6 +1754,15 @@ Added default-on **Objective Alerts** for solo missions. Queued notifications
 show the objective letter, name and updated status, with completion/failure
 colors. Disabling the setting restores the original messages. Notifications
 reset with mission state and do not run as multiplayer objective alerts.
+When every difficulty-active prerequisite is complete, a separate queued alert
+says **All main objectives complete** and prompts the player to finish the
+mission. The progress check excludes listed final actions (including Dam's
+bungee jump and Depot's train) and the casualty safeguards in Facility, Silo,
+Streets and Caverns; Streets' pursuit objective is also an exit action. Any
+failed objective suppresses the cue. Missions with no earlier prerequisite do
+not show it at mission start. This is guidance only: the inherited objective
+rules still decide mission success, and Objective Alerts still control whether
+the cue appears. If progress becomes invalid, a queued cue is removed.
 The description is normalized to lowercase only in its display copy: Bank
 Gothic renders these as uniform small capitals, avoiding the taller initial
 capital in sentence-case objective names. Original localized strings and queue
@@ -1771,12 +1780,19 @@ alert lifetime and other HUD timers keep their normal behavior.
 
 **Sources:** [objective updates](src/game/objective_status.c),
 [mission reset](src/game/objective.c), [notification queue](port/src/port_hud.c),
+[progress rules](port/src/port_objective_progress.c),
 [shared layout](port/src/port_mission_clock.c),
 [native subtitle bounds hook](src/game/bondview2.c).
 **Checks:** HUD queue/filter/timing, display-case/buffer/native-glyph tests and
-completed/failed objective captures. Subtitle/clock clearance across font metrics,
-line counts, HUD scales and viewport offsets, plus immediate queueing and normal
-alert duration during dialogue, have regressions in `scripts/port/test_hud.sh`.
+main-objective progress cases for final actions, casualty failures, difficulty
+filtering and once-per-completion/reset behavior in `scripts/port/test_hud.sh`.
+The ROM-free HUD and ADS suites and an isolated Windows build pass in the
+`goldeneye` container. Gallery regeneration verified both capture passes;
+no image cells changed, and its HTML/manifest source fingerprint was refreshed.
+Prior checks include completed/failed objective captures. Subtitle/clock
+clearance across font metrics, line counts, HUD scales and viewport offsets,
+plus immediate queueing and normal alert duration during dialogue, have
+regressions in `scripts/port/test_hud.sh`.
 `scripts/port/audit_hud.ps1 -Dialogue` reproduces simultaneous native Statue Park
 dialogue and its objective alert in an isolated capture; add `-MissionTimer`,
 `-SmallHud` or `-Aspect Classic` to check the adjacent clock, scaled subtitles
