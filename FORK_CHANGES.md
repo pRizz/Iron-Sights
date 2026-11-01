@@ -30,6 +30,33 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-039 — Upstream PR #104 gameplay capture harness
+
+**Status:** Local Windows audit tooling for the separate upstream ambient-light
+PR; no game behavior or default changes.
+
+The PowerShell runner verifies the clean PR head, builds it in its own CMake
+directory, and launches copied Project Midas executables in isolated runtime
+folders. It records silent game-window videos, once-per-second CPU and memory
+samples, game/FFmpeg logs and a structured result for scripted or hands-on Dam
+and Facility runs. The runner uses a local ROM by path, leaves ordinary Iron
+Sights settings and saves untouched, and removes each temporary executable
+after the session. Videos and logs remain ignored local evidence. This is fork
+contribution tooling; upstream 1.0.2b has no equivalent audit runner. A scripted
+capture does not by itself satisfy upstream's contributor-play checkbox.
+
+**Sources:** [runner](scripts/port/audit_upstream_pr104.ps1),
+[instructions](scripts/port/pr104_gameplay.md).
+**Validation:** An isolated Windows build of PR head `05a8d83` passed using
+read-only generated assets. The runner recorded probeable 90-second Dam and
+Facility H.264 videos at 960×540 with process samples. Both scripted runs
+logged direct stage launch and their frame limit, exited zero and left no
+crash log. The Dam video reached first-person play; sampled Facility footage
+remained near its starting view. These scripted captures are not contributor
+hands-on play or full visual acceptance. A separate 30-second manual-mode
+capture verified the recording path without a human play pass. Local media
+stays ignored.
+
 ### FORK-038 — In-game browser hitch notice
 
 **Status:** Implemented for active browser gameplay; the notice is a timing
