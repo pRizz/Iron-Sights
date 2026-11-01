@@ -3444,6 +3444,21 @@ checks and Bright Builds checks passed. Private ROM-derived captures stay
 ignored in `build/web-flicker/`. See WEB-002 in
 `scripts/port/web_target_progress.md` for evidence and the next action.
 
+The shared immediate OpenGL renderer now synchronizes `frame_count` and
+`noise_scale` with each program before a draw when either value changed since
+that program's last upload. Previously these noise/dither uniforms updated on
+shader load or restore, so a program that stayed bound across frames could
+reuse an old frame count. The retained draw path already synchronized them per
+draw. A headed Chrome probe temporarily kept these uniforms active in shaders
+without changing the game source: eight opening/menu samples had a stale frame
+count before this change, and none of 3,110 sampled draws did afterward. The
+ordinary Dam shaders sampled in that audit did not use noise, so this is a
+separate conditional state bug, not an identified cause of the Dam texture
+flicker. The optimized Wasm/site build, 181 browser tests, typecheck and ten
+WebGL sampler cases passed. The native build and two-pass gallery verified 72
+views and 35 icons with zero changed image cells; only the gallery's source
+fingerprint and HTML changed. No user setting or default changes.
+
 Unlocked browser menus now follow absolute SDL pointer coordinates. Native
 menu/controller snaps remain virtual until actual mouse motion or a fresh
 button press takes ownership, including the first motion after focus recovery.

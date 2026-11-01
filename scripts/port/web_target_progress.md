@@ -98,6 +98,25 @@ resident-memory optimization require separate measured work.
 
 ## WEB-002 | 2026-10-24 | Playable prototype
 
+**Noise uniform state, 2026-11-01:** A follow-up audit found that the immediate
+GL renderer advanced `frame_count` each frame and changed `noise_scale` with
+the render target, but uploaded those uniforms only when a shader was loaded
+or restored. The retained path already refreshed them per draw. A headed Chrome
+probe kept both uniforms active in the private audit shaders and read their GPU
+values before each draw. In the opening/menu sequence, eight of 2,233 baseline
+samples carried an older frame count across two four-frame program-reuse spans;
+after a per-program, changed-value sync immediately before drawing, zero of
+3,110 samples were stale, including those spans. The probe resumed a browser
+pause during its final run; it reported no page or WebGL error. The ordinary
+Dam shaders sampled earlier did not use noise, so this does not explain the
+previous Dam reservoir or sky patches. The optimized Wasm/site build, 181
+browser tests, typecheck, ten WebGL sampler cases and Bright Builds checks
+passed. The native build and two independent gallery passes verified 72 views
+and 35 icons with zero changed image cells; gallery integrity and workflow
+tests passed. Private ROM-derived probe data stays ignored under
+`build/web-flicker/`. Next action: continue browser acceptance of the gate
+cutscene, other GPUs and noise effects in missions that use alpha dithering.
+
 **Dam texture flicker fix, 2026-10-31:** Headed Chrome on an NVIDIA RTX 3070
 Laptop GPU through ANGLE/D3D11 reproduced one-frame black reservoir patches
 during the aerial cutscene and flat blue sky patches during scripted firing.

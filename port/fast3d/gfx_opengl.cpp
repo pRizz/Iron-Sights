@@ -45,6 +45,8 @@ struct ShaderProgram {
     uint8_t num_attribs;
     GLint frame_count_location;
     GLint noise_scale_location;
+    GLint pushed_frame_count = -1;
+    GLfloat pushed_noise_scale = -1.0f;
     GLint three_point_filter_locations[2];
 #ifdef __EMSCRIPTEN__
     GLint web_border_locations[2];
@@ -157,9 +159,11 @@ static void gfx_opengl_set_uniforms(struct ShaderProgram* prg) {
 #endif
     if (prg->frame_count_location >= 0) {
         glUniform1i(prg->frame_count_location, frame_count);
+        prg->pushed_frame_count = (GLint)frame_count;
     }
     if (prg->noise_scale_location >= 0) {
         glUniform1f(prg->noise_scale_location, current_noise_scale);
+        prg->pushed_noise_scale = current_noise_scale;
     }
     for (int t = 0; t < 2; t++) {
         if (prg->three_point_filter_locations[t] >= 0) {
@@ -168,6 +172,21 @@ static void gfx_opengl_set_uniforms(struct ShaderProgram* prg) {
         } else {
             gl_pushed_three[t] = -1;
         }
+    }
+}
+
+/* A program can remain bound across frames or framebuffer changes. Keep its
+ * noise inputs current even when no shader load calls gfx_opengl_set_uniforms. */
+static void gfx_opengl_sync_dynamic_uniforms(void) {
+    struct ShaderProgram* prg = gl_current_prg;
+    if (prg == nullptr || gl_ret_active) return;
+    if (prg->frame_count_location >= 0 && prg->pushed_frame_count != (GLint)frame_count) {
+        glUniform1i(prg->frame_count_location, frame_count);
+        prg->pushed_frame_count = (GLint)frame_count;
+    }
+    if (prg->noise_scale_location >= 0 && prg->pushed_noise_scale != current_noise_scale) {
+        glUniform1f(prg->noise_scale_location, current_noise_scale);
+        prg->pushed_noise_scale = current_noise_scale;
     }
 }
 
@@ -1314,6 +1333,7 @@ static void gfx_opengl_draw_triangles(float buf_vbo[], size_t buf_vbo_len, size_
         if (e != NULL && atof(e) > 0.0) tol = (float)atof(e);
     }
     gl_ret_restore(); /* after a retained draw: the stream VBO + this program's arrays again */
+    gfx_opengl_sync_dynamic_uniforms();
     if (!clip || !ge_dec_draw || gfx_ge_dec_b >= 0.0f || buf_vbo_num_tris == 0) {
         glBufferData(GL_ARRAY_BUFFER, sizeof(float) * buf_vbo_len, buf_vbo, GL_STREAM_DRAW);
         glDrawArrays(GL_TRIANGLES, 0, 3 * buf_vbo_num_tris);
