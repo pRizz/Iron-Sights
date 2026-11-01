@@ -178,7 +178,7 @@ void portHudObjectiveProgress(s32 stage, s32 difficulty, s32 count,
         h->mainObjectivesNotified = 0; return;
     }
     if (h->mainObjectivesNotified || !phOptions[2] || getPlayerCount() != 1) return;
-    if (portHudObjective(-1, 0, OBJECTIVESTATUS_COMPLETE, "Finish the mission when ready")) {
+    if (portHudObjective(-1, 0, OBJECTIVESTATUS_COMPLETE, "Finish the mission")) {
         /* Leave the visible objective alert in place, but show this cue before
          * older pending alerts so it arrives while the final action matters. */
         if (h->toastCount > 2) {

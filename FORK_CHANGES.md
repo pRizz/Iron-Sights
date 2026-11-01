@@ -1755,8 +1755,8 @@ show the objective letter, name and updated status, with completion/failure
 colors. Disabling the setting restores the original messages. Notifications
 reset with mission state and do not run as multiplayer objective alerts.
 When every difficulty-active prerequisite is complete, a separate queued alert
-says **All main objectives complete** and prompts the player to finish the
-mission. The progress check excludes listed final actions (including Dam's
+says **All main objectives complete** and prompts **Finish the mission**.
+The progress check excludes listed final actions (including Dam's
 bungee jump and Depot's train) and the casualty safeguards in Facility, Silo,
 Streets and Caverns; Streets' pursuit objective is also an exit action. Any
 failed objective suppresses the cue. Missions with no earlier prerequisite do
@@ -1789,6 +1789,8 @@ filtering and once-per-completion/reset behavior in `scripts/port/test_hud.sh`.
 The ROM-free HUD and ADS suites and an isolated Windows build pass in the
 `goldeneye` container. Gallery regeneration verified both capture passes;
 no image cells changed, and its HTML/manifest source fingerprint was refreshed.
+The shorter cue copy passed the ROM-free HUD suite; a fresh two-pass gallery
+verified 72 views and 35 icons with no changed image cells.
 Prior checks include completed/failed objective captures. Subtitle/clock
 clearance across font metrics, line counts, HUD scales and viewport offsets,
 plus immediate queueing and normal alert duration during dialogue, have
