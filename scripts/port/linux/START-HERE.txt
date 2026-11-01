@@ -14,6 +14,12 @@ Settings live in the parent iron-sights folder. GE_DATA_ROOT can override the
 absolute writable root. FUSE is optional with --appimage-extract-and-run.
 An AppImage still requires the system's 32-bit loader and OpenGL drivers.
 
+Steam Deck ZIP: Extract to a writable home folder, put the ROM in Data and run
+sh run.sh in Desktop Mode. To add it as a Non-Steam Game, first run
+chmod +x run.sh IronSights and select run.sh as the executable. Data and
+midas.ini stay beside the game. See STEAM-DECK.txt in that ZIP. This packages
+the same i686 binary and has not yet been tested on a Steam Deck device.
+
 Campaign HD environment artwork is bundled and enabled for fresh settings.
 Existing Texture Pack preferences are preserved. Choose Original in Port
 Options > Texture Pack to opt out. Missing, invalid or unmatched artwork uses

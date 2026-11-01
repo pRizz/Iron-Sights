@@ -17,9 +17,10 @@ download link; they are development builds rather than manually certified
 stable versions. PRs run tests only, without publication
 permissions. The previous Linux/Windows three-day EXE-only artifact workflow
 has been replaced by windows-release.yml. It also builds Linux i686 tar.gz and
-AppImage packages against a pinned Ubuntu 22.04 baseline, uploads exact Sentry
-symbols/source context, runs packaged crash tests, and includes both platforms
-in one attested release. See [crash reporting](crash_reporting.md#linux-releases)
+AppImage packages and a Steam Deck ZIP from the same pinned Ubuntu 22.04 build,
+uploads exact Sentry symbols/source context, runs packaged crash tests, and
+includes both platforms in one attested release. See
+[crash reporting](crash_reporting.md#linux-releases)
 for the Linux build, packaging, writable-root and runtime requirements. The
 historical PowerShell three-platform packager remains a manual legacy path;
 the allow-listed Python packagers define current CI releases.
@@ -104,10 +105,10 @@ pack once, verifies every keyed image with the native decoder, and uploads
 `native-hd-artwork`. Windows and Linux consume the same artifact. Their explicit
 packaging allowlists require `hd.istex`, its matching JSON provenance and artist/
 decoder notices; missing artwork or inconsistent headers/reports fail packaging.
-Both Linux formats include those files and record the pack SHA256 in
+All three Linux formats include those files and record the pack SHA256 in
 `build-inputs.json` and package checksums. Packaged smoke tests inspect the actual
-AppImage squashfs as well as the tarball. AppRun exposes the bundled artwork root
-separately from writable player files, so user overrides work without copying
+AppImage squashfs and Steam Deck ZIP as well as the tarball. AppRun exposes the
+bundled artwork root separately from writable player files, so user overrides work without copying
 the bundled pack or replacing saved preferences. See [hd_textures.md](hd_textures.md).
 
 The build uses a fresh GitHub-hosted Ubuntu 24.04 runner, the checked-out

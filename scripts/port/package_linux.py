@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import tarfile
+import zipfile
 
 from linux_build import download
 from texture_pack_distribution import hd_provenance, texture_files
@@ -55,6 +56,23 @@ def checksums(directory):
     files = sorted(p for p in directory.rglob("*") if p.is_file() and p.name != "SHA256SUMS.txt")
     (directory / "SHA256SUMS.txt").write_text("".join(
         f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.relative_to(directory).as_posix()}\n" for p in files))
+
+
+def package_steamdeck(appdir, output):
+    archive = output / "Iron-Sights-steamdeck-i686.zip"
+    extras = ((ROOT / "scripts/port/linux/steamdeck-run.sh", "run.sh"),
+              (ROOT / "scripts/port/linux/STEAM-DECK.txt", "STEAM-DECK.txt"))
+    prefix = "Iron-Sights-steamdeck-i686/"
+    sums = (appdir / "SHA256SUMS.txt").read_text()
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as stream:
+        for path in sorted(appdir.rglob("*")):
+            if path.is_file() and path != appdir / "SHA256SUMS.txt":
+                stream.write(path, prefix + path.relative_to(appdir).as_posix())
+        for source, name in extras:
+            stream.write(source, prefix + name)
+            sums += f"{hashlib.sha256(source.read_bytes()).hexdigest()}  {name}\n"
+        stream.writestr(prefix + "SHA256SUMS.txt", sums)
+    return archive
 
 
 def package(build, output):
@@ -110,6 +128,7 @@ def package(build, output):
     archive = output / "Iron-Sights-linux-i686.tar.gz"
     with tarfile.open(archive, "w:gz") as stream:
         stream.add(appdir, arcname="Iron-Sights-linux-i686")
+    steamdeck = package_steamdeck(appdir, output)
     runtime = download(RUNTIME_URL, RUNTIME_SHA256, build / "downloads/runtime-i686")
     squashfs = output / "payload.squashfs"
     subprocess.run(["mksquashfs", str(appdir), str(squashfs), "-root-owned", "-noappend", "-comp", "gzip", "-processors", "2"], check=True)
@@ -123,9 +142,10 @@ def package(build, output):
     copy(appdir / "build-info.json", output / "linux-build-info.json")
     copy(appdir / "build-inputs.json", output / "linux-build-inputs.json")
     (output / "SHA256SUMS-linux.txt").write_text("".join(
-        f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n" for p in (archive, appimage)))
+        f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.name}\n" for p in (archive, appimage, steamdeck)))
     print(archive)
     print(appimage)
+    print(steamdeck)
 
 
 if __name__ == "__main__":

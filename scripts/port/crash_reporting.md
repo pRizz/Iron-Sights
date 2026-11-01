@@ -152,7 +152,7 @@ For a local reproduction, use a fresh output directory:
 docker build -t midas-linux-release -f scripts/port/linux-release.Dockerfile .
 docker run --rm -v "$PWD:/src" midas-linux-release python3 scripts/port/linux_build.py --work /src/build_linux_ci/deps --output /src/build_linux_ci
 docker run --rm -v "$PWD:/src" midas-linux-release python3 scripts/port/package_linux.py --build build_linux_ci --output build_linux_ci/dist
-docker run --rm -v "$PWD:/src" midas-linux-release python3 scripts/port/test_sentry_linux.py --package build_linux_ci/dist/Iron-Sights-linux-i686.tar.gz --appimage build_linux_ci/dist/Iron-Sights-linux-i686.AppImage --output build_linux_ci/smoke
+docker run --rm -v "$PWD:/src" midas-linux-release python3 scripts/port/test_sentry_linux.py --package build_linux_ci/dist/Iron-Sights-linux-i686.tar.gz --appimage build_linux_ci/dist/Iron-Sights-linux-i686.AppImage --steamdeck build_linux_ci/dist/Iron-Sights-steamdeck-i686.zip --output build_linux_ci/smoke
 ```
 
 A native x86_64 port is a separate engine task: the current ABI probe changes

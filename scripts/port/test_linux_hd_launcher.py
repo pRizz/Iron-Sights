@@ -11,6 +11,25 @@ HERE = Path(__file__).resolve().parent
 
 @unittest.skipUnless(os.name == "posix", "AppRun requires a POSIX shell")
 class LinuxLauncher(unittest.TestCase):
+    def test_steamdeck_launcher_finds_bundle_and_preserves_arguments(self):
+        with tempfile.TemporaryDirectory() as work:
+            root = Path(work)
+            app = root / "Steam Deck bundle with spaces"
+            (app / "lib").mkdir(parents=True)
+            shutil.copy2(HERE / "linux/steamdeck-run.sh", app / "run.sh")
+            exe = app / "IronSights"
+            exe.write_text('#!/bin/sh\nprintf \'%s\\n\' "$PWD" "$LD_LIBRARY_PATH" "$@"\n')
+            helper = app / "sentry-crash"
+            helper.write_text("helper")
+            exe.chmod(0o644)
+            helper.chmod(0o644)
+            env = {k: v for k, v in os.environ.items() if k != "LD_LIBRARY_PATH"}
+            result = subprocess.check_output(["sh", str(app / "run.sh"), "two words"],
+                                             cwd=root, env=env, text=True)
+            self.assertEqual(result.splitlines(), [str(app), str(app / "lib"), "two words"])
+            self.assertTrue(exe.stat().st_mode & 0o111)
+            self.assertTrue(helper.stat().st_mode & 0o111)
+
     def test_readonly_bundle_and_writable_root_stay_separate(self):
         with tempfile.TemporaryDirectory() as work:
             root = Path(work)

@@ -49,7 +49,7 @@ def run(exe, directory, server, args, overrides=None):
                               stdout=out, stderr=err, timeout=30).returncode
 
 
-def check(package, appimage, output):
+def check(package, appimage, steamdeck, output):
     output.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix="run-", dir=output)).resolve()
     server = ThreadingHTTPServer(("127.0.0.1", 0), Receiver)
@@ -61,22 +61,40 @@ def check(package, appimage, output):
             names = stream.getnames()
             assert not any(Path(n).name == "midas.ini" or n.endswith((".z64", ".n64", ".v64", ".debug", ".envelope")) for n in names)
             assert stream.getmember("Iron-Sights-linux-i686/IronSights").mode & 0o111
-            elf = stream.extractfile("Iron-Sights-linux-i686/IronSights").read(20)
+            game = stream.extractfile("Iron-Sights-linux-i686/IronSights").read()
+            elf = game[:20]
             assert elf[:5] == b"\x7fELF\x01" and elf[18:20] == b"\x03\x00"
             artwork_hash = verify_artwork(lambda name: stream.extractfile("Iron-Sights-linux-i686/" + name).read())
+        with zipfile.ZipFile(steamdeck) as stream:
+            names = stream.namelist()
+            prefix = "Iron-Sights-steamdeck-i686/"
+            assert all(name.startswith(prefix) and ".." not in Path(name).parts for name in names)
+            assert not any(Path(name).name == "midas.ini" or name.endswith((".z64", ".n64", ".v64", ".debug", ".envelope")) for name in names)
+            assert hashlib.sha256(stream.read(prefix + "IronSights")).digest() == hashlib.sha256(game).digest()
+            assert verify_artwork(lambda name: stream.read(prefix + name)) == artwork_hash
+            sums = dict(line.split("  ", 1)[::-1] for line in stream.read(prefix + "SHA256SUMS.txt").decode().splitlines())
+            for name in ("run.sh", "STEAM-DECK.txt"):
+                assert hashlib.sha256(stream.read(prefix + name)).hexdigest() == sums[name]
         # Verify the actual squashfs contents, not just the tarball input tree.
         extracted = work / "appimage-contents"
         extracted.mkdir()
         subprocess.run([str(appimage.resolve()), "--appimage-extract"], cwd=extracted,
                        stdout=subprocess.DEVNULL, check=True, timeout=60)
         assert verify_artwork(lambda name: (extracted / "squashfs-root" / name).read_bytes()) == artwork_hash
-        for name in ("enabled", "healthy", "optout", "toggle-off", "override-off", "missing-sdk", "symlink-cache", "offline-retry", "appimage"):
+        for name in ("enabled", "healthy", "optout", "toggle-off", "override-off", "missing-sdk", "symlink-cache", "offline-retry", "appimage", "steamdeck"):
             directory = work / name
             directory.mkdir()
-            with tarfile.open(package) as stream:
-                stream.extractall(directory)
-            directory = directory / "Iron-Sights-linux-i686"
-            exe = directory / "IronSights"
+            if name == "steamdeck":
+                with zipfile.ZipFile(steamdeck) as stream:
+                    stream.extractall(directory)
+                directory = directory / "Iron-Sights-steamdeck-i686"
+                exe = directory / "run.sh"
+                exe.chmod(0o755)
+            else:
+                with tarfile.open(package) as stream:
+                    stream.extractall(directory)
+                directory = directory / "Iron-Sights-linux-i686"
+                exe = directory / "IronSights"
             args = ["--test-crash-reporting"]
             overrides = {}
             if name == "healthy": args = ["--check-crash-reporting"]
@@ -109,7 +127,7 @@ def check(package, appimage, output):
                 assert len(server.envelopes) == before
                 server.reject_uploads = False
                 assert run(exe, directory, server, ["--check-crash-reporting"]) == 0
-            expected = int(name in ("enabled", "offline-retry", "appimage"))
+            expected = int(name in ("enabled", "offline-retry", "appimage", "steamdeck"))
             wait_upload(server, before + expected)
             assert len(server.envelopes) - before == expected, (name, code, (directory / "stderr.log").read_text()[-2000:])
             assert (code == 0) == (name in ("healthy", "missing-sdk", "symlink-cache")), (name, code)
@@ -152,6 +170,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--package", type=Path, required=True)
     parser.add_argument("--appimage", type=Path, required=True)
+    parser.add_argument("--steamdeck", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    check(args.package, args.appimage, args.output)
+    check(args.package, args.appimage, args.steamdeck, args.output)

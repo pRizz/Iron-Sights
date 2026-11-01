@@ -638,8 +638,11 @@ gallery workflow tests and the standards checks pass.
 
 **Status:** Implemented.
 
-Adds trusted-main Linux i686 compilation, a portable tar.gz and a type-2
-AppImage to the existing native release workflow. All game/SDL/Sentry ELF files
+Adds trusted-main Linux i686 compilation, a portable tar.gz, a type-2 AppImage
+and a Steam Deck ZIP to the existing native release workflow. The ZIP reuses
+the same i686 game and bundled libraries, adds a launcher that works from any
+Steam working directory, and keeps writable player data beside the executable.
+Device-verified SteamOS support remains pending. All game/SDL/Sentry ELF files
 are built in a digest-pinned Ubuntu 22.04 container. SDL source and the AppImage
 runtime are SHA256 pinned; the Sentry source remains commit pinned. The tarball
 preserves executable permissions. Allow-listed packaging excludes ROMs, saves,
@@ -655,16 +658,16 @@ data by default. The SDK/helper still load relative to the executable, separate
 from this writable root. This is fork distribution work, replacing the prior
 local-only status for Linux; the historical PowerShell three-platform packager
 remains a manual legacy path. Native publication waits for Windows and Linux
-smoke tests, uploads exact ELF symbols/source context, attests both Linux
-formats and publishes one commit-tagged release. Compiler-object caching is
+smoke tests, uploads exact ELF symbols/source context, attests all three Linux
+packages and publishes one commit-tagged release. Compiler-object caching is
 separate from packages; a clean-build dispatch bypasses it.
 
-FORK-033 adds the same verified HD artwork artifact to the tarball and AppImage,
+FORK-033 adds the same verified HD artwork artifact to all three Linux packages,
 with shared explicit allowlisting, matching report checks and notices. AppRun
 sets the read-only bundled texture root separately from `GE_DATA_ROOT`, retaining
 user overrides and saved mode choices without copying artwork into user storage.
-Packaged smoke tests verify pack hashes, report counts and notices in both
-formats, including extraction of the actual AppImage squashfs.
+Packaged smoke tests verify pack hashes, report counts and notices in each
+format, including extraction of the actual AppImage squashfs and ZIP launcher.
 The runner downloads shared HD artwork immediately after checkout, before
 Docker creates any Linux build output. This keeps the destination directories
 runner-owned and avoids the hosted `EACCES` failure from downloading into a
@@ -685,15 +688,19 @@ state serialization require a coordinated audit before changing that ABI.
 **Sources:** [baseline container](scripts/port/linux-release.Dockerfile),
 [build](scripts/port/linux_build.py), [packager](scripts/port/package_linux.py),
 [AppImage launcher](scripts/port/linux/AppRun),
+[Steam Deck launcher](scripts/port/linux/steamdeck-run.sh),
+[Steam Deck instructions](scripts/port/linux/STEAM-DECK.txt),
 [ELF export boundary](port/crash/linux_game_symbols.map),
 [player instructions](scripts/port/linux/START-HERE.txt),
 [workflow](.github/workflows/windows-release.yml), [root hook](port/src/main.c),
 [release guide](scripts/port/releases.md),
-[packaged tests](scripts/port/test_sentry_linux.py), [reporting](#fork-030--native-sentry-crash-reporting-and-symbol-uploads).
+[packaged tests](scripts/port/test_sentry_linux.py),
+[launcher tests](scripts/port/test_linux_hd_launcher.py),
+[reporting](#fork-030--native-sentry-crash-reporting-and-symbol-uploads).
 
 **Validation:** The 32/64-bit ABI probe reproduced the sizes above. Linux
 reporter syntax, Sentry tooling, ADS/wardrobe/HUD and distribution/launcher tests
-pass. All nine packaged reporting scenarios passed, including a real AppImage
+pass. The earlier nine packaged reporting scenarios passed, including a real AppImage
 fault and its writable-root behavior. The Windows 72-view/35-icon gallery was
 regenerated with zero changed cells. A private ROM-loaded softpipe smoke reached
 6000 frame pumps/13 submitted graphics tasks and exited normally with Sentry
@@ -701,10 +708,18 @@ active. Local llvmpipe/LLVM 15 also failed with reporting disabled; this is not
 a hardware-driver or Steam Deck certification. Final rebuilt tarball/AppImage
 packages repeated all nine reporting scenarios successfully. Hosted CI and
 dashboard verification follow the same exact-artifact release workflow. The
-first hosted run passed Linux compilation, symbol uploads and all nine tests,
+first hosted run passed Linux compilation, symbol uploads and the nine original tests,
 then exposed an artifact-uploader permission mismatch with Docker's private
 temporary directories. Tests now preserve logs/event JSON in a readable ZIP and
 remove their isolated runtime copies before the host uploads diagnostics.
+The Steam Deck packager produced a valid local ZIP from the previously released
+Linux AppDir: its game is ELF32, its two new files match their SHA-256 entries,
+and no ROM entry is present. Both ROM-free POSIX launcher tests passed in Docker.
+The full-size tarball, AppImage and Steam Deck ZIP passed all ten packaged
+crash-reporting scenarios locally using the previously released Linux binary.
+The workflow fingerprint refresh completed two gallery passes with zero changed
+image cells across all 72 views and 35 icons.
+Physical Steam Deck validation remains pending.
 
 ### FORK-030 — Native Sentry crash reporting and symbol uploads
 

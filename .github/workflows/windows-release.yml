@@ -263,10 +263,10 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
           docker run --rm -v "$PWD:/src" -e SENTRY_AUTH_TOKEN midas-linux-release python3 scripts/port/sentry_tools.py upload --exe build_linux_ci/symbols/IronSights.debug --sdk build_linux_ci/symbols --work build_linux_ci/sentry-cli
-      - name: Package tarball and AppImage and test real crashes
+      - name: Package Linux and Steam Deck downloads and test real crashes
         run: |
           docker run --rm -v "$PWD:/src" midas-linux-release python3 scripts/port/package_linux.py --build build_linux_ci --output build_linux_ci/dist
-          docker run --rm -v "$PWD:/src" midas-linux-release python3 scripts/port/test_sentry_linux.py --package build_linux_ci/dist/Iron-Sights-linux-i686.tar.gz --appimage build_linux_ci/dist/Iron-Sights-linux-i686.AppImage --output build_linux_ci/smoke
+          docker run --rm -v "$PWD:/src" midas-linux-release python3 scripts/port/test_sentry_linux.py --package build_linux_ci/dist/Iron-Sights-linux-i686.tar.gz --appimage build_linux_ci/dist/Iron-Sights-linux-i686.AppImage --steamdeck build_linux_ci/dist/Iron-Sights-steamdeck-i686.zip --output build_linux_ci/smoke
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: inputs.clean_build != true
         with:
@@ -278,6 +278,7 @@ jobs:
           path: |
             build_linux_ci/dist/*.tar.gz
             build_linux_ci/dist/*.AppImage
+            build_linux_ci/dist/*.zip
             build_linux_ci/dist/SHA256SUMS-linux.txt
             build_linux_ci/dist/linux-build-*.json
           if-no-files-found: error
@@ -337,6 +338,7 @@ jobs:
             dist/Iron-Sights-windows-x86.zip
             dist/Iron-Sights-linux-i686.tar.gz
             dist/Iron-Sights-linux-i686.AppImage
+            dist/Iron-Sights-steamdeck-i686.zip
       - name: Preserve provenance and publish versioned release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -344,6 +346,7 @@ jobs:
           ATTESTATION_URL: ${{ steps.attest.outputs.attestation-url }}
         run: |
           set -euo pipefail
+          (cd dist && sha256sum -c SHA256SUMS-linux.txt)
           cp "$BUNDLE" dist/build-provenance.sigstore.json
           tag="build-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA:0:12}"
           python3 - <<'PY'
@@ -356,6 +359,8 @@ jobs:
           text=f'''Download **Iron-Sights-windows-x86.zip**, extract the entire ZIP, put your own stock USA ROM in its Data folder, then run IronSights.exe.
 
           Linux: download **Iron-Sights-linux-i686.tar.gz** or **Iron-Sights-linux-i686.AppImage**. Both require a 32-bit-capable x86 Linux with glibc 2.35+ and 32-bit OpenGL drivers. AppImage data lives in `~/.local/share/iron-sights` (or XDG_DATA_HOME); the tarball keeps data beside the executable. See START-HERE.txt.
+
+          Steam Deck / SteamOS: **Iron-Sights-steamdeck-i686.zip** repackages the same 32-bit Linux game with a `run.sh` launcher and Deck setup instructions. Extract it in a writable folder, put your own ROM in `Data`, and run `sh run.sh` in Desktop Mode. Device compatibility has not yet been verified on a Steam Deck.
 
           This is a continuously published development build. Weapon icons are prepared locally on first launch; no Python or asset downloads are required.
 
@@ -372,7 +377,7 @@ jobs:
           '''
           Path('notes.md').write_text(text)
           PY
-          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --title "Native build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} (${GITHUB_SHA:0:9})" --notes-file notes.md dist/Iron-Sights-windows-x86.zip dist/SHA256SUMS.txt dist/build-info.json dist/build-inputs.json dist/build-provenance.sigstore.json dist/Iron-Sights-linux-i686.tar.gz dist/Iron-Sights-linux-i686.AppImage dist/SHA256SUMS-linux.txt dist/linux-build-info.json dist/linux-build-inputs.json
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --title "Native build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} (${GITHUB_SHA:0:9})" --notes-file notes.md dist/Iron-Sights-windows-x86.zip dist/SHA256SUMS.txt dist/build-info.json dist/build-inputs.json dist/build-provenance.sigstore.json dist/Iron-Sights-linux-i686.tar.gz dist/Iron-Sights-linux-i686.AppImage dist/Iron-Sights-steamdeck-i686.zip dist/SHA256SUMS-linux.txt dist/linux-build-info.json dist/linux-build-inputs.json
           gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --latest
           echo "## Native downloads" >> "$GITHUB_STEP_SUMMARY"
           echo "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/$tag" >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,19 @@
+Iron Sights for Steam Deck / SteamOS
+
+This ZIP contains the same i686 game as the Linux tarball and AppImage, with a
+launcher for Steam Deck. It is not a native x86_64 build. A 32-bit ELF loader,
+glibc 2.35 or newer and working 32-bit OpenGL drivers are required. A real
+Steam Deck has not yet been used to validate this package.
+
+1. In Desktop Mode, extract the ZIP to a writable folder under your home
+   directory. Keep the entire Iron-Sights-steamdeck-i686 folder together.
+2. Put your own stock GoldenEye 007 (USA) ROM in its Data folder. The ROM is
+   never included in the download.
+3. In Konsole, enter the extracted folder and run: sh run.sh
+4. To launch from Gaming Mode, run chmod +x run.sh IronSights once, then add
+   run.sh as a Non-Steam Game. The launcher finds its own folder and bundled
+   libraries, even when Steam starts it from another working directory.
+
+Data, saves, profiles and midas.ini stay beside IronSights. Preserve them when
+updating. See START-HERE.txt for settings, HD artwork, crash reporting and
+verification. The Linux tarball and AppImage remain alternatives.
