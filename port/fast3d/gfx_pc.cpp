@@ -41,6 +41,10 @@
 #include "port_weapon_images.h"
 #include "port_icon_decode.h"
 #include "enhanced_fonts.h"
+#ifdef __EMSCRIPTEN__
+extern "C" bool gfx_opengl_web_sampler_flags_changed(int tile, bool linear_filter, uint32_t cms, uint32_t cmt);
+extern "C" void gfx_opengl_web_sampler_sync(void);
+#endif
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
 #include "hd_textures.h"
 #endif
@@ -4597,6 +4601,20 @@ ndcprobe_done:;
     ts.prg = prg; ts.num_inputs = num_inputs; ts.clip_parameters = clip_parameters;
     ts.dec_pull = dec_pull; ts.dec_pull_b = dec_pull_b;
     } /* ts_recompute */
+#ifdef __EMSCRIPTEN__
+    /* A cached texture can skip set_sampler_parameters after a caption changed
+     * the global border uniform. Restore this draw's flags even when its GL
+     * texture object already has the requested wrap/filter parameters. */
+    for (int i = 0; i < 2; i++) {
+        if (used_textures[i] && rendering_state.textures[i]) {
+            const auto &sampler = rendering_state.textures[i]->second;
+            if (gfx_opengl_web_sampler_flags_changed(i, sampler.linear_filter, sampler.cms, sampler.cmt)) {
+                gfx_flush();
+                gfx_opengl_web_sampler_sync();
+            }
+        }
+    }
+#endif
     const bool dxlu_capture = gfx_dxlu_enabled() && !dxlu_closed
         && use_alpha && depth_test && depth_compare && !depth_update
         && dxlu_num_tris < DXLU_MAX_TRIS && dxlu_num_states < DXLU_MAX_STATES;

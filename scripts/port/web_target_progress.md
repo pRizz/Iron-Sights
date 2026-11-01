@@ -98,23 +98,31 @@ resident-memory optimization require separate measured work.
 
 ## WEB-002 | 2026-10-24 | Playable prototype
 
-**Dam texture flicker investigation, 2026-10-31:** A locally built optimized
-web runtime reproduced issue #3 in headed Chrome on an NVIDIA RTX 3070 Laptop
-GPU through ANGLE/D3D11. Full-rate cutscene captures show the reservoir becoming
-black for one presented frame between normal water frames on the aerial Dam
-shot. Scripted early gameplay captures show a flat blue sky patch for one
-captured frame while firing; a 20-second movement/aim control without shots did
-not show that patch. The game canvas remained 839x471, with no page error in
-these runs. A diagnostic `GE_SKY_QUANT=1` run avoided the reservoir flash in
-one comparable aerial capture but still showed the gameplay sky patch.
-`GE_GLPOLL=0` also left a gameplay patch, so neither setting is a validated
-fix. The reported gate/mountain-wall texture flicker was not isolated as a
-single-frame failure in the gate-shot capture. Private ROM-derived captures and
-reports remain ignored under `build/web-flicker/`; no runtime behavior changed.
-The optimized Wasm build, site artifact verification and web typecheck passed.
-Next action: capture the gate/wall symptom at full rate, correlate the confirmed
-water and firing frames with texture binds and sky/RDP draw state, then validate
-a focused renderer fix across cutscene, shooting and movement.
+**Dam texture flicker fix, 2026-10-31:** Headed Chrome on an NVIDIA RTX 3070
+Laptop GPU through ANGLE/D3D11 reproduced one-frame black reservoir patches
+during the aerial cutscene and flat blue sky patches during scripted firing.
+Framebuffer readback confirmed the reservoir defect before presentation. A
+matched-camera replay linked both reservoir drops to HUD caption start times:
+`uWebBorder0` on the following textured scenery draw changed from `[0,0,0]`
+to `[1,1,0]` for the bad frame, then reverted. A caption-disabled control had
+no drops. The renderer now synchronizes border uniforms from the draw's cached
+sampler even when texture parameters do not change, flushing queued triangles
+before the update. In the same camera, the two baseline reservoir pixel drops
+at video 19.730 and 22.732 seconds became zero over the 18-25 second interval;
+the location caption still rendered. A scripted movement/aim/firing capture
+removed all three large one-frame sky patch anomalies from its baseline (peak
+tile scores 46.9-59.8 before, 39.4 after, with the remaining peak at a HUD
+transition). The game canvas remained 839x471 with no page error. The
+gate/mountain-wall symptom was not separately isolated. A final build without
+the temporary audit hooks reached gameplay with no page error, and a 515-frame
+scan of its guard/gate segment found no isolated one-frame wall anomaly; its
+largest changes span adjacent frames during the camera/HUD transition. Private
+ROM-derived captures and reports remain ignored under `build/web-flicker/`.
+The optimized Wasm and site builds, browser unit tests (181 pass), typecheck,
+site artifact verification, Bright Builds checks and gallery workflow tests
+(9 pass) passed. Two independent gallery passes verified 72 views and 35 icons
+with zero changed image cells; gallery integrity verification passed. Next
+action: check the gate cutscene and other GPUs during broader browser acceptance.
 
 **Shared buffer audit, 2026-10-30:** The repository-wide audit adds checked
 memory-bank/high-mapping arithmetic, model-record spans, audio DMEM/history

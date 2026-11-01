@@ -3407,17 +3407,25 @@ The shared native frame-data capacity/guard fix in FORK-017 also compiles in
 the browser target. Optimized Wasm compilation passed; no browser flicker fix
 or new browser gameplay acceptance is claimed by the native Aztec investigation.
 
-The browser renderer still shows issue #3's intermittent Dam
-texture flicker. A headed Chrome audit of the optimized web runtime captured
-single-frame black reservoir patches during the aerial cutscene and flat blue
-sky patches during scripted early-gameplay firing. A movement/aim control with
-no shots did not show the latter patch. The reported gate/mountain-wall flicker
-remains to be isolated. Diagnostic `GE_SKY_QUANT=1` avoided the reservoir flash
-in one comparable aerial run but did not remove the gameplay patch;
-`GE_GLPOLL=0` did not remove the gameplay patch. Neither is a shipped setting
-or fix. The investigation changed documentation only; private ROM-derived
-captures stay ignored in `build/web-flicker/`. Optimized Wasm compilation,
-site-artifact verification and web typecheck passed. See WEB-002 in
+The browser renderer restores WebGL transparent-border shader uniforms from
+each draw's cached texture sampler state, including when no GL texture parameter
+change is needed. Previously a HUD glyph could leave `uWebBorder0` at
+`[1,1,0]` for a following sky or water draw whose sampler was already cached,
+making a single frame sample transparent black. The web-only hook in
+`port/fast3d/gfx_pc.cpp` flushes queued triangles before the uniform changes;
+`port/fast3d/gfx_opengl.cpp` and `port/web/sampler.*` own the sampler flag and
+uniform synchronization. No user setting or default changes. In a matched
+headed Chrome Dam cutscene, two one-frame reservoir drops in the baseline
+became zero with the fix while the location caption remained visible. A
+scripted early-gameplay firing capture removed the three large one-frame sky
+patch anomalies seen in its baseline. The reported gate/mountain-wall symptom
+was not separately isolated; broader browser and GPU acceptance remains open.
+The clean production build reached gameplay without a page error. The render
+gallery's two independent passes verified 72 views and 35 icons with zero
+changed image cells; only its source fingerprint and HTML changed. Browser
+unit tests, typecheck, site artifact verification, gallery integrity/workflow
+checks and Bright Builds checks passed. Private ROM-derived captures stay
+ignored in `build/web-flicker/`. See WEB-002 in
 `scripts/port/web_target_progress.md` for evidence and the next action.
 
 Unlocked browser menus now follow absolute SDL pointer coordinates. Native

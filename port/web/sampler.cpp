@@ -20,12 +20,16 @@ void portWebSamplerSync(const int locations[2])
     }
 }
 
-void portWebSamplerFlags(int tile, uint32_t cms, uint32_t cmt, bool linear)
+bool portWebSamplerFlags(int tile, uint32_t cms, uint32_t cmt, bool linear)
 {
-    if (tile < 0 || tile >= 2) return;
-    borderFlags[tile][0] = cms == 0x10;
-    borderFlags[tile][1] = cmt == 0x10;
-    borderFlags[tile][2] = linear;
+    if (tile < 0 || tile >= 2) return false;
+    const GLfloat flags[3] = {cms == 0x10 ? 1.0f : 0.0f,
+                              cmt == 0x10 ? 1.0f : 0.0f, linear ? 1.0f : 0.0f};
+    const bool changed = borderFlags[tile][0] != flags[0]
+        || borderFlags[tile][1] != flags[1]
+        || borderFlags[tile][2] != flags[2];
+    for (int i = 0; i < 3; i++) borderFlags[tile][i] = flags[i];
+    return changed;
 }
 
 uint32_t portWebMirrorClamp(void)

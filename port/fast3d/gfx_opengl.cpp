@@ -1078,10 +1078,20 @@ static uint32_t gfx_cm_to_opengl(uint32_t val) {
 extern "C" int ge_sky_tri_active; /* gfx_pc: inside an RDP-triangle (sky/water) draw */
 extern "C" int ge_mip_active;     /* gfx_pc: this sampler serves a G_TL_LOD draw - minify through mips */
 
+#ifdef __EMSCRIPTEN__
+extern "C" bool gfx_opengl_web_sampler_flags_changed(int tile, bool linear_filter, uint32_t cms, uint32_t cmt) {
+    return portWebSamplerFlags(tile, cms, cmt, linear_filter && current_filter_mode == FILTER_LINEAR);
+}
+
+extern "C" void gfx_opengl_web_sampler_sync(void) {
+    if (gl_current_prg && !gl_ret_active) portWebSamplerSync(gl_current_prg->web_border_locations);
+}
+#endif
+
 static void gfx_opengl_set_sampler_parameters(int tile, bool linear_filter, uint32_t cms, uint32_t cmt) {
 #ifdef __EMSCRIPTEN__
-    portWebSamplerFlags(tile, cms, cmt, linear_filter && current_filter_mode == FILTER_LINEAR);
-    if (gl_current_prg && !gl_ret_active) portWebSamplerSync(gl_current_prg->web_border_locations);
+    gfx_opengl_web_sampler_flags_changed(tile, linear_filter, cms, cmt);
+    gfx_opengl_web_sampler_sync();
 #endif
     const GLint filter = linear_filter && (current_filter_mode == FILTER_LINEAR) ? GL_LINEAR : GL_NEAREST;
     /* THIS is the value the draw actually wants - gfx_pc computes it per draw
