@@ -3,7 +3,8 @@ param(
     [ValidateSet('960x540','800x600')][string]$Resolution = '960x540',
     [switch]$Remapped,
     [switch]$Unbound,
-    [switch]$LegacyAds
+    [switch]$LegacyAds,
+    [switch]$SprintOff
 )
 $ErrorActionPreference = 'Stop'
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -16,8 +17,9 @@ New-Item -ItemType Directory -Path $dir | Out-Null
 Copy-Item -LiteralPath $Executable -Destination $auditExe
 Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
 $ini = @('[display]', 'fullscreen=window', 'vsync=0', 'maxfps=60', 'tickhz=60', 'msaa=0', 'mission_timer=1', '[input]', 'mouse=1')
-if ($Remapped) { $ini += @('next_inventory=G,Q', 'r=Mouse X2') }
-if ($Unbound) { $ini += @('next_inventory=', 'r=', 'aim_down_sights=') }
+if ($Remapped) { $ini += @('next_inventory=G,Q', 'r=Mouse X2', 'walk=Left Alt') }
+if ($Unbound) { $ini += @('next_inventory=', 'r=', 'aim_down_sights=', 'walk=') }
+if ($SprintOff) { $ini += 'sprint=0' }
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value $ini
 if ($LegacyAds) {
     $deviceDir = Join-Path $dir 'Data\Devices'

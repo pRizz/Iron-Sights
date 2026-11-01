@@ -133,8 +133,8 @@ static void hintSmallCaps(char *text)
 
 Gfx *portMissionHintsDraw(Gfx *gdl)
 {
-    char rows[2][160], binding[96];
-    s32 i, count = 0, width, x, y, aimMode = 0;
+    char rows[3][160], binding[96];
+    s32 i, count = 0, width, x, y, aimMode = 0, sprint = 0;
     f32 fade;
     u32 alpha;
     if (!hintsEnabled || hintRemaining <= 0 || !hintsPermitted()) return gdl;
@@ -146,6 +146,9 @@ Gfx *portMissionHintsDraw(Gfx *gdl)
             cur_player_get_aim_control() ? "Tap" : "Hold", hintBindingName(binding));
     else if (maybeHintBinding("aim_down_sights", binding, sizeof(binding)))
         snprintf(rows[count++], sizeof(rows[0]), "Hold %s to aim down sights", hintBindingName(binding));
+    portJoyPortOptionGet("sprint", &sprint);
+    if (sprint && maybeHintBinding("walk", binding, sizeof(binding)))
+        snprintf(rows[count++], sizeof(rows[0]), "Hold %s to sprint", hintBindingName(binding));
     if (!count) return gdl;
     hintWasShown = 1;
     fade = hintRemaining < 120.0f ? hintRemaining / 120.0f : 1.0f;

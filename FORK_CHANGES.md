@@ -262,8 +262,9 @@ checks; a restored fire/smoke capture was visually reviewed.
 
 ### FORK-035 — Desktop mission-start control hints
 
-Desktop solo missions show compact gadget and aim-down-sights hints for eight
-seconds of controllable gameplay, fading smoothly during the last two seconds.
+Desktop solo missions show compact gadget and aim-down-sights hints, plus a
+conditional sprint hint, for eight seconds of controllable gameplay, fading
+smoothly during the last two seconds.
 The inherited upstream HUD has no such onboarding. The timer waits for Bond's
 actual control-unlock predicate, pauses while the watch, menus, console or
 cutscenes take control, and hides with the HUD or on death. Mission starts and
@@ -277,8 +278,8 @@ missions, hidden/unbound hints and suspend restores do not consume a display.
 Explicitly re-enabling resets the count for the next mission. Counts/settings
 stay outside suspend images, so loading an older image cannot reset the quota.
 
-The two rows describe tapping the live `next_inventory` binding and aiming down
-sights through the current `r` (Aim) binding in ADS mode. They respect the
+The first two rows describe tapping the live `next_inventory` binding and aiming
+down sights through the current `r` (Aim) binding in ADS mode. They respect the
 player's Hold/Toggle setting; a separately mapped `aim_down_sights` action is
 the fallback when normal Aim uses the red reticle or is unbound. They use the
 existing watch binding readback,
@@ -286,7 +287,10 @@ including mouse-button names and remapped keys. Keyboard alternatives show the
 first mapped key; unbound actions disappear. A controller that claimed player
 one uses its current device's friendly button labels instead. N64-mode pads
 omit these direct-action hints because their controls do not consume those
-actions. Bare text, with a one-pixel shadow and no rectangular background, is
+actions. A third row says to hold the live Walk / Sprint binding to sprint only
+while the Sprint gameplay setting is on. It disappears when Sprint is off or
+the action is unbound, and follows remapped keyboard/controller labels.
+Bare text, with a one-pixel shadow and no rectangular background, is
 vertically centered and starts slightly inside the left health arc. Its anchor
 follows health centering/edge transitions independently of the ammo HUD, at wide
 and 4:3 aspect ratios. Friendly mouse names include **Right Mouse Button**;
@@ -305,8 +309,8 @@ existing `video.c`/`input_pc.c` binding APIs rather than a second key table.
 **Validation:** [ROM-free checks](scripts/port/test_mission_hints.sh) pass
 control-lock timing, pause/resume without rearming, eight-second duration at
 30/60/120/240 Hz, smooth final fade, live custom keyboard/mouse/controller
-labels, unbound actions, health anchoring, uniform typography, quota persistence
-and stage/HUD/death/multiplayer/restore gates. Existing
+labels, conditional sprint visibility/remaps, health anchoring, uniform
+typography, quota persistence and stage/HUD/death/multiplayer/restore gates. Existing
 HUD, ADS and suspend-state regressions pass. The native release workflow runs
 the new hint checks. [Isolated Windows captures](scripts/port/audit_mission_hints.ps1)
 cover default/remapped/unbound hints. An isolated four-process mission audit
@@ -323,6 +327,11 @@ The additional 0.60 font-size refinement passes the hint regression and Windows
 build, with legibility/alignment reviewed in wide and 4:3 mission captures.
 Its gallery refresh again matches both independent passes with zero changed
 image cells.
+The three-row update passes the ROM-free hint checks and Windows rebuild.
+Isolated wide/default, wide/Sprint-off and 4:3/remapped mission captures were
+visually reviewed for text, conditional visibility and health-arc spacing.
+The refreshed gallery passed two independent 72-view captures and 35 icons with
+zero changed image cells.
 
 ### FORK-034 — Portable desktop save import and export
 
@@ -1756,6 +1765,8 @@ rebindable **Walk / Sprint** action (Left Shift by default) boosts movement to
 1.5 times normal speed. Aiming and crouching prevent the sprint boost. Turning
 the setting off restores the original half-speed Shift-to-walk behavior; aim
 and walk slowdowns do not stack.
+FORK-035 shows the live Walk / Sprint binding in mission-start hints only while
+this setting is on.
 
 **Sources:** [movement/input](port/src/joy_port.c),
 [option definitions](port/src/port_options.c), frontend/watch settings pages,
