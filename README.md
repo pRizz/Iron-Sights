@@ -13,6 +13,12 @@
 
 Iron Sights is an independent fork of [Project Midas](https://github.com/murkantor/Project-Midas), adding modern aiming, movement, and HUD options to the GE PC port. This fork is maintained separately from upstream.
 
+[![Watch on YouTube: Iron Sights, aim down sights and more for the GoldenEye 007 PC port](https://img.youtube.com/vi/lq_tJ_B7bDY/maxresdefault.jpg)](https://youtu.be/lq_tJ_B7bDY)
+
+**[▶ Watch on YouTube: Aim Down Sights and More for the GoldenEye 007 PC Port (3 min)](https://youtu.be/lq_tJ_B7bDY)**
+
+Earlier video: [ADS Update — Hands, Better Sights & Sniper Scope Zoom (60 FPS)](https://youtu.be/dI-G7Lo12hA)
+
 **[See the full list of changes from upstream →](FORK_CHANGES.md)** — the maintained inventory of this fork's additions, modifications, settings, and fixes.
 
 This fork includes upstream **1.0.2b** at `9062f9f120b7`, including its audio,
@@ -62,12 +68,6 @@ retained launcher has an
 physical iPhone/iPad/Android performance and compatibility remain experimental.
 
 Successful `main` builds deploy automatically to GitHub Pages. See [compatibility and measured limits](scripts/port/web_compatibility.md), [browser build instructions](web/README.md) and [milestone evidence](scripts/port/web_target_progress.md). Browser suspend points and offline application support are deferred.
-
-## Watch the latest gameplay demo
-
-[![Watch Iron Sights update: new hands, improved sights, and sniper scope zoom at 60 FPS](.github/images/iron-sights-gameplay-thumbnail.png)](https://youtu.be/dI-G7Lo12hA)
-
-**[Watch on YouTube: ADS Update — Hands, Better Sights & Sniper Scope Zoom (60 FPS)](https://youtu.be/dI-G7Lo12hA)**
 
 ## What's different in this fork?
 

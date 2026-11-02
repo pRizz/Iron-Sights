@@ -1367,8 +1367,7 @@ vision rig's checkout root, executable/process guard and ignored log location.
 The rig supports Windows/Git Bash and Linux, accepts `GE_TEST_EXE` for another
 build, and propagates game failures. Portable controller/ROM/input comments now
 refer to the game executable; Windows crash-debugging examples use its actual
-filename. The README image is `iron-sights-gameplay-thumbnail.png`, removing its
-old project-name fragment without changing the image. Browser package/plugin
+filename. Browser package/plugin
 names use Iron Sights. Existing upstream attribution, history, file-format and
 storage identities remain intact; the inherited application icon is deliberately
 unchanged for a later asset discussion. Room-model metadata is covered by FORK-025.
@@ -1431,10 +1430,13 @@ The gallery's two independent passes reproduce all 72 views and 35 icons unchang
 only its title and source fingerprint change. Diagnostics remain private under
 `build/iron-sights` and `build_win/iron-sights-menu-audit`.
 
-The README places the latest gameplay video near the top with a screenshot thumbnail
-and YouTube play badge; the newer video supersedes the original demo link.
+The README features the promo video directly under the fork's introduction, ahead
+of the downloads, using YouTube's hosted thumbnail so no game image is committed.
+It keeps a text link to the earlier ADS video, and replaces the former "Watch the
+latest gameplay demo" section and its committed
+`.github/images/iron-sights-gameplay-thumbnail.png`.
 The README introduces the fork, puts the Windows ZIP download and three-step
-setup before the demo (FORK-018), prominently links this full
+setup straight after the video (FORK-018), prominently links this full
 inventory near the top, and summarizes ADS, sniper zoom, sprint, smoother
 sights/combat feedback, objective alerts, the weapon strip, adaptive
 health/armor, solo suspend points, and mission timer/selection cheat-target
@@ -1443,7 +1445,6 @@ Contributor inventory-maintenance instructions sit under
 Contributing, alongside the existing contribution links.
 
 **Sources:** [README.md](README.md),
-[gameplay thumbnail](.github/images/iron-sights-gameplay-thumbnail.png),
 [settings reference](tools/midas_ini_help.txt).
 **History:** `9e46d0d`, `aefb55a`, `74ce634`, `5edcf1a`, `4e37864`.
 **Verification:** README video/image targets and documented settings.
