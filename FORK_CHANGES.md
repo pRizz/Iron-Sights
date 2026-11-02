@@ -85,9 +85,9 @@ has zero replays and hard gaps, plus soft gaps during its slower startup (worst
 stall 4.6 s). Linux WebKit's touch audit passes with a running 22,050 Hz context
 and nonzero output; Linux WebKit's desktop launcher flow stopped before audio with
 Play disabled, in launcher code this change does not touch. Chrome launcher, room
-and touch game audits pass. `room-exit-audit` fails at its `.room-layer` check on
-both this build and the unmodified previous build, so room-return silence is
-covered only by the shared pause check. A forced-fallback Chrome run confirms the
+and touch game audits pass. Chrome and Edge `room-exit-audit` runs measure a 0.56
+output peak before exit and exactly zero in the returned room, including with
+reduced motion in Chrome. A forced-fallback Chrome run confirms the
 SDL path still plays, with its old replay faults. Native buffer tests pass, and
 two-pass gallery regeneration changes zero image cells. These runs are not
 physical listening tests, and physical Safari and iOS remain experimental.
@@ -3198,7 +3198,11 @@ Focused sources are [browser targets](web/src/file-save-actions.tsx),
 [launcher audit](web/tools/room-save-audit.mjs) and
 [live-game lifecycle audit](web/tools/room-exit-audit.mjs).
 The native Files/Exit audit clicks now use direct screen coordinates, without
-the former edge-sweep resynchronization workaround (FORK-024).
+the former edge-sweep resynchronization workaround (FORK-024). Moving the transfer
+column left left that audit clicking Options at the old Exit Game position, so it
+failed waiting for the room while the product worked. It now clicks Exit Game at
+its current position, fails if the click opens nothing or No does not return to
+Files, and requires the audio tap to have heard the game before room silence counts.
 The actual-game Files audit checks transparent hovered targets and scoped
 context-menu cancellation alongside the existing save transfer flow.
 The real IDBFS regression passes staged import/reload, marker exclusion/cleanup,

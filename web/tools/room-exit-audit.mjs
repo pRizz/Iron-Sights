@@ -6,6 +6,12 @@ import { resolve } from 'node:path';
 import { expect } from '@playwright/test';
 import { launchAuditBrowser } from './browser-choice.mjs';
 import { observeAudio, readAudio } from './audio-observer.mjs';
+import { installGameProbe } from './native-game-audit.mjs';
+
+// Native menu coordinates: btn_x/btn_y in front.c, then the confirmation dialog.
+const EXIT_GAME_BUTTON = [360, 298];
+const EXIT_NO = [255, 170];
+const EXIT_YES = [185, 170];
 
 const [romPath, outputPath = '../build/web-room/exit', origin = 'http://127.0.0.1:4176'] =
     process.argv.slice(2);
@@ -19,7 +25,9 @@ const context = await browser.newContext({
 });
 const page = await context.newPage();
 await page.addInitScript(observeAudio);
+await installGameProbe(page);
 const errors = [];
+const roomAudio = [];
 page.on('pageerror', (error) => errors.push(String(error)));
 async function menuClick(x, y) {
     const rect = await page.locator('#canvas').boundingBox();
@@ -40,10 +48,18 @@ async function backup(button = 'Download save backup') {
     for await (const chunk of await download.createReadStream()) chunks.push(chunk);
     return JSON.parse(Buffer.concat(chunks).toString());
 }
-async function confirmExit() {
-    await menuClick(280, 298);
+// Metric 0 is true only on the plain Files screen, with no dialog or Options open.
+const filesScreenIdle = () =>
+    page.evaluate(() => globalThis.midasAuditGame._portWebFileMenuMetric(0));
+async function openExitConfirmation() {
+    assert.ok(await filesScreenIdle(), 'Exit Game needs the idle Files screen');
+    await menuClick(...EXIT_GAME_BUTTON);
     await page.screenshot({ path: resolve(output, 'exit-confirm.png') });
-    await menuClick(185, 170);
+    assert.ok(!(await filesScreenIdle()), 'The Exit Game click opened nothing');
+}
+async function confirmExit() {
+    await openExitConfirmation();
+    await menuClick(...EXIT_YES);
     await expect(page.locator('.room-layer')).toHaveAttribute('data-returning', 'true', {
         timeout: 60_000,
     });
@@ -63,10 +79,14 @@ async function confirmExit() {
     assert.equal(await page.evaluate(() => document.pointerLockElement === null), true);
     const audio = await page.evaluate(readAudio);
     assert.ok(
-        audio.length > 0 &&
-            audio.every((sample) => sample.state === 'suspended' || sample.peak < 0.00001),
+        audio.some((sample) => sample.outputPeak > 0.00001),
+        'The audio tap never heard the game, so room silence would prove nothing',
+    );
+    assert.ok(
+        audio.every((sample) => sample.state === 'suspended' || sample.peak < 0.00001),
         'Game audio was not silent in the room',
     );
+    roomAudio.push(audio);
     return paused;
 }
 try {
@@ -94,8 +114,10 @@ try {
         'Files screen was not reached',
     );
     // Native No leaves the Files screen running; Yes must return to the room.
-    await menuClick(280, 298);
-    await menuClick(255, 170);
+    // No only closes the Exit Game dialog; Options would stay open here.
+    await openExitConfirmation();
+    await menuClick(...EXIT_NO);
+    assert.ok(await filesScreenIdle(), 'Exit Game: No did not return to the Files screen');
     await expect(page.locator('.room-layer')).toHaveCount(0);
     const canvas = await page.locator('#canvas').elementHandle();
     const frozen = await confirmExit();
@@ -140,6 +162,7 @@ try {
             {
                 checks: 'native Exit Game No/Yes, retreat, paused/audio/input release, physical warm power resume, stable canvas/saves, management restart and cached auto-start',
                 errors,
+                roomAudio,
             },
             null,
             2,

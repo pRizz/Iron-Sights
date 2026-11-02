@@ -928,9 +928,12 @@ gameplay and 200 ms elsewhere, fading on underrun. Chrome and Edge now have zero
 replays and hard gaps; forced 60 and 150 ms stalls produce no fault and a 600 ms
 stall gives a faded 372–398 ms gap, where the old build replayed for 587 ms. The
 quality audit passes in Chrome and Edge. Linux Firefox and Linux WebKit pass as
-recorded in FORK-041, which also lists a `room-exit-audit` failure shared with the
-previous build. Private evidence is under `build/web-audio-stall`. Next action:
-confirm by ear on the Pages build, and investigate `room-exit-audit` separately.
+recorded in FORK-041. Private evidence is under `build/web-audio-stall`.
+`room-exit-audit` had failed since the Files transfer column moved, because it
+clicked Options at Exit Game's old position; the product's exit path was fine.
+With current coordinates it passes in Chrome and Edge, and in Chrome with reduced
+motion: 0.56 output peak before exit, exactly zero in the room. Next action:
+confirm the audio by ear on the Pages build.
 
 **2026-10-25 mouse snap investigation:** The user reports intermittent jumps
 during normal keyboard/mouse play without a capture/focus transition. Measured
