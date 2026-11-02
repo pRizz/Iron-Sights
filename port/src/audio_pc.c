@@ -56,9 +56,12 @@
 #else
 #define PORT_AUDIO_DEV_SAMPLES 256       /* device period, 11.6 ms */
 #endif
+#ifndef PORT_AUDIO_QUEUE_MAX
 #define PORT_AUDIO_QUEUE_MAX (16 * 1024)
 #define PORT_AUDIO_TARGET    3584        /* lowest queue level the drift trim aims for (41 ms) */
 #define PORT_AUDIO_TARGET_MAX (6 * 1024) /* raised this far by queues that ran dry */
+#define PORT_AUDIO_FLOOR_DIV 2           /* extra frames only below target / this */
+#endif
 #define PORT_AUDIO_TRIM_MS   500
 #define PORT_AUDIO_FIELD_BYTES (PORT_AUDIO_RATE / PORT_AUDIO_FIELD_HZ * 4)
 #define PORT_MAX_FRAME_SAMPLES 1024
@@ -1156,6 +1159,9 @@ void portAudioPump(void)
      * sequencers only advance inside alAudioFrame, so keep it running anyway. */
     byClock = s_AudioDev == 0 || portAudioStalled();
     if (!s_ForceOneFrame) {
+#ifdef __EMSCRIPTEN__
+        portAudioWebUpdateTarget();
+#endif
         portAudioHealth(byClock);
     }
 
@@ -1200,8 +1206,11 @@ void portAudioPump(void)
         } else {
             if (s_ForceOneFrame) {
                 /* render regardless of the queue */
-            } else if (SDL_GetQueuedAudioSize(s_AudioDev) < s_Target / 2) {
+            } else if (SDL_GetQueuedAudioSize(s_AudioDev) < s_Target / PORT_AUDIO_FLOOR_DIV) {
                 /* below the floor: an extra frame ahead of the field frames */
+#ifdef __EMSCRIPTEN__
+                due -= due > 0; /* the floor is the target here: no second top-up */
+#endif
             } else if (due > 0) {
                 due--;
                 if (s_TrimFrames > 0) {

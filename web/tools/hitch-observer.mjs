@@ -113,7 +113,7 @@ export function observeHitches({ graphics = true, invulnerable = false, swapYiel
 export async function installHitchAudio(source) {
     const game = globalThis.midasAuditGame;
     const context = game.SDL2?.audioContext;
-    const node = game.SDL2?.audio?.scriptProcessorNode;
+    const node = game.midasAudioOutput?.node ?? game.SDL2?.audio?.scriptProcessorNode;
     if (!context || !node || !context.audioWorklet) return 'unavailable';
     const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
     try {

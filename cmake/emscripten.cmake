@@ -31,6 +31,7 @@ function(midas_web_sources source_variable)
         list(APPEND sources ${CMAKE_SOURCE_DIR}/port/web/sampler.cpp)
         list(APPEND sources ${CMAKE_SOURCE_DIR}/port/web/lifecycle.c)
         list(APPEND sources ${CMAKE_SOURCE_DIR}/port/web/touch.c)
+        list(APPEND sources ${CMAKE_SOURCE_DIR}/port/web/audio_output.c)
     endif()
     set(${source_variable} ${sources} PARENT_SCOPE)
     # These TUs synthesize segments; Wasm's assembler has no native -Wa,-I path.
@@ -81,7 +82,10 @@ function(midas_web_target target)
         target_include_directories(${target} PRIVATE ${CMAKE_BINARY_DIR}/generated)
         target_compile_options(${target} PRIVATE --use-port=sdl2)
         target_link_options(${target} PRIVATE --use-port=sdl2 -lidbfs.js
-            -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2)
+            -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2
+            --pre-js=${CMAKE_SOURCE_DIR}/port/web/audio_output.js)
+        set_target_properties(${target} PROPERTIES LINK_DEPENDS
+            ${CMAKE_SOURCE_DIR}/port/web/audio_output.js)
         add_custom_command(TARGET ${target} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 ${CMAKE_SOURCE_DIR}/tools/gamecontrollerdb.txt

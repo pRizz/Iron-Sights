@@ -43,13 +43,9 @@ try {
     await page.waitForTimeout(2000);
     await page.evaluate(async (source) => {
         const game = midasAuditGame;
-        const audio = game.SDL2.audio;
-        const node = audio.scriptProcessorNode;
-        const original = node.onaudioprocess;
+        const node = game.midasAudioOutput.node;
         globalThis.audioQuality = {
             rate: game.SDL2.audioContext.sampleRate,
-            size: node.bufferSize,
-            blocks: [],
             queue: [],
         };
         const moduleURL = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
@@ -80,21 +76,18 @@ try {
                 probe.connect(game.SDL2.audioContext.destination);
             });
         globalThis.audioQualityRendered = captureRenderedAudio(12);
-        node.onaudioprocess = (event) => {
-            original(event);
-            // Read before dispatch returns: output buffers are cleared/recycled
-            // before the microtask used by the older presence-only observer.
-            audioQuality.blocks.push(Array.from(event.outputBuffer.getChannelData(0)));
-            audioQuality.queue.push([performance.now(), game._portWebGetAudioMetric(1)]);
-        };
+        globalThis.audioQualitySampler = setInterval(
+            () => audioQuality.queue.push([performance.now(), game._portWebGetAudioMetric(1)]),
+            50,
+        );
     }, workletSource);
     const result = await page.evaluate(async () => {
         const samples = await audioQualityRendered;
-        const { blocks, ...rest } = audioQuality;
+        clearInterval(audioQualitySampler);
         return {
-            ...rest,
+            ...audioQuality,
             samples,
-            metrics: Array.from({ length: 10 }, (_, i) => midasAuditGame._portWebGetAudioMetric(i)),
+            metrics: Array.from({ length: 13 }, (_, i) => midasAuditGame._portWebGetAudioMetric(i)),
         };
     });
     const samples = result.samples;
@@ -140,7 +133,7 @@ try {
     await writeFile(resolve(output, 'report.json'), JSON.stringify(result, null, 2));
     await writeFile(resolve(output, 'native-log.txt'), await page.locator('pre').textContent());
     console.log(JSON.stringify({ ...result, queue: `${result.queue.length} observations` }));
-    assert.ok(result.size >= 512, 'Browser audio period regressed below the pre-1.0.2b baseline');
+    assert.equal(result.metrics[11], 1, 'Browser audio did not reach the render-thread output');
     assert.ok(
         result.peak > 0.001 && result.jumps === 0,
         'Idle Dam audio has discontinuities; inspect private WAV/report',

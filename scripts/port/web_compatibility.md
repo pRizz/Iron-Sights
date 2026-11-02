@@ -225,6 +225,13 @@ These are measured desktop captures, not a guarantee against arbitrary
 host load or untested audio devices. See `bun run audit:audio` in the web runbook;
 recordings and detailed reports remain local.
 
+FORK-041 later moved normal playback off the main thread into an AudioWorklet
+queue at 22,050 Hz. It needs a secure origin; other pages fall back to the SDL
+path above. The context also needs the browser to accept a 22,050 Hz sample rate;
+Chrome, Edge, Linux Firefox and Linux WebKit do. Stalls longer than the queue
+(80 ms in gameplay, 200 ms elsewhere) still interrupt sound, now with a short fade.
+`bun run audit:audio-transitions` measures this across the menus and Dam's start.
+
 ## Touch preview extension (WEB-011)
 
 Chrome mobile-viewport real-ROM checks reach Dam with on-screen menu input,

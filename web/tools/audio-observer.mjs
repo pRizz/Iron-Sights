@@ -1,38 +1,43 @@
 // QA-only Web Audio tap. Never included in the public launcher/runtime bundle.
+// Both functions are serialized into the page, so each stays self-contained.
+
+// Tap whichever node feeds the speakers, so this holds for any output backend.
 export function observeAudio() {
-  const maybeContext = window.AudioContext || window.webkitAudioContext;
-  if (!maybeContext) return;
-  const original = maybeContext.prototype.createScriptProcessor;
+  const peakOf = (analyser) => {
+    const samples = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(samples);
+    return samples.reduce((largest, value) => Math.max(largest, Math.abs(value)), 0);
+  };
   globalThis.midasAudioObservers = [];
-  maybeContext.prototype.createScriptProcessor = function (...args) {
-    const node = Reflect.apply(original, this, args);
-    const analyser = this.createAnalyser();
+  const connect = AudioNode.prototype.connect;
+  AudioNode.prototype.connect = function (destination, ...ports) {
+    if (!(destination instanceof AudioDestinationNode)) {
+      return Reflect.apply(connect, this, [destination, ...ports]);
+    }
+    const analyser = this.context.createAnalyser();
     analyser.fftSize = 2048;
-    const connect = node.connect.bind(node);
-    node.connect = (destination, ...ports) => {
-      if (destination !== this.destination) return connect(destination, ...ports);
-      connect(analyser);
-      return analyser.connect(destination, ...ports);
-    };
-    const observation = { context: this, analyser, outputPeak: 0, blocks: 0 };
-    node.addEventListener('audioprocess', event => queueMicrotask(() => {
-      observation.blocks++;
-      for (let channel = 0; channel < event.outputBuffer.numberOfChannels; channel++) {
-        for (const value of event.outputBuffer.getChannelData(channel)) {
-          observation.outputPeak = Math.max(observation.outputPeak, Math.abs(value));
-        }
-      }
-    }));
+    Reflect.apply(connect, this, [analyser]);
+    const observation = { context: this.context, analyser, outputPeak: 0, blocks: 0 };
     globalThis.midasAudioObservers.push(observation);
-    return node;
+    setInterval(() => {
+      observation.blocks++;
+      observation.outputPeak = Math.max(observation.outputPeak, peakOf(analyser));
+    }, 100);
+    return Reflect.apply(connect, analyser, [destination, ...ports]);
   };
 }
 
 export function readAudio() {
-  return (globalThis.midasAudioObservers || []).map(({ context, analyser, outputPeak, blocks }) => {
+  const peakOf = (analyser) => {
     const samples = new Float32Array(analyser.fftSize);
     analyser.getFloatTimeDomainData(samples);
-    const peak = samples.reduce((largest, value) => Math.max(largest, Math.abs(value)), 0);
-    return { state: context.state, sampleRate: context.sampleRate, peak, outputPeak, blocks };
-  });
+    return samples.reduce((largest, value) => Math.max(largest, Math.abs(value)), 0);
+  };
+  return (globalThis.midasAudioObservers || []).map(({ context, analyser, outputPeak, blocks }) => ({
+    state: context.state,
+    sampleRate: context.sampleRate,
+    peak: peakOf(analyser),
+    outputPeak,
+    blocks,
+  }));
 }

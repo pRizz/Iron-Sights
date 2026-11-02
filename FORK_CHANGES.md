@@ -30,6 +30,68 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-041 — Browser audio output on the render thread
+
+**Status:** Implemented; real-ROM browser acceptance recorded below.
+
+Browser audio no longer plays through SDL's ScriptProcessor, which runs on the
+game's main thread. Its queue cannot play while that thread is busy, so any long
+frame or level load made the browser replay a stale 1024-sample buffer: the
+buzz heard at screen transitions and Dam's start. A larger C-side queue cannot
+fix this, because that queue is only read on the blocked thread.
+
+`port/web/audio_output.js` (linked with `--pre-js`) now plays mixer frames from
+an AudioWorklet queue at 22,050 Hz, with the browser resampling to the device.
+The queue depth is how long the game thread can stall without an audible fault:
+80 ms target in gameplay and 200 ms in menus and cutscenes, where level loads
+happen. Trimming back to the gameplay target renders fewer frames, so no sound is
+cut. A stall longer than the queue fades out over 5.8 ms, then fades back in after
+30 ms is queued, instead of looping or clicking. Upstream pacing in
+`port/src/audio_pc.c` stays in charge; `port/web/audio_config.h` redirects its
+queued-audio SDL calls to `port/web/audio_output.c`, with small `#ifndef` and
+`__EMSCRIPTEN__` hooks for the web target, queue cap and floor. Native audio is
+unchanged, including its 256-sample period and 41 ms target. The AudioContext
+stays at `Module.SDL2.audioContext`, which touch input resumes. Before the page
+may play, frames drain on the wall clock as SDL's silence timer did.
+
+Without AudioWorklet (for example a non-secure origin), or if its module fails to
+load, the output falls back to SDL's ScriptProcessor at the FORK-026 512-sample
+period; that path keeps the old stall behavior. Gameplay trades about 10–15 ms
+more latency for this: the median queue is 101 ms against 67 ms plus a 21 ms
+ScriptProcessor buffer before.
+
+The transition audit records the rendered output from the menus through Dam's
+start and adds deliberate 60, 150 and 600 ms stalls. The QA audio observer and
+hitch probe now tap whichever node feeds the speakers, since no ScriptProcessor
+exists on the normal path. `linux-game-audit.sh` gains `audio` and `transitions`
+modes. WAVs and reports stay in ignored local directories.
+
+**Sources:** [render-thread output](port/web/audio_output.js),
+[device calls](port/web/audio_output.c), [queue settings](port/web/audio_config.h),
+[pacing hooks](port/src/audio_pc.c), [target and metrics](port/web/audio_bridge.inl),
+[link options](cmake/emscripten.cmake), [unit tests](web/tools/audio-output.test.mjs),
+[transition audit](web/tools/audio-transition-audit.mjs),
+[fault metrics](web/tools/audio-quality.mjs),
+[QA observer](web/tools/audio-observer.mjs).
+**Validation:** On the same Windows host, installed Chrome on the previous build
+replayed stale audio for 80–91 ms during Dam's 97–99 ms load task and 37–40 ms
+during a 52 ms menu task. Forced stalls gave 43 ms (60 ms stall), 128 ms plus a
+hard 66 ms gap (150 ms) and 587 ms (600 ms) of replay. With this change, Chrome
+and Edge have zero replays and zero hard gaps across the menus and Dam's start;
+the 60 and 150 ms stalls produce no fault and the 600 ms stall a faded 372–398 ms
+gap. Three Chrome runs and one Edge run of the quality audit have zero silent gaps
+and sample jumps, with exactly silent pause. Linux Firefox on software rendering
+has zero replays and hard gaps, plus soft gaps during its slower startup (worst
+stall 4.6 s). Linux WebKit's touch audit passes with a running 22,050 Hz context
+and nonzero output; Linux WebKit's desktop launcher flow stopped before audio with
+Play disabled, in launcher code this change does not touch. Chrome launcher, room
+and touch game audits pass. `room-exit-audit` fails at its `.room-layer` check on
+both this build and the unmodified previous build, so room-return silence is
+covered only by the shared pause check. A forced-fallback Chrome run confirms the
+SDL path still plays, with its old replay faults. Native buffer tests pass, and
+two-pass gallery regeneration changes zero image cells. These runs are not
+physical listening tests, and physical Safari and iOS remain experimental.
+
 ### FORK-040 — Local mission music WAV export
 
 **Status:** Implemented for desktop builds; generated audio remains local.
@@ -1224,12 +1286,13 @@ feedback HUD, mission/cheat hints, suspend points, fonts and web lifecycle/stora
   Browser metrics report retry failures, and pause/resume/suspend restore clear
   queue, field/clock credits, stall tracking and drift trim before restarting.
   Instrumentation records one execution per mixer frame.
-  Browser output retains the pre-merge 512-sample SDL period through
+  SDL's browser fallback retains the pre-merge 512-sample period through
   `port/web/audio_config.h`; upstream's new 256-sample native period gives only
   5.3 ms at a 48 kHz Web Audio context and caused audio-block discontinuities.
+  FORK-041 supersedes ScriptProcessor as the normal browser output.
   Native device timing stays upstream-owned. Private real-ROM audio-quality
-  tooling records rendered samples in an AudioWorklet, after ScriptProcessor
-  deadlines, rather than treating nonzero callback samples as continuity proof.
+  tooling records rendered samples in an AudioWorklet, downstream of the output,
+  rather than treating nonzero callback samples as continuity proof.
   It checks idle Dam, Watch, pause silence and sound recovery; WAV evidence stays
   local. ROM-free continuity-metric regressions run with the web unit suite.
   The audit asserts native Watch state and holds its P-key pulse across input

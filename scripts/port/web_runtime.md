@@ -92,6 +92,8 @@ Do not enable `GE_ROMDATA_FALLBACK` for either browser configuration.
   Only the page's Play/Resume gesture calls the web capture entrypoint: automatic
   SDL deferred requests are disabled on web to avoid two requests colliding.
   The page waits for an actual capture event and observes rejection.
+- Audio plays from an AudioWorklet queue, not on the game thread, so a stall up to
+  the queue depth is inaudible (80 ms in gameplay, 200 ms elsewhere). See FORK-041.
 
 The port previously depended on several native ABI accidents: missing float/
 pointer returns, implicit function declarations, ignored callback arguments and

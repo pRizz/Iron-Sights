@@ -110,9 +110,19 @@ For audio changes, run `MIDAS_BROWSER=chrome bun run audit:audio ../baserom.u.z6
 12-second mono WAV and continuity/queue metrics on the audio render thread,
 then checks Watch, pause silence and resumed sound. It requires AudioWorklet
 and measures a quiet reference scene; its sample-jump threshold is not a general
-gunshot/music classifier. Nonzero ScriptProcessor callback/analyser samples
-alone do not prove that the browser met playback deadlines. The browser's
-512-sample SDL period is configured separately from native audio.
+gunshot/music classifier. Nonzero output samples alone do not prove that the
+browser met playback deadlines. Normal browser output is an AudioWorklet queue
+(`port/web/audio_output.js`); the audit fails if it did not reach that path. The
+512-sample SDL period configured separately from native audio applies only to
+the fallback without AudioWorklet.
+
+For audio across screen transitions, run
+`MIDAS_BROWSER=chrome bun run audit:audio-transitions ../baserom.u.z64 ../build/web-audio-transition/current http://127.0.0.1:4177/Iron-Sights/`.
+It records the rendered output from the menus through Dam's start with deliberate
+60, 150 and 600 ms main-thread stalls, then reports silent gaps, stale-buffer
+replays and hard edges against frame stalls and long tasks. It fails on any replay
+or hard gap, or a fault from the 60 ms stall. `MIDAS_AUDIO_FORCE_SDL=1` exercises
+the SDL fallback and skips those checks. The WAV and report stay local.
 
 For recurring browser freezes, run the private long-session audit against a
 completed, locally assembled site and a local ROM:

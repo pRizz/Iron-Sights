@@ -919,6 +919,19 @@ Optimized Wasm and native Windows builds pass. Two independent gallery passes
 change zero image cells. This fixes browser scheduling tolerance without
 changing mixer synthesis, campaign storage or input policy.
 
+**2026-11-02 transition audio stalls:** The user reported audio glitches at
+screen transitions and Dam's start. A new real-ROM audit recording the output from
+the menus into Dam found exact 1024-sample replays inside main-thread long tasks:
+80–91 ms during Dam's 97–99 ms load and 37–40 ms during a 52 ms menu task.
+FORK-041 moves playback to an AudioWorklet queue at 22,050 Hz, 80 ms deep in
+gameplay and 200 ms elsewhere, fading on underrun. Chrome and Edge now have zero
+replays and hard gaps; forced 60 and 150 ms stalls produce no fault and a 600 ms
+stall gives a faded 372–398 ms gap, where the old build replayed for 587 ms. The
+quality audit passes in Chrome and Edge. Linux Firefox and Linux WebKit pass as
+recorded in FORK-041, which also lists a `room-exit-audit` failure shared with the
+previous build. Private evidence is under `build/web-audio-stall`. Next action:
+confirm by ear on the Pages build, and investigate `room-exit-audit` separately.
+
 **2026-10-25 mouse snap investigation:** The user reports intermittent jumps
 during normal keyboard/mouse play without a capture/focus transition. Measured
 40 browser movement counts turn Bond about 2.6 degrees both normally and across

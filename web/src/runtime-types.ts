@@ -24,8 +24,9 @@ export type GameFS = {
 };
 
 export type GameModule = {
-    // Pinned SDL2 exposes this context on Module; touch gestures must resume it
-    // directly when WebKit suppresses compatibility mouse events.
+    // The audio output publishes its context here, as SDL's fallback also does;
+    // touch gestures must resume it directly when WebKit suppresses compatibility
+    // mouse events.
     SDL2?: { audioContext?: AudioContext };
     FS: GameFS;
     IDBFS: unknown;
