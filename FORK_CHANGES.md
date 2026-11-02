@@ -1916,6 +1916,10 @@ those subtitles. Native subtitle rendering reports its final bar
 bottom after HUD scaling, including regional fonts and camera offsets, and resets
 that bound each render so hidden/expired dialogue reserves no space. Queue order,
 alert lifetime and other HUD timers keep their normal behavior.
+An expiring alert now fades out over its last 300 ms (18 timer units) instead of
+disappearing abruptly: its panel, accent bar and both text lines share one opacity.
+The fade sits inside the unchanged 4.5-second lifetime, and the next queued alert
+appears at full opacity as soon as the fade ends. Native and browser builds share this.
 
 **Sources:** [objective updates](src/game/objective_status.c),
 [mission reset](src/game/objective.c), [notification queue](port/src/port_hud.c),
@@ -1937,7 +1941,14 @@ regressions in `scripts/port/test_hud.sh`.
 `scripts/port/audit_hud.ps1 -Dialogue` reproduces simultaneous native Statue Park
 dialogue and its objective alert in an isolated capture; add `-MissionTimer`,
 `-SmallHud` or `-Aspect Classic` to check the adjacent clock, scaled subtitles
-and alternate viewport.
+and alternate viewport. `-ToastFade` adds a capture halfway through an alert's
+fade-out. A native Dam capture with it logs opacity 0.50 and shows the whole panel
+half-faded over the scene, then the next alert fully opaque. `test_hud.sh` covers
+the fade curve, unchanged lifetime and queue order. The two-pass gallery changes
+zero image cells, because its fixture disables objective alerts. The browser build
+was not captured separately. The visual-audit fixture moved unchanged from
+`port_hud.c` into [`port_hud_audit.inl`](port/src/port_hud_audit.inl), keeping that
+file within the 628-line standard.
 Native Statue Park captures at 960x540 and 800x600 (small HUD) verify the actual
 three-line Trevelyan subtitle and completion panel are visible together, with
 clear space between them. The Windows build and HUD regressions pass.

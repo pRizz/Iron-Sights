@@ -192,6 +192,27 @@ static void testObjectiveTimingDuringDialogue(void)
     upper_text_window_timer = -1;
 }
 
+static void testObjectiveFadeOut(void)
+{
+    /* Arrange: two queued alerts, the second waiting behind the first. */
+    portHudReset(0);
+    assert(portHudObjective(0, 0, OBJECTIVESTATUS_COMPLETE, "First"));
+    assert(portHudObjective(1, 1, OBJECTIVESTATUS_FAILED, "Second"));
+    /* Act / assert: fully opaque until the last 300 ms of the same lifetime. */
+    assert(phToastOpacity(phState[0].toastTime) == 1);
+    phAdvance(&phState[0], 270 - HUD_TOAST_FADE);
+    assert(phState[0].toastCount == 2 && phToastOpacity(phState[0].toastTime) == 1);
+    phAdvance(&phState[0], HUD_TOAST_FADE / 2);
+    assert(phState[0].toastCount == 2 && phToastOpacity(phState[0].toastTime) == 0.5f);
+    assert(phOpacity(0x10171cda, 0.5f) == 0x10171c6d);
+    assert(phOpacity(0xb9ed9fff, 0) == 0xb9ed9f00);
+    /* The next alert starts opaque the moment the faded one expires. */
+    phAdvance(&phState[0], HUD_TOAST_FADE / 2);
+    assert(phState[0].toastCount == 1 && phState[0].toasts[0].index == 1);
+    assert(phToastOpacity(phState[0].toastTime) == 1);
+    portHudReset(0);
+}
+
 static void testMainObjectiveCue(void)
 {
     struct objective_entry entries[5] = {0};
@@ -269,6 +290,7 @@ int main(void)
     testTimerSubtitleObjectiveStack();
     testObjectiveSubtitleClearance();
     testObjectiveTimingDuringDialogue();
+    testObjectiveFadeOut();
     testMainObjectiveCue();
     {
         char timer[64], tiny[5];
@@ -533,6 +555,6 @@ int main(void)
         assert(portHudTextOffsetNdc(1, 0) == 0);
     }
     assert(portHudOptionGet("hit_markers", &value) && value == 1);
-    puts("HUD checks passed: settings, idle fading/gauge geometry, icon coverage/decoding, per-player feedback, direction, immediate objectives/subtitle clearance, inventory filtering/scrolling, 30/60/120/240 Hz.");
+    puts("HUD checks passed: settings, idle fading/gauge geometry, icon coverage/decoding, per-player feedback, direction, immediate objectives/subtitle clearance, objective fade-out, inventory filtering/scrolling, 30/60/120/240 Hz.");
     return 0;
 }

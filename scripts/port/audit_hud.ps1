@@ -11,6 +11,7 @@ param(
     [switch]$Menu,
     [switch]$MissionTimer,
     [switch]$Dialogue,
+    [switch]$ToastFade,
     [switch]$SmallHud,
     [switch]$Chop,
     [ValidateRange(0,1023)][int]$BestSeconds = 0,
@@ -44,6 +45,7 @@ $auditEnv = @{
 }
 if ($BodyHit) { $auditEnv.GE_HUD_AUDIT_BODY = '1' }
 if ($Dialogue) { $auditEnv.GE_HUD_AUDIT_DIALOGUE = '1' }
+if ($ToastFade) { $auditEnv.GE_HUD_AUDIT_TOAST_FADE = '1' }
 if ($Chop) {
     $auditEnv.GE_HUD_AUDIT = '1'
     $auditEnv.GE_HUD_AUDIT_CHOP = '1'
