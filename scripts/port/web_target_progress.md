@@ -935,6 +935,17 @@ With current coordinates it passes in Chrome and Edge, and in Chrome with reduce
 motion: 0.56 output peak before exit, exactly zero in the room. Next action:
 confirm the audio by ear on the Pages build.
 
+**2026-11-02 stray firing polygons:** The user reported flat polygons flashing
+across the screen in Dam. Scripted walking never showed them; a hindsight capture
+(press F8 after the glitch) caught them on the user's first tries, and they then
+reproduced by firing at the captured position. A WebGL draw trace showed a tiny
+object straddling the camera plane, and logging identified NaN casings. FORK-042
+records the cause, a Clang-folded `frac * 0.0f`, and the fix: 6 large flashes in
+11,887 frames before, none in 14,623 after, and none in 8,992 native frames. Depth
+clamp and mipmap experiments were ruled out. Private evidence is under
+`build/web-render-flash`. Next action: confirm on the Pages build, and review the 21
+other Clang uninitialized-variable warnings listed in FORK-042.
+
 **2026-10-25 mouse snap investigation:** The user reports intermittent jumps
 during normal keyboard/mouse play without a capture/focus transition. Measured
 40 browser movement counts turn Bond about 2.6 degrees both normally and across

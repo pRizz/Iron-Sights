@@ -124,6 +124,15 @@ replays and hard edges against frame stalls and long tasks. It fails on any repl
 or hard gap, or a fault from the 60 ms stall. `MIDAS_AUDIO_FORCE_SDL=1` exercises
 the SDL fallback and skips those checks. The WAV and report stay local.
 
+For stray geometry, run
+`MIDAS_BROWSER=chrome bun run audit:render-flash ../baserom.u.z64 ../build/web-render-flash/current http://127.0.0.1:4177/Iron-Sights/`.
+It fires repeatedly at a fixed Dam position for 150 seconds, compares each frame with
+its neighbours and fails on a one-frame flash of at least 100 grid cells. For a
+glitch that scripted play misses, set `MIDAS_FLASH_MANUAL=1` and `MIDAS_HEADED=1`:
+play in the window it opens and press F8 right after the glitch to save the last 180
+frames, with Bond's position and heading. Expect a brief hitch on each F8.
+`MIDAS_FLASH_TRACE_DRAWS=1` adds vertex data for draws reaching the camera plane.
+
 For recurring browser freezes, run the private long-session audit against a
 completed, locally assembled site and a local ROM:
 

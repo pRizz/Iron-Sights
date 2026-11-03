@@ -30,6 +30,47 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-042 — Stray casing polygons in the browser
+
+**Status:** Implemented; real-ROM acceptance recorded below.
+
+The browser build drew large flat polygons, yellow or dark, for single frames
+after Bond fired a pistol. Upstream's decompiled `casing->vel.z = frac * 0.0f`
+multiplies an unset local by zero. GCC yields 0, as the N64 effectively did, so
+native is unaffected. Clang folds it to a literal NaN. The casing's position then
+stays NaN, so it never passes the `pos.y < floor` landing test and keeps its slot
+until all 20 are stuck. Wasm converts the NaN translation to fixed-point 0, which
+puts each casing on the camera, where it spins; at some angles its triangles cross
+the camera plane and fill the screen. x86 converts NaN to 0x80000000, which throws
+the casing out of view. The casing velocity is now an explicit 0.0 in both variants
+of the ejection code, so native behavior is unchanged and browser casings now eject
+and fall visibly. The hazard could return through an upstream merge, so a ROM-free
+source test rejects the old expression.
+
+`render-flash-audit.mjs` reproduces this by firing at the reported Dam position and
+fails on a one-frame flash of 100 or more grid cells. `MIDAS_FLASH_MANUAL=1` keeps
+the last 180 frames when a player presses F8, which is how the glitch was first
+captured; `MIDAS_FLASH_TRACE_DRAWS=1` adds vertex data for draws reaching the camera
+plane. Frames stay in ignored local directories.
+
+A Clang uninitialized-variable scan of the 287 web source files reports 21 further
+warnings in decompiled game code. Those inspected are mostly matching no-ops or
+documented dead code; they were not all reviewed and are not changed here. This fix
+did not need depth clamp or mipmap changes: experiments with both left the polygons.
+
+**Sources:** [casing ejection](src/game/gunfire.c),
+[source regression](web/tools/casing-velocity.test.mjs),
+[flash audit](web/tools/render-flash-audit.mjs).
+**Validation:** In headless installed Chrome on one host, the firing scenario gave
+6 flashes of at least 100 cells in 11,887 frames before the fix, worst 1,776 cells.
+Two runs after it gave none in 14,623 frames, worst 70. Native gave none in 8,992
+frames, worst 98, so the remaining flashes are ordinary muzzle effects. A web capture
+after the fix shows a brass casing ejecting beside the PP7. The player's own F8
+captures showed the same polygons before the fix; a by-ear-and-eye check on the
+deployed build has not been done. Edge and Firefox were not rerun for this fix.
+Web unit tests, TypeScript, native buffer, upstream-merge and HUD checks pass, and
+two-pass gallery regeneration changes zero image cells.
+
 ### FORK-041 — Browser audio output on the render thread
 
 **Status:** Implemented; real-ROM browser acceptance recorded below.
