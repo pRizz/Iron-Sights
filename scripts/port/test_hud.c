@@ -10,7 +10,7 @@
 
 static s32 iconFixtureReady = 1;
 s32 portIconCacheReady(void) { return iconFixtureReady; }
-s32 portIconAvailable(s32 icon) { return iconFixtureReady && icon >= 0 && icon < PORT_ICON_COUNT && icon != 23 && icon != 30; }
+s32 portIconAvailable(s32 icon) { return iconFixtureReady && icon >= 0 && icon < PORT_ICON_COUNT && portIconSlotStored(icon); }
 static struct player testPlayer;
 struct player *g_CurrentPlayer = &testPlayer;
 f32 g_GlobalTimerDelta;
@@ -506,9 +506,15 @@ int main(void)
     currentWeapon = ITEM_TRIGGER;
     n = phWeapons(weapons, &selected);
     assert(n == 5 && selected == 4);
+    /* The watch laser is a weapon card with its own icon slot. */
+    inventory[inventoryCount++] = ITEM_WATCHLASER; currentWeapon = ITEM_WATCHLASER;
+    n = phWeapons(weapons, &selected);
+    assert(n == 6 && selected == 5 && weapons[5].item == ITEM_WATCHLASER);
+    assert(phWeaponIcon(ITEM_WATCHLASER) == (portIconCacheReady() ? ITEM_WATCHLASER : -1));
+    inventoryCount--;
     currentWeapon = ITEM_AK47;
     for (i = ITEM_UNARMED; i <= ITEM_TASER; i++) {
-        if (i == ITEM_WATCHLASER || i == ITEM_TRIGGER) continue;
+        if (i == ITEM_TRIGGER) continue;
         assert(phWeaponIcon(i) >= 0 && phWeaponIcon(i) < 38);
     }
     assert(phWeaponIcon(ITEM_DOORDECODER) == -1);

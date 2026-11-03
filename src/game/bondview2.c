@@ -8158,13 +8158,13 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
         }
 
 #ifndef TARGET_N64
-        if (portAdsActive() && !portAdsWeaponZooms(getCurrentPlayerWeaponId(GUNRIGHT)))
+        if (portAdsActive())
         {
-            ftemp_nostack_spE0 = GE_DEFAULT_FOV;
-        }
-        else if (portAdsActive() && ftemp_nostack_spE0 > GE_DEFAULT_FOV * 0.75f)
-        {
-            ftemp_nostack_spE0 = GE_DEFAULT_FOV * 0.75f;
+            const f32 adsFov = GE_DEFAULT_FOV * portAdsWeaponFovScale(getCurrentPlayerWeaponId(GUNRIGHT));
+            if (ftemp_nostack_spE0 > adsFov)
+            {
+                ftemp_nostack_spE0 = adsFov;
+            }
         }
 #endif
         bondviewTriggerWatchZoom(ftemp_nostack_spE0);

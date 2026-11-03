@@ -105,11 +105,11 @@ Gfx *portWeaponExportDraw(Gfx *gdl)
     if (!portWeaponExportEnabled() || !g_CurrentPlayer) return gdl;
     only = getenv("GE_WEAPON_ICON_ITEM");
     if (only) item = atoi(only);
-    if (!only && item >= ITEM_WATCHLASER) item++;
     if (!only && item >= ITEM_TRIGGER) item++;
     icon = item;
-    if (!only && slot >= 29 && slot < 35) { item = ITEM_FIST; icon = 32+slot-29; }
-    if (!only && slot == 35) item = ITEM_TANKSHELLS;
+    /* The watch laser renders Bond's watch (set_enviro_fog_for_items_in_solo_watch_menu). */
+    if (!only && slot >= 30 && slot < 36) { item = ITEM_FIST; icon = 32+slot-30; }
+    if (!only && slot == 36) item = ITEM_TANKSHELLS;
     if (item == ITEM_TANKSHELLS) icon = PORT_ICON_TANK;
     if (slot >= PORT_ICON_IMAGES || (item > ITEM_TASER && icon != PORT_ICON_TANK)
         || item < ITEM_FIST || (only && slot)) return gdl;

@@ -28,7 +28,8 @@ static const struct {
     coord3d trigger;
     coord3d support;
 } sAdsGrips[] = {
-    { ITEM_SKORPION,      { -0.6f,-0.5f,-1.0f }, { 1.1f, 1.0f, 12.0f } },
+    /* Set back so the trigger fist sits round the grip instead of through it. */
+    { ITEM_SKORPION,      { -0.6f,-0.5f,-2.5f }, { 1.1f, 1.0f, 12.0f } },
     { ITEM_AK47,         { -0.6f,-1.8f,-2.0f }, { 1.1f, 0.5f, 30.0f } },
     { ITEM_UZI,          { -0.6f,-3.5f,-1.0f }, { 1.1f, 0.0f, 12.0f } },
     { ITEM_MP5K,         { -0.6f,-1.5f,-2.0f }, { 1.1f,-1.0f, 23.0f } },
@@ -36,11 +37,17 @@ static const struct {
     { ITEM_SPECTRE,      { -0.6f,-2.0f,-6.0f }, { 1.1f,-1.0f, 24.0f } },
     { ITEM_M16,          { -0.6f, 2.0f,-3.0f }, { 1.1f, 5.0f, 36.0f } },
     { ITEM_FNP90,        { -4.5f, 5.0f,-4.0f }, { 4.5f, 5.0f, 11.0f } },
-    { ITEM_SHOTGUN,      { -0.6f,-2.0f,-3.0f }, { 1.1f, 0.0f, 33.0f } },
-    { ITEM_AUTOSHOT,     { -0.6f,-1.0f,-2.0f }, { 1.1f, 1.0f, 30.0f } },
+    /* Shouldered guns (adsShoulderedGrip): the trigger fist is centred on the
+     * pistol grip, its fingers round the front and the thumb on the left;
+     * set back so the palm and web cover the grip's rear instead of the grip
+     * showing through the fist. */
+    { ITEM_SHOTGUN,      { 1.25f,-3.0f,-5.0f }, { 1.1f, 0.0f, 33.0f } },
+    { ITEM_AUTOSHOT,     { 1.25f, 1.0f,-5.0f }, { 1.1f, 1.0f, 30.0f } },
     { ITEM_SNIPERRIFLE,  { -1.2f, 5.0f,-2.0f }, { 1.7f, 6.0f, 35.0f } },
     { ITEM_LASER,        { -0.6f,-1.0f,-2.0f }, { 1.1f, 1.0f, 15.0f } },
-    { ITEM_GRENADELAUNCH,{ -0.6f,-1.0f,-2.0f }, { 1.1f, 0.5f, 25.0f } },
+    /* The support palm holds the underside of the body between the trigger
+     * guard and the cylinder, instead of reaching through the chambers. */
+    { ITEM_GRENADELAUNCH,{ 1.25f,-2.5f,-3.5f }, { 1.1f,-3.0f, 10.0f } },
     { ITEM_ROCKETLAUNCH, { -0.6f, 0.0f,-1.0f }, { 1.1f, 9.0f, 25.0f } },
 };
 
@@ -104,6 +111,32 @@ static f32 adsArmScale(s32 item)
     }
 }
 
+/* The canted rocket launcher (portAdsWeaponRoll) keeps its support hand under
+ * the tube relative to the ground: rotate that hand's gun basis back about the
+ * tube axis (weapon-local, from its muzzle node) instead of twisting with it. */
+static const coord3d sAdsRocketTubeAxis = { -0.3f, 12.75f, 0.0f };
+
+static void adsCounterRoll(Mtxf *out, const Mtxf *gun, coord3d axis, f32 angle)
+{
+    const coord3d pivot = adsHandPoint(gun, &axis);
+    const f32 c = cosf(angle), s = sinf(angle);
+    s32 k;
+    *out = *gun;
+    for (k = 0; k < 4; k++) {
+        const f32 x = k < 3 ? gun->m[k][0] : gun->m[3][0] - pivot.x;
+        const f32 y = k < 3 ? gun->m[k][1] : gun->m[3][1] - pivot.y;
+        out->m[k][0] = x * c - y * s + (k < 3 ? 0 : pivot.x);
+        out->m[k][1] = x * s + y * c + (k < 3 ? 0 : pivot.y);
+    }
+}
+
+/* The RC-P90's trigger grip sits under its body, where a generated right hand
+ * reads badly in ADS; the owner prefers showing only the support hand. */
+static s32 adsGripHands(s32 item)
+{
+    return item == ITEM_FNP90 ? 1 : 2;
+}
+
 static void adsGripPoint(const coord3d *source,coord3d *target,s32 part,const PortGripSpace *space,void *context)
 {
     const AdsArmPose *pose=context;
@@ -131,7 +164,16 @@ static void adsGripPoint(const coord3d *source,coord3d *target,s32 part,const Po
         (source->z*pose->axis.f[k]-source->x*pose->back.f[k]+source->y*pose->side.f[k]));
 }
 
-static AdsArmPose adsNativePose(const Mtxf *gun, coord3d grip, s32 left, f32 blend, f32 scale)
+/* Stocked guns whose trigger hand shows on a slanted pistol grip. The default
+ * low elbow tilts that fist off the grip; a higher elbow beside the shoulder
+ * keeps the forearm level so the closed hand wraps it. */
+static s32 adsShoulderedGrip(s32 item)
+{
+    return item == ITEM_SHOTGUN || item == ITEM_AUTOSHOT || item == ITEM_GRENADELAUNCH;
+}
+
+static AdsArmPose adsNativePose(const Mtxf *gun, coord3d grip, s32 left, f32 blend, f32 scale,
+    s32 shouldered)
 {
     AdsArmPose pose = {0};
     pose.scale = sAdsArmProfile.handScale*scale;
@@ -139,18 +181,22 @@ static AdsArmPose adsNativePose(const Mtxf *gun, coord3d grip, s32 left, f32 ble
     s32 k;
     f32 side = left ? 1 : -1;
     pose.palm = grip; pose.palm.x += side*1.25f;
+    /* The palm-up support hand rises slightly to meet the fore-end's underside. */
+    if (left) pose.palm.y += 0.4f;
     pose.wrist = pose.palm;
     pose.wrist.x += side*1.1f; pose.wrist.y -= left ? 2.8f : 3.4f; pose.wrist.z -= 2;
     pose.palm = adsHandPoint(gun, &pose.palm); pose.wrist = adsHandPoint(gun, &pose.wrist);
     pose.elbow = (coord3d){-side*(left ? 20.0f : 17.0f), -28.0f-(1-blend)*18.0f, -12.0f};
+    if (shouldered && !left) pose.elbow = (coord3d){14.0f, -12.0f-(1-blend)*18.0f, 6.0f};
     pose.axis = (coord3d){pose.wrist.x-pose.elbow.x,pose.wrist.y-pose.elbow.y,pose.wrist.z-pose.elbow.z};
     adsUnit(&pose.axis);
-    /* Grip-driven forearm roll: the support palm faces into/under the
-     * fore-end, putting the watch on the outside of the wrist. Do not turn
-     * the watch towards the camera. The trigger hand's knuckles face out. */
+    /* Grip-driven forearm roll: the support hand cradles the fore-end palm up
+     * (owner request), its back facing the ground with a slight outward cant,
+     * which rolls the watch under the wrist and away from the camera. Never
+     * turn the watch towards the camera. The trigger hand's knuckles face out. */
     for (k = 0; k < 3; k++) {
-        pose.back.f[k] = gun->m[0][k]*(left ? 0.85f : -1.0f)
-            + gun->m[1][k]*(left ? -0.55f : 0.15f);
+        pose.back.f[k] = gun->m[0][k]*(left ? 0.2f : -1.0f)
+            + gun->m[1][k]*(left ? -1.0f : 0.15f);
         along += pose.back.f[k]*pose.axis.f[k];
     }
     for (k = 0; k < 3; k++) pose.back.f[k] -= along*pose.axis.f[k];
@@ -167,9 +213,9 @@ static AdsArmPose adsNativePose(const Mtxf *gun, coord3d grip, s32 left, f32 ble
 }
 
 static s32 adsNativeGrip(PortArmMesh *mesh, const Mtxf *gun, coord3d grip,
-    s32 left, f32 blend, f32 light, f32 scale)
+    s32 left, f32 blend, f32 light, s32 item)
 {
-    AdsArmPose pose = adsNativePose(gun, grip, left, blend, scale);
+    AdsArmPose pose = adsNativePose(gun, grip, left, blend, adsArmScale(item), adsShoulderedGrip(item));
     return portWardrobeBuildGrip(mesh,g_CurrentPlayer->bondtype,fileGetBondForCurrentFolder(),left,light,(u8)(blend*255),adsGripPoint,&pose);
 }
 
@@ -191,7 +237,8 @@ Gfx *portAdsDrawHands(Gfx *gdl, s32 item, const Mtxf *gun)
     f32 blend = portAdsBlend();
     f32 light;
     PortArmMesh native[2];
-    s32 i;
+    Mtxf supportGun;
+    s32 i, hands;
     if(portHandGalleryStock()) return gdl;
     if (blend <= 0.0f || !portAdsHandGrips(item, &trigger, &support)) return gdl;
     matrix = dynAllocateMatrix();
@@ -200,8 +247,15 @@ Gfx *portAdsDrawHands(Gfx *gdl, s32 item, const Mtxf *gun)
     matrix_4x4_f32_to_s32(identity.m, (s32 (*)[4])matrix);
     light = 0.55f + (g_CurrentPlayer->tileColor.r + g_CurrentPlayer->tileColor.g
         + g_CurrentPlayer->tileColor.b) * (0.45f/(255.0f*3.0f));
-    if (!adsNativeGrip(&native[0], gun, support, TRUE, blend, light, adsArmScale(item))
-        || !adsNativeGrip(&native[1], gun, trigger, FALSE, blend, light, adsArmScale(item))) return gdl;
+    hands = adsGripHands(item);
+    supportGun = *gun;
+    if (item == ITEM_ROCKETLAUNCH) {
+        coord3d axis = sAdsRocketTubeAxis;
+        axis.z = support.z;
+        adsCounterRoll(&supportGun, gun, axis, -portAdsWeaponRoll(item) * blend);
+    }
+    if (!adsNativeGrip(&native[0], &supportGun, support, TRUE, blend, light, item)
+        || (hands > 1 && !adsNativeGrip(&native[1], gun, trigger, FALSE, blend, light, item))) return gdl;
     gDPPipeSync(gdl++);
     gDPSetCycleType(gdl++, G_CYC_1CYCLE);
     gDPSetAlphaCompare(gdl++, G_AC_NONE);
@@ -215,7 +269,7 @@ Gfx *portAdsDrawHands(Gfx *gdl, s32 item, const Mtxf *gun)
         gDPSetRenderMode(gdl++, G_RM_AA_ZB_XLU_INTER|Z_UPD, G_RM_AA_ZB_XLU_INTER2|Z_UPD);
         gDPSetCombineMode(gdl++, G_CC_PRIMITIVE, G_CC_PRIMITIVE);
         gDPSetPrimColor(gdl++, 0, 0, 0, 0, 0, 0);
-        for (i = 0; i < 2; i++) gSPDisplayList(gdl++, osVirtualToPhysical(native[i].depth));
+        for (i = 0; i < hands; i++) gSPDisplayList(gdl++, osVirtualToPhysical(native[i].depth));
         gDPPipeSync(gdl++);
     }
     gDPSetCycleType(gdl++, G_CYC_1CYCLE);
@@ -223,7 +277,7 @@ Gfx *portAdsDrawHands(Gfx *gdl, s32 item, const Mtxf *gun)
     gDPSetCombineMode(gdl++, G_CC_MODULATEIA, G_CC_MODULATEIA);
     if (blend == 1) { gDPSetRenderMode(gdl++, G_RM_AA_ZB_OPA_SURF, G_RM_AA_ZB_OPA_SURF2); }
     else { gDPSetRenderMode(gdl++, G_RM_AA_ZB_XLU_INTER, G_RM_AA_ZB_XLU_INTER2); }
-    for (i = 0; i < 2; i++) gSPDisplayList(gdl++, osVirtualToPhysical(native[i].color));
+    for (i = 0; i < hands; i++) gSPDisplayList(gdl++, osVirtualToPhysical(native[i].color));
     gDPPipeSync(gdl++);
     return gdl;
 }

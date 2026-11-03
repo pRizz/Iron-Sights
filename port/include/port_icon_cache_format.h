@@ -4,13 +4,18 @@
 #include <stdint.h>
 #include <stddef.h>
 #define PORT_ICON_COUNT 39
-/* 29 weapons, six wardrobe unarmed images and the tank (slot 38). */
-#define PORT_ICON_IMAGES 36
+/* 30 weapons (including the watch laser), six wardrobe unarmed images and
+ * the tank (slot 38). Slot 30, the detonator, stays empty. */
+#define PORT_ICON_IMAGES 37
 #define PORT_ICON_TANK 38
 #define PORT_ICON_WIDTH 512
 #define PORT_ICON_HEIGHT 160
 #define PORT_ICON_BYTES (PORT_ICON_WIDTH*PORT_ICON_HEIGHT*4)
-#define PORT_ICON_CACHE_VERSION 7
+#define PORT_ICON_CACHE_VERSION 8
+/* Every slot stores an image except the detonator's. The validator, loader and
+ * tests share this one rule so the slot layout cannot drift between them. */
+#define PORT_ICON_EMPTY_SLOT 30
+static int portIconSlotStored(int slot) { return slot != PORT_ICON_EMPTY_SLOT; }
 static uint32_t portIconCrc(const unsigned char *data, size_t size)
 {
     uint32_t crc = 0xffffffffu;
@@ -38,7 +43,7 @@ static int portIconCacheValidate(const unsigned char *data, size_t size, uint32_
         uint32_t n;
         if (size-at<4) return 0;
         n=portIconGet32(data+at);at+=4;
-        if (n!=(i==23 || i==30 ? 0 : PORT_ICON_BYTES) || n>size-at) return 0;
+        if (n!=(portIconSlotStored(i) ? PORT_ICON_BYTES : 0) || n>size-at) return 0;
         at+=n;
     }
     return at==size;

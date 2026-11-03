@@ -24,8 +24,8 @@ f32 portAdsWeaponPitch(s32 item);
 /* Radians about the view axis, applied with the ADS pitch; the settled pose
  * origin is rolled by the same angle, keeping on-axis sights centered. */
 f32 portAdsWeaponRoll(s32 item);
-/* FALSE keeps the unzoomed field of view while this weapon is in ADS. */
-s32 portAdsWeaponZooms(s32 item);
+/* Largest ADS field of view, as a fraction of the default (1 = no zoom). */
+f32 portAdsWeaponFovScale(s32 item);
 s32 portAdsHandGrips(s32 item, struct coord3d *trigger, struct coord3d *support);
 /* Preserve the selected gun pass's XY projection when reserving near depth. */
 Gfx *portAdsBeginHandLayer(Gfx *gdl, const Mtxf *gunProjection);

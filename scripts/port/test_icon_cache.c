@@ -13,12 +13,14 @@ int main(void)
     assert(!portAboutUrlAllowed("https://github.com.example.org/release"));
     assert(!portAboutUrlAllowed("https://github.com/release\nanything"));
     assert(!portAboutUrlAllowed("https://github.com/\"bad"));
-    size_t size=32+PORT_ICON_COUNT*4u+(PORT_ICON_COUNT-2u)*(size_t)PORT_ICON_BYTES, at=32;
+    size_t size=32+PORT_ICON_COUNT*4u+(PORT_ICON_COUNT-1u)*(size_t)PORT_ICON_BYTES, at=32;
     unsigned char *bytes=calloc(size,1);
     int i;
     assert(bytes);memcpy(bytes,"MIDASICO",8);put(bytes+8,PORT_ICON_CACHE_VERSION);
     put(bytes+12,0xb6330846);put(bytes+16,512);put(bytes+20,160);put(bytes+24,PORT_ICON_COUNT);
-    for(i=0;i<PORT_ICON_COUNT;i++){uint32_t n=(i==23||i==30)?0:PORT_ICON_BYTES;put(bytes+at,n);at+=4+n;}
+    for(i=0;i<PORT_ICON_COUNT;i++){uint32_t n=portIconSlotStored(i)?PORT_ICON_BYTES:0;put(bytes+at,n);at+=4+n;}
+    /* Version 8 stores the watch laser (slot 23); only the detonator is empty. */
+    assert(portIconSlotStored(23) && !portIconSlotStored(30));
     assert(at==size);put(bytes+28,portIconCrc(bytes+32,size-32));
     assert(portIconCacheValidate(bytes,size,0xb6330846));
     assert(!portIconCacheValidate(bytes,size,0xdeadbeef));

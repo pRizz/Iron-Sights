@@ -46,9 +46,35 @@ static void testRocketAds(void)
     assert(tube.x > 1.5f && tube.y < -4.0f);
     assert(rim.x > 0.3f && rim.y < -1.0f && rim.z > 0.0f);
     assert(rear.x > 2.0f && rear.y < -6.0f && rear.z > 0.0f);
-    assert(!portAdsWeaponZooms(ITEM_ROCKETLAUNCH) && portAdsWeaponZooms(ITEM_AK47));
+    assert(portAdsWeaponFovScale(ITEM_ROCKETLAUNCH) == 1.0f && portAdsWeaponFovScale(ITEM_AK47) == 0.75f);
+    /* The spread-firing shotguns share the launcher's unzoomed view. */
+    assert(portAdsWeaponFovScale(ITEM_SHOTGUN) == 1.0f && portAdsWeaponFovScale(ITEM_AUTOSHOT) == 1.0f);
+    assert(portAdsWeaponFovScale(ITEM_GRENADELAUNCH) > 0.75f && portAdsWeaponFovScale(ITEM_GRENADELAUNCH) < 1.0f);
     /* Other guns are held upright. */
     assert(portAdsWeaponRoll(ITEM_AK47) == 0.0f && portAdsWeaponRoll(ITEM_WPPK) == 0.0f);
+    {   /* The support hand keeps its unrolled orientation and offset from the
+         * tube axis, so it stays under the launcher relative to the ground. */
+        const Mtxf base = {.m={{-1,0,0,0},{0,1,0,0},{0,0,-1,0},{1,-6,-14.5f,1}}};
+        const f32 c = cosf(roll), s = sinf(roll);
+        Mtxf rolled = base, held;
+        coord3d trigger, grip, axis = sAdsRocketTubeAxis, a, p, a0, p0;
+        s32 k;
+        for (k = 0; k < 4; k++) {
+            rolled.m[k][0] = base.m[k][0]*c - base.m[k][1]*s;
+            rolled.m[k][1] = base.m[k][0]*s + base.m[k][1]*c;
+        }
+        assert(portAdsHandGrips(ITEM_ROCKETLAUNCH, &trigger, &grip));
+        axis.z = grip.z;
+        adsCounterRoll(&held, &rolled, axis, -roll);
+        for (k = 0; k < 3; k++) {
+            assert(fabsf(held.m[k][0] - base.m[k][0]) < 1e-4f && fabsf(held.m[k][1] - base.m[k][1]) < 1e-4f);
+            assert(held.m[k][2] == base.m[k][2]);
+        }
+        a = adsHandPoint(&rolled, &axis); p = adsHandPoint(&held, &grip);
+        a0 = adsHandPoint(&base, &axis); p0 = adsHandPoint(&base, &grip);
+        assert(fabsf((p.x - a.x) - (p0.x - a0.x)) < 1e-3f && fabsf((p.y - a.y) - (p0.y - a0.y)) < 1e-3f);
+        assert(p.y < a.y);
+    }
 
     /* Arrange/act/assert: normal hold/toggle aim and the dedicated binding all
      * admit the launcher, while tank/dual/reload retain their existing gates. */
@@ -71,6 +97,16 @@ static void testRocketAds(void)
     pollAds(0, 0);
     normalAim(0, 0, 0);
     assert(portJoyPortOptionSet("aim_mode", 1));
+    /* The launcher's raise takes 250 ms and eases out onto the pins. */
+    g_GlobalTimerDelta = 1.0f;
+    pollAds(0, 1);
+    for (tick = 0; tick < 7; tick++) portAdsTick();
+    assert(portAdsBlend() > 0.84f && portAdsBlend() < 0.86f); /* raw 7/15 */
+    for (tick = 0; tick < 9; tick++) portAdsTick();
+    assert(portAdsBlend() == 1.0f);
+    pollAds(0, 0);
+    for (tick = 0; tick < 16; tick++) portAdsTick();
+    assert(portAdsBlend() == 0.0f);
     for (rate = 0; rate < 4; rate++) {
         g_GlobalTimerDelta = 60.0f / rates[rate];
         pollAds(0, 1);
@@ -91,5 +127,5 @@ static void testRocketAds(void)
     }
     portStateResetInput();
     selectPlayer(0);
-    puts("Rocket ADS checks passed: stacked centered pins, shoulder cant at hip depth, no zoom, aim modes, tank/dual/reload gates and four tick rates.");
+    puts("Rocket ADS checks passed: stacked centered pins, shoulder cant at hip depth, level support hand, eased raise, no zoom, aim modes, tank/dual/reload gates and four tick rates.");
 }

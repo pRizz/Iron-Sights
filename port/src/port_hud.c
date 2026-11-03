@@ -326,7 +326,7 @@ static s32 phWeapons(HudWeapon *weapons, s32 *selected)
     for (i = 0; i < total && n < HUD_WEAPONS; i++) {
         const s32 item = bondinvGetTextbyInvIndex(i);
         /* The tank's cannon joins the inventory while Bond drives it. */
-        if ((item < ITEM_UNARMED || item > ITEM_TASER || item == ITEM_WATCHLASER || item == ITEM_TRIGGER)
+        if ((item < ITEM_UNARMED || item > ITEM_TASER || item == ITEM_TRIGGER)
             && item != ITEM_TANKSHELLS) continue;
         for (j = 0; j < n && weapons[j].item != item; j++) {}
         if (j < n) continue;

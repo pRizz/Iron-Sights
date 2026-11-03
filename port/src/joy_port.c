@@ -721,7 +721,7 @@ void portStateResetInput(void)
 }
 
 #define PORT_ADS_PHANTOM_PITCH -0.002f
-#define PORT_ADS_ROCKET_ROLL 0.40f
+#define PORT_ADS_ROCKET_ROLL 0.575f /* about 33 degrees */
 
 /* Sight height above the bore and eye distance, in view units. A small
  * muzzle-up pitch reveals the front sight above the rear of each gun;
@@ -732,9 +732,11 @@ static const struct {
     f32 distance;
     f32 pitch;
 } sAdsPoses[] = {
-    { ITEM_WPPK,          1.0f, 33.5f, -0.025f },
-    { ITEM_WPPKSIL,       1.0f, 33.5f, -0.025f },
-    { ITEM_TT33,          1.1f, 33.5f, -0.025f },
+    /* Pistols sit low enough that the topmost point of each sight just
+     * touches the centered shot ray, like the plated PP7s below. */
+    { ITEM_WPPK,          1.55f, 33.5f, -0.025f },
+    { ITEM_WPPKSIL,       1.49f, 33.5f, -0.025f },
+    { ITEM_TT33,          2.01f, 33.5f, -0.025f },
     /* Unscoped long guns sit 20% closer; preserve their calibrated sight ray.
      * Klobb, ZMG, shotgun and grenade launcher sit about 8% closer again. */
     { ITEM_SKORPION,      2.7f, 26.5f, -0.035f },
@@ -750,18 +752,21 @@ static const struct {
      * centered shot ray. The AR33 also needs clearance above its receiver. */
     { ITEM_M16,          6.85f, 48.0f, -0.060f },
     { ITEM_FNP90,        9.85f, 38.4f, -0.030f },
-    /* More muzzle-up pitch keeps the muzzle sight clear of the red shells on top. */
-    { ITEM_SHOTGUN,       2.6f, 31.0f, -0.090f },
-    { ITEM_AUTOSHOT,      1.8f, 44.8f, -0.140f },
+    /* More muzzle-up pitch keeps the muzzle sight clear of the red shells on top.
+     * Like the rocket launcher, the shotguns stay at their hip depth (WeaponStats
+     * PosZ) without ADS zoom: their spread needs no magnified sight picture. */
+    { ITEM_SHOTGUN,       2.6f, 19.5f, -0.090f },
+    { ITEM_AUTOSHOT,      1.8f, 19.0f, -0.140f },
     { ITEM_SNIPERRIFLE,  10.7f, 70.0f, -0.035f },
     { ITEM_RUGER,         4.0f, 36.0f, -0.030f },
     { ITEM_GOLDENGUN,     1.7f, 33.5f, -0.025f },
-    /* The plated PP7 models' sight tips stand taller than the PP7's;
-     * lower them so the tip meets the centered shot ray. */
-    { ITEM_SILVERWPPK,    1.35f, 33.5f, -0.025f },
-    { ITEM_GOLDWPPK,      1.35f, 33.5f, -0.025f },
+    /* The plated PP7 models' sight tips stand taller than the PP7's; lower
+     * them so the top of the tip just touches the centered shot ray. */
+    { ITEM_SILVERWPPK,    1.56f, 33.5f, -0.025f },
+    { ITEM_GOLDWPPK,      1.62f, 33.5f, -0.025f },
     { ITEM_LASER,         6.7f, 36.0f, -0.045f },
-    { ITEM_GRENADELAUNCH, 2.4f, 36.5f, -0.040f },
+    /* Muzzle well up, suggesting the grenade's arcing lob. */
+    { ITEM_GRENADELAUNCH, 2.4f, 36.5f, -0.200f },
     /* Stack the near (-3,200,25) and far (-3,190,399) pins on the centered
      * ray at the launcher's own hip depth (WeaponStats PosZ -14.5), so it does
      * not travel forward; portAdsWeaponRoll cants it onto the right shoulder. */
@@ -813,10 +818,16 @@ f32 portAdsWeaponRoll(s32 item)
     return item == ITEM_ROCKETLAUNCH ? PORT_ADS_ROCKET_ROLL : 0.0f;
 }
 
-/* The shouldered launcher keeps the normal view: ADS only lines up its sights. */
-s32 portAdsWeaponZooms(s32 item)
+/* ADS field of view as a fraction of the default. The shouldered rocket
+ * launcher and the spread-firing shotguns keep the normal view, and the
+ * grenade launcher zooms half as much. */
+f32 portAdsWeaponFovScale(s32 item)
 {
-    return item != ITEM_ROCKETLAUNCH;
+    switch (item) {
+    case ITEM_ROCKETLAUNCH: case ITEM_SHOTGUN: case ITEM_AUTOSHOT: return 1.0f;
+    case ITEM_GRENADELAUNCH: return 0.875f;
+    default: return 0.75f;
+    }
 }
 
 f32 portAdsWeaponPitch(s32 item)
@@ -1034,7 +1045,14 @@ s32 portAdsActive(void)
 f32 portAdsBlend(void)
 {
     const s32 pad = joyPortPad();
-    return (pad >= 0 && joyPortPermitted() && joyPortAdsWeapon()) ? sAdsBlend[pad] : 0.0f;
+    f32 blend = (pad >= 0 && joyPortPermitted() && joyPortAdsWeapon()) ? sAdsBlend[pad] : 0.0f;
+    /* The rocket launcher eases out, settling gently onto its stacked pins;
+     * the end points (0 and 1) are unchanged. */
+    if (getCurrentPlayerWeaponId(GUNRIGHT) == ITEM_ROCKETLAUNCH) {
+        const f32 rest = 1.0f - blend;
+        blend = 1.0f - rest * rest * rest;
+    }
+    return blend;
 }
 
 f32 portAdsScopeBlend(void)
@@ -1091,8 +1109,9 @@ void portAdsTick(void)
         portKnifeAdsTick(pad, FALSE, 0, 0);
         return;
     }
-    /* A 150 ms raise/lower, independent of the simulation rate. */
-    step = g_GlobalTimerDelta / 9.0f;
+    /* A 150 ms raise/lower, independent of the simulation rate; the rocket
+     * launcher's eased swing onto the shoulder takes 250 ms. */
+    step = g_GlobalTimerDelta / (getCurrentPlayerWeaponId(GUNRIGHT) == ITEM_ROCKETLAUNCH ? 15.0f : 9.0f);
     sAdsBlend[pad] += portAdsActive() ? step : -step;
     if (sAdsBlend[pad] < 0.0f) sAdsBlend[pad] = 0.0f;
     if (sAdsBlend[pad] > 1.0f) sAdsBlend[pad] = 1.0f;

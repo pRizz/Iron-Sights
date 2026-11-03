@@ -1650,11 +1650,12 @@ frontend/watch settings and [capture driver](scripts/port/audit_ads.ps1).
 The rocket launcher now joins the supported ADS weapons. At the owner's
 2026-11-02 request, its near and far pins are stacked on the centered ray again,
 using the initial -0.026732 pitch and 6.143 sight height. The launcher is canted
-0.40 radian about that sight line (`portAdsWeaponRoll`), so the tube rests on
+0.575 radian (about 33 degrees, raised from 0.40 after a play-test) about that
+sight line (`portAdsWeaponRoll`), so the tube rests on
 the right shoulder as if the head tilts behind the sights. It stays at its hip
 depth (eye distance 14.5, matching WeaponStats PosZ) instead of travelling out to
-60 units, and its ADS keeps the unzoomed field of view (`portAdsWeaponZooms`;
-other guns keep their 75% cap). ADS therefore rolls the launcher into line
+60 units, and its ADS keeps the unzoomed field of view (`portAdsWeaponFovScale`
+is 1.0 for it and, since a later request, both shotguns; 0.875 for the grenade launcher; 0.75 for other guns). ADS therefore rolls the launcher into line
 without seeming to push it forward. This supersedes
 both the upright hold, which looked aimed into the face, and a brief shoulder
 offset with inward yaw, which no longer lined up the pins. The intermediate
@@ -1691,8 +1692,29 @@ eye distances, with 1.08x generated arms on those four (FORK-004). The ZMG
 pitches -0.090 to look along its top, the shotgun -0.090 to show its front bead
 above the red shells, and the Phantom -0.002 to level its far sight posts inside
 the near notch. Silver and gold PP7 sight heights rise from 1.0 to 1.35, lowering
-their taller tips onto the shot ray. The rocket launcher uses the canted stacked
-pose above. The automatic shotgun and stock PP7 are unchanged. The follow-up
+their taller tips onto the shot ray; a play-test moved them to 1.5. The grenade
+launcher pitches -0.200, muzzle well up to suggest its arcing lob, with half the
+usual ADS zoom (87.5% FOV). The RC-P90 draws only its support hand (FORK-004). Following play-tests, the
+PP7 and silenced PP7 sit at 1.25 and the DD44 at 1.65, centering their tips like
+the plated PP7s. A pre-change capture shows this offset was long-standing, not a
+regression. The automatic shotgun moves from 44.8 to 32 units, with its trigger
+grip on the model's pistol grip, so its right hand stays out of view. The rocket
+launcher's raise eases out over 250 ms, and its support hand stays under the tube
+through the cant. A further play-test asked for those trigger hands back, looking
+natural. Both shotguns got re-measured grips and a raised trigger elbow, so the
+fist wraps the pistol grip; the grip then moved towards the body. At the owner's
+request, both shotguns then took the rocket launcher's treatment. They stay at
+`WeaponStats` hip depth (shotgun 19.5, automatic shotgun 19) with no ADS zoom
+(`portAdsWeaponFovScale` 1.0), which puts that hand out of view. The grenade
+launcher's support hand moves from inside its cylinder to the underside of the
+body. A later request lowered all five pistols until screen center just touches
+the topmost point of each sight, measured from capture pixels. The final heights
+are PP7 1.55, silenced PP7 1.49, DD44 2.01, silver PP7 1.56 and gold PP7 1.62.
+The Klobb's trigger grip moves from z -1 to -2.5, towards the body, so the fist
+wraps its wooden grip instead of the grip showing through the hand. `test_ads.c`
+bounds the new PP7 pose.
+The rocket launcher uses the canted stacked
+pose above. The automatic shotgun and stock PP7 were unchanged in that first pass. The follow-up
 shotgun/PP7/rocket captures use an isolated `build_win/hd-prototype` build
 while the main executable was in use; rocket transitions and hands were reviewed. ADS/rocket/wardrobe regressions and
 the Windows build pass. The full 21-firearm wide audit, sight details, and
@@ -1797,7 +1819,24 @@ The owner's 2026-11-02 request scales the Klobb, ZMG, regular shotgun and grenad
 launcher grips by a further 1.08x (`adsArmScale`): hand, wrist, cuff, watch and
 forearm grow together around the anchored palm origin, with the same 2.5 body
 profile; other long guns keep 0.052. The [arm contracts](scripts/port/arm_rendering.md)
-and pose tests record the per-weapon multiplier.
+and pose tests record the per-weapon multiplier. The RC-P90 draws only its generated support
+hand in ADS (`adsGripHands`), at the owner's request: its trigger grip sits under
+the body, where the generated right hand read badly. The canted rocket
+launcher's support hand uses a counter-rolled basis (`adsCounterRoll`) and stays
+under the tube relative to the ground. Side-on debug captures re-measured the
+stocked guns' grips. Trigger points are shotgun (1.25,-3,-5), automatic shotgun
+(1.25,1,-5), which supersedes the earlier (-0.6,-4.5,-11), and grenade launcher
+(1.25,-2.5,-3.5). The shotgun points first sat at z -2; the grip showed through
+the middle of the fist there, so they moved towards the body. The grenade
+launcher's support palm moves from inside its cylinder (1.1,0.5,25) to the
+underside of the body, (1.1,-3,10). That replaces an interim cupping of the
+cylinder's outside at (6.5,-4,17). `adsShoulderedGrip`
+raises those three guns' trigger elbows to (14,-12,6), so the rigid closed hand
+wraps a slanted pistol grip. The rocket regression checks the restored hand
+basis and its offset from the tube axis. `test_ads.c` checks that the
+shouldered elbow is higher and behind the eye, with a less steep forearm and an
+unchanged palm. It also checks the shotguns' hip depths, and `test_rocket_ads.c`
+checks their unzoomed field of view.
 The preceding body-only refinement increased 1.75 to 2.3 (approximately 31%
 in width/depth) while retaining the old hand scale. The new hand/body adjustment
 supersedes those size values and is confined to the generated long-gun ADS arm transform;
@@ -1858,9 +1897,16 @@ byte-identical. The native version-6 icon cache also reproduced its previous
 bytes. The updated main Windows executable and gallery are available locally.
 
 The rifle wrist roll now follows the weapon grip instead of aiming the watch
-face at the camera. The support palm faces inward/up beneath the fore-end,
-placing the watch on the outside/downward side of the wrist; its band can be
-the only visible part. The trigger hand rolls outward around its grip as well.
+face at the camera. Since the owner's 2026-11-03 request, the support hand
+cradles the fore-end palm up on every generated long-gun arm. Its back faces
+the ground with a slight outward cant (`adsNativePose` knuckle direction
+0.2·x − 1.0·y, replacing 0.85·x − 0.55·y), and the palm rises 0.4 units to meet
+the fore-end. That rolls the watch under the wrist, away from the camera; its
+band can be the only visible part. The earlier hold faced the palm inward/up
+beneath the fore-end. Side-on debug captures checked the AK47 cradle; a full
+21-gun ADS audit with hand details and transitions checked the rest.
+`test_ads.c` asserts the downward knuckle direction and that the watch never
+faces the camera. The trigger hand rolls outward around its grip as well.
 Skin, sleeve, cuff and watch geometry rotate together, retaining their original
 texture mapping. Measured native wrist/arm proportions now supersede the earlier
 hand-heel bulk curve and separately bent watch-hand profile. The watch band,
@@ -2110,7 +2156,8 @@ While Bond drives the tank, its cannon (`ITEM_TANKSHELLS`, which the game adds
 to the inventory on entry) appears as a **tank** card and is highlighted when the
 cannon is in hand. Icon mode uses the tank's own image (slot 38, FORK-019); text
 mode and a missing cache show its name. Leaving the tank removes the card with
-the inherited inventory entry. Holding the watch detonator (`ITEM_TRIGGER`,
+the inherited inventory entry. The watch laser is now listed as a weapon card,
+with its own icon (slot 23, FORK-019). Holding the watch detonator (`ITEM_TRIGGER`,
 filtered from the strip) keeps the Remote Mine card selected instead of clearing
 the selection.
 
@@ -2971,6 +3018,15 @@ preparation rendered 36/36 images with exact repeats and wrote a correctly sized
 cache. Sources: `port/src/port_weapon_export.c`,
 `port/include/port_icon_cache_format.h` and `port/fast3d/weapon_cache.cpp`;
 `scripts/port/test_icon_cache.c` covers the 39-slot layout.
+Version 8 adds the watch laser in slot 23 (37 rendered images; only the
+detonator slot 30 stays empty). The inherited watch-item renderer already draws
+it as Bond's watch. An isolated full preparation rendered 37/37 images with
+exact repeats and wrote a correctly sized cache.
+The validator, runtime loader (`weapon_cache.cpp`) and tests now share one
+slot rule, `portIconSlotStored`, in `port_icon_cache_format.h`. A play-test found
+that the loader still treated slot 23 as empty: it rejected the new cache, so icon
+mode fell back to weapon names. With the shared rule, an isolated icon-mode HUD
+audit reuses the existing version-8 cache and shows weapon images.
 Older versions are not reused. The version-6 cache rendered all 35 images
 with exact repeated black/white pixels; its six corrected wrist/forearm
 variants were visually reviewed. Headers, dimensions, complete slot coverage,
@@ -3190,7 +3246,7 @@ an existing configuration without the new key enables enhanced fonts by default.
 Added a local HTML review tool and generator absent from upstream. The matrix
 has 72 views: PP7, AK47/KF7 and Klobb; regular and settled ADS; original and fork
 models; blue, boiler, jungle, snow, tuxedo and Connery wardrobes. It includes all
-36 native generated icons (weapons, the tank and wardrobe-specific chopping arms,
+37 native generated icons (weapons, the watch laser, the tank and wardrobe-specific chopping arms,
 grouped separately); the tank was added with icon cache version 7.
 Filters, enlarged inspection, stock/fork switching and pixel inspection support
 reviews of hands, wrists, cuffs, watch, grip and sight alignment.

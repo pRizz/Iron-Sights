@@ -58,6 +58,18 @@ the combined scale change. Protected-band/ramp lengths in source space and elbow
 targets remain unchanged. This intentional size adjustment supersedes the older
 fixed-scale value; native pistol/chop/icon transforms retain their existing size.
 
+The RC-P90 draws only its generated support hand in ADS (`adsGripHands`): its
+trigger grip sits under the body, where the generated right hand read badly.
+The grip table, transforms and other guns' two-hand rendering are unchanged.
+The canted rocket launcher builds its support hand from a counter-rolled gun
+basis (`adsCounterRoll`), about the tube axis, so the hand stays under the tube
+relative to the ground. The rigid hand transform, scale and wrist/watch
+contracts are unchanged; only that hand's input basis differs.
+The shotgun, automatic shotgun and grenade launcher (`adsShoulderedGrip`) place
+their trigger elbow at (14,-12,6) in place of (17,-28,-12). With the level
+forearm, the rigid closed hand wraps a slanted pistol grip. Only the forearm
+target changes; the palm anchor, hand transform and scale do not.
+
 The owner's 2026-11-02 request enlarges the generated ADS arms of the Klobb,
 ZMG, regular shotgun and grenade launcher by a further 1.08x (`adsArmScale` in
 `ads_hands.c`), alongside moving those guns about 8% closer. The multiplier
@@ -84,7 +96,11 @@ unchanged. Unrecognized materials retain the authored bracelet. Keep the
 existing arm/cuff transforms; rescaling the wrist to expose the watch can make
 shirt-cuff polygons intersect the jacket. Keep the natural grip roll: seeing
 the band instead of the watch face is expected when the face points away from
-the camera.
+the camera. Generated long-gun support hands cradle palm up (owner request,
+2026-11-03): the back of the hand faces the ground with a slight outward cant,
+and the palm rises 0.4 units onto the fore-end. The watch rolls under the
+wrist. This changes only the rigid hand's roll and anchor, not its
+vertices, scale or wrist/watch fit.
 
 `paNativeSurface` finds the closest point on the native forearm's same-material
 triangles and interpolates its UVs and RGB. Sampling uses the undeformed native

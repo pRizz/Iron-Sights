@@ -143,13 +143,20 @@ were confirmed with the owner before implementation:
 | ---------------- | --------------------------------------------------------------------------- |
 | Klobb            | Eye distance 28.8 → 26.5; generated arms 1.08× (`adsArmScale`).             |
 | ZMG              | Eye distance 32 → 29.5; pitch -0.035 → -0.090; arms 1.08×.                  |
-| Shotgun          | Eye distance 33.6 → 31; pitch -0.040 → -0.090; arms 1.08×.                  |
-| Grenade launcher | Eye distance 40 → 36.5; arms 1.08×.                                         |
+| Shotgun          | Hip depth 19.5 (was 33.6), no ADS zoom; pitch -0.040 → -0.090; arms 1.08×.  |
+| Grenade launcher | Eye distance 40 → 36.5; arms 1.08×; pitch -0.200; ADS FOV 87.5%.            |
 | Phantom          | Pitch -0.040 → -0.002, levelling the far sight posts inside the near notch. |
-| Silver/gold PP7  | Sight height 1.0 → 1.35, lowering the taller tip onto screen center.        |
-| Rocket launcher  | Pins stacked at center at hip depth, canted 0.40 radian; no ADS zoom.       |
+| Silver/gold PP7  | Sight height 1.0 → 1.56 (silver), 1.62 (gold); top of tip touches center.   |
+| Rocket launcher  | Pins stacked at center at hip depth, canted 0.575 radian; no ADS zoom.      |
+| RC-P90           | Only the support hand is drawn; its under-body trigger hand read badly.     |
+| PP7s, DD44       | Sight heights 1.0 → 1.55 (PP7), 1.49 (silenced); DD44 1.1 → 2.01.           |
+| Auto shotgun     | Hip depth 19 (was 44.8), no ADS zoom; trigger fist wraps the pistol grip.   |
+| GL hands         | Support palm under the body behind the cylinder; trigger fist on its grip.  |
 
-The automatic shotgun and stock PP7 are unchanged.
+The automatic shotgun was unchanged in the first pass; later play-tests moved it
+closer, then back out once its trigger hand wrapped the grip, and finally to
+its hip depth without zoom. Every pistol now
+shares the plated PP7s' centering; the DD44 sits a little lower still.
 
 Other sight heights are unchanged; `portAdsWeaponPose` still keeps each muzzle
 below the aim point for its pitch. The shotgun's extra muzzle-up pitch lifts its
@@ -161,8 +168,8 @@ hand, wrist, cuff, watch and forearm uniformly around the grip origin; see the
 
 The rocket launcher restores the initial 2026-10-28 sight solution, pitch
 `-0.026732`, sight height `6.143` and X `-0.3`, which stacks the near and far pins
-on the centered ray. `portAdsWeaponRoll` then cants the gun 0.40 radian (about
-23 degrees) about the view axis, with the ADS blend, in gameplay and the review
+on the centered ray. `portAdsWeaponRoll` then cants the gun 0.575 radian (about
+33 degrees, raised from 0.40 at the owner's request) about the view axis, with the ADS blend, in gameplay and the review
 harness. `portAdsWeaponPose` rolls the settled origin by the same angle, so
 on-axis points such as both pins stay centered. The tube runs down and right
 onto the shoulder, as if the head tilts behind the sights. The owner chose this
@@ -176,8 +183,66 @@ distance is 14.5, matching its `WeaponStats` PosZ of -14.5, instead of 60. ADS
 therefore swings and rolls it into line rather than appearing to push it
 forward. The near pin sits about 16 view units ahead of the eye, and the canted
 tube passes below and right of it, behind the camera, as at the hip. The rocket
-launcher also skips the ADS zoom (`portAdsWeaponZooms`): `bondview2.c` keeps the
-default field of view instead of capping it at 75%. Other guns keep their zoom.
+launcher also skips the ADS zoom: `portAdsWeaponFovScale` caps each weapon's
+ADS field of view in `bondview2.c`, at 100% for the rocket launcher, 87.5% (half
+the usual zoom) for the grenade launcher and the usual 75% for other guns.
+
+The grenade launcher's -0.200 pitch raises its muzzle well above the receiver,
+suggesting the grenade's arcing lob. As with every pose, the projectile still
+leaves along the inherited aim, so the visual tilt does not change ballistics.
+The silver and gold PP7 heights moved 1.35 → 1.5 after the owner's play-test, putting
+the tip a couple of pixels below center at 960x540, where the shot lands. The
+stock PP7, silenced PP7 and DD44 were then lowered to match: their tips sat
+about 2-3 px (PP7) and 10 px (DD44's front post) above center. A capture from
+before this session's pose work is pixel-identical to the pre-change PP7, so
+this was long-standing, not a regression.
+
+The owner then asked for the shotgun and automatic shotgun trigger hands back,
+looking natural, and the DD44 lower again (1.65 → 1.95, about 5 px at 960x540).
+The owner then asked that screen center just touch the topmost point of each
+pistol's sight, where rounds land. Pixel measurement of the 960x540 captures
+found the weapon tops still above center: PP7 4 px, silenced PP7 3 px, gold
+2 px, silver and DD44 1 px. It classed neutral or warm weapon pixels apart from
+the blue-tinted shutter and hint text, within 8 px of the center column. At about
+16.7 px per sight-height unit, the final heights are PP7 1.55, silenced PP7 1.49,
+DD44 2.01, silver 1.56 and gold 1.62. Each topmost weapon row is now the first row
+below center (row 270).
+Side-on debug captures showed that neither trigger hand held its grip: the
+shotgun fist sat on the receiver ahead of the grip, and the earlier automatic
+shotgun point (-0.6,-4.5,-11) left it at the bottom rear. Both points are now 1.25
+left of the old line, which centres the palm on the grip: shotgun (1.25,-3,-2) and
+automatic shotgun (1.25,1,-2). For these stocked guns and the grenade launcher,
+`adsShoulderedGrip` raises the trigger elbow to (14,-12,6), beside the shoulder,
+in place of (17,-28,-12). The default low elbow tilted the rigid closed hand off a
+slanted grip; with the level forearm, the fingers wrap the front and the thumb
+lies on the left. A later play-test found the grip still showing through the
+middle of the fist, so both points moved 3 units towards the body, to z -5. The
+web and palm now cover the grip's rear, which enters through the top of the hand.
+
+The owner then chose the rocket launcher's treatment for both shotguns, since
+their spread needs no magnified sight picture. They stay at their `WeaponStats`
+hip depth (PosZ -19.5 and -19.0) with no ADS FOV change
+(`portAdsWeaponFovScale` 1.0), keeping the same sight heights and pitches. At
+that depth the trigger hand is below the frame through ADS and its transitions,
+which the owner accepted. The muzzle stays clear of the shotgun's red shells.
+
+The grenade launcher's support grip (1.1,0.5,25) lay inside its cylinder (z 16 to
+27 in weapon-local units, about ±7 wide). Any hand ahead of the cylinder
+disappears behind it from the eye, and a hand under it is hidden by the receiver.
+A first fix cupped the cylinder's outside-left at (6.5,-4,17). At the owner's
+request, the palm now holds the underside of the body between the trigger guard
+and the cylinder, at (1.1,-3,10), closer to the body. From the eye it is mostly
+tucked under the receiver; it shows in side-on captures. Its trigger fist moves from the cylinder front (-0.6,-1,-2)
+onto the pistol grip (1.25,-2.5,-3.5).
+Weapon-local grip coordinates equal the model vertex positions minus the root
+group origin, divided by ten.
+
+The rocket launcher's raise eases out over 250 ms instead of a linear 150 ms
+(`portAdsBlend` returns `1-(1-t)^3` for it; 0 and 1 are unchanged), slowing as
+the pins settle. Its support hand no longer twists with the cant:
+`adsCounterRoll` rotates that hand's gun basis back about the tube axis
+(weapon-local `(-0.3, 12.75)`, from the muzzle node), so the palm stays under the
+tube relative to the ground. The trigger hand rolls with the launcher.
 
 Phantom pitches of -0.015 and +0.025 bracketed the result. At -0.015, the posts
 stood well above the housing; at +0.025, the housing hid them. `test_ads.c` now

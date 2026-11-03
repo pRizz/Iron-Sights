@@ -175,14 +175,15 @@ int main(void)
     testKnifeAds();
     testRocketAds();
     testSprint();
-    { /* The support palm faces under/into the gun. The watch follows that
+    { /* The support palm faces up under the gun. The watch follows that
        * roll rather than being billboarded towards the camera. */
         Mtxf gun = {.m={{-1,0,0,0},{0,1,0,0},{0,0,-1,0},{0,-4,-42,1}}};
         s32 grip, phase, left, k;
         for (grip = 0; grip < sizeof(sAdsGrips)/sizeof(sAdsGrips[0]); grip++) {
             for (phase = 0; phase <= 10; phase++) for (left = 0; left < 2; left++) {
                 const f32 armScale = adsArmScale(sAdsGrips[grip].item);
-                AdsArmPose arm = adsNativePose(&gun,left ? sAdsGrips[grip].support : sAdsGrips[grip].trigger,left,phase/10.0f,armScale);
+                const s32 shouldered = adsShoulderedGrip(sAdsGrips[grip].item);
+                AdsArmPose arm = adsNativePose(&gun,left ? sAdsGrips[grip].support : sAdsGrips[grip].trigger,left,phase/10.0f,armScale,shouldered);
                 f32 backLength=0, sideLength=0, dot=0;
                 for (k = 0; k < 3; k++) {
                     backLength += arm.back.f[k]*arm.back.f[k];
@@ -192,8 +193,18 @@ int main(void)
                 assert(backLength > 0.999f && backLength < 1.001f);
                 assert(sideLength > 0.999f && sideLength < 1.001f);
                 assert(dot > -0.001f && dot < 0.001f);
-                if (left) { assert(arm.back.x < 0 && arm.back.y < 0 && arm.back.z < 0); }
+                /* The support hand cradles palm up: its back faces the ground
+                 * (any outward cant vanishes on steep raise phases), and the
+                 * watch never turns towards the camera. */
+                if (left) { assert(arm.back.y < -0.6f && arm.back.x < 0.05f && arm.back.z < 0.1f); }
                 else { assert(arm.back.x > 0); }
+                if (!left && shouldered) {
+                    /* The shouldered trigger forearm stays level enough to
+                     * wrap a slanted pistol grip; other guns keep the low elbow. */
+                    AdsArmPose low = adsNativePose(&gun,sAdsGrips[grip].trigger,0,phase/10.0f,armScale,0);
+                    assert(arm.elbow.y > low.elbow.y && arm.elbow.z > 0 && arm.axis.y < low.axis.y);
+                    assert(!memcmp(&arm.palm,&low.palm,sizeof(arm.palm)));
+                }
                 { /* Closed-hand geometry stays rigid; its exact wrist points
                    * use the same transform as the attached forearm/watch. */
                     PortGripSpace space={{-6,-25,-67},{-3,-54,-182}};
@@ -328,7 +339,10 @@ int main(void)
             || i == ITEM_LASER || i == ITEM_GRENADELAUNCH || i == ITEM_ROCKETLAUNCH;
         assert(!!portAdsHandGrips(i, &trigger, &support) == hands);
         if (hands) {
-            assert(support.z > trigger.z && trigger.x < 0.0f && support.x > 0.0f);
+            /* The trigger palm (1.25 to the right of its grip point) sits on the
+             * right or centred on a shouldered gun's pistol grip. */
+            assert(support.z > trigger.z && trigger.x - 1.25f <= 0.0f && support.x > 0.0f);
+            assert(adsShoulderedGrip(i) ? trigger.x == 1.25f : trigger.x < 0.0f);
         }
     }
 
@@ -351,7 +365,8 @@ int main(void)
     }
     muzzle.y = 57.956562f;
     assert(portAdsWeaponPose(ITEM_WPPK, &muzzle, &pose));
-    assert(pose.y < -8.5f && pose.y > -8.7f && pose.z == -33.5f);
+    /* 1.55 sight height: the top of the PP7 sight touches the centered shot ray. */
+    assert(pose.y < -9.05f && pose.y > -9.25f && pose.z == -33.5f);
     /* The scoped rifle retains its own camera/scope transition distance. */
     assert(portAdsWeaponPose(ITEM_SNIPERRIFLE, &muzzle, &pose));
     assert(pose.z == -70.0f);
@@ -361,9 +376,11 @@ int main(void)
             || i == ITEM_GRENADELAUNCH || i == ITEM_ROCKETLAUNCH;
         assert(!!portAdsWeaponPose(i, &muzzle, &pose) == supported);
         if (supported) {
-            /* The shouldered rocket launcher stays at its hip depth. */
-            assert((i == ITEM_ROCKETLAUNCH ? pose.z == -14.5f : pose.z <= -26.0f) && pose.y < -muzzle.y * 0.1f);
-            assert(portAdsWeaponPitch(i) < 0.0f && portAdsWeaponPitch(i) >= -0.15f);
+            /* The rocket launcher and shotguns stay at their WeaponStats hip depth. */
+            const f32 hip = i == ITEM_ROCKETLAUNCH ? -14.5f : i == ITEM_SHOTGUN ? -19.5f : i == ITEM_AUTOSHOT ? -19.0f : 0.0f;
+            assert((hip != 0.0f ? pose.z == hip : pose.z <= -26.0f) && pose.y < -muzzle.y * 0.1f);
+            /* The grenade launcher tilts well up to suggest its lob. */
+            assert(portAdsWeaponPitch(i) < 0.0f && portAdsWeaponPitch(i) >= (i == ITEM_GRENADELAUNCH ? -0.25f : -0.15f));
         } else {
             assert(portAdsWeaponPitch(i) == 0.0f);
         }

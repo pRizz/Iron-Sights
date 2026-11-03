@@ -25,7 +25,7 @@ WEAPONS = ((4, 'pp7', 'PP7 pistol'), (8, 'ak47', 'AK47 / KF7'), (7, 'klobb', 'Kl
 ICON_NAMES = [None, 'unarmed', 'knife', 'throwing_knife', 'pp7', 'pp7_silenced', 'dd44',
               'klobb', 'kf7', 'zmg', 'd5k', 'd5k_silenced', 'phantom', 'ar33', 'rcp90',
               'shotgun', 'automatic_shotgun', 'sniper_rifle', 'cougar_magnum', 'golden_gun',
-              'silver_pp7', 'gold_pp7', 'laser', None, 'grenade_launcher', 'rocket_launcher',
+              'silver_pp7', 'gold_pp7', 'laser', 'watch_laser', 'grenade_launcher', 'rocket_launcher',
               'grenade', 'timed_mine', 'proximity_mine', 'remote_mine', None, 'taser']
 ICON_NAMES += ['unarmed_' + name for name in WARDROBES]
 ICON_NAMES += ['tank']
@@ -286,7 +286,7 @@ def cache_icons(path, root):
             raise ValueError('Truncated icon cache')
         size = struct.unpack_from('<I', data, at)[0]
         at += 4
-        if size != (0 if slot in (23, 30) else width*height*4) or at+size > len(data):
+        if size != (0 if slot == 30 else width*height*4) or at+size > len(data):
             raise ValueError('Bad icon cache slot')
         if slot and ICON_NAMES[slot]:
             result.append(dict(id=slot, name=ICON_NAMES[slot], **asset(

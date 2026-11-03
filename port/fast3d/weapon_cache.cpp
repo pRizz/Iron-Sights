@@ -59,7 +59,7 @@ static bool readCache(const fs::path &path)
     for (int i=0;i<PORT_ICON_COUNT;i++) {
         if (at+4 > bytes.size()) return false;
         uint32_t size = portIconGet32(bytes.data()+at); at += 4;
-        bool needed = i != 23 && i != 30;
+        bool needed = portIconSlotStored(i);
         if (size != (needed ? PORT_ICON_BYTES : 0) || size > bytes.size()-at) return false;
         decoded[i].assign(bytes.begin()+at,bytes.begin()+at+size); at += size;
     }
