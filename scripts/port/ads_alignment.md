@@ -143,27 +143,39 @@ were confirmed with the owner before implementation:
 | ---------------- | --------------------------------------------------------------------------- |
 | Klobb            | Eye distance 28.8 → 26.5; generated arms 1.08× (`adsArmScale`).             |
 | ZMG              | Eye distance 32 → 29.5; pitch -0.035 → -0.090; arms 1.08×.                  |
-| Shotgun          | Eye distance 33.6 → 31; arms 1.08×. The automatic shotgun is unchanged.     |
+| Shotgun          | Eye distance 33.6 → 31; pitch -0.040 → -0.090; arms 1.08×.                  |
 | Grenade launcher | Eye distance 40 → 36.5; arms 1.08×.                                         |
 | Phantom          | Pitch -0.040 → -0.002, levelling the far sight posts inside the near notch. |
-| Rocket launcher  | Shouldered: X offset -0.3 → 4.5 and a 0.10 radian inward yaw.               |
+| Silver/gold PP7  | Sight height 1.0 → 1.35, lowering the taller tip onto screen center.        |
+| Rocket launcher  | Both pins stacked at center, canted 0.40 radian onto the right shoulder.    |
 
-Sight heights are unchanged; `portAdsWeaponPose` still keeps each muzzle below
-the aim point for its pitch. The 1.08 multiplier enlarges the whole generated
+The automatic shotgun and stock PP7 are unchanged.
+
+Other sight heights are unchanged; `portAdsWeaponPose` still keeps each muzzle
+below the aim point for its pitch. The shotgun's extra muzzle-up pitch lifts its
+front bead above the red shells on the receiver. The plated PP7 models' sight
+tips stood about 7 screen pixels above center at 960x540 (the stock PP7's about
+2), so the shot landed just below the tip. The 1.08 multiplier enlarges the whole generated
 hand, wrist, cuff, watch and forearm uniformly around the grip origin; see the
 [arm contracts](arm_rendering.md). Other long guns keep the 0.052 grip scale.
 
-The rocket launcher's yaw (`portAdsWeaponYaw`) rotates the settled gun about
-camera Y with the ADS blend, in gameplay and the review harness. Its rear rim now
-passes about 10 view units right of the eye. The far pin and loaded nose converge
-on the aim point about 100 units out, with clear background above them. This
-supersedes the 2026-10-28 centered near-pin pose below: the launcher is aimed by
-its converging front, not by stacking both pins on the eye ray.
+The rocket launcher restores the initial 2026-10-28 sight solution, pitch
+`-0.026732`, sight height `6.143` and X `-0.3`, which stacks the near and far pins
+on the centered ray. `portAdsWeaponRoll` then cants the gun 0.40 radian (about
+23 degrees) about the view axis, with the ADS blend, in gameplay and the review
+harness. `portAdsWeaponPose` rolls the settled origin by the same angle, so
+on-axis points such as both pins stay centered. The tube runs down and right
+onto the shoulder, as if the head tilts behind the sights. The owner chose this
+over two earlier options: a shoulder offset with an inward yaw, which separated
+the pins, and the upright stacked hold, which looked aimed into the face. The
+loaded rocket's nose again sits close to the pin tips, the trade-off that the
+earlier -0.005 pitch avoided.
 
 Phantom pitches of -0.015 and +0.025 bracketed the result. At -0.015, the posts
 stood well above the housing; at +0.025, the housing hid them. `test_ads.c` now
 accepts eye distances down to 26 units and per-weapon arm scales of 1.0 or 1.08.
-`test_rocket_ads.c` projects the shouldered pose with its yaw.
+`test_rocket_ads.c` projects the rolled pose, requiring both pins within 0.005
+view units of the center ray and the muzzle/rear rim below and right of it.
 
 ## Earlier height-correction validation
 

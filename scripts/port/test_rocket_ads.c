@@ -1,12 +1,13 @@
-/* Included by test_ads.c: the shouldered launcher keeps its tube beside the
- * face while its front converges on clear background at the aim point. */
-static coord3d rocketAdsViewPoint(coord3d p, coord3d pose, f32 pitch, f32 yaw)
+/* Included by test_ads.c: both sight pins stack on the centered ray while the
+ * tube cants about it onto the right shoulder. The pose origin arrives already
+ * rolled (portAdsWeaponPose); the gun body rolls with it in the renderer. */
+static coord3d rocketAdsViewPoint(coord3d p, coord3d pose, f32 pitch, f32 roll)
 {
-    const f32 x = -p.x*0.1f, z = -(p.y*sinf(pitch) + p.z*cosf(pitch))*0.1f;
+    const f32 x = -p.x*0.1f, y = (p.y*cosf(pitch) - p.z*sinf(pitch))*0.1f;
     return (coord3d){
-        x*cosf(yaw) + z*sinf(yaw) + pose.x,
-        (p.y*cosf(pitch) - p.z*sinf(pitch))*0.1f + pose.y,
-        -x*sinf(yaw) + z*cosf(yaw) + pose.z
+        x*cosf(roll) - y*sinf(roll) + pose.x,
+        x*sinf(roll) + y*cosf(roll) + pose.y,
+        -(p.y*sinf(pitch) + p.z*cosf(pitch))*0.1f + pose.z
     };
 }
 
@@ -16,35 +17,31 @@ static void testRocketAds(void)
      * Model X/Z face away from the camera in the settled weapon basis. */
     const coord3d muzzle = {-3.076880f, 127.545708f, 436.002136f};
     const coord3d nearPin = {-3,200,25}, farPin = {-3,190,399};
-    /* Native loaded rocket's upper shoulder: muzzle plus (0,62,152).
-     * Its upper silhouette previously overlapped the centered pins. */
-    const coord3d noseTop = {-3.076880f,189.545708f,588.002136f};
     const coord3d rearRim = {-3,196,-532};
     const s32 rates[] = {30,60,120,240};
-    coord3d pose, pin, forwardPin, nose, rim;
-    f32 pitch, yaw;
+    coord3d pose, pin, forwardPin, rim, tube;
+    f32 pitch, roll;
     s32 rate, tick;
 
-    /* Act: use the same pose and pitch supplied to the game renderer. */
+    /* Act: use the same pose, pitch and roll supplied to the game renderer. */
     assert(portAdsWeaponPose(ITEM_ROCKETLAUNCH, &muzzle, &pose));
     pitch = portAdsWeaponPitch(ITEM_ROCKETLAUNCH);
-    yaw = portAdsWeaponYaw(ITEM_ROCKETLAUNCH);
+    roll = portAdsWeaponRoll(ITEM_ROCKETLAUNCH);
 
-    /* Assert: the shouldered tube sits right of the eye and turns in, so the
-     * far pin and loaded nose converge on the aim point with clear air above
-     * them; the rear rim passes beside the face, not in front of the eye.
-     * Normalized checks remain meaningful across aspect/FOV changes. */
-    assert(yaw > 0.05f && yaw < 0.2f && pose.x > 3.0f);
-    pin = rocketAdsViewPoint(nearPin, pose, pitch, yaw);
-    forwardPin = rocketAdsViewPoint(farPin, pose, pitch, yaw);
-    nose = rocketAdsViewPoint(noseTop, pose, pitch, yaw);
-    rim = rocketAdsViewPoint(rearRim, pose, pitch, yaw);
-    assert(pin.x > 3.0f && pin.z < -50.0f);
-    assert(forwardPin.z < -50.0f && nose.z < -50.0f);
-    assert(fabsf(forwardPin.x / -forwardPin.z) < 0.02f && fabsf(nose.x / -nose.z) < 0.02f);
-    assert(forwardPin.y / -forwardPin.z < -0.006f);
-    assert(nose.y / -nose.z < -0.005f);
-    assert(rim.x > 8.0f && rim.z < -5.0f);
+    /* Assert: both pins sit on the center ray, so they line up at the
+     * crosshair; the canted tube runs down and right onto the shoulder, with
+     * its rear rim below and right of the eye and still ahead of it. */
+    assert(roll > 0.2f && roll < 0.6f);
+    pin = rocketAdsViewPoint(nearPin, pose, pitch, roll);
+    forwardPin = rocketAdsViewPoint(farPin, pose, pitch, roll);
+    rim = rocketAdsViewPoint(rearRim, pose, pitch, roll);
+    tube = rocketAdsViewPoint(muzzle, pose, pitch, roll);
+    assert(fabsf(pin.x) < 0.005f && fabsf(pin.y) < 0.005f && pin.z < -50.0f);
+    assert(fabsf(forwardPin.x) < 0.005f && fabsf(forwardPin.y) < 0.005f && forwardPin.z < -50.0f);
+    assert(tube.x > 1.5f && tube.y < -4.0f);
+    assert(rim.x > 0.3f && rim.y < -1.0f && rim.z < -5.0f);
+    /* Other guns are held upright. */
+    assert(portAdsWeaponRoll(ITEM_AK47) == 0.0f && portAdsWeaponRoll(ITEM_WPPK) == 0.0f);
 
     /* Arrange/act/assert: normal hold/toggle aim and the dedicated binding all
      * admit the launcher, while tank/dual/reload retain their existing gates. */
@@ -87,5 +84,5 @@ static void testRocketAds(void)
     }
     portStateResetInput();
     selectPlayer(0);
-    puts("Rocket ADS checks passed: shouldered tube, converging nose/pin clearance, aim modes, tank/dual/reload gates and four tick rates.");
+    puts("Rocket ADS checks passed: stacked centered pins, shoulder cant, aim modes, tank/dual/reload gates and four tick rates.");
 }

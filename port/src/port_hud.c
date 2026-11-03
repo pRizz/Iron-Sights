@@ -317,7 +317,9 @@ static s32 phWeaponIcon(s32 item)
 static s32 phWeapons(HudWeapon *weapons, s32 *selected)
 {
     const s32 total = bondinvCountTotalItemsInInv();
-    const s32 current = getCurrentPlayerWeaponId(GUNRIGHT);
+    /* The watch detonator belongs to the Remote Mine card, which stays selected. */
+    const s32 held = getCurrentPlayerWeaponId(GUNRIGHT);
+    const s32 current = held == ITEM_TRIGGER ? ITEM_REMOTEMINE : held;
     s32 i, j, n = 0;
     *selected = -1;
     for (i = 0; i < total && n < HUD_WEAPONS; i++) {

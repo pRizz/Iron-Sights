@@ -501,6 +501,11 @@ int main(void)
     inventoryCount = 8; currentWeapon = ITEM_AK47;
     n = phWeapons(weapons, &selected);
     assert(n == 5 && selected == 2 && weapons[4].item == ITEM_REMOTEMINE);
+    /* Holding the detonator keeps the Remote Mine card selected. */
+    currentWeapon = ITEM_TRIGGER;
+    n = phWeapons(weapons, &selected);
+    assert(n == 5 && selected == 4);
+    currentWeapon = ITEM_AK47;
     for (i = ITEM_UNARMED; i <= ITEM_TASER; i++) {
         if (i == ITEM_WATCHLASER || i == ITEM_TRIGGER) continue;
         assert(phWeaponIcon(i) >= 0 && phWeaponIcon(i) < 38);

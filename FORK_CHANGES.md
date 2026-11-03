@@ -1647,14 +1647,16 @@ Main sources: [knife implementation](port/src/port_knife_ads.c),
 [pose/validation guide](scripts/port/knife_ads.md), shared option/help tables,
 frontend/watch settings and [capture driver](scripts/port/audit_ads.ps1).
 
-The rocket launcher now joins the supported ADS weapons. It is now shouldered
-right of the eye (lateral offset 4.5) and turned 0.10 radians inward
-(`portAdsWeaponYaw`), so the rear tube passes beside the face and the front
-converges on the aim point. This supersedes, at the owner's 2026-11-02 request,
-the centered near-pin hold described next, which looked aimed into the face. The
-earlier pose centered the native near sight's aiming pin using a -0.005 radian
-pitch, 7.040 sight height, launcher-only -0.3 lateral offset and 60-unit eye
-distance. This tilts the loaded
+The rocket launcher now joins the supported ADS weapons. At the owner's
+2026-11-02 request, its near and far pins are stacked on the centered ray again,
+using the initial -0.026732 pitch and 6.143 sight height. The launcher is canted
+0.40 radian about that sight line (`portAdsWeaponRoll`), so the tube rests on
+the right shoulder as if the head tilts behind the sights. This supersedes
+both the upright hold, which looked aimed into the face, and a brief shoulder
+offset with inward yaw, which no longer lined up the pins. The intermediate
+refinement described next centered only the native near sight's aiming pin,
+using a -0.005 radian pitch, 7.040 sight height, launcher-only -0.3 lateral
+offset and 60-unit eye distance. This tilts the loaded
 muzzle down about 1.25 degrees from the initial -0.026732/6.143 pose, which
 centered both sight pins but let the rocket nose overlap the aiming reference.
 The near pin now has clear background above the farther sight and loaded nose.
@@ -1682,9 +1684,13 @@ inputs. Gallery integrity and all eight workflow tests pass.
 Owner pose refinements (2026-11-02, [alignment guide](scripts/port/ads_alignment.md)):
 Klobb 28.8 → 26.5, ZMG 32 → 29.5, shotgun 33.6 → 31 and grenade launcher 40 → 36.5
 eye distances, with 1.08x generated arms on those four (FORK-004). The ZMG
-pitches -0.090 to look along its top, the Phantom -0.002 to level its far sight
-posts inside the near notch, and the rocket launcher uses the shouldered pose
-above. The automatic shotgun is unchanged. ADS/rocket/wardrobe regressions and
+pitches -0.090 to look along its top, the shotgun -0.090 to show its front bead
+above the red shells, and the Phantom -0.002 to level its far sight posts inside
+the near notch. Silver and gold PP7 sight heights rise from 1.0 to 1.35, lowering
+their taller tips onto the shot ray. The rocket launcher uses the canted stacked
+pose above. The automatic shotgun and stock PP7 are unchanged. The follow-up
+shotgun/PP7/rocket captures use an isolated `build_win/hd-prototype` build
+while the main executable was in use; rocket transitions and hands were reviewed. ADS/rocket/wardrobe regressions and
 the Windows build pass. The full 21-firearm wide audit, sight details, and
 Klobb/rocket transitions and hand details were reviewed in native captures.
 Both independent gallery passes regenerate 72 views and 36 icons. Only the 12
@@ -2095,7 +2101,9 @@ While Bond drives the tank, its cannon (`ITEM_TANKSHELLS`, which the game adds
 to the inventory on entry) appears as a **tank** card and is highlighted when the
 cannon is in hand. Icon mode uses the tank's own image (slot 38, FORK-019); text
 mode and a missing cache show its name. Leaving the tank removes the card with
-the inherited inventory entry.
+the inherited inventory entry. Holding the watch detonator (`ITEM_TRIGGER`,
+filtered from the strip) keeps the Remote Mine card selected instead of clearing
+the selection.
 
 **Sources:** [inventory strip](port/src/port_hud.c),
 [inventory reset](src/game/bondinv.c), [HUD integration](src/game/bondview2.c),

@@ -21,8 +21,9 @@ void portAdsConfigureMovement(struct MoveData *move, s32 digitalX, s32 digitalY)
 struct coord3d;
 s32 portAdsWeaponPose(s32 item, const struct coord3d *muzzle, struct coord3d *pose);
 f32 portAdsWeaponPitch(s32 item);
-/* Radians about the camera Y axis, applied with the ADS pitch. */
-f32 portAdsWeaponYaw(s32 item);
+/* Radians about the view axis, applied with the ADS pitch; the settled pose
+ * origin is rolled by the same angle, keeping on-axis sights centered. */
+f32 portAdsWeaponRoll(s32 item);
 s32 portAdsHandGrips(s32 item, struct coord3d *trigger, struct coord3d *support);
 /* Preserve the selected gun pass's XY projection when reserving near depth. */
 Gfx *portAdsBeginHandLayer(Gfx *gdl, const Mtxf *gunProjection);

@@ -721,8 +721,7 @@ void portStateResetInput(void)
 }
 
 #define PORT_ADS_PHANTOM_PITCH -0.002f
-#define PORT_ADS_ROCKET_SHOULDER_X 4.5f
-#define PORT_ADS_ROCKET_YAW 0.10f
+#define PORT_ADS_ROCKET_ROLL 0.40f
 
 /* Sight height above the bore and eye distance, in view units. A small
  * muzzle-up pitch reveals the front sight above the rear of each gun;
@@ -751,18 +750,21 @@ static const struct {
      * centered shot ray. The AR33 also needs clearance above its receiver. */
     { ITEM_M16,          6.85f, 48.0f, -0.060f },
     { ITEM_FNP90,        9.85f, 38.4f, -0.030f },
-    { ITEM_SHOTGUN,       2.6f, 31.0f, -0.040f },
+    /* More muzzle-up pitch keeps the muzzle sight clear of the red shells on top. */
+    { ITEM_SHOTGUN,       2.6f, 31.0f, -0.090f },
     { ITEM_AUTOSHOT,      1.8f, 44.8f, -0.140f },
     { ITEM_SNIPERRIFLE,  10.7f, 70.0f, -0.035f },
     { ITEM_RUGER,         4.0f, 36.0f, -0.030f },
     { ITEM_GOLDENGUN,     1.7f, 33.5f, -0.025f },
-    { ITEM_SILVERWPPK,    1.0f, 33.5f, -0.025f },
-    { ITEM_GOLDWPPK,      1.0f, 33.5f, -0.025f },
+    /* The plated PP7 models' sight tips stand taller than the PP7's;
+     * lower them so the tip meets the centered shot ray. */
+    { ITEM_SILVERWPPK,    1.35f, 33.5f, -0.025f },
+    { ITEM_GOLDWPPK,      1.35f, 33.5f, -0.025f },
     { ITEM_LASER,         6.7f, 36.0f, -0.045f },
     { ITEM_GRENADELAUNCH, 2.4f, 36.5f, -0.040f },
-    /* Center the near sight's pin (-3,200,25), tilting the loaded muzzle
-     * below it so the aiming tip has open background rather than rocket body. */
-    { ITEM_ROCKETLAUNCH, 7.040f, 60.0f, -0.005f },
+    /* Stack the near (-3,200,25) and far (-3,190,399) pins on the centered
+     * ray; portAdsWeaponRoll then cants the tube onto the right shoulder. */
+    { ITEM_ROCKETLAUNCH, 6.143f, 60.0f, -0.026732f },
 };
 
 s32 portAdsWeaponPose(s32 item, const coord3d *muzzle, coord3d *pose)
@@ -773,9 +775,8 @@ s32 portAdsWeaponPose(s32 item, const coord3d *muzzle, coord3d *pose)
         if (sAdsPoses[i].item == item)
         {
             pose->x = -muzzle->x * 0.1f;
-            /* Shoulder the launcher right of the eye, turned in toward the
-             * aim point (portAdsWeaponYaw), so its rear tube clears the face. */
-            if (item == ITEM_ROCKETLAUNCH) pose->x = PORT_ADS_ROCKET_SHOULDER_X;
+            /* This model's sights sit at X=-3, off the root/muzzle axis. */
+            if (item == ITEM_ROCKETLAUNCH) pose->x = -0.3f;
             pose->y = -muzzle->y * 0.1f - sAdsPoses[i].sightHeight;
             if (sAdsPoses[i].pitch != 0.0f)
             {
@@ -785,16 +786,30 @@ s32 portAdsWeaponPose(s32 item, const coord3d *muzzle, coord3d *pose)
                     - muzzle->z * sinf(sAdsPoses[i].pitch)) * 0.1f - sAdsPoses[i].sightHeight;
             }
             pose->z = -sAdsPoses[i].distance;
+            {
+                /* Roll the origin about the view axis with the gun, so
+                 * sights on that axis stay centered (gunfire.c). */
+                const f32 roll = portAdsWeaponRoll(item);
+                if (roll != 0.0f)
+                {
+                    extern float sinf(float);
+                    extern float cosf(float);
+                    const f32 x = pose->x, y = pose->y;
+                    pose->x = x * cosf(roll) - y * sinf(roll);
+                    pose->y = x * sinf(roll) + y * cosf(roll);
+                }
+            }
             return TRUE;
         }
     }
     return FALSE;
 }
 
-/* Only the rocket launcher is held off the sight line; others aim straight. */
-f32 portAdsWeaponYaw(s32 item)
+/* Cant about the sight line: the rocket tube rests on the right shoulder,
+ * as if the head tilts behind its stacked pins. Others are held upright. */
+f32 portAdsWeaponRoll(s32 item)
 {
-    return item == ITEM_ROCKETLAUNCH ? PORT_ADS_ROCKET_YAW : 0.0f;
+    return item == ITEM_ROCKETLAUNCH ? PORT_ADS_ROCKET_ROLL : 0.0f;
 }
 
 f32 portAdsWeaponPitch(s32 item)
