@@ -147,7 +147,7 @@ were confirmed with the owner before implementation:
 | Grenade launcher | Eye distance 40 → 36.5; arms 1.08×.                                         |
 | Phantom          | Pitch -0.040 → -0.002, levelling the far sight posts inside the near notch. |
 | Silver/gold PP7  | Sight height 1.0 → 1.35, lowering the taller tip onto screen center.        |
-| Rocket launcher  | Both pins stacked at center, canted 0.40 radian onto the right shoulder.    |
+| Rocket launcher  | Pins stacked at center at hip depth, canted 0.40 radian; no ADS zoom.       |
 
 The automatic shotgun and stock PP7 are unchanged.
 
@@ -171,11 +171,20 @@ the pins, and the upright stacked hold, which looked aimed into the face. The
 loaded rocket's nose again sits close to the pin tips, the trade-off that the
 earlier -0.005 pitch avoided.
 
+A further owner refinement keeps the launcher at its own hip depth: the eye
+distance is 14.5, matching its `WeaponStats` PosZ of -14.5, instead of 60. ADS
+therefore swings and rolls it into line rather than appearing to push it
+forward. The near pin sits about 16 view units ahead of the eye, and the canted
+tube passes below and right of it, behind the camera, as at the hip. The rocket
+launcher also skips the ADS zoom (`portAdsWeaponZooms`): `bondview2.c` keeps the
+default field of view instead of capping it at 75%. Other guns keep their zoom.
+
 Phantom pitches of -0.015 and +0.025 bracketed the result. At -0.015, the posts
 stood well above the housing; at +0.025, the housing hid them. `test_ads.c` now
 accepts eye distances down to 26 units and per-weapon arm scales of 1.0 or 1.08.
 `test_rocket_ads.c` projects the rolled pose, requiring both pins within 0.005
-view units of the center ray and the muzzle/rear rim below and right of it.
+view units of the center ray, the hip depth, the muzzle and rear tube below and
+right of it, and no ADS zoom for the launcher only.
 
 ## Earlier height-correction validation
 

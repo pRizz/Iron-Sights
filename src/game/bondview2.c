@@ -8158,7 +8158,11 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
         }
 
 #ifndef TARGET_N64
-        if (portAdsActive() && ftemp_nostack_spE0 > GE_DEFAULT_FOV * 0.75f)
+        if (portAdsActive() && !portAdsWeaponZooms(getCurrentPlayerWeaponId(GUNRIGHT)))
+        {
+            ftemp_nostack_spE0 = GE_DEFAULT_FOV;
+        }
+        else if (portAdsActive() && ftemp_nostack_spE0 > GE_DEFAULT_FOV * 0.75f)
         {
             ftemp_nostack_spE0 = GE_DEFAULT_FOV * 0.75f;
         }

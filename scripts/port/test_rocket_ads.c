@@ -1,6 +1,7 @@
 /* Included by test_ads.c: both sight pins stack on the centered ray while the
- * tube cants about it onto the right shoulder. The pose origin arrives already
- * rolled (portAdsWeaponPose); the gun body rolls with it in the renderer. */
+ * tube cants about it onto the right shoulder, at the launcher's hip depth and
+ * unzoomed view. The pose origin arrives already rolled (portAdsWeaponPose);
+ * the gun body rolls with it in the renderer. */
 static coord3d rocketAdsViewPoint(coord3d p, coord3d pose, f32 pitch, f32 roll)
 {
     const f32 x = -p.x*0.1f, y = (p.y*cosf(pitch) - p.z*sinf(pitch))*0.1f;
@@ -19,7 +20,8 @@ static void testRocketAds(void)
     const coord3d nearPin = {-3,200,25}, farPin = {-3,190,399};
     const coord3d rearRim = {-3,196,-532};
     const s32 rates[] = {30,60,120,240};
-    coord3d pose, pin, forwardPin, rim, tube;
+    const coord3d rearAxis = {-3,127,-532};
+    coord3d pose, pin, forwardPin, rim, tube, rear;
     f32 pitch, roll;
     s32 rate, tick;
 
@@ -29,17 +31,22 @@ static void testRocketAds(void)
     roll = portAdsWeaponRoll(ITEM_ROCKETLAUNCH);
 
     /* Assert: both pins sit on the center ray, so they line up at the
-     * crosshair; the canted tube runs down and right onto the shoulder, with
-     * its rear rim below and right of the eye and still ahead of it. */
-    assert(roll > 0.2f && roll < 0.6f);
+     * crosshair. The launcher keeps its hip depth (WeaponStats PosZ -14.5)
+     * rather than travelling forward, and the canted tube runs down and right
+     * onto the shoulder: as at the hip, its rear passes below and right of the
+     * eye, behind the camera. ADS keeps the unzoomed field of view. */
+    assert(roll > 0.2f && roll < 0.6f && pose.z == -14.5f);
     pin = rocketAdsViewPoint(nearPin, pose, pitch, roll);
     forwardPin = rocketAdsViewPoint(farPin, pose, pitch, roll);
     rim = rocketAdsViewPoint(rearRim, pose, pitch, roll);
     tube = rocketAdsViewPoint(muzzle, pose, pitch, roll);
-    assert(fabsf(pin.x) < 0.005f && fabsf(pin.y) < 0.005f && pin.z < -50.0f);
+    rear = rocketAdsViewPoint(rearAxis, pose, pitch, roll);
+    assert(fabsf(pin.x) < 0.005f && fabsf(pin.y) < 0.005f && pin.z < -10.0f);
     assert(fabsf(forwardPin.x) < 0.005f && fabsf(forwardPin.y) < 0.005f && forwardPin.z < -50.0f);
     assert(tube.x > 1.5f && tube.y < -4.0f);
-    assert(rim.x > 0.3f && rim.y < -1.0f && rim.z < -5.0f);
+    assert(rim.x > 0.3f && rim.y < -1.0f && rim.z > 0.0f);
+    assert(rear.x > 2.0f && rear.y < -6.0f && rear.z > 0.0f);
+    assert(!portAdsWeaponZooms(ITEM_ROCKETLAUNCH) && portAdsWeaponZooms(ITEM_AK47));
     /* Other guns are held upright. */
     assert(portAdsWeaponRoll(ITEM_AK47) == 0.0f && portAdsWeaponRoll(ITEM_WPPK) == 0.0f);
 
@@ -84,5 +91,5 @@ static void testRocketAds(void)
     }
     portStateResetInput();
     selectPlayer(0);
-    puts("Rocket ADS checks passed: stacked centered pins, shoulder cant, aim modes, tank/dual/reload gates and four tick rates.");
+    puts("Rocket ADS checks passed: stacked centered pins, shoulder cant at hip depth, no zoom, aim modes, tank/dual/reload gates and four tick rates.");
 }

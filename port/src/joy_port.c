@@ -763,8 +763,9 @@ static const struct {
     { ITEM_LASER,         6.7f, 36.0f, -0.045f },
     { ITEM_GRENADELAUNCH, 2.4f, 36.5f, -0.040f },
     /* Stack the near (-3,200,25) and far (-3,190,399) pins on the centered
-     * ray; portAdsWeaponRoll then cants the tube onto the right shoulder. */
-    { ITEM_ROCKETLAUNCH, 6.143f, 60.0f, -0.026732f },
+     * ray at the launcher's own hip depth (WeaponStats PosZ -14.5), so it does
+     * not travel forward; portAdsWeaponRoll cants it onto the right shoulder. */
+    { ITEM_ROCKETLAUNCH, 6.143f, 14.5f, -0.026732f },
 };
 
 s32 portAdsWeaponPose(s32 item, const coord3d *muzzle, coord3d *pose)
@@ -810,6 +811,12 @@ s32 portAdsWeaponPose(s32 item, const coord3d *muzzle, coord3d *pose)
 f32 portAdsWeaponRoll(s32 item)
 {
     return item == ITEM_ROCKETLAUNCH ? PORT_ADS_ROCKET_ROLL : 0.0f;
+}
+
+/* The shouldered launcher keeps the normal view: ADS only lines up its sights. */
+s32 portAdsWeaponZooms(s32 item)
+{
+    return item != ITEM_ROCKETLAUNCH;
 }
 
 f32 portAdsWeaponPitch(s32 item)

@@ -361,7 +361,8 @@ int main(void)
             || i == ITEM_GRENADELAUNCH || i == ITEM_ROCKETLAUNCH;
         assert(!!portAdsWeaponPose(i, &muzzle, &pose) == supported);
         if (supported) {
-            assert(pose.z <= -26.0f && pose.y < -muzzle.y * 0.1f);
+            /* The shouldered rocket launcher stays at its hip depth. */
+            assert((i == ITEM_ROCKETLAUNCH ? pose.z == -14.5f : pose.z <= -26.0f) && pose.y < -muzzle.y * 0.1f);
             assert(portAdsWeaponPitch(i) < 0.0f && portAdsWeaponPitch(i) >= -0.15f);
         } else {
             assert(portAdsWeaponPitch(i) == 0.0f);

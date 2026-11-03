@@ -1651,7 +1651,11 @@ The rocket launcher now joins the supported ADS weapons. At the owner's
 2026-11-02 request, its near and far pins are stacked on the centered ray again,
 using the initial -0.026732 pitch and 6.143 sight height. The launcher is canted
 0.40 radian about that sight line (`portAdsWeaponRoll`), so the tube rests on
-the right shoulder as if the head tilts behind the sights. This supersedes
+the right shoulder as if the head tilts behind the sights. It stays at its hip
+depth (eye distance 14.5, matching WeaponStats PosZ) instead of travelling out to
+60 units, and its ADS keeps the unzoomed field of view (`portAdsWeaponZooms`;
+other guns keep their 75% cap). ADS therefore rolls the launcher into line
+without seeming to push it forward. This supersedes
 both the upright hold, which looked aimed into the face, and a brief shoulder
 offset with inward yaw, which no longer lined up the pins. The intermediate
 refinement described next centered only the native near sight's aiming pin,
