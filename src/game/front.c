@@ -9136,18 +9136,19 @@ static Gfx *portFrontPaperText(Gfx *dl, const char *text, s32 x, s32 y, f32 scal
     return dl;
 }
 
-/* A stable footer leaves the filmstrip pictures and their hit areas intact. */
+/* A stable footer leaves the filmstrip pictures and their hit areas intact.
+ * Both rows sit centered in the paper strip below the grid's film edge. */
 static Gfx *portFrontMissionCheatSummary(Gfx *dl, s32 mission)
 {
     PortMissionCheatInfo info;
     char summary[128];
     char requirement[96];
-    const s32 x = 43, y = viGetY()-23;
+    const s32 x = 43, y = viGetY()-18;
     if (!portMissionCheatInfo(mission, selected_folder_num, &info)) return dl;
     portMissionCheatSummary(mission, &info, summary, sizeof(summary));
     portMissionCheatRequirement(&info, get_highest_unlocked_difficulty_for_level(mission), requirement, sizeof(requirement));
-    dl = portFrontPaperText(dl, summary, x, y, 0.65f, portMissionCheatColor(&info));
-    return portFrontPaperText(dl, requirement, x, y+10, 0.65f, 0x000000ff);
+    dl = portFrontPaperText(dl, summary, x, y, 0.5f, portMissionCheatColor(&info));
+    return portFrontPaperText(dl, requirement, x, y+7, 0.5f, 0x000000ff);
 }
 #endif
 

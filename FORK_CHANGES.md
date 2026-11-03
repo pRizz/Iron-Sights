@@ -2500,7 +2500,7 @@ Earned bottom banners on both screens also name the unlocked cheat using its
 existing localized cheat-menu label, for example **Cheat unlocked - Paintball
 Mode**. Trailing line endings are omitted so the name stays on the status row.
 Pending and Unlock All availability labels retain their existing wording.
-The shared footer retains its difficulty/time row and green earned color.
+The shared footer retains its difficulty/time row and earned emphasis color.
 The mission-to-cheat mapping matches upstream's unlock cases in `front.c`.
 The footer and difficulty-row badge print on the dossier paper as standard
 game text: Zurich Bold capitals through `frontPrintText`, like **DIFFICULTY:**
@@ -2508,8 +2508,14 @@ and the Best Time column, with no background panel. Unlocked/available status
 uses the game's dark red emphasis (`0xA00000FF`, as in the debrief's cheat
 notice); pending status and requirement rows are black. This supersedes the
 earlier dark translucent panels with green/blue/amber Bank Gothic HUD text, at
-the owner's request. Positions and wording are unchanged; the README's cheat
-hint description was updated with it.
+the owner's request. Wording is unchanged; the README's cheat hint description
+was updated with it. On the mission grid, the stock film strip's dark lower edge
+ends just above a light paper strip (about game y 224-240). The footer's two rows
+therefore use 0.5 scale with seven-unit spacing, from `viGetY()-18`, centered
+in that strip instead of touching the film edge. The difficulty page shares the
+footer position. Isolated earned captures at 960x540 (grid and difficulty) and
+800x600 (grid) were reviewed. At 960x540, 0.5 scale rounds one glyph advance in
+"Paintball" slightly wide.
 
 A required difficulty still locked by progress is identified in the summary.
 The matching visible difficulty row also has a target/unlocked/available badge
