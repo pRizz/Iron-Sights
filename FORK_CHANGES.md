@@ -53,10 +53,45 @@ the last 180 frames when a player presses F8, which is how the glitch was first
 captured; `MIDAS_FLASH_TRACE_DRAWS=1` adds vertex data for draws reaching the camera
 plane. Frames stay in ignored local directories.
 
-A Clang uninitialized-variable scan of the 287 web source files reports 21 further
-warnings in decompiled game code. Those inspected are mostly matching no-ops or
-documented dead code; they were not all reviewed and are not changed here. This fix
-did not need depth clamp or mipmap changes: experiments with both left the polygons.
+This fix did not need depth clamp or mipmap changes: experiments with both left the
+polygons.
+
+A Clang `-Wuninitialized -Wsometimes-uninitialized` scan of the 287 web source files
+reports 21 further warnings in decompiled game code. Each was reviewed for the same
+hazard, and none needs a change. `gunfire.c` uses `#line`, so its warning is listed
+by variable; line numbers elsewhere are as Clang reports them:
+
+| Site | Variable | Verdict |
+| --- | --- | --- |
+| `chrprop.c:980` | `new_var` | Matching no-op; assigned 300 before its first real use |
+| `front.c:1474` | `image` | Unreachable; the option icon is only ever 0, 1 or 2 |
+| `front.c:17952` | `text` | Unreachable; three bit tests always count 0 to 3 |
+| `gunfire.c` | `sp74` | Unreachable; inner branches cover the outer guard's four states |
+| `image.c:420` | `indicesperbyte` | Paletted path only; see below |
+| `model.c:1642` | `matrixPtr` | Matching no-op, `if (matrixPtr);` |
+| `objecthandler.c:816` | `next` | Matching no-op, `if (next);` |
+| `options.c:4461` | `sp60`, `sp5C` | Dead; `unused_draw_watch_inventory_page` has no callers |
+| `options.c:5212` | `dpadtext` | Unreachable; the guard requires one of the four tested buttons |
+| `options.c:5293` | `ctext` | Unreachable; the guard requires exactly one tested button |
+| `othermodemicrocode.c:414` | `depth2`, `lrs`, `sp138`, `line` | Depth is a 2-bit GBI size; see below |
+| `othermodemicrocode.c:681` | `line` | As above |
+| `propobj.c:4824` | `previousOpenPosition` | Dead; both sides of the guard are set to 0, documented in source |
+| `propobj.c:5175` | `sp63C` | Overwritten, or left unread with `hitGround` at 0, documented in source |
+| `propobj.c:7606` | `tmp1` | No effect; only copied to `tmp2`, which is never read |
+| `stan.c:1675` | `uninitialized` | Not a web defect; see below |
+| `stan.c:2139` | `polygon` | Matching no-op, `if (polygon);` |
+
+`texInflateZlib` reads a palette for every image, so `texAlignIndices` should only
+see paletted formats, and Clang compiles it as 1 index per byte for CI8 and 2
+otherwise. `tex->depth` is a 2-bit field, while `tconfig->depth` is a byte from game
+data that is also passed to the RDP as a 2-bit size. `stan.c` is the one read that
+can execute: when a walk fails before saving an edge, `stanSavedColl_pointI` gets
+the unset value. Native reads an unwritten stack slot, which is garbage. Wasm reads
+a zero-initialized local, which is a valid index, so the web build is the safer one
+here. Temporary counters on an instrumented web build logged no non-paletted format,
+out-of-range depth or unset `stan.c` read during walk-and-fire routes in Dam, Facility
+and Statue. That is a sample rather than proof for all missions. The native `stan.c`
+read is left as inherited behavior, with no observed failure to justify changing it.
 
 **Sources:** [casing ejection](src/game/gunfire.c),
 [source regression](web/tools/casing-velocity.test.mjs),
