@@ -452,8 +452,12 @@ player's Hold/Toggle setting; a separately mapped `aim_down_sights` action is
 the fallback when normal Aim uses the red reticle or is unbound. They use the
 existing watch binding readback,
 including mouse-button names and remapped keys. Keyboard alternatives show the
-first mapped key; unbound actions disappear. A controller that claimed player
-one uses its current device's friendly button labels instead. N64-mode pads
+first mapped key; unbound actions disappear. Labels follow player one's most
+recently used device. A button, trigger or decisive stick movement on player one's
+pad selects its friendly button labels; a key press or mouse click selects key
+labels. Before any input, the intro's player-one claim decides. With
+`p1_hybrid=0` and a pad owning player one, pad labels always show. Previously a
+keyboard/mouse intro claim kept key labels even while the player used a pad. N64-mode pads
 omit these direct-action hints because their controls do not consume those
 actions. A third row says to hold the live Walk / Sprint binding to sprint only
 while the Sprint gameplay setting is on. It disappears when Sprint is off or
@@ -474,7 +478,10 @@ six-framebuffer-pixel rightward inset, including a matching shadow offset.
 connect the menu setting, runtime defaults and persisted fields.
 The renderer reuses `portHudLabel`; input labels come from the
 existing `video.c`/`input_pc.c` binding APIs rather than a second key table.
-**Validation:** [ROM-free checks](scripts/port/test_mission_hints.sh) pass
+**Validation:** The last-used-device rule (`port/include/port_input_prompt.h`,
+tracked in `port/src/input_pc.c`) has ROM-free decision checks. It was built for
+Windows but not exercised with a physical controller in this change.
+[ROM-free checks](scripts/port/test_mission_hints.sh) pass
 control-lock timing, pause/resume without rearming, eight-second duration at
 30/60/120/240 Hz, smooth final fade, live custom keyboard/mouse/controller
 labels, conditional sprint visibility/remaps, health anchoring, uniform
@@ -1640,9 +1647,14 @@ Main sources: [knife implementation](port/src/port_knife_ads.c),
 [pose/validation guide](scripts/port/knife_ads.md), shared option/help tables,
 frontend/watch settings and [capture driver](scripts/port/audit_ads.ps1).
 
-The rocket launcher now joins the supported ADS weapons. Its native near sight's
-aiming pin is centered using a -0.005 radian pitch, 7.040 sight height,
-launcher-only -0.3 lateral offset and 60-unit eye distance. This tilts the loaded
+The rocket launcher now joins the supported ADS weapons. It is now shouldered
+right of the eye (lateral offset 4.5) and turned 0.10 radians inward
+(`portAdsWeaponYaw`), so the rear tube passes beside the face and the front
+converges on the aim point. This supersedes, at the owner's 2026-11-02 request,
+the centered near-pin hold described next, which looked aimed into the face. The
+earlier pose centered the native near sight's aiming pin using a -0.005 radian
+pitch, 7.040 sight height, launcher-only -0.3 lateral offset and 60-unit eye
+distance. This tilts the loaded
 muzzle down about 1.25 degrees from the initial -0.026732/6.143 pose, which
 centered both sight pins but let the rocket nose overlap the aiming reference.
 The near pin now has clear background above the farther sight and loaded nose.
@@ -1666,6 +1678,19 @@ evidence is indexed by `build_win/rocket-clearance-*.log`.
 Both independent gallery passes reproduce all 72 views and all 35 icons with
 zero changed image cells; the refreshed manifest/HTML records the new rendering
 inputs. Gallery integrity and all eight workflow tests pass.
+
+Owner pose refinements (2026-11-02, [alignment guide](scripts/port/ads_alignment.md)):
+Klobb 28.8 → 26.5, ZMG 32 → 29.5, shotgun 33.6 → 31 and grenade launcher 40 → 36.5
+eye distances, with 1.08x generated arms on those four (FORK-004). The ZMG
+pitches -0.090 to look along its top, the Phantom -0.002 to level its far sight
+posts inside the near notch, and the rocket launcher uses the shouldered pose
+above. The automatic shotgun is unchanged. ADS/rocket/wardrobe regressions and
+the Windows build pass. The full 21-firearm wide audit, sight details, and
+Klobb/rocket transitions and hand details were reviewed in native captures.
+Both independent gallery passes regenerate 72 views and 36 icons. Only the 12
+Klobb ADS views (stock and fork, six outfits) and the new tank icon change;
+the changed views were reviewed. The optimized Wasm build and its logo-payload
+audit pass.
 
 Added aim-down-sights for 21 supported firearms with individual weapon poses
 and sight alignment. Right mouse defaults to ADS; **Gameplay > General Settings
@@ -1758,6 +1783,11 @@ materials and source vertices are preserved. Hand scale, protected wrist length,
 and body multiplier now have a
 single named profile (`sAdsArmProfile`); pose tests lock the protected transforms,
 body radius and continuity at the boundary independently.
+The owner's 2026-11-02 request scales the Klobb, ZMG, regular shotgun and grenade
+launcher grips by a further 1.08x (`adsArmScale`): hand, wrist, cuff, watch and
+forearm grow together around the anchored palm origin, with the same 2.5 body
+profile; other long guns keep 0.052. The [arm contracts](scripts/port/arm_rendering.md)
+and pose tests record the per-weapon multiplier.
 The preceding body-only refinement increased 1.75 to 2.3 (approximately 31%
 in width/depth) while retaining the old hand scale. The new hand/body adjustment
 supersedes those size values and is confined to the generated long-gun ADS arm transform;
@@ -1996,6 +2026,17 @@ An expiring alert now fades out over its last 300 ms (18 timer units) instead of
 disappearing abruptly: its panel, accent bar and both text lines share one opacity.
 The fade sits inside the unchanged 4.5-second lifetime, and the next queued alert
 appears at full opacity as soon as the fade ends. Native and browser builds share this.
+Objective descriptions now join briefing-wrapped strings into one line: the
+original text breaks long objectives with a newline plus an indent (for example
+Facility's "destroy all tanks in bottling\n    room" and Bunker's "disrupt all
+surveillance\n   equipment" and "get personnel to activate\n    computer"), which
+previously left a run of spaces inside the alert. Only queued objective text
+collapses whitespace runs; other HUD labels keep deliberate spacing. An audit of
+the English objective strings found only space-indented wraps of this kind and no
+hyphenated word splits. The **All main objectives complete** cue now queues after
+pending alerts instead of jumping ahead of them, so the objective that completed
+the set (for example Silo's satellite photograph) is announced first. The
+queue's eight-alert cap still drops the oldest pending alert.
 
 **Sources:** [objective updates](src/game/objective_status.c),
 [mission reset](src/game/objective.c), [notification queue](port/src/port_hud.c),
@@ -2005,6 +2046,8 @@ appears at full opacity as soon as the fade ends. Native and browser builds shar
 **Checks:** HUD queue/filter/timing, display-case/buffer/native-glyph tests and
 main-objective progress cases for final actions, casualty failures, difficulty
 filtering and once-per-completion/reset behavior in `scripts/port/test_hud.sh`.
+The suite also covers wrapped Bunker/Facility objective text, preserved label
+spacing and the summary cue queueing behind a pending objective alert.
 The ROM-free HUD and ADS suites and an isolated Windows build pass in the
 `goldeneye` container. Gallery regeneration verified both capture passes;
 no image cells changed, and its HTML/manifest source fingerprint was refreshed.
@@ -2048,11 +2091,17 @@ a weapon change, the entire strip (text, model images, image rims and selection)
 smoothly fades over one second to 20% opacity. Switching weapons restores full
 emphasis. Pickup messages account for the strip's position. Menus, cutscenes
 and death hide the strip.
+While Bond drives the tank, its cannon (`ITEM_TANKSHELLS`, which the game adds
+to the inventory on entry) appears as a **tank** card and is highlighted when the
+cannon is in hand. Icon mode uses the tank's own image (slot 38, FORK-019); text
+mode and a missing cache show its name. Leaving the tank removes the card with
+the inherited inventory entry.
 
 **Sources:** [inventory strip](port/src/port_hud.c),
 [inventory reset](src/game/bondinv.c), [HUD integration](src/game/bondview2.c),
 [message positioning](port/src/joy_port.c).
-**Checks:** HUD inventory filtering/selection/scrolling and idle timing tests;
+**Checks:** HUD inventory filtering/selection/scrolling (including the tank card)
+and idle timing tests;
 visual captures checked active, quiet and weapon-switch states, text/icon
 styles, and ammo/player-name spacing in solo, two- and four-player layouts.
 
@@ -2123,7 +2172,8 @@ with Text as the default. Icon mode now uses 35 full-color, transparent
 512 x 160 renders of actual weapon models, retaining original materials and
 separate silenced/gold/silver appearances. Unarmed uses the hand/forearm model: six extra wardrobe variants match the
 current mission cuff, resolving Folder's Bond and changing immediately with
-player/stage changes or restores. The native cache has 38 indexed slots;
+player/stage changes or restores. The native cache has 39 indexed slots,
+including the tank (FORK-009/FORK-019);
 runtime preparation supersedes the older embedded/bootstrap packs (FORK-019).
 These images replace the initial hand-drawn vector silhouettes. Cached textures
 and a subtle edge keep the icons readable without extra model rendering in
@@ -2249,6 +2299,19 @@ and captures active/idle health with a refreshed weapon strip.
 Windows and Linux builds passed. Visual captures checked the HUD settings page,
 full/quiet gauges in solo and split-screen, and Automatic mode without
 persistent gauges.
+Persistent gauges are now built in per-frame display memory. Previously, the
+game thread rebuilt the player-owned gauge vertices at full stock size and alpha,
+then restyled them in place. Meanwhile the render thread (on by default whenever
+`tickhz` is not 60) could still be drawing the previous frame from the same
+buffer. A frame read between those two steps drew segments at about five times
+the quiet thickness and up to four times the opacity, which explains the
+intermittent "blown out" gauges. The in-game path now allocates its vertices and
+both gauge display lists with `dynAllocate`, from the double-buffered frame heap.
+The watch keeps its player-owned buffers. N64 builds keep the original in-place
+path. Sources: `bondviewRenderGaugeBars` in `src/game/bondview2.c` and
+`PORT_GAUGE_BAR_GFX` in `port/include/port_hud.h`. The fix was inferred from
+code: the report could not be reproduced, and no capture shows the race. HUD
+tests and the Windows build pass.
 The restored default passes HUD/ADS/upstream regressions, Windows and optimized
 Wasm builds, 155 browser unit tests and type/site checks. An isolated first-run
 Windows INI and HUD settings capture verify Always; imported Automatic stays
@@ -2429,9 +2492,9 @@ under `build/hud-layout`.
 
 Added an always-visible summary for the highlighted mission on the solo mission
 grid and for the chosen mission on the difficulty screen. It shows the timed
-cheat's required difficulty and target, and distinguishes amber **Cheat to
-unlock**, green **Cheat unlocked** (earned in the selected campaign save), and
-blue **Cheat available - Unlock All**.
+cheat's required difficulty and target, and distinguishes **Cheat to unlock**,
+**Cheat unlocked** (earned in the selected campaign save) and **Cheat available
+- Unlock All** by wording and the dossier's stock colors.
 
 Earned bottom banners on both screens also name the unlocked cheat using its
 existing localized cheat-menu label, for example **Cheat unlocked - Paintball
@@ -2439,6 +2502,14 @@ Mode**. Trailing line endings are omitted so the name stays on the status row.
 Pending and Unlock All availability labels retain their existing wording.
 The shared footer retains its difficulty/time row and green earned color.
 The mission-to-cheat mapping matches upstream's unlock cases in `front.c`.
+The footer and difficulty-row badge print on the dossier paper as standard
+game text: Zurich Bold capitals through `frontPrintText`, like **DIFFICULTY:**
+and the Best Time column, with no background panel. Unlocked/available status
+uses the game's dark red emphasis (`0xA00000FF`, as in the debrief's cheat
+notice); pending status and requirement rows are black. This supersedes the
+earlier dark translucent panels with green/blue/amber Bank Gothic HUD text, at
+the owner's request. Positions and wording are unchanged; the README's cheat
+hint description was updated with it.
 
 A required difficulty still locked by progress is identified in the summary.
 The matching visible difficulty row also has a target/unlocked/available badge
@@ -2456,7 +2527,9 @@ unchanged by these indicators.
 [status/requirements](port/src/port_mission_cheats.c),
 [API](port/include/port_mission_cheats.h), [earned-bit reader](src/game/file2.c),
 [save API](src/game/file2.h), [README](README.md).
-**Checks:** [ROM-free status tests](scripts/port/test_mission_cheats.sh) exercise
+**Checks:** The stock-text restyle passes the status tests and Windows build;
+isolated earned/pending captures of the mission grid and difficulty page were
+reviewed at 960x540. [ROM-free status tests](scripts/port/test_mission_cheats.sh) exercise
 the actual save-bit reader with runtime and compile-time Unlock All, earned vs
 available labels, selected-folder isolation, absent saves, target difficulty/time,
 locked requirements and invalid entries. Summary tests also cover representative
@@ -2866,6 +2939,15 @@ skin-only brightness correction to blend exposed wrists/forearms with hands.
 Version 6 measures the shared wrist seam and directly stitches the forearm edge
 to the native chopping hand's polygon outline. It also closes the inherited
 open clothing rim, preventing gaps seen inside the cuff (FORK-017).
+Version 7 adds the tank image in slot 38 (39 slots, 36 rendered images), for
+the weapon strip's tank card (FORK-009). The tank has no first-person gun model,
+so the export harness loads the world prop, hides the parked tank's muzzle-flash
+parts and draws its highest-detail LOD. The usual 35-degree camera frames it by
+bounding radius as a side profile, cannon to the left. An isolated full
+preparation rendered 36/36 images with exact repeats and wrote a correctly sized
+cache. Sources: `port/src/port_weapon_export.c`,
+`port/include/port_icon_cache_format.h` and `port/fast3d/weapon_cache.cpp`;
+`scripts/port/test_icon_cache.c` covers the 39-slot layout.
 Older versions are not reused. The version-6 cache rendered all 35 images
 with exact repeated black/white pixels; its six corrected wrist/forearm
 variants were visually reviewed. Headers, dimensions, complete slot coverage,
@@ -3085,7 +3167,8 @@ an existing configuration without the new key enables enhanced fonts by default.
 Added a local HTML review tool and generator absent from upstream. The matrix
 has 72 views: PP7, AK47/KF7 and Klobb; regular and settled ADS; original and fork
 models; blue, boiler, jungle, snow, tuxedo and Connery wardrobes. It includes all
-35 native generated weapon icons, grouping wardrobe-specific chopping arms.
+36 native generated icons (weapons, the tank and wardrobe-specific chopping arms,
+grouped separately); the tank was added with icon cache version 7.
 Filters, enlarged inspection, stock/fork switching and pixel inspection support
 reviews of hands, wrists, cuffs, watch, grip and sight alignment.
 

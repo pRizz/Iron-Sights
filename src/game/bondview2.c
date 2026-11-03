@@ -12154,29 +12154,42 @@ Gfx *bondviewRenderGaugeBars(Gfx *gdl)
     Mtxf lookatmtxf;
 #ifndef TARGET_N64
     Mtx *orthoRight = NULL; /* HUD Centering 16:9: armour arc's right-edge ortho */
+    /* The render thread may still read the previous frame's display lists
+     * while this one is built. Build the restyled gauges in per-frame memory
+     * so a frame never sees them between rebuild and styling; the watch keeps
+     * the player-owned buffers. */
+    struct damage_display_val *armorValues = dynAllocate(sizeof(g_CurrentPlayer->armor_display_values));
+    struct damage_display_val *healthValues = dynAllocate(sizeof(g_CurrentPlayer->health_display_values));
+    Gfx *armorBar = dynAllocate(PORT_GAUGE_BAR_GFX * sizeof(Gfx));
+    Gfx *healthBar = dynAllocate(PORT_GAUGE_BAR_GFX * sizeof(Gfx));
+#else
+    struct damage_display_val *armorValues = &g_CurrentPlayer->armor_display_values[0].items[0];
+    struct damage_display_val *healthValues = &g_CurrentPlayer->health_display_values[0].items[0];
+    Gfx *armorBar = (Gfx *)&g_CurrentPlayer->watch_body_armor_bar_gdl;
+    Gfx *healthBar = (Gfx *)&g_CurrentPlayer->watch_health_bar_gdl;
 #endif
 
     //Set up armor bars.
-    hudMakeDamageSegments(&g_CurrentPlayer->armor_display_values[0].items[0], 0x2e, 1,
+    hudMakeDamageSegments(armorValues, 0x2e, 1,
 #ifndef TARGET_N64
         portHudAlwaysHealthShown() ? g_CurrentPlayer->bondarmour :
 #endif
         g_CurrentPlayer->apparentarmour);
 #ifndef TARGET_N64
-    portHudStyleGauge(&g_CurrentPlayer->armor_display_values[0].items[0], 0x2e);
+    portHudStyleGauge(armorValues, 0x2e);
 #endif
-    buildGaugeBarDL((Gfx *)&g_CurrentPlayer->watch_body_armor_bar_gdl, OS_PHYSICAL_TO_K0(&g_CurrentPlayer->armor_display_values[0].items[0]), 0x2e);
+    buildGaugeBarDL(armorBar, OS_PHYSICAL_TO_K0(armorValues), 0x2e);
 
     // Set up health bars.
-    hudMakeDamageSegments(&g_CurrentPlayer->health_display_values[0].items[0], 0x2e, -1,
+    hudMakeDamageSegments(healthValues, 0x2e, -1,
 #ifndef TARGET_N64
         portHudAlwaysHealthShown() ? g_CurrentPlayer->bondhealth :
 #endif
         g_CurrentPlayer->apparenthealth);
 #ifndef TARGET_N64
-    portHudStyleGauge(&g_CurrentPlayer->health_display_values[0].items[0], 0x2e);
+    portHudStyleGauge(healthValues, 0x2e);
 #endif
-    buildGaugeBarDL((Gfx *)&g_CurrentPlayer->watch_health_bar_gdl, OS_PHYSICAL_TO_K0(&g_CurrentPlayer->health_display_values[0].items[0]), 0x2e);
+    buildGaugeBarDL(healthBar, OS_PHYSICAL_TO_K0(healthValues), 0x2e);
 
     // Create an orthographic render state for the gauge.
     lookatmtx = dynAllocateMatrix();
@@ -12263,15 +12276,15 @@ Gfx *bondviewRenderGaugeBars(Gfx *gdl)
     {   /* HUD Centering 16:9: armour under the right-edge ortho, health
          * under the left-edge one (orthomtx, loaded above) */
         gSPMatrix(gdl++, osVirtualToPhysical(orthoRight), G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);
-        gSPDisplayList(gdl++, OS_PHYSICAL_TO_K0(&g_CurrentPlayer->watch_body_armor_bar_gdl));
+        gSPDisplayList(gdl++, OS_PHYSICAL_TO_K0(armorBar));
         gSPMatrix(gdl++, osVirtualToPhysical(orthomtx), G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);
-        gSPDisplayList(gdl++, OS_PHYSICAL_TO_K0(&g_CurrentPlayer->watch_health_bar_gdl));
+        gSPDisplayList(gdl++, OS_PHYSICAL_TO_K0(healthBar));
     }
     else
 #endif
     {
-    gSPDisplayList(gdl++, OS_PHYSICAL_TO_K0(&g_CurrentPlayer->watch_body_armor_bar_gdl));
-    gSPDisplayList(gdl++, OS_PHYSICAL_TO_K0(&g_CurrentPlayer->watch_health_bar_gdl));
+    gSPDisplayList(gdl++, OS_PHYSICAL_TO_K0(armorBar));
+    gSPDisplayList(gdl++, OS_PHYSICAL_TO_K0(healthBar));
     }
 
     gSPMatrix(gdl++, osVirtualToPhysical(currentPlayerGetProjectionMatrix()), G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);

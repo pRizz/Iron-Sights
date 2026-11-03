@@ -78,16 +78,16 @@ int main(void)
     portMissionCheatRequirement(&info, DIFFICULTY_007, text, sizeof(text));
     assert(strcmp(text, "SECRET AGENT  02:40") == 0);
 #ifndef GE_UNLOCK_ALL
-    assert(strcmp(portMissionCheatStatus(&info), "CHEAT TO UNLOCK") == 0 && portMissionCheatColor(&info) == 0xf0d994ff);
+    assert(strcmp(portMissionCheatStatus(&info), "CHEAT TO UNLOCK") == 0 && portMissionCheatColor(&info) == 0x000000ff);
 #endif
     unlockAll = 1;
     assert(portMissionCheatInfo(0, FOLDER1, &info) && info.available && !info.earned);
-    assert(strcmp(portMissionCheatStatus(&info), "CHEAT AVAILABLE - UNLOCK ALL") == 0 && portMissionCheatColor(&info) == 0xa7d8ffff);
+    assert(strcmp(portMissionCheatStatus(&info), "CHEAT AVAILABLE - UNLOCK ALL") == 0 && portMissionCheatColor(&info) == 0xa00000ff);
     assert(fileGetIsCheatUnlocked(&saves[0], 0));
     assert(!portFileGetIsCheatUnlockedRaw(&saves[0], 0));
     fileSetSaveCheatUnlocked(&saves[0], 0);
     assert(portMissionCheatInfo(0, FOLDER1, &info) && info.earned && info.available);
-    assert(strcmp(portMissionCheatStatus(&info), "CHEAT UNLOCKED") == 0 && portMissionCheatColor(&info) == 0xb9ed9fff);
+    assert(strcmp(portMissionCheatStatus(&info), "CHEAT UNLOCKED") == 0 && portMissionCheatColor(&info) == 0xa00000ff);
     assert(portMissionCheatInfo(0, FOLDER2, &info) && !info.earned); /* folder isolation */
     assert(portMissionCheatInfo(0, FOLDER3, &info) && !info.earned); /* absent save */
     unlockAll = 0;

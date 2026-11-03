@@ -720,6 +720,10 @@ void portStateResetInput(void)
     sAdsWheelNotches = 0;
 }
 
+#define PORT_ADS_PHANTOM_PITCH -0.002f
+#define PORT_ADS_ROCKET_SHOULDER_X 4.5f
+#define PORT_ADS_ROCKET_YAW 0.10f
+
 /* Sight height above the bore and eye distance, in view units. A small
  * muzzle-up pitch reveals the front sight above the rear of each gun;
  * portAdsWeaponPose keeps the muzzle at the same height below the aim point. */
@@ -732,19 +736,22 @@ static const struct {
     { ITEM_WPPK,          1.0f, 33.5f, -0.025f },
     { ITEM_WPPKSIL,       1.0f, 33.5f, -0.025f },
     { ITEM_TT33,          1.1f, 33.5f, -0.025f },
-    /* Unscoped long guns sit 20% closer; preserve their calibrated sight ray. */
-    { ITEM_SKORPION,      2.7f, 28.8f, -0.035f },
+    /* Unscoped long guns sit 20% closer; preserve their calibrated sight ray.
+     * Klobb, ZMG, shotgun and grenade launcher sit about 8% closer again. */
+    { ITEM_SKORPION,      2.7f, 26.5f, -0.035f },
     { ITEM_AK47,         4.65f, 33.6f, -0.045f },
-    { ITEM_UZI,           4.0f, 32.0f, -0.035f },
+    /* Extra muzzle-up pitch: look along the top of the ZMG, not straight down it. */
+    { ITEM_UZI,           4.0f, 29.5f, -0.090f },
     { ITEM_MP5K,          5.8f, 33.6f, -0.040f },
     /* Same sight geometry as the D5K; compensate for its longer muzzle node. */
     { ITEM_MP5KSIL,       5.0f, 33.6f, -0.040f },
-    { ITEM_SPECTRE,       6.4f, 33.6f, -0.040f },
+    /* Less pitch raises the rear sight block between the front sight's ears. */
+    { ITEM_SPECTRE,       6.4f, 33.6f, PORT_ADS_PHANTOM_PITCH },
     /* Raise the AR33's square aperture and the RC-P90's sight tip onto the
      * centered shot ray. The AR33 also needs clearance above its receiver. */
     { ITEM_M16,          6.85f, 48.0f, -0.060f },
     { ITEM_FNP90,        9.85f, 38.4f, -0.030f },
-    { ITEM_SHOTGUN,       2.6f, 33.6f, -0.040f },
+    { ITEM_SHOTGUN,       2.6f, 31.0f, -0.040f },
     { ITEM_AUTOSHOT,      1.8f, 44.8f, -0.140f },
     { ITEM_SNIPERRIFLE,  10.7f, 70.0f, -0.035f },
     { ITEM_RUGER,         4.0f, 36.0f, -0.030f },
@@ -752,7 +759,7 @@ static const struct {
     { ITEM_SILVERWPPK,    1.0f, 33.5f, -0.025f },
     { ITEM_GOLDWPPK,      1.0f, 33.5f, -0.025f },
     { ITEM_LASER,         6.7f, 36.0f, -0.045f },
-    { ITEM_GRENADELAUNCH, 2.4f, 40.0f, -0.040f },
+    { ITEM_GRENADELAUNCH, 2.4f, 36.5f, -0.040f },
     /* Center the near sight's pin (-3,200,25), tilting the loaded muzzle
      * below it so the aiming tip has open background rather than rocket body. */
     { ITEM_ROCKETLAUNCH, 7.040f, 60.0f, -0.005f },
@@ -766,8 +773,9 @@ s32 portAdsWeaponPose(s32 item, const coord3d *muzzle, coord3d *pose)
         if (sAdsPoses[i].item == item)
         {
             pose->x = -muzzle->x * 0.1f;
-            /* This model's sights sit at X=-3, off the root/muzzle axis. */
-            if (item == ITEM_ROCKETLAUNCH) pose->x = -0.3f;
+            /* Shoulder the launcher right of the eye, turned in toward the
+             * aim point (portAdsWeaponYaw), so its rear tube clears the face. */
+            if (item == ITEM_ROCKETLAUNCH) pose->x = PORT_ADS_ROCKET_SHOULDER_X;
             pose->y = -muzzle->y * 0.1f - sAdsPoses[i].sightHeight;
             if (sAdsPoses[i].pitch != 0.0f)
             {
@@ -781,6 +789,12 @@ s32 portAdsWeaponPose(s32 item, const coord3d *muzzle, coord3d *pose)
         }
     }
     return FALSE;
+}
+
+/* Only the rocket launcher is held off the sight line; others aim straight. */
+f32 portAdsWeaponYaw(s32 item)
+{
+    return item == ITEM_ROCKETLAUNCH ? PORT_ADS_ROCKET_YAW : 0.0f;
 }
 
 f32 portAdsWeaponPitch(s32 item)

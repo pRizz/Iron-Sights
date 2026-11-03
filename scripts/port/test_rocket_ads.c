@@ -1,10 +1,12 @@
-/* Included by test_ads.c: the near aiming pin needs clear background. */
-static coord3d rocketAdsViewPoint(coord3d p, coord3d pose, f32 pitch)
+/* Included by test_ads.c: the shouldered launcher keeps its tube beside the
+ * face while its front converges on clear background at the aim point. */
+static coord3d rocketAdsViewPoint(coord3d p, coord3d pose, f32 pitch, f32 yaw)
 {
+    const f32 x = -p.x*0.1f, z = -(p.y*sinf(pitch) + p.z*cosf(pitch))*0.1f;
     return (coord3d){
-        -p.x*0.1f + pose.x,
+        x*cosf(yaw) + z*sinf(yaw) + pose.x,
         (p.y*cosf(pitch) - p.z*sinf(pitch))*0.1f + pose.y,
-        -(p.y*sinf(pitch) + p.z*cosf(pitch))*0.1f + pose.z
+        -x*sinf(yaw) + z*cosf(yaw) + pose.z
     };
 }
 
@@ -20,25 +22,29 @@ static void testRocketAds(void)
     const coord3d rearRim = {-3,196,-532};
     const s32 rates[] = {30,60,120,240};
     coord3d pose, pin, forwardPin, nose, rim;
-    f32 pitch;
+    f32 pitch, yaw;
     s32 rate, tick;
 
     /* Act: use the same pose and pitch supplied to the game renderer. */
     assert(portAdsWeaponPose(ITEM_ROCKETLAUNCH, &muzzle, &pose));
     pitch = portAdsWeaponPitch(ITEM_ROCKETLAUNCH);
+    yaw = portAdsWeaponYaw(ITEM_ROCKETLAUNCH);
 
-    /* Assert: near pin stays on the ray, with clear air above both the far
-     * pin and loaded nose; the rear tube also remains below it and ahead of us.
-     * Normalized clearance checks remain meaningful across aspect/FOV changes. */
-    pin = rocketAdsViewPoint(nearPin, pose, pitch);
-    forwardPin = rocketAdsViewPoint(farPin, pose, pitch);
-    nose = rocketAdsViewPoint(noseTop, pose, pitch);
-    rim = rocketAdsViewPoint(rearRim, pose, pitch);
-    assert(fabsf(pin.x) < 0.001f && fabsf(pin.y) < 0.002f && pin.z < -50.0f);
+    /* Assert: the shouldered tube sits right of the eye and turns in, so the
+     * far pin and loaded nose converge on the aim point with clear air above
+     * them; the rear rim passes beside the face, not in front of the eye.
+     * Normalized checks remain meaningful across aspect/FOV changes. */
+    assert(yaw > 0.05f && yaw < 0.2f && pose.x > 3.0f);
+    pin = rocketAdsViewPoint(nearPin, pose, pitch, yaw);
+    forwardPin = rocketAdsViewPoint(farPin, pose, pitch, yaw);
+    nose = rocketAdsViewPoint(noseTop, pose, pitch, yaw);
+    rim = rocketAdsViewPoint(rearRim, pose, pitch, yaw);
+    assert(pin.x > 3.0f && pin.z < -50.0f);
     assert(forwardPin.z < -50.0f && nose.z < -50.0f);
-    assert(forwardPin.y / -forwardPin.z < -0.007f);
-    assert(nose.y / -nose.z < -0.006f);
-    assert(rim.y < -0.5f && rim.z < -5.0f);
+    assert(fabsf(forwardPin.x / -forwardPin.z) < 0.02f && fabsf(nose.x / -nose.z) < 0.02f);
+    assert(forwardPin.y / -forwardPin.z < -0.006f);
+    assert(nose.y / -nose.z < -0.005f);
+    assert(rim.x > 8.0f && rim.z < -5.0f);
 
     /* Arrange/act/assert: normal hold/toggle aim and the dedicated binding all
      * admit the launcher, while tank/dual/reload retain their existing gates. */
@@ -81,5 +87,5 @@ static void testRocketAds(void)
     }
     portStateResetInput();
     selectPlayer(0);
-    puts("Rocket ADS checks passed: centered pin, nose/tube clearance, aim modes, tank/dual/reload gates and four tick rates.");
+    puts("Rocket ADS checks passed: shouldered tube, converging nose/pin clearance, aim modes, tank/dual/reload gates and four tick rates.");
 }

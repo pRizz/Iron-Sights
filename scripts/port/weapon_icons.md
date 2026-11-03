@@ -6,8 +6,8 @@ renderer, fixed camera/poses and repeated black/white captures. It recovers
 alpha and downsamples with premultiplied area sampling. No Python, compiler,
 network access or rebuild is needed by players.
 
-A progress window shows 35 images; Esc skips preparation. The per-user SDL
-application-data folder contains `weapon-icons-v6-<ROM fingerprint>.cache` and
+A progress window shows 36 images; Esc skips preparation. The per-user SDL
+application-data folder contains `weapon-icons-v7-<ROM fingerprint>.cache` and
 `last-preparation.log`. About shows readiness. Cache validation checks the ROM,
 generator version, dimensions, complete slot coverage, exact lengths and CRC.
 Invalid caches regenerate; errors or skipping fall back to weapon names.
@@ -23,11 +23,16 @@ lightens the watch model's exposed-skin materials to match the native hand,
 preserving sleeves, watch materials and texture detail. Version 6 measures the
 actual shared wrist seam and stitches forearm edge triangles directly to the
 native chopping hand's polygon outline, closing gaps throughout the animation.
-It also closes the open clothing rim around the exposed wrist. Generated ROM-derived
+It also closes the open clothing rim around the exposed wrist. Version 7 adds
+slot 38, the tank, for the weapon strip while Bond drives it. The tank has no
+first-person gun model, so the exporter loads the world prop (`PROP_TANK`) and
+draws its highest-detail LOD with the parked tank's muzzle-flash parts hidden.
+The same 35-degree camera frames it by the model's bounding radius as a side
+profile, cannon to the left like the weapons. Generated ROM-derived
 data must stay out of Git.
 
-The 38 indexed slots include aliases and empty entries, 29 weapon images and
-six wardrobe-specific unarmed images. The HUD chooses the current mission's
+The 39 indexed slots include aliases and empty entries, 29 weapon images,
+six wardrobe-specific unarmed images and the tank. The HUD chooses the current mission's
 outfit for unarmed and caches GPU textures for visible icons; ordinary gameplay
 does not rerender weapon models for the HUD. Cross-GPU byte identity is not
 promised; repeated captures must match exactly on the active rendering setup.
@@ -67,8 +72,9 @@ and processing versions. The RGB pixels retain original weapon colours, so gold
 and silver weapons have their own images. Unarmed uses the actual hand/forearm model with the same wardrobe treatment as
 first-person chopping. Six additional unarmed icons (IDs 32..37: blue, boiler,
 rolled jungle, snow, tuxedo and Connery) follow the current player's live mission
-cuff; Folder resolves the selected Bond just as the watch does. The complete
-pack has 35 images and 38 indexed slots including aliases/unused entries.
+cuff; Folder resolves the selected Bond just as the watch does. This optional
+Python pack has those 35 images; the native cache adds the tank (36 images and
+39 indexed slots including aliases/unused entries).
 This supersedes the earlier embedded 32-slot bootstrap pack.
 
 To inspect a single model or reprocess a complete capture set:

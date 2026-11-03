@@ -3,11 +3,14 @@
 #define PORT_ICON_CACHE_FORMAT_H
 #include <stdint.h>
 #include <stddef.h>
-#define PORT_ICON_COUNT 38
+#define PORT_ICON_COUNT 39
+/* 29 weapons, six wardrobe unarmed images and the tank (slot 38). */
+#define PORT_ICON_IMAGES 36
+#define PORT_ICON_TANK 38
 #define PORT_ICON_WIDTH 512
 #define PORT_ICON_HEIGHT 160
 #define PORT_ICON_BYTES (PORT_ICON_WIDTH*PORT_ICON_HEIGHT*4)
-#define PORT_ICON_CACHE_VERSION 6
+#define PORT_ICON_CACHE_VERSION 7
 static uint32_t portIconCrc(const unsigned char *data, size_t size)
 {
     uint32_t crc = 0xffffffffu;

@@ -9,7 +9,7 @@ fix one pose while breaking another.
 | Native pistol palm/fingers   | Original weapon model and `model.c`       | Suppress only proximal forearm triangles in a frame-owned display-list copy. Retain original vertices, UVs, RGBA, matrix/material/LOD commands, triangle order and native model render setup.                                                                                                       |
 | Wrist interface              | `port_native_arms.c` measured joint       | Fit the added arm to the native hand, never enlarge or move the native hand to fit the arm. Both sides must use the same nonplanar ring, including inserted edge corners.                                                                                                                           |
 | Wardrobe forearm/cuff        | Pause-watch model and shared mesh builder | Retarget the arm behind its measured wrist. Preserve UVs/material ownership; clothing must not become skin. Close the clothing rim with its own material.                                                                                                                                           |
-| Rifle grip hand              | Closed PP7 hand plus rigid pose           | One rigid transform and fixed 0.052 hand scale. No independent finger curl or forearm bulk applied to hand vertices. The palm origin remains anchored to the weapon's grip.                                                                                                                         |
+| Rifle grip hand              | Closed PP7 hand plus rigid pose           | One rigid transform; 0.052 hand scale, 1.08x for Klobb/ZMG/shotgun/grenade launcher. No independent finger curl or forearm bulk applied to hand vertices. The palm origin remains anchored to the weapon's grip.                                                                                    |
 | Rifle forearm body           | `sAdsArmProfile` in `ads_hands.c`         | Body bulk ramps to 2.5 after a protected 40-native-unit wrist band, over 35 units. This profile is used only for added long-gun ADS arms; pistols, chopping arms and icons use separate transforms. Body-bulk tuning must not change the hand, wrist seam or watch.                                 |
 | Left watch                   | Original watch meshes and grip roll       | Preserve case/face proportions, moving clock hands, arm/cuff fit and grip orientation. Complete the pause model's missing bracelet underside on left long-gun arms from the arm-slab hull and original metal material. Right hands have no watch. Native pistol/chop/icon transforms stay separate. |
 | Skin shading                 | Native forearm material mapping           | Match generated wrist UV/RGB to the original weapon's same-material skin triangles; keep geometry and alpha fixed. Never recolor/remap the stock hand or change clothing/watch UVs to hide a skin seam.                                                                                             |
@@ -57,6 +57,14 @@ multiplier increases from 2.3 to 2.5, for about 26% more forearm width/depth aft
 the combined scale change. Protected-band/ramp lengths in source space and elbow
 targets remain unchanged. This intentional size adjustment supersedes the older
 fixed-scale value; native pistol/chop/icon transforms retain their existing size.
+
+The owner's 2026-11-02 request enlarges the generated ADS arms of the Klobb,
+ZMG, regular shotgun and grenade launcher by a further 1.08x (`adsArmScale` in
+`ads_hands.c`), alongside moving those guns about 8% closer. The multiplier
+applies to the same rigid grip transform, so the hand, wrist seam, cuff, watch
+and forearm grow together around the anchored palm origin; the 2.5 body profile
+and protected-band lengths are unchanged. Other long guns keep 0.052, and native
+pistols, chopping arms and icons keep their own transforms.
 
 Long-gun camera proximity is a separate pose-table control in `joy_port.c`.
 Unscoped ADS origins move 20% closer along camera Z, with calibrated sight

@@ -9124,19 +9124,30 @@ void set_cursor_to_stage_solo(LEVEL_SOLO_SEQUENCE level)
 }
 
 #ifndef TARGET_N64
+/* Cheat status is printed on the dossier paper in its own Zurich text. */
+static Gfx *portFrontPaperText(Gfx *dl, const char *text, s32 x, s32 y, f32 scale, s32 color)
+{
+    char line[136];
+    snprintf(line, sizeof(line), "%s\n", text);
+    portTextScale(scale);
+    dl = microcode_constructor(dl);
+    dl = frontPrintText(dl, &x, &y, line, ptrFontZurichBoldChars, ptrFontZurichBold, color, viGetX(), viGetY(), 0, 0);
+    portTextScale(1.0f);
+    return dl;
+}
+
 /* A stable footer leaves the filmstrip pictures and their hit areas intact. */
 static Gfx *portFrontMissionCheatSummary(Gfx *dl, s32 mission)
 {
     PortMissionCheatInfo info;
     char summary[128];
     char requirement[96];
-    const s32 x = 38, y = viGetY()-24, width = viGetX()-76;
+    const s32 x = 43, y = viGetY()-23;
     if (!portMissionCheatInfo(mission, selected_folder_num, &info)) return dl;
     portMissionCheatSummary(mission, &info, summary, sizeof(summary));
     portMissionCheatRequirement(&info, get_highest_unlocked_difficulty_for_level(mission), requirement, sizeof(requirement));
-    dl = portHudPanel(dl, x, y, width, 22, 0x10171ce8);
-    dl = portHudLabel(dl, summary, x+5, y+2, 0.65f, portMissionCheatColor(&info), width-10);
-    return portHudLabel(dl, requirement, x+5, y+12, 0.65f, 0xe1e5eaff, width-10);
+    dl = portFrontPaperText(dl, summary, x, y, 0.65f, portMissionCheatColor(&info));
+    return portFrontPaperText(dl, requirement, x, y+10, 0.65f, 0x000000ff);
 }
 #endif
 
@@ -9541,8 +9552,7 @@ Gfx *constructor_menu08_difficulty(Gfx *DL)
                 snprintf(badge, sizeof(badge), "%s %02d:%02d",
                     cheatInfo.earned ? "CHEAT UNLOCKED" : cheatInfo.available ? "CHEAT AVAILABLE" : "CHEAT TARGET",
                     cheatInfo.seconds/60, cheatInfo.seconds%60);
-                DL = portHudPanel(DL, bx-3, by-1, 126, 11, 0x10171ce8);
-                DL = portHudLabel(DL, badge, bx, by, 0.60f, portMissionCheatColor(&cheatInfo), 120);
+                DL = portFrontPaperText(DL, badge, bx, by, 0.60f, portMissionCheatColor(&cheatInfo));
             }
 #endif
         }

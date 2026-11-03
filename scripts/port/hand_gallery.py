@@ -28,6 +28,8 @@ ICON_NAMES = [None, 'unarmed', 'knife', 'throwing_knife', 'pp7', 'pp7_silenced',
               'silver_pp7', 'gold_pp7', 'laser', None, 'grenade_launcher', 'rocket_launcher',
               'grenade', 'timed_mine', 'proximity_mine', 'remote_mine', None, 'taser']
 ICON_NAMES += ['unarmed_' + name for name in WARDROBES]
+ICON_NAMES += ['tank']
+ICON_COUNT = sum(name is not None for name in ICON_NAMES[1:])
 
 
 def digest(data):
@@ -273,7 +275,7 @@ def cache_icons(path, root):
     if data[:8] != b'MIDASICO' or len(data) < 32:
         raise ValueError('Invalid icon cache')
     version, rom, width, height, count, crc = struct.unpack_from('<6I', data, 8)
-    if (width, height, count) != (512, 160, 38) or crc != zlib.crc32(data[32:]):
+    if (width, height, count) != (512, 160, len(ICON_NAMES)) or crc != zlib.crc32(data[32:]):
         raise ValueError('Invalid icon cache dimensions/checksum')
     expected = int(re.search(r'PORT_ICON_CACHE_VERSION\s+(\d+)', (ROOT/'port/include/port_icon_cache_format.h').read_text())[1])
     if version != expected:
@@ -290,7 +292,7 @@ def cache_icons(path, root):
             result.append(dict(id=slot, name=ICON_NAMES[slot], **asset(
                 f'images/icons/{slot:02d}-{ICON_NAMES[slot]}.png', width, height, 4, data[at:at+size], root)))
         at += size
-    if at != len(data) or len(result) != 35:
+    if at != len(data) or len(result) != ICON_COUNT:
         raise ValueError('Incomplete icon coverage')
     return result
 
@@ -406,7 +408,7 @@ def generate(root=ROOT, executable=None):
     output = work/'published'
     output.mkdir()
     try:
-        print('Regenerating all 35 native weapon/wardrobe icons...', flush=True)
+        print(f'Regenerating all {ICON_COUNT} native weapon/wardrobe/tank icons...', flush=True)
         run_game(target, rom, game, work/'cache', 'icons')
         icons = cache_icons(next((work/'cache').glob('*.cache')), output)
         print('Capturing 72 cases, two samples per case...', flush=True)
@@ -498,7 +500,7 @@ def main():
             generate(executable=args.executable)
         elif args.command == 'verify':
             verify(staged=args.index)
-            print('Gallery verified: 72 matrix cells, 35 icons, input/pixel/file hashes and generated HTML.')
+            print(f'Gallery verified: 72 matrix cells, {ICON_COUNT} icons, input/pixel/file hashes and generated HTML.')
         elif args.command == 'install-hook':
             install_hook()
         else:

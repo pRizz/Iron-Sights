@@ -965,10 +965,17 @@ void gunUpdateAndFire(GUNHAND handnum)
             if (portAdsWeaponPose(item, muzzle, &pose))
             {
                 const f32 pitch = portAdsWeaponPitch(item) * ads;
+                const f32 yaw = portAdsWeaponYaw(item) * ads;
                 if (pitch != 0.0f)
                 {
                     matrix_4x4_set_rotation_around_x(pitch, &tmpmtx);
                     matrix_4x4_multiply_homogeneous(&gunmtx, &tmpmtx, &aimmtx);
+                    matrix_4x4_copy(&aimmtx, &gunmtx);
+                }
+                if (yaw != 0.0f)
+                {
+                    matrix_4x4_set_rotation_around_y(yaw, &tmpmtx);
+                    matrix_4x4_multiply_homogeneous(&tmpmtx, &gunmtx, &aimmtx);
                     matrix_4x4_copy(&aimmtx, &gunmtx);
                 }
                 gunofs.x += (pose.x + hand->gunofs2_x + recoilx - gunofs.x) * ads;
@@ -994,6 +1001,11 @@ void gunUpdateAndFire(GUNHAND handnum)
                     matrix_4x4_set_rotation_around_x(pitch,&tmpmtx);
                     matrix_4x4_multiply_homogeneous(&gunmtx,&tmpmtx,&aimmtx);
                     matrix_4x4_copy(&aimmtx,&gunmtx);gunofs=pose;
+                    if(portAdsWeaponYaw(item)!=0.0f) {
+                        matrix_4x4_set_rotation_around_y(portAdsWeaponYaw(item),&tmpmtx);
+                        matrix_4x4_multiply_homogeneous(&tmpmtx,&gunmtx,&aimmtx);
+                        matrix_4x4_copy(&aimmtx,&gunmtx);
+                    }
                 }
             }
         }

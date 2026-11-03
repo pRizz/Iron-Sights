@@ -20,6 +20,8 @@ s32 portHudWeaponStripTopInset(void);
 s32 portHudAlwaysHealthShown(void);
 struct damage_display_val;
 void portHudStyleGauge(struct damage_display_val *vertices, s32 count);
+/* buildGaugeBarDL's 46-vertex gauge: 22 loads, at most 22 quads, one end. */
+#define PORT_GAUGE_BAR_GFX 48
 Gfx *portHudDraw(Gfx *gdl);
 void portHudGunSight(s32 *gdl);
 /* Shared port overlay primitives, in native viewport coordinates. */

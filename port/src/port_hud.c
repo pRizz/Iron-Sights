@@ -28,6 +28,7 @@
 #include "port_mission_clock.h"
 #include "port_weapon_images.h"
 #include "port_icon_cache.h"
+#include "port_icon_cache_format.h"
 #include "port_wardrobe.h"
 #include "port/fast3d/hud_text_offset.h"
 #include "game/file.h"
@@ -129,6 +130,17 @@ static void phCopyLine(char *out, s32 size, const char *text)
     out[n] = '\0';
 }
 
+/* Objective strings wrap for the briefing screen with a line break followed by
+ * an indent; join them into one line with single spaces. */
+static void phCopyObjective(char *out, s32 size, const char *text)
+{
+    s32 i, n = 0;
+    phCopyLine(out, size, text);
+    if (size <= 0) return;
+    for (i = 0; out[i]; i++) if (out[i] != ' ' || (n && out[n-1] != ' ')) out[n++] = out[i];
+    out[n] = '\0';
+}
+
 static void phCopySmallCaps(char *out, s32 size, const char *text)
 {
     s32 i;
@@ -158,7 +170,7 @@ s32 portHudObjective(s32 index, s32 letter, s32 status, const char *text)
     if (!h->toastCount) h->toastTime = 270.0f;
     t = &h->toasts[h->toastCount++];
     t->index = index; t->letter = letter; t->status = status;
-    phCopyLine(t->text, sizeof(t->text), text);
+    phCopyObjective(t->text, sizeof(t->text), text);
     return 1;
 }
 
@@ -167,7 +179,6 @@ void portHudObjectiveProgress(s32 stage, s32 difficulty, s32 count,
 {
     HudState *h = &phState[0];
     const s32 ready = portMainObjectivesComplete(stage, difficulty, count, objectives, statuses);
-    HudToast summary;
     s32 i;
     if (!ready) {
         for (i = 0; i < h->toastCount; i++) if (h->toasts[i].index == -1) {
@@ -179,17 +190,10 @@ void portHudObjectiveProgress(s32 stage, s32 difficulty, s32 count,
         h->mainObjectivesNotified = 0; return;
     }
     if (h->mainObjectivesNotified || !phOptions[2] || getPlayerCount() != 1) return;
-    if (portHudObjective(-1, 0, OBJECTIVESTATUS_COMPLETE, "Finish the mission")) {
-        /* Leave the visible objective alert in place, but show this cue before
-         * older pending alerts so it arrives while the final action matters. */
-        if (h->toastCount > 2) {
-            summary = h->toasts[h->toastCount - 1];
-            memmove(&h->toasts[2], &h->toasts[1],
-                sizeof(HudToast) * (h->toastCount - 2));
-            h->toasts[1] = summary;
-        }
+    /* Queue after pending alerts, so the objective that completed the set is
+     * announced before this summary. */
+    if (portHudObjective(-1, 0, OBJECTIVESTATUS_COMPLETE, "Finish the mission"))
         h->mainObjectivesNotified = 1;
-    }
 }
 
 static void phAdvance(HudState *h, f32 dt)
@@ -302,6 +306,7 @@ static const char *phWeaponName(const HudWeapon *weapon)
 
 static s32 phWeaponIcon(s32 item)
 {
+    if (item == ITEM_TANKSHELLS) return portIconAvailable(PORT_ICON_TANK) ? PORT_ICON_TANK : -1;
     if (item == ITEM_UNARMED || item == ITEM_FIST) {
         s32 variant = 32 + portWardrobeVariant(g_CurrentPlayer->bondtype, fileGetBondForCurrentFolder());
         if (portIconAvailable(variant)) return variant;
@@ -317,7 +322,9 @@ static s32 phWeapons(HudWeapon *weapons, s32 *selected)
     *selected = -1;
     for (i = 0; i < total && n < HUD_WEAPONS; i++) {
         const s32 item = bondinvGetTextbyInvIndex(i);
-        if (item < ITEM_UNARMED || item > ITEM_TASER || item == ITEM_WATCHLASER || item == ITEM_TRIGGER) continue;
+        /* The tank's cannon joins the inventory while Bond drives it. */
+        if ((item < ITEM_UNARMED || item > ITEM_TASER || item == ITEM_WATCHLASER || item == ITEM_TRIGGER)
+            && item != ITEM_TANKSHELLS) continue;
         for (j = 0; j < n && weapons[j].item != item; j++) {}
         if (j < n) continue;
         weapons[n].item = item; weapons[n].inventory = i;

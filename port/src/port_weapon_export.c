@@ -7,10 +7,16 @@
 #include "game/dyn.h"
 #include "game/gun.h"
 #include "game/matrixmath.h"
+#include "game/model.h"
+#include "game/objecthandler.h"
 #include "game/options.h"
 #include "game/player.h"
 #include "port_weapon_export.h"
 #include "port_wardrobe.h"
+#include "port_icon_cache_format.h"
+
+#define PORT_TANK_ICON_YAW -35.0f
+#define PORT_TANK_ICON_TARGET_Y 0.08f
 
 s32 portWeaponExportEnabled(void)
 {
@@ -22,6 +28,64 @@ s32 portWeaponExportEnabled(void)
     return 0;
 #endif
 }
+
+#ifdef GE_VIDEO
+/* The tank has no first-person gun model, so its strip image is the world
+ * prop, framed by its bounding sphere from the same near-side camera angle. */
+static Gfx *portWeaponExportTank(Gfx *gdl)
+{
+    extern struct ItemModelFileRecord PitemZ_entries[];
+    extern void matrix_4x4_7F058C64(void);
+    extern void matrix_4x4_7F058C88(void);
+    ItemModelFileRecord *record = &PitemZ_entries[PROP_TANK];
+    ModelFileHeader *header = record->header;
+    ModelRenderData renderdata = {0};
+    Model model = {0};
+    Mtxf rotation, view, transform, *matrices;
+    f32 radius, distance;
+    s32 i, oldDistanceDisabled;
+    if (header->RootNode == NULL) fileLoad(header, record->filename);
+    modelCalculateRwDataLen(header);
+    modelInit(&model, header, dynAllocate(header->numRecords * 4 + 16));
+    /* Match the parked tank's parts (propobj.c): no cannon muzzle flash. */
+    if (header->numSwitches > 8 && header->Switches[7] != NULL)
+        modelGetNodeRwData(&model, header->Switches[7])->Gunfire.visible = 0;
+    if (header->numSwitches > 8 && header->Switches[8] != NULL)
+        modelGetNodeRwData(&model, header->Switches[8])->Switch.visible = 0;
+    radius = header->BoundingVolumeRadius * record->scale;
+    distance = radius * 2.3f;
+    matrix_4x4_set_rotation_around_y(PORT_TANK_ICON_YAW * 0.01745329252f, &rotation);
+    for (i = 0; i < 3; i++) {
+        rotation.m[i][0] *= record->scale;
+        rotation.m[i][1] *= record->scale;
+        rotation.m[i][2] *= record->scale;
+    }
+    matrix_4x4_set_lookat_target(&view, distance*0.82f, radius*PORT_TANK_ICON_TARGET_Y + distance*0.32f, distance*0.47f,
+        0, radius*PORT_TANK_ICON_TARGET_Y, 0, 0, 1, 0);
+    matrix_4x4_multiply(&view, &rotation, &transform);
+    matrices = dynAllocate(header->numMatrices * sizeof(Mtxf));
+    renderdata.basemtx = &transform;
+    renderdata.mtxlist = matrices;
+    renderdata.zbufferenabled = TRUE;
+    renderdata.flags = 3;
+    renderdata.PropType = 9;
+    oldDistanceDisabled = g_ModelDistanceDisabled;
+    g_ModelDistanceDisabled = TRUE; /* highest-detail LOD */
+    instcalcmatrices(&renderdata, &model);
+    renderdata.gdl = gdl;
+    subdraw(&renderdata, &model);
+    g_ModelDistanceDisabled = oldDistanceDisabled;
+    gdl = renderdata.gdl;
+    matrix_4x4_7F058C64();
+    for (i = 0; i < header->numMatrices; i++) {
+        Mtxf value;
+        matrix_4x4_copy(&matrices[i], &value);
+        matrix_4x4_f32_to_s32((void *)&value, (void *)&matrices[i]);
+    }
+    matrix_4x4_7F058C88();
+    return gdl;
+}
+#endif
 
 Gfx *portWeaponExportDraw(Gfx *gdl)
 {
@@ -45,7 +109,10 @@ Gfx *portWeaponExportDraw(Gfx *gdl)
     if (!only && item >= ITEM_TRIGGER) item++;
     icon = item;
     if (!only && slot >= 29 && slot < 35) { item = ITEM_FIST; icon = 32+slot-29; }
-    if (slot >= 35 || item > ITEM_TASER || item < ITEM_FIST || (only && slot)) return gdl;
+    if (!only && slot == 35) item = ITEM_TANKSHELLS;
+    if (item == ITEM_TANKSHELLS) icon = PORT_ICON_TANK;
+    if (slot >= PORT_ICON_IMAGES || (item > ITEM_TASER && icon != PORT_ICON_TANK)
+        || item < ITEM_FIST || (only && slot)) return gdl;
     if (item == ITEM_FIST) g_CurrentPlayer->cur_item_weapon_getname = ITEM_FIST;
     frame++;
     white = phase == 10 || phase == 14;
@@ -69,6 +136,7 @@ Gfx *portWeaponExportDraw(Gfx *gdl)
     guPerspective(projection, &norm, 35.0f, 4.0f/3.0f, 1.0f, 20000.0f, 1.0f);
     gSPPerspNormalize(gdl++, norm);
     gSPMatrix(gdl++, osVirtualToPhysical(projection), G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);
+    if (icon == PORT_ICON_TANK) return portWeaponExportTank(gdl);
     depth = gitem_structs[item].equip_watch_z * 1.6f;
     horizontal = gitem_structs[item].equip_watch_x;
     vertical = gitem_structs[item].equip_watch_y;

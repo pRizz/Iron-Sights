@@ -132,6 +132,39 @@ Both independent gallery processes reproduce all 72 views/35 icons with no image
 changes; the regenerated manifest/HTML updates their rendering-input fingerprint.
 Gallery integrity and all eight workflow tests pass.
 
+## Owner pose refinements, 2026-11-02
+
+The owner reported thin-looking ADS arms on the grenade launcher, Klobb, shotgun
+and ZMG, a ZMG view straight down its sights, a rocket tube that read as aimed
+into the face, and Phantom rear/front sights that did not line up. These choices
+were confirmed with the owner before implementation:
+
+| Weapon           | Change                                                                      |
+| ---------------- | --------------------------------------------------------------------------- |
+| Klobb            | Eye distance 28.8 → 26.5; generated arms 1.08× (`adsArmScale`).             |
+| ZMG              | Eye distance 32 → 29.5; pitch -0.035 → -0.090; arms 1.08×.                  |
+| Shotgun          | Eye distance 33.6 → 31; arms 1.08×. The automatic shotgun is unchanged.     |
+| Grenade launcher | Eye distance 40 → 36.5; arms 1.08×.                                         |
+| Phantom          | Pitch -0.040 → -0.002, levelling the far sight posts inside the near notch. |
+| Rocket launcher  | Shouldered: X offset -0.3 → 4.5 and a 0.10 radian inward yaw.               |
+
+Sight heights are unchanged; `portAdsWeaponPose` still keeps each muzzle below
+the aim point for its pitch. The 1.08 multiplier enlarges the whole generated
+hand, wrist, cuff, watch and forearm uniformly around the grip origin; see the
+[arm contracts](arm_rendering.md). Other long guns keep the 0.052 grip scale.
+
+The rocket launcher's yaw (`portAdsWeaponYaw`) rotates the settled gun about
+camera Y with the ADS blend, in gameplay and the review harness. Its rear rim now
+passes about 10 view units right of the eye. The far pin and loaded nose converge
+on the aim point about 100 units out, with clear background above them. This
+supersedes the 2026-10-28 centered near-pin pose below: the launcher is aimed by
+its converging front, not by stacking both pins on the eye ray.
+
+Phantom pitches of -0.015 and +0.025 bracketed the result. At -0.015, the posts
+stood well above the housing; at +0.025, the housing hid them. `test_ads.c` now
+accepts eye distances down to 26 units and per-weapon arm scales of 1.0 or 1.08.
+`test_rocket_ads.c` projects the shouldered pose with its yaw.
+
 ## Earlier height-correction validation
 
 - Captured all 20 supported ADS firearms at default wide FOV 90/60 Hz and

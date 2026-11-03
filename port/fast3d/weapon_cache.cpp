@@ -151,9 +151,9 @@ extern "C" void portIconWorkerCapture(int icon, int capture, int w, int h, const
         icons[icon]=recover(black,white,w,h);
         if (icons[icon].empty()) { portConLogf("ge: icons: empty/clipped icon %d\n",icon); std::exit(4); }
         completed++;
-        portConLogf("ge: icons: prepared %d/35 (icon %d)\n",completed,icon);
+        portConLogf("ge: icons: prepared %d/%d (icon %d)\n",completed,PORT_ICON_IMAGES,icon);
         writeFile("progress.bin",Bytes{(unsigned char)completed});
-        if (completed==35) {
+        if (completed==PORT_ICON_IMAGES) {
             const char *value=SDL_getenv("GE_ICON_OUTPUT");
             if (!value) std::exit(4);
             std::string output=value; /* SDL's Windows getenv buffer is reused. */
@@ -258,12 +258,12 @@ static bool generate(const fs::path &cache, const char *rom)
         if (cancel || GetTickCount()-start>180000) { TerminateProcess(process.hProcess,4); WaitForSingleObject(process.hProcess,5000); break; }
         auto progress=readFile(files.dir/"progress.bin",1); int count=progress.empty()?0:progress[0];
         if (window) {
-            std::string title="Iron Sights - Preparing icons "+std::to_string(count)+"/35 (first launch; Esc to skip)";
+            std::string title="Iron Sights - Preparing icons "+std::to_string(count)+"/"+std::to_string(PORT_ICON_IMAGES)+" (first launch; Esc to skip)";
             SDL_SetWindowTitle(window,title.c_str());
         }
         if (renderer) {
             SDL_SetRenderDrawColor(renderer,24,31,36,255);SDL_RenderClear(renderer);
-            SDL_Rect outline={20,32,520,24}, bar={22,34,516*count/35,20};
+            SDL_Rect outline={20,32,520,24}, bar={22,34,516*count/PORT_ICON_IMAGES,20};
             SDL_SetRenderDrawColor(renderer,110,130,140,255);SDL_RenderDrawRect(renderer,&outline);
             SDL_SetRenderDrawColor(renderer,183,219,144,255);SDL_RenderFillRect(renderer,&bar);SDL_RenderPresent(renderer);
         }

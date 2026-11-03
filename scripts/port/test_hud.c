@@ -10,7 +10,7 @@
 
 static s32 iconFixtureReady = 1;
 s32 portIconCacheReady(void) { return iconFixtureReady; }
-s32 portIconAvailable(s32 icon) { return iconFixtureReady && icon >= 0 && icon < 38 && icon != 23 && icon != 30; }
+s32 portIconAvailable(s32 icon) { return iconFixtureReady && icon >= 0 && icon < PORT_ICON_COUNT && icon != 23 && icon != 30; }
 static struct player testPlayer;
 struct player *g_CurrentPlayer = &testPlayer;
 f32 g_GlobalTimerDelta;
@@ -67,6 +67,17 @@ static void testToastSmallCaps(void)
     assert(untouched == '!');
     phCopySmallCaps(text, sizeof(text), NULL);
     assert(text[0] == '\0');
+    /* Briefing-wrapped objectives (Bunker, Facility) join without the indent;
+     * other labels keep deliberate spacing. */
+    phCopyObjective(text, sizeof(text), "disrupt all surveillance\n    equipment\n");
+    assert(strcmp(text, "disrupt all surveillance equipment") == 0);
+    phCopyObjective(text, sizeof(text), "  destroy all tanks in bottling\n    room\n");
+    assert(strcmp(text, "destroy all tanks in bottling room") == 0);
+    assert(portHudObjective(0, 0, OBJECTIVESTATUS_COMPLETE, "get personnel to activate\n    computer\n"));
+    assert(strcmp(phState[0].toasts[0].text, "get personnel to activate computer") == 0);
+    portHudReset(0);
+    phCopyLine(text, sizeof(text), "SECRET AGENT  02:40");
+    assert(strcmp(text, "SECRET AGENT  02:40") == 0);
 }
 
 static void testClockClearance(void)
@@ -271,9 +282,10 @@ static void testMainObjectiveCue(void)
     portHudObjective(1, 1, OBJECTIVESTATUS_COMPLETE, "pending");
     portHudObjectiveProgress(LEVELID_DEPOT, DIFFICULTY_AGENT, 5, objectives, statuses);
     assert(phState[0].toastCount == 3);
+    /* The summary follows the pending objective that completed the set. */
     assert(phState[0].toasts[0].index == 0);
-    assert(phState[0].toasts[1].index == -1);
-    assert(phState[0].toasts[2].index == 1);
+    assert(phState[0].toasts[1].index == 1);
+    assert(phState[0].toasts[2].index == -1);
     portHudOptionSet("objective_notifications", 0);
     assert(!phState[0].toastCount && !phState[0].mainObjectivesNotified);
     portHudOptionSet("objective_notifications", 1);
@@ -494,6 +506,12 @@ int main(void)
         assert(phWeaponIcon(i) >= 0 && phWeaponIcon(i) < 38);
     }
     assert(phWeaponIcon(ITEM_DOORDECODER) == -1);
+    /* Driving the tank adds its cannon, selected when it is in hand. */
+    inventory[inventoryCount++] = ITEM_TANKSHELLS; currentWeapon = ITEM_TANKSHELLS;
+    n = phWeapons(weapons, &selected);
+    assert(n == 6 && selected == 5 && weapons[5].item == ITEM_TANKSHELLS);
+    assert(phWeaponIcon(ITEM_TANKSHELLS) == (portIconCacheReady() ? PORT_ICON_TANK : -1));
+    inventoryCount--; currentWeapon = ITEM_AK47;
     assert(phWeaponIcon(ITEM_WPPK) != phWeaponIcon(ITEM_WPPKSIL));
     assert(phWeaponIcon(ITEM_MP5K) != phWeaponIcon(ITEM_MP5KSIL));
     assert(phWeaponIcon(ITEM_TIMEDMINE) != phWeaponIcon(ITEM_REMOTEMINE));

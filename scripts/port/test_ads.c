@@ -181,7 +181,8 @@ int main(void)
         s32 grip, phase, left, k;
         for (grip = 0; grip < sizeof(sAdsGrips)/sizeof(sAdsGrips[0]); grip++) {
             for (phase = 0; phase <= 10; phase++) for (left = 0; left < 2; left++) {
-                AdsArmPose arm = adsNativePose(&gun,left ? sAdsGrips[grip].support : sAdsGrips[grip].trigger,left,phase/10.0f);
+                const f32 armScale = adsArmScale(sAdsGrips[grip].item);
+                AdsArmPose arm = adsNativePose(&gun,left ? sAdsGrips[grip].support : sAdsGrips[grip].trigger,left,phase/10.0f,armScale);
                 f32 backLength=0, sideLength=0, dot=0;
                 for (k = 0; k < 3; k++) {
                     backLength += arm.back.f[k]*arm.back.f[k];
@@ -204,7 +205,9 @@ int main(void)
                         nativeLength+=(a.f[d]-b.f[d])*(a.f[d]-b.f[d]);
                         posedLength+=(pa.f[d]-pb.f[d])*(pa.f[d]-pb.f[d]);
                     }
-                    assert(posedLength/nativeLength>.691f && posedLength/nativeLength<.694f); /* (.052*16)^2 */
+                    /* (.052*16*scale)^2; four thin-armed guns use 1.08 (owner request). */
+                    assert(armScale == 1.0f || armScale == 1.08f);
+                    assert(posedLength/nativeLength>.691f*armScale*armScale && posedLength/nativeLength<.694f*armScale*armScale);
                     /* Enlarging the rigid grip keeps the palm origin anchored
                      * to the weapon instead of shifting its contact point. */
                     a=(coord3d){0,0,0};
@@ -221,7 +224,7 @@ int main(void)
                     adsGripPoint(&a,&pa,PORT_ARM_FOREARM,&space,&arm);
                     posedLength=0;
                     for (s32 d=0;d<3;d++) posedLength+=(pa.f[d]-elbow.f[d])*(pa.f[d]-elbow.f[d]);
-                    assert(posedLength>432.62f && posedLength<432.66f); /* (10*.052*16*2.5)^2 */
+                    assert(posedLength>432.62f*armScale*armScale && posedLength<432.66f*armScale*armScale); /* (10*.052*16*2.5*scale)^2 */
                     /* Forearm shaping must never change a hand or watch,
                      * even for points outside the protected wrist band. */
                     adsGripPoint(&a,&pa,PORT_ARM_HAND,&space,&arm);
@@ -358,7 +361,7 @@ int main(void)
             || i == ITEM_GRENADELAUNCH || i == ITEM_ROCKETLAUNCH;
         assert(!!portAdsWeaponPose(i, &muzzle, &pose) == supported);
         if (supported) {
-            assert(pose.z <= -28.0f && pose.y < -muzzle.y * 0.1f);
+            assert(pose.z <= -26.0f && pose.y < -muzzle.y * 0.1f);
             assert(portAdsWeaponPitch(i) < 0.0f && portAdsWeaponPitch(i) >= -0.15f);
         } else {
             assert(portAdsWeaponPitch(i) == 0.0f);

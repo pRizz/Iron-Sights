@@ -1,4 +1,5 @@
 /* ROM-free lifecycle and live binding checks for desktop onboarding. */
+#include "port_input_prompt.h"
 #include <assert.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -38,7 +39,7 @@ s32 portJoyPortOptionGet(const char *key, s32 *value)
     if (!strcmp(key, "sprint")) { *value = sprint; return 1; }
     assert(0); return 0;
 }
-s32 portInputP1Device(void) { return owner; }
+s32 portInputP1PromptDevice(void) { return owner > 0 ? 1 : -1; }
 s32 portInputSlotDevice(s32 slot) { assert(slot == 0); return 1; }
 s32 portInputDeviceModeIsN64(s32 device) { assert(device == 1); return n64; }
 s32 portVideoIniGetKey(const char *action, char *buf, s32 size)
@@ -133,6 +134,18 @@ static void testLiveBindings(void)
     healthSlide = .5f; assert(draw() == 3); healthSlide = 1;
 }
 
+static void testPromptDevice(void)
+{
+    /* Before any input, the intro claim decides; afterwards the last device used. */
+    assert(!portPromptUsesPad(PORT_PROMPT_INPUT_NONE, 0, 0));
+    assert(portPromptUsesPad(PORT_PROMPT_INPUT_NONE, 1, 0));
+    /* A pad used after a keyboard/mouse claim (hybrid player 1) shows pad labels. */
+    assert(portPromptUsesPad(PORT_PROMPT_INPUT_PAD, 0, 0));
+    assert(!portPromptUsesPad(PORT_PROMPT_INPUT_KBM, 1, 0));
+    /* A muted keyboard (p1_hybrid=0 with a pad owner) never shows key labels. */
+    assert(portPromptUsesPad(PORT_PROMPT_INPUT_KBM, 1, 1));
+}
+
 static void testLifecycle(void)
 {
     /* Arrange: a fresh mission, with UI and player visibility changes. */
@@ -184,6 +197,7 @@ static void testQuota(void)
 
 int main(void)
 {
+    testPromptDevice();
     testControlTime(); testLiveBindings(); testLifecycle(); testQuota();
     puts("Mission hints passed: timed gadget/ADS/conditional sprint rows, live remaps, mouse/pad labels, unbound actions, lifecycle gates.");
     return 0;

@@ -31,6 +31,7 @@
 
 #include <SDL.h>
 #include "port_console.h" /* the tilde console: fixed keys feed it below */
+#include "port_input_prompt.h"
 #ifdef __EMSCRIPTEN__
 #include "../web/menu_pointer.h"
 #endif
@@ -1000,6 +1001,44 @@ s32 portInputP1KbmMuted(void)
     /* and the pad is still THERE: an unplugged claimer leaves s_P1Device set
      * with slot 0 empty, and that must not mute the only input left */
     return !s_OptP1Hybrid && s_P1Device != 0 && inputSlotBusy(0);
+}
+
+/* Which of player 1's devices pressed last (port_input_prompt.h). */
+static int s_P1LastInput = PORT_PROMPT_INPUT_NONE;
+
+static int inputSlotStickMoved(int slot)
+{
+    static const SDL_GameControllerAxis sticks[] = {
+        SDL_CONTROLLER_AXIS_LEFTX, SDL_CONTROLLER_AXIS_LEFTY,
+        SDL_CONTROLLER_AXIS_RIGHTX, SDL_CONTROLLER_AXIS_RIGHTY
+    };
+    int i;
+
+    if (slot < 0 || slot >= INPUT_MAX_PADS || s_Pads[slot] == NULL)
+    {
+        return 0;
+    }
+    for (i = 0; i < 4; i++)
+    {   /* well past any resting drift, so a pad left on the desk stays quiet */
+        const int v = SDL_GameControllerGetAxis(s_Pads[slot], sticks[i]);
+
+        if (v > 16384 || v < -16384)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+s32 portInputSlotDevice(s32 slot);
+
+/** The menu device whose labels player-1 prompts should use, or -1 for keyboard and mouse. */
+s32 portInputP1PromptDevice(void)
+{
+    const int slot = s_P1Device > 0 ? s_P1Device - 1 : 0;
+
+    return portPromptUsesPad(s_P1LastInput, s_P1Device, portInputP1KbmMuted())
+        ? portInputSlotDevice(slot) : -1;
 }
 
 /** Anything at all held on this slot's device - buttons, hat, triggers. */
@@ -1978,6 +2017,7 @@ static int inputEventWatch(void *userdata, SDL_Event *event)
          * relative mode it never moves the cursor - so a tap must not capture
          * the pointer (portInputMouseUpdate). Whichever device pressed last. */
         s_ClickIsTouch = (event->button.which == SDL_TOUCH_MOUSEID);
+        s_P1LastInput = PORT_PROMPT_INPUT_KBM;
         break;
     case SDL_WINDOWEVENT:
         if (event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED || event->window.event == SDL_WINDOWEVENT_FOCUS_LOST)
@@ -1996,6 +2036,7 @@ static int inputEventWatch(void *userdata, SDL_Event *event)
         }
         break;
     case SDL_KEYDOWN:
+        s_P1LastInput = PORT_PROMPT_INPUT_KBM;
         inputFixedKeyDown(&event->key);
         break;
     case SDL_TEXTINPUT:
@@ -7674,6 +7715,11 @@ void portInputPadMerge(s32 idx, OSContPad *pad)
         s_LastMerge[idx] = now;
     }
     inputP1ClaimPoll(idx);   /* intro only, and it records rather than acts */
+    if (idx == (s_P1Device > 0 ? s_P1Device - 1 : 0)
+        && (inputSlotAnyButtonDown(idx) || inputSlotStickMoved(idx)))
+    {
+        s_P1LastInput = PORT_PROMPT_INPUT_PAD;
+    }
     if (idx == 0)
     {
         inputPadBindHarness();     /* GE_PADBIND, a no-op without it */

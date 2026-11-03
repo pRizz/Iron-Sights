@@ -78,7 +78,7 @@ static void adsHandProjection(const Mtxf *scene, Mtxf *projection)
     }
 }
 
-typedef struct { coord3d wrist, palm, elbow, axis, back, side; } AdsArmPose;
+typedef struct { coord3d wrist, palm, elbow, axis, back, side; f32 scale; } AdsArmPose;
 
 static void adsUnit(coord3d *v)
 {
@@ -94,10 +94,20 @@ static const struct {
     f32 handScale,protectedWrist,bulkRamp,forearmBulk;
 } sAdsArmProfile={.052f,40,35,2.5f};
 
+/* Owner-requested 2026-11-02: these guns' ADS arms read thin beside their
+ * bodies, so their whole generated hand/wrist/forearm grows around the grip. */
+static f32 adsArmScale(s32 item)
+{
+    switch (item) {
+    case ITEM_SKORPION: case ITEM_UZI: case ITEM_SHOTGUN: case ITEM_GRENADELAUNCH: return 1.08f;
+    default: return 1.0f;
+    }
+}
+
 static void adsGripPoint(const coord3d *source,coord3d *target,s32 part,const PortGripSpace *space,void *context)
 {
     const AdsArmPose *pose=context;
-    const f32 scale=sAdsArmProfile.handScale;
+    const f32 scale=pose->scale;
     f32 nearZ=space->wrist.z-sAdsArmProfile.protectedWrist;
     s32 k;
     if (part==PORT_ARM_FOREARM && source->z<nearZ && nearZ>space->elbow.z) {
@@ -121,9 +131,10 @@ static void adsGripPoint(const coord3d *source,coord3d *target,s32 part,const Po
         (source->z*pose->axis.f[k]-source->x*pose->back.f[k]+source->y*pose->side.f[k]));
 }
 
-static AdsArmPose adsNativePose(const Mtxf *gun, coord3d grip, s32 left, f32 blend)
+static AdsArmPose adsNativePose(const Mtxf *gun, coord3d grip, s32 left, f32 blend, f32 scale)
 {
     AdsArmPose pose = {0};
+    pose.scale = sAdsArmProfile.handScale*scale;
     f32 along = 0;
     s32 k;
     f32 side = left ? 1 : -1;
@@ -156,9 +167,9 @@ static AdsArmPose adsNativePose(const Mtxf *gun, coord3d grip, s32 left, f32 ble
 }
 
 static s32 adsNativeGrip(PortArmMesh *mesh, const Mtxf *gun, coord3d grip,
-    s32 left, f32 blend, f32 light)
+    s32 left, f32 blend, f32 light, f32 scale)
 {
-    AdsArmPose pose = adsNativePose(gun, grip, left, blend);
+    AdsArmPose pose = adsNativePose(gun, grip, left, blend, scale);
     return portWardrobeBuildGrip(mesh,g_CurrentPlayer->bondtype,fileGetBondForCurrentFolder(),left,light,(u8)(blend*255),adsGripPoint,&pose);
 }
 
@@ -189,8 +200,8 @@ Gfx *portAdsDrawHands(Gfx *gdl, s32 item, const Mtxf *gun)
     matrix_4x4_f32_to_s32(identity.m, (s32 (*)[4])matrix);
     light = 0.55f + (g_CurrentPlayer->tileColor.r + g_CurrentPlayer->tileColor.g
         + g_CurrentPlayer->tileColor.b) * (0.45f/(255.0f*3.0f));
-    if (!adsNativeGrip(&native[0], gun, support, TRUE, blend, light)
-        || !adsNativeGrip(&native[1], gun, trigger, FALSE, blend, light)) return gdl;
+    if (!adsNativeGrip(&native[0], gun, support, TRUE, blend, light, adsArmScale(item))
+        || !adsNativeGrip(&native[1], gun, trigger, FALSE, blend, light, adsArmScale(item))) return gdl;
     gDPPipeSync(gdl++);
     gDPSetCycleType(gdl++, G_CYC_1CYCLE);
     gDPSetAlphaCompare(gdl++, G_AC_NONE);

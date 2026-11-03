@@ -45,8 +45,7 @@ s32 portMissionHintsOptionSet(const char *key, s32 value)
 
 extern s32 portBondControlsLive(void);
 extern s32 portVideoIniGetKey(const char *key, char *buf, s32 size);
-extern s32 portInputP1Device(void);
-extern s32 portInputSlotDevice(s32 slot);
+extern s32 portInputP1PromptDevice(void);
 extern s32 portInputDeviceModeIsN64(s32 device);
 extern s32 portInputDeviceBindText(s32 device, const char *name, char *buf, s32 size);
 extern s32 portJoyPortOptionGet(const char *key, s32 *value);
@@ -90,8 +89,8 @@ void portMissionHintsTick(void)
 
 static s32 maybeHintBinding(const char *action, char *text, s32 size)
 {
-    const s32 owner = portInputP1Device();
-    const s32 maybeDevice = owner > 0 ? portInputSlotDevice(owner - 1) : -1;
+    /* Follow player 1's most recently used device, not just its intro claim. */
+    const s32 maybeDevice = portInputP1PromptDevice();
     text[0] = '\0';
     if (maybeDevice > 0) {
         /* N64-style controls do not consume these direct port actions. */

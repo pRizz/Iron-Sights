@@ -72,5 +72,6 @@ void portMissionCheatRequirement(const PortMissionCheatInfo *info, s32 highestDi
 
 u32 portMissionCheatColor(const PortMissionCheatInfo *info)
 {
-    return info->earned ? 0xb9ed9fff : info->available ? 0xa7d8ffff : 0xf0d994ff;
+    /* The dossier's own emphasis red (debrief cheat notice) and body black. */
+    return info->earned || info->available ? 0xa00000ff : 0x000000ff;
 }
