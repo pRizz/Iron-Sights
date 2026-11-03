@@ -73,7 +73,7 @@ static void phVisualAudit(s32 p)
             extern int ge_shot_force;
             ge_shot_force = 1;
             fired = 2;
-        } else if (fired == 2 && !fadeShot && getenv("GE_HUD_AUDIT_TOAST_FADE") && time >= 361.0f) {
+        } else if (fired == 2 && !fadeShot && getenv("GE_HUD_AUDIT_TOAST_FADE") && time >= 100.0f + HUD_TOAST_LIFETIME - HUD_TOAST_FADE / 2) {
             /* Halfway through the first alert's fade-out. */
             extern int ge_shot_force;
             extern void portConLogf(const char *fmt, ...);

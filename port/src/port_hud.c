@@ -42,7 +42,8 @@ extern void *memset(void *dst, int value, size_t size);
 extern void *memmove(void *dst, const void *src, size_t size);
 
 #define HUD_TOASTS 8
-#define HUD_TOAST_FADE 18.0f /* 300 ms at 60 timer units per second */
+#define HUD_TOAST_LIFETIME 210.0f /* 3.5 s at 60 timer units per second */
+#define HUD_TOAST_FADE 18.0f /* 300 ms */
 #define HUD_WEAPONS 32
 #define HUD_PI 3.14159265358979323846f
 static const char *const phKeys[] = { "hit_markers", "damage_indicators", "objective_notifications", "weapon_hud", "weapon_hud_icons", "always_health" };
@@ -167,7 +168,7 @@ s32 portHudObjective(s32 index, s32 letter, s32 status, const char *text)
         memmove(&h->toasts[1], &h->toasts[2], sizeof(HudToast) * (HUD_TOASTS - 2));
         h->toastCount--;
     }
-    if (!h->toastCount) h->toastTime = 270.0f;
+    if (!h->toastCount) h->toastTime = HUD_TOAST_LIFETIME;
     t = &h->toasts[h->toastCount++];
     t->index = index; t->letter = letter; t->status = status;
     phCopyObjective(t->text, sizeof(t->text), text);
@@ -184,7 +185,7 @@ void portHudObjectiveProgress(s32 stage, s32 difficulty, s32 count,
         for (i = 0; i < h->toastCount; i++) if (h->toasts[i].index == -1) {
             memmove(&h->toasts[i], &h->toasts[i+1], sizeof(HudToast) * (h->toastCount - i - 1));
             h->toastCount--;
-            if (!i) h->toastTime = 270.0f;
+            if (!i) h->toastTime = HUD_TOAST_LIFETIME;
             break;
         }
         h->mainObjectivesNotified = 0; return;
@@ -208,7 +209,7 @@ static void phAdvance(HudState *h, f32 dt)
         if (dt < h->toastTime) { h->toastTime -= dt; break; }
         dt -= h->toastTime;
         memmove(&h->toasts[0], &h->toasts[1], sizeof(HudToast) * --h->toastCount);
-        h->toastTime = 270.0f;
+        h->toastTime = HUD_TOAST_LIFETIME;
     }
 }
 

@@ -193,10 +193,11 @@ static void testObjectiveTimingDuringDialogue(void)
     portHudSubtitleBottom(46);
     /* Act / assert: immediately queued, with the normal uninterrupted lifetime. */
     assert(portHudObjective(1, 1, OBJECTIVESTATUS_COMPLETE, "Confront and unmask Janus"));
-    assert(phState[0].toastCount == 1 && phState[0].toastTime == 270);
+    assert(HUD_TOAST_LIFETIME == 3.5f * 60.0f); /* 3.5 s, including the fade */
+    assert(phState[0].toastCount == 1 && phState[0].toastTime == HUD_TOAST_LIFETIME);
     phAdvance(&phState[0], 30);
-    assert(phState[0].toastCount == 1 && phState[0].toastTime == 240);
-    phAdvance(&phState[0], 240);
+    assert(phState[0].toastCount == 1 && phState[0].toastTime == HUD_TOAST_LIFETIME - 30);
+    phAdvance(&phState[0], HUD_TOAST_LIFETIME - 30);
     assert(phState[0].toastCount == 0);
     portHudSubtitleBottom(0);
     display_upper_text_window = 0;
@@ -211,7 +212,7 @@ static void testObjectiveFadeOut(void)
     assert(portHudObjective(1, 1, OBJECTIVESTATUS_FAILED, "Second"));
     /* Act / assert: fully opaque until the last 300 ms of the same lifetime. */
     assert(phToastOpacity(phState[0].toastTime) == 1);
-    phAdvance(&phState[0], 270 - HUD_TOAST_FADE);
+    phAdvance(&phState[0], HUD_TOAST_LIFETIME - HUD_TOAST_FADE);
     assert(phState[0].toastCount == 2 && phToastOpacity(phState[0].toastTime) == 1);
     phAdvance(&phState[0], HUD_TOAST_FADE / 2);
     assert(phState[0].toastCount == 2 && phToastOpacity(phState[0].toastTime) == 0.5f);

@@ -2030,8 +2030,13 @@ that bound each render so hidden/expired dialogue reserves no space. Queue order
 alert lifetime and other HUD timers keep their normal behavior.
 An expiring alert now fades out over its last 300 ms (18 timer units) instead of
 disappearing abruptly: its panel, accent bar and both text lines share one opacity.
-The fade sits inside the unchanged 4.5-second lifetime, and the next queued alert
-appears at full opacity as soon as the fade ends. Native and browser builds share this.
+The fade sits inside the alert's lifetime, and the next queued alert appears at
+full opacity as soon as the fade ends. Native and browser builds share this.
+At the owner's 2026-11-02 request, each alert now shows for 3.5 seconds instead
+of the original 4.5 seconds. `HUD_TOAST_LIFETIME` is 210 timer units, including
+the 300 ms fade. Queued alerts still each receive the full lifetime, in game
+time. The HUD audit's `-ToastFade` capture derives its mid-fade frame from the
+same constant.
 Objective descriptions now join briefing-wrapped strings into one line: the
 original text breaks long objectives with a newline plus an indent (for example
 Facility's "destroy all tanks in bottling\n    room" and Bunker's "disrupt all
