@@ -10,6 +10,7 @@ extern void *memset(void *dst, int value, size_t size);
 #include "../../port/src/port_options.c"
 #include "../../port/src/port_hud.c"
 #include "../../port/src/port_crosshair.c"
+#include "../../port/src/port_hit_sound.c"
 
 static s32 iconFixtureReady = 1;
 s32 portIconCacheReady(void) { return iconFixtureReady; }

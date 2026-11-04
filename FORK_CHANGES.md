@@ -69,7 +69,8 @@ missing from [the baseline key list](scripts/port/settings_upstream_keys.txt)
 a fork setting is missing from either menu's Iron Sights pages or appears on an
 upstream page, or when an upstream setting appears on an Iron Sights page.
 Documented ini-only or single-menu exceptions live in the script. The
-pre-commit hook runs it before gallery verification.
+pre-commit hook runs it before gallery verification, and the Windows workflow's
+ROM-free test step runs it and its tests.
 
 **Sources:** [folder sheets](src/game/front.c),
 [watch pages](port/src/port_watchpages.c) and [enum](port/include/port_watchpages.h),
@@ -155,7 +156,11 @@ the pass/fail rules. The audit on Dam measured raised hits at 5 to 58 m within
 0.1 dB of point blank, while unraised hits faded from -3.2 dB at 5 m to
 -20.5 dB at 50 m; the same measurement fails a capture of the two-copy
 prototype. The 58 m unraised hit is masked by an unrelated Dam sound in its
-window, and the gunfire-to-damage path itself was not scripted.
+window, and the gunfire-to-damage path itself was not scripted. The Windows
+workflow's ROM-free test step runs the hit sound and measurement tests.
+[test_ads.c](scripts/port/test_ads.c), which compiles `joy_port.c` with its
+option modules, includes the hit sound module for its option bridge; the first
+push of this feature failed CI at that link because the test lacked it.
 
 ### FORK-042 — Stray casing polygons in the browser
 

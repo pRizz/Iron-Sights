@@ -61,6 +61,10 @@ jobs:
           bash scripts/port/test_upstream_merge.sh
           python3 scripts/port/test_native_tool_launchers.py
           bash scripts/port/test_hud.sh
+          bash scripts/port/test_hit_sound.sh
+          python3 scripts/port/test_hit_sound_capture.py
+          python3 scripts/port/test_settings_placement.py
+          python3 scripts/port/settings_placement.py
           bash scripts/port/test_mission_hints.sh
           bash scripts/port/test_wardrobe.sh
           bash scripts/port/test_mission_cheats.sh
