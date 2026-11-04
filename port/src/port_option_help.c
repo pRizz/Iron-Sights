@@ -15,6 +15,8 @@ struct PortOptHelp { const char *key; const char *text; };
 static const struct PortOptHelp sHelp[] = {
     /* GENERAL SETTINGS */
     { "knife_ads",          "Butt Centered keeps the stock grip. Tip Centered flips to throw." },
+    { "ads_spread",         "Bullet spread kept in ADS. 100% is the original. Not shotguns." },
+    { "ads_recoil",         "Gun kick kept in ADS. 100% is the original. Not shotguns." },
     { "look_updown",        "Upright: push up to look up. Reverse inverts it." },
     { "auto_aim",           "Gun aims at enemies for you." },
     { "aim_control",        "Hold: aim while held. Toggle: press to aim, again to stop." },

@@ -151,6 +151,8 @@ static const struct PortWatchRowDef sIronSights[] = {
 static const struct PortWatchRowDef sIsAim[] = {
     { PWROW_OPT,       "aim_mode",         NULL, 0, 0 },
     { PWROW_OPT,       "knife_ads",        NULL, 0, 0 },
+    { PWROW_OPT,       "ads_spread",       NULL, 0, 0 },
+    { PWROW_OPT,       "ads_recoil",       NULL, 0, 0 },
     { PWROW_OPT,       "sprint",           NULL, 0, 0 },
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };

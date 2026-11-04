@@ -148,6 +148,11 @@ Hold **Left Shift** while moving to sprint at 1.5 times normal speed.
 restore Shift-to-walk at half speed. The **Walk / Sprint** control can be rebound.
 Aiming and crouching prevent the sprint boost; ADS keeps its half-speed movement.
 
+ADS steadies your aim. **Gameplay > Iron Sights > Aiming and Movement > ADS Spread**
+sets how much of a weapon's bullet spread remains while aiming down sights, and
+**ADS Recoil** sets how much of its visual kick remains. Both default to 50%;
+100% restores the original. Shotguns keep their full pellet spread and kick.
+
 Iron Sights adds these HUD and feedback options under **Gameplay > Iron Sights >
 Combat Feedback** and **HUD Additions**. Mission Timer is the original setting on
 **Gameplay > HUD**, extended by Iron Sights:

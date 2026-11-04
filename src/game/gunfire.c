@@ -45,6 +45,7 @@
 #ifndef TARGET_N64
 #include "port_hud.h"
 #include "port_hit_sound.h"
+#include "port_ads_accuracy.h"
 #include "port_mission_clock.h"
 #include "boss.h"
 #include "port_weapon_export.h"
@@ -4217,6 +4218,13 @@ void gunTickHandState(enum GUNHAND hand, s32 triggerOn)
             {
                 sp198 = weapon_stats->RecoilBack;
                 sp19C = weapon_stats->RecoilUp;
+#ifndef TARGET_N64
+                { /* ADS Recoil: a smaller kick in ADS; the shot ray never moves */
+                    const f32 kick = portAdsRecoilScale(getCurrentPlayerWeaponId(hand));
+                    sp198 *= kick;
+                    sp19C *= kick;
+                }
+#endif
 
                 if (handptr->field_890 == 0)
                 {
@@ -5980,6 +5988,9 @@ void bullet_path_from_screen_center(coord3d* arg0, coord3d* result, enum GUNHAND
         // Single shots are four times more accurate
         inaccuracy *= 0.25f;
     }
+#ifndef TARGET_N64
+    inaccuracy *= portAdsSpreadScale(getCurrentPlayerWeaponId(arg2)); /* ADS Spread */
+#endif
 
     scaledspread = (120.0f * inaccuracy) / viGetFovY();
 
@@ -6360,6 +6371,9 @@ void bullet_path_from_screen_center(coord3d* arg0, coord3d* result, enum GUNHAND
         // Single shots are four times more accurate
         inaccuracy *= 0.25f;
     }
+#ifndef TARGET_N64
+    inaccuracy *= portAdsSpreadScale(getCurrentPlayerWeaponId(arg2)); /* ADS Spread */
+#endif
 
     scaledspread = (120.0f * inaccuracy) / viGetFovY();
 

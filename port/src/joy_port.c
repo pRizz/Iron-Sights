@@ -74,6 +74,7 @@
 #include "port_wardrobe.h"
 #include "port_hud.h"
 #include "port_hit_sound.h"
+#include "port_ads_accuracy.h"
 #include "joy.h"
 #include <os_extension.h>
 
@@ -304,6 +305,7 @@ s32 portJoyPortSetOption(const char *key, const char *value)
     if (portKnifeAdsOptionSet(key, atoi(value))) return 1;
     if (portHudOptionSet(key, atoi(value))) return 1;
     if (portHitSoundOptionSet(key, atoi(value))) return 1;
+    if (portAdsAccuracyOptionSet(key, atoi(value))) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = atoi(value) != 0;
         return 1;
@@ -450,6 +452,7 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
     if (portKnifeAdsOptionGet(key, out)) return 1;
     if (portHudOptionGet(key, out)) return 1;
     if (portHitSoundOptionGet(key, out)) return 1;
+    if (portAdsAccuracyOptionGet(key, out)) return 1;
     if (strcmp(key, "sprint") == 0) {
         *out = sSprint;
         return 1;
@@ -482,6 +485,7 @@ s32 portJoyPortOptionSet(const char *key, s32 v)
     if (portKnifeAdsOptionSet(key, v)) return 1;
     if (portHudOptionSet(key, v)) return 1;
     if (portHitSoundOptionSet(key, v)) return 1;
+    if (portAdsAccuracyOptionSet(key, v)) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = v != 0;
         return 1;

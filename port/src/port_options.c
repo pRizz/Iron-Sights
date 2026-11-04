@@ -318,6 +318,8 @@ static const struct PortOpt sOpts[] = {
     ENUMR ("aim_control",        "[display]", "Aim Control\n",        PORTOPT_CAT_GAMEPLAY, sAimControlVals, sAimControlText, NULL),
     ENUMR ("aim_mode",           "[display]", "Aim Mode\n",           PORTOPT_CAT_GAMEPLAY, sAimModeVals, sAimModeText, NULL),
     ENUMR ("knife_ads",          "[display]", "Knife ADS\n",          PORTOPT_CAT_GAMEPLAY, sKnifeAdsVals, sKnifeAdsText, NULL),
+    INTR  ("ads_spread",         "[display]", "ADS Spread\n",         PORTOPT_CAT_GAMEPLAY, 0, 100, 10, "%"),
+    INTR  ("ads_recoil",         "[display]", "ADS Recoil\n",         PORTOPT_CAT_GAMEPLAY, 0, 100, 10, "%"),
     TOGGLE("sprint",             "[display]", "Sprint\n",             PORTOPT_CAT_GAMEPLAY),
     TOGGLE("sight_on_screen",    "[display]", "Sight on Screen\n",    PORTOPT_CAT_GAMEPLAY),
     TOGGLE("look_ahead",         "[display]", "Look Ahead\n",         PORTOPT_CAT_GAMEPLAY),

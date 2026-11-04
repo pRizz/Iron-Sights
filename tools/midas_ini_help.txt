@@ -258,6 +258,10 @@ padN_stickmode.
                       |            | auto_aim or the multiplayer settings say
   aim_control         | 0          | 0 = hold to aim, 1 = toggle
   aim_mode            | 1          | 1 = ADS (default), 0 = original red reticle
+  ads_spread          | 50         | Percent of a weapon's bullet spread kept
+                      |            | in ADS; 100 = original. Shotguns keep theirs
+  ads_recoil          | 50         | Percent of a weapon's visual kick kept in
+                      |            | ADS; 100 = original. Shotguns keep theirs
   sprint              | 1          | 1 = hold Walk / Sprint for 1.5x speed;
                       |            | 0 = hold it to walk at half speed
   sight_on_screen     | 1          | Show the aiming sight

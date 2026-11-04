@@ -11,6 +11,7 @@ extern void *memset(void *dst, int value, size_t size);
 #include "../../port/src/port_hud.c"
 #include "../../port/src/port_crosshair.c"
 #include "../../port/src/port_hit_sound.c"
+#include "../../port/src/port_ads_accuracy.c"
 
 static s32 iconFixtureReady = 1;
 s32 portIconCacheReady(void) { return iconFixtureReady; }
@@ -157,6 +158,7 @@ static void testSprint(void)
 
 #include "test_knife_ads.c"
 #include "test_rocket_ads.c"
+#include "test_ads_accuracy.c"
 
 int main(void)
 {
@@ -175,6 +177,7 @@ int main(void)
     selectPlayer(0);
     testKnifeAds();
     testRocketAds();
+    testAdsAccuracy();
     testSprint();
     { /* The support palm faces up under the gun. The watch follows that
        * roll rather than being billboarded towards the camera. */
@@ -612,6 +615,6 @@ int main(void)
     pollAds(0, 1); /* the dedicated ADS button works in red-reticle mode too */
     assert(portAdsMouseWheel(1));
     assert(portAdsWheelZoom(15.0f, 45.0f) < 15.0f);
-    puts("ADS checks passed: sprint/walk/aim/crouch movement, input, scope, wheel zoom, per-player state, 30/60/120/240 Hz.");
+    puts("ADS checks passed: sprint/walk/aim/crouch movement, input, scope, wheel zoom, ADS spread/recoil, per-player state, 30/60/120/240 Hz.");
     return 0;
 }

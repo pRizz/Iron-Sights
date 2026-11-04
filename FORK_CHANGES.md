@@ -30,6 +30,46 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-045 — ADS Spread and ADS Recoil
+
+**Status:** Implemented; the user's Windows play-test confirmed the 50% defaults.
+
+Upstream fires each bullet at the crosshair plus a random offset scaled by the
+weapon's `Inaccuracy` stat (`bullet_path_from_screen_center` in `gunfire.c`;
+weapons flagged for first-shot accuracy quarter it on a volley's first shot).
+That spread is divided by the field of view, so it is the same angle at any
+zoom: ADS zoom made it look larger on screen without changing it. Upstream's
+`RecoilBack`/`RecoilUp` only kick the gun model (the hand's recoil matrix); the
+shot ray never uses them, so in ADS the sights jumped off a target the shots
+still hit.
+
+**Gameplay > Iron Sights > Aiming and Movement** now has **ADS Spread** and
+**ADS Recoil**, each the percentage of the native value kept while aiming down
+sights, 0 to 100 in steps of 10, both defaulting to 50 (`[display] ads_spread`
+and `ads_recoil`; 100 is the original). The multiplier eases with the ADS blend,
+so it reaches the setting as the sights settle and returns to native at the
+hip. ADS Spread multiplies after the first-shot bonus, so a first AK47 shot in
+ADS keeps 12.5% of its normal spread at the default. Both shotguns keep their
+full pellet spread and kick, and demo playback keeps the native values so
+recorded shots replay as recorded. The settings apply to every player in
+multiplayer alike, through each player's own ADS state. The scoped sniper's
+spread is already 0.
+
+**Sources:** [policy](port/src/port_ads_accuracy.c) and
+[header](port/include/port_ads_accuracy.h); spread hooks in both
+`bullet_path_from_screen_center` copies and the recoil hook in
+[gunfire.c](src/game/gunfire.c); option bridge in [joy_port.c](port/src/joy_port.c),
+rows in [port_options.c](port/src/port_options.c), [front.c](src/game/front.c)
+and [port_watchpages.c](port/src/port_watchpages.c),
+[help](port/src/port_option_help.c), [default ini](port/src/video.c),
+[settings reference](tools/midas_ini_help.txt) and [README](README.md).
+**Checks:** [ADS accuracy tests](scripts/port/test_ads_accuracy.c), run by
+[test_ads.sh](scripts/port/test_ads.sh), cover the defaults, option clamping
+and menu bridge, the blend easing, the shotgun exemption, per-player state and
+the demo gate. The Windows build compiles and the settings placement check
+passes. No in-game capture measures the spread; the user's play-test judges
+the feel.
+
 ### FORK-044 — Iron Sights settings page and placement rule
 
 **Status:** Implemented; part of the Windows build the user play-tested for FORK-043.
@@ -40,7 +80,7 @@ subsections, in both the Options folder and the watch:
 
 | Subsection | Settings |
 | --- | --- |
-| Aiming and Movement | Aim Mode, Knife ADS, Sprint |
+| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Sprint |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction |
 | HUD Additions | Always Crosshair Size, Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
 | System | About / Build Info, Texture Pack (desktop), Enhanced Fonts, Crash Reporting (Windows/Linux) |

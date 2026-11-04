@@ -13,6 +13,7 @@
 #include <ultra64.h>
 #include "port_modal.h"
 #include "port_crosshair.h"
+#include "port_ads_accuracy.h"
 #include "port_hd_textures.h"
 
 #ifdef GE_XBOX
@@ -2344,6 +2345,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "stereo_pan=%d\n", s_CfgStereoPan);
     fprintf(f, "aim_lock=%d\n", s_CfgAimLock);
     fprintf(f, "aim_mode=1\n");
+    fprintf(f, "ads_spread=%d\nads_recoil=%d\n", PORT_ADS_ACCURACY_DEFAULT, PORT_ADS_ACCURACY_DEFAULT);
     fprintf(f, "sprint=1\n");
     fprintf(f, "hit_markers=1\n");
     fprintf(f, "hit_sounds=1\n");

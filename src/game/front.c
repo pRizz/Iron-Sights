@@ -4699,7 +4699,8 @@ static const struct PortSheetRow port_sheet_rows_ironsights[] = {
     { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_SYSTEM },
 };
 static const struct PortSheetRow port_sheet_rows_is_aim[] = {
-    { SHROW_OPT, "aim_mode" }, { SHROW_OPT, "knife_ads" }, { SHROW_OPT, "sprint" },
+    { SHROW_OPT, "aim_mode" }, { SHROW_OPT, "knife_ads" },
+    { SHROW_OPT, "ads_spread" }, { SHROW_OPT, "ads_recoil" }, { SHROW_OPT, "sprint" },
 };
 static const struct PortSheetRow port_sheet_rows_is_feedback[] = {
     { SHROW_OPT, "hit_markers" }, { SHROW_OPT, "hit_sounds" }, { SHROW_OPT, "damage_indicators" },
