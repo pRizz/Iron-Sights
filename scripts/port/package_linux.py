@@ -21,6 +21,7 @@ RUNTIME_LICENSE_SHA256 = "aa154fc9070614bbe7921f89db11efd1dba7a1f3a41685958110e2
 SYSTEM_LIBRARIES = re.compile(r"^(ld-linux|lib(c|m|dl|pthread|rt|resolv|util)\.so|libnss_|lib(GL|EGL|GLX|GLdispatch|OpenGL)\.)")
 PLAYER_FILES = ("IronSights", "sentry-crash", "Sentry-LICENSE.txt", "sentry-build.json", "SDL2-LICENSE.txt",
                 "gamecontrollerdb.txt", "gamecontrollerdefault.txt", "midas_ini_help.txt", "Data/shaders_base.txt")
+STEAM_ART = tuple(ROOT / "scripts/port/linux/steam-art" / name for name in ("cover.png", "banner.png", "hero.png", "logo.png"))
 
 
 def copy(source, target):
@@ -61,7 +62,9 @@ def checksums(directory):
 def package_steamdeck(appdir, output):
     archive = output / "Iron-Sights-steamdeck-i686.zip"
     extras = ((ROOT / "scripts/port/linux/steamdeck-run.sh", "run.sh"),
-              (ROOT / "scripts/port/linux/STEAM-DECK.txt", "STEAM-DECK.txt"))
+              (ROOT / "scripts/port/linux/STEAM-DECK.txt", "STEAM-DECK.txt"),
+              (ROOT / "scripts/port/linux/set-steam-art.py", "set-steam-art.py"),
+              *((path, "steam-art/" + path.name) for path in STEAM_ART))
     prefix = "Iron-Sights-steamdeck-i686/"
     sums = (appdir / "SHA256SUMS.txt").read_text()
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as stream:

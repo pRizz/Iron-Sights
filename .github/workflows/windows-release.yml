@@ -73,6 +73,7 @@ jobs:
           python3 scripts/port/test_distribution.py
           python3 scripts/port/test_texture_pack_distribution.py
           python3 scripts/port/test_linux_hd_launcher.py
+          python3 scripts/port/test_steam_art.py
           python3 scripts/port/test_sentry_tools.py
           python3 scripts/port/test_ci_dependencies.py
           python3 scripts/port/test_enhanced_fonts.py
@@ -364,7 +365,7 @@ jobs:
 
           Linux: download **Iron-Sights-linux-i686.tar.gz** or **Iron-Sights-linux-i686.AppImage**. Both require a 32-bit-capable x86 Linux with glibc 2.35+ and 32-bit OpenGL drivers. AppImage data lives in `~/.local/share/iron-sights` (or XDG_DATA_HOME); the tarball keeps data beside the executable. See START-HERE.txt.
 
-          Steam Deck / SteamOS: **Iron-Sights-steamdeck-i686.zip** repackages the same 32-bit Linux game with a `run.sh` launcher and Deck setup instructions. Extract it in a writable folder, put your own ROM in `Data`, and run `sh run.sh` in Desktop Mode. Device compatibility has not yet been verified on a Steam Deck.
+          Steam Deck / SteamOS: **Iron-Sights-steamdeck-i686.zip** repackages the same 32-bit Linux game with a `run.sh` launcher and Deck setup instructions. Extract it in a writable folder, put your own ROM in `Data`, and run `sh run.sh` in Desktop Mode. `set-steam-art.py` gives the Non-Steam Game shortcut its name, icon and library artwork. Device compatibility has not yet been verified on a Steam Deck.
 
           This is a continuously published development build. Weapon icons are prepared locally on first launch; no Python or asset downloads are required.
 

@@ -10,10 +10,24 @@ Steam Deck has not yet been used to validate this package.
 2. Put your own stock GoldenEye 007 (USA) ROM in its Data folder. The ROM is
    never included in the download.
 3. In Konsole, enter the extracted folder and run: sh run.sh
-4. To launch from Gaming Mode, run chmod +x run.sh IronSights once, then add
-   run.sh as a Non-Steam Game. The launcher finds its own folder and bundled
-   libraries, even when Steam starts it from another working directory.
+4. To launch from Gaming Mode with its name, icon and library artwork:
+   a. In Konsole, in the extracted folder, run: python3 set-steam-art.py
+      This makes run.sh executable and adds Iron Sights to the application
+      menu, pointing at this folder.
+   b. In Steam, choose Games > Add a Non-Steam Game to My Library, tick
+      Iron Sights and choose Add Selected Programs.
+   c. Run python3 set-steam-art.py again. It finds that shortcut and copies the
+      cover, banner, background and logo from steam-art into Steam.
+   d. Restart Steam, or return to Gaming Mode, to see the artwork.
+   The script only reads Steam's shortcut list, never changes it, and keeps
+   artwork you already chose for the shortcut unless you add --force. A
+   shortcut added earlier by browsing to run.sh also gets the artwork; rename
+   it to Iron Sights in its Steam Properties. If the script says no shortcut
+   was found, exit Steam once so it saves the new shortcut, then run it again.
+   The launcher finds its own folder and bundled libraries, even when Steam
+   starts it from another working directory.
 
 Data, saves, profiles and midas.ini stay beside IronSights. Preserve them when
-updating. See START-HERE.txt for settings, HD artwork, crash reporting and
+updating. If you move the folder, run set-steam-art.py again and re-add the
+shortcut. See START-HERE.txt for settings, HD artwork, crash reporting and
 verification. The Linux tarball and AppImage remain alternatives.

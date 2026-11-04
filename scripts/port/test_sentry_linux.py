@@ -73,7 +73,8 @@ def check(package, appimage, steamdeck, output):
             assert hashlib.sha256(stream.read(prefix + "IronSights")).digest() == hashlib.sha256(game).digest()
             assert verify_artwork(lambda name: stream.read(prefix + name)) == artwork_hash
             sums = dict(line.split("  ", 1)[::-1] for line in stream.read(prefix + "SHA256SUMS.txt").decode().splitlines())
-            for name in ("run.sh", "STEAM-DECK.txt"):
+            for name in ("run.sh", "STEAM-DECK.txt", "set-steam-art.py", "iron-sights.png", "steam-art/cover.png",
+                         "steam-art/banner.png", "steam-art/hero.png", "steam-art/logo.png"):
                 assert hashlib.sha256(stream.read(prefix + name)).hexdigest() == sums[name]
         # Verify the actual squashfs contents, not just the tarball input tree.
         extracted = work / "appimage-contents"
