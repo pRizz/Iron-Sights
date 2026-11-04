@@ -7,4 +7,5 @@ fi
 bun scripts/bright-builds-check.ts all
 python=$(git config --get midas.galleryPython || true)
 if [ -z "$python" ]; then python=python3; fi
+"$python" scripts/port/settings_placement.py
 exec "$python" scripts/port/hand_gallery.py pre-commit

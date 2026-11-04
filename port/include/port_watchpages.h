@@ -20,7 +20,8 @@
  *
  *   Game Options tab   GENERAL (the face: volume bars, Rare's general
  *                                 settings + screen, the two pickers)
- *                        GAMEPLAY -> HUD / PORTOPTS
+ *                        GAMEPLAY -> GENSETTINGS / HUD / PORTOPTS / IRONSIGHTS
+ *                                    IRONSIGHTS -> IS_AIM / IS_FEEDBACK / IS_HUD / IS_SYSTEM
  *                        DISPLAY  -> VIDEO / AUDIO / GRAPHICS
  *   Control tab        CONTROLLER (input device, then three submenus)
  *                        BINDS (rebind inputs: bindings mode + the bind list)
@@ -41,6 +42,11 @@ enum PortWatchPage {
     PORTWATCH_AUDIO,
     PORTWATCH_GRAPHICS,
     PORTWATCH_GENSETTINGS,      /* the port's General Settings (Rare's four are on the face) */
+    PORTWATCH_IRONSIGHTS,       /* picker: the settings Iron Sights adds, in four subsections */
+    PORTWATCH_IS_AIM,
+    PORTWATCH_IS_FEEDBACK,
+    PORTWATCH_IS_HUD,
+    PORTWATCH_IS_SYSTEM,
     PORTWATCH_CONTROLLER,       /* the Control Options tab */
     PORTWATCH_CONTROLLER_MORE,  /* the device's own page: mouse and keyboard, or controller */
     PORTWATCH_CTLGENERAL,       /* general control options */

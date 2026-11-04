@@ -22,7 +22,7 @@ There is no emulator dependency or runtime download. The executable embeds
 records their source paths and SHA256 fingerprints. The ZIP includes credits
 and the CC0 license. Original ROM glyph pixels are not embedded by this feature.
 
-**Options > Display > Video > Enhanced Fonts** is on by default, including for
+**Options > Gameplay > Iron Sights > System > Enhanced Fonts** is on by default, including for
 existing configurations without the new key. Set `[display] enhanced_fonts=0`
 for original text. Both the frontend and watch offer this setting. It is
 independent of 2D Filtering: HD glyphs retain smooth filtering while other HUD

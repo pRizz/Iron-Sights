@@ -67,7 +67,7 @@ if (!$Menu -and $Players -eq 1) {
             'P 160 8000 0 0', 'P 162 0 0 0', 'P 320 2000 0 0','P 440 0 0 0','P 2200 0 0 0')
     }
 }
-if ($Menu) { $auditEnv.Remove('GE_STAGE'); $auditEnv.Remove('GE_HUD_AUDIT'); $auditEnv.GE_MENU='hud'; $auditEnv.GE_SHOT='500'; $auditEnv.GE_FRAMES='650' }
+if ($Menu) { $auditEnv.Remove('GE_STAGE'); $auditEnv.Remove('GE_HUD_AUDIT'); $auditEnv.GE_MENU='zhud'; $auditEnv.GE_SHOT='500'; $auditEnv.GE_FRAMES='650' }
 if ($Players -gt 1) { $auditEnv.Remove('GE_STAGE'); $auditEnv.GE_MP='temple'; $auditEnv.GE_MPPLAYERS=[string]$Players; $auditEnv.GE_SKIPINTRO='1' }
 $saved = @{}
 try {

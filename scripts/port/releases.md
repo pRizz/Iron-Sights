@@ -151,7 +151,7 @@ Local builds say local, and missing Git metadata never invents a commit/run.
 builds. These display fields are informational; use the attestation to verify
 downloaded bytes.
 
-Both Port Options menus open the About dialog. Windows uses native hyperlink
+Both Iron Sights System menus open the About dialog. Windows uses native hyperlink
 controls (blue underlined links), keyboard navigation and the default browser.
 Only baked HTTPS GitHub links are opened. Without a usable browser the dialog
 reports the failure. Linux provides native dialog buttons for the same links.

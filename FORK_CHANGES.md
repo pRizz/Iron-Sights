@@ -30,6 +30,133 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-044 — Iron Sights settings page and placement rule
+
+**Status:** Implemented; part of the Windows build the user play-tested for FORK-043.
+
+Upstream's settings pages held fork settings mixed in with upstream's. Every
+setting this fork adds now lives under **Gameplay > Iron Sights**, in four
+subsections, in both the Options folder and the watch:
+
+| Subsection | Settings |
+| --- | --- |
+| Aiming and Movement | Aim Mode, Knife ADS, Sprint |
+| Combat Feedback | Hit Markers, Hit Sounds, Damage Direction |
+| HUD Additions | Always Crosshair Size, Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
+| System | About / Build Info, Texture Pack (desktop), Enhanced Fonts, Crash Reporting (Windows/Linux) |
+
+The watch's Iron Sights page also holds the Suspend Points action, which moved
+there from the watch's Gameplay page. Rows left General Settings, HUD, Port
+Options and Video, so those pages are back to upstream's rows plus upstream-owned
+port settings. Enhanced Fonts now applies immediately, as it already did on the
+watch, rather than waiting for the Video sheet's Apply Changes. Crash Reporting
+is new on the watch. midas.ini keys, sections and defaults are unchanged.
+Fork changes to upstream settings, such as Mission Timer's cheat targets,
+stay on upstream's pages.
+
+The folder uses its existing page-link rows (`SHROW_GOSHEET`): new sheet kinds
+appended after Classic, titles, help lines and a `GE_MENU=zironsights` /
+`zaim` / `zfeedback` / `zhud` / `zsystem` harness (`i` was already the mission
+grid). The watch adds five pages before `PORTWATCH_CONTROLLER`, which moves the
+Control tab's `GE_WATCHPAGE` numbers up by five; Game Options pages keep theirs.
+The HUD, sight, HD texture and browser crosshair-size audits now open the new
+pages; the watch sight audit uses `GE_WATCHPAGE=3,12,0,0`.
+
+AGENTS.md now requires new fork settings to go on these pages. The ROM-free
+[placement check](scripts/port/settings_placement.py) treats every option key
+missing from [the baseline key list](scripts/port/settings_upstream_keys.txt)
+(generated from `9062f9f`, the 1.0.2b baseline) as a fork setting. It fails when
+a fork setting is missing from either menu's Iron Sights pages or appears on an
+upstream page, or when an upstream setting appears on an Iron Sights page.
+Documented ini-only or single-menu exceptions live in the script. The
+pre-commit hook runs it before gallery verification.
+
+**Sources:** [folder sheets](src/game/front.c),
+[watch pages](port/src/port_watchpages.c) and [enum](port/include/port_watchpages.h),
+[help](port/src/port_option_help.c), [AGENTS.md](AGENTS.md),
+[standards overrides](standards-overrides.md), [hook](.githooks/pre-commit),
+[audits](scripts/port/audit_sights.ps1), [HUD audit](scripts/port/audit_hud.ps1),
+[HD audit](scripts/port/audit_hd_textures.ps1),
+[browser audit](web/tools/crosshair-size-audit.mjs), [README](README.md),
+[settings reference](tools/midas_ini_help.txt) and the feature guides that name
+menu paths.
+**Checks:** [placement tests](scripts/port/test_settings_placement.py) cover
+option parsing, a clean layout, a setting missing from one menu, a fork setting
+on an upstream page, an upstream setting on an Iron Sights page, and the
+repository itself; the committed pre-change layout produced 55 errors.
+
+### FORK-043 — Distance-independent hit sounds
+
+**Status:** Implemented; the user's Windows play-test on Dam confirmed distant hits sound as they do up close. The web target was not built or tested with it.
+
+Added **Gameplay > Iron Sights > Combat Feedback > Hit Sounds**, on by default, next to Hit Markers. Upstream
+plays `HIT_BULLET_FLESH_SFX` at a struck guard's position (`gunfire.c`), with the
+shared distance fade from `sub_GAME_7F0539E4`: full volume within 200 units,
+fading to silent at 6000, so distant hits are barely heard. A player's bullet
+plays that impact just before applying its damage (`chr.c`). `gunfire.c` now
+reports each bullet flesh impact it starts, and when the same tick's damage to
+that character is confirmed by the hook that raises the hit marker in
+`chraction.c`, the impact's volume is set to full before it starts. The native
+voice, sample and pan are kept, so a confirmed hit sounds exactly as it does up
+close. Unconfirmed impacts, such as on a character that takes no damage, keep
+their native fade. Each shotgun pellet raises its own impact, as up close.
+Fists and knives play other native sounds, and mines, gadgets and the watch
+laser play no impact, so none of them change. Thrown knives keep the native
+fade, because their damage lands before their impact sound starts. The boost is
+solo only, because split-screen players share speakers. Headshots use the same
+sound; the gold marker remains their cue. The setting is a `[display]
+hit_sounds` midas.ini key with folder/watch rows and help text; it does not
+change the visual Hit Markers setting (FORK-007). Its rows are on the Iron
+Sights pages (FORK-044).
+
+This replaced the first prototype, which played a second copy at the volume the
+native copy lost to distance. The synth's loudness grows with roughly the square
+of a voice's volume, so the two partial voices peaked 3 to 6 dB below a
+point-blank hit at 5 to 50 m, and play-testing still heard distant hits as
+distant. The squaring is native (`src/libultrare/audio/env.c` maps each voice's
+volume to its square "to give something close to loudness"), and AGENTS.md now
+tells later work to record audible changes rather than reason from volume
+arithmetic. A review of the fork's other volume code found nothing else that adds
+or splits volumes: the Music/FX percent sliders map linearly to the native raw
+volume as upstream's sliders do, so the mixer's squaring gives them its intended
+loudness taper, and Stereo Pan posts a native pan value that the mixer's
+equal-power table applies.
+
+**Audit:** `scripts/port/audit_hit_sound.ps1` runs an isolated Dam copy with
+music muted. `GE_HITSOUND_PROBE=<metres,...>` replays a hit at each distance from
+a stand-in character above Bond, with Hit Sounds off and then on, through the
+native impact and the confirmation hook. It does not fire a gun or apply damage.
+`GE_AUDIO_CAPTURE=<path.wav>` records the mixed 22050 Hz output before the
+unfocused-window mute, and the probe log gives each hit's frame.
+`hit_sound_capture.py` measures each hit's peak stereo power against the nearest
+unraised hit. It fails a raised hit more than 10% from it or an unraised far hit
+that no longer fades, and writes `hits_compare.wav` with each distance off then
+on. Captures stay in the ignored `build_win/hitsound-audit-*` directories.
+
+**Sources:** [hit sound policy](port/src/port_hit_sound.c),
+[header](port/include/port_hit_sound.h), impact hook in
+[gunfire.c](src/game/gunfire.c), damage hook in
+[chraction.c](src/game/chraction.c), option bridge in
+[joy_port.c](port/src/joy_port.c), rows in [port_options.c](port/src/port_options.c),
+[front.c](src/game/front.c) and [port_watchpages.c](port/src/port_watchpages.c),
+[help](port/src/port_option_help.c), [default ini](port/src/video.c),
+[settings reference](tools/midas_ini_help.txt); audit harness in
+[probe](port/src/port_hit_sound_probe.c) (ticked from [lv.c](src/game/lv.c)),
+[capture](port/src/port_audio_capture.c) (fed from
+[audio_pc.c](port/src/audio_pc.c)), [env list](port/src/port_console_env.h),
+[audit](scripts/port/audit_hit_sound.ps1) and
+[measurement](scripts/port/hit_sound_capture.py); audio rule in
+[AGENTS.md](AGENTS.md#repo-local-guidance).
+**Checks:** [hit sound tests](scripts/port/test_hit_sound.sh) cover raising the
+matching impact once, per-pellet impacts, ignoring other characters' and older
+impacts, and split-screen and setting gating.
+[Measurement tests](scripts/port/test_hit_sound_capture.py) cover log parsing and
+the pass/fail rules. The audit on Dam measured raised hits at 5 to 58 m within
+0.1 dB of point blank, while unraised hits faded from -3.2 dB at 5 m to
+-20.5 dB at 50 m; the same measurement fails a capture of the two-copy
+prototype. The 58 m unraised hit is masked by an unrelated Dam sound in its
+window, and the gunfire-to-damage path itself was not scripted.
+
 ### FORK-042 — Stray casing polygons in the browser
 
 **Status:** Implemented; real-ROM acceptance recorded below.
@@ -438,7 +565,7 @@ actual control-unlock predicate, pauses while the watch, menus, console or
 cutscenes take control, and hides with the HUD or on death. Mission starts and
 restarts rearm it; generic HUD/inventory resets do not. Suspend-point restores
 dismiss it. Multiplayer, browser, Xbox and headless targets omit the overlay.
-**Gameplay > HUD > Mission Start Hints** is available in the desktop folder
+**Gameplay > Iron Sights > HUD Additions > Mission Start Hints** is available in the desktop folder
 and watch menus. It defaults on (`[display] mission_hints=1`) with a saved
 completed-display count (`mission_hints_shown=0`). After three complete windows
 that actually rendered a hint, the setting automatically turns off. Shortened
@@ -603,7 +730,7 @@ passes with zero changed image cells.
 **Status:** Native Windows/Linux OpenGL environment pack; HD is the fresh-config default.
 
 Adds an optional HD environment replacement path beyond upstream's inherited
-BMP pool-byte rewrites, which retain N64 resolution/palettes. **Port Options >
+BMP pool-byte rewrites, which retain N64 resolution/palettes. **Gameplay > Iron Sights > System >
 Texture Pack** in the frontend and watch selects Original/HD/4K through saved
 `[display] texture_pack=0/1/2`. Web/Xbox omit this setting and replacement path.
 Native startup now requests HD (`1`) unless an existing saved value overrides it.
@@ -909,7 +1036,7 @@ Physical Steam Deck validation remains pending.
 
 **Status:** Implemented.
 
-Adds Windows and Linux reporting, default ON, with a persistent Port Options toggle
+Adds Windows and Linux reporting, default ON, with a persistent Iron Sights > System toggle
 and early section-aware `[diagnostics] crash_reporting=0` opt-out. OFF stops the
 SDK and clears its dedicated queue; `GE_CRASH_REPORTING=0` suppresses a process.
 Render/audit runs suppress reporting. The inherited Windows crash log remains;
@@ -1599,7 +1726,7 @@ Contributing, alongside the existing contribution links.
 
 **Status:** Implemented.
 
-Throwing knives now also support single-hand ADS. **Gameplay > General Settings
+Throwing knives now also support single-hand ADS. **Gameplay > Iron Sights > Aiming and Movement
 > Knife ADS** selects **Butt Centered** (default, `[display] knife_ads=0`) or
 **Tip Centered** (`knife_ads=1`) in the frontend and watch. The simple style
 retains the stock blade grip/orientation and depth, translating the handle butt
@@ -1725,7 +1852,7 @@ the changed views were reviewed. The optimized Wasm build and its logo-payload
 audit pass.
 
 Added aim-down-sights for 21 supported firearms with individual weapon poses
-and sight alignment. Right mouse defaults to ADS; **Gameplay > General Settings
+and sight alignment. Right mouse defaults to ADS; **Gameplay > Iron Sights > Aiming and Movement
 > Aim Mode** can restore the red reticle. The existing hold/toggle aim setting
 applies to either mode, with Hold as the default. The separate hold-to-ADS
 action is now unbound by default on desktop and web, replacing its middle-mouse
@@ -2016,7 +2143,7 @@ wheel bindings apply. Existing zoom controls remain available.
 
 **Status:** Implemented.
 
-Added **Gameplay > General Settings > Sprint**, on by default. Holding the
+Added **Gameplay > Iron Sights > Aiming and Movement > Sprint**, on by default. Holding the
 rebindable **Walk / Sprint** action (Left Shift by default) boosts movement to
 1.5 times normal speed. Aiming and crouching prevent the sprint boost. Turning
 the setting off restores the original half-speed Shift-to-walk behavior; aim
@@ -2039,6 +2166,7 @@ Directional red damage arcs point toward the source and track the player's view
 as it turns. Fixed the initial left/right reversal and replaced blocky lines
 and segmented arcs with smooth strokes/curves. Feedback state is per player,
 uses simulation time, and hides when gameplay controls are unavailable.
+FORK-043 adds the separate Hit Sounds setting from the same character-damage hook.
 
 **Sources:** [HUD state/rendering](port/src/port_hud.c),
 [character damage](src/game/chraction.c), [explosions](src/game/explosion.c),
@@ -2173,9 +2301,9 @@ styles, and ammo/player-name spacing in solo, two- and four-player layouts.
 
 **Status:** Implemented.
 
-**Gameplay > HUD > Always Crosshair Size** adjusts the always-on target from 10%
-to 200% in five-point steps; 100% preserves the existing default. The watch HUD
-page exposes the same explicit label, clarifying that other sights are unaffected;
+**Gameplay > Iron Sights > HUD Additions > Always Crosshair Size** adjusts the always-on target from 10%
+to 200% in five-point steps; 100% preserves the existing default. The watch's
+Iron Sights page exposes the same explicit label, clarifying that other sights are unaffected;
 both menus leave room for the longer label beside the slider and percentage.
 A live vector preview sits beside each slider,
 using the current crosshair colour and HUD Scale. Mouse dragging, wheel, keys
@@ -2231,7 +2359,7 @@ aiming, menu cursors and split-screen layouts.
 
 **Status:** Implemented.
 
-Added **Gameplay > HUD > Weapon Strip Style: Text / Icons** (`weapon_hud_icons`),
+Added **Gameplay > Iron Sights > HUD Additions > Weapon Strip Style: Text / Icons** (`weapon_hud_icons`),
 with Text as the default. Icon mode now uses 35 full-color, transparent
 512 x 160 renders of actual weapon models, retaining original materials and
 separate silenced/gold/silver appearances. Unarmed uses the hand/forearm model: six extra wardrobe variants match the
@@ -2319,6 +2447,8 @@ without ROMs, extracted assets, caches or raw captures. Repository instructions
 require fresh references alongside rendering changes and explicit image review.
 Bright Builds adoption (FORK-023) preserves these rules and the former project
 PR checklist while installing managed standards and extending the existing hook.
+The Iron Sights settings rule (FORK-044) keeps fork settings on their own menu
+pages, with a ROM-free check in the same hook.
 
 **Sources:** [AGENTS.md](AGENTS.md), [FORK_CHANGES.md](FORK_CHANGES.md),
 [CONTRIBUTING.md](CONTRIBUTING.md), [README.md](README.md),
@@ -2331,7 +2461,7 @@ behavior changed by the inventory/rule addition.
 
 **Status:** Implemented.
 
-Added **Gameplay > HUD > Health Display: Automatic / Always**, defaulting to
+Added **Gameplay > Iron Sights > HUD Additions > Health Display: Automatic / Always**, defaulting to
 **Always** (`[display] always_health=1`) on all platforms. Both the shared
 in-memory default and first-run INI writer use Always; existing saved choices
 remain authoritative. This restores the original fork default and supersedes
@@ -2351,7 +2481,7 @@ timers are unchanged.
 **Sources:** [HUD state and gauge styling](port/src/port_hud.c),
 [gauge rendering](src/game/bondview2.c), [settings](port/src/port_options.c),
 [first-run defaults](port/src/video.c),
-frontend/watch HUD pages, [README](README.md),
+frontend/watch Iron Sights pages, [README](README.md),
 [INI reference](tools/midas_ini_help.txt).
 **Checks:** [HUD tests](scripts/port/test_hud.sh) cover idle timing at
 30/60/120/240 Hz, pause/player isolation, damage refresh with indicators off,
@@ -2390,8 +2520,8 @@ pass. Evidence is private under `build/file-menu-*`, `build/web-files` and
 
 Added four manual slots per campaign folder, a separate quicksave and one
 undo-load image. F6 opens Suspend Points, F5 quicksaves, F9 quickloads and F8
-undoes a load; all actions are rebindable for keyboard/controllers. The watch
-Gameplay page also opens the menu. Rows show mission, difficulty, save date/time
+undoes a load; all actions are rebindable for keyboard/controllers. The watch's
+Gameplay > Iron Sights page also opens the menu (FORK-044). Rows show mission, difficulty, save date/time
 and elapsed mission time. Manual overwrite requires confirmation. Loads first
 preserve the running mission as an undo point, then resume gameplay immediately.
 Compact three-second toasts identify saved/loaded manual slots, quicksave or
@@ -3065,7 +3195,7 @@ cache cases and text layout without a cache. Python exporter tests passed.
 
 **Status:** Implemented.
 
-Frontend and watch Port Options pages offer **About / Build Info**.
+Frontend and watch Iron Sights > System pages offer **About / Build Info**.
 The frontend now honors the action row's label instead of falling through to
 the invalid-option `?` fallback; its helper explains build version, commit,
 timestamp and source links through `port_option_help.c`.
@@ -3151,7 +3281,7 @@ Private evidence is under `build/build-time` and ignored `build_win` logs.
 
 **Status:** Implemented.
 
-Added default-on **Display > Video > Enhanced Fonts** (`enhanced_fonts=1`) to
+Added default-on **Gameplay > Iron Sights > System > Enhanced Fonts** (`enhanced_fonts=1`) to
 the frontend and watch, independently of 2D Filtering. Replaces matching Latin
 font textures with 186 eight-times-resolution community Bank Gothic/Zurich
 Bold masks from Carnivorous's CC0 GEPD texture pack, published by Graslu at

@@ -47,6 +47,7 @@
 #include <PR/libaudio.h>
 #include <PR/abi.h>
 #include "port_audio_bounds.h"
+#include "port_audio_capture.h"
 
 /* ---- config ------------------------------------------------------------ */
 
@@ -1266,6 +1267,8 @@ void portAudioPump(void)
                 }
             }
         }
+
+        portAudioCaptureFrame(frameBuf, samples); /* GE_AUDIO_CAPTURE harness */
 
         { /* [display] mute_unfocused: silence at the output, so the game's
            * own volumes and the saved ones are never touched */

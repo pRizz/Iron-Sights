@@ -187,7 +187,7 @@ padN_stickmode.
                       |            | when not aiming
   always_crosshair_size | 100      | Size in percent, 10-200 (menu steps of 5).
                       |            | 100 preserves the original size. Live slider
-                      |            | and preview in Gameplay > HUD and watch HUD.
+                      |            | and preview in Iron Sights > HUD Additions.
                       |            | Shared in solo/multiplayer; does not resize
                       |            | the aiming reticle, scope or menu cursor.
   mission_timer       | 0          | Mission Timer: elapsed MM:SS:CC top-left
@@ -199,10 +199,12 @@ padN_stickmode.
                       |            | has a saved record (except 007). 17:03+ = save cap.
   watch_static        | 1          | 0 removes the watch's static and sound
   hit_markers         | 1          | Brief marker on confirmed character damage
+  hit_sounds          | 1          | Solo: confirmed hits keep their close-range
+                      |            | flesh impact sound at any distance
   damage_indicators   | 1          | Red arcs toward the source of damage
   objective_notifications | 1     | Named objective status alerts; 0 = original
   mission_hints       | 1          | Desktop solo mission-start control hints.
-                      |            | Gameplay > HUD > Mission Start Hints.
+                      |            | Iron Sights > HUD Additions.
                       |            | Eight seconds; fades over the final two.
                       |            | Turns off after three complete displays.
                       |            | Re-enable to reset the count (next mission).
@@ -398,7 +400,7 @@ Port actions (extra actions beyond the N64 pad)
   quickload        | F9               | Load the quicksave and resume gameplay
   undo_load        | F8               | Return to the state before the last load
 
-  Suspend Points is also under Watch > Gameplay. Four manual slots, quicksave,
+  Suspend Points is also under Watch > Gameplay > Iron Sights. Four manual slots, quicksave,
   and undo-load are stored separately for each campaign folder in Data/SaveStates.
   Arrows choose a slot and Save/Load; Enter accepts; Escape resumes. Controllers
   use Move/D-pad, Use/Menu Accept, and Menu Back. All four shortcut actions are
@@ -413,7 +415,7 @@ Port actions (extra actions beyond the N64 pad)
   Rebuilding invalidates older suspend points. Campaign saves/settings remain
   separate and are not rolled back. See scripts/port/save_states.md in source.
 
-  Aim Mode (Gameplay > General Settings) selects ADS or Red Reticle for Aim
+  Aim Mode (Iron Sights > Aiming and Movement) selects ADS or Red Reticle for Aim
   (Mouse Right by default). ADS is the default, including with an existing ini
   that has no aim_mode key. Aim Control selects Hold or Toggle for either mode.
   Hold Mouse Right with the default Hold setting; Mouse Middle has no default
@@ -428,7 +430,7 @@ Port actions (extra actions beyond the N64 pad)
 
 Retired keys (ignored): run, walk_toggle.
 
-  Sprint (Gameplay > General Settings) defaults to on, including with an
+  Sprint (Iron Sights > Aiming and Movement) defaults to on, including with an
   existing ini that has no sprint key. Walk / Sprint uses the existing walk
   binding for keyboard and controllers. Aiming and crouching prevent the
   sprint boost; ADS still moves at half speed, with no extra Shift slowdown.

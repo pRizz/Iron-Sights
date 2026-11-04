@@ -2,7 +2,7 @@
 
 Windows and Linux player releases report crashes to the `iron-sights` project in the
 Bright Builds Sentry organization. Reporting defaults to **ON**. Disable it in
-**Port Options > Crash Reporting**, or edit the executable's `midas.ini` before
+**Gameplay > Iron Sights > System > Crash Reporting**, or edit the executable's `midas.ini` before
 starting:
 
 ```ini

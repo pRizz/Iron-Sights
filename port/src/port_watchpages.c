@@ -89,7 +89,7 @@ static const struct PortWatchRowDef sGameplay[] = {
     { PWROW_SUBSCREEN, NULL, "General Settings\n", PORTWATCH_GENSETTINGS, 0 },
     { PWROW_SUBSCREEN, NULL, "HUD\n",              PORTWATCH_HUD,         0 },
     { PWROW_SUBSCREEN, NULL, "Port Options\n",     PORTWATCH_PORTOPTS,    0 },
-    { PWROW_ACTION,    NULL, "Suspend Points\n", 100, 0 },
+    { PWROW_SUBSCREEN, NULL, "Iron Sights\n",      PORTWATCH_IRONSIGHTS,  0 },
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
 static const struct PortWatchRowDef sDisplay[] = {
@@ -104,20 +104,10 @@ static const struct PortWatchRowDef sHud[] = {
     /* sight on-screen and ammo on-screen lead and follow this row in the
      * folder; on the watch they are on the face, where Rare had them */
     { PWROW_OPT,       "always_crosshair", NULL, 0, 0 },
-    { PWROW_OPT,       "always_crosshair_size", NULL, 0, 0 },
     /* Crosshair colour, where the folder has it. It is a STRING key, so it has its own kind: the
      * folder's named list shared through front.c portXhair*, shown under Always Crosshair. */
     { PWROW_XHAIR,     NULL, "Crosshair Colour\n", 0, 0 },
     { PWROW_OPT,       "mission_timer",    NULL, 0, 0 },
-    { PWROW_OPT,       "hit_markers",      NULL, 0, 0 },
-    { PWROW_OPT,       "damage_indicators", NULL, 0, 0 },
-    { PWROW_OPT,       "objective_notifications", NULL, 0, 0 },
-#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
-    { PWROW_OPT,       "mission_hints", NULL, 0, 0 },
-#endif
-    { PWROW_OPT,       "weapon_hud",       NULL, 0, 0 },
-    { PWROW_OPT,       "weapon_hud_icons", NULL, 0, 0 },
-    { PWROW_OPT,       "always_health",    NULL, 0, 0 },
     { PWROW_OPT,       "pause_pillars",    NULL, 0, 0 },
     /* aim lock, stamina sway and steady scope moved to General Settings */
     { PWROW_PLAYEROPT, NULL, NULL, PLAYER_OPTION_RATIO, 0 }, /* lodger: "hud" (romdata.c relabel) */
@@ -130,19 +120,12 @@ static const struct PortWatchRowDef sHud[] = {
 /* GENERAL SETTINGS: the folder's General Settings less Rare's four vanilla options, which are
  * already on the face */
 static const struct PortWatchRowDef sGenSettings[] = {
-    { PWROW_OPT,       "aim_mode",         NULL, 0, 0 },
-    { PWROW_OPT,       "knife_ads",        NULL, 0, 0 },
-    { PWROW_OPT,       "sprint",           NULL, 0, 0 },
     { PWROW_OPT,       "aim_lock",         NULL, 0, 0 },
     { PWROW_OPT,       "scope_steady",     NULL, 0, 0 },
     { PWROW_OPT,       "head_roll",        NULL, 0, 0 },
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
 static const struct PortWatchRowDef sPortOpts[] = {
-    { PWROW_ACTION, NULL, "About / Build Info\n", 101, 0 },
-#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
-    { PWROW_OPT, "texture_pack", NULL, 0, 0 },
-#endif
     { PWROW_OPT,       "unlock_all",         NULL, 0, 0 },   /* first */
     { PWROW_OPT,       "fix_shootthrough",   NULL, 0, 0 },
     { PWROW_OPT,       "distance_fading",    NULL, 0, 0 },
@@ -155,6 +138,50 @@ static const struct PortWatchRowDef sPortOpts[] = {
     { PWROW_OPT,       "setting_help",       NULL, 0, 0 },   /* the folder's help box; never drawn on the watch */
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
+/* IRON SIGHTS: the folder's Iron Sights page and subsections (front.c
+ * port_sheet_rows_ironsights / _is_*), plus the watch-only Suspend Points. */
+static const struct PortWatchRowDef sIronSights[] = {
+    { PWROW_SUBSCREEN, NULL, "Aiming and Movement\n", PORTWATCH_IS_AIM,      0 },
+    { PWROW_SUBSCREEN, NULL, "Combat Feedback\n",     PORTWATCH_IS_FEEDBACK, 0 },
+    { PWROW_SUBSCREEN, NULL, "HUD Additions\n",       PORTWATCH_IS_HUD,      0 },
+    { PWROW_SUBSCREEN, NULL, "System\n",              PORTWATCH_IS_SYSTEM,   0 },
+    { PWROW_ACTION,    NULL, "Suspend Points\n", 100, 0 },
+    { PWROW_BACK,      NULL, "Back\n", 0, 0 },
+};
+static const struct PortWatchRowDef sIsAim[] = {
+    { PWROW_OPT,       "aim_mode",         NULL, 0, 0 },
+    { PWROW_OPT,       "knife_ads",        NULL, 0, 0 },
+    { PWROW_OPT,       "sprint",           NULL, 0, 0 },
+    { PWROW_BACK,      NULL, "Back\n", 0, 0 },
+};
+static const struct PortWatchRowDef sIsFeedback[] = {
+    { PWROW_OPT,       "hit_markers",      NULL, 0, 0 },
+    { PWROW_OPT,       "hit_sounds",       NULL, 0, 0 },
+    { PWROW_OPT,       "damage_indicators", NULL, 0, 0 },
+    { PWROW_BACK,      NULL, "Back\n", 0, 0 },
+};
+static const struct PortWatchRowDef sIsHud[] = {
+    { PWROW_OPT,       "always_crosshair_size", NULL, 0, 0 },
+    { PWROW_OPT,       "weapon_hud",       NULL, 0, 0 },
+    { PWROW_OPT,       "weapon_hud_icons", NULL, 0, 0 },
+    { PWROW_OPT,       "always_health",    NULL, 0, 0 },
+    { PWROW_OPT,       "objective_notifications", NULL, 0, 0 },
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    { PWROW_OPT,       "mission_hints", NULL, 0, 0 },
+#endif
+    { PWROW_BACK,      NULL, "Back\n", 0, 0 },
+};
+static const struct PortWatchRowDef sIsSystem[] = {
+    { PWROW_ACTION, NULL, "About / Build Info\n", 101, 0 },
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    { PWROW_OPT, "texture_pack", NULL, 0, 0 },
+#endif
+    { PWROW_OPT,       "enhanced_fonts",   NULL, 0, 0 },
+#if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
+    { PWROW_OPT,       "crash_reporting",  NULL, 0, 0 },
+#endif
+    { PWROW_BACK,      NULL, "Back\n", 0, 0 },
+};
 
 /* DISPLAY's pages */
 static const struct PortWatchRowDef sVideo[] = {
@@ -165,7 +192,7 @@ static const struct PortWatchRowDef sVideo[] = {
     { PWROW_RESOLUTION, NULL,         "Resolution\n", 0, 0 },   /* the window / fullscreen size */
     { PWROW_OPT,        "vsync",      NULL, 0, 0 },
     { PWROW_OPT,        "widescreen", NULL, 0, 0 },
-    { PWROW_OPT,        "enhanced_fonts", NULL, 0, 0 },
+    /* enhanced fonts: Iron Sights > System */
     /* CLASSIC MODE SITS OVER WHAT IT FORCES: every row below it is one of
      * port_options.c's classic keys, locked while it is on (rowClassicLocked).
      * A row classic mode does not own goes ABOVE it - same rule as the folder. */
@@ -736,6 +763,11 @@ static const struct PortWatchPageDef {
     [PORTWATCH_VIDEO]       = PWPAGE(sVideo),
     [PORTWATCH_AUDIO]       = PWPAGE(sAudio),
     [PORTWATCH_GRAPHICS]    = PWPAGE(sGraphics),
+    [PORTWATCH_IRONSIGHTS]  = PWPAGE(sIronSights),
+    [PORTWATCH_IS_AIM]      = PWPAGE(sIsAim),
+    [PORTWATCH_IS_FEEDBACK] = PWPAGE(sIsFeedback),
+    [PORTWATCH_IS_HUD]      = PWPAGE(sIsHud),
+    [PORTWATCH_IS_SYSTEM]   = PWPAGE(sIsSystem),
     /* PORTWATCH_CONTROLLER, _MORE and _BINDS are dynamic (dynBuild): { NULL, 0 } */
     /* PORTWATCH_CTLGENERAL too (the raphnet's gadget switch) */
 #undef PWPAGE
@@ -1083,7 +1115,13 @@ s32 portWatchParentPage(s32 page)
         case PORTWATCH_GENSETTINGS:
         case PORTWATCH_HUD:
         case PORTWATCH_PORTOPTS:
+        case PORTWATCH_IRONSIGHTS:
             return PORTWATCH_GAMEPLAY;
+        case PORTWATCH_IS_AIM:
+        case PORTWATCH_IS_FEEDBACK:
+        case PORTWATCH_IS_HUD:
+        case PORTWATCH_IS_SYSTEM:
+            return PORTWATCH_IRONSIGHTS;
         case PORTWATCH_VIDEO:
         case PORTWATCH_AUDIO:
         case PORTWATCH_GRAPHICS:

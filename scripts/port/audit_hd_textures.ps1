@@ -33,7 +33,7 @@ foreach ($mode in @(0,1)) {
         GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW='1280x720'; GE_NOINPUT='1';
         GE_HD_TRACE='1'; GE_HD_DUMP='1'; GE_SEED='1'; GE_FRAMES='650'; GE_SHOT='500'; GE_SKIPINTRO='1'
     }
-    if ($Menu) { $auditEnv.GE_MENU='portopts' }
+    if ($Menu) { $auditEnv.GE_MENU='zsystem' }
     else { $auditEnv.GE_STAGE=$Stage; $auditEnv.GE_STAGE_AFTER='1'; $auditEnv.GE_CHEATS='invuln,invis' }
     if ($Gameplay) {
         Set-Content -LiteralPath (Join-Path $dir 'input.txt') -Value @('P 0 0 0 0',

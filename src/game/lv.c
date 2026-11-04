@@ -1311,6 +1311,7 @@ Gfx* lvlRender(Gfx* DL)
             portSpawnWeaponTick(); /* GE_SPAWNWEAPON pickup drops */
             portSpawnWepTrace();
             portGotoTick();  /* GE_GOTO test-man steering */
+            { extern void portHitSoundProbeTick(void); portHitSoundProbeTick(); } /* GE_HITSOUND_PROBE */
 #endif
 
             if (

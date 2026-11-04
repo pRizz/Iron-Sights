@@ -28,8 +28,8 @@ checker unchanged.
 
 Standard: `standards/core/verification.md`.
 
-The existing pre-commit hook owns both Bun standards checks and staged gallery
-freshness. Manual runs for installation, debugging and review are permitted;
+The existing pre-commit hook owns the Bun standards checks, the ROM-free
+Iron Sights settings placement check and staged gallery freshness. Manual runs for installation, debugging and review are permitted;
 the hook may rerun them when committing without another confirmation. The
 gallery hook regenerates only when rendering inputs change, stops for review
 and staging, and rejects partially staged render inputs. Rules/docs maintenance

@@ -5,7 +5,7 @@ graphics are unchanged. HD is the default for fresh native configurations;
 existing saved choices are preserved, and missing packs fall back to originals.
 First-run INI generation reads the same runtime preference (`texture_pack=1`).
 In the frontend
-or pause watch, open **Port Options > Texture Pack** and choose Original, HD or
+or pause watch, open **Gameplay > Iron Sights > System > Texture Pack** and choose Original, HD or
 4K. Missing packs and unmatched or invalid textures fall back to the originals.
 The supplied HD pack includes available environment artwork across the campaign,
 including shared artwork in Surface II and Bunker II. It is not a complete
@@ -139,8 +139,8 @@ preference to exercise runtime defaults; add `-MissingPack` to compare default-H
 fallback against explicit Original without installing artwork in the audit.
 `-Gameplay` skips the intro;
 `-Reload` removes/restores only the audit's copied pack while rendering to verify
-live fallback/reload and Windows file sharing. `-Menu` checks the Port Options
-sheet. Captures, diagnostic texture dumps and copied artwork stay ignored.
+live fallback/reload and Windows file sharing. `-Menu` checks the Iron Sights
+System sheet. Captures, diagnostic texture dumps and copied artwork stay ignored.
 Audit executables are removed after their task-owned processes finish.
 
 ROM-free checks: `test_hd_textures.sh`, `test_texture_pack_preparation.py`,

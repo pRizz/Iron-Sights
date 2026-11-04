@@ -66,6 +66,29 @@ integrity without a ROM. Install the clone's pre-commit hook with `install-hook`
 the hook never stages files automatically and rejects partially staged render
 inputs. See `scripts/port/hand_gallery.md` for the capture and hook workflow.
 
+## Iron Sights settings
+
+Settings this fork adds live on the Iron Sights page, not on upstream's pages.
+In both the Options folder (`src/game/front.c`) and the watch
+(`port/src/port_watchpages.c`), Gameplay > Iron Sights opens the subsections
+Aiming and Movement, Combat Feedback, HUD Additions and System. Put a new fork
+setting in the subsection that fits its topic in both menus, or add a
+subsection when none fits. Fork-owned rows and actions (About / Build Info,
+Suspend Points) belong there too.
+
+- A fork change to an upstream setting leaves that setting where upstream put
+  it; describe the fork behavior in its help text and the inventory.
+- Keep midas.ini key names and sections stable when moving rows, so existing
+  configurations keep working.
+- A key that is deliberately ini-only, or in only one menu, needs an entry with
+  its reason in `scripts/port/settings_placement.py`.
+- `python scripts/port/settings_placement.py` enforces this against
+  `scripts/port/settings_upstream_keys.txt`, the option keys at the inherited
+  baseline; the pre-commit hook runs it. Refresh that list only when
+  `FORK_CHANGES.md` deliberately advances the baseline.
+- Update help lines (`port/src/port_option_help.c`), `tools/midas_ini_help.txt`
+  and any docs or audits that name the setting's menu path.
+
 ## Local build artifacts
 
 Do not keep previous executables as rebuild backups. The user accepts losing
@@ -116,8 +139,9 @@ pass its isolated executable rather than rebuilding an active player binary.
 - This is a C/C++ CMake game port. Bun runs development standards checks and the
   browser tooling subpackage under `web/`. Use `bun install --frozen-lockfile`
   inside `web/` for its tests/audit tooling; the repository root has no Bun package.
-- `.githooks/pre-commit` runs `bun scripts/bright-builds-check.ts all`, then staged gallery verification. Manual runs for installation, debugging or review are allowed; a commit hook rerun needs no separate confirmation.
+- `.githooks/pre-commit` runs `bun scripts/bright-builds-check.ts all`, the settings placement check, then staged gallery verification. Manual runs for installation, debugging or review are allowed; a commit hook rerun needs no separate confirmation.
 - Source changes use the relevant `scripts/port/test_*.sh` checks. Wardrobe/render changes require the arm contracts and gallery workflow above. Documentation/rules-only changes need no game rebuild or render regeneration.
+- Sound volume is not linear in loudness: the mixer squares each voice's volume (`src/libultrare/audio/env.c`), so two partial voices do not add up to one full voice. Verify audible changes by recording them, not by arithmetic: `GE_AUDIO_CAPTURE=<path.wav>` records the mixed output, and `scripts/port/audit_hit_sound.ps1` is a worked capture-and-measure audit.
 - Existing long files have a documented adoption baseline in `.bright-builds-rules-checks.tsv`; new source files remain checked. See `standards-overrides.md` before changing an exempt file.
 - When a PR is needed, use the managed PR template together with [the preserved project checklist](scripts/port/project_pr_checklist.md), `CONTRIBUTING.md` and the fork inventory requirement.
 - Standards maintenance and Windows setup: [Bright Builds workflow](scripts/port/bright_builds_rules.md). Managed file updates are reviewed manually and update `FORK_CHANGES.md`; unattended updates are disabled.

@@ -2346,6 +2346,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "aim_mode=1\n");
     fprintf(f, "sprint=1\n");
     fprintf(f, "hit_markers=1\n");
+    fprintf(f, "hit_sounds=1\n");
     fprintf(f, "damage_indicators=1\n");
     fprintf(f, "objective_notifications=1\n");
     fprintf(f, "mission_hints=1\nmission_hints_shown=0\n");

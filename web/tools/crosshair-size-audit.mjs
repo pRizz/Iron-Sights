@@ -41,7 +41,7 @@ await page.route('**/runtime/*/ProjectMidas.mjs', async (route) => {
             cursorAddresses.map((address) => `HEAPF32[${address / 4}]`).join(',') +
             '];',
     );
-    source = source.replace('var ENV = {};', "var ENV = { GE_MENU: 'hud,900' };");
+    source = source.replace('var ENV = {};', "var ENV = { GE_MENU: 'zhud,900' };");
     await route.fulfill({
         response,
         body: source.replace(
@@ -104,13 +104,13 @@ try {
     const band = Math.min(bounds.width, (bounds.height * 4) / 3);
     const pointer = {
         x: bounds.x + (bounds.width - band) / 2 + (286 * band) / 440,
-        y: bounds.y + (100 * bounds.height) / 330,
+        y: bounds.y + (60 * bounds.height) / 330,
     };
     await page.mouse.move(pointer.x, pointer.y);
     await page.waitForTimeout(200);
     const current = await page.evaluate(() => crosshairAuditGame.auditCursor());
     assert.ok(
-        Math.abs(current[0] - 286) < 1.6 && Math.abs(current[1] - 100) < 1.6,
+        Math.abs(current[0] - 286) < 1.6 && Math.abs(current[1] - 60) < 1.6,
         'Slider requires a cursor offset workaround',
     );
     const point = (x) => ({ x: pointer.x + ((x - 286) * band) / 440, y: pointer.y });

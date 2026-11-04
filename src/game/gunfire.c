@@ -44,6 +44,7 @@
 #include "gbi_extension.h"
 #ifndef TARGET_N64
 #include "port_hud.h"
+#include "port_hit_sound.h"
 #include "port_mission_clock.h"
 #include "boss.h"
 #include "port_weapon_export.h"
@@ -3003,6 +3004,9 @@ void recall_joy2_hits_edit_detail_edit_flag(enum ITEM_IDS item, PropRecord *prop
             {
                 bullet_flesh_sounds_copy = bullet_flesh_sounds;
                 sndPlaySfx((struct ALBankAlt_s* ) g_musicSfxBufferPtr, bullet_flesh_sounds_copy.arr[rnd1 % 2], sound_state);
+#ifndef TARGET_N64
+                portHitSoundImpact((ALSoundState* ) sound_state->link.next, prop); /* Hit Sounds may raise it */
+#endif
             }
 
             if (sound_state->link.next != NULL) {

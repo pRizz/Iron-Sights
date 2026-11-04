@@ -41,7 +41,7 @@ Windows 10/11, an x86-compatible CPU and an OpenGL 3.3-capable graphics driver a
 
 **Steam Deck / SteamOS:** [Steam Deck ZIP](https://github.com/pRizz/Iron-Sights/releases/latest/download/Iron-Sights-steamdeck-i686.zip) packages the same i686 game with a `run.sh` launcher. Extract it to a writable folder, put your ROM in `Data`, then run `sh run.sh` in Desktop Mode. The ZIP includes Gaming Mode setup steps. It still needs the system's 32-bit loader, glibc 2.35+ and 32-bit OpenGL drivers; a Steam Deck device test remains pending.
 
-For the embedded build time, commit and clickable source/build/release links, open **Options > Gameplay > Port Options > About / Build Info**; the watch has the same entry. Windows links are blue and underlined and open in your default browser. Local or modified builds are labeled accordingly. The release page supplies signed provenance, hashes and build-input details; see [verification and maintainer instructions](scripts/port/releases.md).
+For the embedded build time, commit and clickable source/build/release links, open **Options > Gameplay > Iron Sights > System > About / Build Info**; the watch has the same entry. Windows links are blue and underlined and open in your default browser. Local or modified builds are labeled accordingly. The release page supplies signed provenance, hashes and build-input details; see [verification and maintainer instructions](scripts/port/releases.md).
 
 To update, replace the supplied program files while keeping **Data** and **midas.ini**. Normal campaign saves and profiles are separate from executable-specific suspend points.
 
@@ -75,8 +75,8 @@ Successful `main` builds deploy automatically to GitHub Pages. See [compatibilit
 - **Sniper scope and wheel zoom:** aim through a centered scope, turn the whole view with the mouse, and adjust magnification with the mouse wheel.
 - **Shift to sprint:** hold Left Shift to sprint; a gameplay setting can restore the original slow-walk behavior.
 - **Sharper sights and combat feedback:** smooth reticles, optional hit markers, and directional damage indicators.
-- **Enhanced fonts:** smooth, high-resolution community fonts for menus and HUD text, enabled by default in **Display > Video > Enhanced Fonts**. [Details and credits](scripts/port/enhanced_fonts.md).
-- **Native campaign HD textures:** HD is enabled by default for compressed environment artwork by intermissionfb across the campaign. Missing packs and unsupported textures fall back to the originals; existing saved preferences are preserved. Choose **Port Options > Texture Pack > Original** to opt out. HD and optional 4K packs can be replaced without rebuilding the executable. [Scope, preparation and credits](scripts/port/hd_textures.md).
+- **Enhanced fonts:** smooth, high-resolution community fonts for menus and HUD text, enabled by default in **Gameplay > Iron Sights > System > Enhanced Fonts**. [Details and credits](scripts/port/enhanced_fonts.md).
+- **Native campaign HD textures:** HD is enabled by default for compressed environment artwork by intermissionfb across the campaign. Missing packs and unsupported textures fall back to the originals; existing saved preferences are preserved. Choose **Gameplay > Iron Sights > System > Texture Pack > Original** to opt out. HD and optional 4K packs can be replaced without rebuilding the executable. [Scope, preparation and credits](scripts/port/hd_textures.md).
 - **Objective notifications:** named alerts show when mission objectives are completed or failed.
 - **Weapon inventory HUD:** a compact strip highlights your selected weapon, supports text or rendered model icons, and fades while idle.
 - **Always-visible health and armor:** persistent gauges become thinner and dimmer between hits; the original temporary display is also available.
@@ -112,13 +112,13 @@ Files next to the executable:
 | `gamecontrolleruser.txt` | Your saved controller layouts. |
 | `Data/Logs/ge_direct.log` | The run log on Windows (the game opens no console window). |
 | `Data/Logs/crash.log` | Written if the game crashes. |
-| `Data/CrashReports` | Windows/Linux crash-report queue under the writable data root. Reporting defaults ON; opt out in Port Options or `[diagnostics] crash_reporting=0` in `midas.ini`. [Payload and privacy details](scripts/port/crash_reporting.md). |
+| `Data/CrashReports` | Windows/Linux crash-report queue under the writable data root. Reporting defaults ON; opt out in Gameplay > Iron Sights > System or `[diagnostics] crash_reporting=0` in `midas.ini`. [Payload and privacy details](scripts/port/crash_reporting.md). |
 | `Mods/` | Reserved for modded carts. This build loads the stock cart only. |
 
 An older `ge.ini` is renamed to `midas.ini` automatically on first run.
 
-**Mouse Right** aims down the sights by default. Change **Gameplay > General
-Settings > Aim Mode** to **Red Reticle** for the original aiming mode. The
+**Mouse Right** aims down the sights by default. Change **Gameplay > Iron Sights > Aiming and
+Movement > Aim Mode** to **Red Reticle** for the original aiming mode. The
 existing **Aim Control** setting selects hold or toggle for either mode.
 Hold **Mouse Right** for ADS with the default Hold setting. The separate
 hold-to-ADS action is unbound by default and remains available for custom
@@ -126,7 +126,7 @@ keyboard/controller layouts; the former middle-mouse default is removed from
 older saved keyboard bindings once, preserving other custom keys.
 You can walk and strafe at half speed while aiming down sights.
 Desktop missions briefly show the current gadget/ADS bindings when control
-begins. **Gameplay > HUD > Mission Start Hints** turns them off manually;
+begins. **Gameplay > Iron Sights > HUD Additions > Mission Start Hints** turns them off manually;
 after three complete displays they turn off automatically. Re-enabling resets
 the count for subsequent missions.
 ADS adds basic low-poly hands and forearms to the 13 firearms that lack them,
@@ -144,13 +144,16 @@ and the menu/watch target cursor use thin, smoothed lines and circles.
 Custom crosshair colors still apply. Directional damage indicators use smooth curves.
 
 Hold **Left Shift** while moving to sprint at 1.5 times normal speed.
-**Gameplay > General Settings > Sprint** is on by default; turn it off to
+**Gameplay > Iron Sights > Aiming and Movement > Sprint** is on by default; turn it off to
 restore Shift-to-walk at half speed. The **Walk / Sprint** control can be rebound.
 Aiming and crouching prevent the sprint boost; ADS keeps its half-speed movement.
 
-**Gameplay > HUD** includes four new options, all on by default:
+Iron Sights adds these HUD and feedback options under **Gameplay > Iron Sights >
+Combat Feedback** and **HUD Additions**. Mission Timer is the original setting on
+**Gameplay > HUD**, extended by Iron Sights:
 
 - **Hit Markers:** thin, smoothed white lines confirm damage to a character; headshots use gold.
+- **Hit Sounds:** in solo play, a confirmed hit keeps its close-range flesh impact sound at any distance.
 - **Damage Direction:** short red arcs point toward incoming damage and follow your view as you turn.
 - **Objective Alerts:** queued notifications show the objective name and its updated status. Turn this off for the original messages.
 - **Mission Timer:** enable this to show elapsed mission time with hundredths at the top left, clear of gadget names and ammo. The clock stays visible during dialogue, with subtitles below its full timer/BEST block and objective alerts below the subtitles. On a mission/difficulty with a timed cheat unlock, its target appears beside your time (`00:42:50 / CHEAT 02:40`). The target is green while within time, amber with ten seconds remaining, and red once exceeded. Uses the same mission clock and whole-second deadline as the unlock check; pauses and suspend restores follow that clock. A saved best time for this mission and difficulty appears below as `BEST 02:03`; it is omitted if no record exists or in 007 mode. The campaign format stores whole seconds and caps records at 17:03, shown as `17:03+`. Difficulties without a cheat target still show elapsed time and any best record. Defaults to Off (`[display] mission_timer=1` enables it). Objectives and normal cheat-unlock eligibility still apply.
@@ -176,7 +179,7 @@ cheat target. These hints are always shown and do not require the HUD timer.
 
 ### Suspend points
 
-Press **F6** or open **Watch > Gameplay > Suspend Points** for four manual slots,
+Press **F6** or open **Watch > Gameplay > Iron Sights > Suspend Points** for four manual slots,
 a separate quicksave, and undo-load. Use arrows to choose a slot and Save/Load,
 then Enter to accept. Saving over an occupied manual slot asks for a second
 confirmation. Escape closes the menu. A controller can use its Move stick or

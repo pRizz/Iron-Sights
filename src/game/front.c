@@ -4010,18 +4010,25 @@ enum { PORT_SHEET_GAMEPLAY, PORT_SHEET_CONTROL, PORT_SHEET_DISPLAY, PORT_SHEET_C
         * it back there. The settings multiplayer keeps apart from solo. */
        PORT_SHEET_MPOPTS,
        /* CLASSIC: which parts Classic Mode applies, alongside Video and Audio */
-       PORT_SHEET_CLASSIC, PORT_SHEET_COUNT };
+       PORT_SHEET_CLASSIC,
+       /* IRON SIGHTS: every setting this fork adds, in subsections opened from
+        * the Iron Sights page (scripts/port/test_settings_placement.py) */
+       PORT_SHEET_IRONSIGHTS, PORT_SHEET_IS_AIM, PORT_SHEET_IS_FEEDBACK, PORT_SHEET_IS_HUD,
+       PORT_SHEET_IS_SYSTEM, PORT_SHEET_COUNT };
 /* The Options folder's rows, top to bottom, at the Files menu's own row
  * coordinates (y 0xDC, pitch 0x20). Each is a submenu:
  *
  *   DISPLAY  -> VIDEO, AUDIO, CLASSIC
- *   GAMEPLAY -> GENERAL SETTINGS, HUD
+ *   GAMEPLAY -> GENERAL SETTINGS, HUD, PORT OPTIONS, IRON SIGHTS
  *   CONTROL  -> PLAYER n -> MOUSE AND KEYBOARD or CONTROLLER (whichever the
  *               device is), GENERAL CONTROL OPTIONS
  */
 #define PORT_OPTIONS_ROWS 3
-#define PORT_OPTIONS_ROW_Y0    0xDC
 #define PORT_OPTIONS_ROW_PITCH 0x20
+/* A hub with more pages starts higher, so its last row sits where the
+ * folder's third does rather than on the picture's bottom edge. */
+#define PORT_OPTIONS_ROW_Y0    (0xDC - (portOptionsRowCount() > PORT_OPTIONS_ROWS \
+                                ? (portOptionsRowCount() - PORT_OPTIONS_ROWS) * PORT_OPTIONS_ROW_PITCH : 0))
 static const s32 port_options_row_kind[PORT_OPTIONS_ROWS] = {
     PORT_SHEET_GAMEPLAY, PORT_SHEET_CONTROL, PORT_SHEET_DISPLAY,
 };
@@ -4031,7 +4038,8 @@ static const char *const port_sheet_title[PORT_SHEET_COUNT] = { "GAMEPLAY\n", "C
         "CREDITS\n", "PLAYER\n", "REBIND\n", "VIDEO\n", "AUDIO\n", "GRAPHICS\n",
         "GENERAL SETTINGS\n", "HUD\n",
         "MOUSE AND KEYBOARD\n", "CONTROLLER\n", "GENERAL CONTROL OPTIONS\n", "PORT OPTIONS\n",
-        "GAMEPLAY OPTIONS\n", "CLASSIC\n" };   /* GAMEPLAY OPTIONS is not drawn: the two-column sheet has no heading */
+        "GAMEPLAY OPTIONS\n", "CLASSIC\n",   /* GAMEPLAY OPTIONS is not drawn: the two-column sheet has no heading */
+        "IRON SIGHTS\n", "AIMING AND MOVEMENT\n", "COMBAT FEEDBACK\n", "HUD ADDITIONS\n", "SYSTEM\n" };
 static s32 port_options_row_highlighted = -1; /* row under the cursor, -1 = on a tab */
 /* The folder's hubs: GAMEPLAY and AUDIO VISUAL reuse this folder screen to list
  * their pages, numbered; -1 means the folder's own three rows. A page's
@@ -4063,6 +4071,13 @@ s32 portMenuHarnessSheet(char first, char second)
     if (first == 'g') port_sheet_kind = (second == 'r') ? PORT_SHEET_GRAPHICS
                                       : (second == 'e') ? PORT_SHEET_GENERAL : PORT_SHEET_GAMEPLAY;
     else if (first == 'h') port_sheet_kind = PORT_SHEET_HUD;
+    else if (first == 'z')
+    {   /* GE_MENU=zironsights, or zaim / zfeedback / zhud / zsystem for a subsection
+         * ('i' is the mission grid) */
+        port_sheet_kind = (second == 'a') ? PORT_SHEET_IS_AIM : (second == 'f') ? PORT_SHEET_IS_FEEDBACK
+                        : (second == 'h') ? PORT_SHEET_IS_HUD : (second == 's') ? PORT_SHEET_IS_SYSTEM
+                        : PORT_SHEET_IRONSIGHTS;
+    }
     else if (first == 'd') port_sheet_kind = PORT_SHEET_DISPLAY;
     else if (first == 'a') port_sheet_kind = PORT_SHEET_AUDIO;   /* the aiming page was removed */
     else if (first == 'v') port_sheet_kind = PORT_SHEET_VIDEO;
@@ -4569,9 +4584,6 @@ static const struct PortSheetRow port_sheet_rows_general[] = {
      * DISPLAY menus already carry. Sight and ammo on
      * screen are on HUD. */
     { SHROW_OPT, "look_updown" }, { SHROW_OPT, "auto_aim" }, { SHROW_OPT, "aim_control" },
-    { SHROW_OPT, "aim_mode" },
-    { SHROW_OPT, "knife_ads" },
-    { SHROW_OPT, "sprint" },
     { SHROW_OPT, "look_ahead" },
     /* the view's three, moved here from HUD */
     { SHROW_OPT, "aim_lock" }, { SHROW_OPT, "scope_steady" }, { SHROW_OPT, "head_roll" },
@@ -4579,13 +4591,6 @@ static const struct PortSheetRow port_sheet_rows_general[] = {
 /* PORT OPTIONS: the port's own gameplay switches. p1 ends
  * match is ini-only (default on); play as ssf character is ini-only. */
 static const struct PortSheetRow port_sheet_rows_portopts[] = {
-    { SHROW_ABOUT, NULL, "About / Build Info\n" },
-#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
-    { SHROW_OPT, "texture_pack" },
-#endif
-#if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
-    { SHROW_OPT, "crash_reporting" },
-#endif
     { SHROW_OPT, "unlock_all" },   /* first */
     { SHROW_OPT, "fix_shootthrough" }, { SHROW_OPT, "distance_fading" },
     { SHROW_OPT, "true_enemy_rockets" },
@@ -4598,17 +4603,8 @@ static const struct PortSheetRow port_sheet_rows_portopts[] = {
 };
 static const struct PortSheetRow port_sheet_rows_hud[] = {
     { SHROW_OPT, "sight_on_screen" }, { SHROW_OPT, "always_crosshair" },
-    { SHROW_OPT, "always_crosshair_size" },
     { SHROW_XHAIR, NULL },   /* under Always Crosshair */
     { SHROW_OPT, "ammo_on_screen" }, { SHROW_OPT, "mission_timer" },
-    { SHROW_OPT, "hit_markers" }, { SHROW_OPT, "damage_indicators" },
-    { SHROW_OPT, "objective_notifications" },
-#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
-    { SHROW_OPT, "mission_hints" },
-#endif
-    { SHROW_OPT, "weapon_hud" },
-    { SHROW_OPT, "weapon_hud_icons" },
-    { SHROW_OPT, "always_health" },
     /* center mission timer goes here - no such option exists yet */
     { SHROW_OPT, "pause_pillars" },
     /* aim lock, stamina sway and steady scope moved to General Settings */
@@ -4692,11 +4688,47 @@ static const struct PortSheetRow port_sheet_rows_ctlgeneral[] = {
     { SHROW_OPT, "no_aim_crouch" },          /* aim + down does not crouch (bondview2.c) */
     { SHROW_OPT, "background_input" },       /* pads work while the window is unfocused */
 };
+/* IRON SIGHTS: the settings this fork adds, kept off upstream's pages so they
+ * are easy to tell apart and upstream merges stay small. A new fork setting
+ * goes in the subsection that fits it, on the watch too (port_watchpages.c);
+ * scripts/port/test_settings_placement.py checks both. */
+static const struct PortSheetRow port_sheet_rows_ironsights[] = {
+    { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_AIM },
+    { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_FEEDBACK },
+    { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_HUD },
+    { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_SYSTEM },
+};
+static const struct PortSheetRow port_sheet_rows_is_aim[] = {
+    { SHROW_OPT, "aim_mode" }, { SHROW_OPT, "knife_ads" }, { SHROW_OPT, "sprint" },
+};
+static const struct PortSheetRow port_sheet_rows_is_feedback[] = {
+    { SHROW_OPT, "hit_markers" }, { SHROW_OPT, "hit_sounds" }, { SHROW_OPT, "damage_indicators" },
+};
+static const struct PortSheetRow port_sheet_rows_is_hud[] = {
+    { SHROW_OPT, "always_crosshair_size" },   /* sizes HUD's Always Crosshair */
+    { SHROW_OPT, "weapon_hud" }, { SHROW_OPT, "weapon_hud_icons" },
+    { SHROW_OPT, "always_health" },
+    { SHROW_OPT, "objective_notifications" },
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    { SHROW_OPT, "mission_hints" },
+#endif
+};
+static const struct PortSheetRow port_sheet_rows_is_system[] = {
+    { SHROW_ABOUT, NULL, "About / Build Info\n" },
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    { SHROW_OPT, "texture_pack" },
+#endif
+    { SHROW_OPT, "enhanced_fonts" },   /* live here; it was on VIDEO, which defers */
+#if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
+    { SHROW_OPT, "crash_reporting" },
+#endif
+};
 /* AIMING page removed: every row on it was a repeat of the
  * Mouse and Keyboard or Controller page. */
 /* THE TWO PICKERS: each folder row that is a submenu, and its pages top to
  * bottom. A SHROW_GOSHEET row carries the page it opens in port_sheet_row_bind. */
-static const s32 port_sheet_gameplay_pages[] = { PORT_SHEET_GENERAL, PORT_SHEET_HUD, PORT_SHEET_PORTOPTS };
+static const s32 port_sheet_gameplay_pages[] = { PORT_SHEET_GENERAL, PORT_SHEET_HUD, PORT_SHEET_PORTOPTS,
+                                                 PORT_SHEET_IRONSIGHTS };
 static const s32 port_sheet_display_pages[] = { PORT_SHEET_VIDEO, PORT_SHEET_AUDIO, PORT_SHEET_CLASSIC };
 
 /** The Options folder screen's rows: its own three, or a hub's pages. */
@@ -4737,6 +4769,11 @@ static const char *portSheetPageLabel(s32 kind)
         case PORT_SHEET_VIDEO:    return "Video\n";
         case PORT_SHEET_AUDIO:    return "Audio\n";
         case PORT_SHEET_CLASSIC:  return "Classic\n";
+        case PORT_SHEET_IRONSIGHTS:  return "Iron Sights\n";
+        case PORT_SHEET_IS_AIM:      return "Aiming and Movement\n";
+        case PORT_SHEET_IS_FEEDBACK: return "Combat Feedback\n";
+        case PORT_SHEET_IS_HUD:      return "HUD Additions\n";
+        case PORT_SHEET_IS_SYSTEM:   return "System\n";
         case PORT_SHEET_GRAPHICS: return "Graphics\n";
         case PORT_SHEET_MOUSEKB:    return "Mouse and Keyboard\n";
         case PORT_SHEET_PAD:        return "Controller\n";
@@ -4755,7 +4792,7 @@ static const struct PortSheetRow port_sheet_rows_video[] = {
      * here from GRAPHICS. */
     { SHROW_OPT, "fullscreen" }, { SHROW_RES, NULL }, { SHROW_OPT, "vsync" },
     { SHROW_OPT, "widescreen" },
-    { SHROW_OPT, "enhanced_fonts" },
+    /* enhanced fonts: Iron Sights > System */
     /* CLASSIC MODE SITS OVER WHAT IT FORCES: every row below
      * it is one of port_options.c's classic keys, greyed while it is on
      * (portSheetRowDisabled). A row that classic mode does not own goes ABOVE. */
@@ -5085,6 +5122,11 @@ static void portSheetBuild(s32 kind)
     if (kind == PORT_SHEET_CLASSIC)  { src = port_sheet_rows_classic;  n = sizeof(port_sheet_rows_classic)  / sizeof(port_sheet_rows_classic[0]);  }
     if (kind == PORT_SHEET_AUDIO)    { src = port_sheet_rows_audio;    n = sizeof(port_sheet_rows_audio)    / sizeof(port_sheet_rows_audio[0]);    }
     if (kind == PORT_SHEET_GRAPHICS) { src = port_sheet_rows_graphics; n = sizeof(port_sheet_rows_graphics) / sizeof(port_sheet_rows_graphics[0]); }
+    if (kind == PORT_SHEET_IRONSIGHTS)  { src = port_sheet_rows_ironsights;  n = sizeof(port_sheet_rows_ironsights)  / sizeof(port_sheet_rows_ironsights[0]);  }
+    if (kind == PORT_SHEET_IS_AIM)      { src = port_sheet_rows_is_aim;      n = sizeof(port_sheet_rows_is_aim)      / sizeof(port_sheet_rows_is_aim[0]);      }
+    if (kind == PORT_SHEET_IS_FEEDBACK) { src = port_sheet_rows_is_feedback; n = sizeof(port_sheet_rows_is_feedback) / sizeof(port_sheet_rows_is_feedback[0]); }
+    if (kind == PORT_SHEET_IS_HUD)      { src = port_sheet_rows_is_hud;      n = sizeof(port_sheet_rows_is_hud)      / sizeof(port_sheet_rows_is_hud[0]);      }
+    if (kind == PORT_SHEET_IS_SYSTEM)   { src = port_sheet_rows_is_system;   n = sizeof(port_sheet_rows_is_system)   / sizeof(port_sheet_rows_is_system[0]);   }
     port_sheet_twocol_split = PORT_SHEET_TWOCOL_ROWS;
     for (i = 0; i < n && port_sheet_rows < PORT_SHEET_ROWS_MAX; i++)
     {
@@ -7448,6 +7490,11 @@ static const char *portSheetHelpKey(s32 row)
                 case PORT_SHEET_VIDEO:      return "@page_video";
                 case PORT_SHEET_AUDIO:      return "@page_audio";
                 case PORT_SHEET_CLASSIC:    return "@page_classic";
+                case PORT_SHEET_IRONSIGHTS:  return "@page_ironsights";
+                case PORT_SHEET_IS_AIM:      return "@page_is_aim";
+                case PORT_SHEET_IS_FEEDBACK: return "@page_is_feedback";
+                case PORT_SHEET_IS_HUD:      return "@page_is_hud";
+                case PORT_SHEET_IS_SYSTEM:   return "@page_is_system";
             }
             break;
     }
@@ -19082,9 +19129,10 @@ static void portMenuHarnessTick(void)
                 }
             }
             else if (e[0] == 'g' || e[0] == 'd' || e[0] == 'c' || e[0] == 'p' || e[0] == 'a' || e[0] == 'v'
-                     || e[0] == 'h' || e[0] == 'm' || e[0] == 'b')
+                     || e[0] == 'h' || e[0] == 'm' || e[0] == 'b' || e[0] == 'z')
             {   /* GE_MENU=gameplay|general|hud|graphics|control|display|video|audio|credits|player[1-4]
-                 * |mouse|pad|cgeneral|aiming (the last four are a player's control pages) */
+                 * |mouse|pad|cgeneral|aiming (the last four are a player's control pages)
+                 * |zironsights|zaim|zfeedback|zhud|zsystem */
                 extern s32 portMenuHarnessSheet(char first, char second);
                 const char *z = e;
                 char sec = e[1];

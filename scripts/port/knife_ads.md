@@ -1,6 +1,6 @@
 # Throwing-knife ADS
 
-Gameplay > General Settings > Knife ADS is available in the frontend and watch.
+Gameplay > Iron Sights > Aiming and Movement > Knife ADS is available in the frontend and watch.
 `[display] knife_ads=0` defaults to **Butt Centered**, keeping the stock blade
 grip, orientation and view depth and translating the knife's butt onto screen
 center. `knife_ads=1` selects **Tip Centered**, a procedural handle grip with the

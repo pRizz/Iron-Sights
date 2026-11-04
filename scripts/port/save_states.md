@@ -3,7 +3,7 @@
 The fork adds four manual slots per campaign folder, plus separate quicksave
 and undo-load images. F6 opens the menu; F5 saves, F9 loads, and F8 undoes a
 load. Controls exposes all four actions for keyboard and controllers. The
-watch has a Gameplay > Suspend Points action. Slot rows show the mission,
+watch has a Gameplay > Iron Sights > Suspend Points action. Slot rows show the mission,
 difficulty, local save date/time, and elapsed mission time. An occupied slot
 requires a second Accept before overwriting; quicksave deliberately replaces
 its own slot without confirmation.

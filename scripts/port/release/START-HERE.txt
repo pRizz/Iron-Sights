@@ -14,11 +14,11 @@ Mouse: left click fires, right click aims down sights, Shift sprints.
 With the sniper in ADS, the mouse wheel adjusts zoom.
 
 Build details and blue, underlined links are available under:
-Options > Gameplay > Port Options > About / Build Info
-The same entry is available in the watch's Port Options page.
+Options > Gameplay > Iron Sights > System > About / Build Info
+The same entry is available on the watch's Iron Sights > System page.
 
 HD CAMPAIGN ENVIRONMENTS
-Port Options > Texture Pack selects Original, HD (default) or 4K.
+Gameplay > Iron Sights > System > Texture Pack selects Original, HD (default) or 4K.
 Existing saved preferences are preserved; choose Original to disable HD.
 The compressed campaign HD artwork is in Data/TexturePacks/hd.istex. Keep that
 directory and its attribution notices when extracting the ZIP. Missing or
@@ -50,7 +50,7 @@ is a separate verification mechanism; see VERIFY.txt and the release page.
 
 Downloads: https://github.com/pRizz/Iron-Sights/releases/latest
 
-Windows crash reporting is ON by default. Disable it in Port Options > Crash
+Windows crash reporting is ON by default. Disable it in Iron Sights > System > Crash
 Reporting or in midas.ini: [diagnostics] crash_reporting=0. Reports include
 technical system/build/stack information, module paths and an installation ID.
 No ROMs, saves, logs or minidumps are attached. See the repository's

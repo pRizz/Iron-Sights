@@ -44,11 +44,11 @@ $testEnv = @{
 }
 if ($Mode -in @('Menu','HudMenu')) {
     $testEnv.Remove('GE_STAGE'); $testEnv.Remove('GE_INPUTPLAY'); $testEnv.Remove('GE_HUD_AUDIT');
-    $testEnv.GE_MENU=$(if ($Mode -eq 'HudMenu') {'hud'} else {'general'}); $testEnv.GE_CURSOR='240,160'; $testEnv.GE_SHOT='500'; $testEnv.GE_FRAMES='650'
+    $testEnv.GE_MENU=$(if ($Mode -eq 'HudMenu') {'zhud'} else {'general'}); $testEnv.GE_CURSOR='240,160'; $testEnv.GE_SHOT='500'; $testEnv.GE_FRAMES='650'
 }
 if ($Mode -eq 'Watch') {
     $testEnv.Remove('GE_HUD_AUDIT')
-    $testEnv.GE_WATCHPAGE='3,3,1,0'; $testEnv.GE_SHOT='900'
+    $testEnv.GE_WATCHPAGE='3,12,0,0'; $testEnv.GE_SHOT='900'
 }
 if ($Players -gt 1) { $testEnv.Remove('GE_STAGE'); $testEnv.GE_MP='temple'; $testEnv.GE_MPPLAYERS=[string]$Players }
 $saved = @{}
