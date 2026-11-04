@@ -1703,6 +1703,26 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**Options folder sliders by touch, 2026-11-04:** A user reported that Music
+Volume and other slider rows could not be changed on mobile. Tapping one opened
+the native locked edit, but only D-pad/C, stick or wheel changed it, and the menu
+cursor surface sends none of those. A new value-edit touch context (native 4)
+shows − / +, Done and Cancel while an Options folder edit is open; a sideways
+drag steps once per 18 CSS pixels and a tap still keeps the edit. Touch steps
+reach the edit through a web-only hook and clamp at the scale ends rather than
+wrapping like the D-pad. Cancel/B now also restores a deferred Video row's pending
+pick. Sources: `port/web/touch.c`/`.h`, `src/game/front.c`, `touch-*.ts(x)`,
+`touch.css`, the bridge/unit/fixture tests and `touch-slider-audit.mjs`
+(FORK-028). Verification: Wasm bridge regression, 156 unit tests, TypeScript,
+Edge touch fixture, Edge real-ROM slider audit (55 via −/+, clamp at 100 and 0,
+Cancel restore) and zero-change gallery regeneration pass. Evidence:
+`build/web-touch/slider`. A read-only audit of the other settings controls found
+further touch gaps (keyboard/mouse bind capture has no touch cancel, unbind needs
+Delete or a hold, sheet pick lists longer than 13 rows cannot scroll, the
+Erase-folder confirm cannot reach Yes); they are not fixed in this change.
+Next action: confirm on a physical phone after Pages publication; decide which
+of those gaps to fix next.
+
 **Button look gestures and left Z, 2026-10-29:** The owner selected tap activation
 versus swipe-only look. Discrete gameplay buttons activate on release within a
 10-pixel slop; swipes look and never activate after returning to their origin.

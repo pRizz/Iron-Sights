@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import {
     createTouchInput,
     createTouchState,
+    createValueScrub,
     defaultTouch,
     stickVector,
     touchLayoutPreference,
@@ -118,4 +119,16 @@ test('a disappearing gadget control releases only its own contacts', () => {
     ]);
     state.release(1);
     expect(events.at(-1)).toEqual(['fire', false]);
+});
+
+test('slider scrub steps once per stride and carries the remainder', () => {
+    const scrub = createValueScrub(18);
+    expect(scrub.move(500)).toBe(0); // no contact yet
+    scrub.begin(100);
+    expect(scrub.move(117)).toBe(0);
+    expect(scrub.move(119)).toBe(1);
+    expect(scrub.move(135)).toBe(0);
+    expect(scrub.move(136)).toBe(1); // 36 px total: two strides
+    expect(scrub.move(200)).toBe(3);
+    expect(scrub.move(100)).toBe(-5);
 });

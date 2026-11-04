@@ -42,6 +42,7 @@
 .touch-n64,
 .touch-actions,
 .touch-menu-actions,
+.touch-value-step,
 .touch-gadget,
 .touch-left-actions,
 .touch-extra,
@@ -283,6 +284,19 @@
 }
 .touch-menu-actions {
     grid-template-columns: repeat(2, calc(64 * var(--touch-unit)));
+}
+.touch-value-step {
+    position: absolute;
+    left: var(--touch-left);
+    bottom: var(--touch-bottom);
+    display: grid;
+    grid-template-columns: repeat(2, calc(56 * var(--touch-unit)));
+    gap: calc(6 * var(--touch-unit));
+    z-index: 3;
+}
+.touch-controls .touch-value-step button {
+    font-size: calc(24 * var(--touch-unit));
+    line-height: 1;
 }
 .touch-menu-hint {
     position: absolute;

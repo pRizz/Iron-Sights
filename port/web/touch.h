@@ -6,7 +6,8 @@ enum WebTouchContext {
     WEB_TOUCH_NAVIGATION = 0,
     WEB_TOUCH_CINEMATIC = 1,
     WEB_TOUCH_GAME = 2,
-    WEB_TOUCH_WATCH = 3
+    WEB_TOUCH_WATCH = 3,
+    WEB_TOUCH_VALUE_EDIT = 4 /* an Options folder slider is open for editing */
 };
 s32 portWebTouchContext(void);
 s32 portWebTouchHasGadgets(void);

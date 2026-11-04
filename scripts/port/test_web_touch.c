@@ -8,7 +8,7 @@
 s32 g_portMouseDirect, g_PlayerIsInTank;
 f32 g_portMouseYawDeg, g_portMousePitchDeg;
 static s32 live, consoleOpen, playerNum;
-static s32 stageRunning, watchOpen;
+static s32 stageRunning, watchOpen, valueEdit;
 static u32 actionBits;
 static s32 inventory[8], inventoryCount, inventoryReads;
 static const char *const bindings[] = {
@@ -20,6 +20,7 @@ s32 get_cur_playernum(void) { return playerNum; }
 s32 portBondControlsLive(void) { return live; }
 s32 portStageRunning(void) { return stageRunning; }
 s32 portWatchMenuUp(void) { return watchOpen; }
+s32 portSheetValueEditOpen(void) { return valueEdit; }
 s32 portWebControlsLive(void) { return live; }
 s32 portConIsOpen(void) { return consoleOpen; }
 s32 bondinvCountTotalItemsInInv(void) { inventoryReads++; return inventoryCount; }
@@ -47,6 +48,33 @@ static void testTouchContext(void)
                 assert(portWebTouchContext() == expected);
             }
     stageRunning = watchOpen = live = 0;
+    valueEdit = 1;
+    assert(portWebTouchContext() == WEB_TOUCH_VALUE_EDIT);
+    valueEdit = 0;
+}
+
+static void testValueEditSteps(void)
+{
+    /* Arrange: a slider edit is open and a fast drag queues three steps up. */
+    OSContPad pad = {0};
+    portWebTouchReset();
+    valueEdit = 1;
+    portWebTouchStep(3);
+    /* Act / Assert: steps reach the edit directly, never as D-pad or stick input. */
+    portWebTouchPoll(&pad);
+    assert(pad.button == 0 && pad.stick_x == 0);
+    assert(portWebTouchTakeSteps() == 3 && portWebTouchTakeSteps() == 0);
+    /* Opposite steps cancel; a huge swipe is bounded. */
+    portWebTouchStep(-2);
+    portWebTouchStep(1);
+    assert(portWebTouchTakeSteps() == -1);
+    portWebTouchStep(1000);
+    assert(steps == 40);
+    /* Closing the edit drops queued steps so they cannot reach the next one. */
+    valueEdit = 0;
+    portWebTouchPoll(&pad);
+    assert(pad.button == 0 && portWebTouchTakeSteps() == 0);
+    portWebTouchReset();
 }
 
 static void testAvailableGadgets(void)
@@ -149,6 +177,7 @@ int main(void)
     testNativeN64Buttons();
     testAvailableGadgets();
     testWatchDirections();
+    testValueEditSteps();
     portWebTouchButton(TOUCH_FIRE, 1);
     portWebTouchButton(TOUCH_AIM, 1);
     portWebTouchButton(TOUCH_RELOAD, 1);
@@ -199,6 +228,6 @@ int main(void)
     pad.button = 0;
     portWebTouchPoll(&pad);
     assert(pad.button == 0);
-    puts("Touch bridge: semantic buttons, independent holds, analog movement, menu sticks, reset, bounds and locked-look discard passed.");
+    puts("Touch bridge: semantic buttons, independent holds, analog movement, menu sticks, slider steps, reset, bounds and locked-look discard passed.");
     return 0;
 }

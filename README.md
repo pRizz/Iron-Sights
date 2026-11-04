@@ -51,6 +51,8 @@ To update, replace the supplied program files while keeping **Data** and **midas
 
 On phones and tablets, touch controls turn on automatically. Startup, mission
 selection and briefings use the cursor: drag to move it and tap to select.
+Tap a slider such as Music Volume to edit it, then drag sideways or use − / +;
+Done keeps the value and Cancel restores it.
 Controller buttons stay hidden through cutscenes, then fade in when the game
 hands control to you. Move with the left
 thumbstick and drag any free screen area to look. **Touch layout** defaults to **N64

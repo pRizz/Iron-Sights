@@ -22,12 +22,13 @@ extern s32 portWatchMenuUp(void);
 extern s32 bondinvCountTotalItemsInInv(void);
 extern s32 bondinvGetTextbyInvIndex(s32 index);
 extern s32 portJoyPortInvScrollItem(s32 item);
+extern s32 portSheetValueEditOpen(void);
 
 /* Presentation follows real engine permission, never an intro-duration timer.
  * Keep the watch distinct so its native lists can still be closed/navigated. */
 EMSCRIPTEN_KEEPALIVE s32 portWebTouchContext(void)
 {
-    if (!portStageRunning()) return WEB_TOUCH_NAVIGATION;
+    if (!portStageRunning()) return portSheetValueEditOpen() ? WEB_TOUCH_VALUE_EDIT : WEB_TOUCH_NAVIGATION;
     if (portWatchMenuUp()) return WEB_TOUCH_WATCH;
     return portWebControlsLive() ? WEB_TOUCH_GAME : WEB_TOUCH_CINEMATIC;
 }
@@ -50,6 +51,7 @@ enum { TOUCH_FIRE, TOUCH_AIM, TOUCH_USE, TOUCH_RELOAD, TOUCH_WATCH, TOUCH_ACCEPT
 static s32 enabled;
 static f32 moveX, moveY, yaw, pitch;
 static u32 held, pressed;
+static s32 steps;
 static const char *const actions[TOUCH_COUNT] = {
     [TOUCH_AIM] = "aim_down_sights", [TOUCH_USE] = "use", [TOUCH_RELOAD] = "reload",
     [TOUCH_CROUCH] = "crouch_toggle", [TOUCH_PREV_WEAPON] = "prev_weapon",
@@ -61,6 +63,7 @@ static const char *const actions[TOUCH_COUNT] = {
 EMSCRIPTEN_KEEPALIVE void portWebTouchReset(void)
 {
     held = pressed = 0;
+    steps = 0;
     moveX = moveY = yaw = pitch = 0;
 }
 
@@ -101,6 +104,23 @@ EMSCRIPTEN_KEEPALIVE void portWebTouchButton(s32 action, s32 down)
     else held &= ~bit;
 }
 
+/* Slider value steps (negative = lower) from the -/+ buttons or a sideways drag.
+ * Bounded so a long swipe cannot bank a run of steps after the finger stops. */
+EMSCRIPTEN_KEEPALIVE void portWebTouchStep(s32 count)
+{
+    if (!enabled) return;
+    steps = (s32)bounded((f32)steps + (f32)count, 40);
+}
+
+/* The Options folder's open slider edit takes the queued steps each tick
+ * (src/game/front.c) and clamps them at the scale's ends; the D-pad wraps. */
+s32 portWebTouchTakeSteps(void)
+{
+    const s32 taken = steps;
+    steps = 0;
+    return taken;
+}
+
 void portWebTouchPoll(OSContPad *pad)
 {
     static const u16 buttons[TOUCH_COUNT] = {
@@ -115,6 +135,8 @@ void portWebTouchPoll(OSContPad *pad)
     s32 i, action;
     pressed = 0;
     if (!enabled || portConIsOpen()) return;
+    /* Steps belong to the edit they were made in; never carry them into the next. */
+    if (!portSheetValueEditOpen()) steps = 0;
     for (i = 0; i < TOUCH_COUNT; i++) {
         if (!(down & (1u << i))) continue;
         pad->button |= buttons[i];

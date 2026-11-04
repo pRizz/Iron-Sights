@@ -19,6 +19,53 @@ export async function auditTouchContext(page) {
                 await expect(page.locator('.touch-game-hint')).toHaveCount(0);
             }
         }
+        // An open slider edit: -/+ step it, a sideways drag scrubs it, a tap
+        // keeps it, and Done/Cancel send A/B. The cursor surface stays live.
+        await page.evaluate(() => touchFixture.context(4));
+        await expect(overlay).toHaveAttribute('data-context', 'edit');
+        await expect(page.locator('.touch-stick')).toHaveCount(0);
+        await expect(page.locator('.touch-menu-hint')).toContainText('Drag sideways');
+        const before = await page.evaluate(() => touchFixture.snapshot());
+        await page.locator('[data-touch-step="1"]').tap();
+        await page.locator('[data-touch-step="1"]').tap();
+        await page.locator('[data-touch-step="-1"]').tap();
+        assert.equal((await page.evaluate(() => touchFixture.snapshot())).steps, before.steps + 1);
+        const surface = page.locator('.touch-menu-surface');
+        const send = (type, clientX, target = surface) =>
+            target.evaluate(
+                (element, [eventType, x]) =>
+                    element.dispatchEvent(
+                        new PointerEvent(eventType, {
+                            pointerId: 903,
+                            pointerType: 'touch',
+                            bubbles: true,
+                            cancelable: true,
+                            clientX: x,
+                            clientY: 200,
+                        }),
+                    ),
+                [type, clientX],
+            );
+        await send('pointerdown', 300);
+        await send('pointermove', 400);
+        await send('pointerup', 400);
+        const dragged = await page.evaluate(() => touchFixture.snapshot());
+        assert.equal(dragged.steps, before.steps + 1 + 5);
+        assert.equal(dragged.accepts, before.accepts, 'a scrub must not keep the edit');
+        await send('pointerdown', 300);
+        await send('pointerup', 302);
+        assert.equal(
+            (await page.evaluate(() => touchFixture.snapshot())).accepts,
+            before.accepts + 1,
+        );
+        await page.locator('[data-touch-action=accept]').tap();
+        await page.locator('[data-touch-action=back]').tap();
+        const ended = await page.evaluate(() => touchFixture.snapshot());
+        assert.equal(ended.accepts, before.accepts + 2);
+        assert.ok(ended.presses.slice(before.presses.length).includes(6), 'Cancel sends B');
+        await page.evaluate(() => touchFixture.context(0));
+        await expect(page.locator('[data-touch-step]')).toHaveCount(0);
+
         // A menu gesture held over a camera transition must not select/skip
         // on release in the new context.
         await page.evaluate(() => touchFixture.context(0));

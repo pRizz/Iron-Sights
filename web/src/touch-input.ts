@@ -72,6 +72,23 @@ export function menuTapMoved(x: number, y: number, startX: number, startY: numbe
     return Math.hypot(x - startX, y - startY) > 10;
 }
 
+// An open slider edit turns sideways travel into whole value steps. The remainder
+// carries over, so a slow drag still steps once per stride.
+export function createValueScrub(stride = 18) {
+    let maybeOrigin: number | undefined;
+    return {
+        begin(x: number) {
+            maybeOrigin = x;
+        },
+        move(x: number): number {
+            if (maybeOrigin === undefined) return 0;
+            const steps = Math.trunc((x - maybeOrigin) / stride);
+            maybeOrigin += steps * stride;
+            return steps;
+        },
+    };
+}
+
 // Each finger owns one control. Two fingers holding the same button release independently.
 export function createTouchState(send: (action: TouchAction, down: boolean) => void) {
     const fingers = new Map<number, TouchAction>();
@@ -149,6 +166,9 @@ export function createTouchInput(
         },
         look(x: number, y: number) {
             engine.maybeGame()?._portWebTouchLook(x, y);
+        },
+        step(count: number) {
+            engine.maybeGame()?._portWebTouchStep?.(count);
         },
     };
 }

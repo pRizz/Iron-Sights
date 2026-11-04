@@ -63,7 +63,8 @@ insets and proportional canvas fitting apply in portrait and landscape. Pausing,
 focus loss, cancelled touches, rotation, mode changes and room return clear input.
 All controller buttons and the stick stay hidden during startup, mission selection,
 briefings and cutscenes. Drag the cursor and tap to select; taps can skip permitted
-intros. The engine's live-input permission triggers a 240 ms control fade when
+intros. A tapped Options slider opens its edit with − / +, Done and Cancel
+buttons; a sideways drag also steps it. The engine's live-input permission triggers a 240 ms control fade when
 gameplay starts, including after later cutscenes. Reduced motion skips the fade.
 The in-mission watch keeps its navigation buttons; each arrow contact moves one
 item even when held. Context changes release held
@@ -92,6 +93,10 @@ Physical iPad performance and Safari acceptance remain device checks.
 multi-pointer capture/cancellation and layout at the native boundary. The Pages
 workflow also runs the synthetic Wasm bridge regression. For private real-ROM
 mobile-viewport acceptance, use `MIDAS_BROWSER=chrome bun run audit:touch ../baserom.u.z64 ../build/web-touch/game http://127.0.0.1:4177/Iron-Sights/`.
+`MIDAS_SLIDER_Y=59 node tools/touch-slider-audit.mjs ../baserom.u.z64` opens
+Options > Audio and edits Music Volume with held finger taps, −/+, Done, Cancel
+and clamped drags, reading the saved value from `midas.ini`. Without
+`MIDAS_SLIDER_Y` it only saves `sheet.png` for locating the row.
 Set `MIDAS_TOUCH_WATCH_MAP=../build/web/video/ProjectMidas.map` for Chromium-only
 read-only verification that all four watch arrows move one item and never repeat
 while held. The map must match the locally assembled runtime under test.

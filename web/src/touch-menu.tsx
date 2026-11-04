@@ -1,9 +1,15 @@
 import { onCleanup, onMount } from 'solid-js';
 import { createTouchContacts } from './touch-contacts';
-import { menuTapMoved, type TouchInput } from './touch-input';
+import { createValueScrub, menuTapMoved, type TouchInput } from './touch-input';
 
-export function TouchMenu(props: { canvas: () => HTMLCanvasElement; input: TouchInput }) {
+export function TouchMenu(props: {
+    canvas: () => HTMLCanvasElement;
+    input: TouchInput;
+    adjust?: boolean;
+}) {
     let maybePan: { id: number; x: number; y: number; moved: boolean } | undefined;
+    // While a slider edit is open the native cursor is pinned; a drag steps its value.
+    const scrub = createValueScrub();
     const position = (event: PointerEvent) => {
         // SDL receives cursor motion only; it must never see a touch-down mouse
         // press. Select goes through the existing native A-button pulse on tap-up.
@@ -31,6 +37,8 @@ export function TouchMenu(props: { canvas: () => HTMLCanvasElement; input: Touch
             if (maybePan?.id !== id) return;
             maybePan.moved ||= menuTapMoved(event.clientX, event.clientY, maybePan.x, maybePan.y);
             position(event);
+            const steps = props.adjust ? scrub.move(event.clientX) : 0;
+            if (steps !== 0) props.input.step(steps);
         },
     );
     onMount(() => {
@@ -54,7 +62,11 @@ export function TouchMenu(props: { canvas: () => HTMLCanvasElement; input: Touch
     return (
         <div
             class="touch-menu-surface"
-            aria-label="Drag menu cursor; tap to select"
+            aria-label={
+                props.adjust
+                    ? 'Drag sideways to change the value; tap to keep it'
+                    : 'Drag menu cursor; tap to select'
+            }
             onPointerDown={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -67,6 +79,7 @@ export function TouchMenu(props: { canvas: () => HTMLCanvasElement; input: Touch
                     y: event.clientY,
                     moved: false,
                 };
+                scrub.begin(event.clientX);
                 position(event);
             }}
             onContextMenu={(event) => event.preventDefault()}

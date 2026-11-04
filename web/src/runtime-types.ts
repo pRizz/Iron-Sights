@@ -47,6 +47,7 @@ export type GameModule = {
     _portWebTouchMove(x: number, y: number): void;
     _portWebTouchLook(yaw: number, pitch: number): void;
     _portWebTouchButton(action: number, down: number): void;
+    _portWebTouchStep?(steps: number): void;
 };
 
 export type GameOptions = {

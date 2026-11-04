@@ -6038,6 +6038,7 @@ static s32 port_sheet_edit_row = -1;   /* the row being edited, -1 = none */
 static s32 port_sheet_edit_undo;       /* its RAW value when the edit opened; B restores it exactly (an off-grid 13% deadzone has no index) */
 static f32 port_sheet_edit_cx;         /* where the crosshair is pinned for the edit */
 static f32 port_sheet_edit_cy;
+static s32 port_sheet_edit_pending_undo; /* a deferred (VIDEO) row's pending pick when the edit opened, -1 = none */
 
 static void portSheetEditBegin(s32 row)
 {
@@ -6045,6 +6046,7 @@ static void portSheetEditBegin(s32 row)
     port_sheet_edit_undo = portOptGet(port_sheet_row_opt[row]);
     port_sheet_edit_cx = cursor_h_pos;
     port_sheet_edit_cy = cursor_v_pos;
+    port_sheet_edit_pending_undo = portSheetPending(row);
     portSheetRampEnd();
     portOptSaveHold(TRUE);
 }
@@ -6059,11 +6061,46 @@ static void portSheetEditEnd(s32 keep)
     if (!keep)
     {
         portOptSetValue(port_sheet_row_opt[port_sheet_edit_row], port_sheet_edit_undo);
+        if (portSheetDeferred(port_sheet_edit_row))
+        {   /* steps on a deferred row only pend; B puts the pick back too */
+            port_sheet_pending[port_sheet_edit_row] = port_sheet_edit_pending_undo;
+        }
     }
     port_sheet_edit_row = -1;
     portSheetRampEnd();
     portOptSaveHold(FALSE);   /* one write for the whole edit */
 }
+
+/** TRUE while a ranged row's edit is open; the browser touch overlay
+ * (port/web/touch.c) shows its value controls only then. */
+s32 portSheetValueEditOpen(void)
+{
+    return port_sheet_edit_row >= 0;
+}
+
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+/** One touch step (the overlay's - / + or a sideways drag). Unlike a D-pad
+ * press it stops at either end of the scale: a drag past 100% must not wrap
+ * round to 0%. */
+static void portSheetEditTouchStep(s32 row, s32 dir)
+{
+    if (portSheetDeferred(row))
+    {
+        const s32 n = portOptValueCount(port_sheet_row_opt[row]);
+        const s32 i = (portSheetPending(row) >= 0) ? portSheetPending(row) : portSheetListLive(row);
+
+        if (i >= 0 && ((dir > 0 && i >= n - 1) || (dir < 0 && i <= 0)))
+        {
+            return;
+        }
+        portSheetStep(row, dir);   /* pends, as every VIDEO row does */
+    }
+    else
+    {
+        portSheetRampApply(row, dir);   /* clamped */
+    }
+}
+#endif
 
 /** APPLY CHANGES: every pending row in sheet order - the display mode is
  * first on the sheet, and it decides whether a resolution may be picked -
@@ -8089,6 +8126,19 @@ void interface_menu1C_portsheet(void)
         else
         {
             s32 stepped = 0;
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+            extern s32 portWebTouchTakeSteps(void);
+            s32 touch = portWebTouchTakeSteps();
+
+            if (touch != 0)
+            {
+                sndPlaySfx((struct ALBankAlt_s *) g_musicSfxBufferPtr, OPTION_CLICK2_SFX, NULL);
+            }
+            for (; touch != 0; touch -= (touch > 0) ? 1 : -1)
+            {
+                portSheetEditTouchStep(erow, (touch > 0) ? 1 : -1);
+            }
+#endif
 
             if (joyGetButtonsPressedThisFrame(PLAYER_1, R_JPAD | R_CBUTTONS))
             {

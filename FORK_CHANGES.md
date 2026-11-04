@@ -1323,6 +1323,31 @@ Watch arrows now issue one digital direction edge per contact, with no repeated
 hold or duplicate full-strength stick input in the watch. Fire/other holds and
 analog movement retain their ownership. The Wasm bridge regression covers all
 four directions held for 120 polls, duplicate downs and a subsequent short tap.
+Options folder sliders (ranged rows such as Music Volume) are adjustable by
+touch. Tapping one opens the native locked edit as before; the edit previously
+needed D-pad/C left-right, the stick or the mouse wheel, none of which the menu
+cursor surface sends, so a touch user could open it but never change the value.
+While `port_sheet_edit_row` is open, `portSheetValueEditOpen` (src/game/front.c)
+makes `portWebTouchContext` report a new value-edit context (4). The overlay then
+shows − / + buttons at the lower left and Done (A) / Cancel (B, which restores
+the opening value) at the lower right, and a sideways drag on the cursor surface
+steps the value once per 18 CSS pixels. A tap still keeps the edit. Steps queue
+through `portWebTouchStep` (bounded to ±40) and the open edit takes them each
+tick via `portWebTouchTakeSteps`, a web-only hook in the edit loop. Unlike the
+wrapping D-pad press, touch steps stop at either end of the scale, so a drag
+past Music 100% stays at 100%; on the deferred Video sheet they pend like any
+other step. Queued steps are dropped once the edit closes.
+Cancel/B now also restores a deferred Video row's pending pick (Field of View,
+Weapon FOV), which the edit previously left pending and Apply Changes would
+apply; this fixes desktop and controller B as well as touch Cancel.
+Sources: `port/web/touch.c`/`.h`, `src/game/front.c`, `touch-context.ts`,
+`touch-input.ts`, `touch-menu.tsx`, `touch-controls.tsx`, `touch-hints.ts`,
+`touch.css`, runtime types, the context/bridge/unit tests and the touch fixture,
+plus the private real-ROM `web/tools/touch-slider-audit.mjs`. Validation: the Wasm
+bridge regression, 156 browser unit tests, TypeScript, the Edge touch fixture
+(−/+, drag, tap-to-keep, Done/Cancel) and Edge's real-ROM audit (Music 50 → 55
+via −/+ and Done, a long drag stopping at 100, Cancel restoring 100, a leftward
+drag stopping at 0) pass; the gallery regenerated with zero changed images.
 Gameplay buttons distinguish taps from looking: A/B/R/Start, Gadget, More and
 discrete Modern actions activate only on tap-up within a 10 CSS-pixel slop.
 Moving farther latches a look gesture, so returning to the starting point cannot

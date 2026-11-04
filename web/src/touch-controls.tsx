@@ -56,8 +56,17 @@ export function TouchControls(props: Props) {
     }>();
     const active = () =>
         props.visible() && props.input.enabled() && props.capture.state().kind !== 'paused';
+    const editing = () => context() === 'edit';
     const hints = createTouchHints(() =>
-        !active() || context() !== 'navigation' ? 'inactive' : files() ? 'files' : 'menu',
+        !active()
+            ? 'inactive'
+            : editing()
+              ? 'edit'
+              : context() !== 'navigation'
+                ? 'inactive'
+                : files()
+                  ? 'files'
+                  : 'menu',
     );
     const contacts = createTouchContacts(
         (id, maybeEvent) => {
@@ -243,6 +252,24 @@ export function TouchControls(props: Props) {
             {button.children ?? button.label}
         </button>
     );
+    // Slider steps queue natively for the open edit, so no hold state is needed.
+    const StepButton = (button: { steps: number; label: string; text: string }) => (
+        <button
+            type="button"
+            data-touch-step={button.steps}
+            aria-label={button.label}
+            onContextMenu={(event) => event.preventDefault()}
+            onPointerDown={(event) => {
+                begin(event);
+                props.input.step(button.steps);
+            }}
+            onClick={(event) => {
+                if (event.detail === 0) props.input.step(button.steps);
+            }}
+        >
+            {button.text}
+        </button>
+    );
     const move = (event: PointerEvent, target: HTMLElement) => {
         if (maybeMove !== event.pointerId) return;
         const box = target.getBoundingClientRect();
@@ -277,8 +304,26 @@ export function TouchControls(props: Props) {
                         <>
                             <Show when={`${context()}:${files()}`} keyed>
                                 {(_contextKey) => (
-                                    <TouchMenu canvas={props.canvas} input={props.input} />
+                                    <TouchMenu
+                                        canvas={props.canvas}
+                                        input={props.input}
+                                        adjust={editing()}
+                                    />
                                 )}
+                            </Show>
+                            <Show when={editing()}>
+                                <div
+                                    class="touch-value-step"
+                                    role="group"
+                                    aria-label="Change value"
+                                >
+                                    <StepButton steps={-1} label="Decrease" text="−" />
+                                    <StepButton steps={1} label="Increase" text="+" />
+                                </div>
+                                <div class="touch-menu-actions">
+                                    <Button action="accept" label="Done" />
+                                    <Button action="back" label="Cancel" />
+                                </div>
                             </Show>
                             <Show when={watch()}>
                                 <div class="touch-dpad">
@@ -402,7 +447,9 @@ export function TouchControls(props: Props) {
                     </div>
                 </Show>
                 <HelperText when={hints()} class="touch-menu-hint">
-                    Drag to move cursor · Tap to select
+                    {editing()
+                        ? 'Drag sideways or tap − + to change · Done keeps it'
+                        : 'Drag to move cursor · Tap to select'}
                 </HelperText>
             </div>
         </Show>
