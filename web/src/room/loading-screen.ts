@@ -1,6 +1,23 @@
 import type { StartupProgress } from '../startup-progress';
 import { MISSION_THEME as theme } from '../mission-theme';
 
+const gaugeStart = (seconds: number, reduced: boolean) =>
+    reduced ? 8 : Math.floor(((Math.sin(seconds * 1.8) + 1) / 2) * 16);
+
+// Everything the painted screen depends on: an unchanged key repaints identical pixels.
+export function crtScreenKey(
+    seconds: number,
+    label: string,
+    powered: boolean,
+    reduced: boolean,
+    progress?: StartupProgress,
+): string {
+    if (!progress) return ['signal', powered, label].join('|');
+    const { label: stage, maybePercent } = progress;
+    const gauge = maybePercent === null ? gaugeStart(seconds, reduced) : '';
+    return ['mission', stage, maybePercent, gauge].join('|');
+}
+
 function paintMission(
     ctx: CanvasRenderingContext2D,
     seconds: number,
@@ -35,7 +52,7 @@ function paintMission(
     const percent = progress.maybePercent;
     ctx.font = `18px ${theme.font}`;
     ctx.fillText(percent === null ? 'PLEASE WAIT' : `${Math.round(percent)}%`, 596, 262);
-    const active = reduced ? 8 : Math.floor(((Math.sin(seconds * 1.8) + 1) / 2) * 16);
+    const active = gaugeStart(seconds, reduced);
     for (let index = 0; index < 20; index++) {
         const x = 44 + index * 27.8;
         ctx.fillStyle = theme.panel;

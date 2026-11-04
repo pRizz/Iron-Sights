@@ -7,9 +7,15 @@ export function loadCartridgeArtwork(scene: THREE.Scene) {
         loader.load(
             import.meta.env.BASE_URL + 'room/cartridge-art.' + format,
             (image) => {
-                texture.image = image;
-                texture.needsUpdate = true;
-                scene.userData.artworkFormat = format;
+                // Decode off the main thread; an undecoded image stalls its upload frame.
+                void image
+                    .decode()
+                    .catch(() => {})
+                    .then(() => {
+                        texture.image = image;
+                        texture.needsUpdate = true;
+                        scene.userData.artworkFormat = format;
+                    });
             },
             undefined,
             () => {

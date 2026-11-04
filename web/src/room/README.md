@@ -67,8 +67,12 @@ The render loop sleeps while controls/a dialog are open or the document is
 hidden. After the first game graphics tasks, Solid unmounts the room, cancels
 its RAF and disposes scene geometry/materials/textures/lights and its WebGL
 renderer/context. Fullscreen belongs to the shared experience container.
-Idle/reduced-motion room drawing is capped at 30 fps. Stationary prop shadows
-are reused, while moving props update them. Only the room scene chunk imports
+Idle, reduced-motion and preparing room drawing is capped at 60 fps with a carried
+deadline, so high-refresh displays hold that rate. Stationary prop shadows are
+reused, while moving props update them. The CRT texture stores raw sRGB bytes
+that its shader decodes: Chrome/ANGLE sRGB canvas uploads cost about 5 ms of GPU
+each. It repaints only when `crtScreenKey` changes. Programs compile
+asynchronously before the first frame. Only the room scene chunk imports
 Three.js; a validated Vite manifest allowlists that dynamic graph. The launcher
 stays available if the chunk/image/context fails, and a failed room cannot strand
 the user behind a disabled Return-to-room control. The TV stays until the first
@@ -118,6 +122,11 @@ bun run test:launcher http://127.0.0.1:4176
 node tools/room-game-audit.mjs ../baserom.u.z64 ../build/web-room/game
 node tools/room-exit-audit.mjs ../baserom.u.z64 ../build/web-room/exit
 ```
+
+`node tools/room-benchmark.mjs [rom] [output]` measures frame pacing, rAF work
+and GPU timer queries in headed Chrome on the real GPU (cold and warm shader
+cache flights with a ROM); `room-benchmark-compare.mjs before.json after.json`
+prints a table. Results stay in ignored `build/web-room/benchmark`.
 
 Run the fixed-root `tools/serve-site.mjs` first. Set `MIDAS_BROWSER=msedge` or
 `chrome` on this Windows host. Actual-ROM evidence stays private under build/;

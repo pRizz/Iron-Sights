@@ -3637,6 +3637,42 @@ verified room refinements in `ed459f2`. PR #2 was closed rather than merged.
 
 ### FORK-025 — Immersive browser room
 
+Room rendering performance, 2026-11-04: the CRT canvas texture now holds raw
+sRGB bytes (`NoColorSpace`) and `crt.frag.glsl` decodes them with Three.js's
+`sRGBTransferEOTF`. In Chrome/ANGLE D3D11, each upload into the previous sRGB
+texture cost about 5 ms of GPU time against about 0.6 ms for the whole scene;
+RGBA uploads cost almost nothing. `loading-screen.ts` exports `crtScreenKey`, and
+`scene.ts` repaints/uploads the CRT only when that key changes instead of at a
+fixed 15 Hz, so the static NO SIGNAL screen uploads once. `room.tsx` raises the idle,
+reduced-motion and preparing cap from 30 to 60 fps and paces it with a carried
+deadline. The old strict `now - previous < 1000/30` test skipped
+frames that arrived a fraction early, so high-refresh displays drew about 27 fps.
+`scene.ts` compiles programs with `renderer.compileAsync` before the first frame. The
+floating cartridge's shadow updates every frame; it previously updated every third frame. `artwork.ts`
+decodes the label image before upload. Filtering the CRT texture before decoding
+changes only text-edge antialiasing on the screen; the rest of the reduced-motion
+room is pixel-identical. Unlike before, the static screen no longer re-uploads
+unchanged pixels.
+
+`web/tools/room-benchmark.mjs` measures room frame pacing in headed Chrome on the
+host GPU (occlusion throttling disabled, 1536x864 at 1.25x by default). It reports
+rAF main-thread work, timer-query GPU time, long-animation-frame blocking, idle
+and pointer-hover scenarios. With a ROM it also measures one cold-shader-cache and
+several warm-cache insertion/flight runs, attributing frame gaps to startup stages.
+`room-benchmark-compare.mjs` prints a before/after table; reports stay in ignored
+`build/web-room/benchmark`. On the RTX 3070 Laptop host (medians of three runs),
+idle went from 24-28 to 60 fps with p95 frames from 36.7 to 16.8 ms and GPU time from about
+6.7 to 2.6 ms per frame. The first 2.5 s worst frame fell from 210 to 97 ms, and
+warm-cache insertion went from 23 to 51 fps. Cold-cache insertion/flight improved only from
+roughly 9-15 to 13-25 fps. Native `portWebPrepareShaders` still links about
+87 programs synchronously for about 7 s, blocking the page for 85-140 ms per
+program. That native compilation, not the room, remains the cold-cache stutter.
+Rare 0.2-1.4 s idle gaps occurred before and after; traces show rAF stops for the
+whole page, so they are browser/host pauses rather than room work.
+Validation: TypeScript, 200 Bun tests, Prettier, production assembly and exact
+public-artifact verification; Chrome ROM-free room audit (59.6 fps SwiftShader
+idle), actual-ROM insertion/handoff/reload/power and Exit Game/return audits.
+
 Room transitions use 0.9-second cartridge insertion, 0.3-second power-on,
 1.3-second TV flight and 1.5-second return to the room. The return camera retains
 its 0.3-second crossfade hold and completes its retreat within the shared phase
@@ -3771,7 +3807,8 @@ into the TV texture. Existing CRT noise/scanlines gain subtle alternating fields
 reduced motion disables these animations. `flow.ts` holds a screen-fitted phase
 until preparation completes. The first game frames wait behind the cinematic;
 handoff resumes the same instance and waits for fresh graphics before fading.
-The room keeps rendering, capped at 30 fps while preparing, replacing the prior
+The room keeps rendering, capped at 60 fps while preparing (30 fps before the
+2026-11-04 performance pass), replacing the prior
 static-TV hold. Actual pauses offer Resume startup within the room, including an
 interruption during handoff. The game canvas/storage lifecycle stays intact.
 Chrome and audio-enabled Linux WebKit pass deliberately slowed actual-ROM
@@ -3950,7 +3987,7 @@ GLSL CRT effects include restrained tracking/noise, scanlines and a power-on
 phosphor line. Reduced motion disables those temporal effects. `cinematic.ts`
 aligns the cartridge over the slot before descent and eases the TV approach;
 the room crossfades only after game graphics begin. Idle room drawing is capped
-at 30 fps, static geometry is batched without absorbing interactive/LED parts,
+(now 60 fps; originally 30), static geometry is batched without absorbing interactive/LED parts,
 and stationary shadows are reused. Tests cover transform preservation and the
 keyframe endpoints. Context/chunk/image failures retain the standard launcher.
 F2 can close an idle ROM/error modal to reach those controls, including when a
@@ -4014,7 +4051,7 @@ The refined scene also passes actual-ROM insertion/flight/audio/reload/power
 startup in Chrome and isolated Linux Firefox, including verified room GPU-context
 release. The initial renderer had 307 draws/177,510 triangles; batching/reduced
 subdivision brought the tested scene to 86/52,710. An isolated Edge sample reached
-28 fps at the intentional 30 fps idle cap, with about 1.2 ms average JS render
+28 fps at the then-intentional 30 fps idle cap (raised to 60 fps on 2026-11-04), with about 1.2 ms average JS render
 submission after warm-up; this is software-host evidence, not a hardware promise.
 The first refined launcher was about 98 kB JS (35 kB gzip) plus a lazy 603 kB scene
 (154 kB gzip), versus the original single 654 kB bundle. Vite's scene-chunk size

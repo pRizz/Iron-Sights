@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { paintCrtScreen } from './loading-screen';
+import { crtScreenKey, paintCrtScreen } from './loading-screen';
 import { MISSION_THEME } from '../mission-theme';
 
 function drawing(seconds: number, percent: number | null, reduced = false) {
@@ -36,4 +36,30 @@ test('indeterminate work has no invented percentage and reduced motion holds the
     expect(drawing(0, null).text.some((value) => value.includes('%'))).toBe(false);
     expect(drawing(0, null).bars).not.toEqual(drawing(1, null).bars);
     expect(drawing(0, null, true).bars).toEqual(drawing(1, null, true).bars);
+});
+
+test('the CRT repaint key changes exactly when the painted screen would', () => {
+    const measured = { label: 'Preparing graphics', maybePercent: 40 };
+    const waiting = { label: 'Opening cartridge', maybePercent: null };
+    // A static signal screen and a measured gauge need no animation-driven repaint.
+    expect(crtScreenKey(0, 'Insert your cartridge', false, false)).toBe(
+        crtScreenKey(9, 'Insert your cartridge', false, false),
+    );
+    expect(crtScreenKey(0, 'Starting', false, false)).not.toBe(
+        crtScreenKey(0, 'Starting', true, false),
+    );
+    expect(crtScreenKey(0, 'x', true, false, measured)).toBe(
+        crtScreenKey(5, 'y', true, false, measured),
+    );
+    expect(crtScreenKey(0, 'x', true, false, measured)).not.toBe(
+        crtScreenKey(0, 'x', true, false, { ...measured, maybePercent: 41 }),
+    );
+    // The indeterminate gauge animates unless motion is reduced.
+    expect(crtScreenKey(0, 'x', true, false, waiting)).not.toBe(
+        crtScreenKey(1, 'x', true, false, waiting),
+    );
+    expect(crtScreenKey(0, 'x', true, true, waiting)).toBe(
+        crtScreenKey(1, 'x', true, true, waiting),
+    );
+    expect(drawing(0, null).bars).toEqual(drawing(0.01, null).bars);
 });

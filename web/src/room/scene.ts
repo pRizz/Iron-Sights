@@ -12,7 +12,7 @@ import { easeOut, roomDuration, type RoomFlow } from './flow';
 import { ROOM_FOV, TV_SCREEN } from './framing';
 import { pivotRotation } from './pivot';
 import { loadRoomModels } from './models';
-import { paintCrtScreen } from './loading-screen';
+import { crtScreenKey, paintCrtScreen } from './loading-screen';
 import type { StartupProgress } from '../startup-progress';
 
 export type RoomTarget = 'cartridge' | 'power' | 'controls';
@@ -40,7 +40,9 @@ export async function createRoomScene(canvas: HTMLCanvasElement) {
             antialias: true,
             powerPreference: 'low-power',
         });
-        return initializeScene(canvas, maybeRenderer, scene, models);
+        const room = initializeScene(canvas, maybeRenderer, scene, models);
+        await room.compile();
+        return room;
     } catch (error) {
         disposeScene(scene);
         maybeRenderer?.dispose();
@@ -81,8 +83,7 @@ function initializeScene(
     const floating = new THREE.Vector3(-0.2, 1.35, 1.65);
     const inserted = new THREE.Vector3(-0.2, 0.66, 0.98);
     let seconds = 0;
-    let lastScreen = -1;
-    let maybeScreenProgress: StartupProgress | undefined;
+    let lastScreenKey = '';
     let idleAngle = 0.28;
     let insertionAngle = idleAngle;
     let idlePitch = 0;
@@ -194,17 +195,13 @@ function initializeScene(
             );
             canvas.dataset.roomScreenCorners = JSON.stringify(corners);
         }
-        if (
-            seconds - lastScreen > 1 / 15 ||
-            previousPhase !== state.phase ||
-            maybeScreenProgress?.label !== progress?.label ||
-            maybeScreenProgress?.maybePercent !== progress?.maybePercent
-        ) {
+        // Each canvas upload costs GPU time: repaint only when the pixels would change.
+        const screenKey = crtScreenKey(seconds, label, powered, reduced, progress);
+        if (screenKey !== lastScreenKey) {
             paintScreen(tv, seconds, label, powered, reduced, progress);
             canvas.dataset.roomLoadingLabel = progress?.label ?? '';
             canvas.dataset.roomLoadingPercent = progress?.maybePercent?.toString() ?? '';
-            lastScreen = seconds;
-            maybeScreenProgress = progress;
+            lastScreenKey = screenKey;
         }
         renderer.shadowMap.needsUpdate =
             quality.scale !== previousScale ||
@@ -213,7 +210,7 @@ function initializeScene(
             state.phase === 'inserting' ||
             state.phase === 'powering' ||
             state.phase === 'retreating' ||
-            (state.phase === 'empty' && !reduced && frames % 3 === 0);
+            (state.phase === 'empty' && !reduced);
         const before = performance.now();
         renderer.render(scene, camera);
         if (frames >= 5) submittedMS += performance.now() - before;
@@ -246,6 +243,8 @@ function initializeScene(
     }
 
     return {
+        // Compile programs off the main thread before the first frame needs them.
+        compile: () => renderer.compileAsync(scene, camera),
         render,
         hit,
         dragging(active: boolean) {

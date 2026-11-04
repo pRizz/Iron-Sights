@@ -15,6 +15,9 @@ export function createTelevision(scene: THREE.Scene) {
     box(tv, [2.77, 2.01, 0.13], [0, 0.01, 0.57], bezel, 0.06);
     box(tv, [2.61, 1.88, 0.08], [-0.06, 0.05, 0.65], plastic(0x252923), 0.03);
     const screen = canvasTexture(640, 480);
+    // Uploading a canvas into an sRGB texture costs ~5 ms of GPU time per update in
+    // Chrome/ANGLE; plain RGBA uploads are nearly free, so the CRT shader decodes sRGB.
+    screen.texture.colorSpace = THREE.NoColorSpace;
     const geometry = new THREE.PlaneGeometry(TV_SCREEN.width, TV_SCREEN.height, 40, 32);
     const positions = geometry.attributes.position;
     for (let index = 0; index < positions.count; index++) {

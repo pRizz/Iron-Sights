@@ -1016,6 +1016,21 @@ resize-observer feedback in the initial implementation.
 
 ## WEB-008 | 2026-10-24 | Room scene and assets
 
+**Rendering performance, 2026-11-04:** the owner reported laggy idle frames and a
+stuttering TV zoom. The CRT texture switches to raw sRGB bytes decoded in its
+shader, because Chrome/ANGLE sRGB canvas uploads cost about 5 ms of GPU each. It repaints
+only when its content key changes. The idle/preparing cap rises from 30 to a
+deadline-paced 60 fps, programs compile asynchronously before the first frame,
+and artwork decodes before upload. The new `room-benchmark.mjs` (headed Chrome,
+RTX 3070 Laptop, three runs) measured idle 24-28 to 60 fps, p95 frames 36.7 to 16.8
+ms and GPU time 6.7 to 2.6 ms. Warm-cache insertion went from 23 to 51 fps.
+Cold-cache insertion/flight remains limited by native shader preparation (about
+87 synchronous links over about 7 s), improving only from about 9-15 to 13-25 fps.
+TypeScript, 200 Bun tests, assembly/allowlist, Chrome ROM-free room and actual-ROM
+handoff/exit audits pass. Reports: ignored `build/web-room/benchmark`.
+Next action: move the browser shader prewarm to KHR_parallel_shader_compile, so
+cold-cache preparation no longer blocks the cinematic. That is a native/gallery-input change.
+
 **Controller plug refinement, 2026-10-25:** `controller-plug.ts` replaces the
 undersized/off-center cylinder with a rounded shell seated on the licensed
 console's measured player-one socket center, face plane and rim radius. Adds a
@@ -1632,7 +1647,8 @@ scene loading leaves about 98 kB initial JS (35 kB gzip) plus a 603 kB scene
 without that chunk. A tested parser validates the complete Vite output graph
 before allowing dynamic chunks into the exact public artifact. Static batching
 and lower subdivision reduce the sampled scene from 307 draws/177,510 triangles
-to 86/52,710. Idle drawing is intentionally capped at 30 fps. An isolated Edge
+to 86/52,710. Idle drawing was then intentionally capped at 30 fps (60 fps since
+the 2026-11-04 performance pass in WEB-008). An isolated Edge
 1440x900/SwiftShader sample measured 28 fps and about 1.2 ms mean JS render
 submission after shader warm-up; this is not GPU-timer or hardware evidence.
 The updated audit records metrics, verifies no drawing behind F2 controls and

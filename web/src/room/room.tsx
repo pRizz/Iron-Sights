@@ -7,6 +7,8 @@ import type { createRoomScene, RoomTarget } from './scene';
 import { RomDialog } from './rom-dialog';
 import { bindCartridgeDrag } from './pivot';
 
+const CAPPED_FRAME_MS = 1000 / 60;
+
 type Props = {
     returning: boolean;
     engine: Engine;
@@ -140,6 +142,7 @@ export function Room(props: Props) {
         const motion = matchMedia('(prefers-reduced-motion: reduce)');
         let frame = 0;
         let previous = performance.now();
+        let due = previous;
         let maybeRevealTimer: ReturnType<typeof setTimeout> | undefined;
         let loadingScene = false;
         canvas.dataset.roomState = 'loading';
@@ -154,10 +157,14 @@ export function Room(props: Props) {
         canvas.addEventListener('webglcontextlost', contextLost);
         const render = (now: number) => {
             const idleScene = ['empty', 'inserted', 'waiting'].includes(flow().phase);
-            if ((idleScene || motion.matches || !props.ready()) && now - previous < 1000 / 30) {
+            // Idle, reduced-motion and preparing rooms draw at up to 60 fps. A carried
+            // deadline holds that rate when the display's refresh interval does not divide it.
+            const capped = idleScene || motion.matches || !props.ready();
+            if (capped && now < due - 1) {
                 frame = requestAnimationFrame(render);
                 return;
             }
+            due = capped ? Math.max(due + CAPPED_FRAME_MS, now + CAPPED_FRAME_MS / 2) : now;
             const delta = Math.max(0, Math.min((now - previous) / 1000, 0.1));
             const frameMS = now - previous;
             previous = now;
@@ -221,7 +228,7 @@ export function Room(props: Props) {
                     }
                     maybeScene = scene;
                     canvas.dataset.roomState = 'ready';
-                    previous = performance.now();
+                    previous = due = performance.now();
                     frame = requestAnimationFrame(render);
                 })
                 .catch(() => {

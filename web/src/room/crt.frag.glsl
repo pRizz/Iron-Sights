@@ -3,14 +3,18 @@ uniform float time;
 uniform float motion;
 uniform float power;
 varying vec2 vUv;
+// The canvas texture holds sRGB bytes without hardware decoding; see television.ts.
+vec4 screenTexel(vec2 uv) {
+    return sRGBTransferEOTF(texture2D(screen, uv));
+}
 void main() {
     vec2 corner = abs(vUv - 0.5) - vec2(0.455, 0.445);
     if (length(max(corner, 0.0)) + min(max(corner.x, corner.y), 0.0) > 0.045) discard;
     float roll = exp(-pow((fract(vUv.y + time * 0.045) - 0.1) * 32.0, 2.0)) * motion;
     vec2 uv = vUv + vec2(roll * sin(vUv.y * 160.0 + time * 9.0) * 0.002, 0.0);
-    vec3 color = texture2D(screen, uv).rgb;
-    color.r = texture2D(screen, uv + vec2(0.0008, 0.0)).r;
-    color.b = texture2D(screen, uv - vec2(0.0008, 0.0)).b;
+    vec3 color = screenTexel(uv).rgb;
+    color.r = screenTexel(uv + vec2(0.0008, 0.0)).r;
+    color.b = screenTexel(uv - vec2(0.0008, 0.0)).b;
     float scan = 0.94 + 0.06 * sin(vUv.y * 480.0 * 3.14159265);
     float field = mod(floor(time * 30.0), 2.0);
     scan *= 1.0 - motion * 0.035 * mod(floor(vUv.y * 480.0) + field, 2.0);
