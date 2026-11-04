@@ -29,6 +29,8 @@ f32 portAdsWeaponFovScale(s32 item);
 s32 portAdsHandGrips(s32 item, struct coord3d *trigger, struct coord3d *support);
 /* Preserve the selected gun pass's XY projection when reserving near depth. */
 Gfx *portAdsBeginHandLayer(Gfx *gdl, const Mtxf *gunProjection);
+/* Reload the scene projection; G_ZBUFFER stays on for later split views. */
+Gfx *portAdsEndHandLayer(Gfx *gdl, Mtx *sceneProjection);
 Gfx *portAdsDrawHands(Gfx *gdl, s32 item, const Mtxf *gun);
 /* Isolated deterministic review harness; always false in ordinary gameplay. */
 s32 portHandGalleryActive(void);

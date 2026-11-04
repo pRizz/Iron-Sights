@@ -159,6 +159,7 @@ static void testSprint(void)
 #include "test_knife_ads.c"
 #include "test_rocket_ads.c"
 #include "test_ads_accuracy.c"
+#include "test_hand_layer.c"
 
 int main(void)
 {
@@ -179,6 +180,7 @@ int main(void)
     testRocketAds();
     testAdsAccuracy();
     testSprint();
+    testHandLayerEnd();
     { /* The support palm faces up under the gun. The watch follows that
        * roll rather than being billboarded towards the camera. */
         Mtxf gun = {.m={{-1,0,0,0},{0,1,0,0},{0,0,-1,0},{0,-4,-42,1}}};

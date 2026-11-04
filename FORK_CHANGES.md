@@ -2962,6 +2962,21 @@ transitions in the other four outfits. Before/after review confirmed that skin
 strips no longer overpaint the sleeve; stock hand vertices, UVs and colors are
 unchanged. The guide and repository rule now protect cuff occlusion alongside
 the stock hand data contract.
+Fix for [issue 5](https://github.com/pRizz/Iron-Sights/issues/5): ending this
+layer used to clear the `G_ZBUFFER` geometry mode. Upstream's `lvlRender`
+enables it only once per frame (`dlZBufferGeometry`) before the player loop, so
+in split screen every view drawn after a player holding one of these pistols
+(or aiming a long gun with added ADS hands, which shares the layer) rendered
+without depth testing and its rooms flickered as draw order changed.
+Single player hid it because the next frame re-enabled the mode. The layer now
+ends in `portAdsEndHandLayer` ([ads_hands.c](port/src/ads_hands.c)), which only
+reloads the scene projection; `gunfire.c` calls it instead of its inline
+clear/reload. `test_hand_layer.c` (run by `test_ads.sh`) requires that the end
+of the layer emits just the projection load. A display-list trace of a 2-player Temple frame showed the
+clear and player 2's 382 triangles drawn without depth testing. In isolated
+2-player Temple runs, player 2's view changed on about half of 250-390 sampled
+frames with the PP7 or DD44 before the fix and on none after it with the PP7,
+DD44 or Cougar Magnum; the AK47 control showed none either way.
 
 A scoped model hook runs only around first-person pistol/chop draws and offline
 unarmed exports. It validates the proximal forearm's vertex/matrix references,
@@ -3011,7 +3026,8 @@ now passes. This is an ownership fix with no model, fit or material changes.
 [closed grip source](port/src/port_grip_mesh.c),
 [scoped draws](src/game/gunfire.c), [model hook](src/game/model.c),
 [ADS arms](port/src/ads_hands.c), [icon selection](port/src/port_hud.c),
-[exporter](port/src/port_weapon_export.c), [generator guide](scripts/port/weapon_icons.md).
+[exporter](port/src/port_weapon_export.c), [generator guide](scripts/port/weapon_icons.md),
+[depth-layer end regression](scripts/port/test_hand_layer.c).
 **Checks:** [ROM-free wardrobe tests](scripts/port/test_wardrobe.sh) cover all
 six authored outfits, Folder resolution, pistol/chop scope, original bone
 preservation, left-only watch inclusion, UV/alpha preservation, malformed

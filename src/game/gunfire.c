@@ -2196,9 +2196,7 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
             }
         }
         if (armDepth) {
-            gSPClearGeometryMode(gdl++, G_ZBUFFER);
-            gSPMatrix(gdl++, osVirtualToPhysical(currentPlayerGetProjectionMatrix()),
-                G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);
+            gdl = portAdsEndHandLayer(gdl, currentPlayerGetProjectionMatrix());
         }
 #endif
 

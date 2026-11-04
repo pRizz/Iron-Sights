@@ -13,7 +13,7 @@ fix one pose while breaking another.
 | Rifle forearm body           | `sAdsArmProfile` in `ads_hands.c`         | Body bulk ramps to 2.5 after a protected 40-native-unit wrist band, over 35 units. This profile is used only for added long-gun ADS arms; pistols, chopping arms and icons use separate transforms. Body-bulk tuning must not change the hand, wrist seam or watch.                                 |
 | Left watch                   | Original watch meshes and grip roll       | Preserve case/face proportions, moving clock hands, arm/cuff fit and grip orientation. Complete the pause model's missing bracelet underside on left long-gun arms from the arm-slab hull and original metal material. Right hands have no watch. Native pistol/chop/icon transforms stay separate. |
 | Skin shading                 | Native forearm material mapping           | Match generated wrist UV/RGB to the original weapon's same-material skin triangles; keep geometry and alpha fixed. Never recolor/remap the stock hand or change clothing/watch UVs to hide a skin seam.                                                                                             |
-| Pistol hand/sleeve occlusion | First-person weapon depth layer           | Both native hands and added arms use depth testing in the same near projection. A sleeve in front must cover skin regardless of display-list order. Restore the scene projection and clear weapon depth state after each weapon draw.                                                               |
+| Pistol hand/sleeve occlusion | First-person weapon depth layer           | Both native hands and added arms use depth testing in the same near projection. A sleeve in front must cover skin regardless of display-list order. Restore the scene projection after each weapon draw and leave the per-frame `G_ZBUFFER` geometry mode on for later split-screen views.          |
 | ADS fade                     | Shared color/depth topology               | Same triangles in both passes; depth lists contain geometry only. Opaque draws omit unused depth lists.                                                                                                                                                                                             |
 
 ## Protected native pistol path
@@ -32,7 +32,12 @@ With upstream's optional `weapon_fov=1`, this depth remap receives the selected
 gun projection, including its aim correction, rather than reloading the world
 projection. Gun, native hand and generated sleeve use the same XY transform.
 The option remains off by default; fully raised ADS blends back to the calibrated
-world projection. Restore the world projection after the complete hand pass.
+world projection. Restore the world projection after the complete hand pass
+(`portAdsEndHandLayer`). Do not clear `G_ZBUFFER` there: `lvlRender` enables it
+once per frame (`dlZBufferGeometry`) before every player's view, so clearing it
+removed depth testing from each later split-screen view and made its rooms
+flicker. `test_hand_layer.c` (run by `test_ads.sh`) checks that the end of the
+layer only reloads projection.
 The frame-owned filtered list bypasses the retained GPU part
 cache, whose keys assume immutable display lists.
 

@@ -229,6 +229,14 @@ Gfx *portAdsBeginHandLayer(Gfx *gdl, const Mtxf *gunProjection)
     return gdl;
 }
 
+/* lvlRender enables G_ZBUFFER once per frame (dlZBufferGeometry) for every
+ * split-screen view; clearing it here left later views without depth tests. */
+Gfx *portAdsEndHandLayer(Gfx *gdl, Mtx *sceneProjection)
+{
+    gSPMatrix(gdl++, osVirtualToPhysical(sceneProjection), G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);
+    return gdl;
+}
+
 Gfx *portAdsDrawHands(Gfx *gdl, s32 item, const Mtxf *gun)
 {
     coord3d trigger, support;
