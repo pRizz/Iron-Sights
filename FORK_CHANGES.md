@@ -189,6 +189,10 @@ inside, and a miss), box fractions and the front/back half, part and ordinal
 lookup, the leg and arm pose, fitting and facing in front and back views, hits
 following the posed box, and corner and side hits landing on the oval. The
 settings placement check, HUD and hit sound tests and the standards checks pass.
+`test_ads.c` includes `joy_port.c`, which now calls the hit map's option hooks,
+so it stubs `portHitMapOptionGet`/`Set` beside its video and input stubs; without
+them `test_ads.sh` failed to link, which failed CI's ROM-free test step on the
+hit map commit. `test_ads.sh` passes with the stubs.
 The regenerated hand gallery has no changed image cells (only its source
 fingerprint) and verifies. Audit captures at 960x720 show the rearranged overview (also hovered over the
 counts), the closer look without the stamp, the cheat-difficulty page with the

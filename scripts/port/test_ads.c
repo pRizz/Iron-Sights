@@ -33,6 +33,8 @@ s32 portVideoOptionGet(const char *key, s32 *out) { (void) key; (void) out; retu
 s32 portVideoOptionSet(const char *key, s32 v) { (void) key; (void) v; return 0; }
 s32 portInputOptionGet(const char *key, s32 *out) { (void) key; (void) out; return 0; }
 s32 portInputOptionSet(const char *key, s32 v) { (void) key; (void) v; return 0; }
+s32 portHitMapOptionGet(const char *key, s32 *out) { (void) key; (void) out; return 0; }
+s32 portHitMapOptionSet(const char *key, s32 v) { (void) key; (void) v; return 0; }
 s32 portIniWriteStrs(const char *section, const char *const *keys, const char *const *vals, s32 n)
 {
     s32 i;
