@@ -4585,6 +4585,12 @@ void watch_adjust_volume_slider(u16* outVolume) {
     } else if (joyGetButtons(PLAYER_1, L_CBUTTONS|L_TRIG|L_JPAD)) {
         adjusted_volume = adjusted_volume - WATCH_VOL_ADJUST_STEP;
     }
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    else {   /* PORT: a touch arrow sends one press per tap; held, it moves the bar like a held D-pad */
+        extern s32 portWebTouchHeldSide(void);
+        adjusted_volume += portWebTouchHeldSide() * WATCH_VOL_ADJUST_STEP;
+    }
+#endif
 
     // Clamp stick deflection
     if (joy_x >= 0x47) {

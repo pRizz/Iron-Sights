@@ -1723,6 +1723,28 @@ Erase-folder confirm cannot reach Yes); they are not fixed in this change.
 Next action: confirm on a physical phone after Pages publication; decide which
 of those gaps to fix next.
 
+**Remaining Options folder touch gaps, 2026-11-04:** The owner asked to fix the
+audited gaps. Three more native contexts follow the value edit: an open pick list
+(5) shows ▲ / ▼ (three rows per tap through the step queue, clamped like the
+wheel) and Cancel; a bind row's capture (6) shows Unbind (the screen's Delete key
+through `portWebTouchUnbind`) and Cancel (B); Input Device's wait (7) shows a
+Cancel that ends the wait at once instead of the ten-second timeout. Capture and
+wait hide the cursor surface. The Files screen's Erase prompt now lets a pointer
+press on Cancel or Confirm answer with that word (desktop mouse included); a press
+elsewhere keeps the Cancel default. A touch Left/Right held past about 0.3 s moves
+a watch volume bar like a held D-pad; every other watch screen keeps one step per
+contact. Sources: `port/web/touch.c`/`.h`, `src/game/front.c`,
+`src/game/options.c`, `touch-*.ts(x)`, the bridge/unit/fixture tests and the new
+`touch-options-audit.mjs` (FORK-028). Verification: Wasm bridge regression, 201
+unit tests, TypeScript, the Edge touch fixture and the Edge real-ROM Options audit
+(Max FPS scrolls to its last row and closes; Move Forward cancels, re-arms and
+unbinds; Input Device's wait cancels in 65 ms; Erase answers a stray tap with
+Cancel, and taps on Confirm and Cancel with those) pass, with a zero-change gallery
+regeneration. Evidence: `build/web-touch/options3`. Not covered by a real-ROM run:
+the in-mission watch volume hold (bridge test only) and gamepad bind captures.
+007-mode sliders and the multiplayer setup's left/right rows were not audited.
+Next action: confirm on a physical phone after Pages publication.
+
 **Button look gestures and left Z, 2026-10-29:** The owner selected tap activation
 versus swipe-only look. Discrete gameplay buttons activate on release within a
 10-pixel slop; swipes look and never activate after returning to their origin.

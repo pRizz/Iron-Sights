@@ -18,6 +18,7 @@ const held = new Set<number>();
 const presses: number[] = [];
 let accepts = 0;
 let steps = 0;
+let unbinds = 0;
 let cursor = [0, 0];
 let exported = 0,
     imported = '';
@@ -49,6 +50,9 @@ const game = {
     _portWebTouchStep: (count: number) => {
         steps += count;
     },
+    _portWebTouchUnbind: () => {
+        unbinds++;
+    },
     _portWebTouchMove: (x: number, y: number) => {
         movement = [x, y];
     },
@@ -77,6 +81,7 @@ Object.assign(globalThis, {
             state: state().kind,
             accepts,
             steps,
+            unbinds,
             cursor,
             exported,
             imported,

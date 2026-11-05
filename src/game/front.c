@@ -520,6 +520,12 @@ static s32 portDlgTick(void);
 static s32 portDlgSaidYes(void);
 static Gfx *portDlgDraw(Gfx *DL);
 static s32 port_filesel_options_selected = FALSE; /* OPTIONS clicked: menu change at the end of the tick */
+/* The Erase prompt's two answers as last drawn (x0 y0 x1 y1, indexed like
+ * folder_selected_for_deletion_choice: 0 confirm, 1 cancel), so a pointer
+ * press can pick one; valid only once drawn for the folder being asked about. */
+#define PORT_ERASE_HIT_PAD 4
+static s32 port_erase_box[2][4];
+static s32 port_erase_box_valid = FALSE;
 #endif
 
 struct mission_folder_setup mission_folder_setup_entries[] = {
@@ -2723,6 +2729,27 @@ s32 interface_menu05_fileselect(void)
 
     if (folder_selected_for_deletion >= 0)
     {
+#ifndef TARGET_N64
+        /* PORT: a pointer press ON Cancel or Confirm answers with that one (the
+         * mouse, and the web's touch overlay, whose every tap is a press). The
+         * cursor follows here so it is where the player points; a press
+         * anywhere else keeps the choice, which starts on Cancel. */
+        frontUpdateControlStickPosition();
+        if (port_erase_box_valid
+            && joyGetButtonsPressedThisFrame(PLAYER_1, A_BUTTON | Z_TRIG | START_BUTTON) != 0)
+        {
+            s32 k;
+
+            for (k = 0; k < 2; k++)
+            {
+                if ((f32) port_erase_box[k][0] <= cursor_h_pos && cursor_h_pos <= (f32) port_erase_box[k][2]
+                    && (f32) port_erase_box[k][1] <= cursor_v_pos && cursor_v_pos <= (f32) port_erase_box[k][3])
+                {
+                    folder_selected_for_deletion_choice = k;
+                }
+            }
+        }
+#endif
         if ((joyGetButtonsPressedThisFrame(PLAYER_1, L_JPAD | L_TRIG | L_CBUTTONS) != 0) && (folder_selected_for_deletion_choice == 0))
         {
             folder_selected_for_deletion_choice = 1;
@@ -2869,6 +2896,9 @@ s32 interface_menu05_fileselect(void)
                         {
                             folder_selected_for_deletion = foldernum;
                             folder_selected_for_deletion_choice = 1;
+#ifndef TARGET_N64
+                            port_erase_box_valid = FALSE;   /* until drawn for this folder */
+#endif
                         }
 
                         folder_selection_screen_option_icon = 0;
@@ -3373,6 +3403,30 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
             textpos.p[0] = (s32) floorFloat(folderpos2d.f[1]) + 0x1E;
 
             DL = textRender(DL, &textpos.p[1], &textpos.p[0], langp, ptrFontZurichBoldChars, ptrFontZurichBold, 0xEBD879FF, viGetX(), viGetY(), 0, 0);
+
+#ifndef TARGET_N64
+            {   /* PORT: record where the two answers draw, for the tick's pointer press */
+                const s32 ay = (s32) floorFloat(folderpos2d.f[1]) + 0x32;
+                const s32 ax[2] = { (((j_text_trigger != 0) ? 0x17 : -1) + (s32) floorFloat(folderpos2d.f[0])) - 1,
+                                    (s32) floorFloat(folderpos2d.f[0]) - 0x2F };
+                char *const atext[2] = { langGet(getStringID(LTITLE, TITLE_STR_25_CONFIRM)),
+                                         langGet(getStringID(LTITLE, TITLE_STR_24_CANCEL)) };
+                s32 k;
+
+                for (k = 0; k < 2; k++)
+                {
+                    s32 aw = 0;
+                    s32 ah = 0;
+
+                    textMeasure(&ah, &aw, atext[k], ptrFontZurichBoldChars, ptrFontZurichBold, 0);
+                    port_erase_box[k][0] = ax[k] - 1 - PORT_ERASE_HIT_PAD;
+                    port_erase_box[k][1] = ay - 1 - PORT_ERASE_HIT_PAD;
+                    port_erase_box[k][2] = ax[k] + aw + 3 + PORT_ERASE_HIT_PAD;
+                    port_erase_box[k][3] = ay + ah + PORT_ERASE_HIT_PAD;
+                }
+                port_erase_box_valid = TRUE;
+            }
+#endif
 
             langp = langGet(getStringID(LTITLE, TITLE_STR_24_CANCEL)); /* cancel */
             textpos.p[1] = (s32) floorFloat(folderpos2d.f[0]) - 0x2F;
@@ -6078,6 +6132,13 @@ s32 portSheetValueEditOpen(void)
     return port_sheet_edit_row >= 0;
 }
 
+/** TRUE while a row's pick list is up and taking input; the touch overlay
+ * shows its scroll and close buttons only then. */
+s32 portSheetPickListOpen(void)
+{
+    return port_sheet_list_row >= 0 && !port_sheet_list_closing;
+}
+
 #if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
 /** One touch step (the overlay's - / + or a sideways drag). Unlike a D-pad
  * press it stops at either end of the scale: a drag past 100% must not wrap
@@ -7789,6 +7850,13 @@ void interface_menu1C_portsheet(void)
      * or a list owns the tick, or over a row that is not a bind, is spent
      * now - never banked for the next bind row the cursor crosses */
     del = portVideoDeleteEdge();
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    {   /* the touch overlay's Unbind button is this screen's Delete key */
+        extern s32 portWebTouchTakeUnbind(void);
+
+        del |= portWebTouchTakeUnbind();
+    }
+#endif
     {   /* Hotplug under a device page: the page holds a device index, and a
          * plug or unplug in a lower slot puts another player's pad behind it.
          * When the slot behind an unchanged index moves, drop anything armed
@@ -7900,7 +7968,19 @@ void interface_menu1C_portsheet(void)
         {
             const f32 hx = cursor_h_pos;
             const f32 hy = cursor_v_pos;
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+            extern s32 portWebTouchTakeBack(void);
+            extern void portInputAssignCancel(void);
 
+            /* touch is no device the assign listens to, so its Cancel button
+             * stops the wait instead of the ten-second timeout */
+            if (portWebTouchTakeBack())
+            {
+                portInputAssignCancel();
+                sndPlaySfx((struct ALBankAlt_s *) g_musicSfxBufferPtr, GUN_M60AMMGUN_3_SFX, NULL);
+            }
+            else
+#endif
             if (portInputAssignTick())
             {
                 const s32 dev = portInputAssignTake();
@@ -8076,6 +8156,22 @@ void interface_menu1C_portsheet(void)
                 if (port_sheet_list_scroll > count - n) port_sheet_list_scroll = count - n;
                 if (port_sheet_list_scroll < 0) port_sheet_list_scroll = 0;
             }
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+            {   /* the touch overlay's scroll buttons move the window like the
+                 * wheel; the next tap then picks by hover even where the
+                 * finger last rested, since a different entry is under it */
+                extern s32 portWebTouchTakeSteps(void);
+                const s32 touch = portWebTouchTakeSteps();
+
+                if (touch != 0 && count > n)
+                {
+                    port_sheet_list_scroll += touch;
+                    if (port_sheet_list_scroll > count - n) port_sheet_list_scroll = count - n;
+                    if (port_sheet_list_scroll < 0) port_sheet_list_scroll = 0;
+                    listh = -1.0f;
+                }
+            }
+#endif
             if (port_sheet_list_idx != was)
             {
                 sndPlaySfx((struct ALBankAlt_s *) g_musicSfxBufferPtr, OPTION_CLICK2_SFX, NULL);

@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal, onCleanup, type Accessor } from 'solid-js';
 
-type TouchHintContext = 'inactive' | 'menu' | 'files' | 'edit';
+type TouchHintContext = 'inactive' | 'menu' | 'files' | 'edit' | 'list' | 'capture' | 'assign';
 
 export function createTouchHints(context: Accessor<TouchHintContext>): Accessor<boolean> {
     const [visible, setVisible] = createSignal(false);

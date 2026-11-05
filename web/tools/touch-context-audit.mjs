@@ -66,6 +66,46 @@ export async function auditTouchContext(page) {
         await page.evaluate(() => touchFixture.context(0));
         await expect(page.locator('[data-touch-step]')).toHaveCount(0);
 
+        // An open pick list: ▲/▼ queue three rows each, taps still pick by the
+        // cursor, and Cancel sends B to close it.
+        await page.evaluate(() => touchFixture.context(5));
+        await expect(overlay).toHaveAttribute('data-context', 'list');
+        await expect(page.locator('.touch-menu-surface')).toBeVisible();
+        await expect(page.locator('.touch-menu-hint')).toContainText('▲ ▼ scroll');
+        const listed = await page.evaluate(() => touchFixture.snapshot());
+        await page.locator('[data-touch-step="3"]').tap();
+        await page.locator('[data-touch-step="3"]').tap();
+        await page.locator('[data-touch-step="-3"]').tap();
+        await send('pointerdown', 300);
+        await send('pointerup', 301);
+        await page.locator('[data-touch-action=back]').tap();
+        const picked = await page.evaluate(() => touchFixture.snapshot());
+        assert.equal(picked.steps, listed.steps + 3);
+        assert.equal(picked.accepts, listed.accepts + 1, 'a tap picks the hovered entry');
+        assert.ok(picked.presses.slice(listed.presses.length).includes(6), 'Cancel sends B');
+
+        // A bind capture and an Input Device wait show only their buttons: no
+        // cursor surface, whose tap would land on the row being bound.
+        for (const [native, name, unbind] of [
+            [6, 'capture', true],
+            [7, 'assign', false],
+        ]) {
+            await page.evaluate((value) => touchFixture.context(value), native);
+            await expect(overlay).toHaveAttribute('data-context', name);
+            await expect(page.locator('.touch-menu-surface')).toHaveCount(0);
+            await expect(page.locator('[data-touch-step]')).toHaveCount(0);
+            await expect(page.locator('[data-touch-request=unbind]')).toHaveCount(unbind ? 1 : 0);
+            const waiting = await page.evaluate(() => touchFixture.snapshot());
+            if (unbind) await page.locator('[data-touch-request=unbind]').tap();
+            await page.locator('[data-touch-action=back]').tap();
+            const answered = await page.evaluate(() => touchFixture.snapshot());
+            assert.equal(answered.unbinds, waiting.unbinds + (unbind ? 1 : 0));
+            assert.equal(answered.accepts, waiting.accepts, 'waiting never confirms a row');
+            assert.ok(answered.presses.slice(waiting.presses.length).includes(6), 'Cancel sends B');
+        }
+        await page.evaluate(() => touchFixture.context(0));
+        await expect(page.locator('[data-touch-request]')).toHaveCount(0);
+
         // A menu gesture held over a camera transition must not select/skip
         // on release in the new context.
         await page.evaluate(() => touchFixture.context(0));

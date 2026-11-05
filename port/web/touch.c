@@ -23,12 +23,21 @@ extern s32 bondinvCountTotalItemsInInv(void);
 extern s32 bondinvGetTextbyInvIndex(s32 index);
 extern s32 portJoyPortInvScrollItem(s32 item);
 extern s32 portSheetValueEditOpen(void);
+extern s32 portSheetPickListOpen(void);
+extern s32 portBindCaptureActive(void);
+extern s32 portInputAssignActive(void);
 
 /* Presentation follows real engine permission, never an intro-duration timer.
  * Keep the watch distinct so its native lists can still be closed/navigated. */
 EMSCRIPTEN_KEEPALIVE s32 portWebTouchContext(void)
 {
-    if (!portStageRunning()) return portSheetValueEditOpen() ? WEB_TOUCH_VALUE_EDIT : WEB_TOUCH_NAVIGATION;
+    if (!portStageRunning()) {
+        /* Each Options folder state that a menu tap cannot answer gets its own controls. */
+        if (portBindCaptureActive()) return WEB_TOUCH_BIND_CAPTURE;
+        if (portInputAssignActive()) return WEB_TOUCH_ASSIGN;
+        if (portSheetPickListOpen()) return WEB_TOUCH_PICK_LIST;
+        return portSheetValueEditOpen() ? WEB_TOUCH_VALUE_EDIT : WEB_TOUCH_NAVIGATION;
+    }
     if (portWatchMenuUp()) return WEB_TOUCH_WATCH;
     return portWebControlsLive() ? WEB_TOUCH_GAME : WEB_TOUCH_CINEMATIC;
 }
@@ -52,6 +61,10 @@ static s32 enabled;
 static f32 moveX, moveY, yaw, pitch;
 static u32 held, pressed;
 static s32 steps;
+static s32 unbind, back;
+/* A watch Left/Right held this many polls (about 0.3 s) moves a volume bar like a held D-pad. */
+#define TOUCH_REPEAT_POLLS 18
+static s32 sidePolls;
 static const char *const actions[TOUCH_COUNT] = {
     [TOUCH_AIM] = "aim_down_sights", [TOUCH_USE] = "use", [TOUCH_RELOAD] = "reload",
     [TOUCH_CROUCH] = "crouch_toggle", [TOUCH_PREV_WEAPON] = "prev_weapon",
@@ -63,7 +76,7 @@ static const char *const actions[TOUCH_COUNT] = {
 EMSCRIPTEN_KEEPALIVE void portWebTouchReset(void)
 {
     held = pressed = 0;
-    steps = 0;
+    steps = unbind = back = sidePolls = 0;
     moveX = moveY = yaw = pitch = 0;
 }
 
@@ -100,7 +113,13 @@ EMSCRIPTEN_KEEPALIVE void portWebTouchButton(s32 action, s32 down)
     u32 bit;
     if (!enabled || action < 0 || action >= TOUCH_COUNT) return;
     bit = 1u << action;
-    if (down) { if (!(held & bit)) pressed |= bit; held |= bit; }
+    if (down) {
+        if (!(held & bit)) {
+            pressed |= bit;
+            if (action == TOUCH_BACK) back = 1;
+        }
+        held |= bit;
+    }
     else held &= ~bit;
 }
 
@@ -113,11 +132,44 @@ EMSCRIPTEN_KEEPALIVE void portWebTouchStep(s32 count)
 }
 
 /* The Options folder's open slider edit takes the queued steps each tick
- * (src/game/front.c) and clamps them at the scale's ends; the D-pad wraps. */
+ * (src/game/front.c) and clamps them at the scale's ends; the D-pad wraps.
+ * An open pick list takes them as rows to scroll instead. */
 s32 portWebTouchTakeSteps(void)
 {
     const s32 taken = steps;
     steps = 0;
+    return taken;
+}
+
+/* +1 / -1 while the watch's Right / Left has been held past a tap, else 0. Only
+ * the volume bars read it (src/game/options.c): elsewhere a held arrow stays one
+ * step, as watch lists and pages need. */
+s32 portWebTouchHeldSide(void)
+{
+    if (!enabled || sidePolls <= TOUCH_REPEAT_POLLS) return 0;
+    if (held & (1u << TOUCH_RIGHT)) return 1;
+    return (held & (1u << TOUCH_LEFT)) ? -1 : 0;
+}
+
+/* The Unbind button: the Options folder reads it as its Delete key. */
+EMSCRIPTEN_KEEPALIVE void portWebTouchUnbind(void)
+{
+    if (enabled) unbind = 1;
+}
+
+s32 portWebTouchTakeUnbind(void)
+{
+    const s32 taken = unbind;
+    unbind = 0;
+    return taken;
+}
+
+/* Back pressed since the last take; Input Device's wait cancels on it because
+ * it listens to real devices only and never sees the touch B. */
+s32 portWebTouchTakeBack(void)
+{
+    const s32 taken = back;
+    back = 0;
     return taken;
 }
 
@@ -133,10 +185,13 @@ void portWebTouchPoll(OSContPad *pad)
         | (1u << TOUCH_LEFT) | (1u << TOUCH_RIGHT);
     u32 down = (held & ~directions) | pressed;
     s32 i, action;
+    sidePolls = (held & ((1u << TOUCH_LEFT) | (1u << TOUCH_RIGHT))) ? sidePolls + 1 : 0;
     pressed = 0;
     if (!enabled || portConIsOpen()) return;
-    /* Steps belong to the edit they were made in; never carry them into the next. */
-    if (!portSheetValueEditOpen()) steps = 0;
+    /* Steps and requests belong to the screen they were made on; never carry them on. */
+    if (!portSheetValueEditOpen() && !portSheetPickListOpen()) steps = 0;
+    if (!portBindCaptureActive()) unbind = 0;
+    if (!portInputAssignActive()) back = 0;
     for (i = 0; i < TOUCH_COUNT; i++) {
         if (!(down & (1u << i))) continue;
         pad->button |= buttons[i];

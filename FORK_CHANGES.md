@@ -1348,6 +1348,31 @@ bridge regression, 156 browser unit tests, TypeScript, the Edge touch fixture
 (−/+, drag, tap-to-keep, Done/Cancel) and Edge's real-ROM audit (Music 50 → 55
 via −/+ and Done, a long drag stopping at 100, Cancel restoring 100, a leftward
 drag stopping at 0) pass; the gallery regenerated with zero changed images.
+The other Options folder states a menu tap could not answer now have touch
+controls too, each reported as its own native context ahead of the value edit:
+an open pick list (5) shows ▲ / ▼ and Cancel, and `portSheetPickListOpen` lets the
+list take the step queue as rows to scroll (three per tap, clamped like the wheel;
+the next tap picks by hover even where the finger last rested). A bind row's
+capture (6) previously soft-locked touch, since only B, Delete or a three-second
+hold ended it; it now shows Cancel (B) and Unbind, which `portWebTouchUnbind`
+latches and the sheet reads as its Delete key. Input Device's wait (7) shows a
+Cancel that `portWebTouchTakeBack` delivers to the wait, which listens to real
+devices only, instead of its ten-second timeout. Both waits hide the cursor surface.
+Latched steps, Unbind and Back are dropped once their screen closes. On the Files
+screen the Erase prompt (upstream: defaults to cancel, switched only by left/right)
+now follows the cursor and a pointer press on cancel or confirm answers with that
+word, on desktop as well as touch; a press elsewhere keeps the current choice.
+Its hit boxes (`port_erase_box`) are recorded where the words draw. In the watch,
+a touch Left/Right held past about 0.3 s (`portWebTouchHeldSide`, read only by
+`watch_adjust_volume_slider` in `src/game/options.c`) moves a volume bar like a
+held D-pad; other watch screens keep one step per contact. Sources add
+`src/game/options.c` and `web/tools/touch-options-audit.mjs`. Validation: the Wasm
+bridge regression (contexts, list steps, latches, held sides), 201 browser unit
+tests, TypeScript, the Edge touch fixture and Edge's real-ROM Options audit (Max
+FPS list scrolls to its end and closes, a rebind row cancels, re-arms and
+unbinds, Input Device's wait cancels at once, Erase taps answer Cancel, Confirm
+and Cancel) pass, and the gallery regenerated with zero changed images. The
+watch volume hold and gamepad captures have no real-ROM run.
 Gameplay buttons distinguish taps from looking: A/B/R/Start, Gadget, More and
 discrete Modern actions activate only on tap-up within a 10 CSS-pixel slop.
 Moving farther latches a look gesture, so returning to the starting point cannot

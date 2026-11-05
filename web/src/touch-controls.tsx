@@ -57,17 +57,26 @@ export function TouchControls(props: Props) {
     const active = () =>
         props.visible() && props.input.enabled() && props.capture.state().kind !== 'paused';
     const editing = () => context() === 'edit';
-    const hints = createTouchHints(() =>
-        !active()
-            ? 'inactive'
-            : editing()
-              ? 'edit'
-              : context() !== 'navigation'
-                ? 'inactive'
-                : files()
-                  ? 'files'
-                  : 'menu',
-    );
+    const listing = () => context() === 'list';
+    // A bind capture or Input Device wait answers to keys and pads only; a menu
+    // tap there would land on the row being bound, so only its buttons show.
+    const waiting = () => context() === 'capture' || context() === 'assign';
+    const hints = createTouchHints(() => {
+        if (!active()) return 'inactive';
+        const current = context();
+        if (current === 'edit' || current === 'list') return current;
+        if (current === 'capture' || current === 'assign') return current;
+        if (current !== 'navigation') return 'inactive';
+        return files() ? 'files' : 'menu';
+    });
+    const hintText = () => {
+        const current = context();
+        if (current === 'edit') return 'Drag sideways or tap − + to change · Done keeps it';
+        if (current === 'list') return 'Tap an entry to pick it · ▲ ▼ scroll · Cancel closes';
+        if (current === 'capture') return 'Press a key or button to bind · Unbind clears the row';
+        if (current === 'assign') return 'Press a button on the device · Cancel stops waiting';
+        return 'Drag to move cursor · Tap to select';
+    };
     const contacts = createTouchContacts(
         (id, maybeEvent) => {
             const maybeTap = buttonGestures.maybeTakeTap(
@@ -252,23 +261,39 @@ export function TouchControls(props: Props) {
             {button.children ?? button.label}
         </button>
     );
-    // Slider steps queue natively for the open edit, so no hold state is needed.
-    const StepButton = (button: { steps: number; label: string; text: string }) => (
+    // Slider and list steps, and Unbind, queue natively for the open screen,
+    // so no hold state is needed.
+    const QueueButton = (button: {
+        label: string;
+        text: string;
+        activate: () => void;
+        maybeSteps?: number;
+        maybeRequest?: 'unbind';
+    }) => (
         <button
             type="button"
-            data-touch-step={button.steps}
+            data-touch-step={button.maybeSteps}
+            data-touch-request={button.maybeRequest}
             aria-label={button.label}
             onContextMenu={(event) => event.preventDefault()}
             onPointerDown={(event) => {
                 begin(event);
-                props.input.step(button.steps);
+                button.activate();
             }}
             onClick={(event) => {
-                if (event.detail === 0) props.input.step(button.steps);
+                if (event.detail === 0) button.activate();
             }}
         >
             {button.text}
         </button>
+    );
+    const StepButton = (button: { steps: number; label: string; text: string }) => (
+        <QueueButton
+            label={button.label}
+            text={button.text}
+            maybeSteps={button.steps}
+            activate={() => props.input.step(button.steps)}
+        />
     );
     const move = (event: PointerEvent, target: HTMLElement) => {
         if (maybeMove !== event.pointerId) return;
@@ -302,7 +327,7 @@ export function TouchControls(props: Props) {
                     when={!menu()}
                     fallback={
                         <>
-                            <Show when={`${context()}:${files()}`} keyed>
+                            <Show when={!waiting() && `${context()}:${files()}`} keyed>
                                 {(_contextKey) => (
                                     <TouchMenu
                                         canvas={props.canvas}
@@ -310,6 +335,31 @@ export function TouchControls(props: Props) {
                                         adjust={editing()}
                                     />
                                 )}
+                            </Show>
+                            <Show when={listing()}>
+                                <div class="touch-value-step" role="group" aria-label="Scroll list">
+                                    <StepButton steps={-3} label="Scroll up" text="▲" />
+                                    <StepButton steps={3} label="Scroll down" text="▼" />
+                                </div>
+                                <div class="touch-menu-actions">
+                                    <Button action="back" label="Cancel" />
+                                </div>
+                            </Show>
+                            <Show when={context() === 'capture'}>
+                                <div class="touch-menu-actions">
+                                    <QueueButton
+                                        label="Unbind"
+                                        text="Unbind"
+                                        maybeRequest="unbind"
+                                        activate={() => props.input.unbind()}
+                                    />
+                                    <Button action="back" label="Cancel" />
+                                </div>
+                            </Show>
+                            <Show when={context() === 'assign'}>
+                                <div class="touch-menu-actions">
+                                    <Button action="back" label="Cancel" />
+                                </div>
                             </Show>
                             <Show when={editing()}>
                                 <div
@@ -447,9 +497,7 @@ export function TouchControls(props: Props) {
                     </div>
                 </Show>
                 <HelperText when={hints()} class="touch-menu-hint">
-                    {editing()
-                        ? 'Drag sideways or tap − + to change · Done keeps it'
-                        : 'Drag to move cursor · Tap to select'}
+                    {hintText()}
                 </HelperText>
             </div>
         </Show>

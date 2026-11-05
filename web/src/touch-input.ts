@@ -170,6 +170,9 @@ export function createTouchInput(
         step(count: number) {
             engine.maybeGame()?._portWebTouchStep?.(count);
         },
+        unbind() {
+            engine.maybeGame()?._portWebTouchUnbind?.();
+        },
     };
 }
 export type TouchInput = ReturnType<typeof createTouchInput>;

@@ -8,7 +8,7 @@
 s32 g_portMouseDirect, g_PlayerIsInTank;
 f32 g_portMouseYawDeg, g_portMousePitchDeg;
 static s32 live, consoleOpen, playerNum;
-static s32 stageRunning, watchOpen, valueEdit;
+static s32 stageRunning, watchOpen, valueEdit, pickList, bindCapture, assignWait;
 static u32 actionBits;
 static s32 inventory[8], inventoryCount, inventoryReads;
 static const char *const bindings[] = {
@@ -21,6 +21,9 @@ s32 portBondControlsLive(void) { return live; }
 s32 portStageRunning(void) { return stageRunning; }
 s32 portWatchMenuUp(void) { return watchOpen; }
 s32 portSheetValueEditOpen(void) { return valueEdit; }
+s32 portSheetPickListOpen(void) { return pickList; }
+s32 portBindCaptureActive(void) { return bindCapture; }
+s32 portInputAssignActive(void) { return assignWait; }
 s32 portWebControlsLive(void) { return live; }
 s32 portConIsOpen(void) { return consoleOpen; }
 s32 bondinvCountTotalItemsInInv(void) { inventoryReads++; return inventoryCount; }
@@ -51,6 +54,16 @@ static void testTouchContext(void)
     valueEdit = 1;
     assert(portWebTouchContext() == WEB_TOUCH_VALUE_EDIT);
     valueEdit = 0;
+    /* Options folder states that a tap cannot answer each report their own context. */
+    pickList = 1;
+    assert(portWebTouchContext() == WEB_TOUCH_PICK_LIST);
+    assignWait = 1;
+    assert(portWebTouchContext() == WEB_TOUCH_ASSIGN);
+    bindCapture = 1;
+    assert(portWebTouchContext() == WEB_TOUCH_BIND_CAPTURE);
+    stageRunning = 1;
+    assert(portWebTouchContext() == WEB_TOUCH_CINEMATIC); /* only outside a mission */
+    stageRunning = pickList = assignWait = bindCapture = 0;
 }
 
 static void testValueEditSteps(void)
@@ -74,6 +87,44 @@ static void testValueEditSteps(void)
     valueEdit = 0;
     portWebTouchPoll(&pad);
     assert(pad.button == 0 && portWebTouchTakeSteps() == 0);
+    /* An open pick list takes the same queue as rows to scroll. */
+    pickList = 1;
+    portWebTouchStep(-3);
+    portWebTouchPoll(&pad);
+    assert(pad.button == 0 && portWebTouchTakeSteps() == -3);
+    pickList = 0;
+    portWebTouchReset();
+}
+
+static void testCaptureRequests(void)
+{
+    /* Arrange: a bind row waits for an input. */
+    OSContPad pad = {0};
+    portWebTouchReset();
+    bindCapture = 1;
+    /* Act / Assert: Unbind is one Delete for the Options folder, no pad bits. */
+    portWebTouchUnbind();
+    portWebTouchPoll(&pad);
+    assert(pad.button == 0 && portWebTouchTakeUnbind() && !portWebTouchTakeUnbind());
+    /* An Unbind left over when the capture ends is dropped, not banked. */
+    portWebTouchUnbind();
+    bindCapture = 0;
+    portWebTouchPoll(&pad);
+    assert(!portWebTouchTakeUnbind());
+    /* Back still sends B, and Input Device's wait also sees it once. */
+    assignWait = 1;
+    portWebTouchButton(TOUCH_BACK, 1);
+    portWebTouchPoll(&pad);
+    assert(pad.button == B_BUTTON && portWebTouchTakeBack() && !portWebTouchTakeBack());
+    portWebTouchButton(TOUCH_BACK, 0);
+    /* Back pressed with no wait open never cancels a later one. */
+    assignWait = 0;
+    portWebTouchButton(TOUCH_BACK, 1);
+    portWebTouchButton(TOUCH_BACK, 0);
+    portWebTouchPoll(&pad);
+    assignWait = 1;
+    assert(!portWebTouchTakeBack());
+    assignWait = 0;
     portWebTouchReset();
 }
 
@@ -130,8 +181,13 @@ static void testWatchDirections(void)
             portWebTouchButton(directions[i], 1);
             portWebTouchPoll(&pad);
             assert(pad.button == 0 && pad.stick_x == 0 && pad.stick_y == 0);
+            /* Only a long Left/Right hold reports a side, for the volume bars. */
+            assert(portWebTouchHeldSide() == (tick + 2 > TOUCH_REPEAT_POLLS
+                ? (directions[i] == TOUCH_RIGHT ? 1 : directions[i] == TOUCH_LEFT ? -1 : 0) : 0));
         }
         portWebTouchButton(directions[i], 0);
+        portWebTouchPoll(&pad);
+        assert(portWebTouchHeldSide() == 0);
         portWebTouchButton(directions[i], 1);
         portWebTouchButton(directions[i], 0);
         portWebTouchPoll(&pad);
@@ -178,6 +234,7 @@ int main(void)
     testAvailableGadgets();
     testWatchDirections();
     testValueEditSteps();
+    testCaptureRequests();
     portWebTouchButton(TOUCH_FIRE, 1);
     portWebTouchButton(TOUCH_AIM, 1);
     portWebTouchButton(TOUCH_RELOAD, 1);
@@ -228,6 +285,6 @@ int main(void)
     pad.button = 0;
     portWebTouchPoll(&pad);
     assert(pad.button == 0);
-    puts("Touch bridge: semantic buttons, independent holds, analog movement, menu sticks, slider steps, reset, bounds and locked-look discard passed.");
+    puts("Touch bridge: semantic buttons, independent holds, analog movement, menu sticks, slider and list steps, capture requests, held volume arrows, reset, bounds and locked-look discard passed.");
     return 0;
 }
