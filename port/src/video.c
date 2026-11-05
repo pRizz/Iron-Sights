@@ -165,6 +165,8 @@ static int s_CfgAnisotropy = 2;       /* 0/1 = off; 2..16 samples */
 /* [display] filter_2d: smooth HUD/menu texrects by default on every platform. */
 static int s_CfgFilter2D = 1;
 static int s_CfgEnhancedFonts = 1;
+/* [display] hd_hud_icons: embedded community HD ammo icons (every target). */
+static int s_CfgHdHudIcons = 1;
 static int s_CfgHighLod = 1;          /* 0 = use normal distance-based model LODs */
 static int s_CfgLowRes = 0;           /* [display] low_res: the level render's
                                        * line count - 0 off, 240 = "HW" (legacy
@@ -1078,6 +1080,7 @@ static int videoSetDisplayOption(const char *key, const char *value)
     if (SDL_strcasecmp(key, "anisotropy") == 0)    { s_CfgAnisotropy = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "filter_2d") == 0)     { s_CfgFilter2D = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "enhanced_fonts") == 0) { s_CfgEnhancedFonts = SDL_atoi(value) != 0; return 1; }
+    if (SDL_strcasecmp(key, "hd_hud_icons") == 0)  { s_CfgHdHudIcons = SDL_atoi(value) != 0; return 1; }
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     if (SDL_strcasecmp(key, "texture_pack") == 0) {
         portTexturePackSet(SDL_strcasecmp(value, "hd") == 0 ? 1 : SDL_strcasecmp(value, "4k") == 0 ? 2 : SDL_atoi(value));
@@ -1457,6 +1460,7 @@ s32 portVideoOptionGet(const char *key, s32 *out)
     if (SDL_strcasecmp(key, "anisotropy") == 0)    { *out = (s_CfgAnisotropy >= 2) ? s_CfgAnisotropy : 0; return 1; }
     if (SDL_strcasecmp(key, "filter_2d") == 0)     { *out = s_CfgFilter2D;     return 1; }
     if (SDL_strcasecmp(key, "enhanced_fonts") == 0) { *out = s_CfgEnhancedFonts; return 1; }
+    if (SDL_strcasecmp(key, "hd_hud_icons") == 0)  { *out = s_CfgHdHudIcons;   return 1; }
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     if (SDL_strcasecmp(key, "texture_pack") == 0) { *out = portTexturePackGet(); return 1; }
 #endif
@@ -1615,6 +1619,10 @@ s32 portVideoOptionSet(const char *key, s32 value)
     else if (SDL_strcasecmp(key, "enhanced_fonts") == 0)
     {
         gfx_enhanced_fonts = s_CfgEnhancedFonts != 0;
+    }
+    else if (SDL_strcasecmp(key, "hd_hud_icons") == 0)
+    {
+        gfx_hd_hud_icons = s_CfgHdHudIcons != 0;
     }
     else if (SDL_strcasecmp(key, "low_res") == 0)
     {
@@ -2303,6 +2311,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "anisotropy=%d\n", s_CfgAnisotropy);
     fprintf(f, "filter_2d=%d\n", s_CfgFilter2D);
     fprintf(f, "enhanced_fonts=%d\n", s_CfgEnhancedFonts);
+    fprintf(f, "hd_hud_icons=%d\n", s_CfgHdHudIcons);
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     fprintf(f, "texture_pack=%d\n", portTexturePackGet());
 #endif
@@ -4962,6 +4971,7 @@ s32 videoInit(void)
     }
     gfx_filter_2d = s_CfgFilter2D != 0;
     gfx_enhanced_fonts = s_CfgEnhancedFonts != 0;
+    gfx_hd_hud_icons = s_CfgHdHudIcons != 0;
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     {
         extern const char *portRootPath(const char *name);

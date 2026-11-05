@@ -406,6 +406,7 @@ if(GE_VIDEO)
         port/fast3d/about.cpp
         port/fast3d/weapon_cache.cpp
         port/fast3d/enhanced_fonts.cpp
+        port/fast3d/hd_ammo_icons.cpp
         port/fast3d/gfx_pc.cpp
         port/fast3d/gfx_cc.cpp
         port/fast3d/gfx_opengl.cpp

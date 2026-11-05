@@ -76,6 +76,7 @@ class Distribution(unittest.TestCase):
                 self.assertIn("IronSights.exe",names);self.assertNotIn("ProjectMidas.exe",names)
                 self.assertIn("build-info.json",names);self.assertIn("SHA256SUMS.txt",names)
                 self.assertIn("Enhanced-Fonts-LICENSE.txt",names);self.assertIn("Enhanced-Fonts-NOTICE.txt",names)
+                self.assertIn(b"intermissionfb",archive.read("HD-Ammo-Icons-NOTICE.txt"))
                 self.assertIn("Save-Transfer-LICENSE.txt",names)
                 self.assertIn(b"Copyright 2011-2014 Kazuho Oku",archive.read("Save-Transfer-LICENSE.txt"))
                 self.assertIn(b"Copyright (C) 2017 okdshin",archive.read("Save-Transfer-LICENSE.txt"))

@@ -32,6 +32,10 @@ if __name__ == "__main__":
     source = json.loads((fonts/"sources.json").read_text())
     info["enhanced_fonts"] = dict(source=source["source"], commit=source["commit"], license=source["license"],
         masks_sha256=hashlib.sha256((fonts/"gepd_font_data.inc").read_bytes()).hexdigest())
+    ammo = json.loads(Path("port/fast3d/hud_icons/sources.json").read_text())
+    info["hd_ammo_icons"] = dict(source=ammo["source"], source_sha256=ammo["source_sha256"],
+        license="none stated; attribution in HD-Ammo-Icons-NOTICE.txt",
+        icons_sha256=hashlib.sha256(Path("port/fast3d/hud_icons/hd_ammo_icons.inc").read_bytes()).hexdigest())
     pack = Path("build_win/Data/TexturePacks/hd.istex")
     if pack.is_file():
         info["hd_textures"] = hd_provenance(pack.parent)

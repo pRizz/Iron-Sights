@@ -1,0 +1,219 @@
+{
+  "source": "https://evilgames.eu/files/texture-packs/ge007-hd-v2025.12.30-gliden64-png-hd.zip",
+  "source_sha256": "a72d082e23b516f28f4868b0b32cbb676a5b0ce7f00e7eb79badf89f71ab90ba",
+  "scale": 8,
+  "tank_aliases": [
+    "0590F622",
+    "3BDD4B1C",
+    "5F54D152",
+    "7EE28372",
+    "90F09B58",
+    "D580EAC6"
+  ],
+  "slots": [
+    {
+      "slot": 0,
+      "image": "s_ammo9mmimage",
+      "native": [
+        5,
+        12
+      ],
+      "size": [
+        40,
+        96
+      ],
+      "source": "UI/Ammo/GOLDENEYE#AF0A1953#0#3_all.png",
+      "png_sha256": "141b4671cc67fa8aa20cc7d83bd35ce9f13d698b19ef1b23ac8bda9d03bb14d8",
+      "packed_bytes": 14724
+    },
+    {
+      "slot": 1,
+      "image": "s_rifleammoimage",
+      "native": [
+        5,
+        28
+      ],
+      "size": [
+        40,
+        224
+      ],
+      "source": "UI/Ammo/GOLDENEYE#AC193F4F#0#3_all.png",
+      "png_sha256": "dd444aba61d97654a003783d4ffd186ba43f6e41a15dcc84bffe7ed5316e6d1a",
+      "packed_bytes": 33704
+    },
+    {
+      "slot": 2,
+      "image": "s_shotgunammoimage",
+      "native": [
+        6,
+        20
+      ],
+      "size": [
+        48,
+        160
+      ],
+      "source": "UI/Ammo/GOLDENEYE#2B351868#0#3_all.png",
+      "png_sha256": "47397b279b9c9b6347c720df75cc0958b4a84ab8ce91bfa5a7bfd6c1e5546bd8",
+      "packed_bytes": 30716
+    },
+    {
+      "slot": 3,
+      "image": "s_knifeammoimage",
+      "native": [
+        6,
+        24
+      ],
+      "size": [
+        48,
+        192
+      ],
+      "source": "UI/Ammo/GOLDENEYE#98685E98#0#3_all.png",
+      "png_sha256": "aa2ce8e2a7c12dbabb7ebc659905f7e98c8d0f19b7e033f523467f03e5ef98c2",
+      "packed_bytes": 21630
+    },
+    {
+      "slot": 4,
+      "image": "s_glammoimage",
+      "native": [
+        8,
+        21
+      ],
+      "size": [
+        64,
+        168
+      ],
+      "source": "UI/Ammo/GOLDENEYE#EC11BEAB#0#3_all.png",
+      "png_sha256": "48df25c9549e32baf6429f47e4e2dfe3de2d1b3fcfa8073c3d508c369f776290",
+      "packed_bytes": 40112
+    },
+    {
+      "slot": 5,
+      "image": "s_rocketammoimage",
+      "native": [
+        7,
+        22
+      ],
+      "size": [
+        56,
+        176
+      ],
+      "source": "UI/Ammo/GOLDENEYE#BA97A223#0#3_all.png",
+      "png_sha256": "1028848fd48b69eea11f7537a16e404e713baec847644f248f2b6baaeac85a91",
+      "packed_bytes": 28770
+    },
+    {
+      "slot": 6,
+      "image": "s_genericmineammoimage",
+      "native": [
+        14,
+        14
+      ],
+      "source": null
+    },
+    {
+      "slot": 7,
+      "image": "s_grenadeammoimage",
+      "native": [
+        14,
+        18
+      ],
+      "size": [
+        112,
+        144
+      ],
+      "source": "UI/Ammo/GOLDENEYE#AF8E57EF#0#3_all.png",
+      "png_sha256": "d9c1abbf046d9477fce25705976aea647a07983062ede7bb71e19048250176ed",
+      "packed_bytes": 51406
+    },
+    {
+      "slot": 8,
+      "image": "s_magnumammoimage",
+      "native": [
+        5,
+        15
+      ],
+      "size": [
+        40,
+        120
+      ],
+      "source": "UI/Ammo/GOLDENEYE#91651507#0#3_all.png",
+      "png_sha256": "e0ecea7f715f102c3acc142995aa1a60faaa610250669a31d2960fd19a8e0664",
+      "packed_bytes": 17108
+    },
+    {
+      "slot": 9,
+      "image": "s_goldengunammoimage",
+      "native": [
+        5,
+        12
+      ],
+      "size": [
+        40,
+        96
+      ],
+      "source": "UI/Ammo/GOLDENEYE#FA82F840#0#3_all.png",
+      "png_sha256": "42c95d9668225cbf40a237af46a01ecf1de6d3699f2342aabfa4b18852652fe4",
+      "packed_bytes": 14696
+    },
+    {
+      "slot": 10,
+      "image": "s_remotemineammoimage",
+      "native": [
+        14,
+        14
+      ],
+      "size": [
+        112,
+        112
+      ],
+      "source": "UI/Ammo/GOLDENEYE#551F375D#0#3_all.png",
+      "png_sha256": "77de3231ccb89af0a900b4ec1748ed8e591e5eef124a9681b68a83083f604e4b",
+      "packed_bytes": 39134
+    },
+    {
+      "slot": 11,
+      "image": "s_timedmineammoimage",
+      "native": [
+        14,
+        14
+      ],
+      "size": [
+        112,
+        112
+      ],
+      "source": "UI/Ammo/GOLDENEYE#6F1AC5BE#0#3_all.png",
+      "png_sha256": "d8ebac96d7cad86f10ee07bd895c32ae99b58eccf8c9a52086a80f8784a0c589",
+      "packed_bytes": 39006
+    },
+    {
+      "slot": 12,
+      "image": "s_proxmineammoimage",
+      "native": [
+        14,
+        14
+      ],
+      "size": [
+        112,
+        112
+      ],
+      "source": "UI/Ammo/GOLDENEYE#8640BBB3#0#3_all.png",
+      "png_sha256": "82929a1cdbf4cef6e36a2d6e91438f6e3b5eb489897e06f20ed429424912c8fa",
+      "packed_bytes": 39030
+    },
+    {
+      "slot": 13,
+      "image": "s_tankammoimage",
+      "native": [
+        7,
+        22
+      ],
+      "size": [
+        56,
+        176
+      ],
+      "source": "UI/Ammo/Tank/GOLDENEYE#0590F622#2#1#$_ciByRGBA.png",
+      "png_sha256": "6893d89d7074289474f53ff3b41de153c2d35d023ab94526b42b79ddb38c6bb3",
+      "packed_bytes": 34392
+    }
+  ]
+}

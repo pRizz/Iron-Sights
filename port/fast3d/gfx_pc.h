@@ -45,6 +45,7 @@ struct TextureCacheKey {
      * reuse that entry. */
     uint8_t masks, maskt;
     bool enhanced_font;
+    uint8_t hd_ammo; /* HUD ammo slot + 1 when its embedded HD art replaces the image */
 
     bool operator==(const TextureCacheKey&) const noexcept = default;
 
@@ -68,6 +69,7 @@ struct TextureCacheValue {
     bool linear_filter;
     bool mip_filter; /* GE: minifying through a mip chain (N64 G_TL_LOD draw) */
     bool enhanced_font;
+    bool hd_ammo; /* embedded HD ammo art: smooth sampling like enhanced fonts */
 
     std::list<struct TextureCacheMapIter>::iterator lru_location;
     uint32_t hd_bytes; /* RGBA + complete mip chain upper bound; native-only budget */

@@ -23,6 +23,11 @@ void portHudStyleGauge(struct damage_display_val *vertices, s32 count);
 /* buildGaugeBarDL's 46-vertex gauge: 22 loads, at most 22 quads, one end. */
 #define PORT_GAUGE_BAR_GFX 48
 Gfx *portHudDraw(Gfx *gdl);
+/* HUD ammo icon slot (gunfire.c portAmmoIconPtr order), or -1. */
+struct sImageTableEntry;
+s32 portHudAmmoIconSlot(const struct sImageTableEntry *image);
+/* Tag the following ammo icon draw for HD HUD Icons; NULL ends the tag. */
+Gfx *portHudAmmoIconTag(Gfx *gdl, const struct sImageTableEntry *image);
 void portHudGunSight(s32 *gdl);
 /* Shared port overlay primitives, in native viewport coordinates. */
 Gfx *portHudPanel(Gfx *gdl, f32 x, f32 y, f32 w, f32 h, u32 color);

@@ -95,6 +95,9 @@ and [Rice fingerprint definition](https://github.com/gonetz/GLideN64/blob/master
 Only the final RGBA upload is substituted. Native geometry, UVs, wrap/mirror,
 combiner, alpha tests and mip/sampler rules retain their original ownership.
 Unrecognized or incompatible tiles fall back rather than guessing.
+HUD ammo icons are not part of these packs: the game's 32-bit ammo icons do not
+reproduce the release's texture CRCs. Their HD art is embedded and switched by
+**HD HUD Icons** instead (`generate_hd_ammo_icons.py`, FORK-047).
 
 `ISTEX001` stores a little-endian header, sorted 36-byte records and independently
 DEFLATE-compressed PNG-filtered RGBA payloads. Records contain texture/palette

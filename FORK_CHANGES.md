@@ -30,6 +30,76 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-047 — HD HUD ammo icons
+
+**Status:** Implemented in every target (Windows, Linux, browser and Xbox).
+
+Adds default-on **Gameplay > Iron Sights > System > HD HUD Icons**
+(`[display] hd_hud_icons=1`) to the Options folder and the watch, next to
+Enhanced Fonts. It replaces the HUD's ammo-type icons beside the ammo counters
+with intermissionfb's HD ammo art from the GoldenEye 007 HD release
+(v2025.12.30, `UI/Ammo`), requested in issue #6. It is independent of the
+environment **Texture Pack** (FORK-033), so Original environments can keep HD
+ammo icons. The Nintendo 64 watch preset turns it off and Modern turns it on,
+like Enhanced Fonts. Off restores the original point-sampled icons.
+
+The art is embedded in the executable: 13 images, resampled to eight times each
+native icon size and stored as lossless RGBA run-length packets
+(`port_icon_decode.h`), about 400 KB. Unlike FORK-033's sidecar pack, this is
+not loaded from `Data/TexturePacks`. The source has no explicit redistribution
+license; the owner chose to embed these icons on 2026-11-05 and extended that
+to every target, including the public browser build, the same day. Attribution ships as
+`HD-Ammo-Icons-NOTICE.txt` in Windows and Linux releases, in the browser site's
+`THIRD_PARTY_NOTICES.txt` (`web/tools/build-site.ts`), in About / Build Info
+and in `build-inputs.json`; the port's MIT license does not relicense it. A
+licensing request was opened on the source repository on 2026-11-05
+(https://github.com/GhostlyDark/GoldenEye-007-HD/issues/3).
+
+The pack names its ammo art by Rice texture CRC, but the game's 32-bit ammo
+icons do not reproduce those CRCs: a probe with an ammo-only HD pack logged
+misses for every ammo icon. Each image is therefore assigned to its HUD ammo
+slot (`portAmmoIconPtr` order) by eye: 9mm, rifle, shotgun, knife, grenade
+launcher, rocket, grenade, magnum, golden gun, remote/timed/proximity mines and
+tank shell (the release's six identical tank aliases are verified equal). The
+plain mine icon has no community art and stays original. A small hook in
+`microcode_generation_ammo_related` (`gunfire.c`) brackets the icon draw with a
+`0x5B` G_NOOP tag carrying the slot. The renderer keys that texture's cache entry
+by slot when the setting is on, uploads the art over a canvas the size of the
+padded native tile (so native UVs, rectangle, flips, colours and the dark
+backing box are unchanged) and samples it smoothly, as Enhanced Fonts does.
+Toggling the setting invalidates bindings at the next frame. The art, setting,
+rows and preset are unconditional, so the browser and Xbox builds carry them
+too (both keep omitting Texture Pack, whose packs are sidecar files). There is
+no Xbox packaging script, so its credit is About / Build Info only, and the
+Xbox build and its memory budget have not been checked with the art.
+
+**Sources:** [generator](scripts/port/generate_hd_ammo_icons.py),
+[embedded art and provenance](port/fast3d/hud_icons/),
+[decoder/canvas](port/fast3d/hd_ammo_icons.cpp), [slot tag](port/src/port_hud_ammo.c),
+[draw hook](src/game/gunfire.c), [renderer hooks](port/fast3d/gfx_pc.cpp),
+[settings bridge](port/src/video.c), [option row](port/src/port_options.c),
+[frontend row](src/game/front.c), [watch row and preset](port/src/port_watchpages.c),
+[help](port/src/port_option_help.c), [About credit](port/fast3d/about.cpp),
+[Windows](scripts/port/package_windows.py)/[Linux](scripts/port/package_linux.py)/[browser](web/tools/build-site.ts) notices,
+[release inputs](scripts/port/release_inputs.py).
+**Regeneration:** with Pillow, `python scripts/port/generate_hd_ammo_icons.py
+--archive <pinned ge007-hd.zip>` (`--download` fetches the pinned release); it
+verifies the archive SHA256 and rewrites `hd_ammo_icons.inc`, `sources.json` and
+`NOTICE.txt`.
+**Checks:** [ammo icon tests](scripts/port/test_hd_ammo_icons.py) (table vs native
+sizes and provenance, RLE round trip, notice credits, and a C++ decoder/canvas
+test) run in CI; `test_hud.sh` covers slot mapping and the tag words;
+`test_distribution.py` requires the release notice. `audit_hud.ps1
+-OriginalAmmoIcons` captures the originals for comparison. Dam 1920x1080
+captures (All Guns) showed HD rifle, 9mm, rocket, remote mine, grenade and
+shotgun icons aligned beside the counters, against original rifle and remote
+mine controls. The Windows build, HUD, ammo icon, distribution and settings
+placement checks pass; the gallery regenerated with no changed image cells.
+The browser video build compiles with the art (the Wasm grows about 400 KB) and
+passes the payload signature audit; `bun test` and the assembled site's
+allowlist check pass, and its third-party notices include the ammo icon notice.
+The browser icons have not been captured in play.
+
 ### FORK-046 — Steam library artwork for the Steam Deck ZIP
 
 **Status:** Implemented; not yet tried in a real Steam client or on a Steam Deck.
@@ -136,7 +206,7 @@ subsections, in both the Options folder and the watch:
 | Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Sprint, Ludicrous Sprint |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction |
 | HUD Additions | Always Crosshair Size, Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
-| System | About / Build Info, Texture Pack (desktop), Enhanced Fonts, Crash Reporting (Windows/Linux) |
+| System | About / Build Info, Texture Pack (desktop), Enhanced Fonts, HD HUD Icons (FORK-047), Crash Reporting (Windows/Linux) |
 
 The watch's Iron Sights page also holds the Suspend Points action, which moved
 there from the watch's Gameplay page. Rows left General Settings, HUD, Port
@@ -3590,8 +3660,8 @@ The inherited glyph renderer retains spacing, baselines, colours, clipping,
 outlines and scaled HUD layout. Tagged I8 font draws match content fingerprints
 after inherited padding cleanup. Unknown/modified fonts, Japanese text and
 missing characters (both tildes) keep original rendering. Only matching fonts
-receive high-resolution images and smooth sampling; images/logos and ammo
-icons retain their existing behavior. Original and enhanced cache entries are
+receive high-resolution images and smooth sampling; images/logos retain their
+existing behavior, and HD ammo icons are a separate setting (FORK-047). Original and enhanced cache entries are
 distinct, and live setting changes invalidate the renderer's current bindings.
 
 Horizontal preparation preserves authored stroke coordinates within a bounded

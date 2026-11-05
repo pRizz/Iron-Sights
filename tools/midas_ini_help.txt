@@ -141,6 +141,9 @@ padN_stickmode.
                       |            | filtering; missing/modded glyphs fall back.
   texture_pack        | 1          | Native: 0 Original, 1 HD (default), 2 4K.
                       |            | Missing packs/textures use originals.
+  hd_hud_icons        | 1          | Community HD ammo icons
+                      |            | (intermissionfb), built in; 0 = originals.
+                      |            | Independent of texture_pack.
   low_res             | 0          | Level render height in lines, scaled up
                       |            | to the window: 0 = window size,
                       |            | 240 = the N64's, or 480, 720, 1080.

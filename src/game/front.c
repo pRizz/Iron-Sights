@@ -4783,6 +4783,7 @@ static const struct PortSheetRow port_sheet_rows_is_system[] = {
     { SHROW_OPT, "texture_pack" },
 #endif
     { SHROW_OPT, "enhanced_fonts" },   /* live here; it was on VIDEO, which defers */
+    { SHROW_OPT, "hd_hud_icons" },
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     { SHROW_OPT, "crash_reporting" },
 #endif

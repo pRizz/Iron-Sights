@@ -97,7 +97,8 @@ def package(build, output):
                          ("scripts/port/release/DATA-README.txt", "Data/README.txt"),
                          ("port/fast3d/fonts/LICENSE.txt", "Enhanced-Fonts-LICENSE.txt"),
                          ("port/fast3d/third_party/save-backup-LICENSE.txt", "Save-Transfer-LICENSE.txt"),
-                         ("port/fast3d/fonts/NOTICE.txt", "Enhanced-Fonts-NOTICE.txt")):
+                         ("port/fast3d/fonts/NOTICE.txt", "Enhanced-Fonts-NOTICE.txt"),
+                         ("port/fast3d/hud_icons/NOTICE.txt", "HD-Ammo-Icons-NOTICE.txt")):
         copy(ROOT / source, appdir / name)
     copy(build / "generated/build-info.json", appdir / "build-info.json")
     paths = bundle_libraries(build, appdir)

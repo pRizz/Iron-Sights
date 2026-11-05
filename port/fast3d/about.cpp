@@ -57,12 +57,13 @@ void portAboutOpen(void)
 
     snprintf(text, sizeof(text), "Iron Sights - a fork of Project Midas\n\nBuilt at: %s\nBuild: %s\nCommit: %s%s\nBranch: %s\nBuilder: %s\n\nWeapon icons: %s\n\n"
         "Build details identify this executable. Verify the download's signed GitHub attestation for provenance."
+        "\n\nHD HUD ammo icons: GoldenEye 007 HD by intermissionfb."
+        "\nSource: github.com/GhostlyDark/GoldenEye-007-HD"
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
-        "\n\nOptional HD textures: GoldenEye 007 HD by intermissionfb."
+        "\nOptional HD textures: GoldenEye 007 HD by intermissionfb."
         "\nFont textures / technical assistance: GhostlyDark."
         "\nDam environment prototype; original artwork rights remain with its authors."
         "\nhttps://evilgames.eu/texture-packs/ge007-hd.htm"
-        "\nTexture pack source: github.com/GhostlyDark/GoldenEye-007-HD"
         "\nDEFLATE decoder: puff by Mark Adler."
 #endif
         ,

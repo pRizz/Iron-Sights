@@ -41,6 +41,7 @@
 #include "port_weapon_images.h"
 #include "port_icon_decode.h"
 #include "enhanced_fonts.h"
+#include "hd_ammo_icons.h"
 #ifdef __EMSCRIPTEN__
 extern "C" bool gfx_opengl_web_sampler_flags_changed(int tile, bool linear_filter, uint32_t cms, uint32_t cmt);
 extern "C" void gfx_opengl_web_sampler_sync(void);
@@ -408,6 +409,7 @@ extern "C" { uint32_t gfx_line_mode = 0; }    /* this frame's, render thread (gf
 uint32_t gfx_anisotropy = 1;
 uint32_t gfx_filter_2d = 1;
 uint32_t gfx_enhanced_fonts = 1;
+uint32_t gfx_hd_hud_icons = 1;
 /* set by G_MIRRORPILLAR_EXT around an overlay wanting mirrored side bands -
  * blood_animation.c's death / gunbarrel blood, and title.c's untextured fade.
  * The sampler latch reads it as well: see the filter_2d rule there. */
@@ -467,6 +469,8 @@ static int32_t s_RectUvS0, s_RectUvS1, s_RectUvT0, s_RectUvT1;
  * s_RectGlyphBorder = this one was grown half a texel and wants a transparent
  * border from the sampler (see gfx_dp_texture_rectangle). */
 static bool s_GeTextGlyphs = false;
+/* HUD ammo icon slot + 1 for the following texrect (gunfire.c via portHudAmmoIconTag) */
+static uint8_t s_GeHudAmmoSlot = 0;
 static bool s_RectGlyphBorder = false;
 /* options.c portHudScaleBegin (midas.ini hud_scale): G_NOOP tag 0x58 brackets
  * a HUD element, whose 2D rects then draw at half size about the pivot (U10.2),
@@ -3088,6 +3092,7 @@ static void import_texture(int i, int tile, bool importReplacement) {
     key.masks = rdp.texture_tile[tile].masks;
     key.maskt = rdp.texture_tile[tile].maskt;
     key.enhanced_font = s_GeTextGlyphs && gfx_enhanced_fonts && fmt == G_IM_FMT_I && siz == G_IM_SIZ_8b;
+    key.hd_ammo = s_GeHudAmmoSlot && gfx_hd_hud_icons && hd_ammo_icons::available(s_GeHudAmmoSlot-1) ? s_GeHudAmmoSlot : 0;
 
     { /* GE_TEXDBG=1: report address collisions between
        * DIFFERENT geometries - the class that used to silently return
@@ -3164,6 +3169,20 @@ static void import_texture(int i, int tile, bool importReplacement) {
         gfx_rapi->upload_texture(loaded_texture.addr, loaded_texture.raw_tex_metadata.width,
                                 loaded_texture.raw_tex_metadata.height);
         return;
+    }
+
+    if (key.hd_ammo) {
+        /* Embedded HD ammo art over the padded native tile; UVs and the
+         * native rectangle are unchanged. */
+        const unsigned stride = siz == G_IM_SIZ_32b ? rdp.texture_tile[tile].line_size_bytes*2 : rdp.texture_tile[tile].line_size_bytes;
+        const unsigned width = (stride << 1) >> siz, height = stride ? loaded_texture.size_bytes / stride : 0;
+        static std::vector<uint8_t> art;
+        unsigned artWidth, artHeight;
+        if (hd_ammo_icons::load(key.hd_ammo-1, width, height, art, artWidth, artHeight)) {
+            gfx_rapi->upload_texture(art.data(), artWidth, artHeight);
+            rendering_state.textures[i]->second.hd_ammo = true;
+            return;
+        }
     }
 
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
@@ -4417,6 +4436,7 @@ ndcprobe_done:;
                      * filter setting (point, bilinear or 3-point) via the 3D
                      * path below. */
                     linear_filter = gfx_filter_2d != 0 || rendering_state.textures[i]->second.enhanced_font
+                        || rendering_state.textures[i]->second.hd_ammo
                         || (rdp.loaded_texture[rdp.texture_tile[tile].tmem].tex_flags & 0x80000000u);
                 }
                 /* GE N64 mipmaps: when the game asked for per-pixel LOD over a
@@ -7533,6 +7553,9 @@ static void gfx_run_dl(Gfx* cmd) {
                 } else if ((cmd->words.w1 >> 24) == 0x47u) {
                     /* font glyph run on / off (textrelated.c PORT_TEXT_GLYPHS) */
                     s_GeTextGlyphs = (cmd->words.w1 & 1u) != 0;
+                } else if ((cmd->words.w1 >> 24) == 0x5Bu) {
+                    /* HUD ammo icon slot + 1, 0 = none (port_hud_ammo.c) */
+                    s_GeHudAmmoSlot = (uint8_t) (cmd->words.w1 & 0xFFu);
                 } else if ((cmd->words.w1 >> 24) == 0x58u) {
                     /* HUD scale bracket (options.c portHudScaleBegin): pivot x, y in U10.2 */
                     s_GeHudScale = (cmd->words.w1 & 0x00FFFFFFu) != 0x00FFFFFFu;
@@ -8020,12 +8043,14 @@ extern "C" void gfx_start_frame(void) {
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     ge_hd_start_frame();
 #endif
-    static uint32_t previous_fonts = ~0u;
-    if (previous_fonts != gfx_enhanced_fonts) {
+    s_GeHudAmmoSlot = 0; /* a tag never outlives its frame's ammo draw */
+    static uint32_t previous_fonts = ~0u, previous_hud_icons = ~0u;
+    if (previous_fonts != gfx_enhanced_fonts || previous_hud_icons != gfx_hd_hud_icons) {
         gfx_flush();
         rdp.textures_changed[0] = rdp.textures_changed[1] = true;
         ++ge_state_serial;
         previous_fonts = gfx_enhanced_fonts;
+        previous_hud_icons = gfx_hd_hud_icons;
     }
     gfx_line_mode = (gfx_line_mode_req.load() != 0 && gfx_framebuffers_enabled) ? 1u : 0u;
     gfx_msaa_level = gfx_line_mode ? std::max<uint32_t>(gfx_msaa_user, 4u) : gfx_msaa_user;
