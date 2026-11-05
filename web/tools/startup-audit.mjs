@@ -24,12 +24,21 @@ const page = await context.newPage();
 await installStartupProbe(page);
 // Make real cooperative preparation slow enough to exercise the fitted-screen
 // wait. This only delays zero-ms native yields, never blocks the browser thread.
+// Parallel compilation can finish within the cinematic, so in the room the
+// yields are held until the TV is fitted and then slowed further.
 await page.addInitScript(() => {
     const schedule = window.setTimeout;
+    let fitted = false;
+    const hold = (callback, args) => {
+        const phase = document.querySelector('.room-layer')?.dataset.phase;
+        if (phase === 'screen') fitted = true;
+        if (phase && !fitted) return schedule(() => hold(callback, args), 50);
+        return schedule(callback, phase ? 400 : 80, ...args);
+    };
     window.setTimeout = (callback, delay, ...args) => {
         const trace = globalThis.midasStartupTrace;
         const preparing = trace?.progress?.at(-1)?.label === 'Preparing graphics';
-        return schedule(callback, preparing && delay === 0 ? 80 : delay, ...args);
+        return preparing && delay === 0 ? hold(callback, args) : schedule(callback, delay, ...args);
     };
 });
 async function record(name) {

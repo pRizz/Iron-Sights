@@ -1028,8 +1028,20 @@ Cold-cache insertion/flight remains limited by native shader preparation (about
 87 synchronous links over about 7 s), improving only from about 9-15 to 13-25 fps.
 TypeScript, 200 Bun tests, assembly/allowlist, Chrome ROM-free room and actual-ROM
 handoff/exit audits pass. Reports: ignored `build/web-room/benchmark`.
-Next action: move the browser shader prewarm to KHR_parallel_shader_compile, so
+Next action (done below): move the browser shader prewarm to KHR_parallel_shader_compile, so
 cold-cache preparation no longer blocks the cinematic. That is a native/gallery-input change.
+
+**Parallel shader preparation, 2026-11-04:** `portWebPrepareShaders` now issues
+listed programs without status queries through `KHR_parallel_shader_compile`,
+eight at a time. It polls `GL_COMPLETION_STATUS_KHR` between yields and finishes
+only completed programs, in slices of about 8 ms (FORK-025). Issuing all 87 at
+once was tried first and left 130-490 ms blocks, because the room's frames queued
+behind the work in Chrome's GPU process. Same-host `room-benchmark.mjs`: cold
+insertion 13 → 48 fps, powering 22 → 60 fps, flight 12 → 150 fps, cold
+select-to-handoff 8.0 → 3.1 s, preparation about 7.1 → 1.3-1.5 s. Startup,
+room-game and room-exit audits pass in Chrome; the gallery reproduces unchanged.
+Next action: confirm Firefox/Safari behavior (sequential fallback without the
+extension) during a later publication check.
 
 **Controller plug refinement, 2026-10-25:** `controller-plug.ts` replaces the
 undersized/off-center cylinder with a rounded shell seated on the licensed
@@ -1193,6 +1205,15 @@ post-pause sample correctly saw a suspended context and was fixed in the audit.
 Future runs can enable `MIDAS_ROOM_GAMEPLAY=1` or `MIDAS_REDUCED_MOTION=1`.
 
 ## WEB-010 | 2026-10-24 | Immersive compatibility and publication
+
+**Parallel shader preparation acceptance, 2026-11-04:** The WEB-008 parallel
+prewarm passes the actual-ROM Chrome `startup-audit.mjs`, `room-game-audit.mjs`
+and `room-exit-audit.mjs` locally. The startup audit now holds the zero-ms
+preparation yields until the TV is fitted, then delays them 400 ms. Its old
+80 ms per yield no longer outlasted the cinematic. Evidence:
+`build/web-startup/parallel-audit`, `build/web-room/{game,exit}-parallel`.
+Not yet published; Firefox/Safari unmeasured. Next action: normal Pages
+publication gates after push.
 
 **Shared crosshair-size control, 2026-10-26:** Gameplay > HUD and the watch HUD
 page gain a 10%-200% always-on crosshair size slider with a live vector preview.

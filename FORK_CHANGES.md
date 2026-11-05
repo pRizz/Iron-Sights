@@ -1755,6 +1755,9 @@ path stays in place. Browser shader preparation moves from `gfx_pc.cpp` into
 `audio_pc.c` into `port/web/audio_bridge.inl`. These two private includes retain
 access to renderer/audio static state without exposing engine internals through
 new public APIs. Their narrow include sites are intentional shared-file hooks.
+The browser's parallel shader batch follows the same pattern:
+`port/web/shader_parallel.inl` is included at the end of `gfx_opengl.cpp`
+(FORK-025) and reuses that file's split shader build/finish steps.
 The native audio-reset hook stays beside upstream pacing state; small metrics
 hooks remain at validation, command execution and first nonzero output.
 The common CMake port-source glob picks up the sight module automatically.
@@ -1762,6 +1765,7 @@ The common CMake port-source glob picks up the sight module automatically.
 **Sources:** [agent guidance](AGENTS.md), [contributing](CONTRIBUTING.md),
 [sights](port/src/port_sight.c), [HUD interface](port/include/port_hud.h),
 [browser shader helper](port/web/shader_prewarm.inl),
+[browser shader batch](port/web/shader_parallel.inl),
 [browser audio bridge](port/web/audio_bridge.inl).
 **Validation:** FORK-026 build, sight/projection, native render and browser
 lifecycle checks cover these boundaries. No unrelated game subsystem is split.
@@ -3747,14 +3751,59 @@ several warm-cache insertion/flight runs, attributing frame gaps to startup stag
 idle went from 24-28 to 60 fps with p95 frames from 36.7 to 16.8 ms and GPU time from about
 6.7 to 2.6 ms per frame. The first 2.5 s worst frame fell from 210 to 97 ms, and
 warm-cache insertion went from 23 to 51 fps. Cold-cache insertion/flight improved only from
-roughly 9-15 to 13-25 fps. Native `portWebPrepareShaders` still links about
+roughly 9-15 to 13-25 fps. Native `portWebPrepareShaders` then linked about
 87 programs synchronously for about 7 s, blocking the page for 85-140 ms per
-program. That native compilation, not the room, remains the cold-cache stutter.
+program. That native compilation, not the room, was the cold-cache stutter; the
+parallel shader preparation below replaces it.
 Rare 0.2-1.4 s idle gaps occurred before and after; traces show rAF stops for the
 whole page, so they are browser/host pauses rather than room work.
 Validation: TypeScript, 200 Bun tests, Prettier, production assembly and exact
 public-artifact verification; Chrome ROM-free room audit (59.6 fps SwiftShader
 idle), actual-ROM insertion/handoff/reload/power and Exit Game/return audits.
+
+Parallel browser shader preparation, 2026-11-04: `portWebPrepareShaders`
+(`port/web/shader_prewarm.inl`) no longer links its 87 listed programs one at a
+time. Where the context offers `KHR_parallel_shader_compile` (enabled explicitly
+in `port/web/shader_parallel.inl`), it keeps a window of eight programs issued
+without any status query and refills it as programs finish. It polls
+`GL_COMPLETION_STATUS_KHR`, yields between polls with real completed counts, and
+bounds each finish slice to about 8 ms. Only completed programs get their
+compile-status checks, attribute/uniform lookups and load. Issuing all 87 at
+once removed the per-program waits but queued the room's own WebGL frames behind
+the whole list in Chrome's shared GPU process (single blocks of 130-760 ms);
+the window removes those. Without the extension, the previous sequential path
+remains. To allow this, `gfx_opengl_create_and_load_new_shader` in
+`port/fast3d/gfx_opengl.cpp` is split into `gfx_opengl_shader_build_begin`
+(sources, compile, attach, link) and `gfx_opengl_shader_build_finish` (status
+checks, attribute/uniform lookups, load). Desktop calls both back to back. The
+only desktop difference is that the compile-status checks now run after
+`glLinkProgram` instead of after each compile, with the same fatal error
+report. Shader sources, the program pool, rendering and desktop prewarm
+scheduling are unchanged. The browser batch is included at the end of
+`gfx_opengl.cpp` (FORK-027 hook pattern). The final `total/total` progress is
+still reported. The native log names the window, issue time and longest finish
+slice.
+`room-benchmark.mjs` on the same RTX 3070 Laptop host, before → after (cold cache
+is one run each, warm is the median of three): cold insertion went 13 → 48 fps
+(p95 frame 640 → 20 ms), powering 22 → 60 fps and TV flight 12 → 150 fps
+(p95 107 → 17 ms). Cold select-to-handoff fell from 8.0 to 3.1 s, and cold
+graphics preparation from about 7.1 s to about 1.3-1.5 s. A separate probe of
+four fresh-profile cold starts measured 0-2 ms of long-animation-frame blocking
+during preparation; issuing all 87 at once had measured 130-490 ms. Warm
+insertion went 51 → 65 fps. Single 110-190 ms gaps remain at the preparation
+boundaries; they come from runtime startup before and after preparation, which
+the baseline also has. `startup-audit.mjs` used to slow preparation by
+delaying each zero-ms native yield 80 ms, which assumed one yield per program.
+In the room, preparation now finishes inside the cinematic, so the audit holds
+those yields until the TV is fitted and then delays them 400 ms. It still
+exercises the fitted-screen wait, F2 and Resume startup. Validation: optimized
+Wasm via `web_build.py` with the logo-policy audit; Chrome `startup-audit.mjs`,
+`room-game-audit.mjs` and `room-exit-audit.mjs` on the actual ROM; 201 Bun
+tests; Prettier; the web prototype tests; Bright Builds checks; and a two-pass
+gallery regeneration with zero changed image cells, plus `verify`. Desktop was
+rebuilt by the gallery and captured unchanged. Reports stay in ignored
+`build/web-room/benchmark/parallel-*.json`. Firefox and Safari were not measured;
+without the extension they keep the sequential path.
 
 Room transitions use 0.9-second cartridge insertion, 0.3-second power-on,
 1.3-second TV flight and 1.5-second return to the room. The return camera retains

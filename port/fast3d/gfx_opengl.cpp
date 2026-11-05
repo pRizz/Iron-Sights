@@ -334,8 +334,20 @@ static void append_formula(char (&buf)[N], size_t* len, uint8_t c[2][4], bool do
 extern "C" unsigned long long portProfNow(void);
 extern "C" void portHitchNote(int cat, unsigned long long us);
 
-static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shader_id0, uint32_t shader_id1) {
-    const unsigned long long hitch_t0 = portProfNow(); /* hitchlog.c */
+/* A program between glLinkProgram and its first status query. The browser can
+ * keep several in this state at once (port/web/shader_parallel.inl); desktop
+ * finishes each one immediately. */
+struct GlShaderBuild {
+    uint64_t shader_id0;
+    uint32_t shader_id1;
+    struct CCFeatures cc_features;
+    size_t num_floats;
+    GLuint vertex_shader, fragment_shader, program;
+    std::string vs, fs; /* for the compile-failure report */
+};
+
+/* generate both sources and issue compile + link, without querying anything */
+static void gfx_opengl_shader_build_begin(struct GlShaderBuild* b, uint64_t shader_id0, uint32_t shader_id1) {
     struct CCFeatures cc_features = { 0 };
     gfx_cc_get_features(shader_id0, shader_id1, &cc_features);
 
@@ -751,38 +763,58 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
 
     const GLchar* sources[2] = { vs_buf, fs_buf };
     const GLint lengths[2] = { (GLint)vs_len, (GLint)fs_len };
-    GLint success;
 
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &sources[0], &lengths[0]);
     glCompileShader(vertex_shader);
-    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        GLint max_length = 1024;
-        glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &max_length);
-        char error_log[1024];
-        glGetShaderInfoLog(vertex_shader, max_length, &max_length, &error_log[0]);
-        sysLogPrintf(LOG_ERROR, "Failed to compile this vertex shader (ID %llx, %x):\n%s", shader_id0, shader_id1, vs_buf);
-        sysFatalError("Vertex shader compilation failed:\n%s", error_log);
-    }
 
     GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragment_shader, 1, &sources[1], &lengths[1]);
     glCompileShader(fragment_shader);
-    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        GLint max_length = 1024;
-        glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &max_length);
-        char error_log[1024];
-        glGetShaderInfoLog(fragment_shader, max_length, &max_length, &error_log[0]);
-        sysLogPrintf(LOG_ERROR, "Failed to compile this fragment shader (ID %llx, %x):\n%s", shader_id0, shader_id1, fs_buf);
-        sysFatalError("Fragment shader compilation failed:\n%s", error_log);
-    }
 
     GLuint shader_program = glCreateProgram();
     glAttachShader(shader_program, vertex_shader);
     glAttachShader(shader_program, fragment_shader);
     glLinkProgram(shader_program);
+
+    b->shader_id0 = shader_id0;
+    b->shader_id1 = shader_id1;
+    b->cc_features = cc_features;
+    b->num_floats = num_floats;
+    b->vertex_shader = vertex_shader;
+    b->fragment_shader = fragment_shader;
+    b->program = shader_program;
+    b->vs.assign(vs_buf, vs_len);
+    b->fs.assign(fs_buf, fs_len);
+}
+
+static void gfx_opengl_shader_check_compiled(GLuint shader, const char* stage, const char* title,
+                                             const struct GlShaderBuild* b, const std::string& source) {
+    GLint success;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        GLint max_length = 1024;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &max_length);
+        char error_log[1024];
+        glGetShaderInfoLog(shader, max_length, &max_length, &error_log[0]);
+        sysLogPrintf(LOG_ERROR, "Failed to compile this %s shader (ID %llx, %x):\n%s", stage, b->shader_id0,
+                     b->shader_id1, source.c_str());
+        sysFatalError("%s shader compilation failed:\n%s", title, error_log);
+    }
+}
+
+/* the first status query waits for compile + link; then look up and load the program */
+static struct ShaderProgram* gfx_opengl_shader_build_finish(struct GlShaderBuild* b) {
+    const uint64_t shader_id0 = b->shader_id0;
+    const uint32_t shader_id1 = b->shader_id1;
+    const struct CCFeatures& cc_features = b->cc_features;
+    const size_t num_floats = b->num_floats;
+    const GLuint vertex_shader = b->vertex_shader;
+    const GLuint fragment_shader = b->fragment_shader;
+    const GLuint shader_program = b->program;
+
+    gfx_opengl_shader_check_compiled(vertex_shader, "vertex", "Vertex", b, b->vs);
+    gfx_opengl_shader_check_compiled(fragment_shader, "fragment", "Fragment", b, b->fs);
 
     glDetachShader(shader_program, vertex_shader);
     glDetachShader(shader_program, fragment_shader);
@@ -879,6 +911,14 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
 #endif
 
     gfx_opengl_load_shader(prg);
+    return prg;
+}
+
+static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shader_id0, uint32_t shader_id1) {
+    const unsigned long long hitch_t0 = portProfNow(); /* hitchlog.c */
+    struct GlShaderBuild build;
+    gfx_opengl_shader_build_begin(&build, shader_id0, shader_id1);
+    struct ShaderProgram* prg = gfx_opengl_shader_build_finish(&build);
 
     portHitchNote(3 /* shaders */, portProfNow() - hitch_t0);
     return prg;
@@ -3177,3 +3217,7 @@ struct GfxRenderingAPI gfx_opengl_api = {
     gfx_opengl_retained_draw_indexed,
     gfx_opengl_resolve_n64_aa
 };
+
+#ifdef __EMSCRIPTEN__
+#include "../web/shader_parallel.inl"
+#endif
