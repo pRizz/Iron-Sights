@@ -30,6 +30,30 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-050 — Open assets and sharp text plan
+
+**Status:** Documentation only, proposed on 2026-11-05 and awaiting the owner's
+acceptance. No code, assets or repository exist yet.
+
+[open_assets_plan.md](scripts/port/open_assets_plan.md) plans original,
+MIT-licensed fonts to replace the ROM's glyphs, and a renderer that draws them
+sharply at any resolution. It follows the removal of every bundled third-party
+art set (FORK-021, FORK-033, FORK-047). The plan covers provenance rules
+(drawn from scratch, never traced from the ROM or any pack, no ROM-derived data
+in the assets), a hybrid layout (a separate MIT assets repository as the source
+of truth, its built outputs vendored here at a pinned, checksummed version), a
+parametric title font and a hand-drawn body font, and a renderer that keeps the
+game's glyph pipeline but swaps ROM bitmaps for MSDF atlas cells through a glyph
+registry and a new `SHADER_OPT_MSDF` shader bit, behind a Sharp Fonts setting
+with the ROM fonts as fallback. It also records the owner's intent to grow the
+repository into other original game assets later, and to let other projects
+use them, including a deferred exporter that builds an emulator texture pack
+from the player's own ROM. Milestones OPEN-1 to OPEN-6 and five owner decisions
+are listed.
+
+**Sources:** [plan](scripts/port/open_assets_plan.md).
+**Checks:** documentation only; no build or render regeneration needed.
+
 ### FORK-049 — Sub-pixel scaled text
 
 **Status:** Implemented in the Windows build; the owner play-tested it and
@@ -3756,8 +3780,9 @@ are redrawn versions of Rare's own glyphs, so a CC0 dedication by the pack's
 author could not clear their underlying rights, and the issue had credited
 GhostlyDark for fonts. The planned replacement is original, MIT-licensed fonts
 drawn from scratch (never traced from the ROM or any pack) and a renderer that
-draws text sharply at any resolution; until then every target draws the
-original glyphs from the player's ROM.
+draws text sharply at any resolution ([plan](scripts/port/open_assets_plan.md),
+FORK-050); until then every target draws the original glyphs from the
+player's ROM.
 
 The removal deleted the masks, notice, license and provenance
 (`port/fast3d/fonts/`), the decoder and glyph-extent code
