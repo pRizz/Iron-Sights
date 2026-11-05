@@ -37,7 +37,8 @@ with its recommended decisions on 2026-11-05. The assets repository
 [`pRizz/iron-sights-assets`](https://github.com/pRizz/iron-sights-assets) was
 created the same day with its license, rules, roadmap, CI and Bright Builds
 Rules (OPEN-1), and
-released the parametric title font as v0.1.0 after the owner's review (OPEN-2).
+released the parametric title font as v0.1.0 after the owner's review (OPEN-2),
+followed by a comparison-informed 0.2.0 draft.
 Nothing in Iron Sights uses it yet; vendoring (OPEN-3) and the renderer
 (OPEN-4) come next.
 
