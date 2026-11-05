@@ -23,6 +23,7 @@
 #include "game/textrelated.h"
 #include "port_ads.h"
 #include "port_hud.h"
+#include "port_hud_weapons.h"
 #include "port_objective_progress.h"
 #include "port_crosshair.h"
 #include "port_mission_clock.h"
@@ -35,8 +36,6 @@
 #include "boss.h"
 
 extern s32 portBondControlsLive(void);
-extern s32 bondinvGetTextbyInvIndex(s32 index);
-extern u16 *bondinvGetNameByIndex(s32 index);
 /* The decomp's minimal string.h omits these CRT declarations. */
 extern void *memset(void *dst, int value, size_t size);
 extern void *memmove(void *dst, const void *src, size_t size);
@@ -44,7 +43,6 @@ extern void *memmove(void *dst, const void *src, size_t size);
 #define HUD_TOASTS 8
 #define HUD_TOAST_LIFETIME 210.0f /* 3.5 s at 60 timer units per second */
 #define HUD_TOAST_FADE 18.0f /* 300 ms */
-#define HUD_WEAPONS 32
 #define HUD_PI 3.14159265358979323846f
 static const char *const phKeys[] = { "hit_markers", "damage_indicators", "objective_notifications", "weapon_hud", "weapon_hud_icons", "always_health" };
 static s32 phOptions[] = { 1, 1, 1, 1, 0, 1 };
@@ -249,7 +247,8 @@ void portHudTick(void)
     const s32 p = get_cur_playernum();
     if (p < 0 || p >= 4 || !portBondControlsLive() || !g_CurrentPlayer) return;
     phAdvance(&phState[p], g_GlobalTimerDelta);
-    phObserve(&phState[p], getCurrentPlayerWeaponId(GUNRIGHT),
+    /* A pair counts as its own selection, so the caption returns for X -> X x2. */
+    phObserve(&phState[p], getCurrentPlayerWeaponId(GUNRIGHT) | getCurrentPlayerWeaponId(GUNLEFT) << 8,
         g_CurrentPlayer->bondhealth, g_CurrentPlayer->bondarmour);
 #ifdef GE_VIDEO
     phVisualAudit(p);
@@ -297,14 +296,6 @@ void portHudStyleGauge(struct damage_display_val *vertices, s32 count)
     }
 }
 
-typedef struct { s32 item, inventory; } HudWeapon;
-static const char *phWeaponName(const HudWeapon *weapon)
-{
-    const char *name = (const char *)bondinvGetNameByIndex(weapon->inventory);
-    if (!name || !name[0]) name = (const char *)get_ptr_short_watch_text_for_item(weapon->item);
-    return name && name[0] ? name : "Unarmed";
-}
-
 static s32 phWeaponIcon(s32 item)
 {
     if (item == ITEM_TANKSHELLS) return portIconAvailable(PORT_ICON_TANK) ? PORT_ICON_TANK : -1;
@@ -313,28 +304,6 @@ static s32 phWeaponIcon(s32 item)
         if (portIconAvailable(variant)) return variant;
     }
     return item >= 0 && item < 32 && portIconAvailable(item) ? item : -1;
-}
-
-static s32 phWeapons(HudWeapon *weapons, s32 *selected)
-{
-    const s32 total = bondinvCountTotalItemsInInv();
-    /* The watch detonator belongs to the Remote Mine card, which stays selected. */
-    const s32 held = getCurrentPlayerWeaponId(GUNRIGHT);
-    const s32 current = held == ITEM_TRIGGER ? ITEM_REMOTEMINE : held;
-    s32 i, j, n = 0;
-    *selected = -1;
-    for (i = 0; i < total && n < HUD_WEAPONS; i++) {
-        const s32 item = bondinvGetTextbyInvIndex(i);
-        /* The tank's cannon joins the inventory while Bond drives it. */
-        if ((item < ITEM_UNARMED || item > ITEM_TASER || item == ITEM_TRIGGER)
-            && item != ITEM_TANKSHELLS) continue;
-        for (j = 0; j < n && weapons[j].item != item; j++) {}
-        if (j < n) continue;
-        weapons[n].item = item; weapons[n].inventory = i;
-        if (item == current) *selected = n;
-        n++;
-    }
-    return n;
 }
 
 static s32 phStripStart(s32 count, s32 selected, s32 slots)
@@ -422,10 +391,39 @@ static Gfx *phText(Gfx *g, const char *text, s32 x, s32 y, f32 scale, u32 color,
     return phTextAligned(g, text, x, y, scale, color, maxWidth, FALSE);
 }
 
+/* A pair card shows both guns: the left hand's behind and up-left, the right
+ * hand's in front. Identical doubles add an "x2" badge in the free corner. */
+static Gfx *phDrawCard(Gfx *g, const HudWeapon *cards, s32 n, const HudWeapon *card, f32 x, f32 y, s32 active, f32 opacity)
+{
+    const f32 scale = 0.7f;
+    const s32 pair = card->left != ITEM_UNARMED, doubles = card->left == card->item;
+    const s32 icon = phOptions[4] ? phWeaponIcon(card->item) : -1;
+    const s32 back = pair && phOptions[4] ? phWeaponIcon(card->left) : -1;
+    const u32 text = phOpacity(active ? 0xf2ffdcff : 0xc3ccd4ff, opacity);
+    char name[64];
+    g = phRect(g, x, y, 52*scale, 17*scale, phOpacity(active ? 0x53683cce : 0x10171cb0, opacity));
+    if (active) g = phRect(g, x, y+15*scale, 52*scale, 2*scale, phOpacity(0xd7f3a9ff, opacity));
+    if (icon >= 0 && (!pair || back >= 0)) {
+        /* Native 512x160 RGBA model renders, with their original colours. */
+        if (!pair) return phVector(g, 4, x+2*scale, y+scale, 48*scale, 14*scale, icon, 0, phOpacity(0xffffffff, opacity));
+        g = phVector(g, 4, x+scale, y+0.5f*scale, 35*scale, 11*scale, back, 0, phOpacity(0xa8a8a8ff, opacity));
+        g = phVector(g, 4, x+16*scale, y+4*scale, 35*scale, 11*scale, icon, 0, phOpacity(0xffffffff, opacity));
+    } else if (pair && !doubles) {
+        portHudWeaponItemName(cards, n, card->left, name, sizeof(name));
+        g = phText(g, name, (s32)(x+3*scale+0.5f), (s32)(y+1.5f*scale+0.5f), 0.5f*scale, text, (s32)(46*scale));
+        portHudWeaponItemName(cards, n, card->item, name, sizeof(name));
+        return phText(g, name, (s32)(x+3*scale+0.5f), (s32)(y+8*scale+0.5f), 0.5f*scale, text, (s32)(46*scale));
+    } else {
+        portHudWeaponItemName(cards, n, card->item, name, sizeof(name));
+        g = phText(g, name, (s32)(x+3*scale+0.5f), (s32)(y+4*scale+0.5f), 0.65f*scale, text, (s32)((doubles ? 34 : 46)*scale));
+    }
+    return doubles ? phText(g, "x2", (s32)(x+40*scale+0.5f), (s32)(y+scale+0.5f), 0.5f*scale, text, (s32)(11*scale)) : g;
+}
+
 static Gfx *phDrawStrip(Gfx *g)
 {
     HudWeapon weapons[HUD_WEAPONS];
-    s32 selected, n = phWeapons(weapons, &selected);
+    s32 selected, n = portHudWeapons(weapons, HUD_WEAPONS, &selected);
     const f32 scale = 0.7f, pitch = 54 * scale;
     s32 width = viGetViewWidth(), slots = (s32)((width - 36 * scale) / pitch);
     s32 i, start;
@@ -438,19 +436,8 @@ static Gfx *phDrawStrip(Gfx *g)
     if (slots > n) slots = n;
     start = phStripStart(n, selected, slots);
     x = viGetViewLeft() + (width - slots * pitch) / 2;
-    for (i = 0; i < slots; i++) {
-        const s32 active = start + i == selected;
-        const s32 icon = phOptions[4] ? phWeaponIcon(weapons[start+i].item) : -1;
-        g = phRect(g, x + i*pitch, y, 52*scale, 17*scale, phOpacity(active ? 0x53683cce : 0x10171cb0, opacity));
-        if (active) g = phRect(g, x + i*pitch, y+15*scale, 52*scale, 2*scale, phOpacity(0xd7f3a9ff, opacity));
-        if (icon >= 0) {
-            /* Native 512x160 RGBA model render, with its original colours. */
-            g = phVector(g, 4, x+i*pitch+2*scale, y+scale, 48*scale, 14*scale, icon, 0, phOpacity(0xffffffff, opacity));
-        } else {
-            g = phText(g, phWeaponName(&weapons[start+i]), (s32)(x + i*pitch + 3*scale + 0.5f), (s32)(y+4*scale+0.5f), 0.65f*scale,
-                phOpacity(active ? 0xf2ffdcff : 0xc3ccd4ff, opacity), (s32)(46*scale));
-        }
-    }
+    for (i = 0; i < slots; i++)
+        g = phDrawCard(g, weapons, n, &weapons[start+i], x + i*pitch, y, start + i == selected, opacity);
     if (start) {
         snprintf(label, sizeof(label), "+%d", start);
         g = phText(g, label, (s32)(x-17*scale+0.5f), (s32)(y+5*scale+0.5f), 0.6f*scale, phOpacity(0xc3ccd4ff, opacity), (s32)(17*scale));
@@ -463,7 +450,8 @@ static Gfx *phDrawStrip(Gfx *g)
         const s32 center = (s32)(x+(selected-start)*pitch+26*scale+0.5f);
         const s32 top = (s32)(y+17*scale+1.5f);
         const s32 maxWidth = width < 108 ? width-12 : 96;
-        const char *name = phWeaponName(&weapons[selected]);
+        char name[132];
+        portHudWeaponName(weapons, n, &weapons[selected], name, sizeof(name));
         /* Shift after viewport/HUD scaling: one physical framebuffer pixel. */
         gDPNoOpTag(g++, portHudTextOffsetTag(1, 1));
         g = phTextAligned(g, name, center, top, 0.5f,

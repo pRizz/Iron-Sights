@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include "../../port/src/port_hud.c"
+#include "../../port/src/port_hud_weapons.c"
 #include "../../port/src/port_objective_progress.c"
 #include "../../port/src/port_crosshair.c"
 #include "../../port/src/port_mission_clock.c"
@@ -40,7 +41,8 @@ s32 getPlayerCount(void) { return playerCount; }
 s32 portBondControlsLive(void) { return live; }
 s32 bondinvCountTotalItemsInInv(void) { return inventoryCount; }
 s32 bondinvGetTextbyInvIndex(s32 i) { return inventory[i]; }
-ITEM_IDS getCurrentPlayerWeaponId(GUNHAND hand) { (void)hand; return currentWeapon; }
+ITEM_IDS getCurrentPlayerWeaponId(GUNHAND hand) { return hand == GUNRIGHT ? currentWeapon : ITEM_UNARMED; }
+s32 bondinvItemAvailableForHand(ITEM_IDS right, ITEM_IDS left) { (void)right; (void)left; return 0; }
 void osSyncPrintf(const char *fmt, ...)
 {
     va_list args; va_start(args, fmt); vfprintf(stderr, fmt, args); va_end(args); abort();
@@ -500,15 +502,15 @@ int main(void)
     inventory[3] = ITEM_WPPK; inventory[4] = ITEM_DOORDECODER; inventory[5] = ITEM_SNIPERRIFLE;
     inventory[6] = ITEM_REMOTEMINE; inventory[7] = ITEM_TRIGGER;
     inventoryCount = 8; currentWeapon = ITEM_AK47;
-    n = phWeapons(weapons, &selected);
+    n = portHudWeapons(weapons, HUD_WEAPONS, &selected);
     assert(n == 5 && selected == 2 && weapons[4].item == ITEM_REMOTEMINE);
     /* Holding the detonator keeps the Remote Mine card selected. */
     currentWeapon = ITEM_TRIGGER;
-    n = phWeapons(weapons, &selected);
+    n = portHudWeapons(weapons, HUD_WEAPONS, &selected);
     assert(n == 5 && selected == 4);
     /* The watch laser is a weapon card with its own icon slot. */
     inventory[inventoryCount++] = ITEM_WATCHLASER; currentWeapon = ITEM_WATCHLASER;
-    n = phWeapons(weapons, &selected);
+    n = portHudWeapons(weapons, HUD_WEAPONS, &selected);
     assert(n == 6 && selected == 5 && weapons[5].item == ITEM_WATCHLASER);
     assert(phWeaponIcon(ITEM_WATCHLASER) == (portIconCacheReady() ? ITEM_WATCHLASER : -1));
     inventoryCount--;
@@ -520,7 +522,7 @@ int main(void)
     assert(phWeaponIcon(ITEM_DOORDECODER) == -1);
     /* Driving the tank adds its cannon, selected when it is in hand. */
     inventory[inventoryCount++] = ITEM_TANKSHELLS; currentWeapon = ITEM_TANKSHELLS;
-    n = phWeapons(weapons, &selected);
+    n = portHudWeapons(weapons, HUD_WEAPONS, &selected);
     assert(n == 6 && selected == 5 && weapons[5].item == ITEM_TANKSHELLS);
     assert(phWeaponIcon(ITEM_TANKSHELLS) == (portIconCacheReady() ? PORT_ICON_TANK : -1));
     inventoryCount--; currentWeapon = ITEM_AK47;
@@ -565,7 +567,7 @@ int main(void)
     assert(phWeaponIcon(ITEM_AK47) == -1); /* unavailable cache falls back to names */
     iconFixtureReady = 1;
     currentWeapon = ITEM_DOORDECODER;
-    phWeapons(weapons, &selected); assert(selected == -1);
+    portHudWeapons(weapons, HUD_WEAPONS, &selected); assert(selected == -1);
     for (i = 0; i < 32; i++) for (j = 1; j <= 5; j++) {
         const s32 start = phStripStart(32, i, j);
         assert(start >= 0 && start + j <= 32 && start <= i && start + j > i);

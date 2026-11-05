@@ -44,7 +44,10 @@ static void phVisualAudit(s32 p)
                 currentPlayerUnEquipWeaponWrapper(GUNRIGHT, atoi(audit));
                 currentPlayerUnEquipWeaponWrapper(GUNLEFT, ITEM_UNARMED);
             } else {
-                currentPlayerEquipWeaponWrapper(GUNLEFT, ITEM_UNARMED);
+                /* A left gun fixtures a two-gun pair card (doubles or mismatched). */
+                const char *left = getenv("GE_HUD_AUDIT_LEFT");
+                if (left && atoi(left) > ITEM_UNARMED) bondinvAddDoublesInvItem(atoi(audit), atoi(left));
+                currentPlayerEquipWeaponWrapper(GUNLEFT, left ? atoi(left) : ITEM_UNARMED);
                 currentPlayerEquipWeaponWrapper(GUNRIGHT, atoi(audit));
             }
             equipped = 1;

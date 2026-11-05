@@ -2522,11 +2522,35 @@ with its own icon (slot 23, FORK-019). Holding the watch detonator (`ITEM_TRIGGE
 filtered from the strip) keeps the Remote Mine card selected instead of clearing
 the selection.
 
+Two-gun pairs are cards of their own, one card per weapon-cycle stop. The
+inherited inventory index (the watch list) omits pair entries, so the strip
+previously merged a held pair into its right-hand gun's card: Jungle's AR33 +
+RC-P90 highlighted the plain RC-P90. The strip now also walks the cycle list for
+picked-up pairs (`INV_ITEM_DUAL`) and, with All Guns, the doubles
+`bondinvCycleForward` offers, using the native `bondinvItemAvailableForHand`
+rule (solo play, dual-wield flag, knife exclusion). Pairs follow their right-hand
+gun, ordered by left-hand gun as the native sort and cycle visit them; a pair
+whose single gun a mission removed is appended. Selection matches both hands,
+falling back to the right-hand gun's card. Icon cards draw the left hand's gun
+behind and up-left (dimmed) and the right hand's in front; text cards stack the
+two names. Doubles add an `x2` badge. The selected caption reads `PP7 x2` or
+`AR33 + RC-P90`, left hand first, keeping mission name overrides for each gun.
+A pair change counts as a weapon change for caption/emphasis timing. No setting
+is added; the native watch inventory, cycling and dual-wield rules are
+unchanged. With All Guns, the strip shows every double as its own card because
+the cycle stops on each. Jungle captures (960x540, All Guns) checked an AR33 +
+RC-P90 pair in icon and text styles and PP7 doubles in icon style. The Windows
+build and HUD tests pass; the gallery regenerated with no changed image cells.
+
 **Sources:** [inventory strip](port/src/port_hud.c),
+[pair cards and names](port/src/port_hud_weapons.c),
 [inventory reset](src/game/bondinv.c), [HUD integration](src/game/bondview2.c),
 [message positioning](port/src/joy_port.c).
 **Checks:** HUD inventory filtering/selection/scrolling (including the tank card)
-and idle timing tests;
+and idle timing tests; [pair card tests](scripts/port/test_hud_weapons.c)
+(run by `test_hud.sh`) cover picked-up and All Guns pairs, order, selection,
+orphaned pairs, capacity and names. `audit_hud.ps1 -LeftItem <id>` fixtures a
+held pair for captures;
 visual captures checked active, quiet and weapon-switch states, text/icon
 styles, and ammo/player-name spacing in solo, two- and four-player layouts.
 

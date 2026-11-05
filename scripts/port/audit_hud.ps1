@@ -7,6 +7,7 @@ param(
     [switch]$Icons,
     [switch]$AutomaticHealth,
     [int]$Item = 8,
+    [int]$LeftItem = 0,
     [switch]$Disabled,
     [switch]$Menu,
     [switch]$MissionTimer,
@@ -44,6 +45,7 @@ $auditEnv = @{
     GE_HUD_AUDIT=[string]$Item; GE_FRAMES='2100'; GE_SEED='1'
 }
 if ($BodyHit) { $auditEnv.GE_HUD_AUDIT_BODY = '1' }
+if ($LeftItem) { $auditEnv.GE_HUD_AUDIT_LEFT = [string]$LeftItem }
 if ($Dialogue) { $auditEnv.GE_HUD_AUDIT_DIALOGUE = '1' }
 if ($ToastFade) { $auditEnv.GE_HUD_AUDIT_TOAST_FADE = '1' }
 if ($Chop) {
