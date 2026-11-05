@@ -177,7 +177,6 @@ static const struct PortWatchRowDef sIsHud[] = {
 };
 static const struct PortWatchRowDef sIsSystem[] = {
     { PWROW_ACTION, NULL, "About / Build Info\n", 101, 0 },
-    { PWROW_OPT,       "enhanced_fonts",   NULL, 0, 0 },
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     { PWROW_OPT,       "crash_reporting",  NULL, 0, 0 },
 #endif
@@ -193,7 +192,6 @@ static const struct PortWatchRowDef sVideo[] = {
     { PWROW_RESOLUTION, NULL,         "Resolution\n", 0, 0 },   /* the window / fullscreen size */
     { PWROW_OPT,        "vsync",      NULL, 0, 0 },
     { PWROW_OPT,        "widescreen", NULL, 0, 0 },
-    /* enhanced fonts: Iron Sights > System */
     /* CLASSIC MODE SITS OVER WHAT IT FORCES: every row below it is one of
      * port_options.c's classic keys, locked while it is on (rowClassicLocked).
      * A row classic mode does not own goes ABOVE it - same rule as the folder. */
@@ -2697,7 +2695,6 @@ static const struct PortPresetEntry sPreset[] = {
     { "filtering",      1,            2    },  /* bilinear vs 3-point (the N64's own filter, Murk 2026-10-15) */
     { "anisotropy",     0,            16   },
     { "filter_2d",      1,            0    },
-    { "enhanced_fonts", 0,            1    },
     { "high_lod",       1,            1    },
     { "hfov_wide",      90,           90   },  /* 90 = vertical 60, vanilla (videoHfovWide) */
     { "maxfps",         60,           120  },

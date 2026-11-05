@@ -1,28 +1,27 @@
-# Compare real font rendering in isolated folders, leaving player data untouched.
+# Capture real text rendering with point-sampled and smoothed glyphs (filter_2d
+# 0 and 1) in isolated folders, leaving player data untouched.
 param(
     [string]$Executable,
     [ValidateSet('Video','Difficulty','Hud','Credits')][string]$Mode = 'Video',
-    [string]$Resolution = '1920x1080',
-    [switch]$DefaultEnabled
+    [string]$Resolution = '1920x1080'
 )
 $ErrorActionPreference = 'Stop'
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 if (!$Executable) { $Executable = Join-Path $repoDir 'build_win/IronSights.exe' }
 $Executable = (Resolve-Path -LiteralPath $Executable).Path
-foreach ($enabled in @(0,1)) {
-    $dir = Join-Path $repoDir ('build_win/font-audit-' + $Mode + '-' + $enabled + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8))
+foreach ($filter in @(0,1)) {
+    $dir = Join-Path $repoDir ('build_win/font-audit-' + $Mode + '-' + $filter + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8))
     New-Item -ItemType Directory -Path $dir | Out-Null
     $auditExe = [IO.Path]::GetFullPath((Join-Path $dir 'IronSights.exe'))
     if (!$auditExe.StartsWith($repoDir+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw 'Audit must stay in the workspace.' }
     Copy-Item -LiteralPath $Executable -Destination $auditExe
     Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
     $ini = @('[display]','fullscreen=window','vsync=0','maxfps=120',
-        'tickhz=60','render_thread=0','msaa=0','filter_2d=0',"enhanced_fonts=$enabled",'mission_timer=1','weapon_hud_icons=0')
-    if ($DefaultEnabled -and $enabled) { $ini = @($ini | Where-Object { $_ -notmatch '^enhanced_fonts=' }) }
+        'tickhz=60','render_thread=0','msaa=0',"filter_2d=$filter",'mission_timer=1','weapon_hud_icons=0')
     Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value $ini
     $auditEnv = @{
         GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$Resolution; GE_NOINPUT='1';
-        GE_FONT_AUDIT='1'; GE_SEED='1'; GE_FRAMES='650'; GE_SHOT='500'
+        GE_SEED='1'; GE_FRAMES='650'; GE_SHOT='500'
     }
     if ($Mode -eq 'Hud') {
         $auditEnv.GE_STAGE='dam'; $auditEnv.GE_STAGE_AFTER='1'; $auditEnv.GE_CHEATS='invuln,invis,guns'
@@ -52,8 +51,5 @@ foreach ($enabled in @(0,1)) {
     $captures = @(Get-ChildItem -LiteralPath $dir -Filter 'shot_*.bmp')
     if (!$captures.Count) { throw "Missing capture: $dir" }
     if ($Mode -eq 'Hud' -and $captures.Count -lt 4) { throw "HUD audit did not reach gameplay: $dir" }
-    $uploads = @(Select-String -LiteralPath (Join-Path $dir 'stderr.txt') -Pattern '^font: enhanced ')
-    if ($enabled -and !$uploads.Count) { throw "No enhanced glyphs uploaded: $dir" }
-    if (!$enabled -and $uploads.Count) { throw "Enhanced glyphs rendered while disabled: $dir" }
-    [PSCustomObject]@{ Mode=$Mode; Enhanced=$enabled; Directory=$dir; Uploads=$uploads.Count; Capture=$captures[-1].FullName }
+    [PSCustomObject]@{ Mode=$Mode; Filter2D=$filter; Directory=$dir; Capture=$captures[-1].FullName }
 }

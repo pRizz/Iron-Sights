@@ -1,6 +1,5 @@
 """Record inputs without publishing a private ROM URL or any game assets."""
 import argparse
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -25,11 +24,7 @@ if __name__ == "__main__":
               sdl2_version=os.environ["SDL2_VERSION"],sdl2_sha256=os.environ["SDL2_SHA256"],
               workflow=".github/workflows/windows-release.yml",
               generated_icons="Prepared on the player's Windows PC; not embedded in the release")
-    fonts = Path("port/fast3d/fonts")
     info["sentry"] = json.loads(Path("build_win/sentry-build.json").read_text())
-    source = json.loads((fonts/"sources.json").read_text())
-    info["enhanced_fonts"] = dict(source=source["source"], commit=source["commit"], license=source["license"],
-        masks_sha256=hashlib.sha256((fonts/"gepd_font_data.inc").read_bytes()).hexdigest())
     dependencies = os.environ.get("MIDAS_DEPENDENCIES_FILE")
     if dependencies:
         info["dependency_packages"] = json.loads(Path(dependencies).read_text())

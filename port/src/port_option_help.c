@@ -160,7 +160,7 @@ static const struct PortOptHelp sHelp[] = {
     { "@page_is_aim",       "Aim down sights, knife aiming and sprint speed." },
     { "@page_is_feedback",  "Hit markers, hit sounds and damage direction." },
     { "@page_is_hud",       "Crosshair size, weapon strip, health and mission alerts." },
-    { "@page_is_system",    "Build info, texture packs, fonts and crash reports." },
+    { "@page_is_system",    "Build info and crash reports." },
     { "@page_video",        "Display mode, resolution and picture quality." },
     { "@page_audio",        "Volume and sound options." },
     { "@page_classic",      "Choose which settings Classic Mode overrides." },

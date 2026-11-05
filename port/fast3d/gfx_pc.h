@@ -44,7 +44,6 @@ struct TextureCacheKey {
      * (ge_upload_masked); the same bytes drawn with other masks must not
      * reuse that entry. */
     uint8_t masks, maskt;
-    bool enhanced_font;
 
     bool operator==(const TextureCacheKey&) const noexcept = default;
 
@@ -67,7 +66,6 @@ struct TextureCacheValue {
     uint8_t cms, cmt;
     bool linear_filter;
     bool mip_filter; /* GE: minifying through a mip chain (N64 G_TL_LOD draw) */
-    bool enhanced_font;
 
     std::list<struct TextureCacheMapIter>::iterator lru_location;
 };

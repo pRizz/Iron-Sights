@@ -26,18 +26,6 @@ license, reproduced here as its terms require.
     (tools/ido5.3_recomp/rabbitizer)
   ido-static-recomp                  none        build tools only, not shipped
     (tools/ido5.3_recomp)            published
-  Carnivorous GEPD font masks         CC0-1.0    enhanced fonts (embedded)
-
-Enhanced fonts
---------------
-GoldenEye/GoldFinger texture pack by Carnivorous, published by Graslu:
-https://github.com/Graslu/GEPDTexturePacks
-Revision ca06e063f5b985cf59b1ed7a01d03ba3cf86ec63.
-Only the Bank Gothic/Zurich Bold replacement masks are embedded. See
-port/fast3d/fonts/NOTICE.txt, LICENSE.txt and sources.json for the complete
-CC0 license and source fingerprints. Player ZIPs carry these as
-Enhanced-Fonts-NOTICE.txt and Enhanced-Fonts-LICENSE.txt.
-
 
 Fast3D renderer
 ---------------

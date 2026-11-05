@@ -359,13 +359,14 @@ subsections, in both the Options folder and the watch:
 | Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Sprint, Ludicrous Sprint |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction |
 | HUD Additions | Always Crosshair Size, Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
-| System | About / Build Info, Enhanced Fonts, Crash Reporting (Windows/Linux) |
+| System | About / Build Info, Crash Reporting (Windows/Linux) |
 
 The watch's Iron Sights page also holds the Suspend Points action, which moved
 there from the watch's Gameplay page. Rows left General Settings, HUD, Port
 Options and Video, so those pages are back to upstream's rows plus upstream-owned
-port settings. Enhanced Fonts now applies immediately, as it already did on the
-watch, rather than waiting for the Video sheet's Apply Changes. Crash Reporting
+port settings. Enhanced Fonts then applied immediately, as it already did on the
+watch, rather than waiting for the Video sheet's Apply Changes (the setting was
+removed with FORK-021). Crash Reporting
 is new on the watch. midas.ini keys, sections and defaults are unchanged.
 Fork changes to upstream settings, such as Mission Timer's cheat targets,
 stay on upstream's pages.
@@ -2051,7 +2052,8 @@ setup straight after the video (FORK-018), prominently links this full
 inventory near the top, and summarizes ADS, sniper zoom, sprint, smoother
 sights/combat feedback, objective alerts, the weapon strip, adaptive
 health/armor, solo suspend points, and mission timer/selection cheat-target
-and earned-status hints. It also highlights enhanced community fonts (FORK-021).
+and earned-status hints. It also highlighted enhanced community fonts until
+FORK-021 was removed.
 Contributor inventory-maintenance instructions sit under
 Contributing, alongside the existing contribution links.
 
@@ -3686,97 +3688,67 @@ one initial progress-label sampling gap during visible cartridge insertion.
 Both independent gallery passes reproduce all 72 views and 35 icons unchanged.
 Private evidence is under `build/build-time` and ignored `build_win` logs.
 
-### FORK-021 — Enhanced community font textures
+### FORK-021 — Enhanced community font textures (removed)
 
-**Status:** Implemented.
+**Status:** Removed on 2026-11-05. No target embeds, loads or ships the masks.
 
-Added default-on **Gameplay > Iron Sights > System > Enhanced Fonts** (`enhanced_fonts=1`) to
-the frontend and watch, independently of 2D Filtering. Replaces matching Latin
-font textures with 186 eight-times-resolution community Bank Gothic/Zurich
-Bold masks from Carnivorous's CC0 GEPD texture pack, published by Graslu at
-`ca06e063f5b985cf59b1ed7a01d03ba3cf86ec63`. These community-authored replacement
-masks are embedded, with source fingerprints and licensed attribution; this
-addition does not embed the player's original ROM font pixels. No runtime
-download, external emulator or asset preparation is required. The Nintendo 64
-preset disables the feature and Modern enables it; Classic Mode remains an
-independent setting.
+From 2026-10-23 the fork embedded 186 eight-times-resolution Bank Gothic and
+Zurich Bold glyph masks from Carnivorous's GoldenEye/GoldFinger texture pack
+(Graslu's GEPDTexturePacks, CC0, `ca06e063`). A default-on **Gameplay > Iron
+Sights > System > Enhanced Fonts** setting (`[display] enhanced_fonts=1`) swapped
+them in for matching original glyph textures by content fingerprint, grew glyph
+quads to show ink past the native advance, and kept them smooth-sampled
+independently of 2D Filtering.
 
-The inherited glyph renderer retains spacing, baselines, colours, clipping,
-outlines and scaled HUD layout. Tagged I8 font draws match content fingerprints
-after inherited padding cleanup. Unknown/modified fonts, Japanese text and
-missing characters (both tildes) keep original rendering. Only matching fonts
-receive high-resolution images and smooth sampling; images/logos retain their
-existing behavior. Original and enhanced cache entries are
-distinct, and live setting changes invalidate the renderer's current bindings.
+The owner removed them after the GoldenEye 007 HD maintainer disallowed bundling
+that pack's art in ports
+([GhostlyDark/GoldenEye-007-HD#3](https://github.com/GhostlyDark/GoldenEye-007-HD/issues/3),
+see FORK-047 and FORK-033). The font masks came from a different pack, but they
+are redrawn versions of Rare's own glyphs, so a CC0 dedication by the pack's
+author could not clear their underlying rights, and the issue had credited
+GhostlyDark for fonts. The planned replacement is original, MIT-licensed fonts
+drawn from scratch (never traced from the ROM or any pack) and a renderer that
+draws text sharply at any resolution; until then every target draws the
+original glyphs from the player's ROM.
 
-Horizontal preparation preserves authored stroke coordinates within a bounded
-one-native-pixel ink overhang. Matching enhanced glyph quads/UV spans grow to
-show that ink, including scaled/rotated draws; native advances, kerning, measured
-line widths and wrapping stay unchanged. This replaces squeezing all ink into
-the original width, which reduced Bank Gothic `I` from an 11-texture-pixel source
-stroke to 7 (128/255 threshold). The correction affects 99 masks: 54 Bank Gothic
-and 45 Zurich Bold, including lowercase `i` and other letters. Two long
-punctuation masks (Bank Gothic dash/underscore) retain bounded horizontal fitting.
-Automatic full-font kerning checks trim only protruding fringe from Bank Gothic
-`p` (one texture column) and Zurich Bold `r` (three) to avoid touching ink in
-`pJ`, `rp` and `ry`; their stems are not rescaled. Source bounds, native kerning
-class and preparation decisions are recorded in `sources.json`. Existing vertical
-fitting remains, including 13 over-height source images; digit-height policy below
-is still deferred. Original/unknown fonts and Japanese fallback are unchanged.
+The removal deleted the masks, notice, license and provenance
+(`port/fast3d/fonts/`), the decoder and glyph-extent code
+(`port/fast3d/enhanced_fonts.*`), the generator, guide and tests
+(`generate_enhanced_fonts.py`, `enhanced_fonts.md`, `test_enhanced_fonts.*`),
+the renderer's upload swap, cache-key field, smooth-sampling exception, quad
+growth and setting-change flush in `gfx_pc.cpp`, the setting, Options and watch
+rows and Nintendo 64/Modern preset entry, the CI step, the Windows/Linux
+`Enhanced-Fonts-*.txt` files, the browser site's notice entries, the
+`build-inputs.json` record, and the LICENSE, third-party notice, README,
+release and ini-help text. Glyphs again follow 2D Filtering (smoothed by
+default), with their half-texel transparent border when filtered. An existing
+`enhanced_fonts=` line in midas.ini is ignored as an unknown key. The package
+test now requires that no `Enhanced-Fonts-*` file ships. `audit_fonts.ps1`
+stays as a text audit that captures point-sampled and smoothed glyphs
+(`filter_2d` 0 and 1) on the video, difficulty, credits or HUD screens.
+Releases published before the removal still contain the masks.
 
-The generator verifies a pinned source ZIP and records source-image hashes;
-it adapts pack padding and uses lossless RLE storage. Regeneration requires
-Pillow; ordinary builds do not. Release packages include CC0/credits and
-build-inputs.json fingerprints the embedded community masks. No emulator
-implementation code was copied.
-
-**Known visual difference; decision deferred (2026-10-23):** enhanced Bank
-Gothic digits are approximately 12% taller than sampled uppercase letters in
-the source artwork. Original sampled digits/capitals have matching visible
-heights and alignment; lowercase small capitals are a separate, shorter set.
-The pack author's intent is undocumented in the sources reviewed. The
-[font guide](scripts/port/enhanced_fonts.md#digit-height-decision-deferred)
-records measurements, comparison method and source references. Keep current
-proportions while deferring whether to normalize digits and the scope of any
-adjustment; this documentation does not change rendering or assets.
-
-**Sources:** [font replacement](port/fast3d/enhanced_fonts.cpp),
-[glyph metrics API](port/fast3d/enhanced_fonts.h),
-[generated masks](port/fast3d/fonts/gepd_font_data.inc),
-[community masks and provenance](port/fast3d/fonts/sources.json),
-[renderer](port/fast3d/gfx_pc.cpp), [settings](port/src/video.c),
-[frontend](src/game/front.c), [watch](port/src/port_watchpages.c),
-[generator and regeneration guide](scripts/port/enhanced_fonts.md),
-[generator](scripts/port/generate_enhanced_fonts.py),
-[tests](scripts/port/test_enhanced_fonts.py),
-[C++ extent/decoder tests](scripts/port/test_enhanced_fonts.cpp),
-[visual audit](scripts/port/audit_fonts.ps1),
-[packaging](scripts/port/package_windows.py),
-[credits](tools/THIRD_PARTY_NOTICES.txt), [license scope](LICENSE).
-**Validation:** Horizontal-preservation regressions check all 186 mask hashes,
-width bounds, authored narrow strokes and all 17,298 ordered glyph pairs using
-native kerning/baselines. C++ tests cover drawing extents across HUD/menu scales,
-invalid/partial spans and bounded decoding. The ten font tests pass and regeneration
-reproduces masks/provenance byte-for-byte from the SHA256-verified source archive.
-Native Windows/optimized Wasm builds, ADS/wardrobe regressions, TypeScript,
-146 browser unit tests and site allowlist/logo checks pass. Native wide/4:3
-toast and video/difficulty-menu captures plus Edge toast/menu captures are
-visually reviewed, including rotated tabs. Native setting-off audits produce
-zero enhanced uploads; setting-on menu audits confirm replacements. Both
-independent gallery passes reproduce 72 views/35 icons unchanged; integrity and
-eight workflow tests pass. Private evidence is under `build/font-stroke-audit`,
-with browser acceptance recorded in WEB-010.
-Earlier Windows MinGW and Linux video builds passed. ROM-free tests
-check all 186 native mappings, both absent tildes, bounded decoding, malformed
-RLE/size rejection and decoded antialiasing. Regeneration reproduced the output
-byte-for-byte. Isolated 1920x1080 audits compared enhanced/original video menus,
-mission difficulty/cheat hints and live objective/weapon HUD text. Runtime
-uploads confirmed replacement in both font families, with zero replacement
-uploads when disabled. Visual review corrected power-of-two padding adaptation
-that initially made some letters too narrow. Package tests require font license
-and attribution files. The new unit tests run in the release workflow. The main
-Windows executable was rebuilt, and its isolated startup audit confirmed that
-an existing configuration without the new key enables enhanced fonts by default.
+**Sources:** the removal across [renderer](port/fast3d/gfx_pc.cpp),
+[cache key](port/fast3d/gfx_pc.h), [renderer API](port/fast3d/gfx_api.h),
+[settings](port/src/video.c), [options](port/src/port_options.c),
+[watch](port/src/port_watchpages.c), [frontend](src/game/front.c),
+[help](port/src/port_option_help.c), [ini reference](tools/midas_ini_help.txt),
+[build](CMakeLists.txt), [CI](.github/workflows/windows-release.yml),
+[Windows](scripts/port/package_windows.py)/[Linux](scripts/port/package_linux.py)/[browser](web/tools/build-site.ts)
+packaging, [release inputs](scripts/port/release_inputs.py),
+[package test](scripts/port/test_distribution.py), [text audit](scripts/port/audit_fonts.ps1),
+[notices](tools/THIRD_PARTY_NOTICES.txt), [license scope](LICENSE),
+[README](README.md) and [release notes](scripts/port/releases.md).
+**Checks:** the reconfigured Windows build (Docker `goldeneye`, `build_win`)
+compiles and links without the masks. The distribution test (now asserting no
+`Enhanced-Fonts-*` files ship), CI dependency, Linux launcher and Steam art
+tests, `test_hud.sh`, `test_hitmap.sh`, settings placement, the standards
+check and the web package's `bun test` (209 tests) pass. The regenerated
+gallery verifies 72 views and 38 icons with zero changed image cells. A
+1280x960 `audit_fonts.ps1 -Mode Video` capture shows the original glyphs,
+smoothed and point-sampled. The audit's `-Mode Hud` run stayed in the stage
+intro and captured no HUD text, an existing gap in that mode. The browser build
+was left to CI.
 
 ### FORK-022 — Versioned hand and weapon review gallery
 

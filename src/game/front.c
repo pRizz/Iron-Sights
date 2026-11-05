@@ -4781,7 +4781,6 @@ static const struct PortSheetRow port_sheet_rows_is_hud[] = {
 };
 static const struct PortSheetRow port_sheet_rows_is_system[] = {
     { SHROW_ABOUT, NULL, "About / Build Info\n" },
-    { SHROW_OPT, "enhanced_fonts" },   /* live here; it was on VIDEO, which defers */
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     { SHROW_OPT, "crash_reporting" },
 #endif
@@ -4855,7 +4854,6 @@ static const struct PortSheetRow port_sheet_rows_video[] = {
      * here from GRAPHICS. */
     { SHROW_OPT, "fullscreen" }, { SHROW_RES, NULL }, { SHROW_OPT, "vsync" },
     { SHROW_OPT, "widescreen" },
-    /* enhanced fonts: Iron Sights > System */
     /* CLASSIC MODE SITS OVER WHAT IT FORCES: every row below
      * it is one of port_options.c's classic keys, greyed while it is on
      * (portSheetRowDisabled). A row that classic mode does not own goes ABOVE. */
