@@ -48,6 +48,33 @@
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
+.mission-stages {
+    margin-top: 16px;
+}
+.mission-stages ol {
+    display: flex;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.mission-stages li {
+    flex: 1;
+    height: 6px;
+    background: var(--mission-panel);
+    border: 1px solid var(--mission-edge);
+}
+.mission-stages li[data-state='done'] {
+    background: var(--mission-green);
+    border-color: var(--mission-green);
+}
+.mission-stages li[data-state='current'] {
+    background: var(--mission-gold);
+    border-color: var(--mission-gold);
+}
+.mission-stages .startup-measure {
+    margin-top: 8px;
+}
 .mission-topline {
     display: flex;
     justify-content: space-between;

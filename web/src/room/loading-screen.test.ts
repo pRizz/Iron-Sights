@@ -63,3 +63,28 @@ test('the CRT repaint key changes exactly when the painted screen would', () => 
     );
     expect(drawing(0, null).bars).toEqual(drawing(0.01, null).bars);
 });
+
+function stageDrawing(label: string) {
+    const text: string[] = [];
+    const cells: { style: string; x: number }[] = [];
+    const context = {
+        fillStyle: '',
+        fillText: (value: string) => text.push(value),
+        fillRect: (x: number, y: number) => {
+            if (y === 328) cells.push({ style: String(context.fillStyle), x });
+        },
+        strokeRect: () => {},
+    } as unknown as CanvasRenderingContext2D;
+    paintCrtScreen(context, 0, '', true, false, { label, maybePercent: null });
+    return { text, styles: cells.map((cell) => cell.style) };
+}
+
+test('CRT stage track shows where the current stage sits in the whole startup', () => {
+    const { text, styles } = stageDrawing('Preparing graphics');
+    expect(text).toContain('STAGE 5 OF 6');
+    expect(text).toContain('GRAPHICS');
+    const { green, gold, panel } = MISSION_THEME;
+    expect(styles).toEqual([green, green, green, green, gold, panel]);
+    expect(stageDrawing('Ready to play').styles.every((style) => style === green)).toBe(true);
+    expect(stageDrawing('Startup paused · resume below').styles).toHaveLength(0);
+});

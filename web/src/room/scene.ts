@@ -13,7 +13,7 @@ import { ROOM_FOV, TV_SCREEN } from './framing';
 import { pivotRotation } from './pivot';
 import { loadRoomModels } from './models';
 import { crtScreenKey, paintCrtScreen } from './loading-screen';
-import type { StartupProgress } from '../startup-progress';
+import { stageNumber, stageTrack, type StartupProgress } from '../startup-progress';
 
 export type RoomTarget = 'cartridge' | 'power' | 'controls';
 
@@ -201,6 +201,10 @@ function initializeScene(
             paintScreen(tv, seconds, label, powered, reduced, progress);
             canvas.dataset.roomLoadingLabel = progress?.label ?? '';
             canvas.dataset.roomLoadingPercent = progress?.maybePercent?.toString() ?? '';
+            const maybeTrack = progress && stageTrack(progress.label);
+            canvas.dataset.roomLoadingStage = maybeTrack
+                ? `${stageNumber(maybeTrack)}/${maybeTrack.total}`
+                : '';
             lastScreenKey = screenKey;
         }
         renderer.shadowMap.needsUpdate =

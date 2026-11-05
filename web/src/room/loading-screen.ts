@@ -1,4 +1,9 @@
-import type { StartupProgress } from '../startup-progress';
+import {
+    stageNumber,
+    stageTrack,
+    type StageTrack,
+    type StartupProgress,
+} from '../startup-progress';
 import { MISSION_THEME as theme } from '../mission-theme';
 
 const gaugeStart = (seconds: number, reduced: boolean) =>
@@ -16,6 +21,32 @@ export function crtScreenKey(
     const { label: stage, maybePercent } = progress;
     const gauge = maybePercent === null ? gaugeStart(seconds, reduced) : '';
     return ['mission', stage, maybePercent, gauge].join('|');
+}
+
+// Whole-startup track under the stage gauge: finished stages green, the current gold.
+function paintStages(ctx: CanvasRenderingContext2D, track: StageTrack) {
+    const gap = 8;
+    const width = (552 - gap * (track.total - 1)) / track.total;
+    for (let index = 0; index < track.total; index++) {
+        ctx.fillStyle =
+            index < track.current
+                ? theme.green
+                : index === track.current
+                  ? theme.gold
+                  : theme.panel;
+        ctx.fillRect(44 + index * (width + gap), 328, width, 8);
+        if (index > track.current) {
+            ctx.strokeStyle = theme.edge;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(44.5 + index * (width + gap), 328.5, width - 1, 7);
+        }
+    }
+    ctx.fillStyle = theme.muted;
+    ctx.font = `14px ${theme.font}`;
+    ctx.textAlign = 'left';
+    ctx.fillText(`STAGE ${stageNumber(track)} OF ${track.total}`, 44, 360);
+    ctx.textAlign = 'right';
+    ctx.fillText(track.name.toUpperCase(), 596, 360);
 }
 
 function paintMission(
@@ -66,6 +97,8 @@ function paintMission(
             ctx.fillRect(x, 286, 23.8 * amount, 24);
         }
     }
+    const maybeTrack = stageTrack(progress.label);
+    if (maybeTrack) paintStages(ctx, maybeTrack);
     ctx.fillStyle = theme.edge;
     ctx.fillRect(44, 376, 552, 1);
     ctx.fillStyle = theme.muted;

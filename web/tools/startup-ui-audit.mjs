@@ -48,6 +48,7 @@ try {
         timeout: 60_000,
     });
     await expect(crt).toHaveAttribute('data-room-loading-percent', '0');
+    await expect(crt).toHaveAttribute('data-room-loading-stage', '2/6');
     await expect(loading).toHaveCount(0);
     await page.screenshot({ path: resolve(output, 'download.png') });
     await page.keyboard.press('F2');
@@ -63,10 +64,12 @@ try {
         '',
         'Compilation invented a percentage',
     );
+    await expect(crt).toHaveAttribute('data-room-loading-stage', '3/6');
     await page.screenshot({ path: resolve(output, 'compiling.png') });
     await page.evaluate(() => globalThis.releaseStartupCompile());
     await expect(loading).toHaveCount(0, { timeout: 60_000 });
     await expect(crt).toHaveAttribute('data-room-loading-label', '', { timeout: 60_000 });
+    await expect(crt).toHaveAttribute('data-room-loading-stage', '');
     await expect(page.locator('.room-canvas')).toHaveAttribute('data-room-state', 'ready', {
         timeout: 60_000,
     });
@@ -96,7 +99,7 @@ try {
     });
     assert.deepEqual(errors, []);
     console.log(
-        'Startup UI: download percentage, indeterminate compilation, F2 recovery and room handoff passed',
+        'Startup UI: download percentage, startup stage track, indeterminate compilation, F2 recovery and room handoff passed',
     );
 } catch (error) {
     await maybePage

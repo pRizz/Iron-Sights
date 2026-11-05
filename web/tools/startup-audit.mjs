@@ -149,6 +149,8 @@ try {
     await expect(loading.locator('h1')).toHaveText('Compiling WebAssembly', { timeout: 60_000 });
     await expect(loading.getByRole('progressbar')).not.toHaveAttribute('value');
     await expect(loading.locator('.mission-gauge')).toBeVisible();
+    await expect(loading.locator('.mission-stages')).toHaveAttribute('data-stage', '3');
+    await expect(loading.getByText('Startup stage 3 of 6')).toBeAttached();
     const manifest = await (await page.request.get(origin + 'runtime-manifest.json')).json();
     const stamp = manifest.build.built_at;
     const timestamp = loading.locator('time');

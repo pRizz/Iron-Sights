@@ -1,6 +1,8 @@
-import { Show } from 'solid-js';
+import { For, Show } from 'solid-js';
+import { stageNumber, stageTrack } from './startup-progress';
 
 export function MissionProgress(props: { label: string; maybePercent: number | null }) {
+    const maybeTrack = () => stageTrack(props.label);
     return (
         <div class="mission-progress" data-indeterminate={props.maybePercent === null}>
             <Show
@@ -25,6 +27,34 @@ export function MissionProgress(props: { label: string; maybePercent: number | n
                     {props.maybePercent === null ? 'Please wait' : `${props.maybePercent}%`}
                 </strong>
             </p>
+            <Show when={maybeTrack()}>
+                {(track) => (
+                    <div class="mission-stages" data-stage={stageNumber(track())}>
+                        <span class="visually-hidden">
+                            {`Startup stage ${stageNumber(track())} of ${track().total}`}
+                        </span>
+                        <ol aria-hidden="true">
+                            <For each={Array.from({ length: track().total }, (_, index) => index)}>
+                                {(index) => (
+                                    <li
+                                        data-state={
+                                            index < track().current
+                                                ? 'done'
+                                                : index === track().current
+                                                  ? 'current'
+                                                  : 'pending'
+                                        }
+                                    />
+                                )}
+                            </For>
+                        </ol>
+                        <p class="startup-measure" aria-hidden="true">
+                            <span>{`Stage ${stageNumber(track())} of ${track().total}`}</span>
+                            <span>{track().name}</span>
+                        </p>
+                    </div>
+                )}
+            </Show>
         </div>
     );
 }

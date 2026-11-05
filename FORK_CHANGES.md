@@ -3829,6 +3829,31 @@ rebuilt by the gallery and captured unchanged. Reports stay in ignored
 `build/web-room/benchmark/parallel-*.json`. Firefox and Safari were not measured;
 without the extension they keep the sequential path.
 
+Startup stage track, 2026-11-04: the stage gauge restarts at every stage, so it
+never showed how far the whole startup had come. A second row under it now does:
+six segments (Saves, Download, Runtime, Cartridge, Graphics, Start), with
+finished stages green, the current stage gold and pending stages outlined, plus
+"Stage N of 6" and the stage name. `STARTUP_STAGES`/`stageTrack` in
+`web/src/startup-progress.ts` map every label the engine, app and native runtime
+report to a stage. "Ready to play", which the room shows only after start, counts
+as complete. Unknown labels and "Startup paused" hide the row. It is a stage
+count, not a weighted overall percentage: stage durations vary too much between
+cold and cached launches (download size, 0.1-1.5 s of graphics preparation), and
+Compiling WebAssembly and Starting GoldenEye cannot be measured. A skipped stage
+such as a cached download just counts as passed, so the row never goes back. The
+TV loading screen (`room/loading-screen.ts`) paints the row between the gauge
+and its footer. `MissionProgress` adds it to the startup screen and the standard
+launcher's bar, with a screen-reader "Startup stage N of 6" text. The room
+canvas exposes `data-room-loading-stage`. `startup-ui-audit.mjs` asserts 2/6
+during the held download, 3/6 during the held compile, and an empty value once
+loading ends. `startup-audit.mjs` asserts stage 3 on the remembered-ROM startup
+screen, whose no-overflow checks at 1440x900, 390x844 and 844x390 still pass.
+This is a display-only change with no native or gallery inputs. Validation:
+stage-order and CRT-track unit tests, all 207 Bun tests, TypeScript, Prettier
+on the changed files, and Chrome `startup-ui-audit`, `startup-audit` (actual ROM)
+and `launcher-ui-audit`. Screenshots of the TV, the startup screen at three sizes
+and the phone launcher bar were reviewed; they are private in `build/web-startup/{ui-stages,stages-audit,stage-shots}`.
+
 Room transitions use 0.9-second cartridge insertion, 0.3-second power-on,
 1.3-second TV flight and 1.5-second return to the room. The return camera retains
 its 0.3-second crossfade hold and completes its retreat within the shared phase

@@ -1215,6 +1215,15 @@ preparation yields until the TV is fitted, then delays them 400 ms. Its old
 Not yet published; Firefox/Safari unmeasured. Next action: normal Pages
 publication gates after push.
 
+**Startup stage track, 2026-11-04:** The owner asked for a secondary bar that
+tracks the whole startup. Instead of an invented weighted percentage, a
+six-segment stage row (Saves, Download, Runtime, Cartridge, Graphics, Start)
+sits under the stage gauge on the TV, the startup screen and the launcher bar
+(FORK-025). `startup-ui-audit.mjs` (2/6, 3/6, cleared) and the actual-ROM
+`startup-audit.mjs` (stage 3, viewport fit) pass in Chrome, as does
+`launcher-ui-audit.mjs`. Evidence: `build/web-startup/{ui-stages,stages-audit,stage-shots}`.
+Next action: publication gates with the parallel shader change.
+
 **Shared crosshair-size control, 2026-10-26:** Gameplay > HUD and the watch HUD
 page gain a 10%-200% always-on crosshair size slider with a live vector preview.
 Both menus label it **Always Crosshair Size** to make its scope explicit, with
