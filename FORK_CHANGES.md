@@ -1350,8 +1350,8 @@ via −/+ and Done, a long drag stopping at 100, Cancel restoring 100, a leftwar
 drag stopping at 0) pass; the gallery regenerated with zero changed images.
 The other Options folder states a menu tap could not answer now have touch
 controls too, each reported as its own native context ahead of the value edit:
-an open pick list (5) shows ▲ / ▼ and Cancel, and `portSheetPickListOpen` lets the
-list take the step queue as rows to scroll (three per tap, clamped like the wheel;
+an open pick list (5, now `portMenuPickListOpen`) shows ▲ / ▼ and Cancel, and the
+list takes the step queue as rows to scroll (three per tap, clamped like the wheel;
 the next tap picks by hover even where the finger last rested). A bind row's
 capture (6) previously soft-locked touch, since only B, Delete or a three-second
 hold ended it; it now shows Cancel (B) and Unbind, which `portWebTouchUnbind`
@@ -1373,6 +1373,39 @@ FPS list scrolls to its end and closes, a rebind row cancels, re-arms and
 unbinds, Input Device's wait cancels at once, Erase taps answer Cancel, Confirm
 and Cancel) pass, and the gallery regenerated with zero changed images. The
 watch volume hold and gamepad captures have no real-ROM run.
+A follow-up covered the menus outside the Options folder, and AGENTS.md now has
+an Input idioms rule: every screen must work with keyboard, mouse, gamepad and
+browser touch, prompts name the control the current input has, and an input left
+unsupported is recorded here. 007 mode's sliders (Rare's idiom: hold A and move
+the cursor) report a hold context (8, `portMenuHoldDrag`); there the cursor
+surface holds A while a finger rests, starting 80 ms after touch-down so the
+screen picks the touched bar first, and releases it on lift, so dragging along a
+bar sets it (before, only a tap set it, and dragging did nothing). Multiplayer
+setup's drop-down (weapon slots, Load Set, Load Settings, limit values) now joins
+the pick-list context through `portMenuPickListOpen` (which replaces
+`portSheetPickListOpen`), scrolling by touch steps and closing with Cancel.
+Screens only a pad drives - multiplayer Player Options, Health, Teams and the
+character picker, which have no cursor hit-testing - report a pad context (9,
+`portMenuPadOnly`): the overlay hides the cursor surface and shows a D-pad with
+A, B and Start, and an arrow there is a D-pad press only, without the one-frame
+stick step menus otherwise get, which those screens would count twice. Before,
+Player Options soft-locked a touch player on its first row. Player Options'
+seating wait skips a seat on touch Cancel (`portWebTouchTakeBack`), as player 1's
+key or click does, instead of its ten-second timeout. The rebind prompt reads "Tap
+Unbind or Cancel" while touch controls are on (`portWebTouchEnabled`). The Erase
+prompt's boxes are padded 10 native pixels and split halfway where cancel and
+confirm would meet. `GE_MENU=k007` opens the 007 sliders for Dam (harness only).
+Validation: the Wasm bridge regression (hold and pad contexts, D-pad-only arrows,
+the enabled flag), 201 browser unit tests, TypeScript, the Edge touch fixture
+(hold timing, pad buttons) and the Edge real-ROM audit (a drag sets Enemy Health
+to 1000% and then about 250%, a tap still sets a bar, the weapon list scrolls and
+closes, Player Options skips its seat on Cancel and Down moves player 1's row,
+the Erase boxes do not overlap) pass; the gallery regenerated with zero changed
+images. Not changed: the Save As name keyboards still use the on-screen letter
+grid, because a phone keyboard needs a focused HTML input from a user gesture and
+a new text path; leaving the Health screen still needs every player to confirm
+(or L/R); a tap outside a multiplayer drop-down still picks its highlight, as a
+mouse click does.
 Gameplay buttons distinguish taps from looking: A/B/R/Start, Gadget, More and
 discrete Modern actions activate only on tap-up within a 10 CSS-pixel slop.
 Moving farther latches a look gesture, so returning to the starting point cannot

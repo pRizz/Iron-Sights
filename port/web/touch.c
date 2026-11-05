@@ -23,9 +23,11 @@ extern s32 bondinvCountTotalItemsInInv(void);
 extern s32 bondinvGetTextbyInvIndex(s32 index);
 extern s32 portJoyPortInvScrollItem(s32 item);
 extern s32 portSheetValueEditOpen(void);
-extern s32 portSheetPickListOpen(void);
+extern s32 portMenuPickListOpen(void);
 extern s32 portBindCaptureActive(void);
 extern s32 portInputAssignActive(void);
+extern s32 portMenuHoldDrag(void);
+extern s32 portMenuPadOnly(void);
 
 /* Presentation follows real engine permission, never an intro-duration timer.
  * Keep the watch distinct so its native lists can still be closed/navigated. */
@@ -35,7 +37,9 @@ EMSCRIPTEN_KEEPALIVE s32 portWebTouchContext(void)
         /* Each Options folder state that a menu tap cannot answer gets its own controls. */
         if (portBindCaptureActive()) return WEB_TOUCH_BIND_CAPTURE;
         if (portInputAssignActive()) return WEB_TOUCH_ASSIGN;
-        if (portSheetPickListOpen()) return WEB_TOUCH_PICK_LIST;
+        if (portMenuPickListOpen()) return WEB_TOUCH_PICK_LIST;
+        if (portMenuHoldDrag()) return WEB_TOUCH_HOLD_DRAG;
+        if (portMenuPadOnly()) return WEB_TOUCH_PAD;
         return portSheetValueEditOpen() ? WEB_TOUCH_VALUE_EDIT : WEB_TOUCH_NAVIGATION;
     }
     if (portWatchMenuUp()) return WEB_TOUCH_WATCH;
@@ -78,6 +82,12 @@ EMSCRIPTEN_KEEPALIVE void portWebTouchReset(void)
     held = pressed = 0;
     steps = unbind = back = sidePolls = 0;
     moveX = moveY = yaw = pitch = 0;
+}
+
+/* The player's touch controls are on: native prompts then name the overlay's buttons. */
+s32 portWebTouchEnabled(void)
+{
+    return enabled;
 }
 
 EMSCRIPTEN_KEEPALIVE void portWebTouchEnable(s32 on)
@@ -189,7 +199,7 @@ void portWebTouchPoll(OSContPad *pad)
     pressed = 0;
     if (!enabled || portConIsOpen()) return;
     /* Steps and requests belong to the screen they were made on; never carry them on. */
-    if (!portSheetValueEditOpen() && !portSheetPickListOpen()) steps = 0;
+    if (!portSheetValueEditOpen() && !portMenuPickListOpen()) steps = 0;
     if (!portBindCaptureActive()) unbind = 0;
     if (!portInputAssignActive()) back = 0;
     for (i = 0; i < TOUCH_COUNT; i++) {
@@ -204,9 +214,11 @@ void portWebTouchPoll(OSContPad *pad)
         }
     }
     if (!portBondControlsLive() || g_PlayerIsInTank) {
-        /* Native menus include both cursor-driven folders and D-pad watch lists. */
+        /* Native menus include both cursor-driven folders and D-pad watch lists.
+         * Pad-only screens step on the D-pad and the stick alike, so an arrow
+         * there is the D-pad press alone, never a second step by stick. */
         f32 x = moveX, y = moveY;
-        if (!portWatchMenuUp()) {
+        if (!portWatchMenuUp() && !portMenuPadOnly()) {
             if (down & (1u << TOUCH_LEFT)) x = -1;
             if (down & (1u << TOUCH_RIGHT)) x = 1;
             if (down & (1u << TOUCH_UP)) y = 1;

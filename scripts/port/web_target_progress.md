@@ -1745,6 +1745,22 @@ the in-mission watch volume hold (bridge test only) and gamepad bind captures.
 007-mode sliders and the multiplayer setup's left/right rows were not audited.
 Next action: confirm on a physical phone after Pages publication.
 
+**Menus beyond the Options folder, 2026-11-04:** The owner asked for the
+remaining UI/UX recommendations and an input-idioms rule (now in AGENTS.md). 007
+mode's sliders get a hold context (8): a resting finger holds A, so a drag sets a
+bar. Multiplayer setup's drop-downs share the list context's scroll and Cancel.
+Pad-only screens (Player Options, Health, Teams, character picker) get a pad
+context (9) with an on-screen D-pad, A, B and Start; Player Options' seating skips
+on Cancel. The rebind prompt names the touch buttons, the Erase prompt's boxes are
+finger-sized, and the Input Device hint mentions a connected controller.
+Verification: bridge regression, 201 unit tests, TypeScript, Edge fixture and the
+Edge real-ROM `touch-options-audit.mjs` (007 drag to 1000% and ~250%, weapon list
+scroll 1 → 9 and close, Player Options seat skip and Down, Erase boxes apart) pass;
+zero-change gallery. Evidence: `build/web-touch/options7`. Not done: a phone
+keyboard for Save As names (needs a focused input from a gesture and a text path);
+Health still leaves only when every player confirms. Next action: physical-phone
+check after Pages publication, including iOS Safari.
+
 **Button look gestures and left Z, 2026-10-29:** The owner selected tap activation
 versus swipe-only look. Discrete gameplay buttons activate on release within a
 10-pixel slop; swipes look and never activate after returning to their origin.

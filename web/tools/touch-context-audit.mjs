@@ -106,6 +106,43 @@ export async function auditTouchContext(page) {
         await page.evaluate(() => touchFixture.context(0));
         await expect(page.locator('[data-touch-request]')).toHaveCount(0);
 
+        // A hold-to-set screen (the 007 sliders): a resting finger holds A after
+        // the cursor arrives and releases it on lift; a quick tap is one pulse.
+        await page.evaluate(() => touchFixture.context(8));
+        await expect(overlay).toHaveAttribute('data-context', 'hold');
+        await expect(page.locator('.touch-menu-hint')).toContainText('drag along it');
+        const resting = await page.evaluate(() => touchFixture.snapshot());
+        await send('pointerdown', 300);
+        assert.ok(!(await page.evaluate(() => touchFixture.snapshot())).held.includes(5));
+        await page.waitForTimeout(200);
+        assert.ok((await page.evaluate(() => touchFixture.snapshot())).held.includes(5));
+        await send('pointermove', 420);
+        await send('pointerup', 420);
+        const lifted = await page.evaluate(() => touchFixture.snapshot());
+        assert.ok(!lifted.held.includes(5), 'lifting releases A');
+        assert.equal(lifted.accepts, resting.accepts + 1, 'one held press, no extra tap');
+        assert.equal(lifted.cursor[0], 420, 'the cursor follows the drag');
+        await send('pointerdown', 300);
+        await send('pointerup', 301);
+        await page.waitForTimeout(200);
+        const tapped = await page.evaluate(() => touchFixture.snapshot());
+        assert.equal(tapped.accepts, lifted.accepts + 1);
+        assert.ok(!tapped.held.includes(5), 'a quick tap never starts a hold');
+
+        // A pad-only screen (multiplayer Player Options, Health): no cursor
+        // surface, a D-pad plus A, B and Start, each its own native button.
+        await page.evaluate(() => touchFixture.context(9));
+        await expect(overlay).toHaveAttribute('data-context', 'pad');
+        await expect(page.locator('.touch-menu-surface')).toHaveCount(0);
+        await expect(page.locator('.touch-dpad button')).toHaveCount(4);
+        const padBefore = await page.evaluate(() => touchFixture.snapshot());
+        for (const action of ['up', 'right', 'accept', 'back', 'watch'])
+            await page.locator(`[data-touch-action=${action}]`).tap();
+        const padAfter = await page.evaluate(() => touchFixture.snapshot());
+        assert.deepEqual(padAfter.presses.slice(padBefore.presses.length), [15, 18, 5, 6, 4]);
+        await page.evaluate(() => touchFixture.context(0));
+        await expect(page.locator('.touch-dpad')).toHaveCount(0);
+
         // A menu gesture held over a camera transition must not select/skip
         // on release in the new context.
         await page.evaluate(() => touchFixture.context(0));

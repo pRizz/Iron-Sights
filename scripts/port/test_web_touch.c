@@ -8,7 +8,7 @@
 s32 g_portMouseDirect, g_PlayerIsInTank;
 f32 g_portMouseYawDeg, g_portMousePitchDeg;
 static s32 live, consoleOpen, playerNum;
-static s32 stageRunning, watchOpen, valueEdit, pickList, bindCapture, assignWait;
+static s32 stageRunning, watchOpen, valueEdit, pickList, bindCapture, assignWait, holdDrag, padOnly;
 static u32 actionBits;
 static s32 inventory[8], inventoryCount, inventoryReads;
 static const char *const bindings[] = {
@@ -21,9 +21,11 @@ s32 portBondControlsLive(void) { return live; }
 s32 portStageRunning(void) { return stageRunning; }
 s32 portWatchMenuUp(void) { return watchOpen; }
 s32 portSheetValueEditOpen(void) { return valueEdit; }
-s32 portSheetPickListOpen(void) { return pickList; }
+s32 portMenuPickListOpen(void) { return pickList; }
 s32 portBindCaptureActive(void) { return bindCapture; }
 s32 portInputAssignActive(void) { return assignWait; }
+s32 portMenuHoldDrag(void) { return holdDrag; }
+s32 portMenuPadOnly(void) { return padOnly; }
 s32 portWebControlsLive(void) { return live; }
 s32 portConIsOpen(void) { return consoleOpen; }
 s32 bondinvCountTotalItemsInInv(void) { inventoryReads++; return inventoryCount; }
@@ -54,6 +56,15 @@ static void testTouchContext(void)
     valueEdit = 1;
     assert(portWebTouchContext() == WEB_TOUCH_VALUE_EDIT);
     valueEdit = 0;
+    /* A menu set by holding A while the cursor moves reports its own context. */
+    holdDrag = 1;
+    assert(portWebTouchContext() == WEB_TOUCH_HOLD_DRAG);
+    stageRunning = 1;
+    assert(portWebTouchContext() == WEB_TOUCH_CINEMATIC);
+    stageRunning = holdDrag = 0;
+    padOnly = 1;
+    assert(portWebTouchContext() == WEB_TOUCH_PAD);
+    padOnly = 0;
     /* Options folder states that a tap cannot answer each report their own context. */
     pickList = 1;
     assert(portWebTouchContext() == WEB_TOUCH_PICK_LIST);
@@ -194,6 +205,17 @@ static void testWatchDirections(void)
         assert(pad.button == masks[i]);
     }
     watchOpen = 0;
+    /* A pad-only menu takes each arrow as one D-pad press with no stick step. */
+    padOnly = 1;
+    for (i = 0; i < 4; i++) {
+        OSContPad pad = {0};
+        portWebTouchReset();
+        portWebTouchButton(directions[i], 1);
+        portWebTouchPoll(&pad);
+        assert(pad.button == masks[i] && pad.stick_x == 0 && pad.stick_y == 0);
+        portWebTouchButton(directions[i], 0);
+    }
+    padOnly = 0;
     portWebTouchReset();
 }
 
@@ -229,7 +251,9 @@ int main(void)
     OSContPad pad = {0};
     struct MoveData move = {0};
     testTouchContext();
+    assert(!portWebTouchEnabled());
     portWebTouchEnable(1);
+    assert(portWebTouchEnabled());
     testNativeN64Buttons();
     testAvailableGadgets();
     testWatchDirections();
@@ -285,6 +309,6 @@ int main(void)
     pad.button = 0;
     portWebTouchPoll(&pad);
     assert(pad.button == 0);
-    puts("Touch bridge: semantic buttons, independent holds, analog movement, menu sticks, slider and list steps, capture requests, held volume arrows, reset, bounds and locked-look discard passed.");
+    puts("Touch bridge: semantic buttons, independent holds, analog movement, menu sticks, slider and list steps, hold-drag and capture contexts, held volume arrows, reset, bounds and locked-look discard passed.");
     return 0;
 }

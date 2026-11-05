@@ -2,12 +2,24 @@ import { onCleanup, onMount } from 'solid-js';
 import { createTouchContacts } from './touch-contacts';
 import { createValueScrub, menuTapMoved, type TouchInput } from './touch-input';
 
+// About five native frames: long enough for the cursor to arrive first.
+const HOLD_DELAY_MS = 80;
+
 export function TouchMenu(props: {
     canvas: () => HTMLCanvasElement;
     input: TouchInput;
     adjust?: boolean;
+    hold?: boolean;
 }) {
-    let maybePan: { id: number; x: number; y: number; moved: boolean } | undefined;
+    let maybePan: { id: number; x: number; y: number; moved: boolean; held: boolean } | undefined;
+    // On a hold-to-set screen (the 007 sliders) A is held while the finger rests,
+    // starting after the cursor has reached it so the native screen picks the
+    // touched row before A locks it.
+    let maybeHoldTimer: ReturnType<typeof setTimeout> | undefined;
+    const stopHoldTimer = () => {
+        clearTimeout(maybeHoldTimer);
+        maybeHoldTimer = undefined;
+    };
     // While a slider edit is open the native cursor is pinned; a drag steps its value.
     const scrub = createValueScrub();
     const position = (event: PointerEvent) => {
@@ -26,8 +38,13 @@ export function TouchMenu(props: {
             if (maybePan?.id !== id) return;
             const pan = maybePan;
             maybePan = undefined;
+            stopHoldTimer();
+            if (maybeEvent?.type === 'pointerup') position(maybeEvent);
+            if (pan.held) {
+                props.input.state.release(id);
+                return;
+            }
             if (!maybeEvent || maybeEvent.type !== 'pointerup') return;
-            position(maybeEvent);
             if (pan.moved || menuTapMoved(maybeEvent.clientX, maybeEvent.clientY, pan.x, pan.y))
                 return;
             props.input.state.press(id, 'accept');
@@ -52,6 +69,7 @@ export function TouchMenu(props: {
         window.addEventListener('pagehide', clear);
         document.addEventListener('visibilitychange', hidden);
         onCleanup(() => {
+            stopHoldTimer();
             detach();
             window.removeEventListener('blur', clear);
             window.removeEventListener('orientationchange', clear);
@@ -65,7 +83,9 @@ export function TouchMenu(props: {
             aria-label={
                 props.adjust
                     ? 'Drag sideways to change the value; tap to keep it'
-                    : 'Drag menu cursor; tap to select'
+                    : props.hold
+                      ? 'Touch and drag along a bar to set it; tap to select'
+                      : 'Drag menu cursor; tap to select'
             }
             onPointerDown={(event) => {
                 event.preventDefault();
@@ -78,9 +98,19 @@ export function TouchMenu(props: {
                     x: event.clientX,
                     y: event.clientY,
                     moved: false,
+                    held: false,
                 };
                 scrub.begin(event.clientX);
                 position(event);
+                if (!props.hold) return;
+                const id = event.pointerId;
+                stopHoldTimer();
+                maybeHoldTimer = setTimeout(() => {
+                    maybeHoldTimer = undefined;
+                    if (maybePan?.id !== id) return;
+                    maybePan.held = true;
+                    props.input.state.press(id, 'accept');
+                }, HOLD_DELAY_MS);
             }}
             onContextMenu={(event) => event.preventDefault()}
         />

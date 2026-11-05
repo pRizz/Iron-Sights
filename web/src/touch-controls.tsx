@@ -58,14 +58,16 @@ export function TouchControls(props: Props) {
         props.visible() && props.input.enabled() && props.capture.state().kind !== 'paused';
     const editing = () => context() === 'edit';
     const listing = () => context() === 'list';
-    // A bind capture or Input Device wait answers to keys and pads only; a menu
-    // tap there would land on the row being bound, so only its buttons show.
-    const waiting = () => context() === 'capture' || context() === 'assign';
+    // A bind capture or Input Device wait answers to keys and pads only, and a
+    // pad-only screen has no cursor: a menu tap there would land on whatever row
+    // the game last highlighted, so only their buttons show.
+    const waiting = () => context() === 'capture' || context() === 'assign' || context() === 'pad';
     const hints = createTouchHints(() => {
         if (!active()) return 'inactive';
         const current = context();
         if (current === 'edit' || current === 'list') return current;
         if (current === 'capture' || current === 'assign') return current;
+        if (current === 'hold' || current === 'pad') return current;
         if (current !== 'navigation') return 'inactive';
         return files() ? 'files' : 'menu';
     });
@@ -74,7 +76,12 @@ export function TouchControls(props: Props) {
         if (current === 'edit') return 'Drag sideways or tap − + to change · Done keeps it';
         if (current === 'list') return 'Tap an entry to pick it · ▲ ▼ scroll · Cancel closes';
         if (current === 'capture') return 'Press a key or button to bind · Unbind clears the row';
-        if (current === 'assign') return 'Press a button on the device · Cancel stops waiting';
+        if (current === 'assign')
+            return 'Press a button on a connected controller · Cancel stops waiting';
+        if (current === 'hold')
+            return 'Touch a bar and drag along it to set it · Tap tabs to go on';
+        if (current === 'pad')
+            return 'This screen takes a controller · Use the D-pad, A, B and Start';
         return 'Drag to move cursor · Tap to select';
     };
     const contacts = createTouchContacts(
@@ -333,6 +340,7 @@ export function TouchControls(props: Props) {
                                         canvas={props.canvas}
                                         input={props.input}
                                         adjust={editing()}
+                                        hold={context() === 'hold'}
                                     />
                                 )}
                             </Show>
@@ -359,6 +367,19 @@ export function TouchControls(props: Props) {
                             <Show when={context() === 'assign'}>
                                 <div class="touch-menu-actions">
                                     <Button action="back" label="Cancel" />
+                                </div>
+                            </Show>
+                            <Show when={context() === 'pad'}>
+                                <div class="touch-dpad">
+                                    <Button action="up" label="Up" />
+                                    <Button action="left" label="Left" />
+                                    <Button action="down" label="Down" />
+                                    <Button action="right" label="Right" />
+                                </div>
+                                <div class="touch-menu-actions" data-pad-buttons="true">
+                                    <Button action="accept" label="A" />
+                                    <Button action="back" label="B" />
+                                    <Button action="watch" label="Start" />
                                 </div>
                             </Show>
                             <Show when={editing()}>

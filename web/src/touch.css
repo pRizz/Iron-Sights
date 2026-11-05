@@ -285,6 +285,9 @@
 .touch-menu-actions {
     grid-template-columns: repeat(2, calc(64 * var(--touch-unit)));
 }
+.touch-menu-actions[data-pad-buttons] {
+    grid-template-columns: repeat(3, calc(56 * var(--touch-unit)));
+}
 .touch-value-step {
     position: absolute;
     left: var(--touch-left);

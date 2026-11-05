@@ -1,6 +1,8 @@
-// Private real-ROM check: every Options folder state that a menu tap cannot
-// answer has working touch controls - a long pick list scrolls and closes, a
-// bind row's capture cancels and unbinds, Input Device's wait cancels, and the
+// Private real-ROM check: every menu state that a plain tap cannot answer has
+// working touch controls - a long pick list scrolls and closes, a bind row's
+// capture cancels and unbinds, Input Device's wait cancels, 007 mode's bars set
+// by hold-and-drag, multiplayer setup's drop-down scrolls and closes, Player
+// Options' seats skip and its pad-only panels take the on-screen D-pad, and the
 // Files screen's Erase prompt answers Cancel or Confirm by tap.
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -30,6 +32,7 @@ const rows = {
     bind: Number(process.env.MIDAS_BIND_Y || 0),
     device: Number(process.env.MIDAS_DEVICE_Y || 0),
     list: Number(process.env.MIDAS_LIST_Y || 0),
+    weapon: Number(process.env.MIDAS_WEAPON_Y || 0),
 };
 const rowX = Number(process.env.MIDAS_ROW_X || 120);
 const { browser } = await launchAuditBrowser();
@@ -103,7 +106,9 @@ export default async function(options) {
         { timeout: 30000 },
     );
     const overlay = page.locator('.touch-controls');
-    await expect(overlay).toHaveAttribute('data-context', 'navigation');
+    // Harness screens start in a menu context: plain menus, 007's hold-to-set,
+    // or multiplayer Player Options' seating wait.
+    await expect(overlay).toHaveAttribute('data-context', /^(navigation|hold|assign)$/);
     const bounds = await page.locator('#canvas').boundingBox();
     assert.ok(bounds);
     const band = Math.min(bounds.width, (bounds.height * 4) / 3);
@@ -163,7 +168,54 @@ export default async function(options) {
     const ini = () =>
         page.evaluate(() => optionsAuditGame.FS.readFile('/user/midas.ini', { encoding: 'utf8' }));
     const shot = (file) => page.screenshot({ path: resolve(output, `${name}-${file}.png`) });
-    return { context, page, overlay, screen, fingerTap, read32, write32, read8, write8, ini, shot };
+    const readF32 = (address) =>
+        page.evaluate((at) => new Float32Array(optionsAuditMemory())[at >>> 2], address);
+    // A finger that rests, slides in small steps the game can follow, then lifts.
+    const fingerDrag = async (from, to) => {
+        const surface = page.locator('.touch-menu-surface');
+        const send = (type, at) =>
+            (type === 'pointerdown' ? surface : page.locator('body')).evaluate(
+                (element, [eventType, x, y]) =>
+                    (eventType === 'pointerdown' ? element : document).dispatchEvent(
+                        new PointerEvent(eventType, {
+                            pointerId: 78,
+                            pointerType: 'touch',
+                            bubbles: true,
+                            cancelable: true,
+                            clientX: x,
+                            clientY: y,
+                        }),
+                    ),
+                [type, at.x, at.y],
+            );
+        await send('pointerdown', from);
+        await page.waitForTimeout(250);
+        for (let i = 1; i <= 12; i++) {
+            await send('pointermove', {
+                x: from.x + ((to.x - from.x) * i) / 12,
+                y: from.y + ((to.y - from.y) * i) / 12,
+            });
+            await page.waitForTimeout(40);
+        }
+        await page.waitForTimeout(250);
+        await send('pointerup', to);
+        await page.waitForTimeout(150);
+    };
+    return {
+        context,
+        page,
+        overlay,
+        screen,
+        fingerTap,
+        fingerDrag,
+        read32,
+        write32,
+        read8,
+        write8,
+        readF32,
+        ini,
+        shot,
+    };
 }
 
 async function scenario(menu, name, run) {
@@ -261,6 +313,83 @@ try {
         report.device = { cancelledAfterMs: Date.now() - started };
     });
 
+    // 007 mode's sliders are set by holding A while the cursor moves (N64 idiom):
+    // a resting finger holds A, so dragging along a bar sets it.
+    await scenario(
+        'k007,900',
+        '007',
+        async ({ overlay, screen, fingerTap, fingerDrag, readF32, shot }) => {
+            const health = symbol('slider_007_mode_health');
+            const damage = symbol('slider_007_mode_damage');
+            await expect(overlay).toHaveAttribute('data-context', 'hold');
+            // Rows by the screen's own bands (interface_menu09_007options); bars run x 55-355.
+            await fingerDrag(screen(100, 180), screen(370, 180));
+            assert.ok(
+                Math.abs((await readF32(health)) - 10) < 0.01,
+                'a drag to the end sets 1000%',
+            );
+            await fingerDrag(screen(360, 180), screen(205, 180));
+            const middle = await readF32(health);
+            assert.ok(Math.abs(middle - 2.5) < 0.3, `a drag to the middle sets 250%: ${middle}`);
+            await shot('dragged');
+            // A quick tap still sets a bar where it lands, as before.
+            await fingerTap(screen(130, 212));
+            const tapped = await readF32(damage);
+            assert.ok(Math.abs(tapped - 0.625) < 0.15, `a tap sets damage: ${tapped}`);
+            report['007'] = { middle, tapped };
+        },
+    );
+
+    // Multiplayer setup's drop-down (a New Set's weapon slot, ~22 weapons in 13
+    // rows) scrolls with the same buttons and closes with Cancel.
+    await scenario(
+        'xnew,900',
+        'mplist',
+        async ({ page, overlay, screen, fingerTap, read32, shot }) => {
+            if (!rows.weapon) return console.log('Set MIDAS_WEAPON_Y from mplist-sheet.png');
+            const slot = symbol('port_wset_list_slot');
+            const scroll = symbol('port_wset_list_scroll');
+            await fingerTap(screen(rowX, rows.weapon));
+            await expect(overlay).toHaveAttribute('data-context', 'list');
+            const opened = await read32(scroll);
+            for (let i = 0; i < 4; i++) await page.locator('[data-touch-step="3"]').tap();
+            await expect.poll(() => read32(scroll)).toBeGreaterThan(opened);
+            await shot('scrolled');
+            await page.locator('[data-touch-action=back]').tap();
+            await expect.poll(() => read32(slot)).toBe(-1);
+            await expect(overlay).toHaveAttribute('data-context', 'navigation');
+            report.mplist = { opened, scrolled: await read32(scroll) };
+        },
+    );
+
+    // Player Options: each seat's wait skips on Cancel, then the panels, which
+    // only a pad drives, get the on-screen D-pad, A, B and Start.
+    await scenario('xplayers2,900', 'ppo', async ({ page, overlay, shot }) => {
+        // Seats without a free device skip natively; each one that waits skips on Cancel.
+        let skipped = 0;
+        while ((await overlay.getAttribute('data-context')) === 'assign' && skipped < 4) {
+            const started = Date.now();
+            await page.locator('[data-touch-action=back]').tap();
+            await page.waitForTimeout(300);
+            assert.ok(Date.now() - started < 3000, 'a seat skips at once');
+            skipped++;
+        }
+        assert.ok(skipped >= 1, 'player 1 seat waited and was skipped');
+        await expect(overlay).toHaveAttribute('data-context', 'pad');
+        await expect(page.locator('.touch-menu-surface')).toHaveCount(0);
+        await page.waitForTimeout(300);
+        const canvas = page.locator('#canvas');
+        const before = await canvas.screenshot();
+        await page.waitForTimeout(400);
+        assert.ok(before.equals(await canvas.screenshot()), 'the panels hold still between taps');
+        await shot('panels');
+        await page.locator('[data-touch-action=down]').tap();
+        await page.waitForTimeout(400);
+        assert.ok(!before.equals(await canvas.screenshot()), 'Down moved player 1 off its row');
+        await shot('moved');
+        report.ppo = { skipped, moved: 'Down moved player 1' };
+    });
+
     // The Files screen's Erase prompt, armed directly: it needs a folder with
     // Dam on Agent finished, which a fresh browser profile does not have.
     await scenario(
@@ -288,6 +417,10 @@ try {
             // A tap away from both answers keeps the default, Cancel.
             await arm();
             await shot('prompt');
+            const edges = [];
+            for (let i = 0; i < 8; i++) edges.push(await read32(box(i)));
+            // Cancel (k 1) sits left of Confirm (k 0); their finger boxes never meet.
+            assert.ok(edges[6] < edges[0], `answer boxes overlap: ${edges}`);
             await fingerTap(screen(400, 40));
             await expect.poll(() => read32(selected)).toBe(-1);
             assert.equal(await read32(choice), 1, 'a stray tap must not erase');
@@ -307,7 +440,7 @@ try {
     assert.deepEqual(errors, []);
     await writeFile(resolve(output, 'report.json'), JSON.stringify(report, null, 2));
     console.log(
-        'Touch Options: list scroll/close, bind cancel/unbind, device-wait cancel and Erase taps passed.',
+        'Touch Options: list scroll/close, bind cancel/unbind, device-wait cancel, 007 hold-drag, multiplayer list and Player Options pad, and Erase taps passed.',
     );
 } finally {
     await browser.close();

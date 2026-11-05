@@ -89,6 +89,22 @@ Suspend Points) belong there too.
 - Update help lines (`port/src/port_option_help.c`), `tools/midas_ini_help.txt`
   and any docs or audits that name the setting's menu path.
 
+## Input idioms
+
+Every interactive screen must work with each supported input: keyboard, mouse,
+gamepad and browser touch. When adding or changing a menu row, list, prompt,
+capture or watch page, check how each input confirms, cancels or backs out,
+adjusts a value, scrolls, and unbinds or deletes. No screen may need an input
+that another supported one cannot send, and none may wait on one without a way
+out.
+
+- In menus, browser touch sends only cursor motion and A on a tap; the watch
+  adds one-step arrows and Select/Back. Anything else needs a native touch
+  context (`port/web/touch.c`, `portWebTouchContext`) with an overlay control in
+  `web/src/touch-controls.tsx`, and coverage in the touch fixture and audits.
+- Prompts and help text name the control the current input actually has.
+- Record any input deliberately left unsupported, and why, in `FORK_CHANGES.md`.
+
 ## Local build artifacts
 
 Do not keep previous executables as rebuild backups. The user accepts losing

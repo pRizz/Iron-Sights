@@ -523,7 +523,8 @@ static s32 port_filesel_options_selected = FALSE; /* OPTIONS clicked: menu chang
 /* The Erase prompt's two answers as last drawn (x0 y0 x1 y1, indexed like
  * folder_selected_for_deletion_choice: 0 confirm, 1 cancel), so a pointer
  * press can pick one; valid only once drawn for the folder being asked about. */
-#define PORT_ERASE_HIT_PAD 4
+/* Finger-sized padding; where the two words' boxes would meet, they split halfway */
+#define PORT_ERASE_HIT_PAD 10
 static s32 port_erase_box[2][4];
 static s32 port_erase_box_valid = FALSE;
 #endif
@@ -3424,6 +3425,13 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
                     port_erase_box[k][2] = ax[k] + aw + 3 + PORT_ERASE_HIT_PAD;
                     port_erase_box[k][3] = ay + ah + PORT_ERASE_HIT_PAD;
                 }
+                if (port_erase_box[1][2] >= port_erase_box[0][0])
+                {   /* cancel (1) sits left of confirm (0), nearly touching */
+                    const s32 mid = (port_erase_box[1][2] - PORT_ERASE_HIT_PAD + port_erase_box[0][0] + PORT_ERASE_HIT_PAD) / 2;
+
+                    port_erase_box[1][2] = mid - 1;
+                    port_erase_box[0][0] = mid;
+                }
                 port_erase_box_valid = TRUE;
             }
 #endif
@@ -6130,13 +6138,6 @@ static void portSheetEditEnd(s32 keep)
 s32 portSheetValueEditOpen(void)
 {
     return port_sheet_edit_row >= 0;
-}
-
-/** TRUE while a row's pick list is up and taking input; the touch overlay
- * shows its scroll and close buttons only then. */
-s32 portSheetPickListOpen(void)
-{
-    return port_sheet_list_row >= 0 && !port_sheet_list_closing;
 }
 
 #if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
@@ -8984,8 +8985,16 @@ Gfx *constructor_menu1C_portsheet(Gfx *DL)
     {   /* REBIND: the capture says what it wants and how to
          * unbind, in the Exit prompt's window - Delete, or any button held
          * two seconds (the unbind at the top of the sheet tick) */
-        DL = portDlgDrawNote(DL, (port_sheet_bind_dev == 0) ? "Press a Key\n" : "Press a Button\n",
-                             "Del or Hold to Unbind\n");
+        const char *unbind = "Del or Hold to Unbind\n";
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+        extern s32 portWebTouchEnabled(void);
+
+        if (portWebTouchEnabled())
+        {
+            unbind = "Tap Unbind or Cancel\n";   /* the touch overlay's buttons */
+        }
+#endif
+        DL = portDlgDrawNote(DL, (port_sheet_bind_dev == 0) ? "Press a Key\n" : "Press a Button\n", unbind);
     }
     if (port_osk_open)
     {
@@ -13169,6 +13178,18 @@ static void portPpoInterface(void)
 
     if (port_ppo_phase == PORT_PPO_SEATING)
     {   /* an armed seat OWNS the tick: every pad is blanked while it listens */
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+        extern s32 portWebTouchTakeBack(void);
+
+        if (portWebTouchTakeBack())
+        {   /* the touch overlay's Cancel skips this seat, as player 1's key or click does */
+            portInputAssignCancel();
+            port_ppo_exclude |= (1 << port_ppo_seat);
+            sndPlaySfx((struct ALBankAlt_s *) g_musicSfxBufferPtr, DOOR_METAL_CLOSE2_SFX, NULL);
+            portPpoSeatNext(n);
+            return;
+        }
+#endif
         if (portInputAssignTick())
         {
             portInputAssignTake();   /* a pad, a skip or a timeout: all move on */
@@ -15054,6 +15075,20 @@ static s32 portWsetListTick(void)
         if (port_wset_list_scroll > count - port_wset_list_vis) port_wset_list_scroll = count - port_wset_list_vis;
         if (port_wset_list_scroll < 0) port_wset_list_scroll = 0;
     }
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    {   /* the touch overlay's scroll buttons, as on the Options folder's list */
+        extern s32 portWebTouchTakeSteps(void);
+        const s32 touch = portWebTouchTakeSteps();
+
+        if (touch != 0 && count > port_wset_list_vis)
+        {
+            port_wset_list_scroll += touch;
+            if (port_wset_list_scroll > count - port_wset_list_vis) port_wset_list_scroll = count - port_wset_list_vis;
+            if (port_wset_list_scroll < 0) port_wset_list_scroll = 0;
+            listh = -1.0f;   /* the next tap picks by hover even where the finger rested */
+        }
+    }
+#endif
     if (port_wset_list_idx != was)
     {
         sndPlaySfx((struct ALBankAlt_s *) g_musicSfxBufferPtr, OPTION_CLICK2_SFX, NULL);
@@ -19020,6 +19055,32 @@ s32 portStageRunning(void)
 {
     return current_menu == MENU_RUN_STAGE;
 }
+
+/* 1 on a screen whose values are set by holding A while the cursor moves
+ * (the 007 mode sliders): the browser touch overlay then holds A for as long
+ * as a finger rests, instead of tapping it on release. */
+s32 portMenuHoldDrag(void)
+{
+    return current_menu == MENU_007_OPTIONS;
+}
+
+/* 1 on a screen driven only by each player's pad, with no cursor to point
+ * at its rows (multiplayer Player Options, Health, Teams, the character
+ * picker): the touch overlay then shows a D-pad with A, B and Start. */
+s32 portMenuPadOnly(void)
+{
+    return current_menu == MENU_MP_CONTROL_STYLE || current_menu == MENU_MP_HANDICAP
+        || current_menu == MENU_MP_TEAMS || current_menu == MENU_MP_CHAR_SELECT;
+}
+
+/* 1 while a drop-down list is up and taking input: an Options folder row's,
+ * or multiplayer setup's (weapon slot, Load Set, Load Settings, a limit's
+ * values). The touch overlay shows its scroll and close buttons only then. */
+s32 portMenuPickListOpen(void)
+{
+    return (port_sheet_list_row >= 0 && !port_sheet_list_closing)
+        || (port_wset_list_slot >= 0 && !port_wset_list_closing);
+}
 #endif
 
 
@@ -19201,6 +19262,7 @@ static void portMenuHarnessTick(void)
             if (e[0] == 'f') target = MENU_MODE_SELECT;
             else if (e[0] == 'i') target = MENU_MISSION_SELECT;   /* GE_MENU=imissions: the solo mission grid */
             else if (e[0] == 'j') target = MENU_DIFFICULTY; /* GE_MENU=jdifficulty: Dam unless an audit mission is supplied */
+            else if (e[0] == 'k') target = MENU_007_OPTIONS; /* GE_MENU=k007: the 007 mode sliders, for Dam */
             else if (e[0] == 's') target = MENU_FILE_SELECT;  /* GE_MENU=select: the Files screen */
             else if (e[0] == 'o') target = MENU_PORT_OPTIONS; /* GE_MENU=options: the OPTIONS page */
             else if (e[0] == 'x')
@@ -19325,7 +19387,7 @@ static void portMenuHarnessTick(void)
         return;
     }
     selected_folder_num = FOLDER1;
-    if (target == MENU_MISSION_SELECT || target == MENU_DIFFICULTY) {
+    if (target == MENU_MISSION_SELECT || target == MENU_DIFFICULTY || target == MENU_007_OPTIONS) {
         const char *audit = getenv("GE_MISSION_CHEAT_AUDIT");
         s32 mission = 0, earned = 0, complete = 0;
         s32 best[3] = {0x3ff, 0x3ff, 0x3ff};
@@ -19346,7 +19408,8 @@ static void portMenuHarnessTick(void)
             saves[SAVESLOT1] = fixture;
         }
         if (mission < 0 || mission >= 20) mission = 0;
-        if (target == MENU_DIFFICULTY) {
+        if (target == MENU_DIFFICULTY || target == MENU_007_OPTIONS) {
+            if (target == MENU_007_OPTIONS) selected_difficulty = DIFFICULTY_007;
             briefingpage = pull_and_display_text_for_folder_a0(mission);
             selected_stage = mission_folder_setup_entries[briefingpage].stage_id;
         }
