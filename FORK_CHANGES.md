@@ -37,8 +37,9 @@ with its recommended decisions on 2026-11-05. The assets repository
 [`pRizz/iron-sights-assets`](https://github.com/pRizz/iron-sights-assets) was
 created the same day with its license, rules, roadmap, CI and Bright Builds
 Rules (OPEN-1), and
-holds a first draft of the parametric title font with its generator and tests
-(OPEN-2, awaiting the owner's review). Nothing in Iron Sights uses it yet.
+released the parametric title font as v0.1.0 after the owner's review (OPEN-2).
+Nothing in Iron Sights uses it yet; vendoring (OPEN-3) and the renderer
+(OPEN-4) come next.
 
 [open_assets_plan.md](scripts/port/open_assets_plan.md) plans original,
 MIT-licensed fonts to replace the ROM's glyphs, and a renderer that draws them
