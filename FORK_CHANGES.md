@@ -45,8 +45,9 @@ Nothing in Iron Sights uses it yet; vendoring (OPEN-3) and the renderer
 MIT-licensed fonts to replace the ROM's glyphs, and a renderer that draws them
 sharply at any resolution. It follows the removal of every bundled third-party
 art set (FORK-021, FORK-033, FORK-047). The plan covers provenance rules
-(drawn from scratch, never traced from the ROM or any pack, no ROM-derived data
-in the assets), a hybrid layout (a separate MIT assets repository as the source
+(drawn from scratch, never traced from the ROM or any pack or copied from their
+outlines, coordinates, pixels or metrics, no ROM-derived data in the assets;
+local comparison with the game's glyphs allowed since 2026-11-05), a hybrid layout (a separate MIT assets repository as the source
 of truth, its built outputs vendored here at a pinned, checksummed version), a
 parametric title font and a hand-drawn body font, and a renderer that keeps the
 game's glyph pipeline but swaps ROM bitmaps for MSDF atlas cells through a glyph
@@ -65,7 +66,21 @@ play-tested them, and the emulator exporter (OPEN-6) is deferred. `AGENTS.md`
 now sends work on fonts, text rendering and original assets to the plan and its
 provenance rules, as it does for the web target.
 
-**Sources:** [plan](scripts/port/open_assets_plan.md), [repository rules](AGENTS.md).
+`scripts/port/compare_open_font.py` (local review only) reads the game's glyph
+bitmaps from the decompilation's `assets/font/font*.c` (kerning table, 94
+six-field character entries with signed baselines, 8-bit glyph rows padded to
+multiples of 8 bytes with one extra row) and an open TrueType font, scales the
+open glyphs to the game's cap height and baseline, and writes a sheet of four
+panels per character (game, ours, overlay with overlap in red, difference in
+red) with each glyph's overlap share. It writes only to the ignored
+`build_win/font-compare/`. A few game character slots hold special symbols
+rather than their ASCII characters (`@` and `\` in Bank Gothic), so those rows
+do not compare like for like. The first sheet, Bank Gothic against title font
+v0.1.0, gave a mean overlap of 34%; at 8-pixel capitals a one-pixel offset
+moves the share a lot, so it is a rough guide.
+
+**Sources:** [plan](scripts/port/open_assets_plan.md), [repository rules](AGENTS.md),
+[comparison tool](scripts/port/compare_open_font.py).
 **Checks:** documentation only; no build or render regeneration needed.
 
 ### FORK-049 — Sub-pixel scaled text

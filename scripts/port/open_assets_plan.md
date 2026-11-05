@@ -26,10 +26,20 @@ verified.
 - Everything we create is MIT licensed: font sources, generators and generated
   outputs. Third-party tools used to build them (for example `msdfgen`, MIT, or
   `fontTools`, MIT) are build tools, not shipped content.
-- Draw from scratch. Never trace, sample or measure the ROM's glyph pixels, the
-  removed community masks or any other pack. Matching the general style of a
-  1990s bold grotesque and a squared geometric display face is the aim; copying
-  any particular design is not.
+- Draw from scratch. Never trace the ROM's glyphs, the removed community masks
+  or any other pack, and never copy their outlines, coordinates, pixels or
+  metrics into our sources. Capturing the general style of a 1990s bold
+  grotesque and a squared geometric display face is the aim; reproducing any
+  particular design is not.
+- Local comparison is allowed (owner's decision, 2026-11-05). The owner may
+  compare our glyphs with the game's own using
+  `scripts/port/compare_open_font.py`, which draws each game glyph, ours, an
+  overlay (overlap in red) and a difference, with an overlap share, into the
+  ignored `build_win/font-compare/`. The output is game-derived and is never
+  committed anywhere. The owner may use what it shows to adjust our fonts toward
+  the original's spirit; such changes are redrawn in our own sources and their
+  provenance note says a comparison informed them. Title font v0.1.0 was drawn
+  before the first comparison.
 - Do not use the names Zurich, Bank Gothic or GoldenEye for the fonts.
 - Keep ROM-derived data out of the assets repository, including glyph metrics.
   Iron Sights reads the ROM's character widths, baselines and kerning at run
