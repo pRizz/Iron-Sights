@@ -148,6 +148,10 @@ pass its isolated executable rather than rebuilding an active player binary.
   [milestone progress](scripts/port/web_target_progress.md). Read both before
   resuming; update only the relevant stable milestone block with changes,
   verification evidence, blockers and the next action before handing off.
+- Fonts, sharp text rendering and other original game assets follow the
+  accepted [open assets plan](scripts/port/open_assets_plan.md). Read it before
+  resuming, keep its provenance rules (drawn from scratch, MIT, no ROM-derived
+  data in the assets), and update its milestone status table before handing off.
 - The immersive browser room follows its accepted
   [experience plan](scripts/port/web_room_plan.md) and WEB-007 through WEB-010 in
   the same progress file. Keep the game canvas/storage lifecycle intact; record

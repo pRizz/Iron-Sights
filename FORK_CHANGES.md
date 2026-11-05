@@ -32,8 +32,9 @@ new areas. Status describes implementation state, not Git publication state.
 
 ### FORK-050 — Open assets and sharp text plan
 
-**Status:** Documentation only, proposed on 2026-11-05 and awaiting the owner's
-acceptance. No code, assets or repository exist yet.
+**Status:** Documentation and a repository rule; the owner accepted the plan
+with its recommended decisions on 2026-11-05. No code, assets or assets
+repository exist yet.
 
 [open_assets_plan.md](scripts/port/open_assets_plan.md) plans original,
 MIT-licensed fonts to replace the ROM's glyphs, and a renderer that draws them
@@ -48,10 +49,18 @@ registry and a new `SHADER_OPT_MSDF` shader bit, behind a Sharp Fonts setting
 with the ROM fonts as fallback. It also records the owner's intent to grow the
 repository into other original game assets later, and to let other projects
 use them, including a deferred exporter that builds an emulator texture pack
-from the player's own ROM. Milestones OPEN-1 to OPEN-6 and five owner decisions
-are listed.
+from the player's own ROM. Milestones OPEN-1 to OPEN-6 are listed with a
+status table.
 
-**Sources:** [plan](scripts/port/open_assets_plan.md).
+Accepted decisions: the assets repository is `pRizz/iron-sights-assets`
+(public, MIT; creating it is a separate confirmed step), Arimo (Apache-2.0) is a
+development-only body-font placeholder that never ships, the renderer uses MSDF,
+Sharp Fonts defaults to off until both fonts exist and the owner has
+play-tested them, and the emulator exporter (OPEN-6) is deferred. `AGENTS.md`
+now sends work on fonts, text rendering and original assets to the plan and its
+provenance rules, as it does for the web target.
+
+**Sources:** [plan](scripts/port/open_assets_plan.md), [repository rules](AGENTS.md).
 **Checks:** documentation only; no build or render regeneration needed.
 
 ### FORK-049 — Sub-pixel scaled text

@@ -3,9 +3,10 @@
 Iron Sights will draw its text with original, MIT-licensed fonts through a
 renderer that stays sharp at any resolution. The fonts are the first of a
 planned set of open game assets, kept in their own repository so other projects
-can use them too. This plan was proposed on 2026-11-05 and is awaiting the
-owner's acceptance; until then nothing here is a commitment, and approval of the
-plan is not evidence that any milestone works.
+can use them too. The owner accepted this plan and its recommended decisions on
+2026-11-05. Acceptance is not evidence that any milestone works; the
+[milestone status](#milestone-status) below records what has been built and
+verified.
 
 ## Why
 
@@ -66,8 +67,8 @@ Why hybrid rather than one place:
   stays buildable offline. The vendored outputs are small (a few atlas images
   and JSON metrics, a few hundred KB).
 
-The repository name should be neutral and free of trademarks, for example
-`iron-sights-assets` (decision 1 below).
+The repository is `pRizz/iron-sights-assets` (decision 1 below): neutral and
+free of game trademarks.
 
 ## Fonts
 
@@ -119,7 +120,8 @@ swaps only what the rectangle samples:
 
 A new **Gameplay > Iron Sights > System** setting (working name Sharp Fonts,
 `[display] sharp_fonts`) switches between our fonts and the ROM's in both the
-Options folder and the watch. It defaults to on once the body font is final.
+Options folder and the watch. It defaults to off until both fonts exist and the
+owner has play-tested them (decision 4).
 
 MSDF is recommended over the alternatives:
 
@@ -141,7 +143,7 @@ GLideN64-style high-resolution packs, cannot ship ready-made without ROM-derived
 data, so it would be built on the player's machine: an exporter reads their ROM
 for glyph layout and checksums and renders our fonts into those textures.
 Iron Sights keeps the better path (MSDF, sub-pixel layout, any resolution).
-This is deferred until the body font is final (OPEN-6).
+OPEN-6 is deferred (decision 5).
 
 ## Future assets
 
@@ -166,16 +168,32 @@ designed for more than fonts from the start.
 OPEN-2 and OPEN-4 can proceed together: the renderer can be developed against
 the title font and a non-shipping placeholder body font.
 
-## Decisions for the owner
+## Decisions (accepted 2026-11-05)
 
-1. Assets repository name and owner (for example `pRizz/iron-sights-assets`).
-2. Body-font placeholder during development: an Apache-2.0 font such as Arimo,
-   never shipped. Recommended.
-3. MSDF as the renderer technique. Recommended.
-4. Whether Sharp Fonts defaults to on as soon as both fonts exist, or after a
-   wider play-test.
-5. Whether OPEN-6 (emulator export) is in scope now or deferred. Deferral
-   recommended.
+1. **Assets repository:** `pRizz/iron-sights-assets`, public, MIT. Creating it
+   is a separate step the owner confirms.
+2. **Body-font placeholder:** Arimo (Apache-2.0) during development only, never
+   shipped or vendored into a release.
+3. **Renderer technique:** MSDF.
+4. **Sharp Fonts default:** on once both fonts exist and the owner has
+   play-tested them in the game. Until then it defaults to off. (The proposal
+   offered this without a recommendation; this default follows the owner's
+   practice of play-testing visual changes before they ship.)
+5. **OPEN-6 (emulator export):** deferred.
+
+## Milestone status
+
+Update the relevant row with changes, verification evidence, blockers and the
+next action before handing off.
+
+| ID | Status | Notes |
+| --- | --- | --- |
+| OPEN-1 | Not started | Next: create `pRizz/iron-sights-assets` once the owner confirms |
+| OPEN-2 | Not started | |
+| OPEN-3 | Not started | Depends on OPEN-1's first release |
+| OPEN-4 | Not started | Can start against the title font and the Arimo placeholder |
+| OPEN-5 | Not started | |
+| OPEN-6 | Deferred | |
 
 ## Technical references
 
