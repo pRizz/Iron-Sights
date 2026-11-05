@@ -16,6 +16,7 @@ import { TouchMenu } from './touch-menu';
 import { createTouchHints } from './touch-hints';
 import { touchContext, type TouchContext } from './touch-context';
 import { HelperText } from './helper-text';
+import { TouchText } from './touch-text';
 import { createTouchButtonGestures } from './touch-button-gestures';
 import './touch.css';
 
@@ -67,7 +68,7 @@ export function TouchControls(props: Props) {
         const current = context();
         if (current === 'edit' || current === 'list') return current;
         if (current === 'capture' || current === 'assign') return current;
-        if (current === 'hold' || current === 'pad') return current;
+        if (current === 'hold' || current === 'pad' || current === 'text') return current;
         if (current !== 'navigation') return 'inactive';
         return files() ? 'files' : 'menu';
     });
@@ -82,6 +83,7 @@ export function TouchControls(props: Props) {
             return 'Touch a bar and drag along it to set it · Tap tabs to go on';
         if (current === 'pad')
             return 'This screen takes a controller · Use the D-pad, A, B and Start';
+        if (current === 'text') return 'Tap the letters, or Phone keyboard to type the name';
         return 'Drag to move cursor · Tap to select';
     };
     const contacts = createTouchContacts(
@@ -315,6 +317,7 @@ export function TouchControls(props: Props) {
     };
     return (
         <Show when={active()}>
+            <TouchText engine={props.engine} open={() => context() === 'text'} />
             <div
                 ref={(surface) => onCleanup(suppressTouchGestures(surface))}
                 class="touch-controls"

@@ -49,6 +49,10 @@ export type GameModule = {
     _portWebTouchButton(action: number, down: number): void;
     _portWebTouchStep?(steps: number): void;
     _portWebTouchUnbind?(): void;
+    _portWebTextChar?(field: number, index: number): number;
+    _portWebTextClear?(): void;
+    _portWebTextAppend?(code: number): void;
+    _portWebTextFinish?(ok: number): void;
 };
 
 export type GameOptions = {

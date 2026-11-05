@@ -1401,11 +1401,35 @@ the enabled flag), 201 browser unit tests, TypeScript, the Edge touch fixture
 to 1000% and then about 250%, a tap still sets a bar, the weapon list scrolls and
 closes, Player Options skips its seat on Cancel and Down moves player 1's row,
 the Erase boxes do not overlap) pass; the gallery regenerated with zero changed
-images. Not changed: the Save As name keyboards still use the on-screen letter
-grid, because a phone keyboard needs a focused HTML input from a user gesture and
-a new text path; leaving the Health screen still needs every player to confirm
-(or L/R); a tap outside a multiplayer drop-down still picks its highlight, as a
-mouse click does.
+images. Not changed: leaving the Health screen still needs every player to
+confirm (or L/R); a tap outside a multiplayer drop-down still picks its highlight,
+as a mouse click does.
+The name keyboards (Save Config / Layout As, Save Set As, Save Settings As) now
+also take the phone's own keyboard. Their TYPE cell only starts SDL text input,
+which never brings up a phone keyboard. While one is open, `portOskWebOpen` makes
+the touch context report text (10); the overlay keeps the letter grid tappable and
+adds a Phone keyboard button. Its tap focuses a field (`web/src/touch-text.tsx`)
+that docks to the top of the visual viewport, above the phone keyboard, and shows
+the keyboard's title, the name, Done and Cancel; the game canvas is never resized.
+The field sits outside the overlay's gesture-suppressing surface so its taps and
+focus behave normally, and it stops key events so typing never reaches the game's
+bindings. Each edit rewrites the whole name (`portWebTextClear`/`Append`, one
+character code at a time, so the runtime needs no string helpers), which keeps
+autocorrect and swipe typing working; `portOskWebAppend` applies the typed
+keyboard's rules (printable ASCII but '|', '<' and a leading '#', 21 characters),
+mirrored by `sanitizeName` in `touch-text-bridge.ts`. Done/Enter and Cancel set a
+request (`portOskWebFinish`) that the next `portOskTick` applies with the grid's
+OK rule and sounds; hiding the keyboard keeps the text and returns to the grid.
+The field follows the native title and name while not focused, so a "NAME IN
+USE" retitle shows. Player Options' profile keyboard is a separate per-panel
+implementation and still uses the on-screen D-pad. Validation: the Wasm bridge
+regression (text context, character reads, rewrite, finish, closed keyboard), 206
+browser unit tests (including the name rules and bridge), TypeScript, the Edge
+touch fixture (launch, focus, title, '|' dropped, whole-name rewrite, no key events
+reaching the game, Done, Cancel, Enter) and Edge's real-ROM audit (a New Set's Save
+As typed "Touch Set" through the field and saved `Data/WeaponSets/Touch Set.gewset`)
+pass. How the phone keyboard covers the screen is unverified: emulation shows no
+soft keyboard, so iOS Safari and Android Chrome need a device check.
 Gameplay buttons distinguish taps from looking: A/B/R/Start, Gadget, More and
 discrete Modern actions activate only on tap-up within a 10 CSS-pixel slop.
 Moving farther latches a look gesture, so returning to the starting point cannot

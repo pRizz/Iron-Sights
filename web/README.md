@@ -97,11 +97,12 @@ mobile-viewport acceptance, use `MIDAS_BROWSER=chrome bun run audit:touch ../bas
 Options > Audio and edits Music Volume with held finger taps, −/+, Done, Cancel
 and clamped drags, reading the saved value from `midas.ini`. Without
 `MIDAS_SLIDER_Y` it only saves `sheet.png` for locating the row.
-`MIDAS_LIST_Y=275 MIDAS_BIND_Y=80 MIDAS_DEVICE_Y=59 MIDAS_WEAPON_Y=137 node tools/touch-options-audit.mjs ../baserom.u.z64`
+`MIDAS_LIST_Y=275 MIDAS_BIND_Y=80 MIDAS_DEVICE_Y=59 MIDAS_WEAPON_Y=137 MIDAS_SAVEAS_Y=160 node tools/touch-options-audit.mjs ../baserom.u.z64`
 scrolls and closes the Max FPS list, cancels and unbinds a rebind row, cancels
 Input Device's wait, hold-drags a 007 bar, scrolls and closes a multiplayer
 weapon list, skips Player Options' seat and steps its panel with the on-screen
-D-pad, and answers the Erase prompt by tap. It reads native state
+D-pad, types and saves a weapon set name through the phone-keyboard field
+(`MIDAS_SAVEAS_Y=160`), and answers the Erase prompt by tap. It reads native state
 through the matching `../build/web/video/ProjectMidas.map`; unset rows only save
 their sheet screenshots.
 Set `MIDAS_TOUCH_WATCH_MAP=../build/web/video/ProjectMidas.map` for Chromium-only

@@ -143,6 +143,42 @@ export async function auditTouchContext(page) {
         await page.evaluate(() => touchFixture.context(0));
         await expect(page.locator('.touch-dpad')).toHaveCount(0);
 
+        // A name keyboard: the letter grid stays tappable, and Phone keyboard
+        // opens a docked field that rewrites the whole name, keeps typing away
+        // from the game's key bindings, and answers Done or Cancel.
+        await page.evaluate(() => touchFixture.context(10));
+        await expect(overlay).toHaveAttribute('data-context', 'text');
+        await expect(page.locator('.touch-menu-surface')).toBeVisible();
+        const launch = page.getByRole('button', { name: 'Phone keyboard' });
+        const textField = page.locator('#touch-text-field');
+        await expect(page.locator('form.touch-text')).toBeHidden();
+        await launch.tap();
+        await expect(page.locator('form.touch-text')).toBeVisible();
+        await expect(page.locator('.touch-text-title')).toHaveText('SAVE SET AS');
+        await expect(textField).toBeFocused();
+        await expect(launch).toHaveCount(0);
+        const typedFrom = await page.evaluate(() => touchFixture.snapshot());
+        await textField.fill(''); // a later layout pass opens on the name saved earlier
+        await textField.pressSequentially('Gold|en');
+        await expect(textField).toHaveValue('Golden');
+        await textField.fill('Golden Gun');
+        const typed = await page.evaluate(() => touchFixture.snapshot());
+        assert.equal(typed.nameText, 'Golden Gun', 'the whole name is rewritten');
+        assert.equal(typed.windowKeys, typedFrom.windowKeys, 'typing never reaches the game');
+        await page.locator('form.touch-text button[type=submit]').tap();
+        assert.equal((await page.evaluate(() => touchFixture.snapshot())).nameFinish, 1);
+        await expect(page.locator('form.touch-text')).toBeHidden();
+        await launch.tap();
+        await expect(textField).toHaveValue('Golden Gun');
+        await page.locator('form.touch-text button[type=button]').tap();
+        assert.equal((await page.evaluate(() => touchFixture.snapshot())).nameFinish, 0);
+        await launch.tap();
+        await textField.press('Enter');
+        assert.equal((await page.evaluate(() => touchFixture.snapshot())).nameFinish, 1);
+        await page.evaluate(() => touchFixture.context(0));
+        await expect(launch).toHaveCount(0);
+        await expect(page.locator('form.touch-text')).toHaveCount(0);
+
         // A menu gesture held over a camera transition must not select/skip
         // on release in the new context.
         await page.evaluate(() => touchFixture.context(0));

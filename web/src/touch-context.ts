@@ -8,7 +8,8 @@ export type TouchContext =
     | 'capture'
     | 'assign'
     | 'hold'
-    | 'pad';
+    | 'pad'
+    | 'text';
 
 // Values match WebTouchContext in port/web/touch.h. Unknown/older runtimes
 // keep the HUD hidden rather than assuming that gameplay has started.
@@ -22,5 +23,6 @@ export function touchContext(value: unknown): TouchContext {
     if (value === 7) return 'assign';
     if (value === 8) return 'hold';
     if (value === 9) return 'pad';
+    if (value === 10) return 'text';
     return 'cinematic';
 }

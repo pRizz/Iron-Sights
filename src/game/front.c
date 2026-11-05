@@ -6686,6 +6686,9 @@ static f32 port_osk_cursor_v;
 static s32 port_osk_done;            /* 1 = OK, -1 = cancelled, 0 = still going */
 static char port_osk_text[PORT_OSK_MAXLEN];
 static char port_osk_title[32];
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+static s32 port_osk_web_finish;      /* the phone keyboard's Done (1) / Cancel (-1), for the next tick */
+#endif
 
 #ifdef GE_VIDEO
 extern void portTextInputStart(void);
@@ -6883,6 +6886,25 @@ static s32 portOskTick(void)
     {
         return 0;
     }
+
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    if (port_osk_web_finish != 0)
+    {   /* the browser's phone-keyboard field answered: OK keeps the grid's rule */
+        const s32 ok = port_osk_web_finish > 0;
+
+        port_osk_web_finish = 0;
+        if (!ok)
+        {
+            port_osk_done = -1;
+            sndPlaySfx((struct ALBankAlt_s *) g_musicSfxBufferPtr, GUN_M60AMMGUN_3_SFX, NULL);
+        }
+        else if (portOskTextUsable())
+        {
+            port_osk_done = 1;
+            sndPlaySfx((struct ALBankAlt_s *) g_musicSfxBufferPtr, DOOR_METAL_CLOSE2_SFX, NULL);
+        }
+    }
+#endif
 
     if (port_osk_typing)
     {   /* a real keyboard owns the text; the grid still shows where it is */
@@ -19063,6 +19085,48 @@ s32 portMenuHoldDrag(void)
 {
     return current_menu == MENU_007_OPTIONS;
 }
+
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+/* The browser's phone-keyboard field (web/src/touch-text.tsx, through
+ * port/web/touch.c) edits the open name keyboard: it reads the title and name a
+ * character at a time, rewrites the whole name with the typed keyboard's rules,
+ * and asks for OK or Cancel, which the next portOskTick applies. */
+s32 portOskWebOpen(void)
+{
+    return port_osk_open && port_osk_done == 0;
+}
+
+s32 portOskWebChar(s32 field, s32 i)
+{
+    const char *text = (field == 0) ? port_osk_title : port_osk_text;
+    const s32 size = (field == 0) ? (s32) sizeof(port_osk_title) : (s32) sizeof(port_osk_text);
+
+    return (i >= 0 && i < size) ? (u8) text[i] : 0;
+}
+
+void portOskWebClear(void)
+{
+    port_osk_text[0] = '\0';
+}
+
+/* Typed-keyboard rules (portOskTick): printable ASCII but '|', '<' and a leading
+ * '#'; portOskAppend stops at the length cap. */
+void portOskWebAppend(s32 c)
+{
+    if (port_osk_open && c >= 0x20 && c < 0x7F && c != '|' && c != '<' && !(c == '#' && port_osk_text[0] == '\0'))
+    {
+        portOskAppend((char) c);
+    }
+}
+
+void portOskWebFinish(s32 ok)
+{
+    if (port_osk_open)
+    {
+        port_osk_web_finish = ok ? 1 : -1;
+    }
+}
+#endif
 
 /* 1 on a screen driven only by each player's pad, with no cursor to point
  * at its rows (multiplayer Player Options, Health, Teams, the character

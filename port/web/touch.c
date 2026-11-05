@@ -28,6 +28,11 @@ extern s32 portBindCaptureActive(void);
 extern s32 portInputAssignActive(void);
 extern s32 portMenuHoldDrag(void);
 extern s32 portMenuPadOnly(void);
+extern s32 portOskWebOpen(void);
+extern s32 portOskWebChar(s32 field, s32 index);
+extern void portOskWebClear(void);
+extern void portOskWebAppend(s32 code);
+extern void portOskWebFinish(s32 ok);
 
 /* Presentation follows real engine permission, never an intro-duration timer.
  * Keep the watch distinct so its native lists can still be closed/navigated. */
@@ -37,6 +42,7 @@ EMSCRIPTEN_KEEPALIVE s32 portWebTouchContext(void)
         /* Each Options folder state that a menu tap cannot answer gets its own controls. */
         if (portBindCaptureActive()) return WEB_TOUCH_BIND_CAPTURE;
         if (portInputAssignActive()) return WEB_TOUCH_ASSIGN;
+        if (portOskWebOpen()) return WEB_TOUCH_TEXT;
         if (portMenuPickListOpen()) return WEB_TOUCH_PICK_LIST;
         if (portMenuHoldDrag()) return WEB_TOUCH_HOLD_DRAG;
         if (portMenuPadOnly()) return WEB_TOUCH_PAD;
@@ -181,6 +187,29 @@ s32 portWebTouchTakeBack(void)
     const s32 taken = back;
     back = 0;
     return taken;
+}
+
+/* The phone-keyboard field (web/src/touch-text.tsx) and the open name keyboard.
+ * Text crosses one character code at a time, so no runtime string helpers are
+ * needed: field 0 is the title, 1 the name; the name is rewritten whole. */
+EMSCRIPTEN_KEEPALIVE s32 portWebTextChar(s32 field, s32 index)
+{
+    return portOskWebOpen() ? portOskWebChar(field, index) : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE void portWebTextClear(void)
+{
+    if (enabled && portOskWebOpen()) portOskWebClear();
+}
+
+EMSCRIPTEN_KEEPALIVE void portWebTextAppend(s32 code)
+{
+    if (enabled && portOskWebOpen()) portOskWebAppend(code);
+}
+
+EMSCRIPTEN_KEEPALIVE void portWebTextFinish(s32 ok)
+{
+    if (enabled && portOskWebOpen()) portOskWebFinish(ok);
 }
 
 void portWebTouchPoll(OSContPad *pad)

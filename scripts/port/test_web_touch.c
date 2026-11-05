@@ -8,7 +8,9 @@
 s32 g_portMouseDirect, g_PlayerIsInTank;
 f32 g_portMouseYawDeg, g_portMousePitchDeg;
 static s32 live, consoleOpen, playerNum;
-static s32 stageRunning, watchOpen, valueEdit, pickList, bindCapture, assignWait, holdDrag, padOnly;
+static s32 stageRunning, watchOpen, valueEdit, pickList, bindCapture, assignWait, holdDrag, padOnly, oskOpen;
+static char oskName[32];
+static s32 oskFinish;
 static u32 actionBits;
 static s32 inventory[8], inventoryCount, inventoryReads;
 static const char *const bindings[] = {
@@ -26,6 +28,11 @@ s32 portBindCaptureActive(void) { return bindCapture; }
 s32 portInputAssignActive(void) { return assignWait; }
 s32 portMenuHoldDrag(void) { return holdDrag; }
 s32 portMenuPadOnly(void) { return padOnly; }
+s32 portOskWebOpen(void) { return oskOpen; }
+s32 portOskWebChar(s32 field, s32 index) { return field ? oskName[index] : "SAVE SET AS"[index]; }
+void portOskWebClear(void) { oskName[0] = 0; }
+void portOskWebAppend(s32 code) { s32 n = 0; while (oskName[n]) n++; oskName[n] = (char) code; oskName[n + 1] = 0; }
+void portOskWebFinish(s32 ok) { oskFinish = ok ? 1 : -1; }
 s32 portWebControlsLive(void) { return live; }
 s32 portConIsOpen(void) { return consoleOpen; }
 s32 bondinvCountTotalItemsInInv(void) { inventoryReads++; return inventoryCount; }
@@ -65,6 +72,9 @@ static void testTouchContext(void)
     padOnly = 1;
     assert(portWebTouchContext() == WEB_TOUCH_PAD);
     padOnly = 0;
+    oskOpen = 1;
+    assert(portWebTouchContext() == WEB_TOUCH_TEXT);
+    oskOpen = 0;
     /* Options folder states that a tap cannot answer each report their own context. */
     pickList = 1;
     assert(portWebTouchContext() == WEB_TOUCH_PICK_LIST);
@@ -105,6 +115,25 @@ static void testValueEditSteps(void)
     assert(pad.button == 0 && portWebTouchTakeSteps() == -3);
     pickList = 0;
     portWebTouchReset();
+}
+
+static void testPhoneText(void)
+{
+    /* Arrange: a name keyboard is open and touch is on. */
+    oskOpen = 1;
+    /* Act / Assert: the title reads a character at a time; the name is rewritten whole. */
+    assert(portWebTextChar(0, 0) == 'S' && portWebTextChar(0, 4) == ' ');
+    portWebTextClear();
+    portWebTextAppend('O');
+    portWebTextAppend('K');
+    assert(strcmp(oskName, "OK") == 0 && portWebTextChar(1, 1) == 'K');
+    portWebTextFinish(1);
+    assert(oskFinish == 1);
+    /* Nothing reaches a closed keyboard, and closed reads are empty. */
+    oskOpen = 0;
+    portWebTextAppend('X');
+    portWebTextFinish(0);
+    assert(strcmp(oskName, "OK") == 0 && oskFinish == 1 && portWebTextChar(0, 0) == 0);
 }
 
 static void testCaptureRequests(void)
@@ -259,6 +288,7 @@ int main(void)
     testWatchDirections();
     testValueEditSteps();
     testCaptureRequests();
+    testPhoneText();
     portWebTouchButton(TOUCH_FIRE, 1);
     portWebTouchButton(TOUCH_AIM, 1);
     portWebTouchButton(TOUCH_RELOAD, 1);
@@ -309,6 +339,6 @@ int main(void)
     pad.button = 0;
     portWebTouchPoll(&pad);
     assert(pad.button == 0);
-    puts("Touch bridge: semantic buttons, independent holds, analog movement, menu sticks, slider and list steps, hold-drag and capture contexts, held volume arrows, reset, bounds and locked-look discard passed.");
+    puts("Touch bridge: semantic buttons, independent holds, analog movement, menu sticks, slider and list steps, hold-drag, capture and text contexts, phone text, held volume arrows, reset, bounds and locked-look discard passed.");
     return 0;
 }

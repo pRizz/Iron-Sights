@@ -56,7 +56,9 @@ Done keeps the value and Cancel restores it. Long pick lists scroll with â–² / â
 a rebind row offers Unbind and Cancel while it waits for a key, and the Files
 screen's Erase prompt answers by tapping cancel or confirm. Drag along a 007-mode
 bar to set it. Multiplayer screens built for controllers, such as Player Options,
-show an on-screen D-pad with A, B and Start.
+show an on-screen D-pad with A, B and Start. When naming a layout, weapon set
+or saved settings, tap **Phone keyboard** to type with your phone's keyboard; the
+name shows in a bar at the top while you type.
 Controller buttons stay hidden through cutscenes, then fade in when the game
 hands control to you. Move with the left
 thumbstick and drag any free screen area to look. **Touch layout** defaults to **N64

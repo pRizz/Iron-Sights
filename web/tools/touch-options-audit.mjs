@@ -2,7 +2,8 @@
 // working touch controls - a long pick list scrolls and closes, a bind row's
 // capture cancels and unbinds, Input Device's wait cancels, 007 mode's bars set
 // by hold-and-drag, multiplayer setup's drop-down scrolls and closes, Player
-// Options' seats skip and its pad-only panels take the on-screen D-pad, and the
+// Options' seats skip and its pad-only panels take the on-screen D-pad, a name
+// keyboard takes the phone keyboard's typing and saves, and the
 // Files screen's Erase prompt answers Cancel or Confirm by tap.
 import assert from 'node:assert/strict';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -33,6 +34,7 @@ const rows = {
     device: Number(process.env.MIDAS_DEVICE_Y || 0),
     list: Number(process.env.MIDAS_LIST_Y || 0),
     weapon: Number(process.env.MIDAS_WEAPON_Y || 0),
+    saveAs: Number(process.env.MIDAS_SAVEAS_Y || 0),
 };
 const rowX = Number(process.env.MIDAS_ROW_X || 120);
 const { browser } = await launchAuditBrowser();
@@ -390,6 +392,38 @@ try {
         report.ppo = { skipped, moved: 'Down moved player 1' };
     });
 
+    // A name keyboard (a New Set's Save As): Phone keyboard opens the docked
+    // field, whose whole-name edits reach the game, and Done saves the set.
+    await scenario('xnew,900', 'name', async ({ page, overlay, screen, fingerTap, shot }) => {
+        if (!rows.saveAs) return console.log('Set MIDAS_SAVEAS_Y from name-sheet.png');
+        await fingerTap(screen(Number(process.env.MIDAS_SAVEAS_X || 256), rows.saveAs));
+        await expect(overlay).toHaveAttribute('data-context', 'text');
+        await shot('keyboard');
+        await page.getByRole('button', { name: 'Phone keyboard' }).tap();
+        const field = page.locator('#touch-text-field');
+        await expect(field).toBeFocused();
+        await expect(page.locator('.touch-text-title')).toHaveText('SAVE SET AS');
+        await field.fill('');
+        await field.pressSequentially('Touch|Set');
+        await expect(field).toHaveValue('TouchSet');
+        await field.fill('Touch Set');
+        await page.waitForTimeout(300);
+        await shot('typed');
+        await page.locator('form.touch-text button[type=submit]').tap();
+        await expect(overlay).not.toHaveAttribute('data-context', 'text');
+        await expect
+            .poll(() =>
+                page.evaluate(
+                    () =>
+                        optionsAuditGame.FS.analyzePath('/user/Data/WeaponSets/Touch Set.gewset')
+                            .exists,
+                ),
+            )
+            .toBe(true);
+        await shot('saved');
+        report.name = 'Phone keyboard typed and saved "Touch Set"';
+    });
+
     // The Files screen's Erase prompt, armed directly: it needs a folder with
     // Dam on Agent finished, which a fresh browser profile does not have.
     await scenario(
@@ -440,7 +474,7 @@ try {
     assert.deepEqual(errors, []);
     await writeFile(resolve(output, 'report.json'), JSON.stringify(report, null, 2));
     console.log(
-        'Touch Options: list scroll/close, bind cancel/unbind, device-wait cancel, 007 hold-drag, multiplayer list and Player Options pad, and Erase taps passed.',
+        'Touch Options: list scroll/close, bind cancel/unbind, device-wait cancel, 007 hold-drag, multiplayer list and Player Options pad, phone-keyboard naming, and Erase taps passed.',
     );
 } finally {
     await browser.close();

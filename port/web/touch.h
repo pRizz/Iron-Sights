@@ -12,7 +12,8 @@ enum WebTouchContext {
     WEB_TOUCH_BIND_CAPTURE = 6, /* an Options folder bind row waits for an input */
     WEB_TOUCH_ASSIGN = 7,     /* Input Device waits for a press on the device */
     WEB_TOUCH_HOLD_DRAG = 8,  /* a menu set by holding A and moving the cursor (007 mode) */
-    WEB_TOUCH_PAD = 9         /* a menu only a pad drives (multiplayer Player Options, Health) */
+    WEB_TOUCH_PAD = 9,        /* a menu only a pad drives (multiplayer Player Options, Health) */
+    WEB_TOUCH_TEXT = 10       /* a name keyboard is open (Save Layout / Set / Settings As) */
 };
 s32 portWebTouchContext(void);
 s32 portWebTouchHasGadgets(void);

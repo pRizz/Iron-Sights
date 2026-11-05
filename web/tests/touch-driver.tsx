@@ -19,6 +19,11 @@ const presses: number[] = [];
 let accepts = 0;
 let steps = 0;
 let unbinds = 0;
+// The native name keyboard as the phone-keyboard field sees it.
+let nameText = '';
+let nameFinish: number | undefined;
+let windowKeys = 0;
+window.addEventListener('keydown', () => windowKeys++);
 let cursor = [0, 0];
 let exported = 0,
     imported = '';
@@ -53,6 +58,17 @@ const game = {
     _portWebTouchUnbind: () => {
         unbinds++;
     },
+    _portWebTextChar: (field: number, index: number) =>
+        context === 10 ? (field === 0 ? 'SAVE SET AS' : nameText).charCodeAt(index) || 0 : 0,
+    _portWebTextClear: () => {
+        nameText = '';
+    },
+    _portWebTextAppend: (code: number) => {
+        if (nameText.length < 21) nameText += String.fromCharCode(code);
+    },
+    _portWebTextFinish: (ok: number) => {
+        nameFinish = ok;
+    },
     _portWebTouchMove: (x: number, y: number) => {
         movement = [x, y];
     },
@@ -82,6 +98,9 @@ Object.assign(globalThis, {
             accepts,
             steps,
             unbinds,
+            nameText,
+            nameFinish,
+            windowKeys,
             cursor,
             exported,
             imported,

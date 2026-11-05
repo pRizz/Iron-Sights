@@ -285,6 +285,66 @@
 .touch-menu-actions {
     grid-template-columns: repeat(2, calc(64 * var(--touch-unit)));
 }
+/* The phone-keyboard field sits outside .touch-controls, whose surface cancels
+ * default touch handling; it docks to the top of the visual viewport. */
+.touch-text-launch,
+.touch-text {
+    position: fixed;
+    z-index: 9;
+    color: #fff1d6;
+    font-size: 14px;
+}
+.touch-text-launch {
+    right: calc(max(12px, env(safe-area-inset-right)) + 24px);
+    bottom: calc(max(20px, env(safe-area-inset-bottom)) + 20px);
+    min-height: 48px;
+    padding: 6px 16px;
+    background: #141a18e6;
+    border: 1px solid #d9b77580;
+    border-radius: 16px;
+}
+.touch-text {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 6px 8px;
+    align-items: center;
+    padding: 8px max(12px, env(safe-area-inset-left)) 10px max(12px, env(safe-area-inset-right));
+    background: #141a18f2;
+    border-bottom: 1px solid #d9b77580;
+}
+.touch-text[hidden] {
+    display: none;
+}
+.touch-text-title {
+    grid-column: 1 / -1;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: #e4e8d1bb;
+}
+.touch-text input {
+    min-width: 0;
+    min-height: 40px;
+    padding: 4px 10px;
+    font: inherit;
+    font-size: 16px; /* 16px or more keeps iOS from zooming the page on focus */
+    color: inherit;
+    background: #00000066;
+    border: 1px solid #d9b775aa;
+    border-radius: 10px;
+}
+.touch-text button {
+    min-height: 40px;
+    padding: 4px 14px;
+    color: inherit;
+    background: #2a3330;
+    border: 1px solid #d9b77580;
+    border-radius: 12px;
+}
+.touch-text-launch:active,
+.touch-text button:active {
+    background: #8e7949d9;
+}
 .touch-menu-actions[data-pad-buttons] {
     grid-template-columns: repeat(3, calc(56 * var(--touch-unit)));
 }

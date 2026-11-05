@@ -1782,6 +1782,17 @@ keyboard for Save As names (needs a focused input from a gesture and a text path
 Health still leaves only when every player confirms. Next action: physical-phone
 check after Pages publication, including iOS Safari.
 
+**Phone keyboard for name entry, 2026-11-04:** The owner asked for the phone's
+own keyboard in the name keyboards without it covering what is typed. A text
+context (10) adds a Phone keyboard button; its tap focuses a field docked to the
+top of the visual viewport (title, name, Done, Cancel) outside the overlay's
+gesture surface. Whole-name rewrites cross as character codes and keep the native
+rules; Done/Cancel apply on the next tick. Verification: bridge regression, 206
+unit tests, TypeScript, Edge fixture and the Edge real-ROM audit (saved "Touch
+Set" from the field) pass on top of 042cf22. Evidence: `build/web-touch/options9`. Blocker: the soft
+keyboard's real layout needs iOS Safari and Android Chrome. Next action: device
+check after Pages publication.
+
 **Button look gestures and left Z, 2026-10-29:** The owner selected tap activation
 versus swipe-only look. Discrete gameplay buttons activate on release within a
 10-pixel slop; swipes look and never activate after returning to their origin.
