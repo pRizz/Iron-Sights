@@ -33,8 +33,10 @@ new areas. Status describes implementation state, not Git publication state.
 ### FORK-050 — Open assets and sharp text plan
 
 **Status:** Documentation and a repository rule; the owner accepted the plan
-with its recommended decisions on 2026-11-05. No code, assets or assets
-repository exist yet.
+with its recommended decisions on 2026-11-05. The assets repository
+[`pRizz/iron-sights-assets`](https://github.com/pRizz/iron-sights-assets) was
+created the same day with its license, rules and roadmap (OPEN-1 in progress);
+no fonts, code or renderer changes exist yet.
 
 [open_assets_plan.md](scripts/port/open_assets_plan.md) plans original,
 MIT-licensed fonts to replace the ROM's glyphs, and a renderer that draws them
@@ -53,7 +55,7 @@ from the player's own ROM. Milestones OPEN-1 to OPEN-6 are listed with a
 status table.
 
 Accepted decisions: the assets repository is `pRizz/iron-sights-assets`
-(public, MIT; creating it is a separate confirmed step), Arimo (Apache-2.0) is a
+(public, MIT), Arimo (Apache-2.0) is a
 development-only body-font placeholder that never ships, the renderer uses MSDF,
 Sharp Fonts defaults to off until both fonts exist and the owner has
 play-tested them, and the emulator exporter (OPEN-6) is deferred. `AGENTS.md`

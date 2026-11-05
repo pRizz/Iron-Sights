@@ -170,8 +170,8 @@ the title font and a non-shipping placeholder body font.
 
 ## Decisions (accepted 2026-11-05)
 
-1. **Assets repository:** `pRizz/iron-sights-assets`, public, MIT. Creating it
-   is a separate step the owner confirms.
+1. **Assets repository:** `pRizz/iron-sights-assets`, public, MIT. The owner
+   confirmed creating it, and it was created on 2026-11-05.
 2. **Body-font placeholder:** Arimo (Apache-2.0) during development only, never
    shipped or vendored into a release.
 3. **Renderer technique:** MSDF.
@@ -188,7 +188,7 @@ next action before handing off.
 
 | ID | Status | Notes |
 | --- | --- | --- |
-| OPEN-1 | Not started | Next: create `pRizz/iron-sights-assets` once the owner confirms |
+| OPEN-1 | In progress | 2026-11-05: created public [`pRizz/iron-sights-assets`](https://github.com/pRizz/iron-sights-assets) with a plain MIT LICENSE, a README holding these provenance rules, the roadmap and the future-assets intent, and a CONTRIBUTING guide requiring a DCO sign-off and a provenance note (`dedfd44`, `922df3d`). GitHub's license detection had not reported MIT yet when checked. Next: deterministic-build CI and a first tagged release, which need OPEN-2's generator |
 | OPEN-2 | Not started | |
 | OPEN-3 | Not started | Depends on OPEN-1's first release |
 | OPEN-4 | Not started | Can start against the title font and the Arimo placeholder |
