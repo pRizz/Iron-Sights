@@ -3,15 +3,17 @@
 #define PORT_ICON_CACHE_FORMAT_H
 #include <stdint.h>
 #include <stddef.h>
-#define PORT_ICON_COUNT 39
-/* 30 weapons (including the watch laser), six wardrobe unarmed images and
- * the tank (slot 38). Slot 30, the detonator, stays empty. */
-#define PORT_ICON_IMAGES 37
+#define PORT_ICON_COUNT 40
+/* 30 weapons (including the watch laser), six wardrobe unarmed images, the
+ * tank (slot 38) and the rifle butt that replaces the chop while Bond owns the
+ * sniper rifle (slot 39). Slot 30, the detonator, stays empty. */
+#define PORT_ICON_IMAGES 38
 #define PORT_ICON_TANK 38
+#define PORT_ICON_RIFLE_BUTT 39
 #define PORT_ICON_WIDTH 512
 #define PORT_ICON_HEIGHT 160
 #define PORT_ICON_BYTES (PORT_ICON_WIDTH*PORT_ICON_HEIGHT*4)
-#define PORT_ICON_CACHE_VERSION 8
+#define PORT_ICON_CACHE_VERSION 9
 /* Every slot stores an image except the detonator's. The validator, loader and
  * tests share this one rule so the slot layout cannot drift between them. */
 #define PORT_ICON_EMPTY_SLOT 30

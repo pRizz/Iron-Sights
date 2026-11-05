@@ -300,7 +300,8 @@ static s32 phWeaponIcon(s32 item)
 {
     if (item == ITEM_TANKSHELLS) return portIconAvailable(PORT_ICON_TANK) ? PORT_ICON_TANK : -1;
     if (item == ITEM_UNARMED || item == ITEM_FIST) {
-        s32 variant = 32 + portWardrobeVariant(g_CurrentPlayer->bondtype, fileGetBondForCurrentFolder());
+        const s32 variant = 32 + portWardrobeVariant(g_CurrentPlayer->bondtype, fileGetBondForCurrentFolder());
+        if (portHudRifleButt()) return portIconAvailable(PORT_ICON_RIFLE_BUTT) ? PORT_ICON_RIFLE_BUTT : -1;
         if (portIconAvailable(variant)) return variant;
     }
     return item >= 0 && item < 32 && portIconAvailable(item) ? item : -1;

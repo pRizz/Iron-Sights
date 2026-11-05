@@ -43,6 +43,8 @@ s32 bondinvCountTotalItemsInInv(void) { return inventoryCount; }
 s32 bondinvGetTextbyInvIndex(s32 i) { return inventory[i]; }
 ITEM_IDS getCurrentPlayerWeaponId(GUNHAND hand) { return hand == GUNRIGHT ? currentWeapon : ITEM_UNARMED; }
 s32 bondinvItemAvailableForHand(ITEM_IDS right, ITEM_IDS left) { (void)right; (void)left; return 0; }
+static s32 sniperOwned;
+s32 bondinvItemAvailable(ITEM_IDS item) { return item == ITEM_SNIPERRIFLE && sniperOwned; }
 void osSyncPrintf(const char *fmt, ...)
 {
     va_list args; va_start(args, fmt); vfprintf(stderr, fmt, args); va_end(args); abort();
@@ -537,6 +539,20 @@ int main(void)
         testPlayer.bondtype = CUFF_FOLDER;
         assert(phWeaponIcon(ITEM_FIST) == 37);
         testPlayer.bondtype = CUFF_BLUE;
+        /* Owning the sniper rifle turns the next unarmed switch into its butt. */
+        sniperOwned = 1;
+        assert(phWeaponIcon(ITEM_UNARMED) == PORT_ICON_RIFLE_BUTT && phWeaponIcon(ITEM_FIST) == PORT_ICON_RIFLE_BUTT);
+        /* In hand, the club chosen at the last swap wins: a sniper picked up
+         * while unarmed keeps the chop until the next switch. */
+        currentWeapon = ITEM_FIST; testPlayer.cur_item_weapon_getname = ITEM_FIST;
+        assert(phWeaponIcon(ITEM_UNARMED) == 32);
+        testPlayer.cur_item_weapon_getname = ITEM_SNIPERRIFLE; sniperOwned = 0;
+        assert(phWeaponIcon(ITEM_UNARMED) == PORT_ICON_RIFLE_BUTT);
+        iconFixtureReady = 0; /* without the image, the name (Buttstroke) is shown */
+        assert(phWeaponIcon(ITEM_UNARMED) == -1);
+        iconFixtureReady = 1;
+        currentWeapon = ITEM_AK47; testPlayer.cur_item_weapon_getname = ITEM_FIST;
+        assert(phWeaponIcon(ITEM_UNARMED) == 32);
     }
 #if PORT_WEAPON_IMAGES_AVAILABLE
     {

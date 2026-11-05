@@ -1451,10 +1451,20 @@
       "pixels_sha256": "7865743ed210bb3202d2bac665954ebf10c983de3d035882283a7b86728dcda8",
       "sha256": "eb578dd721ea6adb4fd93b5ee23370b67796fa325d090e2cec972a8a1506ad08",
       "width": 512
+    },
+    {
+      "channels": 4,
+      "file": "images/icons/39-rifle_butt.png",
+      "height": 160,
+      "id": 39,
+      "name": "rifle_butt",
+      "pixels_sha256": "c534a419480382157b4f9d1a16eb0ca076797e069a5122ed0f1c25a297d0e8ad",
+      "sha256": "c4a974384696ed9f7092e9978cc99fc5c86afafc698384357b31907ce0c2a96c",
+      "width": 512
     }
   ],
   "independent_pass_verified": true,
-  "inputs_sha256": "c353dee260f035e6bd9e1ced59af74ffa7456ee52656aa18c63b5e08ba02ca78",
+  "inputs_sha256": "fffc7104435501c8566e74e6cc89a63c37c445aec5b7c886d8abf30d8cd12718",
   "recipe": {
     "background": "#30343c",
     "fov": 90,

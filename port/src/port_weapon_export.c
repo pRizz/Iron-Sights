@@ -17,6 +17,10 @@
 
 #define PORT_TANK_ICON_YAW -35.0f
 #define PORT_TANK_ICON_TARGET_Y 0.08f
+/* The rifle butt turns the sniper rifle stock-first, muzzle angled down so the
+ * butt is raised to strike. */
+#define PORT_BUTT_ICON_YAW 180.0f
+#define PORT_BUTT_ICON_ROLL -20.0f
 
 s32 portWeaponExportEnabled(void)
 {
@@ -97,6 +101,7 @@ Gfx *portWeaponExportDraw(Gfx *gdl)
     s32 capture = 0, white;
     f32 depth, horizontal, vertical;
     Mtxf rotation, tilt, view, transform;
+    struct coord3d target;
     Mtx *projection;
     u16 norm;
     const char *only;
@@ -110,6 +115,7 @@ Gfx *portWeaponExportDraw(Gfx *gdl)
     /* The watch laser renders Bond's watch (set_enviro_fog_for_items_in_solo_watch_menu). */
     if (!only && slot >= 30 && slot < 36) { item = ITEM_FIST; icon = 32+slot-30; }
     if (!only && slot == 36) item = ITEM_TANKSHELLS;
+    if (!only && slot == 37) { item = ITEM_SNIPERRIFLE; icon = PORT_ICON_RIFLE_BUTT; }
     if (item == ITEM_TANKSHELLS) icon = PORT_ICON_TANK;
     if (slot >= PORT_ICON_IMAGES || (item > ITEM_TASER && icon != PORT_ICON_TANK)
         || item < ITEM_FIST || (only && slot)) return gdl;
@@ -144,8 +150,18 @@ Gfx *portWeaponExportDraw(Gfx *gdl)
     matrix_4x4_set_rotation_around_y(gitem_structs[item].y_rotation * 0.01745329252f, &rotation);
     matrix_4x4_set_rotation_around_z(-gitem_structs[item].x_rotation * 0.01745329252f, &tilt);
     matrix_4x4_multiply_in_place(&tilt, &rotation);
-    matrix_4x4_set_lookat_target(&view, depth, vertical+depth*0.16f, horizontal+depth*0.18f,
-        0, vertical, horizontal, 0, 1, 0);
+    target.x = 0; target.y = vertical; target.z = horizontal;
+    if (icon == PORT_ICON_RIFLE_BUTT) {
+        /* Turn about the framed point: rotate the model and its target alike. */
+        Mtxf turn, roll;
+        matrix_4x4_set_rotation_around_y(PORT_BUTT_ICON_YAW * 0.01745329252f, &turn);
+        matrix_4x4_set_rotation_around_x(PORT_BUTT_ICON_ROLL * 0.01745329252f, &roll);
+        matrix_4x4_multiply_in_place(&roll, &turn);
+        matrix_4x4_multiply_in_place(&turn, &rotation);
+        mtx4RotateVecInPlace(&turn, &target);
+    }
+    matrix_4x4_set_lookat_target(&view, target.x+depth, target.y+depth*0.16f, target.z+depth*0.18f,
+        target.x, target.y, target.z, 0, 1, 0);
     /* matrixmath's arguments use column-major multiplication: view must be
      * the left operand so watch rotations do not rotate the camera offset. */
     matrix_4x4_multiply(&view, &rotation, &transform);

@@ -76,7 +76,7 @@ class Gallery(unittest.TestCase):
             self.assertEqual(row['weapon_id'], (4, 8, 7)[i//4 % 3])
             self.assertEqual(row['mode'], ('regular', 'ads')[i//2 % 2])
             self.assertEqual(row['variant'], ('stock', 'fork')[i % 2])
-        self.assertEqual(sum(name is not None for name in gallery.ICON_NAMES[1:]), 37)
+        self.assertEqual(sum(name is not None for name in gallery.ICON_NAMES[1:]), 38)
 
     def test_canonical_png(self):
         for channels in (3, 4):

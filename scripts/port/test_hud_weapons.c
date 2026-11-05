@@ -26,6 +26,8 @@ s32 bondinvItemAvailableForHand(ITEM_IDS right, ITEM_IDS left)
     /* Stand-in for the dual-wield flag: pistols through launchers. */
     return allGunsDoubles && right == left && right >= ITEM_WPPK && right <= ITEM_ROCKETLAUNCH;
 }
+static s32 sniperOwned;
+s32 bondinvItemAvailable(ITEM_IDS item) { return item == ITEM_SNIPERRIFLE && sniperOwned; }
 /* A mission override renames the RC-P90's single card only. */
 u16 *bondinvGetNameByIndex(s32 i) { return (u16 *)(inventory[i] == ITEM_FNP90 ? "RC-P90\n" : ""); }
 u16 *get_ptr_short_watch_text_for_item(ITEM_IDS item)
@@ -174,12 +176,35 @@ static void testNames(void)
     assert(strcmp(tiny, "AR33 ") == 0);
 }
 
+static void testRifleButt(void)
+{
+    char name[64];
+    const HudWeapon unarmed = { ITEM_UNARMED, ITEM_UNARMED, 0 };
+    /* Arrange: Bond holds a gun, so ownership predicts the next unarmed switch. */
+    resetFixture();
+    rightHand = ITEM_WPPK; sniperOwned = 1;
+
+    /* Act / assert. */
+    assert(portHudRifleButt());
+    portHudWeaponName(&unarmed, 1, &unarmed, name, sizeof(name));
+    assert(strcmp(name, "Buttstroke") == 0);
+    sniperOwned = 0;
+    assert(!portHudRifleButt());
+    /* In hand, the club recorded at the last swap is what Bond holds. */
+    rightHand = ITEM_FIST; sniperOwned = 1; testPlayer.cur_item_weapon_getname = ITEM_FIST;
+    assert(!portHudRifleButt());
+    rightHand = ITEM_UNARMED; sniperOwned = 0; testPlayer.cur_item_weapon_getname = ITEM_SNIPERRIFLE;
+    assert(portHudRifleButt());
+    testPlayer.cur_item_weapon_getname = ITEM_FIST;
+}
+
 int main(void)
 {
     testPickedUpPairs();
     testAllGunsDoubles();
     testOrphanPairAndCapacity();
     testNames();
-    puts("HUD weapon card checks passed: picked-up pairs, All Guns doubles, selection, orphan pairs, capacity, names.");
+    testRifleButt();
+    puts("HUD weapon card checks passed: picked-up pairs, All Guns doubles, selection, orphan pairs, capacity, names, rifle butt.");
     return 0;
 }

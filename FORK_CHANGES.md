@@ -2542,6 +2542,16 @@ the cycle stops on each. Jungle captures (960x540, All Guns) checked an AR33 +
 RC-P90 pair in icon and text styles and PP7 doubles in icon style. The Windows
 build and HUD tests pass; the gallery regenerated with no changed image cells.
 
+While Bond owns the sniper rifle, the inherited switch to unarmed clubs with the
+rifle (its model and butt-strike keyframes) instead of chopping; the swap code
+records that choice in `cur_item_weapon_getname` (`gunfire.c`). The unarmed card
+previously still showed the wardrobe hand and "Unarmed". It now shows the rifle
+butt image (icon slot 39, FORK-019) and reads **Buttstroke**, the military
+term for a strike with a long gun's stock, in text style and the caption. In hand, the card follows the recorded club, so a sniper picked up
+while unarmed keeps the hand until the next switch; otherwise owning the rifle
+(including All Guns) predicts the next unarmed switch. Without the image the
+card shows its name rather than a hand. Melee behavior is unchanged.
+
 **Sources:** [inventory strip](port/src/port_hud.c),
 [pair cards and names](port/src/port_hud_weapons.c),
 [inventory reset](src/game/bondinv.c), [HUD integration](src/game/bondview2.c),
@@ -2549,7 +2559,9 @@ build and HUD tests pass; the gallery regenerated with no changed image cells.
 **Checks:** HUD inventory filtering/selection/scrolling (including the tank card)
 and idle timing tests; [pair card tests](scripts/port/test_hud_weapons.c)
 (run by `test_hud.sh`) cover picked-up and All Guns pairs, order, selection,
-orphaned pairs, capacity and names. `audit_hud.ps1 -LeftItem <id>` fixtures a
+orphaned pairs, capacity, names and the rifle-butt rule; HUD tests check its
+icon choice. Dam (All Guns) captures showed the rifle-butt card in text style
+and, with a freshly prepared version-9 cache, in icon style. `audit_hud.ps1 -LeftItem <id>` fixtures a
 held pair for captures;
 visual captures checked active, quiet and weapon-switch states, text/icon
 styles, and ammo/player-name spacing in solo, two- and four-player layouts.
@@ -2621,8 +2633,9 @@ with Text as the default. Icon mode now uses 35 full-color, transparent
 512 x 160 renders of actual weapon models, retaining original materials and
 separate silenced/gold/silver appearances. Unarmed uses the hand/forearm model: six extra wardrobe variants match the
 current mission cuff, resolving Folder's Bond and changing immediately with
-player/stage changes or restores. The native cache has 39 indexed slots,
-including the tank (FORK-009/FORK-019);
+player/stage changes or restores. While Bond owns the sniper rifle, the unarmed
+card shows the rifle butt image instead (slot 39, FORK-009). The native cache has
+40 indexed slots, including the tank and the rifle butt (FORK-009/FORK-019);
 runtime preparation supersedes the older embedded/bootstrap packs (FORK-019).
 These images replace the initial hand-drawn vector silhouettes. Cached textures
 and a subtle edge keep the icons readable without extra model rendering in
@@ -3425,6 +3438,14 @@ Version 8 adds the watch laser in slot 23 (37 rendered images; only the
 detonator slot 30 stays empty). The inherited watch-item renderer already draws
 it as Bond's watch. An isolated full preparation rendered 37/37 images with
 exact repeats and wrote a correctly sized cache.
+Version 9 adds the rifle butt in slot 39 (40 slots, 38 rendered images) for the
+weapon strip's unarmed card while Bond owns the sniper rifle (FORK-009). The
+export harness draws the sniper rifle's watch-menu model turned stock-first and
+tilted 20 degrees muzzle-down so the butt is raised, rotating its framed point
+with the model. A first pose dipped the stock instead; play-testing preferred
+the raised butt.
+`test_icon_cache.c` checks the new slot. An isolated preparation rendered all 38
+images with exact repeats and wrote a cache that the HUD audit then used.
 The validator, runtime loader (`weapon_cache.cpp`) and tests now share one
 slot rule, `portIconSlotStored`, in `port_icon_cache_format.h`. A play-test found
 that the loader still treated slot 23 as empty: it rejected the new cache, so icon
@@ -3649,8 +3670,9 @@ an existing configuration without the new key enables enhanced fonts by default.
 Added a local HTML review tool and generator absent from upstream. The matrix
 has 72 views: PP7, AK47/KF7 and Klobb; regular and settled ADS; original and fork
 models; blue, boiler, jungle, snow, tuxedo and Connery wardrobes. It includes all
-37 native generated icons (weapons, the watch laser, the tank and wardrobe-specific chopping arms,
-grouped separately); the tank was added with icon cache version 7.
+38 native generated icons (weapons, the watch laser, the tank, the rifle butt and
+wardrobe-specific chopping arms, grouped separately); the tank was added with
+icon cache version 7 and the rifle butt with version 9.
 Filters, enlarged inspection, stock/fork switching and pixel inspection support
 reviews of hands, wrists, cuffs, watch, grip and sight alignment.
 

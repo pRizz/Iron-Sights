@@ -7,8 +7,9 @@ shows the HTML source; download/clone the directory to use the interactive view.
 The 72-view matrix covers PP7, AK47/KF7 and Klobb, regular and fully settled ADS,
 six wardrobes (blue, boiler, jungle, snow, tuxedo, Connery), and original versus
 fork models. Filters, a larger image inspector, stock/fork keyboard switching,
-and a pixel inspection toggle help compare small seams. All 37 native generated
-icons are included: weapons (with the watch laser), the tank's strip image and, grouped separately,
+and a pixel inspection toggle help compare small seams. All 38 native generated
+icons are included: weapons (with the watch laser), the tank's strip image, the
+unarmed card's rifle butt and, grouped separately,
 the six wardrobe-specific chopping arms. These images are references, not automatic judgments of anatomy.
 
 **Stock is a model control, not an upstream executable capture.** It disables

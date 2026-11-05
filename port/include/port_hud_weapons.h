@@ -12,6 +12,9 @@ typedef struct { s32 item, left, inventory; } HudWeapon;
 s32 portHudWeapons(HudWeapon *cards, s32 max, s32 *selected);
 /* "PP7", "PP7 x2", or the left and right guns: "AR33 + RC-P90". */
 void portHudWeaponName(const HudWeapon *cards, s32 count, const HudWeapon *card, char *out, s32 size);
+/* Whether the unarmed card is the rifle butt: native switches to unarmed use the
+ * sniper rifle as a club while Bond owns one. */
+s32 portHudRifleButt(void);
 /* Short name of one gun, preferring its single card's mission text. */
 void portHudWeaponItemName(const HudWeapon *cards, s32 count, s32 item, char *out, s32 size);
 

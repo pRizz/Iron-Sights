@@ -99,10 +99,21 @@ static void phwCopy(char *out, s32 size, const char *text)
     out[n] = '\0';
 }
 
+s32 portHudRifleButt(void)
+{
+    const s32 held = getCurrentPlayerWeaponId(GUNRIGHT);
+    /* Every weapon swap records the club the next unarmed switch uses (gunfire.c):
+     * in hand it is the truth; otherwise ownership predicts the next switch. */
+    if (held == ITEM_UNARMED || held == ITEM_FIST)
+        return g_CurrentPlayer->cur_item_weapon_getname == ITEM_SNIPERRIFLE;
+    return bondinvItemAvailable(ITEM_SNIPERRIFLE) != 0;
+}
+
 void portHudWeaponItemName(const HudWeapon *cards, s32 count, s32 item, char *out, s32 size)
 {
     const s32 single = phwFind(cards, count, item, ITEM_UNARMED);
     const char *name = NULL;
+    if ((item == ITEM_UNARMED || item == ITEM_FIST) && portHudRifleButt()) { phwCopy(out, size, "Buttstroke"); return; }
     if (single >= 0 && cards[single].inventory >= 0)
         name = (const char *)bondinvGetNameByIndex(cards[single].inventory);
     if (!name || !name[0]) name = (const char *)get_ptr_short_watch_text_for_item(item);

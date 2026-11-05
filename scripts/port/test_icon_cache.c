@@ -19,8 +19,11 @@ int main(void)
     assert(bytes);memcpy(bytes,"MIDASICO",8);put(bytes+8,PORT_ICON_CACHE_VERSION);
     put(bytes+12,0xb6330846);put(bytes+16,512);put(bytes+20,160);put(bytes+24,PORT_ICON_COUNT);
     for(i=0;i<PORT_ICON_COUNT;i++){uint32_t n=portIconSlotStored(i)?PORT_ICON_BYTES:0;put(bytes+at,n);at+=4+n;}
-    /* Version 8 stores the watch laser (slot 23); only the detonator is empty. */
+    /* Version 8 stores the watch laser (slot 23); only the detonator is empty.
+     * Version 9 adds the rifle butt (slot 39); slot 0 aliases unarmed. */
     assert(portIconSlotStored(23) && !portIconSlotStored(30));
+    assert(PORT_ICON_RIFLE_BUTT == PORT_ICON_COUNT-1 && portIconSlotStored(PORT_ICON_RIFLE_BUTT));
+    assert(PORT_ICON_IMAGES == PORT_ICON_COUNT-2);
     assert(at==size);put(bytes+28,portIconCrc(bytes+32,size-32));
     assert(portIconCacheValidate(bytes,size,0xb6330846));
     assert(!portIconCacheValidate(bytes,size,0xdeadbeef));

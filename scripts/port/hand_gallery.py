@@ -28,7 +28,7 @@ ICON_NAMES = [None, 'unarmed', 'knife', 'throwing_knife', 'pp7', 'pp7_silenced',
               'silver_pp7', 'gold_pp7', 'laser', 'watch_laser', 'grenade_launcher', 'rocket_launcher',
               'grenade', 'timed_mine', 'proximity_mine', 'remote_mine', None, 'taser']
 ICON_NAMES += ['unarmed_' + name for name in WARDROBES]
-ICON_NAMES += ['tank']
+ICON_NAMES += ['tank', 'rifle_butt']
 ICON_COUNT = sum(name is not None for name in ICON_NAMES[1:])
 
 
