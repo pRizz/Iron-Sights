@@ -35,7 +35,8 @@ new areas. Status describes implementation state, not Git publication state.
 **Status:** Documentation and a repository rule; the owner accepted the plan
 with its recommended decisions on 2026-11-05. The assets repository
 [`pRizz/iron-sights-assets`](https://github.com/pRizz/iron-sights-assets) was
-created the same day with its license, rules, roadmap and CI (OPEN-1), and
+created the same day with its license, rules, roadmap, CI and Bright Builds
+Rules (OPEN-1), and
 holds a first draft of the parametric title font with its generator and tests
 (OPEN-2, awaiting the owner's review). Nothing in Iron Sights uses it yet.
 
