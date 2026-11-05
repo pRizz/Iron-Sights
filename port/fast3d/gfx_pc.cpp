@@ -6375,6 +6375,13 @@ static void gfx_dp_texture_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int3
             lrt = ((ult << 7) + dtdy * height0) >> 7;
         }
     }
+    /* A precise glyph (textrelated.c's scaled text) is drawn at its exact
+     * width and height, so its UVs span the corners' sub-quarter fractions
+     * too; otherwise the glyph would stretch by up to a quarter pixel. */
+    if (precise && s_GeTextGlyphs && !flip) {
+        lrs += dsdx * (s_GeRectFrac[2] - s_GeRectFrac[0]) / 128.0f;
+        lrt += dtdy * (s_GeRectFrac[3] - s_GeRectFrac[1]) / 128.0f;
+    }
 
     struct LoadedVertex* ul = &rsp.loaded_vertices[MAX_VERTICES + 0];
     struct LoadedVertex* ll = &rsp.loaded_vertices[MAX_VERTICES + 1];

@@ -261,24 +261,35 @@ static f32 port_text_scale = 1.0f;
  * since tiled pictures would open seams. */
 #define PORT_TEXT_GLYPHS(gdl, on) gDPNoOpTag((gdl)++, 0x47000000u | ((on) ? 1u : 0u))
 
+/* The pen's position past *x, in native pixels (0 <= frac < 1). Scaled text
+ * moves the pen by exact scaled widths and gaps, so letters keep their designed
+ * spacing instead of each advance being rounded to a whole native pixel; *x
+ * keeps the whole part for the game's clipping and layout. At scale 1 every
+ * move is whole and this stays 0. Reset per textRender call and line. */
+static f32 port_text_frac;
+
+extern Gfx *portRectPreciseTag(Gfx *gdl, f32 ulx, f32 uly, f32 lrx, f32 lry, s32 iulx, s32 iuly, s32 ilrx, s32 ilry);
+
 void portTextScale(f32 scale)
 {
     port_text_scale = (scale > 0.0f) ? scale : 1.0f;
 }
 
-/* Scaled letter spacing is rounded (gap to nearest pixel, advance rounded up)
- * rather than truncated, so scaled text keeps its gaps and never overlaps; both
- * are exact at 1.0. */
-static s32 portTextScaledGap(s32 kerningOffsetMinus1)
+static s32 portTextFloor(f32 v)
 {
-    const f32 g = (f32) kerningOffsetMinus1 * port_text_scale;
+    s32 i = (s32) v;
 
-    return (s32) ((g < 0.0f) ? g - 0.5f : g + 0.5f);
+    return ((f32) i > v) ? i - 1 : i;
 }
 
-static s32 portTextScaledAdvance(s32 width)
+/* Move a pen by an exact distance; returns the whole pixels to add to it. */
+static s32 portTextStep(f32 *frac, f32 by)
 {
-    return ((s32) (width * 4 * port_text_scale) + 3) >> 2;
+    const f32 exact = *frac + by;
+    const s32 whole = portTextFloor(exact);
+
+    *frac = exact - (f32) whole;
+    return whole;
 }
 #endif
 
@@ -293,7 +304,7 @@ Gfx *textRenderGlyph(Gfx *gdl, s32 *x, s32 *y, struct fontchar *curchar, struct 
 	drawY = *y + yOffset;
 	kerningOffset = font->kerning[prevchar->kerningindex * 13 + curchar->kerningindex] + text_spacing;
 #ifndef TARGET_N64
-    *x -= portTextScaledGap(kerningOffset - 1);
+    *x += portTextStep(&port_text_frac, (f32) -(kerningOffset - 1) * port_text_scale);
 #else
     *x -= (kerningOffset - 1);
 #endif
@@ -430,16 +441,19 @@ Gfx *textRenderGlyph(Gfx *gdl, s32 *x, s32 *y, struct fontchar *curchar, struct 
                             // B3000000 04000400:
 #ifndef TARGET_N64
                             if (port_text_scale != 1.0f)
-                            {   /* PORT: scaled glyph - the rect shrinks, the texel step grows */
-                                s32 sw = (s32) (curchar->width * 4 * port_text_scale);
-                                s32 sb = (s32) (curchar->baseline * 4 * port_text_scale);
-                                s32 sh = (s32) (curchar->height * 4 * port_text_scale);
-                                s32 step = (s32) (0x400 / port_text_scale);
-                                gSPTextureRectangle(gdl++,
-                                    (*x * 4) + text_x,
-                                    (drawY * 4) + sb + text_y,
-                                    (*x * 4) + sw + text_x,
-                                    (drawY * 4) + sb + sh + text_y,
+                            {   /* PORT: scaled glyph - the rect shrinks, the texel step grows.
+                                 * Its exact corners (sub-pixel pen, unrounded size) ride a
+                                 * precise-rect tag; the rect carries their whole quarters. */
+                                const f32 ulx = ((f32) *x + port_text_frac) * 4.0f + text_x;
+                                const f32 uly = (f32) (drawY * 4 + text_y) + curchar->baseline * 4 * port_text_scale;
+                                const f32 lrx = ulx + curchar->width * 4 * port_text_scale;
+                                const f32 lry = uly + curchar->height * 4 * port_text_scale;
+                                const s32 iulx = portTextFloor(ulx), iuly = portTextFloor(uly);
+                                const s32 ilrx = portTextFloor(lrx), ilry = portTextFloor(lry);
+                                s32 step = (s32) (0x400 / port_text_scale + 0.5f);
+
+                                gdl = portRectPreciseTag(gdl, ulx, uly, lrx, lry, iulx, iuly, ilrx, ilry);
+                                gSPTextureRectangle(gdl++, iulx, iuly, ilrx, ilry,
                                     G_TX_RENDERTILE, text_s, text_t, step, step);
                             }
                             else
@@ -498,7 +512,7 @@ Gfx *textRenderGlyph(Gfx *gdl, s32 *x, s32 *y, struct fontchar *curchar, struct 
     }
     
 #ifndef TARGET_N64
-    *x += portTextScaledAdvance(curchar->width);
+    *x += portTextStep(&port_text_frac, curchar->width * port_text_scale);
 #else
     *x += curchar->width;
 #endif
@@ -524,6 +538,7 @@ Gfx *textRender(Gfx *gdl, s32 *x, s32 *y, char *text,
     g_JpnTextTlutNeedsLoad = 1;
 #ifndef TARGET_N64
     PORT_TEXT_GLYPHS(gdl, 1);   /* every texrect until the matching 0 is a font glyph */
+    port_text_frac = 0.0f;
 #endif
 
     savedx = *x;
@@ -551,7 +566,7 @@ Gfx *textRender(Gfx *gdl, s32 *x, s32 *y, char *text,
 #endif
 		    ) {
 #ifndef TARGET_N64
-			*x += (s32) (SPACE_WIDTH * port_text_scale); /* PORT: the space follows portTextScale */
+			*x += portTextStep(&port_text_frac, SPACE_WIDTH * port_text_scale); /* PORT: the space follows portTextScale */
 #else
 			*x += 5;
 #endif
@@ -571,6 +586,9 @@ Gfx *textRender(Gfx *gdl, s32 *x, s32 *y, char *text,
             
 			text++;
 			*x = savedx;
+#ifndef TARGET_N64
+			port_text_frac = 0.0f;
+#endif
 		} else if (*text < 0x80) {
 			gdl = textRenderGlyph(gdl, x, y, &chars[*text - 0x21], &chars[prevchar - 0x21], font, savedx, savedy, width, height, yOffset);
 			prevchar = *text;
@@ -887,6 +905,9 @@ void textMeasure(s32 *textheight, s32 *textwidth, char *text, struct fontchar *f
     char prevchar;
 	s32 longest;
 	s32 tmp;
+#ifndef TARGET_N64
+    f32 frac = 0.0f; /* the same sub-pixel pen textRender keeps */
+#endif
 
 	prevchar = 'H';
     tmp = 0;
@@ -917,7 +938,7 @@ void textMeasure(s32 *textheight, s32 *textwidth, char *text, struct fontchar *f
             // Space
             if (text[1] != '\n') {
 #ifndef TARGET_N64
-                *textwidth += (s32) (SPACE_WIDTH * port_text_scale); /* matches what textRender adds */
+                *textwidth += portTextStep(&frac, SPACE_WIDTH * port_text_scale); /* matches what textRender adds */
 #else
                 *textwidth += SPACE_WIDTH;
 #endif
@@ -934,6 +955,9 @@ void textMeasure(s32 *textheight, s32 *textwidth, char *text, struct fontchar *f
             }
 
             *textwidth = 0;
+#ifndef TARGET_N64
+            frac = 0.0f;
+#endif
             *textheight += lineheight;
             text++;
         }
@@ -942,8 +966,9 @@ void textMeasure(s32 *textheight, s32 *textwidth, char *text, struct fontchar *f
             // Normal single-byte character
             tmp = font2->kerning[font1[prevchar - 0x21].kerningindex * 13 + font1[*text - 0x21].kerningindex] + text_spacing - 1;
 #ifndef TARGET_N64
-            /* the same rounded terms textRenderGlyph moves the pen by */
-            *textwidth = portTextScaledAdvance(font1[*text - 0x21].width) + *textwidth - portTextScaledGap(tmp);
+            /* the same exact moves textRenderGlyph makes, gap then advance */
+            *textwidth += portTextStep(&frac, (f32) -tmp * port_text_scale);
+            *textwidth += portTextStep(&frac, font1[*text - 0x21].width * port_text_scale);
 #else
             *textwidth = font1[*text - 0x21].width + *textwidth - tmp;
 #endif

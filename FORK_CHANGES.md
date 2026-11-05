@@ -30,6 +30,54 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-049 — Sub-pixel scaled text
+
+**Status:** Implemented in the Windows build; the owner play-tested it and
+approved it (2026-11-05). The browser target was not built or tested with it.
+
+Upstream's `portTextScale` (inherited, `textrelated.c`) draws text smaller by
+shrinking each glyph's rect. It kept the pen on whole native pixels: each
+glyph's advance was rounded up and each gap rounded to the nearest pixel, and
+glyph sizes were truncated to quarter pixels. One native pixel is 2.2 screen
+pixels at 720p and 4.4 at 1440p, so scaled text such as the hit map legend
+(55%) showed uneven letter spacing ("Ki ll sh ot") and uneven stroke weight at
+every resolution. The fork found this while reviewing FORK-048 captures.
+
+The pen now keeps its fractional position (`port_text_frac`) across a text
+run: gaps, advances and spaces move it by their exact scaled widths, and only
+the whole part goes into `*x`, so the game's clipping and layout still see
+integers. Each scaled glyph sends its exact corners through upstream's
+precise-rect tag (`portRectPreciseTag`, `G_NOOP` tag `0x59`, 1/256 native pixel)
+before its texture rectangle, and its size is no longer truncated. The texel
+step is rounded rather than truncated. In `gfx_dp_texture_rectangle`, a precise
+glyph rect also extends its texture span by the corners' fractions, so a glyph
+drawn at a fractional width is not stretched; other precise rects (the aim
+sight) keep their old UVs. `textMeasure` steps the same exact moves, so measured
+widths match what is drawn. Scaled words come out slightly narrower than before,
+since advances are no longer rounded up. Layout that measures them, such as the
+hit map's counts column, follows.
+
+At scale 1 every move is a whole pixel and the fraction stays 0, so the game's
+own full-size text is unchanged. This is the first step of the planned text
+renderer work (see FORK-021): it fixes layout precision with the ROM's glyphs;
+original MIT fonts drawn at any resolution would follow.
+
+**Upstream hooks:** fork blocks inside upstream-owned `textrelated.c`
+(`portTextScale` helpers, `textRenderGlyph`'s scaled branch, `textRender`'s
+reset per call and line, `textMeasure`), and one block in `gfx_pc.cpp`'s texture
+rectangle path. The N64 build is untouched.
+
+**Sources:** [text](src/game/textrelated.c), [renderer](port/fast3d/gfx_pc.cpp),
+[precise tag](src/game/bondwalk2.c).
+**Checks:** the Windows build compiles and links. Video-menu captures at
+1280x960 are pixel-identical before and after with point-sampled and smoothed
+glyphs (`audit_fonts.ps1 -Mode Video`), so full-size text is unchanged. The hit
+map closer look's 55% legend and the debrief's 80% counts at 960x720 show even
+spacing and stroke weight; the debrief layout still fits. A 1280x720 HUD capture
+(`audit_hud.ps1 -MissionTimer -Dialogue`) shows the scaled mission hints and
+weapon strip names intact. `test_hud.sh` and `test_hitmap.sh` pass, and the
+regenerated gallery has zero changed image cells.
+
 ### FORK-048 — Debrief hit map
 
 **Status:** Implemented and captured in the Windows build (scripted hits on
