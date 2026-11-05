@@ -205,6 +205,10 @@ padN_stickmode.
   hit_sounds          | 1          | Solo: confirmed hits keep their close-range
                       |            | flesh impact sound at any distance
   damage_indicators   | 1          | Red arcs toward the source of damage
+  debrief_hit_map     | 1          | Solo debrief: front/back figures with a dot
+                      |            | where each bullet hit a character, beside
+                      |            | the hit counts; select either for a closer
+                      |            | look. Iron Sights > Combat Feedback.
   objective_notifications | 1     | Named objective status alerts; 0 = original
   mission_hints       | 1          | Desktop solo mission-start control hints.
                       |            | Iron Sights > HUD Additions.

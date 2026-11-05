@@ -5952,7 +5952,8 @@ static void gfx_draw_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lr
 }
 
 /* Shared screen-space line/curve renderer. Shape 0 is the hit marker, 1 the
- * small cross, 2 GE's ring target, and 3 a directional damage arc. */
+ * small cross, 2 GE's ring target, 3 a directional damage arc, 4 a weapon
+ * image, 5 a flat fill and 7 a filled or outlined ellipse. */
 static void gfx_ge_vector_overlay(float x, float y, uint32_t rgba, int shape = 0,
                                   float size_x = 1, float size_y = 1, float start = 0, float end = 0) {
     if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(size_x) || !std::isfinite(size_y)
@@ -6052,6 +6053,49 @@ static void gfx_ge_vector_overlay(float x, float y, uint32_t rgba, int shape = 0
         if (shape == 2) arc(9.5f*size_x, 9.5f*size_y, 0, 6.28318530718f, true);
     } else if (shape == 3) {
         arc(size_x, size_y, start, end, false);
+    } else if (shape == 7) {
+        /* Ellipse (FORK-048 hit map): centre x,y, radii size_x,size_y along an
+         * axis turned by `start` radians. `end` is an outline's width in native
+         * units; 0 fills it. Feathered edges either way. */
+        const float cs = std::cos(start), sn = std::sin(start);
+        const int n = std::clamp((int)std::ceil(3.2f*(size_x+size_y)*scale/3.0f), 12, 96);
+        float px[96], py[96], nx[96], ny[96];
+        for (int i = 0; i < n; i++) {
+            const float t = 6.28318530718f*i/n, lx = size_x*std::cos(t), ly = size_y*std::sin(t);
+            px[i] = (x+lx*cs-ly*sn)*scale_x;
+            py[i] = (y+lx*sn+ly*cs)*scale;
+        }
+        const float ox = x*scale_x, oy = y*scale;
+        for (int i = 0; i < n; i++) {
+            /* Outward normal from the neighbours, in raster space. */
+            const int prev = (i+n-1) % n, next = (i+1) % n;
+            float vx = py[next]-py[prev], vy = px[prev]-px[next];
+            const float length = std::max(0.001f, std::hypot(vx, vy));
+            vx /= length; vy /= length;
+            if (vx*(px[i]-ox)+vy*(py[i]-oy) < 0) { vx = -vx; vy = -vy; }
+            nx[i] = vx; ny[i] = vy;
+        }
+        const float half = end > 0 ? std::max(0.5f, end*scale*0.5f) : 0.0f;
+        for (int i = 0; i < n; i++) {
+            const int j = (i+1) % n;
+            if (half <= 0) {
+                vertex_at(0, ox, oy, 1);
+                vertex_at(1, px[i], py[i], 1);
+                vertex_at(2, px[j], py[j], 1);
+                gfx_sp_tri1(MAX_VERTICES, MAX_VERTICES+1, MAX_VERTICES+2, true);
+            }
+            /* Bands across the edge: feather, (stroke), feather. */
+            const float offsets[4] = {-half-feather, -half, half, half+feather};
+            for (int band = half > 0 ? 0 : 2; band < 3; band++) {
+                const float a0 = offsets[band], a1 = offsets[band+1];
+                const float alpha0 = band == 0 ? 0 : 1, alpha1 = band == 2 ? 0 : 1;
+                vertex_at(0, px[i]+nx[i]*a0, py[i]+ny[i]*a0, alpha0);
+                vertex_at(1, px[j]+nx[j]*a0, py[j]+ny[j]*a0, alpha0);
+                vertex_at(2, px[j]+nx[j]*a1, py[j]+ny[j]*a1, alpha1);
+                vertex_at(3, px[i]+nx[i]*a1, py[i]+ny[i]*a1, alpha1);
+                quad();
+            }
+        }
     } else if (shape == 5) {
         vertex_at(0, x*scale_x, y*scale, 1);
         vertex_at(1, (x+size_x)*scale_x, y*scale, 1);

@@ -32,6 +32,9 @@ void portHudGunSight(s32 *gdl);
 /* Shared port overlay primitives, in native viewport coordinates. */
 Gfx *portHudPanel(Gfx *gdl, f32 x, f32 y, f32 w, f32 h, u32 color);
 Gfx *portHudLabel(Gfx *gdl, const char *text, s32 x, s32 y, f32 scale, u32 color, s32 maxWidth);
+/* Ellipse centred at x,y with radii along an axis turned by angle radians;
+ * outline is a stroke width, or 0 to fill it. */
+Gfx *portHudEllipse(Gfx *gdl, f32 x, f32 y, f32 radiusX, f32 radiusY, f32 angle, f32 outline, u32 color);
 /* Cheat targets apply only to the corresponding solo stage and difficulty. */
 s32 portHudMissionTargetSeconds(s32 stage, s32 difficulty);
 s32 portHudMissionBestSeconds(s32 stage, s32 difficulty);

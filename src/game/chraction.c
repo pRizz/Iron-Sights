@@ -35,6 +35,7 @@
 #include "cheat.h" /* cheatIsActive(CHEAT_PORT_ENEMY_FF) - chrlvFireWeaponRelated */
 #include "port_hud.h"
 #include "port_hit_sound.h"
+#include "port_hitmap.h"
 #endif
 
 #ifndef TARGET_N64
@@ -2661,6 +2662,7 @@ bool handles_shot_actors(ChrRecord *self, s32 hitpart, coord3d *vector, s32 weap
             if (isPlayer && self->damage > beforeDamage) {
                 portHudHit(get_cur_playernum(), hitpart == HIT_HEAD);
                 portHitSoundConfirmed(myprop);
+                portHitMapDamage(self, beforeDamage);
             }
 #endif
 

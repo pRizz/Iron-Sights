@@ -161,6 +161,7 @@ static const struct PortWatchRowDef sIsFeedback[] = {
     { PWROW_OPT,       "hit_markers",      NULL, 0, 0 },
     { PWROW_OPT,       "hit_sounds",       NULL, 0, 0 },
     { PWROW_OPT,       "damage_indicators", NULL, 0, 0 },
+    { PWROW_OPT,       "debrief_hit_map",  NULL, 0, 0 },
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
 static const struct PortWatchRowDef sIsHud[] = {

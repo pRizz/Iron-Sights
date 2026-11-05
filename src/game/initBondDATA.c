@@ -6,6 +6,9 @@
 #include "bondview.h"
 #include "gun.h"
 #include "player.h"
+#ifndef TARGET_N64
+#include "port_hitmap.h"
+#endif
 
 
 #ifdef REFRESH_PAL
@@ -263,6 +266,9 @@ void init_player_BONDdata_stats(void)
     {
         g_playerPerm->shot_count[i] = 0;
     }
+#ifndef TARGET_N64
+    portHitMapReset(); /* FORK-048: the debrief hit map follows these counts */
+#endif
 
     g_playerPerm->killed_civilians = 0;
     g_playerPerm->kill_count = 0;

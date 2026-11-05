@@ -474,6 +474,11 @@ Gfx *portHudLabel(Gfx *g, const char *text, s32 x, s32 y, f32 scale, u32 color, 
     return phText(g, text, x, y, scale, color, maxWidth);
 }
 
+Gfx *portHudEllipse(Gfx *g, f32 x, f32 y, f32 radiusX, f32 radiusY, f32 angle, f32 outline, u32 color)
+{
+    return phVector(g, 7, x, y, radiusX, radiusY, angle, outline, color);
+}
+
 Gfx *portHudDraw(Gfx *g)
 {
     const s32 p = get_cur_playernum();

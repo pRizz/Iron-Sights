@@ -99,6 +99,8 @@ static const char *const sPortConEnvNames[] = {
     "GE_HANDPOSEDBG",
     "GE_HIDAPI",
     "GE_HITCHMS",
+    "GE_HITMAP_LOG",
+    "GE_HITMAP_PROBE",
     "GE_HITSOUND_PROBE",
     "GE_HITSOUND_PROBE_AFTER",
     "GE_HIGHSCAN",

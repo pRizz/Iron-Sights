@@ -6,6 +6,7 @@
 #include "port_mission_cheats.h"
 #include "port_mission_times.h"
 #include "port_startup.h"
+#include "port_hitmap.h"
 #endif
 #include <assets/oddtextures.h>
 #include "assets/image_externs.h"
@@ -4767,6 +4768,7 @@ static const struct PortSheetRow port_sheet_rows_is_aim[] = {
 };
 static const struct PortSheetRow port_sheet_rows_is_feedback[] = {
     { SHROW_OPT, "hit_markers" }, { SHROW_OPT, "hit_sounds" }, { SHROW_OPT, "damage_indicators" },
+    { SHROW_OPT, "debrief_hit_map" },
 };
 static const struct PortSheetRow port_sheet_rows_is_hud[] = {
     { SHROW_OPT, "always_crosshair_size" },   /* sizes HUD's Always Crosshair */
@@ -17442,6 +17444,9 @@ void init_menu0D_missioncomplete(void)
 {
     tab_next_selected = 0;
     tab_prev_selected = 0;
+#ifndef TARGET_N64
+    portHitMapZoomSet(FALSE);
+#endif
     load_walletbond();
     load_briefing_text_for_stage();
     if (g_NewCheatUnlocked)
@@ -17487,6 +17492,14 @@ void interface_menu0D_missioncomplete()
         }
     }
 
+#ifndef TARGET_N64
+    /* FORK-048: a press on the hit map, or off the tabs while it is open, is the map's */
+    if (portHitMapDebriefInput(tab_prev_highlight || frontCheckCursorOnNextTab(), &tab_next_highlight))
+    {
+        /* the map opened or closed */
+    }
+    else
+#endif
     if (joyGetButtonsPressedThisFrame(PLAYER_1, START_BUTTON|Z_TRIG|A_BUTTON))
     {
         if (tab_next_highlight)
@@ -17510,7 +17523,12 @@ void interface_menu0D_missioncomplete()
     set_item_visibility_in_objinstance(walletinst[0], SW_TABS, 1);
     set_item_visibility_in_objinstance(walletinst[0], SW_PAPER, 1);
     set_item_visibility_in_objinstance(walletinst[0], SW_OHMSS, 1);
+#ifndef TARGET_N64
+    /* FORK-048: the hit map's closer look drops the stamp across it */
+    set_item_visibility_in_objinstance(walletinst[0], SW_CLASSIFIED, !portHitMapZoomed());
+#else
     set_item_visibility_in_objinstance(walletinst[0], SW_CLASSIFIED, 1);
+#endif
     frontUpdateControlStickPosition();
 
     if (tab_next_selected)
@@ -17575,6 +17593,13 @@ void interface_menu0D_missioncomplete()
     return;
 }
 
+#ifndef TARGET_N64
+/* FORK-048: the hit map overview keeps clear of the rows it sits beside. */
+#define PORT_HITMAP_TEXT(row, x, text) portHitMapDebriefText(PORT_HITMAP_ROW_##row, x, (const char *)(text))
+#else
+#define PORT_HITMAP_TEXT(row, x, text)
+#endif
+
 Gfx *constructor_menu0D_missioncomplete(Gfx *DL)
 {
     s32 x;
@@ -17624,6 +17649,15 @@ Gfx *constructor_menu0D_missioncomplete(Gfx *DL)
         allhits = 1;
     }
     DL = print_current_solo_briefing_stage_name(DL, stagename);
+#ifndef TARGET_N64
+    if (portHitMapZoomed())
+    {   /* FORK-048: the hit map's closer look takes the statistics' place */
+        DL = portHitMapDebriefDraw(DL, headshots + bodyshots + limbshots);
+        DL = frontAddNextTabText(DL);
+        DL = frontAddPreviousTabText(DL);
+        return frontDrawCursor(DL);
+    }
+#endif
 
     text = langGet(getStringID(LTITLE, TITLE_STR_104_STATS)); //STATISTICS:*
     x = 0x37;
@@ -17672,11 +17706,13 @@ Gfx *constructor_menu0D_missioncomplete(Gfx *DL)
 #endif
     x = 0x82;
     y = 0xA7;
+    PORT_HITMAP_TEXT(STATS, x, stagename);
     DL = frontPrintText(DL, &x, &y, stagename, ptrFontZurichBoldChars, ptrFontZurichBold, 0xFF, viGetX(), viGetY(), 0, 0);
 
     if (g_NewCheatUnlocked) {
         stagename[0] = '\0';
         sprintf(stagename, "     [%s]", langGet(getStringID(LTITLE, TITLE_STR_275_NEWCHEATAVAILABLE))); //New Cheat Available
+        PORT_HITMAP_TEXT(STATS, x, stagename);
         DL = frontPrintText(DL, &x, &y, stagename, ptrFontZurichBoldChars, ptrFontZurichBold, 0xA00000FF, viGetX(), viGetY(), 0, 0);
     }
 
@@ -17690,6 +17726,7 @@ Gfx *constructor_menu0D_missioncomplete(Gfx *DL)
         sprintf(stagename, "%02d:%02d", targettime / 60, targettime % 60);
         x = 0x82;
         y = y2 + 0xA9;
+        PORT_HITMAP_TEXT(STATS, x, stagename);
         DL = frontPrintText(DL, &x, &y, stagename, ptrFontZurichBoldChars, ptrFontZurichBold, 0xFF, viGetX(), viGetY(), 0, 0);
         if (besttime >= 0) {
             if (besttime < 0x3FF) {
@@ -17700,6 +17737,7 @@ Gfx *constructor_menu0D_missioncomplete(Gfx *DL)
                 else {
                     sprintf(stagename, "");
                 }
+                PORT_HITMAP_TEXT(STATS, x, stagename);
                 DL = frontPrintText(DL, &x, &y, stagename, ptrFontZurichBoldChars, ptrFontZurichBold, 0xFF, viGetX(), viGetY(), 0, 0);
             }
         }
@@ -17715,6 +17753,7 @@ Gfx *constructor_menu0D_missioncomplete(Gfx *DL)
                 sprintf(stagename, "%02d:%02d", besttime / 60, besttime % 60);
                 x = 0x82;
                 y = y2 + 0xA9;
+                PORT_HITMAP_TEXT(STATS, x, stagename);
                 DL = frontPrintText(DL, &x, &y, stagename, ptrFontZurichBoldChars, ptrFontZurichBold, 0xFF, viGetX(), viGetY(), 0, 0);
             }
         }
@@ -17734,6 +17773,7 @@ Gfx *constructor_menu0D_missioncomplete(Gfx *DL)
     sprintf(stagename, "%.1f%%",  hitPct);
     x = 0x82;
     y = 0xCC;
+    PORT_HITMAP_TEXT(STATS, x, stagename);
     DL = frontPrintText(DL, &x, &y, stagename, ptrFontZurichBoldChars, ptrFontZurichBold, 0xFF, viGetX(), viGetY(), 0, 0);
 
 
@@ -17749,9 +17789,17 @@ Gfx *constructor_menu0D_missioncomplete(Gfx *DL)
     }
     x = 0xBE;
     y = 0xDC;
+    PORT_HITMAP_TEXT(WEAPON, x, stagename);
     DL = frontPrintText(DL, &x, &y, stagename, ptrFontZurichBoldChars, ptrFontZurichBold, 0xFF, viGetX(), viGetY(), 0, 0);
 
-
+#ifndef TARGET_N64
+    if (portHitMapDebriefDrawn())
+    {   /* FORK-048: the counts in one column, leaving the corner to the hit map */
+        DL = portHitMapDebriefCounts(DL, shotsfired, killcount, headshots, bodyshots, limbshots, reg5 + reg4, allhits);
+    }
+    else
+#endif
+    {
     text = langGet(getStringID(LTITLE, TITLE_STR_108_SHOTTOTAL)); //Shot total:*
     x = 0x37;
     y = 0xF4;
@@ -17811,7 +17859,11 @@ Gfx *constructor_menu0D_missioncomplete(Gfx *DL)
     x = 0x82;
     y = y2 + 0xF4;
     DL = frontPrintText(DL, &x, &y, stagename, ptrFontZurichBoldChars, ptrFontZurichBold, 0xFF, viGetX(), viGetY(), 0, 0);
+    }
 
+#ifndef TARGET_N64
+    DL = portHitMapDebriefDraw(DL, headshots + bodyshots + limbshots); /* FORK-048 */
+#endif
 
     DL = frontAddNextTabText(DL);
     DL = frontAddPreviousTabText(DL);
@@ -19782,6 +19834,7 @@ void menu_init(void)
     portDirectLaunchMpTick();
     portDirectLaunchDemoTick();
     portMenuHarnessTick();
+    { extern void portHitMapProbeMenu(s32 menu); portHitMapProbeMenu(current_menu); } /* GE_HITMAP_PROBE */
 #ifdef GE_VIDEO
     { /* A mouse aim press (right button by default) acts as B, the "back",
        * in every frontend menu; pad and keyboard R are untouched. */

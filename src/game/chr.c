@@ -30,6 +30,7 @@
 #include "player.h"
 #ifndef TARGET_N64
 #include <stdio.h> /* GE_INTRODBG diag in chrRenderProp */
+#include "port_hitmap.h"
 extern void sysFatalError(const char *format, ...);
 #endif
 #include "propobj.h"
@@ -3770,6 +3771,10 @@ void chrHandleBulletHit(struct ShotData *shot, struct BulletHit *bhit)
     recall_joy2_hits_edit_detail_edit_flag(shot->weapon, bhit->prop, -1);
 
     chrCreateHitPuffs(bhit->prop, bhit->hitpart, &hitpos, &nearhitpos);
+
+#ifndef TARGET_N64
+    portHitMapBullet(shot, bhit); /* FORK-048 debrief hit map, before the damage */
+#endif
 
     // Apply damage to the character.
     if (!handles_shot_actors(chr, bhit->hitpart, &shot->dir, shot->weapon, TRUE)) {

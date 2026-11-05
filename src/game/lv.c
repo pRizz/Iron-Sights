@@ -1220,6 +1220,9 @@ Gfx* lvlRender(Gfx* DL)
             chraiUpdateOnscreenPropCount();
             chrpropUpdateAutoaimTarget();
             chraiCheckUseHeldItems();
+#ifndef TARGET_N64
+            { extern void portHitMapProbeTick(void); portHitMapProbeTick(); } /* GE_HITMAP_PROBE: fires as Bond does */
+#endif
 
             if (bond_pressed_reload_activate() && bond_interact_object())
             {

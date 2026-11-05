@@ -264,6 +264,7 @@ static const struct PortOpt sOpts[] = {
     TOGGLE("hit_markers",        "[display]", "Hit Markers\n",        PORTOPT_CAT_GAMEPLAY),
     TOGGLE("hit_sounds",         "[display]", "Hit Sounds\n",         PORTOPT_CAT_GAMEPLAY),
     TOGGLE("damage_indicators",  "[display]", "Damage Direction\n",   PORTOPT_CAT_GAMEPLAY),
+    TOGGLE("debrief_hit_map",    "[display]", "Debrief Hit Map\n",    PORTOPT_CAT_GAMEPLAY),
     TOGGLE("objective_notifications", "[display]", "Objective Alerts\n", PORTOPT_CAT_GAMEPLAY),
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     TOGGLE("mission_hints", "[display]", "Mission Start Hints\n", PORTOPT_CAT_GAMEPLAY),

@@ -30,6 +30,175 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-048 — Debrief hit map
+
+**Status:** Implemented and captured in the Windows build (scripted hits on
+Archives and Frigate). The owner play-tested the Windows build and approved it
+(2026-11-05); the browser target was not built or tested with it.
+
+Adds default-on **Gameplay > Iron Sights > Combat Feedback > Debrief Hit Map**
+(`[display] debrief_hit_map=1`) to the Options folder and the watch. Upstream's
+solo debrief (`constructor_menu0D_missioncomplete`) only counts head, body,
+limb and other hits. The fork now also records where each of the player's
+bullets struck a character and draws front and back body figures with a dot per
+hit. The owner chose a 2D front/back view, dots coloured by outcome, the figures
+on the statistics page plus a closer look, solo only, and a tally for hits with
+no position (2026-11-05).
+
+**Recording.** `chrHandleBulletHit` (`chr.c`) reports each player bullet before
+its damage. The bullet's view-space ray is moved into the frame of the hit
+box's joint (the node matrix rows, divided by their squared length, as
+`modelTestRayIntersectsTransformedBBox` does), and a slab test finds where it
+entered the box. The hit stores the box and the entry point as fractions across
+the box's local x and y. A box keeps that frame in every animation pose, so the
+point lands on the same spot of the reference figure. A hit is a back hit when
+it entered the box's rear half (local -z); characters face +z, as the feet and
+head boxes show. Hits on gun and hat boxes (upstream's "Others") are not
+placed. The fork's damage hook in `chraction.c`, which also raises hit markers,
+marks a hit as the kill shot when its damage takes the character from below to
+at least `maxdamage`. Only solo play records (`getPlayerCount() == 1`). Up to
+1024 hits are kept per mission; `init_player_BONDdata_stats`
+(`initBondDATA.c`) clears them where upstream clears the shot counters.
+
+**Figure.** The first character hit in a mission supplies the figure: its body
+model's hit boxes, at joint positions summed from the group origins. GE's
+unanimated skeleton is a starfish, with every limb bone running out sideways
+along its local x. `portHitMapPose` therefore swings each leg chain straight
+down about its thigh joint and each arm chain 65 degrees below horizontal about
+its shoulder; the torso, pelvis and head keep their place. Other characters'
+hits map onto the figure by part and box order.
+
+Each part is drawn as the oval inscribed in its box: a heat-tinted wireframe in
+dossier ink. An opaque oval in the paper's average colour (sampled 202,194,156),
+grown by the stroke width, backs each part first, so the red CLASSIFIED stamp
+does not show through the translucent shading. Parts are filled crimson
+(`#c81e23`) at 6% opacity plus up to 79% more by their share of the busiest
+part's hits (front and back share one scale), then outlined in ink. The owner
+chose this deeper, stronger ramp for contrast over the first version's
+`#e24b4a` at up to 61% (2026-11-05). Hits are ink dots on a paper-coloured
+rim; head hits are gold, ringed with one pixel of ink so they read on the
+paper (owner's request, 2026-11-05). A kill shot's rim is red, edged with a one-pixel paper
+ring (the overlay's thinnest stroke) so it stands apart from crimson parts,
+and kill shots are drawn after the other dots so none cover them. A hit's fractions across its box are taken onto
+the oval with the elliptical grid mapping, so a side hit lands on the rim and a
+corner hit just inside it, never off the part. Dot size and stroke width grow
+with the figure. Hits in a box's back half go on the back figure, which is
+mirrored so the character's left is on the screen's left, as seen from behind.
+The owner chose this style from mock-ups (2026-11-05). It replaces the first
+version's solid slate rounded boxes with white dots.
+
+**Debrief.** With the map shown, the debrief rearranges its hit counts:
+`portHitMapDebriefCounts` prints Shot total and Kill total with Head hits,
+Body hits, Limb hits and Others stacked under them, at 80% size. The values sit
+just past the widest label, so all six rows fit above the page's foot. Upstream
+prints the last four in a column beside the totals, and still does when the map
+is off. The overview sits in the lower-right corner on the page's foot, with a
+**HIT MAP** caption under the two figures, as close to the text as its shape
+allows. `front.c` reports the right edges of the rows near it: the Time value,
+New Cheat notice, Target and Best Time values, Accuracy value and weapon of
+choice. The page is split into bands: the statistics rows, the weapon row and
+the counts column. Each part's oval, and the caption, must keep clear of the
+text in any band it overlaps. Placement prefers figures right beside the
+counts column, as tall as fit there; on a typical debrief that keeps the
+figures' shoulders under the weapon row, so they stand about as tall as the
+counts. If nothing fits there, the tallest figures that fit anywhere are used,
+as far left as they can go. The owner asked for the counts under the totals, the
+map snug in the lower-right quarter and less space between it and the counts
+(2026-11-05). This replaces three earlier layouts. The first kept the stock
+counts and fitted the figures right of the statistics above them. The second
+also hid the folder's crest (showing the `SW_BLANK` sheet instead of
+`SW_PAPER`) and raised the figures beside the stage name; the crest is back now
+that the map has left its corner. The third placed the tallest figures that fit
+flush against the tabs, which left a wide gap after the counts. The whole bottom
+area opens a closer look in the statistics' place: the counts strip across the
+page, plus the map's column where it rises above that strip. The closer look
+hides the folder's CLASSIFIED stamp (`SW_CLASSIFIED`), which ran across the
+figures. It shows larger **FRONT** and **BACK** figures, a legend (hit, head,
+kill shot and the hits-per-part shading), a tally and **CLOSE**. The tally
+reads **Hits shown: N**, the dots on the figures. Only when the debrief counts
+more head, body and limb hits than that, a second line reads **Not recorded:
+M**, the difference. Fists, the knife and thrown knives never reach those
+counts (their weapons lack `WEAPONSTATBITFLAG_PLAYER_STAT_HIT`, so
+`inc_curplayer_hitcount_with_weapon` skips them; checked at runtime), so the
+difference is bullet hits the map could not record: past its 1024 cap, or a hit
+box it could not find. The owner asked for wording a first-time viewer
+understands (2026-11-05). It replaces **Placed** and **Not placed**, whose
+description wrongly blamed melee and thrown knives. A Melee/thrown line was
+tried and dropped once those weapons proved never to count. A mission whose
+hits were all unrecorded, or with the setting off, shows the stock page. Explosions never count as hits upstream, so they appear nowhere.
+
+**Input.** Every input points at the bottom area with the menu cursor and
+confirms there, as it does for the tabs: mouse click, gamepad A/Start/Z, the
+keyboard's bound confirm, or a touch tap. While the closer look is open, a
+confirm anywhere off the tabs, B or a right-click (the frontend's mouse B)
+closes it, so a tap off the tabs closes it on touch. The NEXT and PREVIOUS tabs
+keep working on both views. The bottom area and CLOSE use the tabs' hover
+highlight; the bottom area's is L-shaped, covering the strip and the map's
+column. No input is left unsupported.
+
+**Rendering.** The HUD vector overlay (`gfx_ge_vector_overlay`) gains shape 7,
+an ellipse turned by an angle, filled or outlined at a given width, with
+feathered edges; `portHudEllipse` exposes it. The screen angle comes from the
+stored pose angle, because the game's `atan2f` is built on a 16-bit `acosf`
+table and visibly skewed near-vertical limbs. The first version's shape 7 was a
+filled rounded box (`portHudBox`); the ellipse replaced it.
+
+**Upstream hooks:** one call each in `chrHandleBulletHit` (`chr.c`),
+`init_player_BONDdata_stats` (`initBondDATA.c`), the existing fork block of
+`handles_shot_actors` (`chraction.c`), and the debrief's init, interface and
+constructor (`front.c`), all under `#ifndef TARGET_N64`. The constructor also
+reports seven value rows through `PORT_HITMAP_TEXT`, which is empty on N64. Its
+stock hit-count block is wrapped in braces as the `else` of a
+`portHitMapDebriefDrawn()` branch that calls `portHitMapDebriefCounts`. The
+interface shows `SW_CLASSIFIED` only while the closer look is closed. The
+closer look returns before the statistics.
+
+**Audit:** `scripts/port/audit_hitmap.ps1` runs an isolated copy on a solo stage
+with invulnerability.
+`GE_HITMAP_PROBE=<hits>[,zoom][,live][,best=<s>][,cheat][,cap=<n>]` fires bullets
+through the game's own `chrTestHit` and `chrHandleBulletHit` at random points
+inside on-screen characters' body boxes, at the point where Bond's own shots
+resolve (after `chraiCheckUseHeldItems`, `lv.c`). It then aborts as the watch
+does, moves from the status page to the debrief (`front.c` harness), opens the
+closer look if asked, captures a frame and exits. `-Cursor x,y` parks the menu
+cursor; `-Off` turns the setting off. `-Difficulty`, `-Best` (a RAM-only best
+time) and `-Cheat` (the New Cheat notice) bring up the debrief's longest rows.
+`-Cap n` records at most n hits (`portHitMapLimitSet`, harness only), so the
+rest show as Not recorded without needing 1024 targets. `GE_HITMAP_LOG=1`
+prints the figure boxes,
+each hit and kill, and the game's own front test (the melee bearing from
+`get_distance_actor_to_position`). Captures stay in the ignored
+`build_win/hitmap-audit-*` directories.
+
+**Sources:** [header](port/include/port_hitmap.h), [core](port/src/port_hitmap.c),
+[recorder](port/src/port_hitmap_game.c), [debrief](port/src/port_hitmap_draw.c),
+[probe](port/src/port_hitmap_probe.c), hooks in [chr.c](src/game/chr.c),
+[chraction.c](src/game/chraction.c), [initBondDATA.c](src/game/initBondDATA.c),
+[lv.c](src/game/lv.c) and [front.c](src/game/front.c); the ellipse shape in
+[gfx_pc.cpp](port/fast3d/gfx_pc.cpp), [gbiex_compat.h](port/fast3d/gbiex_compat.h)
+and [port_hud.c](port/src/port_hud.c); option bridge in
+[joy_port.c](port/src/joy_port.c), rows in [port_options.c](port/src/port_options.c),
+[front.c](src/game/front.c) and [port_watchpages.c](port/src/port_watchpages.c),
+[help](port/src/port_option_help.c), [default ini](port/src/video.c),
+[settings reference](tools/midas_ini_help.txt), [env list](port/src/port_console_env.h)
+and [audit](scripts/port/audit_hitmap.ps1).
+
+**Checks:** [hit map tests](scripts/port/test_hitmap.sh) cover the ray's move
+into a scaled, turned joint frame, the entry surface (including a ray starting
+inside, and a miss), box fractions and the front/back half, part and ordinal
+lookup, the leg and arm pose, fitting and facing in front and back views, hits
+following the posed box, and corner and side hits landing on the oval. The
+settings placement check, HUD and hit sound tests and the standards checks pass.
+The regenerated hand gallery has no changed image cells (only its source
+fingerprint) and verifies. Audit captures at 960x720 show the rearranged overview (also hovered over the
+counts), the closer look without the stamp, the cheat-difficulty page with the
+New Cheat notice, the Best Time page and the setting off, with the crest back
+on each. In each run, kill rings matched the debrief's Kill total and hits shown
+matched head, body and limb hits. A closer look with `-Cap 100` after 120 shots
+read Hits shown: 100 and Not recorded: 18 (two shots struck a gun or hat). On live targets (`-Live`), all ten hits the
+game's bearing called clearly front or back (eight front, two back, on pelvis
+and limbs) got the same side.
+
 ### FORK-047 — HD HUD ammo icons
 
 **Status:** Implemented in every target (Windows, Linux, browser and Xbox).
