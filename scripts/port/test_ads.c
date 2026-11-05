@@ -23,7 +23,7 @@ f32 g_GlobalTimerDelta;
 static s32 currentPlayer;
 static s32 controlsLive;
 static OSTime testTime = 1;
-static s32 savedSprint = -1;
+static s32 savedSprint = -1, savedLudicrousSprint = -1;
 static s32 savedKnifeStyle = -1;
 static s32 savedCrosshairSize = -1;
 static s32 savedHud[6] = {-1,-1,-1,-1,-1,-1};
@@ -44,6 +44,10 @@ s32 portIniWriteStrs(const char *section, const char *const *keys, const char *c
         if (strcmp(keys[i], "sprint") == 0) {
             assert(strcmp(section, "[display]") == 0);
             savedSprint = atoi(vals[i]);
+        }
+        if (strcmp(keys[i], "ludicrous_sprint") == 0) {
+            assert(strcmp(section, "[display]") == 0);
+            savedLudicrousSprint = atoi(vals[i]);
         }
     }
     return 1;
@@ -99,63 +103,7 @@ static void normalAim(s32 held, s32 pressed, s32 toggle)
     g_CurrentPlayer->insightaimmode = portAdsUpdateAim(held, pressed, toggle);
 }
 
-static void testSprint(void)
-{
-    s32 setting;
-    const s32 opt = portOptFind("sprint");
-    assert(opt >= 0 && portOptAvailable(opt) && portOptIsToggle(opt));
-    assert(portOptCategoryOf(opt) == PORTOPT_CAT_GAMEPLAY);
-    assert(portJoyPortOptionGet("sprint", &setting) && setting == 1);
-    assert(strcmp(portJoyPortBindDefault(PORTACT_WALK), "Left Shift") == 0);
-    assert(portJoyPortMoveScale(0) == 1.0f);
-    portJoyPortPadDown(0, PORTACT_WALK);
-    portJoyPortPollCommit();
-    assert(portJoyPortMoveScale(0) == 1.5f);
-    assert(portJoyPortMoveScale(1) == 1.0f); /* native crouch slowdown still applies */
-    g_CurrentPlayer->insightaimmode = 1;
-    assert(portJoyPortMoveScale(0) == 1.0f);
-    g_CurrentPlayer->insightaimmode = 0;
-    normalAim(1, 1, 0);
-    assert(portJoyPortMoveScale(0) == 0.5f); /* ADS wins over held sprint */
-    assert(portJoyPortMoveScale(1) == 0.5f);
-    normalAim(0, 0, 0);
-
-    selectPlayer(1);
-    assert(portJoyPortMoveScale(0) == 1.0f); /* player 1's key cannot sprint player 2 */
-    portJoyPortPadDown(1, PORTACT_WALK);
-    portJoyPortPollCommit();
-    assert(portJoyPortMoveScale(0) == 1.5f);
-    selectPlayer(0);
-    assert(portJoyPortMoveScale(0) == 1.0f);
-    portJoyPortPadDown(0, PORTACT_WALK);
-    portJoyPortPollCommit();
-    controlsLive = 0;
-    assert(portJoyPortMoveScale(0) == 1.0f);
-    controlsLive = 1;
-    g_PlayerIsInTank = 1;
-    assert(portJoyPortMoveScale(0) == 1.0f);
-    g_PlayerIsInTank = 0;
-    currentPlayer = -1;
-    assert(portJoyPortMoveScale(0) == 1.0f);
-    selectPlayer(0);
-
-    assert(portJoyPortSetOption("sprint", "0")); /* saved ini uses the string bridge */
-    assert(portJoyPortOptionGet("sprint", &setting) && setting == 0);
-    assert(portJoyPortMoveScale(0) == 0.5f);
-    assert(portJoyPortMoveScale(1) == 0.5f);
-    normalAim(1, 1, 0);
-    assert(portJoyPortMoveScale(0) == 0.5f); /* walk and ADS slowdowns do not stack */
-    normalAim(0, 0, 0);
-    portJoyPortPollCommit();
-    assert(portJoyPortMoveScale(0) == 1.0f);
-    assert(portJoyPortOptionSet("sprint", 1)); /* menus use the integer bridge */
-    assert(portJoyPortOptionGet("sprint", &setting) && setting == 1);
-    portOptStep(opt, 1);
-    assert(portOptGet(opt) == 0 && savedSprint == 0);
-    portOptStep(opt, -1);
-    assert(portOptGet(opt) == 1 && savedSprint == 1);
-}
-
+#include "test_sprint.c"
 #include "test_knife_ads.c"
 #include "test_rocket_ads.c"
 #include "test_ads_accuracy.c"
@@ -180,6 +128,7 @@ int main(void)
     testRocketAds();
     testAdsAccuracy();
     testSprint();
+    testLudicrousSprint();
     testHandLayerEnd();
     { /* The support palm faces up under the gun. The watch follows that
        * roll rather than being billboarded towards the camera. */

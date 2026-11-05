@@ -14,6 +14,7 @@ let context = 2;
 let gadgets = true;
 let movement = [0, 0],
     look = [0, 0];
+let stickSprint = false;
 const held = new Set<number>();
 const presses: number[] = [];
 let accepts = 0;
@@ -72,11 +73,15 @@ const game = {
     _portWebTouchMove: (x: number, y: number) => {
         movement = [x, y];
     },
+    _portWebTouchStickSprint: (on: number) => {
+        stickSprint = !!on;
+    },
     _portWebTouchLook: (x: number, y: number) => {
         look = [look[0] + x, look[1] + y];
     },
     _portWebTouchReset: () => {
         movement = [0, 0];
+        stickSprint = false;
         look = [0, 0];
         held.clear();
     },
@@ -91,6 +96,7 @@ Object.assign(globalThis, {
     touchFixture: {
         snapshot: () => ({
             movement,
+            stickSprint,
             look,
             held: [...held],
             presses: [...presses],

@@ -264,6 +264,8 @@ padN_stickmode.
                       |            | ADS; 100 = original. Shotguns keep theirs
   sprint              | 1          | 1 = hold Walk / Sprint for 1.5x speed;
                       |            | 0 = hold it to walk at half speed
+  ludicrous_sprint    | 0          | 1 = sprint at 5x speed instead of 1.5x.
+                      |            | Needs sprint=1
   sight_on_screen     | 1          | Show the aiming sight
   look_ahead          | 1          | Look Ahead
   ammo_on_screen      | 1          | Show ammo on screen
@@ -440,6 +442,9 @@ Retired keys (ignored): run, walk_toggle.
   sprint boost; ADS still moves at half speed, with no extra Shift slowdown.
   Sprint does not change tank movement. Turning Sprint off restores the
   original half-speed Walk binding.
+  Ludicrous Sprint (same page, off by default) raises the sprint boost to 5x.
+  It has no effect while Sprint is off. In the browser, dragging the touch
+  move stick well past its ring also sprints while Sprint is on.
 
 
 Other keys you may see are managed by the game; leave them as they are.

@@ -188,6 +188,14 @@
     background: #d9b77560;
     border: 1px solid #d9b775a0;
 }
+/* Dragged past the ring: the stick is holding Sprint. */
+.touch-stick[data-sprinting] {
+    border-color: #d9b775c0;
+}
+.touch-stick[data-sprinting] i {
+    background: #d9b775b0;
+    border-color: #f0d9a0;
+}
 .touch-look {
     position: absolute;
     inset: 0;

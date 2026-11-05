@@ -11,6 +11,7 @@ extern s32 get_cur_playernum(void);
 extern s32 portBondControlsLive(void);
 extern s32 portConIsOpen(void);
 extern s32 portJoyPortBindCount(void);
+extern s32 portJoyPortOptionGet(const char *key, s32 *out);
 extern const char *portJoyPortBindName(s32 index);
 extern void portJoyPortPadDown(s32 pad, s32 action);
 extern s32 g_portMouseDirect;
@@ -72,6 +73,8 @@ static f32 moveX, moveY, yaw, pitch;
 static u32 held, pressed;
 static s32 steps;
 static s32 unbind, back;
+/* The move stick is dragged well past its ring (web/src/touch-input.ts stickOverdrag). */
+static s32 stickSprint;
 /* A watch Left/Right held this many polls (about 0.3 s) moves a volume bar like a held D-pad. */
 #define TOUCH_REPEAT_POLLS 18
 static s32 sidePolls;
@@ -86,7 +89,7 @@ static const char *const actions[TOUCH_COUNT] = {
 EMSCRIPTEN_KEEPALIVE void portWebTouchReset(void)
 {
     held = pressed = 0;
-    steps = unbind = back = sidePolls = 0;
+    steps = unbind = back = sidePolls = stickSprint = 0;
     moveX = moveY = yaw = pitch = 0;
 }
 
@@ -114,6 +117,12 @@ EMSCRIPTEN_KEEPALIVE void portWebTouchMove(f32 x, f32 y)
     if (!enabled) return;
     moveX = bounded(x, 1);
     moveY = bounded(y, 1);
+}
+
+EMSCRIPTEN_KEEPALIVE void portWebTouchStickSprint(s32 on)
+{
+    if (!enabled) return;
+    stickSprint = on != 0;
 }
 
 EMSCRIPTEN_KEEPALIVE void portWebTouchLook(f32 x, f32 y)
@@ -212,6 +221,17 @@ EMSCRIPTEN_KEEPALIVE void portWebTextFinish(s32 ok)
     if (enabled && portOskWebOpen()) portOskWebFinish(ok);
 }
 
+static void pressBind(const char *name)
+{
+    s32 action;
+    for (action = 0; action < portJoyPortBindCount(); action++) {
+        if (strcmp(name, portJoyPortBindName(action)) == 0) {
+            portJoyPortPadDown(0, action);
+            return;
+        }
+    }
+}
+
 void portWebTouchPoll(OSContPad *pad)
 {
     static const u16 buttons[TOUCH_COUNT] = {
@@ -223,7 +243,7 @@ void portWebTouchPoll(OSContPad *pad)
     const u32 directions = (1u << TOUCH_UP) | (1u << TOUCH_DOWN)
         | (1u << TOUCH_LEFT) | (1u << TOUCH_RIGHT);
     u32 down = (held & ~directions) | pressed;
-    s32 i, action;
+    s32 i, sprint = 0;
     sidePolls = (held & ((1u << TOUCH_LEFT) | (1u << TOUCH_RIGHT))) ? sidePolls + 1 : 0;
     pressed = 0;
     if (!enabled || portConIsOpen()) return;
@@ -234,14 +254,12 @@ void portWebTouchPoll(OSContPad *pad)
     for (i = 0; i < TOUCH_COUNT; i++) {
         if (!(down & (1u << i))) continue;
         pad->button |= buttons[i];
-        if (!actions[i]) continue;
-        for (action = 0; action < portJoyPortBindCount(); action++) {
-            if (strcmp(actions[i], portJoyPortBindName(action)) == 0) {
-                portJoyPortPadDown(0, action);
-                break;
-            }
-        }
+        if (actions[i]) pressBind(actions[i]);
     }
+    /* The over-dragged stick holds Walk / Sprint only while the Sprint setting
+     * is on, so pushing farther never turns into the half-speed walk. */
+    if (stickSprint && !(down & (1u << TOUCH_SPRINT))
+        && portJoyPortOptionGet("sprint", &sprint) && sprint) pressBind("walk");
     if (!portBondControlsLive() || g_PlayerIsInTank) {
         /* Native menus include both cursor-driven folders and D-pad watch lists.
          * Pad-only screens step on the D-pad and the stick alike, so an arrow

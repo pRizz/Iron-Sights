@@ -4,6 +4,7 @@ import {
     createTouchState,
     createValueScrub,
     defaultTouch,
+    stickOverdrag,
     stickVector,
     touchLayoutPreference,
 } from './touch-input';
@@ -80,6 +81,15 @@ test('thumbstick has a dead zone, analog strength and circular diagonal clamp', 
     expect(Math.hypot(diagonal.x, diagonal.y)).toBeCloseTo(1);
     expect(diagonal.y).toBeGreaterThan(0);
     expect(stickVector(NaN, 10, 50)).toEqual({ x: 0, y: 0 });
+});
+test('dragging well past the stick ring sprints, with a lower release point', () => {
+    // Arrange: a 100px stick; its ring edge is 50px from the centre.
+    expect(stickOverdrag(0, -50, 100, false)).toBe(false); // full push at the ring
+    expect(stickOverdrag(0, -65, 100, false)).toBe(false);
+    expect(stickOverdrag(-50, -50, 100, false)).toBe(true); // ~71px, any direction
+    expect(stickOverdrag(0, -65, 100, true)).toBe(true); // holds between the two
+    expect(stickOverdrag(0, -55, 100, true)).toBe(false);
+    expect(stickOverdrag(NaN, 0, 100, true)).toBe(false);
 });
 test('simultaneous fingers release independently and reset releases every held action', () => {
     const events: unknown[] = [];

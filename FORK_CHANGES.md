@@ -133,7 +133,7 @@ subsections, in both the Options folder and the watch:
 
 | Subsection | Settings |
 | --- | --- |
-| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Sprint |
+| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Sprint, Ludicrous Sprint |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction |
 | HUD Additions | Always Crosshair Size, Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
 | System | About / Build Info, Texture Pack (desktop), Enhanced Fonts, Crash Reporting (Windows/Linux) |
@@ -1440,6 +1440,20 @@ Cancellation, lifecycle changes, disappearing gadgets and removed More buttons
 cannot activate stale taps. Focused sources are `touch-button-gestures.ts`, its
 unit tests, `touch-controls.tsx` and `touch-button-audit.mjs`.
 
+Dragging the move stick well past its ring sprints, as holding the Sprint button
+does. Sprint engages once the finger is farther from the stick's centre than
+0.7 of the stick's width (the ring's edge is 0.5), in any direction, and stops
+when the finger comes back inside 0.6, so a thumb resting at the boundary cannot
+flicker. While it sprints, the stick and its knob brighten. It holds the same
+Walk / Sprint bind natively, but only while the Sprint setting is on, so pushing
+farther never becomes the half-speed walk; the Sprint button keeps holding its
+bind either way. Releasing the stick, a reset or leaving gameplay ends it. The
+thresholds are `STICK_SPRINT_ENGAGE` and `STICK_SPRINT_RELEASE` in
+`web/src/touch-input.ts`; the native hook is `portWebTouchStickSprint` in
+`port/web/touch.c`. Checks: the Wasm bridge regression (Sprint on/off, button,
+release, reset), unit tests for the thresholds and hysteresis, and the touch UI
+fixture audit (engage, visible state, release, lift).
+
 A second gray Z trigger appears above the left stick in both layouts, beside the
 conditional gadget shortcut. It fills the row when no gadget is available. Its
 contact fires immediately without moving the camera; the right finger can look
@@ -2357,13 +2371,23 @@ rebindable **Walk / Sprint** action (Left Shift by default) boosts movement to
 1.5 times normal speed. Aiming and crouching prevent the sprint boost. Turning
 the setting off restores the original half-speed Shift-to-walk behavior; aim
 and walk slowdowns do not stack.
+**Ludicrous Sprint**, on the same page and off by default (`[display]
+ludicrous_sprint=0`), raises the sprint boost from 1.5x to 5x for fun. It has
+no effect while Sprint is off, and aiming and crouching still prevent it. The
+1.5x default matches the classic Call of Duty sprint scale; modern Call of Duty
+sprints at roughly 1.15x and tactical-sprints at about 1.4x. In the browser,
+dragging the touch move stick well past its ring also holds Walk / Sprint
+(FORK-028).
 FORK-035 shows the live Walk / Sprint binding in mission-start hints only while
 this setting is on.
 
 **Sources:** [movement/input](port/src/joy_port.c),
 [option definitions](port/src/port_options.c), frontend/watch settings pages,
 [settings reference](tools/midas_ini_help.txt).
-**History:** `939b400`. **Checks:** ADS test suite movement/settings cases.
+**History:** `939b400`; Ludicrous Sprint added later without a commit
+reference yet. **Checks:** ADS test suite movement/settings cases
+(`scripts/port/test_sprint.c`, included by `test_ads.c`), including the 5x,
+crouch, ADS, Sprint-off and saved-setting cases for Ludicrous Sprint.
 
 ### FORK-007 — Optional combat feedback
 

@@ -1733,6 +1733,17 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**Stick-overdrag sprint, 2026-11-04:** Dragging the move stick past 0.7 of its
+width from the centre (the ring's edge is 0.5) holds Walk / Sprint until the
+finger comes back inside 0.6; the stick brightens while it sprints. The native
+side holds the bind only while the Sprint setting is on. Sources:
+`touch-input.ts`, `touch-controls.tsx`, `touch.css`, `port/web/touch.c` and
+`runtime-types.ts` (FORK-028). Verification: Wasm bridge regression, touch unit
+tests, TypeScript and the Edge touch UI fixture audit pass. Not yet checked on a
+real phone or with the real ROM in the browser. Next action: play-test the
+threshold on a phone and adjust the two constants if it engages too easily or
+too late.
+
 **Options folder sliders by touch, 2026-11-04:** A user reported that Music
 Volume and other slider rows could not be changed on mobile. Tapping one opened
 the native locked edit, but only D-pad/C, stick or wheel changed it, and the menu

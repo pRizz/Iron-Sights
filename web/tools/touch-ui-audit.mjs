@@ -232,8 +232,23 @@ try {
         fingers.clear();
         await update(1, stick.x + stick.width / 2, stick.y + 15, true);
         assert.ok((await snapshot()).movement[1] > 0.5, 'Stick could not be used after recovery');
+        // Dragging well past the ring sprints; easing back to the ring stops it.
+        await update(1, stick.x + stick.width / 2, stick.y - stick.height * 0.25, true);
+        value = await snapshot();
+        assert.ok(value.stickSprint && value.movement[1] > 0.99, 'Overdrag did not sprint');
+        assert.equal(
+            await page.locator('.touch-stick').getAttribute('data-sprinting'),
+            'true',
+            'Overdrag sprint is not shown on the stick',
+        );
+        await update(1, stick.x + stick.width / 2, stick.y + stick.height * 0.05, true);
+        value = await snapshot();
+        assert.ok(!value.stickSprint && value.movement[1] > 0.99, 'Sprint outlived the overdrag');
+        await update(1, stick.x + stick.width / 2, stick.y - stick.height * 0.25, true);
         await update(1, 0, 0, false);
-        assert.deepEqual((await snapshot()).movement, [0, 0]);
+        value = await snapshot();
+        assert.deepEqual(value.movement, [0, 0]);
+        assert.ok(!value.stickSprint, 'Releasing the stick left it sprinting');
         await update(1, fire.x + 24, fire.y + 24, true);
         await page.evaluate(() => window.dispatchEvent(new Event('blur')));
         assert.deepEqual((await snapshot()).held, [], 'Focus loss left fire held');
@@ -358,7 +373,7 @@ try {
     await expect(importer).toHaveCount(0);
     assert.deepEqual(errors, []);
     console.log(
-        'Touch UI: free-surface hit coverage, uncaptured/non-primary gestures, hint deadlines, repeated fire/zoom prevention, menu tap vs drag, orphaned stick recovery, independent move/look/fire, cancellation, focus reset, layouts, disable and direct save-picker gesture passed',
+        'Touch UI: free-surface hit coverage, uncaptured/non-primary gestures, hint deadlines, repeated fire/zoom prevention, menu tap vs drag, orphaned stick recovery, stick-overdrag sprint, independent move/look/fire, cancellation, focus reset, layouts, disable and direct save-picker gesture passed',
     );
 } finally {
     await browser.close();

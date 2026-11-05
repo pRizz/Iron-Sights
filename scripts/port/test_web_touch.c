@@ -7,7 +7,7 @@
 
 s32 g_portMouseDirect, g_PlayerIsInTank;
 f32 g_portMouseYawDeg, g_portMousePitchDeg;
-static s32 live, consoleOpen, playerNum;
+static s32 live, consoleOpen, playerNum, sprintSetting = 1;
 static s32 stageRunning, watchOpen, valueEdit, pickList, bindCapture, assignWait, holdDrag, padOnly, oskOpen;
 static char oskName[32];
 static s32 oskFinish;
@@ -41,6 +41,12 @@ s32 portJoyPortInvScrollItem(s32 item) { return item == ITEM_BUG || item == ITEM
 s32 portJoyPortBindCount(void) { return sizeof(bindings) / sizeof(bindings[0]); }
 const char *portJoyPortBindName(s32 index) { return bindings[index]; }
 void portJoyPortPadDown(s32 pad, s32 action) { assert(pad == 0); actionBits |= 1u << action; }
+s32 portJoyPortOptionGet(const char *key, s32 *out)
+{
+    if (strcmp(key, "sprint") != 0) return 0;
+    *out = sprintSetting;
+    return 1;
+}
 void osSyncPrintf(const char *format, ...)
 {
     va_list args;
@@ -275,6 +281,37 @@ static void testNativeN64Buttons(void)
     portWebTouchReset();
 }
 
+static void testStickSprint(void)
+{
+    /* Arrange: walk is bind 9; the over-dragged stick holds it like the Sprint button. */
+    OSContPad pad = {0};
+    const u32 walk = 1u << 9;
+    portWebTouchStickSprint(1);
+    actionBits = 0;
+    portWebTouchPoll(&pad);
+    assert(actionBits == walk);
+    /* With Sprint off, holding Walk would slow the player, so the stick does not. */
+    sprintSetting = 0;
+    actionBits = 0;
+    portWebTouchPoll(&pad);
+    assert(actionBits == 0);
+    /* The Sprint button still holds the bind it names. */
+    portWebTouchButton(TOUCH_SPRINT, 1);
+    portWebTouchPoll(&pad);
+    assert(actionBits == walk);
+    portWebTouchButton(TOUCH_SPRINT, 0);
+    sprintSetting = 1;
+    portWebTouchStickSprint(0);
+    actionBits = 0;
+    portWebTouchPoll(&pad);
+    assert(actionBits == 0);
+    /* Reset releases a stick sprint along with every other hold. */
+    portWebTouchStickSprint(1);
+    portWebTouchReset();
+    portWebTouchPoll(&pad);
+    assert(actionBits == 0);
+}
+
 int main(void)
 {
     OSContPad pad = {0};
@@ -289,6 +326,7 @@ int main(void)
     testValueEditSteps();
     testCaptureRequests();
     testPhoneText();
+    testStickSprint();
     portWebTouchButton(TOUCH_FIRE, 1);
     portWebTouchButton(TOUCH_AIM, 1);
     portWebTouchButton(TOUCH_RELOAD, 1);
@@ -339,6 +377,6 @@ int main(void)
     pad.button = 0;
     portWebTouchPoll(&pad);
     assert(pad.button == 0);
-    puts("Touch bridge: semantic buttons, independent holds, analog movement, menu sticks, slider and list steps, hold-drag, capture and text contexts, phone text, held volume arrows, reset, bounds and locked-look discard passed.");
+    puts("Touch bridge: semantic buttons, independent holds, analog movement, stick-overdrag sprint, menu sticks, slider and list steps, hold-drag, capture and text contexts, phone text, held volume arrows, reset, bounds and locked-look discard passed.");
     return 0;
 }

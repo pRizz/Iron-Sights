@@ -67,6 +67,18 @@ export function stickVector(x: number, y: number, radius: number) {
     return { x: x * scale, y: -y * scale };
 }
 
+// Distances from the stick's centre, as fractions of its width (the ring's edge
+// is 0.5). Dragging past ENGAGE sprints; the finger must come back inside RELEASE
+// to stop, so a thumb resting near the boundary cannot flicker in and out.
+export const STICK_SPRINT_ENGAGE = 0.7;
+export const STICK_SPRINT_RELEASE = 0.6;
+
+export function stickOverdrag(x: number, y: number, width: number, sprinting: boolean): boolean {
+    const distance = Math.hypot(x, y) / width;
+    if (!Number.isFinite(distance)) return false;
+    return distance > (sprinting ? STICK_SPRINT_RELEASE : STICK_SPRINT_ENGAGE);
+}
+
 // A tap may wobble, but a drag (even one that returns to its origin) never selects.
 export function menuTapMoved(x: number, y: number, startX: number, startY: number): boolean {
     return Math.hypot(x - startX, y - startY) > 10;
@@ -166,6 +178,9 @@ export function createTouchInput(
         },
         look(x: number, y: number) {
             engine.maybeGame()?._portWebTouchLook(x, y);
+        },
+        stickSprint(on: boolean) {
+            engine.maybeGame()?._portWebTouchStickSprint?.(Number(on));
         },
         step(count: number) {
             engine.maybeGame()?._portWebTouchStep?.(count);

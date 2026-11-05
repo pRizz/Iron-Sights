@@ -2346,7 +2346,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "aim_lock=%d\n", s_CfgAimLock);
     fprintf(f, "aim_mode=1\n");
     fprintf(f, "ads_spread=%d\nads_recoil=%d\n", PORT_ADS_ACCURACY_DEFAULT, PORT_ADS_ACCURACY_DEFAULT);
-    fprintf(f, "sprint=1\n");
+    fprintf(f, "sprint=1\nludicrous_sprint=0\n");
     fprintf(f, "hit_markers=1\n");
     fprintf(f, "hit_sounds=1\n");
     fprintf(f, "damage_indicators=1\n");

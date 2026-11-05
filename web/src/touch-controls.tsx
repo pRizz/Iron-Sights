@@ -4,13 +4,14 @@ import {
     onCleanup,
     onMount,
     Show,
+    untrack,
     For,
     type Accessor,
     type JSX,
 } from 'solid-js';
 import type { Engine } from './engine';
 import type { Capture } from './capture';
-import { stickVector, type TouchAction, type TouchInput } from './touch-input';
+import { stickOverdrag, stickVector, type TouchAction, type TouchInput } from './touch-input';
 import { createTouchContacts, suppressTouchGestures } from './touch-contacts';
 import { TouchMenu } from './touch-menu';
 import { createTouchHints } from './touch-hints';
@@ -48,6 +49,12 @@ export function TouchControls(props: Props) {
     const [more, setMore] = createSignal(false);
     const [aiming, setAiming] = createSignal(false);
     const [stick, setStick] = createSignal({ x: 0, y: 0 });
+    const [stickSprint, setStickSprint] = createSignal(false);
+    const sprintStick = (on: boolean) => {
+        if (on === stickSprint()) return;
+        setStickSprint(on);
+        props.input.stickSprint(on);
+    };
     let maybeMove: number | undefined;
     let maybeLook: { id: number; x: number; y: number } | undefined;
     let maybeHeldLook: { id: number; x: number; y: number } | undefined;
@@ -99,6 +106,7 @@ export function TouchControls(props: Props) {
             if (maybeMove === id) {
                 maybeMove = undefined;
                 setStick({ x: 0, y: 0 });
+                sprintStick(false);
                 props.input.move(0, 0);
             }
             if (maybeLook?.id === id) maybeLook = undefined;
@@ -135,9 +143,15 @@ export function TouchControls(props: Props) {
         maybeHeldLook = undefined;
         setAiming(false);
         setStick({ x: 0, y: 0 });
+        setStickSprint(false);
         setMore(false);
         props.input.reset();
     };
+    // Opening the watch or a menu mid-drag ends a stick sprint; it re-engages on
+    // the next move back in gameplay.
+    createEffect(() => {
+        if (menu()) untrack(() => sprintStick(false));
+    });
     createEffect(() => {
         if (!active()) clear();
     });
@@ -307,13 +321,13 @@ export function TouchControls(props: Props) {
     const move = (event: PointerEvent, target: HTMLElement) => {
         if (maybeMove !== event.pointerId) return;
         const box = target.getBoundingClientRect();
-        const vector = stickVector(
-            event.clientX - box.x - box.width / 2,
-            event.clientY - box.y - box.height / 2,
-            box.width * 0.4,
-        );
+        const x = event.clientX - box.x - box.width / 2;
+        const y = event.clientY - box.y - box.height / 2;
+        const vector = stickVector(x, y, box.width * 0.4);
         setStick(vector);
         props.input.move(vector.x, vector.y);
+        // Dragging well past the ring holds Sprint, as the Sprint button does.
+        sprintStick(!menu() && stickOverdrag(x, y, box.width, stickSprint()));
     };
     return (
         <Show when={active()}>
@@ -434,6 +448,7 @@ export function TouchControls(props: Props) {
                         class="touch-stick"
                         role="group"
                         aria-label="Move thumbstick"
+                        data-sprinting={stickSprint() ? 'true' : undefined}
                         onPointerDown={(event) => {
                             begin(event);
                             if (maybeMove === undefined) {

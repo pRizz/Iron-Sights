@@ -27,8 +27,10 @@
  *                  reload" fallback for that tap.
  *   walk / sprint  the Walk / Sprint bind (Left Shift) multiplies on-foot
  *                  forward/sideways speed by 1.5 with [display] sprint=1
- *                  (default), or by 0.5 with sprint=0. Aiming and crouching
- *                  prevent sprinting; ADS keeps its own half-speed movement.
+ *                  (default), or by 0.5 with sprint=0. [display]
+ *                  ludicrous_sprint=1 (default 0) makes the sprint 5x.
+ *                  Aiming and crouching prevent sprinting; ADS keeps its own
+ *                  half-speed movement.
  *                  Applied in MoveBond before knockback, for all input devices.
  *   prev/next weapon  moveData.weaponBackOffset / weaponForwardOffset in
  *                  bondviewProcessInput, exactly the A-tap / A+Z paths (gun.c
@@ -199,6 +201,7 @@ static s32 sDetonateUseReload = 1;
 static s32 sShootNextPrev = 1;
 static s32 sAimMode = 1; /* [display] aim_mode: 1 = ADS, 0 = red reticle */
 static s32 sSprint = 1;  /* [display] sprint: the Walk bind sprints instead */
+static s32 sLudicrousSprint = 0; /* [display] ludicrous_sprint: sprint at 5x, not 1.5x */
 static s32 sShootPrev[4];   /* shoot was down last tick */
 static s32 sShootTap[4];    /* shoot went down this tick */
 /* [input] no_aim_crouch (default OFF = vanilla): 1 = aim + down no longer
@@ -308,6 +311,10 @@ s32 portJoyPortSetOption(const char *key, const char *value)
     if (portAdsAccuracyOptionSet(key, atoi(value))) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = atoi(value) != 0;
+        return 1;
+    }
+    if (strcmp(key, "ludicrous_sprint") == 0) {
+        sLudicrousSprint = atoi(value) != 0;
         return 1;
     }
     if (strcmp(key, "aim_mode") == 0) {
@@ -457,6 +464,10 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
         *out = sSprint;
         return 1;
     }
+    if (strcmp(key, "ludicrous_sprint") == 0) {
+        *out = sLudicrousSprint;
+        return 1;
+    }
     if (strcmp(key, "aim_mode") == 0) {
         *out = sAimMode;
         return 1;
@@ -488,6 +499,10 @@ s32 portJoyPortOptionSet(const char *key, s32 v)
     if (portAdsAccuracyOptionSet(key, v)) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = v != 0;
+        return 1;
+    }
+    if (strcmp(key, "ludicrous_sprint") == 0) {
+        sLudicrousSprint = v != 0;
         return 1;
     }
     if (strcmp(key, "aim_mode") == 0) {
@@ -1246,7 +1261,7 @@ f32 portJoyPortMoveScale(s32 crouched)
     }
     if (sHeld[pad][PORTACT_WALK]) {
         if (!sSprint) return 0.5f;
-        if (!crouched && !g_CurrentPlayer->insightaimmode) return 1.5f;
+        if (!crouched && !g_CurrentPlayer->insightaimmode) return sLudicrousSprint ? 5.0f : 1.5f;
     }
     return 1.0f;
 }
