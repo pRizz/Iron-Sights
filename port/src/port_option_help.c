@@ -27,8 +27,6 @@ static const struct PortOptHelp sHelp[] = {
     { "head_roll",          "Camera tilt and breathing sway." },
 
     /* PORT OPTIONS */
-    { "texture_pack",       "HD by default. Original, HD or 4K; missing packs and unmatched textures use originals." },
-    { "hd_hud_icons",       "Community HD ammo icons by intermissionfb; Off shows the originals." },
     { "unlock_all",         "Unlocks all missions and cheats, still saves progress." },
     { "fix_shootthrough",   "Fixes shots passing through some walls." },
     { "distance_fading",    "Distant props and characters fade out." },

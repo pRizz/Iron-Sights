@@ -57,7 +57,6 @@ jobs:
           MIDAS_BUFFER_SANITIZE=1 bash scripts/port/test_buffers.sh
           bash scripts/port/test_build_time.sh
           MIDAS_SAVE_TEST_I686=1 bash scripts/port/test_save_transfer.sh
-          MIDAS_HD_TEST_I686=1 bash scripts/port/test_hd_textures.sh
           bash scripts/port/test_upstream_merge.sh
           python3 scripts/port/test_native_tool_launchers.py
           bash scripts/port/test_hud.sh
@@ -71,36 +70,13 @@ jobs:
           bash scripts/port/test_mission_times.sh
           bash scripts/port/test_states.sh
           python3 scripts/port/test_distribution.py
-          python3 scripts/port/test_texture_pack_distribution.py
-          python3 scripts/port/test_linux_hd_launcher.py
+          python3 scripts/port/test_linux_launcher.py
           python3 scripts/port/test_steam_art.py
           python3 scripts/port/test_sentry_tools.py
           python3 scripts/port/test_ci_dependencies.py
           python3 scripts/port/test_enhanced_fonts.py
-          python3 scripts/port/test_hd_ammo_icons.py
           python3 scripts/port/test_hand_gallery.py
           python3 scripts/port/hand_gallery.py verify
-
-  hd-artwork:
-    needs: tests
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-      - name: Prepare and verify shared campaign HD artwork
-        run: |
-          python3 -m pip install --target "$RUNNER_TEMP/texture-tools" Pillow==12.0.0
-          PYTHONPATH="$RUNNER_TEMP/texture-tools" python3 scripts/port/test_texture_pack_preparation.py
-          PYTHONPATH="$RUNNER_TEMP/texture-tools" python3 scripts/port/prepare_texture_pack.py --download --scope levels --archive "$RUNNER_TEMP/ge007-hd.zip" --output build_hd/TexturePacks/hd.istex
-          bash scripts/port/test_hd_textures.sh build_hd/TexturePacks/hd.istex
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: native-hd-artwork
-          path: build_hd/TexturePacks/*
-          if-no-files-found: error
-          retention-days: 30
 
   sentry-sdk:
     needs: tests
@@ -120,7 +96,7 @@ jobs:
           retention-days: 30
 
   windows:
-    needs: [tests, sentry-sdk, hd-artwork]
+    needs: [tests, sentry-sdk]
     # Publishing is restricted to main; compilation itself needs no ROM or secrets.
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
@@ -202,10 +178,6 @@ jobs:
           cat build_win/ccache-stats.txt >> "$GITHUB_STEP_SUMMARY"
           git diff --exit-code HEAD
           python3 -c "import json; m=json.load(open('build_win/generated/build-info.json')); assert m['ci'] and not m['dirty']"
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: native-hd-artwork
-          path: build_win/Data/TexturePacks
       - name: Upload exact Windows debug information and source context
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
@@ -232,7 +204,7 @@ jobs:
           retention-days: 30
 
   linux:
-    needs: [tests, hd-artwork]
+    needs: tests
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
@@ -241,11 +213,6 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      # Create these directories as the runner before Docker creates build output as root.
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: native-hd-artwork
-          path: build_linux_ci/Data/TexturePacks
       - name: Build pinned Linux baseline image
         run: docker build -t midas-linux-release -f scripts/port/linux-release.Dockerfile .
       - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

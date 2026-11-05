@@ -84,8 +84,6 @@ Successful `main` builds deploy automatically to GitHub Pages. See [compatibilit
 - **Shift to sprint:** hold Left Shift to sprint; a gameplay setting can restore the original slow-walk behavior.
 - **Sharper sights and combat feedback:** smooth reticles, optional hit markers, and directional damage indicators.
 - **Enhanced fonts:** smooth, high-resolution community fonts for menus and HUD text, enabled by default in **Gameplay > Iron Sights > System > Enhanced Fonts**. [Details and credits](scripts/port/enhanced_fonts.md).
-- **Native campaign HD textures:** HD is enabled by default for compressed environment artwork by intermissionfb across the campaign. Missing packs and unsupported textures fall back to the originals; existing saved preferences are preserved. Choose **Gameplay > Iron Sights > System > Texture Pack > Original** to opt out. HD and optional 4K packs can be replaced without rebuilding the executable. [Scope, preparation and credits](scripts/port/hd_textures.md).
-- **HD ammo icons:** the HUD's ammo-type icons use intermissionfb's HD art from GoldenEye 007 HD, built into every build of the game, including the browser, and enabled by default in **Gameplay > Iron Sights > System > HD HUD Icons** (independent of Texture Pack). Credits are in About / Build Info, `HD-Ammo-Icons-NOTICE.txt` and the browser site's third-party notices.
 - **Objective notifications:** named alerts show when mission objectives are completed or failed.
 - **Weapon inventory HUD:** a compact strip highlights your selected weapon, supports text or rendered model icons, and fades while idle.
 - **Always-visible health and armor:** persistent gauges become thinner and dimmer between hits; the original temporary display is also available.

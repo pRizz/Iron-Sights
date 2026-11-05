@@ -7041,16 +7041,10 @@ Gfx *microcode_generation_ammo_related(Gfx *gdl, struct sImageTableEntry *tconfi
     gDPSetPrimColor(gdl++, 0, 0, 0, 0, 0, 0);
     gDPFillRectangle(gdl++, ((s32)(xy[0] - halfed[0])) - 1, ((s32)(xy[1] - halfed[1])) - 1, ((s32)(xy[0] + halfed[0])) + 1, ((s32)(xy[1] + halfed[1])) + 1);
 
-#ifndef TARGET_N64
-    gdl = portHudAmmoIconTag(gdl, tconfig); /* HD HUD Icons swaps the art by slot */
-#endif
     texSelect(&gdl, tconfig, (arg7 != 0) ? (2) : (1), 0, 0);
     /* The mine icon's flip orientation is vanilla (the N64 shows the shine on
      * top); its old one-pixel-too-long bug was fixed in draw_textured_rectangle. */
     display_image_at_position(&gdl, xy, halfed, tconfig->width, tconfig->height, 0, 0, 1, red, green, blue, alpha, 0 < tconfig->level, 0);
-#ifndef TARGET_N64
-    gdl = portHudAmmoIconTag(gdl, NULL);
-#endif
 
     gDPPipeSync(gdl++);
     gDPSetColorDither(gdl++, G_CD_BAYER);

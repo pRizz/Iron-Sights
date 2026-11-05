@@ -56,17 +56,7 @@ void portAboutOpen(void)
     portFormatBuildTime(builtAt, sizeof(builtAt), PORT_BUILD_TIME);
 
     snprintf(text, sizeof(text), "Iron Sights - a fork of Project Midas\n\nBuilt at: %s\nBuild: %s\nCommit: %s%s\nBranch: %s\nBuilder: %s\n\nWeapon icons: %s\n\n"
-        "Build details identify this executable. Verify the download's signed GitHub attestation for provenance."
-        "\n\nHD HUD ammo icons: GoldenEye 007 HD by intermissionfb."
-        "\nSource: github.com/GhostlyDark/GoldenEye-007-HD"
-#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
-        "\nOptional HD textures: GoldenEye 007 HD by intermissionfb."
-        "\nFont textures / technical assistance: GhostlyDark."
-        "\nDam environment prototype; original artwork rights remain with its authors."
-        "\nhttps://evilgames.eu/texture-packs/ge007-hd.htm"
-        "\nDEFLATE decoder: puff by Mark Adler."
-#endif
-        ,
+        "Build details identify this executable. Verify the download's signed GitHub attestation for provenance.",
         builtAt, PORT_BUILD_STRING, PORT_BUILD_SHA, PORT_BUILD_DIRTY ? " (modified source)" : "",
         PORT_BUILD_BRANCH, PORT_BUILD_CI ? "GitHub Actions" : "Local build - no CI attestation", portIconCacheStatus());
 #ifdef _WIN32

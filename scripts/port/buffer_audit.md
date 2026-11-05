@@ -81,8 +81,8 @@ reproducible overflow in them:
 - Native campaign backup/import: 4 MiB/256-file limits, bounded JSON nesting,
   canonical base64, checksums, path allowlists, case aliases, symlink rejection
   and staged replacement. Browser backup parsing and storage tests also ran.
-- HD texture packs: entry/count/dimension/compressed/decoded limits, checked
-  metadata arithmetic, bounded puff output and identity/checksum validation.
+- HD texture packs: covered when audited; the loader and its tests were later
+  removed with the feature (FORK-033).
 - BMP/font/icon loading: dimension/row/file spans, bounded native icon records
   and decoded sizes. These codecs have unit coverage; that is not a complete
   fuzzing campaign against every image format.
@@ -142,7 +142,6 @@ ROM-free targeted tests (also wired into Windows release CI):
 MIDAS_BUFFER_SANITIZE=1 bash scripts/port/test_buffers.sh
 bash scripts/port/test_states.sh
 MIDAS_SAVE_TEST_I686=1 bash scripts/port/test_save_transfer.sh
-MIDAS_HD_TEST_I686=1 bash scripts/port/test_hd_textures.sh
 ```
 
 The new suite covers exact fit and one-past boundaries, wrapping sizes,

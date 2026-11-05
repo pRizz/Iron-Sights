@@ -406,7 +406,6 @@ if(GE_VIDEO)
         port/fast3d/about.cpp
         port/fast3d/weapon_cache.cpp
         port/fast3d/enhanced_fonts.cpp
-        port/fast3d/hd_ammo_icons.cpp
         port/fast3d/gfx_pc.cpp
         port/fast3d/gfx_cc.cpp
         port/fast3d/gfx_opengl.cpp
@@ -435,17 +434,6 @@ if(GE_VIDEO)
             target_compile_definitions(ge_save_transfer PRIVATE _FILE_OFFSET_BITS=64 _TIME_BITS=64)
         endif()
         list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_save_transfer>)
-        # Hosted C++ headers must not resolve sched.h/limits.h to the N64 SDK.
-        # Keep this standard-library-only loader outside the game's include paths.
-        add_library(ge_hd_textures OBJECT port/fast3d/hd_textures.cpp
-            port/fast3d/hd_texture_format.cpp port/fast3d/third_party/puff/puff.c)
-        set_target_properties(ge_hd_textures PROPERTIES
-            INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/port/include")
-        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-            # i686 stat otherwise rejects large inode numbers on modern mounts.
-            target_compile_definitions(ge_hd_textures PRIVATE _FILE_OFFSET_BITS=64 _TIME_BITS=64)
-        endif()
-        list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_hd_textures>)
     endif()
     add_compile_definitions(GE_VIDEO=1)
 else()

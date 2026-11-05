@@ -15,7 +15,6 @@ param(
     [switch]$ToastFade,
     [switch]$SmallHud,
     [switch]$Chop,
-    [switch]$OriginalAmmoIcons,
     [ValidateRange(0,1023)][int]$BestSeconds = 0,
     [string]$Stage = 'dam',
     [ValidateRange(0,3)][int]$Difficulty = 0,
@@ -38,7 +37,6 @@ if (!$AutomaticHealth -and !$Disabled) { $ini = @('[display]', 'always_health=1'
 if ($AutomaticHealth) { $ini = @('[display]', 'always_health=0') + $ini }
 if ($MissionTimer) { $ini = @('[display]', 'mission_timer=1') + $ini }
 if ($SmallHud) { $ini = @('[display]', 'hud_scale=1') + $ini }
-if ($OriginalAmmoIcons) { $ini = @('[display]', 'hd_hud_icons=0') + $ini }
 if ($Disabled) { $ini = @('[display]', 'hit_markers=0', 'damage_indicators=0', 'objective_notifications=0', 'weapon_hud=0', 'always_health=0') + $ini }
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value $ini
 $auditEnv = @{

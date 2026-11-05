@@ -17,19 +17,9 @@ from http.server import ThreadingHTTPServer
 from test_sentry_windows import Receiver
 
 
-def verify_artwork(read):
-    prefix = "Data/TexturePacks/"
-    pack = read(prefix + "hd.istex")
-    report = json.loads(read(prefix + "hd.json"))
-    provenance = json.loads(read("build-inputs.json"))["hd_textures"]
-    assert pack[:8] == b"ISTEX001" and len(pack) == report["pack_bytes"]
-    assert int.from_bytes(pack[8:12], "little") == report["keys"]
-    assert hashlib.sha256(pack).hexdigest() == provenance["pack_sha256"]
-    for name in ("HD-Textures-NOTICE.txt", "puff-LICENSE.txt"):
-        assert read(prefix + name)
-    sums = dict(line.split("  ", 1)[::-1] for line in read("SHA256SUMS.txt").decode().splitlines())
-    assert sums[prefix + "hd.istex"] == provenance["pack_sha256"]
-    return provenance["pack_sha256"]
+def assert_no_artwork(names):
+    # Third-party texture packs are external mods the player adds, never release contents.
+    assert not any("Data/TexturePacks" in name for name in names)
 
 
 def wait_upload(server, count, seconds=6):
@@ -64,14 +54,14 @@ def check(package, appimage, steamdeck, output):
             game = stream.extractfile("Iron-Sights-linux-i686/IronSights").read()
             elf = game[:20]
             assert elf[:5] == b"\x7fELF\x01" and elf[18:20] == b"\x03\x00"
-            artwork_hash = verify_artwork(lambda name: stream.extractfile("Iron-Sights-linux-i686/" + name).read())
+            assert_no_artwork(names)
         with zipfile.ZipFile(steamdeck) as stream:
             names = stream.namelist()
             prefix = "Iron-Sights-steamdeck-i686/"
             assert all(name.startswith(prefix) and ".." not in Path(name).parts for name in names)
             assert not any(Path(name).name == "midas.ini" or name.endswith((".z64", ".n64", ".v64", ".debug", ".envelope")) for name in names)
             assert hashlib.sha256(stream.read(prefix + "IronSights")).digest() == hashlib.sha256(game).digest()
-            assert verify_artwork(lambda name: stream.read(prefix + name)) == artwork_hash
+            assert_no_artwork(names)
             sums = dict(line.split("  ", 1)[::-1] for line in stream.read(prefix + "SHA256SUMS.txt").decode().splitlines())
             for name in ("run.sh", "STEAM-DECK.txt", "set-steam-art.py", "iron-sights.png", "steam-art/cover.png",
                          "steam-art/banner.png", "steam-art/hero.png", "steam-art/logo.png"):
@@ -81,7 +71,7 @@ def check(package, appimage, steamdeck, output):
         extracted.mkdir()
         subprocess.run([str(appimage.resolve()), "--appimage-extract"], cwd=extracted,
                        stdout=subprocess.DEVNULL, check=True, timeout=60)
-        assert verify_artwork(lambda name: (extracted / "squashfs-root" / name).read_bytes()) == artwork_hash
+        assert_no_artwork(str(path) for path in (extracted / "squashfs-root").rglob("*"))
         for name in ("enabled", "healthy", "optout", "toggle-off", "override-off", "missing-sdk", "symlink-cache", "offline-retry", "appimage", "steamdeck"):
             directory = work / name
             directory.mkdir()
@@ -150,7 +140,7 @@ def check(package, appimage, steamdeck, output):
         assert event["extra"] == dict(stage=-1, menu=-1, frame=0)
         image = next(image for image in event["debug_meta"]["images"] if image["code_file"].endswith("/IronSights"))
         assert image["debug_id"] and event["tags"]["architecture"] == "i686"
-        result = dict(cases=cases, hd_pack_sha256=artwork_hash, event_id=event["event_id"], debug_id=image["debug_id"], bytes=len(body))
+        result = dict(cases=cases, event_id=event["event_id"], debug_id=image["debug_id"], bytes=len(body))
         (output / "results.json").write_text(json.dumps(result, indent=2) + "\n")
         print(json.dumps(result, indent=2))
     finally:

@@ -100,16 +100,10 @@ alone does not provide that assurance.
 
 ## What is built and shipped
 
-The trusted-main `hd-artwork` job prepares the pinned campaign environment
-pack once, verifies every keyed image with the native decoder, and uploads
-`native-hd-artwork`. Windows and Linux consume the same artifact. Their explicit
-packaging allowlists require `hd.istex`, its matching JSON provenance and artist/
-decoder notices; missing artwork or inconsistent headers/reports fail packaging.
-All three Linux formats include those files and record the pack SHA256 in
-`build-inputs.json` and package checksums. Packaged smoke tests inspect the actual
-AppImage squashfs and Steam Deck ZIP as well as the tarball. AppRun exposes the
-bundled artwork root separately from writable player files, so user overrides work without copying
-the bundled pack or replacing saved preferences. See [hd_textures.md](hd_textures.md).
+Releases contain no third-party texture packs: those stay external mods that
+players add themselves. The Windows and Linux packaging allowlists never copy
+`Data/TexturePacks`, and the packaged smoke tests check that the tarball,
+AppImage squashfs and Steam Deck ZIP contain none.
 
 The build uses a fresh GitHub-hosted Ubuntu 24.04 runner, the checked-out
 commit, the SHA256-pinned SDL2 2.30.11 package, and runner-installed

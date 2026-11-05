@@ -29,5 +29,5 @@ Steam Deck has not yet been used to validate this package.
 
 Data, saves, profiles and midas.ini stay beside IronSights. Preserve them when
 updating. If you move the folder, run set-steam-art.py again and re-add the
-shortcut. See START-HERE.txt for settings, HD artwork, crash reporting and
+shortcut. See START-HERE.txt for settings, crash reporting and
 verification. The Linux tarball and AppImage remain alternatives.

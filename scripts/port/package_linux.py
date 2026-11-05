@@ -11,7 +11,6 @@ import tarfile
 import zipfile
 
 from linux_build import download
-from texture_pack_distribution import hd_provenance, texture_files
 
 ROOT = Path(__file__).resolve().parents[2]
 RUNTIME_URL = "https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-i686"
@@ -79,16 +78,12 @@ def package_steamdeck(appdir, output):
 
 
 def package(build, output):
-    textures = build / "Data/TexturePacks"
-    artwork = texture_files(textures)
     output.mkdir(parents=True, exist_ok=True)
     appdir = output / "Iron-Sights-linux-i686.AppDir"
     if appdir.exists():
         raise ValueError("Use a fresh packaging directory; refusing to reuse an AppDir")
     for name in PLAYER_FILES:
         copy(build / name, appdir / name)
-    for name, path in artwork.items():
-        copy(path, appdir / "Data/TexturePacks" / name)
     for source, name in (("LICENSE", "LICENSE.txt"), ("port/include/icon.png", "iron-sights.png"),
                          ("scripts/port/crash_reporting.md", "Crash-Reporting.md"),
                          ("scripts/port/linux/START-HERE.txt", "START-HERE.txt"),
@@ -97,8 +92,7 @@ def package(build, output):
                          ("scripts/port/release/DATA-README.txt", "Data/README.txt"),
                          ("port/fast3d/fonts/LICENSE.txt", "Enhanced-Fonts-LICENSE.txt"),
                          ("port/fast3d/third_party/save-backup-LICENSE.txt", "Save-Transfer-LICENSE.txt"),
-                         ("port/fast3d/fonts/NOTICE.txt", "Enhanced-Fonts-NOTICE.txt"),
-                         ("port/fast3d/hud_icons/NOTICE.txt", "HD-Ammo-Icons-NOTICE.txt")):
+                         ("port/fast3d/fonts/NOTICE.txt", "Enhanced-Fonts-NOTICE.txt")):
         copy(ROOT / source, appdir / name)
     copy(build / "generated/build-info.json", appdir / "build-info.json")
     paths = bundle_libraries(build, appdir)
@@ -125,7 +119,6 @@ def package(build, output):
                 bundled_libraries={name: hashlib.sha256((appdir / "lib" / name).read_bytes()).hexdigest() for name in paths},
                 appimage_runtime_sha256=RUNTIME_SHA256,
                 appimage_runtime_source=RUNTIME_SOURCE,
-                hd_textures=hd_provenance(textures),
                 reporting=json.loads((build / "sentry-build.json").read_text()))
     (appdir / "build-inputs.json").write_text(json.dumps(info, indent=2) + "\n")
     checksums(appdir)

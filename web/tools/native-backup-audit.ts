@@ -65,7 +65,7 @@ try {
             incoming.push({
                 path: 'midas.ini',
                 bytes: new TextEncoder().encode(
-                    '[display]\nfullscreen=window\ntexture_pack=0\nalways_health=0\n[diagnostics]\ncrash_reporting=0\n[input]\nmouse=1\n',
+                    '[display]\nfullscreen=window\nalways_health=0\n[diagnostics]\ncrash_reporting=0\n[input]\nmouse=1\n',
                 ),
             });
             incoming.push({

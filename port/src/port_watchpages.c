@@ -177,11 +177,7 @@ static const struct PortWatchRowDef sIsHud[] = {
 };
 static const struct PortWatchRowDef sIsSystem[] = {
     { PWROW_ACTION, NULL, "About / Build Info\n", 101, 0 },
-#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
-    { PWROW_OPT, "texture_pack", NULL, 0, 0 },
-#endif
     { PWROW_OPT,       "enhanced_fonts",   NULL, 0, 0 },
-    { PWROW_OPT,       "hd_hud_icons",     NULL, 0, 0 },
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     { PWROW_OPT,       "crash_reporting",  NULL, 0, 0 },
 #endif
@@ -2702,7 +2698,6 @@ static const struct PortPresetEntry sPreset[] = {
     { "anisotropy",     0,            16   },
     { "filter_2d",      1,            0    },
     { "enhanced_fonts", 0,            1    },
-    { "hd_hud_icons",   0,            1    },
     { "high_lod",       1,            1    },
     { "hfov_wide",      90,           90   },  /* 90 = vertical 60, vanilla (videoHfovWide) */
     { "maxfps",         60,           120  },

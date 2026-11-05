@@ -34,13 +34,12 @@ class LinuxLauncher(unittest.TestCase):
         with tempfile.TemporaryDirectory() as work:
             root = Path(work)
             app = root / "bundle with spaces"
-            (app / "Data/TexturePacks").mkdir(parents=True)
+            (app / "Data").mkdir(parents=True)
             shutil.copy2(HERE / "linux/AppRun", app / "AppRun")
             for name in ("gamecontrollerdb.txt", "gamecontrollerdefault.txt", "midas_ini_help.txt", "Data/shaders_base.txt"):
                 (app / name).write_text("packaged default")
-            (app / "Data/TexturePacks/hd.istex").write_text("bundled artwork")
             exe = app / "IronSights"
-            exe.write_text('#!/bin/sh\nprintf \'%s\\n\' "$GE_DATA_ROOT" "$GE_BUNDLED_TEXTURE_ROOT" "$@"\n')
+            exe.write_text('#!/bin/sh\nprintf \'%s\\n\' "$GE_DATA_ROOT" "$@"\n')
             exe.chmod(0o555)
             app.chmod(0o555)
             env = {k: v for k, v in os.environ.items() if not k.startswith("GE_") and k != "APPDIR"}
@@ -51,12 +50,11 @@ class LinuxLauncher(unittest.TestCase):
                         env["GE_DATA_ROOT"] = override
                     data = Path(override) if override else root / "xdg/iron-sights"
                     data.mkdir(parents=True)
-                    (data / "midas.ini").write_text("[display]\ntexture_pack=0\n")
-                    env["GE_BUNDLED_TEXTURE_ROOT"] = "/stale-bundle"
+                    (data / "midas.ini").write_text("[display]\nfullscreen=window\n")
                     result = subprocess.check_output(["sh", str(app / "AppRun"), "--argument with spaces"], cwd=root, env=env, text=True)
-                    self.assertEqual(result.splitlines(), [str(data), str(app / "Data/TexturePacks"), "--argument with spaces"])
-                    self.assertFalse((data / "Data/TexturePacks").exists())
-                    self.assertEqual((data / "midas.ini").read_text(), "[display]\ntexture_pack=0\n")
+                    self.assertEqual(result.splitlines(), [str(data), "--argument with spaces"])
+                    self.assertEqual((data / "Data/shaders_base.txt").read_text(), "packaged default")
+                    self.assertEqual((data / "midas.ini").read_text(), "[display]\nfullscreen=window\n")
                 env["GE_DATA_ROOT"] = "relative"
                 self.assertNotEqual(subprocess.run(["sh", str(app / "AppRun")], env=env, capture_output=True).returncode, 0)
             finally:

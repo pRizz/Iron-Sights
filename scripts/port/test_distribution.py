@@ -9,8 +9,6 @@ import tempfile
 import unittest
 import zipfile
 
-from test_texture_pack_distribution import fixture as texture_fixture
-
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[1]
 
@@ -65,9 +63,9 @@ class Distribution(unittest.TestCase):
                 path=build/source;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b"test file")
             for source in ("Data/user.z64","Data/Saves/eeprom.bin","Data/Profiles/user.geprofile","midas.ini","previous.exe","ProjectMidas.exe"):
                 path=build/source;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b"must not ship")
+            # Third-party texture packs are external mods; a stray copy in the build never ships.
             textures=build/"Data/TexturePacks";textures.mkdir(parents=True)
-            texture_fixture(textures)
-            (textures/"unrelated.zip").write_text("must not ship")
+            (textures/"hd.istex").write_text("must not ship")
             license=root/"SDL-LICENSE";license.write_text("license fixture")
             path=packager.package(build,out,sdl_license=license)
             with zipfile.ZipFile(path) as archive:
@@ -76,13 +74,10 @@ class Distribution(unittest.TestCase):
                 self.assertIn("IronSights.exe",names);self.assertNotIn("ProjectMidas.exe",names)
                 self.assertIn("build-info.json",names);self.assertIn("SHA256SUMS.txt",names)
                 self.assertIn("Enhanced-Fonts-LICENSE.txt",names);self.assertIn("Enhanced-Fonts-NOTICE.txt",names)
-                self.assertIn(b"intermissionfb",archive.read("HD-Ammo-Icons-NOTICE.txt"))
                 self.assertIn("Save-Transfer-LICENSE.txt",names)
                 self.assertIn(b"Copyright 2011-2014 Kazuho Oku",archive.read("Save-Transfer-LICENSE.txt"))
                 self.assertIn(b"Copyright (C) 2017 okdshin",archive.read("Save-Transfer-LICENSE.txt"))
-                self.assertIn("Data/TexturePacks/hd.istex",names)
-                self.assertIn("Data/TexturePacks/HD-Textures-NOTICE.txt",names)
-                self.assertNotIn("Data/TexturePacks/unrelated.zip",names)
+                self.assertFalse(any(n.startswith("Data/TexturePacks/") for n in names))
                 self.assertFalse(any(n.endswith((".z64",".bin",".geprofile")) for n in names))
                 self.assertNotIn("midas.ini",names);self.assertNotIn("previous.exe",names)
             previous=path.read_bytes();packager.package(build,out,sdl_license=license)

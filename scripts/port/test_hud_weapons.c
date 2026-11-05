@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <stdarg.h>
 #include "../../port/src/port_hud_weapons.c"
-#include "../../port/src/port_hud_ammo.c"
 /* The decomp's minimal string.h omits these CRT declarations. */
 extern int strcmp(const char *a, const char *b);
 extern void *memset(void *dst, int value, size_t size);
@@ -177,28 +176,6 @@ static void testNames(void)
     assert(strcmp(tiny, "AR33 ") == 0);
 }
 
-static sImageTableEntry ammoImages[14];
-struct sImageTableEntry *ammo9mmimage = &ammoImages[0], *rifleammoimage = &ammoImages[1],
-    *shotgunammoimage = &ammoImages[2], *knifeammoimage = &ammoImages[3], *glaunchammoimage = &ammoImages[4],
-    *rocketammoimage = &ammoImages[5], *genericmineammoimage = &ammoImages[6], *grenadeammoimage = &ammoImages[7],
-    *magnumammoimage = &ammoImages[8], *goldengunammoimage = &ammoImages[9], *remotemineammoimage = &ammoImages[10],
-    *timedmineammoimage = &ammoImages[11], *proxmineammoimage = &ammoImages[12], *tankammoimage = &ammoImages[13];
-
-static void testAmmoIconTags(void)
-{
-    Gfx list[2], *end;
-    sImageTableEntry other;
-    s32 i;
-    /* Slots follow portAmmoIconPtr's order, which the embedded art shares. */
-    for (i = 0; i < 14; i++) assert(portHudAmmoIconSlot(&ammoImages[i]) == i);
-    assert(portHudAmmoIconSlot(&other) == -1 && portHudAmmoIconSlot(NULL) == -1);
-    /* The tag carries slot + 1; NULL (or an unknown image) clears it. */
-    end = portHudAmmoIconTag(list, tankammoimage);
-    end = portHudAmmoIconTag(end, NULL);
-    assert(end == list + 2);
-    assert(list[0].words.w1 == 0x5B00000Eu && list[1].words.w1 == 0x5B000000u);
-}
-
 static void testRifleButt(void)
 {
     char name[64];
@@ -228,7 +205,6 @@ int main(void)
     testOrphanPairAndCapacity();
     testNames();
     testRifleButt();
-    testAmmoIconTags();
-    puts("HUD weapon card checks passed: picked-up pairs, All Guns doubles, selection, orphan pairs, capacity, names, rifle butt, ammo icon tags.");
+    puts("HUD weapon card checks passed: picked-up pairs, All Guns doubles, selection, orphan pairs, capacity, names, rifle butt.");
     return 0;
 }

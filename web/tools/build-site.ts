@@ -20,7 +20,6 @@ const notices = [
     ['Port dependencies', '../../tools/THIRD_PARTY_NOTICES.txt'],
     ['Enhanced fonts: license', '../../port/fast3d/fonts/LICENSE.txt'],
     ['Enhanced fonts: notice', '../../port/fast3d/fonts/NOTICE.txt'],
-    ['HD HUD ammo icons: notice', '../../port/fast3d/hud_icons/NOTICE.txt'],
     ['Emscripten / C / C++ / SDL2 runtime', '../../build/web/video/runtime-notices.txt'],
     ['SolidJS', '../node_modules/solid-js/LICENSE'],
     ['Three.js', '../node_modules/three/LICENSE'],

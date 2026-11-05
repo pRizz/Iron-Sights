@@ -199,75 +199,55 @@ read Hits shown: 100 and Not recorded: 18 (two shots struck a gun or hat). On li
 game's bearing called clearly front or back (eight front, two back, on pelvis
 and limbs) got the same side.
 
-### FORK-047 — HD HUD ammo icons
+### FORK-047 — HD HUD ammo icons (removed)
 
-**Status:** Implemented in every target (Windows, Linux, browser and Xbox).
+**Status:** Removed on 2026-11-05, the day it was added. No target carries the
+art, setting or renderer hook.
 
-Adds default-on **Gameplay > Iron Sights > System > HD HUD Icons**
-(`[display] hd_hud_icons=1`) to the Options folder and the watch, next to
-Enhanced Fonts. It replaces the HUD's ammo-type icons beside the ammo counters
-with intermissionfb's HD ammo art from the GoldenEye 007 HD release
-(v2025.12.30, `UI/Ammo`), requested in issue #6. It is independent of the
-environment **Texture Pack** (FORK-033), so Original environments can keep HD
-ammo icons. The Nintendo 64 watch preset turns it off and Modern turns it on,
-like Enhanced Fonts. Off restores the original point-sampled icons.
+Commit `5a3b7c0` embedded intermissionfb's HD ammo art from the GoldenEye 007 HD
+release (v2025.12.30, `UI/Ammo`) in every target. It replaced the HUD's
+ammo-type icons beside the ammo counters, switched by a default-on **Gameplay >
+Iron Sights > System > HD HUD Icons** setting (`[display] hd_hud_icons`),
+requested in issue #6. The source repository has no license. Asked to add one
+([GhostlyDark/GoldenEye-007-HD#3](https://github.com/GhostlyDark/GoldenEye-007-HD/issues/3)),
+its maintainer replied on 2026-11-05 that integrating the textures directly in a
+port like Iron Sights is explicitly disallowed: texture packs should stay
+external mods added by the user and kept updated by their maintainers. The
+owner then removed all of the pack's art, along with FORK-033.
 
-The art is embedded in the executable: 13 images, resampled to eight times each
-native icon size and stored as lossless RGBA run-length packets
-(`port_icon_decode.h`), about 400 KB. Unlike FORK-033's sidecar pack, this is
-not loaded from `Data/TexturePacks`. The source has no explicit redistribution
-license; the owner chose to embed these icons on 2026-11-05 and extended that
-to every target, including the public browser build, the same day. Attribution ships as
-`HD-Ammo-Icons-NOTICE.txt` in Windows and Linux releases, in the browser site's
-`THIRD_PARTY_NOTICES.txt` (`web/tools/build-site.ts`), in About / Build Info
-and in `build-inputs.json`; the port's MIT license does not relicense it. A
-licensing request was opened on the source repository on 2026-11-05
-(https://github.com/GhostlyDark/GoldenEye-007-HD/issues/3).
+The removal reverts that commit: the embedded art, decoder/canvas, generator,
+provenance and notice files (`port/fast3d/hud_icons/`, `hd_ammo_icons.*`,
+`generate_hd_ammo_icons.py`), the `0x5B` slot tag in `gunfire.c`
+(`port_hud_ammo.c`), the renderer cache key and smooth-sampling exception in
+`gfx_pc.cpp`, the setting, rows, preset and help, the About credit, the
+Windows/Linux `HD-Ammo-Icons-NOTICE.txt`, the browser site's notice entry, the
+`build-inputs.json` record, `audit_hud.ps1 -OriginalAmmoIcons` and the icon
+tests. The HUD draws the original ammo icons again on every target. An existing
+`hd_hud_icons=` line in midas.ini is ignored as an unknown key (logged once at
+startup). Releases published before the removal still contain the art; they
+were left in place for now.
 
-The pack names its ammo art by Rice texture CRC, but the game's 32-bit ammo
-icons do not reproduce those CRCs: a probe with an ammo-only HD pack logged
-misses for every ammo icon. Each image is therefore assigned to its HUD ammo
-slot (`portAmmoIconPtr` order) by eye: 9mm, rifle, shotgun, knife, grenade
-launcher, rocket, grenade, magnum, golden gun, remote/timed/proximity mines and
-tank shell (the release's six identical tank aliases are verified equal). The
-plain mine icon has no community art and stays original. A small hook in
-`microcode_generation_ammo_related` (`gunfire.c`) brackets the icon draw with a
-`0x5B` G_NOOP tag carrying the slot. The renderer keys that texture's cache entry
-by slot when the setting is on, uploads the art over a canvas the size of the
-padded native tile (so native UVs, rectangle, flips, colours and the dark
-backing box are unchanged) and samples it smoothly, as Enhanced Fonts does.
-Toggling the setting invalidates bindings at the next frame. The art, setting,
-rows and preset are unconditional, so the browser and Xbox builds carry them
-too (both keep omitting Texture Pack, whose packs are sidecar files). There is
-no Xbox packaging script, so its credit is About / Build Info only, and the
-Xbox build and its memory budget have not been checked with the art.
+A right-edge smear reported on issue #6 came from this feature: the in-shader
+clamp works in native texels, so on the 8x art it skipped the last half native
+texel of icons with padded TMEM rows (5- and 7-texel widths). It went away with
+the feature and needed no separate fix.
 
-**Sources:** [generator](scripts/port/generate_hd_ammo_icons.py),
-[embedded art and provenance](port/fast3d/hud_icons/),
-[decoder/canvas](port/fast3d/hd_ammo_icons.cpp), [slot tag](port/src/port_hud_ammo.c),
-[draw hook](src/game/gunfire.c), [renderer hooks](port/fast3d/gfx_pc.cpp),
-[settings bridge](port/src/video.c), [option row](port/src/port_options.c),
-[frontend row](src/game/front.c), [watch row and preset](port/src/port_watchpages.c),
-[help](port/src/port_option_help.c), [About credit](port/fast3d/about.cpp),
-[Windows](scripts/port/package_windows.py)/[Linux](scripts/port/package_linux.py)/[browser](web/tools/build-site.ts) notices,
-[release inputs](scripts/port/release_inputs.py).
-**Regeneration:** with Pillow, `python scripts/port/generate_hd_ammo_icons.py
---archive <pinned ge007-hd.zip>` (`--download` fetches the pinned release); it
-verifies the archive SHA256 and rewrites `hd_ammo_icons.inc`, `sources.json` and
-`NOTICE.txt`.
-**Checks:** [ammo icon tests](scripts/port/test_hd_ammo_icons.py) (table vs native
-sizes and provenance, RLE round trip, notice credits, and a C++ decoder/canvas
-test) run in CI; `test_hud.sh` covers slot mapping and the tag words;
-`test_distribution.py` requires the release notice. `audit_hud.ps1
--OriginalAmmoIcons` captures the originals for comparison. Dam 1920x1080
-captures (All Guns) showed HD rifle, 9mm, rocket, remote mine, grenade and
-shotgun icons aligned beside the counters, against original rifle and remote
-mine controls. The Windows build, HUD, ammo icon, distribution and settings
-placement checks pass; the gallery regenerated with no changed image cells.
-The browser video build compiles with the art (the Wasm grows about 400 KB) and
-passes the payload signature audit; `bun test` and the assembled site's
-allowlist check pass, and its third-party notices include the ammo icon notice.
-The browser icons have not been captured in play.
+**Sources:** the revert of `5a3b7c0` across [renderer](port/fast3d/gfx_pc.cpp),
+[draw hook](src/game/gunfire.c), [settings bridge](port/src/video.c),
+[option row](port/src/port_options.c), [frontend row](src/game/front.c),
+[watch rows and preset](port/src/port_watchpages.c),
+[help](port/src/port_option_help.c), [About](port/fast3d/about.cpp),
+[Windows](scripts/port/package_windows.py)/[Linux](scripts/port/package_linux.py)/[browser](web/tools/build-site.ts)
+packaging, [release inputs](scripts/port/release_inputs.py), [CI](.github/workflows/windows-release.yml),
+[HUD tests](scripts/port/test_hud_weapons.c) and [HUD audit](scripts/port/audit_hud.ps1).
+**Checks:** The Windows build (Docker `goldeneye`, `build_win`) compiles and links
+without the art. `test_hud.sh` passes without the slot-tag cases; wardrobe, state,
+buffer and ADS regressions pass (ADS after the separate FORK-048 test-link fix),
+as do the distribution, settings placement and its tests, CI dependency, Steam
+art, enhanced font and gallery tests, the web package's `bun test` and the
+standards check. The regenerated gallery verifies 72 views and 38 icons with zero
+changed image cells. The original icons were not captured in play, and the
+browser build was left to CI.
 
 ### FORK-046 — Steam library artwork for the Steam Deck ZIP
 
@@ -375,7 +355,7 @@ subsections, in both the Options folder and the watch:
 | Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Sprint, Ludicrous Sprint |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction |
 | HUD Additions | Always Crosshair Size, Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
-| System | About / Build Info, Texture Pack (desktop), Enhanced Fonts, HD HUD Icons (FORK-047), Crash Reporting (Windows/Linux) |
+| System | About / Build Info, Enhanced Fonts, Crash Reporting (Windows/Linux) |
 
 The watch's Iron Sights page also holds the Suspend Points action, which moved
 there from the watch's Gameplay page. Rows left General Settings, HUD, Port
@@ -391,8 +371,8 @@ appended after Classic, titles, help lines and a `GE_MENU=zironsights` /
 `zaim` / `zfeedback` / `zhud` / `zsystem` harness (`i` was already the mission
 grid). The watch adds five pages before `PORTWATCH_CONTROLLER`, which moves the
 Control tab's `GE_WATCHPAGE` numbers up by five; Game Options pages keep theirs.
-The HUD, sight, HD texture and browser crosshair-size audits now open the new
-pages; the watch sight audit uses `GE_WATCHPAGE=3,12,0,0`.
+The HUD, sight and browser crosshair-size audits now open the new pages (as
+did the HD texture audit until FORK-033 was removed); the watch sight audit uses `GE_WATCHPAGE=3,12,0,0`.
 
 AGENTS.md now requires new fork settings to go on these pages. The ROM-free
 [placement check](scripts/port/settings_placement.py) treats every option key
@@ -409,7 +389,6 @@ ROM-free test step runs it and its tests.
 [help](port/src/port_option_help.c), [AGENTS.md](AGENTS.md),
 [standards overrides](standards-overrides.md), [hook](.githooks/pre-commit),
 [audits](scripts/port/audit_sights.ps1), [HUD audit](scripts/port/audit_hud.ps1),
-[HD audit](scripts/port/audit_hd_textures.ps1),
 [browser audit](web/tools/crosshair-size-audit.mjs), [README](README.md),
 [settings reference](tools/midas_ini_help.txt) and the feature guides that name
 menu paths.
@@ -1062,173 +1041,73 @@ manual formatter checks cover zero padding and a year boundary.
 Its gallery refresh matches all 72 views and 35 icons across two independent
 passes with zero changed image cells.
 
-### FORK-033 — Native campaign HD texture packs
+### FORK-033 — Native campaign HD texture packs (removed)
 
-**Status:** Native Windows/Linux OpenGL environment pack; HD is the fresh-config default.
+**Status:** Removed on 2026-11-05. No target loads, prepares or ships
+third-party texture packs.
 
-Adds an optional HD environment replacement path beyond upstream's inherited
-BMP pool-byte rewrites, which retain N64 resolution/palettes. **Gameplay > Iron Sights > System >
-Texture Pack** in the frontend and watch selects Original/HD/4K through saved
-`[display] texture_pack=0/1/2`. Web/Xbox omit this setting and replacement path.
-Native startup now requests HD (`1`) unless an existing saved value overrides it.
-First-run INI generation writes that same live preference, rather than a second
-hardcoded default. Missing packs retain original rendering while keeping the HD
-preference, so installing a pack later is detected automatically. Saved Original
-(`0`) and 4K (`2`) choices remain respected; users can opt out through the selector.
-HD uses a campaign environment subset, expanded from the original Dam prototype;
-Surface II and Bunker II share their earlier missions' environment art.
-4K accepts a separately prepared pack rather
-than claiming bundled 4K artwork. Missing, corrupt, incompatible or unmatched
-textures retain their original rendering. Existing font selection is independent.
+From 2026-10-29 the native Windows/Linux OpenGL builds could replace campaign
+environment textures from a compressed `Data/TexturePacks/hd.istex` (or `4k.istex`)
+sidecar, selected by **Gameplay > Iron Sights > System > Texture Pack**
+(`[display] texture_pack`, HD by default). The trusted-main `hd-artwork` CI job
+converted a pinned subset of intermissionfb's GoldenEye 007 HD v2025.12.30
+release (plus three textures from a pinned artist revision) into that format,
+and every Windows, Linux tarball, AppImage and Steam Deck release bundled it with
+attribution notices. The source repository has no license; the earlier text
+here recorded that as the owner's choice. Its maintainer has since stated
+([GhostlyDark/GoldenEye-007-HD#3](https://github.com/GhostlyDark/GoldenEye-007-HD/issues/3),
+2026-11-05) that direct integration in a port like Iron Sights is explicitly
+disallowed and that texture packs should remain external mods added by the user
+and kept updated by their maintainers. The owner chose to remove the whole
+feature rather than keep a converter for player-supplied copies, so nothing in
+Iron Sights handles that art.
 
-Texture identity reconstructs the N64 alternate-row swaps omitted by the native
-inflater, plus native u16/u32 byte ordering, without rewriting game texture
-pools. CI also requires a palette identity. The preparer includes a reviewed
-stock-USA Dam native-palette crosswalk for 15 source identities and 132 additional
-reviewed campaign mappings; it does not pick
-arbitrary artwork by index hash alone. Unverified palette variants remain
-original. Source-order row preparation and scaled wrap-mask cropping keep
-the authored art aligned with existing UVs. Special composite/water addressing
-stays on the inherited path. No hand vertices, materials, UVs, wardrobe mapping,
-weapon geometry or text glyphs are redesigned by this feature.
+Removed: the `.istex` loader, format/identity code and renderer adapter
+(`hd_textures.*`, `hd_texture_format.*`, `hd_texture_import.inl`,
+`port_hd_textures.h`), the vendored puff decoder and its file-length exception,
+the `ge_hd_textures` CMake object target, the renderer hooks (`gfx_pc.cpp`
+texture release, import and frame-start calls, now as before `00ec557`, and the
+`hd_bytes` cache field), the setting in the Options folder, watch, help, ini
+writer and `midas_ini_help.txt`, the bundled-root lookup in `video.c` and
+`GE_BUNDLED_TEXTURE_ROOT` in AppRun, the About credits, the preparer, source and
+alias manifests, supplement verifier, artwork allowlist, CI job and downloads,
+packaging, provenance (`build-inputs.json` `hd_textures`), player-guide sections,
+README bullet, `hd_textures.md`, and the loader, preparation, distribution and
+capture-audit scripts. `test_linux_hd_launcher.py` became
+`test_linux_launcher.py` without its texture-root checks; it still covers the
+Steam Deck launcher and AppRun's writable-root rules and now runs in CI by that
+name. The inherited upstream BMP pool-byte texture rewrites are unaffected.
 
-`Data/TexturePacks/hd.istex` and `4k.istex` are replaceable compressed sidecars
-beside the executable, or under Linux's writable `GE_DATA_ROOT`. AppImage checks
-user overrides first, then its read-only artwork root supplied by AppRun through
-`GE_BUNDLED_TEXTURE_ROOT`; it never copies the bundled pack into player data.
-Present invalid overrides retain originals; removing an override restores the
-bundle. Reload compares the selected path as well as file size/timestamp, so
-switching roots also invalidates identical-metadata packs. HD and 4K resolve
-independently. Linux direct launches also resolve bundled artwork beside the
-actual executable when writable data is redirected. The i686 loader uses
-64-bit file offsets/timestamps: ordinary 32-bit `stat` rejected large inode
-numbers on the local filesystem and falsely reported an installed pack absent.
-Linux compile-time ABI assertions and an i686 ROM-free test pass protect this
-interface. CI test dependencies include GCC/G++ multilib.
-Each image is independently DEFLATE-compressed with PNG's
-lossless RGBA row filters and a decoded Adler32. Bounds and checksums are checked
-before upload. GPU cache retention has a 128 MiB HD-image budget (including a
-mip-chain allowance; currently bound textures survive until unbound), and CPU
-decode holds one replacement at a time. A render-thread boundary applies mode
-and high-resolution file-timestamp changes, invalidating GPU and retained draw
-caches. Windows read handles allow atomic pack replacement while a snapshot is
-open. Artwork updates and higher-resolution versions require no executable rebuild.
+Packaging now guards the other way: `test_distribution.py` puts a stray
+`Data/TexturePacks/hd.istex` in the build folder and requires that nothing under
+`Data/TexturePacks/` ships, and the Linux smoke test requires the tarball,
+Steam Deck ZIP and extracted AppImage to contain no `Data/TexturePacks` entry.
+An existing `texture_pack=` line in midas.ini is ignored as an unknown key
+(logged once at startup), and an old `Data/TexturePacks` folder is no longer
+read; the Windows player guide says it can be deleted. Releases published before
+the removal still contain the pack; they were left in place for now. FORK-047,
+the HD ammo icons from the same release, was removed at the same time.
 
-The source is intermissionfb's GoldenEye 007 HD v2025.12.30, with font textures
-and technical assistance credited to GhostlyDark. About / Build Info, the native
-player guide, pack provenance and separate notices retain attribution. The pack
-has no explicit redistribution license in its source release; this records the
-owner's requested bundled environment subset and does not relicense artwork under the port's
-MIT license. Unmodified puff 2.3 from zlib v1.3.1 supplies bounded DEFLATE decode
-with Mark Adler's license retained and packaged. The pinned source archive SHA256
-is recorded in the preparer and guide. Three Egyptian textures missing from that
-ZIP are fetched from a pinned artist repository revision with Git-blob hash/size
-verification. Cached/downloaded art is reverified before preparation; custom
-offline ZIPs do not implicitly add network artwork. Downloaded/prepared art and raw captures
-stay out of Git. A shared trusted-main CI job prepares and verifies the campaign
-subset once for Windows and both Linux formats. Shared packaging validation
-requires HD artwork, matching report counts/sizes and artist/decoder notices;
-Linux provenance/checksums include the exact shipped pack hash. Web artifacts
-contain none of it.
-The loader/codec use an isolated CMake object target so hosted Linux standard
-headers cannot accidentally include the N64 SDK's `sched.h` or `limits.h`.
-
-Current preparation selects 469 source keys and adds 147 native aliases, compared
-with the original 100-source-key Dam subset. Twelve exact decoded-image duplicates
-share payloads, leaving 457 unique images. Source PNG data is 112,393,785 bytes;
-the prepared pack is 103,178,825 bytes, preserving RGBA values and source row
-order. This corrects the prototype's vertical flip for asymmetric braces and
-labels. The report identifies 362 images with
-constant alpha as potential future codec work, without dropping their alpha or
-evicting visually similar but nonidentical art. The default `levels` scope uses a
-pinned campaign environment inventory; `dam` remains available for compatibility
-and `all` is an explicit opt-in to non-environment artwork. Schema 2 provenance
-records inventory revision, missing keys and per-source-folder import counts;
-those counts are not unique per-mission runtime coverage because art is shared.
-The published source archive does not contain every inventory texture. Missing
-art and unreviewed native palettes retain original rendering.
-
-**Sources:** [guide](scripts/port/hd_textures.md),
-[renderer adapter](port/fast3d/hd_texture_import.inl),
-[format/identity](port/fast3d/hd_texture_format.cpp),
-[native loader](port/fast3d/hd_textures.cpp),
-[renderer hooks](port/fast3d/gfx_pc.cpp), [cache metadata](port/fast3d/gfx_pc.h),
-[settings bridge](port/src/video.c), [shared options](port/src/port_options.c),
-[setting help](port/src/port_option_help.c), [watch](port/src/port_watchpages.c),
-[frontend row](src/game/front.c), [About credits](port/fast3d/about.cpp),
-[preparer](scripts/port/prepare_texture_pack.py),
-[Dam scope](scripts/port/hd_dam_sources.json),
-[campaign scope](scripts/port/hd_level_sources.json),
-[pinned supplement](scripts/port/hd_level_supplement.json),
-[supplement verifier](scripts/port/texture_pack_supplement.py),
-[reviewed palette identities](scripts/port/hd_dam_native_aliases.json),
-[campaign palette identities](scripts/port/hd_level_native_aliases.json),
-[decoder and license](port/fast3d/third_party/puff/puff.h),
-[native unit runner](scripts/port/test_hd_textures.sh),
-[preparation tests](scripts/port/test_texture_pack_preparation.py),
-[capture audit](scripts/port/audit_hd_textures.ps1),
-[all-mission audit](scripts/port/audit_hd_levels.ps1),
-[Windows packaging](scripts/port/package_windows.py),
-[Linux packaging](scripts/port/package_linux.py),
-[shared artwork validation](scripts/port/texture_pack_distribution.py),
-[artwork distribution tests](scripts/port/test_texture_pack_distribution.py),
-[Linux launcher tests](scripts/port/test_linux_hd_launcher.py),
+**Sources:** [renderer](port/fast3d/gfx_pc.cpp), [cache metadata](port/fast3d/gfx_pc.h),
+[settings bridge](port/src/video.c), [options](port/src/port_options.c),
+[watch](port/src/port_watchpages.c), [frontend](src/game/front.c),
+[help](port/src/port_option_help.c), [About](port/fast3d/about.cpp),
+[CMake](CMakeLists.txt), [CI](.github/workflows/windows-release.yml),
+[Windows](scripts/port/package_windows.py)/[Linux](scripts/port/package_linux.py) packaging,
+[release inputs](scripts/port/release_inputs.py),
 [package tests](scripts/port/test_distribution.py),
-[release input provenance](scripts/port/release_inputs.py),
-[native release CI](.github/workflows/windows-release.yml), [CMake](CMakeLists.txt),
-[INI guide](tools/midas_ini_help.txt), [player guide](scripts/port/release/START-HERE.txt).
-
-Default-HD regression checks cover absent-pack startup, recovery when a pack is
-installed later and explicit Original opt-out. The native audit supports
-`-DefaultMode` (omit the saved preference) and `-MissingPack` for isolated startup
-and pixel comparison with stock rendering.
-The default-mode Windows audit loads 35 Dam replacements with the pack present;
-without a pack, the fixed terrain comparison matches explicit Original rendering
-and no replacements load. Independent hand-gallery passes retain all 72 views
-and 35 icons with zero changed image cells after the default change.
-
-**Linux bundling validation:** Host and i686 loader regressions pass default HD,
-read-only bundle access, missing/corrupt pack fallback, explicit Original/4K,
-user override insertion/removal and identical-metadata source switches. All 616
-keyed payloads pass native decode in both ABIs. Artwork allowlist/provenance,
-AppRun, distribution and dependency-tool tests pass. Windows and Linux builds,
-ADS/wardrobe regressions and both independent gallery passes pass with zero
-changed image cells. Final tarball/AppImage contents pass hashes/report/notices
-checks and all nine packaged reporting scenarios. Isolated Linux softpipe Dam
-captures show 47 replacements from the tarball and 46 with either a separate
-data root or AppImage; explicit Original renders none. AppImage's user root
-contains no copied pack. These are software-renderer checks, not hardware/Deck
-certification. Logs/captures remain ignored under `build_win/hd-linux` and
-`build_linux_ci/hd-render-final` / `hd-smoke-final`.
-
-**Validation:** Campaign expansion: preparation tests cover scope selection,
-source-order rows, verified supplement bytes and exact native palette aliases.
-All 11 preparation tests, distribution tests and an isolated Windows build pass.
-Seeded Original/HD captures for all 20 campaign missions pass and were visually
-reviewed, including Statue and Egyptian. All 616 keyed payloads pass the native
-decoder/checksum validation. Both independent hand-gallery passes verify 72 views
-and 35 icons with zero changed image cells; wardrobe/ADS regressions and standards
-checks pass. This samples entry views, not every camera or palette in each mission.
-
-Original Dam prototype validation: ROM-free native identity/decode/lifecycle tests, five synthetic
-preparation tests, distribution tests, wardrobe and ADS regressions pass.
-Seeded Original/HD native Dam intro captures show 31 exact replacements including
-reviewed CI scenery; the native Port Options screenshot shows the HD selector.
-The gameplay/reload route observes 39 distinct keyed replacements, successfully
-removes the copied pack while Windows holds it open, renders the original
-fallback, and restores/reloads HD in the same process. Every one of the 115
-prepared records passes the native decoder/checksum test, including off-route
-images. Both independent gallery passes verify 72 views and 35 icons with zero
-changed image cells; all nine gallery workflow tests pass. Web video compilation
-and the Wasm asset exclusion audit pass with HD loading/UI excluded. Native
-release-workflow lint, scoped Markdown checks and the actual local package's
-23 input checksums pass; no ROM, campaign or profile data is bundled.
-Complete isolated Windows and Linux GCC 11 builds pass after correcting the
-hosted-header collision detected by Linux CI; all 115 payloads also pass there.
-Private evidence is `build_win/hd-research` and isolated `build_win/hd-audit-*`.
-This is prototype coverage, not evidence that every Dam camera/palette variant
-or a complete 4K pack has been accepted. Main player builds remain separate from
-the isolated development executable and audit copies.
+[Linux smoke test](scripts/port/test_sentry_linux.py), [AppRun](scripts/port/linux/AppRun)
+and its [launcher tests](scripts/port/test_linux_launcher.py),
+player guides ([Windows](scripts/port/release/START-HERE.txt),
+[Linux](scripts/port/linux/START-HERE.txt), [Steam Deck](scripts/port/linux/STEAM-DECK.txt)),
+[release notes](scripts/port/releases.md), [buffer audit](scripts/port/buffer_audit.md),
+[INI guide](tools/midas_ini_help.txt), [README](README.md).
+**Checks:** Same run as FORK-047: the Windows build compiles and links without the
+loader, `test_distribution.py` passes with a stray pack in the build folder and
+`test_linux_launcher.py` passes; settings placement, the remaining ROM-free
+regressions, web tests, standards check and gallery (zero changed cells) pass.
+The Linux packages and their smoke test need the Linux release image and run in
+CI; they were not run locally. No in-game capture was taken.
 
 ### FORK-032 — Best-time column on mission difficulty pages
 
@@ -1310,18 +1189,11 @@ smoke tests, uploads exact ELF symbols/source context, attests all three Linux
 packages and publishes one commit-tagged release. Compiler-object caching is
 separate from packages; a clean-build dispatch bypasses it.
 
-FORK-033 adds the same verified HD artwork artifact to all three Linux packages,
-with shared explicit allowlisting, matching report checks and notices. AppRun
-sets the read-only bundled texture root separately from `GE_DATA_ROOT`, retaining
-user overrides and saved mode choices without copying artwork into user storage.
-Packaged smoke tests verify pack hashes, report counts and notices in each
-format, including extraction of the actual AppImage squashfs and ZIP launcher.
-The runner downloads shared HD artwork immediately after checkout, before
-Docker creates any Linux build output. This keeps the destination directories
-runner-owned and avoids the hosted `EACCES` failure from downloading into a
-root-owned `build_linux_ci/Data` after compilation.
-A POSIX UID-1001/root fixture reproduces the old permission failure and confirms
-the reordered download retains runner write access after root-created output.
+FORK-033 once added the same verified HD artwork artifact to all three Linux
+packages, with a separate read-only bundled texture root set by AppRun and a
+runner-side artwork download placed before Docker created build output. That
+artwork, the AppRun variable and the download step were removed on 2026-11-05;
+the smoke test now requires each Linux format to contain no `Data/TexturePacks`.
 
 A Linux-only ELF export rule keeps the game's N64 libc/math replacements
 private, so shared graphics/audio/reporting libraries use standard libc calls.
@@ -1343,7 +1215,7 @@ state serialization require a coordinated audit before changing that ABI.
 [workflow](.github/workflows/windows-release.yml), [root hook](port/src/main.c),
 [release guide](scripts/port/releases.md),
 [packaged tests](scripts/port/test_sentry_linux.py),
-[launcher tests](scripts/port/test_linux_hd_launcher.py),
+[launcher tests](scripts/port/test_linux_launcher.py),
 [reporting](#fork-030--native-sentry-crash-reporting-and-symbol-uploads).
 
 **Validation:** The 32/64-bit ABI probe reproduced the sizes above. Linux
@@ -3830,7 +3702,7 @@ outlines and scaled HUD layout. Tagged I8 font draws match content fingerprints
 after inherited padding cleanup. Unknown/modified fonts, Japanese text and
 missing characters (both tildes) keep original rendering. Only matching fonts
 receive high-resolution images and smooth sampling; images/logos retain their
-existing behavior, and HD ammo icons are a separate setting (FORK-047). Original and enhanced cache entries are
+existing behavior. Original and enhanced cache entries are
 distinct, and live setting changes invalidate the renderer's current bindings.
 
 Horizontal preparation preserves authored stroke coordinates within a bounded
@@ -4014,9 +3886,10 @@ with a live Windows player. The main executable and player data must remain
 untouched; task-owned audit processes/copies are separate. Gallery generation
 accepts `--executable` for an already built isolated binary and refuses its
 default Windows player build while that binary is running. The unmodified puff
-vendor directory has a narrowly scoped file-length exception. Sources include
+vendor directory had a narrowly scoped file-length exception, removed with it
+in FORK-033. Sources include
 AGENTS.md, the gallery script/guide and the user-owned checker baseline; HD
-prototype delivery and validation are FORK-033.
+prototype delivery and its later removal are FORK-033.
 
 Unattended rules updates are explicitly disabled: future updates must preserve
 the fork inventory and review requirements. The manual status/update guide

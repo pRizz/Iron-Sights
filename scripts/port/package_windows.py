@@ -5,8 +5,6 @@ import json
 from pathlib import Path
 import zipfile
 
-from texture_pack_distribution import texture_files
-
 ROOT = Path(__file__).resolve().parents[2]
 NAME = "Iron-Sights-windows-x86.zip"
 FILES = {"IronSights.exe": "IronSights.exe", "SDL2.dll": "SDL2.dll",
@@ -30,12 +28,7 @@ def package(build, output, root=ROOT, sdl_license=None):
     inputs["SDL2-LICENSE.txt"] = sdl_license.read_bytes()
     inputs["Enhanced-Fonts-LICENSE.txt"] = (root/"port/fast3d/fonts/LICENSE.txt").read_bytes()
     inputs["Enhanced-Fonts-NOTICE.txt"] = (root/"port/fast3d/fonts/NOTICE.txt").read_bytes()
-    inputs["HD-Ammo-Icons-NOTICE.txt"] = (root/"port/fast3d/hud_icons/NOTICE.txt").read_bytes()
     inputs["Save-Transfer-LICENSE.txt"] = (root/"port/fast3d/third_party/save-backup-LICENSE.txt").read_bytes()
-    # Deliberate artwork allowlist, independent of saves/ROMs and unrelated packs.
-    textures = build/"Data/TexturePacks"
-    for name, path in texture_files(textures).items():
-        inputs["Data/TexturePacks/"+name] = path.read_bytes()
     hashes = "".join(f"{hashlib.sha256(data).hexdigest()}  {name}\n" for name, data in sorted(inputs.items()))
     inputs["SHA256SUMS.txt"] = hashes.encode("ascii")
     path = output/NAME
