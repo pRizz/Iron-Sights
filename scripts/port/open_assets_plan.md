@@ -188,8 +188,8 @@ next action before handing off.
 
 | ID | Status | Notes |
 | --- | --- | --- |
-| OPEN-1 | In progress | 2026-11-05: created public [`pRizz/iron-sights-assets`](https://github.com/pRizz/iron-sights-assets) with a plain MIT LICENSE, a README holding these provenance rules, the roadmap and the future-assets intent, and a CONTRIBUTING guide requiring a DCO sign-off and a provenance note (`dedfd44`, `922df3d`). GitHub's license detection had not reported MIT yet when checked. Next: deterministic-build CI and a first tagged release, which need OPEN-2's generator |
-| OPEN-2 | Not started | |
+| OPEN-1 | In progress | 2026-11-05: created public [`pRizz/iron-sights-assets`](https://github.com/pRizz/iron-sights-assets) (GitHub detects MIT) with a plain MIT LICENSE, a README holding these provenance rules, the roadmap and the future-assets intent, and a CONTRIBUTING guide requiring a DCO sign-off and a provenance note (`dedfd44`, `922df3d`). CI (`ad7f0d3`) runs the ROM-free tests and a drift check that rebuilds `dist/` and compares it (bytes for the TTF and JSON, pixels for PNGs); its first Linux run passed against outputs built on Windows. A `v*` tag publishes a release with per-font archives, the license and SHA-256 checksums. Next: tag the first release once the owner approves the title font draft |
+| OPEN-2 | In progress | 2026-11-05 (`ad7f0d3`): parametric generator (centerline skeletons stroked, unioned, clipped and softened with Clipper's integer geometry), all 94 glyphs with small-cap lowercase and equal-width figures; outputs `IronSightsTitle-Regular.ttf`, an MTSDF atlas from our own numpy generator (48 px/em, 6 px range), `metrics.json` and a specimen drawn back from the atlas. Nine ROM-free tests pass: coverage, heights, ink inside the advance, clean contours, the font file, field validity (no median/true-distance disagreement more than 0.75 px from an edge), corner colouring and determinism. Next: owner review of the specimen, then tag v0.1.0 |
 | OPEN-3 | Not started | Depends on OPEN-1's first release |
 | OPEN-4 | Not started | Can start against the title font and the Arimo placeholder |
 | OPEN-5 | Not started | |
