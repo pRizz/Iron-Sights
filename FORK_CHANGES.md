@@ -34,8 +34,8 @@ new areas. Status describes implementation state, not Git publication state.
 
 **Status:** Plan accepted with its recommended decisions on 2026-11-05.
 FONT-1 (the setting), FONT-2 (the Enhanced renderer with manual install),
-FONT-3 (the in-game download) and FONT-4 (the browser download) are
-implemented; FONT-5 (release) is not started.
+FONT-3 (the in-game download), FONT-4 (the browser download) and FONT-5
+(release) are done; the owner signed off on the play-test on 2026-11-06.
 
 [`scripts/port/font_styles_plan.md`](scripts/port/font_styles_plan.md)
 proposes one **Gameplay > Iron Sights > System > Fonts** setting choosing
@@ -325,13 +325,15 @@ download (source, size, CC0, Remove). `audit_hitmap.ps1` takes `-FontStyle`
 (0 to 2) for debrief captures. The owner play-test checklist lives in the font
 styles plan. Checks: `test_distribution.py` passed locally (two tests that
 need GCC skipped; CI runs them); the Linux checks run in CI. Not run: Remove
-inside the browser game and the full launcher (FONT-4).
+inside the browser game and the full launcher (FONT-4). The owner then
+play-tested the checklist and signed off the same day; FONT-5 is Done.
 
 ### FORK-051 — Iron Sights font: open-font MSDF text
 
-**Status:** Implemented in the Windows build and compiled for the browser;
-default off. Not yet play-tested by the owner, and the browser build was not
-run. Part of the open assets plan (OPEN-4, FORK-050).
+**Status:** Implemented in the Windows and browser builds; default off.
+The browser build was run at 1440p and 4K, and the owner signed off on the
+play-test on 2026-11-06. Part of the open assets plan (OPEN-4, Done;
+FORK-050).
 
 With **Gameplay > Iron Sights > System > Fonts** set to **Iron Sights**
 (`[display] font_style=2`; Original by default) in the Options folder or the
@@ -440,7 +442,8 @@ Windows captures on this machine stop at 1600x900, since SDL shrinks larger
 windows to fit the 1920x1080 desktop; at that size the HUD, Credits,
 Difficulty, the scrolled watch Video page, the watch inventory list and the
 debrief render cleanly in both fonts. A glyph actually cut by a clipped list
-(a watch inventory item's scrolling description) was not captured.
+(a watch inventory item's scrolling description) was not captured; it was
+part of the owner's play-test, which passed.
 
 ### FORK-050 — Open assets and sharp text plan
 
