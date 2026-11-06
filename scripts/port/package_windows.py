@@ -27,6 +27,7 @@ def package(build, output, root=ROOT, sdl_license=None):
         raise ValueError("The SDL2 license is required")
     inputs["SDL2-LICENSE.txt"] = sdl_license.read_bytes()
     inputs["Save-Transfer-LICENSE.txt"] = (root/"port/fast3d/third_party/save-backup-LICENSE.txt").read_bytes()
+    inputs["Open-Assets-LICENSE.txt"] = (root/"port/fast3d/open_assets/LICENSE").read_bytes()
     hashes = "".join(f"{hashlib.sha256(data).hexdigest()}  {name}\n" for name, data in sorted(inputs.items()))
     inputs["SHA256SUMS.txt"] = hashes.encode("ascii")
     path = output/NAME

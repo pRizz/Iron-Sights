@@ -90,7 +90,8 @@ def package(build, output):
                          ("scripts/port/linux/AppRun", "AppRun"),
                          ("scripts/port/linux/iron-sights.desktop", "iron-sights.desktop"),
                          ("scripts/port/release/DATA-README.txt", "Data/README.txt"),
-                         ("port/fast3d/third_party/save-backup-LICENSE.txt", "Save-Transfer-LICENSE.txt")):
+                         ("port/fast3d/third_party/save-backup-LICENSE.txt", "Save-Transfer-LICENSE.txt"),
+                         ("port/fast3d/open_assets/LICENSE", "Open-Assets-LICENSE.txt")):
         copy(ROOT / source, appdir / name)
     copy(build / "generated/build-info.json", appdir / "build-info.json")
     paths = bundle_libraries(build, appdir)

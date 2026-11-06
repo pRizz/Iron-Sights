@@ -1,2 +1,4 @@
 # Normalize line endings to LF for text files.
 * text=auto eol=lf
+# Vendored release files stay byte-identical to their manifest.
+port/fast3d/open_assets/** -text

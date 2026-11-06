@@ -32,15 +32,22 @@ new areas. Status describes implementation state, not Git publication state.
 
 ### FORK-050 — Open assets and sharp text plan
 
-**Status:** Documentation and a repository rule; the owner accepted the plan
+**Status:** Plan, repository rule and vendored assets; the owner accepted the plan
 with its recommended decisions on 2026-11-05. The assets repository
 [`pRizz/iron-sights-assets`](https://github.com/pRizz/iron-sights-assets) was
 created the same day with its license, rules, roadmap, CI and Bright Builds
 Rules (OPEN-1), and
 released the parametric title font as v0.1.0 after the owner's review (OPEN-2),
-then v0.2.0 with comparison-informed refinements.
-Nothing in Iron Sights uses it yet; vendoring (OPEN-3) and the renderer
-(OPEN-4) come next.
+then v0.2.0 with comparison-informed refinements. Iron Sights vendors v0.2.0
+(OPEN-3): `scripts/port/update_open_assets.py` fetches a tag, checks every
+download against the release's SHA256SUMS and copies the LICENSE,
+`title/atlas.png` and `title/metrics.json` byte for byte into
+`port/fast3d/open_assets/` with a `manifest.json` of checksums (`--verify`
+rechecks offline; `.gitattributes` keeps the folder byte-exact).
+`test_open_assets.py` runs in the release workflow, `build-inputs.json` records
+the release, Windows and Linux packages ship `Open-Assets-LICENSE.txt`, the
+browser site lists it, and THIRD_PARTY_NOTICES describes it. The game does not
+draw with the font yet; that is the renderer (OPEN-4).
 
 [open_assets_plan.md](scripts/port/open_assets_plan.md) plans original,
 MIT-licensed fonts to replace the ROM's glyphs, and a renderer that draws them
@@ -81,7 +88,15 @@ v0.1.0, gave a mean overlap of 34%; at 8-pixel capitals a one-pixel offset
 moves the share a lot, so it is a rough guide.
 
 **Sources:** [plan](scripts/port/open_assets_plan.md), [repository rules](AGENTS.md),
-[comparison tool](scripts/port/compare_open_font.py).
+[comparison tool](scripts/port/compare_open_font.py),
+[vendored assets](port/fast3d/open_assets/manifest.json),
+[update script](scripts/port/update_open_assets.py), [tests](scripts/port/test_open_assets.py),
+[release inputs](scripts/port/release_inputs.py), [Windows](scripts/port/package_windows.py)
+and [Linux](scripts/port/package_linux.py) packaging, [browser notices](web/tools/build-site.ts),
+[notices](tools/THIRD_PARTY_NOTICES.txt), [release workflow](.github/workflows/windows-release.yml).
+**Checks (OPEN-3):** the vendored files verify against their manifest; the open
+asset tests (4), the distribution test (now requiring the license) and the web
+package's 209 tests pass, and the standards check reports no findings.
 **Checks:** documentation only; no build or render regeneration needed.
 
 ### FORK-049 — Sub-pixel scaled text

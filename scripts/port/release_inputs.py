@@ -25,6 +25,9 @@ if __name__ == "__main__":
               workflow=".github/workflows/windows-release.yml",
               generated_icons="Prepared on the player's Windows PC; not embedded in the release")
     info["sentry"] = json.loads(Path("build_win/sentry-build.json").read_text())
+    assets = json.loads(Path("port/fast3d/open_assets/manifest.json").read_text())
+    info["open_assets"] = dict(repository=assets["repository"], tag=assets["tag"], license=assets["license"],
+                               archives=assets["archives"], files=assets["files"])
     dependencies = os.environ.get("MIDAS_DEPENDENCIES_FILE")
     if dependencies:
         info["dependency_packages"] = json.loads(Path(dependencies).read_text())

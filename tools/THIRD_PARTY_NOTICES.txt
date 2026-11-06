@@ -16,6 +16,8 @@ license, reproduced here as its terms require.
     in src/game/spectrum_hw.h)
   inflate.c by Mark Adler            public      every build (src/inflate,
                                      domain      src/game/zlib.c)
+  Iron Sights open assets            MIT         vendored source; used once
+    (port/fast3d/open_assets)                     the text renderer lands
   ENet                               MIT         netplay builds
   Perfect Dark decompilation         MIT         netplay builds (via the
                                                  Perfect Dark netplay fork)
@@ -26,6 +28,14 @@ license, reproduced here as its terms require.
     (tools/ido5.3_recomp/rabbitizer)
   ido-static-recomp                  none        build tools only, not shipped
     (tools/ido5.3_recomp)            published
+
+Iron Sights open assets
+-----------------------
+Original fonts drawn from scratch for Iron Sights, from
+https://github.com/pRizz/iron-sights-assets, vendored at the release recorded in
+port/fast3d/open_assets/manifest.json. MIT licensed; see
+port/fast3d/open_assets/LICENSE (Open-Assets-LICENSE.txt in player packages).
+
 
 Fast3D renderer
 ---------------

@@ -18,6 +18,7 @@ await writeFile(new URL('runtime-manifest.json', output), JSON.stringify(manifes
 await copyFile(new URL('../../LICENSE', import.meta.url), new URL('LICENSE.txt', output));
 const notices = [
     ['Port dependencies', '../../tools/THIRD_PARTY_NOTICES.txt'],
+    ['Iron Sights open assets (fonts)', '../../port/fast3d/open_assets/LICENSE'],
     ['Emscripten / C / C++ / SDL2 runtime', '../../build/web/video/runtime-notices.txt'],
     ['SolidJS', '../node_modules/solid-js/LICENSE'],
     ['Three.js', '../node_modules/three/LICENSE'],

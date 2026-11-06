@@ -75,6 +75,8 @@ class Distribution(unittest.TestCase):
                 self.assertIn("build-info.json",names);self.assertIn("SHA256SUMS.txt",names)
                 self.assertNotIn("Enhanced-Fonts-LICENSE.txt",names);self.assertNotIn("Enhanced-Fonts-NOTICE.txt",names)
                 self.assertIn("Save-Transfer-LICENSE.txt",names)
+                self.assertIn("Open-Assets-LICENSE.txt",names)
+                self.assertIn(b"Iron Sights assets contributors",archive.read("Open-Assets-LICENSE.txt"))
                 self.assertIn(b"Copyright 2011-2014 Kazuho Oku",archive.read("Save-Transfer-LICENSE.txt"))
                 self.assertIn(b"Copyright (C) 2017 okdshin",archive.read("Save-Transfer-LICENSE.txt"))
                 self.assertFalse(any(n.startswith("Data/TexturePacks/") for n in names))
