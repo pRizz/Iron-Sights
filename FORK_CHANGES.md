@@ -4033,6 +4033,20 @@ completed tests through publication in 1m22s, excluding its intentional queue
 behind the cold run. Cold and warm release ZIP attestations verified; the warm
 release recorded a fresh timestamp/run identity for the same source commit.
 
+**Faster job graph (2026-11-06).** At the owner's request: the Windows build,
+Sentry runtime and Linux jobs no longer wait for the `tests` job; they start
+together, the Windows build waits only for the Sentry runtime, and `publish`
+now needs `tests` as well as both packages and the smoke test, so a failing
+test still stops a release (a failing test no longer stops the builds
+themselves). The pinned MSVC x86 Sentry runtime is cached under a key of
+`sentry_config.json`, `sentry_tools.py` and the runner image
+(`ImageOS-ImageVersion`, since the image fixes the MSVC version recorded in
+`sentry-build.json`); a hit skips the 54 s build, and `sentry_tools.py stage`
+still checks every runtime file against its recorded hashes. An image rollout
+only costs one rebuild. Measured before: tests 74 s, then Sentry 71 s, then the
+Windows build 48 s, then the smoke test 30 s, then publish 16 s (4 min 11 s for
+the workflow); the change is checked on GitHub after the push, not locally.
+
 ### FORK-019 — Native first-launch weapon image cache
 
 **Status:** Implemented on Windows; Linux reads caches and otherwise uses names.
@@ -5443,3 +5457,24 @@ Python compilation, pinned GFM/frontmatter formatting, relative links and Git
 whitespace checks passed for that earlier tooling-only commit. It changed no
 native game/render inputs; the current runtime/shared ABI work does and follows
 the required native build/gallery workflow.
+
+**Faster browser CI (2026-11-06).** At the owner's request, measured first:
+the workflow took 7 min 38 s, of which the browser test step was 242 s (room
+audit 164 s, mostly software-rendered WebGL with no GPU on the runner; startup
+audit 57 s; the five others about 15 s together) and the build step 158 s (SDK
+image pull 33 s, compile and link 90 s with nothing cached, logo audit 32 s).
+The test step now runs three lanes side by side against the one preview server
+(room; startup; launcher, touch, storage, filesystem and sampler, the two
+storage audits sharing a lane because they share an output folder); each lane
+stops at its first failure, every lane's log is printed in its own group, and
+the step fails if any lane failed. The build compiles through ccache 4.14.2's
+official static Linux binary, pinned by URL and SHA-256 (GitHub's recorded
+asset digest, checked against a download) in `web_toolchain.json`:
+`web_build.py --ccache DIR` (new `scripts/port/web_ccache.py`, tested by
+`test_web_ccache.py` in the workflow) downloads it once, checks it on every
+use, mounts it into the pinned SDK container and sets `EM_COMPILER_WRAPPER`;
+CI restores and saves `build/web/ccache` under a key of the toolchain file.
+Locally, with an emptied build folder, all 306 compiles were cacheable; the
+first build missed all of them and took 654 s, the second hit 302 (the other
+four embed per-build information) and took 266 s, with a 24 MB cache. The CI
+gains are checked on GitHub after the push.

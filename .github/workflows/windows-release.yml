@@ -80,16 +80,35 @@ jobs:
           python3 scripts/port/test_hand_gallery.py
           python3 scripts/port/hand_gallery.py verify
 
+  # The builds start alongside the tests instead of after them; publish waits
+  # for the tests, so a failing test still stops a release.
   sentry-sdk:
-    needs: tests
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
+      - name: Identify the runner image
+        # The image fixes the MSVC version the runtime is built with.
+        id: image
+        shell: bash
+        run: echo "version=${ImageOS}-${ImageVersion}" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: restore-sentry
+        with:
+          path: build/sentry-runtime
+          key: sentry-msvc-x86-${{ hashFiles('scripts/port/sentry_config.json', 'scripts/port/sentry_tools.py') }}-${{ steps.image.outputs.version }}
       - name: Build pinned MSVC x86 Sentry runtime
+        # The pinned commit builds the same runtime on the same image, so a
+        # cached copy is reused; `stage` rechecks its hashes before packaging.
+        if: steps.restore-sentry.outputs.cache-hit != 'true'
         run: python scripts/port/sentry_tools.py build --work build/sentry-sdk --output build/sentry-runtime
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.restore-sentry.outputs.cache-hit != 'true'
+        with:
+          path: build/sentry-runtime
+          key: sentry-msvc-x86-${{ hashFiles('scripts/port/sentry_config.json', 'scripts/port/sentry_tools.py') }}-${{ steps.image.outputs.version }}
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sentry-msvc-x86
@@ -98,7 +117,7 @@ jobs:
           retention-days: 30
 
   windows:
-    needs: [tests, sentry-sdk]
+    needs: sentry-sdk
     # Publishing is restricted to main; compilation itself needs no ROM or secrets.
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
@@ -206,7 +225,6 @@ jobs:
           retention-days: 30
 
   linux:
-    needs: tests
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 35
@@ -288,7 +306,7 @@ jobs:
           retention-days: 7
 
   publish:
-    needs: [windows, sentry-smoke, linux]
+    needs: [tests, windows, sentry-smoke, linux]
     runs-on: ubuntu-24.04
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     permissions:

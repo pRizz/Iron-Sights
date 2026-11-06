@@ -29,6 +29,14 @@ the output directory, never the repository root or a directory containing ROMs.
 The Node smoke mounts the selected ROM read-only and copies it into ephemeral
 MEMFS. Its output directory contains no ROM copy.
 
+`--ccache DIR` compiles through ccache's official static Linux binary, pinned
+by version and SHA-256 in `web_toolchain.json`: it is downloaded into `DIR` once,
+checked on every use, mounted into the SDK container and used through
+Emscripten's `EM_COMPILER_WRAPPER`, with the compiled objects kept in
+`DIR/objects`. CI restores that folder between runs, so a fresh build directory
+recompiles only changed sources. Locally the build directory already persists,
+so the option mainly helps after deleting it.
+
 `--link-opt 0` accelerates iterative runtime debugging. The default is `2` and
 must be retested before treating an optimized build as verified. The complete
 legacy engine still compiles with the root Release settings; this option selects
