@@ -4045,7 +4045,10 @@ themselves). The pinned MSVC x86 Sentry runtime is cached under a key of
 still checks every runtime file against its recorded hashes. An image rollout
 only costs one rebuild. Measured before: tests 74 s, then Sentry 71 s, then the
 Windows build 48 s, then the smoke test 30 s, then publish 16 s (4 min 11 s for
-the workflow); the change is checked on GitHub after the push, not locally.
+the workflow). After: 188 s on the first run (Sentry built and cached) and
+132 s once cached (Sentry 16 s with the build skipped; tests 58 s and Linux
+104 s alongside; then Windows 53 s, smoke 25 s and publish 21 s), all jobs
+passing.
 
 ### FORK-019 — Native first-launch weapon image cache
 
@@ -5458,28 +5461,26 @@ whitespace checks passed for that earlier tooling-only commit. It changed no
 native game/render inputs; the current runtime/shared ABI work does and follows
 the required native build/gallery workflow.
 
-**Faster browser CI (2026-11-06).** At the owner's request, measured first:
-the workflow took 7 min 38 s, of which the browser test step was 242 s (room
-audit 164 s, mostly software-rendered WebGL with no GPU on the runner; startup
-audit 57 s; the five others about 15 s together) and the build step 158 s (SDK
-image pull 33 s, compile and link 90 s with nothing cached, logo audit 32 s).
-The test step now runs the quick audits (launcher, touch, storage, filesystem,
-sampler; about 20 s) first on an otherwise idle runner, then the slow room and
-startup audits side by side against the one preview server. Each lane stops at
-its first failure (explicitly, since `set -e` does not apply inside an `if`),
-every lane's log is printed in its own group, and the step fails if any lane
-failed. The first version ran all three lanes at once: with the room audit's
-software WebGL busy on every core, the touch audit's check right after a
-`touchCancel` (`touch-ui-audit.mjs`, movement still `[0, 1]` instead of
-`[0, 0]`) failed in CI run 42279844036. Whether that is only a test race or a
-real stale-movement race on slow devices is not yet investigated. The build compiles through ccache 4.14.2's
-official static Linux binary, pinned by URL and SHA-256 (GitHub's recorded
-asset digest, checked against a download) in `web_toolchain.json`:
-`web_build.py --ccache DIR` (new `scripts/port/web_ccache.py`, tested by
-`test_web_ccache.py` in the workflow) downloads it once, checks it on every
-use, mounts it into the pinned SDK container and sets `EM_COMPILER_WRAPPER`;
-CI restores and saves `build/web/ccache` under a key of the toolchain file.
-Locally, with an emptied build folder, all 306 compiles were cacheable; the
-first build missed all of them and took 654 s, the second hit 302 (the other
-four embed per-build information) and took 266 s, with a 24 MB cache. The CI
-gains are checked on GitHub after the push.
+**Browser CI speed attempt, reverted (2026-11-06).** At the owner's request
+two changes were tried and removed after measuring them on GitHub. Before: the
+workflow took 7 min 38 s; its test step 242 s (room audit 164 s, startup 57 s,
+the other five about 20 s) and its build step 158 s (SDK pull 33 s, compile
+and link 90 s, logo audit 32 s). (1) Running the audits side by side: all three
+lanes at once failed the touch audit's check right after a `touchCancel`
+(`touch-ui-audit.mjs`, movement `[0, 1]` instead of `[0, 0]`, run
+42279844036) while the room audit's software WebGL kept every core busy; with
+the quick audits first and only room and startup together, the room audit took
+248 s and the step 268 s, slower than running them one after another, since
+both render the room in software on the runner's four cores. (2) A compiler
+cache (ccache 4.14.2's static binary, pinned by SHA-256 and mounted into the SDK
+container through `EM_COMPILER_WRAPPER`, `web_build.py --ccache`): locally a
+rebuild into an emptied folder hit 302 of 306 compiles and fell from 654 s to
+266 s, but on CI the build step went from 158 s to 149 s with the cache filled,
+within noise (the link and Wasm optimization dominate there), and the
+filesystem fixture's build got 27 s slower. Both were removed (the workflow
+step, `web_build.py`, `web_toolchain.json` and `web_runtime.md` are back to
+their earlier form; `web_ccache.py` and its test are deleted). Untested
+whether the touch-cancel failure is only a test race or a real stale-movement
+race on slow devices. Remaining browser costs are the room audit's software
+rendering and the link; a faster room audit would need fewer room loads or a
+smaller viewport.

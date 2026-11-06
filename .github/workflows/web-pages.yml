@@ -32,29 +32,16 @@ jobs:
         run: |
           python3 scripts/port/test_web_logo.py
           python3 scripts/port/test_web_spike.py
-          python3 scripts/port/test_web_ccache.py
           bash scripts/port/test_web_menu_pointer.sh
           bash scripts/port/test_save_transfer.sh
           cd web
           bun tools/native-backup-audit.ts ../build/save-transfer-tests/driver
           bun run typecheck
           bun run test
-      # The pinned ccache keeps compiled objects between runs, keyed on the SDK
-      # pin; each run saves its own entry and restores the newest.
-      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: build/web/ccache
-          key: web-ccache-v1-${{ hashFiles('scripts/port/web_toolchain.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: web-ccache-v1-${{ hashFiles('scripts/port/web_toolchain.json') }}-
       - name: Build pinned SDK game and filesystem fixture without a ROM
         run: |
-          python3 scripts/port/web_build.py video --jobs 4 --callback-types --ccache build/web/ccache
-          python3 scripts/port/web_build.py files --jobs 4 --ccache build/web/ccache
-      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        with:
-          path: build/web/ccache
-          key: web-ccache-v1-${{ hashFiles('scripts/port/web_toolchain.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          python3 scripts/port/web_build.py video --jobs 4 --callback-types
+          python3 scripts/port/web_build.py files --jobs 4
       - name: Check Wasm logo conversion
         run: |
           sdk_image=$(python3 -c 'import json; print(json.load(open("scripts/port/web_toolchain.json"))["image"])')
@@ -73,26 +60,13 @@ jobs:
           preview_pid=$!
           trap 'kill "$preview_pid"' EXIT
           bun tools/wait-for-site.ts http://127.0.0.1:4177/Iron-Sights/
-          site=http://127.0.0.1:4177/Iron-Sights/
-          # The quick audits run first on an otherwise idle runner: the touch
-          # audit times input events, and the room audit's software WebGL keeps
-          # every core busy (with all three at once its touch-cancel check read
-          # stale movement). Then the slow room and startup audits run side by
-          # side. Each lane stops at its first failure; every log is shown.
-          lane() { local name=$1; shift; (for command in "$@"; do eval "$command" || exit 1; done) > "../build/web/audit-$name.log" 2>&1; }
-          failed=0
-          report() {
-            echo "::group::$1 audits $2"; cat "../build/web/audit-$1.log"; echo "::endgroup::"
-            if [ "$2" = failed ]; then echo "::error::The $1 audits failed; see their log group"; failed=1; fi
-          }
-          if lane quick "bun run test:launcher $site" "bun run test:touch" "bun run test:storage" \
-            "bun run test:filesystem" "bun run test:sampler"; then report quick passed; else report quick failed; fi
-          lane room "bun run test:room $site" & room=$!
-          lane startup "bun run test:startup $site" & startup=$!
-          for name in room startup; do
-            if wait "${!name}"; then report "$name" passed; else report "$name" failed; fi
-          done
-          exit "$failed"
+          bun run test:launcher http://127.0.0.1:4177/Iron-Sights/
+          bun run test:room http://127.0.0.1:4177/Iron-Sights/
+          bun run test:startup http://127.0.0.1:4177/Iron-Sights/
+          bun run test:touch
+          bun run test:storage
+          bun run test:filesystem
+          bun run test:sampler
       - name: Upload verified Pages artifact
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4

@@ -9,7 +9,6 @@ import sys
 
 from web_spike import ROOT, load_toolchain, run_logged
 from web_spike_audit import run_audit
-import web_ccache
 
 
 def copy_runtime_notices(output):
@@ -43,8 +42,6 @@ def inside(options):
     if options.keep_going:
         build_command.extend(['--', '-k'])
     run_logged(build_command, output / 'build.log', timeout=900)
-    if os.environ.get('EM_COMPILER_WRAPPER') == 'ccache':
-        run_logged(['ccache', '--show-stats'], output / 'ccache-stats.log')
     if video:
         shutil.copyfile(ROOT / 'scripts/port/web_probe/play.html', output / 'index.html')
         copy_runtime_notices(output)
@@ -78,10 +75,6 @@ def outside(options):
                '--mount', f'type=bind,source={output},target=/out',
                '--mount', f'type=volume,source={cache},target=/emsdk/upstream/emscripten/cache',
                '-w', '/src']
-    if options.ccache:
-        directory = Path(options.ccache).resolve()
-        binary = web_ccache.ensure(directory, web_ccache.pin(config))
-        command.extend(web_ccache.docker_arguments(binary, directory / 'objects'))
     for name in ('GITHUB_ACTIONS', 'GITHUB_SHA', 'GITHUB_REPOSITORY', 'GITHUB_RUN_ID',
                  'GITHUB_REF_NAME', 'SOURCE_DATE_EPOCH', 'MIDAS_BUILD_TIME_UTC'):
         if os.environ.get(name):
@@ -121,8 +114,6 @@ def main():
     parser.add_argument('--keep-going', action='store_true', help='Collect independent Make build failures')
     parser.add_argument('--callback-types', action='store_true',
                         help='Audit all selected sources with function-pointer warnings enabled and fatal')
-    parser.add_argument('--ccache', metavar='DIR',
-                        help='Compile through the pinned ccache, keeping its objects in DIR (CI restores it)')
     parser.add_argument('--rom')
     parser.add_argument('--frames', type=int, default=360)
     parser.add_argument('--inside', action='store_true', help=argparse.SUPPRESS)
