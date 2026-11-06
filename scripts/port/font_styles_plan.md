@@ -4,9 +4,10 @@ Iron Sights will offer three text styles: the ROM's **Original** fonts, the
 community **Enhanced** fonts, and our own **Iron Sights** font. The Enhanced
 fonts are never bundled: when the player chooses them, the game asks before
 downloading them from their original repository, verifies each file and
-installs it where a manual install would go. This plan is a proposal awaiting
-the owner's decisions; nothing in it has been built yet. The
-[milestone status](#milestone-status) records what has been built and verified.
+installs it where a manual install would go. The owner accepted this plan
+and its recommended decisions on 2026-11-05. Acceptance is not evidence that
+any milestone works; the [milestone status](#milestone-status) records what
+has been built and verified.
 
 ## Why
 
@@ -136,19 +137,17 @@ FORK-051's glyph registry so both styles share one hook:
 | FONT-4 | Browser | `fetch()` download into persistent storage, the prompt with touch controls and audits; or Enhanced recorded as unsupported in the browser with its reason |
 | FONT-5 | Release | Owner play-test of all three styles; README, THIRD_PARTY_NOTICES and release notes describe the download; package checks confirm no pack file ships |
 
-## Proposed decisions
+## Decisions (accepted 2026-11-05)
 
 1. **Setting:** one Fonts row with Original / Enhanced / Iron Sights, key
-   `font_style`, default Original, replacing Sharp Fonts. *(Recommended.)*
+   `font_style`, default Original, replacing Sharp Fonts.
 2. **Source:** single files from `raw.githubusercontent.com` at commit
    `ca06e063`, pinned by checksum, rather than the repository's 32 MB
-   archive. *(Recommended.)*
+   archive.
 3. **Install folder:** `Data/FontPacks/gepd/`, files under their pack names.
-   *(Recommended.)*
 4. **Linux:** libcurl loaded at run time, manual install otherwise.
-   *(Recommended.)*
 5. **Browser:** include the download in FONT-4 rather than leave Enhanced
-   native-only. *(Recommended; it needs no new transport.)*
+   native-only; it needs no new transport.
 6. **Order:** FONT-1, then FONT-2 (useful on its own through manual
    install), then FONT-3 and FONT-4.
 
