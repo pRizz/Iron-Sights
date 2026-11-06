@@ -177,7 +177,7 @@ static const struct PortWatchRowDef sIsHud[] = {
 };
 static const struct PortWatchRowDef sIsSystem[] = {
     { PWROW_ACTION, NULL, "About / Build Info\n", 101, 0 },
-    { PWROW_OPT,       "sharp_fonts",      NULL, 0, 0 },
+    { PWROW_OPT,       "font_style",       NULL, 0, 0 },
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     { PWROW_OPT,       "crash_reporting",  NULL, 0, 0 },
 #endif

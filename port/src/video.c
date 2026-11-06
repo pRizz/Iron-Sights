@@ -163,9 +163,13 @@ static int s_CfgVsync = 1;            /* 0 = never wait for vblank */
 static int s_CfgAnisotropy = 2;       /* 0/1 = off; 2..16 samples */
 /* [display] filter_2d: smooth HUD/menu texrects by default on every platform. */
 static int s_CfgFilter2D = 1;
-/* [display] sharp_fonts (FORK-050): open title font for Bank Gothic text; off
- * until both open fonts exist and the owner has play-tested them. */
-static int s_CfgSharpFonts = 0;
+/* [display] font_style (FORK-051, font styles plan FONT-1): 0 Original (ROM),
+ * 1 Enhanced (the player-installed GEPD pack; Original until its renderer
+ * lands), 2 Iron Sights (open title font for Bank Gothic text). Original
+ * until both open fonts exist and the owner has play-tested them. The older
+ * sharp_fonts=1 still loads as Iron Sights unless font_style is present. */
+static int s_CfgFontStyle = 0;
+static int s_CfgFontStyleSeen = 0;
 static int s_CfgHighLod = 1;          /* 0 = use normal distance-based model LODs */
 static int s_CfgLowRes = 0;           /* [display] low_res: the level render's
                                        * line count - 0 off, 240 = "HW" (legacy
@@ -1078,7 +1082,8 @@ static int videoSetDisplayOption(const char *key, const char *value)
     if (SDL_strcasecmp(key, "msaa") == 0)          { s_CfgMsaa = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "anisotropy") == 0)    { s_CfgAnisotropy = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "filter_2d") == 0)     { s_CfgFilter2D = SDL_atoi(value); return 1; }
-    if (SDL_strcasecmp(key, "sharp_fonts") == 0)   { s_CfgSharpFonts = SDL_atoi(value) != 0; return 1; }
+    if (SDL_strcasecmp(key, "font_style") == 0)    { s_CfgFontStyle = SDL_clamp(SDL_atoi(value), 0, 2); s_CfgFontStyleSeen = 1; return 1; }
+    if (SDL_strcasecmp(key, "sharp_fonts") == 0)   { if (!s_CfgFontStyleSeen) s_CfgFontStyle = SDL_atoi(value) != 0 ? 2 : 0; return 1; }
     if (SDL_strcasecmp(key, "high_lod") == 0)      { s_CfgHighLod = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "low_res") == 0)       { s_CfgLowRes = videoLowResLines(value); return 1; }
     /* "mipmaps" is the key the menu overhaul settled on (spec 2.1);
@@ -1451,7 +1456,7 @@ s32 portVideoOptionGet(const char *key, s32 *out)
     if (SDL_strcasecmp(key, "filtering") == 0)     { *out = videoFilteringIndex(); return 1; }
     if (SDL_strcasecmp(key, "anisotropy") == 0)    { *out = (s_CfgAnisotropy >= 2) ? s_CfgAnisotropy : 0; return 1; }
     if (SDL_strcasecmp(key, "filter_2d") == 0)     { *out = s_CfgFilter2D;     return 1; }
-    if (SDL_strcasecmp(key, "sharp_fonts") == 0)   { *out = s_CfgSharpFonts;   return 1; }
+    if (SDL_strcasecmp(key, "font_style") == 0)    { *out = s_CfgFontStyle;    return 1; }
     if (SDL_strcasecmp(key, "high_lod") == 0)      { *out = s_CfgHighLod;      return 1; }
     if (SDL_strcasecmp(key, "low_res") == 0)       { *out = s_CfgLowRes;       return 1; }
     if (SDL_strcasecmp(key, "mipmaps") == 0
@@ -1604,9 +1609,9 @@ s32 portVideoOptionSet(const char *key, s32 value)
     {
         gfx_filter_2d = s_CfgFilter2D != 0;
     }
-    else if (SDL_strcasecmp(key, "sharp_fonts") == 0)
+    else if (SDL_strcasecmp(key, "font_style") == 0)
     {
-        gfx_sharp_fonts = s_CfgSharpFonts != 0;
+        gfx_sharp_fonts = s_CfgFontStyle == 2;
     }
     else if (SDL_strcasecmp(key, "low_res") == 0)
     {
@@ -2294,7 +2299,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "filtering=%s\n", s_CfgFiltering);
     fprintf(f, "anisotropy=%d\n", s_CfgAnisotropy);
     fprintf(f, "filter_2d=%d\n", s_CfgFilter2D);
-    fprintf(f, "sharp_fonts=%d\n", s_CfgSharpFonts);
+    fprintf(f, "font_style=%d\n", s_CfgFontStyle);
     fprintf(f, "low_res=%d\n", s_CfgLowRes);
     fprintf(f, "n64_aa=%d\n", s_CfgN64Aa ? 1 : 0);
     fprintf(f, "room_cache=%d\n", s_CfgRoomCache);
@@ -4951,7 +4956,7 @@ s32 videoInit(void)
         gfx_anisotropy = (s_CfgAnisotropy > 16) ? 16u : (uint32_t)s_CfgAnisotropy;
     }
     gfx_filter_2d = s_CfgFilter2D != 0;
-    gfx_sharp_fonts = s_CfgSharpFonts != 0;
+    gfx_sharp_fonts = s_CfgFontStyle == 2;
     { /* [display] low_res: whole-game 240p render scaled to the window (very low power machines).
        * GE_LOWRES=1/0 overrides the ini for A/B. */
         extern char *getenv(const char *);

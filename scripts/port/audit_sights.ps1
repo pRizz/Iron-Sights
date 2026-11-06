@@ -8,8 +8,10 @@ param(
     [switch]$Edge,
     [ValidateRange(10,200)][int]$CrosshairSize = 100,
     [switch]$HighHudScale,
-    # Bank Gothic text from the open title font (FORK-050).
-    [switch]$SharpFonts
+    # Fonts = Iron Sights (font_style=2): Bank Gothic text from the open title font (FORK-051).
+    [switch]$SharpFonts,
+    # Watch mode's GE_WATCHPAGE: tab,subpage,row,selected (13 = Iron Sights > System).
+    [string]$WatchPage = '3,12,0,0'
 )
 $ErrorActionPreference = 'Stop'
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -26,7 +28,7 @@ Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]', 'ful
     'maxfps=60', 'tickhz=60', 'render_thread=0', 'watch_static=0', 'msaa=0', "aim_mode=$aimMode", 'aim_control=0', 'always_crosshair=1',
     "always_crosshair_size=$CrosshairSize", "hud_scale=$([int]$HighHudScale.IsPresent)",
     'sight_on_screen=1', 'mp_always_crosshair=1', "crosshair_color=$Color", 'hit_markers=0', 'damage_indicators=0',
-    'objective_notifications=0', 'weapon_hud=0', "sharp_fonts=$([int]$SharpFonts.IsPresent)", '[input]', 'mouse=1')
+    'objective_notifications=0', 'weapon_hud=0', "font_style=$(if ($SharpFonts) { 2 } else { 0 })", '[input]', 'mouse=1')
 $pad = if ($Mode -eq 'RedReticle') {'10'} else {'0'}
 $actions = if ($Mode -eq 'Sniper') {'200000'} else {'0'}
 $inputFile = Join-Path $dir 'input.txt'
@@ -50,7 +52,7 @@ if ($Mode -in @('Menu','HudMenu')) {
 }
 if ($Mode -eq 'Watch') {
     $testEnv.Remove('GE_HUD_AUDIT')
-    $testEnv.GE_WATCHPAGE='3,12,0,0'; $testEnv.GE_SHOT='900'
+    $testEnv.GE_WATCHPAGE=$WatchPage; $testEnv.GE_SHOT='900'
 }
 if ($Players -gt 1) { $testEnv.Remove('GE_STAGE'); $testEnv.GE_MP='temple'; $testEnv.GE_MPPLAYERS=[string]$Players }
 $saved = @{}

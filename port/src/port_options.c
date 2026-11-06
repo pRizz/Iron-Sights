@@ -103,6 +103,8 @@ static const char *const sAnisoText[] = { "OFF\n", "2x\n", "4x\n", "8x\n", "16x\
 /* [display] msaa: 1 = off, not 0 - that is the ini's own spelling and the
  * launcher's, and changing it would break every existing file. */
 static const s32 sMsaaVals[] = { 1, 2, 4, 8 };
+static const s32 sFontStyleVals[] = { 0, 1, 2 };
+static const char *const sFontStyleText[] = { "Original\n", "Enhanced\n", "Iron Sights\n" };
 static const char *const sHudScaleText[] = { "Normal\n", "High\n" };
 /* weapon_fov: off = the gun follows the view FOV (vanilla), on = the default FOV */
 static const char *const sWeaponFovText[] = { "Match View\n", "Default\n" };
@@ -203,7 +205,7 @@ static const struct PortOpt sOpts[] = {
     ENUMR ("anisotropy",    "[display]", "Anisotropy\n",      PORTOPT_CAT_DISPLAY, sAnisoVals, sAnisoText, NULL),
     ENUMR ("msaa",          "[display]", "MSAA\n",            PORTOPT_CAT_DISPLAY, sMsaaVals, sMsaaText, NULL),
     TOGGLE("filter_2d",     "[display]", "2D Filtering\n",    PORTOPT_CAT_DISPLAY),
-    TOGGLE("sharp_fonts",   "[display]", "Sharp Fonts\n",     PORTOPT_CAT_DISPLAY),
+    ENUMR ("font_style",    "[display]", "Fonts\n",           PORTOPT_CAT_DISPLAY, sFontStyleVals, sFontStyleText, NULL),
     TOGGLE("high_lod",      "[display]", "High Detail\n",     PORTOPT_CAT_DISPLAY),
     ENUMR ("low_res",       "[display]", "3D Resolution\n",   PORTOPT_CAT_DISPLAY, sLowResVals, sLowResText, NULL),
     TOGGLE("mipmaps",       "[display]", "Mipmaps\n",         PORTOPT_CAT_DISPLAY),

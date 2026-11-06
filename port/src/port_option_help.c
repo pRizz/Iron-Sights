@@ -38,7 +38,7 @@ static const struct PortOptHelp sHelp[] = {
     { "high_lod",           "Always draws the most detailed models." },
     { "setting_help",       "Shows this help box." },
     { "crash_reporting",    "Sends technical crash reports to Sentry. OFF stops uploads." },
-    { "sharp_fonts",        "Draws HUD and title text with our own font, sharp at any size." },
+    { "font_style",         "Original: game fonts. Enhanced: not yet available. Iron Sights: our sharp HUD font." },
 
     /* HUD */
     { "sight_on_screen",    "Shows the aiming sight." },
@@ -161,7 +161,7 @@ static const struct PortOptHelp sHelp[] = {
     { "@page_is_aim",       "Aim down sights, knife aiming and sprint speed." },
     { "@page_is_feedback",  "Hit markers, hit sounds and damage direction." },
     { "@page_is_hud",       "Crosshair size, weapon strip, health and mission alerts." },
-    { "@page_is_system",    "Build info, sharp fonts and crash reports." },
+    { "@page_is_system",    "Build info, fonts and crash reports." },
     { "@page_video",        "Display mode, resolution and picture quality." },
     { "@page_audio",        "Volume and sound options." },
     { "@page_classic",      "Choose which settings Classic Mode overrides." },

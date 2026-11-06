@@ -158,7 +158,7 @@ next action before handing off.
 
 | ID | Status | Notes |
 | --- | --- | --- |
-| FONT-1 | Not started | |
+| FONT-1 | Done | 2026-11-05: `[display] font_style` (0 Original, 1 Enhanced, 2 Iron Sights; default 0) replaces Sharp Fonts as **Fonts** on Iron Sights > System in the Options folder and the watch, with help, ini help, README and notices updated. `sharp_fonts=1` loads as Iron Sights unless `font_style` is present; saving writes only `font_style`. Until FONT-2, Enhanced draws the ROM fonts and its help says it is not yet available; the value reads `Enhanced`, and the `Enhanced (get)` label and prompt come with FONT-3. Verified: Windows build; settings placement and standards checks; 720p HUD captures draw the ROM font for 0 and 1 and the open font for 2 and for a file with only `sharp_fonts=1`; the watch page shows Fonts reading Iron Sights. `audit_hud.ps1 -FontStyle` and `audit_sights.ps1 -WatchPage` support these captures. Next: FONT-2 |
 | FONT-2 | Not started | |
 | FONT-3 | Not started | |
 | FONT-4 | Not started | |

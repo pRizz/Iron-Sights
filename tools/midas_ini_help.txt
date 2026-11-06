@@ -237,10 +237,14 @@ padN_stickmode.
                       |            | pages says what the highlighted
                       |            | setting does. Not on the watch
   Diagnostics (Windows, [diagnostics])
-  sharp_fonts         | 0          | [display] Draws Bank Gothic text (HUD,
-                      |            | watch, titles) with the open MIT title
-                      |            | font as a sharp distance field; 0 = the
-                      |            | ROM font. Iron Sights > System.
+  font_style          | 0          | [display] Fonts. 0 = Original (the ROM
+                      |            | fonts); 1 = Enhanced (a community redraw
+                      |            | the player downloads; not available yet,
+                      |            | drawn as 0); 2 = Iron Sights (HUD, watch
+                      |            | and title text in the open MIT title font,
+                      |            | sharp at any size). The older
+                      |            | sharp_fonts=1 loads as 2.
+                      |            | Iron Sights > System.
   crash_reporting     | 1          | ON sends technical crash reports to Sentry.
                       |            | 0 stops uploads and discards queued reports.
                       |            | No ROMs, saves or memory dumps are attached.

@@ -4781,7 +4781,7 @@ static const struct PortSheetRow port_sheet_rows_is_hud[] = {
 };
 static const struct PortSheetRow port_sheet_rows_is_system[] = {
     { SHROW_ABOUT, NULL, "About / Build Info\n" },
-    { SHROW_OPT, "sharp_fonts" },   /* FORK-050: applies live */
+    { SHROW_OPT, "font_style" },    /* FORK-051: applies live */
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     { SHROW_OPT, "crash_reporting" },
 #endif

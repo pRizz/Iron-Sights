@@ -32,8 +32,8 @@ new areas. Status describes implementation state, not Git publication state.
 
 ### FORK-052 — Font styles plan
 
-**Status:** Plan only. Proposed at the owner's request and accepted with its
-recommended decisions on 2026-11-05; nothing is built.
+**Status:** Plan accepted with its recommended decisions on 2026-11-05.
+FONT-1 (the setting) is implemented; FONT-2 to FONT-5 are not started.
 
 [`scripts/port/font_styles_plan.md`](scripts/port/font_styles_plan.md)
 proposes one **Gameplay > Iron Sights > System > Fonts** setting choosing
@@ -48,19 +48,42 @@ the consent prompt for every input, WinHTTP, libcurl and browser `fetch()`
 transports, the Enhanced renderer rebuilt from FORK-021's history on the
 FORK-051 glyph registry, milestones FONT-1 to FONT-5 and the accepted
 decisions.
-`AGENTS.md` points to it. **Checks:** documentation only; the download size
-(247,988 bytes) and file list were checked against the pinned commit through
-the GitHub API.
+`AGENTS.md` points to it.
 
-### FORK-051 — Sharp Fonts: open-font MSDF text
+**FONT-1 (2026-11-05).** **Gameplay > Iron Sights > System > Fonts**
+(`[display] font_style`: 0 Original, 1 Enhanced, 2 Iron Sights; default 0)
+replaces the Sharp Fonts toggle in the Options folder and the watch. Iron
+Sights draws Bank Gothic text with the open title font (FORK-051); Original
+and, until FONT-2 adds its renderer, Enhanced draw the ROM fonts, and the help
+line says Enhanced is not yet available. An older `sharp_fonts=1` loads as
+Iron Sights unless a `font_style` line is present; saving writes only
+`font_style`. Sources: [setting](port/src/video.c),
+[options](port/src/port_options.c), [frontend row](src/game/front.c),
+[watch row](port/src/port_watchpages.c), [help](port/src/port_option_help.c),
+[ini reference](tools/midas_ini_help.txt), [notices](tools/THIRD_PARTY_NOTICES.txt),
+[README](README.md), a `-FontStyle` choice (Original, Enhanced, IronSights,
+LegacySharpFonts) on the [HUD audit](scripts/port/audit_hud.ps1) and a
+`-WatchPage` parameter on the [sight/watch audit](scripts/port/audit_sights.ps1);
+the audits' `-SharpFonts` switches now write `font_style=2`.
+
+**Checks:** the plan's download size (247,988 bytes) and file list were
+checked against the pinned commit through the GitHub API. For FONT-1, the
+Windows build compiles and links and settings placement and the standards
+check pass. 1280x720 HUD captures with `font_style` 0 and 1 draw the ROM font
+(maximum vertical edge step 74 on the mission hints), while `font_style=2`
+and a file with only `sharp_fonts=1` draw the open font (200 and 203); a
+1600x900 capture of the watch's Iron Sights > System page shows the Fonts row
+reading Iron Sights. Saving a migrated file was not exercised at run time.
+
+### FORK-051 — Iron Sights font: open-font MSDF text
 
 **Status:** Implemented in the Windows build and compiled for the browser;
 default off. Not yet play-tested by the owner, and the browser build was not
 run. Part of the open assets plan (OPEN-4, FORK-050).
 
-Adds **Gameplay > Iron Sights > System > Sharp Fonts** (`[display]
-sharp_fonts`, default 0) to the Options folder and the watch. With it on,
-every Bank Gothic glyph (the HUD, watch, mission hints, timers, weapon strip,
+With **Gameplay > Iron Sights > System > Fonts** set to **Iron Sights**
+(`[display] font_style=2`; Original by default) in the Options folder or the
+watch, every Bank Gothic glyph (the HUD, watch, mission hints, timers, weapon strip,
 titles) is drawn from the open title font (pRizz/iron-sights-assets, MIT,
 vendored at v0.3.0) as a multi-channel signed distance field, sharp at any
 resolution, while Zurich Bold text (briefings, folder menus) keeps the ROM
@@ -110,7 +133,19 @@ replaced:
   3-point filter), takes the median of RGB and turns it into coverage over one
   screen pixel with `fwidth`; the combiner uses that as the glyph's intensity.
 
-With Sharp Fonts off, rendering is unchanged.
+With Fonts on Original, rendering is unchanged. The setting began as a
+Sharp Fonts toggle (`[display] sharp_fonts`); FONT-1 of the font styles plan
+(FORK-052) replaced it with Fonts, and `sharp_fonts=1` still loads as Iron
+Sights.
+
+The C++ registry builds as its own CMake object library (`ge_open_fonts`)
+with none of the game's include directories. Built with them, the first
+pushed version failed the Linux CI build: under GCC 11, `<algorithm>` reaches
+`<pthread.h>`, whose `<sched.h>` resolved to the game's `src/sched.h`, and the
+game's declarations then clashed with the C library's. Windows (GCC 13 MinGW)
+and the browser were unaffected. The CI Linux image reproduced the errors on
+the old include path, and its `linux_build.py` build compiles and links with
+the object library.
 
 **Upstream hooks:** a fork block in `textrelated.c`'s font loader; in
 `gfx_pc.cpp` the I8 import, cache key, 2D sampler choice, UV-clamp decision,
@@ -127,7 +162,7 @@ generator in `gfx_opengl.cpp`; `gfx_cc.*` and `gfx_pc.h`.
 [help](port/src/port_option_help.c), [ini reference](tools/midas_ini_help.txt),
 [build](CMakeLists.txt), [notices](tools/THIRD_PARTY_NOTICES.txt),
 [tests](scripts/port/test_open_fonts.sh), [README](README.md), and
-`-SharpFonts` switches on the [HUD](scripts/port/audit_hud.ps1),
+`-SharpFonts` switches (now `font_style=2`) on the [HUD](scripts/port/audit_hud.ps1),
 [sight/watch](scripts/port/audit_sights.ps1) and [text](scripts/port/audit_fonts.ps1) audits.
 **Checks:** the Windows build compiles and links; the browser video build
 (`web_build.py video`) compiles and links and its wasm audit passes, but was
@@ -136,8 +171,9 @@ vendored atlas, registers a ROM-like font and checks a glyph's box, field
 inside its stem, outside its corner and on the ROM baseline. `test_hud.sh`,
 `test_hitmap.sh`, the open-asset verification, settings placement and the
 standards check pass; the regenerated gallery has zero changed image cells.
-With Sharp Fonts off, 1280x960 video-menu captures are pixel-identical to the
-build before this change, with point-sampled and smoothed glyphs. With it on,
+With the setting off (now Original), 1280x960 video-menu captures are
+pixel-identical to the build before this change, with point-sampled and
+smoothed glyphs. With it on,
 1280x720 HUD captures show the outlined timer and ammo digits, the mission
 hints and the weapon strip crisp where the ROM font is blurry, at the ROM's
 capital height with no overlapping letters, and a 1600x900 watch page shows
@@ -164,7 +200,8 @@ rechecks offline; `.gitattributes` keeps the folder byte-exact).
 `test_open_assets.py` runs in the release workflow, `build-inputs.json` records
 the release, Windows and Linux packages ship `Open-Assets-LICENSE.txt`, the
 browser site lists it, and THIRD_PARTY_NOTICES describes it. The renderer that
-draws it is FORK-051 (OPEN-4), behind Sharp Fonts (default off).
+draws it is FORK-051 (OPEN-4), the Fonts setting's Iron Sights choice
+(Original by default).
 
 [open_assets_plan.md](scripts/port/open_assets_plan.md) plans original,
 MIT-licensed fonts to replace the ROM's glyphs, and a renderer that draws them
@@ -186,8 +223,8 @@ status table.
 Accepted decisions: the assets repository is `pRizz/iron-sights-assets`
 (public, MIT), Arimo (Apache-2.0) is a
 development-only body-font placeholder that never ships, the renderer uses MSDF,
-Sharp Fonts defaults to off until both fonts exist and the owner has
-play-tested them, and the emulator exporter (OPEN-6) is deferred. `AGENTS.md`
+Sharp Fonts (now the Fonts setting's Iron Sights choice) defaults to off
+until both fonts exist and the owner has play-tested them, and the emulator exporter (OPEN-6) is deferred. `AGENTS.md`
 now sends work on fonts, text rendering and original assets to the plan and its
 provenance rules, as it does for the web target.
 
@@ -593,7 +630,7 @@ subsections, in both the Options folder and the watch:
 | Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Sprint, Ludicrous Sprint |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction |
 | HUD Additions | Always Crosshair Size, Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
-| System | About / Build Info, Sharp Fonts (FORK-051), Crash Reporting (Windows/Linux) |
+| System | About / Build Info, Fonts (FORK-051, FORK-052), Crash Reporting (Windows/Linux) |
 
 The watch's Iron Sights page also holds the Suspend Points action, which moved
 there from the watch's Gameplay page. Rows left General Settings, HUD, Port
