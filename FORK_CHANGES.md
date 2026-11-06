@@ -2309,6 +2309,29 @@ layouts. Private evidence is `build/web-touch/n64-{edge,webkit,game}`. The exist
 optimized runtime is reused; no native render inputs change and gallery freshness
 verifies. These checks do not establish physical iPhone acceptance.
 
+**Touch-cancel check under load (2026-11-06).** CI run 42279844036 failed
+`touch-ui-audit.mjs` once while the room audit's software WebGL loaded every
+core: right after a CDP `touchCancel` the fixture still reported the stick at
+`[0, 1]`. Investigated as a possible real stale-movement bug: on cancel,
+`touch-contacts.ts` ends the contact (from `pointercancel`, or the
+`touchcancel` fallback) and the stick handler sends `move(0, 0)`; a later
+`pointermove` is ignored once the contact is gone, and the per-frame monitor
+never sends stick movement, so nothing can re-apply movement after a handled
+cancel. Locally (Edge, 16 cores) the failure did not reproduce: 7 runs under
+CDP CPU throttling at rates 1 to 40, 8 runs with 32 CPU-burning processes and
+2 more with 24 all passed the cancel check, and a probe found that
+`Input.dispatchTouchEvent` returned after the page had handled `pointercancel`
+and `touchcancel` in all 600 rounds, idle and loaded. The remaining explanation
+is the overloaded 4-core runner, whose input pipeline can acknowledge a touch
+before the page handles it, letting the audit's snapshot overtake the queued
+cancel; a device handles the cancel a moment later. So the audit, not the
+controls, changed: every check that follows a dispatched touch in its CDP block
+now waits up to 5 s for the expected state (`settled`), keeping its failure
+message and reporting the last state, and the fire press is confirmed before
+the simulated focus loss so a late press cannot follow it. The touch audit
+passed 3 runs idle and 2 under load afterwards. Not reproduced on CI itself,
+since CI no longer runs the audits side by side (FORK-024).
+
 ### FORK-026 — Upstream 1.0.2b integration
 
 **Status:** Implemented; local acceptance passes.
@@ -5479,8 +5502,10 @@ rebuild into an emptied folder hit 302 of 306 compiles and fell from 654 s to
 within noise (the link and Wasm optimization dominate there), and the
 filesystem fixture's build got 27 s slower. Both were removed (the workflow
 step, `web_build.py`, `web_toolchain.json` and `web_runtime.md` are back to
-their earlier form; `web_ccache.py` and its test are deleted). Untested
+their earlier form; `web_ccache.py` and its test are deleted). Then untested
 whether the touch-cancel failure is only a test race or a real stale-movement
-race on slow devices. Remaining browser costs are the room audit's software
+race on slow devices: investigated in FORK-028, which found no way for the
+controls to keep movement after a handled cancel and made the audit wait for
+each state. Remaining browser costs are the room audit's software
 rendering and the link; a faster room audit would need fewer room loads or a
 smaller viewport.

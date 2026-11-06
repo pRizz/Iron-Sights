@@ -2141,3 +2141,10 @@ additional test host and passes the real-ROM menu, movement, Watch,
 Pause/Resume, Options, audio and layout integration checks. Continue with
 physical-device acceptance and tune controls
 from that evidence without changing campaign storage or desktop capture policy.
+
+- 2026-11-06 touch-cancel check under load: one CI run (42279844036, audits run
+  side by side) read stale stick movement right after a CDP `touchCancel`. The
+  controls cannot re-apply movement after a handled cancel, and locally neither
+  the failure nor an early CDP acknowledgement reproduced (throttled and loaded
+  runs, a 600-round probe). The audit now waits for each expected state after a
+  dispatched touch instead of reading once; see FORK-028.

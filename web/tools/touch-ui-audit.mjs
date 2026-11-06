@@ -208,22 +208,39 @@ try {
         await update(2, fire.x + 24, fire.y + 24, true);
         await update(3, look.x + 40, look.y + 40, true);
         await update(3, look.x + 95, look.y + 40, true);
-        let value = await snapshot();
-        assert.ok(value.movement[1] > 0.5 && value.held.includes(0) && value.look[0] > 1);
+        // A busy runner's browser can acknowledge a dispatched touch before the
+        // page has handled it (CI run 42279844036 read stale movement after a
+        // touchCancel), so each check waits for its state instead of reading once.
+        const settled = async (check, message) => {
+            const deadline = Date.now() + 5000;
+            let current = await snapshot();
+            while (!check(current) && Date.now() < deadline) {
+                await new Promise((resolve) => setTimeout(resolve, 20));
+                current = await snapshot();
+            }
+            assert.ok(check(current), message + ': ' + JSON.stringify(current));
+            return current;
+        };
+        const still = (current) => current.movement[0] === 0 && current.movement[1] === 0;
+        await settled(
+            (current) =>
+                current.movement[1] > 0.5 && current.held.includes(0) && current.look[0] > 1,
+            'Stick, fire and look did not work together',
+        );
         await update(2, 0, 0, false);
-        value = await snapshot();
-        assert.ok(
-            !value.held.includes(0) && value.movement[1] > 0.5,
-            'Finger release affected another control: ' + JSON.stringify(value),
+        await settled(
+            (current) => !current.held.includes(0) && current.movement[1] > 0.5,
+            'Finger release affected another control',
         );
         await session.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
-        value = await snapshot();
-        assert.deepEqual(value.movement, [0, 0]);
-        assert.deepEqual(value.held, []);
+        await settled(
+            (current) => still(current) && current.held.length === 0,
+            'Touch cancel left a control held',
+        );
         fingers.clear();
         // A touch stream can end without pointerup/cancel reaching its owner.
         await update(1, stick.x + stick.width / 2, stick.y + 15, true);
-        assert.ok((await snapshot()).movement[1] > 0.5);
+        await settled((current) => current.movement[1] > 0.5, 'Stick did not move');
         await page.evaluate(() =>
             document.dispatchEvent(new TouchEvent('touchend', { touches: [] })),
         );
@@ -231,25 +248,35 @@ try {
         await session.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
         fingers.clear();
         await update(1, stick.x + stick.width / 2, stick.y + 15, true);
-        assert.ok((await snapshot()).movement[1] > 0.5, 'Stick could not be used after recovery');
+        await settled(
+            (current) => current.movement[1] > 0.5,
+            'Stick could not be used after recovery',
+        );
         // Dragging well past the ring sprints; easing back to the ring stops it.
         await update(1, stick.x + stick.width / 2, stick.y - stick.height * 0.25, true);
-        value = await snapshot();
-        assert.ok(value.stickSprint && value.movement[1] > 0.99, 'Overdrag did not sprint');
+        await settled(
+            (current) => current.stickSprint && current.movement[1] > 0.99,
+            'Overdrag did not sprint',
+        );
         assert.equal(
             await page.locator('.touch-stick').getAttribute('data-sprinting'),
             'true',
             'Overdrag sprint is not shown on the stick',
         );
         await update(1, stick.x + stick.width / 2, stick.y + stick.height * 0.05, true);
-        value = await snapshot();
-        assert.ok(!value.stickSprint && value.movement[1] > 0.99, 'Sprint outlived the overdrag');
+        await settled(
+            (current) => !current.stickSprint && current.movement[1] > 0.99,
+            'Sprint outlived the overdrag',
+        );
         await update(1, stick.x + stick.width / 2, stick.y - stick.height * 0.25, true);
         await update(1, 0, 0, false);
-        value = await snapshot();
-        assert.deepEqual(value.movement, [0, 0]);
-        assert.ok(!value.stickSprint, 'Releasing the stick left it sprinting');
+        await settled(
+            (current) => still(current) && !current.stickSprint,
+            'Releasing the stick left it moving or sprinting',
+        );
         await update(1, fire.x + 24, fire.y + 24, true);
+        // The press must land before the focus loss, or a late press would follow it.
+        await settled((current) => current.held.includes(0), 'Fire did not press');
         await page.evaluate(() => window.dispatchEvent(new Event('blur')));
         assert.deepEqual((await snapshot()).held, [], 'Focus loss left fire held');
         await session.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
