@@ -30,6 +30,27 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-052 — Font styles plan
+
+**Status:** Plan only, proposed 2026-11-05 at the owner's request and awaiting
+their decisions; nothing is built.
+
+[`scripts/port/font_styles_plan.md`](scripts/port/font_styles_plan.md)
+proposes one **Gameplay > Iron Sights > System > Fonts** setting choosing
+Original (ROM), Enhanced (the community GEPD masks removed in FORK-021) or
+Iron Sights (the open title font, FORK-051), replacing the Sharp Fonts row.
+The Enhanced fonts would stay out of every package and commit: choosing them
+asks the player before downloading the pack's 186 font PNGs from
+Graslu/GEPDTexturePacks at its pinned final commit, checks each file against a
+pinned SHA-256 and installs it in `Data/FontPacks/gepd/`, where a manual
+install also works. The plan covers the setting and `sharp_fonts` migration,
+the consent prompt for every input, WinHTTP, libcurl and browser `fetch()`
+transports, the Enhanced renderer rebuilt from FORK-021's history on the
+FORK-051 glyph registry, milestones FONT-1 to FONT-5 and proposed decisions.
+`AGENTS.md` points to it. **Checks:** documentation only; the download size
+(247,988 bytes) and file list were checked against the pinned commit through
+the GitHub API.
+
 ### FORK-051 — Sharp Fonts: open-font MSDF text
 
 **Status:** Implemented in the Windows build and compiled for the browser;
@@ -3922,7 +3943,8 @@ GhostlyDark for fonts. The planned replacement is original, MIT-licensed fonts
 drawn from scratch (never traced from the ROM or any pack) and a renderer that
 draws text sharply at any resolution ([plan](scripts/port/open_assets_plan.md),
 FORK-050); until then every target draws the original glyphs from the
-player's ROM.
+player's ROM. A later proposal (FORK-052) would let players download the
+pack themselves, on request, without Iron Sights bundling it.
 
 The removal deleted the masks, notice, license and provenance
 (`port/fast3d/fonts/`), the decoder and glyph-extent code

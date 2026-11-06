@@ -177,7 +177,9 @@ MSDF is recommended over the alternatives:
   screen pixel with `fwidth`, and feeds that as the texel to the unchanged
   combiner, so colours, outlines and fades work as before.
 - **Setting.** Sharp Fonts (`[display] sharp_fonts`, default 0) on Iron Sights
-  > System in the Options folder and the watch.
+  > System in the Options folder and the watch. The proposed
+  [font styles plan](font_styles_plan.md) would fold it into a Fonts choice
+  (Original, Enhanced, Iron Sights).
 
 ## Use outside Iron Sights
 

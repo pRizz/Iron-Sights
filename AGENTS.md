@@ -152,6 +152,10 @@ pass its isolated executable rather than rebuilding an active player binary.
   accepted [open assets plan](scripts/port/open_assets_plan.md). Read it before
   resuming, keep its provenance rules (drawn from scratch, MIT, no ROM-derived
   data in the assets), and update its milestone status table before handing off.
+- Text styles (Original, Enhanced, Iron Sights) follow the
+  [font styles plan](scripts/port/font_styles_plan.md). Never bundle, commit or
+  host the Enhanced pack's files; the game downloads them only after the
+  player consents. Update its milestone status table before handing off.
 - The immersive browser room follows its accepted
   [experience plan](scripts/port/web_room_plan.md) and WEB-007 through WEB-010 in
   the same progress file. Keep the game canvas/storage lifecycle intact; record
