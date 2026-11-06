@@ -1,4 +1,5 @@
 import { allowedUserPath, MAX_USER_FILE_BYTES, MAX_BACKUP_TEXT, createBackup, parseBackup, validateUserFiles, type UserFile } from './backup';
+import { fontPackPath } from './font-pack-paths';
 import type { GameFS } from './runtime-types';
 import { createSyncQueue, type SaveStatus } from './sync-queue';
 
@@ -41,7 +42,11 @@ function installWriteTracking(fs: GameFS, changed: () => void): () => void {
   const unlink = fs.unlink.bind(fs);
   let stamp = Date.now();
   const canonical = (path: string) => fs.getPath(fs.lookupPath(path, { follow: true }).node);
-  const userPath = (path: string) => path.startsWith(USER_MOUNT + '/') && allowedUserPath(path.slice(USER_MOUNT.length + 1));
+  const userPath = (path: string) => {
+    if (!path.startsWith(USER_MOUNT + '/')) return false;
+    const relative = path.slice(USER_MOUNT.length + 1);
+    return allowedUserPath(relative) || fontPackPath(relative);
+  };
   const touch = (path: string) => {
     // IDBFS compares millisecond mtimes. Two quick writes must not look equal.
     stamp = Math.max(Date.now(), stamp + 1);

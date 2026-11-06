@@ -141,7 +141,28 @@ try {
   await page.reload();
   await page.evaluate(initialize);
   assert.equal(await page.evaluate(() => fixture.FS.readFile('/user/Data/Saves/eeprom.bin')[0]), 37);
-  console.log('IDBFS: C save/reload, writes during sync, backup round trip, rollback, running-game guard and staged import/reload passed');
+  // FORK-052 FONT-4: a downloaded Enhanced font file (written as .part, then
+  // renamed, as the game does) persists across a reload but stays out of save
+  // backups, and removing it persists too.
+  const fontFile = '/user/Data/FontPacks/gepd/GOLDENEYE#CDE33EA7#4#1_rgb.png';
+  await page.evaluate(async path => {
+    fixture.FS.mkdirTree('/user/Data/FontPacks/gepd');
+    fixture.FS.writeFile(path + '.part', new Uint8Array([137, 80, 78, 71]));
+    fixture.FS.rename(path + '.part', path);
+    await files.flush();
+  }, fontFile);
+  await page.reload();
+  await page.evaluate(initialize);
+  assert.deepEqual(await page.evaluate(path => Array.from(fixture.FS.readFile(path)), fontFile), [137, 80, 78, 71]);
+  assert.equal(await page.evaluate(() => files.snapshot().some(file => file.path.includes('FontPacks'))), false);
+  await page.evaluate(async path => {
+    fixture.FS.unlink(path);
+    await files.flush();
+  }, fontFile);
+  await page.reload();
+  await page.evaluate(initialize);
+  assert.equal(await page.evaluate(path => fixture.FS.analyzePath(path).exists, fontFile), false);
+  console.log('IDBFS: C save/reload, writes during sync, backup round trip, rollback, running-game guard, staged import/reload and Enhanced font files passed');
 } finally {
   await maybeBrowser?.close();
   await new Promise(resolve => server.close(resolve));

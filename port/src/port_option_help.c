@@ -119,7 +119,7 @@ static const struct PortOptHelp sHelp[] = {
     { "maxfps",             "Frame rate cap." },
     { "@apply",             "Applies the changes on this page." },
     { "@about",             "Build version, commit, timestamp and source links." },
-    { "@enhanced_fonts_get", "Downloads the files named above from GitHub, or cancels or uses them." },
+    { "@enhanced_fonts_get", "Downloads the files named above from GitHub and uses them, or cancels, or switches fonts." },
     { "@enhanced_fonts_remove", "Deletes the downloaded font files. Asks first." },
 
     /* CLASSIC: what Classic Mode forces while it is on */

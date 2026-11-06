@@ -7,8 +7,14 @@
 #include <cstring>
 #include <filesystem>
 #include <chrono>
+#include <memory>
 #include <mutex>
 #include <thread>
+#include <utility>
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 #include "../include/port_enhanced_fonts.h"
 #include "enhanced_fonts.h"
@@ -94,42 +100,108 @@ std::string file_url(const std::string &base, const enhanced_font_masks::PackFil
     return base + encode_path(std::string(kPackDir) + file.path);
 }
 
+Installer::Installer(std::string base, const enhanced_font_masks::PackFile *files, size_t count, std::string directory,
+                     Progress &progress)
+    : base_(std::move(base)), directory_(std::move(directory)), files_(files), count_(count), progress_(progress),
+      backoff_(kFirstBackoff) {
+    std::error_code ec;
+    fs::create_directories(fs::path(directory_), ec);
+    if (ec) finish(Result::Failed, "Folder not writable");
+}
+
+void Installer::finish(Result result, std::string error) {
+    finished_ = true;
+    outcome_ = {result, std::move(error)};
+}
+
+Installer::Step Installer::next() {
+    if (finished_) return {};
+    if (waiting_) return {Step::Kind::Wait, "", wait_seconds_};
+    while (!checked_) {
+        if (index_ == count_) {
+            if (write_file(fs::path(directory_) / "SOURCE.txt", kSourceNote, sizeof(kSourceNote) - 1)) {
+                finish(Result::Done, "");
+            } else {
+                finish(Result::Failed, "Folder not writable");
+            }
+            return {};
+        }
+        if (!valid_file(fs::path(directory_) / enhanced_font_masks::file_name(files_[index_]), files_[index_])) {
+            checked_ = true;
+            break;
+        }
+        progress_.done++;
+        index_++;
+    }
+    return {Step::Kind::Fetch, file_url(base_, files_[index_]), 0};
+}
+
+void Installer::fetched(bool ok, const std::vector<uint8_t> &data, const Failure &failure) {
+    if (finished_ || waiting_ || !checked_) return;  /* no fetch was asked for */
+    if (!ok) {
+        if (failure.retry_after < 0) {
+            finish(Result::Failed, failure.reason.empty() ? "Download failed" : failure.reason);
+            return;
+        }
+        const int seconds = failure.retry_after > 0 ? failure.retry_after : backoff_;
+        if (attempt_ >= kBusyTries || seconds > kLongestWait) {
+            finish(Result::Failed, "GitHub busy");
+            return;
+        }
+        attempt_++;
+        backoff_ *= 2;
+        waiting_ = true;
+        wait_seconds_ = seconds;
+        return;
+    }
+    const auto &file = files_[index_];
+    if (!enhanced_font_masks::verify(data.data(), data.size(), file)) {
+        finish(Result::Failed, "A file did not match");
+        return;
+    }
+    const fs::path target = fs::path(directory_) / enhanced_font_masks::file_name(file);
+    fs::path partial = target;
+    partial += ".part";
+    std::error_code ec;
+    if (!write_file(partial, data.data(), data.size())) {
+        finish(Result::Failed, "Folder not writable");
+        return;
+    }
+    fs::rename(partial, target, ec);
+    if (ec) {
+        finish(Result::Failed, "Folder not writable");
+        return;
+    }
+    progress_.done++;
+    index_++;
+    checked_ = false;
+    attempt_ = 1;
+    backoff_ = kFirstBackoff;
+}
+
+void Installer::waited() {
+    waiting_ = false;
+}
+
 Outcome install(const std::string &base, const enhanced_font_masks::PackFile *files, size_t count,
                 const std::string &directory, const Transport &transport, const std::atomic<bool> &cancel,
                 Progress &progress, const Wait &wait) {
-    std::error_code ec;
-    fs::create_directories(fs::path(directory), ec);
-    if (ec) return {Result::Failed, "Folder not writable"};
+    Installer installer(base, files, count, directory, progress);
     std::vector<uint8_t> data;
-    for (size_t i = 0; i < count; i++) {
+    for (;;) {
         if (cancel) return {Result::Cancelled, ""};
-        const fs::path target = fs::path(directory) / enhanced_font_masks::file_name(files[i]);
-        if (valid_file(target, files[i])) {
-            progress.done++;
+        const Installer::Step step = installer.next();
+        if (step.kind == Installer::Step::Kind::Finished) return installer.outcome();
+        if (step.kind == Installer::Step::Kind::Wait) {
+            if (!wait(step.seconds, progress.waiting, cancel)) return {Result::Cancelled, ""};
+            installer.waited();
             continue;
         }
         Failure failure;
-        for (int attempt = 1, backoff = kFirstBackoff;; attempt++, backoff *= 2) {
-            failure = Failure();
-            if (transport(file_url(base, files[i]), data, failure, cancel)) break;
-            if (cancel) return {Result::Cancelled, ""};
-            if (failure.retry_after < 0) return {Result::Failed, failure.reason.empty() ? "Download failed" : failure.reason};
-            const int seconds = failure.retry_after > 0 ? failure.retry_after : backoff;
-            if (attempt >= kBusyTries || seconds > kLongestWait) return {Result::Failed, "GitHub busy"};
-            if (!wait(seconds, progress.waiting, cancel)) return {Result::Cancelled, ""};
-        }
-        if (!enhanced_font_masks::verify(data.data(), data.size(), files[i])) return {Result::Failed, "A file did not match"};
-        fs::path partial = target;
-        partial += ".part";
-        if (!write_file(partial, data.data(), data.size())) return {Result::Failed, "Folder not writable"};
-        fs::rename(partial, target, ec);
-        if (ec) return {Result::Failed, "Folder not writable"};
-        progress.done++;
+        const bool ok = transport(step.url, data, failure, cancel);
+        if (!ok && cancel) return {Result::Cancelled, ""};
+        installer.fetched(ok, data, failure);
     }
-    if (!write_file(fs::path(directory) / "SOURCE.txt", kSourceNote, sizeof(kSourceNote) - 1)) {
-        return {Result::Failed, "Folder not writable"};
-    }
-    return {Result::Done, ""};
 }
 
 void remove_files(const enhanced_font_masks::PackFile *files, size_t count, const std::string &directory) {
@@ -175,24 +247,176 @@ size_t pinned_count() {
     return count;
 }
 
-/* The worker's whole job; it owns no state but g_download's atomics until it
- * takes the lock to report. */
-void run_download() {
-    size_t count = 0;
-    const auto *files = enhanced_font_masks::pack_files(count);
-    const std::string directory = enhanced_fonts::directory();
+std::string download_base() {
     const char *override_base = std::getenv("GE_FONTPACK_BASE_URL");  /* tests: a local fixture only */
     const bool local = override_base != nullptr && std::strncmp(override_base, "http://127.0.0.1:", 17) == 0;
-    const Outcome outcome = install(local ? override_base : default_base(), files, count, directory,
-                                    platform_transport(), g_download.cancel, g_download.progress);
-    const int valid = count_valid(files, count, directory);
+    return local ? override_base : default_base();
+}
+
+/* Records how a download ended and lets the renderer see the new files. */
+void report(const Outcome &outcome) {
+    size_t count = 0;
+    const auto *files = enhanced_font_masks::pack_files(count);
+    const int valid = count_valid(files, count, enhanced_fonts::directory());
     enhanced_fonts::reload();
     std::lock_guard<std::mutex> guard(g_download.lock);
     g_download.valid = valid;
     g_download.failed = outcome.result == Result::Failed;
     g_download.error = outcome.error;
     if (outcome.result == Result::Done) g_download.just_installed = true;
+    g_download.progress.waiting = 0;
     g_download.running = false;
+}
+
+#ifdef __EMSCRIPTEN__
+
+/* The browser has no threads: fetch() runs beside the game and a pump on each
+ * frame answers the Installer's steps (FONT-4). A request's answer waits in
+ * Module.midasFontFetches until the pump takes it. */
+EM_JS(int, efonts_fetch_start, (const char *url), {
+    const table = Module.midasFontFetches || (Module.midasFontFetches = { next: 1, live: {} });
+    const id = table.next++;
+    const entry = { done: false, status: 0, retryAfter: -1, bytes: null, online: true, controller: new AbortController() };
+    table.live[id] = entry;
+    fetch(UTF8ToString(url), { signal: entry.controller.signal })
+        .then(async response => {
+            entry.status = response.status;
+            const header = response.headers.get('Retry-After');
+            entry.retryAfter = header ? (parseInt(header, 10) || 0) : 0;
+            if (response.ok) entry.bytes = new Uint8Array(await response.arrayBuffer());
+        })
+        .catch(() => {
+            entry.status = 0;
+            entry.online = typeof navigator === 'undefined' || navigator.onLine !== false;
+        })
+        .finally(() => { entry.done = true; });
+    return id;
+});
+/* -1 while in flight, else the HTTP status (0 = no answer). */
+EM_JS(int, efonts_fetch_status, (int id), {
+    const entry = Module.midasFontFetches && Module.midasFontFetches.live[id];
+    return entry && entry.done ? entry.status : -1;
+});
+EM_JS(int, efonts_fetch_size, (int id), {
+    const entry = Module.midasFontFetches.live[id];
+    return entry.bytes ? entry.bytes.length : 0;
+});
+EM_JS(int, efonts_fetch_retry_after, (int id), {
+    return Module.midasFontFetches.live[id].retryAfter;
+});
+EM_JS(int, efonts_fetch_online, (int id), {
+    return Module.midasFontFetches.live[id].online ? 1 : 0;
+});
+/* Copies the body out and forgets the request. */
+EM_JS(void, efonts_fetch_take, (int id, uint8_t *out), {
+    const entry = Module.midasFontFetches.live[id];
+    if (entry.bytes) HEAPU8.set(entry.bytes, out);
+    delete Module.midasFontFetches.live[id];
+});
+EM_JS(void, efonts_fetch_abort, (int id), {
+    const entry = Module.midasFontFetches && Module.midasFontFetches.live[id];
+    if (entry) entry.controller.abort();
+    if (entry) delete Module.midasFontFetches.live[id];
+});
+
+struct BrowserDownload {
+    std::unique_ptr<Installer> installer;
+    int request = 0;        /* the fetch in flight, 0 = none */
+    double wait_until = 0;  /* emscripten_get_now() ms when a busy wait ends, 0 = not waiting */
+};
+BrowserDownload g_browser;
+
+/* A finished fetch as the Installer reads it: the body, or why not. A failed
+ * fetch while the browser is online may be a busy answer it hid (a 429
+ * without CORS headers), so it is retried like one. */
+void take_fetch(int id, int status, std::vector<uint8_t> &data, Failure &failure, bool &ok) {
+    const int size = efonts_fetch_size(id);
+    const int retry_after = efonts_fetch_retry_after(id);
+    const bool online = efonts_fetch_online(id) != 0;
+    data.assign(size_t(size), 0);
+    efonts_fetch_take(id, data.data());
+    ok = status == 200 && size_t(size) <= (1u << 20);
+    if (ok) return;
+    if (status == 200) {
+        failure.reason = "File too large";
+    } else if (status == 0) {
+        failure.reason = "No connection";
+        if (online) failure.retry_after = 0;
+    } else {
+        failure.reason = "Server error " + std::to_string(status);
+        if (status == 429 || status == 502 || status == 503 || status == 504) failure.retry_after = retry_after > 0 ? retry_after : 0;
+    }
+}
+
+void pump() {
+    BrowserDownload &b = g_browser;
+    if (!b.installer) return;
+    if (g_download.cancel) {
+        if (b.request != 0) efonts_fetch_abort(b.request);
+        b = BrowserDownload();
+        report({Result::Cancelled, ""});
+        return;
+    }
+    for (;;) {
+        if (b.request != 0) {
+            const int status = efonts_fetch_status(b.request);
+            if (status < 0) return;  /* still in flight */
+            std::vector<uint8_t> data;
+            Failure failure;
+            bool ok = false;
+            take_fetch(b.request, status, data, failure, ok);
+            b.request = 0;
+            b.installer->fetched(ok, data, failure);
+            continue;
+        }
+        if (b.wait_until > 0) {
+            const double left = b.wait_until - emscripten_get_now();
+            if (left > 0) {
+                g_download.progress.waiting = int((left + 999) / 1000);
+                return;
+            }
+            b.wait_until = 0;
+            g_download.progress.waiting = 0;
+            b.installer->waited();
+            continue;
+        }
+        const Installer::Step step = b.installer->next();
+        if (step.kind == Installer::Step::Kind::Finished) {
+            const Outcome outcome = b.installer->outcome();
+            b = BrowserDownload();
+            report(outcome);
+            return;
+        }
+        if (step.kind == Installer::Step::Kind::Wait) {
+            b.wait_until = emscripten_get_now() + step.seconds * 1000.0;
+            g_download.progress.waiting = step.seconds;
+            return;
+        }
+        b.request = efonts_fetch_start(step.url.c_str());
+        return;
+    }
+}
+
+#else
+
+/* The worker's whole job; it owns no state but g_download's atomics until
+ * report takes the lock. */
+void run_download() {
+    size_t count = 0;
+    const auto *files = enhanced_font_masks::pack_files(count);
+    report(install(download_base(), files, count, enhanced_fonts::directory(), platform_transport(), g_download.cancel,
+                   g_download.progress));
+}
+
+#endif
+
+/* This build can fetch the files itself. */
+bool can_download() {
+#ifdef __EMSCRIPTEN__
+    return true;
+#else
+    return bool(platform_transport());
+#endif
 }
 
 }  // namespace
@@ -207,7 +431,7 @@ extern "C" int portEnhancedFontsState(void) {
     }
     if (g_download.failed) return PORT_EFONTS_FAILED;
     if (g_download.valid >= int(pinned_count())) return PORT_EFONTS_INSTALLED;
-    if (!platform_transport()) return PORT_EFONTS_UNSUPPORTED;
+    if (!can_download()) return PORT_EFONTS_UNSUPPORTED;
     return g_download.valid > 0 ? PORT_EFONTS_PARTIAL : PORT_EFONTS_MISSING;
 }
 
@@ -224,7 +448,7 @@ extern "C" const char *portEnhancedFontsError(void) {
 }
 
 extern "C" void portEnhancedFontsDownload(void) {
-    if (g_download.running || !platform_transport()) return;
+    if (g_download.running || !can_download()) return;
     {
         std::lock_guard<std::mutex> guard(g_download.lock);
         g_download.failed = false;
@@ -235,10 +459,27 @@ extern "C" void portEnhancedFontsDownload(void) {
     g_download.progress.waiting = 0;
     g_download.running = true;
 #ifdef __EMSCRIPTEN__
-    run_download();  /* unreachable until FONT-4: the browser has no transport yet */
+    size_t count = 0;
+    const auto *files = enhanced_font_masks::pack_files(count);
+    g_browser.installer = std::make_unique<Installer>(download_base(), files, count, enhanced_fonts::directory(),
+                                                      g_download.progress);
 #else
     std::thread(run_download).detach();  /* quitting mid-download just abandons it; no partial file is used */
 #endif
+}
+
+extern "C" void portEnhancedFontsPump(void) {
+#ifdef __EMSCRIPTEN__
+    pump();
+#endif
+}
+
+extern "C" void portEnhancedFontsSetDirectory(const char *directory) {
+    if (directory != nullptr && !g_download.running) {
+        enhanced_fonts::set_directory(directory);
+        std::lock_guard<std::mutex> guard(g_download.lock);
+        g_download.valid = -1;
+    }
 }
 
 extern "C" void portEnhancedFontsCancel(void) {

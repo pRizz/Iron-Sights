@@ -4961,6 +4961,10 @@ s32 videoInit(void)
     gfx_filter_2d = s_CfgFilter2D != 0;
     gfx_sharp_fonts = s_CfgFontStyle == 2;
     gfx_enhanced_fonts = s_CfgFontStyle == 1;
+    { /* FORK-052: the Enhanced fonts beside midas.ini, not wherever the game was launched from */
+        extern const char *portRootPath(const char *name);
+        portEnhancedFontsSetDirectory(portRootPath("Data/FontPacks/gepd"));
+    }
     { /* [display] low_res: whole-game 240p render scaled to the window (very low power machines).
        * GE_LOWRES=1/0 overrides the ini for A/B. */
         extern char *getenv(const char *);

@@ -126,6 +126,8 @@ __attribute__((weak)) void portEnhancedFontsProgress(int *done, int *total) { if
 __attribute__((weak)) const char *portEnhancedFontsError(void) { return ""; }
 __attribute__((weak)) void portEnhancedFontsDownload(void) {}
 __attribute__((weak)) void portEnhancedFontsCancel(void) {}
+__attribute__((weak)) void portEnhancedFontsPump(void) {}
+__attribute__((weak)) void portEnhancedFontsSetDirectory(const char *directory) { (void) directory; }
 __attribute__((weak)) void portEnhancedFontsRecount(void) {}
 __attribute__((weak)) void portEnhancedFontsRemove(void) {}
 __attribute__((weak)) int portEnhancedFontsJustInstalled(void) { return 0; }

@@ -33,9 +33,9 @@ new areas. Status describes implementation state, not Git publication state.
 ### FORK-052 — Font styles plan
 
 **Status:** Plan accepted with its recommended decisions on 2026-11-05.
-FONT-1 (the setting), FONT-2 (the Enhanced renderer with manual install) and
-FONT-3 (the in-game download) are implemented; FONT-4 and FONT-5 are not
-started.
+FONT-1 (the setting), FONT-2 (the Enhanced renderer with manual install),
+FONT-3 (the in-game download) and FONT-4 (the browser download) are
+implemented; FONT-5 (release) is not started.
 
 [`scripts/port/font_styles_plan.md`](scripts/port/font_styles_plan.md)
 proposes one **Gameplay > Iron Sights > System > Fonts** setting choosing
@@ -136,9 +136,9 @@ their license, that Iron Sights does not include them, and the download's
 size and source (186 files, 250 KB, GitHub Graslu/GEPDTexturePacks), then
 a status line (Not installed, Incomplete: N of 186, Downloading: N of 186,
 Failed: reason, Installed) and two actions. The first reads **Download**,
-**Cancel Download**, **Retry Download**, **Use Enhanced Fonts** (installed:
-sets Fonts to Enhanced) or, where the build cannot download, **Check Folder
-Again**; the second is **Remove Enhanced Fonts**, which asks first (the
+**Cancel Download**, **Retry Download**, **Use Original Fonts** /
+**Use Enhanced Fonts** (installed: switches Fonts; see FONT-4) or, where the
+build cannot download, **Check Folder Again**; the second is **Remove Enhanced Fonts**, which asks first (the
 folder's Yes/No dialog, starting on No; on the watch a second press on
 **Confirm Remove**, as Reset to Default does) and sets Fonts back to Original
 if it was Enhanced. Picking Download on this page is the player's consent; the
@@ -161,9 +161,8 @@ as `winhttp`) and, on Linux, libcurl loaded at run time (`libcurl.so.4`, then
 `libcurl-gnutls.so.4`); each caps a file at 1 MiB and gives short reasons (No
 connection, Timed out, Secure link failed, Server error N, File too large, A
 file did not match, Folder not writable). A Linux system without libcurl gets
-**Check Folder Again** and the manual-install hint. The browser and Xbox have
-no transport and the page is hidden in the browser until FONT-4, so browser
-touch has no new screen. `GE_FONTPACK_BASE_URL` points the download at a local
+**Check Folder Again** and the manual-install hint. Xbox has no transport;
+the browser fetches through its own pump (FONT-4). `GE_FONTPACK_BASE_URL` points the download at a local
 fixture for tests and is honoured only for `http://127.0.0.1:` addresses.
 `port/src/port_enhanced_fonts.c` holds the actions both menus share; the
 menus' C API is `port/include/port_enhanced_fonts.h`, with weak fallbacks in
@@ -207,7 +206,7 @@ the same Enhanced Fonts page (whose text and Download action remain the
 consent), and Back returns onto it. The row shows only while the build can
 download and the files are not all installed: it disappears once the pack is
 installed (Back then lands on the last row) and is absent where the build
-cannot download (the browser, Xbox, Linux without libcurl), where System >
+cannot download (Xbox, Linux without libcurl), where System >
 Enhanced Fonts still explains a manual copy. This is a deliberate exception to
 keeping fork rows on the Iron Sights pages. The watch has no shortcut: its face
 holds exactly nine rows (Rare's seven plus Gameplay and Audio Visual) and a
@@ -263,6 +262,58 @@ and with every answer 429 stopped after five requests on **Failed: GitHub
 busy**; a 64-bit Linux build through `libcurl-gnutls.so.4` installed 186
 files in 6.3 s after one 429 naming 5 seconds and gave up after five
 requests and 30 s when every answer was 429.
+
+**FONT-4 (2026-11-06).** The browser downloads the Enhanced fonts too: the
+Enhanced Fonts page under System, its watch page and the Options folder's
+**Get Enhanced Fonts** row now appear in the browser as on Windows and Linux.
+The browser has no threads, so the download became steps:
+`enhanced_fonts_download::Installer` decides what to fetch, verifies and
+writes each file and applies the busy-server backoff, and `install()` is now
+the blocking loop over it that the native worker runs. In the browser
+`portEnhancedFontsPump`, called every frame from `portEnhancedFontsFrame`,
+answers its steps: each file is fetched with `fetch()` beside the game
+(`EM_JS` helpers keep the answers in `Module.midasFontFetches` until the pump
+takes them), busy waits are timed with `emscripten_get_now`, and Cancel aborts
+the request in flight. raw.githubusercontent.com answers with
+`Access-Control-Allow-Origin: *`; a fetch that fails while the browser is
+online is retried like a busy answer, since a 429 without CORS headers reaches
+the page only as a failed fetch. The files go to `/user/Data/FontPacks/gepd`,
+inside the browser's saved storage: `web/src/font-pack-paths.ts` lets their
+writes, renames and deletions schedule the storage sync
+(`persistent-files.ts`) without adding them to save backups, which stay
+limited to the player's own files. Everywhere, the folder is now set from the
+game's root folder at start (`portEnhancedFontsSetDirectory(portRootPath(...))`
+in `video.c`) instead of the launch folder, so a native game started from
+another folder finds and installs its fonts beside `midas.ini`.
+
+The page's first button, once the files are installed, reads **Use Original
+Fonts** while Fonts is Enhanced and **Use Enhanced Fonts** otherwise, and
+switches between them. A finished download already set Fonts to Enhanced; the
+old label made it look as if a further press were needed (owner feedback).
+Help: "Downloads the files named above from GitHub and uses them, or cancels,
+or switches fonts."
+
+Input: the page needs only taps on its buttons (browser touch sends cursor
+motion and A in menus, as on every folder row) and the Remove dialog's
+choices, answered by tapping a choice like the folder's other Yes/No dialogs;
+it needs no native touch context. Not run: the touch audits, the full launcher
+in a browser, and Remove in the browser game (the scripted D-pad presses did
+not reach the Remove button in the probe page).
+
+**FONT-4 checks:** the engine and download tests (unchanged, through the new
+`Installer`) and the ADS test pass; the Windows game installed 186 files from a
+local server after one 429 and showed **Use Original Fonts**. `bun test
+src/font-pack-paths.test.ts` checks which paths persist without being backed
+up. `bun run test:filesystem` (Edge, real IDBFS) gains a case: a font file
+written as `.part` and renamed survives a reload, is absent from the backup
+snapshot, and its deletion survives a reload; with the tracking change
+removed, the same case fails. The browser game (`web_build.py video`, the
+probe page with a scripted A press, Edge headless) downloaded from a local
+server through one 429 with CORS (countdown, progress, then Installed with
+**Use Original Fonts** and the Enhanced text), through two 429s sent without
+CORS headers (retried, then installed), and from GitHub itself: each time 186
+files and `SOURCE.txt` with no `.part` left and "186 of 186 files installed"
+in the log, and no page errors.
 
 ### FORK-051 — Iron Sights font: open-font MSDF text
 

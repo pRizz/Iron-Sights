@@ -4794,9 +4794,7 @@ static const struct PortSheetRow port_sheet_rows_is_hud[] = {
 static const struct PortSheetRow port_sheet_rows_is_system[] = {
     { SHROW_ABOUT, NULL, "About / Build Info\n" },
     { SHROW_OPT, "font_style" },    /* FORK-051: applies live */
-#ifndef __EMSCRIPTEN__   /* the browser cannot download yet (font styles plan FONT-4) */
     { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_FONTS },
-#endif
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     { SHROW_OPT, "crash_reporting" },
 #endif
@@ -4811,16 +4809,12 @@ static const s32 port_sheet_display_pages[] = { PORT_SHEET_VIDEO, PORT_SHEET_AUD
 
 /* GET ENHANCED FONTS (FORK-052): a fourth folder row, opening the Enhanced
  * Fonts page, while this build can download the fonts and they are not all
- * installed. Not in the browser, which cannot download yet (FONT-4). */
+ * installed. */
 static s32 portOptionsFontsRow(void)
 {
-#ifdef __EMSCRIPTEN__
-    return FALSE;
-#else
     const int state = portEnhancedFontsState();
 
     return state != PORT_EFONTS_INSTALLED && state != PORT_EFONTS_UNSUPPORTED;
-#endif
 }
 
 /** The Options folder screen's rows: its own three, or a hub's pages. */

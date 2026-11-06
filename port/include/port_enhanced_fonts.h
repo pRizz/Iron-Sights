@@ -19,6 +19,10 @@ enum PortEnhancedFontsState {
 };
 
 int portEnhancedFontsState(void);
+/* Advances a browser download; called every frame (portEnhancedFontsFrame). */
+void portEnhancedFontsPump(void);
+/* Where the files live: Data/FontPacks/gepd under the game's root folder. */
+void portEnhancedFontsSetDirectory(const char *directory);
 /* Files verified so far and the pinned total, for the progress line. */
 void portEnhancedFontsProgress(int *done, int *total);
 /* Why the last download failed, short enough for one menu line. */

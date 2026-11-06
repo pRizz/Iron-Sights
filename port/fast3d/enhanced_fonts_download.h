@@ -53,6 +53,44 @@ std::string file_url(const std::string &base, const enhanced_font_masks::PackFil
 /* The pack's own repository at the pinned commit. */
 std::string default_base();
 
+/* The download one step at a time, for a caller that cannot block (the
+ * browser drives it a frame at a time); install() drives it with a blocking
+ * transport and wait. Ask next() what to do, then report it with fetched() or
+ * waited(). It keeps each valid file, verifies each fetched one, writes it as
+ * .part and renames it into place, and writes SOURCE.txt last. */
+class Installer {
+  public:
+    struct Step {
+        enum class Kind { Fetch, Wait, Finished };
+        Kind kind = Kind::Finished;
+        std::string url;  /* Fetch */
+        int seconds = 0;  /* Wait */
+    };
+
+    Installer(std::string base, const enhanced_font_masks::PackFile *files, size_t count, std::string directory,
+              Progress &progress);
+    /* What to do now; asking again before answering returns the same step. */
+    Step next();
+    /* The answer to a Fetch step. */
+    void fetched(bool ok, const std::vector<uint8_t> &data, const Failure &failure);
+    /* The answer to a Wait step. */
+    void waited();
+    /* How it ended, once next() says Finished. */
+    const Outcome &outcome() const { return outcome_; }
+
+  private:
+    void finish(Result result, std::string error);
+
+    std::string base_, directory_;
+    const enhanced_font_masks::PackFile *files_;
+    size_t count_;
+    Progress &progress_;
+    size_t index_ = 0;
+    bool checked_ = false, waiting_ = false, finished_ = false;
+    int attempt_ = 1, backoff_ = 0, wait_seconds_ = 0;
+    Outcome outcome_;
+};
+
 /* Installs files[0..count) into directory: each one already valid is kept,
  * the others fetched and verified. progress.done is bumped per verified file.
  * While the server is busy a file is asked for again after the wait it names,
@@ -66,8 +104,9 @@ void remove_files(const enhanced_font_masks::PackFile *files, size_t count, cons
 /* How many of the pinned files in directory are valid. */
 int count_valid(const enhanced_font_masks::PackFile *files, size_t count, const std::string &directory);
 
-/* This platform's HTTPS transport, or an empty function when there is none
- * (no libcurl on Linux, or the browser until FONT-4). */
+/* This platform's blocking HTTPS transport, or an empty function when there
+ * is none (no libcurl on Linux; the browser fetches through its own pump in
+ * the menus' C API instead). */
 Transport platform_transport();
 
 }  // namespace enhanced_fonts_download

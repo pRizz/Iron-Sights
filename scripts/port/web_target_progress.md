@@ -447,6 +447,11 @@ verify an actual deployed update. Keep suspend images disabled.
   lock transfer/retry. An injected quota-style abort of the real IDBFS transaction
   rolled back memory files, retained durable data, exposed a save error and
   recovered with Retry. Storage/IDBFS fixture reruns and 62 unit tests passed.
+- 2026-11-06 Enhanced fonts (FORK-052 FONT-4): files the game downloads into
+  `Data/FontPacks/gepd` on request also schedule the IDBFS sync
+  (`web/src/font-pack-paths.ts`), so they survive a reload, but stay out of
+  save backups. `test:filesystem` gained that case (write as `.part`, rename,
+  reload, absent from the snapshot, delete, reload) and passed in Edge.
 
 ## WEB-004 | 2026-10-24 | Browser launcher
 

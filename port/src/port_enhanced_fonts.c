@@ -8,6 +8,7 @@ extern s32 portOptFind(const char *key);
 extern s32 portOptGet(s32 i);
 extern s32 portOptSetValue(s32 i, s32 v);
 
+#define FONT_STYLE_ORIGINAL 0
 #define FONT_STYLE_ENHANCED 1
 
 static void setFontStyle(s32 style)
@@ -20,6 +21,14 @@ static void setFontStyle(s32 style)
     }
 }
 
+/** Fonts is set to Enhanced (a finished download sets it by itself). */
+static s32 enhancedInUse(void)
+{
+    const s32 i = portOptFind("font_style");
+
+    return i >= 0 && portOptGet(i) == FONT_STYLE_ENHANCED;
+}
+
 const char *portEnhancedFontsActionLabel(int action)
 {
     if (action != 0)
@@ -30,7 +39,7 @@ const char *portEnhancedFontsActionLabel(int action)
     {
     case PORT_EFONTS_DOWNLOADING: return "Cancel Download\n";
     case PORT_EFONTS_FAILED:      return "Retry Download\n";
-    case PORT_EFONTS_INSTALLED:   return "Use Enhanced Fonts\n";
+    case PORT_EFONTS_INSTALLED:   return enhancedInUse() ? "Use Original Fonts\n" : "Use Enhanced Fonts\n";
     case PORT_EFONTS_UNSUPPORTED: return "Check Folder Again\n";
     default:                      return "Download\n";
     }
@@ -41,7 +50,7 @@ void portEnhancedFontsPrimaryAction(void)
     switch (portEnhancedFontsState())
     {
     case PORT_EFONTS_DOWNLOADING: portEnhancedFontsCancel(); break;
-    case PORT_EFONTS_INSTALLED:   setFontStyle(FONT_STYLE_ENHANCED); break;
+    case PORT_EFONTS_INSTALLED:   setFontStyle(enhancedInUse() ? FONT_STYLE_ORIGINAL : FONT_STYLE_ENHANCED); break;
     case PORT_EFONTS_UNSUPPORTED: portEnhancedFontsRecount(); break;
     default:                      portEnhancedFontsDownload(); break;
     }
@@ -72,6 +81,7 @@ void portEnhancedFontsRemoveAndRevert(void)
 
 void portEnhancedFontsFrame(void)
 {
+    portEnhancedFontsPump();
     if (portEnhancedFontsJustInstalled())
     {
         setFontStyle(FONT_STYLE_ENHANCED);
