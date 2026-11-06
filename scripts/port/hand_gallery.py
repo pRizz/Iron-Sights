@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate/verify the versioned hand review matrix. No Python packages required."""
 import argparse
+import concurrent.futures
 import hashlib
 import html
 import json
@@ -30,6 +31,12 @@ ICON_NAMES = [None, 'unarmed', 'knife', 'throwing_knife', 'pp7', 'pp7_silenced',
 ICON_NAMES += ['unarmed_' + name for name in WARDROBES]
 ICON_NAMES += ['tank', 'rifle_butt']
 ICON_COUNT = sum(name is not None for name in ICON_NAMES[1:])
+# The fixture's settings. maxfps=0 with GE_NOSLEEP lets a capture run as fast
+# as it renders; GE_FIXEDTICK keeps its game time one field per frame.
+FIXTURE_INI = ('[display]\nfullscreen=window\nvsync=0\nmaxfps=0\ntickhz=60\n'
+    'msaa=1\nrender_thread=0\nwidescreen=1\nhfov_wide=90\nlow_res=0\nfiltering=bilinear\nfilter_2d=1\n'
+    'aim_mode=1\nsight_on_screen=0\nalways_crosshair=0\nweapon_hud=0\nalways_health=0\n'
+    'mission_timer=0\nhit_markers=0\ndamage_indicators=0\nobjective_notifications=0\nmission_hints=0\n[input]\nmouse=1\n')
 
 
 def digest(data):
@@ -192,9 +199,11 @@ def run_game(exe, rom, directory, cache, name, gallery=False):
     env.update(GE_ROM=str(rom), GE_WINDOW='960x540', GE_NOINPUT='1', GE_SEED='1',
                GE_STAGE='runway', GE_STAGE_AFTER='1', GE_SKIPINTRO='1',
                GE_CHEATS='invuln,invis,guns', GE_ICON_CACHE_DIR=str(cache),
-               GE_FRAMES='14000' if gallery else '5')
+               GE_FRAMES='1000000' if gallery else '5')
     if gallery:
-        env.update(GE_HAND_GALLERY='1', GE_FIXEDTICK='1')
+        # Unpaced: the frame cap counts the pump's retraces, which outrun the
+        # game's frames, so only the timeout below bounds a stuck capture.
+        env.update(GE_HAND_GALLERY='1', GE_FIXEDTICK='1', GE_NOSLEEP='1')
     else:
         env['GE_ICON_CACHE_FORCE'] = '1'
     flags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
@@ -395,29 +404,31 @@ def generate(root=ROOT, executable=None):
     work = Path(tempfile.mkdtemp(prefix='hand-gallery-', dir=root/'build_win'))
     print('Local capture logs: '+str(work), flush=True)
     exe = Path(executable).resolve(strict=True) if executable else build(root, work)
-    game = work/'game'
-    game.mkdir()
-    target = game/exe.name
-    shutil.copy2(exe, target)
-    for dll in exe.parent.glob('*.dll'):
-        shutil.copy2(dll, game/dll.name)
-    (game/'midas.ini').write_text('[display]\nfullscreen=window\nvsync=0\nmaxfps=60\ntickhz=60\n'
-        'msaa=1\nrender_thread=0\nwidescreen=1\nhfov_wide=90\nlow_res=0\nfiltering=bilinear\nfilter_2d=1\n'
-        'aim_mode=1\nsight_on_screen=0\nalways_crosshair=0\nweapon_hud=0\nalways_health=0\n'
-        'mission_timer=0\nhit_markers=0\ndamage_indicators=0\nobjective_notifications=0\nmission_hints=0\n[input]\nmouse=1\n', encoding='utf-8')
+    # The icon run and both render passes are independent game processes, so
+    # they run side by side, each in its own folder with its own icon cache.
+    games = {}
+    for name in ('icons', 'pass-1', 'pass-2'):
+        game = work/('game-'+name)
+        game.mkdir()
+        shutil.copy2(exe, game/exe.name)
+        for dll in exe.parent.glob('*.dll'):
+            shutil.copy2(dll, game/dll.name)
+        (game/'midas.ini').write_text(FIXTURE_INI, encoding='utf-8')
+        games[name] = game
     output = work/'published'
     output.mkdir()
     try:
-        print(f'Regenerating all {ICON_COUNT} native weapon/wardrobe/tank icons...', flush=True)
-        run_game(target, rom, game, work/'cache', 'icons')
-        icons = cache_icons(next((work/'cache').glob('*.cache')), output)
-        print('Capturing 72 cases, two samples per case...', flush=True)
-        log = run_game(target, rom, game, work/'cache', 'pass-1', True)
-        first = capture_pass(log, game)
-        for path in game.glob('shot_*.bmp'):
-            path.unlink()
-        print('Verifying a second independent render pass...', flush=True)
-        second = capture_pass(run_game(target, rom, game, work/'cache', 'pass-2', True), game)
+        print(f'Regenerating all {ICON_COUNT} native icons and capturing 72 cases (two samples each) '
+              'in two independent passes, side by side...', flush=True)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(games)) as pool:
+            runs = {name: pool.submit(run_game, game/exe.name, rom, game, work/('cache-'+name), name, name != 'icons')
+                    for name, game in games.items()}
+            log = runs['pass-1'].result()
+            log2 = runs['pass-2'].result()
+            runs['icons'].result()
+        icons = cache_icons(next((work/'cache-icons').glob('*.cache')), output)
+        first = capture_pass(log, games['pass-1'])
+        second = capture_pass(log2, games['pass-2'])
         for case in cases():
             if first[case['id']] != second[case['id']]:
                 raise ValueError('Independent render passes differ: '+case['file'])
@@ -458,7 +469,8 @@ def generate(root=ROOT, executable=None):
         for name in changed:
             print('  '+name)
     finally:
-        target.unlink(missing_ok=True)
+        for game in games.values():
+            (game/exe.name).unlink(missing_ok=True)
 
 
 def install_hook(root=ROOT):

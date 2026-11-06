@@ -961,6 +961,20 @@ s32 portHwPaceFields(void)
     return lastFields;
 }
 #endif
+#ifndef TARGET_N64
+/** GE_FIXEDTICK is set: the capture harness's fixed one field per frame. */
+static s32 portFixedTick(void)
+{
+    extern char *getenv(const char *);
+    static s32 fixedtick = -1;
+
+    if (fixedtick < 0)
+    {
+        fixedtick = (getenv("GE_FIXEDTICK") != NULL);
+    }
+    return fixedtick;
+}
+#endif
 void updateFrameCounters(s32 deltaFrames)
 {
 #ifndef TARGET_N64
@@ -972,18 +986,9 @@ void updateFrameCounters(s32 deltaFrames)
      * rendered frame, so two runs of the same scene stay frame-for-frame
      * comparable for pixel diffs. The game runs in slow motion when rendering
      * can't keep up; never on by default. */
+    if (portFixedTick() && deltaFrames > 0)
     {
-        extern char *getenv(const char *);
-        static s32 fixedtick = -1;
-
-        if (fixedtick < 0)
-        {
-            fixedtick = (getenv("GE_FIXEDTICK") != NULL);
-        }
-        if (fixedtick && deltaFrames > 0)
-        {
-            deltaFrames = 1;
-        }
+        deltaFrames = 1;
     }
 #endif
 
@@ -1121,6 +1126,16 @@ void waitForNextFrame(void) //maybe WaitForTick
   u32 nextFrameTime; //next frame time?
 
 #ifndef TARGET_N64
+  /* GE_FIXEDTICK (FORK-022's review gallery): every frame is exactly one field, with
+   * no wait for the clock, so a capture's game time follows the frames drawn
+   * rather than real time and an unpaced capture (GE_NOSLEEP) runs as fast as
+   * it can render, with the same result. */
+  if (portFixedTick())
+  {
+      frameDelay = 1;
+      updateFrameCounters(1);
+      return;
+  }
   if (portTickHz() != 60)
   {
       /* Any tick rate other than 60: from one elapsed-time reading, derive

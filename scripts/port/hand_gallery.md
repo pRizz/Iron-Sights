@@ -52,6 +52,14 @@ captured by a second game process and compared again. Native icon generation
 performs its existing repeated-sample check. The script publishes output only
 after these checks pass. It does not silently accept unstable renders.
 
+The icon run and both render passes are separate game processes running side
+by side, each in its own folder. The passes run unpaced (`GE_NOSLEEP`,
+`maxfps=0`); `GE_FIXEDTICK` counts every frame as exactly one field without
+waiting on the clock, so a capture's game time follows the frames drawn and
+each case's settle time passes as fast as the GPU renders it. A full
+regeneration takes about 40 seconds on the development machine, down from about
+6 minutes when the steps ran one after another at 60 frames a second.
+
 `manifest.json` records the recipe, source-input fingerprint, ROM hash, GPU/GL
 identity and file/pixel hashes. No timestamps or machine-specific absolute paths
 appear in output. PNG encoding is canonical. Repeated captures on the recorded

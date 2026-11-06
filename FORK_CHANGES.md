@@ -4333,6 +4333,25 @@ and Node.js syntax validation of the embedded gallery script passed.
 The browser prototype slice extended fingerprint coverage for CMake presets,
 header templates and always-linked asset objects; all eight gallery tests and
 both full capture passes passed with zero changed image cells.
+
+**Faster regeneration (2026-11-06).** At the owner's request, generation went
+from 5 min 53 s to 38 s. Each case waits 120 fields to settle, and
+`GE_FIXEDTICK` used to wait for each field in real time (`waitForNextFrame`
+spun on the clock), so a pass took at least 144 s whatever the GPU could do;
+two passes and the icon run ran one after another. Now `GE_FIXEDTICK` makes
+`waitForNextFrame` count every frame as one field without waiting
+(`src/game/frametiming.c`, port-only code under `#ifndef TARGET_N64`; an
+upstream merge touching that function must keep this early return), the
+capture passes run unpaced (`GE_NOSLEEP`, `maxfps=0`, the frame cap raised so
+only the 600 s timeout bounds a stuck capture), and the icon run and both
+passes run side by side as three processes, each in its own folder with its
+own icon cache. The two passes stay independent processes compared pixel for
+pixel, the repeated-sample check is unchanged, and the recipe is unchanged.
+Nothing else sets `GE_FIXEDTICK`. Checks: two full regenerations in 38 s each
+with zero changed image cells against the committed gallery (so pixel-identical
+to the paced captures), `verify` and `test_hand_gallery.py` passed; the earlier
+sequential baseline measured icons 30 s, pass 1 158 s and pass 2 164 s, and
+turning off pacing alone left each pass at 158 s.
 Browser automation rejected the local file URL by policy, so interactive browser
 validation was not completed; the gallery can be opened manually offline.
 
