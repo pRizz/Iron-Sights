@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <chrono>
 #include <mutex>
 #include <thread>
 
@@ -20,6 +21,11 @@ namespace fs = std::filesystem;
 const char kRepository[] = "Graslu/GEPDTexturePacks";
 const char kCommit[] = "ca06e063f5b985cf59b1ed7a01d03ba3cf86ec63";
 const char kPackDir[] = "GoldenEye Texture Pack/";
+/* A busy server: tries per file, the first wait when it names none (doubling
+ * after), and the longest wait accepted before giving up. */
+constexpr int kBusyTries = 5;
+constexpr int kFirstBackoff = 2;
+constexpr int kLongestWait = 60;
 const char kSourceNote[] =
     "Enhanced fonts for Iron Sights\n\n"
     "Carnivorous's GEPD font images (CC0-1.0), from\n"
@@ -68,6 +74,18 @@ std::string encode_path(const std::string &path) {
 
 }  // namespace
 
+Wait sleeping_wait() {
+    return [](int seconds, std::atomic<int> &waiting, const std::atomic<bool> &cancel) {
+        for (int tenths = seconds * 10; tenths > 0; tenths--) {
+            if (cancel) break;
+            waiting = (tenths + 9) / 10;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        waiting = 0;
+        return !cancel;
+    };
+}
+
 std::string default_base() {
     return std::string("https://raw.githubusercontent.com/") + kRepository + "/" + kCommit + "/";
 }
@@ -78,7 +96,7 @@ std::string file_url(const std::string &base, const enhanced_font_masks::PackFil
 
 Outcome install(const std::string &base, const enhanced_font_masks::PackFile *files, size_t count,
                 const std::string &directory, const Transport &transport, const std::atomic<bool> &cancel,
-                std::atomic<int> &done) {
+                Progress &progress, const Wait &wait) {
     std::error_code ec;
     fs::create_directories(fs::path(directory), ec);
     if (ec) return {Result::Failed, "Folder not writable"};
@@ -87,13 +105,18 @@ Outcome install(const std::string &base, const enhanced_font_masks::PackFile *fi
         if (cancel) return {Result::Cancelled, ""};
         const fs::path target = fs::path(directory) / enhanced_font_masks::file_name(files[i]);
         if (valid_file(target, files[i])) {
-            done++;
+            progress.done++;
             continue;
         }
-        std::string error;
-        if (!transport(file_url(base, files[i]), data, error, cancel)) {
+        Failure failure;
+        for (int attempt = 1, backoff = kFirstBackoff;; attempt++, backoff *= 2) {
+            failure = Failure();
+            if (transport(file_url(base, files[i]), data, failure, cancel)) break;
             if (cancel) return {Result::Cancelled, ""};
-            return {Result::Failed, error.empty() ? "Download failed" : error};
+            if (failure.retry_after < 0) return {Result::Failed, failure.reason.empty() ? "Download failed" : failure.reason};
+            const int seconds = failure.retry_after > 0 ? failure.retry_after : backoff;
+            if (attempt >= kBusyTries || seconds > kLongestWait) return {Result::Failed, "GitHub busy"};
+            if (!wait(seconds, progress.waiting, cancel)) return {Result::Cancelled, ""};
         }
         if (!enhanced_font_masks::verify(data.data(), data.size(), files[i])) return {Result::Failed, "A file did not match"};
         fs::path partial = target;
@@ -101,7 +124,7 @@ Outcome install(const std::string &base, const enhanced_font_masks::PackFile *fi
         if (!write_file(partial, data.data(), data.size())) return {Result::Failed, "Folder not writable"};
         fs::rename(partial, target, ec);
         if (ec) return {Result::Failed, "Folder not writable"};
-        done++;
+        progress.done++;
     }
     if (!write_file(fs::path(directory) / "SOURCE.txt", kSourceNote, sizeof(kSourceNote) - 1)) {
         return {Result::Failed, "Folder not writable"};
@@ -138,7 +161,7 @@ using namespace enhanced_fonts_download;
 struct Download {
     std::mutex lock;
     std::atomic<bool> running{false}, cancel{false}, just_installed{false};
-    std::atomic<int> done{0};
+    Progress progress;
     int valid = -1;  /* verified files in the folder; -1 = not counted yet */
     bool failed = false;
     std::string error;
@@ -161,7 +184,7 @@ void run_download() {
     const char *override_base = std::getenv("GE_FONTPACK_BASE_URL");  /* tests: a local fixture only */
     const bool local = override_base != nullptr && std::strncmp(override_base, "http://127.0.0.1:", 17) == 0;
     const Outcome outcome = install(local ? override_base : default_base(), files, count, directory,
-                                    platform_transport(), g_download.cancel, g_download.done);
+                                    platform_transport(), g_download.cancel, g_download.progress);
     const int valid = count_valid(files, count, directory);
     enhanced_fonts::reload();
     std::lock_guard<std::mutex> guard(g_download.lock);
@@ -191,7 +214,7 @@ extern "C" int portEnhancedFontsState(void) {
 extern "C" void portEnhancedFontsProgress(int *done, int *total) {
     const int state = portEnhancedFontsState();
     std::lock_guard<std::mutex> guard(g_download.lock);
-    if (done) *done = state == PORT_EFONTS_DOWNLOADING ? g_download.done.load() : g_download.valid;
+    if (done) *done = state == PORT_EFONTS_DOWNLOADING ? g_download.progress.done.load() : g_download.valid;
     if (total) *total = int(pinned_count());
 }
 
@@ -208,7 +231,8 @@ extern "C" void portEnhancedFontsDownload(void) {
         g_download.error.clear();
     }
     g_download.cancel = false;
-    g_download.done = 0;
+    g_download.progress.done = 0;
+    g_download.progress.waiting = 0;
     g_download.running = true;
 #ifdef __EMSCRIPTEN__
     run_download();  /* unreachable until FONT-4: the browser has no transport yet */
@@ -262,7 +286,13 @@ extern "C" const char *portEnhancedFontsInfoLine(int i) {
     portEnhancedFontsProgress(&done, &total);
     switch (portEnhancedFontsState()) {
         case PORT_EFONTS_INSTALLED: return "Installed.\n";
-        case PORT_EFONTS_DOWNLOADING: std::snprintf(status, sizeof(status), "Downloading: %d of %d\n", done, total); break;
+        case PORT_EFONTS_DOWNLOADING:
+            if (g_download.progress.waiting > 0) {
+                std::snprintf(status, sizeof(status), "GitHub busy: retry in %ds\n", g_download.progress.waiting.load());
+            } else {
+                std::snprintf(status, sizeof(status), "Downloading: %d of %d\n", done, total);
+            }
+            break;
         case PORT_EFONTS_PARTIAL: std::snprintf(status, sizeof(status), "Incomplete: %d of %d files\n", done, total); break;
         case PORT_EFONTS_FAILED: std::snprintf(status, sizeof(status), "Failed: %s\n", portEnhancedFontsError()); break;
         case PORT_EFONTS_UNSUPPORTED: return "Copy to Data/FontPacks/gepd\n";

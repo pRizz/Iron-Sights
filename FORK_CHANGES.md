@@ -239,6 +239,31 @@ box still names it), after a scripted A (Retry Download boxed) and installed
 and with A on Remove opening its dialog, and a 1600x900 watch capture with the dimmed
 description, a full-strength status line and the three button plates.
 
+**Busy-server backoff (2026-11-06).** GitHub publishes no limit for
+`raw.githubusercontent.com`, and since 2025 players have reported 429 answers
+there, mostly from shared addresses; 186 requests in a row could meet one.
+When a file's answer is 429, 502, 503 or 504, `install` now waits and asks for
+that file again instead of failing: for the Retry-After the server named, or
+else 2, 4, 8 and 16 seconds, five tries in all. A fifth busy answer, or a
+wait over a minute, fails with **Failed: GitHub busy** and **Retry Download**
+(files already installed are kept). While it waits the status line reads
+**GitHub busy: retry in Ns**, counting down, and **Cancel Download** stops
+the wait at once. Transports return a `Failure` (reason plus `retry_after`)
+instead of a string: WinHTTP reads Retry-After as text (its numeric query
+refused the header in testing), libcurl through `CURLINFO_RETRY_AFTER` (7.66
+and later; older ones read as no wait). `install` takes a `Progress` (files
+done, seconds left waiting) and a `Wait`, which tests replace. Source:
+`port/fast3d/enhanced_fonts_download.{h,cpp}`, `enhanced_fonts_http.cpp`.
+Checks: `test_enhanced_fonts_download.cpp` covers the backoff sequence, a named
+wait, giving up after five tries, refusing a two-minute wait, cancelling
+during a wait and the real wait's countdown and cancel. Against a local server
+answering 429: the Windows game showed **GitHub busy: retry in 5s** two
+seconds into a 7-second Retry-After, finished all 186 files after two 429s,
+and with every answer 429 stopped after five requests on **Failed: GitHub
+busy**; a 64-bit Linux build through `libcurl-gnutls.so.4` installed 186
+files in 6.3 s after one 429 naming 5 seconds and gave up after five
+requests and 30 s when every answer was 429.
+
 ### FORK-051 — Iron Sights font: open-font MSDF text
 
 **Status:** Implemented in the Windows build and compiled for the browser;
