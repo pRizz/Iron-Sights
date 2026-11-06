@@ -5,7 +5,10 @@ param(
     [ValidateSet('Video','Difficulty','Hud','Credits')][string]$Mode = 'Video',
     [string]$Resolution = '1920x1080',
     # Fonts = Iron Sights (font_style=2): Bank Gothic text from the open title font (FORK-051).
-    [switch]$SharpFonts
+    [switch]$SharpFonts,
+    # Fonts = Enhanced (font_style=1) with this folder of Enhanced font files copied into
+    # Data/FontPacks/gepd (FORK-052; enhanced_fonts_pack.py install makes one).
+    [string]$FontPack = ''
 )
 $ErrorActionPreference = 'Stop'
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
@@ -19,8 +22,13 @@ foreach ($filter in @(0,1)) {
     Copy-Item -LiteralPath $Executable -Destination $auditExe
     Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
     $ini = @('[display]','fullscreen=window','vsync=0','maxfps=120',
-        'tickhz=60','render_thread=0','msaa=0',"filter_2d=$filter","font_style=$(if ($SharpFonts) { 2 } else { 0 })",'mission_timer=1','weapon_hud_icons=0')
+        'tickhz=60','render_thread=0','msaa=0',"filter_2d=$filter","font_style=$(if ($SharpFonts) { 2 } elseif ($FontPack) { 1 } else { 0 })",'mission_timer=1','weapon_hud_icons=0')
     Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value $ini
+    if ($FontPack) {
+        $packDir = Join-Path $dir 'Data/FontPacks/gepd'
+        New-Item -ItemType Directory -Path $packDir | Out-Null
+        Copy-Item -Path (Join-Path (Resolve-Path -LiteralPath $FontPack).Path '*') -Destination $packDir
+    }
     $auditEnv = @{
         GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$Resolution; GE_NOINPUT='1';
         GE_SEED='1'; GE_FRAMES='650'; GE_SHOT='500'

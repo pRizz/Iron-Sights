@@ -18,6 +18,8 @@ param(
     [switch]$SharpFonts,
     # Fonts choice to write instead; LegacySharpFonts writes only the older sharp_fonts=1.
     [ValidateSet('', 'Original', 'Enhanced', 'IronSights', 'LegacySharpFonts')][string]$FontStyle = '',
+    # A folder of Enhanced font files (enhanced_fonts_pack.py install) to copy into Data/FontPacks/gepd.
+    [string]$FontPack = '',
     [switch]$Chop,
     [ValidateRange(0,1023)][int]$BestSeconds = 0,
     [string]$Stage = 'dam',
@@ -46,6 +48,11 @@ if ($FontStyle -eq 'LegacySharpFonts') { $ini = @('[display]', 'sharp_fonts=1') 
 elseif ($FontStyle) { $ini = @('[display]', "font_style=$(@{Original=0; Enhanced=1; IronSights=2}[$FontStyle])") + $ini }
 if ($Disabled) { $ini = @('[display]', 'hit_markers=0', 'damage_indicators=0', 'objective_notifications=0', 'weapon_hud=0', 'always_health=0') + $ini }
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value $ini
+if ($FontPack) {
+    $packDir = Join-Path $dir 'Data\FontPacks\gepd'
+    New-Item -ItemType Directory -Path $packDir | Out-Null
+    Copy-Item -Path (Join-Path (Resolve-Path -LiteralPath $FontPack).Path '*') -Destination $packDir
+}
 $auditEnv = @{
     GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$(if ($Resolution) {$Resolution} elseif ($Aspect -eq 'Wide') {'960x540'} else {'800x600'});
     GE_NOINPUT='1'; GE_STAGE=$Stage; GE_DIFF=[string]$Difficulty; GE_STAGE_AFTER='1'; GE_CHEATS='invuln,invis,guns';

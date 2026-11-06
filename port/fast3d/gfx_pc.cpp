@@ -34,6 +34,7 @@
 
 #include "gfx_pc.h"
 #include "open_fonts.h" /* FORK-050: open-font MSDF glyphs */
+#include "enhanced_fonts.h" /* FORK-052: player-installed Enhanced font masks */
 #include "gfx_cc.h"
 #include "gfx_window_manager_api.h"
 #include "gfx_rendering_api.h"
@@ -407,6 +408,9 @@ uint32_t gfx_filter_2d = 1;
 /* [display] sharp_fonts (FORK-050): draw Bank Gothic glyphs from the open
  * title font's distance field. */
 uint32_t gfx_sharp_fonts = 0;
+/* [display] font_style=1 (FORK-052): draw both fonts' glyphs from the
+ * player-installed Enhanced masks, smooth whatever 2D Filtering says. */
+uint32_t gfx_enhanced_fonts = 0;
 /* set by G_MIRRORPILLAR_EXT around an overlay wanting mirrored side bands -
  * blood_animation.c's death / gunbarrel blood, and title.c's untextured fade.
  * The sampler latch reads it as well: see the filter_2d rule there. */
@@ -2438,6 +2442,17 @@ static void import_texture_i8(int tile, const LoadedTexture& loaded_texture, boo
         }
     }
 
+    if (s_GeTextGlyphs && gfx_enhanced_fonts) { /* FORK-052: an Enhanced font's 8x mask */
+        enhanced_fonts::Drawn glyph{};
+        static std::vector<uint8_t> mask;
+        if (enhanced_fonts::find(addr, glyph) && rdp.texture_tile[tile].line_size_bytes == uint32_t(glyph.stride)
+            && size_bytes == uint32_t(glyph.stride * glyph.height)) {
+            enhanced_fonts::rgba(*glyph.mask, mask);
+            gfx_rapi->upload_texture(mask.data(), glyph.mask->width, glyph.mask->height);
+            return;
+        }
+    }
+
     if (!ge_tex_upload_reserve(size_bytes)) {
         return;
     }
@@ -3071,6 +3086,11 @@ static void import_texture(int i, int tile, bool importReplacement) {
         const open_fonts::Glyph *glyph = (s_GeTextGlyphs && gfx_sharp_fonts && fmt == G_IM_FMT_I && siz == G_IM_SIZ_8b)
                                              ? open_fonts::find(orig_addr) : nullptr;
         key.msdf_glyph = glyph != nullptr && open_fonts::usable(*glyph);
+    }
+    { /* FORK-052: an Enhanced font mask is a different image from its ROM bitmap */
+        enhanced_fonts::Drawn glyph{};
+        key.enhanced_glyph = s_GeTextGlyphs && gfx_enhanced_fonts && fmt == G_IM_FMT_I && siz == G_IM_SIZ_8b
+                             && enhanced_fonts::find(orig_addr, glyph);
     }
 
     { /* GE_TEXDBG=1: report address collisions between
@@ -4406,6 +4426,7 @@ ndcprobe_done:;
                      * filter setting (point, bilinear or 3-point) via the 3D
                      * path below. */
                     linear_filter = gfx_filter_2d != 0 || rendering_state.textures[i]->first.msdf_glyph
+                        || rendering_state.textures[i]->first.enhanced_glyph
                         || (rdp.loaded_texture[rdp.texture_tile[tile].tmem].tex_flags & 0x80000000u);
                 }
                 /* GE N64 mipmaps: when the game asked for per-pixel LOD over a
@@ -6343,11 +6364,28 @@ static void gfx_dp_texture_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int3
         }
     }
 
-    /* Filtered glyphs: grow half a texel per side
-     * with a transparent border, so bilinear can finish the edge fade that
-     * the tight glyph cells cut off. GE_NOGLYPHPAD=1 turns it off. */
+    /* Enhanced fonts (FORK-052): a mask's ink may pass its glyph's width.
+     * Grow only the quad and its UV span; the game's pen positions and
+     * measurements stay the ROM's. */
+    bool enhanced_rect = false;
+    if (s_GeTextGlyphs && gfx_enhanced_fonts && !s_RectMsdf && rdp.texture_tile[tile].fmt == G_IM_FMT_I
+        && rdp.texture_tile[tile].siz == G_IM_SIZ_8b) {
+        enhanced_fonts::Drawn glyph{};
+        if (enhanced_fonts::find(rdp.loaded_texture[rdp.texture_tile[tile].tmem].addr, glyph)) {
+            enhanced_rect = true;
+            int32_t &edge = flip ? lry : lrx;
+            const int32_t start = flip ? uly : ulx;
+            const int32_t extent = enhanced_fonts::draw_extent(glyph, edge - start, dsdx, uls - rdp.texture_tile[tile].uls * 8);
+            precise |= extent != edge - start;
+            edge = start + extent;
+        }
+    }
+
+    /* Filtered glyphs (and Enhanced masks, always smooth): grow half a texel
+     * per side with a transparent border, so bilinear can finish the edge
+     * fade that the tight glyph cells cut off. GE_NOGLYPHPAD=1 turns it off. */
     s_RectGlyphBorder = false;
-    if (s_GeTextGlyphs && gfx_filter_2d != 0 && !s_RectMsdf && !flip && dsdx > 0 && dtdy > 0
+    if (s_GeTextGlyphs && (gfx_filter_2d != 0 || enhanced_rect) && !s_RectMsdf && !flip && dsdx > 0 && dtdy > 0
         && (rdp.other_mode_h & (3U << G_MDSFT_CYCLETYPE)) != G_CYC_COPY) {
         static int glyphpad = -1;
         if (glyphpad < 0) {
@@ -8095,12 +8133,13 @@ extern "C" uint32_t gfx_real_window_width;  /* the real window width while a pil
 uint32_t gfx_real_window_width = 0;
 
 extern "C" void gfx_start_frame(void) {
-    static uint32_t previous_sharp_fonts = ~0u;
-    if (previous_sharp_fonts != gfx_sharp_fonts) { /* FORK-050: rebind glyph textures */
+    static uint32_t previous_fonts = ~0u;
+    const uint32_t fonts = gfx_sharp_fonts | (gfx_enhanced_fonts << 1);
+    if (previous_fonts != fonts) { /* FORK-050, FORK-052: rebind glyph textures */
         gfx_flush();
         rdp.textures_changed[0] = rdp.textures_changed[1] = true;
         ++ge_state_serial;
-        previous_sharp_fonts = gfx_sharp_fonts;
+        previous_fonts = fonts;
     }
     gfx_line_mode = (gfx_line_mode_req.load() != 0 && gfx_framebuffers_enabled) ? 1u : 0u;
     gfx_msaa_level = gfx_line_mode ? std::max<uint32_t>(gfx_msaa_user, 4u) : gfx_msaa_user;

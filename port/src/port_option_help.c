@@ -38,7 +38,7 @@ static const struct PortOptHelp sHelp[] = {
     { "high_lod",           "Always draws the most detailed models." },
     { "setting_help",       "Shows this help box." },
     { "crash_reporting",    "Sends technical crash reports to Sentry. OFF stops uploads." },
-    { "font_style",         "Original: game fonts. Enhanced: not yet available. Iron Sights: our sharp HUD font." },
+    { "font_style",         "Original: game fonts. Enhanced: installed community redraw. Iron Sights: our sharp HUD font." },
 
     /* HUD */
     { "sight_on_screen",    "Shows the aiming sight." },

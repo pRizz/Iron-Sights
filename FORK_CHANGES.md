@@ -33,7 +33,8 @@ new areas. Status describes implementation state, not Git publication state.
 ### FORK-052 — Font styles plan
 
 **Status:** Plan accepted with its recommended decisions on 2026-11-05.
-FONT-1 (the setting) is implemented; FONT-2 to FONT-5 are not started.
+FONT-1 (the setting) and FONT-2 (the Enhanced renderer with manual install)
+are implemented; FONT-3 to FONT-5 are not started.
 
 [`scripts/port/font_styles_plan.md`](scripts/port/font_styles_plan.md)
 proposes one **Gameplay > Iron Sights > System > Fonts** setting choosing
@@ -54,8 +55,7 @@ decisions.
 (`[display] font_style`: 0 Original, 1 Enhanced, 2 Iron Sights; default 0)
 replaces the Sharp Fonts toggle in the Options folder and the watch. Iron
 Sights draws Bank Gothic text with the open title font (FORK-051); Original
-and, until FONT-2 adds its renderer, Enhanced draw the ROM fonts, and the help
-line says Enhanced is not yet available. An older `sharp_fonts=1` loads as
+draws the ROM fonts, and so did Enhanced until FONT-2. An older `sharp_fonts=1` loads as
 Iron Sights unless a `font_style` line is present; saving writes only
 `font_style`. Sources: [setting](port/src/video.c),
 [options](port/src/port_options.c), [frontend row](src/game/front.c),
@@ -74,6 +74,60 @@ check pass. 1280x720 HUD captures with `font_style` 0 and 1 draw the ROM font
 and a file with only `sharp_fonts=1` draw the open font (200 and 203); a
 1600x900 capture of the watch's Iron Sights > System page shows the Fonts row
 reading Iron Sights. Saving a migrated file was not exercised at run time.
+
+**FONT-2 (2026-11-05).** With Fonts on Enhanced, both fonts' glyphs are drawn
+from Carnivorous's CC0 GEPD font images, which the player installs in
+`Data/FontPacks/gepd/` under their pack file names; Iron Sights ships none of
+them. `port/fast3d/enhanced_fonts_list.inc` pins the 186 files (93 per font;
+the pack has no tilde) by font, character, path in the pack, size and SHA-256,
+taken from FORK-021's removed manifest with sizes from the GitHub tree at
+commit `ca06e063`. Files map to glyphs by character rather than by the pack's
+texture CRCs, because the game clears each glyph's padding before registering
+it. On the first Enhanced glyph the port reads the folder, skips any file
+whose size or checksum differs (logging it), decodes the PNGs and prepares 8x
+masks with the removed generator's rules, now at run time
+(`enhanced_font_masks.cpp`): the red channel, authored X coordinates with at
+most one native texel of overhang, oversize images fitted with a port of
+Pillow's Lanczos filter, and fringe that would touch a tightly kerned
+neighbour trimmed using the font's kerning table. The texture import uploads
+the mask under its own cache-key flag (`enhanced_glyph`), it is always
+smooth-sampled, and the texture rectangle grows a whole glyph's quad to show
+ink past its width, as FORK-021 did. Glyphs without a valid file keep the ROM
+bitmap. Advances, kerning and line spacing stay the ROM's.
+
+The font loader's fork block in `textrelated.c` also registers each glyph
+with its kerning index and its font's kerning table
+(`portEnhancedFontsGlyph`, with a weak no-op in `libultra_shim.c`). PNG
+decoding moved from `open_fonts.cpp` into `png_decode.cpp`, which also reads
+8-bit RGB. The font sources build in the `ge_open_fonts` object library.
+`scripts/port/enhanced_fonts_pack.py install|check --dest DIR` downloads the
+pinned files from the pack's repository at that commit and checks them, for
+manual installs and local tests; `audit_hud.ps1 -FontPack DIR` and
+`audit_fonts.ps1 -FontPack DIR` copy a folder into the audit's isolated
+`Data/FontPacks/gepd`. Sources: [masks](port/fast3d/enhanced_font_masks.cpp),
+[loader](port/fast3d/enhanced_fonts.cpp), [file list](port/fast3d/enhanced_fonts_list.inc),
+[PNG decoding](port/fast3d/png_decode.cpp), [renderer](port/fast3d/gfx_pc.cpp),
+[cache key](port/fast3d/gfx_pc.h), [font registry hook](src/game/textrelated.c),
+[weak fallback](port/src/libultra_shim.c), [setting](port/src/video.c),
+[build](CMakeLists.txt), [pack tool](scripts/port/enhanced_fonts_pack.py),
+[tests](scripts/port/test_enhanced_fonts.sh).
+
+**FONT-2 checks:** `enhanced_fonts_pack.py install` fetched all 186 files and
+each matched its pinned size and SHA-256. With them, a local harness (not
+committed; it used the removed manifest's glyph metrics and the extracted
+fonts' kerning tables) found all 186 run-time masks byte-identical to the
+FORK-021 generator's recorded mask checksums, including the 15 fitted with
+Lanczos and the 2 trimmed. `test_enhanced_fonts.sh` (added to the release
+workflow) checks the pinned list, verification, RGB PNG decoding with row
+filters, mask preparation and fitting, Lanczos resizing, the kerning trim,
+quad growth and that the loader refuses a file with the wrong checksum, with
+no pack files; `test_open_fonts.sh` passes with the shared decoder. The
+Windows build compiles and links, and the new sources compile under the CI
+Linux image's GCC 11. In 1280x720 HUD captures with the files installed,
+Enhanced draws the timer, ammo, mission hints and weapon strip sharply in the
+original letter shapes and places; without them it matches Original. A
+1280x960 difficulty-screen capture shows Zurich Bold text replaced. Not yet
+run: the Linux and browser builds, and captures beyond 720p and 960p.
 
 ### FORK-051 — Iron Sights font: open-font MSDF text
 
@@ -98,7 +152,8 @@ replaced:
   vendored `atlas.png` and `metrics.json` into a generated C file at
   configure time in plain CMake (re-run when they change). `open_fonts.cpp`
   decodes the PNG with vendored, unmodified puff 2.3 (zlib license, from
-  zlib v1.3.1) plus PNG unfiltering, and parses the metrics with picojson.
+  zlib v1.3.1) plus PNG unfiltering (in `png_decode.cpp` since FONT-2,
+  FORK-052), and parses the metrics with picojson.
 - **Registry.** `textrelated.c`'s font loader registers each glyph's pixel
   pointer, width, height and baseline (a weak no-op covers builds without the
   renderer). Bank Gothic maps to the title font.

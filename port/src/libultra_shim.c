@@ -113,6 +113,13 @@ __attribute__((weak)) void portOpenFontsGlyph(int font, int ch, const unsigned c
     (void) font; (void) ch; (void) pixels; (void) width; (void) height; (void) baseline;
 }
 
+/* enhanced_fonts.cpp (renderer builds only): register a ROM glyph for the Enhanced fonts (FORK-052) */
+__attribute__((weak)) void portEnhancedFontsGlyph(int font, int ch, const unsigned char *pixels, int width, int height,
+                                                  int baseline, int kerningindex, const int *kerning)
+{
+    (void) font; (void) ch; (void) pixels; (void) width; (void) height; (void) baseline; (void) kerningindex; (void) kerning;
+}
+
 __attribute__((weak)) s32 portWatchStatic(void)   /* video.c: [display] watch_static, vanilla on */
 {
     return 1;

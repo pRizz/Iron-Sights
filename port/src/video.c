@@ -164,8 +164,9 @@ static int s_CfgAnisotropy = 2;       /* 0/1 = off; 2..16 samples */
 /* [display] filter_2d: smooth HUD/menu texrects by default on every platform. */
 static int s_CfgFilter2D = 1;
 /* [display] font_style (FORK-051, font styles plan FONT-1): 0 Original (ROM),
- * 1 Enhanced (the player-installed GEPD pack; Original until its renderer
- * lands), 2 Iron Sights (open title font for Bank Gothic text). Original
+ * 1 Enhanced (the player-installed GEPD pack in Data/FontPacks/gepd; glyphs
+ * without a file stay the ROM's), 2 Iron Sights (open title font for Bank
+ * Gothic text). Original
  * until both open fonts exist and the owner has play-tested them. The older
  * sharp_fonts=1 still loads as Iron Sights unless font_style is present. */
 static int s_CfgFontStyle = 0;
@@ -1612,6 +1613,7 @@ s32 portVideoOptionSet(const char *key, s32 value)
     else if (SDL_strcasecmp(key, "font_style") == 0)
     {
         gfx_sharp_fonts = s_CfgFontStyle == 2;
+        gfx_enhanced_fonts = s_CfgFontStyle == 1;
     }
     else if (SDL_strcasecmp(key, "low_res") == 0)
     {
@@ -4957,6 +4959,7 @@ s32 videoInit(void)
     }
     gfx_filter_2d = s_CfgFilter2D != 0;
     gfx_sharp_fonts = s_CfgFontStyle == 2;
+    gfx_enhanced_fonts = s_CfgFontStyle == 1;
     { /* [display] low_res: whole-game 240p render scaled to the window (very low power machines).
        * GE_LOWRES=1/0 overrides the ini for A/B. */
         extern char *getenv(const char *);

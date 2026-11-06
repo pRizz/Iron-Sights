@@ -45,6 +45,7 @@ struct TextureCacheKey {
      * reuse that entry. */
     uint8_t masks, maskt;
     bool msdf_glyph; /* FORK-050: an open-font glyph's field image, not its ROM bitmap */
+    bool enhanced_glyph; /* FORK-052: an Enhanced font mask, not its ROM bitmap */
 
     bool operator==(const TextureCacheKey&) const noexcept = default;
 

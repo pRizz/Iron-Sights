@@ -415,10 +415,11 @@ if(GE_VIDEO)
         port/fast3d/gfx_sdl2.cpp
         port/fast3d/glad/glad.c
     )
-    # FORK-051: open_fonts.cpp needs no game headers, and the game's include
-    # directories shadow system ones (src/sched.h for <sched.h>, which GCC 11's
-    # <algorithm> reaches through <pthread.h>), so it builds with none of them.
-    add_library(ge_open_fonts OBJECT port/fast3d/open_fonts.cpp)
+    # FORK-051, FORK-052: the font sources need no game headers, and the game's
+    # include directories shadow system ones (src/sched.h for <sched.h>, which
+    # GCC 11's <algorithm> reaches through <pthread.h>), so they build with none.
+    add_library(ge_open_fonts OBJECT port/fast3d/open_fonts.cpp port/fast3d/png_decode.cpp
+        port/fast3d/enhanced_fonts.cpp port/fast3d/enhanced_font_masks.cpp)
     set_target_properties(ge_open_fonts PROPERTIES INCLUDE_DIRECTORIES "")
     list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_open_fonts>)
     if(NOT EMSCRIPTEN AND NOT GE_XBOX)

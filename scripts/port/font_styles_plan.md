@@ -111,11 +111,12 @@ control the current input has.
 The Enhanced path returns from FORK-021's history (`378bee0^`), rebuilt on
 FORK-051's glyph registry so both styles share one hook:
 
-- **Loading.** At start-up (and after a download) the port reads the folder,
-  checks each file's size and SHA-256 against the list, decodes the PNG with
-  the vendored puff and unfilter step, and keys it by the Rice CRC in its
-  name. Each registered ROM glyph's Rice CRC (computed from its pixels in N64
-  byte order) finds its file.
+- **Loading.** On the first Enhanced glyph (and after a download) the port
+  reads the folder, checks each file's size and SHA-256 against the list and
+  decodes the PNG with the vendored puff and unfilter step. The list maps each
+  file to its font and character. (The design first matched files by the
+  Rice CRC in their names; the game clears glyph padding before registering
+  glyphs, which changes that CRC, so FONT-2 uses the pinned mapping.)
 - **Masks.** The old generator's preparation moves to run time: take the
   image's luminance as an 8x mask, keep authored X coordinates with at most one
   native pixel of overhang, fit only glyphs taller or wider than allowed
@@ -159,7 +160,7 @@ next action before handing off.
 | ID | Status | Notes |
 | --- | --- | --- |
 | FONT-1 | Done | 2026-11-05: `[display] font_style` (0 Original, 1 Enhanced, 2 Iron Sights; default 0) replaces Sharp Fonts as **Fonts** on Iron Sights > System in the Options folder and the watch, with help, ini help, README and notices updated. `sharp_fonts=1` loads as Iron Sights unless `font_style` is present; saving writes only `font_style`. Until FONT-2, Enhanced draws the ROM fonts and its help says it is not yet available; the value reads `Enhanced`, and the `Enhanced (get)` label and prompt come with FONT-3. Verified: Windows build; settings placement and standards checks; 720p HUD captures draw the ROM font for 0 and 1 and the open font for 2 and for a file with only `sharp_fonts=1`; the watch page shows Fonts reading Iron Sights. `audit_hud.ps1 -FontStyle` and `audit_sights.ps1 -WatchPage` support these captures. Next: FONT-2 |
-| FONT-2 | Not started | |
+| FONT-2 | Done | 2026-11-05: `enhanced_fonts_list.inc` pins the 186 files; `enhanced_fonts.cpp` reads `Data/FontPacks/gepd/`, verifies each file, decodes it (`png_decode.cpp`, now shared with the open fonts) and prepares 8x masks at run time (`enhanced_font_masks.cpp`), which the renderer uploads, smooth-samples and draws with FORK-021's quad growth. Deviation from the design above: files map to glyphs by character from the pinned list, not by computing Rice CRCs, because the game clears glyph padding before registering glyphs. The kerning trim needs each font's kerning table, so `portEnhancedFontsGlyph` registers it. Verified: all 186 run-time masks byte-identical to the FORK-021 generator's (local harness with the downloaded files); `test_enhanced_fonts.sh` (ROM-free, no pack files, in CI); Windows build; GCC 11 compile; 720p HUD and 960p difficulty-screen captures with and without the files. `enhanced_fonts_pack.py install` is the manual install. Next: FONT-3 |
 | FONT-3 | Not started | |
 | FONT-4 | Not started | |
 | FONT-5 | Not started | |

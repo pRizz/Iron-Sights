@@ -184,15 +184,20 @@ void load_font_tables(void)
 #ifndef TARGET_N64
 	portFontClearPadding(ptrFontBankGothicChars, 94);
 	portFontClearPadding(ptrFontZurichBoldChars, 94);
-	{   /* FORK-050: register the glyphs the open fonts may draw in their place */
+	{   /* FORK-050, FORK-052: register the glyphs the open and Enhanced fonts may draw in their place */
 		extern void portOpenFontsGlyph(int font, int ch, const unsigned char *pixels, int width, int height, int baseline);
+		extern void portEnhancedFontsGlyph(int font, int ch, const unsigned char *pixels, int width, int height,
+		                                   int baseline, int kerningindex, const int *kerning);
 		struct fontchar *fonts[2] = { ptrFontBankGothicChars, ptrFontZurichBoldChars };
+		struct font *tables[2] = { ptrFontBankGothic, ptrFontZurichBold };
 		s32 f;
 
 		for (f = 0; f < 2; f++) {
 			for (i = 0; i < 94; i++) {
 				portOpenFontsGlyph(f, 0x21 + i, fonts[f][i].pixeldata, fonts[f][i].width,
 				                   fonts[f][i].height, fonts[f][i].baseline);
+				portEnhancedFontsGlyph(f, 0x21 + i, fonts[f][i].pixeldata, fonts[f][i].width, fonts[f][i].height,
+				                       fonts[f][i].baseline, fonts[f][i].kerningindex, tables[f]->kerning);
 			}
 		}
 	}
