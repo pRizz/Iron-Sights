@@ -4088,6 +4088,9 @@ enum { PORT_SHEET_GAMEPLAY, PORT_SHEET_CONTROL, PORT_SHEET_DISPLAY, PORT_SHEET_C
  *   GAMEPLAY -> GENERAL SETTINGS, HUD, PORT OPTIONS, IRON SIGHTS
  *   CONTROL  -> PLAYER n -> MOUSE AND KEYBOARD or CONTROLLER (whichever the
  *               device is), GENERAL CONTROL OPTIONS
+ *
+ * and, while the Enhanced fonts can be downloaded and are not installed,
+ * GET ENHANCED FONTS -> the ENHANCED FONTS page (portOptionsFontsRow).
  */
 #define PORT_OPTIONS_ROWS 3
 #define PORT_OPTIONS_ROW_PITCH 0x20
@@ -4401,7 +4404,8 @@ Gfx *constructor_menu1B_portoptions(Gfx *DL)
         y = row_y;
         DL = frontPrintText(DL, &x, &y, number, ptrFontZurichBoldChars, ptrFontZurichBold, 0xFF, viGetX(), viGetY(), 0, 0);
 
-        textstring = (char *) port_sheet_title[portOptionsRowKind(i)];
+        textstring = (char *) ((portOptionsRowKind(i) == PORT_SHEET_IS_FONTS) ? "GET ENHANCED FONTS\n"
+                                                                              : port_sheet_title[portOptionsRowKind(i)]);
         textMeasure(&x2, &y2, textstring, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
 
         x = 0xAA;
@@ -4463,6 +4467,7 @@ Gfx *constructor_menu1B_portoptions(Gfx *DL)
 #define PORT_SHEET_LIST_PAD   4
 #define PORT_SHEET_COL_PENDING 0xA00000FF /* a picked-but-not-applied value, and APPLY while one waits */
 #define PORT_SHEET_COL_DIM     0x70       /* an unavailable row */
+#define PORT_SHEET_COL_NOTE    0xA0       /* a page's description, lighter than its rows (FORK-052) */
 #define PORT_SHEET_COL_LIST_EDGE 0x000000C0
 #define PORT_SHEET_COL_LIST_BG   0xEDE4C4FF /* opaque paper, so the rows under the list do not show through */
 #define PORT_SHEET_COL_LIST_LIVE 0x00000032 /* the value in use: the folder's own highlight band */
@@ -4804,6 +4809,20 @@ static const s32 port_sheet_gameplay_pages[] = { PORT_SHEET_GENERAL, PORT_SHEET_
                                                  PORT_SHEET_IRONSIGHTS };
 static const s32 port_sheet_display_pages[] = { PORT_SHEET_VIDEO, PORT_SHEET_AUDIO, PORT_SHEET_CLASSIC };
 
+/* GET ENHANCED FONTS (FORK-052): a fourth folder row, opening the Enhanced
+ * Fonts page, while this build can download the fonts and they are not all
+ * installed. Not in the browser, which cannot download yet (FONT-4). */
+static s32 portOptionsFontsRow(void)
+{
+#ifdef __EMSCRIPTEN__
+    return FALSE;
+#else
+    const int state = portEnhancedFontsState();
+
+    return state != PORT_EFONTS_INSTALLED && state != PORT_EFONTS_UNSUPPORTED;
+#endif
+}
+
 /** The Options folder screen's rows: its own three, or a hub's pages. */
 static s32 portOptionsRowCount(void)
 {
@@ -4815,7 +4834,7 @@ static s32 portOptionsRowCount(void)
     {
         return (s32) (sizeof(port_sheet_display_pages) / sizeof(port_sheet_display_pages[0]));
     }
-    return PORT_OPTIONS_ROWS;
+    return PORT_OPTIONS_ROWS + (portOptionsFontsRow() ? 1 : 0);
 }
 
 static s32 portOptionsRowKind(s32 r)
@@ -4828,7 +4847,7 @@ static s32 portOptionsRowKind(s32 r)
     {
         return port_sheet_display_pages[r];
     }
-    return port_options_row_kind[r];
+    return (r < PORT_OPTIONS_ROWS) ? port_options_row_kind[r] : PORT_SHEET_IS_FONTS;
 }
 
 /** A picker row's text: the page's name in the sheets' lowercase. */
@@ -5108,6 +5127,68 @@ static s32 portSheetSlotInert(s32 slot)
 #define PORT_SHEET_DEVNAME_INDENT 0x0C
 #define PORT_SHEET_RULE_R         0x170        /* the Control sheet's player rules end clear of the tabs */
 #define PORT_SHEET_COL_RULE       0x00000070   /* black @ ~44%: a pencil line on the paper */
+
+/* The sheet's buttons (FORK-052's Enhanced Fonts actions): a rounded ink
+ * outline this far outside the label, and its corner radius */
+#define PORT_SHEET_BUTTON_PADX    12
+#define PORT_SHEET_BUTTON_PADY    6
+#define PORT_SHEET_BUTTON_RADIUS  6
+
+/** How far row i of a rounded corner (0 = the edge row) starts inside the
+ *  box: r minus the quarter circle's half-width there, rounded. */
+static s32 portSheetCornerInset(s32 r, s32 i)
+{
+    const s32 dy = 2 * (r - i) - 1;
+    const s32 v = 4 * r * r - dy * dy;
+    s32 dx = 0;
+
+    while ((2 * dx + 1) * (2 * dx + 1) <= v)
+    {
+        dx++;
+    }
+    return r - dx;
+}
+
+/** A box from (x0,y0) to (x1,y1) with corners of radius r: a one-pixel
+ *  outline with the paper showing inside, or (fill) solid. */
+static Gfx *portSheetDrawRoundBox(Gfx *DL, s32 x0, s32 y0, s32 x1, s32 y1, s32 r, u32 colour, s32 fill)
+{
+    s32 j;
+
+    for (j = 0; j < y1 - y0; j++)
+    {
+        const s32 i = (j < r) ? j : (j >= y1 - y0 - r) ? (y1 - y0 - 1 - j) : -1;
+        const s32 in = (i >= 0) ? portSheetCornerInset(r, i) : 0;
+        const s32 y = y0 + j;
+
+        if (i < 0)
+        {   /* the straight part in one piece: solid, or its two sides */
+            if (fill)
+            {
+                DL = microcode_constructor_related_to_menus(DL, x0, y, x1, y1 - r, colour);
+            }
+            else
+            {
+                DL = microcode_constructor_related_to_menus(DL, x0, y, x0 + 1, y1 - r, colour);
+                DL = microcode_constructor_related_to_menus(DL, x1 - 1, y, x1, y1 - r, colour);
+            }
+            j = y1 - y0 - r - 1;
+        }
+        else if (fill || i == 0)
+        {
+            DL = microcode_constructor_related_to_menus(DL, x0 + in, y, x1 - in, y + 1, colour);
+        }
+        else
+        {   /* each side's pixels on this row, down to where the row above began */
+            const s32 above = portSheetCornerInset(r, i - 1) - in;
+            const s32 w = (above > 1) ? above : 1;
+
+            DL = microcode_constructor_related_to_menus(DL, x0 + in, y, x0 + in + w, y + 1, colour);
+            DL = microcode_constructor_related_to_menus(DL, x1 - in - w, y, x1 - in, y + 1, colour);
+        }
+    }
+    return microcode_constructor(DL);
+}
 #define PORT_SHEET_DEVNAME_MAXW   (0x170 - PORT_SHEET_LABEL_X - PORT_SHEET_DEVNAME_INDENT)   /* clear of the tabs */
 
 /** text as is when it fits in maxw, else cut at a character with "..." on (a static copy) */
@@ -5302,8 +5383,22 @@ static void portSheetBuild(s32 kind)
             port_sheet_row_bind[port_sheet_rows] = k;
             port_sheet_rows++;
         }
+        if (port_sheet_rows < PORT_SHEET_ROWS_MAX)
+        {   /* a blank line, so the buttons stand apart from the text */
+            port_sheet_row_kind[port_sheet_rows] = SHROW_INFO;
+            port_sheet_row_opt[port_sheet_rows] = -1;
+            port_sheet_row_bind[port_sheet_rows] = -1;
+            port_sheet_rows++;
+        }
         for (k = 0; k < 2 && port_sheet_rows < PORT_SHEET_ROWS_MAX; k++)
         {
+            if (k > 0 && port_sheet_rows < PORT_SHEET_ROWS_MAX - 1)
+            {   /* and between them, so the padded boxes do not touch */
+                port_sheet_row_kind[port_sheet_rows] = SHROW_INFO;
+                port_sheet_row_opt[port_sheet_rows] = -1;
+                port_sheet_row_bind[port_sheet_rows] = -1;
+                port_sheet_rows++;
+            }
             port_sheet_row_kind[port_sheet_rows] = SHROW_FONTACT;
             port_sheet_row_opt[port_sheet_rows] = -1;
             port_sheet_row_bind[port_sheet_rows] = k;
@@ -6490,7 +6585,19 @@ static const char *portSheetLabel(s32 row)
 
         return line != NULL ? line : "\n";
     }
-    if (port_sheet_row_kind[row] == SHROW_FONTACT) return portEnhancedFontsActionLabel(port_sheet_row_bind[row]);
+    if (port_sheet_row_kind[row] == SHROW_FONTACT)
+    {   /* in capitals, as the folder's own rows are, inside a box (portSheetDrawRoundBox) */
+        static char caps[40];
+        const char *text = portEnhancedFontsActionLabel(port_sheet_row_bind[row]);
+        s32 i;
+
+        for (i = 0; text[i] != '\0' && i < (s32) sizeof(caps) - 1; i++)
+        {
+            caps[i] = (text[i] >= 'a' && text[i] <= 'z') ? (char) (text[i] - 'a' + 'A') : text[i];
+        }
+        caps[i] = '\0';
+        return caps;
+    }
     if (port_sheet_row_kind[row] == SHROW_DEVNAME)
     {   /* the device, or the assign prompt while one is armed; cut to the tabs.
          * bind = the player it names on the Control sheet, -1 = the page's own */
@@ -7473,6 +7580,10 @@ static void portSheetLeave(s32 tohub)
 
         for (r = 0; r < portOptionsRowCount() && portOptionsRowKind(r) != root; r++)
         {
+        }
+        if (root == PORT_SHEET_IS_FONTS && r == portOptionsRowCount())
+        {
+            r--;   /* the fonts were installed, so their row is gone: onto the last row */
         }
         if (r < portOptionsRowCount())
         {
@@ -8966,6 +9077,11 @@ Gfx *constructor_menu1C_portsheet(Gfx *DL)
             {
                 lcolour = PORT_SHEET_COL_DIM;
             }
+            else if (port_sheet_row_kind[row] == SHROW_INFO && portEnhancedFontsInfoLine(port_sheet_row_bind[row] + 1) != NULL)
+            {   /* FORK-052: the Enhanced Fonts description in a lighter ink than
+                 * its status line (the last) and its buttons */
+                lcolour = PORT_SHEET_COL_NOTE;
+            }
             else if (port_sheet_row_kind[row] == SHROW_OPT
                      && portOptIsToggle(port_sheet_row_opt[row])
                      && portOptGet(port_sheet_row_opt[row]) != 0)
@@ -9012,7 +9128,21 @@ Gfx *constructor_menu1C_portsheet(Gfx *DL)
         textMeasure(&th, &tw, label, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
         x = portSheetSlotLabelX(slot);
         y = portSheetSlotY(slot);
-        if (hot)
+        if (row >= 0 && port_sheet_row_kind[row] == SHROW_FONTACT)
+        {   /* FORK-052: the Enhanced Fonts actions drawn as rounded buttons,
+             * filled with the highlight under the cursor. The button's left
+             * edge stays on the text column; the label moves in by the padding. */
+            const s32 bx0 = x - 2, bx1 = x + tw + 1 + 2 * PORT_SHEET_BUTTON_PADX;
+            const s32 by0 = y - PORT_SHEET_BUTTON_PADY, by1 = y + 0xD + PORT_SHEET_BUTTON_PADY;
+
+            x += PORT_SHEET_BUTTON_PADX - 2;
+            if (hot)
+            {
+                DL = portSheetDrawRoundBox(DL, bx0 + 1, by0 + 1, bx1 - 1, by1 - 1, PORT_SHEET_BUTTON_RADIUS - 1, 0x32, TRUE);
+            }
+            DL = portSheetDrawRoundBox(DL, bx0, by0, bx1, by1, PORT_SHEET_BUTTON_RADIUS, PORT_SHEET_COL_LIST_EDGE, FALSE);
+        }
+        else if (hot)
         {
             DL = microcode_constructor_related_to_menus(DL, x - 2, y - 1, x + tw + 5, y + 0xE, 0x32);
         }

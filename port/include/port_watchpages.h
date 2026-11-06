@@ -108,6 +108,7 @@ void        portWatchRowStep(s32 page, s32 row, s32 dir);
 void        portWatchRowSetIndex(s32 page, s32 row, s32 idx);
 
 s32         portWatchRowSelectable(s32 page, s32 row); /* a hint row is not */
+s32         portWatchRowSubdued(s32 page, s32 row);    /* a description line, drawn dimmer */
 s32         portWatchParentPage(s32 page);
 /** A page was just opened: VIDEO repairs classic mode's forced rows if they drifted. */
 void        portWatchPageEntered(s32 page);

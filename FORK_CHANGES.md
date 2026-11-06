@@ -200,6 +200,45 @@ runs never write `midas.ini`, so saving the switched setting was not seen. `scri
 builds `port_options.c` on its own, so it stubs `portEnhancedFontsValueText`;
 FONT-3's first push failed CI's tests job at link time without it.
 
+**Get Enhanced Fonts shortcut (2026-11-06).** At the owner's request, so
+players find the download, the Options folder's top level gains a fourth row,
+**4. GET ENHANCED FONTS**, under Gameplay, Control and Audio Visual. It opens
+the same Enhanced Fonts page (whose text and Download action remain the
+consent), and Back returns onto it. The row shows only while the build can
+download and the files are not all installed: it disappears once the pack is
+installed (Back then lands on the last row) and is absent where the build
+cannot download (the browser, Xbox, Linux without libcurl), where System >
+Enhanced Fonts still explains a manual copy. This is a deliberate exception to
+keeping fork rows on the Iron Sights pages. The watch has no shortcut: its face
+holds exactly nine rows (Rare's seven plus Gameplay and Audio Visual) and a
+tenth would make it scroll, so the watch keeps the page under System only.
+Source: `portOptionsFontsRow`, `portOptionsRowCount`/`portOptionsRowKind` and
+the folder's row drawing and Back in `src/game/front.c`. Checks: 1280x960
+captures of the folder showing four rows without the pack and three with it
+installed, a scripted A on the row opening the page, and B returning to the
+folder with the cursor on the row.
+
+**Enhanced Fonts buttons stand out (2026-11-06).** The owner found Download
+and Remove hard to spot among the description, and chose dimmed text with
+boxed buttons. In the folder the six description lines draw in a lighter ink
+(`PORT_SHEET_COL_NOTE`, black at 0xA0), the status line stays full ink, a blank
+line follows, and the two actions draw in capitals as rounded buttons
+(`portSheetDrawRoundBox`): a one-pixel ink outline 12 pixels left and right and
+6 above and below the label (native 440x330 units), its left edge on the text
+column with the label moved in by the padding, corner radius 6, filled
+with the highlight band's ink in the same rounded shape on hover. A second
+blank line separates the two buttons so their padded boxes do not touch. On the watch the description draws in a dimmer green
+(`PORTWATCH_COL_NOTE`, through the new `portWatchRowSubdued`); its actions
+already sit on button plates and its font is already capitals, and the face
+has no free row for the gap. Source: `src/game/front.c` (the sheet builder,
+`portSheetLabel`, the sheet's row drawing), `src/game/options.c` (the watch's
+row drawing), `port/src/port_watchpages.c` and `port_watchpages.h`. Checks:
+1280x960 folder captures of the page plain, with Download hovered (the help
+box still names it), after a scripted A (Retry Download boxed) and installed
+(Use Enhanced Fonts boxed), then of the rounded, padded buttons plain, hovered
+and with A on Remove opening its dialog, and a 1600x900 watch capture with the dimmed
+description, a full-strength status line and the three button plates.
+
 ### FORK-051 — Iron Sights font: open-font MSDF text
 
 **Status:** Implemented in the Windows build and compiled for the browser;

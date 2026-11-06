@@ -1147,6 +1147,16 @@ s32 portWatchRowSelectable(s32 page, s32 row)
     return portWatchRowKind(page, row) != PWROW_HINT;
 }
 
+/** The Enhanced Fonts description, drawn dimmer than its status line (the
+ *  last hint) and its buttons so those stand out (FORK-052). */
+s32 portWatchRowSubdued(s32 page, s32 row)
+{
+    const struct PortWatchRowDef *d = rowDef(page, row);
+
+    return d != NULL && d->kind == PWROW_HINT && d->arg >= PWHINT_FONTS
+        && portEnhancedFontsInfoLine(d->arg - PWHINT_FONTS + 1) != NULL;
+}
+
 /** Where a back button goes. Sub-pages know their own parent; nothing else
  *  should have to hold that map. */
 s32 portWatchParentPage(s32 page)

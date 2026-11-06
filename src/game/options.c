@@ -5964,6 +5964,7 @@ s32 g_portWatchPage = PORTWATCH_GENERAL;
 #define PORTWATCH_COL_VALUE_ON  0x00FF00B0
 #define PORTWATCH_COL_SELECTED  0xA0FFA0F0
 #define PORTWATCH_COL_LABEL     0xFF00B0
+#define PORTWATCH_COL_NOTE      0x00B000A0  /* a page's description, dimmer than its rows (FORK-052) */
 #define PORTWATCH_COL_OUTLINE   0x7000A0
 #define PORTWATCH_COL_BG        0x3000B0
 /* the button plate: the same dark-green family as the vanilla label plate,
@@ -7012,7 +7013,8 @@ Gfx *portWatchDrawRows(Gfx *gdl)
         else
         {
             gdl = draw_options_labels(gdl, XOFFSET_1, y, text,
-                                      (state == 1) ? PORTWATCH_COL_SELECTED : PORTWATCH_COL_LABEL,
+                                      (state == 1) ? PORTWATCH_COL_SELECTED
+                                      : portWatchRowSubdued(page, i) ? PORTWATCH_COL_NOTE : PORTWATCH_COL_LABEL,
                                       0, -1, 0, 0, PORTWATCH_COL_BG, 0);
         }
 
