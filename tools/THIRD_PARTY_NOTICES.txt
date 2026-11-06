@@ -38,6 +38,11 @@ https://github.com/pRizz/iron-sights-assets, vendored at the release recorded in
 port/fast3d/open_assets/manifest.json. MIT licensed; see
 port/fast3d/open_assets/LICENSE (Open-Assets-LICENSE.txt in player packages).
 
+Not included: the Enhanced fonts (Carnivorous's CC0 GEPD font images, from
+https://github.com/Graslu/GEPDTexturePacks) are downloaded only when the player
+chooses Download under Gameplay > Iron Sights > System > Enhanced Fonts, or
+copied into Data/FontPacks/gepd by the player. No release ships them.
+
 
 Fast3D renderer
 ---------------

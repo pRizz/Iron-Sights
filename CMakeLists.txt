@@ -419,7 +419,8 @@ if(GE_VIDEO)
     # include directories shadow system ones (src/sched.h for <sched.h>, which
     # GCC 11's <algorithm> reaches through <pthread.h>), so they build with none.
     add_library(ge_open_fonts OBJECT port/fast3d/open_fonts.cpp port/fast3d/png_decode.cpp
-        port/fast3d/enhanced_fonts.cpp port/fast3d/enhanced_font_masks.cpp)
+        port/fast3d/enhanced_fonts.cpp port/fast3d/enhanced_font_masks.cpp
+        port/fast3d/enhanced_fonts_download.cpp port/fast3d/enhanced_fonts_http.cpp)
     set_target_properties(ge_open_fonts PROPERTIES INCLUDE_DIRECTORIES "")
     list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_open_fonts>)
     if(NOT EMSCRIPTEN AND NOT GE_XBOX)
@@ -517,7 +518,8 @@ if(GE_VIDEO AND NOT EMSCRIPTEN)
             set(SDL2_ROOT ${CMAKE_SOURCE_DIR}/third_party/SDL2-2.30.11/i686-w64-mingw32)
         endif()
         target_include_directories(ge PRIVATE ${SDL2_ROOT}/include ${SDL2_ROOT}/include/SDL2)
-        target_link_libraries(ge ${SDL2_ROOT}/lib/libSDL2.dll.a opengl32 gdi32 imm32 winmm setupapi hid version ole32 oleaut32)
+        target_link_libraries(ge ${SDL2_ROOT}/lib/libSDL2.dll.a opengl32 gdi32 imm32 winmm setupapi hid version ole32 oleaut32
+            winhttp)  # winhttp: the Enhanced fonts' download (FORK-052)
         # the game needs SDL2.dll beside the exe
         add_custom_command(TARGET ge POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SDL2_ROOT}/bin/SDL2.dll $<TARGET_FILE_DIR:ge>)

@@ -27,6 +27,7 @@
 #include <string.h>
 #include <ultra64.h>
 #include "port_crosshair.h"
+#include "port_enhanced_fonts.h"
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
 #include "port_crash.h"
 #endif
@@ -550,6 +551,17 @@ s32 portOptGet(s32 i)
 }
 
 /** Current value as row text ("ON\n" / "OFF\n" / enum text / number). */
+/* An ENUM's text; Fonts' Enhanced reads "(Get)" until its files are
+ * installed (FORK-052). */
+static const char *enumText(const struct PortOpt *o, s32 idx)
+{
+    if (idx == 1 && strcmp(o->key, "font_style") == 0)
+    {
+        return portEnhancedFontsValueText(o->valueText[idx]);
+    }
+    return o->valueText[idx];
+}
+
 const char *portOptValueText(s32 i)
 {
     static char sNum[24];
@@ -577,7 +589,7 @@ const char *portOptValueText(s32 i)
         idx = enumIndex(o, v);
         if (idx >= 0)
         {
-            return o->valueText[idx];
+            return enumText(o, idx);
         }
         if (o->base > 0)
         {
@@ -1184,7 +1196,7 @@ const char *portOptValueTextAt(s32 i, s32 idx)
     }
     if (sOpts[i].kind == KIND_ENUM && idx < sOpts[i].min)
     {
-        return sOpts[i].valueText[idx];
+        return enumText(&sOpts[i], idx);
     }
     if (kindIsRanged(sOpts[i].kind) && idx < rangeCount(&sOpts[i]))
     {

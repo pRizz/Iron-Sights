@@ -240,7 +240,8 @@ padN_stickmode.
   font_style          | 0          | [display] Fonts. 0 = Original (the ROM
                       |            | fonts); 1 = Enhanced (Carnivorous's CC0
                       |            | GEPD redraw, installed by the player in
-                      |            | Data/FontPacks/gepd; not bundled, and
+                      |            | Data/FontPacks/gepd from System > Enhanced
+                      |            | Fonts, or copied there; not bundled, and
                       |            | glyphs without a file stay the ROM's;
                       |            | see scripts/port/font_styles_plan.md);
                       |            | 2 = Iron Sights (HUD, watch

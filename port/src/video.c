@@ -13,6 +13,7 @@
 #include <ultra64.h>
 #include "port_modal.h"
 #include "port_crosshair.h"
+#include "port_enhanced_fonts.h"
 #include "port_ads_accuracy.h"
 
 #ifdef GE_XBOX
@@ -5053,6 +5054,7 @@ s32 videoInit(void)
 
 void videoStartFrame(void)
 {
+    portEnhancedFontsFrame();   /* FORK-052: a finished download switches Fonts to Enhanced */
     if (s_VideoInitDone)
     {
         /* GE switches VI resolution at runtime (fr.c g_viRuntimeScreenWidths:

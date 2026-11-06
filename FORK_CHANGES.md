@@ -33,8 +33,9 @@ new areas. Status describes implementation state, not Git publication state.
 ### FORK-052 — Font styles plan
 
 **Status:** Plan accepted with its recommended decisions on 2026-11-05.
-FONT-1 (the setting) and FONT-2 (the Enhanced renderer with manual install)
-are implemented; FONT-3 to FONT-5 are not started.
+FONT-1 (the setting), FONT-2 (the Enhanced renderer with manual install) and
+FONT-3 (the in-game download) are implemented; FONT-4 and FONT-5 are not
+started.
 
 [`scripts/port/font_styles_plan.md`](scripts/port/font_styles_plan.md)
 proposes one **Gameplay > Iron Sights > System > Fonts** setting choosing
@@ -128,6 +129,74 @@ Enhanced draws the timer, ammo, mission hints and weapon strip sharply in the
 original letter shapes and places; without them it matches Original. A
 1280x960 difficulty-screen capture shows Zurich Bold text replaced. Not yet
 run: the Linux and browser builds, and captures beyond 720p and 960p.
+
+**FONT-3 (2026-11-05).** **Gameplay > Iron Sights > System > Enhanced Fonts**
+opens a page in the Options folder and the watch. It says who made the fonts,
+their license, that Iron Sights does not include them, and the download's
+size and source (186 files, 250 KB, GitHub Graslu/GEPDTexturePacks), then
+a status line (Not installed, Incomplete: N of 186, Downloading: N of 186,
+Failed: reason, Installed) and two actions. The first reads **Download**,
+**Cancel Download**, **Retry Download**, **Use Enhanced Fonts** (installed:
+sets Fonts to Enhanced) or, where the build cannot download, **Check Folder
+Again**; the second is **Remove Enhanced Fonts**, which asks first (the
+folder's Yes/No dialog, starting on No; on the watch a second press on
+**Confirm Remove**, as Reset to Default does) and sets Fonts back to Original
+if it was Enhanced. Picking Download on this page is the player's consent; the
+game never contacts the network otherwise. While the files are missing, the
+Fonts row's Enhanced value reads **Enhanced (Get)**; choosing it applies, and
+draws the ROM fonts, rather than jumping to the page, because stepping through
+the values with arrows or the stick passes over it. When a download the player
+started finishes with every file installed, Fonts switches to Enhanced on the
+next frame (`videoStartFrame`).
+
+The download (`enhanced_fonts_download.cpp`) runs on a detached worker
+thread: for each pinned file not already valid it fetches
+`raw.githubusercontent.com/Graslu/GEPDTexturePacks/ca06e063.../GoldenEye
+Texture Pack/<path>` (percent-encoded), checks the size and SHA-256, writes
+`<name>.part` and renames it into `Data/FontPacks/gepd/`, then writes
+`SOURCE.txt` (source, commit, author, CC0). Cancel stops between files and
+inside a transfer; quitting mid-download abandons it, and no partial file is
+ever used. Transports (`enhanced_fonts_http.cpp`): WinHTTP on Windows (linked
+as `winhttp`) and, on Linux, libcurl loaded at run time (`libcurl.so.4`, then
+`libcurl-gnutls.so.4`); each caps a file at 1 MiB and gives short reasons (No
+connection, Timed out, Secure link failed, Server error N, File too large, A
+file did not match, Folder not writable). A Linux system without libcurl gets
+**Check Folder Again** and the manual-install hint. The browser and Xbox have
+no transport and the page is hidden in the browser until FONT-4, so browser
+touch has no new screen. `GE_FONTPACK_BASE_URL` points the download at a local
+fixture for tests and is honoured only for `http://127.0.0.1:` addresses.
+`port/src/port_enhanced_fonts.c` holds the actions both menus share; the
+menus' C API is `port/include/port_enhanced_fonts.h`, with weak fallbacks in
+`libultra_shim.c`. Upstream-file hooks: the folder's `SHROW_INFO` (a text
+line) and `SHROW_FONTACT` row kinds, the `PORT_SHEET_IS_FONTS` sheet and a
+`GE_MENU=zenhanced` harness in `front.c`; the watch's `PORTWATCH_IS_FONTS` page
+with hint and action rows in `port_watchpages.c`, placed before the Control
+tab's pages because `options.c` tells those apart by number, so the Control
+tab's `GE_WATCHPAGE` sub-page numbers move up by one (the new page is 14);
+`port_options.c`'s Enhanced value text; and `videoStartFrame`. Every input
+reaches the page and its actions through the existing row handling: keyboard,
+mouse and gamepad in the folder and on the watch.
+
+**FONT-3 checks:** `test_enhanced_fonts.sh` also builds
+`test_enhanced_fonts_download.cpp`, which drives the engine with a fake
+transport: fetching and installing, keeping valid files without fetching,
+refusing a mismatched file (nothing written), cancel, a network failure,
+removal and URL encoding. A 64-bit Linux build of the engine with the libcurl
+transport installed all 186 files from a local server (through
+`libcurl-gnutls.so.4`) and reported No connection for a closed port. The new
+sources compile under the CI Linux image's GCC 11 (32-bit), and the Windows
+build compiles and links. Windows captures at 1280x960, with scripted gamepad
+A presses on the folder page: a download from a local fixture installed 186
+files and `SOURCE.txt` and switched the text to the Enhanced fonts; a real
+download from GitHub over HTTPS installed all 186; a slowed fixture showed
+**Downloading: 15 of 186** with **Cancel Download**, and cancelling left
+**Incomplete: 18 of 186 files** with no `.part` files; a closed port showed
+**Failed: No connection** with **Retry Download**; Remove showed its dialog,
+and Yes deleted every file and set Fonts back. The System page shows **Fonts:
+Enhanced (Get)** and the new row, and a 1600x900 capture shows the watch page
+(seven description lines, both actions, Back) fitting the face. Not covered:
+the watch's armed Remove and the Linux and browser builds at run time; harness
+runs never write `midas.ini`, so saving the switched setting was not seen.
 
 ### FORK-051 — Iron Sights font: open-font MSDF text
 

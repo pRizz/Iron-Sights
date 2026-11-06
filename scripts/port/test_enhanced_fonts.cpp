@@ -160,7 +160,7 @@ void test_draw_extent() {
 void test_loader_refuses_wrong_files() {
     size_t count = 0;
     const PackFile *files = pack_files(count);
-    const auto dir = std::filesystem::temp_directory_path() / "enhanced_fonts_test";
+    const auto dir = std::filesystem::temp_directory_path() / "enhanced_fonts_loader_test";
     std::filesystem::create_directories(dir);
     FILE *f = std::fopen((dir / file_name(files[0])).string().c_str(), "wb");
     assert(f != nullptr);

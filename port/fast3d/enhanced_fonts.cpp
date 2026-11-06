@@ -135,6 +135,11 @@ void set_directory(const std::string &directory) {
     g_state.loaded = false;
 }
 
+std::string directory() {
+    std::lock_guard<std::mutex> guard(g_lock);
+    return g_state.directory;
+}
+
 }  // namespace enhanced_fonts
 
 extern "C" void portEnhancedFontsGlyph(int font, int ch, const unsigned char *pixels, int width, int height, int baseline,

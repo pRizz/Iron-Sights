@@ -21,6 +21,7 @@
 #include <bondconstants.h>   /* PLAYER_OPTION_* - the real enum, not a copy */
 
 #include "port_watchpages.h"
+#include "port_enhanced_fonts.h"
 
 /* port_options.c */
 extern s32         portOptFind(const char *key);
@@ -178,11 +179,35 @@ static const struct PortWatchRowDef sIsHud[] = {
 static const struct PortWatchRowDef sIsSystem[] = {
     { PWROW_ACTION, NULL, "About / Build Info\n", 101, 0 },
     { PWROW_OPT,       "font_style",       NULL, 0, 0 },
+#ifndef __EMSCRIPTEN__   /* the browser cannot download yet (font styles plan FONT-4) */
+    { PWROW_SUBSCREEN, NULL, "Enhanced Fonts\n", PORTWATCH_IS_FONTS, 0 },
+#endif
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     { PWROW_OPT,       "crash_reporting",  NULL, 0, 0 },
 #endif
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
+
+/* ENHANCED FONTS (FORK-052): the description and status (hint rows whose
+ * arg - PWHINT_FONTS is the line), then Download / Cancel / Retry / Use and
+ * Remove (action args PWACT_FONTS and PWACT_FONTS_REMOVE). Picking Download
+ * here is the player's consent; Remove asks twice, as Reset to Default does. */
+#define PWHINT_FONTS 1000
+#define PWACT_FONTS 110
+#define PWACT_FONTS_REMOVE 111
+static const struct PortWatchRowDef sIsFonts[] = {
+    { PWROW_HINT,   NULL, NULL, PWHINT_FONTS + 0, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_FONTS + 1, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_FONTS + 2, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_FONTS + 3, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_FONTS + 4, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_FONTS + 5, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_FONTS + 6, 0 },
+    { PWROW_ACTION, NULL, NULL, PWACT_FONTS, 0 },
+    { PWROW_ACTION, NULL, NULL, PWACT_FONTS_REMOVE, 0 },
+    { PWROW_BACK,   NULL, "Back\n", 0, 0 },
+};
+static s32 sFontsRemoveArmed;
 
 /* DISPLAY's pages */
 static const struct PortWatchRowDef sVideo[] = {
@@ -768,6 +793,7 @@ static const struct PortWatchPageDef {
     [PORTWATCH_IS_FEEDBACK] = PWPAGE(sIsFeedback),
     [PORTWATCH_IS_HUD]      = PWPAGE(sIsHud),
     [PORTWATCH_IS_SYSTEM]   = PWPAGE(sIsSystem),
+    [PORTWATCH_IS_FONTS]    = PWPAGE(sIsFonts),
     /* PORTWATCH_CONTROLLER, _MORE and _BINDS are dynamic (dynBuild): { NULL, 0 } */
     /* PORTWATCH_CTLGENERAL too (the raphnet's gadget switch) */
 #undef PWPAGE
@@ -978,9 +1004,23 @@ static const char *rowLabelShared(s32 page, s32 row)
     {
         return d->label;
     }
+    if (d->kind == PWROW_HINT && d->arg >= PWHINT_FONTS)
+    {
+        const char *line = portEnhancedFontsInfoLine(d->arg - PWHINT_FONTS);
+
+        return (line != NULL) ? line : "\n";
+    }
     if (d->kind == PWROW_HINT)
     {   /* the line under Input: the device's name */
         return portWatchDeviceText();
+    }
+    if (d->kind == PWROW_ACTION && d->arg == PWACT_FONTS_REMOVE && sFontsRemoveArmed)
+    {
+        return "Confirm Remove\n";
+    }
+    if (d->kind == PWROW_ACTION && (d->arg == PWACT_FONTS || d->arg == PWACT_FONTS_REMOVE))
+    {
+        return portEnhancedFontsActionLabel(d->arg == PWACT_FONTS ? 0 : 1);
     }
     if (d->kind == PWROW_ACTION)
     {
@@ -1050,6 +1090,7 @@ void portWatchPageEntered(s32 page)
     s32 wrote = 0;
     s32 i;
 
+    sFontsRemoveArmed = 0;   /* FORK-052: a page change disarms Remove */
     if (page != PORTWATCH_VIDEO || aa < 0 || portOptGet(aa) == 0)
     {
         return;
@@ -1122,6 +1163,8 @@ s32 portWatchParentPage(s32 page)
         case PORTWATCH_IS_HUD:
         case PORTWATCH_IS_SYSTEM:
             return PORTWATCH_IRONSIGHTS;
+        case PORTWATCH_IS_FONTS:
+            return PORTWATCH_IS_SYSTEM;
         case PORTWATCH_VIDEO:
         case PORTWATCH_AUDIO:
         case PORTWATCH_GRAPHICS:
@@ -1839,6 +1882,22 @@ s32 portWatchRowAction(s32 page, s32 row)
     if (d->arg == 100) {
         extern void portStateMenuOpen(void);
         portStateMenuOpen(); return 1;
+    }
+    if (d->arg == PWACT_FONTS) {
+        sFontsRemoveArmed = 0;
+        portEnhancedFontsPrimaryAction();
+        return 1;
+    }
+    if (d->arg == PWACT_FONTS_REMOVE) {
+        if (!portEnhancedFontsHasFiles()) {
+            sFontsRemoveArmed = 0;
+        } else if (!sFontsRemoveArmed) {
+            sFontsRemoveArmed = 1;
+        } else {
+            sFontsRemoveArmed = 0;
+            portEnhancedFontsRemoveAndRevert();
+        }
+        return 1;
     }
     if (!sResetArmed)
     {

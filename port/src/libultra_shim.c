@@ -120,6 +120,17 @@ __attribute__((weak)) void portEnhancedFontsGlyph(int font, int ch, const unsign
     (void) font; (void) ch; (void) pixels; (void) width; (void) height; (void) baseline; (void) kerningindex; (void) kerning;
 }
 
+/* enhanced_fonts_download.cpp (renderer builds only): the Enhanced fonts' download (FORK-052) */
+__attribute__((weak)) int portEnhancedFontsState(void) { return 5; /* PORT_EFONTS_UNSUPPORTED */ }
+__attribute__((weak)) void portEnhancedFontsProgress(int *done, int *total) { if (done) *done = 0; if (total) *total = 0; }
+__attribute__((weak)) const char *portEnhancedFontsError(void) { return ""; }
+__attribute__((weak)) void portEnhancedFontsDownload(void) {}
+__attribute__((weak)) void portEnhancedFontsCancel(void) {}
+__attribute__((weak)) void portEnhancedFontsRecount(void) {}
+__attribute__((weak)) void portEnhancedFontsRemove(void) {}
+__attribute__((weak)) int portEnhancedFontsJustInstalled(void) { return 0; }
+__attribute__((weak)) const char *portEnhancedFontsInfoLine(int i) { (void) i; return NULL; }
+
 __attribute__((weak)) s32 portWatchStatic(void)   /* video.c: [display] watch_static, vanilla on */
 {
     return 1;

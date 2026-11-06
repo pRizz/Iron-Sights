@@ -38,7 +38,7 @@ static const struct PortOptHelp sHelp[] = {
     { "high_lod",           "Always draws the most detailed models." },
     { "setting_help",       "Shows this help box." },
     { "crash_reporting",    "Sends technical crash reports to Sentry. OFF stops uploads." },
-    { "font_style",         "Original: game fonts. Enhanced: installed community redraw. Iron Sights: our sharp HUD font." },
+    { "font_style",         "Original: game fonts. Enhanced: community redraw, see Enhanced Fonts. Iron Sights: ours." },
 
     /* HUD */
     { "sight_on_screen",    "Shows the aiming sight." },
@@ -119,6 +119,8 @@ static const struct PortOptHelp sHelp[] = {
     { "maxfps",             "Frame rate cap." },
     { "@apply",             "Applies the changes on this page." },
     { "@about",             "Build version, commit, timestamp and source links." },
+    { "@enhanced_fonts_get", "Downloads the files named above from GitHub, or cancels or uses them." },
+    { "@enhanced_fonts_remove", "Deletes the downloaded font files. Asks first." },
 
     /* CLASSIC: what Classic Mode forces while it is on */
     { "classic_res",        "Classic Mode renders 3D at the N64's 240 lines." },
@@ -162,6 +164,7 @@ static const struct PortOptHelp sHelp[] = {
     { "@page_is_feedback",  "Hit markers, hit sounds and damage direction." },
     { "@page_is_hud",       "Crosshair size, weapon strip, health and mission alerts." },
     { "@page_is_system",    "Build info, fonts and crash reports." },
+    { "@page_is_fonts",     "Get or remove the community Enhanced fonts." },
     { "@page_video",        "Display mode, resolution and picture quality." },
     { "@page_audio",        "Volume and sound options." },
     { "@page_classic",      "Choose which settings Classic Mode overrides." },

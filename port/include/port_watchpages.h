@@ -47,6 +47,8 @@ enum PortWatchPage {
     PORTWATCH_IS_FEEDBACK,
     PORTWATCH_IS_HUD,
     PORTWATCH_IS_SYSTEM,
+    PORTWATCH_IS_FONTS,         /* FORK-052: Enhanced Fonts, under System; before the Control
+                                 * tab's pages, which options.c tells apart by number */
     PORTWATCH_CONTROLLER,       /* the Control Options tab */
     PORTWATCH_CONTROLLER_MORE,  /* the device's own page: mouse and keyboard, or controller */
     PORTWATCH_CTLGENERAL,       /* general control options */

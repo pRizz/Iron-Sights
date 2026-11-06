@@ -37,6 +37,8 @@ int installed_count();
 void reload();
 /* The folder to read (default Data/FontPacks/gepd); for tests. */
 void set_directory(const std::string &directory);
+/* The folder the files are read from and installed into. */
+std::string directory();
 
 }  // namespace enhanced_fonts
 
