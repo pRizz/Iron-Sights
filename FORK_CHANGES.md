@@ -440,7 +440,10 @@ area opens a closer look in the statistics' place: the counts strip across the
 page, plus the map's column where it rises above that strip. The closer look
 hides the folder's CLASSIFIED stamp (`SW_CLASSIFIED`), which ran across the
 figures. It shows larger **FRONT** and **BACK** figures, a legend (hit, head,
-kill shot and the hits-per-part shading), a tally and **CLOSE**. The tally
+kill shot and the hits-per-part shading), a tally and **CLOSE**. Each dot
+entry gives its count, as **Hit: N**, **Head: N** and **Kill shot: N**: Hit
+and Head count the ink and gold dots, which add up to Hits shown, and kill
+shots are counted within them (owner's request, 2026-11-05). The tally
 reads **Hits shown: N**, the dots on the figures. Only when the debrief counts
 more head, body and limb hits than that, a second line reads **Not recorded:
 M**, the difference. Fists, the knife and thrown knives never reach those

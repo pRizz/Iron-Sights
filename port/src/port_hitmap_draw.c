@@ -429,13 +429,32 @@ Gfx *portHitMapDebriefCounts(Gfx *g, s32 shots, s32 kills, s32 head, s32 body, s
     return g;
 }
 
-static Gfx *hitmapLegendDot(Gfx *g, s32 y, u32 color, s32 kill, const char *label)
+static Gfx *hitmapLegendDot(Gfx *g, s32 y, u32 color, s32 kill, const char *label, s32 count)
 {
     const f32 cx = ZOOM_LEGEND_X + 3.0f, cy = y + 3.5f;
+    char line[32];
 
     g = kill ? hitmapKillRing(g, cx, cy, 2.9f) : hitmapDot(g, cx, cy, 2.3f, PAPER_RIM);
     g = hitmapHitDot(g, cx, cy, 1.9f, color);
-    return hitmapText(g, label, ZOOM_LEGEND_X + 9, y, 0.55f, PAPER_TEXT);
+    snprintf(line, sizeof(line), "%s: %d", label, count);
+    return hitmapText(g, line, ZOOM_LEGEND_X + 9, y, 0.55f, PAPER_TEXT);
+}
+
+/* The dots by legend entry: ink and gold (head) dots, which add up to the
+ * hits shown, and kill shots, which are also one of those. */
+static void hitmapLegendCounts(s32 *ink, s32 *head, s32 *kill)
+{
+    const PortHitMapFigure *figure = portHitMapFigure();
+    const PortHitMapHit *hits = portHitMapHits();
+    const s32 count = portHitMapCount();
+    s32 i;
+
+    *ink = *head = *kill = 0;
+    for (i = 0; i < count; i++) {
+        if (figure->boxes[hits[i].box].part == HIT_HEAD) (*head)++;
+        else (*ink)++;
+        if ((hits[i].flags & PORT_HITMAP_KILL) != 0) (*kill)++;
+    }
 }
 
 /* Fewest to most hits, shaded as the parts are. */
@@ -471,6 +490,8 @@ static Gfx *hitmapTally(Gfx *g, s32 bodyHits)
 
 static Gfx *hitmapZoom(Gfx *g, s32 bodyHits)
 {
+    s32 ink, head, kill;
+
     g = hitmapText(g, "HIT MAP:", 0x37, ZOOM_TOP, 1.0f, PAPER_TEXT);
     if (hitmapCloseHover()) {
         g = microcode_constructor_related_to_menus(g, ZOOM_CLOSE_X - 4, ZOOM_TOP - 2, ZOOM_CLOSE_X + 46, ZOOM_TOP + 12, HOVER_BOX);
@@ -482,9 +503,10 @@ static Gfx *hitmapZoom(Gfx *g, s32 bodyHits)
                    (s32)ZOOM_FIG_Y - 12, 0.6f, PAPER_TEXT);
     g = hitmapFigure(g, FALSE, ZOOM_FRONT_X, ZOOM_FIG_Y, ZOOM_FIG_W, ZOOM_FIG_H);
     g = hitmapFigure(g, TRUE, ZOOM_BACK_X, ZOOM_FIG_Y, ZOOM_FIG_W, ZOOM_FIG_H);
-    g = hitmapLegendDot(g, 180, INK, FALSE, "Hit");
-    g = hitmapLegendDot(g, 194, DOT_HEAD, FALSE, "Head");
-    g = hitmapLegendDot(g, 208, INK, TRUE, "Kill shot");
+    hitmapLegendCounts(&ink, &head, &kill);
+    g = hitmapLegendDot(g, 180, INK, FALSE, "Hit", ink);
+    g = hitmapLegendDot(g, 194, DOT_HEAD, FALSE, "Head", head);
+    g = hitmapLegendDot(g, 208, INK, TRUE, "Kill shot", kill);
     g = hitmapLegendHeat(g, 224);
     return hitmapTally(g, bodyHits);
 }
