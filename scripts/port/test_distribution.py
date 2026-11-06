@@ -66,6 +66,9 @@ class Distribution(unittest.TestCase):
             # Third-party texture packs are external mods; a stray copy in the build never ships.
             textures=build/"Data/TexturePacks";textures.mkdir(parents=True)
             (textures/"hd.istex").write_text("must not ship")
+            # So are the Enhanced fonts (FORK-052): the player downloads them on request.
+            fonts=build/"Data/FontPacks/gepd";fonts.mkdir(parents=True)
+            (fonts/"GOLDENEYE#CDE33EA7#4#1_rgb.png").write_text("must not ship");(fonts/"SOURCE.txt").write_text("must not ship")
             license=root/"SDL-LICENSE";license.write_text("license fixture")
             path=packager.package(build,out,sdl_license=license)
             with zipfile.ZipFile(path) as archive:
@@ -80,6 +83,7 @@ class Distribution(unittest.TestCase):
                 self.assertIn(b"Copyright 2011-2014 Kazuho Oku",archive.read("Save-Transfer-LICENSE.txt"))
                 self.assertIn(b"Copyright (C) 2017 okdshin",archive.read("Save-Transfer-LICENSE.txt"))
                 self.assertFalse(any(n.startswith("Data/TexturePacks/") for n in names))
+                self.assertFalse(any(n.startswith("Data/FontPacks/") for n in names))
                 self.assertFalse(any(n.endswith((".z64",".bin",".geprofile")) for n in names))
                 self.assertNotIn("midas.ini",names);self.assertNotIn("previous.exe",names)
             previous=path.read_bytes();packager.package(build,out,sdl_license=license)

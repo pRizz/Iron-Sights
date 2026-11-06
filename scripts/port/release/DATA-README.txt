@@ -4,4 +4,6 @@ Extract archives first. Other regions, modified ROMs and bad dumps are rejected.
 You can also drag a ROM onto IronSights.exe or set [data] rom= in midas.ini.
 
 Your campaign saves, profiles and other player data also live below Data.
+FontPacks/gepd holds the optional Enhanced fonts once you download them from
+Options (Gameplay > Iron Sights > System > Enhanced Fonts); releases never include them.
 Keep this folder when updating the executable. No ROM is included in releases.

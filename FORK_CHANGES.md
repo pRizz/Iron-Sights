@@ -315,6 +315,18 @@ CORS headers (retried, then installed), and from GitHub itself: each time 186
 files and `SOURCE.txt` with no `.part` left and "186 of 186 files installed"
 in the log, and no page errors.
 
+**FONT-5 preparation (2026-11-06).** Release checks: the Windows package test
+plants Enhanced font files (`Data/FontPacks/gepd`) in the build folder and
+asserts none ships, and the Linux package checks (`test_sentry_linux.py`,
+tar.gz, AppImage and Steam Deck ZIP) reject any `Data/FontPacks` path, as they
+already did texture packs. The release notes written by `windows-release.yml`
+and the packaged `Data/README.txt` describe the Fonts setting and the optional
+download (source, size, CC0, Remove). `audit_hitmap.ps1` takes `-FontStyle`
+(0 to 2) for debrief captures. The owner play-test checklist lives in the font
+styles plan. Checks: `test_distribution.py` passed locally (two tests that
+need GCC skipped; CI runs them); the Linux checks run in CI. Not run: Remove
+inside the browser game and the full launcher (FONT-4).
+
 ### FORK-051 — Iron Sights font: open-font MSDF text
 
 **Status:** Implemented in the Windows build and compiled for the browser;
@@ -419,9 +431,16 @@ smoothed glyphs. With it on,
 hints and the weapon strip crisp where the ROM font is blurry, at the ROM's
 capital height with no overlapping letters, and a 1600x900 watch page shows
 every Bank Gothic row replaced with capitals and small capitals in their ROM
-places. Not yet covered: 1440p and 4K captures (the
-display limits windows to 1600x900), a clipped scrolling list, the debrief,
-and the browser at run time.
+places. The 1440p, 4K, debrief and browser captures followed (below); a
+glyph cut by a clipped scrolling list is still not captured.
+
+**Captures (2026-11-06).** The browser build drew the Iron Sights font at run
+time at a true 2560x1440 and 3840x2160 (headless browser canvas). Native
+Windows captures on this machine stop at 1600x900, since SDL shrinks larger
+windows to fit the 1920x1080 desktop; at that size the HUD, Credits,
+Difficulty, the scrolled watch Video page, the watch inventory list and the
+debrief render cleanly in both fonts. A glyph actually cut by a clipped list
+(a watch inventory item's scrolling description) was not captured.
 
 ### FORK-050 — Open assets and sharp text plan
 

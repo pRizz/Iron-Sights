@@ -163,7 +163,26 @@ next action before handing off.
 | FONT-2 | Done | 2026-11-05: `enhanced_fonts_list.inc` pins the 186 files; `enhanced_fonts.cpp` reads `Data/FontPacks/gepd/`, verifies each file, decodes it (`png_decode.cpp`, now shared with the open fonts) and prepares 8x masks at run time (`enhanced_font_masks.cpp`), which the renderer uploads, smooth-samples and draws with FORK-021's quad growth. Deviation from the design above: files map to glyphs by character from the pinned list, not by computing Rice CRCs, because the game clears glyph padding before registering glyphs. The kerning trim needs each font's kerning table, so `portEnhancedFontsGlyph` registers it. Verified: all 186 run-time masks byte-identical to the FORK-021 generator's (local harness with the downloaded files); `test_enhanced_fonts.sh` (ROM-free, no pack files, in CI); Windows build; GCC 11 compile; 720p HUD and 960p difficulty-screen captures with and without the files. `enhanced_fonts_pack.py install` is the manual install. Next: FONT-3 |
 | FONT-3 | Done | 2026-11-05: an **Enhanced Fonts** page under System in the folder and on the watch carries the consent text, a status line, Download / Cancel / Retry / Use (or Check Folder Again) and Remove (asks first); `enhanced_fonts_download.cpp` fetches, verifies, writes `.part` and renames, then writes `SOURCE.txt`, on a worker thread through WinHTTP or run-time-loaded libcurl. Deviations from the design above: choosing Enhanced on the Fonts row does not open the prompt (stepping through values would jump pages); its value reads `Enhanced (Get)` instead and the page is the next row; the watch page sits before the Control tab's pages, which moves their `GE_WATCHPAGE` numbers up by one. Verified: engine tests with a fake transport; a Linux libcurl run against a local server; Windows captures of download, real GitHub download, cancel, failure, remove, the System row and the watch page. Not covered: the watch's armed Remove at run time, Linux and browser builds at run time. 2026-11-06: at the owner's request the Options folder's top level also shows **Get Enhanced Fonts**, opening the same page, while the fonts can be downloaded and are not installed (not on the watch, whose face has no free row); captured shown, hidden when installed, opening and Back. The page's description now draws dimmer than its status line, and in the folder a blank line and rounded, padded capital buttons (a blank line between them too) set them off (the watch's buttons already sit on plates); captured in both menus. A busy server (429, 502-504) is asked again after its Retry-After or a 2-16 s backoff, five tries, before **Failed: GitHub busy**; tested with fakes and a local 429 server on Windows and Linux. Next: FONT-4 |
 | FONT-4 | Done | 2026-11-06: the Enhanced Fonts page, watch page and Get Enhanced Fonts row appear in the browser; the download is now an `Installer` of steps that the native worker loops over and a per-frame browser pump answers with `fetch()` (no threads), with the same checks and busy backoff; files land in `/user/Data/FontPacks/gepd`, which `web/src/font-pack-paths.ts` lets the storage sync keep without entering save backups. The fonts folder now follows the game's root folder on every target. Installed, the first button switches between **Use Original Fonts** and **Use Enhanced Fonts** (a finished download already applies Enhanced). Verified: engine tests, an IDBFS reload case in `test:filesystem`, browser downloads from a local server (with and without CORS on 429s) and from GitHub. Not run: touch audits, the full launcher, Remove in the browser game. Next: FONT-5 |
-| FONT-5 | Not started | |
+| FONT-5 | In progress | 2026-11-06: automated part done. The Windows package test (`test_distribution.py`) and the Linux package checks (`test_sentry_linux.py`) now fail if anything under `Data/FontPacks` ships; the published site keeps its exact allowlist (`verify-site.ts`). The release notes written by `windows-release.yml` and the packaged `Data/README.txt` describe the Fonts setting and the optional download (source, size, CC0, Remove); README and THIRD_PARTY_NOTICES already did (FONT-3). Not run in the browser game: Remove (scripted input could not reach its button; Remove is covered natively and the IDBFS deletion by `test:filesystem`) and the full launcher. Next: the owner's play-test below, then mark Done |
+
+### FONT-5 play-test checklist
+
+For the owner, on the current Windows build (the browser where noted):
+
+1. **Original** (Fonts = Original): menus, HUD, watch and debrief look as before.
+2. **Iron Sights**: mission hints and other HUD text, the watch, the folder's
+   tab labels and small captions, and the debrief's HIT MAP caption use our
+   font; menu and briefing body text keeps the game font (OPEN-5). Check sizes,
+   spacing and that nothing overlaps or is cut, including a watch inventory
+   item's scrolling description.
+3. **Enhanced**: from Options, **Get Enhanced Fonts** opens the page; Download
+   shows progress, then applies Enhanced at once (the button then reads **Use
+   Original Fonts**); text in menus, HUD, watch and debrief uses the redraw.
+4. Cancel mid-download keeps the files fetched so far; Retry finishes.
+5. **Remove Enhanced Fonts** asks first (folder: Yes/No starting on No; watch:
+   press twice) and, with Fonts on Enhanced, switches back to Original.
+6. In the browser: the same page downloads, and the fonts are still there after
+   reloading the page.
 
 ## Technical references
 

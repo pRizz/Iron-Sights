@@ -18,8 +18,9 @@ from test_sentry_windows import Receiver
 
 
 def assert_no_artwork(names):
-    # Third-party texture packs are external mods the player adds, never release contents.
-    assert not any("Data/TexturePacks" in name for name in names)
+    # Third-party texture packs are external mods the player adds, never release contents;
+    # nor are the Enhanced fonts the game downloads on request (FORK-052).
+    assert not any("Data/TexturePacks" in name or "Data/FontPacks" in name for name in names)
 
 
 def wait_upload(server, count, seconds=6):

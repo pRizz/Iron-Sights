@@ -16,7 +16,9 @@ param(
     [switch]$Cheat,
     # Record at most this many hits; the rest are the Not recorded line.
     [int]$Cap = 0,
-    [string]$Resolution = '960x720'
+    [string]$Resolution = '960x720',
+    # Fonts: 0 Original, 1 Enhanced (needs Data/FontPacks/gepd), 2 Iron Sights (FORK-051/052).
+    [ValidateRange(0,2)][int]$FontStyle = 0
 )
 $ErrorActionPreference = 'Stop'
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -29,7 +31,7 @@ New-Item -ItemType Directory -Path $dir | Out-Null
 Copy-Item -LiteralPath $Executable -Destination $auditExe
 Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]', 'fullscreen=window', 'vsync=0', 'maxfps=60',
-    'tickhz=60', 'render_thread=0', 'msaa=0', 'music_volume=0', "debrief_hit_map=$([int](!$Off))")
+    'tickhz=60', 'render_thread=0', 'msaa=0', 'music_volume=0', "debrief_hit_map=$([int](!$Off))", "font_style=$FontStyle")
 $auditEnv = @{
     GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$Resolution; GE_NOINPUT='1'; GE_SEED='1';
     GE_STAGE=$Stage; GE_STAGE_AFTER='1'; GE_SKIPINTRO='1'; GE_CHEATS='invuln';
