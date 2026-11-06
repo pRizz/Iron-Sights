@@ -74,19 +74,23 @@ jobs:
           trap 'kill "$preview_pid"' EXIT
           bun tools/wait-for-site.ts http://127.0.0.1:4177/Iron-Sights/
           site=http://127.0.0.1:4177/Iron-Sights/
-          # Three lanes side by side: the room and startup audits are the slow
-          # ones; the rest share a lane (the two storage audits share an output
-          # folder). Each lane stops at its first failure; every log is shown.
-          lane() { local name=$1; shift; (set -e; for command in "$@"; do eval "$command"; done) > "../build/web/audit-$name.log" 2>&1; }
+          # The quick audits run first on an otherwise idle runner: the touch
+          # audit times input events, and the room audit's software WebGL keeps
+          # every core busy (with all three at once its touch-cancel check read
+          # stale movement). Then the slow room and startup audits run side by
+          # side. Each lane stops at its first failure; every log is shown.
+          lane() { local name=$1; shift; (for command in "$@"; do eval "$command" || exit 1; done) > "../build/web/audit-$name.log" 2>&1; }
+          failed=0
+          report() {
+            echo "::group::$1 audits $2"; cat "../build/web/audit-$1.log"; echo "::endgroup::"
+            if [ "$2" = failed ]; then echo "::error::The $1 audits failed; see their log group"; failed=1; fi
+          }
+          if lane quick "bun run test:launcher $site" "bun run test:touch" "bun run test:storage" \
+            "bun run test:filesystem" "bun run test:sampler"; then report quick passed; else report quick failed; fi
           lane room "bun run test:room $site" & room=$!
           lane startup "bun run test:startup $site" & startup=$!
-          lane others "bun run test:launcher $site" "bun run test:touch" "bun run test:storage" \
-            "bun run test:filesystem" "bun run test:sampler" & others=$!
-          failed=0
-          for name in room startup others; do
-            if wait "${!name}"; then result=passed; else result=failed; failed=1; fi
-            echo "::group::$name audits $result"; cat "../build/web/audit-$name.log"; echo "::endgroup::"
-            if [ "$result" = failed ]; then echo "::error::The $name audits failed; see their log group"; fi
+          for name in room startup; do
+            if wait "${!name}"; then report "$name" passed; else report "$name" failed; fi
           done
           exit "$failed"
       - name: Upload verified Pages artifact

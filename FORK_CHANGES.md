@@ -5463,11 +5463,16 @@ the workflow took 7 min 38 s, of which the browser test step was 242 s (room
 audit 164 s, mostly software-rendered WebGL with no GPU on the runner; startup
 audit 57 s; the five others about 15 s together) and the build step 158 s (SDK
 image pull 33 s, compile and link 90 s with nothing cached, logo audit 32 s).
-The test step now runs three lanes side by side against the one preview server
-(room; startup; launcher, touch, storage, filesystem and sampler, the two
-storage audits sharing a lane because they share an output folder); each lane
-stops at its first failure, every lane's log is printed in its own group, and
-the step fails if any lane failed. The build compiles through ccache 4.14.2's
+The test step now runs the quick audits (launcher, touch, storage, filesystem,
+sampler; about 20 s) first on an otherwise idle runner, then the slow room and
+startup audits side by side against the one preview server. Each lane stops at
+its first failure (explicitly, since `set -e` does not apply inside an `if`),
+every lane's log is printed in its own group, and the step fails if any lane
+failed. The first version ran all three lanes at once: with the room audit's
+software WebGL busy on every core, the touch audit's check right after a
+`touchCancel` (`touch-ui-audit.mjs`, movement still `[0, 1]` instead of
+`[0, 0]`) failed in CI run 42279844036. Whether that is only a test race or a
+real stale-movement race on slow devices is not yet investigated. The build compiles through ccache 4.14.2's
 official static Linux binary, pinned by URL and SHA-256 (GitHub's recorded
 asset digest, checked against a download) in `web_toolchain.json`:
 `web_build.py --ccache DIR` (new `scripts/port/web_ccache.py`, tested by
