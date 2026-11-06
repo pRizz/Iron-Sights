@@ -38,7 +38,7 @@ with its recommended decisions on 2026-11-05. The assets repository
 created the same day with its license, rules, roadmap, CI and Bright Builds
 Rules (OPEN-1), and
 released the parametric title font as v0.1.0 after the owner's review (OPEN-2),
-followed by a comparison-informed 0.2.0 draft.
+then v0.2.0 with comparison-informed refinements.
 Nothing in Iron Sights uses it yet; vendoring (OPEN-3) and the renderer
 (OPEN-4) come next.
 
