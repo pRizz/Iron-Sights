@@ -402,9 +402,14 @@ endif()
 if(GE_VIDEO)
     enable_language(CXX)
     set(CMAKE_CXX_STANDARD 20) # gfx_cc.h uses operator<=> (PD builds C++20)
+    include(port/fast3d/open_fonts_embed.cmake)
+    midas_embed_open_fonts(OPEN_FONTS_DATA_SRC)
     set(FAST3D_SRC
         port/fast3d/about.cpp
         port/fast3d/weapon_cache.cpp
+        port/fast3d/open_fonts.cpp
+        port/fast3d/third_party/puff/puff.c
+        ${OPEN_FONTS_DATA_SRC}
         port/fast3d/gfx_pc.cpp
         port/fast3d/gfx_cc.cpp
         port/fast3d/gfx_opengl.cpp

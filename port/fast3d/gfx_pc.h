@@ -44,6 +44,7 @@ struct TextureCacheKey {
      * (ge_upload_masked); the same bytes drawn with other masks must not
      * reuse that entry. */
     uint8_t masks, maskt;
+    bool msdf_glyph; /* FORK-050: an open-font glyph's field image, not its ROM bitmap */
 
     bool operator==(const TextureCacheKey&) const noexcept = default;
 

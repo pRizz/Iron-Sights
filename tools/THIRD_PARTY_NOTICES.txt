@@ -16,12 +16,14 @@ license, reproduced here as its terms require.
     in src/game/spectrum_hw.h)
   inflate.c by Mark Adler            public      every build (src/inflate,
                                      domain      src/game/zlib.c)
-  Iron Sights open assets            MIT         vendored source; used once
-    (port/fast3d/open_assets)                     the text renderer lands
+  Iron Sights open assets            MIT         every video build (drawn
+    (port/fast3d/open_assets)                     when Sharp Fonts is on)
   ENet                               MIT         netplay builds
   Perfect Dark decompilation         MIT         netplay builds (via the
                                                  Perfect Dark netplay fork)
   gzip 1.2.4 (tools/gzipsrc)         GPL-2.0+    build tools only, not shipped
+  puff 2.3, unmodified               zlib        every video build (decodes
+    (port/fast3d/third_party/puff)                 the open font atlas)
   puff (tools/extractor)             zlib        build tools only, not shipped
   armips (tools/armips.cpp)          MIT         build tools only, not shipped
   rabbitizer                         MIT         build tools only, not shipped
@@ -246,6 +248,8 @@ freely, subject to the following restrictions:
    misrepresented as being the original software.
 3. This notice may not be removed or altered from any source distribution.
 
+The copy in port/fast3d/third_party/puff is unmodified puff 2.3 from zlib
+v1.3.1; video builds use it to decode the open font atlas.
 The copy in tools/extractor has been modified to write the output length
 to an argument pointer.
 

@@ -86,6 +86,7 @@ Successful `main` builds deploy automatically to GitHub Pages. See [compatibilit
 - **Objective notifications:** named alerts show when mission objectives are completed or failed.
 - **Weapon inventory HUD:** a compact strip highlights your selected weapon, supports text or rendered model icons, and fades while idle.
 - **Always-visible health and armor:** persistent gauges become thinner and dimmer between hits; the original temporary display is also available.
+- **Sharp Fonts (preview, off by default):** **Gameplay > Iron Sights > System > Sharp Fonts** draws the HUD, watch and title text with our own MIT-licensed font, drawn from scratch, as a distance field that stays sharp at any resolution. Briefing and menu text keeps the original font until our body font exists. See the [open assets plan](scripts/port/open_assets_plan.md).
 - **Suspend points:** four manual slots, quicksave/quickload, and undo-load for solo missions.
 
 See [Playing](#playing) below for controls and settings.

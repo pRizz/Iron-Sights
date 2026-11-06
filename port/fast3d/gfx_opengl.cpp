@@ -656,7 +656,21 @@ static void gfx_opengl_shader_build_begin(struct GlShaderBuild* b, uint64_t shad
                 }
             }
 
-            if (current_filter_mode == FILTER_THREE_POINT)
+            if (cc_features.opt_msdf && i == 0) {
+                /* FORK-050: an open-font glyph's MSDF. Sample it plainly (no 3-point
+                 * filter), take the median of RGB and turn it into coverage over one
+                 * screen pixel; the combiner then uses it as the glyph's intensity.
+                 * 6.0 is the field's range in texture pixels. */
+                fs_len += shader_appendf(fs_buf, fs_len, "    vec4 msdf%d = SAMPLE_TEX(uTex%d, vTexCoordAdj%d);\n", i, i, i);
+                fs_len += shader_appendf(fs_buf, fs_len,
+                    "    float msdfMedian%d = max(min(msdf%d.r, msdf%d.g), min(max(msdf%d.r, msdf%d.g), msdf%d.b));\n",
+                    i, i, i, i, i, i);
+                fs_len += shader_appendf(fs_buf, fs_len,
+                    "    float msdfRange%d = max(0.5 * dot(vec2(6.0) / texSize%d, vec2(1.0) / fwidth(vTexCoordAdj%d)), 1.0);\n",
+                    i, i, i);
+                fs_len += shader_appendf(fs_buf, fs_len,
+                    "    vec4 texVal%d = vec4(clamp((msdfMedian%d - 0.5) * msdfRange%d + 0.5, 0.0, 1.0));\n", i, i, i);
+            } else if (current_filter_mode == FILTER_THREE_POINT)
                 fs_len += shader_appendf(fs_buf, fs_len, "    vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d, three_point_filter%d WEB_BORDER%d);\n", i, i, i, i, i, i);
             else
                 fs_len += shader_appendf(fs_buf, fs_len, "    vec4 texVal%d = hookTexture2D(uTex%d, vTexCoordAdj%d, texSize%d WEB_BORDER%d);\n", i, i, i, i, i);

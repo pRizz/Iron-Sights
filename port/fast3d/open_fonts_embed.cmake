@@ -1,0 +1,21 @@
+# Embed the vendored open title font (port/fast3d/open_assets/title) into a
+# generated C source at configure time, in plain CMake so no tool is needed to
+# build. Editing a vendored file re-runs configure (FORK-050).
+function(midas_embed_open_fonts out_var)
+    set(dir "${CMAKE_SOURCE_DIR}/port/fast3d/open_assets/title")
+    set(out "${CMAKE_BINARY_DIR}/generated/open_fonts_data.c")
+    set(text "/* Generated from port/fast3d/open_assets/title by port/fast3d/open_fonts_embed.cmake; do not edit. */\n#include <stddef.h>\n")
+    foreach(name atlas.png metrics.json)
+        set(path "${dir}/${name}")
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${path}")
+        file(READ "${path}" hex HEX)
+        string(LENGTH "${hex}" digits)
+        math(EXPR size "${digits} / 2")
+        string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," bytes "${hex}")
+        string(MAKE_C_IDENTIFIER "open_title_${name}" ident)
+        string(APPEND text "const unsigned char ${ident}[] = {${bytes}};\nconst size_t ${ident}_size = ${size};\n")
+    endforeach()
+    file(WRITE "${out}.tmp" "${text}")
+    configure_file("${out}.tmp" "${out}" COPYONLY)
+    set(${out_var} "${out}" PARENT_SCOPE)
+endfunction()

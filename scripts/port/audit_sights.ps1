@@ -7,7 +7,9 @@ param(
     [ValidateSet(1,2,4)][int]$Players = 1,
     [switch]$Edge,
     [ValidateRange(10,200)][int]$CrosshairSize = 100,
-    [switch]$HighHudScale
+    [switch]$HighHudScale,
+    # Bank Gothic text from the open title font (FORK-050).
+    [switch]$SharpFonts
 )
 $ErrorActionPreference = 'Stop'
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -24,7 +26,7 @@ Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]', 'ful
     'maxfps=60', 'tickhz=60', 'render_thread=0', 'watch_static=0', 'msaa=0', "aim_mode=$aimMode", 'aim_control=0', 'always_crosshair=1',
     "always_crosshair_size=$CrosshairSize", "hud_scale=$([int]$HighHudScale.IsPresent)",
     'sight_on_screen=1', 'mp_always_crosshair=1', "crosshair_color=$Color", 'hit_markers=0', 'damage_indicators=0',
-    'objective_notifications=0', 'weapon_hud=0', '[input]', 'mouse=1')
+    'objective_notifications=0', 'weapon_hud=0', "sharp_fonts=$([int]$SharpFonts.IsPresent)", '[input]', 'mouse=1')
 $pad = if ($Mode -eq 'RedReticle') {'10'} else {'0'}
 $actions = if ($Mode -eq 'Sniper') {'200000'} else {'0'}
 $inputFile = Join-Path $dir 'input.txt'

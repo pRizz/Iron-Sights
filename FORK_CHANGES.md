@@ -30,6 +30,100 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-051 — Sharp Fonts: open-font MSDF text
+
+**Status:** Implemented in the Windows build and compiled for the browser;
+default off. Not yet play-tested by the owner, and the browser build was not
+run. Part of the open assets plan (OPEN-4, FORK-050).
+
+Adds **Gameplay > Iron Sights > System > Sharp Fonts** (`[display]
+sharp_fonts`, default 0) to the Options folder and the watch. With it on,
+every Bank Gothic glyph (the HUD, watch, mission hints, timers, weapon strip,
+titles) is drawn from the open title font (pRizz/iron-sights-assets, MIT,
+vendored at v0.3.0) as a multi-channel signed distance field, sharp at any
+resolution, while Zurich Bold text (briefings, folder menus) keeps the ROM
+font until the open body font exists. It defaults to off until both fonts
+exist and the owner has play-tested them (plan decision 4).
+
+The game keeps its own text layout: advances, kerning, line spacing,
+clipping, colours and outlines are unchanged. Each glyph's ROM texture is
+replaced:
+
+- **Embedding and decoding.** `port/fast3d/open_fonts_embed.cmake` turns the
+  vendored `atlas.png` and `metrics.json` into a generated C file at
+  configure time in plain CMake (re-run when they change). `open_fonts.cpp`
+  decodes the PNG with vendored, unmodified puff 2.3 (zlib license, from
+  zlib v1.3.1) plus PNG unfiltering, and parses the metrics with picojson.
+- **Registry.** `textrelated.c`'s font loader registers each glyph's pixel
+  pointer, width, height and baseline (a weak no-op covers builds without the
+  renderer). Bank Gothic maps to the title font.
+- **Placement.** Our capitals match the ROM `H` as it reads on screen: its
+  ink edges are where its rows' peak intensity, interpolated between row
+  centres, crosses a quarter of its peak (6.7 of its 8 rows). Our glyph sits
+  on that ink's foot, with its ink centred in the ROM glyph's width; a glyph
+  that would still be wider than that width plus 0.4 texel is squeezed
+  horizontally to fit, so letters never overlap. The first build scaled to all
+  8 rows; in play the letters came out too tall, too wide and overlapping, and
+  the owner asked for them shorter and less wide (2026-11-05). Captures at
+  720p measured the mission-hint line at 9 px for the ROM, 11 px for that
+  build, 8 px when scaled to the rows' summed ink, and 9 px with the
+  quarter-peak edges. Those hints are drawn in small capitals, so the 9 px
+  match came partly from our small capitals being too short (76% of our
+  capital against the ROM's 84%); title font v0.3.0, vendored at the owner's
+  request after play-testing the draft, raises them to 85%, and
+  the hint line's ink-mass height is then 9.3 and 8.2 px against the ROM's
+  9.3 and 9.0 (v0.2.0: 8.6 and 7.6). Rows are then counted 2 px taller than
+  the ROM's, because sharp edges cross the count's half-intensity threshold
+  where the ROM's blurred ones do not.
+- **Textures.** Importing a registered glyph uploads an RGBA field image
+  resampled from the atlas over the union of the ROM glyph box and our padded
+  glyph box, at the atlas's own density. A `msdf_glyph` cache-key flag keeps
+  it apart from the ROM bitmap, and turning the setting on or off rebinds.
+- **Quads.** `gfx_dp_texture_rectangle` grows the glyph's quad to that box
+  (sides always; top and bottom only where a clipped list did not cut the
+  glyph) with sub-pixel corners, maps its UVs onto the box, skips the
+  half-texel glyph border, and draws without the tile UV clamp. Rotated text
+  and copy-mode rects keep the ROM path.
+- **Shader.** `SHADER_OPT_MSDF` (bit 31) samples the field directly (no
+  3-point filter), takes the median of RGB and turns it into coverage over one
+  screen pixel with `fwidth`; the combiner uses that as the glyph's intensity.
+
+With Sharp Fonts off, rendering is unchanged.
+
+**Upstream hooks:** a fork block in `textrelated.c`'s font loader; in
+`gfx_pc.cpp` the I8 import, cache key, 2D sampler choice, UV-clamp decision,
+shader option, texture-rectangle path and frame-start rebind; the shader
+generator in `gfx_opengl.cpp`; `gfx_cc.*` and `gfx_pc.h`.
+
+**Sources:** [open fonts](port/fast3d/open_fonts.cpp) and [header](port/fast3d/open_fonts.h),
+[embedding](port/fast3d/open_fonts_embed.cmake), [puff](port/fast3d/third_party/puff/README.md),
+[renderer](port/fast3d/gfx_pc.cpp), [shader](port/fast3d/gfx_opengl.cpp),
+[shader options](port/fast3d/gfx_cc.h), [cache key](port/fast3d/gfx_pc.h),
+[font registry hook](src/game/textrelated.c), [weak fallback](port/src/libultra_shim.c),
+[setting](port/src/video.c), [options](port/src/port_options.c),
+[frontend row](src/game/front.c), [watch row](port/src/port_watchpages.c),
+[help](port/src/port_option_help.c), [ini reference](tools/midas_ini_help.txt),
+[build](CMakeLists.txt), [notices](tools/THIRD_PARTY_NOTICES.txt),
+[tests](scripts/port/test_open_fonts.sh), [README](README.md), and
+`-SharpFonts` switches on the [HUD](scripts/port/audit_hud.ps1),
+[sight/watch](scripts/port/audit_sights.ps1) and [text](scripts/port/audit_fonts.ps1) audits.
+**Checks:** the Windows build compiles and links; the browser video build
+(`web_build.py video`) compiles and links and its wasm audit passes, but was
+not run. `test_open_fonts.sh` (added to the release workflow) decodes the
+vendored atlas, registers a ROM-like font and checks a glyph's box, field
+inside its stem, outside its corner and on the ROM baseline. `test_hud.sh`,
+`test_hitmap.sh`, the open-asset verification, settings placement and the
+standards check pass; the regenerated gallery has zero changed image cells.
+With Sharp Fonts off, 1280x960 video-menu captures are pixel-identical to the
+build before this change, with point-sampled and smoothed glyphs. With it on,
+1280x720 HUD captures show the outlined timer and ammo digits, the mission
+hints and the weapon strip crisp where the ROM font is blurry, at the ROM's
+capital height with no overlapping letters, and a 1600x900 watch page shows
+every Bank Gothic row replaced with capitals and small capitals in their ROM
+places. Not yet covered: 1440p and 4K captures (the
+display limits windows to 1600x900), a clipped scrolling list, the debrief,
+and the browser at run time.
+
 ### FORK-050 — Open assets and sharp text plan
 
 **Status:** Plan, repository rule and vendored assets; the owner accepted the plan
@@ -38,16 +132,17 @@ with its recommended decisions on 2026-11-05. The assets repository
 created the same day with its license, rules, roadmap, CI and Bright Builds
 Rules (OPEN-1), and
 released the parametric title font as v0.1.0 after the owner's review (OPEN-2),
-then v0.2.0 with comparison-informed refinements. Iron Sights vendors v0.2.0
-(OPEN-3): `scripts/port/update_open_assets.py` fetches a tag, checks every
-download against the release's SHA256SUMS and copies the LICENSE,
-`title/atlas.png` and `title/metrics.json` byte for byte into
-`port/fast3d/open_assets/` with a `manifest.json` of checksums (`--verify`
+then v0.2.0 with comparison-informed refinements and v0.3.0 with taller small
+capitals after the owner's Sharp Fonts play-test (OPEN-4). Iron Sights first
+vendored v0.2.0 (OPEN-3) and now vendors v0.3.0:
+`scripts/port/update_open_assets.py` fetches a tag, checks every download
+against the release's SHA256SUMS and copies the LICENSE, `title/atlas.png`
+and `title/metrics.json` byte for byte into `port/fast3d/open_assets/` with a `manifest.json` of checksums (`--verify`
 rechecks offline; `.gitattributes` keeps the folder byte-exact).
 `test_open_assets.py` runs in the release workflow, `build-inputs.json` records
 the release, Windows and Linux packages ship `Open-Assets-LICENSE.txt`, the
-browser site lists it, and THIRD_PARTY_NOTICES describes it. The game does not
-draw with the font yet; that is the renderer (OPEN-4).
+browser site lists it, and THIRD_PARTY_NOTICES describes it. The renderer that
+draws it is FORK-051 (OPEN-4), behind Sharp Fonts (default off).
 
 [open_assets_plan.md](scripts/port/open_assets_plan.md) plans original,
 MIT-licensed fonts to replace the ROM's glyphs, and a renderer that draws them
@@ -476,7 +571,7 @@ subsections, in both the Options folder and the watch:
 | Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Sprint, Ludicrous Sprint |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction |
 | HUD Additions | Always Crosshair Size, Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
-| System | About / Build Info, Crash Reporting (Windows/Linux) |
+| System | About / Build Info, Sharp Fonts (FORK-051), Crash Reporting (Windows/Linux) |
 
 The watch's Iron Sights page also holds the Suspend Points action, which moved
 there from the watch's Gameplay page. Rows left General Settings, HUD, Port

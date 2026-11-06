@@ -1,10 +1,10 @@
 {
  "family": "Iron Sights Title",
- "version": "0.2.0",
+ "version": "0.3.0",
  "license": "MIT",
  "unitsPerEm": 1000,
  "capHeight": 700,
- "smallcapHeight": 530,
+ "smallcapHeight": 595,
  "ascender": 860,
  "descender": -200,
  "space": 260,
@@ -1428,12 +1428,12 @@
   },
   "a": {
    "codepoint": 97,
-   "advance": 604,
+   "advance": 663,
    "bounds": [
     79,
     0,
-    525,
-    530
+    584,
+    595
    ],
    "atlas": [
     0,
@@ -1450,12 +1450,12 @@
   },
   "b": {
    "codepoint": 98,
-   "advance": 593,
+   "advance": 652,
    "bounds": [
     58,
     0,
-    535,
-    530
+    594,
+    595
    ],
    "atlas": [
     50,
@@ -1472,12 +1472,12 @@
   },
   "c": {
    "codepoint": 99,
-   "advance": 582,
+   "advance": 640,
    "bounds": [
     58,
     0,
-    524,
-    530
+    582,
+    595
    ],
    "atlas": [
     100,
@@ -1494,12 +1494,12 @@
   },
   "d": {
    "codepoint": 100,
-   "advance": 604,
+   "advance": 663,
    "bounds": [
     58,
     0,
-    546,
-    530
+    605,
+    595
    ],
    "atlas": [
     150,
@@ -1516,12 +1516,12 @@
   },
   "e": {
    "codepoint": 101,
-   "advance": 551,
+   "advance": 604,
    "bounds": [
     58,
     0,
-    493,
-    530
+    546,
+    595
    ],
    "atlas": [
     200,
@@ -1538,12 +1538,12 @@
   },
   "f": {
    "codepoint": 102,
-   "advance": 540,
+   "advance": 592,
    "bounds": [
     58,
     0,
-    482,
-    530
+    534,
+    595
    ],
    "atlas": [
     250,
@@ -1560,12 +1560,12 @@
   },
   "g": {
    "codepoint": 103,
-   "advance": 604,
+   "advance": 663,
    "bounds": [
     58,
     0,
-    546,
-    530
+    605,
+    595
    ],
    "atlas": [
     300,
@@ -1582,12 +1582,12 @@
   },
   "h": {
    "codepoint": 104,
-   "advance": 604,
+   "advance": 663,
    "bounds": [
     58,
     0,
-    546,
-    530
+    605,
+    595
    ],
    "atlas": [
     350,
@@ -1609,7 +1609,7 @@
     58,
     0,
     152,
-    530
+    595
    ],
    "atlas": [
     400,
@@ -1626,12 +1626,12 @@
   },
   "j": {
    "codepoint": 106,
-   "advance": 540,
+   "advance": 592,
    "bounds": [
     58,
     0,
-    482,
-    530
+    534,
+    595
    ],
    "atlas": [
     450,
@@ -1648,12 +1648,12 @@
   },
   "k": {
    "codepoint": 107,
-   "advance": 593,
+   "advance": 652,
    "bounds": [
     58,
     0,
-    477,
-    530
+    531,
+    595
    ],
    "atlas": [
     500,
@@ -1670,12 +1670,12 @@
   },
   "l": {
    "codepoint": 108,
-   "advance": 529,
+   "advance": 580,
    "bounds": [
     58,
     0,
-    471,
-    530
+    522,
+    595
    ],
    "atlas": [
     550,
@@ -1692,12 +1692,12 @@
   },
   "m": {
    "codepoint": 109,
-   "advance": 688,
+   "advance": 759,
    "bounds": [
     58,
     0,
-    630,
-    530
+    701,
+    595
    ],
    "atlas": [
     600,
@@ -1714,12 +1714,12 @@
   },
   "n": {
    "codepoint": 110,
-   "advance": 620,
+   "advance": 681,
    "bounds": [
     58,
     0,
-    562,
-    530
+    623,
+    595
    ],
    "atlas": [
     650,
@@ -1736,12 +1736,12 @@
   },
   "o": {
    "codepoint": 111,
-   "advance": 620,
+   "advance": 681,
    "bounds": [
     58,
     0,
-    562,
-    530
+    623,
+    595
    ],
    "atlas": [
     700,
@@ -1758,12 +1758,12 @@
   },
   "p": {
    "codepoint": 112,
-   "advance": 582,
+   "advance": 640,
    "bounds": [
     58,
     0,
-    524,
-    530
+    582,
+    595
    ],
    "atlas": [
     750,
@@ -1780,12 +1780,12 @@
   },
   "q": {
    "codepoint": 113,
-   "advance": 620,
+   "advance": 681,
    "bounds": [
     58,
-    -74,
-    562,
-    530
+    -83,
+    623,
+    595
    ],
    "atlas": [
     0,
@@ -1802,12 +1802,12 @@
   },
   "r": {
    "codepoint": 114,
-   "advance": 593,
+   "advance": 652,
    "bounds": [
     58,
     0,
-    535,
-    530
+    594,
+    595
    ],
    "atlas": [
     50,
@@ -1824,12 +1824,12 @@
   },
   "s": {
    "codepoint": 115,
-   "advance": 582,
+   "advance": 640,
    "bounds": [
     58,
     0,
-    524,
-    530
+    582,
+    595
    ],
    "atlas": [
     100,
@@ -1846,12 +1846,12 @@
   },
   "t": {
    "codepoint": 116,
-   "advance": 572,
+   "advance": 628,
    "bounds": [
     58,
     0,
-    514,
-    530
+    570,
+    595
    ],
    "atlas": [
     150,
@@ -1868,12 +1868,12 @@
   },
   "u": {
    "codepoint": 117,
-   "advance": 604,
+   "advance": 663,
    "bounds": [
     58,
     0,
-    546,
-    530
+    605,
+    595
    ],
    "atlas": [
     200,
@@ -1890,12 +1890,12 @@
   },
   "v": {
    "codepoint": 118,
-   "advance": 614,
+   "advance": 675,
    "bounds": [
-    66,
+    67,
     0,
-    548,
-    530
+    608,
+    595
    ],
    "atlas": [
     250,
@@ -1912,12 +1912,12 @@
   },
   "w": {
    "codepoint": 119,
-   "advance": 752,
+   "advance": 830,
    "bounds": [
     58,
     0,
-    694,
-    530
+    772,
+    595
    ],
    "atlas": [
     300,
@@ -1934,12 +1934,12 @@
   },
   "x": {
    "codepoint": 120,
-   "advance": 604,
+   "advance": 663,
    "bounds": [
-    84,
+    86,
     0,
-    520,
-    530
+    578,
+    595
    ],
    "atlas": [
     350,
@@ -1956,12 +1956,12 @@
   },
   "y": {
    "codepoint": 121,
-   "advance": 604,
+   "advance": 663,
    "bounds": [
-    88,
+    90,
     0,
-    516,
-    530
+    574,
+    595
    ],
    "atlas": [
     400,
@@ -1978,12 +1978,12 @@
   },
   "z": {
    "codepoint": 122,
-   "advance": 572,
+   "advance": 628,
    "bounds": [
     58,
     0,
-    514,
-    530
+    570,
+    595
    ],
    "atlas": [
     450,

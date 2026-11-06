@@ -145,6 +145,40 @@ MSDF is recommended over the alternatives:
   text (under about 12 screen pixels) is slightly softer; that can be tuned
   with the field range or a small-size bitmap tier later if captures show it.
 
+### OPEN-4 implementation design (2026-11-05)
+
+- **Embedding.** CMake turns the vendored `atlas.png` and `metrics.json` into a
+  generated C file at configure time (pure CMake `file(READ ... HEX)`, so no
+  tool is needed at build time, and a change re-runs configure). At start-up
+  the port decodes the PNG with `puff.c` (Mark Adler, zlib license, vendored
+  from `tools/extractor`; bounds-checked, no global state) plus a small
+  unfilter step, and parses the metrics with the vendored picojson.
+- **Registry.** `textrelated.c`'s font loader, in a fork block, registers each
+  glyph's pixel pointer, width, height and baseline, and each font's reference
+  capital (`H`). Bank Gothic maps to the title font; Zurich Bold stays on the
+  ROM path until the body font exists.
+- **Placement.** Our capitals match the ROM capital's ink as it reads on
+  screen (edges where its interpolated row intensity crosses a quarter of
+  its peak), sitting on that ink's foot with ink centred in the ROM glyph's
+  width; glyphs that would overflow that width are squeezed horizontally.
+  The ROM keeps the advance, kerning and line spacing.
+- **Per-glyph textures.** Importing a registered glyph's texture with Sharp
+  Fonts on uploads an RGBA image resampled from the atlas over the union of
+  the ROM glyph box and our padded glyph box, at the atlas's own density, so
+  the field's pixel range is unchanged. A cache-key flag keeps it apart from
+  the ROM bitmap, so toggling the setting re-imports.
+- **Quads.** The texture-rectangle path grows a registered glyph's quad to
+  that union (sides always; top and bottom only where a clipped list did not
+  cut the glyph) with sub-pixel corners, rewrites its UVs to the union, and
+  skips the half-texel glyph border. Flipped (rotated) text and copy-mode
+  rects keep the ROM path.
+- **Shader.** `SHADER_OPT_MSDF` (bit 31) samples the texture directly (no
+  3-point filter), takes the median of RGB, converts it to coverage over one
+  screen pixel with `fwidth`, and feeds that as the texel to the unchanged
+  combiner, so colours, outlines and fades work as before.
+- **Setting.** Sharp Fonts (`[display] sharp_fonts`, default 0) on Iron Sights
+  > System in the Options folder and the watch.
+
 ## Use outside Iron Sights
 
 The fonts are usable directly by anyone (TTF/OTF and atlases, MIT). An
@@ -199,9 +233,9 @@ next action before handing off.
 | ID | Status | Notes |
 | --- | --- | --- |
 | OPEN-1 | Done | 2026-11-05: public [`pRizz/iron-sights-assets`](https://github.com/pRizz/iron-sights-assets) (MIT, detected by GitHub) with the provenance rules, roadmap and future-assets intent in its README, a CONTRIBUTING guide requiring a DCO sign-off and a provenance note, and Bright Builds Rules installed as in Iron Sights (auto-update disabled). CI runs the ROM-free tests, the Bright Builds checks and a drift check rebuilding `dist/` (bytes for TTF/JSON, pixels for PNGs) on every push; `v*` tags publish per-font archives, the license and SHA-256 checksums via `tools/package_release.py`. First release: [v0.1.0](https://github.com/pRizz/iron-sights-assets/releases/tag/v0.1.0), checksums verified after download, and a Windows repack matches it byte for byte (`c4038ca` fixed a case-insensitive sort that had made local packs differ) |
-| OPEN-2 | Done | 2026-11-05: title font [v0.1.0](https://github.com/pRizz/iron-sights-assets/releases/tag/v0.1.0): a parametric generator (centerline skeletons stroked, unioned, clipped and softened with Clipper's integer geometry), all 94 glyphs with small-cap lowercase and equal-width figures, `IronSightsTitle-Regular.ttf`, an MTSDF atlas from our own numpy generator (48 px/em, 6 px range), `metrics.json` and a specimen drawn from the atlas. After the owner's review (`306c627`), A, M, W, Y and 7 use the classic diagonal structures, closer to the game lettering's general style without tracing or measuring it, and &, @ and ~ were redrawn. Ten ROM-free tests pass (coverage, heights, ink inside the advance, clean contours, the font file, field validity, corner colouring, determinism, reproducible packing). Follow-up [v0.2.0](https://github.com/pRizz/iron-sights-assets/releases/tag/v0.2.0) (released 2026-11-05; checksums verified, Windows repack identical): after comparing v0.1.0 with the game's glyphs locally, the owner asked for 17 changes (A, C, M, Q, S, W; 2, 3, 4, 5, 7, 9; %, #, $, &, ?), redrawn in our own skeletons and recorded as comparison-informed; the mean overlap share across all 94 glyphs rose from 34% to 35%, with $ at 66% and 4 at 54%. `f8f9ec1` shortened the hooks on C, S, 2, 3 and 7 and added the ampersand's down-right leg, and `a5018ee` gave the 9 a bigger loop, both at the owner's request (`1938cce` started the series). Iron Sights should vendor v0.2.0 in OPEN-3 |
-| OPEN-3 | Done | 2026-11-05: `scripts/port/update_open_assets.py --tag v0.2.0` downloaded the release's SHA256SUMS, LICENSE and `title-v0.2.0.tar.gz`, checked each against SHA256SUMS, and vendored the LICENSE plus `title/atlas.png` and `title/metrics.json` byte for byte into `port/fast3d/open_assets/`, with `manifest.json` recording the tag, archive checksum and each file's SHA-256 (`.gitattributes` keeps the folder byte-exact). `--verify` rechecks offline; `test_open_assets.py` (in the release workflow) also checks the MIT license, the 94 glyphs, the version against the tag and the atlas size against its PNG header. `build-inputs.json` records the release (`release_inputs.py`); Windows and Linux packages ship `Open-Assets-LICENSE.txt` (the package test requires it), the browser site lists it, and THIRD_PARTY_NOTICES describes it as vendored source used once the renderer lands. The atlas stays a PNG: the port has no PNG decoder and the distance field barely run-length compresses, so how it is embedded is decided in OPEN-4 |
-| OPEN-4 | Not started | Can start against the vendored title font and the Arimo placeholder. First decision: how the PNG atlas reaches the executable (a small inflate/PNG decoder, or a build-time conversion) |
+| OPEN-2 | Done | 2026-11-05: title font [v0.1.0](https://github.com/pRizz/iron-sights-assets/releases/tag/v0.1.0): a parametric generator (centerline skeletons stroked, unioned, clipped and softened with Clipper's integer geometry), all 94 glyphs with small-cap lowercase and equal-width figures, `IronSightsTitle-Regular.ttf`, an MTSDF atlas from our own numpy generator (48 px/em, 6 px range), `metrics.json` and a specimen drawn from the atlas. After the owner's review (`306c627`), A, M, W, Y and 7 use the classic diagonal structures, closer to the game lettering's general style without tracing or measuring it, and &, @ and ~ were redrawn. Ten ROM-free tests pass (coverage, heights, ink inside the advance, clean contours, the font file, field validity, corner colouring, determinism, reproducible packing). Follow-up [v0.2.0](https://github.com/pRizz/iron-sights-assets/releases/tag/v0.2.0) (released 2026-11-05; checksums verified, Windows repack identical): after comparing v0.1.0 with the game's glyphs locally, the owner asked for 17 changes (A, C, M, Q, S, W; 2, 3, 4, 5, 7, 9; %, #, $, &, ?), redrawn in our own skeletons and recorded as comparison-informed; the mean overlap share across all 94 glyphs rose from 34% to 35%, with $ at 66% and 4 at 54%. `f8f9ec1` shortened the hooks on C, S, 2, 3 and 7 and added the ampersand's down-right leg, and `a5018ee` gave the 9 a bigger loop, both at the owner's request (`1938cce` started the series). Iron Sights should vendor v0.2.0 in OPEN-3. [v0.3.0](https://github.com/pRizz/iron-sights-assets/releases/tag/v0.3.0) (released 2026-11-05, `84578c3`) raises the small capitals from 76% to 85% of the capital height after the owner's Sharp Fonts play-test, a proportion informed by locally comparing the game font's (about 84%) |
+| OPEN-3 | Done | 2026-11-05: `scripts/port/update_open_assets.py --tag v0.2.0` downloaded the release's SHA256SUMS, LICENSE and `title-v0.2.0.tar.gz`, checked each against SHA256SUMS, and vendored the LICENSE plus `title/atlas.png` and `title/metrics.json` byte for byte into `port/fast3d/open_assets/`, with `manifest.json` recording the tag, archive checksum and each file's SHA-256 (`.gitattributes` keeps the folder byte-exact). `--verify` rechecks offline; `test_open_assets.py` (in the release workflow) also checks the MIT license, the 94 glyphs, the version against the tag and the atlas size against its PNG header. `build-inputs.json` records the release (`release_inputs.py`); Windows and Linux packages ship `Open-Assets-LICENSE.txt` (the package test requires it), the browser site lists it, and THIRD_PARTY_NOTICES describes it as vendored source used once the renderer lands. The atlas stays a PNG: the port has no PNG decoder and the distance field barely run-length compresses, so how it is embedded is decided in OPEN-4. During OPEN-4 the same script vendored v0.3.0 |
+| OPEN-4 | In progress | 2026-11-05: implemented as FORK-051 per the design above (Sharp Fonts, default off): configure-time embedding, puff PNG decoding, the glyph registry, per-glyph field images, quad growth with sub-pixel corners and `SHADER_OPT_MSDF`. Windows build verified: setting off is pixel-identical to the previous build on the video menu; setting on renders the HUD and watch crisply at 720p and 900p, with outlines; `test_open_fonts.sh` passes. The browser build compiles and links. The owner's first play-test found letters too tall, too wide and overlapping; placement now matches the ROM capital's on-screen ink height and squeezes glyphs wider than their ROM space, so no letters overlap. The mission hints that seemed to confirm the height are small capitals, which were short (76% of the capital against the ROM's 84%); the owner asked for taller ones, and v0.3.0 (85%) brings the hints' ink height to 9.3 and 8.2 px against the ROM's 9.3 and 9.0. Remaining: owner play-test of the fix, the browser at run time, 1440p/4K captures, a clipped list and the debrief |
 | OPEN-5 | Not started | |
 | OPEN-6 | Deferred | |
 

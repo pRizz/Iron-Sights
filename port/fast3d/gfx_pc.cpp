@@ -33,6 +33,7 @@
 #include "platform.h"
 
 #include "gfx_pc.h"
+#include "open_fonts.h" /* FORK-050: open-font MSDF glyphs */
 #include "gfx_cc.h"
 #include "gfx_window_manager_api.h"
 #include "gfx_rendering_api.h"
@@ -403,6 +404,9 @@ static std::atomic<int> gfx_line_mode_req{0}; /* boss.c, every frame, sim thread
 extern "C" { uint32_t gfx_line_mode = 0; }    /* this frame's, render thread (gfx_opengl.cpp reads it) */
 uint32_t gfx_anisotropy = 1;
 uint32_t gfx_filter_2d = 1;
+/* [display] sharp_fonts (FORK-050): draw Bank Gothic glyphs from the open
+ * title font's distance field. */
+uint32_t gfx_sharp_fonts = 0;
 /* set by G_MIRRORPILLAR_EXT around an overlay wanting mirrored side bands -
  * blood_animation.c's death / gunbarrel blood, and title.c's untextured fade.
  * The sampler latch reads it as well: see the filter_2d rule there. */
@@ -463,6 +467,8 @@ static int32_t s_RectUvS0, s_RectUvS1, s_RectUvT0, s_RectUvT1;
  * border from the sampler (see gfx_dp_texture_rectangle). */
 static bool s_GeTextGlyphs = false;
 static bool s_RectGlyphBorder = false;
+/* This texture rect is an open-font glyph (FORK-050): the MSDF shader, no UV clamp. */
+static bool s_RectMsdf = false;
 /* options.c portHudScaleBegin (midas.ini hud_scale): G_NOOP tag 0x58 brackets
  * a HUD element, whose 2D rects then draw at half size about the pivot (U10.2),
  * as on a 640x480 canvas. 0x58FFFFFF ends the bracket. */
@@ -2422,6 +2428,16 @@ static void import_texture_i8(int tile, const LoadedTexture& loaded_texture, boo
     const uint32_t line_size_bytes = loaded_texture.line_size_bytes;
     SUPPORT_CHECK(full_image_line_size_bytes == line_size_bytes);
 
+    if (s_GeTextGlyphs && gfx_sharp_fonts) { /* FORK-050: an open-font glyph's field image */
+        const open_fonts::Glyph *glyph = open_fonts::find(addr);
+        static std::vector<uint8_t> field;
+        uint32_t fw = 0, fh = 0;
+        if (glyph != nullptr && open_fonts::image(*glyph, field, fw, fh)) {
+            gfx_rapi->upload_texture(field.data(), fw, fh);
+            return;
+        }
+    }
+
     if (!ge_tex_upload_reserve(size_bytes)) {
         return;
     }
@@ -3051,6 +3067,11 @@ static void import_texture(int i, int tile, bool importReplacement) {
     ge_composite_hash = 0;
     key.masks = rdp.texture_tile[tile].masks;
     key.maskt = rdp.texture_tile[tile].maskt;
+    { /* FORK-050: an open-font glyph is a different image from its ROM bitmap */
+        const open_fonts::Glyph *glyph = (s_GeTextGlyphs && gfx_sharp_fonts && fmt == G_IM_FMT_I && siz == G_IM_SIZ_8b)
+                                             ? open_fonts::find(orig_addr) : nullptr;
+        key.msdf_glyph = glyph != nullptr && open_fonts::usable(*glyph);
+    }
 
     { /* GE_TEXDBG=1: report address collisions between
        * DIFFERENT geometries - the class that used to silently return
@@ -4143,6 +4164,9 @@ ndcprobe_done:;
     if (use_blur) {
         cc_options |= (uint64_t)SHADER_OPT_BLUR;
     }
+    if (s_RectMsdf) {
+        cc_options |= (uint64_t)SHADER_OPT_MSDF;
+    }
     if (alpha_cvg_sel) {
         cc_options |= (uint64_t)SHADER_OPT_ALPHA_CVG_SEL;
     }
@@ -4309,6 +4333,12 @@ ndcprobe_done:;
                 tm |= 1 << (2 * i + 1);
                 cmt &= ~G_TX_CLAMP;
             }
+            if (s_RectMsdf && i == 0) {
+                /* FORK-050: the field image is the whole box the UVs span; clamp at
+                 * its (outside-valued) edge rather than at the ROM tile's width */
+                tm &= ~3u;
+                cms = cmt = G_TX_NOMIRROR | G_TX_CLAMP;
+            }
 
             /* A 2D rect whose UVs stay inside one tile is clamped to edge even
              * if declared G_TX_WRAP, since scaled sampling would otherwise pull
@@ -4375,7 +4405,7 @@ ndcprobe_done:;
                      * G_MIRRORPILLAR_EXT; they skip this and follow the texture
                      * filter setting (point, bilinear or 3-point) via the 3D
                      * path below. */
-                    linear_filter = gfx_filter_2d != 0
+                    linear_filter = gfx_filter_2d != 0 || rendering_state.textures[i]->first.msdf_glyph
                         || (rdp.loaded_texture[rdp.texture_tile[tile].tmem].tex_flags & 0x80000000u);
                 }
                 /* GE N64 mipmaps: when the game asked for per-pixel LOD over a
@@ -6271,11 +6301,53 @@ static void gfx_dp_texture_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int3
         return;
     }
 
+    /* Open fonts (FORK-050): a registered glyph drawn from its open-font field
+     * grows to the field image's box - the sides always, the top and bottom
+     * only where a clipped list did not cut the glyph - with sub-pixel corners,
+     * and its UVs span that box. */
+    s_RectMsdf = false;
+    open_fonts::Box msdf_box{};
+    float msdf_v0 = 0.0f, msdf_v1 = 0.0f;
+    if (s_GeTextGlyphs && gfx_sharp_fonts && !flip && dsdx > 0 && dtdy > 0
+        && (rdp.other_mode_h & (3U << G_MDSFT_CYCLETYPE)) != G_CYC_COPY) {
+        const open_fonts::Glyph *glyph = open_fonts::find(rdp.loaded_texture[rdp.texture_tile[tile].tmem].addr);
+        if (glyph != nullptr && open_fonts::usable(*glyph)) {
+            int rom_w = 0, rom_h = 0;
+            open_fonts::rom_size(*glyph, rom_w, rom_h);
+            msdf_box = open_fonts::box(*glyph);
+            const float qx = 4096.0f / dsdx, qy = 4096.0f / dtdy; /* rect quarter pixels per texel */
+            const float l = ulx + (precise ? s_GeRectFrac[0] : 0.0f), t = uly + (precise ? s_GeRectFrac[1] : 0.0f);
+            const float b = lry + (precise ? s_GeRectFrac[3] : 0.0f);
+            const float s0 = (uls - rdp.texture_tile[tile].uls * 8) / 32.0f;
+            const float t0 = (ult - rdp.texture_tile[tile].ult * 8) / 32.0f, t1 = t0 + (b - t) / qy;
+            const float nl = l + (msdf_box.x0 - s0) * qx, nr = l + (msdf_box.x1 - s0) * qx;
+            float nt = t, nb = b;
+            msdf_v0 = t0;
+            msdf_v1 = t1;
+            if (t0 <= 0.5f) {
+                nt = t + (msdf_box.y0 - t0) * qy;
+                msdf_v0 = msdf_box.y0;
+            }
+            if (t1 >= rom_h - 0.5f) {
+                nb = t + (msdf_box.y1 - t0) * qy;
+                msdf_v1 = msdf_box.y1;
+            }
+            const float corners[4] = { nl, nt, nr, nb };
+            int32_t *whole[4] = { &ulx, &uly, &lrx, &lry };
+            for (int k = 0; k < 4; k++) {
+                *whole[k] = (int32_t) floorf(corners[k]);
+                s_GeRectFrac[k] = corners[k] - (float) *whole[k];
+            }
+            precise = true;
+            s_RectMsdf = true;
+        }
+    }
+
     /* Filtered glyphs: grow half a texel per side
      * with a transparent border, so bilinear can finish the edge fade that
      * the tight glyph cells cut off. GE_NOGLYPHPAD=1 turns it off. */
     s_RectGlyphBorder = false;
-    if (s_GeTextGlyphs && gfx_filter_2d != 0 && !flip && dsdx > 0 && dtdy > 0
+    if (s_GeTextGlyphs && gfx_filter_2d != 0 && !s_RectMsdf && !flip && dsdx > 0 && dtdy > 0
         && (rdp.other_mode_h & (3U << G_MDSFT_CYCLETYPE)) != G_CYC_COPY) {
         static int glyphpad = -1;
         if (glyphpad < 0) {
@@ -6378,9 +6450,21 @@ static void gfx_dp_texture_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int3
     /* A precise glyph (textrelated.c's scaled text) is drawn at its exact
      * width and height, so its UVs span the corners' sub-quarter fractions
      * too; otherwise the glyph would stretch by up to a quarter pixel. */
-    if (precise && s_GeTextGlyphs && !flip) {
+    if (precise && s_GeTextGlyphs && !flip && !s_RectMsdf) {
         lrs += dsdx * (s_GeRectFrac[2] - s_GeRectFrac[0]) / 128.0f;
         lrt += dtdy * (s_GeRectFrac[3] - s_GeRectFrac[1]) / 128.0f;
+    }
+    if (s_RectMsdf) {
+        /* FORK-050: span the field box. The shader normalizes u by the tile's line
+         * width and v by its rows: u = 32 * n * width + 8 * tile.uls. */
+        const auto& tt = rdp.texture_tile[tile];
+        const float width = (float) (tt.line_size_bytes ? tt.line_size_bytes : 1);
+        const float rows = (float) rdp.loaded_texture[tt.tmem].orig_size_bytes / width;
+        const float bh = msdf_box.y1 - msdf_box.y0;
+        uls = (int16_t) (8 * tt.uls);
+        lrs = 32.0f * width + 8.0f * tt.uls;
+        ult = (int16_t) lroundf(32.0f * rows * (msdf_v0 - msdf_box.y0) / bh + 8.0f * tt.ult);
+        lrt = 32.0f * rows * (msdf_v1 - msdf_box.y0) / bh + 8.0f * tt.ult;
     }
 
     struct LoadedVertex* ul = &rsp.loaded_vertices[MAX_VERTICES + 0];
@@ -6422,6 +6506,7 @@ static void gfx_dp_texture_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int3
     s_GeRectFracOn = false;
     s_RectUvValid = false;
     s_RectGlyphBorder = false;
+    s_RectMsdf = false;
     if (saved_tile != tile) {
         rdp.textures_changed[0] = true;
         rdp.textures_changed[1] = true;
@@ -8010,6 +8095,13 @@ extern "C" uint32_t gfx_real_window_width;  /* the real window width while a pil
 uint32_t gfx_real_window_width = 0;
 
 extern "C" void gfx_start_frame(void) {
+    static uint32_t previous_sharp_fonts = ~0u;
+    if (previous_sharp_fonts != gfx_sharp_fonts) { /* FORK-050: rebind glyph textures */
+        gfx_flush();
+        rdp.textures_changed[0] = rdp.textures_changed[1] = true;
+        ++ge_state_serial;
+        previous_sharp_fonts = gfx_sharp_fonts;
+    }
     gfx_line_mode = (gfx_line_mode_req.load() != 0 && gfx_framebuffers_enabled) ? 1u : 0u;
     gfx_msaa_level = gfx_line_mode ? std::max<uint32_t>(gfx_msaa_user, 4u) : gfx_msaa_user;
     gfx_n64_aa = gfx_line_mode ? 1u : gfx_n64_aa_user;

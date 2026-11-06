@@ -107,6 +107,12 @@ __attribute__((weak)) s32 portInputPadLookYP1(void)   /* input_pc.c: no pads hea
     return 0;
 }
 
+/* open_fonts.cpp (renderer builds only): register a ROM glyph for the open fonts (FORK-050) */
+__attribute__((weak)) void portOpenFontsGlyph(int font, int ch, const unsigned char *pixels, int width, int height, int baseline)
+{
+    (void) font; (void) ch; (void) pixels; (void) width; (void) height; (void) baseline;
+}
+
 __attribute__((weak)) s32 portWatchStatic(void)   /* video.c: [display] watch_static, vanilla on */
 {
     return 1;

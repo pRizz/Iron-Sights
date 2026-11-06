@@ -41,6 +41,7 @@ extern bool gfx_framebuffers_enabled;
 extern bool gfx_detail_textures_enabled;
 extern uint32_t gfx_anisotropy;  // 1 = off; 2..16 samples (applies where mipmaps exist)
 extern uint32_t gfx_filter_2d;   // 0 = point sampling for original HUD/menu textures.
+extern uint32_t gfx_sharp_fonts; // FORK-050: open-font MSDF glyphs for Bank Gothic text.
 extern uint32_t gfx_low_res;     // the level render's LINE COUNT (240 = "HW", 480, 720, 1080; 0 = the window's) (width follows the window
                                  //     aspect) and scale to the window - very low power machines
 extern uint32_t gfx_mipmaps;     // HW Mipmaps: 1 = minify G_TL_LOD draws through GL mip

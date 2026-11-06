@@ -3,7 +3,9 @@
 param(
     [string]$Executable,
     [ValidateSet('Video','Difficulty','Hud','Credits')][string]$Mode = 'Video',
-    [string]$Resolution = '1920x1080'
+    [string]$Resolution = '1920x1080',
+    # Bank Gothic text from the open title font (FORK-050).
+    [switch]$SharpFonts
 )
 $ErrorActionPreference = 'Stop'
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
@@ -17,7 +19,7 @@ foreach ($filter in @(0,1)) {
     Copy-Item -LiteralPath $Executable -Destination $auditExe
     Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
     $ini = @('[display]','fullscreen=window','vsync=0','maxfps=120',
-        'tickhz=60','render_thread=0','msaa=0',"filter_2d=$filter",'mission_timer=1','weapon_hud_icons=0')
+        'tickhz=60','render_thread=0','msaa=0',"filter_2d=$filter","sharp_fonts=$([int][bool]$SharpFonts)",'mission_timer=1','weapon_hud_icons=0')
     Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value $ini
     $auditEnv = @{
         GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$Resolution; GE_NOINPUT='1';

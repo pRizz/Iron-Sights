@@ -51,6 +51,7 @@ enum {
  * floats, causing a stride mismatch and garbage rendering. */
 #define SHADER_OPT_GE_FARCLIP (1u << 28) /* GE: fogless world draws clip at the projection far plane like the console - fragment discard where clip z > w */
 #define SHADER_OPT_GE_PIXFOG (1u << 29)  /* GE: PER-PIXEL fog for G_FOG world draws like the RDP - vertex fog interpolated across GE's huge terrain tris under a steep fog ramp mid-fogs whole slabs (e.g. the olive band in Jungle); fragment recomputes clamp(z/w*mul+off) */      /* GE: sky/water draws land in the N64's RGBA5551 framebuffer - truncate to 5 bits so the faint near-horizon cloud gradient collapses to sky colour as it does on hardware */
+#define SHADER_OPT_MSDF (1u << 31) /* FORK-050: texel 0 is an open-font MSDF; sample it plainly and turn the median into coverage */
 #define SHADER_OPT_GE_SKY_PIXDIV (1u << 30) /* GE: sky/water do the perspective texture divide per pixel like the RDP (vertex carries u*q, v*q, q), replacing the CPU subdivision grid */
 
 struct ColorCombinerKey {
@@ -78,6 +79,7 @@ struct CCFeatures {
     bool opt_sky_rgb5;
     bool opt_ge_farclip;
     bool opt_ge_pixfog;
+    bool opt_msdf;
     bool opt_ge_sky_pixdiv;
     bool used_textures[2];
     bool clamp[2][2];

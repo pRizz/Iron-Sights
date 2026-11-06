@@ -14,6 +14,8 @@ param(
     [switch]$Dialogue,
     [switch]$ToastFade,
     [switch]$SmallHud,
+    # Bank Gothic text from the open title font (FORK-050).
+    [switch]$SharpFonts,
     [switch]$Chop,
     [ValidateRange(0,1023)][int]$BestSeconds = 0,
     [string]$Stage = 'dam',
@@ -37,6 +39,7 @@ if (!$AutomaticHealth -and !$Disabled) { $ini = @('[display]', 'always_health=1'
 if ($AutomaticHealth) { $ini = @('[display]', 'always_health=0') + $ini }
 if ($MissionTimer) { $ini = @('[display]', 'mission_timer=1') + $ini }
 if ($SmallHud) { $ini = @('[display]', 'hud_scale=1') + $ini }
+if ($SharpFonts) { $ini = @('[display]', 'sharp_fonts=1') + $ini }
 if ($Disabled) { $ini = @('[display]', 'hit_markers=0', 'damage_indicators=0', 'objective_notifications=0', 'weapon_hud=0', 'always_health=0') + $ini }
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value $ini
 $auditEnv = @{

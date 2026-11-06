@@ -24,6 +24,7 @@ void gfx_cc_get_features(uint64_t shader_id0, uint32_t shader_id1, struct CCFeat
     cc_features->opt_ge_farclip = (shader_id1 & SHADER_OPT_GE_FARCLIP) != 0;
     cc_features->opt_ge_pixfog = (shader_id1 & SHADER_OPT_GE_PIXFOG) != 0;
     cc_features->opt_ge_sky_pixdiv = (shader_id1 & SHADER_OPT_GE_SKY_PIXDIV) != 0;
+    cc_features->opt_msdf = (shader_id1 & SHADER_OPT_MSDF) != 0;
 
     cc_features->clamp[0][0] = (shader_id1 & SHADER_OPT_TEXEL0_CLAMP_S);
     cc_features->clamp[0][1] = (shader_id1 & SHADER_OPT_TEXEL0_CLAMP_T);
