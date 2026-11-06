@@ -196,7 +196,9 @@ and Yes deleted every file and set Fonts back. The System page shows **Fonts:
 Enhanced (Get)** and the new row, and a 1600x900 capture shows the watch page
 (seven description lines, both actions, Back) fitting the face. Not covered:
 the watch's armed Remove and the Linux and browser builds at run time; harness
-runs never write `midas.ini`, so saving the switched setting was not seen.
+runs never write `midas.ini`, so saving the switched setting was not seen. `scripts/port/test_ads.c`
+builds `port_options.c` on its own, so it stubs `portEnhancedFontsValueText`;
+FONT-3's first push failed CI's tests job at link time without it.
 
 ### FORK-051 — Iron Sights font: open-font MSDF text
 
