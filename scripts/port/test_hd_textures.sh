@@ -16,3 +16,17 @@ python3 scripts/port/make_hd_texture_fixture.py "$work/pack"
 "${CXX:-g++}" -std=c++20 -Wall -Wextra -Werror -I. -Iport/fast3d \
     scripts/port/test_hd_download.cpp port/fast3d/hd_download_engine.cpp -o "$work/test_download"
 "$work/test_download" "$work/download"
+# The Close HD Matches list (only while close_hd_matches is on) and the
+# reviewed alias lists name different native palettes of in-scope keys.
+python3 - <<'PY'
+import json
+def keys(name):
+    aliases = json.load(open(f'port/fast3d/texture_packs/{name}.json'))['aliases']
+    return [(a['pack_key'][0], a['native_palette']) for a in aliases]
+close = keys('hd_level_close_aliases')
+reviewed = set(keys('hd_level_native_aliases') + keys('hd_dam_native_aliases'))
+scope = {t.split('/')[-1].split('#')[1].upper() for t in json.load(open('port/fast3d/texture_packs/hd_level_sources.json'))['textures']}
+assert close and len(set(close)) == len(close) and not set(close) & reviewed
+assert all(f'{texture:08X}' in scope for texture, _ in close)
+print(f'hd aliases: {len(reviewed)} reviewed, {len(close)} close matches')
+PY

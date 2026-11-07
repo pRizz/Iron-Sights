@@ -1110,6 +1110,7 @@ static int videoSetDisplayOption(const char *key, const char *value)
         portTexturePackSet(SDL_strcasecmp(value, "hd") == 0 || SDL_strcasecmp(value, "4k") == 0 || SDL_atoi(value) != 0);
         return 1;
     }
+    if (SDL_strcasecmp(key, "close_hd_matches") == 0) { portTexturePackCloseSet(SDL_atoi(value) != 0); return 1; }
 #endif
     if (SDL_strcasecmp(key, "high_lod") == 0)      { s_CfgHighLod = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "low_res") == 0)       { s_CfgLowRes = videoLowResLines(value); return 1; }
@@ -1487,6 +1488,7 @@ s32 portVideoOptionGet(const char *key, s32 *out)
     if (SDL_strcasecmp(key, "text_antialiasing") == 0) { *out = s_CfgTextAa;   return 1; }
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     if (SDL_strcasecmp(key, "texture_pack") == 0)  { *out = portTexturePackGet(); return 1; }
+    if (SDL_strcasecmp(key, "close_hd_matches") == 0) { *out = portTexturePackCloseGet(); return 1; }
 #endif
     if (SDL_strcasecmp(key, "high_lod") == 0)      { *out = s_CfgHighLod;      return 1; }
     if (SDL_strcasecmp(key, "low_res") == 0)       { *out = s_CfgLowRes;       return 1; }
@@ -2339,6 +2341,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "text_antialiasing=%d\n", s_CfgTextAa);
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     fprintf(f, "texture_pack=%d\n", portTexturePackGet());
+    fprintf(f, "close_hd_matches=%d\n", portTexturePackCloseGet());
 #endif
     fprintf(f, "low_res=%d\n", s_CfgLowRes);
     fprintf(f, "n64_aa=%d\n", s_CfgN64Aa ? 1 : 0);

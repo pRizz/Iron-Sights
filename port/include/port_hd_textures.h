@@ -10,6 +10,10 @@ void portTexturePackRoot(const char *directory);
 /* [display] texture_pack: 0 Original, 1 HD (a player-installed pack). */
 void portTexturePackSet(int mode);
 int portTexturePackGet(void);
+/* [display] close_hd_matches: 1 (the default) also gives HD art to textures
+ * whose colours only roughly match the pack's; 0 keeps their originals. */
+void portTexturePackCloseSet(int on);
+int portTexturePackCloseGet(void);
 /* The Texture Pack row's HD text once a search found no pack: "HD (Get)"
  * where the HD Textures page can download one, "HD (not found)" elsewhere;
  * otherwise text. */

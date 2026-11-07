@@ -14,6 +14,7 @@
 #include <string>
 #include <system_error>
 #include <thread>
+#include <vector>
 
 #include "hd_download_engine.h"
 #include "port_hd_download.h"
@@ -27,16 +28,20 @@ extern const unsigned char hd_level_native_aliases_json[];
 extern const size_t hd_level_native_aliases_json_size;
 extern const unsigned char hd_dam_native_aliases_json[];
 extern const size_t hd_dam_native_aliases_json_size;
+extern const unsigned char hd_level_close_aliases_json[];
+extern const size_t hd_level_close_aliases_json_size;
 }
 
 namespace {
 constexpr unsigned kCheckFrames = 300;  /* look for an added or removed pack about every 5 s */
 
 std::atomic<int> g_requested{1};
+std::atomic<int> g_close_requested{1};  /* [display] close_hd_matches */
 std::atomic<int> g_found{-1};           /* keys found by the last search; -1 before one */
 std::atomic<int> g_custom{-1};          /* of those, keys from custom packs */
 std::string g_root;
 int g_current = -1;
+int g_close_current = -1;
 unsigned g_frames = 0;
 std::string g_signature;
 hd_textures::Pack g_pack;
@@ -145,22 +150,26 @@ const AmmoArt kAmmo[hd_textures::kAmmoSlots] = {
     {7, 22, {0x0590F622, 0, 2, 1}},   /* tank shell */
 };
 
-const hd_textures::Scope &scope() {
-    static hd_textures::Scope s;
+/* The download's scope; close adds the aliases whose colours only roughly
+ * match the pack's (Close HD Matches). */
+const hd_textures::Scope &scope(bool close) {
+    static hd_textures::Scope s[2];
     static bool loaded = false;
     if (!loaded) {
         loaded = true;
-        if (!hd_textures::parse_scope(text(hd_level_sources_json, hd_level_sources_json_size),
-                                      {text(hd_level_native_aliases_json, hd_level_native_aliases_json_size),
-                                       text(hd_dam_native_aliases_json, hd_dam_native_aliases_json_size)},
-                                      s)) {
-            std::fprintf(stderr, "hd: the texture scope could not be read; original textures stay\n");
-        }
-        for (const AmmoArt &art : kAmmo) {
-            if (art.width) s.keys.insert(art.key);  /* indexed, found by slot rather than by tile */
+        std::vector<std::string> aliases{text(hd_level_native_aliases_json, hd_level_native_aliases_json_size),
+                                         text(hd_dam_native_aliases_json, hd_dam_native_aliases_json_size)};
+        for (int i = 0; i < 2; i++) {
+            if (i) aliases.push_back(text(hd_level_close_aliases_json, hd_level_close_aliases_json_size));
+            if (!hd_textures::parse_scope(text(hd_level_sources_json, hd_level_sources_json_size), aliases, s[i])) {
+                std::fprintf(stderr, "hd: the texture scope could not be read; original textures stay\n");
+            }
+            for (const AmmoArt &art : kAmmo) {
+                if (art.width) s[i].keys.insert(art.key);  /* indexed, found by slot rather than by tile */
+            }
         }
     }
-    return s;
+    return s[close ? 1 : 0];
 }
 
 /* Every file under the pack folder (paths, sizes, times), to notice a pack
@@ -207,6 +216,8 @@ extern "C" const char *portTexturePackFolder(void) {
 }
 extern "C" void portTexturePackSet(int mode) { g_requested.store(mode ? 1 : 0); }
 extern "C" int portTexturePackGet(void) { return g_requested.load(); }
+extern "C" void portTexturePackCloseSet(int on) { g_close_requested.store(on ? 1 : 0); }
+extern "C" int portTexturePackCloseGet(void) { return g_close_requested.load(); }
 extern "C" const char *portTexturePackValueText(const char *text) {
     if (g_found.load() != 0) return text;
     return portHdTexturesState() == PORT_HDTEX_UNSUPPORTED ? "HD (not found)\n" : "HD (Get)\n";
@@ -214,12 +225,13 @@ extern "C" const char *portTexturePackValueText(const char *text) {
 
 namespace hd_textures {
 bool beginFrame() {
-    const int mode = g_requested.load();
-    const bool changed = mode != g_current;
+    const int mode = g_requested.load(), close = g_close_requested.load();
+    const bool changed = mode != g_current || (mode && close != g_close_current);
     if (!changed && (!mode || ++g_frames % kCheckFrames != 0)) return false;
     std::string now = mode && !g_root.empty() ? signature() : std::string();
     if (!changed && now == g_signature) return false;
     g_current = mode;
+    g_close_current = close;
     g_signature = now;
     g_pack.clear();
     g_reported.clear();
@@ -233,7 +245,7 @@ bool beginFrame() {
         w.reported.clear();
     }
     if (mode && !g_root.empty()) {
-        const size_t found = g_pack.index(std::filesystem::path(g_root), scope(), downloaded);
+        const size_t found = g_pack.index(std::filesystem::path(g_root), scope(close != 0), downloaded);
         g_found.store(int(found));
         g_custom.store(int(g_pack.custom()));
         if (found) {
@@ -273,7 +285,7 @@ Found lookup(const Tile &tile, Image &image, uint32_t &request) {
     if (!g_current || !g_pack.size()) return Found::none;
     Key key;
     if (!identify(tile, key)) return Found::none;
-    const Entry *entry = g_pack.find(key);
+    const Entry *entry = g_pack.find(tile, key);
     const bool trace = std::getenv("GE_HD_TRACE") != nullptr;
     if (entry == nullptr) {
         if (trace && g_reported.insert(key).second) {
@@ -316,8 +328,8 @@ void kept(const Tile &tile) {
     if (!g_current || !std::getenv("GE_HD_TRACE")) return;
     Key key;
     if (!identify(tile, key)) return;
+    const Entry *entry = g_pack.find(tile, key);
     if (!g_reported.insert(key).second) return;
-    const Entry *entry = g_pack.find(key);
     std::fprintf(stderr, "hd: kept %08X#%u#%u#%08X native=%ux%u (first-person weapon or hands)%s%s\n", key.texture,
                  key.format, key.size, key.palette, tile.width, tile.height, entry ? ", in " : "",
                  entry ? entry->file.filename().string().c_str() : "");

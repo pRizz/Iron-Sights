@@ -41,6 +41,7 @@ static const struct PortOptHelp sHelp[] = {
     { "font_style",         "Original or Enhanced (community redraw). Our own font is hidden while we fix it." },
     { "text_antialiasing",  "Smooths small Enhanced text so strokes keep even widths." },
     { "texture_pack",       "HD: intermissionfb's pack from HD Textures, and any pack put in Data/TexturePacks." },
+    { "close_hd_matches",   "Adds HD art for 17 textures whose colours only roughly match the pack." },
 
     /* HUD */
     { "sight_on_screen",    "Shows the aiming sight." },

@@ -266,6 +266,12 @@ padN_stickmode.
                       |            | weapon and hands stay original.
                       |            | 0 = Original. Without a pack
                       |            | the originals stay. Iron Sights > System.
+  close_hd_matches    | 1          | [display] Close HD Matches (Windows/
+                      |            | Linux). ON also gives HD art to 17
+                      |            | environment textures whose colours only
+                      |            | roughly match the pack's (some may look
+                      |            | a little off); 0 keeps their originals.
+                      |            | Applies live. Iron Sights > System.
   crash_reporting     | 1          | ON sends technical crash reports to Sentry.
                       |            | 0 stops uploads and discards queued reports.
                       |            | No ROMs, saves or memory dumps are attached.

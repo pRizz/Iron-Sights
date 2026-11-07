@@ -162,12 +162,14 @@ FORK-033's ini values `hd`, `4k` and `2` read as HD.
 - **Scope.** The download draws only campaign environment textures: our inventory of the
   pack's area folders (`port/fast3d/texture_packs/hd_level_sources.json`,
   641 names) plus our reviewed native-palette aliases
-  (`hd_level_native_aliases.json`, 132, and `hd_dam_native_aliases.json`,
-  15), restored from FORK-033 and embedded at configure time
+  (`hd_level_native_aliases.json`, 162, and `hd_dam_native_aliases.json`,
+  15; plus `hd_level_close_aliases.json`, 17, under Close HD Matches below),
+  restored from FORK-033 and embedded at configure time
   (`hd_texture_scope_embed.cmake`). They hold names and fingerprints, no
   artwork. Weapons, fonts and the rest of the HUD are outside this scope.
   With the v2025.12.30 PNG pack 466 of
-  the 641 are present (610 keys with aliases); three Egyptian textures exist
+  the 641 are present (640 keys with aliases, 610 before the coverage
+  audit below); three Egyptian textures exist
   only in the artist repository and are used if the player adds those PNGs.
 - **Images.** A texture is read when a level first draws it: inflated with
   the vendored puff and decoded by `png_decode.cpp` (8-bit RGB/RGBA,
@@ -182,6 +184,55 @@ FORK-033's ini values `hd`, `4k` and `2` read as HD.
   file under the pack folder is added, removed, replaced or edited (a
   recursive listing of paths, sizes and times, checked about every 5 s), so a
   pack being made shows each saved PNG within seconds.
+- **Coverage audit (2026-11-07).** A local audit ran each campaign level (an
+  isolated copy, walking and firing rockets while turning) with the pack
+  treated as custom, so every key could apply, and compared the traced
+  textures with the scope. Two gaps in the intended coverage were closed:
+  - *Row order.* GE swaps odd rows only for textures it builds a set number of
+    images for (`texSwapAltRowBytes` in `src/game/image.c`), so GLideN64
+    hashed the others unswapped. `Pack::find(tile, key)` tries the swapped key
+    first, then the natural row order (`hd_texture_pack.cpp`); `lookup` and
+    the `kept` trace use it. Mostly effects outside the scope matched this
+    way, plus about one Dam environment texture.
+  - *Palette aliases.* 47 in-scope textures were drawn with a native palette
+    that no alias named. Native/HD contact sheets were reviewed as for the
+    first 132: 30 were added to `hd_level_native_aliases.json` (signs and
+    decals, brick, windows and posters in Streets, stone in Statue, foliage
+    and panels in Jungle, and others in Depot, Caverns, Frigate, Runway,
+    Archives and Bunker). The other 17 have colours that only roughly match:
+    noise-like native colours (perhaps a palette read in another format),
+    opaque corners or transparent bands that the HD art fills differently,
+    or painted detail this palette variant hides. The private evidence is in
+    `build_win/hd-alias/review`.
+  - *Close HD Matches.* Those 17 are in `hd_level_close_aliases.json` and
+    apply while **Gameplay > Iron Sights > System > Close HD Matches**
+    (`[display] close_hd_matches`, default 1, after Texture Pack in the
+    Options folder and on the watch; native builds only, like Texture Pack)
+    is on, so they show by default and a player can keep those originals.
+    `hd_textures.cpp` keeps two scopes, with and without them, and
+    re-indexes when the setting changes; custom packs take the same
+    aliases. Input: an ordinary toggle row, adjusted as every other one by
+    keyboard, mouse, gamepad and the watch's arrows.
+  Outside the scope, and left out deliberately for now: the gunbarrel intro
+  (299 exact matches at the title), impact sparks, debris, shards and bullet
+  holes, and the sky clouds (their own sky path). Explosions and smoke do not
+  match by key: GLideN64 hashed 16x14 explosion frames as 16 rows, taking in
+  whatever the N64 held next in memory. The audit scripts and ROM-derived
+  images stay local. Checks: `test_hd_textures.sh` gained a fixture PNG named
+  for a tile's natural row order, found second for the swapped tile and not
+  tried for an unswapped one. With the normal download in isolated copies of
+  the Windows build, Depot, Caverns, Streets, Statue, Jungle, Frigate, Runway,
+  Archives and Bunker indexed 653 keys (623 before) and the trace showed all
+  30 new aliases as `match` and none of the 17 close ones (before they had a
+  setting). `test_hd_textures.sh` also checks that the close list parses,
+  names in-scope textures and shares no palette with the reviewed lists.
+  With the setting on, nine levels indexed 670 keys and traced all 17 close
+  aliases as `match`; with it off, Runway, Jungle and Depot indexed 653 and
+  drew the 8 they reached as originals. A 1280x720 capture shows the row
+  and its help line on the Options folder's System page. Not checked: the
+  live re-index when the row changes in play, and the watch's row.
+  Not run: Linux, a long play session, and side-by-side captures of each
+  new alias.
 
 The removed `.istex` format, the CI preparer and its download, the bundled
 packs and the AppImage bundle root do not return.

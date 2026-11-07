@@ -331,6 +331,17 @@ const Entry *Pack::find(const Key &key) const {
     return it == entries_.end() ? nullptr : &it->second;
 }
 
+const Entry *Pack::find(const Tile &tile, Key &key) const {
+    const Entry *entry = find(key);
+    if (entry != nullptr || !tile.restoreSwizzle) return entry;
+    Tile natural = tile;
+    natural.restoreSwizzle = false;
+    Key other;
+    if (!identify(natural, other) || (entry = find(other)) == nullptr) return nullptr;
+    key = other;
+    return entry;
+}
+
 bool Pack::read(const Entry &entry, Image &image) {
     image = Image{};
     std::ifstream in(entry.file, std::ios::binary);

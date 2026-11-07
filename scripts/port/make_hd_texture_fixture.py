@@ -4,7 +4,7 @@
 
 Writes a pack folder the way a player might leave one: a ZIP holding a
 deflated PNG (A), a stored PNG (B), an out-of-scope PNG (D), a corrupt PNG
-(E) and a text file, plus an extracted PNG (C) in a subfolder. The test treats
+(E), a PNG named for a tile hashed in natural row order (G) and a text file, plus an extracted PNG (C) in a subfolder. The test treats
 those as the downloaded pack. player/ is a player's own pack: a ZIP64 archive
 (written by hand, so every size and offset goes through its 64-bit fields)
 with other art for A and D, and a loose PNG (F). The images are tiny
@@ -70,6 +70,7 @@ def main():
         z.writestr('GOLDENEYE/Areas/B/GOLDENEYE#BBBB0002#2#1#$_ciByRGBA.png', b, compress_type=zipfile.ZIP_STORED)
         z.writestr('GOLDENEYE/Areas/D/GOLDENEYE#DDDD0004#3#1_all.png', d, compress_type=zipfile.ZIP_DEFLATED)
         z.writestr('GOLDENEYE/Areas/E/GOLDENEYE#EEEE0005#3#1_all.png', e, compress_type=zipfile.ZIP_STORED)
+        z.writestr('GOLDENEYE/Effects/G/GOLDENEYE#8D8E8F90#4#1_all.png', d, compress_type=zipfile.ZIP_DEFLATED)
         z.writestr('README.txt', 'not a texture')
     c = png(4, 4, 6, lambda x, y: bytes((200, 100, 50, 128)))
     (out / 'extracted' / 'Areas' / 'GOLDENEYE#CCCC0003#4#1_all.png').write_bytes(c)

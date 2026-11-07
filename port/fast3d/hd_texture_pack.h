@@ -63,6 +63,11 @@ public:
     size_t size() const { return entries_.size(); }
     /* The entry for a native key: exact, then any palette. */
     const Entry *find(const Key &key) const;
+    /* The entry for a native tile whose identify() key is key, then for the
+     * tile in natural row order, which replaces key on a hit. GE swaps odd
+     * rows only for textures it builds a set number of images for (image.c
+     * texSwapAltRowBytes); GLideN64 hashed the others unswapped. */
+    const Entry *find(const Tile &tile, Key &key) const;
     /* The entry's image as RGBA; false for anything unreadable. */
     static bool read(const Entry &entry, Image &image);
 
