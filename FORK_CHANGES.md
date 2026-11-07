@@ -344,9 +344,9 @@ titles) is drawn from the open title font and every Zurich Bold glyph
 (briefings, folder menus, help lines) from the open body font
 (pRizz/iron-sights-assets, MIT, vendored at v0.4.0), each as a multi-channel
 signed distance field, sharp at any resolution. Fonts defaults to Original
-(font styles plan decision 1); open assets plan decision 4 foresaw Iron
-Sights as the default once both fonts were play-tested, which remains the
-owner's call.
+(font styles plan decision 1). Open assets plan decision 4 foresaw Iron
+Sights as the default once both fonts were play-tested; with both done, the
+owner kept Original as the default (2026-11-06).
 
 The game keeps its own text layout: advances, kerning, line spacing,
 clipping, colours and outlines are unchanged. Each glyph's ROM texture is
@@ -523,7 +523,8 @@ Accepted decisions: the assets repository is `pRizz/iron-sights-assets`
 (public, MIT), Arimo (Apache-2.0) is a
 development-only body-font placeholder that never ships, the renderer uses MSDF,
 Sharp Fonts (now the Fonts setting's Iron Sights choice) defaults to off
-until both fonts exist and the owner has play-tested them, and the emulator exporter (OPEN-6) is deferred. `AGENTS.md`
+until both fonts exist and the owner has play-tested them (on 2026-11-06,
+with both done, the owner kept Original as the default instead), and the emulator exporter (OPEN-6) is deferred. `AGENTS.md`
 now sends work on fonts, text rendering and original assets to the plan and its
 provenance rules, as it does for the web target.
 
