@@ -255,7 +255,11 @@ padN_stickmode.
                       |            | Data/TexturePacks (downloaded from System >
                       |            | HD Textures, or the GLideN64 PNG pack's
                       |            | ZIP or folder copied there; none is
-                      |            | included); 0 = Original. Without a pack
+                      |            | included). Any other PNG pack there is a
+                      |            | custom pack, used for every texture it
+                      |            | names ahead of the download; the view's
+                      |            | weapon and hands stay original.
+                      |            | 0 = Original. Without a pack
                       |            | the originals stay. Iron Sights > System.
   crash_reporting     | 1          | ON sends technical crash reports to Sentry.
                       |            | 0 stops uploads and discards queued reports.

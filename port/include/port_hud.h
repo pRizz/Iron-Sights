@@ -25,6 +25,9 @@ struct sImageTableEntry;
 s32 portHudAmmoIconSlot(const struct sImageTableEntry *image);
 /* Tags the following ammo icon draw for the HD texture pack's art; NULL ends the tag. */
 Gfx *portHudAmmoIconTag(Gfx *gdl, const struct sImageTableEntry *image);
+/* Brackets the first-person weapon and hands: their textures stay the game's
+ * own whatever an HD texture pack holds (arm_rendering.md). */
+Gfx *portHudViewmodelTag(Gfx *gdl, s32 on);
 /* buildGaugeBarDL's 46-vertex gauge: 22 loads, at most 22 quads, one end. */
 #define PORT_GAUGE_BAR_GFX 48
 Gfx *portHudDraw(Gfx *gdl);

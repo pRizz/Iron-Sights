@@ -4,12 +4,18 @@
 
 #include <algorithm>
 #include <atomic>
+#include <condition_variable>
 #include <cstdio>
 #include <cstdlib>
+#include <deque>
+#include <mutex>
+#include <new>
 #include <set>
 #include <string>
 #include <system_error>
+#include <thread>
 
+#include "hd_download_engine.h"
 #include "port_hd_download.h"
 #include "port_hd_textures.h"
 
@@ -34,6 +40,81 @@ unsigned g_frames = 0;
 std::string g_signature;
 hd_textures::Pack g_pack;
 std::set<hd_textures::Key> g_reported;
+
+/* Custom-pack images read off the render thread. Two workers keep a
+ * level's first frames moving while the artist's masters are inflated
+ * (about 100 ms each at 2048 px). */
+constexpr int kWorkers = 2;
+struct Job {
+    uint32_t request = 0, generation = 0;
+    hd_textures::Key key;
+    hd_textures::Entry entry;   /* a copy: the index may be rebuilt meanwhile */
+    unsigned width = 0, height = 0;
+};
+struct Done {
+    uint32_t request = 0, generation = 0;
+    hd_textures::Image image;
+};
+struct Workers {
+    std::mutex lock;
+    std::condition_variable wake;
+    std::deque<Job> jobs;
+    std::deque<Done> done;
+    std::set<hd_textures::Key> reported;
+    bool started = false;
+};
+/* Never destroyed: detached workers may still run while the process exits. */
+Workers &workers() {
+    static Workers *w = new Workers;
+    return *w;
+}
+std::atomic<uint32_t> g_generation{0};  /* bumped whenever the index is rebuilt */
+uint32_t g_next_request = 0;
+
+/* Same shape, at least the native size: anything else keeps the original. */
+bool usable(const hd_textures::Entry &entry, unsigned width, unsigned height, hd_textures::Image &image) {
+    if (!hd_textures::Pack::read(entry, image) || uint64_t(image.width) * height != uint64_t(image.height) * width
+        || image.width < width) {
+        image = hd_textures::Image{};
+        return false;
+    }
+    return true;
+}
+
+void work() {
+    Workers &w = workers();
+    for (;;) {
+        Job job;
+        {
+            std::unique_lock<std::mutex> guard(w.lock);
+            w.wake.wait(guard, [&] { return !w.jobs.empty(); });
+            job = std::move(w.jobs.front());
+            w.jobs.pop_front();
+        }
+        if (job.generation != g_generation.load()) continue;
+        hd_textures::Image image;
+        bool ok = false;
+        try {
+            ok = usable(job.entry, job.width, job.height, image);
+            if (ok && image.width > job.width * hd_textures::kMaxScale) {
+                image = hd_textures::resample(image, job.width * hd_textures::kMaxScale,
+                                              job.height * hd_textures::kMaxScale);
+            }
+        } catch (const std::bad_alloc &) {
+            /* A 4096 px master needs about 100 MB while it is read; in the
+             * 32-bit Windows build's address space that can fail. */
+            ok = false;
+            image = hd_textures::Image{};
+        }
+        std::lock_guard<std::mutex> guard(w.lock);
+        if (ok && !image.rgba.empty()) {
+            w.done.push_back({job.request, job.generation, std::move(image)});
+        } else if (w.reported.insert(job.key).second) {
+            std::fprintf(stderr, "hd: unusable image for %08X in %s; original kept\n", job.key.texture,
+                         job.entry.file.string().c_str());
+        }
+    }
+}
 
 std::string text(const unsigned char *data, size_t size) {
     return std::string(reinterpret_cast<const char *>(data), size);
@@ -81,15 +162,18 @@ const hd_textures::Scope &scope() {
     return s;
 }
 
-/* What is directly in the pack folder (names, sizes, times), to notice a pack
- * being added, replaced or removed without rescanning every file. */
+/* Every file under the pack folder (paths, sizes, times), to notice a pack
+ * being added, replaced, removed or edited - loose PNGs of a pack being made
+ * included - without reading any of them. The directory entries carry these
+ * from the listing itself, so a pack of a few thousand files costs a few ms. */
 std::string signature() {
     std::string out;
     std::error_code error;
-    for (auto it = std::filesystem::directory_iterator(g_root, error);
-         !error && it != std::filesystem::directory_iterator(); it.increment(error)) {
+    const auto options = std::filesystem::directory_options::skip_permission_denied;
+    for (auto it = std::filesystem::recursive_directory_iterator(g_root, options, error);
+         !error && it != std::filesystem::recursive_directory_iterator(); it.increment(error)) {
         std::error_code e;
-        out += it->path().filename().string();
+        out += it->path().generic_string();
         out += '|';
         if (it->is_regular_file(e)) out += std::to_string(it->file_size(e));
         out += '|';
@@ -97,6 +181,19 @@ std::string signature() {
         out += '\n';
     }
     return out;
+}
+
+/* The files the HD Textures page downloads: the checked release ZIP and the
+ * Egyptian PNGs, kept to the reviewed environment scope. Anything else in the
+ * folder is a player's own pack. */
+bool downloaded(const std::filesystem::path &file) {
+    int count = 0;
+    const auto *list = hd_download::pack_files(count);
+    const auto normal = file.lexically_normal();
+    for (int i = 0; i < count; i++) {
+        if (hd_download::path_of(g_root, list[i]).lexically_normal() == normal) return true;
+    }
+    return false;
 }
 }  // namespace
 
@@ -119,11 +216,23 @@ bool beginFrame() {
     g_signature = now;
     g_pack.clear();
     g_reported.clear();
+    g_generation++;
+    {
+        Workers &w = workers();
+        std::lock_guard<std::mutex> guard(w.lock);
+        w.jobs.clear();
+        w.done.clear();
+        w.reported.clear();
+    }
     if (mode && !g_root.empty()) {
-        const size_t found = g_pack.index(std::filesystem::path(g_root), scope());
+        const size_t found = g_pack.index(std::filesystem::path(g_root), scope(), downloaded);
         g_found.store(int(found));
-        if (found) std::fprintf(stderr, "hd: %zu environment textures from the pack in %s\n", found, g_root.c_str());
-        else std::fprintf(stderr, "hd: no HD texture pack in %s; original textures stay\n", g_root.c_str());
+        if (found) {
+            std::fprintf(stderr, "hd: %zu textures in %s (%zu from custom packs, %zu from the HD download)\n",
+                         found, g_root.c_str(), g_pack.custom(), found - g_pack.custom());
+        } else {
+            std::fprintf(stderr, "hd: no HD texture pack in %s; original textures stay\n", g_root.c_str());
+        }
         std::fflush(stderr);
     }
     return true;
@@ -151,32 +260,71 @@ bool ammo_icon(int slot, unsigned tile_width, unsigned tile_height, Image &image
     return true;
 }
 
-bool lookup(const Tile &tile, Image &image) {
-    if (!g_current || !g_pack.size()) return false;
+Found lookup(const Tile &tile, Image &image, uint32_t &request) {
+    if (!g_current || !g_pack.size()) return Found::none;
     Key key;
-    if (!identify(tile, key)) return false;
+    if (!identify(tile, key)) return Found::none;
     const Entry *entry = g_pack.find(key);
+    const bool trace = std::getenv("GE_HD_TRACE") != nullptr;
     if (entry == nullptr) {
-        if (std::getenv("GE_HD_TRACE") && g_reported.insert(key).second) {
+        if (trace && g_reported.insert(key).second) {
             std::fprintf(stderr, "hd: miss %08X#%u#%u#%08X native=%ux%u\n", key.texture, key.format, key.size,
                          key.palette, tile.width, tile.height);
         }
-        return false;
+        return Found::none;
     }
-    /* Same shape, at least the native size: anything else keeps the original. */
-    if (!Pack::read(*entry, image) || uint64_t(image.width) * tile.height != uint64_t(image.height) * tile.width
-        || image.width < tile.width) {
+    if (entry->custom) {
+        if (trace && g_reported.insert(key).second) {
+            std::fprintf(stderr, "hd: custom %08X#%u#%u#%08X %ux%u from %s\n", key.texture, key.format, key.size,
+                         key.palette, tile.width, tile.height, entry->file.filename().string().c_str());
+        }
+        Workers &w = workers();
+        std::lock_guard<std::mutex> guard(w.lock);
+        if (!w.started) {
+            w.started = true;
+            for (int i = 0; i < kWorkers; i++) std::thread(work).detach();
+        }
+        request = ++g_next_request ? g_next_request : ++g_next_request;  /* 0 means none */
+        w.jobs.push_back({request, g_generation.load(), key, *entry, tile.width, tile.height});
+        w.wake.notify_one();
+        return Found::later;
+    }
+    if (!usable(*entry, tile.width, tile.height, image)) {
         if (g_reported.insert(key).second) {
             std::fprintf(stderr, "hd: unusable image for %08X in %s; original kept\n", key.texture,
                          entry->file.string().c_str());
         }
-        image = Image{};
-        return false;
+        return Found::none;
     }
-    if (std::getenv("GE_HD_TRACE") && g_reported.insert(key).second) {
+    if (trace && g_reported.insert(key).second) {
         std::fprintf(stderr, "hd: match %08X#%u#%u#%08X %ux%u -> %ux%u\n", key.texture, key.format, key.size,
                      key.palette, tile.width, tile.height, image.width, image.height);
     }
-    return true;
+    return Found::now;
+}
+
+void kept(const Tile &tile) {
+    if (!g_current || !std::getenv("GE_HD_TRACE")) return;
+    Key key;
+    if (!identify(tile, key)) return;
+    if (!g_reported.insert(key).second) return;
+    const Entry *entry = g_pack.find(key);
+    std::fprintf(stderr, "hd: kept %08X#%u#%u#%08X native=%ux%u (first-person weapon or hands)%s%s\n", key.texture,
+                 key.format, key.size, key.palette, tile.width, tile.height, entry ? ", in " : "",
+                 entry ? entry->file.filename().string().c_str() : "");
+}
+
+bool finished(uint32_t &request, Image &image) {
+    Workers &w = workers();
+    std::lock_guard<std::mutex> guard(w.lock);
+    while (!w.done.empty()) {
+        Done done = std::move(w.done.front());
+        w.done.pop_front();
+        if (done.generation != g_generation.load()) continue;
+        request = done.request;
+        image = std::move(done.image);
+        return true;
+    }
+    return false;
 }
 }  // namespace hd_textures

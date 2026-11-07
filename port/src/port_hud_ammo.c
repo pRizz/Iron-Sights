@@ -1,8 +1,9 @@
-/* Tags the HUD ammo icon draw with its ammo slot so the renderer can draw the
- * HD texture pack's art for it (FORK-053, port/fast3d/hd_textures.cpp). The
- * game's 32-bit ammo icons do not reproduce the pack's texture CRCs, so the
- * slot, not the pixels, identifies each icon. Restored from 5a3b7c0, whose
- * embedded art was removed (FORK-047). */
+/* Display-list tags for HD texture packs (FORK-053, port/fast3d/hd_textures.cpp).
+ * The HUD ammo icon draw carries its ammo slot so the renderer can draw the
+ * pack's art for it: the game's 32-bit ammo icons do not reproduce the pack's
+ * texture CRCs, so the slot, not the pixels, identifies each icon. Restored
+ * from 5a3b7c0, whose embedded art was removed (FORK-047). The first-person
+ * weapon and hands are bracketed so no pack replaces their textures. */
 #include <ultra64.h>
 #include <bondtypes.h>
 #include "port_hud.h"
@@ -28,5 +29,11 @@ s32 portHudAmmoIconSlot(const struct sImageTableEntry *image)
 Gfx *portHudAmmoIconTag(Gfx *gdl, const struct sImageTableEntry *image)
 {
     gDPNoOpTag(gdl++, 0x5B000000u | (u32)(portHudAmmoIconSlot(image) + 1));
+    return gdl;
+}
+
+Gfx *portHudViewmodelTag(Gfx *gdl, s32 on)
+{
+    gDPNoOpTag(gdl++, 0x5C000000u | (on ? 1u : 0u));
     return gdl;
 }

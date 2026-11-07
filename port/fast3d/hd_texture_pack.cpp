@@ -22,6 +22,7 @@ constexpr uint32_t kMaxSide = 4096;
 
 uint32_t le16(const uint8_t *p) { return uint32_t(p[0]) | uint32_t(p[1]) << 8; }
 uint32_t le32(const uint8_t *p) { return le16(p) | le16(p + 2) << 16; }
+uint64_t le64(const uint8_t *p) { return uint64_t(le32(p)) | uint64_t(le32(p + 4)) << 32; }
 
 /* Plain ASCII checks: <cctype>'s toupper would clash with the game's own
  * (src/str.c) at link time on Windows. */
@@ -134,21 +135,20 @@ Image resample(const Image &src, unsigned width, unsigned height) {
         || src.rgba.size() < size_t(src.width) * src.height * 4) {
         return out;
     }
-    std::vector<float> pre(size_t(src.width) * src.height * 4);
-    for (size_t i = 0; i < size_t(src.width) * src.height; i++) {
-        const float a = src.rgba[i * 4 + 3] / 255.0f;
-        for (int c = 0; c < 3; c++) pre[i * 4 + c] = src.rgba[i * 4 + c] / 255.0f * a;
-        pre[i * 4 + 3] = a;
-    }
     const Taps tx = taps(src.width, width), ty = taps(src.height, height);
-    std::vector<float> rows(size_t(width) * src.height * 4, 0.0f);  /* horizontal pass */
+    /* Horizontal pass, premultiplying as it reads: the only float buffer is
+     * output width x source height, so a custom pack's 4096 px master
+     * reduced to the HD tier needs 16 MB, not a 128 MB copy of itself. */
+    std::vector<float> rows(size_t(width) * src.height * 4, 0.0f);
     for (unsigned y = 0; y < src.height; y++) {
         size_t w = 0;
         for (unsigned x = 0; x < width; x++) {
             float *dst = &rows[(size_t(y) * width + x) * 4];
             for (unsigned k = 0; k < tx.count[x]; k++, w++) {
-                const float *s = &pre[(size_t(y) * src.width + tx.first[x] + k) * 4];
-                for (int c = 0; c < 4; c++) dst[c] += s[c] * tx.weight[w];
+                const uint8_t *s = &src.rgba[(size_t(y) * src.width + tx.first[x] + k) * 4];
+                const float a = s[3] / 255.0f, weight = tx.weight[w] / 255.0f;
+                for (int c = 0; c < 3; c++) dst[c] += s[c] * a * weight;
+                dst[3] += a * tx.weight[w];
             }
         }
     }
@@ -205,11 +205,13 @@ bool parse_scope(const std::string &sources, const std::vector<std::string> &ali
 
 void Pack::add(const Key &key, const Entry &entry, const Scope &scope) {
     const Key any{key.texture, 0, key.format, key.size};
-    if (!scope.keys.count(key) && !scope.keys.count(any)) return;
-    entries_.emplace(key, entry);  /* the first copy of a key wins */
+    if (!scope.all && !scope.keys.count(key) && !scope.keys.count(any)) return;
+    Entry found = entry;
+    found.custom = scope.all;
+    entries_.emplace(key, found);  /* the first copy of a key wins */
     const auto range = scope.aliases.equal_range(key);
     for (auto it = range.first; it != range.second; ++it) {
-        entries_.emplace(Key{key.texture, it->second, key.format, key.size}, entry);
+        entries_.emplace(Key{key.texture, it->second, key.format, key.size}, found);
     }
 }
 
@@ -228,23 +230,47 @@ void Pack::index_zip(const std::filesystem::path &zip, const Scope &scope) {
         if (le32(&end[i]) == 0x06054b50u) { eocd = i; break; }
     }
     if (eocd == std::string::npos) return;
-    const uint32_t count = le16(&end[eocd + 10]), cd_size = le32(&end[eocd + 12]), cd_offset = le32(&end[eocd + 16]);
-    if (cd_offset == 0xFFFFFFFFu || uint64_t(cd_offset) + cd_size > length) return;  /* ZIP64: not a pack's size */
-    std::vector<uint8_t> cd(cd_size);
-    if (!read_at(in, cd_offset, cd.data(), cd_size)) return;
+    uint64_t count = le16(&end[eocd + 10]), cd_size = le32(&end[eocd + 12]), cd_offset = le32(&end[eocd + 16]);
+    if (count == 0xFFFFu || cd_size == 0xFFFFFFFFu || cd_offset == 0xFFFFFFFFu) {
+        /* ZIP64: the locator just before the record points at the 64-bit one. */
+        uint8_t locator[20], record[56];
+        const uint64_t at = length - tail + eocd;
+        if (at < 20 || !read_at(in, at - 20, locator, 20) || le32(locator) != 0x07064b50u) return;
+        if (!read_at(in, le64(locator + 8), record, 56) || le32(record) != 0x06064b50u) return;
+        count = le64(record + 32);
+        cd_size = le64(record + 40);
+        cd_offset = le64(record + 48);
+    }
+    if (cd_size > (64u << 20) || cd_offset + cd_size > length) return;  /* a pack's directory is far smaller */
+    std::vector<uint8_t> cd(static_cast<size_t>(cd_size));
+    if (!read_at(in, cd_offset, cd.data(), cd.size())) return;
     size_t at = 0;
-    for (uint32_t n = 0; n < count && at + 46 <= cd.size(); n++) {
+    for (uint64_t n = 0; n < count && at + 46 <= cd.size(); n++) {
         const uint8_t *e = &cd[at];
         if (le32(e) != 0x02014b50u) return;
-        const uint32_t flags = le16(e + 8), method = le16(e + 10), packed = le32(e + 20), size = le32(e + 24);
+        const uint32_t flags = le16(e + 8), method = le16(e + 10);
+        uint64_t packed = le32(e + 20), size = le32(e + 24), header = le32(e + 42);
         const uint32_t name_len = le16(e + 28), extra_len = le16(e + 30), comment_len = le16(e + 32);
-        const uint32_t header = le32(e + 42);
-        if (at + 46 + name_len > cd.size()) return;
+        if (at + 46 + name_len + extra_len > cd.size()) return;
         const std::string name(reinterpret_cast<const char *>(e + 46), name_len);
+        /* ZIP64 extra field: whichever of size, packed size and header offset
+         * are 0xFFFFFFFF follow in that order. */
+        for (size_t x = 0; x + 4 <= extra_len;) {
+            const uint8_t *field = e + 46 + name_len + x;
+            const uint32_t id = le16(field), len = le16(field + 2);
+            if (x + 4 + len > extra_len) break;
+            if (id == 0x0001) {
+                size_t v = 4;
+                if (size == 0xFFFFFFFFu && v + 8 <= 4 + len) { size = le64(field + v); v += 8; }
+                if (packed == 0xFFFFFFFFu && v + 8 <= 4 + len) { packed = le64(field + v); v += 8; }
+                if (header == 0xFFFFFFFFu && v + 8 <= 4 + len) { header = le64(field + v); v += 8; }
+            }
+            x += 4 + len;
+        }
         at += 46 + name_len + extra_len + comment_len;
         Key key;
         if ((flags & 1u) || (method != 0 && method != 8) || size > kMaxBytes || packed > kMaxBytes
-            || !parse_name(name, key)) {
+            || header >= length || !parse_name(name, key)) {
             continue;  /* encrypted, unsupported compression, oversized or not a texture */
         }
         Entry entry;
@@ -252,40 +278,50 @@ void Pack::index_zip(const std::filesystem::path &zip, const Scope &scope) {
         entry.zipped = true;
         entry.header = header;
         entry.method = method;
-        entry.packed = packed;
-        entry.size = size;
+        entry.packed = uint32_t(packed);
+        entry.size = uint32_t(size);
         add(key, entry, scope);
     }
 }
 
-size_t Pack::index(const std::filesystem::path &root, const Scope &scope) {
+void Pack::index_png(const std::filesystem::path &png, const Scope &scope) {
+    Key key;
+    std::error_code size_error;
+    const auto bytes = std::filesystem::file_size(png, size_error);
+    if (size_error || bytes == 0 || bytes > kMaxBytes || !parse_name(png.filename().string(), key)) return;
+    Entry entry;
+    entry.file = png;
+    entry.size = uint32_t(bytes);
+    add(key, entry, scope);
+}
+
+size_t Pack::index(const std::filesystem::path &root, const Scope &scope,
+                   const std::function<bool(const std::filesystem::path &)> &curated) {
     entries_.clear();
+    custom_ = 0;
     std::error_code error;
     if (!std::filesystem::is_directory(root, error)) return 0;
-    std::vector<std::filesystem::path> zips, pngs;
+    std::vector<std::filesystem::path> custom_pngs, custom_zips, curated_pngs, curated_zips;
     const auto options = std::filesystem::directory_options::skip_permission_denied;
     for (auto it = std::filesystem::recursive_directory_iterator(root, options, error);
          !error && it != std::filesystem::recursive_directory_iterator(); it.increment(error)) {
         if (!it->is_regular_file(error)) continue;
         const std::string name = it->path().filename().string();
-        if (lower_ends_with(name, ".zip")) zips.push_back(it->path());
-        else if (lower_ends_with(name, ".png")) pngs.push_back(it->path());
+        const bool is_curated = curated && curated(it->path());
+        if (lower_ends_with(name, ".zip")) (is_curated ? curated_zips : custom_zips).push_back(it->path());
+        else if (lower_ends_with(name, ".png")) (is_curated ? curated_pngs : custom_pngs).push_back(it->path());
     }
     /* Sorted so the same files always give the same choice between copies:
-     * extracted PNGs first, then ZIPs. */
-    std::sort(pngs.begin(), pngs.end());
-    std::sort(zips.begin(), zips.end());
-    for (const auto &png : pngs) {
-        Key key;
-        std::error_code size_error;
-        const auto bytes = std::filesystem::file_size(png, size_error);
-        if (size_error || bytes == 0 || bytes > kMaxBytes || !parse_name(png.filename().string(), key)) continue;
-        Entry entry;
-        entry.file = png;
-        entry.size = uint32_t(bytes);
-        add(key, entry, scope);
-    }
-    for (const auto &zip : zips) index_zip(zip, scope);
+     * custom packs before the curated one, and loose PNGs (a pack being made)
+     * before ZIPs. */
+    for (auto *list : {&custom_pngs, &custom_zips, &curated_pngs, &curated_zips}) std::sort(list->begin(), list->end());
+    Scope everything = scope;
+    everything.all = true;
+    for (const auto &png : custom_pngs) index_png(png, everything);
+    for (const auto &zip : custom_zips) index_zip(zip, everything);
+    custom_ = entries_.size();
+    for (const auto &png : curated_pngs) index_png(png, scope);
+    for (const auto &zip : curated_zips) index_zip(zip, scope);
     return entries_.size();
 }
 

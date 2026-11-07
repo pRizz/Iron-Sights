@@ -1464,7 +1464,7 @@
     }
   ],
   "independent_pass_verified": true,
-  "inputs_sha256": "2d5522eac0b81b78e78273741d4fded33146c14ce7c0840d1cf2211f3240c3fa",
+  "inputs_sha256": "4b6123faa048e216d07552502e6f71198a9ac26f103043f2a66b7147911669c7",
   "recipe": {
     "background": "#30343c",
     "fov": 90,

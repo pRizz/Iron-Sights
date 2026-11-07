@@ -34,7 +34,7 @@ new areas. Status describes implementation state, not Git publication state.
 
 **Status:** Implemented in the native Windows and Linux builds (2026-11-06);
 not in the browser or Xbox builds. The owner reviewed it in play and approved
-it on 2026-11-06.
+it on 2026-11-06; custom packs (added the same day) await the owner's review.
 
 Iron Sights again draws HD campaign environment textures from intermissionfb's
 GoldenEye 007 HD pack, but never bundles it. The pack's maintainer disallowed
@@ -47,6 +47,10 @@ from the makers' own GitHub, as long as no Iron Sights package carries the art
 So the pack arrives only when the player chooses Download, or when they copy it
 in; releases still carry nothing under `Data/TexturePacks` (the packaging
 guards from FORK-033 stay), and Iron Sights does not convert or modify it.
+Since 2026-11-06 the same folder also takes **custom packs**: anything else a
+player puts there, such as the artist repository's own ZIP (asked for in
+[issue #6](https://github.com/pRizz/Iron-Sights/issues/6#issuecomment-6671173971))
+or a pack of their own being made.
 
 **Gameplay > Iron Sights > System > Texture Pack** (`[display] texture_pack`:
 0 Original, 1 HD; default 1; there is no 4K choice), in the Options folder and
@@ -85,19 +89,62 @@ FORK-033's ini values `hd`, `4k` and `2` read as HD.
   `GE_HDPACK_BASE_URL=http://127.0.0.1:port` points a test at a local fixture.
 
 - **Index.** `hd_texture_pack.cpp` reads each ZIP's central directory (stored
-  and deflated entries; encrypted, other methods, ZIP64 and files over 80 MB
-  are skipped) and lists PNGs whose Rice names
-  (`GOLDENEYE#tttttttt#f#s[#pppppppp|#$]_all.png` / `_ciByRGBA.png`) fall in
-  the scope. Extracted PNGs win over ZIP copies; the order is sorted, so the
-  same files always give the same choice.
-- **Scope.** Only campaign environment textures: our inventory of the
+  and deflated entries, ZIP64 included, with 64-bit offsets, so the
+  repository's 2.4 GB ZIP reads on the 32-bit Windows build; encrypted
+  entries, other methods and images over 80 MB are skipped) and lists PNGs
+  with Rice names (`GOLDENEYE#tttttttt#f#s[#pppppppp|#$]_all.png` /
+  `_ciByRGBA.png`). Custom packs come first, then the download; within each,
+  extracted PNGs win over ZIP copies, and the order is sorted by path, so the
+  same files always give the same choice. The log line counts both
+  (`hd: N textures in ... (C from custom packs, D from the HD download)`).
+- **Downloaded or custom.** The files the HD Textures page fetches, at their
+  exact paths (the release ZIP's name at the top of the folder and the three
+  PNGs in `ge007-hd-egyptian`), are the download and keep the reviewed scope
+  below. Every other ZIP or PNG under `Data/TexturePacks` is a custom pack: it
+  is read for every texture it names (the scope's aliases still apply) and
+  wins over the download, so a player can add the repository's extra
+  textures (effects, smoke, explosions, crosshairs, gun barrel, portraits,
+  watch art, world weapon pickups) or override any of them with their own.
+  The Hacks folder's textures are for ROM hacks and do not match this game's
+  textures. A copied-in release ZIP under another name, or an extracted
+  release, is a custom pack too.
+- **Custom images load in the background, at the HD tier.** The repository
+  holds the artist's masters (mostly 1024 to 4096 px; the release's copies are
+  mostly at most 256 px), which take about 100 ms each to inflate at 2048 px
+  (270 ms at 4096 px, measured at -O2 on Linux). Read on the render thread,
+  they froze Dam's first frames until the stall watchdog exited the game, and
+  a handful would have filled the 128 MB budget. So a custom pack's image is
+  read on one of two worker threads while the original draws, reduced to at
+  most 8x native per side (`kMaxScale`; the tent filter widens with the
+  ratio, and it now premultiplies as it reads, so a 4096 px master needs a
+  16 MB buffer rather than a 128 MB copy), and swapped into the waiting cache
+  node at the next frame start (`hd_request`; a node evicted meanwhile is
+  skipped). An image that cannot be read, or an allocation the 32-bit
+  Windows build's address space refuses, keeps the original. Re-indexing
+  discards outstanding work. The download's images keep the immediate read,
+  so its reviewed look is unchanged. This matches the Original/HD choice:
+  there is still no 4K tier.
+- **Tracing.** `GE_HD_TRACE=1` logs each texture once: `match` (the download),
+  `custom` (requested from a custom pack), `miss` (no pack has it), and `kept`
+  for every first-person weapon or hand texture, naming the pack file that
+  has it, so a pack author can see why weapon art does not apply in the hand.
+- **Protected from every pack.** The first-person weapon and hands keep the
+  game's textures, so the hand and arm contracts (`arm_rendering.md`) hold
+  whatever a pack contains: `gunfire.c` brackets the span from the ADS hand
+  layer to its end with `portHudViewmodelTag` (a `0x5C` G_NOOP), and while it
+  is open the renderer neither looks a texture up in the pack nor reuses a
+  pack image the world drew (`hd_native` in the cache key: a pickup on the
+  floor may use the same texture). The flag also clears at frame start. Text
+  glyphs stay on their own paths (FORK-050, FORK-052), and the ammo icons take
+  the pack's art by slot.
+- **Scope.** The download draws only campaign environment textures: our inventory of the
   pack's area folders (`port/fast3d/texture_packs/hd_level_sources.json`,
   641 names) plus our reviewed native-palette aliases
   (`hd_level_native_aliases.json`, 132, and `hd_dam_native_aliases.json`,
   15), restored from FORK-033 and embedded at configure time
   (`hd_texture_scope_embed.cmake`). They hold names and fingerprints, no
-  artwork. Weapons, hands, fonts and the rest of the HUD are outside the
-  scope, so the arm and hand contracts are untouched. With the v2025.12.30 PNG pack 466 of
+  artwork. Weapons, fonts and the rest of the HUD are outside this scope.
+  With the v2025.12.30 PNG pack 466 of
   the 641 are present (610 keys with aliases); three Egyptian textures exist
   only in the artist repository and are used if the player adds those PNGs.
 - **Images.** A texture is read when a level first draws it: inflated with
@@ -109,9 +156,10 @@ FORK-033's ini values `hd`, `4k` and `2` read as HD.
   fingerprint of each native tile (`hd_texture_format.cpp`), the upload at the
   authored scale with native UVs and masks, the `hd_bytes` cache field, deleting
   rather than recycling HD texture ids, and a 128 MB budget evicted at frame
-  start. `hd_textures.cpp` re-indexes when the setting changes and when the
-  pack folder's own listing changes (checked about every 5 s); changes inside
-  an extracted folder take effect after toggling the setting or restarting.
+  start. `hd_textures.cpp` re-indexes when the setting changes and when any
+  file under the pack folder is added, removed, replaced or edited (a
+  recursive listing of paths, sizes and times, checked about every 5 s), so a
+  pack being made shows each saved PNG within seconds.
 
 The removed `.istex` format, the CI preparer and its download, the bundled
 packs and the AppImage bundle root do not return.
@@ -156,7 +204,11 @@ by that in FORK-033).
 five free sites, the import call before the format decoders, the frame-start
 call and the include of the adapter; `hd_bytes` in `gfx_pc.h`; the ammo slot tag (`0x5B`) and its smooth sampling, and the clamp's
 HD scale in the vertex setup, in `gfx_pc.cpp`; two `portHudAmmoIconTag` calls
-around the ammo icon draw in `gunfire.c`.
+around the ammo icon draw in `gunfire.c`; the first-person tag (`0x5C`), its
+frame-start reset, the `hd_native` cache-key field and the skipped import in
+`gfx_pc.cpp`/`gfx_pc.h`, the `hd_request` cache-value field, and two
+`portHudViewmodelTag` calls in `gunfire.c` (inside the existing
+`#ifndef TARGET_N64` blocks around the hand layer).
 
 **Sources:** [pack index](port/fast3d/hd_texture_pack.cpp) and [header](port/fast3d/hd_texture_pack.h),
 [ammo slot tag](port/src/port_hud_ammo.c) with its [declarations](port/include/port_hud.h) and
@@ -199,6 +251,27 @@ uniform), `test_hud.sh`, and 1600x900 HUD captures (`audit_hud.ps1`, which
 gained `-TexturePack`) of the 9 mm, rifle, magnum and grenade icons in HD with
 clean right edges, against the originals. Not run: a download from GitHub
 itself, the Linux build locally, other levels, and a long play session.
+Custom packs: the fixture gained `player/`, a hand-written ZIP64 archive (every
+size, offset and count in its 64-bit fields; Python's `zipfile` reads it
+back) and a loose PNG, and the tests check that custom copies win over the
+download, read keys outside its scope, keep aliases, and that with no
+download every file is custom. In the 32-bit Windows build, with GitHub's
+"Download ZIP" of the repository (2,387,276,857 bytes, 2,412 entries, 1,091
+of them past 2 GiB) in an isolated folder, Dam indexed 2,384 textures, read 56
+custom ones in the background (the longest frame gap was 270 ms, against
+201 ms with Original; before the background reads the game stalled and the
+watchdog exited, and the first background version ran out of address space
+in the resampler) and drew the repository's scenery and its rifle ammo art,
+whose entry starts at byte 2,352,547,137. A synthetic pack of solid magenta
+images for the KF7 view's 13 textures (`kept`, each found in the pack) and
+the 56 scenery textures drew magenta scenery around an unchanged KF7 and
+hand. With the release ZIP alone the index found 623 keys from the download
+(the 610 environment keys and 13 ammo slots); with both, 2,384 custom and 10
+from the download. `test_wardrobe.sh`, `test_ads.sh`, `test_hud.sh`,
+`test_enhanced_fonts.sh` and `test_upstream_merge.sh` pass, and the hand gallery
+regenerated with zero changed image cells. Not run for custom
+packs: effects, explosions and menus in play, other levels, Linux, and a long
+session.
 
 ### FORK-052 — Font styles plan
 

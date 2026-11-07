@@ -2135,6 +2135,7 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
         matrix_4x4_7F058C64();
 
 #ifndef TARGET_N64
+        renderdata.gdl = portHudViewmodelTag(renderdata.gdl, TRUE);
         if (armDepth) {
             /* The sleeve can cover native wrist triangles. Resolve their
              * actual surfaces in the weapon's near depth range. */
@@ -2198,6 +2199,7 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
         if (armDepth) {
             gdl = portAdsEndHandLayer(gdl, currentPlayerGetProjectionMatrix());
         }
+        gdl = portHudViewmodelTag(gdl, FALSE);
 #endif
 
         if (bondwalkItemCheckBitflags(item, WEAPONSTATBITFLAG_MIRROR_DUAL) != 0)

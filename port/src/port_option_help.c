@@ -39,7 +39,7 @@ static const struct PortOptHelp sHelp[] = {
     { "setting_help",       "Shows this help box." },
     { "crash_reporting",    "Sends technical crash reports to Sentry. OFF stops uploads." },
     { "font_style",         "Original or Enhanced (community redraw). Our own font is hidden while we fix it." },
-    { "texture_pack",       "HD: intermissionfb's pack, from HD Textures or copied into Data/TexturePacks." },
+    { "texture_pack",       "HD: intermissionfb's pack from HD Textures, and any pack put in Data/TexturePacks." },
 
     /* HUD */
     { "sight_on_screen",    "Shows the aiming sight." },

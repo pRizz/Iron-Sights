@@ -38,6 +38,11 @@ once per frame (`dlZBufferGeometry`) before every player's view, so clearing it
 removed depth testing from each later split-screen view and made its rooms
 flicker. `test_hand_layer.c` (run by `test_ads.sh`) checks that the end of the
 layer only reloads projection.
+No HD texture pack replaces a texture inside this first-person span (FORK-053):
+`gunfire.c` opens it with `portHudViewmodelTag` before the hand layer and closes
+it after `portAdsEndHandLayer`, and the renderer skips pack lookups there and
+keeps those textures apart in its cache. Keep new viewmodel draws inside the
+bracket.
 The frame-owned filtered list bypasses the retained GPU part
 cache, whose keys assume immutable display lists.
 

@@ -477,6 +477,9 @@ static bool s_RectGlyphBorder = false;
 /* FORK-053: HUD ammo icon slot + 1 for the following texrect (gunfire.c via
  * portHudAmmoIconTag), 0 = none */
 static uint8_t s_GeHudAmmoSlot = 0;
+/* FORK-053: inside the first-person weapon and hands (G_NOOP 0x5C, gunfire.c via
+ * portHudViewmodelTag); texture packs leave these textures alone */
+static bool s_GeViewmodel = false;
 /* This texture rect is an open-font glyph (FORK-050): the MSDF shader, no UV clamp. */
 static bool s_RectMsdf = false;
 /* options.c portHudScaleBegin (midas.ini hud_scale): G_NOOP tag 0x58 brackets
@@ -3112,6 +3115,8 @@ static void import_texture(int i, int tile, bool importReplacement) {
     /* FORK-053: the HD pack's art for a tagged HUD ammo icon is a different image */
     key.hd_ammo = (s_GeHudAmmoSlot && portTexturePackGet() && hd_textures::ammo_available(s_GeHudAmmoSlot - 1))
                       ? s_GeHudAmmoSlot : 0;
+    /* A gun texture a pack replaced in the world is a different image in the hand */
+    key.hd_native = s_GeViewmodel && portTexturePackGet();
 #endif
 
     { /* GE_TEXDBG=1: report address collisions between
@@ -3208,7 +3213,7 @@ static void import_texture(int i, int tile, bool importReplacement) {
             return;
         }
     }
-    if (ge_hd_try_import(i, tile)) return; /* FORK-053 */
+    if (ge_hd_try_import(i, tile, key.hd_native)) return; /* FORK-053 */
 #endif
 
     { /* GE bring-up (GE_TRACE_TEX=1): one line per unique texture import -
@@ -7701,6 +7706,9 @@ static void gfx_run_dl(Gfx* cmd) {
                 } else if ((cmd->words.w1 >> 24) == 0x5Bu) {
                     /* FORK-053: HUD ammo icon slot + 1, 0 = none (port_hud_ammo.c) */
                     s_GeHudAmmoSlot = (uint8_t) (cmd->words.w1 & 0xFFu);
+                } else if ((cmd->words.w1 >> 24) == 0x5Cu) {
+                    /* FORK-053: first-person weapon span on / off (port_hud_ammo.c) */
+                    s_GeViewmodel = (cmd->words.w1 & 1u) != 0;
                 } else if ((cmd->words.w1 >> 24) == 0x58u) {
                     /* HUD scale bracket (options.c portHudScaleBegin): pivot x, y in U10.2 */
                     s_GeHudScale = (cmd->words.w1 & 0x00FFFFFFu) != 0x00FFFFFFu;
@@ -8189,6 +8197,7 @@ extern "C" void gfx_start_frame(void) {
     ge_hd_start_frame(); /* FORK-053 */
 #endif
     s_GeHudAmmoSlot = 0; /* FORK-053: a tag never outlives its frame's ammo draw */
+    s_GeViewmodel = false;
     static uint32_t previous_fonts = ~0u;
     const uint32_t fonts = gfx_sharp_fonts | (gfx_enhanced_fonts << 1);
     if (previous_fonts != fonts) { /* FORK-050, FORK-052: rebind glyph textures */

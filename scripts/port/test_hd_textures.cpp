@@ -1,10 +1,12 @@
 // ROM-free checks for player-installed HD texture packs (FORK-053): native
 // tile identity, Rice file names, the scope and the pack index over a pack
 // fixture built by make_hd_texture_fixture.py (a ZIP with deflated and stored
-// entries, an extracted PNG, an out-of-scope name and a corrupt image).
+// entries, an extracted PNG, an out-of-scope name and a corrupt image, plus a
+// custom pack: a ZIP64 archive and a loose PNG).
 #include <array>
 #include <cassert>
 #include <cstdio>
+#include <filesystem>
 #include <string>
 
 #include "port/fast3d/hd_texture_pack.h"
@@ -90,18 +92,25 @@ static Scope fixture_scope() {
     return scope;
 }
 
+static bool everything_downloaded(const std::filesystem::path &) { return true; }
+
+static bool outside_player(const std::filesystem::path &file) {
+    return file.generic_string().find("/player/") == std::string::npos;
+}
+
 static void pack(const std::string &root) {
     // Arrange
     const Scope scope = fixture_scope();
     Pack pack;
-    // Act: A (deflated in the ZIP), B (stored), C (extracted PNG), E (corrupt);
-    // D is out of scope. A's alias adds a native palette key.
-    const size_t found = pack.index(root, scope);
+    // Act: every file is the downloaded pack: A (deflated in pack.zip, which
+    // sorts before player/mine.zip's copy), B (stored), C (extracted PNG), E
+    // (corrupt); D and F are out of scope. A's alias adds a native palette key.
+    const size_t found = pack.index(root, scope, everything_downloaded);
     // Assert
-    assert(found == 5);
+    assert(found == 5 && pack.custom() == 0);
     Image image;
     const Entry *a = pack.find(Key{0xAAAA0001, 0, 3, 1});
-    assert(a && a->zipped && a->method == 8 && Pack::read(*a, image));
+    assert(a && a->zipped && !a->custom && a->method == 8 && Pack::read(*a, image));
     assert(image.width == 8 && image.height == 4 && image.rgba.size() == 8 * 4 * 4 && image.rgba[0] == 10);
     const Entry *alias = pack.find(Key{0xAAAA0001, 0x12345678, 3, 1});
     assert(alias && alias->header == a->header);
@@ -114,7 +123,34 @@ static void pack(const std::string &root) {
     assert(e && !Pack::read(*e, image) && image.rgba.empty());       // corrupt PNG
     assert(pack.find(Key{0xAAAA0001, 0x12345678, 3, 0}) == nullptr);  // size is part of the key
     // A missing folder finds nothing.
-    assert(pack.index(root + "/missing", scope) == 0 && pack.size() == 0);
+    assert(pack.index(root + "/missing", scope, everything_downloaded) == 0 && pack.size() == 0);
+}
+
+static void custom_packs(const std::string &root) {
+    // Arrange: player/ is a player's own pack; the rest is the download.
+    const Scope scope = fixture_scope();
+    Pack pack;
+    // Act
+    const size_t found = pack.index(root, scope, outside_player);
+    // Assert: the custom pack's A, A's alias, D (outside the download's scope)
+    // and F, then the download's B, C and E.
+    assert(found == 7 && pack.custom() == 4);
+    Image image;
+    const Entry *a = pack.find(Key{0xAAAA0001, 0, 3, 1});
+    assert(a && a->zipped && a->custom && a->file.filename() == "mine.zip");  // the custom copy wins
+    assert(Pack::read(*a, image) && image.width == 8 && image.rgba[0] == 99);
+    const Entry *alias = pack.find(Key{0xAAAA0001, 0x12345678, 3, 1});
+    assert(alias && alias->file == a->file && alias->header == a->header);
+    const Entry *d = pack.find(Key{0xDDDD0004, 0, 3, 1});
+    assert(d && d->method == 0 && Pack::read(*d, image) && image.width == 8 && image.height == 8 && image.rgba[0] == 77);
+    const Entry *f = pack.find(Key{0xFFFF0006, 0, 3, 1});
+    assert(f && !f->zipped && Pack::read(*f, image) && image.width == 4 && image.rgba[3] == 255);
+    const Entry *b = pack.find(Key{0xBBBB0002, 0, 2, 1});
+    assert(b && !b->custom && b->file.filename() == "pack.zip");
+    // Without a download every file is custom, read for every key it names;
+    // between two custom copies the first path wins.
+    assert(pack.index(root, scope, nullptr) == 7 && pack.custom() == 7);
+    assert(pack.find(Key{0xAAAA0001, 0, 3, 1})->file.filename() == "pack.zip");
 }
 
 static void resampling() {
@@ -152,6 +188,7 @@ int main(int argc, char **argv) {
     palettes();
     names();
     pack(argv[1]);
+    custom_packs(argv[1]);
     std::printf("hd textures: ok\n");
     return 0;
 }

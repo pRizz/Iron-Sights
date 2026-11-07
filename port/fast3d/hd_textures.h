@@ -6,8 +6,21 @@ namespace hd_textures {
 /* Render thread, once a frame: true when the usable pack changed, so cached
  * textures must be dropped. */
 bool beginFrame();
-/* The replacement for a native tile, when the pack has one. */
-bool lookup(const Tile &tile, Image &image);
+/* The replacement for a native tile. The download's images (a few hundred
+ * pixels a side) are read at once: now, in image. A custom pack's may be the
+ * artist's multi-megapixel masters, so they are read on worker threads and
+ * reduced to at most kMaxScale times native (the HD tier; there is no 4K):
+ * later, under request, while the original draws. */
+enum class Found { none, now, later };
+constexpr unsigned kMaxScale = 8;
+Found lookup(const Tile &tile, Image &image, uint32_t &request);
+/* Render thread: one finished custom image, checked and reduced; false when
+ * none is waiting. An unusable image never arrives (the original stays), and
+ * nothing requested before the pack changed arrives after it. */
+bool finished(uint32_t &request, Image &image);
+/* GE_HD_TRACE: report, once, each texture the first-person weapon or hands
+ * draw (they stay original), naming the pack file when one has it. */
+void kept(const Tile &tile);
 
 /* HUD ammo icons (gunfire.c portAmmoIconPtr order): the pack names them by
  * Rice keys the game's own 32-bit icons never reproduce, so the HUD tags
