@@ -47,6 +47,28 @@ static HRESULT CALLBACK aboutLink(HWND window, UINT event, WPARAM w, LPARAM valu
 }
 #endif
 
+void portOpenFolder(const char *path)
+{
+#ifdef GE_VIDEO
+    if (path == NULL || path[0] == '\0') return;
+    std::string url = path[0] == '/' ? "file://" : "file:///";
+    for (const char *c = path; *c; c++) {
+        /* forward slashes, and spaces and other awkward bytes escaped */
+        const unsigned char ch = (unsigned char)*c;
+        char escaped[4];
+        if (ch == '\\') url += '/';
+        else if (ch <= ' ' || ch == '%' || ch == '#' || ch == '?' || ch >= 0x7F) {
+            snprintf(escaped, sizeof(escaped), "%%%02X", ch);
+            url += escaped;
+        }
+        else url += (char)ch;
+    }
+    SDL_OpenURL(url.c_str());
+#else
+    (void)path;
+#endif
+}
+
 void portAboutOpen(void)
 {
 #ifdef GE_VIDEO

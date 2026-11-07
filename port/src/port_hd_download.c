@@ -3,7 +3,7 @@
  * port/fast3d/hd_textures_download.cpp. */
 #include <ultra64.h>
 #include <stdio.h>
-#include <SDL.h>
+#include "port_about.h"
 #include "port_hd_download.h"
 #include "port_download_page.h"
 
@@ -148,35 +148,7 @@ static const char *customActionLabel(int action)
 static void customOpenFolder(void)
 {
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
-    char url[1100];
-    const char *path = portTexturePackFolder();
-    size_t n = 0;
-    const char *c;
-
-    if (path == NULL || path[0] == '\0')
-    {
-        return;
-    }
-    n = (size_t) snprintf(url, sizeof(url), (path[0] == '/') ? "file://" : "file:///");
-    for (c = path; *c != '\0' && n + 4 < sizeof(url); c++)
-    {   /* forward slashes, and spaces and other awkward bytes escaped */
-        const unsigned char ch = (unsigned char) *c;
-
-        if (ch == '\\')
-        {
-            url[n++] = '/';
-        }
-        else if (ch <= ' ' || ch == '%' || ch == '#' || ch == '?' || ch >= 0x7F)
-        {
-            n += (size_t) snprintf(url + n, sizeof(url) - n, "%%%02X", ch);
-        }
-        else
-        {
-            url[n++] = (char) ch;
-        }
-    }
-    url[n] = '\0';
-    SDL_OpenURL(url);
+    portOpenFolder(portTexturePackFolder());
 #endif
 }
 

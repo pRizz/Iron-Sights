@@ -133,9 +133,13 @@ FORK-033's ini values `hd`, `4k` and `2` read as HD.
   custom pack found.`, `Looking for packs...` (before the first search) or
   `Texture Pack is Original.`, from the index's custom count
   (`portTexturePackCustomCount`). **Open Folder** creates `Data/TexturePacks`
-  if needed (`portTexturePackFolder`) and opens it with `SDL_OpenURL` as a
-  `file://` URL (backslashes turned to slashes, spaces and other awkward bytes
-  escaped), as the About page opens links. The page is a `PortDownloadPage`
+  if needed (`portTexturePackFolder`) and opens it with `portOpenFolder` in
+  `port/fast3d/about.cpp`, which hands `SDL_OpenURL` a `file://` URL
+  (backslashes turned to slashes, spaces and other awkward bytes escaped), as
+  the About page opens links. The opener lives in C++ beside the About code
+  because `SDL.h` cannot follow `ultra64.h` on glibc: `PR/os.h` declares
+  `bcopy`, `bzero` and `bcmp` with `int` lengths, and the Linux CI build of the
+  first version failed on those conflicts. The page is a `PortDownloadPage`
   without a Remove (action 1 is NULL, so the folder skips that button); the
   watch's rows are `sIsCustomTex` (`PWHINT_CUSTOMTEX` 3000, `PWACT_CUSTOMTEX`
   114), and its page sits before the Control tab's, so their numbers do not

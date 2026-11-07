@@ -152,6 +152,7 @@ __attribute__((weak)) int portHdTexturesJustInstalled(void) { return 0; }
 __attribute__((weak)) const char *portHdTexturesInfoLine(int i) { (void) i; return NULL; }
 __attribute__((weak)) int portTexturePackCustomCount(void) { return -1; }
 __attribute__((weak)) const char *portTexturePackFolder(void) { return ""; }
+__attribute__((weak)) void portOpenFolder(const char *path) { (void) path; }
 
 __attribute__((weak)) s32 portWatchStatic(void)   /* video.c: [display] watch_static, vanilla on */
 {
