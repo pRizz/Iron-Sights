@@ -155,7 +155,8 @@ when they return.
 On Windows the first validated-ROM launch prepares icons using an isolated,
 temporary copy of the current executable and its SDL DLL. It uses the game's
 own OpenGL renderer and a neutral configuration, without Python or downloads.
-A progress window allows skipping. The helper is removed after exit. Normal
+It runs in the background while the game starts (about 6 s on a desktop GPU), at
+below-normal priority, and dies with the game. The helper is removed after exit. Normal
 game settings and campaign data are not used by the helper.
 
 The cache resides in SDL's per-user application-data directory, keyed by the

@@ -219,10 +219,14 @@ padN_stickmode.
                       |            | "PP7 x2" or "AR33 + RC-P90" (left first)
                       |            | Unarmed reads Buttstroke while the sniper
                       |            | rifle is owned (its butt replaces the chop)
-  weapon_hud_icons    | 0          | Weapon Strip Style: 0 = text, 1 = static
+  weapon_hud_icons    | 1          | Weapon Strip Style: 0 = text, 1 = static
                       |            | weapon model images. Requires weapon_hud=1
                       |            | Selected icon shows its name underneath;
-                      |            | name fades to 0% after 3 seconds idle
+                      |            | name fades to 0% after 3 seconds idle.
+                      |            | The images are prepared from your ROM in
+                      |            | the background on first launch (a few
+                      |            | seconds); until a mission starts with
+                      |            | them ready, the strip shows names
   hud_scale           | 0          | 1 = draw the in-game HUD as on a 640x480
                       |            | screen: same places, half size (text,
                       |            | ammo, timer, radar, sight; the health

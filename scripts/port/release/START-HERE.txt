@@ -6,7 +6,8 @@ IRON SIGHTS - WINDOWS
    Supported formats: .z64, .v64, .n64. Extract it first if it is zipped.
    No ROM is included or downloaded by this package.
 3. Double-click IronSights.exe. The first launch prepares weapon icons from
-   your ROM. A progress window appears; Esc skips preparation and uses names.
+   your ROM in the background (a few seconds); a mission started before they
+   are ready shows weapon names.
    No Python, compiler, administrator access or internet connection is needed
    for icon preparation. Later launches reuse a per-user application-data cache.
 

@@ -6,9 +6,14 @@ renderer, fixed camera/poses and repeated black/white captures. It recovers
 alpha and downsamples with premultiplied area sampling. No Python, compiler,
 network access or rebuild is needed by players.
 
-A progress window shows 38 images (about 6 s on a desktop GPU: 8 frames an
-image, with the level intro skipped and the world not drawn in export mode);
-Esc skips preparation. The per-user SDL
+The 38 images are prepared in the background while the game starts (about
+6 s on a desktop GPU: 8 frames an image, with the level intro skipped and the
+world not drawn in export mode). The HUD takes the finished cache at the next
+mission start (`portIconCacheLatch`); a mission started earlier keeps weapon
+names throughout. `GE_ICON_CACHE_FORCE=1` prepares in the foreground instead
+(the review gallery needs that), and `GE_ICON_CACHE_BACKGROUND=1` lets a
+scripted run (`GE_FRAMES`, `GE_STAGE`) prepare in the background like a
+player's launch. The per-user SDL
 application-data folder contains `weapon-icons-v9-<ROM fingerprint>.cache` and
 `last-preparation.log`. About shows readiness. Cache validation checks the ROM,
 generator version, dimensions, complete slot coverage, exact lengths and CRC.

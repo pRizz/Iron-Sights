@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <vector>
 #include "port_icon_cache.h"
@@ -20,16 +21,25 @@
 #include <csignal>
 #include <fcntl.h>
 #include <sys/file.h>
+#include <sys/prctl.h>
 #include <sys/wait.h>
 #include <unistd.h>
 extern char **environ;
 #endif
 namespace fs = std::filesystem;
 using Bytes = std::vector<unsigned char>;
-static std::array<Bytes, PORT_ICON_COUNT> icons;
-static std::string cacheStatus = "Weapon names (icons not prepared)";
+/* Never destroyed: a background preparation may still be writing it while a
+ * quitting game runs its static destructors. */
+static std::array<Bytes, PORT_ICON_COUNT> &icons=*new std::array<Bytes, PORT_ICON_COUNT>;
 static unsigned int romFingerprint;
-static bool ready;
+/* A missing cache is prepared on a background thread while the game starts.
+ * icons is written only before loaded is set, and the HUD reads it only once
+ * portIconCacheLatch has seen loaded at a mission start, so a cache that
+ * finishes mid-mission appears from the next one. */
+enum CacheState { kNotPrepared, kPreparing, kReady, kFailed, kNoFolder, kUnavailable, kUnsupported };
+static SDL_atomic_t cacheState;  /* a CacheState, for About */
+static SDL_atomic_t loaded;      /* icons holds a validated cache */
+static int active;               /* latched: the HUD may use icons */
 extern "C" void portConLogf(const char *, ...);
 
 static std::string utf8(const fs::path &path)
@@ -111,7 +121,8 @@ static bool readCache(const fs::path &path)
     }
     if (at != bytes.size()) return false;
     for (auto &image : decoded) if (!image.empty()) bleedEdges(image);
-    icons.swap(decoded); ready = true;
+    icons.swap(decoded);
+    SDL_AtomicSet(&loaded,1);
     return true;
 }
 static bool writeCache(const fs::path &path)
@@ -133,11 +144,24 @@ static bool writeCache(const fs::path &path)
 }
 
 extern "C" int portIconAvailable(int icon)
-{ return ready && icon >= 0 && icon < PORT_ICON_COUNT && !icons[icon].empty(); }
-extern "C" int portIconCacheReady(void) { return ready; }
+{ return active && icon >= 0 && icon < PORT_ICON_COUNT && !icons[icon].empty(); }
+extern "C" int portIconCacheReady(void) { return active; }
+extern "C" void portIconCacheLatch(void) { if (!active && SDL_AtomicGet(&loaded)) active=1; }
 extern "C" const unsigned char *portIconPixels(int icon)
 { return portIconAvailable(icon) ? icons[icon].data() : nullptr; }
-extern "C" const char *portIconCacheStatus(void) { return cacheStatus.c_str(); }
+extern "C" const char *portIconCacheStatus(void)
+{
+    switch (SDL_AtomicGet(&cacheState)) {
+    case kPreparing: return "Preparing in the background (weapon names until ready)";
+    case kReady: return active ? "Ready - prepared locally from your ROM"
+                               : "Ready - prepared locally from your ROM (shown from the next mission)";
+    case kFailed: return "Weapon names (preparation failed; retry next launch)";
+    case kNoFolder: return "Weapon names (cache folder unavailable)";
+    case kUnavailable: return "Weapon names (cache unavailable; game remains playable)";
+    case kUnsupported: return "Weapon names (native preparation available on Windows and Linux)";
+    default: return "Weapon names (icons not prepared)";
+    }
+}
 extern "C" int portIconWorkerEnabled(void) { return SDL_getenv("GE_ICON_WORKER") != nullptr; }
 
 /* Native area resampling, in premultiplied alpha, avoids dark fringe pixels.
@@ -269,43 +293,18 @@ struct ChildFiles {
     fs::path dir;
     ~ChildFiles() { std::error_code e; if (!dir.empty()) fs::remove_all(dir,e); }
 };
-struct PreparationWindow {
-    SDL_Window *window=nullptr;
-    SDL_Renderer *renderer=nullptr;
-    ~PreparationWindow() {
-        if (renderer) SDL_DestroyRenderer(renderer);
-        if (window) SDL_DestroyWindow(window);
-        SDL_QuitSubSystem(SDL_INIT_VIDEO);
-    }
-};
-/* Shows the worker's progress (root/progress.bin) until running() turns false;
- * Esc, closing the window or 180 s call stop() first. */
-template <class Running, class Stop>
-static void showProgress(const fs::path &root, Running running, Stop stop)
+/* A worker gets 180 s; it normally needs about 6. */
+constexpr Uint32 kWorkerTimeoutMs=180000;
+/* Worker folders a launch that quit mid-preparation left behind; only called
+ * under the cache lock, so no other launch is using one. */
+static void removeStaleWorkers(const fs::path &folder)
 {
-    PreparationWindow progressWindow;
-    auto &window=progressWindow.window;
-    auto &renderer=progressWindow.renderer;
-    if (SDL_InitSubSystem(SDL_INIT_VIDEO)==0) {
-        window=SDL_CreateWindow("Iron Sights - Preparing weapon icons (first launch)",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,560,90,0);
-        if (window) renderer=SDL_CreateRenderer(window,-1,SDL_RENDERER_SOFTWARE);
-    }
-    const Uint32 start=SDL_GetTicks();
-    while (running()) {
-        SDL_Delay(20);
-        SDL_Event event; bool cancel=false;
-        while (SDL_PollEvent(&event)) if (event.type==SDL_QUIT || (event.type==SDL_KEYDOWN && event.key.keysym.sym==SDLK_ESCAPE)) cancel=true;
-        if (cancel || SDL_GetTicks()-start>180000) { stop(); break; }
-        auto progress=readFile(root/"progress.bin",1); int count=progress.empty()?0:progress[0];
-        if (window) {
-            std::string title="Iron Sights - Preparing icons "+std::to_string(count)+"/"+std::to_string(PORT_ICON_IMAGES)+" (first launch; Esc to skip)";
-            SDL_SetWindowTitle(window,title.c_str());
-        }
-        if (renderer) {
-            SDL_SetRenderDrawColor(renderer,24,31,36,255);SDL_RenderClear(renderer);
-            SDL_Rect outline={20,32,520,24}, bar={22,34,516*count/PORT_ICON_IMAGES,20};
-            SDL_SetRenderDrawColor(renderer,110,130,140,255);SDL_RenderDrawRect(renderer,&outline);
-            SDL_SetRenderDrawColor(renderer,183,219,144,255);SDL_RenderFillRect(renderer,&bar);SDL_RenderPresent(renderer);
+    std::error_code error;
+    for (auto it=fs::directory_iterator(folder,error);!error && it!=fs::directory_iterator();it.increment(error)) {
+        const auto name=it->path().filename().u8string();
+        if (it->is_directory(error) && name.rfind(u8"worker-",0)==0) {
+            std::error_code ignored;
+            fs::remove_all(it->path(),ignored);
         }
     }
 }
@@ -332,6 +331,19 @@ struct CacheLock {
     bool owned=false;
     ~CacheLock() { if (owned) ReleaseMutex(handle); if (handle) CloseHandle(handle); }
 };
+/* Kills the worker when the game exits, even mid-preparation: the job's
+ * only handle closes with this process. */
+static HANDLE workerJob()
+{
+    static HANDLE job=[] {
+        HANDLE handle=CreateJobObjectW(nullptr,nullptr);
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits={};
+        limits.BasicLimitInformation.LimitFlags=JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        if (handle) SetInformationJobObject(handle,JobObjectExtendedLimitInformation,&limits,sizeof limits);
+        return handle;
+    }();
+    return job;
+}
 struct ChildProcess {
     PROCESS_INFORMATION value={0};
     ~ChildProcess() {
@@ -375,10 +387,17 @@ static bool generate(const fs::path &cache, const char *rom)
     ChildProcess child;
     auto &process=child.value;
     std::wstring command=quoted(files.dir/"IronSights.exe");
-    if (!CreateProcessW(nullptr,command.data(),nullptr,nullptr,FALSE,CREATE_UNICODE_ENVIRONMENT|CREATE_NO_WINDOW,
+    /* Below normal priority, so the game starting meanwhile keeps the CPU.
+     * Not created suspended: a game quitting between creation and the job
+     * assignment would leave a suspended worker forever, while a running one
+     * finishes (GE_FRAMES) and exits on its own. */
+    if (!CreateProcessW(nullptr,command.data(),nullptr,nullptr,FALSE,
+        CREATE_UNICODE_ENVIRONMENT|CREATE_NO_WINDOW|BELOW_NORMAL_PRIORITY_CLASS,
         environment.data(),files.dir.c_str(),&startup,&process)) return false;
-    showProgress(files.dir,[&] { return WaitForSingleObject(process.hProcess,0)==WAIT_TIMEOUT; },
-                 [&] { TerminateProcess(process.hProcess,4); WaitForSingleObject(process.hProcess,5000); });
+    if (HANDLE job=workerJob()) AssignProcessToJobObject(job,process.hProcess);
+    if (WaitForSingleObject(process.hProcess,kWorkerTimeoutMs)==WAIT_TIMEOUT) {
+        TerminateProcess(process.hProcess,4); WaitForSingleObject(process.hProcess,5000);
+    }
     DWORD exit=4;
     GetExitCodeProcess(process.hProcess,&exit);
     keepLog(files.dir,cache);
@@ -433,16 +452,24 @@ static bool generate(const fs::path &cache, const char *rom)
     environment.push_back(nullptr);
     char *argv[]={self,nullptr};
     const std::string dir=utf8(root);
+    const pid_t parent=getpid();
     ChildProcess child;
     child.pid=fork();
     if (child.pid<0) return false;
     if (child.pid==0) {
+        /* Dies with the thread that started it (which waits for it), so the
+         * game quitting mid-preparation ends it too; and yields the CPU. */
+        prctl(PR_SET_PDEATHSIG,SIGKILL);
+        if (getppid()!=parent) _exit(127);
+        if (nice(10)==-1) { /* a lower priority is only a courtesy */ }
         int null=open("/dev/null",O_RDWR);
         if (null>=0) { dup2(null,0); dup2(null,1); dup2(null,2); }
         if (chdir(dir.c_str())==0) execve(self,argv,environment.data());
         _exit(127);
     }
-    showProgress(root,[&] { return child.running(); },[&] { child.stop(); });
+    for (Uint32 start=SDL_GetTicks();child.running();SDL_Delay(50)) {
+        if (SDL_GetTicks()-start>kWorkerTimeoutMs) { child.stop(); break; }
+    }
     const bool ok=child.pid<0 && child.status!=-1 && WIFEXITED(child.status) && WEXITSTATUS(child.status)==0;
     if (!ok) portConLogf("ge: icons: worker %s %d\n",WIFSIGNALED(child.status) ? "killed by signal" : "exited",
                          WIFSIGNALED(child.status) ? WTERMSIG(child.status) : WEXITSTATUS(child.status));
@@ -451,56 +478,89 @@ static bool generate(const fs::path &cache, const char *rom)
 }
 #endif
 
+#if defined(_WIN32) || defined(__linux__)
+/* Takes the per-user cache lock (simultaneous launches neither duplicate the
+ * work nor race the atomic replacement), then reads the cache another launch
+ * may have finished meanwhile, or runs the worker. */
+static int prepare(const fs::path &folder, const fs::path &cache, const std::string &rom)
+{
+#ifdef _WIN32
+    auto key=utf8(folder); auto hash=portIconCrc((const unsigned char*)key.data(),key.size());
+    std::wstring name=L"Local\\IronSightsIcons-"+std::to_wstring(hash);
+    CacheLock mutex{CreateMutexW(nullptr,FALSE,name.c_str())};
+    if (!mutex.handle) return kFailed;
+    DWORD acquired=WaitForSingleObject(mutex.handle,185000);
+    if (acquired!=WAIT_OBJECT_0 && acquired!=WAIT_ABANDONED) return kFailed;
+    mutex.owned=true;
+#else
+    /* A per-user lock file plays the Windows mutex's part; flock is
+     * released if its holder dies. */
+    CacheLock lock{open(utf8(folder/"weapon-icons.lock").c_str(),O_RDWR|O_CREAT|O_CLOEXEC,0644)};
+    if (lock.fd<0) return kFailed;
+    bool held=false;
+    for (int i=0;i<185000/50 && !(held=flock(lock.fd,LOCK_EX|LOCK_NB)==0);i++) SDL_Delay(50);
+    if (!held) return kFailed;
+#endif
+    if (readCache(cache)) return kReady;
+    removeStaleWorkers(folder);
+    return generate(cache,rom.c_str()) && readCache(cache) ? kReady : kFailed;
+}
+struct Preparation { fs::path folder, cache; std::string rom; };
+static int SDLCALL prepareInBackground(void *data)
+{
+    std::unique_ptr<Preparation> job(static_cast<Preparation *>(data));
+    int result=kUnavailable;
+    try { result=prepare(job->folder,job->cache,job->rom); }
+    catch (const std::exception &error) { portConLogf("ge: icons: %s\n",error.what()); }
+    SDL_AtomicSet(&cacheState,result);
+    portConLogf("ge: icons: background preparation %s\n",result==kReady ? "ready" : "failed; weapon names stay");
+    return 0;
+}
+#endif
+
 extern "C" void portIconCacheInit(const char *rom, unsigned int fingerprint)
 {
     if (portIconWorkerEnabled()) return;
-    PortModalScope modal;
     romFingerprint=fingerprint;
     try {
         char *pref=SDL_GetPrefPath("IronSights","IronSights");
-        if (!pref) { cacheStatus="Weapon names (cache folder unavailable)";return; }
+        if (!pref) { SDL_AtomicSet(&cacheState,kNoFolder); return; }
         fs::path folder=fs::u8path(pref);SDL_free(pref);
         if (const char *overridePath=SDL_getenv("GE_ICON_CACHE_DIR")) folder=fs::u8path(overridePath);
         fs::create_directories(folder);
         char name[80]; std::snprintf(name,sizeof(name),"weapon-icons-v%d-%08x.cache",PORT_ICON_CACHE_VERSION,fingerprint);
         fs::path cache=folder/name;
         if (readCache(cache)) {
-            cacheStatus="Ready - prepared locally from your ROM";
+            SDL_AtomicSet(&cacheState,kReady);
+            portIconCacheLatch();
             portConLogf("ge: icons: reusing validated cache\n");
             return;
         }
         bool diagnostic=SDL_getenv("GE_FRAMES") || SDL_getenv("GE_STAGE") || SDL_getenv("GE_MENU") || SDL_getenv("GE_WEAPON_ICON_EXPORT");
-        if (diagnostic && !SDL_getenv("GE_ICON_CACHE_FORCE")) return;
-#ifdef _WIN32
-        /* A per-user cache lock keeps simultaneous launches from duplicating
-         * generation or racing an atomic cache replacement. */
-        auto key=utf8(folder); auto hash=portIconCrc((const unsigned char*)key.data(),key.size());
-        std::wstring lock=L"Local\\IronSightsIcons-"+std::to_wstring(hash);
-        CacheLock mutex{CreateMutexW(nullptr,FALSE,lock.c_str())};
-        if (!mutex.handle) return;
-        DWORD acquired=WaitForSingleObject(mutex.handle,185000);
-        if (acquired==WAIT_OBJECT_0 || acquired==WAIT_ABANDONED) {
-            mutex.owned=true;
-            if (readCache(cache) || (generate(cache,rom) && readCache(cache))) cacheStatus="Ready - prepared locally from your ROM";
-            else cacheStatus="Weapon names (preparation skipped or failed; retry next launch)";
-        }
-#elif defined(__linux__)
-        /* A per-user lock file plays the Windows mutex's part; flock is
-         * released if its holder dies. */
-        CacheLock lock{open(utf8(folder/"weapon-icons.lock").c_str(),O_RDWR|O_CREAT|O_CLOEXEC,0644)};
-        if (lock.fd<0) return;
-        bool held=false;
-        for (int i=0;i<185000/50 && !(held=flock(lock.fd,LOCK_EX|LOCK_NB)==0);i++) SDL_Delay(50);
-        if (held) {
-            if (readCache(cache) || (generate(cache,rom) && readCache(cache))) cacheStatus="Ready - prepared locally from your ROM";
-            else cacheStatus="Weapon names (preparation skipped or failed; retry next launch)";
+        /* GE_ICON_CACHE_FORCE prepares in the foreground despite a scripted
+         * run; GE_ICON_CACHE_BACKGROUND in the background, as a player's. */
+        const bool forced=SDL_getenv("GE_ICON_CACHE_FORCE")!=nullptr;
+        if (diagnostic && !forced && !SDL_getenv("GE_ICON_CACHE_BACKGROUND")) return;
+#if defined(_WIN32) || defined(__linux__)
+        SDL_AtomicSet(&cacheState,kPreparing);
+        if (forced) {
+            /* Harnesses (the review gallery) need the cache before their
+             * short run ends: prepare in the foreground. */
+            PortModalScope modal;
+            SDL_AtomicSet(&cacheState,prepare(folder,cache,rom));
+            portIconCacheLatch();
+        } else {
+            auto *job=new Preparation{folder,cache,rom};
+            SDL_Thread *thread=SDL_CreateThread(prepareInBackground,"icon-cache",job);
+            if (thread) SDL_DetachThread(thread);
+            else { delete job; SDL_AtomicSet(&cacheState,kFailed); }
         }
 #else
-        cacheStatus="Weapon names (native preparation currently available on Windows and Linux)";
+        SDL_AtomicSet(&cacheState,kUnsupported);
 #endif
     } catch (const std::exception &error) {
-        cacheStatus="Weapon names (cache unavailable; game remains playable)";
+        SDL_AtomicSet(&cacheState,kUnavailable);
         portConLogf("ge: icons: %s\n",error.what());
     }
-    portConLogf("ge: icons: %s\n",cacheStatus.c_str());
+    portConLogf("ge: icons: %s\n",portIconCacheStatus());
 }

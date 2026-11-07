@@ -45,7 +45,7 @@ extern void *memmove(void *dst, const void *src, size_t size);
 #define HUD_TOAST_FADE 18.0f /* 300 ms */
 #define HUD_PI 3.14159265358979323846f
 static const char *const phKeys[] = { "hit_markers", "damage_indicators", "objective_notifications", "weapon_hud", "weapon_hud_icons", "always_health" };
-static s32 phOptions[] = { 1, 1, 1, 1, 0, 1 };
+static s32 phOptions[] = { 1, 1, 1, 1, 1, 1 };
 #define HUD_OPTIONS (sizeof(phOptions) / sizeof(phOptions[0]))
 typedef struct { f32 time, bearing; s32 directional; } HudDamage;
 typedef struct { s32 index, letter, status; char text[192]; } HudToast;
@@ -89,6 +89,9 @@ s32 portHudOptionSet(const char *key, s32 value)
 
 void portHudReset(s32 player)
 {
+    /* Mission start (and respawn): icons prepared in the background since
+     * launch take over from names from here on. */
+    portIconCacheLatch();
     if (player >= 0 && player < 4) memset(&phState[player], 0, sizeof(phState[player]));
 }
 

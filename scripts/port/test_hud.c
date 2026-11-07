@@ -10,7 +10,9 @@
 #include "port_icon_decode.h"
 
 static s32 iconFixtureReady = 1;
+static s32 iconLatches;
 s32 portIconCacheReady(void) { return iconFixtureReady; }
+void portIconCacheLatch(void) { iconLatches++; }
 s32 portIconAvailable(s32 icon) { return iconFixtureReady && icon >= 0 && icon < PORT_ICON_COUNT && portIconSlotStored(icon); }
 static struct player testPlayer;
 struct player *g_CurrentPlayer = &testPlayer;
@@ -353,12 +355,17 @@ int main(void)
         assert(portHudMissionTargetColor(999999, 0) == 0xffffffff);
     }
     for (i = 0; i < 4; i++) assert(portHudOptionGet(phKeys[i], &value) && value == 1);
+    assert(portHudOptionGet("weapon_hud_icons", &value) && value == 1);  /* icons by default */
+    assert(portHudOptionSet("weapon_hud_icons", 0));
+    assert(portHudOptionGet("weapon_hud_icons", &value) && value == 0);
+    {   /* changing presentation does not depend on stage state; a mission
+         * start latches a cache prepared in the background meanwhile */
+        const s32 latches = iconLatches;
+        portHudReset(0);
+        assert(iconLatches == latches + 1);
+    }
     assert(portHudOptionGet("weapon_hud_icons", &value) && value == 0);
     assert(portHudOptionSet("weapon_hud_icons", 1));
-    assert(portHudOptionGet("weapon_hud_icons", &value) && value == 1);
-    portHudReset(0); /* changing presentation does not depend on stage state */
-    assert(portHudOptionGet("weapon_hud_icons", &value) && value == 1);
-    assert(portHudOptionSet("weapon_hud_icons", 0));
     assert(!portHudOptionGet("not_a_setting", &value));
     assert(!portHudOptionSet("not_a_setting", 0));
     portHudHit(-1, 1); portHudDamage(4, 1, 0);

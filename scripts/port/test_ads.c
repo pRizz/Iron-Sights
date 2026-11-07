@@ -15,6 +15,7 @@ extern void *memset(void *dst, int value, size_t size);
 
 static s32 iconFixtureReady = 1;
 s32 portIconCacheReady(void) { return iconFixtureReady; }
+void portIconCacheLatch(void) {}
 s32 portIconAvailable(s32 icon) { return iconFixtureReady && icon >= 0 && icon < 38 && icon != 23 && icon != 30; }
 static struct player players[4];
 struct player *g_CurrentPlayer;
@@ -249,10 +250,10 @@ int main(void)
     {
         const s32 opt = portOptFind("weapon_hud_icons");
         assert(opt >= 0 && portOptAvailable(opt) && !portOptIsToggle(opt));
-        assert(portOptGet(opt) == 0);
-        portOptStep(opt, 1);
-        assert(portOptGet(opt) == 1 && savedHud[4] == 1);
-        assert(portJoyPortSetOption("weapon_hud_icons", "0") && portOptGet(opt) == 0);
+        assert(portOptGet(opt) == 1);  /* icons by default */
+        portOptStep(opt, -1);
+        assert(portOptGet(opt) == 0 && savedHud[4] == 0);
+        assert(portJoyPortSetOption("weapon_hud_icons", "1") && portOptGet(opt) == 1);
     }
     {
         const s32 opt = portOptFind("always_health");

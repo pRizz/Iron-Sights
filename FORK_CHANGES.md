@@ -3825,7 +3825,7 @@ aiming, menu cursors and split-screen layouts.
 
 **Status:** Implemented.
 
-Added **Gameplay > Iron Sights > HUD Additions > Weapon Strip Style: Text / Icons** (`weapon_hud_icons`),
+Added **Gameplay > Iron Sights > HUD Additions > Weapon Strip Style: Text / Icons** (`weapon_hud_icons`; Icons by default since 2026-11-07, FORK-019),
 with Text as the default. Icon mode now uses 35 full-color, transparent
 512 x 160 renders of actual weapon models, retaining original materials and
 separate silenced/gold/silver appearances. Unarmed uses the hand/forearm model: six extra wardrobe variants match the
@@ -4657,7 +4657,8 @@ copy of the current game's renderer. First launch with a validated ROM renders
 all 35 weapon/wardrobe images at 2048x1536, checks exact repeated black/white
 pixels, recovers transparency and downsamples with premultiplied area sampling
 to 512x160 RGBA. Players need no Python, compiler, admin rights or downloads.
-A progress window allows Esc/close to skip and continue with names. Scoped
+(Since 2026-11-07 preparation runs in the background; see below. Before,
+a progress window allowed Esc/close to skip and continue with names.) Scoped
 intentional-wait tracking prevents the Windows hang watchdog from killing a
 healthy preparation that exceeds its normal startup grace. The helper
 uses neutral settings and no player campaign files, references the ROM without
@@ -4719,6 +4720,40 @@ state. This prevents the pistol depth-layer restoration from changing icon
 occlusion. A fresh 35-image preparation after the wrist skin-mapping fix matched
 the preceding version-6 cache byte-for-byte; no cache version change is needed.
 
+**Background preparation (2026-11-07).** A launch without a cache no longer
+waits: `portIconCacheInit` starts an SDL thread that takes the cache lock,
+removes `worker-*` folders a launch that quit mid-preparation left behind,
+runs the worker and reads the result, while the game boots. The finished
+cache is published with an atomic flag, and the HUD latches it at a mission
+start (`portIconCacheLatch`, called from `portHudReset`, which runs for every
+player at stage start and on respawn): `portIconAvailable` and
+`portIconCacheReady` answer from the latch, so a mission started before the
+icons were ready shows names throughout, and icons never appear mid-mission.
+The `icons` array is written only before the flag is set and is never
+destroyed, since a quitting game may run static destructors while the thread
+still writes it. The worker runs below normal priority and dies with the
+game: on Windows a kill-on-close job object (created running, then assigned:
+a suspended child orphaned by a game quitting in between stayed suspended
+forever in testing), on Linux `PR_SET_PDEATHSIG` from the waiting thread
+plus `nice(10)`. The progress window and its Esc skip are gone; About reads
+`Preparing in the background (weapon names until ready)`, then `Ready`
+(with "shown from the next mission" until a mission latches it).
+`GE_ICON_CACHE_FORCE=1` keeps foreground preparation for harnesses such as
+the review gallery; `GE_ICON_CACHE_BACKGROUND=1` lets a scripted run prepare
+in the background. Weapon Strip Style now defaults to **Icons**
+(`weapon_hud_icons=1`, FORK-009); existing settings files keep their value.
+Checks: `test_hud.sh` (the new default, `portHudReset` latching) and
+`test_ads.sh` (the option row's default) pass. Windows, fresh cache folders,
+no `weapon_hud_icons` line: a Dam mission launched after about 15 s showed
+icons; one launched at once kept names for the whole mission although the
+cache finished early in it; a game quitting about 4 s in left no worker
+process, and the next launch removed its `worker-*` folder and prepared the
+cache. Slow-frame logs of a 900-frame start were alike with and without
+background preparation (one frame over 30 ms each; the worst, 55 ms, in a
+control run). The review gallery's forced preparation still works. Linux
+(Docker, Xvfb, software GL): background preparation finished in 18 s, a
+quick quit left no worker, and the next launch cleared its folder.
+
 **Faster preparation (2026-11-07).** A first launch's icon preparation took
 about 27 s of worker time (about 31 s with the game's own start). Measured
 on the audited laptop, it was 38 images x 32 frames at the worker's 60 fps
@@ -4764,9 +4799,9 @@ cache whose 39 slots decode to correct renders. A forced first launch there
 reached the worker and lock as designed but timed out for the same reason.
 On Windows a forced isolated generation still wrote a full cache in 31 s.
 Not checked: a full first launch on Linux hardware GL. A per-user `flock` on `weapon-icons.lock`
-replaces the Windows named mutex (released if its holder dies); Esc, closing
-the progress window or 180 s send SIGTERM, then SIGKILL. The worker settings,
-replay, progress window and log copy are now shared by both branches
+replaces the Windows named mutex (released if its holder dies); 180 s send
+SIGTERM, then SIGKILL. The worker settings,
+replay and log copy are now shared by both branches
 (`kWorkerIni`, `kWorkerReplay`, `kWorkerEnv`, `showProgress`, `keepLog`).
 
 **Sources:** [cache](port/fast3d/weapon_cache.cpp),

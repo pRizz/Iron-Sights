@@ -3,6 +3,7 @@
 void portIconCacheInit(const char *rom, unsigned int fingerprint) {}
 int portIconAvailable(int icon) { return 0; }
 int portIconCacheReady(void) { return 0; }
+void portIconCacheLatch(void) {}
 const unsigned char *portIconPixels(int icon) { return 0; }
 const char *portIconCacheStatus(void) { return "Unavailable in a headless build"; }
 int portIconWorkerEnabled(void) { return 0; }
