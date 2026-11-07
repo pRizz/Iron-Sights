@@ -34,6 +34,7 @@ constexpr unsigned kCheckFrames = 300;  /* look for an added or removed pack abo
 
 std::atomic<int> g_requested{1};
 std::atomic<int> g_found{-1};           /* keys found by the last search; -1 before one */
+std::atomic<int> g_custom{-1};          /* of those, keys from custom packs */
 std::string g_root;
 int g_current = -1;
 unsigned g_frames = 0;
@@ -198,6 +199,12 @@ bool downloaded(const std::filesystem::path &file) {
 }  // namespace
 
 extern "C" void portTexturePackRoot(const char *root) { g_root = root ? root : ""; }
+extern "C" int portTexturePackCustomCount(void) { return g_custom.load(); }
+extern "C" const char *portTexturePackFolder(void) {
+    std::error_code error;
+    if (!g_root.empty()) std::filesystem::create_directories(std::filesystem::path(g_root), error);
+    return g_root.c_str();
+}
 extern "C" void portTexturePackSet(int mode) { g_requested.store(mode ? 1 : 0); }
 extern "C" int portTexturePackGet(void) { return g_requested.load(); }
 extern "C" const char *portTexturePackValueText(const char *text) {
@@ -216,6 +223,7 @@ bool beginFrame() {
     g_signature = now;
     g_pack.clear();
     g_reported.clear();
+    g_custom.store(-1);
     g_generation++;
     {
         Workers &w = workers();
@@ -227,6 +235,7 @@ bool beginFrame() {
     if (mode && !g_root.empty()) {
         const size_t found = g_pack.index(std::filesystem::path(g_root), scope(), downloaded);
         g_found.store(int(found));
+        g_custom.store(int(g_pack.custom()));
         if (found) {
             std::fprintf(stderr, "hd: %zu textures in %s (%zu from custom packs, %zu from the HD download)\n",
                          found, g_root.c_str(), g_pack.custom(), found - g_pack.custom());

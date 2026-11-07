@@ -37,6 +37,7 @@ for campaign environment textures and the HUD's ammo icons. Any other PNG pack
 there (a ZIP or a folder, such as the repository's own Download ZIP or a pack
 you are making) is a custom pack, used for every texture it names, ahead of
 the download; the weapon and hands in your view keep their original look.
+System > Custom Texture Packs explains it and opens the folder.
 
 No ROM or extracted game data is included. Never copy Data/CrashReports into
 a bug report. Keep Data and midas.ini when updating. Suspend states require

@@ -4083,7 +4083,7 @@ enum { PORT_SHEET_GAMEPLAY, PORT_SHEET_CONTROL, PORT_SHEET_DISPLAY, PORT_SHEET_C
        PORT_SHEET_IS_SYSTEM,
        /* ENHANCED FONTS (FORK-052) and HD TEXTURES (FORK-053): downloads the
         * player starts, opened from System (port_download_page.h) */
-       PORT_SHEET_IS_FONTS, PORT_SHEET_IS_HDTEX, PORT_SHEET_COUNT };
+       PORT_SHEET_IS_FONTS, PORT_SHEET_IS_HDTEX, PORT_SHEET_IS_CUSTOMTEX, PORT_SHEET_COUNT };
 /* The Options folder's rows, top to bottom, at the Files menu's own row
  * coordinates (y 0xDC, pitch 0x20). Each is a submenu:
  *
@@ -4113,7 +4113,7 @@ static const char *const port_sheet_title[PORT_SHEET_COUNT] = { "GAMEPLAY\n", "C
         "MOUSE AND KEYBOARD\n", "CONTROLLER\n", "GENERAL CONTROL OPTIONS\n", "PORT OPTIONS\n",
         "GAMEPLAY OPTIONS\n", "CLASSIC\n",   /* GAMEPLAY OPTIONS is not drawn: the two-column sheet has no heading */
         "IRON SIGHTS\n", "AIMING AND MOVEMENT\n", "COMBAT FEEDBACK\n", "HUD ADDITIONS\n", "SYSTEM\n",
-        "ENHANCED FONTS\n", "HD TEXTURES\n" };
+        "ENHANCED FONTS\n", "HD TEXTURES\n", "CUSTOM TEXTURE PACKS\n" };
 static s32 port_options_row_highlighted = -1; /* row under the cursor, -1 = on a tab */
 /* The folder's hubs: GAMEPLAY and AUDIO VISUAL reuse this folder screen to list
  * their pages, numbered; -1 means the folder's own three rows. A page's
@@ -4152,6 +4152,7 @@ s32 portMenuHarnessSheet(char first, char second)
                         : (second == 'h') ? PORT_SHEET_IS_HUD : (second == 's') ? PORT_SHEET_IS_SYSTEM
                         : (second == 'e') ? PORT_SHEET_IS_FONTS   /* GE_MENU=zenhanced */
                         : (second == 't') ? PORT_SHEET_IS_HDTEX   /* GE_MENU=ztextures */
+                        : (second == 'c') ? PORT_SHEET_IS_CUSTOMTEX   /* GE_MENU=zcustom */
                         : PORT_SHEET_IRONSIGHTS;
     }
     else if (first == 'd') port_sheet_kind = PORT_SHEET_DISPLAY;
@@ -4805,6 +4806,7 @@ static const struct PortSheetRow port_sheet_rows_is_system[] = {
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     { SHROW_OPT, "texture_pack" },  /* FORK-053: an HD pack, downloaded or copied in */
     { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_HDTEX },
+    { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_CUSTOMTEX },   /* how to add one's own pack */
 #endif
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     { SHROW_OPT, "crash_reporting" },
@@ -4844,7 +4846,11 @@ static s32 portOptionsExtraRows(s32 pages[2])
 static const struct PortDownloadPage *portSheetDownloadPage(s32 kind)
 {
     return (kind == PORT_SHEET_IS_FONTS) ? &portEnhancedFontsPage
-         : (kind == PORT_SHEET_IS_HDTEX) ? &portHdTexturesPage : NULL;
+         : (kind == PORT_SHEET_IS_HDTEX) ? &portHdTexturesPage
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+         : (kind == PORT_SHEET_IS_CUSTOMTEX) ? &portCustomTexturesPage
+#endif
+         : NULL;
 }
 
 /** The Options folder screen's rows: its own three, or a hub's pages. */
@@ -4905,6 +4911,7 @@ static const char *portSheetPageLabel(s32 kind)
         case PORT_SHEET_IS_SYSTEM:   return "System\n";
         case PORT_SHEET_IS_FONTS:    return "Enhanced Fonts\n";
         case PORT_SHEET_IS_HDTEX:    return "HD Textures\n";
+        case PORT_SHEET_IS_CUSTOMTEX: return "Custom Texture Packs\n";
         case PORT_SHEET_GRAPHICS: return "Graphics\n";
         case PORT_SHEET_MOUSEKB:    return "Mouse and Keyboard\n";
         case PORT_SHEET_PAD:        return "Controller\n";
@@ -5431,6 +5438,10 @@ static void portSheetBuild(s32 kind)
         }
         for (k = 0; k < 2 && port_sheet_rows < PORT_SHEET_ROWS_MAX; k++)
         {
+            if (dl->action_label(k) == NULL)
+            {   /* a help page has no Remove */
+                continue;
+            }
             if (k > 0 && port_sheet_rows < PORT_SHEET_ROWS_MAX - 1)
             {   /* and between them, so the padded boxes do not touch */
                 port_sheet_row_kind[port_sheet_rows] = SHROW_INFO;
@@ -7819,6 +7830,7 @@ static const char *portSheetHelpKey(s32 row)
                 case PORT_SHEET_IS_SYSTEM:   return "@page_is_system";
                 case PORT_SHEET_IS_FONTS:    return "@page_is_fonts";
                 case PORT_SHEET_IS_HDTEX:    return "@page_is_hdtex";
+                case PORT_SHEET_IS_CUSTOMTEX: return "@page_is_customtex";
             }
             break;
     }

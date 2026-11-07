@@ -170,6 +170,8 @@ static const struct PortOptHelp sHelp[] = {
     { "@page_is_system",    "Build info, fonts and crash reports." },
     { "@page_is_fonts",     "Get or remove the community Enhanced fonts." },
     { "@page_is_hdtex",     "Get or remove intermissionfb's GoldenEye 007 HD textures." },
+    { "@page_is_customtex", "How to add texture packs of your own, and how many textures were found." },
+    { "@custom_textures_open", "Opens Data/TexturePacks in your file manager." },
     { "@page_video",        "Display mode, resolution and picture quality." },
     { "@page_audio",        "Volume and sound options." },
     { "@page_classic",      "Choose which settings Classic Mode overrides." },

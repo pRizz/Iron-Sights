@@ -14,6 +14,11 @@ int portTexturePackGet(void);
  * where the HD Textures page can download one, "HD (not found)" elsewhere;
  * otherwise text. */
 const char *portTexturePackValueText(const char *text);
+/* Textures the last search took from custom packs (anything in the folder
+ * but the HD Textures download); -1 before a search or with Original. */
+int portTexturePackCustomCount(void);
+/* Creates the pack folder if needed and returns its path, for Open Folder. */
+const char *portTexturePackFolder(void);
 #ifdef __cplusplus
 }
 #endif

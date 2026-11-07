@@ -2,8 +2,13 @@
  * (front.c) and the watch (port_watchpages.c). The download itself is
  * port/fast3d/hd_textures_download.cpp. */
 #include <ultra64.h>
+#include <stdio.h>
+#include <SDL.h>
 #include "port_hd_download.h"
 #include "port_download_page.h"
+
+extern int portTexturePackCustomCount(void);
+extern const char *portTexturePackFolder(void);
 
 extern s32 portOptFind(const char *key);
 extern s32 portOptGet(s32 i);
@@ -90,6 +95,110 @@ int portHdTexturesOffered(void)
 
     return state != PORT_HDTEX_INSTALLED && state != PORT_HDTEX_UNSUPPORTED;
 }
+
+/* CUSTOM TEXTURE PACKS: how to add a pack of one's own, how many textures
+ * the game found in them, and a button that opens the folder. Lines fit the
+ * watch face (about 29 characters). */
+static const char *customInfoLine(int i)
+{
+    static char status[48];
+    static const char *const lines[] = {
+        "Put your own packs in\n",
+        "Data/TexturePacks too:\n",
+        "ZIPs or folders of\n",
+        "GOLDENEYE#...png files.\n",
+        "They win over HD Textures,\n",
+        "and saved files show soon.\n",
+        "Gun and hands stay original.\n",
+    };
+    const int fixed = (int) (sizeof(lines) / sizeof(lines[0]));
+    int count;
+
+    if (i >= 0 && i < fixed)
+    {
+        return lines[i];
+    }
+    if (i != fixed)
+    {
+        return NULL;
+    }
+    if (!hdInUse())
+    {
+        return "Texture Pack is Original.\n";
+    }
+    count = portTexturePackCustomCount();
+    if (count < 0)
+    {
+        return "Looking for packs...\n";
+    }
+    if (count == 0)
+    {
+        return "No custom pack found.\n";
+    }
+    snprintf(status, sizeof(status), "Custom packs: %d textures\n", count);
+    return status;
+}
+
+static const char *customActionLabel(int action)
+{
+    return action == 0 ? "Open Folder\n" : NULL;
+}
+
+/** Opens Data/TexturePacks (created if missing) in the system's file manager. */
+static void customOpenFolder(void)
+{
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    char url[1100];
+    const char *path = portTexturePackFolder();
+    size_t n = 0;
+    const char *c;
+
+    if (path == NULL || path[0] == '\0')
+    {
+        return;
+    }
+    n = (size_t) snprintf(url, sizeof(url), (path[0] == '/') ? "file://" : "file:///");
+    for (c = path; *c != '\0' && n + 4 < sizeof(url); c++)
+    {   /* forward slashes, and spaces and other awkward bytes escaped */
+        const unsigned char ch = (unsigned char) *c;
+
+        if (ch == '\\')
+        {
+            url[n++] = '/';
+        }
+        else if (ch <= ' ' || ch == '%' || ch == '#' || ch == '?' || ch >= 0x7F)
+        {
+            n += (size_t) snprintf(url + n, sizeof(url) - n, "%%%02X", ch);
+        }
+        else
+        {
+            url[n++] = (char) ch;
+        }
+    }
+    url[n] = '\0';
+    SDL_OpenURL(url);
+#endif
+}
+
+static int customHasFiles(void)
+{
+    return 0;
+}
+
+static void customRemove(void)
+{
+}
+
+const struct PortDownloadPage portCustomTexturesPage = {
+    customInfoLine,
+    customActionLabel,
+    customOpenFolder,
+    customHasFiles,
+    customRemove,
+    NULL,
+    "@custom_textures_open",
+    NULL,
+};
 
 const struct PortDownloadPage portHdTexturesPage = {
     portHdTexturesInfoLine,

@@ -185,6 +185,7 @@ static const struct PortWatchRowDef sIsSystem[] = {
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     { PWROW_OPT,       "texture_pack",     NULL, 0, 0 },
     { PWROW_SUBSCREEN, NULL, "HD Textures\n", PORTWATCH_IS_HDTEX, 0 },
+    { PWROW_SUBSCREEN, NULL, "Custom Texture Packs\n", PORTWATCH_IS_CUSTOMTEX, 0 },
 #endif
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     { PWROW_OPT,       "crash_reporting",  NULL, 0, 0 },
@@ -200,10 +201,12 @@ static const struct PortWatchRowDef sIsSystem[] = {
  * Remove asks twice, as Reset to Default does. */
 #define PWHINT_FONTS 1000
 #define PWHINT_HDTEX 2000
+#define PWHINT_CUSTOMTEX 3000   /* the Custom Texture Packs help page: text and Open Folder */
 #define PWACT_FONTS 110
 #define PWACT_FONTS_REMOVE 111
 #define PWACT_HDTEX 112
 #define PWACT_HDTEX_REMOVE 113
+#define PWACT_CUSTOMTEX 114
 static const struct PortWatchRowDef sIsFonts[] = {
     { PWROW_HINT,   NULL, NULL, PWHINT_FONTS + 0, 0 },
     { PWROW_HINT,   NULL, NULL, PWHINT_FONTS + 1, 0 },
@@ -228,11 +231,26 @@ static const struct PortWatchRowDef sIsHdTex[] = {
     { PWROW_ACTION, NULL, NULL, PWACT_HDTEX_REMOVE, 0 },
     { PWROW_BACK,   NULL, "Back\n", 0, 0 },
 };
+static const struct PortWatchRowDef sIsCustomTex[] = {
+    { PWROW_HINT,   NULL, NULL, PWHINT_CUSTOMTEX + 0, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_CUSTOMTEX + 1, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_CUSTOMTEX + 2, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_CUSTOMTEX + 3, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_CUSTOMTEX + 4, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_CUSTOMTEX + 5, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_CUSTOMTEX + 6, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_CUSTOMTEX + 7, 0 },
+    { PWROW_ACTION, NULL, NULL, PWACT_CUSTOMTEX, 0 },
+    { PWROW_BACK,   NULL, "Back\n", 0, 0 },
+};
 static s32 sDlRemoveArmed;
 
 /* The download page a hint row (and its line) or an action row belongs to. */
 static const struct PortDownloadPage *hintPage(s32 arg, s32 *line)
 {
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    if (arg >= PWHINT_CUSTOMTEX) { *line = arg - PWHINT_CUSTOMTEX; return &portCustomTexturesPage; }
+#endif
     if (arg >= PWHINT_HDTEX) { *line = arg - PWHINT_HDTEX; return &portHdTexturesPage; }
     *line = arg - PWHINT_FONTS;
     return &portEnhancedFontsPage;
@@ -240,7 +258,11 @@ static const struct PortDownloadPage *hintPage(s32 arg, s32 *line)
 static const struct PortDownloadPage *actionPage(s32 arg)
 {
     return (arg == PWACT_FONTS || arg == PWACT_FONTS_REMOVE) ? &portEnhancedFontsPage
-         : (arg == PWACT_HDTEX || arg == PWACT_HDTEX_REMOVE) ? &portHdTexturesPage : NULL;
+         : (arg == PWACT_HDTEX || arg == PWACT_HDTEX_REMOVE) ? &portHdTexturesPage
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+         : (arg == PWACT_CUSTOMTEX) ? &portCustomTexturesPage
+#endif
+         : NULL;
 }
 
 /* DISPLAY's pages */
@@ -829,6 +851,7 @@ static const struct PortWatchPageDef {
     [PORTWATCH_IS_SYSTEM]   = PWPAGE(sIsSystem),
     [PORTWATCH_IS_FONTS]    = PWPAGE(sIsFonts),
     [PORTWATCH_IS_HDTEX]    = PWPAGE(sIsHdTex),
+    [PORTWATCH_IS_CUSTOMTEX] = PWPAGE(sIsCustomTex),
     /* PORTWATCH_CONTROLLER, _MORE and _BINDS are dynamic (dynBuild): { NULL, 0 } */
     /* PORTWATCH_CTLGENERAL too (the raphnet's gadget switch) */
 #undef PWPAGE
@@ -1057,7 +1080,8 @@ static const char *rowLabelShared(s32 page, s32 row)
     }
     if (d->kind == PWROW_ACTION && actionPage(d->arg) != NULL)
     {
-        return actionPage(d->arg)->action_label((d->arg == PWACT_FONTS || d->arg == PWACT_HDTEX) ? 0 : 1);
+        return actionPage(d->arg)->action_label((d->arg == PWACT_FONTS || d->arg == PWACT_HDTEX
+                                                 || d->arg == PWACT_CUSTOMTEX) ? 0 : 1);
     }
     if (d->kind == PWROW_ACTION)
     {
@@ -1213,6 +1237,7 @@ s32 portWatchParentPage(s32 page)
             return PORTWATCH_IRONSIGHTS;
         case PORTWATCH_IS_FONTS:
         case PORTWATCH_IS_HDTEX:
+        case PORTWATCH_IS_CUSTOMTEX:
             return PORTWATCH_IS_SYSTEM;
         case PORTWATCH_VIDEO:
         case PORTWATCH_AUDIO:
@@ -1932,7 +1957,7 @@ s32 portWatchRowAction(s32 page, s32 row)
         extern void portStateMenuOpen(void);
         portStateMenuOpen(); return 1;
     }
-    if (d->arg == PWACT_FONTS || d->arg == PWACT_HDTEX) {
+    if (d->arg == PWACT_FONTS || d->arg == PWACT_HDTEX || d->arg == PWACT_CUSTOMTEX) {
         sDlRemoveArmed = 0;
         actionPage(d->arg)->primary_action();
         return 1;

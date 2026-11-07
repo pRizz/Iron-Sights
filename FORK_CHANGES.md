@@ -124,6 +124,24 @@ FORK-033's ini values `hd`, `4k` and `2` read as HD.
   discards outstanding work. The download's images keep the immediate read,
   so its reviewed look is unchanged. This matches the Original/HD choice:
   there is still no 4K tier.
+- **Custom Texture Packs page (2026-11-06).** Gameplay > Iron Sights >
+  System > **Custom Texture Packs**, after HD Textures in the Options folder
+  and on the watch (native builds only, like HD Textures), explains in seven
+  short lines where a player's own pack goes, what counts as one, that it wins
+  over the download and updates within seconds, and that the gun and hands
+  stay original; a status line then reads `Custom packs: N textures`, `No
+  custom pack found.`, `Looking for packs...` (before the first search) or
+  `Texture Pack is Original.`, from the index's custom count
+  (`portTexturePackCustomCount`). **Open Folder** creates `Data/TexturePacks`
+  if needed (`portTexturePackFolder`) and opens it with `SDL_OpenURL` as a
+  `file://` URL (backslashes turned to slashes, spaces and other awkward bytes
+  escaped), as the About page opens links. The page is a `PortDownloadPage`
+  without a Remove (action 1 is NULL, so the folder skips that button); the
+  watch's rows are `sIsCustomTex` (`PWHINT_CUSTOMTEX` 3000, `PWACT_CUSTOMTEX`
+  114), and its page sits before the Control tab's, so their numbers do not
+  move. `GE_MENU=zcustom` opens the folder page. Input: the description and
+  status are text rows, and Open Folder is an action row that every input
+  confirms as on the HD Textures page; Back leaves as on every page.
 - **Tracing.** `GE_HD_TRACE=1` logs each texture once: `match` (the download),
   `custom` (requested from a custom pack), `miss` (no pack has it), and `kept`
   for every first-person weapon or hand texture, naming the pack file that
@@ -222,6 +240,7 @@ and its [C header](port/include/port_hd_download.h), [menu actions](port/src/por
 [renderer](port/fast3d/gfx_pc.cpp), [build](CMakeLists.txt), [setting](port/src/video.c),
 [options](port/src/port_options.c), [frontend row](src/game/front.c),
 [watch row](port/src/port_watchpages.c), [help](port/src/port_option_help.c),
+[watch page list](port/include/port_watchpages.h),
 [headless fallback](port/src/libultra_shim.c), [ini reference](tools/midas_ini_help.txt),
 [notices](tools/THIRD_PARTY_NOTICES.txt), player guides ([Windows](scripts/port/release/START-HERE.txt),
 [Linux](scripts/port/linux/START-HERE.txt), [Data](scripts/port/release/DATA-README.txt)),
@@ -271,7 +290,13 @@ from the download. `test_wardrobe.sh`, `test_ads.sh`, `test_hud.sh`,
 `test_enhanced_fonts.sh` and `test_upstream_merge.sh` pass, and the hand gallery
 regenerated with zero changed image cells. Not run for custom
 packs: effects, explosions and menus in play, other levels, Linux, and a long
-session.
+session. Custom Texture Packs page: Windows build; captures of the folder page
+(reading `Custom packs: 69 textures` with a test pack) and the watch page
+(`No custom pack found.` without one); the first folder capture caught a crash
+from a missing sheet title, fixed by adding it to `port_sheet_title`;
+`test_hd_textures.sh`, `test_enhanced_fonts.sh` and `test_web_menu_pointer.sh`
+pass, and the hand gallery regenerated with zero changed image cells. Not run:
+pressing Open Folder (it would open a file manager on the desktop) and Linux.
 
 ### FORK-052 — Font styles plan
 
