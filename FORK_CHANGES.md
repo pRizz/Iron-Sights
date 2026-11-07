@@ -3757,9 +3757,34 @@ Icon mode falls back to names when its native cache is unavailable.
 ROM-derived output packs remain ignored. FORK-022 later adds a narrow exception
 for final rendered review PNGs, not caches or extracted assets.
 
+**Icon antialiasing (2026-11-07).** The strip draws each 512x160 icon about
+3.4 times smaller at 1080p (151 x 44 px; a pair's icons about 110 x 35 px).
+Plain bilinear sampling without mips read only 4 of the ~11 texels under each
+pixel, so edges stair-stepped and thin parts (Klobb stock, KF7 magazine) broke
+up. The sampler latch now treats a native HUD image (`tex_flags & 0x80000000`,
+used only by these icons) like an Enhanced glyph under Text Antialiasing:
+`ge_mip_active` 3 generates the GL mip chain and minifies with
+`GL_LINEAR_MIPMAP_LINEAR`, with a `GL_TEXTURE_LOD_BIAS` of -0.5 so the chosen
+level is half a step sharper than plain trilinear (desktop GL only; GLES has no
+bias, and icons are prepared only on Windows today). The bias is tracked per
+texture object and written back to 0 when a recycled name serves another
+texture. When the cache loads, transparent texels take their nearest visible
+neighbours' colour for 32 rings (`bleedEdges`), so filtering and mip averaging no
+longer pull black into silver and gold edges; alpha, visible texels and the cache
+file format are unchanged, so no regeneration is needed. Always on, with no
+setting. The level was chosen by the user from review sheets of five draw-side
+levels (none, mip bias -1, -0.5, full trilinear, exact area average) at 1080p,
+paired-icon and 1440p sizes. Capture settings were compared too: 2048 and 4096 px
+captures with no, 4x and 8x MSAA changed the stored icons' edges by about 2/255
+on average, and the old HUD draw discarded most of even that (56-60% of edge
+pixels partial in every variant, against ~100% with mips), so capture settings
+stay as they were. Review sheets and captures are ROM-derived and stayed local
+(`build_win/icon-aa`).
+
 **Sources:** [generator](scripts/port/generate_weapon_icons.py),
 [export harness](port/src/port_weapon_export.c), [model drawing](src/game/gunfire.c),
 [capture backend](port/fast3d/gfx_sdl2.cpp), [image renderer](port/fast3d/gfx_pc.cpp),
+[icon sampler](port/fast3d/gfx_opengl.cpp), [icon cache](port/fast3d/weapon_cache.cpp),
 [packet decoder](port/include/port_icon_decode.h),
 [embedded pack](port/src/port_weapon_images.c), [build wiring](CMakeLists.txt).
 **Regeneration guide:** [weapon_icons.md](scripts/port/weapon_icons.md).
@@ -3767,7 +3792,10 @@ for final rendered review PNGs, not caches or extracted assets.
 and coverage tests, solo/split-screen captures, Windows/Linux builds. Two full
 generation runs of the earlier 29-image pack matched all 33 output files
 byte-for-byte on the tested machine;
-cross-GPU byte identity is not assumed.
+cross-GPU byte identity is not assumed. Icon antialiasing: Windows build; matched
+1920x1080 in-game strip captures before and after (HUD audit with icons) show
+smooth edges and no dark fringe; HUD, ADS, wardrobe, Enhanced font and
+generator tests pass. Not checked: split-screen sizes in-game, and Linux.
 
 ### FORK-012 — Fork inventory maintenance rule
 

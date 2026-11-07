@@ -107,6 +107,21 @@ static void gl_set_has_mips(GLuint id, uint8_t v) {
 static bool gl_has_mips(GLuint id) {
     return id < gl_tex_has_mips.size() && gl_tex_has_mips[id] != 0;
 }
+/* FORK-011: which objects carry the weapon icons' LOD bias. Like anisotropy, it
+ * survives a recycled name, so it is written back to 0 for the next texture. */
+static std::vector<uint8_t> gl_tex_lod_biased;
+static void gl_set_lod_bias(GLuint id, bool biased) {
+#ifndef GL_TEXTURE_LOD_BIAS
+#define GL_TEXTURE_LOD_BIAS 0x8501
+#endif
+    if (id >= gl_tex_lod_biased.size()) {
+        if (!biased) return;
+        gl_tex_lod_biased.resize((size_t)id + 64, 0);
+    }
+    if (gl_tex_lod_biased[id] == (uint8_t)biased) return;
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, biased ? -0.5f : 0.0f);
+    gl_tex_lod_biased[id] = biased;
+}
 
 static void gfx_opengl_generate_mipmap(GLuint id) {
 #ifdef __EMSCRIPTEN__
@@ -1150,7 +1165,8 @@ static uint32_t gfx_cm_to_opengl(uint32_t val) {
 
 extern "C" int ge_sky_tri_active; /* gfx_pc: inside an RDP-triangle (sky/water) draw */
 extern "C" int ge_mip_active;     /* gfx_pc: this sampler serves a G_TL_LOD draw - minify through mips;
-                                    * 2 = an Enhanced font mask under Text Antialiasing (FORK-052) */
+                                    * 2 = an Enhanced font mask under Text Antialiasing (FORK-052);
+                                    * 3 = a weapon strip icon (FORK-011) */
 
 #ifdef __EMSCRIPTEN__
 extern "C" bool gfx_opengl_web_sampler_flags_changed(int tile, bool linear_filter, uint32_t cms, uint32_t cmt) {
@@ -1184,10 +1200,15 @@ static void gfx_opengl_set_sampler_parameters(int tile, bool linear_filter, uint
          * has to be written back or the old 2x-16x stays */
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.0f);
     }
-    if (ge_mip_active == 2) {
+    /* FORK-011: a weapon icon picks a mip half a level sharper than trilinear's
+     * choice, which kept its detail closest to an exact area average in review
+     * sheets. GLES has no LOD bias; icons there would use plain trilinear. */
+    gl_set_lod_bias(current_texture_ids[tile], ge_mip_active == 3 && !gl_es);
+    if (ge_mip_active == 2 || ge_mip_active == 3) {
         /* FORK-052 Text Antialiasing: an Enhanced font mask always minifies
          * through trilinear mips, whatever the 3D filter (3-point's taps then
-         * read already-averaged texels); magnification keeps that filter. */
+         * read already-averaged texels); magnification keeps that filter.
+         * FORK-011 weapon icons minify the same way. */
         const GLuint id = current_texture_ids[tile];
         if (!gl_has_mips(id)) {
             gfx_opengl_generate_mipmap(id);

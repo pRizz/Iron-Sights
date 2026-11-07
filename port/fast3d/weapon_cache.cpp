@@ -50,6 +50,45 @@ static bool writeFile(const fs::path &path, const Bytes &bytes)
 static void put32(Bytes &out, uint32_t n)
 { for (int i=0;i<4;i++) out.push_back((unsigned char)(n>>(8*i))); }
 
+/* Transparent texels take their nearest visible neighbours' colour, so the HUD's
+ * bilinear taps and mip averaging never pull black into a weapon's edge. Alpha
+ * and every visible texel are unchanged; the cache file keeps the recovered bytes. */
+static void bleedEdges(Bytes &rgba)
+{
+    const int w=PORT_ICON_WIDTH, h=PORT_ICON_HEIGHT;
+    /* 0 = transparent, 1 = queued for this ring, 2 = has a colour */
+    std::vector<unsigned char> state((size_t)w*h);
+    std::vector<int> ring, nextRing;
+    auto neighbours=[&](int i, auto &&visit) {
+        const int x=i%w, y=i/w;
+        if (x>0) visit(i-1);
+        if (x<w-1) visit(i+1);
+        if (y>0) visit(i-w);
+        if (y<h-1) visit(i+w);
+    };
+    auto queue=[&](std::vector<int> &into, int i) {
+        neighbours(i,[&](int n) { if (!state[n]) { state[n]=1; into.push_back(n); } });
+    };
+    for (int i=0;i<w*h;i++) if (rgba[(size_t)i*4+3]) state[i]=2;
+    for (int i=0;i<w*h;i++) if (state[i]==2) queue(ring,i);
+    /* 32 rings cover the mip levels a HUD-sized icon reaches. */
+    for (int pass=0;pass<32 && !ring.empty();pass++) {
+        for (int i : ring) {
+            int sum[3]={0,0,0}, count=0;
+            neighbours(i,[&](int n) {
+                if (state[n]!=2) return;
+                for (int c=0;c<3;c++) sum[c]+=rgba[(size_t)n*4+c];
+                count++;
+            });
+            for (int c=0;c<3;c++) rgba[(size_t)i*4+c]=(unsigned char)((sum[c]+count/2)/count);
+        }
+        for (int i : ring) state[i]=2;
+        nextRing.clear();
+        for (int i : ring) queue(nextRing,i);
+        ring.swap(nextRing);
+    }
+}
+
 static bool readCache(const fs::path &path)
 {
     auto bytes = readFile(path, PORT_ICON_COUNT*(PORT_ICON_BYTES+4)+32);
@@ -64,6 +103,7 @@ static bool readCache(const fs::path &path)
         decoded[i].assign(bytes.begin()+at,bytes.begin()+at+size); at += size;
     }
     if (at != bytes.size()) return false;
+    for (auto &image : decoded) if (!image.empty()) bleedEdges(image);
     icons.swap(decoded); ready = true;
     return true;
 }

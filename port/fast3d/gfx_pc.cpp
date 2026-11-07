@@ -4493,7 +4493,12 @@ ndcprobe_done:;
                  * sampled a few of its texels and strokes snapped to whole pixels. */
                 const bool text_aa = s_DrawingRect && gfx_text_aa && linear_filter
                                      && rendering_state.textures[i]->first.enhanced_glyph;
-                const bool mip_filter = text_aa || (!s_DrawingRect && !ge_sky_tri_active && gfx_mipmaps != 0
+                /* FORK-011: a 512x160 weapon icon is drawn a few times smaller in
+                 * the HUD strip; plain bilinear read 4 of the ~11 texels under each
+                 * pixel and stair-stepped its edges. */
+                const bool icon_aa = linear_filter
+                                     && (rdp.loaded_texture[rdp.texture_tile[tile].tmem].tex_flags & 0x80000000u);
+                const bool mip_filter = text_aa || icon_aa || (!s_DrawingRect && !ge_sky_tri_active && gfx_mipmaps != 0
                                         && (rdp.tex_lod || (gfx_mipmaps >= 2 && !texture_edge)));
                 { /* GE_XHAIRDBG=1: debug print of what decides a 2D sprite's
                    * filtering, logged only when it changes, to track down the
@@ -4555,7 +4560,7 @@ ndcprobe_done:;
                     mip_filter != rendering_state.textures[i]->second.mip_filter ||
                     cms != rendering_state.textures[i]->second.cms || cmt != rendering_state.textures[i]->second.cmt) {
                     gfx_flush();
-                    ge_mip_active = text_aa ? 2 : mip_filter ? 1 : 0;
+                    ge_mip_active = text_aa ? 2 : icon_aa ? 3 : mip_filter ? 1 : 0;
                     gfx_rapi->set_sampler_parameters(i, linear_filter, cms, cmt);
                     ge_mip_active = 0;
                     rendering_state.textures[i]->second.linear_filter = linear_filter;
