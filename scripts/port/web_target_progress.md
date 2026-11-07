@@ -979,6 +979,14 @@ raw fallback. Narrow toolbar bounds pass at 390 px; Chrome's separate real
 focus/Escape and cutscene-to-control regression passes. No native/render input
 changes are made; the existing gallery remains fresh.
 
+**2026-11-06 iOS background audio follow-up:** The owner reported game audio
+1–2 s behind every action on iPhone and iPad after backgrounding; only quitting
+the browser recovered it. FORK-041 now builds a new AudioContext and processor
+on the first gesture after the page was hidden or WebKit interrupted the
+context, and logs the old context's latency and queued frames. Unit tests and a
+local real-ROM Chrome hide/resume check pass, with audio continuing through the
+new context; physical iOS confirmation is pending.
+
 **Next action:** Preserve the published storage/deployment contracts and use
 the render-thread quality audit for future audio changes. Future
 macOS Safari/hardware-GPU/full-mission testing and optional enhancements require

@@ -1351,6 +1351,29 @@ SDL path still plays, with its old replay faults. Native buffer tests pass, and
 two-pass gallery regeneration changes zero image cells. These runs are not
 physical listening tests, and physical Safari and iOS remain experimental.
 
+**Background recovery (2026-11-06):** On iPhone and iPad, after the browser or
+Home Screen web app sat in the background, all game audio played 1–2 s behind
+every action until the browser was quit. A reused iOS context can come back with
+that much delay, and a reset of the queue cannot remove it, so the output now
+marks its context stale when the page is hidden, or when WebKit reports an
+`interrupted` context. The next keydown, mousedown, pointerup or touchend then
+disconnects the node, closes the context, and builds a new 22,050 Hz context and
+processor inside that gesture, which may start it at once. A processor load
+still pending for the old context is dropped. Until a gesture arrives, the old
+context keeps playing or draining on the wall clock as before. Each rebuild logs
+the old context's state, base and output latency, and its queued frames to the
+browser console, so a device trace can show where the delay was. The same path
+runs on desktop browsers, where the bug has not been seen; the rebuild adds a
+single short gap after the first input on return.
+**Background recovery validation:** Unit tests cover a rebuild after hiding, a
+plain gesture that keeps the context, a single rebuild after an interruption,
+and a processor load that the rebuild supersedes. A scratch real-ROM Chrome check
+of a local build hid the page in Dam for 3 s and then pressed Resume game. That
+click closed the old context and started a new running one; output peaked at
+0.24 and 0.18 afterward (0.19 before), with no underruns. The check simulated
+hiding in-page; it could not reproduce the iOS delay itself, so the fix awaits a
+physical iPhone/iPad play-test.
+
 ### FORK-040 — Local mission music WAV export
 
 **Status:** Implemented for desktop builds; generated audio remains local.

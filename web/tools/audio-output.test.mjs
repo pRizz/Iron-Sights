@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from 'bun:test';
+import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { readFile } from 'node:fs/promises';
 
 const source = await readFile(new URL('../../port/web/audio_output.js', import.meta.url), 'utf8');
@@ -145,25 +145,60 @@ function installFakeAudio({ state = 'running', loads = true } = {}) {
             this.state = 'running';
             return Promise.resolve();
         }
-        close() {}
+        close() {
+            this.state = 'closed';
+            return Promise.resolve();
+        }
     };
     globalThis.AudioWorkletNode = class {
         port = new FakePort();
+        connected = true;
         connect() {}
-        constructor() {
+        disconnect() {
+            this.connected = false;
+        }
+        constructor(context) {
+            this.context = context;
             created.nodes.push(this);
         }
     };
-    globalThis.window = { addEventListener() {} };
+    created.window = new FakeTarget();
+    created.document = Object.assign(new FakeTarget(), { hidden: false });
+    globalThis.window = created.window;
+    globalThis.document = created.document;
     return created;
+}
+
+class FakeTarget {
+    listeners = {};
+    addEventListener(name, listener) {
+        (this.listeners[name] ??= []).push(listener);
+    }
+    dispatch(name) {
+        for (const listener of this.listeners[name] ?? []) listener({ type: name });
+    }
+}
+
+function hideAndReturn(fake) {
+    fake.document.hidden = true;
+    fake.document.dispatch('visibilitychange');
+    fake.document.hidden = false;
+    fake.document.dispatch('visibilitychange');
 }
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
+const consoleInfo = console.info;
+beforeEach(() => {
+    console.info = () => {};
+});
+
 afterEach(() => {
+    console.info = consoleInfo;
     delete globalThis.AudioContext;
     delete globalThis.AudioWorkletNode;
     delete globalThis.window;
+    delete globalThis.document;
 });
 
 test('open reports failure without AudioWorklet, so SDL can take over', () => {
@@ -238,4 +273,63 @@ test('the context is published where the touch input resumes it', () => {
     const module = {};
     midasCreateAudioOutput(module).open();
     expect(module.SDL2.audioContext.sampleRate).toBe(22050);
+});
+
+test('the first gesture after the page was hidden plays through a new context', async () => {
+    // Arrange
+    const fake = installFakeAudio();
+    const module = {};
+    const output = midasCreateAudioOutput(module);
+    output.open();
+    await settle();
+    hideAndReturn(fake);
+    // Act
+    fake.window.dispatch('touchend');
+    await settle();
+    output.push(new Int16Array(200));
+    // Assert
+    const [old, fresh] = fake.contexts;
+    expect(old.state).toBe('closed');
+    expect(fake.nodes[0].connected).toBe(false);
+    expect(module.SDL2.audioContext).toBe(fresh);
+    expect(output.node).toBe(fake.nodes[1]);
+    expect(fake.nodes[1].port.posted.at(-1).chunk.length).toBe(200);
+    expect(output.queuedBytes()).toBe(400);
+});
+
+test('a gesture without hiding or interruption keeps the context', async () => {
+    const fake = installFakeAudio({ state: 'suspended' });
+    const output = midasCreateAudioOutput({});
+    output.open();
+    await settle();
+    fake.window.dispatch('mousedown');
+    await settle();
+    expect(fake.contexts).toHaveLength(1);
+    expect(fake.contexts[0].state).toBe('running');
+});
+
+test('an interruption is rebuilt on the next gesture, once', async () => {
+    const fake = installFakeAudio();
+    const output = midasCreateAudioOutput({});
+    output.open();
+    await settle();
+    fake.contexts[0].state = 'interrupted';
+    fake.contexts[0].onstatechange();
+    fake.window.dispatch('pointerup');
+    fake.window.dispatch('touchend');
+    await settle();
+    expect(fake.contexts).toHaveLength(2);
+    expect(fake.contexts[1].state).toBe('running');
+});
+
+test('a processor still loading for the replaced context is not attached', async () => {
+    const fake = installFakeAudio();
+    const output = midasCreateAudioOutput({});
+    output.open();
+    hideAndReturn(fake);
+    fake.window.dispatch('keydown'); // before the first load settles
+    await settle();
+    expect(fake.nodes).toHaveLength(1);
+    expect(fake.nodes[0].context).toBe(fake.contexts[1]);
+    expect(output.node).toBe(fake.nodes[0]);
 });

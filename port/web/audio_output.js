@@ -127,6 +127,8 @@ function midasCreateAudioOutput(module) {
     var opened = false;
     var failed = false;
     var resuming = false;
+    var stale = false; // hidden or interrupted since this context was made
+    var listening = false;
     var generation = 0;
     var sent = 0;
     var ack = { consumed: 0, time: 0, playing: false };
@@ -155,20 +157,62 @@ function midasCreateAudioOutput(module) {
     }
 
     function resume() {
-        if (!context || context.state !== 'suspended' || resuming) return;
+        var target = context;
+        if (!target || target.state === 'running' || target.state === 'closed' || resuming) return;
         resuming = true;
-        Promise.resolve(context.resume()).finally(function () {
-            resuming = false;
+        Promise.resolve(target.resume()).finally(function () {
+            if (target === context) resuming = false;
+        });
+    }
+
+    // iOS can bring a backgrounded or interrupted context back playing a second
+    // or more late, and only a new context (or quitting the browser) recovers.
+    // The first gesture after one builds a new context, which may start at once.
+    function rebuild() {
+        var old = context;
+        console.info('Audio output rebuilt after the page was hidden or interrupted', {
+            state: old.state,
+            baseLatency: old.baseLatency,
+            outputLatency: old.outputLatency,
+            queuedFrames: ack.level,
+        });
+        old.onstatechange = null;
+        if (node) {
+            node.port.onmessage = null;
+            node.disconnect();
+        }
+        context = node = null;
+        resuming = stale = false;
+        Promise.resolve(old.close()).catch(function () {});
+        if (!createContext()) failed = true;
+        reset();
+    }
+
+    function wake() {
+        if (stale && context && !document.hidden) rebuild();
+        resume();
+    }
+
+    function listen() {
+        if (listening) return;
+        listening = true;
+        ['keydown', 'mousedown', 'pointerup', 'touchend'].forEach(function (name) {
+            window.addEventListener(name, wake, { capture: true, passive: true });
+        });
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) stale = true;
         });
     }
 
     function loadProcessor() {
+        var target = context;
         var source =
             '(' + midasAudioProcessorSetup + ')(' + midasAudioRing + ', ' + JSON.stringify(PROCESSOR) + ');';
         var url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
         context.audioWorklet
             .addModule(url)
             .then(function () {
+                if (target !== context) return; // rebuilt while loading
                 node = new AudioWorkletNode(context, PROCESSOR.name, {
                     numberOfInputs: 0,
                     outputChannelCount: [2],
@@ -182,6 +226,7 @@ function midasCreateAudioOutput(module) {
                 reset();
             })
             .catch(function (error) {
+                if (target !== context) return;
                 failed = true;
                 console.error('Audio output processor failed to load', error);
             })
@@ -205,10 +250,11 @@ function midasCreateAudioOutput(module) {
         // Touch gestures and audits reach the context where SDL publishes its own.
         module['SDL2'] = module['SDL2'] || {};
         module['SDL2'].audioContext = context;
-        context.onstatechange = reset;
-        ['keydown', 'mousedown', 'pointerup', 'touchend'].forEach(function (name) {
-            window.addEventListener(name, resume, { capture: true, passive: true });
-        });
+        context.onstatechange = function () {
+            if (context.state === 'interrupted') stale = true; // WebKit only
+            reset();
+        };
+        listen();
         loadProcessor();
         return true;
     }
