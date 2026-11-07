@@ -177,21 +177,44 @@ Image resample(const Image &src, unsigned width, unsigned height) {
     return out;
 }
 
-bool parse_scope(const std::string &sources, const std::vector<std::string> &aliases, Scope &scope) {
-    picojson::value doc;
-    if (!picojson::parse(doc, sources).empty() || !doc.is<picojson::object>()) return false;
-    const auto &textures = doc.get<picojson::object>().find("textures");
-    if (textures == doc.get<picojson::object>().end() || !textures->second.is<picojson::array>()) return false;
-    for (const auto &name : textures->second.get<picojson::array>()) {
-        Key key;
-        if (name.is<std::string>() && parse_name(name.get<std::string>(), key)) scope.keys.insert(key);
+bool parse_scope(const std::vector<std::string> &sources, const std::vector<std::string> &aliases, Scope &scope) {
+    for (const auto &text : sources) {
+        picojson::value doc;
+        if (!picojson::parse(doc, text).empty() || !doc.is<picojson::object>()) return false;
+        const auto &textures = doc.get<picojson::object>().find("textures");
+        if (textures == doc.get<picojson::object>().end() || !textures->second.is<picojson::array>()) return false;
+        for (const auto &name : textures->second.get<picojson::array>()) {
+            Key key;
+            if (name.is<std::string>() && parse_name(name.get<std::string>(), key)) scope.keys.insert(key);
+        }
     }
     for (const auto &text : aliases) {
         picojson::value list;
         if (!picojson::parse(list, text).empty() || !list.is<picojson::object>()) return false;
-        const auto &items = list.get<picojson::object>().find("aliases");
-        if (items == list.get<picojson::object>().end() || !items->second.is<picojson::array>()) return false;
-        for (const auto &item : items->second.get<picojson::array>()) {
+        const auto &doc = list.get<picojson::object>();
+        const auto items = doc.find("aliases"), remaps = doc.find("remaps");
+        const bool has_aliases = items != doc.end() && items->second.is<picojson::array>();
+        const bool has_remaps = remaps != doc.end() && remaps->second.is<picojson::array>();
+        if (!has_aliases && !has_remaps) return false;
+        static const picojson::array none;
+        for (const auto &item : has_remaps ? remaps->second.get<picojson::array>() : none) {
+            if (!item.is<picojson::object>()) continue;
+            const auto &o = item.get<picojson::object>();
+            const auto pack = o.find("pack_key"), native = o.find("native_key");
+            const auto keep = o.find("keep_rows"), of = o.find("of_rows"), masked = o.find("masked");
+            Key key;
+            Remap remap;
+            if (pack == o.end() || native == o.end() || !key_of(pack->second, key) || !key_of(native->second, remap.native)) continue;
+            if (keep != o.end() && of != o.end() && keep->second.is<double>() && of->second.is<double>()) {
+                remap.keep_rows = unsigned(keep->second.get<double>());
+                remap.of_rows = unsigned(of->second.get<double>());
+                if (!remap.keep_rows || remap.keep_rows > remap.of_rows) continue;
+            }
+            remap.masked = masked != o.end() && masked->second.is<bool>() && masked->second.get<bool>();
+            scope.keys.insert(key);
+            scope.remaps.emplace(key, remap);
+        }
+        for (const auto &item : has_aliases ? items->second.get<picojson::array>() : none) {
             if (!item.is<picojson::object>()) continue;
             const auto &o = item.get<picojson::object>();
             const auto pack = o.find("pack_key"), native = o.find("native_palette");
@@ -212,6 +235,14 @@ void Pack::add(const Key &key, const Entry &entry, const Scope &scope) {
     const auto range = scope.aliases.equal_range(key);
     for (auto it = range.first; it != range.second; ++it) {
         entries_.emplace(Key{key.texture, it->second, key.format, key.size}, found);
+    }
+    const auto remaps = scope.remaps.equal_range(key);
+    for (auto it = remaps.first; it != remaps.second; ++it) {
+        Entry remapped = found;
+        remapped.keep_rows = it->second.keep_rows;
+        remapped.of_rows = it->second.of_rows;
+        remapped.masked = it->second.masked;
+        entries_.emplace(it->second.native, remapped);
     }
 }
 
@@ -371,6 +402,10 @@ bool Pack::read(const Entry &entry, Image &image) {
     }
     image.width = unsigned(width);
     image.height = unsigned(height);
+    if (entry.keep_rows && entry.of_rows && entry.keep_rows < entry.of_rows) {
+        image.height = std::max(1u, image.height * entry.keep_rows / entry.of_rows);
+        image.rgba.resize(size_t(image.width) * image.height * 4);
+    }
     return true;
 }
 }  // namespace hd_textures

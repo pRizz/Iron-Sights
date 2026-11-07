@@ -41,24 +41,27 @@ static bool ge_hd_try_import(int i, int tile, bool firstPerson)
         const unsigned palette = siz == G_IM_SIZ_4b ? unsigned(palette_index & 15u)*16 : 0;
         hd_textures::Tile source{loaded_texture.addr, loaded_texture.size_bytes, width, height,
             stride, fmt, siz, rdp.palette+palette, siz == G_IM_SIZ_4b ? 16u : 256u};
-        const bool specialWrap = ge_maskwrap_tile(tile, width) || (fmt == G_IM_FMT_RGBA &&
-            siz == G_IM_SIZ_16b && rdp.texture_tile[tile].masks && rdp.texture_tile[tile].maskt &&
-            (2u << rdp.texture_tile[tile].masks) != line);
+        const bool maskWrapped = ge_maskwrap_tile(tile, width);
+        const bool waterWrap = fmt == G_IM_FMT_RGBA && siz == G_IM_SIZ_16b && rdp.texture_tile[tile].masks &&
+            rdp.texture_tile[tile].maskt && (2u << rdp.texture_tile[tile].masks) != line;
         if (firstPerson) { /* the weapon and hands keep the game's textures (gunfire.c tag) */
             hd_textures::kept(source);
             return false;
         }
-        if (specialWrap) return false;
-        /* Mirror ge_upload_masked's logical crop at the authored scale. */
-        GeHdPending crop{width, height, width, height};
+        if (waterWrap) return false;
+        /* Mirror ge_upload_masked's logical crop at the authored scale; a
+         * mask-wrapped tile draws at its mask size, which a masked image covers. */
         const auto& parameters = rdp.texture_tile[tile];
-        if (ge_maskcrop_enabled()) {
+        const unsigned maskWidth = 1u << parameters.masks, maskHeight = 1u << parameters.maskt;
+        GeHdPending crop = maskWrapped ? GeHdPending{maskWidth, maskHeight, maskWidth, maskHeight}
+                                       : GeHdPending{width, height, width, height};
+        if (!maskWrapped && ge_maskcrop_enabled()) {
             if (parameters.masks) crop.cropWidth = std::min(crop.cropWidth, 1u << parameters.masks);
             if (parameters.maskt) crop.cropHeight = std::min(crop.cropHeight, 1u << parameters.maskt);
         }
         hd_textures::Image replacement;
         uint32_t request = 0;
-        switch (hd_textures::lookup(source, replacement, request)) {
+        switch (hd_textures::lookup(source, replacement, request, maskWrapped)) {
             case hd_textures::Found::now:
                 ge_hd_upload(rendering_state.textures[i] ? &rendering_state.textures[i]->second : nullptr,
                              replacement, crop);

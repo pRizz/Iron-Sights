@@ -13,7 +13,9 @@ bool beginFrame();
  * later, under request, while the original draws. */
 enum class Found { none, now, later };
 constexpr unsigned kMaxScale = 8;
-Found lookup(const Tile &tile, Image &image, uint32_t &request);
+/* maskWrapped: the tile draws at its wrap mask's size (the renderer rebuilds
+ * it there), and only images made for that (Remap::masked) apply. */
+Found lookup(const Tile &tile, Image &image, uint32_t &request, bool maskWrapped = false);
 /* Render thread: one finished custom image, checked and reduced; false when
  * none is waiting. An unusable image never arrives (the original stays), and
  * nothing requested before the pack changed arrives after it. */

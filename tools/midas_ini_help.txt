@@ -255,7 +255,9 @@ padN_stickmode.
                       |            | Texture Filter; 0 samples it as before.
                       |            | Iron Sights > System.
   texture_pack        | 1          | [display] Texture Pack (Windows/Linux).
-                      |            | 1 = HD: campaign environment textures and
+                      |            | 1 = HD: campaign environment textures,
+                      |            | the gunbarrel intro, sky clouds,
+                      |            | explosions, smoke, impact effects and
                       |            | HUD ammo icons from the GoldenEye 007 HD
                       |            | pack in
                       |            | Data/TexturePacks (downloaded from System >

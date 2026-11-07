@@ -29,4 +29,18 @@ scope = {t.split('/')[-1].split('#')[1].upper() for t in json.load(open('port/fa
 assert close and len(set(close)) == len(close) and not set(close) & reviewed
 assert all(f'{texture:08X}' in scope for texture, _ in close)
 print(f'hd aliases: {len(reviewed)} reviewed, {len(close)} close matches')
+# Effect remaps: one image per native texture, fire frames cropped (never
+# masked), smoke masked; the files they name are in the effect folders.
+remaps = json.load(open('port/fast3d/texture_packs/hd_effect_remaps.json'))['remaps']
+native = [tuple(r['native_key']) for r in remaps]
+assert remaps and len(set(native)) == len(native)
+for r in remaps:
+    cropped = 'keep_rows' in r
+    assert cropped != r.get('masked', False)
+    assert not cropped or 0 < r['keep_rows'] < r['of_rows']
+    assert f"#{r['pack_key'][0]:08X}#{r['pack_key'][2]}#{r['pack_key'][3]}_" in r['source']
+    assert r['source'].startswith('GOLDENEYE/Effects/')
+effects = json.load(open('port/fast3d/texture_packs/hd_effect_sources.json'))['textures']
+assert len(set(effects)) == len(effects) and all(t.startswith('GOLDENEYE/') for t in effects)
+print(f'hd effects: {len(effects)} by key, {len(remaps)} remapped')
 PY

@@ -20,12 +20,22 @@ struct Image {
     std::vector<uint8_t> rgba;
 };
 
+/* A native texture drawn with a pack image GLideN64 hashed past its end
+ * (into the next pool record): the image's top keep_rows of of_rows, or, for
+ * masked, an image covering the tile's whole wrap mask rather than its data. */
+struct Remap {
+    Key native;
+    unsigned keep_rows = 0, of_rows = 0;
+    bool masked = false;
+};
+
 /* Which pack textures may replace native ones, and the native palette
  * identities that stand for a pack key (reviewed aliases: native palettes
  * fingerprint differently from GLideN64's). */
 struct Scope {
     std::set<Key> keys;                    /* pack keys; palette 0 = any palette */
     std::multimap<Key, uint32_t> aliases;  /* pack key -> native palette */
+    std::multimap<Key, Remap> remaps;      /* pack key -> native texture (its pack key joins keys) */
     bool all = false;                      /* every key (a custom pack), not just keys */
 };
 
@@ -38,8 +48,9 @@ bool parse_name(const std::string &name, Key &key);
  * not darken: the HD ammo icons' art has other proportions than the icons. */
 Image resample(const Image &src, unsigned width, unsigned height);
 
-/* The scope from the inventory and alias JSON documents. */
-bool parse_scope(const std::string &sources, const std::vector<std::string> &aliases, Scope &scope);
+/* The scope from the inventory (texture lists) and alias JSON documents
+ * (each with "aliases", "remaps" or both). */
+bool parse_scope(const std::vector<std::string> &sources, const std::vector<std::string> &aliases, Scope &scope);
 
 struct Entry {
     std::filesystem::path file;  /* the ZIP, or the PNG itself */
@@ -47,6 +58,8 @@ struct Entry {
     uint64_t header = 0;         /* the ZIP entry's local header */
     uint32_t method = 0, packed = 0, size = 0;
     bool custom = false;         /* from a custom pack, not the download */
+    unsigned keep_rows = 0, of_rows = 0;  /* read() keeps the top keep_rows/of_rows */
+    bool masked = false;         /* covers the tile's wrap mask (Remap) */
 };
 
 class Pack {

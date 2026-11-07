@@ -166,8 +166,8 @@ premultiplied area downsampling. Cache headers, dimensions, sizes and CRCs are
 validated before use, with atomic publication and a per-user generation lock.
 Corrupt/stale caches regenerate; unwritable folders, generation failure or
 skipping fall back to weapon names. `last-preparation.log` preserves diagnostics.
-About reports readiness. Linux can read the same cache format; native automatic
-generation is currently Windows-only. Cross-GPU pixel identity is not promised.
+About reports readiness. Windows and Linux both generate it on first launch.
+Cross-GPU pixel identity is not promised.
 
 Keep the generator version in `port_icon_cache_format.h` current whenever
 rendering/material/camera changes require regeneration. ROMs, caches, helper

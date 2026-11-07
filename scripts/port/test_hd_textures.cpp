@@ -87,9 +87,17 @@ static Scope fixture_scope() {
         "GOLDENEYE/Effects/G/GOLDENEYE#8D8E8F90#4#1_all.png"]})";
     const std::string aliases = R"({"aliases": [
         {"pack_key": [2863267841, 0, 3, 1], "native_palette": 305419896}]})";
+    // A drawn for two other native textures: its top 3 of 4 rows, and whole
+    // over a wrap mask (only for a mask-wrapped tile).
+    const std::string remaps = R"({"remaps": [
+        {"pack_key": [2863267841, 0, 3, 1], "native_key": [305397760, 0, 0, 2], "keep_rows": 3, "of_rows": 4},
+        {"pack_key": [2863267841, 0, 3, 1], "native_key": [305397761, 0, 3, 1], "masked": true},
+        {"pack_key": [2863267841, 0, 3, 1], "native_key": [305397762, 0, 0, 2], "keep_rows": 5, "of_rows": 4}]})";
     Scope scope;
-    assert(parse_scope(sources, {aliases}, scope));
-    assert(scope.keys.size() == 5 && scope.aliases.size() == 1);
+    assert(parse_scope({sources}, {aliases, remaps}, scope));
+    assert(scope.keys.size() == 5 && scope.aliases.size() == 1 && scope.remaps.size() == 2);  // 5 of 4 rows is refused
+    Scope none;
+    assert(!parse_scope({sources}, {R"({"other": []})"}, none));
     return scope;
 }
 
@@ -105,10 +113,11 @@ static void pack(const std::string &root) {
     Pack pack;
     // Act: every file is the downloaded pack: A (deflated in pack.zip, which
     // sorts before player/mine.zip's copy), B (stored), C (extracted PNG), E
-    // (corrupt), G; D and F are out of scope. A's alias adds a native palette key.
+    // (corrupt), G; D and F are out of scope. A's alias adds a native palette
+    // key and its remaps two native textures.
     const size_t found = pack.index(root, scope, everything_downloaded);
     // Assert
-    assert(found == 6 && pack.custom() == 0);
+    assert(found == 8 && pack.custom() == 0);
     Image image;
     const Entry *a = pack.find(Key{0xAAAA0001, 0, 3, 1});
     assert(a && a->zipped && !a->custom && a->method == 8 && Pack::read(*a, image));
@@ -123,6 +132,11 @@ static void pack(const std::string &root) {
     const Entry *e = pack.find(Key{0xEEEE0005, 0, 3, 1});
     assert(e && !Pack::read(*e, image) && image.rgba.empty());       // corrupt PNG
     assert(pack.find(Key{0xAAAA0001, 0x12345678, 3, 0}) == nullptr);  // size is part of the key
+    const Entry *cropped = pack.find(Key{0x12340000, 0, 0, 2});
+    assert(cropped && cropped->header == a->header && !cropped->masked && Pack::read(*cropped, image));
+    assert(image.width == 8 && image.height == 3 && image.rgba.size() == 8 * 3 * 4 && image.rgba[0] == 10);
+    const Entry *masked = pack.find(Key{0x12340001, 0, 3, 1});
+    assert(masked && masked->masked && Pack::read(*masked, image) && image.height == 4);
     // G's name is the identity() tile's natural row order: a swapped tile finds it second.
     std::array<uint8_t, 32> data;
     Tile tile = source(data);
@@ -146,8 +160,8 @@ static void custom_packs(const std::string &root) {
     // Act
     const size_t found = pack.index(root, scope, outside_player);
     // Assert: the custom pack's A, A's alias, D (outside the download's scope)
-    // and F, then the download's B, C, E and G.
-    assert(found == 8 && pack.custom() == 4);
+    // and F, A's remaps, then the download's B, C, E and G.
+    assert(found == 10 && pack.custom() == 6);
     Image image;
     const Entry *a = pack.find(Key{0xAAAA0001, 0, 3, 1});
     assert(a && a->zipped && a->custom && a->file.filename() == "mine.zip");  // the custom copy wins
@@ -162,7 +176,7 @@ static void custom_packs(const std::string &root) {
     assert(b && !b->custom && b->file.filename() == "pack.zip");
     // Without a download every file is custom, read for every key it names;
     // between two custom copies the first path wins.
-    assert(pack.index(root, scope, nullptr) == 8 && pack.custom() == 8);
+    assert(pack.index(root, scope, nullptr) == 10 && pack.custom() == 10);
     assert(pack.find(Key{0xAAAA0001, 0, 3, 1})->file.filename() == "pack.zip");
 }
 

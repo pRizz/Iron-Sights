@@ -1,0 +1,553 @@
+{
+  "schema": 1,
+  "scope": "Explosion fire frames (16x14 RGBA16, the pack's 16-row hashes cropped to 14) and their smoke layers (56x56 IA8 under a 64x64 wrap mask, the pack's image covering the mask) in g_ExplosionDisplayLists order",
+  "validation": "GLideN64 hashed past each texture into the next pool record (an 8-byte header with 6 stale bytes, then the next texture). With those bytes zero, 8 fire and 9 smoke textures reproduce a pack key exactly ('exact'); the rest take the remaining distinct artwork in the bright-to-dark order between them ('sequence'). Native keys are this port's identify() keys. Private evidence: build_win/hd-effects. Step 0 (a fully transparent fade-in on both layers) keeps its original: paired with the pack's dark smoke it drew black puffs in the middle of every blast.",
+  "remaps": [
+    {
+      "native_key": [
+        33881353,
+        0,
+        0,
+        2
+      ],
+      "pack_key": [
+        137819071,
+        0,
+        0,
+        2
+      ],
+      "keep_rows": 14,
+      "of_rows": 16,
+      "image": "IMAGE_FIRE_2",
+      "step": 1,
+      "evidence": "sequence",
+      "source": "GOLDENEYE/Effects/Explosion/GOLDENEYE#0836F3BF#0#2_all.png"
+    },
+    {
+      "native_key": [
+        1069280558,
+        0,
+        0,
+        2
+      ],
+      "pack_key": [
+        182084473,
+        0,
+        0,
+        2
+      ],
+      "keep_rows": 14,
+      "of_rows": 16,
+      "image": "IMAGE_FIRE_7",
+      "step": 2,
+      "evidence": "sequence",
+      "source": "GOLDENEYE/Effects/Explosion/GOLDENEYE#0ADA6379#0#2_all.png"
+    },
+    {
+      "native_key": [
+        973844207,
+        0,
+        0,
+        2
+      ],
+      "pack_key": [
+        506559014,
+        0,
+        0,
+        2
+      ],
+      "keep_rows": 14,
+      "of_rows": 16,
+      "image": "IMAGE_FIRE_8",
+      "step": 3,
+      "evidence": "sequence",
+      "source": "GOLDENEYE/Effects/Explosion/GOLDENEYE#1E317A26#0#2_all.png"
+    },
+    {
+      "native_key": [
+        891874962,
+        0,
+        0,
+        2
+      ],
+      "pack_key": [
+        2056330127,
+        0,
+        0,
+        2
+      ],
+      "keep_rows": 14,
+      "of_rows": 16,
+      "image": "IMAGE_FIRE_9",
+      "step": 4,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Explosion/GOLDENEYE#7A911B8F#0#2_all.png"
+    },
+    {
+      "native_key": [
+        612117348,
+        0,
+        0,
+        2
+      ],
+      "pack_key": [
+        1640159925,
+        0,
+        0,
+        2
+      ],
+      "keep_rows": 14,
+      "of_rows": 16,
+      "image": "IMAGE_FIRE_10",
+      "step": 5,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Explosion/GOLDENEYE#61C2DAB5#0#2_all.png"
+    },
+    {
+      "native_key": [
+        2926846773,
+        0,
+        0,
+        2
+      ],
+      "pack_key": [
+        3251141796,
+        0,
+        0,
+        2
+      ],
+      "keep_rows": 14,
+      "of_rows": 16,
+      "image": "IMAGE_FIRE_11",
+      "step": 6,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Explosion/GOLDENEYE#C1C87CA4#0#2_all.png"
+    },
+    {
+      "native_key": [
+        2928351523,
+        0,
+        0,
+        2
+      ],
+      "pack_key": [
+        91192419,
+        0,
+        0,
+        2
+      ],
+      "keep_rows": 14,
+      "of_rows": 16,
+      "image": "IMAGE_FIRE_12",
+      "step": 7,
+      "evidence": "sequence",
+      "source": "GOLDENEYE/Effects/Explosion/GOLDENEYE#056F7C63#0#2_all.png"
+    },
+    {
+      "native_key": [
+        3657657474,
+        0,
+        0,
+        2
+      ],
+      "pack_key": [
+        2126739130,
+        0,
+        0,
+        2
+      ],
+      "keep_rows": 14,
+      "of_rows": 16,
+      "image": "IMAGE_FIRE_13",
+      "step": 8,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Explosion/GOLDENEYE#7EC376BA#0#2_all.png"
+    },
+    {
+      "native_key": [
+        3512101060,
+        0,
+        0,
+        2
+      ],
+      "pack_key": [
+        296816394,
+        0,
+        0,
+        2
+      ],
+      "keep_rows": 14,
+      "of_rows": 16,
+      "image": "IMAGE_FIRE_14",
+      "step": 9,
+      "evidence": "sequence",
+      "source": "GOLDENEYE/Effects/Explosion/GOLDENEYE#11B10F0A#0#2_all.png"
+    },
+    {
+      "native_key": [
+        2388403067,
+        0,
+        0,
+        2
+      ],
+      "pack_key": [
+        3665937815,
+        0,
+        0,
+        2
+      ],
+      "keep_rows": 14,
+      "of_rows": 16,
+      "image": "IMAGE_FIRE_1",
+      "step": 10,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Explosion/GOLDENEYE#DA81C597#0#2_all.png"
+    },
+    {
+      "native_key": [
+        878053215,
+        0,
+        0,
+        2
+      ],
+      "pack_key": [
+        172500077,
+        0,
+        0,
+        2
+      ],
+      "keep_rows": 14,
+      "of_rows": 16,
+      "image": "IMAGE_FIRE_3",
+      "step": 11,
+      "evidence": "sequence",
+      "source": "GOLDENEYE/Effects/Explosion/GOLDENEYE#0A48246D#0#2_all.png"
+    },
+    {
+      "native_key": [
+        2824271105,
+        0,
+        0,
+        2
+      ],
+      "pack_key": [
+        2050592727,
+        0,
+        0,
+        2
+      ],
+      "keep_rows": 14,
+      "of_rows": 16,
+      "image": "IMAGE_FIRE_4",
+      "step": 12,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Explosion/GOLDENEYE#7A398FD7#0#2_all.png"
+    },
+    {
+      "native_key": [
+        3563476192,
+        0,
+        0,
+        2
+      ],
+      "pack_key": [
+        1782234487,
+        0,
+        0,
+        2
+      ],
+      "keep_rows": 14,
+      "of_rows": 16,
+      "image": "IMAGE_FIRE_5",
+      "step": 13,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Explosion/GOLDENEYE#6A3ABD77#0#2_all.png"
+    },
+    {
+      "native_key": [
+        2921553976,
+        0,
+        0,
+        2
+      ],
+      "pack_key": [
+        2297322009,
+        0,
+        0,
+        2
+      ],
+      "keep_rows": 14,
+      "of_rows": 16,
+      "image": "IMAGE_FIRE_6",
+      "step": 14,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Explosion/GOLDENEYE#88EE5A19#0#2_all.png"
+    },
+    {
+      "native_key": [
+        585789749,
+        0,
+        3,
+        1
+      ],
+      "pack_key": [
+        2696502617,
+        0,
+        3,
+        1
+      ],
+      "masked": true,
+      "image": "IMAGE_SMOKE_2",
+      "step": 1,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Smoke/GOLDENEYE#A0B95D59#3#1_all.png"
+    },
+    {
+      "native_key": [
+        3535691388,
+        0,
+        3,
+        1
+      ],
+      "pack_key": [
+        313181139,
+        0,
+        3,
+        1
+      ],
+      "masked": true,
+      "image": "IMAGE_SMOKE_7",
+      "step": 2,
+      "evidence": "sequence",
+      "source": "GOLDENEYE/Effects/Smoke/GOLDENEYE#12AAC3D3#3#1_all.png"
+    },
+    {
+      "native_key": [
+        2422911409,
+        0,
+        3,
+        1
+      ],
+      "pack_key": [
+        171557734,
+        0,
+        3,
+        1
+      ],
+      "masked": true,
+      "image": "IMAGE_SMOKE_8",
+      "step": 3,
+      "evidence": "sequence",
+      "source": "GOLDENEYE/Effects/Smoke/GOLDENEYE#0A39C366#3#1_all.png"
+    },
+    {
+      "native_key": [
+        2937266039,
+        0,
+        3,
+        1
+      ],
+      "pack_key": [
+        4249334251,
+        0,
+        3,
+        1
+      ],
+      "masked": true,
+      "image": "IMAGE_SMOKE_9",
+      "step": 4,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Smoke/GOLDENEYE#FD47B1EB#3#1_all.png"
+    },
+    {
+      "native_key": [
+        2383469081,
+        0,
+        3,
+        1
+      ],
+      "pack_key": [
+        2126235737,
+        0,
+        3,
+        1
+      ],
+      "masked": true,
+      "image": "IMAGE_SMOKE_10",
+      "step": 5,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Smoke/GOLDENEYE#7EBBC859#3#1_all.png"
+    },
+    {
+      "native_key": [
+        2377764929,
+        0,
+        3,
+        1
+      ],
+      "pack_key": [
+        650908006,
+        0,
+        3,
+        1
+      ],
+      "masked": true,
+      "image": "IMAGE_SMOKE_11",
+      "step": 6,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Smoke/GOLDENEYE#26CC1166#3#1_all.png"
+    },
+    {
+      "native_key": [
+        1142231482,
+        0,
+        3,
+        1
+      ],
+      "pack_key": [
+        202147551,
+        0,
+        3,
+        1
+      ],
+      "masked": true,
+      "image": "IMAGE_SMOKE_12",
+      "step": 7,
+      "evidence": "sequence",
+      "source": "GOLDENEYE/Effects/Smoke/GOLDENEYE#0C0C86DF#3#1_all.png"
+    },
+    {
+      "native_key": [
+        1661201004,
+        0,
+        3,
+        1
+      ],
+      "pack_key": [
+        2399174854,
+        0,
+        3,
+        1
+      ],
+      "masked": true,
+      "image": "IMAGE_SMOKE_13",
+      "step": 8,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Smoke/GOLDENEYE#8F0080C6#3#1_all.png"
+    },
+    {
+      "native_key": [
+        3154846920,
+        0,
+        3,
+        1
+      ],
+      "pack_key": [
+        153810833,
+        0,
+        3,
+        1
+      ],
+      "masked": true,
+      "image": "IMAGE_SMOKE_14",
+      "step": 9,
+      "evidence": "sequence",
+      "source": "GOLDENEYE/Effects/Smoke/GOLDENEYE#092AF791#3#1_all.png"
+    },
+    {
+      "native_key": [
+        2497928222,
+        0,
+        3,
+        1
+      ],
+      "pack_key": [
+        4121690325,
+        0,
+        3,
+        1
+      ],
+      "masked": true,
+      "image": "IMAGE_SMOKE_1",
+      "step": 10,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Smoke/GOLDENEYE#F5AC00D5#3#1_all.png"
+    },
+    {
+      "native_key": [
+        1863064370,
+        0,
+        3,
+        1
+      ],
+      "pack_key": [
+        466764821,
+        0,
+        3,
+        1
+      ],
+      "masked": true,
+      "image": "IMAGE_SMOKE_3",
+      "step": 11,
+      "evidence": "sequence",
+      "source": "GOLDENEYE/Effects/Smoke/GOLDENEYE#1BD24415#3#1_all.png"
+    },
+    {
+      "native_key": [
+        4196328924,
+        0,
+        3,
+        1
+      ],
+      "pack_key": [
+        4152550973,
+        0,
+        3,
+        1
+      ],
+      "masked": true,
+      "image": "IMAGE_SMOKE_4",
+      "step": 12,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Smoke/GOLDENEYE#F782E63D#3#1_all.png"
+    },
+    {
+      "native_key": [
+        3103301486,
+        0,
+        3,
+        1
+      ],
+      "pack_key": [
+        2144757980,
+        0,
+        3,
+        1
+      ],
+      "masked": true,
+      "image": "IMAGE_SMOKE_5",
+      "step": 13,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Smoke/GOLDENEYE#7FD668DC#3#1_all.png"
+    },
+    {
+      "native_key": [
+        388133825,
+        0,
+        3,
+        1
+      ],
+      "pack_key": [
+        2065150303,
+        0,
+        3,
+        1
+      ],
+      "masked": true,
+      "image": "IMAGE_SMOKE_6",
+      "step": 14,
+      "evidence": "exact",
+      "source": "GOLDENEYE/Effects/Smoke/GOLDENEYE#7B17B15F#3#1_all.png"
+    }
+  ]
+}

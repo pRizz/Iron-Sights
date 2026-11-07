@@ -1,6 +1,6 @@
 # Weapon HUD image generation
 
-Windows player builds generate transparent 512 x 160 icons from the actual
+Windows and Linux player builds generate transparent 512 x 160 icons from the actual
 ROM-loaded weapon models on first launch. The native helper uses the game's
 renderer, fixed camera/poses and repeated black/white captures. It recovers
 alpha and downsamples with premultiplied area sampling. No Python, compiler,
@@ -12,9 +12,10 @@ application-data folder contains `weapon-icons-v9-<ROM fingerprint>.cache` and
 generator version, dimensions, complete slot coverage, exact lengths and CRC.
 Invalid caches regenerate; errors or skipping fall back to weapon names.
 The helper uses neutral settings and temporary program files, leaves campaign
-saves/settings alone, and removes its temporary executable on exit. Unicode
-paths are supported. Linux can read this cache format; automatic generation
-currently targets Windows. Bump `PORT_ICON_CACHE_VERSION` when rendering changes
+saves/settings alone, and removes its temporary files on exit (Windows runs a
+temporary copy of the executable; Linux runs the same binary with
+`GE_DATA_ROOT` pointing at a temporary root, and serializes launches with an
+`flock` on `weapon-icons.lock`). Unicode paths are supported. Bump `PORT_ICON_CACHE_VERSION` when rendering changes
 need new images. Version 2 introduced the authored pause-watch forearm meshes
 and UVs in place of estimated sleeve coverage. Version 4 supersedes version 3
 arm-body thickening: it fits the wrist to the retained native hand independently

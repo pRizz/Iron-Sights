@@ -16,6 +16,13 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#elif defined(__linux__)
+#include <csignal>
+#include <fcntl.h>
+#include <sys/file.h>
+#include <sys/wait.h>
+#include <unistd.h>
+extern char **environ;
 #endif
 namespace fs = std::filesystem;
 using Bytes = std::vector<unsigned char>;
@@ -207,6 +214,73 @@ extern "C" void portIconWorkerCapture(int icon, int capture, int w, int h, const
     }
 }
 
+#if defined(_WIN32) || defined(__linux__)
+/* The worker: an isolated run of this executable that renders each weapon
+ * model and writes the cache (portIconWorkerCapture). */
+static const char kWorkerIni[]="[display]\nfullscreen=window\nvsync=0\nmaxfps=60\ntickhz=60\nmsaa=1\nwidescreen=0\nlow_res=0\nfiltering=bilinear\nfilter_2d=1\nrender_thread=0\nweapon_hud=0\nmission_timer=0\nalways_health=0\n[input]\nmouse=1\n";
+static const char kWorkerReplay[]="P 0 0 0 0\nP 80 8000 0 0\nP 82 0 0 0\nP 120 8000 0 0\nP 122 0 0 0\nP 160 8000 0 0\nP 162 0 0 0\nP 2000 0 0 0\n";
+/* Beside GE_ROM, GE_ICON_OUTPUT, GE_ICON_ROM_CRC and GE_INPUTPLAY; every other
+ * GE_ variable of the player's environment is left out. */
+static const char *const kWorkerEnv[][2]={{"GE_ICON_WORKER","1"},{"GE_STAGE","dam"},{"GE_STAGE_AFTER","1"},
+    {"GE_WINDOW","2048x1536"},{"GE_NOINPUT","1"},{"GE_SEED","1"},{"GE_CHEATS","invuln,invis,guns"},
+    {"GE_FRAMES","1800"},{"GE_WEAPON_ICON_EXPORT","1"}};
+static bool writeWorkerFiles(const fs::path &root)
+{
+    return writeFile(root/"midas.ini",Bytes(kWorkerIni,kWorkerIni+sizeof kWorkerIni-1))
+        && writeFile(root/"input.txt",Bytes(kWorkerReplay,kWorkerReplay+sizeof kWorkerReplay-1));
+}
+struct ChildFiles {
+    fs::path dir;
+    ~ChildFiles() { std::error_code e; if (!dir.empty()) fs::remove_all(dir,e); }
+};
+struct PreparationWindow {
+    SDL_Window *window=nullptr;
+    SDL_Renderer *renderer=nullptr;
+    ~PreparationWindow() {
+        if (renderer) SDL_DestroyRenderer(renderer);
+        if (window) SDL_DestroyWindow(window);
+        SDL_QuitSubSystem(SDL_INIT_VIDEO);
+    }
+};
+/* Shows the worker's progress (root/progress.bin) until running() turns false;
+ * Esc, closing the window or 180 s call stop() first. */
+template <class Running, class Stop>
+static void showProgress(const fs::path &root, Running running, Stop stop)
+{
+    PreparationWindow progressWindow;
+    auto &window=progressWindow.window;
+    auto &renderer=progressWindow.renderer;
+    if (SDL_InitSubSystem(SDL_INIT_VIDEO)==0) {
+        window=SDL_CreateWindow("Iron Sights - Preparing weapon icons (first launch)",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,560,90,0);
+        if (window) renderer=SDL_CreateRenderer(window,-1,SDL_RENDERER_SOFTWARE);
+    }
+    const Uint32 start=SDL_GetTicks();
+    while (running()) {
+        SDL_Delay(20);
+        SDL_Event event; bool cancel=false;
+        while (SDL_PollEvent(&event)) if (event.type==SDL_QUIT || (event.type==SDL_KEYDOWN && event.key.keysym.sym==SDLK_ESCAPE)) cancel=true;
+        if (cancel || SDL_GetTicks()-start>180000) { stop(); break; }
+        auto progress=readFile(root/"progress.bin",1); int count=progress.empty()?0:progress[0];
+        if (window) {
+            std::string title="Iron Sights - Preparing icons "+std::to_string(count)+"/"+std::to_string(PORT_ICON_IMAGES)+" (first launch; Esc to skip)";
+            SDL_SetWindowTitle(window,title.c_str());
+        }
+        if (renderer) {
+            SDL_SetRenderDrawColor(renderer,24,31,36,255);SDL_RenderClear(renderer);
+            SDL_Rect outline={20,32,520,24}, bar={22,34,516*count/PORT_ICON_IMAGES,20};
+            SDL_SetRenderDrawColor(renderer,110,130,140,255);SDL_RenderDrawRect(renderer,&outline);
+            SDL_SetRenderDrawColor(renderer,183,219,144,255);SDL_RenderFillRect(renderer,&bar);SDL_RenderPresent(renderer);
+        }
+    }
+}
+static void keepLog(const fs::path &root, const fs::path &cache)
+{
+    std::error_code error;
+    fs::copy_file(root/"Data"/"Logs"/"ge_direct.log",cache.parent_path()/"last-preparation.log",fs::copy_options::overwrite_existing,error);
+}
+
+#endif
+
 #ifdef _WIN32
 static std::wstring quoted(const fs::path &path)
 {
@@ -217,10 +291,6 @@ static std::wstring quoted(const fs::path &path)
     for (auto it=value.rbegin();it!=value.rend() && *it==L'\\';++it) out+=L'\\';
     return out+L"\"";
 }
-struct ChildFiles {
-    fs::path dir;
-    ~ChildFiles() { std::error_code e; if (!dir.empty()) fs::remove_all(dir,e); }
-};
 struct CacheLock {
     HANDLE handle;
     bool owned=false;
@@ -238,15 +308,6 @@ struct ChildProcess {
         if (value.hThread) CloseHandle(value.hThread);
     }
 };
-struct PreparationWindow {
-    SDL_Window *window=nullptr;
-    SDL_Renderer *renderer=nullptr;
-    ~PreparationWindow() {
-        if (renderer) SDL_DestroyRenderer(renderer);
-        if (window) SDL_DestroyWindow(window);
-        SDL_QuitSubSystem(SDL_INIT_VIDEO);
-    }
-};
 static bool generate(const fs::path &cache, const char *rom)
 {
     WCHAR module[32768]; DWORD n=GetModuleFileNameW(nullptr,module,32768);
@@ -256,10 +317,7 @@ static bool generate(const fs::path &cache, const char *rom)
     fs::create_directory(files.dir);
     fs::copy_file(source,files.dir/"IronSights.exe");
     fs::copy_file(base/"SDL2.dll",files.dir/"SDL2.dll");
-    std::string ini="[display]\nfullscreen=window\nvsync=0\nmaxfps=60\ntickhz=60\nmsaa=1\nwidescreen=0\nlow_res=0\nfiltering=bilinear\nfilter_2d=1\nrender_thread=0\nweapon_hud=0\nmission_timer=0\nalways_health=0\n[input]\nmouse=1\n";
-    if (!writeFile(files.dir/"midas.ini",Bytes(ini.begin(),ini.end()))) return false;
-    std::string replay="P 0 0 0 0\nP 80 8000 0 0\nP 82 0 0 0\nP 120 8000 0 0\nP 122 0 0 0\nP 160 8000 0 0\nP 162 0 0 0\nP 2000 0 0 0\n";
-    if (!writeFile(files.dir/"input.txt",Bytes(replay.begin(),replay.end()))) return false;
+    if (!writeWorkerFiles(files.dir)) return false;
     /* Build a private environment, with diagnostic/launch overrides removed.
      * Never change the parent game's environment or copy the user's ROM. */
     std::vector<std::wstring> entries;
@@ -267,13 +325,12 @@ static bool generate(const fs::path &cache, const char *rom)
     if (!block) return false;
     for (const WCHAR *p=block;*p;p+=wcslen(p)+1) if (_wcsnicmp(p,L"GE_",3)) entries.emplace_back(p);
     FreeEnvironmentStringsW(block);
-    auto set=[&](const wchar_t *key,const std::wstring &value) { entries.emplace_back(std::wstring(key)+L"="+value); };
-    set(L"GE_ROM",fs::u8path(rom).native()); set(L"GE_ICON_WORKER",L"1");
+    auto set=[&](const std::wstring &key,const std::wstring &value) { entries.emplace_back(key+L"="+value); };
+    set(L"GE_ROM",fs::u8path(rom).native());
     set(L"GE_ICON_OUTPUT",cache.native());
     WCHAR crc[16]; swprintf(crc,16,L"%08x",romFingerprint); set(L"GE_ICON_ROM_CRC",crc);
-    set(L"GE_STAGE",L"dam");set(L"GE_STAGE_AFTER",L"1");set(L"GE_WINDOW",L"2048x1536");
-    set(L"GE_NOINPUT",L"1");set(L"GE_SEED",L"1");set(L"GE_CHEATS",L"invuln,invis,guns");
-    set(L"GE_FRAMES",L"1800");set(L"GE_WEAPON_ICON_EXPORT",L"1");set(L"GE_INPUTPLAY",(files.dir/"input.txt").native());
+    set(L"GE_INPUTPLAY",(files.dir/"input.txt").native());
+    for (auto &pair : kWorkerEnv) set(fs::u8path(pair[0]).native(),fs::u8path(pair[1]).native());
     std::sort(entries.begin(),entries.end(),[](auto &a,auto &b){return _wcsicmp(a.c_str(),b.c_str())<0;});
     std::vector<WCHAR> environment;
     for (auto &entry:entries) { environment.insert(environment.end(),entry.begin(),entry.end()); environment.push_back(0); }
@@ -284,36 +341,77 @@ static bool generate(const fs::path &cache, const char *rom)
     std::wstring command=quoted(files.dir/"IronSights.exe");
     if (!CreateProcessW(nullptr,command.data(),nullptr,nullptr,FALSE,CREATE_UNICODE_ENVIRONMENT|CREATE_NO_WINDOW,
         environment.data(),files.dir.c_str(),&startup,&process)) return false;
-    PreparationWindow progressWindow;
-    auto &window=progressWindow.window;
-    auto &renderer=progressWindow.renderer;
-    if (SDL_InitSubSystem(SDL_INIT_VIDEO)==0) {
-        window=SDL_CreateWindow("Iron Sights - Preparing weapon icons (first launch)",SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED,560,90,0);
-        if (window) renderer=SDL_CreateRenderer(window,-1,SDL_RENDERER_SOFTWARE);
-    }
-    DWORD start=GetTickCount(), exit=4;
-    while (WaitForSingleObject(process.hProcess,20)==WAIT_TIMEOUT) {
-        SDL_Event event; bool cancel=false;
-        while (SDL_PollEvent(&event)) if (event.type==SDL_QUIT || (event.type==SDL_KEYDOWN && event.key.keysym.sym==SDLK_ESCAPE)) cancel=true;
-        if (cancel || GetTickCount()-start>180000) { TerminateProcess(process.hProcess,4); WaitForSingleObject(process.hProcess,5000); break; }
-        auto progress=readFile(files.dir/"progress.bin",1); int count=progress.empty()?0:progress[0];
-        if (window) {
-            std::string title="Iron Sights - Preparing icons "+std::to_string(count)+"/"+std::to_string(PORT_ICON_IMAGES)+" (first launch; Esc to skip)";
-            SDL_SetWindowTitle(window,title.c_str());
-        }
-        if (renderer) {
-            SDL_SetRenderDrawColor(renderer,24,31,36,255);SDL_RenderClear(renderer);
-            SDL_Rect outline={20,32,520,24}, bar={22,34,516*count/PORT_ICON_IMAGES,20};
-            SDL_SetRenderDrawColor(renderer,110,130,140,255);SDL_RenderDrawRect(renderer,&outline);
-            SDL_SetRenderDrawColor(renderer,183,219,144,255);SDL_RenderFillRect(renderer,&bar);SDL_RenderPresent(renderer);
-        }
-    }
+    showProgress(files.dir,[&] { return WaitForSingleObject(process.hProcess,0)==WAIT_TIMEOUT; },
+                 [&] { TerminateProcess(process.hProcess,4); WaitForSingleObject(process.hProcess,5000); });
+    DWORD exit=4;
     GetExitCodeProcess(process.hProcess,&exit);
-    {
-        std::error_code error;
-        fs::copy_file(files.dir/"Data"/"Logs"/"ge_direct.log",cache.parent_path()/"last-preparation.log",fs::copy_options::overwrite_existing,error);
-    }
+    keepLog(files.dir,cache);
     return exit==0;
+}
+#elif defined(__linux__)
+/* The same binary runs as the worker, with GE_DATA_ROOT giving it a root of
+ * its own, so nothing is copied and its bundled libraries resolve as for the
+ * game. main.c appends "/IronSights" to GE_DATA_ROOT and then drops the last
+ * path part as if it were the executable's name: the root is the folder. */
+struct CacheLock {
+    int fd=-1;
+    ~CacheLock() { if (fd>=0) { flock(fd,LOCK_UN); close(fd); } }
+};
+struct ChildProcess {
+    pid_t pid=-1;
+    int status=0;
+    bool running() {
+        if (pid<0) return false;
+        if (waitpid(pid,&status,WNOHANG)!=pid) return true;
+        pid=-1; return false;
+    }
+    void stop() {
+        if (pid<0) return;
+        kill(pid,SIGTERM);
+        for (int i=0;i<250 && running();i++) SDL_Delay(20);
+        if (pid>=0) { kill(pid,SIGKILL); waitpid(pid,&status,0); pid=-1; status=-1; }
+    }
+    ~ChildProcess() { stop(); }
+};
+static bool generate(const fs::path &cache, const char *rom)
+{
+    char self[4096]; ssize_t n=readlink("/proc/self/exe",self,sizeof self-1);
+    if (n<=0 || n>=(ssize_t)sizeof self-1) return false;
+    self[n]='\0';
+    ChildFiles files {cache.parent_path()/("worker-"+std::to_string(getpid())+"-"+std::to_string(SDL_GetTicks()))};
+    const fs::path root=files.dir;
+    fs::create_directories(root);
+    if (!writeWorkerFiles(root)) return false;
+    std::vector<std::string> entries;
+    for (char **p=environ;*p;p++) if (std::strncmp(*p,"GE_",3)) entries.emplace_back(*p);
+    auto set=[&](const char *key,const std::string &value) { entries.emplace_back(std::string(key)+"="+value); };
+    set("GE_ROM",rom); set("GE_DATA_ROOT",utf8(files.dir));
+    set("GE_ICON_OUTPUT",utf8(cache));
+    char crc[16]; std::snprintf(crc,sizeof crc,"%08x",romFingerprint); set("GE_ICON_ROM_CRC",crc);
+    set("GE_INPUTPLAY",utf8(root/"input.txt"));
+    for (auto &pair : kWorkerEnv) set(pair[0],pair[1]);
+    /* Everything the child needs is built before fork: after it, only
+     * async-signal-safe calls. */
+    std::vector<char *> environment;
+    for (auto &entry:entries) environment.push_back(entry.data());
+    environment.push_back(nullptr);
+    char *argv[]={self,nullptr};
+    const std::string dir=utf8(root);
+    ChildProcess child;
+    child.pid=fork();
+    if (child.pid<0) return false;
+    if (child.pid==0) {
+        int null=open("/dev/null",O_RDWR);
+        if (null>=0) { dup2(null,0); dup2(null,1); dup2(null,2); }
+        if (chdir(dir.c_str())==0) execve(self,argv,environment.data());
+        _exit(127);
+    }
+    showProgress(root,[&] { return child.running(); },[&] { child.stop(); });
+    const bool ok=child.pid<0 && child.status!=-1 && WIFEXITED(child.status) && WEXITSTATUS(child.status)==0;
+    if (!ok) portConLogf("ge: icons: worker %s %d\n",WIFSIGNALED(child.status) ? "killed by signal" : "exited",
+                         WIFSIGNALED(child.status) ? WTERMSIG(child.status) : WEXITSTATUS(child.status));
+    keepLog(root,cache);
+    return ok;
 }
 #endif
 
@@ -350,8 +448,19 @@ extern "C" void portIconCacheInit(const char *rom, unsigned int fingerprint)
             if (readCache(cache) || (generate(cache,rom) && readCache(cache))) cacheStatus="Ready - prepared locally from your ROM";
             else cacheStatus="Weapon names (preparation skipped or failed; retry next launch)";
         }
+#elif defined(__linux__)
+        /* A per-user lock file plays the Windows mutex's part; flock is
+         * released if its holder dies. */
+        CacheLock lock{open(utf8(folder/"weapon-icons.lock").c_str(),O_RDWR|O_CREAT|O_CLOEXEC,0644)};
+        if (lock.fd<0) return;
+        bool held=false;
+        for (int i=0;i<185000/50 && !(held=flock(lock.fd,LOCK_EX|LOCK_NB)==0);i++) SDL_Delay(50);
+        if (held) {
+            if (readCache(cache) || (generate(cache,rom) && readCache(cache))) cacheStatus="Ready - prepared locally from your ROM";
+            else cacheStatus="Weapon names (preparation skipped or failed; retry next launch)";
+        }
 #else
-        cacheStatus="Weapon names (native preparation currently available on Windows)";
+        cacheStatus="Weapon names (native preparation currently available on Windows and Linux)";
 #endif
     } catch (const std::exception &error) {
         cacheStatus="Weapon names (cache unavailable; game remains playable)";

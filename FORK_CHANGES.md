@@ -196,14 +196,16 @@ FORK-033's ini values `hd`, `4k` and `2` read as HD.
   floor may use the same texture). The flag also clears at frame start. Text
   glyphs stay on their own paths (FORK-050, FORK-052), and the ammo icons take
   the pack's art by slot.
-- **Scope.** The download draws only campaign environment textures: our inventory of the
+- **Scope.** The download draws campaign environment textures: our inventory of the
   pack's area folders (`port/fast3d/texture_packs/hd_level_sources.json`,
   641 names) plus our reviewed native-palette aliases
   (`hd_level_native_aliases.json`, 162, and `hd_dam_native_aliases.json`,
   15; plus `hd_level_close_aliases.json`, 17, under Close HD Matches below),
   restored from FORK-033 and embedded at configure time
   (`hd_texture_scope_embed.cmake`). They hold names and fingerprints, no
-  artwork. Weapons, fonts and the rest of the HUD are outside this scope.
+  artwork. Since 2026-11-07 it also covers the gunbarrel intro, sky clouds,
+  impact effects, explosions and smoke (below). Weapons, fonts and the rest of
+  the HUD are outside it.
   With the v2025.12.30 PNG pack 466 of
   the 641 are present (640 keys with aliases, 610 before the coverage
   audit below); three Egyptian textures exist
@@ -250,12 +252,7 @@ FORK-033's ini values `hd`, `4k` and `2` read as HD.
     re-indexes when the setting changes; custom packs take the same
     aliases. Input: an ordinary toggle row, adjusted as every other one by
     keyboard, mouse, gamepad and the watch's arrows.
-  Outside the scope, and left out deliberately for now: the gunbarrel intro
-  (299 exact matches at the title), impact sparks, debris, shards and bullet
-  holes, and the sky clouds (their own sky path). Explosions and smoke do not
-  match by key: GLideN64 hashed 16x14 explosion frames as 16 rows, taking in
-  whatever the N64 held next in memory. The audit scripts and ROM-derived
-  images stay local. Checks: `test_hd_textures.sh` gained a fixture PNG named
+  The audit scripts and ROM-derived images stay local. Checks: `test_hd_textures.sh` gained a fixture PNG named
   for a tile's natural row order, found second for the swapped tile and not
   tried for an unswapped one. With the normal download in isolated copies of
   the Windows build, Depot, Caverns, Streets, Statue, Jungle, Frigate, Runway,
@@ -270,6 +267,45 @@ FORK-033's ini values `hd`, `4k` and `2` read as HD.
   live re-index when the row changes in play, and the watch's row.
   Not run: Linux, a long play session, and side-by-side captures of each
   new alias.
+
+- **Intro, sky and effects (2026-11-07).** The download's scope grew past the
+  environments, following the coverage audit:
+  - `hd_effect_sources.json` (308 names, matched by key): the gunbarrel intro's
+    299 strips (`UI/Gunbarrel`, 440x1 I8 drawn as 1760x4), the sky clouds
+    (64x64 IA8 as 512x512, in 12 levels) and eight impact textures (debris,
+    five spark sprites, glass shards, the bullet hole). `parse_scope` now takes
+    several texture lists.
+  - `hd_effect_remaps.json` (28 remaps): explosions and their smoke. Each of
+    the 15 frames in `g_ExplosionDisplayLists` draws, in two cycles, a 56x56 IA8
+    smoke texture under a 64x64 wrap mask times a 16x14 RGBA16 fire frame
+    (`IMAGE_SMOKE_n`, `IMAGE_FIRE_n`). GLideN64 hashed the fire frame as 16
+    rows and the smoke as 64 rows of 64 bytes at its 56-byte stride, both
+    running past the data into the next pool record: an 8-byte header (the
+    texture number and 6 stale bytes, `texLoad`) and the next texture. With
+    those stale bytes zero, 8 fire and 9 smoke textures reproduce a pack key
+    exactly; the others take the remaining distinct art in the bright-to-dark
+    order between them. A remap names a native key and a pack key (which joins
+    the scope) plus `keep_rows`/`of_rows` (the fire frames keep 14 of 16 rows;
+    `Pack::read` crops) or `masked` (the smoke image covers the whole 64x64
+    mask, exactly what `ge_upload_masked` rebuilds the tile as).
+    `hd_texture_import.inl` now looks mask-wrapped tiles up with
+    `maskWrapped`, which only masked entries satisfy, and uploads them at the
+    mask's size; Rare's RGBA16 water stays excluded. Frame 0 is fully
+    transparent on both layers and keeps its original: paired with the pack's
+    dark smoke it painted black puffs in the middle of every blast. Frames 13
+    and 14 are transparent too, but their exact matches carry the artist's
+    fading smoke and stay.
+  Not done: the death effects, monitors and crosshairs never appeared in the
+  audit, and letters stay on the font paths. A custom pack's copies of these
+  keys are remapped the same way. Checks: `test_hd_textures.sh` covers several
+  texture lists, a remap's row crop, a masked remap, a refused crop and a
+  document with neither list. Captures with the download (isolated copies of
+  the Windows build) traced the 299 intro strips, the clouds in Dam, Runway and
+  Surface, seven impact textures in Facility with a KF7 (the bullet hole did
+  not appear there) and all 28 explosion and smoke remaps in Dam as `match`;
+  the intro, clouds, sparks and debris, and the explosions frame by frame,
+  were compared with the original side by side. Not checked: Linux, the
+  bullet hole in play, and other levels' explosions.
 
 The removed `.istex` format, the CI preparer and its download, the bundled
 packs and the AppImage bundle root do not return.
@@ -4613,7 +4649,8 @@ passing.
 
 ### FORK-019 — Native first-launch weapon image cache
 
-**Status:** Implemented on Windows; Linux reads caches and otherwise uses names.
+**Status:** Implemented on Windows and Linux (Linux since 2026-11-07); other
+targets read no cache and use names.
 
 Replaced rebuild-time embedding (FORK-011) with local preparation by an isolated
 copy of the current game's renderer. First launch with a validated ROM renders
@@ -4681,6 +4718,29 @@ fixed model view, rather than inheriting the preceding gameplay gun's depth
 state. This prevents the pistol depth-layer restoration from changing icon
 occlusion. A fresh 35-image preparation after the wrist skin-mapping fix matched
 the preceding version-6 cache byte-for-byte; no cache version change is needed.
+
+**Linux generation (2026-11-07).** Linux builds had read a cache but never
+made one, so their weapon strip always showed names. `generate()` now has a
+Linux branch: it runs the game's own binary (`/proc/self/exe`) as the worker,
+forked and exec'd with a private environment (the player's `GE_` variables
+dropped, the worker's added) and `GE_DATA_ROOT` set to a temporary folder, so
+the worker's `midas.ini`, input replay and logs live in that folder and
+nothing is copied: a copied binary could miss the libraries bundled beside it.
+(main.c appends `/IronSights` to `GE_DATA_ROOT` and then drops the last part
+as the executable's name, so the root is the folder itself; a first version
+wrote the worker's files one level down, where it never read them.) Checks: the Linux build compiles; in a Docker container with Xvfb and
+Mesa's software renderer, the 32-bit Linux worker (its settings as
+`generate()` writes them, a 1024x768 window and a raised frame limit, since
+software GL draws a frame in about 5 s and the real 1,800-frame limit ends
+first) rendered all 38 images with exact repeats and wrote a 12,779,712-byte
+cache whose 39 slots decode to correct renders. A forced first launch there
+reached the worker and lock as designed but timed out for the same reason.
+On Windows a forced isolated generation still wrote a full cache in 31 s.
+Not checked: a full first launch on Linux hardware GL. A per-user `flock` on `weapon-icons.lock`
+replaces the Windows named mutex (released if its holder dies); Esc, closing
+the progress window or 180 s send SIGTERM, then SIGKILL. The worker settings,
+replay, progress window and log copy are now shared by both branches
+(`kWorkerIni`, `kWorkerReplay`, `kWorkerEnv`, `showProgress`, `keepLog`).
 
 **Sources:** [cache](port/fast3d/weapon_cache.cpp),
 [format](port/include/port_icon_cache_format.h),

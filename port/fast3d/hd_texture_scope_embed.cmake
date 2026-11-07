@@ -6,7 +6,7 @@ function(midas_embed_hd_texture_scope out_var)
     set(out "${CMAKE_BINARY_DIR}/generated/hd_texture_scope_data.c")
     set(text "/* Generated from port/fast3d/texture_packs by port/fast3d/hd_texture_scope_embed.cmake; do not edit. */\n#include <stddef.h>\n")
     foreach(name hd_level_sources hd_level_native_aliases hd_dam_native_aliases
-            hd_level_close_aliases)
+            hd_level_close_aliases hd_effect_sources hd_effect_remaps)
         set(path "${CMAKE_SOURCE_DIR}/port/fast3d/texture_packs/${name}.json")
         set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${path}")
         file(READ "${path}" hex HEX)

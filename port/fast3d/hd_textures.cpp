@@ -30,6 +30,10 @@ extern const unsigned char hd_dam_native_aliases_json[];
 extern const size_t hd_dam_native_aliases_json_size;
 extern const unsigned char hd_level_close_aliases_json[];
 extern const size_t hd_level_close_aliases_json_size;
+extern const unsigned char hd_effect_sources_json[];
+extern const size_t hd_effect_sources_json_size;
+extern const unsigned char hd_effect_remaps_json[];
+extern const size_t hd_effect_remaps_json_size;
 }
 
 namespace {
@@ -157,11 +161,14 @@ const hd_textures::Scope &scope(bool close) {
     static bool loaded = false;
     if (!loaded) {
         loaded = true;
+        const std::vector<std::string> sources{text(hd_level_sources_json, hd_level_sources_json_size),
+                                               text(hd_effect_sources_json, hd_effect_sources_json_size)};
         std::vector<std::string> aliases{text(hd_level_native_aliases_json, hd_level_native_aliases_json_size),
-                                         text(hd_dam_native_aliases_json, hd_dam_native_aliases_json_size)};
+                                         text(hd_dam_native_aliases_json, hd_dam_native_aliases_json_size),
+                                         text(hd_effect_remaps_json, hd_effect_remaps_json_size)};
         for (int i = 0; i < 2; i++) {
             if (i) aliases.push_back(text(hd_level_close_aliases_json, hd_level_close_aliases_json_size));
-            if (!hd_textures::parse_scope(text(hd_level_sources_json, hd_level_sources_json_size), aliases, s[i])) {
+            if (!hd_textures::parse_scope(sources, aliases, s[i])) {
                 std::fprintf(stderr, "hd: the texture scope could not be read; original textures stay\n");
             }
             for (const AmmoArt &art : kAmmo) {
@@ -281,11 +288,12 @@ bool ammo_icon(int slot, unsigned tile_width, unsigned tile_height, Image &image
     return true;
 }
 
-Found lookup(const Tile &tile, Image &image, uint32_t &request) {
+Found lookup(const Tile &tile, Image &image, uint32_t &request, bool maskWrapped) {
     if (!g_current || !g_pack.size()) return Found::none;
     Key key;
     if (!identify(tile, key)) return Found::none;
     const Entry *entry = g_pack.find(tile, key);
+    if (entry != nullptr && entry->masked != maskWrapped) entry = nullptr;
     const bool trace = std::getenv("GE_HD_TRACE") != nullptr;
     if (entry == nullptr) {
         if (trace && g_reported.insert(key).second) {
