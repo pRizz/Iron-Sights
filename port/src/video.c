@@ -14,6 +14,8 @@
 #include "port_modal.h"
 #include "port_crosshair.h"
 #include "port_enhanced_fonts.h"
+#include "port_hd_textures.h" /* FORK-053: player-installed HD texture packs */
+#include "port_hd_download.h"  /* FORK-053: their download */
 #include "port_ads_accuracy.h"
 
 #ifdef GE_XBOX
@@ -1086,6 +1088,13 @@ static int videoSetDisplayOption(const char *key, const char *value)
     if (SDL_strcasecmp(key, "filter_2d") == 0)     { s_CfgFilter2D = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "font_style") == 0)    { s_CfgFontStyle = SDL_clamp(SDL_atoi(value), 0, 2); s_CfgFontStyleSeen = 1; return 1; }
     if (SDL_strcasecmp(key, "sharp_fonts") == 0)   { if (!s_CfgFontStyleSeen) s_CfgFontStyle = SDL_atoi(value) != 0 ? 2 : 0; return 1; }
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    if (SDL_strcasecmp(key, "texture_pack") == 0)
+    {   /* FORK-053: 0 Original, 1 HD; FORK-033 files may say hd, 4k or 2 */
+        portTexturePackSet(SDL_strcasecmp(value, "hd") == 0 || SDL_strcasecmp(value, "4k") == 0 || SDL_atoi(value) != 0);
+        return 1;
+    }
+#endif
     if (SDL_strcasecmp(key, "high_lod") == 0)      { s_CfgHighLod = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "low_res") == 0)       { s_CfgLowRes = videoLowResLines(value); return 1; }
     /* "mipmaps" is the key the menu overhaul settled on (spec 2.1);
@@ -1459,6 +1468,9 @@ s32 portVideoOptionGet(const char *key, s32 *out)
     if (SDL_strcasecmp(key, "anisotropy") == 0)    { *out = (s_CfgAnisotropy >= 2) ? s_CfgAnisotropy : 0; return 1; }
     if (SDL_strcasecmp(key, "filter_2d") == 0)     { *out = s_CfgFilter2D;     return 1; }
     if (SDL_strcasecmp(key, "font_style") == 0)    { *out = s_CfgFontStyle;    return 1; }
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    if (SDL_strcasecmp(key, "texture_pack") == 0)  { *out = portTexturePackGet(); return 1; }
+#endif
     if (SDL_strcasecmp(key, "high_lod") == 0)      { *out = s_CfgHighLod;      return 1; }
     if (SDL_strcasecmp(key, "low_res") == 0)       { *out = s_CfgLowRes;       return 1; }
     if (SDL_strcasecmp(key, "mipmaps") == 0
@@ -2303,6 +2315,9 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "anisotropy=%d\n", s_CfgAnisotropy);
     fprintf(f, "filter_2d=%d\n", s_CfgFilter2D);
     fprintf(f, "font_style=%d\n", s_CfgFontStyle);
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    fprintf(f, "texture_pack=%d\n", portTexturePackGet());
+#endif
     fprintf(f, "low_res=%d\n", s_CfgLowRes);
     fprintf(f, "n64_aa=%d\n", s_CfgN64Aa ? 1 : 0);
     fprintf(f, "room_cache=%d\n", s_CfgRoomCache);
@@ -4964,6 +4979,10 @@ s32 videoInit(void)
     { /* FORK-052: the Enhanced fonts beside midas.ini, not wherever the game was launched from */
         extern const char *portRootPath(const char *name);
         portEnhancedFontsSetDirectory(portRootPath("Data/FontPacks/gepd"));
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+        portTexturePackRoot(portRootPath("Data/TexturePacks")); /* FORK-053: where a pack goes */
+        portHdTexturesSetDirectory(portRootPath("Data/TexturePacks"));
+#endif
     }
     { /* [display] low_res: whole-game 240p render scaled to the window (very low power machines).
        * GE_LOWRES=1/0 overrides the ini for A/B. */
@@ -5059,6 +5078,7 @@ s32 videoInit(void)
 void videoStartFrame(void)
 {
     portEnhancedFontsFrame();   /* FORK-052: a finished download switches Fonts to Enhanced */
+    portHdTexturesFrame();      /* FORK-053: and one of the HD textures sets Texture Pack to HD */
     if (s_VideoInitDone)
     {
         /* GE switches VI resolution at runtime (fr.c g_viRuntimeScreenWidths:

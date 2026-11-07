@@ -1,8 +1,9 @@
-/* The Enhanced fonts' HTTPS transports (FORK-052, FONT-3): WinHTTP on
- * Windows and libcurl, loaded when first needed, on Linux. Other targets have
- * none yet (the browser's fetch() is FONT-4). Each fetch caps the body at
- * 1 MiB, gives up on cancel and reports a short reason; a busy server's answer
- * also carries its Retry-After, for install's backoff. */
+/* The HTTPS transports (FORK-052, FONT-3; streaming for FORK-053): WinHTTP
+ * on Windows and libcurl, loaded when first needed, on Linux. Other targets
+ * have none (the browser's fetch() is FONT-4). A font fetch caps the body at
+ * 1 MiB; a stream hands every byte to its sink. Both give up on cancel and
+ * report a short reason; a busy server's answer also carries its Retry-After,
+ * for the callers' backoff. */
 #include "enhanced_fonts_download.h"
 
 #if defined(_WIN32) && !defined(GE_XBOX)
@@ -54,8 +55,7 @@ const char *winhttp_reason(DWORD error) {
     }
 }
 
-bool winhttp_fetch(const std::string &url, std::vector<uint8_t> &out, Failure &failure, const std::atomic<bool> &cancel) {
-    out.clear();
+bool winhttp_get(const std::string &url, const Sink &sink, Failure &failure, const std::atomic<bool> &cancel) {
     const std::wstring wide(url.begin(), url.end());  /* the URLs are ASCII */
     wchar_t host[256] = {0}, path[2048] = {0};
     URL_COMPONENTS parts = {};
@@ -97,6 +97,7 @@ bool winhttp_fetch(const std::string &url, std::vector<uint8_t> &out, Failure &f
         status_failure(long(status), retry_after, failure);
         return false;
     }
+    std::vector<uint8_t> chunk(1u << 16);
     for (;;) {
         DWORD available = 0, read = 0;
         if (cancel) return false;
@@ -105,18 +106,24 @@ bool winhttp_fetch(const std::string &url, std::vector<uint8_t> &out, Failure &f
             return false;
         }
         if (available == 0) return true;
-        if (out.size() + available > kMaxBody) {
-            failure.reason = "File too large";
-            return false;
-        }
-        const size_t at = out.size();
-        out.resize(at + available);
-        if (!WinHttpReadData(request.h, out.data() + at, available, &read)) {
+        if (!WinHttpReadData(request.h, chunk.data(), DWORD(available < chunk.size() ? available : chunk.size()), &read)) {
             failure.reason = winhttp_reason(GetLastError());
             return false;
         }
-        out.resize(at + read);
+        if (!sink(chunk.data(), read)) return false;
     }
+}
+
+bool winhttp_fetch(const std::string &url, std::vector<uint8_t> &out, Failure &failure, const std::atomic<bool> &cancel) {
+    out.clear();
+    bool too_large = false;
+    const bool ok = winhttp_get(url, [&](const uint8_t *data, size_t size) {
+        if (out.size() + size > kMaxBody) return !(too_large = true);
+        out.insert(out.end(), data, data + size);
+        return true;
+    }, failure, cancel);
+    if (too_large) failure.reason = "File too large";
+    return ok && !too_large;
 }
 
 #elif defined(__linux__) && !defined(__EMSCRIPTEN__)
@@ -134,6 +141,7 @@ enum {
     kOptWriteData = 10001, kOptUrl = 10002, kOptUserAgent = 10018, kOptTimeout = 13, kOptNoProgress = 43,
     kOptFollow = 52, kOptConnectTimeout = 78, kOptNoSignal = 99, kOptXferInfoData = 10057,
     kOptWriteFunction = 20011, kOptXferInfoFunction = 20219, kInfoResponseCode = 0x200002,
+    kOptLowSpeedLimit = 19, kOptLowSpeedTime = 20,
     kInfoRetryAfter = 0x600000 + 57,  /* CURLINFO_RETRY_AFTER, libcurl 7.66 on; older ones refuse it */
     kErrResolve = 6, kErrConnect = 7, kErrTimeout = 28, kErrSsl = 35, kErrPeerCert = 60,
 };
@@ -156,42 +164,46 @@ const Curl *load_curl() {
     return (curl.init && curl.setopt && curl.perform && curl.getinfo && curl.cleanup) ? &curl : nullptr;
 }
 
-struct Sink {
-    std::vector<uint8_t> *out;
+struct Receiver {
+    const Sink *sink;
     const std::atomic<bool> *cancel;
-    bool too_large;
+    bool stopped;
 };
 
 size_t curl_write(char *data, size_t size, size_t count, void *user) {
-    Sink *sink = static_cast<Sink *>(user);
+    Receiver *receiver = static_cast<Receiver *>(user);
     const size_t n = size * count;
-    if (sink->out->size() + n > kMaxBody) {
-        sink->too_large = true;
+    if (!(*receiver->sink)(reinterpret_cast<const uint8_t *>(data), n)) {
+        receiver->stopped = true;
         return 0;
     }
-    sink->out->insert(sink->out->end(), data, data + n);
     return n;
 }
 
 int curl_progress(void *user, long long, long long, long long, long long) {
-    return static_cast<Sink *>(user)->cancel->load() ? 1 : 0;
+    return static_cast<Receiver *>(user)->cancel->load() ? 1 : 0;
 }
 
-bool curl_fetch(const std::string &url, std::vector<uint8_t> &out, Failure &failure, const std::atomic<bool> &cancel) {
+/* stream: no overall time limit, only a stall limit, for one large file. */
+bool curl_get(const std::string &url, const Sink &sink_fn, Failure &failure, const std::atomic<bool> &cancel, bool stream) {
     const Curl *curl = load_curl();
-    out.clear();
     void *easy = curl ? curl->init() : nullptr;
     if (easy == nullptr) {
         failure.reason = "No libcurl";
         return false;
     }
-    Sink sink{&out, &cancel, false};
+    Receiver sink{&sink_fn, &cancel, false};
     curl->setopt(easy, kOptUrl, url.c_str());
     curl->setopt(easy, kOptUserAgent, "IronSights");
     curl->setopt(easy, kOptFollow, 1L);
     curl->setopt(easy, kOptNoSignal, 1L);
     curl->setopt(easy, kOptConnectTimeout, 10L);
-    curl->setopt(easy, kOptTimeout, 30L);
+    if (stream) {
+        curl->setopt(easy, kOptLowSpeedLimit, 1L);   /* under a byte a second ... */
+        curl->setopt(easy, kOptLowSpeedTime, 30L);   /* ... for 30 s gives up */
+    } else {
+        curl->setopt(easy, kOptTimeout, 30L);
+    }
     curl->setopt(easy, kOptWriteFunction, &curl_write);
     curl->setopt(easy, kOptWriteData, &sink);
     curl->setopt(easy, kOptNoProgress, 0L);
@@ -204,13 +216,26 @@ bool curl_fetch(const std::string &url, std::vector<uint8_t> &out, Failure &fail
     if (curl->getinfo(easy, kInfoRetryAfter, &retry_after) != 0) retry_after = 0;
     curl->cleanup(easy);
     if (code == 0 && status == 200) return true;
-    if (sink.too_large) failure.reason = "File too large";
+    if (sink.stopped) failure.reason = "File too large";
     else if (code == kErrResolve || code == kErrConnect) failure.reason = "No connection";
     else if (code == kErrTimeout) failure.reason = "Timed out";
     else if (code == kErrSsl || code == kErrPeerCert) failure.reason = "Secure link failed";
     else if (code == 0) status_failure(status, long(retry_after), failure);
     else failure.reason = "Download failed";
     return false;
+}
+
+bool curl_fetch(const std::string &url, std::vector<uint8_t> &out, Failure &failure, const std::atomic<bool> &cancel) {
+    out.clear();
+    return curl_get(url, [&](const uint8_t *data, size_t size) {
+        if (out.size() + size > kMaxBody) return false;
+        out.insert(out.end(), data, data + size);
+        return true;
+    }, failure, cancel, false);
+}
+
+bool curl_stream(const std::string &url, const Sink &sink, Failure &failure, const std::atomic<bool> &cancel) {
+    return curl_get(url, sink, failure, cancel, true);
 }
 
 #endif
@@ -225,6 +250,17 @@ Transport platform_transport() {
     return curl_fetch;
 #else
     return Transport();
+#endif
+}
+
+StreamTransport platform_stream_transport() {
+#if defined(_WIN32) && !defined(GE_XBOX)
+    return winhttp_get;
+#elif defined(__linux__) && !defined(__EMSCRIPTEN__)
+    if (load_curl() == nullptr) return StreamTransport();
+    return curl_stream;
+#else
+    return StreamTransport();
 #endif
 }
 

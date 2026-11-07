@@ -70,6 +70,7 @@ struct TextureCacheValue {
     bool mip_filter; /* GE: minifying through a mip chain (N64 G_TL_LOD draw) */
 
     std::list<struct TextureCacheMapIter>::iterator lru_location;
+    uint32_t hd_bytes; /* FORK-053: a player-installed HD image's RGBA + mip chain upper bound; native-only budget */
 };
 
 struct TextureCacheMapIter {

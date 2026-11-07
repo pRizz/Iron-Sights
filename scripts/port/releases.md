@@ -101,7 +101,9 @@ alone does not provide that assurance.
 ## What is built and shipped
 
 Releases contain no third-party texture packs: those stay external mods that
-players add themselves. The Windows and Linux packaging allowlists never copy
+players add themselves. Native builds read such a pack from `Data/TexturePacks`
+exactly as its makers publish it, downloaded at the player's request from the
+HD Textures page or copied in (FORK-053). The Windows and Linux packaging allowlists never copy
 `Data/TexturePacks`, and the packaged smoke tests check that the tarball,
 AppImage squashfs and Steam Deck ZIP contain none.
 

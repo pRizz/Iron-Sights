@@ -1,0 +1,172 @@
+{
+  "schema": 1,
+  "scope": "Stock USA Dam prototype; native palette fingerprints, not palette pixels",
+  "validation": "Native tile/HD artwork contact-sheet comparison; unsupported identities fall back",
+  "aliases": [
+    {
+      "pack_key": [
+        245350526,
+        937804777,
+        2,
+        1
+      ],
+      "native_palette": 2610326470,
+      "native_width": 32,
+      "native_height": 32
+    },
+    {
+      "pack_key": [
+        426738142,
+        1504379002,
+        2,
+        1
+      ],
+      "native_palette": 1910720687,
+      "native_width": 32,
+      "native_height": 32
+    },
+    {
+      "pack_key": [
+        926715642,
+        3023520448,
+        2,
+        1
+      ],
+      "native_palette": 2997002916,
+      "native_width": 32,
+      "native_height": 33
+    },
+    {
+      "pack_key": [
+        1598279292,
+        2477037909,
+        2,
+        1
+      ],
+      "native_palette": 2426871041,
+      "native_width": 32,
+      "native_height": 33
+    },
+    {
+      "pack_key": [
+        1846437297,
+        46407658,
+        2,
+        1
+      ],
+      "native_palette": 2475061333,
+      "native_width": 16,
+      "native_height": 64
+    },
+    {
+      "pack_key": [
+        1847085867,
+        1127110052,
+        2,
+        1
+      ],
+      "native_palette": 3914673175,
+      "native_width": 32,
+      "native_height": 32
+    },
+    {
+      "pack_key": [
+        1941435307,
+        2110124280,
+        2,
+        1
+      ],
+      "native_palette": 1621892822,
+      "native_width": 32,
+      "native_height": 33
+    },
+    {
+      "pack_key": [
+        2430147619,
+        4291843344,
+        2,
+        1
+      ],
+      "native_palette": 1617514455,
+      "native_width": 32,
+      "native_height": 32
+    },
+    {
+      "pack_key": [
+        2673121925,
+        3122425254,
+        2,
+        1
+      ],
+      "native_palette": 1820372577,
+      "native_width": 32,
+      "native_height": 32
+    },
+    {
+      "pack_key": [
+        3061012456,
+        3054907299,
+        2,
+        1
+      ],
+      "native_palette": 868364934,
+      "native_width": 32,
+      "native_height": 32
+    },
+    {
+      "pack_key": [
+        3248675659,
+        2111791469,
+        2,
+        1
+      ],
+      "native_palette": 1200076602,
+      "native_width": 32,
+      "native_height": 32
+    },
+    {
+      "pack_key": [
+        3889616068,
+        2002562123,
+        2,
+        1
+      ],
+      "native_palette": 2365914756,
+      "native_width": 32,
+      "native_height": 32
+    },
+    {
+      "pack_key": [
+        4098297014,
+        987573881,
+        2,
+        1
+      ],
+      "native_palette": 1776729057,
+      "native_width": 32,
+      "native_height": 32
+    },
+    {
+      "pack_key": [
+        4114337017,
+        2290810381,
+        2,
+        1
+      ],
+      "native_palette": 2646547036,
+      "native_width": 16,
+      "native_height": 64
+    },
+    {
+      "pack_key": [
+        4232186867,
+        1176824378,
+        2,
+        1
+      ],
+      "native_palette": 2552892106,
+      "native_width": 32,
+      "native_height": 33
+    }
+  ]
+}

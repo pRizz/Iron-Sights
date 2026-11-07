@@ -30,12 +30,161 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-053 — HD texture packs: downloaded or copied in by the player
+
+**Status:** Implemented in the native Windows and Linux builds (2026-11-06);
+not in the browser or Xbox builds. The owner reviewed it in play and approved
+it on 2026-11-06.
+
+Iron Sights again draws HD campaign environment textures from intermissionfb's
+GoldenEye 007 HD pack, but never bundles it. The pack's maintainer disallowed
+integrating its textures in a port and asked that packs stay "an external mod
+added by the user and kept updated by its original maintainers"
+([GhostlyDark/GoldenEye-007-HD#3](https://github.com/GhostlyDark/GoldenEye-007-HD/issues/3),
+2026-11-05). The owner reads that as allowing a download the player starts,
+from the makers' own GitHub, as long as no Iron Sights package carries the art
+(owner's decision, 2026-11-06; the maintainer was not asked about a download).
+So the pack arrives only when the player chooses Download, or when they copy it
+in; releases still carry nothing under `Data/TexturePacks` (the packaging
+guards from FORK-033 stay), and Iron Sights does not convert or modify it.
+
+**Gameplay > Iron Sights > System > Texture Pack** (`[display] texture_pack`:
+0 Original, 1 HD; default 1; there is no 4K choice), in the Options folder and
+the watch, below the Enhanced Fonts row, followed by an **HD Textures** page. With HD, the game looks in `Data/TexturePacks` under the
+root (beside midas.ini, or the AppImage's writable data folder) for a
+GLideN64 PNG pack exactly as published: any ZIP, such as
+`ge007-hd-v2025.12.30-gliden64-png-hd.zip`, and any PNGs from an extracted
+copy, in any subfolder. With no usable texture found the value reads `HD (Get)`
+(`HD (not found)` where this build cannot download) and the originals stay.
+FORK-033's ini values `hd`, `4k` and `2` read as HD.
+
+- **Download page.** HD Textures (Options folder and watch), and **GET HD
+  TEXTURES** as a row of the Options folder's top level (after GET ENHANCED
+  FONTS) while the files can be downloaded and are not all in place, work as
+  the Enhanced Fonts page does (FORK-052): a description naming the pack, its
+  author, its 150 MB size and its source, a status line, then Download /
+  Cancel Download / Retry Download / Use HD Textures / Use Original Textures
+  and Remove HD Textures (the folder asks Yes/No, the watch asks twice).
+  Picking Download is the player's consent. A finished download sets Texture
+  Pack to HD; Remove leaves the setting alone (HD without a pack draws the
+  originals). Status lines count megabytes (`Downloading: 59 of 150 MB`), a
+  busy server's wait, or a failure's reason.
+- **What it fetches.** Pinned to release v2025-12-30: the PNG release's ZIP
+  (135,256,079 bytes, SHA-256 `a72d082e...`, which matches GitHub's own digest
+  for the asset) from the release, and the three Egyptian textures missing from
+  that ZIP from the repository at the revision the scope came from (their SHA-1
+  blob ids were checked against the repository's). Files go to
+  `Data/TexturePacks` and `Data/TexturePacks/ge007-hd-egyptian`, then
+  `SOURCE.txt` records the source, the author and that the art is not part of
+  Iron Sights. `hd_download_engine.cpp` streams each file to a `.part` name
+  while hashing it, checks size and SHA-256, and renames it into place; a busy
+  server (429, 502-504) is asked again after its Retry-After or 2, 4, 8 and
+  16 s, five tries a file. The shared HTTPS layer gained a streaming form for
+  this (`platform_stream_transport`: no size cap, no overall time limit, curl
+  gives up after 30 s under a byte a second), so 150 MB never sits in memory.
+  `GE_HDPACK_BASE_URL=http://127.0.0.1:port` points a test at a local fixture.
+
+- **Index.** `hd_texture_pack.cpp` reads each ZIP's central directory (stored
+  and deflated entries; encrypted, other methods, ZIP64 and files over 80 MB
+  are skipped) and lists PNGs whose Rice names
+  (`GOLDENEYE#tttttttt#f#s[#pppppppp|#$]_all.png` / `_ciByRGBA.png`) fall in
+  the scope. Extracted PNGs win over ZIP copies; the order is sorted, so the
+  same files always give the same choice.
+- **Scope.** Only campaign environment textures: our inventory of the
+  pack's area folders (`port/fast3d/texture_packs/hd_level_sources.json`,
+  641 names) plus our reviewed native-palette aliases
+  (`hd_level_native_aliases.json`, 132, and `hd_dam_native_aliases.json`,
+  15), restored from FORK-033 and embedded at configure time
+  (`hd_texture_scope_embed.cmake`). They hold names and fingerprints, no
+  artwork. Weapons, hands, the HUD and fonts are outside the scope, so the
+  arm and hand contracts are untouched. With the v2025.12.30 PNG pack 466 of
+  the 641 are present (610 keys with aliases); three Egyptian textures exist
+  only in the artist repository and are used if the player adds those PNGs.
+- **Images.** A texture is read when a level first draws it: inflated with
+  the vendored puff and decoded by `png_decode.cpp` (8-bit RGB/RGBA,
+  non-interlaced; every image in the v2025.12.30 pack is one of these). An
+  image must keep the native aspect ratio and be at least the native size,
+  otherwise the original stays.
+- **Renderer.** Restored from FORK-033 (`hd_texture_import.inl`): the Rice
+  fingerprint of each native tile (`hd_texture_format.cpp`), the upload at the
+  authored scale with native UVs and masks, the `hd_bytes` cache field, deleting
+  rather than recycling HD texture ids, and a 128 MB budget evicted at frame
+  start. `hd_textures.cpp` re-indexes when the setting changes and when the
+  pack folder's own listing changes (checked about every 5 s); changes inside
+  an extracted folder take effect after toggling the setting or restarting.
+
+The removed `.istex` format, the CI preparer and its download, the bundled
+packs and the AppImage bundle root do not return.
+
+**Unsupported, by decision:** the browser and Xbox builds have neither the
+Texture Pack row nor the HD Textures page; 150 MB in browser storage would not
+suit the browser version. The 4K and HTS versions of the pack are not read or
+offered (7z archives in a different format). Linux downloads need libcurl,
+like the fonts; without it the page reads `Copy to Data/TexturePacks`.
+
+**Input:** both pages use the shared download-page code, so keyboard, mouse
+and gamepad confirm, back out and scroll as on Enhanced Fonts; there is no
+browser touch context because the browser build has no such page.
+
+**Earlier rendering fixes, kept:** the restored adapter keeps FORK-033's
+wrap-mask cropping at the authored scale and leaves special composite and
+water addressing on the original path, and images keep the PNG's own row
+order (the prototype's vertical flip of asymmetric braces and labels was fixed
+by that in FORK-033).
+
+**Upstream hooks:** in `gfx_pc.cpp` the texture release helper at the cache's
+five free sites, the import call before the format decoders, the frame-start
+call and the include of the adapter; `hd_bytes` in `gfx_pc.h`.
+
+**Sources:** [pack index](port/fast3d/hd_texture_pack.cpp) and [header](port/fast3d/hd_texture_pack.h),
+[download engine](port/fast3d/hd_download_engine.cpp), [download API](port/fast3d/hd_textures_download.cpp)
+and its [C header](port/include/port_hd_download.h), [menu actions](port/src/port_hd_download.c),
+[shared page table](port/include/port_download_page.h), [streaming transport](port/fast3d/enhanced_fonts_http.cpp),
+[runtime](port/fast3d/hd_textures.cpp), [identity](port/fast3d/hd_texture_format.cpp),
+[adapter](port/fast3d/hd_texture_import.inl), [scope data](port/fast3d/texture_packs/hd_level_sources.json),
+[embedding](port/fast3d/hd_texture_scope_embed.cmake), [C API](port/include/port_hd_textures.h),
+[renderer](port/fast3d/gfx_pc.cpp), [build](CMakeLists.txt), [setting](port/src/video.c),
+[options](port/src/port_options.c), [frontend row](src/game/front.c),
+[watch row](port/src/port_watchpages.c), [help](port/src/port_option_help.c),
+[headless fallback](port/src/libultra_shim.c), [ini reference](tools/midas_ini_help.txt),
+[notices](tools/THIRD_PARTY_NOTICES.txt), player guides ([Windows](scripts/port/release/START-HERE.txt),
+[Linux](scripts/port/linux/START-HERE.txt), [Data](scripts/port/release/DATA-README.txt)),
+[release notes](scripts/port/releases.md), [README](README.md),
+[tests](scripts/port/test_hd_textures.sh) with the [pack fixture](scripts/port/make_hd_texture_fixture.py)
+and the [download test](scripts/port/test_hd_download.cpp), and [CI](.github/workflows/windows-release.yml).
+**Checks:** `test_hd_textures.sh` (Docker) checks the restored fingerprint
+vectors, Rice names, the scope, and the index over a generated pack (deflated
+and stored ZIP entries, an extracted PNG, a palette alias, an out-of-scope name
+and a corrupt image); it runs in the release workflow. The Windows build
+compiles and links. With the local v2025.12.30 PNG pack in an isolated folder,
+Dam found 610 textures from the ZIP and the same from the extracted folder, and
+1600x900 captures show its rocks, mountains, road and stripes in HD while the
+weapon's and hand's surfaces stay pixel-identical (edges differ by sub-pixel
+pose shifts, which also occur between two HD runs). The download engine's
+test (fake transport) covers success, a checksum mismatch, a longer body than
+pinned (which caught a bug: a stopped transfer had been accepted), busy retries
+and giving up, cancel and removal sparing the player's own files. In the game,
+Download on the HD Textures page against a local fixture serving the same four
+files showed `Downloading: 59 of 150 MB`, then `Installed.` and Use Original
+Textures; the files verified and the pack loaded 616 textures (the Egyptian
+three and their aliases added). Captures show GET HD TEXTURES in the Options
+folder, the watch's System page reading `HD (Get)` and its HD Textures page.
+`test_enhanced_fonts.sh` and `test_ads.sh` still pass. Not run: a download from
+GitHub itself, the Linux build locally, other levels, and a long play session.
+
 ### FORK-052 — Font styles plan
 
 **Status:** Plan accepted with its recommended decisions on 2026-11-05.
 FONT-1 (the setting), FONT-2 (the Enhanced renderer with manual install),
 FONT-3 (the in-game download), FONT-4 (the browser download) and FONT-5
 (release) are done; the owner signed off on the play-test on 2026-11-06.
+
+**Shared with FORK-053 (2026-11-06).** The Enhanced Fonts pages now run on the
+download-page table (`port_download_page.h`) that the HD Textures pages also
+use, in both menus; the Options folder's extra rows come from
+`portOptionsExtraRows`. Labels, actions, prompts and help keys are unchanged.
+The HTTPS layer gained `platform_stream_transport` beside the fonts' capped
+in-memory transport, which now wraps it; `test_enhanced_fonts.sh` passes.
 
 [`scripts/port/font_styles_plan.md`](scripts/port/font_styles_plan.md)
 proposes one **Gameplay > Iron Sights > System > Fonts** setting choosing
@@ -1622,8 +1771,11 @@ passes with zero changed image cells.
 
 ### FORK-033 — Native campaign HD texture packs (removed)
 
-**Status:** Removed on 2026-11-05. No target loads, prepares or ships
-third-party texture packs.
+**Status:** Removed on 2026-11-05. No target prepares or ships third-party
+texture packs. Since 2026-11-06, FORK-053 reads a pack the player installs
+themselves, reusing this entry's fingerprints, renderer adapter and alias
+data; the bundling, `.istex` format and CI preparer described below stay
+removed.
 
 From 2026-10-29 the native Windows/Linux OpenGL builds could replace campaign
 environment textures from a compressed `Data/TexturePacks/hd.istex` (or `4k.istex`)

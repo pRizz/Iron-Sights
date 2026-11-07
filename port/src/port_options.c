@@ -105,6 +105,13 @@ static const char *const sAnisoText[] = { "OFF\n", "2x\n", "4x\n", "8x\n", "16x\
  * launcher's, and changing it would break every existing file. */
 static const s32 sMsaaVals[] = { 1, 2, 4, 8 };
 static const s32 sFontStyleVals[] = { 0, 1, 2 };
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+/* FORK-053: HD draws a player-installed pack; see port_hd_textures.h
+ * (hd_textures.cpp, with a weak fallback in libultra_shim.c for headless builds) */
+extern const char *portTexturePackValueText(const char *text);
+static const s32 sTexturePackVals[] = { 0, 1 };
+static const char *const sTexturePackText[] = { "Original\n", "HD\n" };
+#endif
 static const char *const sFontStyleText[] = { "Original\n", "Enhanced\n", "Iron Sights\n" };
 static const char *const sHudScaleText[] = { "Normal\n", "High\n" };
 /* weapon_fov: off = the gun follows the view FOV (vanilla), on = the default FOV */
@@ -207,6 +214,9 @@ static const struct PortOpt sOpts[] = {
     ENUMR ("msaa",          "[display]", "MSAA\n",            PORTOPT_CAT_DISPLAY, sMsaaVals, sMsaaText, NULL),
     TOGGLE("filter_2d",     "[display]", "2D Filtering\n",    PORTOPT_CAT_DISPLAY),
     ENUMR ("font_style",    "[display]", "Fonts\n",           PORTOPT_CAT_DISPLAY, sFontStyleVals, sFontStyleText, NULL),
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    ENUMR ("texture_pack",  "[display]", "Texture Pack\n",    PORTOPT_CAT_DISPLAY, sTexturePackVals, sTexturePackText, NULL),
+#endif
     TOGGLE("high_lod",      "[display]", "High Detail\n",     PORTOPT_CAT_DISPLAY),
     ENUMR ("low_res",       "[display]", "3D Resolution\n",   PORTOPT_CAT_DISPLAY, sLowResVals, sLowResText, NULL),
     TOGGLE("mipmaps",       "[display]", "Mipmaps\n",         PORTOPT_CAT_DISPLAY),
@@ -559,6 +569,12 @@ static const char *enumText(const struct PortOpt *o, s32 idx)
     {
         return portEnhancedFontsValueText(o->valueText[idx]);
     }
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    if (idx == 1 && strcmp(o->key, "texture_pack") == 0)
+    {   /* FORK-053: "HD (not found)" when no pack is installed */
+        return portTexturePackValueText(o->valueText[idx]);
+    }
+#endif
     return o->valueText[idx];
 }
 

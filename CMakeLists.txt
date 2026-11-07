@@ -424,6 +424,22 @@ if(GE_VIDEO)
     set_target_properties(ge_open_fonts PROPERTIES INCLUDE_DIRECTORIES "")
     list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_open_fonts>)
     if(NOT EMSCRIPTEN AND NOT GE_XBOX)
+        # FORK-053: player-installed HD texture packs (native only). Like the
+        # font sources, it builds without the game's include directories.
+        include(port/fast3d/hd_texture_scope_embed.cmake)
+        midas_embed_hd_texture_scope(HD_TEXTURE_SCOPE_SRC)
+        add_library(ge_hd_textures OBJECT port/fast3d/hd_textures.cpp
+            port/fast3d/hd_texture_pack.cpp port/fast3d/hd_texture_format.cpp
+            port/fast3d/hd_textures_download.cpp port/fast3d/hd_download_engine.cpp)
+        set_target_properties(ge_hd_textures PROPERTIES
+            INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/port/include")
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            # i686 stat otherwise rejects large inode numbers on modern mounts.
+            target_compile_definitions(ge_hd_textures PRIVATE _FILE_OFFSET_BITS=64 _TIME_BITS=64)
+        endif()
+        list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_hd_textures> ${HD_TEXTURE_SCOPE_SRC})
+    endif()
+    if(NOT EMSCRIPTEN AND NOT GE_XBOX)
         add_compile_definitions(GE_SAVE_TRANSFER=1)
         add_library(ge_save_transfer OBJECT port/fast3d/save_backup.cpp
             port/fast3d/save_restore.cpp port/fast3d/save_transfer.cpp)

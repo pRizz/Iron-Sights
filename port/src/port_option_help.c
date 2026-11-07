@@ -39,6 +39,7 @@ static const struct PortOptHelp sHelp[] = {
     { "setting_help",       "Shows this help box." },
     { "crash_reporting",    "Sends technical crash reports to Sentry. OFF stops uploads." },
     { "font_style",         "Original: game fonts. Enhanced: community redraw, see Enhanced Fonts. Iron Sights: ours." },
+    { "texture_pack",       "HD: intermissionfb's pack, from HD Textures or copied into Data/TexturePacks." },
 
     /* HUD */
     { "sight_on_screen",    "Shows the aiming sight." },
@@ -121,6 +122,8 @@ static const struct PortOptHelp sHelp[] = {
     { "@about",             "Build version, commit, timestamp and source links." },
     { "@enhanced_fonts_get", "Downloads the files named above from GitHub and uses them, or cancels, or switches fonts." },
     { "@enhanced_fonts_remove", "Deletes the downloaded font files. Asks first." },
+    { "@hd_textures_get",   "Downloads the pack named above from GitHub and uses it, or cancels, or switches." },
+    { "@hd_textures_remove", "Deletes the downloaded HD texture files. Asks first." },
 
     /* CLASSIC: what Classic Mode forces while it is on */
     { "classic_res",        "Classic Mode renders 3D at the N64's 240 lines." },
@@ -165,6 +168,7 @@ static const struct PortOptHelp sHelp[] = {
     { "@page_is_hud",       "Crosshair size, weapon strip, health and mission alerts." },
     { "@page_is_system",    "Build info, fonts and crash reports." },
     { "@page_is_fonts",     "Get or remove the community Enhanced fonts." },
+    { "@page_is_hdtex",     "Get or remove intermissionfb's GoldenEye 007 HD textures." },
     { "@page_video",        "Display mode, resolution and picture quality." },
     { "@page_audio",        "Volume and sound options." },
     { "@page_classic",      "Choose which settings Classic Mode overrides." },

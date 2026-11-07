@@ -3,6 +3,7 @@
  * The download itself is port/fast3d/enhanced_fonts_download.cpp. */
 #include <ultra64.h>
 #include "port_enhanced_fonts.h"
+#include "port_download_page.h"
 
 extern s32 portOptFind(const char *key);
 extern s32 portOptGet(s32 i);
@@ -92,3 +93,14 @@ const char *portEnhancedFontsValueText(const char *text)
 {
     return portEnhancedFontsState() == PORT_EFONTS_INSTALLED ? text : "Enhanced (Get)\n";
 }
+
+const struct PortDownloadPage portEnhancedFontsPage = {
+    portEnhancedFontsInfoLine,
+    portEnhancedFontsActionLabel,
+    portEnhancedFontsPrimaryAction,
+    portEnhancedFontsHasFiles,
+    portEnhancedFontsRemoveAndRevert,
+    "Remove Enhanced Fonts?\n",
+    "@enhanced_fonts_get",
+    "@enhanced_fonts_remove",
+};

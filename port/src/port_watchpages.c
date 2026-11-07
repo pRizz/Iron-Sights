@@ -22,6 +22,7 @@
 
 #include "port_watchpages.h"
 #include "port_enhanced_fonts.h"
+#include "port_download_page.h"   /* FORK-052, FORK-053 */
 
 /* port_options.c */
 extern s32         portOptFind(const char *key);
@@ -180,19 +181,28 @@ static const struct PortWatchRowDef sIsSystem[] = {
     { PWROW_ACTION, NULL, "About / Build Info\n", 101, 0 },
     { PWROW_OPT,       "font_style",       NULL, 0, 0 },
     { PWROW_SUBSCREEN, NULL, "Enhanced Fonts\n", PORTWATCH_IS_FONTS, 0 },
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    { PWROW_OPT,       "texture_pack",     NULL, 0, 0 },
+    { PWROW_SUBSCREEN, NULL, "HD Textures\n", PORTWATCH_IS_HDTEX, 0 },
+#endif
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     { PWROW_OPT,       "crash_reporting",  NULL, 0, 0 },
 #endif
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
 
-/* ENHANCED FONTS (FORK-052): the description and status (hint rows whose
- * arg - PWHINT_FONTS is the line), then Download / Cancel / Retry / Use and
- * Remove (action args PWACT_FONTS and PWACT_FONTS_REMOVE). Picking Download
- * here is the player's consent; Remove asks twice, as Reset to Default does. */
+/* ENHANCED FONTS (FORK-052) and HD TEXTURES (FORK-053), drawn from their
+ * port_download_page.h tables: the description and status (hint rows whose
+ * arg - PWHINT_FONTS or - PWHINT_HDTEX is the line), then Download / Cancel /
+ * Retry / Use and Remove (action args PWACT_FONTS(_REMOVE) and
+ * PWACT_HDTEX(_REMOVE)). Picking Download here is the player's consent;
+ * Remove asks twice, as Reset to Default does. */
 #define PWHINT_FONTS 1000
+#define PWHINT_HDTEX 2000
 #define PWACT_FONTS 110
 #define PWACT_FONTS_REMOVE 111
+#define PWACT_HDTEX 112
+#define PWACT_HDTEX_REMOVE 113
 static const struct PortWatchRowDef sIsFonts[] = {
     { PWROW_HINT,   NULL, NULL, PWHINT_FONTS + 0, 0 },
     { PWROW_HINT,   NULL, NULL, PWHINT_FONTS + 1, 0 },
@@ -205,7 +215,32 @@ static const struct PortWatchRowDef sIsFonts[] = {
     { PWROW_ACTION, NULL, NULL, PWACT_FONTS_REMOVE, 0 },
     { PWROW_BACK,   NULL, "Back\n", 0, 0 },
 };
-static s32 sFontsRemoveArmed;
+static const struct PortWatchRowDef sIsHdTex[] = {
+    { PWROW_HINT,   NULL, NULL, PWHINT_HDTEX + 0, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_HDTEX + 1, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_HDTEX + 2, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_HDTEX + 3, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_HDTEX + 4, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_HDTEX + 5, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_HDTEX + 6, 0 },
+    { PWROW_ACTION, NULL, NULL, PWACT_HDTEX, 0 },
+    { PWROW_ACTION, NULL, NULL, PWACT_HDTEX_REMOVE, 0 },
+    { PWROW_BACK,   NULL, "Back\n", 0, 0 },
+};
+static s32 sDlRemoveArmed;
+
+/* The download page a hint row (and its line) or an action row belongs to. */
+static const struct PortDownloadPage *hintPage(s32 arg, s32 *line)
+{
+    if (arg >= PWHINT_HDTEX) { *line = arg - PWHINT_HDTEX; return &portHdTexturesPage; }
+    *line = arg - PWHINT_FONTS;
+    return &portEnhancedFontsPage;
+}
+static const struct PortDownloadPage *actionPage(s32 arg)
+{
+    return (arg == PWACT_FONTS || arg == PWACT_FONTS_REMOVE) ? &portEnhancedFontsPage
+         : (arg == PWACT_HDTEX || arg == PWACT_HDTEX_REMOVE) ? &portHdTexturesPage : NULL;
+}
 
 /* DISPLAY's pages */
 static const struct PortWatchRowDef sVideo[] = {
@@ -792,6 +827,7 @@ static const struct PortWatchPageDef {
     [PORTWATCH_IS_HUD]      = PWPAGE(sIsHud),
     [PORTWATCH_IS_SYSTEM]   = PWPAGE(sIsSystem),
     [PORTWATCH_IS_FONTS]    = PWPAGE(sIsFonts),
+    [PORTWATCH_IS_HDTEX]    = PWPAGE(sIsHdTex),
     /* PORTWATCH_CONTROLLER, _MORE and _BINDS are dynamic (dynBuild): { NULL, 0 } */
     /* PORTWATCH_CTLGENERAL too (the raphnet's gadget switch) */
 #undef PWPAGE
@@ -1004,7 +1040,9 @@ static const char *rowLabelShared(s32 page, s32 row)
     }
     if (d->kind == PWROW_HINT && d->arg >= PWHINT_FONTS)
     {
-        const char *line = portEnhancedFontsInfoLine(d->arg - PWHINT_FONTS);
+        s32 n;
+        const struct PortDownloadPage *dl = hintPage(d->arg, &n);
+        const char *line = dl->info_line(n);
 
         return (line != NULL) ? line : "\n";
     }
@@ -1012,13 +1050,13 @@ static const char *rowLabelShared(s32 page, s32 row)
     {   /* the line under Input: the device's name */
         return portWatchDeviceText();
     }
-    if (d->kind == PWROW_ACTION && d->arg == PWACT_FONTS_REMOVE && sFontsRemoveArmed)
+    if (d->kind == PWROW_ACTION && (d->arg == PWACT_FONTS_REMOVE || d->arg == PWACT_HDTEX_REMOVE) && sDlRemoveArmed)
     {
         return "Confirm Remove\n";
     }
-    if (d->kind == PWROW_ACTION && (d->arg == PWACT_FONTS || d->arg == PWACT_FONTS_REMOVE))
+    if (d->kind == PWROW_ACTION && actionPage(d->arg) != NULL)
     {
-        return portEnhancedFontsActionLabel(d->arg == PWACT_FONTS ? 0 : 1);
+        return actionPage(d->arg)->action_label((d->arg == PWACT_FONTS || d->arg == PWACT_HDTEX) ? 0 : 1);
     }
     if (d->kind == PWROW_ACTION)
     {
@@ -1088,7 +1126,7 @@ void portWatchPageEntered(s32 page)
     s32 wrote = 0;
     s32 i;
 
-    sFontsRemoveArmed = 0;   /* FORK-052: a page change disarms Remove */
+    sDlRemoveArmed = 0;   /* FORK-052: a page change disarms Remove */
     if (page != PORTWATCH_VIDEO || aa < 0 || portOptGet(aa) == 0)
     {
         return;
@@ -1145,14 +1183,15 @@ s32 portWatchRowSelectable(s32 page, s32 row)
     return portWatchRowKind(page, row) != PWROW_HINT;
 }
 
-/** The Enhanced Fonts description, drawn dimmer than its status line (the
+/** A download page's description, drawn dimmer than its status line (the
  *  last hint) and its buttons so those stand out (FORK-052). */
 s32 portWatchRowSubdued(s32 page, s32 row)
 {
     const struct PortWatchRowDef *d = rowDef(page, row);
+    s32 n;
 
     return d != NULL && d->kind == PWROW_HINT && d->arg >= PWHINT_FONTS
-        && portEnhancedFontsInfoLine(d->arg - PWHINT_FONTS + 1) != NULL;
+        && hintPage(d->arg, &n)->info_line(n + 1) != NULL;
 }
 
 /** Where a back button goes. Sub-pages know their own parent; nothing else
@@ -1172,6 +1211,7 @@ s32 portWatchParentPage(s32 page)
         case PORTWATCH_IS_SYSTEM:
             return PORTWATCH_IRONSIGHTS;
         case PORTWATCH_IS_FONTS:
+        case PORTWATCH_IS_HDTEX:
             return PORTWATCH_IS_SYSTEM;
         case PORTWATCH_VIDEO:
         case PORTWATCH_AUDIO:
@@ -1891,19 +1931,21 @@ s32 portWatchRowAction(s32 page, s32 row)
         extern void portStateMenuOpen(void);
         portStateMenuOpen(); return 1;
     }
-    if (d->arg == PWACT_FONTS) {
-        sFontsRemoveArmed = 0;
-        portEnhancedFontsPrimaryAction();
+    if (d->arg == PWACT_FONTS || d->arg == PWACT_HDTEX) {
+        sDlRemoveArmed = 0;
+        actionPage(d->arg)->primary_action();
         return 1;
     }
-    if (d->arg == PWACT_FONTS_REMOVE) {
-        if (!portEnhancedFontsHasFiles()) {
-            sFontsRemoveArmed = 0;
-        } else if (!sFontsRemoveArmed) {
-            sFontsRemoveArmed = 1;
+    if (d->arg == PWACT_FONTS_REMOVE || d->arg == PWACT_HDTEX_REMOVE) {
+        const struct PortDownloadPage *dl = actionPage(d->arg);
+
+        if (!dl->has_files()) {
+            sDlRemoveArmed = 0;
+        } else if (!sDlRemoveArmed) {
+            sDlRemoveArmed = 1;
         } else {
-            sFontsRemoveArmed = 0;
-            portEnhancedFontsRemoveAndRevert();
+            sDlRemoveArmed = 0;
+            dl->remove();
         }
         return 1;
     }

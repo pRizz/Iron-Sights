@@ -62,6 +62,7 @@ jobs:
           bash scripts/port/test_hud.sh
           bash scripts/port/test_open_fonts.sh
           bash scripts/port/test_enhanced_fonts.sh
+          bash scripts/port/test_hd_textures.sh
           bash scripts/port/test_hit_sound.sh
           python3 scripts/port/test_hit_sound_capture.py
           python3 scripts/port/test_settings_placement.py

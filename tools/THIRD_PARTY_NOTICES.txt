@@ -43,6 +43,12 @@ https://github.com/Graslu/GEPDTexturePacks) are downloaded only when the player
 chooses Download under Gameplay > Iron Sights > System > Enhanced Fonts, or
 copied into Data/FontPacks/gepd by the player. No release ships them.
 
+Not included: HD texture packs, such as intermissionfb's GoldenEye 007 HD
+(https://github.com/GhostlyDark/GoldenEye-007-HD). Native builds download that pack
+from its makers' GitHub only when the player chooses Download on the HD Textures
+page, or read one the player copies into Data/TexturePacks. No release ships
+it, and Iron Sights does not convert or modify it.
+
 
 Fast3D renderer
 ---------------

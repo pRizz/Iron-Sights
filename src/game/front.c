@@ -8,6 +8,8 @@
 #include "port_startup.h"
 #include "port_hitmap.h"
 #include "port_enhanced_fonts.h"
+#include "port_hd_download.h"      /* FORK-053 */
+#include "port_download_page.h"    /* FORK-052, FORK-053 */
 #endif
 #include <assets/oddtextures.h>
 #include "assets/image_externs.h"
@@ -4079,8 +4081,9 @@ enum { PORT_SHEET_GAMEPLAY, PORT_SHEET_CONTROL, PORT_SHEET_DISPLAY, PORT_SHEET_C
         * the Iron Sights page (scripts/port/test_settings_placement.py) */
        PORT_SHEET_IRONSIGHTS, PORT_SHEET_IS_AIM, PORT_SHEET_IS_FEEDBACK, PORT_SHEET_IS_HUD,
        PORT_SHEET_IS_SYSTEM,
-       /* ENHANCED FONTS (FORK-052): the player-installed font files, opened from System */
-       PORT_SHEET_IS_FONTS, PORT_SHEET_COUNT };
+       /* ENHANCED FONTS (FORK-052) and HD TEXTURES (FORK-053): downloads the
+        * player starts, opened from System (port_download_page.h) */
+       PORT_SHEET_IS_FONTS, PORT_SHEET_IS_HDTEX, PORT_SHEET_COUNT };
 /* The Options folder's rows, top to bottom, at the Files menu's own row
  * coordinates (y 0xDC, pitch 0x20). Each is a submenu:
  *
@@ -4089,8 +4092,9 @@ enum { PORT_SHEET_GAMEPLAY, PORT_SHEET_CONTROL, PORT_SHEET_DISPLAY, PORT_SHEET_C
  *   CONTROL  -> PLAYER n -> MOUSE AND KEYBOARD or CONTROLLER (whichever the
  *               device is), GENERAL CONTROL OPTIONS
  *
- * and, while the Enhanced fonts can be downloaded and are not installed,
- * GET ENHANCED FONTS -> the ENHANCED FONTS page (portOptionsFontsRow).
+ * and, while the Enhanced fonts or the HD textures can be downloaded and are
+ * not installed, GET ENHANCED FONTS -> the ENHANCED FONTS page and GET HD
+ * TEXTURES -> the HD TEXTURES page (portOptionsExtraRows).
  */
 #define PORT_OPTIONS_ROWS 3
 #define PORT_OPTIONS_ROW_PITCH 0x20
@@ -4109,7 +4113,7 @@ static const char *const port_sheet_title[PORT_SHEET_COUNT] = { "GAMEPLAY\n", "C
         "MOUSE AND KEYBOARD\n", "CONTROLLER\n", "GENERAL CONTROL OPTIONS\n", "PORT OPTIONS\n",
         "GAMEPLAY OPTIONS\n", "CLASSIC\n",   /* GAMEPLAY OPTIONS is not drawn: the two-column sheet has no heading */
         "IRON SIGHTS\n", "AIMING AND MOVEMENT\n", "COMBAT FEEDBACK\n", "HUD ADDITIONS\n", "SYSTEM\n",
-        "ENHANCED FONTS\n" };
+        "ENHANCED FONTS\n", "HD TEXTURES\n" };
 static s32 port_options_row_highlighted = -1; /* row under the cursor, -1 = on a tab */
 /* The folder's hubs: GAMEPLAY and AUDIO VISUAL reuse this folder screen to list
  * their pages, numbered; -1 means the folder's own three rows. A page's
@@ -4147,6 +4151,7 @@ s32 portMenuHarnessSheet(char first, char second)
         port_sheet_kind = (second == 'a') ? PORT_SHEET_IS_AIM : (second == 'f') ? PORT_SHEET_IS_FEEDBACK
                         : (second == 'h') ? PORT_SHEET_IS_HUD : (second == 's') ? PORT_SHEET_IS_SYSTEM
                         : (second == 'e') ? PORT_SHEET_IS_FONTS   /* GE_MENU=zenhanced */
+                        : (second == 't') ? PORT_SHEET_IS_HDTEX   /* GE_MENU=ztextures */
                         : PORT_SHEET_IRONSIGHTS;
     }
     else if (first == 'd') port_sheet_kind = PORT_SHEET_DISPLAY;
@@ -4404,7 +4409,8 @@ Gfx *constructor_menu1B_portoptions(Gfx *DL)
         y = row_y;
         DL = frontPrintText(DL, &x, &y, number, ptrFontZurichBoldChars, ptrFontZurichBold, 0xFF, viGetX(), viGetY(), 0, 0);
 
-        textstring = (char *) ((portOptionsRowKind(i) == PORT_SHEET_IS_FONTS) ? "GET ENHANCED FONTS\n"
+        textstring = (char *) ((portOptionsRowKind(i) == PORT_SHEET_IS_FONTS)   ? "GET ENHANCED FONTS\n"
+                             : (portOptionsRowKind(i) == PORT_SHEET_IS_HDTEX) ? "GET HD TEXTURES\n"
                                                                               : port_sheet_title[portOptionsRowKind(i)]);
         textMeasure(&x2, &y2, textstring, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
 
@@ -4523,8 +4529,8 @@ enum { SHROW_OPT, SHROW_RES, SHROW_XHAIR, SHROW_LAYOUT, SHROW_SAVELAYOUT, SHROW_
        SHROW_GOBINDS, SHROW_GOSHEET, SHROW_ABOUT,
        SHROW_DEVNAME, /* the device's name, on the line under Input Device - text, takes no input */
        SHROW_RESETBINDS, /* the rebind page's Reset to Default */
-       SHROW_INFO,     /* FORK-052: a line of the Enhanced Fonts page's description - text, takes no input */
-       SHROW_FONTACT,  /* FORK-052: an Enhanced Fonts action; bind 0 = download / cancel / use, 1 = remove */
+       SHROW_INFO,     /* FORK-052: a line of a download page's description - text, takes no input */
+       SHROW_DLACT,    /* FORK-052: a download page's action; bind 0 = download / cancel / use, 1 = remove */
        SHROW_COLBREAK /* two-column sheets: the rows after it start the right column (no row of its own) */ };
 
 /* Rebinding from the Options menu, so a player can fix their bindings before
@@ -4795,6 +4801,10 @@ static const struct PortSheetRow port_sheet_rows_is_system[] = {
     { SHROW_ABOUT, NULL, "About / Build Info\n" },
     { SHROW_OPT, "font_style" },    /* FORK-051: applies live */
     { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_FONTS },
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    { SHROW_OPT, "texture_pack" },  /* FORK-053: an HD pack, downloaded or copied in */
+    { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_HDTEX },
+#endif
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     { SHROW_OPT, "crash_reporting" },
 #endif
@@ -4807,14 +4817,33 @@ static const s32 port_sheet_gameplay_pages[] = { PORT_SHEET_GENERAL, PORT_SHEET_
                                                  PORT_SHEET_IRONSIGHTS };
 static const s32 port_sheet_display_pages[] = { PORT_SHEET_VIDEO, PORT_SHEET_AUDIO, PORT_SHEET_CLASSIC };
 
-/* GET ENHANCED FONTS (FORK-052): a fourth folder row, opening the Enhanced
- * Fonts page, while this build can download the fonts and they are not all
- * installed. */
-static s32 portOptionsFontsRow(void)
+/* GET ENHANCED FONTS (FORK-052) and GET HD TEXTURES (FORK-053): folder rows
+ * after the three, each opening its download page, while this build can
+ * download the files and they are not all installed. Fills pages; returns
+ * how many. */
+static s32 portOptionsExtraRows(s32 pages[2])
 {
-    const int state = portEnhancedFontsState();
+    const int fonts = portEnhancedFontsState();
+    s32 n = 0;
 
-    return state != PORT_EFONTS_INSTALLED && state != PORT_EFONTS_UNSUPPORTED;
+    if (fonts != PORT_EFONTS_INSTALLED && fonts != PORT_EFONTS_UNSUPPORTED)
+    {
+        pages[n++] = PORT_SHEET_IS_FONTS;
+    }
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    if (portHdTexturesOffered())
+    {
+        pages[n++] = PORT_SHEET_IS_HDTEX;
+    }
+#endif
+    return n;
+}
+
+/* The download page a sheet shows, or NULL for any other sheet. */
+static const struct PortDownloadPage *portSheetDownloadPage(s32 kind)
+{
+    return (kind == PORT_SHEET_IS_FONTS) ? &portEnhancedFontsPage
+         : (kind == PORT_SHEET_IS_HDTEX) ? &portHdTexturesPage : NULL;
 }
 
 /** The Options folder screen's rows: its own three, or a hub's pages. */
@@ -4828,7 +4857,11 @@ static s32 portOptionsRowCount(void)
     {
         return (s32) (sizeof(port_sheet_display_pages) / sizeof(port_sheet_display_pages[0]));
     }
-    return PORT_OPTIONS_ROWS + (portOptionsFontsRow() ? 1 : 0);
+    {
+        s32 pages[2];
+
+        return PORT_OPTIONS_ROWS + portOptionsExtraRows(pages);
+    }
 }
 
 static s32 portOptionsRowKind(s32 r)
@@ -4841,7 +4874,16 @@ static s32 portOptionsRowKind(s32 r)
     {
         return port_sheet_display_pages[r];
     }
-    return (r < PORT_OPTIONS_ROWS) ? port_options_row_kind[r] : PORT_SHEET_IS_FONTS;
+    if (r < PORT_OPTIONS_ROWS)
+    {
+        return port_options_row_kind[r];
+    }
+    {
+        s32 pages[2];
+        const s32 n = portOptionsExtraRows(pages);
+
+        return (r - PORT_OPTIONS_ROWS < n) ? pages[r - PORT_OPTIONS_ROWS] : PORT_SHEET_IS_FONTS;
+    }
 }
 
 /** A picker row's text: the page's name in the sheets' lowercase. */
@@ -4861,6 +4903,7 @@ static const char *portSheetPageLabel(s32 kind)
         case PORT_SHEET_IS_HUD:      return "HUD Additions\n";
         case PORT_SHEET_IS_SYSTEM:   return "System\n";
         case PORT_SHEET_IS_FONTS:    return "Enhanced Fonts\n";
+        case PORT_SHEET_IS_HDTEX:    return "HD Textures\n";
         case PORT_SHEET_GRAPHICS: return "Graphics\n";
         case PORT_SHEET_MOUSEKB:    return "Mouse and Keyboard\n";
         case PORT_SHEET_PAD:        return "Controller\n";
@@ -5366,11 +5409,12 @@ static void portSheetBuild(s32 kind)
             }
         }
     }
-    if (kind == PORT_SHEET_IS_FONTS)
-    {   /* FORK-052: the description and status lines, then Download / Cancel / Use and Remove */
+    if (portSheetDownloadPage(kind) != NULL)
+    {   /* FORK-052, FORK-053: the description and status lines, then Download / Cancel / Use and Remove */
+        const struct PortDownloadPage *dl = portSheetDownloadPage(kind);
         s32 k;
 
-        for (k = 0; portEnhancedFontsInfoLine(k) != NULL && port_sheet_rows < PORT_SHEET_ROWS_MAX; k++)
+        for (k = 0; dl->info_line(k) != NULL && port_sheet_rows < PORT_SHEET_ROWS_MAX; k++)
         {
             port_sheet_row_kind[port_sheet_rows] = SHROW_INFO;
             port_sheet_row_opt[port_sheet_rows] = -1;
@@ -5393,7 +5437,7 @@ static void portSheetBuild(s32 kind)
                 port_sheet_row_bind[port_sheet_rows] = -1;
                 port_sheet_rows++;
             }
-            port_sheet_row_kind[port_sheet_rows] = SHROW_FONTACT;
+            port_sheet_row_kind[port_sheet_rows] = SHROW_DLACT;
             port_sheet_row_opt[port_sheet_rows] = -1;
             port_sheet_row_bind[port_sheet_rows] = k;
             port_sheet_rows++;
@@ -5529,7 +5573,7 @@ static s32 portSheetDelLayoutIdx(void)
  * that was asked about, not on whatever is active when it is answered. */
 static s32 port_sheet_del_idx = -1;
 static s32 port_sheet_reset_open;   /* the dialog up is Reset to Default's */
-static s32 port_sheet_fonts_remove_open;   /* FORK-052: the dialog up is Remove Enhanced Fonts' */
+static s32 port_sheet_dl_remove_open;   /* FORK-052: the dialog up is a download page's Remove */
 /* Reset All on the Port Options page: 1 = the first question is up, 2 = the
  * second ("Are you sure?"); only a second Yes resets. */
 static s32 port_sheet_resetall_step;
@@ -5567,7 +5611,7 @@ static s32 portSheetListCount(s32 row)
         || port_sheet_row_kind[row] == SHROW_GOSHEET
         || port_sheet_row_kind[row] == SHROW_DEVNAME
         || port_sheet_row_kind[row] == SHROW_RESETBINDS
-        || port_sheet_row_kind[row] == SHROW_INFO || port_sheet_row_kind[row] == SHROW_FONTACT)
+        || port_sheet_row_kind[row] == SHROW_INFO || port_sheet_row_kind[row] == SHROW_DLACT)
     {
         return 0;   /* A arms a capture / steps the device / opens a page */
     }
@@ -5973,7 +6017,7 @@ static void portSheetStep(s32 row, s32 dir)
         || port_sheet_row_kind[row] == SHROW_ABOUT
         || port_sheet_row_kind[row] == SHROW_GOSHEET || port_sheet_row_kind[row] == SHROW_DEVNAME
         || port_sheet_row_kind[row] == SHROW_RESETBINDS
-        || port_sheet_row_kind[row] == SHROW_INFO || port_sheet_row_kind[row] == SHROW_FONTACT)
+        || port_sheet_row_kind[row] == SHROW_INFO || port_sheet_row_kind[row] == SHROW_DLACT)
     {
         return;   /* a layout is picked from the list, not stepped past */
     }
@@ -6472,7 +6516,7 @@ static const char *portSheetValueText(s32 row, s32 *colour)
     if (port_sheet_row_kind[row] == SHROW_GOBINDS || port_sheet_row_kind[row] == SHROW_GOSHEET
         || port_sheet_row_kind[row] == SHROW_ABOUT
         || port_sheet_row_kind[row] == SHROW_DEVNAME || port_sheet_row_kind[row] == SHROW_RESETBINDS
-        || port_sheet_row_kind[row] == SHROW_INFO || port_sheet_row_kind[row] == SHROW_FONTACT)
+        || port_sheet_row_kind[row] == SHROW_INFO || port_sheet_row_kind[row] == SHROW_DLACT)
     {
         return "\n";   /* a page, not a value, so no "press A" text */
     }
@@ -6574,15 +6618,17 @@ static const char *portSheetLabel(s32 row)
     if (port_sheet_row_kind[row] == SHROW_BINDDEV) return "Input Device\n";
     if (port_sheet_row_kind[row] == SHROW_RESETBINDS) return "Reset to Default\n";
     if (port_sheet_row_kind[row] == SHROW_INFO)
-    {   /* FORK-052: the Enhanced Fonts page's description and status */
-        const char *line = portEnhancedFontsInfoLine(port_sheet_row_bind[row]);
+    {   /* FORK-052: a download page's description and status */
+        const struct PortDownloadPage *dl = portSheetDownloadPage(port_sheet_kind);
+        const char *line = dl != NULL ? dl->info_line(port_sheet_row_bind[row]) : NULL;
 
         return line != NULL ? line : "\n";
     }
-    if (port_sheet_row_kind[row] == SHROW_FONTACT)
+    if (port_sheet_row_kind[row] == SHROW_DLACT)
     {   /* in capitals, as the folder's own rows are, inside a box (portSheetDrawRoundBox) */
         static char caps[40];
-        const char *text = portEnhancedFontsActionLabel(port_sheet_row_bind[row]);
+        const struct PortDownloadPage *dl = portSheetDownloadPage(port_sheet_kind);
+        const char *text = dl != NULL ? dl->action_label(port_sheet_row_bind[row]) : "\n";
         s32 i;
 
         for (i = 0; text[i] != '\0' && i < (s32) sizeof(caps) - 1; i++)
@@ -7575,9 +7621,9 @@ static void portSheetLeave(s32 tohub)
         for (r = 0; r < portOptionsRowCount() && portOptionsRowKind(r) != root; r++)
         {
         }
-        if (root == PORT_SHEET_IS_FONTS && r == portOptionsRowCount())
+        if ((root == PORT_SHEET_IS_FONTS || root == PORT_SHEET_IS_HDTEX) && r == portOptionsRowCount())
         {
-            r--;   /* the fonts were installed, so their row is gone: onto the last row */
+            r--;   /* the files were installed, so their row is gone: onto the last row */
         }
         if (r < portOptionsRowCount())
         {
@@ -7744,7 +7790,14 @@ static const char *portSheetHelpKey(s32 row)
         case SHROW_LAYOUT:       return "@bind_config";
         case SHROW_MANAGELAYOUT: return "@manage_config";
         case SHROW_RESETBINDS:   return "@reset_binds";
-        case SHROW_FONTACT:      return port_sheet_row_bind[row] == 0 ? "@enhanced_fonts_get" : "@enhanced_fonts_remove";
+        case SHROW_DLACT:
+            if (portSheetDownloadPage(port_sheet_kind) != NULL)
+            {
+                const struct PortDownloadPage *dl = portSheetDownloadPage(port_sheet_kind);
+
+                return port_sheet_row_bind[row] == 0 ? dl->help_get : dl->help_remove;
+            }
+            break;
         case SHROW_BIND:         return "@bind";
         case SHROW_GOSHEET:
             switch (port_sheet_row_bind[row])
@@ -7764,6 +7817,7 @@ static const char *portSheetHelpKey(s32 row)
                 case PORT_SHEET_IS_HUD:      return "@page_is_hud";
                 case PORT_SHEET_IS_SYSTEM:   return "@page_is_system";
                 case PORT_SHEET_IS_FONTS:    return "@page_is_fonts";
+                case PORT_SHEET_IS_HDTEX:    return "@page_is_hdtex";
             }
             break;
     }
@@ -8214,12 +8268,12 @@ void interface_menu1C_portsheet(void)
                     portSheetBuild(port_sheet_kind);   /* the rows read the defaults */
                 }
             }
-            else if (port_sheet_fonts_remove_open)
+            else if (port_sheet_dl_remove_open)
             {
-                port_sheet_fonts_remove_open = FALSE;
-                if (portDlgSaidYes())
+                port_sheet_dl_remove_open = FALSE;
+                if (portDlgSaidYes() && portSheetDownloadPage(port_sheet_kind) != NULL)
                 {
-                    portEnhancedFontsRemoveAndRevert();
+                    portSheetDownloadPage(port_sheet_kind)->remove();
                 }
             }
             else if (port_sheet_reset_open)
@@ -8711,16 +8765,18 @@ void interface_menu1C_portsheet(void)
                 extern void portAboutOpen(void);
                 portAboutOpen();
             }
-            else if (port_sheet_row_kind[row] == SHROW_FONTACT)
+            else if (port_sheet_row_kind[row] == SHROW_DLACT && portSheetDownloadPage(port_sheet_kind) != NULL)
             {   /* FORK-052: Download (the consent is this page), Cancel, Retry, Use; Remove asks first */
+                const struct PortDownloadPage *dl = portSheetDownloadPage(port_sheet_kind);
+
                 if (port_sheet_row_bind[row] == 0)
                 {
-                    portEnhancedFontsPrimaryAction();
+                    dl->primary_action();
                 }
-                else if (portEnhancedFontsHasFiles())
+                else if (dl->has_files())
                 {
-                    port_sheet_fonts_remove_open = TRUE;
-                    portDlgOpen("Remove Enhanced Fonts?\n", "Yes\n", "No\n", 0);
+                    port_sheet_dl_remove_open = TRUE;
+                    portDlgOpen(dl->remove_prompt, "Yes\n", "No\n", 0);
                 }
             }
             else if (port_sheet_row_kind[row] == SHROW_GOSHEET)
@@ -9071,8 +9127,9 @@ Gfx *constructor_menu1C_portsheet(Gfx *DL)
             {
                 lcolour = PORT_SHEET_COL_DIM;
             }
-            else if (port_sheet_row_kind[row] == SHROW_INFO && portEnhancedFontsInfoLine(port_sheet_row_bind[row] + 1) != NULL)
-            {   /* FORK-052: the Enhanced Fonts description in a lighter ink than
+            else if (port_sheet_row_kind[row] == SHROW_INFO && portSheetDownloadPage(port_sheet_kind) != NULL
+                     && portSheetDownloadPage(port_sheet_kind)->info_line(port_sheet_row_bind[row] + 1) != NULL)
+            {   /* FORK-052: a download page's description in a lighter ink than
                  * its status line (the last) and its buttons */
                 lcolour = PORT_SHEET_COL_NOTE;
             }
@@ -9122,8 +9179,8 @@ Gfx *constructor_menu1C_portsheet(Gfx *DL)
         textMeasure(&th, &tw, label, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
         x = portSheetSlotLabelX(slot);
         y = portSheetSlotY(slot);
-        if (row >= 0 && port_sheet_row_kind[row] == SHROW_FONTACT)
-        {   /* FORK-052: the Enhanced Fonts actions drawn as rounded buttons,
+        if (row >= 0 && port_sheet_row_kind[row] == SHROW_DLACT)
+        {   /* FORK-052: a download page's actions drawn as rounded buttons,
              * filled with the highlight under the cursor. The button's left
              * edge stays on the text column; the label moves in by the padding. */
             const s32 bx0 = x - 2, bx1 = x + tw + 1 + 2 * PORT_SHEET_BUTTON_PADX;

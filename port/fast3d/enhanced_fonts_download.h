@@ -109,5 +109,15 @@ int count_valid(const enhanced_font_masks::PackFile *files, size_t count, const 
  * the menus' C API instead). */
 Transport platform_transport();
 
+/* Hands a body's bytes on as they arrive; false stops the transfer. */
+using Sink = std::function<bool(const uint8_t *data, size_t size)>;
+/* Streams url's body to sink, for one large file (the HD texture pack,
+ * FORK-053): no size cap, and it gives up when the connection stalls rather
+ * than after a fixed time. Failures are reported as for Transport. */
+using StreamTransport =
+    std::function<bool(const std::string &url, const Sink &sink, Failure &failure, const std::atomic<bool> &cancel)>;
+/* The streaming form of platform_transport(); empty where there is none. */
+StreamTransport platform_stream_transport();
+
 }  // namespace enhanced_fonts_download
 #endif

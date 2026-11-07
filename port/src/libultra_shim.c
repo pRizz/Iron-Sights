@@ -107,6 +107,12 @@ __attribute__((weak)) s32 portInputPadLookYP1(void)   /* input_pc.c: no pads hea
     return 0;
 }
 
+/* hd_textures.cpp (native renderer builds only): the Texture Pack row's HD text (FORK-053) */
+__attribute__((weak)) const char *portTexturePackValueText(const char *text)
+{
+    return text;
+}
+
 /* open_fonts.cpp (renderer builds only): register a ROM glyph for the open fonts (FORK-050) */
 __attribute__((weak)) void portOpenFontsGlyph(int font, int ch, const unsigned char *pixels, int width, int height, int baseline)
 {
@@ -132,6 +138,18 @@ __attribute__((weak)) void portEnhancedFontsRecount(void) {}
 __attribute__((weak)) void portEnhancedFontsRemove(void) {}
 __attribute__((weak)) int portEnhancedFontsJustInstalled(void) { return 0; }
 __attribute__((weak)) const char *portEnhancedFontsInfoLine(int i) { (void) i; return NULL; }
+
+/* hd_textures_download.cpp (native renderer builds only): the HD textures' download (FORK-053) */
+__attribute__((weak)) int portHdTexturesState(void) { return 5; /* PORT_HDTEX_UNSUPPORTED */ }
+__attribute__((weak)) void portHdTexturesSetDirectory(const char *directory) { (void) directory; }
+__attribute__((weak)) void portHdTexturesProgress(int *done, int *total) { if (done) *done = 0; if (total) *total = 0; }
+__attribute__((weak)) const char *portHdTexturesError(void) { return ""; }
+__attribute__((weak)) void portHdTexturesDownload(void) {}
+__attribute__((weak)) void portHdTexturesCancel(void) {}
+__attribute__((weak)) void portHdTexturesRecount(void) {}
+__attribute__((weak)) void portHdTexturesRemove(void) {}
+__attribute__((weak)) int portHdTexturesJustInstalled(void) { return 0; }
+__attribute__((weak)) const char *portHdTexturesInfoLine(int i) { (void) i; return NULL; }
 
 __attribute__((weak)) s32 portWatchStatic(void)   /* video.c: [display] watch_static, vanilla on */
 {

@@ -22,8 +22,18 @@ Extract a newer ZIP into the game folder and replace its supplied files.
 Keep your Data folder and midas.ini: they contain your ROM, saves and settings.
 Suspend points require the same executable and will not load on a newer build.
 Normal campaign saves and profiles remain separate.
-Earlier builds bundled an HD environment pack in Data/TexturePacks. This
-build no longer reads it; you can delete that folder.
+
+HD TEXTURES (OPTIONAL)
+Iron Sights does not include any HD textures. Get HD Textures in Options (or
+Gameplay > Iron Sights > System > HD Textures) downloads intermissionfb's
+GoldenEye 007 HD pack, 150 MB, from its makers' GitHub when you choose
+Download, into Data/TexturePacks; Remove there deletes it. You can also
+download its PNG version (the ...-gliden64-png-hd.zip file) yourself from
+https://github.com/GhostlyDark/GoldenEye-007-HD and put the ZIP, or the folder you
+extract it to, in Data/TexturePacks. Texture Pack set to HD (the default) draws
+its campaign environment textures; weapons, hands and the HUD keep their
+original look. The 4K and HTS versions are not read. The hd.istex file that
+earlier builds shipped is no longer read; delete it.
 
 SAVE TRANSFER
 On the four-campaign Files screen, Export writes a portable JSON backup.

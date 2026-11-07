@@ -1,0 +1,1724 @@
+{
+  "schema": 1,
+  "scope": "Stock USA campaign environment palette identities",
+  "source_revision": "f16ed0acb0b9b5ca5f7dad90dc6d5ae0f18c0ead",
+  "validation": "Native/artist contact sheets reviewed for index pattern, palette colours, alpha and orientation; ambiguous or incompatible images excluded. Private evidence: build_win/hd-levels/alias-review.",
+  "aliases": [
+    {
+      "pack_key": [
+        62431182,
+        2329089702,
+        2,
+        1
+      ],
+      "native_palette": 487911958,
+      "native_width": 32,
+      "native_height": 48,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#03B89FCE#2#1#8AD316A6_ciByRGBA.png",
+      "native_dump_sha256": "2b41a4c3216327239b81cc92a33ff43c92b5a4303465b482c84c8a7072e24185"
+    },
+    {
+      "pack_key": [
+        98381350,
+        1577561510,
+        2,
+        1
+      ],
+      "native_palette": 317983646,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#05DD2E26#2#1#5E07ADA6_ciByRGBA.png",
+      "native_dump_sha256": "717eaa88e82ab83bc8d21404f26dea3092545003a5d0a76f5796bc7e1f223c67"
+    },
+    {
+      "pack_key": [
+        125510571,
+        1389430003,
+        2,
+        1
+      ],
+      "native_palette": 1633401772,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#077B23AB#2#1#52D104F3_ciByRGBA.png",
+      "native_dump_sha256": "39caeec03d3411283095e29cadd08f442f9ec8c742920305a4b3b691bd8f0226"
+    },
+    {
+      "pack_key": [
+        165175085,
+        3398153774,
+        2,
+        1
+      ],
+      "native_palette": 2775317852,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#09D85F2D#2#1#CA8BB62E_ciByRGBA.png",
+      "native_dump_sha256": "39bdd1744e3576ecf85932646da518031833ad726d90e9e8f329de519b1c774b"
+    },
+    {
+      "pack_key": [
+        194112074,
+        2372571278,
+        2,
+        1
+      ],
+      "native_palette": 1127379933,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#0B91EA4A#2#1#8D6A908E_ciByRGBA.png",
+      "native_dump_sha256": "c40a2635fa1a1e1625606338102ec4d713b1fc5d5699cb9cc381120eea9ff6c1"
+    },
+    {
+      "pack_key": [
+        213288131,
+        1981758606,
+        2,
+        1
+      ],
+      "native_palette": 1875682373,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#0CB684C3#2#1#761F3C8E_ciByRGBA.png",
+      "native_dump_sha256": "ef1afe8f6b079302ecd481f53049d773ac3c386ece485bcbdae0d30d73a6c83e"
+    },
+    {
+      "pack_key": [
+        257786729,
+        3979541807,
+        2,
+        1
+      ],
+      "native_palette": 3121836278,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#0F5D8369#2#1#ED32FD2F_ciByRGBA.png",
+      "native_dump_sha256": "9cdbd05d1d40d48adaf81b1eebe877bbcf936b2be63e11dbff202db7ba6799c8"
+    },
+    {
+      "pack_key": [
+        326962233,
+        3990113442,
+        2,
+        1
+      ],
+      "native_palette": 3512764341,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#137D0C39#2#1#EDD44CA2_ciByRGBA.png",
+      "native_dump_sha256": "6946c6e63ad06498d2e2f995a46e2df6a8357eb68e3c69958220a9ecbddad963"
+    },
+    {
+      "pack_key": [
+        378405948,
+        13732632,
+        2,
+        1
+      ],
+      "native_palette": 1646177211,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#168E043C#2#1#00D18B18_ciByRGBA.png",
+      "native_dump_sha256": "cbadb9a5204046233472113facc3e801c4261179bf4f928da61b15d8bf4f172c"
+    },
+    {
+      "pack_key": [
+        422204759,
+        1907027792,
+        2,
+        1
+      ],
+      "native_palette": 3320942390,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#192A5557#2#1#71AAEF50_ciByRGBA.png",
+      "native_dump_sha256": "9f76bd02e7af163acb2eb60a01590b9b31055ada5f23ef17a84f8c594432cc65"
+    },
+    {
+      "pack_key": [
+        428503911,
+        4038244250,
+        2,
+        1
+      ],
+      "native_palette": 1611676496,
+      "native_width": 16,
+      "native_height": 64,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#198A7367#2#1#F0B2B79A_ciByRGBA.png",
+      "native_dump_sha256": "1a8098b3b2e86daf069622b26bf82848232b987d9c4e218d11e1af792e4ce3c0"
+    },
+    {
+      "pack_key": [
+        432809072,
+        4076771551,
+        2,
+        1
+      ],
+      "native_palette": 2047142837,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#19CC2470#2#1#F2FE98DF_ciByRGBA.png",
+      "native_dump_sha256": "8ab5376547643eafef7836d104429b94c9b8555817539200a9411b7ef613031c"
+    },
+    {
+      "pack_key": [
+        438048389,
+        2574861436,
+        2,
+        1
+      ],
+      "native_palette": 1045938562,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#1A1C1685#2#1#9979447C_ciByRGBA.png",
+      "native_dump_sha256": "f1149af0ba1ef5d430f5c30bcea8018c7d15542c693954430df6115ddf7c746c"
+    },
+    {
+      "pack_key": [
+        446778492,
+        4135339492,
+        2,
+        1
+      ],
+      "native_palette": 1165521254,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/Areas/Mission 20 - Egyptian/GOLDENEYE#1AA14C7C#2#1#F67C45E4_ciByRGBA.png",
+      "native_dump_sha256": "1f80e53810a3b641ffac6197e5e11b6437563b674fbd7f13d20a00c5b38ee6de"
+    },
+    {
+      "pack_key": [
+        467051532,
+        2682484051,
+        2,
+        1
+      ],
+      "native_palette": 3018765947,
+      "native_width": 64,
+      "native_height": 17,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#1BD6A40C#2#1#9FE37553_ciByRGBA.png",
+      "native_dump_sha256": "ddb57662a792645ff599186af39e5fa32febe34f1dc86b2994116bb6790fa4d0"
+    },
+    {
+      "pack_key": [
+        474853130,
+        4086816095,
+        2,
+        1
+      ],
+      "native_palette": 1573862313,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#1C4DAF0A#2#1#F397DD5F_ciByRGBA.png",
+      "native_dump_sha256": "ec89391d3f8b5264b2e524bc8f64fbaafe61bfc51609fd2b3d641ece139dc646"
+    },
+    {
+      "pack_key": [
+        513947979,
+        607325198,
+        2,
+        1
+      ],
+      "native_palette": 1612702788,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#1EA2394B#2#1#24330C0E_ciByRGBA.png",
+      "native_dump_sha256": "d1ae6c4f96c9ca8aeb9c2fd2aea124f1989dfc47d50b448dc9a4dda7e1347bdc"
+    },
+    {
+      "pack_key": [
+        539444745,
+        623194576,
+        2,
+        1
+      ],
+      "native_palette": 3315046625,
+      "native_width": 64,
+      "native_height": 17,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#20274609#2#1#252531D0_ciByRGBA.png",
+      "native_dump_sha256": "b9a31fb57c995e14c7a358a33f7b1e36b413bcb5e851d9517d153ff962dcef52"
+    },
+    {
+      "pack_key": [
+        551621779,
+        2429091504,
+        2,
+        1
+      ],
+      "native_palette": 3828388095,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#20E11493#2#1#90C8FEB0_ciByRGBA.png",
+      "native_dump_sha256": "34df199093cb0bd72407ca8e0a7166c765793b2814d702f39d1cb2e793564a06"
+    },
+    {
+      "pack_key": [
+        576012773,
+        443265036,
+        2,
+        1
+      ],
+      "native_palette": 3788965318,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#225541E5#2#1#1A6BB00C_ciByRGBA.png",
+      "native_dump_sha256": "5b333303ebce506881e98aa292aa92b59372e5e49299ad9425c0a2eb3b9bbfbb"
+    },
+    {
+      "pack_key": [
+        696966832,
+        506501,
+        2,
+        1
+      ],
+      "native_palette": 2802802451,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#298ADEB0#2#1#0007BA85_ciByRGBA.png",
+      "native_dump_sha256": "1d279358d8fda09d85c7f0372568cc32464c918830832dfe6568a6288a383572"
+    },
+    {
+      "pack_key": [
+        749612511,
+        1520212966,
+        2,
+        1
+      ],
+      "native_palette": 4168082806,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#2CAE2DDF#2#1#5A9C9BE6_ciByRGBA.png",
+      "native_dump_sha256": "744b087951d9c6b736c54f642b01d6d3de43155f228abd5a2e742530d8d1898f"
+    },
+    {
+      "pack_key": [
+        894122276,
+        1789335585,
+        2,
+        1
+      ],
+      "native_palette": 645917859,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#354B3924#2#1#6AA71821_ciByRGBA.png",
+      "native_dump_sha256": "3e9fecd87cabe32ea1c564b8ed47fc43cba86a70b5dddc92cd69a9544d3e5091"
+    },
+    {
+      "pack_key": [
+        899292141,
+        4132978820,
+        2,
+        1
+      ],
+      "native_palette": 1694237776,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#359A1BED#2#1#F6584084_ciByRGBA.png",
+      "native_dump_sha256": "1c7989abf5d8c1e357f57a1a262f42be4d731a1f0cd7b9b31c10d2751be6c04a"
+    },
+    {
+      "pack_key": [
+        960929984,
+        613291260,
+        2,
+        1
+      ],
+      "native_palette": 1869969897,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#3946A0C0#2#1#248E14FC_ciByRGBA.png",
+      "native_dump_sha256": "ee6d36f9451ec174a5d2fdd8eae402c64f58c1e7b6426398f78a2838d6e8b1d1"
+    },
+    {
+      "pack_key": [
+        962247092,
+        71332717,
+        2,
+        1
+      ],
+      "native_palette": 4254990400,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#395AB9B4#2#1#0440736D_ciByRGBA.png",
+      "native_dump_sha256": "afc4f576b4caee167528e541ec5bb048a86bf8427f37243b97bf401cf976b508"
+    },
+    {
+      "pack_key": [
+        979330923,
+        4073492716,
+        2,
+        1
+      ],
+      "native_palette": 287764914,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#3A5F676B#2#1#F2CC90EC_ciByRGBA.png",
+      "native_dump_sha256": "283db392959d577ea947a58e4a658a7d971a459a111cf0d8008350a81fb78048"
+    },
+    {
+      "pack_key": [
+        1024450035,
+        3126203142,
+        2,
+        0
+      ],
+      "native_palette": 1718500134,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#3D0FDDF3#2#0#BA561306_ciByRGBA.png",
+      "native_dump_sha256": "cb3e8e1dc3ac4b5b779557cdda704813515525432a330693f728ede14762f91c"
+    },
+    {
+      "pack_key": [
+        1081829456,
+        3777578319,
+        2,
+        0
+      ],
+      "native_palette": 2481248715,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#407B6850#2#0#E129454F_ciByRGBA.png",
+      "native_dump_sha256": "fd6467dfb50b6eb621f60a2494d9778a1da1499bfccb700b3f53631db0cd30c8"
+    },
+    {
+      "pack_key": [
+        1128378664,
+        1436804869,
+        2,
+        1
+      ],
+      "native_palette": 526645426,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#4341B128#2#1#55A3E705_ciByRGBA.png",
+      "native_dump_sha256": "686cf0e37844706208cf4f2f15ff94ed7633cc93d3c26bcff9f6022edcde1b8b"
+    },
+    {
+      "pack_key": [
+        1151620298,
+        2622718184,
+        2,
+        1
+      ],
+      "native_palette": 2428686755,
+      "native_width": 64,
+      "native_height": 17,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#44A454CA#2#1#9C5380E8_ciByRGBA.png",
+      "native_dump_sha256": "dc8f82fd7a665e4fc5de4aeca0ab5f55bdc529772d17c41e4ddb0c684a8da528"
+    },
+    {
+      "pack_key": [
+        1187164650,
+        3722987579,
+        2,
+        1
+      ],
+      "native_palette": 3968752905,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#46C2B1EA#2#1#DDE8483B_ciByRGBA.png",
+      "native_dump_sha256": "6b6d01eba33516e2a7469f5cf604bf3b13f398b2e51a753dc621ea6e073de522"
+    },
+    {
+      "pack_key": [
+        1208941302,
+        1472123048,
+        2,
+        1
+      ],
+      "native_palette": 1861285510,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#480EFAF6#2#1#57BED0A8_ciByRGBA.png",
+      "native_dump_sha256": "bd0e24b19fe421db221e088919a22f48496ffe5d8ade247deabfea2e129605e6"
+    },
+    {
+      "pack_key": [
+        1267603774,
+        529996248,
+        2,
+        1
+      ],
+      "native_palette": 1903796673,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#4B8E193E#2#1#1F9719D8_ciByRGBA.png",
+      "native_dump_sha256": "cb63a99f3857e5192fd3c1bb45802b7425eadcf6ccd9d0d41a5fff5e6a634625"
+    },
+    {
+      "pack_key": [
+        1268249911,
+        544428429,
+        2,
+        1
+      ],
+      "native_palette": 2101652054,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#4B97F537#2#1#2073518D_ciByRGBA.png",
+      "native_dump_sha256": "ce7a579e34d8bdc3185ceeb48d9d5e723532ba511cee68cf3d37fe3cc3ababfc"
+    },
+    {
+      "pack_key": [
+        1276885178,
+        130344698,
+        2,
+        1
+      ],
+      "native_palette": 1863402972,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#4C1BB8BA#2#1#07C4E6FA_ciByRGBA.png",
+      "native_dump_sha256": "4762459d3425f4b3d1d42a85f5bb425b9617cd1479dbc92054fa9df87fb489c2"
+    },
+    {
+      "pack_key": [
+        1289739662,
+        2075275946,
+        2,
+        1
+      ],
+      "native_palette": 2584239658,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#4CDFDD8E#2#1#7BB232AA_ciByRGBA.png",
+      "native_dump_sha256": "c9c51f571242d7e284bd69e7575856674802ea9aa059a3bf1f4ea299e048e944"
+    },
+    {
+      "pack_key": [
+        1315076861,
+        1102655438,
+        2,
+        1
+      ],
+      "native_palette": 1531284670,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#4E627AFD#2#1#41B92FCE_ciByRGBA.png",
+      "native_dump_sha256": "e804303d82ceb18f3ac1e395ff3e6bf320a444a27e1127b080ffd557604414e7"
+    },
+    {
+      "pack_key": [
+        1317000943,
+        1459419607,
+        2,
+        1
+      ],
+      "native_palette": 960094518,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#4E7FD6EF#2#1#56FCF9D7_ciByRGBA.png",
+      "native_dump_sha256": "04c0cf068c05694d9bfd6d07b53987fd87544f8081e36d1d9c8051944e618207"
+    },
+    {
+      "pack_key": [
+        1338975077,
+        4187114753,
+        2,
+        1
+      ],
+      "native_palette": 2297580743,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#4FCF2365#2#1#F9924D01_ciByRGBA.png",
+      "native_dump_sha256": "29926609539aa1a23daf9354538c8d022894257cd3c6141fdd1a35ead2dcba5d"
+    },
+    {
+      "pack_key": [
+        1384827476,
+        2544945669,
+        2,
+        1
+      ],
+      "native_palette": 11453257,
+      "native_width": 32,
+      "native_height": 48,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#528ACA54#2#1#97B0CA05_ciByRGBA.png",
+      "native_dump_sha256": "8e4f14f16e70846d8aa3133726cf00d390d4e6a6c871d0ccd322cde4897ae115"
+    },
+    {
+      "pack_key": [
+        1390640178,
+        2897445836,
+        2,
+        1
+      ],
+      "native_palette": 3527345283,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#52E37C32#2#1#ACB383CC_ciByRGBA.png",
+      "native_dump_sha256": "4b2b11320687f28b6b9c294b8d152afe95f21fb1e0a76e69c56bf6cc38d791ba"
+    },
+    {
+      "pack_key": [
+        1404338534,
+        541593778,
+        2,
+        1
+      ],
+      "native_palette": 3712929486,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#53B48166#2#1#204810B2_ciByRGBA.png",
+      "native_dump_sha256": "5e3e2eda738242bf57ceae3774a4e68570979017291deb5fa32a585bdf37cf41"
+    },
+    {
+      "pack_key": [
+        1433246617,
+        1952607128,
+        2,
+        1
+      ],
+      "native_palette": 1609593929,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#556D9B99#2#1#74626B98_ciByRGBA.png",
+      "native_dump_sha256": "816950bceebef5b116b8286548da8a032ee596de2617a1594702614ea3030f9f"
+    },
+    {
+      "pack_key": [
+        1443331901,
+        1080319582,
+        2,
+        1
+      ],
+      "native_palette": 3574425902,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#56077F3D#2#1#40645E5E_ciByRGBA.png",
+      "native_dump_sha256": "1760a4f970f230222447a63cb0aefd64536a46ca05404108ee6f2e3b8882c496"
+    },
+    {
+      "pack_key": [
+        1452213900,
+        614139271,
+        2,
+        1
+      ],
+      "native_palette": 3202055875,
+      "native_width": 64,
+      "native_height": 17,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#568F068C#2#1#249B0587_ciByRGBA.png",
+      "native_dump_sha256": "7b8574ba0e33f2125474419a906a12a65e8d38b64bf29cc3d479340ddbe33e98"
+    },
+    {
+      "pack_key": [
+        1456677978,
+        486780892,
+        2,
+        1
+      ],
+      "native_palette": 543497559,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#56D3245A#2#1#1D03AFDC_ciByRGBA.png",
+      "native_dump_sha256": "738077fddc57fb1b90a5d00f0f25dce3f5350f989a8292692e6566c77634e3ad"
+    },
+    {
+      "pack_key": [
+        1501816705,
+        2150861253,
+        2,
+        1
+      ],
+      "native_palette": 2487675293,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#5983E781#2#1#803389C5_ciByRGBA.png",
+      "native_dump_sha256": "3e0d4c3b15a95a6584475465cf2646a3f7c1edbb68c91695264b4f4b6742b7b4"
+    },
+    {
+      "pack_key": [
+        1558197553,
+        3624101996,
+        2,
+        0
+      ],
+      "native_palette": 1479594041,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#5CE03531#2#0#D803686C_ciByRGBA.png",
+      "native_dump_sha256": "a5140d8999902644aca0b03d87c34a0121de8402e59e81ef6094debe96888db1"
+    },
+    {
+      "pack_key": [
+        1594270882,
+        2234757724,
+        2,
+        1
+      ],
+      "native_palette": 2816263133,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#5F06A4A2#2#1#8533B25C_ciByRGBA.png",
+      "native_dump_sha256": "2d90d8c4acb980a7df73e6b90d2c1a24daefb9c910707d014be18816e9ea2c13"
+    },
+    {
+      "pack_key": [
+        1650703901,
+        2429465770,
+        2,
+        1
+      ],
+      "native_palette": 4174169408,
+      "native_width": 32,
+      "native_height": 48,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#6263BE1D#2#1#90CEB4AA_ciByRGBA.png",
+      "native_dump_sha256": "3baaa232f68a9bfcb22f0ec0b88f284da466aac86d74f307864479811f7fc40a"
+    },
+    {
+      "pack_key": [
+        1655896474,
+        2653737178,
+        2,
+        1
+      ],
+      "native_palette": 4002827627,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#62B2F99A#2#1#9E2CD0DA_ciByRGBA.png",
+      "native_dump_sha256": "bda8d3ad2ab984df3378027a6fdb5de2e6f5205830552ad88bbf33451d0b1cfe"
+    },
+    {
+      "pack_key": [
+        1667686744,
+        201078237,
+        2,
+        1
+      ],
+      "native_palette": 3243360953,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#6366E158#2#1#0BFC35DD_ciByRGBA.png",
+      "native_dump_sha256": "af52596a40a9f40d7f34bdcc82274b6fa08e62a3111fe5659ada75fa9e97cd52"
+    },
+    {
+      "pack_key": [
+        1677511396,
+        1140253992,
+        2,
+        1
+      ],
+      "native_palette": 1225494638,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#63FCCAE4#2#1#43F6E528_ciByRGBA.png",
+      "native_dump_sha256": "86c70cdc377556a767d157ec5180467c1f151528e423446fff36f47ad0ae05b2"
+    },
+    {
+      "pack_key": [
+        1716437261,
+        1941216599,
+        2,
+        1
+      ],
+      "native_palette": 1974264928,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#664EC10D#2#1#73B49D57_ciByRGBA.png",
+      "native_dump_sha256": "f1e7fb6c218a979571d009ea49feee0ef1e532c880d9a84743fa99ffffa17a9d"
+    },
+    {
+      "pack_key": [
+        1733510394,
+        24845929,
+        2,
+        1
+      ],
+      "native_palette": 3477917241,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#675344FA#2#1#017B1E69_ciByRGBA.png",
+      "native_dump_sha256": "a46c6145cde6c70a39a72c8d311d0caab26070f180b0f9c7d9fe917bdfefd405"
+    },
+    {
+      "pack_key": [
+        1766191985,
+        953963062,
+        2,
+        1
+      ],
+      "native_palette": 2222842313,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#6945F371#2#1#38DC5236_ciByRGBA.png",
+      "native_dump_sha256": "ff480ea1092b847077aab726b9e5d31840a69cacd45d54bf94a94e0099d7c89c"
+    },
+    {
+      "pack_key": [
+        1806154452,
+        2839483623,
+        2,
+        1
+      ],
+      "native_palette": 4043473949,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#6BA7BAD4#2#1#A93F14E7_ciByRGBA.png",
+      "native_dump_sha256": "0bd80885a51e8c93cdd64a38251922ec5fa6ab51231954780c00a0ac0e264ae7"
+    },
+    {
+      "pack_key": [
+        1808888830,
+        1112968517,
+        2,
+        1
+      ],
+      "native_palette": 521253055,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#6BD173FE#2#1#42568D45_ciByRGBA.png",
+      "native_dump_sha256": "cd367e401ae5a9265743149875c58527ce05a3dbb00894f23f7a4aa8aaf3b499"
+    },
+    {
+      "pack_key": [
+        1869606975,
+        2298604884,
+        2,
+        1
+      ],
+      "native_palette": 1889735747,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/Areas/Mission 20 - Egyptian/GOLDENEYE#6F6FF03F#2#1#8901ED54_ciByRGBA.png",
+      "native_dump_sha256": "f84c0cbd4c561851a1a9f185a614d292c4663458b268dc678a1f2288d990e59c"
+    },
+    {
+      "pack_key": [
+        1878448032,
+        1380533931,
+        2,
+        1
+      ],
+      "native_palette": 3379749716,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#6FF6D7A0#2#1#524946AB_ciByRGBA.png",
+      "native_dump_sha256": "2b0ac401af7c31485a83ee137a00ced7ee315dc9b977287a411dcc1d3df83e6f"
+    },
+    {
+      "pack_key": [
+        1925510488,
+        2236454,
+        2,
+        0
+      ],
+      "native_palette": 3463962354,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#72C4F558#2#0#00222026_ciByRGBA.png",
+      "native_dump_sha256": "a70614dfc28a1c10974caf4132e1ab908b4b0907ef82c1306b4f1f6adfecb76d"
+    },
+    {
+      "pack_key": [
+        1938984577,
+        503210234,
+        2,
+        1
+      ],
+      "native_palette": 2645575083,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#73928E81#2#1#1DFE60FA_ciByRGBA.png",
+      "native_dump_sha256": "1a1ea0b55d4b60677d971387e8fd3143eed27e492a6113798b91b770fa6805d8"
+    },
+    {
+      "pack_key": [
+        1999641716,
+        646642032,
+        2,
+        1
+      ],
+      "native_palette": 1503701140,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#77301C74#2#1#268AF970_ciByRGBA.png",
+      "native_dump_sha256": "004f0664eb38f3a4db3ae91320d8b0ba81a5021a013eb55ba78ebf1ce80870fc"
+    },
+    {
+      "pack_key": [
+        2001689120,
+        2114343557,
+        2,
+        1
+      ],
+      "native_palette": 3438932634,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#774F5A20#2#1#7E065285_ciByRGBA.png",
+      "native_dump_sha256": "ae49ba75984a64878cc71b5e7bd1e4cc62b1df1c99d090343b7a537ac4049b0e"
+    },
+    {
+      "pack_key": [
+        2004945336,
+        2238663085,
+        2,
+        1
+      ],
+      "native_palette": 2023924131,
+      "native_width": 64,
+      "native_height": 17,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#778109B8#2#1#856F49AD_ciByRGBA.png",
+      "native_dump_sha256": "34e94713a93ff9cdb70193be57bb9244fbeb4f3154e51f46f681895e0571f013"
+    },
+    {
+      "pack_key": [
+        2006865892,
+        2745183454,
+        2,
+        1
+      ],
+      "native_palette": 3276194931,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#779E57E4#2#1#A3A02CDE_ciByRGBA.png",
+      "native_dump_sha256": "b6dbe0df40aad3b8ad2bf84475e0bb2090a9a301a3305e2df81e38583be8e7db"
+    },
+    {
+      "pack_key": [
+        2034757550,
+        328999776,
+        2,
+        1
+      ],
+      "native_palette": 712874697,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#7947EFAE#2#1#139C2360_ciByRGBA.png",
+      "native_dump_sha256": "07f832fe492fcd2e9b9906192381531ce5a472b782903f8b23d45a2a23b15b55"
+    },
+    {
+      "pack_key": [
+        2041026908,
+        2618192894,
+        2,
+        1
+      ],
+      "native_palette": 1508286531,
+      "native_width": 16,
+      "native_height": 64,
+      "source": "GOLDENEYE/Areas/Mission 20 - Egyptian/GOLDENEYE#79A7995C#2#1#9C0E73FE_ciByRGBA.png",
+      "native_dump_sha256": "e00c151f99cd37844edc5239a1b6b238a36a4093fadb86e77bf4bd82b478014f"
+    },
+    {
+      "pack_key": [
+        2076763442,
+        1133822465,
+        2,
+        1
+      ],
+      "native_palette": 35990088,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#7BC8E532#2#1#4394C201_ciByRGBA.png",
+      "native_dump_sha256": "e56e5d7d56c81a0d89dc930c41ae5a2493a19c6af020be8ec26198848e14e0d8"
+    },
+    {
+      "pack_key": [
+        2077906905,
+        986175937,
+        2,
+        1
+      ],
+      "native_palette": 3566632909,
+      "native_width": 32,
+      "native_height": 48,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#7BDA57D9#2#1#3AC7D9C1_ciByRGBA.png",
+      "native_dump_sha256": "48783b06f7362bd1c25eb16110608c6e69e0f6cca838a03f5c0dd6655dec8683"
+    },
+    {
+      "pack_key": [
+        2118851797,
+        3979002107,
+        2,
+        1
+      ],
+      "native_palette": 1067605527,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#7E4B1CD5#2#1#ED2AC0FB_ciByRGBA.png",
+      "native_dump_sha256": "d5537ddabd051275ab58f5dc5d4d5b83735cb0ee6ab4b672b328466004031c68"
+    },
+    {
+      "pack_key": [
+        2168763893,
+        1766238524,
+        2,
+        1
+      ],
+      "native_palette": 1471312050,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#8144B5F5#2#1#6946A93C_ciByRGBA.png",
+      "native_dump_sha256": "674ec631e7f8fd976ef9921db22ed0624031c582a9c2c87727b7f5d3c430843e"
+    },
+    {
+      "pack_key": [
+        2220491233,
+        123319271,
+        2,
+        1
+      ],
+      "native_palette": 3405379764,
+      "native_width": 32,
+      "native_height": 33,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#845A01E1#2#1#0759B3E7_ciByRGBA.png",
+      "native_dump_sha256": "d2a7f15fd96e71b2b7c1eeb13f7b190376c72e46980f1dd52e8d5f33a5b78b8f"
+    },
+    {
+      "pack_key": [
+        2221386868,
+        3608087475,
+        2,
+        1
+      ],
+      "native_palette": 3676749199,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#8467AC74#2#1#D70F0BB3_ciByRGBA.png",
+      "native_dump_sha256": "a5b18dd33c1d57309c542181cf5bffdb2c0afec56277174fa10370323f4b0cc4"
+    },
+    {
+      "pack_key": [
+        2261464741,
+        646143256,
+        2,
+        1
+      ],
+      "native_palette": 4092706996,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#86CB36A5#2#1#26835D18_ciByRGBA.png",
+      "native_dump_sha256": "c7d32fa062cff3fe9595d0cb96beb20a9ff003c3be4b30480fe76fc2d6c159ad"
+    },
+    {
+      "pack_key": [
+        2269468654,
+        145545349,
+        2,
+        1
+      ],
+      "native_palette": 551613185,
+      "native_width": 64,
+      "native_height": 17,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#874557EE#2#1#08ACD885_ciByRGBA.png",
+      "native_dump_sha256": "16995d584f83656d9607ffdaf1f68d870880cfa5fdecbeb8d5c4c8d40abdc1e3"
+    },
+    {
+      "pack_key": [
+        2361427519,
+        4101835883,
+        2,
+        1
+      ],
+      "native_palette": 2857721949,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#8CC0863F#2#1#F47D0C6B_ciByRGBA.png",
+      "native_dump_sha256": "79891114bc8a28e28989b3ba1f8d228416369f3e173252e6705ce3abd1c38374"
+    },
+    {
+      "pack_key": [
+        2385319471,
+        2223272629,
+        2,
+        1
+      ],
+      "native_palette": 215775565,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#8E2D162F#2#1#848472B5_ciByRGBA.png",
+      "native_dump_sha256": "b410bf60874e85095d5c67c46abe01c4bb163dba2a9c94bb5f8dfc1ede139208"
+    },
+    {
+      "pack_key": [
+        2443351053,
+        1491444406,
+        2,
+        1
+      ],
+      "native_palette": 3405775339,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#91A2940D#2#1#58E5A2B6_ciByRGBA.png",
+      "native_dump_sha256": "736740fa0d5769e22925878b295da7e89553d52d794f2028cf30564bda2c3224"
+    },
+    {
+      "pack_key": [
+        2447952206,
+        2409637067,
+        2,
+        1
+      ],
+      "native_palette": 2648989305,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#91E8C94E#2#1#8FA024CB_ciByRGBA.png",
+      "native_dump_sha256": "0fec99c3c751bc825d5f9b90b37bd0455627d9c370aa1233a0a6bbd1528f9a4a"
+    },
+    {
+      "pack_key": [
+        2457183247,
+        2293122868,
+        2,
+        1
+      ],
+      "native_palette": 3347361588,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#9275A40F#2#1#88AE4734_ciByRGBA.png",
+      "native_dump_sha256": "1d61814586d9aed3e0224ad3f50947b4daab27db034437d7ec35a6d864b5259d"
+    },
+    {
+      "pack_key": [
+        2463793486,
+        3077909542,
+        2,
+        1
+      ],
+      "native_palette": 1359741031,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#92DA814E#2#1#B7752C26_ciByRGBA.png",
+      "native_dump_sha256": "3d8dd070a78c6e664bc3bf07e89b66f85454bb2d8e86c92b654ff29a91c19924"
+    },
+    {
+      "pack_key": [
+        2493689189,
+        2402158953,
+        2,
+        1
+      ],
+      "native_palette": 621148769,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#94A2AD65#2#1#8F2E0969_ciByRGBA.png",
+      "native_dump_sha256": "946a08068c56c1fc2fc8f28b1ab8b37b2b2df9b98190be9b05dd93f85051c51c"
+    },
+    {
+      "pack_key": [
+        2531989947,
+        3380627876,
+        2,
+        1
+      ],
+      "native_palette": 576719450,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#96EB19BB#2#1#C98049A4_ciByRGBA.png",
+      "native_dump_sha256": "4c5225a692a3383ee3bd462386b74837de51312df6d95aca0d9a1d9abbd72f32"
+    },
+    {
+      "pack_key": [
+        2562976176,
+        4229113914,
+        2,
+        1
+      ],
+      "native_palette": 1804090653,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#98C3E9B0#2#1#FC13283A_ciByRGBA.png",
+      "native_dump_sha256": "155301fa9ba506bf49f72bf2d2577e136dd9ef6b2c4657159b3629b37f6475fd"
+    },
+    {
+      "pack_key": [
+        2585935585,
+        2986394148,
+        2,
+        1
+      ],
+      "native_palette": 2524391105,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#9A223EE1#2#1#B200C224_ciByRGBA.png",
+      "native_dump_sha256": "bbc1cc60118ea8ebd4e56fa7cc7bcf87e2afe25ff8b695282a85ebe504f81c85"
+    },
+    {
+      "pack_key": [
+        2686092285,
+        3087559361,
+        2,
+        1
+      ],
+      "native_palette": 3880978189,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#A01A83FD#2#1#B8086AC1_ciByRGBA.png",
+      "native_dump_sha256": "cb2296b5e6443672d7c8ad60363e916ff5ee8575813c453ae20d7c5504aa205b"
+    },
+    {
+      "pack_key": [
+        2702698885,
+        3677736222,
+        2,
+        1
+      ],
+      "native_palette": 3580455298,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#A117E985#2#1#DB35CD1E_ciByRGBA.png",
+      "native_dump_sha256": "2dd65231899c4961b1fa70d297a94c826575a98ed93be570e3e631cfe37191c2"
+    },
+    {
+      "pack_key": [
+        2715930152,
+        242618632,
+        2,
+        1
+      ],
+      "native_palette": 2030713131,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#A1E1CE28#2#1#0E761108_ciByRGBA.png",
+      "native_dump_sha256": "8394de7e84914fbdf6f9849cff572c56dabfcde60220f0820ec1a083ca2bd890"
+    },
+    {
+      "pack_key": [
+        2721687079,
+        1869997689,
+        2,
+        1
+      ],
+      "native_palette": 1020449351,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#A239A627#2#1#6F75E679_ciByRGBA.png",
+      "native_dump_sha256": "5e7c8db1628f9d6c0cd0a86fccf374e900735d9ccb1abb318df741849d3d8559"
+    },
+    {
+      "pack_key": [
+        2778835808,
+        2131079485,
+        2,
+        1
+      ],
+      "native_palette": 1952984122,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#A5A1AB60#2#1#7F05B13D_ciByRGBA.png",
+      "native_dump_sha256": "939f4e4e231ece891a4df1bd4c9f3e4f8e3c5d3ea44a6061f23a81795c444b7c"
+    },
+    {
+      "pack_key": [
+        2820969365,
+        243035247,
+        2,
+        1
+      ],
+      "native_palette": 2312044792,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#A8249395#2#1#0E7C6C6F_ciByRGBA.png",
+      "native_dump_sha256": "8059f62ef7c5834f19be9267cdeb1900f79ef1e7f898683e267b3ef011d23e25"
+    },
+    {
+      "pack_key": [
+        2855125500,
+        2471997950,
+        2,
+        1
+      ],
+      "native_palette": 975264986,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#AA2DC1FC#2#1#9357B1FE_ciByRGBA.png",
+      "native_dump_sha256": "836b2f8f7dfe07e79a9add03c3293f89ac40741ef95a8cb7ed5a3e0117ce7a4d"
+    },
+    {
+      "pack_key": [
+        2857102176,
+        3989368502,
+        2,
+        1
+      ],
+      "native_palette": 2159545481,
+      "native_width": 32,
+      "native_height": 33,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#AA4BEB60#2#1#EDC8EEB6_ciByRGBA.png",
+      "native_dump_sha256": "bfcd2d6e11aafd1686bf5363903c0b996ab3969b9c42820d695331c51230069a"
+    },
+    {
+      "pack_key": [
+        2953538876,
+        3841953966,
+        2,
+        1
+      ],
+      "native_palette": 735423823,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#B00B6D3C#2#1#E4FF90AE_ciByRGBA.png",
+      "native_dump_sha256": "1616d53ae72175ad54540f580202428dc68e24bdbdc15b917b5c80e1a87e1c14"
+    },
+    {
+      "pack_key": [
+        2967843038,
+        1241686203,
+        2,
+        1
+      ],
+      "native_palette": 4096382876,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#B0E5B0DE#2#1#4A02A0BB_ciByRGBA.png",
+      "native_dump_sha256": "c9a7044b0fa5b154a37f70bfa84b2560e42921541bc741d80a82f34d8ef4f53c"
+    },
+    {
+      "pack_key": [
+        2974769349,
+        822208015,
+        2,
+        1
+      ],
+      "native_palette": 2424734939,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#B14F60C5#2#1#3101E60F_ciByRGBA.png",
+      "native_dump_sha256": "d44c58e5c36c95f7daf595c77212010897cc7cd602fc1c7e693cdd5926104683"
+    },
+    {
+      "pack_key": [
+        3016730311,
+        1039623104,
+        2,
+        1
+      ],
+      "native_palette": 137446528,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#B3CFA6C7#2#1#3DF763C0_ciByRGBA.png",
+      "native_dump_sha256": "cca21b92fdb0dea202508eb6d41694f2547facd7c1b3056f5a5d41331492ff66"
+    },
+    {
+      "pack_key": [
+        3019464956,
+        612273796,
+        2,
+        1
+      ],
+      "native_palette": 1521921102,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#B3F960FC#2#1#247E8E84_ciByRGBA.png",
+      "native_dump_sha256": "ea88c29908f1950f7b7726ac9833a2ed6cf6f25dd73fb994af240232fe150919"
+    },
+    {
+      "pack_key": [
+        3026696159,
+        920581657,
+        2,
+        1
+      ],
+      "native_palette": 1010587992,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#B467B7DF#2#1#36DEF619_ciByRGBA.png",
+      "native_dump_sha256": "66f8950ea624d24976a905b1bf6de38f7556674360e6f983d7536151756d61ca"
+    },
+    {
+      "pack_key": [
+        3071908836,
+        1743307527,
+        2,
+        1
+      ],
+      "native_palette": 2800717654,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#B7199BE4#2#1#67E8C307_ciByRGBA.png",
+      "native_dump_sha256": "f2b77475e024ffeb46f088c6c0daae33439812ceff2d3d5330d30bb2c955a15f"
+    },
+    {
+      "pack_key": [
+        3088368765,
+        1444098192,
+        2,
+        1
+      ],
+      "native_palette": 4198074123,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#B814C47D#2#1#56133090_ciByRGBA.png",
+      "native_dump_sha256": "17b6609a71d38b57a24d242d9484f1a8d9537f15d3bbb5404c076695299e6007"
+    },
+    {
+      "pack_key": [
+        3097860971,
+        289815357,
+        2,
+        1
+      ],
+      "native_palette": 1381250851,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#B8A59B6B#2#1#11463B3D_ciByRGBA.png",
+      "native_dump_sha256": "4d3eea937ccf8d139d4a55cd9afa5574956b02116fe8fa054b856c0ff1ada9d5"
+    },
+    {
+      "pack_key": [
+        3103493029,
+        1883229167,
+        2,
+        1
+      ],
+      "native_palette": 2900779214,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#B8FB8BA5#2#1#703FCBEF_ciByRGBA.png",
+      "native_dump_sha256": "a1b4a21b0000e1d2927a3bf288cf93f3ad26b1cd625f61784a934882dc0ec35d"
+    },
+    {
+      "pack_key": [
+        3118749768,
+        2168870352,
+        2,
+        1
+      ],
+      "native_palette": 2663237957,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#B9E45848#2#1#814655D0_ciByRGBA.png",
+      "native_dump_sha256": "d0c6cdedeb5d2611c2a13d602608a897c34ed2b95c8d90c0accd33814db91756"
+    },
+    {
+      "pack_key": [
+        3120837722,
+        165876882,
+        2,
+        1
+      ],
+      "native_palette": 3283409944,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#BA04345A#2#1#09E31492_ciByRGBA.png",
+      "native_dump_sha256": "dd856963e24cbd58bbb93bee38211740a7d5005c7e850794ffb00d917a556281"
+    },
+    {
+      "pack_key": [
+        3152518602,
+        1512780554,
+        2,
+        1
+      ],
+      "native_palette": 1578065328,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#BBE79DCA#2#1#5A2B330A_ciByRGBA.png",
+      "native_dump_sha256": "6842c9b21a2f78fb2d8404b713e32d025c60567d20644706c75fab0a74a04e21"
+    },
+    {
+      "pack_key": [
+        3237450035,
+        838842411,
+        2,
+        1
+      ],
+      "native_palette": 3769697770,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#C0F79133#2#1#31FFB82B_ciByRGBA.png",
+      "native_dump_sha256": "a79d016a37e48b73491b0eb322c57267a0c81519c1604166b61a19b170d126a5"
+    },
+    {
+      "pack_key": [
+        3242341437,
+        2231955064,
+        2,
+        1
+      ],
+      "native_palette": 4014314253,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#C142343D#2#1#8508EE78_ciByRGBA.png",
+      "native_dump_sha256": "f9cef108801cd36557ee8da2a4a5774491d43bd9a9cbfcef3cf0b31452347719"
+    },
+    {
+      "pack_key": [
+        3308318781,
+        336989598,
+        2,
+        1
+      ],
+      "native_palette": 2051977648,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#C530F03D#2#1#14160D9E_ciByRGBA.png",
+      "native_dump_sha256": "3b054f5b73ac5c514561419f2b42eab23025f07fcad379d9667dccede94a38b3"
+    },
+    {
+      "pack_key": [
+        3370187968,
+        1781918359,
+        2,
+        1
+      ],
+      "native_palette": 3965105550,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#C8E0FCC0#2#1#6A35EA97_ciByRGBA.png",
+      "native_dump_sha256": "7da9436c1b98b874a01002551fa9d28213e485cd9e051f770772d81669c57772"
+    },
+    {
+      "pack_key": [
+        3383473532,
+        589978072,
+        2,
+        1
+      ],
+      "native_palette": 2777299668,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#C9ABB57C#2#1#232A59D8_ciByRGBA.png",
+      "native_dump_sha256": "8c04d45f8025a1f4b57c594c2adfd3ad5decf27c8b7b5c5ef360c210b06703b0"
+    },
+    {
+      "pack_key": [
+        3479332426,
+        821824317,
+        2,
+        1
+      ],
+      "native_palette": 3685422943,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#CF62664A#2#1#30FC0B3D_ciByRGBA.png",
+      "native_dump_sha256": "705b2e931a9f822e38298ae665b3a472f772d5fe046bbe90bf79b5066c0ceb0d"
+    },
+    {
+      "pack_key": [
+        3538157119,
+        2596319055,
+        2,
+        1
+      ],
+      "native_palette": 2818951607,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#D2E3FE3F#2#1#9AC0AF4F_ciByRGBA.png",
+      "native_dump_sha256": "4d1d870d24f3ca38e3044b3dad0d8ed049ada90d1b05bccfac50f7f23d9df61b"
+    },
+    {
+      "pack_key": [
+        3564864668,
+        121082034,
+        2,
+        1
+      ],
+      "native_palette": 1955976242,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#D47B849C#2#1#073790B2_ciByRGBA.png",
+      "native_dump_sha256": "8c8e23733d77c3d4d242391d005737184f822967252755956a6891799fb102e1"
+    },
+    {
+      "pack_key": [
+        3582122015,
+        3786270276,
+        2,
+        1
+      ],
+      "native_palette": 1100795430,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#D582D81F#2#1#E1ADE644_ciByRGBA.png",
+      "native_dump_sha256": "3d7e6a87b11afcf5ae207f8aafc1daab797f2f7c0d383dfda7b980c060f75fcc"
+    },
+    {
+      "pack_key": [
+        3681468661,
+        3551994156,
+        2,
+        1
+      ],
+      "native_palette": 4204116682,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#DB6EC0F5#2#1#D3B7212C_ciByRGBA.png",
+      "native_dump_sha256": "a652c11cda9cf57ed93a336f66a71cd08a14fbca072671b3cf4964f0d3ec2991"
+    },
+    {
+      "pack_key": [
+        3720579817,
+        1557168466,
+        2,
+        1
+      ],
+      "native_palette": 97982525,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#DDC38AE9#2#1#5CD08152_ciByRGBA.png",
+      "native_dump_sha256": "5da43b16a07dc2294d2e122f8e7cb33c042bac9b039b34081ecea538e1953f3a"
+    },
+    {
+      "pack_key": [
+        3733822729,
+        458896338,
+        2,
+        1
+      ],
+      "native_palette": 3918651130,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#DE8D9D09#2#1#1B5A33D2_ciByRGBA.png",
+      "native_dump_sha256": "07e220c3924b7eb3a1810447b30a47e9412eece44ec4075aabeeb4a596d66b5c"
+    },
+    {
+      "pack_key": [
+        3769094456,
+        3077038422,
+        2,
+        1
+      ],
+      "native_palette": 1514308257,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#E0A7D138#2#1#B767E156_ciByRGBA.png",
+      "native_dump_sha256": "e1de6c19567920ac2c4fcc6fb2118b87d0813e5db257fa500c4737cd6978640b"
+    },
+    {
+      "pack_key": [
+        3779964093,
+        3313235831,
+        2,
+        1
+      ],
+      "native_palette": 4010960224,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#E14DACBD#2#1#C57BF777_ciByRGBA.png",
+      "native_dump_sha256": "2001e9d70f9de8327ebb1f747f53b39223994ac397a3d576b633cbfbecffdd21"
+    },
+    {
+      "pack_key": [
+        3787251550,
+        2922118130,
+        2,
+        1
+      ],
+      "native_palette": 1647085349,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#E1BCDF5E#2#1#AE2BFBF2_ciByRGBA.png",
+      "native_dump_sha256": "1a1efb85762602790ea9b56620d9107ce0c437a4189df7751d9df9f689e63db2"
+    },
+    {
+      "pack_key": [
+        3794858673,
+        524758735,
+        2,
+        1
+      ],
+      "native_palette": 2622854499,
+      "native_width": 64,
+      "native_height": 16,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#E230F2B1#2#1#1F472ECF_ciByRGBA.png",
+      "native_dump_sha256": "e9903e033eee7676b52d8e362743f19e7e9fc7aec14ab9227b94a7ff2abdcec0"
+    },
+    {
+      "pack_key": [
+        3800766612,
+        803117204,
+        2,
+        1
+      ],
+      "native_palette": 3805568024,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#E28B1894#2#1#2FDE9894_ciByRGBA.png",
+      "native_dump_sha256": "943c57f764ce53b5a668d1b36d505483f5499a225f6febcb797ce1eb7bf1fcd7"
+    },
+    {
+      "pack_key": [
+        3952927447,
+        1099308644,
+        2,
+        1
+      ],
+      "native_palette": 1074653213,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#EB9CE2D7#2#1#41861E64_ciByRGBA.png",
+      "native_dump_sha256": "2bb0ef538de59353c230a625a6fbed97fa98e4758bbe659ee6c21789cbc284c8"
+    },
+    {
+      "pack_key": [
+        3953387305,
+        2010334826,
+        2,
+        1
+      ],
+      "native_palette": 2813917374,
+      "native_width": 64,
+      "native_height": 16,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#EBA3E729#2#1#77D3466A_ciByRGBA.png",
+      "native_dump_sha256": "2cdcfea1e3ff076a6f1cbb970342287a8d4d0ad0a5227a83a6304b36fe7266fc"
+    },
+    {
+      "pack_key": [
+        3980050974,
+        1589028781,
+        2,
+        1
+      ],
+      "native_palette": 2290051893,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#ED3AC21E#2#1#5EB6A7AD_ciByRGBA.png",
+      "native_dump_sha256": "c88646adf2866107fd36b8c9637e5eda108544bdadae4103bf2d386ad04d215b"
+    },
+    {
+      "pack_key": [
+        4008006945,
+        2922239966,
+        2,
+        1
+      ],
+      "native_palette": 1258717157,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#EEE55521#2#1#AE2DD7DE_ciByRGBA.png",
+      "native_dump_sha256": "344c0abc3ab466a9012e9f86184084f7f6b6d38aea8f2101344fe2e3439d37ae"
+    },
+    {
+      "pack_key": [
+        4011945550,
+        1433831646,
+        2,
+        0
+      ],
+      "native_palette": 3039182070,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#EF216E4E#2#0#557688DE_ciByRGBA.png",
+      "native_dump_sha256": "88c187f929d7ce4e944773d741f28e4c485a879bcd2acb83ab62b9b373874fdb"
+    },
+    {
+      "pack_key": [
+        4224306317,
+        795515801,
+        2,
+        1
+      ],
+      "native_palette": 1718584827,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#FBC9CC8D#2#1#2F6A9B99_ciByRGBA.png",
+      "native_dump_sha256": "14bb4281cd3427999c79940b16db45f6286f002408cdb4967695b00c7b5ee6ce"
+    },
+    {
+      "pack_key": [
+        4275350943,
+        4006582050,
+        2,
+        0
+      ],
+      "native_palette": 1718500134,
+      "native_width": 32,
+      "native_height": 32,
+      "source": "GOLDENEYE/In-game/GOLDENEYE#FED4AD9F#2#0#EECF9722_ciByRGBA.png",
+      "native_dump_sha256": "3fccf3071da545dea2d0cf572ea860e1ae0df5a67c5e846e1a9dfe02dfa689b2"
+    }
+  ]
+}

@@ -46,6 +46,9 @@
 extern "C" bool gfx_opengl_web_sampler_flags_changed(int tile, bool linear_filter, uint32_t cms, uint32_t cmt);
 extern "C" void gfx_opengl_web_sampler_sync(void);
 #endif
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+#include "hd_textures.h" /* FORK-053: player-installed HD texture packs */
+#endif
 
 #include "port_icon_cache.h"
 static const uint8_t *gfx_weapon_image(int item) { return portIconPixels(item); }
@@ -1904,11 +1907,17 @@ extern "C" void gfx_async_apply_pending(void) {
     }
 }
 
+/* FORK-053: an HD image's large GL texture is deleted rather than recycled. */
+static void gfx_release_cached_texture(const TextureCacheValue& texture) {
+    if (texture.hd_bytes) gfx_rapi->delete_texture(texture.texture_id);
+    else gfx_texture_cache.free_texture_ids.push_back(texture.texture_id);
+}
+
 void gfx_texture_cache_clear() {
     portRoomCacheClear(); /* cached texture ids die with the cache (render thread: the tables are its) */
     gfx_flush();
     for (const auto& entry : gfx_texture_cache.map) {
-        gfx_texture_cache.free_texture_ids.push_back(entry.second.texture_id);
+        gfx_release_cached_texture(entry.second);
     }
     gfx_texture_cache.map.clear();
     ge_texcache_gen++;
@@ -1993,7 +2002,7 @@ static bool gfx_texture_cache_lookup(int i, const TextureCacheKey& key) {
             }
         }
         if (victim != gfx_texture_cache.map.end()) {
-            gfx_texture_cache.free_texture_ids.push_back(victim->second.texture_id);
+            gfx_release_cached_texture(victim->second);
             ge_texcache_gen++;
             gfx_texture_cache.lru.erase(victim->second.lru_location);
             gfx_texture_cache.map.erase(victim);
@@ -2047,7 +2056,7 @@ static void gfx_texture_cache_delete_now(const uint8_t* orig_addr) {
         for (auto it = gfx_texture_cache.map.begin(bucket); it != gfx_texture_cache.map.end(bucket); ++it) {
             if (it->first.texture_addr == orig_addr) {
                 gfx_texture_cache.lru.erase(it->second.lru_location);
-                gfx_texture_cache.free_texture_ids.push_back(it->second.texture_id);
+                gfx_release_cached_texture(it->second);
                 ge_texcache_gen++;
                 ge_texcache_delete_gen++;
                 gfx_texture_cache.map.erase(it->first);
@@ -2909,6 +2918,10 @@ static void ge_texchurn_report(void) {
     ge_churn_addr.clear();
 }
 
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+#include "hd_texture_import.inl"
+#endif
+
 static void import_texture(int i, int tile, bool importReplacement) {
     LoadedTexture& loaded_texture = rdp.loaded_texture[rdp.texture_tile[tile].tmem];
     const uint8_t fmt = rdp.texture_tile[tile].fmt;
@@ -3131,7 +3144,7 @@ static void import_texture(int i, int tile, bool importReplacement) {
                         ge_state_serial++;
                     }
                 }
-                gfx_texture_cache.free_texture_ids.push_back(ev->second.texture_id);
+                gfx_release_cached_texture(ev->second);
                 gfx_texture_cache.lru.erase(ev->second.lru_location);
                 ge_texcache_gen++;
                 gfx_texture_cache.map.erase(ev);
@@ -3169,6 +3182,10 @@ static void import_texture(int i, int tile, bool importReplacement) {
                                 loaded_texture.raw_tex_metadata.height);
         return;
     }
+
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    if (ge_hd_try_import(i, tile)) return; /* FORK-053 */
+#endif
 
     { /* GE bring-up (GE_TRACE_TEX=1): one line per unique texture import -
        * names what each surface actually samples (the flat-world hunt). */
@@ -3286,7 +3303,7 @@ static void import_texture(int i, int tile, bool importReplacement) {
             g_GfxUploadError = 0;
             TextureCacheNode* node = rendering_state.textures[i];
             if (node != NULL) {
-                gfx_texture_cache.free_texture_ids.push_back(node->second.texture_id);
+                gfx_release_cached_texture(node->second);
                 gfx_texture_cache.lru.erase(node->second.lru_location);
                 ge_texcache_gen++;
                 gfx_texture_cache.map.erase(node->first);
@@ -8133,6 +8150,9 @@ extern "C" uint32_t gfx_real_window_width;  /* the real window width while a pil
 uint32_t gfx_real_window_width = 0;
 
 extern "C" void gfx_start_frame(void) {
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    ge_hd_start_frame(); /* FORK-053 */
+#endif
     static uint32_t previous_fonts = ~0u;
     const uint32_t fonts = gfx_sharp_fonts | (gfx_enhanced_fonts << 1);
     if (previous_fonts != fonts) { /* FORK-050, FORK-052: rebind glyph textures */

@@ -250,6 +250,14 @@ padN_stickmode.
                       |            | menus and briefings). The older
                       |            | sharp_fonts=1 loads as 2.
                       |            | Iron Sights > System.
+  texture_pack        | 1          | [display] Texture Pack (Windows/Linux).
+                      |            | 1 = HD: campaign environment textures from
+                      |            | the GoldenEye 007 HD pack in
+                      |            | Data/TexturePacks (downloaded from System >
+                      |            | HD Textures, or the GLideN64 PNG pack's
+                      |            | ZIP or folder copied there; none is
+                      |            | included); 0 = Original. Without a pack
+                      |            | the originals stay. Iron Sights > System.
   crash_reporting     | 1          | ON sends technical crash reports to Sentry.
                       |            | 0 stops uploads and discards queued reports.
                       |            | No ROMs, saves or memory dumps are attached.

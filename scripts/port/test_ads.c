@@ -31,6 +31,7 @@ u32 osVirtualToPhysical(void *address) { return (u32)address; }
 
 s32 portVideoOptionGet(const char *key, s32 *out) { (void) key; (void) out; return 0; }
 const char *portEnhancedFontsValueText(const char *text) { return text; }   /* port_enhanced_fonts.c */
+const char *portTexturePackValueText(const char *text) { return text; }     /* hd_textures.cpp (FORK-053) */
 s32 portVideoOptionSet(const char *key, s32 v) { (void) key; (void) v; return 0; }
 s32 portInputOptionGet(const char *key, s32 *out) { (void) key; (void) out; return 0; }
 s32 portInputOptionSet(const char *key, s32 v) { (void) key; (void) v; return 0; }
