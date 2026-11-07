@@ -987,6 +987,10 @@ static void gfx_opengl_delete_texture(uint32_t texID) {
 #endif
     glDeleteTextures(1, &texID);
     gl_set_has_mips(texID, 0);
+    /* a new object under this name starts with GL's default bias of 0 */
+    if (texID < gl_tex_lod_biased.size()) {
+        gl_tex_lod_biased[texID] = 0;
+    }
 }
 
 static void gfx_opengl_select_texture(int tile, GLuint texture_id, bool linear_filter) {

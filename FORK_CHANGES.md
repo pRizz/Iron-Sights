@@ -3768,7 +3768,11 @@ used only by these icons) like an Enhanced glyph under Text Antialiasing:
 level is half a step sharper than plain trilinear (desktop GL only; GLES has no
 bias, and icons are prepared only on Windows today). The bias is tracked per
 texture object and written back to 0 when a recycled name serves another
-texture. When the cache loads, transparent texels take their nearest visible
+texture; deleting a texture clears its record, since a new object under that
+name starts at GL's default bias (the first version kept the record, so a
+later icon reusing the name could draw unbiased). The mip chain lives only in
+GPU memory: `glGenerateMipmap` builds it on first antialiased use and again
+after a new upload; the cache file holds only the full-size images. When the cache loads, transparent texels take their nearest visible
 neighbours' colour for 32 rings (`bleedEdges`), so filtering and mip averaging no
 longer pull black into silver and gold edges; alpha, visible texels and the cache
 file format are unchanged, so no regeneration is needed. Always on, with no
