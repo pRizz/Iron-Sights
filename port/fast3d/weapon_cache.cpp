@@ -180,6 +180,20 @@ static Bytes recover(const Bytes &black, const Bytes &white, int w, int h)
     return out;
 }
 
+/* One image's recovery, run on an SDL thread while the next model renders.
+ * (SDL's C threads: <thread> pulls in <semaphore>, which this target's own
+ * limits.h breaks on Linux.) */
+struct RecoverJob {
+    Bytes black, white, out;
+    int w, h, icon;
+};
+static int SDLCALL recoverJob(void *data)
+{
+    auto *job=static_cast<RecoverJob *>(data);
+    job->out=recover(job->black,job->white,job->w,job->h);
+    return 0;
+}
+
 extern "C" void portIconWorkerCapture(int icon, int capture, int w, int h, const unsigned char *rgb)
 {
     static Bytes black, white;
@@ -195,11 +209,29 @@ extern "C" void portIconWorkerCapture(int icon, int capture, int w, int h, const
         portConLogf("ge: icons: non-repeatable capture for icon %d\n",icon); std::exit(4);
     }
     if (capture==4) {
-        icons[icon]=recover(black,white,w,h);
-        if (icons[icon].empty()) { portConLogf("ge: icons: empty/clipped icon %d\n",icon); std::exit(4); }
-        completed++;
-        portConLogf("ge: icons: prepared %d/%d (icon %d)\n",completed,PORT_ICON_IMAGES,icon);
-        writeFile("progress.bin",Bytes{(unsigned char)completed});
+        /* Recovery (about 40 ms an image) runs on a thread while the next
+         * model renders; each result is collected when the next image's
+         * captures arrive, so at most one pair of captures waits. */
+        static RecoverJob *job;
+        static SDL_Thread *thread;
+        auto collect=[&] {
+            if (!job) return;
+            if (thread) SDL_WaitThread(thread,nullptr);
+            thread=nullptr;
+            const int done=job->icon;
+            icons[done]=std::move(job->out);
+            delete job; job=nullptr;
+            if (icons[done].empty()) { portConLogf("ge: icons: empty/clipped icon %d\n",done); std::exit(4); }
+            completed++;
+            portConLogf("ge: icons: prepared %d/%d (icon %d)\n",completed,PORT_ICON_IMAGES,done);
+            writeFile("progress.bin",Bytes{(unsigned char)completed});
+        };
+        collect();
+        job=new RecoverJob{std::move(black),std::move(white),{},w,h,icon};
+        black.clear(); white.clear();
+        thread=SDL_CreateThread(recoverJob,"icon-recover",job);
+        if (!thread) recoverJob(job);  /* no thread: recover here */
+        if (completed==PORT_ICON_IMAGES-1) collect();
         if (completed==PORT_ICON_IMAGES) {
             const char *value=SDL_getenv("GE_ICON_OUTPUT");
             if (!value) std::exit(4);
@@ -216,14 +248,18 @@ extern "C" void portIconWorkerCapture(int icon, int capture, int w, int h, const
 
 #if defined(_WIN32) || defined(__linux__)
 /* The worker: an isolated run of this executable that renders each weapon
- * model and writes the cache (portIconWorkerCapture). */
-static const char kWorkerIni[]="[display]\nfullscreen=window\nvsync=0\nmaxfps=60\ntickhz=60\nmsaa=1\nwidescreen=0\nlow_res=0\nfiltering=bilinear\nfilter_2d=1\nrender_thread=0\nweapon_hud=0\nmission_timer=0\nalways_health=0\n[input]\nmouse=1\n";
-static const char kWorkerReplay[]="P 0 0 0 0\nP 80 8000 0 0\nP 82 0 0 0\nP 120 8000 0 0\nP 122 0 0 0\nP 160 8000 0 0\nP 162 0 0 0\nP 2000 0 0 0\n";
+ * model and writes the cache (portIconWorkerCapture). maxfps=240 lets it run
+ * as fast as the GPU draws (240, 500 and 1000 all measured the same);
+ * uncapped (0) stalls on a display reporting 0 Hz, such as Xvfb. */
+static const char kWorkerIni[]="[display]\nfullscreen=window\nvsync=0\nmaxfps=240\nmsaa=1\nwidescreen=0\nlow_res=0\nfiltering=bilinear\nfilter_2d=1\nrender_thread=0\nweapon_hud=0\nmission_timer=0\nalways_health=0\n[input]\nmouse=1\n";
+/* Neutral input: in this mode the game skips the level intro itself
+ * (bondview2.c), so nothing needs pressing. */
+static const char kWorkerReplay[]="P 0 0 0 0\nP 3000 0 0 0\n";
 /* Beside GE_ROM, GE_ICON_OUTPUT, GE_ICON_ROM_CRC and GE_INPUTPLAY; every other
  * GE_ variable of the player's environment is left out. */
 static const char *const kWorkerEnv[][2]={{"GE_ICON_WORKER","1"},{"GE_STAGE","dam"},{"GE_STAGE_AFTER","1"},
     {"GE_WINDOW","2048x1536"},{"GE_NOINPUT","1"},{"GE_SEED","1"},{"GE_CHEATS","invuln,invis,guns"},
-    {"GE_FRAMES","1800"},{"GE_WEAPON_ICON_EXPORT","1"}};
+    {"GE_FRAMES","3000"},{"GE_WEAPON_ICON_EXPORT","1"}};
 static bool writeWorkerFiles(const fs::path &root)
 {
     return writeFile(root/"midas.ini",Bytes(kWorkerIni,kWorkerIni+sizeof kWorkerIni-1))

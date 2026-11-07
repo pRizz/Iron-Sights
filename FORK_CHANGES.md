@@ -4719,6 +4719,33 @@ state. This prevents the pistol depth-layer restoration from changing icon
 occlusion. A fresh 35-image preparation after the wrist skin-mapping fix matched
 the preceding version-6 cache byte-for-byte; no cache version change is needed.
 
+**Faster preparation (2026-11-07).** A first launch's icon preparation took
+about 27 s of worker time (about 31 s with the game's own start). Measured
+on the audited laptop, it was 38 images x 32 frames at the worker's 60 fps
+cap, plus the Dam intro and Bond swirl that three Start presses cut short;
+each frame also drew the whole level, which the capture then cleared. Now:
+- each image takes 8 frames (`PORT_ICON_FRAMES`, `port_weapon_export.c`): 4
+  frames to settle (3 sufficed, 2 failed the repeat check on the first
+  image) and the black, white, black, white captures on consecutive frames;
+- in export mode the game ends the overview camera and the swirl itself
+  (two hooks in `bondview2.c`; the swirl still waits for the AI pass that
+  Silo and Statue need) and skips `bgLevelRender` (`lv.c`), so the replay is
+  neutral input;
+- the worker runs at `maxfps=240`, as fast as the GPU draws (240, 500 and
+  1000 measured the same; uncapped stalled on Xvfb's 0 Hz display), with a
+  3,000-frame safety limit;
+- each image's alpha recovery (about 40 ms) runs on an SDL thread while the
+  next model renders (SDL's C threads: `<thread>` pulls in `<semaphore>`,
+  which this target's own `limits.h` breaks on Linux).
+The worker now takes 5.4-6 s and a forced first launch about 9 s, and every
+run's cache was byte-identical to the 27 s baseline's (12,779,712 bytes). The
+optional `generate_weapon_icons.py` exporter also sends neutral input now
+(a Start press once gameplay began would open the pause watch) and still
+produced its 35 PNGs. Parallel workers were considered and not used: each
+pays about 3 s of start-up, more than the remaining rendering. On Linux the
+software-GL check above now finishes in 10 s, with a cache byte-identical to
+the slow schedule's.
+
 **Linux generation (2026-11-07).** Linux builds had read a cache but never
 made one, so their weapon strip always showed names. `generate()` now has a
 Linux branch: it runs the game's own binary (`/proc/self/exe`) as the worker,

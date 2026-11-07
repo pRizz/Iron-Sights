@@ -6,7 +6,9 @@ renderer, fixed camera/poses and repeated black/white captures. It recovers
 alpha and downsamples with premultiplied area sampling. No Python, compiler,
 network access or rebuild is needed by players.
 
-A progress window shows 38 images; Esc skips preparation. The per-user SDL
+A progress window shows 38 images (about 6 s on a desktop GPU: 8 frames an
+image, with the level intro skipped and the world not drawn in export mode);
+Esc skips preparation. The per-user SDL
 application-data folder contains `weapon-icons-v9-<ROM fingerprint>.cache` and
 `last-preparation.log`. About shows readiness. Cache validation checks the ROM,
 generator version, dimensions, complete slot coverage, exact lengths and CRC.

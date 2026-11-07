@@ -1243,7 +1243,18 @@ Gfx* lvlRender(Gfx* DL)
 #endif
 
             propsTickPlayer();
+#ifndef TARGET_N64
+            {   /* FORK-019: the weapon-icon worker clears each frame for its icon */
+                extern s32 portWeaponExportEnabled(void);
+
+                if (!portWeaponExportEnabled())
+                {
+                    DL = bgLevelRender(DL);
+                }
+            }
+#else
             DL = bgLevelRender(DL);
+#endif
 
             if (get_debug_portal_flag())
             {

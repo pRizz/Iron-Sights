@@ -52,9 +52,9 @@ def capture(exe, rom, resolution, item=None):
         "widescreen=0\nlow_res=0\nfiltering=bilinear\nfilter_2d=1\nrender_thread=0\n"
         "hit_markers=0\ndamage_indicators=0\nobjective_notifications=0\nweapon_hud=0\n"
         "mission_timer=0\n[input]\nmouse=1\n", encoding="utf-8")
-    (work / "input.txt").write_text(
-        "P 0 0 0 0\nP 80 8000 0 0\nP 82 0 0 0\nP 120 8000 0 0\n"
-        "P 122 0 0 0\nP 160 8000 0 0\nP 162 0 0 0\nP 2000 0 0 0\n")
+    # Neutral input: export mode skips the level intro itself, and a Start
+    # press once gameplay began would open the pause watch.
+    (work / "input.txt").write_text("P 0 0 0 0\nP 2000 0 0 0\n")
     env = {k: v for k, v in os.environ.items() if not k.startswith("GE_")}
     env.update(GE_ROM=str(rom), GE_STAGE="dam", GE_STAGE_AFTER="1", GE_WINDOW=resolution,
                GE_NOINPUT="1", GE_SEED="1", GE_CHEATS="invuln,invis,guns", GE_FRAMES="1800",

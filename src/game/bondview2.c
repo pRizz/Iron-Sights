@@ -1387,6 +1387,16 @@ void bondviewFrozenCameraTick(u16 buttons, u16 oldbuttons, struct coord3d *pos, 
             camera_transition_timer += g_GlobalTimerDelta;
 
 #ifndef TARGET_N64
+            /* FORK-019: the weapon-icon worker draws no intro; skip it at once. */
+            {
+                extern s32 portWeaponExportEnabled(void);
+
+                if (portWeaponExportEnabled())
+                {
+                    g_CameraAfterCinema = CAMERAMODE_INTRO;
+                }
+            }
+
             /* PORT: require a FRESH press to skip the intro camera. Our loads
              * are so fast that a button still held from the briefing would read
              * as a new press and skip it instantly, so arming waits until the
@@ -1630,6 +1640,15 @@ void bondviewFrozenCameraTick(u16 buttons, u16 oldbuttons, struct coord3d *pos, 
         }
 
 #ifndef TARGET_N64
+        {   /* FORK-019: the weapon-icon worker skips the swirl too */
+            extern s32 portWeaponExportEnabled(void);
+
+            if (portWeaponExportEnabled())
+            {
+                g_CameraAfterCinema = CAMERAMODE_INTRO;
+            }
+        }
+
         /* Silo's timer and Statue's guards wait for this mode, and chr AI runs every
          * 2 fields here (portAiGovDefer), so hold the exit until an AI pass saw it. */
         if (s_PortSwirlAiFields < 2)

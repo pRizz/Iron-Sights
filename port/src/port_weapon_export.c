@@ -15,6 +15,11 @@
 #include "port_wardrobe.h"
 #include "port_icon_cache_format.h"
 
+/* Each image takes PORT_ICON_FRAMES frames: PORT_ICON_LEAD frames for the
+ * model to settle (3 sufficed when measured; 2 failed the repeat check), then
+ * black, white, black and white captures on consecutive frames. */
+#define PORT_ICON_LEAD 4
+#define PORT_ICON_FRAMES (PORT_ICON_LEAD + 4)
 #define PORT_TANK_ICON_YAW -35.0f
 #define PORT_TANK_ICON_TARGET_Y 0.08f
 /* The rifle butt turns the sniper rifle stock-first, muzzle angled down so the
@@ -95,7 +100,7 @@ Gfx *portWeaponExportDraw(Gfx *gdl)
 {
 #ifdef GE_VIDEO
     static s32 frame;
-    const s32 slot = frame / 32, phase = frame % 32;
+    const s32 slot = frame / PORT_ICON_FRAMES, phase = frame % PORT_ICON_FRAMES;
     s32 item = slot + ITEM_FIST;
     s32 icon, oldCuff;
     s32 capture = 0, white;
@@ -121,11 +126,8 @@ Gfx *portWeaponExportDraw(Gfx *gdl)
         || item < ITEM_FIST || (only && slot)) return gdl;
     if (item == ITEM_FIST) g_CurrentPlayer->cur_item_weapon_getname = ITEM_FIST;
     frame++;
-    white = phase == 10 || phase == 14;
-    if (phase == 8) capture = 1;
-    if (phase == 10) capture = 2;
-    if (phase == 12) capture = 3;
-    if (phase == 14) capture = 4;
+    if (phase >= PORT_ICON_LEAD) capture = phase - PORT_ICON_LEAD + 1;
+    white = capture == 2 || capture == 4;
     /* Capture names are assigned when this list executes, so queued simulation
      * frames cannot mislabel a weapon's pixels. */
     gdl->words.w0 = (u32)0x4f << 24;
