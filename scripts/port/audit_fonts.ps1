@@ -32,6 +32,7 @@ foreach ($filter in @(0,1)) {
     $auditEnv = @{
         GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$Resolution; GE_NOINPUT='1';
         GE_SEED='1'; GE_FRAMES='650'; GE_SHOT='500'
+    GE_IRONSIGHTS_FONTS='1';   # FORK-051: allows the hidden Iron Sights font when asked for
     }
     if ($Mode -eq 'Hud') {
         $auditEnv.GE_STAGE='dam'; $auditEnv.GE_STAGE_AFTER='1'; $auditEnv.GE_CHEATS='invuln,invis,guns'

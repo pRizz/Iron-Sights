@@ -104,7 +104,8 @@ static const char *const sAnisoText[] = { "OFF\n", "2x\n", "4x\n", "8x\n", "16x\
 /* [display] msaa: 1 = off, not 0 - that is the ini's own spelling and the
  * launcher's, and changing it would break every existing file. */
 static const s32 sMsaaVals[] = { 1, 2, 4, 8 };
-static const s32 sFontStyleVals[] = { 0, 1, 2 };
+/* Iron Sights (2) is hidden for now: the font has deficiencies (FORK-051) */
+static const s32 sFontStyleVals[] = { 0, 1 };
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
 /* FORK-053: HD draws a player-installed pack; see port_hd_textures.h
  * (hd_textures.cpp, with a weak fallback in libultra_shim.c for headless builds) */
@@ -112,7 +113,7 @@ extern const char *portTexturePackValueText(const char *text);
 static const s32 sTexturePackVals[] = { 0, 1 };
 static const char *const sTexturePackText[] = { "Original\n", "HD\n" };
 #endif
-static const char *const sFontStyleText[] = { "Original\n", "Enhanced\n", "Iron Sights\n" };
+static const char *const sFontStyleText[] = { "Original\n", "Enhanced\n" };
 static const char *const sHudScaleText[] = { "Normal\n", "High\n" };
 /* weapon_fov: off = the gun follows the view FOV (vanilla), on = the default FOV */
 static const char *const sWeaponFovText[] = { "Match View\n", "Default\n" };

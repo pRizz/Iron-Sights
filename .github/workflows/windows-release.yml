@@ -367,7 +367,7 @@ jobs:
 
           Preserve Data and midas.ini when updating. Suspend points require their original executable; campaign saves are separate.
 
-          Fonts: Gameplay > Iron Sights > System > Fonts chooses Original (the default), Enhanced or Iron Sights. Enhanced is Carnivorous's CC0 redraw from GitHub (Graslu/GEPDTexturePacks), which these downloads do not include: the game fetches its 186 files (250 KB) only when you choose Download on the Enhanced Fonts page or Get Enhanced Fonts in Options, and Remove there deletes them.
+          Fonts: Gameplay > Iron Sights > System > Fonts chooses Original (the default) or Enhanced; our own Iron Sights font is hidden for now while its deficiencies are fixed. Enhanced is Carnivorous's CC0 redraw from GitHub (Graslu/GEPDTexturePacks), which these downloads do not include: the game fetches its 186 files (250 KB) only when you choose Download on the Enhanced Fonts page or Get Enhanced Fonts in Options, and Remove there deletes them.
 
           Windows and Linux crash reporting is ON by default. Turn it off in Port Options > Crash Reporting or set `[diagnostics] crash_reporting=0` in midas.ini. Reports contain technical diagnostics; no minidumps, ROMs or saves are attached. See scripts/port/crash_reporting.md for payload and privacy details.
           '''

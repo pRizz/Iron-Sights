@@ -44,6 +44,7 @@ Set-Content -LiteralPath $inputFile -Value $records
 $testEnv = @{
     GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$Resolution; GE_NOINPUT='1';
     GE_STAGE='dam'; GE_STAGE_AFTER='1'; GE_CHEATS='invuln,invis,guns'; GE_INPUTPLAY=$inputFile;
+    GE_IRONSIGHTS_FONTS='1';   # FORK-051: allows the hidden Iron Sights font when asked for
     GE_HUD_AUDIT=$(if ($Mode -eq 'Sniper') {'17'} else {'8'}); GE_FRAMES='1000'; GE_SEED='1'
 }
 if ($Mode -in @('Menu','HudMenu')) {

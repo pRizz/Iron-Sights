@@ -234,6 +234,11 @@ the title font and a non-shipping placeholder body font.
 
 ## Milestone status
 
+**Hidden for now (2026-11-06):** the owner hid the Iron Sights font choice
+because the fonts still have deficiencies. Both fonts stay vendored and drawn
+by the renderer when `GE_IRONSIGHTS_FONTS=1` allows `font_style=2`; players
+see only Original and Enhanced until it returns (font styles plan).
+
 Update the relevant row with changes, verification evidence, blockers and the
 next action before handing off.
 

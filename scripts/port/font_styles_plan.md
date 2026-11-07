@@ -60,7 +60,14 @@ watch, replaces the Sharp Fonts row (FORK-051):
 | --- | --- | --- |
 | Original | ROM | ROM |
 | Enhanced | GEPD masks | GEPD masks |
-| Iron Sights | Open title font (MSDF) | Open body font (MSDF, OPEN-5) |
+| Iron Sights (hidden since 2026-11-06) | Open title font (MSDF) | Open body font (MSDF, OPEN-5) |
+
+**Iron Sights hidden (2026-11-06).** The owner chose to stop offering the
+Iron Sights choice for now because the font still has deficiencies. Fonts
+offers Original and Enhanced in both menus; a saved `font_style=2` or
+`sharp_fonts=1` loads as Original. The renderer and fonts stay in the code,
+and `GE_IRONSIGHTS_FONTS=1` re-enables the choice for development and the
+capture scripts (FORK-051).
 
 - Key `[display] font_style`: 0 Original, 1 Enhanced, 2 Iron Sights; default 0.
   An existing `sharp_fonts=1` with no `font_style` line loads as 2, and saving

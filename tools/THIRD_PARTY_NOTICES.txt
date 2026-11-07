@@ -17,7 +17,8 @@ license, reproduced here as its terms require.
   inflate.c by Mark Adler            public      every build (src/inflate,
                                      domain      src/game/zlib.c)
   Iron Sights open assets            MIT         every video build (drawn
-    (port/fast3d/open_assets)                     when Fonts is Iron Sights)
+    (port/fast3d/open_assets)                     only in development: the
+                                                  Iron Sights font is hidden)
   ENet                               MIT         netplay builds
   Perfect Dark decompilation         MIT         netplay builds (via the
                                                  Perfect Dark netplay fork)

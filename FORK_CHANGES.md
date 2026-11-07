@@ -480,11 +480,23 @@ play-tested the checklist and signed off the same day; FONT-5 is Done.
 
 ### FORK-051 — Iron Sights font: open-font MSDF text
 
-**Status:** Implemented in the Windows and browser builds; default off.
-The browser build was run at 1440p and 4K, and the owner signed off on the
-play-test on 2026-11-06. Part of the open assets plan (OPEN-4 and OPEN-5,
-Done; FORK-050). Since OPEN-5 (2026-11-06) the open body font draws Zurich
-Bold text too.
+**Status:** Implemented in the Windows and browser builds, but **hidden from
+players since 2026-11-06**: the owner chose not to offer it for now because the
+font still has deficiencies. The browser build was run at 1440p and 4K, and
+the owner signed off on the play-test on 2026-11-06. Part of the open assets
+plan (OPEN-4 and OPEN-5, Done; FORK-050). Since OPEN-5 (2026-11-06) the open
+body font draws Zurich Bold text too.
+
+**Hidden (2026-11-06).** Fonts offers only Original and Enhanced in the
+Options folder and the watch (`port_options.c`). A saved `font_style=2`, or
+the older `sharp_fonts=1`, loads as Original (`videoFontStyle` in `video.c`),
+unless `GE_IRONSIGHTS_FONTS=1` allows it for development; the font, HUD,
+sight and hit map capture scripts set it, so their Iron Sights switches keep
+working (the Fonts row then shows the raw value `2`). The help line, ini
+reference, README, release notes, notices and both plans say why. The
+renderer, vendored fonts and tests are unchanged. Checks: the Windows build;
+a 1600x900 System page with `font_style=2` reads Original, and with the
+override draws the open fonts.
 
 With **Gameplay > Iron Sights > System > Fonts** set to **Iron Sights**
 (`[display] font_style=2`; Original by default) in the Options folder or the

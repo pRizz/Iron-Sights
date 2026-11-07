@@ -170,8 +170,9 @@ static int s_CfgFilter2D = 1;
  * 1 Enhanced (the player-installed GEPD pack in Data/FontPacks/gepd; glyphs
  * without a file stay the ROM's), 2 Iron Sights (the open title font for
  * Bank Gothic text, the open body font for Zurich Bold). Original by
- * default (font styles plan decision 1). The older
- * sharp_fonts=1 still loads as Iron Sights unless font_style is present. */
+ * default (font styles plan decision 1). Iron Sights is hidden for now - the
+ * font has deficiencies - so 2, and the older sharp_fonts=1, load as Original
+ * unless GE_IRONSIGHTS_FONTS=1 (development and captures) allows it. */
 static int s_CfgFontStyle = 0;
 static int s_CfgFontStyleSeen = 0;
 static int s_CfgHighLod = 1;          /* 0 = use normal distance-based model LODs */
@@ -1071,6 +1072,17 @@ static int videoLowResLines(const char *value)
     return 1080;
 }
 
+/* [display] font_style as loaded: Iron Sights (2) is hidden while its font
+ * has deficiencies (FORK-051), so it reads as Original unless the
+ * GE_IRONSIGHTS_FONTS=1 development override allows it. */
+static int videoFontStyle(int value)
+{
+    const char *allow = getenv("GE_IRONSIGHTS_FONTS");
+
+    value = SDL_clamp(value, 0, 2);
+    return (value == 2 && !(allow != NULL && allow[0] == '1')) ? 0 : value;
+}
+
 static int videoSetDisplayOption(const char *key, const char *value)
 {
     if (SDL_strcasecmp(key, "window_width") == 0)  { s_CfgWindowW = SDL_atoi(value); return 1; }
@@ -1086,8 +1098,8 @@ static int videoSetDisplayOption(const char *key, const char *value)
     if (SDL_strcasecmp(key, "msaa") == 0)          { s_CfgMsaa = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "anisotropy") == 0)    { s_CfgAnisotropy = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "filter_2d") == 0)     { s_CfgFilter2D = SDL_atoi(value); return 1; }
-    if (SDL_strcasecmp(key, "font_style") == 0)    { s_CfgFontStyle = SDL_clamp(SDL_atoi(value), 0, 2); s_CfgFontStyleSeen = 1; return 1; }
-    if (SDL_strcasecmp(key, "sharp_fonts") == 0)   { if (!s_CfgFontStyleSeen) s_CfgFontStyle = SDL_atoi(value) != 0 ? 2 : 0; return 1; }
+    if (SDL_strcasecmp(key, "font_style") == 0)    { s_CfgFontStyle = videoFontStyle(SDL_atoi(value)); s_CfgFontStyleSeen = 1; return 1; }
+    if (SDL_strcasecmp(key, "sharp_fonts") == 0)   { if (!s_CfgFontStyleSeen) s_CfgFontStyle = videoFontStyle(SDL_atoi(value) != 0 ? 2 : 0); return 1; }
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     if (SDL_strcasecmp(key, "texture_pack") == 0)
     {   /* FORK-053: 0 Original, 1 HD; FORK-033 files may say hd, 4k or 2 */

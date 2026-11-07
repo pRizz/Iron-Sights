@@ -38,7 +38,7 @@ static const struct PortOptHelp sHelp[] = {
     { "high_lod",           "Always draws the most detailed models." },
     { "setting_help",       "Shows this help box." },
     { "crash_reporting",    "Sends technical crash reports to Sentry. OFF stops uploads." },
-    { "font_style",         "Original: game fonts. Enhanced: community redraw, see Enhanced Fonts. Iron Sights: ours." },
+    { "font_style",         "Original or Enhanced (community redraw). Our own font is hidden while we fix it." },
     { "texture_pack",       "HD: intermissionfb's pack, from HD Textures or copied into Data/TexturePacks." },
 
     /* HUD */

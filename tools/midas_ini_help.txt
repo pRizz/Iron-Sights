@@ -244,11 +244,9 @@ padN_stickmode.
                       |            | Fonts, or copied there; not bundled, and
                       |            | glyphs without a file stay the ROM's;
                       |            | see scripts/port/font_styles_plan.md);
-                      |            | 2 = Iron Sights (the open MIT
-                      |            | fonts, sharp at any size: a title font for
-                      |            | HUD, watch and titles, a body font for
-                      |            | menus and briefings). The older
-                      |            | sharp_fonts=1 loads as 2.
+                      |            | 2 = Iron Sights, our own fonts, is hidden
+                      |            | for now (it has deficiencies): 2 and the
+                      |            | older sharp_fonts=1 load as 0.
                       |            | Iron Sights > System.
   texture_pack        | 1          | [display] Texture Pack (Windows/Linux).
                       |            | 1 = HD: campaign environment textures from

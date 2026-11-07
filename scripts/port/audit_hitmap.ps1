@@ -34,6 +34,7 @@ Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]', 'ful
     'tickhz=60', 'render_thread=0', 'msaa=0', 'music_volume=0', "debrief_hit_map=$([int](!$Off))", "font_style=$FontStyle")
 $auditEnv = @{
     GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$Resolution; GE_NOINPUT='1'; GE_SEED='1';
+    GE_IRONSIGHTS_FONTS='1';   # FORK-051: allows the hidden Iron Sights font when asked for
     GE_STAGE=$Stage; GE_STAGE_AFTER='1'; GE_SKIPINTRO='1'; GE_CHEATS='invuln';
     GE_DIFF=[string]$Difficulty;
     GE_HITMAP_PROBE=(@([string]$Hits) + @(if ($Zoom) { 'zoom' }) + @(if ($Live) { 'live' }) + @(if ($Best) { "best=$Best" }) + @(if ($Cheat) { 'cheat' }) + @(if ($Cap) { "cap=$Cap" })) -join ','; GE_HITMAP_LOG='1';
