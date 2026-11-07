@@ -60,7 +60,7 @@ watch, replaces the Sharp Fonts row (FORK-051):
 | --- | --- | --- |
 | Original | ROM | ROM |
 | Enhanced | GEPD masks | GEPD masks |
-| Iron Sights | Open title font (MSDF) | ROM, until the open body font (OPEN-5) |
+| Iron Sights | Open title font (MSDF) | Open body font (MSDF, OPEN-5) |
 
 - Key `[display] font_style`: 0 Original, 1 Enhanced, 2 Iron Sights; default 0.
   An existing `sharp_fonts=1` with no `font_style` line loads as 2, and saving
@@ -172,7 +172,8 @@ For the owner, on the current Windows build (the browser where noted):
 1. **Original** (Fonts = Original): menus, HUD, watch and debrief look as before.
 2. **Iron Sights**: mission hints and other HUD text, the watch, the folder's
    tab labels and small captions, and the debrief's HIT MAP caption use our
-   font; menu and briefing body text keeps the game font (OPEN-5). Check sizes,
+   font; menu and briefing body text kept the game font until OPEN-5 (since
+   2026-11-06 it uses the open body font). Check sizes,
    spacing and that nothing overlaps or is cut, including a watch inventory
    item's scrolling description.
 3. **Enhanced**: from Options, **Get Enhanced Fonts** opens the page; Download

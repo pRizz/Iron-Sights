@@ -1,7 +1,8 @@
 #ifndef PORT_OPEN_FONTS_H
 #define PORT_OPEN_FONTS_H
-/* Open fonts (FORK-050): the vendored MIT title font drawn in place of the
- * ROM's Bank Gothic glyphs as multi-channel signed distance fields.
+/* Open fonts (FORK-050, FORK-051): the vendored MIT title and body fonts drawn
+ * in place of the ROM's Bank Gothic and Zurich Bold glyphs as multi-channel
+ * signed distance fields.
  *
  * The game keeps its own text layout. Each ROM glyph's texture is replaced by
  * a field image resampled from the open font's atlas over a box in the ROM
@@ -32,7 +33,7 @@ bool image(const Glyph &glyph, std::vector<uint8_t> &rgba, uint32_t &width, uint
 
 extern "C" {
 /* textrelated.c: a ROM font's glyph at chars[ch - 0x21]. font 0 is Bank Gothic
- * (drawn with the open title font); other fonts are not replaced yet. */
+ * (drawn with the open title font), font 1 Zurich Bold (the open body font). */
 void portOpenFontsGlyph(int font, int ch, const unsigned char *pixels, int width, int height, int baseline);
 }
 #endif

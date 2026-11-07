@@ -405,8 +405,8 @@ static std::atomic<int> gfx_line_mode_req{0}; /* boss.c, every frame, sim thread
 extern "C" { uint32_t gfx_line_mode = 0; }    /* this frame's, render thread (gfx_opengl.cpp reads it) */
 uint32_t gfx_anisotropy = 1;
 uint32_t gfx_filter_2d = 1;
-/* [display] sharp_fonts (FORK-050): draw Bank Gothic glyphs from the open
- * title font's distance field. */
+/* [display] font_style=2 (FORK-050, FORK-051): draw Bank Gothic and Zurich
+ * Bold glyphs from the open title and body fonts' distance fields. */
 uint32_t gfx_sharp_fonts = 0;
 /* [display] font_style=1 (FORK-052): draw both fonts' glyphs from the
  * player-installed Enhanced masks, smooth whatever 2D Filtering says. */

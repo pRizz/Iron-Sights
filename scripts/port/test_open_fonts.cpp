@@ -1,5 +1,5 @@
-// ROM-free checks for the open-font glyph path (FORK-050): the vendored atlas
-// decodes, a registered glyph places on the ROM baseline and its field image
+// ROM-free checks for the open-font glyph path (FORK-050): the vendored atlases
+// decode, a registered glyph places on the ROM baseline and its field image
 // is inside where the glyph has ink and outside past it.
 #include <cassert>
 #include <cstdio>
@@ -24,7 +24,10 @@ int main() {
     for (int ch = 0x21; ch <= 0x7e; ch++) portOpenFontsGlyph(0, ch, pixels[ch - 0x21], 7, 8, 2);
     portOpenFontsGlyph(0, 'I', pixels['I' - 0x21], 2, 8, 2);
     portOpenFontsGlyph(0, ',', pixels[',' - 0x21], 2, 4, 7);
-    portOpenFontsGlyph(1, 'H', pixels[0], 7, 8, 2);  // Zurich Bold: not replaced
+    // Zurich Bold (font 1) draws with the body font, from its own H.
+    static uint8_t body[94][16 * 16];
+    for (int y = 1; y <= 9; y++) body['H' - 0x21][y * 8 + 0] = body['H' - 0x21][y * 8 + 6] = 220;
+    for (int ch = 0x21; ch <= 0x7e; ch++) portOpenFontsGlyph(1, ch, body[ch - 0x21], 7, 11, 1);
 
     // Act
     const open_fonts::Glyph *h = open_fonts::find(pixels['H' - 0x21]);
@@ -34,6 +37,11 @@ int main() {
     // Assert: registration and the atlas.
     assert(h && i && comma);
     assert(open_fonts::usable(*h) && open_fonts::usable(*i) && open_fonts::usable(*comma));
+    const open_fonts::Glyph *body_a = open_fonts::find(body['a' - 0x21]);
+    assert(body_a && open_fonts::usable(*body_a));
+    std::vector<uint8_t> body_rgba;
+    uint32_t bw = 0, bh = 0;
+    assert(open_fonts::image(*body_a, body_rgba, bw, bh) && bw > 0 && bh > 0);
 
     // The box covers the ROM bitmap; a comma's box reaches below its 4 rows.
     const open_fonts::Box hb = open_fonts::box(*h);

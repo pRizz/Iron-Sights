@@ -1,14 +1,17 @@
 {
   "repository": "https://github.com/pRizz/iron-sights-assets",
-  "tag": "v0.3.0",
+  "tag": "v0.4.0",
   "license": "MIT",
-  "release": "https://github.com/pRizz/iron-sights-assets/releases/tag/v0.3.0",
+  "release": "https://github.com/pRizz/iron-sights-assets/releases/tag/v0.4.0",
   "archives": {
-    "title-v0.3.0.tar.gz": "3a089400b47dc818591e2b46cc672b26f98075df815f84f3d60087fb78a4908d"
+    "title-v0.4.0.tar.gz": "0f553c9362d4e240174ef75726fcf9b84527aa8bf15ad5f9884018b7cccf2ab4",
+    "body-v0.4.0.tar.gz": "f7658edd2ffe4f35838b7d107e1b5f56b510eb692d041f2e8e5e98bc962d2fd1"
   },
   "files": {
     "LICENSE": "2d75cbfc027263ba6ffa6b4595907f5720b2a513924ad9a508bb052a003944e3",
-    "title/atlas.png": "b314eec5119588e9273bfb4fe8c4aa381074792183efef49353c32a30ed4ab24",
-    "title/metrics.json": "ab233df3ff5dcb71a177cddf5a24ade37aee8fe14df7de125cab7c3f2d4fe99f"
+    "body/atlas.png": "73d2e50cc316b4d0f815f5f9b9f6d4473abeb39566c9dfdb58483d34bf93527b",
+    "body/metrics.json": "2ff2dd3f5b86dda5615269c9b37b635c76290b2520bb8f2a894b4eb90aa3ae2b",
+    "title/atlas.png": "887d44b2c50006e2a78174180e66012fc2bfc4224e0c4ffd8454272fdd3ac948",
+    "title/metrics.json": "10d2dbe89b141f10fd0d31ce685fec5d2bb17220204297d165d7e673db25e35b"
   }
 }

@@ -40,7 +40,8 @@ FONT-3 (the in-game download), FONT-4 (the browser download) and FONT-5
 [`scripts/port/font_styles_plan.md`](scripts/port/font_styles_plan.md)
 proposes one **Gameplay > Iron Sights > System > Fonts** setting choosing
 Original (ROM), Enhanced (the community GEPD masks removed in FORK-021) or
-Iron Sights (the open title font, FORK-051), replacing the Sharp Fonts row.
+Iron Sights (the open title font, and the open body font since OPEN-5,
+FORK-051), replacing the Sharp Fonts row.
 The Enhanced fonts would stay out of every package and commit: choosing them
 asks the player before downloading the pack's 186 font PNGs from
 Graslu/GEPDTexturePacks at its pinned final commit, checks each file against a
@@ -332,17 +333,20 @@ play-tested the checklist and signed off the same day; FONT-5 is Done.
 
 **Status:** Implemented in the Windows and browser builds; default off.
 The browser build was run at 1440p and 4K, and the owner signed off on the
-play-test on 2026-11-06. Part of the open assets plan (OPEN-4, Done;
-FORK-050).
+play-test on 2026-11-06. Part of the open assets plan (OPEN-4 and OPEN-5,
+Done; FORK-050). Since OPEN-5 (2026-11-06) the open body font draws Zurich
+Bold text too.
 
 With **Gameplay > Iron Sights > System > Fonts** set to **Iron Sights**
 (`[display] font_style=2`; Original by default) in the Options folder or the
 watch, every Bank Gothic glyph (the HUD, watch, mission hints, timers, weapon strip,
-titles) is drawn from the open title font (pRizz/iron-sights-assets, MIT,
-vendored at v0.3.0) as a multi-channel signed distance field, sharp at any
-resolution, while Zurich Bold text (briefings, folder menus) keeps the ROM
-font until the open body font exists. It defaults to off until both fonts
-exist and the owner has play-tested them (plan decision 4).
+titles) is drawn from the open title font and every Zurich Bold glyph
+(briefings, folder menus, help lines) from the open body font
+(pRizz/iron-sights-assets, MIT, vendored at v0.4.0), each as a multi-channel
+signed distance field, sharp at any resolution. Fonts defaults to Original
+(font styles plan decision 1); open assets plan decision 4 foresaw Iron
+Sights as the default once both fonts were play-tested, which remains the
+owner's call.
 
 The game keeps its own text layout: advances, kerning, line spacing,
 clipping, colours and outlines are unchanged. Each glyph's ROM texture is
@@ -356,7 +360,10 @@ replaced:
   FORK-052), and parses the metrics with picojson.
 - **Registry.** `textrelated.c`'s font loader registers each glyph's pixel
   pointer, width, height and baseline (a weak no-op covers builds without the
-  renderer). Bank Gothic maps to the title font.
+  renderer). Bank Gothic maps to the title font and Zurich Bold to the body
+  font; each font's atlas loads from its own embedded files
+  (`open_fonts_embed.cmake` embeds both), and each places from its own ROM
+  `H`.
 - **Placement.** Our capitals match the ROM `H` as it reads on screen: its
   ink edges are where its rows' peak intensity, interpolated between row
   centres, crosses a quarter of its peak (6.7 of its 8 rows). Our glyph sits
@@ -416,7 +423,7 @@ generator in `gfx_opengl.cpp`; `gfx_cc.*` and `gfx_pc.h`.
 [frontend row](src/game/front.c), [watch row](port/src/port_watchpages.c),
 [help](port/src/port_option_help.c), [ini reference](tools/midas_ini_help.txt),
 [build](CMakeLists.txt), [notices](tools/THIRD_PARTY_NOTICES.txt),
-[tests](scripts/port/test_open_fonts.sh), [README](README.md), and
+[tests](scripts/port/test_open_fonts.sh), [fit check](scripts/port/check_open_fonts.py), [README](README.md), and
 `-SharpFonts` switches (now `font_style=2`) on the [HUD](scripts/port/audit_hud.ps1),
 [sight/watch](scripts/port/audit_sights.ps1) and [text](scripts/port/audit_fonts.ps1) audits.
 **Checks:** the Windows build compiles and links; the browser video build
@@ -436,6 +443,30 @@ every Bank Gothic row replaced with capitals and small capitals in their ROM
 places. The 1440p, 4K, debrief and browser captures followed (below); a
 glyph cut by a clipped scrolling list is still not captured.
 
+**Body font (OPEN-5, 2026-11-06).** `open_fonts.cpp` keeps one atlas per
+ROM font and registers Zurich Bold as well as Bank Gothic; the placement is
+unchanged. `test_open_fonts.cpp` registers a ROM-like Zurich Bold and checks a
+body glyph's field image. `update_open_assets.py` vendors both fonts from
+v0.4.0 and `test_open_assets.py` checks each. The new local
+`scripts/port/check_open_fonts.py` fits an open font into the game font's
+glyph widths as the renderer does and lists any glyph squeezed below a
+threshold (it reads the extracted font sources and prints numbers only);
+`compare_open_font.py` now also reads Zurich Bold, whose kerning table is
+declared with an explicit size. The first in-game draft showed specks and
+nicks: the assets' MSDF generator now stores the true distance more than
+1.5 px from an edge (a false near-edge median in, for example, the foot of
+the n's counter showed as a dot in small text, where the shader spreads
+coverage over few pixels), the body atlas uses 96 px/em, curves are
+simplified more finely, and several glyphs were redrawn. Checks:
+`test_open_fonts.sh` (Docker), `test_open_assets.py`, the Windows build, the
+standards and settings placement checks, the regenerated gallery (zero
+changed image cells; it renders the Original fonts), the fit check (no glyph
+squeezed) and 1600x900 captures of the Video, Iron
+Sights, Files and mission pages in both styles, with no stray specks found by
+a scan of the Video page. The owner reviewed the result in play and approved
+the release. Not run: the browser build with the body font, and native
+captures above 1600x900.
+
 **Captures (2026-11-06).** The browser build drew the Iron Sights font at run
 time at a true 2560x1440 and 3840x2160 (headless browser canvas). Native
 Windows captures on this machine stop at 1600x900, since SDL shrinks larger
@@ -454,11 +485,15 @@ created the same day with its license, rules, roadmap, CI and Bright Builds
 Rules (OPEN-1), and
 released the parametric title font as v0.1.0 after the owner's review (OPEN-2),
 then v0.2.0 with comparison-informed refinements and v0.3.0 with taller small
-capitals after the owner's Sharp Fonts play-test (OPEN-4). Iron Sights first
-vendored v0.2.0 (OPEN-3) and now vendors v0.3.0:
+capitals after the owner's Sharp Fonts play-test (OPEN-4). v0.4.0
+(2026-11-06, OPEN-5) adds the body font, drawn in code as variable-width
+strokes and approved by the owner after play-tests, and a generator fix that
+also rebuilds the title font's atlas. Iron Sights first vendored v0.2.0
+(OPEN-3), then v0.3.0, and now vendors v0.4.0:
 `scripts/port/update_open_assets.py` fetches a tag, checks every download
-against the release's SHA256SUMS and copies the LICENSE, `title/atlas.png`
-and `title/metrics.json` byte for byte into `port/fast3d/open_assets/` with a `manifest.json` of checksums (`--verify`
+against the release's SHA256SUMS and copies the LICENSE and each font's
+`atlas.png` and `metrics.json` (title and body) byte for byte into
+`port/fast3d/open_assets/` with a `manifest.json` of checksums (`--verify`
 rechecks offline; `.gitattributes` keeps the folder byte-exact).
 `test_open_assets.py` runs in the release workflow, `build-inputs.json` records
 the release, Windows and Linux packages ship `Open-Assets-LICENSE.txt`, the
@@ -474,7 +509,8 @@ art set (FORK-021, FORK-033, FORK-047). The plan covers provenance rules
 outlines, coordinates, pixels or metrics, no ROM-derived data in the assets;
 local comparison with the game's glyphs allowed since 2026-11-05), a hybrid layout (a separate MIT assets repository as the source
 of truth, its built outputs vendored here at a pinned, checksummed version), a
-parametric title font and a hand-drawn body font, and a renderer that keeps the
+parametric title font and a body font (planned as hand-drawn; OPEN-5 drew it
+in code as variable-width strokes), and a renderer that keeps the
 game's glyph pipeline but swaps ROM bitmaps for MSDF atlas cells through a glyph
 registry and a new `SHADER_OPT_MSDF` shader bit, behind a Sharp Fonts setting
 with the ROM fonts as fallback. It also records the owner's intent to grow the

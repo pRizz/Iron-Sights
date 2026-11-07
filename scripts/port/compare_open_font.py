@@ -32,7 +32,7 @@ def read_game_font(name):
     source = (ROOT / 'assets' / 'font' / f'{name}.c').read_text()
     tables = {}
     for label in ('kerning', 'fontchartable', 'fontbytes'):
-        body = re.search(rf'{name}_{label}\[\]\s*=\s*\{{(.*?)\}};', source, re.S).group(1)
+        body = re.search(rf'{name}_{label}\[[^\]]*\]\s*=\s*\{{(.*?)\}};', source, re.S).group(1)
         tables[label] = [int(v, 16) for v in re.findall(r'0x([0-9A-Fa-f]+)', body)]
     data = b''.join(w.to_bytes(4, 'big') for w in tables['kerning'] + tables['fontchartable'] + tables['fontbytes'])
     glyphs = {}

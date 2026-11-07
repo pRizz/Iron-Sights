@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[2]
 VENDOR = ROOT / 'port' / 'fast3d' / 'open_assets'
 MANIFEST = VENDOR / 'manifest.json'
 REPOSITORY = 'pRizz/iron-sights-assets'
-FONTS = ('title',)
+FONTS = ('title', 'body')
 FONT_FILES = ('atlas.png', 'metrics.json')  # what the game uses from each font
 
 

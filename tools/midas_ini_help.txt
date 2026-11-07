@@ -244,9 +244,10 @@ padN_stickmode.
                       |            | Fonts, or copied there; not bundled, and
                       |            | glyphs without a file stay the ROM's;
                       |            | see scripts/port/font_styles_plan.md);
-                      |            | 2 = Iron Sights (HUD, watch
-                      |            | and title text in the open MIT title font,
-                      |            | sharp at any size). The older
+                      |            | 2 = Iron Sights (the open MIT
+                      |            | fonts, sharp at any size: a title font for
+                      |            | HUD, watch and titles, a body font for
+                      |            | menus and briefings). The older
                       |            | sharp_fonts=1 loads as 2.
                       |            | Iron Sights > System.
   crash_reporting     | 1          | ON sends technical crash reports to Sentry.

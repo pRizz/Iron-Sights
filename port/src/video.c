@@ -166,9 +166,9 @@ static int s_CfgAnisotropy = 2;       /* 0/1 = off; 2..16 samples */
 static int s_CfgFilter2D = 1;
 /* [display] font_style (FORK-051, font styles plan FONT-1): 0 Original (ROM),
  * 1 Enhanced (the player-installed GEPD pack in Data/FontPacks/gepd; glyphs
- * without a file stay the ROM's), 2 Iron Sights (open title font for Bank
- * Gothic text). Original
- * until both open fonts exist and the owner has play-tested them. The older
+ * without a file stay the ROM's), 2 Iron Sights (the open title font for
+ * Bank Gothic text, the open body font for Zurich Bold). Original by
+ * default (font styles plan decision 1). The older
  * sharp_fonts=1 still loads as Iron Sights unless font_style is present. */
 static int s_CfgFontStyle = 0;
 static int s_CfgFontStyleSeen = 0;
