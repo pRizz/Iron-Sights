@@ -20316,6 +20316,11 @@ void menu_init(void)
         }
         portInputP1ClaimWindow(intro);
     }
+    {   /* FORK-054: the 3D intro logos draw with at least 4x MSAA (gfx_pc.cpp) */
+        extern void gfx_set_intro_logo_aa(s32 on);
+
+        gfx_set_intro_logo_aa(current_menu == MENU_NINTENDO_LOGO || current_menu == MENU_RAREWARE_LOGO);
+    }
 #endif
 
 #ifndef TARGET_N64

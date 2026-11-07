@@ -406,6 +406,9 @@ uint32_t gfx_n64_aa = 0; /* GE N64 AA: VI-style resolve of the MSAA level frame 
 static uint32_t gfx_msaa_user = 1, gfx_n64_aa_user = 0;
 static std::atomic<int> gfx_line_mode_req{0}; /* boss.c, every frame, sim thread */
 extern "C" { uint32_t gfx_line_mode = 0; }    /* this frame's, render thread (gfx_opengl.cpp reads it) */
+/* FORK-054: the 3D Nintendo and Rareware intro logos draw with at least 4x MSAA
+ * whatever the player set (front.c, every tick, sim thread); N64 AA stays theirs */
+static std::atomic<int> gfx_intro_logo_req{0};
 uint32_t gfx_anisotropy = 1;
 uint32_t gfx_filter_2d = 1;
 /* [display] font_style=2 (FORK-050, FORK-051): draw Bank Gothic and Zurich
@@ -8219,7 +8222,8 @@ extern "C" void gfx_start_frame(void) {
         previous_fonts = fonts;
     }
     gfx_line_mode = (gfx_line_mode_req.load() != 0 && gfx_framebuffers_enabled) ? 1u : 0u;
-    gfx_msaa_level = gfx_line_mode ? std::max<uint32_t>(gfx_msaa_user, 4u) : gfx_msaa_user;
+    const bool intro_logo = gfx_intro_logo_req.load() != 0 && gfx_framebuffers_enabled; /* FORK-054 */
+    gfx_msaa_level = (gfx_line_mode || intro_logo) ? std::max<uint32_t>(gfx_msaa_user, 4u) : gfx_msaa_user;
     gfx_n64_aa = gfx_line_mode ? 1u : gfx_n64_aa_user;
     if (!gfx_async_mode) { /* async: the main thread pumps events via gfx_poll_events */
         gfx_wapi->handle_events();
@@ -8562,6 +8566,10 @@ extern "C" void gfx_set_aa(uint32_t msaa_level, uint32_t n64_aa) {
 
 extern "C" void gfx_set_line_mode(int32_t on) {
     gfx_line_mode_req.store(on ? 1 : 0);
+}
+
+extern "C" void gfx_set_intro_logo_aa(int32_t on) { /* FORK-054 */
+    gfx_intro_logo_req.store(on ? 1 : 0);
 }
 
 static void gfx_set_texture_filter_now(enum FilteringMode mode) {

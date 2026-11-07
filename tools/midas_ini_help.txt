@@ -129,7 +129,8 @@ padN_stickmode.
   render_thread       | -1         | Draw on its own thread. -1 = auto,
                       |            | 0 = off, 1 = on
   Graphics
-  msaa                | 2          | 1 = off; 2, 4 or 8 = samples
+  msaa                | 2          | 1 = off; 2, 4 or 8 = samples. The
+                      |            | intro logos always use at least 4x
   filtering           | trilinear  | point, bilinear, 3point (N64-style) or
                       |            | trilinear
   anisotropy          | 2          | 0 = off; 2 to 16 = sharper textures at

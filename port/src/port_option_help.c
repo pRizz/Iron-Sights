@@ -117,7 +117,7 @@ static const struct PortOptHelp sHelp[] = {
     { "low_res",            "3D render height." },
     { "filtering",          "Texture smoothing." },
     { "anisotropy",         "Sharper textures at glancing angles." },
-    { "msaa",               "Smooths jagged edges." },
+    { "msaa",               "Smooths jagged edges. The intro logos always use at least 4x." },
     { "filter_2d",          "Smooths HUD and menu graphics." },
     { "maxfps",             "Frame rate cap." },
     { "@apply",             "Applies the changes on this page." },

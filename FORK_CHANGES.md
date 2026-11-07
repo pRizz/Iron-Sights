@@ -30,6 +30,43 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-054 — Intro logos always draw with at least 4x MSAA
+
+**Status:** Implemented in the Windows build (2026-11-07); the owner asked for
+it after reviewing captures of both logos with MSAA off, 2x, 4x and 8x and N64 AA.
+Not yet play-tested by the owner.
+
+The spinning 3D Nintendo and Rareware logos at startup (`MENU_NINTENDO_LOGO`,
+`MENU_RAREWARE_LOGO`) render with at least 4x MSAA whatever the player's
+`[display] msaa` is. Upstream draws them at the player's level like every other
+frame, which at the 2x default (FORK-029) or with MSAA off leaves visible stair
+steps on the logos' slow-turning outer edges. A player's 8x stays 8x. N64 AA
+and Classic Mode keep the player's choice, because the N64 AA resolve visibly blurs
+the logos at window resolution. Every other screen, including the legal
+screen, the black switch between logos and the eye intro, keeps the player's level. There is no
+setting; the `msaa` help line in both menus and `tools/midas_ini_help.txt` say
+the intro logos always use at least 4x. No input changes.
+
+**Upstream hooks:** `gfx_pc.cpp` already raises the frame's MSAA to at least
+4x for the inherited Line Mode cheat in `gfx_start_frame`; the fork adds a
+second request (`gfx_set_intro_logo_aa`, an atomic the render thread reads at
+frame start, like Line Mode's) that joins the same `std::max` floor, guarded by
+framebuffer support. `front.c`'s per-tick menu interface handler sets it inside
+its existing `GE_VIDEO` block. With the render thread on, the floor can lag the
+menu by one frame at each change; both edges fall on black switch screens.
+
+**Sources:** [renderer](port/fast3d/gfx_pc.cpp), [menu hook](src/game/front.c),
+[help](port/src/port_option_help.c), [ini help](tools/midas_ini_help.txt).
+
+**Checks:** the Windows build compiles and links. 1080p intro captures (every
+30 frames to frame 1080) with the new build at `msaa=1` and `msaa=2` are pixel
+identical to each other on both logos and match a previous-build `msaa=4` run
+wherever the animation is in step; zoomed edges at `msaa=1` show 4x
+coverage shades. `msaa=8` differs from the 4x frames (its 8x level is kept).
+The eye intro at `msaa=1` stays identical to the previous build's `msaa=1`.
+The hand gallery regenerated with zero changed image cells (source fingerprint
+only).
+
 ### FORK-053 — HD texture packs: downloaded or copied in by the player
 
 **Status:** Implemented in the native Windows and Linux builds (2026-11-06);
