@@ -181,6 +181,7 @@ static const struct PortWatchRowDef sIsSystem[] = {
     { PWROW_ACTION, NULL, "About / Build Info\n", 101, 0 },
     { PWROW_OPT,       "font_style",       NULL, 0, 0 },
     { PWROW_SUBSCREEN, NULL, "Enhanced Fonts\n", PORTWATCH_IS_FONTS, 0 },
+    { PWROW_OPT,       "text_antialiasing", NULL, 0, 0 },
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     { PWROW_OPT,       "texture_pack",     NULL, 0, 0 },
     { PWROW_SUBSCREEN, NULL, "HD Textures\n", PORTWATCH_IS_HDTEX, 0 },

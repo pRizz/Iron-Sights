@@ -248,6 +248,11 @@ padN_stickmode.
                       |            | for now (it has deficiencies): 2 and the
                       |            | older sharp_fonts=1 load as 0.
                       |            | Iron Sights > System.
+  text_antialiasing   | 1          | [display] Text Antialiasing. ON smooths
+                      |            | small Enhanced text through mipmaps so
+                      |            | strokes keep even widths with any
+                      |            | Texture Filter; 0 samples it as before.
+                      |            | Iron Sights > System.
   texture_pack        | 1          | [display] Texture Pack (Windows/Linux).
                       |            | 1 = HD: campaign environment textures and
                       |            | HUD ammo icons from the GoldenEye 007 HD

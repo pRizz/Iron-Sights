@@ -287,6 +287,46 @@ use, in both menus; the Options folder's extra rows come from
 The HTTPS layer gained `platform_stream_transport` beside the fonts' capped
 in-memory transport, which now wraps it; `test_enhanced_fonts.sh` passes.
 
+**Text Antialiasing (2026-11-06).** Small Enhanced text, such as the 0.5x and
+0.6x cheat lines on the difficulty screen, showed strokes of uneven weight.
+Each mask is 8x its glyph, so text at native size or smaller shrinks it
+several times (about 3.5x for 0.5x text at 1080p), and glyph texture
+rectangles had no mip chain unless the 3D filter was linear with anisotropy
+on: 3-point filtering forced `GL_NEAREST` plus the shader's three taps at full
+mask resolution, and linear with anisotropy off sampled plain bilinear. Each
+pixel then read a few of the dozen or so texels under it, so stems snapped to
+whole pixels. Captures at 1080p measured it: in the footer text only 21% of
+inked pixels were partial-coverage edges with 3-point or with anisotropy off,
+against 64% with linear and anisotropy.
+
+**Gameplay > Iron Sights > System > Text Antialiasing** (`[display]
+text_antialiasing`, default 1, applies live; in the Options folder and the
+watch, after the Enhanced Fonts row) now makes an Enhanced mask minify through
+a trilinear mip chain whatever the texture filter; magnification keeps the
+chosen filter. The sampler latch treats such a draw as a mip draw
+(`ge_mip_active` 2, so toggling re-applies it per texture) and
+`gfx_opengl_set_sampler_parameters` builds the chain and sets
+`GL_LINEAR_MIPMAP_LINEAR`. 0 samples the masks as before. Original glyphs are
+magnified, not shrunk, and the open fonts' distance fields compute their own
+coverage, so neither changes. With it on, the same footer measured 67%
+partial edge pixels under 3-point and 69% with anisotropy off; with it off the
+3-point capture matched the earlier one exactly, and only text pixels change.
+Input: an ordinary toggle row, so every supported input changes it as it does
+the rows around it. Upstream hooks: the `text_aa` term and the `ge_mip_active`
+value in `gfx_pc.cpp`'s sampler latch, and the new first branch in
+`gfx_opengl.cpp`'s sampler setup. Sources: [renderer](port/fast3d/gfx_pc.cpp),
+[GL sampler](port/fast3d/gfx_opengl.cpp), [global](port/fast3d/gfx_api.h),
+[setting](port/src/video.c), [options](port/src/port_options.c),
+[frontend row](src/game/front.c), [watch row](port/src/port_watchpages.c),
+[help](port/src/port_option_help.c), [ini reference](tools/midas_ini_help.txt).
+Checks: Windows build; difficulty-screen captures at 1080p with 3-point,
+linear and linear without anisotropy, on and off; the System sheet capture;
+settings placement and standards checks; `test_enhanced_fonts.sh`,
+`test_open_fonts.sh`, `test_hud.sh`, `test_web_menu_pointer.sh` and
+`test_upstream_merge.sh`; the hand gallery regenerated with zero changed image
+cells. Not run: the browser and Linux
+builds at run time, and other screens' Enhanced text side by side.
+
 [`scripts/port/font_styles_plan.md`](scripts/port/font_styles_plan.md)
 proposes one **Gameplay > Iron Sights > System > Fonts** setting choosing
 Original (ROM), Enhanced (the community GEPD masks removed in FORK-021) or

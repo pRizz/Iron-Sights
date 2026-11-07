@@ -4801,6 +4801,7 @@ static const struct PortSheetRow port_sheet_rows_is_system[] = {
     { SHROW_ABOUT, NULL, "About / Build Info\n" },
     { SHROW_OPT, "font_style" },    /* FORK-051: applies live */
     { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_FONTS },
+    { SHROW_OPT, "text_antialiasing" },  /* FORK-052: Enhanced text through mips */
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     { SHROW_OPT, "texture_pack" },  /* FORK-053: an HD pack, downloaded or copied in */
     { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_HDTEX },

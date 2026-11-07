@@ -1149,7 +1149,8 @@ static uint32_t gfx_cm_to_opengl(uint32_t val) {
 }
 
 extern "C" int ge_sky_tri_active; /* gfx_pc: inside an RDP-triangle (sky/water) draw */
-extern "C" int ge_mip_active;     /* gfx_pc: this sampler serves a G_TL_LOD draw - minify through mips */
+extern "C" int ge_mip_active;     /* gfx_pc: this sampler serves a G_TL_LOD draw - minify through mips;
+                                    * 2 = an Enhanced font mask under Text Antialiasing (FORK-052) */
 
 #ifdef __EMSCRIPTEN__
 extern "C" bool gfx_opengl_web_sampler_flags_changed(int tile, bool linear_filter, uint32_t cms, uint32_t cmt) {
@@ -1182,6 +1183,20 @@ static void gfx_opengl_set_sampler_parameters(int tile, bool linear_filter, uint
         /* Anisotropy is per texture object and survives a recycled name, so OFF
          * has to be written back or the old 2x-16x stays */
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.0f);
+    }
+    if (ge_mip_active == 2) {
+        /* FORK-052 Text Antialiasing: an Enhanced font mask always minifies
+         * through trilinear mips, whatever the 3D filter (3-point's taps then
+         * read already-averaged texels); magnification keeps that filter. */
+        const GLuint id = current_texture_ids[tile];
+        if (!gl_has_mips(id)) {
+            gfx_opengl_generate_mipmap(id);
+        }
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, gfx_cm_to_opengl(cms));
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, gfx_cm_to_opengl(cmt));
+        return;
     }
     if (aniso > 1.0f && filter == GL_LINEAR && !ge_sky_tri_active) {
         /* Mips exist (generated at upload when aniso is on) and trilinear

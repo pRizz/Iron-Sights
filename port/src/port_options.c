@@ -215,6 +215,7 @@ static const struct PortOpt sOpts[] = {
     ENUMR ("msaa",          "[display]", "MSAA\n",            PORTOPT_CAT_DISPLAY, sMsaaVals, sMsaaText, NULL),
     TOGGLE("filter_2d",     "[display]", "2D Filtering\n",    PORTOPT_CAT_DISPLAY),
     ENUMR ("font_style",    "[display]", "Fonts\n",           PORTOPT_CAT_DISPLAY, sFontStyleVals, sFontStyleText, NULL),
+    TOGGLE("text_antialiasing", "[display]", "Text Antialiasing\n", PORTOPT_CAT_DISPLAY),
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     ENUMR ("texture_pack",  "[display]", "Texture Pack\n",    PORTOPT_CAT_DISPLAY, sTexturePackVals, sTexturePackText, NULL),
 #endif
