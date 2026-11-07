@@ -96,8 +96,8 @@ FORK-033's ini values `hd`, `4k` and `2` read as HD.
   (`hd_level_native_aliases.json`, 132, and `hd_dam_native_aliases.json`,
   15), restored from FORK-033 and embedded at configure time
   (`hd_texture_scope_embed.cmake`). They hold names and fingerprints, no
-  artwork. Weapons, hands, the HUD and fonts are outside the scope, so the
-  arm and hand contracts are untouched. With the v2025.12.30 PNG pack 466 of
+  artwork. Weapons, hands, fonts and the rest of the HUD are outside the
+  scope, so the arm and hand contracts are untouched. With the v2025.12.30 PNG pack 466 of
   the 641 are present (610 keys with aliases); three Egyptian textures exist
   only in the artist repository and are used if the player adds those PNGs.
 - **Images.** A texture is read when a level first draws it: inflated with
@@ -115,6 +115,26 @@ FORK-033's ini values `hd`, `4k` and `2` read as HD.
 
 The removed `.istex` format, the CI preparer and its download, the bundled
 packs and the AppImage bundle root do not return.
+
+- **HUD ammo icons (2026-11-06).** With Texture Pack on HD, the HUD's ammo
+  icons draw the pack's own `UI/Ammo` art, the feature FORK-047 had embedded
+  and then removed: 13 of the 14 slots (the plain mine has no art; the tank
+  shell's six palette copies are one image). The pack's keys never match the
+  game's 32-bit icons, so, as in `5a3b7c0`, the ammo draw tags its slot
+  (`port_hud_ammo.c`, a `0x5B` G_NOOP from `gunfire.c`) and the renderer reads
+  that slot's PNG from the pack, resizes it to the icon's visible size x8
+  (`hd_textures::resample`: a tent filter in premultiplied alpha; the art has
+  other proportions than the icons) and lays it over a canvas the size of the
+  padded native tile x8, keeping native UVs, placement and colours, sampled
+  smoothly. The art is read from the installed pack, never embedded; there is
+  no separate setting.
+- **Edge smear fixed (issue #6).** The renderer's in-shader clamp for a tile
+  wider than its visible image stopped half a native texel short of the
+  edge, so on an enlarged image the last half native texel (four texels of 8x
+  art) repeated one column: the smear reported on the 5- and 7-texel ammo
+  icons. Each cached texture now records its enlargement (`hd_scale_s/t`), and
+  the clamp stops half a texel of the uploaded image short instead. It applies
+  to every HD image, the pack's environment textures included.
 
 **Unsupported, by decision:** the browser and Xbox builds have neither the
 Texture Pack row nor the HD Textures page; 150 MB in browser storage would not
@@ -134,9 +154,13 @@ by that in FORK-033).
 
 **Upstream hooks:** in `gfx_pc.cpp` the texture release helper at the cache's
 five free sites, the import call before the format decoders, the frame-start
-call and the include of the adapter; `hd_bytes` in `gfx_pc.h`.
+call and the include of the adapter; `hd_bytes` in `gfx_pc.h`; the ammo slot tag (`0x5B`) and its smooth sampling, and the clamp's
+HD scale in the vertex setup, in `gfx_pc.cpp`; two `portHudAmmoIconTag` calls
+around the ammo icon draw in `gunfire.c`.
 
 **Sources:** [pack index](port/fast3d/hd_texture_pack.cpp) and [header](port/fast3d/hd_texture_pack.h),
+[ammo slot tag](port/src/port_hud_ammo.c) with its [declarations](port/include/port_hud.h) and
+[draw hook](src/game/gunfire.c), [HUD audit](scripts/port/audit_hud.ps1),
 [download engine](port/fast3d/hd_download_engine.cpp), [download API](port/fast3d/hd_textures_download.cpp)
 and its [C header](port/include/port_hd_download.h), [menu actions](port/src/port_hd_download.c),
 [shared page table](port/include/port_download_page.h), [streaming transport](port/fast3d/enhanced_fonts_http.cpp),
@@ -169,8 +193,12 @@ files showed `Downloading: 59 of 150 MB`, then `Installed.` and Use Original
 Textures; the files verified and the pack loaded 616 textures (the Egyptian
 three and their aliases added). Captures show GET HD TEXTURES in the Options
 folder, the watch's System page reading `HD (Get)` and its HD Textures page.
-`test_enhanced_fonts.sh` and `test_ads.sh` still pass. Not run: a download from
-GitHub itself, the Linux build locally, other levels, and a long play session.
+`test_enhanced_fonts.sh` and `test_ads.sh` still pass. Ammo icons: the
+resampler test (no colour bleeding from transparent texels, uniform images stay
+uniform), `test_hud.sh`, and 1600x900 HUD captures (`audit_hud.ps1`, which
+gained `-TexturePack`) of the 9 mm, rifle, magnum and grenade icons in HD with
+clean right edges, against the originals. Not run: a download from GitHub
+itself, the Linux build locally, other levels, and a long play session.
 
 ### FORK-052 — Font styles plan
 
@@ -941,7 +969,9 @@ and limbs) got the same side.
 ### FORK-047 — HD HUD ammo icons (removed)
 
 **Status:** Removed on 2026-11-05, the day it was added. No target carries the
-art, setting or renderer hook.
+art or its setting. Since 2026-11-06 FORK-053 draws the same `UI/Ammo` art from
+the pack the player downloads or copies in, reusing this entry's slot tag, and
+fixes the right-edge smear described below.
 
 Commit `5a3b7c0` embedded intermissionfb's HD ammo art from the GoldenEye 007 HD
 release (v2025.12.30, `UI/Ammo`) in every target. It replaced the HUD's

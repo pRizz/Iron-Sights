@@ -92,6 +92,91 @@ bool parse_name(const std::string &path, Key &key) {
     return true;
 }
 
+namespace {
+/* One axis of resample: for each output texel, its source texels and weights. */
+struct Taps {
+    std::vector<unsigned> first, count;
+    std::vector<float> weight;
+};
+
+Taps taps(unsigned from, unsigned to) {
+    Taps out;
+    const float ratio = float(from) / float(to);
+    const float radius = ratio > 1.0f ? ratio : 1.0f;
+    for (unsigned i = 0; i < to; i++) {
+        const float centre = (float(i) + 0.5f) * ratio - 0.5f;
+        int lo = int(centre - radius) + 1, hi = int(centre + radius);
+        if (lo < 0) lo = 0;
+        if (hi > int(from) - 1) hi = int(from) - 1;
+        if (hi < lo) lo = hi = int(centre < 0 ? 0 : (centre > float(from - 1) ? float(from - 1) : centre + 0.5f));
+        float sum = 0;
+        const size_t at = out.weight.size();
+        for (int k = lo; k <= hi; k++) {
+            const float d = (float(k) - centre) / radius;
+            const float w = 1.0f - (d < 0 ? -d : d);
+            out.weight.push_back(w > 0 ? w : 0);
+            sum += w > 0 ? w : 0;
+        }
+        if (sum <= 0) {
+            out.weight[at] = sum = 1.0f;
+        }
+        for (size_t k = at; k < out.weight.size(); k++) out.weight[k] /= sum;
+        out.first.push_back(unsigned(lo));
+        out.count.push_back(unsigned(hi - lo + 1));
+    }
+    return out;
+}
+}  // namespace
+
+Image resample(const Image &src, unsigned width, unsigned height) {
+    Image out;
+    if (src.width == 0 || src.height == 0 || width == 0 || height == 0
+        || src.rgba.size() < size_t(src.width) * src.height * 4) {
+        return out;
+    }
+    std::vector<float> pre(size_t(src.width) * src.height * 4);
+    for (size_t i = 0; i < size_t(src.width) * src.height; i++) {
+        const float a = src.rgba[i * 4 + 3] / 255.0f;
+        for (int c = 0; c < 3; c++) pre[i * 4 + c] = src.rgba[i * 4 + c] / 255.0f * a;
+        pre[i * 4 + 3] = a;
+    }
+    const Taps tx = taps(src.width, width), ty = taps(src.height, height);
+    std::vector<float> rows(size_t(width) * src.height * 4, 0.0f);  /* horizontal pass */
+    for (unsigned y = 0; y < src.height; y++) {
+        size_t w = 0;
+        for (unsigned x = 0; x < width; x++) {
+            float *dst = &rows[(size_t(y) * width + x) * 4];
+            for (unsigned k = 0; k < tx.count[x]; k++, w++) {
+                const float *s = &pre[(size_t(y) * src.width + tx.first[x] + k) * 4];
+                for (int c = 0; c < 4; c++) dst[c] += s[c] * tx.weight[w];
+            }
+        }
+    }
+    out.width = width;
+    out.height = height;
+    out.rgba.assign(size_t(width) * height * 4, 0);
+    size_t w = 0;
+    for (unsigned y = 0; y < height; y++) {
+        const size_t wy = w;
+        for (unsigned x = 0; x < width; x++) {
+            float px[4] = {0, 0, 0, 0};
+            w = wy;
+            for (unsigned k = 0; k < ty.count[y]; k++, w++) {
+                const float *s = &rows[(size_t(ty.first[y] + k) * width + x) * 4];
+                for (int c = 0; c < 4; c++) px[c] += s[c] * ty.weight[w];
+            }
+            uint8_t *dst = &out.rgba[(size_t(y) * width + x) * 4];
+            const float a = px[3];
+            for (int c = 0; c < 3; c++) {
+                const float v = a > 0 ? px[c] / a : 0.0f;
+                dst[c] = uint8_t(v <= 0 ? 0 : v >= 1 ? 255 : v * 255.0f + 0.5f);
+            }
+            dst[3] = uint8_t(a <= 0 ? 0 : a >= 1 ? 255 : a * 255.0f + 0.5f);
+        }
+    }
+    return out;
+}
+
 bool parse_scope(const std::string &sources, const std::vector<std::string> &aliases, Scope &scope) {
     picojson::value doc;
     if (!picojson::parse(doc, sources).empty() || !doc.is<picojson::object>()) return false;

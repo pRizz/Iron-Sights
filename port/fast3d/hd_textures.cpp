@@ -2,6 +2,7 @@
  * a pack, and lookups for the renderer. See hd_textures.h. */
 #include "hd_textures.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
@@ -38,6 +39,30 @@ std::string text(const unsigned char *data, size_t size) {
     return std::string(reinterpret_cast<const char *>(data), size);
 }
 
+/* The HUD ammo icons' art in the pack, by slot: the visible size of the
+ * game's icon and the pack key of its image (from the pack's UI/Ammo folder;
+ * the tank shell's six palette copies are one image). */
+struct AmmoArt {
+    unsigned width, height;
+    hd_textures::Key key;
+};
+const AmmoArt kAmmo[hd_textures::kAmmoSlots] = {
+    {5, 12, {0xAF0A1953, 0, 0, 3}},   /* 9 mm */
+    {5, 28, {0xAC193F4F, 0, 0, 3}},   /* rifle */
+    {6, 20, {0x2B351868, 0, 0, 3}},   /* shotgun */
+    {6, 24, {0x98685E98, 0, 0, 3}},   /* throwing knife */
+    {8, 21, {0xEC11BEAB, 0, 0, 3}},   /* grenade launcher */
+    {7, 22, {0xBA97A223, 0, 0, 3}},   /* rocket */
+    {0, 0, {0, 0, 0, 0}},             /* plain mine: no HD art */
+    {14, 18, {0xAF8E57EF, 0, 0, 3}},  /* grenade */
+    {5, 15, {0x91651507, 0, 0, 3}},   /* magnum */
+    {5, 12, {0xFA82F840, 0, 0, 3}},   /* golden gun */
+    {14, 14, {0x551F375D, 0, 0, 3}},  /* remote mine */
+    {14, 14, {0x6F1AC5BE, 0, 0, 3}},  /* timed mine */
+    {14, 14, {0x8640BBB3, 0, 0, 3}},  /* proximity mine */
+    {7, 22, {0x0590F622, 0, 2, 1}},   /* tank shell */
+};
+
 const hd_textures::Scope &scope() {
     static hd_textures::Scope s;
     static bool loaded = false;
@@ -48,6 +73,9 @@ const hd_textures::Scope &scope() {
                                        text(hd_dam_native_aliases_json, hd_dam_native_aliases_json_size)},
                                       s)) {
             std::fprintf(stderr, "hd: the texture scope could not be read; original textures stay\n");
+        }
+        for (const AmmoArt &art : kAmmo) {
+            if (art.width) s.keys.insert(art.key);  /* indexed, found by slot rather than by tile */
         }
     }
     return s;
@@ -97,6 +125,28 @@ bool beginFrame() {
         if (found) std::fprintf(stderr, "hd: %zu environment textures from the pack in %s\n", found, g_root.c_str());
         else std::fprintf(stderr, "hd: no HD texture pack in %s; original textures stay\n", g_root.c_str());
         std::fflush(stderr);
+    }
+    return true;
+}
+
+bool ammo_available(int slot) {
+    return g_current && slot >= 0 && slot < kAmmoSlots && kAmmo[slot].width && g_pack.find(kAmmo[slot].key);
+}
+
+bool ammo_icon(int slot, unsigned tile_width, unsigned tile_height, Image &image) {
+    if (!ammo_available(slot)) return false;
+    const AmmoArt &art = kAmmo[slot];
+    if (tile_width < art.width || tile_height < art.height || tile_width > 64 || tile_height > 64) return false;
+    Image source;
+    if (!Pack::read(*g_pack.find(art.key), source)) return false;
+    const Image sized = resample(source, art.width * kAmmoScale, art.height * kAmmoScale);
+    if (sized.rgba.empty()) return false;
+    image.width = tile_width * kAmmoScale;
+    image.height = tile_height * kAmmoScale;
+    image.rgba.assign(size_t(image.width) * image.height * 4, 0);
+    for (unsigned y = 0; y < sized.height; y++) {
+        std::copy(sized.rgba.begin() + size_t(y) * sized.width * 4, sized.rgba.begin() + size_t(y + 1) * sized.width * 4,
+                  image.rgba.begin() + size_t(y) * image.width * 4);
     }
     return true;
 }

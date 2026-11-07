@@ -31,8 +31,8 @@ Download, into Data/TexturePacks; Remove there deletes it. You can also
 download its PNG version (the ...-gliden64-png-hd.zip file) yourself from
 https://github.com/GhostlyDark/GoldenEye-007-HD and put the ZIP, or the folder you
 extract it to, in Data/TexturePacks. Texture Pack set to HD (the default) draws
-its campaign environment textures; weapons, hands and the HUD keep their
-original look. The 4K and HTS versions are not read. The hd.istex file that
+its campaign environment textures and the HUD's ammo icons; weapons and hands
+keep their original look. The 4K and HTS versions are not read. The hd.istex file that
 earlier builds shipped is no longer read; delete it.
 
 SAVE TRANSFER

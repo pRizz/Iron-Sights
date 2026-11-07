@@ -172,7 +172,7 @@ extern "C" const char *portHdTexturesInfoLine(int i) {
         "of Iron Sights. Download\n",
         "gets the pack, 150 MB,\n",
         "from its makers' GitHub.\n",
-        "Walls, floors, scenery.\n",
+        "Scenery and ammo icons.\n",
     };
     const int fixed = int(sizeof(lines) / sizeof(lines[0]));
     if (i >= 0 && i < fixed) return lines[i];

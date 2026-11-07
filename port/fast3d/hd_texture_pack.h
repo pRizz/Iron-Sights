@@ -31,6 +31,11 @@ struct Scope {
  * "#pppppppp" or "#$" before "_ciByRGBA.png") as a key; "$" gives palette 0. */
 bool parse_name(const std::string &name, Key &key);
 
+/* src resized to width x height with a tent filter (as wide as the
+ * reduction, at least one source texel) in premultiplied alpha, so edges do
+ * not darken: the HD ammo icons' art has other proportions than the icons. */
+Image resample(const Image &src, unsigned width, unsigned height);
+
 /* The scope from the inventory and alias JSON documents. */
 bool parse_scope(const std::string &sources, const std::vector<std::string> &aliases, Scope &scope);
 

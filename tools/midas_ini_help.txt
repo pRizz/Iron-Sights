@@ -249,8 +249,9 @@ padN_stickmode.
                       |            | older sharp_fonts=1 load as 0.
                       |            | Iron Sights > System.
   texture_pack        | 1          | [display] Texture Pack (Windows/Linux).
-                      |            | 1 = HD: campaign environment textures from
-                      |            | the GoldenEye 007 HD pack in
+                      |            | 1 = HD: campaign environment textures and
+                      |            | HUD ammo icons from the GoldenEye 007 HD
+                      |            | pack in
                       |            | Data/TexturePacks (downloaded from System >
                       |            | HD Textures, or the GLideN64 PNG pack's
                       |            | ZIP or folder copied there; none is

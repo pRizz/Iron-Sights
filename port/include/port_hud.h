@@ -20,6 +20,11 @@ s32 portHudWeaponStripTopInset(void);
 s32 portHudAlwaysHealthShown(void);
 struct damage_display_val;
 void portHudStyleGauge(struct damage_display_val *vertices, s32 count);
+/* HUD ammo icon slot (gunfire.c portAmmoIconPtr order), or -1 (FORK-053). */
+struct sImageTableEntry;
+s32 portHudAmmoIconSlot(const struct sImageTableEntry *image);
+/* Tags the following ammo icon draw for the HD texture pack's art; NULL ends the tag. */
+Gfx *portHudAmmoIconTag(Gfx *gdl, const struct sImageTableEntry *image);
 /* buildGaugeBarDL's 46-vertex gauge: 22 loads, at most 22 quads, one end. */
 #define PORT_GAUGE_BAR_GFX 48
 Gfx *portHudDraw(Gfx *gdl);

@@ -20,6 +20,9 @@ param(
     [ValidateSet('', 'Original', 'Enhanced', 'IronSights', 'LegacySharpFonts')][string]$FontStyle = '',
     # A folder of Enhanced font files (enhanced_fonts_pack.py install) to copy into Data/FontPacks/gepd.
     [string]$FontPack = '',
+    # An HD texture pack (its ZIP) to hard-link into Data/TexturePacks, with Texture Pack on HD (FORK-053);
+    # without it Texture Pack is Original, so the original HUD ammo icons draw.
+    [string]$TexturePack = '',
     [switch]$Chop,
     [ValidateRange(0,1023)][int]$BestSeconds = 0,
     [string]$Stage = 'dam',
@@ -46,12 +49,19 @@ if ($SmallHud) { $ini = @('[display]', 'hud_scale=1') + $ini }
 if ($SharpFonts) { $ini = @('[display]', 'font_style=2') + $ini }
 if ($FontStyle -eq 'LegacySharpFonts') { $ini = @('[display]', 'sharp_fonts=1') + $ini }
 elseif ($FontStyle) { $ini = @('[display]', "font_style=$(@{Original=0; Enhanced=1; IronSights=2}[$FontStyle])") + $ini }
+$ini = @('[display]', "texture_pack=$(if ($TexturePack) { 1 } else { 0 })") + $ini
 if ($Disabled) { $ini = @('[display]', 'hit_markers=0', 'damage_indicators=0', 'objective_notifications=0', 'weapon_hud=0', 'always_health=0') + $ini }
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value $ini
 if ($FontPack) {
     $packDir = Join-Path $dir 'Data\FontPacks\gepd'
     New-Item -ItemType Directory -Path $packDir | Out-Null
     Copy-Item -Path (Join-Path (Resolve-Path -LiteralPath $FontPack).Path '*') -Destination $packDir
+}
+if ($TexturePack) {
+    $texDir = Join-Path $dir 'Data\TexturePacks'
+    New-Item -ItemType Directory -Path $texDir | Out-Null
+    $source = (Resolve-Path -LiteralPath $TexturePack).Path
+    New-Item -ItemType HardLink -Path (Join-Path $texDir (Split-Path -Leaf $source)) -Target $source | Out-Null
 }
 $auditEnv = @{
     GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$(if ($Resolution) {$Resolution} elseif ($Aspect -eq 'Wide') {'960x540'} else {'800x600'});

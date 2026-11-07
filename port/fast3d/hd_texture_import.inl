@@ -34,8 +34,11 @@ static bool ge_hd_try_import(int i, int tile)
                 std::memmove(replacement.rgba.data()+size_t(y)*uploadWidth*4,
                     replacement.rgba.data()+size_t(y)*replacement.width*4, size_t(uploadWidth)*4);
             gfx_rapi->upload_texture(replacement.rgba.data(), uploadWidth, uploadHeight);
-            if (rendering_state.textures[i]) rendering_state.textures[i]->second.hd_bytes =
-                uint32_t(size_t(uploadWidth)*uploadHeight*16/3+16);
+            if (rendering_state.textures[i]) {
+                rendering_state.textures[i]->second.hd_bytes = uint32_t(size_t(uploadWidth)*uploadHeight*16/3+16);
+                rendering_state.textures[i]->second.hd_scale_s = float(replacement.width) / float(width);
+                rendering_state.textures[i]->second.hd_scale_t = float(replacement.height) / float(height);
+            }
             return true;
         }
     }

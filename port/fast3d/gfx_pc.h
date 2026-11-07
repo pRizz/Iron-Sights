@@ -46,6 +46,7 @@ struct TextureCacheKey {
     uint8_t masks, maskt;
     bool msdf_glyph; /* FORK-050: an open-font glyph's field image, not its ROM bitmap */
     bool enhanced_glyph; /* FORK-052: an Enhanced font mask, not its ROM bitmap */
+    uint8_t hd_ammo; /* FORK-053: HUD ammo slot + 1 when the HD pack's art replaces the image */
 
     bool operator==(const TextureCacheKey&) const noexcept = default;
 
@@ -71,6 +72,8 @@ struct TextureCacheValue {
 
     std::list<struct TextureCacheMapIter>::iterator lru_location;
     uint32_t hd_bytes; /* FORK-053: a player-installed HD image's RGBA + mip chain upper bound; native-only budget */
+    float hd_scale_s, hd_scale_t; /* FORK-053: uploaded texels per native texel of an HD image (0 = native) */
+    bool hd_ammo; /* FORK-053: HD ammo art, smooth sampled like the Enhanced fonts */
 };
 
 struct TextureCacheMapIter {

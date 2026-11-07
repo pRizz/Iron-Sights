@@ -474,6 +474,9 @@ static int32_t s_RectUvS0, s_RectUvS1, s_RectUvT0, s_RectUvT1;
  * border from the sampler (see gfx_dp_texture_rectangle). */
 static bool s_GeTextGlyphs = false;
 static bool s_RectGlyphBorder = false;
+/* FORK-053: HUD ammo icon slot + 1 for the following texrect (gunfire.c via
+ * portHudAmmoIconTag), 0 = none */
+static uint8_t s_GeHudAmmoSlot = 0;
 /* This texture rect is an open-font glyph (FORK-050): the MSDF shader, no UV clamp. */
 static bool s_RectMsdf = false;
 /* options.c portHudScaleBegin (midas.ini hud_scale): G_NOOP tag 0x58 brackets
@@ -3105,6 +3108,11 @@ static void import_texture(int i, int tile, bool importReplacement) {
         key.enhanced_glyph = s_GeTextGlyphs && gfx_enhanced_fonts && fmt == G_IM_FMT_I && siz == G_IM_SIZ_8b
                              && enhanced_fonts::find(orig_addr, glyph);
     }
+#if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    /* FORK-053: the HD pack's art for a tagged HUD ammo icon is a different image */
+    key.hd_ammo = (s_GeHudAmmoSlot && portTexturePackGet() && hd_textures::ammo_available(s_GeHudAmmoSlot - 1))
+                      ? s_GeHudAmmoSlot : 0;
+#endif
 
     { /* GE_TEXDBG=1: report address collisions between
        * DIFFERENT geometries - the class that used to silently return
@@ -3184,6 +3192,22 @@ static void import_texture(int i, int tile, bool importReplacement) {
     }
 
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+    if (key.hd_ammo) {
+        /* FORK-053: the HD pack's ammo art over the padded native tile; native
+         * UVs, placement and colours are unchanged. */
+        const unsigned stride = siz == G_IM_SIZ_32b ? rdp.texture_tile[tile].line_size_bytes * 2
+                                                    : rdp.texture_tile[tile].line_size_bytes;
+        const unsigned width = (stride << 1) >> siz, height = stride ? loaded_texture.size_bytes / stride : 0;
+        hd_textures::Image art;
+        if (rendering_state.textures[i] && hd_textures::ammo_icon(key.hd_ammo - 1, width, height, art)) {
+            gfx_rapi->upload_texture(art.rgba.data(), art.width, art.height);
+            auto &value = rendering_state.textures[i]->second;
+            value.hd_ammo = true;
+            value.hd_bytes = uint32_t(size_t(art.width) * art.height * 16 / 3 + 16);
+            value.hd_scale_s = value.hd_scale_t = float(hd_textures::kAmmoScale);
+            return;
+        }
+    }
     if (ge_hd_try_import(i, tile)) return; /* FORK-053 */
 #endif
 
@@ -4444,6 +4468,7 @@ ndcprobe_done:;
                      * path below. */
                     linear_filter = gfx_filter_2d != 0 || rendering_state.textures[i]->first.msdf_glyph
                         || rendering_state.textures[i]->first.enhanced_glyph
+                        || rendering_state.textures[i]->second.hd_ammo
                         || (rdp.loaded_texture[rdp.texture_tile[tile].tmem].tex_flags & 0x80000000u);
                 }
                 /* GE N64 mipmaps: when the game asked for per-pixel LOD over a
@@ -4733,8 +4758,15 @@ ndcprobe_done:;
         tc_ih[t] = 1.0f / (float)tex_height[t];
         tc_clamps[t] = (tm & (1 << 2 * t)) != 0;
         tc_clampt[t] = (tm & (1 << (2 * t + 1))) != 0;
-        tc_cs[t] = ((float)tex_width2[t] - 0.5f) * tc_iw[t];
-        tc_ct[t] = ((float)tex_height2[t] - 0.5f) * tc_ih[t];
+        /* The clamp stops half a texel of the uploaded image short of the
+         * visible edge. FORK-053: an enlarged HD image (an ammo icon, a pack
+         * texture) has smaller texels; half a native texel there repeated its
+         * last column across the edge of icons with padded rows (issue #6). */
+        const TextureCacheNode *bound = rendering_state.textures[t];
+        const float hd_s = (bound && bound->second.hd_scale_s > 1.0f) ? bound->second.hd_scale_s : 1.0f;
+        const float hd_t = (bound && bound->second.hd_scale_t > 1.0f) ? bound->second.hd_scale_t : 1.0f;
+        tc_cs[t] = ((float)tex_width2[t] - 0.5f / hd_s) * tc_iw[t];
+        tc_ct[t] = ((float)tex_height2[t] - 0.5f / hd_t) * tc_ih[t];
     }
     float fog_rgb[3] = { 0.0f, 0.0f, 0.0f };
     if (use_fog) {
@@ -7666,6 +7698,9 @@ static void gfx_run_dl(Gfx* cmd) {
                 } else if ((cmd->words.w1 >> 24) == 0x47u) {
                     /* font glyph run on / off (textrelated.c PORT_TEXT_GLYPHS) */
                     s_GeTextGlyphs = (cmd->words.w1 & 1u) != 0;
+                } else if ((cmd->words.w1 >> 24) == 0x5Bu) {
+                    /* FORK-053: HUD ammo icon slot + 1, 0 = none (port_hud_ammo.c) */
+                    s_GeHudAmmoSlot = (uint8_t) (cmd->words.w1 & 0xFFu);
                 } else if ((cmd->words.w1 >> 24) == 0x58u) {
                     /* HUD scale bracket (options.c portHudScaleBegin): pivot x, y in U10.2 */
                     s_GeHudScale = (cmd->words.w1 & 0x00FFFFFFu) != 0x00FFFFFFu;
@@ -8153,6 +8188,7 @@ extern "C" void gfx_start_frame(void) {
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     ge_hd_start_frame(); /* FORK-053 */
 #endif
+    s_GeHudAmmoSlot = 0; /* FORK-053: a tag never outlives its frame's ammo draw */
     static uint32_t previous_fonts = ~0u;
     const uint32_t fonts = gfx_sharp_fonts | (gfx_enhanced_fonts << 1);
     if (previous_fonts != fonts) { /* FORK-050, FORK-052: rebind glyph textures */

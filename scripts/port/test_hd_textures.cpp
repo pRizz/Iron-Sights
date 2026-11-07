@@ -117,9 +117,37 @@ static void pack(const std::string &root) {
     assert(pack.index(root + "/missing", scope) == 0 && pack.size() == 0);
 }
 
+static void resampling() {
+    // A transparent texel's colour must not bleed into its opaque neighbour
+    // when the HD ammo art is resized (premultiplied alpha).
+    Image src;
+    src.width = 2;
+    src.height = 1;
+    src.rgba = {255, 0, 0, 255, 0, 255, 0, 0};  // opaque red, transparent green
+    const Image up = resample(src, 4, 1);
+    assert(up.width == 4 && up.height == 1 && up.rgba.size() == 16);
+    for (unsigned x = 0; x < 4; x++) {
+        if (up.rgba[x * 4 + 3] > 0) assert(up.rgba[x * 4 + 1] == 0 && up.rgba[x * 4 + 0] == 255);
+    }
+    assert(up.rgba[3] == 255 && up.rgba[15] == 0);  // the ends keep their alpha
+    // A uniform image stays uniform when reduced to other proportions.
+    Image flat;
+    flat.width = 20;
+    flat.height = 14;
+    flat.rgba.assign(20 * 14 * 4, 0);
+    for (size_t i = 0; i < flat.rgba.size(); i += 4) { flat.rgba[i] = 10; flat.rgba[i + 1] = 200; flat.rgba[i + 2] = 30; flat.rgba[i + 3] = 255; }
+    const Image down = resample(flat, 6, 9);
+    assert(down.width == 6 && down.height == 9);
+    for (size_t i = 0; i < down.rgba.size(); i += 4) {
+        assert(down.rgba[i] == 10 && down.rgba[i + 1] == 200 && down.rgba[i + 2] == 30 && down.rgba[i + 3] == 255);
+    }
+    assert(resample(Image{}, 4, 4).rgba.empty());
+}
+
 int main(int argc, char **argv) {
     assert(argc == 2);
     identity();
+    resampling();
     native_words();
     palettes();
     names();
