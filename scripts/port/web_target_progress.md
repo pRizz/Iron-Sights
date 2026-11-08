@@ -636,6 +636,20 @@ filesystem, touch and sampler audits. Next action: measure the step in Safari
 and Firefox and on a phone; if it is too slow there, consider spreading alpha
 recovery across frames.
 
+**First weapon strip hitch, 2026-11-07:** On mobile web, the first mission
+after the icons were prepared paused for a few hundred ms just as the strip
+appeared: its two icon shaders were not in `tools/shaders_base.txt`, because
+missions with text names never use them, so the browser compiled them
+mid-frame. Both are now listed and compiled behind the startup screen.
+Evidence: `bun run audit:strip-hitch <rom> <out> <origin> [cpu-throttle]`
+(private, actual ROM, Chrome, fresh profile, 4x CPU throttle) served the
+same build with only that file swapped. The frame where the player gets control
+took 120 and 330 ms with the old list and 27 ms in both runs with the new one.
+Unrelated 300-900 ms present stalls at random points mid-mission appear in
+every configuration; the CPU profile (`MIDAS_PROFILE=1`) shows no script
+running in them. `bun run audit:soak <rom> <out> <origin> [stages:frames:laps]`
+is the browser's growth soak (FORK-055). Next action: confirm on a phone.
+
 **Game context menu, 2026-10-31:** Right-click still reaches the native main
 menu's back action while the browser context menu is canceled on the game
 stage and Files transfer targets. The surrounding page retains normal browser

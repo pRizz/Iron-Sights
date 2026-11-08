@@ -30,6 +30,61 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-055 — Growth soak audit and a bounded texture-name pool
+
+**Status:** Implemented 2026-11-07. Measured on Windows (plain and with an HD
+pack) and in desktop Chrome; Linux builds but no Linux soak was run.
+
+`GE_SOAK=<stages|all>[:<frames>[:<laps>]]` plays solo stages over and over in
+one process, each for a number of frames (Agent; the stage's normal start), and
+returns through the title between them as an attract demo does. It logs
+`ge: memstats:` at each stage's end and again in the menus after it: process
+memory and the renderer's resource counts. On Windows that is private bytes and
+working set. In the browser it is the Wasm memory size and dlmalloc's in-use
+heap. On Linux it is `/proc/self/statm` and `mallinfo2`. The renderer counts
+are texture cache entries, the free texture-name pool, live GL textures,
+framebuffers, shader programs and HD-pack bytes. `GE_MEMSTATS=1` alone logs one
+line about a second into each stage.
+`scripts/port/soak.py` runs it on an isolated executable copy and settings (GE_DRIVE,
+invulnerability, fixed seed) and reports per-counter growth from lap 1 (lap 0 is
+warm-up) to the last lap. `--analyze` reads a browser log. `bun run audit:soak
+<rom> <out> <origin> [spec]` (`web/tools/soak-audit.mjs`, private, actual ROM)
+sets `GE_SOAK` in `Module.ENV` before Play; the game reads it live there.
+These are test hooks only, with no settings or input changes.
+
+The soak found one unbounded resource. `gfx_pc.cpp` keeps evicted texture names
+for reuse instead of deleting them (upstream behavior), and that pool only grew.
+On Windows, live GL textures rose 309, 322, 344, 344 over four laps of all 20
+stages. The pool is now capped at 128 names (`GE_FREE_TEXTURE_IDS_MAX`): beyond
+that the oldest are deleted. HD-pack textures, which were already deleted
+rather than pooled, are unchanged.
+
+**Upstream hooks:** `front.c` gains `portSoakLaunchTick` beside the existing
+direct launchers (the same folder/difficulty/briefing recipe) and lets
+`MENU_RUN_STAGE` route a soak stage's end to the legal screen, as it does for
+the icon stage. `lv.c` calls `portSoakTick` next to the other per-frame test
+hooks. `gfx_opengl.cpp` counts live textures in `new_texture`/`delete_texture`
+and publishes framebuffer and program counts at frame end (SDL atomics; `<atomic>`
+there breaks the Linux build's header order). `gfx_pc.cpp` publishes its counts
+at frame start, and its existing `gfx_release_cached_texture` now trims the pool.
+`hd_texture_import.inl` publishes the HD budget it already sums.
+
+**Sources:** [soak harness](port/src/port_soak.c), [driver](scripts/port/soak.py),
+[browser soak](web/tools/soak-audit.mjs), [renderer](port/fast3d/gfx_pc.cpp),
+[GL backend](port/fast3d/gfx_opengl.cpp), [HD budget](port/fast3d/hd_texture_import.inl),
+[menu hook](src/game/front.c), [frame hook](src/game/lv.c).
+
+**Checks:** Windows, all stages, 600 frames, 4 laps (about 9.5 min). Before the
+cap, private bytes were flat at about 263 MB, and shader programs plateaued at
+48 with no framebuffer growth, but the pool reached 298 names. With the cap,
+the pool peaks at 82, live GL textures stay at 297-304 on every lap and private
+bytes stay at about 263 MB. Every run completed and exited cleanly. Windows with
+the HD pack (before the cap): private bytes flat at about 279 MB, the HD budget held,
+textures flat after warm-up. Chrome, all stages, 300 frames, 4 laps (before
+the cap): in-use heap flat at about 177.5 MB and the Wasm memory unchanged at
+624 MB; live textures 251 to 298, the same pool growth. Windows, Linux and Wasm
+builds pass, and the hand gallery regenerated with zero changed image cells.
+
 ### FORK-054 — Intro logos always draw with at least 4x MSAA
 
 **Status:** Implemented in the Windows build (2026-11-07); the owner asked for
@@ -4770,6 +4825,21 @@ move the forced worker and background preparation still wrote caches
 byte-identical to the baseline, the in-process stage its own, and none left a
 worker folder. The private browser audit is `bun run audit:icon-stage <rom>
 <out> <origin>` (`web/tools/icon-stage-audit.mjs`).
+
+**Strip shaders compiled ahead (2026-11-07).** The strip's two icon shaders
+(`00000000d1d81000 10000001`, the alpha rim, and `00000000d1d88000 10000001`,
+the image) were missing from the shipped prewarm list `tools/shaders_base.txt`
+(87 to 89 lines), because missions with text names never use them. So the first
+mission with icons compiled them in the frame the strip first drew, a pause
+of a few hundred ms on mobile web just as the strip appeared. Natively a run
+with icons recorded exactly these two programs beyond the list, and a run with
+names recorded none. Browser check: `bun run audit:strip-hitch <rom> <out>
+<origin> [cpu-throttle]` (`web/tools/strip-hitch-audit.mjs`; private, actual
+ROM, fresh Chrome profile, 4x CPU throttle; optional CPU profile and trace with
+`MIDAS_PROFILE=1` / `MIDAS_TRACE=1`) served one build with only that file
+swapped. The frame where the player gets control took 120 and 330 ms with the
+old list and 27 ms in both runs with the new one. No phone was tested. There
+are no setting or input changes.
 
 **Background preparation (2026-11-07).** A launch without a cache no longer
 waits: `portIconCacheInit` starts an SDL thread that takes the cache lock,

@@ -124,6 +124,7 @@ static void ge_hd_start_frame()
     {
         uint64_t bytes = 0;
         for (const auto& entry : gfx_texture_cache.map) bytes += entry.second.hd_bytes;
+        ge_stat_hd_kb = (uint32_t) (bytes / 1024);  /* GE_MEMSTATS */
         for (auto it = gfx_texture_cache.lru.begin(); bytes > 128u*1024*1024 && it != gfx_texture_cache.lru.end();) {
             const auto victim = it++->it;
             if (!victim->second.hd_bytes) continue;

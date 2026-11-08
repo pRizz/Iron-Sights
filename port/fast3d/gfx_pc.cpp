@@ -220,6 +220,21 @@ static struct {
     GeFreeTextureIds free_texture_ids;
 } gfx_texture_cache;
 
+/* GE_SOAK / GE_MEMSTATS: the texture cache's size, published at each frame's
+ * start (render thread) for port_soak.c's log on the game thread. */
+static std::atomic<uint32_t> ge_stat_cache_entries, ge_stat_free_ids, ge_stat_hd_kb;
+extern "C" void gfx_opengl_memstats(uint32_t* textures, uint32_t* fbs, uint32_t* programs);
+extern "C" void gfx_memstats(unsigned out[6]) {
+    uint32_t textures = 0, fbs = 0, programs = 0;
+    gfx_opengl_memstats(&textures, &fbs, &programs);
+    out[0] = ge_stat_cache_entries.load();
+    out[1] = ge_stat_free_ids.load();
+    out[2] = ge_stat_hd_kb.load();
+    out[3] = textures;
+    out[4] = fbs;
+    out[5] = programs;
+}
+
 static bool ge_churn_reset; /* gfx_texture_cache_clear -> the texchurn history starts again */
 
 struct ColorCombiner {
@@ -1921,10 +1936,22 @@ extern "C" void gfx_async_apply_pending(void) {
     }
 }
 
-/* FORK-053: an HD image's large GL texture is deleted rather than recycled. */
+/* FORK-053: an HD image's large GL texture is deleted rather than recycled.
+ * The others wait in the free-id pool, which keeps at most
+ * GE_FREE_TEXTURE_IDS_MAX: the growth soak (GE_SOAK) saw it grow with every
+ * new peak of cache use, each parked id keeping its texture's storage. */
+#define GE_FREE_TEXTURE_IDS_MAX 128
 static void gfx_release_cached_texture(const TextureCacheValue& texture) {
-    if (texture.hd_bytes) gfx_rapi->delete_texture(texture.texture_id);
-    else gfx_texture_cache.free_texture_ids.push_back(texture.texture_id);
+    if (texture.hd_bytes) {
+        gfx_rapi->delete_texture(texture.texture_id);
+        return;
+    }
+    auto& pool = gfx_texture_cache.free_texture_ids.q;
+    gfx_texture_cache.free_texture_ids.push_back(texture.texture_id);
+    while (pool.size() > GE_FREE_TEXTURE_IDS_MAX) {
+        gfx_rapi->delete_texture(pool.front().first);
+        pool.pop_front();
+    }
 }
 
 void gfx_texture_cache_clear() {
@@ -8216,6 +8243,8 @@ extern "C" void gfx_start_frame(void) {
     ge_hd_start_frame(); /* FORK-053 */
 #endif
     s_GeHudAmmoSlot = 0; /* FORK-053: a tag never outlives its frame's ammo draw */
+    ge_stat_cache_entries = (uint32_t) gfx_texture_cache.map.size();
+    ge_stat_free_ids = (uint32_t) gfx_texture_cache.free_texture_ids.q.size();
     s_GeViewmodel = false;
     static uint32_t previous_fonts = ~0u;
     const uint32_t fonts = gfx_sharp_fonts | (gfx_enhanced_fonts << 1);

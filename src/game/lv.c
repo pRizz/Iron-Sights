@@ -1326,6 +1326,7 @@ Gfx* lvlRender(Gfx* DL)
             portSpawnWepTrace();
             portGotoTick();  /* GE_GOTO test-man steering */
             { extern void portHitSoundProbeTick(void); portHitSoundProbeTick(); } /* GE_HITSOUND_PROBE */
+            { extern void portSoakTick(s32 stage); portSoakTick(g_CurrentStageToLoad); } /* GE_SOAK / GE_MEMSTATS */
 #endif
 
             if (

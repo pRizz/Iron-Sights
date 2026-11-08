@@ -19460,6 +19460,26 @@ extern int portIconStagePending(void);     /* weapon_cache.cpp (FORK-019) */
 extern void portIconStageBegin(void);
 extern int portIconStageIsCurrent(void);
 extern void portIconStageFrontTick(void);
+extern s32 portSoakIsCurrent(void);         /* port_soak.c: GE_SOAK growth soak */
+extern s32 portSoakNextStage(void);
+extern void portSoakFrontTick(void);
+
+/* GE_SOAK: launch the soak's next stage with the direct-launch recipe below. */
+static void portSoakLaunchTick(void)
+{
+    s32 stage;
+
+    portSoakFrontTick();
+    stage = portSoakNextStage();
+    if (stage < 0)
+    {
+        return;
+    }
+    selected_folder_num = FOLDER1;
+    set_selected_difficulty(DIFFICULTY_AGENT);
+    set_solo_and_ptr_briefing(stage);
+    frontChangeMenu(MENU_RUN_STAGE, TRUE);
+}
 
 /* GE_STAGE=<name|LEVELID> [GE_DIFF=0..3]: debug launch straight into a solo
  * mission, skipping every menu (e.g. GE_STAGE=frigate). Uses the ramrom demo
@@ -20096,6 +20116,7 @@ void menu_init(void)
         }
     }
     portIconStageFrontTick();   /* FORK-019: the icon stage is over once menus tick */
+    portSoakLaunchTick();
     portDirectLaunchTick();
     portDirectLaunchMpTick();
     portDirectLaunchDemoTick();
@@ -20382,7 +20403,7 @@ void menu_init(void)
 #endif
 #ifndef TARGET_N64
             /* the in-process icon stage ends as an attract demo does */
-            if (interface_menu0B_runstage() || portIconStageIsCurrent())
+            if (interface_menu0B_runstage() || portIconStageIsCurrent() || portSoakIsCurrent())
 #else
             if (interface_menu0B_runstage())
 #endif

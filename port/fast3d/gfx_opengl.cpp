@@ -975,9 +975,19 @@ static void gfx_opengl_clear_shaders(void) {
     shader_program_pool.clear();
 }
 
+/* GE_SOAK / GE_MEMSTATS: renderer objects, published at each frame's end for
+ * the game thread's log (port_soak.c), which must not read them directly. */
+static SDL_atomic_t gl_stat_live_textures, gl_stat_framebuffers, gl_stat_programs;
+extern "C" void gfx_opengl_memstats(uint32_t* textures, uint32_t* fbs, uint32_t* programs) {
+    *textures = (uint32_t) SDL_AtomicGet(&gl_stat_live_textures);
+    *fbs = (uint32_t) SDL_AtomicGet(&gl_stat_framebuffers);
+    *programs = (uint32_t) SDL_AtomicGet(&gl_stat_programs);
+}
+
 static GLuint gfx_opengl_new_texture(void) {
     GLuint ret;
     glGenTextures(1, &ret);
+    SDL_AtomicIncRef(&gl_stat_live_textures);
     return ret;
 }
 
@@ -986,6 +996,7 @@ static void gfx_opengl_delete_texture(uint32_t texID) {
     portWebTextureDeleted(texID);
 #endif
     glDeleteTextures(1, &texID);
+    SDL_AtomicDecRef(&gl_stat_live_textures);
     gl_set_has_mips(texID, 0);
     /* a new object under this name starts with GL's default bias of 0 */
     if (texID < gl_tex_lod_biased.size()) {
@@ -1743,6 +1754,8 @@ static void gfx_opengl_start_frame(void) {
 }
 
 static void gfx_opengl_end_frame(void) {
+    SDL_AtomicSet(&gl_stat_framebuffers, (int) framebuffers.size());
+    SDL_AtomicSet(&gl_stat_programs, (int) shader_program_pool.size());
     glFlush();
 }
 
