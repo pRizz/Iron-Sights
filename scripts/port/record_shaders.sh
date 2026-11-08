@@ -3,8 +3,12 @@
 #
 # Runs the exe through every solo stage (driven), the front end, a watch
 # open, 2P and 4P multiplayer and the 14 attract demos, in an empty scratch
-# folder, so Data/shaders.txt there lists every colour combiner program those
-# runs compiled. It is merged into tools/shaders_base.txt, which
+# folder, plus the fork's own screens: every gun raised to its sights (the
+# ADS audit, which also cycles the weapon strip), the debrief hit map, and
+# missions with the weapon strip's icons (a cache prepared first, since
+# scripted runs otherwise keep names). HD_PACK=<zip> adds Dam and Facility
+# with that HD texture pack. Data/shaders.txt there then lists every colour
+# combiner program those runs compiled. It is merged into tools/shaders_base.txt, which
 # package_release.ps1 ships as Data/shaders_base.txt for the shader prewarm
 # (docs/port/reading-a-user-log.md, "The shader prewarm lines").
 # Rerun after a change to the colour combiner or its shader ids.
@@ -13,7 +17,7 @@ BUILD="$1"; OUT="$2"
 R="$(cd "$(dirname "$0")/../.." && pwd)"
 ROM="$(cygpath -m "$R/baserom.u.z64")"   # the exe needs a Windows path
 rm -rf "$OUT"; mkdir -p "$OUT/Data"
-cp "$BUILD/IronSights.exe" "$BUILD/SDL2.dll" "$R/tools/gamecontrollerdb.txt" "$R/tools/gamecontrollerdefault.txt" "$OUT/"
+cp "$BUILD/IronSights.exe" "$BUILD"/*.dll "$R/tools/gamecontrollerdb.txt" "$R/tools/gamecontrollerdefault.txt" "$OUT/"
 cd "$OUT"
 run() { # name, env...
   local name=$1; shift
@@ -22,12 +26,21 @@ run() { # name, env...
       timeout 400 ./IronSights.exe > "$name.log" 2>&1
   echo "$name exit $? shaders $(wc -l < Data/shaders.txt 2>/dev/null || echo 0)"
 }
-run frontend GE_FRAMES=1500
+run frontend GE_FRAMES=1500 GE_ICON_CACHE_FORCE=1   # also prepares the icon cache the runs below reuse
 for s in dam facility runway surface bunker1 silo frigate surface2 bunker2 statue archives streets \
          depot train jungle control caverns cradle aztec egypt; do
   run "$s" GE_STAGE=$s GE_DRIVE=1 GE_FRAMES=1500
 done
 run watch GE_STAGE=dam GE_DRIVE=1 GE_FRAMES=1400 GE_AUTOBTN=0x1000,900,906
+run ads GE_STAGE=dam GE_STAGE_AFTER=1 GE_SKIPINTRO=1 GE_CHEATS=invuln,invis,guns GE_ADS_AUDIT=1 GE_FRAMES=8000
+run ads_dual GE_STAGE=dam GE_STAGE_AFTER=1 GE_SKIPINTRO=1 GE_CHEATS=invuln,invis,guns GE_ADS_AUDIT=1 \
+    GE_ADS_AUDIT_DUAL=1 GE_FRAMES=8000
+run hitmap GE_STAGE=dam GE_STAGE_AFTER=1 GE_SKIPINTRO=1 GE_CHEATS=invuln GE_HITMAP_PROBE=40,zoom GE_FRAMES=12000
+if [ -n "${HD_PACK:-}" ]; then
+  mkdir -p Data/TexturePacks && cp "$HD_PACK" Data/TexturePacks/
+  for s in dam facility; do run "hd_$s" GE_STAGE=$s GE_DRIVE=1 GE_FRAMES=1500; done
+  rm -rf Data/TexturePacks
+fi
 for a in temple complex caves library basement stack facility bunker archives caverns egypt statue cradle; do
   run "mp_$a" GE_MP=$a GE_MPPLAYERS=4 GE_DRIVE=1 GE_FRAMES=900
 done

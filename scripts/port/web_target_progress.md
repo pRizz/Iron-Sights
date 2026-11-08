@@ -648,7 +648,9 @@ took 120 and 330 ms with the old list and 27 ms in both runs with the new one.
 Unrelated 300-900 ms present stalls at random points mid-mission appear in
 every configuration; the CPU profile (`MIDAS_PROFILE=1`) shows no script
 running in them. `bun run audit:soak <rom> <out> <origin> [stages:frames:laps]`
-is the browser's growth soak (FORK-055). Next action: confirm on a phone.
+is the browser's growth soak (FORK-055). A later recording over the fork's
+own screens (FORK-057) found one more missing program, first used when
+raising a gun to its sights, and added it. Next action: confirm on a phone.
 
 **Game context menu, 2026-10-31:** Right-click still reaches the native main
 menu's back action while the browser context menu is canceled on the game

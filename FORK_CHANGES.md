@@ -30,6 +30,50 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-057 — Shader prewarm list recorded over the fork's screens
+
+**Status:** Implemented 2026-11-07 on Windows. The list is shared by every
+target and ships to the browser too.
+
+The shader prewarm list (`tools/shaders_base.txt`, shipped as
+`Data/shaders_base.txt`) is compiled behind the front end, so a colour combiner
+program's first use does not stall gameplay. On mobile web each such stall costs
+hundreds of ms. The inherited recorder, `scripts/port/record_shaders.sh`,
+drives every solo stage, the front end, a watch open, 2P/4P multiplayer and the
+attract demos. That list dates from the 2026-10-18 import, and the recorder
+never reached the fork's own screens. Scripted runs also skip preparing the icon
+cache, so it never saw icons: that is how the weapon strip's two programs were
+missed (FORK-019, added in `403cedd`).
+
+The recorder now also runs:
+- **Icons:** the front-end run prepares the icon cache in the foreground
+  (`GE_ICON_CACHE_FORCE`), so every later mission shows the strip with icons.
+- **Sights:** the ADS audit raises every gun, single and dual, to its sights
+  (`GE_ADS_AUDIT`, with the all-guns cheat), covering scopes, crosshairs and
+  the strip on each weapon.
+- **Debrief:** the hit-map probe aborts into the debrief and its closer look
+  (`GE_HITMAP_PROBE=40,zoom`).
+- **HD pack:** with `HD_PACK=<zip>`, Dam and Facility run with that pack.
+
+It also copies every DLL beside the executable, now that the build ships
+Sentry's. Shader ids do not change with the texture filter (a filter change
+recompiles the same list), so one recording covers every filter setting.
+
+**Result:** a full recording with the 2026-11-07 build (`36ded5a` plus this
+change) and the GLideN64 HD pack ran all 55 scenarios with exit 0. It compiled
+71 distinct programs. Exactly one was missing from the list:
+`0000000001080108 10000100`, a fogless world-geometry program with a
+horizontally clamped texture, first used in the ADS run (all guns, intro
+skipped). It is added (89 to 90 lines). The icons, hit-map debrief, HD pack and
+multiplayer runs needed nothing new, and the strip's two programs were
+recorded in the Facility run as expected. Not covered: the hidden Iron Sights
+font (MSDF programs; players cannot select it), the downloaded Enhanced font,
+and non-default display modes such as N64 AA or Classic Mode. A player's own
+`Data/shaders.txt` still learns anything beyond the list after its first use.
+
+**Sources:** [recorder](scripts/port/record_shaders.sh),
+[list](tools/shaders_base.txt), [prewarm](port/fast3d/gfx_pc.cpp).
+
 ### FORK-056 — Outlined text keeps clean outlines at high resolution
 
 **Status:** Implemented in the Windows build (2026-11-07) after the owner
