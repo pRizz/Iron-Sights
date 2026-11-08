@@ -142,6 +142,14 @@ threshold 0.3, strength 2.2, radius 2.5, 5 passes, was a faint haze).
 lookat from the camera's look direction (`bondview2.c` `guLookAtReflect`), so
 turning should move the reflection; the audit never turns the camera.
 
+**Candidate work.** Upstream's sphere mapping ignores the player's position, so
+the reflection stays still while walking. Strategies for reflections that
+follow the player (position sway, sky and floor-light tint, screen-space
+reflections from the last frame, live environment capture, baked probes) are
+recorded with their trade-offs in the
+[shiny reflections candidates](scripts/port/shiny_reflections_plan.md)
+(2026-11-07).
+
 **Sources:** [tag](port/src/port_shiny.c) with its
 [header](port/include/port_shiny.h), [draw hook](src/game/gunfire.c),
 [tuning](port/fast3d/gfx_shiny.cpp) and its [header](port/fast3d/gfx_shiny.h),
