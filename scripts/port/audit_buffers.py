@@ -2,6 +2,7 @@
 
 Run from any directory. Reports stay local under build_win/buffer-audit. Supply
 Cppcheck XML to summarize the separately executed compiler-configuration scan.
+--leaks turns on LeakSanitizer with the checked-in lsan_suppressions.txt.
 """
 import argparse
 from collections import Counter
@@ -29,6 +30,16 @@ PATTERNS = {
 MISSIONS = ('dam', 'facility', 'runway', 'surface', 'bunker1', 'silo', 'frigate',
             'surface2', 'bunker2', 'statue', 'archives', 'streets', 'depot',
             'train', 'jungle', 'control', 'caverns', 'cradle', 'aztec', 'egypt')
+LSAN_SUPPRESSIONS = ROOT/'scripts/port/lsan_suppressions.txt'
+SANITIZER_ERRORS = ('runtime error:', 'ERROR: AddressSanitizer', 'ERROR: LeakSanitizer')
+
+
+def sanitizer_env(leaks):
+    """detect_leaks=0 keeps the original buffer-only samples; leaks adds LSan."""
+    if not leaks:
+        return dict(ASAN_OPTIONS='detect_leaks=0')
+    return dict(ASAN_OPTIONS='detect_leaks=1',
+                LSAN_OPTIONS=f'suppressions={LSAN_SUPPRESSIONS}:print_suppressions=1')
 
 
 def domain(name):
@@ -73,7 +84,7 @@ def checker_report(path):
             'severities': dict(Counter(e['severity'] for e in records))}
 
 
-def mission_smoke(executable, rom, output, frames, jobs):
+def mission_smoke(executable, rom, output, frames, jobs, leaks=False):
     """Headless-only samples; every child owns its executable/runtime directory."""
     executable, rom = executable.resolve(strict=True), rom.resolve(strict=True)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -86,15 +97,15 @@ def mission_smoke(executable, rom, output, frames, jobs):
             env = {key: value for key, value in os.environ.items() if not key.startswith('GE_')}
             env.update(GE_ROM=str(rom), GE_STAGE=stage, GE_STAGE_AFTER='1',
                        GE_FRAMES=str(frames), GE_SEED='1', GE_CHEATS='invuln,invis',
-                       GE_NOINISAVE='1', ASAN_OPTIONS='detect_leaks=0')
+                       GE_NOINISAVE='1', **sanitizer_env(leaks))
             log_path = output.parent / (stage + '.log')
             with log_path.open('w', encoding='utf-8') as log:
                 result = subprocess.run([str(child)], cwd=folder, env=env, stdout=log,
-                                        stderr=subprocess.STDOUT, timeout=120)
+                                        stderr=subprocess.STDOUT, timeout=300 if leaks else 120)
             text = log_path.read_text(errors='replace')
             passed = (result.returncode == 0 and 'GE_STAGE direct launch:' in text
                       and f'frame limit reached: frames={frames}' in text
-                      and 'runtime error:' not in text and 'ERROR: AddressSanitizer' not in text)
+                      and not any(error in text for error in SANITIZER_ERRORS))
             print(stage + (': PASS' if passed else ': FAIL'), flush=True)
             return dict(stage=stage, exit=result.returncode, passed=passed, log=str(log_path))
 
@@ -112,12 +123,13 @@ def main():
     parser.add_argument('--rom', type=Path)
     parser.add_argument('--frames', type=int, default=900)
     parser.add_argument('--jobs', type=int, choices=range(1, 9), default=4)
+    parser.add_argument('--leaks', action='store_true', help='Mission smoke with LeakSanitizer enabled')
     options = parser.parse_args()
     if options.mission_smoke:
         if not options.rom or not 600 <= options.frames <= 36000:
             parser.error('--mission-smoke needs --rom and 600..36000 frames')
         return mission_smoke(options.mission_smoke, options.rom, options.output,
-                             options.frames, options.jobs)
+                             options.frames, options.jobs, options.leaks)
     names = subprocess.check_output(['git', '-C', str(ROOT), 'ls-files', '-z']).decode().split('\0')
     sources = [source_record(name, (ROOT/name).read_bytes()) for name in names
                if Path(name).suffix.lower() in EXTENSIONS and (ROOT/name).is_file()]

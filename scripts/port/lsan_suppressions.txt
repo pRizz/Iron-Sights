@@ -1,0 +1,27 @@
+# LeakSanitizer suppressions for the sanitizer builds (scripts/port/buffer_audit.md,
+# "Leak detection"). Used by audit_buffers.py --leaks and leak_audit_video.sh.
+#
+# Add an active `leak:<pattern>` line only for a report that a run actually
+# printed, with a one-line reason above it: a deliberate never-freed process
+# allocation, or a third-party library's own internals (suppress by library,
+# for example `leak:libGLX_mesa.so`). A pattern matches any frame of the
+# allocation stack, so keep it to the allocating function or library and never
+# use a pattern that also covers port code calling into it. Never suppress a
+# real leak.
+#
+# No active entries: the 2026-11-07 headless matrix and renderer runs printed no
+# leak report. LSan reports only unreachable blocks, and these deliberate
+# singletons stay reachable through a static pointer until exit, so they need
+# no suppression. Listed so a later report naming one is recognised:
+#   port/fast3d/weapon_cache.cpp `icons`: *new, a background preparation may
+#     still write it while static destructors run.
+#   port/fast3d/hd_textures.cpp `workers()`: new Workers, detached HD texture
+#     workers may still use it while the process exits.
+#   port/fast3d/gfx_pc.cpp `ge_upload_masked` wrapbuf: plain realloc'd static,
+#     no destructor may run in render-thread code at exit.
+#   port/fast3d/gfx_opengl.cpp decal `pushed`: *new vector, the render thread may
+#     still draw decals into it during exit.
+#   port/src/port_textures.c sTex[].blob: one replacement texture per name,
+#     allocated once and kept for the process.
+# The memp and portAllocHigh arenas are anonymous mmap regions, not heap blocks:
+# LSan neither scans them nor reports them.

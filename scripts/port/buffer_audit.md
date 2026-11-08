@@ -155,8 +155,9 @@ Sanitizer runs disable alignment, shift and signed-integer-overflow checks to
 retain this port's inherited packed/unaligned and integer-wrap contracts.
 ASan and the other UBSan checks remain enabled with immediate failure. The
 headless build uses `GE_SANITIZE=ON` and its existing generated-asset exclusions;
-leak detection is disabled for short mission samples. These exclusions and
-custom arenas limit what a clean run establishes.
+the original 2026-10-30 mission samples disabled leak detection, which the
+[leak-detection pass](#leak-detection) below adds. These exclusions and custom
+arenas limit what a clean run establishes.
 
 The local GCC headless build was configured with `GE_HEADLESS=ON`,
 `GE_VIDEO=OFF`, `GE_SANITIZE=ON`, and both C/C++ flags set to
@@ -187,3 +188,116 @@ Useful local logs use the `build_win/buffer-audit-` prefix. The original ASan
 reproductions are `repro-model.log`, `repro-audio-copy.log` and
 `repro-audio-log.log` under that prefix. ROM-derived captures and binaries are
 not part of this report's versioned artifacts.
+
+## Leak detection
+
+Added 2026-11-07 on top of `91640bc`. The earlier samples ran with
+`detect_leaks=0`; this pass runs the same sanitizer builds with
+LeakSanitizer (LSan) on and triages every report.
+
+### Method
+
+LSan runs once, when the process exits (the frame limit's `exit(0)`, after
+`atexit` handlers and static destructors). It reports heap blocks that no
+pointer reaches from globals, thread stacks, TLS or other reachable blocks.
+So it finds orphaned allocations: a dropped pointer, an error path that skips
+`free`, a container destroyed without its owned pointers. It does not find a
+reachable cache that only grows (that needs multi-stage memory sampling), GL or
+driver objects (they are not port heap blocks), or memp/`portAllocHigh` arena
+use: both arenas are anonymous `mmap` regions that LSan neither reports nor
+scans, so a heap pointer stored only in an arena would show as a leak. The
+game never tears down SDL or the GL context, so driver state stays reachable
+and produced no reports. On i686 the scan is conservative: a stale word that
+looks like a heap address keeps a block alive, so a clean run is evidence,
+not proof.
+
+- **Headless matrix:** `build/lsan-headless`, configured exactly like the
+  original headless build (`GE_HEADLESS=ON GE_VIDEO=OFF GE_SANITIZE=ON
+  GE_ROMDATA_FALLBACK=OFF`, the same C/C++ sanitizer flags) in `goldeneye:latest`.
+  `audit_buffers.py --leaks` sets `ASAN_OPTIONS=detect_leaks=1` and
+  `LSAN_OPTIONS=suppressions=scripts/port/lsan_suppressions.txt:print_suppressions=1`,
+  allows 300 s per child for the exit-time scan, and fails a mission on
+  `ERROR: LeakSanitizer` as well as ASan/UBSan output.
+- **Renderer run:** `build/lsan-video`, `GE_VIDEO=ON GE_SANITIZE=ON` (Debug,
+  same flags) in `midas-linux-release` with `SDL2_LINUX_ROOT` set to an i686
+  SDL 2.30.11 prefix as `linux_build.py` builds it (`build_linux*/deps/sdl`).
+  This configuration keeps `headless_stubs.c` out, as the CMake comment
+  requires, and links. `scripts/port/leak_audit_video.sh` installs Xvfb and
+  i386 Mesa, gives each case its own folder, `midas.ini` (640x480 window,
+  `msaa=1`, point filtering, no mipmaps, `render_thread` from `RT`) and icon
+  cache, and runs Mesa's `softpipe` (`GALLIUM_DRIVER=softpipe`). llvmpipe
+  works too, but its shader JIT under ASan stalled single frames for up to
+  325 s; softpipe ran a 150-frame Dam case in 112 s instead of 615 s.
+
+### Rerun
+
+The ROM stays in the main checkout and is mounted read-only; it is never
+copied into the worktree. On Git Bash prefix `docker` with `MSYS_NO_PATHCONV=1`.
+
+```sh
+# Headless: configure/build build/lsan-headless as above, then
+docker run --rm -v "<worktree>:/src" -v "<rom>:/rom/baserom.u.z64:ro" -w /src goldeneye:latest \
+  python3 scripts/port/audit_buffers.py --mission-smoke build/lsan-headless/IronSights \
+  --rom /rom/baserom.u.z64 --leaks --jobs 8 --output build/lsan-logs/matrix/results.json
+
+# Renderer: build build/lsan-video (copy libSDL2-2.0.so.0 into build/lsan-video/lib), then
+docker run --rm -v "<worktree>:/src" -v "<rom>:/rom/baserom.u.z64:ro" -w /src midas-linux-release \
+  bash scripts/port/leak_audit_video.sh build/lsan-video/IronSights build/lsan-logs/video \
+  'title|1200|GE_NOINISAVE=1' 'dam|300|GE_STAGE=dam GE_STAGE_AFTER=1 GE_NOINISAVE=1' \
+  'dam-rt|500|GE_STAGE=dam GE_STAGE_AFTER=1 RT=1 GE_NOINISAVE=1'
+```
+
+A case is `name|frames|VAR=value ...`; it passes on exit zero, the requested
+frame limit and no sanitizer report. Leave `GE_NOINISAVE` out to exercise the
+settings writes at exit (each case writes only its own folder).
+
+### Suppressions
+
+[`lsan_suppressions.txt`](lsan_suppressions.txt) currently has no active entry,
+because no run printed a report. It lists the deliberate never-freed
+singletons (weapon icons, HD texture workers, the mask-wrap buffer, the decal
+vertex copy, replacement-texture blobs) with their reasons: each stays
+reachable through a static pointer, so LSan does not report it. A future entry
+must name a report a run actually printed: a deliberate process allocation by
+its allocating function, or third-party internals by library (for example
+`leak:libGLX_mesa.so`). A pattern matches any frame of the allocation stack,
+so it must not also cover port code calling into that function or library.
+
+### Findings
+
+| Finding | Classification |
+| ------- | -------------- |
+| The headless sanitizer build no longer linked: `port_hitmap_probe.c` (FORK-048) sets `ge_shot_force`, which only `gfx_sdl2.cpp` defines. | Fixed (build): `headless_stubs.c` defines the trigger; nothing reads it without a renderer. |
+| No LSan, ASan or UBSan report in any run below. | No leak to fix or suppress. |
+
+Runs, all exit zero with no report, logs local under the worktree's ignored
+`build/lsan-logs/`:
+
+- Headless: all 20 solo missions (900 frames each, `--leaks`); the title for
+  14,000 frames, including the Runway and Dam attract demos and their stage
+  loads and unloads; Temple four-player and Complex two-player multiplayer
+  (`GE_MP`, `GE_DRIVE`); title and Dam with `GE_NOINISAVE` unset; Facility
+  with a console command; the hit-map probe through mission abort and debrief.
+- Renderer (softpipe unless noted): title for 300 and Dam for 300 frames
+  (llvmpipe, the game's default 1280x800 settings with the render thread on);
+  title for 900 (llvmpipe) and 2,400 frames; Dam for 150 frames (llvmpipe and
+  softpipe); Dam with the render thread on; Dam with
+  settings writes at exit; Facility, Aztec, Frigate and Cradle for 300 frames;
+  Temple two-player for 400 frames; the hit-map probe through the debrief;
+  the in-process weapon-icon stage (`GE_ICON_STAGE=1`), which hit its 60 s
+  limit under softpipe and so exercised the failure path, not a cache write.
+- ROM-free suites with ASan/UBSan/LSan compiler wrappers first on `PATH`:
+  `test_hd_textures`, `test_enhanced_fonts`, `test_open_fonts`,
+  `test_save_transfer`, `test_states`, `test_hud`, `test_ads`, `test_wardrobe`,
+  `test_buffers`, `test_dyn`, `test_hitmap`, `test_hit_sound`,
+  `test_image_bank`, `test_mission_cheats`, `test_mission_hints`,
+  `test_mission_times`, `test_stan_callbacks`. `test_start_input` needs SDL
+  development headers that the image lacks and did not build.
+
+A source review of the port's own allocation sites (SDL strings and mappings,
+`midas.ini` rewrites, suspend-point files, texture replacement buffers,
+threads) found them freed, detached or joined on the paths read. Not exercised:
+HD texture workers (no matching pack installed), the Enhanced font and HD pack
+downloads (no consent or network), a completed icon-cache write, campaign
+backup/restore inside the game, and Windows (MinGW has no LSan). This pass
+also does not cover growth of reachable caches over many stages.

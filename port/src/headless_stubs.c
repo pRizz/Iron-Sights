@@ -97,3 +97,7 @@ s32 portInputPadResetDefaults(s32 device) { (void)device; return 0; }
 void portVideoKbdDigitalMove(s32 *x, s32 *y) { *x = *y = 0; }
 s32 portHudWideCfg(void) { return -1; }
 void portHudWideAdopt(s32 wide) { (void)wide; }
+
+/* The screenshot trigger, normally owned by gfx_sdl2.cpp; no renderer, no shot.
+ * The hit-map probe (port_hitmap_probe.c) still sets it. */
+int ge_shot_force;

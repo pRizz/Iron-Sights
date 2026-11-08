@@ -54,6 +54,33 @@ class AuditTests(unittest.TestCase):
             self.assertTrue(all(not path.exists() for path in child_paths))
             self.assertEqual(executable.read_bytes(), b'test')
 
+    def test_leak_mode_enables_lsan_and_rejects_leaks(self):
+        self.assertEqual(audit.sanitizer_env(False), {'ASAN_OPTIONS': 'detect_leaks=0'})
+        leaks = audit.sanitizer_env(True)
+        self.assertEqual(leaks['ASAN_OPTIONS'], 'detect_leaks=1')
+        self.assertIn('suppressions=' + str(audit.LSAN_SUPPRESSIONS), leaks['LSAN_OPTIONS'])
+        self.assertTrue(audit.LSAN_SUPPRESSIONS.is_file())
+        with tempfile.TemporaryDirectory() as temporary:
+            folder = Path(temporary)
+            executable, rom = folder/'headless', folder/'rom'
+            executable.write_bytes(b'test')
+            rom.write_bytes(b'test')
+
+            def run(args, cwd, env, stdout, **kwargs):
+                self.assertEqual(env['ASAN_OPTIONS'], 'detect_leaks=1')
+                stdout.write(sample)
+                return type('Result', (), {'returncode': 0})()
+
+            for sample, expected in [
+                ('GE_STAGE direct launch: dam\nframe limit reached: frames=900', True),
+                ('GE_STAGE direct launch: dam\nframe limit reached: frames=900\n'
+                 '==1==ERROR: LeakSanitizer: detected memory leaks', False),
+            ]:
+                with patch.object(audit, 'MISSIONS', ('dam',)), \
+                        patch.object(audit.subprocess, 'run', side_effect=run), redirect_stdout(StringIO()):
+                    status = audit.mission_smoke(executable, rom, folder/'results.json', 900, 1, leaks=True)
+                self.assertEqual(status, 0 if expected else 1)
+
 
 if __name__ == '__main__':
     unittest.main()

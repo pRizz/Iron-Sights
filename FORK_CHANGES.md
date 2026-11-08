@@ -2027,6 +2027,29 @@ The final 120 Hz threaded/MSAA-2 Aztec effect audit and a fresh Facility-process
 restore of that Aztec snapshot each passed all 24 captures and texture-byte
 checks; a restored fire/smoke capture was visually reviewed.
 
+**Leak detection (2026-11-07, on `91640bc`):** the original samples ran with
+`detect_leaks=0`. `audit_buffers.py --mission-smoke --leaks` now runs them with
+LeakSanitizer and the checked-in [suppressions](scripts/port/lsan_suppressions.txt),
+and fails a mission on a leak report as well as ASan/UBSan output. A
+[renderer run](scripts/port/leak_audit_video.sh) covers a `GE_VIDEO=ON` plus
+`GE_SANITIZE=ON` i686 build under Xvfb and Mesa softpipe in
+`midas-linux-release`; that configuration links without `headless_stubs.c`.
+The headless sanitizer target had stopped linking because the FORK-048 hit-map
+probe sets the renderer's `ge_shot_force`; `headless_stubs.c` now defines it.
+No run reported a leak: all 20 headless missions, a 14,000-frame title with two
+attract-demo stage changes, multiplayer, settings writes, a console command and
+the hit-map debrief headless; title, Dam (render thread off and on), Facility,
+Aztec, Frigate, Cradle, two-player Temple, the hit-map debrief and the
+in-process icon stage with the renderer; and 17 ROM-free suites built with
+ASan/UBSan/LSan wrappers. The suppressions file therefore has no active entry;
+it records why the deliberate never-freed singletons (they stay reachable)
+need none and how a future third-party entry must be scoped. LSan sees only
+orphaned heap blocks at exit, not reachable caches that grow, GL objects or the
+mmap'd arenas, and MinGW has no LSan. The [audit record](scripts/port/buffer_audit.md#leak-detection)
+lists the method, rerun commands, runs and gaps. The gallery fingerprint was
+regenerated for the stub change with zero changed image cells. The audit-tool
+tests cover the leak option and verdict.
+
 ### FORK-035 — Desktop mission-start control hints
 
 Desktop solo missions show compact gadget and aim-down-sights hints, plus a
