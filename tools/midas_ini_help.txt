@@ -279,13 +279,22 @@ padN_stickmode.
                       |            | scene mix, 0 = off), screen_blur (8),
                       |            | screen_gain (1), screen_back (0.85),
                       |            | screen_fov (60), screen_smooth (0.2),
-                      |            | screen_flip (0), silver_screen (1), log
-                      |            | (0). Edits apply while the game runs.
+                      |            | screen_flip (0), silver_screen (1),
+                      |            | screen_hue (0: reflections in the
+                      |            | gun's own colour, 1 = the scene's),
+                      |            | screen_mirror (0.5: share of the scene
+                      |            | shown as a mirror), map (128: reflect
+                      |            | the level itself as a cube of that face
+                      |            | size; 0 = the screen copy), log (0).
+                      |            | Edits apply while the game runs.
                       |            | Iron Sights > System.
   gun_glint           | 1          | [display] Gun Glint. ON adds moving
                       |            | highlights to the grey and black metal
                       |            | of the ordinary guns, PP7 to sniper
-                      |            | rifle (never to hands, sleeves, wood);
+                      |            | rifle (never to hands, sleeves, wood or
+                      |            | see-through parts such as sight holes;
+                      |            | it fades out as the gun is raised to
+                      |            | the sights);
                       |            | 0 draws them as the original. Tuned in
                       |            | shiny_weapons.ini: glint (0.25
                       |            | strength), glint_power (64), glint_sat

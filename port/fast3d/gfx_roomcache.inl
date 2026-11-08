@@ -834,6 +834,7 @@ static void roc_walk_end(RocRoom& r) {
 }
 
 /* Mode 2 replay: state per draw, constants per room, one draw call per draw. */
+static void roc_env_note(int ri); /* FORK-058 prototype: gfx_envcube.inl */
 static bool roc_replay_gpu(RocRoom& r) {
     if (!roc_textures_still_live(r)) {
         for (size_t di = 0; di < r.draws.size(); di++) {
@@ -857,6 +858,9 @@ static bool roc_replay_gpu(RocRoom& r) {
         roc_pin(r, true);
     }
     gfx_flush(); /* the interpreter's pending batch draws before the room */
+    if (&r >= roc_rooms && &r < roc_rooms + ROC_MAX_ROOMS) {
+        roc_env_note((int)(&r - roc_rooms)); /* FORK-058 prototype: the room's placement for the reflection cube */
+    }
 
     float mvp[16];
     for (int i = 0; i < 4; i++) {

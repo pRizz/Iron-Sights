@@ -36,6 +36,12 @@ void gfx_roc_queue_op(int op, int arg, const void *ptr)
     (void)op; (void)arg; (void)ptr;
 }
 
+/* roc_hooks.c asks whether Richer Reflections wants the rooms captured (FORK-058); no renderer, no. */
+int gfx_shiny_level_cube(void)
+{
+    return 0;
+}
+
 /* GE_GFX_STATS tri counters, normally owned by video.c */
 u32 ge_dbg0;
 u32 ge_dbg1;

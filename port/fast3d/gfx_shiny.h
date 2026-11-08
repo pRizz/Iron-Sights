@@ -42,11 +42,16 @@ struct Tuning {
     bool screen_flip;   /* sample the screen copy upside down */
     float screen_smooth; /* 0..1 share of each new frame blended into the reflection (1 = none: it flickered) */
     bool silver_screen; /* the silver guns take the screen reflection without the tuned look (default on) */
+    int map;            /* prototype: cube face size reflecting the level itself (room cache), 0 = the screen */
     /* Gun Glint ([display] gun_glint): a moving highlight on the ordinary guns' metal (gfx_glint.inl) */
     float glint;        /* strength 0..1 of the per-pixel highlight added over metal triangles (0 = off) */
     float glint_power;  /* its tightness: higher = a smaller, sharper spot */
     float glint_sat;    /* the most colourful (0..255 mean saturation) an image may be and count as metal */
     uint32_t glint_skip; /* items (bit = ITEM_* id) left without the glint; glint_skip = 8, 15 in the file */
+    float screen_hue;   /* 0..1 share of the scene's own colour in the scene reflection: 0 (default) =
+                         * light and dark only, so gold reflects in gold and silver in silver */
+    float screen_mirror; /* 0..1 share of the scene itself, in the metal's average colour, rather than
+                          * as light and dark on the authored pattern (which near-white silver clips) */
 };
 
 /* whether the glint applies to this item (ITEM_WPPK..ITEM_SNIPERRIFLE, less glint_skip) */
@@ -56,6 +61,9 @@ bool glint_on(uint8_t item);
 struct Screen {
     float mix, gain, back, fov, blur, smooth;
     int flip;
+    int map_size; /* prototype: > 0 renders the level as a cube of this face size (gfx_envcube.inl) */
+    float hue;    /* 0..1 share of the scene's own colour in the reflection (0 = the metal's colour) */
+    float mirror; /* 0..1 share of the scene shown as a mirror in the metal's colour */
 };
 /* false when screen reflections are off */
 bool screen(Screen *out);

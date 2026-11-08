@@ -522,6 +522,10 @@ static bool s_GeShinyLook = false;
 /* FORK-058: inside a PP7 draw taking the glint (G_NOOP 0x5E, item 4/5),
  * and inside a draw bracketed as never taking it (G_NOOP 0x61: sleeve, native hand) */
 static bool s_GeGlint = false, s_GeGlintBlock = false;
+/* FORK-058: the glint span's ADS blend (G_NOOP 0x62): the glint fades as (1 - blend)^2 */
+static float s_GeGlintAds = 0.0f;
+/* FORK-058: the level's sky colour (G_NOOP 0x60), the reflection cube's empty space */
+static uint8_t s_GeSkyRGB[3] = { 0, 0, 0 };
 /* FORK-058: the current batch's glint triangles (15 floats per corner, gfx_glint.inl) */
 static std::vector<float> s_GlintBuf;
 /* This texture rect is an open-font glyph (FORK-050): the MSDF shader, no UV clamp. */
@@ -1889,6 +1893,9 @@ extern "C" void portPartCacheForgetVertices(const void* vtx); /* gfx_roomcache.i
 extern "C" void portRoomCacheForgetRoom(int room);
 extern "C" void portPartCacheStage(int stage);
 extern "C" uint32_t gfx_room_cache;
+/* FORK-058 prototype: rooms are captured for the level reflection's cube
+ * (gfx_envcube.inl) but always drawn by the interpreter; no model parts */
+static bool roc_env_only = false;
 enum { ROC_OP_FORGET_VTX = 1, ROC_OP_FORGET_ROOM = 2, ROC_OP_STAGE = 3, ROC_OP_MODE = 4 };
 struct RocPendingOp { int op; int arg; const void* ptr; };
 static std::vector<RocPendingOp> gfx_roc_pending_ops;
@@ -1897,7 +1904,11 @@ static void gfx_roc_apply_op(const RocPendingOp& o) {
         case ROC_OP_FORGET_VTX: portPartCacheForgetVertices(o.ptr); break;
         case ROC_OP_FORGET_ROOM: portRoomCacheForgetRoom(o.arg); break;
         case ROC_OP_STAGE: portPartCacheStage(o.arg); break;
-        case ROC_OP_MODE: portRoomCacheClear(); gfx_room_cache = (uint32_t)o.arg; break;
+        case ROC_OP_MODE: /* 3 (FORK-058 prototype): GPU capture for the level reflection only */
+            portRoomCacheClear();
+            roc_env_only = o.arg == 3;
+            gfx_room_cache = roc_env_only ? 2u : (uint32_t)o.arg;
+            break;
         default: break;
     }
 }
@@ -3008,15 +3019,20 @@ static bool ge_shiny_tone;
 static TextureCacheValue *ge_shiny_classify;
 static void ge_shiny_upload_texture(const uint8_t *rgba, uint32_t w, uint32_t h) {
     if (ge_shiny_classify != nullptr) {
-        uint64_t sat = 0, n = 0;
+        uint64_t sat = 0, n = 0, clear = 0;
         for (size_t p = 0; p < size_t(w) * h; p++) {
             const uint8_t *c = rgba + p * 4;
-            if (c[3] < 128) continue;
+            if (c[3] < 128) {
+                clear++;
+                continue;
+            }
             const uint8_t hi = std::max(c[0], std::max(c[1], c[2])), lo = std::min(c[0], std::min(c[1], c[2]));
             sat += hi - lo;
             n++;
         }
-        ge_shiny_classify->glint_metal = n > 0 && (float)sat / (float)n <= gfx_shiny::tuning().glint_sat;
+        /* an image with see-through texels (a sight's hole, a cutout) is never
+         * metal: the glint pass draws whole triangles and would cover them */
+        ge_shiny_classify->glint_metal = n > 0 && clear == 0 && (float)sat / (float)n <= gfx_shiny::tuning().glint_sat;
         if (gfx_shiny::tuning().log) {
             uint64_t sum[3] = { 0, 0, 0 };
             for (size_t p = 0; p < size_t(w) * h; p++) {
@@ -3948,6 +3964,7 @@ static int gfx_ge_farclip_mode(void) {
 }
 
 #include "gfx_roomcache.inl"
+#include "gfx_envcube.inl" /* FORK-058 prototype: the level as a reflection cube, from the room cache */
 
 static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bool is_rect) {
     const unsigned capacity = is_rect ? MAX_VERTICES + 4 : MAX_VERTICES;
@@ -5091,7 +5108,10 @@ ndcprobe_done:;
 
     /* FORK-058: the Gun Glint lands only on metal triangles - drawn
      * with an image classified grey enough, outside the sleeve and hand passes */
-    const bool glint_tri = s_GeGlint && !s_GeGlintBlock && rendering_state.textures[0] != nullptr
+    /* ... and never on blended or cutout draws (the AR33's rear-sight hole
+     * brightened under it), nor at full ADS (see the 0x62 tag) */
+    const bool glint_tri = s_GeGlint && !s_GeGlintBlock && !use_alpha && s_GeGlintAds < 1.0f
+                           && rendering_state.textures[0] != nullptr
                            && rendering_state.textures[0]->first.glint && rendering_state.textures[0]->second.glint_metal;
     bool glint_face = false;
     float glint_n[3], glint_light[3];
@@ -5144,7 +5164,8 @@ ndcprobe_done:;
                                        v_arr[i]->eye[0], v_arr[i]->eye[1], v_arr[i]->eye[2],
                                        glint_n[0], glint_n[1], glint_n[2],
                                        glint_light[0], glint_light[1], glint_light[2],
-                                       gfx_shiny::tuning().glint * (1.0f - v_arr[i]->fog / 255.0f),
+                                       gfx_shiny::tuning().glint * (1.0f - v_arr[i]->fog / 255.0f)
+                                           * (1.0f - s_GeGlintAds) * (1.0f - s_GeGlintAds),
                                        gfx_shiny::tuning().glint_power };
             s_GlintBuf.insert(s_GlintBuf.end(), corner, corner + 15);
         }
@@ -8020,6 +8041,14 @@ static void gfx_run_dl(Gfx* cmd) {
                 } else if ((cmd->words.w1 >> 24) == 0x5Cu) {
                     /* FORK-053: first-person weapon span on / off (port_hud_ammo.c) */
                     s_GeViewmodel = (cmd->words.w1 & 1u) != 0;
+                } else if ((cmd->words.w1 >> 24) == 0x60u) {
+                    /* FORK-058 prototype: the level's sky colour (port_shiny.c) */
+                    s_GeSkyRGB[0] = (uint8_t)(cmd->words.w1 >> 16);
+                    s_GeSkyRGB[1] = (uint8_t)(cmd->words.w1 >> 8);
+                    s_GeSkyRGB[2] = (uint8_t)cmd->words.w1;
+                } else if ((cmd->words.w1 >> 24) == 0x62u) {
+                    /* FORK-058: the glint span's ADS blend, 0-255 (port_shiny.c) */
+                    s_GeGlintAds = (float)(cmd->words.w1 & 0xFFu) / 255.0f;
                 } else if ((cmd->words.w1 >> 24) == 0x61u) {
                     /* FORK-058: a draw that never takes the glint (sleeve, native hand) */
                     gfx_flush();
@@ -8046,8 +8075,11 @@ static void gfx_run_dl(Gfx* cmd) {
                     }
                     gfx_shiny::Screen scene;
                     if (s_GeShinyItem && scene_on && !s_GeShinyEnv && gfx_rapi->env_begin && gfx_shiny::screen(&scene)) {
+                        /* FORK-058 prototype: the level itself (a cube from the room cache), else the screen */
+                        const bool map = scene.map_size > 0 && roc_env_cube(scene.map_size, s_GeSkyRGB);
                         gfx_rapi->env_begin(scene.mix, scene.gain, scene.back, scene.fov, scene.blur, scene.flip,
-                                            scene.smooth, s_GeShinyItem);
+                                            scene.smooth, s_GeShinyItem, map ? 1 : 0, scene.hue,
+                                            scene.mirror);
                         s_GeShinyEnv = true;
                     } else if (!s_GeShinyItem && s_GeShinyEnv) {
                         gfx_rapi->env_end();
@@ -8117,7 +8149,8 @@ static void gfx_run_dl(Gfx* cmd) {
                         if (subGFX != nullptr && gfx_room_cache != 0) {
                             if (roc_next_kind == 1) {
                                 portRoomCacheRegister(roc_next_arg, subGFX);
-                            } else if (roc_next_kind == 2 && gfx_room_cache == 2 && roc_next_arg >= 0 && roc_next_arg < 16) {
+                            } else if (roc_next_kind == 2 && gfx_room_cache == 2 && !roc_env_only && roc_next_arg >= 0
+                                       && roc_next_arg < 16) {
                                 portPartCacheRegister(subGFX, (const void*)segmentPointers[roc_next_arg]);
                             }
                         }
@@ -8154,6 +8187,9 @@ static void gfx_run_dl(Gfx* cmd) {
                         if (rr != nullptr && rr->kind == 1 && rr->state == 2 && sig != rr->sig) {
                             roc_stat_part_sigmiss++;
                             ge_tri_origin = 4;
+                            gfx_run_dl(subGFX);
+                        } else if (rr != nullptr && rr->state == 2 && roc_env_only) {
+                            if (rr->kind == 0) roc_env_note((int)(rr - roc_rooms)); /* FORK-058 prototype */
                             gfx_run_dl(subGFX);
                         } else if (rr != nullptr && rr->state == 2) {
                             bool ok;
@@ -8556,6 +8592,8 @@ extern "C" void gfx_start_frame(void) {
     s_GeViewmodel = false;
     s_GeShinyItem = 0;
     s_GeGlint = s_GeGlintBlock = false;
+    s_GeGlintAds = 0.0f;
+    roc_env_frame_reset(); /* FORK-058 prototype */
     if (s_GeShinyBloom) { /* FORK-058: a span never closed: stop mirroring, draw no glow */
         gfx_rapi->bloom_end(1.0f, 0.0f, 0.0f, 1);
         s_GeShinyBloom = false;

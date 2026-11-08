@@ -107,9 +107,16 @@ void portPartCacheStageLoaded(s32 stage)
  * tables and switches mode at its next frame start, this side gates now */
 void portRoomCacheSetMode(s32 mode)
 {
+    extern int gfx_shiny_level_cube(void); /* port/fast3d/gfx_shiny.cpp */
     if (mode < 0 || mode > 2)
     {
         mode = 0;
+    }
+    if (mode == 0 && gfx_shiny_level_cube())
+    {   /* FORK-058 prototype: with the cache off, Richer Reflections still
+         * captures the rooms (never replays them, no parts) for the shiny
+         * guns' level reflection (port/fast3d/gfx_envcube.inl) */
+        mode = 3;
     }
     g_PortRoomCacheMode = mode;
     gfx_roc_queue_op(ROC_OP_MODE, mode, NULL);

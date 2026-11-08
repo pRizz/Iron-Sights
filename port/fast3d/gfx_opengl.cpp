@@ -3316,7 +3316,10 @@ struct GfxRenderingAPI gfx_opengl_api = {
     gfx_opengl_bloom_end,
     gfx_opengl_env_begin,
     gfx_opengl_env_end,
-    gfx_opengl_glint_draw
+    gfx_opengl_glint_draw,
+    gfx_opengl_env_cube_begin,
+    gfx_opengl_env_cube_face,
+    gfx_opengl_env_cube_end
 };
 
 #ifdef __EMSCRIPTEN__

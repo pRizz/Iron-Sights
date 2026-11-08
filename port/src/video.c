@@ -1664,6 +1664,7 @@ s32 portVideoOptionSet(const char *key, s32 value)
     else if (SDL_strcasecmp(key, "shiny_weapons") == 0)
     {
         gfx_shiny_weapons = s_CfgShinyWeapons != 0;
+        portRoomCacheSetMode(s_CfgRoomCache); /* FORK-058 prototype: the level reflection's room capture */
     }
     else if (SDL_strcasecmp(key, "gun_glint") == 0)
     {
@@ -5052,8 +5053,8 @@ s32 videoInit(void)
         {
             s_CfgRoomCache = SDL_atoi(e);
             if (s_CfgRoomCache < 0 || s_CfgRoomCache > 2) s_CfgRoomCache = 0;
-            portRoomCacheSetMode(s_CfgRoomCache);
         }
+        portRoomCacheSetMode(s_CfgRoomCache); /* FORK-058 prototype: also when the ini has no room_cache */
         e = getenv("GE_TRIHOIST");
         if (e != NULL)
         {

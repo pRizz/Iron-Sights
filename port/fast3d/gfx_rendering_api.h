@@ -118,9 +118,14 @@ struct GfxRenderingAPI {
      * scene, back = shade for directions behind the camera, fov_y in degrees,
      * blur = extra mip blur factor (1 = none), flip = sample the copy upside
      * down, smooth = share of the new frame blended into the previous map
-     * (1 = rebuild each time), key = the weapon (a new key starts fresh).
+     * (1 = rebuild each time), key = the weapon (a new key starts fresh),
+     * source 1 = sample the level cube (env_cube_*) instead of the screen,
+ * hue 0..1 = how much of the scene's own colour tints the metal (0 = light
+ * and dark only), mirror 0..1 = the share of the scene itself in the
+ * metal's average colour rather than as light and dark on its pattern.
      * env_end: back to the authored texture. NULL on backends without it. */
-    void (*env_begin)(float mix, float gain, float back, float fov_y, float blur, int flip, float smooth, int key);
+    void (*env_begin)(float mix, float gain, float back, float fov_y, float blur, int flip, float smooth, int key,
+                      int source, float hue, float mirror);
     void (*env_end)(void);
     /* FORK-058, Gun Glint (gfx_glint.inl): draw triangles additively
      * over the current target, depth tested (LEQUAL) but not written, lit per
@@ -128,6 +133,14 @@ struct GfxRenderingAPI {
      * as the batch emitted them, camera-space position, face normal, light
      * direction, strength, power. NULL on backends without it. */
     void (*glint_draw)(const float* buf, size_t vertex_count);
+    /* FORK-058 prototype, the level cube (gfx_envcube.inl): env_cube_begin binds
+     * and clears (to the sky colour) a 3x2 atlas of size x size faces, saving
+     * the target; env_cube_face confines the next draws to face 0..5 (call it
+     * after any viewport change); env_cube_end builds its mips and restores the
+     * target, writing the atlas to dump (a BMP path) when set. */
+    void (*env_cube_begin)(int size, float r, float g, float b);
+    void (*env_cube_face)(int face);
+    void (*env_cube_end)(const char* dump);
 };
 
 #endif

@@ -32,7 +32,8 @@ new areas. Status describes implementation state, not Git publication state.
 
 ### FORK-058 — Richer Reflections and Gun Glint: shinier weapon metal
 
-**Status:** Implemented in all builds (2026-11-07, extended 2026-11-08);
+**Status:** Implemented in all builds (2026-11-07, extended twice 2026-11-08:
+scene reflection and Gun Glint, then the level reflection and the glint fix);
 Windows built and tested, Linux and browser not built locally. The owner
 play-tested each part: a gentle contrast curve suits the speckled gold guns
 and the silver guns look best without it (2026-11-07); the scene reflection
@@ -78,7 +79,42 @@ adjust them like any other.
   dark; unsmoothed and less blurred, it flickered as the player moved
   (frame-to-frame change of the reflection while walking in Facility:
   median 19.5 / 255 before, about 6-9 after). It can only show what is on
-  screen, so walking straight changes it little.
+  screen, so walking straight changes it little; the level reflection below
+  replaces it by default.
+- **Level reflection** (candidate 4, `port/fast3d/gfx_envcube.inl`; owner
+  play-tested 2026-11-08: "decently better"). At each shiny span the backend
+  renders the level around the camera into a cube (six camera-aligned 128x128
+  faces in a 3x2 atlas, cleared to the level's fog/sky colour sent with G_NOOP
+  `0x60`), and the warp pass samples it instead of the screen copy, so the
+  guns reflect walls passing by and what is behind the player. The cube draws
+  the room cache's retained GPU buffers (`gfx_roomcache.inl`), skipping
+  translucent and lit draws; props, characters and rooms not yet seen are
+  missing. GoldenEye loads the camera's rotation and position with the
+  perspective into the projection matrix (`bondview2.c`) and gives each room
+  only its offset as modelview, so `roc_env_note` splits the camera out of the
+  projection (which also yields the game's near and far planes) and keeps each
+  room's placement in one reference space, rebuilt with the current camera.
+  With `room_cache = 0` (the PC default), Richer Reflections puts the cache in
+  an internal capture-only mode 3 (`roc_hooks.c` `portRoomCacheSetMode`, also
+  called at boot and when the setting changes in `video.c`; a
+  `headless_stubs.c` answer for builds without a renderer): rooms are recorded
+  once and never replayed, model parts do not register, and the frame draws as
+  before (outside the gun, the hip view matched the screen-copy run pixel for
+  pixel; replay mode 2 changed hundreds of thousands of level pixels). The
+  render-side switch is `roc_env_only` in `gfx_pc.cpp`'s cache dispatch.
+  Debug build cost: CPU 0.27-0.35 ms per cube on Facility and 0.58-0.90 ms on
+  Dam, GPU 0.06-0.18 ms (`GE_ENVCUBE_TIME=1`; `GE_ENVCUBE_DUMP=n` writes the
+  n-th atlas). Nothing limits the room count yet, so the cost grows as a
+  level is explored. `map = 0` returns to the screen copy.
+- **Reflection colour** (both sources). The first play-test found the blue
+  sky on the gold guns uncanny: the scene multiplied the metal per channel.
+  The scene now contributes only brightness (`screen_hue` 0; 1 restores its
+  colours), and half of it (`screen_mirror` 0.5) shows as the scene itself in
+  the metal's average colour (a 4x4-tap mean of the authored image) rather
+  than as light and dark on the pattern, which near-white silver images had
+  clipped and their stripes hid. On Dam, turning the scene on changes the
+  Silver PP7 about as much as the Golden Gun (mean 31-32 vs 33-44 per changed
+  pixel).
 - **Gun Glint** (`port/fast3d/gfx_glint.inl`). The ordinary guns, PP7 to
   sniper rifle (`ITEM_WPPK`..`ITEM_SNIPERRIFLE`, less `glint_skip`), are
   prelit (no vertex normals) and their metal is nearly black, and the game
@@ -95,6 +131,17 @@ adjust them like any other.
   (`port_native_arms.c`) and the native hand pass (`model.c`, two calls in the
   existing `#ifndef TARGET_N64` code beside `portPartCacheEmit`). A value per
   face washed whole faces grey and was replaced by the per-pixel pass.
+  Fixed 2026-11-08 after the owner saw a layer over the AR33's sight: the pass
+  drew whole triangles, so the rear sight's transparent hole brightened by
+  about 14/255, and in ADS a sloped face towards the eye nearly doubled in
+  brightness over the sight picture. Images with any see-through texel
+  (alpha below 128) no longer count as metal, blended and cutout draws
+  (`use_alpha`) take no glint, and the glint fades as (1 - ADS blend)^2,
+  gone at full ADS (G_NOOP `0x62` carries `portAdsBlend()` from
+  `port_shiny.c`). An audit of every gun (Facility, hip, mid-raise and ADS,
+  glint on vs off, before and after) found the AR33 sight the only see-through
+  overlap; the hip glint is unchanged on every other gun except the DD44, whose
+  71-pixel glint went with its image's transparent texels.
 
 - **Span.** `portShinyWeaponTag` (`port/src/port_shiny.c`) brackets the
   first-person weapon draw with G_NOOP `0x5E` (item in the low byte, 0 =
@@ -112,7 +159,9 @@ adjust them like any other.
   floor-tile darkening kept, below), `coverage` (reflection coordinate scale),
   `sweep` (shift with camera yaw and pitch), `drift` (constant shift, like the
   intro logo's spin), `sharp` (no mip chain on the reflection), `bloom` (0 off,
-  1 subtle, 2 ludicrous, with `bloom_threshold` and `bloom_strength`) and `log`
+  1 subtle, 2 ludicrous, with `bloom_threshold` and `bloom_strength`), the
+  scene reflection's `screen*` keys, `map`, `screen_hue`, `screen_mirror`, the
+  glint's `glint*` keys and `log`
   (or `GE_SHINY_LOG`: draw state on stderr). Coverage, sweep and drift fold
   coordinates with a triangle wave instead of clamping. Documented in
   `tools/midas_ini_help.txt`. These keys are not midas.ini options, so they
@@ -195,10 +244,9 @@ recorded with their trade-offs in the
 (2026-11-07). The position sway and the sky/floor-light tint were built and
 play-tested on 2026-11-08; the owner rejected the sway as unrealistic at every
 speed tried, and both were archived unmerged on the `archive/shiny-walk-sway`
-branch (`d973a2c`). The scene reflection (candidate 3a) shipped instead. A
-feasibility spike for candidate 4 (a cube map rendered from the room cache)
-found it workable with four fixes; its debug hook is not in the repository and
-the findings are in the candidates plan.
+branch (`d973a2c`). The scene reflection (candidate 3a) shipped instead, then
+candidate 4, the level reflection above, after a feasibility spike and a
+play-tested prototype (findings in the candidates plan).
 
 **Sources:** [tag](port/src/port_shiny.c) with its
 [header](port/include/port_shiny.h), [draw hook](src/game/gunfire.c),
@@ -206,6 +254,8 @@ the findings are in the candidates plan.
 [renderer](port/fast3d/gfx_pc.cpp) and [API globals](port/fast3d/gfx_api.h),
 [cache key](port/fast3d/gfx_pc.h), [bloom](port/fast3d/gfx_bloom.inl),
 [scene reflection](port/fast3d/gfx_screen_env.inl), [glint pass](port/fast3d/gfx_glint.inl),
+[level cube](port/fast3d/gfx_envcube.inl) with its [room cache hook](port/fast3d/gfx_roomcache.inl),
+[capture mode](port/src/roc_hooks.c) and [headless stub](port/src/headless_stubs.c),
 [backend](port/fast3d/gfx_opengl.cpp), [backend API](port/fast3d/gfx_rendering_api.h),
 [sleeve bracket](port/src/port_native_arms.c), [hand bracket](src/game/model.c),
 the [wardrobe test stub](scripts/port/test_wardrobe.c),
@@ -235,6 +285,17 @@ The Options folder's System sheet was captured with both rows and Gun Glint's
 help line. The regressions above, settings placement and the standards check
 pass again. Not run: the watch page captured (the level fly-in needs input),
 the Linux and browser builds, every level, and a long play session.
+Level reflection and glint fix (2026-11-08): cube atlases dumped and reviewed
+on Facility and Dam; hip and ADS captures of the Golden Gun, Silver PP7 and
+Cougar Magnum compared against the screen copy and the earlier colour mix; the
+all-guns glint audit above; the owner play-tested the level reflection and
+colour mix in the Windows build (the glint fix was not play-tested before
+shipping). `test_wardrobe.sh`, `test_ads.sh`, `test_hud.sh`,
+`test_upstream_merge.sh`, `settings_placement.py` and `bright-builds-check.ts
+all` pass; the regenerated gallery changed only the ADS images of the PP7,
+AK47 and Klobb (36 images), every changed pixel darker and the counts equal to
+the earlier ADS glint (1,956, 6,432 and 3,286) in all six wardrobes, and it
+verifies.
 
 ### FORK-057 — Shader prewarm list recorded over the fork's screens
 

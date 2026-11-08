@@ -22,8 +22,8 @@ const char kFile[] = "shiny_weapons.ini";
  * on the gold guns only; every other knob neutral. */
 const Tuning kDefaults = { -1.0f, 1.0f, 1.0f, 0.5f, 0.4f, 0.0f, 1.0f, 0.0f, 0.0f,
                            false, false, 0, -1.0f, 1.0f, true, false,
-                           0.5f, 1.0f, 0.85f, 60.0f, 8.0f, false, 0.2f, true,
-                           0.25f, 64.0f, 12.0f, 0u };
+                           0.5f, 1.0f, 0.85f, 60.0f, 8.0f, false, 0.2f, true, 128,
+                           0.25f, 64.0f, 12.0f, 0u, 0.0f, 0.5f };
 Tuning s_tuning = kDefaults;
 std::string s_text;
 unsigned s_frame;
@@ -69,6 +69,9 @@ void parse(const std::string &text, Tuning &t)
         else if (key == "screen_flip") t.screen_flip = v != 0.0f;
         else if (key == "screen_smooth") t.screen_smooth = v < 0.01f ? 0.01f : (v > 1.0f ? 1.0f : v);
         else if (key == "silver_screen") t.silver_screen = v != 0.0f;
+        else if (key == "screen_hue") t.screen_hue = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+        else if (key == "screen_mirror") t.screen_mirror = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+        else if (key == "map") t.map = v <= 0.0f ? 0 : (v < 16.0f ? 16 : (v > 512.0f ? 512 : (int)v));
         else if (key == "glint") t.glint = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
         else if (key == "glint_power") t.glint_power = v < 1.0f ? 1.0f : (v > 256.0f ? 256.0f : v);
         else if (key == "glint_sat") t.glint_sat = v < 0.0f ? 0.0f : (v > 255.0f ? 255.0f : v);
@@ -214,7 +217,8 @@ bool screen(Screen *out)
     const Tuning &t = s_tuning;
     if (!gfx_shiny_weapons || t.screen <= 0.0f) return false;
     *out = Screen{ t.screen, t.screen_gain, t.screen_back, t.screen_fov, t.screen_blur, t.screen_smooth,
-                   t.screen_flip ? 1 : 0 };
+                   t.screen_flip ? 1 : 0, t.map, t.screen_hue,
+                   t.screen_mirror };
     return true;
 }
 
@@ -245,3 +249,10 @@ bool bloom(Bloom *out)
 }
 
 } // namespace gfx_shiny
+
+/* roc_hooks.c (sim thread), prototype: whether the level reflection wants the
+ * room cache's capture-only mode. Reads the knob without reloading the file. */
+extern "C" int gfx_shiny_level_cube(void)
+{
+    return gfx_shiny_weapons && gfx_shiny::s_tuning.map > 0;
+}

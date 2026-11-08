@@ -10,7 +10,7 @@ turning its section into a plan with milestones, and update this table.
 | 2. Sky and floor-light tint | A day | Tried with 1, archived with it (not judged on its own) |
 | 3a. Sphere map built from the screen | Days | Shipped 2026-11-08 (FORK-058 Richer Reflections) |
 | 3. Screen-space reflections from the last frame | Days | Candidate; 3b if 3a is too soft |
-| 4. Live environment capture at the player | Weeks | Spike done 2026-11-08: feasible, four fixes needed (below) |
+| 4. Live environment capture at the player | Weeks | Shipped 2026-11-08 as the level reflection (FORK-058) |
 | 5. Baked reflection probes across a mission | Weeks to months | Candidate, depends on 4 |
 
 ## Why the stock reflection ignores walking
@@ -148,9 +148,58 @@ and dumps them.
 - Timing: 8-12 ms for six faces, but that included reading them back and
   writing files; the render cost alone is still unmeasured.
 
-Next, if pursued: per-room placement, sky clear, captured constants, then
-time six faces without the dump and feed the cube into 3a's warp pass in
-place of the screen copy.
+**Prototype, then shipped (2026-11-08; the owner play-tested it twice and
+called the second round "decently better").**
+`port/fast3d/gfx_envcube.inl` renders the cube at each shiny weapon span, and
+3a's warp pass samples it in place of the screen copy (`shiny_weapons.ini`
+`map` = face size, default 128; `0` = the shipped screen copy).
+
+- Placement: GoldenEye's room modelview is only the room's offset. The
+  camera's rotation and position ride in the projection (`bondview2.c`
+  multiplies them into the matrix loaded with `G_MTX_PROJECTION`). The first
+  attempt read the modelview as the whole view and drew the rooms
+  world-aligned from the wrong place, so Facility's vent showed as distant
+  duct pieces. `roc_env_note` now splits the rotation and translation out of
+  the projection, which also yields the game's near and far planes
+  (Facility 10 / ~5000, Dam 5 / ~15000). Each room's placement is kept in one
+  reference space and rebuilt with the current camera.
+- Capture without changing the frame: with `room_cache = 0`, Richer
+  Reflections sets the cache to capture-only mode 3 (`roc_hooks.c`). Rooms
+  are recorded once as GPU buffers but always drawn by the interpreter, and
+  no model parts register. The hip view is identical to the screen-copy run
+  outside the gun. Mode 2 changed hundreds of thousands of level pixels.
+  Switching the render-side mode at run time alone did nothing: the sim side
+  only emits room markers while its own mode is on.
+- Sky: faces clear to the level's fog/sky colour (G_NOOP 0x60 from
+  `port_shiny.c`). Fog and constants are the frame's.
+- Results: Facility's cube encloses the vent on all sides, with the shaft
+  overhead; Dam's shows cliffs, the striped road and blue sky across
+  continuous seams. On Dam the gold gun's upper faces now pick up the sky,
+  which the screen copy could not show.
+- Cost (Debug build, ADS audit): CPU 0.27-0.35 ms per cube on Facility
+  (5 rooms, 8 draws), 0.58-0.90 ms on Dam (11 rooms, 44 draws) after
+  applying each draw's state once for all six faces; GPU 0.06-0.18 ms.
+  `GE_ENVCUBE_TIME=1` logs both.
+- A crash on leaving a level (stale texture nodes once the stage unloaded)
+  was fixed by validating every draw's textures and skipping the cube outside
+  levels.
+- Owner's first play-test: better, but the blue sky on the gold guns looked
+  uncanny. The reflection multiplied the authored image by the scene per
+  colour channel, so the sky's colour tinted the metal. `screen_hue` (default
+  0) now uses only the scene's brightness: gold reflects in gold and silver in
+  silver; 1 restores the scene's colours. The owner also saw the gold gun's
+  reflection follow their walking but not the silver guns'. Measured on Dam,
+  the scene reflection reaches all four guns at similar strength (turning it on
+  changed the Silver PP7's pixels by a mean of 31-32, the Golden Gun's by
+  33-44). The silver images are near white with strong stripes, so
+  brightening clipped and the stripes hid the rest, and on gold most of the
+  visible change had been the sky's colour. `screen_mirror` (default 0.5)
+  shows that share of the scene itself in the metal's average colour (a
+  4x4-tap mean of the authored image) rather than only as light and dark on
+  its pattern. Both knobs also apply to the screen copy (`map = 0`).
+- Open: translucent and lit room draws, props and characters are not in the
+  cube; rooms never seen show sky; the room count, and so the cost, grows as
+  the player explores (no distance limit yet).
 
 ## 5. Baked reflection probes across a mission
 
