@@ -19456,6 +19456,11 @@ s32 portMenuPickListOpen(void)
 
 
 #ifndef TARGET_N64
+extern int portIconStagePending(void);     /* weapon_cache.cpp (FORK-019) */
+extern void portIconStageBegin(void);
+extern int portIconStageIsCurrent(void);
+extern void portIconStageFrontTick(void);
+
 /* GE_STAGE=<name|LEVELID> [GE_DIFF=0..3]: debug launch straight into a solo
  * mission, skipping every menu (e.g. GE_STAGE=frigate). Uses the ramrom demo
  * launch recipe (folder + difficulty + briefing + jump to MENU_RUN_STAGE),
@@ -19492,6 +19497,12 @@ static void portDirectLaunchTick(void)
     {
         const char *e = getenv("GE_STAGE");
         state = 2;
+        if ((e == NULL || e[0] == '\0') && portIconStagePending())
+        {   /* FORK-019: the in-process icon stage plays Dam before the title */
+            stage = LEVELID_DAM;
+            state = 1;
+            return;
+        }
         if (e != NULL && e[0] != '\0')
         {
             if (e[0] >= '0' && e[0] <= '9')
@@ -19539,7 +19550,7 @@ static void portDirectLaunchTick(void)
         {
             const char *a = getenv("GE_STAGE_AFTER");
 
-            after = 120;
+            after = portIconStagePending() ? 1 : 120;
 
             if (a != NULL && a[0] >= '0' && a[0] <= '9')
             {
@@ -19570,6 +19581,7 @@ static void portDirectLaunchTick(void)
         selected_folder_num = FOLDER1;
         set_selected_difficulty(diff);
         set_solo_and_ptr_briefing(stage);
+        portIconStageBegin();
         frontChangeMenu(MENU_RUN_STAGE, TRUE);
         printf("ge: GE_STAGE direct launch: levelid=%d diff=%d\n", stage, diff);
     }
@@ -20083,6 +20095,7 @@ void menu_init(void)
             portPlayerOptsApplyOnce();
         }
     }
+    portIconStageFrontTick();   /* FORK-019: the icon stage is over once menus tick */
     portDirectLaunchTick();
     portDirectLaunchMpTick();
     portDirectLaunchDemoTick();
@@ -20367,7 +20380,12 @@ void menu_init(void)
 #ifdef GE_VIDEO
             frontStageRunningMouseReset();   /* the menu after the stage gets its entry snap */
 #endif
+#ifndef TARGET_N64
+            /* the in-process icon stage ends as an attract demo does */
+            if (interface_menu0B_runstage() || portIconStageIsCurrent())
+#else
             if (interface_menu0B_runstage())
+#endif
             {
 #ifndef TARGET_N64
                 port_credits_roll = FALSE;   /* a credits roll that ended here never reaches the cast parade */

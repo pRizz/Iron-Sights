@@ -56,6 +56,7 @@ static void portWebPrepareShadersParallel(unsigned total) {
  * behind browser loading progress instead of stalling every visible logo frame.
  * Without the extension each program still completes before the next yield.
  * Desktop retains its incremental prewarm and its current frame scheduling. */
+extern "C" int portIconStagePending(void); /* weapon_cache.cpp */
 extern "C" void portWebPrepareShaders(void) {
     if (ge_prewarm_on < 0) gfx_shader_prewarm_load();
     const unsigned total = (unsigned)ge_prewarm_ids.size();
@@ -70,5 +71,7 @@ extern "C" void portWebPrepareShaders(void) {
     }
     printf("ge: web: startup shader preparation complete (%u programs, %s, %llu ms)\n",
            (unsigned)ge_prewarm_next, parallel ? "parallel" : "sequential", (portProfNow() - t0) / 1000);
-    portWebStartupProgress("Starting GoldenEye", 0, 0);
+    /* FORK-019: an icon stage armed for this boot is the next step shown */
+    if (portIconStagePending()) portWebStartupProgress("Preparing weapon icons", 0, 38);
+    else portWebStartupProgress("Starting GoldenEye", 0, 0);
 }

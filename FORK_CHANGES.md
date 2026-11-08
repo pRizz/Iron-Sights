@@ -4720,6 +4720,57 @@ state. This prevents the pistol depth-layer restoration from changing icon
 occlusion. A fresh 35-image preparation after the wrist skin-mapping fix matched
 the preceding version-6 cache byte-for-byte; no cache version change is needed.
 
+**In-process icon stage for the web player (2026-11-07).** The browser
+cannot start a worker process, so a web launch without a cache prepares the
+icons inside the game, behind the startup screen. `portIconCacheInit` arms the
+stage (the cache now lives in the persistent `/user/Data/Cache`); the front
+end's direct launcher (`portDirectLaunchTick`) plays Dam in place of the boot
+sequence; export mode (`portWeaponExportEnabled`) is on for that stage only, so
+the worker's hooks (8-frame schedule, intro, swirl and world skips) apply
+unchanged and no cheats are needed (a worker without `GE_CHEATS` wrote a
+byte-identical cache). `gfx_pc.cpp` treats the window as 2048x1536 (4:3) and
+renders single-sampled into the game framebuffer for the stage, so a canvas of
+any shape, widescreen, low resolution or MSAA settings change nothing: earlier
+attempts leaked the window's aspect into the tank (a world prop drawn through
+the game's widened projection) and clipped it. Each tagged frame is read back
+as RGBA (`gfx_opengl_read_framebuffer_rgb`; WebGL guarantees no RGB read)
+before presenting. Failures end the stage instead of exiting. When the last
+image is recovered the cache is written and, from the game thread
+(`portIconStageTick`; captures may arrive on a render thread), the stage fades
+out the attract demos' way (`ramromFadeToTitle`); `MENU_RUN_STAGE` then routes
+to the legal screen as for a demo (`portIconStageIsCurrent`, asked as the
+stage starts) and the boot sequence runs normally. The first front-end tick
+after the stage ends it, also when it ended early (counted as failed); it gives
+up after 60 s. Audio output is muted during it. The web wrapper shows a new
+startup step, **Preparing weapon icons** (0-38), between graphics and the
+start, waits in `engine.start()` while `_portWebIconStageBusy()` (at most
+90 s), and persists the cache with the saves but keeps it out of backups
+(`icon-cache-paths.ts`). Natively `GE_ICON_STAGE=1` runs the same stage for
+testing. Checks: natively the stage took 4.6-4.7 s at default settings; its
+caches were byte-identical across 1280x720, 1280x960 and 2048x1536 windows and
+the player's defaults (widescreen, MSAA, threaded rendering) and within 0.1/255
+of the worker's (sub-pixel edge differences on the rocket launcher, not
+visible); the campaign EEPROM it leaves is byte-identical to a launch without
+the stage; screenshots show the legal screen, logos, gun barrel and title
+after it. `web/tools/icon-stage-audit.mjs` (private, actual ROM, Chrome): the
+first launch showed Preparing graphics > Preparing weapon icons > Starting
+GoldenEye, the stage took 12.8-15.7 s, a 12,779,712-byte cache reached
+`/user/Data/Cache`, a reload reused it without the step (2.7-5.0 s to start)
+and the first Dam mission latched the icons (the strip shows them). Web unit
+tests (222), TypeScript, site verification, the startup, launcher, room,
+storage, filesystem, touch and sampler audits, the touch and logo bridges and
+the menu-pointer test pass; the startup audits now count seven steps. Not
+checked: Safari and Firefox, phones, and the browser's 12.7 MB of IndexedDB on
+a low-quota device.
+The native worker process code (its settings, child process, lock and
+leftover-folder cleanup) moved out of `weapon_cache.cpp` into
+`port/fast3d/weapon_worker.cpp` (`weapon_worker::withLock`, `removeStale`,
+`generate`), keeping the cache file under the file-length limit; after the
+move the forced worker and background preparation still wrote caches
+byte-identical to the baseline, the in-process stage its own, and none left a
+worker folder. The private browser audit is `bun run audit:icon-stage <rom>
+<out> <origin>` (`web/tools/icon-stage-audit.mjs`).
+
 **Background preparation (2026-11-07).** A launch without a cache no longer
 waits: `portIconCacheInit` starts an SDL thread that takes the cache lock,
 removes `worker-*` folders a launch that quit mid-preparation left behind,
@@ -4804,7 +4855,7 @@ SIGTERM, then SIGKILL. The worker settings,
 replay and log copy are now shared by both branches
 (`kWorkerIni`, `kWorkerReplay`, `kWorkerEnv`, `showProgress`, `keepLog`).
 
-**Sources:** [cache](port/fast3d/weapon_cache.cpp),
+**Sources:** [cache](port/fast3d/weapon_cache.cpp), [worker](port/fast3d/weapon_worker.cpp),
 [format](port/include/port_icon_cache_format.h),
 [capture](port/fast3d/gfx_sdl2.cpp), [renderer](port/fast3d/gfx_pc.cpp),
 [startup](port/src/main.c), [HUD](port/src/port_hud.c),

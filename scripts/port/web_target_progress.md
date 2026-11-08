@@ -623,6 +623,19 @@ WEB-006 compatibility and mission/effect coverage.
 
 ## WEB-006 | 2026-10-24 | Browser compatibility and polish
 
+**Weapon strip icons in the browser, 2026-11-07:** The first launch with a
+cartridge now prepares the weapon strip icons inside the game before the
+title (FORK-019's in-process icon stage), as a seventh startup step, Preparing
+weapon icons, with 0-38 progress; the cache persists in IndexedDB with the
+saves but stays out of backups, and later launches skip the step. The startup
+audits count seven steps. Evidence: a private actual-ROM Chrome audit
+(`bun run audit:icon-stage <rom> <out> <origin>`; first launch 12.8-15.7 s of
+icon stage, reload without it, icons in the first Dam mission), 222 web tests,
+TypeScript, site verification and the startup, launcher, room, storage,
+filesystem, touch and sampler audits. Next action: measure the step in Safari
+and Firefox and on a phone; if it is too slow there, consider spreading alpha
+recovery across frames.
+
 **Game context menu, 2026-10-31:** Right-click still reaches the native main
 menu's back action while the browser context menu is canceled on the game
 stage and Files transfer targets. The surrounding page retains normal browser

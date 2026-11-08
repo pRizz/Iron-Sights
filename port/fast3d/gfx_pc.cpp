@@ -52,6 +52,9 @@ extern "C" void gfx_opengl_web_sampler_sync(void);
 
 #include "port_icon_cache.h"
 static const uint8_t *gfx_weapon_image(int item) { return portIconPixels(item); }
+/* FORK-019: the in-process icon stage's render size, the worker's window */
+#define GE_ICON_STAGE_WIDTH 2048u
+#define GE_ICON_STAGE_HEIGHT 1536u
 
 uintptr_t gfxFramebuffer;
 
@@ -432,6 +435,7 @@ static uint32_t gfx_ge_con2d_saved_w, gfx_ge_con2d_saved_h;
 static float gfx_ge_con2d_saved_aspect;
 static void gfx_ge_con2d_set(uint32_t w, uint32_t h);
 static void gfx_present_game_fb(void);
+static void gfx_icon_stage_capture(void); /* FORK-019 */
 uint32_t gfx_low_res = 0; /* GE "Low Res": render the whole game at 240 lines
                            * and scale to the window at present; video.c
                            * [display] low_res drives it, gfx_start_frame
@@ -8225,11 +8229,26 @@ extern "C" void gfx_start_frame(void) {
     const bool intro_logo = gfx_intro_logo_req.load() != 0 && gfx_framebuffers_enabled; /* FORK-054 */
     gfx_msaa_level = (gfx_line_mode || intro_logo) ? std::max<uint32_t>(gfx_msaa_user, 4u) : gfx_msaa_user;
     gfx_n64_aa = gfx_line_mode ? 1u : gfx_n64_aa_user;
+    /* FORK-019: the in-process icon stage captures single-sampled frames */
+    const bool icon_stage = portIconStageActive() && gfx_framebuffers_enabled;
+    if (icon_stage) {
+        gfx_msaa_level = 1;
+        gfx_n64_aa = 0;
+    }
     if (!gfx_async_mode) { /* async: the main thread pumps events via gfx_poll_events */
         gfx_wapi->handle_events();
     }
     gfx_wapi->get_dimensions(&gfx_current_window_dimensions.width, &gfx_current_window_dimensions.height,
                              &gfx_current_window_position_x, &gfx_current_window_position_y);
+    /* FORK-019: the in-process icon stage renders as if the window were the
+     * worker's 2048x1536 (4:3), whatever the real one (a browser canvas), so
+     * no aspect handling - pillarbox, widescreen projection, 2D pins - differs
+     * from the worker's; it draws to the game framebuffer (below), and what
+     * reaches the hidden window does not matter. */
+    if (icon_stage) {
+        gfx_current_window_dimensions.width = GE_ICON_STAGE_WIDTH;
+        gfx_current_window_dimensions.height = GE_ICON_STAGE_HEIGHT;
+    }
 
     if (gfx_current_window_dimensions.height == 0) {
         // Avoid division by zero
@@ -8273,7 +8292,7 @@ extern "C" void gfx_start_frame(void) {
     /* Low Res setting is a line count: 240 "HW" (the original setting), 480,
      * 720, 1080, or 0 for the window's own resolution. It is only ever a
      * downscale, so a window shorter than the setting renders at the window. */
-    if (gfx_low_res != 0 && gfx_framebuffers_enabled && gfx_current_window_dimensions.height > gfx_low_res) {
+    if (gfx_low_res != 0 && gfx_framebuffers_enabled && !icon_stage && gfx_current_window_dimensions.height > gfx_low_res) {
         const uint32_t lines = gfx_low_res;
         uint32_t w = (uint32_t) std::lround((float) lines * gfx_current_window_dimensions.aspect_ratio);
         w &= ~1u; /* even width keeps the blit clean */
@@ -8310,7 +8329,7 @@ extern "C" void gfx_start_frame(void) {
 
     bool different_size = gfx_current_dimensions.width != gfx_current_game_window_viewport.width ||
                           gfx_current_dimensions.height != gfx_current_game_window_viewport.height;
-    if (gfx_framebuffers_enabled && (different_size || gfx_msaa_level > 1)) {
+    if (gfx_framebuffers_enabled && (different_size || gfx_msaa_level > 1 || icon_stage)) {
         game_renders_to_framebuffer = true;
         if (different_size) {
             /* opengl_invert_y = FALSE: invert_y flips rendered geometry per
@@ -8428,6 +8447,7 @@ extern "C" void gfx_run(Gfx* commands) {
     }
 
     gfx_ge_con2d_set(0, 0);   /* whatever the list left: the frame's own space */
+    gfx_icon_stage_capture();
     if (game_renders_to_framebuffer) {
         gfx_present_game_fb();
     }
@@ -8461,6 +8481,25 @@ extern "C" void gfx_run(Gfx* commands) {
             }
         }
     }
+}
+
+/* FORK-019: an in-process icon stage frame tagged for capture is read from
+ * the frame it rendered into (the 2048x1536 game framebuffer, or the window
+ * when that is the same size) before it is presented; the worker process
+ * reads its window instead (gfx_sdl2.cpp). */
+extern "C" void gfx_opengl_read_framebuffer_rgb(int fb_id, uint32_t width, uint32_t height, uint8_t* rgb);
+static void gfx_icon_stage_capture(void) {
+    extern int ge_weapon_icon_capture; /* gfx_sdl2.cpp */
+    const int capture = ge_weapon_icon_capture;
+    if (capture == 0 || !portIconStageActive()) {
+        return;
+    }
+    ge_weapon_icon_capture = 0;
+    const uint32_t w = gfx_current_dimensions.width, h = gfx_current_dimensions.height;
+    static std::vector<uint8_t> rgb;
+    rgb.resize((size_t) w * h * 3);
+    gfx_opengl_read_framebuffer_rgb(game_renders_to_framebuffer ? game_framebuffer : 0, w, h, rgb.data());
+    portIconWorkerCapture(capture >> 8, capture & 15, (int) w, (int) h, rgb.data());
 }
 
 /* the framebuffer-rendered frame onto the window: at the frame's end, or early

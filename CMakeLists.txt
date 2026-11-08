@@ -407,6 +407,7 @@ if(GE_VIDEO)
     set(FAST3D_SRC
         port/fast3d/about.cpp
         port/fast3d/weapon_cache.cpp
+        port/fast3d/weapon_worker.cpp
         port/fast3d/third_party/puff/puff.c
         ${OPEN_FONTS_DATA_SRC}
         port/fast3d/gfx_pc.cpp

@@ -23,15 +23,17 @@ test('every reported startup label maps to one stage in launch order', () => {
         'Preparing cartridge',
         'Opening cartridge',
         'Preparing graphics',
+        'Preparing weapon icons',
         'Starting GoldenEye',
         'Ready to play',
     ];
     const positions = order.map((label) => stageTrack(label)?.current);
-    expect(positions).toEqual([0, 0, 1, 2, 2, 3, 3, 3, 4, 5, 6]);
+    expect(positions).toEqual([0, 0, 1, 2, 2, 3, 3, 3, 4, 5, 6, 7]);
     expect(positions.every((value, index) => index === 0 || value! >= positions[index - 1]!)).toBe(
         true,
     );
-    expect(stageTrack('Preparing graphics')).toEqual({ current: 4, total: 6, name: 'Graphics' });
+    expect(stageTrack('Preparing graphics')).toEqual({ current: 4, total: 7, name: 'Graphics' });
+    expect(stageTrack('Preparing weapon icons')).toEqual({ current: 5, total: 7, name: 'Icons' });
 });
 
 test('the stage track hides for unknown or paused labels and caps its number when done', () => {

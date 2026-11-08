@@ -13,6 +13,7 @@
     "audit:runtime": "node tools/runtime-audit.mjs",
     "audit:menus": "node tools/menu-audit.mjs",
     "audit:launcher": "node tools/launcher-game-audit.mjs",
+    "audit:icon-stage": "node tools/icon-stage-audit.mjs",
     "audit:room-exit": "node tools/room-exit-audit.mjs",
     "audit:control": "node tools/control-transition-audit.mjs",
     "audit:startup": "node tools/startup-audit.mjs",

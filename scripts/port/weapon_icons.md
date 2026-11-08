@@ -13,7 +13,13 @@ mission start (`portIconCacheLatch`); a mission started earlier keeps weapon
 names throughout. `GE_ICON_CACHE_FORCE=1` prepares in the foreground instead
 (the review gallery needs that), and `GE_ICON_CACHE_BACKGROUND=1` lets a
 scripted run (`GE_FRAMES`, `GE_STAGE`) prepare in the background like a
-player's launch. The per-user SDL
+player's launch.
+
+The web player cannot start a worker: its first launch with a cartridge plays
+a short hidden Dam stage in export mode before the title, shown as **Preparing
+weapon icons** on the startup screen (about 13-16 s in desktop Chrome), and
+keeps the cache in `/user/Data/Cache` with the saves (not in backups).
+`GE_ICON_STAGE=1` runs that in-process stage natively. The per-user SDL
 application-data folder contains `weapon-icons-v9-<ROM fingerprint>.cache` and
 `last-preparation.log`. About shows readiness. Cache validation checks the ROM,
 generator version, dimensions, complete slot coverage, exact lengths and CRC.

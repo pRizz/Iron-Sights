@@ -22,6 +22,8 @@ export const STARTUP_STAGES = [
         labels: ['Checking saved cartridge', 'Preparing cartridge', 'Opening cartridge'],
     },
     { name: 'Graphics', labels: ['Preparing graphics'] },
+    // The first launch with a cartridge renders the weapon strip icons in place.
+    { name: 'Icons', labels: ['Preparing weapon icons'] },
     { name: 'Start', labels: ['Starting GoldenEye'] },
 ] as const;
 

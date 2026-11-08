@@ -1128,6 +1128,24 @@ static void gfx_opengl_upload_texture(const uint8_t* rgba32_buf, uint32_t width,
 
 /* gfx_pc.cpp's periodic check: drain the GL error flags and return the first,
  * or 0. One driver sync, so it is called every ~2 s, not per upload. */
+/* FORK-019: a framebuffer's colour as bottom-up RGB rows, read as RGBA (the
+ * only format WebGL guarantees) for the in-process icon stage. */
+extern "C" void gfx_opengl_read_framebuffer_rgb(int fb_id, uint32_t width, uint32_t height, uint8_t* rgb) {
+    static std::vector<uint8_t> rgba;
+    rgba.resize((size_t) width * height * 4);
+    GLint previous = 0;
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &previous);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, framebuffers[fb_id].fbo);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(0, 0, (GLsizei) width, (GLsizei) height, GL_RGBA, GL_UNSIGNED_BYTE, rgba.data());
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, (GLuint) previous);
+    for (size_t i = 0, n = (size_t) width * height; i < n; i++) {
+        rgb[i * 3 + 0] = rgba[i * 4 + 0];
+        rgb[i * 3 + 1] = rgba[i * 4 + 1];
+        rgb[i * 3 + 2] = rgba[i * 4 + 2];
+    }
+}
+
 extern "C" unsigned gfx_opengl_poll_gl_error(void) {
     GLenum first = GL_NO_ERROR;
     for (int n = 0; n < 16; n++) {

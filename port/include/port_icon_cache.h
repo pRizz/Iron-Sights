@@ -13,6 +13,20 @@ void portIconCacheLatch(void);
 const unsigned char *portIconPixels(int icon);
 const char *portIconCacheStatus(void);
 int portIconWorkerEnabled(void);
+/* The in-process icon stage (the web build; natively GE_ICON_STAGE=1): armed
+ * at boot when no cache exists, launched by front.c in place of the title,
+ * active while it renders in export mode; its stage then returns to the legal
+ * screen as an attract demo's does (portIconStageIsCurrent, asked as the
+ * stage starts), and the first front-end tick after it ends the stage. */
+int portIconStagePending(void);
+int portIconStageActive(void);
+void portIconStageBegin(void);
+int portIconStageIsCurrent(void);
+void portIconStageFrontTick(void);
+/* Game thread, from each export draw: starts the fade once the stage is done. */
+void portIconStageTick(void);
+/* From arming until the stage has returned to the legal screen. */
+int portIconStageBusy(void);
 void portIconWorkerCapture(int icon, int capture, int width, int height, const unsigned char *rgb);
 #ifdef __cplusplus
 }

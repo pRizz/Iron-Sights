@@ -1275,14 +1275,15 @@ void portAudioPump(void)
             extern s32 portVideoMuteUnfocused(void);
             extern s32 portInputWindowFocused(void);
             static s32 s_WasMuted;
-            const s32 mute = portVideoMuteUnfocused() && !portInputWindowFocused();
+            extern int portIconStageActive(void); /* weapon_cache.cpp: icons behind the startup screen */
+            const s32 mute = (portVideoMuteUnfocused() && !portInputWindowFocused()) || portIconStageActive();
 
             if (mute) {
                 memset(frameBuf, 0, samples * 4);
             }
             if (mute != s_WasMuted) {
                 s_WasMuted = mute;
-                portConLogf("ge: audio: %s\n", mute ? "muted (window lost focus)" : "unmuted");
+                portConLogf("ge: audio: %s\n", !mute ? "unmuted" : portIconStageActive() ? "muted (weapon icons)" : "muted (window lost focus)");
             }
         }
 

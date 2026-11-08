@@ -84,6 +84,12 @@ EMSCRIPTEN_KEEPALIVE u32 portWebGetGfxTasks(void)
     extern u32 g_PortGfxTasksSubmitted;
     return g_PortGfxTasksSubmitted;
 }
+/* FORK-019: the startup screen stays up while the in-process icon stage runs. */
+EMSCRIPTEN_KEEPALIVE s32 portWebIconStageBusy(void)
+{
+    extern int portIconStageBusy(void);
+    return portIconStageBusy();
+}
 EMSCRIPTEN_KEEPALIVE f32 portWebGetPlayerPosition(s32 axis)
 {
     if (axis < 0 || axis > 2 || !g_CurrentPlayer || !g_CurrentPlayer->prop) return 0;

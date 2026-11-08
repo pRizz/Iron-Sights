@@ -14,6 +14,7 @@
 #include "port_weapon_export.h"
 #include "port_wardrobe.h"
 #include "port_icon_cache_format.h"
+#include "port_icon_cache.h"
 
 /* Each image takes PORT_ICON_FRAMES frames: PORT_ICON_LEAD frames for the
  * model to settle (3 sufficed when measured; 2 failed the repeat check), then
@@ -32,7 +33,8 @@ s32 portWeaponExportEnabled(void)
 #ifdef GE_VIDEO
     static s32 enabled = -1;
     if (enabled < 0) enabled = getenv("GE_WEAPON_ICON_EXPORT") != NULL;
-    return enabled;
+    /* or the in-process icon stage, for its stage only (weapon_cache.cpp) */
+    return enabled || portIconStageActive();
 #else
     return 0;
 #endif
@@ -113,6 +115,7 @@ Gfx *portWeaponExportDraw(Gfx *gdl)
     extern Gfx *sub_GAME_7F0A6EE8(Gfx *gdl);
     extern GunModelFileRecord gitem_structs[];
     if (!portWeaponExportEnabled() || !g_CurrentPlayer) return gdl;
+    portIconStageTick();
     only = getenv("GE_WEAPON_ICON_ITEM");
     if (only) item = atoi(only);
     if (!only && item >= ITEM_TRIGGER) item++;

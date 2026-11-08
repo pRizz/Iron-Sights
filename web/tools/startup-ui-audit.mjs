@@ -48,7 +48,7 @@ try {
         timeout: 60_000,
     });
     await expect(crt).toHaveAttribute('data-room-loading-percent', '0');
-    await expect(crt).toHaveAttribute('data-room-loading-stage', '2/6');
+    await expect(crt).toHaveAttribute('data-room-loading-stage', '2/7');
     await expect(loading).toHaveCount(0);
     await page.screenshot({ path: resolve(output, 'download.png') });
     await page.keyboard.press('F2');
@@ -64,7 +64,7 @@ try {
         '',
         'Compilation invented a percentage',
     );
-    await expect(crt).toHaveAttribute('data-room-loading-stage', '3/6');
+    await expect(crt).toHaveAttribute('data-room-loading-stage', '3/7');
     await page.screenshot({ path: resolve(output, 'compiling.png') });
     await page.evaluate(() => globalThis.releaseStartupCompile());
     await expect(loading).toHaveCount(0, { timeout: 60_000 });

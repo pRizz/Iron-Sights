@@ -96,6 +96,14 @@ export function createEngine(pointerless: () => boolean = () => false) {
             if (status().kind === 'error') throw new Error('Game initialization failed');
             await new Promise(requestAnimationFrame);
         }
+        // Without an icon cache the game first renders the weapon strip icons
+        // in a short hidden stage (it reports 'Preparing weapon icons'). It
+        // ends that stage itself within a minute; never wait much longer.
+        const iconsDeadline = performance.now() + 90_000;
+        while (game._portWebIconStageBusy() && performance.now() < iconsDeadline) {
+            if (status().kind === 'error') throw new Error('Game initialization failed');
+            await new Promise(requestAnimationFrame);
+        }
         setStartup(undefined);
     }
 

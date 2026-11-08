@@ -81,10 +81,10 @@ function stageDrawing(label: string) {
 
 test('CRT stage track shows where the current stage sits in the whole startup', () => {
     const { text, styles } = stageDrawing('Preparing graphics');
-    expect(text).toContain('STAGE 5 OF 6');
+    expect(text).toContain('STAGE 5 OF 7');
     expect(text).toContain('GRAPHICS');
     const { green, gold, panel } = MISSION_THEME;
-    expect(styles).toEqual([green, green, green, green, gold, panel]);
+    expect(styles).toEqual([green, green, green, green, gold, panel, panel]);
     expect(stageDrawing('Ready to play').styles.every((style) => style === green)).toBe(true);
     expect(stageDrawing('Startup paused · resume below').styles).toHaveLength(0);
 });

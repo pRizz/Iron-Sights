@@ -38,6 +38,7 @@ export type GameModule = {
     _portWebTouchHasGadgets?(): number;
     _portWebCaptureMouse(): number;
     _portWebGetGfxTasks(): number;
+    _portWebIconStageBusy(): number;
     _portWebReturnToRoom(): void;
     _portWebFileMenuMetric(metric: number): number;
     _portWebGetFrames(): number;
