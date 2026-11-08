@@ -1,13 +1,17 @@
 import { expect, test } from 'bun:test';
-import { FAVICON_SOURCE, frontendFiles } from './frontend-files';
+import { ICON_SOURCES, frontendFiles } from './frontend-files';
 
-test('includes the explicit project icon and its HTML entry reference', () => {
-    const icon = 'assets/ProjectMidas-abc.ico';
+const [FAVICON, TOUCH_ICON] = ICON_SOURCES.map(({ source }) => source);
+
+test('includes the explicit launcher icons and their HTML entry references', () => {
+    const favicon = 'assets/favicon-abc.ico';
+    const touchIcon = 'assets/apple-touch-icon-abc.png';
     const manifest = {
-        [FAVICON_SOURCE]: { src: FAVICON_SOURCE, file: icon },
-        'index.html': { file: 'assets/main-abc.js', assets: [icon] },
+        [FAVICON]: { src: FAVICON, file: favicon },
+        [TOUCH_ICON]: { src: TOUCH_ICON, file: touchIcon },
+        'index.html': { file: 'assets/main-abc.js', assets: [favicon, touchIcon] },
     };
-    expect(frontendFiles(manifest)).toEqual([icon, 'assets/main-abc.js']);
+    expect(frontendFiles(manifest)).toEqual([favicon, touchIcon, 'assets/main-abc.js']);
 });
 
 test('rejects an icon reference without its explicit source record', () => {
@@ -15,19 +19,27 @@ test('rejects an icon reference without its explicit source record', () => {
         frontendFiles({
             'index.html': {
                 file: 'assets/main-abc.js',
-                assets: ['assets/ProjectMidas-abc.ico'],
+                assets: ['assets/favicon-abc.ico'],
             },
         }),
     ).toThrow();
 });
 
-test('rejects a favicon entry that disguises an unrelated source', () => {
+test('rejects an icon entry that disguises an unrelated source', () => {
     expect(() =>
         frontendFiles({
-            [FAVICON_SOURCE]: {
+            [FAVICON]: {
                 src: '../private.ico',
-                file: 'assets/ProjectMidas-abc.ico',
+                file: 'assets/favicon-abc.ico',
             },
+        }),
+    ).toThrow();
+});
+
+test('rejects an icon emitted under another icon name', () => {
+    expect(() =>
+        frontendFiles({
+            [TOUCH_ICON]: { src: TOUCH_ICON, file: 'assets/favicon-abc.ico' },
         }),
     ).toThrow();
 });
@@ -54,6 +66,7 @@ for (const path of [
     'assets/../file.js',
     'assets/file.js/extra',
     'assets/unapproved.ico',
+    'assets/apple-touch-icon-abc.png',
 ])
     test('rejects unsafe or non-code artifact ' + path, () => {
         expect(() => frontendFiles({ a: { file: path } })).toThrow();

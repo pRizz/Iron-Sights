@@ -1,16 +1,19 @@
-"""Regenerate the Steam library artwork shipped in the Steam Deck ZIP.
+"""Regenerate the Steam library artwork and the browser build's icons.
 
 Usage (from the repo root, with Pillow installed):
 
-    python scripts/port/make_steam_art.py
+    python scripts/port/make_steam_art.py [--icons-only]
 
-Writes scripts/port/linux/steam-art/{cover,banner,hero,logo}.png. The artwork is
-original: an iron-sight picture drawn from polygons and the Iron Sights title in
-Black Ops One (SIL Open Font License 1.1), downloaded from a pinned Google Fonts
-commit. Run it again after changing the design and commit the outputs; packaging
-only copies them, so the release container needs no Pillow.
+Writes scripts/port/linux/steam-art/{cover,banner,hero,logo}.png and
+web/icons/{favicon.ico,apple-touch-icon.png}; --icons-only skips the Steam art
+and its font download. The artwork is original: an iron-sight picture drawn from
+polygons and the Iron Sights title in Black Ops One (SIL Open Font License 1.1),
+downloaded from a pinned Google Fonts commit. The icons carry no text. Run it
+again after changing the design and commit the outputs; packaging and the web
+build only copy them, so neither needs Pillow.
 """
 from pathlib import Path
+import sys
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
@@ -18,6 +21,8 @@ from linux_build import download
 
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / "scripts/port/linux/steam-art"
+WEB_ICONS = ROOT / "web/icons"
+FAVICON_SIZES = (16, 32, 48)
 FONT_COMMIT = "d50a0d29b8b01a0a5d2cc7f6fd0fee1fbdbe4ce5"
 FONT_URL = f"https://raw.githubusercontent.com/google/fonts/{FONT_COMMIT}/ofl/blackopsone/BlackOpsOne-Regular.ttf"
 FONT_SHA256 = "282a825b5f294377387e3969f765408157dbea8da0f5d0aae68c6bc704b145b3"
@@ -121,6 +126,69 @@ def sight_picture(image, cx, tip, width):
         ImageDraw.Draw(image).ellipse((x - size, y - size, x + size, y + size), fill=color + (255,))
 
 
+def icon_art(size, detailed):
+    """Square sight picture for browser icons, framed close so the dots stay legible.
+
+    The favicon frame is a transparent rounded tile. The detailed frame is an opaque
+    full square, because iOS masks Home Screen icons itself and fills transparency black.
+    """
+    s = size * (1 if size >= 512 else 512 // size + 1)
+    image = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    tile = Image.new("L", (s, s))
+    if detailed:
+        tile.paste(255, (0, 0, s, s))
+    else:
+        ImageDraw.Draw(tile).rounded_rectangle((0, 0, s - 1, s - 1), radius=0.18 * s, fill=255)
+    paint(image, tile, gradient((s, s), (SKY_TOP, SKY_BOTTOM)))
+
+    cx, tip = s / 2, 0.40 * s
+    notch, depth = 0.26 * s, 0.20 * s
+    left, right, bottom = 0.06 * s, 0.94 * s, (0.86 if detailed else 0.84) * s
+    glow(image, (cx, tip), 0.55 * s, GLOW, 0.45 if detailed else 0.3)
+    glow(image, (cx, tip + 0.04 * s), 0.30 * s, GOLD_TOP, 0.55)
+
+    post = Image.new("L", (s, s))
+    ImageDraw.Draw(post).rectangle((cx - 0.035 * s, tip + 0.06 * s, cx + 0.035 * s, tip + depth), fill=255)
+    paint(image, post, POST)
+
+    blade = [(left, tip), (cx - notch / 2, tip), (cx - notch / 2, tip + depth), (cx + notch / 2, tip + depth),
+             (cx + notch / 2, tip), (right, tip), (right, bottom), (left, bottom)]
+    mask = Image.new("L", (s, s))
+    ImageDraw.Draw(mask).polygon(blade, fill=255)
+    clipped = Image.new("L", (s, s))
+    clipped.paste(mask, (0, 0), tile)
+    steel = gradient((s, s), (EDGE, STEEL_TOP, STEEL_BOTTOM) if detailed else (EDGE, STEEL_BOTTOM))
+    if detailed:
+        step, line = 0.035 * s, max(1, round(0.008 * s))
+        y = tip + depth + step
+        while y < bottom - step / 2:
+            ImageDraw.Draw(steel).line((left, y, right, y), fill=SLIDE_BOTTOM + (255,), width=line)
+            y += step
+    paint(image, clipped, steel)
+    if detailed:
+        ImageDraw.Draw(image).line(blade[:6], fill=EDGE + (255,), width=max(1, round(0.01 * s)))
+        vignette(image, 0.35)
+
+    dot = 0.075 * s
+    for x, y, color, radius in ((cx, tip + 0.05 * s, GOLD_TOP, dot * 0.9),
+                                (cx - notch / 2 - 0.14 * s, tip + depth * 0.5, GOLD_MID, dot),
+                                (cx + notch / 2 + 0.14 * s, tip + depth * 0.5, GOLD_MID, dot)):
+        if detailed:
+            glow(image, (x, y), radius * 2.5, GLOW, 0.5)
+        ImageDraw.Draw(image).ellipse((x - radius, y - radius, x + radius, y + radius), fill=color + (255,))
+    return image.resize((size, size), Image.LANCZOS)
+
+
+def render_icons():
+    """Browser tab favicon (16/32/48 ICO) and the iOS Home Screen icon (180 px PNG)."""
+    WEB_ICONS.mkdir(parents=True, exist_ok=True)
+    frames = [icon_art(size, detailed=False) for size in FAVICON_SIZES]
+    frames[-1].save(WEB_ICONS / "favicon.ico", sizes=[f.size for f in frames], append_images=frames[:-1])
+    print(WEB_ICONS / "favicon.ico")
+    icon_art(180, detailed=True).convert("RGB").save(WEB_ICONS / "apple-touch-icon.png", optimize=True)
+    print(WEB_ICONS / "apple-touch-icon.png")
+
+
 def fit_font(font_path, text, width):
     probe = ImageFont.truetype(str(font_path), 100)
     left, _, right, _ = probe.getbbox(text)
@@ -192,4 +260,6 @@ def render(font_path):
 
 
 if __name__ == "__main__":
-    render(download(FONT_URL, FONT_SHA256, ROOT / "build/steam-art/BlackOpsOne-Regular.ttf"))
+    if "--icons-only" not in sys.argv[1:]:
+        render(download(FONT_URL, FONT_SHA256, ROOT / "build/steam-art/BlackOpsOne-Regular.ttf"))
+    render_icons()

@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { parseRuntimeManifest } from '../src/runtime-manifest.ts';
 import { GAME_FILES } from './runtime-artifacts.ts';
 import { ROOM_ASSETS } from './room-assets.ts';
-import { frontendFiles } from './frontend-files';
+import { frontendFiles, ICON_SOURCES } from './frontend-files';
 
 const root = new URL('../../build/web-site/', import.meta.url);
 const manifest = parseRuntimeManifest(
@@ -14,17 +14,21 @@ const html = await readFile(new URL('index.html', root), 'utf8');
 const frontend = frontendFiles(
     JSON.parse(await readFile(new URL('frontend-manifest.json', root), 'utf8')),
 );
-const maybeFavicon = html.match(
-    /<link rel="icon" type="image\/x-icon" href="\.\/(assets\/[^"/]+\.ico)"/,
-)?.[1];
-if (!maybeFavicon || !frontend.includes(maybeFavicon))
-    throw new Error('The site is missing its project favicon');
-const [favicon, originalIcon] = await Promise.all([
-    readFile(new URL(maybeFavicon, root)),
-    readFile(new URL('../../port/win/ProjectMidas.ico', import.meta.url)),
-]);
-if (!favicon.equals(originalIcon))
-    throw new Error('The favicon differs from the native project icon');
+const iconLinks: Record<(typeof ICON_SOURCES)[number]['source'], RegExp> = {
+    'icons/favicon.ico': /<link rel="icon" type="image\/x-icon" href="\.\/(assets\/[^"/]+\.ico)"/,
+    'icons/apple-touch-icon.png': /<link rel="apple-touch-icon" href="\.\/(assets\/[^"/]+\.png)"/,
+};
+for (const { source, output } of ICON_SOURCES) {
+    const maybeIcon = html.match(iconLinks[source])?.[1];
+    if (!maybeIcon || !output.test(maybeIcon) || !frontend.includes(maybeIcon))
+        throw new Error('The site is missing its launcher icon: ' + source);
+    const [emitted, committed] = await Promise.all([
+        readFile(new URL(maybeIcon, root)),
+        readFile(new URL('../' + source, import.meta.url)),
+    ]);
+    if (!emitted.equals(committed))
+        throw new Error('The launcher icon differs from its generated source: ' + source);
+}
 const linked = [...html.matchAll(/(?:src|href)="\.\/(assets\/[a-zA-Z0-9_-]+\.(?:js|css))"/g)].map(
     (match) => match[1],
 );

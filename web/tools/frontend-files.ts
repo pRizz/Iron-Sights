@@ -1,5 +1,13 @@
 // Parse Vite's output graph without permitting arbitrary extra public files.
-export const FAVICON_SOURCE = '../port/win/ProjectMidas.ico';
+// The only non-code assets are the launcher icons that
+// scripts/port/make_steam_art.py generates into web/icons.
+export const ICON_SOURCES = [
+    { source: 'icons/favicon.ico', output: /^assets\/favicon-[a-zA-Z0-9_-]+\.ico$/ },
+    {
+        source: 'icons/apple-touch-icon.png',
+        output: /^assets\/apple-touch-icon-[a-zA-Z0-9_-]+\.png$/,
+    },
+] as const;
 
 export function frontendFiles(value: unknown): string[] {
     if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -8,14 +16,15 @@ export function frontendFiles(value: unknown): string[] {
     const keys = new Set(entries.map(([key]) => key));
     const files = new Set<string>();
     const explicitAssets = new Set<string>();
-    const maybeIcon = entries.find(([name]) => name === FAVICON_SOURCE)?.[1];
-    if (maybeIcon) {
+    for (const { source, output } of ICON_SOURCES) {
+        const maybeIcon = entries.find(([name]) => name === source)?.[1];
+        if (!maybeIcon) continue;
         if (
-            maybeIcon.src !== FAVICON_SOURCE ||
+            maybeIcon.src !== source ||
             typeof maybeIcon.file !== 'string' ||
-            !/^assets\/ProjectMidas-[a-zA-Z0-9_-]+\.ico$/.test(maybeIcon.file)
+            !output.test(maybeIcon.file)
         )
-            throw new Error('Invalid project favicon artifact');
+            throw new Error('Invalid launcher icon artifact');
         explicitAssets.add(maybeIcon.file);
     }
     const add = (path: unknown) => {

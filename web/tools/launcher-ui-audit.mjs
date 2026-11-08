@@ -51,15 +51,20 @@ const migratedFiles = [
 ];
 try {
     await page.goto(origin);
-    const favicon = await page.locator('link[rel="icon"]').getAttribute('href');
-    assert.match(favicon, /^\.\/assets\/ProjectMidas-[a-zA-Z0-9_-]+\.ico$/);
-    const iconResponse = await page.request.get(new URL(favicon, page.url()).href);
-    assert.ok(iconResponse.ok(), 'Project favicon did not load under the deployment path');
-    assert.match(iconResponse.headers()['content-type'], /^image\/(?:x-icon|vnd\.microsoft\.icon)/);
-    assert.deepEqual(
-        await iconResponse.body(),
-        await readFile(new URL('../../port/win/ProjectMidas.ico', import.meta.url)),
-    );
+    for (const [rel, name, extension, type] of [
+        ['icon', 'favicon', 'ico', /^image\/(?:x-icon|vnd\.microsoft\.icon)/],
+        ['apple-touch-icon', 'apple-touch-icon', 'png', /^image\/png/],
+    ]) {
+        const href = await page.locator(`link[rel="${rel}"]`).getAttribute('href');
+        assert.match(href, new RegExp(`^\\./assets/${name}-[a-zA-Z0-9_-]+\\.${extension}$`));
+        const iconResponse = await page.request.get(new URL(href, page.url()).href);
+        assert.ok(iconResponse.ok(), `${name} did not load under the deployment path`);
+        assert.match(iconResponse.headers()['content-type'], type);
+        assert.deepEqual(
+            await iconResponse.body(),
+            await readFile(new URL(`../icons/${name}.${extension}`, import.meta.url)),
+        );
+    }
     await page.keyboard.press('F2');
     await page.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
     const before = await download(page);

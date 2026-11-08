@@ -482,6 +482,17 @@ and Chrome's launcher audit under `/Iron-Sights/` pass; the browser verifies the
 favicon response, MIME type and exact inherited bytes. Next action: publish on
 main and confirm the favicon after a browser tab reload.
 
+**Iron Sights launcher icons, 2026-11-08:** The inherited icon is replaced by
+generated `web/icons/favicon.ico` (16/32/48) and `web/icons/apple-touch-icon.png`
+(opaque 180 px), from `scripts/port/make_steam_art.py --icons-only`. An
+`apple-mobile-web-app-title` of "Iron Sights" is added. iOS had shown a letter
+tile because it had no touch icon beneath `/Iron-Sights/`. The manifest
+allowlist, site verifier and launcher audit now check both icons' links, names,
+MIME types and exact committed bytes. 228 web tests, TypeScript, assembly,
+`verify:site` and the launcher audit (system Chrome, `/Iron-Sights/`) pass.
+Next action: after publishing, add the site to an iPhone Home Screen and confirm
+the sight icon and label.
+
 **Status:** Complete for the local desktop launcher. First/repeat launch,
 storage/error flows and normal Dam capture/audio/focus/watch checks pass.
 

@@ -1720,10 +1720,14 @@ It draws a three-dot iron-sight picture from polygons and sets the title in
 Black Ops One (SIL Open Font License 1.1), downloaded from a pinned Google Fonts
 commit with a SHA-256 check and cached under `build/steam-art/`. Rendered text is
 not covered by the font licence; no font file is committed or shipped. The
-artwork uses no game assets or GoldenEye/007 marks.
+artwork uses no game assets or GoldenEye/007 marks. Since 2026-11-08, the same
+generator also renders the browser launcher's text-free sight icons into
+`web/icons/`; `--icons-only` skips the Steam art and its font download. FORK-024
+describes those icons. The Steam Deck menu icon (`iron-sights.png`) is still a copy
+of the inherited `port/include/icon.png`.
 
 **Sources:** [artwork generator](scripts/port/make_steam_art.py),
-[artwork](scripts/port/linux/steam-art/),
+[artwork](scripts/port/linux/steam-art/), [web icons](web/icons/),
 [helper](scripts/port/linux/set-steam-art.py),
 [packager](scripts/port/package_linux.py),
 [Steam Deck instructions](scripts/port/linux/STEAM-DECK.txt),
@@ -6288,15 +6292,29 @@ checks pass. The Windows rebuild and independent gallery passes reproduce all
 107 images unchanged; freshness/integrity and eight workflow tests pass.
 Publication is tracked in WEB-006.
 
-The browser tab uses the inherited Project Midas application icon from
-`port/win/ProjectMidas.ico`, referenced by `web/index.html` and emitted by Vite
-under a hashed, deployment-relative asset path. No duplicate logo or ROM-derived
-art is introduced. `frontend-files.ts` explicitly allows only that non-code
-asset; `verify-site.ts` checks its HTML link and exact native-icon bytes, and
-the launcher browser audit verifies its response beneath the Pages project path.
-The local audit server serves ICO files with their image MIME type. TypeScript,
-152 web tests (including 17 manifest checks), production assembly, the exact
-artifact policy and Chrome's launcher audit under `/Iron-Sights/` pass.
+The launcher has its own Iron Sights icons, which replaced the inherited Project
+Midas satellite-dish icon (`port/win/ProjectMidas.ico`) on 2026-11-08. The
+desktop executables still use that inherited icon. `web/index.html` links
+`web/icons/favicon.ico` (16/32/48 px, a rounded tile for browser tabs) and
+`web/icons/apple-touch-icon.png` (an opaque 180 px square), and names the Home
+Screen entry "Iron Sights" with `apple-mobile-web-app-title`. iOS ignores ICO
+favicons for Home Screen icons. Without a touch-icon link, it tried
+`/apple-touch-icon.png` at the domain root, outside the `/Iron-Sights/` Pages
+path, and then drew a letter tile from the title, so the owner's iPhone showed
+a plain "I". Both icons show FORK-046's three-dot sight picture without text,
+framed close so the dots stay legible at 16 px.
+`scripts/port/make_steam_art.py --icons-only` regenerates them, deterministically.
+The PNG and ICO outputs are committed, so the web build needs no Pillow. Vite
+emits them under hashed, deployment-relative asset paths. `frontend-files.ts`
+allows only these two non-code sources (`ICON_SOURCES`), each under its own
+output name. `verify-site.ts` checks both HTML links and that the emitted bytes
+equal the committed files. The launcher browser audit fetches both icons beneath
+the Pages project path and checks their MIME types and bytes. On 2026-11-08,
+the following passed: 19 manifest tests among 228 web tests, TypeScript,
+production assembly, the exact artifact policy, and the launcher audit in
+system Chrome under `/Iron-Sights/`. `test_steam_art.py` checks the ICO sizes,
+the opaque 180 px PNG, and both links. The new icons have not yet been tried on
+a real iPhone Home Screen.
 
 The root CMake project now has Emscripten core and SDL2/WebGL 2 configurations.
 It keeps native flags/link processing separate, uses the verified high data
