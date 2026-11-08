@@ -484,7 +484,7 @@ main and confirm the favicon after a browser tab reload.
 
 **Iron Sights launcher icons, 2026-11-08:** The inherited icon is replaced by
 generated `web/icons/favicon.ico` (16/32/48) and `web/icons/apple-touch-icon.png`
-(opaque 180 px), from `scripts/port/make_steam_art.py --icons-only`. An
+(opaque 180 px), from `scripts/port/make_brand_art.py --icons-only`. An
 `apple-mobile-web-app-title` of "Iron Sights" is added. iOS had shown a letter
 tile because it had no touch icon beneath `/Iron-Sights/`. The manifest
 allowlist, site verifier and launcher audit now check both icons' links, names,

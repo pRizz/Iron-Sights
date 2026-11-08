@@ -17,7 +17,7 @@ static bool web_fixed_framebuffer(void) {
 #include "gfx_window_manager_api.h"
 #include "gfx_screen_config.h"
 #include "glad/glad.h" /* GE bring-up: glReadPixels for GE_SHOT screenshots */
-#include "icon_rgba.h"  /* the window icon (scripts/port/make_icon.py) */
+#include "icon_rgba.h"  /* the window icon (scripts/port/make_brand_art.py) */
 
 #ifdef _WIN32
 /* Hybrid-GPU laptops: NVIDIA / AMD drivers read these two exports to run the exe
@@ -449,7 +449,7 @@ static void gfx_sdl_init(const struct GfxWindowInitSettings *set) {
             sysLogPrintf(LOG_WARNING, "SDL: could not open SDL window for GL%d.%d%s:\n%s", vmaj, vmin, vprofstr, SDL_GetError());
             continue;
         }
-        { /* the window / taskbar icon: icon.png at 64 x 64 (scripts/port/make_icon.py),
+        { /* the window / taskbar icon: 64 x 64 (scripts/port/make_brand_art.py),
            * R G B A bytes in memory, which on a little-endian host is these masks */
             SDL_Surface *icon = SDL_CreateRGBSurfaceFrom((void *) port_icon_rgba, PORT_ICON_SIZE, PORT_ICON_SIZE, 32,
                                                          PORT_ICON_SIZE * 4, 0x000000ffu, 0x0000ff00u, 0x00ff0000u, 0xff000000u);

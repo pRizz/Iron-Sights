@@ -1,6 +1,6 @@
 // Parse Vite's output graph without permitting arbitrary extra public files.
 // The only non-code assets are the launcher icons that
-// scripts/port/make_steam_art.py generates into web/icons.
+// scripts/port/make_brand_art.py generates into web/icons.
 export const ICON_SOURCES = [
     { source: 'icons/favicon.ico', output: /^assets\/favicon-[a-zA-Z0-9_-]+\.ico$/ },
     {

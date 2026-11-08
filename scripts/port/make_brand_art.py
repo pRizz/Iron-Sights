@@ -1,28 +1,51 @@
-"""Regenerate the Steam library artwork and the browser build's icons.
+"""Regenerate every Iron Sights icon and the Steam library artwork.
 
 Usage (from the repo root, with Pillow installed):
 
-    python scripts/port/make_steam_art.py [--icons-only]
+    python scripts/port/make_brand_art.py [--icons-only]
 
-Writes scripts/port/linux/steam-art/{cover,banner,hero,logo}.png and
-web/icons/{favicon.ico,apple-touch-icon.png}; --icons-only skips the Steam art
-and its font download. The artwork is original: an iron-sight picture drawn from
-polygons and the Iron Sights title in Black Ops One (SIL Open Font License 1.1),
-downloaded from a pinned Google Fonts commit. The icons carry no text. Run it
-again after changing the design and commit the outputs; packaging and the web
-build only copy them, so neither needs Pillow.
+This is the only source of application icons. A new place that shows an icon
+gets a new output here, never a separately drawn image. Outputs:
+
+    port/win/ProjectMidas.ico       16..256 px, compiled into IronSights.exe by
+                                    port/win/ProjectMidas.rc (Explorer, pinned taskbar)
+    port/include/icon_rgba.h        64 px RGBA for SDL_SetWindowIcon (title bar and
+                                    running taskbar entry on every platform)
+    port/include/icon.png           1024 px master; shipped by package_linux.py as
+                                    iron-sights.png (Linux and Steam Deck menu entry)
+    web/icons/favicon.ico           16/32/48 px browser tab icon
+    web/icons/apple-touch-icon.png  opaque 180 px iOS Home Screen icon
+    scripts/port/linux/steam-art/{cover,banner,hero,logo}.png  Steam library art
+
+It also records each output's SHA-256 in scripts/port/brand-art.sha256, which
+test_steam_art.py checks, so hand-replaced icons fail CI. --icons-only skips the
+Steam art and its font download.
+
+The artwork is original: an iron-sight picture drawn from polygons and the Iron
+Sights title in Black Ops One (SIL Open Font License 1.1), downloaded from a
+pinned Google Fonts commit. The icons carry no text. Run it again after changing
+the design and commit the outputs; the builds and packaging only copy them, so
+none of them needs Pillow.
 """
+import hashlib
 from pathlib import Path
 import sys
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 from linux_build import download
 
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / "scripts/port/linux/steam-art"
 WEB_ICONS = ROOT / "web/icons"
+EXE_ICON = ROOT / "port/win/ProjectMidas.ico"
+WINDOW_ICON = ROOT / "port/include/icon_rgba.h"
+MASTER_ICON = ROOT / "port/include/icon.png"
+CHECKSUMS = ROOT / "scripts/port/brand-art.sha256"
 FAVICON_SIZES = (16, 32, 48)
+EXE_ICON_SIZES = (16, 24, 32, 48, 64, 128, 256)
+SMALL_ICON_MAX = 48  # at or below this size, use the simplified tab art
+WINDOW_ICON_SIZE = 64
 FONT_COMMIT = "d50a0d29b8b01a0a5d2cc7f6fd0fee1fbdbe4ce5"
 FONT_URL = f"https://raw.githubusercontent.com/google/fonts/{FONT_COMMIT}/ofl/blackopsone/BlackOpsOne-Regular.ttf"
 FONT_SHA256 = "282a825b5f294377387e3969f765408157dbea8da0f5d0aae68c6bc704b145b3"
@@ -126,16 +149,24 @@ def sight_picture(image, cx, tip, width):
         ImageDraw.Draw(image).ellipse((x - size, y - size, x + size, y + size), fill=color + (255,))
 
 
-def icon_art(size, detailed):
-    """Square sight picture for browser icons, framed close so the dots stay legible.
+ICON_STYLES = ("tab", "desktop", "square")
 
-    The favicon frame is a transparent rounded tile. The detailed frame is an opaque
-    full square, because iOS masks Home Screen icons itself and fills transparency black.
+
+def icon_art(size, style):
+    """Square sight picture for icons, framed close so the dots stay legible.
+
+    "tab" is the simplified art on a transparent rounded tile, for 48 px and below.
+    "desktop" adds the detailed shading (serrations, edge, glows) to that tile.
+    "square" is the detailed art on an opaque full square, because iOS masks Home
+    Screen icons itself and fills transparency black.
     """
-    s = size * (1 if size >= 512 else 512 // size + 1)
+    if style not in ICON_STYLES:
+        raise ValueError("Unknown icon style: " + style)
+    detailed = style != "tab"
+    s = size * (512 // size + 1 if size < 512 else 2)
     image = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     tile = Image.new("L", (s, s))
-    if detailed:
+    if style == "square":
         tile.paste(255, (0, 0, s, s))
     else:
         ImageDraw.Draw(tile).rounded_rectangle((0, 0, s - 1, s - 1), radius=0.18 * s, fill=255)
@@ -143,7 +174,7 @@ def icon_art(size, detailed):
 
     cx, tip = s / 2, 0.40 * s
     notch, depth = 0.26 * s, 0.20 * s
-    left, right, bottom = 0.06 * s, 0.94 * s, (0.86 if detailed else 0.84) * s
+    left, right, bottom = 0.06 * s, 0.94 * s, (0.86 if style == "square" else 0.84) * s
     glow(image, (cx, tip), 0.55 * s, GLOW, 0.45 if detailed else 0.3)
     glow(image, (cx, tip + 0.04 * s), 0.30 * s, GOLD_TOP, 0.55)
 
@@ -176,17 +207,60 @@ def icon_art(size, detailed):
         if detailed:
             glow(image, (x, y), radius * 2.5, GLOW, 0.5)
         ImageDraw.Draw(image).ellipse((x - radius, y - radius, x + radius, y + radius), fill=color + (255,))
+    if style == "desktop":
+        # The vignette and glows also darken the transparent corners; keep them clear.
+        image.putalpha(ImageChops.multiply(image.getchannel("A"), tile))
     return image.resize((size, size), Image.LANCZOS)
 
 
+def sized_icon(size):
+    """The rounded tile art suited to a size: simplified when small, detailed above."""
+    return icon_art(size, "tab" if size <= SMALL_ICON_MAX else "desktop")
+
+
+def save_ico(path, sizes):
+    frames = [sized_icon(size) for size in sizes]
+    frames[-1].save(path, sizes=[frame.size for frame in frames], append_images=frames[:-1])
+    print(path)
+
+
+def write_window_icon(path):
+    """64 px RGBA header for SDL_SetWindowIcon, in the layout gfx_sdl2.cpp expects."""
+    data = sized_icon(WINDOW_ICON_SIZE).tobytes()
+    rows = ["    " + ", ".join("0x%02x" % b for b in data[i:i + 16]) + "," for i in range(0, len(data), 16)]
+    with open(path, "w", newline="\n") as header:
+        header.write("/* generated by scripts/port/make_brand_art.py - do not edit */\n")
+        header.write("#ifndef PORT_ICON_RGBA_H\n#define PORT_ICON_RGBA_H\n\n")
+        header.write("#define PORT_ICON_SIZE %d\n\n" % WINDOW_ICON_SIZE)
+        header.write("/* PORT_ICON_SIZE x PORT_ICON_SIZE pixels, R G B A bytes, top row first */\n")
+        header.write("static const unsigned char port_icon_rgba[%d] = {\n" % len(data))
+        header.write("\n".join(rows) + "\n};\n\n#endif\n")
+    print(path)
+
+
 def render_icons():
-    """Browser tab favicon (16/32/48 ICO) and the iOS Home Screen icon (180 px PNG)."""
+    """Every application icon: browser, Windows executable, window and Linux menu."""
     WEB_ICONS.mkdir(parents=True, exist_ok=True)
-    frames = [icon_art(size, detailed=False) for size in FAVICON_SIZES]
-    frames[-1].save(WEB_ICONS / "favicon.ico", sizes=[f.size for f in frames], append_images=frames[:-1])
-    print(WEB_ICONS / "favicon.ico")
-    icon_art(180, detailed=True).convert("RGB").save(WEB_ICONS / "apple-touch-icon.png", optimize=True)
+    save_ico(WEB_ICONS / "favicon.ico", FAVICON_SIZES)
+    icon_art(180, "square").convert("RGB").save(WEB_ICONS / "apple-touch-icon.png", optimize=True)
     print(WEB_ICONS / "apple-touch-icon.png")
+    save_ico(EXE_ICON, EXE_ICON_SIZES)
+    write_window_icon(WINDOW_ICON)
+    icon_art(1024, "desktop").save(MASTER_ICON, optimize=True)
+    print(MASTER_ICON)
+
+
+def checksum_outputs():
+    """All generated files, so a hand-placed replacement shows up in test_steam_art.py."""
+    return [EXE_ICON, WINDOW_ICON, MASTER_ICON, WEB_ICONS / "favicon.ico", WEB_ICONS / "apple-touch-icon.png",
+            *(OUTPUT / name for name in ("cover.png", "banner.png", "hero.png", "logo.png"))]
+
+
+def write_checksums():
+    lines = [hashlib.sha256(path.read_bytes()).hexdigest() + "  " + path.relative_to(ROOT).as_posix()
+             for path in checksum_outputs()]
+    CHECKSUMS.write_text("\n".join(lines) + "\n", newline="\n")
+    print(CHECKSUMS)
 
 
 def fit_font(font_path, text, width):
@@ -263,3 +337,4 @@ if __name__ == "__main__":
     if "--icons-only" not in sys.argv[1:]:
         render(download(FONT_URL, FONT_SHA256, ROOT / "build/steam-art/BlackOpsOne-Regular.ttf"))
     render_icons()
+    write_checksums()

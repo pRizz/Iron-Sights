@@ -152,6 +152,13 @@ pass its isolated executable rather than rebuilding an active player binary.
   accepted [open assets plan](scripts/port/open_assets_plan.md). Read it before
   resuming, keep its provenance rules (drawn from scratch, MIT, no ROM-derived
   data in the assets), and update its milestone status table before handing off.
+- Application icons (the Windows executable, window, Linux and Steam Deck menu,
+  browser favicon and Home Screen) and the Steam library art all come from
+  `python scripts/port/make_brand_art.py`. Change the design there, rerun it,
+  and commit its outputs together with `scripts/port/brand-art.sha256`;
+  `test_steam_art.py` fails if an output no longer matches the generator. A new
+  place that shows an icon (a web app manifest, a Flatpak, a macOS `.icns`)
+  gets a new output in the generator, never a separately drawn image.
 - Text styles (Original, Enhanced, Iron Sights) follow the
   [font styles plan](scripts/port/font_styles_plan.md). Never bundle, commit or
   host the Enhanced pack's files; the game downloads them only after the

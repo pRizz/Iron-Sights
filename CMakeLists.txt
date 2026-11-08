@@ -499,7 +499,7 @@ add_custom_command(TARGET ge POST_BUILD
     VERBATIM)
 endif()
 # The exe's own icon (Explorer, a pinned taskbar entry): port/win/ProjectMidas.ico,
-# generated with the window icon by scripts/port/make_icon.py.
+# generated with the window icon by scripts/port/make_brand_art.py.
 if(WIN32)
     enable_language(RC)
     target_sources(ge PRIVATE ${CMAKE_SOURCE_DIR}/port/win/ProjectMidas.rc)
