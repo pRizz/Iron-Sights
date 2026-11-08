@@ -40,7 +40,8 @@ static const struct PortOptHelp sHelp[] = {
     { "crash_reporting",    "Sends technical crash reports to Sentry. OFF stops uploads." },
     { "font_style",         "Original or Enhanced (community redraw). Our own font is hidden while we fix it." },
     { "text_antialiasing",  "Smooths small Enhanced text so strokes keep even widths." },
-    { "shiny_weapons",      "Stronger reflections on the Golden Gun and Gold PP7." },
+    { "shiny_weapons",      "Richer reflections on the Golden Gun, Gold PP7, Silver PP7 and Magnum." },
+    { "gun_glint",          "Moving highlights on the metal of ordinary guns, PP7 to sniper rifle." },
     { "texture_pack",       "HD: intermissionfb's pack from HD Textures, and any pack put in Data/TexturePacks." },
     { "close_hd_matches",   "Adds HD art for 17 textures whose colours only roughly match the pack." },
 

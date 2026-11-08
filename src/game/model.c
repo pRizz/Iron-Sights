@@ -16,6 +16,7 @@
 #include "random.h"
 #ifndef TARGET_N64
 #include "port_wardrobe.h"
+#include "port_shiny.h"
 #endif
 
 
@@ -4268,8 +4269,14 @@ void modelRenderNodeGundl(ModelRenderData* renderdata, ModelNode* arg1)
             /* the gun-DL node's lists address their vertices through SPSEGMENT_MODEL_COL1 = the model's base */
             if (wardrobeDraw != PORT_WARDROBE_NATIVE_HAND)
                 renderdata->gdl = portPartCacheEmit(renderdata->gdl, SPSEGMENT_MODEL_COL1);
+            else /* FORK-058: the native hand pass never takes a glint */
+                renderdata->gdl = portShinyGlintBlock(renderdata->gdl, TRUE);
 #endif
             gSPDisplayList(renderdata->gdl++, rodata->Primary);
+#ifndef TARGET_N64
+            if (wardrobeDraw == PORT_WARDROBE_NATIVE_HAND)
+                renderdata->gdl = portShinyGlintBlock(renderdata->gdl, FALSE);
+#endif
 
             if ((rodata->ModelType == 3) && rodata->Secondary)
             {

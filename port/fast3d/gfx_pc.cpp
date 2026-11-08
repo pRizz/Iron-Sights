@@ -36,7 +36,7 @@
 #include "gfx_pc.h"
 #include "open_fonts.h" /* FORK-050: open-font MSDF glyphs */
 #include "enhanced_fonts.h" /* FORK-052: player-installed Enhanced font masks */
-#include "gfx_shiny.h" /* FORK-058: Shiny Gold Guns */
+#include "gfx_shiny.h" /* FORK-058: Richer Reflections, Gun Glint */
 #include "gfx_cc.h"
 #include "gfx_window_manager_api.h"
 #include "gfx_rendering_api.h"
@@ -163,6 +163,7 @@ struct LoadedVertex {
     struct RGBA color;
     uint8_t fog;
     uint8_t clip_rej;
+    float eye[3]; /* FORK-058: camera-space position in a Gun Glint span */
 };
 
 /* 8-bit -> float, bit-identical to `x / 255.0f` (twenty-seventh build: the
@@ -438,7 +439,8 @@ uint32_t gfx_sharp_fonts = 0;
  * player-installed Enhanced masks, smooth whatever 2D Filtering says. */
 uint32_t gfx_enhanced_fonts = 0;
 uint32_t gfx_text_aa = 1;
-uint32_t gfx_shiny_weapons = 1; /* FORK-058: [display] shiny_weapons (video.c) - Shiny Gold Guns */
+uint32_t gfx_shiny_weapons = 1; /* FORK-058: [display] shiny_weapons (video.c) - Richer Reflections */
+uint32_t gfx_gun_glint = 1;     /* FORK-058: [display] gun_glint (video.c) - Gun Glint */
 /* set by G_MIRRORPILLAR_EXT around an overlay wanting mirrored side bands -
  * blood_animation.c's death / gunbarrel blood, and title.c's untextured fade.
  * The sampler latch reads it as well: see the filter_2d rule there. */
@@ -512,6 +514,16 @@ static bool s_GeViewmodel = false;
 static uint8_t s_GeShinyItem = 0;
 /* FORK-058: the backend is mirroring this span's draws into its bloom buffer */
 static bool s_GeShinyBloom = false;
+/* FORK-058: the backend swaps in its screen reflection texture for shiny batches */
+static bool s_GeShinyEnv = false;
+/* FORK-058: the span's weapon takes the tuned look (tone curve, light, room,
+ * bloom); the silver guns can take the screen reflection without it */
+static bool s_GeShinyLook = false;
+/* FORK-058: inside a PP7 draw taking the glint (G_NOOP 0x5E, item 4/5),
+ * and inside a draw bracketed as never taking it (G_NOOP 0x61: sleeve, native hand) */
+static bool s_GeGlint = false, s_GeGlintBlock = false;
+/* FORK-058: the current batch's glint triangles (15 floats per corner, gfx_glint.inl) */
+static std::vector<float> s_GlintBuf;
 /* This texture rect is an open-font glyph (FORK-050): the MSDF shader, no UV clamp. */
 static bool s_RectMsdf = false;
 /* options.c portHudScaleBegin (midas.ini hud_scale): G_NOOP tag 0x58 brackets
@@ -579,10 +591,14 @@ float gfx_ge_dec_b = 0.0f, gfx_ge_dec_d = 0.0f;
 static void gfx_flush(void) {
     if (buf_vbo_len > 0) {
         roc_stat_draw_origin[ge_flush_origin & 15u]++;
-        if (s_GeShinyBloom) { /* FORK-058: glow only from the reflection-textured batches */
+        if (s_GeShinyBloom || s_GeShinyEnv) { /* FORK-058: glow from / screen texture for reflection batches */
             gfx_rapi->bloom_mark(rendering_state.textures[0] != nullptr && rendering_state.textures[0]->first.shiny);
         }
         gfx_rapi->draw_triangles(buf_vbo, buf_vbo_len, buf_vbo_num_tris);
+        if (!s_GlintBuf.empty()) { /* FORK-058: the Gun Glint over its metal */
+            if (gfx_rapi->glint_draw) gfx_rapi->glint_draw(s_GlintBuf.data(), s_GlintBuf.size() / 15);
+            s_GlintBuf.clear();
+        }
         buf_vbo_len = 0;
         buf_vbo_num_tris = 0;
         g_PortGfxDraws++;
@@ -2984,9 +3000,38 @@ static void ge_texchurn_report(void) {
 #endif
 
 /* FORK-058: while a shiny weapon's reflection image is imported, every decoder's
- * upload passes through gfx_shiny's tone curve on its way to the GPU. */
+ * upload passes through gfx_shiny's tone curve on its way to the GPU. In a PP7
+ * glint span it also measures the image's mean saturation (max - min channel
+ * over opaque texels): grey and black metal take the glint, skin and cloth not. */
 static void (*ge_shiny_real_upload)(const uint8_t *, uint32_t, uint32_t);
+static bool ge_shiny_tone;
+static TextureCacheValue *ge_shiny_classify;
 static void ge_shiny_upload_texture(const uint8_t *rgba, uint32_t w, uint32_t h) {
+    if (ge_shiny_classify != nullptr) {
+        uint64_t sat = 0, n = 0;
+        for (size_t p = 0; p < size_t(w) * h; p++) {
+            const uint8_t *c = rgba + p * 4;
+            if (c[3] < 128) continue;
+            const uint8_t hi = std::max(c[0], std::max(c[1], c[2])), lo = std::min(c[0], std::min(c[1], c[2]));
+            sat += hi - lo;
+            n++;
+        }
+        ge_shiny_classify->glint_metal = n > 0 && (float)sat / (float)n <= gfx_shiny::tuning().glint_sat;
+        if (gfx_shiny::tuning().log) {
+            uint64_t sum[3] = { 0, 0, 0 };
+            for (size_t p = 0; p < size_t(w) * h; p++) {
+                for (int k = 0; k < 3; k++) sum[k] += rgba[p * 4 + k];
+            }
+            const double px = (double)(size_t(w) * h);
+            fprintf(stderr, "shiny: glint image %ux%u mean rgb %.0f,%.0f,%.0f saturation %.1f metal=%d\n", w, h,
+                    sum[0] / px, sum[1] / px, sum[2] / px, n ? (double)sat / (double)n : 0.0,
+                    ge_shiny_classify->glint_metal ? 1 : 0);
+        }
+    }
+    if (!ge_shiny_tone) {
+        ge_shiny_real_upload(rgba, w, h);
+        return;
+    }
     static std::vector<uint8_t> image;
     image.assign(rgba, rgba + size_t(w) * h * 4);
     gfx_shiny::process(image.data(), w, h);
@@ -2995,8 +3040,10 @@ static void ge_shiny_upload_texture(const uint8_t *rgba, uint32_t w, uint32_t h)
 struct GeShinyUpload {
     GfxRenderingAPI shadow;
     GfxRenderingAPI *saved = nullptr;
-    explicit GeShinyUpload(bool on) {
-        if (!on) return;
+    explicit GeShinyUpload(bool tone, TextureCacheValue *classify) {
+        ge_shiny_tone = tone;
+        ge_shiny_classify = classify;
+        if (!tone && classify == nullptr) return;
         saved = gfx_rapi;
         shadow = *gfx_rapi;
         ge_shiny_real_upload = gfx_rapi->upload_texture;
@@ -3196,6 +3243,8 @@ static void import_texture(int i, int tile, bool importReplacement) {
     /* A gun texture a pack replaced in the world is a different image in the hand */
     key.hd_native = s_GeViewmodel && portTexturePackGet();
 #endif
+    /* FORK-058: a Gun Glint span's images are classified as metal or not */
+    key.glint = s_GeGlint && !s_GeGlintBlock;
     /* FORK-058: a shiny weapon's reflection image is tone-curved */
     key.shiny = (s_GeShinyItem && (rsp.geometry_mode & G_TEXTURE_GEN))
                     ? gfx_shiny::texture_variant() : 0;
@@ -3317,7 +3366,9 @@ static void import_texture(int i, int tile, bool importReplacement) {
                     rdp.env_color.a, rdp.prim_color.r, rdp.prim_color.g, rdp.prim_color.b, rdp.prim_color.a);
         }
     }
-    GeShinyUpload ge_shiny_upload(key.shiny != 0);
+    GeShinyUpload ge_shiny_upload(key.shiny != 0 && s_GeShinyLook, /* the silver guns keep their image */
+                                  key.glint && rendering_state.textures[i] ? &rendering_state.textures[i]->second
+                                                                           : nullptr);
 
     { /* GE bring-up (GE_TRACE_TEX=1): one line per unique texture import -
        * names what each surface actually samples (the flat-world hunt). */
@@ -3631,6 +3682,15 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* verti
 
         x = gfx_adjust_x_for_aspect_ratio(x, w);
 
+        if (s_GeGlint && !s_GeGlintBlock) {
+            /* FORK-058: the camera-space position, for the Gun Glint's
+             * face normals (its models are prelit: no vertex normals to use) */
+            const float (*mv)[4] = rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1];
+            for (int k = 0; k < 3; k++) {
+                d->eye[k] = v->ob[0] * mv[0][k] + v->ob[1] * mv[1][k] + v->ob[2] * mv[2][k] + mv[3][k];
+            }
+        }
+
         short U = v->tc[0] * rsp.texture_scaling_factor.s >> 16;
         short V = v->tc[1] * rsp.texture_scaling_factor.t >> 16;
 
@@ -3650,7 +3710,7 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* verti
             int g = rsp.current_lights[rsp.current_num_lights - 1].col[1];
             int b = rsp.current_lights[rsp.current_num_lights - 1].col[2];
             /* FORK-058: a shiny weapon's reflective surface takes the tuned light */
-            const bool shiny = s_GeShinyItem && (rsp.geometry_mode & G_TEXTURE_GEN);
+            const bool shiny = s_GeShinyItem && s_GeShinyLook && (rsp.geometry_mode & G_TEXTURE_GEN);
             const float diffuse_gain = shiny ? gfx_shiny::tuning().diffuse : 1.0f;
             if (shiny && gfx_shiny::tuning().ambient >= 0.0f) {
                 r = g = b = (int)gfx_shiny::tuning().ambient;
@@ -3673,6 +3733,7 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* verti
             d->color.r = r > 255 ? 255 : r;
             d->color.g = g > 255 ? 255 : g;
             d->color.b = b > 255 ? 255 : b;
+
 
             {
                 /* GE bring-up (GE_SHADE_WHITE=1): force lit shade to full
@@ -3831,7 +3892,7 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* verti
             /* FORK-058: the held weapon's floor-tile darkening (model.c
              * G_RM_FOG_PRIM_A, alpha from propobj.c set_color_shading_from_tile)
              * scaled on its reflective surfaces only */
-            if (s_GeShinyItem && (rsp.geometry_mode & G_TEXTURE_GEN)) {
+            if (s_GeShinyItem && s_GeShinyLook && (rsp.geometry_mode & G_TEXTURE_GEN)) {
                 d->fog = (uint8_t)lroundf(d->fog * gfx_shiny::tuning().room);
             }
         }
@@ -5028,6 +5089,45 @@ ndcprobe_done:;
         }
     }
 
+    /* FORK-058: the Gun Glint lands only on metal triangles - drawn
+     * with an image classified grey enough, outside the sleeve and hand passes */
+    const bool glint_tri = s_GeGlint && !s_GeGlintBlock && rendering_state.textures[0] != nullptr
+                           && rendering_state.textures[0]->first.glint && rendering_state.textures[0]->second.glint_metal;
+    bool glint_face = false;
+    float glint_n[3], glint_light[3];
+    if (glint_tri) {
+        /* the face normal from the three camera-space corners, turned towards
+         * the viewer, and a world-fixed overhead light rotated into camera
+         * space by the game's camera axes (gSPLookAt: right, up), so the glint
+         * follows the view as well as the gun's bob and animations; the glint
+         * pass (gfx_glint.inl) lights each pixel from these */
+        const float *a = v_arr[0]->eye, *b = v_arr[1]->eye, *c = v_arr[2]->eye;
+        const float e1[3] = { b[0] - a[0], b[1] - a[1], b[2] - a[2] }, e2[3] = { c[0] - a[0], c[1] - a[1], c[2] - a[2] };
+        float *n = glint_n;
+        n[0] = e1[1] * e2[2] - e1[2] * e2[1];
+        n[1] = e1[2] * e2[0] - e1[0] * e2[2];
+        n[2] = e1[0] * e2[1] - e1[1] * e2[0];
+        const float to_eye[3] = { -(a[0] + b[0] + c[0]), -(a[1] + b[1] + c[1]), -(a[2] + b[2] + c[2]) };
+        const float nl = sqrtf(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+        if (nl > 0.0f) {
+            const float sign = (n[0] * to_eye[0] + n[1] * to_eye[1] + n[2] * to_eye[2]) < 0.0f ? -1.0f : 1.0f;
+            for (int k = 0; k < 3; k++) n[k] *= sign / nl;
+            static const float sun[3] = { 0.30f, 0.90f, 0.30f }; /* world space: high, a little to the side */
+            float right[3], up[3], back[3];
+            for (int k = 0; k < 3; k++) {
+                right[k] = rsp.lookat[0].dir[k] / 127.0f;
+                up[k] = rsp.lookat[1].dir[k] / 127.0f;
+            }
+            back[0] = right[1] * up[2] - right[2] * up[1];
+            back[1] = right[2] * up[0] - right[0] * up[2];
+            back[2] = right[0] * up[1] - right[1] * up[0];
+            glint_light[0] = sun[0] * right[0] + sun[1] * right[1] + sun[2] * right[2];
+            glint_light[1] = sun[0] * up[0] + sun[1] * up[1] + sun[2] * up[2];
+            glint_light[2] = sun[0] * back[0] + sun[1] * back[1] + sun[2] * back[2];
+            glint_face = true;
+        }
+    }
+
     for (int i = 0; i < 3; i++) {
         float z = v_arr[i]->z, w = v_arr[i]->w;
         if (dec_pull && w > 4.0f * ge_dec_pull) {
@@ -5037,6 +5137,17 @@ ndcprobe_done:;
             z = (z + w) / 2.0f;
         }
 
+        if (glint_face) {
+            /* FORK-058: this corner for the glint pass after the
+             * batch, dimmed by the game's floor shade for the held weapon */
+            const float corner[15] = { v_arr[i]->x, clip_parameters.invert_y ? -v_arr[i]->y : v_arr[i]->y, z, w,
+                                       v_arr[i]->eye[0], v_arr[i]->eye[1], v_arr[i]->eye[2],
+                                       glint_n[0], glint_n[1], glint_n[2],
+                                       glint_light[0], glint_light[1], glint_light[2],
+                                       gfx_shiny::tuning().glint * (1.0f - v_arr[i]->fog / 255.0f),
+                                       gfx_shiny::tuning().glint_power };
+            s_GlintBuf.insert(s_GlintBuf.end(), corner, corner + 15);
+        }
         buf_vbo[buf_vbo_len++] = v_arr[i]->x;
         buf_vbo[buf_vbo_len++] = clip_parameters.invert_y ? -v_arr[i]->y : v_arr[i]->y;
         buf_vbo[buf_vbo_len++] = z;
@@ -7909,19 +8020,38 @@ static void gfx_run_dl(Gfx* cmd) {
                 } else if ((cmd->words.w1 >> 24) == 0x5Cu) {
                     /* FORK-053: first-person weapon span on / off (port_hud_ammo.c) */
                     s_GeViewmodel = (cmd->words.w1 & 1u) != 0;
+                } else if ((cmd->words.w1 >> 24) == 0x61u) {
+                    /* FORK-058: a draw that never takes the glint (sleeve, native hand) */
+                    gfx_flush();
+                    s_GeGlintBlock = (cmd->words.w1 & 1u) != 0;
                 } else if ((cmd->words.w1 >> 24) == 0x5Eu) {
                     /* FORK-058: shiny weapon span, item or 0 (port_shiny.c) */
                     gfx_flush(); /* draws before the tag belong outside the span */
                     s_GeShinyItem = (uint8_t) (cmd->words.w1 & 0xFFu);
-                    if (!gfx_shiny::applies(s_GeShinyItem)) s_GeShinyItem = 0; /* this gun keeps the stock look */
+                    /* the ordinary firearms take only the glint, never the shiny paths */
+                    s_GeGlint = gfx_shiny::glint_on(s_GeShinyItem);
+                    if (s_GeShinyItem >= 4 && s_GeShinyItem <= 17) s_GeShinyItem = 0; /* ITEM_WPPK..ITEM_SNIPERRIFLE */
+                    s_GeShinyLook = gfx_shiny::applies(s_GeShinyItem);
+                    const bool scene_on = gfx_shiny::screen_applies(s_GeShinyItem);
+                    if (!s_GeShinyLook && !scene_on) s_GeShinyItem = 0; /* this gun keeps the stock look */
                     gfx_shiny::Bloom glow;
-                    if (s_GeShinyItem && !s_GeShinyBloom && gfx_rapi->bloom_begin && gfx_shiny::bloom(&glow)) {
+                    if (s_GeShinyItem && s_GeShinyLook && !s_GeShinyBloom && gfx_rapi->bloom_begin
+                        && gfx_shiny::bloom(&glow)) {
                         gfx_rapi->bloom_begin();
                         s_GeShinyBloom = true;
                     } else if (!s_GeShinyItem && s_GeShinyBloom) {
                         if (!gfx_shiny::bloom(&glow)) glow.strength = 0.0f; /* switched off mid-span */
                         gfx_rapi->bloom_end(glow.threshold, glow.strength, glow.radius, glow.passes);
                         s_GeShinyBloom = false;
+                    }
+                    gfx_shiny::Screen scene;
+                    if (s_GeShinyItem && scene_on && !s_GeShinyEnv && gfx_rapi->env_begin && gfx_shiny::screen(&scene)) {
+                        gfx_rapi->env_begin(scene.mix, scene.gain, scene.back, scene.fov, scene.blur, scene.flip,
+                                            scene.smooth, s_GeShinyItem);
+                        s_GeShinyEnv = true;
+                    } else if (!s_GeShinyItem && s_GeShinyEnv) {
+                        gfx_rapi->env_end();
+                        s_GeShinyEnv = false;
                     }
                     static unsigned shiny_spans;
                     if (s_GeShinyItem && gfx_shiny::tuning().log && (shiny_spans++ % 60u) == 0) {
@@ -8425,9 +8555,14 @@ extern "C" void gfx_start_frame(void) {
     ge_stat_free_ids = (uint32_t) gfx_texture_cache.free_texture_ids.q.size();
     s_GeViewmodel = false;
     s_GeShinyItem = 0;
+    s_GeGlint = s_GeGlintBlock = false;
     if (s_GeShinyBloom) { /* FORK-058: a span never closed: stop mirroring, draw no glow */
         gfx_rapi->bloom_end(1.0f, 0.0f, 0.0f, 1);
         s_GeShinyBloom = false;
+    }
+    if (s_GeShinyEnv) { /* FORK-058: likewise for the screen reflection */
+        gfx_rapi->env_end();
+        s_GeShinyEnv = false;
     }
     gfx_shiny::start_frame(); /* FORK-058 */
     static uint32_t previous_fonts = ~0u;

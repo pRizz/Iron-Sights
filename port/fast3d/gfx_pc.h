@@ -49,6 +49,7 @@ struct TextureCacheKey {
     uint8_t hd_ammo; /* FORK-053: HUD ammo slot + 1 when the HD pack's art replaces the image */
     bool hd_native;  /* FORK-053: drawn in the first-person weapon span, never from a pack */
     uint8_t shiny;   /* FORK-058: a shiny weapon's processed reflection image (gfx_shiny variant), 0 = native */
+    bool glint;      /* FORK-058: imported in a Gun Glint span, so classified as metal or not */
 
     bool operator==(const TextureCacheKey&) const noexcept = default;
 
@@ -76,6 +77,7 @@ struct TextureCacheValue {
     uint32_t hd_bytes; /* FORK-053: a player-installed HD image's RGBA + mip chain upper bound; native-only budget */
     float hd_scale_s, hd_scale_t; /* FORK-053: uploaded texels per native texel of an HD image (0 = native) */
     bool hd_ammo; /* FORK-053: HD ammo art, smooth sampled like the Enhanced fonts */
+    bool glint_metal; /* FORK-058: a glint-span image grey enough to be metal, not skin or cloth */
     uint32_t hd_request; /* FORK-053: a custom pack's image being read for this node (0 = none) */
 };
 

@@ -44,7 +44,8 @@ extern uint32_t gfx_filter_2d;   // 0 = point sampling for original HUD/menu tex
 extern uint32_t gfx_sharp_fonts; // FORK-050: open-font MSDF glyphs for Bank Gothic text.
 extern uint32_t gfx_enhanced_fonts; // FORK-052: player-installed GEPD masks for both fonts.
 extern uint32_t gfx_text_aa; // FORK-052: Text Antialiasing - Enhanced masks minify through trilinear mips.
-extern uint32_t gfx_shiny_weapons; // FORK-058: Shiny Gold Guns - the gold guns' tuned reflections (gfx_shiny.h).
+extern uint32_t gfx_shiny_weapons; // FORK-058: Richer Reflections - the shiny guns' reflections (gfx_shiny.h).
+extern uint32_t gfx_gun_glint;     // FORK-058: Gun Glint - moving highlights on ordinary guns (gfx_glint.inl).
 extern uint32_t gfx_low_res;     // the level render's LINE COUNT (240 = "HW", 480, 720, 1080; 0 = the window's) (width follows the window
                                  //     aspect) and scale to the window - very low power machines
 extern uint32_t gfx_mipmaps;     // HW Mipmaps: 1 = minify G_TL_LOD draws through GL mip

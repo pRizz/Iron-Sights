@@ -1,4 +1,4 @@
-/* FORK-058: Shiny Gold Guns - the look's settings and image processing. See
+/* FORK-058: Richer Reflections - the look's settings and image processing. See
  * gfx_shiny.h. [display] shiny_weapons (video.c -> gfx_shiny_weapons) switches
  * it; the optional shiny_weapons.ini beside midas.ini tunes it. */
 #include "gfx_shiny.h"
@@ -11,6 +11,7 @@
 
 extern "C" const char *portRootPath(const char *name);
 extern uint32_t gfx_shiny_weapons; /* gfx_pc.cpp, from [display] shiny_weapons */
+extern uint32_t gfx_gun_glint;     /* gfx_pc.cpp, from [display] gun_glint */
 
 namespace gfx_shiny {
 namespace {
@@ -20,7 +21,9 @@ const char kFile[] = "shiny_weapons.ini";
 /* The shipped look (the owner's pick in play, 2026-11-07): a gentle tone curve
  * on the gold guns only; every other knob neutral. */
 const Tuning kDefaults = { -1.0f, 1.0f, 1.0f, 0.5f, 0.4f, 0.0f, 1.0f, 0.0f, 0.0f,
-                           false, false, 0, -1.0f, 1.0f, true, false };
+                           false, false, 0, -1.0f, 1.0f, true, false,
+                           0.5f, 1.0f, 0.85f, 60.0f, 8.0f, false, 0.2f, true,
+                           0.25f, 64.0f, 12.0f, 0u };
 Tuning s_tuning = kDefaults;
 std::string s_text;
 unsigned s_frame;
@@ -58,6 +61,30 @@ void parse(const std::string &text, Tuning &t)
         else if (key == "bloom_strength") t.bloom_strength = v < 0.0f ? 0.0f : v;
         else if (key == "gold") t.gold = v != 0.0f;
         else if (key == "silver") t.silver = v != 0.0f;
+        else if (key == "screen") t.screen = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+        else if (key == "screen_gain") t.screen_gain = v < 0.0f ? 0.0f : v;
+        else if (key == "screen_back") t.screen_back = v < 0.0f ? 0.0f : v;
+        else if (key == "screen_fov") t.screen_fov = v < 10.0f ? 10.0f : (v > 170.0f ? 170.0f : v);
+        else if (key == "screen_blur") t.screen_blur = v < 0.1f ? 0.1f : v;
+        else if (key == "screen_flip") t.screen_flip = v != 0.0f;
+        else if (key == "screen_smooth") t.screen_smooth = v < 0.01f ? 0.01f : (v > 1.0f ? 1.0f : v);
+        else if (key == "silver_screen") t.silver_screen = v != 0.0f;
+        else if (key == "glint") t.glint = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+        else if (key == "glint_power") t.glint_power = v < 1.0f ? 1.0f : (v > 256.0f ? 256.0f : v);
+        else if (key == "glint_sat") t.glint_sat = v < 0.0f ? 0.0f : (v > 255.0f ? 255.0f : v);
+        else if (key == "glint_skip") { /* item ids, separated by commas or spaces */
+            t.glint_skip = 0;
+            for (const char *p = line.c_str() + eq + 1; *p;) {
+                char *next;
+                const long id = strtol(p, &next, 10);
+                if (next == p) {
+                    p++;
+                    continue;
+                }
+                if (id >= 0 && id < 32) t.glint_skip |= 1u << id;
+                p = next;
+            }
+        }
     }
     if (getenv("GE_SHINY_LOG")) t.log = true;
 }
@@ -180,6 +207,29 @@ void process(uint8_t *rgba, uint32_t width, uint32_t height)
         }
         for (int j = 0; j < 3; j++) rgba[j] = (uint8_t)lroundf(c[j] * 255.0f);
     }
+}
+
+bool screen(Screen *out)
+{
+    const Tuning &t = s_tuning;
+    if (!gfx_shiny_weapons || t.screen <= 0.0f) return false;
+    *out = Screen{ t.screen, t.screen_gain, t.screen_back, t.screen_fov, t.screen_blur, t.screen_smooth,
+                   t.screen_flip ? 1 : 0 };
+    return true;
+}
+
+bool glint_on(uint8_t item)
+{
+    /* ITEM_WPPK (4) to ITEM_SNIPERRIFLE (17), less any in glint_skip */
+    return gfx_gun_glint && s_tuning.glint > 0.0f && item >= 4 && item <= 17 && !(s_tuning.glint_skip & (1u << item));
+}
+
+bool screen_applies(uint8_t item)
+{
+    const Tuning &t = s_tuning;
+    if (!gfx_shiny_weapons || t.screen <= 0.0f) return false;
+    const bool gold = item == 19 || item == 21; /* ITEM_GOLDENGUN, ITEM_GOLDWPPK */
+    return gold ? t.gold : t.silver_screen;
 }
 
 bool bloom(Bloom *out)

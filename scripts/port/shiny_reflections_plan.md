@@ -8,8 +8,9 @@ turning its section into a plan with milestones, and update this table.
 | --- | --- | --- |
 | 1. Position-driven sway | Hours | Tried and rejected 2026-11-08; archived |
 | 2. Sky and floor-light tint | A day | Tried with 1, archived with it (not judged on its own) |
-| 3. Screen-space reflections from the last frame | Days | Candidate |
-| 4. Live environment capture at the player | Weeks | Candidate, needs a feasibility spike |
+| 3a. Sphere map built from the screen | Days | Shipped 2026-11-08 (FORK-058 Richer Reflections) |
+| 3. Screen-space reflections from the last frame | Days | Candidate; 3b if 3a is too soft |
+| 4. Live environment capture at the player | Weeks | Spike done 2026-11-08: feasible, four fixes needed (below) |
 | 5. Baked reflection probes across a mission | Weeks to months | Candidate, depends on 4 |
 
 ## Why the stock reflection ignores walking
@@ -63,6 +64,30 @@ game's own `tileColor` darkening alpha, `propobj.c`
 nothing. It shipped to play-test together with 1 and was archived with it on
 the same branch, without a separate verdict, so it could be revived alone.
 
+## 3a. Sphere map built from the screen (shipped)
+
+Added 2026-11-08 after candidate 1 failed. The shiny gun draws after the world
+and before the HUD, so when its span opens the target already holds the scene:
+the backend copies it (resolving MSAA) into a mipmapped texture
+(`port/fast3d/gfx_screen_env.inl`). At the span's first shiny batch a warp pass
+builds a 64x64 sphere map in the game's own `G_TEXTURE_GEN` layout (texel
+`(s, t)` = eye-space normal `(2s - 1, 2t - 1)` along the camera's right and up
+axes): each texel's reflection of the view ray, mirrored forward when it
+points behind the camera (shade `screen_back`), samples the screen copy at a
+blurred mip level. The game's per-vertex reflection lookup, lighting and floor
+shading are unchanged; shiny batches just sample this texture on both units.
+
+First try: mixing the raw scene in replaced the gold with the walls' colours
+and went dark (mean brightness 25-96 against 80-133 stock on Runway, Facility
+and Bunker). Current: the authored texture times the scene relative to the
+screen's average brightness (its 1x1 mip), mixed by `screen` (0.7), so the
+metal keeps its colour, detail and level-to-level brightness (within about 10%
+of stock on those three levels, with higher contrast) and the surroundings
+show as light, dark and hue on it. Knobs in `shiny_weapons.ini`: `screen`,
+`screen_gain`, `screen_back`, `screen_fov` (60), `screen_blur`, `screen_flip`.
+All four shiny guns (the silver ones without the tone curve; `silver_screen`). Each new map is blended into the last (`screen_smooth` 0.2) and sampled at blur 8 with `screen` 0.5, which cut the frame-to-frame flicker about in half. Limits: nothing behind the player except the
+mirrored front; soft by design.
+
 ## 3. Screen-space reflections from the last frame
 
 For each shiny pixel, compute the reflection direction from the interpolated
@@ -98,6 +123,34 @@ characters are missing, and the cache has to be reliable first.
 - Feasibility spike before any commitment: enable mode 2 on three levels and
   measure how many rooms around the player are cached, how often captures
   fall back to the interpreter, and the cost of six small extra renders.
+
+**Spike results (2026-11-08).** Debug hook `GE_ENVCUBE_DUMP=n`
+(`gfx_envcube_spike.inl`, kept out of the repository) renders every
+captured room into six camera-aligned 128x128 faces at the n-th weapon span
+and dumps them.
+
+- Mode 2 renders correctly: walking the KF7 ADS audit, Facility and Bunker
+  matched `room_cache = 0` pixel for pixel and Dam differed by a mean of
+  0.5-1.1 / 255; no fallbacks. About 90-125 rooms were captured over ~900
+  frames per level; the game draws 4-50 rooms a frame.
+- Cached rooms do render into cube faces from the camera position: Facility's
+  "ahead" face showed the same X-braced wall as the game's view; Dam's faces
+  showed its rock walls and structures.
+- Each room has its own modelview (4 of 5 rooms differed on Facility, 9 of 11
+  on Dam), so reusing one room's matrix for all misplaced most of them (half
+  black faces, jumbled Dam rooms). Needed: store each room's placement
+  (its modelview relative to the frame's camera when it last drew) and
+  rebuild it with the current camera.
+- No sky: the sky is not a room. Clear the faces to the level's sky colour,
+  or draw the sky separately.
+- Colours came out grey, not Facility's teal: the retained draws' combiner
+  constants and fog were zeroed in the spike; pass the captured ones.
+- Timing: 8-12 ms for six faces, but that included reading them back and
+  writing files; the render cost alone is still unmeasured.
+
+Next, if pursued: per-room placement, sky clear, captured constants, then
+time six faces without the dump and feed the cube into 3a's warp pass in
+place of the screen copy.
 
 ## 5. Baked reflection probes across a mission
 

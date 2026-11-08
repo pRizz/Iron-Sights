@@ -258,24 +258,40 @@ padN_stickmode.
                       |            | strokes keep even widths with any
                       |            | Texture Filter; 0 samples it as before.
                       |            | Iron Sights > System.
-  shiny_weapons       | 1          | [display] Shiny Gold Guns. ON gives the
-                      |            | Golden Gun and Gold PP7 stronger
-                      |            | reflections (a contrast curve on their
-                      |            | reflection texture); 0 draws them as the
+  shiny_weapons       | 1          | [display] Richer Reflections. ON
+                      |            | gives the Golden Gun and Gold PP7 a
+                      |            | contrast curve on their reflection, and
+                      |            | all four shiny guns (with the Silver PP7
+                      |            | and Cougar Magnum) a reflection of the
+                      |            | scene on screen; 0 draws them as the
                       |            | original. An optional shiny_weapons.ini
                       |            | beside midas.ini tunes the look, one
                       |            | key = value per line: gold, silver (1/0:
-                      |            | which guns; silver = Cougar Magnum and
-                      |            | Silver PP7, off by default), contrast
-                      |            | (0.5), gain (0.4), levels (0), ambient
-                      |            | (-1 = the game's 150), diffuse (1), room
-                      |            | (1: share of the game's floor-shade
-                      |            | darkening kept), coverage (1), sweep (0),
-                      |            | drift (0), sharp (0), bloom (0 off, 1
-                      |            | subtle, 2 ludicrous), bloom_threshold
-                      |            | (-1 = the mode's), bloom_strength (1),
-                      |            | log (0). Edits apply while the game runs.
+                      |            | which guns take the contrast look; silver
+                      |            | off by default), contrast (0.5), gain
+                      |            | (0.4), levels (0), ambient (-1 = the
+                      |            | game's 150), diffuse (1), room (1: share
+                      |            | of the game's floor-shade darkening
+                      |            | kept), coverage (1), sweep (0), drift
+                      |            | (0), sharp (0), bloom (0 off, 1 subtle,
+                      |            | 2 ludicrous), bloom_threshold (-1 = the
+                      |            | mode's), bloom_strength (1), screen (0.5:
+                      |            | scene mix, 0 = off), screen_blur (8),
+                      |            | screen_gain (1), screen_back (0.85),
+                      |            | screen_fov (60), screen_smooth (0.2),
+                      |            | screen_flip (0), silver_screen (1), log
+                      |            | (0). Edits apply while the game runs.
                       |            | Iron Sights > System.
+  gun_glint           | 1          | [display] Gun Glint. ON adds moving
+                      |            | highlights to the grey and black metal
+                      |            | of the ordinary guns, PP7 to sniper
+                      |            | rifle (never to hands, sleeves, wood);
+                      |            | 0 draws them as the original. Tuned in
+                      |            | shiny_weapons.ini: glint (0.25
+                      |            | strength), glint_power (64), glint_sat
+                      |            | (12: the most colourful image counted as
+                      |            | metal), glint_skip (item ids to leave
+                      |            | out, e.g. 8, 15). Iron Sights > System.
   texture_pack        | 1          | [display] Texture Pack (Windows/Linux).
                       |            | 1 = HD: campaign environment textures,
                       |            | the gunbarrel intro, sky clouds,

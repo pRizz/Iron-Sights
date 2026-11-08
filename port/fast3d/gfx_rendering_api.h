@@ -111,6 +111,23 @@ struct GfxRenderingAPI {
     void (*bloom_begin)(void);
     void (*bloom_mark)(bool shiny);
     void (*bloom_end)(float threshold, float strength, float radius, int passes);
+    /* FORK-058, screen reflections (gfx_screen_env.inl). env_begin:
+     * copy the current target (the scene so far) and, for the following draws
+     * that bloom_mark calls shiny, replace the reflection texture with a sphere
+     * map sampled from it: mix 0..1 against the authored texture, gain on the
+     * scene, back = shade for directions behind the camera, fov_y in degrees,
+     * blur = extra mip blur factor (1 = none), flip = sample the copy upside
+     * down, smooth = share of the new frame blended into the previous map
+     * (1 = rebuild each time), key = the weapon (a new key starts fresh).
+     * env_end: back to the authored texture. NULL on backends without it. */
+    void (*env_begin)(float mix, float gain, float back, float fov_y, float blur, int flip, float smooth, int key);
+    void (*env_end)(void);
+    /* FORK-058, Gun Glint (gfx_glint.inl): draw triangles additively
+     * over the current target, depth tested (LEQUAL) but not written, lit per
+     * pixel (Blinn-Phong). buf: 15 floats per vertex - clip x, y, z, w exactly
+     * as the batch emitted them, camera-space position, face normal, light
+     * direction, strength, power. NULL on backends without it. */
+    void (*glint_draw)(const float* buf, size_t vertex_count);
 };
 
 #endif

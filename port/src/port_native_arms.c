@@ -14,6 +14,7 @@
 #include "port_arm_mesh.h"
 #include "port_ads.h"
 #include "port_console.h"
+#include "port_shiny.h"
 #include <stdlib.h>
 extern f32 fabsf(f32);
 
@@ -492,7 +493,9 @@ s32 portWardrobeRenderNode(ModelRenderData *renderdata, ModelNode *node,
         if (renderdata->zbufferenabled) { gDPSetRenderMode(gdl++, G_RM_AA_ZB_OPA_SURF,G_RM_AA_ZB_OPA_SURF2); }
         else { gDPSetRenderMode(gdl++, G_RM_AA_OPA_SURF,G_RM_AA_OPA_SURF2); }
     }
+    gdl = portShinyGlintBlock(gdl, TRUE); /* FORK-058: the sleeve never takes a glint */
     gSPDisplayList(gdl++, osVirtualToPhysical(native.color));
+    gdl = portShinyGlintBlock(gdl, FALSE);
     if (preserve) {
         /* Render the hand last through model.c's unchanged native setup,
          * retaining authored mip sampling after the matched wrist draw. */

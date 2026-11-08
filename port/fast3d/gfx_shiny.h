@@ -1,9 +1,11 @@
-/* FORK-058: Shiny Gold Guns. gunfire.c brackets the first-person draw of the
- * Cougar Magnum, Golden Gun, Silver PP7 and Gold PP7 with a G_NOOP tag 0x5E
- * (port_shiny.c); inside it, gfx_pc.cpp hands the reflection-mapped
- * (G_TEXTURE_GEN) triangles' lighting, reflection coordinates and texture to
- * this module, and the backend's bloom to gfx_bloom.inl. Everything else in
- * the span, including the native hands, keeps the stock path. */
+/* FORK-058: Richer Reflections and Gun Glint. gunfire.c brackets the
+ * first-person draw of the Cougar Magnum, Golden Gun, Silver PP7, Gold PP7 and
+ * the ordinary guns (PP7 to sniper rifle) with a G_NOOP tag 0x5E (port_shiny.c).
+ * For the shiny guns, gfx_pc.cpp hands the reflection-mapped (G_TEXTURE_GEN)
+ * triangles' lighting, reflection coordinates and texture to this module, the
+ * scene reflection to gfx_screen_env.inl and bloom to gfx_bloom.inl; for the
+ * ordinary guns, their metal triangles to the glint pass (gfx_glint.inl).
+ * Everything else in the span, including the native hands, keeps the stock path. */
 #ifndef GFX_SHINY_H
 #define GFX_SHINY_H
 
@@ -31,7 +33,34 @@ struct Tuning {
     bool gold;             /* Golden Gun and Gold PP7 take the look (default on) */
     bool silver;           /* Cougar Magnum and Silver PP7 take it (default off: the owner
                             * preferred them stock in play, 2026-11-07) */
+    /* the scene reflection (shiny reflections candidate 3a, gfx_screen_env.inl) */
+    float screen;       /* 0..1 mix of the scene (a sphere map from the screen) into the reflection */
+    float screen_gain;  /* brightness of that scene */
+    float screen_back;  /* shade of directions behind the camera (mirrored from the front) */
+    float screen_fov;   /* vertical field of view assumed for the screen, degrees */
+    float screen_blur;  /* extra blur factor (1 = the sphere map's own size) */
+    bool screen_flip;   /* sample the screen copy upside down */
+    float screen_smooth; /* 0..1 share of each new frame blended into the reflection (1 = none: it flickered) */
+    bool silver_screen; /* the silver guns take the screen reflection without the tuned look (default on) */
+    /* Gun Glint ([display] gun_glint): a moving highlight on the ordinary guns' metal (gfx_glint.inl) */
+    float glint;        /* strength 0..1 of the per-pixel highlight added over metal triangles (0 = off) */
+    float glint_power;  /* its tightness: higher = a smaller, sharper spot */
+    float glint_sat;    /* the most colourful (0..255 mean saturation) an image may be and count as metal */
+    uint32_t glint_skip; /* items (bit = ITEM_* id) left without the glint; glint_skip = 8, 15 in the file */
 };
+
+/* whether the glint applies to this item (ITEM_WPPK..ITEM_SNIPERRIFLE, less glint_skip) */
+bool glint_on(uint8_t item);
+
+/* The screen reflection gfx_pc.cpp asks the backend for at a span's start. */
+struct Screen {
+    float mix, gain, back, fov, blur, smooth;
+    int flip;
+};
+/* false when screen reflections are off */
+bool screen(Screen *out);
+/* whether this shiny weapon item takes the screen reflection now */
+bool screen_applies(uint8_t item);
 
 /* The glow gfx_pc.cpp asks the backend for at the end of a shiny weapon draw. */
 struct Bloom {
@@ -43,7 +72,7 @@ struct Bloom {
 void start_frame();
 const Tuning &tuning();
 /* Whether a shiny weapon item (bondconstants.h ITEM_*) takes the look now:
- * the Shiny Gold Guns setting is on and the file's gold/silver choice has it. */
+ * the Richer Reflections setting is on and the file's gold/silver choice has it. */
 bool applies(uint8_t item);
 /* Texture cache variant for a reflection texture in the span: changes when a
  * texture-affecting setting does, so old images are not reused. Never 0. */

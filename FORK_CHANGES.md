@@ -30,12 +30,17 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
-### FORK-058 — Shiny Gold Guns: tuned reflections on the gold guns
+### FORK-058 — Richer Reflections and Gun Glint: shinier weapon metal
 
-**Status:** Implemented in all builds (2026-11-07); Windows built and tested,
-Linux and browser not built locally. The owner play-tested the prototype on
-2026-11-07: a gentle contrast curve suits the speckled gold guns, and the
-silver guns look best stock, so that is the shipped default.
+**Status:** Implemented in all builds (2026-11-07, extended 2026-11-08);
+Windows built and tested, Linux and browser not built locally. The owner
+play-tested each part: a gentle contrast curve suits the speckled gold guns
+and the silver guns look best without it (2026-11-07); the scene reflection
+no longer flickered after smoothing, and the glint "looks nice" and went to
+the other ordinary guns (2026-11-08). The setting was named Shiny Gold Guns
+until 2026-11-08, when it took the scene reflection and became Richer
+Reflections ("Better Reflective Guns" overran the Options folder's value
+column).
 
 Upstream draws the Cougar Magnum (`ITEM_RUGER`), Golden Gun, Silver PP7 and
 Gold PP7 with N64 sphere mapping: `gunfire.c` sets `g_WeaponEnvmapLight`
@@ -44,20 +49,59 @@ fast3d computes reflection texture coordinates per vertex (`G_TEXTURE_GEN`).
 The draw multiplies an I4 64x64 (Magnum, Silver PP7) or CI8 32x32 (Golden Gun,
 Gold PP7) reflection by the lighting, through a two-mip trilinear blend.
 
-**Gameplay > Iron Sights > System > Shiny Gold Guns** (`[display]
-shiny_weapons`: 0 Off, 1 On; default 1), after Text Antialiasing in the
-Options folder and the watch. On, the Golden Gun's and Gold PP7's reflection
+**Gameplay > Iron Sights > System > Richer Reflections** (`[display]
+shiny_weapons`: 0 Off, 1 On; default 1) and **Gun Glint** (`[display]
+gun_glint`, default 1), after Text Antialiasing in the Options folder and the
+watch. With Richer Reflections on, the Golden Gun's and Gold PP7's reflection
 texture gets a luminance S-curve (contrast 0.5) and a highlight lift (gain
 0.4), scaling colour by a luminance ratio so gold stays gold and fading towards
-white past white. Off, and always for the Cougar Magnum and Silver PP7 unless
-`silver = 1` below, those guns draw exactly as upstream. It is an ordinary
-toggle row, so keyboard, mouse, gamepad and touch adjust it like any other.
+white past white, and all four shiny guns take the scene reflection below
+(the silver guns without the curve, unless `silver = 1`). Gun Glint adds the
+moving highlight below to the ordinary guns. Off, those guns draw exactly as
+upstream. Both are ordinary toggle rows, so keyboard, mouse, gamepad and touch
+adjust them like any other.
+
+- **Scene reflection** (shiny reflections candidate 3a,
+  `port/fast3d/gfx_screen_env.inl`). The shiny gun draws after the world and
+  before the HUD, so when its span opens the backend copies the target (the
+  scene so far, resolving MSAA) into a mipmapped texture. At the span's first
+  shiny batch a warp pass builds a 64x64 sphere map in the game's own
+  `G_TEXTURE_GEN` layout: each texel's reflection of the view ray, mirrored
+  forward when it points behind the camera (shade faded across the seam to
+  `screen_back` 0.85), samples the copy at a blurred mip (`screen_blur` 8);
+  the authored texture times that scene relative to the screen's average
+  brightness (its 1x1 mip) is mixed in by `screen` (0.5), so the metal keeps
+  its colour and level-to-level brightness. Each new map is blended into the
+  last (`screen_smooth` 0.2, reset on a weapon change). Shiny batches sample
+  it on both texture units; the game's lookup, lighting and floor shading are
+  unchanged. First tries rejected: the raw scene replaced the gold and went
+  dark; unsmoothed and less blurred, it flickered as the player moved
+  (frame-to-frame change of the reflection while walking in Facility:
+  median 19.5 / 255 before, about 6-9 after). It can only show what is on
+  screen, so walking straight changes it little.
+- **Gun Glint** (`port/fast3d/gfx_glint.inl`). The ordinary guns, PP7 to
+  sniper rifle (`ITEM_WPPK`..`ITEM_SNIPERRIFLE`, less `glint_skip`), are
+  prelit (no vertex normals) and their metal is nearly black, and the game
+  draws texture x shade, so a highlight in the shade could not show (first
+  try: 0-208 pixels changed). Instead, `port_shiny.c` loads the camera's
+  reflection axes (`gSPLookAt`) at the span, vertices record their camera-space
+  positions, and after each metal batch its triangles are drawn again
+  additively (ONE, ONE; depth tested, not written) with a per-pixel
+  Blinn-Phong highlight from the face normal and a world-fixed overhead light
+  rotated into camera space, dimmed by the floor shade (strength `glint`
+  0.25, `glint_power` 64). Metal means an image whose mean saturation is at
+  most `glint_sat` 12 (the PP7's metal measured 0; skin and wood 28-119), and
+  draws bracketed by G_NOOP `0x61` never take it: the generated sleeve
+  (`port_native_arms.c`) and the native hand pass (`model.c`, two calls in the
+  existing `#ifndef TARGET_N64` code beside `portPartCacheEmit`). A value per
+  face washed whole faces grey and was replaced by the per-pixel pass.
 
 - **Span.** `portShinyWeaponTag` (`port/src/port_shiny.c`) brackets the
   first-person weapon draw with G_NOOP `0x5E` (item in the low byte, 0 =
-  closed; `0x5D` is FORK-056's outline tag) for the four items; knives keep
-  the stock look. `gfx_shiny::applies` drops the span for a gun that does not
-  take the look. Inside it, only reflection-mapped triangles change: the
+  closed; `0x5D` is FORK-056's outline tag) for the four shiny items and the
+  ordinary guns; knives keep the stock look. A gun taking neither the tuned
+  look nor the scene reflection drops the span; the ordinary guns take only
+  the glint. Inside it, only reflection-mapped triangles change: the
   native hands and other triangles without texture generation keep the stock
   lighting, UVs and textures (`scripts/port/arm_rendering.md`).
 - **Advanced tuning.** An optional `shiny_weapons.ini` beside midas.ini (the
@@ -151,14 +195,20 @@ recorded with their trade-offs in the
 (2026-11-07). The position sway and the sky/floor-light tint were built and
 play-tested on 2026-11-08; the owner rejected the sway as unrealistic at every
 speed tried, and both were archived unmerged on the `archive/shiny-walk-sway`
-branch (`d973a2c`). The shipped FORK-058 behaviour above is unchanged.
+branch (`d973a2c`). The scene reflection (candidate 3a) shipped instead. A
+feasibility spike for candidate 4 (a cube map rendered from the room cache)
+found it workable with four fixes; its debug hook is not in the repository and
+the findings are in the candidates plan.
 
 **Sources:** [tag](port/src/port_shiny.c) with its
 [header](port/include/port_shiny.h), [draw hook](src/game/gunfire.c),
 [tuning](port/fast3d/gfx_shiny.cpp) and its [header](port/fast3d/gfx_shiny.h),
 [renderer](port/fast3d/gfx_pc.cpp) and [API globals](port/fast3d/gfx_api.h),
 [cache key](port/fast3d/gfx_pc.h), [bloom](port/fast3d/gfx_bloom.inl),
+[scene reflection](port/fast3d/gfx_screen_env.inl), [glint pass](port/fast3d/gfx_glint.inl),
 [backend](port/fast3d/gfx_opengl.cpp), [backend API](port/fast3d/gfx_rendering_api.h),
+[sleeve bracket](port/src/port_native_arms.c), [hand bracket](src/game/model.c),
+the [wardrobe test stub](scripts/port/test_wardrobe.c),
 [setting](port/src/video.c), [options](port/src/port_options.c),
 [frontend row](src/game/front.c), [watch row](port/src/port_watchpages.c),
 [help](port/src/port_option_help.c), [ini reference](tools/midas_ini_help.txt),
@@ -171,9 +221,20 @@ with no tuning file matches the play-tested look pixel for pixel. The owner
 play-tested the prototype presets in the Windows build. `test_wardrobe.sh`,
 `test_ads.sh`, `test_hud.sh` and `test_upstream_merge.sh` pass;
 `settings_placement.py` and `bright-builds-check.ts all` pass; the hand
-gallery regenerated with zero changed image cells and verifies. Not run: the
-new menu row viewed in the Options folder and watch, the Linux and browser
-builds, other levels, and a long play session.
+gallery regenerated with zero changed image cells and verifies (2026-11-07).
+2026-11-08: scene reflection captured on Runway, Facility and Bunker (gold
+guns' brightness within about 10% of before) and its flicker measured walking
+through Facility (deterministic runs, frame-to-frame change of the reflection's
+contribution). Gun Glint: classification logged per image; changed-pixel masks
+for both PP7s on Dam and Facility and for the DD44, Klobb, KF7, RC-P90,
+Shotgun and Sniper Rifle on Dam showed every changed pixel on gun metal; the
+regenerated hand gallery changed 60 of 72 cells (PP7, AK47 aimed, Klobb), all
+168,072 changed pixels previously grey or black, with identical counts across
+all six wardrobes per gun and pose (so none on a sleeve) and no icon changes.
+The Options folder's System sheet was captured with both rows and Gun Glint's
+help line. The regressions above, settings placement and the standards check
+pass again. Not run: the watch page captured (the level fly-in needs input),
+the Linux and browser builds, every level, and a long play session.
 
 ### FORK-057 — Shader prewarm list recorded over the fork's screens
 

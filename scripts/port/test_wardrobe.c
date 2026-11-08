@@ -25,6 +25,8 @@ static s32 nativeCacheMarks;
 s32 portHandGalleryActive(void) {return FALSE;}
 s32 portHandGalleryStock(void) {return FALSE;}
 Gfx *portPartCacheEmit(Gfx *gdl,s32 segment) { assert(segment==5); ++nativeCacheMarks; return gdl; }
+/* FORK-058: the glint bracket is a renderer marker; the list stays as checked */
+Gfx *portShinyGlintBlock(Gfx *gdl,s32 on) { (void)on; return gdl; }
 static Vtx *copied[16];
 static struct tex skinTextures[2];
 static struct tex bandTexture;

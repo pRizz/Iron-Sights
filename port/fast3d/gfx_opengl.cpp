@@ -139,6 +139,8 @@ static bool gl_core_profile = false;
 
 static void gl_ret_restore(void); /* GE retained geometry: back to the interpreter's VBO / program (defined below) */
 static void gl_bloom_mirror(size_t vertex_count); /* FORK-058: gfx_bloom.inl */
+static bool gl_env_bind(void);   /* FORK-058: gfx_screen_env.inl */
+static void gl_env_unbind(void);
 static struct ShaderProgram* gl_current_prg_set(struct ShaderProgram* prg);
 
 static int gfx_opengl_get_max_texture_size() {
@@ -1459,9 +1461,11 @@ static void gfx_opengl_draw_triangles(float buf_vbo[], size_t buf_vbo_len, size_
     gl_ret_restore(); /* after a retained draw: the stream VBO + this program's arrays again */
     gfx_opengl_sync_dynamic_uniforms();
     if (!clip || !ge_dec_draw || gfx_ge_dec_b >= 0.0f || buf_vbo_num_tris == 0) {
+        const bool env = gl_env_bind(); /* FORK-058: screen reflections (gfx_screen_env.inl) */
         glBufferData(GL_ARRAY_BUFFER, sizeof(float) * buf_vbo_len, buf_vbo, GL_STREAM_DRAW);
         glDrawArrays(GL_TRIANGLES, 0, 3 * buf_vbo_num_tris);
         gl_bloom_mirror(3 * buf_vbo_num_tris); /* FORK-058: shiny weapon bloom (gfx_bloom.inl) */
+        if (env) gl_env_unbind();
         return;
     }
 
@@ -3261,6 +3265,8 @@ static void gfx_opengl_resolve_n64_aa(int fb_dst, int fb_src) {
 }
 
 #include "gfx_bloom.inl" /* FORK-058 */
+#include "gfx_screen_env.inl" /* FORK-058: screen reflections */
+#include "gfx_glint.inl" /* FORK-058: the Gun Glint pass */
 
 struct GfxRenderingAPI gfx_opengl_api = { 
     gfx_opengl_get_name,
@@ -3307,7 +3313,10 @@ struct GfxRenderingAPI gfx_opengl_api = {
     gfx_opengl_resolve_n64_aa,
     gfx_opengl_bloom_begin,
     gfx_opengl_bloom_mark,
-    gfx_opengl_bloom_end
+    gfx_opengl_bloom_end,
+    gfx_opengl_env_begin,
+    gfx_opengl_env_end,
+    gfx_opengl_glint_draw
 };
 
 #ifdef __EMSCRIPTEN__
