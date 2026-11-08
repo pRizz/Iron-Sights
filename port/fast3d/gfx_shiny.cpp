@@ -20,7 +20,8 @@ const char kFile[] = "shiny_weapons.ini";
 /* The shipped look (the owner's pick in play, 2026-11-07): a gentle tone curve
  * on the gold guns only; every other knob neutral. */
 const Tuning kDefaults = { -1.0f, 1.0f, 1.0f, 0.5f, 0.4f, 0.0f, 1.0f, 0.0f, 0.0f,
-                           false, false, 0, -1.0f, 1.0f, true, false };
+                           false, false, 0, -1.0f, 1.0f, true, false,
+                           1.0f, 0.25f, 0.2f, true };
 Tuning s_tuning = kDefaults;
 std::string s_text;
 unsigned s_frame;
@@ -58,6 +59,10 @@ void parse(const std::string &text, Tuning &t)
         else if (key == "bloom_strength") t.bloom_strength = v < 0.0f ? 0.0f : v;
         else if (key == "gold") t.gold = v != 0.0f;
         else if (key == "silver") t.silver = v != 0.0f;
+        else if (key == "walk") t.walk = v;
+        else if (key == "env_tint") t.env_tint = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+        else if (key == "env_bright") t.env_bright = v < 0.0f ? 0.0f : v;
+        else if (key == "silver_motion") t.silver_motion = v != 0.0f;
     }
     if (getenv("GE_SHINY_LOG")) t.log = true;
 }
@@ -122,31 +127,62 @@ void start_frame()
 
 const Tuning &tuning() { return s_tuning; }
 
-bool applies(uint8_t item)
+static bool is_gold(uint8_t item)
 {
-    if (!gfx_shiny_weapons) return false;
-    const bool gold = item == 19 || item == 21; /* ITEM_GOLDENGUN, ITEM_GOLDWPPK (bondconstants.h) */
-    return gold ? s_tuning.gold : s_tuning.silver;
+    return item == 19 || item == 21; /* ITEM_GOLDENGUN, ITEM_GOLDWPPK (bondconstants.h) */
+}
+
+bool look(uint8_t item)
+{
+    return gfx_shiny_weapons && (is_gold(item) ? s_tuning.gold : s_tuning.silver);
+}
+
+bool motion(uint8_t item)
+{
+    return gfx_shiny_weapons && (is_gold(item) ? s_tuning.gold : s_tuning.silver_motion);
 }
 
 uint8_t texture_variant() { return s_variant; }
 
-float remap(float dot, int axis, const int8_t *lookat_x, const int8_t *lookat_y, bool lookat)
+float remap(float dot, int axis, const int8_t *lookat_x, const int8_t *lookat_y, bool lookat, const View &view,
+            bool tuned)
 {
     const Tuning &t = s_tuning;
-    if (t.coverage == 1.0f && t.sweep == 0.0f && t.drift == 0.0f) {
+    const bool walk = t.walk != 0.0f && lookat && view.valid;
+    const float coverage = tuned ? t.coverage : 1.0f, sweep = tuned ? t.sweep : 0.0f, drift = tuned ? t.drift : 0.0f;
+    if (coverage == 1.0f && sweep == 0.0f && drift == 0.0f && !walk) {
         return dot < -1.0f ? -1.0f : (dot > 1.0f ? 1.0f : dot);
     }
-    float x = dot * t.coverage;
-    if (t.sweep != 0.0f && lookat) {
+    float x = dot * coverage;
+    if (walk) {
+        /* the camera's ground position along its own right axis moves the
+         * pattern sideways and along its forward axis up and down, so strafing
+         * and walking slide the reflection like scenery passing in the metal.
+         * Height is left out: the head bob jittered it. */
+        float rx = lookat_x[0], rz = lookat_x[2];
+        const float rl = sqrtf(rx * rx + rz * rz);
+        if (rl > 0.0f) {
+            rx /= rl;
+            rz /= rl;
+            const float *p = view.pos;
+            const float along = axis == 0 ? p[0] * rx + p[2] * rz : p[2] * rx - p[0] * rz;
+            /* a slow, bounded sway around the stock pattern: amplitude 0.15 of
+             * the reflection's range per unit of walk, one swing per ~6,300
+             * units. The first tries were unbounded (the phase drifted onto
+             * dark bands) and then ten times as fast (the owner found the whole
+             * reflection changed with small steps, 2026-11-08). */
+            x += t.walk * 0.15f * sinf(along / 1000.0f);
+        }
+    }
+    if (sweep != 0.0f && lookat) {
         /* the camera's yaw from its right axis; pitch from its forward axis
          * (up x right), whose height is the sine of the pitch */
         const float yaw = atan2f(-(float)lookat_x[2], (float)lookat_x[0]);
         const float fy = ((float)lookat_y[2] * lookat_x[0] - (float)lookat_y[0] * lookat_x[2]) / (127.0f * 127.0f);
         const float pitch = asinf(fy < -1.0f ? -1.0f : (fy > 1.0f ? 1.0f : fy));
-        x += t.sweep * (axis == 0 ? yaw : pitch) * (2.0f / 3.14159265f);
+        x += sweep * (axis == 0 ? yaw : pitch) * (2.0f / 3.14159265f);
     }
-    if (t.drift != 0.0f) x += 4.0f * t.drift * seconds() * (axis == 0 ? 1.0f : 0.37f);
+    if (drift != 0.0f) x += 4.0f * drift * seconds() * (axis == 0 ? 1.0f : 0.37f);
     return fold(x);
 }
 
@@ -180,6 +216,23 @@ void process(uint8_t *rgba, uint32_t width, uint32_t height)
         }
         for (int j = 0; j < 3; j++) rgba[j] = (uint8_t)lroundf(c[j] * 255.0f);
     }
+}
+
+void tint(int rgb[3], uint8_t fog_alpha, const View &view)
+{
+    const Tuning &t = s_tuning;
+    if (!view.valid || (t.env_tint <= 0.0f && t.env_bright <= 0.0f)) return;
+    /* set_color_shading_from_tile: alpha = (255 - floor luminance) x 0.75 */
+    float lit = 1.0f - fog_alpha / 191.0f;
+    lit = lit < 0.0f ? 0.0f : (lit > 1.0f ? 1.0f : lit);
+    float hue[3] = { 1.0f, 1.0f, 1.0f };
+    const int top = view.sky[0] > view.sky[1] ? (view.sky[0] > view.sky[2] ? view.sky[0] : view.sky[2])
+                                              : (view.sky[1] > view.sky[2] ? view.sky[1] : view.sky[2]);
+    if (top >= 24) { /* a black sky (indoor levels) tints nothing */
+        for (int i = 0; i < 3; i++) hue[i] = (float)view.sky[i] / (float)top;
+    }
+    const float w = t.env_tint * lit, gain = 1.0f + t.env_bright * lit;
+    for (int i = 0; i < 3; i++) rgb[i] = (int)lroundf(rgb[i] * (1.0f + w * (hue[i] - 1.0f)) * gain);
 }
 
 bool bloom(Bloom *out)

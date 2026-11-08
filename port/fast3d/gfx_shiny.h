@@ -31,6 +31,18 @@ struct Tuning {
     bool gold;             /* Golden Gun and Gold PP7 take the look (default on) */
     bool silver;           /* Cougar Magnum and Silver PP7 take it (default off: the owner
                             * preferred them stock in play, 2026-11-07) */
+    float walk;       /* reflection sway as the camera moves (1 = default, 0 = stock: still while walking) */
+    float env_tint;   /* 0..1 pull of the reflective shade towards the level's sky colour, in lit areas */
+    float env_bright; /* extra reflective brightness in lit areas (0 = none) */
+    bool silver_motion; /* the silver guns take the sway and tint without the tuned look (default on) */
+};
+
+/* Where the camera is and what the level's sky colour is, for one span
+ * (port_shiny.c tags 0x5F, 0x60). */
+struct View {
+    float pos[3];
+    uint8_t sky[3];
+    bool valid;
 };
 
 /* The glow gfx_pc.cpp asks the backend for at the end of a shiny weapon draw. */
@@ -42,15 +54,24 @@ struct Bloom {
 /* Re-reads shiny_weapons.ini when its contents change (twice a second). */
 void start_frame();
 const Tuning &tuning();
-/* Whether a shiny weapon item (bondconstants.h ITEM_*) takes the look now:
- * the Shiny Gold Guns setting is on and the file's gold/silver choice has it. */
-bool applies(uint8_t item);
+/* With the Shiny Gold Guns setting on, whether a shiny weapon item
+ * (bondconstants.h ITEM_*) takes the tuned look (tone curve, light, room,
+ * bloom: the file's gold/silver), and whether its reflection follows the
+ * player (sway and sky tint: gold, or silver_motion for the silver guns). */
+bool look(uint8_t item);
+bool motion(uint8_t item);
 /* Texture cache variant for a reflection texture in the span: changes when a
  * texture-affecting setting does, so old images are not reused. Never 0. */
 uint8_t texture_variant();
-/* The reflection coordinate after coverage, sweep and drift; lookat_x/y are
- * the game's camera reflection axes (gSPLookAt) when it set them. */
-float remap(float dot, int axis, const int8_t *lookat_x, const int8_t *lookat_y, bool lookat);
+/* The reflection coordinate after the walking sway, and for a gun with the
+ * tuned look also coverage, sweep and drift; lookat_x/y are the game's camera
+ * reflection axes (gSPLookAt) when it set them. */
+float remap(float dot, int axis, const int8_t *lookat_x, const int8_t *lookat_y, bool lookat, const View &view,
+            bool tuned);
+/* A reflective vertex's lit shade (0..255+ per channel) tinted towards the
+ * sky colour and brightened by how lit the floor is: fog_alpha is the game's
+ * floor-shade darkening for the held weapon (0 bright .. 191 black). */
+void tint(int rgb[3], uint8_t fog_alpha, const View &view);
 /* Tone curve, in place, over an RGBA8 image. */
 void process(uint8_t *rgba, uint32_t width, uint32_t height);
 /* false when bloom is off */

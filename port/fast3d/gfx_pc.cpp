@@ -509,8 +509,13 @@ static bool s_GeViewmodel = false;
 /* FORK-058: the shiny weapon being drawn (G_NOOP 0x5E, port_shiny.c), 0 = none;
  * its reflection-mapped triangles take gfx_shiny's lighting, coordinates and image */
 static uint8_t s_GeShinyItem = 0;
+/* FORK-058: that weapon takes the tuned look (tone curve, light, room, bloom),
+ * not only the reflection's motion and sky tint */
+static bool s_GeShinyLook = false;
 /* FORK-058: the backend is mirroring this span's draws into its bloom buffer */
 static bool s_GeShinyBloom = false;
+/* FORK-058: the camera position and sky colour sent before the span (G_NOOP 0x5F, 0x60) */
+static gfx_shiny::View s_GeShinyView = {};
 /* This texture rect is an open-font glyph (FORK-050): the MSDF shader, no UV clamp. */
 static bool s_RectMsdf = false;
 /* options.c portHudScaleBegin (midas.ini hud_scale): G_NOOP tag 0x58 brackets
@@ -3188,7 +3193,7 @@ static void import_texture(int i, int tile, bool importReplacement) {
     key.hd_native = s_GeViewmodel && portTexturePackGet();
 #endif
     /* FORK-058: a shiny weapon's reflection image is tone-curved */
-    key.shiny = (s_GeShinyItem && (rsp.geometry_mode & G_TEXTURE_GEN))
+    key.shiny = (s_GeShinyItem && s_GeShinyLook && (rsp.geometry_mode & G_TEXTURE_GEN))
                     ? gfx_shiny::texture_variant() : 0;
 
     { /* GE_TEXDBG=1: report address collisions between
@@ -3642,8 +3647,8 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* verti
             int b = rsp.current_lights[rsp.current_num_lights - 1].col[2];
             /* FORK-058: a shiny weapon's reflective surface takes the tuned light */
             const bool shiny = s_GeShinyItem && (rsp.geometry_mode & G_TEXTURE_GEN);
-            const float diffuse_gain = shiny ? gfx_shiny::tuning().diffuse : 1.0f;
-            if (shiny && gfx_shiny::tuning().ambient >= 0.0f) {
+            const float diffuse_gain = shiny && s_GeShinyLook ? gfx_shiny::tuning().diffuse : 1.0f;
+            if (shiny && s_GeShinyLook && gfx_shiny::tuning().ambient >= 0.0f) {
                 r = g = b = (int)gfx_shiny::tuning().ambient;
             }
 
@@ -3659,6 +3664,13 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* verti
                     g += intensity * rsp.current_lights[i].col[1];
                     b += intensity * rsp.current_lights[i].col[2];
                 }
+            }
+            if (shiny) { /* FORK-058: the level's sky colour in lit areas */
+                int rgb[3] = { r, g, b };
+                gfx_shiny::tint(rgb, rdp.fog_color.a, s_GeShinyView);
+                r = rgb[0];
+                g = rgb[1];
+                b = rgb[2];
             }
 
             d->color.r = r > 255 ? 255 : r;
@@ -3700,9 +3712,11 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* verti
                     doty = tvcn[1];
                 }
 
-                if (shiny) { /* FORK-058: coverage, camera sweep and drift */
-                    dotx = gfx_shiny::remap(dotx, 0, rsp.lookat[0].dir, rsp.lookat[1].dir, rsp.lookat_enabled);
-                    doty = gfx_shiny::remap(doty, 1, rsp.lookat[0].dir, rsp.lookat[1].dir, rsp.lookat_enabled);
+                if (shiny) { /* FORK-058: walking sway; for the tuned look also coverage, sweep, drift */
+                    dotx = gfx_shiny::remap(dotx, 0, rsp.lookat[0].dir, rsp.lookat[1].dir, rsp.lookat_enabled,
+                                            s_GeShinyView, s_GeShinyLook);
+                    doty = gfx_shiny::remap(doty, 1, rsp.lookat[0].dir, rsp.lookat[1].dir, rsp.lookat_enabled,
+                                            s_GeShinyView, s_GeShinyLook);
                 }
                 dotx = clampf(dotx, -1.0f, 1.0f);
                 doty = clampf(doty, -1.0f, 1.0f);
@@ -3822,7 +3836,7 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* verti
             /* FORK-058: the held weapon's floor-tile darkening (model.c
              * G_RM_FOG_PRIM_A, alpha from propobj.c set_color_shading_from_tile)
              * scaled on its reflective surfaces only */
-            if (s_GeShinyItem && (rsp.geometry_mode & G_TEXTURE_GEN)) {
+            if (s_GeShinyItem && s_GeShinyLook && (rsp.geometry_mode & G_TEXTURE_GEN)) {
                 d->fog = (uint8_t)lroundf(d->fog * gfx_shiny::tuning().room);
             }
         }
@@ -7855,13 +7869,26 @@ static void gfx_run_dl(Gfx* cmd) {
                 } else if ((cmd->words.w1 >> 24) == 0x5Cu) {
                     /* FORK-053: first-person weapon span on / off (port_hud_ammo.c) */
                     s_GeViewmodel = (cmd->words.w1 & 1u) != 0;
+                } else if ((cmd->words.w1 >> 24) == 0x5Fu) {
+                    /* FORK-058: camera position, axis in bits 22-23, signed units in 0-21 */
+                    const uint32_t axis = (cmd->words.w1 >> 22) & 3u;
+                    const int32_t v = (int32_t)((cmd->words.w1 & 0x3FFFFFu) << 10) >> 10;
+                    if (axis < 3) s_GeShinyView.pos[axis] = (float)v;
+                } else if ((cmd->words.w1 >> 24) == 0x60u) {
+                    /* FORK-058: the level's sky colour, then the span opens */
+                    s_GeShinyView.sky[0] = (uint8_t)(cmd->words.w1 >> 16);
+                    s_GeShinyView.sky[1] = (uint8_t)(cmd->words.w1 >> 8);
+                    s_GeShinyView.sky[2] = (uint8_t)cmd->words.w1;
+                    s_GeShinyView.valid = true;
                 } else if ((cmd->words.w1 >> 24) == 0x5Eu) {
                     /* FORK-058: shiny weapon span, item or 0 (port_shiny.c) */
                     gfx_flush(); /* draws before the tag belong outside the span */
                     s_GeShinyItem = (uint8_t) (cmd->words.w1 & 0xFFu);
-                    if (!gfx_shiny::applies(s_GeShinyItem)) s_GeShinyItem = 0; /* this gun keeps the stock look */
+                    s_GeShinyLook = gfx_shiny::look(s_GeShinyItem);
+                    if (!s_GeShinyLook && !gfx_shiny::motion(s_GeShinyItem)) s_GeShinyItem = 0; /* stock */
                     gfx_shiny::Bloom glow;
-                    if (s_GeShinyItem && !s_GeShinyBloom && gfx_rapi->bloom_begin && gfx_shiny::bloom(&glow)) {
+                    if (s_GeShinyItem && s_GeShinyLook && !s_GeShinyBloom && gfx_rapi->bloom_begin
+                        && gfx_shiny::bloom(&glow)) {
                         gfx_rapi->bloom_begin();
                         s_GeShinyBloom = true;
                     } else if (!s_GeShinyItem && s_GeShinyBloom) {
@@ -8369,6 +8396,7 @@ extern "C" void gfx_start_frame(void) {
     ge_stat_free_ids = (uint32_t) gfx_texture_cache.free_texture_ids.q.size();
     s_GeViewmodel = false;
     s_GeShinyItem = 0;
+    s_GeShinyView.valid = false;
     if (s_GeShinyBloom) { /* FORK-058: a span never closed: stop mirroring, draw no glow */
         gfx_rapi->bloom_end(1.0f, 0.0f, 0.0f, 1);
         s_GeShinyBloom = false;
