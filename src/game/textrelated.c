@@ -277,6 +277,10 @@ static f32 port_text_scale = 1.0f;
  * them. Only glyphs may be tagged (a tagged G_NOOP, 0x47 in the top byte),
  * since tiled pictures would open seams. */
 #define PORT_TEXT_GLYPHS(gdl, on) gDPNoOpTag((gdl)++, 0x47000000u | ((on) ? 1u : 0u))
+/* An outline glyph (tag 0x5D): the renderer repeats it around the square one
+ * native pixel out at framebuffer-pixel steps, instead of Rare's eight copies
+ * a whole native pixel apart, which notch diagonal strokes once upscaled. */
+#define PORT_TEXT_OUTLINE(gdl, on) gDPNoOpTag((gdl)++, 0x5D000000u | ((on) ? 1u : 0u))
 
 /* The pen's position past *x, in native pixels (0 <= frac < 1). Scaled text
  * moves the pen by exact scaled widths and gaps, so letters keep their designed
@@ -668,8 +672,10 @@ Gfx *textRenderGlyphOutlined(Gfx *gdl, s32 *x, s32 *y, struct fontchar *curchar,
                        /*sp80*/u32 textColour, u32 outlineColour, s32 clipWidth, s32 clipHeight, 
                        /*sp90*/ s32 yOffset)
 {
+#ifdef TARGET_N64
     s32 offsetX;
     s32 offsetY;
+#endif
     s32 kerningOffset;
     s32 drawY;
     s32 tmpx;
@@ -719,6 +725,12 @@ Gfx *textRenderGlyphOutlined(Gfx *gdl, s32 *x, s32 *y, struct fontchar *curchar,
         rgba = outlineColour;
         gDPSetPrimColor(gdl++, 0, 0, M_COLOR_R(rgba), M_COLOR_G(rgba), M_COLOR_B(rgba), M_COLOR_A(rgba));
 
+#ifndef TARGET_N64
+        /* The renderer traces the one-pixel outline at its own resolution. */
+        PORT_TEXT_OUTLINE(gdl, 1);
+        gdl = textDrawGlyphQuad(gdl, *x, drawY, curchar, clipX, clipY, clipWidth, clipHeight);
+        PORT_TEXT_OUTLINE(gdl, 0);
+#else
         for (offsetX = -1; offsetX < 2; offsetX++) {
             for (offsetY = -1; offsetY < 2; offsetY++) {
                 tmpx = *x + offsetX;
@@ -729,6 +741,7 @@ Gfx *textRenderGlyphOutlined(Gfx *gdl, s32 *x, s32 *y, struct fontchar *curchar,
                 }
             }
         }
+#endif
 
         // Render main character.
         tmpx = *x;

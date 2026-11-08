@@ -30,6 +30,48 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-056 — Outlined text keeps clean outlines at high resolution
+
+**Status:** Implemented in the Windows build (2026-11-07) after the owner
+reported jagged gray outlines on HUD ammo digits such as 6 and 7. The owner
+play-tested it and approved it the same day.
+
+Outlined text is the white text with a gray ring around it: the ammo counters,
+the bottom-left HUD messages and the countdown timers (`textRenderOutlined`).
+Upstream draws the ring as eight copies of each glyph, one native pixel away
+in each direction, under the glyph itself. At 320x240 that is the glyph grown
+by a one-pixel square. Upscaled, the copies sit several screen pixels apart (4.5
+at 1080p), so where a diagonal stroke ends, a copy's flat end shows as a step
+in the ring. The 7's stem showed it most. The Original font's blur mostly hid
+it, but the sharp Enhanced and Iron Sights fonts showed it clearly.
+
+The PC build now draws the outline glyph once, tagged, and the renderer
+repeats it around the square one native pixel out, with copies at most one
+framebuffer pixel apart (40 at 1080p, 8 at native resolution, where they are
+upstream's offsets). The ring is therefore the glyph grown by that square at
+screen resolution: straight bands along diagonals and square corners as
+before. Copies are offset from the clipped glyph quad, rather than each being
+clipped again like upstream's. The half-size HUD halves the square with the
+text. All font styles change. With Original, the ring is also a more even gray
+band instead of the soft overlap of eight blurred copies. The N64 build keeps
+upstream's loop. There is no setting, and input is unchanged.
+
+**Upstream hooks:** `textRenderGlyphOutlined` in `textrelated.c` replaces its
+eight-copy loop on PC with one quad between `PORT_TEXT_OUTLINE` tags (`G_NOOP`
+`0x5D`). In `gfx_pc.cpp`, the display-list parser sets `s_GeTextOutline`,
+frame start clears it, and `gfx_draw_rectangle` emits the ring of copies for
+a tagged glyph.
+
+**Sources:** [glyph outline](src/game/textrelated.c), [renderer](port/fast3d/gfx_pc.cpp).
+
+**Checks:** the Windows build compiles and links. With all three font styles,
+1920x1080 HUD audits (`audit_hud.ps1 -Resolution 1920x1080 -FontStyle ...`)
+before and after the change show the step in the 7's outline is gone with
+Enhanced and Iron Sights. Square digits such as 8 and 0 keep their outline
+shape. A 3840x2160 request was clamped to a 1600x900 window on this display,
+so 4K was not captured. `test_hud.sh`, `test_open_fonts.sh` and
+`test_enhanced_fonts.sh` pass. The hand gallery regenerated with zero changed
+image cells (source fingerprint only).
 ### FORK-055 — Growth soak audit and a bounded texture-name pool
 
 **Status:** Implemented 2026-11-07. Measured on Windows (plain and with an HD

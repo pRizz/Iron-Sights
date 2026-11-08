@@ -496,6 +496,7 @@ static int32_t s_RectUvS0, s_RectUvS1, s_RectUvT0, s_RectUvT1;
  * s_RectGlyphBorder = this one was grown half a texel and wants a transparent
  * border from the sampler (see gfx_dp_texture_rectangle). */
 static bool s_GeTextGlyphs = false;
+static bool s_GeTextOutline = false;   /* textrelated.c PORT_TEXT_OUTLINE */
 static bool s_RectGlyphBorder = false;
 /* FORK-053: HUD ammo icon slot + 1 for the following texrect (gunfire.c via
  * portHudAmmoIconTag), 0 = none */
@@ -5991,30 +5992,42 @@ static void gfx_draw_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lr
         ulyf -= dy; lryf -= dy;
     }
 
+    /* textrelated.c PORT_TEXT_OUTLINE: an outline glyph is repeated around the
+     * square one native pixel out, at most a framebuffer pixel apart. Its union
+     * is the glyph grown by that square, as Rare's eight copies were at 320x240;
+     * a whole native pixel apart, upscaled, they notch diagonal strokes. */
+    float ring[2][256];
+    int ring_n = 0;
+    if (s_GeTextGlyphs && s_GeTextOutline) {
+        const float native = s_GeHudScale ? 0.5f : 1.0f;
+        const float rx = fabsf(gfx_adjust_x_for_aspect_ratio(native / HALF_SCREEN_WIDTH) - gfx_adjust_x_for_aspect_ratio(0.0f));
+        const float ry = native / HALF_SCREEN_HEIGHT;
+        const int nx = std::clamp((int) ceilf(rx * gfx_current_dimensions.width * 0.5f - 0.01f), 1, 31);
+        const int ny = std::clamp((int) ceilf(ry * gfx_current_dimensions.height * 0.5f - 0.01f), 1, 31);
+        for (int i = -nx; i <= nx; i++) {
+            for (int side = -1; side <= 1; side += 2) {
+                ring[0][ring_n] = rx * i / nx;
+                ring[1][ring_n++] = ry * side;
+            }
+        }
+        for (int j = 1 - ny; j < ny; j++) {
+            for (int side = -1; side <= 1; side += 2) {
+                ring[0][ring_n] = rx * side;
+                ring[1][ring_n++] = ry * j / ny;
+            }
+        }
+    } else {
+        ring[0][0] = ring[1][0] = 0.0f;
+        ring_n = 1;
+    }
+
     struct LoadedVertex* ul = &rsp.loaded_vertices[MAX_VERTICES + 0];
     struct LoadedVertex* ll = &rsp.loaded_vertices[MAX_VERTICES + 1];
     struct LoadedVertex* lr = &rsp.loaded_vertices[MAX_VERTICES + 2];
     struct LoadedVertex* ur = &rsp.loaded_vertices[MAX_VERTICES + 3];
 
-    ul->x = ulxf;
-    ul->y = ulyf;
-    ul->z = -1.0f;
-    ul->w = 1.0f;
-
-    ll->x = ulxf;
-    ll->y = lryf;
-    ll->z = -1.0f;
-    ll->w = 1.0f;
-
-    lr->x = lrxf;
-    lr->y = lryf;
-    lr->z = -1.0f;
-    lr->w = 1.0f;
-
-    ur->x = lrxf;
-    ur->y = ulyf;
-    ur->z = -1.0f;
-    ur->w = 1.0f;
+    ul->z = ll->z = lr->z = ur->z = -1.0f;
+    ul->w = ll->w = lr->w = ur->w = 1.0f;
 
     // The coordinates for texture rectangle shall bypass the viewport setting
     struct XYWidthHeight default_viewport = { 0, (int16_t)SCREEN_HEIGHT, (uint32_t)SCREEN_WIDTH, (uint32_t)SCREEN_HEIGHT };
@@ -6028,8 +6041,14 @@ static void gfx_draw_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lr
     rsp.geometry_mode = 0;
 
     s_DrawingRect = true;
-    gfx_sp_tri1(MAX_VERTICES + 0, MAX_VERTICES + 1, MAX_VERTICES + 3, true);
-    gfx_sp_tri1(MAX_VERTICES + 1, MAX_VERTICES + 2, MAX_VERTICES + 3, true);
+    for (int k = 0; k < ring_n; k++) {
+        ul->x = ll->x = ulxf + ring[0][k];
+        lr->x = ur->x = lrxf + ring[0][k];
+        ul->y = ur->y = ulyf + ring[1][k];
+        ll->y = lr->y = lryf + ring[1][k];
+        gfx_sp_tri1(MAX_VERTICES + 0, MAX_VERTICES + 1, MAX_VERTICES + 3, true);
+        gfx_sp_tri1(MAX_VERTICES + 1, MAX_VERTICES + 2, MAX_VERTICES + 3, true);
+    }
     s_DrawingRect = false;
 
     rsp.geometry_mode = geometry_mode_saved;
@@ -7749,6 +7768,9 @@ static void gfx_run_dl(Gfx* cmd) {
                 } else if ((cmd->words.w1 >> 24) == 0x47u) {
                     /* font glyph run on / off (textrelated.c PORT_TEXT_GLYPHS) */
                     s_GeTextGlyphs = (cmd->words.w1 & 1u) != 0;
+                } else if ((cmd->words.w1 >> 24) == 0x5Du) {
+                    /* an outline glyph on / off (textrelated.c PORT_TEXT_OUTLINE) */
+                    s_GeTextOutline = (cmd->words.w1 & 1u) != 0;
                 } else if ((cmd->words.w1 >> 24) == 0x5Bu) {
                     /* FORK-053: HUD ammo icon slot + 1, 0 = none (port_hud_ammo.c) */
                     s_GeHudAmmoSlot = (uint8_t) (cmd->words.w1 & 0xFFu);
@@ -8414,6 +8436,7 @@ extern "C" void gfx_run(Gfx* commands) {
 
     // puts("New frame");
     s_GeTextPixelOffset = {0, 0};
+    s_GeTextOutline = false;
 
     if (!gfx_wapi->start_frame()) {
         dropped_frame = true;
