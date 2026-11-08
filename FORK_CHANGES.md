@@ -148,7 +148,10 @@ follow the player (position sway, sky and floor-light tint, screen-space
 reflections from the last frame, live environment capture, baked probes) are
 recorded with their trade-offs in the
 [shiny reflections candidates](scripts/port/shiny_reflections_plan.md)
-(2026-11-07).
+(2026-11-07). The position sway and the sky/floor-light tint were built and
+play-tested on 2026-11-08; the owner rejected the sway as unrealistic at every
+speed tried, and both were archived unmerged on the `archive/shiny-walk-sway`
+branch (`d973a2c`). The shipped FORK-058 behaviour above is unchanged.
 
 **Sources:** [tag](port/src/port_shiny.c) with its
 [header](port/include/port_shiny.h), [draw hook](src/game/gunfire.c),

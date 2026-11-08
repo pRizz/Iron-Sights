@@ -6,8 +6,8 @@ turning its section into a plan with milestones, and update this table.
 
 | Candidate | Effort | Status |
 | --- | --- | --- |
-| 1. Position-driven sway | Hours | In play-test (FORK-058 `walk`) |
-| 2. Sky and floor-light tint | A day | In play-test (FORK-058 `env_tint`, `env_bright`) |
+| 1. Position-driven sway | Hours | Tried and rejected 2026-11-08; archived |
+| 2. Sky and floor-light tint | A day | Tried with 1, archived with it (not judged on its own) |
 | 3. Screen-space reflections from the last frame | Days | Candidate |
 | 4. Live environment capture at the player | Weeks | Candidate, needs a feasibility spike |
 | 5. Baked reflection probes across a mission | Weeks to months | Candidate, depends on 4 |
@@ -31,22 +31,37 @@ triangles, so the native hands keep the stock path
 the authored texture, so they may suit the silver guns too, which the owner
 preferred stock with the tone curve alone.
 
-## 1. Position-driven sway (in play-test)
+## 1. Position-driven sway (tried, rejected)
 
-The camera position goes to the renderer with the span (`0x5F` tags) and
-sways the reflection coordinates around the stock pattern: position along the
-camera's right axis moves it sideways, along forward (plus half of up) up and
-down, as `walk x 0.35 x sin(distance / 150)`. An unbounded offset was tried
-first and rejected: it drifted the pattern's phase onto its dark bands at some
-spots. Not physically accurate; it removes the stillness while walking.
+**Outcome (2026-11-08):** the owner play-tested it and rejected it: the
+reflection's change with movement looked and felt unrealistic, at both speeds
+tried. The code is archived on the `archive/shiny-walk-sway` branch (commit
+`d973a2c`), never merged into `main`.
 
-## 2. Sky and floor-light tint (in play-test)
+What it did: the camera position went to the renderer with the span (`0x5F`
+tags) and swayed the reflection coordinates around the stock pattern: ground
+position along the camera's right axis moved it sideways, along its forward
+axis up and down. Three versions: an unbounded offset (the pattern's phase
+drifted onto its dark bands: Gold PP7 median brightness 80 to 27 on Runway),
+a bounded `0.35 x sin(distance / 150)` (the whole reflection changed with
+small steps) and `0.15 x sin(distance / 1000)` without height (gentle, still
+unrealistic). It applied to all four guns, the silver ones without the tuned
+look (`silver_motion`).
 
-The level's sky colour (`g_CurrentEnvironment`, `0x60` tag) tints the
-reflective shade, weighted by how lit the floor under the player is (the
+**Lesson:** sliding the authored pattern cannot read as a reflection,
+however it is paced, because nothing in it corresponds to the surroundings:
+the eye sees a texture moving, not a room passing. Movement-correct
+reflections need real scene content (candidates 3 to 5).
+
+## 2. Sky and floor-light tint (archived with 1)
+
+The level's sky colour (`g_CurrentEnvironment`, `0x60` tag) tinted the
+reflective shade, weighted by how lit the floor under the player was (the
 game's own `tileColor` darkening alpha, `propobj.c`
-`set_color_shading_from_tile`), and lit areas brighten it slightly. A black
-sky (indoor levels) tints nothing.
+`set_color_shading_from_tile`), and lit areas brightened it slightly
+(`env_tint` 0.25, `env_bright` 0.2); a black sky (indoor levels) tinted
+nothing. It shipped to play-test together with 1 and was archived with it on
+the same branch, without a separate verdict, so it could be revived alone.
 
 ## 3. Screen-space reflections from the last frame
 
