@@ -100,6 +100,17 @@ struct GfxRenderingAPI {
      * the N64's Video Interface filtered its frame - see gfx_opengl.cpp. NULL on
      * backends without it (gfx_pc falls back to the plain resolve). */
     void (*resolve_n64_aa)(int fb_dst, int fb_src);
+    /* FORK-058 shiny weapon bloom (gfx_bloom.inl). bloom_begin: clear the bloom
+     * buffer and mirror every following draw_triangles into it - batches marked
+     * shiny in colour, the rest as black, with the same depth state, so it holds
+     * only the visible reflective pixels. bloom_mark: whether the next draws are
+     * shiny. bloom_end: stop mirroring, then add the blurred bright part
+     * (soft-thresholded luma above threshold, 0..1) times strength to the
+     * current target; radius in pixels per blur pass, passes >= 1. NULL on
+     * backends without it. */
+    void (*bloom_begin)(void);
+    void (*bloom_mark)(bool shiny);
+    void (*bloom_end)(float threshold, float strength, float radius, int passes);
 };
 
 #endif

@@ -48,6 +48,7 @@ struct TextureCacheKey {
     bool enhanced_glyph; /* FORK-052: an Enhanced font mask, not its ROM bitmap */
     uint8_t hd_ammo; /* FORK-053: HUD ammo slot + 1 when the HD pack's art replaces the image */
     bool hd_native;  /* FORK-053: drawn in the first-person weapon span, never from a pack */
+    uint8_t shiny;   /* FORK-058: a shiny weapon's processed reflection image (gfx_shiny variant), 0 = native */
 
     bool operator==(const TextureCacheKey&) const noexcept = default;
 

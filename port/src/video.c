@@ -169,6 +169,9 @@ static int s_CfgFilter2D = 1;
 /* [display] text_antialiasing (FORK-052): Enhanced font masks minify through
  * trilinear mips whatever the texture filter; 0 samples them as before. */
 static int s_CfgTextAa = 1;
+/* [display] shiny_weapons (FORK-058): Shiny Gold Guns, the gold guns' tuned
+ * reflections (port/fast3d/gfx_shiny.h); 0 draws them as upstream. */
+static int s_CfgShinyWeapons = 1;
 /* [display] font_style (FORK-051, font styles plan FONT-1): 0 Original (ROM),
  * 1 Enhanced (the player-installed GEPD pack in Data/FontPacks/gepd; glyphs
  * without a file stay the ROM's), 2 Iron Sights (the open title font for
@@ -1103,6 +1106,7 @@ static int videoSetDisplayOption(const char *key, const char *value)
     if (SDL_strcasecmp(key, "filter_2d") == 0)     { s_CfgFilter2D = SDL_atoi(value); return 1; }
     if (SDL_strcasecmp(key, "font_style") == 0)    { s_CfgFontStyle = videoFontStyle(SDL_atoi(value)); s_CfgFontStyleSeen = 1; return 1; }
     if (SDL_strcasecmp(key, "text_antialiasing") == 0) { s_CfgTextAa = SDL_atoi(value) != 0; return 1; }
+    if (SDL_strcasecmp(key, "shiny_weapons") == 0) { s_CfgShinyWeapons = SDL_atoi(value) != 0; return 1; }
     if (SDL_strcasecmp(key, "sharp_fonts") == 0)   { if (!s_CfgFontStyleSeen) s_CfgFontStyle = videoFontStyle(SDL_atoi(value) != 0 ? 2 : 0); return 1; }
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     if (SDL_strcasecmp(key, "texture_pack") == 0)
@@ -1486,6 +1490,7 @@ s32 portVideoOptionGet(const char *key, s32 *out)
     if (SDL_strcasecmp(key, "filter_2d") == 0)     { *out = s_CfgFilter2D;     return 1; }
     if (SDL_strcasecmp(key, "font_style") == 0)    { *out = s_CfgFontStyle;    return 1; }
     if (SDL_strcasecmp(key, "text_antialiasing") == 0) { *out = s_CfgTextAa;   return 1; }
+    if (SDL_strcasecmp(key, "shiny_weapons") == 0) { *out = s_CfgShinyWeapons; return 1; }
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     if (SDL_strcasecmp(key, "texture_pack") == 0)  { *out = portTexturePackGet(); return 1; }
     if (SDL_strcasecmp(key, "close_hd_matches") == 0) { *out = portTexturePackCloseGet(); return 1; }
@@ -1650,6 +1655,10 @@ s32 portVideoOptionSet(const char *key, s32 value)
     else if (SDL_strcasecmp(key, "text_antialiasing") == 0)
     {
         gfx_text_aa = s_CfgTextAa != 0;
+    }
+    else if (SDL_strcasecmp(key, "shiny_weapons") == 0)
+    {
+        gfx_shiny_weapons = s_CfgShinyWeapons != 0;
     }
     else if (SDL_strcasecmp(key, "low_res") == 0)
     {
@@ -2339,6 +2348,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "filter_2d=%d\n", s_CfgFilter2D);
     fprintf(f, "font_style=%d\n", s_CfgFontStyle);
     fprintf(f, "text_antialiasing=%d\n", s_CfgTextAa);
+    fprintf(f, "shiny_weapons=%d\n", s_CfgShinyWeapons);
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     fprintf(f, "texture_pack=%d\n", portTexturePackGet());
     fprintf(f, "close_hd_matches=%d\n", portTexturePackCloseGet());
@@ -5002,6 +5012,7 @@ s32 videoInit(void)
     gfx_sharp_fonts = s_CfgFontStyle == 2;
     gfx_enhanced_fonts = s_CfgFontStyle == 1;
     gfx_text_aa = s_CfgTextAa != 0;
+    gfx_shiny_weapons = s_CfgShinyWeapons != 0;
     { /* FORK-052: the Enhanced fonts beside midas.ini, not wherever the game was launched from */
         extern const char *portRootPath(const char *name);
         portEnhancedFontsSetDirectory(portRootPath("Data/FontPacks/gepd"));

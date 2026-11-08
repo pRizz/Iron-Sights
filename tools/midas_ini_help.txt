@@ -258,6 +258,24 @@ padN_stickmode.
                       |            | strokes keep even widths with any
                       |            | Texture Filter; 0 samples it as before.
                       |            | Iron Sights > System.
+  shiny_weapons       | 1          | [display] Shiny Gold Guns. ON gives the
+                      |            | Golden Gun and Gold PP7 stronger
+                      |            | reflections (a contrast curve on their
+                      |            | reflection texture); 0 draws them as the
+                      |            | original. An optional shiny_weapons.ini
+                      |            | beside midas.ini tunes the look, one
+                      |            | key = value per line: gold, silver (1/0:
+                      |            | which guns; silver = Cougar Magnum and
+                      |            | Silver PP7, off by default), contrast
+                      |            | (0.5), gain (0.4), levels (0), ambient
+                      |            | (-1 = the game's 150), diffuse (1), room
+                      |            | (1: share of the game's floor-shade
+                      |            | darkening kept), coverage (1), sweep (0),
+                      |            | drift (0), sharp (0), bloom (0 off, 1
+                      |            | subtle, 2 ludicrous), bloom_threshold
+                      |            | (-1 = the mode's), bloom_strength (1),
+                      |            | log (0). Edits apply while the game runs.
+                      |            | Iron Sights > System.
   texture_pack        | 1          | [display] Texture Pack (Windows/Linux).
                       |            | 1 = HD: campaign environment textures,
                       |            | the gunbarrel intro, sky clouds,

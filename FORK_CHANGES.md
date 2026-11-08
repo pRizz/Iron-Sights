@@ -30,6 +30,140 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-058 — Shiny Gold Guns: tuned reflections on the gold guns
+
+**Status:** Implemented in all builds (2026-11-07); Windows built and tested,
+Linux and browser not built locally. The owner play-tested the prototype on
+2026-11-07: a gentle contrast curve suits the speckled gold guns, and the
+silver guns look best stock, so that is the shipped default.
+
+Upstream draws the Cougar Magnum (`ITEM_RUGER`), Golden Gun, Silver PP7 and
+Gold PP7 with N64 sphere mapping: `gunfire.c` sets `g_WeaponEnvmapLight`
+(ambient 150, one white directional light) and a camera reflection lookat, and
+fast3d computes reflection texture coordinates per vertex (`G_TEXTURE_GEN`).
+The draw multiplies an I4 64x64 (Magnum, Silver PP7) or CI8 32x32 (Golden Gun,
+Gold PP7) reflection by the lighting, through a two-mip trilinear blend.
+
+**Gameplay > Iron Sights > System > Shiny Gold Guns** (`[display]
+shiny_weapons`: 0 Off, 1 On; default 1), after Text Antialiasing in the
+Options folder and the watch. On, the Golden Gun's and Gold PP7's reflection
+texture gets a luminance S-curve (contrast 0.5) and a highlight lift (gain
+0.4), scaling colour by a luminance ratio so gold stays gold and fading towards
+white past white. Off, and always for the Cougar Magnum and Silver PP7 unless
+`silver = 1` below, those guns draw exactly as upstream. It is an ordinary
+toggle row, so keyboard, mouse, gamepad and touch adjust it like any other.
+
+- **Span.** `portShinyWeaponTag` (`port/src/port_shiny.c`) brackets the
+  first-person weapon draw with G_NOOP `0x5E` (item in the low byte, 0 =
+  closed; `0x5D` is FORK-056's outline tag) for the four items; knives keep
+  the stock look. `gfx_shiny::applies` drops the span for a gun that does not
+  take the look. Inside it, only reflection-mapped triangles change: the
+  native hands and other triangles without texture generation keep the stock
+  lighting, UVs and textures (`scripts/port/arm_rendering.md`).
+- **Advanced tuning.** An optional `shiny_weapons.ini` beside midas.ini (the
+  game never writes it; re-read twice a second, so edits apply in play)
+  overrides the shipped values: `gold` and `silver` (which guns), `contrast`,
+  `gain`, `levels` (stretch the image's range), `ambient` (lighting floor, -1
+  keeps 150), `diffuse` (directional light multiplier), `room` (share of the
+  floor-tile darkening kept, below), `coverage` (reflection coordinate scale),
+  `sweep` (shift with camera yaw and pitch), `drift` (constant shift, like the
+  intro logo's spin), `sharp` (no mip chain on the reflection), `bloom` (0 off,
+  1 subtle, 2 ludicrous, with `bloom_threshold` and `bloom_strength`) and `log`
+  (or `GE_SHINY_LOG`: draw state on stderr). Coverage, sweep and drift fold
+  coordinates with a triangle wave instead of clamping. Documented in
+  `tools/midas_ini_help.txt`. These keys are not midas.ini options, so they
+  need no `settings_placement.py` entry; being file-only, they need no input
+  handling.
+- **Bloom** (off by default). Upstream has none. The backend mirrors every
+  draw in the span into its own buffer (target size, own depth buffer, cleared
+  at the span's start) with the same program and depth state: batches whose
+  bound texture is the shiny reflection in colour, the rest (hands, matte
+  parts) as black through a ZERO/ZERO blend, so it holds only the reflective
+  pixels left visible, in either draw order. At the span's end a
+  soft-threshold bright pass (smoothstep over 0.25 of luma) downsamples it to
+  half size, a 9-tap separable Gaussian runs `passes` times with a growing
+  step, and the result is added onto the target before the HUD draws; every GL
+  state touched is saved and restored. Subtle: threshold 0.55, strength 0.6,
+  radius 1.5, 2 passes. Ludicrous: threshold 0.25, strength 5, radius 2, 4
+  passes. Retained (room cache) draws are not mirrored, and a batch drawn
+  untextured right after a shiny one would count as shiny (the bound texture
+  is the test); neither occurs in the four guns as far as the captures show.
+  OpenGL only (the only backend); WebGL2 not tested.
+- **Renderer hooks.** `port/fast3d/gfx_shiny.cpp` owns the tuning and tone
+  curve; `gfx_shiny_weapons` (`gfx_api.h`, set by `video.c`) switches it.
+  `gfx_pc.cpp`: the `0x5E` tag and its frame-start reset, the tuned
+  ambient/diffuse, coordinate remap and scaled fog alpha in `gfx_sp_vertex`
+  for texgen vertices, the draw-state log, the `shiny` texture-cache key field
+  (`gfx_pc.h`; a variant id changes with texture-affecting settings), an upload
+  wrapper that tone-curves every decoder's output for that key, `sharp` in the
+  sampler latch, and the bloom span (open and close at the tag, a frame-start
+  safety close, `bloom_mark` in `gfx_flush`). The backend gains three optional
+  `GfxRenderingAPI` entries (`bloom_begin`, `bloom_mark`, `bloom_end`,
+  `gfx_rendering_api.h`), implemented in `gfx_bloom.inl`, which
+  `gfx_opengl.cpp` includes before its API table; its draw path calls
+  `gl_bloom_mirror` after the stream draw. `gunfire.c` gains the two tag calls
+  inside the existing `#ifndef TARGET_N64` blocks around the hand draw.
+- **Prototype removed before shipping.** An F4 hotkey cycled nine presets
+  (Original, Custom, Contrast, Punchy, Punchy + Lit, Punchy + Bloom, Ludicrous
+  Bloom, Punchy + Motion, Logo Texture) with a HUD message; it was keyboard
+  only, so it went with the presets. A `logo` knob put the intro Rare logo's
+  reflection images on the guns; read as the renderer reads the intro's draw
+  they decoded dark blue-grey (luma 4-20), byte-swapped green and orange, not
+  the gold the intro shows, so it was dropped unverified. The game no longer
+  writes a commented `shiny_weapons.ini` template on first run.
+
+Measurements (ADS audit on Runway, 960x540, pixels that differ from Off;
+luminance 0-255): Off, deviation 24-36. The shipped look changes 4,192-5,213
+Golden Gun/Gold PP7 pixels with a deviation of 35-52, and none on the silver
+guns. Stronger tuning ("Punchy": contrast 0.8, gain 0.8, ambient 90, diffuse
+1.4, sharp) reached 39-56, with shadows at 7-26.
+
+**The 192 ceiling is Rare's floor shading, not a port clamp.** Every
+first-person weapon (PropType 4) draws with `G_RM_FOG_PRIM_A` in cycle 1
+(`model.c` render modes), blending towards the fog colour register by its
+alpha. `gunfire.c` fills that register from `tileColor`, which
+`set_color_shading_from_tile` (`propobj.c`) derives from the floor tile under
+the player: alpha = (255 - tile luminance) x 0.75, RGB = the tile's tint with
+its grey removed, eased each tick by `update_color_shading`. On Runway the
+register is (0, 0, 0, 63), so the gun is mixed 25% towards black and peaks at
+192 (189 for the CI8 guns); a blown-out test (ambient 255, diffuse 2, contrast
+1, gain 6) still stopped at exactly 192. The RDP applies the same blend, so
+this matches the console, and it darkens the hands too. `room` scales that
+alpha on the reflective vertices only (`d->fog` for texgen vertices in the
+span): with `room = 0` the blown-out test reaches 255; Punchy with `room =
+0.4` gives a deviation of 47-67 with highlights at 188-230. Low values also
+brighten the metal in dark rooms, where the game darkens it up to 75%.
+Bloom over that: subtle changes about twice the gun's pixels and lifts the
+99th percentile to 215-255; ludicrous changes 34,000-53,000 pixels and
+saturates the silver guns into white glare (an earlier ludicrous setting,
+threshold 0.3, strength 2.2, radius 2.5, 5 passes, was a faint haze).
+`levels` changes little (the reflection images already span 0-241 and 0-255);
+`sharp` changed no pixel with mipmaps off. The game builds the reflection
+lookat from the camera's look direction (`bondview2.c` `guLookAtReflect`), so
+turning should move the reflection; the audit never turns the camera.
+
+**Sources:** [tag](port/src/port_shiny.c) with its
+[header](port/include/port_shiny.h), [draw hook](src/game/gunfire.c),
+[tuning](port/fast3d/gfx_shiny.cpp) and its [header](port/fast3d/gfx_shiny.h),
+[renderer](port/fast3d/gfx_pc.cpp) and [API globals](port/fast3d/gfx_api.h),
+[cache key](port/fast3d/gfx_pc.h), [bloom](port/fast3d/gfx_bloom.inl),
+[backend](port/fast3d/gfx_opengl.cpp), [backend API](port/fast3d/gfx_rendering_api.h),
+[setting](port/src/video.c), [options](port/src/port_options.c),
+[frontend row](src/game/front.c), [watch row](port/src/port_watchpages.c),
+[help](port/src/port_option_help.c), [ini reference](tools/midas_ini_help.txt),
+the [review gallery](review/hand-gallery/index.html) and the [build](CMakeLists.txt).
+**Checks:** The Windows build compiles and links with no new warnings. A local
+capture script (not in the repository) ran the ADS audit (`GE_ADS_AUDIT=18`
+to `21`, with transitions) for each gun in isolated folders and measured the
+changed pixels; captures were reviewed side by side, and the shipped build
+with no tuning file matches the play-tested look pixel for pixel. The owner
+play-tested the prototype presets in the Windows build. `test_wardrobe.sh`,
+`test_ads.sh`, `test_hud.sh` and `test_upstream_merge.sh` pass;
+`settings_placement.py` and `bright-builds-check.ts all` pass; the hand
+gallery regenerated with zero changed image cells and verifies. Not run: the
+new menu row viewed in the Options folder and watch, the Linux and browser
+builds, other levels, and a long play session.
+
 ### FORK-057 — Shader prewarm list recorded over the fork's screens
 
 **Status:** Implemented 2026-11-07 on Windows. The list is shared by every

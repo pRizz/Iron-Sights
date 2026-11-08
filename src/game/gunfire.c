@@ -50,6 +50,7 @@
 #include "boss.h"
 #include "port_weapon_export.h"
 #include "port_wardrobe.h"
+#include "port_shiny.h"
 #endif
 
 
@@ -2177,6 +2178,7 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
 
 #ifndef TARGET_N64
         portWardrobeBeginHand(item, handnum);
+        renderdata.gdl = portShinyWeaponTag(renderdata.gdl, item, TRUE);
 #endif
 #ifndef TARGET_N64
         portKnifeAdsDraw(&renderdata, (Model *)&handptr->field_B68, item, handnum);
@@ -2184,6 +2186,7 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
         subdraw(&renderdata, (Model *)&handptr->field_B68);
 #endif
 #ifndef TARGET_N64
+        renderdata.gdl = portShinyWeaponTag(renderdata.gdl, item, FALSE);
         portWardrobeEnd();
 #endif
         gdl = renderdata.gdl;

@@ -138,6 +138,7 @@ static bool gl_es = false;
 static bool gl_core_profile = false;
 
 static void gl_ret_restore(void); /* GE retained geometry: back to the interpreter's VBO / program (defined below) */
+static void gl_bloom_mirror(size_t vertex_count); /* FORK-058: gfx_bloom.inl */
 static struct ShaderProgram* gl_current_prg_set(struct ShaderProgram* prg);
 
 static int gfx_opengl_get_max_texture_size() {
@@ -1460,6 +1461,7 @@ static void gfx_opengl_draw_triangles(float buf_vbo[], size_t buf_vbo_len, size_
     if (!clip || !ge_dec_draw || gfx_ge_dec_b >= 0.0f || buf_vbo_num_tris == 0) {
         glBufferData(GL_ARRAY_BUFFER, sizeof(float) * buf_vbo_len, buf_vbo, GL_STREAM_DRAW);
         glDrawArrays(GL_TRIANGLES, 0, 3 * buf_vbo_num_tris);
+        gl_bloom_mirror(3 * buf_vbo_num_tris); /* FORK-058: shiny weapon bloom (gfx_bloom.inl) */
         return;
     }
 
@@ -3258,6 +3260,8 @@ static void gfx_opengl_resolve_n64_aa(int fb_dst, int fb_src) {
     glDepthMask(current_depth_mask ? GL_TRUE : GL_FALSE);
 }
 
+#include "gfx_bloom.inl" /* FORK-058 */
+
 struct GfxRenderingAPI gfx_opengl_api = { 
     gfx_opengl_get_name,
     gfx_opengl_get_max_texture_size,
@@ -3300,7 +3304,10 @@ struct GfxRenderingAPI gfx_opengl_api = {
     gfx_opengl_retained_draw,
     gfx_opengl_retained_matrices,
     gfx_opengl_retained_draw_indexed,
-    gfx_opengl_resolve_n64_aa
+    gfx_opengl_resolve_n64_aa,
+    gfx_opengl_bloom_begin,
+    gfx_opengl_bloom_mark,
+    gfx_opengl_bloom_end
 };
 
 #ifdef __EMSCRIPTEN__

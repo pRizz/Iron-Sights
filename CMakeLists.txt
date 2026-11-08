@@ -411,6 +411,7 @@ if(GE_VIDEO)
         port/fast3d/third_party/puff/puff.c
         ${OPEN_FONTS_DATA_SRC}
         port/fast3d/gfx_pc.cpp
+        port/fast3d/gfx_shiny.cpp
         port/fast3d/gfx_cc.cpp
         port/fast3d/gfx_opengl.cpp
         port/fast3d/gfx_sdl2.cpp
