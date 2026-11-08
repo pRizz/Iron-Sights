@@ -76,5 +76,9 @@ void gfx_resize_framebuffer(int fb, uint32_t width, uint32_t height, int upscale
 void gfx_set_framebuffer(int fb, float noise_scale) ;
 void gfx_reset_framebuffer(void);
 void gfx_copy_framebuffer(int fb_dst, int fb_src, int left, int top, int use_back);
+/* FORK-028: browser touch controls cover a bottom corner (0 left, 1 right): its
+ * ammo drops a little and its box is reported so the controls rise above it. */
+void gfx_hud_touch_corner(int side, int covered);
+int gfx_hud_touch_ammo_box(int side, float out[4]);
 
 #endif

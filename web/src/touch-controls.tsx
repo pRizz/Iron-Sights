@@ -19,6 +19,7 @@ import { touchContext, type TouchContext } from './touch-context';
 import { HelperText } from './helper-text';
 import { TouchText } from './touch-text';
 import { createTouchButtonGestures } from './touch-button-gestures';
+import { createCornerClearance } from './touch-hud-clearance';
 import './touch.css';
 
 type Props = {
@@ -159,6 +160,19 @@ export function TouchControls(props: Props) {
         props.input.layout();
         clear();
     });
+    // The gameplay buttons over each bottom corner rise above the corner ammo;
+    // they are measured again after anything that can move them.
+    let maybeRoot: HTMLDivElement | undefined;
+    const clearance = createCornerClearance();
+    createEffect(() => {
+        active();
+        context();
+        files();
+        hasGadgets();
+        more();
+        props.input.layout();
+        clearance.remeasure();
+    });
     onMount(() => {
         const detachContacts = contacts.attach();
         let frame = 0;
@@ -181,12 +195,18 @@ export function TouchControls(props: Props) {
                 clear();
                 setContext(next);
             }
+            const maybeGame = props.engine.maybeGame();
+            const covering = active() && hud();
+            if (maybeGame)
+                clearance.update(maybeGame, covering ? maybeRoot : undefined, props.canvas());
             frame = requestAnimationFrame(monitor);
         };
         frame = requestAnimationFrame(monitor);
         window.addEventListener('blur', clear);
         window.addEventListener('orientationchange', clear);
         window.addEventListener('pagehide', clear);
+        window.addEventListener('resize', clearance.remeasure);
+        window.visualViewport?.addEventListener('resize', clearance.remeasure);
         const hidden = () => {
             if (document.hidden) clear();
         };
@@ -197,6 +217,8 @@ export function TouchControls(props: Props) {
             window.removeEventListener('blur', clear);
             window.removeEventListener('orientationchange', clear);
             window.removeEventListener('pagehide', clear);
+            window.removeEventListener('resize', clearance.remeasure);
+            window.visualViewport?.removeEventListener('resize', clearance.remeasure);
             document.removeEventListener('visibilitychange', hidden);
             clear();
         });
@@ -333,7 +355,10 @@ export function TouchControls(props: Props) {
         <Show when={active()}>
             <TouchText engine={props.engine} open={() => context() === 'text'} />
             <div
-                ref={(surface) => onCleanup(suppressTouchGestures(surface))}
+                ref={(surface) => {
+                    maybeRoot = surface;
+                    onCleanup(suppressTouchGestures(surface));
+                }}
                 class="touch-controls"
                 aria-label="Touch game controls"
                 data-mode={menu() ? 'menu' : 'game'}

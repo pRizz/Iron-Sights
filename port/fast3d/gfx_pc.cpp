@@ -29,6 +29,7 @@
 #include <PR/gbi.h>
 #include "gbiex_compat.h" // PD EXT opcodes/bits absent from GE's gbi.h
 #include "hud_text_offset.h"
+#include "hud_touch_clearance.h"
 
 #include "platform.h"
 
@@ -524,6 +525,14 @@ static float s_GeHudPivotX = 0.f, s_GeHudPivotY = 0.f;
 static bool s_GeRectFracPending = false, s_GeRectFracOn = false;
 static float s_GeRectFrac[4];
 static PortHudTextOffset s_GeTextPixelOffset = {0, 0};
+/* FORK-028: the bottom-corner HUD element being drawn (G_NOOP 0x5F, gunfire.c),
+ * its box so far, where each element last drew in full, how far this one drops,
+ * and which bottom corners browser touch controls cover (port/web/touch.c) */
+static uint8_t s_GeHudClearSlot = PORT_HUD_CLEAR_NONE;
+static PortHudClearBox s_GeHudClearDrawing;
+static PortHudClearBox s_GeHudClearDrawn[PORT_HUD_CLEAR_SLOTS];
+static float s_GeHudClearDrop = 0.f;
+static bool s_GeHudClearTouch[PORT_HUD_CLEAR_SIDES];
 /* a wrap mode of our own, beside G_TX_WRAP / MIRROR / CLAMP: outside the
  * texture is TRANSPARENT (gfx_opengl.cpp maps it to GL_CLAMP_TO_BORDER) */
 #define GE_TX_BORDER 0x10
@@ -6023,6 +6032,45 @@ static void gfx_dp_set_subpixel_offset(int16_t x, int16_t y) {
     rdp.subpixel_ofs_y = y;
 }
 
+extern "C" uint32_t gfx_real_window_width;
+
+/* FORK-028: whether browser touch controls cover a bottom corner (port/web/touch.c).
+ * Leaving forgets where that corner's elements drew. */
+extern "C" void gfx_hud_touch_corner(int side, int covered) {
+    if (side < 0 || side >= PORT_HUD_CLEAR_SIDES) return;
+    s_GeHudClearTouch[side] = covered != 0;
+    if (covered) return;
+    for (int slot = PORT_HUD_CLEAR_NONE + 1; slot < PORT_HUD_CLEAR_SLOTS; slot++) {
+        if (portHudClearSide(slot) == side) s_GeHudClearDrawn[slot] = PortHudClearBox{};
+    }
+}
+
+/* Where a corner's elements last drew, as canvas fractions (left, right, top,
+ * bottom); 0 before any has drawn under touch controls. */
+extern "C" int gfx_hud_touch_ammo_box(int side, float out[4]) {
+    PortHudClearBox box{};
+    for (int slot = PORT_HUD_CLEAR_NONE + 1; slot < PORT_HUD_CLEAR_SLOTS; slot++) {
+        const PortHudClearBox drawn = s_GeHudClearDrawn[slot];
+        if (portHudClearSide(slot) == side && drawn.valid) box = portHudClearUnion(box, drawn.x0, drawn.x1, drawn.y0, drawn.y1);
+    }
+    return portHudClearToCanvas(box, (float) gfx_real_window_width, (float) gfx_current_game_window_viewport.x,
+                                (float) gfx_current_window_dimensions.width, out);
+}
+
+/* Opens a bottom-corner element's bracket, or closes it with 0, keeping a
+ * completed box: a frame read between draws never sees half an element. */
+static void gfx_hud_clear_begin(uint32_t slot) {
+    if (s_GeHudClearSlot != PORT_HUD_CLEAR_NONE && s_GeHudClearDrawing.valid) {
+        s_GeHudClearDrawn[s_GeHudClearSlot] = s_GeHudClearDrawing;
+    }
+    s_GeHudClearSlot = slot < PORT_HUD_CLEAR_SLOTS ? (uint8_t) slot : PORT_HUD_CLEAR_NONE;
+    s_GeHudClearDrawing = PortHudClearBox{};
+    s_GeHudClearDrop = 0.f;
+    if (s_GeHudClearSlot == PORT_HUD_CLEAR_NONE || !s_GeHudClearTouch[portHudClearSide(s_GeHudClearSlot)]) return;
+    /* native pixels to NDC; HUD Scale draws the bracket at half size */
+    s_GeHudClearDrop = PORT_HUD_CLEAR_DROP / HALF_SCREEN_HEIGHT * (s_GeHudScale ? 0.5f : 1.0f);
+}
+
 static void gfx_draw_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry) {
     uint32_t saved_other_mode_h = rdp.other_mode_h;
     uint32_t cycle_type = (rdp.other_mode_h & (3U << G_MDSFT_CYCLETYPE));
@@ -6062,6 +6110,12 @@ static void gfx_draw_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lr
 
     ulxf = gfx_adjust_x_for_aspect_ratio(ulxf);
     lrxf = gfx_adjust_x_for_aspect_ratio(lrxf);
+
+    if (s_GeHudClearSlot != PORT_HUD_CLEAR_NONE && s_GeHudClearTouch[portHudClearSide(s_GeHudClearSlot)]) {
+        ulyf -= s_GeHudClearDrop;
+        lryf -= s_GeHudClearDrop;
+        s_GeHudClearDrawing = portHudClearUnion(s_GeHudClearDrawing, ulxf, lrxf, lryf, ulyf);
+    }
 
     if (s_GeTextGlyphs) {
         const float dx = portHudTextOffsetNdc(s_GeTextPixelOffset.x, gfx_current_dimensions.width);
@@ -7882,6 +7936,8 @@ static void gfx_run_dl(Gfx* cmd) {
                     s_GeHudScale = (cmd->words.w1 & 0x00FFFFFFu) != 0x00FFFFFFu;
                     s_GeHudPivotX = (float) ((cmd->words.w1 >> 12) & 0xFFFu);
                     s_GeHudPivotY = (float) (cmd->words.w1 & 0xFFFu);
+                } else if ((cmd->words.w1 & 0xff000000u) == PORT_HUD_CLEAR_TAG) {
+                    gfx_hud_clear_begin(cmd->words.w1 & 0xFFu);
                 } else if ((cmd->words.w1 & 0xff000000u) == PORT_HUD_TEXT_OFFSET_TAG) {
                     s_GeTextPixelOffset = portHudTextOffsetDecode(cmd->words.w1);
                 } else if ((cmd->words.w1 >> 24) == 0x59u) {
@@ -8543,6 +8599,8 @@ extern "C" void gfx_run(Gfx* commands) {
     // puts("New frame");
     s_GeTextPixelOffset = {0, 0};
     s_GeTextOutline = false;
+    s_GeHudClearSlot = PORT_HUD_CLEAR_NONE; /* an unclosed bracket's box is dropped */
+    s_GeHudClearDrop = 0.f;
 
     if (!gfx_wapi->start_frame()) {
         dropped_frame = true;

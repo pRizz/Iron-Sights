@@ -34,6 +34,8 @@ extern s32 portOskWebChar(s32 field, s32 index);
 extern void portOskWebClear(void);
 extern void portOskWebAppend(s32 code);
 extern void portOskWebFinish(s32 ok);
+extern void gfx_hud_touch_corner(int side, int covered);
+extern int gfx_hud_touch_ammo_box(int side, float out[4]);
 
 /* Presentation follows real engine permission, never an intro-duration timer.
  * Keep the watch distinct so its native lists can still be closed/navigated. */
@@ -104,12 +106,32 @@ EMSCRIPTEN_KEEPALIVE void portWebTouchEnable(s32 on)
     on = on != 0;
     if (on != enabled) portWebTouchReset();
     enabled = on;
+    if (!on) { /* hidden controls cover nothing */
+        gfx_hud_touch_corner(0, 0);
+        gfx_hud_touch_corner(1, 0);
+    }
 }
 
 static f32 bounded(f32 value, f32 limit)
 {
     if (!__builtin_isfinite(value)) return 0;
     return value < -limit ? -limit : value > limit ? limit : value;
+}
+
+/* Gameplay buttons cover a bottom corner (0 left, 1 right): its ammo drops a
+ * little and reports where it drew, so the overlay can raise them above it. */
+EMSCRIPTEN_KEEPALIVE void portWebTouchHudCorner(s32 side, s32 covered)
+{
+    gfx_hud_touch_corner(side, covered && enabled);
+}
+
+/* One edge of where a corner's ammo last drew, as a canvas fraction (0 left,
+ * 1 right, 2 top, 3 bottom), or -1 when none has drawn there. */
+EMSCRIPTEN_KEEPALIVE f32 portWebTouchAmmoBox(s32 side, s32 edge)
+{
+    f32 box[4];
+    if (edge < 0 || edge > 3 || !gfx_hud_touch_ammo_box(side, box)) return -1;
+    return box[edge];
 }
 
 EMSCRIPTEN_KEEPALIVE void portWebTouchMove(f32 x, f32 y)

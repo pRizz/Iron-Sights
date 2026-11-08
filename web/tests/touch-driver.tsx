@@ -24,6 +24,10 @@ let unbinds = 0;
 let nameText = '';
 let nameFinish: number | undefined;
 let windowKeys = 0;
+// Corners the overlay says its controls cover, and the corner ammo boxes the
+// runtime reports there (canvas fractions; none until the audit sets one).
+const corners = [false, false];
+const ammo: (number[] | undefined)[] = [undefined, undefined];
 window.addEventListener('keydown', () => windowKeys++);
 let cursor = [0, 0];
 let exported = 0,
@@ -48,6 +52,11 @@ const game = {
     _portWebControlsLive: () => Number(live),
     _portWebTouchContext: () => (fileMenu() ? 0 : context),
     _portWebTouchHasGadgets: () => Number(gadgets && context === 2 && !fileMenu()),
+    _portWebTouchHudCorner: (side: number, covered: number) => {
+        corners[side] = !!covered;
+    },
+    _portWebTouchAmmoBox: (side: number, edge: number) =>
+        (corners[side] && ammo[side]?.[edge]) ?? -1,
     _portWebTouchButton: (id: number, down: number) => {
         if (down) presses.push(id);
         if (id === 5 && down) accepts++;
@@ -107,11 +116,15 @@ Object.assign(globalThis, {
             nameText,
             nameFinish,
             windowKeys,
+            corners: [...corners],
             cursor,
             exported,
             imported,
         }),
         fileMenu: setFileMenu,
+        ammo: (side: number, box?: number[]) => {
+            ammo[side] = box;
+        },
         gadgets: (value: boolean) => {
             gadgets = value;
         },

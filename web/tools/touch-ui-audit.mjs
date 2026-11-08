@@ -8,6 +8,7 @@ import { launchAuditBrowser } from './browser-choice.mjs';
 import { auditN64Layout } from './touch-n64-audit.mjs';
 import { auditTouchContext } from './touch-context-audit.mjs';
 import { auditTouchButtons } from './touch-button-audit.mjs';
+import { auditHudClearance } from './touch-clearance-audit.mjs';
 import { auditTouchSurface, auditTouchGestures, auditTouchHints } from './touch-surface-audit.mjs';
 
 const assets = new Map(
@@ -49,6 +50,7 @@ try {
     await auditTouchHints(page);
     await auditN64Layout(page, output);
     await auditTouchButtons(page);
+    await auditHudClearance(page);
     const aim = page.locator('[data-touch-action=aim]');
     await aim.tap();
     await expect(aim).toHaveAttribute('aria-pressed', 'true');
@@ -400,7 +402,7 @@ try {
     await expect(importer).toHaveCount(0);
     assert.deepEqual(errors, []);
     console.log(
-        'Touch UI: free-surface hit coverage, uncaptured/non-primary gestures, hint deadlines, repeated fire/zoom prevention, menu tap vs drag, orphaned stick recovery, stick-overdrag sprint, independent move/look/fire, cancellation, focus reset, layouts, disable and direct save-picker gesture passed',
+        'Touch UI: free-surface hit coverage, uncaptured/non-primary gestures, hint deadlines, repeated fire/zoom prevention, menu tap vs drag, orphaned stick recovery, stick-overdrag sprint, corner HUD clearance, independent move/look/fire, cancellation, focus reset, layouts, disable and direct save-picker gesture passed',
     );
 } finally {
     await browser.close();

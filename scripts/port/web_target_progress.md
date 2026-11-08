@@ -1775,6 +1775,21 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**Corner ammo clear of the buttons, 2026-11-08:** The owner reported that on an
+iPad the bottom-right buttons hid the ammo counts and bullet icon. A 4:3 iPad's
+HUD reaches the corners, which phones' 4:3 band avoids. The ammo keeps its place
+(dropped 6 native pixels while touch controls cover its corner) and the renderer
+reports where it drew; in gameplay the overlay raises the buttons over each
+corner until they clear it, and they only rise once settled. A first version
+that lifted the ammo instead was replaced at the owner's request before it was
+pushed. Sources: `touch-hud-clearance.ts`, `touch-controls.tsx`, `touch.css`,
+`port/web/touch.c`, `hud_touch_clearance.h`, `gfx_pc.cpp` and tags in
+`gunfire.c` (FORK-028). Verification: `test_hud.sh`, the touch bridge regression
+(host gcc, emsdk image not available locally), 226 unit tests, TypeScript and
+the Edge touch fixture audit pass. Not yet seen on a physical iPad or with the
+real ROM in the browser. Next action: check the raised buttons and lowered ammo
+on an iPad after Pages publication.
+
 **Stick-overdrag sprint, 2026-11-04:** Dragging the move stick past 0.7 of its
 width from the centre (the ring's edge is 0.5) holds Walk / Sprint until the
 finger comes back inside 0.6; the stick brightens while it sprints. The native

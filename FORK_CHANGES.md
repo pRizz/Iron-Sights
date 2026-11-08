@@ -3183,6 +3183,50 @@ the simulated focus loss so a late press cannot follow it. The touch audit
 passed 3 runs idle and 2 under load afterwards. Not reproduced on CI itself,
 since CI no longer runs the audits side by side (FORK-024).
 
+Corner ammo stays visible: the touch buttons rise above it. On a 4:3 iPad the
+game's 4:3 HUD reaches the window corners, so the N64 cluster (or Modern
+actions) covered the right-hand ammo icon and counts, and the stick a dual-wield
+left-hand counter or a gadget name; on phone landscape the 4:3 band already kept
+them clear. During gameplay and the watch the overlay tells the runtime which
+bottom corners its controls cover (`portWebTouchHudCorner`). `gunfire.c`
+brackets the right-hand ammo, the left-hand ammo and the gadget name with a
+renderer tag (`portHudTouchClearTag`, G_NOOP `0x5F`,
+`port/fast3d/hud_touch_clearance.h`). In a covered corner `gfx_pc.cpp` draws them
+6 native pixels lower (3 at HUD Scale), so the row's lowest icon ends about 5
+pixels above the bottom and the buttons need to rise less, and records where
+each drew in full, after HUD Scale and HUD Centering. The overlay reads that box
+each frame (`portWebTouchAmmoBox`, canvas fractions) and, where it overlaps a
+corner's controls at rest, raises that corner by CSS variables
+(`--touch-lift-left` for the stick and left Z/gadget row, `--touch-lift-right`
+for the N64 cluster or Modern actions, with the More tray following) until their
+bottom is 8 CSS pixels above the ammo's top (`web/src/touch-hud-clearance.ts`).
+Ammo beside or wholly below the controls moves nothing. A context, layout,
+gadget, More, Files or viewport change measures the controls again; for 30
+frames after it a lift may also fall, and afterwards lifts only grow, so a
+shorter icon, a weapon switch or a hidden counter never drops the buttons.
+Menus, cutscenes and switching touch off uncover the corners: the drop ends, the
+recorded boxes are forgotten and the controls return to rest. Desktop frames are
+unchanged. This supersedes the first version of this fix, never pushed, in which
+the renderer lifted the ammo above the buttons; the owner preferred the ammo to
+keep its place. Not changed: other bottom HUD (pickup messages, mission timer).
+Shared hooks for later merges: the three tag pairs in upstream
+`generate_ammo_total_microcode`, and `gfx_draw_rectangle`'s new step beside the
+text-offset tag. Sources also include `port/web/touch.c`, `port_hud_ammo.c`,
+`port_hud.h`, `gfx_api.h`, `touch-controls.tsx`, `touch.css`, `runtime-types.ts`,
+the touch fixture, `web/tools/touch-clearance-audit.mjs` and
+`scripts/port/test_hud_clearance.c`. Validation: `test_hud.sh`, which now also
+runs that check (box union, canvas fractions, pillarbox, empty box, drop range),
+the touch bridge regression compiled with host gcc and a stub `emscripten.h` (the
+pinned emsdk image was not available locally), 226 browser unit tests,
+TypeScript, and the Edge touch UI fixture audit (at 1024×768 the N64 cluster,
+the stick with its left Z row and the Modern actions rise to 8 pixels above a
+reported box and stay up when it disappears; a new layout starts at rest; ammo
+beside the actions at 844×390 lifts nothing; leaving play uncovers both corners)
+pass; an isolated Windows build (`build_win/touch-clearance`) compiles, and the
+render gallery regenerated from it with zero changed images. Not yet run: the
+browser build with the real ROM, or a physical iPad, so the drop's look and the
+lift's size on a device are unreviewed.
+
 ### FORK-026 — Upstream 1.0.2b integration
 
 **Status:** Implemented; local acceptance passes.

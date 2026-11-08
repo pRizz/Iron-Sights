@@ -100,7 +100,7 @@
 .touch-n64 {
     position: absolute;
     right: var(--touch-right);
-    bottom: var(--touch-bottom);
+    bottom: calc(var(--touch-bottom) + var(--touch-lift-right, 0px));
     display: grid;
     grid-template-columns: calc(64 * var(--touch-unit)) calc(80 * var(--touch-unit));
     grid-template-rows:
@@ -171,7 +171,7 @@
 .touch-stick {
     position: absolute;
     left: var(--touch-left);
-    bottom: var(--touch-bottom);
+    bottom: calc(var(--touch-bottom) + var(--touch-lift-left, 0px));
     width: var(--touch-stick-size);
     aspect-ratio: 1;
     border-radius: 50%;
@@ -214,6 +214,11 @@
     gap: calc(6 * var(--touch-unit));
     z-index: 3;
 }
+/* Corner controls rise above the game's corner ammo where they would cover it
+ * (touch-hud-clearance.ts sets the lifts). */
+.touch-actions {
+    bottom: calc(var(--touch-bottom) + var(--touch-lift-right, 0px));
+}
 .touch-actions button[data-touch-action='fire'] {
     border-color: #f4bd76;
     background: #74412fa6;
@@ -221,7 +226,10 @@
 .touch-left-actions {
     position: absolute;
     left: var(--touch-left);
-    bottom: calc(var(--touch-bottom) + var(--touch-stick-size) + 10 * var(--touch-unit));
+    bottom: calc(
+        var(--touch-bottom) + var(--touch-lift-left, 0px) + var(--touch-stick-size) + 10 *
+            var(--touch-unit)
+    );
     width: max(var(--touch-stick-size), calc(104 * var(--touch-unit)));
     display: grid;
     grid-template-columns: 1fr;
@@ -257,7 +265,7 @@
 .touch-extra {
     position: absolute;
     right: var(--touch-right);
-    bottom: calc(var(--touch-bottom) + 114 * var(--touch-unit));
+    bottom: calc(var(--touch-bottom) + var(--touch-lift-right, 0px) + 114 * var(--touch-unit));
     display: grid;
     grid-template-columns: repeat(
         4,
@@ -419,7 +427,10 @@
 }
 @media (max-width: 440px) {
     .touch-extra {
-        bottom: calc(var(--touch-bottom) + var(--touch-stick-size) + 74 * var(--touch-unit));
+        bottom: calc(
+            var(--touch-bottom) + max(var(--touch-lift-left, 0px), var(--touch-lift-right, 0px)) +
+                var(--touch-stick-size) + 74 * var(--touch-unit)
+        );
     }
 }
 @media (max-width: 420px) {

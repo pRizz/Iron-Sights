@@ -33,6 +33,22 @@ s32 portOskWebChar(s32 field, s32 index) { return field ? oskName[index] : "SAVE
 void portOskWebClear(void) { oskName[0] = 0; }
 void portOskWebAppend(s32 code) { s32 n = 0; while (oskName[n]) n++; oskName[n] = (char) code; oskName[n + 1] = 0; }
 void portOskWebFinish(s32 ok) { oskFinish = ok ? 1 : -1; }
+static s32 corners[2], cornerCalls;
+static float ammoBox[2][4];
+static s32 ammoDrawn[2];
+void gfx_hud_touch_corner(int side, int covered)
+{
+    assert(side == 0 || side == 1);
+    corners[side] = covered;
+    cornerCalls++;
+}
+int gfx_hud_touch_ammo_box(int side, float out[4])
+{
+    s32 i;
+    if (!ammoDrawn[side]) return 0;
+    for (i = 0; i < 4; i++) out[i] = ammoBox[side][i];
+    return 1;
+}
 s32 portWebControlsLive(void) { return live; }
 s32 portConIsOpen(void) { return consoleOpen; }
 s32 bondinvCountTotalItemsInInv(void) { inventoryReads++; return inventoryCount; }
@@ -312,6 +328,31 @@ static void testStickSprint(void)
     assert(actionBits == 0);
 }
 
+static void testHudClearance(void)
+{
+    /* Arrange/act/assert: the overlay's covered corners reach the renderer. */
+    portWebTouchHudCorner(1, 1);
+    portWebTouchHudCorner(0, 1);
+    assert(corners[0] && corners[1]);
+    portWebTouchHudCorner(0, 0);
+    assert(!corners[0] && corners[1]);
+    /* The ammo box comes back one edge at a time, or -1 before any draw. */
+    assert(portWebTouchAmmoBox(1, 0) == -1);
+    ammoDrawn[1] = 1;
+    ammoBox[1][0] = .72f; ammoBox[1][1] = .9f; ammoBox[1][2] = .88f; ammoBox[1][3] = .97f;
+    assert(portWebTouchAmmoBox(1, 0) == .72f && portWebTouchAmmoBox(1, 2) == .88f);
+    assert(portWebTouchAmmoBox(1, 4) == -1 && portWebTouchAmmoBox(1, -1) == -1);
+    ammoDrawn[1] = 0;
+    /* Turning touch off uncovers both corners, and a covered report is refused then. */
+    portWebTouchEnable(0);
+    assert(!corners[0] && !corners[1]);
+    portWebTouchHudCorner(1, 1);
+    assert(!corners[1]);
+    cornerCalls = 0;
+    portWebTouchEnable(1);
+    assert(cornerCalls == 0);
+}
+
 int main(void)
 {
     OSContPad pad = {0};
@@ -327,6 +368,7 @@ int main(void)
     testCaptureRequests();
     testPhoneText();
     testStickSprint();
+    testHudClearance();
     portWebTouchButton(TOUCH_FIRE, 1);
     portWebTouchButton(TOUCH_AIM, 1);
     portWebTouchButton(TOUCH_RELOAD, 1);
@@ -377,6 +419,6 @@ int main(void)
     pad.button = 0;
     portWebTouchPoll(&pad);
     assert(pad.button == 0);
-    puts("Touch bridge: semantic buttons, independent holds, analog movement, stick-overdrag sprint, menu sticks, slider and list steps, hold-drag, capture and text contexts, phone text, held volume arrows, reset, bounds and locked-look discard passed.");
+    puts("Touch bridge: semantic buttons, independent holds, analog movement, stick-overdrag sprint, HUD clearance, menu sticks, slider and list steps, hold-drag, capture and text contexts, phone text, held volume arrows, reset, bounds and locked-look discard passed.");
     return 0;
 }

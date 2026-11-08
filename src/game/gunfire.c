@@ -7341,6 +7341,7 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
                     }
                     /* HUD Scale: laid out from the view's bottom-right corner */
                     gdl = portHudScaleBegin(gdl, (f32) (viGetViewLeft() + viGetViewWidth()), (f32) (viGetViewTop() + viGetViewHeight()));
+                    gdl = portHudTouchClearTag(gdl, PORT_HUD_CLEAR_RIGHT_AMMO);
 #endif
 
                     if (imageoffset_r != 0)
@@ -7397,6 +7398,7 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
 
                     gdl = combiner_bayer_lod_perspective(gdl);
 #ifndef TARGET_N64
+                    gdl = portHudTouchClearTag(gdl, PORT_HUD_CLEAR_NONE);
                     gdl = portHudScaleEnd(gdl);
                     if (hudAnchorsToEdges())
                     {
@@ -7429,6 +7431,7 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
                     }
                     /* HUD Scale: laid out from the view's bottom-left corner */
                     gdl = portHudScaleBegin(gdl, (f32) viGetViewLeft(), (f32) (viGetViewTop() + viGetViewHeight()));
+                    gdl = portHudTouchClearTag(gdl, PORT_HUD_CLEAR_LEFT_AMMO);
 #endif
 
                     if (imageoffset_l != 0)
@@ -7485,6 +7488,7 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
 
                     gdl = combiner_bayer_lod_perspective(gdl);
 #ifndef TARGET_N64
+                    gdl = portHudTouchClearTag(gdl, PORT_HUD_CLEAR_NONE);
                     gdl = portHudScaleEnd(gdl);
                     if (hudAnchorsToEdges())
                     {
@@ -7509,6 +7513,7 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
                     PORT_HUD_ANCHOR(gdl, PORT_HUD_ANCHOR_LEFT);
                 }
                 gdl = portHudScaleBegin(gdl, (f32) viGetViewLeft(), (f32) (viGetViewTop() + viGetViewHeight()));
+                gdl = portHudTouchClearTag(gdl, PORT_HUD_CLEAR_GADGET);
                 gdl = microcode_constructor(gdl);
                 gdl = gunDrawHudString(gdl, (s8 *) name, viGetViewLeft() + 30, HUDHALIGN_LEFT,
 #if defined(VERSION_EU)
@@ -7517,6 +7522,7 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
                     (viGetViewTop() + viGetViewHeight()) - 18, HUDVALIGN_MIDDLE, 1);
 #endif
                 gdl = combiner_bayer_lod_perspective(gdl);
+                gdl = portHudTouchClearTag(gdl, PORT_HUD_CLEAR_NONE);
                 gdl = portHudScaleEnd(gdl);
                 if (hudAnchorsToEdges())
                 {

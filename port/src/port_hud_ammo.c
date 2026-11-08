@@ -37,3 +37,11 @@ Gfx *portHudViewmodelTag(Gfx *gdl, s32 on)
     gDPNoOpTag(gdl++, 0x5C000000u | (on ? 1u : 0u));
     return gdl;
 }
+
+/* FORK-028: brackets a bottom-corner ammo element so the renderer can lift it
+ * above browser touch controls covering that corner; 0 closes the bracket. */
+Gfx *portHudTouchClearTag(Gfx *gdl, s32 slot)
+{
+    gDPNoOpTag(gdl++, PORT_HUD_CLEAR_TAG | (u32) slot);
+    return gdl;
+}

@@ -14,3 +14,5 @@ trap 'rm -f "$test_bin"' EXIT
     -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \
     scripts/port/test_hud_weapons.c -o "$test_bin"
 "$test_bin"
+"${CC:-gcc}" -std=gnu11 -Werror=implicit-function-declaration -I. scripts/port/test_hud_clearance.c -o "$test_bin"
+"$test_bin"

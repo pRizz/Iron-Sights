@@ -36,6 +36,8 @@ export type GameModule = {
     _portWebControlsLive(): number;
     _portWebTouchContext(): number;
     _portWebTouchHasGadgets?(): number;
+    _portWebTouchHudCorner?(side: number, covered: number): void;
+    _portWebTouchAmmoBox?(side: number, edge: number): number;
     _portWebCaptureMouse(): number;
     _portWebGetGfxTasks(): number;
     _portWebIconStageBusy(): number;

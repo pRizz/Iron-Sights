@@ -2,6 +2,7 @@
 #define PORT_HUD_H
 #include <ultra64.h>
 #include <bondtypes.h>
+#include "port/fast3d/hud_touch_clearance.h"
 #define PORT_HUD_WEAPON_BOTTOM 36
 
 s32 portHudOptionGet(const char *key, s32 *value);
@@ -28,6 +29,9 @@ Gfx *portHudAmmoIconTag(Gfx *gdl, const struct sImageTableEntry *image);
 /* Brackets the first-person weapon and hands: their textures stay the game's
  * own whatever an HD texture pack holds (arm_rendering.md). */
 Gfx *portHudViewmodelTag(Gfx *gdl, s32 on);
+/* Brackets a bottom-corner ammo element (hud_touch_clearance.h slot, 0 ends) so
+ * browser touch controls over that corner cannot hide it (FORK-028). */
+Gfx *portHudTouchClearTag(Gfx *gdl, s32 slot);
 /* buildGaugeBarDL's 46-vertex gauge: 22 loads, at most 22 quads, one end. */
 #define PORT_GAUGE_BAR_GFX 48
 Gfx *portHudDraw(Gfx *gdl);
