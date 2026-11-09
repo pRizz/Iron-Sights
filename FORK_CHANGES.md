@@ -6397,9 +6397,15 @@ without JavaScript a description, links to the releases and source, and a
 statement that the fan project is not affiliated with Nintendo, Rare, Microsoft
 or the James Bond franchise owners. `web/public/manifest.webmanifest` names the
 app and its 192/512 px and maskable icons for Android and Chrome home screens.
-It deliberately keeps `display: browser`: an iOS standalone Home Screen app
-gets storage separate from Safari, which would split the remembered ROM and
-saves. That mode waits for a device test.
+Since 2026-11-08 it uses `display: standalone`, at the owner's request, after
+starting with `browser`. Opened from a Home Screen, the launcher fills its own
+window with no browser toolbar, and desktop Chrome and Edge offer to install
+it. Known trade-off: iOS gives a standalone Home Screen app storage separate
+from Safari. The remembered ROM, campaign saves, profiles and settings
+therefore do not carry over between the two, and players pick the ROM again and
+can move saves with Export Save and Import Save. Removing the Home Screen app
+can remove its storage. No first-run notice explains this. Standalone behaviour
+has not been tried on a real iPhone or Android device.
 
 The 1200x630 preview image shows the gold title beside the sight picture,
 over two lines reading "PLAY GOLDENEYE / IN YOUR BROWSER" (the owner's
@@ -6412,8 +6418,8 @@ the `web/public` images recorded in `scripts/port/brand-art.sha256`
 (`brand-assets.ts`), and checks their bytes against that record. It also checks
 the manifest link, that every manifest icon is published, and every absolute tag
 when `MIDAS_SITE_URL` is set. The launcher audit loads the manifest, its icons
-and the preview image under `/Iron-Sights/`, and asserts the `browser` display
-mode. The audit server maps `.webmanifest` to `application/manifest+json`.
+and the preview image under `/Iron-Sights/`, and asserts the `standalone`
+display mode. The audit server maps `.webmanifest` to `application/manifest+json`.
 
 Robots and sitemap files are not added: crawlers read `robots.txt` only at the
 `prizz.github.io` root, another repository, and one page needs no sitemap. The

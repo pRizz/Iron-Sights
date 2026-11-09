@@ -507,8 +507,11 @@ digests, and the launcher audit loads them under `/Iron-Sights/`. 242 web tests,
 assembly, verification and the launcher audit pass, and local Lighthouse scores
 are unchanged. Next action: after deployment, paste the link into a chat app to
 check the preview, try Android's Add to Home screen, and, if the owner wants
-it, register the site in Google Search Console. Test standalone display on an
-iPhone before enabling it.
+it, register the site in Google Search Console. Later the same day, the owner
+chose `display: standalone`. The manifest and launcher audit now use it, and
+iOS Home Screen storage is accepted as separate from Safari's. Next action: on
+an iPhone, add the site to the Home Screen and confirm the window, ROM picking,
+storage, touch controls, and save import and export.
 
 **Status:** Complete for the local desktop launcher. First/repeat launch,
 storage/error flows and normal Dam capture/audio/focus/watch checks pass.

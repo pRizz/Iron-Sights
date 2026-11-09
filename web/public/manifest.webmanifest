@@ -4,7 +4,7 @@
     "description": "Play GoldenEye 007 in your browser with your own ROM. Saves stay on your device.",
     "start_url": "./",
     "scope": "./",
-    "display": "browser",
+    "display": "standalone",
     "background_color": "#121511",
     "theme_color": "#121511",
     "icons": [

@@ -69,7 +69,8 @@ try {
     const manifestHref = await page.locator('link[rel="manifest"]').getAttribute('href');
     const manifestUrl = new URL(manifestHref, page.url());
     const webManifest = await (await page.request.get(manifestUrl.href)).json();
-    assert.equal(webManifest.display, 'browser', 'Standalone mode would split iOS storage');
+    // The owner chose standalone despite iOS keeping Home Screen storage apart from Safari.
+    assert.equal(webManifest.display, 'standalone');
     for (const src of [...webManifest.icons.map((icon) => icon.src), 'social-card.png']) {
         const response = await page.request.get(new URL(src, manifestUrl).href);
         assert.ok(response.ok(), `${src} did not load under the deployment path`);
