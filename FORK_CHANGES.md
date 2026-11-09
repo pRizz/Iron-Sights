@@ -6401,7 +6401,11 @@ It deliberately keeps `display: browser`: an iOS standalone Home Screen app
 gets storage separate from Safari, which would split the remembered ROM and
 saves. That mode waits for a device test.
 
-The 1200x630 preview image and the manifest icons are `make_brand_art.py`
+The 1200x630 preview image shows the gold title beside the sight picture,
+over two lines reading "PLAY GOLDENEYE / IN YOUR BROWSER" (the owner's
+wording; previously "PLAY IN YOUR BROWSER" on one line). The two lines share one
+size, so the text stays legible when previews are shown at half size. The
+preview image and the manifest icons are `make_brand_art.py`
 outputs (FORK-059), published unhashed from `web/public` so the absolute
 `og:image` URL stays stable. `verify-site.ts` allows the manifest and exactly
 the `web/public` images recorded in `scripts/port/brand-art.sha256`

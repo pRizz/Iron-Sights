@@ -306,12 +306,17 @@ def title(image, font_path, lines, box):
         y += (y1 - y0) + round(font.size * 0.12)
 
 
-def subtitle(image, font_path, text, box):
-    """One plain light line, scaled to box=(left, top, width)."""
+def subtitle(image, font_path, lines, box):
+    """Plain light lines at one size, the widest filling box=(left, top, width)."""
     left, top, width = box
-    font = fit_font(font_path, text, width)
-    x0, y0, _, _ = font.getbbox(text)
-    ImageDraw.Draw(image).text((left - x0, top - y0), text, font=font, fill=SUBTITLE + (255,))
+    probe = ImageFont.truetype(str(font_path), 100)
+    widest = max(lines, key=lambda text: probe.getbbox(text)[2] - probe.getbbox(text)[0])
+    font = fit_font(font_path, widest, width)
+    y = top
+    for text in lines:
+        x0, y0, _, y1 = font.getbbox(text)
+        ImageDraw.Draw(image).text((left - x0, y - y0), text, font=font, fill=SUBTITLE + (255,))
+        y += (y1 - y0) + round(font.size * 0.3)
 
 
 def finish(image, size, path):
@@ -360,7 +365,7 @@ def render(font_path):
     sight_picture(image, 880 * s, 330 * s, 520 * s)
     vignette(image, 0.5)
     title(image, font_path, ("IRON", "SIGHTS"), (70 * s, 150 * s, 440 * s))
-    subtitle(image, font_path, "PLAY IN YOUR BROWSER", (74 * s, 400 * s, 432 * s))
+    subtitle(image, font_path, ("PLAY GOLDENEYE", "IN YOUR BROWSER"), (74 * s, 390 * s, 432 * s))
     finish(image, size, SOCIAL_CARD)
 
 
