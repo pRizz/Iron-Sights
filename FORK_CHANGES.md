@@ -30,6 +30,62 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-067 — Player options survive a stage started before the saves are read
+
+**Status:** Fixed on 2026-11-09 after the owner saw the corner ammo missing on
+an iPad. Verified in the Windows build and in a local web build (tablet and
+phone viewports).
+
+The missing ammo was not the touch clearance of FORK-028. The game had switched
+**Ammo On Screen** off, together with Auto-Aim, Sight On Screen and Look Ahead,
+on every platform where a stage started before the title: the web player's
+first-startup weapon icon stage (FORK-019, `91640bc`, 2026-11-07) and the
+`GE_STAGE` / `GE_ICON_STAGE` harnesses. Each stage start loads the selected
+folder's settings (`options.c` -> `fileLoadSettingsForFolder`). Before
+`fileValidateSaves` has run, `saves[]` is all zeros, which
+`fileGetSaveForFoldernum` accepts as the first folder's save with every option
+bit clear. Upstream's global player options (`video.c` `s_CfgPlayerOpt`) are
+then seeded from that load, so the zeros were written to `midas.ini` as
+`auto_aim=0`, `sight_on_screen=0`, `look_ahead=0` and `ammo_on_screen=0`, and a
+later real folder load, which only seeds unset keys, never corrected them. A
+captured web `midas.ini` after a fresh start held exactly those values; a
+native debug log traced the write to `fileLoadSettingsForFolder` reading slot
+0 with options `0000`.
+
+`file2.c` now records that `fileValidateSaves` ran (`s_PortSavesRead`), and
+until then `fileLoadSettingsForFolder` skips the unread slots (demo playback's
+RAMROM slot still loads) and applies the player's global options instead.
+Both changes sit inside `#ifndef TARGET_N64` in this upstream file. Settings
+already written as zeros by an affected build stay as written; the player can
+switch them back in the Options folder (Auto-Aim and Look Ahead on the
+Gameplay page, Sight and Ammo On Screen on HUD) or the watch.
+
+**Sources:** [save settings](src/game/file2.c) and the
+[touch audit](web/tools/touch-game-audit.mjs), which now waits for the icon
+stage before navigating (it had been mistaking that hidden Dam stage for the
+player's mission) and fails if either the icon stage or the first folder
+leaves any of the four options off. The render review gallery's fixture
+(`scripts/port/hand_gallery.py`) starts its captures with `GE_STAGE`, so its
+references had been taken with the counter hidden by this bug; the fixture
+now sets `ammo_on_screen=0` beside its other hidden HUD overlays
+(`sight_on_screen=0`, `weapon_hud=0`, `always_health=0`), keeping the images
+unchanged. Without it, the fix added the counter to all 72 images and nothing
+else.
+
+**Checks:** The native HUD audit (`GE_HUD_AUDIT=4` on Dam) logged
+`ammo-hide=1` (the option reason) before the fix and `ammo-hide=0` after, with
+the counter drawn at the bottom right. Web (local `web_build.py video` build
+served by `serve-site.mjs`, Edge): before the fix, a fresh profile's
+`midas.ini` held the four zeros and neither the 1024x768 tablet nor the 844x390
+phone viewport drew the counter; after it, `touch-game-audit.mjs` with
+`MIDAS_TABLET=1` passes end to end (it had been failing at its intro check
+since the icon stage arrived) and its tablet capture shows the counter with the
+N64 cluster lifted above it by FORK-028. `test_hud.sh`,
+`test_upstream_merge.sh`, `test_states.sh`, `settings_placement.py` and
+`bright-builds-check.ts all` pass; the gallery regenerated with every image
+identical to before (new manifest and index) and verifies. Not run: a physical
+iPad, the phone viewport audit after the fix, WebKit.
+
 ### FORK-066 — Glass Reflections: the level reflected in glass and shards
 
 **Status:** Spike implemented on 2026-11-09 at the owner's request ("all glass a

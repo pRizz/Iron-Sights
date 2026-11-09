@@ -522,6 +522,13 @@ void fileBuildWriteNewSave(u32 folder)
     }
 }
 
+#ifndef TARGET_N64
+/* FORK-067: the save slots have been read (or reset) by fileValidateSaves. Until
+ * then saves[] is all zeros, which fileGetSaveForFoldernum takes for the first
+ * folder's save with every option off. */
+static s32 s_PortSavesRead = FALSE;
+#endif
+
 void fileValidateSaves(void)
 {
     bool checksumOK;
@@ -530,6 +537,9 @@ void fileValidateSaves(void)
     s32 i;
     s32 *temp;
 
+#ifndef TARGET_N64
+    s_PortSavesRead = TRUE;
+#endif
     if (fileGamePakProbe())
     {
         checksumOK = TRUE;
@@ -1339,6 +1349,17 @@ void fileLoadSettingsForFolder(u32 folder)
     u16 padding;
     u16 options;
 
+#ifndef TARGET_N64
+    if (!s_PortSavesRead && folder != RAMROM_FOLDERNUM)
+    {   /* FORK-067: a stage started before the title read the saves (the web
+         * player's hidden weapon icon stage, GE_STAGE): the zeroed slot would
+         * switch Auto-Aim, Sight/Ammo On Screen and Look Ahead off and seed
+         * those zeros into midas.ini. Keep the player's global options. */
+        extern void portPlayerOptsApply(void); /* options.c */
+        portPlayerOptsApply();
+        return;
+    }
+#endif
     save = fileGetSaveForFoldernum(folder);
     if (save)
     {

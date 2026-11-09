@@ -135,6 +135,22 @@ try {
     assert.deepEqual(resolution.drawable, resolution.actual);
     console.log('Retina framebuffer', resolution.actual, 'CSS presentation', resolution.css);
     assert.match(resolution.settings, /mouse_auto_aim=1/);
+    // A first launch plays a hidden Dam stage for the weapon icons before the
+    // title; it must end before navigation, and it must not have switched off
+    // the player options (FORK-067: it once seeded a zeroed save's options).
+    await page.waitForFunction(() => !midasAuditGame._portWebIconStageBusy(), undefined, {
+        timeout: 400000,
+    });
+    await page.waitForFunction(() => midasAuditGame._portWebGetStage() !== 33, undefined, {
+        timeout: 120000,
+    });
+    const zeroedOptions = /^(auto_aim|sight_on_screen|look_ahead|ammo_on_screen)=0$/m;
+    const readSettings = () =>
+        page.evaluate(() =>
+            new TextDecoder().decode(midasAuditGame.FS.readFile('/user/midas.ini')),
+        );
+    const afterIcons = await readSettings();
+    assert.doesNotMatch(afterIcons, zeroedOptions, 'The icon stage switched player options off');
     let filesChecked = false;
     for (let step = 0; step < 24; step++) {
         if (await page.evaluate(() => midasAuditGame._portWebGetStage() === 33)) break;
@@ -176,6 +192,12 @@ try {
     });
     await expect(page.locator('.touch-controls')).toHaveAttribute('data-mode', 'game');
     await expect(page.locator('.touch-controls')).toHaveAttribute('data-context', 'game');
+    // Entering the first folder seeds the global options from its save.
+    assert.doesNotMatch(
+        await readSettings(),
+        zeroedOptions,
+        'A new folder switched player options off',
+    );
     const contexts = await page.evaluate(() => touchContextAudit);
     assert.ok(
         contexts.some((entry) => entry.context === 'cinematic'),

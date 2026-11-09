@@ -35,7 +35,7 @@ ICON_COUNT = sum(name is not None for name in ICON_NAMES[1:])
 # as it renders; GE_FIXEDTICK keeps its game time one field per frame.
 FIXTURE_INI = ('[display]\nfullscreen=window\nvsync=0\nmaxfps=0\ntickhz=60\n'
     'msaa=1\nrender_thread=0\nwidescreen=1\nhfov_wide=90\nlow_res=0\nfiltering=bilinear\nfilter_2d=1\n'
-    'aim_mode=1\nsight_on_screen=0\nalways_crosshair=0\nweapon_hud=0\nalways_health=0\n'
+    'aim_mode=1\nsight_on_screen=0\nammo_on_screen=0\nalways_crosshair=0\nweapon_hud=0\nalways_health=0\n'
     'mission_timer=0\nhit_markers=0\ndamage_indicators=0\nobjective_notifications=0\nmission_hints=0\n[input]\nmouse=1\n')
 
 
