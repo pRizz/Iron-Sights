@@ -7,7 +7,9 @@ import re
 from pathlib import Path
 import shutil
 import subprocess
-import urllib.request
+import urllib.request  # tests patch urlopen through this module
+
+from download_retry import fetch
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = ROOT / "scripts/port/sentry_config.json"
@@ -104,8 +106,7 @@ def cli(work):
     work.mkdir(parents=True, exist_ok=True)
     target = work / ("sentry-cli.exe" if os.name == "nt" else "sentry-cli")
     if not target.exists() or hashlib.sha256(target.read_bytes()).hexdigest() != digest:
-        with urllib.request.urlopen(url, timeout=60) as response:
-            data = response.read()
+        data = fetch(url, timeout=60)
         if hashlib.sha256(data).hexdigest() != digest:
             raise ValueError("Sentry CLI checksum mismatch")
         target.write_bytes(data)

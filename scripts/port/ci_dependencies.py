@@ -12,6 +12,7 @@ import re
 import shlex
 import shutil
 import subprocess
+import time
 from urllib.parse import unquote
 
 
@@ -45,6 +46,23 @@ def options(root, archives=None):
 def apt(root, args, capture=False, archives=None, program="apt-get"):
     prefix = [] if os.geteuid() == 0 else ["sudo"]
     return run([*prefix, program, *options(root, archives), *args], capture)
+
+
+# Acquire::Retries covers one slow file; a mirror that refuses connections for
+# a minute (seen on hosted runners) needs the whole command repeated later.
+APT_RETRY_DELAYS = (20, 60)
+
+
+def apt_network(root, args, archives=None, delays=APT_RETRY_DELAYS, sleep=time.sleep):
+    """Run an apt-get command that downloads, repeating it after transient failures."""
+    for attempt, delay in enumerate((*delays, None), start=1):
+        try:
+            return apt(root, args, archives=archives)
+        except subprocess.CalledProcessError:
+            if delay is None:
+                raise
+            print(f"apt-get {args[-1]} attempt {attempt} failed; retrying in {delay} s", flush=True)
+            sleep(delay)
 
 
 def paragraphs(text):
@@ -115,7 +133,7 @@ def prepare(root, profile):
                     f"Components: main universe\nArchitectures: {architecture}\n"
                     "Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg\n\n")
     (root/"ubuntu.sources").write_text(sources)
-    apt(root, ["update", "--error-on=any"])
+    apt_network(root, ["update", "--error-on=any"])
     requested = packages(profile)
     candidates = {}
     for name in requested:
@@ -156,7 +174,7 @@ def install(root):
     reused = sum(r["size"] for r in plan["archives"] if (root/"archives"/r["name"]).is_file())
     print(f"Reusing {reused:,} bytes of verified package downloads", flush=True)
     args = ["--assume-yes", "--no-install-recommends", "install", *plan["install"]]
-    apt(root, ["--download-only", *args])
+    apt_network(root, ["--download-only", *args])
     verify_archives(root/"archives", plan["archives"], require=True)
     # Every needed archive was SHA256-verified against this run's signed indexes.
     apt(root, ["--no-download", *args])

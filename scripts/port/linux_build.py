@@ -7,8 +7,8 @@ from pathlib import Path
 import shutil
 import subprocess
 import tarfile
-import urllib.request
 
+from download_retry import fetch
 from sentry_tools import checkout_source, licenses, run, CONFIG
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,8 +19,7 @@ SDL_SHA256 = "8b8d4aef2038533da814965220f88f77d60dfa0f32685f80ead65e501337da7f"
 def download(url, digest, target):
     target.parent.mkdir(parents=True, exist_ok=True)
     if not target.exists() or hashlib.sha256(target.read_bytes()).hexdigest() != digest:
-        with urllib.request.urlopen(url, timeout=120) as response:
-            data = response.read()
+        data = fetch(url, timeout=120)
         if hashlib.sha256(data).hexdigest() != digest:
             raise ValueError("Download SHA256 mismatch: " + url)
         target.write_bytes(data)

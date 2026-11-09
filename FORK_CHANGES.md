@@ -30,6 +30,51 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-065 — CI retries for transient network failures
+
+**Status:** Implemented on 2026-11-09; ROM-free tests pass locally. Whether CI
+stays green depends on the next runs.
+
+Three of the last four `Windows builds and provenance` runs on `main`
+(`ed0374a`, `2e4e578`, `d0eb2b8`) failed on the network, not the code:
+GitHub release downloads answered `504 Gateway Time-out` (the Linux job's SDL
+source and AppImage runtime, and the Sentry CLI for the Windows symbol upload),
+and `archive.ubuntu.com` refused connections during `apt-get update` in the
+tests job. Each download was a single attempt; APT's own `Acquire::Retries`
+covers one slow file but not a mirror that is unreachable for a minute.
+
+- `scripts/port/download_retry.py` fetches with four attempts, waiting 5, 15
+  and 45 s, and retries only transient failures (HTTP 429 and 5xx, connection
+  errors and timeouts). A 404 or other client error fails at once. Callers
+  still check every byte against their pinned SHA256, so a retry never widens
+  what is accepted. `linux_build.download` (SDL, the AppImage runtime via
+  `package_linux.py`, and `make_brand_art.py`'s inputs) and `sentry_tools.cli`
+  use it.
+- `ci_dependencies.py` repeats `apt-get update` and the archive download after
+  20 and 60 s (`apt_network`). Its script hash is part of the APT cache key,
+  so the first run after this change refills that cache once.
+- The Linux job restores and saves `build_linux_ci/deps/downloads` and
+  `build_linux_ci/downloads` (key: the hashes of `linux_build.py` and
+  `package_linux.py`), so later runs skip those GitHub downloads entirely. The
+  cached files are re-verified before use. Editing `sentry_tools.py` also
+  invalidates the Sentry SDK cache once (about a 54 s rebuild).
+
+**Sources:** [retry helper](scripts/port/download_retry.py),
+[tests](scripts/port/test_download_retry.py),
+[dependency cache](scripts/port/ci_dependencies.py) and its
+[tests](scripts/port/test_ci_dependencies.py),
+[Linux build](scripts/port/linux_build.py),
+[Sentry tooling](scripts/port/sentry_tools.py),
+[workflow](.github/workflows/windows-release.yml) (runs the new test and caches
+the Linux downloads).
+
+**Checks:** `test_download_retry.py` (504/502 then success, connection errors
+and timeouts, giving up after four attempts, 404 failing at once),
+`test_ci_dependencies.py` (an unreachable mirror repeats the command, then
+gives up) and `test_sentry_tools.py` pass; `actionlint` passes on the workflow.
+The gallery's input fingerprint covers these scripts, so the pre-commit hook
+regenerated it: zero changed image cells, new manifest and index only.
+
 ### FORK-064 — Taser and watch laser ADS
 
 **Status:** Implemented on 2026-11-08 at the owner's request and built into

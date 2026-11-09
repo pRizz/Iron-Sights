@@ -77,6 +77,7 @@ jobs:
           python3 scripts/port/test_linux_launcher.py
           python3 scripts/port/test_steam_art.py
           python3 scripts/port/test_sentry_tools.py
+          python3 scripts/port/test_download_retry.py
           python3 scripts/port/test_ci_dependencies.py
           python3 scripts/port/test_hand_gallery.py
           python3 scripts/port/hand_gallery.py verify
@@ -242,6 +243,15 @@ jobs:
           path: ${{ runner.temp }}/midas-linux-ccache
           key: linux-ccache-${{ hashFiles('scripts/port/linux-release.Dockerfile', 'scripts/port/linux_build.py') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: linux-ccache-${{ hashFiles('scripts/port/linux-release.Dockerfile', 'scripts/port/linux_build.py') }}-
+      # SHA256-pinned SDL source and AppImage runtime; both are verified again
+      # before use, so a cached copy needs no GitHub release download.
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: restore-linux-downloads
+        with:
+          path: |
+            build_linux_ci/deps/downloads
+            build_linux_ci/downloads
+          key: linux-downloads-${{ hashFiles('scripts/port/linux_build.py', 'scripts/port/package_linux.py') }}
       - name: Compile optimized i686 game and pinned reporter without a ROM
         env:
           CLEAN_BUILD: ${{ inputs.clean_build == true }}
@@ -261,6 +271,13 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/src" midas-linux-release python3 scripts/port/package_linux.py --build build_linux_ci --output build_linux_ci/dist
           docker run --rm -v "$PWD:/src" midas-linux-release python3 scripts/port/test_sentry_linux.py --package build_linux_ci/dist/Iron-Sights-linux-i686.tar.gz --appimage build_linux_ci/dist/Iron-Sights-linux-i686.AppImage --steamdeck build_linux_ci/dist/Iron-Sights-steamdeck-i686.zip --output build_linux_ci/smoke
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.restore-linux-downloads.outputs.cache-hit != 'true'
+        with:
+          path: |
+            build_linux_ci/deps/downloads
+            build_linux_ci/downloads
+          key: linux-downloads-${{ hashFiles('scripts/port/linux_build.py', 'scripts/port/package_linux.py') }}
       - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         if: inputs.clean_build != true
         with:

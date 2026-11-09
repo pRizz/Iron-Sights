@@ -5,10 +5,22 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
-from ci_dependencies import archive_record, verify_archives, compiler_identity
+import subprocess
+from ci_dependencies import apt_network, archive_record, verify_archives, compiler_identity
 
 
 class DependencyCache(unittest.TestCase):
+    def test_unreachable_mirror_repeats_the_apt_command(self):
+        failure = subprocess.CalledProcessError(100, ["apt-get", "update"])
+        sleeps = []
+        with patch("ci_dependencies.apt", side_effect=[failure, failure, ""]) as apt:
+            apt_network(Path("/unused"), ["update"], sleep=sleeps.append)
+        self.assertEqual((apt.call_count, sleeps), (3, [20, 60]))
+        with patch("ci_dependencies.apt", side_effect=[failure] * 3) as apt:
+            with self.assertRaises(subprocess.CalledProcessError):
+                apt_network(Path("/unused"), ["update"], sleep=lambda delay: None)
+        self.assertEqual(apt.call_count, 3)
+
     def test_object_identity_tracks_tools_across_hosted_image_rollouts(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
