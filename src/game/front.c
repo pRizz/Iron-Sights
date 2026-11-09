@@ -4788,7 +4788,7 @@ static const struct PortSheetRow port_sheet_rows_is_aim[] = {
 };
 static const struct PortSheetRow port_sheet_rows_is_feedback[] = {
     { SHROW_OPT, "hit_markers" }, { SHROW_OPT, "hit_sounds" }, { SHROW_OPT, "damage_indicators" },
-    { SHROW_OPT, "debrief_hit_map" },
+    { SHROW_OPT, "debrief_hit_map" }, { SHROW_OPT, "tracer_strength" }, /* FORK-062 */
 };
 static const struct PortSheetRow port_sheet_rows_is_hud[] = {
     { SHROW_OPT, "always_crosshair_size" },   /* sizes HUD's Always Crosshair */

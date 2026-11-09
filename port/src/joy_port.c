@@ -79,6 +79,7 @@
 #include "port_hitmap.h"
 #include "port_ads_accuracy.h"
 #include "port_gun_kick.h"
+#include "port_tracers.h"
 #include "joy.h"
 #include <os_extension.h>
 
@@ -313,6 +314,7 @@ s32 portJoyPortSetOption(const char *key, const char *value)
     if (portHitMapOptionSet(key, atoi(value))) return 1;
     if (portAdsAccuracyOptionSet(key, atoi(value))) return 1;
     if (portGunKickOptionSet(key, atoi(value))) return 1;
+    if (portTracerOptionSet(key, atoi(value))) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = atoi(value) != 0;
         return 1;
@@ -466,6 +468,7 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
     if (portHitMapOptionGet(key, out)) return 1;
     if (portAdsAccuracyOptionGet(key, out)) return 1;
     if (portGunKickOptionGet(key, out)) return 1;
+    if (portTracerOptionGet(key, out)) return 1;
     if (strcmp(key, "sprint") == 0) {
         *out = sSprint;
         return 1;
@@ -505,6 +508,7 @@ s32 portJoyPortOptionSet(const char *key, s32 v)
     if (portHitMapOptionSet(key, v)) return 1;
     if (portAdsAccuracyOptionSet(key, v)) return 1;
     if (portGunKickOptionSet(key, v)) return 1;
+    if (portTracerOptionSet(key, v)) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = v != 0;
         return 1;

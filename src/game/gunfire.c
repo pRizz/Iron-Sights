@@ -47,6 +47,7 @@
 #include "port_hit_sound.h"
 #include "port_ads_accuracy.h"
 #include "port_gun_kick.h"
+#include "port_tracers.h"
 #include "port_mission_clock.h"
 #include "boss.h"
 #include "port_weapon_export.h"
@@ -1748,6 +1749,11 @@ Gfx *sub_GAME_7F061E18(Gfx *gdl, BeamRecord *flash, s32 arg2)
     Vtx *vtx;
     f32 dist;
     Gfx *cmd;
+#ifndef TARGET_N64
+    PortTracerLook tracerlook;
+    s32 tracerlooked = FALSE;
+    Vtx *tracerglow = NULL;
+#endif
 
     if (flash->unk00 >= 0)
     {
@@ -1781,6 +1787,20 @@ Gfx *sub_GAME_7F061E18(Gfx *gdl, BeamRecord *flash, s32 arg2)
         {
             radius = 30.0f;
         }
+
+#ifndef TARGET_N64
+        /* Tracer Strength (FORK-062): wider and longer; vertices stay in s16 range. */
+        tracerlooked = portTracerLook(flash->item_id, &tracerlook);
+        if (tracerlooked)
+        {
+            radius *= tracerlook.width;
+            dist *= tracerlook.length;
+            if (dist > 3000.0f)
+            {
+                dist = 3000.0f;
+            }
+        }
+#endif
 
         pos.f[0] = flash->pos.f[0];
         pos.f[1] = flash->pos.f[1];
@@ -1921,6 +1941,30 @@ Gfx *sub_GAME_7F061E18(Gfx *gdl, BeamRecord *flash, s32 arg2)
         vtx[3].v.tc[0] = 0;
         vtx[3].v.tc[1] = image->height << 5;
 
+#ifndef TARGET_N64
+        if (tracerlooked)
+        {   /* Tracer Strength: hold a minimum on-screen width at each end, then a glow strip. */
+            const f32 tanhalf = portTracerTanHalfFov(getPlayer_c_perspfovy());
+            coord3d tracerend;
+            f32 startscale;
+            f32 endscale;
+
+            tracerend.f[0] = pos.f[0] + (flash->delta.f[0] * dist);
+            tracerend.f[1] = pos.f[1] + (flash->delta.f[1] * dist);
+            tracerend.f[2] = pos.f[2] + (flash->delta.f[2] * dist);
+            startscale = portTracerMinWidthScale(radius, portTracerViewDepth(worldtoscreen->m, pos.f), tanhalf, &tracerlook);
+            endscale = portTracerMinWidthScale(radius, portTracerViewDepth(worldtoscreen->m, tracerend.f), tanhalf, &tracerlook);
+            portTracerShapeStrip(vtx, right.f, flareoffset.f, startscale, endscale);
+
+            if (tracerlook.glowWidth > 0.0f)
+            {
+                tracerglow = dynAllocateVertices(4);
+                portTracerGlowStrip(tracerglow, vtx, right.f, flareoffset.f, startscale, endscale,
+                                    tracerlook.glowWidth, tracerlook.glowAlpha);
+            }
+        }
+#endif
+
         if (flash->item_id == ITEM_LASER)
         {
             f14 = playerpos->f[0] - pos.f[0];
@@ -1994,6 +2038,14 @@ Gfx *sub_GAME_7F061E18(Gfx *gdl, BeamRecord *flash, s32 arg2)
         else
         {
             texSelect(&gdl, image, 4, arg2, 2);
+
+#ifndef TARGET_N64
+            if (tracerglow != NULL)
+            {   /* Tracer Strength: the soft glow first, the core over it. */
+                gSPVertex(gdl++, osVirtualToPhysical(tracerglow), 4, 0);
+                gSP4Triangles(gdl++, 0, 2, 3, 0, 3, 1, 0, 0, 0, 0, 0, 0);
+            }
+#endif
 
             gSPVertex(gdl++, osVirtualToPhysical(vtx), 4, 0);
 

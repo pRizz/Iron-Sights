@@ -13,6 +13,7 @@ extern void *memset(void *dst, int value, size_t size);
 #include "../../port/src/port_hit_sound.c"
 #include "../../port/src/port_ads_accuracy.c"
 #include "../../port/src/port_gun_kick.c"
+#include "../../port/src/port_tracers.c"
 
 static s32 iconFixtureReady = 1;
 s32 portIconCacheReady(void) { return iconFixtureReady; }
@@ -114,6 +115,7 @@ static void normalAim(s32 held, s32 pressed, s32 toggle)
 #include "test_rocket_ads.c"
 #include "test_ads_accuracy.c"
 #include "test_gun_kick.c"
+#include "test_tracers.c"
 #include "test_hand_layer.c"
 
 int main(void)
@@ -135,6 +137,7 @@ int main(void)
     testRocketAds();
     testAdsAccuracy();
     testGunKick();
+    testTracers();
     testSprint();
     testLudicrousSprint();
     testHandLayerEnd();
@@ -574,6 +577,6 @@ int main(void)
     pollAds(0, 1); /* the dedicated ADS button works in red-reticle mode too */
     assert(portAdsMouseWheel(1));
     assert(portAdsWheelZoom(15.0f, 45.0f) < 15.0f);
-    puts("ADS checks passed: sprint/walk/aim/crouch movement, input, scope, wheel zoom, ADS spread/recoil, weapon kick, per-player state, 30/60/120/240 Hz.");
+    puts("ADS checks passed: sprint/walk/aim/crouch movement, input, scope, wheel zoom, ADS spread/recoil, weapon kick, tracers, per-player state, 30/60/120/240 Hz.");
     return 0;
 }

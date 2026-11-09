@@ -209,6 +209,11 @@ padN_stickmode.
                       |            | look, whose PARTS tab lists hits, kills
                       |            | and damage by body part.
                       |            | Iron Sights > Combat Feedback.
+  tracer_strength     | 200        | Bullet tracer strength, 100-400 percent in
+                      |            | steps of 50: wider, longer streaks with a
+                      |            | glow and a minimum on-screen width so long
+                      |            | shots stay visible. 100 = original. Not the
+                      |            | lasers. Iron Sights > Combat Feedback
   objective_notifications | 1     | Named objective status alerts; 0 = original
   mission_hints       | 1          | Desktop solo mission-start control hints.
                       |            | Iron Sights > HUD Additions.

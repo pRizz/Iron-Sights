@@ -18,6 +18,7 @@
 #include "port_hd_download.h"  /* FORK-053: their download */
 #include "port_ads_accuracy.h"
 #include "port_gun_kick.h"
+#include "port_tracers.h"
 
 #ifdef GE_XBOX
 /* No SDL on the console: the string/keyboard/thread stand-ins live in the
@@ -2412,6 +2413,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "hit_sounds=1\n");
     fprintf(f, "damage_indicators=1\n");
     fprintf(f, "debrief_hit_map=1\n");
+    fprintf(f, "tracer_strength=%d\n", PORT_TRACER_STRENGTH_DEFAULT);
     fprintf(f, "objective_notifications=1\n");
     fprintf(f, "mission_hints=1\nmission_hints_shown=0\n");
     fprintf(f, "weapon_hud=1\n");

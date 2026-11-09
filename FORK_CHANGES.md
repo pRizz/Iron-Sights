@@ -30,6 +30,67 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-062 — Tracer Strength: wider, longer, glowing bullet tracers
+
+**Status:** Implemented on 2026-11-08 and built for Windows; a scripted Dam
+capture confirmed the look at 100/200/400%. Awaits the owner's play-test.
+Linux and browser builds not run locally.
+
+Inherited behaviour: every bullet tracer (the player's, guards',
+multiplayer characters' and autoguns') is one camera-facing strip drawn by
+`sub_GAME_7F061E18` in `gunfire.c` with the orange `flareimage3` texture: 6
+world units wide (radius 30 at the 0.1 model scale), a streak 20% of the
+shot's path (`unk24`, capped at 3000), crossing the whole path in about five
+fields. Its width is fixed in the world, so long shots thin to under a pixel,
+and short shots that hit the floor ahead show for only one to three frames.
+
+**Gameplay > Iron Sights > Combat Feedback > Tracer Strength**
+(`[display] tracer_strength`: 100 to 400 percent in steps of 50; default 200),
+after Debrief Hit Map in the Options folder and on the watch. 100% draws the
+native strip untouched. Above it, with s = percent / 100, `portTracerLookFor`
+gives width × s, streak length × (1 + (s − 1) / 2) up to 2 (and never past
+the native 3000-unit cap, which keeps vertices in s16 range), a minimum full
+width of (s − 1) × 1.5 px of a 1080-line screen (scaled with the current
+field of view and per strip end, so distant ends widen and near ends keep
+their width), and a glow strip 2.5 times the core's width at vertex alpha
+90 × (s − 1), capped at 160. The glow is drawn first with the same texture and
+render mode, then the core over it.
+
+- **Hook.** `sub_GAME_7F061E18` scales `radius` and `dist` after the per-item
+  radius, rewrites the four strip vertices with `portTracerShapeStrip` (the
+  native layout times per-end scales, truncated to s16 as natively) and emits
+  the glow strip before the core. The Moonraker laser and watch laser return
+  no look and keep their beams.
+- **Drawing only.** `CapBeamLengthAndDecideIfRendered` and
+  `gunAdvanceBeamTimer` are untouched, so tracer timing, its draws from
+  `randomGetNext`, hits and demos are unchanged. The lifetime is therefore the
+  native one; a visual afterglow that outlives the native timer would be a
+  separate addition.
+- **Not covered.** Shotguns still have no tracers, as natively.
+- **Input.** An ordinary percentage row, so keyboard, mouse, gamepad and touch
+  adjust it like any other.
+
+**Sources:** [tracer module](port/src/port_tracers.c) and its
+[header](port/include/port_tracers.h); draw hook in [gunfire.c](src/game/gunfire.c);
+option bridge in [joy_port.c](port/src/joy_port.c), rows in
+[port_options.c](port/src/port_options.c), [front.c](src/game/front.c) and
+[port_watchpages.c](port/src/port_watchpages.c), [help](port/src/port_option_help.c),
+[ini template](port/src/video.c), [ini reference](tools/midas_ini_help.txt) and
+[README](README.md).
+**Checks:** [tracer tests](scripts/port/test_tracers.c), run by
+[test_ads.sh](scripts/port/test_ads.sh), cover the default, clamping and menu
+bridge, the 100/200/400% looks and their caps, view depth and field of view,
+the minimum-width scale near and far, the native strip layout and per-end
+widening, the glow strip, and the laser and 100% exemptions; they pass
+(Docker `midas-linux-release`), as do `settings_placement.py` and
+`bright-builds-check.ts all`. The Windows build compiles; the regenerated hand
+gallery changed 0 image cells. A scripted capture (Dam, PP7, `GE_AUTOFIRE`,
+`GE_SHOT=1`, isolated copies in `build_win/tracer-audit-*`) showed the firing
+frame's tracer adding about 1.9 times the native brightness at 200% and 2.4
+times at 400% in the tracer region (which also holds part of the muzzle
+flash), with a visibly wider streak and glow. The capture frames were deleted
+afterwards; the logs remain.
+
 ### FORK-061 — Weapon Kick: a per-shot recoil spring
 
 **Status:** Implemented on 2026-11-08 and built for Windows. The owner
@@ -2036,7 +2097,7 @@ subsections, in both the Options folder and the watch:
 | Subsection | Settings |
 | --- | --- |
 | Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Sprint, Ludicrous Sprint |
-| Combat Feedback | Hit Markers, Hit Sounds, Damage Direction |
+| Combat Feedback | Hit Markers, Hit Sounds, Damage Direction, Tracer Strength (FORK-062) |
 | HUD Additions | Always Crosshair Size, Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
 | System | About / Build Info, Fonts (FORK-051, FORK-052), Crash Reporting (Windows/Linux) |
 
