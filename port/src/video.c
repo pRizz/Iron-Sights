@@ -332,6 +332,10 @@ static int   s_CfgPlayerOpt[PLAYEROPT_COUNT] = { 1, 1, 0, 1, 1, 1 };   /* look U
  * make the other five "established" at their defaults */
 #define PLAYEROPT_ALL ((1 << PLAYEROPT_COUNT) - 1)
 static int   s_CfgPlayerOptsMask = 0;
+/* [display] player_opts_repaired (FORK-067): the one-time repair of the four
+ * options a hidden pre-title stage switched off has run (videoRepairPlayerOpts) */
+#define VIDEO_PLAYEROPTS_REPAIR_KEY "player_opts_repaired"
+static int   s_CfgPlayerOptsRepaired = 0;
 static const char *const s_PlayerOptKeys[PLAYEROPT_COUNT] = {
     "look_updown", "auto_aim", "aim_control", "sight_on_screen", "look_ahead", "ammo_on_screen",
 };
@@ -1343,6 +1347,7 @@ static int videoSetDisplayOption(const char *key, const char *value)
         const int po = videoPlayerOptIndex(key);
         if (po >= 0) { s_CfgPlayerOpt[po] = SDL_atoi(value) != 0; s_CfgPlayerOptsMask |= 1 << po; return 1; }
     }
+    if (SDL_strcasecmp(key, VIDEO_PLAYEROPTS_REPAIR_KEY) == 0) { s_CfgPlayerOptsRepaired = SDL_atoi(value) != 0; return 1; }
     if (SDL_strcasecmp(key, "sfx_volume") == 0)    { s_CfgSfxVolume = videoClampPct(SDL_atoi(value)); s_CfgVolumesSet = 1; return 1; }
     if (SDL_strcasecmp(key, "hfov_wide") == 0)
     {   /* HORIZONTAL degrees on a 16:9 picture - the menus'
@@ -3333,6 +3338,52 @@ static void videoSaveWindowIni(void)
 
 static void videoBindToText(const SDL_Scancode *codes, char *buf, int len); /* below */
 
+/* FORK-067, once per midas.ini: a stage started before the saves were read
+ * (the web player's hidden weapon icon stage) seeded the empty save slot's
+ * options, saving Auto-Aim, Sight On Screen, Look Ahead and Ammo On Screen as
+ * 0. Those four all off is that bug's mark, so turn them back on. A player who
+ * really wanted all four off gets them back once; the marker key keeps the
+ * repair from undoing that choice again. Auto-Aim on is harmless for a mouse
+ * player: mouse_auto_aim still decides whether the mouse gets it. */
+static void videoRepairPlayerOpts(void)
+{
+    static const int fixes[] = { 1, 3, 4, 5 }; /* auto_aim, sight_on_screen, look_ahead, ammo_on_screen */
+    const char *keys[1 + 4];
+    const char *vals[1 + 4];
+    int n = 0;
+    int zeroed = 1;
+    int i;
+
+    if (s_CfgPlayerOptsRepaired)
+    {
+        return;
+    }
+    for (i = 0; i < 4; i++)
+    {
+        const int po = fixes[i];
+
+        if (!(s_CfgPlayerOptsMask & (1 << po)) || s_CfgPlayerOpt[po] != 0)
+        {
+            zeroed = 0;
+        }
+    }
+    s_CfgPlayerOptsRepaired = 1;
+    keys[n] = VIDEO_PLAYEROPTS_REPAIR_KEY;
+    vals[n++] = "1";
+    if (zeroed)
+    {
+        for (i = 0; i < 4; i++)
+        {
+            s_CfgPlayerOpt[fixes[i]] = 1;
+            keys[n] = s_PlayerOptKeys[fixes[i]];
+            vals[n++] = "1";
+        }
+        portConLogf("ge: midas.ini: Auto-Aim, Sight On Screen, Look Ahead and Ammo On Screen were all off "
+                    "(a stage started before the saves were read) - turned back on, once\n");
+    }
+    portIniWriteStrs("[display]", keys, vals, n);
+}
+
 static void videoLoadConfig(void)
 {
     extern FILE *portRootFopen(const char *name, const char *mode);
@@ -3419,6 +3470,7 @@ static void videoLoadConfig(void)
         }
     }
     fclose(f);
+    videoRepairPlayerOpts();
 
     /* The keyboard's record wins over any old [controls] lines; a record
      * without binds takes them over, once, and midas.ini drops the section. */

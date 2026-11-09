@@ -33,8 +33,8 @@ new areas. Status describes implementation state, not Git publication state.
 ### FORK-067 — Player options survive a stage started before the saves are read
 
 **Status:** Fixed on 2026-11-09 after the owner saw the corner ammo missing on
-an iPad. Verified in the Windows build and in a local web build (tablet and
-phone viewports).
+an iPad, with a one-time repair for settings already zeroed. Verified in the
+Windows build and in a local web build (tablet and phone viewports).
 
 The missing ammo was not the touch clearance of FORK-028. The game had switched
 **Ammo On Screen** off, together with Auto-Aim, Sight On Screen and Look Ahead,
@@ -55,12 +55,29 @@ native debug log traced the write to `fileLoadSettingsForFolder` reading slot
 `file2.c` now records that `fileValidateSaves` ran (`s_PortSavesRead`), and
 until then `fileLoadSettingsForFolder` skips the unread slots (demo playback's
 RAMROM slot still loads) and applies the player's global options instead.
-Both changes sit inside `#ifndef TARGET_N64` in this upstream file. Settings
-already written as zeros by an affected build stay as written; the player can
-switch them back in the Options folder (Auto-Aim and Look Ahead on the
-Gameplay page, Sight and Ammo On Screen on HUD) or the watch.
+Both changes sit inside `#ifndef TARGET_N64` in this upstream file.
 
-**Sources:** [save settings](src/game/file2.c) and the
+Settings already written as zeros by an affected build are repaired once, at
+the owner's request (the owner's own iPad was affected). When `midas.ini` is
+read, `videoRepairPlayerOpts` (`port/src/video.c`) checks for the bug's mark:
+`auto_aim`, `sight_on_screen`, `look_ahead` and `ammo_on_screen` all present
+and all 0. It sets the four back to 1, logs the repair, and writes the ini-only
+marker `[display] player_opts_repaired=1`. The marker is written on the first
+read of any existing `midas.ini`, repaired or not, so the repair never runs
+twice. A fresh install has no `midas.ini` yet and writes the defaults instead;
+the next start adds the marker. Trade-off: a player who deliberately switched
+all four off gets them back on once, and the marker keeps the repair from
+undoing that choice again. Auto-Aim back on does not give a mouse player
+auto-aim, because `mouse_auto_aim` (default off) still decides that. A device
+record (`Data/Devices/*.gedevice`) that saved `auto_aim=0` while affected can
+still apply it when that device next becomes player 1. Like every ini write,
+the marker and the repaired values are not saved during `GE_WINDOW` /
+`GE_NOINISAVE` harness runs; those runs apply the repair in memory only. The
+marker is internal, so it has no menu row, help line or
+`settings_placement.py` entry.
+
+**Sources:** [save settings](src/game/file2.c), the
+[ini repair](port/src/video.c) and the
 [touch audit](web/tools/touch-game-audit.mjs), which now waits for the icon
 stage before navigating (it had been mistaking that hidden Dam stage for the
 player's mission) and fails if either the icon stage or the first folder
@@ -83,8 +100,14 @@ since the icon stage arrived) and its tablet capture shows the counter with the
 N64 cluster lifted above it by FORK-028. `test_hud.sh`,
 `test_upstream_merge.sh`, `test_states.sh`, `settings_placement.py` and
 `bright-builds-check.ts all` pass; the gallery regenerated with every image
-identical to before (new manifest and index) and verifies. Not run: a physical
-iPad, the phone viewport audit after the fix, WebKit.
+identical to before (new manifest and index) and verifies. The repair was
+checked with an isolated Windows build, a copied executable and seeded
+`midas.ini` files, without the harness's ini guard. The four zeros came back as 1
+with the marker written and the repair logged. A marked file with the four
+zeros was left alone. Three zeros with `auto_aim=1` was left alone and only
+gained the marker. Not run: a physical iPad, the phone viewport audit after the
+fix, WebKit, and the repair in a browser build. The repair uses the same C
+code on the web.
 
 ### FORK-066 — Glass Reflections: the level reflected in glass and shards
 
