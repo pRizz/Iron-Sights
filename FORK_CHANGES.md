@@ -6398,14 +6398,21 @@ statement that the fan project is not affiliated with Nintendo, Rare, Microsoft
 or the James Bond franchise owners. `web/public/manifest.webmanifest` names the
 app and its 192/512 px and maskable icons for Android and Chrome home screens.
 Since 2026-11-08 it uses `display: standalone`, at the owner's request, after
-starting with `browser`. Opened from a Home Screen, the launcher fills its own
-window with no browser toolbar, and desktop Chrome and Edge offer to install
-it. Known trade-off: iOS gives a standalone Home Screen app storage separate
-from Safari. The remembered ROM, campaign saves, profiles and settings
-therefore do not carry over between the two, and players pick the ROM again and
-can move saves with Export Save and Import Save. Removing the Home Screen app
-can remove its storage. No first-run notice explains this. Standalone behaviour
-has not been tried on a real iPhone or Android device.
+starting with `browser`. This mainly affects Android and desktop Chrome and
+Edge, which offer to install the launcher as an app only when the manifest asks
+for an app window. It also affects iOS 18 and earlier, where a Home Screen icon
+opened in Safari unless the site asked otherwise. Since iOS 26, Safari's Add to
+Home Screen sheet turns "Open as Web App" on by default for every site, with or
+without a manifest. The owner's Home Screen copy already opened full screen
+before this change, so on iOS 26 the manifest supplies only the name and icons.
+The player can still turn that switch off for a plain Safari bookmark.
+
+A Home Screen web app on iOS keeps storage separate from Safari. This comes from
+iOS 26's default, not from this setting. The remembered ROM, campaign saves,
+profiles and settings therefore do not carry over between the two: players pick
+the ROM again and can move saves with Export Save and Import Save. Removing the
+Home Screen app can remove its storage. No first-run notice explains this.
+Standalone behaviour has not been tried on an Android device or older iOS.
 
 The 1200x630 preview image shows the gold title beside the sight picture,
 over two lines reading "PLAY GOLDENEYE / IN YOUR BROWSER" (the owner's

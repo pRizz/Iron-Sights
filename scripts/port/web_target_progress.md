@@ -508,10 +508,13 @@ assembly, verification and the launcher audit pass, and local Lighthouse scores
 are unchanged. Next action: after deployment, paste the link into a chat app to
 check the preview, try Android's Add to Home screen, and, if the owner wants
 it, register the site in Google Search Console. Later the same day, the owner
-chose `display: standalone`. The manifest and launcher audit now use it, and
-iOS Home Screen storage is accepted as separate from Safari's. Next action: on
-an iPhone, add the site to the Home Screen and confirm the window, ROM picking,
-storage, touch controls, and save import and export.
+chose `display: standalone`. The manifest and launcher audit now use it. It
+mainly enables app installation in Android and desktop Chrome/Edge, and app mode
+on iOS 18 and earlier. iOS 26 already opens every Home Screen site as a web app
+by default ("Open as Web App"), with storage separate from Safari's, and the
+owner's Home Screen copy already did. Next action: confirm installation on
+Android and in desktop Chrome, and on an iPhone confirm ROM picking, touch
+controls, and save import and export in the Home Screen app.
 
 **Status:** Complete for the local desktop launcher. First/repeat launch,
 storage/error flows and normal Dam capture/audio/focus/watch checks pass.
