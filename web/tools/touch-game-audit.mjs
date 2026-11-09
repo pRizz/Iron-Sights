@@ -84,6 +84,21 @@ try {
         timeout: 90000,
     });
     await tap(page.getByRole('button', { name: 'Play GoldenEye' }));
+    // A fresh profile first plays a hidden Dam stage for the weapon icons
+    // (FORK-019). Snapshot the settings once that stage is running: it must not
+    // write midas.ini at all (FORK-067: it once saved a zeroed save's options).
+    await page.waitForFunction(
+        () =>
+            globalThis.midasAuditGame?._portWebIconStageBusy() &&
+            midasAuditGame._portWebGetStage() === 33,
+        undefined,
+        { timeout: 120000 },
+    );
+    const readSettings = () =>
+        page.evaluate(() =>
+            new TextDecoder().decode(midasAuditGame.FS.readFile('/user/midas.ini')),
+        );
+    const duringIcons = await readSettings();
     console.log('Waiting for native frames at full device pixel ratio');
     await page.waitForFunction(
         () => globalThis.midasAuditGame?._portWebGetGfxTasks() >= 240,
@@ -135,9 +150,7 @@ try {
     assert.deepEqual(resolution.drawable, resolution.actual);
     console.log('Retina framebuffer', resolution.actual, 'CSS presentation', resolution.css);
     assert.match(resolution.settings, /mouse_auto_aim=1/);
-    // A first launch plays a hidden Dam stage for the weapon icons before the
-    // title; it must end before navigation, and it must not have switched off
-    // the player options (FORK-067: it once seeded a zeroed save's options).
+    // The icon stage must end before navigation and leave midas.ini as it was.
     await page.waitForFunction(() => !midasAuditGame._portWebIconStageBusy(), undefined, {
         timeout: 400000,
     });
@@ -145,11 +158,8 @@ try {
         timeout: 120000,
     });
     const zeroedOptions = /^(auto_aim|sight_on_screen|look_ahead|ammo_on_screen)=0$/m;
-    const readSettings = () =>
-        page.evaluate(() =>
-            new TextDecoder().decode(midasAuditGame.FS.readFile('/user/midas.ini')),
-        );
     const afterIcons = await readSettings();
+    assert.equal(afterIcons, duringIcons, 'The hidden icon stage wrote midas.ini');
     assert.doesNotMatch(afterIcons, zeroedOptions, 'The icon stage switched player options off');
     let filesChecked = false;
     for (let step = 0; step < 24; step++) {

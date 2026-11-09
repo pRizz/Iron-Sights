@@ -78,10 +78,11 @@ marker is internal, so it has no menu row, help line or
 
 **Sources:** [save settings](src/game/file2.c), the
 [ini repair](port/src/video.c) and the
-[touch audit](web/tools/touch-game-audit.mjs), which now waits for the icon
-stage before navigating (it had been mistaking that hidden Dam stage for the
-player's mission) and fails if either the icon stage or the first folder
-leaves any of the four options off. The render review gallery's fixture
+[touch audit](web/tools/touch-game-audit.mjs). The audit now waits for the icon
+stage before navigating; it had been mistaking that hidden Dam stage for the
+player's mission. It snapshots `midas.ini` once the icon stage is running and
+fails unless the file is byte-identical when the stage ends. It also fails if
+the icon stage or the first folder leaves any of the four options off. The render review gallery's fixture
 (`scripts/port/hand_gallery.py`) starts its captures with `GE_STAGE`, so its
 references had been taken with the counter hidden by this bug; the fixture
 now sets `ammo_on_screen=0` beside its other hidden HUD overlays
@@ -105,7 +106,13 @@ checked with an isolated Windows build, a copied executable and seeded
 `midas.ini` files, without the harness's ini guard. The four zeros came back as 1
 with the marker written and the repair logged. A marked file with the four
 zeros was left alone. Three zeros with `auto_aim=1` was left alone and only
-gained the marker. Not run: a physical iPad, the phone viewport audit after the
+gained the marker. The audit's unchanged-`midas.ini` check passes on the
+fixed web build at the tablet viewport. With the `file2.c` guard temporarily
+disabled, it failed with "The hidden icon stage wrote midas.ini". A
+follow-up audit compared Windows first starts with and without the icon stage
+(web-style starting `midas.ini`, an empty icon cache). `midas.ini`, the save
+file and the device files came out the same, and the hidden stage made no
+save writes. Not run: a physical iPad, the phone viewport audit after the
 fix, WebKit, and the repair in a browser build. The repair uses the same C
 code on the web.
 
