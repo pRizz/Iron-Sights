@@ -281,6 +281,11 @@ static f32 port_text_scale = 1.0f;
  * native pixel out at framebuffer-pixel steps, instead of Rare's eight copies
  * a whole native pixel apart, which notch diagonal strokes once upscaled. */
 #define PORT_TEXT_OUTLINE(gdl, on) gDPNoOpTag((gdl)++, 0x5D000000u | ((on) ? 1u : 0u))
+/* Outlined strings draw in two passes, every outline then every fill, so a
+ * glyph's ring cannot paint over its tightly kerned neighbour's fill. */
+#define PORT_OUTLINE_PASS_RING 1
+#define PORT_OUTLINE_PASS_FILL 2
+static s32 port_outline_pass; /* 0 = both per glyph, as upstream */
 
 /* The pen's position past *x, in native pixels (0 <= frac < 1). Scaled text
  * moves the pen by exact scaled widths and gaps, so letters keep their designed
@@ -727,9 +732,15 @@ Gfx *textRenderGlyphOutlined(Gfx *gdl, s32 *x, s32 *y, struct fontchar *curchar,
 
 #ifndef TARGET_N64
         /* The renderer traces the one-pixel outline at its own resolution. */
-        PORT_TEXT_OUTLINE(gdl, 1);
-        gdl = textDrawGlyphQuad(gdl, *x, drawY, curchar, clipX, clipY, clipWidth, clipHeight);
-        PORT_TEXT_OUTLINE(gdl, 0);
+        if (port_outline_pass != PORT_OUTLINE_PASS_FILL) {
+            PORT_TEXT_OUTLINE(gdl, 1);
+            gdl = textDrawGlyphQuad(gdl, *x, drawY, curchar, clipX, clipY, clipWidth, clipHeight);
+            PORT_TEXT_OUTLINE(gdl, 0);
+        }
+        if (port_outline_pass == PORT_OUTLINE_PASS_RING) {
+            *x += curchar->width;
+            return gdl;
+        }
 #else
         for (offsetX = -1; offsetX < 2; offsetX++) {
             for (offsetY = -1; offsetY < 2; offsetY++) {
@@ -859,7 +870,19 @@ Gfx *textRenderOutlined(Gfx *gdl, s32 *x, s32 *y,
 	if (j_text_trigger != 0 && lineheight < 14) {
 		lineheight = 14;
 	}
-    
+
+#ifndef TARGET_N64
+    {
+    char *const passtext = text;
+
+    for (port_outline_pass = PORT_OUTLINE_PASS_RING; port_outline_pass <= PORT_OUTLINE_PASS_FILL; port_outline_pass++)
+    {
+    /* Both passes walk the same pens; the fill pass leaves *x and *y as upstream. */
+    text = passtext;
+    *x = savedx;
+    *y = savedy;
+    prevchar = 'H';
+#endif
     while (*text != '\0')
     {
 		if (*text == ' '
@@ -925,6 +948,9 @@ Gfx *textRenderOutlined(Gfx *gdl, s32 *x, s32 *y,
 	}
 
 #ifndef TARGET_N64
+    }
+    port_outline_pass = 0;
+    }
     PORT_TEXT_GLYPHS(gdl, 0);
 #endif
     return gdl;

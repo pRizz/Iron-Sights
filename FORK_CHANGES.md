@@ -1043,9 +1043,22 @@ text. All font styles change. With Original, the ring is also a more even gray
 band instead of the soft overlap of eight blurred copies. The N64 build keeps
 upstream's loop. There is no setting, and input is unchanged.
 
+Outlined strings also draw in two passes on PC (2026-11-09, after the owner
+reported neighbouring HUD digits obscuring each other at three-digit ammo and
+FPS counts). Upstream draws each glyph's ring and then its fill before moving
+on, so with the tight inherited kerning (often under one native pixel of ink
+gap) the next glyph's ring painted over the previous glyph's right edge, most
+visibly the 1 in numbers such as 147, 157 and 11. The PC build now walks the
+string once drawing every ring, then again drawing every fill over them, so no
+fill is ever covered. Spacing, kerning, ring width, measurement and the final
+pen position are unchanged. Adding a native pixel of spacing between outlined
+glyphs separated the digits further in a test, but the owner chose to keep
+upstream spacing.
+
 **Upstream hooks:** `textRenderGlyphOutlined` in `textrelated.c` replaces its
 eight-copy loop on PC with one quad between `PORT_TEXT_OUTLINE` tags (`G_NOOP`
-`0x5D`). In `gfx_pc.cpp`, the display-list parser sets `s_GeTextOutline`,
+`0x5D`), drawing only the ring or only the fill as `port_outline_pass` asks;
+`textRenderOutlined` wraps its glyph loop in the ring and fill passes. In `gfx_pc.cpp`, the display-list parser sets `s_GeTextOutline`,
 frame start clears it, and `gfx_draw_rectangle` emits the ring of copies for
 a tagged glyph.
 
@@ -1059,6 +1072,16 @@ shape. A 3840x2160 request was clamped to a 1600x900 window on this display,
 so 4K was not captured. `test_hud.sh`, `test_open_fonts.sh` and
 `test_enhanced_fonts.sh` pass. The hand gallery regenerated with zero changed
 image cells (source fingerprint only).
+The two-pass refinement compiles in the Docker MinGW Windows build, and
+`test_hud.sh`, `test_open_fonts.sh` and `test_enhanced_fonts.sh` pass. One
+1920x1080 build rendered the same string (`11 17 71 77 147 474 800 ...`) one-
+and two-pass with each font style through temporary, since-removed
+environment switches. A per-pixel diff showed fills restored only where a
+neighbour's ring had covered them: the 1's right edge in `147` with Original and
+Enhanced, plus a speck at the 4/7 join. Iron Sights' wider gaps left it unchanged.
+White pixel counts rose about 3% (Original) and under 1% (others). Captures of
+ammo 800 and live FPS counts matched, and the owner play-tested and approved
+it. Private captures are under ignored `build_win/digits-*`.
 ### FORK-055 — Growth soak audit and a bounded texture-name pool
 
 **Status:** Implemented 2026-11-07. Measured on Windows (plain and with an HD
