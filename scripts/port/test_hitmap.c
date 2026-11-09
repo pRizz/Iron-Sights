@@ -1,4 +1,4 @@
-/* Debrief hit map core (FORK-048): placement, pose and layout without a ROM. */
+/* Debrief hit map core (FORK-048): placement, pose, layout and per-part stats without a ROM. */
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -206,6 +206,79 @@ static void testCornerHitsStayOnTheOval(void)
     }
 }
 
+static void testGroupsJoinLeftAndRight(void)
+{
+    /* Arrange, act and assert: each side's part shares one row; others have none. */
+    assert(portHitMapGroup(HIT_HEAD) == PORT_HITMAP_GROUP_HEAD);
+    assert(portHitMapGroup(HIT_LEFT_SHOULDER) == PORT_HITMAP_GROUP_UPPER_ARM);
+    assert(portHitMapGroup(HIT_RIGHT_SHOULDER) == PORT_HITMAP_GROUP_UPPER_ARM);
+    assert(portHitMapGroup(HIT_LEFT_ARM) == PORT_HITMAP_GROUP_FOREARM);
+    assert(portHitMapGroup(HIT_RIGHT_HAND) == PORT_HITMAP_GROUP_HAND);
+    assert(portHitMapGroup(HIT_LEFT_LEG) == PORT_HITMAP_GROUP_SHIN);
+    assert(portHitMapGroup(HIT_RIGHT_FOOT) == PORT_HITMAP_GROUP_FOOT);
+    assert(portHitMapGroup(HIT_PELVIS) == PORT_HITMAP_GROUP_PELVIS);
+    assert(portHitMapGroup(HIT_GUN) < 0 && portHitMapGroup(HIT_HAT) < 0 && portHitMapGroup(HIT_NULL_PART) < 0);
+}
+
+static void testDamageUnitsMeasureHealthAndOverkill(void)
+{
+    u16 damage, overkill;
+
+    /* A quarter of a 4.0 health bar, no kill. */
+    portHitMapDamageUnits(1.0f, 2.0f, 4.0f, &damage, &overkill);
+    assert(damage == 250 && overkill == 0);
+    /* A kill shot with 0.5 health left that dealt 2.0: 1.5 went past the top. */
+    portHitMapDamageUnits(3.5f, 5.5f, 4.0f, &damage, &overkill);
+    assert(damage == 500 && overkill == 375);
+    /* Damage on a character already past its health is all overkill. */
+    portHitMapDamageUnits(5.0f, 6.0f, 4.0f, &damage, &overkill);
+    assert(damage == 250 && overkill == 250);
+    /* No damage, or no health to measure against, records nothing; a huge hit clamps. */
+    portHitMapDamageUnits(2.0f, 2.0f, 4.0f, &damage, &overkill);
+    assert(damage == 0 && overkill == 0);
+    portHitMapDamageUnits(0.0f, 1.0f, 0.0f, &damage, &overkill);
+    assert(damage == 0 && overkill == 0);
+    portHitMapDamageUnits(0.0f, 1000.0f, 1.0f, &damage, &overkill);
+    assert(damage == 65535 && overkill == 65535);
+}
+
+static void testStatsCountByRow(void)
+{
+    /* Arrange: a head, both shoulders and a gun box; hits on each, one kill. */
+    PortHitMapFigure f = { 0 };
+    PortHitMapStats s;
+    PortHitMapHit hits[5] = { { 0 } };
+    const s32 parts[4] = { HIT_HEAD, HIT_LEFT_SHOULDER, HIT_RIGHT_SHOULDER, HIT_GUN };
+    s32 i;
+
+    f.count = 4;
+    for (i = 0; i < 4; i++) f.boxes[i].part = parts[i];
+    hits[0].box = 0; hits[0].damage = 1000; hits[0].overkill = 400; hits[0].flags = PORT_HITMAP_KILL;
+    hits[1].box = 1; hits[1].damage = 250;
+    hits[2].box = 2; hits[2].damage = 250; hits[2].flags = PORT_HITMAP_BACK;
+    hits[3].box = 3; hits[3].damage = 999; /* not a body part */
+    hits[4].box = 9;                       /* past the figure */
+    /* Act */
+    portHitMapStatsCompute(&f, hits, 5, &s);
+    /* Assert: both shoulders count as upper arms; only body parts count. */
+    assert(s.hits == 3 && s.kills == 1 && s.damage == 1500 && s.overkill == 400);
+    assert(s.groups[PORT_HITMAP_GROUP_HEAD].hits == 1 && s.groups[PORT_HITMAP_GROUP_HEAD].kills == 1);
+    assert(s.groups[PORT_HITMAP_GROUP_HEAD].damage == 1000);
+    assert(s.groups[PORT_HITMAP_GROUP_UPPER_ARM].hits == 2 && s.groups[PORT_HITMAP_GROUP_UPPER_ARM].damage == 500);
+    assert(s.groups[PORT_HITMAP_GROUP_FOOT].hits == 0);
+}
+
+static void testPlaceStartsWithoutDamage(void)
+{
+    /* Arrange */
+    const struct bbox b = makeBox(0.0f, 10.0f, 0.0f, 10.0f, 0.0f, 10.0f);
+    const coord3d entry = { { { 5.0f, 5.0f, 10.0f } } }, dir = { { { 0.0f, 0.0f, -1.0f } } };
+    /* Act */
+    const PortHitMapHit hit = portHitMapPlace(2, &b, &entry, &dir);
+    /* Assert: portHitMapDamage fills these in once the game applies the damage. */
+    assert(hit.damage == 0 && hit.overkill == 0);
+}
+
 int main(void)
 {
     testRayToLocalUndoesScaledTurn();
@@ -216,6 +289,10 @@ int main(void)
     testLayoutFitsAndFacesTheViewer();
     testHitPointFollowsThePosedBox();
     testCornerHitsStayOnTheOval();
+    testGroupsJoinLeftAndRight();
+    testDamageUnitsMeasureHealthAndOverkill();
+    testStatsCountByRow();
+    testPlaceStartsWithoutDamage();
     puts("hit map: ok");
     return 0;
 }

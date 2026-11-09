@@ -53,7 +53,7 @@ static const struct PortOptHelp sHelp[] = {
     { "ammo_on_screen",     "Shows your ammo count." },
     { "mission_timer",      "Shows elapsed mission time." },
     { "hit_sounds",         "Hits sound as they do up close, at any range. Solo only." },
-    { "debrief_hit_map",    "Solo debrief maps each bullet hit, front and back. Select the hit counts to enlarge." },
+    { "debrief_hit_map",    "Solo debrief maps each bullet hit. Select the hit counts for figures and per-part stats." },
     { "pause_pillars",      "Black side bars ease in while paused." },
     { "hud_wide",           "Wide moves ammo and messages to the screen edges." },
     { "health_wide",        "Wide moves the health and armor arcs to the screen edges." },

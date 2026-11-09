@@ -22,7 +22,39 @@ typedef struct PortHitMapHit {
     u8 flags;
     u16 u;
     u16 v;
+    /* Damage in thousandths of the victim's full health (portHitMapDamageUnits):
+     * all of it, and the part a kill shot spent past the health left. 0 when
+     * the hit did no damage, as on a character already dying. */
+    u16 damage;
+    u16 overkill;
 } PortHitMapHit;
+
+/* The Parts view's rows: left and right sides counted together. */
+enum {
+    PORT_HITMAP_GROUP_HEAD,
+    PORT_HITMAP_GROUP_CHEST,
+    PORT_HITMAP_GROUP_PELVIS,
+    PORT_HITMAP_GROUP_UPPER_ARM,
+    PORT_HITMAP_GROUP_FOREARM,
+    PORT_HITMAP_GROUP_HAND,
+    PORT_HITMAP_GROUP_THIGH,
+    PORT_HITMAP_GROUP_SHIN,
+    PORT_HITMAP_GROUP_FOOT,
+    PORT_HITMAP_GROUPS
+};
+
+#define PORT_HITMAP_HEALTH 1000 /* PortHitMapHit damage units in one full health */
+
+typedef struct PortHitMapGroupStats {
+    s32 hits, kills;
+    u32 damage; /* PortHitMapHit damage units */
+} PortHitMapGroupStats;
+
+typedef struct PortHitMapStats {
+    PortHitMapGroupStats groups[PORT_HITMAP_GROUPS];
+    s32 hits, kills;
+    u32 damage, overkill;
+} PortHitMapStats;
 
 /* A body part's hit box, drawn as the ellipse inscribed in it. GE's unanimated
  * skeleton spreads every limb out sideways along its bone's local x, so
@@ -56,6 +88,14 @@ s32 portHitMapBoxEntry(const struct bbox *box, const coord3d *origin, const coor
 PortHitMapHit portHitMapPlace(s32 boxIndex, const struct bbox *box, const coord3d *entry,
                               const coord3d *localDir);
 s32 portHitMapFigureFind(const PortHitMapFigure *figure, s32 part, s32 ordinal);
+/* A HIT_* body part's Parts view row, or -1. */
+s32 portHitMapGroup(s32 part);
+/* A hit's damage from the victim's damage before and after it and its full
+ * health, in PortHitMapHit units (each clamped to u16). */
+void portHitMapDamageUnits(f32 before, f32 after, f32 maxdamage, u16 *damage, u16 *overkill);
+/* Hits, kill shots and damage by Parts view row, and their totals. */
+void portHitMapStatsCompute(const PortHitMapFigure *figure, const PortHitMapHit *hits, s32 count,
+                            PortHitMapStats *stats);
 void portHitMapPose(PortHitMapFigure *figure);
 /* Fit a posed figure in a screen rectangle; back views mirror it. */
 PortHitMapView portHitMapLayout(const PortHitMapFigure *figure, s32 back,
@@ -82,7 +122,11 @@ s32 portHitMapShown(void);
 /* TRUE while the debrief draws the map; it then prints the counts below. */
 s32 portHitMapDebriefDrawn(void);
 s32 portHitMapZoomed(void);
+/* Closing the closer look from outside (the debrief's init) also returns it to FIGURES. */
 void portHitMapZoomSet(s32 zoomed);
+/* The closer look's view: FIGURES (0) or PARTS (1). */
+s32 portHitMapPartsShown(void);
+void portHitMapPartsSet(s32 parts);
 /* onTab: the cursor is on NEXT or PREVIOUS. TRUE when the press was the map's. */
 s32 portHitMapDebriefInput(s32 onTab, s32 *nextHighlight);
 /* Rows the debrief reports, so the overview keeps clear of them. */

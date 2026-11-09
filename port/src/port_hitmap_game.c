@@ -23,7 +23,8 @@ static s32 hitmapCount;
 static s32 hitmapLimit = PORT_HITMAP_MAX_HITS;
 static PortHitMapFigure hitmapFigure;
 /* The latest recorded hit. handles_shot_actors applies its damage straight
- * after, and portHitMapDamage then marks it if that damage was lethal. */
+ * after, and portHitMapDamage then records that damage and marks the hit if
+ * it was lethal. */
 static ChrRecord *hitmapPendingChr;
 static s32 hitmapPendingIndex;
 static s32 hitmapLog = -1; /* GE_HITMAP_LOG=1: each figure box and hit on stderr */
@@ -222,10 +223,17 @@ void portHitMapBullet(struct ShotData *shot, struct BulletHit *bhit)
 
 void portHitMapDamage(ChrRecord *chr, f32 before)
 {
+    PortHitMapHit *hit;
+
     if (chr != hitmapPendingChr) return;
     hitmapPendingChr = NULL;
+    hit = &hitmapHits[hitmapPendingIndex];
+    portHitMapDamageUnits(before, chr->damage, chr->maxdamage, &hit->damage, &hit->overkill);
+    if (hitmapLog > 0) {
+        fprintf(stderr, "ge: hitmap damage=%d units=%u overkill=%u\n", hitmapPendingIndex, hit->damage, hit->overkill);
+    }
     if (before < chr->maxdamage && chr->damage >= chr->maxdamage) {
-        hitmapHits[hitmapPendingIndex].flags |= PORT_HITMAP_KILL;
+        hit->flags |= PORT_HITMAP_KILL;
         if (hitmapLog > 0) fprintf(stderr, "ge: hitmap kill=%d\n", hitmapPendingIndex);
     }
 }

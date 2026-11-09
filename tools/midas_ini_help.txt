@@ -201,7 +201,9 @@ padN_stickmode.
   debrief_hit_map     | 1          | Solo debrief: front/back figures with a dot
                       |            | where each bullet hit a character, beside
                       |            | the hit counts; select either for a closer
-                      |            | look. Iron Sights > Combat Feedback.
+                      |            | look, whose PARTS tab lists hits, kills
+                      |            | and damage by body part.
+                      |            | Iron Sights > Combat Feedback.
   objective_notifications | 1     | Named objective status alerts; 0 = original
   mission_hints       | 1          | Desktop solo mission-start control hints.
                       |            | Iron Sights > HUD Additions.

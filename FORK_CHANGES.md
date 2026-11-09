@@ -1531,7 +1531,9 @@ regenerated gallery has zero changed image cells.
 
 **Status:** Implemented and captured in the Windows build (scripted hits on
 Archives and Frigate). The owner play-tested the Windows build and approved it
-(2026-11-05); the browser target was not built or tested with it.
+(2026-11-05); the browser target was not built or tested with it. The closer
+look's PARTS tab (2026-11-08) is built and captured in the Windows build with
+scripted hits on Dam; it has not been play-tested yet.
 
 Adds default-on **Gameplay > Iron Sights > Combat Feedback > Debrief Hit Map**
 (`[display] debrief_hit_map=1`) to the Options folder and the watch. Upstream's
@@ -1553,7 +1555,11 @@ it entered the box's rear half (local -z); characters face +z, as the feet and
 head boxes show. Hits on gun and hat boxes (upstream's "Others") are not
 placed. The fork's damage hook in `chraction.c`, which also raises hit markers,
 marks a hit as the kill shot when its damage takes the character from below to
-at least `maxdamage`. Only solo play records (`getPlayerCount() == 1`). Up to
+at least `maxdamage`. The same hook stores each hit's damage, in thousandths
+of the victim's full health (`maxdamage`): all of it, and for a kill shot the
+part past the health left (`portHitMapDamageUnits`; each clamps at 65535). A
+hit that does no damage, such as one on a character already dying, records
+0. Only solo play records (`getPlayerCount() == 1`). Up to
 1024 hits are kept per mission; `init_player_BONDdata_stats`
 (`initBondDATA.c`) clears them where upstream clears the shot counters.
 
@@ -1627,14 +1633,38 @@ description wrongly blamed melee and thrown knives. A Melee/thrown line was
 tried and dropped once those weapons proved never to count. A mission whose
 hits were all unrecorded, or with the setting off, shows the stock page. Explosions never count as hits upstream, so they appear nowhere.
 
+**Parts view.** The closer look has **FIGURES** and **PARTS** tabs between its
+title and CLOSE; it opens on FIGURES, the shown tab is underlined, and the
+debrief's init returns it to FIGURES. PARTS replaces the figures, legend and
+tally with a table of Head, Chest, Pelvis, Upper arms, Forearms, Hands,
+Thighs, Shins and Feet: left and right sides are counted together, and GE's
+"shoulder" box is the upper arm, "arm" the forearm and "leg" the shin. Each
+row gives hits, kill shots, and bars with percentages for its share of the hits
+and of the damage, both bars on one scale (full at the largest share on the
+page). Beside the table: Hits shown, Not recorded (only when non-zero, as on
+FIGURES), Kill shots, Hits per kill, Damage dealt, Overkill, Gun hits and Hat
+hits, with notes that 100 damage is one full health bar and that gun and hat
+hits do no damage. Damage dealt is the recorded damage in hundredths of a full
+health; Overkill is the share of it kill shots spent past the health left. The
+rows count only the map's recorded hits, so they add up to Hits shown. Gun and
+hat hits are never placed on the figures, so they come from the debrief's own
+counters (`SHOT_REGISTER_GUN`/`HAT`), which upstream adds together as Others.
+GE has no neck or abdomen hit box, so the table has neither; the owner
+preferred the game's real parts to splits invented inside a box. The owner
+chose the separate PARTS view, combined sides, the gun and hat rows and the
+damage shares from mock-ups (2026-11-08) over a table squeezed beside the
+figures.
+
 **Input.** Every input points at the bottom area with the menu cursor and
 confirms there, as it does for the tabs: mouse click, gamepad A/Start/Z, the
 keyboard's bound confirm, or a touch tap. While the closer look is open, a
 confirm anywhere off the tabs, B or a right-click (the frontend's mouse B)
 closes it, so a tap off the tabs closes it on touch. The NEXT and PREVIOUS tabs
-keep working on both views. The bottom area and CLOSE use the tabs' hover
-highlight; the bottom area's is L-shaped, covering the strip and the map's
-column. No input is left unsupported.
+keep working on both views. A confirm on FIGURES or PARTS switches the closer
+look's view instead of closing it, with the same pointing as CLOSE (mouse
+click, gamepad A/Start/Z, keyboard confirm, touch tap). The bottom area, CLOSE
+and the view tabs use the tabs' hover highlight; the bottom area's is L-shaped,
+covering the strip and the map's column. No input is left unsupported.
 
 **Rendering.** The HUD vector overlay (`gfx_ge_vector_overlay`) gains shape 7,
 an ellipse turned by an angle, filled or outlined at a given width, with
@@ -1655,23 +1685,24 @@ closer look returns before the statistics.
 
 **Audit:** `scripts/port/audit_hitmap.ps1` runs an isolated copy on a solo stage
 with invulnerability.
-`GE_HITMAP_PROBE=<hits>[,zoom][,live][,best=<s>][,cheat][,cap=<n>]` fires bullets
+`GE_HITMAP_PROBE=<hits>[,zoom][,parts][,live][,best=<s>][,cheat][,cap=<n>]` fires bullets
 through the game's own `chrTestHit` and `chrHandleBulletHit` at random points
 inside on-screen characters' body boxes, at the point where Bond's own shots
 resolve (after `chraiCheckUseHeldItems`, `lv.c`). It then aborts as the watch
 does, moves from the status page to the debrief (`front.c` harness), opens the
-closer look if asked, captures a frame and exits. `-Cursor x,y` parks the menu
+closer look if asked (`-Parts` on its PARTS tab), captures a frame and exits. `-Cursor x,y` parks the menu
 cursor; `-Off` turns the setting off. `-Difficulty`, `-Best` (a RAM-only best
 time) and `-Cheat` (the New Cheat notice) bring up the debrief's longest rows.
 `-Cap n` records at most n hits (`portHitMapLimitSet`, harness only), so the
 rest show as Not recorded without needing 1024 targets. `GE_HITMAP_LOG=1`
 prints the figure boxes,
-each hit and kill, and the game's own front test (the melee bearing from
+each hit, its damage and kill, and the game's own front test (the melee bearing from
 `get_distance_actor_to_position`). Captures stay in the ignored
 `build_win/hitmap-audit-*` directories.
 
 **Sources:** [header](port/include/port_hitmap.h), [core](port/src/port_hitmap.c),
 [recorder](port/src/port_hitmap_game.c), [debrief](port/src/port_hitmap_draw.c),
+[Parts view](port/src/port_hitmap_parts.c), [drawing header](port/src/port_hitmap_draw.h),
 [probe](port/src/port_hitmap_probe.c), hooks in [chr.c](src/game/chr.c),
 [chraction.c](src/game/chraction.c), [initBondDATA.c](src/game/initBondDATA.c),
 [lv.c](src/game/lv.c) and [front.c](src/game/front.c); the ellipse shape in
@@ -1687,7 +1718,11 @@ and [audit](scripts/port/audit_hitmap.ps1).
 into a scaled, turned joint frame, the entry surface (including a ray starting
 inside, and a miss), box fractions and the front/back half, part and ordinal
 lookup, the leg and arm pose, fitting and facing in front and back views, hits
-following the posed box, and corner and side hits landing on the oval. The
+following the posed box, and corner and side hits landing on the oval. They
+also cover the Parts view's core: left and right parts sharing a row, damage
+and overkill in health units (an ordinary hit, a kill shot, damage past the
+health, no damage, no health and the clamp), per-row and total counts that
+skip non-body boxes, and a placed hit starting without damage. The
 settings placement check, HUD and hit sound tests and the standards checks pass.
 `test_ads.c` includes `joy_port.c`, which now calls the hit map's option hooks,
 so it stubs `portHitMapOptionGet`/`Set` beside its video and input stubs; without

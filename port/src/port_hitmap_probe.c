@@ -1,10 +1,11 @@
-/* GE_HITMAP_PROBE=<hits>[,zoom][,live][,best=<s>][,cheat][,cap=<n>] (test harness,
+/* GE_HITMAP_PROBE=<hits>[,zoom][,parts][,live][,best=<s>][,cheat][,cap=<n>] (test harness,
  * FORK-048): in a solo stage,
  * fire <hits> player bullets through the game's own hit test (chrTestHit and
  * chrHandleBulletHit) at random points on on-screen characters' hit boxes,
  * one every few ticks, then abort the mission as the watch does. On the
  * title side it moves on from the mission status page to the debrief, opens
- * the closer look when asked, captures one GE_SHOT-style frame and exits.
+ * the closer look when asked (`parts` on its PARTS tab), captures one
+ * GE_SHOT-style frame and exits.
  * `live` skips falling characters, whose death animations turn the body away
  * from the facing GE_HITMAP_LOG's bearing column reports. Pair it with
  * GE_CHEATS=invuln so Bond outlives the fight. `best` puts a best time for
@@ -43,6 +44,7 @@ void portHitMapProbeMenu(s32 menu);
 
 static s32 probeHits = -1; /* -1 unread, 0 off */
 static s32 probeZoom;
+static s32 probeParts;
 static s32 probeLive;
 static s32 probeBest;
 static s32 probeCheat;
@@ -57,6 +59,7 @@ static void probeRead(void)
 
     probeHits = (e != NULL) ? atoi(e) : 0;
     probeZoom = e != NULL && strstr(e, "zoom") != NULL;
+    probeParts = e != NULL && strstr(e, "parts") != NULL;
     probeLive = e != NULL && strstr(e, "live") != NULL;
     probeBest = (e != NULL && strstr(e, "best=") != NULL) ? atoi(strstr(e, "best=") + 5) : 0;
     probeCheat = e != NULL && strstr(e, "cheat") != NULL;
@@ -180,7 +183,8 @@ void portHitMapProbeMenu(s32 menu)
     }
     if (menu != MENU_MISSION_COMPLETE) return;
     probeMenuTicks++;
-    if (probeMenuTicks == 30 && probeZoom) portHitMapZoomSet(TRUE);
+    if (probeMenuTicks == 30 && (probeZoom || probeParts)) portHitMapZoomSet(TRUE);
+    if (probeMenuTicks == 30 && probeParts) portHitMapPartsSet(TRUE);
     if (probeMenuTicks == 90) ge_shot_force = 1;
     if (probeMenuTicks == 100) {
         fprintf(stderr, "ge: hitmap probe captured the debrief\n");

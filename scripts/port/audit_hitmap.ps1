@@ -4,6 +4,8 @@ param(
     [string]$Stage = 'dam',
     [ValidateRange(1,1024)][int]$Hits = 80,
     [switch]$Zoom,
+    # The closer look's PARTS tab (opens the closer look too).
+    [switch]$Parts,
     # Only characters still standing; GE_HITMAP_LOG's bearing then checks the front/back split.
     [switch]$Live,
     [switch]$Off,
@@ -37,7 +39,7 @@ $auditEnv = @{
     GE_IRONSIGHTS_FONTS='1';   # FORK-051: allows the hidden Iron Sights font when asked for
     GE_STAGE=$Stage; GE_STAGE_AFTER='1'; GE_SKIPINTRO='1'; GE_CHEATS='invuln';
     GE_DIFF=[string]$Difficulty;
-    GE_HITMAP_PROBE=(@([string]$Hits) + @(if ($Zoom) { 'zoom' }) + @(if ($Live) { 'live' }) + @(if ($Best) { "best=$Best" }) + @(if ($Cheat) { 'cheat' }) + @(if ($Cap) { "cap=$Cap" })) -join ','; GE_HITMAP_LOG='1';
+    GE_HITMAP_PROBE=(@([string]$Hits) + @(if ($Zoom) { 'zoom' }) + @(if ($Parts) { 'parts' }) + @(if ($Live) { 'live' }) + @(if ($Best) { "best=$Best" }) + @(if ($Cheat) { 'cheat' }) + @(if ($Cap) { "cap=$Cap" })) -join ','; GE_HITMAP_LOG='1';
     # The probe exits after its capture; this only bounds a run that never gets there.
     GE_FRAMES='12000'
 }

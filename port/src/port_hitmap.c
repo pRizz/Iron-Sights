@@ -85,6 +85,7 @@ PortHitMapHit portHitMapPlace(s32 boxIndex, const struct bbox *box, const coord3
     const f32 depth = (entry->z - middle) * HITMAP_FORWARD_Z;
 
     hit.box = (u8)boxIndex;
+    hit.damage = hit.overkill = 0;
     hit.u = hitmapUnit(entry->x, box->xmin, box->xmax);
     hit.v = hitmapUnit(entry->y, box->ymin, box->ymax);
     /* A side entry halfway along takes the half the bullet travelled toward. */
@@ -102,6 +103,64 @@ s32 portHitMapFigureFind(const PortHitMapFigure *figure, s32 part, s32 ordinal)
         if (first < 0) first = i;
     }
     return first;
+}
+
+s32 portHitMapGroup(s32 part)
+{
+    switch (part) {
+    case HIT_HEAD: return PORT_HITMAP_GROUP_HEAD;
+    case HIT_CHEST: return PORT_HITMAP_GROUP_CHEST;
+    case HIT_PELVIS: return PORT_HITMAP_GROUP_PELVIS;
+    case HIT_LEFT_SHOULDER: case HIT_RIGHT_SHOULDER: return PORT_HITMAP_GROUP_UPPER_ARM;
+    case HIT_LEFT_ARM: case HIT_RIGHT_ARM: return PORT_HITMAP_GROUP_FOREARM;
+    case HIT_LEFT_HAND: case HIT_RIGHT_HAND: return PORT_HITMAP_GROUP_HAND;
+    case HIT_LEFT_THIGH: case HIT_RIGHT_THIGH: return PORT_HITMAP_GROUP_THIGH;
+    case HIT_LEFT_LEG: case HIT_RIGHT_LEG: return PORT_HITMAP_GROUP_SHIN;
+    case HIT_LEFT_FOOT: case HIT_RIGHT_FOOT: return PORT_HITMAP_GROUP_FOOT;
+    default: return -1;
+    }
+}
+
+static u16 hitmapHealthUnits(f32 amount, f32 maxdamage)
+{
+    const f32 units = amount * PORT_HITMAP_HEALTH / maxdamage + 0.5f;
+
+    if (!(units > 0.0f)) return 0;
+    return units >= 65535.0f ? 65535 : (u16)units;
+}
+
+/* Health is how far damage has to climb to maxdamage, so the damage dealt is
+ * the climb and a kill shot's overkill is how far it went past the top. */
+void portHitMapDamageUnits(f32 before, f32 after, f32 maxdamage, u16 *damage, u16 *overkill)
+{
+    *damage = *overkill = 0;
+    if (!(maxdamage > 0.0f) || !(after > before)) return;
+    *damage = hitmapHealthUnits(after - before, maxdamage);
+    if (after > maxdamage) *overkill = hitmapHealthUnits(after - (before > maxdamage ? before : maxdamage), maxdamage);
+}
+
+void portHitMapStatsCompute(const PortHitMapFigure *figure, const PortHitMapHit *hits, s32 count,
+                            PortHitMapStats *stats)
+{
+    static const PortHitMapStats empty;
+    s32 i;
+
+    *stats = empty;
+    for (i = 0; i < count; i++) {
+        const s32 group = hits[i].box < figure->count ? portHitMapGroup(figure->boxes[hits[i].box].part) : -1;
+        const s32 kill = (hits[i].flags & PORT_HITMAP_KILL) != 0;
+        PortHitMapGroupStats *g;
+
+        if (group < 0) continue;
+        g = &stats->groups[group];
+        g->hits++;
+        g->kills += kill;
+        g->damage += hits[i].damage;
+        stats->hits++;
+        stats->kills += kill;
+        stats->damage += hits[i].damage;
+        stats->overkill += hits[i].overkill;
+    }
 }
 
 static s32 hitmapLeftPart(s32 part)

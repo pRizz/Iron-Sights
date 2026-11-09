@@ -1,7 +1,8 @@
 /* Debrief hit map drawing and input (FORK-048). The mission debrief shows the
  * front and back figures in its lower-right corner; selecting them or the hit
  * counts opens a closer look in the statistics' place. Each body part is an
- * ink-outlined oval shaded red by its hits, and dots mark the hits.
+ * ink-outlined oval shaded red by its hits, and dots mark the hits. The closer
+ * look's PARTS tab swaps the figures for a table (port_hitmap_parts.c).
  * Coordinates are the dossier's native 440x330 page. Hits on the back half of
  * a box go on the back figure, the rest on the front one. */
 #include <math.h>
@@ -18,6 +19,7 @@
 #include "game/textrelated.h"
 #include "assets/obseg/text/LtitleE.h"
 #include "port_hitmap.h"
+#include "port_hitmap_draw.h"
 #include "port_hud.h"
 
 extern s32 viGetX(void);
@@ -42,8 +44,8 @@ extern s32 viGetY(void);
 #define COUNTS_SPACE 7
 #define COUNTS_TOP   0xF4
 #define COUNTS_SCALE 0.8f
-/* The closer look, below the stage name. */
-#define ZOOM_TOP 143
+/* The closer look, below the stage name (ZOOM_TOP), with its FIGURES and
+ * PARTS tabs between the title and CLOSE. */
 #define ZOOM_FIG_Y 170.0f
 #define ZOOM_FIG_H 140.0f
 #define ZOOM_FRONT_X 70.0f
@@ -51,13 +53,13 @@ extern s32 viGetY(void);
 #define ZOOM_FIG_W 110.0f
 #define ZOOM_LEGEND_X 320
 #define ZOOM_CLOSE_X 340
+#define ZOOM_TAB_X 150
+#define ZOOM_TAB_GAP 14
+#define ZOOM_TAB_SCALE 0.75f
 
-/* Ink on the dossier: parts outlined in ink and shaded red by their hits. */
-#define PAPER_TEXT  0x000000ffu
-#define INK         0x22303cffu
+/* The dossier's other inks (port_hitmap_draw.h has text, ink and crimson). */
 #define PAPER_RIM   0xd2caa6ffu
 #define PAPER_BACK  0xcac29cffu /* the dossier paper's average, under the parts */
-#define HEAT_RGB    0xc81e2300u /* crimson, up to 85% over the paper */
 #define HEAT_MIN    0.06f
 #define HEAT_SPAN   0.79f
 #define DOT_HEAD    0xffc23cffu
@@ -73,9 +75,17 @@ static s32 hitmapEdges[2];                  /* this frame's text right edges by 
 static s32 hitmapCountsEdge;                /* and the counts column's */
 static HitMapFrame hitmapOverviewFrame;     /* the last overview drawn, for hovering */
 static s32 hitmapZoomed;
+static s32 hitmapParts;                     /* the closer look shows PARTS, not FIGURES */
 
 s32 portHitMapZoomed(void) { return hitmapZoomed; }
-void portHitMapZoomSet(s32 zoomed) { hitmapZoomed = zoomed != 0; }
+s32 portHitMapPartsShown(void) { return hitmapParts; }
+void portHitMapPartsSet(s32 parts) { hitmapParts = parts != 0; }
+
+void portHitMapZoomSet(s32 zoomed)
+{
+    hitmapZoomed = zoomed != 0;
+    if (!hitmapZoomed) hitmapParts = FALSE;
+}
 
 static s32 hitmapHasFigure(void)
 {
@@ -89,7 +99,7 @@ static s32 hitmapCursorIn(f32 x, f32 y, f32 w, f32 h)
     return cursor_h_pos >= x && cursor_h_pos <= x + w && cursor_v_pos >= y && cursor_v_pos <= y + h;
 }
 
-static s32 hitmapTextWidth(const char *text, f32 scale)
+s32 portHitMapInkWidth(const char *text, f32 scale)
 {
     s32 h = 0, w = 0;
 
@@ -101,7 +111,7 @@ static s32 hitmapTextWidth(const char *text, f32 scale)
 
 void portHitMapDebriefText(s32 row, s32 x, const char *text)
 {
-    const s32 right = x + hitmapTextWidth(text, 1.0f);
+    const s32 right = x + portHitMapInkWidth(text, 1.0f);
 
     if (row < 0 || row > PORT_HITMAP_ROW_WEAPON) return;
     if (right > hitmapEdges[row]) hitmapEdges[row] = right;
@@ -135,7 +145,7 @@ static f32 hitmapRoot(f32 v)
 static f32 hitmapSnugX(const HitMapBand *bands, s32 count, f32 h, f32 *figureW)
 {
     const PortHitMapFigure *figure = portHitMapFigure();
-    const f32 groupY = OVERVIEW_FOOT - OVERVIEW_CAPTION - h, captionW = hitmapTextWidth("HIT MAP", 0.5f);
+    const f32 groupY = OVERVIEW_FOOT - OVERVIEW_CAPTION - h, captionW = portHitMapInkWidth("HIT MAP", 0.5f);
     PortHitMapView views[2];
     f32 w, need = 0.0f;
     s32 side, i;
@@ -226,6 +236,27 @@ static s32 hitmapCloseHover(void)
     return hitmapCursorIn(ZOOM_CLOSE_X - 4, ZOOM_TOP - 2, 50, 14);
 }
 
+/* The closer look's view tabs: FIGURES (0) and PARTS (1). */
+static const char *const hitmapTabNames[2] = { "FIGURES", "PARTS" };
+
+static s32 hitmapTabX(s32 tab)
+{
+    return tab == 0 ? ZOOM_TAB_X : ZOOM_TAB_X + portHitMapInkWidth(hitmapTabNames[0], ZOOM_TAB_SCALE) + ZOOM_TAB_GAP;
+}
+
+static s32 hitmapTabWidth(s32 tab) { return portHitMapInkWidth(hitmapTabNames[tab], ZOOM_TAB_SCALE); }
+
+/* The view tab under the cursor, or -1. */
+static s32 hitmapTabHover(void)
+{
+    s32 tab;
+
+    for (tab = 0; tab < 2; tab++) {
+        if (hitmapCursorIn(hitmapTabX(tab) - 4, ZOOM_TOP - 2, hitmapTabWidth(tab) + 8, 14)) return tab;
+    }
+    return -1;
+}
+
 static void hitmapSound(void)
 {
     sndPlaySfx((struct ALBankAlt_s *)g_musicSfxBufferPtr, DOOR_METAL_CLOSE2_SFX, NULL);
@@ -252,13 +283,24 @@ s32 portHitMapDebriefInput(s32 onTab, s32 *nextHighlight)
     }
     if (onTab) return FALSE;
     *nextHighlight = FALSE;
-    if (!joyGetButtonsPressedThisFrame(PLAYER_1, confirm | B_BUTTON)) return FALSE;
+    if (joyGetButtonsPressedThisFrame(PLAYER_1, confirm)) {
+        const s32 tab = hitmapTabHover();
+
+        if (tab >= 0) {
+            /* FIGURES or PARTS switches the view; confirming elsewhere closes. */
+            if (tab != hitmapParts) hitmapSound();
+            hitmapParts = tab;
+            return TRUE;
+        }
+    } else if (!joyGetButtonsPressedThisFrame(PLAYER_1, B_BUTTON)) {
+        return FALSE;
+    }
     hitmapZoomed = FALSE;
     hitmapSound();
     return TRUE;
 }
 
-static Gfx *hitmapText(Gfx *g, const char *text, s32 x, s32 y, f32 scale, u32 color)
+Gfx *portHitMapInk(Gfx *g, const char *text, s32 x, s32 y, f32 scale, u32 color)
 {
     char line[64];
 
@@ -381,7 +423,7 @@ static Gfx *hitmapOverview(Gfx *g)
     }
     g = hitmapFigure(g, FALSE, f.x, f.y, f.figureW, f.figureH);
     g = hitmapFigure(g, TRUE, f.x + f.figureW + OVERVIEW_GAP, f.y, f.figureW, f.figureH);
-    return hitmapText(g, caption, (s32)(f.x + groupW * 0.5f) - hitmapTextWidth(caption, 0.5f) / 2,
+    return portHitMapInk(g, caption, (s32)(f.x + groupW * 0.5f) - portHitMapInkWidth(caption, 0.5f) / 2,
                       (s32)(f.y + f.figureH) + 3, 0.5f, PAPER_TEXT);
 }
 
@@ -393,11 +435,11 @@ static const char *hitmapTitle(s32 slot)
 static Gfx *hitmapCount(Gfx *g, s32 row, s32 rowH, s32 x, s32 label, const char *value)
 {
     const s32 y = COUNTS_TOP + row * rowH;
-    const s32 right = x + hitmapTextWidth(value, COUNTS_SCALE);
+    const s32 right = x + portHitMapInkWidth(value, COUNTS_SCALE);
 
     if (right > hitmapCountsEdge) hitmapCountsEdge = right;
-    g = hitmapText(g, hitmapTitle(label), COUNTS_X, y, COUNTS_SCALE, PAPER_TEXT);
-    return hitmapText(g, value, x, y, COUNTS_SCALE, PAPER_TEXT);
+    g = portHitMapInk(g, hitmapTitle(label), COUNTS_X, y, COUNTS_SCALE, PAPER_TEXT);
+    return portHitMapInk(g, value, x, y, COUNTS_SCALE, PAPER_TEXT);
 }
 
 static s32 hitmapPercent(s32 count, s32 allHits)
@@ -417,7 +459,7 @@ Gfx *portHitMapDebriefCounts(Gfx *g, s32 shots, s32 kills, s32 head, s32 body, s
     textMeasure(&rowH, &w, (char *)hitmapTitle(TITLE_STR_104_STATS), ptrFontZurichBoldChars, ptrFontZurichBold, 0);
     portTextScale(1.0f);
     for (i = 0; i < 6; i++) {
-        w = hitmapTextWidth(hitmapTitle(labels[i]), COUNTS_SCALE);
+        w = portHitMapInkWidth(hitmapTitle(labels[i]), COUNTS_SCALE);
         if (w > x) x = w;
     }
     x += COUNTS_X + COUNTS_SPACE;
@@ -437,7 +479,7 @@ static Gfx *hitmapLegendDot(Gfx *g, s32 y, u32 color, s32 kill, const char *labe
     g = kill ? hitmapKillRing(g, cx, cy, 2.9f) : hitmapDot(g, cx, cy, 2.3f, PAPER_RIM);
     g = hitmapHitDot(g, cx, cy, 1.9f, color);
     snprintf(line, sizeof(line), "%s: %d", label, count);
-    return hitmapText(g, line, ZOOM_LEGEND_X + 9, y, 0.55f, PAPER_TEXT);
+    return portHitMapInk(g, line, ZOOM_LEGEND_X + 9, y, 0.55f, PAPER_TEXT);
 }
 
 /* The dots by legend entry: ink and gold (head) dots, which add up to the
@@ -468,7 +510,7 @@ static Gfx *hitmapLegendHeat(Gfx *g, s32 y)
         g = portHudEllipse(g, cx, cy, 3.0f, 3.0f, 0.0f, 0.0f, hitmapHeatColor(i, 3));
         g = portHudEllipse(g, cx, cy, 3.0f, 3.0f, 0.0f, 0.6f, INK);
     }
-    return hitmapText(g, "Hits per part", ZOOM_LEGEND_X, y + 9, 0.5f, PAPER_TEXT);
+    return portHitMapInk(g, "Hits per part", ZOOM_LEGEND_X, y + 9, 0.5f, PAPER_TEXT);
 }
 
 /* The hits with a dot; then, only when there are any, the debrief's head,
@@ -482,24 +524,42 @@ static Gfx *hitmapTally(Gfx *g, s32 bodyHits)
     char line[48];
 
     snprintf(line, sizeof(line), "Hits shown: %d", shown);
-    g = hitmapText(g, line, ZOOM_LEGEND_X, 250, 0.55f, PAPER_TEXT);
+    g = portHitMapInk(g, line, ZOOM_LEGEND_X, 250, 0.55f, PAPER_TEXT);
     if (unshown <= 0) return g;
     snprintf(line, sizeof(line), "Not recorded: %d", unshown);
-    return hitmapText(g, line, ZOOM_LEGEND_X, 262, 0.55f, PAPER_TEXT);
+    return portHitMapInk(g, line, ZOOM_LEGEND_X, 262, 0.55f, PAPER_TEXT);
+}
+
+/* FIGURES and PARTS, the shown one underlined in ink, with the tabs' hover highlight. */
+static Gfx *hitmapTabs(Gfx *g)
+{
+    const s32 hover = hitmapTabHover();
+    s32 tab;
+
+    for (tab = 0; tab < 2; tab++) {
+        const s32 x = hitmapTabX(tab), w = hitmapTabWidth(tab);
+
+        if (tab == hover) g = microcode_constructor_related_to_menus(g, x - 4, ZOOM_TOP - 2, x + w + 4, ZOOM_TOP + 12, HOVER_BOX);
+        if (tab == hitmapParts) g = microcode_constructor_related_to_menus(g, x, ZOOM_TOP + 10, x + w, ZOOM_TOP + 11, INK);
+        g = portHitMapInk(g, hitmapTabNames[tab], x, ZOOM_TOP, ZOOM_TAB_SCALE, PAPER_TEXT);
+    }
+    return g;
 }
 
 static Gfx *hitmapZoom(Gfx *g, s32 bodyHits)
 {
     s32 ink, head, kill;
 
-    g = hitmapText(g, "HIT MAP:", 0x37, ZOOM_TOP, 1.0f, PAPER_TEXT);
+    g = portHitMapInk(g, "HIT MAP:", 0x37, ZOOM_TOP, 1.0f, PAPER_TEXT);
     if (hitmapCloseHover()) {
         g = microcode_constructor_related_to_menus(g, ZOOM_CLOSE_X - 4, ZOOM_TOP - 2, ZOOM_CLOSE_X + 46, ZOOM_TOP + 12, HOVER_BOX);
     }
-    g = hitmapText(g, "CLOSE", ZOOM_CLOSE_X, ZOOM_TOP, 0.75f, PAPER_TEXT);
-    g = hitmapText(g, "FRONT", (s32)(ZOOM_FRONT_X + ZOOM_FIG_W * 0.5f) - hitmapTextWidth("FRONT", 0.6f) / 2,
+    g = portHitMapInk(g, "CLOSE", ZOOM_CLOSE_X, ZOOM_TOP, 0.75f, PAPER_TEXT);
+    g = hitmapTabs(g);
+    if (hitmapParts) return portHitMapPartsDraw(g, bodyHits);
+    g = portHitMapInk(g, "FRONT", (s32)(ZOOM_FRONT_X + ZOOM_FIG_W * 0.5f) - portHitMapInkWidth("FRONT", 0.6f) / 2,
                    (s32)ZOOM_FIG_Y - 12, 0.6f, PAPER_TEXT);
-    g = hitmapText(g, "BACK", (s32)(ZOOM_BACK_X + ZOOM_FIG_W * 0.5f) - hitmapTextWidth("BACK", 0.6f) / 2,
+    g = portHitMapInk(g, "BACK", (s32)(ZOOM_BACK_X + ZOOM_FIG_W * 0.5f) - portHitMapInkWidth("BACK", 0.6f) / 2,
                    (s32)ZOOM_FIG_Y - 12, 0.6f, PAPER_TEXT);
     g = hitmapFigure(g, FALSE, ZOOM_FRONT_X, ZOOM_FIG_Y, ZOOM_FIG_W, ZOOM_FIG_H);
     g = hitmapFigure(g, TRUE, ZOOM_BACK_X, ZOOM_FIG_Y, ZOOM_FIG_W, ZOOM_FIG_H);
