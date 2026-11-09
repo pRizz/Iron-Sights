@@ -12,6 +12,7 @@
 extern "C" const char *portRootPath(const char *name);
 extern uint32_t gfx_shiny_weapons; /* gfx_pc.cpp, from [display] shiny_weapons */
 extern uint32_t gfx_gun_glint;     /* gfx_pc.cpp, from [display] gun_glint */
+extern uint32_t gfx_glass_reflections; /* gfx_pc.cpp, from [display] glass_reflections (FORK-066) */
 
 namespace gfx_shiny {
 namespace {
@@ -23,7 +24,8 @@ const char kFile[] = "shiny_weapons.ini";
 const Tuning kDefaults = { -1.0f, 1.0f, 1.0f, 0.5f, 0.4f, 0.0f, 1.0f, 0.0f, 0.0f,
                            false, false, 0, -1.0f, 1.0f, true, false,
                            0.5f, 1.0f, 0.85f, 60.0f, 8.0f, false, 0.2f, true, 128,
-                           0.25f, 64.0f, 12.0f, 0u, 0.0f, 1.0f, 0.5f };
+                           0.25f, 64.0f, 12.0f, 0u, 0.0f, 1.0f, 0.5f,
+                           1.0f, 0.25f, 1.25f, 0.6f, 0.6f, 96.0f, 1.0f, false };
 Tuning s_tuning = kDefaults;
 std::string s_text;
 unsigned s_frame;
@@ -76,6 +78,14 @@ void parse(const std::string &text, Tuning &t)
         else if (key == "glint") t.glint = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
         else if (key == "glint_power") t.glint_power = v < 1.0f ? 1.0f : (v > 256.0f ? 256.0f : v);
         else if (key == "glint_sat") t.glint_sat = v < 0.0f ? 0.0f : (v > 255.0f ? 255.0f : v);
+        else if (key == "glass") t.glass = v < 0.0f ? 0.0f : (v > 4.0f ? 4.0f : v);
+        else if (key == "glass_f0") t.glass_f0 = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+        else if (key == "glass_shard") t.glass_shard = v < 0.0f ? 0.0f : (v > 4.0f ? 4.0f : v);
+        else if (key == "glass_shard_f0") t.glass_shard_f0 = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+        else if (key == "glass_glint") t.glass_glint = v < 0.0f ? 0.0f : (v > 4.0f ? 4.0f : v);
+        else if (key == "glass_power") t.glass_power = v < 1.0f ? 1.0f : (v > 512.0f ? 512.0f : v);
+        else if (key == "glass_blur") t.glass_blur = v < 0.0f ? 0.0f : (v > 8.0f ? 8.0f : v);
+        else if (key == "glass_split") t.glass_split = v != 0.0f;
         else if (key == "glint_skip") { /* item ids, separated by commas or spaces */
             t.glint_skip = 0;
             for (const char *p = line.c_str() + eq + 1; *p;) {
@@ -249,11 +259,22 @@ bool bloom(Bloom *out)
     return true;
 }
 
+bool glass(uint8_t kind, Glass *out)
+{
+    const Tuning &t = s_tuning;
+    if (!gfx_glass_reflections || kind == 0) return false;
+    const bool shard = kind == 3; /* PORT_GLASS_SHARDS */
+    *out = Glass{ shard ? t.glass_shard : t.glass, shard ? t.glass_shard_f0 : t.glass_f0, t.glass_glint,
+                  t.glass_power, t.glass_blur, t.glass_split };
+    return out->strength > 0.0f || out->glint > 0.0f;
+}
+
 } // namespace gfx_shiny
 
 /* roc_hooks.c (sim thread), prototype: whether the level reflection wants the
  * room cache's capture-only mode. Reads the knob without reloading the file. */
 extern "C" int gfx_shiny_level_cube(void)
 {
-    return gfx_shiny_weapons && gfx_shiny::s_tuning.map > 0;
+    /* FORK-066: Glass Reflections sample the same cube */
+    return (gfx_shiny_weapons || gfx_glass_reflections) && gfx_shiny::s_tuning.map > 0;
 }

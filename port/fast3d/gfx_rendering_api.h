@@ -141,6 +141,16 @@ struct GfxRenderingAPI {
     void (*env_cube_begin)(int size, float r, float g, float b);
     void (*env_cube_face)(int face);
     void (*env_cube_end)(const char* dump);
+    /* FORK-066, Glass Reflections (gfx_glass.inl): draw glass triangles again
+     * additively over the current target, depth tested (LEQUAL) but not
+     * written: the level cube (env_cube_*, when cube is true) reflected off
+     * the face, weighted by a Fresnel term, plus an overhead highlight.
+     * buf: 18 floats per vertex - clip x, y, z, w exactly as the batch emitted
+     * them, camera-space position, face normal, light direction, reflection
+     * strength, head-on reflectance, highlight strength and power, the cube's
+     * mip level. split: only the right half of the viewport (a review aid).
+     * NULL on backends without it. */
+    void (*glass_draw)(const float* buf, size_t vertex_count, bool cube, bool split);
 };
 
 #endif

@@ -8,6 +8,9 @@
 #include "objective_status.h"
 #include "player.h"
 #include "random.h"
+#ifndef TARGET_N64
+#include "port_glass.h" /* Glass Reflections (FORK-066) */
+#endif
 
 
 #ifndef VERSION_EU
@@ -287,6 +290,9 @@ Gfx *glassRenderShards(Gfx *gdl)
     gDPSetTextureFilter(gdl++, G_TF_BILERP);
     gSPSetGeometryMode(gdl++, G_LIGHTING | G_TEXTURE_GEN);
     gSPMatrix(gdl++, osVirtualToPhysical(get_BONDdata_field_10E0()), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
+#ifndef TARGET_N64
+    gdl = portGlassReflectTag(gdl, PORT_GLASS_SHARDS); /* FORK-066: the shards take the glass pass */
+#endif
 
     #define WINDOW_PIECE(_i) ((s_shattered_window_piece*)((u8*)ptr_shattered_window_pieces + ((_i) * sizeof(s_shattered_window_piece))))
 
@@ -318,6 +324,9 @@ Gfx *glassRenderShards(Gfx *gdl)
         }
     }
     #undef WINDOW_PIECE
+#ifndef TARGET_N64
+    gdl = portGlassReflectTag(gdl, PORT_GLASS_NONE);
+#endif
 
     gSPClearGeometryMode(gdl++, G_LIGHTING | G_TEXTURE_GEN);
     gSPMatrix(gdl++, (u32)currentPlayerGetProjectionMatrix(), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);

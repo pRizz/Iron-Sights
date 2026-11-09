@@ -4808,6 +4808,7 @@ static const struct PortSheetRow port_sheet_rows_is_system[] = {
     { SHROW_OPT, "text_antialiasing" },  /* FORK-052: Enhanced text through mips */
     { SHROW_OPT, "shiny_weapons" },      /* FORK-058: Richer Reflections */
     { SHROW_OPT, "gun_glint" },          /* FORK-058: Gun Glint */
+    { SHROW_OPT, "glass_reflections" },  /* FORK-066: Glass Reflections */
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     { SHROW_OPT, "texture_pack" },  /* FORK-053: an HD pack, downloaded or copied in */
     { SHROW_OPT, "close_hd_matches" },  /* FORK-053: the pack's rough palette matches */

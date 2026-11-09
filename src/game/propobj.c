@@ -58,6 +58,7 @@
 #include "frametiming.h"   /* portAnimTicks / portLagStep: sub-field smoothing */
 #include "cheat.h"         /* cheatIsActive(CHEAT_PORT_UNLOCK_DOORS) - propdoorInteract */
 #include "port_tracers.h"  /* Shotgun Tracers (FORK-063) */
+#include "port_glass.h"    /* Glass Reflections (FORK-066) */
 extern s32 g_PortFadeDbg;  /* the fade diagnostic (cl_fadedbg), defined beside posIsOnScreen */
 static void portFadeNote(PropRecord *prop, s32 state, s32 alpha, f32 foga);
 #endif
@@ -8109,7 +8110,16 @@ Gfx *chrobjRenderProp(PropRecord *prop, Gfx *gdl, s32 arg2)
 
     mrData.fogcolour.word = (sp48.rgba[0] << 0x18) | (sp48.rgba[1] << 0x10) | (sp48.rgba[2] << 0x08) | (sp48.rgba[3] << 0x00);
 
+#ifndef TARGET_N64
+    { /* FORK-066: Glass Reflections - bracket glass props and windowed doors */
+        const s32 glassKind = portGlassKindOfObject(obj);
+        if (glassKind != PORT_GLASS_NONE) mrData.gdl = portGlassReflectTag(mrData.gdl, glassKind);
+        sub_GAME_7F04AC20(prop, &mrData, arg2);
+        if (glassKind != PORT_GLASS_NONE) mrData.gdl = portGlassReflectTag(mrData.gdl, PORT_GLASS_NONE);
+    }
+#else
     sub_GAME_7F04AC20(prop, &mrData, arg2);
+#endif
 
     return mrData.gdl;
 }

@@ -220,6 +220,7 @@ static const struct PortOpt sOpts[] = {
     TOGGLE("text_antialiasing", "[display]", "Text Antialiasing\n", PORTOPT_CAT_DISPLAY),
     TOGGLE("shiny_weapons", "[display]", "Richer Reflections\n", PORTOPT_CAT_DISPLAY),
     TOGGLE("gun_glint",     "[display]", "Gun Glint\n",       PORTOPT_CAT_DISPLAY),
+    TOGGLE("glass_reflections", "[display]", "Glass Reflections\n", PORTOPT_CAT_DISPLAY),
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     ENUMR ("texture_pack",  "[display]", "Texture Pack\n",    PORTOPT_CAT_DISPLAY, sTexturePackVals, sTexturePackText, NULL),
     TOGGLE("close_hd_matches", "[display]", "Close HD Matches\n", PORTOPT_CAT_DISPLAY),

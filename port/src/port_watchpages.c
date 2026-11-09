@@ -189,6 +189,7 @@ static const struct PortWatchRowDef sIsSystem[] = {
     { PWROW_OPT,       "text_antialiasing", NULL, 0, 0 },
     { PWROW_OPT,       "shiny_weapons",    NULL, 0, 0 },
     { PWROW_OPT,       "gun_glint",        NULL, 0, 0 },
+    { PWROW_OPT,       "glass_reflections", NULL, 0, 0 },
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     { PWROW_OPT,       "texture_pack",     NULL, 0, 0 },
     { PWROW_OPT,       "close_hd_matches", NULL, 0, 0 },

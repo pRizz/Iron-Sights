@@ -53,7 +53,24 @@ struct Tuning {
     float glint_ads;     /* 0..1 share of the glint kept at full ADS (1 = all; 0 = fade out as the gun rises) */
     float screen_mirror; /* 0..1 share of the scene itself, in the metal's average colour, rather than
                           * as light and dark on the authored pattern (which near-white silver clips) */
+    /* FORK-066, Glass Reflections ([display] glass_reflections, gfx_glass.inl) */
+    float glass;          /* strength of the level reflection over glass panes and window doors (0 = none) */
+    float glass_f0;       /* panes' reflectance seen head on (rises to 1 at a grazing angle) */
+    float glass_shard;    /* strength over broken glass shards (0 = none) */
+    float glass_shard_f0; /* shards' reflectance seen head on */
+    float glass_glint;    /* strength of the overhead light's highlight on glass (0 = none) */
+    float glass_power;    /* its tightness: higher = a smaller, sharper spot */
+    float glass_blur;     /* mip level of the cube the glass samples (0 = sharpest) */
+    bool glass_split;     /* review aid: the glass pass on the right half of the screen only */
 };
+
+/* The glass pass's look for a glass span's kind (port_glass.h PortGlassKind). */
+struct Glass {
+    float strength, f0, glint, power, blur;
+    bool split; /* right half of the screen only (review aid) */
+};
+/* false when Glass Reflections are off or this kind has no strength */
+bool glass(uint8_t kind, Glass *out);
 
 /* whether the glint applies to this item (ITEM_WPPK..ITEM_SNIPERRIFLE, less glint_skip) */
 bool glint_on(uint8_t item);

@@ -177,6 +177,10 @@ static int s_CfgShinyWeapons = 1;
 /* [display] gun_glint (FORK-058): Gun Glint, moving highlights on the metal of
  * the ordinary guns (port/fast3d/gfx_glint.inl); 0 draws them as upstream. */
 static int s_CfgGunGlint = 1;
+/* [display] glass_reflections (FORK-066): Glass Reflections, the level cube
+ * reflected in glass panes, window doors and shards (port/fast3d/gfx_glass.inl);
+ * 0 draws glass as upstream. */
+static int s_CfgGlassReflections = 1;
 /* [display] font_style (FORK-051, font styles plan FONT-1): 0 Original (ROM),
  * 1 Enhanced (the player-installed GEPD pack in Data/FontPacks/gepd; glyphs
  * without a file stay the ROM's), 2 Iron Sights (the open title font for
@@ -1113,6 +1117,7 @@ static int videoSetDisplayOption(const char *key, const char *value)
     if (SDL_strcasecmp(key, "text_antialiasing") == 0) { s_CfgTextAa = SDL_atoi(value) != 0; return 1; }
     if (SDL_strcasecmp(key, "shiny_weapons") == 0) { s_CfgShinyWeapons = SDL_atoi(value) != 0; return 1; }
     if (SDL_strcasecmp(key, "gun_glint") == 0)     { s_CfgGunGlint = SDL_atoi(value) != 0; return 1; }
+    if (SDL_strcasecmp(key, "glass_reflections") == 0) { s_CfgGlassReflections = SDL_atoi(value) != 0; return 1; }
     if (SDL_strcasecmp(key, "sharp_fonts") == 0)   { if (!s_CfgFontStyleSeen) s_CfgFontStyle = videoFontStyle(SDL_atoi(value) != 0 ? 2 : 0); return 1; }
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     if (SDL_strcasecmp(key, "texture_pack") == 0)
@@ -1498,6 +1503,7 @@ s32 portVideoOptionGet(const char *key, s32 *out)
     if (SDL_strcasecmp(key, "text_antialiasing") == 0) { *out = s_CfgTextAa;   return 1; }
     if (SDL_strcasecmp(key, "shiny_weapons") == 0) { *out = s_CfgShinyWeapons; return 1; }
     if (SDL_strcasecmp(key, "gun_glint") == 0)     { *out = s_CfgGunGlint;     return 1; }
+    if (SDL_strcasecmp(key, "glass_reflections") == 0) { *out = s_CfgGlassReflections; return 1; }
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     if (SDL_strcasecmp(key, "texture_pack") == 0)  { *out = portTexturePackGet(); return 1; }
     if (SDL_strcasecmp(key, "close_hd_matches") == 0) { *out = portTexturePackCloseGet(); return 1; }
@@ -1671,6 +1677,11 @@ s32 portVideoOptionSet(const char *key, s32 value)
     else if (SDL_strcasecmp(key, "gun_glint") == 0)
     {
         gfx_gun_glint = s_CfgGunGlint != 0;
+    }
+    else if (SDL_strcasecmp(key, "glass_reflections") == 0)
+    {
+        gfx_glass_reflections = s_CfgGlassReflections != 0;
+        portRoomCacheSetMode(s_CfgRoomCache); /* FORK-066: the level cube's room capture */
     }
     else if (SDL_strcasecmp(key, "low_res") == 0)
     {
@@ -2362,6 +2373,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "text_antialiasing=%d\n", s_CfgTextAa);
     fprintf(f, "shiny_weapons=%d\n", s_CfgShinyWeapons);
     fprintf(f, "gun_glint=%d\n", s_CfgGunGlint);
+    fprintf(f, "glass_reflections=%d\n", s_CfgGlassReflections);
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     fprintf(f, "texture_pack=%d\n", portTexturePackGet());
     fprintf(f, "close_hd_matches=%d\n", portTexturePackCloseGet());
@@ -5032,6 +5044,7 @@ s32 videoInit(void)
     gfx_text_aa = s_CfgTextAa != 0;
     gfx_shiny_weapons = s_CfgShinyWeapons != 0;
     gfx_gun_glint = s_CfgGunGlint != 0;
+    gfx_glass_reflections = s_CfgGlassReflections != 0;
     { /* FORK-052: the Enhanced fonts beside midas.ini, not wherever the game was launched from */
         extern const char *portRootPath(const char *name);
         portEnhancedFontsSetDirectory(portRootPath("Data/FontPacks/gepd"));

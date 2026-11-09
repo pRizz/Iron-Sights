@@ -3270,6 +3270,7 @@ static void gfx_opengl_resolve_n64_aa(int fb_dst, int fb_src) {
 #include "gfx_bloom.inl" /* FORK-058 */
 #include "gfx_screen_env.inl" /* FORK-058: screen reflections */
 #include "gfx_glint.inl" /* FORK-058: the Gun Glint pass */
+#include "gfx_glass.inl" /* FORK-066: the Glass Reflections pass */
 
 struct GfxRenderingAPI gfx_opengl_api = { 
     gfx_opengl_get_name,
@@ -3322,7 +3323,8 @@ struct GfxRenderingAPI gfx_opengl_api = {
     gfx_opengl_glint_draw,
     gfx_opengl_env_cube_begin,
     gfx_opengl_env_cube_face,
-    gfx_opengl_env_cube_end
+    gfx_opengl_env_cube_end,
+    gfx_opengl_glass_draw
 };
 
 #ifdef __EMSCRIPTEN__

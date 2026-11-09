@@ -441,6 +441,7 @@ uint32_t gfx_enhanced_fonts = 0;
 uint32_t gfx_text_aa = 1;
 uint32_t gfx_shiny_weapons = 1; /* FORK-058: [display] shiny_weapons (video.c) - Richer Reflections */
 uint32_t gfx_gun_glint = 1;     /* FORK-058: [display] gun_glint (video.c) - Gun Glint */
+uint32_t gfx_glass_reflections = 1; /* FORK-066: [display] glass_reflections (video.c) - Glass Reflections */
 /* set by G_MIRRORPILLAR_EXT around an overlay wanting mirrored side bands -
  * blood_animation.c's death / gunbarrel blood, and title.c's untextured fade.
  * The sampler latch reads it as well: see the filter_2d rule there. */
@@ -529,6 +530,14 @@ static float s_GeGlintAds = 0.0f;
 static uint8_t s_GeSkyRGB[3] = { 0, 0, 0 };
 /* FORK-058: the current batch's glint triangles (15 floats per corner, gfx_glint.inl) */
 static std::vector<float> s_GlintBuf;
+/* FORK-066: inside a glass draw (G_NOOP 0x63, port_glass.c), its kind (port_glass.h), 0 = none;
+ * its look, whether this frame's level cube exists, the overhead light in camera space,
+ * and the current batch's glass triangles (18 floats per corner, gfx_glass.inl) */
+static uint8_t s_GeGlass = 0;
+static gfx_shiny::Glass s_GeGlassLook;
+static bool s_GeGlassCube = false;
+static float s_GeGlassLight[3] = { 0.0f, 1.0f, 0.0f };
+static std::vector<float> s_GlassBuf;
 /* This texture rect is an open-font glyph (FORK-050): the MSDF shader, no UV clamp. */
 static bool s_RectMsdf = false;
 /* options.c portHudScaleBegin (midas.ini hud_scale): G_NOOP tag 0x58 brackets
@@ -603,6 +612,11 @@ static void gfx_flush(void) {
         if (!s_GlintBuf.empty()) { /* FORK-058: the Gun Glint over its metal */
             if (gfx_rapi->glint_draw) gfx_rapi->glint_draw(s_GlintBuf.data(), s_GlintBuf.size() / 15);
             s_GlintBuf.clear();
+        }
+        if (!s_GlassBuf.empty()) { /* FORK-066: the level's reflection over glass */
+            if (gfx_rapi->glass_draw) gfx_rapi->glass_draw(s_GlassBuf.data(), s_GlassBuf.size() / 18, s_GeGlassCube,
+                                                          s_GeGlassLook.split);
+            s_GlassBuf.clear();
         }
         buf_vbo_len = 0;
         buf_vbo_num_tris = 0;
@@ -3697,6 +3711,19 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* verti
         float z = v->ob[0] * rsp.MP_matrix[0][2] + v->ob[1] * rsp.MP_matrix[1][2] + v->ob[2] * rsp.MP_matrix[2][2] + rsp.MP_matrix[3][2];
         float w = v->ob[0] * rsp.MP_matrix[0][3] + v->ob[1] * rsp.MP_matrix[1][3] + v->ob[2] * rsp.MP_matrix[2][3] + rsp.MP_matrix[3][3];
 
+        if (s_GeGlass) {
+            /* FORK-066: the camera-space position from the clip one. GoldenEye
+             * carries the camera's rotation in the projection (C = R x Pp), so
+             * clip = eye x Pp: x = eye.x sx, y = eye.y sy, w = -eye.z, with sx
+             * and sy the lengths of the projection's first two columns */
+            const float (*c)[4] = rsp.P_matrix;
+            const float sx = sqrtf(c[0][0] * c[0][0] + c[1][0] * c[1][0] + c[2][0] * c[2][0]);
+            const float sy = sqrtf(c[0][1] * c[0][1] + c[1][1] * c[1][1] + c[2][1] * c[2][1]);
+            d->eye[0] = sx > 1e-6f ? x / sx : 0.0f;
+            d->eye[1] = sy > 1e-6f ? y / sy : 0.0f;
+            d->eye[2] = -w;
+        }
+
         x = gfx_adjust_x_for_aspect_ratio(x, w);
 
         if (s_GeGlint && !s_GeGlintBlock) {
@@ -3966,6 +3993,45 @@ static int gfx_ge_farclip_mode(void) {
 
 #include "gfx_roomcache.inl"
 #include "gfx_envcube.inl" /* FORK-058 prototype: the level as a reflection cube, from the room cache */
+
+/* FORK-066: a glass triangle's face normal from its camera-space corners,
+ * turned towards the viewer; false when it is degenerate */
+static bool gfx_glass_face_normal(const float* a, const float* b, const float* c, float n[3]) {
+    const float e1[3] = { b[0] - a[0], b[1] - a[1], b[2] - a[2] }, e2[3] = { c[0] - a[0], c[1] - a[1], c[2] - a[2] };
+    n[0] = e1[1] * e2[2] - e1[2] * e2[1];
+    n[1] = e1[2] * e2[0] - e1[0] * e2[2];
+    n[2] = e1[0] * e2[1] - e1[1] * e2[0];
+    const float nl = sqrtf(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
+    if (!(nl > 0.0f)) return false;
+    const float to_eye[3] = { -(a[0] + b[0] + c[0]), -(a[1] + b[1] + c[1]), -(a[2] + b[2] + c[2]) };
+    const float sign = (n[0] * to_eye[0] + n[1] * to_eye[1] + n[2] * to_eye[2]) < 0.0f ? -1.0f : 1.0f;
+    for (int k = 0; k < 3; k++) n[k] *= sign / nl;
+    return true;
+}
+
+/* FORK-066: the G_NOOP 0x63 decode. Opening a span renders this frame's level
+ * cube if no span has yet (shared with the shiny guns, gfx_envcube.inl), and
+ * turns a world-fixed overhead light into camera space with the camera's
+ * rotation, which GoldenEye keeps in the projection (C = R x Pp: R's columns
+ * are C's first two columns over sx and sy, and minus its fourth) */
+static void gfx_glass_span(uint8_t kind) {
+    s_GeGlass = 0;
+    if (kind == 0 || !gfx_rapi->glass_draw || !gfx_shiny::glass(kind, &s_GeGlassLook)) return;
+    s_GeGlass = kind;
+    const int size = gfx_shiny::tuning().map > 0 ? gfx_shiny::tuning().map : 128;
+    s_GeGlassCube = s_GeGlassLook.strength > 0.0f && roc_env_cube(size, s_GeSkyRGB);
+    const float (*c)[4] = rsp.P_matrix;
+    float col[3][3] = {};
+    for (int j = 0; j < 2; j++) {
+        const float l = sqrtf(c[0][j] * c[0][j] + c[1][j] * c[1][j] + c[2][j] * c[2][j]);
+        for (int i = 0; i < 3 && l > 1e-6f; i++) col[j][i] = c[i][j] / l;
+    }
+    for (int i = 0; i < 3; i++) col[2][i] = -c[i][3];
+    static const float sun[3] = { 0.30f, 0.90f, 0.30f }; /* world space: high, a little to the side */
+    for (int k = 0; k < 3; k++) {
+        s_GeGlassLight[k] = sun[0] * col[k][0] + sun[1] * col[k][1] + sun[2] * col[k][2];
+    }
+}
 
 static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bool is_rect) {
     const unsigned capacity = is_rect ? MAX_VERTICES + 4 : MAX_VERTICES;
@@ -5150,6 +5216,23 @@ ndcprobe_done:;
         }
     }
 
+    /* FORK-066: Glass Reflections - a pane's blended (see-through) triangles, so
+     * a window door's frame stays as drawn, and every shard */
+    bool glass_face = false;
+    float glass_n[3];
+    if (s_GeGlass && (use_alpha || s_GeGlass == 3)) {
+        glass_face = gfx_glass_face_normal(v_arr[0]->eye, v_arr[1]->eye, v_arr[2]->eye, glass_n);
+        if (gfx_shiny::tuning().log) {
+            static unsigned glass_tris;
+            if ((glass_tris++ % 2000u) == 0) {
+                fprintf(stderr, "glass: kind %u texgen=%d alpha=%d lit=%d fog=%d cube=%d tri %u\n", s_GeGlass,
+                        (rsp.geometry_mode & G_TEXTURE_GEN) ? 1 : 0, use_alpha ? 1 : 0,
+                        (rsp.geometry_mode & G_LIGHTING) ? 1 : 0, (rsp.geometry_mode & G_FOG) ? 1 : 0,
+                        s_GeGlassCube ? 1 : 0, glass_tris);
+            }
+        }
+    }
+
     for (int i = 0; i < 3; i++) {
         float z = v_arr[i]->z, w = v_arr[i]->w;
         if (dec_pull && w > 4.0f * ge_dec_pull) {
@@ -5170,6 +5253,18 @@ ndcprobe_done:;
                                            * glint_ads_keep,
                                        gfx_shiny::tuning().glint_power };
             s_GlintBuf.insert(s_GlintBuf.end(), corner, corner + 15);
+        }
+        if (glass_face) {
+            /* FORK-066: this corner for the glass pass after the batch, faded
+             * with the game's fog where the draw is fogged */
+            const float fade = (rsp.geometry_mode & G_FOG) ? 1.0f - v_arr[i]->fog / 255.0f : 1.0f;
+            const float corner[18] = { v_arr[i]->x, clip_parameters.invert_y ? -v_arr[i]->y : v_arr[i]->y, z, w,
+                                       v_arr[i]->eye[0], v_arr[i]->eye[1], v_arr[i]->eye[2],
+                                       glass_n[0], glass_n[1], glass_n[2],
+                                       s_GeGlassLight[0], s_GeGlassLight[1], s_GeGlassLight[2],
+                                       s_GeGlassLook.strength * fade, s_GeGlassLook.f0,
+                                       s_GeGlassLook.glint * fade, s_GeGlassLook.power, s_GeGlassLook.blur };
+            s_GlassBuf.insert(s_GlassBuf.end(), corner, corner + 18);
         }
         buf_vbo[buf_vbo_len++] = v_arr[i]->x;
         buf_vbo[buf_vbo_len++] = clip_parameters.invert_y ? -v_arr[i]->y : v_arr[i]->y;
@@ -8055,6 +8150,10 @@ static void gfx_run_dl(Gfx* cmd) {
                     /* FORK-058: a draw that never takes the glint (sleeve, native hand) */
                     gfx_flush();
                     s_GeGlintBlock = (cmd->words.w1 & 1u) != 0;
+                } else if ((cmd->words.w1 >> 24) == 0x63u) {
+                    /* FORK-066: glass span, kind or 0 (port_glass.c) */
+                    gfx_flush(); /* draws before the tag belong outside the span */
+                    gfx_glass_span((uint8_t)(cmd->words.w1 & 0xFFu));
                 } else if ((cmd->words.w1 >> 24) == 0x5Eu) {
                     /* FORK-058: shiny weapon span, item or 0 (port_shiny.c) */
                     gfx_flush(); /* draws before the tag belong outside the span */
@@ -8595,6 +8694,7 @@ extern "C" void gfx_start_frame(void) {
     s_GeShinyItem = 0;
     s_GeGlint = s_GeGlintBlock = false;
     s_GeGlintAds = 0.0f;
+    s_GeGlass = 0; /* FORK-066 */
     roc_env_frame_reset(); /* FORK-058 prototype */
     if (s_GeShinyBloom) { /* FORK-058: a span never closed: stop mirroring, draw no glow */
         gfx_rapi->bloom_end(1.0f, 0.0f, 0.0f, 1);

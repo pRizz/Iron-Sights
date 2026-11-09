@@ -326,7 +326,23 @@ padN_stickmode.
                       |            | out, e.g. 8, 15), glint_ads (1: share
                       |            | kept at full ADS; 0 fades it out as the
                       |            | gun is raised). Iron Sights > System.
-  texture_pack        | 1          | [display] Texture Pack (Windows/Linux).
+  glass_reflections   | 1          | [display] Glass Reflections. ON
+                      |            | reflects the level's rooms in glass
+                      |            | panes, the windows of doors and broken
+                      |            | glass shards, more strongly at a
+                      |            | glancing angle, with a soft overhead
+                      |            | highlight; 0 draws glass as the
+                      |            | original. Tuned in shiny_weapons.ini:
+                      |            | glass (1: pane strength), glass_f0
+                      |            | (0.25: pane reflectance head on),
+                      |            | glass_shard (1.25), glass_shard_f0
+                      |            | (0.6), glass_glint (0.6: highlight),
+                      |            | glass_power (96), glass_blur (1: cube
+                      |            | mip level), glass_split (0; 1 = only
+                      |            | the right half of the screen, to
+                      |            | compare). Shares map with Richer
+                      |            | Reflections. Iron Sights > System.
+  texture_pack       | 1          | [display] Texture Pack (Windows/Linux).
                       |            | 1 = HD: campaign environment textures,
                       |            | the gunbarrel intro, sky clouds,
                       |            | explosions, smoke, impact effects and

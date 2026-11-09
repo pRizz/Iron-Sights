@@ -30,6 +30,102 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-066 — Glass Reflections: the level reflected in glass and shards
+
+**Status:** Spike implemented on 2026-11-09 at the owner's request ("all glass a
+bit more reflective, and the shards when it breaks"); Windows built and
+captured in an isolated folder, not yet play-tested, Linux and browser not
+built locally.
+
+Upstream already sphere-maps glass: shards (`glass.c` `glassRenderShards`)
+draw with `G_LIGHTING | G_TEXTURE_GEN` and the shared `glassoverlayimage`, their
+vertex colours standing in for normals, and the glass props' own display lists
+turn on texture generation and lighting too (logged: `texgen=1 lit=1` with
+blending for every glass prop triangle seen on Facility and Archives). Neither
+reflects the level. Glass props are `PROPDEF_GLASS` (Archives' office windows,
+Facility's lab glassware) and `PROPDEF_TINTED_GLASS` (Facility and Control
+windows); windowed doors (`DOORFLAG_WINDOWED`) carry glass too.
+
+**Gameplay > Iron Sights > System > Glass Reflections** (`[display]
+glass_reflections`: 0 Off, 1 On; default 1), after Gun Glint in the Options
+folder and the watch. On, glass props and window doors (their blended,
+see-through triangles only, so a door's frame keeps its look) and every broken
+shard are drawn a second time, additively, like the Gun Glint pass: per pixel,
+the view ray reflected off the face samples the level reflection cube of
+FORK-058, weighted by Schlick's Fresnel term (head-on reflectance `glass_f0`
+0.25, rising to full at a glancing angle), plus a soft Blinn-Phong highlight
+from a world-fixed overhead light (`glass_glint` 0.6, `glass_power` 96). Shards
+take a stronger look (`glass_shard` 1.25, `glass_shard_f0` 0.6) so they flash as
+they tumble. The reflection fades with the game's fog on fogged draws. Off,
+glass draws exactly as upstream (no tags are acted on). It is an ordinary
+toggle row, so keyboard, mouse, gamepad and touch adjust it like any other.
+
+- **Spans.** `port/src/port_glass.c` emits G_NOOP `0x63` with the kind in the
+  low byte (1 pane, 2 window door, 3 shards; 0 closes), preceded by the sky
+  colour tag `0x60` for the cube's empty space. Two hooks call it, inside
+  `#ifndef TARGET_N64`: around `sub_GAME_7F04AC20` at the end of the object
+  render in `propobj.c` (for the kinds `portGlassKindOfObject` names) and
+  around the shard loop in `glass.c`.
+- **Renderer.** `gfx_pc.cpp` decodes the tag (`gfx_glass_span`), builds this
+  frame's cube if no span has yet, and turns the overhead light into camera
+  space from the projection (GoldenEye keeps the camera rotation there,
+  C = R x Pp). Inside a span, `gfx_sp_vertex` records camera-space positions
+  from the clip ones (x / sx, y / sy, -w, with sx and sy the projection's
+  column lengths, so no modelview split is needed), `gfx_sp_tri1` adds each
+  glass triangle's corners (face normal turned to the viewer) to a buffer, and
+  `gfx_flush` hands it to the backend's new optional `glass_draw`
+  (`gfx_rendering_api.h`), implemented in `port/fast3d/gfx_glass.inl` (ONE/ONE,
+  depth tested LEQUAL, not written; every GL state touched restored).
+- **Shared cube.** `roc_env_cube` (`gfx_envcube.inl`) now remembers the frame
+  and size it built for and returns that result to later spans in the same
+  frame, so glass and the shiny guns share one cube per frame (the gun's span
+  previously always rendered its own). `gfx_shiny_level_cube` asks for the
+  room cache's capture-only mode 3 when either Richer Reflections or Glass
+  Reflections is on, and `video.c` re-applies the mode when the glass setting
+  changes.
+- **Tuning.** `shiny_weapons.ini` (re-read twice a second) gains `glass`,
+  `glass_f0`, `glass_shard`, `glass_shard_f0`, `glass_glint`, `glass_power`,
+  `glass_blur` (cube mip level, 1) and `glass_split` (review aid: 1 applies the
+  pass to the right half of the screen only, for an exact A/B in one frame),
+  documented in `tools/midas_ini_help.txt`. They are file-only tuning keys, so
+  they need no `settings_placement.py` entry or input handling.
+- **Limits.** The cube holds only the level's rooms (no props, characters or
+  glass) and is centred on the camera, so a pane does not mirror its own
+  surroundings exactly; kept light, it reads as glass. Glass that is part of
+  the level geometry (surfaces with the `HIT_GLASS_XLU` sound) is not covered,
+  nor CCTV lens glass. With `room_cache = 2` (replay), model parts that the
+  cache replays skip the interpreter and would skip the pass; the PC default
+  (0) is unaffected. The cube costs 0.3-0.9 ms of CPU in a debug build on
+  frames where glass or a shiny gun is drawn (FORK-058's measurement).
+
+**Sources:** [tags](port/src/port_glass.c) with their
+[header](port/include/port_glass.h), [prop hook](src/game/propobj.c),
+[shard hook](src/game/glass.c), [renderer](port/fast3d/gfx_pc.cpp),
+[glass pass](port/fast3d/gfx_glass.inl), [shared cube](port/fast3d/gfx_envcube.inl),
+[backend API](port/fast3d/gfx_rendering_api.h), [backend](port/fast3d/gfx_opengl.cpp),
+[API globals](port/fast3d/gfx_api.h), [tuning](port/fast3d/gfx_shiny.cpp) and
+its [header](port/fast3d/gfx_shiny.h), [setting](port/src/video.c),
+[options](port/src/port_options.c), [frontend row](src/game/front.c),
+[watch row](port/src/port_watchpages.c), [help](port/src/port_option_help.c),
+[ini reference](tools/midas_ini_help.txt) and the
+[review gallery](review/hand-gallery/index.html).
+
+**Checks:** The Windows build (isolated `build_win/hd-prototype`) compiles and
+links with no new warnings. Captures in isolated folders (`GE_SPAWNXYZ`,
+`GE_SHOT`, input playback firing the PP7): an exaggerated run (`glass = 4`)
+on Archives changed only the office window's pixels against Off (16,081, all
+inside the pane); `glass_split` runs on Archives and on Facility's shot lab
+glassware showed the pass on the right half only, both for intact glass and
+for shards; three strengths were compared on the Archives pane and 0.25
+head-on reflectance chosen as "a bit more" (0.1 was nearly invisible head on,
+0.4 an obvious coat). Runs are not frame-identical (an idle sub-pixel camera
+drift), so whole-frame Off/On diffs are not meaningful; the split is the A/B.
+`test_wardrobe.sh`, `test_ads.sh`, `test_hud.sh`, `test_upstream_merge.sh`,
+`settings_placement.py` and `bright-builds-check.ts all` pass; the regenerated
+hand gallery changed zero image cells (new manifest and index only) and
+verifies. Not run: a play session, the Options and watch rows captured,
+Control's tinted windows, window doors, the Linux and browser builds.
+
 ### FORK-065 — CI retries for transient network failures
 
 **Status:** Implemented on 2026-11-09; ROM-free tests pass locally. Whether CI
@@ -580,7 +676,9 @@ adjust them like any other.
   Debug build cost: CPU 0.27-0.35 ms per cube on Facility and 0.58-0.90 ms on
   Dam, GPU 0.06-0.18 ms (`GE_ENVCUBE_TIME=1`; `GE_ENVCUBE_DUMP=n` writes the
   n-th atlas). Nothing limits the room count yet, so the cost grows as a
-  level is explored. `map = 0` returns to the screen copy.
+  level is explored. `map = 0` returns to the screen copy. Since FORK-066
+  (2026-11-09) the cube is built at most once per frame and shared with Glass
+  Reflections, whose setting also asks for the capture-only mode.
 - **Reflection colour** (both sources). The first play-test found the blue
   sky on the gold guns uncanny: the scene multiplied the metal per channel.
   The scene now contributes only brightness (`screen_hue` 0; 1 restores its

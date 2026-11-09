@@ -43,6 +43,7 @@ static const struct PortOptHelp sHelp[] = {
     { "text_antialiasing",  "Smooths small Enhanced text so strokes keep even widths." },
     { "shiny_weapons",      "Richer reflections on the Golden Gun, Gold PP7, Silver PP7 and Magnum." },
     { "gun_glint",          "Moving highlights on the metal of ordinary guns, PP7 to sniper rifle." },
+    { "glass_reflections",  "Windows and broken glass shards reflect the room around you." },
     { "texture_pack",       "HD: intermissionfb's pack from HD Textures, and any pack put in Data/TexturePacks." },
     { "close_hd_matches",   "Adds HD art for 17 textures whose colours only roughly match the pack." },
 

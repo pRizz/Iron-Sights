@@ -37,6 +37,11 @@ static int roc_env_pending_count = 0;
 /* the frame's fog and projection planes, from the last replayed room */
 static float roc_env_fogp[4], roc_env_fog_rgb[3], roc_env_near = 4.0f, roc_env_far = 40000.0f;
 static uint32_t roc_env_rooms_drawn = 0;
+/* FORK-066: the frame being drawn, and the cube built in it (size, result):
+ * the glass spans and the shiny gun share one cube per frame */
+static uint32_t roc_env_frame_no = 1, roc_env_cube_frame = 0;
+static int roc_env_cube_size = 0;
+static bool roc_env_cube_ok = false;
 static float roc_env_cam_t[3]; /* diagnostics: the translation found in the projection */
 
 static void roc_env_mul(float out[4][4], const float a[4][4], const float b[4][4]) {
@@ -161,6 +166,7 @@ static void roc_env_note(int ri) {
 }
 
 static void roc_env_frame_reset(void) {
+    roc_env_frame_no++; /* FORK-066: this frame's cube is not built yet */
     roc_env_view_valid = false;
     roc_env_pending_count = 0;
     roc_env_rooms_drawn = 0;
@@ -185,8 +191,14 @@ static void roc_env_reseed(void) {
  * it could not (no cached room placed this frame) */
 static bool roc_env_cube(int size, const uint8_t sky[3]) {
     if (!gfx_rapi->env_cube_begin || gfx_room_cache != 2 || roc_stage < 0 || roc_stage == 0x5A) return false;
+    if (roc_env_cube_frame == roc_env_frame_no && roc_env_cube_size == size) {
+        return roc_env_cube_ok; /* FORK-066: built earlier this frame (a glass span or the gun) */
+    }
     roc_env_reseed();
-    if (!roc_env_view_valid) return false;
+    if (!roc_env_view_valid) return false; /* no room placed yet: a later span may try again */
+    roc_env_cube_frame = roc_env_frame_no;
+    roc_env_cube_size = size;
+    roc_env_cube_ok = false;
     /* face bases in camera space: right, up, back (each face looks down -back);
      * gfx_screen_env.inl samples with the same table */
     static const float faces[6][3][3] = {
@@ -297,5 +309,6 @@ static bool roc_env_cube(int size, const uint8_t sky[3]) {
                 cubes, rooms, unplaced, skipped, roc_env_rooms_drawn, roc_env_near, roc_env_far, n_drawn, n_lit,
                 n_xlu, n_nodesc, n_notex, roc_env_cam_t[0], roc_env_cam_t[1], roc_env_cam_t[2]);
     }
-    return rooms > 0;
+    roc_env_cube_ok = rooms > 0;
+    return roc_env_cube_ok;
 }
