@@ -356,7 +356,16 @@ padN_stickmode.
   ads_spread          | 50         | Percent of a weapon's bullet spread kept
                       |            | in ADS; 100 = original. Shotguns keep theirs
   ads_recoil          | 50         | Percent of a weapon's visual kick kept in
-                      |            | ADS; 100 = original. Shotguns keep theirs
+                      |            | ADS; 100 = original. Shotguns keep theirs.
+                      |            | Also scales weapon_kick in ADS
+  weapon_kick         | 1          | 1 = every round kicks the gun back and up,
+                      |            | with a capped climb in automatic fire;
+                      |            | 2 = ludicrous: the same, with three times
+                      |            | the muzzle flip and climb and half again
+                      |            | the push back; 3 = cartoon: 5.5 times the
+                      |            | flip and climb and twice the push back;
+                      |            | 0 = original kick after the trigger is let
+                      |            | go. Visual only; aim is unchanged
   sprint              | 1          | 1 = hold Walk / Sprint for 1.5x speed;
                       |            | 0 = hold it to walk at half speed
   ludicrous_sprint    | 0          | 1 = sprint at 5x speed instead of 1.5x.

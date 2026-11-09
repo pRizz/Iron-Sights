@@ -17,6 +17,7 @@ static const struct PortOptHelp sHelp[] = {
     { "knife_ads",          "Butt Centered keeps the stock grip. Tip Centered flips to throw." },
     { "ads_spread",         "Bullet spread kept in ADS. 100% is the original. Not shotguns." },
     { "ads_recoil",         "Gun kick kept in ADS. 100% is the original. Not shotguns." },
+    { "weapon_kick",        "Every shot kicks the gun; Ludicrous 3x, Cartoon 5.5x. Original: after firing." },
     { "ludicrous_sprint",   "With Sprint on, sprinting goes 5x speed instead of 1.5x." },
     { "look_updown",        "Upright: push up to look up. Reverse inverts it." },
     { "auto_aim",           "Gun aims at enemies for you." },

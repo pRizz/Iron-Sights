@@ -46,6 +46,7 @@
 #include "port_hud.h"
 #include "port_hit_sound.h"
 #include "port_ads_accuracy.h"
+#include "port_gun_kick.h"
 #include "port_mission_clock.h"
 #include "boss.h"
 #include "port_weapon_export.h"
@@ -721,6 +722,7 @@ void gunUpdateAndFire(GUNHAND handnum)
     u8 stackpad2[4];
 #ifndef TARGET_N64
     f32 ads;
+    PortGunKickPose kick;
 #endif
 
     flashvisptr = NULL;
@@ -937,6 +939,20 @@ void gunUpdateAndFire(GUNHAND handnum)
     }
 
 #ifndef TARGET_N64
+    /* Weapon Kick (FORK-061): the per-shot spring, layered on the native pose. */
+    if (portGunKickAdvance(handnum, item, g_GlobalTimerDelta, &kick))
+    {
+        coord3d kickrot;
+        kickrot.x = -kick.pitch; /* same sign as the native RecoilUp rotation */
+        kickrot.y = kick.yaw;
+        kickrot.z = kick.roll;
+        gunofs.x += kick.x;
+        gunofs.y += kick.y;
+        gunofs.z += kick.z;
+        matrix_4x4_set_rotation_around_xyz(&kickrot, &tmpmtx);
+        matrix_4x4_multiply_homogeneous_in_place(&tmpmtx, &rotmtx);
+    }
+
     matrix_4x4_set_basis_and_position_target(&tmpmtx, 0.0f, 0.0f, 0.0f,
         hand->sway_look_x * (1.0f - ads), hand->sway_look_y * (1.0f - ads),
         hand->sway_look_z * (1.0f - ads) - ads,
@@ -962,9 +978,9 @@ void gunUpdateAndFire(GUNHAND handnum)
         {
             const coord3d *muzzle = (const coord3d *) header->Switches[3]->Data;
             coord3d pose;
-            const f32 recoilx = hand->field_92C ? hand->field_8EC.m[3][0] : 0.0f;
-            const f32 recoily = hand->field_92C ? hand->field_8EC.m[3][1] : 0.0f;
-            const f32 recoilz = hand->field_92C ? hand->field_8EC.m[3][2] : 0.0f;
+            const f32 recoilx = (hand->field_92C ? hand->field_8EC.m[3][0] : 0.0f) + kick.x;
+            const f32 recoily = (hand->field_92C ? hand->field_8EC.m[3][1] : 0.0f) + kick.y;
+            const f32 recoilz = (hand->field_92C ? hand->field_8EC.m[3][2] : 0.0f) + kick.z;
             if (portAdsWeaponPose(item, muzzle, &pose))
             {
                 const f32 pitch = portAdsWeaponPitch(item) * ads;
@@ -3970,6 +3986,9 @@ void gunTickHandState(enum GUNHAND hand, s32 triggerOn)
 
                 handptr->weapon_ammo_in_magazine -= 1;
                 handptr->volley += 1;
+#ifndef TARGET_N64
+                portGunKickFire(hand, var_s1);
+#endif
             }
 
             if (handptr->weapon_action_state == GUN_ANIM_STATE_FIRE)
@@ -4222,8 +4241,9 @@ void gunTickHandState(enum GUNHAND hand, s32 triggerOn)
                 sp198 = weapon_stats->RecoilBack;
                 sp19C = weapon_stats->RecoilUp;
 #ifndef TARGET_N64
-                { /* ADS Recoil: a smaller kick in ADS; the shot ray never moves */
-                    const f32 kick = portAdsRecoilScale(getCurrentPlayerWeaponId(hand));
+                { /* ADS Recoil: a smaller kick in ADS; the shot ray never moves.
+                   * Weapon Kick (FORK-061) zeroes it while its spring owns the kick. */
+                    const f32 kick = portAdsRecoilScale(getCurrentPlayerWeaponId(hand)) * portGunKickNativeScale(var_s1);
                     sp198 *= kick;
                     sp19C *= kick;
                 }

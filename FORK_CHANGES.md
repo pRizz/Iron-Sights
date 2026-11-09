@@ -30,6 +30,94 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-061 — Weapon Kick: a per-shot recoil spring
+
+**Status:** Implemented on 2026-11-08 and built for Windows. The owner
+play-tested Enhanced and asked for heavier shotguns and launchers, a rocket
+launcher kick, a Ludicrous mode at 3x and a Cartoon mode at 5.5x, keeping
+Enhanced as the default; that revision awaits its play-test. Linux
+and browser builds not run locally.
+
+Inherited behaviour: the whole-gun recoil animation (`GUN_ANIM_STATE_RECOIL1`
+and `RECOIL2` in `gunTickHandState`, driven by `RecoilSpeed`, `RecoilBack` and
+`RecoilUp`) starts only when the hand leaves `GUN_ANIM_STATE_FIRE`. Automatic
+weapons stay in that state while the trigger is held, so a held burst showed
+only the native ±0.3-unit jitter (`WEAPONSTATBITFLAG_00000020`/`40` in
+`gunUpdateAndFire`), and one kick played after the trigger was let go. Pistols
+and shotguns entered `RECOIL1` after each shot, but as a soft sine-eased rise.
+ADS used the same animation, scaled by FORK-045's ADS Recoil.
+
+**Gameplay > Iron Sights > Aiming and Movement > Weapon Kick**
+(`[display] weapon_kick`: 0 Original, 1 Enhanced, 2 Ludicrous, 3 Cartoon;
+default 1), after ADS Recoil
+in the Options folder and on the watch. Enhanced gives every round fired a kick
+on a per-player, per-hand spring: back towards the camera, a little up, muzzle
+pitch, and a small random sideways and roll movement. A stiff, slightly bouncy
+spring returns the gun in roughly 60 to 150 ms, so held automatic fire shows a
+jolt per round. Sustained fire also builds a climb, which approaches a per-weapon
+ceiling without passing it and drains about a quarter of a second after the last
+shot. Ludicrous is Enhanced with three times the pitch, sideways kick, roll and
+climb (step and ceiling), 1.5 times the push back and rise, and a spring 20%
+softer so the bigger kick reads as heavier. Cartoon uses 5.5 times the
+rotation and climb, twice the travel and a spring 30% softer, which flips the
+magnum and shotgun past 60 degrees. Travel grows less than rotation in both
+so close guns such as the rocket launcher stay clear of the camera.
+`portGunKickExaggerate` holds both scalings. Original
+keeps the inherited animation exactly.
+
+- **Weapons.** A table in `port_gun_kick.c` gives each class its own peaks and
+  spring: pistols (the silenced PP7 and the DD44 separately), the magnum and
+  Golden Gun, SMGs (the silenced D5K and the RCP90 lighter), rifles, both
+  shotguns, the sniper rifle, the grenade launcher and the rocket launcher.
+  After the first play-test the shotguns (back 3.0, pitch 12°) and grenade
+  launcher (back 2.6, pitch 11°) were raised above every pistol, and the
+  rocket launcher, which has no native kick, gained a slow heavy shove (back
+  1.8, rise 0.8, pitch 7°). The native stats were tuned for one animation per
+  burst and are too small per round, so the table does not derive from them.
+  The knife, fists, taser, lasers, throwables and gadgets have no entry and
+  keep the native behaviour.
+- **Native kick.** While any mode but Original is on, `portGunKickNativeScale` zeroes the
+  native recoil amplitudes for weapons in the table, multiplied into FORK-045's
+  existing ADS Recoil hook. The `RECOIL1`/`RECOIL2` timing, and with it the fire
+  rate, is unchanged. The native per-shot jitter still plays and still draws
+  `randomGetNext`, and pistol slide movement (`BoltRecoilBack`) is untouched.
+- **Shot and pose hooks.** `gunTickHandState` calls `portGunKickFire` where a
+  round takes ammo, which happens once per shot on field ticks. `gunUpdateAndFire`
+  calls `portGunKickAdvance` every tick with `g_GlobalTimerDelta`, then adds the
+  translation to `gunofs` and multiplies the rotation into `rotmtx`, after the
+  native recoil matrix. In ADS the same translation is added to the pose the
+  ADS blend moves towards, so the kick shows once at every blend. The spring
+  update is the exact damped-oscillator solution, so the motion is the same at
+  every tick rate, and a paused game holds it.
+- **ADS.** The drawn kick is scaled by `portAdsRecoilScale`, so ADS Recoil (50%
+  by default) halves it once the sights settle. Both shotguns keep their full
+  kick in ADS, as FORK-045 already does for them.
+- **Visual only.** The shot ray, spread, fire rate, ammo and game RNG are
+  unchanged. The kick uses its own xorshift generator, so demos replay as
+  recorded. The hand gallery's review pose discards recoil, so its images
+  are unchanged.
+- **Input.** An ordinary enum row, so keyboard, mouse, gamepad and touch adjust
+  it like any other.
+
+**Sources:** [kick module](port/src/port_gun_kick.c) and its
+[header](port/include/port_gun_kick.h); hooks in [gunfire.c](src/game/gunfire.c);
+option bridge in [joy_port.c](port/src/joy_port.c), rows in
+[port_options.c](port/src/port_options.c), [front.c](src/game/front.c) and
+[port_watchpages.c](port/src/port_watchpages.c), [help](port/src/port_option_help.c),
+[ini template](port/src/video.c), [ini reference](tools/midas_ini_help.txt) and
+[README](README.md).
+**Checks:** [kick tests](scripts/port/test_gun_kick.c), run by
+[test_ads.sh](scripts/port/test_ads.sh), cover the default and option bridge,
+which weapons have a profile, the heavy weapons out-kicking pistols, the
+single-shot peak, matching motion at 60 and 240 Hz, the return to rest, the
+climb ceiling and settling, the Ludicrous and Cartoon scaling and Ludicrous's larger drawn shot,
+the native-kick ownership, ADS Recoil scaling, resetting on weapon change and
+Original. They
+pass (Docker `midas-linux-release`), as do `settings_placement.py` and
+`bright-builds-check.ts all`. The Windows build compiles and links. The
+regenerated hand gallery changed 0 image cells. No in-game capture of the
+kick has been taken; the owner's play-test judges the strength and feel.
+
 ### FORK-060 — ADS Crosshair: the always-on crosshair while aiming
 
 **Status:** Implemented in all builds (2026-11-08); Windows built and tested,
@@ -1918,7 +2006,9 @@ ADS keeps 12.5% of its normal spread at the default. Both shotguns keep their
 full pellet spread and kick, and demo playback keeps the native values so
 recorded shots replay as recorded. The settings apply to every player in
 multiplayer alike, through each player's own ADS state. The scoped sniper's
-spread is already 0.
+spread is already 0. Since FORK-061, ADS Recoil also scales Weapon Kick's
+per-shot spring, and while Weapon Kick is Enhanced the native kick it scales is
+zeroed for every weapon Weapon Kick covers.
 
 **Sources:** [policy](port/src/port_ads_accuracy.c) and
 [header](port/include/port_ads_accuracy.h); spread hooks in both
@@ -1945,7 +2035,7 @@ subsections, in both the Options folder and the watch:
 
 | Subsection | Settings |
 | --- | --- |
-| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Sprint, Ludicrous Sprint |
+| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Sprint, Ludicrous Sprint |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction |
 | HUD Additions | Always Crosshair Size, Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
 | System | About / Build Info, Fonts (FORK-051, FORK-052), Crash Reporting (Windows/Linux) |

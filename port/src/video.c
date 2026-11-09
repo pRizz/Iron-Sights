@@ -17,6 +17,7 @@
 #include "port_hd_textures.h" /* FORK-053: player-installed HD texture packs */
 #include "port_hd_download.h"  /* FORK-053: their download */
 #include "port_ads_accuracy.h"
+#include "port_gun_kick.h"
 
 #ifdef GE_XBOX
 /* No SDL on the console: the string/keyboard/thread stand-ins live in the
@@ -2405,6 +2406,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "aim_lock=%d\n", s_CfgAimLock);
     fprintf(f, "aim_mode=1\n");
     fprintf(f, "ads_spread=%d\nads_recoil=%d\n", PORT_ADS_ACCURACY_DEFAULT, PORT_ADS_ACCURACY_DEFAULT);
+    fprintf(f, "weapon_kick=%d\n", PORT_GUN_KICK_DEFAULT);
     fprintf(f, "sprint=1\nludicrous_sprint=0\n");
     fprintf(f, "hit_markers=1\n");
     fprintf(f, "hit_sounds=1\n");

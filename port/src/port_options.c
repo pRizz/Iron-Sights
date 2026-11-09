@@ -148,6 +148,8 @@ static const s32 sAimModeVals[] = { 1, 0 };
 static const char *const sAimModeText[] = { "ADS\n", "Red Reticle\n" };
 static const s32 sKnifeAdsVals[] = { 0, 1 };
 static const char *const sKnifeAdsText[] = { "Butt Centered\n", "Tip Centered\n" };
+static const s32 sWeaponKickVals[] = { 0, 1, 2, 3 };
+static const char *const sWeaponKickText[] = { "Original\n", "Enhanced\n", "Ludicrous\n", "Cartoon\n" };
 static const s32 sWeaponStyleVals[] = { 0, 1 };
 static const char *const sWeaponStyleText[] = { "Text\n", "Icons\n" };
 static const s32 sHealthDisplayVals[] = { 0, 1 };
@@ -333,6 +335,7 @@ static const struct PortOpt sOpts[] = {
     ENUMR ("knife_ads",          "[display]", "Knife ADS\n",          PORTOPT_CAT_GAMEPLAY, sKnifeAdsVals, sKnifeAdsText, NULL),
     INTR  ("ads_spread",         "[display]", "ADS Spread\n",         PORTOPT_CAT_GAMEPLAY, 0, 100, 10, "%"),
     INTR  ("ads_recoil",         "[display]", "ADS Recoil\n",         PORTOPT_CAT_GAMEPLAY, 0, 100, 10, "%"),
+    ENUMR ("weapon_kick",        "[display]", "Weapon Kick\n",        PORTOPT_CAT_GAMEPLAY, sWeaponKickVals, sWeaponKickText, NULL), /* FORK-061 */
     TOGGLE("sprint",             "[display]", "Sprint\n",             PORTOPT_CAT_GAMEPLAY),
     TOGGLE("ludicrous_sprint",   "[display]", "Ludicrous Sprint\n",   PORTOPT_CAT_GAMEPLAY),
     TOGGLE("sight_on_screen",    "[display]", "Sight on Screen\n",    PORTOPT_CAT_GAMEPLAY),

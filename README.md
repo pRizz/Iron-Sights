@@ -161,6 +161,14 @@ sets how much of a weapon's bullet spread remains while aiming down sights, and
 **ADS Recoil** sets how much of its visual kick remains. Both default to 50%;
 100% restores the original. Shotguns keep their full pellet spread and kick.
 
+**Weapon Kick**, on the same page, makes every round kick the gun back and up,
+including each shot of held automatic fire, which also climbs a little until
+you let go. ADS Recoil scales it while aiming down sights. It is visual only:
+where your shots go does not change. **Ludicrous** triples the muzzle flip,
+sideways kick and climb, and **Cartoon** multiplies them by 5.5, both for fun
+rather than realism. **Original** restores the native kick, which plays once
+after the trigger is released.
+
 Iron Sights adds these HUD and feedback options under **Gameplay > Iron Sights >
 Combat Feedback** and **HUD Additions**. Mission Timer is the original setting on
 **Gameplay > HUD**, extended by Iron Sights:
