@@ -902,12 +902,18 @@ void gunUpdateAndFire(GUNHAND handnum)
     if ((item == ITEM_TRIGGER) || (item == ITEM_WATCHLASER))
     {
             trigrot = D_80035C70;
+#ifndef TARGET_N64
+            portAdsBlendRotation(item, &trigrot, ads); /* watch laser ADS */
+#endif
             matrix_4x4_set_rotation_around_xyz(&trigrot, &tmpmtx);
             matrix_4x4_multiply_homogeneous_in_place(&tmpmtx, &rotmtx);
     }
     else if (item == ITEM_TASER)
     {
         taserrot = D_80035C7C;
+#ifndef TARGET_N64
+        portAdsBlendRotation(item, &taserrot, ads); /* taser ADS */
+#endif
         matrix_4x4_set_rotation_around_xyz(&taserrot, &tmpmtx);
         matrix_4x4_multiply_homogeneous_in_place(&tmpmtx, &rotmtx);
     }
@@ -975,9 +981,11 @@ void gunUpdateAndFire(GUNHAND handnum)
     if (ads > 0.0f)
     {
         ModelFileHeader *header = &g_CurrentPlayer->copy_of_body_obj_header[handnum];
-        if (header->Switches != NULL && header->Switches[3] != NULL)
+        /* The taser has no muzzle node; its pose is measured from the model origin. */
+        static const coord3d noMuzzle = {0.0f, 0.0f, 0.0f};
+        if (header->Switches != NULL)
         {
-            const coord3d *muzzle = (const coord3d *) header->Switches[3]->Data;
+            const coord3d *muzzle = header->Switches[3] != NULL ? (const coord3d *) header->Switches[3]->Data : &noMuzzle;
             coord3d pose;
             const f32 recoilx = (hand->field_92C ? hand->field_8EC.m[3][0] : 0.0f) + kick.x;
             const f32 recoily = (hand->field_92C ? hand->field_8EC.m[3][1] : 0.0f) + kick.y;

@@ -54,7 +54,7 @@ if ($KnifeThrows) { $auditEnv.GE_KNIFE_ADS_THROWS = '1' }
 if ($Dual) { $auditEnv.GE_ADS_AUDIT_DUAL = '1' }
 if ($Wardrobe -ne 'Mission') { $auditEnv.GE_ADS_AUDIT_WARDROBE=[string](@('blue','boiler','jungle','snow','tuxedo','connery').IndexOf($Wardrobe.ToLowerInvariant())) }
 if ($StockHands) { $auditEnv.GE_ARM_AUDIT_STOCK='1' }
-$expectedCount = if ($Item -eq 0) { if ($Dual) {7} else {21} } else { 1 }
+$expectedCount = if ($Item -eq 0) { if ($Dual) {7} else {23} } else { 1 }
 try {
     foreach ($key in $auditEnv.Keys) {
         $previousEnv[$key] = [Environment]::GetEnvironmentVariable($key, 'Process')
@@ -101,7 +101,7 @@ $names = @{
     4='PP7'; 5='Silenced PP7'; 6='DD44'; 7='Klobb'; 8='KF7 / AK47'; 9='ZMG';
     10='D5K'; 11='Silenced D5K'; 12='Phantom'; 13='AR33'; 14='RC-P90';
     15='Shotgun'; 16='Auto Shotgun'; 17='Sniper'; 18='Cougar Magnum';
-    19='Golden Gun'; 20='Silver PP7'; 21='Gold PP7'; 22='Laser'; 24='Grenade Launcher'; 25='Rocket Launcher'
+    19='Golden Gun'; 20='Silver PP7'; 21='Gold PP7'; 22='Laser'; 23='Watch Laser'; 24='Grenade Launcher'; 25='Rocket Launcher'; 31='Taser'
 }
 Add-Type -AssemblyName System.Drawing
 $height = if ($Aspect -eq 'Wide') { 225 } else { 300 }

@@ -30,6 +30,65 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-064 — Taser and watch laser ADS
+
+**Status:** Implemented on 2026-11-08 at the owner's request and built into
+the main Windows executable; the owner reviewed it and approved it on
+2026-11-09.
+Linux and browser builds not run locally.
+
+Inherited behaviour (and FORK-003 until now): ADS covered the items from the
+PP7 to the Moonraker laser, the grenade and rocket launchers and the throwing
+knife. The watch laser (item 23, just past that range) and the taser (31)
+fell back to the original aim mode with its red reticle, even with Aim Mode
+set to ADS. Upstream draws both at the hip with a fixed rotation in
+`gunUpdateAndFire` (`D_80035C70`, shared with the detonator, and
+`D_80035C7C`, which turns the taser about 52 degrees so its face shows).
+
+Both now use the normal ADS controls, the 150 ms raise and lower, half-speed
+movement, ADS zoom (75% FOV), ADS Spread/Recoil and the existing single-item,
+tank, switch and reload gates. Neither has sights, so each pose is a sight
+picture of its own, calibrated with ADS Crosshair's aim point:
+
+- **Taser:** turned a quarter turn to face the camera, its prongs tipped
+  0.5 radian towards the target. The two prongs straddle the aim point with
+  their tips level with it (measured within 2 px at 960x540).
+- **Watch laser:** the arm rolls 0.35 radian and the watch face sits below
+  the aim point, where the beam leaves it, so the hand stays below and right
+  of the aim point instead of covering it.
+
+`portAdsBlendRotation` (`joy_port.c`) eases each item's native hip rotation to
+its ADS orientation with the blend, each angle the shorter way round (the watch
+laser's native angles sit near a full turn, which would otherwise spin), and
+leaves hip-fire angles untouched. The taser model has no muzzle node
+(`Switches[3]`), so `gunfire.c` now poses an item without one from its model
+origin; every earlier supported weapon has that node and is unchanged. Both get
+pose-table entries but no generated grips: their native hands and the watch
+laser's native arm move rigidly, without changing vertices, UVs, materials or
+render setup, and the detonator keeps its pose. Weapon Kick and tracers already
+leave both native.
+
+**Shared hooks:** two `portAdsBlendRotation` calls in `gunUpdateAndFire`'s
+taser and detonator/watch-laser rotation branches, and the muzzle-node fallback
+in its ADS block (`src/game/gunfire.c`), all outside `TARGET_N64`.
+
+**Sources:** [poses, rotation and gates](port/src/joy_port.c),
+[interface](port/include/port_ads.h), [gun pose hooks](src/game/gunfire.c),
+[capture driver](scripts/port/audit_ads.ps1) (now 23 items, with labels),
+[alignment guide](scripts/port/ads_alignment.md),
+[arm contracts note](scripts/port/arm_rendering.md).
+
+**Checks:** `test_ads.c` covers both items' poses, gates and the rotation blend
+(hip angles kept bit for bit, the halfway and settled taser turn, and the watch
+laser easing the short way). `test_ads.sh`, `test_wardrobe.sh`,
+`test_upstream_merge.sh`, `test_hud.sh`, `test_states.sh` and
+`bun scripts/bright-builds-check.ts all` pass. Native ADS audits
+(`audit_ads.ps1 -Item 31` and `-Item 23 -Transitions`, Runway, 960x540) were
+reviewed settled and through 11 raise/lower frames each: no flips or spins.
+Firing in ADS was not captured; the play-test covers it. The review gallery
+was regenerated from the isolated build (both passes, 72 views): zero changed
+image cells, so only its manifest and index record the new rendering inputs.
+
 ### FORK-063 — Shotgun Tracers: a tracer per pellet, and Decorative Pellets
 
 **Status:** Implemented on 2026-11-08 and built for Windows; a scripted Dam

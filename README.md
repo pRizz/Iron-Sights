@@ -79,7 +79,7 @@ Successful `main` builds deploy automatically to GitHub Pages. See [compatibilit
 
 ## What's different in this fork?
 
-- **Aim down sights (ADS):** right-click ADS by default, individual sight alignment for 20 supported firearms, and half-speed movement while aiming. Added hands and forearms support guns that originally lacked them. Rifle ADS arms, native pistol forearms and the karate-chop arm match the mission's watch-arm wardrobe with original fabric/skin textures and rolled or long sleeves. Unarmed HUD icons match that outfit too. The original red reticle mode remains selectable.
+- **Aim down sights (ADS):** right-click ADS by default, individual sight alignment for 20 supported firearms, a sight picture for the taser (prongs either side of the aim point) and the watch laser (watch face just below it), and half-speed movement while aiming. Added hands and forearms support guns that originally lacked them. Rifle ADS arms, native pistol forearms and the karate-chop arm match the mission's watch-arm wardrobe with original fabric/skin textures and rolled or long sleeves. Unarmed HUD icons match that outfit too. The original red reticle mode remains selectable.
 - **Sniper scope and wheel zoom:** aim through a centered scope, turn the whole view with the mouse, and adjust magnification with the mouse wheel.
 - **Shift to sprint:** hold Left Shift to sprint; a gameplay setting can restore the original slow-walk behavior.
 - **Sharper sights and combat feedback:** smooth reticles, optional hit markers, and directional damage indicators.

@@ -286,6 +286,31 @@ are screen pixels at 1600 × 900; y is positive downwards.
 sits right of the muzzle axis, subtracted from the pose's x. Only the Magnum
 uses it. Each 0.05 units moved the Magnum about 0.75 px at 1600 × 900.
 
+## Taser and watch laser, 2026-11-08
+
+Neither item has sights, and upstream draws both with a fixed hip rotation
+(FORK-064). In ADS, `portAdsBlendRotation` eases that rotation to an ADS
+orientation, and the pose table places the result. Calibration used the
+private `GE_ADS_AUDIT` capture of each item on Runway at 960x540, with the
+screen centre marked.
+
+| Item        | ADS orientation (XYZ radians)     | Pose (height, distance, pitch, sightX) | Sight picture                                           |
+| ----------- | --------------------------------- | -------------------------------------- | ------------------------------------------------------- |
+| Taser       | (pi/2, pi/2 - 0.5, pi/2)          | 13.6, 36, 0, -6.2                      | prongs either side of centre (midpoint within 2 px), tips level with it |
+| Watch laser | (0, 0, 0.35)                      | 8, 27, -0.03, 1.2                      | watch face below centre; hand below and right of it     |
+
+The taser's angles are a quarter turn about Y (face to the camera) followed by
+a 0.5 radian tilt about the parent X axis (prongs towards the target),
+expressed in `matrix_4x4_set_rotation_around_xyz`'s order. Removing its native
+rotation alone showed the taser edge-on; a plain quarter turn stood it upright,
+and a 0.3 radian tilt barely read. The model has no muzzle node, so its pose
+is measured from the model origin and its `sightX` is large.
+
+Removing the watch laser's small native tilt alone put the hand's knuckles on
+the aim point at heights 2 and 4. Height 8 to 9 cleared it; a 0.35 radian roll
+lays the hand flatter, pointing at the target, where -0.35 stood it up across
+the centre. Both items' 11-frame raise/lower captures blend without flips.
+
 ## Earlier height-correction validation
 
 - Captured all 20 supported ADS firearms at default wide FOV 90/60 Hz and

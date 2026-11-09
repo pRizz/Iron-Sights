@@ -338,18 +338,50 @@ int main(void)
     assert(pose.z == -70.0f);
     for (i = ITEM_UNARMED; i <= ITEM_CAMERA; i++)
     {
-        const s32 supported = (i >= ITEM_WPPK && i <= ITEM_LASER)
-            || i == ITEM_GRENADELAUNCH || i == ITEM_ROCKETLAUNCH;
+        const s32 supported = (i >= ITEM_WPPK && i <= ITEM_WATCHLASER)
+            || i == ITEM_GRENADELAUNCH || i == ITEM_ROCKETLAUNCH || i == ITEM_TASER;
         assert(!!portAdsWeaponPose(i, &muzzle, &pose) == supported);
         if (supported) {
             /* The rocket launcher and shotguns stay at their WeaponStats hip depth. */
             const f32 hip = i == ITEM_ROCKETLAUNCH ? -14.5f : i == ITEM_SHOTGUN ? -19.5f : i == ITEM_AUTOSHOT ? -19.0f : 0.0f;
             assert((hip != 0.0f ? pose.z == hip : pose.z <= -26.0f) && pose.y < -muzzle.y * 0.1f);
-            /* The grenade launcher tilts well up to suggest its lob. */
-            assert(portAdsWeaponPitch(i) < 0.0f && portAdsWeaponPitch(i) >= (i == ITEM_GRENADELAUNCH ? -0.25f : -0.15f));
+            /* The grenade launcher tilts well up to suggest its lob; the taser's
+             * whole ADS orientation comes from portAdsBlendRotation. */
+            if (i == ITEM_TASER) {
+                assert(portAdsWeaponPitch(i) == 0.0f);
+            } else {
+                assert(portAdsWeaponPitch(i) < 0.0f && portAdsWeaponPitch(i) >= (i == ITEM_GRENADELAUNCH ? -0.25f : -0.15f));
+            }
         } else {
             assert(portAdsWeaponPitch(i) == 0.0f);
         }
+    }
+    {
+        /* The taser has no muzzle node: gunfire.c passes the model origin, and
+         * its prongs straddle the aim point once turned to face the camera. */
+        const coord3d origin = {0.0f, 0.0f, 0.0f};
+        coord3d angles = {0.25045f, 0.904823f, 0.28717f}, half = angles;
+        assert(portAdsWeaponPose(ITEM_TASER, &origin, &pose));
+        assert(pose.x == 6.2f && pose.y == -13.6f && pose.z == -36.0f);
+        /* Hip fire keeps the native angles bit for bit; full ADS reaches the
+         * quarter turn with the prongs tipped 0.5 radian forward. */
+        portAdsBlendRotation(ITEM_TASER, &angles, 0.0f);
+        assert(angles.x == 0.25045f && angles.y == 0.904823f && angles.z == 0.28717f);
+        portAdsBlendRotation(ITEM_TASER, &half, 0.5f);
+        assert(half.y > 0.98f && half.y < 0.99f);
+        portAdsBlendRotation(ITEM_TASER, &angles, 1.0f);
+        assert(angles.x > 1.5707f && angles.x < 1.5709f && angles.y > 1.0707f && angles.y < 1.0709f);
+        assert(angles.z > 1.5707f && angles.z < 1.5709f);
+    }
+    {
+        /* The watch laser's native angles sit near a full turn (6.2536 is
+         * -0.0296): easing them takes the short way, never a visible spin. */
+        coord3d angles = {6.2536321f, 6.2592888f, 0.204238f};
+        portAdsBlendRotation(ITEM_WATCHLASER, &angles, 0.5f);
+        assert(angles.x > -0.02f && angles.x < -0.01f && angles.y > -0.02f && angles.y < -0.01f);
+        assert(angles.z > 0.27f && angles.z < 0.28f);
+        portAdsBlendRotation(ITEM_WATCHLASER, &angles, 1.0f);
+        assert(angles.x == 0.0f && angles.y == 0.0f && angles.z == 0.35f);
     }
     muzzle.y = 77.935936f;
     muzzle.z = 648.51721f;
@@ -450,8 +482,9 @@ int main(void)
     for (i = ITEM_UNARMED; i <= ITEM_CAMERA; i++)
     {
         g_CurrentPlayer->hand_item[GUNRIGHT] = i;
-        assert(!!portAdsActive() == ((i >= ITEM_WPPK && i <= ITEM_LASER)
-            || i == ITEM_GRENADELAUNCH || i == ITEM_ROCKETLAUNCH || i == ITEM_THROWKNIFE));
+        assert(!!portAdsActive() == ((i >= ITEM_WPPK && i <= ITEM_WATCHLASER)
+            || i == ITEM_GRENADELAUNCH || i == ITEM_ROCKETLAUNCH || i == ITEM_THROWKNIFE
+            || i == ITEM_TASER));
     }
     selectPlayer(0);
     for (i = GUN_ANIM_STATE_SWITCH_LOWER; i <= GUN_ANIM_STATE_RELOAD_RAISE; i++)

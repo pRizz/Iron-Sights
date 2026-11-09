@@ -811,6 +811,12 @@ static const struct {
      * ray at the launcher's own hip depth (WeaponStats PosZ -14.5), so it does
      * not travel forward; portAdsWeaponRoll cants it onto the right shoulder. */
     { ITEM_ROCKETLAUNCH, 6.143f, 14.5f, -0.026732f },
+    /* Sightless items, turned by portAdsItemRotation. The watch face sits
+     * below the aim point, where the beam leaves it. The taser has no muzzle
+     * node: from its model origin, the prongs straddle the aim point with
+     * their tips level with it. */
+    { ITEM_WATCHLASER,    8.0f, 27.0f, -0.030f, 1.2f },
+    { ITEM_TASER,        13.6f, 36.0f, 0.0f, -6.2f },
 };
 
 s32 portAdsWeaponPose(s32 item, const coord3d *muzzle, coord3d *pose)
@@ -856,6 +862,33 @@ s32 portAdsWeaponPose(s32 item, const coord3d *muzzle, coord3d *pose)
 f32 portAdsWeaponRoll(s32 item)
 {
     return item == ITEM_ROCKETLAUNCH ? PORT_ADS_ROCKET_ROLL : 0.0f;
+}
+
+/* ADS orientation (XYZ radians, matrix_4x4_set_rotation_around_xyz) for the
+ * items gunfire.c turns by a native hip rotation. The taser faces the camera
+ * (a quarter turn) with its prongs tipped 0.5 radian towards the target; the
+ * watch laser rolls its arm 0.35 radian, keeping the hand below the aim point. */
+static coord3d portAdsItemRotation(s32 item)
+{
+    const coord3d taser = {1.5707963f, 1.0707963f, 1.5707963f};
+    const coord3d watch = {0.0f, 0.0f, 0.35f};
+    const coord3d none = {0.0f, 0.0f, 0.0f};
+    return item == ITEM_TASER ? taser : item == ITEM_WATCHLASER ? watch : none;
+}
+
+void portAdsBlendRotation(s32 item, coord3d *angles, f32 blend)
+{
+    const f32 tau = 6.2831853f;
+    const coord3d target = portAdsItemRotation(item);
+    s32 k;
+    if (blend <= 0.0f) return; /* hip fire keeps the native angles exactly */
+    for (k = 0; k < 3; k++)
+    {
+        f32 angle = angles->f[k] - target.f[k];
+        while (angle > tau * 0.5f) angle -= tau;
+        while (angle < -tau * 0.5f) angle += tau;
+        angles->f[k] = target.f[k] + angle * (1.0f - blend);
+    }
 }
 
 /* ADS field of view as a fraction of the default. The shouldered rocket
@@ -1049,8 +1082,8 @@ static s32 joyPortAdsSupported(void)
     /* One sight at a time; other thrown weapons/gadgets and the tank keep their controls. */
     return g_PlayerIsInTank != 1 && get_itemtype_in_hand(GUNLEFT) == 0
         && get_itemtype_in_hand(GUNRIGHT) != 0
-        && ((item >= ITEM_WPPK && item <= ITEM_LASER) || item == ITEM_GRENADELAUNCH
-            || item == ITEM_ROCKETLAUNCH || item == ITEM_THROWKNIFE);
+        && ((item >= ITEM_WPPK && item <= ITEM_WATCHLASER) || item == ITEM_GRENADELAUNCH
+            || item == ITEM_ROCKETLAUNCH || item == ITEM_THROWKNIFE || item == ITEM_TASER);
 }
 
 static s32 joyPortAdsWeapon(void)

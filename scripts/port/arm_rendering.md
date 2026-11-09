@@ -129,6 +129,11 @@ temporary knife-only matrix-list copies for its optional handle-grip animation.
 See [knife ADS contracts and validation](knife_ads.md). It does not use the
 generated rifle grips or alter native pistol paths.
 
+Taser and watch laser ADS (FORK-064) move their native models rigidly: the
+taser's hand and the watch laser's arm, watch and hand keep their vertices,
+UVs, materials and render setup. Only the hip rotation and position change
+with the ADS blend. Neither uses generated grips or wardrobe arms.
+
 Run `bash scripts/port/test_wardrobe.sh` and `bash scripts/port/test_ads.sh`.
 Both already run in the Windows release workflow without a ROM. Tests cover:
 
