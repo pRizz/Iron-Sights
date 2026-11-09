@@ -6112,6 +6112,15 @@ UTC offset, including daylight saving at the build instant. Windows uses 64-bit
 time conversion in the x86 player. Missing timestamps show `Unavailable`;
 invalid or unconvertible timestamps retain their exact UTC source value.
 A focused port helper owns the copy/layout through a small `front.c` hook.
+The file select screen adds a subtle two-line stamp under the SELECT FILE art,
+left-aligned with it: `Build <number-date> - <short commit>` and
+`Built <local time>`, at half the menu text scale in translucent grey
+(`0x9C9C9CB4`). This label omits the UTC offset (`portFormatBuildTimeCompact`)
+so both lines stay clear of the Import/Export column on web and save-transfer
+builds; a modified build appends ` - modified` to the shorter time line. It is
+not interactive and has no setting; dialogs draw over it. A second
+`front.c` hook in `constructor_menu05_fileselect` calls
+`portFileSelectBuildStamp`, passing the art's lower-left corner.
 The browser's returning-player loading screen uses the same fork attribution
 and formats the runtime manifest's build instant with the browser's locale and
 time zone, including a zone label. Its semantic `time` element and tooltip retain
@@ -6174,6 +6183,16 @@ and its UTC tooltip as well. The broader startup audit passed on retry after
 one initial progress-label sampling gap during visible cartridge insertion.
 Both independent gallery passes reproduce all 72 views and 35 icons unchanged.
 Private evidence is under `build/build-time` and ignored `build_win` logs.
+The file select stamp passes the Linux formatter test, now including the
+compact label (converted offset dropped; raw fallback and `Unavailable` kept).
+The Docker MinGW Windows build compiles it without warnings. Real-ROM captures
+of a save-transfer build at 1920x1080, 1440x1080 and 1280x720 (`GE_MENU=select`,
+ignored `build_win/filestamp-*`) show both lines under SELECT FILE, clear of
+the Import/Export icons, with "modified" on the time line. An earlier one-line
+"(modified)" variant at 0.55 scale overlapped the Export icon and was dropped.
+The browser build's smaller SELECT FILE art was not captured.
+Both independent gallery passes reproduced all 72 views and 38 icons with zero
+changed image cells; only the gallery's source fingerprint changed.
 
 ### FORK-021 — Enhanced community font textures (removed)
 

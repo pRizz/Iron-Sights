@@ -3702,6 +3702,9 @@ Gfx *constructor_menu05_fileselect(Gfx *DL)
 
         texSelect(&DL, mainfolderimages + IMG_SEL, 4, 0, 0);
         display_image_at_position(&DL, &selectpos.f[0], &selecthalfsize.f[0], (mainfolderimages + IMG_SEL)->width, (mainfolderimages + IMG_SEL)->height, 0, 0, 1, 0xFF, 0xFF, 0xFF, 0xFF, (s32) (mainfolderimages + IMG_SEL)->level > 0, 0);
+#ifndef TARGET_N64
+        DL = portFileSelectBuildStamp(DL, (s32) (selectpos.f[0] - selecthalfsize.f[0]), (s32) (selectpos.f[1] + selecthalfsize.f[1])); /* FORK-020 */
+#endif
     }
 
 #ifndef TARGET_N64

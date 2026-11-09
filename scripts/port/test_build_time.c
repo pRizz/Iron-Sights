@@ -58,6 +58,15 @@ int main(void)
     portFormatBuildTime(tiny, 0, NULL);
     assert(tiny[1] == '\0');
     portFormatBuildTime(NULL, 0, NULL);
+    /* Arrange/act/assert: the compact label drops only a converted offset. */
+    char compact[64];
+    portFormatBuildTimeCompact(compact, sizeof(compact), "2024-02-29T12:00:00Z");
+    assert(!strcmp(compact, "Feb 29, 2024 12:00 PM"));
+    portFormatBuildTimeCompact(compact, sizeof(compact), "2026-02-29T12:00:00Z");
+    assert(!strcmp(compact, "2026-02-29T12:00:00Z"));
+    portFormatBuildTimeCompact(compact, sizeof(compact), NULL);
+    assert(!strcmp(compact, "Unavailable"));
+    portFormatBuildTimeCompact(NULL, 0, NULL);
     puts("Local build-time display: DST, rollover, offsets, validation and bounds passed.");
     return 0;
 }

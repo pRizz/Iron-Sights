@@ -54,3 +54,11 @@ void portFormatBuildTime(char *output, size_t capacity, const char *maybeUtc)
     snprintf(output, capacity, "%s UTC%c%02ld:%02ld", readable,
         offset < 0 ? '-' : '+', magnitude / 3600, magnitude / 60 % 60);
 }
+
+void portFormatBuildTimeCompact(char *output, size_t capacity, const char *maybeUtc)
+{
+    char *offset;
+    portFormatBuildTime(output, capacity, maybeUtc);
+    /* Only a converted time has " UTC"; raw fallback stamps stay exact. */
+    if (output && capacity && (offset = strstr(output, " UTC"))) *offset = '\0';
+}
