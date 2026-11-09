@@ -57,6 +57,7 @@
 #ifndef TARGET_N64
 #include "frametiming.h"   /* portAnimTicks / portLagStep: sub-field smoothing */
 #include "cheat.h"         /* cheatIsActive(CHEAT_PORT_UNLOCK_DOORS) - propdoorInteract */
+#include "port_tracers.h"  /* Shotgun Tracers (FORK-063) */
 extern s32 g_PortFadeDbg;  /* the fade diagnostic (cl_fadedbg), defined beside posIsOnScreen */
 static void portFadeNote(PropRecord *prop, s32 state, s32 alpha, f32 foga);
 #endif
@@ -7127,6 +7128,9 @@ Gfx *weaponRenderTracers(Gfx *gdl)
                 chr = prop->chr;
                 gdl = sub_GAME_7F061E18(gdl, &chr->beams[0], one);
                 gdl = sub_GAME_7F061E18(gdl, &chr->beams[1], one);
+#ifndef TARGET_N64
+                gdl = portChrShotgunTracersDraw(gdl, chr); /* Shotgun Tracers (FORK-063) */
+#endif
             }
             else if (one == type)
             {
@@ -7147,6 +7151,9 @@ Gfx *weaponRenderTracers(Gfx *gdl)
                         chr2 = prop->chr;
                         gdl = sub_GAME_7F061E18(gdl, &chr2->beams[0], one);
                         gdl = sub_GAME_7F061E18(gdl, &chr2->beams[1], one);
+#ifndef TARGET_N64
+                        gdl = portPelletTracersDrawOther(gdl, playernum); /* Shotgun Tracers (FORK-063) */
+#endif
                     }
                 }
             }

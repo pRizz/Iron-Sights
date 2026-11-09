@@ -214,6 +214,19 @@ padN_stickmode.
                       |            | glow and a minimum on-screen width so long
                       |            | shots stay visible. 100 = original. Not the
                       |            | lasers. Iron Sights > Combat Feedback
+  shotgun_tracers     | 1          | 1 = Shotgun and Automatic Shotgun blasts
+                      |            | draw a thinner tracer for each of the five
+                      |            | pellets (in multiplayer other players see
+                      |            | them too); a guard's shotgun, which fires
+                      |            | one shot, draws one. Styled by
+                      |            | tracer_strength. Drawing only.
+                      |            | Iron Sights > Combat Feedback
+  decorative_pellets  | 1          | 1 = with shotgun_tracers on, a guard's
+                      |            | shotgun shot also draws four fake pellet
+                      |            | tracers in a 3-degree cone around the real
+                      |            | one. Decorative only: enemies fire a
+                      |            | single shot, which alone can hit.
+                      |            | Iron Sights > Combat Feedback
   objective_notifications | 1     | Named objective status alerts; 0 = original
   mission_hints       | 1          | Desktop solo mission-start control hints.
                       |            | Iron Sights > HUD Additions.

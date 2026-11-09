@@ -30,6 +30,121 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-063 — Shotgun Tracers: a tracer per pellet, and Decorative Pellets
+
+**Status:** Implemented on 2026-11-08 and built for Windows; a scripted Dam
+capture showed the player's pellet tracers. The owner then asked for other
+players' pellets and guards' shotguns too; those were added the same day and
+smoke-tested (a solo shotgun run and a two-player Temple run both exit
+cleanly) but have not been seen in a capture. Decorative Pellets followed at
+the owner's request. After play-testing, the owner made both settings on by
+default (they were off at first).
+Linux and browser builds not run locally.
+
+Inherited behaviour: a Shotgun or Automatic Shotgun blast fires
+`NUMBER_SHOTGUN_BULLETS` (5) pellets through `chraiDefaultWeaponFireHandler`
+in `chraiCheckUseHeldItem` (`chrprop.c`). Each pellet's hit calls
+`gunSetTracerTarget`, but tracers are only created for the weapons listed in
+`gunUpdateAndFire`, which leave out both shotguns, and each hand has one
+`weapon_beam`, so shotguns draw no tracer. Guards fire a shotgun as a single
+shot (`chrlvFireWeaponRelated` in `chraction.c`), and its tracer list leaves
+shotguns out too.
+
+**Gameplay > Iron Sights > Combat Feedback > Shotgun Tracers**
+(`[display] shotgun_tracers`: 0 Off, 1 On; default 1), after Tracer Strength
+in the Options folder and on the watch. When on, each pellet of a player's
+blast draws its own tracer from the drawn muzzle to that pellet's hit. In
+multiplayer each pellet also gets a beam from the shooter's third-person gun
+(`field_2A18`) for the other players' views, under the same 5-degree
+agreement check `gunCreateBeamForHand` applies to a bullet
+(`portPelletSameDirection`). A guard's shotgun shot draws one beam from its
+muzzle to the shot's end (the guard fires one shot, so there are no pellets
+to draw).
+
+**Decorative Pellets** (`[display] decorative_pellets`: 0 Off, 1 On; default
+1), after Shotgun Tracers in both menus, takes effect only while Shotgun
+Tracers is on (`portDecorativePelletsEnabled`). A guard's shotgun shot then
+also draws four fake pellet tracers whose directions lie uniformly in a
+3-degree cone around the real shot (`portPelletDecorativeEnd`,
+`PORT_DECORATIVE_PELLET_CONE_TAN`), each as long as the real shot. They are
+not tested against walls, so one can pass slightly into the surface the real
+shot hit. Its help line says why: enemies really fire a single shot, which
+alone can hit. The label is shorter than the requested "Decorative Enemy
+Pellet Tracers" because that would be ten characters longer than any existing
+row; the help line names enemies instead.
+
+- **Hooks.** The pellet loop calls `portPelletTracerRecord(hand, i)` after
+  each pellet, copying the tracer target it just set. `gunUpdateAndFire`'s
+  tracer switch gains a shotgun case that places the muzzle with
+  `gunWeaponFovPlaceWorld` and calls `portPelletTracersCreate`, which skips a
+  hit nearer than the muzzle as `gunCreateBeamForHand` does. The player
+  branch of the beam-timer tick in `chrprop.c` calls
+  `portPelletTracersAdvance`, and `gunRenderFirstPersonGunModels` draws them
+  with `portPelletTracersDraw` right after the hand's own tracer. The other
+  players' beams are drawn by `portPelletTracersDrawOther` beside the native
+  multiplayer character beams in `propobj.c`. `chrlvFireWeaponRelated` calls
+  `portChrShotgunTracer` when a guard's shotgun fires a traced shot (`sp264`,
+  every shot for single-shot weapons), before its weapon list would discard
+  it; the NPC branch of the beam tick advances it
+  (`portChrShotgunTracersAdvance`) and the character branch of the beam draw
+  draws it (`portChrShotgunTracersDraw`).
+- **Same look, own timing.** Pellet beams are drawn by the native tracer
+  draw, so Tracer Strength styles them, at `PORT_PELLET_TRACER_SCALE` (60%)
+  of a bullet tracer's width and glow alpha (60% of the native width even at
+  100%). `portPelletBeamInit` and `portPelletBeamAdvance` reproduce the native
+  setup and timer numbers (10000-unit path cap, a fifth of the path per field
+  with a 500-unit floor, the 3000-unit streak cap, a start up to one step
+  either side) but take their random start from a private xorshift generator
+  and always advance by `g_GlobalTimerDelta`. The native setup and timer draw
+  `randomGetNext`, so reusing them would shift the game RNG; these never do,
+  so hits, AI and demos are unchanged.
+- **State.** Five first-person beams, five third-person beams and five
+  recorded hits per player and hand in `port_pellet_tracers.c`, started spent.
+  A new blast replaces the hand's previous pellet beams. Guards' beams live in
+  16 slots keyed by character; a slot is free, and never drawn, once
+  60 ticks old, so a character that leaves play (or a reused record) cannot
+  show a stale beam, and when all are busy the oldest in turn is reused.
+  Each guard hand holds five beams: the real shot first, then the decorative
+  ones, drawn from the same private generator.
+- **Input.** An ordinary toggle row, so keyboard, mouse, gamepad and touch
+  change it like any other.
+
+`port_tracers.h` forward-declares `struct BeamRecord` and `struct coord3d`
+because including `bondtypes.h` there clashed with the platform headers in
+`video.c`.
+
+**Sources:** [pellet hooks](port/src/port_pellet_tracers.c), pellet beam
+math, option and look in [port_tracers.c](port/src/port_tracers.c) and its
+[header](port/include/port_tracers.h); hooks in [chrprop.c](src/game/chrprop.c),
+[gunfire.c](src/game/gunfire.c), [chraction.c](src/game/chraction.c) and
+[propobj.c](src/game/propobj.c); rows in
+[port_options.c](port/src/port_options.c), [front.c](src/game/front.c) and
+[port_watchpages.c](port/src/port_watchpages.c), [help](port/src/port_option_help.c),
+[ini template](port/src/video.c), [ini reference](tools/midas_ini_help.txt) and
+[README](README.md).
+**Checks:** [tracer tests](scripts/port/test_tracers.c), run by
+[test_ads.sh](scripts/port/test_ads.sh), cover the default and menu bridge,
+the pellet look at 200% and 100%, the native setup numbers, the path cap,
+pellets that start past their hit, zero-length paths, the five-field
+crossing at a quarter-field tick, the 5-degree multiplayer agreement, and
+Decorative Pellets' default, its dependence on Shotgun Tracers, and fan ends
+that keep the shot's length and sit on the 3-degree rim for level and
+straight-up shots; the test links no `randomGetNext`, so a
+call from this code would fail to build. They pass (Docker
+`midas-linux-release`), as do `settings_placement.py` and
+`bright-builds-check.ts all`. The Windows build compiles; the regenerated
+hand gallery changed 0 image cells. A scripted capture (Dam, All Guns cheat,
+`GE_AUTOWHEEL=20,770` to the Shotgun, `GE_AUTOFIRE`, `GE_SHOT=1`, isolated
+copies in `build_win/tracer-audit-*`) showed orange pellet tracers at each
+impact in the frames after a blast with the option on and none with it off.
+The muzzle flash covers the firing frame, and the runs were not
+frame-identical, so the comparison is visual rather than a pixel count. The
+capture frames were deleted afterwards; the logs remain. After the
+multiplayer and guard additions, `test_upstream_merge.sh` also passes, and
+a solo shotgun run and a two-player Temple run (`GE_MP=temple`,
+`GE_MPPLAYERS=2`, `GE_MPDRIVE=1`, option on) exit cleanly; neither shows a
+multiplayer shotgun or a shotgun guard on screen.
+
 ### FORK-062 — Tracer Strength: wider, longer, glowing bullet tracers
 
 **Status:** Implemented on 2026-11-08 and built for Windows; a scripted Dam
@@ -66,7 +181,8 @@ render mode, then the core over it.
   `randomGetNext`, hits and demos are unchanged. The lifetime is therefore the
   native one; a visual afterglow that outlives the native timer would be a
   separate addition.
-- **Not covered.** Shotguns still have no tracers, as natively.
+- **Not covered.** Shotguns draw no tracers natively; FORK-063 adds a tracer
+  per pellet, on by default.
 - **Input.** An ordinary percentage row, so keyboard, mouse, gamepad and touch
   adjust it like any other.
 
@@ -2097,7 +2213,7 @@ subsections, in both the Options folder and the watch:
 | Subsection | Settings |
 | --- | --- |
 | Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Sprint, Ludicrous Sprint |
-| Combat Feedback | Hit Markers, Hit Sounds, Damage Direction, Tracer Strength (FORK-062) |
+| Combat Feedback | Hit Markers, Hit Sounds, Damage Direction, Tracer Strength (FORK-062), Shotgun Tracers and Decorative Pellets (FORK-063) |
 | HUD Additions | Always Crosshair Size, Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
 | System | About / Build Info, Fonts (FORK-051, FORK-052), Crash Reporting (Windows/Linux) |
 

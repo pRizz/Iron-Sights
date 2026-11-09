@@ -56,6 +56,8 @@ static const struct PortOptHelp sHelp[] = {
     { "mission_timer",      "Shows elapsed mission time." },
     { "hit_sounds",         "Hits sound as they do up close, at any range. Solo only." },
     { "tracer_strength",    "Bullet tracers wider, longer and glowing. 100% is the original." },
+    { "shotgun_tracers",    "Shotguns draw tracers: a thin one per pellet, guards one per shot." },
+    { "decorative_pellets", "Enemies really fire one shotgun shot; this adds 4 fake pellets. Needs Shotgun Tracers." },
     { "debrief_hit_map",    "Solo debrief maps each bullet hit. Select the hit counts for figures and per-part stats." },
     { "pause_pillars",      "Black side bars ease in while paused." },
     { "hud_wide",           "Wide moves ammo and messages to the screen edges." },

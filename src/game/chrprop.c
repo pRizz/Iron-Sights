@@ -36,6 +36,9 @@
 #include "objective_status.h"
 #include "stan.h"
 #include "tex.h"
+#ifndef TARGET_N64
+#include "port_tracers.h"
+#endif
 
 
 // bss
@@ -1622,6 +1625,9 @@ void chraiCheckUseHeldItem(s32 hand)
             for (i=0; i<NUMBER_SHOTGUN_BULLETS; i++)
             {
                 chraiDefaultWeaponFireHandler(hand);
+#ifndef TARGET_N64
+                portPelletTracerRecord(hand, i); /* Shotgun Tracers (FORK-063) */
+#endif
             }
         }
         else if (item_id == ITEM_CAMERA)
@@ -1856,6 +1862,9 @@ void chrpropTick(void)
             // Update NPC bullet tracers.
             gunAdvanceBeamTimer(&chr->beams[0]);
             gunAdvanceBeamTimer(&chr->beams[1]);
+#ifndef TARGET_N64
+            portChrShotgunTracersAdvance(chr); /* Shotgun Tracers (FORK-063) */
+#endif
         }
         else if (((prop->type == PROP_TYPE_OBJ) || (prop->type == PROP_TYPE_WEAPON)) || (prop->type == PROP_TYPE_DOOR))
         {
@@ -1983,6 +1992,9 @@ void chrpropTick(void)
                 gunAdvanceBeamTimer(&g_playerPointers[playernum]->hands[0].weapon_beam);
                 playernum = getPlayerPointerIndex(prop);
                 gunAdvanceBeamTimer(&g_playerPointers[playernum]->hands[1].weapon_beam);
+#ifndef TARGET_N64
+                portPelletTracersAdvance(playernum); /* Shotgun Tracers (FORK-063) */
+#endif
 
                 // Update MP character bullet tracers.
                 if (prop->chr != NULL)

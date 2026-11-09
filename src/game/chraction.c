@@ -36,6 +36,7 @@
 #include "port_hud.h"
 #include "port_hit_sound.h"
 #include "port_hitmap.h"
+#include "port_tracers.h"
 #endif
 
 #ifndef TARGET_N64
@@ -7166,6 +7167,16 @@ void chrlvFireWeaponRelated(ChrRecord *self, s32 hand)
                                 recall_joy2_hits_edit_flag(prop_selfchr->act_attack.attack_item, &sp258, -1);
                             }
                         }
+
+#ifndef TARGET_N64
+                        /* Shotgun Tracers (FORK-063): a guard's shotgun fires one shot, which gets one beam. */
+                        if ((sp264 != 0)
+                            && ((prop_selfchr->act_attack.attack_item == ITEM_SHOTGUN)
+                                || (prop_selfchr->act_attack.attack_item == ITEM_AUTOSHOT)))
+                        {
+                            portChrShotgunTracer(self, hand, prop_selfchr->act_attack.attack_item, &sp240, &sp258);
+                        }
+#endif
 
                         if (sp264 != 0)
                         {

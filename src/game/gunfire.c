@@ -1431,6 +1431,17 @@ void gunUpdateAndFire(GUNHAND handnum)
 #endif
                 gunCreateBeamForHand(handnum);
                 break;
+#ifndef TARGET_N64
+            case ITEM_SHOTGUN:
+            case ITEM_AUTOSHOT:
+                if (portShotgunTracersEnabled())
+                {   /* Shotgun Tracers (FORK-063): one beam per pellet, from the drawn muzzle */
+                    coord3d pelletstart = hand->field_B58;
+                    gunWeaponFovPlaceWorld(handnum, &pelletstart);
+                    portPelletTracersCreate(handnum, item, &pelletstart, hand->field_B64);
+                }
+                break;
+#endif
             }
         }
     }
@@ -2154,6 +2165,9 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
         if (item != ITEM_WATCHLASER)
         {
             gdl = sub_GAME_7F061E18(gdl, &handptr->weapon_beam, 0);
+#ifndef TARGET_N64
+            gdl = portPelletTracersDraw(gdl, handnum); /* Shotgun Tracers (FORK-063) */
+#endif
         }
 
 #ifndef TARGET_N64
