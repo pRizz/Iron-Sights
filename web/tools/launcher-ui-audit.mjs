@@ -65,6 +65,16 @@ try {
             await readFile(new URL(`../icons/${name}.${extension}`, import.meta.url)),
         );
     }
+    // The web app manifest, its icons and the link-preview image load beneath the project path.
+    const manifestHref = await page.locator('link[rel="manifest"]').getAttribute('href');
+    const manifestUrl = new URL(manifestHref, page.url());
+    const webManifest = await (await page.request.get(manifestUrl.href)).json();
+    assert.equal(webManifest.display, 'browser', 'Standalone mode would split iOS storage');
+    for (const src of [...webManifest.icons.map((icon) => icon.src), 'social-card.png']) {
+        const response = await page.request.get(new URL(src, manifestUrl).href);
+        assert.ok(response.ok(), `${src} did not load under the deployment path`);
+        assert.match(response.headers()['content-type'], /^image\/png/);
+    }
     await page.keyboard.press('F2');
     await page.getByText('Saved on this device', { exact: true }).waitFor({ timeout: 60_000 });
     const before = await download(page);

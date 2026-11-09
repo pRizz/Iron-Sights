@@ -51,7 +51,10 @@ version on an opaque full square for iOS. The generator writes:
 - `port/include/icon.png`: a 1024 px desktop master, which `package_linux.py`
   still ships as `iron-sights.png` for the Linux packages and the Steam Deck
   application menu (the icon in Steam's "Add a Non-Steam Game" list);
-- FORK-024's web icons and FORK-046's Steam art, which stayed byte-identical.
+- FORK-024's web icons and FORK-046's Steam art, which stayed byte-identical;
+- since FORK-024's search metadata, the web app manifest's 192/512 px desktop
+  icons and opaque maskable 512 px icon in `web/public/icons/`, and the
+  1200x630 link-preview image `web/public/social-card.png`.
 
 The file names and paths are unchanged, so the `.rc` file, CMake, `gfx_sdl2.cpp`
 and the packager change only in comments that named the old script. Upstream's
@@ -6377,6 +6380,52 @@ production assembly, the exact artifact policy, and the launcher audit in
 system Chrome under `/Iron-Sights/`. `test_steam_art.py` checks the ICO sizes,
 the opaque 180 px PNG, and both links. The new icons have not yet been tried on
 a real iPhone Home Screen.
+
+Search and link-preview metadata (2026-11-08): the title is now "Iron Sights ·
+Play GoldenEye 007 in your browser" (previously "Iron Sights · Browser preview"),
+and the description says what the site does and that players bring their own
+ROM. Static Open Graph and Twitter tags give the title, description, a
+`summary_large_image` card and the preview image's size and alt text. Chat apps
+and social sites read these without running JavaScript. The page had
+previously offered only its title. The absolute-URL tags (canonical, `og:url`,
+`og:image`, `twitter:image`) need the deployed address. `vite.config.ts` injects
+them only when `MIDAS_SITE_URL` is set, so a local or forked build never points
+at this deployment. The Pages workflow sets it from the repository owner and
+name. `web/tools/site-meta.ts` validates the address (https, ending in /, no
+query) and builds the tags. A `<noscript>` block gives crawlers and readers
+without JavaScript a description, links to the releases and source, and a
+statement that the fan project is not affiliated with Nintendo, Rare, Microsoft
+or the James Bond franchise owners. `web/public/manifest.webmanifest` names the
+app and its 192/512 px and maskable icons for Android and Chrome home screens.
+It deliberately keeps `display: browser`: an iOS standalone Home Screen app
+gets storage separate from Safari, which would split the remembered ROM and
+saves. That mode waits for a device test.
+
+The 1200x630 preview image and the manifest icons are `make_brand_art.py`
+outputs (FORK-059), published unhashed from `web/public` so the absolute
+`og:image` URL stays stable. `verify-site.ts` allows the manifest and exactly
+the `web/public` images recorded in `scripts/port/brand-art.sha256`
+(`brand-assets.ts`), and checks their bytes against that record. It also checks
+the manifest link, that every manifest icon is published, and every absolute tag
+when `MIDAS_SITE_URL` is set. The launcher audit loads the manifest, its icons
+and the preview image under `/Iron-Sights/`, and asserts the `browser` display
+mode. The audit server maps `.webmanifest` to `application/manifest+json`.
+
+Robots and sitemap files are not added: crawlers read `robots.txt` only at the
+`prizz.github.io` root, another repository, and one page needs no sitemap. The
+owner can add the site to Google Search Console. A Lighthouse 12.6.1 baseline
+of the deployed site before this change scored 100 for accessibility, best
+practices and SEO. On mobile it measured a 1.4 s first contentful paint, a
+4.7 s speed index, no layout shift, and 6.4 s of JavaScript boot-up (desktop:
+0.4 s, 1.8 s and 1.8 s). It gives no performance score, because the page's
+largest paint is the WebGL canvas, which Lighthouse never counts as Largest
+Contentful Paint. The only non-passing audit, missing source maps, carries no
+weight. The local build with these changes keeps all three scores at 100. The
+14 new unit tests among 242 web tests, TypeScript, assembly with the Pages
+address, `verify:site` (and its rejection of a mismatched address or an
+altered image), the launcher audit in system Chrome and `test_steam_art.py`
+pass. Real link previews and Android's manifest handling can be checked only
+after deployment.
 
 The root CMake project now has Emscripten core and SDL2/WebGL 2 configurations.
 It keeps native flags/link processing separate, uses the verified high data

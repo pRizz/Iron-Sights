@@ -5,6 +5,8 @@ import { parseRuntimeManifest } from '../src/runtime-manifest.ts';
 import { GAME_FILES } from './runtime-artifacts.ts';
 import { ROOM_ASSETS } from './room-assets.ts';
 import { frontendFiles, ICON_SOURCES } from './frontend-files';
+import { publicBrandAssets } from './brand-assets';
+import { absoluteSiteTags, renderedSiteTag, siteUrl, SOCIAL_CARD, WEB_MANIFEST } from './site-meta';
 
 const root = new URL('../../build/web-site/', import.meta.url);
 const manifest = parseRuntimeManifest(
@@ -38,12 +40,40 @@ if (
     linked.some((file) => !frontend.includes(file))
 )
     throw new Error('The site is missing its built launcher assets');
+const brandAssets = publicBrandAssets(
+    await readFile(new URL('../../scripts/port/brand-art.sha256', import.meta.url), 'utf8'),
+);
+for (const asset of brandAssets) {
+    const bytes = await readFile(new URL(asset.path, root));
+    if (createHash('sha256').update(bytes).digest('hex') !== asset.sha256)
+        throw new Error('The published image differs from its generated source: ' + asset.path);
+}
+if (!html.includes(`<link rel="manifest" href="./${WEB_MANIFEST}"`))
+    throw new Error('The site is missing its web app manifest link');
+const webManifest = JSON.parse(await readFile(new URL(WEB_MANIFEST, root), 'utf8'));
+if (
+    !Array.isArray(webManifest.icons) ||
+    !webManifest.icons.length ||
+    webManifest.icons.some(
+        (icon: { src?: unknown }) => !brandAssets.some((asset) => asset.path === icon.src),
+    )
+)
+    throw new Error('The web app manifest names an icon the site does not publish');
+const maybeSite = siteUrl(process.env.MIDAS_SITE_URL);
+if (maybeSite)
+    for (const tag of absoluteSiteTags(maybeSite))
+        if (!html.includes(renderedSiteTag(tag)))
+            throw new Error('The site is missing its absolute tag: ' + renderedSiteTag(tag));
+if (!brandAssets.some((asset) => asset.path === SOCIAL_CARD))
+    throw new Error('The site is missing its link-preview image');
 const allowed = new Set([
     'index.html',
     'frontend-manifest.json',
     'runtime-manifest.json',
     'LICENSE.txt',
     'THIRD_PARTY_NOTICES.txt',
+    WEB_MANIFEST,
+    ...brandAssets.map((asset) => asset.path),
     ...frontend,
     ...ROOM_ASSETS.map((file) => file.path),
     ...GAME_FILES.map((file) => manifest.base + file),

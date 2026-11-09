@@ -9,7 +9,7 @@
     "build": "bun tools/build-site.ts",
     "verify:site": "bun tools/verify-site.ts",
     "typecheck": "tsc --noEmit",
-    "test": "bun test src tools/runtime-policy.test.ts tools/frontend-files.test.ts tools/model-geometry.test.mjs tools/audio-quality.test.mjs tools/audio-output.test.mjs tools/casing-velocity.test.mjs",
+    "test": "bun test src tools/runtime-policy.test.ts tools/frontend-files.test.ts tools/site-meta.test.ts tools/brand-assets.test.ts tools/model-geometry.test.mjs tools/audio-quality.test.mjs tools/audio-output.test.mjs tools/casing-velocity.test.mjs",
     "audit:runtime": "node tools/runtime-audit.mjs",
     "audit:menus": "node tools/menu-audit.mjs",
     "audit:launcher": "node tools/launcher-game-audit.mjs",

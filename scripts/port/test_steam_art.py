@@ -1,6 +1,7 @@
 """ROM-free checks for the generated icons, Steam Deck artwork and set-steam-art.py."""
 import hashlib
 import importlib.util
+import json
 import os
 from pathlib import Path, PurePosixPath
 import shutil
@@ -61,6 +62,8 @@ class BrandIcons(unittest.TestCase):
     EXPECTED = {
         "port/win/ProjectMidas.ico", "port/include/icon_rgba.h", "port/include/icon.png",
         "web/icons/favicon.ico", "web/icons/apple-touch-icon.png",
+        "web/public/icons/icon-192.png", "web/public/icons/icon-512.png",
+        "web/public/icons/icon-maskable-512.png", "web/public/social-card.png",
         "scripts/port/linux/steam-art/cover.png", "scripts/port/linux/steam-art/banner.png",
         "scripts/port/linux/steam-art/hero.png", "scripts/port/linux/steam-art/logo.png",
     }
@@ -116,6 +119,15 @@ class WebIcons(unittest.TestCase):
         path = WEB_ICONS / "apple-touch-icon.png"
         self.assertEqual(png_size(path), (180, 180))
         self.assertEqual(path.read_bytes()[25], 2)  # IHDR colour type 2: truecolour, no alpha
+
+    def test_manifest_icons_and_preview_image_have_their_sizes(self):
+        public = ROOT / "web/public"
+        manifest = json.loads((public / "manifest.webmanifest").read_text(encoding="utf-8"))
+        for icon in manifest["icons"]:
+            with self.subTest(icon=icon["src"]):
+                width, height = (int(n) for n in icon["sizes"].split("x"))
+                self.assertEqual(png_size(public / icon["src"]), (width, height))
+        self.assertEqual(png_size(public / "social-card.png"), (1200, 630))
 
     def test_launcher_links_both_icons(self):
         html = (HERE.parents[1] / "web/index.html").read_text(encoding="utf-8")

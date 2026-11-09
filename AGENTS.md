@@ -153,7 +153,8 @@ pass its isolated executable rather than rebuilding an active player binary.
   resuming, keep its provenance rules (drawn from scratch, MIT, no ROM-derived
   data in the assets), and update its milestone status table before handing off.
 - Application icons (the Windows executable, window, Linux and Steam Deck menu,
-  browser favicon and Home Screen) and the Steam library art all come from
+  browser favicon, Home Screen and web app manifest), the link-preview image
+  and the Steam library art all come from
   `python scripts/port/make_brand_art.py`. Change the design there, rerun it,
   and commit its outputs together with `scripts/port/brand-art.sha256`;
   `test_steam_art.py` fails if an output no longer matches the generator. A new

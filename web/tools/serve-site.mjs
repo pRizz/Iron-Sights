@@ -21,6 +21,7 @@ const types = {
     '.css': 'text/css',
     '.wasm': 'application/wasm',
     '.json': 'application/json',
+    '.webmanifest': 'application/manifest+json',
     '.html': 'text/html',
     '.txt': 'text/plain',
     '.avif': 'image/avif',

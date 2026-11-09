@@ -1,11 +1,21 @@
 import { defineConfig } from 'vite';
 import solid from 'vite-plugin-solid';
 import { runtimeArtifacts } from './tools/runtime-artifacts.ts';
+import { absoluteSiteTags, siteUrl } from './tools/site-meta.ts';
+
+const maybeSite = siteUrl(process.env.MIDAS_SITE_URL);
 
 export default defineConfig({
     base: './',
     plugins: [
         solid(),
+        {
+            name: 'iron-sights-site-meta',
+            transformIndexHtml: () =>
+                maybeSite
+                    ? absoluteSiteTags(maybeSite).map((tag) => ({ ...tag, injectTo: 'head' as const }))
+                    : [],
+        },
         {
             name: 'iron-sights-local-runtime',
             configureServer(server) {

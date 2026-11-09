@@ -493,6 +493,23 @@ MIME types and exact committed bytes. 228 web tests, TypeScript, assembly,
 Next action: after publishing, add the site to an iPhone Home Screen and confirm
 the sight icon and label.
 
+**Search and link previews, 2026-11-08:** A Lighthouse baseline of the deployed
+site scored 100 for accessibility, best practices and SEO. It gives no
+performance score, because the WebGL canvas is never counted as Largest
+Contentful Paint. On mobile: first contentful paint 1.4 s, speed index 4.7 s,
+JavaScript boot-up 6.4 s. The page gains a descriptive title and description,
+Open Graph and Twitter tags, and a generated 1200x630 preview image. It also
+gains a `<noscript>` description with a statement of non-affiliation, and a
+web app manifest that keeps `display: browser`, so iOS storage is not split.
+Canonical and absolute image URLs come from `MIDAS_SITE_URL`, which the Pages
+workflow sets. `verify:site` checks them, the manifest and the generated images'
+digests, and the launcher audit loads them under `/Iron-Sights/`. 242 web tests,
+assembly, verification and the launcher audit pass, and local Lighthouse scores
+are unchanged. Next action: after deployment, paste the link into a chat app to
+check the preview, try Android's Add to Home screen, and, if the owner wants
+it, register the site in Google Search Console. Test standalone display on an
+iPhone before enabling it.
+
 **Status:** Complete for the local desktop launcher. First/repeat launch,
 storage/error flows and normal Dam capture/audio/focus/watch checks pass.
 

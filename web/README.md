@@ -232,6 +232,8 @@ bun run test:filesystem
 bun run dev
 bun run build
 bun run verify:site
+# Pages builds set MIDAS_SITE_URL (for example https://prizz.github.io/Iron-Sights/)
+# for the canonical and link-preview tags; verify:site requires them when it is set.
 # Serve ../build/web-site on 127.0.0.1:4176, then:
 bun run test:launcher
 bun run audit:launcher ../baserom.u.z64 ../build/web-ui/game

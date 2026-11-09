@@ -15,11 +15,13 @@ gets a new output here, never a separately drawn image. Outputs:
                                     iron-sights.png (Linux and Steam Deck menu entry)
     web/icons/favicon.ico           16/32/48 px browser tab icon
     web/icons/apple-touch-icon.png  opaque 180 px iOS Home Screen icon
+    web/public/icons/icon-{192,512,maskable-512}.png  web app manifest icons
+    web/public/social-card.png      1200 x 630 link preview (Open Graph, Twitter)
     scripts/port/linux/steam-art/{cover,banner,hero,logo}.png  Steam library art
 
 It also records each output's SHA-256 in scripts/port/brand-art.sha256, which
 test_steam_art.py checks, so hand-replaced icons fail CI. --icons-only skips the
-Steam art and its font download.
+Steam art, the social card and their font download.
 
 The artwork is original: an iron-sight picture drawn from polygons and the Iron
 Sights title in Black Ops One (SIL Open Font License 1.1), downloaded from a
@@ -42,6 +44,9 @@ EXE_ICON = ROOT / "port/win/ProjectMidas.ico"
 WINDOW_ICON = ROOT / "port/include/icon_rgba.h"
 MASTER_ICON = ROOT / "port/include/icon.png"
 CHECKSUMS = ROOT / "scripts/port/brand-art.sha256"
+APP_ICONS = ROOT / "web/public/icons"  # web app manifest icons, at fixed published paths
+SOCIAL_CARD = ROOT / "web/public/social-card.png"
+SOCIAL_CARD_SIZE = (1200, 630)
 FAVICON_SIZES = (16, 32, 48)
 EXE_ICON_SIZES = (16, 24, 32, 48, 64, 128, 256)
 SMALL_ICON_MAX = 48  # at or below this size, use the simplified tab art
@@ -60,6 +65,7 @@ SLIDE_TOP, SLIDE_BOTTOM = (24, 27, 29), (9, 10, 11)
 POST = (58, 62, 63)
 EDGE = (92, 99, 103)
 OUTLINE = (26, 18, 6)
+SUBTITLE = (214, 210, 192)
 
 
 def gradient(size, stops):
@@ -248,12 +254,20 @@ def render_icons():
     write_window_icon(WINDOW_ICON)
     icon_art(1024, "desktop").save(MASTER_ICON, optimize=True)
     print(MASTER_ICON)
+    APP_ICONS.mkdir(parents=True, exist_ok=True)
+    for size in (192, 512):
+        icon_art(size, "desktop").save(APP_ICONS / f"icon-{size}.png", optimize=True)
+        print(APP_ICONS / f"icon-{size}.png")
+    # Android crops maskable icons to its own shape, keeping the centre 80%.
+    icon_art(512, "square").convert("RGB").save(APP_ICONS / "icon-maskable-512.png", optimize=True)
+    print(APP_ICONS / "icon-maskable-512.png")
 
 
 def checksum_outputs():
     """All generated files, so a hand-placed replacement shows up in test_steam_art.py."""
     return [EXE_ICON, WINDOW_ICON, MASTER_ICON, WEB_ICONS / "favicon.ico", WEB_ICONS / "apple-touch-icon.png",
-            *(OUTPUT / name for name in ("cover.png", "banner.png", "hero.png", "logo.png"))]
+            *(APP_ICONS / name for name in ("icon-192.png", "icon-512.png", "icon-maskable-512.png")),
+            SOCIAL_CARD, *(OUTPUT / name for name in ("cover.png", "banner.png", "hero.png", "logo.png"))]
 
 
 def write_checksums():
@@ -290,6 +304,14 @@ def title(image, font_path, lines, box):
         fill.paste(gradient((image.width, y1 - y0), (GOLD_TOP, GOLD_MID, GOLD_BOTTOM)), (0, y))
         paint(image, mask, fill)
         y += (y1 - y0) + round(font.size * 0.12)
+
+
+def subtitle(image, font_path, text, box):
+    """One plain light line, scaled to box=(left, top, width)."""
+    left, top, width = box
+    font = fit_font(font_path, text, width)
+    x0, y0, _, _ = font.getbbox(text)
+    ImageDraw.Draw(image).text((left - x0, top - y0), text, font=font, fill=SUBTITLE + (255,))
 
 
 def finish(image, size, path):
@@ -331,6 +353,15 @@ def render(font_path):
     pad = 12 * s
     image = image.crop((left - pad, top - pad, right + pad, bottom + pad))
     finish(image, (image.width // s, image.height // s), OUTPUT / "logo.png")
+
+    # Link-preview image (Open Graph and Twitter cards); its tags give the size.
+    size = SOCIAL_CARD_SIZE
+    image = gradient((size[0] * s, size[1] * s), (SKY_TOP, SKY_BOTTOM))
+    sight_picture(image, 880 * s, 330 * s, 520 * s)
+    vignette(image, 0.5)
+    title(image, font_path, ("IRON", "SIGHTS"), (70 * s, 150 * s, 440 * s))
+    subtitle(image, font_path, "PLAY IN YOUR BROWSER", (74 * s, 400 * s, 432 * s))
+    finish(image, size, SOCIAL_CARD)
 
 
 if __name__ == "__main__":

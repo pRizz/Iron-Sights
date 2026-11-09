@@ -6,14 +6,46 @@
         <meta name="theme-color" content="#121511" />
         <link rel="icon" type="image/x-icon" href="./icons/favicon.ico" />
         <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.webmanifest" />
         <meta name="apple-mobile-web-app-title" content="Iron Sights" />
         <meta
             name="description"
-            content="Play Iron Sights, a fork of Project Midas, with your own GoldenEye ROM. Keep saves on your device and download backups."
+            content="Play GoldenEye 007 in your browser with Iron Sights, a fork of the Project Midas PC port. Bring your own ROM; saves stay on your device."
         />
-        <title>Iron Sights · Browser preview</title>
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Iron Sights" />
+        <meta property="og:title" content="Iron Sights · Play GoldenEye 007 in your browser" />
+        <meta
+            property="og:description"
+            content="A fork of the Project Midas PC port that runs in your browser with your own ROM. Saves stay on your device."
+        />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="Iron Sights: three-dot pistol sights glowing gold" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <title>Iron Sights · Play GoldenEye 007 in your browser</title>
     </head>
     <body>
+        <noscript>
+            <main style="max-width: 40rem; margin: 3rem auto; padding: 0 1rem; color: #e6e4da; font: 16px/1.5 system-ui, sans-serif">
+                <h1>Iron Sights</h1>
+                <p>
+                    Iron Sights runs GoldenEye 007 in your browser through WebAssembly, using a ROM
+                    you supply. It contains no game data, and your ROM and saves stay on your
+                    device. It is a fork of the Project Midas PC port. Playing here needs
+                    JavaScript.
+                </p>
+                <p>
+                    <a style="color: #eab830" href="https://github.com/pRizz/Iron-Sights/releases/latest">Windows, Linux and Steam Deck downloads</a>
+                    ·
+                    <a style="color: #eab830" href="https://github.com/pRizz/Iron-Sights">Source code and instructions</a>
+                </p>
+                <p>
+                    Iron Sights is a fan project. It is not affiliated with or endorsed by
+                    Nintendo, Rare, Microsoft or the owners of the James Bond franchise.
+                </p>
+            </main>
+        </noscript>
         <div id="root"></div>
         <script type="module" src="/src/main.tsx"></script>
     </body>
