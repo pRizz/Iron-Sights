@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+/* FORK-058: before <string>. On Linux it reaches pthread.h -> the game's sched.h
+ * -> PR/gu.h, whose sinf/sqrtf would otherwise precede the C declarations. */
+#include <cmath>
 
 #include <map>
 #include <unordered_map>

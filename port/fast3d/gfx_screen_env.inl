@@ -12,8 +12,9 @@
  * multiplied into the batch's authored reflection texture relative to the
  * screen's average brightness (the metal keeps its colour; the scene shows as
  * light and dark on it, in its colours only by `screen_hue`), mixed by `screen`. Shiny batches draw with
- * that texture on both texture units; nothing else in the pipeline changes. */
-#include <cmath>
+ * that texture on both texture units; nothing else in the pipeline changes.
+ * It uses std::log2 from <cmath>, which gfx_opengl.cpp includes first: here,
+ * after PR/gu.h, the Linux build rejects the C library's sinf/sqrtf. */
 
 static bool gl_env_active = false, gl_env_built = false, gl_env_failed = false;
 static GLuint gl_env_fbo = 0, gl_env_copy = 0, gl_env_copy_fbo = 0, gl_env_map = 0;

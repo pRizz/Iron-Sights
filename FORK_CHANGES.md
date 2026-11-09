@@ -345,6 +345,17 @@ all` pass; the regenerated gallery changed only the ADS images of the PP7,
 AK47 and Klobb (36 images), every changed pixel darker and the counts equal to
 the earlier ADS glint (1,956, 6,432 and 3,286) in all six wardrobes, and it
 verifies.
+Linux build fix (2026-11-08): from `2516632` the Linux CI job failed compiling
+`gfx_opengl.cpp`, because `gfx_screen_env.inl` included `<cmath>` partway
+through the file. On Linux, `<string>` reaches `pthread.h`, which finds the
+game's `src/sched.h` on the include path, then `ultra64.h` and `PR/gu.h`. Its
+`sinf`/`sqrtf` declarations, without a linkage specification, then preceded the
+C library's `extern "C"` ones, which C++ rejects. MinGW and Emscripten were
+unaffected. `gfx_opengl.cpp` now includes `<cmath>` before `<string>` (the
+order `gfx_pc.cpp` already uses), and the `.inl` relies on it. The CI Linux
+build, in the `midas-linux-release` container with `linux_build.py`, compiles
+and links again. The Windows build and an unchanged hand gallery confirm the
+other compilers.
 
 ### FORK-057 — Shader prewarm list recorded over the fork's screens
 
