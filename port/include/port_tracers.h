@@ -22,6 +22,18 @@ struct ChrRecord;
  * four fake pellet tracers in a cone around it, on by default. */
 #define PORT_DECORATIVE_PELLETS_DEFAULT 1
 #define PORT_DECORATIVE_PELLET_CONE_TAN 0.0524f /* tan 3 degrees: the fan's half-angle */
+/* Enemy shotgun tracers are lighter than the player's pellets, as a share of
+ * a bullet tracer: width and minimum width, and glow alpha. Decorative ones
+ * are drawn at half opacity beside the real shot. */
+#define PORT_ENEMY_PELLET_WIDTH 0.4f
+#define PORT_ENEMY_PELLET_GLOW 0.3f
+#define PORT_DECORATIVE_PELLET_ALPHA 128
+
+/* Which shotgun beam a BeamRecord is, kept in its spare unk02 byte. Only read
+ * for shotgun beams, which only this fork creates. */
+#define PORT_TRACER_KIND_PLAYER 0
+#define PORT_TRACER_KIND_ENEMY 1
+#define PORT_TRACER_KIND_DECORATIVE 2
 
 typedef struct PortTracerLook {
     f32 width;     /* multiplier on the native strip width */
@@ -29,6 +41,7 @@ typedef struct PortTracerLook {
     f32 minWidth;  /* minimum full width as a fraction of screen height, 0 = none */
     f32 glowWidth; /* glow strip width relative to the core, 0 = no glow */
     u8 glowAlpha;  /* glow strip vertex alpha */
+    u8 coreAlpha;  /* core strip vertex alpha (255 natively); scales the glow too */
 } PortTracerLook;
 
 /* Pure core. */
@@ -71,6 +84,8 @@ s32 portDecorativePelletsEnabled(void);
  * original. Shotgun pellet tracers always get a look, PORT_PELLET_TRACER_SCALE
  * as wide and as bright in glow as a bullet tracer. */
 s32 portTracerLook(s32 item, PortTracerLook *out);
+/* The same for a beam of PORT_TRACER_KIND_* `kind` (ignored unless a shotgun's). */
+s32 portTracerLookKind(s32 item, s32 kind, PortTracerLook *out);
 
 /* Shotgun Tracers hooks (port_pellet_tracers.c), for the current player. */
 /* chrprop.c: pellet `pellet` of a blast has just set the hand's tracer target. */

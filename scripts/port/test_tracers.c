@@ -35,6 +35,28 @@ static void testPelletLook(void)
     portTracerOptionSet("tracer_strength", PORT_TRACER_STRENGTH_DEFAULT);
 }
 
+static void testEnemyPelletLook(void)
+{
+    PortTracerLook look;
+
+    /* The player's pellets stay at 60% and fully opaque. */
+    assert(portTracerLookKind(ITEM_SHOTGUN, PORT_TRACER_KIND_PLAYER, &look) && look.coreAlpha == 0xff);
+    assert(nearlyEqual(look.width, 1.2f) && nearlyEqual(look.minWidth * 1080.0f, 1.5f));
+
+    /* An enemy's real shot: 40% width and minimum width, 30% glow, opaque. */
+    assert(portTracerLookKind(ITEM_SHOTGUN, PORT_TRACER_KIND_ENEMY, &look));
+    assert(nearlyEqual(look.width, 0.8f) && nearlyEqual(look.minWidth * 1080.0f, 0.6f));
+    assert(look.glowAlpha == 27 && look.coreAlpha == 0xff);
+
+    /* Its decorative pellets: the same, at half opacity. */
+    assert(portTracerLookKind(ITEM_AUTOSHOT, PORT_TRACER_KIND_DECORATIVE, &look));
+    assert(nearlyEqual(look.width, 0.8f) && look.glowAlpha == 27 && look.coreAlpha == PORT_DECORATIVE_PELLET_ALPHA);
+
+    /* A non-shotgun beam ignores whatever its spare byte holds. */
+    assert(portTracerLookKind(ITEM_AK47, PORT_TRACER_KIND_DECORATIVE, &look));
+    assert(look.width == 2.0f && look.coreAlpha == 0xff);
+}
+
 static void testPelletBeams(void)
 {
     const coord3d muzzle = { 0.0f, 0.0f, 0.0f };
@@ -201,6 +223,7 @@ static void testTracers(void)
     testTracerStrips();
     testTracerLaserExemption();
     testPelletLook();
+    testEnemyPelletLook();
     testPelletBeams();
     testPelletSameDirection();
     testDecorativePellets();

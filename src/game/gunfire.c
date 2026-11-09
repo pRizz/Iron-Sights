@@ -1801,9 +1801,10 @@ Gfx *sub_GAME_7F061E18(Gfx *gdl, BeamRecord *flash, s32 arg2)
 
 #ifndef TARGET_N64
         /* Tracer Strength (FORK-062): wider and longer; vertices stay in s16 range. */
-        tracerlooked = portTracerLook(flash->item_id, &tracerlook);
+        tracerlooked = portTracerLookKind(flash->item_id, flash->unk02, &tracerlook);
         if (tracerlooked)
         {
+            templatevtx.v.cn[3] = (u8) ((templatevtx.v.cn[3] * tracerlook.coreAlpha) / 255);
             radius *= tracerlook.width;
             dist *= tracerlook.length;
             if (dist > 3000.0f)

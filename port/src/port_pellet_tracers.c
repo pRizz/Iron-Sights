@@ -223,6 +223,7 @@ void portChrShotgunTracer(const ChrRecord *chr, s32 hand, s32 item, const coord3
     slot->chr = chr;
     slot->stamp = g_GlobalTimer;
     portPelletBeamInit(&slot->beams[hand & 1][0], item, from, to, guardRandom());
+    slot->beams[hand & 1][0].unk02 = PORT_TRACER_KIND_ENEMY;
     for (i = 1; i < NUMBER_SHOTGUN_BULLETS; i++)
     {
         BeamRecord *beam = &slot->beams[hand & 1][i];
@@ -237,6 +238,7 @@ void portChrShotgunTracer(const ChrRecord *chr, s32 hand, s32 item, const coord3
             portPelletDecorativeEnd(from, to, radius, turn, &end);
         }
         portPelletBeamInit(beam, item, from, &end, guardRandom());
+        beam->unk02 = PORT_TRACER_KIND_DECORATIVE;
     }
 }
 

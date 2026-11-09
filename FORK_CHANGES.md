@@ -38,7 +38,8 @@ players' pellets and guards' shotguns too; those were added the same day and
 smoke-tested (a solo shotgun run and a two-player Temple run both exit
 cleanly) but have not been seen in a capture. Decorative Pellets followed at
 the owner's request. After play-testing, the owner made both settings on by
-default (they were off at first).
+default (they were off at first), then asked for enemy pellet tracers to be
+toned down with fixed values, without a new setting.
 Linux and browser builds not run locally.
 
 Inherited behaviour: a Shotgun or Automatic Shotgun blast fires
@@ -106,6 +107,18 @@ row; the help line names enemies instead.
   show a stale beam, and when all are busy the oldest in turn is reused.
   Each guard hand holds five beams: the real shot first, then the decorative
   ones, drawn from the same private generator.
+- **Enemy look.** Guard beams record their kind in the spare `unk02` byte of
+  `BeamRecord` (`PORT_TRACER_KIND_ENEMY`, `PORT_TRACER_KIND_DECORATIVE`; the
+  player's and other players' pellet beams stay `PORT_TRACER_KIND_PLAYER`),
+  and the draw hook asks `portTracerLookKind` for that kind; the byte is only
+  read for shotgun beams, which only this fork creates. An enemy's beams are
+  40% of a bullet tracer's width and minimum on-screen width (the player's
+  pellets keep 60% width and the full minimum) and 30% of its glow alpha;
+  decorative ones also draw at half opacity (core vertex alpha 128, which the
+  glow strip inherits), so the real shot stands out. At Tracer Strength 200%
+  that is about 4.8 world units wide with a 0.6 px minimum. The draw hook
+  scales the template vertex alpha by the look's `coreAlpha`, which is 255,
+  and so unchanged, for every other tracer.
 - **Input.** An ordinary toggle row, so keyboard, mouse, gamepad and touch
   change it like any other.
 
@@ -127,9 +140,10 @@ math, option and look in [port_tracers.c](port/src/port_tracers.c) and its
 the pellet look at 200% and 100%, the native setup numbers, the path cap,
 pellets that start past their hit, zero-length paths, the five-field
 crossing at a quarter-field tick, the 5-degree multiplayer agreement, and
-Decorative Pellets' default, its dependence on Shotgun Tracers, and fan ends
+Decorative Pellets' default, its dependence on Shotgun Tracers, fan ends
 that keep the shot's length and sit on the 3-degree rim for level and
-straight-up shots; the test links no `randomGetNext`, so a
+straight-up shots, and the player, enemy and decorative looks (including a
+non-shotgun beam ignoring the kind byte); the test links no `randomGetNext`, so a
 call from this code would fail to build. They pass (Docker
 `midas-linux-release`), as do `settings_placement.py` and
 `bright-builds-check.ts all`. The Windows build compiles; the regenerated

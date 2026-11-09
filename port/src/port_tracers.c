@@ -43,6 +43,7 @@ void portTracerLookFor(s32 percent, PortTracerLook *out)
     out->minWidth = extra * TRACER_MIN_PX_PER_STEP / TRACER_REFERENCE_LINES;
     out->glowWidth = extra > 0.0f ? TRACER_GLOW_WIDTH : 0.0f;
     out->glowAlpha = (u8) (alpha > TRACER_GLOW_ALPHA_MAX ? TRACER_GLOW_ALPHA_MAX : alpha);
+    out->coreAlpha = 0xff;
 }
 
 f32 portTracerMinWidthScale(f32 radius, f32 depth, f32 tanHalfFovY, const PortTracerLook *look)
@@ -220,17 +221,30 @@ s32 portTracerOptionSet(const char *key, s32 value)
 s32 portShotgunTracersEnabled(void) { return shotgunTracers; }
 s32 portDecorativePelletsEnabled(void) { return shotgunTracers && decorativePellets; }
 
-s32 portTracerLook(s32 item, PortTracerLook *out)
+s32 portTracerLookKind(s32 item, s32 kind, PortTracerLook *out)
 {
     portTracerLookFor(PORT_TRACER_STRENGTH_MIN, out);
     /* The lasers' beams keep their own look. */
     if (item == ITEM_LASER || item == ITEM_WATCHLASER) return FALSE;
     portTracerLookFor(tracerStrength, out);
-    if (item == ITEM_SHOTGUN || item == ITEM_AUTOSHOT)
-    {   /* Only Shotgun Tracers draws these; five at once read best thinner. */
-        out->width *= PORT_PELLET_TRACER_SCALE;
-        out->glowAlpha = (u8) (out->glowAlpha * PORT_PELLET_TRACER_SCALE);
+    if (item != ITEM_SHOTGUN && item != ITEM_AUTOSHOT) return tracerStrength != PORT_TRACER_STRENGTH_MIN;
+
+    /* Only Shotgun Tracers draws these; five at once read best thinner, and
+     * enemies' lighter still, with the fake ones fainter than the real shot. */
+    if (kind == PORT_TRACER_KIND_ENEMY || kind == PORT_TRACER_KIND_DECORATIVE)
+    {
+        out->width *= PORT_ENEMY_PELLET_WIDTH;
+        out->minWidth *= PORT_ENEMY_PELLET_WIDTH;
+        out->glowAlpha = (u8) (out->glowAlpha * PORT_ENEMY_PELLET_GLOW);
+        if (kind == PORT_TRACER_KIND_DECORATIVE) out->coreAlpha = PORT_DECORATIVE_PELLET_ALPHA;
         return TRUE;
     }
-    return tracerStrength != PORT_TRACER_STRENGTH_MIN;
+    out->width *= PORT_PELLET_TRACER_SCALE;
+    out->glowAlpha = (u8) (out->glowAlpha * PORT_PELLET_TRACER_SCALE);
+    return TRUE;
+}
+
+s32 portTracerLook(s32 item, PortTracerLook *out)
+{
+    return portTracerLookKind(item, PORT_TRACER_KIND_PLAYER, out);
 }
