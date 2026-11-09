@@ -56,8 +56,14 @@ void portHudGunSight(s32 *gdl)
             portDrawTarget(gdl, FALSE, portAdsScopeBlend());
         return;
     }
-    if (portAdsActive()) return;
     if (g_CurrentPlayer->mpmenuon || g_CurrentPlayer->bonddead) return;
+    if (portAdsActive())
+    {
+        /* ADS Crosshair (FORK-060, debugging): the always-on cross at the aim
+         * point over the sights, to check them against it */
+        if (portCrosshairAds()) portDrawTarget(gdl, FALSE, 0.0f);
+        return;
+    }
     if (g_CurrentPlayer->gunsightmode == 0)
         portDrawTarget(gdl, TRUE, 0.0f);
     else if (g_CurrentPlayer->gunsightmode == GUNSIGHTREASON_NOTAIMING)

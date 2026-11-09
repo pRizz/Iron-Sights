@@ -8,6 +8,17 @@ extern s32 portOptSetValue(s32 option, s32 value);
 extern const char *portOptKey(s32 option);
 
 static s32 sCrosshairSize = PORT_CROSSHAIR_SIZE_DEFAULT;
+static s32 sCrosshairAds = 0;
+
+s32 portCrosshairAds(void)
+{
+    return sCrosshairAds;
+}
+
+void portCrosshairAdsSet(s32 on)
+{
+    sCrosshairAds = on != 0;
+}
 
 s32 portCrosshairSize(void)
 {

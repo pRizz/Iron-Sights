@@ -522,7 +522,8 @@ static bool s_GeShinyLook = false;
 /* FORK-058: inside a PP7 draw taking the glint (G_NOOP 0x5E, item 4/5),
  * and inside a draw bracketed as never taking it (G_NOOP 0x61: sleeve, native hand) */
 static bool s_GeGlint = false, s_GeGlintBlock = false;
-/* FORK-058: the glint span's ADS blend (G_NOOP 0x62): the glint fades as (1 - blend)^2 */
+/* FORK-058: the glint span's ADS blend (G_NOOP 0x62): at full ADS the glint keeps glint_ads of
+ * its strength (default all of it) */
 static float s_GeGlintAds = 0.0f;
 /* FORK-058: the level's sky colour (G_NOOP 0x60), the reflection cube's empty space */
 static uint8_t s_GeSkyRGB[3] = { 0, 0, 0 };
@@ -5109,8 +5110,9 @@ ndcprobe_done:;
     /* FORK-058: the Gun Glint lands only on metal triangles - drawn
      * with an image classified grey enough, outside the sleeve and hand passes */
     /* ... and never on blended or cutout draws (the AR33's rear-sight hole
-     * brightened under it), nor at full ADS (see the 0x62 tag) */
-    const bool glint_tri = s_GeGlint && !s_GeGlintBlock && !use_alpha && s_GeGlintAds < 1.0f
+     * brightened under it); glint_ads scales it towards full ADS (the 0x62 tag) */
+    const float glint_ads_keep = 1.0f - s_GeGlintAds * (1.0f - gfx_shiny::tuning().glint_ads);
+    const bool glint_tri = s_GeGlint && !s_GeGlintBlock && !use_alpha && glint_ads_keep > 0.0f
                            && rendering_state.textures[0] != nullptr
                            && rendering_state.textures[0]->first.glint && rendering_state.textures[0]->second.glint_metal;
     bool glint_face = false;
@@ -5165,7 +5167,7 @@ ndcprobe_done:;
                                        glint_n[0], glint_n[1], glint_n[2],
                                        glint_light[0], glint_light[1], glint_light[2],
                                        gfx_shiny::tuning().glint * (1.0f - v_arr[i]->fog / 255.0f)
-                                           * (1.0f - s_GeGlintAds) * (1.0f - s_GeGlintAds),
+                                           * glint_ads_keep,
                                        gfx_shiny::tuning().glint_power };
             s_GlintBuf.insert(s_GlintBuf.end(), corner, corner + 15);
         }

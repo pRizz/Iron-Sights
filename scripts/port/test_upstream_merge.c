@@ -80,6 +80,11 @@ static void sightChecks(void)
     assert(drawnScaleX == 0.25f && drawnScaleY == 0.5f);
     adsBlend = 1.0f;
     portHudGunSight(&gdl); assert(calls == 2); /* iron sights hide targets */
+    portCrosshairAdsSet(1); /* ADS Crosshair (FORK-060): the always-on cross at the aim point */
+    portHudGunSight(&gdl);
+    assert(calls == 3 && !ringDrawn && drawnX == 200.5f && drawnY == 90.5f);
+    player.bonddead = 1; portHudGunSight(&gdl); assert(calls == 3); player.bonddead = 0;
+    portCrosshairAdsSet(0); calls = 2;
     scopeBlend = 0.5f;
     portHudGunSight(&gdl);
     assert(calls == 3 && !ringDrawn && drawnX == 360.0f && drawnY == 130.0f);

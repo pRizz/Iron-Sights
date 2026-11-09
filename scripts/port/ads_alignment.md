@@ -251,6 +251,41 @@ accepts eye distances down to 26 units and per-weapon arm scales of 1.0 or 1.08.
 view units of the center ray, the hip depth, the muzzle and rear tube below and
 right of it, and no ADS zoom for the launcher only.
 
+## Crosshair calibration, 2026-11-08
+
+ADS Crosshair (FORK-060) draws the always-on cross at the aim point in ADS,
+so each sight can be compared with the shot ray directly. The owner saw the
+Magnum's tip a few pixels right of the cross and the D5K rings off centre. A
+local script captured every gun's settled ADS view at 1600 × 900 on Facility
+with the cross off and on, took the cross centre from the changed pixels,
+and found either an enclosed aperture around it (its centre) or the topmost
+gun pixels below it (a tip), with a zoomed crop per gun for review. Offsets
+are screen pixels at 1600 × 900; y is positive downwards.
+
+| Weapon              | Before                                  | After                                                         |
+| ------------------- | --------------------------------------- | ------------------------------------------------------------- |
+| PP7, silenced PP7, DD44 | tips touch the centre                | retained                                                      |
+| Klobb               | centred between its rails (no real sight) | retained                                                    |
+| KF7                 | ring centred (−0.5 y)                   | retained                                                      |
+| ZMG                 | rear fins' tops 14 px below the cross's arms, no front sight in view | owner's call: height 4.0 → 3.41, fin tops on the arms' top row (3.24 overshot by 4 px; about 0.042 units per pixel) |
+| D5K, silenced D5K   | ring centre 5.0 px above the cross      | heights 5.8 → 6.11 and 5.0 → 5.31 (same 0.8 apart): 0.0, 0.0  |
+| Phantom             | front-sight ears straddle the cross, tops just under it | retained                                    |
+| AR33                | square aperture centre −1.0 x, −1.0 y   | retained (within a pixel)                                     |
+| RC-P90              | block top on the cross, +1.4 x          | retained (within 1.5 px)                                      |
+| Shotgun             | tip about 10 px below the cross         | retained (bead shown above the red shells); reported          |
+| Automatic shotgun   | drum top about 2.5 px below             | retained (no conventional sight)                              |
+| Cougar Magnum       | tip +1.0 to +1.5 x, 1.5 px low          | height 4.0 → 3.92 and a new 0.075 `sightX` (tip right of the muzzle axis): top +0.5 y, +0.1 x |
+| Golden Gun          | post about 2.3 px low                   | height 1.7 → 1.56: post top on the centre                     |
+| Silver and Gold PP7 | tips touch the centre                   | retained                                                      |
+| Moonraker Laser     | body top about 15 px below              | retained (no sight); reported                                 |
+| Grenade launcher    | top about 9 px below                    | retained (deliberate lob pitch)                               |
+| Rocket launcher     | canted pins; the detector cannot judge them | retained (`test_rocket_ads.c` holds them)                 |
+| Sniper rifle        | scoped: no cross (its scope mark)       | retained                                                      |
+
+`sightX` is a new optional field in the pose table: view units the sight tip
+sits right of the muzzle axis, subtracted from the pose's x. Only the Magnum
+uses it. Each 0.05 units moved the Magnum about 0.75 px at 1600 × 900.
+
 ## Earlier height-correction validation
 
 - Captured all 20 supported ADS firearms at default wide FOV 90/60 Hz and

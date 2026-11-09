@@ -7,6 +7,11 @@
 #define PORT_CROSSHAIR_SIZE_DEFAULT 100
 #define PORT_CROSSHAIR_SIZE_STEP 5
 
+/* [display] ads_crosshair (FORK-060): the always-on crosshair stays drawn,
+ * at the aim point, while aiming down the sights; off by default */
+s32 portCrosshairAds(void);
+void portCrosshairAdsSet(s32 on);
+
 s32 portCrosshairSize(void);
 void portCrosshairSizeSet(s32 percent);
 f32 portCrosshairSizeScale(s32 highHud);

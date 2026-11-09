@@ -184,6 +184,11 @@ padN_stickmode.
   always_crosshair_size | 100      | Size in percent, 10-200 (menu steps of 5).
                       |            | 100 preserves the original size. Live slider
                       |            | and preview in Iron Sights > HUD Additions.
+  ads_crosshair       | 0          | 1 = keep the always-on crosshair, at the
+                      |            | gun's aim point, while aiming down the
+                      |            | sights (not the scoped sniper view), to
+                      |            | check sights against it. Iron Sights >
+                      |            | HUD Additions.
                       |            | Shared in solo/multiplayer; does not resize
                       |            | the aiming reticle, scope or menu cursor.
   mission_timer       | 0          | Mission Timer: elapsed MM:SS:CC top-left
@@ -294,15 +299,15 @@ padN_stickmode.
                       |            | highlights to the grey and black metal
                       |            | of the ordinary guns, PP7 to sniper
                       |            | rifle (never to hands, sleeves, wood or
-                      |            | see-through parts such as sight holes;
-                      |            | it fades out as the gun is raised to
-                      |            | the sights);
+                      |            | see-through parts such as sight holes);
                       |            | 0 draws them as the original. Tuned in
                       |            | shiny_weapons.ini: glint (0.25
                       |            | strength), glint_power (64), glint_sat
                       |            | (12: the most colourful image counted as
                       |            | metal), glint_skip (item ids to leave
-                      |            | out, e.g. 8, 15). Iron Sights > System.
+                      |            | out, e.g. 8, 15), glint_ads (1: share
+                      |            | kept at full ADS; 0 fades it out as the
+                      |            | gun is raised). Iron Sights > System.
   texture_pack        | 1          | [display] Texture Pack (Windows/Linux).
                       |            | 1 = HD: campaign environment textures,
                       |            | the gunbarrel intro, sky clouds,

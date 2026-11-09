@@ -358,6 +358,11 @@ int main(void)
     assert(portHudOptionGet("weapon_hud_icons", &value) && value == 1);  /* icons by default */
     assert(portHudOptionSet("weapon_hud_icons", 0));
     assert(portHudOptionGet("weapon_hud_icons", &value) && value == 0);
+    /* ADS Crosshair (FORK-060): off by default, persisted as 0/1 */
+    assert(portHudOptionGet("ads_crosshair", &value) && value == 0 && !portCrosshairAds());
+    assert(portHudOptionSet("ads_crosshair", 7) && portCrosshairAds() == 1);
+    assert(portHudOptionGet("ads_crosshair", &value) && value == 1);
+    assert(portHudOptionSet("ads_crosshair", 0) && portCrosshairAds() == 0);
     {   /* changing presentation does not depend on stage state; a mission
          * start latches a cache prepared in the background meanwhile */
         const s32 latches = iconLatches;

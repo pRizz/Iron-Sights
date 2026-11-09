@@ -2399,6 +2399,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "shadow_alpha=%d\n", s_CfgShadowAlpha);
     fprintf(f, "always_crosshair=%d\n", s_CfgAlwaysCrosshair);
     fprintf(f, "always_crosshair_size=%d\n", portCrosshairSize());
+    fprintf(f, "ads_crosshair=%d\n", portCrosshairAds());
     fprintf(f, "mission_timer=%d\n", s_CfgMissionTimer);
     fprintf(f, "stereo_pan=%d\n", s_CfgStereoPan);
     fprintf(f, "aim_lock=%d\n", s_CfgAimLock);

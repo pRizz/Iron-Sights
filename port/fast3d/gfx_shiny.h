@@ -50,6 +50,7 @@ struct Tuning {
     uint32_t glint_skip; /* items (bit = ITEM_* id) left without the glint; glint_skip = 8, 15 in the file */
     float screen_hue;   /* 0..1 share of the scene's own colour in the scene reflection: 0 (default) =
                          * light and dark only, so gold reflects in gold and silver in silver */
+    float glint_ads;     /* 0..1 share of the glint kept at full ADS (1 = all; 0 = fade out as the gun rises) */
     float screen_mirror; /* 0..1 share of the scene itself, in the metal's average colour, rather than
                           * as light and dark on the authored pattern (which near-white silver clips) */
 };

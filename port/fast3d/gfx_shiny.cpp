@@ -23,7 +23,7 @@ const char kFile[] = "shiny_weapons.ini";
 const Tuning kDefaults = { -1.0f, 1.0f, 1.0f, 0.5f, 0.4f, 0.0f, 1.0f, 0.0f, 0.0f,
                            false, false, 0, -1.0f, 1.0f, true, false,
                            0.5f, 1.0f, 0.85f, 60.0f, 8.0f, false, 0.2f, true, 128,
-                           0.25f, 64.0f, 12.0f, 0u, 0.0f, 0.5f };
+                           0.25f, 64.0f, 12.0f, 0u, 0.0f, 1.0f, 0.5f };
 Tuning s_tuning = kDefaults;
 std::string s_text;
 unsigned s_frame;
@@ -70,6 +70,7 @@ void parse(const std::string &text, Tuning &t)
         else if (key == "screen_smooth") t.screen_smooth = v < 0.01f ? 0.01f : (v > 1.0f ? 1.0f : v);
         else if (key == "silver_screen") t.silver_screen = v != 0.0f;
         else if (key == "screen_hue") t.screen_hue = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+        else if (key == "glint_ads") t.glint_ads = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
         else if (key == "screen_mirror") t.screen_mirror = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
         else if (key == "map") t.map = v <= 0.0f ? 0 : (v < 16.0f ? 16 : (v > 512.0f ? 512 : (int)v));
         else if (key == "glint") t.glint = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);

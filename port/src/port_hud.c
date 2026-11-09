@@ -63,6 +63,7 @@ s32 portHudOptionGet(const char *key, s32 *value)
 {
     s32 i;
     if (strcmp(key, "always_crosshair_size") == 0) { *value = portCrosshairSize(); return 1; }
+    if (strcmp(key, "ads_crosshair") == 0) { *value = portCrosshairAds(); return 1; }
     for (i = 0; i < HUD_OPTIONS; i++) if (strcmp(key, phKeys[i]) == 0) { *value = phOptions[i]; return 1; }
     return 0;
 }
@@ -71,6 +72,7 @@ s32 portHudOptionSet(const char *key, s32 value)
 {
     s32 i, p;
     if (strcmp(key, "always_crosshair_size") == 0) { portCrosshairSizeSet(value); return 1; }
+    if (strcmp(key, "ads_crosshair") == 0) { portCrosshairAdsSet(value); return 1; }
     for (i = 0; i < HUD_OPTIONS; i++) if (strcmp(key, phKeys[i]) == 0) {
         phOptions[i] = value != 0;
         for (p = 0; p < 4; p++) {

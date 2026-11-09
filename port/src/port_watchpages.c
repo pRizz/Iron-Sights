@@ -168,6 +168,7 @@ static const struct PortWatchRowDef sIsFeedback[] = {
 };
 static const struct PortWatchRowDef sIsHud[] = {
     { PWROW_OPT,       "always_crosshair_size", NULL, 0, 0 },
+    { PWROW_OPT,       "ads_crosshair",    NULL, 0, 0 },
     { PWROW_OPT,       "weapon_hud",       NULL, 0, 0 },
     { PWROW_OPT,       "weapon_hud_icons", NULL, 0, 0 },
     { PWROW_OPT,       "always_health",    NULL, 0, 0 },

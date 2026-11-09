@@ -758,6 +758,7 @@ static const struct {
     f32 sightHeight;
     f32 distance;
     f32 pitch;
+    f32 sightX; /* view units right of the muzzle axis the sight tip sits; 0 = on it */
 } sAdsPoses[] = {
     /* Pistols sit low enough that the topmost point of each sight just
      * touches the centered shot ray, like the plated PP7s below. */
@@ -768,11 +769,13 @@ static const struct {
      * Klobb, ZMG, shotgun and grenade launcher sit about 8% closer again. */
     { ITEM_SKORPION,      2.7f, 26.5f, -0.035f },
     { ITEM_AK47,         4.65f, 33.6f, -0.045f },
-    /* Extra muzzle-up pitch: look along the top of the ZMG, not straight down it. */
-    { ITEM_UZI,           4.0f, 29.5f, -0.090f },
-    { ITEM_MP5K,          5.8f, 33.6f, -0.040f },
+    /* Extra muzzle-up pitch: look along the top of the ZMG, not straight down it.
+     * The rear fins' tops sit level with the shot ray (ADS Crosshair's arms). */
+    { ITEM_UZI,           3.41f, 29.5f, -0.090f },
+    /* The ring's centre on the shot ray (ADS Crosshair). */
+    { ITEM_MP5K,          6.11f, 33.6f, -0.040f },
     /* Same sight geometry as the D5K; compensate for its longer muzzle node. */
-    { ITEM_MP5KSIL,       5.0f, 33.6f, -0.040f },
+    { ITEM_MP5KSIL,       5.31f, 33.6f, -0.040f },
     /* Less pitch raises the rear sight block between the front sight's ears. */
     { ITEM_SPECTRE,       6.4f, 33.6f, PORT_ADS_PHANTOM_PITCH },
     /* Raise the AR33's square aperture and the RC-P90's sight tip onto the
@@ -785,8 +788,10 @@ static const struct {
     { ITEM_SHOTGUN,       2.6f, 19.5f, -0.090f },
     { ITEM_AUTOSHOT,      1.8f, 19.0f, -0.140f },
     { ITEM_SNIPERRIFLE,  10.7f, 70.0f, -0.035f },
-    { ITEM_RUGER,         4.0f, 36.0f, -0.030f },
-    { ITEM_GOLDENGUN,     1.7f, 33.5f, -0.025f },
+    /* The Magnum's front sight tip sits right of its muzzle axis and stood
+     * below the shot ray; centre its tip on the ray (ADS Crosshair). */
+    { ITEM_RUGER,         3.92f, 36.0f, -0.030f, 0.075f },
+    { ITEM_GOLDENGUN,     1.56f, 33.5f, -0.025f },
     /* The plated PP7 models' sight tips stand taller than the PP7's; lower
      * them so the top of the tip just touches the centered shot ray. */
     { ITEM_SILVERWPPK,    1.56f, 33.5f, -0.025f },
@@ -807,7 +812,7 @@ s32 portAdsWeaponPose(s32 item, const coord3d *muzzle, coord3d *pose)
     {
         if (sAdsPoses[i].item == item)
         {
-            pose->x = -muzzle->x * 0.1f;
+            pose->x = -muzzle->x * 0.1f - sAdsPoses[i].sightX;
             /* This model's sights sit at X=-3, off the root/muzzle axis. */
             if (item == ITEM_ROCKETLAUNCH) pose->x = -0.3f;
             pose->y = -muzzle->y * 0.1f - sAdsPoses[i].sightHeight;

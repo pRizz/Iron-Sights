@@ -30,6 +30,46 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-060 — ADS Crosshair: the always-on crosshair while aiming
+
+**Status:** Implemented in all builds (2026-11-08); Windows built and tested,
+Linux and browser not built locally. Requested by the owner as a debugging aid
+and play-tested; it led to the crosshair calibration of FORK-003's ADS poses.
+
+Inherited behaviour: Always Crosshair (`[display] always_crosshair`, upstream)
+draws a small cross at the gun's aim point while not aiming, and the fork's
+ADS (`port/src/port_sight.c`) hides every target while the gun is raised to
+the sights. **Gameplay > Iron Sights > HUD Additions > ADS Crosshair**
+(`[display] ads_crosshair`: 0 Off, 1 On; default 0), after Always Crosshair
+Size in the Options folder and on the watch, keeps that cross, at the aim
+point and at Always Crosshair Size, in ADS, so the sights can be checked
+against where shots go. It does not need Always Crosshair on. The scoped
+Sniper Rifle keeps its own red scope mark, and the multiplayer menu and death
+still hide it. An ordinary toggle row, so keyboard, mouse, gamepad and touch
+adjust it like any other.
+
+- **State and hook.** `port_crosshair.c` holds the value
+  (`portCrosshairAds`), `port_hud.c`'s option get/set reads and writes it (so
+  midas.ini persists it like Always Crosshair Size), and `port_sight.c`'s ADS
+  early return draws the always-on target when it is on. `video.c` writes
+  `ads_crosshair=0` into a new midas.ini.
+
+**Sources:** [state](port/src/port_crosshair.c) and its
+[header](port/include/port_crosshair.h), [option hook](port/src/port_hud.c),
+[draw](port/src/port_sight.c), [option row](port/src/port_options.c),
+[frontend row](src/game/front.c), [watch row](port/src/port_watchpages.c),
+[help](port/src/port_option_help.c), [ini template](port/src/video.c),
+[ini reference](tools/midas_ini_help.txt), and the
+[HUD](scripts/port/test_hud.c) and [sight](scripts/port/test_upstream_merge.c)
+tests.
+**Checks:** `test_hud.sh` (default off, set and read back) and
+`test_upstream_merge.sh` (drawn in ADS at the aim point, hidden when dead)
+pass, with `test_wardrobe.sh`, `test_ads.sh` and `settings_placement.py`. The
+all-guns ADS audit on Facility with the setting off and on changed 104 pixels
+per gun (the cross; it sits in the AR33's rear aperture) and none on the
+scoped Sniper Rifle, and the HUD Additions sheet was captured with the row.
+Not captured: the watch page.
+
 ### FORK-059 — Iron Sights application icons from one generator
 
 **Status:** Implemented on 2026-11-08; not yet seen in a real Windows Explorer
@@ -188,12 +228,18 @@ adjust them like any other.
   about 14/255, and in ADS a sloped face towards the eye nearly doubled in
   brightness over the sight picture. Images with any see-through texel
   (alpha below 128) no longer count as metal, blended and cutout draws
-  (`use_alpha`) take no glint, and the glint fades as (1 - ADS blend)^2,
-  gone at full ADS (G_NOOP `0x62` carries `portAdsBlend()` from
-  `port_shiny.c`). An audit of every gun (Facility, hip, mid-raise and ADS,
-  glint on vs off, before and after) found the AR33 sight the only see-through
-  overlap; the hip glint is unchanged on every other gun except the DD44, whose
-  71-pixel glint went with its image's transparent texels.
+  (`use_alpha`) take no glint. An audit of every gun (Facility, hip, mid-raise
+  and ADS, glint on vs off, before and after) found the AR33 sight the only
+  see-through overlap; the hip glint is unchanged on every other gun except the
+  DD44, whose 71-pixel glint went with its image's transparent texels. The fix
+  first also faded the glint out in ADS; the owner asked to keep it there, so
+  `glint_ads` (shiny_weapons.ini, default 1) sets the share kept at full ADS,
+  scaled linearly with the ADS blend (G_NOOP `0x62` carries `portAdsBlend()`
+  from `port_shiny.c`); 0 restores the fade. With the default, every gun's ADS
+  glint matches its pre-fix pixel count, except the AR33's excluded rear sight
+  (11,897 → 10,397 changed pixels, the sight post and hole untouched). The
+  owner play-tested it. The regenerated hand gallery's images are again
+  identical to those before the fade.
 
 - **Span.** `portShinyWeaponTag` (`port/src/port_shiny.c`) brackets the
   first-person weapon draw with G_NOOP `0x5E` (item in the low byte, 0 =
@@ -3873,6 +3919,18 @@ vertical sight offsets. These use individual height corrections; the other
 audited long-gun poses are retained.
 The silenced D5K explicitly compensates for its longer muzzle node so its
 shared sight mesh receives the same pose as the unsilenced D5K.
+Crosshair calibration (2026-11-08, [alignment guide](scripts/port/ads_alignment.md)):
+with ADS Crosshair (FORK-060) showing the aim point, the owner saw the
+Magnum's tip right of it and the D5K rings off centre. An all-guns audit at
+1600 × 900 measured each sight against the cross: the D5K pair's ring centres
+sat 5 px high (heights 5.8 → 6.11 and 5.0 → 5.31, centred to the pixel), the
+Magnum's tip 1-1.5 px right and 1.5 px low (height 4.0 → 3.92 and a new
+optional `sightX` of 0.075 view units in the pose table, the tip's offset right
+of the muzzle axis), and the Golden Gun's post about 2.3 px low (1.7 → 1.56).
+At the owner's request the ZMG rose until its rear fins' tops sit flush with
+the cross's horizontal arms (height 4.0 → 3.41; they had been 14 px below).
+The other guns were within about a pixel or deliberately posed (shotgun,
+laser and grenade launcher sit lower); they are listed in the guide.
 
 The owner's camera-proximity refinement moves the 12 unscoped long-gun ADS
 origins 20% closer along camera Z. It retains each calibrated sight height/pitch,
