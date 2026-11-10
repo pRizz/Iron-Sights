@@ -1,13 +1,12 @@
 {
   "source": "https://github.com/GhostlyDark/GoldenEye-007-HD",
   "release": "v2025.12.30",
-  "scope": "The gunbarrel intro (UI/Gunbarrel), impact effects drawn in almost every level (debris, sparks, glass shards and the bullet hole) and the sky clouds (In-game). Found by the 2026-11-07 coverage audit; each matches its native key exactly.",
+  "scope": "The gunbarrel intro (UI/Gunbarrel), impact effects drawn in almost every level (debris, sparks and glass shards) and the sky clouds (In-game). Found by the 2026-11-07 coverage audit; each matches its native key exactly. The bullet hole (8E4AB4BE, IMAGE_IMPACT2: a 64x32 strip holding a 32x32 crater and its smaller mip levels) keeps its original: the pack's image is one small hole in the middle of the whole strip, so only its edge fell in the 32x32 square the game stretches over each decal, and holes drew as slivers that came and went with distance and angle (FORK-068).",
   "textures": [
     "GOLDENEYE/In-game/GOLDENEYE#22D9AAA5#3#1_all.png",
     "GOLDENEYE/In-game/GOLDENEYE#2F062259#3#1_all.png",
     "GOLDENEYE/In-game/GOLDENEYE#7394B069#3#1_all.png",
     "GOLDENEYE/In-game/GOLDENEYE#8B4C5796#3#1_all.png",
-    "GOLDENEYE/In-game/GOLDENEYE#8E4AB4BE#3#1_all.png",
     "GOLDENEYE/In-game/GOLDENEYE#99ED49A8#3#1_all.png",
     "GOLDENEYE/In-game/GOLDENEYE#B0B0AF87#3#1_all.png",
     "GOLDENEYE/In-game/GOLDENEYE#B58E760D#3#1_all.png",

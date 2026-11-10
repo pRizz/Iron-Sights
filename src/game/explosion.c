@@ -25,6 +25,9 @@
 #include "stan.h"
 #include "bgroomtrans.h"
 #include <assets/oddtextures.h>
+#ifndef TARGET_N64
+#include "port_bullet_rooms.h"
+#endif
 
 // bss
 //CODE.bss:8007A100
@@ -2365,6 +2368,9 @@ void explosionCreateBulletImpact(struct coord3d *pos, struct coord3d *arg1, s16 
     g_BulletImpactBuffer[g_NumImpactEntries].model_render_pos_index = model_render_pos_index;
     g_BulletImpactBuffer[g_NumImpactEntries].room_clear_flag = room_clear_flag;
     g_BulletImpactBuffer[g_NumImpactEntries].room = room;
+#ifndef TARGET_N64
+    portBulletImpactAssign(g_NumImpactEntries, prop); /* FORK-068: rooms sharing the wall */
+#endif
     g_BulletImpactBuffer[g_NumImpactEntries].impact_type = impact_type;
 #ifndef TARGET_N64
     g_BulletImpactBuffer[g_NumImpactEntries].unk4E = pass_type;
@@ -2505,7 +2511,11 @@ Gfx *explosionRenderBulletImpactOnProp(Gfx *gdl, PropRecord *arg1, s32 arg2)
         {
             if (g_BulletImpactBuffer[i].room >= 0)
             {
+#ifndef TARGET_N64
+                if (arg1 || portBulletImpactRoomDrawn(i, g_BulletImpactBuffer[i].room)) /* FORK-068 */
+#else
                 if (arg1 || getROOMID_isRendered(g_BulletImpactBuffer[i].room))
+#endif
                 {
                     impact_type = g_BulletImpactBuffer[i].impact_type;
 #ifndef TARGET_N64

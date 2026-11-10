@@ -18,7 +18,8 @@ EXCLUDE = {'boss.c', 'init.c', 'joy.c', 'sched.c', 'pi.c', 'rom.c', 'ramrom.c',
            'vi.c', 'rsp.c', 'deb.c', 'debugmenu.c', 'file2.c', 'options.c',
            'frametiming.c', 'speedgraphrenderer.c', 'token.c'}
 PORT = {'n64_random.c', 'segments.c', 'animdata.c', 'romdata.c', 'audio_stubs.c',
-        'romfile_bg.c', 'port_arm_mesh.c', 'port_grip_mesh.c'}
+        'romfile_bg.c', 'port_arm_mesh.c', 'port_grip_mesh.c',
+        'port_bullet_rooms.c'}  # FORK-068: rooms sharing each wall hole's surface
 # Converted model headers/texture pointers in the arm modules reference the
 # snapshotted high arena. Restoring its bytes must also restore those owners.
 WORLD_SYMBOLS = {'port_textures.c': {

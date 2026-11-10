@@ -38,6 +38,7 @@
 #include "tex.h"
 #ifndef TARGET_N64
 #include "port_tracers.h"
+#include "port_bullet_rooms.h"
 #endif
 
 
@@ -1254,6 +1255,9 @@ void chraiDefaultWeaponFireHandler(s32 hand)
                 if ((impact_sounds->thing2_len > 0) && (shotdata.weapon != 23))
                 {
                     pad = randomGetNext() % impact_sounds->thing2_len;
+#ifndef TARGET_N64
+                    portBulletImpactNoteWall(&bghit.hitpos, &bghit.normal); /* FORK-068 */
+#endif
                     explosionCreateBulletImpact(&visiblehitpos, &bghit.normal, impact_sounds->thing2[pad], bestroom, 0, -1, 0);
                 }
 

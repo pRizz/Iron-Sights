@@ -30,6 +30,78 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-068 — Wall bullet holes draw on the wall they hit
+
+**Status:** Implemented on 2026-11-09 in the Windows build after the owner saw
+bullet holes on Dam's walls stay invisible from a distance, appear only when
+walking closer, and vanish again when turning away. The owner play-tested the
+fixed build and approved it the same day. The browser player, without the HD
+pack, never showed it.
+
+Two separate causes, both fixed:
+
+- **The HD pack's bullet hole (the main cause, a fork regression).** Brick and
+  stone hits use `IMAGE_IMPACT2` (`s_impactimages[1]`), a 64x32 IA8 strip that
+  holds a 32x32 crater plus its smaller mip levels; the game stretches the
+  32x32 square over each hole's quad. The 2026-11-07 coverage audit (FORK-053,
+  `9b9a862`) added the pack's `GOLDENEYE#8E4AB4BE#3#1` to the download scope,
+  but that image is a different design: one small hole (about 15x10 at native
+  scale) in the middle of the whole strip. Only its edge falls in the sampled
+  square, so each hole drew as a sliver a few pixels wide beside the impact,
+  which appeared or vanished as distance and camera angle changed its screen
+  coverage. That audit had not checked the bullet hole in play. It is removed from `hd_effect_sources.json`, so the original hole
+  draws with the HD pack on; the other impact effects keep their HD art. A
+  custom pack that names the key still replaces it.
+- **Room filing (inherited from upstream).** Upstream files each wall hole under
+  one room (`bestroom` in `chrprop.c`) and draws it only while that room is
+  drawn (`explosionRenderBulletImpactOnProp`, `getROOMID_isRendered`). A wall
+  surface can exist in more than one room, and the hit search keeps the first
+  copy it finds. Temporary logging in the owner's session showed nine holes
+  filed under room 114 toggling between drawn and skipped while the owner stood
+  in room 123. The PC build now also draws a wall hole while any drawn room has
+  geometry right at it: when the hole's own room is not drawn, each drawn room
+  is probed once per hole with a 16-unit segment through the hole along the
+  wall normal (`bgTestBulletHitBackground`), and the answer is cached per hole.
+  A first version that only compared rooms drawn at the moment of the shot
+  missed rooms first seen later and was replaced. Holes on props, the hit
+  search, impact sounds, sparks and the RNG are unchanged, and the N64 build
+  keeps upstream's check. There is no setting.
+
+**Upstream hooks:** `chrprop.c` calls `portBulletImpactNoteWall` (hit point and
+normal) just before a wall hole's `explosionCreateBulletImpact`; `explosion.c`
+calls `portBulletImpactAssign` as the slot is filled and
+`portBulletImpactRoomDrawn` in place of the room check when drawing. All three
+sit inside `#ifndef TARGET_N64`. The per-slot table is registered for suspend
+images (`embed_state_layout.py` `PORT`), so a loaded suspend point keeps it with
+the hole buffer it describes.
+
+**Sources:** [hole rooms](port/src/port_bullet_rooms.c),
+[interface](port/include/port_bullet_rooms.h), [hit hook](src/game/chrprop.c),
+[create and draw hooks](src/game/explosion.c),
+[suspend layout](scripts/port/embed_state_layout.py),
+[HD effect scope](port/fast3d/texture_packs/hd_effect_sources.json).
+
+**Checks:** the Docker MinGW Windows build compiles without warnings in the
+touched files; `test_state_layout.py` passes and the link map shows the table's
+`.bss` in the new object. Two owner sessions with temporary logging (since
+removed) separated the causes: after the room fix, no hole was ever skipped,
+yet holes still did not show. The owner's input recordings did not replay
+deterministically (position drift from about tick 1950), so later checks spawned
+Bond at the owner's recorded firing positions with the owner's settings
+(isolated folders, `GE_SPAWNXYZ`). From about 725 and 2700 units, holes at the
+crosshair were invisible with the HD pack on, unchanged by `GE_DEC_CLIP=0`,
+`GE_XLU_NOPIN=1`, `GE_NOXLUSORT=1` or MSAA off, and appeared with
+`texture_pack=0`. `GE_HD_TRACE` showed `8E4AB4BE` matched to a 256x128 image
+before the fix and kept native after it, with the hole visible near and as
+small marks far. A camera sweep across the holes (about 725 units, stick turn
+after firing) showed the original texture at every sampled angle; the same
+sweep with the pack's image restored as a custom pack showed none, and a
+head-on capture from about 200 units showed the original's full crater against
+the HD image's small clipped fragment. In the owner's second session (lazy
+probes on), main-wall holes no longer toggled; one hole on a side face held by
+room 114 alone still followed that room, whose face is undrawn whenever the
+room is. Private captures: ignored `build_win/holes-*`.
+
 ### FORK-067 — Player options survive a stage started before the saves are read
 
 **Status:** Fixed on 2026-11-09 after the owner saw the corner ammo missing on
@@ -1377,11 +1449,13 @@ FORK-033's ini values `hd`, `4k` and `2` read as HD.
 
 - **Intro, sky and effects (2026-11-07).** The download's scope grew past the
   environments, following the coverage audit:
-  - `hd_effect_sources.json` (308 names, matched by key): the gunbarrel intro's
+  - `hd_effect_sources.json` (307 names, matched by key): the gunbarrel intro's
     299 strips (`UI/Gunbarrel`, 440x1 I8 drawn as 1760x4), the sky clouds
-    (64x64 IA8 as 512x512, in 12 levels) and eight impact textures (debris,
-    five spark sprites, glass shards, the bullet hole). `parse_scope` now takes
-    several texture lists.
+    (64x64 IA8 as 512x512, in 12 levels) and seven impact textures (debris,
+    five spark sprites, glass shards). `parse_scope` now takes several texture
+    lists. The audit's eighth, the bullet hole (`8E4AB4BE`), was removed on
+    2026-11-09: its image is one small hole across the whole mip strip, so
+    only a sliver landed in the square the game samples (FORK-068).
   - `hd_effect_remaps.json` (28 remaps): explosions and their smoke. Each of
     the 15 frames in `g_ExplosionDisplayLists` draws, in two cycles, a 56x56 IA8
     smoke texture under a 64x64 wrap mask times a 16x14 RGBA16 fire frame
