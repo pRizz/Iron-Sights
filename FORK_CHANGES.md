@@ -5089,7 +5089,13 @@ corner's controls at rest, raises that corner by CSS variables
 (`--touch-lift-left` for the stick and left Z/gadget row, `--touch-lift-right`
 for the N64 cluster or Modern actions, with the More tray following) until their
 bottom is 8 CSS pixels above the ammo's top (`web/src/touch-hud-clearance.ts`).
-Ammo beside or wholly below the controls moves nothing. A context, layout,
+Ammo beside or wholly below the controls moves nothing. In a portrait window
+(taller than wide, `isPortrait`) neither happens: on 2026-11-11 the owner saw
+the bottom-right controls on an upright iPhone float up over the full-width 4:3
+picture to clear its ammo, which looked strange, so in portrait the controls
+stay at rest in their corners and the overlay reports no corner covered (the
+ammo keeps its normal place). Turning back to landscape measures again and
+restores the lift. A context, layout,
 gadget, More, Files or viewport change measures the controls again; for 30
 frames after it a lift may also fall, and afterwards lifts only grow, so a
 shorter icon, a weapon switch or a hidden counter never drops the buttons.

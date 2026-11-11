@@ -1826,6 +1826,19 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**Portrait keeps the corner controls at rest, 2026-11-11:** The owner reported
+that on an upright iPhone the bottom-right controls rose over the full-width
+4:3 picture to clear the ammo, which looked strange. In a portrait window
+(taller than wide) the corner clearance no longer lifts either corner and
+reports no corner covered, so the controls stay in the bottom corners and the
+ammo keeps its normal place; landscape keeps the lift. Sources:
+`touch-hud-clearance.ts` (`isPortrait`, the `portrait` argument of
+`createCornerClearance().update`) and `touch-controls.tsx` (FORK-028).
+Verification: the clearance unit tests (portrait and landscape), all 250 web
+unit tests, TypeScript, and the Edge touch fixture audit with a new upright
+390x844 step pass. Not yet seen on a physical iPhone or with the real ROM in
+the browser. Next action: check an upright iPhone after Pages publication.
+
 **Corner ammo clear of the buttons, 2026-11-08:** The owner reported that on an
 iPad the bottom-right buttons hid the ammo counts and bullet icon. A 4:3 iPad's
 HUD reaches the corners, which phones' 4:3 band avoids. The ammo keeps its place

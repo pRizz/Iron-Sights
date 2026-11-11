@@ -67,6 +67,16 @@ export async function auditHudClearance(page) {
     await ammo(1, await fractions(actions.left - 120, actions.left - 10, 340, 380));
     await page.waitForTimeout(800);
     assert.ok(Math.abs((await bottom('.touch-actions')) - (390 - 40)) < 2, 'beside ammo lifted');
+    // Held upright, a tall phone keeps the controls in their corners even with
+    // the ammo under them, and reports no corner covered.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await ammo(1, await under('.touch-actions', 760));
+    await expect.poll(async () => (await snapshot()).corners).toEqual([false, false]);
+    await page.waitForTimeout(800);
+    assert.ok(Math.abs((await bottom('.touch-actions')) - (844 - 40)) < 2, 'portrait lifted the actions');
+    await ammo(1, undefined);
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expect.poll(async () => (await snapshot()).corners).toEqual([true, true]);
     // Leaving play uncovers both corners and the controls come back to rest.
     await page.evaluate(() => touchFixture.context(0));
     await expect(overlay).toHaveAttribute('data-context', 'navigation');

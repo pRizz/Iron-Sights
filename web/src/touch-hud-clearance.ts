@@ -45,6 +45,13 @@ export function fractionBox(
     };
 }
 
+// A portrait window keeps the corner controls where they rest: the full-width
+// 4:3 picture leaves room below it, and controls lifted over the ammo there
+// floated oddly mid-screen on tall phones.
+export function isPortrait(width: number, height: number): boolean {
+    return height > width;
+}
+
 // How far controls at rest must rise so their bottom clears the ammo's top;
 // 0 when the ammo is beside them or there is none.
 export function cornerLift(
@@ -81,8 +88,15 @@ export function createCornerClearance() {
         remeasure() {
             settle = 0;
         },
-        // maybeRoot is the overlay during gameplay or the watch, else none.
-        update(game: ClearanceGame, maybeRoot: HTMLElement | undefined, canvas: Element) {
+        // maybeRoot is the overlay during gameplay or the watch, else none. In a
+        // portrait window the controls stay at rest and cover nothing, so the
+        // ammo keeps its own place too.
+        update(
+            game: ClearanceGame,
+            maybeRoot: HTMLElement | undefined,
+            canvas: Element,
+            portrait = false,
+        ) {
             if (game !== maybeGame) {
                 maybeGame = game;
                 covered.fill(false);
@@ -90,7 +104,8 @@ export function createCornerClearance() {
             }
             if (maybeRoot && settle === 0) canvasBox = canvas.getBoundingClientRect();
             for (const { side, selector, lift } of clearanceCorners) {
-                if (!maybeRoot) {
+                if (!maybeRoot || portrait) {
+                    if (maybeRoot && lifts[side] !== 0) maybeRoot.style.setProperty(lift, '0px');
                     lifts[side] = 0;
                     cover(game, side, false);
                     continue;

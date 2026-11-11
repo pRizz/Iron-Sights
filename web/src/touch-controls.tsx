@@ -19,7 +19,7 @@ import { touchContext, type TouchContext } from './touch-context';
 import { HelperText } from './helper-text';
 import { TouchText } from './touch-text';
 import { createTouchButtonGestures } from './touch-button-gestures';
-import { createCornerClearance } from './touch-hud-clearance';
+import { createCornerClearance, isPortrait } from './touch-hud-clearance';
 import './touch.css';
 
 type Props = {
@@ -198,7 +198,12 @@ export function TouchControls(props: Props) {
             const maybeGame = props.engine.maybeGame();
             const covering = active() && hud();
             if (maybeGame)
-                clearance.update(maybeGame, covering ? maybeRoot : undefined, props.canvas());
+                clearance.update(
+                    maybeGame,
+                    covering ? maybeRoot : undefined,
+                    props.canvas(),
+                    isPortrait(window.innerWidth, window.innerHeight),
+                );
             frame = requestAnimationFrame(monitor);
         };
         frame = requestAnimationFrame(monitor);
