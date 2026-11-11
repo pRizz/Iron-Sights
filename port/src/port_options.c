@@ -150,6 +150,9 @@ static const s32 sKnifeAdsVals[] = { 0, 1 };
 static const char *const sKnifeAdsText[] = { "Butt Centered\n", "Tip Centered\n" };
 static const s32 sWeaponKickVals[] = { 0, 1, 2, 3 };
 static const char *const sWeaponKickText[] = { "Original\n", "Enhanced\n", "Ludicrous\n", "Cartoon\n" };
+/* Reload Speed (FORK-071): a multiplier, 0 = Instant (port_reload_speed.h) */
+static const s32 sReloadSpeedVals[] = { 1, 2, 3, 5, 10, 0 };
+static const char *const sReloadSpeedText[] = { "Original\n", "2x\n", "3x\n", "5x\n", "10x\n", "Instant\n" };
 static const s32 sWeaponStyleVals[] = { 0, 1 };
 static const char *const sWeaponStyleText[] = { "Text\n", "Icons\n" };
 static const s32 sHealthDisplayVals[] = { 0, 1 };
@@ -342,6 +345,7 @@ static const struct PortOpt sOpts[] = {
     INTR  ("ads_spread",         "[display]", "ADS Spread\n",         PORTOPT_CAT_GAMEPLAY, 0, 100, 10, "%"),
     INTR  ("ads_recoil",         "[display]", "ADS Recoil\n",         PORTOPT_CAT_GAMEPLAY, 0, 100, 10, "%"),
     ENUMR ("weapon_kick",        "[display]", "Weapon Kick\n",        PORTOPT_CAT_GAMEPLAY, sWeaponKickVals, sWeaponKickText, NULL), /* FORK-061 */
+    ENUMR ("reload_speed",       "[display]", "Reload Speed\n",       PORTOPT_CAT_GAMEPLAY, sReloadSpeedVals, sReloadSpeedText, NULL), /* FORK-071 */
     TOGGLE("sprint",             "[display]", "Sprint\n",             PORTOPT_CAT_GAMEPLAY),
     TOGGLE("ludicrous_sprint",   "[display]", "Ludicrous Sprint\n",   PORTOPT_CAT_GAMEPLAY),
     TOGGLE("sight_on_screen",    "[display]", "Sight on Screen\n",    PORTOPT_CAT_GAMEPLAY),

@@ -30,6 +30,74 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-071 — Reload Speed: faster player reloads, up to instant
+
+**Status:** Implemented on 2026-11-10 at the owner's request, built for
+Windows and play-tested by the owner, then committed and pushed to `main` on
+2026-11-10. Linux, Steam Deck and browser builds not run locally.
+
+Inherited behaviour: a player reload is four first-person hand states in
+`gunfire.c`. RELOAD_START checks the magazine is not full and spare ammo
+exists, RELOAD_LOWER tilts the gun down (16 fields at NTSC), RELOAD_SWAP plays
+the cock sound (17 fields and at least two ticks) and RELOAD_RAISE refills the
+magazine on its first tick and brings the gun back up (23 fields). That is 56
+fields, about 0.93 s, and the gun cannot fire until RAISE ends. Each state's
+pose is computed from its field timer (`field_890`), which advances by
+`g_ClockTimer` per tick.
+
+**Gameplay > Iron Sights > Aiming and Movement > Reload Speed**
+(`[display] reload_speed`, default 1 = Original) offers 2x, 3x, 5x, 10x and
+Instant:
+
+- A multiplier advances the timer of RELOAD_LOWER, RELOAD_SWAP and
+  RELOAD_RAISE by that many times the tick's fields, so the same motion plays
+  faster. SWAP's two-tick minimum stays. Counted from the state thresholds
+  (not timed in game), a 60 Hz reload takes 29 ticks at 2x, 20 at 3x, 13 at
+  5x and 7 (about 0.12 s) at 10x.
+- Instant (midas.ini `reload_speed=0`) ends LOWER, SWAP and RAISE on the tick
+  they start, so the whole reload completes on the tick it begins, through
+  the native refill (`sub_GAME_7F0649D8`, which also creates the rocket and
+  sets the shotgun's visible shells), cock sound and trigger handling. The
+  gun never dips, and with the native automatic reload on an empty magazine
+  it keeps firing until the spare ammo runs out.
+- midas.ini accepts any whole number from 0 to 10 (the menu snaps an
+  unlisted one to the nearest choice); larger values read as 10 and negative
+  ones as 1.
+- Only the player's reload changes: guards reload through their own
+  animations, and weapon switches, the watch and firing keep their timing.
+  Demo playback (`get_is_ramrom_flag`) keeps the native reload, since
+  recorded input expects it. Multiplayer players share the global setting.
+
+**Hooks** (`gunfire.c`, inside `#ifndef TARGET_N64`, with the N64 build
+keeping the inherited code): the `field_890` advance calls
+`portReloadSpeedFields`, and `RELOAD_INSTANT()` (`portReloadInstant`; 0 on
+N64) is added to the end conditions of RELOAD_LOWER, RELOAD_SWAP and
+RELOAD_RAISE. The option registers through `joy_port.c`'s option dispatch,
+`port_options.c` (ENUM after Weapon Kick), the folder's Aiming and Movement
+rows (`front.c`) and the watch's (`port_watchpages.c`), with help in
+`port_option_help.c` (which also names reloads in the page description),
+`tools/midas_ini_help.txt`, the default midas.ini writer (`video.c`) and
+README.md.
+
+**Input:** an ordinary option row, so every supported input already
+adjusts it the way it adjusts Weapon Kick.
+
+**Sources:** [header with the pure rules](port/include/port_reload_speed.h),
+[setting and hooks](port/src/port_reload_speed.c) and the
+[ROM-free test](scripts/port/test_reload_speed.c) (included by `test_ads.c`).
+
+**Checks:** in the `goldeneye` Docker image, `test_ads.sh` passes with the new
+test: the default and menu entry; midas.ini clamping; only the three reload
+states are scaled, and START, switch, watch and fire states keep their
+fields; Instant applies outside demo playback only; and the menu's first and
+last choices set Original and Instant. `test_upstream_merge.sh`,
+`test_hud.sh`, `test_wardrobe.sh`, `test_states.sh`,
+`settings_placement.py` and `bright-builds-check.ts all` pass. The hand
+gallery was regenerated for the `gunfire.c` input change with no changed
+image cells (only its input hashes moved), and `hand_gallery.py verify`
+passes. Not yet checked in game: how each speed looks and sounds, dual-wield, the rocket
+launcher and shotguns at Instant, and raised tick rates.
+
 ### FORK-070 — Thrown grenades slide the same at any tick rate
 
 **Status:** Implemented on 2026-11-10 at the owner's request, after they saw
@@ -3199,7 +3267,7 @@ subsections, in both the Options folder and the watch:
 
 | Subsection | Settings |
 | --- | --- |
-| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Sprint, Ludicrous Sprint |
+| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Reload Speed (FORK-071), Sprint, Ludicrous Sprint |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction, Tracer Strength (FORK-062), Shotgun Tracers and Decorative Pellets (FORK-063) |
 | HUD Additions | Always Crosshair Size, Projectile Arc and Arc Impact Crosshair (FORK-069), Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
 | System | About / Build Info, Fonts (FORK-051, FORK-052), Crash Reporting (Windows/Linux) |

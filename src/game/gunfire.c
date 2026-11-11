@@ -48,11 +48,16 @@
 #include "port_ads_accuracy.h"
 #include "port_gun_kick.h"
 #include "port_tracers.h"
+#include "port_reload_speed.h"
 #include "port_mission_clock.h"
 #include "boss.h"
 #include "port_weapon_export.h"
 #include "port_wardrobe.h"
 #include "port_shiny.h"
+/* Reload Speed (FORK-071): Instant ends each reload state on the tick it starts. */
+#define RELOAD_INSTANT() portReloadInstant()
+#else
+#define RELOAD_INSTANT() 0
 #endif
 
 
@@ -3659,7 +3664,11 @@ void gunTickHandState(enum GUNHAND hand, s32 triggerOn)
 
     if (g_ClockTimer > 0)
     {
+#ifndef TARGET_N64
+        handptr->field_890 += portReloadSpeedFields(handptr->weapon_action_state, g_ClockTimer); /* Reload Speed (FORK-071) */
+#else
         handptr->field_890 += g_ClockTimer;
+#endif
         handptr->field_88C += 1;
 
 #ifndef TARGET_N64
@@ -4646,7 +4655,7 @@ void gunTickHandState(enum GUNHAND hand, s32 triggerOn)
 
     if (handptr->weapon_action_state == GUN_ANIM_STATE_RELOAD_LOWER)
     {
-        if ((handptr->field_890 >= WHEN_A_FLD890) || (handptr->field_87F == 0))
+        if ((handptr->field_890 >= WHEN_A_FLD890) || (handptr->field_87F == 0) || RELOAD_INSTANT())
         {
             handptr->weapon_action_state = GUN_ANIM_STATE_RELOAD_SWAP;
             handptr->field_8B0 = WHEN_A_FLD8B0;
@@ -4774,7 +4783,7 @@ void gunTickHandState(enum GUNHAND hand, s32 triggerOn)
             }
         }
 
-        if ((handptr->field_890 >= handptr->field_8B0) && !(((handptr->field_88C < 2))))
+        if (((handptr->field_890 >= handptr->field_8B0) && !(((handptr->field_88C < 2)))) || RELOAD_INSTANT())
         {
             handptr->weapon_action_state = GUN_ANIM_STATE_RELOAD_RAISE;
             handptr->field_890 = 0.0f;
@@ -4810,7 +4819,7 @@ void gunTickHandState(enum GUNHAND hand, s32 triggerOn)
             g_CurrentPlayer->trigger_released = 0;
         }
 
-        if ((handptr->field_890 >= WHEN_C_FLD890)
+        if ((handptr->field_890 >= WHEN_C_FLD890) || RELOAD_INSTANT()
             || (get_ptr_weapon_model_header_line(var_s1) == NULL)
             || (bondwalkItemCheckBitflags(var_s1, WEAPONSTATBITFLAG_SHOW_FIRST_PERSON) == 0)
             || (bondwalkItemCheckBitflags(var_s1, WEAPONSTATBITFLAG_HIDE_FIRST_PERSON_HAND) != 0))

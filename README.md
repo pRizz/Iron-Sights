@@ -169,6 +169,12 @@ sideways kick and climb, and **Cartoon** multiplies them by 5.5, both for fun
 rather than realism. **Original** restores the native kick, which plays once
 after the trigger is released.
 
+**Reload Speed**, also on that page, speeds up your reloads: **2x**, **3x**,
+**5x** or **10x** play the same reload that many times faster, and **Instant**
+refills the magazine with no reload at all, so a gun keeps firing until your
+spare ammo runs out. **Original** is the default. Guards, weapon switches and
+demo playback keep the original speed.
+
 Iron Sights adds these HUD and feedback options under **Gameplay > Iron Sights >
 Combat Feedback** and **HUD Additions**. Mission Timer is the original setting on
 **Gameplay > HUD**, extended by Iron Sights:

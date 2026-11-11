@@ -431,6 +431,12 @@ padN_stickmode.
                       |            | flip and climb and twice the push back;
                       |            | 0 = original kick after the trigger is let
                       |            | go. Visual only; aim is unchanged
+  reload_speed        | 1          | Player reload speed: 1 = original,
+                      |            | 2, 3, 5 or 10 = that many times faster
+                      |            | (any whole number up to 10 works);
+                      |            | 0 = instant, the magazine refills with
+                      |            | no reload. Guards, weapon switches and
+                      |            | demo playback keep the original speed
   sprint              | 1          | 1 = hold Walk / Sprint for 1.5x speed;
                       |            | 0 = hold it to walk at half speed
   ludicrous_sprint    | 0          | 1 = sprint at 5x speed instead of 1.5x.

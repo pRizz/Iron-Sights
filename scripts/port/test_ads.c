@@ -14,6 +14,7 @@ extern void *memset(void *dst, int value, size_t size);
 #include "../../port/src/port_ads_accuracy.c"
 #include "../../port/src/port_gun_kick.c"
 #include "../../port/src/port_tracers.c"
+#include "../../port/src/port_reload_speed.c"
 #include "../../port/src/port_projectile_arc.c"
 #include "../../port/src/port_projectile_arc_rocket.c"
 #include "../../port/src/port_projectile_arc_thrown.c"
@@ -120,6 +121,7 @@ static void normalAim(s32 held, s32 pressed, s32 toggle)
 #include "test_ads_accuracy.c"
 #include "test_gun_kick.c"
 #include "test_tracers.c"
+#include "test_reload_speed.c"
 #include "test_projectile_arc.c"
 #include "test_projectile_arc_thrown.c"
 #include "test_settle_ticks.c"
@@ -145,6 +147,7 @@ int main(void)
     testAdsAccuracy();
     testGunKick();
     testTracers();
+    testReloadSpeed();
     testProjectileArc();
     testProjectileArcThrown();
     testSettleTicks();
