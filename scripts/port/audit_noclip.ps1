@@ -16,6 +16,9 @@ param(
     [string]$Pitch,
     # Extra GE_JOYPORT_AUTO presses (one poll each), e.g. 'noclip_up:1400,walk:1400'.
     [string]$Auto,
+    # Noclip View Distance (1 Normal, 4 Far, 10 Maximum) and the frame cap (0 = uncapped).
+    [int]$View = 4,
+    [int]$MaxFps = 60,
     # Leave Allow Noclip off, to check a press only shows the hint.
     [switch]$NotAllowed,
     [string]$Resolution = '960x540'
@@ -32,8 +35,8 @@ if (!$auditExe.StartsWith($repoDir+[IO.Path]::DirectorySeparatorChar,[StringComp
 New-Item -ItemType Directory -Path $dir | Out-Null
 Copy-Item -LiteralPath $Executable -Destination $auditExe
 Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
-Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]', 'fullscreen=window', 'vsync=0', 'maxfps=60',
-    'tickhz=60', 'render_thread=0', 'msaa=0', 'music_volume=0', 'sfx_volume=0', "allow_noclip=$(if ($NotAllowed) { 0 } else { 1 })")
+Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]', 'fullscreen=window', 'vsync=0', "maxfps=$MaxFps",
+    'tickhz=60', 'render_thread=0', 'msaa=0', 'music_volume=0', 'sfx_volume=0', "allow_noclip=$(if ($NotAllowed) { 0 } else { 1 })", "noclip_view=$View")
 $autoList = (@($Presses.Split(',')) | ForEach-Object { "noclip:$($_.Trim())" }) -join ','
 if ($Auto) { $autoList += ',' + $Auto }
 $auditEnv = @{

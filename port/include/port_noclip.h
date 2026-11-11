@@ -55,6 +55,25 @@ static inline void portNoclipFlyStep(const coord3d *walk, f32 forwardX, f32 forw
     out->f[2] = sideZ + along * cosPitch * forwardZ;
 }
 
+/* View distance while flying: the portal walk treats every portal as visible
+ * (so every room draws, however far above or below its walls the camera is),
+ * and the level's far distance is multiplied by Noclip View Distance before
+ * its fog and culling are derived, so the fog stretches out with it.
+ * [display] noclip_view: 1 = Normal (all rooms only), 4 = Far, 10 = Maximum. */
+#define PORT_NOCLIP_VIEW_DEFAULT 4
+#define PORT_NOCLIP_VIEW_MAX 10
+
+static inline s32 portNoclipViewClamp(s32 value)
+{
+    return value < 1 ? 1 : value > PORT_NOCLIP_VIEW_MAX ? PORT_NOCLIP_VIEW_MAX : value;
+}
+
+/* The far-distance multiplier to load the level's fog with. */
+static inline f32 portNoclipViewScaleFor(s32 anyFlying, s32 setting)
+{
+    return anyFlying ? (f32) portNoclipViewClamp(setting) : 1.0f;
+}
+
 /* Whether a player flies this tick. */
 static inline s32 portNoclipFliesFor(s32 allowed, s32 toggled, s32 demo, s32 inTank, s32 dead)
 {
@@ -80,5 +99,12 @@ s32 portNoclipActive(void);
 void portNoclipMove(const coord3d *walk);
 /* portHudDraw: the NOCLIP label while the current player flies. */
 Gfx *portNoclipDrawLabel(Gfx *g);
+/* bg.c portal test: the current player flies, so every portal is visible. */
+s32 portNoclipAllRooms(void);
+/* bgfog.c fogLoadCurrentEnvironment: the far multiplier to load with now,
+ * remembered as the one applied. */
+f32 portNoclipViewScaleApply(void);
+/* bgfog.c: reload the level's fog and far distance at the current multiplier. */
+void portFogNoclipReapply(void);
 
 #endif

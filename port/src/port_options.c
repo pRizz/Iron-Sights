@@ -153,6 +153,9 @@ static const char *const sWeaponKickText[] = { "Original\n", "Enhanced\n", "Ludi
 /* Reload Speed (FORK-071): a multiplier, 0 = Instant (port_reload_speed.h) */
 static const s32 sReloadSpeedVals[] = { 1, 2, 3, 5, 10, 0 };
 static const char *const sReloadSpeedText[] = { "Original\n", "2x\n", "3x\n", "5x\n", "10x\n", "Instant\n" };
+/* Noclip View Distance (FORK-072): the far multiplier while flying (port_noclip.h) */
+static const s32 sNoclipViewVals[] = { 1, 4, 10 };
+static const char *const sNoclipViewText[] = { "Normal\n", "Far\n", "Maximum\n" };
 static const s32 sWeaponStyleVals[] = { 0, 1 };
 static const char *const sWeaponStyleText[] = { "Text\n", "Icons\n" };
 static const s32 sHealthDisplayVals[] = { 0, 1 };
@@ -347,6 +350,7 @@ static const struct PortOpt sOpts[] = {
     ENUMR ("weapon_kick",        "[display]", "Weapon Kick\n",        PORTOPT_CAT_GAMEPLAY, sWeaponKickVals, sWeaponKickText, NULL), /* FORK-061 */
     ENUMR ("reload_speed",       "[display]", "Reload Speed\n",       PORTOPT_CAT_GAMEPLAY, sReloadSpeedVals, sReloadSpeedText, NULL), /* FORK-071 */
     TOGGLE("allow_noclip",       "[display]", "Allow Noclip\n",       PORTOPT_CAT_GAMEPLAY), /* FORK-072 */
+    ENUMR ("noclip_view",        "[display]", "Noclip View Distance\n", PORTOPT_CAT_GAMEPLAY, sNoclipViewVals, sNoclipViewText, NULL), /* FORK-072 */
     TOGGLE("sprint",             "[display]", "Sprint\n",             PORTOPT_CAT_GAMEPLAY),
     TOGGLE("ludicrous_sprint",   "[display]", "Ludicrous Sprint\n",   PORTOPT_CAT_GAMEPLAY),
     TOGGLE("sight_on_screen",    "[display]", "Sight on Screen\n",    PORTOPT_CAT_GAMEPLAY),

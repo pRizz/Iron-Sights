@@ -244,6 +244,24 @@ EnvironmentFoglessRecord fog_tables2[] = {
 
 void fogLoadCurrentEnvironment(EnvironmentRecord *arg0);
 void fogLoadFoglessCurrentEnvironment(EnvironmentFoglessRecord *arg0);
+#ifndef TARGET_N64
+/* Noclip View Distance (FORK-072, port_noclip.c). */
+extern f32 portNoclipViewScaleApply(void);
+static EnvironmentRecord *g_portFogEnv; /* the last record loaded, unscaled */
+#define PORT_FOGLESS_NEAR 15.0f   /* fogLoadLevelEnvironment's fogless z range */
+#define PORT_FOGLESS_FAR 10000.0f
+
+/* Reload the level's fog and far distance at the current noclip multiplier. */
+void portFogNoclipReapply(void)
+{
+    if (g_EnvironmentFoundp != NULL && g_portFogEnv != NULL)
+    {
+        fogLoadCurrentEnvironment(g_portFogEnv);
+        return;
+    }
+    viSetZRange(PORT_FOGLESS_NEAR, PORT_FOGLESS_FAR * portNoclipViewScaleApply());
+}
+#endif
 
 // end forward declarations
 
@@ -304,6 +322,23 @@ void fogLoadCurrentEnvironment(EnvironmentRecord *arg0)
     fmax = arg0->Visibility.Nfd.MaxVisRange / 1000;
     assert(0.0F <= fmax);
     assert(fmax <= 1.0F);
+#endif
+#ifndef TARGET_N64
+    { /* Noclip View Distance (FORK-072): while a player flies, load the level
+       * with its far distance multiplied, before the fog, cull radius and
+       * character fade are derived from it, so they all stretch together.
+       * The unscaled record is kept for portFogNoclipReapply. */
+        static EnvironmentRecord port_noclip_env;
+        const f32 k = portNoclipViewScaleApply();
+
+        g_portFogEnv = arg0;
+        if (k > 1.0f)
+        {
+            port_noclip_env = *arg0;
+            port_noclip_env.Visibility.FarFog *= k;
+            arg0 = &port_noclip_env;
+        }
+    }
 #endif
 
     viSetZRange(arg0->Visibility.BlendMultiplier, arg0->Visibility.FarFog);

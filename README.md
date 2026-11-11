@@ -180,7 +180,11 @@ demo playback keep the original speed.
 look, through walls, floors and doors, with no gravity, at three times walking
 speed, or twelve times while holding **Left Shift** (Walk / Sprint). Hold
 **Space** to rise and **Left Ctrl** (Crouch Hold) to fall; both are rebindable
-as **Noclip Up** and **Noclip Down**. A **NOCLIP** label shows while it is on. Press it again to
+as **Noclip Up** and **Noclip Down**. A **NOCLIP** label shows while it is on.
+While flying, every room of the level draws, so the map no longer vanishes
+when you rise above or sink below it, and **Noclip View Distance** (Normal,
+Far by default, or Maximum) pushes the fog and far clip out with you. Drawing
+everything costs frame time on big levels; choose Normal if flying stutters. Press it again to
 drop onto the floor below you; with no floor there, you go back to where you
 last flew over one. It is off in demo playback, in the tank and after death,
 and each mission starts on foot. Browser touch has no Noclip button yet.

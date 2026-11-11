@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 extern void sysFatalError(const char *format, ...);
+extern s32 portNoclipAllRooms(void); /* port_noclip.c (FORK-072) */
 #endif
 
 
@@ -5998,6 +5999,15 @@ void bgDetermineVisibleRooms(void)
             {
                 sub_GAME_7F0B39BC(forced[i], 0, &g_CurrentPlayer->screensize, 1);
             }
+        }
+    }
+
+    if (portNoclipAllRooms())
+    { /* Noclip (FORK-072): a flier sees every room, full screen, however far
+       * above, below or outside the portal walk's reach the camera is */
+        for (i = 1; i < g_MaxNumRooms; i++)
+        {
+            sub_GAME_7F0B39BC(i, 0, &g_CurrentPlayer->screensize, 1);
         }
     }
 #endif

@@ -444,6 +444,11 @@ padN_stickmode.
                       |            | rises, crouch_hold falls; pressing it
                       |            | again drops you onto the floor below. Off
                       |            | in demo playback, the tank and after death
+  noclip_view         | 4          | Draw distance while noclip flies: every
+                      |            | room draws, and the level's far distance
+                      |            | (fog and far clip) is multiplied: 1 =
+                      |            | normal, 4 = far, 10 = maximum. Costs
+                      |            | frame time on big levels
   sprint              | 1          | 1 = hold Walk / Sprint for 1.5x speed;
                       |            | 0 = hold it to walk at half speed
   ludicrous_sprint    | 0          | 1 = sprint at 5x speed instead of 1.5x.

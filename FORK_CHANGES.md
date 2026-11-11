@@ -35,7 +35,10 @@ new areas. Status describes implementation state, not Git publication state.
 **Status:** Implemented on 2026-11-10 at the owner's request. They play-tested
 the first Windows build and asked for rise / fall controls and faster flight,
 then play-tested the revised build; committed and pushed to `main` on
-2026-11-10. Linux, Steam Deck and browser builds not run locally.
+2026-11-10. Flying around Dam they saw much of the map vanish slightly too
+high or low, so the view distance below was added; they play-tested it and it
+was committed and pushed to `main` on 2026-11-10. Linux, Steam Deck and browser builds not
+run locally.
 
 Inherited behaviour: Bond always stands on a stan floor tile. `MoveBond`
 (`bondview2.c`) turns the head animation's step into a move offset and
@@ -78,6 +81,22 @@ control pressed it:
 - Never in demo playback, in the tank or once dead (each of those lands him);
   turning the setting off lands every flier; each stage starts on foot
   (`initBONDdataforPlayer`). Tank entry is unavailable while flying.
+- **View distance while flying.** Inherited, the rooms drawn come from a
+  portal walk from the camera's room (`bg.c`): portals behind the camera's
+  side, outside the parent's screen box or past 0.9 of the far distance are
+  dropped, and the walk stops at 16 hops. A flier's room is the floor's below
+  him, so above the walls or under the floor whole rooms dropped out, and
+  Dam's far distance (15,000, fog from 99.5% of it) cut off the rest. Now,
+  while any player flies, every room is appended to the drawn set with a
+  full-screen box after the walk (`portNoclipAllRooms`, beside the inherited
+  `GE_FORCEROOM` diagnostic; at most 150 rooms, inside the 204-entry table),
+  and **Noclip View Distance** (`[display] noclip_view`, Normal 1 / Far 4,
+  default / Maximum 10) multiplies the level's far distance in
+  `fogLoadCurrentEnvironment` before its fog, room cull radius and character
+  fade are derived, so they stretch together; fogless levels scale their
+  fixed 15-10,000 range. The fog reloads (`portFogNoclipReapply`) when
+  flight starts or ends or the setting changes. The fog is shared, so in
+  split-screen one flier stretches it for everyone.
 - Mission records and unlocks are unaffected, as with the game's own cheats,
   which do not block saving either.
 
@@ -85,7 +104,10 @@ control pressed it:
 the on-foot branch calls `portNoclipMove` and jumps past the collision and
 step-height code (`port_noclip_moved`) while flying; `bondviewUpdatePlayerY`
 is skipped while flying; `initBONDdataforPlayer` (`player.c`) resets the
-player; `portHudDraw` draws the label. All game-side hooks are inside
+player; `portHudDraw` draws the label; `bg.c`'s visible-room pass appends
+every room while flying; `fogLoadCurrentEnvironment` (`bgfog.c`) loads with
+the view multiplier and keeps the unscaled record for `portFogNoclipReapply`,
+defined beside it. All game-side hooks are inside
 `#ifndef TARGET_N64`. The actions are appended as `PORTACT_NOCLIP` (28), `PORTACT_NOCLIP_UP`
 (29) and `PORTACT_NOCLIP_DOWN` (30) in `joy_port.c`, with
 `portJoyPortNoclipPressed` and `portJoyPortNoclipControls`, the pad-map names in
@@ -109,8 +131,9 @@ point actions either.
 [setting, flight and hooks](port/src/port_noclip.c), the
 [ROM-free test](scripts/port/test_noclip.c) (included by `test_ads.c`) and
 the [in-game audit](scripts/port/audit_noclip.ps1). `GE_NOCLIPDBG=1` logs
-flight starts, landings and positions; `GE_NOCLIPDBG_PITCH` holds the view
-pitch while flying, for the audit only.
+flight starts, landings and positions; `GE_NOCLIPDBG_PITCH=deg[,ticks,deg2]` holds the
+view pitch while flying (switching after that many ticks), for the audit only;
+the audit's `-View` and `-MaxFps` set the view distance and frame cap.
 
 **Checks:** in the `goldeneye` Docker image, `test_ads.sh` passes with the
 new test: the fly step (level, climbing, diving, sideways and turned
@@ -136,8 +159,18 @@ second where the first version covered about 590, and ten one-poll Noclip Up
 presses raised his feet 300 units (30 a tick). A capture showed the NOCLIP label and the level drawn around him
 high on the cliff. The hand gallery was regenerated for the `bondview2.c`
 and `port_hud.c` input changes with no changed image cells, and
-`hand_gallery.py verify` passes. Not checked: split-screen, other stages, guards'
-reactions, and how rooms draw when flying far outside the level.
+`hand_gallery.py verify` passes. View distance (ROM-free): every room while flying, the
+multiplier's clamp and default, fog reloads at 4 on take-off, at 10 and 1 as
+the setting changes and at 1 on landing. In game, climbing at 25 degrees and
+then diving at -35 over Dam: the stock build drew only fog-blue sky where
+this one draws the cliffs and terrain; `GE_ROOMLIST` showed 2-10 rooms
+before and all 136 of Dam's while flying, `GE_FOG_AUDIT` the far distance
+reloaded at 150,000 for Maximum, and no fatal or table errors. At the spawn
+point (60 FPS cap, `GE_HITCHMS=1`) GL time per frame went from 6.5 ms on
+foot (about 370 draws) to 12.4 ms flying at Maximum (about 656). Not checked:
+split-screen, other stages, guards' reactions, rooms far outside the level,
+and slower GPUs. The hand gallery was regenerated for the `bg.c` and
+`bgfog.c` input changes with no changed image cells.
 
 ### FORK-071 — Reload Speed: faster player reloads, up to instant
 
@@ -3376,7 +3409,7 @@ subsections, in both the Options folder and the watch:
 
 | Subsection | Settings |
 | --- | --- |
-| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Reload Speed (FORK-071), Allow Noclip (FORK-072), Sprint, Ludicrous Sprint |
+| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Reload Speed (FORK-071), Allow Noclip and Noclip View Distance (FORK-072), Sprint, Ludicrous Sprint |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction, Tracer Strength (FORK-062), Shotgun Tracers and Decorative Pellets (FORK-063) |
 | HUD Additions | Always Crosshair Size, Projectile Arc and Arc Impact Crosshair (FORK-069), Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
 | System | About / Build Info, Fonts (FORK-051, FORK-052), Crash Reporting (Windows/Linux) |

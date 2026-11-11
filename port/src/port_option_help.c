@@ -20,6 +20,7 @@ static const struct PortOptHelp sHelp[] = {
     { "weapon_kick",        "Every shot kicks the gun; Ludicrous 3x, Cartoon 5.5x. Original: after firing." },
     { "reload_speed",       "Your reloads go 2x to 10x faster; Instant refills with no reload at all." },
     { "allow_noclip",       "Noclip (N) flies you through walls where you look: Space up, Ctrl down, Shift faster." },
+    { "noclip_view",        "While flying, every room draws; Far and Maximum also push fog and far clip out." },
     { "ludicrous_sprint",   "With Sprint on, sprinting goes 5x speed instead of 1.5x." },
     { "look_updown",        "Upright: push up to look up. Reverse inverts it." },
     { "auto_aim",           "Gun aims at enemies for you." },

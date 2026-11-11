@@ -22,6 +22,9 @@ void bondviewUpdatePlayerRoom(struct player *player) { (void) player; noclipRoom
 void objectivestatusCheckRoomEntered(s32 roomid) { noclipRoomEntered = roomid; }
 void portConPrintf(s32 showmsg, const char *fmt, ...) { (void) fmt; noclipPopups += showmsg != 0; }
 s32 portConIsOpen(void) { return 0; } /* joy_port.c's crouch step */
+static s32 noclipFogReloads;
+static f32 noclipFogScale = 1.0f;
+void portFogNoclipReapply(void) { noclipFogReloads++; noclipFogScale = portNoclipViewScaleApply(); } /* bgfog.c */
 
 static void noclipPress(void)
 {
@@ -170,6 +173,36 @@ static void testNoclip(void)
         g_GlobalTimerDelta = savedDelta;
     }
     assert(portNoclipClimbFor(-1, TRUE, 0.5f) == -PORT_NOCLIP_CLIMB * PORT_NOCLIP_SPRINT_SPEED * 0.5f);
+
+    /* View distance: every room while flying, and the fog reloads at the
+     * Noclip View Distance multiplier when flight starts or the setting
+     * changes, and back at 1 on landing. */
+    {
+        s32 view = -1;
+
+        assert(portNoclipViewClamp(0) == 1 && portNoclipViewClamp(99) == PORT_NOCLIP_VIEW_MAX);
+        assert(portNoclipViewScaleFor(FALSE, 10) == 1.0f && portNoclipViewScaleFor(TRUE, 4) == 4.0f);
+        assert(portJoyPortOptionGet("noclip_view", &view) && view == PORT_NOCLIP_VIEW_DEFAULT);
+        assert(portOptFind("noclip_view") >= 0 && portOptValueCount(portOptFind("noclip_view")) == 3);
+        assert(!portNoclipAllRooms());
+        noclipFogReloads = 0;
+        noclipPress();
+        portNoclipTick();
+        assert(portNoclipAllRooms() && noclipFogReloads == 1 && noclipFogScale == 4.0f);
+        portNoclipTick();
+        assert(noclipFogReloads == 1); /* nothing changed */
+        assert(portJoyPortOptionSet("noclip_view", 10));
+        portNoclipTick();
+        assert(noclipFogReloads == 2 && noclipFogScale == 10.0f);
+        assert(portJoyPortOptionSet("noclip_view", 1));
+        portNoclipTick();
+        assert(noclipFogScale == 1.0f && portNoclipAllRooms());
+        assert(portJoyPortOptionSet("noclip_view", PORT_NOCLIP_VIEW_DEFAULT));
+        portNoclipTick();
+        noclipPress();
+        portNoclipTick();
+        assert(!portNoclipAllRooms() && noclipFogScale == 1.0f);
+    }
 
     /* Demo playback, the tank and turning the setting off all land him. */
     noclipPress();

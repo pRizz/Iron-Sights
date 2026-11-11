@@ -39,6 +39,8 @@ typedef struct NoclipFooting {
 } NoclipFooting;
 
 static s32 allowNoclip = PORT_NOCLIP_ALLOW_DEFAULT;
+static s32 noclipView = PORT_NOCLIP_VIEW_DEFAULT;
+static f32 viewApplied = 1.0f; /* the far multiplier the level's fog was last loaded with */
 static s32 toggled[NOCLIP_PLAYERS];
 static s32 flying[NOCLIP_PLAYERS];
 static NoclipFooting footing[NOCLIP_PLAYERS];
@@ -73,6 +75,11 @@ static s32 noclipPlayer(void)
 
 s32 portNoclipOptionGet(const char *key, s32 *value)
 {
+    if (strcmp(key, "noclip_view") == 0)
+    {
+        *value = noclipView;
+        return TRUE;
+    }
     if (strcmp(key, "allow_noclip") != 0) return FALSE;
     *value = allowNoclip;
     return TRUE;
@@ -80,10 +87,24 @@ s32 portNoclipOptionGet(const char *key, s32 *value)
 
 s32 portNoclipOptionSet(const char *key, s32 value)
 {
+    if (strcmp(key, "noclip_view") == 0)
+    {
+        noclipView = portNoclipViewClamp(value); /* a flier's next tick reloads the fog */
+        return TRUE;
+    }
     if (strcmp(key, "allow_noclip") != 0) return FALSE;
     allowNoclip = value != 0;
     if (!allowNoclip) memset(toggled, 0, sizeof(toggled)); /* each flier lands on its next tick */
     return TRUE;
+}
+
+/* The level's far multiplier now: any player flying stretches the shared fog. */
+static f32 noclipViewScale(void)
+{
+    s32 i, any = 0;
+
+    for (i = 0; i < NOCLIP_PLAYERS; i++) any |= flying[i];
+    return portNoclipViewScaleFor(any, noclipView);
 }
 
 void portNoclipResetPlayer(s32 player)
@@ -192,6 +213,18 @@ void portNoclipTick(void)
         noclipLog("after-land", pl); /* where gravity left him */
     }
     flying[p] = fly;
+    if (noclipViewScale() != viewApplied) portFogNoclipReapply(); /* view distance follows flight */
+}
+
+s32 portNoclipAllRooms(void)
+{
+    return flying[noclipPlayer()];
+}
+
+f32 portNoclipViewScaleApply(void)
+{
+    viewApplied = noclipViewScale();
+    return viewApplied;
 }
 
 s32 portNoclipActive(void)
@@ -207,18 +240,22 @@ void portNoclipMove(const coord3d *walk)
     f32 floorY = 0.0f;
     StandTile *tile;
 
-    { /* GE_NOCLIPDBG_PITCH=deg (audit only): hold the view at that pitch while
-       * flying, since the walk's look-ahead recentres any spawn pitch */
-        static s32 parsed;
-        static const char *hold;
+    { /* GE_NOCLIPDBG_PITCH=deg[,ticks,deg2] (audit only): hold the view at that
+       * pitch while flying (deg2 after that many flying ticks), since the
+       * walk's look-ahead recentres any spawn pitch */
+        static s32 parsed, held, after = -1;
+        static f32 first, second;
         if (!parsed)
         {
+            const char *e = getenv("GE_NOCLIPDBG_PITCH");
             parsed = 1;
-            hold = getenv("GE_NOCLIPDBG_PITCH");
+            held = e != NULL && e[0] != '\0';
+            if (held && sscanf(e, "%f,%d,%f", &first, &after, &second) < 3) after = -1;
         }
-        if (hold != NULL && hold[0] != '\0')
+        if (held)
         {
-            pl->vv_verta = (f32) atof(hold);
+            static s32 ticks;
+            pl->vv_verta = (after >= 0 && ticks++ >= after) ? second : first;
             pl->vv_sinverta = sinf(pl->vv_verta * NOCLIP_DEG_TO_RAD);
             pl->vv_cosverta = cosf(pl->vv_verta * NOCLIP_DEG_TO_RAD);
         }
