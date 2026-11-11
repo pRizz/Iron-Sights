@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 extern void sysFatalError(const char *format, ...);
-extern s32 portNoclipAllRooms(void); /* port_noclip.c (FORK-072) */
+#include "port_noclip.h" /* FORK-072: portNoclipAllRooms, portNoclipMatrixOffsetFits */
 #endif
 
 
@@ -6005,10 +6005,33 @@ void bgDetermineVisibleRooms(void)
     if (portNoclipAllRooms())
     { /* Noclip (FORK-072): a flier sees every room, full screen, however far
        * above, below or outside the portal walk's reach the camera is */
+        s32 kept = 0;
+
         for (i = 1; i < g_MaxNumRooms; i++)
         {
             sub_GAME_7F0B39BC(i, 0, &g_CurrentPlayer->screensize, 1);
         }
+        /* ...except rooms whose offset from the camera anchor overflows the
+         * 16.16 room matrix (setupRoomTransformationMatrix): out of range,
+         * they wrap to the camera and fill the screen with stray polygons.
+         * The stock far cull never reaches them; a raised view distance does. */
+        for (i = 0; i < g_BgNumberOfRoomsDrawn; i++)
+        {
+            const s32 room = dword_CODE_bss_8007FFA0[i].roomid;
+            const struct coord3d *pos = &ptr_bgdata_room_fileposition_list[room].pos;
+
+            if (portNoclipMatrixOffsetFits(pos->f[0] * room_data_float2 - g_CurrentPlayer->current_model_pos.f[0],
+                                           pos->f[1] * room_data_float2 - g_CurrentPlayer->current_model_pos.f[1],
+                                           pos->f[2] * room_data_float2 - g_CurrentPlayer->current_model_pos.f[2]))
+            {
+                dword_CODE_bss_8007FFA0[kept++] = dword_CODE_bss_8007FFA0[i];
+            }
+            else
+            {
+                g_BgRoomInfo[room].room_rendered = 0;
+            }
+        }
+        g_BgNumberOfRoomsDrawn = kept;
     }
 #endif
 

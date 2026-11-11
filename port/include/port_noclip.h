@@ -55,9 +55,9 @@ static inline void portNoclipFlyStep(const coord3d *walk, f32 forwardX, f32 forw
     out->f[2] = sideZ + along * cosPitch * forwardZ;
 }
 
-/* View distance while flying: the portal walk treats every portal as visible
- * (so every room draws, however far above or below its walls the camera is),
- * and the level's far distance is multiplied by Noclip View Distance before
+/* View distance while flying: every room is appended to the drawn set after
+ * the portal walk (so rooms draw however far above or below their walls the
+ * camera is), except rooms out of matrix range (below), and the level's far distance is multiplied by Noclip View Distance before
  * its fog and culling are derived, so the fog stretches out with it.
  * [display] noclip_view: 1 = Normal (all rooms only), 4 = Far, 10 = Maximum. */
 #define PORT_NOCLIP_VIEW_DEFAULT 4
@@ -72,6 +72,18 @@ static inline s32 portNoclipViewClamp(s32 value)
 static inline f32 portNoclipViewScaleFor(s32 anyFlying, s32 setting)
 {
     return anyFlying ? (f32) portNoclipViewClamp(setting) : 1.0f;
+}
+
+/* A room's matrix (bgroomtrans.c) stores its offset from the camera anchor
+ * as 16.16 fixed point, so each axis must stay inside +-32767 units; past
+ * that it wraps and the room draws as stray polygons at the camera. While
+ * flying, rooms beyond this margin are dropped from the drawn set. */
+#define PORT_NOCLIP_MATRIX_RANGE 32000.0f
+
+static inline s32 portNoclipMatrixOffsetFits(f32 dx, f32 dy, f32 dz)
+{
+    return dx > -PORT_NOCLIP_MATRIX_RANGE && dx < PORT_NOCLIP_MATRIX_RANGE && dy > -PORT_NOCLIP_MATRIX_RANGE
+        && dy < PORT_NOCLIP_MATRIX_RANGE && dz > -PORT_NOCLIP_MATRIX_RANGE && dz < PORT_NOCLIP_MATRIX_RANGE;
 }
 
 /* Whether a player flies this tick. */

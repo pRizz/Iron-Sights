@@ -169,7 +169,9 @@ the first Windows build and asked for rise / fall controls and faster flight,
 then play-tested the revised build; committed and pushed to `main` on
 2026-11-10. Flying around Dam they saw much of the map vanish slightly too
 high or low, so the view distance below was added; they play-tested it and it
-was committed and pushed to `main` on 2026-11-10. Linux, Steam Deck and browser builds not
+was committed and pushed to `main` on 2026-11-10. The room-matrix range fix
+for the stray polygons it caused at Dam's spawn was committed and pushed on
+2026-11-11 after the owner reviewed it. Linux, Steam Deck and browser builds not
 run locally.
 
 Inherited behaviour: Bond always stands on a stan floor tile. `MoveBond`
@@ -229,6 +231,14 @@ control pressed it:
   fixed 15-10,000 range. The fog reloads (`portFogReapply`) when
   flight starts or ends or the setting changes. The fog is shared, so in
   split-screen one flier stretches it for everyone.
+  The owner then saw the screen fill with stray polygons when flying started
+  at Dam's spawn. A room's matrix stores its offset from the camera anchor as
+  16.16 fixed point (`setupRoomTransformationMatrix`), so a room more than
+  32,767 units away on any axis wraps and draws at the camera; the stock far
+  cull never reaches such rooms, but the raised far distance did. While flying,
+  rooms outside +-32,000 on any axis (`portNoclipMatrixOffsetFits`) are now
+  dropped from the drawn set, whether the walk or the append added them (121
+  of Dam's 136 rooms remain at its spawn).
 - Mission records and unlocks are unaffected, as with the game's own cheats,
   which do not block saving either.
 
@@ -265,7 +275,10 @@ point actions either.
 the [in-game audit](scripts/port/audit_noclip.ps1). `GE_NOCLIPDBG=1` logs
 flight starts, landings and positions; `GE_NOCLIPDBG_PITCH=deg[,ticks,deg2]` holds the
 view pitch while flying (switching after that many ticks), for the audit only;
-the audit's `-View` and `-MaxFps` set the view distance and frame cap.
+the audit's `-View` and `-MaxFps` set the view distance and frame cap,
+`-UserIni` copies `build_win\midas.ini` and links its HD texture pack (the
+junction is removed when the run ends), `-Intro` plays the mission intro and
+`-Set` overrides midas.ini keys.
 
 **Checks:** in the `goldeneye` Docker image, `test_ads.sh` passes with the
 new test: the fly step (level, climbing, diving, sideways and turned
@@ -301,7 +314,13 @@ reloaded at 150,000 for Maximum, and no fatal or table errors. At the spawn
 point (60 FPS cap, `GE_HITCHMS=1`) GL time per frame went from 6.5 ms on
 foot (about 370 draws) to 12.4 ms flying at Maximum (about 656). Not checked:
 split-screen, other stages, guards' reactions, rooms far outside the level,
-and slower GPUs. The hand gallery was regenerated for the `bg.c` and
+and slower GPUs. Stray polygons at the spawn: reproduced with the owner's
+settings (HD pack, MSAA, reflections, 120 Hz, render thread) by skipping the
+intro and flying at once, and also with defaults, but not at Normal view;
+unaffected by reflections, the HD pack or 16 times the room memory; drawing
+only rooms near the camera removed it. With the range check, the same runs at
+Far and Maximum draw cleanly and the dive over Dam still shows the cliffs.
+The hand gallery was regenerated for the `bg.c` and
 `bgfog.c` input changes with no changed image cells.
 
 ### FORK-071 — Reload Speed: faster player reloads, up to instant

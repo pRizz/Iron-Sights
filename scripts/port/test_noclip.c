@@ -181,6 +181,9 @@ static void testNoclip(void)
         s32 view = -1;
 
         assert(portNoclipViewClamp(0) == 1 && portNoclipViewClamp(99) == PORT_NOCLIP_VIEW_MAX);
+        /* rooms out of the 16.16 room-matrix range are not drawn while flying */
+        assert(portNoclipMatrixOffsetFits(31000.0f, -31000.0f, 0.0f));
+        assert(!portNoclipMatrixOffsetFits(0.0f, 0.0f, -40000.0f) && !portNoclipMatrixOffsetFits(33000.0f, 0.0f, 0.0f));
         assert(portNoclipViewScaleFor(FALSE, 10) == 1.0f && portNoclipViewScaleFor(TRUE, 4) == 4.0f);
         assert(portJoyPortOptionGet("noclip_view", &view) && view == PORT_NOCLIP_VIEW_DEFAULT);
         assert(portOptFind("noclip_view") >= 0 && portOptValueCount(portOptFind("noclip_view")) == 3);

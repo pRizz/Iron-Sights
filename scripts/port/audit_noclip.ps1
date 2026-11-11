@@ -21,6 +21,13 @@ param(
     [int]$MaxFps = 60,
     # Leave Allow Noclip off, to check a press only shows the hint.
     [switch]$NotAllowed,
+    # Start from a copy of build_win\midas.ini (windowed, with the noclip keys
+    # appended) and link its HD texture pack, to reproduce a player's setup.
+    [switch]$UserIni,
+    # Play the mission intro instead of skipping it.
+    [switch]$Intro,
+    # midas.ini overrides, e.g. 'glass_reflections=0','shiny_weapons=0'.
+    [string[]]$Set = @(),
     [string]$Resolution = '960x540'
 )
 $ErrorActionPreference = 'Stop'
@@ -35,8 +42,19 @@ if (!$auditExe.StartsWith($repoDir+[IO.Path]::DirectorySeparatorChar,[StringComp
 New-Item -ItemType Directory -Path $dir | Out-Null
 Copy-Item -LiteralPath $Executable -Destination $auditExe
 Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
-Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]', 'fullscreen=window', 'vsync=0', "maxfps=$MaxFps",
-    'tickhz=60', 'render_thread=0', 'msaa=0', 'music_volume=0', 'sfx_volume=0', "allow_noclip=$(if ($NotAllowed) { 0 } else { 1 })", "noclip_view=$View")
+$noclipKeys = @("allow_noclip=$(if ($NotAllowed) { 0 } else { 1 })", "noclip_view=$View")
+if ($UserIni) {
+    $userLines = Get-Content -LiteralPath (Join-Path $repoDir 'build_win\midas.ini') | Where-Object { $_ -notmatch '^(fullscreen|vsync|allow_noclip|noclip_view|music_volume|sfx_volume)=' -and ($Set | ForEach-Object { $_.Split('=')[0] }) -notcontains $_.Split('=')[0] }
+    Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value (@($userLines) + @('[display]', 'fullscreen=window', 'vsync=0', 'music_volume=0', 'sfx_volume=0') + $noclipKeys + $Set)
+    $packs = Join-Path $repoDir 'build_win\Data\TexturePacks'
+    if (Test-Path -LiteralPath $packs) {
+        New-Item -ItemType Directory -Path (Join-Path $dir 'Data') | Out-Null
+        New-Item -ItemType Junction -Path (Join-Path $dir 'Data\TexturePacks') -Target $packs | Out-Null
+    }
+} else {
+    Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value (@('[display]', 'fullscreen=window', 'vsync=0', "maxfps=$MaxFps",
+        'tickhz=60', 'render_thread=0', 'msaa=0', 'music_volume=0', 'sfx_volume=0') + $noclipKeys)
+}
 $autoList = (@($Presses.Split(',')) | ForEach-Object { "noclip:$($_.Trim())" }) -join ','
 if ($Auto) { $autoList += ',' + $Auto }
 $auditEnv = @{
@@ -44,6 +62,7 @@ $auditEnv = @{
     GE_STAGE=$Stage; GE_STAGE_AFTER='1'; GE_SKIPINTRO='1'; GE_CHEATS='invuln,invis';
     GE_JOYPORT_AUTO=$autoList; GE_NOCLIPDBG='1'; GE_FRAMES=[string]$Frames
 }
+if ($Intro) { $auditEnv.Remove('GE_SKIPINTRO') }
 if ($Spawn) { $auditEnv.GE_SPAWNXYZ = $Spawn }
 if ($Goto) { $auditEnv.GE_GOTO = $Goto }
 if ($Pitch) { $auditEnv.GE_NOCLIPDBG_PITCH = $Pitch }
@@ -62,6 +81,10 @@ Write-Output "Noclip audit: $dir"
 try { $p.WaitForExit() }
 finally {
     if ($p.HasExited -and (Test-Path -LiteralPath $auditExe)) { Remove-Item -LiteralPath $auditExe }
+    # Unlink the borrowed texture pack (rmdir removes only the junction), so a
+    # later recursive delete of this folder cannot reach the player's pack.
+    $packLink = Join-Path $dir 'Data\TexturePacks'
+    if ($p.HasExited -and (Test-Path -LiteralPath $packLink)) { cmd /c rmdir "$packLink" }
 }
 if ($p.ExitCode -ne 0) { throw "Game exited with code $($p.ExitCode)." }
 Get-Content -LiteralPath (Join-Path $dir 'stdout.log') | Where-Object { $_ -like 'noclipdbg:*' } | ForEach-Object { Write-Output $_ }
