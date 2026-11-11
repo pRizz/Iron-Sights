@@ -80,6 +80,7 @@
 #include "port_ads_accuracy.h"
 #include "port_gun_kick.h"
 #include "port_tracers.h"
+#include "port_projectile_arc.h"
 #include "joy.h"
 #include <os_extension.h>
 
@@ -315,6 +316,7 @@ s32 portJoyPortSetOption(const char *key, const char *value)
     if (portAdsAccuracyOptionSet(key, atoi(value))) return 1;
     if (portGunKickOptionSet(key, atoi(value))) return 1;
     if (portTracerOptionSet(key, atoi(value))) return 1;
+    if (portProjectileArcOptionSet(key, atoi(value))) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = atoi(value) != 0;
         return 1;
@@ -469,6 +471,7 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
     if (portAdsAccuracyOptionGet(key, out)) return 1;
     if (portGunKickOptionGet(key, out)) return 1;
     if (portTracerOptionGet(key, out)) return 1;
+    if (portProjectileArcOptionGet(key, out)) return 1;
     if (strcmp(key, "sprint") == 0) {
         *out = sSprint;
         return 1;
@@ -509,6 +512,7 @@ s32 portJoyPortOptionSet(const char *key, s32 v)
     if (portAdsAccuracyOptionSet(key, v)) return 1;
     if (portGunKickOptionSet(key, v)) return 1;
     if (portTracerOptionSet(key, v)) return 1;
+    if (portProjectileArcOptionSet(key, v)) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = v != 0;
         return 1;
@@ -805,8 +809,10 @@ static const struct {
     { ITEM_SILVERWPPK,    1.56f, 33.5f, -0.025f },
     { ITEM_GOLDWPPK,      1.62f, 33.5f, -0.025f },
     { ITEM_LASER,         6.7f, 36.0f, -0.045f },
-    /* Muzzle well up, suggesting the grenade's arcing lob. */
-    { ITEM_GRENADELAUNCH, 2.4f, 36.5f, -0.200f },
+    /* Held well below the aim point, muzzle only a little up, so the
+     * Projectile Arc (FORK-069) and its ring show past it; it no longer
+     * sights down the barrel. */
+    { ITEM_GRENADELAUNCH, 26.0f, 36.5f, -0.060f },
     /* Stack the near (-3,200,25) and far (-3,190,399) pins on the centered
      * ray at the launcher's own hip depth (WeaponStats PosZ -14.5), so it does
      * not travel forward; portAdsWeaponRoll cants it onto the right shoulder. */
@@ -1174,6 +1180,11 @@ void portAdsTick(void)
     if (pad < 0) return;
 #ifdef GE_VIDEO
     if(portHandGalleryActive()) joyPortHandGallery(); else joyPortAdsAudit();
+    {   /* GE_ARC_AUDIT (FORK-069): aim for its grenade rounds, Use to board its tank */
+        const s32 arcAudit = portProjectileArcAuditAim();
+        if (arcAudit & PORT_ARC_AUDIT_AIM) sHeld[pad][PORTACT_AIM_DOWN_SIGHTS] = 1;
+        if (arcAudit & PORT_ARC_AUDIT_USE) portJoyPortPadDown(pad, PORTACT_USE);
+    }
 #endif
     if (!joyPortPermitted()) sAdsNormalAim[pad] = 0;
     if (!joyPortPermitted() || !joyPortAdsWeapon())

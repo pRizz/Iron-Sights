@@ -348,6 +348,15 @@ Gfx *portHudReticle(Gfx *g, f32 x, f32 y, f32 scaleX, f32 scaleY, u32 color, s32
     return phVector(g, ring ? 2 : 1, x, y, scaleX, scaleY, 0, 0, color);
 }
 
+/* The small cross with its arms in dashes marching outward by `phase`
+ * (native units): the Arc Impact Crosshair on an impact out of sight
+ * (FORK-069). */
+Gfx *portHudReticleDashed(Gfx *g, f32 x, f32 y, f32 scaleX, f32 scaleY, u32 color, f32 phase)
+{
+    if (scaleX <= 0 || scaleY <= 0) return g;
+    return phVector(g, 8, x, y, scaleX, scaleY, phase, 0, color);
+}
+
 /* Quarter-pixel fills permit translucent rectangles without textures. */
 static Gfx *phRect(Gfx *g, f32 x, f32 y, f32 w, f32 h, u32 rgba)
 {

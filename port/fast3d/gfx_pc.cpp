@@ -6423,7 +6423,8 @@ static void gfx_draw_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lr
 
 /* Shared screen-space line/curve renderer. Shape 0 is the hit marker, 1 the
  * small cross, 2 GE's ring target, 3 a directional damage arc, 4 a weapon
- * image, 5 a flat fill and 7 a filled or outlined ellipse. */
+ * image, 5 a flat fill, 7 a filled or outlined ellipse and 8 the small cross
+ * in dashes marching outward (FORK-069: an impact out of sight). */
 static void gfx_ge_vector_overlay(float x, float y, uint32_t rgba, int shape = 0,
                                   float size_x = 1, float size_y = 1, float start = 0, float end = 0) {
     if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(size_x) || !std::isfinite(size_y)
@@ -6457,7 +6458,7 @@ static void gfx_ge_vector_overlay(float x, float y, uint32_t rgba, int shape = 0
      * under both the pinned HUD and full-width mouse-aim mapping. */
     const float scale_x = std::max(0.01f, std::abs(gfx_adjust_x_for_aspect_ratio(1)-gfx_adjust_x_for_aspect_ratio(0))
                                   * (float)gfx_current_dimensions.width / SCREEN_WIDTH);
-    const float marker_size = shape == 1 || shape == 2 ? size_y : 1.0f;
+    const float marker_size = shape == 1 || shape == 2 || shape == 8 ? size_y : 1.0f;
     const float half_width = std::max(1.0f, (shape == 3 ? 0.50f : 0.30f) * scale * marker_size) * 0.5f;
     const float feather = 0.7f;
     const RGBA color = {(uint8_t)(rgba >> 24), (uint8_t)(rgba >> 16), (uint8_t)(rgba >> 8), (uint8_t)rgba};
@@ -6521,6 +6522,17 @@ static void gfx_ge_vector_overlay(float x, float y, uint32_t rgba, int shape = 0
             line(x, y+sign*1.75f*size_y, x, y+sign*extent*size_y);
         }
         if (shape == 2) arc(9.5f*size_x, 9.5f*size_y, 0, 6.28318530718f, true);
+    } else if (shape == 8) {
+        /* Shape 1's arms, from 1.75 to 7 units out, as dashes that march
+         * outward: `start` is the phase in native units. */
+        const float dash = 1.5f, gap = 1.1f, period = dash + gap, inner = 1.75f, outer = 7.0f;
+        const float phase = std::fmod(std::max(0.0f, start), period);
+        for (int sign : {-1,1}) for (float s = inner - period + phase; s < outer; s += period) {
+            const float a = std::max(s, inner), b = std::min(s + dash, outer);
+            if (b - a < 0.2f) continue;
+            line(x+sign*a*size_x, y, x+sign*b*size_x, y);
+            line(x, y+sign*a*size_y, x, y+sign*b*size_y);
+        }
     } else if (shape == 3) {
         arc(size_x, size_y, start, end, false);
     } else if (shape == 7) {

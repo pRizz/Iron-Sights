@@ -59,6 +59,7 @@
 #include "cheat.h"         /* cheatIsActive(CHEAT_PORT_UNLOCK_DOORS) - propdoorInteract */
 #include "port_tracers.h"  /* Shotgun Tracers (FORK-063) */
 #include "port_glass.h"    /* Glass Reflections (FORK-066) */
+#include "port_projectile_arc.h" /* Projectile Arc (FORK-069) */
 extern s32 g_PortFadeDbg;  /* the fade diagnostic (cl_fadedbg), defined beside posIsOnScreen */
 static void portFadeNote(PropRecord *prop, s32 state, s32 alpha, f32 foga);
 #endif
@@ -75,6 +76,13 @@ static void portFadeNote(PropRecord *prop, s32 state, s32 alpha, f32 foga);
  * one-field steps smear across sub-ticks and drift from the pauses (murkantor/Project-Midas#27). */
 #undef MONITOR_TIMER_DELTA
 #define MONITOR_TIMER_DELTA ((portTickHz() != 60) ? (f32) g_ClockTimer : g_GlobalTimerDelta)
+/* FORK-070: a settled projectile's slide loop runs once per whole field, so
+ * above 60 Hz each pass is one field of friction, not the tick's fraction
+ * (which let grenades slide 2.4 times as far at 144 Hz). 60 Hz unchanged. */
+#include "port_settle_ticks.h"
+#define SLIDE_FRICTION_STEP portSettleFrictionStep()
+#else
+#define SLIDE_FRICTION_STEP g_GlobalTimerDelta
 #endif
 
 #if defined(VERSION_JP)
@@ -2269,6 +2277,10 @@ void objSettle(ObjectRecord *obj, coord3d *arg1)
     s32 pad;
     f32 angle;
     Projectile *projectile;
+#ifndef TARGET_N64
+    coord3d settlePrev;
+    f32 settleStep;
+#endif
 
     if (((obj->runtime_bitflags &= ~0x00010000) & 0x80) == 0) {
         return;
@@ -2283,6 +2295,12 @@ void objSettle(ObjectRecord *obj, coord3d *arg1)
         return;
     }
 
+#ifndef TARGET_N64
+    /* FORK-070: above 60 Hz, the spin over the last whole field, which an
+     * in-between tick has not moved, rather than this tick's (none). */
+    portSettleSpinPrevious(projectile, arg1, &settlePrev, &settleStep);
+    arg1 = &settlePrev;
+#endif
     projectile->ownerprop = 0;
     projectile->flags &= ~PROJECTILEFLAG_AIRBORNE;
     projectile->flags &= ~PROJECTILEFLAG_STICKY;
@@ -2381,7 +2399,11 @@ void objSettle(ObjectRecord *obj, coord3d *arg1)
             + (obj->mtx.m[0][2] * arg1->z))
             / (modelscale * modelscale));
 
+#ifndef TARGET_N64
+        tmp = tmp / settleStep;     /* FORK-070: g_GlobalTimerDelta at 60 Hz */
+#else
         tmp = tmp / g_GlobalTimerDelta;
+#endif
 
         if (angle != 0.0f) {
             projectile->unk64 = tmp / angle;
@@ -3505,6 +3527,9 @@ void chrobjWeaponTick(struct PropRecord* prop)
 
             if (weapon->timer < 0)
             {
+#ifndef TARGET_N64
+                portProjectileArcExploded(prop); /* Projectile Arc (FORK-069): GE_ARCDBG log */
+#endif
                 propExplode(prop, (obj->flags2 & PROPFLAG2_DOOR_ALTCOORDSYSTEM) ? EXPLOSION_DEF_MASSIVE : EXPLOSION_DEF_STANDARD);
                 obj->runtime_bitflags |= RUNTIMEBITFLAG_REMOVE;
             }
@@ -3513,6 +3538,9 @@ void chrobjWeaponTick(struct PropRecord* prop)
         {
             if (weapon->timer == 0)
             {
+#ifndef TARGET_N64
+                portProjectileArcExploded(prop); /* Projectile Arc (FORK-069): GE_ARCDBG log */
+#endif
                 propExplode(prop, (obj->flags2 & PROPFLAG2_DOOR_ALTCOORDSYSTEM) ? EXPLOSION_DEF_MASSIVE : EXPLOSION_DEF_STANDARD);
                 obj->runtime_bitflags |= RUNTIMEBITFLAG_REMOVE;
             }
@@ -4952,6 +4980,9 @@ s32 objTick(struct PropRecord *prop)
 				previousXAxis.f[0] = obj->mtx.m[0][0];
 				previousXAxis.f[1] = obj->mtx.m[0][1];
 				previousXAxis.f[2] = obj->mtx.m[0][2];
+#ifndef TARGET_N64
+				portSettleSpinNote(Rocket, &previousXAxis); /* FORK-070: the axis before a whole field's spin */
+#endif
 
 				if (Rocket->flags & PROJECTILEFLAG_00000020)
 				{
@@ -5383,7 +5414,7 @@ s32 objTick(struct PropRecord *prop)
 						{
 							if (Rocket->unk94 > 0.0f)
 							{
-								temp_f12_5 = (Rocket->unk94 * g_GlobalTimerDelta) / sqrtf((Rocket->speed.f[0] * Rocket->speed.f[0]) + (Rocket->speed.f[2] * Rocket->speed.f[2]));
+								temp_f12_5 = (Rocket->unk94 * SLIDE_FRICTION_STEP) / sqrtf((Rocket->speed.f[0] * Rocket->speed.f[0]) + (Rocket->speed.f[2] * Rocket->speed.f[2]));
 								if (temp_f12_5 >= 1.0f)
 								{
 									Rocket->speed.f[0] = 0.0f;

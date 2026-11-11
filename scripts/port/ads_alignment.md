@@ -144,7 +144,7 @@ were confirmed with the owner before implementation:
 | Klobb            | Eye distance 28.8 → 26.5; generated arms 1.08× (`adsArmScale`).             |
 | ZMG              | Eye distance 32 → 29.5; pitch -0.035 → -0.090; arms 1.08×.                  |
 | Shotgun          | Hip depth 19.5 (was 33.6), no ADS zoom; pitch -0.040 → -0.090; arms 1.08×.  |
-| Grenade launcher | Eye distance 40 → 36.5; arms 1.08×; pitch -0.200; ADS FOV 87.5%.            |
+| Grenade launcher | Eye distance 40 → 36.5; arms 1.08×; pitch -0.200; ADS FOV 87.5%; sight height 2.4 → 26, pitch -0.200 → -0.060 (2026-11-10). |
 | Phantom          | Pitch -0.040 → -0.002, levelling the far sight posts inside the near notch. |
 | Silver/gold PP7  | Sight height 1.0 → 1.56 (silver), 1.62 (gold); top of tip touches center.   |
 | Rocket launcher  | Pins stacked at center at hip depth, canted 0.575 radian; no ADS zoom.      |
@@ -187,8 +187,12 @@ launcher also skips the ADS zoom: `portAdsWeaponFovScale` caps each weapon's
 ADS field of view in `bondview2.c`, at 100% for the rocket launcher, 87.5% (half
 the usual zoom) for the grenade launcher and the usual 75% for other guns.
 
-The grenade launcher's -0.200 pitch raises its muzzle well above the receiver,
-suggesting the grenade's arcing lob. As with every pose, the projectile still
+The grenade launcher's -0.200 pitch raised its muzzle well above the receiver,
+suggesting the grenade's arcing lob. Since 2026-11-10 it is held well below the
+aim point (sight height 26, from 2.4) with its muzzle only slightly up (pitch
+-0.060) at the owner's request, so the Projectile Arc and its impact ring
+(FORK-069), which lie straight below the crosshair, show above the muzzle; it
+no longer sights down the barrel. As with every pose, the projectile still
 leaves along the inherited aim, so the visual tilt does not change ballistics.
 The silver and gold PP7 heights moved 1.35 → 1.5 after the owner's play-test, putting
 the tip a couple of pixels below center at 960x540, where the shot lands. The

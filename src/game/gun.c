@@ -2031,6 +2031,12 @@ void generate_player_thrown_grenade(s32 hand)
             wor->projectile->unk8C = 0.3f;
             wor->projectile->unk94 = 0.13333333f;
             wor->projectile->refreshrate = THROWN_ITEM_REFRESH_RATE;
+#ifndef TARGET_N64
+            {
+                extern void portProjectileArcShotFired(ObjectRecord *obj, s32 item);
+                portProjectileArcShotFired((ObjectRecord *) wor, ITEM_GRENADE); /* Projectile Arc (FORK-069): ends the throw's arc; GE_ARCDBG log */
+            }
+#endif
 #line 1849
             sfx_state = sndPlaySfx((struct ALBankAlt_s *) g_musicSfxBufferPtr, GRENADE_THROW_SFX, NULL);
 
@@ -2130,6 +2136,12 @@ void generate_player_thrown_knife(s32 hand)
             wor->projectile->refreshrate = THROWN_ITEM_REFRESH_RATE;
 
             wor->runtime_bitflags |= RUNTIMEBITFLAG_THROWING_KNIFE_RELATED;
+#ifndef TARGET_N64
+            {
+                extern void portProjectileArcShotFired(ObjectRecord *obj, s32 item);
+                portProjectileArcShotFired((ObjectRecord *) wor, ITEM_THROWKNIFE); /* Projectile Arc (FORK-069): GE_ARCDBG log */
+            }
+#endif
         }
 
         objUpdateThrowKnifeSound(wor);
@@ -2336,6 +2348,12 @@ void generate_player_thrown_object(s32 hand)
 
             wor->projectile->unk8C = 0.1f;
             wor->projectile->refreshrate = THROWN_ITEM_REFRESH_RATE;
+#ifndef TARGET_N64
+            {
+                extern void portProjectileArcShotFired(ObjectRecord *obj, s32 item);
+                portProjectileArcShotFired((ObjectRecord *) wor, current_weapon); /* Projectile Arc (FORK-069): GE_ARCDBG log */
+            }
+#endif
         #line 2218
             sfx_state = sndPlaySfx((struct ALBankAlt_s *) g_musicSfxBufferPtr, GRENADE_THROW_SFX, NULL);
 
@@ -2419,6 +2437,12 @@ void gunSpawnGLGrenade(s32 handnum)
             grenadeobj->projectile->unk94 = g_GLGrenadeLaunchUnk94;
             grenadeobj->projectile->refreshrate = THROWN_ITEM_REFRESH_RATE;
         }
+#ifndef TARGET_N64
+        {
+            extern void portProjectileArcShotFired(ObjectRecord *obj, s32 item);
+            portProjectileArcShotFired((ObjectRecord *) grenadeobj, ITEM_GRENADELAUNCH); /* Projectile Arc (FORK-069): GE_ARCDBG log */
+        }
+#endif
     }
 }
 

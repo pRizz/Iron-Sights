@@ -93,6 +93,7 @@ extern u32 D_80035CC0;
 #include <stdio.h> /* stderr - port diagnostics */
 #include "port_ads.h"
 #include "port_knife_ads.h"
+#include "port_projectile_arc.h"
 extern u32 D_80035CC4[];
 #endif
 extern u32 D_80035D00;
@@ -352,6 +353,9 @@ void gunFireTankShell(s32 handnum)
             }
         }
     }
+#ifndef TARGET_N64
+    portProjectileArcShotFired((ObjectRecord *) obj, weaponid); /* Projectile Arc (FORK-069): GE_ARCDBG log */
+#endif
 }
 
 
@@ -1544,6 +1548,9 @@ void gunUpdateAndFireBothHands(void)
 {
     gunUpdateAndFire(GUNRIGHT);
     gunUpdateAndFire(GUNLEFT);
+#ifndef TARGET_N64
+    portProjectileArcNoteLaunch(); /* Projectile Arc (FORK-069): where a round fired now would start */
+#endif
 }
 
 
@@ -2120,6 +2127,10 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
         gdl->words.w0=(u32)0x4f<<24;gdl->words.w1=32;gdl++;
         /* Tile alpha is the fog amount, not surface opacity. */
         g_CurrentPlayer->tileColor=(struct rgba_u8){255,255,255,0};
+    }
+    else
+    {
+        gdl = portProjectileArcRender(gdl); /* Projectile Arc (FORK-069): before the gun, in the world */
     }
 #endif
     /* Weapon FOV: by default the hands and guns draw under the scene

@@ -2419,6 +2419,8 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "always_crosshair=%d\n", s_CfgAlwaysCrosshair);
     fprintf(f, "always_crosshair_size=%d\n", portCrosshairSize());
     fprintf(f, "ads_crosshair=%d\n", portCrosshairAds());
+    fprintf(f, "projectile_arc=0\n"); /* PORT_PROJECTILE_ARC_DEFAULT (FORK-069) */
+    fprintf(f, "arc_crosshair=1\n");  /* PORT_ARC_CROSSHAIR_DEFAULT (FORK-069) */
     fprintf(f, "mission_timer=%d\n", s_CfgMissionTimer);
     fprintf(f, "stereo_pan=%d\n", s_CfgStereoPan);
     fprintf(f, "aim_lock=%d\n", s_CfgAimLock);
@@ -4842,6 +4844,7 @@ void videoGetPad(OSContPad *pad)
          * poll n) can exercise the gunfire path. */
         static int autostart = -1;
         static long startafter, startuntil, fireafter, startperiod = 120; /* GE_AUTOSTART_PERIOD=n: press cadence (pause-spam tests) */
+        static long fireperiod = 120; /* GE_AUTOFIRE_PERIOD=n: burst cadence (hand grenade arc audit, FORK-069) */
         static u32 polls;
         if (autostart < 0)
         {
@@ -4855,6 +4858,8 @@ void videoGetPad(OSContPad *pad)
             fireafter = (e != NULL) ? atol(e) : 0;
             e = getenv("GE_AUTOSTART_PERIOD");
             if (e != NULL && atol(e) >= 12) { startperiod = atol(e); }
+            e = getenv("GE_AUTOFIRE_PERIOD");
+            if (e != NULL && atol(e) >= 60) { fireperiod = atol(e); }
         }
         polls++;
         if (autostart && polls >= (u32) startafter && polls <= (u32) startuntil)
@@ -4870,7 +4875,7 @@ void videoGetPad(OSContPad *pad)
                 buttons |= CONT_START;
             }
         }
-        if (fireafter > 0 && polls >= (u32) fireafter && (polls % 120) < 30)
+        if (fireafter > 0 && polls >= (u32) fireafter && (polls % (u32) fireperiod) < 30)
         {
             buttons |= CONT_G; /* Z trigger: fire */
         }

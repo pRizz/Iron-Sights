@@ -4797,6 +4797,8 @@ static const struct PortSheetRow port_sheet_rows_is_feedback[] = {
 static const struct PortSheetRow port_sheet_rows_is_hud[] = {
     { SHROW_OPT, "always_crosshair_size" },   /* sizes HUD's Always Crosshair */
     { SHROW_OPT, "ads_crosshair" },           /* FORK-060: that crosshair in ADS too */
+    { SHROW_OPT, "projectile_arc" },          /* FORK-069: grenade and tank shell paths */
+    { SHROW_OPT, "arc_crosshair" },           /* FORK-069: the always-on crosshair at the impact */
     { SHROW_OPT, "weapon_hud" }, { SHROW_OPT, "weapon_hud_icons" },
     { SHROW_OPT, "always_health" },
     { SHROW_OPT, "objective_notifications" },

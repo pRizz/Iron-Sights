@@ -191,7 +191,38 @@ padN_stickmode.
                       |            | HUD Additions.
                       |            | Shared in solo/multiplayer; does not resize
                       |            | the aiming reticle, scope or menu cursor.
-  mission_timer       | 0          | Mission Timer: elapsed MM:SS:CC top-left
+  projectile_arc      | 0          | 1 = Projectile Arc: while holding the
+                      |            | grenade or rocket launcher, hand
+                      |            | grenades, throwing knives, mines or tank
+                      |            | shells (in the tank or on foot), draw the
+                      |            | predicted path, including your own motion
+                      |            | (dashed orange, with bounces, and a hand
+                      |            | grenade's roll and fuse, shortened while
+                      |            | the trigger is held), one per hand when
+                      |            | dual wielding, and a ring where it
+                      |            | explodes, where the blast does at least
+                      |            | half its damage (on a character, a small
+                      |            | orange burst stands there instead of the
+                      |            | ring's fence; for a knife, a see-through
+                      |            | knife stuck in a character it would hit).
+                      |            | Ignores the launchers' random spread.
+                      |            | Iron Sights > HUD Additions; applies to
+                      |            | every player.
+  arc_crosshair       | 1          | 1 = Arc Impact Crosshair: while the
+                      |            | always-on crosshair shows (Always
+                      |            | Crosshair, or ADS Crosshair in ADS) and
+                      |            | you hold a weapon with a Projectile Arc,
+                      |            | it marks where the shot will land, one
+                      |            | per hand, at the screen's edge for an
+                      |            | impact outside it, fainter with marching
+                      |            | dashes where a wall, object or door hides
+                      |            | the impact from you, and smaller the
+                      |            | farther it lands (never under 40%); with
+                      |            | no impact it
+                      |            | stays at the aim point. Works with
+                      |            | projectile_arc off. Iron Sights > HUD
+                      |            | Additions; applies to every player.
+  mission_timer      | 0          | Mission Timer: elapsed MM:SS:CC top-left
                       |            | in solo missions. Shows / CHEAT MM:SS when
                       |            | this stage/difficulty has an unlock target.
                       |            | Green within time, amber in the last 10s,

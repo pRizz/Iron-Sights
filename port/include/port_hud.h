@@ -49,4 +49,5 @@ void portHudMissionTimerText(s32 ticks, s32 target, char *text, s32 size);
 u32 portHudMissionTargetColor(s32 ticks, s32 target);
 /* Shared smooth strokes for gameplay sights and menu/watch cursors. */
 Gfx *portHudReticle(Gfx *gdl, f32 x, f32 y, f32 scaleX, f32 scaleY, u32 color, s32 ring);
+Gfx *portHudReticleDashed(Gfx *gdl, f32 x, f32 y, f32 scaleX, f32 scaleY, u32 color, f32 phase);
 #endif

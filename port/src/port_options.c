@@ -275,6 +275,8 @@ static const struct PortOpt sOpts[] = {
     INTR("always_crosshair_size", "[display]", "Always Crosshair Size\n", PORTOPT_CAT_GAMEPLAY,
          PORT_CROSSHAIR_SIZE_MIN, PORT_CROSSHAIR_SIZE_MAX, PORT_CROSSHAIR_SIZE_STEP, "%"),
     TOGGLE("ads_crosshair",      "[display]", "ADS Crosshair\n",      PORTOPT_CAT_GAMEPLAY), /* FORK-060 */
+    TOGGLE("projectile_arc",     "[display]", "Projectile Arc\n",     PORTOPT_CAT_GAMEPLAY), /* FORK-069 */
+    TOGGLE("arc_crosshair",      "[display]", "Arc Impact Crosshair\n", PORTOPT_CAT_GAMEPLAY), /* FORK-069 */
     TOGGLE("hit_markers",        "[display]", "Hit Markers\n",        PORTOPT_CAT_GAMEPLAY),
     TOGGLE("hit_sounds",         "[display]", "Hit Sounds\n",         PORTOPT_CAT_GAMEPLAY),
     TOGGLE("damage_indicators",  "[display]", "Damage Direction\n",   PORTOPT_CAT_GAMEPLAY),

@@ -10,7 +10,7 @@ static struct player player;
 struct player *g_CurrentPlayer = &player;
 f32 g_bondviewSceneWideFactor = 2.0f;
 static f32 baseFov = 90.0f, adsBlend, scopeBlend, reach = 1.0f;
-static s32 weaponFov = 1, hudScale, calls, ringDrawn;
+static s32 weaponFov = 1, hudScale, calls, ringDrawn, dashedDrawn;
 static f32 drawnX, drawnY, drawnScaleX, drawnScaleY;
 static u32 drawnColor;
 
@@ -36,7 +36,23 @@ Gfx *portHudReticle(Gfx *g, f32 x, f32 y, f32 sx, f32 sy, u32 color, s32 ring)
     drawnColor = color; ringDrawn = ring;
     return g;
 }
+Gfx *portHudReticleDashed(Gfx *g, f32 x, f32 y, f32 sx, f32 sy, u32 color, f32 phase)
+{
+    g = portHudReticle(g, x, y, sx, sy, color, 0);
+    dashedDrawn = phase >= 0.0f;
+    return g;
+}
 Gfx *portHudPanel(Gfx *g, f32 x, f32 y, f32 w, f32 h, u32 color) { return g; }
+/* Arc Impact Crosshair (FORK-069): the impacts it reports this frame. */
+static s32 arcImpacts;
+static f32 arcImpactAt[PORT_ARC_SLOTS][4] = { { 50.0f, 60.0f, -1.0f, 1.0f }, { 70.0f, 80.0f, -1.0f, 1.0f } };
+s32 portProjectileArcCrosshairs(f32 xy[PORT_ARC_SLOTS][4])
+{
+    s32 i, k;
+
+    for (i = 0; i < arcImpacts; i++) for (k = 0; k < 4; k++) xy[i][k] = arcImpactAt[i][k];
+    return arcImpacts;
+}
 void osSyncPrintf(const char *format, ...)
 {
     va_list args;
@@ -92,6 +108,33 @@ static void sightChecks(void)
     player.mpmenuon = 1; portHudGunSight(&gdl); assert(calls == 3);
     player.mpmenuon = 0; player.bonddead = 1;
     portHudGunSight(&gdl); assert(calls == 3);
+
+    /* Arc Impact Crosshair: the always-on cross at each arc's impact, through
+     * the same wide-aim conversion; with none, at the aim point. */
+    player.bonddead = 0; scopeBlend = 0.0f; adsBlend = 0.0f; reach = 2.0f;
+    gdl = (s32)commands;   /* each wide draw adds its anchor commands */
+    arcImpacts = 2;
+    portHudGunSight(&gdl);
+    assert(calls == 5 && !ringDrawn && drawnX == 140.0f && drawnY == 80.0f);
+    arcImpacts = 1; dashedDrawn = 0;
+    portHudGunSight(&gdl);
+    assert(calls == 6 && drawnX == 100.0f && drawnY == 60.0f && !dashedDrawn);
+    arcImpactAt[0][2] = 0.5f;                         /* out of sight: dashed, fainter */
+    portHudGunSight(&gdl);
+    assert(calls == 7 && drawnX == 100.0f && dashedDrawn && (drawnColor & 0xff) == 0xdc * 2 / 3);
+    arcImpactAt[0][2] = -1.0f; calls = 6; gdl = (s32)commands;
+    arcImpactAt[0][3] = 0.5f; hudScale = 0;            /* a far impact: half size */
+    portHudGunSight(&gdl);
+    assert(calls == 7 && drawnScaleY == 0.5f && drawnScaleX == 0.25f);
+    arcImpactAt[0][3] = 1.0f; hudScale = 1; calls = 6; gdl = (s32)commands;
+    adsBlend = 1.0f; portCrosshairAdsSet(1);          /* and with ADS Crosshair in ADS */
+    portHudGunSight(&gdl);
+    assert(calls == 7 && drawnX == 100.0f && drawnY == 60.0f);
+    portCrosshairAdsSet(0); adsBlend = 0.0f;
+    arcImpacts = 0;
+    portHudGunSight(&gdl);
+    assert(calls == 8 && drawnX == 200.5f && drawnY == 90.5f);
+    reach = 1.0f; calls = 3;
 }
 
 static void crosshairSizingChecks(void)

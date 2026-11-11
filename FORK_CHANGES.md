@@ -30,6 +30,593 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-070 — Thrown grenades slide the same at any tick rate
+
+**Status:** Implemented on 2026-11-10 at the owner's request, after they saw
+hand grenades slide well past the Projectile Arc's ring (FORK-069) on Runway
+at their raised tick rate. Built for Windows (isolated worktree build) and
+play-tested with the Projectile Arc; committed and pushed to `main` with it
+on 2026-11-10. Linux, Steam Deck and browser builds
+not run locally.
+
+Inherited behaviour (the PC port's raised tick rates): once a thrown object
+stops bouncing, `objSettle` (`propobj.c`) sets how fast it turns flat from
+how far it spun over the last tick divided by `g_GlobalTimerDelta`, and
+`objectTick` slides it a whole field per pass of a `g_ClockTimer` loop with
+friction `unk94 * g_GlobalTimerDelta`. The spin (`sub_GAME_7F057DF8`) and the
+slide only advance on whole-field ticks. At 60 Hz the step is one field and
+a hand grenade loses 0.133 units of speed a field; above 60 Hz the tick's
+fraction made the friction too weak (0.056 a field at 144 Hz, so it slid
+about 2.4 times as far after turning), and a grenade settling on an
+in-between tick measured no spin, so it took the slowest turn the game
+allows (about 15 friction-free fields instead of the usual 5). Traced at
+144 Hz on Dam, a grenade that stops in the open at 60 Hz slid on about
+1,800 units and into a barrier, still moving at 10 units a field.
+
+Now, above 60 Hz only (`portTickHz() != 60`; 60 Hz, demos recorded at it
+and the N64 build keep the inherited code):
+
+- each slide pass applies one field of friction (`SLIDE_FRICTION_STEP`,
+  `portSettleFrictionStep`);
+- `objSettle` measures the spin over the last whole field: each airborne
+  tick that spins the object records the axis it spins from and the fields
+  it covers (`portSettleSpinNote`, one record per `g_Projectiles` slot), and
+  `objSettle` uses that axis and divides by those fields
+  (`portSettleSpinPrevious`), so an in-between tick sees what a 60 Hz tick
+  would.
+
+This applies to every settling projectile with friction (`unk94`), which in
+the game are hand grenades thrown by the player and by guards
+(`chraction.c`); objects without it keep the per-field 0.9 factor, which
+was already tick-rate independent. No setting: it restores the 60 Hz
+behaviour. The Projectile Arc's prediction (FORK-069) follows it.
+
+**Hooks** (inside `#ifndef TARGET_N64`, `propobj.c`): the
+`SLIDE_FRICTION_STEP` macro beside `MONITOR_TIMER_DELTA` and its use in the
+slide's friction, `portSettleSpinNote` after `objectTick` reads the axis
+before the spin, and `portSettleSpinPrevious` plus the divisor in
+`objSettle`.
+
+**Sources:** [header with the pure rules](port/include/port_settle_ticks.h),
+[game side](port/src/port_settle_ticks.c) and the
+[ROM-free test](scripts/port/test_settle_ticks.c) (included by `test_ads.c`).
+
+**Checks:** `test_ads.sh` passes with the new test: the friction step is the
+tick's at 60 Hz (2 for a frame of two fields) and one field above it; above
+60 Hz a settle on an in-between tick uses the axis from before the last
+whole-field spin, over its fields, and before any spin the current axis over
+one field; at 60 Hz the game's axis and step pass through. With the isolated
+Windows build and `audit_projectile_arc.ps1` on Dam at 144 Hz (`-MaxFps
+144`), grenades thrown at -25 degrees came to rest at 18,465-18,526 along x,
+in the range 60 Hz throws reach (18,450-18,622 in these runs), where before the change
+they slid on to the barrier at about 18,240; a per-tick trace (temporary,
+removed) showed 0.133 units of friction a field at 144 Hz and turn rates at
+settle spread as at 60 Hz (six of eight at the 0.15 cap). Not checked:
+guards' grenades, uncapped and hardware-paced tick rates, and rates other
+than 144 Hz.
+
+### FORK-069 — Projectile Arc: predicted grenade, rocket, tank shell, hand grenade, knife and mine paths
+
+**Status:** Implemented on 2026-11-09 at the owner's request and built for
+Windows (isolated worktree build); committed and pushed to `main` on
+2026-11-10 after the owner's play-test, numbered FORK-069 (and the slide fix
+FORK-070) because FORK-068 had gone to the wall bullet holes on `main`
+meanwhile. The owner play-tested the first version
+the same day and asked for four changes, made the same day: arcs whenever
+the weapon is held (not only while aiming), the rocket launcher too, a
+single arc that includes the player's motion (two had shown while moving),
+and a tighter ring. On 2026-11-10 the owner asked for hand grenades too,
+with their whole path (bounces, roll and fuse), and for the impact burst
+to go, keeping the ring; both done the same day (the burst was first
+removed in place of the ring by mistake, then swapped). Later that day:
+throwing knives and remote, timed and proximity mines; tank shells carried
+on foot (the All Guns cheat); and one arc per hand when dual wielding. The second and third rounds are not yet
+play-tested. Not yet committed or pushed. Linux, Steam Deck and browser
+builds not run locally. The render review gallery has not been regenerated
+for these source changes yet; the arc is off by default and skipped while
+the gallery captures, so its images are not expected to change.
+
+Inherited behaviour: nothing shows where a grenade round, rocket, tank shell
+or hand grenade will go. A grenade round (`gunSpawnGLGrenade` in `gun.c`) and
+a tank shell (`gunFireTankShell` in `gunfire.c`) are unpowered and fall at
+`PROP_PROJECTILE_GRAVITY_MODIFIER` (0.2778 units per field²). A grenade round
+leaves at 33.3 units per field plus the player's motion, bounces off walls,
+ceilings and characters with restitution 0.3, and explodes when it lands on a
+floor (`objectTick`'s airborne branch in `propobj.c`). A tank shell leaves the
+turret's muzzle at 66.7 units per field and explodes on the first wall, floor,
+object or character, so it lands short of the crosshair at range. A rocket
+(also `gunFireTankShell`) leaves at three fields of its thrust plus the
+player's motion and flies under thrust, described under Prediction. A hand
+grenade (`generate_player_thrown_grenade` in `gun.c`) leaves the hand at
+16.7 units per field along the aim plus 5 upwards and the player's motion,
+bounces, rolls to a stop and explodes when its fuse runs out: 240 fields
+(`THROWN_ITEM_TIMER_DEFAULT`, US) less the fields the trigger was held, so
+holding the trigger cooks it.
+
+**Gameplay > Iron Sights > HUD Additions > Arc Impact Crosshair**
+(`[display] arc_crosshair`: 0 Off, 1 On; default 1, 2026-11-10, owner's
+request), after Projectile Arc in the Options folder and on the watch; a
+plain toggle, so every supported input handles it. While the always-on
+crosshair is drawn (Always Crosshair, or ADS Crosshair in ADS, or the
+multiplayer key with two or more players) and the player holds a weapon
+with a Projectile Arc, the cross marks the predicted impact instead of the
+aim point: where the round or rocket explodes, the hand grenade bursts, the
+knife strikes or comes to rest, the mine sticks or rests. One per hand's
+arc. It eases there over about a twentieth of a second (exponential, the
+same at any frame rate) so a jumping impact glides; an impact outside the
+view keeps it at the edge on the line from the centre towards it; with no
+impact (a shot past the prediction's reach) or one behind the camera it
+stays at the aim point. Where the level, an object or a door stands between
+the eye and the impact (2026-11-10, owner's request), the cross is drawn at
+two thirds of its opacity with its arms in dashes marching outward (4 native
+units a second), so a grenade lobbed over a wall still shows where it lands
+and that it lands out of sight. It also shrinks with the impact's distance
+from the eye (2026-11-10, owner's request), as an object there would look:
+full size (Always Crosshair Size) up to 350 units, then 350/distance of it,
+never under 40% so a far impact stays visible (`portArcCursorScale`,
+`PORT_ARC_CURSOR_NEAR`, `PORT_ARC_CURSOR_MIN_SCALE`); the size glides with
+the position. The scale multiplies Always Crosshair Size, so the floor is
+40% of the player's own size: at 15% a far impact draws a 6% cross, at the
+10% minimum 4%, little more than a dot (the stroke stays at least a pixel
+wide). That is deliberate: offered an absolute floor that would leave small
+crosses unshrunk, the owner kept this as a feature (2026-11-10). Characters do not count, so a guard in
+front of the impact, or the one a shot hits, leaves it solid. The prediction
+tests the line from the eye (`bondviewGetCurrentPlayersPosition`) to 8 units
+short of the impact against the level (`bgTestBulletHitBackground` over the
+rooms along it and the visible rooms) and against objects and doors
+(`projectileFindCollidingProp` with `CDTYPE_OBJS | CDTYPE_DOORS`), with the
+player's own collision off, and records it in `PortArcPath.endHidden`; it
+refreshes with the path (at least every 10 ticks). The dashed cross is a new
+renderer vector shape, 8 (`port/fast3d/gfx_pc.cpp`, `G_HUD_VECTOR_EXT`):
+shape 1's arms from 1.75 to 7 units out as 1.5-unit dashes with 1.1-unit
+gaps, shifted outward by the phase in its `start` parameter, drawn through
+`portHudReticleDashed` (`port_hud.c`). It works with Projectile Arc off: the arcs are then
+predicted for it but not drawn (`portProjectileArcWanted`). Upstream's
+Always Crosshair is unchanged with this off, and the aiming ring (aim mode)
+and the scoped Sniper Rifle's mark keep the aim point. The impact is
+projected as the game projects its aim (`camGetWorldToScreenMtxf`,
+`transform3Dto2DCoords`, then `bondviewAimPinX` into the crosshair's pinned
+coordinates), and `port_sight.c` draws the cross there through the same
+wide-aim conversion as the aim point (`port_projectile_arc_cursor.c`).
+The first build of it hid the gun: `include/math.h` keeps `expf` inside
+`#if 0`, so the easing's call was taken as returning `int` and left its
+float on the x87 stack each frame until it overflowed and the gun's pose
+came out NaN (the launch log showed NaN positions); `port_projectile_arc.c`
+now declares `expf` itself, and the arc files compile with no implicit
+declarations under `-Werror=implicit-function-declaration`.
+
+**Gameplay > Iron Sights > HUD Additions > Projectile Arc**
+(`[display] projectile_arc`: 0 Off, 1 On; default 0), after ADS Crosshair in
+the Options folder and on the watch. A plain toggle, so every supported input
+handles it like the rows around it. One setting for every player; each
+player sees only their own prediction. When on:
+
+- **Grenade launcher and rocket launcher, whenever held** in either hand,
+  from the hip or aiming. (Until the per-hand slots below, a second
+  launcher in the left hand got no arc.)
+  (The first version showed the grenade launcher's only while aiming; the
+  owner asked for it always.)
+- **One arc per hand.** Each player has two slots, the right hand (or the
+  tank) and the left hand, each with its own launch, cached path and ring,
+  so dual-wielded launchers, knives or mines each show theirs. Both hands
+  aim at the crosshair, so two launchers' rings land close together.
+- **Throwing knives and remote, timed and proximity mines, whenever held**
+  (`generate_player_thrown_knife`, `generate_player_thrown_object`): from
+  the hand as drawn, along the crosshair at 25 units a field (knife) or
+  16.7 (mine), plus 5 upwards and the player's motion. A knife has no ring,
+  as it does not explode; a mine has its ring where it will stick or rest.
+  Where a knife will strike a character (2026-11-10, owner's request), a
+  see-through orange knife (alpha 170, blade lighter than the grip, 30
+  units long but never under 6% of the view's height) sticks out of them at
+  the arc's end, its tip a fifth of the way in so the body hides it, flat to
+  the camera. It leans at least 50 degrees off the line of sight, turned
+  towards the knife's own sideways and downward drift (else straight down),
+  since a knife thrown from the eye flies nearly along that line and would
+  show end-on as a dot; the real knife spins, so how it sticks is not known
+  anyway (`portArcKnifeAxis`). The path records the strike
+  (`PortArcPath.endChr`) and the knife's direction (`endDir`).
+- **A blast on a character** (2026-11-10, owner's request): where a tank
+  shell or rocket will explode on a character (both do on contact,
+  `objectTick`), or a grenade-launcher round comes down on one (it only
+  turns off a character it meets otherwise, as the game's does), a small
+  orange explosion stands at the hit in place of the ring's fence: a star of
+  ten spikes, long and short, around a lighter core, flat to the camera,
+  lifted towards it out of the body, 24 units across its long spikes but
+  never under 4.5% of the view's height, turning and swelling slowly. The
+  ring then lies on the floor under the character
+  (`port_projectile_arc_world.c` sets `PortArcPath.ringCentre` and
+  `ringNormal`; elsewhere they are the impact and its surface), not upright
+  through them along the hit's normal. The models record the character hit
+  in `endChr`.
+- **Tank shells carried on foot** (the All Guns cheat): `gunFireTankShell`
+  with no running tank, from the player along the crosshair.
+- **Hand grenades, whenever held**, through the throw until the grenade
+  leaves the hand (`portProjectileArcGrenadeThrown`), then again for the
+  next one. While the trigger is held the fuse shortens with it, so the arc
+  shows where a cooked grenade will burst, in the air if need be.
+- **Tank, while driving it with the shells selected**, aimed or not.
+- **One arc, the trajectory the round will fly, including the player's
+  motion.** The game adds the player's motion to a round's launch speed,
+  measured as the move over the last tick, and measures it only on frames
+  where a tick ran (`g_ClockTimer > 0`). When frames are drawn faster than the
+  60 Hz tick (tick rate following a higher `maxfps`), the first version
+  dropped the motion on the frames without a tick, so it alternated between
+  two arcs while moving; the owner saw both in the tank and walking with the
+  grenade launcher. Each player's last measured motion now carries over
+  (`arcAddMotion`). Real launches always fall on whole-field ticks, since
+  input and the weapon state run at 60 Hz, so a real round always gets the
+  motion: at 144 fps while walking, 16 of 16 grenade-launcher and rocket
+  launches did, though 58% of frames were in-between ticks. A change that
+  let launches on in-between ticks keep the motion (eight hooks in `gun.c`
+  and `gunfire.c`) was built on 2026-11-10 and removed again the same day at
+  the owner's agreement, because it never changed a launch.
+- **The path:** marching orange dashes (36 units on, 24 off), drawn with the
+  native tracer's texture and cloud render mode but depth-tested, so walls in
+  front of the path hide it. It fades in over its first 240 units so it does
+  not start as a blob at the muzzle, and keeps at least 2 pixels of
+  half-width with distance. Grenade-round bounces show as separate legs; a
+  hand grenade's hops and roll follow its points along the floor.
+- **The impact:** an orange ring on the surface hit, where the blast
+  does at least half its damage as it starts: half the standard explosion's
+  starting reach (`explosion_range`, 300), so 150 units. Damage falls
+  linearly from the centre to nothing at the reach, which grows to
+  `dmg_range` (480) over the blast. The first version drew the ring at 480;
+  the owner found it too big. The first two versions also drew a looping
+  burst of the game's spark-explosion frames (`scattered_explosions`) as a
+  HUD sprite at the impact; the owner asked on 2026-11-10 for it to go.
+  The owner then found the ring hard to see far off: it lies nearly edge-on
+  there, a band flat on the floor thins to nothing at its near and far
+  sides, and only 2 units up the depth test broke it into dots against the
+  floor. Since 2026-11-10 its line is camera-facing strips like the dashes
+  (at least 4 pixels wide, as opaque), over a dark halo twice as wide so it
+  reads on light and dark floors, around a faint orange fill flat on the
+  surface, and lifted 2 units plus 0.4% of its distance. Captures on Dam at
+  about 600 and 1,950 units show it as a solid line where it had been a
+  dotted sliver. At the owner's request a see-through orange fence also
+  stands on the ring, along the surface normal (upwards on a floor), 45
+  units tall but never under 18 pixels on screen, fading from 31% opacity (first 47%; the owner asked for less)
+  at its foot to nothing at its top; it does not flatten from afar, and
+  the captures show it at both distances, over the barrier a grenade
+  stops against. The ring is drawn in the world pass, so down the sights, where the impact lies
+  right behind the launcher, the weapon can cover it. When the round would
+  fly past the prediction (160 fields for a shell, about 10,700 units; 240
+  for a grenade round; 200 for a rocket) there is no ring. A hand grenade
+  always has one, where its fuse ends.
+- The prediction aims along the crosshair without the launchers' random
+  spread (`bullet_path_from_screen_center` draws the game RNG), so it shows
+  the round's average path.
+
+Down the sights the path itself projects to a short line straight below the
+crosshair, right behind the launcher or the tank's barrel; from the hip it
+runs out from the muzzle. A second, undepth-tested pass of the whole
+overlay after the gun was tried and removed: the weapon pass lands on top of
+anything drawn after it in `gunRenderFirstPersonGunModels`. (That is why the
+removed burst had been drawn in the HUD pass.)
+
+**Prediction.** `port_projectile_arc.c`, `port_projectile_arc_rocket.c` and
+`port_projectile_arc_thrown.c` are ROM-free: the option, the flight models
+and the dash layout.
+
+- *Shells and grenade rounds:* the model samples the exact parabola (the
+  game's trapezoidal step is exact for constant acceleration, so the path is
+  the same at any tick rate) in steps of three fields for a shell and two
+  for a grenade round, testing each step's chord. The step that first dips
+  below the floor is flown again one field at a time, as the game moves a
+  round, against a floor clearance measured from the game's blasts (8.2
+  units for a shell or rocket, one model, 5.5 for a grenade round: the game
+  explodes a round once its origin is within its model's bottom offset of
+  the floor, then lifts the blast 4 units above that). Grenade-round bounces
+  follow `objectTick`: the speed is reflected about the hit normal with
+  restitution 0.3; it explodes when it was falling and the bounce sends it
+  up or leaves it no lower; an object or character hit leaves it at the
+  tick's start position at the tick's new height, as
+  `handles_projectile_motion` does. Up to five bounces are predicted.
+- *Rockets* fly no parabola, so `portArcSimulateRocket` steps the game's
+  integrator a field at a time (60 Hz ticks) and records each position as a
+  polyline. While boosting (`PROJECTILEFLAG_00000020`) an ideal height climbs
+  under the thrust alone while a lift ramps from 0 to gravity at 1/90 a
+  field, so the rocket dips at first, then closes 7% of its gap to the ideal
+  height a field (from a level shot it settles about 50 units under the aim
+  line, as in the game); on reaching it, it is powered and accelerates along
+  its thrust. Thrust stops once its speed² passes
+  `ROCKET_SPEED_BREAK_THRESHOLD` (about 167 units a field) and after
+  `GRENADE_SMOKE_FRAMES` (301 fields, US/JP) it loses lift and power and
+  falls. It explodes like a shell. The floor is checked every field and
+  collisions on three-field chords, the costly part, with positions past a
+  hit dropped.
+- *Hand grenades* (`portArcSimulateThrown`) step `objectTick` a field at a
+  time to the end of the fuse (it explodes the tick after its timer runs
+  out), recording each position. In the air it falls like a round; what it
+  hits reflects its speed with restitution 0.3 (`Projectile.unk8C`), and it
+  bounces once its origin dips 8.2 units over the floor, or on a hit that
+  leaves it no lower while falling: it is placed 4 units above that height
+  and its vertical speed reversed times 0.3, a first bounce hopping at least
+  2.22 units a field and a slower later one settling it (`objSettle`).
+  Settled, it slides at its horizontal speed while it turns flat, then loses
+  0.133 units of speed a field (`unk94`) until it stops, resting 8.2 units
+  over the floor. At 60 Hz the game scales that friction by the tick's step
+  (`g_GlobalTimerDelta`), so a frame that runs two fields applies twice the
+  friction each pass; the prediction follows (`slideFriction`, by the step
+  of recent whole-field ticks, `portProjectileArcNoteTickStep`, smoothed and
+  rounded to 0.02). Above 60 Hz the game used to scale it by the tick's
+  fraction and slide grenades about 2.4 times as far at 144 Hz, which the
+  owner saw on Runway, the ring well short of where grenades stopped;
+  FORK-070 makes it a whole field's friction there, as the prediction now
+  assumes. Settled objects move with `objTryMovePropWithCollision`,
+  not the airborne point test, so the slide asks a new `slide` world
+  callback that makes the same stan calls (the line to the target and the
+  object's width there against walls, objects, doors and characters; when
+  blocked, the move to its width short of the edge it met, width 10 from
+  `objGetWidth`). *Knives and mines* use the same model with their own
+  values: restitution 0.1 (`unk8C`), no `unk94`, so a settled one keeps
+  `PROJECTILE_FRICTION_FACTOR` (0.9) of its speed a field; measured rest and
+  bounce heights 5.2 (knife) and 5.5 (mine); turns of 8 and 6 fields, the
+  medians of traced settles (knives 5 to 15, mines 5 to 9). A mine sticks to
+  the first wall, ceiling or object it hits (`handles_projectile_motion`
+  returns 2 when it may embed), not to a character (it falls past without
+  bouncing). The level's floor usually catches it first: the game catches a
+  falling object once a tick ends inside its clearance over the floor (the
+  bottom of its bounding box as it spins, `chrpropSumMatrixPosY`), and it
+  hops and slides like a grenade; it sticks only when one tick's drop takes
+  it from above that band to below the floor. That hangs on where the ticks
+  fall and on the random spin, so the model stepping through it flipped
+  between sticking and hopping as the aim moved a hair (the owner saw the
+  arc flicker and every mine hop, 2026-11-10; at 144 Hz a tick moves it
+  60/144 as far, so nearly every mine is caught). The model now decides by
+  the likelier: it sticks to the floor only once a tick's drop (the fall
+  speed times `PortArcLaunch.tickStep`, the game's `g_GlobalTimerDelta`)
+  exceeds twice the band it is caught in, `PORT_ARC_MINE_CATCH` 10, which
+  takes a fall from a ledge; otherwise it hops. The band comes from the
+  stick rate: at 60 Hz, throws falling 12.8 units a tick stuck about one
+  time in five. (The first model let mines stick to the floor and put -15
+  degree throws 500 units short; the clearance fix after it still predicted
+  sticks the game seldom makes.) A knife's flight ends on the first character it meets before
+  any bounce (`handles_shot_actors`); the world's hit now says whether it
+  was a character (`PortArcHit.chr`). A field that finds the object under
+  the floor's clearance is flown again with the hit test, since a chord
+  between placed positions misses a floor crossing. The friction-free turn lasts as long as the landing spin
+  allows: the throw spins the grenade randomly (`sub_GAME_7F057C14`). Of ten
+  traced settles at 60 and 144 Hz (the latter with FORK-070), six turned at
+  the game's fastest rate (5 fields) and the rest took 6 to 11, so the model
+  uses 5: most grenades stop where the arc ends and the rest slide a few
+  fields past it, never short. (It used 7 before, the middle of the first
+  three traces.)
+  The bounce and rest heights were measured from traced grenades. In the
+  air, collisions are tested on three-field chords, and a chord that hits
+  is flown again a field at a time.
+
+`port_projectile_arc_launch.c` takes the launch where the game takes a real
+one: a grenade round's or rocket's at the end of `gunUpdateAndFireBothHands`
+(muzzle `field_B58`, `gunWeaponFovLaunch`; a rocket's thrust `D_80053DDC`
+along the aim, launch speed three fields of it, or the recorded cadence in
+demo playback); a hand grenade's there too, from the hand as drawn
+(`throw_item_pos_related`, within about 4.4 units of the release point) with
+its fuse less the fields held (`field_890` while the trigger is down,
+`last_z_trigger_timer` during the throw); a tank shell's from the turret
+(`bondviewSet3dCoord7F07CEB0`, model matrix 4) right after that player's
+`propsTick` in `lv.c`, where `chraiCheckUseHeldItems` fires it, because by the
+gun pass the tank's model matrices are no longer valid (reading them there
+gave garbage). It was split out of `port_projectile_arc_world.c` to keep that
+file within the line limit. `port_projectile_arc_world.c` predicts the
+flight right after `propsTick` too, for each player, with the queries a real
+round uses each tick: `bgTestBulletHitBackground` over the rooms along the
+step plus the visible rooms (nearest hit; the game keeps the last valid one,
+which only matters where rooms overlap), then `projectileFindCollidingProp`
+for objects and characters, the stan floor via
+`walkTilesBetweenPoints_NoCallback` / `stanFindTileBelowPos`, and, for a
+settled grenade, `stanTestLineUnobstructed`, `stanTestVolume`,
+`getCollisionEdge_maybe` and `calculateRayToSegmentIntersectionNormalized`.
+Running it during the gun pass crashed: a character's hit list
+(`ChrRecord.field_20`) is rebuilt by its tick in `propsTick` and freed again
+while it draws, and the game's character test (`sub_GAME_7F041BB8`) does not
+check for a missing one. The player's own collision is switched off as for
+their own round (`sub_GAME_7F03D058`), rounds already in the air are passed
+through (temporary `PROPFLAG2_THROWTHROUGH`; otherwise the prediction
+bounced off the previous grenade), and the collision scratch state
+(`stanSavedColl_*`, `g_portBlock*`, `D_80030B0C` and the projectile hit
+globals) is put back, as `gunWeaponFovClearFrac` does. Nothing draws the game
+RNG or changes game state, so demos and multiplayer stay in step. A path is
+reused while the launch (and a hand grenade's fuse) holds still, refreshed
+every 10 ticks so doors, guards and vehicles moving into it still show. When
+the muzzle is behind something (the game would spawn the round at the
+player) no path is shown.
+
+**Hooks** (all inside `#ifndef TARGET_N64`): `lv.c` calls
+`portProjectileArcTick` after `propsTick` beside the hit-map probe;
+`gunfire.c` calls `portProjectileArcNoteLaunch` at the end of
+`gunUpdateAndFireBothHands` and `portProjectileArcRender` at the start of
+`gunRenderFirstPersonGunModels` (not during the hand gallery);
+`gunFireTankShell` (`gunfire.c`, US/JP copy only), `gunSpawnGLGrenade`,
+`generate_player_thrown_grenade`, `generate_player_thrown_knife` and
+`generate_player_thrown_object` (`gun.c`) call `portProjectileArcShotFired`,
+and `objectTick` (`propobj.c`) calls `portProjectileArcExploded` as a fired
+round explodes; these only log, under `GE_ARCDBG`, except that a hand
+grenade leaving the hand ends its throw's arc. The option is read and
+written through `joy_port.c`'s option dispatch; `video.c` writes its default
+into a new `midas.ini`.
+
+**Diagnostics.** `GE_ARCDBG=1` logs, per round fired, the drawn arc's launch
+(and its offset) and impact against the round's real launch, the flight
+model's impact from that real launch, and where it really exploded (3D and
+ground distances, at the round's own position, where `propExplode` puts the
+blast; a round that has left the stan keeps a stale prop position). It also
+logs the prediction's cost every 240 predictions, and how many frames had no
+tick and kept the carried motion and how often that motion jumped
+(`port_projectile_arc_log.c`, `port_projectile_arc_launch.c`).
+`GE_ARC_AUDIT` (`port_projectile_arc_audit.c`, desktop video builds only)
+turns the arc on in memory, equips the grenade launcher or (`rocket`) the
+rocket launcher or (`grenade`, `knife`, `mine`, `shells`) hand grenades,
+throwing knives, remote mines or tank shells on foot (`GE_ARC_AUDIT_DUAL`,
+`-Dual`: the same in the left hand), holding aim only with
+`GE_ARC_AUDIT_ADS`, or (`tank`) boards the level's tank and selects the
+shells, steps the pitch, and requests screenshots. `GE_ARC_AUDIT_FACE`
+(`-FaceChr`) turns the player each tick towards the nearest living character
+in a shared room at least 250 units off, counting the pitches from the line
+to its feet; `GE_ARC_AUDIT_STRIKE` (`-StrikeMarker`) draws the character-hit
+marker (the stuck knife, or a round's or rocket's burst with the fenceless
+ring) at every arc's end, 50 units up as if at a character's chest, to
+capture its look without a character in view (finding one in clear view
+from a spawn point proved unreliable); `GE_ARC_AUDIT_HIDDEN`
+(`-HiddenCross`) draws every Arc Impact Crosshair as out of sight; each
+capture logs the right hand's impact and whether it is out of sight, and
+the prediction-cost line counts out-of-sight impacts; `GE_ARC_AUDIT_NOARC` (`-NoArc`)
+leaves the arc itself off, for the Arc Impact Crosshair alone (with
+`GE_ALWAYSCROSSHAIR=1` in the environment);
+`scripts/port/audit_projectile_arc.ps1` runs it from a copied executable in
+an isolated `build_win/arc-audit-*` folder with `GE_AUTOFIRE` (or `-NoFire`),
+optionally drawing faster than the tick while walking about (`-MaxFps`,
+`-Drive`), never touching the user's settings, and removes the copy
+afterwards. `GE_AUTOFIRE` presses the trigger for 30 of every 120 polls
+(drawn frames); `GE_AUTOFIRE_PERIOD=n` (`video.c`, debug input only)
+changes the 120, and the script sets ten seconds' worth for hand grenades:
+the first grenade audit threw every two seconds with a 3.5-second fuse, so
+each blast set off the next grenade in mid-air, and at 144 Hz a five-second
+cadence still let a grenade roll into the previous blast while it burned.
+
+**Sources:** [shell and grenade-round model, option and dashes](port/src/port_projectile_arc.c),
+[rocket model](port/src/port_projectile_arc_rocket.c),
+[hand grenade, knife and mine model](port/src/port_projectile_arc_thrown.c),
+[launch](port/src/port_projectile_arc_launch.c),
+[game queries](port/src/port_projectile_arc_world.c),
+[drawing](port/src/port_projectile_arc_draw.c),
+[Arc Impact Crosshair](port/src/port_projectile_arc_cursor.c) and its
+[draw hook](port/src/port_sight.c), its [dashed cross](port/fast3d/gfx_pc.cpp)
+([reticle call](port/src/port_hud.c)),
+[log](port/src/port_projectile_arc_log.c),
+[audit](port/src/port_projectile_arc_audit.c),
+[header](port/include/port_projectile_arc.h),
+ROM-free tests [for rounds](scripts/port/test_projectile_arc.c) and
+[for hand grenades, knives and mines](scripts/port/test_projectile_arc_thrown.c) (included by
+`test_ads.c`) and the [audit script](scripts/port/audit_projectile_arc.ps1).
+
+**Checks:** `test_ads.sh` passes with the new tests: the option is off by
+default and a toggle; the parabola matches the game's per-tick integrator at
+0.5, 1, 2 and 3 fields; a shell stops at the first floor, wall or ceiling; a
+grenade round bounces off a wall and a rising ceiling hit and explodes on
+the floor; a coarse prediction lands exactly where field-by-field steps do;
+a level rocket dips, levels off, holds its speed cap, stops at a wall (the
+same with three-field chords, keeping nothing past it) and falls once its
+power runs out; a hand grenade hops once, settles and rolls to rest past
+its landing before its fuse, bursts in the air where a short fuse ends,
+comes back off a wall in the air, lands where field-by-field tests put it
+with fewer tests, stops its width short of a wall it rolls into, and at
+twice the friction (a 60 Hz frame of two fields) rolls v²/2f shorter for
+each f; a mine sticks to a wall and hops and rests on open floor, and over
+falls from 40 to 1,400 units turns from hopping to sticking to the floor
+exactly once (never back and forth), while at 144 Hz the highest fall still
+hops; a knife flying into a character ends in it with its flight direction
+recorded, and one ending on the floor records no strike (the fixture's
+level hits now say they are not characters: the field was left unset, and
+the first run passed on whatever the stack held); a struck knife's drawn
+axis is turned to 50 degrees off the line of sight only when nearer to it;
+a shell exploding on a character records it and a grenade round turned by
+one does not; Arc Impact Crosshair is a toggle on by default, eases the same
+in one step or six, keeps an impact off the view at its edge along the line
+towards it, and is full size near, half at twice 350 units and held at 40%
+far off; `test_upstream_merge.sh` draws the always-on cross at each
+reported impact (through the wide-aim conversion, and in ADS with ADS
+Crosshair), dashed at two thirds opacity for one out of sight, at half size
+for one reported at half scale, and at the
+aim point with none (its draw buffer is now reset before those draws: the
+wide-aim anchors overran its 16 commands, which AddressSanitizer caught
+after a crash);
+the
+dash layout keeps its pattern, moves with its phase, never spans a bounce
+and follows a polyline. `settings_placement.py` and `bright-builds-check.ts
+all` pass. With the isolated Windows build and `audit_projectile_arc.ps1`
+(60 Hz ticks, from the hip unless noted):
+
+- Grenade launcher, Dam, -12 to 24 degrees: from the round's real launch the
+  model's impact was within 0.0-0.4 units along the ground in most shots and
+  7-21 units in a few. The drawn arc was within 0.3-12 units in ADS and 2-30
+  from the hip; it starts about 3 units from the real spawn (the launcher's
+  pose shifts as it fires), which a shallow shot stretches. One round
+  falling about 1,600 units into the dam's basin landed about 200 units
+  short of both predictions (measured with the older log's stale position;
+  not rechecked). Rechecked after the launch code moved to its own file on
+  2026-11-10: model within 0.1, drawn arc median 13.4 units.
+- Rocket launcher, Dam, -6 to 6 degrees: model within 0.0-0.1 units every
+  time; drawn arc within 0.2-4.6 units on long shots and about 44 units on
+  shots skimming the ground at -6 degrees (the same 2.7-unit spawn offset).
+  Before the log used the round's own position, it reported rockets about
+  1,000 units short: they had left the stan, whose prop position stays put.
+- Tank, Streets: shells within 0.0-0.3 units of both the drawn arc and the
+  model, except two that exploded 133 units short with the same launch as
+  the rest, hitting something that had moved into the street.
+- Hand grenades, Dam, -25 to 20 degrees, the trigger held 30 fields each
+  throw: those rolling into a road barrier about 1,950 units away burst
+  within 0.0-0.7 units of the drawn arc's end (12 throws, -15 to 20
+  degrees). Free rolls stopping in the open, after about 1,700 units, came
+  within 1-17 units in most throws and 46-106 units in a few, the spread of
+  the random landing spin. The first fitting runs, with a guessed bounce
+  height, turn length and a point test for the slide, were 12-130 units off
+  or missed the barrier; a per-tick trace of real grenades (temporary,
+  removed) set the values above.
+- Hand grenades at 144 Hz (`-MaxFps 144`, the tick following it). With the
+  prediction scaling the friction by the tick's fraction, as the game then
+  did: on Dam, eight throws at -25 to 5 degrees all slid to the barrier and
+  burst within 0.0-0.4 units of the ring (before, a -25 degree throw
+  predicted to stop 270 units short slid on into the barrier, still moving
+  at 10 units a field); on Runway, five throws at 15 and 35 degrees burst
+  within 0.1-2.8 units, against the fence by the start. With FORK-070's
+  per-field slide, -25 degree throws on Dam stopped in the open, 39-62 units
+  short of the ring with the model's earlier 7-field turn (six of eight
+  turned in 5). With the 5-field turn: at 144 Hz, six free rolls ended
+  0.8-37.7 units from the ring (median 13) and two barrier stops 0.3; at
+  60 Hz, five free rolls 15.8-90.3 units from the drawn ring (the model from
+  the real launch 0.0-106) and two barrier stops 0.3-0.5.
+- Character-hit marker and Arc Impact Crosshair, Dam (`-StrikeMarker`, with
+  `GE_ALWAYSCROSSHAIR=1`): the grenade launcher's ring without its fence and
+  the burst above it, the always-on cross on the impact rather than the
+  screen centre; with `-NoArc` and the rocket launcher, nothing drawn and
+  the cross below the centre on the rocket's impact. No capture yet with a
+  real character hit. Out of sight: hand grenades on Dam at 20-56 degrees;
+  one at 32 degrees glanced sideways to land behind the rock, was logged
+  out of sight and drew the dashed, fainter cross at the screen's bottom
+  edge; the steep lobs landing by the barrier ahead, below the view but in
+  line of sight, drew solid crosses at the edge; 49 of 240 predictions over
+  the run were out of sight. `-HiddenCross` shows the dashed cross on the
+  grenade launcher's ring. Size with distance, grenade launcher on Dam at
+  960x540: about 26 pixels across for an impact some 430 units off, 14 at
+  770 and 14 at 1,750 (the 40% floor).
+- Mines after the floor rule, Dam, -25 to 15 degrees: at 144 Hz no throw
+  is predicted to stick to the floor, as none does; rest positions are
+  mostly within 10-50 units, a few 260-530 off (as off from the model run
+  from the real launch, so the hop and slide, whose spin is random, not the
+  prediction's timing). At 60 Hz the first threshold (twice the 5.5 rest
+  height) still predicted sticks that one mine in five made; with the
+  10-unit band no throw is predicted to stick to the floor, 10 of 14 mines
+  rest within 45 units of the ring, and the other four (280-560) are -5
+  degree throws the model sticks to the top edge of the low barrier while
+  the game's clear it (as far off from their real launches: a glancing hit
+  on an edge, a known limit).
+- Knives and remote mines, Dam, -25 to 10 degrees (the log reports where
+  each sticks or comes to rest, `arcdbg: stopped`): knives that hit the
+  barrier within 0.1-0.3 units of the arc's end, open-floor rolls 9-72
+  units (the random spin), one 503 that glanced off sideways; mines mostly
+  within 0-50 units, with one drawn arc 539 units off whose mine sat at the
+  edge between sticking to the floor and hopping (the model from its real
+  launch was 0.1 off). Tank shells on foot burst within 0.1-0.5 units.
+  Captures show two arcs for dual grenade launchers and dual knives and a
+  mine's ring and fence.
+- Cost per prediction: 0.2-0.34 ms on average for rounds (worst 0.76 ms),
+  0.29-0.43 ms for hand grenades (worst 0.93 ms); a path held still is
+  reused.
+- Double arc: drawing at 144 fps while walking, 132-140 of every 240 frames
+  had no tick, the frames where the first version dropped the player's
+  motion; the carried motion changed by over a unit only as the walk turned.
+
+Screenshots from the earlier versions show the ring for the grenade
+launcher in ADS and from the hip, the rocket's dashes running to its
+impact, the dashes rising past the tank's barrel, and a hand grenade's
+dashes running along the road; the ring was checked again with hand
+grenades after the burst was removed. Not checked: split-screen multiplayer, other levels' long drops, tick rates other than 60 Hz for rockets,
+uncapped or hardware-paced tick rates for hand grenades, a hand grenade bouncing off a wall in flight or rolling
+into a character in game, a cooked hand grenade (the audit always held the
+trigger 30 fields), a knife striking a character, timed and proximity mines
+in game (they share the remote mine's throw), dual rocket launchers, and a
+browser build.
+
 ### FORK-068 — Wall bullet holes draw on the wall they hit
 
 **Status:** Implemented on 2026-11-09 in the Windows build after the owner saw
@@ -2613,7 +3200,7 @@ subsections, in both the Options folder and the watch:
 | --- | --- |
 | Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Sprint, Ludicrous Sprint |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction, Tracer Strength (FORK-062), Shotgun Tracers and Decorative Pellets (FORK-063) |
-| HUD Additions | Always Crosshair Size, Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
+| HUD Additions | Always Crosshair Size, Projectile Arc and Arc Impact Crosshair (FORK-069), Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
 | System | About / Build Info, Fonts (FORK-051, FORK-052), Crash Reporting (Windows/Linux) |
 
 The watch's Iron Sights page also holds the Suspend Points action, which moved
@@ -4597,6 +5184,18 @@ At the owner's request the ZMG rose until its rear fins' tops sit flush with
 the cross's horizontal arms (height 4.0 → 3.41; they had been 14 px below).
 The other guns were within about a pixel or deliberately posed (shotgun,
 laser and grenade launcher sit lower); they are listed in the guide.
+On 2026-11-10 the owner asked for the grenade launcher to sit much lower in
+ADS, since it covered most of the Projectile Arc (FORK-069), whose path and
+ring lie straight below the crosshair: its sight height went from 2.4 to 18,
+keeping its depth, pitch and FOV (captures on Dam at 12 still hid the ring of
+a level shot behind the muzzle; at 18 the ring shows above it). It no longer
+sights down the barrel. The owner then asked for it lower still with the
+muzzle tilted down: sight height 26 and pitch -0.060 (from -0.200, so the
+muzzle points only slightly up, no longer suggesting the lob); captures show
+it at the bottom of the screen with the ring of level and downward shots
+in clear view. `test_ads.sh`, `test_wardrobe.sh` and `test_hud.sh`
+pass; the regenerated render gallery changed no image (it has no grenade
+launcher ADS view).
 
 The owner's camera-proximity refinement moves the 12 unscoped long-gun ADS
 origins 20% closer along camera Z. It retains each calibrated sight height/pitch,

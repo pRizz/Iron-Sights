@@ -1222,6 +1222,7 @@ Gfx* lvlRender(Gfx* DL)
             chraiCheckUseHeldItems();
 #ifndef TARGET_N64
             { extern void portHitMapProbeTick(void); portHitMapProbeTick(); } /* GE_HITMAP_PROBE: fires as Bond does */
+            { extern void portProjectileArcTick(void); portProjectileArcTick(); } /* FORK-069: after the props tick, as a real round */
 #endif
 
             if (bond_pressed_reload_activate() && bond_interact_object())
