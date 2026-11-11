@@ -41,6 +41,7 @@ s16 solo_target_time_array[20][3] = {{0,160,0}, {0,0,125}, {300,0,0}};
 s32 get_cur_playernum(void) { return testSeat; }
 s32 getPlayerCount(void) { return playerCount; }
 s32 portBondControlsLive(void) { return live; }
+Gfx *portNoclipDrawLabel(Gfx *g) { return g; } /* port_noclip.c (FORK-072), covered by test_ads */
 s32 bondinvCountTotalItemsInInv(void) { return inventoryCount; }
 s32 bondinvGetTextbyInvIndex(s32 i) { return inventory[i]; }
 ITEM_IDS getCurrentPlayerWeaponId(GUNHAND hand) { return hand == GUNRIGHT ? currentWeapon : ITEM_UNARMED; }

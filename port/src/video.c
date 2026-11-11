@@ -2428,6 +2428,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "ads_spread=%d\nads_recoil=%d\n", PORT_ADS_ACCURACY_DEFAULT, PORT_ADS_ACCURACY_DEFAULT);
     fprintf(f, "weapon_kick=%d\n", PORT_GUN_KICK_DEFAULT);
     fprintf(f, "reload_speed=1\n"); /* PORT_RELOAD_SPEED_DEFAULT (FORK-071) */
+    fprintf(f, "allow_noclip=0\n"); /* PORT_NOCLIP_ALLOW_DEFAULT (FORK-072) */
     fprintf(f, "sprint=1\nludicrous_sprint=0\n");
     fprintf(f, "hit_markers=1\n");
     fprintf(f, "hit_sounds=1\n");

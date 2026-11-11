@@ -30,6 +30,115 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-072 — Noclip: Quake-style flight through walls
+
+**Status:** Implemented on 2026-11-10 at the owner's request. They play-tested
+the first Windows build and asked for rise / fall controls and faster flight,
+then play-tested the revised build; committed and pushed to `main` on
+2026-11-10. Linux, Steam Deck and browser builds not run locally.
+
+Inherited behaviour: Bond always stands on a stan floor tile. `MoveBond`
+(`bondview2.c`) turns the head animation's step into a move offset and
+`bondviewCalcUpdatePlayerCollision` tests it against the tile edges (walls),
+objects, doors and characters; `bondviewUpdatePlayerY` then sets his height
+from the tile and applies gravity. The tile also gives his room, which
+drives room registration, the rooms drawn and room objectives. The game's
+own debug "collisions" switch (`obj_collision_flag`) only drops object,
+door and character collision; walls stay.
+
+**Gameplay > Iron Sights > Aiming and Movement > Allow Noclip**
+(`[display] allow_noclip`, default 0) lets the new **Noclip** control
+(`[input] noclip`, keyboard default N, pads unbound, rebindable in Controls
+on the watch and in the Options folder) toggle flight for the player whose
+control pressed it:
+
+- While flying, the walk step has its forward part tilted along the view's
+  pitch (`portNoclipFlyStep`): looking up climbs, looking down dives,
+  sideways stays level. It is then scaled to 3x (`PORT_NOCLIP_SPEED`), or 12x
+  while Walk / Sprint is held (`PORT_NOCLIP_SPRINT_SPEED`), at the owner's
+  request after play-testing the first version. `portJoyPortMoveScale` returns 1 while flying, so the
+  walk animation (and its head bob) keeps its normal speed and Sprint,
+  Ludicrous Sprint and ADS slowdowns do not apply. Bond moves there with no
+  wall, object, door or character test and no gravity.
+- Held **Noclip Up** (`[input] noclip_up`, keyboard default Space) rises and
+  **Noclip Down** (`noclip_down`, unbound) or Crouch Hold (Left Ctrl) falls,
+  at 10 units a field times the same 3x / 12x (`PORT_NOCLIP_CLIMB`,
+  `portNoclipClimbFor`); both together cancel. While flying, the crouch step
+  (`portJoyPortCrouchStep`) keeps Bond standing instead of crouching, and a
+  crouch toggle press is dropped.
+- Each tick the highest floor tile below his feet
+  (`stanFindTileBelowPos`) becomes his tile, with
+  `bondviewUpdatePlayerRoom` and `objectivestatusCheckRoomEntered`, so his
+  room, the drawn rooms and room objectives follow him. Above no floor (under
+  the level or outside it) he keeps the last tile and room.
+- Pressing it again drops him onto the floor below through the normal
+  gravity, or, with none below, puts him back where he last flew over one.
+- A **NOCLIP** label shows at the top right of his view while flying; a
+  press when Allow Noclip is off pops up where to turn it on.
+- Never in demo playback, in the tank or once dead (each of those lands him);
+  turning the setting off lands every flier; each stage starts on foot
+  (`initBONDdataforPlayer`). Tank entry is unavailable while flying.
+- Mission records and unlocks are unaffected, as with the game's own cheats,
+  which do not block saving either.
+
+**Hooks:** `MoveBond` calls `portNoclipTick` after `bondviewProcessInput`;
+the on-foot branch calls `portNoclipMove` and jumps past the collision and
+step-height code (`port_noclip_moved`) while flying; `bondviewUpdatePlayerY`
+is skipped while flying; `initBONDdataforPlayer` (`player.c`) resets the
+player; `portHudDraw` draws the label. All game-side hooks are inside
+`#ifndef TARGET_N64`. The actions are appended as `PORTACT_NOCLIP` (28), `PORTACT_NOCLIP_UP`
+(29) and `PORTACT_NOCLIP_DOWN` (30) in `joy_port.c`, with
+`portJoyPortNoclipPressed` and `portJoyPortNoclipControls`, the pad-map names in
+`input_pc.c` (`PM_PORT_LAST` + 30) and Controls rows in
+`port_watchpages.c`'s shared `sBindsAllExtra`. The option registers in
+`port_options.c`, the folder (`front.c`) and watch rows, help
+(`port_option_help.c`, which also names noclip in the page description),
+`tools/midas_ini_help.txt`, the default midas.ini writer (`video.c`) and
+README.md.
+
+**Input:** keyboard (N, Space, Left Ctrl), mouse (bind buttons) and gamepads
+(bind `padN_noclip`, `padN_noclip_up`, `padN_noclip_down`) can toggle it and
+rise or fall; a pad's crouch hold also falls. Browser touch has no Noclip control: the
+touch overlay sends only the controls it draws, and adding a button needs a
+native touch context, overlay control and fixture audits; deliberately left
+for later. A browser keyboard's N works. The launcher's bind list
+(`tools/GELauncher.cs`) does not list it, as it does not list the suspend
+point actions either.
+
+**Sources:** [header with the pure rules](port/include/port_noclip.h),
+[setting, flight and hooks](port/src/port_noclip.c), the
+[ROM-free test](scripts/port/test_noclip.c) (included by `test_ads.c`) and
+the [in-game audit](scripts/port/audit_noclip.ps1). `GE_NOCLIPDBG=1` logs
+flight starts, landings and positions; `GE_NOCLIPDBG_PITCH` holds the view
+pitch while flying, for the audit only.
+
+**Checks:** in the `goldeneye` Docker image, `test_ads.sh` passes with the
+new test: the fly step (level, climbing, diving, sideways and turned
+facings); the gates; the default, toggle row, bind slot 28 and default N; a
+press while not allowed only pops the hint; flight follows the floor below
+and keeps the last tile above none; landing with no floor restores the last
+footing and with one leaves him to fall; 3x flight and 12x with Walk /
+Sprint, with the native move scale held at 1; Space rises, Crouch Hold or
+Noclip Down falls, both cancel, and Crouch Hold does not crouch while flying;
+binds 29 and 30 default to Space and unbound; demo playback, the tank,
+turning the setting off and a stage reset land him. `test_hud.sh`,
+`test_states.sh`, `test_upstream_merge.sh`, `test_wardrobe.sh`,
+`settings_placement.py` and `bright-builds-check.ts all` pass. In game
+(isolated Windows build, `audit_noclip.ps1` on Dam; the first version, at
+1x, unless noted): walking at a point
+about 3,200 units away, noclip went straight through to it while the same
+walk without it (press refused) stopped against a wall at x 17,410; held at
++30 and -30 degrees, Bond climbed and dived about 272 units over 502 along
+the ground; turning it off in the air dropped him back to the floor (feet
+-107), and turning it off under the terrain put him back at his last
+footing. With the 3x speed, an unheld flight covered about 1,760 units a
+second where the first version covered about 590, and ten one-poll Noclip Up
+presses raised his feet 300 units (30 a tick). A capture showed the NOCLIP label and the level drawn around him
+high on the cliff. The hand gallery was regenerated for the `bondview2.c`
+and `port_hud.c` input changes with no changed image cells, and
+`hand_gallery.py verify` passes. Not checked: split-screen, other stages, guards'
+reactions, and how rooms draw when flying far outside the level.
+
 ### FORK-071 — Reload Speed: faster player reloads, up to instant
 
 **Status:** Implemented on 2026-11-10 at the owner's request, built for
@@ -3267,7 +3376,7 @@ subsections, in both the Options folder and the watch:
 
 | Subsection | Settings |
 | --- | --- |
-| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Reload Speed (FORK-071), Sprint, Ludicrous Sprint |
+| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Reload Speed (FORK-071), Allow Noclip (FORK-072), Sprint, Ludicrous Sprint |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction, Tracer Strength (FORK-062), Shotgun Tracers and Decorative Pellets (FORK-063) |
 | HUD Additions | Always Crosshair Size, Projectile Arc and Arc Impact Crosshair (FORK-069), Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
 | System | About / Build Info, Fonts (FORK-051, FORK-052), Crash Reporting (Windows/Linux) |

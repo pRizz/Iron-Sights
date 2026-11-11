@@ -175,6 +175,16 @@ refills the magazine with no reload at all, so a gun keeps firing until your
 spare ammo runs out. **Original** is the default. Guards, weapon switches and
 demo playback keep the original speed.
 
+**Allow Noclip**, also there and off by default, lets **N** (the rebindable
+**Noclip** control in Controls) toggle Quake-style noclip: you fly where you
+look, through walls, floors and doors, with no gravity, at three times walking
+speed, or twelve times while holding **Left Shift** (Walk / Sprint). Hold
+**Space** to rise and **Left Ctrl** (Crouch Hold) to fall; both are rebindable
+as **Noclip Up** and **Noclip Down**. A **NOCLIP** label shows while it is on. Press it again to
+drop onto the floor below you; with no floor there, you go back to where you
+last flew over one. It is off in demo playback, in the tank and after death,
+and each mission starts on foot. Browser touch has no Noclip button yet.
+
 Iron Sights adds these HUD and feedback options under **Gameplay > Iron Sights >
 Combat Feedback** and **HUD Additions**. Mission Timer is the original setting on
 **Gameplay > HUD**, extended by Iron Sights:

@@ -482,6 +482,12 @@ void initBONDdataforPlayer(s32 player_num)
 
     g_VisibleToGuardsFlag = TRUE;
     obj_collision_flag = TRUE;
+#ifndef TARGET_N64
+    {
+        extern void portNoclipResetPlayer(s32 player);
+        portNoclipResetPlayer(player_num); /* Noclip (FORK-072): each stage starts on foot */
+    }
+#endif
 }
 
 

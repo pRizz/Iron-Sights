@@ -437,6 +437,13 @@ padN_stickmode.
                       |            | 0 = instant, the magazine refills with
                       |            | no reload. Guards, weapon switches and
                       |            | demo playback keep the original speed
+  allow_noclip        | 0          | 1 = the noclip control (default N) flies
+                      |            | you where you look, through walls, floors
+                      |            | and doors, with no gravity, at 3x walking
+                      |            | speed (12x holding walk/sprint); Space
+                      |            | rises, crouch_hold falls; pressing it
+                      |            | again drops you onto the floor below. Off
+                      |            | in demo playback, the tank and after death
   sprint              | 1          | 1 = hold Walk / Sprint for 1.5x speed;
                       |            | 0 = hold it to walk at half speed
   ludicrous_sprint    | 0          | 1 = sprint at 5x speed instead of 1.5x.
@@ -580,6 +587,10 @@ Port actions (extra actions beyond the N64 pad)
   quicksave        | F5               | Replace the separate quicksave
   quickload        | F9               | Load the quicksave and resume gameplay
   undo_load        | F8               | Return to the state before the last load
+  noclip           | N                | Noclip on or off (needs allow_noclip=1)
+  noclip_up        | Space            | Rise while noclip is on (held)
+  noclip_down      |                  | Fall while noclip is on (held); so does
+                   |                  | crouch_hold
 
   Suspend Points is also under Watch > Gameplay > Iron Sights. Four manual slots, quicksave,
   and undo-load are stored separately for each campaign folder in Data/SaveStates.

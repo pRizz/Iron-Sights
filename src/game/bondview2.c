@@ -56,6 +56,7 @@
 #include "port_hud.h"
 #include "port_mission_hints.h"
 #include "port_mission_clock.h"
+#include "port_noclip.h"
 extern f32 g_bondviewSceneWideFactor;
 extern s32 portAdzyMode(void); /* video.c: midas.ini [display] adzy - used twice in solo_char_load */
 extern s32 portReturnStartThisTick(void); /* video.c: START came from Return alone; weak 0 headless */
@@ -9658,6 +9659,9 @@ void MoveBond(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
     bondviewPlayerTickDamageAndHealth();
     bondviewPlayerTickExplode();
     bondviewProcessInput(stick_x, stick_y, buttons, oldbuttons);
+#ifndef TARGET_N64
+    portNoclipTick(); /* Noclip (FORK-072): take a press, start or end flight */
+#endif
 
     if (lvlGetControlsLockedFlag())
     {
@@ -10683,6 +10687,13 @@ void MoveBond(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
                 ) * g_GlobalTimerDelta * 10.0f;
         }
 
+#ifndef TARGET_N64
+        if (portNoclipActive())
+        { /* Noclip (FORK-072): fly by this step, past every collision test */
+            portNoclipMove(&move_offset);
+            goto port_noclip_moved;
+        }
+#endif
         bondviewCalcUpdatePlayerCollision(&move_offset, (g_CurrentPlayer->swaytarget == 0.0f));
 
         stanTileDistanceRelated(
@@ -10839,6 +10850,9 @@ void MoveBond(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
         g_CurrentPlayer->swayoffset2 += sp240 * sp21C;
     }
 
+#ifndef TARGET_N64
+port_noclip_moved:
+#endif
     // add basic block
     {
         f32 breathing;
@@ -11049,6 +11063,9 @@ void MoveBond(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
         }
     }
 
+#ifndef TARGET_N64
+    if (!portNoclipActive()) /* Noclip (FORK-072): no floor or gravity while flying */
+#endif
     bondviewUpdatePlayerY(use_stanHeight, sp390);
     bondviewUpdatePlayerCollisionPositionFields();
     bondviewUpdatePlayerCollisionBounds();

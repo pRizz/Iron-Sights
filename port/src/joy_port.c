@@ -81,6 +81,7 @@
 #include "port_gun_kick.h"
 #include "port_tracers.h"
 #include "port_reload_speed.h"
+#include "port_noclip.h"
 #include "port_projectile_arc.h"
 #include "joy.h"
 #include <os_extension.h>
@@ -136,6 +137,11 @@ enum {
      * watch_next, injected as D-pad up / down edges while the watch is open. */
     PORTACT_WATCH_UP,
     PORTACT_WATCH_DOWN,
+    /* Appended: Noclip (FORK-072), which flies only with Allow Noclip on. */
+    PORTACT_NOCLIP,
+    /* Appended: held rise / fall while flying (FORK-072); crouch_hold also falls. */
+    PORTACT_NOCLIP_UP,
+    PORTACT_NOCLIP_DOWN,
     PORTACT_COUNT
 };
 
@@ -191,6 +197,11 @@ static const struct {
      * nothing outside the watch takes these presses. */
     [PORTACT_WATCH_UP]         = { "watch_up",         "Up",       1 },
     [PORTACT_WATCH_DOWN]       = { "watch_down",       "Down",     1 },
+    /* N is free on the shipped layout; pads ship unbound */
+    [PORTACT_NOCLIP]           = { "noclip",           "N",        1 },
+    /* Space is free in play; crouch_hold (Left Ctrl) already falls, so down ships unbound */
+    [PORTACT_NOCLIP_UP]        = { "noclip_up",        "Space",    0 },
+    [PORTACT_NOCLIP_DOWN]      = { "noclip_down",      "",         0 },
 };
 
 /* [input] detonate_use_reload (default ON): with remote mines in the right
@@ -318,6 +329,7 @@ s32 portJoyPortSetOption(const char *key, const char *value)
     if (portGunKickOptionSet(key, atoi(value))) return 1;
     if (portTracerOptionSet(key, atoi(value))) return 1;
     if (portReloadSpeedOptionSet(key, atoi(value))) return 1;
+    if (portNoclipOptionSet(key, atoi(value))) return 1;
     if (portProjectileArcOptionSet(key, atoi(value))) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = atoi(value) != 0;
@@ -474,6 +486,7 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
     if (portGunKickOptionGet(key, out)) return 1;
     if (portTracerOptionGet(key, out)) return 1;
     if (portReloadSpeedOptionGet(key, out)) return 1;
+    if (portNoclipOptionGet(key, out)) return 1;
     if (portProjectileArcOptionGet(key, out)) return 1;
     if (strcmp(key, "sprint") == 0) {
         *out = sSprint;
@@ -516,6 +529,7 @@ s32 portJoyPortOptionSet(const char *key, s32 v)
     if (portGunKickOptionSet(key, v)) return 1;
     if (portTracerOptionSet(key, v)) return 1;
     if (portReloadSpeedOptionSet(key, v)) return 1;
+    if (portNoclipOptionSet(key, v)) return 1;
     if (portProjectileArcOptionSet(key, v)) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = v != 0;
@@ -1310,6 +1324,33 @@ s32 portJoyPortClassicTogglePressed(s32 pad)
     return portJoyPortTake(pad, PORTACT_CLASSIC_TOGGLE);
 }
 
+/** port_noclip.c: a fresh Noclip press on a pad (the keyboard is pad 0), taken. */
+s32 portJoyPortNoclipPressed(s32 pad)
+{
+    if (pad < 0 || pad >= PORT_PADS) {
+        return 0;
+    }
+    return portJoyPortTake(pad, PORTACT_NOCLIP);
+}
+
+/** port_noclip.c: this player's flight controls now. Returns 1 while Walk /
+ * Sprint is held; *vertical is +1 for noclip_up, -1 for noclip_down or
+ * crouch_hold, 0 for neither or both. */
+s32 portJoyPortNoclipControls(s32 *vertical)
+{
+    const s32 pad = joyPortPad();
+    s32 up, down;
+
+    *vertical = 0;
+    if (pad < 0 || !joyPortPermitted()) {
+        return 0;
+    }
+    up = sHeld[pad][PORTACT_NOCLIP_UP] != 0;
+    down = sHeld[pad][PORTACT_NOCLIP_DOWN] || sHeld[pad][PORTACT_CROUCH_HOLD];
+    *vertical = up - down;
+    return sHeld[pad][PORTACT_WALK] != 0;
+}
+
 /** The PORTACT_* ids the game side needs by name, so it needs no enum. */
 s32 portJoyPortActZoomIn(void)    { return PORTACT_ZOOM_IN; }
 s32 portJoyPortActZoomOut(void)   { return PORTACT_ZOOM_OUT; }
@@ -1320,6 +1361,9 @@ f32 portJoyPortMoveScale(s32 crouched)
     const s32 pad = joyPortPad();
     if (pad < 0 || g_CurrentPlayer == NULL || !joyPortPermitted() || g_PlayerIsInTank) {
         return 1.0f;
+    }
+    if (portNoclipActive()) {
+        return 1.0f; /* Noclip (FORK-072) scales its own flight; the walk animation stays normal */
     }
     if (portAdsActive()) {
         return 0.5f;
@@ -1634,6 +1678,14 @@ s32 portJoyPortCrouchStep(void)
     c = &sCrouch[pad];
     toggle = portJoyPortTake(pad, PORTACT_CROUCH_TOGGLE);
     hold = sHeld[pad][PORTACT_CROUCH_HOLD];
+    if (portNoclipActive()) {
+        /* Noclip (FORK-072): crouch_hold falls instead, so Bond stays standing */
+        c->wanted = 0;
+        c->holdWas = hold;
+        c->holdEaten = 0;
+        c->standPending = 0;
+        return g_CurrentPlayer->crouchpos != CROUCH_STAND ? 1 : 0;
+    }
     if (g_PlayerIsInTank) {
         c->wanted = 0;
         c->wasSquat = 0;

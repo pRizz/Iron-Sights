@@ -2,6 +2,8 @@
  * in for demo playback): Reload Speed (FORK-071) scales only the reload
  * states' timers, Instant ends them at once, and demos keep the native
  * reload. */
+#include "../../port/src/port_reload_speed.c"
+
 static void testReloadSpeed(void)
 {
     const s32 opt = portOptFind("reload_speed");

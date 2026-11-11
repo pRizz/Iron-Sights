@@ -14,7 +14,6 @@ extern void *memset(void *dst, int value, size_t size);
 #include "../../port/src/port_ads_accuracy.c"
 #include "../../port/src/port_gun_kick.c"
 #include "../../port/src/port_tracers.c"
-#include "../../port/src/port_reload_speed.c"
 #include "../../port/src/port_projectile_arc.c"
 #include "../../port/src/port_projectile_arc_rocket.c"
 #include "../../port/src/port_projectile_arc_thrown.c"
@@ -122,6 +121,7 @@ static void normalAim(s32 held, s32 pressed, s32 toggle)
 #include "test_gun_kick.c"
 #include "test_tracers.c"
 #include "test_reload_speed.c"
+#include "test_noclip.c"
 #include "test_projectile_arc.c"
 #include "test_projectile_arc_thrown.c"
 #include "test_settle_ticks.c"
@@ -147,7 +147,7 @@ int main(void)
     testAdsAccuracy();
     testGunKick();
     testTracers();
-    testReloadSpeed();
+    testReloadSpeed(); testNoclip(); /* FORK-071, FORK-072 */
     testProjectileArc();
     testProjectileArcThrown();
     testSettleTicks();
@@ -286,7 +286,7 @@ int main(void)
     /* Appending upstream watch controls must not renumber saved fork bindings. */
     assert(PORTACT_AIM_DOWN_SIGHTS == 21 && PORTACT_STATE_MENU == 22);
     assert(PORTACT_QUICKSAVE == 23 && PORTACT_QUICKLOAD == 24 && PORTACT_UNDO_LOAD == 25);
-    assert(PORTACT_WATCH_UP == 26 && PORTACT_WATCH_DOWN == 27 && PORTACT_COUNT == 28);
+    assert(PORTACT_WATCH_UP == 26 && PORTACT_WATCH_DOWN == 27 && PORTACT_COUNT == 31);
     assert(strcmp(portJoyPortBindDefault(PORTACT_WATCH_UP), "Up") == 0);
     portJoyPortPadDown(0, PORTACT_WATCH_DOWN);
     portJoyPortPollCommit();

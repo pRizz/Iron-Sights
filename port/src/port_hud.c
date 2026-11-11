@@ -31,6 +31,7 @@
 #include "port_icon_cache.h"
 #include "port_icon_cache_format.h"
 #include "port_wardrobe.h"
+#include "port_noclip.h"
 #include "port/fast3d/hud_text_offset.h"
 #include "game/file.h"
 #include "boss.h"
@@ -518,6 +519,7 @@ Gfx *portHudDraw(Gfx *g)
     }
 #endif
     if (phOptions[3]) g = phDrawStrip(g);
+    g = portNoclipDrawLabel(g); /* FORK-072 */
     if (phOptions[2] && h->toastCount && getPlayerCount() == 1) {
         const HudToast *t = &h->toasts[0];
         const s32 complete = t->status == OBJECTIVESTATUS_COMPLETE;

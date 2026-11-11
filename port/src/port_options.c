@@ -346,6 +346,7 @@ static const struct PortOpt sOpts[] = {
     INTR  ("ads_recoil",         "[display]", "ADS Recoil\n",         PORTOPT_CAT_GAMEPLAY, 0, 100, 10, "%"),
     ENUMR ("weapon_kick",        "[display]", "Weapon Kick\n",        PORTOPT_CAT_GAMEPLAY, sWeaponKickVals, sWeaponKickText, NULL), /* FORK-061 */
     ENUMR ("reload_speed",       "[display]", "Reload Speed\n",       PORTOPT_CAT_GAMEPLAY, sReloadSpeedVals, sReloadSpeedText, NULL), /* FORK-071 */
+    TOGGLE("allow_noclip",       "[display]", "Allow Noclip\n",       PORTOPT_CAT_GAMEPLAY), /* FORK-072 */
     TOGGLE("sprint",             "[display]", "Sprint\n",             PORTOPT_CAT_GAMEPLAY),
     TOGGLE("ludicrous_sprint",   "[display]", "Ludicrous Sprint\n",   PORTOPT_CAT_GAMEPLAY),
     TOGGLE("sight_on_screen",    "[display]", "Sight on Screen\n",    PORTOPT_CAT_GAMEPLAY),

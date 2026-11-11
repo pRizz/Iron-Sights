@@ -4787,6 +4787,7 @@ static const struct PortSheetRow port_sheet_rows_is_aim[] = {
     { SHROW_OPT, "aim_mode" }, { SHROW_OPT, "knife_ads" },
     { SHROW_OPT, "ads_spread" }, { SHROW_OPT, "ads_recoil" }, { SHROW_OPT, "weapon_kick" },
     { SHROW_OPT, "reload_speed" },            /* FORK-071 */
+    { SHROW_OPT, "allow_noclip" },            /* FORK-072: the Noclip bind flies */
     { SHROW_OPT, "sprint" },
     { SHROW_OPT, "ludicrous_sprint" },
 };
