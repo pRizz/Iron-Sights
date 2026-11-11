@@ -4894,12 +4894,14 @@ custom dimensions and explicit render-quality settings remain. The migration
 marker is saved only after user-file synchronization succeeds. Fresh settings
 receive the mobile defaults even if a previous migration marker remains.
 The browser-only SDL window-fit bypass prevents CSS display bounds from clamping
-the physical-pixel framebuffer. Touch-enabled browser windows also disable SDL resizability,
-which otherwise replaces requested render dimensions with the canvas's CSS size;
-the frontend owns responsive presentation. Both hooks use the browser-only
-`GE_WEB_FIXED_FRAMEBUFFER` startup flag; desktop browser/native fitting stays intact.
-CSS presentation and pointer coordinates retain their existing scale; rotation
-fits the framebuffer without selecting a new render resolution. The separate
+the physical-pixel framebuffer. Browser windows also disable SDL resizability,
+which otherwise replaces requested render dimensions with the canvas's CSS size.
+These two hooks once depended on a `GE_WEB_FIXED_FRAMEBUFFER` startup flag set only
+for touch; since 2026-11-11 they apply to every browser start (see the stage-filling
+framebuffer under FORK-025). Touch play renders that framebuffer at the full device
+pixel ratio, and a rotation or browser-chrome change now selects a new render
+resolution for the new stage instead of shrinking the starting 16:9 picture
+(portrait stages get 4:3, the narrowest shape the renderer draws unstretched). The startup default above only sizes the first frames. The separate
 introductory room keeps its existing pixel-ratio cap.
 Controls respect safe-area insets and the game's aspect; browser panning is
 disabled on the game surface while touch mode is enabled. Layout follows the
@@ -7942,11 +7944,40 @@ field of view, face it head-on and contain all corners at the end of the flight.
 This replaces the fixed destination that approached too far into the screen.
 
 `presentation.ts`, `player.tsx` and the player/room styles replace viewport
-stretching with a centered canvas fitted to the actual framebuffer ratio.
-Black bars fill the remaining space in viewport, controls and fullscreen; buffer
-resolution is unchanged and mouse mapping uses the same visible element bounds.
-Native resolution changes are observed. Absolute positioning and deferred,
-deduplicated size writes avoid WebKit resize-observer feedback.
+stretching with a centered canvas fitted to the actual framebuffer ratio, and
+mouse mapping uses the same visible element bounds. Native resolution changes
+are observed. Absolute positioning and deferred, deduplicated size writes avoid
+WebKit resize-observer feedback.
+
+**Stage-filling framebuffer (2026-11-11).** The page now also chooses the render
+resolution: 150 ms after the game stage settles on a new size (window resize,
+rotation, browser chrome, Controls, fullscreen), `presentation.ts` asks the
+running game for a framebuffer of the stage's size through
+`portWebResizeFramebuffer` (`port/web/lifecycle.c`, `SDL_SetWindowSize`; the
+renderer already follows `SDL_WINDOWEVENT_SIZE_CHANGED`). The scale is the full
+device pixel ratio for touch play (FORK-028) and CSS pixels for a mouse, as
+SDL's own browser window used before. The renderer widens the view for shapes
+wider than 4:3 but stretches taller ones (a portrait legal screen came out
+vertically stretched), so the requested height is at most three quarters of the
+width. Landscape phones and desktop windows of 4:3 or wider are covered
+completely; a portrait phone gets its full width at 4:3 (390x293 CSS pixels on
+a 390x844 phone, up from the 390x219 16:9 strip) with bars above and below.
+Otherwise bars appear only for the moment before the new size arrives, during
+which the old framebuffer stays contained rather than stretched. The export returns 0, and the page asks again every
+250 ms, until SDL has a window and the first-start icon stage (FORK-019) has
+ended. This fixes two faults in the earlier arrangement. On a desktop browser,
+SDL's resizable window read the canvas's CSS size, which `presentation.ts`
+itself derived from the framebuffer's aspect, so the aspect never changed after
+startup: a 1280x720 window could keep a stale 1024x700 framebuffer with bars on
+every side. On touch the framebuffer was fixed at a startup 16:9 fit, which
+pillarboxed landscape phones and left portrait a thin strip after rotation.
+`gfx_sdl2.cpp` makes every browser window non-resizable and skips the display
+fit unconditionally, replacing the touch-only `GE_WEB_FIXED_FRAMEBUFFER` flag
+(the launcher no longer sets it). An older runtime without the export keeps the
+contained presentation. `presentation.test.ts` covers the size rule;
+`touch-game-audit.mjs` now requires the framebuffer to fill the stage (4:3 at
+full width in portrait) at start, after rotating to portrait and after a tablet
+resize, replacing its check that rotation kept the starting resolution.
 
 `tools/prepare-room-models.mjs` verifies pinned acquisition hashes and regenerates
 the console-only GLB (203,896 bytes) and controller GLB (1,204,348 bytes).

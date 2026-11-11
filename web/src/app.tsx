@@ -26,6 +26,8 @@ export function App() {
     const rom = createRomManager();
     const [started, setStarted] = createSignal(false);
     const [prepared, setPrepared] = createSignal(false);
+    // Touch play renders at the full device pixel ratio (FORK-028); a mouse at CSS pixels.
+    const [denseFramebuffer, setDenseFramebuffer] = createSignal(false);
     const [controls, setControls] = createSignal(
         new URL(location.href).searchParams.has('controls'),
     );
@@ -206,7 +208,7 @@ export function App() {
                 return;
             }
             const rememberSettings = ensureBrowserSettings(game, touch.enabled());
-            game.ENV.GE_WEB_FIXED_FRAMEBUFFER = touch.enabled() ? '1' : '0';
+            setDenseFramebuffer(touch.enabled());
             await files.flush();
             rememberSettings();
             const latest = rom.status();
@@ -408,6 +410,7 @@ export function App() {
                             presenting={() => entered() || controls()}
                             resume={resumeGame}
                             started={started}
+                            framebufferScale={() => (denseFramebuffer() ? devicePixelRatio : 1)}
                             ready={ready}
                             onCanvas={(element) => {
                                 canvas = element;

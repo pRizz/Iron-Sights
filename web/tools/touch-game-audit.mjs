@@ -121,33 +121,67 @@ try {
             attributeFilter: ['data-context'],
         });
     });
-    const resolution = await page.evaluate(() => {
-        const canvas = document.querySelector('#canvas');
-        const viewport = window.visualViewport;
-        const width = Math.min(innerWidth, viewport?.width || innerWidth);
-        const height = Math.min(innerHeight, viewport?.height || innerHeight);
-        const fittedWidth = Math.min(width, (height * 16) / 9);
-        return {
-            expected: [
-                Math.round(fittedWidth * devicePixelRatio),
-                Math.round(((fittedWidth * 9) / 16) * devicePixelRatio),
-            ],
-            actual: [canvas.width, canvas.height],
-            css: [canvas.clientWidth, canvas.clientHeight],
-            dpr: devicePixelRatio,
-            settings: new TextDecoder().decode(midasAuditGame.FS.readFile('/user/midas.ini')),
-            drawable: [
-                canvas.getContext('webgl2').drawingBufferWidth,
-                canvas.getContext('webgl2').drawingBufferHeight,
-            ],
-        };
-    });
-    assert.deepEqual(
-        resolution.actual,
-        resolution.expected,
-        'SDL clamped or double-scaled the Retina framebuffer',
-    );
-    assert.deepEqual(resolution.drawable, resolution.actual);
+    // The framebuffer fills the game stage at the full device pixel ratio, so the
+    // picture covers the screen. A portrait stage gets its full width at 4:3, the
+    // narrowest shape the renderer draws without stretching (presentation.ts).
+    const filledStage = () =>
+        page.evaluate(() => {
+            const canvas = document.querySelector('#canvas');
+            const stage = canvas.parentElement;
+            const box = canvas.getBoundingClientRect();
+            const shown = [
+                stage.clientWidth,
+                Math.min(stage.clientHeight, (stage.clientWidth * 3) / 4),
+            ];
+            return {
+                expected: shown.map((size) => Math.round(size * devicePixelRatio)),
+                actual: [canvas.width, canvas.height],
+                css: [canvas.clientWidth, canvas.clientHeight],
+                stage: [stage.clientWidth, stage.clientHeight],
+                covered:
+                    Math.abs(box.width - shown[0]) <= 1 && Math.abs(box.height - shown[1]) <= 1,
+                dpr: devicePixelRatio,
+                settings: new TextDecoder().decode(midasAuditGame.FS.readFile('/user/midas.ini')),
+                drawable: [
+                    canvas.getContext('webgl2').drawingBufferWidth,
+                    canvas.getContext('webgl2').drawingBufferHeight,
+                ],
+            };
+        });
+    const expectFilledStage = async (label) => {
+        await page
+            .waitForFunction(
+                () => {
+                    const canvas = document.querySelector('#canvas');
+                    const stage = canvas.parentElement;
+                    const height = Math.min(stage.clientHeight, (stage.clientWidth * 3) / 4);
+                    return (
+                        canvas.width === Math.round(stage.clientWidth * devicePixelRatio) &&
+                        canvas.height === Math.round(height * devicePixelRatio)
+                    );
+                },
+                undefined,
+                { timeout: 10000 },
+            )
+            .catch(() => {});
+        const state = await filledStage();
+        assert.deepEqual(
+            state.actual,
+            state.expected,
+            `${label}: framebuffer does not fill the stage`,
+        );
+        assert.deepEqual(
+            state.drawable,
+            state.actual,
+            `${label}: SDL clamped or double-scaled the framebuffer`,
+        );
+        assert.ok(
+            state.covered,
+            `${label}: canvas ${state.css} does not cover stage ${state.stage}`,
+        );
+        return state;
+    };
+    const resolution = await expectFilledStage('Start');
     console.log('Retina framebuffer', resolution.actual, 'CSS presentation', resolution.css);
     assert.match(resolution.settings, /mouse_auto_aim=1/);
     // The icon stage must end before navigation and leave midas.ini as it was.
@@ -346,13 +380,10 @@ try {
             'Portrait control cropped',
         );
     }
+    const portrait = await expectFilledStage('Portrait rotation');
     await page.screenshot({ path: resolve(output, 'portrait.png') });
     await resize(1024, 768);
-    assert.deepEqual(
-        await page.locator('#canvas').evaluate((canvas) => [canvas.width, canvas.height]),
-        resolution.actual,
-        'Rotation changed the chosen framebuffer resolution',
-    );
+    const tablet = await expectFilledStage('Tablet resize');
     await page.screenshot({ path: resolve(output, 'tablet.png') });
     assert.deepEqual(errors, []);
     await writeFile(
@@ -361,13 +392,15 @@ try {
             {
                 before,
                 resolution,
+                portrait: { actual: portrait.actual, css: portrait.css },
+                tablet: { actual: tablet.actual, css: tablet.css },
                 renderedFps,
                 moved,
                 audio,
                 audioAvailable,
                 errors,
                 contexts,
-                checks: 'cursor-only startup/menus to Dam, hidden HUD during intro, native input-ready fade, Z firing, thumbstick, Start watch, hidden Pause/Options, focus pause/resume, audio, portrait/tablet bounds',
+                checks: 'cursor-only startup/menus to Dam, hidden HUD during intro, native input-ready fade, Z firing, thumbstick, Start watch, hidden Pause/Options, focus pause/resume, audio, portrait/tablet bounds, stage-filling framebuffer after rotation',
                 driver:
                     kind === 'webkit'
                         ? 'desktop WebKit: simulated touch capability/resize; single pointer drag'

@@ -5,10 +5,6 @@
 #include <time.h>
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
-/* Read the live startup choice: libc caches Emscripten's environment before Play. */
-static bool web_fixed_framebuffer(void) {
-    return EM_ASM_INT({ return Module['ENV']['GE_WEB_FIXED_FRAMEBUFFER'] === '1'; });
-}
 #endif
 
 #include "platform.h"
@@ -163,8 +159,9 @@ static int borderless_extra_height(void) {
 static void fit_window_to_display(void) {
 #ifdef __EMSCRIPTEN__
     /* Browser canvas dimensions are framebuffer pixels, while SDL display
-     * bounds are CSS pixels. The frontend fits the canvas without cropping. */
-    if (web_fixed_framebuffer()) return;
+     * bounds are CSS pixels. The page sizes the framebuffer to its stage
+     * (portWebResizeFramebuffer) and fits the canvas without cropping. */
+    return;
 #endif
     /* The asset exporter deliberately renders beyond the physical display. */
     if (SDL_getenv("GE_WEAPON_ICON_EXPORT")) return;
@@ -342,9 +339,10 @@ static void gfx_sdl_init(const struct GfxWindowInitSettings *set) {
     // we will unhide the window once the GL context is successfully created
     Uint32 flags = SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL;
 #ifdef __EMSCRIPTEN__
-    /* CSS owns presentation, not render resolution. SDL's resizable browser
-     * window otherwise replaces the requested framebuffer size with CSS size. */
-    if (web_fixed_framebuffer()) flags &= ~SDL_WINDOW_RESIZABLE;
+    /* The page owns render resolution (portWebResizeFramebuffer). SDL's
+     * resizable browser window would replace it with the canvas's CSS size,
+     * which the page derives from the framebuffer: the aspect never changed. */
+    flags &= ~SDL_WINDOW_RESIZABLE;
 #endif
 
     // if fullscreen was requested, start the window in fullscreen right away

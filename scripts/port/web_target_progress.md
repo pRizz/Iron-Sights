@@ -1090,6 +1090,23 @@ cover wide and portrait windows, fullscreen and F2 toggles. The canvas is remove
 from layout flow and size writes are deferred/deduplicated after WebKit exposed
 resize-observer feedback in the initial implementation.
 
+**2026-11-11 stage-filling framebuffer:** Reported regression: the game no
+longer covered the browser window, and on a phone it stopped filling the screen
+after rotation. A Playwright probe of the assembled 2026-11-09 site with the
+real ROM measured the causes. Desktop Chrome kept a stale framebuffer after
+resizing (1280x720 window, 1024x700 framebuffer, 1053x720 canvas with side
+bars), because SDL's resizable window read the CSS size that `presentation.ts`
+derived from the framebuffer's own aspect. A 844x390 DPR-3 phone rendered
+2080x1170 (16:9) into a 693x390 box, and portrait showed a 390x219 strip. The
+page now asks the game for a stage-sized framebuffer (`portWebResizeFramebuffer`,
+FORK-025) at full DPR for touch and CSS pixels for a mouse, at least 4:3 wide
+because taller framebuffers stretch the game's screens; every browser window is
+non-resizable for SDL. `touch-game-audit.mjs` checks the framebuffer fills
+the stage at start, in portrait and at tablet size.
+
+**Next action:** Run the touch audit on WebKit and a physical iPhone and Android
+phone, including a Home Screen launch, to confirm rotation there.
+
 ## WEB-008 | 2026-10-24 | Room scene and assets
 
 **Rendering performance, 2026-11-04:** the owner reported laggy idle frames and a

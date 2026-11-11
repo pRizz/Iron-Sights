@@ -1,4 +1,12 @@
-import { createMemo, createSignal, onMount, onCleanup, Show, type Accessor } from 'solid-js';
+import {
+    createEffect,
+    createMemo,
+    createSignal,
+    onMount,
+    onCleanup,
+    Show,
+    type Accessor,
+} from 'solid-js';
 import { ShimmerButton } from 'mystic-ui';
 import type { Engine } from './engine';
 import type { RomManager } from './rom-manager';
@@ -16,6 +24,8 @@ type PlayerProps = {
     touch: TouchInput;
     touchVisible: Accessor<boolean>;
     started: Accessor<boolean>;
+    /** Framebuffer pixels per CSS pixel: full device ratio for touch play. */
+    framebufferScale: () => number;
     presenting: Accessor<boolean>;
     resume: () => Promise<void>;
     ready: () => boolean;
@@ -31,7 +41,25 @@ export function Player(props: PlayerProps) {
     const [dragging, setDragging] = createSignal(false);
     let canvas!: HTMLCanvasElement;
     let stage!: HTMLDivElement;
-    onMount(() => onCleanup(observeGameSize(canvas, stage)));
+    // The running game renders at the stage's size, so the picture fills the
+    // window and follows rotation instead of keeping its starting shape.
+    const framebuffer = () => {
+        const maybeGame = engine.maybeGame();
+        const maybeResize = maybeGame?._portWebResizeFramebuffer;
+        if (!started() || !maybeGame || !maybeResize) return undefined;
+        return {
+            scale: props.framebufferScale(),
+            resize: (width: number, height: number) =>
+                maybeResize.call(maybeGame, width, height) !== 0,
+        };
+    };
+    onMount(() => {
+        const presentation = observeGameSize(canvas, stage, framebuffer);
+        createEffect(() => {
+            if (started()) presentation.refit();
+        });
+        onCleanup(presentation.stop);
+    });
     onMount(() => onCleanup(observeTouchViewport(stage)));
     const maybeError = createMemo(() => {
         const value = engine.status();

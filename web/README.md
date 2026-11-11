@@ -73,10 +73,11 @@ leave at least 28/36/40 CSS pixels on the left/right/bottom, with extra protecti
 for device safe areas. Narrow phones keep the stick and menu arrows separate
 from the right-side buttons. Touch-enabled startup defaults Mouse Auto Aim to
 On when unset, preserving saved choices. Mobile render resolution uses the full
-device pixel ratio within the existing 16:9 presentation. A one-time migration
-upgrades the previous 960×540 default; custom resolutions and explicit quality
-settings remain. Rotation fits the existing framebuffer without changing its
-resolution. Only real buttons and the stick claim touch areas; transparent
+device pixel ratio. A one-time migration
+upgrades the previous 960×540 default; explicit quality settings remain. The
+page then sizes the framebuffer to fill the game stage, so the picture covers
+the screen and follows rotation and browser-chrome changes. Portrait shows the
+full width at 4:3, the narrowest shape the game draws without stretching. Only real buttons and the stick claim touch areas; transparent
 control groups and helper/status text pass gestures through. Look and cursor
 movement follow their pointer IDs even if capture fails or a drag crosses a
 button. During gameplay, swiping from A/B/R/Start, Gadget or other discrete action

@@ -33,6 +33,21 @@ EMSCRIPTEN_KEEPALIVE void portWebReturnToRoom(void)
     EM_ASM({ if (typeof Module['onRoomRequested'] === 'function') Module['onRoomRequested'](); });
 }
 
+/* The page sizes the framebuffer to its game stage (presentation.ts), so the
+ * picture fills the window and follows rotation. The window is not resizable
+ * in a browser (gfx_sdl2.cpp), so SDL never replaces this with a CSS size;
+ * SDL_SetWindowSize sets the canvas and sends SIZE_CHANGED, which the renderer
+ * already handles. Returns 0 when nothing was applied: no window yet, or the
+ * first-start icon stage owns the frames; the page asks again later. */
+EMSCRIPTEN_KEEPALIVE s32 portWebResizeFramebuffer(s32 width, s32 height)
+{
+    extern int portIconStageBusy(void);
+    SDL_Window *window = SDL_GL_GetCurrentWindow();
+    if (window == NULL || portIconStageBusy() || width < 1 || height < 1) return 0;
+    SDL_SetWindowSize(window, width, height);
+    return 1;
+}
+
 /* Internal SDL 2.32.10 contracts from the immutable Emscripten port. */
 extern void SDL_ResetKeyboard(void);
 extern void SDL_SetKeyboardFocus(SDL_Window *window);
