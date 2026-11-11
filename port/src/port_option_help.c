@@ -21,6 +21,7 @@ static const struct PortOptHelp sHelp[] = {
     { "reload_speed",       "Your reloads go 2x to 10x faster; Instant refills with no reload at all." },
     { "fog",                "The level's distance fog. Off clears the haze; the view distance stays the same." },
     { "leaning",            "Lean Left (Z) and Lean Right (C) peek around corners, as the stock aim-mode lean does." },
+    { "lean_tilt",          "Tilts the view as you lean: Subtle 6 degrees, Strong 12. The stock lean has none." },
     { "allow_noclip",       "Noclip (N) flies you through walls where you look: Space up, Ctrl down, Shift faster." },
     { "noclip_view",        "While flying, every room draws; Far and Maximum also push fog and far clip out." },
     { "ludicrous_sprint",   "With Sprint on, sprinting goes 5x speed instead of 1.5x." },

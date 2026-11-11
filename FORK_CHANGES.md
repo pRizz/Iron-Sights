@@ -78,7 +78,8 @@ and the [ROM-free test](scripts/port/test_fog.c) (included by
 [issue #8](https://github.com/pRizz/Iron-Sights/issues/8) at the owner's
 request, built for Windows (isolated `build_win/hd-prototype` build) and
 play-tested by the owner; committed and pushed to `main` on 2026-11-11.
-Linux, Steam Deck and browser builds not run locally.
+Lean Tilt was added afterwards, play-tested by the owner, and committed and
+pushed to `main` on 2026-11-11. Linux, Steam Deck and browser builds not run locally.
 
 Inherited behaviour: the game leans. While `moveData.rLeanLeft` /
 `rLeanRight` is set, `bondviewProcessInput` calls
@@ -94,9 +95,17 @@ leaning`, default 1) lets two new held controls set them too, in any stance:
 (`lean_right`, C), rebindable in Controls on the watch and in the Options
 folder. Left wins when both are held, as in the stock code; the stock
 aim-mode lean keeps working either way. Not while noclip flies (FORK-072) or
-the controls are not live; the lean code itself is skipped in the tank. No
-camera tilt was added, at the owner's request, because the stock lean has
-none. Z and C were free on the shipped layout; the Q / E convention of other
+the controls are not live; the lean code itself is skipped in the tank.
+The first version added no camera tilt, at the owner's request, because the
+stock lean has none; they then asked for it as an option, default off:
+**Lean Tilt** (`[display] lean_tilt`: Off 0 by default, Subtle 6, Strong 12
+degrees; any whole number up to 20 in midas.ini) rolls the camera around its
+line of sight in proportion to how far the body has actually moved (the sway
+offset along Bond's right over the full 75 units), so it eases with the lean,
+stops where a wall stops it, and follows every lean source. The look
+direction, and so the aim and crosshair, is unchanged; the first-person gun is
+drawn with its own matrix and stays upright. Not in demo playback or while
+noclip flies; each split-screen player rolls with their own lean. Z and C were free on the shipped layout; the Q / E convention of other
 shooters was declined because Q is Next Gadget and E is Use, and because
 `videoPortBindNewDefaults` leaves a new control unbound when its default key
 is already taken in a player's saved binds.
@@ -107,7 +116,9 @@ is already taken in a player's saved binds.
 and `PORTACT_LEAN_RIGHT` (32) in `joy_port.c`, with `portJoyPortLeanHeld`,
 the pad-map names in `input_pc.c` (`PM_PORT_LAST` + 32) and Controls rows in
 `port_watchpages.c`'s shared `sBindsAllExtra`; the stale "Lean has no action"
-comment there is updated. `video.c`'s `PORT_BIND_MAX` rises from 32 to 64:
+comment there is updated. `bondviewMoveAnimationTick` calls `portLeanTilt`,
+which turns `headup` around `headlook` (Rodrigues), after the No Head Roll
+block so both apply. `video.c`'s `PORT_BIND_MAX` rises from 32 to 64:
 `portJoyPortPoll` reads `PORTACT_COUNT` entries from its `pdown[PORT_BIND_MAX]`
 arrays, so at 33 actions the 33rd (Lean Right) read a stray stack byte and
 pressed at random, which also made the hand gallery's repeated poses differ. The option registers in `joy_port.c`'s dispatch,
@@ -143,6 +154,11 @@ with `fog=0` the distant canyon walls lost their blue haze (a third of
 sampled pixels changed) and the far distance was unchanged. Not checked in
 game: holding the keys for a full lean, ADS and moving while leaning,
 toggling Fog live from the menus, gamepads, split-screen and other stages.
+Lean Tilt: the ROM-free test checks the default, the three choices, the angle
+rule (full, partial and clamped leans, off, demo playback, flying) and that
+the roll turns up by the setting's angle around an unchanged look; captures
+with Strong showed the far barriers sloping down to the right while leaning
+left, level with no lean, and up to the right while leaning right.
 The hand gallery was regenerated from the isolated build for the
 `bondview2.c` and `bgfog.c` input changes with no changed image cells.
 
@@ -3525,7 +3541,7 @@ subsections, in both the Options folder and the watch:
 
 | Subsection | Settings |
 | --- | --- |
-| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Reload Speed (FORK-071), Leaning (FORK-073), Allow Noclip and Noclip View Distance (FORK-072), Sprint, Ludicrous Sprint |
+| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Reload Speed (FORK-071), Leaning and Lean Tilt (FORK-073), Allow Noclip and Noclip View Distance (FORK-072), Sprint, Ludicrous Sprint |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction, Tracer Strength (FORK-062), Shotgun Tracers and Decorative Pellets (FORK-063) |
 | HUD Additions | Always Crosshair Size, Projectile Arc and Arc Impact Crosshair (FORK-069), Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
 | System | About / Build Info, Fonts (FORK-051, FORK-052), Fog (FORK-074), Crash Reporting (Windows/Linux) |

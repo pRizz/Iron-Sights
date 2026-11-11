@@ -446,6 +446,11 @@ padN_stickmode.
                       |            | (Z / C) lean as the stock aim-mode
                       |            | strafe does, in any stance; 0 = only
                       |            | the stock aim-mode lean
+  lean_tilt           | 0          | Degrees the view rolls at a full lean,
+                      |            | eased with it: 0 = off (the stock lean
+                      |            | has none), 6 = subtle, 12 = strong;
+                      |            | any whole number up to 20. Aim is
+                      |            | unchanged
   allow_noclip        | 0          | 1 = the noclip control (default N) flies
                       |            | you where you look, through walls, floors
                       |            | and doors, with no gravity, at 3x walking

@@ -5591,6 +5591,13 @@ void bondviewMoveAnimationTick(f32 speed, f32 speedforwards, f32 speedsideways)
             }
         }
     }
+
+    { /* LEAN TILT (FORK-073, [display] lean_tilt, off by default): roll the
+       * head basis with the body's lean; after NO HEAD ROLL so both apply */
+        extern void portLeanTilt(f32 *look, f32 *up);
+
+        portLeanTilt(g_CurrentPlayer->headlook.f, g_CurrentPlayer->headup.f);
+    }
 #endif
 
     matrix_4x4_set_rotation_around_x((360.0f - g_CurrentPlayer->vv_verta360) * DegToRad1Fact(1), &sp8C);

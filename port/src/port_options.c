@@ -156,6 +156,9 @@ static const char *const sReloadSpeedText[] = { "Original\n", "2x\n", "3x\n", "5
 /* Noclip View Distance (FORK-072): the far multiplier while flying (port_noclip.h) */
 static const s32 sNoclipViewVals[] = { 1, 4, 10 };
 static const char *const sNoclipViewText[] = { "Normal\n", "Far\n", "Maximum\n" };
+/* Lean Tilt (FORK-073): degrees of camera roll at a full lean (port_lean.h) */
+static const s32 sLeanTiltVals[] = { 0, 6, 12 };
+static const char *const sLeanTiltText[] = { "Off\n", "Subtle\n", "Strong\n" };
 static const s32 sWeaponStyleVals[] = { 0, 1 };
 static const char *const sWeaponStyleText[] = { "Text\n", "Icons\n" };
 static const s32 sHealthDisplayVals[] = { 0, 1 };
@@ -351,6 +354,7 @@ static const struct PortOpt sOpts[] = {
     ENUMR ("weapon_kick",        "[display]", "Weapon Kick\n",        PORTOPT_CAT_GAMEPLAY, sWeaponKickVals, sWeaponKickText, NULL), /* FORK-061 */
     ENUMR ("reload_speed",       "[display]", "Reload Speed\n",       PORTOPT_CAT_GAMEPLAY, sReloadSpeedVals, sReloadSpeedText, NULL), /* FORK-071 */
     TOGGLE("leaning",            "[display]", "Leaning\n",            PORTOPT_CAT_GAMEPLAY), /* FORK-073 */
+    ENUMR ("lean_tilt",          "[display]", "Lean Tilt\n",          PORTOPT_CAT_GAMEPLAY, sLeanTiltVals, sLeanTiltText, NULL), /* FORK-073 */
     TOGGLE("allow_noclip",       "[display]", "Allow Noclip\n",       PORTOPT_CAT_GAMEPLAY), /* FORK-072 */
     ENUMR ("noclip_view",        "[display]", "Noclip View Distance\n", PORTOPT_CAT_GAMEPLAY, sNoclipViewVals, sNoclipViewText, NULL), /* FORK-072 */
     TOGGLE("sprint",             "[display]", "Sprint\n",             PORTOPT_CAT_GAMEPLAY),

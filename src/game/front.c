@@ -4788,6 +4788,7 @@ static const struct PortSheetRow port_sheet_rows_is_aim[] = {
     { SHROW_OPT, "ads_spread" }, { SHROW_OPT, "ads_recoil" }, { SHROW_OPT, "weapon_kick" },
     { SHROW_OPT, "reload_speed" },            /* FORK-071 */
     { SHROW_OPT, "leaning" },                 /* FORK-073: Lean Left / Right controls */
+    { SHROW_OPT, "lean_tilt" },               /* FORK-073: camera roll with the lean */
     { SHROW_OPT, "allow_noclip" },            /* FORK-072: the Noclip bind flies */
     { SHROW_OPT, "noclip_view" },             /* FORK-072: draw distance while flying */
     { SHROW_OPT, "sprint" },

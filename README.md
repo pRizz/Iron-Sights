@@ -179,7 +179,9 @@ demo playback keep the original speed.
 **Leaning**, on by default, lets you lean with **Z** (left) and **C** (right),
 rebindable as **Lean Left** and **Lean Right** in Controls. It is the game's
 own lean, the sidestep you could already do by strafing while aiming with the
-red reticle, now available at the hip and in ADS too.
+red reticle, now available at the hip and in ADS too. **Lean Tilt** (Off by
+default, Subtle or Strong) also rolls the view as you lean, which the stock
+lean does not; where you aim stays the same.
 
 **Allow Noclip**, also there and off by default, lets **N** (the rebindable
 **Noclip** control in Controls) toggle Quake-style noclip: you fly where you

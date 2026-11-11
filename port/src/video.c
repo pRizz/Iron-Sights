@@ -2432,6 +2432,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "weapon_kick=%d\n", PORT_GUN_KICK_DEFAULT);
     fprintf(f, "reload_speed=1\n"); /* PORT_RELOAD_SPEED_DEFAULT (FORK-071) */
     fprintf(f, "leaning=1\n");      /* PORT_LEANING_DEFAULT (FORK-073) */
+    fprintf(f, "lean_tilt=0\n");    /* PORT_LEAN_TILT_DEFAULT (FORK-073) */
     fprintf(f, "fog=1\n");          /* PORT_FOG_DEFAULT (FORK-074) */
     fprintf(f, "allow_noclip=0\n"); /* PORT_NOCLIP_ALLOW_DEFAULT (FORK-072) */
     fprintf(f, "noclip_view=4\n");  /* PORT_NOCLIP_VIEW_DEFAULT (FORK-072) */

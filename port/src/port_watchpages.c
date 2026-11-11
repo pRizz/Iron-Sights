@@ -158,6 +158,7 @@ static const struct PortWatchRowDef sIsAim[] = {
     { PWROW_OPT,       "weapon_kick",      NULL, 0, 0 },
     { PWROW_OPT,       "reload_speed",     NULL, 0, 0 },
     { PWROW_OPT,       "leaning",          NULL, 0, 0 },
+    { PWROW_OPT,       "lean_tilt",        NULL, 0, 0 },
     { PWROW_OPT,       "allow_noclip",     NULL, 0, 0 },
     { PWROW_OPT,       "noclip_view",      NULL, 0, 0 },
     { PWROW_OPT,       "sprint",           NULL, 0, 0 },
