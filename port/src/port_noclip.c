@@ -10,6 +10,7 @@
 #include "game/bondview.h"
 #include "game/player.h"
 #include "port_noclip.h"
+#include "port_fog.h"
 
 extern s32 get_is_ramrom_flag(void);
 /* The tree's math.h hides its float declarations from GCC. */
@@ -213,7 +214,8 @@ void portNoclipTick(void)
         noclipLog("after-land", pl); /* where gravity left him */
     }
     flying[p] = fly;
-    if (noclipViewScale() != viewApplied) portFogNoclipReapply(); /* view distance follows flight */
+    /* view distance follows flight, and the level's fog follows the Fog setting (FORK-074) */
+    if (noclipViewScale() != viewApplied || portFogNeedsReload()) portFogReapply();
 }
 
 s32 portNoclipAllRooms(void)

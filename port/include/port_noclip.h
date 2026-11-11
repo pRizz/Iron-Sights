@@ -104,7 +104,8 @@ s32 portNoclipAllRooms(void);
 /* bgfog.c fogLoadCurrentEnvironment: the far multiplier to load with now,
  * remembered as the one applied. */
 f32 portNoclipViewScaleApply(void);
-/* bgfog.c: reload the level's fog and far distance at the current multiplier. */
-void portFogNoclipReapply(void);
+/* bgfog.c: reload the level's fog and far distance at the current multiplier
+ * and Fog setting (FORK-074). */
+void portFogReapply(void);
 
 #endif

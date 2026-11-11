@@ -24,7 +24,7 @@ void portConPrintf(s32 showmsg, const char *fmt, ...) { (void) fmt; noclipPopups
 s32 portConIsOpen(void) { return 0; } /* joy_port.c's crouch step */
 static s32 noclipFogReloads;
 static f32 noclipFogScale = 1.0f;
-void portFogNoclipReapply(void) { noclipFogReloads++; noclipFogScale = portNoclipViewScaleApply(); } /* bgfog.c */
+void portFogReapply(void) { noclipFogReloads++; noclipFogScale = portNoclipViewScaleApply(); portFogApply(); } /* bgfog.c */
 
 static void noclipPress(void)
 {
@@ -234,3 +234,7 @@ static void testNoclip(void)
     assert(portJoyPortOptionSet("allow_noclip", PORT_NOCLIP_ALLOW_DEFAULT));
     ramromFlag = savedRamrom;
 }
+
+/* Leaning (FORK-073) and Fog (FORK-074), kept here for test_ads.c's line budget. */
+#include "test_lean.c"
+#include "test_fog.c"

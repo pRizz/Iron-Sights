@@ -357,6 +357,11 @@ padN_stickmode.
                       |            | out, e.g. 8, 15), glint_ads (1: share
                       |            | kept at full ADS; 0 fades it out as the
                       |            | gun is raised). Iron Sights > System.
+  fog                 | 1          | [display] Fog. 0 = no distance fog on
+                      |            | the level, sky or distant characters;
+                      |            | the view distance and guards' sight
+                      |            | stay the same. Levels without fog are
+                      |            | unaffected
   glass_reflections   | 1          | [display] Glass Reflections. ON
                       |            | reflects the level's rooms in glass
                       |            | panes, the windows of doors and broken
@@ -437,6 +442,10 @@ padN_stickmode.
                       |            | 0 = instant, the magazine refills with
                       |            | no reload. Guards, weapon switches and
                       |            | demo playback keep the original speed
+  leaning             | 1          | 1 = the lean_left / lean_right controls
+                      |            | (Z / C) lean as the stock aim-mode
+                      |            | strafe does, in any stance; 0 = only
+                      |            | the stock aim-mode lean
   allow_noclip        | 0          | 1 = the noclip control (default N) flies
                       |            | you where you look, through walls, floors
                       |            | and doors, with no gravity, at 3x walking
@@ -596,6 +605,8 @@ Port actions (extra actions beyond the N64 pad)
   noclip_up        | Space            | Rise while noclip is on (held)
   noclip_down      |                  | Fall while noclip is on (held); so does
                    |                  | crouch_hold
+  lean_left        | Z                | Lean left while held (needs leaning=1)
+  lean_right       | C                | Lean right while held (needs leaning=1)
 
   Suspend Points is also under Watch > Gameplay > Iron Sights. Four manual slots, quicksave,
   and undo-load are stored separately for each campaign folder in Data/SaveStates.

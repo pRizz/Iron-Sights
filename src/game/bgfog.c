@@ -245,20 +245,23 @@ EnvironmentFoglessRecord fog_tables2[] = {
 void fogLoadCurrentEnvironment(EnvironmentRecord *arg0);
 void fogLoadFoglessCurrentEnvironment(EnvironmentFoglessRecord *arg0);
 #ifndef TARGET_N64
-/* Noclip View Distance (FORK-072, port_noclip.c). */
+/* Noclip View Distance (FORK-072, port_noclip.c) and Fog (FORK-074, port_fog.c). */
 extern f32 portNoclipViewScaleApply(void);
+extern s32 portFogApply(void);
 static EnvironmentRecord *g_portFogEnv; /* the last record loaded, unscaled */
 #define PORT_FOGLESS_NEAR 15.0f   /* fogLoadLevelEnvironment's fogless z range */
 #define PORT_FOGLESS_FAR 10000.0f
 
-/* Reload the level's fog and far distance at the current noclip multiplier. */
-void portFogNoclipReapply(void)
+/* Reload the level's fog and far distance at the current noclip multiplier
+ * and Fog setting. */
+void portFogReapply(void)
 {
     if (g_EnvironmentFoundp != NULL && g_portFogEnv != NULL)
     {
         fogLoadCurrentEnvironment(g_portFogEnv);
         return;
     }
+    portFogApply(); /* a fogless level has no fog to turn off */
     viSetZRange(PORT_FOGLESS_NEAR, PORT_FOGLESS_FAR * portNoclipViewScaleApply());
 }
 #endif
@@ -324,10 +327,11 @@ void fogLoadCurrentEnvironment(EnvironmentRecord *arg0)
     assert(fmax <= 1.0F);
 #endif
 #ifndef TARGET_N64
+    const s32 port_fog_on = portFogApply(); /* Fog (FORK-074): off takes the fogless path below */
     { /* Noclip View Distance (FORK-072): while a player flies, load the level
        * with its far distance multiplied, before the fog, cull radius and
        * character fade are derived from it, so they all stretch together.
-       * The unscaled record is kept for portFogNoclipReapply. */
+       * The unscaled record is kept for portFogReapply. */
         static EnvironmentRecord port_noclip_env;
         const f32 k = portNoclipViewScaleApply();
 
@@ -483,7 +487,7 @@ void fogLoadCurrentEnvironment(EnvironmentRecord *arg0)
         {
             nofog = getenv("GE_NOFOG") != NULL;
         }
-        if (nofog)
+        if (nofog || !port_fog_on) /* or Fog off (FORK-074) */
         {
             g_NearFogValuesP = NULL;
             g_FogSkyIsEnabled = 0;

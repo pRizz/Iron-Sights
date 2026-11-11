@@ -30,6 +30,122 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-074 — Fog: turn the levels' distance fog off
+
+**Status:** Implemented on 2026-11-10 at the owner's request, built for
+Windows (isolated `build_win/hd-prototype` build) and play-tested by the
+owner; committed and pushed to `main` on 2026-11-11. Linux, Steam Deck and
+browser builds not run locally.
+
+Inherited behaviour: `fogLoadCurrentEnvironment` (`bgfog.c`) loads a fogged
+level's environment: the z range, the fog colour ramp, the sky fog, the
+character / prop distance fade (`g_NearFogValuesP`) and the fog radius guards
+see within (`g_ScaledFarFogIntensity`, `chraction.c`). Its `GE_NOFOG`
+diagnostic already loaded a fogged level as fogless.
+
+**Gameplay > Iron Sights > System > Fog** (`[display] fog`, default 1) turns
+it off: with Fog off the load takes that fogless path (no fog colour, sky fog
+or distance fade). The z range and `g_ScaledFarFogIntensity` are derived
+before it, so how far you can see and how far guards see you stay the same;
+on Dam the fog only starts at 99.5% of the far distance, so the view barely
+lengthens (Noclip View Distance, FORK-072, is what does). Changing the setting
+reloads the level's environment on the next `MoveBond` tick through the shared
+`portFogReapply` (renamed from FORK-072's `portFogNoclipReapply`), whose
+check in `portNoclipTick` now also compares the Fog setting with the state the
+level was loaded with. Levels without fog are unaffected. Fog is visual only,
+so demo playback follows the setting.
+
+**Hooks:** `fogLoadCurrentEnvironment` records the state with `portFogApply`
+and adds `|| !port_fog_on` to the `GE_NOFOG` test (inside
+`#ifndef TARGET_N64`). The option registers in `joy_port.c`'s dispatch,
+`port_options.c` (beside Glass Reflections, display category), the folder's
+System rows (`front.c`) and the watch's (`port_watchpages.c`), with help in
+`port_option_help.c` (which also names fog in the System page description),
+`tools/midas_ini_help.txt`, the default midas.ini writer (`video.c`) and
+README.md.
+
+**Input:** an ordinary option row; every supported input already toggles it.
+
+**Sources:** [header](port/include/port_fog.h), [setting](port/src/port_fog.c)
+and the [ROM-free test](scripts/port/test_fog.c) (included by
+`test_noclip.c`).
+
+**Checks:** see FORK-073; they were run together.
+
+### FORK-073 — Leaning: Lean Left / Lean Right controls for the stock lean
+
+**Status:** Implemented on 2026-11-10 for
+[issue #8](https://github.com/pRizz/Iron-Sights/issues/8) at the owner's
+request, built for Windows (isolated `build_win/hd-prototype` build) and
+play-tested by the owner; committed and pushed to `main` on 2026-11-11.
+Linux, Steam Deck and browser builds not run locally.
+
+Inherited behaviour: the game leans. While `moveData.rLeanLeft` /
+`rLeanRight` is set, `bondviewProcessInput` calls
+`currentPlayerSetSwayTarget` (-1 / +1, 75 units) and `MoveBond` eases Bond's
+body that far to the side, stopped by walls; the camera does not roll. Only
+the strafe input in red-reticle aim mode (the port's Move input and the
+keyboard's A / D on an N64 slot) and the N64 C buttons set them, so in ADS or
+at the hip the Move keys strafe and there was no way to lean.
+
+**Gameplay > Iron Sights > Aiming and Movement > Leaning** (`[display]
+leaning`, default 1) lets two new held controls set them too, in any stance:
+**Lean Left** (`[input] lean_left`, keyboard default Z) and **Lean Right**
+(`lean_right`, C), rebindable in Controls on the watch and in the Options
+folder. Left wins when both are held, as in the stock code; the stock
+aim-mode lean keeps working either way. Not while noclip flies (FORK-072) or
+the controls are not live; the lean code itself is skipped in the tank. No
+camera tilt was added, at the owner's request, because the stock lean has
+none. Z and C were free on the shipped layout; the Q / E convention of other
+shooters was declined because Q is Next Gadget and E is Use, and because
+`videoPortBindNewDefaults` leaves a new control unbound when its default key
+is already taken in a player's saved binds.
+
+**Hooks:** `bondviewProcessInput` ORs `portLeanInput` into
+`rLeanLeft` / `rLeanRight` just before the stock sway-target code (inside
+`#ifndef TARGET_N64`). The actions are appended as `PORTACT_LEAN_LEFT` (31)
+and `PORTACT_LEAN_RIGHT` (32) in `joy_port.c`, with `portJoyPortLeanHeld`,
+the pad-map names in `input_pc.c` (`PM_PORT_LAST` + 32) and Controls rows in
+`port_watchpages.c`'s shared `sBindsAllExtra`; the stale "Lean has no action"
+comment there is updated. `video.c`'s `PORT_BIND_MAX` rises from 32 to 64:
+`portJoyPortPoll` reads `PORTACT_COUNT` entries from its `pdown[PORT_BIND_MAX]`
+arrays, so at 33 actions the 33rd (Lean Right) read a stray stack byte and
+pressed at random, which also made the hand gallery's repeated poses differ. The option registers in `joy_port.c`'s dispatch,
+`port_options.c`, the folder (`front.c`) and watch Aiming and Movement rows,
+help (`port_option_help.c`, which also names leaning in the page
+description), `tools/midas_ini_help.txt`, the default midas.ini writer
+(`video.c`) and README.md.
+
+**Input:** keyboard (Z, C), mouse (bind buttons) and gamepads (bind
+`padN_lean_left`, `padN_lean_right`) can lean; the stock aim-mode lean stays
+on every device. Browser touch has no lean controls: as with Noclip, a held
+button needs a native touch context, overlay control and fixture audits, so
+it is deliberately left for later. A browser keyboard's Z and C work.
+
+**Sources:** [header with the pure rule](port/include/port_lean.h),
+[setting and input](port/src/port_lean.c) and the
+[ROM-free test](scripts/port/test_lean.c) (included by `test_noclip.c`,
+which keeps `test_ads.c` within its line baseline).
+
+**Checks:** in the `goldeneye` Docker image, `test_ads.sh` passes with the
+new tests: the lean rule (left, right, left winning, setting off, controls
+not live, flying), the default, toggle row, bind slots 31 / 32 and defaults Z
+/ C, held controls reaching the game side and releasing; Fog on by default,
+one environment reload when it changes and none while unchanged.
+`test_hud.sh`, `test_states.sh`, `test_upstream_merge.sh`,
+`test_wardrobe.sh`, `settings_placement.py` and `bright-builds-check.ts all`
+pass, and the test asserts `PORTACT_COUNT` stays within the 64-entry bind
+table. In game (isolated `hd-prototype` build on Dam, a scratch audit with
+its own midas.ini): sixteen one-poll Lean Left and Lean Right presses at the
+hip, not in aim mode, drove the stock sway (`GE_LEANDBG`) to +63 and -63 of
+its 75 units, and an idle run logged no lean;
+with `fog=0` the distant canyon walls lost their blue haze (a third of
+sampled pixels changed) and the far distance was unchanged. Not checked in
+game: holding the keys for a full lean, ADS and moving while leaning,
+toggling Fog live from the menus, gamepads, split-screen and other stages.
+The hand gallery was regenerated from the isolated build for the
+`bondview2.c` and `bgfog.c` input changes with no changed image cells.
+
 ### FORK-072 — Noclip: Quake-style flight through walls
 
 **Status:** Implemented on 2026-11-10 at the owner's request. They play-tested
@@ -94,7 +210,7 @@ control pressed it:
   default / Maximum 10) multiplies the level's far distance in
   `fogLoadCurrentEnvironment` before its fog, room cull radius and character
   fade are derived, so they stretch together; fogless levels scale their
-  fixed 15-10,000 range. The fog reloads (`portFogNoclipReapply`) when
+  fixed 15-10,000 range. The fog reloads (`portFogReapply`) when
   flight starts or ends or the setting changes. The fog is shared, so in
   split-screen one flier stretches it for everyone.
 - Mission records and unlocks are unaffected, as with the game's own cheats,
@@ -106,7 +222,7 @@ step-height code (`port_noclip_moved`) while flying; `bondviewUpdatePlayerY`
 is skipped while flying; `initBONDdataforPlayer` (`player.c`) resets the
 player; `portHudDraw` draws the label; `bg.c`'s visible-room pass appends
 every room while flying; `fogLoadCurrentEnvironment` (`bgfog.c`) loads with
-the view multiplier and keeps the unscaled record for `portFogNoclipReapply`,
+the view multiplier and keeps the unscaled record for `portFogReapply`,
 defined beside it. All game-side hooks are inside
 `#ifndef TARGET_N64`. The actions are appended as `PORTACT_NOCLIP` (28), `PORTACT_NOCLIP_UP`
 (29) and `PORTACT_NOCLIP_DOWN` (30) in `joy_port.c`, with
@@ -3409,10 +3525,10 @@ subsections, in both the Options folder and the watch:
 
 | Subsection | Settings |
 | --- | --- |
-| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Reload Speed (FORK-071), Allow Noclip and Noclip View Distance (FORK-072), Sprint, Ludicrous Sprint |
+| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Reload Speed (FORK-071), Leaning (FORK-073), Allow Noclip and Noclip View Distance (FORK-072), Sprint, Ludicrous Sprint |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction, Tracer Strength (FORK-062), Shotgun Tracers and Decorative Pellets (FORK-063) |
 | HUD Additions | Always Crosshair Size, Projectile Arc and Arc Impact Crosshair (FORK-069), Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
-| System | About / Build Info, Fonts (FORK-051, FORK-052), Crash Reporting (Windows/Linux) |
+| System | About / Build Info, Fonts (FORK-051, FORK-052), Fog (FORK-074), Crash Reporting (Windows/Linux) |
 
 The watch's Iron Sights page also holds the Suspend Points action, which moved
 there from the watch's Gameplay page. Rows left General Settings, HUD, Port

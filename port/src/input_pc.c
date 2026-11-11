@@ -151,8 +151,8 @@ enum
     /* +19 mouse_unlock (never bound on a pad, but the order must match
      * joy_port's, checked at init),
      * +20 classic_toggle (Classic Mode bindable on a pad, as Tab is on the keyboard),
-     * +21 aim_down_sights (held, separate from R's red-target Aim); +26/+27 watch_up/watch_down, +28 noclip, +29/+30 noclip_up/noclip_down (FORK-072) */
-    PM_PORT_LAST = PM_PORT_FIRST + 30,
+     * +21 aim_down_sights (held, separate from R's red-target Aim); +26/+27 watch_up/watch_down, +28 noclip, +29/+30 noclip_up/noclip_down (FORK-072), +31/+32 lean_left/lean_right (FORK-073) */
+    PM_PORT_LAST = PM_PORT_FIRST + 32,
     PM_COUNT
 };
 #define PM_PORT_COUNT (PM_PORT_LAST - PM_PORT_FIRST + 1)
@@ -177,6 +177,7 @@ static const char *sPadMapNames[PM_COUNT] =
     "suspend_points", "quicksave", "quickload", "undo_load",
     "watch_up", "watch_down",
     "noclip", "noclip_up", "noclip_down",
+    "lean_left", "lean_right",
 };
 /* The raw (unmapped DInput) fallback layout of portInputPadMerge expressed as
  * map tokens, so the launcher, first-rebind seed and bind rows can describe it.

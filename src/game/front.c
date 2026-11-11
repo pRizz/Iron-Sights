@@ -4787,6 +4787,7 @@ static const struct PortSheetRow port_sheet_rows_is_aim[] = {
     { SHROW_OPT, "aim_mode" }, { SHROW_OPT, "knife_ads" },
     { SHROW_OPT, "ads_spread" }, { SHROW_OPT, "ads_recoil" }, { SHROW_OPT, "weapon_kick" },
     { SHROW_OPT, "reload_speed" },            /* FORK-071 */
+    { SHROW_OPT, "leaning" },                 /* FORK-073: Lean Left / Right controls */
     { SHROW_OPT, "allow_noclip" },            /* FORK-072: the Noclip bind flies */
     { SHROW_OPT, "noclip_view" },             /* FORK-072: draw distance while flying */
     { SHROW_OPT, "sprint" },
@@ -4817,6 +4818,7 @@ static const struct PortSheetRow port_sheet_rows_is_system[] = {
     { SHROW_OPT, "shiny_weapons" },      /* FORK-058: Richer Reflections */
     { SHROW_OPT, "gun_glint" },          /* FORK-058: Gun Glint */
     { SHROW_OPT, "glass_reflections" },  /* FORK-066: Glass Reflections */
+    { SHROW_OPT, "fog" },                /* FORK-074: the level's distance fog */
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     { SHROW_OPT, "texture_pack" },  /* FORK-053: an HD pack, downloaded or copied in */
     { SHROW_OPT, "close_hd_matches" },  /* FORK-053: the pack's rough palette matches */

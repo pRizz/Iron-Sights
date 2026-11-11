@@ -88,6 +88,7 @@ Successful `main` builds deploy automatically to GitHub Pages. See [compatibilit
 - **Always-visible health and armor:** persistent gauges become thinner and dimmer between hits; the original temporary display is also available.
 - **Fonts (Original by default):** **Gameplay > Iron Sights > System > Fonts** chooses **Original** or **Enhanced**. Our own MIT-licensed fonts (a squared title font and a grotesque body font, drawn as sharp distance fields) are in the code but hidden for now, because they still have deficiencies; see the [open assets plan](scripts/port/open_assets_plan.md). **Enhanced** draws both fonts from Carnivorous's CC0 GEPD redraw, which Iron Sights does not bundle: **Gameplay > Iron Sights > System > Enhanced Fonts** (also **Get Enhanced Fonts** in the Options folder until they are installed) downloads its 186 font images (250 KB) from GitHub when you choose Download there, in the browser version too, or you can copy them into `Data/FontPacks/gepd/` yourself (for example with `python scripts/port/enhanced_fonts_pack.py install --dest Data/FontPacks/gepd`). **Text Antialiasing** (on by default, beside Fonts) keeps small Enhanced text smooth with any Texture Filter. See the [font styles plan](scripts/port/font_styles_plan.md).
 - **HD textures (Windows and Linux):** Iron Sights includes no texture pack. **Get HD Textures** in the Options folder (also **Gameplay > Iron Sights > System > HD Textures**) downloads intermissionfb's [GoldenEye 007 HD](https://github.com/GhostlyDark/GoldenEye-007-HD) pack, 150 MB, from its makers' GitHub when you choose Download; or put its PNG version's ZIP (`...-gliden64-png-hd.zip`), or the extracted folder, in `Data/TexturePacks` yourself. **Texture Pack** set to **HD** (the default) draws its campaign environment textures, the gunbarrel intro, sky clouds, explosions, smoke and bullet-impact effects, and the HUD's ammo icons. Any other GLideN64 PNG pack in that folder is a custom pack, used for every texture it names and ahead of the download: for example the artist repository's own ZIP (**Code > Download ZIP**, with more textures than the release) or a pack you are making, whose saved PNGs show up within seconds. **Gameplay > Iron Sights > System > Custom Texture Packs** explains this in the game, shows how many custom textures were found, and opens the folder. A custom pack's images load in the background and are reduced to HD size (at most 8x the original), so very large art appears a moment after a level starts. **Close HD Matches** (on by default, beside Texture Pack) also gives HD art to 17 textures whose colours only roughly match the pack's; turn it off to keep those originals. The first-person weapon and hands always keep their original look.
+- **Fog (on by default):** **Gameplay > Iron Sights > System > Fog** turns the levels' distance fog off. How far you can see and how far guards see you stay the same.
 - **Suspend points:** four manual slots, quicksave/quickload, and undo-load for solo missions.
 
 See [Playing](#playing) below for controls and settings.
@@ -174,6 +175,11 @@ after the trigger is released.
 refills the magazine with no reload at all, so a gun keeps firing until your
 spare ammo runs out. **Original** is the default. Guards, weapon switches and
 demo playback keep the original speed.
+
+**Leaning**, on by default, lets you lean with **Z** (left) and **C** (right),
+rebindable as **Lean Left** and **Lean Right** in Controls. It is the game's
+own lean, the sidestep you could already do by strafing while aiming with the
+red reticle, now available at the hip and in ADS too.
 
 **Allow Noclip**, also there and off by default, lets **N** (the rebindable
 **Noclip** control in Controls) toggle Quake-style noclip: you fly where you

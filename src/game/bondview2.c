@@ -8405,6 +8405,22 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
             g_CurrentPlayer->speedmaxtime60 = 0;
         }
 
+#ifndef TARGET_N64
+        { /* Leaning (FORK-073): the Lean Left / Lean Right controls drive the
+           * stock lean in any stance, not only through red-reticle strafing */
+            extern s32 portLeanInput(void);
+            const s32 lean = portLeanInput();
+
+            if (lean < 0)
+            {
+                moveData.rLeanLeft = 1;
+            }
+            else if (lean > 0)
+            {
+                moveData.rLeanRight = 1;
+            }
+        }
+#endif
         if (moveData.rLeanLeft)
         {
             currentPlayerSetSwayTarget(-1);

@@ -227,6 +227,7 @@ static const struct PortOpt sOpts[] = {
     TOGGLE("shiny_weapons", "[display]", "Richer Reflections\n", PORTOPT_CAT_DISPLAY),
     TOGGLE("gun_glint",     "[display]", "Gun Glint\n",       PORTOPT_CAT_DISPLAY),
     TOGGLE("glass_reflections", "[display]", "Glass Reflections\n", PORTOPT_CAT_DISPLAY),
+    TOGGLE("fog", "[display]", "Fog\n", PORTOPT_CAT_DISPLAY), /* FORK-074 */
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     ENUMR ("texture_pack",  "[display]", "Texture Pack\n",    PORTOPT_CAT_DISPLAY, sTexturePackVals, sTexturePackText, NULL),
     TOGGLE("close_hd_matches", "[display]", "Close HD Matches\n", PORTOPT_CAT_DISPLAY),
@@ -349,6 +350,7 @@ static const struct PortOpt sOpts[] = {
     INTR  ("ads_recoil",         "[display]", "ADS Recoil\n",         PORTOPT_CAT_GAMEPLAY, 0, 100, 10, "%"),
     ENUMR ("weapon_kick",        "[display]", "Weapon Kick\n",        PORTOPT_CAT_GAMEPLAY, sWeaponKickVals, sWeaponKickText, NULL), /* FORK-061 */
     ENUMR ("reload_speed",       "[display]", "Reload Speed\n",       PORTOPT_CAT_GAMEPLAY, sReloadSpeedVals, sReloadSpeedText, NULL), /* FORK-071 */
+    TOGGLE("leaning",            "[display]", "Leaning\n",            PORTOPT_CAT_GAMEPLAY), /* FORK-073 */
     TOGGLE("allow_noclip",       "[display]", "Allow Noclip\n",       PORTOPT_CAT_GAMEPLAY), /* FORK-072 */
     ENUMR ("noclip_view",        "[display]", "Noclip View Distance\n", PORTOPT_CAT_GAMEPLAY, sNoclipViewVals, sNoclipViewText, NULL), /* FORK-072 */
     TOGGLE("sprint",             "[display]", "Sprint\n",             PORTOPT_CAT_GAMEPLAY),

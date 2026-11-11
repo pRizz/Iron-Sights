@@ -157,6 +157,7 @@ static const struct PortWatchRowDef sIsAim[] = {
     { PWROW_OPT,       "ads_recoil",       NULL, 0, 0 },
     { PWROW_OPT,       "weapon_kick",      NULL, 0, 0 },
     { PWROW_OPT,       "reload_speed",     NULL, 0, 0 },
+    { PWROW_OPT,       "leaning",          NULL, 0, 0 },
     { PWROW_OPT,       "allow_noclip",     NULL, 0, 0 },
     { PWROW_OPT,       "noclip_view",      NULL, 0, 0 },
     { PWROW_OPT,       "sprint",           NULL, 0, 0 },
@@ -195,6 +196,7 @@ static const struct PortWatchRowDef sIsSystem[] = {
     { PWROW_OPT,       "shiny_weapons",    NULL, 0, 0 },
     { PWROW_OPT,       "gun_glint",        NULL, 0, 0 },
     { PWROW_OPT,       "glass_reflections", NULL, 0, 0 },
+    { PWROW_OPT,       "fog",              NULL, 0, 0 },
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     { PWROW_OPT,       "texture_pack",     NULL, 0, 0 },
     { PWROW_OPT,       "close_hd_matches", NULL, 0, 0 },
@@ -523,6 +525,8 @@ static const struct PortBindDef sBindsAllExtra[] = {
     { "Noclip\n",            "noclip",         "noclip" },         /* FORK-072: keyboard default N */
     { "Noclip Up\n",         "noclip_up",      "noclip_up" },      /* held; keyboard default Space */
     { "Noclip Down\n",       "noclip_down",    "noclip_down" },    /* held; Crouch Hold also falls */
+    { "Lean Left\n",         "lean_left",      "lean_left" },      /* FORK-073: held; keyboard default Z */
+    { "Lean Right\n",        "lean_right",     "lean_right" },     /* held; keyboard default C */
 };
 #define PORTBIND_ALL_EXTRA ((s32) (sizeof(sBindsAllExtra) / sizeof(sBindsAllExtra[0])))
 

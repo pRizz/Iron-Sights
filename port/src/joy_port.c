@@ -82,6 +82,8 @@
 #include "port_tracers.h"
 #include "port_reload_speed.h"
 #include "port_noclip.h"
+#include "port_lean.h"
+#include "port_fog.h"
 #include "port_projectile_arc.h"
 #include "joy.h"
 #include <os_extension.h>
@@ -109,8 +111,8 @@ enum {
     PORTACT_WATCH_OBJECTIVES, /* pause straight onto the Briefing (objectives) page; again = close */
     PORTACT_DETONATE,         /* remote mines: the A+B detonate as one button */
     /* Appended actions: zoom, because the C buttons that zoom on N64 are not
-     * bound on a modern pad. Lean has no action on purpose; it stays on the
-     * Move input in bondviewProcessInput, as on N64. */
+     * bound on a modern pad. Lean stays on the Move input in aim mode, as on
+     * N64; Leaning (FORK-073) appends its own lean_left / lean_right below. */
     PORTACT_ZOOM_IN,
     PORTACT_ZOOM_OUT,
     /* Appended: menu-only Accept and Back. Nothing in play takes them, so an
@@ -142,6 +144,9 @@ enum {
     /* Appended: held rise / fall while flying (FORK-072); crouch_hold also falls. */
     PORTACT_NOCLIP_UP,
     PORTACT_NOCLIP_DOWN,
+    /* Appended: held stock lean (FORK-073), with Leaning on. */
+    PORTACT_LEAN_LEFT,
+    PORTACT_LEAN_RIGHT,
     PORTACT_COUNT
 };
 
@@ -202,6 +207,9 @@ static const struct {
     /* Space is free in play; crouch_hold (Left Ctrl) already falls, so down ships unbound */
     [PORTACT_NOCLIP_UP]        = { "noclip_up",        "Space",    0 },
     [PORTACT_NOCLIP_DOWN]      = { "noclip_down",      "",         0 },
+    /* Z and C are free on the shipped layout (Q / E are gadgets and use) */
+    [PORTACT_LEAN_LEFT]        = { "lean_left",        "Z",        0 },
+    [PORTACT_LEAN_RIGHT]       = { "lean_right",       "C",        0 },
 };
 
 /* [input] detonate_use_reload (default ON): with remote mines in the right
@@ -330,6 +338,8 @@ s32 portJoyPortSetOption(const char *key, const char *value)
     if (portTracerOptionSet(key, atoi(value))) return 1;
     if (portReloadSpeedOptionSet(key, atoi(value))) return 1;
     if (portNoclipOptionSet(key, atoi(value))) return 1;
+    if (portLeanOptionSet(key, atoi(value))) return 1;
+    if (portFogOptionSet(key, atoi(value))) return 1;
     if (portProjectileArcOptionSet(key, atoi(value))) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = atoi(value) != 0;
@@ -487,6 +497,8 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
     if (portTracerOptionGet(key, out)) return 1;
     if (portReloadSpeedOptionGet(key, out)) return 1;
     if (portNoclipOptionGet(key, out)) return 1;
+    if (portLeanOptionGet(key, out)) return 1;
+    if (portFogOptionGet(key, out)) return 1;
     if (portProjectileArcOptionGet(key, out)) return 1;
     if (strcmp(key, "sprint") == 0) {
         *out = sSprint;
@@ -530,6 +542,8 @@ s32 portJoyPortOptionSet(const char *key, s32 v)
     if (portTracerOptionSet(key, v)) return 1;
     if (portReloadSpeedOptionSet(key, v)) return 1;
     if (portNoclipOptionSet(key, v)) return 1;
+    if (portLeanOptionSet(key, v)) return 1;
+    if (portFogOptionSet(key, v)) return 1;
     if (portProjectileArcOptionSet(key, v)) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = v != 0;
@@ -1349,6 +1363,21 @@ s32 portJoyPortNoclipControls(s32 *vertical)
     down = sHeld[pad][PORTACT_NOCLIP_DOWN] || sHeld[pad][PORTACT_CROUCH_HOLD];
     *vertical = up - down;
     return sHeld[pad][PORTACT_WALK] != 0;
+}
+
+/** port_lean.c: the current player's Lean Left / Lean Right held now.
+ * Returns whether the controls are live. */
+s32 portJoyPortLeanHeld(s32 *left, s32 *right)
+{
+    const s32 pad = joyPortPad();
+
+    *left = *right = 0;
+    if (pad < 0 || !joyPortPermitted()) {
+        return 0;
+    }
+    *left = sHeld[pad][PORTACT_LEAN_LEFT] != 0;
+    *right = sHeld[pad][PORTACT_LEAN_RIGHT] != 0;
+    return 1;
 }
 
 /** The PORTACT_* ids the game side needs by name, so it needs no enum. */

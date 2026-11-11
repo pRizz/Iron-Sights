@@ -1882,7 +1882,10 @@ void videoMouseWheel(int dy)
  * only parses the key names and reports "down" per action each poll). */
 /* Bigger than PORTACT_COUNT with room to append; the poll loop silently clips to it, so
  * videoBindCountCheck below complains if it is ever too small. */
-#define PORT_BIND_MAX 32
+/* Must cover joy_port.c's PORTACT_COUNT: portJoyPortPoll reads that many
+ * entries from the pdown[PORT_BIND_MAX] arrays below. Raised from 32 when
+ * Leaning (FORK-073) took the count to 33. */
+#define PORT_BIND_MAX 64
 static SDL_Scancode sPortBindings[PORT_BIND_MAX][BIND_MAX_KEYS];
 
 /* [controls] mouse_unlock (default F1): the key that frees / re-grabs the
@@ -2428,6 +2431,8 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "ads_spread=%d\nads_recoil=%d\n", PORT_ADS_ACCURACY_DEFAULT, PORT_ADS_ACCURACY_DEFAULT);
     fprintf(f, "weapon_kick=%d\n", PORT_GUN_KICK_DEFAULT);
     fprintf(f, "reload_speed=1\n"); /* PORT_RELOAD_SPEED_DEFAULT (FORK-071) */
+    fprintf(f, "leaning=1\n");      /* PORT_LEANING_DEFAULT (FORK-073) */
+    fprintf(f, "fog=1\n");          /* PORT_FOG_DEFAULT (FORK-074) */
     fprintf(f, "allow_noclip=0\n"); /* PORT_NOCLIP_ALLOW_DEFAULT (FORK-072) */
     fprintf(f, "noclip_view=4\n");  /* PORT_NOCLIP_VIEW_DEFAULT (FORK-072) */
     fprintf(f, "sprint=1\nludicrous_sprint=0\n");
