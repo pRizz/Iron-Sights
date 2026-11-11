@@ -7401,6 +7401,16 @@ with zero changed image cells against the committed gallery (so pixel-identical
 to the paced captures), `verify` and `test_hand_gallery.py` passed; the earlier
 sequential baseline measured icons 30 s, pass 1 158 s and pass 2 164 s, and
 turning off pacing alone left each pass at 158 s.
+
+**Silent regeneration (2026-11-11).** At the owner's request, since the
+unpaced capture played Runway's music and effects at many times speed through
+the real sound device. `run_game` now gives every game process SDL's dummy
+audio driver (`SDL_AUDIODRIVER=dummy`, which `audio_pc.c` opens as the first
+driver and which plays nothing), and the fixture's settings set
+`music_volume=0` and `sfx_volume=0` as a backstop. The recipe and captures are
+otherwise unchanged. Checks: each process's log showed the device opened on
+driver `dummy`; a regeneration against the existing executable took 31 s with
+zero changed image cells, and `verify` passed.
 Browser automation rejected the local file URL by policy, so interactive browser
 validation was not completed; the gallery can be opened manually offline.
 

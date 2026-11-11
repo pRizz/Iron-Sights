@@ -36,7 +36,8 @@ ICON_COUNT = sum(name is not None for name in ICON_NAMES[1:])
 FIXTURE_INI = ('[display]\nfullscreen=window\nvsync=0\nmaxfps=0\ntickhz=60\n'
     'msaa=1\nrender_thread=0\nwidescreen=1\nhfov_wide=90\nlow_res=0\nfiltering=bilinear\nfilter_2d=1\n'
     'aim_mode=1\nsight_on_screen=0\nammo_on_screen=0\nalways_crosshair=0\nweapon_hud=0\nalways_health=0\n'
-    'mission_timer=0\nhit_markers=0\ndamage_indicators=0\nobjective_notifications=0\nmission_hints=0\n[input]\nmouse=1\n')
+    'mission_timer=0\nhit_markers=0\ndamage_indicators=0\nobjective_notifications=0\nmission_hints=0\n'
+    'music_volume=0\nsfx_volume=0\n[input]\nmouse=1\n')
 
 
 def digest(data):
@@ -199,7 +200,10 @@ def run_game(exe, rom, directory, cache, name, gallery=False):
     env.update(GE_ROM=str(rom), GE_WINDOW='960x540', GE_NOINPUT='1', GE_SEED='1',
                GE_STAGE='runway', GE_STAGE_AFTER='1', GE_SKIPINTRO='1',
                GE_CHEATS='invuln,invis,guns', GE_ICON_CACHE_DIR=str(cache),
-               GE_FRAMES='1000000' if gallery else '5')
+               GE_FRAMES='1000000' if gallery else '5',
+               # Silent: the uncapped capture would otherwise play the level's
+               # music and effects at many times speed on the real device.
+               SDL_AUDIODRIVER='dummy')
     if gallery:
         # Unpaced: the frame cap counts the pump's retraces, which outrun the
         # game's frames, so only the timeout below bounds a stuck capture.

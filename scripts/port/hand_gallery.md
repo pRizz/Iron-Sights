@@ -59,6 +59,10 @@ waiting on the clock, so a capture's game time follows the frames drawn and
 each case's settle time passes as fast as the GPU renders it. A full
 regeneration takes about 40 seconds on the development machine, down from about
 6 minutes when the steps ran one after another at 60 frames a second.
+All three processes are silent: they run with SDL's dummy audio driver
+(`SDL_AUDIODRIVER=dummy`), which never opens the sound device, and with music
+and effects at 0 in the fixture's settings, so the unpaced level no longer
+plays its music and effects at many times speed while the gallery runs.
 
 `manifest.json` records the recipe, source-input fingerprint, ROM hash, GPU/GL
 identity and file/pixel hashes. No timestamps or machine-specific absolute paths
