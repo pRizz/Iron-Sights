@@ -134,8 +134,9 @@ bounces, rolls to a stop and explodes when its fuse runs out: 240 fields
 holding the trigger cooks it.
 
 **Gameplay > Iron Sights > HUD Additions > Arc Impact Crosshair**
-(`[display] arc_crosshair`: 0 Off, 1 On; default 1, 2026-11-10, owner's
-request), after Projectile Arc in the Options folder and on the watch; a
+(`[display] arc_crosshair`: 0 Off, 1 On; default 0, 2026-11-10, owner's
+request; it shipped on by default in `efa5f7a` and the owner turned the
+default off the same day), after Projectile Arc in the Options folder and on the watch; a
 plain toggle, so every supported input handles it. While the always-on
 crosshair is drawn (Always Crosshair, or ADS Crosshair in ADS, or the
 multiplayer key with two or more players) and the player holds a weapon
@@ -510,7 +511,7 @@ level hits now say they are not characters: the field was left unset, and
 the first run passed on whatever the stack held); a struck knife's drawn
 axis is turned to 50 degrees off the line of sight only when nearer to it;
 a shell exploding on a character records it and a grenade round turned by
-one does not; Arc Impact Crosshair is a toggle on by default, eases the same
+one does not; Arc Impact Crosshair is a toggle off by default, eases the same
 in one step or six, keeps an impact off the view at its edge along the line
 towards it, and is full size near, half at twice 350 units and held at 40%
 far off; `test_upstream_merge.sh` draws the always-on cross at each

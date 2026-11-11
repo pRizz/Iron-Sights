@@ -2420,7 +2420,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "always_crosshair_size=%d\n", portCrosshairSize());
     fprintf(f, "ads_crosshair=%d\n", portCrosshairAds());
     fprintf(f, "projectile_arc=0\n"); /* PORT_PROJECTILE_ARC_DEFAULT (FORK-069) */
-    fprintf(f, "arc_crosshair=1\n");  /* PORT_ARC_CROSSHAIR_DEFAULT (FORK-069) */
+    fprintf(f, "arc_crosshair=0\n");  /* PORT_ARC_CROSSHAIR_DEFAULT (FORK-069) */
     fprintf(f, "mission_timer=%d\n", s_CfgMissionTimer);
     fprintf(f, "stereo_pan=%d\n", s_CfgStereoPan);
     fprintf(f, "aim_lock=%d\n", s_CfgAimLock);

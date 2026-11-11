@@ -15,8 +15,8 @@
 
 #define PORT_PROJECTILE_ARC_DEFAULT 0
 /* Arc Impact Crosshair ([display] arc_crosshair): the always-on crosshair
- * marks where a held arcing weapon's shot will land. On by default. */
-#define PORT_ARC_CROSSHAIR_DEFAULT 1
+ * marks where a held arcing weapon's shot will land. Off by default. */
+#define PORT_ARC_CROSSHAIR_DEFAULT 0
 
 /* The game's own flight constants (propobj.c, gun.c, gun_rodata.c). */
 #define PORT_ARC_GRAVITY      0.27777779f /* PROP_PROJECTILE_GRAVITY_MODIFIER, units per field^2 */

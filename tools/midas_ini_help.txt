@@ -208,7 +208,7 @@ padN_stickmode.
                       |            | Ignores the launchers' random spread.
                       |            | Iron Sights > HUD Additions; applies to
                       |            | every player.
-  arc_crosshair       | 1          | 1 = Arc Impact Crosshair: while the
+  arc_crosshair       | 0          | 1 = Arc Impact Crosshair: while the
                       |            | always-on crosshair shows (Always
                       |            | Crosshair, or ADS Crosshair in ADS) and
                       |            | you hold a weapon with a Projectile Arc,

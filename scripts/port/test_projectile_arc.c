@@ -88,12 +88,13 @@ static void testArcOption(void)
     assert(portJoyPortOptionSet("projectile_arc", PORT_PROJECTILE_ARC_DEFAULT) && !portProjectileArcEnabled());
     assert(!portProjectileArcOptionGet("tracer_strength", &value));
 
-    /* Arc Impact Crosshair: its own toggle, on by default. */
+    /* Arc Impact Crosshair: its own toggle, off by default. */
     assert(portOptFind("arc_crosshair") >= 0 && portOptCategoryOf(portOptFind("arc_crosshair")) == PORTOPT_CAT_GAMEPLAY);
-    assert(PORT_ARC_CROSSHAIR_DEFAULT == 1);
-    assert(portJoyPortOptionGet("arc_crosshair", &value) && value == 1 && portArcCrosshairEnabled());
-    assert(portJoyPortSetOption("arc_crosshair", "0") && !portArcCrosshairEnabled() && !portProjectileArcEnabled());
+    assert(PORT_ARC_CROSSHAIR_DEFAULT == 0);
+    assert(portJoyPortOptionGet("arc_crosshair", &value) && value == 0 && !portArcCrosshairEnabled());
+    assert(portJoyPortSetOption("arc_crosshair", "1") && portArcCrosshairEnabled() && !portProjectileArcEnabled());
     assert(portJoyPortOptionSet("arc_crosshair", 5) && portJoyPortOptionGet("arc_crosshair", &value) && value == 1);
+    assert(portJoyPortOptionSet("arc_crosshair", PORT_ARC_CROSSHAIR_DEFAULT) && !portArcCrosshairEnabled());
 }
 
 /* The crosshair glides to a jumped impact over about a twentieth of a

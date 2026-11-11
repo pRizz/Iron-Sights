@@ -1,4 +1,4 @@
-/* Arc Impact Crosshair (FORK-069, [display] arc_crosshair, on by default):
+/* Arc Impact Crosshair (FORK-069, [display] arc_crosshair, off by default):
  * while the always-on crosshair is drawn (Always Crosshair, or ADS Crosshair
  * in ADS) and the player holds a weapon with a Projectile Arc, the cross
  * marks where the shot will land instead of the aim point: one for each
