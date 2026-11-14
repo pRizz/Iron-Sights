@@ -153,7 +153,7 @@ int main(void)
     testProjectileArcThrown();
     testSettleTicks();
     testSprint(); testLudicrousSprint(); testSprintToggle(); testSprintFeedback();
-    testHandLayerEnd(); testHipArms(); /* FORK-075 */
+    testHandLayerEnd(); testHipArms(); testExplosiveRounds(); /* FORK-075, FORK-078 */
     { /* The support palm faces up under the gun. The watch follows that
        * roll rather than being billboarded towards the camera. */
         Mtxf gun = {.m={{-1,0,0,0},{0,1,0,0},{0,0,-1,0},{0,-4,-42,1}}};

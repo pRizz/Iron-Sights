@@ -37,6 +37,7 @@
 #include "port_hit_sound.h"
 #include "port_hitmap.h"
 #include "port_tracers.h"
+#include "port_explosive_rounds.h"
 #endif
 
 #ifndef TARGET_N64
@@ -7103,6 +7104,9 @@ void chrlvFireWeaponRelated(ChrRecord *self, s32 hand)
                             if (sp254 != 0)
                             {
                                 bullet_spark_create(&sp258, 1, 26.0f, (s16) sp254->room);
+#ifndef TARGET_N64
+                                portExplosiveRoundsGuardImpact(&sp258, sp254); /* Explosive Rounds (FORK-078) */
+#endif
                             }
 
                             if (stanSavedColl_posData != NULL)

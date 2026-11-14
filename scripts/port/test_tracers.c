@@ -228,3 +228,6 @@ static void testTracers(void)
     testPelletSameDirection();
     testDecorativePellets();
 }
+
+/* Explosive Rounds (FORK-078), the other Combat Feedback setting built on bullet impacts. */
+#include "test_explosive_rounds.c"

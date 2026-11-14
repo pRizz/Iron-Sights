@@ -39,6 +39,7 @@
 #ifndef TARGET_N64
 #include "port_tracers.h"
 #include "port_bullet_rooms.h"
+#include "port_explosive_rounds.h"
 #endif
 
 
@@ -1308,9 +1309,22 @@ void chraiDefaultWeaponFireHandler(s32 hand)
             if (createSpark)
             {
                 bullet_spark_create(finalpos, 1, 26.0f, bestroom);
+#ifndef TARGET_N64
+                if (gotbghit)
+                {
+                    portExplosiveRoundsPlayerWall(finalpos, hittile, bestroom); /* Explosive Rounds (FORK-078) */
+                }
+#endif
             }
         }
     }
+
+#ifndef TARGET_N64
+    if (!gotbghit)
+    {
+        portExplosiveRoundsPlayerHits(&shotdata); /* FORK-078: stopped by a guard, object or door */
+    }
+#endif
 }
 
 
@@ -1625,6 +1639,9 @@ void chraiCheckUseHeldItem(s32 hand)
         else if (item_id == ITEM_SHOTGUN || item_id == ITEM_AUTOSHOT)
         {
             inc_curplayer_hitcount_with_weapon(item_id, SHOT_REGISTER_TOTAL);
+#ifndef TARGET_N64
+            portExplosiveRoundsShotBegin(); /* Explosive Rounds (FORK-078): one blast per shot */
+#endif
 
             for (i=0; i<NUMBER_SHOTGUN_BULLETS; i++)
             {
@@ -1633,6 +1650,9 @@ void chraiCheckUseHeldItem(s32 hand)
                 portPelletTracerRecord(hand, i); /* Shotgun Tracers (FORK-063) */
 #endif
             }
+#ifndef TARGET_N64
+            portExplosiveRoundsShotEnd();
+#endif
         }
         else if (item_id == ITEM_CAMERA)
         {

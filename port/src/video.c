@@ -2445,6 +2445,8 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "tracer_strength=%d\n", PORT_TRACER_STRENGTH_DEFAULT);
     fprintf(f, "shotgun_tracers=%d\n", PORT_SHOTGUN_TRACERS_DEFAULT);
     fprintf(f, "decorative_pellets=%d\n", PORT_DECORATIVE_PELLETS_DEFAULT);
+    fprintf(f, "explosive_rounds=0\n");        /* PORT_EXPLOSIVE_ROUNDS_DEFAULT (FORK-078) */
+    fprintf(f, "explosive_rounds_guards=1\n"); /* PORT_EXPLOSIVE_ROUNDS_GUARDS_DEFAULT (FORK-078) */
     fprintf(f, "objective_notifications=1\n");
     fprintf(f, "mission_hints=1\nmission_hints_shown=0\n");
     fprintf(f, "weapon_hud=1\n");

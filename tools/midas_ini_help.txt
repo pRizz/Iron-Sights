@@ -258,6 +258,18 @@ padN_stickmode.
                       |            | one. Decorative only: enemies fire a
                       |            | single shot, which alone can hit.
                       |            | Iron Sights > Combat Feedback
+  explosive_rounds    | 0          | A small blast where each bullet lands:
+                      |            | 0 = off, 1 = Visual (quick flash, pale puff,
+                      |            | shrapnel and sound; no damage), 2 =
+                      |            | Explosive (the blast also does splash
+                      |            | damage to characters, Bond included, and
+                      |            | objects). A shotgun blast makes one.
+                      |            | Off in demo playback; rounds leave two
+                      |            | explosion slots free and never shake the
+                      |            | screen. Iron Sights > Combat Feedback
+  explosive_rounds_guards | 1      | With explosive_rounds on: 1 = everyone's
+                      |            | bullets explode, guards' too; 0 = players'
+                      |            | only. Iron Sights > Combat Feedback
   objective_notifications | 1     | Named objective status alerts; 0 = original
                       |            | Scripted top messages that only repeat
                       |            | an alert's result give way to it.

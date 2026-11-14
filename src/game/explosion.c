@@ -27,6 +27,9 @@
 #include <assets/oddtextures.h>
 #ifndef TARGET_N64
 #include "port_bullet_rooms.h"
+#ifndef TARGET_N64
+#include "port_explosive_rounds.h"
+#endif
 #endif
 
 // bss
@@ -140,6 +143,16 @@ s_explosiontype g_ExplosionTypes[] = {
     /* facility remote mine */
     { 90.0f,  75.0f,    3.0f,               1.0f,                 250.0f,  375.0f,  600.0f,   150,        2,     5.0f,   200,     6.0f,   30.0f,    6.0f,   15.0f,         6,  EXPLOSION_4B_SFX,   4.0f},
     {160.0f, 120.0f,    7.19999980926514f,  2.40000009536743f,    600.0f,  450.0f,  640.0f,    50,        1,     2.0f,     0,     0.0f,    0.0f,    0.0f,    0.0f,         0,  EXPLOSION_4B_SFX,   4.0f},
+#ifndef TARGET_N64
+    /* Explosive Rounds (FORK-078, port_explosive_rounds.h): 22 Visual, 23 Bond's
+     * Explosive, 24 a guard's Explosive (the same blast, without Bond's hit marker).
+     * Smaller and quicker than Rare's smallest damaging blast (2): a 1.5-tick flare
+     * frame, a short life and smoke 9's brief puff, not smoke 7's lingering plume.
+     * Three damage passes of 0.165 match that blast's four of 0.125 over 50 units. */
+    {  6.0f,   6.0f,    0.0f,  0.0f,    12.0f,    0.0f,    0.0f,    21,        1,     1.5f,    20,     5.0f,    3.0f,    1.0f,    5.0f,         9,  EXPLOSION_1B_SFX,   0.0f},
+    {  6.0f,   6.0f,    0.0f,  0.0f,    12.0f,   30.0f,   50.0f,    21,        1,     1.5f,    20,     5.0f,    3.0f,    1.0f,    5.0f,         9,  EXPLOSION_1B_SFX, 0.165f},
+    {  6.0f,   6.0f,    0.0f,  0.0f,    12.0f,   30.0f,   50.0f,    21,        1,     1.5f,    20,     5.0f,    3.0f,    1.0f,    5.0f,         9,  EXPLOSION_1B_SFX, 0.165f},
+#endif
 };
 #else
 s_explosiontype g_ExplosionTypes[] = {
@@ -165,6 +178,16 @@ s_explosiontype g_ExplosionTypes[] = {
     { 80.0f,  60.0f,    3.0f,  1.0f,   300.0f,  450.0f,  640.0f,    60,        1,     2.0f,     0,     0.0f,    0.0f,    0.0f,    0.0f,         0,  EXPLOSION_4B_SFX,   4.0f},
     { 90.0f,  75.0f,    2.5f, 0.87f,   250.0f,  375.0f,  600.0f,   180,        2,     5.0f,   200,     6.0f,   30.0f,    6.0f,   15.0f,         6,  EXPLOSION_4B_SFX,   4.0f},
     {160.0f, 120.0f,    6.0f,  2.0f,   600.0f,  450.0f,  640.0f,    60,        1,     2.0f,     0,     0.0f,    0.0f,    0.0f,    0.0f,         0,  EXPLOSION_4B_SFX,   4.0f},
+#ifndef TARGET_N64
+    /* Explosive Rounds (FORK-078, port_explosive_rounds.h): 22 Visual, 23 Bond's
+     * Explosive, 24 a guard's Explosive (the same blast, without Bond's hit marker).
+     * Smaller and quicker than Rare's smallest damaging blast (2): a 1.5-tick flare
+     * frame, a short life and smoke 9's brief puff, not smoke 7's lingering plume.
+     * Three damage passes of 0.165 match that blast's four of 0.125 over 50 units. */
+    {  6.0f,   6.0f,    0.0f,  0.0f,    12.0f,    0.0f,    0.0f,    24,        1,     1.5f,    20,     5.0f,    3.0f,    1.0f,    5.0f,         9,  EXPLOSION_1B_SFX,   0.0f},
+    {  6.0f,   6.0f,    0.0f,  0.0f,    12.0f,   30.0f,   50.0f,    24,        1,     1.5f,    20,     5.0f,    3.0f,    1.0f,    5.0f,         9,  EXPLOSION_1B_SFX, 0.165f},
+    {  6.0f,   6.0f,    0.0f,  0.0f,    12.0f,   30.0f,   50.0f,    24,        1,     1.5f,    20,     5.0f,    3.0f,    1.0f,    5.0f,         9,  EXPLOSION_1B_SFX, 0.165f},
+#endif
 };
 #endif
 
@@ -270,7 +293,11 @@ explosionCreate(PropRecord *arg0, struct coord3d *target_pos, StandTile *target_
     sp40 = NULL;
 
 #if defined(VERSION_US)
+#ifndef TARGET_N64
+    if (portExplosionStartsShake(explosion_type)) /* Rare's test, and rounds never shake (FORK-078) */
+#else
     if ((explosion_type != 0x10) && (explosion_type != 1))
+#endif
     {
         g_NumExplosionEntries = 6;
     }
@@ -307,7 +334,11 @@ explosionCreate(PropRecord *arg0, struct coord3d *target_pos, StandTile *target_
         sp30 = chrpropAllocate();
 
 #if defined(VERSION_JP) || defined(VERSION_EU)
+#ifndef TARGET_N64
+        if (portExplosionStartsShake(explosion_type)) /* FORK-078 */
+#else
         if ((explosion_type != 0x10) && (explosion_type != 1))
+#endif
         {
             g_NumExplosionEntries = 6;
         }
@@ -656,7 +687,8 @@ void explosionInflictDamage(PropRecord *arg0, f32 horiz_range, f32 vert_range)
 #endif
                             chrlvExplosionDamage(temp_s0->chr, &arg0->pos, minfrac, 1);
 #ifndef TARGET_N64
-                            if (temp_s0->chr->damage > before)
+                            if (temp_s0->chr->damage > before
+                                && portExplosionShowsHitMarker(temp_s2->explosion_type)) /* FORK-078 */
                             {
                                 extern void portHudHit(s32 attacker, s32 headshot);
                                 portHudHit((s32)temp_s2->player, 0);

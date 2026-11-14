@@ -30,6 +30,121 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-078 — Explosive Rounds: a small blast where each bullet lands
+
+**Status:** Implemented on 2026-11-14 at the owner's request and built into
+the main Windows executable for play-testing. The owner's first play-test
+found guards' rounds leaving large smoke plumes and asked for a quicker
+blast; the shorter blast and short smoke below replaced the first version's.
+That revision is not yet play-tested, and nothing is committed. Linux, Steam
+Deck and browser builds not run locally.
+
+Inherited behaviour: a bullet that reaches a wall or floor makes Rare's
+impact spark, explosion type 1 (no damage, no sound, ten shrapnel bits and
+smoke 7), plus a bullet hole and a `bullet_spark_create` puff
+(`chraiDefaultWeaponFireHandler`, `chrprop.c`). A bullet that hits a guard,
+object or door makes only that hit's puffs, blood or hole. A guard's bullet
+makes a puff where it lands (`chraction.c`). Explosions take one of 6 slots
+(100 with Unlimited Explosions), and every type but 1 and 16 starts the
+screen shake.
+
+**Gameplay > Iron Sights > Combat Feedback > Explosive Rounds**
+(`[display] explosive_rounds`, default 0 = Off) adds a small blast where each
+bullet lands:
+
+- **Visual** (1) is a fireball of size 12 (Rare's smallest damaging blast,
+  type 2, is 30), 20 shrapnel bits, a brief pale puff and
+  `EXPLOSION_1B_SFX`, with no damage: its damage range and damage are 0, as
+  for the spark. The blast is quick: each flare sprite holds its 15 frames
+  1.5 ticks apiece (3 in the first version), flares spawn for 24 ticks (21
+  in the EU table) and the whole blast ends after about 48 ticks, under a
+  second at 60 Hz (93 before). Its smoke is Rare's short smoke 9 (four light
+  grey puffs that fade in about a second). The first version used smoke 7,
+  as the bullet spark does, whose puffs keep growing and rising for 6 to 10
+  seconds; the owner found that guards' rounds piled them into large
+  plumes.
+- **Explosive** (2) is the same blast with splash damage over a radius
+  growing from 30 to 50 units: 0.165 per damage pass, three passes over the
+  blast's life (any explosion applies damage every quarter of its life from
+  age 8), matching type 2's four passes of 0.125. It damages
+  characters, Bond included (so shooting a wall at point-blank range hurts),
+  and objects, so rounds can set off barrels and other explosive props. The
+  shooting player is credited, as the native stray-shot damage is.
+- Placement: a wall or floor hit uses the native spark's point, 26 units off
+  the surface. A bullet stopped by a guard, object or door blasts at its
+  farthest hit, which is where it stopped, pulled 26 units towards the
+  camera (the view-space point `chrHandleBulletHit` computes). A shotgun
+  blast makes one blast, at the first pellet that lands. A guard's bullet
+  blasts where its native puff appears, including on another guard it hits.
+  A guard's shot that hits Bond makes no blast, so no explosion fills the
+  screen.
+
+**Explosive Rounds For** (`[display] explosive_rounds_guards`, default 1 =
+Everyone) chooses whose bullets explode: Everyone, guards included, or
+Players Only (0). In multiplayer every player's rounds follow the shared
+setting.
+
+The fork appends three rows to `g_ExplosionTypes` (both the NTSC and the EU
+tables, after Rare's 22; not on N64): 22 Visual, 23 Bond's Explosive and 24 a
+guard's Explosive. Rows 23 and 24 are identical, except that damage from a
+guard's round never shows Bond's hit marker. Rounds never start the screen
+shake. A round is skipped unless more than two explosion slots are free
+under the cap, so grenades, mines and props still explode with Unlimited
+Explosions off. Demo playback (`get_is_ramrom_flag`) keeps the native
+impacts, since recorded input expects them. The native spark and puffs are
+unchanged and still appear under the blast. `GE_ROUNDS_LOG=1` prints each
+blast's type, position and room, and each one held back for the slots.
+
+**Hooks** (all inside `#ifndef TARGET_N64`): `chrprop.c` calls
+`portExplosiveRoundsPlayerWall` beside the wall spark's `bullet_spark_create`
+when the shot reached a surface, `portExplosiveRoundsPlayerHits` at the end
+of `chraiDefaultWeaponFireHandler` when it did not, and
+`portExplosiveRoundsShotBegin` / `ShotEnd` around the shotgun's pellet loop
+in `chraiCheckUseHeldItem`. `chraction.c` calls
+`portExplosiveRoundsGuardImpact` beside a guard shot's
+`bullet_spark_create`. `explosion.c` appends the rows, routes `explosionCreate`'s
+shake test (US and EU/JP copies) through `portExplosionStartsShake`, which
+keeps Rare's exemptions, and adds `portExplosionShowsHitMarker` to
+`explosionInflictDamage`'s `portHudHit` call. The options register in
+`joy_port.c`'s dispatch, `port_options.c` (after Decorative Pellets), the
+folder's Combat Feedback rows (`front.c`) and the watch's
+(`port_watchpages.c`), with help in `port_option_help.c` (which also names
+tracers and explosive rounds in the page description),
+`tools/midas_ini_help.txt`, the default midas.ini writer (`video.c`) and
+README.md.
+
+**Input:** two ordinary option rows, so every supported input already
+adjusts them as it does the other Combat Feedback rows.
+
+**Sources:** [header with the pure rules](port/include/port_explosive_rounds.h),
+[settings](port/src/port_explosive_rounds.c),
+[game hooks](port/src/port_explosive_rounds_game.c) and the
+[ROM-free test](scripts/port/test_explosive_rounds.c) (included by
+`test_tracers.c`, in `test_ads.sh`).
+
+**Checks:** in the `goldeneye` Docker image, `test_ads.sh` passes with the new
+test: the defaults and menu entries; midas.ini clamping; which shooter,
+mode and demo state make which row; the row indices after Rare's 22; the
+two-slot reserve; Rare's shake exemptions kept and rounds added; the guard
+row's hidden hit marker; and the one-blast-per-shotgun-shot queue.
+`test_hud.sh`, `test_states.sh`, `test_upstream_merge.sh`,
+`test_wardrobe.sh`, `settings_placement.py` and `bright-builds-check.ts all`
+pass. The Windows build succeeds. Two isolated 60-second Dam runs
+(invulnerable, holding fire in one-second bursts, `GE_ROUNDS_LOG=1`) exited
+cleanly: Explosive with Unlimited Explosions off made 48 type-23 blasts with
+none held back, and Visual made 48 type-22 blasts. Two 90-second Explosive
+runs where guards attack the invulnerable player also exited cleanly:
+Runway made 79 type-23 and 238 type-24 (guard) blasts, and Archives made 107
+guard blasts. Those runs used the first version's rows; with the quicker
+rows, a repeat Runway run with Unlimited Explosions off exited cleanly with
+64 type-23 and 118 type-24 blasts, the slot reserve holding back 114 more
+under the guards' fire. The hand gallery was regenerated
+for the source change with no changed image cells, and
+`hand_gallery.py verify` passes. Not yet checked in game: the revised blast's
+look, size and loudness (the sound has not been recorded and measured), damage
+balance for Bond and guards, shotguns, explosive props, multiplayer and
+raised tick rates.
+
 ### FORK-077 — Level decals keep the one-sided depth test
 
 **Status:** Fixed on 2026-11-14 after the owner saw Statue's ground flip
