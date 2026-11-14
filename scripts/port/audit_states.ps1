@@ -18,7 +18,7 @@ for ($tick=0;$tick -le 5000;$tick+=37) {
     $axis=if (($tick/37)%2 -eq 0) {1} else {-1}
     Add-Content -LiteralPath (Join-Path $dir 'input.txt') -Value "D $tick $axis 0"
 }
-$auditEnv=@{ GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW='960x540'; GE_NOINPUT='1'; GE_STAGE_AFTER='1'; GE_CHEATS='invuln,invis,guns'; GE_FRAMES='5000'; GE_SEED='1'; GE_INPUTPLAY=(Join-Path $dir 'input.txt') }
+$auditEnv=@{ SDL_AUDIODRIVER='dummy'; GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW='960x540'; GE_NOINPUT='1'; GE_STAGE_AFTER='1'; GE_CHEATS='invuln,invis,guns'; GE_FRAMES='5000'; GE_SEED='1'; GE_INPUTPLAY=(Join-Path $dir 'input.txt') }
 $saved=@{}
 try {
     foreach ($key in $auditEnv.Keys) { $saved[$key]=[Environment]::GetEnvironmentVariable($key,'Process'); [Environment]::SetEnvironmentVariable($key,$auditEnv[$key],'Process') }

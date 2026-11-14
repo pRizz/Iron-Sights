@@ -423,6 +423,10 @@ padN_stickmode.
                       |            | auto_aim or the multiplayer settings say
   aim_control         | 0          | 0 = hold to aim, 1 = toggle
   aim_mode            | 1          | 1 = ADS (default), 0 = original red reticle
+  hip_arms            | 0          | 1 = the rifles', SMGs', shotguns' and
+                      |            | launchers' generated ADS hands and arms
+                      |            | also show at the hip, held as in ADS;
+                      |            | 0 = only while aiming. Not dual wielding
   ads_spread          | 50         | Percent of a weapon's bullet spread kept
                       |            | in ADS; 100 = original. Shotguns keep theirs
   ads_recoil          | 50         | Percent of a weapon's visual kick kept in

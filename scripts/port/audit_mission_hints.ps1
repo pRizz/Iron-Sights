@@ -29,7 +29,7 @@ if ($LegacyAds) {
 Set-Content -LiteralPath (Join-Path $dir 'input.txt') -Value @('P 0 0 0 0',
     'P 80 8000 0 0', 'P 82 0 0 0', 'P 120 8000 0 0', 'P 122 0 0 0',
     'P 160 8000 0 0', 'P 162 0 0 0', 'P 1100 0 0 0')
-$auditEnv = @{
+$auditEnv = @{ SDL_AUDIODRIVER='dummy';
     GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$Resolution;
     GE_NOINPUT='1'; GE_STAGE='dam'; GE_DIFF='0'; GE_STAGE_AFTER='1';
     GE_CHEATS='invuln,invis'; GE_FRAMES='1000'; GE_SEED='1'; GE_SHOT='120';

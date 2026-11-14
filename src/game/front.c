@@ -4785,6 +4785,7 @@ static const struct PortSheetRow port_sheet_rows_ironsights[] = {
 };
 static const struct PortSheetRow port_sheet_rows_is_aim[] = {
     { SHROW_OPT, "aim_mode" }, { SHROW_OPT, "knife_ads" },
+    { SHROW_OPT, "hip_arms" },                /* FORK-075: long-gun arms at the hip */
     { SHROW_OPT, "ads_spread" }, { SHROW_OPT, "ads_recoil" }, { SHROW_OPT, "weapon_kick" },
     { SHROW_OPT, "reload_speed" },            /* FORK-071 */
     { SHROW_OPT, "leaning" },                 /* FORK-073: Lean Left / Right controls */

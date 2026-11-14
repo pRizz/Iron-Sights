@@ -330,6 +330,7 @@ s32 portJoyPortSetOption(const char *key, const char *value)
     if (portMissionHintsOptionSet(key, atoi(value))) return 1;
 #endif
     if (portKnifeAdsOptionSet(key, atoi(value))) return 1;
+    if (portAdsHandsOptionSet(key, atoi(value))) return 1;
     if (portHudOptionSet(key, atoi(value))) return 1;
     if (portHitSoundOptionSet(key, atoi(value))) return 1;
     if (portHitMapOptionSet(key, atoi(value))) return 1;
@@ -489,6 +490,7 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
     if (portMissionHintsOptionGet(key, out)) return 1;
 #endif
     if (portKnifeAdsOptionGet(key, out)) return 1;
+    if (portAdsHandsOptionGet(key, out)) return 1;
     if (portHudOptionGet(key, out)) return 1;
     if (portHitSoundOptionGet(key, out)) return 1;
     if (portHitMapOptionGet(key, out)) return 1;
@@ -534,6 +536,7 @@ s32 portJoyPortOptionSet(const char *key, s32 v)
     if (portMissionHintsOptionSet(key, v)) return 1;
 #endif
     if (portKnifeAdsOptionSet(key, v)) return 1;
+    if (portAdsHandsOptionSet(key, v)) return 1;
     if (portHudOptionSet(key, v)) return 1;
     if (portHitSoundOptionSet(key, v)) return 1;
     if (portHitMapOptionSet(key, v)) return 1;
@@ -963,8 +966,17 @@ s32 portHandGalleryActive(void)
 #endif
 }
 s32 portHandGalleryStock(void) {return portHandGalleryActive() && !(sHandGalleryCase&1);}
+/* Cases 0-71 keep the original order (stock/fork, regular/ADS, gun, wardrobe)
+ * and timeline; 72-107 add stock/fork with Hip-Fire Arms (FORK-075) per gun
+ * and wardrobe. The pistol's level reflection (FORK-058) changes with game
+ * time, so a reordered timeline can split a case's two samples across a change. */
+s32 portHandGalleryHipArms(void) {return portHandGalleryActive() && sHandGalleryCase>=72;}
 
 #ifdef GE_VIDEO
+static s32 joyPortHandGalleryWardrobe(void)
+{
+    return sHandGalleryCase<72 ? sHandGalleryCase/12 : (sHandGalleryCase-72)/6;
+}
 static void joyPortHandGallery(void)
 {
     static const s32 weapons[3]={ITEM_WPPK,ITEM_AK47,ITEM_SKORPION};
@@ -973,10 +985,11 @@ static void joyPortHandGallery(void)
     s32 item,aiming;
     if(!portHandGalleryActive() || get_cur_playernum()!=0 || !joyPortPermitted()) return;
     if(advance) {sHandGalleryCase++;time=0;samples=advance=0;}
-    if(sHandGalleryCase==72) {portConLogf("ge: hand-gallery complete cases=72 samples=144\n");exit(0);}
-    item=weapons[(sHandGalleryCase/4)%3];aiming=(sHandGalleryCase/2)%2;
+    if(sHandGalleryCase==108) {portConLogf("ge: hand-gallery complete cases=108 samples=216\n");exit(0);}
+    item=sHandGalleryCase<72 ? weapons[(sHandGalleryCase/4)%3] : weapons[(sHandGalleryCase-72)/2%3];
+    aiming=sHandGalleryCase<72 && (sHandGalleryCase/2)%2;
     sHeld[0][PORTACT_AIM_DOWN_SIGHTS]=aiming;
-    g_CurrentPlayer->bondtype=portWardrobeCuff(sHandGalleryCase/12);
+    g_CurrentPlayer->bondtype=portWardrobeCuff(joyPortHandGalleryWardrobe());
     if(configured!=sHandGalleryCase) {
         bondinvSetAllGunsFlag(TRUE);
         currentPlayerEquipWeaponWrapper(GUNLEFT,ITEM_UNARMED);
@@ -990,10 +1003,35 @@ static void joyPortHandGallery(void)
         && g_CurrentPlayer->hands[GUNRIGHT].weapon_current_animation==0
         && portAdsBlend()==(aiming?1.0f:0.0f)) {
         extern int ge_shot_force;
-        portConLogf("ge: hand-gallery capture case=%d sample=%d item=%d wardrobe=%d ads=%d stock=%d\n",
-            sHandGalleryCase,++samples,item,sHandGalleryCase/12,aiming,portHandGalleryStock());
+        portConLogf("ge: hand-gallery capture case=%d sample=%d item=%d wardrobe=%d ads=%d stock=%d hip=%d\n",
+            sHandGalleryCase,++samples,item,joyPortHandGalleryWardrobe(),aiming,portHandGalleryStock(),portHandGalleryHipArms());
         ge_shot_force=1;if(samples==2) advance=1;
     }
+}
+/* GE_HIP_DUAL_AUDIT=<item> (FORK-075): with one gun settled, take up the
+ * second and later put it away, capturing every 4 ticks through both switches
+ * so the support arm's slide can be reviewed. Exits when done. */
+static s32 joyPortHipDualAudit(void)
+{
+    static s32 item=-1;
+    static f32 time,next;
+    if(item<0) {const char *value=getenv("GE_HIP_DUAL_AUDIT");item=value && *value ? atoi(value) : 0;}
+    if(!item || get_cur_playernum()!=0 || !joyPortPermitted()) return item>0;
+    if(time==0) {
+        bondinvSetAllGunsFlag(TRUE);
+        currentPlayerEquipWeaponWrapper(GUNLEFT,ITEM_UNARMED);
+        currentPlayerEquipWeaponWrapper(GUNRIGHT,item);
+    }
+    time+=g_GlobalTimerDelta;
+    if(time>=120 && time-g_GlobalTimerDelta<120) currentPlayerEquipWeaponWrapper(GUNLEFT,item);
+    if(time>=260 && time-g_GlobalTimerDelta<260) currentPlayerEquipWeaponWrapper(GUNLEFT,ITEM_UNARMED);
+    if(time>=110 && time>=next) {
+        extern int ge_shot_force;
+        portConLogf("ge: hip-dual-audit: capture t=%.0f left=%d\n",time,(int)get_itemtype_in_hand(GUNLEFT));
+        ge_shot_force=1;next=time+4;
+    }
+    if(time>=400) {portConLogf("ge: hip-dual-audit: complete\n");exit(0);}
+    return TRUE;
 }
 static s32 sAdsAuditTransitions;
 /* GE_ADS_AUDIT=1 captures all guns; an item ID captures just that gun. */
@@ -1209,9 +1247,11 @@ void portAdsTick(void)
     const s32 pad = joyPortPad();
     f32 step;
 
+    portAdsHandsTick(); /* FORK-075: before the dual-wield return below */
     if (pad < 0) return;
 #ifdef GE_VIDEO
-    if(portHandGalleryActive()) joyPortHandGallery(); else joyPortAdsAudit();
+    if(portHandGalleryActive()) joyPortHandGallery();
+    else if (!joyPortHipDualAudit()) joyPortAdsAudit();
     {   /* GE_ARC_AUDIT (FORK-069): aim for its grenade rounds, Use to board its tank */
         const s32 arcAudit = portProjectileArcAuditAim();
         if (arcAudit & PORT_ARC_AUDIT_AIM) sHeld[pad][PORTACT_AIM_DOWN_SIGHTS] = 1;

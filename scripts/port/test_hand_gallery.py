@@ -68,13 +68,15 @@ class Gallery(unittest.TestCase):
 
     def test_matrix_coordinates(self):
         rows = gallery.cases()
-        self.assertEqual(len(rows), 72)
-        self.assertEqual(len({row['file'] for row in rows}), 72)
+        self.assertEqual(len(rows), 108)
+        self.assertEqual(len({row['file'] for row in rows}), 108)
         for i, row in enumerate(rows):
             self.assertEqual(row['id'], i)
-            self.assertEqual(row['wardrobe'], gallery.WARDROBES[i//12])
-            self.assertEqual(row['weapon_id'], (4, 8, 7)[i//4 % 3])
-            self.assertEqual(row['mode'], ('regular', 'ads')[i//2 % 2])
+            # The game's joyPortHandGallery uses the same case arithmetic.
+            hip = i >= 72
+            self.assertEqual(row['wardrobe'], gallery.WARDROBES[(i-72)//6 if hip else i//12])
+            self.assertEqual(row['weapon_id'], (4, 8, 7)[(i-72)//2 % 3 if hip else i//4 % 3])
+            self.assertEqual(row['mode'], 'hip_arms' if hip else ('regular', 'ads')[i//2 % 2])
             self.assertEqual(row['variant'], ('stock', 'fork')[i % 2])
         self.assertEqual(sum(name is not None for name in gallery.ICON_NAMES[1:]), 38)
 
@@ -154,13 +156,14 @@ class Gallery(unittest.TestCase):
             for row in gallery.cases():
                 for sample in (1, 2):
                     log += (f"ge: hand-gallery capture case={row['id']} sample={sample} item={row['weapon_id']} "
-                            f"wardrobe={row['id']//12} ads={int(row['mode']=='ads')} stock={int(row['variant']=='stock')}\n"
+                            f"wardrobe={gallery.WARDROBES.index(row['wardrobe'])} ads={int(row['mode']=='ads')} stock={int(row['variant']=='stock')} "
+                            f"hip={int(row['mode']=='hip_arms')}\n"
                             f"gfx: wrote shot_{row['id']*2+sample:05}.bmp\n")
-            log += 'ge: hand-gallery complete cases=72 samples=144\n'
-            self.assertEqual(len(gallery.capture_pass(log, Path('.'))), 72)
+            log += 'ge: hand-gallery complete cases=108 samples=216\n'
+            self.assertEqual(len(gallery.capture_pass(log, Path('.'))), 108)
             with self.assertRaises(ValueError):
                 gallery.capture_pass(log.replace('sample=1 item=4', 'sample=2 item=4', 1), Path('.'))
-            with mock.patch.object(gallery, 'bmp_pixels', side_effect=[b'a', b'b']+[b'a']*142):
+            with mock.patch.object(gallery, 'bmp_pixels', side_effect=[b'a', b'b']+[b'a']*214):
                 with self.assertRaisesRegex(ValueError, 'Non-deterministic'):
                     gallery.capture_pass(log, Path('.'))
 

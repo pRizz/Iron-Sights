@@ -63,7 +63,7 @@ if ($TexturePack) {
     $source = (Resolve-Path -LiteralPath $TexturePack).Path
     New-Item -ItemType HardLink -Path (Join-Path $texDir (Split-Path -Leaf $source)) -Target $source | Out-Null
 }
-$auditEnv = @{
+$auditEnv = @{ SDL_AUDIODRIVER='dummy';
     GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$(if ($Resolution) {$Resolution} elseif ($Aspect -eq 'Wide') {'960x540'} else {'800x600'});
     GE_NOINPUT='1'; GE_STAGE=$Stage; GE_DIFF=[string]$Difficulty; GE_STAGE_AFTER='1'; GE_CHEATS='invuln,invis,guns';
     GE_IRONSIGHTS_FONTS='1';   # FORK-051: allows the hidden Iron Sights font when asked for

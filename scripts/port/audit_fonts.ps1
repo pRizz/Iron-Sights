@@ -29,7 +29,7 @@ foreach ($filter in @(0,1)) {
         New-Item -ItemType Directory -Path $packDir | Out-Null
         Copy-Item -Path (Join-Path (Resolve-Path -LiteralPath $FontPack).Path '*') -Destination $packDir
     }
-    $auditEnv = @{
+    $auditEnv = @{ SDL_AUDIODRIVER='dummy';
         GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$Resolution; GE_NOINPUT='1';
         GE_SEED='1'; GE_FRAMES='650'; GE_SHOT='500'
     GE_IRONSIGHTS_FONTS='1';   # FORK-051: allows the hidden Iron Sights font when asked for

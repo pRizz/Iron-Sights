@@ -35,8 +35,35 @@ Gfx *portAdsBeginHandLayer(Gfx *gdl, const Mtxf *gunProjection);
 /* Reload the scene projection; G_ZBUFFER stays on for later split views. */
 Gfx *portAdsEndHandLayer(Gfx *gdl, Mtx *sceneProjection);
 Gfx *portAdsDrawHands(Gfx *gdl, s32 item, const Mtxf *gun);
+Gfx *portAdsDrawHandsBehindGun(Gfx *gdl, s32 item, const Mtxf *gun);
+/* Brackets a long gun's own draw in the hand layer: stock painter's order with
+ * depth writes kept for the arms drawn after it (FORK-075, G_NOOP 0x64). */
+Gfx *portAdsGunPainterTag(Gfx *gdl, s32 on);
+
+/* Hip-Fire Arms (FORK-075, [display] hip_arms, 0 off by default): the long
+ * guns' generated ADS arms also show at the hip, opaque and riding rigidly
+ * with the gun in their settled ADS shape. Off, they fade in with the ADS
+ * blend as before. Dual wielding keeps the right gun's trigger hand while the
+ * support arm slides down out of view (and back once the left gun goes). */
+#define PORT_HIP_ARMS_DEFAULT 0
+s32 portAdsHandsOptionGet(const char *key, s32 *value);
+s32 portAdsHandsOptionSet(const char *key, s32 value);
+/* Per player tick, every tick (dual wield blocks the ADS tick's later steps). */
+void portAdsHandsTick(void);
+/* The support hold after `ticks`: towards 0 while dual wielding, else 1. */
+f32 portAdsSupportHoldStep(f32 hold, s32 dual, f32 ticks);
+/* The arms' opacity for the current player's right gun: 0 = not drawn. */
+f32 portAdsHandAlpha(s32 item);
+static inline f32 portAdsHandAlphaFor(s32 hasGrips, s32 hipArms, f32 blend)
+{
+    if (!hasGrips) return 0.0f;
+    return hipArms ? 1.0f : blend;
+}
+
 /* Isolated deterministic review harness; always false in ordinary gameplay. */
 s32 portHandGalleryActive(void);
 s32 portHandGalleryStock(void);
+/* The gallery's hip-arms cells turn Hip-Fire Arms on for that capture only. */
+s32 portHandGalleryHipArms(void);
 
 #endif

@@ -140,6 +140,11 @@ after three complete displays they turn off automatically. Re-enabling resets
 the count for subsequent missions.
 ADS adds basic low-poly hands and forearms to the 13 firearms that lack them,
 including the KF7 Soviet. Pistols retain their original hands.
+**Gameplay > Iron Sights > Aiming and Movement > Hip-Fire Arms** (off by
+default) keeps those hands and forearms on at the hip too, held the way they
+are in ADS and moving with the gun. Taking up a second gun of the same kind
+keeps the right hand on its gun while the left arm slides down out of view,
+and it slides back when you go back to one gun.
 Each firearm's ADS pose has a slight upward angle to reveal its front sight
 and give a view along the top of the gun.
 Sniper ADS raises the rifle into a zoomed scope view with the gun and hands hidden
@@ -328,7 +333,7 @@ sudo apt install libsdl2-2.0-0:i386 libgl1:i386
 
 Every repository change must update the [fork change inventory](FORK_CHANGES.md); see [AGENTS.md](AGENTS.md).
 
-For hands, arms and weapon rendering, open the [visual review gallery](review/hand-gallery/index.html) locally in a browser. It compares PP7, AK47/KF7 and Klobb in regular/ADS poses across six wardrobes, plus all generated weapon icons. See [generation and pre-commit setup](scripts/port/hand_gallery.md).
+For hands, arms and weapon rendering, open the [visual review gallery](review/hand-gallery/index.html) locally in a browser. It compares PP7, AK47/KF7 and Klobb in regular, ADS and Hip-Fire Arms poses across six wardrobes, plus all generated weapon icons. See [generation and pre-commit setup](scripts/port/hand_gallery.md).
 
 For aiming changes and bug reports, use [this fork's issues](https://github.com/pRizz/Iron-Sights/issues) and pull requests. The inherited [CONTRIBUTING.md](CONTRIBUTING.md) describes upstream contribution guidelines, including the rules for AI-assisted changes. General port development is coordinated in [upstream Project Midas](https://github.com/murkantor/Project-Midas).
 

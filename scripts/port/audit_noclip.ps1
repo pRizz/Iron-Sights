@@ -57,7 +57,7 @@ if ($UserIni) {
 }
 $autoList = (@($Presses.Split(',')) | ForEach-Object { "noclip:$($_.Trim())" }) -join ','
 if ($Auto) { $autoList += ',' + $Auto }
-$auditEnv = @{
+$auditEnv = @{ SDL_AUDIODRIVER='dummy';
     GE_ROM=$rom; GE_WINDOW=$Resolution; GE_NOINPUT='1'; GE_SEED='1';
     GE_STAGE=$Stage; GE_STAGE_AFTER='1'; GE_SKIPINTRO='1'; GE_CHEATS='invuln,invis';
     GE_JOYPORT_AUTO=$autoList; GE_NOCLIPDBG='1'; GE_FRAMES=[string]$Frames

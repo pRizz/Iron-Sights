@@ -19,7 +19,7 @@ if ($StressAds) {
     # Port action 21 is ADS. Raise/lower the generated arms before saving.
     Add-Content -LiteralPath (Join-Path $dir 'input.txt') -Value @('A 0 0 0', 'A 900 200000 0', 'A 1150 0 0', 'A 6000 0 0')
 }
-$auditEnv = @{ GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW='960x540'; GE_NOINPUT='1'; GE_STAGE=$Stage; GE_DIFF='0'; GE_STAGE_AFTER='1'; GE_CHEATS='invuln,invis'; GE_FRAMES='6000'; GE_SEED='1'; GE_INPUTPLAY=(Join-Path $dir 'input.txt'); GE_STATE_EFFECTS_AUDIT='1'; GE_NOINISAVE='1' }
+$auditEnv = @{ SDL_AUDIODRIVER='dummy'; GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW='960x540'; GE_NOINPUT='1'; GE_STAGE=$Stage; GE_DIFF='0'; GE_STAGE_AFTER='1'; GE_CHEATS='invuln,invis'; GE_FRAMES='6000'; GE_SEED='1'; GE_INPUTPLAY=(Join-Path $dir 'input.txt'); GE_STATE_EFFECTS_AUDIT='1'; GE_NOINISAVE='1' }
 if ($Spawn) { $auditEnv.GE_SPAWNXYZ = $Spawn }
 if ($StressAds) { $auditEnv.GE_STATE_EFFECTS_ADS = '1'; $auditEnv.GE_ROOM_AUDIT = '1' }
 if ($ActiveAtSave) { $auditEnv.GE_STATE_EFFECTS_ACTIVE = '1' }

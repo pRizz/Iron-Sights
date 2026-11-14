@@ -15,6 +15,7 @@ struct PortOptHelp { const char *key; const char *text; };
 static const struct PortOptHelp sHelp[] = {
     /* GENERAL SETTINGS */
     { "knife_ads",          "Butt Centered keeps the stock grip. Tip Centered flips to throw." },
+    { "hip_arms",           "Rifles, SMGs and launchers keep their ADS hands and arms at the hip too." },
     { "ads_spread",         "Bullet spread kept in ADS. 100% is the original. Not shotguns." },
     { "ads_recoil",         "Gun kick kept in ADS. 100% is the original. Not shotguns." },
     { "weapon_kick",        "Every shot kicks the gun; Ludicrous 3x, Cartoon 5.5x. Original: after firing." },
@@ -181,7 +182,7 @@ static const struct PortOptHelp sHelp[] = {
     { "@page_hud",          "What the in-game HUD shows and where." },
     { "@page_portopts",     "The port's own gameplay switches." },
     { "@page_ironsights",   "Settings that Iron Sights adds to Project Midas." },
-    { "@page_is_aim",       "Aim down sights, knife aiming, reload and sprint speed, leaning, noclip." },
+    { "@page_is_aim",       "Aim down sights, knife aiming, hip-fire arms, reload and sprint speed, leaning, noclip." },
     { "@page_is_feedback",  "Hit markers, hit sounds and damage direction." },
     { "@page_is_hud",       "Crosshair size, weapon strip, health and mission alerts." },
     { "@page_is_system",    "Build info, fonts, reflections, fog and crash reports." },

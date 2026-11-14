@@ -4,9 +4,17 @@ Open [`review/hand-gallery/index.html`](../../review/hand-gallery/index.html)
 locally in a browser. No web server or network connection is needed. GitHub
 shows the HTML source; download/clone the directory to use the interactive view.
 
-The 72-view matrix covers PP7, AK47/KF7 and Klobb, regular and fully settled ADS,
-six wardrobes (blue, boiler, jungle, snow, tuxedo, Connery), and original versus
-fork models. Filters, a larger image inspector, stock/fork keyboard switching,
+The 108-view matrix covers PP7, AK47/KF7 and Klobb, regular, fully settled ADS
+and regular with Hip-Fire Arms (FORK-075) on, six wardrobes (blue, boiler,
+jungle, snow, tuxedo, Connery), and original versus fork models. The hip-arms
+stock cells, and the PP7 (which has native hands), show what their regular cells
+do: only the KF7 and Klobb fork cells gain arms. The original 72 regular/ADS
+cases run first in their old order, then the 36 hip-arms cases. Keep that
+order: the shiny guns' level reflection (FORK-058) drifts by a few colour steps
+with game time, so a reordered timeline once split a PP7 case's two samples
+across a change and failed the repeat check. The same drift is why a few
+hip-arms stock cells differ from their regular cells by up to 6 steps on the
+gun metal. Filters, a larger image inspector, stock/fork keyboard switching,
 and a pixel inspection toggle help compare small seams. All 38 native generated
 icons are included: weapons (with the watch laser), the tank's strip image, the
 unarmed card's rifle butt and, grouped separately,

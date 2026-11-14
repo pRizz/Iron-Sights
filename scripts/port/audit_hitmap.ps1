@@ -34,7 +34,7 @@ Copy-Item -LiteralPath $Executable -Destination $auditExe
 Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]', 'fullscreen=window', 'vsync=0', 'maxfps=60',
     'tickhz=60', 'render_thread=0', 'msaa=0', 'music_volume=0', "debrief_hit_map=$([int](!$Off))", "font_style=$FontStyle")
-$auditEnv = @{
+$auditEnv = @{ SDL_AUDIODRIVER='dummy';
     GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$Resolution; GE_NOINPUT='1'; GE_SEED='1';
     GE_IRONSIGHTS_FONTS='1';   # FORK-051: allows the hidden Iron Sights font when asked for
     GE_STAGE=$Stage; GE_STAGE_AFTER='1'; GE_SKIPINTRO='1'; GE_CHEATS='invuln';

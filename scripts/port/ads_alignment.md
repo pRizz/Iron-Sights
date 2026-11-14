@@ -164,7 +164,8 @@ front bead above the red shells on the receiver. The plated PP7 models' sight
 tips stood about 7 screen pixels above center at 960x540 (the stock PP7's about
 2), so the shot landed just below the tip. The 1.08 multiplier enlarges the whole generated
 hand, wrist, cuff, watch and forearm uniformly around the grip origin; see the
-[arm contracts](arm_rendering.md). Other long guns keep the 0.052 grip scale.
+[arm contracts](arm_rendering.md). Other long guns keep the base grip scale
+(0.065 since 2026-11-11, previously 0.052, briefly 0.058).
 
 The rocket launcher restores the initial 2026-10-28 sight solution, pitch
 `-0.026732`, sight height `6.143` and X `-0.3`, which stacks the near and far pins

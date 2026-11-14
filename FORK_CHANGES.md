@@ -30,6 +30,385 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-076 — Silent audit runs
+
+**Status:** Implemented on 2026-11-11 at the owner's request, after background
+ADS audits played the game's sound while they were working.
+
+Before this change, the hand gallery (FORK-022) already ran its game processes
+on SDL's `dummy` audio driver, but the PowerShell audits did not: each launched
+an isolated game copy that played music and effects through the real sound
+device. All twelve `scripts/port/audit_*.ps1` launchers now add
+`SDL_AUDIODRIVER='dummy'` to the environment table they already set before
+`Start-Process` and restore afterwards. `audio_pc.c` opens that driver first
+and it plays nothing. Each audit's game copy is silent. The caller's shell and
+the user's own game keep their audio settings.
+
+`GE_AUDIO_CAPTURE` records the mixed output before it reaches the device, so
+`audit_hit_sound.ps1` still measures real audio.
+
+**Sources:** the `$auditEnv` / `$testEnv` table in each of
+`scripts/port/audit_{ads,fonts,hit_sound,hitmap,hud,mission_cheats,mission_hints,noclip,projectile_arc,sights,state_effects,states}.ps1`.
+
+**Checks:**
+- A KF7 `audit_ads.ps1 -Item 8 -Stage runway` run logged its device opening on driver `dummy` and verified its capture.
+- `audit_hit_sound.ps1` with its default distances logged the `dummy` device and recorded a nonzero capture, and its level checks passed.
+- A run limited to `-Metres '5,20'` failed the 10% check. It omits the 1 m point-blank reference the check compares against.
+
+### FORK-075 — Hip-Fire Arms: the long guns' ADS arms at the hip
+
+**Status:** Implemented on 2026-11-11 for
+[issue #7](https://github.com/pRizz/Iron-Sights/issues/7) at the owner's
+request and built for Windows (`build_win`). The owner's first play-test asked
+for better hip grips, a bent rocket elbow and larger non-pistol hands; the
+second asked for further grip changes and reported the rocket launcher's
+lettering flickering; the third asked for the KF7 fingers out of the gun,
+larger arms again and the sniper hand further back, and raised the dual-wield
+switch, for which they then chose the lowering support arm (below), the
+fifth revision. Temporary renders of an open
+KF7 support hand (palm up under the wood, or flat along its side) did not
+improve on the closed hand, which the owner kept. Further renders moved the
+closed hand lower, out, back or forward, or flattened its finger curl; the
+owner found the fingers glitched in all of them. On 2026-11-12 they chose,
+from a third round of renders, the KF7 support hand drawn behind the gun and
+raised against the wood (below), and approved that sixth revision in
+play-test the same day. They then asked for the AR33's support thumb to point
+up the hand guard instead of along the barrel, and chose, from four renders,
+the hand tilted, raised and out to the guard's side (below). Their play-test
+of that seventh revision found it mostly good but asked for the index finger
+out of sight, then for the hand closer to the gun and a fuller arm, and gave a
+reference photo of their own hand holding a bottle; from the renders that
+followed they chose the hand tucked under the guard with a light roll and a
+1.3 times fuller forearm (below). Their play-test of that eighth revision
+found it mostly good but the wrist too small; on 2026-11-14 they chose, from
+four renders, a wrist 1.5 times thicker from palm to back and 1.25 times wider
+(below). Their play-test of that ninth revision found it mostly good but
+thought a finger might be clipping through the gun, and asked for the hand
+slightly lower; it now sits 0.5 lower (below). They then asked why the thumb
+tip looked pointy, declined reshaping the model for now, and chose, from
+renders of the hand moved left in small steps, 0.25 left (below). They
+approved that eleventh revision in play-test the same day. Linux, Steam Deck
+and browser builds not run locally.
+
+Inherited behaviour: GoldenEye's rifles, SMGs, shotguns, sniper rifle, laser
+and launchers have no first-person hands; the guns float at the hip. FORK-004
+adds generated hands and wardrobe forearms to those 14 guns, but only while
+aiming: they fade in with the ADS blend (alpha `blend*255`) and their elbows
+rise 18 units as they do, so at the hip (blend 0) nothing draws. Players asked
+to keep those arms on all the time.
+
+**Gameplay > Iron Sights > Aiming and Movement > Hip-Fire Arms** (`[display]
+hip_arms`, default 0) keeps them at the hip, opaque. The arm keeps its settled
+ADS shape relative to the gun: `adsSettledGun` rebuilds the settled ADS gun
+matrix (view-facing basis, ADS pitch and roll, muzzle-derived sight pose, as
+the gallery fixture builds it in `gunfire.c`) and `adsGunCarried` carries the
+camera-space ADS elbow onto the current gun matrix, so the arm rides rigidly
+with the gun through hip fire, bob, raises, lowers, reloads and switches.
+Aiming lerps that carried elbow onto the camera-space ADS target; at a settled
+ADS the original pose path runs, so ADS pixels are the same with the setting
+on or off, and with it off the fade is unchanged. Hands, wrists, scale,
+wardrobe meshes, watch and the RC-P90's support-only grip are FORK-004's. Dual
+wielding keeps the right gun's trigger hand and slides the support arm away
+(below). Off by default because the
+stock game has no hip hands and FORK-004's ADS-only arms are the established
+look.
+
+The hip camera sees the support hand from above and beside the gun. In the
+first play-test the ADS palm-up cradle left fingers floating beside the Klobb,
+ZMG, D5K, RC-P90 and shotgun, sank into the assault rifle, held the sniper by
+its muzzle, and the rocket launcher's carried arm ran straight to the lower
+left corner. A per-gun hip fit (`sAdsHipGrips`) adjusts only the support hand,
+fading out linearly as the gun rises: a weapon-local grip offset, extra outward
+roll and a carried-elbow offset. After the second play-test (the Klobb's hand
+clipped, the KF7's floated, the D5K, AR33, RC-P90 and shotgun hands stood
+upright beside the gun, the Phantom's sat too near the muzzle and the sniper's
+clipped): the Klobb and ZMG wrap the fore-end's side, rolled out; both D5Ks,
+the AR33, RC-P90 and shotgun hold the gun from underneath, palm up; the
+Phantom's hand sits 6 units back; the rocket's elbow moves down and towards the
+body, bent under the tube. After the third, the KF7's hand sat below its wood
+(offset y -1.2), which the behind-the-gun hand below replaced. The automatic
+shotgun (approved as is), laser and grenade launcher keep the plain carried
+grip. Values came from captured hip frames of three or four candidates per
+gun, compared side by side. The trigger hand and settled ADS are unchanged.
+The sniper's support grip itself moved in `sAdsGrips`, from the muzzle
+(1.7,6,35) to the wooden fore-end (0.1,1,19): as a fading hip fit it slid back
+onto the muzzle during the raise, where it clipped (a 4:3 capture showed the old
+grip on the muzzle; the new one sits below the screen edge at the hip). The
+scope hides both hands once raised, so no settled view changes.
+The owner asked twice for larger hands and arms on the non-pistol guns:
+FORK-004's base grip scale rises from 0.052 to 0.058 and then 0.065 (about 25%
+in all), in ADS and at the hip alike, so the hands keep one size through a
+raise.
+
+An open hand for the KF7's support grip was asked for and tried: `GfistZ`'s
+flat chop hand loads through the grip-source path, but its native orientation
+does not match the grip basis (a blade at the hip and in ADS), so the
+experiment was reverted. The pause-watch hand (open, used by these arms before
+the closed PP7 hand) remains a possible source; swapping hands between the hip
+and ADS would pop during a raise, so it would replace that gun's ADS hand too.
+The owner kept the closed hand.
+
+The KF7's glitched fingers: a zoomed hip capture showed the closed hand's
+finger tips passing through the fore-end and showing on its near side as pale
+shards, and as a white sliver when the raise starts. Moving the hand (lower 1
+and 2, out 1, back 3, forward 3) or squashing its finger curl (70% and 55%)
+left them, and pressing the vertices onto the wood's underside left shards and
+added a spike. What removed them was order: `AdsHipGrip` gains `behind`, and
+below a settled ADS such a support hand draws alone before the gun
+(`portAdsDrawHandsBehindGun`), so the painter's-order gun covers whatever
+overlaps it; the pass after the gun draws only the trigger hand
+(`adsHandInPass`). Of three heights rendered, the owner chose the hand raised
+1.2 against the wood, so the KF7's fit is offset (0.2, 0, 0), roll 0.2,
+behind. Only the KF7 sets it. The cost: no finger shows on the gun's near
+side, only the back and heel of the hand beside and below the wood. A settled
+ADS is unchanged, and the raise showed no pop at 56%, 78% and 100%.
+
+The AR33's thumb: the closed hand is rigid and its thumb lies along the hand's
+axis, which ran from the elbow to the wrist, so under the hand guard the thumb
+pointed along the barrel. Rolling the hand out or moving the carried elbow
+under it (six renders) barely changed that. `AdsHipGrip` gains `tilt`:
+`adsArmPose` leans the support hand's axis towards the gun's up by that much
+before building the hand basis, so the hand, wrist seam, cuff and watch turn
+together as one rigid piece about the palm, the thumb runs up the guard's left
+face, and the generated forearm behind the protected cuff still ends at the
+same elbow. Like the rest of a hip fit it fades out linearly with the raise.
+Of twelve further renders, more tilt or height (tilt 1.5 and above, or the
+hand raised 2.5) pushed finger tips through the guard. The owner chose, from
+the current hand and three tilted ones, the hand raised 1.0, out 0.75 to the
+guard's left, rolled out 0.5 and tilted 1.0: the AR33's fit is offset
+(0.75, -1.5, 0), roll 0.2, tilt 1.0 (was (0, -2.5, 0), roll -0.3, untilted).
+Only the AR33 sets it. Tilting lowers the cuff, so more wrist skin shows
+between the guard and the sleeve than before.
+
+The AR33's index finger and arm (eighth revision): with the thumb up, the
+index finger lay on the guard's lower edge beside it. Rolling the wrist the
+other way pushed finger tips through the guard; the behind-the-gun pass hid
+the finger but also keeps the thumb off the guard's face; a hard roll (3.0)
+hid it, and the owner found that closest, but the hand floated beside the gun
+and the arm looked thin. Two causes of the thin arm were found. The wrist and
+cuff, one rigid piece with the hand, are flatter than wide, and the roll
+turned their narrow edge to the camera (the cuff measured about 32 px across
+before and 22 px rolled). And the forearm's cross-section was built in the
+hand's frame all the way to the elbow, so the roll and the tilt squeezed the
+sleeve (about 75 px to 55 px at the screen's lower edge). For the second,
+a tilted hand's forearm now eases from the hand's frame at the cuff to the
+plain palm-up frame of the untilted forearm (`adsElbowFrame`, reached by
+mid-forearm, `ADS_UNTWIST_RATE`), as an arm's twist fades towards the elbow.
+`AdsHipGrip` also gains `girth`, a multiplier on the generated forearm behind
+the protected cuff that fades out with the raise. The owner's photo showed a
+broad forearm, a thumb gripping the near side and fingers curled round the far
+side. The closed fist is rigid and cannot open round the guard, so no finger
+shows on the far side; the pose takes the rest. Of the renders (rolls 0.5 to
+3.0, the hand 0.5 to 1.0 nearer the gun and up to 0.75 higher, girths 1.3 and
+1.6), the owner chose the light roll: offset (0, -0.75, 0), roll 0.7, tilt
+1.0, girth 1.3. The hand sits under the guard, which hides the index finger by
+depth; the thumb rests on the guard's edge and the wrist keeps its broad side
+to the camera. Not done: reshaping the fist's fingers to wrap the guard, which
+was offered as a larger experiment.
+
+The AR33's wrist (ninth revision): beside the fuller forearm the owner found
+the wrist far too small. Measured in the arm mesh, the wrist and cuff are
+about 40 source units from palm to back and 62 across, against a fist of about
+80 by 105 or more: half the hand's size, and thinnest from palm to back. Until
+now the wrist seam, cuff and watch were fixed with the hand, so nothing could
+widen them. `AdsHipGrip` gains `wristDepth` and `wristWidth`, and
+`adsWristPoint` scales hand, cuff and watch points about the arm's centre line
+before the rigid grip transform, easing in along the last 45 source units of
+the hand's heel (`sAdsArmProfile.wristRamp`) and whole from the wrist seam
+through the protected band; the generated forearm leaves the cuff at that
+scale and blends to its own bulk and girth, so the elbow is unchanged. The
+fingers, thumb and palm anchor keep their size, the watch grows with its
+wrist, and the scale fades out with the raise, so the aimed view is as before.
+Of the renders (current; 1.3 by 1.15; 1.5 by 1.25; 1.7 by 1.35; also 1.5 by
+1.5 and 2.0 by 1.4, not shown), the owner chose 1.5 from palm to back and 1.25
+across. Only the AR33's hip support hand has a wrist scale; every other gun,
+the trigger hand, native pistols and ADS use exactly 1 and take the old path.
+This is a deliberate, owner-requested exception to the arm contract's fixed
+wrist, cuff and watch, recorded in `scripts/port/arm_rendering.md`.
+
+The AR33's fingertip (tenth revision): the owner thought a finger might be
+clipping through the gun. Zoomed Runway captures (960x540) found one: with
+the hand 0.75 below the grip point, a fingertip of the tilted hand showed as
+a speck about three pixels wide on top of the hand guard at the hip, and as a
+longer streak along the guard's front edge while the gun rose. Renders with
+the hand 0.25, 0.5, 0.75, 1.0 and 1.5 lower all cleared the speck at the
+hip, and the 0.5 and 1.0 renders, the two zoomed through the raise, also
+cleared its first frame; the fit's offset is now (0, -1.25, 0), 0.5 lower,
+for margin over the 0.25 that just cleared the hip. The thumb still rests
+on the guard's edge and the index finger stays hidden. Still present: about a
+third to a half of the way through the raise, a shorter streak of fingertip
+shows along the guard's front edge, because the tilt and the offset fade out
+together; lowering the hand up to 1.5 shortened it but did not remove it.
+Changing how the tilt fades was not attempted.
+
+The AR33's thumb (eleventh revision): the owner asked why the thumb tip
+looked pointy. Two causes were found. The closed fist is the game's original
+low-polygon hand, whose thumb narrows to a single vertex at its tip; a render
+with the hand moved clear of the gun showed the same point. And the hand guard
+hides the inner half of the thumb, so only a sliver cut diagonally by the
+guard's edge shows. Reshaping the thumb's tip was offered and declined for
+now. The owner asked instead for renders of the hand moved left in small
+steps, to show more thumb with less clipping. Of 0.25, 0.5, 0.75, 1.0 and 1.5
+left: 0.25 and 0.5 showed slightly more thumb with nothing new through the
+guard; at 0.75 an index fingertip showed as a streak on the guard at the hip,
+at 1.0 the finger cut through the guard's edge, and at 1.5 the thumb and
+index finger both showed, mostly beside the guard. The owner chose 0.25, so
+the fit's offset is (0.25, -1.25, 0). The thumb tip is still pointed, and the
+mid-raise streak above is unchanged.
+
+Dual wielding: the first version hid both arms the moment a left gun was
+equipped, so with the All Guns cheat picking a 2x gun popped the support hand
+away in one frame (and back on return). Of the options offered (fade, lower the
+support arm, lower it and keep the trigger hand), the owner chose the last:
+`sAdsSupportHold` per player eases over 300 ms towards 0 while a left gun is
+equipped and back to 1 after, and `adsSupportLowered` moves the whole support
+arm rigidly down, a little left and towards the eye by a smoothstep of that
+hold, out of view before the second gun rises from the lower left. The right
+gun keeps its trigger hand; the left gun has none (it is a mirrored model and
+would need its own grip). The RC-P90, support hand only, shows no arms while
+lowered. `portAdsHandsTick` runs at the top of `portAdsTick`, which returns
+early when dual wielding. `GE_HIP_DUAL_AUDIT=<item>` (`joy_port.c`) takes up
+and puts away the second gun, capturing every 4 ticks; a Klobb run showed the
+hand leave in about four frames and return after the left gun lowered.
+
+The rocket launcher's lettering flicker came from this feature. The stock gun
+draws without depth testing, in its authored painter's order, so its coplanar
+lettering and arrow, drawn after the tube, always show. Hip-Fire Arms put the
+gun into the compressed first-person depth layer at the hip, where that
+overlay, fractionally under the curved tube, lost the depth test and flickered
+or vanished as the gun moved (switching the decal pull and clip off changed
+nothing; `LEQUAL` alone fixed only part of it). Now, whenever a long gun has
+generated arms and the ADS blend is below 1, its own draw keeps painter's order
+with depth writes, and the arms draw after it, testing against that depth. A
+settled ADS keeps the depth-tested gun with opaque arms drawn first, as before,
+because from behind the gun the authored order paints a sliver of the Klobb's
+grip and the rocket's lettering over nearer parts.
+
+**Hooks:** `gunfire.c`'s first-person loop gates the arms on
+`portAdsHandAlpha(item)` instead of `portAdsBlend()`, and `gunPainter` (arms
+and blend below 1) brackets the gun's draw with `portAdsGunPainterTag` and
+draws the arms after it, with one `portAdsDrawHandsBehindGun` call before the
+opening tag for a hip support hand the gun is to cover; a settled ADS keeps the
+old order (inside
+`#ifndef TARGET_N64`; the unused grip locals there are removed). The renderer
+(`gfx_pc.cpp`) decodes G_NOOP `0x64` into `s_GeGunPainter`, which clears the
+depth compare (so `GL_ALWAYS`, writes kept) while set, beside FORK-058's
+`0x5E`-`0x63` viewmodel tags; it applies to every backend through the shared
+depth state. In
+`ads_hands.c`, `adsNativePose` now wraps `adsArmPose` with `adsElbow` (the
+same elbow expressions) and `adsArmPose` takes the support hand's added roll
+and tilt (both 0 in ADS; `adsBackTerm` holds the shared back-vector seed and
+`AdsArmPose` carries the girth, wrist scale and elbow frame for
+`adsGripPoint`, 1 and unused in ADS, with `adsWristPoint` applying the wrist
+scale ahead of the rigid branch); `adsHipPose`, `sAdsHipGrips`, the option and `portAdsHandAlpha`
+are new, `sAdsArmProfile`'s hand scale is 0.065, the sniper's `sAdsGrips`
+support point moved, and `portAdsDrawHands` builds
+both grips in one loop (now in `adsDrawHands`, shared with the behind-the-gun
+pass). The option
+registers in `joy_port.c`'s dispatch, `port_options.c`, the folder (`front.c`)
+and watch (`port_watchpages.c`) Aiming and Movement rows after Knife ADS, help
+(`port_option_help.c`, which also names it in the page description),
+`tools/midas_ini_help.txt`, the default midas.ini writer (`video.c`) and
+README.md. `audit_ads.ps1` gains `-HipArms` (its blend-0 transition frames are
+the hip poses). The hand gallery (FORK-022) gains 36 hip-arms cells.
+
+**Input:** an ordinary toggle row; keyboard, mouse, gamepad and touch adjust
+it like any other.
+
+**Sources:** [arms](port/src/ads_hands.c), [declarations and the opacity
+rule](port/include/port_ads.h), the [renderer tag](port/fast3d/gfx_pc.cpp)
+(`s_GeGunPainter`), [contract](scripts/port/arm_rendering.md) and
+the [ROM-free test](scripts/port/test_hip_arms.c) (included by `test_ads.c`).
+
+**Checks:** `test_ads.sh` (with the new Hip-Fire Arms checks for all 14 grip
+pairs, the hip fits, the painter's-order tag, the dual-wield slide and the
+0.065 scale) and
+`test_wardrobe.sh` passed in the `goldeneye` container; `settings_placement.py`,
+`test_hand_gallery.py` and the Bright Builds checks passed. The Windows build
+succeeded; the renderer change is not built for the browser locally. Runway
+audits with `-HipArms -Transitions` (blue wardrobe) captured all 23 ADS guns
+and 253 transition frames each round; the 14 long guns' hip frames (zoomed on
+the support hands), the settled ADS contact sheet, the KF7 raise and the
+mid-transition overview were reviewed, and the pistols matched the setting-off
+run. Rocket captures with the setting off and on, and after each fix, showed
+the lettering missing at the hip before the fix and complete after it. The
+regenerated gallery verified all 108 views and 38 icons in both passes. Of the
+original 72 images, exactly the 12 KF7/Klobb ADS fork views changed (the larger
+hands); the rest, including every stock cell, are byte-identical. Of the 36 new
+cells, only the KF7 and Klobb fork cells show arms.
+
+For the KF7's behind-the-gun hand (2026-11-12): `test_ads.sh` (now also
+checking that only the KF7's fit is behind and which hands each pass draws) and
+`test_wardrobe.sh` passed, and the Windows build succeeded. A Runway KF7 audit
+of the built exe (`-HipArms -Transitions`, blue) matched the chosen render in
+all 11 transition frames, apart from one to three scattered scenery pixels in
+four of them; a tuxedo run also captured. The regenerated gallery changed
+exactly the six KF7 hip-arms fork cells and verified all 108 views and 38
+icons. The owner's play-test approved it; the browser build is not run
+locally.
+
+For the AR33's tilted hand (2026-11-12): `test_ads.sh` (now also checking that
+only the AR33's fit tilts, that the tilt leans the support hand's axis towards
+the gun's up without moving its palm or elbow, leaves the trigger hand alone
+and is gone at a settled ADS) and `test_wardrobe.sh` passed, and the Windows
+build succeeded. Runway AR33 audits of the built exe (`-HipArms -Transitions`,
+blue and tuxedo) were compared by eye with the chosen render at the hip and at
+two raise frames and matched; captures taken under different load land on
+different frames, so they were not compared pixel for pixel. The gallery has no
+AR33 cell: regenerating it for the changed source changed no image and it
+verified all 108 views and 38 icons. The owner's play-test asked for the
+changes below.
+
+For the AR33's hidden index finger and fuller forearm (2026-11-12):
+`test_ads.sh` (now also checking that only the AR33's fit sets a girth, that it
+fades with the raise, that the tilted forearm's elbow cross-section lies in
+the untilted palm-up frame at that girth, and that the hand, wrist seam,
+elbow point and trigger hand map as before) and `test_wardrobe.sh` passed, and
+the Windows build succeeded. Runway AR33 audits of the built exe (`-HipArms
+-Transitions`, blue and tuxedo) matched the chosen render by eye at the hip and
+through the raise, and their fully aimed frames looked alike. The
+regenerated gallery changed no image and verified all 108 views and 38 icons,
+so the KF7 and Klobb arms, which share the forearm mapping, are pixel for pixel
+as before. The owner's play-test asked for the thicker wrist below.
+
+For the AR33's thicker wrist (2026-11-14): `test_ads.sh` (now also checking
+that only the AR33's fit sets a wrist scale, 1.5 by 1.25; that it fades with
+the raise and is exactly 1 fully aimed and on the trigger hand; that the grip
+ahead of the heel, the arm's centre line and the elbow are untouched; that the
+scale is whole at the wrist and half midway along the heel; that hand, cuff
+and watch points at the wrist move as one along the hand's back and side; and
+that the sleeve meets the scaled cuff without a step) and `test_wardrobe.sh`
+passed, and the Windows build succeeded. Runway AR33 audits of the built exe
+(`-HipArms -Transitions`, blue and tuxedo) matched the chosen render by eye at
+the hip and through the raise, and their fully aimed frames looked alike. The
+regenerated gallery changed no image and verified all 108 views and 38 icons;
+it has no AR33 cell, so this shows only that the other guns' arms are as
+before. `bun scripts/bright-builds-check.ts all`, `settings_placement.py` and
+`test_hand_gallery.py` passed. The owner's play-test asked for the lower hand
+below.
+
+For the AR33's lower hand (2026-11-14): `test_ads.sh` and `test_wardrobe.sh`
+passed and the Windows build succeeded. Runway AR33 audits of the built exe
+(`-HipArms -Transitions`, blue and tuxedo) matched the 0.5-lower render by
+eye, and six-times zooms of the guard's top showed no fingertip at the hip or
+at the first raise frame in either wardrobe, with the shorter mid-raise streak
+described above. The regenerated gallery changed no image and verified all
+108 views and 38 icons (it has no AR33 cell).
+`bun scripts/bright-builds-check.ts all`,
+`settings_placement.py` and `test_hand_gallery.py` passed. The owner's
+play-test asked about the thumb, below.
+
+For the AR33's hand 0.25 left (2026-11-14): `test_ads.sh` and
+`test_wardrobe.sh` passed and the Windows build succeeded. Runway AR33 audits
+of the built exe (`-HipArms -Transitions`, blue and tuxedo) matched the chosen
+render by eye at the hip and at a third and a half raised. The regenerated
+gallery changed no image and verified all 108 views and 38 icons (it has no
+AR33 cell).
+`bun scripts/bright-builds-check.ts all`, `settings_placement.py` and
+`test_hand_gallery.py` passed. The owner then play-tested the Windows build
+and approved it. Other wardrobes and levels were not captured; the captures
+were standing stills, not walking; the browser build is not run locally.
+
 ### FORK-074 — Fog: turn the levels' distance fog off
 
 **Status:** Implemented on 2026-11-10 at the owner's request, built for
@@ -3560,7 +3939,7 @@ subsections, in both the Options folder and the watch:
 
 | Subsection | Settings |
 | --- | --- |
-| Aiming and Movement | Aim Mode, Knife ADS, ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Reload Speed (FORK-071), Leaning and Lean Tilt (FORK-073), Allow Noclip and Noclip View Distance (FORK-072), Sprint, Ludicrous Sprint |
+| Aiming and Movement | Aim Mode, Knife ADS, Hip-Fire Arms (FORK-075), ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Reload Speed (FORK-071), Leaning and Lean Tilt (FORK-073), Allow Noclip and Noclip View Distance (FORK-072), Sprint, Ludicrous Sprint |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction, Tracer Strength (FORK-062), Shotgun Tracers and Decorative Pellets (FORK-063) |
 | HUD Additions | Always Crosshair Size, Projectile Arc and Arc Impact Crosshair (FORK-069), Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
 | System | About / Build Info, Fonts (FORK-051, FORK-052), Fog (FORK-074), Crash Reporting (Windows/Linux) |
@@ -3644,7 +4023,8 @@ loudness taper, and Stereo Pan posts a native pan value that the mixer's
 equal-power table applies.
 
 **Audit:** `scripts/port/audit_hit_sound.ps1` runs an isolated Dam copy with
-music muted. `GE_HITSOUND_PROBE=<metres,...>` replays a hit at each distance from
+music muted. Since FORK-076, that copy also runs on SDL's silent `dummy`
+driver; the capture below still records the mixed output. `GE_HITSOUND_PROBE=<metres,...>` replays a hit at each distance from
 a stand-in character above Bond, with Hit Sounds off and then on, through the
 native impact and the confirmation hook. It does not fire a gun or apply damage.
 `GE_AUDIO_CAPTURE=<path.wav>` records the mixed 22050 Hz output before the
@@ -5637,7 +6017,12 @@ body radius and continuity at the boundary independently.
 The owner's 2026-11-02 request scales the Klobb, ZMG, regular shotgun and grenade
 launcher grips by a further 1.08x (`adsArmScale`): hand, wrist, cuff, watch and
 forearm grow together around the anchored palm origin, with the same 2.5 body
-profile; other long guns keep 0.052. The [arm contracts](scripts/port/arm_rendering.md)
+profile; other long guns keep the base scale. The owner's 2026-11-11 requests
+(with FORK-075) raise that base from 0.052 to 0.058 and then 0.065, about 25%
+in all, for every
+generated non-pistol hand and arm in ADS and at the hip; the 1.08 multiplier,
+body profile and elbow targets are unchanged, and the 0.052 figures below
+describe earlier checkpoints. The [arm contracts](scripts/port/arm_rendering.md)
 and pose tests record the per-weapon multiplier. The RC-P90 draws only its generated support
 hand in ADS (`adsGripHands`), at the owner's request: its trigger grip sits under
 the body, where the generated right hand read badly. The canted rocket
@@ -5683,6 +6068,8 @@ The original watch body, strap,
 face and moving hands accompany every added left ADS arm, driven by the same
 clock as the pause animation; the right arm has no watch.
 Native pistol/chop arms use the same forearm source (FORK-017).
+These arms show only while aiming unless Hip-Fire Arms (FORK-075) keeps them
+on at the hip.
 
 The pause model's bracelet has an open underside; a generated back completes
 it for left long-gun grips, using the original metal texture setup and measured
@@ -7329,8 +7716,14 @@ was left to CI.
 **Status:** Implemented.
 
 Added a local HTML review tool and generator absent from upstream. The matrix
-has 72 views: PP7, AK47/KF7 and Klobb; regular and settled ADS; original and fork
-models; blue, boiler, jungle, snow, tuxedo and Connery wardrobes. It includes all
+has 108 views: PP7, AK47/KF7 and Klobb; regular, settled ADS and regular with
+Hip-Fire Arms (FORK-075, added 2026-11-11; it raised the matrix from 72 views);
+original and fork models; blue, boiler, jungle, snow, tuxedo and Connery
+wardrobes. The 72 regular/ADS cases keep their original order and game
+timeline and the 36 hip-arms cases follow (`joyPortHandGallery` case
+arithmetic, `MODES` in the generator, mirrored in `test_hand_gallery.py`): the
+shiny guns' level reflection drifts a few colour steps with game time, and an
+interleaved order failed the repeat check on a PP7 cell. It includes all
 38 native generated icons (weapons, the watch laser, the tank, the rifle butt and
 wardrobe-specific chopping arms, grouped separately); the tank was added with
 icon cache version 7 and the rifle butt with version 9.
@@ -7342,7 +7735,7 @@ same fixed fork camera/ADS pose. It is not an upstream ADS implementation or an
 old executable. The environment-only `GE_HAND_GALLERY` audit fixes pose, wardrobe,
 lighting and clock hands, with a neutral backdrop; normal gameplay is unaffected.
 The generator rebuilds current sources, uses isolated settings and caches, then
-requires exact repeated samples and a second independent 72-view process pass
+requires exact repeated samples and a second independent full-matrix process pass
 before publishing. Icon preparation retains its own repeated-pixel check.
 The input fingerprint also covers CMake presets, generated-header templates
 under the source roots and the three always-linked asset C objects, including

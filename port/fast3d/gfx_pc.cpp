@@ -528,6 +528,11 @@ static bool s_GeGlint = false, s_GeGlintBlock = false;
 static float s_GeGlintAds = 0.0f;
 /* FORK-058: the level's sky colour (G_NOOP 0x60), the reflection cube's empty space */
 static uint8_t s_GeSkyRGB[3] = { 0, 0, 0 };
+/* FORK-075: inside a long gun's own draw in the first-person depth layer
+ * (G_NOOP 0x64, ads_hands.c): no depth compare, so the gun keeps the stock
+ * unbuffered painter's order (its coplanar overlays always show), while its
+ * depth writes stay for the generated arms drawn after it */
+static bool s_GeGunPainter = false;
 /* FORK-058: the current batch's glint triangles (15 floats per corner, gfx_glint.inl) */
 static std::vector<float> s_GlintBuf;
 /* FORK-066: inside a glass draw (G_NOOP 0x63, port_glass.c), its kind (port_glass.h), 0 = none;
@@ -4378,6 +4383,8 @@ ndcprobe_done:;
     depth_update = (rdp.other_mode_l & Z_UPD) == Z_UPD;
     depth_compare = (rdp.other_mode_l & Z_CMP) == Z_CMP;
     depth_source_prim = (rdp.other_mode_l & G_ZS_PRIM) == G_ZS_PRIM /* && gDP.primDepth.z == 1.0f */;
+    /* FORK-075: the long gun keeps the stock painter's order, still writing depth */
+    depth_compare = depth_compare && !s_GeGunPainter;
     zmode = rdp.other_mode_l & ZMODE_DEC;
     depth_mode = (depth_test ? 1 : 0) | (depth_update ? 2 : 0) | (depth_compare ? 4 : 0) | (depth_source_prim ? 8 : 0) | (zmode >> 6);
 
@@ -8162,6 +8169,11 @@ static void gfx_run_dl(Gfx* cmd) {
                     /* FORK-058: a draw that never takes the glint (sleeve, native hand) */
                     gfx_flush();
                     s_GeGlintBlock = (cmd->words.w1 & 1u) != 0;
+                } else if ((cmd->words.w1 >> 24) == 0x64u) {
+                    /* FORK-075: long-gun painter's order on / off (ads_hands.c) */
+                    gfx_flush();
+                    s_GeGunPainter = (cmd->words.w1 & 1u) != 0;
+                    ge_state_serial++; /* the depth state derives from it */
                 } else if ((cmd->words.w1 >> 24) == 0x63u) {
                     /* FORK-066: glass span, kind or 0 (port_glass.c) */
                     gfx_flush(); /* draws before the tag belong outside the span */

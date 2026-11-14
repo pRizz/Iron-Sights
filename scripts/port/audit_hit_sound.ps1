@@ -17,7 +17,7 @@ Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destinat
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]', 'fullscreen=window', 'vsync=0', 'maxfps=60',
     'tickhz=60', 'render_thread=0', 'msaa=0', 'music_volume=0', 'sfx_volume=100', 'hit_sounds=1')
 $hits = @($Metres.Split(',')).Count * 2
-$auditEnv = @{
+$auditEnv = @{ SDL_AUDIODRIVER='dummy';
     GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW='640x480'; GE_NOINPUT='1'; GE_SEED='1';
     GE_STAGE='dam'; GE_STAGE_AFTER='1'; GE_SKIPINTRO='1'; GE_CHEATS='invuln,invis';
     GE_HITSOUND_PROBE=$Metres; GE_AUDIO_CAPTURE=(Join-Path $dir 'capture.wav');

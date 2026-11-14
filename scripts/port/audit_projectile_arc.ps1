@@ -45,7 +45,7 @@ Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destinat
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]', 'fullscreen=window', 'vsync=0', "maxfps=$MaxFps",
     'tickhz=60', 'render_thread=0', 'msaa=0', 'music_volume=0', 'sfx_volume=0')
 $pitches = @($Pitch.Split(',')).Count
-$auditEnv = @{
+$auditEnv = @{ SDL_AUDIODRIVER='dummy';
     GE_ROM=$rom; GE_WINDOW=$Resolution; GE_NOINPUT='1'; GE_SEED='1';
     GE_STAGE=$Stage; GE_STAGE_AFTER='1'; GE_SKIPINTRO='1'; GE_CHEATS='invuln,invis,guns';
     GE_ARC_AUDIT=$(if ($Mode -eq 'gl') { '1' } else { $Mode }); GE_ARC_AUDIT_PITCH=$Pitch;

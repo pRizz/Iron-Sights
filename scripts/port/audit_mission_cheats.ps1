@@ -22,7 +22,7 @@ Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]','full
 $xs=@(73,142,212,282,352)
 $ys=@(62,131,201,270)
 $cursor=if ($Menu -eq 'Missions') { "$($xs[$Mission%5]),$($ys[[int][Math]::Floor($Mission/5)])" } else { "200,$(186+30*$HoverDifficulty)" }
-$auditEnv=@{
+$auditEnv=@{ SDL_AUDIODRIVER='dummy';
     GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$Resolution; GE_NOINPUT='1';
     GE_MENU=$(if ($Menu -eq 'Missions') {'imissions'} else {'jdifficulty'}); GE_CURSOR=$cursor;
     GE_MISSION_CHEAT_AUDIT="$Mission,$([int][bool]$Earned),$([int](!$LockedDifficulty)),$($BestTimes -join ',')";

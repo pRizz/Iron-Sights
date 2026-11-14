@@ -23,6 +23,12 @@ RECIPE = dict(version=1, width=960, height=540, seed=1, tick_hz=60, fov=90,
               stock_reference='Original models in the same fork camera/ADS pose; upstream has no ADS.')
 WARDROBES = ('blue', 'boiler', 'jungle', 'snow', 'tuxedo', 'connery')
 WEAPONS = ((4, 'pp7', 'PP7 pistol'), (8, 'ak47', 'AK47 / KF7'), (7, 'klobb', 'Klobb'))
+# hip_arms is a regular hip pose with Hip-Fire Arms (FORK-075) on; stock cells
+# and the PP7, which has native hands, match their regular cells. The original
+# 72 regular/ADS cases keep their order and game timeline; the 36 hip_arms
+# cases follow (joyPortHandGallery uses the same order).
+MODES = ('regular', 'ads', 'hip_arms')
+CASES = len(WARDROBES) * len(WEAPONS) * len(MODES) * 2
 ICON_NAMES = [None, 'unarmed', 'knife', 'throwing_knife', 'pp7', 'pp7_silenced', 'dd44',
               'klobb', 'kf7', 'zmg', 'd5k', 'd5k_silenced', 'phantom', 'ar33', 'rcp90',
               'shotgun', 'automatic_shotgun', 'sniper_rifle', 'cougar_magnum', 'golden_gun',
@@ -114,8 +120,8 @@ def cases():
                  file=f'images/{wardrobe}/{weapon}-{mode}-{variant}.png')
             for i, (wardrobe, item, weapon, label, mode, variant) in enumerate(
                 (w, item, key, label, mode, variant)
-                for w in WARDROBES for item, key, label in WEAPONS
-                for mode in ('regular', 'ads') for variant in ('stock', 'fork'))]
+                for modes in (MODES[:2], MODES[2:]) for w in WARDROBES for item, key, label in WEAPONS
+                for mode in modes for variant in ('stock', 'fork'))]
 
 
 def png_chunk(kind, payload):
@@ -237,13 +243,13 @@ def run_game(exe, rom, directory, cache, name, gallery=False):
                         match = re.search(r'gfx: wrote (shot_\d+\.bmp)', line)
                         if match and pending:
                             captures[pending] = directory/match[1];pending = None
-                    for case_id in range(72):
+                    for case_id in range(CASES):
                         if case_id not in checked and (case_id, 1) in captures and (case_id, 2) in captures:
                             if bmp_pixels(captures[case_id, 1]) != bmp_pixels(captures[case_id, 2]):
                                 raise ValueError('Non-deterministic repeated pose: '+cases()[case_id]['file'])
                             checked.add(case_id)
                             if len(checked) % 12 == 0:
-                                print(f'  {name}: {len(checked)}/72 cases verified', flush=True)
+                                print(f'  {name}: {len(checked)}/{CASES} cases verified', flush=True)
                 time.sleep(.25)
             if process.returncode:
                 raise ValueError(f'Game capture exited {process.returncode}; see {directory.parent}')
@@ -260,13 +266,14 @@ def run_game(exe, rom, directory, cache, name, gallery=False):
 def capture_pass(log, directory):
     captured, pending = {}, None
     for line in log.splitlines():
-        match = re.search(r'hand-gallery capture case=(\d+) sample=(\d+) item=(\d+) wardrobe=(\d+) ads=(\d+) stock=(\d+)', line)
+        match = re.search(r'hand-gallery capture case=(\d+) sample=(\d+) item=(\d+) wardrobe=(\d+) ads=(\d+) stock=(\d+) hip=(\d+)', line)
         if match:
             if pending:
                 raise ValueError('A gallery capture was skipped')
-            case_id, sample, item, wardrobe, aiming, stock = map(int, match.groups())
+            case_id, sample, item, wardrobe, aiming, stock, hip = map(int, match.groups())
             case = cases()[case_id]
-            if (item, wardrobe, aiming, stock) != (case['weapon_id'], case_id//12, int(case['mode']=='ads'), int(case['variant']=='stock')):
+            if (item, wardrobe, aiming, stock, hip) != (case['weapon_id'], WARDROBES.index(case['wardrobe']),
+                    int(case['mode']=='ads'), int(case['variant']=='stock'), int(case['mode']=='hip_arms')):
                 raise ValueError('Capture does not match its matrix coordinates')
             pending = case_id, sample
         match = re.search(r'gfx: wrote (shot_\d+\.bmp)', line)
@@ -275,8 +282,8 @@ def capture_pass(log, directory):
                 raise ValueError('Duplicate capture')
             captured[pending] = bmp_pixels(directory/match[1])
             pending = None
-    if pending or len(captured) != 144 or 'hand-gallery complete cases=72 samples=144' not in log:
-        raise ValueError('Incomplete 72-case gallery; inspect local capture logs')
+    if pending or len(captured) != 2*CASES or f'hand-gallery complete cases={CASES} samples={2*CASES}' not in log:
+        raise ValueError(f'Incomplete {CASES}-case gallery; inspect local capture logs')
     for case in cases():
         if captured[case['id'], 1] != captured[case['id'], 2]:
             raise ValueError('Non-deterministic repeated pose: ' + case['file'])
@@ -342,7 +349,7 @@ def verify(root=ROOT, staged=False):
         raise ValueError('Gallery is stale for these rendering inputs; regenerate references')
     if not manifest.get('repeat_verified') or not manifest.get('independent_pass_verified'):
         raise ValueError('Unverified render determinism')
-    if [{k: row[k] for k in case} for row, case in zip(manifest['cases'], cases())] != cases() or len(manifest['cases']) != 72:
+    if [{k: row[k] for k in case} for row, case in zip(manifest['cases'], cases())] != cases() or len(manifest['cases']) != CASES:
         raise ValueError('Matrix coordinates/coverage changed')
     if [(row['id'], row['name']) for row in manifest['icons']] != [(i, name) for i, name in enumerate(ICON_NAMES) if i and name]:
         raise ValueError('Icon coverage changed')
@@ -422,7 +429,7 @@ def generate(root=ROOT, executable=None):
     output = work/'published'
     output.mkdir()
     try:
-        print(f'Regenerating all {ICON_COUNT} native icons and capturing 72 cases (two samples each) '
+        print(f'Regenerating all {ICON_COUNT} native icons and capturing {CASES} cases (two samples each) '
               'in two independent passes, side by side...', flush=True)
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(games)) as pool:
             runs = {name: pool.submit(run_game, game/exe.name, rom, game, work/('cache-'+name), name, name != 'icons')
@@ -516,7 +523,7 @@ def main():
             generate(executable=args.executable)
         elif args.command == 'verify':
             verify(staged=args.index)
-            print(f'Gallery verified: 72 matrix cells, {ICON_COUNT} icons, input/pixel/file hashes and generated HTML.')
+            print(f'Gallery verified: {CASES} matrix cells, {ICON_COUNT} icons, input/pixel/file hashes and generated HTML.')
         elif args.command == 'install-hook':
             install_hook()
         else:

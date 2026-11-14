@@ -2172,10 +2172,12 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
         struct hand *handptr = &g_CurrentPlayer->hands[handnum];
         s32 item = get_item_in_hand_or_watch_menu(handnum);
 #ifndef TARGET_N64
-        coord3d trigger, support;
         Mtxf gunProjection;
-        s32 adsHands = handnum == GUNRIGHT && portAdsBlend() > 0.0f
-            && portAdsHandGrips(item, &trigger, &support);
+        /* Generated long-gun arms: with the ADS blend, or always with Hip-Fire Arms (FORK-075). */
+        s32 adsHands = handnum == GUNRIGHT && portAdsHandAlpha(item) > 0.0f;
+        /* Below a settled ADS the long gun keeps its stock painter's order
+         * (written for the hip camera), with its arms drawn after it. */
+        s32 gunPainter = adsHands && portAdsBlend() < 1.0f;
         s32 armDepth = adsHands || portWardrobeDepthRequired(item);
         /* Raise the rifle into the eye, then look through the optic. Keep the
          * simulation and firing updates running while hiding gun and hands. */
@@ -2250,8 +2252,15 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
             gSPSetGeometryMode(renderdata.gdl++, G_ZBUFFER);
             renderdata.gdl = portAdsBeginHandLayer(renderdata.gdl,
                 wfov ? &gunProjection : currentPlayerGetProjectionMatrixF());
-            if (adsHands && portAdsBlend() == 1.0f) {
+            if (adsHands && !gunPainter) {
                 renderdata.gdl = portAdsDrawHands(renderdata.gdl, item, &handptr->gunmtx_camspace);
+            }
+            /* FORK-075: the gun draws in painter's order but writes depth;
+             * its generated arms follow and test against it, except a hip
+             * support hand that the gun is to cover. */
+            if (gunPainter) {
+                renderdata.gdl = portAdsDrawHandsBehindGun(renderdata.gdl, item, &handptr->gunmtx_camspace);
+                renderdata.gdl = portAdsGunPainterTag(renderdata.gdl, TRUE);
             }
         }
 #endif
@@ -2299,12 +2308,11 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
         gdl = renderdata.gdl;
 
 #ifndef TARGET_N64
-        if (adsHands) {
-            /* Fading hands need the opaque gun underneath before their depth
-             * and colour passes; keep the established opaque ADS order. */
-            if (portAdsBlend() < 1.0f) {
-                gdl = portAdsDrawHands(gdl, item, &handptr->gunmtx_camspace);
-            }
+        if (gunPainter) {
+            gdl = portAdsGunPainterTag(gdl, FALSE);
+            /* Hip and transition hands follow the gun and test against its
+             * depth; fading ones also need it underneath to blend over. */
+            gdl = portAdsDrawHands(gdl, item, &handptr->gunmtx_camspace);
         }
         if (armDepth) {
             gdl = portAdsEndHandLayer(gdl, currentPlayerGetProjectionMatrix());

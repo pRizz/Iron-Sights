@@ -126,6 +126,7 @@ static void normalAim(s32 held, s32 pressed, s32 toggle)
 #include "test_projectile_arc_thrown.c"
 #include "test_settle_ticks.c"
 #include "test_hand_layer.c"
+#include "test_hip_arms.c"
 
 int main(void)
 {
@@ -151,9 +152,8 @@ int main(void)
     testProjectileArc();
     testProjectileArcThrown();
     testSettleTicks();
-    testSprint();
-    testLudicrousSprint();
-    testHandLayerEnd();
+    testSprint(); testLudicrousSprint();
+    testHandLayerEnd(); testHipArms(); /* FORK-075 */
     { /* The support palm faces up under the gun. The watch follows that
        * roll rather than being billboarded towards the camera. */
         Mtxf gun = {.m={{-1,0,0,0},{0,1,0,0},{0,0,-1,0},{0,-4,-42,1}}};
@@ -195,9 +195,9 @@ int main(void)
                         nativeLength+=(a.f[d]-b.f[d])*(a.f[d]-b.f[d]);
                         posedLength+=(pa.f[d]-pb.f[d])*(pa.f[d]-pb.f[d]);
                     }
-                    /* (.052*16*scale)^2; four thin-armed guns use 1.08 (owner request). */
+                    /* (.065*16*scale)^2; four thin-armed guns use 1.08 (owner request). */
                     assert(armScale == 1.0f || armScale == 1.08f);
-                    assert(posedLength/nativeLength>.691f*armScale*armScale && posedLength/nativeLength<.694f*armScale*armScale);
+                    assert(posedLength/nativeLength>1.080f*armScale*armScale && posedLength/nativeLength<1.083f*armScale*armScale);
                     /* Enlarging the rigid grip keeps the palm origin anchored
                      * to the weapon instead of shifting its contact point. */
                     a=(coord3d){0,0,0};
@@ -214,7 +214,7 @@ int main(void)
                     adsGripPoint(&a,&pa,PORT_ARM_FOREARM,&space,&arm);
                     posedLength=0;
                     for (s32 d=0;d<3;d++) posedLength+=(pa.f[d]-elbow.f[d])*(pa.f[d]-elbow.f[d]);
-                    assert(posedLength>432.62f*armScale*armScale && posedLength<432.66f*armScale*armScale); /* (10*.052*16*2.5*scale)^2 */
+                    assert(posedLength>675.96f*armScale*armScale && posedLength<676.04f*armScale*armScale); /* (10*.065*16*2.5*scale)^2 */
                     /* Forearm shaping must never change a hand or watch,
                      * even for points outside the protected wrist band. */
                     adsGripPoint(&a,&pa,PORT_ARM_HAND,&space,&arm);

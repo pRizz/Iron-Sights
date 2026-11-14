@@ -12,13 +12,13 @@
 <h1>Hands, wrists &amp; weapons</h1>
 <p>A repeatable visual matrix for checking grip shape, skin continuity, sleeve coverage and weapon alignment. Click an image for full-resolution inspection; use the filters to narrow the comparison.</p>
 <nav aria-label="Gallery sections"><a href="#matrix">Weapon matrix</a><a href="#hands">Wardrobe hand icons</a><a href="#icons">Other weapon icons</a><a href="#provenance">Render provenance</a></nav>
-<div class="stats"><span><strong>72</strong> weapon views</span><span><strong>6</strong> wardrobes</span><span><strong>35</strong> native icon renders</span><span><strong>2 × 2</strong> repeat checks</span></div>
+<div class="stats"><span><strong>108</strong> weapon views</span><span><strong>6</strong> wardrobes</span><span><strong>38</strong> native icon renders</span><span><strong>2 × 2</strong> repeat checks</span></div>
 <div class="notice">Stock is a native-model control rendered in the same fork camera and aim pose. Upstream has no ADS mode. “Fork” shows the current wardrobe/arm treatment; this is not a comparison with a separately built upstream executable.</div>
 <section id="matrix" aria-label="Weapon comparison matrix">
 <div class="controls">
 <label>Weapon<select id="weapon"><option value="all">All weapons</option><option value="pp7">PP7 pistol</option><option value="ak47">AK47 / KF7</option><option value="klobb">Klobb</option></select></label>
 <label>Wardrobe<select id="wardrobe"><option value="all">All wardrobes</option><option>blue</option><option>boiler</option><option>jungle</option><option>snow</option><option>tuxedo</option><option>connery</option></select></label>
-<label>Aim mode<select id="mode"><option value="all">Regular + ADS</option><option value="regular">Regular</option><option value="ads">ADS</option></select></label>
+<label>Aim mode<select id="mode"><option value="all">Regular + ADS + Hip Arms</option><option value="regular">Regular</option><option value="ads">ADS</option><option value="hip_arms">Hip-Fire Arms</option></select></label>
 <label>Reference<select id="variant"><option value="all">Stock + fork</option><option value="stock">Stock only</option><option value="fork">Fork only</option></select></label>
 <button id="pixels" type="button" aria-pressed="false">Pixel inspection</button><span id="count" aria-live="polite"></span>
 </div>
@@ -39,7 +39,7 @@ let selected=null;
 function element(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function openImage(row){selected=row;$('view-title').textContent=row.label?`${title(row.wardrobe)} / ${row.label} / ${title(row.mode)} / ${title(row.variant)}`:title(row.name);$('view-image').src=row.file;$('view-image').alt=$('view-title').textContent;$('view-image').style.width='100%';$('zoom').value=100;$('view-meta').textContent=`${row.width} × ${row.height} · pixel SHA256 ${row.pixels_sha256}`;$('peer').hidden=!row.variant;if(!$('dialog').open)$('dialog').showModal();}
 function render(){
- const modes=$('mode').value==='all'?['regular','ads']:[$('mode').value],variants=$('variant').value==='all'?['stock','fork']:[$('variant').value];
+ const modes=$('mode').value==='all'?['regular','ads','hip_arms']:[$('mode').value],variants=$('variant').value==='all'?['stock','fork']:[$('variant').value];
  const rows=data.cases.filter(r=>($('weapon').value==='all'||r.weapon===$('weapon').value)&&($('wardrobe').value==='all'||r.wardrobe===$('wardrobe').value)&&modes.includes(r.mode)&&variants.includes(r.variant));
  const table=$('matrix-table');table.replaceChildren();const head=document.createElement('thead'),line=document.createElement('tr');line.append(element('th','Wardrobe / weapon'));
  for(const mode of modes)for(const variant of variants)line.append(element('th',`${title(mode)} · ${variant==='fork'?'Fork':'Stock model'}`,'group'));head.append(line);table.append(head);

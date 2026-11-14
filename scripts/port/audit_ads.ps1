@@ -13,6 +13,7 @@ param(
     [switch]$HandDetails,
     [switch]$StockHands,
     [switch]$WeaponFov,
+    [switch]$HipArms,
     [ValidateSet(30,60,120,240)][int]$TickHz = 60,
     [ValidateSet('Butt','Tip')][string]$KnifeStyle = 'Butt',
     [switch]$KnifeThrows
@@ -40,8 +41,10 @@ Set-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value $settings
 if ($Item -eq 3) { Add-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value @('[display]', ('knife_ads='+[int]($KnifeStyle -eq 'Tip'))) }
 if ($Adzy) { Add-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value @('[display]','adzy=1') }
 if ($WeaponFov) { Add-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value @('[display]','weapon_fov=1') }
+# Hip-Fire Arms (FORK-075): with -Transitions the blend-0 frames show the hip arms.
+if ($HipArms) { Add-Content -LiteralPath (Join-Path $auditDir 'midas.ini') -Value @('[display]','hip_arms=1') }
 # The intro harness stops automatically once live gameplay owns input.
-$auditEnv = @{
+$auditEnv = @{ SDL_AUDIODRIVER='dummy';
     GE_ROM=$Rom; GE_WINDOW=$resolution; GE_NOINPUT='1'; GE_STAGE=$Stage; GE_STAGE_AFTER='1';
     GE_CHEATS='invuln,invis,guns'; GE_ADS_AUDIT='1';
     GE_SKIPINTRO='1'; GE_ARM_AUDIT='1';
