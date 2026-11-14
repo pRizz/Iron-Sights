@@ -42,6 +42,8 @@ s32 get_cur_playernum(void) { return testSeat; }
 s32 getPlayerCount(void) { return playerCount; }
 s32 portBondControlsLive(void) { return live; }
 Gfx *portNoclipDrawLabel(Gfx *g) { return g; } /* port_noclip.c (FORK-072), covered by test_ads */
+Gfx *portSprintIndicatorDraw(Gfx *g) { return g; } /* port_sprint_feedback.c (FORK-006), covered by test_ads */
+void portSprintFeedbackReset(s32 player) { (void) player; }
 s32 bondinvCountTotalItemsInInv(void) { return inventoryCount; }
 s32 bondinvGetTextbyInvIndex(s32 i) { return inventory[i]; }
 ITEM_IDS getCurrentPlayerWeaponId(GUNHAND hand) { return hand == GUNRIGHT ? currentWeapon : ITEM_UNARMED; }

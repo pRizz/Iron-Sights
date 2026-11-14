@@ -57,6 +57,7 @@
 #include "port_mission_hints.h"
 #include "port_mission_clock.h"
 #include "port_noclip.h"
+#include "port_sprint_feedback.h"
 extern f32 g_bondviewSceneWideFactor;
 extern s32 portAdzyMode(void); /* video.c: midas.ini [display] adzy - used twice in solo_char_load */
 extern s32 portReturnStartThisTick(void); /* video.c: START came from Return alone; weak 0 headless */
@@ -8193,6 +8194,17 @@ void bondviewProcessInput(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
                 ftemp_nostack_spE0 = adsFov;
             }
         }
+        else if (!moveData.zooming)
+        {
+            /* Sprint FOV (FORK-006): the fade already eases it, and each step
+             * is small enough that the zoom below lands on it the same tick.
+             * Capped so Crazy Wide over a wide base FOV stays sane. */
+            ftemp_nostack_spE0 *= portSprintFovScale();
+            if (ftemp_nostack_spE0 > 150.0f)
+            {
+                ftemp_nostack_spE0 = (GE_DEFAULT_FOV > 150.0f) ? GE_DEFAULT_FOV : 150.0f;
+            }
+        }
 #endif
         bondviewTriggerWatchZoom(ftemp_nostack_spE0);
         bondviewUpdateWatchZoomIn();
@@ -9684,6 +9696,7 @@ void MoveBond(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
     bondviewProcessInput(stick_x, stick_y, buttons, oldbuttons);
 #ifndef TARGET_N64
     portNoclipTick(); /* Noclip (FORK-072): take a press, start or end flight */
+    portSprintFeedbackTick(); /* FORK-006: the indicator / widening fade */
 #endif
 
     if (lvlGetControlsLockedFlag())

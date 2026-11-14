@@ -12,8 +12,8 @@
  *    the axis read, so Move/Look rows, raw/calibrated modes and C emulation all follow together.
  *  - Built-in layout (seeded per device from its SDL bindings, inputDefaultTokens): left stick
  *    move, right stick look, D-pad digital move, RT fire, LT aim, A use/confirm, X reload,
- *    Y/B prev/next gadget, LB/RB prev/next weapon and watch page, LS+RS click crouch toggle,
- *    Start pause. N64 A/B, C buttons and N64 D-pad are unbound (rebindable in the launcher).
+ *    Y/B prev/next gadget, LB/RB prev/next weapon and watch page, LS click sprint toggle,
+ *    RS click crouch toggle, Start pause. N64 A/B, C buttons and N64 D-pad are unbound (rebindable in the launcher).
  *    The fixed-map code path only serves pads whose SDL bindings failed to seed.
  *  - Analog: deadzone-rescaled (PD inputAxisScale), then scaled to the N64's +/-80 range, NOT
  *    PD's +/-127, because GE tuning constants (e.g. /70 saturation) assume real stick reach.
@@ -151,8 +151,8 @@ enum
     /* +19 mouse_unlock (never bound on a pad, but the order must match
      * joy_port's, checked at init),
      * +20 classic_toggle (Classic Mode bindable on a pad, as Tab is on the keyboard),
-     * +21 aim_down_sights (held, separate from R's red-target Aim); +26/+27 watch_up/watch_down, +28 noclip, +29/+30 noclip_up/noclip_down (FORK-072), +31/+32 lean_left/lean_right (FORK-073) */
-    PM_PORT_LAST = PM_PORT_FIRST + 32,
+     * +21 aim_down_sights (held, separate from R's red-target Aim); +26/+27 watch_up/watch_down, +28 noclip, +29/+30 noclip_up/noclip_down (FORK-072), +31/+32 lean_left/lean_right (FORK-073), +33 sprint_toggle (FORK-006) */
+    PM_PORT_LAST = PM_PORT_FIRST + 33,
     PM_COUNT
 };
 #define PM_PORT_COUNT (PM_PORT_LAST - PM_PORT_FIRST + 1)
@@ -178,6 +178,7 @@ static const char *sPadMapNames[PM_COUNT] =
     "watch_up", "watch_down",
     "noclip", "noclip_up", "noclip_down",
     "lean_left", "lean_right",
+    "sprint_toggle",
 };
 /* The raw (unmapped DInput) fallback layout of portInputPadMerge expressed as
  * map tokens, so the launcher, first-rebind seed and bind rows can describe it.
@@ -2463,7 +2464,7 @@ static int inputAxisInverted(SDL_GameController *c, SDL_GameControllerAxis a)
  *   aim, Y previous gadget,
  *   B next gadget, X reload, A use (= confirm in menus), Start pause, LB / RB
  *   previous / next weapon
- *   and watch page, LS + RS click crouch toggle.
+ *   and watch page, LS click sprint toggle, RS click crouch toggle.
  *   Unbound: N64 A and B, the C buttons, the N64 D-pad, L, walk / run / toggle,
  *   crouch hold, look_* buttons.
  *   (N64 A and B would double-act with the gadget buttons, e.g. stepping back a
@@ -2592,20 +2593,8 @@ static void inputDefaultTokensBuiltin(SDL_GameController *c, char tok[][16])
     DEF_BTN(DEF_PORT(6), SDL_CONTROLLER_BUTTON_RIGHTSHOULDER); /* next weapon */
     DEF_BTN(DEF_PORT(7), SDL_CONTROLLER_BUTTON_Y);             /* prev gadget */
     DEF_BTN(DEF_PORT(8), SDL_CONTROLLER_BUTTON_B);             /* next gadget */
-    DEF_BTN(DEF_PORT(9), SDL_CONTROLLER_BUTTON_LEFTSTICK);     /* crouch toggle: LS click ... */
-    inputBindToken(t2, 16, SDL_GameControllerGetBindForButton(c, SDL_CONTROLLER_BUTTON_RIGHTSTICK), 1);
-    if (t2[0] != '-')                                          /* ... or RS click */
-    {
-        if (tok[DEF_PORT(9)][0] == '-')
-        {
-            SDL_strlcpy(tok[DEF_PORT(9)], t2, 16);
-        }
-        else
-        {
-            SDL_strlcat(tok[DEF_PORT(9)], ",", 16);
-            SDL_strlcat(tok[DEF_PORT(9)], t2, 16);
-        }
-    }
+    DEF_BTN(DEF_PORT(33), SDL_CONTROLLER_BUTTON_LEFTSTICK);    /* sprint toggle: LS click */
+    DEF_BTN(DEF_PORT(9), SDL_CONTROLLER_BUTTON_RIGHTSTICK);    /* crouch toggle: RS click */
     DEF_BTN(DEF_PORT(11), SDL_CONTROLLER_BUTTON_LEFTSHOULDER);  /* watch prev page */
     DEF_BTN(DEF_PORT(12), SDL_CONTROLLER_BUTTON_RIGHTSHOULDER); /* watch next page */
     {   /* zoom in / out = Move stick up / down and the D-pad, as the shipped

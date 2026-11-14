@@ -150,6 +150,9 @@ static const s32 sKnifeAdsVals[] = { 0, 1 };
 static const char *const sKnifeAdsText[] = { "Butt Centered\n", "Tip Centered\n" };
 static const s32 sWeaponKickVals[] = { 0, 1, 2, 3 };
 static const char *const sWeaponKickText[] = { "Original\n", "Enhanced\n", "Ludicrous\n", "Cartoon\n" };
+/* Sprint FOV (FORK-006): how far the view widens while sprinting (port_sprint_feedback.h) */
+static const s32 sSprintFovVals[] = { 0, 1, 2, 3 };
+static const char *const sSprintFovText[] = { "Off\n", "Normal\n", "Wider\n", "Crazy Wide\n" };
 /* Reload Speed (FORK-071): a multiplier, 0 = Instant (port_reload_speed.h) */
 static const s32 sReloadSpeedVals[] = { 1, 2, 3, 5, 10, 0 };
 static const char *const sReloadSpeedText[] = { "Original\n", "2x\n", "3x\n", "5x\n", "10x\n", "Instant\n" };
@@ -360,6 +363,8 @@ static const struct PortOpt sOpts[] = {
     ENUMR ("noclip_view",        "[display]", "Noclip View Distance\n", PORTOPT_CAT_GAMEPLAY, sNoclipViewVals, sNoclipViewText, NULL), /* FORK-072 */
     TOGGLE("sprint",             "[display]", "Sprint\n",             PORTOPT_CAT_GAMEPLAY),
     TOGGLE("ludicrous_sprint",   "[display]", "Ludicrous Sprint\n",   PORTOPT_CAT_GAMEPLAY),
+    ENUMR ("sprint_fov",         "[display]", "Sprint FOV\n",         PORTOPT_CAT_GAMEPLAY, sSprintFovVals, sSprintFovText, NULL), /* FORK-006 */
+    TOGGLE("sprint_indicator",   "[display]", "Sprint Indicator\n",   PORTOPT_CAT_GAMEPLAY), /* FORK-006 */
     TOGGLE("sight_on_screen",    "[display]", "Sight on Screen\n",    PORTOPT_CAT_GAMEPLAY),
     TOGGLE("look_ahead",         "[display]", "Look Ahead\n",         PORTOPT_CAT_GAMEPLAY),
     TOGGLE("ammo_on_screen",     "[display]", "Ammo on Screen\n",     PORTOPT_CAT_GAMEPLAY),

@@ -152,7 +152,7 @@ int main(void)
     testProjectileArc();
     testProjectileArcThrown();
     testSettleTicks();
-    testSprint(); testLudicrousSprint();
+    testSprint(); testLudicrousSprint(); testSprintToggle(); testSprintFeedback();
     testHandLayerEnd(); testHipArms(); /* FORK-075 */
     { /* The support palm faces up under the gun. The watch follows that
        * roll rather than being billboarded towards the camera. */
@@ -286,7 +286,7 @@ int main(void)
     /* Appending upstream watch controls must not renumber saved fork bindings. */
     assert(PORTACT_AIM_DOWN_SIGHTS == 21 && PORTACT_STATE_MENU == 22);
     assert(PORTACT_QUICKSAVE == 23 && PORTACT_QUICKLOAD == 24 && PORTACT_UNDO_LOAD == 25);
-    assert(PORTACT_WATCH_UP == 26 && PORTACT_WATCH_DOWN == 27 && PORTACT_COUNT == 33);
+    assert(PORTACT_WATCH_UP == 26 && PORTACT_WATCH_DOWN == 27 && PORTACT_COUNT == 34);
     assert(strcmp(portJoyPortBindDefault(PORTACT_WATCH_UP), "Up") == 0);
     portJoyPortPadDown(0, PORTACT_WATCH_DOWN);
     portJoyPortPollCommit();

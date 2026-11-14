@@ -32,6 +32,7 @@
 #include "port_icon_cache_format.h"
 #include "port_wardrobe.h"
 #include "port_noclip.h"
+#include "port_sprint_feedback.h"
 #include "port/fast3d/hud_text_offset.h"
 #include "game/file.h"
 #include "boss.h"
@@ -96,6 +97,7 @@ void portHudReset(s32 player)
      * launch take over from names from here on. */
     portIconCacheLatch();
     if (player >= 0 && player < 4) memset(&phState[player], 0, sizeof(phState[player]));
+    portSprintFeedbackReset(player); /* FORK-006: no indicator or widening carried over */
 }
 
 void portHudHit(s32 attacker, s32 headshot)
@@ -494,6 +496,11 @@ Gfx *portHudEllipse(Gfx *g, f32 x, f32 y, f32 radiusX, f32 radiusY, f32 angle, f
     return phVector(g, 7, x, y, radiusX, radiusY, angle, outline, color);
 }
 
+Gfx *portHudChevrons(Gfx *g, f32 x, f32 y, f32 halfHeight, f32 stroke, u32 color)
+{
+    return phVector(g, 9, x, y, halfHeight, stroke, 0, 0, color);
+}
+
 Gfx *portHudDraw(Gfx *g)
 {
     const s32 p = get_cur_playernum();
@@ -520,6 +527,7 @@ Gfx *portHudDraw(Gfx *g)
 #endif
     if (phOptions[3]) g = phDrawStrip(g);
     g = portNoclipDrawLabel(g); /* FORK-072 */
+    g = portSprintIndicatorDraw(g); /* FORK-006 */
     if (phOptions[2] && h->toastCount && getPlayerCount() == 1) {
         const HudToast *t = &h->toasts[0];
         const s32 complete = t->status == OBJECTIVESTATUS_COMPLETE;

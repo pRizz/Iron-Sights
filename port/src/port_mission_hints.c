@@ -148,6 +148,8 @@ Gfx *portMissionHintsDraw(Gfx *gdl)
     portJoyPortOptionGet("sprint", &sprint);
     if (sprint && maybeHintBinding("walk", binding, sizeof(binding)))
         snprintf(rows[count++], sizeof(rows[0]), "Hold %s to sprint", hintBindingName(binding));
+    else if (sprint && maybeHintBinding("sprint_toggle", binding, sizeof(binding)))
+        snprintf(rows[count++], sizeof(rows[0]), "Press %s to sprint", hintBindingName(binding));
     if (!count) return gdl;
     hintWasShown = 1;
     fade = hintRemaining < 120.0f ? hintRemaining / 120.0f : 1.0f;

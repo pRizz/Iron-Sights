@@ -157,10 +157,17 @@ Aiming reticles, the sniper crosshair, the optional always-on crosshair,
 and the menu/watch target cursor use thin, smoothed lines and circles.
 Custom crosshair colors still apply. Directional damage indicators use smooth curves.
 
-Hold **Left Shift** while moving to sprint at 1.5 times normal speed.
+Hold **Left Shift** while moving to sprint at 1.5 times normal speed. On a
+controller, click the **left stick** to sprint until you stop moving, click again,
+aim or crouch; the right stick click crouches.
 **Gameplay > Iron Sights > Aiming and Movement > Sprint** is on by default; turn it off to
-restore Shift-to-walk at half speed. The **Walk / Sprint** control can be rebound.
+restore Shift-to-walk at half speed. The **Walk / Sprint** and **Sprint (Toggle)**
+controls can be rebound.
 Aiming and crouching prevent the sprint boost; ADS keeps its half-speed movement.
+While you sprint, the view widens slightly
+(**Aiming and Movement > Sprint FOV**: Off, Normal, Wider or Crazy Wide; Normal
+by default). **HUD Additions > Sprint Indicator**, off by default, also fades in
+small chevrons at the bottom of the screen.
 
 ADS steadies your aim. **Gameplay > Iron Sights > Aiming and Movement > ADS Spread**
 sets how much of a weapon's bullet spread remains while aiming down sights, and

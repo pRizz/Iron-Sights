@@ -164,6 +164,7 @@ static const struct PortWatchRowDef sIsAim[] = {
     { PWROW_OPT,       "noclip_view",      NULL, 0, 0 },
     { PWROW_OPT,       "sprint",           NULL, 0, 0 },
     { PWROW_OPT,       "ludicrous_sprint", NULL, 0, 0 },
+    { PWROW_OPT,       "sprint_fov",       NULL, 0, 0 },
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
 static const struct PortWatchRowDef sIsFeedback[] = {
@@ -181,6 +182,7 @@ static const struct PortWatchRowDef sIsHud[] = {
     { PWROW_OPT,       "ads_crosshair",    NULL, 0, 0 },
     { PWROW_OPT,       "projectile_arc",   NULL, 0, 0 },
     { PWROW_OPT,       "arc_crosshair",    NULL, 0, 0 },
+    { PWROW_OPT,       "sprint_indicator", NULL, 0, 0 },
     { PWROW_OPT,       "weapon_hud",       NULL, 0, 0 },
     { PWROW_OPT,       "weapon_hud_icons", NULL, 0, 0 },
     { PWROW_OPT,       "always_health",    NULL, 0, 0 },
@@ -372,6 +374,7 @@ static const struct PortBindDef sBindsPort[] = {
     { "Crouch (Hold)\n",     "crouch_hold",    "crouch_hold"    },
     { "Crouch (Toggle)\n",   "crouch_toggle",  "crouch_toggle"  },
     { "Walk / Sprint\n",     "walk",           "walk"           },
+    { "Sprint (Toggle)\n",   "sprint_toggle",  "sprint_toggle"  }, /* FORK-006: pads' L stick click */
     /* No Run / Walk-Run rows: they only existed to leave or flip Always Walk, which is gone */
     /* The look rows (at the top) have their own keyboard binds, so binding W to "move forward"
      * does not also bind it to "look up". */

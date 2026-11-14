@@ -4794,6 +4794,7 @@ static const struct PortSheetRow port_sheet_rows_is_aim[] = {
     { SHROW_OPT, "noclip_view" },             /* FORK-072: draw distance while flying */
     { SHROW_OPT, "sprint" },
     { SHROW_OPT, "ludicrous_sprint" },
+    { SHROW_OPT, "sprint_fov" },              /* FORK-006: the view widens while sprinting */
 };
 static const struct PortSheetRow port_sheet_rows_is_feedback[] = {
     { SHROW_OPT, "hit_markers" }, { SHROW_OPT, "hit_sounds" }, { SHROW_OPT, "damage_indicators" },
@@ -4805,6 +4806,7 @@ static const struct PortSheetRow port_sheet_rows_is_hud[] = {
     { SHROW_OPT, "ads_crosshair" },           /* FORK-060: that crosshair in ADS too */
     { SHROW_OPT, "projectile_arc" },          /* FORK-069: grenade and tank shell paths */
     { SHROW_OPT, "arc_crosshair" },           /* FORK-069: the always-on crosshair at the impact */
+    { SHROW_OPT, "sprint_indicator" },        /* FORK-006: chevrons while sprinting */
     { SHROW_OPT, "weapon_hud" }, { SHROW_OPT, "weapon_hud_icons" },
     { SHROW_OPT, "always_health" },
     { SHROW_OPT, "objective_notifications" },

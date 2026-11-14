@@ -6430,8 +6430,9 @@ static void gfx_draw_rectangle(int32_t ulx, int32_t uly, int32_t lrx, int32_t lr
 
 /* Shared screen-space line/curve renderer. Shape 0 is the hit marker, 1 the
  * small cross, 2 GE's ring target, 3 a directional damage arc, 4 a weapon
- * image, 5 a flat fill, 7 a filled or outlined ellipse and 8 the small cross
- * in dashes marching outward (FORK-069: an impact out of sight). */
+ * image, 5 a flat fill, 7 a filled or outlined ellipse, 8 the small cross
+ * in dashes marching outward (FORK-069: an impact out of sight) and 9 the
+ * Sprint Indicator's two chevrons (FORK-006). */
 static void gfx_ge_vector_overlay(float x, float y, uint32_t rgba, int shape = 0,
                                   float size_x = 1, float size_y = 1, float start = 0, float end = 0) {
     if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(size_x) || !std::isfinite(size_y)
@@ -6465,7 +6466,7 @@ static void gfx_ge_vector_overlay(float x, float y, uint32_t rgba, int shape = 0
      * under both the pinned HUD and full-width mouse-aim mapping. */
     const float scale_x = std::max(0.01f, std::abs(gfx_adjust_x_for_aspect_ratio(1)-gfx_adjust_x_for_aspect_ratio(0))
                                   * (float)gfx_current_dimensions.width / SCREEN_WIDTH);
-    const float marker_size = shape == 1 || shape == 2 || shape == 8 ? size_y : 1.0f;
+    const float marker_size = shape == 1 || shape == 2 || shape == 8 || shape == 9 ? size_y : 1.0f;
     const float half_width = std::max(1.0f, (shape == 3 ? 0.50f : 0.30f) * scale * marker_size) * 0.5f;
     const float feather = 0.7f;
     const RGBA color = {(uint8_t)(rgba >> 24), (uint8_t)(rgba >> 16), (uint8_t)(rgba >> 8), (uint8_t)rgba};
@@ -6539,6 +6540,15 @@ static void gfx_ge_vector_overlay(float x, float y, uint32_t rgba, int shape = 0
             if (b - a < 0.2f) continue;
             line(x+sign*a*size_x, y, x+sign*b*size_x, y);
             line(x, y+sign*a*size_y, x, y+sign*b*size_y);
+        }
+    } else if (shape == 9) {
+        /* Two right-pointing chevrons centred on x,y: size_x is each one's
+         * half height (and depth), size_y the stroke scale. */
+        const float h = size_x, pitch = 1.3f * size_x, tip0 = x - 0.5f * (pitch - h);
+        for (int k = 0; k < 2; k++) {
+            const float tip = tip0 + k * pitch;
+            line(tip - h, y - h, tip, y);
+            line(tip - h, y + h, tip, y);
         }
     } else if (shape == 3) {
         arc(size_x, size_y, start, end, false);

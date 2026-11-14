@@ -10,7 +10,8 @@ struct player *g_CurrentPlayer = &player;
 f32 g_GlobalTimerDelta = 1;
 static s32 live = 1, players = 1, owner, n64, lines, seat;
 static LEVELID stage = LEVELID_DAM;
-static const char *gadget = "Q", *ads = "Mouse Right", *dedicatedAds = "", *walk = "Left Shift";
+static const char *gadget = "Q", *ads = "Mouse Right", *dedicatedAds = "", *walk = "Left Shift",
+    *sprintToggle = "";
 static s32 aimMode = 1, aimToggle, sprint = 1;
 static char shown[3][160];
 static u32 textAlpha;
@@ -46,7 +47,8 @@ s32 portVideoIniGetKey(const char *action, char *buf, s32 size)
 {
     const char *text = !strcmp(action, "next_inventory") ? gadget
         : !strcmp(action, "r") ? ads
-        : !strcmp(action, "walk") ? walk : dedicatedAds;
+        : !strcmp(action, "walk") ? walk
+        : !strcmp(action, "sprint_toggle") ? sprintToggle : dedicatedAds;
     snprintf(buf, size, "%s", text);
     return 1;
 }
@@ -120,6 +122,12 @@ static void testLiveBindings(void)
     assert(draw() == 3 && !strcmp(shown[0], "tap right shoulder to change gadgets"));
     assert(!strcmp(shown[1], "hold left trigger to aim down sights"));
     assert(!strcmp(shown[2], "hold left shoulder to sprint"));
+    /* The shipped pad layouts: no held Walk, Sprint (Toggle) on the stick click. */
+    walk = "(unbound)"; sprintToggle = "L stick click";
+    assert(draw() == 3 && !strcmp(shown[2], "press l stick click to sprint"));
+    walk = "Left Shoulder"; assert(draw() == 3 && !strcmp(shown[2], "hold left shoulder to sprint"));
+    sprint = 0; assert(draw() == 2); sprint = 1;
+    sprintToggle = "";
     n64 = 1; assert(draw() == 0); n64 = 0;
     owner = 0; gadget = "Q"; ads = "Mouse Right";
     aimToggle = 1; assert(draw() == 3 && !strcmp(shown[1], "tap right mouse button to aim down sights")); aimToggle = 0;

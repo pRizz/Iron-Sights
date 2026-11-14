@@ -32,6 +32,10 @@
  *                  Aiming and crouching prevent sprinting; ADS keeps its own
  *                  half-speed movement.
  *                  Applied in MoveBond before knockback, for all input devices.
+ *   sprint_toggle  click to sprint (the controller layouts' left stick click):
+ *                  the same boost as a held Walk / Sprint, latched until the
+ *                  player stops moving, presses again, aims or crouches
+ *                  (port_sprint_toggle.h). Nothing while Sprint is off.
  *   prev/next weapon  moveData.weaponBackOffset / weaponForwardOffset in
  *                  bondviewProcessInput, exactly the A-tap / A+Z paths (gun.c
  *                  backstep_/advance_through_inventory), so the MP golden-gun lock
@@ -85,6 +89,8 @@
 #include "port_lean.h"
 #include "port_fog.h"
 #include "port_projectile_arc.h"
+#include "port_sprint_toggle.h"
+#include "port_sprint_feedback.h"
 #include "joy.h"
 #include <os_extension.h>
 
@@ -147,6 +153,9 @@ enum {
     /* Appended: held stock lean (FORK-073), with Leaning on. */
     PORTACT_LEAN_LEFT,
     PORTACT_LEAN_RIGHT,
+    /* Appended: click-to-sprint (FORK-006), the controller layouts' left
+     * stick click. */
+    PORTACT_SPRINT_TOGGLE,
     PORTACT_COUNT
 };
 
@@ -210,6 +219,8 @@ static const struct {
     /* Z and C are free on the shipped layout (Q / E are gadgets and use) */
     [PORTACT_LEAN_LEFT]        = { "lean_left",        "Z",        0 },
     [PORTACT_LEAN_RIGHT]       = { "lean_right",       "C",        0 },
+    /* Shift already holds Walk / Sprint; the controller layouts bind the left stick click */
+    [PORTACT_SPRINT_TOGGLE]    = { "sprint_toggle",    "",         1 },
 };
 
 /* [input] detonate_use_reload (default ON): with remote mines in the right
@@ -342,6 +353,7 @@ s32 portJoyPortSetOption(const char *key, const char *value)
     if (portLeanOptionSet(key, atoi(value))) return 1;
     if (portFogOptionSet(key, atoi(value))) return 1;
     if (portProjectileArcOptionSet(key, atoi(value))) return 1;
+    if (portSprintFeedbackOptionSet(key, atoi(value))) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = atoi(value) != 0;
         return 1;
@@ -502,6 +514,7 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
     if (portLeanOptionGet(key, out)) return 1;
     if (portFogOptionGet(key, out)) return 1;
     if (portProjectileArcOptionGet(key, out)) return 1;
+    if (portSprintFeedbackOptionGet(key, out)) return 1;
     if (strcmp(key, "sprint") == 0) {
         *out = sSprint;
         return 1;
@@ -548,6 +561,7 @@ s32 portJoyPortOptionSet(const char *key, s32 v)
     if (portLeanOptionSet(key, v)) return 1;
     if (portFogOptionSet(key, v)) return 1;
     if (portProjectileArcOptionSet(key, v)) return 1;
+    if (portSprintFeedbackOptionSet(key, v)) return 1;
     if (strcmp(key, "sprint") == 0) {
         sSprint = v != 0;
         return 1;
@@ -778,6 +792,8 @@ static s32 joyPortPermitted(void)
 
 static f32 sAdsBlend[PORT_PADS];
 static s32 sAdsNormalAim[PORT_PADS];
+static PortSprintToggle sSprintToggle[PORT_PADS]; /* sprint_toggle latch, per pad */
+static u8 sSprintBoost[PORT_PADS]; /* the move scale applied the sprint boost since last taken */
 /* Wheel steps survive polls between simulation ticks, unlike held zoom keys. */
 static s32 sAdsWheelNotches;
 static OSTime sAdsWheelTime;
@@ -791,6 +807,8 @@ void portStateResetInput(void)
     memset(sAdsBlend, 0, sizeof(sAdsBlend));
     portKnifeAdsReset();
     memset(sAdsNormalAim, 0, sizeof(sAdsNormalAim));
+    memset(sSprintToggle, 0, sizeof(sSprintToggle));
+    memset(sSprintBoost, 0, sizeof(sSprintBoost));
     sAdsWheelNotches = 0;
 }
 
@@ -1424,11 +1442,48 @@ s32 portJoyPortLeanHeld(s32 *left, s32 *right)
 s32 portJoyPortActZoomIn(void)    { return PORTACT_ZOOM_IN; }
 s32 portJoyPortActZoomOut(void)   { return PORTACT_ZOOM_OUT; }
 
+/** This tick's sprint_toggle latch (port_sprint_toggle.h). The press is taken
+ * every tick, so one made while sprinting is blocked is dropped, not saved. */
+static s32 joyPortSprintToggleTick(s32 pad, s32 crouched)
+{
+    const s32 pressed = portJoyPortTake(pad, PORTACT_SPRINT_TOGGLE);
+    const s32 blocked = !sSprint || g_CurrentPlayer == NULL || !joyPortPermitted() || g_PlayerIsInTank
+                        || portNoclipActive() || portAdsActive() || crouched
+                        || g_CurrentPlayer->insightaimmode;
+
+    if (blocked) {
+        return portSprintToggleStep(&sSprintToggle[pad], pressed, 0.0f, 0.0f, 1, g_GlobalTimerDelta);
+    }
+    return portSprintToggleStep(&sSprintToggle[pad], pressed, g_CurrentPlayer->speedforwards,
+                                g_CurrentPlayer->speedsideways, 0, g_GlobalTimerDelta);
+}
+
+/** port_sprint_feedback.c: whether this pad sprinted since the last call. */
+s32 portJoyPortTakeSprintBoost(s32 pad)
+{
+    s32 boosted;
+    if (pad < 0 || pad >= PORT_PADS) return 0;
+    boosted = sSprintBoost[pad];
+    sSprintBoost[pad] = 0;
+    return boosted;
+}
+
+static f32 joyPortSprintBoost(s32 pad)
+{
+    sSprintBoost[pad] = 1;
+    return sLudicrousSprint ? 5.0f : 1.5f;
+}
+
 /** MoveBond: scale voluntary on-foot movement, before crouch and knockback. */
 f32 portJoyPortMoveScale(s32 crouched)
 {
     const s32 pad = joyPortPad();
-    if (pad < 0 || g_CurrentPlayer == NULL || !joyPortPermitted() || g_PlayerIsInTank) {
+    s32 toggled;
+    if (pad < 0) {
+        return 1.0f;
+    }
+    toggled = joyPortSprintToggleTick(pad, crouched);
+    if (g_CurrentPlayer == NULL || !joyPortPermitted() || g_PlayerIsInTank) {
         return 1.0f;
     }
     if (portNoclipActive()) {
@@ -1439,7 +1494,10 @@ f32 portJoyPortMoveScale(s32 crouched)
     }
     if (sHeld[pad][PORTACT_WALK]) {
         if (!sSprint) return 0.5f;
-        if (!crouched && !g_CurrentPlayer->insightaimmode) return sLudicrousSprint ? 5.0f : 1.5f;
+        if (!crouched && !g_CurrentPlayer->insightaimmode) return joyPortSprintBoost(pad);
+    }
+    if (toggled) {
+        return joyPortSprintBoost(pad); /* the latch already ends on crouch and aim */
     }
     return 1.0f;
 }

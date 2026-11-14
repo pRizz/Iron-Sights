@@ -4019,9 +4019,9 @@ subsections, in both the Options folder and the watch:
 
 | Subsection | Settings |
 | --- | --- |
-| Aiming and Movement | Aim Mode, Knife ADS, Hip-Fire Arms (FORK-075), ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Reload Speed (FORK-071), Leaning and Lean Tilt (FORK-073), Allow Noclip and Noclip View Distance (FORK-072), Sprint, Ludicrous Sprint |
+| Aiming and Movement | Aim Mode, Knife ADS, Hip-Fire Arms (FORK-075), ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Reload Speed (FORK-071), Leaning and Lean Tilt (FORK-073), Allow Noclip and Noclip View Distance (FORK-072), Sprint, Ludicrous Sprint, Sprint FOV (FORK-006) |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction, Tracer Strength (FORK-062), Shotgun Tracers and Decorative Pellets (FORK-063) |
-| HUD Additions | Always Crosshair Size, Projectile Arc and Arc Impact Crosshair (FORK-069), Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
+| HUD Additions | Always Crosshair Size, Projectile Arc and Arc Impact Crosshair (FORK-069), Sprint Indicator (FORK-006), Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
 | System | About / Build Info, Fonts (FORK-051, FORK-052), Fog (FORK-074), Crash Reporting (Windows/Linux) |
 
 The watch's Iron Sights page also holds the Suspend Points action, which moved
@@ -4618,8 +4618,11 @@ labels. Before any input, the intro's player-one claim decides. With
 keyboard/mouse intro claim kept key labels even while the player used a pad. N64-mode pads
 omit these direct-action hints because their controls do not consume those
 actions. A third row says to hold the live Walk / Sprint binding to sprint only
-while the Sprint gameplay setting is on. It disappears when Sprint is off or
-the action is unbound, and follows remapped keyboard/controller labels.
+while the Sprint gameplay setting is on. When Walk / Sprint is unbound on the
+current device but Sprint (Toggle) is bound, as on the shipped controller
+layouts, it says to press that binding instead (FORK-006). It disappears when
+Sprint is off or both actions are unbound, and follows remapped
+keyboard/controller labels.
 Bare text, with a one-pixel shadow and no rectangular background, is
 vertically centered and starts slightly inside the left health arc. Its anchor
 follows health centering/edge transitions independently of the ammo HUD, at wide
@@ -6298,7 +6301,7 @@ wheel bindings apply. Existing zoom controls remain available.
 **History:** `79d3892`, `45e6439`.
 **Checks:** ADS scope/wheel tests; [sight audit](scripts/port/audit_sights.ps1).
 
-### FORK-006 — Configurable Shift sprint
+### FORK-006 — Configurable sprint (Shift hold, stick-click toggle, indicator and FOV)
 
 **Status:** Implemented.
 
@@ -6315,15 +6318,98 @@ sprints at roughly 1.15x and tactical-sprints at about 1.4x. In the browser,
 dragging the touch move stick well past its ring also holds Walk / Sprint
 (FORK-028).
 FORK-035 shows the live Walk / Sprint binding in mission-start hints only while
-this setting is on.
+this setting is on, or the Sprint (Toggle) binding when only that one is bound.
+
+**Sprint (Toggle)** is a separate, rebindable click-to-sprint action
+(`[controls] sprint_toggle`, `padN_sprint_toggle`), appended to the Port action
+table as `PORTACT_SPRINT_TOGGLE` (index 33) and listed after Walk / Sprint in
+the watch/Options controls list. It is unbound on the keyboard, where Shift
+still holds the sprint. A press while moving sprints at the same 1.5x (5x with
+Ludicrous Sprint) with nothing held. A press made standing still waits up to
+half a second (30 frames at 60 Hz) for movement. The sprint ends when the
+forward/sideways move speed drops below 0.3, on a second press, or when Sprint
+is off, controls are not live (pause, watch, death), noclip flies, the player
+aims, ADS is up or the player crouches; it does not resume afterwards. A press
+while one of those blocks applies is dropped, so the toggle never stands a
+crouched player up and never becomes the Sprint-off half-speed walk. The rule
+is the pure `portSprintToggleStep` in `port/include/port_sprint_toggle.h`;
+`joy_port.c` keeps one latch per pad, steps it from `portJoyPortMoveScale` and
+clears it in `portStateResetInput`. Noclip's faster flight still needs the held
+Walk / Sprint. Browser touch keeps its own over-drag sprint and has no toggle
+control; the overlay already sprints without holding a second button.
+
+**Controller defaults (upstream overlap):** all six inherited twin-stick
+layouts in `tools/gamecontrollerdefault.txt` (PlayStation, Switch and Xbox,
+Standard and Pro) bind `sprint_toggle=leftstick` and move `crouch_toggle` to
+`rightstick` alone, the usual shooter L3 sprint / R3 crouch pair. Before, the
+Standard layouts crouched on the left stick click, the Pro layouts on either
+click, and no layout could sprint. The compiled fallback layout in
+`port/src/input_pc.c` (`inputDefaultTokensForSlot`, used when the file is
+missing) matches, and `sPadMapNames` gains `sprint_toggle` (`PM_PORT_LAST` +33)
+so `padN_sprint_toggle` and layout lines parse. These are upstream-owned
+layout/map files; keep the two stick-click tokens and the appended map name when
+merging upstream layout changes. A pad that applied or rebound a layout before
+this change keeps its saved `padN_*` map, so its stick clicks stay as saved; a
+pad on a shipped layout with no saved map picks up the new defaults.
+
+**Sprint feedback:** two settings show a sprint while the boost applies (held
+Walk / Sprint or the toggle latch). **Gameplay > Iron Sights > Aiming and
+Movement > Sprint FOV** (`[display] sprint_fov`) widens the gameplay field of
+view: 0 Off, 1 Normal (8%, the default), 2 Wider (16%) or 3 Crazy Wide (30%);
+an out-of-range value clamps, and the widened target is capped at 150 degrees
+(or the base FOV if that is wider). **HUD Additions > Sprint Indicator**
+(`[display] sprint_indicator`, off by default) draws two small right-pointing
+chevrons (>>) at the bottom centre of the player's own view, seven native
+units above the weapon strip's top inset, each two units tall above and below
+its tip with a stroke 1.2 times the crosshair line, in light grey at up to 50%
+opacity over a soft shadow. The owner first had the indicator on by default at
+a larger size (three units, stroke 1.6), then shrank it and turned it off by
+default once the widening alone made sprinting noticeable (2026-11-14). Both
+follow one per-player fade in `port_sprint_feedback.c`: up over 9 frames
+(0.15 s at 60 Hz) and down over 15 (0.25 s), scaled by the tick length and
+eased with smoothstep, so tapping Shift does not flicker. `joy_port.c` flags
+each tick on which `portJoyPortMoveScale` applied the boost; the feedback tick,
+beside `portNoclipTick` in `bondview2.c`, takes and clears that flag, so any
+tick without the boost (letting go, aiming, ADS, crouching, the tank, pause,
+death) fades out. `portHudReset` clears a player's fade. The widening scales
+the zoom target in the normal-play branch of `bondview2.c` (watch closed, not
+ADS, not zooming); each per-tick step is small enough that the native zoom
+lands on it the same tick. The gun model widens with the view, since keeping
+its projection fixed would touch the gun FOV aim correction in `gunfire.c`.
+Look and aim speeds already scale with the current field of view, so turning is
+faster by the same fraction at full widening (8% at Normal, 30% at Crazy Wide). The chevrons are a new HUD vector shape 9 in
+`port/fast3d/gfx_pc.cpp`, built from its existing feathered line routine and
+reached through `portHudChevrons` in `port_hud.c`, which draws them from
+`portHudDraw` after the noclip label; they are drawn from code, with no
+ROM-derived art. Shared hooks in upstream-owned files: the tick and the zoom
+target in `bondview2.c`, and one row on each Iron Sights page in `front.c`.
 
 **Sources:** [movement/input](port/src/joy_port.c),
+[toggle rule](port/include/port_sprint_toggle.h),
+[sprint feedback](port/src/port_sprint_feedback.c) and
+[its rules](port/include/port_sprint_feedback.h),
+[HUD hook and chevron primitive](port/src/port_hud.c), chevron shape in
+[gfx_pc.cpp](port/fast3d/gfx_pc.cpp), tick and zoom hooks in
+[bondview2.c](src/game/bondview2.c), Options rows in [front.c](src/game/front.c),
+[controller layouts](tools/gamecontrollerdefault.txt), pad map and fallback in
+[input_pc.c](port/src/input_pc.c), controls list in
+[port_watchpages.c](port/src/port_watchpages.c), help line in
+[port_option_help.c](port/src/port_option_help.c),
 [option definitions](port/src/port_options.c), frontend/watch settings pages,
-[settings reference](tools/midas_ini_help.txt).
-**History:** `939b400`; Ludicrous Sprint added later without a commit
-reference yet. **Checks:** ADS test suite movement/settings cases
-(`scripts/port/test_sprint.c`, included by `test_ads.c`), including the 5x,
-crouch, ADS, Sprint-off and saved-setting cases for Ludicrous Sprint.
+[settings reference](tools/midas_ini_help.txt), README.
+**History:** `939b400`; Ludicrous Sprint and Sprint (Toggle) added later
+without a commit reference yet. **Checks:** ADS test suite movement/settings
+cases (`scripts/port/test_sprint.c`, included by `test_ads.c`), including the
+5x, crouch, ADS, Sprint-off and saved-setting cases for Ludicrous Sprint and
+`testSprintToggle` (press while moving, armed window and lapse, second-press
+cancel, crouch/aim/ADS/dead-controls ends, Ludicrous, Sprint off, per-pad
+latches, suspend-point reset) and `testSprintFeedback` (Sprint FOV at Normal
+and the indicator off by default, the four widening levels and their menu text,
+clamping, both rows reached from the menu, eased fade in and out, ticks without
+a move scale fading out, tick-length scaling, toggle-driven fade, Sprint FOV Off,
+per-player fades, reset); `test_mission_hints.c` covers the press-to-sprint
+hint row; `test_hud.c` stubs the indicator. The chevrons' look was checked in a
+local in-game capture.
 
 ### FORK-007 — Optional combat feedback
 
