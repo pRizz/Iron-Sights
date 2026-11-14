@@ -1050,7 +1050,8 @@ static void roc_record_tri(struct ShaderProgram* prg, const ColorCombiner* comb,
             s.tex_used[t] = true;
             s.tex_id[t] = rendering_state.textures[t]->second.texture_id;
             s.tex_linear[t] = rendering_state.textures[t]->second.linear_filter;
-            s.tex_mip[t] = rendering_state.textures[t]->second.mip_filter;
+            s.tex_mip[t] = ge_mip_mode(rendering_state.textures[t]->second,
+                                       rendering_state.textures[t]->second.mip_filter);
             s.tex_cms[t] = rendering_state.textures[t]->second.cms;
             s.tex_cmt[t] = rendering_state.textures[t]->second.cmt;
         }
@@ -1172,7 +1173,7 @@ static void roc_apply_state(const RocDraw& d) {
             TextureCacheNode* n = d.tex_node[i];
             tex_diff[i] = rendering_state.textures[i] != n;
             samp_diff[i] = tex_diff[i] || n->second.linear_filter != s->tex_linear[i]
-                || n->second.mip_filter != s->tex_mip[i]
+                || n->second.mip_filter != (s->tex_mip[i] != 0)
                 || n->second.cms != s->tex_cms[i] || n->second.cmt != s->tex_cmt[i];
             diff = diff || samp_diff[i];
         }
@@ -1213,11 +1214,11 @@ static void roc_apply_state(const RocDraw& d) {
             rendering_state.textures[i] = n;
         }
         if (samp_diff[i]) {
-            ge_mip_active = s->tex_mip[i] ? 1 : 0;
+            ge_mip_active = s->tex_mip[i];
             gfx_rapi->set_sampler_parameters(i, s->tex_linear[i], s->tex_cms[i], s->tex_cmt[i]);
             ge_mip_active = 0;
             n->second.linear_filter = s->tex_linear[i];
-            n->second.mip_filter = s->tex_mip[i];
+            n->second.mip_filter = s->tex_mip[i] != 0;
             n->second.cms = (uint8_t)s->tex_cms[i];
             n->second.cmt = (uint8_t)s->tex_cmt[i];
         }

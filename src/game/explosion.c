@@ -2133,6 +2133,9 @@ Gfx *explosionRenderScorchBuffer(Gfx *arg0)
         gSPSetGeometryMode(arg0++, G_CULL_BACK);
         gSPClearGeometryMode(arg0++, G_CULL_FRONT | G_FOG);
         gDPSetColorDither(arg0++, G_CD_NOISE);
+#ifndef TARGET_N64
+        arg0 = portDecalWindowTag(arg0, 1); /* FORK-077 */
+#endif
 
         texSelect(&arg0, genericimage, 4, 1, 2);
 
@@ -2161,6 +2164,9 @@ Gfx *explosionRenderScorchBuffer(Gfx *arg0)
             }
         }
 
+#ifndef TARGET_N64
+        arg0 = portDecalWindowTag(arg0, 0);
+#endif
         gDPSetColorDither(arg0++, G_CD_BAYER);
     }
 
@@ -2504,6 +2510,9 @@ Gfx *explosionRenderBulletImpactOnProp(Gfx *gdl, PropRecord *arg1, s32 arg2)
 
     gSPClearGeometryMode(gdl++, G_CULL_BOTH);
     gDPSetColorDither(gdl++, G_CD_NOISE);
+#ifndef TARGET_N64
+    gdl = portDecalWindowTag(gdl, 1); /* FORK-077 */
+#endif
 
     for (i = 0; i < BULLET_IMPACT_BUFFER_LEN; i++)
     {
@@ -2576,6 +2585,9 @@ Gfx *explosionRenderBulletImpactOnProp(Gfx *gdl, PropRecord *arg1, s32 arg2)
         sp4C->unk02 &= ~(1 << arg2);
     }
 
+#ifndef TARGET_N64
+    gdl = portDecalWindowTag(gdl, 0);
+#endif
     gDPSetColorDither(gdl++, G_CD_BAYER);
 
     return gdl;

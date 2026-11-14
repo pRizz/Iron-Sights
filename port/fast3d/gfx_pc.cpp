@@ -477,6 +477,12 @@ static unsigned ge_xbox_trace_dl;  /* trace the first frames' DLs (set in gfx_ru
 extern "C" int ge_mip_active; /* GL backend side channel: the sampler being set
                                * serves a G_TL_LOD draw - minify through mips */
 int ge_mip_active;
+/* FORK-053: the side-channel mode for a node's 3D sampler. An HD pack image
+ * (4) minifies through trilinear mips whatever the filter; a native one (1)
+ * follows the filter. Retained lists record this, so a replay keeps it. */
+static uint8_t ge_mip_mode(const TextureCacheValue& value, bool mip) {
+    return !mip ? 0 : (value.hd_bytes && !value.hd_ammo) ? 4 : 1;
+}
 
 /* GE widescreen presentation (video.c decides per submitted frame):
  *   0 = off - everything maps game space -> window like always (4:3 window,
@@ -607,6 +613,9 @@ static struct PortHwLoad g_PortHwLoad; /* the frame in progress (gfx_api.h) */
 /* ZMODE_DEC projection intercept + pull distance of the current decal state,
  * for the GL backend's decal clip (gfx_opengl_draw_triangles) */
 float gfx_ge_dec_b = 0.0f, gfx_ge_dec_d = 0.0f;
+/* FORK-077: inside the bullet-hole / scorch span (G_NOOP 0x65, explosion.c):
+ * only those decals take the backend's two-sided decal window */
+bool gfx_ge_dec_window = false;
 static void gfx_flush(void) {
     if (buf_vbo_len > 0) {
         roc_stat_draw_origin[ge_flush_origin & 15u]++;
@@ -673,10 +682,12 @@ struct DXluState {
     bool tex_used[2];
     uint32_t tex_id[2];
     bool tex_linear[2];
-    bool tex_mip[2]; /* GE N64 mipmaps: replay must re-assert the node's mip
-                      * sampling, or a shared texture object is left un-mipped
-                      * while its cache node still says mipped (latch stale) */
+    uint8_t tex_mip[2]; /* GE N64 mipmaps: replay must re-assert the node's mip
+                         * sampling, or a shared texture object is left un-mipped
+                         * while its cache node still says mipped (latch stale);
+                         * the ge_mip_mode value, 0 = none */
     uint32_t tex_cms[2], tex_cmt[2];
+    bool dec_window; /* FORK-077: captured inside the effect-decal span */
 };
 
 struct DXluTri {
@@ -1031,6 +1042,7 @@ static float gfx_dxlu_vertex_dist(const float* v, float eye[3], bool* eye_ok) {
 
 static void gfx_dxlu_apply_state(const struct DXluState* s) {
     gfx_flush();
+    gfx_ge_dec_window = s->dec_window; /* FORK-077 */
     ge_state_serial++;
 
     if (s->prg != rendering_state.shader_program) {
@@ -1061,7 +1073,7 @@ static void gfx_dxlu_apply_state(const struct DXluState* s) {
     for (int i = 0; i < 2; i++) {
         if (s->tex_used[i]) {
             gfx_rapi->select_texture(i, s->tex_id[i], s->tex_linear[i]);
-            ge_mip_active = s->tex_mip[i] ? 1 : 0;
+            ge_mip_active = s->tex_mip[i];
             gfx_rapi->set_sampler_parameters(i, s->tex_linear[i], s->tex_cms[i], s->tex_cmt[i]);
             ge_mip_active = 0;
             /* the cached binding in rendering_state.textures no longer
@@ -1531,6 +1543,7 @@ static void gfx_dxlu_draw(void) {
         roc_xlu_replay_unit(cur_ret, ridx, nridx);
     }
     gfx_flush();
+    gfx_ge_dec_window = false; /* FORK-077: the frame's spans are closed */
 
     /* The replay applied captured viewport/scissor rects directly, and those
      * two are flag-gated in the normal path, so force a re-compare or the next
@@ -4296,7 +4309,6 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
         }
 ndcprobe_done:;
     }
-
     if (rdp.viewport_or_scissor_changed) {
         if (memcmp(&rdp.viewport, &rendering_state.viewport, sizeof(rdp.viewport)) != 0) {
             gfx_flush();
@@ -4772,7 +4784,16 @@ ndcprobe_done:;
                 /* FORK-058: a shiny weapon's reflection sampled at full size keeps its
                  * small highlights, which a mip chain averages away */
                 const bool shiny_sharp = rendering_state.textures[i]->first.shiny && gfx_shiny::tuning().sharp;
-                const bool mip_filter = text_aa || icon_aa || (!s_DrawingRect && !ge_sky_tri_active && gfx_mipmaps != 0
+                /* FORK-053: an HD pack image is 8-32x denser than the tile it
+                 * replaces. Minified without mips (Mipmaps off, or 3-point
+                 * filtering's nearest taps) the distant ground read one texel in
+                 * hundreds and shimmered while walking (Statue). In 3D it always
+                 * minifies through mips; cut-outs keep the mode-2 rule. */
+                const bool hd_minify = !s_DrawingRect && !ge_sky_tri_active && !shiny_sharp
+                                       && rendering_state.textures[i]->second.hd_bytes
+                                       && !rendering_state.textures[i]->second.hd_ammo
+                                       && (rdp.tex_lod || !texture_edge);
+                const bool mip_filter = text_aa || icon_aa || hd_minify || (!s_DrawingRect && !ge_sky_tri_active && gfx_mipmaps != 0
                                         && !shiny_sharp && (rdp.tex_lod || (gfx_mipmaps >= 2 && !texture_edge)));
                 { /* GE_XHAIRDBG=1: debug print of what decides a 2D sprite's
                    * filtering, logged only when it changes, to track down the
@@ -4834,7 +4855,7 @@ ndcprobe_done:;
                     mip_filter != rendering_state.textures[i]->second.mip_filter ||
                     cms != rendering_state.textures[i]->second.cms || cmt != rendering_state.textures[i]->second.cmt) {
                     gfx_flush();
-                    ge_mip_active = text_aa ? 2 : icon_aa ? 3 : mip_filter ? 1 : 0;
+                    ge_mip_active = text_aa ? 2 : icon_aa ? 3 : ge_mip_mode(rendering_state.textures[i]->second, mip_filter);
                     gfx_rapi->set_sampler_parameters(i, linear_filter, cms, cmt);
                     ge_mip_active = 0;
                     rendering_state.textures[i]->second.linear_filter = linear_filter;
@@ -5412,6 +5433,7 @@ ndcprobe_done:;
             s.depth_source_prim = depth_source_prim;
             s.zmode = zmode;
             s.depth_mode_enc = depth_mode;
+            s.dec_window = gfx_ge_dec_window;
             s.viewport = rendering_state.viewport;
             s.scissor = rendering_state.scissor;
             for (int t = 0; t < 2; t++) {
@@ -5419,7 +5441,8 @@ ndcprobe_done:;
                     s.tex_used[t] = true;
                     s.tex_id[t] = rendering_state.textures[t]->second.texture_id;
                     s.tex_linear[t] = rendering_state.textures[t]->second.linear_filter;
-                    s.tex_mip[t] = rendering_state.textures[t]->second.mip_filter;
+                    s.tex_mip[t] = ge_mip_mode(rendering_state.textures[t]->second,
+                                               rendering_state.textures[t]->second.mip_filter);
                     s.tex_cms[t] = rendering_state.textures[t]->second.cms;
                     s.tex_cmt[t] = rendering_state.textures[t]->second.cmt;
                 }
@@ -8184,6 +8207,10 @@ static void gfx_run_dl(Gfx* cmd) {
                     gfx_flush();
                     s_GeGunPainter = (cmd->words.w1 & 1u) != 0;
                     ge_state_serial++; /* the depth state derives from it */
+                } else if ((cmd->words.w1 >> 24) == 0x65u) {
+                    /* FORK-077: bullet-hole / scorch span on / off (port_bullet_rooms.c) */
+                    gfx_flush(); /* draws before the tag belong outside the span */
+                    gfx_ge_dec_window = (cmd->words.w1 & 1u) != 0;
                 } else if ((cmd->words.w1 >> 24) == 0x63u) {
                     /* FORK-066: glass span, kind or 0 (port_glass.c) */
                     gfx_flush(); /* draws before the tag belong outside the span */

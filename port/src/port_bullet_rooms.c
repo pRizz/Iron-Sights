@@ -109,3 +109,9 @@ s32 portBulletImpactRoomDrawn(s32 slot, s32 room)
     }
     return 0;
 }
+
+Gfx *portDecalWindowTag(Gfx *gdl, s32 on)
+{
+    gDPNoOpTag(gdl++, 0x65000000u | (on ? 1u : 0u));
+    return gdl;
+}

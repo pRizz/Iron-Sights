@@ -1205,7 +1205,8 @@ static uint32_t gfx_cm_to_opengl(uint32_t val) {
 extern "C" int ge_sky_tri_active; /* gfx_pc: inside an RDP-triangle (sky/water) draw */
 extern "C" int ge_mip_active;     /* gfx_pc: this sampler serves a G_TL_LOD draw - minify through mips;
                                     * 2 = an Enhanced font mask under Text Antialiasing (FORK-052);
-                                    * 3 = a weapon strip icon (FORK-011) */
+                                    * 3 = a weapon strip icon (FORK-011);
+                                    * 4 = an HD pack image in a 3D draw (FORK-053) */
 
 #ifdef __EMSCRIPTEN__
 extern "C" bool gfx_opengl_web_sampler_flags_changed(int tile, bool linear_filter, uint32_t cms, uint32_t cmt) {
@@ -1243,11 +1244,11 @@ static void gfx_opengl_set_sampler_parameters(int tile, bool linear_filter, uint
      * choice, which kept its detail closest to an exact area average in review
      * sheets. GLES has no LOD bias; icons there would use plain trilinear. */
     gl_set_lod_bias(current_texture_ids[tile], ge_mip_active == 3 && !gl_es);
-    if (ge_mip_active == 2 || ge_mip_active == 3) {
+    if (ge_mip_active == 2 || ge_mip_active == 3 || ge_mip_active == 4) {
         /* FORK-052 Text Antialiasing: an Enhanced font mask always minifies
          * through trilinear mips, whatever the 3D filter (3-point's taps then
          * read already-averaged texels); magnification keeps that filter.
-         * FORK-011 weapon icons minify the same way. */
+         * FORK-011 weapon icons and FORK-053 HD pack images minify the same way. */
         const GLuint id = current_texture_ids[tile];
         if (!gl_has_mips(id)) {
             gfx_opengl_generate_mipmap(id);
@@ -1449,8 +1450,14 @@ static void gfx_opengl_set_use_alpha(bool use_alpha, bool modulate) {
  * The push uses the projection's z/w intercept b (as the pull does), so the
  * window is a world distance at every range. Immediate draws only; retained
  * room decals keep the one-sided test. GE_DEC_CLIP=0 = old behaviour,
- * GE_DEC_TOL=<world units> (default 8). */
+ * GE_DEC_TOL=<world units> (default 8).
+ * FORK-077: only bullet holes and scorch marks take the window (the span
+ * explosion.c tags, gfx_ge_dec_window). Level and prop decals keep fast3d's
+ * one-sided test: Statue's ground decals are large triangles that sit tens
+ * of units off the ground they cover, so any window narrow enough to trim a
+ * hole cut them into bands and wedges that changed as the view moved. */
 extern float gfx_ge_dec_b, gfx_ge_dec_d;
+extern bool gfx_ge_dec_window;
 static void gfx_opengl_draw_triangles(float buf_vbo[], size_t buf_vbo_len, size_t buf_vbo_num_tris) {
     // printf("flushing %d tris\n", buf_vbo_num_tris);
     static int clip = -1;
@@ -1463,7 +1470,7 @@ static void gfx_opengl_draw_triangles(float buf_vbo[], size_t buf_vbo_len, size_
     }
     gl_ret_restore(); /* after a retained draw: the stream VBO + this program's arrays again */
     gfx_opengl_sync_dynamic_uniforms();
-    if (!clip || !ge_dec_draw || gfx_ge_dec_b >= 0.0f || buf_vbo_num_tris == 0) {
+    if (!clip || !ge_dec_draw || !gfx_ge_dec_window || gfx_ge_dec_b >= 0.0f || buf_vbo_num_tris == 0) {
         const bool env = gl_env_bind(); /* FORK-058: screen reflections (gfx_screen_env.inl) */
         glBufferData(GL_ARRAY_BUFFER, sizeof(float) * buf_vbo_len, buf_vbo, GL_STREAM_DRAW);
         glDrawArrays(GL_TRIANGLES, 0, 3 * buf_vbo_num_tris);
@@ -1476,17 +1483,42 @@ static void gfx_opengl_draw_triangles(float buf_vbo[], size_t buf_vbo_len, size_
      * while the render thread is still drawing decals into it, corrupting the
      * heap. Leaked on purpose. */
     static std::vector<float>& pushed = *new std::vector<float>();
-    const size_t nv = 3 * buf_vbo_num_tris;
-    const size_t stride = buf_vbo_len / nv;
+    static std::vector<float>& reach = *new std::vector<float>();
+    const size_t stride = buf_vbo_len / (3 * buf_vbo_num_tris);
     const float b = gfx_ge_dec_b, d = gfx_ge_dec_d;
-    pushed.assign(buf_vbo, buf_vbo + buf_vbo_len);
+    /* The window is pushed per corner and interpolated, which holds only when
+     * every corner is well in front of the eye: then each corner is exact and
+     * the push between them is never smaller than the true one. A corner
+     * within the window (or the pull) of the eye, or behind it, breaks that
+     * (a scorch mark under Bond's feet can have one); such a triangle takes
+     * the one-sided test instead. */
+    const float reach_w = std::max(tol, 4.0f * d);
+    pushed.clear();
+    reach.clear();
+    for (size_t t = 0; t < buf_vbo_num_tris; t++) {
+        const float* tri = &buf_vbo[t * 3 * stride];
+        const bool near_eye = tri[3] <= reach_w || tri[stride + 3] <= reach_w || tri[2 * stride + 3] <= reach_w;
+        (near_eye ? reach : pushed).insert((near_eye ? reach : pushed).end(), tri, tri + 3 * stride);
+    }
+    if (!reach.empty()) {
+        glBufferData(GL_ARRAY_BUFFER, sizeof(float) * reach.size(), reach.data(), GL_STREAM_DRAW);
+        glDrawArrays(GL_TRIANGLES, 0, (GLsizei)(reach.size() / stride));
+        if (pushed.empty()) {
+            return;
+        }
+    }
+    /* The window batch: the triangles in pushed, drawn as they are in pass 2 */
+    static std::vector<float>& windowed = *new std::vector<float>();
+    windowed.assign(pushed.begin(), pushed.end());
+    buf_vbo = windowed.data();
+    buf_vbo_len = windowed.size();
+    const size_t nv = buf_vbo_len / stride;
     for (size_t i = 0; i < nv; i++) {
         float* v = &pushed[i * stride];
         const float w = v[3];
-        const float dv = (w > 4.0f * d) ? d : 0.0f; /* gfx_sp_tri1 leaves near-plane verts unpulled */
-        if (w - dv > 1.0f) {
-            v[2] -= b * tol * w / ((w - dv) * (w - dv + tol));
-        }
+        v[2] -= b * tol * w / ((w - d) * (w - d + tol)); /* every corner here was pulled by d */
+        /* never past the far plane (z <= w): the GPU marks nothing there */
+        v[2] = std::min(v[2], std::max(buf_vbo[i * stride + 2], w - 1e-4f * w));
     }
 
     glEnable(GL_STENCIL_TEST);

@@ -22,4 +22,10 @@ void portBulletImpactAssign(s32 slot, PropRecord *prop);
 /* explosion.c render: is room, or any drawn room holding slot's wall, drawn? */
 s32 portBulletImpactRoomDrawn(s32 slot, s32 room);
 
+/* explosion.c render (FORK-077): brackets the bullet-hole and scorch draws.
+ * Only decals inside the span take the renderer's two-sided decal window, which
+ * trims a hole where its wall ends; level and prop decals keep the one-sided
+ * test. Emits a G_NOOP tag (0x65) the renderer reads. */
+Gfx *portDecalWindowTag(Gfx *gdl, s32 on);
+
 #endif

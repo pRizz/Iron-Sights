@@ -30,6 +30,80 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-077 — Level decals keep the one-sided depth test
+
+**Status:** Fixed on 2026-11-14 after the owner saw Statue's ground flip
+between textures while walking near the start. The owner's play-tests of the
+first two attempts each turned up another spot; this entry describes the
+design that replaced them. Not yet play-tested by the owner in its final form.
+
+Statue's ground near the start is two layers: a base grass and, over it, a
+clover-patterned grass decal (`ZMODE_DEC`, texture `20154810`, from the model
+texture pool). The decal's triangles are much larger than the ground's, share
+only some of its corners, and so sit tens of units off the ground in places;
+several reach from behind the camera hundreds of units out. Walking or turning
+a degree or two cut bands, wedges and triangles out of the decal, showing the
+darker base ground, and they came back as the view moved. The original
+textures did the same, less visibly.
+
+The cause is inherited decal emulation (present at the 1.0.2b baseline in
+`gfx_opengl_draw_triangles`): to emulate the RDP's two-sided decal depth window
+and trim a bullet hole where its wall ends, a marking pass pushes a copy of each
+decal corner `GE_DEC_TOL` (8) world units away and draws the decal only where
+the stored surface is no farther. Applied to Statue's terrain decals it failed
+three ways, each found at one of the owner's positions (`GE_DEBUGPOS`):
+- X -15196, Y 1029, Z 2284, pitch -24, heading 270 against 272: a corner at
+  `w` 0.7 (or -0.6) was skipped by the push (`w - pull <= 1`), collapsing the
+  window beside it.
+- X -15060, Y 962, Z 2391, heading 241 pitch -13 against 243 pitch -26: a
+  corner 10 units behind the eye pushed the visible part of the copy past the
+  far plane; a GPU readback showed the marking pass left the stencil clear
+  there even with its depth test forced to pass, despite depth clamp.
+- X -15090, Y 1017, Z 2824, heading 170 pitch -28: every corner was well in
+  front of the eye, yet the decal sat more than 8 units off the ground. A
+  slope-scaled window (GL polygon offset, like the RDP's) needed a factor near
+  64 to stop cutting it, which no longer trims anything.
+
+So the window now applies only to the decals it exists for. `explosion.c`
+brackets the bullet-hole and scorch draws with a `G_NOOP` tag (`0x65`, through
+`portDecalWindowTag` in `port_bullet_rooms.c`); the renderer keeps
+`gfx_ge_dec_window` while inside it, the translucent sort records it per state
+(`DXluState.dec_window`), and the backend takes the two-sided path only for
+those draws. Level and prop decals keep fast3d's one-sided `LEQUAL` with the
+pull, as with `GE_DEC_CLIP=0`. Within the window path, a triangle with a corner
+within `max(GE_DEC_TOL, 4 * pull)` of the eye, or behind it, also takes the
+one-sided test (a large scorch mark under Bond's feet could have one), and no
+pushed corner goes past the far plane. Corners in front keep the original
+push. Two earlier attempts the same day (pushing near-eye corners with
+`b*tol/(w + tol)`, then capping at the far plane) are superseded; the cap
+remains inside the window path.
+
+**Sources:** the decal path in [GL backend](port/fast3d/gfx_opengl.cpp)
+(`gfx_opengl_draw_triangles`); the tag handler, `gfx_ge_dec_window` and the
+`DXluState` field in [renderer](port/fast3d/gfx_pc.cpp); the tag helper in
+[hole rooms](port/src/port_bullet_rooms.c) and its
+[header](port/include/port_bullet_rooms.h); four `#ifndef TARGET_N64` tag calls
+in [explosion.c](src/game/explosion.c) (`explosionRenderScorchBuffer`,
+`explosionRenderBulletImpactOnProp`).
+
+**Upstream hooks:** the `0x65` `G_NOOP` case and the `dec_window` capture and
+replay in `gfx_pc.cpp`; the window condition and near-eye split in
+`gfx_opengl.cpp`; the tag calls in `explosion.c`. A future upstream change to
+decal emulation should keep level decals one-sided.
+
+**Checks:** isolated copies spawned at each position (`GE_SPAWNXYZ`) reproduced
+the cuts with the HD pack and with original textures, and showed none with
+`GE_DEC_CLIP=0`. Room lists, texture and palette traces were the same at the
+flipping headings. Temporary diagnostics (a per-pixel triangle probe, a
+depth/stencil/colour readback inside the decal passes, and env switches for
+depth clamp and the marking depth test) were used and removed. After the
+change, captures with the owner's settings (3-point, MSAA 2x, tickhz 120,
+render thread on) at headings 270 and 272, 241/-13 and 243/-26, 170/-28,
+174/-28 and 166/-20, and at X -15116 Z 2652 show the decal whole. Shots into
+Statue's ground drew the impact with the window on as with it off. Windows
+build only; not checked: bullet holes trimmed at a wall edge, other levels'
+decals, the browser build, Linux.
+
 ### FORK-076 — Silent audit runs
 
 **Status:** Implemented on 2026-11-11 at the owner's request, after background
@@ -2882,6 +2956,28 @@ packs and the AppImage bundle root do not return.
   icons. Each cached texture now records its enlargement (`hd_scale_s/t`), and
   the clamp stops half a texel of the uploaded image short instead. It applies
   to every HD image, the pack's environment textures included.
+- **Distant HD ground minified through mips (2026-11-14).** Walking forward
+  from Statue's start, the HD ground shimmered between patterns. Its 32x32 CI8
+  grass tiles become 512x512 to 1024x1024 images, and outside Classic Mode
+  Mipmaps are off, while 3-point filtering minifies with nearest taps (the
+  anisotropy path is bilinear only), so each distant pixel read one texel in
+  hundreds. An HD image in a 3D draw now always minifies through trilinear
+  mips (`ge_mip_active` mode 4 in `gfx_opengl.cpp`, as for Enhanced font masks
+  and weapon icons); magnification keeps the chosen filter, so close textures
+  look as before. Alpha cut-outs that did not ask for LOD keep the existing
+  mode-2 rule (mips average alpha), and the sky, 2D rects and HUD ammo art keep
+  their own sampling. Retained room and translucent lists now record the mode
+  (`ge_mip_mode`) instead of a mipped flag, so a replay re-asserts the same
+  sampler. Original textures and the Mipmaps setting are unchanged; the HD
+  budget already counted a mip chain (`hd_bytes`). Measured on one scripted
+  walk from the Statue start at 960x540 with the player's settings (3-point,
+  tickhz 120, render thread on), as the mean frame-to-frame difference in the
+  distant ground: original textures 1.79, HD before 6.79, HD with
+  `GE_HWMIPMAPS=1` 3.53, HD with this change 3.17. A texture trace in the same
+  walk showed each HD match imported once and no evictions, ruling out cache
+  churn. The owner's report of ground textures flipping on Statue turned out to
+  be mostly a separate decal bug that also affects the original textures
+  (FORK-077). Not checked: Linux, bilinear filtering, a play session.
 
 **Unsupported, by decision:** the browser and Xbox builds have neither the
 Texture Pack row nor the HD Textures page; 150 MB in browser storage would not
@@ -2902,7 +2998,10 @@ by that in FORK-033).
 **Upstream hooks:** in `gfx_pc.cpp` the texture release helper at the cache's
 five free sites, the import call before the format decoders, the frame-start
 call and the include of the adapter; `hd_bytes` in `gfx_pc.h`; the ammo slot tag (`0x5B`) and its smooth sampling, and the clamp's
-HD scale in the vertex setup, in `gfx_pc.cpp`; two `portHudAmmoIconTag` calls
+HD scale in the vertex setup, in `gfx_pc.cpp`; the HD minification mode
+(`ge_mip_mode`, the `hd_minify` term of the sampler latch and the `tex_mip`
+mode recorded in `DXluState`) in `gfx_pc.cpp` and `gfx_roomcache.inl`, and
+mode 4 in the sampler setup of `gfx_opengl.cpp`; two `portHudAmmoIconTag` calls
 around the ammo icon draw in `gunfire.c`; the first-person tag (`0x5C`), its
 frame-start reset, the `hd_native` cache-key field and the skipped import in
 `gfx_pc.cpp`/`gfx_pc.h`, the `hd_request` cache-value field, and two
