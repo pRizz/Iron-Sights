@@ -167,7 +167,13 @@ bool prepare(const std::vector<uint8_t> &rgba, int width, int height, const Glyp
     out.height = glyph.height * kScale;
     const int limit = std::min(out.width, (glyph.width + 1) * kScale);
     const int crop_w = std::min(width, std::max(limit, box_right));
-    const int crop_h = std::min(height, std::max(out.height, box_bottom));
+    /* The pack draws glyphs shorter than eight rows (Bank Gothic's lowercase
+     * small capitals, : < > = and the quotes) on a 64-texel canvas that spans
+     * the glyph's own rows: stretched over the cell, their ink lines up with
+     * the ROM glyph's rows. Placed at 8x, it fell almost a native pixel below
+     * the capitals' baseline. */
+    const bool spans_cell = height == kSpanCanvas && out.height < kSpanCanvas;
+    const int crop_h = spans_cell ? height : std::min(height, std::max(out.height, box_bottom));
     const int fit_w = std::min(crop_w, limit), fit_h = std::min(crop_h, out.height);
     std::vector<uint8_t> crop(size_t(crop_w) * crop_h);
     for (int y = 0; y < crop_h; y++) std::memcpy(&crop[size_t(y) * crop_w], &red[size_t(y) * width], size_t(crop_w));

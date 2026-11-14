@@ -3013,6 +3013,41 @@ settings placement and standards checks; `test_enhanced_fonts.sh`,
 cells. Not run: the browser and Linux
 builds at run time, and other screens' Enhanced text side by side.
 
+**Small-capital baseline (2026-11-14).** With Fonts on Enhanced, mixed-case
+Bank Gothic text such as the pickup message "Picked up a KF7 Soviet." drew its
+lowercase small capitals below the capitals, so each initial capital looked
+raised off the line. The pack draws Bank Gothic's 26 lowercase letters (7 ROM
+rows) and `:`, `<`, `>` (7 rows), `=` and the two quotes (5 rows) on 64-texel
+canvases, while the mask placed every image at 8x, which put their ink up to
+seven mask texels (0.88 native pixels) too low. Measured over all 93 files
+per font, the lowercase ink then ended at row 9.88 against 9.0 for the ROM and
+9.12 for the pack's capitals; stretched over the glyph's rows, it ends at 9.02
+and its top matches the ROM's within a quarter pixel. `prepare` now stretches a
+64-texel canvas over the cell for glyphs shorter than eight rows
+(`kSpanCanvas`). Taller canvases still keep their ink at 8x, because there the
+extra height is only padding: `#` (128 for 10 rows) and `{`/`}` (112 for 12)
+match the ROM unchanged. Zurich Bold has no such canvas: its short glyphs
+are exact 8x images, and its tall digits were already fitted. The small capitals are also
+about 12% shorter than before, matching the ROM's small-capital proportion.
+Original and Iron Sights fonts are unchanged. The ROM font has no baseline
+offset: its capitals and small capitals end on the same row, and capitals are
+one row taller by design. FORK-008's lowercase objective alerts stay as they are.
+This was fixed in the glyphs rather than by changing the case of HUD strings,
+so the watch, menus and other Bank Gothic text are corrected too. The HUD audit gained
+`-Pickup` (`GE_HUD_AUDIT_PICKUP`), which shows the localized gun pickup message
+in the bottom-left box. Checks: `test_enhanced_fonts.sh`, whose new case covers
+a 7-row glyph stretched to the cell, a capital and a padded tall canvas, and
+fails without the fix; `test_hud.sh`; an isolated Windows build; the two-pass
+hand gallery regenerated with zero changed image cells (its fixture uses the
+Original fonts), refreshing its source fingerprint. In
+1920x1080 Dam captures of the pickup message with the pack installed, the
+small capitals' lowest ink row was 849 against 846 for the capitals before the
+fix, and every glyph ends on 845-846 after it. Sources:
+[masks](port/fast3d/enhanced_font_masks.cpp),
+[constant](port/fast3d/enhanced_font_masks.h),
+[tests](scripts/port/test_enhanced_fonts.cpp),
+[audit fixture](port/src/port_hud_audit.inl), [HUD audit](scripts/port/audit_hud.ps1).
+
 [`scripts/port/font_styles_plan.md`](scripts/port/font_styles_plan.md)
 proposes one **Gameplay > Iron Sights > System > Fonts** setting choosing
 Original (ROM), Enhanced (the community GEPD masks removed in FORK-021) or
@@ -3064,7 +3099,8 @@ texture CRCs, because the game clears each glyph's padding before registering
 it. On the first Enhanced glyph the port reads the folder, skips any file
 whose size or checksum differs (logging it), decodes the PNGs and prepares 8x
 masks with the removed generator's rules, now at run time
-(`enhanced_font_masks.cpp`): the red channel, authored X coordinates with at
+(`enhanced_font_masks.cpp`; short glyphs' 64-texel canvases are stretched since
+the 2026-11-14 small-capital baseline fix above): the red channel, authored X coordinates with at
 most one native texel of overhang, oversize images fitted with a port of
 Pillow's Lanczos filter, and fringe that would touch a tightly kerned
 neighbour trimmed using the font's kerning table. The texture import uploads

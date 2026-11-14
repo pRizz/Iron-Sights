@@ -129,7 +129,9 @@ FORK-051's glyph registry so both styles share one hook:
   native pixel of overhang, fit only glyphs taller or wider than allowed
   (area filtering instead of Lanczos), and trim fringe that would touch a
   tightly kerned neighbour, comparing the whole font first so results do not
-  depend on order.
+  depend on order. A glyph shorter than eight rows drawn on the pack's
+  64-texel canvas has that whole canvas stretched over its rows, which lines
+  its ink up with the ROM glyph's rows (2026-11-14; see the milestone table).
 - **Drawing.** The texture import uploads the mask under a cache-key flag of
   its own, the texture rectangle grows the quad to the mask's ink, and the
   mask is smooth-sampled whatever 2D Filtering says, as before. Advances,
@@ -172,6 +174,7 @@ next action before handing off.
 | FONT-4 | Done | 2026-11-06: the Enhanced Fonts page, watch page and Get Enhanced Fonts row appear in the browser; the download is now an `Installer` of steps that the native worker loops over and a per-frame browser pump answers with `fetch()` (no threads), with the same checks and busy backoff; files land in `/user/Data/FontPacks/gepd`, which `web/src/font-pack-paths.ts` lets the storage sync keep without entering save backups. The fonts folder now follows the game's root folder on every target. Installed, the first button switches between **Use Original Fonts** and **Use Enhanced Fonts** (a finished download already applies Enhanced). Verified: engine tests, an IDBFS reload case in `test:filesystem`, browser downloads from a local server (with and without CORS on 429s) and from GitHub. Not run: touch audits, the full launcher, Remove in the browser game. Next: FONT-5 |
 | Follow-up | Done | 2026-11-06: **Text Antialiasing** (`[display] text_antialiasing`, default on, Iron Sights > System in both menus): Enhanced masks minify through trilinear mips whatever the texture filter, fixing uneven stroke weights in small Enhanced text under 3-point filtering or with anisotropy off (measured on the difficulty screen's cheat lines; see FORK-052). Not run: browser and Linux at run time. |
 | FONT-5 | Done | 2026-11-06: the owner signed off on the play-test ("LGTM"). Earlier the same day: automated part done. The Windows package test (`test_distribution.py`) and the Linux package checks (`test_sentry_linux.py`) now fail if anything under `Data/FontPacks` ships; the published site keeps its exact allowlist (`verify-site.ts`). The release notes written by `windows-release.yml` and the packaged `Data/README.txt` describe the Fonts setting and the optional download (source, size, CC0, Remove); README and THIRD_PARTY_NOTICES already did (FONT-3). Not run in the browser game: Remove (scripted input could not reach its button; Remove is covered natively and the IDBFS deletion by `test:filesystem`) and the full launcher. Done |
+| Follow-up | Done | 2026-11-14: Enhanced Bank Gothic's lowercase small capitals (and `:` `<` `>` `=` and the quotes) sat up to 0.88 native pixels below the capitals, because their 64-texel canvases span 7 or 5 ROM rows and were placed at 8x; `prepare` now stretches such a canvas over the cell, and every glyph shares the ROM's baseline (FORK-052). Verified: `test_enhanced_fonts.sh`, `test_hud.sh`, 1080p pickup-message captures before and after (`audit_hud.ps1 -Pickup`). Not run: browser and Linux at run time. |
 
 ### FONT-5 play-test checklist
 

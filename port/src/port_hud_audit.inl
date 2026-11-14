@@ -70,6 +70,14 @@ static void phVisualAudit(s32 p)
                 portHudObjective(0, 0, OBJECTIVESTATUS_COMPLETE, "Neutralise all alarms");
                 portHudObjective(1, 1, OBJECTIVESTATUS_FAILED, "Install covert modem");
             }
+            if (getenv("GE_HUD_AUDIT_PICKUP")) {
+                /* The localized gun pickup message, assembled as propobj.c
+                 * does: "Picked up " + "a KF7 Soviet.\n". */
+                static char pickup[80];
+                snprintf(pickup, sizeof(pickup), "%s%s", langGet(getStringID(LPROPOBJ, 0x00)),
+                    langGet(getStringID(LPROPOBJ, 0x25)));
+                HUDMESSAGEBOTTOM(pickup);
+            }
             fired = 1;
             portConLogf("ge: hud-audit: hit, direction, completed objective, weapon strip\n");
         } else if (fired == 1 && time >= 104.0f) {

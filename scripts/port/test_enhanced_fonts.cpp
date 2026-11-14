@@ -120,6 +120,47 @@ void test_prepare() {
     assert(!prepare(empty, 64, 64, glyph, m));
 }
 
+// The last mask row holding ink, or -1.
+int ink_bottom(const Mask &m) {
+    for (int y = m.height - 1; y >= 0; y--) {
+        for (int x = 0; x < m.width; x++) if (m.alpha[size_t(y) * m.width + x]) return y;
+    }
+    return -1;
+}
+
+// A 64-texel-wide canvas inked on rows first..last (red channel only).
+std::vector<uint8_t> canvas(int height, int first, int last) {
+    std::vector<uint8_t> rgba(size_t(64) * height * 4, 0);
+    for (int y = first; y <= last; y++) {
+        for (int x = 2; x < 40; x++) rgba[(size_t(y) * 64 + x) * 4] = 200;
+    }
+    return rgba;
+}
+
+void test_prepare_canvas_rows() {
+    // A 7-row lowercase small capital (top 3, bottom 10, as the capitals'
+    // top 2 + 8 rows): its 64-texel canvas spans the 56 mask rows, so ink
+    // ending on canvas row 55 ends on mask row 48 (55 / 64 * 56), within a
+    // texel of the cell's last ROM row, instead of seven texels lower.
+    const GlyphInfo small{5, 7, 3, 0};
+    Mask m;
+    assert(prepare(canvas(64, 7, 55), 64, 64, small, m));
+    assert(m.height == 56);
+    assert(ink_bottom(m) >= 47 && ink_bottom(m) <= 49);
+    assert(m.alpha[size_t(5) * m.width + 10] == 0 && m.alpha[size_t(8) * m.width + 10] != 0);
+
+    // A capital's 64-texel canvas is already 8x its 8 rows: unchanged.
+    const GlyphInfo capital{5, 8, 2, 0};
+    assert(prepare(canvas(64, 4, 59), 64, 64, capital, m));
+    assert(m.height == 64 && ink_bottom(m) == 59);
+
+    // A taller canvas only pads a 10-row glyph (Bank Gothic's #): its ink
+    // keeps its 8x rows.
+    const GlyphInfo tall{5, 10, 0, 0};
+    assert(prepare(canvas(128, 6, 76), 64, 128, tall, m));
+    assert(m.height == 80 && ink_bottom(m) == 76);
+}
+
 void test_resize() {
     const std::vector<uint8_t> flat(40 * 30, 180);
     const std::vector<uint8_t> same = resize_lanczos(flat, 40, 30, 40, 30);
@@ -183,6 +224,7 @@ int main() {
     test_verify();
     test_png();
     test_prepare();
+    test_prepare_canvas_rows();
     test_resize();
     test_trim();
     test_draw_extent();

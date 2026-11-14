@@ -6,7 +6,9 @@
  * (378bee0^:scripts/port/generate_enhanced_fonts.py) so the masks match what
  * it produced: authored X coordinates kept, at most one native pixel of ink
  * past the glyph's width, oversize images fitted with Pillow's Lanczos filter,
- * and fringe that would touch a tightly kerned neighbour trimmed. */
+ * and fringe that would touch a tightly kerned neighbour trimmed. Unlike that
+ * generator, a short glyph's 64-texel canvas is stretched over its rows, which
+ * puts the lowercase small capitals on the capitals' baseline. */
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -14,6 +16,9 @@
 namespace enhanced_font_masks {
 
 constexpr int kScale = 8;  /* mask texels per ROM texel */
+/* Canvas height the pack uses for glyphs shorter than eight rows; such a
+ * canvas spans the glyph's rows rather than padding them (prepare). */
+constexpr int kSpanCanvas = 64;
 
 /* A ROM glyph's metrics, as textrelated.c registers them. */
 struct GlyphInfo {

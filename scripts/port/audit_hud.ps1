@@ -13,6 +13,8 @@ param(
     [switch]$MissionTimer,
     [switch]$Dialogue,
     [switch]$ToastFade,
+    # Also shows the localized "Picked up a KF7 Soviet." message in the bottom-left message box.
+    [switch]$Pickup,
     [switch]$SmallHud,
     # Fonts = Iron Sights (font_style=2): Bank Gothic text from the open title font (FORK-051).
     [switch]$SharpFonts,
@@ -73,6 +75,7 @@ if ($BodyHit) { $auditEnv.GE_HUD_AUDIT_BODY = '1' }
 if ($LeftItem) { $auditEnv.GE_HUD_AUDIT_LEFT = [string]$LeftItem }
 if ($Dialogue) { $auditEnv.GE_HUD_AUDIT_DIALOGUE = '1' }
 if ($ToastFade) { $auditEnv.GE_HUD_AUDIT_TOAST_FADE = '1' }
+if ($Pickup) { $auditEnv.GE_HUD_AUDIT_PICKUP = '1' }
 if ($Chop) {
     $auditEnv.GE_HUD_AUDIT = '1'
     $auditEnv.GE_HUD_AUDIT_CHOP = '1'
