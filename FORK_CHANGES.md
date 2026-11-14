@@ -256,6 +256,30 @@ index finger both showed, mostly beside the guard. The owner chose 0.25, so
 the fit's offset is (0.25, -1.25, 0). The thumb tip is still pointed, and the
 mid-raise streak above is unchanged.
 
+Deferred, 2026-11-14: the AR33's thumb-up grip for the KF7. The owner asked
+about it, saw six renders and put it off. What the renders showed, for
+whoever resumes it:
+
+- It needs only values in the KF7's `sAdsHipGrips` row; the tilt, girth and
+  wrist scale already work for any gun.
+- Clean: tilt 1.0 at the current fit (offset (0.2, 0, 0), roll 0.2), with the
+  hand still drawn behind the gun. The thumb shows as a strip along the wood's
+  left edge, not on its face, because the gun covers what it overlaps.
+  Adding girth 1.3 and wrist 1.5 by 1.25 visibly broadens the wrist; that
+  combination was the suggested pick. The hand 0.5 further left, 0.5 higher
+  or lower, roll 0.7 and tilt 0.6 looked much the same.
+- Not clean: the hand in front of the gun (AR33's offset (0.25, -1.25, 0),
+  roll 0.7, or the KF7's own offset). The thumb and index finger show
+  clearly, but the index finger crosses the wood's edge at the hip and
+  through the raise; the KF7's fore-end is too narrow to hide it.
+- Building it in also means: the checks in `test_hip_arms.c` that only the
+  AR33 sets a tilt, girth or wrist scale; the tilted-hand and wrist-scale
+  paragraphs in `scripts/port/arm_rendering.md`; and regenerating the
+  gallery, whose KF7 Hip-Fire Arms views will change in all six wardrobes.
+
+The renders were Runway stills in the blue wardrobe from a temporary tuning
+build; they are not in the repository.
+
 Dual wielding: the first version hid both arms the moment a left gun was
 equipped, so with the All Guns cheat picking a 2x gun popped the support hand
 away in one frame (and back on return). Of the options offered (fade, lower the

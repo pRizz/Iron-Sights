@@ -160,7 +160,8 @@ through the top of the AR33's guard at the hip, and 1.0 or more below clears
 it. The tilt and the offset fade together, so partway through the raise a
 short streak of fingertip still shows along the guard's front edge. Moving
 the hand left shows more of the thumb, but from 0.75 left of the grip point
-the index finger comes through the guard at the hip.
+the index finger comes through the guard at the hip. The same grip for the KF7
+was rendered and deferred; FORK-075 in `FORK_CHANGES.md` records what worked.
 
 A tilted hand's forearm does not keep the hand's frame to the elbow, which
 squeezed the sleeve: `adsGripPoint` eases the generated forearm's
