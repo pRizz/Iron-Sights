@@ -37,6 +37,7 @@ typedef struct PortGunKickState {
     f32 climb;
     u32 rng;
     s32 item;
+    s32 pendingShots; /* rounds fired since the last drawn pose (portGunKickAdvance) */
 } PortGunKickState;
 
 /* Offset added to the drawn gun: gun units and radians (pitch > 0 is muzzle up). */
@@ -61,7 +62,10 @@ f32 portGunKickNativeScale(s32 item);
 /* gunfire.c: a round left `hand`. */
 void portGunKickFire(s32 hand, s32 item);
 /* gunfire.c gun pose: advance by `fields` (60 Hz field units) and return the
- * offset to draw, scaled by ADS Recoil; FALSE when there is none. */
+ * offset to draw, scaled by ADS Recoil; FALSE when there is none. Rounds fired
+ * since the last call kick after this step, so the frame a round leaves on
+ * shows the gun (and the muzzle its tracer starts from) before that round's
+ * kick. */
 s32 portGunKickAdvance(s32 hand, s32 item, f32 fields, PortGunKickPose *out);
 
 #endif

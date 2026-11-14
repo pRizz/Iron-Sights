@@ -1,6 +1,7 @@
 /* Included by test_ads.c: Weapon Kick (FORK-061) springs each shot, settles at
  * any tick rate, caps the climb, owns the native kick only while it is on,
- * scales with ADS Recoil, and Ludicrous and Cartoon kick far harder. */
+ * scales with ADS Recoil, Ludicrous and Cartoon kick far harder, and a round's
+ * kick starts after the frame it is fired on. */
 static f32 kickAbs(f32 value) { return value < 0.0f ? -value : value; }
 
 /* Largest value `channel` reaches in `seconds` after one shot from rest. */
@@ -154,13 +155,13 @@ static void testGunKickHooks(void)
     /* Ludicrous draws the same shot (same fresh spring and seed) far bigger.
      * Switching weapon and back resets the spring to an identical start. */
     portGunKickFire(GUNRIGHT, ITEM_UZI);
-    assert(portGunKickAdvance(GUNRIGHT, ITEM_UZI, 1.0f, &hip));
+    for (tick = 0; tick < 2; tick++) assert(portGunKickAdvance(GUNRIGHT, ITEM_UZI, 1.0f, &hip));
     assert(portGunKickAdvance(GUNRIGHT, ITEM_M16, 0.0f, &ads));
     assert(portGunKickAdvance(GUNRIGHT, ITEM_UZI, 0.0f, &ads));
     portGunKickOptionSet("weapon_kick", PORT_GUN_KICK_LUDICROUS);
     assert(portGunKickNativeScale(ITEM_UZI) == 0.0f);
     portGunKickFire(GUNRIGHT, ITEM_UZI);
-    assert(portGunKickAdvance(GUNRIGHT, ITEM_UZI, 1.0f, &ads));
+    for (tick = 0; tick < 2; tick++) assert(portGunKickAdvance(GUNRIGHT, ITEM_UZI, 1.0f, &ads));
     assert(ads.pitch > hip.pitch * 2.0f && ads.z > hip.z);
     portGunKickOptionSet("weapon_kick", PORT_GUN_KICK_ENHANCED);
 
@@ -172,6 +173,65 @@ static void testGunKickHooks(void)
     portGunKickOptionSet("weapon_kick", PORT_GUN_KICK_DEFAULT);
 }
 
+/* The frame a round is fired on draws the gun, and so the muzzle its flash
+ * and tracer leave from, before that round's kick; from the next frame on the
+ * pose is the spring started at the shot, at any tick rate. */
+static void testGunKickFiringFrame(void)
+{
+    const f32 deltas[] = { 1.0f, 0.5f, 0.25f };
+    PortGunKickProfile profile;
+    PortGunKickPose pose;
+    s32 i, frame;
+
+    selectPlayer(0);
+    sAdsBlend[0] = 0.0f;
+    portGunKickOptionSet("weapon_kick", PORT_GUN_KICK_LUDICROUS);
+    portGunKickExaggerate(portGunKickMaybeProfile(ITEM_SHOTGUN), PORT_GUN_KICK_LUDICROUS, &profile);
+    for (i = 0; i < (s32) (sizeof(deltas) / sizeof(deltas[0])); i++)
+    {
+        PortGunKickState expect;
+
+        /* A fresh spring at rest, with the slot's seed. */
+        assert(portGunKickAdvance(GUNRIGHT, ITEM_AK47, 0.0f, &pose));
+        assert(portGunKickAdvance(GUNRIGHT, ITEM_SHOTGUN, 0.0f, &pose) && pose.pitch == 0.0f);
+        memset(&expect, 0, sizeof(expect));
+        expect.rng = 0x2545F491u;
+
+        portGunKickFire(GUNRIGHT, ITEM_SHOTGUN);
+        assert(portGunKickAdvance(GUNRIGHT, ITEM_SHOTGUN, deltas[i], &pose));
+        assert(pose.x == 0.0f && pose.y == 0.0f && pose.z == 0.0f);
+        assert(pose.pitch == 0.0f && pose.yaw == 0.0f && pose.roll == 0.0f);
+
+        portGunKickImpulse(&expect, &profile);
+        for (frame = 1; frame <= 4; frame++)
+        {
+            PortGunKickPose want;
+            assert(portGunKickAdvance(GUNRIGHT, ITEM_SHOTGUN, deltas[i], &pose));
+            portGunKickStep(&expect, &profile, deltas[i] / 60.0f);
+            portGunKickPoseOf(&expect, 1.0f, &want);
+            assert(pose.pitch > 0.0f && nearlyEqual(pose.pitch, want.pitch) && nearlyEqual(pose.z, want.z));
+        }
+    }
+
+    /* Two rounds before one drawn frame both kick, after that frame. */
+    assert(portGunKickAdvance(GUNRIGHT, ITEM_AK47, 0.0f, &pose));
+    portGunKickFire(GUNRIGHT, ITEM_SHOTGUN);
+    portGunKickFire(GUNRIGHT, ITEM_SHOTGUN);
+    assert(portGunKickAdvance(GUNRIGHT, ITEM_SHOTGUN, 1.0f, &pose) && pose.pitch == 0.0f);
+    {
+        PortGunKickState expect;
+        PortGunKickPose want;
+        memset(&expect, 0, sizeof(expect));
+        expect.rng = 0x2545F491u;
+        portGunKickImpulse(&expect, &profile);
+        portGunKickImpulse(&expect, &profile);
+        portGunKickStep(&expect, &profile, 1.0f / 60.0f);
+        portGunKickPoseOf(&expect, 1.0f, &want);
+        assert(portGunKickAdvance(GUNRIGHT, ITEM_SHOTGUN, 1.0f, &pose) && nearlyEqual(pose.pitch, want.pitch));
+    }
+    portGunKickOptionSet("weapon_kick", PORT_GUN_KICK_DEFAULT);
+}
+
 static void testGunKick(void)
 {
     testGunKickOption();
@@ -180,4 +240,5 @@ static void testGunKick(void)
     testGunKickSpring();
     testGunKickClimb();
     testGunKickHooks();
+    testGunKickFiringFrame();
 }

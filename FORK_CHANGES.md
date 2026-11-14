@@ -1799,6 +1799,10 @@ row; the help line names enemies instead.
   it; the NPC branch of the beam tick advances it
   (`portChrShotgunTracersAdvance`) and the character branch of the beam draw
   draws it (`portChrShotgunTracersDraw`).
+- **Muzzle.** Pellet beams start at `field_B58`, the muzzle of the pose drawn
+  on the firing frame. With Weapon Kick on, that pose no longer includes the
+  firing round's kick (FORK-061, 2026-11-14), so the pellets leave the barrel
+  before it rises.
 - **Same look, own timing.** Pellet beams are drawn by the native tracer
   draw, so Tracer Strength styles them, at `PORT_PELLET_TRACER_SCALE` (60%)
   of a bullet tracer's width and glow alpha (60% of the native width even at
@@ -1990,6 +1994,20 @@ keeps the inherited animation exactly.
   ADS blend moves towards, so the kick shows once at every blend. The spring
   update is the exact damped-oscillator solution, so the motion is the same at
   every tick rate, and a paused game holds it.
+- **Firing frame.** `portGunKickFire` only queues the round
+  (`pendingShots`); `portGunKickAdvance` steps the spring and then applies
+  the queued impulses, which change velocity, not position. The frame a round
+  is fired on therefore draws the gun where it was when the round left, and the
+  kick shows from the next frame on (one tick later: 8.3 ms at 120 Hz). Before
+  2026-11-14 the impulse was applied in the tick and the render stepped the
+  spring a whole frame into it before posing the gun, so the firing frame
+  already showed the kick (about 8 degrees of a Ludicrous shotgun's 36 at
+  120 Hz, 15 at 60 Hz). The muzzle position `gunUpdateAndFire` reads from that
+  pose (`field_B58`) places the muzzle flash, bullet tracers and FORK-063's
+  pellet tracers, so on every kicked gun the tracers left a muzzle that was
+  already rising; the owner reported it as tracers leaving late, most visibly
+  on shotguns. The owner approved the fix on 2026-11-14 after a play-test
+  build.
 - **ADS.** The drawn kick is scaled by `portAdsRecoilScale`, so ADS Recoil (50%
   by default) halves it once the sights settle. Both shotguns keep their full
   kick in ADS, as FORK-045 already does for them.
@@ -2013,7 +2031,9 @@ which weapons have a profile, the heavy weapons out-kicking pistols, the
 single-shot peak, matching motion at 60 and 240 Hz, the return to rest, the
 climb ceiling and settling, the Ludicrous and Cartoon scaling and Ludicrous's larger drawn shot,
 the native-kick ownership, ADS Recoil scaling, resetting on weapon change and
-Original. They
+Original, and (`testGunKickFiringFrame`) a firing frame that draws no kick from
+that round at 1, 0.5 and 0.25 fields per tick, later frames that match the
+spring started at the shot, and two rounds queued before one frame. They
 pass (Docker `midas-linux-release`), as do `settings_placement.py` and
 `bright-builds-check.ts all`. The Windows build compiles and links. The
 regenerated hand gallery changed 0 image cells. No in-game capture of the

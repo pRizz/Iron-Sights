@@ -1,6 +1,7 @@
 /* Weapon Kick (FORK-061): a per-shot spring kick on the first-person gun.
  * gunfire.c calls portGunKickFire for each round and adds the advanced pose to
- * the drawn gun; the native recoil animation is zeroed while the spring owns it. */
+ * the drawn gun; the native recoil animation is zeroed while the spring owns it.
+ * A round kicks after the pose of the frame it is fired on is taken. */
 #include <math.h>
 #include <string.h>
 #include <ultra64.h>
@@ -232,13 +233,15 @@ f32 portGunKickNativeScale(s32 item)
     return kickMaybeActiveProfile(item, &scratch) != NULL ? 0.0f : 1.0f;
 }
 
+/* The round is queued, not kicked here: the tick fires it before the render
+ * steps the spring, so kicking now would draw the firing frame already a step
+ * into the kick, with the muzzle flash and tracer leaving a raised muzzle. */
 void portGunKickFire(s32 hand, s32 item)
 {
     PortGunKickProfile scratch;
-    const PortGunKickProfile *maybeProfile = kickMaybeActiveProfile(item, &scratch);
 
-    if (maybeProfile == NULL) return;
-    portGunKickImpulse(kickSlot(hand, item), maybeProfile);
+    if (kickMaybeActiveProfile(item, &scratch) == NULL) return;
+    kickSlot(hand, item)->pendingShots++;
 }
 
 s32 portGunKickAdvance(s32 hand, s32 item, f32 fields, PortGunKickPose *out)
@@ -252,6 +255,9 @@ s32 portGunKickAdvance(s32 hand, s32 item, f32 fields, PortGunKickPose *out)
 
     state = kickSlot(hand, item);
     portGunKickStep(state, maybeProfile, fields / KICK_FIELDS_PER_S);
+    /* An impulse changes velocity only, so the pose drawn now is the moment
+     * the queued rounds left; their kick shows from the next step on. */
+    for (; state->pendingShots > 0; state->pendingShots--) portGunKickImpulse(state, maybeProfile);
     portGunKickPoseOf(state, portAdsRecoilScale(item), out);
     return TRUE;
 }
