@@ -1526,7 +1526,8 @@ head-on capture from about 200 units showed the original's full crater against
 the HD image's small clipped fragment. In the owner's second session (lazy
 probes on), main-wall holes no longer toggled; one hole on a side face held by
 room 114 alone still followed that room, whose face is undrawn whenever the
-room is. Private captures: ignored `build_win/holes-*`.
+room is. Private captures were kept in ignored `build_win/holes-*` until the
+2026-11-14 build-folder cleanup (FORK-001) removed them.
 
 ### FORK-067 — Player options survive a stage started before the saves are read
 
@@ -2599,7 +2600,8 @@ neighbour's ring had covered them: the 1's right edge in `147` with Original and
 Enhanced, plus a speck at the 4/7 join. Iron Sights' wider gaps left it unchanged.
 White pixel counts rose about 3% (Original) and under 1% (others). Captures of
 ammo 800 and live FPS counts matched, and the owner play-tested and approved
-it. Private captures are under ignored `build_win/digits-*`.
+it. Private captures were kept in ignored `build_win/digits-*` until the
+2026-11-14 build-folder cleanup (FORK-001) removed them.
 ### FORK-055 — Growth soak audit and a bounded texture-name pool
 
 **Status:** Implemented 2026-11-07. Measured on Windows (plain and with an HD
@@ -2866,8 +2868,9 @@ FORK-033's ini values `hd`, `4k` and `2` read as HD.
     Archives and Bunker). The other 17 have colours that only roughly match:
     noise-like native colours (perhaps a palette read in another format),
     opaque corners or transparent bands that the HD art fills differently,
-    or painted detail this palette variant hides. The private evidence is in
-    `build_win/hd-alias/review`.
+    or painted detail this palette variant hides. The private evidence was in
+    `build_win/hd-alias/review` until the 2026-11-14 build-folder cleanup
+    (FORK-001) removed it.
   - *Close HD Matches.* Those 17 are in `hd_level_close_aliases.json` and
     apply while **Gameplay > Iron Sights > System > Close HD Matches**
     (`[display] close_hd_matches`, default 1, after Texture Pack in the
@@ -5829,8 +5832,28 @@ executables and suspend images matched to those builds may be purged without
 archiving or another confirmation. Keep the current main executable and its
 states, unknown images, normal campaign saves, profiles and settings. The state
 and HUD/mission-cheat/ADS audits and the weapon-icon generator remove their
-temporary executable on exit and retain diagnostic logs and captures. This supersedes briefly retaining the pre-toast executable for
+temporary executable on exit. This supersedes briefly retaining the pre-toast executable for
 older states.
+
+**Cleanup before pushing (2026-11-14):** at the owner's request, after
+`build_win` had grown to about 95 GB of audit, capture and gallery folders on
+a drive with 5 GB free, AGENTS.md now requires each task to delete the
+temporary files it generated outside Git before pushing (audit, capture and
+repro folders, hand-gallery capture folders, temporary isolated builds,
+scratch scripts), outright rather than to the Recycle Bin, which shares the
+drive. It lists what stays: the main executable and the files beside it,
+`build_win/Data`, settings, saves, profiles, the CMake build trees, Sentry
+inputs, owner-placed files, and anything another session may use. Findings an
+entry relies on belong in its text; an entry that names a removed capture
+folder is updated. This replaces the earlier rule to retain audit logs and
+captures. The same day's cleanup permanently deleted 1,368 items (87.8 GB) from
+`build_win`: hand-gallery capture folders, finished research and capture
+folders (`icon-aa`, `hd-*`, `holes-*`, `digits-*`, `weapon-icons-*` and
+others), audit and repro folders from before that day, stale secondary builds
+and old loose logs, images and scratch files. Today's folders other sessions
+might still use, the keep list above and the owner's recordings stayed; free
+space on the drive went from 5 GB to 83.7 GB. FORK-068, FORK-053 and the
+other entries that named those folders now say they were removed.
 
 **Sources:** [.gitignore](.gitignore), [artifact rules](AGENTS.md),
 [state audit](scripts/port/audit_states.ps1),
@@ -6866,7 +6889,7 @@ captures with no, 4x and 8x MSAA changed the stored icons' edges by about 2/255
 on average, and the old HUD draw discarded most of even that (56-60% of edge
 pixels partial in every variant, against ~100% with mips), so capture settings
 stay as they were. Review sheets and captures are ROM-derived and stayed local
-(`build_win/icon-aa`).
+(`build_win/icon-aa`, removed in the 2026-11-14 build-folder cleanup, FORK-001).
 
 **Sources:** [generator](scripts/port/generate_weapon_icons.py),
 [export harness](port/src/port_weapon_export.c), [model drawing](src/game/gunfire.c),

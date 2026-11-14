@@ -117,7 +117,22 @@ build fingerprints before purging them; leave unknown or current-build images
 alone. This permission concerns build artifacts and suspend images, not normal
 campaign saves (`Data/Saves`), profiles, settings, source files or other user data.
 Audit executables are temporary: remove the copied executable when the audit
-finishes, while keeping useful diagnostic logs and captures.
+finishes. The audit's logs and captures follow the cleanup rule below.
+
+Clean up temporary generated files before pushing. Before each push, delete
+what the task generated outside Git and no longer needs: its audit, capture
+and repro folders under `build_win` (logs, screenshots, frame dumps, copied
+executables), hand-gallery capture folders (`build_win/hand-gallery-*`),
+temporary isolated build or runtime directories, and scratch scripts. Delete
+them outright: the Recycle Bin shares the drive and frees nothing. Keep the
+main executable and the files beside it (DLLs, `.map`, link outputs,
+`shiny_weapons.ini`), `build_win/Data`, `midas.ini`, saves and profiles, the
+CMake build trees (`build_win`, `build_win/hd-prototype`), Sentry inputs
+(`build_win/sentry-*`), and files the owner placed there (recordings,
+screenshots). Leave alone what another session or running process may still
+use. A finding a `FORK_CHANGES.md` entry relies on belongs in that entry's
+text; if an entry names a capture folder, update the entry when the folder
+is removed.
 
 The user may play/debug the main Windows executable during development. Before
 building or replacing an executable, check running game processes and their
