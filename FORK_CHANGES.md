@@ -36,8 +36,9 @@ new areas. Status describes implementation state, not Git publication state.
 the main Windows executable for play-testing. The owner's first play-test
 found guards' rounds leaving large smoke plumes and asked for a quicker
 blast; the shorter blast and short smoke below replaced the first version's.
-That revision is not yet play-tested, and nothing is committed. Linux, Steam
-Deck and browser builds not run locally.
+The owner play-tested that revision and approved it; committed and pushed to
+`main` on 2026-11-14 (`092f276`). Linux, Steam Deck and browser builds not
+run locally.
 
 Inherited behaviour: a bullet that reaches a wall or floor makes Rare's
 impact spark, explosion type 1 (no damage, no sound, ten shrapnel bits and
@@ -140,8 +141,8 @@ rows, a repeat Runway run with Unlimited Explosions off exited cleanly with
 64 type-23 and 118 type-24 blasts, the slot reserve holding back 114 more
 under the guards' fire. The hand gallery was regenerated
 for the source change with no changed image cells, and
-`hand_gallery.py verify` passes. Not yet checked in game: the revised blast's
-look, size and loudness (the sound has not been recorded and measured), damage
+`hand_gallery.py verify` passes. The owner's play-test covered the revised
+blast's look. Not separately checked: its size and loudness (the sound has not been recorded and measured), damage
 balance for Bond and guards, shotguns, explosive props, multiplayer and
 raised tick rates.
 
