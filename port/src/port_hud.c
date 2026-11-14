@@ -181,6 +181,14 @@ s32 portHudObjective(s32 index, s32 letter, s32 status, const char *text)
     return 1;
 }
 
+s32 portHudObjectiveQueued(s32 index, s32 status)
+{
+    const HudState *h = &phState[0];
+    s32 i;
+    for (i = 0; i < h->toastCount; i++) if (h->toasts[i].index == index && h->toasts[i].status == status) return 1;
+    return 0;
+}
+
 void portHudObjectiveProgress(s32 stage, s32 difficulty, s32 count,
     struct objective_entry *const *objectives, const OBJECTIVESTATUS *statuses)
 {

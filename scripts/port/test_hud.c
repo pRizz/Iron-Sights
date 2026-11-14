@@ -4,6 +4,7 @@
 #include "../../port/src/port_hud.c"
 #include "../../port/src/port_hud_weapons.c"
 #include "../../port/src/port_objective_progress.c"
+#include "../../port/src/port_objective_messages.c"
 #include "../../port/src/port_crosshair.c"
 #include "../../port/src/port_mission_clock.c"
 #include "../../port/src/port_wardrobe.c"
@@ -301,6 +302,8 @@ static void testMainObjectiveCue(void)
     portHudOptionSet("objective_notifications", 1);
 }
 
+#include "test_hud_objective_messages.inl"
+
 int main(void)
 {
     s32 i, j, value, selected, n;
@@ -314,6 +317,8 @@ int main(void)
     testObjectiveTimingDuringDialogue();
     testObjectiveFadeOut();
     testMainObjectiveCue();
+    testScriptedObjectiveEchoTable();
+    testScriptedObjectiveEchoYields();
     {
         char timer[64], tiny[5];
         bestTimes[0][DIFFICULTY_SECRET] = 123;

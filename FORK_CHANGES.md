@@ -6580,10 +6580,36 @@ hyphenated word splits. The **All main objectives complete** cue now queues afte
 pending alerts instead of jumping ahead of them, so the objective that completed
 the set (for example Silo's satellite photograph) is announced first. The
 queue's eight-alert cap still drops the oldest pending alert.
+Alerts now take priority over stage-script top-of-screen messages that only
+restate the same objective result (owner request, 2026-11-14). An audit of every
+solo stage's `text_print_top` calls against its objective flags found twelve
+such echoes: Dam's "Covert modem installed.", "Off-site data backup completed."
+and "... backup failed."; Surface 1's "Communications dish powered down.";
+Surface 2's "Communications link damaged." and "Bomb placed on Hound MI-4.";
+Aztec's "Q's guidance data has been uploaded."; Bunker 1's "Finished
+download."; Frigate's tracker-bug and both bomb-defused lines; and Cradle's
+"Control console destroyed! Antenna inoperative." These live in one table
+keyed by stage and text ID. Scripts often print before setting the objective
+flag, so `AI_TextPrintTop` holds a listed message (at most two, matching the
+native top window) until the end of that frame's objective pass. If an alert for
+that objective and status is then shown or queued, the message is dropped;
+otherwise it shows unchanged, at most one frame later than upstream. That covers
+alerts being off, multiplayer, objectives above the selected difficulty
+(Dam's modem and backup on Agent) and a different outcome (Cradle's console
+destroyed after the antenna failed). Mission reset clears held messages.
+Failure lines that explain a cause stay, for example "Covert modem incorrectly
+installed.", "Satellite communications link destroyed...", "Mainframe
+destroyed!", "Radio damaged", "Plane destroyed!" and the "Mission Failure"
+casualty lines. So do dialogue lines that coincide with a completion and the
+generic "Picked up ..." messages. The audit also noted, without changing them,
+Statue Park's Valentin failures queueing five failure alerts at once and Bunker
+2 printing "Natalya has died." at both top and bottom.
 
 **Sources:** [objective updates](src/game/objective_status.c),
 [mission reset](src/game/objective.c), [notification queue](port/src/port_hud.c),
 [progress rules](port/src/port_objective_progress.c),
+[scripted echo table](port/src/port_objective_messages.c) with hooks in
+[AI top text](src/game/chrai.c), the objective pass and mission reset,
 [shared layout](port/src/port_mission_clock.c),
 [native subtitle bounds hook](src/game/bondview2.c).
 **Checks:** HUD queue/filter/timing, display-case/buffer/native-glyph tests and
@@ -6591,6 +6617,15 @@ main-objective progress cases for final actions, casualty failures, difficulty
 filtering and once-per-completion/reset behavior in `scripts/port/test_hud.sh`.
 The suite also covers wrapped Bunker/Facility objective text, preserved label
 spacing and the summary cue queueing behind a pending objective alert.
+It checks every echo-table text ID against the English text bank, confirms that
+the cause-giving failures stay unlisted, and tests hold/release. Release drops
+an echo with a matching alert, shows it without one or with a different outcome,
+never holds with alerts off, in multiplayer or when full, and resets with the
+mission. These tests live in `scripts/port/test_hud_objective_messages.inl`.
+The ROM-free HUD and ADS suites and an isolated Windows build pass in the
+`goldeneye` container. A two-pass gallery regeneration verified 108 cells with
+no changed image cells and refreshed its source fingerprint. The echo
+suppression has not yet been play-tested in a live mission.
 The ROM-free HUD and ADS suites and an isolated Windows build pass in the
 `goldeneye` container. Gallery regeneration verified both capture passes;
 no image cells changed, and its HTML/manifest source fingerprint was refreshed.

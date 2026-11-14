@@ -16,8 +16,10 @@ void something_with_stage_objectives(void)
 #ifndef TARGET_N64
     extern void portHudReset(s32 player);
     extern void portMissionHintsReset(void);
+    extern void portObjectiveMessagesReset(void);
     for (i = 0; i < 4; i++) portHudReset(i);
     portMissionHintsReset();
+    portObjectiveMessagesReset();
 #endif
 
     OBJECTIVESTATUS *start;

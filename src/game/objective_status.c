@@ -10,6 +10,7 @@
 #include "bondview.h"
 #ifndef TARGET_N64
 #include "port_hud.h"
+#include "port_objective_messages.h"
 #endif
 
 //Public variables - move to header
@@ -416,6 +417,7 @@ void display_objective_status_text_on_status_change(void)
 #ifndef TARGET_N64
     portHudObjectiveProgress(bossGetStageNum(), lvlGetSelectedDifficulty(),
         objectiveGetCount(), objective_ptrs, objectiveStatuses);
+    portObjectiveMessagesRelease();
 #endif
 }
 

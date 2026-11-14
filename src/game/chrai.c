@@ -3765,7 +3765,16 @@ void                   ai(PropDefHeaderRecord *Entityp, PROP_TYPE EntityType)
 
     #endif
 
+#ifndef TARGET_N64
+                    /* FORK-008: an echo of an objective result yields to its alert. */
+                    {
+                        extern s32 portObjectiveMessageHold(s32 textId, char *text);
+                        if (!portObjectiveMessageHold(ntohs(ai->txt), text))
+                            hudmsgTopShow(text);
+                    }
+#else
                     hudmsgTopShow(text);
+#endif
                     Offset += sizeof(AiTextPrintTopRecord);
                     break;
                 }

@@ -12,6 +12,8 @@ void portHudTick(void);
 void portHudHit(s32 attacker, s32 headshot);
 void portHudDamage(s32 victim, f32 incomingX, f32 incomingZ);
 s32 portHudObjective(s32 index, s32 letter, s32 status, const char *text);
+/* True while an alert for this objective result is shown or waiting. */
+s32 portHudObjectiveQueued(s32 index, s32 status);
 struct objective_entry;
 void portHudObjectiveProgress(s32 stage, s32 difficulty, s32 count,
     struct objective_entry *const *objectives, const OBJECTIVESTATUS *statuses);

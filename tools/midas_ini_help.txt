@@ -259,6 +259,8 @@ padN_stickmode.
                       |            | single shot, which alone can hit.
                       |            | Iron Sights > Combat Feedback
   objective_notifications | 1     | Named objective status alerts; 0 = original
+                      |            | Scripted top messages that only repeat
+                      |            | an alert's result give way to it.
   mission_hints       | 1          | Desktop solo mission-start control hints.
                       |            | Iron Sights > HUD Additions.
                       |            | Eight seconds; fades over the final two.
