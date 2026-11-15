@@ -36,8 +36,9 @@ new areas. Status describes implementation state, not Git publication state.
 - **Built:** for Windows in an isolated worktree build.
 - **Play-tested:** by the owner as `build_win/IronSights-Graphics.exe`, beside
   the main executable (which then held FORK-081's play-test build).
-- **Committed:** to `main` on 2026-11-15, after rebasing onto FORK-080 and
-  FORK-081; first drafted as FORK-080 and renumbered when those two landed.
+- **Committed and pushed:** to `main` on 2026-11-15 as `08af4e2`, after
+  rebasing onto FORK-080 and FORK-081; first drafted as FORK-080 and
+  renumbered when those two landed.
 - **Not run:** Linux, Steam Deck and browser builds.
 - **HDR Output** was not seen on an HDR display: this machine's monitor
   reports Windows HDR off.
