@@ -233,3 +233,5 @@ static void testTracers(void)
 #include "test_explosive_rounds.c"
 /* Reinforcements (FORK-081), another setting test_ads.c runs from here. */
 #include "test_reinforcements.c"
+/* Headshots Only (FORK-083), the other Enemies setting. */
+#include "test_headshots_only.c"

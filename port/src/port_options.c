@@ -182,6 +182,8 @@ static const char *const sExplosiveRoundsGuardsText[] = { "Players\n", "Everyone
 /* Reinforcements (FORK-081): 0 Original, 1 More, 2 Relentless (port_reinforcements.h) */
 static const s32 sReinforcementsVals[] = { 0, 1, 2 };
 static const char *const sReinforcementsText[] = { "Original\n", "More\n", "Relentless\n" };
+/* Headshots Melee (FORK-083): headshots_only_melee 0 or 1 */
+static const char *const sHeadshotsMeleeText[] = { "Blocked\n", "Allowed\n" };
 static const s32 sWeaponStyleVals[] = { 0, 1 };
 static const char *const sWeaponStyleText[] = { "Text\n", "Icons\n" };
 static const s32 sHealthDisplayVals[] = { 0, 1 };
@@ -347,6 +349,8 @@ static const struct PortOpt sOpts[] = {
     ENUMR ("explosive_rounds",   "[display]", "Explosive Rounds\n",   PORTOPT_CAT_GAMEPLAY, sExplosiveRoundsVals, sExplosiveRoundsText, NULL), /* FORK-078 */
     TOGGLET("explosive_rounds_guards", "[display]", "Whose Rounds\n",         PORTOPT_CAT_GAMEPLAY, sExplosiveRoundsGuardsText), /* FORK-078 */
     ENUMR ("reinforcements",     "[display]", "Reinforcements\n",     PORTOPT_CAT_GAMEPLAY, sReinforcementsVals, sReinforcementsText, NULL), /* FORK-081 */
+    TOGGLE("headshots_only",     "[display]", "Headshots Only\n",     PORTOPT_CAT_GAMEPLAY), /* FORK-083 */
+    TOGGLET("headshots_only_melee", "[display]", "Headshots Melee\n", PORTOPT_CAT_GAMEPLAY, sHeadshotsMeleeText), /* FORK-083 */
     TOGGLE("objective_notifications", "[display]", "Objective Alerts\n", PORTOPT_CAT_GAMEPLAY),
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     TOGGLE("mission_hints", "[display]", "Mission Start Hints\n", PORTOPT_CAT_GAMEPLAY),

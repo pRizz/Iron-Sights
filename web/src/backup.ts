@@ -10,6 +10,8 @@ const MAX_TOTAL_BYTES = 4 * 1024 * 1024;
 
 export function allowedUserPath(path: string): boolean {
   if (path === 'Data/Saves/eeprom.bin' || path === 'midas.ini' || path === 'gamecontrolleruser.txt') return true;
+  // Headshots Only records (FORK-083, port_headshots_records.c) live beside the save.
+  if (path === 'Data/Saves/headshots.ini') return true;
   const maybeProfile = /^Data\/Profiles\/([^/]+)\.geprofile$/.exec(path);
   if (!maybeProfile) return /^Data\/Devices\/[A-Za-z0-9_-]{1,128}\.gedevice$/.test(path);
   // Match port_profiles.c's portable names, including the watch keyboard's !

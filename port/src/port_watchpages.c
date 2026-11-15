@@ -184,9 +184,12 @@ static const struct PortWatchRowDef sIsFeedback[] = {
     { PWROW_OPT,       "explosive_rounds_guards", NULL, 0, 0 },
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
-/* ENEMIES (FORK-081): Reinforcements is also on each mission's difficulty page. */
+/* ENEMIES (FORK-081): Reinforcements and Headshots Only (FORK-083) are also on
+ * each mission's difficulty page. */
 static const struct PortWatchRowDef sIsEnemies[] = {
     { PWROW_OPT,       "reinforcements",   NULL, 0, 0 },
+    { PWROW_OPT,       "headshots_only",   NULL, 0, 0 },
+    { PWROW_OPT,       "headshots_only_melee", NULL, 0, 0 },
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
 static const struct PortWatchRowDef sIsHud[] = {

@@ -10,6 +10,7 @@
 #include "cheat.h"
 #ifndef TARGET_N64
 #include <stdio.h> /* stderr - save-write diagnostics (see file.c portMissionEndLog) */
+#include "port_headshots_only.h" /* FORK-083: records follow folder erase/copy */
 #endif
 
 
@@ -1170,6 +1171,9 @@ void fileDeleteSaveForFolder(s32 foldernum)
 
     if (foldernum >= FOLDER1 && foldernum < MAX_FOLDER_COUNT)
     {
+#ifndef TARGET_N64
+        portHeadshotsFolderErased(foldernum); /* Headshots Only (FORK-083) records */
+#endif
         save = fileGetSaveForFoldernum(foldernum);
         if (save)
         {
@@ -1252,6 +1256,9 @@ void fileCopyFolderToFirstFree(s32 foldernum)
                         fileSetSaveFoldernum(&new_save, other);
                         fileSetSelectedBondTofolder(other, fileGetBondForFolder(foldernum));
                         fileOverwriteSaveSlotWithNewSave(temp_s2, &new_save);
+#ifndef TARGET_N64
+                        portHeadshotsFolderCopied(foldernum, other); /* Headshots Only (FORK-083) */
+#endif
                     }
                 }
             }

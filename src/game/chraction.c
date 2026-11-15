@@ -39,6 +39,7 @@
 #include "port_tracers.h"
 #include "port_explosive_rounds.h"
 #include "port_reinforcements.h"
+#include "port_headshots_only.h"
 #endif
 
 #ifndef TARGET_N64
@@ -2635,6 +2636,18 @@ bool handles_shot_actors(ChrRecord *self, s32 hitpart, coord3d *vector, s32 weap
         {
             damageToCause = 0.0f;
         }
+
+#ifndef TARGET_N64
+        /* Headshots Only (FORK-083): the player's body hit on a guard does no
+         * damage. The guard flinches and the hit sound confirms it; no hit
+         * marker, no stagger. */
+        if (self->prop->type != PROP_TYPE_VIEWER && portHeadshotsOnlyBlocksHit(isPlayer, hitpart, weaponid))
+        {
+            portHitSoundConfirmed(myprop);
+            chrSetHiddenToRandom(self);
+            return TRUE;
+        }
+#endif
 
         if (self->prop->type == PROP_TYPE_VIEWER)
         {

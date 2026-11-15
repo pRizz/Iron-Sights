@@ -11,6 +11,7 @@
 #include "port_hd_download.h"      /* FORK-053 */
 #include "port_download_page.h"    /* FORK-052, FORK-053 */
 #include "port_reinforcements_menu.h"   /* FORK-081 */
+#include "port_headshots_menu.h"        /* FORK-083 */
 #endif
 #include <assets/oddtextures.h>
 #include "assets/image_externs.h"
@@ -4843,10 +4844,12 @@ static const struct PortSheetRow port_sheet_rows_is_feedback[] = {
     { SHROW_OPT, "shotgun_tracers" }, { SHROW_OPT, "decorative_pellets" }, /* FORK-063 */
     { SHROW_OPT, "explosive_rounds" }, { SHROW_OPT, "explosive_rounds_guards" }, /* FORK-078 */
 };
-/* ENEMIES (FORK-081): the guards' side. Reinforcements is also on each
- * mission's difficulty page (port_reinforcements_menu.c). */
+/* ENEMIES (FORK-081): the guards' side. Reinforcements and Headshots Only
+ * (FORK-083) are also on each mission's difficulty page
+ * (port_reinforcements_menu.c, port_headshots_menu.c). */
 static const struct PortSheetRow port_sheet_rows_is_enemies[] = {
     { SHROW_OPT, "reinforcements" },
+    { SHROW_OPT, "headshots_only" }, { SHROW_OPT, "headshots_only_melee" },   /* FORK-083 */
 };
 static const struct PortSheetRow port_sheet_rows_is_hud[] = {
     { SHROW_OPT, "always_crosshair_size" },   /* sizes HUD's Always Crosshair */
@@ -9824,6 +9827,8 @@ void update_menu08_difficulty(void) {
 #ifndef TARGET_N64
 /* Reinforcements (FORK-081): the cursor is on the difficulty page's row */
 static s32 port_reinforcements_highlight = FALSE;
+/* Headshots Only (FORK-083): likewise, on its row */
+static s32 port_headshots_highlight = FALSE;
 #endif
 
 void interface_menu08_difficulty(void)
@@ -9844,6 +9849,7 @@ void interface_menu08_difficulty(void)
     mission_difficulty_highlighted = DIFFICULTY_MULTI;
 #ifndef TARGET_N64
     port_reinforcements_highlight = FALSE;
+    port_headshots_highlight = FALSE;
 #endif
 
     if (frontCheckCursorOnPreviousTab())
@@ -9854,6 +9860,10 @@ void interface_menu08_difficulty(void)
     else if (portReinforcementsMenuHit(cursor_h_pos, cursor_v_pos))
     {
         port_reinforcements_highlight = TRUE;   /* Reinforcements (FORK-081) */
+    }
+    else if (portHeadshotsMenuHit(cursor_h_pos, cursor_v_pos))
+    {
+        port_headshots_highlight = TRUE;   /* Headshots Only (FORK-083) */
     }
 #endif
     else if ((unlockedDifficulty >= DIFFICULTY_007) && (cursor_v_pos >= 275.0f))
@@ -9885,6 +9895,11 @@ void interface_menu08_difficulty(void)
         else if (port_reinforcements_highlight)
         {   /* Reinforcements (FORK-081): the confirm press steps to the next level */
             portReinforcementsMenuStep();
+            sndPlaySfx(g_musicSfxBufferPtr, OPTION_CLICK2_SFX, NULL);
+        }
+        else if (port_headshots_highlight)
+        {   /* Headshots Only (FORK-083): the confirm press flips it */
+            portHeadshotsMenuStep();
             sndPlaySfx(g_musicSfxBufferPtr, OPTION_CLICK2_SFX, NULL);
         }
 #endif
@@ -10059,12 +10074,23 @@ Gfx *constructor_menu08_difficulty(Gfx *DL)
 
     if (mission_difficulty_highlighted >= 0)
     {
+#ifndef TARGET_N64
+        /* the box also covers the row's best times and, on the cheat's
+         * row, its badge below the name (drawn at row y + 194, 0.6 scale;
+         * FORK-083) */
+        const s32 rowRight = PORT_MISSION_TIMES_ROW_RIGHT;
+        const s32 rowBottom = (mission_difficulty_highlighted * 0x1E)
+            + (hasCheatInfo && cheatInfo.difficulty == mission_difficulty_highlighted ? 0xCB : 0xC3);
+#else
+        const s32 rowRight = 0xF0;
+        const s32 rowBottom = (mission_difficulty_highlighted * 0x1E) + 0xC3;
+#endif
         DL = microcode_constructor_related_to_menus(
             DL,
             0x7E - (j_text_trigger ? 0x32 : 0),
             (mission_difficulty_highlighted * 0x1E) + 0xB2,
-            0xF0,
-            (mission_difficulty_highlighted * 0x1E) + 0xC3,
+            rowRight,
+            rowBottom,
             0x32);
     }
 
@@ -10140,6 +10166,9 @@ Gfx *constructor_menu08_difficulty(Gfx *DL)
 
     DL = frontAddPreviousTabText(DL);
 
+#ifdef TARGET_N64
+    /* The port shows best times instead: a checkmark heads that column
+     * (port_mission_times.c, FORK-083). */
     /**
      * Draw the checkmark for completed difficulties.
     */
@@ -10160,11 +10189,16 @@ Gfx *constructor_menu08_difficulty(Gfx *DL)
             display_image_at_position(&DL, &xypos, &halfedxy, image->width, image->height, 0, 0, 1, 0xB4, 0, 0, 0xFF, image->level > 0, 0);
         }
     }
+#endif
 
 #ifndef TARGET_N64
     DL = portMissionBestTimesDraw(DL, mission_folder_setup_entries[briefingpage].mission_num, selected_folder_num, unlockedDifficulty);
-    DL = portFrontMissionCheatSummary(DL, mission_folder_setup_entries[briefingpage].mission_num);
+    /* The cheat footer only when its target row is locked: otherwise that
+     * row's own badge says the same (FORK-083). */
+    if (hasCheatInfo && cheatInfo.difficulty > DIFFICULTY_AGENT && unlockedDifficulty < cheatInfo.difficulty)
+        DL = portFrontMissionCheatSummary(DL, mission_folder_setup_entries[briefingpage].mission_num);
     DL = portReinforcementsMenuDraw(DL, port_reinforcements_highlight);   /* FORK-081 */
+    DL = portHeadshotsMenuDraw(DL, port_headshots_highlight);   /* FORK-083 */
 #endif
     DL = frontDrawCursor(DL);
 
@@ -18018,6 +18052,9 @@ Gfx *constructor_menu0D_missioncomplete(Gfx *DL)
     x2 = 0;
     y2 = 0;
     textMeasure(&y2, &x2, text, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
+#ifndef TARGET_N64
+    DL = portHeadshotsDebriefDraw(DL, 0x37 + x2, 0x8F);   /* Headshots Only (FORK-083) */
+#endif
 
     text = langGet(getStringID(LTITLE, TITLE_STR_105_TIME)); //Time:*
     x = 0x37;

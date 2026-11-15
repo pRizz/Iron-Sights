@@ -2474,6 +2474,8 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "explosive_rounds=0\n");        /* PORT_EXPLOSIVE_ROUNDS_DEFAULT (FORK-078) */
     fprintf(f, "explosive_rounds_guards=1\n"); /* PORT_EXPLOSIVE_ROUNDS_GUARDS_DEFAULT (FORK-078) */
     fprintf(f, "reinforcements=0\n");          /* PORT_REINFORCEMENTS_DEFAULT (FORK-081) */
+    fprintf(f, "headshots_only=0\n");          /* PORT_HEADSHOTS_ONLY_DEFAULT (FORK-083) */
+    fprintf(f, "headshots_only_melee=1\n");    /* PORT_HEADSHOTS_ONLY_MELEE_DEFAULT (FORK-083) */
     fprintf(f, "objective_notifications=1\n");
     fprintf(f, "mission_hints=1\nmission_hints_shown=0\n");
     fprintf(f, "weapon_hud=1\n");

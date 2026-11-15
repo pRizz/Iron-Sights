@@ -18,17 +18,21 @@ extern s32 portOptFind(const char *key);
 extern void portOptStep(s32 i, s32 dir);
 extern const char *portOptValueText(s32 i);
 
-/* Under the best times, one difficulty pitch below the 007 row, ending
- * clear of the dossier's tabs; the cheat footer sits at the left. */
+/* Under the best times, just short of a difficulty pitch below the 007 row
+ * so its highlight clears the cheat footer below (FORK-083 moved it up from
+ * 300 when Headshots Only took the line's left end), ending clear of the
+ * dossier's tabs. */
 #define ROW_RIGHT_X 370
-#define ROW_Y 300
+#define ROW_Y 295
 #define ROW_PAD_X 4
+#define ROW_LABEL "Reinforcements: "
+#define VALUE_RED 0xA00000FFu   /* the dossier's emphasis red, as the cheat badges */
 
 static void rowText(char *text, s32 size)
 {
     const s32 opt = portOptFind("reinforcements");
     const char *value = opt >= 0 ? portOptValueText(opt) : "Original\n";
-    snprintf(text, size, "Reinforcements: %s", value);
+    snprintf(text, size, ROW_LABEL "%s", value);
 }
 
 static s32 rowLeftX(void)
@@ -55,16 +59,26 @@ void portReinforcementsMenuStep(void)
 
 Gfx *portReinforcementsMenuDraw(Gfx *dl, s32 highlighted)
 {
-    char text[48];
-    s32 x = rowLeftX(), y = ROW_Y;
+    const s32 opt = portOptFind("reinforcements");
+    const char *value = opt >= 0 ? portOptValueText(opt) : "Original\n";
+    /* a level above Original reads in red */
+    const u32 valueColor = portReinforcementsSetting() != PORT_REINFORCEMENTS_ORIGINAL ? VALUE_RED : 0x000000ffu;
+    s32 x = rowLeftX(), y = ROW_Y, labelHeight, labelWidth;
     if (!ptrFontZurichBoldChars || !ptrFontZurichBold) return dl;
     if (highlighted)
     {
         /* the same box the difficulty rows get */
         dl = microcode_constructor_related_to_menus(dl, x - ROW_PAD_X, ROW_Y - 2, ROW_RIGHT_X + ROW_PAD_X, ROW_Y + 15, 0x32);
     }
-    rowText(text, sizeof(text));
+    textMeasure(&labelHeight, &labelWidth, ROW_LABEL, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
     dl = microcode_constructor(dl);
-    return frontPrintText(dl, &x, &y, (s8 *)text, (s32)ptrFontZurichBoldChars, (s32)ptrFontZurichBold,
-        0x000000ff, viGetX(), viGetY(), 0, 0);
+    {
+        s32 lx = x, ly = y;
+        dl = frontPrintText(dl, &lx, &ly, (s8 *)ROW_LABEL, (s32)ptrFontZurichBoldChars, (s32)ptrFontZurichBold,
+            0x000000ff, viGetX(), viGetY(), 0, 0);
+    }
+    x += labelWidth;
+    dl = microcode_constructor(dl);
+    return frontPrintText(dl, &x, &y, (s8 *)value, (s32)ptrFontZurichBoldChars, (s32)ptrFontZurichBold,
+        valueColor, viGetX(), viGetY(), 0, 0);
 }

@@ -285,6 +285,22 @@ padN_stickmode.
                       |            | playback and multiplayer.
                       |            | Iron Sights > Enemies, or the row on each
                       |            | mission's difficulty page.
+  headshots_only      | 0          | 1 = solo missions where only your head
+                      |            | hits hurt guards: a body or limb hit
+                      |            | makes them flinch (the hit sound still
+                      |            | plays, no hit marker) but does no damage.
+                      |            | Explosions (Explosive Rounds' splash too),
+                      |            | guards' fire and multiplayer are
+                      |            | unchanged. Completions (Agent to 00
+                      |            | Agent, no cheats) are kept with their own
+                      |            | best times in Data/Saves/headshots.ini.
+                      |            | Read at mission start. Iron Sights >
+                      |            | Enemies, or the row on each mission's
+                      |            | difficulty page.
+  headshots_only_melee | 1         | With headshots_only on: 1 = punches and
+                      |            | knife slashes still hurt guards (melee
+                      |            | never reports a head hit); 0 = they do
+                      |            | nothing either. Iron Sights > Enemies.
   objective_notifications | 1     | Named objective status alerts; 0 = original
                       |            | Scripted top messages that only repeat
                       |            | an alert's result give way to it.

@@ -11,6 +11,7 @@ extern int strcmp(const char *, const char *);
 #include "../../src/game/file2.c"
 #pragma GCC diagnostic pop
 #include "../../port/src/port_mission_times.c"
+#include "test_headshots_records.c"   /* FORK-083 */
 
 s32 portUnlockAll(void) { return 1; }
 void osSyncPrintf(const char *fmt, ...)
@@ -43,13 +44,14 @@ static void testRecordedTimes(void)
 
 static void testUnavailableTimes(void)
 {
-    /* Arrange: one empty campaign and one completion/overflow sentinel. */
+    /* Arrange: one empty campaign and one time at the save's 1023 s cap. */
     char text[8];
     s32 mission, difficulty;
-    fileSetDifficultyStageTime(&saves[0], SP_LEVEL_DAM, DIFFICULTY_SECRET, 1023);
-    /* Act / Assert: Unlock All and 007 never manufacture a measured time. */
-    assert(!portMissionBestTimeText(SP_LEVEL_DAM, FOLDER1, DIFFICULTY_SECRET, text, sizeof(text)));
-    assert(strcmp(text, "--:--") == 0);
+    fileSetDifficultyStageTime(&saves[0], SP_LEVEL_DAM, DIFFICULTY_SECRET, 1500);
+    /* Act / Assert: a capped completion reads 17:03+ (the page has no row
+     * checkmarks to show it); Unlock All and 007 never manufacture a time. */
+    assert(portMissionBestTimeText(SP_LEVEL_DAM, FOLDER1, DIFFICULTY_SECRET, text, sizeof(text)));
+    assert(strcmp(text, "17:03+") == 0);
     for (mission = SP_LEVEL_DAM; mission < SP_LEVEL_MAX; mission++)
         for (difficulty = DIFFICULTY_AGENT; difficulty <= DIFFICULTY_007; difficulty++) {
             assert(!portMissionBestTimeText(mission, FOLDER3, difficulty, text, sizeof(text)));
@@ -88,6 +90,7 @@ int main(void)
     testRecordedTimes();
     testUnavailableTimes();
     testBoundedOutput();
-    puts("Mission best-time checks passed: packed records, folders, sentinel, 007, Unlock All and bounded output.");
+    testHeadshotsRecords();
+    puts("Mission best-time checks passed: packed records, folders, sentinel, 007, Unlock All, bounded output and Headshots Only records.");
     return 0;
 }

@@ -30,6 +30,212 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-083 — Headshots Only: a mission modifier with its own records
+
+**Status:** Implemented on 2026-11-15 at the owner's request and committed to
+`main` with the owner's approval after six rounds of review of the
+difficulty page (see the review history below). Built for Windows into the
+main `build_win/IronSights.exe`; the owner had the build running between
+rounds, but a full Headshots Only mission was not reported as played. Linux,
+Steam Deck and browser builds were not run locally.
+
+Inherited behaviour: `handles_shot_actors` (`chraction.c`) scales a hit's damage
+by body part (head x4, chest x2, limbs x1, hat and held gun x0) and every hit
+part hurts. The save keeps one best time per mission and difficulty (Agent to
+00 Agent; 007 is never recorded), only for runs without cheats, and the
+difficulty page marks completed difficulties with a red checkmark.
+
+**What it does:** **Headshots Only** (off by default) makes the player's hits
+on a guard do damage only on the head. Any other part (feet to chest, and
+the crouched melee's general hit) leaves the guard's health alone: the guard
+still flinches (`chrSetHiddenToRandom`, as an invincible character does) and
+notices (`CHRFLAG_WAS_HIT` is set before the check), the hit still counts in
+the shot register and the debrief hit map, and the confirmed hit sound
+(FORK-043) still plays, but no hit marker shows, no hurt yelp plays and the
+guard is not staggered into its argh animation. The function returns TRUE, so
+a bullet still leaves its blood decal and a thrown knife still stops. Hat and
+held-gun hits keep stock handling (no damage either way, the hat still
+knocked off, the steel helmet still ricochets; a moonraker helmet already
+counts as the head). Thrown knives report a real hit part, so a knife to the
+head counts.
+
+**Headshots Melee** (`headshots_only_melee`, **Allowed** by default) covers
+melee, which never reports a head hit (`chraiFistAttackHandler` hits the
+chest): Allowed keeps stock damage for `ITEM_FIST` and `ITEM_KNIFE`, so missions
+that start unarmed (Bunker 2's cell, Archives' interrogation) stay playable, as
+the owner asked; Blocked makes melee do nothing too.
+
+**Deliberately unaffected:** explosions (`chrlvExplosionDamage` cannot tell the
+player's grenade from a guard's, so blocking it would make guards immune to
+their own; this includes Explosive Rounds' splash, FORK-078), guard-on-guard
+fire and scripted AI damage (`isPlayer` false), and players in multiplayer
+(`PROP_TYPE_VIEWER`).
+
+**When it applies:** `lv.c` latches the setting as a non-title stage loads,
+only for solo play (`gamemode == GAMEMODE_SOLO`, one player) outside demo
+playback (`get_is_ramrom_flag`). A change made from the pause watch applies to
+the next mission, so a run is either all Headshots Only or not. The front end
+is not a stage load, so the latch still describes the mission just played on
+its debrief. Headshots Melee is read live: it only relaxes the rule.
+
+**Records:** `file.c`'s `end_of_mission_briefing` records a headshot completion
+right after the stock save does, under the stock rule (not 007, no cheats
+active), so a big-head cheat cannot earn one. Records live in
+`Data/Saves/headshots.ini` (`[headshots_only]`, `version=1`, one
+`fN_mNN_dD=seconds` line per folder, mission and difficulty; 1023 marks an
+untimed completion, as in the stock save), because the N64 save has no room.
+Only a faster run replaces a record. `file2.c` clears a folder's records when
+the folder is erased and copies them with **Copy** to the folder it fills.
+The difficulty page shows a record only where the save has its own completion
+of that difficulty, so a replaced, imported or reset `eeprom.bin` never shows a
+stale time. Harness runs (`GE_NOINISAVE` or `GE_WINDOW`) read the file but never
+write it. In the browser the file is in the persisted set and save backups
+(`web/src/backup.ts`, `web/src/persistent-files.ts`).
+
+**Where it shows:**
+- Each mission's difficulty page: a **Headshots Only: ON/OFF** row on the
+  Reinforcements line, from the page's left margin. The label is black and the
+  value is printed after it separately: **ON** in the dossier's emphasis red
+  (`0xA00000FF`, as the cheat badges), **OFF** black. The Reinforcements row
+  does the same for a level above Original (FORK-081). Pointing at it
+  highlights it with the difficulty rows' box and the confirm press flips it
+  (A, Start or Z on a pad, Enter, a mouse click, a browser tap), with the
+  options' click sound; it calls the options table's `portOptStep`, so it saves
+  `midas.ini`. Browser touch sends cursor motion and A, all it needs, so it
+  has no native touch context. Both bottom rows moved up from y 300 to 295
+  (FORK-081) so the highlight clears the FORK-016 cheat footer below them.
+- Two best-time columns, always shown whatever the setting: the stock records
+  under a red checkmark heading (the stock checkmark texture in place of
+  FORK-032's **Best Time** text, placed so its bottom point is over the
+  column's centre: the texture's centre sits 4.2 units right of it), then the
+  Headshots Only records under the crosshair-and-head mark. The mark is a ring
+  around a head and shoulders with four straight ticks that cross the ring,
+  each showing as much of itself inside the ring as outside it (0.28 of the
+  ring's radius each way, clear of the head), with a stroke 0.17 of the
+  radius. The head is centred on the ring's centre and the shoulders below it
+  meet the ring's inner edge. On the heading the
+  ring's radius is 6.6 native units and the ticks reach about 9, so the mark
+  spans about the 18-unit square around the checkmark heading (measured: the
+  checkmark 16.5 x 17.9, the mark 18.5 x 18.5). Both are drawn in the
+  checkmark's red with the overlay ellipse and rectangle primitives. With
+  the row checkmarks gone, the stock column moved left into the freed space
+  (centres at x 300 and 362; the difficulty names and cheat-target badges end
+  near x 238). 007 reads `--:--` in both.
+- The port no longer draws the stock checkmark on each completed difficulty
+  row (`front.c` keeps it for N64): the times say the same. To keep that true,
+  a time at the save's 1023-second cap, which FORK-032 showed as `--:--`, now
+  reads `17:03+` in either column, as the Mission Timer's BEST does.
+- Owner review history: the first draft put a crosshair mark beside each
+  completed row's checkmark and swapped the one Best Time column to the
+  Headshots Only records while the mode was on. The first review asked for
+  both columns with icon headings and a smaller ring and figure with longer
+  ticks; the second removed the row checkmarks and marks as redundant with the
+  times, enlarged the heading's mark, ran its ticks inside the ring, and
+  centred the checkmark's point on its column; the third moved the stock
+  column left (from x 314) and made the ticks equal inside and outside the
+  ring, keeping the ring and figure's size; the fourth sized the heading's mark
+  to the checkmark's square, thinned its stroke (from 0.24 of the radius),
+  lowered the figure so the head is about central (it was 0.2 of the radius
+  above), widened the row highlight over the times and hid the cheat footer
+  where the row badge already shows the cheat; the fifth extended the
+  highlight over the cheat badge and lowered the figure one more screen pixel
+  (0.05 of the radius at 1280x960) to centre the head exactly; the sixth
+  turned both bottom rows' values red when not the default.
+- A highlighted difficulty row's box runs past both time columns to x 386
+  (`PORT_MISSION_TIMES_ROW_RIGHT`; the stock box ended at x 240, after the
+  difficulty name), and on the cheat's row it runs 8 units lower (to row y +
+  203, from + 195) to take in the **CHEAT TARGET** / **CHEAT UNLOCKED** badge
+  drawn under the name, at the owner's request after the fourth review. The
+  rows were already selected across the page's whole width (the stock hit
+  test reads only the cursor's height), so only the box changed.
+- The FORK-016 cheat footer (`CHEAT TO UNLOCK` and the required difficulty and
+  time) shows on the difficulty page only when the cheat's difficulty is still
+  locked, so its row and the row's **CHEAT TARGET** badge are hidden; otherwise
+  the badge says the same. The mission grid keeps the footer.
+- The debrief: the mark and **HEADSHOTS ONLY** in the dossier's emphasis red
+  after **STATISTICS** when the mission just played ran the mode.
+- **Gameplay > Iron Sights > Enemies** (both the Options folder and the watch):
+  **Headshots Only** and **Headshots Melee** after Reinforcements.
+
+**Shared hooks in upstream files** (all `#ifndef TARGET_N64`): `chraction.c`
+`handles_shot_actors` (the check, after the body-part multipliers), `lv.c` (the
+stage latch, beside the MP stats reset), `file.c` `end_of_mission_briefing`
+(the record), `file2.c` `fileDeleteSaveForFolder` and
+`fileCopyFolderToFirstFree` (erase and copy), and `front.c` (the difficulty
+page's hit test, confirm and draw calls, the stock row checkmarks limited to
+N64, the highlight box's right edge, the cheat footer's condition, the Enemies
+sheet rows and the debrief badge).
+
+**Sources:** rules in [port_headshots_only.h](port/include/port_headshots_only.h),
+settings and latch in [port_headshots_only.c](port/src/port_headshots_only.c),
+records in [port_headshots_records.c](port/src/port_headshots_records.c), the
+difficulty-page row, marks and debrief badge in
+[port_headshots_menu.c](port/src/port_headshots_menu.c), the two best-time columns in
+[port_mission_times.c](port/src/port_mission_times.c), plus
+[port_options.c](port/src/port_options.c), [joy_port.c](port/src/joy_port.c),
+[port_watchpages.c](port/src/port_watchpages.c),
+[help](port/src/port_option_help.c), [default ini](port/src/video.c),
+[settings reference](tools/midas_ini_help.txt) and [README](README.md).
+`ge: headshots:` lines on stderr log each recorded completion.
+
+**Checks:**
+- [test_headshots_only.c](scripts/port/test_headshots_only.c), run by
+  [test_ads.sh](scripts/port/test_ads.sh) through `test_tracers.c`: defaults,
+  option rows and value texts, the difficulty page's wrapping step, the solo
+  and demo latch, every body part blocked for bullets and thrown knives, head,
+  hat and gun untouched, guards' hits untouched, and melee under both melee
+  settings.
+- [test_headshots_records.c](scripts/port/test_headshots_records.c), run by
+  [test_mission_times.sh](scripts/port/test_mission_times.sh) with the real save
+  codec in both Unlock All variants: no record without the latch, only faster
+  runs replace one, the untimed clamp, 007 and out-of-range rejection, the stock
+  completion gate, the column text, the file round trip with unknown lines
+  ignored, and folder erase and copy. (The `file2.c` call sites write the
+  eeprom, so they are checked in game rather than there.)
+- `web/src/backup.test.ts` allows `Data/Saves/headshots.ini`; 37 tests pass.
+- The settings placement check and Bright Builds checks pass; the Windows build
+  succeeded with no implicit declarations. The hand gallery regenerated from
+  that build with 0 of 108 image cells changed (only its source fingerprint).
+- In game, [audit_hitmap.ps1](scripts/port/audit_hitmap.ps1) (new
+  `-HeadshotsOnly` and `-BlockMelee` switches) fired 120 probe bullets at Dam's
+  guards: with the mode on, 113 body and limb hits did no damage and killed no
+  one, and head hits killed 2; with it off, body hits damaged 8 guards and
+  killed 4. The debrief capture showed the badge, with the body hits still on
+  the hit map and in the counts.
+- [audit_mission_cheats.ps1](scripts/port/audit_mission_cheats.ps1) (new
+  `-HeadshotTimes`, `-HeadshotsOnly`, `-Cursor`, `-Reinforcements` (0-2, the
+  `reinforcements` key) and `-Executable` (an isolated build, used while the
+  owner's game held the main executable)) captured the difficulty page
+  at 1280x960 and 960x540 with records for Agent and Secret Agent: the row
+  plain and highlighted, and both bottom rows clear of the cheat footer. After
+  each review it captured both sizes again, with the mode off and on: the
+  final capture shows both icon headings and no row icons, both columns of
+  times inside the paper (`17:03+`, the widest, ends about 5 units short of the
+  paper's edge), the stock column clear of the highlighted row's box, and the
+  checkmark's lowest red pixels measured at x 299.9 for the column's 300.
+  After the fourth review: the highlight box spanning both columns at
+  1280x960 and 960x540, no cheat footer with Dam's and Facility's target rows
+  shown, and the resized mark with its head on the horizontal ticks' line.
+  After the fifth: the box around Dam's Secret Agent row taking in its
+  **CHEAT TARGET** badge at 1280x960 and its earned **CHEAT UNLOCKED** badge at
+  960x540, clear of the next row, and the 00 Agent row's box at its stock
+  height. After the sixth, from `build_win/hd-prototype`: **ON** and
+  **Relentless** red with their labels black at 1280x960, **OFF** and
+  **Original** black, and a highlighted **More** red at 960x540, each value
+  following its label at the same spacing as the single-string row. The
+  locked-target case (footer shown) was not captured: the audit's
+  `-LockedDifficulty` fixture still unlocked Facility's 00 Agent, so that case
+  rests on the condition's code. The debrief badge (ring radius 4.4, ticks
+  reaching about 6; its text moved 2 units right during the redraws) was not
+  recaptured after the mark's redraws.
+- Not yet checked: a full mission completed in the mode (the record path ran
+  only in the unit test), Copy and Erase on the Files screen, melee in game,
+  the watch page, and the Linux and browser builds.
+
+**Input idioms:** the difficulty-page row uses the page's own cursor and confirm,
+which every supported input sends; the two settings are ordinary toggle rows in
+both menus. No input is left unsupported.
+
 ### FORK-082 — Graphics: Tone Mapping, HDR Output and ray-traced Baked Lighting
 
 **Status:** Implemented on 2026-11-14 and 2026-11-15 at the owner's request.
@@ -448,14 +654,18 @@ change applies from the next mission start. Multiplayer (no placed guards) and
 demo playback (`get_is_ramrom_flag`) keep Original.
 
 **Where it is set:** each mission's difficulty page shows a **Reinforcements:**
-row under the best times (right of the cheat footer, one difficulty pitch below
-the 007 row). Pointing at it highlights it with the difficulty rows' box; the
+row under the best times (right of the cheat footer, at y 295, just short of a
+difficulty pitch below the 007 row; FORK-083 moved it up from 300 and put its
+Headshots Only row at the line's left end). Since FORK-083 the value prints
+after the black label in the dossier's emphasis red (`0xA00000FF`) when it is
+above Original, and black at Original. Pointing at it highlights it with the difficulty rows' box; the
 page's confirm press steps to the next level and wraps (A, Start or Z on a
 pad, Enter, a mouse click, a browser tap), with the options' click sound. It
 calls the options table's `portOptStep`, so it saves `midas.ini` like any row.
 Every supported input reaches it: browser touch sends cursor motion and A, which
-is all it needs, so it has no native touch context. It is also the only row of a
-new **Gameplay > Iron Sights > Enemies** subsection, in both the Options folder
+is all it needs, so it has no native touch context. It was also the only row of a
+new **Gameplay > Iron Sights > Enemies** subsection (FORK-083 added Headshots
+Only and Headshots Melee after it), in both the Options folder
 and the watch, between Combat Feedback and HUD Additions (no existing
 subsection fits a setting about the guards). `GE_MENU=zguards` opens the folder
 page.
@@ -5784,21 +5994,24 @@ CI; they were not run locally. No in-game capture was taken.
 
 **Status:** Implemented.
 
-The selected mission's difficulty page now shows an always-visible **Best Time**
-column beside the inherited Agent, Secret Agent, 00 Agent and optional 007 rows.
+The selected mission's difficulty page now shows an always-visible best-time
+column (headed **Best Time** until FORK-083 replaced the heading with the red
+checkmark, added a Headshots Only column after it, removed the port's row
+checkmarks and showed capped times as `17:03+`) beside the inherited Agent, Secret Agent, 00 Agent and optional 007 rows.
 The heading and centered times use the difficulty labels' native Zurich Bold
 font, size, black ink and menu text renderer directly on the dossier paper, with
-no added background panel or rule. Each label shares a column center halfway
+no added background panel or rule. Each label shared a column center halfway
 between the red completion checkmark's right edge and the dossier paper's right
-edge, giving equal space on either side. They fit beside the existing completion
+edge, giving equal space on either side, until FORK-083 put two columns there
+(centres at x 300 and 362). They fit beside the existing completion
 checkmarks and cheat-target badges. Only
 available difficulty rows appear. This adds a fork presentation of the upstream
 campaign's packed time records; the upstream briefing already displayed a best
 time after choosing a difficulty, but the difficulty list had no record column.
 
 Measured records use `MM:SS` from the selected campaign and mission. Unplayed
-records, absent saves and the inherited 1023-second completion/overflow sentinel
-show `--:--`. Custom 007 also shows `--:--` because the inherited save
+records and absent saves show `--:--`; the inherited 1023-second cap shows
+`17:03+` (until FORK-083 it showed `--:--` too, beside the row's checkmark). Custom 007 also shows `--:--` because the inherited save
 does not store a measured 007 time. Unlock All never supplies a synthetic record.
 The column needs no setting and does not write saves or change selection areas.
 The shared native/browser port uses one focused drawing hook in `front.c`;
@@ -8037,7 +8250,8 @@ was updated with it. On the mission grid, the stock film strip's dark lower edge
 ends just above a light paper strip (about game y 224-240). The footer's two rows
 therefore use 0.5 scale with seven-unit spacing, from `viGetY()-18`, centered
 in that strip instead of touching the film edge. The difficulty page shares the
-footer position. Isolated earned captures at 960x540 (grid and difficulty) and
+footer position, but since FORK-083 shows the footer only when the cheat's
+difficulty is locked (otherwise the row badge says the same). Isolated earned captures at 960x540 (grid and difficulty) and
 800x600 (grid) were reviewed. At 960x540, 0.5 scale rounds one glyph advance in
 "Paintball" slightly wide.
 

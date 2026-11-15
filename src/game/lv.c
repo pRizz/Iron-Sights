@@ -854,6 +854,11 @@ void lvlStageLoad(s32 stage)
             extern void portMpStatsStageStart(void);
             portMpStatsStageStart();
         }
+        {   /* Headshots Only (FORK-083): this solo stage's rule, latched here */
+            extern void portHeadshotsOnlyBeginStage(s32 solo, s32 demo);
+            extern s32 get_is_ramrom_flag(void);
+            portHeadshotsOnlyBeginStage(gamemode == GAMEMODE_SOLO && getPlayerCount() == 1, get_is_ramrom_flag() != 0);
+        }
         {   /* Random / Random Set weapons: this match's roll, before proplvreset2 places the pads */
             extern void portMpWeaponRoll(void);
             portMpWeaponRoll();

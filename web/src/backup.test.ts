@@ -57,7 +57,7 @@ describe('save backup boundary', () => {
   });
 
   test.each(['Data/Profiles/Agent 007.geprofile', 'Data/Devices/kbm.gedevice',
-    'gamecontrolleruser.txt', 'Data/Profiles/Web.Audit!.geprofile', 'Data/Profiles/Météore.geprofile'])('allows %s', path => {
+    'gamecontrolleruser.txt', 'Data/Saves/headshots.ini', 'Data/Profiles/Web.Audit!.geprofile', 'Data/Profiles/Météore.geprofile'])('allows %s', path => {
     // Arrange / Act / Assert
     expect(allowedUserPath(path)).toBe(true);
   });

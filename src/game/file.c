@@ -4,6 +4,7 @@
 #include "front.h"
 #ifndef TARGET_N64
 #include <stdio.h> /* stderr - mission-end diagnostics */
+#include "port_headshots_only.h" /* FORK-083: headshot records */
 #endif
 
 f32 get_007_reaction_speed(void)
@@ -72,6 +73,8 @@ void end_of_mission_briefing(void)
         var1 = solo_target_time_array[mission_folder_setup_entries[briefingpage].mission_num][selected_difficulty];
         fileUnlockStageInFolderAtDifficulty(selected_folder_num, mission_folder_setup_entries[briefingpage].mission_num, selected_difficulty, getMissiontimer() / 0x3c);
 #ifndef TARGET_N64
+        /* Headshots Only (FORK-083): its own record, under the same rule */
+        portHeadshotsMissionComplete(selected_folder_num, mission_folder_setup_entries[briefingpage].mission_num, selected_difficulty, getMissiontimer() / 0x3c);
         fprintf(stderr, "ge: debrief: stage %d @ difficulty %d status=%d; aztec agent=%d secret=%d 00=%d (0 locked 1 unlocked 3 completed)\n",
                 mission_folder_setup_entries[briefingpage].mission_num, selected_difficulty,
                 fileIsStageUnlockedAtDifficulty(selected_folder_num, mission_folder_setup_entries[briefingpage].mission_num, selected_difficulty),

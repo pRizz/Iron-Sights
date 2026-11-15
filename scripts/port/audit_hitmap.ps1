@@ -25,7 +25,10 @@ param(
     [switch]$List,
     [string]$Resolution = '960x720',
     # Fonts: 0 Original, 1 Enhanced (needs Data/FontPacks/gepd), 2 Iron Sights (FORK-051/052).
-    [ValidateRange(0,2)][int]$FontStyle = 0
+    [ValidateRange(0,2)][int]$FontStyle = 0,
+    # Headshots Only (FORK-083): only head hits do damage; -BlockMelee sets Headshots Melee to Blocked.
+    [switch]$HeadshotsOnly,
+    [switch]$BlockMelee
 )
 $ErrorActionPreference = 'Stop'
 $repoDir = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
@@ -38,7 +41,8 @@ New-Item -ItemType Directory -Path $dir | Out-Null
 Copy-Item -LiteralPath $Executable -Destination $auditExe
 Copy-Item -LiteralPath (Join-Path (Split-Path $Executable) 'SDL2.dll') -Destination $dir
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]', 'fullscreen=window', 'vsync=0', 'maxfps=60',
-    'tickhz=60', 'render_thread=0', 'msaa=0', 'music_volume=0', "debrief_hit_map=$([int](!$Off))", "font_style=$FontStyle")
+    'tickhz=60', 'render_thread=0', 'msaa=0', 'music_volume=0', "debrief_hit_map=$([int](!$Off))", "font_style=$FontStyle",
+    "headshots_only=$([int][bool]$HeadshotsOnly)", "headshots_only_melee=$([int](!$BlockMelee))")
 $auditEnv = @{ SDL_AUDIODRIVER='dummy';
     GE_ROM=(Join-Path $repoDir 'baserom.u.z64'); GE_WINDOW=$Resolution; GE_NOINPUT='1'; GE_SEED='1';
     GE_IRONSIGHTS_FONTS='1';   # FORK-051: allows the hidden Iron Sights font when asked for

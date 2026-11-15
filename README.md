@@ -96,6 +96,7 @@ Successful `main` builds deploy automatically to GitHub Pages. See [compatibilit
 - **Graphics (on by default on Windows and Linux, with the Vibrant Look):** **Gameplay > Iron Sights > Graphics** adds **Tone Mapping** (the 3D view regraded for richer colour and contrast without darkening it, with **Brightness**, **Contrast**, **Intensity**, **Vibrance**, **Clarity**, **Sharpen**, **Glow**, **Saturation**, **Temperature**, **Split Tone**, **Fade**, **Vignette**, **Film Grain**, **Auto Exposure** (eye adaptation: bright snow and walls are brought down, dark levels stay dark) and **Adaptation Speed** sliders, and **Looks** that set them all at once: Natural, Vibrant, Cinematic, Noir, Muted, Cold War, Warm Retro and Dark; the HUD keeps its colours), **Baked Lighting** (ray-traced shadowing in corners and under objects, with a touch of colour from nearby surfaces, baked into each level as it loads), **HDR Output** (Windows, while Windows HDR is on: graded highlights brighter than white, with **HDR Peak Brightness** and **HDR Paper White**) and **Gun and Hands** (whether these also reach your gun, hands and arms). Tone Mapping and Baked Lighting start on, HDR Output off; turn Tone Mapping off for the original look. See [Graphics hotkeys](#graphics-hotkeys).
 - **Suspend points:** four manual slots, quicksave/quickload, and undo-load for solo missions.
 - **Reinforcements (Original by default):** each mission's difficulty page sets how many extra guards come after you: **Original**, **More** or **Relentless**, through clones of guards who hear you and fresh guards sent from out of sight once you are spotted. See [Reinforcements](#reinforcements).
+- **Headshots Only (off by default):** a second row on each mission's difficulty page makes only your head hits hurt guards. Runs completed this way get their own best-times column. See [Headshots Only](#headshots-only).
 
 See [Playing](#playing) below for controls and settings.
 
@@ -244,7 +245,8 @@ call one copy of themselves when they hear you before you have seen them: the
 copy runs at you while the original holds its post. **Reinforcements** sets how
 many guards the level sends after you. It sits on each mission's difficulty page,
 below the best times (point at it and confirm with A, Enter, a click or a tap to
-step to the next level), and under **Gameplay > Iron Sights > Enemies**:
+step to the next level; a level above Original shows in red), and under
+**Gameplay > Iron Sights > Enemies**:
 
 - **Original** (the default): the original game's rule, unchanged.
 - **More:** any placed soldier can call clones, not just those few guards, with
@@ -270,6 +272,36 @@ spare guard slots free, so the level's own scripted reinforcements always have
 room. A change applies from the next mission start. Demo playback and
 multiplayer keep Original.
 
+### Headshots Only
+
+**Headshots Only** turns a solo mission into a test of aim: only your shots to
+a guard's head do any damage. It sits on each mission's difficulty page, on the
+Reinforcements line at the left (point at it and confirm with A, Enter, a click
+or a tap to switch it; **ON** shows in red), and under **Gameplay > Iron Sights >
+Enemies**.
+
+- A bullet or thrown knife that hits anywhere else makes the guard flinch and
+  notice you, and the hit sound still plays, but it does no damage and shows no
+  hit marker. It still counts in your accuracy and on the debrief hit map.
+- Shooting off a hat still exposes the head; a steel helmet still stops the shot.
+- **Headshots Melee** (**Allowed** by default, under **Enemies**) decides whether
+  punches and knife slashes still hurt, since they never count as head hits.
+  Leave it on for missions that start you unarmed, such as Bunker's cell or
+  Archives' interrogation room; set it to **Blocked** for a stricter run.
+- Explosions are not affected (Explosive Rounds' splash included), nor are
+  guards' own shots or multiplayer.
+
+The setting is read when a mission starts, so a change made from the pause watch
+applies to the next one. Completing a mission with it on (Agent, Secret Agent or
+00 Agent, with no cheats on, as for the normal records) records your time in
+the Headshots Only column. The page always shows two best-time
+columns: your normal records under a red checkmark, then your Headshots Only
+records under a red crosshair-and-head mark. A time slower than the save's
+17:03 cap reads `17:03+`. The debrief shows **HEADSHOTS ONLY** after
+**STATISTICS** for such a run. These records are kept per campaign folder in
+`Data/Saves/headshots.ini` (in the browser, with the other saves and in save
+backups); erasing or copying a folder erases or copies them too.
+
 ### Mission cheat hints
 
 The mission grid shows the highlighted mission's cheat status, required difficulty,
@@ -278,8 +310,9 @@ that can unlock it. **Cheat unlocked** means the selected campaign save has
 earned it; **Cheat to unlock** means it is still to be earned. **Cheat available
 - Unlock All** distinguishes temporary availability through that setting.
 Both are printed on the dossier in the game's own text, with unlocked and
-available status in its dark red. The footer also identifies a required
-difficulty that is still locked. Completion checkmarks retain their original meaning; 007 has no timed
+available status in its dark red. On the difficulty screen the footer appears
+only when the required difficulty is still locked, so its row and badge are
+hidden. The difficulty rows show best times rather than completion checkmarks; 007 has no timed
 cheat target. These hints are always shown and do not require the HUD timer.
 
 ### Graphics hotkeys

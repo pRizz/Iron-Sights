@@ -15,7 +15,7 @@ function synchronize(fs: GameFS, populate: boolean): Promise<void> {
 }
 
 function knownPaths(fs: GameFS): string[] {
-  const candidates = ['midas.ini', 'gamecontrolleruser.txt', 'Data/Saves/eeprom.bin'];
+  const candidates = ['midas.ini', 'gamecontrolleruser.txt', 'Data/Saves/eeprom.bin', 'Data/Saves/headshots.ini'];
   for (const directory of ['Data/Profiles', 'Data/Devices']) {
     const path = `${USER_MOUNT}/${directory}`;
     if (!fs.analyzePath(path).exists) continue;
