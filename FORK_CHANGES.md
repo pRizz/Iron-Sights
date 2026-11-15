@@ -35,9 +35,9 @@ new areas. Status describes implementation state, not Git publication state.
 **Status:** Implemented on 2026-11-15 at the owner's request and committed to
 `main` with the owner's approval after six rounds of review of the
 difficulty page (see the review history below). Built for Windows into the
-main `build_win/IronSights.exe`; the owner had the build running between
-rounds, but a full Headshots Only mission was not reported as played. Linux,
-Steam Deck and browser builds were not run locally.
+main `build_win/IronSights.exe`. After the push the owner reported playing
+several Headshots Only missions with the Windows build and that the mode
+works. Linux, Steam Deck and browser builds were not run locally.
 
 Inherited behaviour: `handles_shot_actors` (`chraction.c`) scales a hit's damage
 by body part (head x4, chest x2, limbs x1, hat and held gun x0) and every hit
@@ -228,9 +228,12 @@ difficulty-page row, marks and debrief badge in
   rests on the condition's code. The debrief badge (ring radius 4.4, ticks
   reaching about 6; its text moved 2 units right during the redraws) was not
   recaptured after the mark's redraws.
-- Not yet checked: a full mission completed in the mode (the record path ran
-  only in the unit test), Copy and Erase on the Files screen, melee in game,
-  the watch page, and the Linux and browser builds.
+- The owner played several Headshots Only missions on Windows after the push
+  and reported that the mode works; which missions, and whether records were
+  written, were not reported.
+- Not yet checked separately: a record written by an in-game completion (the
+  record path ran in the unit test), Copy and Erase on the Files screen,
+  melee in game, the watch page, and the Linux and browser builds.
 
 **Input idioms:** the difficulty-page row uses the page's own cursor and confirm,
 which every supported input sends; the two settings are ordinary toggle rows in
