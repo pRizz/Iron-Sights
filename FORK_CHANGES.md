@@ -30,6 +30,152 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-086 — Room Seams: level seams no longer show the sky
+
+**Status:** Implemented on 2026-11-15 after the owner reported thin blue
+lines along floor edges, wall feet and the road's centre line in Dam. The
+owner play-tested the first version (below) as
+`build_win/IronSights-Seams.exe` and still saw the lines; this version
+replaced it the same day, and the owner play-tested it the same way and
+approved it. Built for Windows and the browser (`web_build.py video`).
+Linux and Steam Deck builds were not run locally.
+
+**Cause (inherited, made visible by FORK-082):** Rare's room meshes have
+T-junctions whose middle vertex sits off the long edge it should lie on. At
+one of the owner's spots (room 132, x 17151, z 19170) a floor triangle's
+corner is 0.65 units from the barrier foot it should meet (eye-space units,
+where Bond's eye is about 186 above the floor), so a thin wedge of the floor
+plane belongs to no triangle and the sky drawn behind the room shows through.
+The gap has a size in the world: close up it is several pixels wide (about 5
+at 1920x1080 there), and further away it shrinks to a dashed sub-pixel
+sliver. A build of `d9cd84f` (2026-11-01, before this month's rendering work)
+shows the same lines at the owner's four spots and at the tunnel wall below,
+so the gaps are not new. Tone Mapping (FORK-082, the same day) brightens
+them from dark navy to vivid cyan: at the tunnel wall, against a surrounding
+brightness of about 22, the crack went from 53 with Tone Mapping off to about
+95 with it on (Clarity, Sharpen and Brightness each add a little, the tone
+curve the rest). That is why it looked like a regression.
+
+**What it does:** each opaque triangle of a room's display list also draws a
+backing copy. The copy is the triangle grown, in its own plane, by 2 world
+units along each edge that no other opaque triangle of the room has, and it is
+drawn 16 units (eight times the grow) further back in depth. Every real
+surface wins the depth test against it, so it only shows where nothing was
+drawn: the seams. The real triangles are untouched.
+
+- **Which edges grow:** a room's first draw learns its edges, keyed by the two
+  corners' integer model positions (`gfx_seam_edge_key`), counting every
+  opaque triangle of the list before culling. An edge two triangles share
+  (a box's corner edges, a floor's inner diagonals) stays; an edge only one
+  triangle has (the long side of a T-junction, a floor's edge at a wall foot,
+  a room's border) grows. That first draw takes no copy. A different stage
+  in the tag forgets every room.
+- **The grow:** each corner goes to where its two (moved or unmoved) edge
+  lines meet, capped at three times the grow from where it was so a needle
+  corner does not spike (`gfx_seam_grow_plane`). Positions are camera-relative
+  (modelview times the vertex), in world units; the copy's clip position is
+  that point times the projection.
+- **The depth:** only the copy's clip z changes, to the depth of the point 16
+  units further along the view axis (`gfx_seam_push_depth`), so its screen
+  shape, perspective and fog stay as grown. The copy is first clipped to the
+  near plane itself (`gfx_seam_clip_near`, every float interpolated as the
+  rasterizer would), so every corner is in front and takes the push; a
+  quadrilateral is drawn as two triangles.
+- **Which draws:** depth-tested, opaque, not decals and not cutouts. Dam's
+  opaque lists use the one-minus-alpha blender with `ALPHA_CVG_SEL` and
+  `A_IN`, whose alpha is pixel coverage, which the renderer draws opaque, so
+  they count as opaque. Truly blended draws, `CVG_X_ALPHA` texture-edge and
+  alpha-threshold cutouts (a copy behind a fence would double its pattern),
+  decals (and so they do not mark a floor edge as shared), texture
+  rectangles, the rooms' translucent lists, props, characters, guns and hands
+  take no copy, so the first-person arm contracts are untouched.
+- **What it costs in looks:** at an unshared edge whose background is more
+  than 16 units behind it (a mesh border against the sky), the copy shows as
+  a rim of up to 2 units. None was visible in the captures below.
+- **Tuning:** `GE_SEAM_GROW=<world units>` (0 to 16, default 2) for
+  diagnosis; 0 turns it off. No menu setting: it fixes a defect.
+- **Not covered:** the room cache's replay paths (`room_cache = 1` or `2`,
+  default 0 on PC, 2 on the Xbox) draw rooms without the interpreter's
+  triangle path, so they keep the seams.
+
+**Replaced the same day:** the first version grew every opaque room triangle
+by half a pixel in clip space (a conservative-rasterization grow). It closed
+the dashed sub-pixel crack at the tunnel wall but not the owner's lines,
+which are gaps of a fixed world size and several pixels wide up close. A
+grown copy at a small fixed depth offset was tried next: it closed the lines
+but overhung convex corners (a barrier's top face in front of its side and
+over the floor below), showing shards and spikes. Pushing the copy back
+fixed the shards on faces but not over far backgrounds, and moving vertices
+along their view rays misplaced triangles that cross the eye plane. Growing
+only unshared edges, with the near clip and the z-only push, removed all of
+those.
+
+**Hooks:** `bg.c`'s `bgRenderRoomPrimary` brackets the room's opaque
+`gSPDisplayList` with `portRoomSeamsTag(gdl, 1, room)` / `(gdl, 0, room)`
+(inside `#ifndef TARGET_N64`). That is a G_NOOP tag 0x68 that
+`port_room_seams.c` emits with the room (bits 1-10) and the stage's low byte
+(bits 11-18, from `bossGetStageNum`). In `gfx_pc.cpp`:
+- `gfx_run_dl` reads the tag and drives the room's learning state;
+  `gfx_start_frame` closes the span;
+- `gfx_sp_vertex` stores the camera-relative and model positions in the
+  `LoadedVertex` (`seam_eye`, `seam_ob`; separate from the glint and glass
+  `eye`);
+- `gfx_sp_tri1` counts edges at entry while a room learns, prepares the grown
+  corners before emission, and appends the clipped, pushed copy after the
+  triangle is counted, flushing the batch as usual.
+
+**Input:** none; it is a rendering fix with no row or binding.
+
+**Sources:** [tag](port/src/port_room_seams.c) and its
+[header](port/include/port_room_seams.h), the
+[helpers](port/fast3d/gfx_seam_grow.h), the hooks in `src/game/bg.c` and
+`port/fast3d/gfx_pc.cpp`, `GE_SEAM_GROW` in `port/src/port_console_env.h`,
+and the [unit test](scripts/port/test_room_seams.c)
+([runner](scripts/port/test_room_seams.sh)).
+
+**Checks (2026-11-15):**
+- `test_room_seams.sh` (ROM-free, in the `goldeneye` Docker image) passes:
+  - every grown edge sits the grow outside its line, in the triangle's
+    plane;
+  - with one edge named, the opposite corner stays and the other two slide
+    along their unmoved edges;
+  - no edge, no area or no grow declines, and a needle corner is capped;
+  - edge keys match in either order and differ for different edges;
+  - the near clip keeps the part in front as a quad with interpolated floats,
+    drops a triangle behind the eye and keeps one in front whole;
+  - for a GL perspective, the pushed depth equals the depth of the point that
+    far back, the near plane's w is found, and a corner behind the eye keeps
+    its depth.
+- **The owner's four spots** (`GE_SPAWNXYZ` with their coordinates and
+  pitch, 1920x1080, their `[display]` settings without HDR Output, a pulsed B
+  press to skip the intro). Strong-blue pixels in the left two thirds of the
+  frame, baseline (`GE_SEAM_GROW=0`) then fix:
+
+  | Spot | Before | After | Peak blue excess |
+  |---|---|---|---|
+  | room 132, x 17151, z 19170 | 5,829 | 22 | 98 → 23 |
+  | room 132, x 16385, z 18690 | 2,073 | 1 | 86 → 16 |
+  | room 132, x 15650, z 18810 | 3,798 | 0 | 102 → 7 |
+  | room 126, x 14338, z 18198 | 3,587 | 274 | 90 → 18 |
+
+  The pixels left at the last spot are dark (brightness 19, against the
+  line's 137), not the line. Crops showed the lines gone and the barriers
+  as in the baseline.
+- **Tunnel wall:** `audit_graphics.ps1`, `GE_AUTOSTICK=0,70,700,3000` from
+  Dam's start, Bond walks into the wall at room 132 (x 16524, z 17091). Crack
+  pixels (blue more than 12 above red and green) went from about 200 to 0.
+- **Elsewhere on Dam** (the start yard down the road and against the cliffs,
+  the dark tunnel, the far tunnel by the dam), copy on and off side by side:
+  the same apart from guards and the sky moving, and the cliff silhouettes
+  against the sky are identical.
+- **Performance:** 20,000 uncapped frames at the road spot took 99 and 109 s
+  without the copy and 122 and 93 s with it (about 200 fps either way); the
+  run-to-run noise on this machine is larger than any difference.
+- The owner's play-test in Dam, from `build_win` with their own settings,
+  found the lines gone.
+- Not yet checked: other levels, the room cache paths, HDR Output, a browser
+  device, and the cost on phones.
+
 ### FORK-085 — Benchmark suite: fixed-work frame timing against stock
 
 **Status:** Implemented on 2026-11-15 at the owner's request, as the first step
@@ -821,6 +967,11 @@ depth and the native render setup are unchanged, and with the features off
 `powf` is not the hosted one (`powf(1, 2.2)` returned 16481, which turned
 baked rooms black). The bake's float maths therefore lives in the SDL-only
 `port_baked_trace.c` (`portBakeLinTable`, `portBakeEncode`, `portBakeSqrt`).
+
+**Seams (2026-11-15):** the grade turned the level's inherited seams
+(T-junction gaps that show the sky behind a room) from dark navy into bright
+cyan lines that the owner took for a regression. FORK-086 closes the seams
+themselves; the grade is unchanged.
 
 **Input:** the eight rows are ordinary option rows, so every supported input
 (keyboard, mouse, gamepad, browser touch) changes them. The hotkeys are

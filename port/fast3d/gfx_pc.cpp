@@ -165,6 +165,8 @@ struct LoadedVertex {
     uint8_t fog;
     uint8_t clip_rej;
     float eye[3]; /* FORK-058: camera-space position in a Gun Glint span */
+    float seam_eye[3]; /* FORK-086: camera-relative position in a room's opaque list */
+    int16_t seam_ob[3]; /* FORK-086: its model position, for the room's edge table */
 };
 
 /* 8-bit -> float, bit-identical to `x / 255.0f` (twenty-seventh build: the
@@ -620,6 +622,42 @@ float gfx_ge_dec_b = 0.0f, gfx_ge_dec_d = 0.0f;
 /* FORK-077: inside the bullet-hole / scorch span (G_NOOP 0x65, explosion.c):
  * only those decals take the backend's two-sided decal window */
 bool gfx_ge_dec_window = false;
+/* FORK-086: inside a room's opaque list (G_NOOP 0x68, port_room_seams.c):
+ * each opaque triangle also draws a backing copy, grown in its plane by
+ * gfx_seam_amount() world units and pushed just behind the real surfaces,
+ * which covers the level's seams (gfx_seam_grow.h) */
+#include "gfx_seam_grow.h"
+#include <unordered_map>
+static bool s_GeRoomSeams = false;
+/* Each room's edges, learned on its first draw: how many of its opaque
+ * triangles have each edge (gfx_seam_edge_key). Only an edge one triangle has
+ * grows, so the copy never overhangs a box's shared corner edges. Rooms are
+ * forgotten when the tag names another stage. */
+struct GfxSeamRoom {
+    uint8_t state = 0; /* 0 unseen, 1 learning (this draw), 2 known */
+    std::unordered_map<uint64_t, uint16_t> edges;
+};
+static std::vector<GfxSeamRoom> s_SeamRooms(1024);
+static int s_SeamRoom = 0, s_SeamStage = -1;
+/* the draws that take a backing copy: depth-tested, opaque, not a decal and
+ * not a cutout (a copy behind a fence would double its pattern). The rooms'
+ * opaque lists use the 1-minus-alpha blender, but with ALPHA_CVG_SEL and A_IN
+ * their alpha is pixel coverage, which the renderer draws opaque. */
+static bool gfx_seam_mode_ok(uint32_t oml) {
+    const bool cvg_opaque = (oml & ALPHA_CVG_SEL) != 0 && (oml & CVG_X_ALPHA) == 0 && ((oml >> 24) & 3) == G_BL_A_IN;
+    const bool blend = (oml & (3 << 20)) == (G_BL_CLR_MEM << 20) && (oml & (3 << 16)) == (G_BL_1MA << 16) && !cvg_opaque;
+    const bool cutout = (oml & CVG_X_ALPHA) != 0 || (oml & (3U << G_MDSFT_ALPHACOMPARE)) == G_AC_THRESHOLD;
+    return (oml & Z_CMP) != 0 && (oml & ZMODE_DEC) != ZMODE_DEC && !blend && !cutout;
+}
+static float gfx_seam_amount(void) {
+    static float amount = -1.0f; /* world units; GE_SEAM_GROW overrides, 0 = off */
+    if (amount < 0.0f) {
+        const char* e = getenv("GE_SEAM_GROW");
+        amount = e != NULL ? (float) atof(e) : 2.0f;
+        if (!(amount >= 0.0f) || amount > 16.0f) amount = 2.0f;
+    }
+    return amount;
+}
 static void gfx_flush(void) {
     if (buf_vbo_len > 0) {
         roc_stat_draw_origin[ge_flush_origin & 15u]++;
@@ -3814,6 +3852,15 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* verti
 
         x = gfx_adjust_x_for_aspect_ratio(x, w);
 
+        if (s_GeRoomSeams && gfx_seam_amount() > 0.0f) {
+            /* FORK-086: the camera-relative position (world units; the camera's
+             * rotation lives in the projection), for the seam backing copy */
+            const float (*mv)[4] = rsp.modelview_matrix_stack[rsp.modelview_matrix_stack_size - 1];
+            for (int k = 0; k < 3; k++) {
+                d->seam_eye[k] = v->ob[0] * mv[0][k] + v->ob[1] * mv[1][k] + v->ob[2] * mv[2][k] + mv[3][k];
+                d->seam_ob[k] = (int16_t) v->ob[k];
+            }
+        }
         if (s_GeGlint && !s_GeGlintBlock) {
             /* FORK-058: the camera-space position, for the Gun Glint's
              * face normals (its models are prelit: no vertex normals to use) */
@@ -4141,6 +4188,15 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
     struct LoadedVertex* v2 = &rsp.loaded_vertices[vtx2_idx];
     struct LoadedVertex* v3 = &rsp.loaded_vertices[vtx3_idx];
     struct LoadedVertex* v_arr[3] = { v1, v2, v3 };
+    if (s_GeRoomSeams && !is_rect && s_SeamRooms[s_SeamRoom].state == 1 && gfx_seam_mode_ok(rdp.other_mode_l)) {
+        /* FORK-086: learning this room's edges - every opaque triangle of its
+         * list, before culling, so edges off screen count too */
+        GfxSeamRoom& room = s_SeamRooms[s_SeamRoom];
+        for (int i = 0; i < 3; i++) {
+            uint16_t& n = room.edges[gfx_seam_edge_key(v_arr[i]->seam_ob, v_arr[(i + 1) % 3]->seam_ob)];
+            n = n < 0xFFFFu ? (uint16_t) (n + 1u) : n;
+        }
+    }
     /* room cache capture: a rejected / culled triangle still runs the state
      * and emission path so it can be recorded, then its floats are dropped */
     bool roc_drop = false;
@@ -5329,6 +5385,48 @@ ndcprobe_done:;
         }
     }
 
+    /* FORK-086: an opaque room triangle also draws a backing copy, grown in
+     * its plane by gfx_seam_amount() world units along the edges no other
+     * triangle of the room has, and pushed behind the real surfaces, so it
+     * shows only where the level's seams let the sky through. A room's first
+     * draw learns its edges and draws no copy. */
+    float seam_pos[3][4];
+    float seam_alpha = 0.0f, seam_back_w = 0.0f, seam_near_w = 0.0f;
+    bool seam_copy = false;
+    if (s_GeRoomSeams && !is_rect && s_SeamRooms[s_SeamRoom].state == 2 && gfx_seam_amount() > 0.0f &&
+        gfx_seam_mode_ok(rdp.other_mode_l)) {
+        const GfxSeamRoom& room = s_SeamRooms[s_SeamRoom];
+        unsigned open = 0;
+        for (int i = 0; i < 3; i++) {
+            const auto it = room.edges.find(gfx_seam_edge_key(v_arr[i]->seam_ob, v_arr[(i + 1) % 3]->seam_ob));
+            open |= (it != room.edges.end() && it->second == 1) ? 1u << i : 0u;
+        }
+        const float p[3][3] = { { v_arr[0]->seam_eye[0], v_arr[0]->seam_eye[1], v_arr[0]->seam_eye[2] },
+                                { v_arr[1]->seam_eye[0], v_arr[1]->seam_eye[1], v_arr[1]->seam_eye[2] },
+                                { v_arr[2]->seam_eye[0], v_arr[2]->seam_eye[1], v_arr[2]->seam_eye[2] } };
+        float g[3][3];
+        if (open != 0 && gfx_seam_grow_plane(p, gfx_seam_amount(), open, g)) {
+            const float (*P)[4] = rsp.P_matrix; /* clip = camera-relative position x P */
+            /* its depth is pushed back eight times the grow (after the near
+             * clip, at emission): at a convex corner the grown copy overhangs
+             * the edge in front of the next face, and must still lose to it */
+            seam_back_w = 8.0f * gfx_seam_amount() * gfx_seam_w_scale(P);
+            seam_alpha = gfx_seam_depth_ratio(P);
+            seam_near_w = gfx_seam_near_w(P, seam_alpha);
+            for (int i = 0; i < 3; i++) {
+                float c[4];
+                for (int k = 0; k < 4; k++) {
+                    c[k] = g[i][0] * P[0][k] + g[i][1] * P[1][k] + g[i][2] * P[2][k] + P[3][k];
+                }
+                seam_pos[i][0] = gfx_adjust_x_for_aspect_ratio(c[0], c[3]);
+                seam_pos[i][1] = clip_parameters.invert_y ? -c[1] : c[1];
+                seam_pos[i][2] = c[2]; /* raw clip z: pushed and remapped at emission */
+                seam_pos[i][3] = c[3];
+            }
+            seam_copy = seam_near_w > 0.0f;
+        }
+    }
+
     for (int i = 0; i < 3; i++) {
         float z = v_arr[i]->z, w = v_arr[i]->w;
         if (dec_pull && w > 4.0f * ge_dec_pull) {
@@ -5645,8 +5743,40 @@ ndcprobe_done:;
         }
     }
 
+    /* FORK-086: the backing copy - this triangle's floats with the grown
+     * corners in place of its positions, clipped to the near plane so every
+     * corner is in front, then pushed back */
+    float seam_poly[4 * 32];
+    int seam_n = 0;
+    const uint32_t seam_stride = seam_copy ? (buf_vbo_len - roc_vstart) / 3 : 0;
+    if (seam_stride >= 4 && seam_stride <= 32) {
+        float tri[3 * 32];
+        memcpy(tri, buf_vbo + roc_vstart, 3 * seam_stride * sizeof(float));
+        for (int i = 0; i < 3; i++) {
+            memcpy(tri + i * seam_stride, seam_pos[i], 4 * sizeof(float));
+        }
+        seam_n = gfx_seam_clip_near(tri, (int) seam_stride, seam_near_w * 1.001f, seam_poly);
+        for (int i = 0; i < seam_n; i++) {
+            float* v = seam_poly + i * seam_stride;
+            v[2] = gfx_seam_push_depth(v[2], v[3], seam_alpha, seam_back_w);
+            if (clip_parameters.z_is_from_0_to_1) {
+                v[2] = (v[2] + v[3]) / 2.0f;
+            }
+        }
+    }
+
     if (++buf_vbo_num_tris == MAX_BUFFERED) {
         gfx_flush();
+    }
+    for (int t = 0; t + 2 < seam_n; t++) { /* a fan: one or two triangles */
+        const int corner[3] = { 0, t + 1, t + 2 };
+        for (int i = 0; i < 3; i++) {
+            memcpy(buf_vbo + buf_vbo_len, seam_poly + corner[i] * seam_stride, seam_stride * sizeof(float));
+            buf_vbo_len += seam_stride;
+        }
+        if (++buf_vbo_num_tris == MAX_BUFFERED) {
+            gfx_flush();
+        }
     }
 }
 
@@ -8279,6 +8409,25 @@ static void gfx_run_dl(Gfx* cmd) {
                     /* FORK-077: bullet-hole / scorch span on / off (port_bullet_rooms.c) */
                     gfx_flush(); /* draws before the tag belong outside the span */
                     gfx_ge_dec_window = (cmd->words.w1 & 1u) != 0;
+                } else if ((cmd->words.w1 >> 24) == 0x68u) {
+                    /* FORK-086: a room's opaque list on / off (port_room_seams.c);
+                     * it only adds triangles to the batch, so nothing to flush */
+                    const int stage = (int) ((cmd->words.w1 >> 11) & 0xFFu);
+                    GfxSeamRoom& room = s_SeamRooms[(cmd->words.w1 >> 1) & 0x3FFu];
+                    s_GeRoomSeams = (cmd->words.w1 & 1u) != 0;
+                    s_SeamRoom = (int) ((cmd->words.w1 >> 1) & 0x3FFu);
+                    if (stage != s_SeamStage) { /* another level: its rooms are new */
+                        for (GfxSeamRoom& r : s_SeamRooms) {
+                            r.state = 0;
+                            r.edges.clear();
+                        }
+                        s_SeamStage = stage;
+                    }
+                    if (s_GeRoomSeams && room.state == 0) {
+                        room.state = 1; /* learn its edges during this draw */
+                    } else if (!s_GeRoomSeams && room.state == 1) {
+                        room.state = 2;
+                    }
                 } else if ((cmd->words.w1 >> 24) == 0x63u) {
                     /* FORK-066: glass span, kind or 0 (port_glass.c) */
                     gfx_flush(); /* draws before the tag belong outside the span */
@@ -8835,6 +8984,7 @@ extern "C" void gfx_start_frame(void) {
     ge_stat_cache_entries = (uint32_t) gfx_texture_cache.map.size();
     ge_stat_free_ids = (uint32_t) gfx_texture_cache.free_texture_ids.q.size();
     s_GeViewmodel = false;
+    s_GeRoomSeams = false; /* FORK-086 */
     s_GeViewmodelLight[0] = s_GeViewmodelLight[1] = s_GeViewmodelLight[2] = 1.0f; /* FORK-082 */
     s_GeShinyItem = 0;
     s_GeGlint = s_GeGlintBlock = false;

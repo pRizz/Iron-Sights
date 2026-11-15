@@ -233,6 +233,7 @@ static const char *const sPortConEnvNames[] = {
     "GE_ROOMLIST",
     "GE_ROOM_AUDIT",
     "GE_RUMBLETEST",
+    "GE_SEAM_GROW",
     "GE_SEED",
     "GE_SHADERPREWARM",
     "GE_SHADE_WHITE",

@@ -27,6 +27,7 @@
 #include <string.h>
 extern void sysFatalError(const char *format, ...);
 #include "port_noclip.h" /* FORK-072: portNoclipAllRooms, portNoclipMatrixOffsetFits */
+#include "port_room_seams.h" /* FORK-086: portRoomSeamsTag */
 #include "port_graphics.h" /* FORK-082: Baked Lighting's capture and apply hooks */
 #endif
 
@@ -3924,8 +3925,12 @@ Gfx *bgRenderRoomPrimary(Gfx *gdl, s32 room_index)
                 extern Gfx *portRoomCacheEmit(Gfx *gdl, s32 room);
                 gdl = portRoomCacheEmit(gdl, room_index);
             }
+            gdl = portRoomSeamsTag(gdl, 1, room_index); /* FORK-086: the opaque list covers its seams */
 #endif
             gSPDisplayList(gdl++, OS_K0_TO_PHYSICAL(g_BgRoomInfo[room_index].ptr_expanded_mapping_info));
+#ifndef TARGET_N64
+            gdl = portRoomSeamsTag(gdl, 0, room_index);
+#endif
 
             // Set the room's state to "loaded"
             g_BgRoomInfo[room_index].model_bin_loaded = 1;
