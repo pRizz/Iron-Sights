@@ -9886,6 +9886,25 @@ contained presentation. `presentation.test.ts` covers the size rule;
 full width in portrait) at start, after rotating to portrait and after a tablet
 resize, replacing its check that rotation kept the starting resolution.
 
+**Safe-area text inset (2026-11-15).** The stage-filling canvas runs under an
+iPhone's notch and rounded corners, which clipped the show_fps counter in the
+top-left corner. The canvas still fills the stage; only the text moves.
+`safe-area.ts` reads `env(safe-area-inset-*)` (the page sets
+`viewport-fit=cover`) through a hidden fixed probe. It reports how far each
+inset reaches into the canvas's bounds, as a fraction of the canvas width or
+height, through `portWebSetSafeArea` (`port/web/lifecycle.c`). It reports again
+whenever the canvas, window or orientation changes, and once the game starts.
+`portDrawFpsCounter` (`src/game/bondview2.c`, browser builds only) adds
+`portWebSafeAreaTopLeft`'s offset to its position. That offset is the left and
+top fractions in HUD units. x uses the larger of the wide frame's unit (window
+height / viY) and the stretched frame's (window width / viX), so the counter
+clears the inset in either mapping. A canvas that does not reach the inset, and
+every desktop or Android browser without one, gets no offset. Native builds are
+unchanged. Other HUD text keeps its upstream or Wide HUD placement.
+`safe-area.test.ts` covers the inset-to-canvas rule, and `web_build.py video`
+compiles and exports the bridge. Not yet checked on a physical iPhone or in a
+WebKit device emulation.
+
 `tools/prepare-room-models.mjs` verifies pinned acquisition hashes and regenerates
 the console-only GLB (203,896 bytes) and controller GLB (1,204,348 bytes).
 `tools/model-geometry.mjs` preserves normalized vertex attributes when isolating

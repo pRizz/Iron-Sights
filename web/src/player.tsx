@@ -12,6 +12,7 @@ import type { Engine } from './engine';
 import type { RomManager } from './rom-manager';
 import type { Capture } from './capture';
 import { observeGameSize } from './presentation';
+import { observeSafeArea } from './safe-area';
 import { TouchControls } from './touch-controls';
 import type { TouchInput } from './touch-input';
 import { observeTouchViewport } from './touch-viewport';
@@ -61,6 +62,20 @@ export function Player(props: PlayerProps) {
         onCleanup(presentation.stop);
     });
     onMount(() => onCleanup(observeTouchViewport(stage)));
+    // Edge-pinned game text (the FPS counter) moves clear of a notch or
+    // rounded corner the canvas extends under.
+    onMount(() => {
+        const safeArea = observeSafeArea(canvas, () => {
+            const maybeGame = engine.maybeGame();
+            const maybeSet = maybeGame?._portWebSetSafeArea;
+            if (!started() || !maybeGame || !maybeSet) return undefined;
+            return (left, top, right, bottom) => maybeSet.call(maybeGame, left, top, right, bottom);
+        });
+        createEffect(() => {
+            if (started()) safeArea.refresh();
+        });
+        onCleanup(safeArea.stop);
+    });
     const maybeError = createMemo(() => {
         const value = engine.status();
         return value.kind === 'error' ? value : undefined;

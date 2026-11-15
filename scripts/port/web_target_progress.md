@@ -1138,6 +1138,16 @@ the stage at start, in portrait and at tablet size.
 **Next action:** Run the touch audit on WebKit and a physical iPhone and Android
 phone, including a Home Screen launch, to confirm rotation there.
 
+**2026-11-15 safe-area text inset:** Reported on an iPhone: with show_fps on, the
+counter was cut off in the top-left corner under the notch/rounded corner. The
+canvas keeps filling the stage. `safe-area.ts` sends the safe-area insets'
+share of the canvas to `portWebSetSafeArea`, and the FPS counter moves in by
+that much (FORK-025). Bun tests, the typecheck and `web_build.py video` pass;
+a device check is still open.
+
+**Next action:** On a physical iPhone, in landscape both ways and in portrait,
+confirm the counter clears the notch and the rounded corners.
+
 ## WEB-008 | 2026-10-24 | Room scene and assets
 
 **Rendering performance, 2026-11-04:** the owner reported laggy idle frames and a

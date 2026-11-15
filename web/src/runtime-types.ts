@@ -45,6 +45,7 @@ export type GameModule = {
     _portWebIconStageBusy(): number;
     _portWebReturnToRoom(): void;
     _portWebResizeFramebuffer?(width: number, height: number): number;
+    _portWebSetSafeArea?(left: number, top: number, right: number, bottom: number): void;
     _portWebFileMenuMetric(metric: number): number;
     _portWebGetFrames(): number;
     _portWebGetPlayerHeading(): number;

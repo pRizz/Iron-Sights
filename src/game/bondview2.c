@@ -12856,6 +12856,16 @@ static Gfx *portDrawFpsCounter(Gfx *gdl)
             {
                 fp_y = 2;
             }
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+            { /* a browser canvas under a notch or rounded corner: clear the safe area */
+                extern void portWebSafeAreaTopLeft(s32 viX, s32 viY, s32 *dx, s32 *dy);
+                s32 safe_x = 0;
+                s32 safe_y = 0;
+                portWebSafeAreaTopLeft(viGetX(), viGetY(), &safe_x, &safe_y);
+                fp_x += safe_x;
+                fp_y += safe_y;
+            }
+#endif
 
             sprintf(fpstext, "%d", (int) g_PortStatFps);
             gdl = microcode_constructor(gdl);

@@ -48,6 +48,45 @@ EMSCRIPTEN_KEEPALIVE s32 portWebResizeFramebuffer(s32 width, s32 height)
     return 1;
 }
 
+/* The canvas fills the stage edge to edge, under an iPhone's notch and rounded
+ * corners too, so the page (safe-area.ts) reports how far each safe-area inset
+ * reaches into the canvas, as a fraction of its width (left, right) or height
+ * (top, bottom). Text pinned to a window edge moves in by that much. */
+static f32 s_SafeArea[4];
+
+static f32 safeAreaFraction(f32 value)
+{
+    if (!__builtin_isfinite(value) || value < 0) return 0;
+    return value > 0.5f ? 0.5f : value;
+}
+
+EMSCRIPTEN_KEEPALIVE void portWebSetSafeArea(f32 left, f32 top, f32 right, f32 bottom)
+{
+    s_SafeArea[0] = safeAreaFraction(left);
+    s_SafeArea[1] = safeAreaFraction(top);
+    s_SafeArea[2] = safeAreaFraction(right);
+    s_SafeArea[3] = safeAreaFraction(bottom);
+}
+
+/* The top-left safe-area inset in HUD units for a frame of viX x viY. A
+ * left-anchored element's unit is the window height / viY in wide frames and
+ * the window width / viX when the frame stretches, so x takes the larger
+ * count and clears the inset either way. */
+void portWebSafeAreaTopLeft(s32 viX, s32 viY, s32 *dx, s32 *dy)
+{
+    SDL_Window *window = SDL_GL_GetCurrentWindow();
+    int width = 0;
+    int height = 0;
+    f32 across = (f32)viX;
+    *dx = 0;
+    *dy = 0;
+    if (window == NULL) return;
+    SDL_GetWindowSize(window, &width, &height);
+    if (width > 0 && height > 0 && (f32)viY * width / height > across) across = (f32)viY * width / height;
+    *dx = (s32)__builtin_ceilf(s_SafeArea[0] * across);
+    *dy = (s32)__builtin_ceilf(s_SafeArea[1] * (f32)viY);
+}
+
 /* Internal SDL 2.32.10 contracts from the immutable Emscripten port. */
 extern void SDL_ResetKeyboard(void);
 extern void SDL_SetKeyboardFocus(SDL_Window *window);
