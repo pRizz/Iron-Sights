@@ -259,6 +259,7 @@ static const struct PortWatchRowDef sIsSystem[] = {
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     { PWROW_OPT,       "crash_reporting",  NULL, 0, 0 },
 #endif
+    { PWROW_OPT,       "show_debug_pos",   NULL, 0, 0 }, /* FORK-084 */
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
 

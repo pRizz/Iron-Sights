@@ -1145,8 +1145,14 @@ share of the canvas to `portWebSetSafeArea`, and the FPS counter moves in by
 that much (FORK-025). Bun tests, the typecheck and `web_build.py video` pass;
 a device check is still open.
 
+**2026-11-15 Debug Position:** the new in-game Debug Position readout
+(FORK-084) and the `show_input` row start no nearer the edge than the same
+inset. In a wide frame the readout already starts past it and stays put.
+`web_build.py video` compiles it; not seen on a device.
+
 **Next action:** On a physical iPhone, in landscape both ways and in portrait,
-confirm the counter clears the notch and the rounded corners.
+confirm the counter and the Debug Position readout clear the notch and the
+rounded corners.
 
 ## WEB-008 | 2026-10-24 | Room scene and assets
 

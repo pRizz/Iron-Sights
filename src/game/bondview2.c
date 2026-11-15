@@ -14283,6 +14283,29 @@ void bondviewUpperTextWindowTimerTick(void)
 }
 
 
+#ifndef TARGET_N64
+/* FORK-084: the top-left debug rows (Debug Position, show_input) start no
+ * nearer the window edge than a browser canvas's notch or rounded corner
+ * reaches (the FPS counter's safe area). In a wide frame they already start
+ * inside the 4:3 area, past the inset, and stay put; native builds have no
+ * inset. */
+static void portDebugRowsClearSafeArea(s32 *left, s32 *top)
+{
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    extern void portWebSafeAreaTopLeft(s32 viX, s32 viY, s32 *dx, s32 *dy);
+    s32 safe_x = 0;
+    s32 safe_y = 0;
+
+    portWebSafeAreaTopLeft(viGetX(), viGetY(), &safe_x, &safe_y);
+    if (*left < safe_x) *left = safe_x;
+    if (*top < safe_y) *top = safe_y;
+#else
+    (void) left;
+    (void) top;
+#endif
+}
+#endif
+
 Gfx *sub_GAME_7F08AAE8(Gfx *gdl)
 {
     TopMessageLocals msg;
@@ -14400,6 +14423,11 @@ Gfx *sub_GAME_7F08AAE8(Gfx *gdl)
 
     if (get_debug_testingmanpos_flag())
     {
+        s32 debug_left = viGetViewLeft();
+        s32 debug_top = viGetViewTop();
+#ifndef TARGET_N64
+        portDebugRowsClearSafeArea(&debug_left, &debug_top);
+#endif
         theta_x = g_CurrentPlayer->field_488.theta_transform.x;
         debug_angle = (s32) ((atan2f(-theta_x, g_CurrentPlayer->field_488.theta_transform.z) * 180.0f) / M_PI_F);
         directions = g_DebugCompassLabels;
@@ -14418,23 +14446,23 @@ Gfx *sub_GAME_7F08AAE8(Gfx *gdl)
         (void) directions;
 #endif
 
-        debug_x = viGetViewLeft() + 0x11;
-        debug_y = viGetViewTop() + 0x11;
+        debug_x = debug_left + 0x11;
+        debug_y = debug_top + 0x11;
         debug_boxbottom = debug_y + 0xa;
         gdl = microcode_constructor(gdl);
         gdl = microcode_constructor_related_to_menus(gdl, 0, debug_y, viGetX(), debug_boxbottom + 1, 0x64);
         sw.screenwidth = viGetX();
         gdl = textRender(gdl, &debug_x, &debug_y, debugtext.room, ptrFontBankGothicChars, ptrFontBankGothic, -1, sw.screenwidth, viGetY(), 0, 0);
-        debug_x = viGetViewLeft() + 0x57;
+        debug_x = debug_left + 0x57;
         sw.screenwidth = viGetX();
         gdl = textRender(gdl, &debug_x, &debug_y, debugtext.x, ptrFontBankGothicChars, ptrFontBankGothic, -1, sw.screenwidth, viGetY(), 0, 0);
-        debug_x = viGetViewLeft() + 0x8d;
+        debug_x = debug_left + 0x8d;
         sw.screenwidth = viGetX();
         gdl = textRender(gdl, &debug_x, &debug_y, debugtext.y, ptrFontBankGothicChars, ptrFontBankGothic, -1, sw.screenwidth, viGetY(), 0, 0);
-        debug_x = viGetViewLeft() + 0xc3;
+        debug_x = debug_left + 0xc3;
         sw.screenwidth = viGetX();
         gdl = textRender(gdl, &debug_x, &debug_y, debugtext.z, ptrFontBankGothicChars, ptrFontBankGothic, -1, sw.screenwidth, viGetY(), 0, 0);
-        debug_x = viGetViewLeft() + 0xf9;
+        debug_x = debug_left + 0xf9;
         sw.screenwidth = viGetX();
         gdl = textRender(gdl, &debug_x, &debug_y, debugtext.angle, ptrFontBankGothicChars, ptrFontBankGothic, -1, sw.screenwidth, viGetY(), 0, 0);
 #ifndef TARGET_N64
@@ -14442,7 +14470,7 @@ Gfx *sub_GAME_7F08AAE8(Gfx *gdl)
            * appended to the readout so GE_SPAWNXYZ pitch can be captured */
             static char pitchtext[16];
             sprintf(pitchtext, "P %d", (s32) g_CurrentPlayer->vv_verta);
-            debug_x = viGetViewLeft() + 0x120;
+            debug_x = debug_left + 0x120;
             sw.screenwidth = viGetX();
             gdl = textRender(gdl, &debug_x, &debug_y, pitchtext, ptrFontBankGothicChars, ptrFontBankGothic, -1, sw.screenwidth, viGetY(), 0, 0);
         }
@@ -14462,10 +14490,17 @@ Gfx *sub_GAME_7F08AAE8(Gfx *gdl)
         if (portInputShowInput() && (getPlayerCount() == 1 || get_cur_playernum() == 0))
         {
             static char sticktext[24];
-            s32 in_x = viGetViewLeft() + 0x11;
-            s32 in_y = viGetViewTop() + (get_debug_testingmanpos_flag() ? 0x20 : 0x11)
-                     + ((getPlayerCount() >= 3) ? PORT_OVERLAY_MP_DROP : 0);
-            s32 in_bot = in_y + 0xa;
+            s32 in_left = viGetViewLeft();
+            s32 in_top = viGetViewTop();
+            s32 in_x;
+            s32 in_y;
+            s32 in_bot;
+
+            portDebugRowsClearSafeArea(&in_left, &in_top); /* FORK-084: as the readout above */
+            in_x = in_left + 0x11;
+            in_y = in_top + (get_debug_testingmanpos_flag() ? 0x20 : 0x11)
+                 + ((getPlayerCount() >= 3) ? PORT_OVERLAY_MP_DROP : 0);
+            in_bot = in_y + 0xa;
 
             sprintf(sticktext, "X %d  Y %d", joyGetStickX(0), joyGetStickY(0));
             gdl = microcode_constructor(gdl);

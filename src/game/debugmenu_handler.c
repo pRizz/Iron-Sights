@@ -1011,6 +1011,13 @@ s32 get_debug_man_pos_flag(void) {
 
 s32 get_debug_testingmanpos_flag(void) {
 #if defined(LEFTOVERDEBUG)
+#ifndef TARGET_N64
+    { /* FORK-084: Iron Sights > System > Debug Position (GE_DEBUGPOS
+       * overrides it); the Debug Pos cheat's flag still shows it too */
+        extern s32 portDebugPosShown(void);
+        if (portDebugPosShown()) return TRUE;
+    }
+#endif
     return g_DebugManPos;
 #else
     return 0;

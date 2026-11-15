@@ -2436,6 +2436,7 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "leaning=1\n");      /* PORT_LEANING_DEFAULT (FORK-073) */
     fprintf(f, "lean_tilt=0\n");    /* PORT_LEAN_TILT_DEFAULT (FORK-073) */
     fprintf(f, "fog=1\n");          /* PORT_FOG_DEFAULT (FORK-074) */
+    fprintf(f, "show_debug_pos=0\n"); /* PORT_DEBUG_POS_DEFAULT (FORK-084) */
     /* FORK-082: the Graphics page (port_graphics.h defaults) */
     fprintf(f, "graphics_look=%d\n", PORT_LOOK_DEFAULT); /* before the sliders it sets */
     fprintf(f, "tone_mapping=%d\n", PORT_TONE_MAPPING_DEFAULT);

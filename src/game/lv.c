@@ -644,19 +644,6 @@ static void portSpawnWeaponTick(void)
     }
 }
 
-/* GE_DEBUGPOS=1: the leftover "testing man pos" debug overlay (room id,
- * x/y/z, compass aim angle across the top of the view). */
-static void portDebugPosApply(void)
-{
-    extern char *getenv(const char *);
-    extern void set_debug_testingmanpos_flag(s32 flag);
-    const char *e = getenv("GE_DEBUGPOS");
-    if (e != NULL && e[0] != '\0' && e[0] != '0')
-    {
-        set_debug_testingmanpos_flag(TRUE);
-    }
-}
-
 /* GE_GOTO="x,y,z" (test harness): steer Bond in a straight line to a position,
  * turning toward it, walking when roughly facing it, and stopping inside the
  * arrival radius. The stick values set here are injected on pad 0 by
@@ -746,7 +733,6 @@ void lvlStageLoad(s32 stage)
 #ifndef TARGET_N64
     g_PortCheatCountdown = 60; /* apply GE_CHEATS ~1s into the mission */
     g_PortSpawnWepCountdown = 120; /* GE_SPAWNWEAPON drops ~2s in */
-    portDebugPosApply();
     portCheatApplyLoadTimeSafe(); /* GE_CHEATS=rockets must be live before
                                    * proplvreset2/weaponAssignToHome below */
 #endif

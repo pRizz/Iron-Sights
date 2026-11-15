@@ -238,7 +238,8 @@ static void testNoclip(void)
     ramromFlag = savedRamrom;
 }
 
-/* Leaning (FORK-073) and Fog (FORK-074), kept here for test_ads.c's line budget. */
+/* Leaning (FORK-073), Fog (FORK-074) and Debug Position (FORK-084), kept here for test_ads.c's line budget. */
 #include "test_lean.c"
 #include "test_fog.c"
+#include "test_debug_pos.c" /* FORK-084 */
 #include "test_graphics.c" /* FORK-082: uses the popup counter above */

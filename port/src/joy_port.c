@@ -88,6 +88,7 @@
 #include "port_noclip.h"
 #include "port_lean.h"
 #include "port_fog.h"
+#include "port_debug_pos.h" /* FORK-084 */
 #include "port_graphics.h" /* FORK-082 */
 #include "port_explosive_rounds.h"
 #include "port_reinforcements.h"
@@ -396,6 +397,7 @@ s32 portJoyPortSetOption(const char *key, const char *value)
     if (portNoclipOptionSet(key, atoi(value))) return 1;
     if (portLeanOptionSet(key, atoi(value))) return 1;
     if (portFogOptionSet(key, atoi(value))) return 1;
+    if (portDebugPosOptionSet(key, atoi(value))) return 1; /* FORK-084 */
     if (portGraphicsOptionSet(key, atoi(value))) return 1; /* FORK-082 */
     if (portExplosiveRoundsOptionSet(key, atoi(value))) return 1;
     if (portReinforcementsOptionSet(key, atoi(value))) return 1;
@@ -564,6 +566,7 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
     if (portNoclipOptionGet(key, out)) return 1;
     if (portLeanOptionGet(key, out)) return 1;
     if (portFogOptionGet(key, out)) return 1;
+    if (portDebugPosOptionGet(key, out)) return 1; /* FORK-084 */
     if (portGraphicsOptionGet(key, out)) return 1; /* FORK-082 */
     if (portExplosiveRoundsOptionGet(key, out)) return 1;
     if (portReinforcementsOptionGet(key, out)) return 1;
@@ -618,6 +621,7 @@ s32 portJoyPortOptionSet(const char *key, s32 v)
     if (portNoclipOptionSet(key, v)) return 1;
     if (portLeanOptionSet(key, v)) return 1;
     if (portFogOptionSet(key, v)) return 1;
+    if (portDebugPosOptionSet(key, v)) return 1; /* FORK-084 */
     if (portGraphicsOptionSet(key, v)) return 1; /* FORK-082 */
     if (portExplosiveRoundsOptionSet(key, v)) return 1;
     if (portReinforcementsOptionSet(key, v)) return 1;

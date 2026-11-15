@@ -256,6 +256,8 @@ static const struct PortOpt sOpts[] = {
     TOGGLE("gun_glint",     "[display]", "Gun Glint\n",       PORTOPT_CAT_DISPLAY),
     TOGGLE("glass_reflections", "[display]", "Glass Reflections\n", PORTOPT_CAT_DISPLAY),
     TOGGLE("fog", "[display]", "Fog\n", PORTOPT_CAT_DISPLAY), /* FORK-074 */
+    /* FORK-084: the room / x y z / heading readout (port_debug_pos.c) */
+    TOGGLE("show_debug_pos", "[display]", "Debug Position\n", PORTOPT_CAT_DISPLAY),
     /* FORK-082: the Graphics page (port_graphics.c) */
     ENUMR ("graphics_look", "[display]", "Look\n", PORTOPT_CAT_DISPLAY, sLookVals, sLookText, NULL), /* before the sliders it sets */
     TOGGLE("tone_mapping", "[display]", "Tone Mapping\n", PORTOPT_CAT_DISPLAY),

@@ -82,6 +82,7 @@ static const struct PortOptHelp sHelp[] = {
     { "glass_reflections",  "Windows and broken glass shards reflect the room around you." },
     { "texture_pack",       "HD: intermissionfb's pack from HD Textures, and any pack put in Data/TexturePacks." },
     { "close_hd_matches",   "Adds HD art for 17 textures whose colours only roughly match the pack." },
+    { "show_debug_pos",     "Shows your room, x/y/z position, heading H and pitch P across the top." },
 
     /* HUD */
     { "sight_on_screen",    "Shows the aiming sight." },
@@ -220,7 +221,7 @@ static const struct PortOptHelp sHelp[] = {
     { "@page_is_feedback",  "Hit markers, hit sounds, damage direction, tracers and explosive rounds." },
     { "@page_is_hud",       "Crosshair size, weapon strip, sprint indicator, health and mission alerts, touch controls opacity." },
     { "@page_is_enemies",   "Reinforcements and Headshots Only, both also on the mission's difficulty page." },
-    { "@page_is_system",    "Build info, fonts, reflections, fog and crash reports." },
+    { "@page_is_system",    "Build info, fonts, reflections, fog, crash reports and debug position." },
 #ifdef __EMSCRIPTEN__ /* FORK-082: no HDR Output in the browser, which keeps F11 */
     { "@page_is_graphics",  "Tone mapping and baked lighting. F8 compares; Home/End, PgUp/PgDn tune sliders in play." },
 #else

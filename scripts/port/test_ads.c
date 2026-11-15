@@ -148,7 +148,7 @@ int main(void)
     testAdsAccuracy();
     testGunKick();
     testTracers();
-    testReloadSpeed(); testNoclip(); testLean(); testFog(); testGraphics(); /* FORK-071 to FORK-074, FORK-082 */
+    testReloadSpeed(); testNoclip(); testLean(); testFog(); testGraphics(); testDebugPos(); /* FORK-071 to FORK-074, FORK-082, FORK-084 */
     testProjectileArc();
     testProjectileArcThrown();
     testSettleTicks();

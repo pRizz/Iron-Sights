@@ -398,6 +398,7 @@ static void conCmdHelp(void)
     conPrintLn(0, "  cl_<setting> <value>  set any setting - cl_vsync 0, cl_maxfps 144");
     conPrintLn(0, "  cl_<setting>          show it");
     conPrintLn(0, "  cl_showfps 0|1        the FPS / TPS strip");
+    conPrintLn(0, "  cl_debugpos 0|1       the room / x y z / heading readout");
     conPrintLn(0, "  cl_fov <deg>          field of view (16:9 horizontal); cl_fps = cl_maxfps");
     conPrintLn(0, "  cl_hitchms <ms>       log frames this slow as 'ge: hitch:' (0 = off, not saved)");
     conPrintLn(0, "  cl_fadedbg 0|1        log objects' fade / cull changes as 'ge: fade:'");
@@ -413,6 +414,7 @@ static void conCmdHelp(void)
  * and cl_hitchms); the older set / get still work, but help lists only the cl_ forms. */
 static const char *const sConClAlias[][2] = {
     { "showfps", "show_fps" },
+    { "debugpos", "show_debug_pos" }, /* FORK-084 */
     { "fov",     "hfov_wide" },
     { "fps",     "maxfps" },
 };

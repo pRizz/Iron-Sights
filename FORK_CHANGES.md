@@ -30,6 +30,86 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-084 — Debug Position: the position readout as an in-game setting
+
+**Status:** Implemented on 2026-11-15 at the owner's request. Built for
+Windows (an isolated build directory) and the browser
+(`web_build.py video`). Not yet play-tested by the owner. Linux and Steam
+Deck builds were not run locally.
+
+Inherited behaviour: the decompiled game keeps Rare's "testing man pos"
+readout (`sub_GAME_7F08AAE8`, `bondview2.c`): a dark strip across the top of
+the view with the room id, x / y / z, and the heading. It shows while
+`get_debug_testingmanpos_flag()` (`debugmenu_handler.c`) is set; the Debug Pos
+cheat sets that flag. Earlier fork work added the pitch (`P`) and dropped the
+compass prefix from the heading (`H`) so a spot can be copied into
+`GE_SPAWNXYZ`, and `GE_DEBUGPOS=1` set the flag once as each stage loaded
+(`portDebugPosApply`, `lv.c`), so it only took effect at launch.
+
+**What it does:** **Gameplay > Iron Sights > System > Debug Position**
+(`[display] show_debug_pos`, default 0) shows or hides the readout from the
+next frame, in a running mission too. The row is in the System subsection
+of both the Options folder and the watch, and the console's `cl_debugpos`
+(an alias of `cl_show_debug_pos`) sets it too. `GE_DEBUGPOS` still overrides the
+setting either way: unset leaves it to the setting, `0` hides the readout, and
+any other value shows it (as before, anything not starting with `0` turns it on).
+The override is read once; the setting keeps its saved value under it. The
+Debug Pos cheat keeps its own flag, and the readout shows while either is on.
+Turning the cheat off while the setting is on leaves the readout up. The
+readout's look in native builds is unchanged.
+
+**Browser:** the readout and the `show_input` row under it start no nearer
+the window edge than the safe-area inset (`portWebSafeAreaTopLeft`, FORK-025)
+reaches. Only the left/top starting point is clamped. The FPS counter, by
+contrast, is moved in by the whole inset. In a wide frame the readout already
+starts inside the 4:3 area, past an iPhone notch, so it stays put. Adding the
+whole inset there would push the line right for nothing, and in a stretched
+4:3 frame it would push `P` off the right edge. The full-width strip behind
+the text still runs under the notch, which hides nothing. Native builds are
+unchanged.
+
+**Hooks:** `get_debug_testingmanpos_flag` returns TRUE when
+`portDebugPosShown()` does (inside `#ifndef TARGET_N64`), so the three
+`bondview2.c` reads and the cheat's checks see the setting with no other
+upstream change. `lv.c`'s `portDebugPosApply` was removed. The readout's six
+`viGetViewLeft()` x positions take a local `debug_left` and its y a
+`debug_top` (`portDebugRowsClearSafeArea`). The option is registered in
+`joy_port.c`'s dispatch, `port_options.c` (after Fog, display category), the
+folder's System rows (`front.c`) and the watch's (`port_watchpages.c`), with
+help in `port_option_help.c` (also named in the System page description),
+`tools/midas_ini_help.txt`, the default midas.ini writer (`video.c`), the
+console alias and help line (`port_console.c`) and README.md. `GE_DEBUGPOS`
+stays in `port_console_env.h`, and the launcher's "Testing man pos"
+checkbox (`tools/GELauncher.cs`) still sets it, as the override.
+
+**Input:** an ordinary option row. Keyboard, mouse, gamepad and browser touch
+already confirm and adjust it as they do every toggle. The readout itself
+takes no input.
+
+**Sources:** [header](port/include/port_debug_pos.h),
+[setting](port/src/port_debug_pos.c) and the
+[ROM-free test](scripts/port/test_debug_pos.c) (included by `test_noclip.c`,
+run by `test_ads.sh`): off by default, a toggle row, shown and hidden live,
+`GE_DEBUGPOS=1` and `=0` overriding a setting of off and on.
+
+**Checks:** `test_ads.sh`, `test_states.sh`, `test_hud.sh` and
+`test_web_menu_pointer.sh` pass (`test_web_touch.sh` needs `emcc` on the path
+and `test_start_input.sh` needs SDL headers; neither ran).
+`settings_placement.py` and `bun scripts/bright-builds-check.ts all` pass.
+The Windows build and `web_build.py video` compile cleanly. ROM captures on
+Dam with the isolated Windows exe: `GE_CONCMD="cl_debugpos 1"` set from
+the title screen over `show_debug_pos=0` shows the readout as before
+(`ROOM135  X 20198  Y 60  Z 16902  H 90  P -4`). `show_debug_pos=1` with
+`GE_DEBUGPOS=0` hides it, and the default hides it. Harness runs never write
+midas.ini (`GE_WINDOW`), so saving was not captured. It uses the same
+`portIniWriteStrs` path as Fog. A scripted mid-mission run toggled it from the
+watch (`GE_INPUTPLAY` Start presses, `GE_WATCHPAGE=3,13,13,1,1,1` on the System
+page's row): with `show_debug_pos=0` the readout appeared the frame the row
+read ON, over the open watch, and stayed after the watch closed. With
+`show_debug_pos=1` it disappeared the same way. Not yet play-tested by hand.
+The browser safe-area clamp has not been seen on an iPhone. The hand gallery was regenerated with the isolated exe,
+because `src/` and `port/` C files are its render inputs.
+
 ### FORK-083 — Headshots Only: a mission modifier with its own records
 
 **Status:** Implemented on 2026-11-15 at the owner's request and committed to
@@ -5304,7 +5384,7 @@ folder and the watch:
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction, Tracer Strength (FORK-062), Shotgun Tracers and Decorative Pellets (FORK-063) |
 | Enemies | Reinforcements (FORK-081), also on each mission's difficulty page |
 | HUD Additions | Always Crosshair Size, Projectile Arc and Arc Impact Crosshair (FORK-069), Sprint Indicator (FORK-006), Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
-| System | About / Build Info, Fonts (FORK-051, FORK-052), Fog (FORK-074), Crash Reporting (Windows/Linux) |
+| System | About / Build Info, Fonts (FORK-051, FORK-052), Fog (FORK-074), Crash Reporting (Windows/Linux), Debug Position (FORK-084) |
 
 The watch's Iron Sights page also holds the Suspend Points action, which moved
 there from the watch's Gameplay page. Rows left General Settings, HUD, Port
@@ -9900,7 +9980,9 @@ top fractions in HUD units. x uses the larger of the wide frame's unit (window
 height / viY) and the stretched frame's (window width / viX), so the counter
 clears the inset in either mapping. A canvas that does not reach the inset, and
 every desktop or Android browser without one, gets no offset. Native builds are
-unchanged. Other HUD text keeps its upstream or Wide HUD placement.
+unchanged. Other HUD text keeps its upstream or Wide HUD placement, except
+the Debug Position readout, which starts no nearer the edge than the inset
+(FORK-084).
 `safe-area.test.ts` covers the inset-to-canvas rule, and `web_build.py video`
 compiles and exports the bridge. Not yet checked on a physical iPhone or in a
 WebKit device emulation.

@@ -407,6 +407,12 @@ padN_stickmode.
                       |            | the view distance and guards' sight
                       |            | stay the same. Levels without fog are
                       |            | unaffected
+  show_debug_pos      | 0          | [display] Debug Position. 1 = room id,
+                      |            | x/y/z position, heading H and pitch P
+                      |            | across the top of the view, changeable
+                      |            | in game (Iron Sights > System). The
+                      |            | GE_DEBUGPOS env overrides it: 0 hides,
+                      |            | anything else shows
   graphics_look       | 2          | [display] Look (FORK-082): a preset of
                       |            | the grading sliders below. 0 Custom,
                       |            | 1 Natural, 2 Vibrant, 3 Cinematic,

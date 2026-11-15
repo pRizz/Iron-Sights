@@ -4885,6 +4885,7 @@ static const struct PortSheetRow port_sheet_rows_is_system[] = {
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     { SHROW_OPT, "crash_reporting" },
 #endif
+    { SHROW_OPT, "show_debug_pos" },     /* FORK-084: room, x/y/z and heading */
 };
 /* AIMING page removed: every row on it was a repeat of the
  * Mouse and Keyboard or Controller page. */
