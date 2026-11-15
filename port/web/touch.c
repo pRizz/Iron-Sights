@@ -94,18 +94,55 @@ static const char *const actions[TOUCH_COUNT] = {
  * gesture (web/src/touch-double-tap.ts) and asks portWebTouchDoubleTapFire. */
 static s32 doubleTapFire = 1;
 
+/* Touch Controls Opacity (FORK-080; [display] touch_controls_opacity, Iron
+ * Sights > HUD Additions, browser only): how strongly the gameplay controls
+ * show at rest, in percent of their designed look. The overlay
+ * (web/src/touch-controls.tsx) reads it; a touched control shows at 80% or
+ * this, whichever is more. */
+static const s32 sOpacitySteps[] = { 25, 35, 50, 75, 100 };
+static s32 controlsOpacity = 50;
+
+/* An off-list value (a hand-edited midas.ini) takes the nearest step. */
+static s32 touchOpacityStep(s32 value)
+{
+    s32 best = sOpacitySteps[0];
+    u32 i;
+    for (i = 1; i < sizeof(sOpacitySteps) / sizeof(sOpacitySteps[0]); i++) {
+        const s32 d = sOpacitySteps[i] - value, b = best - value;
+        if ((d < 0 ? -d : d) < (b < 0 ? -b : b)) best = sOpacitySteps[i];
+    }
+    return best;
+}
+
 s32 portWebTouchOptionGet(const char *key, s32 *out)
 {
-    if (strcmp(key, "touch_double_tap_fire") != 0) return 0;
-    *out = doubleTapFire;
-    return 1;
+    if (strcmp(key, "touch_double_tap_fire") == 0) {
+        *out = doubleTapFire;
+        return 1;
+    }
+    if (strcmp(key, "touch_controls_opacity") == 0) {
+        *out = controlsOpacity;
+        return 1;
+    }
+    return 0;
 }
 
 s32 portWebTouchOptionSet(const char *key, s32 value)
 {
-    if (strcmp(key, "touch_double_tap_fire") != 0) return 0;
-    doubleTapFire = value != 0;
-    return 1;
+    if (strcmp(key, "touch_double_tap_fire") == 0) {
+        doubleTapFire = value != 0;
+        return 1;
+    }
+    if (strcmp(key, "touch_controls_opacity") == 0) {
+        controlsOpacity = touchOpacityStep(value);
+        return 1;
+    }
+    return 0;
+}
+
+EMSCRIPTEN_KEEPALIVE s32 portWebTouchControlsOpacity(void)
+{
+    return controlsOpacity;
 }
 
 EMSCRIPTEN_KEEPALIVE s32 portWebTouchDoubleTapFire(void)

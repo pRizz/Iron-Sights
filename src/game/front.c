@@ -4817,6 +4817,9 @@ static const struct PortSheetRow port_sheet_rows_is_hud[] = {
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     { SHROW_OPT, "mission_hints" },
 #endif
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    { SHROW_OPT, "touch_controls_opacity" },  /* FORK-080: the gameplay touch controls at rest */
+#endif
 };
 static const struct PortSheetRow port_sheet_rows_is_system[] = {
     { SHROW_ABOUT, NULL, "About / Build Info\n" },

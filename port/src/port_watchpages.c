@@ -195,6 +195,9 @@ static const struct PortWatchRowDef sIsHud[] = {
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     { PWROW_OPT,       "mission_hints", NULL, 0, 0 },
 #endif
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    { PWROW_OPT,       "touch_controls_opacity", NULL, 0, 0 }, /* FORK-080 */
+#endif
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
 static const struct PortWatchRowDef sIsSystem[] = {

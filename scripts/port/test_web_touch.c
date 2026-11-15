@@ -365,12 +365,27 @@ static void testDoubleTapFireOption(void)
     assert(!portWebTouchOptionGet("sprint", &value) && !portWebTouchOptionSet("sprint", 0));
 }
 
+/* Touch Controls Opacity (FORK-080): 50% by default, saved as its percent,
+ * and an off-list value takes the nearest menu step. */
+static void testControlsOpacityOption(void)
+{
+    s32 value = -1;
+    assert(portWebTouchControlsOpacity() == 50);
+    assert(portWebTouchOptionGet("touch_controls_opacity", &value) && value == 50);
+    assert(portWebTouchOptionSet("touch_controls_opacity", 75) && portWebTouchControlsOpacity() == 75);
+    assert(portWebTouchOptionSet("touch_controls_opacity", 40) && portWebTouchControlsOpacity() == 35);
+    assert(portWebTouchOptionSet("touch_controls_opacity", 0) && portWebTouchControlsOpacity() == 25);
+    assert(portWebTouchOptionSet("touch_controls_opacity", 250) && portWebTouchControlsOpacity() == 100);
+    assert(portWebTouchOptionSet("touch_controls_opacity", 50) && portWebTouchControlsOpacity() == 50);
+}
+
 int main(void)
 {
     OSContPad pad = {0};
     struct MoveData move = {0};
     testTouchContext();
     testDoubleTapFireOption();
+    testControlsOpacityOption();
     assert(!portWebTouchEnabled());
     portWebTouchEnable(1);
     assert(portWebTouchEnabled());
@@ -432,6 +447,6 @@ int main(void)
     pad.button = 0;
     portWebTouchPoll(&pad);
     assert(pad.button == 0);
-    puts("Touch bridge: semantic buttons, independent holds, analog movement, stick-overdrag sprint, HUD clearance, menu sticks, slider and list steps, hold-drag, capture and text contexts, phone text, held volume arrows, Double-Tap Fire option, reset, bounds and locked-look discard passed.");
+    puts("Touch bridge: semantic buttons, independent holds, analog movement, stick-overdrag sprint, HUD clearance, menu sticks, slider and list steps, hold-drag, capture and text contexts, phone text, held volume arrows, Double-Tap Fire and Controls Opacity options, reset, bounds and locked-look discard passed.");
     return 0;
 }

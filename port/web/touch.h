@@ -21,6 +21,8 @@ s32 portWebTouchHasGadgets(void);
 s32 portWebTouchOptionGet(const char *key, s32 *out);
 s32 portWebTouchOptionSet(const char *key, s32 value);
 s32 portWebTouchDoubleTapFire(void);
+/* Touch Controls Opacity (FORK-080): [display] touch_controls_opacity, percent. */
+s32 portWebTouchControlsOpacity(void);
 /* Browser-local virtual controls, player one only. No saved bind IDs change. */
 void portWebTouchReset(void);
 void portWebTouchPoll(OSContPad *pad);

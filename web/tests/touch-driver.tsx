@@ -14,6 +14,8 @@ let context = 2;
 let gadgets = true;
 // Iron Sights > Aiming and Movement > Double-Tap Fire (native default on).
 let doubleTapFire = true;
+// Iron Sights > HUD Additions > Touch Controls Opacity (default 50%).
+let controlsOpacity = 50;
 let movement = [0, 0],
     look = [0, 0];
 let stickSprint = false;
@@ -55,6 +57,7 @@ const game = {
     _portWebTouchContext: () => (fileMenu() ? 0 : context),
     _portWebTouchHasGadgets: () => Number(gadgets && context === 2 && !fileMenu()),
     _portWebTouchDoubleTapFire: () => Number(doubleTapFire),
+    _portWebTouchControlsOpacity: () => controlsOpacity,
     _portWebTouchHudCorner: (side: number, covered: number) => {
         corners[side] = !!covered;
     },
@@ -133,6 +136,9 @@ Object.assign(globalThis, {
         },
         doubleTapFire: (value: boolean) => {
             doubleTapFire = value;
+        },
+        controlsOpacity: (percent: number) => {
+            controlsOpacity = percent;
         },
         menu: (value: boolean) => {
             live = !value;

@@ -67,7 +67,9 @@ top, A on the bottom), beside gray Z on the right.
 Hold/drag Z to shoot and turn; the gray rectangular **R** toggles ADS, and the weapon icon switches
 weapons. You can also tap a free screen area, then touch it again and hold to fire while
 that finger keeps aiming (**Double-Tap Fire** under Gameplay > Iron Sights > Aiming and Movement,
-on by default; a single tap never fires). Start opens the watch; A/B navigate its menus. Choose **Modern actions** in
+on by default; a single tap never fires). The controls rest at half strength while you play and
+brighten to 80% under your finger (**Touch Controls Opacity** under Gameplay > Iron Sights > HUD
+Additions: 25-100%). Start opens the watch; A/B navigate its menus. Choose **Modern actions** in
 settings for the previous Fire/Use/Reload controls and More tray. Touch controls
 sit farther inside the safe screen edges. The mobile overlay omits browser
 Pause/Options buttons and leaves gaps between controls available for gestures.

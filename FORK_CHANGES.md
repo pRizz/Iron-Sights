@@ -30,6 +30,75 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-080 — Touch Controls Opacity for browser touch
+
+**Status:** Implemented on 2026-11-14 at the owner's request (default 50%,
+80% while touched). Not yet tried on a physical phone or with the real ROM in
+the browser.
+
+Before this entry the touch overlay (FORK-028) had no overall strength: each
+control's transparency was fixed in its colours in `web/src/touch.css`
+(backgrounds 38-85%, borders 40-63%) and its labels and icons were fully
+opaque. Upstream has no browser target.
+
+**Gameplay > Iron Sights > HUD Additions > Touch Controls Opacity**
+(`[display] touch_controls_opacity`, 25 / 35 / 50 / 75 / 100, default 50):
+- **At rest** during gameplay every touch button and the move stick show at
+  the chosen percent of their designed look (labels and icons included, via
+  CSS `opacity`), easing over 160 ms.
+- **Touched** controls show at 80% or the setting, whichever is more, with no
+  delay, so a pressed button or a dragged stick is always clear, and a 100%
+  setting is never dimmed by a touch.
+- **Menus, the watch and other touch screens** keep full strength; only the
+  `game` touch context fades.
+- An off-list value in `midas.ini` takes the nearest step.
+
+**How.** `port/web/touch.c` stores the value next to Double-Tap Fire
+(`portWebTouchOptionGet/Set`, `portWebTouchControlsOpacity`). The overlay
+reads it each frame (`touch-controls.tsx`, through `createTouchFade` in
+`web/src/touch-opacity.ts`) into a `--touch-rest-opacity` custom property on
+the overlay root; the same module converts the percent and marks
+the control each finger is on with `data-touching` until that finger lifts or
+is cancelled (a delegated capture-phase `pointerdown` on the overlay and
+window `pointerup`/`pointercancel`, so it does not rely on `:active`, which is
+unreliable for multi-touch). The overlay's entry fade (`touch-hud-enter`) used
+`fill-mode: both`, which held opacity at 1 after it ended and would have
+overridden the stick's resting strength; it now uses `backwards`, and the
+stick's entry ends at its resting strength (`--touch-enter-opacity`) so it
+does not pop.
+
+**Setting placement.** Browser-only like FORK-079: the option entry
+(`port_options.c`), folder row (`front.c port_sheet_rows_is_hud`), watch row
+(`port_watchpages.c sIsHud`) and the `joy_port.c` dispatch are inside
+`#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)`. Desktop builds show no
+row. Help text is in `port_option_help.c` (row and HUD Additions page
+summary), `tools/midas_ini_help.txt` and the README touch paragraph.
+
+**Input idioms.** An ordinary choice row, changed like any other by keyboard,
+mouse, gamepad, the watch arrows and touch.
+
+**Sources.** `web/src/touch-opacity.ts` and its test, `touch-controls.tsx`,
+`touch.css`, `runtime-types.ts`, the fixture switch in
+`web/tests/touch-driver.tsx`, `web/tools/touch-opacity-audit.mjs`,
+`port/web/touch.c`/`.h`, `scripts/port/test_web_touch.c` and the rows above.
+WEB-011 in `scripts/port/web_target_progress.md` records the milestone note.
+
+**Validation.** `touch-opacity.test.ts` (6 tests: percent conversion,
+default, multi-finger holds, finger moving between controls, clear, writing
+the strength only on change) and all 262 web unit tests pass, as does TypeScript. The ROM-free touch UI audit
+(`MIDAS_BROWSER=msedge`) passes with a new step: Fire and the stick rest at
+0.5, a touched Fire or stick shows 0.8 while others stay 0.5, lifting or
+cancelling returns to 0.5, a 100% setting shows 1 touched or not, and a menu
+control stays at 1 with the setting at 25%. That step first found the stick
+pinned at 1 by the entry fade's held frame (fixed above). `test_web_touch.sh`
+in the pinned emsdk image passes with a new option check (default 50, steps,
+nearest-step clamping). The web video target builds with the pinned SDK
+(`web_build.py video`) and its wasm carries the key, the row label and the
+`portWebTouchControlsOpacity` export. The Windows build compiles with the
+rows guarded out. `settings_placement.py` and `bun scripts/bright-builds-check.ts
+all` pass; the hand gallery regeneration changed 0 image cells. The ROM-backed
+touch game audit was not run.
+
 ### FORK-079 — Double-Tap Fire for browser touch
 
 **Status:** Implemented on 2026-11-14 at the owner's request; committed and

@@ -21,6 +21,7 @@ import { TouchText } from './touch-text';
 import { createTouchButtonGestures } from './touch-button-gestures';
 import { createCornerClearance, isPortrait } from './touch-hud-clearance';
 import { createDoubleTap, type TapPoint } from './touch-double-tap';
+import { createTouchFade } from './touch-opacity';
 import './touch.css';
 
 type Props = {
@@ -65,6 +66,7 @@ export function TouchControls(props: Props) {
         | undefined;
     const doubleTap = createDoubleTap();
     const doubleTapFire = () => !!props.engine.maybeGame()?._portWebTouchDoubleTapFire?.();
+    const fade = createTouchFade(); // Touch Controls Opacity: resting and touched strength
     let maybeHeldLook: { id: number; x: number; y: number } | undefined;
     const buttonGestures = createTouchButtonGestures<{
         maybeAction?: TouchAction;
@@ -173,6 +175,7 @@ export function TouchControls(props: Props) {
         maybeLook = undefined;
         maybeHeldLook = undefined;
         doubleTap.clear();
+        fade.clear();
         setAiming(false);
         setStick({ x: 0, y: 0 });
         setStickSprint(false);
@@ -227,6 +230,7 @@ export function TouchControls(props: Props) {
                 setContext(next);
             }
             const maybeGame = props.engine.maybeGame();
+            fade.update(maybeRoot, maybeGame?._portWebTouchControlsOpacity?.());
             const covering = active() && hud();
             if (maybeGame)
                 clearance.update(
@@ -247,6 +251,7 @@ export function TouchControls(props: Props) {
             if (document.hidden) clear();
         };
         document.addEventListener('visibilitychange', hidden);
+        const detachFade = maybeRoot ? fade.attach(maybeRoot) : () => {};
         onCleanup(() => {
             detachContacts();
             cancelAnimationFrame(frame);
@@ -256,6 +261,7 @@ export function TouchControls(props: Props) {
             window.removeEventListener('resize', clearance.remeasure);
             window.visualViewport?.removeEventListener('resize', clearance.remeasure);
             document.removeEventListener('visibilitychange', hidden);
+            detachFade();
             clear();
         });
     });

@@ -37,6 +37,7 @@ export type GameModule = {
     _portWebTouchContext(): number;
     _portWebTouchHasGadgets?(): number;
     _portWebTouchDoubleTapFire?(): number;
+    _portWebTouchControlsOpacity?(): number;
     _portWebTouchHudCorner?(side: number, covered: number): void;
     _portWebTouchAmmoBox?(side: number, edge: number): number;
     _portWebCaptureMouse(): number;

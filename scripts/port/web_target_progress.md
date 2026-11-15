@@ -1826,6 +1826,20 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**Touch Controls Opacity, 2026-11-14:** The owner asked for a setting to fade
+the floating controls: Gameplay > Iron Sights > HUD Additions > Touch Controls
+Opacity (`[display] touch_controls_opacity`, 25/35/50/75/100, default 50).
+During gameplay the buttons and stick rest at that strength; the one under a
+finger shows at 80% or the setting, whichever is more; menus and the watch keep
+full strength. The entry fade no longer holds its final frame (it pinned the
+stick at full strength). Sources: `touch-opacity.ts`, `touch-controls.tsx`,
+`touch.css`, `port/web/touch.c` and the gated rows (FORK-080). Verification:
+6 new unit tests (262 total), TypeScript, the Edge touch fixture audit with a
+new opacity step, and the touch bridge regression in the pinned emsdk image
+pass. Not yet seen on a physical phone or with the real ROM in the browser.
+Next action: try 50% on a phone after Pages publication and adjust the default
+or the 80% touched strength if needed.
+
 **Double-Tap Fire, 2026-11-14:** The owner asked for shooting by double tap
 on mobile, on by default. A quick still tap on the look area, then a second
 touch within 300 ms and 48 CSS pixels, holds Fire until that finger lifts

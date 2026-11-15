@@ -492,6 +492,12 @@ padN_stickmode.
                       |            | 3 = crazy wide (30%)
   sprint_indicator    | 0          | 1 = small faint chevrons (>>) at the
                       |            | bottom centre while sprinting; 0 = off
+  touch_controls_opacity | 50      | Browser only. How strongly the
+                      |            | on-screen touch controls show during
+                      |            | play, in percent of their full look:
+                      |            | 25, 35, 50, 75 or 100. A control you
+                      |            | touch shows at 80% or this, whichever
+                      |            | is more; menus keep full strength
   touch_double_tap_fire | 1        | Browser only. 1 = with the on-screen
                       |            | touch controls, tap the look area and
                       |            | touch it again within 0.3 s to hold

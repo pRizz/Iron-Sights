@@ -150,6 +150,11 @@ static const s32 sKnifeAdsVals[] = { 0, 1 };
 static const char *const sKnifeAdsText[] = { "Butt Centered\n", "Tip Centered\n" };
 static const s32 sWeaponKickVals[] = { 0, 1, 2, 3 };
 static const char *const sWeaponKickText[] = { "Original\n", "Enhanced\n", "Ludicrous\n", "Cartoon\n" };
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+/* Touch Controls Opacity (FORK-080): port/web/touch.c keeps the same steps */
+static const s32 sTouchOpacityVals[] = { 25, 35, 50, 75, 100 };
+static const char *const sTouchOpacityText[] = { "25%\n", "35%\n", "50%\n", "75%\n", "100%\n" };
+#endif
 /* Sprint FOV (FORK-006): how far the view widens while sprinting (port_sprint_feedback.h) */
 static const s32 sSprintFovVals[] = { 0, 1, 2, 3 };
 static const char *const sSprintFovText[] = { "Off\n", "Normal\n", "Wider\n", "Crazy Wide\n" };
@@ -372,6 +377,10 @@ static const struct PortOpt sOpts[] = {
     TOGGLE("ludicrous_sprint",   "[display]", "Ludicrous Sprint\n",   PORTOPT_CAT_GAMEPLAY),
     ENUMR ("sprint_fov",         "[display]", "Sprint FOV\n",         PORTOPT_CAT_GAMEPLAY, sSprintFovVals, sSprintFovText, NULL), /* FORK-006 */
     TOGGLE("sprint_indicator",   "[display]", "Sprint Indicator\n",   PORTOPT_CAT_GAMEPLAY), /* FORK-006 */
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    /* FORK-080: browser touch only (port/web/touch.c keeps the value) */
+    ENUMR ("touch_controls_opacity", "[display]", "Touch Controls Opacity\n", PORTOPT_CAT_GAMEPLAY, sTouchOpacityVals, sTouchOpacityText, NULL),
+#endif
 #if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
     /* FORK-079: browser touch only (port/web/touch.c keeps the value) */
     TOGGLE("touch_double_tap_fire", "[display]", "Double-Tap Fire\n", PORTOPT_CAT_GAMEPLAY),
