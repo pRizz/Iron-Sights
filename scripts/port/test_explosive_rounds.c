@@ -50,7 +50,7 @@ static void testExplosiveRoundsSettings(void)
 
 static void testExplosiveRoundsRules(void)
 {
-    /* Off and demo playback make no blast; Players Only skips guards. */
+    /* Off and demo playback make no blast; Players skips guards. */
     assert(portExplosiveRoundsTypeFor(PORT_EXPLOSIVE_ROUNDS_OFF, 1, FALSE, PORT_ROUND_BY_PLAYER) == -1);
     assert(portExplosiveRoundsTypeFor(PORT_EXPLOSIVE_ROUNDS_EXPLOSIVE, 1, TRUE, PORT_ROUND_BY_PLAYER) == -1);
     assert(portExplosiveRoundsTypeFor(PORT_EXPLOSIVE_ROUNDS_VISUAL, 1, TRUE, PORT_ROUND_BY_GUARD) == -1);

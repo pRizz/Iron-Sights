@@ -80,10 +80,14 @@ bullet lands:
   A guard's shot that hits Bond makes no blast, so no explosion fills the
   screen.
 
-**Explosive Rounds For** (`[display] explosive_rounds_guards`, default 1 =
+**Whose Rounds** (`[display] explosive_rounds_guards`, default 1 =
 Everyone) chooses whose bullets explode: Everyone, guards included, or
-Players Only (0). In multiplayer every player's rounds follow the shared
-setting.
+Players (0). In multiplayer every player's rounds follow the shared
+setting. The row was first labelled Explosive Rounds For, with values
+Players Only and Everyone; the owner saw that label run into its value in
+the Options folder (both fonts, 1080p captures), and it nearly touched the
+value on the watch, where Players Only also overhung the value column. The
+shorter label and value replaced them; the midas.ini key is unchanged.
 
 The fork appends three rows to `g_ExplosionTypes` (both the NTSC and the EU
 tables, after Rare's 22; not on N64): 22 Visual, 23 Bond's Explosive and 24 a
@@ -144,7 +148,11 @@ for the source change with no changed image cells, and
 `hand_gallery.py verify` passes. The owner's play-test covered the revised
 blast's look. Not separately checked: its size and loudness (the sound has not been recorded and measured), damage
 balance for Bond and guards, shotguns, explosive props, multiplayer and
-raised tick rates.
+raised tick rates. For the Whose Rounds rename, isolated 1920x1080 captures
+(`GE_MENU=zfeedback` and `GE_WATCHPAGE=3,11,8`) in the Original and Iron
+Sights fonts showed both rows clear of their values in the Options folder
+and on the watch, Players inside the watch's value column, and both help
+lines fitting their box; `test_ads.sh` and `settings_placement.py` pass.
 
 ### FORK-077 — Level decals keep the one-sided depth test
 

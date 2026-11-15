@@ -165,8 +165,8 @@ static const char *const sLeanTiltText[] = { "Off\n", "Subtle\n", "Strong\n" };
 /* Explosive Rounds (FORK-078): 0 Off, 1 Visual, 2 Explosive (port_explosive_rounds.h) */
 static const s32 sExplosiveRoundsVals[] = { 0, 1, 2 };
 static const char *const sExplosiveRoundsText[] = { "Off\n", "Visual\n", "Explosive\n" };
-/* Explosive Rounds For (FORK-078): explosive_rounds_guards 0 or 1 */
-static const char *const sExplosiveRoundsGuardsText[] = { "Players Only\n", "Everyone\n" };
+/* Whose Rounds (FORK-078): explosive_rounds_guards 0 or 1 */
+static const char *const sExplosiveRoundsGuardsText[] = { "Players\n", "Everyone\n" };
 static const s32 sWeaponStyleVals[] = { 0, 1 };
 static const char *const sWeaponStyleText[] = { "Text\n", "Icons\n" };
 static const s32 sHealthDisplayVals[] = { 0, 1 };
@@ -303,7 +303,7 @@ static const struct PortOpt sOpts[] = {
     TOGGLE("shotgun_tracers",    "[display]", "Shotgun Tracers\n",    PORTOPT_CAT_GAMEPLAY), /* FORK-063 */
     TOGGLE("decorative_pellets", "[display]", "Decorative Pellets\n", PORTOPT_CAT_GAMEPLAY), /* FORK-063 */
     ENUMR ("explosive_rounds",   "[display]", "Explosive Rounds\n",   PORTOPT_CAT_GAMEPLAY, sExplosiveRoundsVals, sExplosiveRoundsText, NULL), /* FORK-078 */
-    TOGGLET("explosive_rounds_guards", "[display]", "Explosive Rounds For\n", PORTOPT_CAT_GAMEPLAY, sExplosiveRoundsGuardsText), /* FORK-078 */
+    TOGGLET("explosive_rounds_guards", "[display]", "Whose Rounds\n",         PORTOPT_CAT_GAMEPLAY, sExplosiveRoundsGuardsText), /* FORK-078 */
     TOGGLE("objective_notifications", "[display]", "Objective Alerts\n", PORTOPT_CAT_GAMEPLAY),
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     TOGGLE("mission_hints", "[display]", "Mission Start Hints\n", PORTOPT_CAT_GAMEPLAY),

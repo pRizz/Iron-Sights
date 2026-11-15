@@ -72,7 +72,7 @@ static const struct PortOptHelp sHelp[] = {
     { "shotgun_tracers",    "Shotguns draw tracers: a thin one per pellet, guards one per shot." },
     { "decorative_pellets", "Enemies really fire one shotgun shot; this adds 4 fake pellets. Needs Shotgun Tracers." },
     { "explosive_rounds",   "A small blast where bullets land. Visual: looks only. Explosive: splash damage, to you too." },
-    { "explosive_rounds_guards", "Whose bullets explode with Explosive Rounds on: Everyone, guards too, or Players Only." },
+    { "explosive_rounds_guards", "Whose bullets explode with Explosive Rounds on: Everyone, guards too, or just Players." },
     { "debrief_hit_map",    "Solo debrief maps each bullet hit. Select the hit counts for figures and per-part stats." },
     { "pause_pillars",      "Black side bars ease in while paused." },
     { "hud_wide",           "Wide moves ammo and messages to the screen edges." },

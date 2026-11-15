@@ -17,8 +17,8 @@
  * - A shotgun blast (five pellets) makes one blast, at the first pellet
  *   that lands.
  *
- * Explosive Rounds For chooses whose bullets explode: Everyone (default) or
- * Players Only. Demo playback keeps the native impacts, since recorded
+ * Whose Rounds chooses whose bullets explode: Everyone (default) or
+ * Players. Demo playback keeps the native impacts, since recorded
  * input expects them. A round never takes the last explosion slots under
  * the explosion cap, so grenades, mines and props still explode with
  * Unlimited Explosions off. Rounds do not start the screen shake. */
