@@ -683,7 +683,15 @@ void portPumpEvents(void)
 
 #ifdef __EMSCRIPTEN__
     { extern void portWebWaitIfPaused(void); portWebWaitIfPaused(); }
-    if (getenv("GE_NOSLEEP") != NULL) emscripten_sleep(0);
+    if (getenv("GE_NOSLEEP") != NULL)
+    {   /* An unpaced run still has to hand the browser its event loop. Count
+         * the wait as pacer sleep, or hitchlog.c and GE_BENCH would charge it
+         * to the game code that ran before this pump. */
+        const unsigned long long yield_start = portProfNow();
+
+        emscripten_sleep(0);
+        g_PortPumpSleepUs += portProfNow() - yield_start;
+    }
 #endif
     if (s_PumpDepth++ == 0)
     {

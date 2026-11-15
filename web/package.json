@@ -17,6 +17,7 @@
     "audit:strip-hitch": "node tools/strip-hitch-audit.mjs",
     "audit:soak": "node tools/soak-audit.mjs",
     "audit:graphics": "node tools/graphics-audit.mjs",
+    "audit:bench": "node tools/bench-audit.mjs",
     "audit:room-exit": "node tools/room-exit-audit.mjs",
     "audit:control": "node tools/control-transition-audit.mjs",
     "audit:startup": "node tools/startup-audit.mjs",

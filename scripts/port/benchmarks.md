@@ -1,11 +1,13 @@
 # Benchmarks
 
-The benchmark suite times the Windows game on fixed work, several times over,
-and compares builds: Iron Sights before and after a change, and stock Project
-Midas 1.0.2b. It needs the local US ROM (`baserom.u.z64` in the repository root,
-or `GE_ROM`) and the project's build container. Nothing ROM-derived is
-committed: routes are generated controller input, and frame logs and result
-files stay under the ignored `build_win`.
+The benchmark suite times the game on fixed work, several times over, and
+compares builds: Iron Sights before and after a change, and stock Project
+Midas 1.0.2b. It covers the Windows build and, with its own runner, the
+[browser build](#the-browser-build). It needs the local US ROM
+(`baserom.u.z64` in the repository root, or `GE_ROM`) and the project's build
+container. Nothing ROM-derived is committed: routes are generated controller
+input, and frame logs and result files stay under the ignored `build_win` and
+`build`.
 
 ## Quick start
 
@@ -58,7 +60,7 @@ scenario, the median over the repeats of:
 | 1% low fps | Frame rate over the slowest 1% of frames |
 | Median frame ms, 99th pct ms | Frame-time percentiles |
 | Render ms | Mean time in the renderer per frame, without the buffer swap |
-| Game ms | Mean of the longest stretch of game code per frame (tick plus display-list build) |
+| Game ms | Mean of the longest stretch of game code per frame (tick plus display-list build); where the renderer shares the game's thread, its time is taken off |
 | Draws | Mean draw batches per frame; a workload check, not a score |
 | Load ms | The stage's load, taken as its longest frame before the window |
 
@@ -66,7 +68,8 @@ A change is printed in bold only when it is larger than the slowest-to-fastest
 range of the runs it compares; otherwise treat it as noise. A single run has no
 range, so nothing is bold. The results file
 also holds frame counts over the 120, 60 and 30 fps budgets, the swap, audio and
-pacer times and time in timed load events.
+pacer times, time in timed load events, and `work_ms`: render plus game, the
+processor time a frame costs.
 
 Fixed tick makes every frame do a whole 60 Hz game tick. In normal uncapped
 play most frames are sub-ticks that skip the 60 Hz logic, so the in-game fps
@@ -114,6 +117,50 @@ switches are its own. `--ref <commit> --name <name>` builds any other commit
 the same way, which is how a "before" executable is made without keeping old
 executables around. `--name <name> --clean` deletes a folder.
 
+## The browser build
+
+The browser runs the same scenarios, routes, presets and metrics. Three steps,
+after building the runtime (`python scripts/port/web_build.py video`) and the
+site (`bun run build` in `web/`) and serving it
+(`node tools/serve-site.mjs 4191 /Iron-Sights/` in `web/`; from Git Bash set
+`MSYS_NO_PATHCONV=1` so the prefix is not rewritten):
+
+```sh
+python scripts/port/bench/bench_web.py plan build/web-bench/current --preset default --preset matched
+```
+
+```sh
+cd web && MIDAS_BROWSER=chrome MIDAS_ANGLE=d3d11 node tools/bench-audit.mjs ../baserom.u.z64 ../build/web-bench/current http://127.0.0.1:4191/Iron-Sights/
+```
+
+```sh
+python scripts/port/bench/bench_web.py collect --build web=build/web-bench/current
+```
+
+`plan` writes the run list (environment, `midas.ini`, route and tick window
+for each run). The Playwright tool plays it in one browser profile: a first
+launch prepares the weapon icons, then each run reloads the page with its own
+settings and saves the game's frame log beside the plan. `collect` turns one or
+more such folders into the usual results file and report; give it a "before"
+and an "after" folder to compare two runtimes.
+
+Read browser results differently:
+
+- **Compare Render ms and Game ms, not fps.** The browser schedules frames
+  itself, and an unpaced run hands it the event loop twice a frame, each a wait
+  of about 4 ms. Average fps and frame times mostly measure that. Render ms and
+  Game ms are processor time inside the game and do not include the waits (the
+  swap's wait is counted as swap, the pump's as pacer sleep).
+- **The renderer shares the game's thread**, so a frame costs render plus game
+  (`work_ms` in the results), and that sum against the display's frame time is
+  the headroom: at 60 Hz a frame has 16.7 ms.
+- **Timers are coarse.** Without cross-origin isolation Chrome rounds the
+  game's clock to 0.1 ms, which is fine for the millisecond-scale browser
+  numbers and too coarse for anything smaller.
+- **Sound is not switched off** in the browser runs; a headless browser plays
+  none. `MIDAS_HEADED=1` shows the window (and plays the sound).
+- The runner has no guard against other programs. Keep the machine quiet.
+
 ## Method notes
 
 - **Use a visible window.** A hidden window ran about 30% slower on the
@@ -140,5 +187,6 @@ executables around. `--name <name> --clean` deletes a folder.
 
 ## Checks
 
-`python scripts/port/test_bench.py` tests the metrics, run planning, route
-generation, report and stock patching without a ROM.
+`python scripts/port/test_bench.py` tests the metrics, run planning (Windows and
+browser), route generation, host checks, report and stock patching without a
+ROM.

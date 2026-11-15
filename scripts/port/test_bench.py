@@ -62,6 +62,20 @@ class MetricsTests(unittest.TestCase):
         self.assertAlmostEqual(result['render_ms'], 1.6)
         self.assertAlmostEqual(result['swap_ms'], 0.4)
 
+    def test_game_time_excludes_the_renderer_when_it_shares_the_thread(self):
+        # Arrange: every frame logs 400 us of game stretch and interval/2 of renderer
+        threaded = log_text([400]*20)
+        shared = threaded.replace('render_thread=1', 'render_thread=0')
+
+        # Act
+        on = metrics.run_metrics(threaded, 1, 21)
+        off = metrics.run_metrics(shared, 1, 21)
+
+        # Assert: 400 us of stretch, 200 us of it the renderer
+        self.assertAlmostEqual(on['sim_ms'], 0.4)
+        self.assertAlmostEqual(off['sim_ms'], 0.2)
+        self.assertAlmostEqual(off['work_ms'], off['render_ms']+0.2)
+
     def test_load_is_the_long_frame_before_the_window(self):
         # Arrange
         text = log_text([2000]*20, load_us=250000)
@@ -186,6 +200,21 @@ class PlanTests(unittest.TestCase):
         self.assertAlmostEqual(plan.busy_fraction((0, 0, 0), (75, 80, 20)), 0.25)
         self.assertIsNone(plan.busy_fraction((5, 5, 5), (5, 5, 5)))
 
+    def test_browser_runs_carry_their_input_and_settings_as_data(self):
+        config = plan.load_config(self.CONFIG)
+
+        runs = plan.web_runs(config, ['dam'], ['matched'], 2)
+
+        self.assertEqual([run['repeat'] for run in runs], [1, 2])
+        self.assertEqual(runs[0]['env']['GE_INPUTPLAY'], plan.WEB_ROUTE)
+        self.assertEqual(runs[0]['env']['GE_BENCH'], plan.WEB_FRAME_LOG)
+        self.assertEqual((runs[0]['env']['GE_FIXEDTICK'], runs[0]['env']['GE_TICKHZ']), ('1', '0'))
+        self.assertNotIn('GE_ROM', runs[0]['env'])
+        self.assertIn('msaa=1', runs[0]['ini'])
+        self.assertTrue(runs[0]['route'].startswith('P 1 0 0 46'))
+        self.assertEqual((runs[0]['first_tick'], runs[0]['end_tick']), (300, 3900))
+        self.assertEqual(plan.web_log_name(runs[1]), 'matched-dam-2.csv')
+
     def test_builds_alternate_within_a_repeat(self):
         order = plan.run_order(['fork', 'stock'], ['dam'], 2)
 
@@ -241,6 +270,22 @@ class ReportTests(unittest.TestCase):
         results['runs'] = [{'disturbed': False, 'cpu_busy': 0.2}]
 
         self.assertNotIn('overlapped', report.render(results, 'stock'))
+
+    def test_notes_are_listed_and_a_build_without_a_digest_omits_it(self):
+        results = self.results(self.summary(200.0, 195.0, 205.0))
+        results['notes'] = ['Browser build. Compare Render ms']
+        results['builds'][1]['sha256'] = ''
+
+        text = report.render(results, 'stock')
+
+        self.assertIn('- Browser build. Compare Render ms', text)
+        self.assertIn('- `fork`: b\n', text)
+        self.assertIn('- `stock`: a (sha256 ffffffffffff)', text)
+
+    def test_a_browser_session_names_its_window_as_headless(self):
+        results = dict(self.results(self.summary(200.0, 195.0, 205.0)), target='browser', visible=False)
+
+        self.assertIn('- Window: 1920x1080, headless browser', report.render(results, 'stock'))
 
     def test_a_single_run_is_never_bold(self):
         other = dict(self.summary(200.0, 200.0, 200.0), runs=1)

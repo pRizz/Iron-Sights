@@ -657,6 +657,19 @@ WEB-006 compatibility and mission/effect coverage.
 
 ## WEB-006 | 2026-10-24 | Browser compatibility and polish
 
+**Browser benchmark (FORK-085), 2026-11-15:** the benchmark suite now runs in
+the browser build (`bench_web.py plan`, `bun run audit:bench`,
+`bench_web.py collect`; see [the guide](benchmarks.md#the-browser-build)).
+`pcsched.c` counts an unpaced run's event-loop yield as pacer sleep, in the
+browser build only. First baseline, headless Chromium 157 on ANGLE/Direct3D 11
+at `bf052df`: a single-player frame costs 10.7-13.0 ms of processor time at
+default settings and 9.1-11.1 ms with the Graphics features off, nearly all of
+it in the renderer, five to eight times the Windows build's renderer time for
+the same frames. Render time ranged by 0-4% between repeats. Only this one
+browser and machine were measured. Next action: profile the browser renderer,
+starting with what single player draws and four-player split screen (2.7 ms)
+does not.
+
 **Graphics in the browser (FORK-082), 2026-11-15:** Tone Mapping, the Looks,
 Auto Exposure and Baked Lighting now run in the browser, on by default in
 desktop browsers and off by default on touch devices (no phone measured).

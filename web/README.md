@@ -147,6 +147,11 @@ play in the window it opens and press F8 right after the glitch to save the last
 frames, with Bond's position and heading. Expect a brief hitch on each F8.
 `MIDAS_FLASH_TRACE_DRAWS=1` adds vertex data for draws reaching the camera plane.
 
+To measure performance, `bun run audit:bench` plays the benchmark suite's
+scenarios in the browser build and saves each run's frame log; the planning and
+the numbers come from `scripts/port/bench/bench_web.py`. See
+[the benchmark guide](../scripts/port/benchmarks.md#the-browser-build).
+
 For recurring browser freezes, run the private long-session audit against a
 completed, locally assembled site and a local ROM:
 

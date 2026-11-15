@@ -33,9 +33,9 @@ new areas. Status describes implementation state, not Git publication state.
 ### FORK-085 — Benchmark suite: fixed-work frame timing against stock
 
 **Status:** Implemented on 2026-11-15 at the owner's request, as the first step
-of performance work (measure, then profile, then optimize). Windows only so
-far; the browser build is not measured yet. No game behaviour changes: the
-frame log is off unless `GE_BENCH` is set.
+of performance work (measure, then profile, then optimize). It covers the
+Windows build and, with its own runner, the browser build. No game behaviour
+changes: the frame log is off unless `GE_BENCH` is set.
 
 Inherited behaviour: upstream has no benchmark. It does have the pieces one
 needs, all present at the 1.0.2b baseline and reused here unchanged: the input
@@ -91,6 +91,18 @@ change as real only when it exceeds the runs' own slowest-to-fastest range.
   Each run uses its own folder, `midas.ini` and executable copy under
   `build_win/bench-run-*`, deleted when measured; the player's game, settings
   and saves are not touched. Runs use SDL's dummy audio driver.
+
+- **Browser runner**: `bench_web.py plan` writes the same runs as data (the
+  environment, `midas.ini`, generated route and tick window of each);
+  [bench-audit.mjs](web/tools/bench-audit.mjs) (`bun run audit:bench`) plays
+  them in one Playwright browser profile, reloading the page per run, and saves
+  each frame log; `bench_web.py collect` turns one or more such folders into
+  the same results file and report. In the browser the renderer shares the
+  game's thread, so the metrics take its time off the game's stretch, and the
+  results add `work_ms` (render plus game). An unpaced browser run hands the
+  browser its event loop at the top of every pump; `pcsched.c` now counts that
+  wait as pacer sleep (browser build only), or it was charged to the game code
+  before it.
 
 **Findings while building it** (they shape how the numbers must be read):
 
@@ -148,17 +160,51 @@ individual figures need a rerun on an idle machine. The results file is local
 (`build_win/bench-results/baseline.json`, ignored by Git) and is not needed
 later: before and after are always measured together.
 
-**Not done yet:** the browser build (the frame log compiles there but no
-runner drives it), a paced mode for frame-time consistency at a fixed rate,
-hand-played routes (a scenario takes one as `route_file`), and Linux. Stock's
-repeats of the fight scenarios do not always draw identical frames (a few
-draw batches differ on some ticks); the report says so where it happens.
+**Browser baseline, Iron Sights at `bf052df`** (2026-11-15; the same laptop;
+Chromium 157 headless on ANGLE/Direct3D 11, 1280x960 canvas; two repeats,
+medians; 24 runs; processor time per frame in milliseconds):
+
+| Scenario | Browser render / game, default | Browser render / game, matched | Windows fork render / game, matched |
+|---|---:|---:|---:|
+| dam-walk | 10.06 / 0.67 | 8.48 / 0.59 | 1.05 / 0.44 |
+| streets-fight | 11.83 / 0.76 | 9.78 / 0.62 | 1.52 / 0.44 |
+| depot-fight | 11.12 / 0.74 | 9.49 / 0.60 | 1.28 / 0.42 |
+| jungle-fight | 11.64 / 0.86 | 10.05 / 0.74 | 1.51 / 0.58 |
+| cradle-fight | 12.20 / 0.76 | 10.44 / 0.67 | 1.97 / 0.57 |
+| temple-4p | 6.58 / 0.96 | 2.69 / 0.80 | 1.24 / 0.89 |
+
+- A single-player frame costs the browser 10.7-13.0 ms of processor time at
+  default settings (render plus game), against the 16.7 ms a 60 Hz display
+  allows, and 9.1-11.1 ms with settings matched. A 120 Hz display is out of
+  reach.
+- Nearly all of it is the renderer: 8.5-10.4 ms with the graphics features
+  off, five to eight times the Windows build's figure for the same frames.
+  The game code is close to the Windows build's (0.6-1.0 ms).
+- The graphics features add 1.6-2.1 ms a frame in single player and 3.9 ms in
+  four-player split screen.
+- Four-player split screen is the cheapest scenario in the browser (2.69 ms
+  of renderer with settings matched) although it draws four views. Something
+  the single-player scenarios draw and it does not is expensive there; the
+  profiling step starts with that.
+- These are far steadier than the Windows numbers: render time ranged by 0-4%
+  between repeats. Average fps (44-58 at defaults) is not comparable with
+  Windows: the unpaced browser run waits on the event loop twice a frame,
+  about 4.8 ms each, and the window sizes differ.
+
+**Not done yet:** a paced mode for frame-time consistency at a fixed rate,
+hand-played routes (a scenario takes one as `route_file`), Linux, and a guard
+against other programs in the browser runner. Only headless Chromium was
+measured; Firefox, Safari and phones were not. Stock's repeats of the fight
+scenarios vary by a few draw batches on some ticks, well inside the report's
+tolerance.
 
 **Shared hooks for later merges:** [hitchlog.c](port/src/hitchlog.c) (inherited)
 gains one call to `portBenchFrame` after it takes its counters; keep it there
 if upstream changes that function, and keep `stock.py`'s anchor text in step
 (`test_bench.py` checks both). `port_console_env.h` lists the three new
-`GE_BENCH*` names. No upstream file changes otherwise.
+`GE_BENCH*` names. [pcsched.c](port/src/pcsched.c) times the unpaced browser
+yield at the top of `portPumpEvents` (inside its existing `__EMSCRIPTEN__`
+block). No upstream file changes otherwise.
 
 **Sources:** [port_bench.c](port/src/port_bench.c),
 [bench.py](scripts/port/bench/bench.py) (runner),
@@ -166,19 +212,25 @@ if upstream changes that function, and keep `stock.py`'s anchor text in step
 routes, host checks), [bench_metrics.py](scripts/port/bench/bench_metrics.py)
 (numbers), [bench_report.py](scripts/port/bench/bench_report.py) (Markdown),
 [stock.py](scripts/port/bench/stock.py),
+[bench_web.py](scripts/port/bench/bench_web.py) and
+[bench-audit.mjs](web/tools/bench-audit.mjs) (browser),
 [scenarios.json](scripts/port/bench/scenarios.json),
 [the guide](scripts/port/benchmarks.md) and `AGENTS.md`'s repo-local guidance.
 
-**Checks:** `python scripts/port/test_bench.py` (32 tests: metrics, run planning,
-route generation, host checks, report, stock patching, and that the fork's
+**Checks:** `python scripts/port/test_bench.py` (36 tests: metrics, run planning
+for Windows and the browser, route generation, host checks, report, stock
+patching, and that the fork's
 hook and the inventory's baseline match what `stock.py` uses) passed. The
 Windows build passed and the frame log was exercised by every run above: a
 1,500-tick Dam run replayed twice gave identical draw counts on every tick; the
 four-player scenario did the same in both builds; mean draws per frame agreed
 to two decimals across all five repeats of every build and scenario. Stock
 1.0.2b built from the export with the three harness additions and ran every
-scenario. The Bright Builds checks and the settings placement check passed.
-Linux, Steam Deck and browser builds were not built or run for this change.
+scenario. The browser runtime built (`web_build.py video`), the site
+assembled, and the browser runner completed all 24 runs with no page errors.
+The Bright Builds checks and the settings placement check passed, and the
+review gallery regenerated with no changed image. Linux and Steam Deck builds
+were not built or run for this change.
 
 **Input idioms:** no menu, prompt or setting was added; the suite is a
 development tool run from a shell.

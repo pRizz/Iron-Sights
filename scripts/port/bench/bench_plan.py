@@ -7,6 +7,8 @@ import csv
 import json
 
 GAME_PROCESSES = ('ironsights.exe', 'projectmidas.exe')
+WEB_FRAME_LOG = '/tmp/bench-frames.csv'
+WEB_ROUTE = '/tmp/bench-route.rec'
 # Harness settings every run uses, whatever the preset: a window, no vsync and
 # no frame cap, so the frame rate is the work and nothing else.
 BASE_INI = ('[display]', 'fullscreen=window', 'vsync=0', 'maxfps=0')
@@ -123,6 +125,34 @@ def synth_route(route, ticks):
 def route_text(scenario):
     """The scenario's generated route, long enough to cover the measured window."""
     return synth_route(scenario['route'], end_tick(scenario)+ROUTE_MARGIN_TICKS)
+
+
+def web_runs(config, scenarios, presets, repeats):
+    """The same runs for the browser build, as data its runner can replay.
+
+    Paths are inside the page's in-memory file system. Settings the browser has
+    no use for (the ROM path, the window size, the message-box and sound-device
+    switches) are left out; its runner supplies the cartridge itself.
+    """
+    runs = []
+    for preset in presets:
+        for repeat, name, _ in run_order(['browser'], scenarios, repeats):
+            scenario = config['scenarios'][name]
+            if 'route_file' in scenario:
+                raise ValueError(f'{name}: the browser runner takes generated routes only')
+            env = run_env(scenario, '', '', WEB_FRAME_LOG, WEB_ROUTE)
+            for key in ('GE_ROM', 'GE_WINDOW', 'GE_NOMSGBOX', 'SDL_AUDIODRIVER'):
+                del env[key]
+            runs.append({'preset': preset, 'scenario': name, 'repeat': repeat, 'env': env,
+                         'ini': ini_text(config['presets'][preset]), 'route': route_text(scenario),
+                         'frame_log': WEB_FRAME_LOG, 'route_path': WEB_ROUTE,
+                         'first_tick': scenario['warmup_ticks'], 'end_tick': end_tick(scenario)})
+    return runs
+
+
+def web_log_name(run):
+    """File the browser runner saves a run's frame log under."""
+    return f"{run['preset']}-{run['scenario']}-{run['repeat']}.csv"
 
 
 def other_games(tasklist_csv, own_pid):

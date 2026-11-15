@@ -86,6 +86,12 @@ def disturbance_lines(runs):
     return lines
 
 
+def window_state(results):
+    if results.get('target') == 'browser':
+        return 'headed browser' if results['visible'] else 'headless browser'
+    return 'visible' if results['visible'] else 'hidden'
+
+
 def render(results, base_label):
     """Markdown report: one table per preset and scenario, medians of the repeats."""
     host = results['host']
@@ -93,12 +99,14 @@ def render(results, base_label):
     lines = ['# Benchmark results', '',
              f"- Recorded: {results['created']}",
              f"- Machine: {host.get('cpu', 'unknown')}; {host.get('gpu', 'unknown')}; {host.get('os', 'unknown')}",
-             f"- Window: {results['resolution']}, {'visible' if results['visible'] else 'hidden'}",
+             f"- Window: {results['resolution']}, {window_state(results)}",
              f"- Mode: fixed tick, unpaced; each run draws the same game ticks, one frame per tick",
              f"- Compared against: {base_label}"]
-    lines += disturbance_lines(results.get('runs', []))+['']
+    lines += disturbance_lines(results.get('runs', []))
+    lines += [f'- {note}' for note in results.get('notes', [])]+['']
     for build in results['builds']:
-        lines.append(f"- `{build['label']}`: {build['identity']} (sha256 {build['sha256'][:12]})")
+        digest = f" (sha256 {build['sha256'][:12]})" if build['sha256'] else ''
+        lines.append(f"- `{build['label']}`: {build['identity']}{digest}")
     lines += ['', 'Each cell is the median of the repeats. A change in bold is larger than the',
               "runs' own slowest-to-fastest range; one in plain text is within the noise.", '']
     for preset, scenarios in results['summary'].items():

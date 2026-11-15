@@ -60,7 +60,18 @@ def low_fps(ordered_us, fraction):
     return 1e6/statistics.fmean(ordered_us[-count:])
 
 
-def frame_metrics(window):
+def game_us(frame, render_thread):
+    """Game code in a frame: the tick and the display-list build.
+
+    With the render thread off (always, in the browser) the renderer runs
+    inside the game's stretch, so its time comes off.
+    """
+    if render_thread:
+        return frame.sim
+    return max(0, frame.sim-frame.run)
+
+
+def frame_metrics(window, render_thread=True):
     """Numbers for one measured window of frames."""
     if not window:
         raise ValueError('the measured window holds no frames')
@@ -82,12 +93,15 @@ def frame_metrics(window):
         'frame_ms_max': intervals[-1]/1000,
         'render_ms': mean_ms(lambda frame: max(0, frame.run-frame.swap-frame.lim)),
         'swap_ms': mean_ms(lambda frame: frame.swap),
-        'sim_ms': mean_ms(lambda frame: frame.sim),
+        'sim_ms': mean_ms(lambda frame: game_us(frame, render_thread)),
         'audio_ms': mean_ms(lambda frame: frame.audio),
         'pacer_ms': mean_ms(lambda frame: frame.pacer),
         'draws': statistics.fmean(frame.draws for frame in window),
         'events_ms': sum(getattr(frame, name) for frame in window for name in EVENTS)/1000,
     }
+    # Processor time a frame costs, wherever it ran: what the browser's own
+    # frame scheduling and a hidden window's throttling cannot distort.
+    metrics['work_ms'] = metrics['render_ms']+metrics['sim_ms']
     for name, budget in BUDGETS_US:
         metrics[name] = sum(1 for interval in intervals if interval > budget)
     return metrics
@@ -109,7 +123,7 @@ def run_metrics(text, first_tick, last_tick):
     """All numbers for one run's frame log."""
     header, frames = parse_log(text)
     window = select_window(frames, first_tick, last_tick)
-    metrics = frame_metrics(window)
+    metrics = frame_metrics(window, render_thread=header.get('render_thread') != '0')
     metrics.update(load_metrics(frames, first_tick))
     metrics['ticks'] = window[-1].tick-window[0].tick+1
     metrics['header'] = header
