@@ -32,8 +32,9 @@ new areas. Status describes implementation state, not Git publication state.
 
 ### FORK-079 — Double-Tap Fire for browser touch
 
-**Status:** Implemented on 2026-11-14 at the owner's request and committed
-locally; not yet pushed to `main`, so not yet on GitHub Pages. Not yet tried on a physical phone or with the real ROM
+**Status:** Implemented on 2026-11-14 at the owner's request; committed and
+pushed to `main` on 2026-11-14 (`d31f229`) so GitHub Pages can deploy it for
+phone testing. Not yet tried on a physical phone or with the real ROM
 in the browser.
 
 Inherited behaviour: upstream has no browser target. Before this entry the
