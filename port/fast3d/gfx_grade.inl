@@ -33,10 +33,13 @@
  *  shift before step 3.
  *  6. Saturation (0 = black and white) and Temperature (white-balance gains,
  *     luminance kept), in linear light.
- *  7. Clarity: local contrast - the pixel's luminance against a 16x16 mip
- *     average of the image, added back in gamma space, limited to +-0.25 and
- *     faded toward black, and only halfway toward white, so bright surfaces
- *     such as snow keep their texture.
+ *  7. Clarity: local contrast - the pixel's luminance against an edge-aware
+ *     local mean (clarityMean: taps on two rings, each weighted by how close
+ *     its luminance is to the pixel's), added back in gamma space, limited to
+ *     +-0.25 and faded toward black, and only halfway toward white, so bright
+ *     surfaces such as snow keep their texture. A plain 16x16 mip average
+ *     left a pale rim along the dark gun and hands, whose pixels dragged the
+ *     wall's average down.
  *  8. Split tone (shadows toward one colour, highlights toward the other,
  *     brightness kept), Fade (blacks lifted to 0.12, white lowered 5%),
  *     Vignette (corners darkened up to 60%, by the view's own rect) and Film
@@ -88,6 +91,25 @@ static const char* const kGradeFs =
     "    vec3 k = -amp * mix(0.125, 0.2, uSharpen);\n"
     "    return max((c + k * (n + s + e + w)) / (1.0 + 4.0 * k), 0.0);\n"
     "}\n"
+    /* Clarity's reference: an edge-aware local mean of luminance from 16 taps of
+     * the 4x4 mip on two rings (8 and 18 px), each weighted by its likeness to
+     * the pixel (a range kernel, sigma 0.12), so a dark gun or a bright sky does
+     * not drag a wall's mean and leave a rim along the edge */
+    "const vec2 RING[8] = vec2[8](vec2(1.0, 0.0), vec2(0.7071, 0.7071), vec2(0.0, 1.0), vec2(-0.7071, 0.7071),\n"
+    "                             vec2(-1.0, 0.0), vec2(-0.7071, -0.7071), vec2(0.0, -1.0), vec2(0.7071, -0.7071));\n"
+    "float clarityMean(vec2 uv, float l0) {\n"
+    "    float sum = 0.0, wsum = 0.0;\n"
+    "    for (int i = 0; i < 8; i++) {\n"
+    "        for (int r = 0; r < 2; r++) {\n"
+    "            vec2 o = RING[i] * (r == 0 ? 8.0 : 18.0) * uTexel;\n"
+    "            float l = dot(textureLod(uScene, uv + o, 2.0).rgb, LUM);\n"
+    "            float w = exp(-(l - l0) * (l - l0) * 69.4);\n"
+    "            sum += l * w;\n"
+    "            wsum += w;\n"
+    "        }\n"
+    "    }\n"
+    "    return wsum > 1e-3 ? sum / wsum : l0;\n"
+    "}\n"
     "vec3 vibrant(vec3 x) {\n"
     "    float l = dot(x, LUM);\n"
     "    float mx = max(x.r, max(x.g, x.b)), mn = min(x.r, min(x.g, x.b));\n"
@@ -127,7 +149,10 @@ static const char* const kGradeFs =
     "    vec3 g = pow(lin, vec3(1.0 / 2.2));\n"
     "    if (uClarity > 0.0) {\n"
     "        float lg = dot(g, LUM);\n"
-    "        float d = clamp(dot(c0, LUM) - dot(textureLod(uScene, uv, 4.0).rgb, LUM), -0.25, 0.25);\n"
+    "        float l0 = dot(c0, LUM);\n"
+    /* x1.3: the edge-aware mean keeps less of strong texture than the plain one
+     * did; this restores most of the old strength at the same slider value */
+    "        float d = clamp((l0 - clarityMean(uv, l0)) * 1.3, -0.25, 0.25);\n"
     "        float t = clamp(lg, 0.0, 1.0) * 2.0 - 1.0;\n"
     "        g *= max(lg + uClarity * d * (1.0 - t * t * (t > 0.0 ? 0.5 : 1.0)), 0.0) / max(lg, 1e-4);\n"
     "    }\n"

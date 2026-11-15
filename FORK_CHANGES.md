@@ -297,8 +297,24 @@ page numbers stay put; the Control tab's `GE_WATCHPAGE` numbers move up by one).
   - **Vibrance** (`vibrance`, default 80): more saturation for the
     less saturated colours.
   - **Clarity** (`tone_clarity`, default 60): local contrast - luminance
-    against a 16x16 mip average of the image, limited to +-0.25 and faded
-    toward black and white.
+    against an edge-aware local mean, x1.3, limited to +-0.25 and faded
+    toward black and white. The mean (`clarityMean`) takes 16 taps of the
+    4x4 mip on rings of 8 and 18 px, each weighted by its likeness to the
+    pixel (Gaussian range kernel, sigma 0.12 in gamma luminance).
+    - **Halo fix (2026-11-15):** the owner saw an uncanny halo around the
+      gun and hands. Captures traced it to Clarity, not Glow: its plain
+      16x16 mip average included the dark gun, so the wall beside it read as
+      brighter than its surroundings and was brightened further.
+    - **Before:** with Glow off, Clarity brightened the band within 6 px of
+      the gun, relative to the wall 20-40 px away, by about 10 levels of 255
+      on Facility and 4 on Caverns. Glow alone added nothing there.
+    - **After:** the pale band along the Facility barrel is gone; Caverns
+      keeps a residual of about 3 levels.
+    - **Texture detail:** the x1.3 gain keeps the boost away from the gun at
+      82-123% of the old one (mean absolute difference from a 6 px box blur;
+      Facility, Surface and Caverns).
+    - **Browser:** the shader compiles and grades there too (headless Chrome
+      on Facility, no WebGL errors).
   - **Sharpen** (`tone_sharpen`, default 50): contrast-adaptive sharpening of
     the 4 neighbours after AMD's CAS, strongest on flat mid-tone texture and
     backing off near clipping, so no halos.
