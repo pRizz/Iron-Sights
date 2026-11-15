@@ -1150,9 +1150,15 @@ a device check is still open.
 inset. In a wide frame the readout already starts past it and stays put.
 `web_build.py video` compiles it; not seen on a device.
 
+Follow-up the same day: the moved counter overlapped the mission timer. The
+top-left text now shares one layout (FORK-015): counter, clock and console
+notices take the inset together, and subtitles, objective alerts and debug
+readouts stack below. Native captures with a simulated inset (`GE_HUD_SAFE`)
+show no overlaps.
+
 **Next action:** On a physical iPhone, in landscape both ways and in portrait,
-confirm the counter and the Debug Position readout clear the notch and the
-rounded corners.
+confirm the counter, the mission timer and the Debug Position readout clear
+the notch and the rounded corners.
 
 ## WEB-008 | 2026-10-24 | Room scene and assets
 

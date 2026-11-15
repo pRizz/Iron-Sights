@@ -1,5 +1,6 @@
 /* Fork clock presentation, separate from upstream ammo and gadget rendering. */
 #include <stdio.h>
+#include <stdlib.h>
 #include <ultra64.h>
 #include <bondtypes.h>
 #include <bondconstants.h>
@@ -17,6 +18,7 @@
 #include "gbi_extension.h"
 #include "port_hud.h"
 #include "port_mission_clock.h"
+#include "port_noclip.h"
 
 s32 portHudMissionBestSeconds(s32 stage, s32 difficulty)
 {
@@ -83,6 +85,66 @@ PortMissionClockLayout portMissionClockLayout(s32 left, s32 top, s32 lineHeight,
     return layout;
 }
 
+/* ---- the top-left text corner (pure layout) ------------------------------ */
+
+PortHudBox portHudFpsLayout(s32 left, s32 top, s32 safeX, s32 safeY, s32 textWidth, s32 textHeight)
+{
+    PortHudBox box;
+    /* Two units in from the corner, plus the one-unit outline. */
+    box.x = left + 3 + safeX;
+    box.y = top + 3 + safeY;
+    box.right = box.x + textWidth + 1;
+    box.bottom = box.y + textHeight + 1;
+    return box;
+}
+
+s32 portHudClockOffsetX(s32 left, s32 fpsRight, s32 safeX, s32 scale)
+{
+    s32 offset = safeX * scale;
+    if (fpsRight > 0) {
+        /* The clock's text starts at left + 30 layout units, which HUD Scale
+         * halves about the view's left edge; leave four screen units. */
+        const s32 clear = (fpsRight + 4 - left) * scale - 30;
+        if (clear > offset) offset = clear;
+    }
+    return offset > 0 ? offset : 0;
+}
+
+s32 portHudSubtitleLayoutTop(s32 viewTop, s32 textY, s32 clockBottom, s32 smallHud, s32 screenBottom)
+{
+    const s32 scale = smallHud ? 2 : 1;
+    s32 obstacle = viewTop, minimumY;
+    /* The clock is laid out in the subtitle's scaled units; round its scaled
+     * bottom outward. */
+    if (clockBottom > viewTop) obstacle = viewTop + (clockBottom - viewTop + scale - 1) / scale;
+    if (screenBottom > obstacle) obstacle = screenBottom;
+    if (obstacle <= viewTop) return textY;
+    /* The subtitle bar starts two units above its text; leave four visible
+     * units between the obstacle and that bar. */
+    minimumY = viewTop + (obstacle - viewTop + 4) * scale + 2;
+    return textY > minimumY ? textY : minimumY;
+}
+
+s32 portHudObjectiveLayoutTop(s32 viewTop, s32 clockToastY, s32 subtitleBottom, s32 screenBottom)
+{
+    s32 top = viewTop + 28;
+    if (clockToastY > top) top = clockToastY;
+    if (subtitleBottom > 0 && subtitleBottom + 4 > top) top = subtitleBottom + 4;
+    if (screenBottom > 0 && screenBottom + 4 > top) top = screenBottom + 4;
+    return top;
+}
+
+s32 portHudDebugLayoutTop(s32 base, s32 fpsBottom, s32 clockBottom, s32 labelBottom)
+{
+    s32 top = base;
+    if (fpsBottom > 0 && fpsBottom + 4 > top) top = fpsBottom + 4;
+    if (clockBottom > 0 && clockBottom + 4 > top) top = clockBottom + 4;
+    if (labelBottom > 0 && labelBottom + 4 > top) top = labelBottom + 4;
+    return top;
+}
+
+/* ---- the top-left text corner (this frame) ------------------------------- */
+
 s32 portMissionTimerShown(void)
 {
     extern s32 portMissionTimer(void);
@@ -92,55 +154,207 @@ s32 portMissionTimerShown(void)
         && getPlayerCount() == 1;
 }
 
-static PortMissionClockLayout clockLayout(s32 hasBest)
+void portHudSafeArea(s32 *dx, s32 *dy)
+{
+    *dx = 0;
+    *dy = 0;
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    {   /* a browser canvas under a notch or rounded corner (safe-area.ts) */
+        extern void portWebSafeAreaTopLeft(s32 viX, s32 viY, s32 *dx, s32 *dy);
+        portWebSafeAreaTopLeft(viGetX(), viGetY(), dx, dy);
+    }
+#else
+    {   /* GE_HUD_SAFE=x,y: a simulated inset in HUD units, so native audits
+         * can capture the browser's notch layout */
+        static s32 envX = -1, envY;
+        if (envX < 0) {
+            const char *e = getenv("GE_HUD_SAFE");
+            envX = envY = 0;
+            if (e == NULL || sscanf(e, "%d,%d", &envX, &envY) != 2 || envX < 0 || envY < 0) envX = envY = 0;
+        }
+        *dx = envX;
+        *dy = envY;
+    }
+#endif
+}
+
+static s32 hudScale(void)
+{
+    return portHudScaleOn() ? 2 : 1;
+}
+
+static s32 gothicLineHeight(void)
 {
     s32 height = 0, width = 0;
     /* textMeasure accumulates height only at a newline, like ammo digits. */
     textMeasure(&height, &width, "0\n", ptrFontBankGothicChars, ptrFontBankGothic, 0);
-    return portMissionClockLayout(viGetViewLeft(), viGetViewTop(), height, hasBest);
+    return height;
 }
 
-s32 portHudSubtitleLayoutTop(s32 viewTop, s32 textY, s32 clockBottom, s32 smallHud)
+static s32 fpsShown(void)
 {
-    const s32 scale = smallHud ? 2 : 1;
-    s32 minimumY;
-    if (clockBottom <= viewTop) return textY;
-    /* The subtitle bar starts two units above its text. Round the scaled
-     * clock bottom outward, then leave four visible units before that bar. */
-    minimumY = viewTop + (((clockBottom - viewTop + scale - 1) / scale + 4) * scale) + 2;
-    return textY > minimumY ? textY : minimumY;
+    extern s32 portVideoShowFps(void); /* video.c; weak 0 headless */
+    return ptrFontBankGothic && ptrFontBankGothicChars && portVideoShowFps()
+        && (getPlayerCount() == 1 || get_cur_playernum() == 0);
 }
 
-s32 portHudSubtitleTop(s32 textY)
+static char *fpsText(void)
 {
-    PortMissionClockLayout clock;
-    if (!ptrFontBankGothic || !ptrFontBankGothicChars || !portMissionTimerShown()) return textY;
-    clock = clockLayout(portHudMissionBestSeconds(bossGetStageNum(), lvlGetSelectedDifficulty()) > 0);
-    return portHudSubtitleLayoutTop(viGetViewTop(), textY, clock.bottom, portHudScaleOn());
+    extern s32 g_PortStatFps; /* frametiming.c, from gfx_sdl2's 500 ms stat window */
+    static char text[16];
+    snprintf(text, sizeof(text), "%d", (int) g_PortStatFps);
+    return text;
+}
+
+/* The FPS counter's box this frame, all zero while it is hidden. Its width
+ * is reserved for at least three digits, so the clock beside it does not
+ * shift as the rate crosses 99/100. */
+static PortHudBox fpsBox(void)
+{
+    extern s32 portFullHeightActive(void); /* bondview2.c */
+    PortHudBox box = {0, 0, 0, 0};
+    s32 height = 0, width = 0, reserve = 0, safeX, safeY, top;
+    if (!fpsShown()) return box;
+    textMeasure(&height, &width, fpsText(), ptrFontBankGothicChars, ptrFontBankGothic, 0);
+    textMeasure(&height, &reserve, "000", ptrFontBankGothicChars, ptrFontBankGothic, 0);
+    portHudSafeArea(&safeX, &safeY);
+    /* Solo full height keeps the top row while paused, since the view snaps
+     * 10 lines down at the end of the pause-box ease. */
+    top = (getPlayerCount() == 1 && portFullHeightActive()) ? 0 : viGetViewTop();
+    return portHudFpsLayout(viGetViewLeft(), top, safeX, safeY,
+                            width > reserve ? width : reserve, gothicLineHeight());
+}
+
+static PortMissionClockLayout clockLayout(s32 hasBest)
+{
+    const s32 scale = hudScale(), left = viGetViewLeft();
+    s32 safeX, safeY;
+    portHudSafeArea(&safeX, &safeY);
+    /* The safe area only reaches the clock where it sits at the window edge
+     * (Wide HUD); the 4:3 band is clear of it. */
+    if (!hudAnchorsToEdges()) safeX = 0;
+    return portMissionClockLayout(left + portHudClockOffsetX(left, fpsBox().right, safeX, scale),
+                                  viGetViewTop() + safeY * scale, gothicLineHeight(), hasBest);
+}
+
+static s32 clockHasBest(void)
+{
+    return portHudMissionBestSeconds(bossGetStageNum(), lvlGetSelectedDifficulty()) > 0;
+}
+
+static s32 clockReady(void)
+{
+    return ptrFontBankGothic && ptrFontBankGothicChars && portMissionTimerShown();
+}
+
+/* The clock's bottom edge on screen (after HUD Scale), 0 while hidden. */
+static s32 clockScreenBottom(void)
+{
+    const s32 scale = hudScale(), top = viGetViewTop();
+    if (!clockReady()) return 0;
+    return top + (clockLayout(clockHasBest()).bottom - top + scale - 1) / scale;
+}
+
+s32 portHudSubtitleTop(s32 textX, s32 textY)
+{
+    const s32 scale = hudScale(), left = viGetViewLeft();
+    const PortHudBox fps = fpsBox();
+    const s32 clockBottom = clockReady() ? clockLayout(clockHasBest()).bottom : 0;
+    s32 fpsBottom = 0;
+    /* The bar spans the width and the counter draws over it, so the FPS
+     * counter only moves the text when it reaches the text's columns. */
+    if (fps.bottom > 0 && fps.right + 2 > left + (textX - left) / scale) fpsBottom = fps.bottom;
+    return portHudSubtitleLayoutTop(viGetViewTop(), textY, clockBottom, portHudScaleOn(), fpsBottom);
 }
 
 static s32 objectiveSubtitleBottom;
+static s32 objectiveCardBottom;
 
 void portHudSubtitleBottom(s32 bottom)
 {
     objectiveSubtitleBottom = bottom;
 }
 
-s32 portHudObjectiveLayoutTop(s32 viewTop, s32 clockToastY, s32 subtitleBottom)
+void portHudObjectiveCardBottom(s32 bottom)
 {
-    s32 top = viewTop + 28;
-    if (clockToastY > top) top = clockToastY;
-    if (subtitleBottom > 0 && subtitleBottom + 4 > top) top = subtitleBottom + 4;
-    return top;
+    objectiveCardBottom = bottom;
 }
 
 s32 portHudObjectiveTop(void)
 {
-    s32 clockToastY = 0;
-    if (portMissionTimerShown() && ptrFontBankGothic && ptrFontBankGothicChars)
-        clockToastY = clockLayout(portHudMissionBestSeconds(bossGetStageNum(), lvlGetSelectedDifficulty()) > 0).toastY;
-    return portHudObjectiveLayoutTop(viGetViewTop(), clockToastY, objectiveSubtitleBottom);
+    const s32 clockToastY = clockReady() ? clockLayout(clockHasBest()).toastY : 0;
+    return portHudObjectiveLayoutTop(viGetViewTop(), clockToastY, objectiveSubtitleBottom, fpsBox().bottom);
 }
+
+/* The NOCLIP label (port_noclip.c) sits at the view's top right, 0.7 scale. */
+static s32 noclipLabelBottom(void)
+{
+    if (!portNoclipActive() || !ptrFontBankGothic || !ptrFontBankGothicChars) return 0;
+    return viGetViewTop() + 12 + (gothicLineHeight() * 7 + 9) / 10;
+}
+
+s32 portHudDebugRowsTop(void)
+{
+    /* FORK-084's floor: the rows start no nearer the top than the safe area */
+    s32 safeX, safeY, top = viGetViewTop();
+    portHudSafeArea(&safeX, &safeY);
+    if (safeY > top) top = safeY;
+    return portHudDebugLayoutTop(top + 0x11, fpsBox().bottom, clockScreenBottom(), noclipLabelBottom());
+}
+
+/* How many debug readout rows draw from portHudDebugRowsTop (bondview2.c). */
+static s32 debugRowCount(void)
+{
+    extern s32 get_debug_testingmanpos_flag(void); /* debugmenu_handler.c */
+    extern s32 portInputShowInput(void);           /* input_pc.c; weak 0 headless */
+    return (get_debug_testingmanpos_flag() ? 1 : 0) + (portInputShowInput() ? 1 : 0);
+}
+
+static s32 topReserved;
+
+static void reserveTop(s32 bottom)
+{
+    if (bottom > topReserved) topReserved = bottom;
+}
+
+Gfx *portHudDrawFpsCounter(Gfx *gdl)
+{
+    const PortHudBox fps = fpsBox();
+    if (getPlayerCount() == 1 || get_cur_playernum() == 0) {
+        /* Everything at the top left this frame. This draws last, after the
+         * subtitle and objective card recorded their edges. */
+        const s32 rows = debugRowCount();
+        topReserved = 0;
+        reserveTop(fps.bottom);
+        reserveTop(clockScreenBottom());
+        reserveTop(noclipLabelBottom());
+        if (rows > 0) reserveTop(portHudDebugRowsTop() + (rows - 1) * 0xf + 0xb);
+        reserveTop(objectiveSubtitleBottom);
+        reserveTop(objectiveCardBottom);
+    }
+    if (fps.bottom == 0) return gdl;
+    {
+        /* Just the number, in the small Gothic font, OUTLINED white on
+         * 0x646464FF like the HUD's own counters so the digits stay readable
+         * over a bright sky; always anchored to the window's left edge. */
+        s32 x = fps.x, y = fps.y;
+        gdl = microcode_constructor(gdl);
+        PORT_HUD_ANCHOR_FULL(gdl, PORT_HUD_ANCHOR_LEFT);
+        gdl = textRenderOutlined(gdl, &x, &y, fpsText(), ptrFontBankGothicChars, ptrFontBankGothic, -1,
+                                 0x646464FFU, viGetX(), viGetY(), 0, 0);
+        PORT_HUD_ANCHOR_OFF(gdl);
+        gdl = combiner_bayer_lod_perspective(gdl);
+    }
+    return gdl;
+}
+
+s32 portHudTakeTopReserved(void)
+{
+    const s32 bottom = topReserved;
+    topReserved = 0;
+    return bottom;
+}
+
 
 Gfx *portHudDrawMissionTimer(Gfx *gdl)
 {

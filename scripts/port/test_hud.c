@@ -156,42 +156,18 @@ static void testTimerSubtitleObjectiveStack(void)
         const PortMissionClockLayout clock = portMissionClockLayout(0, origin, heights[font], best);
         const s32 clockBottom = origin + (clock.bottom - origin + scale - 1) / scale;
         /* Act: position native text, then use its final bar bottom for the toast. */
-        const s32 y = portHudSubtitleLayoutTop(origin, origin + 13, clock.bottom, small);
+        const s32 y = portHudSubtitleLayoutTop(origin, origin + 13, clock.bottom, small, 0);
         const s32 barTop = origin + (y - 2 - origin) / scale;
         const s32 barBottom = origin + (y + rows * heights[font] - origin + scale - 1) / scale;
-        const s32 toastY = portHudObjectiveLayoutTop(origin, clock.toastY, barBottom);
+        const s32 toastY = portHudObjectiveLayoutTop(origin, clock.toastY, barBottom, 0);
         /* Assert: clock, complete subtitle bar and objective panel have gaps. */
         assert(barTop >= clockBottom + 4);
         assert(toastY >= barBottom + 4 && toastY >= clock.toastY);
         assert(clock.elapsedY == origin + 4 + (heights[font] + 1) / 2);
-        assert(portHudSubtitleLayoutTop(origin, origin + 90, clock.bottom, small) >= origin + 90);
-        assert(portHudSubtitleLayoutTop(origin, origin + 13, 0, small) == origin + 13);
+        assert(portHudSubtitleLayoutTop(origin, origin + 90, clock.bottom, small, 0) >= origin + 90);
+        assert(portHudSubtitleLayoutTop(origin, origin + 13, 0, small, 0) == origin + 13);
     }
-    assert(portHudSubtitleLayoutTop(0, 90, 12, 0) == 90); /* preserve lower camera text */
-}
-
-static void testObjectiveSubtitleClearance(void)
-{
-    /* Arrange: shifted viewports, regional metrics, one to six subtitle rows. */
-    const s32 heights[] = {8, 11, 14, 20};
-    s32 origin, scaled, row, font, best;
-    for (origin = 0; origin <= 12; origin += 12)
-    for (scaled = 0; scaled <= 1; scaled++)
-    for (row = 1; row <= 6; row++)
-    for (font = 0; font < 4; font++)
-    for (best = 0; best <= 1; best++) {
-        const s32 subtitleBottom = origin + (13 + row * heights[font] + scaled) / (scaled ? 2 : 1);
-        const PortMissionClockLayout clock = portMissionClockLayout(0, origin, heights[font], best);
-        /* Act: use the subtitle renderer's measured and scaled bottom edge. */
-        const s32 y = portHudObjectiveLayoutTop(origin, clock.toastY, subtitleBottom);
-        /* Assert: the complete panel clears text, its bar and the optional clock. */
-        assert(y >= origin + 28 && y >= clock.toastY && y >= subtitleBottom + 4);
-        assert(y + 30 <= origin + 180);
-        assert(portHudObjectiveLayoutTop(origin, 0, subtitleBottom) >= subtitleBottom + 4);
-    }
-    assert(portHudObjectiveLayoutTop(12, 0, 0) == 40); /* no displayed subtitle */
-    assert(portHudObjectiveLayoutTop(0, 0, 20) == 28); /* short line needs no move */
-    assert(portHudObjectiveLayoutTop(0, 0, 46) == 50); /* Janus's three-line dialogue */
+    assert(portHudSubtitleLayoutTop(0, 90, 12, 0, 0) == 90); /* preserve lower camera text */
 }
 
 static void testObjectiveTimingDuringDialogue(void)
@@ -303,6 +279,7 @@ static void testMainObjectiveCue(void)
 }
 
 #include "test_hud_objective_messages.inl"
+#include "test_hud_corner.inl"
 
 int main(void)
 {
@@ -314,6 +291,7 @@ int main(void)
     testClockVisibility();
     testTimerSubtitleObjectiveStack();
     testObjectiveSubtitleClearance();
+    testTopLeftCornerNoOverlap();
     testObjectiveTimingDuringDialogue();
     testObjectiveFadeOut();
     testMainObjectiveCue();

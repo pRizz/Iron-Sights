@@ -109,6 +109,7 @@ static const char *const sPortConEnvNames[] = {
     "GE_HUD_AUDIT_BODY",
     "GE_HUD_AUDIT_BEST",
     "GE_HUD_AUDIT_CHOP",
+    "GE_HUD_SAFE",
     "GE_HUDGAUGE",
     "GE_HUDSCALE",
     "GE_HWCAL",

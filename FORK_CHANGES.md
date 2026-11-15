@@ -61,7 +61,9 @@ readout's look in native builds is unchanged.
 **Browser:** the readout and the `show_input` row under it start no nearer
 the window edge than the safe-area inset (`portWebSafeAreaTopLeft`, FORK-025)
 reaches. Only the left/top starting point is clamped. The FPS counter, by
-contrast, is moved in by the whole inset. In a wide frame the readout already
+contrast, is moved in by the whole inset. Vertically the rows also start below
+the top-left corner's FPS counter, mission clock and NOCLIP label
+(`portHudDebugRowsTop`, FORK-015), keeping the same safe-area floor. In a wide frame the readout already
 starts inside the 4:3 area, past an iPhone notch, so it stays put. Adding the
 whole inset there would push the line right for nothing, and in a stretched
 4:3 frame it would push `P` off the right edge. The full-width strip behind
@@ -8379,8 +8381,40 @@ clock; gadget/ammo/weapon-strip spacing still applies.
 The setting remains off by default (`[display] mission_timer=0`); the INI guide
 now matches the actual video default, correcting its inherited claim of 1.
 
+**Shared top-left corner (2026-11-15).** The browser's safe-area inset
+(FORK-025) moved the show_fps counter into the clock, and HUD Scale already
+halved the clock's 30-unit offset to 15, onto the counter. One layout in
+`port_mission_clock.c` now places everything at the top left, so none of it
+draws over another:
+- **FPS counter:** `portHudDrawFpsCounter` replaces the body of bondview2.c's
+  `portDrawFpsCounter`. It keeps the counter's place (three units in, window
+  edge), adds the safe-area inset, and reserves at least three digits' width.
+- **Mission clock:** starts four screen units after the counter's right edge,
+  after HUD Scale (`portHudClockOffsetX`), and inside the safe area when it sits
+  at the window edge (Wide HUD). On a desktop with a two- or three-digit counter
+  and full-size HUD it does not move.
+- **Subtitles:** also clear the counter when the counter reaches the text's
+  columns (`portHudSubtitleTop(textX, textY)`); the bar spans the width, so a
+  counter left of the text still draws over the bar as before.
+- **Objective alerts:** also stay four units below the counter.
+- **Debug readouts:** the testing-man position strip (`GE_DEBUGPOS`), show_input
+  and `GE_WATCHDBG` rows start below the counter, the clock (BEST row included)
+  and the NOCLIP label (`portHudDebugRowsTop`), where they used to start at a
+  fixed `top + 0x11` and could cross the BEST row and the label.
+- **Console notices:** messages shown while the console is closed (hotkey
+  toggles, `Baked Lighting: ready`) start below the lowest of these edges for the
+  frame and inside the safe area (`conNoticeOrigin`, `port_console.c`); they
+  used to draw on the counter and the clock. `port_hud.c` records the objective
+  card's bottom (`portHudObjectiveCardBottom`) for this.
+- **Checked, already separate:** mission hints (mid-left), the NOCLIP label,
+  the stock countdown and weapon strip (bottom centre), ammo, gadget names and
+  pickup messages (bottom corners, existing clearances) and the weapon cards.
+- **`GE_HUD_SAFE=x,y`:** simulates a safe-area inset in HUD units on native
+  builds, for audits.
+
 **Sources:** [timer rendering/layout](port/src/port_mission_clock.c),
 [clock interface](port/include/port_mission_clock.h),
+[console notices](port/src/port_console.c), [FPS/debug-row hooks](src/game/bondview2.c),
 [small ammo-render hook](src/game/gunfire.c),
 [pickup-message spacing](src/game/bondview2.c),
 [target lookup/format/colors](port/src/port_mission_clock.c), [HUD API](port/include/port_hud.h),
@@ -8399,6 +8433,14 @@ Native Statue Park captures verify simultaneous elapsed/cheat target, BEST,
 three-line Trevelyan dialogue and immediate objective completion at 960x540 and
 800x600 with the small HUD. A timer-disabled capture retains the native subtitle
 position. The Windows build and HUD regressions pass.
+The shared corner adds `testTopLeftCornerNoOverlap` in
+[test_hud_corner.inl](scripts/port/test_hud_corner.inl), which also takes the
+objective/subtitle clearance test to keep `test_hud.c` in its length limit (2 to 5 digit counters,
+four font heights, inset or none, both HUD scales, best row or none). Dam
+captures at 1280x720 with show_fps and the timer: desktop (layout unchanged),
+`GE_HUD_SAFE=24,0`, that inset with HUD Scale, desktop HUD Scale, and the inset
+with `GE_DEBUGPOS` plus a Baked Lighting toggle notice. None overlap. The HUD
+and ADS tests, the Windows build and `web_build.py video` pass.
 [HUD audit](scripts/port/audit_hud.ps1)
 accepts a
 mission, difficulty and timer switch plus an optional RAM-only `-BestSeconds`
@@ -9974,18 +10016,20 @@ top-left corner. The canvas still fills the stage; only the text moves.
 inset reaches into the canvas's bounds, as a fraction of the canvas width or
 height, through `portWebSetSafeArea` (`port/web/lifecycle.c`). It reports again
 whenever the canvas, window or orientation changes, and once the game starts.
-`portDrawFpsCounter` (`src/game/bondview2.c`, browser builds only) adds
-`portWebSafeAreaTopLeft`'s offset to its position. That offset is the left and
-top fractions in HUD units. x uses the larger of the wide frame's unit (window
-height / viY) and the stretched frame's (window width / viX), so the counter
-clears the inset in either mapping. A canvas that does not reach the inset, and
-every desktop or Android browser without one, gets no offset. Native builds are
-unchanged. Other HUD text keeps its upstream or Wide HUD placement, except
-the Debug Position readout, which starts no nearer the edge than the inset
-(FORK-084).
-`safe-area.test.ts` covers the inset-to-canvas rule, and `web_build.py video`
-compiles and exports the bridge. Not yet checked on a physical iPhone or in a
-WebKit device emulation.
+`portWebSafeAreaTopLeft` turns the left and top fractions into HUD units. x
+uses the larger of the wide frame's unit (window height / viY) and the
+stretched frame's (window width / viX), so text clears the inset in either
+mapping. The first version moved only the FPS counter, which then ran into the
+mission clock. The shared top-left corner layout (FORK-015,
+`portHudSafeArea` in `port/src/port_mission_clock.c`) now applies the inset to
+the counter, the Wide HUD clock beside it and the console's notices together;
+the Debug Position readout starts no nearer the edge than the inset
+(FORK-084) and below the corner's text.
+A canvas that does not reach the inset, and every desktop or Android browser
+without one, gets no offset; native builds take one only from the
+`GE_HUD_SAFE` audit variable. `safe-area.test.ts` covers the inset-to-canvas
+rule, and `web_build.py video` compiles and exports the bridge. Not yet checked
+on a physical iPhone or in a WebKit device emulation.
 
 `tools/prepare-room-models.mjs` verifies pinned acquisition hashes and regenerates
 the console-only GLB (203,896 bytes) and controller GLB (1,204,348 bytes).

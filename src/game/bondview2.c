@@ -12833,54 +12833,12 @@ Gfx *bondviewRenderCredits(Gfx *gdl)
 #ifndef TARGET_N64
 /* The show_fps counter, drawn LAST in the frame by maybe_mp_interface so the
  * pause pillars can't cover it, and outside sub_GAME_7F08AAE8, whose top-text
- * branch skips its overlays and made the counter blink. */
+ * branch skips its overlays and made the counter blink. Its placement, beside
+ * the mission clock and clear of the browser's safe area, is the top-left
+ * corner layout's (port_mission_clock.c). */
 static Gfx *portDrawFpsCounter(Gfx *gdl)
 {
-    { /* midas.ini [display] show_fps=1 (GE_SHOWFPS env override): rendered
-       * frames per second, drawn in-window for fullscreen use, from gfx_sdl2's
-       * 500ms stat window via g_PortStatFps (0 headless). */
-        extern s32 portVideoShowFps(void); /* video.c; weak 0 headless */
-        if (portVideoShowFps() && (getPlayerCount() == 1 || get_cur_playernum() == 0))
-        {
-            /* Just the number, in the small Gothic font, two units in from the
-             * view's top-left so it stays above the top text box; always
-             * anchored to the window's left (TPS is in the log's stats line). */
-            static char fpstext[16];
-            s32 fp_x = viGetViewLeft() + 2;
-            s32 fp_y = viGetViewTop() + 2;
-
-            /* Solo full height keeps the top row while paused, since the view
-             * snaps 10 lines down at the end of the pause-box ease; the black
-             * bar the digits sit on is drawn before them. */
-            if (getPlayerCount() == 1 && portFullHeightActive())
-            {
-                fp_y = 2;
-            }
-#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
-            { /* a browser canvas under a notch or rounded corner: clear the safe area */
-                extern void portWebSafeAreaTopLeft(s32 viX, s32 viY, s32 *dx, s32 *dy);
-                s32 safe_x = 0;
-                s32 safe_y = 0;
-                portWebSafeAreaTopLeft(viGetX(), viGetY(), &safe_x, &safe_y);
-                fp_x += safe_x;
-                fp_y += safe_y;
-            }
-#endif
-
-            sprintf(fpstext, "%d", (int) g_PortStatFps);
-            gdl = microcode_constructor(gdl);
-            PORT_HUD_ANCHOR_FULL(gdl, PORT_HUD_ANCHOR_LEFT);   /* the FPS strip: always the window edge */
-            /* OUTLINED white on 0x646464FF like the HUD's own counters
-             * (textRenderOutlined), so the digits stay readable over a bright
-             * sky; the one-pixel outline moves them one further in. */
-            fp_x += 1;
-            fp_y += 1;
-            gdl = textRenderOutlined(gdl, &fp_x, &fp_y, fpstext, ptrFontBankGothicChars, ptrFontBankGothic, -1, 0x646464FFU, viGetX(), viGetY(), 0, 0);
-            PORT_HUD_ANCHOR_OFF(gdl);
-            gdl = combiner_bayer_lod_perspective(gdl);
-        }
-    }
-    return gdl;
+    return portHudDrawFpsCounter(gdl);
 }
 #endif
 
@@ -14368,7 +14326,7 @@ Gfx *sub_GAME_7F08AAE8(Gfx *gdl)
                     }
 
 #ifndef TARGET_N64
-                    msg.y = portHudSubtitleTop(msg.y);
+                    msg.y = portHudSubtitleTop(msg.x, msg.y);
 #endif
                     msg.bottom = msg.y + msg.textheight;
 #ifndef TARGET_N64
@@ -14447,7 +14405,11 @@ Gfx *sub_GAME_7F08AAE8(Gfx *gdl)
 #endif
 
         debug_x = debug_left + 0x11;
+#ifndef TARGET_N64
+        debug_y = portHudDebugRowsTop(); /* below the top-left corner text, inside the safe area (port_mission_clock.c) */
+#else
         debug_y = debug_top + 0x11;
+#endif
         debug_boxbottom = debug_y + 0xa;
         gdl = microcode_constructor(gdl);
         gdl = microcode_constructor_related_to_menus(gdl, 0, debug_y, viGetX(), debug_boxbottom + 1, 0x64);
@@ -14498,7 +14460,8 @@ Gfx *sub_GAME_7F08AAE8(Gfx *gdl)
 
             portDebugRowsClearSafeArea(&in_left, &in_top); /* FORK-084: as the readout above */
             in_x = in_left + 0x11;
-            in_y = in_top + (get_debug_testingmanpos_flag() ? 0x20 : 0x11)
+            /* below the readout and the top-left corner text (port_mission_clock.c) */
+            in_y = portHudDebugRowsTop() + (get_debug_testingmanpos_flag() ? 0xf : 0)
                  + ((getPlayerCount() >= 3) ? PORT_OVERLAY_MP_DROP : 0);
             in_bot = in_y + 0xa;
 
@@ -14525,7 +14488,7 @@ Gfx *sub_GAME_7F08AAE8(Gfx *gdl)
             struct hand *lh = &g_CurrentPlayer->hands[GUNLEFT];
             s32 wd_rows = (get_debug_testingmanpos_flag() ? 1 : 0) + (portInputShowInput() ? 1 : 0); /* show_fps sits in the corner now, not in this stack */
             s32 wd_x = viGetViewLeft() + 0x11;
-            s32 wd_y = viGetViewTop() + 0x11 + (wd_rows * 0xf);
+            s32 wd_y = portHudDebugRowsTop() + (wd_rows * 0xf);
             s32 wd_bot = wd_y + 0xa;
             if (g_CurrentPlayer->watch_animation_state == 0 && !g_portWatchDbgArm && lh->weaponnum_watchmenu < 0 && lh->weapon_current_animation == 0) { wd_frame = 0; } else { wd_frame++; }
             sprintf(wdtext, "F %d  W %d/%d A %d R %d  LH %d/%d/%d an %d v %d inv %d",

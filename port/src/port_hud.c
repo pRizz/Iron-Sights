@@ -515,6 +515,7 @@ Gfx *portHudDraw(Gfx *g)
     HudState *h;
     s32 i;
     f32 cx, cy;
+    if (p == 0 || getPlayerCount() == 1) portHudObjectiveCardBottom(0); /* until the card draws below */
     if (p < 0 || p >= 4 || !portBondControlsLive() || !g_CurrentPlayer
         || g_CurrentPlayer->hudmessoff || g_CurrentPlayer->mpmenuon
         || !ptrFontBankGothic || !ptrFontBankGothicChars) return g;
@@ -548,6 +549,7 @@ Gfx *portHudDraw(Gfx *g)
         if (t->index < 0) snprintf(title, sizeof(title), "ALL MAIN OBJECTIVES COMPLETE");
         else snprintf(title, sizeof(title), "OBJECTIVE %c %s", 'A'+t->letter,
             complete ? "COMPLETED" : failed ? "FAILED" : "UPDATED");
+        portHudObjectiveCardBottom(y + 30); /* the corner layout's reserved top (port_mission_clock.c) */
         g = phRect(g, x, y, w, 30, phOpacity(0x10171cda, opacity));
         g = phRect(g, x, y, 2, 30, color);
         g = phText(g, title, x+8, y+4, 0.8f, color, w-16);

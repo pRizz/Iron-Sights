@@ -1135,8 +1135,33 @@ static void conEnvHarness(void)
     }
 }
 
+/* Notices shown while the console is closed start below this frame's
+ * top-left HUD text (the FPS counter, mission clock, subtitles, objective
+ * card and debug readouts: port_mission_clock.c) and inside the browser's
+ * safe area. `reserved` is that text's lowest edge in HUD units (0 for
+ * none). The console's space is 480 units tall over the whole window, so
+ * one HUD unit is 480 / viGetY() of its units. Called before conSpaceBegin,
+ * while viGetY() is still the frame's. */
+static void conNoticeOrigin(s32 reserved, s32 *x, s32 *y)
+{
+    extern void portHudSafeArea(s32 *dx, s32 *dy);    /* port_mission_clock.c */
+    const s32 viY = viGetY() > 0 ? viGetY() : 240;
+    s32 safeX, safeY;
+
+    portHudSafeArea(&safeX, &safeY);
+    *x = CON_TEXT_X + (safeX * 480 + viY - 1) / viY;
+    *y = CON_TOP_Y + (safeY * 480 + viY - 1) / viY;
+    if (reserved > 0 && (reserved * 480 + viY - 1) / viY + CON_TOP_Y > *y)
+    {
+        *y = (reserved * 480 + viY - 1) / viY + CON_TOP_Y;
+    }
+}
+
 Gfx *portConRender(Gfx *gdl)
 {
+    extern s32 portHudTakeTopReserved(void);   /* port_mission_clock.c */
+    /* taken every frame, so a menu frame (no HUD) never reuses gameplay's */
+    const s32 hudReserved = portHudTakeTopReserved();
     s32 i;
 
     conEnvHarness();
@@ -1161,10 +1186,13 @@ Gfx *portConRender(Gfx *gdl)
     {
         if (conMsgRows > 0)
         {
+            s32 noticeX, noticeY;
+
+            conNoticeOrigin(hudReserved, &noticeX, &noticeY);
             gdl = conSpaceBegin(gdl);
             for (i = 0; i < conMsgRows; i++)
             {
-                gdl = conDrawRow(gdl, CON_TEXT_X, CON_TOP_Y + CON_ROW_PITCH * (conMsgRows - i - 1),
+                gdl = conDrawRow(gdl, noticeX, noticeY + CON_ROW_PITCH * (conMsgRows - i - 1),
                                  conMsgBuf[i], CON_COL_TEXT);
             }
             gdl = conSpaceEnd(gdl);
