@@ -39,7 +39,8 @@ new areas. Status describes implementation state, not Git publication state.
 - **Committed and pushed:** to `main` on 2026-11-15 as `08af4e2`, after
   rebasing onto FORK-080 and FORK-081; first drafted as FORK-080 and
   renumbered when those two landed.
-- **Not run:** Linux, Steam Deck and browser builds.
+- **Not yet seen running:** Linux, Steam Deck (CI builds and packages them) and
+  the browser.
 - **HDR Output** was not seen on an HDR display: this machine's monitor
   reports Windows HDR off.
 
@@ -344,7 +345,25 @@ aid, and every setting they flip is a menu row touch can reach.
   `test_states.sh`, `test_baked_trace.sh`, `test_wardrobe.sh`, `test_hud.sh`,
   both settings-placement checks and the Bright Builds checks passed.
   `test_web_touch.sh` needs `emcc` and was not run.
-- **Not done:** HDR on a real HDR display; Linux and browser builds.
+- **Linux and Steam Deck (2026-11-15):**
+  - **CI:** the `linux` job built and packaged commit `1fd99a0`, Native
+    build 267.1, including `Iron-Sights-steamdeck-i686.zip`. Its smoke tests
+    launch the packages for crash reporting, not rendering.
+  - **Local build:** the same sources would not build in the `goldeneye`
+    image. That image's GCC 13 rejects the pre-existing `gfx_shiny.cpp`
+    (`src/sched.h` shadows `<sched.h>`), the reason CI uses its pinned
+    `midas-linux-release` image.
+  - **Headless render:** running build 267.1's Linux package under Xvfb with
+    Mesa llvmpipe could not open a 32-bit GL window ("Couldn't find matching
+    GLX visual", through GLX and EGL, with bundled or system X libraries),
+    while 64-bit `glxinfo` worked. Graphics on Linux is therefore built but
+    not yet seen; the owner's Steam Deck play-test of build 267.1 is the
+    check.
+  - **Steam Deck input:** the Deck has no keyboard, so the hotkeys need
+    Steam Input to map buttons to their keys (or pad binds in Controls); the
+    menu rows work with the controller.
+- **Not done:** HDR on a real HDR display; Graphics running on Linux and in
+  the browser.
 
 ### FORK-081 — Reinforcements: more clones and a reinforcement director
 
