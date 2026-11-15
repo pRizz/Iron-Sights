@@ -1826,6 +1826,19 @@ change the accepted feature behavior.
 
 ## WEB-011 | 2026-10-25 | Touch controls
 
+**Double-Tap Fire, 2026-11-14:** The owner asked for shooting by double tap
+on mobile, on by default. A quick still tap on the look area, then a second
+touch within 300 ms and 48 CSS pixels, holds Fire until that finger lifts
+and keeps aiming as it drags; a single tap never fires. The browser-only
+toggle is Gameplay > Iron Sights > Aiming and Movement > Double-Tap Fire
+(`[display] touch_double_tap_fire`). Sources: `touch-double-tap.ts`,
+`touch-controls.tsx`, `port/web/touch.c` and the gated rows (FORK-079).
+Verification: 6 new unit tests, TypeScript, the Chrome touch fixture audit
+with a new double-tap step, and the touch bridge regression in the pinned
+emsdk image pass. Not yet seen on a physical phone or with the real ROM in
+the browser. Next action: try it on a phone after Pages publication and
+tune the timing if it fires by accident or feels slow.
+
 **Portrait keeps the corner controls at rest, 2026-11-11:** The owner reported
 that on an upright iPhone the bottom-right controls rose over the full-width
 4:3 picture to clear the ammo, which looked strange. In a portrait window

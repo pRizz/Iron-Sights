@@ -17,6 +17,10 @@ enum WebTouchContext {
 };
 s32 portWebTouchContext(void);
 s32 portWebTouchHasGadgets(void);
+/* Double-Tap Fire (FORK-079): the [display] touch_double_tap_fire option. */
+s32 portWebTouchOptionGet(const char *key, s32 *out);
+s32 portWebTouchOptionSet(const char *key, s32 value);
+s32 portWebTouchDoubleTapFire(void);
 /* Browser-local virtual controls, player one only. No saved bind IDs change. */
 void portWebTouchReset(void);
 void portWebTouchPoll(OSContPad *pad);

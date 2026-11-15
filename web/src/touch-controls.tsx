@@ -20,6 +20,7 @@ import { HelperText } from './helper-text';
 import { TouchText } from './touch-text';
 import { createTouchButtonGestures } from './touch-button-gestures';
 import { createCornerClearance, isPortrait } from './touch-hud-clearance';
+import { createDoubleTap, type TapPoint } from './touch-double-tap';
 import './touch.css';
 
 type Props = {
@@ -57,7 +58,13 @@ export function TouchControls(props: Props) {
         props.input.stickSprint(on);
     };
     let maybeMove: number | undefined;
-    let maybeLook: { id: number; x: number; y: number } | undefined;
+    // The look finger, with where and when it landed for Double-Tap Fire:
+    // `wandered` is its farthest distance from there, `fired` whether it holds Fire.
+    let maybeLook:
+        | { id: number; x: number; y: number; start: TapPoint; wandered: number; fired: boolean }
+        | undefined;
+    const doubleTap = createDoubleTap();
+    const doubleTapFire = () => !!props.engine.maybeGame()?._portWebTouchDoubleTapFire?.();
     let maybeHeldLook: { id: number; x: number; y: number } | undefined;
     const buttonGestures = createTouchButtonGestures<{
         maybeAction?: TouchAction;
@@ -110,7 +117,22 @@ export function TouchControls(props: Props) {
                 sprintStick(false);
                 props.input.move(0, 0);
             }
-            if (maybeLook?.id === id) maybeLook = undefined;
+            if (maybeLook?.id === id) {
+                // Only a real release can be the first tap; a cancel or lost capture is not.
+                if (maybeEvent?.type === 'pointerup') {
+                    const end = {
+                        x: maybeEvent.clientX,
+                        y: maybeEvent.clientY,
+                        time: maybeEvent.timeStamp,
+                    };
+                    const wandered = Math.max(
+                        maybeLook.wandered,
+                        Math.hypot(end.x - maybeLook.start.x, end.y - maybeLook.start.y),
+                    );
+                    doubleTap.end(maybeLook.start, end, wandered, maybeLook.fired);
+                } else doubleTap.clear();
+                maybeLook = undefined;
+            }
             if (maybeHeldLook?.id === id) maybeHeldLook = undefined;
         },
         (id, event, target) => {
@@ -127,6 +149,14 @@ export function TouchControls(props: Props) {
                       ? maybeHeldLook
                       : undefined;
             if (!maybeDrag) return;
+            if (maybeDrag === maybeLook)
+                maybeLook.wandered = Math.max(
+                    maybeLook.wandered,
+                    Math.hypot(
+                        event.clientX - maybeLook.start.x,
+                        event.clientY - maybeLook.start.y,
+                    ),
+                );
             const scale = 120 / Math.min(innerWidth, innerHeight);
             props.input.look(
                 (event.clientX - maybeDrag.x) * scale,
@@ -142,6 +172,7 @@ export function TouchControls(props: Props) {
         maybeMove = undefined;
         maybeLook = undefined;
         maybeHeldLook = undefined;
+        doubleTap.clear();
         setAiming(false);
         setStick({ x: 0, y: 0 });
         setStickSprint(false);
@@ -466,12 +497,24 @@ export function TouchControls(props: Props) {
                         onContextMenu={(event) => event.preventDefault()}
                         onPointerDown={(event) => {
                             begin(event);
-                            if (!maybeLook)
-                                maybeLook = {
-                                    id: event.pointerId,
-                                    x: event.clientX,
-                                    y: event.clientY,
-                                };
+                            if (maybeLook) return;
+                            const start = {
+                                x: event.clientX,
+                                y: event.clientY,
+                                time: event.timeStamp,
+                            };
+                            // Double-Tap Fire: the second touch holds Fire until it lifts,
+                            // and keeps looking as it drags.
+                            const fired = doubleTap.begin(start) && doubleTapFire();
+                            if (fired) props.input.state.press(event.pointerId, 'fire');
+                            maybeLook = {
+                                id: event.pointerId,
+                                x: start.x,
+                                y: start.y,
+                                start,
+                                wandered: 0,
+                                fired,
+                            };
                         }}
                     ></div>
                     <div

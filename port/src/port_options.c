@@ -372,6 +372,10 @@ static const struct PortOpt sOpts[] = {
     TOGGLE("ludicrous_sprint",   "[display]", "Ludicrous Sprint\n",   PORTOPT_CAT_GAMEPLAY),
     ENUMR ("sprint_fov",         "[display]", "Sprint FOV\n",         PORTOPT_CAT_GAMEPLAY, sSprintFovVals, sSprintFovText, NULL), /* FORK-006 */
     TOGGLE("sprint_indicator",   "[display]", "Sprint Indicator\n",   PORTOPT_CAT_GAMEPLAY), /* FORK-006 */
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    /* FORK-079: browser touch only (port/web/touch.c keeps the value) */
+    TOGGLE("touch_double_tap_fire", "[display]", "Double-Tap Fire\n", PORTOPT_CAT_GAMEPLAY),
+#endif
     TOGGLE("sight_on_screen",    "[display]", "Sight on Screen\n",    PORTOPT_CAT_GAMEPLAY),
     TOGGLE("look_ahead",         "[display]", "Look Ahead\n",         PORTOPT_CAT_GAMEPLAY),
     TOGGLE("ammo_on_screen",     "[display]", "Ammo on Screen\n",     PORTOPT_CAT_GAMEPLAY),

@@ -65,7 +65,9 @@ thumbstick and drag any free screen area to look. **Touch layout** defaults to *
 controller**, with blue A, green B and red Start in a vertical column (Start on
 top, A on the bottom), beside gray Z on the right.
 Hold/drag Z to shoot and turn; the gray rectangular **R** toggles ADS, and the weapon icon switches
-weapons. Start opens the watch; A/B navigate its menus. Choose **Modern actions** in
+weapons. You can also tap a free screen area, then touch it again and hold to fire while
+that finger keeps aiming (**Double-Tap Fire** under Gameplay > Iron Sights > Aiming and Movement,
+on by default; a single tap never fires). Start opens the watch; A/B navigate its menus. Choose **Modern actions** in
 settings for the previous Fire/Use/Reload controls and More tray. Touch controls
 sit farther inside the safe screen edges. The mobile overlay omits browser
 Pause/Options buttons and leaves gaps between controls available for gestures.

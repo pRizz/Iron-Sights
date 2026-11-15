@@ -165,6 +165,9 @@ static const struct PortWatchRowDef sIsAim[] = {
     { PWROW_OPT,       "sprint",           NULL, 0, 0 },
     { PWROW_OPT,       "ludicrous_sprint", NULL, 0, 0 },
     { PWROW_OPT,       "sprint_fov",       NULL, 0, 0 },
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    { PWROW_OPT,       "touch_double_tap_fire", NULL, 0, 0 }, /* FORK-079 */
+#endif
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
 static const struct PortWatchRowDef sIsFeedback[] = {

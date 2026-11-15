@@ -4795,6 +4795,9 @@ static const struct PortSheetRow port_sheet_rows_is_aim[] = {
     { SHROW_OPT, "sprint" },
     { SHROW_OPT, "ludicrous_sprint" },
     { SHROW_OPT, "sprint_fov" },              /* FORK-006: the view widens while sprinting */
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    { SHROW_OPT, "touch_double_tap_fire" },   /* FORK-079: a second tap on the look area fires */
+#endif
 };
 static const struct PortSheetRow port_sheet_rows_is_feedback[] = {
     { SHROW_OPT, "hit_markers" }, { SHROW_OPT, "hit_sounds" }, { SHROW_OPT, "damage_indicators" },

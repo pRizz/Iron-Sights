@@ -88,6 +88,31 @@ static const char *const actions[TOUCH_COUNT] = {
     [TOUCH_ZOOM_IN] = "zoom_in", [TOUCH_ZOOM_OUT] = "zoom_out", [TOUCH_SPRINT] = "walk"
 };
 
+/* Double-Tap Fire (FORK-079; [display] touch_double_tap_fire, Iron Sights >
+ * Aiming and Movement, browser only): a tap on the look area followed by a
+ * second touch holds Fire while that finger stays down. The overlay times the
+ * gesture (web/src/touch-double-tap.ts) and asks portWebTouchDoubleTapFire. */
+static s32 doubleTapFire = 1;
+
+s32 portWebTouchOptionGet(const char *key, s32 *out)
+{
+    if (strcmp(key, "touch_double_tap_fire") != 0) return 0;
+    *out = doubleTapFire;
+    return 1;
+}
+
+s32 portWebTouchOptionSet(const char *key, s32 value)
+{
+    if (strcmp(key, "touch_double_tap_fire") != 0) return 0;
+    doubleTapFire = value != 0;
+    return 1;
+}
+
+EMSCRIPTEN_KEEPALIVE s32 portWebTouchDoubleTapFire(void)
+{
+    return doubleTapFire;
+}
+
 EMSCRIPTEN_KEEPALIVE void portWebTouchReset(void)
 {
     held = pressed = 0;

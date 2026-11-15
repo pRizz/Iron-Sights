@@ -92,6 +92,10 @@
 #include "port_projectile_arc.h"
 #include "port_sprint_toggle.h"
 #include "port_sprint_feedback.h"
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+extern s32 portWebTouchOptionGet(const char *key, s32 *out); /* port/web/touch.c, FORK-079 */
+extern s32 portWebTouchOptionSet(const char *key, s32 value);
+#endif
 #include "joy.h"
 #include <os_extension.h>
 
@@ -356,6 +360,9 @@ s32 portJoyPortSetOption(const char *key, const char *value)
     if (portExplosiveRoundsOptionSet(key, atoi(value))) return 1;
     if (portProjectileArcOptionSet(key, atoi(value))) return 1;
     if (portSprintFeedbackOptionSet(key, atoi(value))) return 1;
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    if (portWebTouchOptionSet(key, atoi(value))) return 1; /* FORK-079 */
+#endif
     if (strcmp(key, "sprint") == 0) {
         sSprint = atoi(value) != 0;
         return 1;
@@ -518,6 +525,9 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
     if (portExplosiveRoundsOptionGet(key, out)) return 1;
     if (portProjectileArcOptionGet(key, out)) return 1;
     if (portSprintFeedbackOptionGet(key, out)) return 1;
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    if (portWebTouchOptionGet(key, out)) return 1; /* FORK-079 */
+#endif
     if (strcmp(key, "sprint") == 0) {
         *out = sSprint;
         return 1;
@@ -566,6 +576,9 @@ s32 portJoyPortOptionSet(const char *key, s32 v)
     if (portExplosiveRoundsOptionSet(key, v)) return 1;
     if (portProjectileArcOptionSet(key, v)) return 1;
     if (portSprintFeedbackOptionSet(key, v)) return 1;
+#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
+    if (portWebTouchOptionSet(key, v)) return 1; /* FORK-079 */
+#endif
     if (strcmp(key, "sprint") == 0) {
         sSprint = v != 0;
         return 1;

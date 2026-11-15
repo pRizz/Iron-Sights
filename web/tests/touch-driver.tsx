@@ -12,6 +12,8 @@ import '../src/room.css';
 let live = true;
 let context = 2;
 let gadgets = true;
+// Iron Sights > Aiming and Movement > Double-Tap Fire (native default on).
+let doubleTapFire = true;
 let movement = [0, 0],
     look = [0, 0];
 let stickSprint = false;
@@ -52,6 +54,7 @@ const game = {
     _portWebControlsLive: () => Number(live),
     _portWebTouchContext: () => (fileMenu() ? 0 : context),
     _portWebTouchHasGadgets: () => Number(gadgets && context === 2 && !fileMenu()),
+    _portWebTouchDoubleTapFire: () => Number(doubleTapFire),
     _portWebTouchHudCorner: (side: number, covered: number) => {
         corners[side] = !!covered;
     },
@@ -127,6 +130,9 @@ Object.assign(globalThis, {
         },
         gadgets: (value: boolean) => {
             gadgets = value;
+        },
+        doubleTapFire: (value: boolean) => {
+            doubleTapFire = value;
         },
         menu: (value: boolean) => {
             live = !value;

@@ -30,6 +30,78 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-079 — Double-Tap Fire for browser touch
+
+**Status:** Implemented on 2026-11-14 at the owner's request and committed
+locally; not yet pushed to `main`, so not yet on GitHub Pages. Not yet tried on a physical phone or with the real ROM
+in the browser.
+
+Inherited behaviour: upstream has no browser target. Before this entry the
+fork's touch overlay (FORK-028) fired only from the Fire / Z buttons; a tap
+on the free look area did nothing in gameplay.
+
+**Gameplay > Iron Sights > Aiming and Movement > Double-Tap Fire**
+(`[display] touch_double_tap_fire`, default 1 = on) adds a fire gesture to
+the look area in both touch layouts:
+
+- **Gesture.** A first contact on the look area that lifts within 250 ms
+  and never wanders more than 10 CSS pixels (the overlay's button tap slop)
+  arms a pair. A second look contact that lands within 300 ms of that
+  release and within 48 pixels of it holds Fire (`TOUCH_FIRE`, the N64 Z)
+  from the moment it touches until that finger lifts, so automatic weapons
+  keep firing and semi-automatic ones fire once, as when Z is held. The
+  firing finger keeps looking as it drags, like a held Fire button.
+- **Never by accident.** The first tap never fires. A look swipe is not a
+  tap, so lifting and quickly re-touching to keep turning does not fire. The
+  firing contact does not arm another pair, so three quick taps fire once.
+  A cancelled contact, lost capture, context change, focus loss or layout
+  change forgets an armed tap.
+- **Scope.** Only the gameplay look surface (`.touch-look`); menus, the
+  watch and cinematics keep their tap behaviour. Only one look finger is
+  tracked at a time, as before.
+- **Why a press, not a release.** Firing on the second touch rather than on
+  its lift avoids adding delay, and lets the same finger hold and aim.
+
+**Setting placement.** The row is browser-only: its option-table entry
+(`port_options.c`), folder row (`front.c port_sheet_rows_is_aim`), watch row
+(`port_watchpages.c sIsAim`) and `joy_port.c` dispatch are all inside
+`#if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)`, the guard front.c uses
+for the other touch hooks, because `port/web/touch.c` (which stores the
+value) is compiled only for non-headless web builds. Desktop builds show no
+row and ignore the key. `settings_placement.py` reads the rows textually, so
+the key needs no exception entry. Help text is in `port_option_help.c`, and
+the Aiming and Movement page summary now mentions touch fire.
+
+**Input idioms.** The setting is an ordinary toggle row, so keyboard, mouse,
+gamepad and touch change it like any other. The gesture itself is
+touch-only by nature; mouse, keyboard and gamepad already have Fire.
+
+**Sources.** `web/src/touch-double-tap.ts` (pure timing rules),
+`web/src/touch-controls.tsx` (look-surface hook: `maybeLook` now records its
+start, farthest wander and whether it fires), `web/src/runtime-types.ts`,
+`port/web/touch.c` / `touch.h` (`portWebTouchOptionGet/Set`,
+`portWebTouchDoubleTapFire`), the rows above, `tools/midas_ini_help.txt` and
+the README touch paragraph. WEB-011 in `scripts/port/web_target_progress.md`
+records the milestone note.
+
+**Validation.** `web/src/touch-double-tap.test.ts` (6 unit tests: tap and
+second-tap limits, swipe, single use, slow touch, clear) and TypeScript
+pass. The ROM-free touch UI audit (`bun run test:touch`, run with
+`MIDAS_BROWSER=chrome`) passes with a new `touch-double-tap-audit.mjs` step
+through the fixture's `doubleTapFire` switch: tap then touch holds Fire and
+keeps aiming, lifting releases it, a third touch does not refire, and a
+single tap, swipe and re-touch, far second touch, slow second touch and the
+setting off never fire. Every earlier audit step still passes with the
+gesture on. The Firefox audit browser failed to launch locally (Playwright
+launch error), so only Chrome ran. `test_web_touch.sh` in the pinned emsdk
+image passes with a new Double-Tap Fire option check. The web video target
+builds with the pinned SDK (`web_build.py video`) and its wasm carries the
+key, the row label and the `portWebTouchDoubleTapFire` export. All 256 web
+unit tests, `settings_placement.py` and `bun scripts/bright-builds-check.ts
+all` pass. The hand gallery was regenerated for the touched render inputs
+with 0 changed image cells. The ROM-backed touch game audit was not run; the
+gesture sends the same `TOUCH_FIRE` the Fire button does.
+
 ### FORK-078 — Explosive Rounds: a small blast where each bullet lands
 
 **Status:** Implemented on 2026-11-14 at the owner's request and built into
@@ -5408,7 +5480,7 @@ were unchanged in that presentation-only update. Evidence is
 `build_win/mobile-r-*.log` and private touch captures.
 This replaces the former 104×48 horizontal Z; the stick, safe areas and remaining
 button hit targets stay separate. Existing press/release and drag-to-fire/look
-behavior is retained. On the Files screen the N64 cluster and Modern Select/Back
+behavior is retained; FORK-079 adds Double-Tap Fire on the look area. On the Files screen the N64 cluster and Modern Select/Back
 buttons are hidden, superseding the earlier upper docking that made the N64
 buttons jump. Direct cursor/tap navigation and Import/Export remain available.
 All controller buttons and the stick now stay hidden throughout startup,

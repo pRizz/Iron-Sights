@@ -492,6 +492,12 @@ padN_stickmode.
                       |            | 3 = crazy wide (30%)
   sprint_indicator    | 0          | 1 = small faint chevrons (>>) at the
                       |            | bottom centre while sprinting; 0 = off
+  touch_double_tap_fire | 1        | Browser only. 1 = with the on-screen
+                      |            | touch controls, tap the look area and
+                      |            | touch it again within 0.3 s to hold
+                      |            | Fire until you lift that finger; drag
+                      |            | it to aim while firing. 0 = only the
+                      |            | Fire / Z buttons fire
   sight_on_screen     | 1          | Show the aiming sight
   look_ahead          | 1          | Look Ahead
   ammo_on_screen      | 1          | Show ammo on screen
@@ -684,6 +690,10 @@ Retired keys (ignored): run, walk_toggle.
   Ludicrous Sprint (same page, off by default) raises the sprint boost to 5x.
   It has no effect while Sprint is off. In the browser, dragging the touch
   move stick well past its ring also sprints while Sprint is on.
+  Double-Tap Fire (same page, browser only, on by default): with the touch
+  controls, a quick tap on the look area followed by a second touch near it
+  holds Fire until that finger lifts, and the finger keeps aiming. The first
+  tap does nothing, so a single stray tap never shoots.
 
 
 Other keys you may see are managed by the game; leave them as they are.

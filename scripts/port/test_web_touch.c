@@ -353,11 +353,24 @@ static void testHudClearance(void)
     assert(cornerCalls == 0);
 }
 
+/* Double-Tap Fire (FORK-079): on by default, saved like any 0/1 option,
+ * and the overlay reads it; other keys fall through to the next owner. */
+static void testDoubleTapFireOption(void)
+{
+    s32 value = -1;
+    assert(portWebTouchDoubleTapFire() == 1);
+    assert(portWebTouchOptionGet("touch_double_tap_fire", &value) && value == 1);
+    assert(portWebTouchOptionSet("touch_double_tap_fire", 0) && !portWebTouchDoubleTapFire());
+    assert(portWebTouchOptionSet("touch_double_tap_fire", 7) && portWebTouchDoubleTapFire() == 1);
+    assert(!portWebTouchOptionGet("sprint", &value) && !portWebTouchOptionSet("sprint", 0));
+}
+
 int main(void)
 {
     OSContPad pad = {0};
     struct MoveData move = {0};
     testTouchContext();
+    testDoubleTapFireOption();
     assert(!portWebTouchEnabled());
     portWebTouchEnable(1);
     assert(portWebTouchEnabled());
@@ -419,6 +432,6 @@ int main(void)
     pad.button = 0;
     portWebTouchPoll(&pad);
     assert(pad.button == 0);
-    puts("Touch bridge: semantic buttons, independent holds, analog movement, stick-overdrag sprint, HUD clearance, menu sticks, slider and list steps, hold-drag, capture and text contexts, phone text, held volume arrows, reset, bounds and locked-look discard passed.");
+    puts("Touch bridge: semantic buttons, independent holds, analog movement, stick-overdrag sprint, HUD clearance, menu sticks, slider and list steps, hold-drag, capture and text contexts, phone text, held volume arrows, Double-Tap Fire option, reset, bounds and locked-look discard passed.");
     return 0;
 }
