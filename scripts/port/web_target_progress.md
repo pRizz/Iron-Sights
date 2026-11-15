@@ -666,9 +666,14 @@ at `bf052df`: a single-player frame costs 10.7-13.0 ms of processor time at
 default settings and 9.1-11.1 ms with the Graphics features off, nearly all of
 it in the renderer, five to eight times the Windows build's renderer time for
 the same frames. Render time ranged by 0-4% between repeats. Only this one
-browser and machine were measured. Next action: profile the browser renderer,
-starting with what single player draws and four-player split screen (2.7 ms)
-does not.
+browser and machine were measured.
+
+**Browser profile (FORK-087), 2026-11-15:** `MIDAS_BENCH_PROFILE=1` records a
+Chromium CPU profile of each benchmark run. On Dam with the Graphics features
+off, WebGL `getParameter` takes 6.50 ms of the 10.14 ms frame: the weapon glint
+draw queries twelve pieces of GL state on every call. Four-player Temple, with
+no gun drawn, spends none. Next action: make the fork's passes track the state
+they change instead of querying it, then measure again.
 
 **Graphics in the browser (FORK-082), 2026-11-15:** Tone Mapping, the Looks,
 Auto Exposure and Baked Lighting now run in the browser, on by default in

@@ -159,6 +159,7 @@ def measure(build, scenario, preset_lines, folder, options):
     folder.mkdir(parents=True)
     frame_log = folder/'frames.csv'
     env = bench_plan.run_env(scenario, options.rom, options.resolution, frame_log, write_route(scenario, folder))
+    env.update(item.split('=', 1) for item in options.env or [])
     code, disturbed, maybe_busy = launch(build['path'], folder, env, bench_plan.ini_text(preset_lines),
                                          options.visible)
     if code != 0 or not frame_log.exists():
@@ -265,6 +266,8 @@ def main():
     run.add_argument('--scenario', action='append', help='scenario name (repeatable; default all)')
     run.add_argument('--resolution', default='1920x1080')
     run.add_argument('--keep', action='store_true', help='keep run folders (logs, frame logs, routes)')
+    run.add_argument('--env', action='append', metavar='NAME=VALUE',
+                     help='extra environment for the game, e.g. GE_PROFILE=profile.txt (repeatable)')
     run.add_argument('--preset', action='append', help='settings preset (repeatable; default: default)')
     run.add_argument('--repeats', type=int, default=5)
     run.add_argument('--hidden', dest='visible', action='store_false',

@@ -30,6 +30,127 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-087 — Profilers for the benchmark runs, and where the time goes
+
+**Status:** Implemented on 2026-11-15 at the owner's request, as the second
+step of performance work (FORK-085 measures; this finds the causes; nothing is
+optimized yet). No game behaviour changes: the sampler runs only when
+`GE_PROFILE` is set.
+
+Inherited behaviour: upstream has no profiler. Its hitch log and title-bar
+figures split a frame into render, swap and game time and stop there. The tree
+is built with frame pointers for the crash handler's stack walk, which is what
+makes a sampler possible without debug-info unwinding.
+
+**What it does:**
+
+- **Windows sampler** ([port_profile.c](port/src/port_profile.c)):
+  `GE_PROFILE=<file>` starts a time-critical thread that wakes `GE_PROFILE_HZ`
+  times a second (default 1000). For each other thread whose cycle count has
+  moved by more than 20,000 since its last sample, it suspends the thread,
+  records its program counter and frame-pointer chain (up to 48 frames, read
+  only between the stack pointer and the end of its committed region) with the
+  stage, game tick, wake-up number and a microsecond clock, resumes it, and
+  reads the cycle count again so the suspension itself does not make it look
+  busy. Nothing is allocated or printed while a thread is suspended. Samples
+  sit in 48 MB reserved at start and are written once, with the loaded module
+  list, by `portProfileWrite`, which `port_bench.c` calls before it leaves.
+  The sampler starts from a constructor, so no other file calls it.
+- **Report** ([bench_profile.py](scripts/port/bench/bench_profile.py)): names
+  addresses with the container's `nm` (functions of the game) or the module
+  they lie in, keeps the samples of the benchmark's tick window, and prints
+  processor milliseconds per frame by function, self and inclusive, per busy
+  thread; with two runs, the functions whose inclusive time differs most. A
+  thread's samples over the sampler's wake-ups is its share of a processor.
+  Samples under `portPumpEvents` are totalled and set aside: unpaced, the game
+  thread spins there waiting for the renderer.
+- **Browser** ([bench-audit.mjs](web/tools/bench-audit.mjs),
+  `MIDAS_BENCH_PROFILE=1`): records a Chromium CPU profile of each run over the
+  DevTools protocol, from player control to the end, with the frames it covers.
+  [bench_profile_web.py](scripts/port/bench/bench_profile_web.py) prints the
+  same tables for the page's main thread.
+- `bench.py run --env NAME=VALUE` passes extra environment to the game, and
+  `stock.py` now always copies this checkout's `port_bench.c` and
+  `port_profile.c` into a reference build, so every build is measured by the
+  same instrument.
+
+**Findings** (2026-11-15, the development laptop, one profiled run of each;
+processor milliseconds per frame; the Windows figures are stock 1.0.2b against
+Iron Sights at `d56205e` with the `matched` preset on Cradle unless noted):
+
+| Where | Stock | Fork | What it is |
+|---|---:|---:|---|
+| Render thread, total | 1.16 | 2.49 | |
+| `gfx_opengl_draw_triangles` (inside the GL driver) | 0.03 | 0.63 | The driver doing its work on the render thread |
+| GL driver's own worker thread | 1.16 | 0.27 | The driver's threading, mostly idle in the fork |
+| `gfx_sp_tri1`, self | 0.36 | 0.71 | Per-triangle setup |
+| `gfx_draw_rectangle` | 0.03 | 0.26 | HUD rectangles (0.57 in four-player) |
+| Game thread, outside the pump | 0.23 | 0.86 | |
+| `portWardrobeRenderNode` | none | 0.33 | First-person arm mesh rebuilt every frame (0.56 in four-player) |
+| `roc_env_cube`, default settings | none | 0.68 | The reflection cube |
+
+1. **The fork queries GL state every frame, and that is the largest single
+   cost on both platforms.** `gfx_opengl_glint_draw` (the weapon glint,
+   `gfx_glint.inl`) saves the state it changes with one `glIsEnabled`, ten
+   `glGetIntegerv` and one `glGetBooleanv`, on every call. The same
+   save-by-query pattern is in the bloom, glass, grade, HDR and screen-space
+   reflection passes (about 120 query calls in `port/fast3d/*.inl`).
+   - In the browser a query crosses into JavaScript and waits on the GPU
+     process: on Dam with settings matched, WebGL `getParameter` takes 6.50 ms
+     of the 10.14 ms frame, all of it under the glint draw. Four-player Temple,
+     where no gun is drawn, spends none and costs 4.76 ms.
+   - On Windows the cost shows differently. In stock the NVIDIA driver hands
+     draws to its own worker thread (1.16 ms a frame there, 0.03 ms in the
+     draw call). In the fork's single-player runs that worker is mostly idle
+     and the draw call itself takes 0.63 ms. In the fork's four-player run the
+     worker is busy again. That the queries make the driver wait for its
+     worker is my reading of this pattern, not something the profile shows
+     directly; removing the queries will confirm or refute it.
+2. **The first-person arm mesh is rebuilt every frame** on the game thread
+   (`portWardrobeRenderNode`, `portArmMeshBuildJoinedSurface`, `armCopyPart`):
+   0.33 ms a frame, 0.56 ms with four players, 0.21 ms of it inside C runtime
+   calls made directly by `portWardrobeRenderNode`. It is the main reason the
+   fork's game code costs three times stock's.
+3. **HUD rectangles** cost 0.26 ms a frame against stock's 0.03 ms, and
+   1.15 ms a frame in the browser's four-player run.
+4. **Per-triangle setup** (`gfx_sp_tri1` itself) takes twice stock's time.
+5. At default settings the reflection cube adds 0.68 ms and the retained
+   draw (`gl_ret_draw`) 0.33 ms on the render thread.
+6. A benchmark artifact, not a game cost: unpaced, the game thread polls input
+   in a spin, and `videoGetPad` spends most of that in the C runtime. Paced
+   play polls once a tick.
+
+The profile reports and frame logs are local (`build_win/bench-results`,
+ignored by Git); these figures are the record.
+
+**Not done yet:** GPU time per render pass (the samplers see processor time
+only), a profile of the browser at default settings, and Linux. The sampler is
+Windows only; elsewhere `portProfileWrite` is an empty function.
+
+**Shared hooks for later merges:** none in upstream files. `port_bench.c`
+(FORK-085) calls `portProfileWrite`; `port_console_env.h` lists `GE_PROFILE`
+and `GE_PROFILE_HZ`.
+
+**Sources:** [port_profile.c](port/src/port_profile.c),
+[bench_profile.py](scripts/port/bench/bench_profile.py),
+[bench_profile_web.py](scripts/port/bench/bench_profile_web.py),
+[bench-audit.mjs](web/tools/bench-audit.mjs),
+[the guide](scripts/port/benchmarks.md#profiling).
+
+**Checks:** `python scripts/port/test_bench_profile.py` (11 tests: sample
+parsing, naming, the tick window, per-frame arithmetic, the pump's set-aside,
+difference ranking, and the browser profile's tables) and
+`python scripts/port/test_bench.py` (36 tests) passed. The Windows build and
+the stock reference build passed and ran profiled: frame rates with the
+sampler on matched unprofiled runs (Cradle, stock 889 and fork 298 frames a
+second), and idle threads stopped appearing once the cycle count was re-read
+after each resume. The browser runtime built, the site assembled, and two
+profiled browser runs completed. The Bright Builds checks and the settings
+placement check passed, and the review gallery regenerated with no changed
+image. Linux and Steam Deck builds were not built or run for this change.
+
+**Input idioms:** no menu, prompt or setting was added.
+
 ### FORK-086 — Room Seams: level seams no longer show the sky
 
 **Status:** Implemented on 2026-11-15 after the owner reported thin blue
@@ -225,7 +346,8 @@ change as real only when it exceeds the runs' own slowest-to-fastest range.
 - **Reference builds** ([stock.py](scripts/port/bench/stock.py)): exports a
   commit (by default the inherited baseline) into `build_win/bench-<name>`,
   copies this checkout's ignored generated assets, and builds it in the project
-  container with the same flags. It adds `port_bench.c`, the `hitchlog.c` call
+  container with the same flags. It adds this checkout's `port_bench.c` (and
+  the profiler, FORK-087), the `hitchlog.c` call
   and, for stock, an early return in `waitForNextFrame` so `GE_FIXEDTICK` does
   not wait on the clock (the fork has had that since the 2026-11-06 gallery
   speed-up, FORK-022); a commit that already has one keeps its own. The same

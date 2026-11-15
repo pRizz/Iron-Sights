@@ -197,6 +197,8 @@ static const char *const sPortConEnvNames[] = {
     "GE_PORTALPTS",
     "GE_PPO",
     "GE_PRIMZERO",
+    "GE_PROFILE",
+    "GE_PROFILE_HZ",
     "GE_PROPDUMP",
     "GE_PROPFOG_LERP",
     "GE_PROPFOG_RARE",

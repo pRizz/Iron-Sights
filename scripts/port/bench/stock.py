@@ -5,12 +5,13 @@ By default that commit is the inherited upstream baseline, stock Project Midas
 benchmark needs to measure it, and built with the project's own container and
 compiler flags:
 
-  * port/src/port_bench.c, the same frame logger the fork builds
+  * port/src/port_bench.c and port_profile.c, this checkout's frame logger
+    and sampling profiler
   * one call to it in port/src/hitchlog.c
   * an early return in waitForNextFrame so GE_FIXEDTICK does not wait on the
     clock (a fixed-work run needs it)
 
-A commit that already has one of these keeps its own. Nothing else in the
+A commit that already has one of the two hooks keeps its own. Nothing else in the
 exported tree changes. The generated ROM-derived assets are copied from this
 checkout, since Git ignores them.
 
@@ -34,6 +35,7 @@ BASELINE_REF = '9062f9f120b7f64d39e5db59500ed50e8e7a6686'
 CONTAINER_ROOT = '/home/dev/project'
 SDL2_ROOT = '/home/dev/sdl2-mingw/SDL2-2.30.11/i686-w64-mingw32'
 REF_MARKER = 'BENCH_REF'
+HARNESS_FILES = ('port_bench.c', 'port_profile.c')
 
 HITCH_ANCHOR = '        us[i] = __atomic_exchange_n(&sHitchUs[i], 0ull, __ATOMIC_RELAXED);\n    }\n'
 HITCH_CALL = 'portBenchFrame(interval_us, run_us, swap_us, lim_us, draws, simmax, us);'
@@ -93,9 +95,10 @@ def copy_ignored_assets(source):
 
 
 def apply_harness(source):
-    logger = source/'port'/'src'/'port_bench.c'
-    if not logger.exists():
-        shutil.copy2(REPO/'port'/'src'/'port_bench.c', logger)
+    # The measuring code is always this checkout's, so every build is timed
+    # and profiled by the same instrument.
+    for name in HARNESS_FILES:
+        shutil.copy2(REPO/'port'/'src'/name, source/'port'/'src'/name)
     for relative, anchor, hook, present in (('port/src/hitchlog.c', HITCH_ANCHOR, HITCH_HOOK, HITCH_CALL),
                                             ('src/game/frametiming.c', TICK_ANCHOR, TICK_HOOK, TICK_PRESENT)):
         path = source/relative

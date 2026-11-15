@@ -5,6 +5,9 @@
 // by `bench_web.py collect`; this tool only launches and collects.
 // One browser profile: a first launch prepares the weapon icons, so no run
 // waits on that stage. Never upload the output; it is timing data only.
+// MIDAS_BENCH_PROFILE=1 (Chromium) also records a CPU profile of each run, from
+// the moment the player has control to the end, as <run>.cpuprofile;
+// scripts/port/bench/bench_profile_web.py reads it.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
@@ -115,16 +118,42 @@ async function firstLaunch() {
     await page.waitForTimeout(3000); // the icon cache reaches IndexedDB
 }
 
+const profiling = process.env.MIDAS_BENCH_PROFILE === '1';
+const cdp = profiling ? await page.context().newCDPSession(page) : null;
+const frameCount = () => page.evaluate(() => benchAuditGame._portWebGetGfxTasks());
+
+async function startProfile() {
+    await page.waitForFunction(() => globalThis.benchAuditGame._portWebControlsLive(), undefined, {
+        timeout: 120_000,
+    });
+    await cdp.send('Profiler.enable');
+    await cdp.send('Profiler.setSamplingInterval', { interval: 250 });
+    await cdp.send('Profiler.start');
+    return frameCount();
+}
+
+async function stopProfile(run, firstFrame) {
+    const lastFrame = await frameCount();
+    const { profile } = await cdp.send('Profiler.stop');
+    profile.midasFrames = lastFrame - firstFrame;
+    await writeFile(
+        resolve(output, run.log_name.replace(/\.csv$/, '.cpuprofile')),
+        JSON.stringify(profile),
+    );
+}
+
 async function measure(run) {
     current = { env: run.env, ini: run.ini, files: { [run.route_path]: run.route } };
     await page.goto(origin);
     await started();
+    const firstFrame = profiling ? await startProfile() : 0;
     const end = Date.now() + RUN_TIMEOUT_MS;
     while (Date.now() < end) {
         await keepRunning(2000);
         if ((await gameLog()).some((line) => line.startsWith(DONE))) break;
         await page.waitForTimeout(1000);
     }
+    if (profiling) await stopProfile(run, firstFrame);
     const log = await gameLog();
     assert.ok(
         log.some((line) => line.startsWith(DONE)),

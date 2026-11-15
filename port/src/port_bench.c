@@ -184,7 +184,12 @@ void portBenchFrame(unsigned long long interval_us, unsigned long long run_us,
         benchWrite("end");
 #ifndef __EMSCRIPTEN__
         /* Leave here: the run is over, and no teardown is worth timing.
-         * _Exit skips stdio, so flush every log first. */
+         * _Exit skips stdio, so write the profile (GE_PROFILE, port_profile.c)
+         * and flush every log first. */
+        {
+            extern void portProfileWrite(void);
+            portProfileWrite();
+        }
         fflush(NULL);
         _Exit(0);
 #endif

@@ -161,6 +161,54 @@ Read browser results differently:
   none. `MIDAS_HEADED=1` shows the window (and plays the sound).
 - The runner has no guard against other programs. Keep the machine quiet.
 
+## Profiling
+
+The benchmarks say how long a frame takes; the profilers say where the time
+goes. Both use the same scenarios and tick window.
+
+**Windows.** The game samples itself. `GE_PROFILE=<file>` starts a sampler
+thread ([port_profile.c](../../port/src/port_profile.c)) that, a thousand times
+a second (`GE_PROFILE_HZ`), suspends each thread that has used processor time,
+reads its program counter and walks its frame-pointer chain. Take a profiled
+run of each build and keep the folders:
+
+```sh
+python scripts/port/bench/bench.py run --build stock=build_win/bench-stock/build/ProjectMidas.exe --build fork=build_win/IronSights.exe --scenario cradle-fight --preset matched --repeats 1 --keep --env GE_PROFILE=profile.txt
+```
+
+```sh
+python scripts/port/bench/bench_profile.py --run stock=build_win/bench-run-<time>/matched-cradle-fight-stock-1 --run fork=build_win/bench-run-<time>/matched-cradle-fight-fork-1 --exe stock=build_win/bench-stock/build/ProjectMidas.exe --exe fork=build_win/IronSights.exe
+```
+
+The report gives processor milliseconds per frame by function, self and
+inclusive, for each busy thread, and for two runs the functions whose
+inclusive time differs most (the first `--run` is the base). `--folded <prefix>`
+also writes folded stacks for a flame graph tool. Function names come from the
+project container's `nm`. Delete the kept run folders afterwards.
+
+- Counts are processor time: a thread that has not run since the last sample
+  is not sampled.
+- The GL driver and system DLLs have no frame pointers, so a walk that starts
+  inside one may stop there. Such samples are still charged to the module
+  (`[nvoglv32.dll]`), and usually to the game function that called it.
+- Time the game thread spends in the pump is set aside and reported as one
+  figure. Unpaced, that thread spins there waiting for the renderer, polling
+  input tens of thousands of times a second; it is not the cost of a frame.
+- Sampling costs little: a profiled run's frame rates match an unprofiled one's.
+
+**Browser.** `MIDAS_BENCH_PROFILE=1` makes the browser runner record a Chromium
+CPU profile of each run, from the moment the player has control to the end, as
+`<run>.cpuprofile` beside the frame log, with the number of frames it covers:
+
+```sh
+python scripts/port/bench/bench_profile_web.py --profile temple=build/web-bench/current/matched-temple-4p-1.cpuprofile --profile dam=build/web-bench/current/matched-dam-walk-1.cpuprofile
+```
+
+Functions of the game keep their C names; WebGL calls show as the browser's
+own functions (`getParameter`, `bufferData`), which is exactly what shows a
+costly call across the JavaScript boundary. The files also open in Chrome's
+DevTools Performance panel.
+
 ## Method notes
 
 - **Use a visible window.** A hidden window ran about 30% slower on the
@@ -187,6 +235,7 @@ Read browser results differently:
 
 ## Checks
 
-`python scripts/port/test_bench.py` tests the metrics, run planning (Windows and
+`python scripts/port/test_bench_profile.py` tests the profilers' sample
+parsing, naming and tables. `python scripts/port/test_bench.py` tests the metrics, run planning (Windows and
 browser), route generation, host checks, report and stock patching without a
 ROM.
