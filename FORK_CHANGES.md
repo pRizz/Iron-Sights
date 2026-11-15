@@ -7099,7 +7099,8 @@ Shadow/foreground share the same centered/clamped layout. The scoped font-only
 and at frame start, and does not shift other glyph runs or non-font rectangles.
 Browser CSS scaling still scales the complete framebuffer. The caption stays opaque for
 three seconds after selection, then fades to zero over one second; the icon
-strip retains its separate 20% idle opacity. Icon mode reserves a small label
+strip retains its separate idle opacity, 10% since 2026-11-14 (20% before; the
+owner wanted the idle list quieter). Icon mode reserves a small label
 row above the ammo counters, including after the name disappears, and pickup
 messages account for that row. Text fallback builds keep the text-only layout.
 HUD timing tests cover complete caption disappearance and restoration on

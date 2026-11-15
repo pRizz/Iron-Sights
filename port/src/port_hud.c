@@ -454,7 +454,7 @@ static Gfx *phDrawStrip(Gfx *g)
     s32 width = viGetViewWidth(), slots = (s32)((width - 36 * scale) / pitch);
     s32 i, start;
     f32 x, y = viGetViewTop() + viGetViewHeight() - portHudWeaponStripTopInset();
-    const f32 opacity = phQuietScale(phState[get_cur_playernum()].weaponIdle, 0.2f);
+    const f32 opacity = phQuietScale(phState[get_cur_playernum()].weaponIdle, 0.1f); /* idle: 10% */
     const f32 captionOpacity = phQuietScale(phState[get_cur_playernum()].weaponIdle, 0.0f);
     char label[64];
     if (!n || slots < 1) return g;
