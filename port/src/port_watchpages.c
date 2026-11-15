@@ -145,6 +145,7 @@ static const struct PortWatchRowDef sPortOpts[] = {
 static const struct PortWatchRowDef sIronSights[] = {
     { PWROW_SUBSCREEN, NULL, "Aiming and Movement\n", PORTWATCH_IS_AIM,      0 },
     { PWROW_SUBSCREEN, NULL, "Combat Feedback\n",     PORTWATCH_IS_FEEDBACK, 0 },
+    { PWROW_SUBSCREEN, NULL, "Enemies\n",             PORTWATCH_IS_ENEMIES,  0 },   /* FORK-081 */
     { PWROW_SUBSCREEN, NULL, "HUD Additions\n",       PORTWATCH_IS_HUD,      0 },
     { PWROW_SUBSCREEN, NULL, "System\n",              PORTWATCH_IS_SYSTEM,   0 },
     { PWROW_ACTION,    NULL, "Suspend Points\n", 100, 0 },
@@ -180,6 +181,11 @@ static const struct PortWatchRowDef sIsFeedback[] = {
     { PWROW_OPT,       "decorative_pellets", NULL, 0, 0 },
     { PWROW_OPT,       "explosive_rounds", NULL, 0, 0 },
     { PWROW_OPT,       "explosive_rounds_guards", NULL, 0, 0 },
+    { PWROW_BACK,      NULL, "Back\n", 0, 0 },
+};
+/* ENEMIES (FORK-081): Reinforcements is also on each mission's difficulty page. */
+static const struct PortWatchRowDef sIsEnemies[] = {
+    { PWROW_OPT,       "reinforcements",   NULL, 0, 0 },
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
 static const struct PortWatchRowDef sIsHud[] = {
@@ -883,6 +889,7 @@ static const struct PortWatchPageDef {
     [PORTWATCH_IS_FEEDBACK] = PWPAGE(sIsFeedback),
     [PORTWATCH_IS_HUD]      = PWPAGE(sIsHud),
     [PORTWATCH_IS_SYSTEM]   = PWPAGE(sIsSystem),
+    [PORTWATCH_IS_ENEMIES]  = PWPAGE(sIsEnemies),
     [PORTWATCH_IS_FONTS]    = PWPAGE(sIsFonts),
     [PORTWATCH_IS_HDTEX]    = PWPAGE(sIsHdTex),
     [PORTWATCH_IS_CUSTOMTEX] = PWPAGE(sIsCustomTex),
@@ -1268,6 +1275,7 @@ s32 portWatchParentPage(s32 page)
         case PORTWATCH_IS_FEEDBACK:
         case PORTWATCH_IS_HUD:
         case PORTWATCH_IS_SYSTEM:
+        case PORTWATCH_IS_ENEMIES:
             return PORTWATCH_IRONSIGHTS;
         case PORTWATCH_IS_FONTS:
         case PORTWATCH_IS_HDTEX:

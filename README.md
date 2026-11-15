@@ -94,6 +94,7 @@ Successful `main` builds deploy automatically to GitHub Pages. See [compatibilit
 - **HD textures (Windows and Linux):** Iron Sights includes no texture pack. **Get HD Textures** in the Options folder (also **Gameplay > Iron Sights > System > HD Textures**) downloads intermissionfb's [GoldenEye 007 HD](https://github.com/GhostlyDark/GoldenEye-007-HD) pack, 150 MB, from its makers' GitHub when you choose Download; or put its PNG version's ZIP (`...-gliden64-png-hd.zip`), or the extracted folder, in `Data/TexturePacks` yourself. **Texture Pack** set to **HD** (the default) draws its campaign environment textures, the gunbarrel intro, sky clouds, explosions, smoke and bullet-impact effects, and the HUD's ammo icons. Any other GLideN64 PNG pack in that folder is a custom pack, used for every texture it names and ahead of the download: for example the artist repository's own ZIP (**Code > Download ZIP**, with more textures than the release) or a pack you are making, whose saved PNGs show up within seconds. **Gameplay > Iron Sights > System > Custom Texture Packs** explains this in the game, shows how many custom textures were found, and opens the folder. A custom pack's images load in the background and are reduced to HD size (at most 8x the original), so very large art appears a moment after a level starts. **Close HD Matches** (on by default, beside Texture Pack) also gives HD art to 17 textures whose colours only roughly match the pack's; turn it off to keep those originals. The first-person weapon and hands always keep their original look.
 - **Fog (on by default):** **Gameplay > Iron Sights > System > Fog** turns the levels' distance fog off. How far you can see and how far guards see you stay the same.
 - **Suspend points:** four manual slots, quicksave/quickload, and undo-load for solo missions.
+- **Reinforcements (Original by default):** each mission's difficulty page sets how many extra guards come after you: **Original**, **More** or **Relentless**, through clones of guards who hear you and fresh guards sent from out of sight once you are spotted. See [Reinforcements](#reinforcements).
 
 See [Playing](#playing) below for controls and settings.
 
@@ -234,6 +235,39 @@ Combat Feedback** and **HUD Additions**. Mission Timer is the original setting o
 **Health Display** defaults to **Always** on all platforms, keeping slimmer health and armor arcs visible during gameplay. Damage or a health/armor change restores full opacity at 75% of the original thickness; after three quiet seconds, they smoothly fade to 25% opacity and 20% thickness. Select **Automatic** for the original temporary gauges, or set `[display] always_health=0` in `midas.ini`. Existing saved preferences are preserved.
 
 These displays hide during menus, cutscenes, and death. Each setting can be changed independently.
+
+### Reinforcements
+
+In the original game, a few guards (in Archives, Runway, Surface and Bunker)
+call one copy of themselves when they hear you before you have seen them: the
+copy runs at you while the original holds its post. **Reinforcements** sets how
+many guards the level sends after you. It sits on each mission's difficulty page,
+below the best times (point at it and confirm with A, Enter, a click or a tap to
+step to the next level), and under **Gameplay > Iron Sights > Enemies**:
+
+- **Original** (the default): the original game's rule, unchanged.
+- **More:** any placed soldier can call clones, not just those few guards, with
+  up to two of its clones alive at once and a new one at most every eight seconds
+  while it still hears gunfire. Named characters, civilians, scientists,
+  invincible characters and clones never call one. The level gets room for 12
+  more guards.
+- **Relentless:** up to three clones per guard, one every four seconds, room for
+  24 more guards, and a guard you have already seen can call one more while it is
+  off screen.
+
+Clones need a guard to hear you before you see it, which open levels such as
+Dam rarely allow, so More and Relentless also send reinforcements of their own.
+Once a guard has spotted you or the alarm is on, a guard arrives every 20 seconds
+(More, up to 4 of them alive) or every 10 seconds (Relentless, up to 8), for as
+long as you stay noticed and 20 seconds after. Each starts somewhere you cannot
+see, a short walk away along the level's own paths, dressed and armed like the
+nearest soldier the level placed, and comes straight for you.
+
+None of these extra guards appear inside another character: each keeps a small
+gap around it. They only appear while the level still has the original's ten
+spare guard slots free, so the level's own scripted reinforcements always have
+room. A change applies from the next mission start. Demo playback and
+multiplayer keep Original.
 
 ### Mission cheat hints
 

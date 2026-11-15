@@ -89,6 +89,7 @@
 #include "port_lean.h"
 #include "port_fog.h"
 #include "port_explosive_rounds.h"
+#include "port_reinforcements.h"
 #include "port_projectile_arc.h"
 #include "port_sprint_toggle.h"
 #include "port_sprint_feedback.h"
@@ -358,6 +359,7 @@ s32 portJoyPortSetOption(const char *key, const char *value)
     if (portLeanOptionSet(key, atoi(value))) return 1;
     if (portFogOptionSet(key, atoi(value))) return 1;
     if (portExplosiveRoundsOptionSet(key, atoi(value))) return 1;
+    if (portReinforcementsOptionSet(key, atoi(value))) return 1;
     if (portProjectileArcOptionSet(key, atoi(value))) return 1;
     if (portSprintFeedbackOptionSet(key, atoi(value))) return 1;
 #if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
@@ -523,6 +525,7 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
     if (portLeanOptionGet(key, out)) return 1;
     if (portFogOptionGet(key, out)) return 1;
     if (portExplosiveRoundsOptionGet(key, out)) return 1;
+    if (portReinforcementsOptionGet(key, out)) return 1;
     if (portProjectileArcOptionGet(key, out)) return 1;
     if (portSprintFeedbackOptionGet(key, out)) return 1;
 #if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
@@ -574,6 +577,7 @@ s32 portJoyPortOptionSet(const char *key, s32 v)
     if (portLeanOptionSet(key, v)) return 1;
     if (portFogOptionSet(key, v)) return 1;
     if (portExplosiveRoundsOptionSet(key, v)) return 1;
+    if (portReinforcementsOptionSet(key, v)) return 1;
     if (portProjectileArcOptionSet(key, v)) return 1;
     if (portSprintFeedbackOptionSet(key, v)) return 1;
 #if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)

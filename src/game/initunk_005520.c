@@ -5,8 +5,16 @@
 #include "objecthandler.h"
 #include "memp.h"
 
+#ifndef TARGET_N64
+/* Reinforcements (FORK-081): room for the stage's added guards and their guns.
+ * model.c's level-reset search skips the same spare slots. */
+#include "port_reinforcements.h"
+#define MODEL_SPARE_SLOTS          (30 + portReinforcementsExtraModels(portReinforcementsStageExtraChrs()))
+#define ANIM_MODEL_SPARE_SLOTS     (10 + portReinforcementsExtraAnimModels(portReinforcementsStageExtraChrs()))
+#else
 #define MODEL_SPARE_SLOTS          30
 #define ANIM_MODEL_SPARE_SLOTS     10
+#endif
 
 #define MODEL_SPARE_RWDATALEN      0x14
 #define ANIM_MODEL_SPARE_RWDATALEN 0x8c

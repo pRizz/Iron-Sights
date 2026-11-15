@@ -172,6 +172,9 @@ static const s32 sExplosiveRoundsVals[] = { 0, 1, 2 };
 static const char *const sExplosiveRoundsText[] = { "Off\n", "Visual\n", "Explosive\n" };
 /* Whose Rounds (FORK-078): explosive_rounds_guards 0 or 1 */
 static const char *const sExplosiveRoundsGuardsText[] = { "Players\n", "Everyone\n" };
+/* Reinforcements (FORK-081): 0 Original, 1 More, 2 Relentless (port_reinforcements.h) */
+static const s32 sReinforcementsVals[] = { 0, 1, 2 };
+static const char *const sReinforcementsText[] = { "Original\n", "More\n", "Relentless\n" };
 static const s32 sWeaponStyleVals[] = { 0, 1 };
 static const char *const sWeaponStyleText[] = { "Text\n", "Icons\n" };
 static const s32 sHealthDisplayVals[] = { 0, 1 };
@@ -309,6 +312,7 @@ static const struct PortOpt sOpts[] = {
     TOGGLE("decorative_pellets", "[display]", "Decorative Pellets\n", PORTOPT_CAT_GAMEPLAY), /* FORK-063 */
     ENUMR ("explosive_rounds",   "[display]", "Explosive Rounds\n",   PORTOPT_CAT_GAMEPLAY, sExplosiveRoundsVals, sExplosiveRoundsText, NULL), /* FORK-078 */
     TOGGLET("explosive_rounds_guards", "[display]", "Whose Rounds\n",         PORTOPT_CAT_GAMEPLAY, sExplosiveRoundsGuardsText), /* FORK-078 */
+    ENUMR ("reinforcements",     "[display]", "Reinforcements\n",     PORTOPT_CAT_GAMEPLAY, sReinforcementsVals, sReinforcementsText, NULL), /* FORK-081 */
     TOGGLE("objective_notifications", "[display]", "Objective Alerts\n", PORTOPT_CAT_GAMEPLAY),
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     TOGGLE("mission_hints", "[display]", "Mission Start Hints\n", PORTOPT_CAT_GAMEPLAY),

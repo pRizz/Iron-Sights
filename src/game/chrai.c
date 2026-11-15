@@ -38,6 +38,8 @@
 extern s32 objectiveGetStatus_WEAK(s32 objectiveNum, s32);
 
 #ifndef TARGET_N64
+#include "port_reinforcements.h"
+
 /* PORT: GE_AIDBG=1 traces every AI list switch and AI PRINT (chrnum, list id,
  * resolved pointer), to find which code parks a chr in m_DeadAI and whether
  * ailistFindById() resolved the id. Added while debugging Natalya never
@@ -1201,8 +1203,17 @@ void                   ai(PropDefHeaderRecord *Entityp, PROP_TYPE EntityType)
                 {
                     AiIFChrDoesNotExistRecord *ai  = AiListp + Offset;
                     ChrRecord                 *chr = chrFindById(ChrEntityp, ai->CHR_NUM);
+#ifndef TARGET_N64
+                    /* Reinforcements (FORK-081): in Rare's clone list, "no clone"
+                     * means another clone may come now */
+                    s32 cloneSlotOpen = FALSE;
+                    s32 cloneRules    = ai->CHR_NUM == (u8)CHR_CLONE
+                        && portReinforcementsCloneCheck(ChrEntityp, AiListp, &cloneSlotOpen);
 
+                    if (cloneRules ? cloneSlotOpen : (!chr || !chr->model))
+#else
                     if (!chr || !chr->model)
+#endif
                     {
                         Offset = chraiGoToLabel(AiListp, Offset, ai->GOTOLABEL);
                     }
@@ -1861,7 +1872,13 @@ void                   ai(PropDefHeaderRecord *Entityp, PROP_TYPE EntityType)
                 case AI_IFIveNotBeenSeen:
                 {
                     AiIFIveNotBeenSeenRecord *ai = AiListp + Offset;
+#ifndef TARGET_N64
+                    /* Reinforcements (FORK-081): Relentless, off screen, in Rare's clone list */
+                    if (!(ChrEntityp->chrflags & CHRFLAG_HAS_BEEN_ON_SCREEN)
+                        || portReinforcementsTreatAsUnseen(ChrEntityp, AiListp))
+#else
                     if (!(ChrEntityp->chrflags & CHRFLAG_HAS_BEEN_ON_SCREEN))
+#endif
                     {
                         Offset = chraiGoToLabel(AiListp, Offset, ai->GOTOLABEL);
                     }
@@ -3674,9 +3691,20 @@ void                   ai(PropDefHeaderRecord *Entityp, PROP_TYPE EntityType)
                     PropRecord            *hatprop;
                     ObjectRecord          *hatobj;
                     // bool tryhat;
+#ifndef TARGET_N64
+                    /* Reinforcements (FORK-081): More and Relentless clone soldiers without the flag */
+                    if (chr && ((chr->chrflags & CHRFLAG_CLONE) || portReinforcementsMayClone(chr)))
+#else
                     if (chr && (chr->chrflags & CHRFLAG_CLONE))
+#endif
                     {
+#ifndef TARGET_N64
+                        portReinforcementsCloneBegin(chr);
                         cloneprop = chrSpawnAtChr(ChrEntityp, chr->bodynum, -1, chr->chrnum, ailist, 0);
+                        portReinforcementsCloneEnd(chr, cloneprop);
+#else
+                        cloneprop = chrSpawnAtChr(ChrEntityp, chr->bodynum, -1, chr->chrnum, ailist, 0);
+#endif
                         if (cloneprop)
                         {
                             clone  = cloneprop->chr;

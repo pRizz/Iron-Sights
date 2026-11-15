@@ -42,11 +42,12 @@ enum PortWatchPage {
     PORTWATCH_AUDIO,
     PORTWATCH_GRAPHICS,
     PORTWATCH_GENSETTINGS,      /* the port's General Settings (Rare's four are on the face) */
-    PORTWATCH_IRONSIGHTS,       /* picker: the settings Iron Sights adds, in four subsections */
+    PORTWATCH_IRONSIGHTS,       /* picker: the settings Iron Sights adds, in five subsections */
     PORTWATCH_IS_AIM,
     PORTWATCH_IS_FEEDBACK,
     PORTWATCH_IS_HUD,
     PORTWATCH_IS_SYSTEM,
+    PORTWATCH_IS_ENEMIES,       /* FORK-081: Reinforcements */
     PORTWATCH_IS_FONTS,         /* FORK-052: Enhanced Fonts, under System; before the Control
                                  * tab's pages, which options.c tells apart by number */
     PORTWATCH_IS_HDTEX,         /* FORK-053: HD Textures, under System */

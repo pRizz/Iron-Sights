@@ -10,6 +10,7 @@
 #include "port_enhanced_fonts.h"
 #include "port_hd_download.h"      /* FORK-053 */
 #include "port_download_page.h"    /* FORK-052, FORK-053 */
+#include "port_reinforcements_menu.h"   /* FORK-081 */
 #endif
 #include <assets/oddtextures.h>
 #include "assets/image_externs.h"
@@ -4083,7 +4084,7 @@ enum { PORT_SHEET_GAMEPLAY, PORT_SHEET_CONTROL, PORT_SHEET_DISPLAY, PORT_SHEET_C
        /* IRON SIGHTS: every setting this fork adds, in subsections opened from
         * the Iron Sights page (scripts/port/test_settings_placement.py) */
        PORT_SHEET_IRONSIGHTS, PORT_SHEET_IS_AIM, PORT_SHEET_IS_FEEDBACK, PORT_SHEET_IS_HUD,
-       PORT_SHEET_IS_SYSTEM,
+       PORT_SHEET_IS_SYSTEM, PORT_SHEET_IS_ENEMIES,   /* Enemies: FORK-081 */
        /* ENHANCED FONTS (FORK-052) and HD TEXTURES (FORK-053): downloads the
         * player starts, opened from System (port_download_page.h) */
        PORT_SHEET_IS_FONTS, PORT_SHEET_IS_HDTEX, PORT_SHEET_IS_CUSTOMTEX, PORT_SHEET_COUNT };
@@ -4116,6 +4117,7 @@ static const char *const port_sheet_title[PORT_SHEET_COUNT] = { "GAMEPLAY\n", "C
         "MOUSE AND KEYBOARD\n", "CONTROLLER\n", "GENERAL CONTROL OPTIONS\n", "PORT OPTIONS\n",
         "GAMEPLAY OPTIONS\n", "CLASSIC\n",   /* GAMEPLAY OPTIONS is not drawn: the two-column sheet has no heading */
         "IRON SIGHTS\n", "AIMING AND MOVEMENT\n", "COMBAT FEEDBACK\n", "HUD ADDITIONS\n", "SYSTEM\n",
+        "ENEMIES\n",   /* FORK-081 */
         "ENHANCED FONTS\n", "HD TEXTURES\n", "CUSTOM TEXTURE PACKS\n" };
 static s32 port_options_row_highlighted = -1; /* row under the cursor, -1 = on a tab */
 /* The folder's hubs: GAMEPLAY and AUDIO VISUAL reuse this folder screen to list
@@ -4149,9 +4151,10 @@ s32 portMenuHarnessSheet(char first, char second)
                                       : (second == 'e') ? PORT_SHEET_GENERAL : PORT_SHEET_GAMEPLAY;
     else if (first == 'h') port_sheet_kind = PORT_SHEET_HUD;
     else if (first == 'z')
-    {   /* GE_MENU=zironsights, or zaim / zfeedback / zhud / zsystem for a subsection
-         * ('i' is the mission grid) */
+    {   /* GE_MENU=zironsights, or zaim / zfeedback / zguards / zhud / zsystem for a
+         * subsection ('i' is the mission grid) */
         port_sheet_kind = (second == 'a') ? PORT_SHEET_IS_AIM : (second == 'f') ? PORT_SHEET_IS_FEEDBACK
+                        : (second == 'g') ? PORT_SHEET_IS_ENEMIES   /* GE_MENU=zguards (FORK-081) */
                         : (second == 'h') ? PORT_SHEET_IS_HUD : (second == 's') ? PORT_SHEET_IS_SYSTEM
                         : (second == 'e') ? PORT_SHEET_IS_FONTS   /* GE_MENU=zenhanced */
                         : (second == 't') ? PORT_SHEET_IS_HDTEX   /* GE_MENU=ztextures */
@@ -4780,6 +4783,7 @@ static const struct PortSheetRow port_sheet_rows_ctlgeneral[] = {
 static const struct PortSheetRow port_sheet_rows_ironsights[] = {
     { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_AIM },
     { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_FEEDBACK },
+    { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_ENEMIES },   /* FORK-081 */
     { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_HUD },
     { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_SYSTEM },
 };
@@ -4804,6 +4808,11 @@ static const struct PortSheetRow port_sheet_rows_is_feedback[] = {
     { SHROW_OPT, "debrief_hit_map" }, { SHROW_OPT, "tracer_strength" }, /* FORK-062 */
     { SHROW_OPT, "shotgun_tracers" }, { SHROW_OPT, "decorative_pellets" }, /* FORK-063 */
     { SHROW_OPT, "explosive_rounds" }, { SHROW_OPT, "explosive_rounds_guards" }, /* FORK-078 */
+};
+/* ENEMIES (FORK-081): the guards' side. Reinforcements is also on each
+ * mission's difficulty page (port_reinforcements_menu.c). */
+static const struct PortSheetRow port_sheet_rows_is_enemies[] = {
+    { SHROW_OPT, "reinforcements" },
 };
 static const struct PortSheetRow port_sheet_rows_is_hud[] = {
     { SHROW_OPT, "always_crosshair_size" },   /* sizes HUD's Always Crosshair */
@@ -4935,6 +4944,7 @@ static const char *portSheetPageLabel(s32 kind)
         case PORT_SHEET_IRONSIGHTS:  return "Iron Sights\n";
         case PORT_SHEET_IS_AIM:      return "Aiming and Movement\n";
         case PORT_SHEET_IS_FEEDBACK: return "Combat Feedback\n";
+        case PORT_SHEET_IS_ENEMIES:  return "Enemies\n";
         case PORT_SHEET_IS_HUD:      return "HUD Additions\n";
         case PORT_SHEET_IS_SYSTEM:   return "System\n";
         case PORT_SHEET_IS_FONTS:    return "Enhanced Fonts\n";
@@ -5352,6 +5362,7 @@ static void portSheetBuild(s32 kind)
     if (kind == PORT_SHEET_IRONSIGHTS)  { src = port_sheet_rows_ironsights;  n = sizeof(port_sheet_rows_ironsights)  / sizeof(port_sheet_rows_ironsights[0]);  }
     if (kind == PORT_SHEET_IS_AIM)      { src = port_sheet_rows_is_aim;      n = sizeof(port_sheet_rows_is_aim)      / sizeof(port_sheet_rows_is_aim[0]);      }
     if (kind == PORT_SHEET_IS_FEEDBACK) { src = port_sheet_rows_is_feedback; n = sizeof(port_sheet_rows_is_feedback) / sizeof(port_sheet_rows_is_feedback[0]); }
+    if (kind == PORT_SHEET_IS_ENEMIES)  { src = port_sheet_rows_is_enemies;  n = sizeof(port_sheet_rows_is_enemies)  / sizeof(port_sheet_rows_is_enemies[0]);  }
     if (kind == PORT_SHEET_IS_HUD)      { src = port_sheet_rows_is_hud;      n = sizeof(port_sheet_rows_is_hud)      / sizeof(port_sheet_rows_is_hud[0]);      }
     if (kind == PORT_SHEET_IS_SYSTEM)   { src = port_sheet_rows_is_system;   n = sizeof(port_sheet_rows_is_system)   / sizeof(port_sheet_rows_is_system[0]);   }
     port_sheet_twocol_split = PORT_SHEET_TWOCOL_ROWS;
@@ -7854,6 +7865,7 @@ static const char *portSheetHelpKey(s32 row)
                 case PORT_SHEET_IRONSIGHTS:  return "@page_ironsights";
                 case PORT_SHEET_IS_AIM:      return "@page_is_aim";
                 case PORT_SHEET_IS_FEEDBACK: return "@page_is_feedback";
+                case PORT_SHEET_IS_ENEMIES:  return "@page_is_enemies";
                 case PORT_SHEET_IS_HUD:      return "@page_is_hud";
                 case PORT_SHEET_IS_SYSTEM:   return "@page_is_system";
                 case PORT_SHEET_IS_FONTS:    return "@page_is_fonts";
@@ -9772,6 +9784,11 @@ void update_menu08_difficulty(void) {
 }
 
 
+#ifndef TARGET_N64
+/* Reinforcements (FORK-081): the cursor is on the difficulty page's row */
+static s32 port_reinforcements_highlight = FALSE;
+#endif
+
 void interface_menu08_difficulty(void)
 {
     s32 unlockedDifficulty;
@@ -9788,11 +9805,20 @@ void interface_menu08_difficulty(void)
     set_item_visibility_in_objinstance(walletinst[0], SW_CONFIDENTIAL, 1);
     tab_prev_highlight = FALSE;
     mission_difficulty_highlighted = DIFFICULTY_MULTI;
+#ifndef TARGET_N64
+    port_reinforcements_highlight = FALSE;
+#endif
 
     if (frontCheckCursorOnPreviousTab())
     {
         tab_prev_highlight = TRUE;
     }
+#ifndef TARGET_N64
+    else if (portReinforcementsMenuHit(cursor_h_pos, cursor_v_pos))
+    {
+        port_reinforcements_highlight = TRUE;   /* Reinforcements (FORK-081) */
+    }
+#endif
     else if ((unlockedDifficulty >= DIFFICULTY_007) && (cursor_v_pos >= 275.0f))
     {
         mission_difficulty_highlighted = DIFFICULTY_007;
@@ -9818,6 +9844,13 @@ void interface_menu08_difficulty(void)
 
             sndPlaySfx(g_musicSfxBufferPtr, DOOR_METAL_CLOSE2_SFX, NULL);
         }
+#ifndef TARGET_N64
+        else if (port_reinforcements_highlight)
+        {   /* Reinforcements (FORK-081): the confirm press steps to the next level */
+            portReinforcementsMenuStep();
+            sndPlaySfx(g_musicSfxBufferPtr, OPTION_CLICK2_SFX, NULL);
+        }
+#endif
         else
         {
             if (mission_difficulty_highlighted >= DIFFICULTY_AGENT)
@@ -10094,6 +10127,7 @@ Gfx *constructor_menu08_difficulty(Gfx *DL)
 #ifndef TARGET_N64
     DL = portMissionBestTimesDraw(DL, mission_folder_setup_entries[briefingpage].mission_num, selected_folder_num, unlockedDifficulty);
     DL = portFrontMissionCheatSummary(DL, mission_folder_setup_entries[briefingpage].mission_num);
+    DL = portReinforcementsMenuDraw(DL, port_reinforcements_highlight);   /* FORK-081 */
 #endif
     DL = frontDrawCursor(DL);
 

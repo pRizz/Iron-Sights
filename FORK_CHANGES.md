@@ -30,6 +30,177 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-081 — Reinforcements: more clones and a reinforcement director
+
+**Status:** Clones and the difficulty-page row implemented on 2026-11-14 at
+the owner's request; after their first play-test the owner asked for the
+reinforcement director, added on 2026-11-15 together with a spawn clearance
+check. Built in a separate CMake directory (another session was rebuilding
+the main executable at the time) and copied into the main
+`build_win/IronSights.exe` for the owner's play-test. The owner approved the
+director build on 2026-11-15 and asked for it to be committed and pushed to
+`main`, which was done the same day. Linux, Steam Deck and browser builds not
+run locally.
+
+Inherited behaviour: Rare's only general reinforcement is the clone. A guard
+running the standard guard AI (`chraidata.c` `m_StandardGuard`) that hears Bond
+before Bond has seen it jumps to `m_TryCloneSendOrRunToBond`: if its single
+clone (chrnum + 10000) does not exist, `chr_try_spawning_clone` makes a copy of
+it beside it, which runs to Bond while the original holds its post. Only guards
+whose setup sets the clone flag (`GUARD_SETUP_FLAG_CHR_CLONE`) can do it: 7 in
+Archives, 10 in Runway, 4 in Surface 1, 14 in Bunker 1 and 9 in Bunker 2, none
+anywhere else. Every spawn (`chrSpawnAtCoord`) needs 3 free character slots, and
+the pool (`alloc_init_GUARDdata_entries`) holds the level's placed guards plus 10,
+with 30 spare plain and 10 spare animated model slots (`initunk_005520.c`). On
+PC, running out of character slots stops the game with "Character pool
+exhausted". Level scripts time their own reinforcements (`chr_try_spawning_at_pad`,
+about 330 calls in 17 setups) with local timers and fixed guard IDs; this entry
+leaves them alone.
+
+**Reinforcements** (`[display] reinforcements`, default 0 = Original) sets how
+many guards the level sends:
+
+- **Original** (0): Rare's rule, unchanged. Every hook below is a no-op.
+- **More** (1): any placed guard with a soldier's body (Jungle Commando, St
+  Petersburg Guard, Russian Soldier and Infantry, Janus Special Forces and
+  Marine, Russian Commandant, both Siberian guards and Special Forces, Naval
+  Officer, Helicopter Pilot, Arctic Commando, both Moonraker Elite) may clone,
+  as may Rare's flagged guards. Named characters, Bond's outfits, civilians,
+  scientists, invincible characters, clones and guards spawned by scripts never
+  do. Each keeps up to 2 living clones, the next at most every 8 seconds while
+  it still hears gunfire, and the level gets 12 more character slots, 12 more
+  animated and 24 more plain model slots.
+- **Relentless** (2): up to 3 living clones per guard, one every 4 seconds, 24
+  more slots (24 animated, 48 plain), and a guard Bond has already seen may call
+  one more while it is off screen (`PROPFLAG_ONSCREEN` clear), so the clone never
+  pops into view.
+
+**The director (More and Relentless).** Clones need a guard that hears Bond
+before Bond sees it, which open levels rarely give, so the director sends guards
+of its own (`port_reinforcements_director.c`, called once a frame from `lv.c`
+after `propsTick`). Bond counts as noticed while any guard saw him within Rare's
+10-second memory (`chrSawTargetRecently`) or the alarm is on; the director keeps
+sending for 20 seconds after. It sends one guard every 20 seconds while fewer
+than 4 of its own are alive (More), or every 10 seconds up to 8 (Relentless),
+searching at most once a second. The guard starts on a waypoint pad (so it is on
+Rare's navigation network) 600 to 6000 units from Bond across the floor and
+within 400 up or down, with a `waypointFindRoute` route of 2 to 14 steps to the
+waypoint nearest Bond, off screen (`chrIsPosOffScreen`: its room not drawn, or
+out of view) and clear of others; of up to ten shuffled candidates the shortest
+route wins. It wears the body, guns (doubles kept) and hat of the nearest placed
+soldier, copied while that soldier is alive and remembered after it falls, gets
+Rare's clone AI (`GAILIST_STANDARD_CLONE`: run to Bond, then act as a standard
+guard), never clones, and drops its gun when killed like any guard. Objectives
+are untouched; the debrief counts its kills like any other.
+
+**Spawn clearance.** Rare's `chrAdjustPosForSpawn` tests a 20-unit circle against
+characters that are standing (dying and dead ones are not obstacles), so a spawn
+can land touching another guard or inside a falling one. Every spawn this entry
+adds, clone or director guard, now also needs no character, living or fallen,
+within 60 units across the floor (and 200 up or down), and a director guard no
+Bond within 300 (`portReinforcementsSpawnClear`, hooked into `chrSpawnAtCoord`).
+Rare's own spawns, and every spawn at Original, skip it.
+
+A clone Rare would not have made (any clone under More or Relentless except a
+flagged, unseen guard's first), and every director guard, only spawns while 10
+character slots stay free, the margin Rare's pool always had, so scripted
+reinforcements keep their room and the pool-exhausted stop cannot be reached by
+these spawns. Rare's own spawns keep
+the 3-slot test, now inside a bigger pool. A guard at its limit or cooldown holds
+its post as Rare's clone guards do; a seen guard falls back to Rare's run at
+Bond. The level is read when a stage loads (the pools are sized then), so a
+change applies from the next mission start. Multiplayer (no placed guards) and
+demo playback (`get_is_ramrom_flag`) keep Original.
+
+**Where it is set:** each mission's difficulty page shows a **Reinforcements:**
+row under the best times (right of the cheat footer, one difficulty pitch below
+the 007 row). Pointing at it highlights it with the difficulty rows' box; the
+page's confirm press steps to the next level and wraps (A, Start or Z on a
+pad, Enter, a mouse click, a browser tap), with the options' click sound. It
+calls the options table's `portOptStep`, so it saves `midas.ini` like any row.
+Every supported input reaches it: browser touch sends cursor motion and A, which
+is all it needs, so it has no native touch context. It is also the only row of a
+new **Gameplay > Iron Sights > Enemies** subsection, in both the Options folder
+and the watch, between Combat Feedback and HUD Additions (no existing
+subsection fits a setting about the guards). `GE_MENU=zguards` opens the folder
+page.
+
+**Shared hooks in upstream files** (all `#ifndef TARGET_N64`):
+`initguards.c` adds the stage's slots; `initunk_005520.c` and `model.c` grow the
+spare model slots and make the level-reset searches skip them; `chraction.c`
+marks placed guards at setup, swaps `chrSpawnAtCoord`'s free-slot test and lets
+`chrSpawnAtChr` clone a seen, off-screen guard during a Relentless clone, and
+adds the clearance test to `chrSpawnAtCoord`; `lv.c` runs the director each
+frame after `propsTick`;
+`chr.c` clears a slot's record when it is freed; `chrai.c` hooks
+`IFChrDoesNotExist(CHR_CLONE)` and `IFIveNotBeenSeen`, both only inside Rare's
+clone list, and `TRYCloningChr` (eligibility and bookkeeping around the
+spawn); `front.c` adds the Enemies page and the difficulty-page row.
+
+**Sources:** rules in [port_reinforcements.h](port/include/port_reinforcements.h),
+setting in [port_reinforcements.c](port/src/port_reinforcements.c), game hooks
+and the per-slot side table in
+[port_reinforcements_game.c](port/src/port_reinforcements_game.c), the
+difficulty-page row in [port_reinforcements_menu.c](port/src/port_reinforcements_menu.c),
+the director in [port_reinforcements_director.c](port/src/port_reinforcements_director.c)
+with its rules in [port_reinforcements_director.h](port/include/port_reinforcements_director.h),
+plus [port_options.c](port/src/port_options.c), [joy_port.c](port/src/joy_port.c),
+[port_watchpages.c](port/src/port_watchpages.c),
+[help](port/src/port_option_help.c), [default ini](port/src/video.c),
+[settings reference](tools/midas_ini_help.txt), [README](README.md) and the
+subsection list in [AGENTS.md](AGENTS.md). `GE_REINFORCEMENTS_LOG=1` prints each
+stage's level, every placed guard (body, position, clone flag, whether it may
+clone), every clone with its game tick, living count, free slots and floor
+distance to the nearest other character, and every director guard with its pad,
+route steps, distance from Bond and the outfit and gun it copied.
+
+**Checks:** [test_reinforcements.c](scripts/port/test_reinforcements.c), run by
+[test_ads.sh](scripts/port/test_ads.sh), covers the setting, clamping and the
+difficulty page's wrapping step, the pool sizes, the multiplayer and demo
+gates, eligibility and soldier bodies, the per-guard limit and cooldown, the
+free slots an added clone leaves, the director's timing, cap and noticed window,
+its pad distance and route limits, and the spawn clearance. The four new sources
+also compile with implicit declarations as errors: the director first called
+`atan2f` without a prototype (this repository's `include/math.h` keeps its libc
+declarations under `#if 0`), so its guards spawned with garbage headings and the
+second one to aim crashed the game in `chrlvInitActAttack`; it now includes
+`game/math_atan2f.h`. The settings placement check and Bright Builds
+checks pass; the hand gallery regenerated with no changed image cells. In game
+(isolated copies, `GE_SPAWNXYZ` beside Facility's guards 1, 3, 6 and 7 with dual
+DD44s firing): Original made no clones; More made 2 per guard, the second about
+8 seconds after the first (ticks 1557 and 2045); Relentless made 3 per guard
+about 4 seconds apart and then stopped. A soak loaded 14 solo stages at
+Relentless with the extra slots and no errors. The difficulty page was captured
+with the row plain and highlighted. Not yet checked: what clones look like
+arriving in a real fight (the audit spawn points were outside room geometry),
+Relentless's after-seen clones, the clone rate in Rare's flagged levels, demo
+playback, and the browser and Linux builds.
+
+Director runs (isolated copies, Bond invulnerable with autofire): in Dam's
+tunnel (`GE_SPAWNXYZ` 8194,-633,-1282) Relentless sent 9 guards in 90 seconds,
+exactly 10 seconds apart, from pads 1200 to 2700 units away with 2 or 3 route
+steps; More sent 4, 20 seconds apart. In Facility's bathroom Relentless sent 10,
+from pads 700 to 1200 units away with 2 to 7 steps; most were killed by the
+autofire and their slots reused, so they reached Bond. Original at the same Dam
+spot ran without the director or a crash. Not yet checked: how the arrivals feel
+and look in play (the audit camera faced a wall), stealth-heavy missions, and
+long missions at the cap.
+
+The owner's first play-test (Dam, Agent, Relentless, in the main executable)
+found few extra guards, and some underground guards appearing inside each
+other with confused behaviour. (A later `build_win/IronSights-Graphics.exe`
+run, a separate graphics build sharing `midas.ini` and the log, overwrote
+`Data/Logs/ge_direct.log`, so that session left no log.) Dam limits clones: 13 of its 36 guards run a
+tower script (`ai_11`) that only rarely hands over to the standard guard AI,
+and in a tunnel test (guards 16 to 21) every guard that reacted saw Bond first
+and went straight to attacking, since Rare's standard guard checks sight before
+hearing; none cloned. Open levels with long sightlines therefore gain little
+from hearing-based clones, which is why the director above was added (it was
+first recorded here as a follow-up). In the Facility runs each new clone landed
+60 units (the spawn ring's spacing) from the nearest character; the overlapping
+guards were not reproduced, and the spawn clearance above now rules out the
+cases Rare's own test misses.
+
 ### FORK-080 — Touch Controls Opacity for browser touch
 
 **Status:** Implemented on 2026-11-14 at the owner's request (default 50%,
@@ -4456,13 +4627,15 @@ the feel.
 **Status:** Implemented; part of the Windows build the user play-tested for FORK-043.
 
 Upstream's settings pages held fork settings mixed in with upstream's. Every
-setting this fork adds now lives under **Gameplay > Iron Sights**, in four
-subsections, in both the Options folder and the watch:
+setting this fork adds now lives under **Gameplay > Iron Sights**, in five
+subsections (four until Enemies arrived with FORK-081), in both the Options
+folder and the watch:
 
 | Subsection | Settings |
 | --- | --- |
 | Aiming and Movement | Aim Mode, Knife ADS, Hip-Fire Arms (FORK-075), ADS Spread, ADS Recoil (FORK-045), Weapon Kick (FORK-061), Reload Speed (FORK-071), Leaning and Lean Tilt (FORK-073), Allow Noclip and Noclip View Distance (FORK-072), Sprint, Ludicrous Sprint, Sprint FOV (FORK-006) |
 | Combat Feedback | Hit Markers, Hit Sounds, Damage Direction, Tracer Strength (FORK-062), Shotgun Tracers and Decorative Pellets (FORK-063) |
+| Enemies | Reinforcements (FORK-081), also on each mission's difficulty page |
 | HUD Additions | Always Crosshair Size, Projectile Arc and Arc Impact Crosshair (FORK-069), Sprint Indicator (FORK-006), Weapon Strip, Weapon Strip Style, Health Display, Objective Alerts, Mission Start Hints (desktop) |
 | System | About / Build Info, Fonts (FORK-051, FORK-052), Fog (FORK-074), Crash Reporting (Windows/Linux) |
 

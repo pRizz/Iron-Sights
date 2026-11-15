@@ -31,6 +31,7 @@
 #ifndef TARGET_N64
 #include <stdio.h> /* GE_INTRODBG diag in chrRenderProp */
 #include "port_hitmap.h"
+#include "port_reinforcements.h"
 extern void sysFatalError(const char *format, ...);
 #endif
 #include "propobj.h"
@@ -1867,6 +1868,9 @@ void chrpropCleanupForRemoval(PropRecord *prop)
 
     clear_aircraft_model_obj(model);
 
+#ifndef TARGET_N64
+    portReinforcementsChrFreed(chr); /* Reinforcements (FORK-081) */
+#endif
     chr->model = NULL;
     chr->chrnum = -1;
 

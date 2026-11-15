@@ -38,6 +38,7 @@
 #include "port_hitmap.h"
 #include "port_tracers.h"
 #include "port_explosive_rounds.h"
+#include "port_reinforcements.h"
 #endif
 
 #ifndef TARGET_N64
@@ -308,6 +309,9 @@ void expand_09_characters(s32 stageid, GuardRecord *arg1, s32 arg2)
                 {
                     temp_v0_5->chrflags |= CHRFLAG_CLONE;
                 }
+#ifndef TARGET_N64
+                portReinforcementsMarkPlaced(temp_v0_5); /* Reinforcements (FORK-081) */
+#endif
 
                 if ((arg1->bitflags & 8) != 0)
                 {
@@ -1227,7 +1231,6 @@ void chrlvInitActAttack(ChrRecord *self, struct anim_group_info **arg1, s32 arg2
     {
         anim_index = 0;
     }
-
     next_anim = (u32)randomGetNext() % (u32)arg1[anim_index]->len;
 
     // I can't get a `li t0,72` without explicit multiply, but
@@ -11265,7 +11268,12 @@ PropRecord *chrSpawnAtCoord(s32 bodynum, s32 headnum, coord3d *pos, StandTile *s
     StandTile *stancopy;
     Model *chrHeader;
 
+#ifndef TARGET_N64
+    /* Reinforcements (FORK-081): Rare's 3, or 10 for a clone Rare would not make */
+    if (chrGetNumFree() >= portReinforcementsFreeChrsForSpawn())
+#else
     if (chrGetNumFree() >= 3)
+#endif
     {
         if (headnum < 0)
         {
@@ -11277,7 +11285,13 @@ PropRecord *chrSpawnAtCoord(s32 bodynum, s32 headnum, coord3d *pos, StandTile *s
         newpos.z = pos->z;
         stancopy = stan;
 
+#ifndef TARGET_N64
+        /* Reinforcements (FORK-081): this feature's spawns also keep clear of others */
+        if (chrAdjustPosForSpawn(&newpos, &stancopy, angle, ((spawnflags & 0x10) != 0))
+            && portReinforcementsSpawnClear(&newpos))
+#else
         if (chrAdjustPosForSpawn(&newpos, &stancopy, angle, ((spawnflags & 0x10) != 0)))
+#endif
         {
             chrHeader = retrieve_header_for_body_and_head(bodynum, headnum, spawnflags);
 
@@ -11335,7 +11349,12 @@ PropRecord *chrSpawnAtChr(ChrRecord *self, s32 bodynum, s32 headnum, s32 chrnum,
     ChrRecord *chr;
     chr = chrFindById(self, chrnum);
 
+#ifndef TARGET_N64
+    /* Reinforcements (FORK-081): Relentless clones a seen guard while it is off screen */
+    if (!(chr->chrflags & CHRFLAG_HAS_BEEN_ON_SCREEN) || portReinforcementsSpawnBesideSeen(chr))
+#else
     if (!(chr->chrflags & CHRFLAG_HAS_BEEN_ON_SCREEN))
+#endif
     {
         f32 chrRadHeading   = getsubroty(chr->model);
         PropRecord *chrprop = chr->prop;

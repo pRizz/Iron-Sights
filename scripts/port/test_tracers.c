@@ -231,3 +231,5 @@ static void testTracers(void)
 
 /* Explosive Rounds (FORK-078), the other Combat Feedback setting built on bullet impacts. */
 #include "test_explosive_rounds.c"
+/* Reinforcements (FORK-081), another setting test_ads.c runs from here. */
+#include "test_reinforcements.c"

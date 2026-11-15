@@ -270,6 +270,21 @@ padN_stickmode.
   explosive_rounds_guards | 1      | With explosive_rounds on: 1 = everyone's
                       |            | bullets explode, guards' too; 0 = players'
                       |            | only. Iron Sights > Combat Feedback
+  reinforcements      | 0          | How many clones guards call in when they
+                      |            | hear you: 0 = Original (Rare's clone
+                      |            | guards only, one each), 1 = More (any
+                      |            | placed soldier, 2 living clones each, one
+                      |            | per 8 s, 12 extra guard slots), 2 =
+                      |            | Relentless (3 each, one per 4 s, 24
+                      |            | slots; a seen guard off screen can call
+                      |            | one too). 1 and 2 also send a guard every
+                      |            | 20 s (up to 4 alive) or 10 s (up to 8)
+                      |            | once Bond is spotted or the alarm is on,
+                      |            | from an unseen pad with a route to him.
+                      |            | Read at mission start; Original in demo
+                      |            | playback and multiplayer.
+                      |            | Iron Sights > Enemies, or the row on each
+                      |            | mission's difficulty page.
   objective_notifications | 1     | Named objective status alerts; 0 = original
                       |            | Scripted top messages that only repeat
                       |            | an alert's result give way to it.

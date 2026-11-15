@@ -7,6 +7,16 @@
 #include "chrobjdata.h"
 #include "gbi_extension.h"
 #include "initunk_005520.h"
+#ifndef TARGET_N64
+/* Reinforcements (FORK-081): initunk_005520.c adds spare slots for the
+ * stage's extra guards; the level-reset searches below skip them too. */
+#include "port_reinforcements.h"
+#define MODEL_RESET_SPARE      (30 + portReinforcementsExtraModels(portReinforcementsStageExtraChrs()))
+#define ANIM_MODEL_RESET_SPARE (10 + portReinforcementsExtraAnimModels(portReinforcementsStageExtraChrs()))
+#else
+#define MODEL_RESET_SPARE      30
+#define ANIM_MODEL_RESET_SPARE 10
+#endif
 #include "math_asinfacosf.h"
 #include "math_floor.h"
 #include "math_ceil.h"
@@ -60,7 +70,7 @@ Model *modelmgrInstantiateModel(ModelFileHeader *header)
     {
         s32 i;
 
-        for (i = 0; i < (g_MaxModelSlots - 30); i++)
+        for (i = 0; i < (g_MaxModelSlots - MODEL_RESET_SPARE); i++)
         {
             if (g_ModelSlots[i].unk08 == 0)
             {
@@ -130,7 +140,7 @@ Model *modelmgrInstantiateModelWithAnim(ModelFileHeader *modelFileHeader)
 
     if (g_ModelIsLvResetting)
     {
-        for (i = 0; i < (g_MaxAnimModelSlots - 10); i++)
+        for (i = 0; i < (g_MaxAnimModelSlots - ANIM_MODEL_RESET_SPARE); i++)
         {
             if (g_AnimModelSlots[i].unk08 == 0)
             {
