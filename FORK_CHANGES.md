@@ -30,6 +30,159 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-085 — Benchmark suite: fixed-work frame timing against stock
+
+**Status:** Implemented on 2026-11-15 at the owner's request, as the first step
+of performance work (measure, then profile, then optimize). Windows only so
+far; the browser build is not measured yet. No game behaviour changes: the
+frame log is off unless `GE_BENCH` is set.
+
+Inherited behaviour: upstream has no benchmark. It does have the pieces one
+needs, all present at the 1.0.2b baseline and reused here unchanged: the input
+recorder and replayer (`GE_INPUTREC` / `GE_INPUTPLAY`, `port/src/inputrec.c`),
+`GE_SEED`, `GE_STAGE`, `GE_MP`, `GE_FIXEDTICK`, `GE_NOSLEEP`, `GE_TICKHZ`, and
+the hitch log's per-frame split of render, swap and game time
+(`port/src/hitchlog.c`, called once per presented frame by `gfx_sdl2.cpp`).
+
+**What it does:** `python scripts/port/bench/bench.py run` times builds on
+fixed work and prints a comparison; [the benchmark guide](scripts/port/benchmarks.md)
+is the reference. Each run plays one scenario in fixed tick, unpaced mode
+(`GE_FIXEDTICK`, `GE_NOSLEEP`, `tickhz` 0, no vsync, no frame cap): every frame
+advances the game one 60 Hz tick and draws as fast as it can, so a run draws
+the same frames on any machine and in any build. The measured window is 3,600
+ticks, starting 300 ticks into the mission. Runs are repeated (five by
+default) with the builds interleaved, and the report gives medians and marks a
+change as real only when it exceeds the runs' own slowest-to-fastest range.
+
+- **Frame log** (`GE_BENCH=<file>`, [port_bench.c](port/src/port_bench.c)): one
+  row per presented frame with the present-to-present interval, renderer time,
+  swap, limiter, longest stretch of game code, audio, pacer sleep, draw
+  batches, stage, game tick and the five timed load-event kinds. Rows are held
+  in memory (60 bytes each, 200,000 by default, `GE_BENCH_MAX`) and written
+  once. `GE_BENCH_END=<tick>[,<stage>]` writes the file and leaves the process
+  when the mission reaches that tick (`_Exit`, after flushing every stream;
+  the browser build writes the file and stays up). The one hook is a call from
+  `portHitchFrame`, which already holds every value.
+- **Scenarios** ([scenarios.json](scripts/port/bench/scenarios.json)): Dam,
+  Streets, Depot, Jungle and Cradle, and four-player Temple. A one-off survey
+  of 19 missions with the same route picked the heaviest (Cradle, Streets,
+  Depot, Jungle); Dam is kept as the familiar opening.
+- **Routes** are generated from a description (walk forward, turn the camera by
+  a fixed list of angles between straight legs, fire in bursts) into
+  `GE_INPUTPLAY` pad and mouse-look records, so the input is a function of the
+  game tick and identical for every build. In the four-player scenario player
+  1 follows the route and the others stand at their spawns.
+- **Presets**: `default` runs each build as it ships; `matched` sets the
+  settings both builds share to stock's defaults (`msaa`, `anisotropy`,
+  `filter_2d`, `filtering`) and turns off `shiny_weapons`, `glass_reflections`,
+  `tone_mapping` and `baked_lighting`.
+- **Reference builds** ([stock.py](scripts/port/bench/stock.py)): exports a
+  commit (by default the inherited baseline) into `build_win/bench-<name>`,
+  copies this checkout's ignored generated assets, and builds it in the project
+  container with the same flags. It adds `port_bench.c`, the `hitchlog.c` call
+  and, for stock, an early return in `waitForNextFrame` so `GE_FIXEDTICK` does
+  not wait on the clock (the fork has had that since the 2026-11-06 gallery
+  speed-up, FORK-022); a commit that already has one keeps its own. The same
+  script builds a "before" executable from any commit, so no old executable is
+  kept as a backup.
+- **Host guard**: before each run the runner waits for other game processes to
+  exit, repeats a run one overlapped (up to three times) and reports how many
+  stayed overlapped, with processor use across the machine during the runs.
+  Each run uses its own folder, `midas.ini` and executable copy under
+  `build_win/bench-run-*`, deleted when measured; the player's game, settings
+  and saves are not touched. Runs use SDL's dummy audio driver.
+
+**Findings while building it** (they shape how the numbers must be read):
+
+- A hidden window ran about 30% slower than a visible one on the development
+  machine (296 against 418 frames a second on the same Dam run), so measured
+  runs show their window.
+- The game's scripted drivers (`GE_DRIVE`, `GE_MPDRIVE`) count controller
+  polls. Unpaced, the pump polls tens of thousands of times a second, so those
+  scripts gave different input on every run (the four-player scenario's draw
+  counts diverged from tick 115 with them, and matched tick for tick without
+  them). They are not used. `GE_DRIVE=1` also walks Bond into the first wall
+  and leaves him there, so it was no use as a route either.
+- Replay matches by tick, so a generated route puts the fork and stock at the
+  same position and view on the same tick (checked by screenshots at tick 1,400
+  and 2,800 in Facility).
+- Fixed tick makes every frame do a whole 60 Hz game tick; in normal uncapped
+  play most frames are sub-ticks, so the in-game counter reads higher. The
+  suite compares cost per frame of full work.
+
+**Baseline, stock 1.0.2b against Iron Sights at `21ccff3`** (2026-11-15; the
+development laptop, an i7-10870H with an RTX 3070 Laptop GPU; 1920x1080
+visible window; five repeats, medians; 120 runs):
+
+| Scenario | Stock fps (default / matched) | Fork fps, default | Fork fps, matched | Stock render / game ms, matched | Fork render / game ms, matched |
+|---|---:|---:|---:|---:|---:|
+| dam-walk | 1168 / 1230 | 481 (-59%) | 788 (-36%) | 0.53 / 0.16 | 1.05 / 0.44 |
+| streets-fight | 917 / 1068 | 329 (-64%) | 562 (-47%) | 0.66 / 0.13 | 1.52 / 0.44 |
+| depot-fight | 979 / 1181 | 367 (-62%) | 645 (-45%) | 0.56 / 0.12 | 1.28 / 0.42 |
+| jungle-fight | 912 / 1033 | 402 (-56%) | 563 (-46%) | 0.75 / 0.20 | 1.51 / 0.58 |
+| cradle-fight | 718 / 834 | 294 (-59%) | 449 (-46%) | 0.95 / 0.16 | 1.97 / 0.57 |
+| temple-4p | 907 / 1065 | 306 (-66%) | 764 (-28%) | 0.70 / 0.15 | 1.24 / 0.89 |
+
+- At default settings the fork draws 34-44% of stock's frames a second on
+  every scenario. Its 1% lows fall the same way (91-174 against 205-439).
+- With settings matched and the fork's graphics features off it draws 53-72%.
+  The renderer then takes about twice stock's time per frame and the game code
+  about three times (six times in four-player split screen). That gap remains
+  with those settings off, so it comes from fork work the preset does not
+  switch off; profiling has to say which.
+- The fork's default-on graphics (2x MSAA, anisotropy, Tone Mapping, Baked
+  Lighting, the reflections) take a further 29-60% of its own frame rate.
+- Stage loads were 17-48% longer at default settings (54-128 ms against
+  36-109 ms) and equal with settings matched.
+- The fork still drew 294-481 frames a second at its defaults on this machine;
+  the cost matters on weaker hardware and for headroom.
+
+Read the default-preset numbers as approximate. Two other sessions were
+building and running game audits on the machine: processor use across it was
+41% in the median run and peaked at 94%, and average fps ranged by up to 64%
+between repeats of one build. The matched preset ran in a quieter spell
+(median 34%, ranges of 8-22%). Twenty runs were repeated because another game
+process overlapped them; none stayed overlapped. The ratios agree across
+scenarios and both presets, so the direction and rough size hold; the
+individual figures need a rerun on an idle machine. The results file is local
+(`build_win/bench-results/baseline.json`, ignored by Git) and is not needed
+later: before and after are always measured together.
+
+**Not done yet:** the browser build (the frame log compiles there but no
+runner drives it), a paced mode for frame-time consistency at a fixed rate,
+hand-played routes (a scenario takes one as `route_file`), and Linux. Stock's
+repeats of the fight scenarios do not always draw identical frames (a few
+draw batches differ on some ticks); the report says so where it happens.
+
+**Shared hooks for later merges:** [hitchlog.c](port/src/hitchlog.c) (inherited)
+gains one call to `portBenchFrame` after it takes its counters; keep it there
+if upstream changes that function, and keep `stock.py`'s anchor text in step
+(`test_bench.py` checks both). `port_console_env.h` lists the three new
+`GE_BENCH*` names. No upstream file changes otherwise.
+
+**Sources:** [port_bench.c](port/src/port_bench.c),
+[bench.py](scripts/port/bench/bench.py) (runner),
+[bench_plan.py](scripts/port/bench/bench_plan.py) (settings, environment,
+routes, host checks), [bench_metrics.py](scripts/port/bench/bench_metrics.py)
+(numbers), [bench_report.py](scripts/port/bench/bench_report.py) (Markdown),
+[stock.py](scripts/port/bench/stock.py),
+[scenarios.json](scripts/port/bench/scenarios.json),
+[the guide](scripts/port/benchmarks.md) and `AGENTS.md`'s repo-local guidance.
+
+**Checks:** `python scripts/port/test_bench.py` (32 tests: metrics, run planning,
+route generation, host checks, report, stock patching, and that the fork's
+hook and the inventory's baseline match what `stock.py` uses) passed. The
+Windows build passed and the frame log was exercised by every run above: a
+1,500-tick Dam run replayed twice gave identical draw counts on every tick; the
+four-player scenario did the same in both builds; mean draws per frame agreed
+to two decimals across all five repeats of every build and scenario. Stock
+1.0.2b built from the export with the three harness additions and ran every
+scenario. The Bright Builds checks and the settings placement check passed.
+Linux, Steam Deck and browser builds were not built or run for this change.
+
+**Input idioms:** no menu, prompt or setting was added; the suite is a
+development tool run from a shell.
+
 ### FORK-084 — Debug Position: the position readout as an in-game setting
 
 **Status:** Implemented on 2026-11-15 at the owner's request. Built for

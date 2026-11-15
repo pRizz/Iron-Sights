@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "defaults": {
+    "seed": 1,
+    "warmup_ticks": 300,
+    "ticks": 3600
+  },
+  "routes": {
+    "walk": {
+      "forward": 70,
+      "straight_ticks": 150,
+      "turn_ticks": 45,
+      "turn_degrees": [80, -50, 110, -140, 60, 170, -95, 35]
+    },
+    "fight": {
+      "forward": 70,
+      "straight_ticks": 150,
+      "turn_ticks": 45,
+      "turn_degrees": [80, -50, 110, -140, 60, 170, -95, 35],
+      "fire": { "from": 400, "every": 120, "hold": 30 }
+    }
+  },
+  "scenarios": {
+    "dam-walk": {
+      "about": "Dam, outdoors with a long view: walk and look around, unseen by the guards.",
+      "stage": "dam",
+      "cheats": "invuln,invis",
+      "route": "walk"
+    },
+    "streets-fight": {
+      "about": "Streets, a city block with long sight lines: walk, look around and fire in bursts.",
+      "stage": "streets",
+      "cheats": "invuln",
+      "route": "fight"
+    },
+    "depot-fight": {
+      "about": "Depot, yards and warehouses: walk, look around and fire in bursts, guards fighting back.",
+      "stage": "depot",
+      "cheats": "invuln",
+      "route": "fight"
+    },
+    "jungle-fight": {
+      "about": "Jungle, dense foliage and fog: walk, look around and fire in bursts, guards fighting back.",
+      "stage": "jungle",
+      "cheats": "invuln",
+      "route": "fight"
+    },
+    "cradle-fight": {
+      "about": "Cradle, the open antenna platform, the heaviest mission to draw: walk, look around and fire.",
+      "stage": "cradle",
+      "cheats": "invuln",
+      "route": "fight"
+    },
+    "temple-4p": {
+      "about": "Temple, four-player split screen: player 1 walks, looks around and fires; the others stand at their spawns.",
+      "multiplayer": { "arena": "temple", "players": 4 },
+      "route": "fight"
+    }
+  },
+  "presets": {
+    "default": [],
+    "matched": [
+      "msaa=1",
+      "anisotropy=0",
+      "filter_2d=0",
+      "filtering=trilinear",
+      "shiny_weapons=0",
+      "glass_reflections=0",
+      "tone_mapping=0",
+      "baked_lighting=0"
+    ]
+  }
+}

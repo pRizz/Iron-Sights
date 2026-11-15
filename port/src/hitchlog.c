@@ -126,6 +126,11 @@ void portHitchFrame(unsigned long long interval_us, unsigned long long run_us,
         n[i] = __atomic_exchange_n(&sHitchCount[i], 0u, __ATOMIC_RELAXED);
         us[i] = __atomic_exchange_n(&sHitchUs[i], 0ull, __ATOMIC_RELAXED);
     }
+    { /* port_bench.c: GE_BENCH's per-frame log */
+        extern void portBenchFrame(unsigned long long, unsigned long long, unsigned long long, unsigned long long,
+                                   unsigned int, unsigned long long, const unsigned long long *);
+        portBenchFrame(interval_us, run_us, swap_us, lim_us, draws, simmax, us);
+    }
 
     /* In hardware-paced mode (tickhz=hw) the pacer deliberately sleeps to match
      * the N64's frame time, so only time spent beyond that counts as a hitch. */
