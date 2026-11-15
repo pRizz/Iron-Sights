@@ -1,7 +1,9 @@
 import { expect, test } from 'bun:test';
 import {
+    browserGraphicsDefaultMigration,
     browserLookDefault,
     browserMobileDefaults,
+    browserTouchGraphicsDefaults,
     mobileResolution,
     ensureBrowserSettings,
 } from './browser-settings';
@@ -123,7 +125,7 @@ test('mobile migration is remembered after flush and fresh settings still receiv
         expect(files.get(path)).toContain('mouse_auto_aim=0');
         expect(preferences.size).toBe(0);
         remember();
-        expect([...preferences.values()]).toEqual(['done']);
+        expect(preferences.get('midas-ads-mobile-resolution-v1')).toBe('done');
 
         files.set(path, legacy); // A later deliberate 960x540 selection is retained.
         ensureBrowserSettings(game, true)();
@@ -154,5 +156,70 @@ test('default insertion is idempotent and handles CRLF or missing display sectio
         const next = browserLookDefault(settings);
         expect(next).toContain('look_updown=1');
         expect(browserLookDefault(next)).toBe(next);
+    }
+});
+
+test('touch devices start with Tone Mapping and Baked Lighting off, keeping explicit choices', () => {
+    // Arrange / Act
+    const fresh = browserTouchGraphicsDefaults('[display]\nmaxfps=60\n');
+    const chosen = '[display]\ntone_mapping=1\nbaked_lighting=1\n';
+    // Assert
+    expect(fresh).toContain('tone_mapping=0\n');
+    expect(fresh).toContain('baked_lighting=0\n');
+    expect(browserTouchGraphicsDefaults(fresh)).toBe(fresh);
+    expect(browserTouchGraphicsDefaults(chosen)).toBe(chosen);
+});
+
+test('the first build saved Graphics off; the migration drops only that pair in display', () => {
+    // Arrange
+    const saved =
+        '[display]\r\nmaxfps=60\r\ntone_mapping=0\r\ngraphics_look=2\r\nbaked_lighting=0\r\n[input]\r\ntone_mapping=0\r\n';
+    // Act
+    const next = browserGraphicsDefaultMigration(saved);
+    // Assert
+    expect(next).toBe('[display]\r\nmaxfps=60\r\ngraphics_look=2\r\n[input]\r\ntone_mapping=0\r\n');
+    for (const kept of [
+        '[display]\ntone_mapping=1\nbaked_lighting=0\n',
+        '[display]\ntone_mapping=0\nbaked_lighting=1\n',
+        '[display]\nmaxfps=60\n',
+    ])
+        expect(browserGraphicsDefaultMigration(kept)).toBe(kept);
+});
+
+test('desktop browsers run the Graphics migration once, after the caller flushes', () => {
+    // Arrange
+    const path = '/user/midas.ini';
+    const files = new Map([[path, '[display]\ntone_mapping=0\nbaked_lighting=0\n']]);
+    const preferences = new Map<string, string>();
+    const previous = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', {
+        configurable: true,
+        value: {
+            getItem: (key: string) => preferences.get(key),
+            setItem: (key: string, value: string) => preferences.set(key, value),
+        },
+    });
+    const game = {
+        FS: {
+            mkdirTree() {},
+            analyzePath: (name: string) => ({ exists: files.has(name) }),
+            readFile: (name: string) => new TextEncoder().encode(files.get(name)),
+            writeFile: (name: string, value: string) => files.set(name, value),
+        },
+    } as unknown as GameModule;
+    try {
+        // Act
+        const remember = ensureBrowserSettings(game);
+        // Assert
+        expect(files.get(path)).not.toContain('tone_mapping');
+        expect(files.get(path)).not.toContain('baked_lighting');
+        remember();
+        expect(preferences.get('midas-graphics-default-v1')).toBe('done');
+        files.set(path, '[display]\ntone_mapping=0\nbaked_lighting=0\n'); // a later choice
+        ensureBrowserSettings(game)();
+        expect(files.get(path)).toContain('tone_mapping=0\nbaked_lighting=0\n');
+    } finally {
+        if (previous) Object.defineProperty(globalThis, 'localStorage', previous);
+        else Reflect.deleteProperty(globalThis, 'localStorage');
     }
 });

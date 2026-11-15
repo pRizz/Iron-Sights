@@ -221,7 +221,11 @@ static const struct PortOptHelp sHelp[] = {
     { "@page_is_hud",       "Crosshair size, weapon strip, sprint indicator, health and mission alerts, touch controls opacity." },
     { "@page_is_enemies",   "Reinforcements and Headshots Only, both also on the mission's difficulty page." },
     { "@page_is_system",    "Build info, fonts, reflections, fog and crash reports." },
+#ifdef __EMSCRIPTEN__ /* FORK-082: no HDR Output in the browser, which keeps F11 */
+    { "@page_is_graphics",  "Tone mapping and baked lighting. F8 compares; Home/End, PgUp/PgDn tune sliders in play." },
+#else
     { "@page_is_graphics",  "Tone mapping, HDR and baked lighting. F11 compares; Home/End, PgUp/PgDn tune sliders in play." },
+#endif
     { "@page_is_fonts",     "Get or remove the community Enhanced fonts." },
     { "@page_is_hdtex",     "Get or remove intermissionfb's GoldenEye 007 HD textures." },
     { "@page_is_customtex", "How to add texture packs of your own, and how many textures were found." },

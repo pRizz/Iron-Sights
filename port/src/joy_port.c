@@ -226,7 +226,11 @@ static const struct {
     [PORTACT_STATE_MENU]      = { "suspend_points", "F6", 1 },
     [PORTACT_QUICKSAVE]       = { "quicksave", "F5", 1 },
     [PORTACT_QUICKLOAD]       = { "quickload", "F9", 1 },
+#ifdef __EMSCRIPTEN__ /* no suspend points in the browser: F8 is Graphics Compare's there */
+    [PORTACT_UNDO_LOAD]       = { "undo_load", "", 1 },
+#else
     [PORTACT_UNDO_LOAD]       = { "undo_load", "F8", 1 },
+#endif
     /* The arrow keys are free on the shipped layout (look_* ship unbound), and
      * nothing outside the watch takes these presses. */
     [PORTACT_WATCH_UP]         = { "watch_up",         "Up",       1 },
@@ -241,13 +245,18 @@ static const struct {
     [PORTACT_LEAN_RIGHT]       = { "lean_right",       "C",        0 },
     /* Shift already holds Walk / Sprint; the controller layouts bind the left stick click */
     [PORTACT_SPRINT_TOGGLE]    = { "sprint_toggle",    "",         1 },
-    /* F2-F4, F7 and F11 are free on the shipped layout (the browser keeps F2
-     * and F11 for itself, where HDR Output does not exist anyway) */
+    /* F2-F4, F7 and F11 are free on the shipped layout. The browser keeps F2
+     * (the launcher's Controls; HDR Output does not exist there) and F11 (its
+     * fullscreen), so Compare takes F8 there, free without suspend points. */
     [PORTACT_TOGGLE_TONE_MAPPING]       = { "toggle_tone_mapping",       "F3",  1 },
     [PORTACT_TOGGLE_BAKED_LIGHTING]     = { "toggle_baked_lighting",     "F4",  1 },
     [PORTACT_TOGGLE_HDR_OUTPUT]         = { "toggle_hdr_output",         "F2",  1 },
     [PORTACT_TOGGLE_GRAPHICS_VIEWMODEL] = { "toggle_graphics_viewmodel", "F7",  1 },
+#ifdef __EMSCRIPTEN__
+    [PORTACT_GRAPHICS_COMPARE]          = { "graphics_compare",          "F8",  1 },
+#else
     [PORTACT_GRAPHICS_COMPARE]          = { "graphics_compare",          "F11", 1 },
+#endif
     /* every Graphics slider in play: Home / End pick it, Page Up / Page Down
      * step it (those four only act in the console otherwise) */
     [PORTACT_GRAPHICS_SLIDER_NEXT]      = { "graphics_slider_next",      "Home",     1 },
@@ -798,6 +807,19 @@ static void joyPortDrop(s32 pad, s32 act)
 }
 
 /* ---- game side ------------------------------------------------------------ */
+/* FORK-082: the Graphics hotkeys (anywhere, menus included), the HDR report
+ * and Baked Lighting's frame slice; every frame from portStateInput, and in
+ * the browser (no suspend points) from port/web/state.c's portStateFrame */
+void portGraphicsFrame(void)
+{
+    s32 x;
+    for (x = 0; x < PORT_GFX_KEY_COUNT; x++) {
+        if (portJoyPortTake(0, PORTACT_TOGGLE_TONE_MAPPING + x)) portGraphicsHotkey(x);
+    }
+    portGraphicsTick();
+    portBakeTick();
+}
+
 void portStateInput(void)
 {
     static s32 stickHeld;
@@ -811,11 +833,7 @@ void portStateInput(void)
     if (portJoyPortTake(0, PORTACT_QUICKSAVE)) portStateRequest(4, 0);
     if (portJoyPortTake(0, PORTACT_QUICKLOAD)) portStateRequest(4, 1);
     if (portJoyPortTake(0, PORTACT_UNDO_LOAD)) portStateRequest(5, 1);
-    for (x = 0; x < PORT_GFX_KEY_COUNT; x++) { /* FORK-082: anywhere, menus included */
-        if (portJoyPortTake(0, PORTACT_TOGGLE_TONE_MAPPING + x)) portGraphicsHotkey(x);
-    }
-    portGraphicsTick();
-    portBakeTick();
+    portGraphicsFrame(); /* FORK-082 */
     if (!portStatePaused()) { stickHeld=0; return; }
     pressed=joyGetButtonsPressedThisFrame(0,ANY_BUTTON);
     x=joyGetStickX(0); y=joyGetStickY(0);

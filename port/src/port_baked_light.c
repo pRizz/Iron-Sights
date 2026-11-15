@@ -244,8 +244,11 @@ void portBakedLightingChanged(void) {
     s_dirty = 1;
 }
 
+extern s32 portWeaponExportEnabled(void);
+
 void portBakeTick(void) {
-    if (s_lvl.nverts == 0) return;
+    /* not for the weapon icon export's stage: it captures stock pixels */
+    if (s_lvl.nverts == 0 || portWeaponExportEnabled()) return;
     if (s_dirty && portBakedLightingOn() && !s_started) start_bake();
     if (s_started && !s_ready && portBakeTraceStep(4000)) {
         s_ready = 1;

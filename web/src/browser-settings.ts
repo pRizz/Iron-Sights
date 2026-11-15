@@ -2,6 +2,7 @@ import type { GameModule } from './runtime-types';
 import { containSize } from './presentation';
 
 const MOBILE_RESOLUTION_KEY = 'midas-ads-mobile-resolution-v1';
+const GRAPHICS_DEFAULT_KEY = 'midas-graphics-default-v1';
 
 const DEFAULT_SETTINGS =
     '[display]\nfullscreen=windowed\nwindow_width=960\nwindow_height=540\n' +
@@ -23,6 +24,31 @@ function displayDefault(settings: string, key: string, value: number): string {
 
 export function browserLookDefault(settings: string): string {
     return displayDefault(settings, 'look_updown', 1);
+}
+
+// FORK-082: Graphics is on by default. Touch devices (phones and tablets, which
+// render at their full pixel density) start with Tone Mapping and Baked Lighting
+// off until they are checked on a phone; both stay on the Graphics page.
+export function browserTouchGraphicsDefaults(settings: string): string {
+    return displayDefault(displayDefault(settings, 'tone_mapping', 0), 'baked_lighting', 0);
+}
+
+// The browser build first shipped Graphics off (2026-11-15) and saved
+// tone_mapping=0 and baked_lighting=0 with every other setting. Desktop
+// browsers drop that pair once so the new default applies; a choice made
+// after this migration is kept.
+export function browserGraphicsDefaultMigration(settings: string): string {
+    return settings.replace(
+        /(^[ \t]*\[display\][ \t]*\r?$)([\s\S]*?)(?=^[ \t]*\[|(?![\s\S]))/im,
+        (original, header: string, body: string) => {
+            const off = (key: string) => new RegExp(`^[ \t]*${key}[ \t]*=[ \t]*0[ \t]*\r?$`, 'im');
+            if (!off('tone_mapping').test(body) || !off('baked_lighting').test(body))
+                return original;
+            return (
+                header + body.replace(/^[ \t]*(tone_mapping|baked_lighting)[ \t]*=[^\n]*\n?/gim, '')
+            );
+        },
+    );
 }
 
 export function mobileResolution(width: number, height: number, dpr: number) {
@@ -71,6 +97,13 @@ export function ensureBrowserSettings(game: GameModule, touch = false): () => vo
     const exists = game.FS.analyzePath(path).exists;
     const original = exists ? new TextDecoder().decode(game.FS.readFile(path)) : DEFAULT_SETTINGS;
     let next = browserLookDefault(original);
+    let migrateGraphics = false;
+    try {
+        migrateGraphics = exists && localStorage.getItem(GRAPHICS_DEFAULT_KEY) !== 'done';
+    } catch {
+        /* Without browser preferences the saved settings stay as they are. */
+    }
+    if (!touch && migrateGraphics) next = browserGraphicsDefaultMigration(next);
     if (touch) {
         let migrated = false;
         try {
@@ -85,9 +118,15 @@ export function ensureBrowserSettings(game: GameModule, touch = false): () => vo
             devicePixelRatio,
         );
         next = browserMobileDefaults(next, size, !exists || !migrated);
+        next = browserTouchGraphicsDefaults(next);
     }
     if (!exists || next !== original) game.FS.writeFile(path, next);
     return () => {
+        try {
+            localStorage.setItem(GRAPHICS_DEFAULT_KEY, 'done');
+        } catch {
+            /* The migration only removes the first build's saved defaults. */
+        }
         if (!touch) return;
         try {
             localStorage.setItem(MOBILE_RESOLUTION_KEY, 'done');

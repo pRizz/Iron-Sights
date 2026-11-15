@@ -581,7 +581,7 @@ static const struct PortBindDef sBindsAllExtra[] = {
     { "Noclip Down\n",       "noclip_down",    "noclip_down" },    /* held; Crouch Hold also falls */
     { "Lean Left\n",         "lean_left",      "lean_left" },      /* FORK-073: held; keyboard default Z */
     { "Lean Right\n",        "lean_right",     "lean_right" },     /* held; keyboard default C */
-    /* FORK-082: the Graphics toggles; keyboard F3, F4, F2, F7, F11 */
+    /* FORK-082: the Graphics toggles; keyboard F3, F4, F2, F7, F11 (F8 in the browser) */
     { "Tone Mapping\n",      "toggle_tone_mapping",       "toggle_tone_mapping" },
     { "Baked Lighting\n",    "toggle_baked_lighting",     "toggle_baked_lighting" },
     { "HDR Output\n",        "toggle_hdr_output",         "toggle_hdr_output" },

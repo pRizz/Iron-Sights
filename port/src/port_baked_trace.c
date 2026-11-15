@@ -329,7 +329,10 @@ int portBakeTraceStep(unsigned budget_us) {
         const Uint64 freq = SDL_GetPerformanceFrequency(), t0 = SDL_GetPerformanceCounter();
         while (run_chunk() && (SDL_GetPerformanceCounter() - t0) * 1000000u / freq < budget_us) {
         }
-        return (uint32_t) SDL_AtomicGet(&s_done) >= s_lvl->nverts;
+        if ((uint32_t) SDL_AtomicGet(&s_done) < s_lvl->nverts) return 0;
+        /* sliced (the browser build): the time is wall time, frames included */
+        s_ms = (unsigned) ((SDL_GetPerformanceCounter() - s_t0) * 1000u / freq);
+        return 1;
     }
     if (done && s_nthreads > 0) {
         join_workers();

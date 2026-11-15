@@ -23,11 +23,12 @@
 #include <ultra64.h>
 #include "port_graphics_render.h"
 
-/* On by default on Windows and Linux, with the Vibrant Look (2026-11-15, the
- * owner's choice); off in the browser and on the Xbox, where they are not yet
- * tested. Capture runs (GE_WINDOW) start with them off too:
- * portGraphicsCaptureDefaults. */
-#if defined(__EMSCRIPTEN__) || defined(GE_XBOX)
+/* On by default on Windows, Linux and in the browser, with the Vibrant Look
+ * (2026-11-15, the owner's choice); off on the Xbox, where they are not yet
+ * tested. The browser's launcher starts touch devices with them off
+ * (web/src/browser-settings.ts). Capture runs (GE_WINDOW) start with them off
+ * too: portGraphicsCaptureDefaults. */
+#if defined(GE_XBOX)
 #define PORT_GRAPHICS_ON_DEFAULT 0
 #else
 #define PORT_GRAPHICS_ON_DEFAULT 1
@@ -91,8 +92,11 @@ s32 portGraphicsOptionGet(const char *key, s32 *value);
  * so their images stay comparable with stock; their own ini can still set them */
 void portGraphicsCaptureDefaults(void);
 s32 portGraphicsOptionSet(const char *key, s32 value);
-/* a hotkey press (joy_port.c portStateInput, every frame) */
+/* a hotkey press (joy_port.c portGraphicsFrame, every frame) */
 void portGraphicsHotkey(s32 which);
+/* joy_port.c: hotkeys, portGraphicsTick and portBakeTick, once per frame; from
+ * portStateInput natively and port/web/state.c's portStateFrame in the browser */
+void portGraphicsFrame(void);
 /* once per frame: reports HDR Output becoming unavailable */
 void portGraphicsTick(void);
 /* bondview2.c maybe_mp_interface, around the first-person guns: the grade tag

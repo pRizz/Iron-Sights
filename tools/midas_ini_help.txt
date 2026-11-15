@@ -750,6 +750,7 @@ Port actions (extra actions beyond the N64 pad)
   quicksave        | F5               | Replace the separate quicksave
   quickload        | F9               | Load the quicksave and resume gameplay
   undo_load        | F8               | Return to the state before the last load
+                   |                  | (unbound in the browser)
   noclip           | N                | Noclip on or off (needs allow_noclip=1)
   noclip_up        | Space            | Rise while noclip is on (held)
   noclip_down      |                  | Fall while noclip is on (held); so does
@@ -761,7 +762,8 @@ Port actions (extra actions beyond the N64 pad)
   toggle_hdr_output | F2              | HDR Output on / off (saved)
   toggle_graphics_viewmodel | F7      | Gun and Hands on / off (saved)
   graphics_compare | F11              | Split the view: left stock, right
-                   |                  | tone mapped (not saved)
+                   |                  | tone mapped (not saved); F8 in the
+                   |                  | browser, which keeps F11
   graphics_slider_next | Home         | Pick the next Graphics slider to
                    |                  | change in play (message shows it)
   graphics_slider_prev | End          | Pick the previous Graphics slider

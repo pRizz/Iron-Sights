@@ -263,9 +263,13 @@ s32 portGraphicsGradesViewmodel(void)
     return viewmodelOn;
 }
 
+/* The weapon icon export (FORK-019: the browser's first-launch icon stage, or
+ * the native icon helper) captures stock pixels: no grade, no probe, no bake. */
+extern s32 portWeaponExportEnabled(void);
+
 Gfx *portGraphicsGradeTag(Gfx *gdl)
 {
-    if (g_PortGraphicsRender.tone_mapping) {
+    if (g_PortGraphicsRender.tone_mapping && !portWeaponExportEnabled()) {
         gDPNoOpTag(gdl++, 0x66000000u);
     }
     return gdl;
@@ -280,7 +284,7 @@ static u32 probeByte(f32 v)
 Gfx *portGraphicsViewmodelTag(Gfx *gdl)
 {
     f32 rgb[3];
-    if (!viewmodelOn || !bakedOn) {
+    if (!viewmodelOn || !bakedOn || portWeaponExportEnabled()) {
         return gdl;
     }
     portBakeViewmodelProbe(rgb);

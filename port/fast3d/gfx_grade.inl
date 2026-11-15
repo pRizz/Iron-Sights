@@ -242,7 +242,8 @@ static bool gl_grade_target(GLuint* tex, GLuint* fbo, uint32_t w, uint32_t h, GL
         glGenTextures(1, tex);
     }
     glBindTexture(GL_TEXTURE_2D, *tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, fmt, w, h, 0, GL_RGBA, fmt == GL_RGBA16F ? GL_HALF_FLOAT : GL_UNSIGNED_BYTE, NULL);
+    const GLenum layout = fmt == GL_RGB8 ? GL_RGB : GL_RGBA; /* ES takes only matching combinations */
+    glTexImage2D(GL_TEXTURE_2D, 0, fmt, w, h, 0, layout, fmt == GL_RGBA16F ? GL_HALF_FLOAT : GL_UNSIGNED_BYTE, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -253,7 +254,9 @@ static bool gl_grade_target(GLuint* tex, GLuint* fbo, uint32_t w, uint32_t h, GL
     return glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
 }
 
-/* the scene copy (the bound target's size, float while it is float) and Glow's half-size buffer */
+/* the scene copy (the bound target's size and format: RGB8, or RGBA16F while
+ * HDR Output runs - GLES and WebGL resolve MSAA only between identical formats)
+ * and Glow's half-size buffer */
 static bool gl_grade_buffers(uint32_t w, uint32_t h, GLenum fmt) {
     if (w == 0 || h == 0) return false;
     if (gl_grade_copy_fbo != 0 && w == gl_grade_w && h == gl_grade_h && fmt == gl_grade_fmt) return true;
@@ -359,7 +362,7 @@ static void gfx_opengl_grade(const struct GfxGradeParams* p) {
     /* the player's view, clipped to the target */
     GLint x0 = std::max(viewport[0], 0), y0 = std::max(viewport[1], 0);
     GLint x1 = std::min(viewport[0] + viewport[2], (GLint)fb.width), y1 = std::min(viewport[1] + viewport[3], (GLint)fb.height);
-    const bool ok = x1 > x0 && y1 > y0 && gl_grade_program() && gl_grade_buffers(fb.width, fb.height, hdr ? GL_RGBA16F : GL_RGBA8);
+    const bool ok = x1 > x0 && y1 > y0 && gl_grade_program() && gl_grade_buffers(fb.width, fb.height, hdr ? GL_RGBA16F : GL_RGB8);
     if (ok) {
         glDisable(GL_SCISSOR_TEST);
         glDisable(GL_BLEND);

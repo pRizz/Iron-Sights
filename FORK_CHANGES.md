@@ -248,8 +248,11 @@ both menus. No input is left unsupported.
 - **Committed and pushed:** to `main` on 2026-11-15 as `08af4e2`, after
   rebasing onto FORK-080 and FORK-081; first drafted as FORK-080 and
   renumbered when those two landed.
-- **Not yet seen running:** Linux, Steam Deck (CI builds and packages them) and
-  the browser.
+- **Browser (2026-11-15, at the owner's request):** ported, on by default in
+  desktop browsers, and checked with private real-ROM captures in headless
+  Chrome on this machine's GPU. See **Browser** below.
+- **Not yet seen running:** Linux and Steam Deck (CI builds and packages
+  them), Safari, Firefox and phones.
 - **HDR Output** was not seen on an HDR display: this machine's monitor
   reports Windows HDR off.
 
@@ -260,12 +263,17 @@ use the N64's directional lights. There was no grading, no HDR path and no
 light baking.
 
 **Defaults (2026-11-15, the owner's choice):**
-- **On by default:** the Windows and Linux builds start with Tone Mapping and
-  Baked Lighting on and the Vibrant Look (its values are the slider defaults
-  and the fresh midas.ini's), Gun and Hands on, HDR Output off.
+- **On by default:** the Windows, Linux and browser builds start with Tone
+  Mapping and Baked Lighting on and the Vibrant Look (its values are the
+  slider defaults and the fresh midas.ini's), Gun and Hands on, HDR Output
+  off.
 - **HDR Output stays opt-in:** it only runs while Windows HDR is on, and its
   presenter has not yet been seen on an HDR display.
-- **Browser and Xbox builds:** both stay off there, untested.
+- **Touch devices in the browser** start with Tone Mapping and Baked
+  Lighting off (`browserTouchGraphicsDefaults`): phones and tablets render at
+  their full pixel density on weaker GPUs, and no phone has been measured.
+  Both rows stay on the Graphics page.
+- **Xbox:** both stay off, untested.
 - **Capture runs:** every run with `GE_WINDOW` set (audits, the review gallery,
   weapon icon export) starts with both off (`portGraphicsCaptureDefaults`,
   called by `videoLoadConfig` before the ini is read), so captures stay
@@ -278,7 +286,7 @@ folder (`PORT_SHEET_IS_GRAPHICS`, `GE_MENU=zgraphics`) and the watch
 (`PORTWATCH_IS_GRAPHICS`, appended after the System pages so earlier watch
 page numbers stay put; the Control tab's `GE_WATCHPAGE` numbers move up by one). All keys are `[display]`:
 
-- **Tone Mapping** (`tone_mapping`, default 1 on Windows and Linux) with seven sliders (all
+- **Tone Mapping** (`tone_mapping`, default 1 on Windows, Linux and desktop browsers) with seven sliders (all
   0-100% unless noted; 2026-11-15 after the owner found the first version
   darker than stock and asked for more pop and control):
   - **Brightness** (`tone_brightness`, 50-200%, default 150, the Vibrant value; 100 = stock): an exposure gain.
@@ -409,7 +417,7 @@ page numbers stay put; the Control tab's `GE_WATCHPAGE` numbers move up by one).
   - **Fallback:** with Windows HDR off, or if the presenter fails, GL keeps
     presenting and a console message says why. `GE_HDR_FORCE=1` runs the
     presenter on an SDR monitor for audits.
-- **Baked Lighting** (`baked_lighting`, default 1 on Windows and Linux; **Lighting Strength**
+- **Baked Lighting** (`baked_lighting`, default 1 on Windows, Linux and desktop browsers; **Lighting Strength**
   `baked_lighting_strength`, 25-200%, default 100):
   - **Capture:** `load_bg_file` already loads every room once at stage start
     (`bgRoomCalcBB`). `portBakeCaptureRoom` copies each room's vertices
@@ -456,7 +464,7 @@ page numbers stay put; the Control tab's `GE_WATCHPAGE` numbers move up by one).
 | `toggle_baked_lighting` | F4 |
 | `toggle_hdr_output` | F2 |
 | `toggle_graphics_viewmodel` | F7 |
-| `graphics_compare` | F11 |
+| `graphics_compare` | F11 (F8 in the browser) |
 | `graphics_slider_next` / `graphics_slider_prev` | Home / End |
 | `graphics_slider_up` / `graphics_slider_down` | Page Up / Page Down |
 | `graphics_look_next` | Insert |
@@ -493,6 +501,10 @@ depth and the native render setup are unchanged, and with the features off
   - a fix: `resolve_msaa_color_buffer` rebinds the current target's fbo; it
     used to bind its index, which only worked while that was 0.
 - `gfx_sdl2.cpp`: skips `SDL_GL_SwapWindow` while DXGI presents.
+- `port/web/state.c`: the browser's `portStateFrame` calls
+  `portGraphicsFrame` (hotkeys and Baked Lighting's slice).
+- `web/src/browser-settings.ts`: touch defaults and the one-time desktop
+  migration (browser build only).
 - `CMakeLists.txt`: the `ge_hdr_dxgi` object library, built without the
   game's include directories, which collide with the Windows SDK headers.
 - `front.c`, `port_watchpages.c/.h`, `port_options.c`, `joy_port.c`,
@@ -528,6 +540,9 @@ aid, and every setting they flip is a menu row touch can reach.
 - [capture audit](scripts/port/audit_graphics.ps1): isolated copy, `-Set`
   ini overrides, `-Auto` presses, `-Visible` / `-ScreenAt` desktop grabs for
   HDR.
+- [browser capture audit](web/tools/graphics-audit.mjs) (`bun run
+  audit:graphics`): one Chrome profile, per-case midas.ini and stage, canvas
+  captures, bake time, GL timings and the F3 / F8 keys.
 
 **Checks (2026-11-14):**
 - **Passed:** Windows build; `test_ads.sh`, `test_states.sh`,
@@ -571,8 +586,72 @@ aid, and every setting they flip is a menu row touch can reach.
   - **Steam Deck input:** the Deck has no keyboard, so the hotkeys need
     Steam Input to map buttons to their keys (or pad binds in Controls); the
     menu rows work with the controller.
-- **Not done:** HDR on a real HDR display; Graphics running on Linux and in
+- **Browser (2026-11-15):** see **Browser** below.
+- **Not done:** HDR on a real HDR display; Graphics running on Linux; Safari,
+  Firefox and phones.
+
+**Browser (2026-11-15, at the owner's request to bring Graphics to the web
+build).** The first browser build compiled the Graphics code with it off by
+default and never ran it; bringing it up found four gaps:
+- **No per-frame work:** the hotkeys, `portGraphicsTick` and Baked Lighting's
+  slice ran from `portStateInput`, which only the native suspend-point frame
+  (`portStateFrame`) calls; the browser's `port/web/state.c` stubs that
+  frame out. The three now live in `portGraphicsFrame` (`joy_port.c`), called
+  from `portStateInput` natively and from the browser's `portStateFrame`, so
+  in the browser the bake never started and no hotkey worked before.
+- **Black grade under MSAA:** the grade copied the target into an RGBA8
+  texture. Desktop GL converts the RGB8 MSAA buffer while resolving; GLES and
+  WebGL resolve only between identical formats (`GL_INVALID_OPERATION`, a
+  black scene). The copy now takes the target's format: RGB8, or RGBA16F
+  under HDR Output.
+- **Bake time:** the browser has no threads, so the bake runs in 4 ms slices
+  per frame: 4.1 s wall on Surface (14,697 vertices), 6.2-7.0 s on Dam
+  (21,722) and 7.1 s on Facility (25,493), finished before control in every
+  capture. The `bake:` line's time is wall time in this mode (it read 0 ms
+  before).
+- **Keys:** the browser keeps F11 (fullscreen) and F2 (the launcher's
+  Controls), so Compare defaults to F8 there; `undo_load`, F8 natively, is
+  unbound in the browser, which has no suspend points. The other hotkeys
+  work as on Windows. The Graphics page help names F8 in the browser.
+- **Weapon icons:** the first-launch icon stage (FORK-019) renders guns in
+  Dam and reads them back. Its pixels are drawn after the grade, so they were
+  never graded, but the grade, the viewmodel probe and the bake all ran
+  during it. While the export runs (`portWeaponExportEnabled`, also the
+  native icon helper) no grade or probe tag is sent and the bake does not
+  start.
+- **Defaults and migration:** `PORT_GRAPHICS_ON_DEFAULT` is now 1 in the
+  browser. The launcher (`web/src/browser-settings.ts`) starts touch devices
+  with both off. Browsers that ran the first build saved `tone_mapping=0` and
+  `baked_lighting=0` with every other setting; on desktop the launcher drops
+  that pair once (`browserGraphicsDefaultMigration`, remembered in
+  `localStorage` as `midas-graphics-default-v1` after the save flush), so the
+  new default applies. A later choice is kept. HDR Output does not exist in
   the browser.
+- **Captures** (`bun run audit:graphics <rom> <out> [origin] [cases]`,
+  `web/tools/graphics-audit.mjs`; private, not committed): one Chrome profile
+  prepares the weapon icons, then each case reloads the cartridge into Dam,
+  Surface or Facility with its own midas.ini at 1280x960 with 2x MSAA.
+  Results with `MIDAS_ANGLE=d3d11` (ANGLE on the RTX 3070):
+  - Vibrant, Noir and the build's defaults render graded with Auto Exposure
+    (Surface's snow keeps its texture), the bake finishing before control;
+  - F3 saved `tone_mapping=0` and `=1` and showed its message; F8 showed the
+    split; no WebGL or page errors in any case;
+  - the game's GL submit time per frame rose by about 0.5-2 ms with Vibrant
+    (Dam 6.6 to 8.4 ms, Surface 11.5 to 11.9 ms at a matching point); frame
+    rates, 30-44 fps in headless Chrome with or without Graphics, are
+    throttled by the capture itself and say nothing about play;
+  - the audit holds each key for 150 ms: the game samples held keys once a
+    frame, and Playwright's instant press was missed.
+- **Checks:** web typecheck and the 265 web unit tests (three new ones for
+  the touch defaults and the migration); `test_ads.sh` (the icon-export tag
+  case), `test_states.sh` (`portGraphicsFrame`), `test_baked_trace.sh`,
+  `test_hud.sh` and `test_wardrobe.sh` in the `goldeneye` image; the Windows
+  build; the settings placement check; the review gallery, regenerated with
+  the isolated worktree executable (0 of 108 image cells changed, the
+  manifest's source fingerprint updated).
+- **Not done:** Safari, Firefox, phones and tablets (the reason touch starts
+  with both off); the WEB-006 block in `scripts/port/web_target_progress.md`
+  records the browser evidence and next action.
 
 ### FORK-081 — Reinforcements: more clones and a reinforcement director
 

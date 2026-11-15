@@ -29,6 +29,7 @@ void osSyncPrintf(const char *fmt,...) { va_list args;va_start(args,fmt);vfprint
 static void press(s32 action) { sLatchPoll[0][action]=1;sLatchN[0][action]=1;sLatchCount[0][action]=now; }
 int main(void)
 {
+    s32 x;
     press(PORTACT_STATE_MENU);portStateInput();assert(paused && opens==1);
     stickY=85;buttons=U_JPAD;portStateInput();assert(keyCount==1 && lastKey==1);
     buttons=0;portStateInput();assert(keyCount==1); /* held stick cannot repeat an accept/navigation edge */
@@ -45,5 +46,7 @@ int main(void)
     press(PORTACT_GRAPHICS_COMPARE);portStateInput();assert(gfxKeys[4]==1 && gfxTicks>0);
     press(PORTACT_GRAPHICS_SLIDER_DOWN);portStateInput();assert(gfxKeys[8]==1);
     press(PORTACT_GRAPHICS_LOOK_NEXT);portStateInput();assert(gfxKeys[9]==1);
+    x=gfxTicks;press(PORTACT_TOGGLE_BAKED_LIGHTING);portGraphicsFrame(); /* the browser's per-frame entry */
+    assert(gfxKeys[1]==1 && gfxTicks==x+1);
     puts("Suspend input routing tests passed.");return 0;
 }

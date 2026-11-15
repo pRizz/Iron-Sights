@@ -657,6 +657,37 @@ WEB-006 compatibility and mission/effect coverage.
 
 ## WEB-006 | 2026-10-24 | Browser compatibility and polish
 
+**Graphics in the browser (FORK-082), 2026-11-15:** Tone Mapping, the Looks,
+Auto Exposure and Baked Lighting now run in the browser, on by default in
+desktop browsers and off by default on touch devices (no phone measured).
+Bringing them up fixed four gaps that the first build, compiled with them off,
+hid:
+- the Graphics hotkeys and the bake's frame slice never ran, because the
+  browser's `portStateFrame` stub skipped the native suspend-point frame they
+  lived in; they now run from `portGraphicsFrame`;
+- under the default 2x MSAA the grade's copy failed with
+  `GL_INVALID_OPERATION` (WebGL resolves only between identical formats), so
+  the scene went black;
+- F11 belongs to the browser, so Compare defaults to F8 there;
+- browsers that ran the first build saved both settings off, and desktop
+  browsers drop that pair once.
+The bake runs in 4 ms slices (4-7 s per level).
+
+Evidence: private real-ROM captures, `bun run audit:graphics <rom> <out>
+[origin] [cases]`, in headless Chrome on ANGLE D3D11 (RTX 3070):
+- Vibrant, Noir and the build's defaults rendered graded on Dam, Surface and
+  Facility, with the bake finished before control;
+- F3 saved and F8 split the view;
+- there were no WebGL or page errors;
+- GL submit time rose by about 0.5-2 ms per frame at 1280x960.
+
+Also passing: web typecheck, the 265 web tests, and the native settings,
+state, ADS, trace, HUD and wardrobe tests.
+
+Next action: measure Graphics on a phone (GPU time at full pixel density, the
+bake's slices on a slower CPU) before turning it on for touch, and check
+Safari and Firefox.
+
 **Weapon strip icons in the browser, 2026-11-07:** The first launch with a
 cartridge now prepares the weapon strip icons inside the game before the
 title (FORK-019's in-process icon stage), as a seventh startup step, Preparing

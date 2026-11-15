@@ -6,6 +6,8 @@
 #include "../../port/src/port_graphics_looks.c"
 
 static s32 bakeChanges;
+static s32 iconExport;
+s32 portWeaponExportEnabled(void) { return iconExport; }
 static f32 bakeProbe[3] = { 1.0f, 1.0f, 1.0f };
 void portBakedLightingChanged(void) { bakeChanges++; }
 const char *portBakeStatusText(void) { return NULL; }
@@ -222,6 +224,9 @@ static void testGraphicsTags(void)
     bakeProbe[2] = 2.5f; /* clamps at 255 = 1.99x */
     end = portGraphicsViewmodelTag(list);
     assert(end == list + 1 && list[0].words.w1 == 0x674080FFu);
+    iconExport = 1; /* the weapon icon export captures stock pixels */
+    assert(portGraphicsViewmodelTag(list) == list && portGraphicsGradeTag(list) == list);
+    iconExport = 0;
     assert(portJoyPortOptionSet("graphics_viewmodel", 0));
     assert(portGraphicsViewmodelTag(list) == list);
 
