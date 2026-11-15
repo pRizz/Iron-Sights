@@ -510,7 +510,10 @@ depth and the native render setup are unchanged, and with the features off
   `portBakeLevelUnload` in `cleanup_rooms`.
 - `bondview2.c`: the grade and viewmodel tags around
   `gunRenderFirstPersonGunModels`, and the grade tag in the cutscene branch.
-- `gfx_pc.cpp`: decodes 0x66 / 0x67 and scales the viewmodel's vertex shade.
+- `gfx_pc.cpp`: decodes 0x66 / 0x67 and scales the viewmodel's vertex shade;
+  before grading it applies the game's pending viewport and scissor
+  (`gfx_sync_viewport_scissor`, extracted from the per-draw state code), so
+  the grade covers the player's view whatever GL was left on.
 - `gfx_opengl.cpp`:
   - the float colour format, `framebuffers[0]` swap and HDR sync;
   - the grade entry in `gfx_opengl_api` and `gfx_rendering_api.h`;
@@ -605,6 +608,27 @@ aid, and every setting they flip is a menu row touch can reach.
 - **Browser (2026-11-15):** see **Browser** below.
 - **Not done:** HDR on a real HDR display; Graphics running on Linux; Safari,
   Firefox and phones.
+
+**Fix: the Dam ending darkened all but a square (2026-11-15, reported by the
+owner).**
+- **Symptom:** during Dam's bungee fall and outro, at 1920x1080, the whole
+  view lost the grade (read as darker under Vibrant) except one square near
+  the bottom left.
+- **Cause:** the grade took the player's view from GL's current viewport.
+  Richer Reflections' level cube (FORK-066, `gfx_envcube.inl`) renders its
+  six 128x128 faces in a 3x2 atlas mid-frame. It marks the game's viewport
+  to be re-applied by the next draw but leaves GL on its last cell (256, 128,
+  128x128). In play the gun and hands draw before the grade and restore it;
+  the Dam outro hides the weapons, so nothing drew in between and only that
+  cell was graded. It happens wherever the cube renders and no draw follows
+  before the grade.
+- **Evidence:** a temporary log in an isolated outro capture (spawned in the
+  bungee room, reflections on, 1920x1080, 60 and 120 Hz) showed the grade
+  receiving viewport 256 128 128 128 of 1920 x 1080 on every logged outro
+  frame, the reported square's position; in normal play it never happened.
+  With the fix, the same run logged no small viewport.
+- **Fix:** the 0x66 handler applies the game's pending viewport and scissor
+  before grading.
 
 **Browser (2026-11-15, at the owner's request to bring Graphics to the web
 build).** The first browser build compiled the Graphics code with it off by

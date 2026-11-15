@@ -975,6 +975,23 @@ static void gfx_unit_luminance(const float in[3], float out[3]) {
     for (int k = 0; k < 3; k++) out[k] = l > 1e-5f ? in[k] / l : 1.0f;
 }
 
+/* Apply the game's viewport and scissor to GL if they changed (or a pass
+ * between draws, such as the reflections' level cube, invalidated them) */
+static void gfx_sync_viewport_scissor(void) {
+    if (!rdp.viewport_or_scissor_changed) return;
+    if (memcmp(&rdp.viewport, &rendering_state.viewport, sizeof(rdp.viewport)) != 0) {
+        gfx_flush();
+        gfx_rapi->set_viewport(rdp.viewport.x, rdp.viewport.y, rdp.viewport.width, rdp.viewport.height);
+        rendering_state.viewport = rdp.viewport;
+    }
+    if (memcmp(&rdp.scissor, &rendering_state.scissor, sizeof(rdp.scissor)) != 0) {
+        gfx_flush();
+        gfx_rapi->set_scissor(rdp.scissor.x, rdp.scissor.y, rdp.scissor.width, rdp.scissor.height);
+        rendering_state.scissor = rdp.scissor;
+    }
+    rdp.viewport_or_scissor_changed = false;
+}
+
 /* FORK-082: Tone Mapping at G_NOOP 0x66, from the Graphics page's sliders.
  * Contrast maps 50-200% to a power of 0.75-1.5 around mid grey. */
 static void gfx_grade_now(void) {
@@ -4372,19 +4389,7 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx, bo
         }
 ndcprobe_done:;
     }
-    if (rdp.viewport_or_scissor_changed) {
-        if (memcmp(&rdp.viewport, &rendering_state.viewport, sizeof(rdp.viewport)) != 0) {
-            gfx_flush();
-            gfx_rapi->set_viewport(rdp.viewport.x, rdp.viewport.y, rdp.viewport.width, rdp.viewport.height);
-            rendering_state.viewport = rdp.viewport;
-        }
-        if (memcmp(&rdp.scissor, &rendering_state.scissor, sizeof(rdp.scissor)) != 0) {
-            gfx_flush();
-            gfx_rapi->set_scissor(rdp.scissor.x, rdp.scissor.y, rdp.scissor.width, rdp.scissor.height);
-            rendering_state.scissor = rdp.scissor;
-        }
-        rdp.viewport_or_scissor_changed = false;
-    }
+    gfx_sync_viewport_scissor();
     static float ge_dec_pull = -1.0f;
     if (ge_dec_pull < 0.0f) {
         const char* e = getenv("GE_DEC_PULL");
@@ -8322,6 +8327,11 @@ static void gfx_run_dl(Gfx* cmd) {
                     /* FORK-082: Tone Mapping regrades the view drawn so far (port_graphics.c) */
                     gfx_flush();
                     gfx_dxlu_draw(); /* the deferred translucent draws belong to the scene */
+                    /* the grade takes the player's view from GL's viewport: the
+                     * reflections' level cube (gfx_envcube.inl) leaves it on its
+                     * last 128x128 cell, and with no gun drawn after it (the Dam
+                     * outro hides the weapons) only that square was graded */
+                    gfx_sync_viewport_scissor();
                     gfx_grade_now();
                 } else if ((cmd->words.w1 >> 24) == 0x67u) {
                     /* FORK-082: Baked Lighting's viewmodel probe, 128 = 1.0 (port_graphics.c) */
