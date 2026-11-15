@@ -3877,7 +3877,11 @@ regenerated gallery has zero changed image cells.
 Archives and Frigate). The owner play-tested the Windows build and approved it
 (2026-11-05); the browser target was not built or tested with it. The closer
 look's PARTS tab (2026-11-08) is built and captured in the Windows build with
-scripted hits on Dam; it has not been play-tested yet.
+scripted hits on Dam; it has not been play-tested yet. The closer look's gun
+filter (2026-11-14) is built and captured with scripted hits in the Windows
+build; the owner play-tested it, asked for more padding in the list, and
+approved the padded version (2026-11-14). The browser target was not built or
+tested with it.
 
 Adds default-on **Gameplay > Iron Sights > Combat Feedback > Debrief Hit Map**
 (`[display] debrief_hit_map=1`) to the Options folder and the watch. Upstream's
@@ -3999,6 +4003,58 @@ chose the separate PARTS view, combined sides, the gun and hat rows and the
 damage shares from mock-ups (2026-11-08) over a table squeezed beside the
 figures.
 
+**Gun filter.** A row under the closer look's title and tabs reads **GUN:**,
+a drop-down box and, at its right, **Shots fired: N** and **Accuracy: N%** for
+the guns shown. The box opens a list of **All guns** and each gun the player
+fired or hit with, by its weapon-of-choice name, most hits first (ties: more
+shots, then item order), each with its hits on characters in brackets and its
+accuracy at the right, e.g. **KF7 Soviet (86) 40%**. Picking a gun filters
+both views: FIGURES draws only its dots, shades the parts by its hits alone
+(its busiest part is full strength) and counts only its dots in the legend and
+Hits shown; PARTS counts only its hits, kill shots and damage. Not recorded,
+Gun hits and Hat hits then come from that gun's counters. The overview on the
+statistics page always shows every gun. The debrief's init returns the filter
+to All guns with the list shut; closing and reopening the closer look keeps
+it, as it keeps the tab. The list is drawn like the Options sheet's drop-down
+(opaque paper with a dark edge, the shown entry on a light band, the entry
+under the cursor in white on a dark band) without its CRT animation. Lines are 14 pixels tall with the text 3 below
+their top and 6 in from each side, so brackets and descenders clear the
+highlight bands (the owner asked for more padding after play-testing the first
+11-pixel lines, 2026-11-14); the box matches. A list longer than the 10 lines
+that fit above the page's foot shows 9 entries and a **More guns (page n of
+m)** line that turns the page, wrapping to the first.
+The owner chose the drop-down over chips, hit counts in brackets, sorting by
+hits and per-gun accuracy from mock-ups (2026-11-14); the accuracy sits on the
+row rather than in the tally, so both views show it without crowding PARTS'
+summary column.
+
+The bracketed hits, shots and accuracy come from the debrief's own counters
+kept per gun: `inc_curplayer_hitcount_with_weapon` (`gunfire.c`) already
+receives the weapon but upstream only adds to shared totals, so the fork's
+hook copies each counted bump into a per-gun tally (`portHitMapShotRegister`,
+solo only, inside the same `WEAPONSTATBITFLAG_PLAYER_STAT_HIT` gate). The
+brackets count head, body, limb, gun and hat hits, so All guns matches the
+debrief's head, body, limb and Others total. Accuracy is the shots that hit
+anything the debrief counts (a character or a destructible object, as the
+debrief's own Accuracy counts) over shots fired, rounded to the nearest
+percent; a gun with no shots shows `-`. A shot's hits are resolved straight
+after it is counted (`chraiDefaultWeaponFireHandler` calls `chrHandleBulletHit`
+and `objHit` before returning), so a hit scores the latest shot when that shot
+was the same gun's and has not scored yet. A shotgun's five pellets therefore
+score one shot, and a bullet through a guard into a crate scores once. The
+debrief's own Accuracy divides every hit, pellets included, by shots fired, so
+it can pass 100% with a shotgun; the closer look's All guns accuracy never
+does and is lower than the debrief's whenever a shot hit more than once. Each
+recorded hit also keeps its gun (`PortHitMapHit.weapon`) for the figures and
+PARTS.
+
+The row and list are pointed at with the menu cursor and confirmed, like the
+tabs: mouse click, gamepad A/Start/Z, the keyboard's bound confirm, or a touch
+tap. While the list is open it takes every press: a confirm on an entry picks
+it, on the More line turns the page, and anywhere else (or B, a right-click)
+shuts the list without closing the closer look; the tabs and CLOSE lose their
+hover highlight meanwhile. No input is left unsupported.
+
 **Input.** Every input points at the bottom area with the menu cursor and
 confirms there, as it does for the tabs: mouse click, gamepad A/Start/Z, the
 keyboard's bound confirm, or a touch tap. While the closer look is open, a
@@ -4018,7 +4074,8 @@ table and visibly skewed near-vertical limbs. The first version's shape 7 was a
 filled rounded box (`portHudBox`); the ellipse replaced it.
 
 **Upstream hooks:** one call each in `chrHandleBulletHit` (`chr.c`),
-`init_player_BONDdata_stats` (`initBondDATA.c`), the existing fork block of
+`init_player_BONDdata_stats` (`initBondDATA.c`),
+`inc_curplayer_hitcount_with_weapon` (`gunfire.c`, the gun filter's tally), the existing fork block of
 `handles_shot_actors` (`chraction.c`), and the debrief's init, interface and
 constructor (`front.c`), all under `#ifndef TARGET_N64`. The constructor also
 reports seven value rows through `PORT_HITMAP_TEXT`, which is empty on N64. Its
@@ -4029,7 +4086,7 @@ closer look returns before the statistics.
 
 **Audit:** `scripts/port/audit_hitmap.ps1` runs an isolated copy on a solo stage
 with invulnerability.
-`GE_HITMAP_PROBE=<hits>[,zoom][,parts][,live][,best=<s>][,cheat][,cap=<n>]` fires bullets
+`GE_HITMAP_PROBE=<hits>[,zoom][,parts][,live][,best=<s>][,cheat][,cap=<n>][,guns][,gun=<n>][,list]` fires bullets
 through the game's own `chrTestHit` and `chrHandleBulletHit` at random points
 inside on-screen characters' body boxes, at the point where Bond's own shots
 resolve (after `chraiCheckUseHeldItems`, `lv.c`). It then aborts as the watch
@@ -4038,7 +4095,11 @@ closer look if asked (`-Parts` on its PARTS tab), captures a frame and exits. `-
 cursor; `-Off` turns the setting off. `-Difficulty`, `-Best` (a RAM-only best
 time) and `-Cheat` (the New Cheat notice) bring up the debrief's longest rows.
 `-Cap n` records at most n hits (`portHitMapLimitSet`, harness only), so the
-rest show as Not recorded without needing 1024 targets. `GE_HITMAP_LOG=1`
+rest show as Not recorded without needing 1024 targets. `-Guns` fires with the
+KF7, silenced PP7, D5K and Cougar Magnum (half, 30%, 15% and 5% of the hits),
+the first three also firing extra shots that miss, so the gun filter lists
+four guns with different accuracies; `-Gun n` picks the list's nth entry (0 is
+All guns) and `-List` opens it for the capture. `GE_HITMAP_LOG=1`
 prints the figure boxes,
 each hit, its damage and kill, and the game's own front test (the melee bearing from
 `get_distance_actor_to_position`). Captures stay in the ignored
@@ -4046,9 +4107,9 @@ each hit, its damage and kill, and the game's own front test (the melee bearing 
 
 **Sources:** [header](port/include/port_hitmap.h), [core](port/src/port_hitmap.c),
 [recorder](port/src/port_hitmap_game.c), [debrief](port/src/port_hitmap_draw.c),
-[Parts view](port/src/port_hitmap_parts.c), [drawing header](port/src/port_hitmap_draw.h),
+[Parts view](port/src/port_hitmap_parts.c), [gun filter](port/src/port_hitmap_guns.c), [drawing header](port/src/port_hitmap_draw.h),
 [probe](port/src/port_hitmap_probe.c), hooks in [chr.c](src/game/chr.c),
-[chraction.c](src/game/chraction.c), [initBondDATA.c](src/game/initBondDATA.c),
+[chraction.c](src/game/chraction.c), [initBondDATA.c](src/game/initBondDATA.c), [gunfire.c](src/game/gunfire.c),
 [lv.c](src/game/lv.c) and [front.c](src/game/front.c); the ellipse shape in
 [gfx_pc.cpp](port/fast3d/gfx_pc.cpp), [gbiex_compat.h](port/fast3d/gbiex_compat.h)
 and [port_hud.c](port/src/port_hud.c); option bridge in
@@ -4066,7 +4127,20 @@ following the posed box, and corner and side hits landing on the oval. They
 also cover the Parts view's core: left and right parts sharing a row, damage
 and overkill in health units (an ordinary hit, a kill shot, damage past the
 health, no damage, no health and the clamp), per-row and total counts that
-skip non-body boxes, and a placed hit starting without damage. The
+skip non-body boxes, and a placed hit starting without damage. For the gun
+filter they cover stats filtered by gun, the per-gun tally (a shotgun shot
+whose pellets hit three times scoring one shot, two hands' shots each
+scoring, an object hit scoring, another gun's hit never scoring the latest
+shot, bad guns and registers ignored, all-gun totals, accuracy rounding and a
+gun never fired) and the list's order (hits, then shots; unused guns left out;
+a short list keeping the top entries). Gun filter audit captures on Dam at
+960x720 (`-Guns -Zoom -List`, `-Guns -Zoom -Gun 1`, `-Guns -Parts -Gun 2`)
+show the list sorted by hits with brackets and accuracy, the KF7 alone on
+FIGURES (its hits in the brackets matching Hits shown) and the silenced PP7
+alone on PARTS. Those captures set the filter through the probe; picking with
+real input, and the More guns page line, have not been exercised yet. The
+regenerated hand gallery again changed no image cells, only its source
+fingerprint, and verifies. The
 settings placement check, HUD and hit sound tests and the standards checks pass.
 `test_ads.c` includes `joy_port.c`, which now calls the hit map's option hooks,
 so it stubs `portHitMapOptionGet`/`Set` beside its video and input stubs; without

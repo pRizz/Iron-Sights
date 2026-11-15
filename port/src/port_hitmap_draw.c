@@ -45,9 +45,9 @@ extern s32 viGetY(void);
 #define COUNTS_TOP   0xF4
 #define COUNTS_SCALE 0.8f
 /* The closer look, below the stage name (ZOOM_TOP), with its FIGURES and
- * PARTS tabs between the title and CLOSE. */
-#define ZOOM_FIG_Y 170.0f
-#define ZOOM_FIG_H 140.0f
+ * PARTS tabs between the title and CLOSE, and the gun filter's row under them. */
+#define ZOOM_FIG_Y 185.0f
+#define ZOOM_FIG_H 131.0f
 #define ZOOM_FRONT_X 70.0f
 #define ZOOM_BACK_X 190.0f
 #define ZOOM_FIG_W 110.0f
@@ -84,7 +84,9 @@ void portHitMapPartsSet(s32 parts) { hitmapParts = parts != 0; }
 void portHitMapZoomSet(s32 zoomed)
 {
     hitmapZoomed = zoomed != 0;
-    if (!hitmapZoomed) hitmapParts = FALSE;
+    if (hitmapZoomed) return;
+    hitmapParts = FALSE;
+    portHitMapGunsReset();
 }
 
 static s32 hitmapHasFigure(void)
@@ -94,7 +96,7 @@ static s32 hitmapHasFigure(void)
 
 s32 portHitMapDebriefDrawn(void) { return hitmapHasFigure(); }
 
-static s32 hitmapCursorIn(f32 x, f32 y, f32 w, f32 h)
+s32 portHitMapCursorIn(f32 x, f32 y, f32 w, f32 h)
 {
     return cursor_h_pos >= x && cursor_h_pos <= x + w && cursor_v_pos >= y && cursor_v_pos <= y + h;
 }
@@ -227,13 +229,13 @@ static s32 hitmapOverviewHover(void)
     const f32 left = f->x - 3;
 
     return f->figureH > 0.0f
-        && (hitmapCursorIn(COUNTS_X - 3, hitmapStripTop(), OVERVIEW_RIGHT + 3 - (COUNTS_X - 3), OVERVIEW_FOOT + 3 - hitmapStripTop())
-            || hitmapCursorIn(left, hitmapColumnTop(f), hitmapGroupRight(f) + 3 - left, hitmapStripTop() - hitmapColumnTop(f)));
+        && (portHitMapCursorIn(COUNTS_X - 3, hitmapStripTop(), OVERVIEW_RIGHT + 3 - (COUNTS_X - 3), OVERVIEW_FOOT + 3 - hitmapStripTop())
+            || portHitMapCursorIn(left, hitmapColumnTop(f), hitmapGroupRight(f) + 3 - left, hitmapStripTop() - hitmapColumnTop(f)));
 }
 
 static s32 hitmapCloseHover(void)
 {
-    return hitmapCursorIn(ZOOM_CLOSE_X - 4, ZOOM_TOP - 2, 50, 14);
+    return portHitMapCursorIn(ZOOM_CLOSE_X - 4, ZOOM_TOP - 2, 50, 14);
 }
 
 /* The closer look's view tabs: FIGURES (0) and PARTS (1). */
@@ -252,12 +254,12 @@ static s32 hitmapTabHover(void)
     s32 tab;
 
     for (tab = 0; tab < 2; tab++) {
-        if (hitmapCursorIn(hitmapTabX(tab) - 4, ZOOM_TOP - 2, hitmapTabWidth(tab) + 8, 14)) return tab;
+        if (portHitMapCursorIn(hitmapTabX(tab) - 4, ZOOM_TOP - 2, hitmapTabWidth(tab) + 8, 14)) return tab;
     }
     return -1;
 }
 
-static void hitmapSound(void)
+void portHitMapSound(void)
 {
     sndPlaySfx((struct ALBankAlt_s *)g_musicSfxBufferPtr, DOOR_METAL_CLOSE2_SFX, NULL);
 }
@@ -278,7 +280,12 @@ s32 portHitMapDebriefInput(s32 onTab, s32 *nextHighlight)
         *nextHighlight = FALSE;
         if (!joyGetButtonsPressedThisFrame(PLAYER_1, confirm)) return FALSE;
         hitmapZoomed = TRUE;
-        hitmapSound();
+        portHitMapSound();
+        return TRUE;
+    }
+    if (portHitMapGunsInput(joyGetButtonsPressedThisFrame(PLAYER_1, confirm) != 0,
+                            joyGetButtonsPressedThisFrame(PLAYER_1, B_BUTTON) != 0)) {
+        *nextHighlight = FALSE;
         return TRUE;
     }
     if (onTab) return FALSE;
@@ -288,7 +295,7 @@ s32 portHitMapDebriefInput(s32 onTab, s32 *nextHighlight)
 
         if (tab >= 0) {
             /* FIGURES or PARTS switches the view; confirming elsewhere closes. */
-            if (tab != hitmapParts) hitmapSound();
+            if (tab != hitmapParts) portHitMapSound();
             hitmapParts = tab;
             return TRUE;
         }
@@ -296,7 +303,7 @@ s32 portHitMapDebriefInput(s32 onTab, s32 *nextHighlight)
         return FALSE;
     }
     hitmapZoomed = FALSE;
-    hitmapSound();
+    portHitMapSound();
     return TRUE;
 }
 
@@ -345,8 +352,8 @@ static Gfx *hitmapKillRing(Gfx *g, f32 x, f32 y, f32 r)
 }
 
 /* Hits per part on one side, and the busiest part on either side, so the
- * front and back figures share one scale. */
-static s32 hitmapHeat(s32 back, s32 counts[PORT_HITMAP_MAX_BOXES])
+ * front and back figures share one scale; only the gun filter's hits. */
+static s32 hitmapHeat(s32 back, s32 gun, s32 counts[PORT_HITMAP_MAX_BOXES])
 {
     const PortHitMapHit *hits = portHitMapHits();
     const s32 n = portHitMapCount();
@@ -356,7 +363,7 @@ static s32 hitmapHeat(s32 back, s32 counts[PORT_HITMAP_MAX_BOXES])
     for (i = 0; i < n; i++) {
         s32 *c = &sides[(hits[i].flags & PORT_HITMAP_BACK) != 0][hits[i].box];
 
-        if (++*c > most) most = *c;
+        if (portHitMapGunMatch(&hits[i], gun) && ++*c > most) most = *c;
     }
     for (i = 0; i < PORT_HITMAP_MAX_BOXES; i++) counts[i] = sides[back != 0][i];
     return most;
@@ -369,11 +376,11 @@ static u32 hitmapHeatColor(s32 count, s32 most)
     return HEAT_RGB | (u32)(alpha * 255.0f + 0.5f);
 }
 
-/* One figure and the hits on its side: opaque paper under the parts (so the
- * CLASSIFIED stamp does not show through), parts shaded by hits, inked over,
- * then dots on a paper rim, kill shots last so their red ring stays on top.
- * Dots and strokes grow with the figure. */
-static Gfx *hitmapFigure(Gfx *g, s32 back, f32 x, f32 y, f32 w, f32 h)
+/* One figure and one gun's hits (or every gun's) on its side: opaque paper
+ * under the parts (so the CLASSIFIED stamp does not show through), parts
+ * shaded by hits, inked over, then dots on a paper rim, kill shots last so
+ * their red ring stays on top. Dots and strokes grow with the figure. */
+static Gfx *hitmapFigure(Gfx *g, s32 back, s32 gun, f32 x, f32 y, f32 w, f32 h)
 {
     const PortHitMapFigure *figure = portHitMapFigure();
     const PortHitMapHit *hits = portHitMapHits();
@@ -381,7 +388,7 @@ static Gfx *hitmapFigure(Gfx *g, s32 back, f32 x, f32 y, f32 w, f32 h)
     const s32 count = portHitMapCount();
     const f32 dot = 0.6f + 0.009f * view.height, stroke = 0.3f + 0.003f * view.height;
     s32 heat[PORT_HITMAP_MAX_BOXES];
-    const s32 most = hitmapHeat(back, heat);
+    const s32 most = hitmapHeat(back, gun, heat);
     s32 i, pass;
 
     for (i = 0; i < figure->count; i++) g = hitmapPart(g, &view, &figure->boxes[i], stroke, 0.0f, PAPER_BACK);
@@ -396,6 +403,7 @@ static Gfx *hitmapFigure(Gfx *g, s32 back, f32 x, f32 y, f32 w, f32 h)
         f32 fx, fy, sx, sy;
 
         if (((hit->flags & PORT_HITMAP_BACK) != 0) != (back != 0) || kill != pass) continue;
+        if (!portHitMapGunMatch(hit, gun)) continue;
         portHitMapHitPoint(figure, hit, &fx, &fy);
         sx = view.originX + view.scaleX * fx;
         sy = view.originY + view.scaleY * fy;
@@ -421,8 +429,8 @@ static Gfx *hitmapOverview(Gfx *g)
             g = microcode_constructor_related_to_menus(g, (s32)f.x - 3, column, (s32)hitmapGroupRight(&f) + 3, strip, HOVER_BOX);
         }
     }
-    g = hitmapFigure(g, FALSE, f.x, f.y, f.figureW, f.figureH);
-    g = hitmapFigure(g, TRUE, f.x + f.figureW + OVERVIEW_GAP, f.y, f.figureW, f.figureH);
+    g = hitmapFigure(g, FALSE, PORT_HITMAP_ALL_GUNS, f.x, f.y, f.figureW, f.figureH);
+    g = hitmapFigure(g, TRUE, PORT_HITMAP_ALL_GUNS, f.x + f.figureW + OVERVIEW_GAP, f.y, f.figureW, f.figureH);
     return portHitMapInk(g, caption, (s32)(f.x + groupW * 0.5f) - portHitMapInkWidth(caption, 0.5f) / 2,
                       (s32)(f.y + f.figureH) + 3, 0.5f, PAPER_TEXT);
 }
@@ -482,9 +490,9 @@ static Gfx *hitmapLegendDot(Gfx *g, s32 y, u32 color, s32 kill, const char *labe
     return portHitMapInk(g, line, ZOOM_LEGEND_X + 9, y, 0.55f, PAPER_TEXT);
 }
 
-/* The dots by legend entry: ink and gold (head) dots, which add up to the
- * hits shown, and kill shots, which are also one of those. */
-static void hitmapLegendCounts(s32 *ink, s32 *head, s32 *kill)
+/* The shown gun's dots by legend entry: ink and gold (head) dots, which add
+ * up to the hits shown, and kill shots, which are also one of those. */
+static void hitmapLegendCounts(s32 gun, s32 *ink, s32 *head, s32 *kill)
 {
     const PortHitMapFigure *figure = portHitMapFigure();
     const PortHitMapHit *hits = portHitMapHits();
@@ -493,6 +501,7 @@ static void hitmapLegendCounts(s32 *ink, s32 *head, s32 *kill)
 
     *ink = *head = *kill = 0;
     for (i = 0; i < count; i++) {
+        if (!portHitMapGunMatch(&hits[i], gun)) continue;
         if (figure->boxes[hits[i].box].part == HIT_HEAD) (*head)++;
         else (*ink)++;
         if ((hits[i].flags & PORT_HITMAP_KILL) != 0) (*kill)++;
@@ -517,9 +526,8 @@ static Gfx *hitmapLegendHeat(Gfx *g, s32 y)
  * body and limb hits without one. Fists and knives never count as debrief
  * hits (no WEAPONSTATBITFLAG_PLAYER_STAT_HIT), so those are bullet hits the
  * map could not record: past its cap, or a box it could not find. */
-static Gfx *hitmapTally(Gfx *g, s32 bodyHits)
+static Gfx *hitmapTally(Gfx *g, s32 shown, s32 bodyHits)
 {
-    const s32 shown = portHitMapCount();
     const s32 unshown = bodyHits > shown ? bodyHits - shown : 0;
     char line[48];
 
@@ -533,7 +541,7 @@ static Gfx *hitmapTally(Gfx *g, s32 bodyHits)
 /* FIGURES and PARTS, the shown one underlined in ink, with the tabs' hover highlight. */
 static Gfx *hitmapTabs(Gfx *g)
 {
-    const s32 hover = hitmapTabHover();
+    const s32 hover = portHitMapGunsOpen() ? -1 : hitmapTabHover();
     s32 tab;
 
     for (tab = 0; tab < 2; tab++) {
@@ -546,29 +554,37 @@ static Gfx *hitmapTabs(Gfx *g)
     return g;
 }
 
-static Gfx *hitmapZoom(Gfx *g, s32 bodyHits)
+/* The FIGURES view of the gun filter's hits. */
+static Gfx *hitmapZoomFigures(Gfx *g, s32 bodyHits)
 {
+    const s32 gun = portHitMapGunShown();
     s32 ink, head, kill;
 
-    g = portHitMapInk(g, "HIT MAP:", 0x37, ZOOM_TOP, 1.0f, PAPER_TEXT);
-    if (hitmapCloseHover()) {
-        g = microcode_constructor_related_to_menus(g, ZOOM_CLOSE_X - 4, ZOOM_TOP - 2, ZOOM_CLOSE_X + 46, ZOOM_TOP + 12, HOVER_BOX);
-    }
-    g = portHitMapInk(g, "CLOSE", ZOOM_CLOSE_X, ZOOM_TOP, 0.75f, PAPER_TEXT);
-    g = hitmapTabs(g);
-    if (hitmapParts) return portHitMapPartsDraw(g, bodyHits);
     g = portHitMapInk(g, "FRONT", (s32)(ZOOM_FRONT_X + ZOOM_FIG_W * 0.5f) - portHitMapInkWidth("FRONT", 0.6f) / 2,
                    (s32)ZOOM_FIG_Y - 12, 0.6f, PAPER_TEXT);
     g = portHitMapInk(g, "BACK", (s32)(ZOOM_BACK_X + ZOOM_FIG_W * 0.5f) - portHitMapInkWidth("BACK", 0.6f) / 2,
                    (s32)ZOOM_FIG_Y - 12, 0.6f, PAPER_TEXT);
-    g = hitmapFigure(g, FALSE, ZOOM_FRONT_X, ZOOM_FIG_Y, ZOOM_FIG_W, ZOOM_FIG_H);
-    g = hitmapFigure(g, TRUE, ZOOM_BACK_X, ZOOM_FIG_Y, ZOOM_FIG_W, ZOOM_FIG_H);
-    hitmapLegendCounts(&ink, &head, &kill);
+    g = hitmapFigure(g, FALSE, gun, ZOOM_FRONT_X, ZOOM_FIG_Y, ZOOM_FIG_W, ZOOM_FIG_H);
+    g = hitmapFigure(g, TRUE, gun, ZOOM_BACK_X, ZOOM_FIG_Y, ZOOM_FIG_W, ZOOM_FIG_H);
+    hitmapLegendCounts(gun, &ink, &head, &kill);
     g = hitmapLegendDot(g, 180, INK, FALSE, "Hit", ink);
     g = hitmapLegendDot(g, 194, DOT_HEAD, FALSE, "Head", head);
     g = hitmapLegendDot(g, 208, INK, TRUE, "Kill shot", kill);
     g = hitmapLegendHeat(g, 224);
-    return hitmapTally(g, bodyHits);
+    return hitmapTally(g, ink + head, portHitMapGunBodyHits(bodyHits));
+}
+
+static Gfx *hitmapZoom(Gfx *g, s32 bodyHits)
+{
+    g = portHitMapInk(g, "HIT MAP:", 0x37, ZOOM_TOP, 1.0f, PAPER_TEXT);
+    if (!portHitMapGunsOpen() && hitmapCloseHover()) {
+        g = microcode_constructor_related_to_menus(g, ZOOM_CLOSE_X - 4, ZOOM_TOP - 2, ZOOM_CLOSE_X + 46, ZOOM_TOP + 12, HOVER_BOX);
+    }
+    g = portHitMapInk(g, "CLOSE", ZOOM_CLOSE_X, ZOOM_TOP, 0.75f, PAPER_TEXT);
+    g = hitmapTabs(g);
+    g = portHitMapGunsRow(g);
+    g = hitmapParts ? portHitMapPartsDraw(g, bodyHits) : hitmapZoomFigures(g, bodyHits);
+    return portHitMapGunsList(g);
 }
 
 Gfx *portHitMapDebriefDraw(Gfx *gdl, s32 bodyHits)

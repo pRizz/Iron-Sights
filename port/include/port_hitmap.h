@@ -27,6 +27,7 @@ typedef struct PortHitMapHit {
      * the hit did no damage, as on a character already dying. */
     u16 damage;
     u16 overkill;
+    u8 weapon; /* the ITEM_IDS gun that fired it, for the closer look's gun filter */
 } PortHitMapHit;
 
 /* The Parts view's rows: left and right sides counted together. */
@@ -55,6 +56,23 @@ typedef struct PortHitMapStats {
     s32 hits, kills;
     u32 damage, overkill;
 } PortHitMapStats;
+
+/* The closer look's gun filter: every gun, or one ITEM_IDS gun. */
+#define PORT_HITMAP_ALL_GUNS (-1)
+
+/* One gun's share of the debrief's counters (SHOT_REGISTER_*), counted where
+ * the game counts them. hitShots is the shots that hit anything, so a
+ * shotgun's pellets count one shot, and accuracy never passes 100%. */
+typedef struct PortHitMapGunCounts {
+    s32 shots, hitShots;
+    s32 head, body, limb, gun, hat, object;
+} PortHitMapGunCounts;
+
+typedef struct PortHitMapGunTally {
+    PortHitMapGunCounts guns[ITEM_IDS_MAX];
+    s32 pullGun;    /* the latest shot's gun, or -1 */
+    s32 pullScored; /* that shot has already hit something */
+} PortHitMapGunTally;
 
 /* A body part's hit box, drawn as the ellipse inscribed in it. GE's unanimated
  * skeleton spreads every limb out sideways along its bone's local x, so
@@ -93,9 +111,26 @@ s32 portHitMapGroup(s32 part);
 /* A hit's damage from the victim's damage before and after it and its full
  * health, in PortHitMapHit units (each clamped to u16). */
 void portHitMapDamageUnits(f32 before, f32 after, f32 maxdamage, u16 *damage, u16 *overkill);
-/* Hits, kill shots and damage by Parts view row, and their totals. */
+/* Hits, kill shots and damage by Parts view row, and their totals, for one
+ * gun or PORT_HITMAP_ALL_GUNS. */
 void portHitMapStatsCompute(const PortHitMapFigure *figure, const PortHitMapHit *hits, s32 count,
-                            PortHitMapStats *stats);
+                            s32 gun, PortHitMapStats *stats);
+/* TRUE when the hit counts under the gun filter. */
+s32 portHitMapGunMatch(const PortHitMapHit *hit, s32 gun);
+void portHitMapGunTallyReset(PortHitMapGunTally *tally);
+/* One of the debrief's counter bumps (SHOT_REGISTER_*) for a gun. Hits are
+ * resolved straight after the shot that fired them, so a hit scores the
+ * latest shot if it is the same gun's and has not scored yet. */
+void portHitMapGunTallyAdd(PortHitMapGunTally *tally, s32 gun, s32 shotRegister);
+/* One gun's counts, or every gun's added up (PORT_HITMAP_ALL_GUNS). */
+PortHitMapGunCounts portHitMapGunTotals(const PortHitMapGunTally *tally, s32 gun);
+/* Hits on characters: head, body, limb, gun and hat, as the debrief counts them. */
+s32 portHitMapGunHits(const PortHitMapGunCounts *counts);
+/* Shots that hit, in whole percent of the shots fired; -1 with no shots. */
+s32 portHitMapGunAccuracy(const PortHitMapGunCounts *counts);
+/* The guns that fired or hit, most hits first, then most shots, then item
+ * order. Returns how many were written (at most max). */
+s32 portHitMapGunList(const PortHitMapGunTally *tally, s32 *guns, s32 max);
 void portHitMapPose(PortHitMapFigure *figure);
 /* Fit a posed figure in a screen rectangle; back views mirror it. */
 PortHitMapView portHitMapLayout(const PortHitMapFigure *figure, s32 back,
@@ -111,6 +146,9 @@ struct ShotData;
 struct BulletHit;
 void portHitMapBullet(struct ShotData *shot, struct BulletHit *bhit);
 void portHitMapDamage(struct ChrRecord *chr, f32 before);
+/* inc_curplayer_hitcount_with_weapon (gunfire.c): a counter the debrief keeps, by gun. */
+void portHitMapShotRegister(s32 gun, s32 shotRegister);
+const PortHitMapGunTally *portHitMapGuns(void);
 s32 portHitMapCount(void);
 /* Test harness only (GE_HITMAP_PROBE cap=<n>): record at most limit hits. */
 void portHitMapLimitSet(s32 limit);

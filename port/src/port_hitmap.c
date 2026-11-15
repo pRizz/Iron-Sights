@@ -85,6 +85,7 @@ PortHitMapHit portHitMapPlace(s32 boxIndex, const struct bbox *box, const coord3
     const f32 depth = (entry->z - middle) * HITMAP_FORWARD_Z;
 
     hit.box = (u8)boxIndex;
+    hit.weapon = 0;
     hit.damage = hit.overkill = 0;
     hit.u = hitmapUnit(entry->x, box->xmin, box->xmax);
     hit.v = hitmapUnit(entry->y, box->ymin, box->ymax);
@@ -139,8 +140,13 @@ void portHitMapDamageUnits(f32 before, f32 after, f32 maxdamage, u16 *damage, u1
     if (after > maxdamage) *overkill = hitmapHealthUnits(after - (before > maxdamage ? before : maxdamage), maxdamage);
 }
 
+s32 portHitMapGunMatch(const PortHitMapHit *hit, s32 gun)
+{
+    return gun == PORT_HITMAP_ALL_GUNS || hit->weapon == gun;
+}
+
 void portHitMapStatsCompute(const PortHitMapFigure *figure, const PortHitMapHit *hits, s32 count,
-                            PortHitMapStats *stats)
+                            s32 gun, PortHitMapStats *stats)
 {
     static const PortHitMapStats empty;
     s32 i;
@@ -151,7 +157,7 @@ void portHitMapStatsCompute(const PortHitMapFigure *figure, const PortHitMapHit 
         const s32 kill = (hits[i].flags & PORT_HITMAP_KILL) != 0;
         PortHitMapGroupStats *g;
 
-        if (group < 0) continue;
+        if (group < 0 || !portHitMapGunMatch(&hits[i], gun)) continue;
         g = &stats->groups[group];
         g->hits++;
         g->kills += kill;
@@ -161,6 +167,96 @@ void portHitMapStatsCompute(const PortHitMapFigure *figure, const PortHitMapHit 
         stats->damage += hits[i].damage;
         stats->overkill += hits[i].overkill;
     }
+}
+
+void portHitMapGunTallyReset(PortHitMapGunTally *tally)
+{
+    static const PortHitMapGunTally empty;
+
+    *tally = empty;
+    tally->pullGun = -1;
+}
+
+void portHitMapGunTallyAdd(PortHitMapGunTally *tally, s32 gun, s32 shotRegister)
+{
+    PortHitMapGunCounts *c;
+
+    if (gun < 0 || gun >= ITEM_IDS_MAX) return;
+    c = &tally->guns[gun];
+    switch (shotRegister) {
+    case SHOT_REGISTER_TOTAL:
+        c->shots++;
+        tally->pullGun = gun;
+        tally->pullScored = FALSE;
+        return;
+    case SHOT_REGISTER_HEAD: c->head++; break;
+    case SHOT_REGISTER_BODY: c->body++; break;
+    case SHOT_REGISTER_LIMB: c->limb++; break;
+    case SHOT_REGISTER_GUN: c->gun++; break;
+    case SHOT_REGISTER_HAT: c->hat++; break;
+    case SHOT_REGISTER_OBJECT: c->object++; break;
+    default: return;
+    }
+    if (tally->pullGun == gun && !tally->pullScored) {
+        c->hitShots++;
+        tally->pullScored = TRUE;
+    }
+}
+
+PortHitMapGunCounts portHitMapGunTotals(const PortHitMapGunTally *tally, s32 gun)
+{
+    PortHitMapGunCounts sum = { 0 };
+    s32 i;
+
+    if (gun != PORT_HITMAP_ALL_GUNS) return (gun >= 0 && gun < ITEM_IDS_MAX) ? tally->guns[gun] : sum;
+    for (i = 0; i < ITEM_IDS_MAX; i++) {
+        const PortHitMapGunCounts *c = &tally->guns[i];
+
+        sum.shots += c->shots; sum.hitShots += c->hitShots;
+        sum.head += c->head; sum.body += c->body; sum.limb += c->limb;
+        sum.gun += c->gun; sum.hat += c->hat; sum.object += c->object;
+    }
+    return sum;
+}
+
+s32 portHitMapGunHits(const PortHitMapGunCounts *counts)
+{
+    return counts->head + counts->body + counts->limb + counts->gun + counts->hat;
+}
+
+s32 portHitMapGunAccuracy(const PortHitMapGunCounts *counts)
+{
+    const s32 hit = counts->hitShots < counts->shots ? counts->hitShots : counts->shots;
+
+    if (counts->shots <= 0) return -1;
+    return (hit * 200 + counts->shots) / (counts->shots * 2);
+}
+
+/* Sorts before: more hits, then more shots, then the lower item. */
+static s32 hitmapGunBefore(const PortHitMapGunTally *tally, s32 a, s32 b)
+{
+    const s32 ha = portHitMapGunHits(&tally->guns[a]), hb = portHitMapGunHits(&tally->guns[b]);
+
+    if (ha != hb) return ha > hb;
+    if (tally->guns[a].shots != tally->guns[b].shots) return tally->guns[a].shots > tally->guns[b].shots;
+    return a < b;
+}
+
+s32 portHitMapGunList(const PortHitMapGunTally *tally, s32 *guns, s32 max)
+{
+    s32 gun, n = 0;
+
+    for (gun = 0; gun < ITEM_IDS_MAX; gun++) {
+        s32 at;
+
+        if (tally->guns[gun].shots <= 0 && portHitMapGunHits(&tally->guns[gun]) <= 0) continue;
+        for (at = n; at > 0 && hitmapGunBefore(tally, gun, guns[at - 1]); at--) {
+            if (at < max) guns[at] = guns[at - 1];
+        }
+        if (at < max) guns[at] = gun;
+        if (n < max) n++;
+    }
+    return n;
 }
 
 static s32 hitmapLeftPart(s32 part)

@@ -48,6 +48,7 @@
 #include "port_ads_accuracy.h"
 #include "port_gun_kick.h"
 #include "port_tracers.h"
+#include "port_hitmap.h"
 #include "port_reload_speed.h"
 #include "port_mission_clock.h"
 #include "boss.h"
@@ -7830,6 +7831,9 @@ void inc_curplayer_hitcount_with_weapon(ITEM_IDS item, SHOT_REGISTER shot_regist
 
     if (bondwalkItemCheckBitflags(item, WEAPONSTATBITFLAG_PLAYER_STAT_HIT)) {
         g_playerPerm->shot_count[shot_register] = g_playerPerm->shot_count[shot_register]+1;
+#ifndef TARGET_N64
+        portHitMapShotRegister(item, shot_register); /* FORK-048: the hit map's gun filter */
+#endif
     }
 }
 

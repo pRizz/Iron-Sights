@@ -18,6 +18,11 @@ param(
     [switch]$Cheat,
     # Record at most this many hits; the rest are the Not recorded line.
     [int]$Cap = 0,
+    # Fire with several guns, some shots missing; -Gun n picks the gun filter's nth entry
+    # (0 All guns) and -List opens its drop-down for the capture.
+    [switch]$Guns,
+    [int]$Gun = 0,
+    [switch]$List,
     [string]$Resolution = '960x720',
     # Fonts: 0 Original, 1 Enhanced (needs Data/FontPacks/gepd), 2 Iron Sights (FORK-051/052).
     [ValidateRange(0,2)][int]$FontStyle = 0
@@ -39,7 +44,7 @@ $auditEnv = @{ SDL_AUDIODRIVER='dummy';
     GE_IRONSIGHTS_FONTS='1';   # FORK-051: allows the hidden Iron Sights font when asked for
     GE_STAGE=$Stage; GE_STAGE_AFTER='1'; GE_SKIPINTRO='1'; GE_CHEATS='invuln';
     GE_DIFF=[string]$Difficulty;
-    GE_HITMAP_PROBE=(@([string]$Hits) + @(if ($Zoom) { 'zoom' }) + @(if ($Parts) { 'parts' }) + @(if ($Live) { 'live' }) + @(if ($Best) { "best=$Best" }) + @(if ($Cheat) { 'cheat' }) + @(if ($Cap) { "cap=$Cap" })) -join ','; GE_HITMAP_LOG='1';
+    GE_HITMAP_PROBE=(@([string]$Hits) + @(if ($Zoom) { 'zoom' }) + @(if ($Parts) { 'parts' }) + @(if ($Live) { 'live' }) + @(if ($Best) { "best=$Best" }) + @(if ($Cheat) { 'cheat' }) + @(if ($Cap) { "cap=$Cap" }) + @(if ($Guns) { 'guns' }) + @(if ($Gun) { "gun=$Gun" }) + @(if ($List) { 'list' })) -join ','; GE_HITMAP_LOG='1';
     # The probe exits after its capture; this only bounds a run that never gets there.
     GE_FRAMES='12000'
 }

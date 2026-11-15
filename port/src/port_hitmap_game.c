@@ -22,6 +22,7 @@ static PortHitMapHit hitmapHits[PORT_HITMAP_MAX_HITS];
 static s32 hitmapCount;
 static s32 hitmapLimit = PORT_HITMAP_MAX_HITS;
 static PortHitMapFigure hitmapFigure;
+static PortHitMapGunTally hitmapGuns; /* the debrief's counters by gun, for the gun filter */
 /* The latest recorded hit. handles_shot_actors applies its damage straight
  * after, and portHitMapDamage then records that damage and marks the hit if
  * it was lethal. */
@@ -53,7 +54,15 @@ void portHitMapReset(void)
     hitmapCount = 0;
     hitmapFigure.count = 0;
     hitmapPendingChr = NULL;
+    portHitMapGunTallyReset(&hitmapGuns);
 }
+
+void portHitMapShotRegister(s32 gun, s32 shotRegister)
+{
+    if (getPlayerCount() == 1) portHitMapGunTallyAdd(&hitmapGuns, gun, shotRegister);
+}
+
+const PortHitMapGunTally *portHitMapGuns(void) { return &hitmapGuns; }
 
 s32 portHitMapCount(void) { return hitmapCount; }
 
@@ -204,6 +213,7 @@ void portHitMapBullet(struct ShotData *shot, struct BulletHit *bhit)
     if (box < 0 || mtx == NULL || !portHitMapRayToLocal(mtx, &shot->viewOrigin, &shot->viewDir, &origin, &dir)) return;
     if (!portHitMapBoxEntry(&record->Bounds, &origin, &dir, &entry)) hitmapNearestEntry(&record->Bounds, &origin, &dir, &entry);
     hitmapHits[hitmapCount] = portHitMapPlace(box, &record->Bounds, &entry, &dir);
+    hitmapHits[hitmapCount].weapon = (shot->weapon >= 0 && shot->weapon < ITEM_IDS_MAX) ? (u8)shot->weapon : 0;
     if (hitmapLog > 0) {
         /* The game's own front test (melee damage): a point back along the
          * shot, from the character's facing; near 0 or 360 degrees is ahead. */
@@ -212,8 +222,8 @@ void portHitMapBullet(struct ShotData *shot, struct BulletHit *bhit)
         toward.x = bhit->prop->pos.x - shot->dir.x;
         toward.y = bhit->prop->pos.y - shot->dir.y;
         toward.z = bhit->prop->pos.z - shot->dir.z;
-        fprintf(stderr, "ge: hitmap hit=%d part=%d box=%d local=%.1f,%.1f,%.1f dir=%.2f,%.2f,%.2f back=%d bearing=%.0f act=%d\n",
-                hitmapCount, part, box, entry.x, entry.y, entry.z, dir.x, dir.y, dir.z,
+        fprintf(stderr, "ge: hitmap hit=%d gun=%d part=%d box=%d local=%.1f,%.1f,%.1f dir=%.2f,%.2f,%.2f back=%d bearing=%.0f act=%d\n",
+                hitmapCount, shot->weapon, part, box, entry.x, entry.y, entry.z, dir.x, dir.y, dir.z,
                 (hitmapHits[hitmapCount].flags & PORT_HITMAP_BACK) != 0,
                 get_distance_actor_to_position(chr, &toward) * 57.29578f, chr->actiontype);
     }

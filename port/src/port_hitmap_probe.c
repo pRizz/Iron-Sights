@@ -1,4 +1,4 @@
-/* GE_HITMAP_PROBE=<hits>[,zoom][,parts][,live][,best=<s>][,cheat][,cap=<n>] (test harness,
+/* GE_HITMAP_PROBE=<hits>[,zoom][,parts][,live][,best=<s>][,cheat][,cap=<n>][,guns][,gun=<n>][,list] (test harness,
  * FORK-048): in a solo stage,
  * fire <hits> player bullets through the game's own hit test (chrTestHit and
  * chrHandleBulletHit) at random points on on-screen characters' hit boxes,
@@ -12,7 +12,9 @@
  * this mission and difficulty in the RAM save (never the campaign file) and
  * `cheat` raises the New Cheat notice, so the debrief prints its longest rows.
  * `cap` records at most n hits, so the rest exercise the closer look's Not
- * recorded line without 1024 targets. */
+ * recorded line without 1024 targets. `guns` fires with several guns, each
+ * missing some shots, so the closer look's gun filter has a list to show;
+ * `gun=<n>` picks its nth entry (0 is All guns) and `list` opens it. */
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,6 +34,7 @@
 #include "game/model.h"
 #include "game/mp_music.h"
 #include "port_hitmap.h"
+#include "port_hitmap_draw.h"
 
 #define PROBE_SPACING 4   /* ticks between shots */
 #define PROBE_SETTLE  240 /* ticks after the stage starts */
@@ -48,6 +51,9 @@ static s32 probeParts;
 static s32 probeLive;
 static s32 probeBest;
 static s32 probeCheat;
+static s32 probeGuns;
+static s32 probeGunPick;
+static s32 probeList;
 static s32 probeFired;
 static s32 probeTick;
 static s32 probeMenuTicks;
@@ -64,6 +70,9 @@ static void probeRead(void)
     probeBest = (e != NULL && strstr(e, "best=") != NULL) ? atoi(strstr(e, "best=") + 5) : 0;
     probeCheat = e != NULL && strstr(e, "cheat") != NULL;
     if (e != NULL && strstr(e, "cap=") != NULL) portHitMapLimitSet(atoi(strstr(e, "cap=") + 4));
+    probeGuns = e != NULL && strstr(e, "guns") != NULL;
+    probeGunPick = (e != NULL && strstr(e, "gun=") != NULL) ? atoi(strstr(e, "gun=") + 4) : 0;
+    probeList = e != NULL && strstr(e, "list") != NULL;
     probeTick = -PROBE_SETTLE;
 }
 
@@ -91,6 +100,21 @@ static ModelNode *probeBodyBox(Model *model)
     return pick;
 }
 
+/* The probe's gun: the KF7 alone, or with `guns` a mix, most shots from the
+ * KF7; a gun that misses more fires extra shots that hit nothing first. */
+static ITEM_IDS probeGun(void)
+{
+    static const ITEM_IDS guns[4] = { ITEM_AK47, ITEM_WPPKSIL, ITEM_MP5K, ITEM_RUGER };
+    static const f32 share[4] = { 0.5f, 0.3f, 0.15f, 0.05f }, miss[4] = { 0.4f, 0.2f, 0.6f, 0.0f };
+    f32 pick = probeRandom();
+    s32 i;
+
+    if (!probeGuns) return ITEM_AK47;
+    for (i = 0; i < 3 && pick >= share[i]; i++) pick -= share[i];
+    while (probeRandom() < miss[i]) inc_curplayer_hitcount_with_weapon(guns[i], SHOT_REGISTER_TOTAL);
+    return guns[i];
+}
+
 /* One bullet from the camera through a random point inside a random box. */
 static s32 probeShoot(PropRecord *prop)
 {
@@ -113,7 +137,7 @@ static s32 probeShoot(PropRecord *prop)
     len = sqrtf(target.x * target.x + target.y * target.y + target.z * target.z);
     if (!(len > 0.0f)) return FALSE;
     memset(&shot, 0, sizeof(shot));
-    shot.weapon = ITEM_AK47;
+    shot.weapon = probeGun();
     shot.viewDir.x = target.x / len;
     shot.viewDir.y = target.y / len;
     shot.viewDir.z = target.z / len;
@@ -185,6 +209,7 @@ void portHitMapProbeMenu(s32 menu)
     probeMenuTicks++;
     if (probeMenuTicks == 30 && (probeZoom || probeParts)) portHitMapZoomSet(TRUE);
     if (probeMenuTicks == 30 && probeParts) portHitMapPartsSet(TRUE);
+    if (probeMenuTicks == 30 && (probeGunPick > 0 || probeList)) portHitMapGunsPick(probeGunPick, probeList);
     if (probeMenuTicks == 90) ge_shot_force = 1;
     if (probeMenuTicks == 100) {
         fprintf(stderr, "ge: hitmap probe captured the debrief\n");

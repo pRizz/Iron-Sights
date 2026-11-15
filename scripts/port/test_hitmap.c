@@ -1,4 +1,4 @@
-/* Debrief hit map core (FORK-048): placement, pose, layout and per-part stats without a ROM. */
+/* Debrief hit map core (FORK-048): placement, pose, layout, per-part stats and the gun filter without a ROM. */
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -259,7 +259,7 @@ static void testStatsCountByRow(void)
     hits[3].box = 3; hits[3].damage = 999; /* not a body part */
     hits[4].box = 9;                       /* past the figure */
     /* Act */
-    portHitMapStatsCompute(&f, hits, 5, &s);
+    portHitMapStatsCompute(&f, hits, 5, PORT_HITMAP_ALL_GUNS, &s);
     /* Assert: both shoulders count as upper arms; only body parts count. */
     assert(s.hits == 3 && s.kills == 1 && s.damage == 1500 && s.overkill == 400);
     assert(s.groups[PORT_HITMAP_GROUP_HEAD].hits == 1 && s.groups[PORT_HITMAP_GROUP_HEAD].kills == 1);
@@ -279,6 +279,112 @@ static void testPlaceStartsWithoutDamage(void)
     assert(hit.damage == 0 && hit.overkill == 0);
 }
 
+static void testStatsFilterByGun(void)
+{
+    /* Arrange: three chest hits, two from the KF7 (one a kill) and one from the PP7. */
+    PortHitMapFigure f = { 0 };
+    PortHitMapStats s;
+    PortHitMapHit hits[3] = { { 0 } };
+
+    f.count = 1;
+    f.boxes[0].part = HIT_CHEST;
+    hits[0].weapon = ITEM_AK47; hits[0].damage = 300;
+    hits[1].weapon = ITEM_AK47; hits[1].damage = 700; hits[1].flags = PORT_HITMAP_KILL;
+    hits[2].weapon = ITEM_WPPKSIL; hits[2].damage = 200;
+    /* Act / Assert: each gun counts only its own hits; all guns count every hit. */
+    portHitMapStatsCompute(&f, hits, 3, ITEM_AK47, &s);
+    assert(s.hits == 2 && s.kills == 1 && s.damage == 1000);
+    portHitMapStatsCompute(&f, hits, 3, ITEM_WPPKSIL, &s);
+    assert(s.hits == 1 && s.kills == 0 && s.damage == 200);
+    portHitMapStatsCompute(&f, hits, 3, ITEM_MP5K, &s);
+    assert(s.hits == 0);
+    portHitMapStatsCompute(&f, hits, 3, PORT_HITMAP_ALL_GUNS, &s);
+    assert(s.hits == 3 && portHitMapGunMatch(&hits[2], PORT_HITMAP_ALL_GUNS) && !portHitMapGunMatch(&hits[2], ITEM_AK47));
+}
+
+static void testTallyCountsShotsThatHit(void)
+{
+    /* Arrange */
+    static PortHitMapGunTally t;
+    PortHitMapGunCounts c;
+    s32 i;
+
+    portHitMapGunTallyReset(&t);
+    /* Act: a shotgun shot whose five pellets hit three times, then a miss. */
+    portHitMapGunTallyAdd(&t, ITEM_SHOTGUN, SHOT_REGISTER_TOTAL);
+    portHitMapGunTallyAdd(&t, ITEM_SHOTGUN, SHOT_REGISTER_BODY);
+    portHitMapGunTallyAdd(&t, ITEM_SHOTGUN, SHOT_REGISTER_LIMB);
+    portHitMapGunTallyAdd(&t, ITEM_SHOTGUN, SHOT_REGISTER_HEAD);
+    portHitMapGunTallyAdd(&t, ITEM_SHOTGUN, SHOT_REGISTER_TOTAL);
+    /* Two PP7s, one each hand: both hit, the right through a guard into a crate. */
+    portHitMapGunTallyAdd(&t, ITEM_WPPK, SHOT_REGISTER_TOTAL);
+    portHitMapGunTallyAdd(&t, ITEM_WPPK, SHOT_REGISTER_HAT);
+    portHitMapGunTallyAdd(&t, ITEM_WPPK, SHOT_REGISTER_TOTAL);
+    portHitMapGunTallyAdd(&t, ITEM_WPPK, SHOT_REGISTER_GUN);
+    portHitMapGunTallyAdd(&t, ITEM_WPPK, SHOT_REGISTER_OBJECT);
+    /* A hit credited to another gun never scores the latest shot; nor does a bad gun or register. */
+    portHitMapGunTallyAdd(&t, ITEM_AK47, SHOT_REGISTER_TOTAL);
+    portHitMapGunTallyAdd(&t, ITEM_WPPK, SHOT_REGISTER_BODY);
+    portHitMapGunTallyAdd(&t, -1, SHOT_REGISTER_TOTAL);
+    portHitMapGunTallyAdd(&t, ITEM_IDS_MAX, SHOT_REGISTER_TOTAL);
+    portHitMapGunTallyAdd(&t, ITEM_AK47, 99);
+    /* Assert: the shotgun hit once in two shots, its pellets all counted as hits. */
+    c = portHitMapGunTotals(&t, ITEM_SHOTGUN);
+    assert(c.shots == 2 && c.hitShots == 1 && portHitMapGunHits(&c) == 3 && portHitMapGunAccuracy(&c) == 50);
+    c = portHitMapGunTotals(&t, ITEM_WPPK);
+    assert(c.shots == 2 && c.hitShots == 2 && c.gun == 1 && c.hat == 1 && c.object == 1 && c.body == 1);
+    assert(portHitMapGunHits(&c) == 3 && portHitMapGunAccuracy(&c) == 100);
+    c = portHitMapGunTotals(&t, ITEM_AK47);
+    assert(c.shots == 1 && c.hitShots == 0 && portHitMapGunAccuracy(&c) == 0);
+    /* Every gun together, and a gun never fired. */
+    c = portHitMapGunTotals(&t, PORT_HITMAP_ALL_GUNS);
+    assert(c.shots == 5 && c.hitShots == 3 && portHitMapGunHits(&c) == 6 && portHitMapGunAccuracy(&c) == 60);
+    c = portHitMapGunTotals(&t, ITEM_RUGER);
+    assert(c.shots == 0 && portHitMapGunAccuracy(&c) == -1);
+    /* Accuracy rounds to the nearest percent: 2 of 3 is 67%, 1 of 3 is 33%. */
+    portHitMapGunTallyReset(&t);
+    for (i = 0; i < 3; i++) portHitMapGunTallyAdd(&t, ITEM_M16, SHOT_REGISTER_TOTAL);
+    portHitMapGunTallyAdd(&t, ITEM_M16, SHOT_REGISTER_BODY);
+    c = portHitMapGunTotals(&t, ITEM_M16);
+    assert(portHitMapGunAccuracy(&c) == 33);
+    portHitMapGunTallyAdd(&t, ITEM_M16, SHOT_REGISTER_TOTAL);
+    portHitMapGunTallyAdd(&t, ITEM_M16, SHOT_REGISTER_BODY);
+    portHitMapGunTallyAdd(&t, ITEM_M16, SHOT_REGISTER_TOTAL);
+    portHitMapGunTallyAdd(&t, ITEM_M16, SHOT_REGISTER_LIMB);
+    c = portHitMapGunTotals(&t, ITEM_M16);
+    assert(c.shots == 5 && c.hitShots == 3 && portHitMapGunAccuracy(&c) == 60);
+}
+
+static void addShots(PortHitMapGunTally *t, s32 gun, s32 shots, s32 hits)
+{
+    s32 i;
+
+    for (i = 0; i < shots; i++) portHitMapGunTallyAdd(t, gun, SHOT_REGISTER_TOTAL);
+    for (i = 0; i < hits; i++) portHitMapGunTallyAdd(t, gun, SHOT_REGISTER_BODY);
+}
+
+static void testGunListSortsByHits(void)
+{
+    /* Arrange: the KF7 hit most; the PP7 and D5K tie on hits, the D5K fired more;
+     * the Klobb fired and missed; the M16 was never used. */
+    static PortHitMapGunTally t;
+    s32 guns[ITEM_IDS_MAX], n;
+
+    portHitMapGunTallyReset(&t);
+    addShots(&t, ITEM_WPPK, 4, 3);
+    addShots(&t, ITEM_SKORPION, 9, 0);
+    addShots(&t, ITEM_MP5K, 8, 3);
+    addShots(&t, ITEM_AK47, 20, 9);
+    /* Act */
+    n = portHitMapGunList(&t, guns, ITEM_IDS_MAX);
+    /* Assert: most hits first, ties by shots fired, unused guns left out. */
+    assert(n == 4);
+    assert(guns[0] == ITEM_AK47 && guns[1] == ITEM_MP5K && guns[2] == ITEM_WPPK && guns[3] == ITEM_SKORPION);
+    /* A short list keeps the top entries. */
+    n = portHitMapGunList(&t, guns, 2);
+    assert(n == 2 && guns[0] == ITEM_AK47 && guns[1] == ITEM_MP5K);
+}
+
 int main(void)
 {
     testRayToLocalUndoesScaledTurn();
@@ -293,6 +399,9 @@ int main(void)
     testDamageUnitsMeasureHealthAndOverkill();
     testStatsCountByRow();
     testPlaceStartsWithoutDamage();
+    testStatsFilterByGun();
+    testTallyCountsShotsThatHit();
+    testGunListSortsByHits();
     puts("hit map: ok");
     return 0;
 }

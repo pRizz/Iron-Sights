@@ -1,9 +1,10 @@
 /* Debrief hit map Parts view (FORK-048): the closer look's PARTS tab. A table
  * gives each body part's hits, kill shots and shares of the hits and of the
  * damage, left and right sides together; a column beside it sums the mission
- * up. The counts are the map's own recorded hits, so they add up to Hits
- * shown; gun and hat hits, which the map never places, come from the
- * debrief's counters. Coordinates are the dossier's native 440x330 page. */
+ * up, both for the gun filter's gun or every gun. The counts are the map's own
+ * recorded hits, so they add up to Hits shown; gun and hat hits, which the map
+ * never places, come from the debrief's counters (for one gun, the hit map's
+ * copy of them by gun). Coordinates are the dossier's native 440x330 page. */
 #include <stdio.h>
 #include <ultra64.h>
 #include <bondconstants.h>
@@ -16,7 +17,7 @@ extern s32 get_curplayer_shot_register(SHOT_REGISTER shot_register);
 
 #define PARTS_SCALE   0.55f
 #define PARTS_NOTE    0.5f
-#define PARTS_TOP     170
+#define PARTS_TOP     183 /* under the gun filter's row */
 #define PARTS_ROW     12
 #define PARTS_LABEL_X 0x37
 #define PARTS_HITS_R  120 /* right edges of the hit and kill counts */
@@ -123,6 +124,9 @@ static Gfx *partsLine(Gfx *g, s32 *y, const char *label, const char *value)
  * the debrief, so Not recorded appears as on the FIGURES view. */
 static Gfx *partsSummary(Gfx *g, const PortHitMapStats *s, s32 bodyHits)
 {
+    const s32 gun = portHitMapGunShown();
+    const PortHitMapGunCounts counts = portHitMapGunTotals(portHitMapGuns(), gun);
+    const s32 all = gun == PORT_HITMAP_ALL_GUNS;
     const s32 unshown = bodyHits > s->hits ? bodyHits - s->hits : 0;
     char text[24];
     s32 y = PARTS_TOP;
@@ -143,9 +147,9 @@ static Gfx *partsSummary(Gfx *g, const PortHitMapStats *s, s32 bodyHits)
     if (s->damage > 0) snprintf(text, sizeof(text), "%d%%", partsRound(100.0f * s->overkill / s->damage));
     g = partsLine(g, &y, "Overkill", s->damage > 0 ? text : "-");
     y += PARTS_ROW / 2;
-    snprintf(text, sizeof(text), "%d", get_curplayer_shot_register(SHOT_REGISTER_GUN));
+    snprintf(text, sizeof(text), "%d", all ? get_curplayer_shot_register(SHOT_REGISTER_GUN) : counts.gun);
     g = partsLine(g, &y, "Gun hits", text);
-    snprintf(text, sizeof(text), "%d", get_curplayer_shot_register(SHOT_REGISTER_HAT));
+    snprintf(text, sizeof(text), "%d", all ? get_curplayer_shot_register(SHOT_REGISTER_HAT) : counts.hat);
     g = partsLine(g, &y, "Hat hits", text);
     y += 3;
     g = portHitMapInk(g, "100 damage is one", SUMMARY_X, y, PARTS_NOTE, PAPER_TEXT);
@@ -158,7 +162,7 @@ Gfx *portHitMapPartsDraw(Gfx *g, s32 bodyHits)
 {
     PortHitMapStats stats;
 
-    portHitMapStatsCompute(portHitMapFigure(), portHitMapHits(), portHitMapCount(), &stats);
+    portHitMapStatsCompute(portHitMapFigure(), portHitMapHits(), portHitMapCount(), portHitMapGunShown(), &stats);
     g = partsTable(g, &stats);
-    return partsSummary(g, &stats, bodyHits);
+    return partsSummary(g, &stats, portHitMapGunBodyHits(bodyHits));
 }
