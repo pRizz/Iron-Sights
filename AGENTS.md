@@ -71,7 +71,7 @@ inputs. See `scripts/port/hand_gallery.md` for the capture and hook workflow.
 Settings this fork adds live on the Iron Sights page, not on upstream's pages.
 In both the Options folder (`src/game/front.c`) and the watch
 (`port/src/port_watchpages.c`), Gameplay > Iron Sights opens the subsections
-Aiming and Movement, Combat Feedback, Enemies, HUD Additions and System. Put a new fork
+Aiming and Movement, Combat Feedback, Enemies, HUD Additions, System and Graphics. Put a new fork
 setting in the subsection that fits its topic in both menus, or add a
 subsection when none fits. Fork-owned rows and actions (About / Build Info,
 Suspend Points) belong there too.

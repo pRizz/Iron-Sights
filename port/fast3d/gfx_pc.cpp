@@ -42,6 +42,7 @@
 #include "gfx_rendering_api.h"
 #include "gfx_screen_config.h"
 #include "port_hostptr.h" /* PORT_IS_HOST_ADDR: the Xbox image sits below 0x10000000 */
+#include "port_graphics_render.h" /* FORK-082: Tone Mapping, HDR Output, Gun and Hands */
 #include "port_weapon_images.h"
 #include "port_icon_decode.h"
 #ifdef __EMSCRIPTEN__
@@ -516,6 +517,9 @@ static uint8_t s_GeHudAmmoSlot = 0;
 /* FORK-053: inside the first-person weapon and hands (G_NOOP 0x5C, gunfire.c via
  * portHudViewmodelTag); texture packs leave these textures alone */
 static bool s_GeViewmodel = false;
+/* FORK-082: Baked Lighting's probe for the viewmodel's vertex colours this frame
+ * (G_NOOP 0x67 from port_graphics.c, 128 = 1.0); 1 = untouched */
+static float s_GeViewmodelLight[3] = { 1.0f, 1.0f, 1.0f };
 /* FORK-058: the shiny weapon being drawn (G_NOOP 0x5E, port_shiny.c), 0 = none;
  * its reflection-mapped triangles take gfx_shiny's lighting, coordinates and image */
 static uint8_t s_GeShinyItem = 0;
@@ -963,6 +967,55 @@ static void gfx_dxlu_group(uint32_t mode) {
 extern "C" void gfx_dxlu_new_view(void) {
     gfx_dxlu_draw(); /* flush any un-flushed set from the previous view */
     dxlu_closed = false;
+}
+
+/* FORK-082: an rgb scaled to luminance 1, so a tint shifts colour, not brightness */
+static void gfx_unit_luminance(const float in[3], float out[3]) {
+    const float l = in[0] * 0.2126f + in[1] * 0.7152f + in[2] * 0.0722f;
+    for (int k = 0; k < 3; k++) out[k] = l > 1e-5f ? in[k] / l : 1.0f;
+}
+
+/* FORK-082: Tone Mapping at G_NOOP 0x66, from the Graphics page's sliders.
+ * Contrast maps 50-200% to a power of 0.75-1.5 around mid grey. */
+static void gfx_grade_now(void) {
+    const PortGraphicsRender& g = g_PortGraphicsRender;
+    if (gfx_rapi->grade == NULL || !g.tone_mapping) return;
+    GfxGradeParams p;
+    p.tonemap = true;
+    p.exposure = 0.53f; /* with the filmic curve: mid grey in = mid grey out */
+    p.expand = 0.6f;
+    p.brightness = (float) g.brightness / 100.0f;
+    p.contrast = 1.0f + (float) (g.contrast - 100) / 200.0f;
+    p.filmic = (float) g.intensity / 100.0f;
+    p.vibrance = (float) g.vibrance / 100.0f;
+    p.clarity = (float) g.clarity / 100.0f;
+    p.sharpen = (float) g.sharpen / 100.0f;
+    p.glow = (float) g.glow / 100.0f;
+    p.peak = (float) g.hdr_peak / (float) (g.hdr_paper > 0 ? g.hdr_paper : 200);
+    p.split = g.compare != 0;
+    p.saturation = (float) g.saturation / 100.0f;
+    p.split_tone = (float) g.split / 100.0f;
+    p.fade = (float) g.fade / 100.0f;
+    p.vignette = (float) g.vignette / 100.0f;
+    p.grain = (float) g.grain / 100.0f;
+    p.auto_exposure = (float) g.auto_exposure / 100.0f;
+    p.adapt_speed = (float) g.adapt_speed / 100.0f;
+    /* Temperature: amber at +100, blue at -100, as white-balance gains */
+    const float t = (float) g.temperature / 100.0f;
+    const float temp[3] = { 1.0f + 0.25f * t, 1.0f + 0.04f * t, 1.0f - 0.3f * t };
+    /* Split Colours: shadow then highlight tint (0 teal / orange, 1 green / gold,
+     * 2 blue / amber, 3 sepia: brown / cream) */
+    static const float tints[4][2][3] = {
+        { { 0.20f, 0.85f, 0.90f }, { 1.00f, 0.55f, 0.20f } },
+        { { 0.45f, 0.65f, 0.35f }, { 1.00f, 0.85f, 0.40f } },
+        { { 0.30f, 0.45f, 0.85f }, { 1.00f, 0.72f, 0.35f } },
+        { { 0.60f, 0.40f, 0.25f }, { 1.00f, 0.88f, 0.68f } },
+    };
+    const int pair = g.split_colours >= 0 && g.split_colours <= 3 ? g.split_colours : 0;
+    gfx_unit_luminance(temp, p.temperature);
+    gfx_unit_luminance(tints[pair][0], p.shadow_tint);
+    gfx_unit_luminance(tints[pair][1], p.high_tint);
+    gfx_rapi->grade(&p);
 }
 
 /* Sort key of one captured vertex = its Euclidean distance from the eye, not
@@ -3868,6 +3921,16 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx* verti
                     d->color.r = d->color.g = d->color.b = 255;
                 }
             }
+        }
+
+        if (s_GeViewmodel && (s_GeViewmodelLight[0] != 1.0f || s_GeViewmodelLight[1] != 1.0f ||
+                              s_GeViewmodelLight[2] != 1.0f)) {
+            /* FORK-082: the gun, hands and arms take the surroundings' baked light */
+            const float c[3] = { d->color.r * s_GeViewmodelLight[0], d->color.g * s_GeViewmodelLight[1],
+                                 d->color.b * s_GeViewmodelLight[2] };
+            d->color.r = (uint8_t) (c[0] > 255.0f ? 255.0f : c[0]);
+            d->color.g = (uint8_t) (c[1] > 255.0f ? 255.0f : c[1]);
+            d->color.b = (uint8_t) (c[2] > 255.0f ? 255.0f : c[2]);
         }
 
         d->u = U;
@@ -8255,6 +8318,16 @@ static void gfx_run_dl(Gfx* cmd) {
                                 rsp.lookat[0].dir[2], rsp.lookat[1].dir[0], rsp.lookat[1].dir[1],
                                 rsp.lookat[1].dir[2]);
                     }
+                } else if ((cmd->words.w1 >> 24) == 0x66u) {
+                    /* FORK-082: Tone Mapping regrades the view drawn so far (port_graphics.c) */
+                    gfx_flush();
+                    gfx_dxlu_draw(); /* the deferred translucent draws belong to the scene */
+                    gfx_grade_now();
+                } else if ((cmd->words.w1 >> 24) == 0x67u) {
+                    /* FORK-082: Baked Lighting's viewmodel probe, 128 = 1.0 (port_graphics.c) */
+                    s_GeViewmodelLight[0] = (float) ((cmd->words.w1 >> 16) & 0xFFu) / 128.0f;
+                    s_GeViewmodelLight[1] = (float) ((cmd->words.w1 >> 8) & 0xFFu) / 128.0f;
+                    s_GeViewmodelLight[2] = (float) (cmd->words.w1 & 0xFFu) / 128.0f;
                 } else if ((cmd->words.w1 >> 24) == 0x58u) {
                     /* HUD scale bracket (options.c portHudScaleBegin): pivot x, y in U10.2 */
                     s_GeHudScale = (cmd->words.w1 & 0x00FFFFFFu) != 0x00FFFFFFu;
@@ -8752,6 +8825,7 @@ extern "C" void gfx_start_frame(void) {
     ge_stat_cache_entries = (uint32_t) gfx_texture_cache.map.size();
     ge_stat_free_ids = (uint32_t) gfx_texture_cache.free_texture_ids.q.size();
     s_GeViewmodel = false;
+    s_GeViewmodelLight[0] = s_GeViewmodelLight[1] = s_GeViewmodelLight[2] = 1.0f; /* FORK-082 */
     s_GeShinyItem = 0;
     s_GeGlint = s_GeGlintBlock = false;
     s_GeGlintAds = 0.0f;

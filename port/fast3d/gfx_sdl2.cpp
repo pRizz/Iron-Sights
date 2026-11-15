@@ -1023,6 +1023,8 @@ extern "C" unsigned long long portProfNow(void);
 extern "C" void portHitchFrame(unsigned long long interval_us, unsigned long long run_us,
                                unsigned long long swap_us, unsigned long long lim_us, unsigned int draws);
 
+extern "C" bool gfx_opengl_hdr_present(int vsync); /* gfx_hdr.inl (FORK-082) */
+
 static void gfx_sdl_swap_buffers_begin(void) {
     gfx_sdl_maybe_screenshot();
     /* Both waits sit inside gfx_run's timer, so the stats line's gl figure
@@ -1032,7 +1034,9 @@ static void gfx_sdl_swap_buffers_begin(void) {
         sync_framerate_with_timer();
     }
     const uint64_t t1 = SDL_GetPerformanceCounter();
-    SDL_GL_SwapWindow(wnd);
+    if (!gfx_opengl_hdr_present(vsync_enabled)) { /* FORK-082: HDR Output presents through DXGI */
+        SDL_GL_SwapWindow(wnd);
+    }
     const uint64_t t2 = SDL_GetPerformanceCounter();
     stat_swap_us += (t2 - t1) * 1000000ull / qpc_freq;
     stat_limit_us += (t1 - t0) * 1000000ull / qpc_freq;

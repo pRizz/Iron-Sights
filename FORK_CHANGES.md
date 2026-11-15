@@ -30,6 +30,321 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-082 — Graphics: Tone Mapping, HDR Output and ray-traced Baked Lighting
+
+**Status:** Implemented on 2026-11-14 and 2026-11-15 at the owner's request.
+- **Built:** for Windows in an isolated worktree build.
+- **Play-tested:** by the owner as `build_win/IronSights-Graphics.exe`, beside
+  the main executable (which then held FORK-081's play-test build).
+- **Committed:** to `main` on 2026-11-15, after rebasing onto FORK-080 and
+  FORK-081; first drafted as FORK-080 and renumbered when those two landed.
+- **Not run:** Linux, Steam Deck and browser builds.
+- **HDR Output** was not seen on an HDR display: this machine's monitor
+  reports Windows HDR off.
+
+Inherited behaviour: the renderer replays the N64 display lists through
+OpenGL into an 8-bit target and presents with `SDL_GL_SwapWindow`. Room
+lighting is the vertex colours in the level files; characters, props and guns
+use the N64's directional lights. There was no grading, no HDR path and no
+light baking.
+
+**Defaults (2026-11-15, the owner's choice):**
+- **On by default:** the Windows and Linux builds start with Tone Mapping and
+  Baked Lighting on and the Vibrant Look (its values are the slider defaults
+  and the fresh midas.ini's), Gun and Hands on, HDR Output off.
+- **HDR Output stays opt-in:** it only runs while Windows HDR is on, and its
+  presenter has not yet been seen on an HDR display.
+- **Browser and Xbox builds:** both stay off there, untested.
+- **Capture runs:** every run with `GE_WINDOW` set (audits, the review gallery,
+  weapon icon export) starts with both off (`portGraphicsCaptureDefaults`,
+  called by `videoLoadConfig` before the ini is read), so captures stay
+  comparable with stock unless their own midas.ini turns them on.
+- **Existing midas.ini files keep their saved values.** Earlier in the day all
+  of these defaulted to off.
+
+**Gameplay > Iron Sights > Graphics**, a new subsection in both the Options
+folder (`PORT_SHEET_IS_GRAPHICS`, `GE_MENU=zgraphics`) and the watch
+(`PORTWATCH_IS_GRAPHICS`, appended after the System pages so earlier watch
+page numbers stay put; the Control tab's `GE_WATCHPAGE` numbers move up by one). All keys are `[display]`:
+
+- **Tone Mapping** (`tone_mapping`, default 1 on Windows and Linux) with seven sliders (all
+  0-100% unless noted; 2026-11-15 after the owner found the first version
+  darker than stock and asked for more pop and control):
+  - **Brightness** (`tone_brightness`, 50-200%, default 150, the Vibrant value; 100 = stock): an exposure gain.
+  - **Contrast** (`tone_contrast`, 50-200%, default 90): a power of 0.75-1.5
+    around mid grey.
+  - **Intensity** (`tone_intensity`, default 50): the share of the filmic
+    highlight roll-off.
+  - **Vibrance** (`vibrance`, default 80): more saturation for the
+    less saturated colours.
+  - **Clarity** (`tone_clarity`, default 60): local contrast - luminance
+    against a 16x16 mip average of the image, limited to +-0.25 and faded
+    toward black and white.
+  - **Sharpen** (`tone_sharpen`, default 50): contrast-adaptive sharpening of
+    the 4 neighbours after AMD's CAS, strongest on flat mid-tone texture and
+    backing off near clipping, so no halos.
+  - **Glow** (`tone_glow`, default 100): a half-size bright pass (linear light
+    above 0.4 luminance), mipmapped and sampled at four levels, added before
+    the curve, so lamps, sky and flashes bleed a soft halo.
+
+  The game emits G_NOOP 0x66 (`portGraphicsGradeTag`) in
+  `maybe_mp_interface` (`bondview2.c`), after the first-person guns and
+  before the watch, HUD and fades, and at the start of the cutscene branch.
+  The renderer (`gfx_grade.inl`) copies the bound target into a mipmapped
+  texture and draws the current viewport (one per player in split screen)
+  back graded: the N64 image as gamma 2.2, sharpened, glow added, brightness
+  and contrast applied, then the filmic curve mixed in by Intensity. The curve
+  is an ACES fit on a highlight range recovered by an inverse Reinhard on
+  luminance (white to 2.5x), exposure 0.53 so mid grey stays put, normalised
+  to keep white. Below a luminance of 0.1-0.3 the curve gives way to the
+  image (the brighter of the two), so shadows never sink. The first version
+  used the plain curve at 50%, which darkened a quarter-bright pixel by about
+  20%; GoldenEye's scenes sit mostly in that range. Vibrance and Clarity
+  follow. In a Facility capture the mean brightness with the Natural values is
+  115.6 against stock 115.7 (the first version was visibly darker). Menus,
+  title screens and the watch are never graded.
+- **Looks and colour grading** (2026-11-15, at the owner's request for
+  presets with different feelings). Seven more grading sliders, applied after
+  the curve:
+  - **Saturation** (`tone_saturation`, 0-200%, default 100; 0 = black and
+    white) and **Temperature** (`tone_temperature`, -100 cool to 100 warm,
+    default 0), both in linear light. Temperature is white-balance gains of
+    (1 + 0.25t, 1 + 0.04t, 1 - 0.3t) scaled to luminance 1.
+  - **Split Tone** (`tone_split`, default 0) with **Split Colours**
+    (`tone_split_colours`: teal / orange, green / gold, blue / amber, sepia):
+    shadows toward one tint, highlights toward the other, brightness kept.
+  - **Fade** (`tone_fade`): blacks lifted to 0.12 and white lowered 5%.
+  - **Vignette** (`tone_vignette`): corners darkened up to 60%, by the view's
+    own rect.
+  - **Film Grain** (`tone_grain`): a hash per pixel and frame, strongest in
+    mid tones.
+
+- **Auto Exposure and highlight detail** (2026-11-15, after the owner found
+  the snow on Surface washed out under Vibrant: Brightness 150 put it on the
+  flat top of the curve, Glow 100 hazed it and Clarity faded out near white):
+  - **Auto Exposure** (`tone_auto_exposure`, 0-100%, default 60) and
+    **Adaptation Speed** (`tone_adapt_speed`, 25-400%, default 100), in
+    `gfx_exposure.inl`.
+  - **Metering:** the view is drawn into a 64x64 float buffer as luminance x
+    weight (centre 1.5, edges 0.5), and its 1x1 mip gives the mean. The plain
+    mean, not the log mean: measured on stock captures, the log mean put Dam
+    at -5.6 stops and Surface at -1.9, letting dark textures dominate.
+  - **Adaptation:** a 1x1 float per player view (ping-ponged, up to 4 in
+    split screen) moves the adapted log2 luminance toward the meter at 2.5/s
+    toward brighter scenes and 0.6/s toward darker ones, times the speed. A
+    gap over a second resets it. Nothing is read back to the CPU.
+  - **Exposure shift:** (key - adapted) stops, clamped to -2 .. +0.25 and
+    scaled by the strength, multiplies Brightness. The key, log2 0.125, sits
+    between the measured centre-weighted means of Dam, Bunker and Caverns
+    (-4.1 .. -4.7) and Surface's snow (-1.5).
+  - **Clarity in highlights:** it now fades only halfway toward white, so
+    bright surfaces keep their texture.
+  - **Glow ignores wide bright areas:** the bright pass needs a pixel above
+    1.25x its 32x32 mip surroundings as well as above 0.4, so a whole
+    snowfield no longer glows while lamps and sky edges still do.
+  - **Measured on isolated captures:** mean frame brightness, stock /
+    Vibrant without Auto Exposure / Vibrant with it:
+    - Surface: 139.0 / 161.8 / 122.6, the snow's shading and tracks visible
+      again;
+    - Bunker 1: 49.8 / 61.9 / 64.6;
+    - Facility's first wall: 115.7 / 138.0 / 125.5.
+  - **In the Looks:** both are part of every Look. Auto Exposure is 60 in
+    Vibrant, 50 in Natural, Cinematic and Cold War, 40 in Noir, Muted and
+    Warm Retro, and 25 in Dark; speed 100 in all.
+
+  **Look** (`graphics_look`, default Vibrant; `port_graphics_looks.c`) sets
+  all sixteen grading sliders at once:
+
+  | Look | Brightness | Contrast | Intensity | Vibrance | Clarity | Sharpen | Glow | Saturation | Temp | Split | Colours | Fade | Vignette | Grain | Auto Exp. |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | Natural | 100 | 100 | 50 | 50 | 25 | 25 | 25 | 100 | 0 | 0 | teal/orange | 0 | 0 | 0 | 50 |
+  | Vibrant (the owner's settings) | 150 | 90 | 50 | 80 | 60 | 50 | 100 | 100 | 0 | 0 | teal/orange | 0 | 0 | 0 | 60 |
+  | Cinematic | 105 | 115 | 70 | 40 | 35 | 30 | 40 | 100 | 0 | 40 | teal/orange | 0 | 30 | 0 | 50 |
+  | Noir | 100 | 130 | 60 | 0 | 50 | 40 | 30 | 0 | 0 | 0 | teal/orange | 10 | 50 | 35 | 40 |
+  | Muted | 100 | 85 | 40 | 0 | 15 | 20 | 0 | 70 | 0 | 0 | teal/orange | 25 | 10 | 0 | 40 |
+  | Cold War | 95 | 105 | 50 | 20 | 35 | 30 | 20 | 80 | -40 | 40 | green/gold | 10 | 20 | 10 | 50 |
+  | Warm Retro | 105 | 95 | 60 | 30 | 20 | 20 | 45 | 90 | 60 | 40 | sepia | 30 | 25 | 30 | 40 |
+  | Dark | 75 | 120 | 60 | 30 | 40 | 30 | 30 | 90 | -10 | 0 | teal/orange | 0 | 50 | 10 | 25 |
+
+  - **Tuning from captures:** the values were tuned from contact sheets of
+    every Look on Facility and Dam. Warm Retro first read cool (its blue /
+    amber shadows outweighed a weak Temperature), then olive with green /
+    gold, which is why Temperature was strengthened and the Sepia pair added.
+    Dark was deepened from brightness 85.
+  - **Custom:** changing any grading slider (menu, hotkey or midas.ini) keeps
+    the values and makes the Look Custom; values that match a Look again read
+    as that Look, so the owner's existing settings load as Vibrant.
+  - **Saving:** midas.ini writes `graphics_look` before the sliders.
+  - **Tone Mapping:** the Look row and midas.ini leave Tone Mapping alone; the
+    Insert hotkey also turns it on.
+  - **Not in a Look:** HDR calibration and Baked Lighting.
+- **HDR Output** (`hdr_output`, default 0; **HDR Peak Brightness**
+  `hdr_peak`, 400-2000 nits, default 1000; **HDR Paper White**
+  `hdr_paper_white`, 80-480 nits, default 200), Windows only (the rows and
+  keys are compiled out elsewhere and on the Xbox).
+  - **Display:** while the window's monitor is in Windows HDR mode (checked
+    every 2 s through DXGI), a DXGI flip-model R16G16B16A16_FLOAT swap chain
+    (scRGB) presents the window instead of GL (`gfx_hdr_dxgi.cpp`; d3d11 and
+    dxgi load at run time). GL draws its final frame into a shared D3D11
+    texture through `WGL_NV_DX_interop2`.
+  - **Float targets:** framebuffer 0 becomes an RGBA16F texture (its fbo
+    stands in for GL's window in `framebuffers[0]`), and every other target,
+    the MSAA resolve copies and the N64 AA textures allocate RGBA16F.
+  - **Grade:** on a float target it skips the curve, so highlights go above
+    paper white with a soft shoulder into the peak. The HUD, drawn afterwards
+    at up to 1.0, sits at paper white.
+  - **Present:** `gfx_hdr.inl` converts the gamma-encoded, paper-relative
+    values to linear scRGB (x paper / 80) at swap.
+  - **Fallback:** with Windows HDR off, or if the presenter fails, GL keeps
+    presenting and a console message says why. `GE_HDR_FORCE=1` runs the
+    presenter on an SDR monitor for audits.
+- **Baked Lighting** (`baked_lighting`, default 1 on Windows and Linux; **Lighting Strength**
+  `baked_lighting_strength`, 25-200%, default 100):
+  - **Capture:** `load_bg_file` already loads every room once at stage start
+    (`bgRoomCalcBB`). `portBakeCaptureRoom` copies each room's vertices
+    (room-bounds space, the file colours) and walks its opaque and translucent
+    lists (G_VTX slot cache, G_TRI1, G_TRI4). Opaque triangles become
+    occluders; both kinds feed area-weighted vertex normals, whose winding was
+    confirmed to face out (flipped, about 1,000 vertices on Dam and Facility
+    came out almost black).
+  - **Bake:** `port_baked_trace.c` builds a BVH and casts 64 cosine-weighted
+    rays per vertex up to 220 world units (scaled by the level scale) on SDL
+    worker threads (CPU count - 2, at most 8). Where threads are unavailable
+    it runs 4 ms slices per frame.
+  - **Result:** occlusion (weight 1 - t / radius, strength 0.85) darkens; the
+    gathered colour of nearby surfaces tints but adds no brightness. Adding
+    gathered light was tried first and brightened Facility by 54% on average,
+    because the file colours already contain the level's light.
+  - **Timing and apply:** a bake takes about 0.4 s on Dam and Facility here
+    (21,722 and 25,493 vertices). Until it finishes the level keeps its own
+    colours; then loaded rooms are rewritten, and rooms streaming in take the
+    result in `bgLoadRoomModelData` (before the shot-light redarken, so a
+    shot-out light still darkens on top).
+  - **Strength and off:** strength blends file colour to bake in linear
+    light, so changing it needs no new bake. Off writes the file colours back.
+    Each rewrite reapplies the room's shot-out lights and drops the room
+    cache's copy.
+  - **Tuning env vars:** `GE_BAKE_RADIUS`, `GE_BAKE_RAYS`, `GE_BAKE_AO`,
+    `GE_BAKE_BOUNCE` and `GE_BAKE_THREADS`. `GE_BAKE_DEBUG=1` shows the
+    occlusion and tint on white. `stderr` logs one `bake:` line with the
+    vertex and triangle counts, radius, mean brightness ratio and time.
+- **Gun and Hands** (`graphics_viewmodel`, default 1). On: the grade runs
+  after the guns, hands and arms, and Baked Lighting sends a probe (G_NOOP
+  0x67, `portGraphicsViewmodelTag`). The probe is 64 rays from the eye
+  against the bake, giving the surroundings' baked/original ratio, a little
+  occlusion and their tint. The renderer multiplies the computed vertex
+  colour of every draw in the `portHudViewmodelTag` span by it. Off: the
+  grade runs before the guns and no probe is sent.
+
+**Hotkeys:** ten appended bind actions (`PORTACT_TOGGLE_TONE_MAPPING` ..
+`PORTACT_GRAPHICS_LOOK_NEXT`, `PM_PORT_LAST` +43):
+
+| Action | Key |
+| --- | --- |
+| `toggle_tone_mapping` | F3 |
+| `toggle_baked_lighting` | F4 |
+| `toggle_hdr_output` | F2 |
+| `toggle_graphics_viewmodel` | F7 |
+| `graphics_compare` | F11 |
+| `graphics_slider_next` / `graphics_slider_prev` | Home / End |
+| `graphics_slider_up` / `graphics_slider_down` | Page Up / Page Down |
+| `graphics_look_next` | Insert |
+
+The four slider keys (added 2026-11-15 at the owner's request, so every slider
+can be tuned at run time) pick one of the page's sliders - the sixteen Tone
+Mapping and grading sliders, Lighting Strength, and on Windows HDR Peak Brightness and HDR Paper
+White - and step it by its menu step, clamped rather than wrapped. Each press
+shows the slider's name and value, noting when its feature is off or a limit is
+reached; a change saves. Home, End, Page Up and Page Down were free outside the
+console. Pads ship unbound. They are taken every frame, menus included, in
+`portStateInput`. Each toggle saves like its menu row and shows a console
+message (`portConPrintf`). Compare splits the graded view (left stock, right
+graded) and is not saved. They are listed in Controls (`sBindsAllExtra`).
+
+**Arm rendering contract:** the owner asked for these features to reach the
+gun, hands and arms. `scripts/port/arm_rendering.md` records the exception:
+final colour only (the full-view grade, and one multiplier on the computed
+shade inside the viewmodel span); vertices, UVs, alpha, triangles, materials,
+depth and the native render setup are unchanged, and with the features off
+(their default) the viewmodel draws as before.
+
+**Hooks in upstream-owned files:**
+- `bg.c`: `portBakeLevelBegin` / `portBakeLevelLoaded` around the
+  `bgRoomCalcBB` loop, `portBakeCaptureRoom` in `bgRoomCalcBB`,
+  `portBakeApplyRoom` after the room's vertices load, and
+  `portBakeLevelUnload` in `cleanup_rooms`.
+- `bondview2.c`: the grade and viewmodel tags around
+  `gunRenderFirstPersonGunModels`, and the grade tag in the cutscene branch.
+- `gfx_pc.cpp`: decodes 0x66 / 0x67 and scales the viewmodel's vertex shade.
+- `gfx_opengl.cpp`:
+  - the float colour format, `framebuffers[0]` swap and HDR sync;
+  - the grade entry in `gfx_opengl_api` and `gfx_rendering_api.h`;
+  - a fix: `resolve_msaa_color_buffer` rebinds the current target's fbo; it
+    used to bind its index, which only worked while that was 0.
+- `gfx_sdl2.cpp`: skips `SDL_GL_SwapWindow` while DXGI presents.
+- `CMakeLists.txt`: the `ge_hdr_dxgi` object library, built without the
+  game's include directories, which collide with the Windows SDK headers.
+- `front.c`, `port_watchpages.c/.h`, `port_options.c`, `joy_port.c`,
+  `input_pc.c`, `video.c` (default ini), `port_option_help.c`,
+  `tools/midas_ini_help.txt`, README.md and AGENTS.md (the subsection list).
+
+**Pitfall found:** in files compiled with the game's include directories,
+`powf` is not the hosted one (`powf(1, 2.2)` returned 16481, which turned
+baked rooms black). The bake's float maths therefore lives in the SDL-only
+`port_baked_trace.c` (`portBakeLinTable`, `portBakeEncode`, `portBakeSqrt`).
+
+**Input:** the eight rows are ordinary option rows, so every supported input
+(keyboard, mouse, gamepad, browser touch) changes them. The hotkeys are
+keyboard by default and bindable to a controller; browser touch has no way to
+press them and gets no overlay control. This is deliberate: they are a review
+aid, and every setting they flip is a menu row touch can reach.
+
+**Sources:**
+- settings, hotkeys and tags: [header](port/include/port_graphics.h),
+  [renderer state](port/include/port_graphics_render.h),
+  [module](port/src/port_graphics.c), [Looks](port/src/port_graphics_looks.c);
+- Baked Lighting: [level side](port/src/port_baked_light.c),
+  [ray tracer](port/src/port_baked_trace.c),
+  [shared header](port/src/port_baked_light.h);
+- renderer: [grade](port/fast3d/gfx_grade.inl), [Auto Exposure](port/fast3d/gfx_exposure.inl),
+  [HDR GL side](port/fast3d/gfx_hdr.inl),
+  [DXGI presenter](port/fast3d/gfx_hdr_dxgi.cpp);
+- tests: [settings and tags test](scripts/port/test_graphics.c) (in
+  `test_ads.sh` through `test_noclip.c`), the
+  [ray-tracer test](scripts/port/test_baked_trace.sh) with its
+  [SDL shim](scripts/port/sdl_shim/SDL.h) (CI), and the hotkey routing in
+  `test_state_input.c`;
+- [capture audit](scripts/port/audit_graphics.ps1): isolated copy, `-Set`
+  ini overrides, `-Auto` presses, `-Visible` / `-ScreenAt` desktop grabs for
+  HDR.
+
+**Checks (2026-11-14):**
+- **Passed:** Windows build; `test_ads.sh`, `test_states.sh`,
+  `test_wardrobe.sh`, `test_baked_trace.sh`, `test_settings_placement.py`,
+  `settings_placement.py` and `bun scripts/bright-builds-check.ts all`.
+- **Isolated captures on Dam and Facility:**
+  - stock, Tone Mapping, Baked Lighting and both;
+  - hotkeys pressed mid-run, which saved to the copy's midas.ini and showed
+    their messages;
+  - Compare's split, which graded the gun and hand on the right while the HUD
+    stayed stock;
+  - forced HDR Output toggled on, off and on, which created the swap chain
+    twice and ran to the frame limit without GL errors.
+  - The first forced run showed only one triangle of the frame: the HDR
+    program's setup had left its VAO bound and the renderer overwrote its
+    attribute. Both new programs now restore the bindings. The rerun's window
+    was hidden behind the owner's fullscreen game, so the full HDR frame and
+    GL presenting again after the swap chain is released were not seen.
+- **Review gallery (2026-11-15, after the rebase):** regenerated with the
+  isolated worktree executable. 0 of 108 image cells changed, as expected
+  with capture runs starting with Graphics off; the manifest's source
+  fingerprint updated.
+- **Rerun on the rebased sources:** the Windows build, `test_ads.sh`,
+  `test_states.sh`, `test_baked_trace.sh`, `test_wardrobe.sh`, `test_hud.sh`,
+  both settings-placement checks and the Bright Builds checks passed.
+  `test_web_touch.sh` needs `emcc` and was not run.
+- **Not done:** HDR on a real HDR display; Linux and browser builds.
+
 ### FORK-081 — Reinforcements: more clones and a reinforcement director
 
 **Status:** Clones and the difficulty-page row implemented on 2026-11-14 at

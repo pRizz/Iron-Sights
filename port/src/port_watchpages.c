@@ -148,6 +148,7 @@ static const struct PortWatchRowDef sIronSights[] = {
     { PWROW_SUBSCREEN, NULL, "Enemies\n",             PORTWATCH_IS_ENEMIES,  0 },   /* FORK-081 */
     { PWROW_SUBSCREEN, NULL, "HUD Additions\n",       PORTWATCH_IS_HUD,      0 },
     { PWROW_SUBSCREEN, NULL, "System\n",              PORTWATCH_IS_SYSTEM,   0 },
+    { PWROW_SUBSCREEN, NULL, "Graphics\n",            PORTWATCH_IS_GRAPHICS, 0 },
     { PWROW_ACTION,    NULL, "Suspend Points\n", 100, 0 },
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
@@ -204,6 +205,37 @@ static const struct PortWatchRowDef sIsHud[] = {
 #if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
     { PWROW_OPT,       "touch_controls_opacity", NULL, 0, 0 }, /* FORK-080 */
 #endif
+    { PWROW_BACK,      NULL, "Back\n", 0, 0 },
+};
+/* FORK-082: Tone Mapping, HDR Output (Windows), Baked Lighting, and whether
+ * they reach the first-person gun and hands */
+static const struct PortWatchRowDef sIsGraphics[] = {
+    { PWROW_OPT,       "graphics_look",    NULL, 0, 0 },
+    { PWROW_OPT,       "tone_mapping",     NULL, 0, 0 },
+    { PWROW_OPT,       "tone_brightness",  NULL, 0, 0 },
+    { PWROW_OPT,       "tone_contrast",    NULL, 0, 0 },
+    { PWROW_OPT,       "tone_intensity",   NULL, 0, 0 },
+    { PWROW_OPT,       "vibrance",         NULL, 0, 0 },
+    { PWROW_OPT,       "tone_clarity",     NULL, 0, 0 },
+    { PWROW_OPT,       "tone_sharpen",     NULL, 0, 0 },
+    { PWROW_OPT,       "tone_glow",        NULL, 0, 0 },
+    { PWROW_OPT,       "tone_saturation",  NULL, 0, 0 },
+    { PWROW_OPT,       "tone_temperature", NULL, 0, 0 },
+    { PWROW_OPT,       "tone_split",       NULL, 0, 0 },
+    { PWROW_OPT,       "tone_split_colours", NULL, 0, 0 },
+    { PWROW_OPT,       "tone_fade",        NULL, 0, 0 },
+    { PWROW_OPT,       "tone_vignette",    NULL, 0, 0 },
+    { PWROW_OPT,       "tone_grain",       NULL, 0, 0 },
+    { PWROW_OPT,       "tone_auto_exposure", NULL, 0, 0 },
+    { PWROW_OPT,       "tone_adapt_speed", NULL, 0, 0 },
+#if defined(_WIN32) && !defined(GE_XBOX)
+    { PWROW_OPT,       "hdr_output",       NULL, 0, 0 },
+    { PWROW_OPT,       "hdr_peak",         NULL, 0, 0 },
+    { PWROW_OPT,       "hdr_paper_white",  NULL, 0, 0 },
+#endif
+    { PWROW_OPT,       "baked_lighting",   NULL, 0, 0 },
+    { PWROW_OPT,       "baked_lighting_strength", NULL, 0, 0 },
+    { PWROW_OPT,       "graphics_viewmodel", NULL, 0, 0 },
     { PWROW_BACK,      NULL, "Back\n", 0, 0 },
 };
 static const struct PortWatchRowDef sIsSystem[] = {
@@ -546,6 +578,17 @@ static const struct PortBindDef sBindsAllExtra[] = {
     { "Noclip Down\n",       "noclip_down",    "noclip_down" },    /* held; Crouch Hold also falls */
     { "Lean Left\n",         "lean_left",      "lean_left" },      /* FORK-073: held; keyboard default Z */
     { "Lean Right\n",        "lean_right",     "lean_right" },     /* held; keyboard default C */
+    /* FORK-082: the Graphics toggles; keyboard F3, F4, F2, F7, F11 */
+    { "Tone Mapping\n",      "toggle_tone_mapping",       "toggle_tone_mapping" },
+    { "Baked Lighting\n",    "toggle_baked_lighting",     "toggle_baked_lighting" },
+    { "HDR Output\n",        "toggle_hdr_output",         "toggle_hdr_output" },
+    { "Gun and Hands\n",     "toggle_graphics_viewmodel", "toggle_graphics_viewmodel" },
+    { "Compare Graphics\n",  "graphics_compare",          "graphics_compare" },
+    { "Next Graphics Slider\n", "graphics_slider_next",   "graphics_slider_next" },  /* Home */
+    { "Prev Graphics Slider\n", "graphics_slider_prev",   "graphics_slider_prev" },  /* End */
+    { "Graphics Slider Up\n",   "graphics_slider_up",     "graphics_slider_up" },    /* Page Up */
+    { "Graphics Slider Down\n", "graphics_slider_down",   "graphics_slider_down" },  /* Page Down */
+    { "Next Graphics Look\n",   "graphics_look_next",     "graphics_look_next" },    /* Insert */
 };
 #define PORTBIND_ALL_EXTRA ((s32) (sizeof(sBindsAllExtra) / sizeof(sBindsAllExtra[0])))
 
@@ -893,6 +936,7 @@ static const struct PortWatchPageDef {
     [PORTWATCH_IS_FONTS]    = PWPAGE(sIsFonts),
     [PORTWATCH_IS_HDTEX]    = PWPAGE(sIsHdTex),
     [PORTWATCH_IS_CUSTOMTEX] = PWPAGE(sIsCustomTex),
+    [PORTWATCH_IS_GRAPHICS] = PWPAGE(sIsGraphics),
     /* PORTWATCH_CONTROLLER, _MORE and _BINDS are dynamic (dynBuild): { NULL, 0 } */
     /* PORTWATCH_CTLGENERAL too (the raphnet's gadget switch) */
 #undef PWPAGE
@@ -1276,6 +1320,7 @@ s32 portWatchParentPage(s32 page)
         case PORTWATCH_IS_HUD:
         case PORTWATCH_IS_SYSTEM:
         case PORTWATCH_IS_ENEMIES:
+        case PORTWATCH_IS_GRAPHICS:
             return PORTWATCH_IRONSIGHTS;
         case PORTWATCH_IS_FONTS:
         case PORTWATCH_IS_HDTEX:

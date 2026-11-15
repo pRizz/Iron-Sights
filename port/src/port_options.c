@@ -165,6 +165,13 @@ static const char *const sReloadSpeedText[] = { "Original\n", "2x\n", "3x\n", "5
 static const s32 sNoclipViewVals[] = { 1, 4, 10 };
 static const char *const sNoclipViewText[] = { "Normal\n", "Far\n", "Maximum\n" };
 /* Lean Tilt (FORK-073): degrees of camera roll at a full lean (port_lean.h) */
+/* Graphics (FORK-082): the Look and the split-tone colour pairs (port_graphics.h) */
+static const s32 sLookVals[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+static const char *const sLookText[] = { "Custom\n", "Natural\n", "Vibrant\n", "Cinematic\n", "Noir\n",
+                                         "Muted\n", "Cold War\n", "Warm Retro\n", "Dark\n" };
+static const s32 sSplitColourVals[] = { 0, 1, 2, 3 };
+static const char *const sSplitColourText[] = { "Teal / Orange\n", "Green / Gold\n", "Blue / Amber\n",
+                                                "Sepia\n" };
 static const s32 sLeanTiltVals[] = { 0, 6, 12 };
 static const char *const sLeanTiltText[] = { "Off\n", "Subtle\n", "Strong\n" };
 /* Explosive Rounds (FORK-078): 0 Off, 1 Visual, 2 Explosive (port_explosive_rounds.h) */
@@ -247,6 +254,33 @@ static const struct PortOpt sOpts[] = {
     TOGGLE("gun_glint",     "[display]", "Gun Glint\n",       PORTOPT_CAT_DISPLAY),
     TOGGLE("glass_reflections", "[display]", "Glass Reflections\n", PORTOPT_CAT_DISPLAY),
     TOGGLE("fog", "[display]", "Fog\n", PORTOPT_CAT_DISPLAY), /* FORK-074 */
+    /* FORK-082: the Graphics page (port_graphics.c) */
+    ENUMR ("graphics_look", "[display]", "Look\n", PORTOPT_CAT_DISPLAY, sLookVals, sLookText, NULL), /* before the sliders it sets */
+    TOGGLE("tone_mapping", "[display]", "Tone Mapping\n", PORTOPT_CAT_DISPLAY),
+    INTR  ("tone_brightness", "[display]", "Brightness\n", PORTOPT_CAT_DISPLAY, 50, 200, 5, "%"),
+    INTR  ("tone_contrast", "[display]", "Contrast\n", PORTOPT_CAT_DISPLAY, 50, 200, 5, "%"),
+    INTR  ("tone_intensity", "[display]", "Intensity\n", PORTOPT_CAT_DISPLAY, 0, 100, 10, "%"),
+    INTR  ("vibrance", "[display]", "Vibrance\n", PORTOPT_CAT_DISPLAY, 0, 100, 10, "%"),
+    INTR  ("tone_clarity", "[display]", "Clarity\n", PORTOPT_CAT_DISPLAY, 0, 100, 5, "%"),
+    INTR  ("tone_sharpen", "[display]", "Sharpen\n", PORTOPT_CAT_DISPLAY, 0, 100, 5, "%"),
+    INTR  ("tone_glow", "[display]", "Glow\n", PORTOPT_CAT_DISPLAY, 0, 100, 5, "%"),
+    INTR  ("tone_saturation", "[display]", "Saturation\n", PORTOPT_CAT_DISPLAY, 0, 200, 10, "%"),
+    INTR  ("tone_temperature", "[display]", "Temperature\n", PORTOPT_CAT_DISPLAY, -100, 100, 10, ""),
+    INTR  ("tone_split", "[display]", "Split Tone\n", PORTOPT_CAT_DISPLAY, 0, 100, 10, "%"),
+    ENUMR ("tone_split_colours", "[display]", "Split Colours\n", PORTOPT_CAT_DISPLAY, sSplitColourVals, sSplitColourText, NULL),
+    INTR  ("tone_fade", "[display]", "Fade\n", PORTOPT_CAT_DISPLAY, 0, 100, 5, "%"),
+    INTR  ("tone_vignette", "[display]", "Vignette\n", PORTOPT_CAT_DISPLAY, 0, 100, 5, "%"),
+    INTR  ("tone_grain", "[display]", "Film Grain\n", PORTOPT_CAT_DISPLAY, 0, 100, 5, "%"),
+    INTR  ("tone_auto_exposure", "[display]", "Auto Exposure\n", PORTOPT_CAT_DISPLAY, 0, 100, 10, "%"),
+    INTR  ("tone_adapt_speed", "[display]", "Adaptation Speed\n", PORTOPT_CAT_DISPLAY, 25, 400, 25, "%"),
+#if defined(_WIN32) && !defined(GE_XBOX)
+    TOGGLE("hdr_output", "[display]", "HDR Output\n", PORTOPT_CAT_DISPLAY),
+    INTR  ("hdr_peak", "[display]", "HDR Peak Brightness\n", PORTOPT_CAT_DISPLAY, 400, 2000, 100, " nits"),
+    INTR  ("hdr_paper_white", "[display]", "HDR Paper White\n", PORTOPT_CAT_DISPLAY, 80, 480, 20, " nits"),
+#endif
+    TOGGLE("baked_lighting", "[display]", "Baked Lighting\n", PORTOPT_CAT_DISPLAY),
+    INTR  ("baked_lighting_strength", "[display]", "Lighting Strength\n", PORTOPT_CAT_DISPLAY, 25, 200, 25, "%"),
+    TOGGLE("graphics_viewmodel", "[display]", "Gun and Hands\n", PORTOPT_CAT_DISPLAY),
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     ENUMR ("texture_pack",  "[display]", "Texture Pack\n",    PORTOPT_CAT_DISPLAY, sTexturePackVals, sTexturePackText, NULL),
     TOGGLE("close_hd_matches", "[display]", "Close HD Matches\n", PORTOPT_CAT_DISPLAY),

@@ -148,7 +148,7 @@ int main(void)
     testAdsAccuracy();
     testGunKick();
     testTracers();
-    testReloadSpeed(); testNoclip(); testLean(); testFog(); /* FORK-071 to FORK-074 */
+    testReloadSpeed(); testNoclip(); testLean(); testFog(); testGraphics(); /* FORK-071 to FORK-074, FORK-082 */
     testProjectileArc();
     testProjectileArcThrown();
     testSettleTicks();
@@ -286,7 +286,7 @@ int main(void)
     /* Appending upstream watch controls must not renumber saved fork bindings. */
     assert(PORTACT_AIM_DOWN_SIGHTS == 21 && PORTACT_STATE_MENU == 22);
     assert(PORTACT_QUICKSAVE == 23 && PORTACT_QUICKLOAD == 24 && PORTACT_UNDO_LOAD == 25);
-    assert(PORTACT_WATCH_UP == 26 && PORTACT_WATCH_DOWN == 27 && PORTACT_COUNT == 34);
+    assert(PORTACT_WATCH_UP == 26 && PORTACT_WATCH_DOWN == 27 && PORTACT_COUNT == 44);
     assert(strcmp(portJoyPortBindDefault(PORTACT_WATCH_UP), "Up") == 0);
     portJoyPortPadDown(0, PORTACT_WATCH_DOWN);
     portJoyPortPollCommit();

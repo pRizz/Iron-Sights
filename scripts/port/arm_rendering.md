@@ -16,6 +16,24 @@ fix one pose while breaking another.
 | Pistol hand/sleeve occlusion | First-person weapon depth layer           | Both native hands and added arms use depth testing in the same near projection. A sleeve in front must cover skin regardless of display-list order. Restore the scene projection after each weapon draw and leave the per-frame `G_ZBUFFER` geometry mode on for later split-screen views.          |
 | ADS fade                     | Shared color/depth topology               | Same triangles in both passes; depth lists contain geometry only. Opaque draws omit unused depth lists.                                                                                                                                                                                             |
 | Hip-Fire Arms (FORK-075)     | `adsHipPose` in `ads_hands.c`             | Optional, off by default. Below a settled ADS the same rigid hands draw opaque; the elbow is carried with the gun from the settled ADS pose, and the per-gun `sAdsHipGrips` fit moves only the support hand and elbow, both fading out as the blend rises. Settled ADS and the setting-off fade are unchanged. |
+| Graphics on Gun and Hands (FORK-082) | `port_graphics.c`, the renderer's viewmodel span | Owner-requested exception to the colour rules above, active while Tone Mapping or Baked Lighting is on (both on by default in the Windows and Linux builds since 2026-11-15, off in capture runs) with Gun and Hands on. Tone Mapping regrades the finished pixels after the hands draw; Baked Lighting scales the computed vertex colour of every viewmodel draw by one probe multiplier. Vertices, UVs, alpha, triangles, materials, shaders, depth and the native render setup stay untouched; with both off the viewmodel is unchanged. |
+
+## Graphics on the gun and hands (FORK-082)
+
+At the owner's request (2026-11-14), the Graphics page's Tone Mapping and Baked
+Lighting may reach the first-person gun, native hands and generated arms. This
+is a deliberate, opt-in exception to "never recolor the stock hand": it changes
+their final colour only, never their data. Tone Mapping is a full-view pass
+after `gunRenderFirstPersonGunModels` (G_NOOP 0x66), so the hand, sleeve and
+wrist seam are graded together and keep matching. Baked Lighting multiplies the
+renderer's computed shade (`gfx_sp_vertex`, after lighting) by the probe sent
+in G_NOOP 0x67, for every vertex inside the `portHudViewmodelTag` span, so
+skin, clothing, watch and gun move by the same factor and seams stay matched.
+With Gun and Hands off the grade runs before the guns and no probe is sent: the
+viewmodel draws exactly as before. Captures and the review gallery run with
+Tone Mapping and Baked Lighting off: every run with `GE_WINDOW` set starts with
+both off (`portGraphicsCaptureDefaults`), so their images stay comparable with
+the stock audit reference, unless the run's own midas.ini turns them on.
 
 ## Protected native pistol path
 

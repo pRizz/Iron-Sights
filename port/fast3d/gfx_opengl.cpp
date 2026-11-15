@@ -28,6 +28,8 @@
 #include "gfx_cc.h"
 #include "gfx_rendering_api.h"
 #include "gfx_pc.h"
+#include "gfx_hdr_dxgi.h"         /* FORK-082: HDR Output's presenter */
+#include "port_graphics_render.h" /* FORK-082: the Graphics page's state */
 
 #include <cstdarg>
 #include <cstdio>
@@ -70,7 +72,24 @@ struct Framebuffer {
     GLuint fbo, clrbuf, clrbuf_msaa, rbo;
     GLuint clrtex_msaa;   /* GE N64 AA: the colour target as a multisample TEXTURE (readable per sample) */
     bool msaa_is_texture; /* which of the two is attached */
+    GLenum color_fmt;     /* FORK-082: GL_RGB8, or GL_RGBA16F while HDR Output runs */
 };
+
+/* FORK-082 (gfx_hdr.inl): HDR Output is running - framebuffer 0 is a float
+ * texture and every other target allocates float too */
+static bool gl_hdr_on = false;
+static void gl_hdr_sync(uint32_t w, uint32_t h);
+static GLenum gl_fb_color_format(void) {
+    return gl_hdr_on ? GL_RGBA16F : GL_RGB8;
+}
+/* glTexImage2D storage of colour format `fmt` for the bound 2D texture */
+static void gl_color_tex_image(GLenum fmt, uint32_t w, uint32_t h) {
+    if (fmt == GL_RGBA16F) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_HALF_FLOAT, NULL);
+    } else {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    }
+}
 
 static std::map<pair<uint64_t, uint32_t>, struct ShaderProgram> shader_program_pool;
 static GLuint opengl_vbo;
@@ -1817,6 +1836,7 @@ static int gfx_opengl_create_framebuffer() {
     framebuffers[i].clrbuf = clrbuf;
     framebuffers[i].clrtex_msaa = 0;
     framebuffers[i].msaa_is_texture = false;
+    framebuffers[i].color_fmt = GL_RGB8;
 
     if (!gfx_framebuffers_enabled) {
         return i;
@@ -1879,11 +1899,14 @@ static void gfx_opengl_update_framebuffer_parameters(int fb_id, uint32_t width, 
             /* GE N64 AA: the VI resolve reads samples, so the multisampled colour
              * target is a texture while gfx_n64_aa is set (a renderbuffer otherwise) */
             const bool want_tex = msaa_level > 1 && gfx_n64_aa != 0 && glTexImage2DMultisample != NULL && msaa_tex_ok;
-            if (fb.width != width || fb.height != height || fb.msaa_level != msaa_level || fb.msaa_is_texture != want_tex) {
+            const GLenum fmt = gl_fb_color_format(); /* FORK-082 */
+            if (fb.width != width || fb.height != height || fb.msaa_level != msaa_level || fb.msaa_is_texture != want_tex ||
+                fb.color_fmt != fmt) {
                 realloc = true;
+                fb.color_fmt = fmt;
                 if (msaa_level <= 1) {
                     glBindTexture(GL_TEXTURE_2D, fb.clrbuf);
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+                    gl_color_tex_image(fmt, width, height);
                     glBindTexture(GL_TEXTURE_2D, 0);
                     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fb.clrbuf, 0);
                 } else if (want_tex) {
@@ -1891,12 +1914,12 @@ static void gfx_opengl_update_framebuffer_parameters(int fb_id, uint32_t width, 
                         glGenTextures(1, &fb.clrtex_msaa);
                     }
                     glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, fb.clrtex_msaa);
-                    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, msaa_level, GL_RGB8, width, height, GL_TRUE);
+                    glTexImage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, msaa_level, fmt, width, height, GL_TRUE);
                     glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, 0);
                     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, fb.clrtex_msaa, 0);
                 } else {
                     glBindRenderbuffer(GL_RENDERBUFFER, fb.clrbuf_msaa);
-                    glRenderbufferStorageMultisample(GL_RENDERBUFFER, msaa_level, GL_RGB8, width, height);
+                    glRenderbufferStorageMultisample(GL_RENDERBUFFER, msaa_level, fmt, width, height);
                     glBindRenderbuffer(GL_RENDERBUFFER, 0);
                     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, fb.clrbuf_msaa);
                 }
@@ -1958,6 +1981,9 @@ static void gfx_opengl_update_framebuffer_parameters(int fb_id, uint32_t width, 
     fb.has_depth_buffer = has_depth_buffer;
     fb.msaa_level = msaa_level;
     fb.invert_y = opengl_invert_y;
+    if (fb_id == 0) {
+        gl_hdr_sync(width, height); /* FORK-082: HDR Output starts, resizes or stops here */
+    }
 }
 
 bool gfx_opengl_start_draw_to_framebuffer(int fb_id, float noise_scale) {
@@ -2080,16 +2106,18 @@ void gfx_opengl_resolve_msaa_color_buffer(int fb_id_target, int fb_id_source) {
          * the source size into a plain RGB8 texture first, then blit that. */
         static GLuint rs_fbo = 0, rs_tex = 0;
         static uint32_t rs_w = 0, rs_h = 0;
+        static GLenum rs_fmt = 0; /* FORK-082: the source's format (float under HDR Output) */
         if (rs_fbo == 0) {
             glGenFramebuffers(1, &rs_fbo);
             glGenTextures(1, &rs_tex);
         }
         glBindFramebuffer(GL_FRAMEBUFFER, rs_fbo);
-        if (rs_w != fb_src.width || rs_h != fb_src.height) {
+        if (rs_w != fb_src.width || rs_h != fb_src.height || rs_fmt != fb_src.color_fmt) {
             GLint had_tex = 0;
+            rs_fmt = fb_src.color_fmt;
             glGetIntegerv(GL_TEXTURE_BINDING_2D, &had_tex);
             glBindTexture(GL_TEXTURE_2D, rs_tex);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, fb_src.width, fb_src.height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+            gl_color_tex_image(rs_fmt, fb_src.width, fb_src.height);
             glBindTexture(GL_TEXTURE_2D, (GLuint)had_tex);
             glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, rs_tex, 0);
             rs_w = fb_src.width;
@@ -2104,7 +2132,8 @@ void gfx_opengl_resolve_msaa_color_buffer(int fb_id_target, int fb_id_source) {
         glBindFramebuffer(GL_READ_FRAMEBUFFER, fb_src.fbo);
     }
     gl_blit_to(fb_dst.fbo, fb_src.width, fb_src.height, dx0, 0, dx1, fb_dst.height, GL_NEAREST);
-    glBindFramebuffer(GL_FRAMEBUFFER, current_framebuffer);
+    /* the current target's fbo (was the index, which only matched while it was 0 = GL's window) */
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffers[current_framebuffer].fbo);
     glEnable(GL_SCISSOR_TEST);
 }
 
@@ -2159,7 +2188,9 @@ void gfx_opengl_copy_framebuffer(int fb_dst, int fb_src, int left, int top, bool
         std::swap(dstY0, dstY1);
     }
 
-    if (fb_src == 0) {
+    if (fb_src == 0 && gl_hdr_on) {
+        glReadBuffer(GL_COLOR_ATTACHMENT0); /* FORK-082: "the window" is the HDR float target */
+    } else if (fb_src == 0) {
         // GLES does not support GL_FRONT here
         glReadBuffer((use_back || gl_es) ? GL_BACK : GL_FRONT);
     } else {
@@ -3119,10 +3150,16 @@ static bool vi_init(void) {
 }
 
 static void vi_size(uint32_t w, uint32_t h) {
-    if (vi_w == w && vi_h == h) return;
+    static bool vi_float = false; /* FORK-082: float under HDR Output, so highlights pass */
+    if (vi_w == w && vi_h == h && vi_float == gl_hdr_on) return;
+    vi_float = gl_hdr_on;
     for (int i = 0; i < 3; i++) {
         glBindTexture(GL_TEXTURE_2D, vi_tex[i]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        if (vi_float) {
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_HALF_FLOAT, NULL);
+        } else {
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        }
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -3159,16 +3196,18 @@ static void gfx_opengl_resolve_n64_aa(int fb_dst, int fb_src) {
              * gfx_pc's plain MSAA branch does. */
             static GLuint fb_fbo = 0, fb_tex = 0;
             static uint32_t fb_w = 0, fb_h = 0;
+            static GLenum fb_fmt = 0; /* FORK-082: the source's format */
             if (fb_fbo == 0) {
                 glGenFramebuffers(1, &fb_fbo);
                 glGenTextures(1, &fb_tex);
             }
             glBindFramebuffer(GL_FRAMEBUFFER, fb_fbo);
-            if (fb_w != src.width || fb_h != src.height) {
+            if (fb_w != src.width || fb_h != src.height || fb_fmt != src.color_fmt) {
                 GLint had_tex = 0;
+                fb_fmt = src.color_fmt;
                 glGetIntegerv(GL_TEXTURE_BINDING_2D, &had_tex);
                 glBindTexture(GL_TEXTURE_2D, fb_tex);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, src.width, src.height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+                gl_color_tex_image(fb_fmt, src.width, src.height);
                 glBindTexture(GL_TEXTURE_2D, (GLuint)had_tex);
                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fb_tex, 0);
                 fb_w = src.width;
@@ -3303,6 +3342,8 @@ static void gfx_opengl_resolve_n64_aa(int fb_dst, int fb_src) {
 #include "gfx_screen_env.inl" /* FORK-058: screen reflections */
 #include "gfx_glint.inl" /* FORK-058: the Gun Glint pass */
 #include "gfx_glass.inl" /* FORK-066: the Glass Reflections pass */
+#include "gfx_hdr.inl" /* FORK-082: HDR Output */
+#include "gfx_grade.inl" /* FORK-082: Tone Mapping */
 
 struct GfxRenderingAPI gfx_opengl_api = { 
     gfx_opengl_get_name,
@@ -3356,7 +3397,8 @@ struct GfxRenderingAPI gfx_opengl_api = {
     gfx_opengl_env_cube_begin,
     gfx_opengl_env_cube_face,
     gfx_opengl_env_cube_end,
-    gfx_opengl_glass_draw
+    gfx_opengl_glass_draw,
+    gfx_opengl_grade
 };
 
 #ifdef __EMSCRIPTEN__

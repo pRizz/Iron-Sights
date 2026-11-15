@@ -151,8 +151,9 @@ enum
     /* +19 mouse_unlock (never bound on a pad, but the order must match
      * joy_port's, checked at init),
      * +20 classic_toggle (Classic Mode bindable on a pad, as Tab is on the keyboard),
-     * +21 aim_down_sights (held, separate from R's red-target Aim); +26/+27 watch_up/watch_down, +28 noclip, +29/+30 noclip_up/noclip_down (FORK-072), +31/+32 lean_left/lean_right (FORK-073), +33 sprint_toggle (FORK-006) */
-    PM_PORT_LAST = PM_PORT_FIRST + 33,
+     * +21 aim_down_sights (held, separate from R's red-target Aim); +26/+27 watch_up/watch_down, +28 noclip, +29/+30 noclip_up/noclip_down (FORK-072), +31/+32 lean_left/lean_right (FORK-073), +33 sprint_toggle (FORK-006),
+     * +34..+38 the Graphics toggles and compare, +39..+42 its slider keys, +43 the next Look (FORK-082) */
+    PM_PORT_LAST = PM_PORT_FIRST + 43,
     PM_COUNT
 };
 #define PM_PORT_COUNT (PM_PORT_LAST - PM_PORT_FIRST + 1)
@@ -179,6 +180,10 @@ static const char *sPadMapNames[PM_COUNT] =
     "noclip", "noclip_up", "noclip_down",
     "lean_left", "lean_right",
     "sprint_toggle",
+    "toggle_tone_mapping", "toggle_baked_lighting", "toggle_hdr_output", "toggle_graphics_viewmodel",
+    "graphics_compare",
+    "graphics_slider_next", "graphics_slider_prev", "graphics_slider_up", "graphics_slider_down",
+    "graphics_look_next",
 };
 /* The raw (unmapped DInput) fallback layout of portInputPadMerge expressed as
  * map tokens, so the launcher, first-rebind seed and bind rows can describe it.

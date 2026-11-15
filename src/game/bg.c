@@ -27,6 +27,7 @@
 #include <string.h>
 extern void sysFatalError(const char *format, ...);
 #include "port_noclip.h" /* FORK-072: portNoclipAllRooms, portNoclipMatrixOffsetFits */
+#include "port_graphics.h" /* FORK-082: Baked Lighting's capture and apply hooks */
 #endif
 
 
@@ -1279,6 +1280,9 @@ void load_bg_file(LEVEL_INDEX levelid)
         }
  
         initializeRoomData();
+#ifndef TARGET_N64
+        portBakeLevelBegin(); /* FORK-082: bgRoomCalcBB captures each room */
+#endif
  
         for (i = 1; i < g_MaxNumRooms; i++)
         {
@@ -1290,6 +1294,7 @@ void load_bg_file(LEVEL_INDEX levelid)
             extern void portBgCalcLevelFloor(void);
             portBgCalcLevelFloor(); /* every room's box is measured by here */
         }
+        portBakeLevelLoaded(); /* FORK-082: Baked Lighting starts here when on */
 #endif
 
         for (i = 0; g_BgPortals[i].offset_portal != (NULL); i++)
@@ -1321,6 +1326,9 @@ void load_bg_file(LEVEL_INDEX levelid)
 
 
 void cleanup_rooms(void) {
+#ifndef TARGET_N64
+    portBakeLevelUnload(); /* FORK-082 */
+#endif
     unload_rooms();
     matrix_4x4_7F058C4C(1.0);
 }
@@ -3604,6 +3612,9 @@ void bgLoadRoomModelData(s32 roomID)
         if (result >= 0)
         {
             used = result;
+#ifndef TARGET_N64
+            portBakeApplyRoom(roomID); /* FORK-082: baked colours, before the shot-light redarken */
+#endif
             redarken_lights_in_room(roomID);
         }
 #ifndef TARGET_N64
@@ -6437,6 +6448,10 @@ void bgRoomCalcBB(s32 room) // canonical name
     g_BgRoomInfo[room].maxbounds.x = roomdata->pos.x + limits.maxX;
     g_BgRoomInfo[room].maxbounds.y = roomdata->pos.y + limits.maxY;
     g_BgRoomInfo[room].maxbounds.z = roomdata->pos.z + limits.maxZ;
+
+#ifndef TARGET_N64
+    portBakeCaptureRoom(room); /* FORK-082: Baked Lighting's copy of the room */
+#endif
 
     if (wasloaded == 0)
     {

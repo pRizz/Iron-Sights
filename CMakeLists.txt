@@ -425,6 +425,20 @@ if(GE_VIDEO)
         port/fast3d/enhanced_fonts_download.cpp port/fast3d/enhanced_fonts_http.cpp)
     set_target_properties(ge_open_fonts PROPERTIES INCLUDE_DIRECTORIES "")
     list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_open_fonts>)
+    # FORK-082: HDR Output's DXGI presenter (stubs off Windows). The Windows
+    # SDK headers collide with the game's include directories, so like the
+    # font sources it builds without them.
+    add_library(ge_hdr_dxgi OBJECT port/fast3d/gfx_hdr_dxgi.cpp)
+    set_target_properties(ge_hdr_dxgi PROPERTIES INCLUDE_DIRECTORIES "")
+    if(WIN32 AND NOT GE_XBOX)
+        if(SDL2_MINGW_ROOT)
+            target_include_directories(ge_hdr_dxgi PRIVATE ${SDL2_MINGW_ROOT}/include/SDL2)
+        else()
+            target_include_directories(ge_hdr_dxgi PRIVATE
+                ${CMAKE_SOURCE_DIR}/third_party/SDL2-2.30.11/i686-w64-mingw32/include/SDL2)
+        endif()
+    endif()
+    list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_hdr_dxgi>)
     if(NOT EMSCRIPTEN AND NOT GE_XBOX)
         # FORK-053: player-installed HD texture packs (native only). Like the
         # font sources, it builds without the game's include directories.

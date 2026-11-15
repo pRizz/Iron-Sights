@@ -4087,7 +4087,9 @@ enum { PORT_SHEET_GAMEPLAY, PORT_SHEET_CONTROL, PORT_SHEET_DISPLAY, PORT_SHEET_C
        PORT_SHEET_IS_SYSTEM, PORT_SHEET_IS_ENEMIES,   /* Enemies: FORK-081 */
        /* ENHANCED FONTS (FORK-052) and HD TEXTURES (FORK-053): downloads the
         * player starts, opened from System (port_download_page.h) */
-       PORT_SHEET_IS_FONTS, PORT_SHEET_IS_HDTEX, PORT_SHEET_IS_CUSTOMTEX, PORT_SHEET_COUNT };
+       PORT_SHEET_IS_FONTS, PORT_SHEET_IS_HDTEX, PORT_SHEET_IS_CUSTOMTEX,
+       /* GRAPHICS (FORK-082): Tone Mapping, HDR Output, Baked Lighting */
+       PORT_SHEET_IS_GRAPHICS, PORT_SHEET_COUNT };
 /* The Options folder's rows, top to bottom, at the Files menu's own row
  * coordinates (y 0xDC, pitch 0x20). Each is a submenu:
  *
@@ -4118,7 +4120,7 @@ static const char *const port_sheet_title[PORT_SHEET_COUNT] = { "GAMEPLAY\n", "C
         "GAMEPLAY OPTIONS\n", "CLASSIC\n",   /* GAMEPLAY OPTIONS is not drawn: the two-column sheet has no heading */
         "IRON SIGHTS\n", "AIMING AND MOVEMENT\n", "COMBAT FEEDBACK\n", "HUD ADDITIONS\n", "SYSTEM\n",
         "ENEMIES\n",   /* FORK-081 */
-        "ENHANCED FONTS\n", "HD TEXTURES\n", "CUSTOM TEXTURE PACKS\n" };
+        "ENHANCED FONTS\n", "HD TEXTURES\n", "CUSTOM TEXTURE PACKS\n", "GRAPHICS\n" };
 static s32 port_options_row_highlighted = -1; /* row under the cursor, -1 = on a tab */
 /* The folder's hubs: GAMEPLAY and AUDIO VISUAL reuse this folder screen to list
  * their pages, numbered; -1 means the folder's own three rows. A page's
@@ -4159,6 +4161,7 @@ s32 portMenuHarnessSheet(char first, char second)
                         : (second == 'e') ? PORT_SHEET_IS_FONTS   /* GE_MENU=zenhanced */
                         : (second == 't') ? PORT_SHEET_IS_HDTEX   /* GE_MENU=ztextures */
                         : (second == 'c') ? PORT_SHEET_IS_CUSTOMTEX   /* GE_MENU=zcustom */
+                        : (second == 'g') ? PORT_SHEET_IS_GRAPHICS    /* GE_MENU=zgraphics (FORK-082) */
                         : PORT_SHEET_IRONSIGHTS;
     }
     else if (first == 'd') port_sheet_kind = PORT_SHEET_DISPLAY;
@@ -4786,6 +4789,37 @@ static const struct PortSheetRow port_sheet_rows_ironsights[] = {
     { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_ENEMIES },   /* FORK-081 */
     { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_HUD },
     { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_SYSTEM },
+    { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_GRAPHICS },   /* FORK-082 */
+};
+/* FORK-082: Tone Mapping, HDR Output (Windows), Baked Lighting, and whether
+ * they reach the first-person gun and hands (port_graphics.h) */
+static const struct PortSheetRow port_sheet_rows_is_graphics[] = {
+    { SHROW_OPT, "graphics_look" },
+    { SHROW_OPT, "tone_mapping" },
+    { SHROW_OPT, "tone_brightness" },
+    { SHROW_OPT, "tone_contrast" },
+    { SHROW_OPT, "tone_intensity" },
+    { SHROW_OPT, "vibrance" },
+    { SHROW_OPT, "tone_clarity" },
+    { SHROW_OPT, "tone_sharpen" },
+    { SHROW_OPT, "tone_glow" },
+    { SHROW_OPT, "tone_saturation" },
+    { SHROW_OPT, "tone_temperature" },
+    { SHROW_OPT, "tone_split" },
+    { SHROW_OPT, "tone_split_colours" },
+    { SHROW_OPT, "tone_fade" },
+    { SHROW_OPT, "tone_vignette" },
+    { SHROW_OPT, "tone_grain" },
+    { SHROW_OPT, "tone_auto_exposure" },
+    { SHROW_OPT, "tone_adapt_speed" },
+#if defined(_WIN32) && !defined(GE_XBOX)
+    { SHROW_OPT, "hdr_output" },
+    { SHROW_OPT, "hdr_peak" },
+    { SHROW_OPT, "hdr_paper_white" },
+#endif
+    { SHROW_OPT, "baked_lighting" },
+    { SHROW_OPT, "baked_lighting_strength" },
+    { SHROW_OPT, "graphics_viewmodel" },
 };
 static const struct PortSheetRow port_sheet_rows_is_aim[] = {
     { SHROW_OPT, "aim_mode" }, { SHROW_OPT, "knife_ads" },
@@ -4950,6 +4984,7 @@ static const char *portSheetPageLabel(s32 kind)
         case PORT_SHEET_IS_FONTS:    return "Enhanced Fonts\n";
         case PORT_SHEET_IS_HDTEX:    return "HD Textures\n";
         case PORT_SHEET_IS_CUSTOMTEX: return "Custom Texture Packs\n";
+        case PORT_SHEET_IS_GRAPHICS: return "Graphics\n";   /* FORK-082 */
         case PORT_SHEET_GRAPHICS: return "Graphics\n";
         case PORT_SHEET_MOUSEKB:    return "Mouse and Keyboard\n";
         case PORT_SHEET_PAD:        return "Controller\n";
@@ -5365,6 +5400,7 @@ static void portSheetBuild(s32 kind)
     if (kind == PORT_SHEET_IS_ENEMIES)  { src = port_sheet_rows_is_enemies;  n = sizeof(port_sheet_rows_is_enemies)  / sizeof(port_sheet_rows_is_enemies[0]);  }
     if (kind == PORT_SHEET_IS_HUD)      { src = port_sheet_rows_is_hud;      n = sizeof(port_sheet_rows_is_hud)      / sizeof(port_sheet_rows_is_hud[0]);      }
     if (kind == PORT_SHEET_IS_SYSTEM)   { src = port_sheet_rows_is_system;   n = sizeof(port_sheet_rows_is_system)   / sizeof(port_sheet_rows_is_system[0]);   }
+    if (kind == PORT_SHEET_IS_GRAPHICS) { src = port_sheet_rows_is_graphics; n = sizeof(port_sheet_rows_is_graphics) / sizeof(port_sheet_rows_is_graphics[0]); }
     port_sheet_twocol_split = PORT_SHEET_TWOCOL_ROWS;
     for (i = 0; i < n && port_sheet_rows < PORT_SHEET_ROWS_MAX; i++)
     {
@@ -7871,6 +7907,7 @@ static const char *portSheetHelpKey(s32 row)
                 case PORT_SHEET_IS_FONTS:    return "@page_is_fonts";
                 case PORT_SHEET_IS_HDTEX:    return "@page_is_hdtex";
                 case PORT_SHEET_IS_CUSTOMTEX: return "@page_is_customtex";
+                case PORT_SHEET_IS_GRAPHICS: return "@page_is_graphics";
             }
             break;
     }

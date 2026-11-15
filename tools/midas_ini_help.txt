@@ -391,6 +391,82 @@ padN_stickmode.
                       |            | the view distance and guards' sight
                       |            | stay the same. Levels without fog are
                       |            | unaffected
+  graphics_look       | 2          | [display] Look (FORK-082): a preset of
+                      |            | the grading sliders below. 0 Custom,
+                      |            | 1 Natural, 2 Vibrant, 3 Cinematic,
+                      |            | 4 Noir, 5 Muted, 6 Cold War, 7 Warm
+                      |            | Retro, 8 Dark. Changing a slider makes
+                      |            | it Custom; written before the sliders.
+                      |            | Defaults (Windows, Linux): Vibrant
+                      |            | with Tone Mapping and Baked Lighting
+                      |            | on; browser and Xbox: both off
+  tone_mapping        | 1          | [display] Tone Mapping (FORK-082). 1 =
+                      |            | the 3D view is regraded after it draws:
+                      |            | highlight range recovered, vibrance,
+                      |            | contrast and a filmic curve; the HUD,
+                      |            | watch and menus stay stock. Iron
+                      |            | Sights > Graphics; toggle F3
+  vibrance            | 80         | [display] 0-100 (%): extra saturation
+                      |            | for the less saturated colours, with
+                      |            | Tone Mapping on
+  tone_brightness     | 150        | [display] 50-200 (%): exposure gain
+                      |            | with Tone Mapping; 100 = stock
+  tone_contrast       | 90         | [display] 50-200 (%): contrast around
+                      |            | mid grey (a power of 0.75-1.5)
+  tone_intensity      | 50         | [display] 0-100 (%): share of the
+                      |            | filmic highlight roll-off; shadows
+                      |            | are never darkened by it
+  tone_clarity        | 60         | [display] 0-100 (%): local contrast
+                      |            | around edges and detail
+  tone_sharpen        | 50         | [display] 0-100 (%): contrast-
+                      |            | adaptive sharpening (CAS-style)
+  tone_glow           | 100        | [display] 0-100 (%): a soft glow
+                      |            | from bright areas (lamps, sky, flashes)
+  tone_saturation     | 100        | [display] 0-200 (%): overall colour;
+                      |            | 0 = black and white
+  tone_temperature    | 0          | [display] -100 (cool, blue) to 100
+                      |            | (warm, amber)
+  tone_split          | 0          | [display] 0-100 (%): split-tone
+                      |            | strength
+  tone_split_colours  | 0          | [display] shadow / highlight colours:
+                      |            | 0 teal / orange, 1 green / gold,
+                      |            | 2 blue / amber, 3 sepia
+  tone_fade           | 0          | [display] 0-100 (%): lifted blacks
+  tone_vignette       | 0          | [display] 0-100 (%): darker corners
+  tone_grain          | 0          | [display] 0-100 (%): film grain
+  tone_auto_exposure  | 60         | [display] 0-100 (%): eye adaptation;
+                      |            | bright scenes (snow) darken up to 2
+                      |            | stops, dark ones lift 0.25 at most
+  tone_adapt_speed    | 100        | [display] 25-400 (%): how fast it
+                      |            | adapts (100: ~0.4 s to brighter
+                      |            | scenes, ~1.7 s to darker)
+  hdr_output          | 0          | [display] HDR Output (Windows). 1 = a
+                      |            | DXGI scRGB swap chain presents the
+                      |            | frame, with graded highlights above
+                      |            | paper white, while Windows has HDR on
+                      |            | for the monitor; toggle F2
+  hdr_peak            | 1000       | [display] 400-2000 nits: the display's
+                      |            | peak brightness for HDR Output
+  hdr_paper_white     | 200        | [display] 80-480 nits: the brightness
+                      |            | of white (HUD, stock image) in HDR
+  baked_lighting      | 1          | [display] Baked Lighting. 1 = ray-
+                      |            | traced ambient occlusion and bounce
+                      |            | light baked into the room vertex
+                      |            | colours on worker threads as each
+                      |            | stage loads (the level shows stock
+                      |            | colours until it is done); toggle F4.
+                      |            | Tuning env vars: GE_BAKE_RADIUS (world
+                      |            | units, 220), GE_BAKE_RAYS (64),
+                      |            | GE_BAKE_AO (0.85), GE_BAKE_BOUNCE (0.6),
+                      |            | GE_BAKE_THREADS
+  baked_lighting_strength | 100    | [display] 25-200 (%): how far the
+                      |            | level's colours move toward the bake
+  graphics_viewmodel  | 1          | [display] Gun and Hands. 1 = Tone
+                      |            | Mapping grades the first-person gun,
+                      |            | hands and arms too, and Baked Lighting
+                      |            | lights them from a probe at the eye;
+                      |            | 0 = they keep their stock look; toggle
+                      |            | F7
   glass_reflections   | 1          | [display] Glass Reflections. ON
                       |            | reflects the level's rooms in glass
                       |            | panes, the windows of doors and broken
@@ -664,6 +740,20 @@ Port actions (extra actions beyond the N64 pad)
                    |                  | crouch_hold
   lean_left        | Z                | Lean left while held (needs leaning=1)
   lean_right       | C                | Lean right while held (needs leaning=1)
+  toggle_tone_mapping | F3            | Tone Mapping on / off (saved)
+  toggle_baked_lighting | F4          | Baked Lighting on / off (saved)
+  toggle_hdr_output | F2              | HDR Output on / off (saved)
+  toggle_graphics_viewmodel | F7      | Gun and Hands on / off (saved)
+  graphics_compare | F11              | Split the view: left stock, right
+                   |                  | tone mapped (not saved)
+  graphics_slider_next | Home         | Pick the next Graphics slider to
+                   |                  | change in play (message shows it)
+  graphics_slider_prev | End          | Pick the previous Graphics slider
+  graphics_slider_up | PageUp         | Raise the picked slider one menu
+                   |                  | step (saved; stops at its limit)
+  graphics_slider_down | PageDown     | Lower the picked slider one step
+  graphics_look_next | Insert         | The next Look (turns Tone Mapping
+                   |                  | on; saved)
   sprint_toggle    |                  | Press to sprint until you stop moving,
                    |                  | press again, aim or crouch (needs
                    |                  | sprint=1); pad layouts: L stick click

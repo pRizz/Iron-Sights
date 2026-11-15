@@ -21,6 +21,10 @@ void portStateMenuOpen(void) { paused=!paused;opens++; }
 s32 portStatePaused(void) { return paused; }
 s32 portStateMenuInput(s32 key) { keyCount++;lastKey=key;if(key==6)paused=0;return 1; }
 void portStateRequest(s32 s,s32 l) { requests++;slot=s;load=l; }
+static s32 gfxKeys[10], gfxTicks;
+void portGraphicsHotkey(s32 which) { gfxKeys[which]++; } /* FORK-082 */
+void portGraphicsTick(void) { gfxTicks++; }
+void portBakeTick(void) {}
 void osSyncPrintf(const char *fmt,...) { va_list args;va_start(args,fmt);vfprintf(stderr,fmt,args);va_end(args);abort(); }
 static void press(s32 action) { sLatchPoll[0][action]=1;sLatchN[0][action]=1;sLatchCount[0][action]=now; }
 int main(void)
@@ -37,5 +41,9 @@ int main(void)
     press(PORTACT_QUICKLOAD);portStateInput();assert(requests==2 && slot==4 && load);
     press(PORTACT_UNDO_LOAD);portStateInput();assert(requests==3 && slot==5 && load);
     press(PORTACT_QUICKLOAD);now+=251ull*46875ull;portStateInput();assert(requests==3);
+    press(PORTACT_TOGGLE_TONE_MAPPING);portStateInput();assert(gfxKeys[0]==1 && gfxKeys[4]==0); /* FORK-082: menus too */
+    press(PORTACT_GRAPHICS_COMPARE);portStateInput();assert(gfxKeys[4]==1 && gfxTicks>0);
+    press(PORTACT_GRAPHICS_SLIDER_DOWN);portStateInput();assert(gfxKeys[8]==1);
+    press(PORTACT_GRAPHICS_LOOK_NEXT);portStateInput();assert(gfxKeys[9]==1);
     puts("Suspend input routing tests passed.");return 0;
 }

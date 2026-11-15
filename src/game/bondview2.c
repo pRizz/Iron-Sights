@@ -58,6 +58,7 @@
 #include "port_mission_clock.h"
 #include "port_noclip.h"
 #include "port_sprint_feedback.h"
+#include "port_graphics.h" /* FORK-082 */
 extern f32 g_bondviewSceneWideFactor;
 extern s32 portAdzyMode(void); /* video.c: midas.ini [display] adzy - used twice in solo_char_load */
 extern s32 portReturnStartThisTick(void); /* video.c: START came from Return alone; weak 0 headless */
@@ -12945,6 +12946,9 @@ Gfx *maybe_mp_interface(Gfx *gdl)
 
     if (g_CurrentPlayer->cameramode == 1)
     {
+#ifndef TARGET_N64
+        gdl = portGraphicsGradeTag(gdl); /* FORK-082: Tone Mapping, before the cutscene text */
+#endif
         bondviewIntroCameraTextTick();
         gdl = hudmsgBottomRender(gdl);
         bondviewUpperTextWindowTimerTick();
@@ -12960,7 +12964,26 @@ Gfx *maybe_mp_interface(Gfx *gdl)
 
     gunUpdateAndFireBothHands();
     gunRenderCasings(&gdl);
+#ifndef TARGET_N64
+    /* FORK-082: Tone Mapping grades the view after the guns, hands and arms
+     * with Gun and Hands on (they also take the Baked Lighting probe), else
+     * before them; the watch and HUD keep their stock colours either way */
+    if (portGraphicsGradesViewmodel())
+    {
+        gdl = portGraphicsViewmodelTag(gdl);
+    }
+    else
+    {
+        gdl = portGraphicsGradeTag(gdl);
+    }
+#endif
     gunRenderFirstPersonGunModels(&gdl);
+#ifndef TARGET_N64
+    if (portGraphicsGradesViewmodel())
+    {
+        gdl = portGraphicsGradeTag(gdl);
+    }
+#endif
     gdl = bondviewRenderWatch(gdl);
     if (g_CurrentPlayer->mpmenuon != 0)
     {

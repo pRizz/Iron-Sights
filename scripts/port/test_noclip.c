@@ -241,3 +241,4 @@ static void testNoclip(void)
 /* Leaning (FORK-073) and Fog (FORK-074), kept here for test_ads.c's line budget. */
 #include "test_lean.c"
 #include "test_fog.c"
+#include "test_graphics.c" /* FORK-082: uses the popup counter above */

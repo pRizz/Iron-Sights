@@ -88,6 +88,7 @@
 #include "port_noclip.h"
 #include "port_lean.h"
 #include "port_fog.h"
+#include "port_graphics.h" /* FORK-082 */
 #include "port_explosive_rounds.h"
 #include "port_reinforcements.h"
 #include "port_projectile_arc.h"
@@ -162,6 +163,18 @@ enum {
     /* Appended: click-to-sprint (FORK-006), the controller layouts' left
      * stick click. */
     PORTACT_SPRINT_TOGGLE,
+    /* Appended: the Graphics page's toggles (FORK-082), in port_graphics.h
+     * PORT_GFX_KEY_* order; keyboard F-keys, pads ship unbound. */
+    PORTACT_TOGGLE_TONE_MAPPING,
+    PORTACT_TOGGLE_BAKED_LIGHTING,
+    PORTACT_TOGGLE_HDR_OUTPUT,
+    PORTACT_TOGGLE_GRAPHICS_VIEWMODEL,
+    PORTACT_GRAPHICS_COMPARE,
+    PORTACT_GRAPHICS_SLIDER_NEXT,
+    PORTACT_GRAPHICS_SLIDER_PREV,
+    PORTACT_GRAPHICS_SLIDER_UP,
+    PORTACT_GRAPHICS_SLIDER_DOWN,
+    PORTACT_GRAPHICS_LOOK_NEXT,
     PORTACT_COUNT
 };
 
@@ -227,6 +240,21 @@ static const struct {
     [PORTACT_LEAN_RIGHT]       = { "lean_right",       "C",        0 },
     /* Shift already holds Walk / Sprint; the controller layouts bind the left stick click */
     [PORTACT_SPRINT_TOGGLE]    = { "sprint_toggle",    "",         1 },
+    /* F2-F4, F7 and F11 are free on the shipped layout (the browser keeps F2
+     * and F11 for itself, where HDR Output does not exist anyway) */
+    [PORTACT_TOGGLE_TONE_MAPPING]       = { "toggle_tone_mapping",       "F3",  1 },
+    [PORTACT_TOGGLE_BAKED_LIGHTING]     = { "toggle_baked_lighting",     "F4",  1 },
+    [PORTACT_TOGGLE_HDR_OUTPUT]         = { "toggle_hdr_output",         "F2",  1 },
+    [PORTACT_TOGGLE_GRAPHICS_VIEWMODEL] = { "toggle_graphics_viewmodel", "F7",  1 },
+    [PORTACT_GRAPHICS_COMPARE]          = { "graphics_compare",          "F11", 1 },
+    /* every Graphics slider in play: Home / End pick it, Page Up / Page Down
+     * step it (those four only act in the console otherwise) */
+    [PORTACT_GRAPHICS_SLIDER_NEXT]      = { "graphics_slider_next",      "Home",     1 },
+    [PORTACT_GRAPHICS_SLIDER_PREV]      = { "graphics_slider_prev",      "End",      1 },
+    [PORTACT_GRAPHICS_SLIDER_UP]        = { "graphics_slider_up",        "PageUp",   1 },
+    [PORTACT_GRAPHICS_SLIDER_DOWN]      = { "graphics_slider_down",      "PageDown", 1 },
+    /* the next Look; Insert, like the four above, only acts in the console otherwise */
+    [PORTACT_GRAPHICS_LOOK_NEXT]        = { "graphics_look_next",        "Insert",   1 },
 };
 
 /* [input] detonate_use_reload (default ON): with remote mines in the right
@@ -358,6 +386,7 @@ s32 portJoyPortSetOption(const char *key, const char *value)
     if (portNoclipOptionSet(key, atoi(value))) return 1;
     if (portLeanOptionSet(key, atoi(value))) return 1;
     if (portFogOptionSet(key, atoi(value))) return 1;
+    if (portGraphicsOptionSet(key, atoi(value))) return 1; /* FORK-082 */
     if (portExplosiveRoundsOptionSet(key, atoi(value))) return 1;
     if (portReinforcementsOptionSet(key, atoi(value))) return 1;
     if (portProjectileArcOptionSet(key, atoi(value))) return 1;
@@ -524,6 +553,7 @@ s32 portJoyPortOptionGet(const char *key, s32 *out)
     if (portNoclipOptionGet(key, out)) return 1;
     if (portLeanOptionGet(key, out)) return 1;
     if (portFogOptionGet(key, out)) return 1;
+    if (portGraphicsOptionGet(key, out)) return 1; /* FORK-082 */
     if (portExplosiveRoundsOptionGet(key, out)) return 1;
     if (portReinforcementsOptionGet(key, out)) return 1;
     if (portProjectileArcOptionGet(key, out)) return 1;
@@ -576,6 +606,7 @@ s32 portJoyPortOptionSet(const char *key, s32 v)
     if (portNoclipOptionSet(key, v)) return 1;
     if (portLeanOptionSet(key, v)) return 1;
     if (portFogOptionSet(key, v)) return 1;
+    if (portGraphicsOptionSet(key, v)) return 1; /* FORK-082 */
     if (portExplosiveRoundsOptionSet(key, v)) return 1;
     if (portReinforcementsOptionSet(key, v)) return 1;
     if (portProjectileArcOptionSet(key, v)) return 1;
@@ -776,6 +807,11 @@ void portStateInput(void)
     if (portJoyPortTake(0, PORTACT_QUICKSAVE)) portStateRequest(4, 0);
     if (portJoyPortTake(0, PORTACT_QUICKLOAD)) portStateRequest(4, 1);
     if (portJoyPortTake(0, PORTACT_UNDO_LOAD)) portStateRequest(5, 1);
+    for (x = 0; x < PORT_GFX_KEY_COUNT; x++) { /* FORK-082: anywhere, menus included */
+        if (portJoyPortTake(0, PORTACT_TOGGLE_TONE_MAPPING + x)) portGraphicsHotkey(x);
+    }
+    portGraphicsTick();
+    portBakeTick();
     if (!portStatePaused()) { stickHeld=0; return; }
     pressed=joyGetButtonsPressedThisFrame(0,ANY_BUTTON);
     x=joyGetStickX(0); y=joyGetStickY(0);

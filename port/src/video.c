@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <ultra64.h>
 #include "port_modal.h"
+#include "port_graphics.h"   /* FORK-082: the Graphics defaults in the fresh midas.ini */
 #include "port_crosshair.h"
 #include "port_enhanced_fonts.h"
 #include "port_hd_textures.h" /* FORK-053: player-installed HD texture packs */
@@ -2435,6 +2436,31 @@ static void videoWriteDefaultIni(void)
     fprintf(f, "leaning=1\n");      /* PORT_LEANING_DEFAULT (FORK-073) */
     fprintf(f, "lean_tilt=0\n");    /* PORT_LEAN_TILT_DEFAULT (FORK-073) */
     fprintf(f, "fog=1\n");          /* PORT_FOG_DEFAULT (FORK-074) */
+    /* FORK-082: the Graphics page (port_graphics.h defaults) */
+    fprintf(f, "graphics_look=%d\n", PORT_LOOK_DEFAULT); /* before the sliders it sets */
+    fprintf(f, "tone_mapping=%d\n", PORT_TONE_MAPPING_DEFAULT);
+    fprintf(f, "vibrance=%d\n", PORT_VIBRANCE_DEFAULT);
+    fprintf(f, "tone_brightness=%d\n", PORT_BRIGHTNESS_DEFAULT);
+    fprintf(f, "tone_contrast=%d\n", PORT_CONTRAST_DEFAULT);
+    fprintf(f, "tone_intensity=%d\n", PORT_INTENSITY_DEFAULT);
+    fprintf(f, "tone_clarity=%d\n", PORT_CLARITY_DEFAULT);
+    fprintf(f, "tone_sharpen=%d\n", PORT_SHARPEN_DEFAULT);
+    fprintf(f, "tone_glow=%d\n", PORT_GLOW_DEFAULT);
+    fprintf(f, "tone_saturation=100\n");
+    fprintf(f, "tone_temperature=0\n");
+    fprintf(f, "tone_split=0\n");
+    fprintf(f, "tone_split_colours=0\n");
+    fprintf(f, "tone_fade=0\n");
+    fprintf(f, "tone_vignette=0\n");
+    fprintf(f, "tone_grain=0\n");
+    fprintf(f, "tone_auto_exposure=%d\n", PORT_AUTO_EXPOSURE_DEFAULT);
+    fprintf(f, "tone_adapt_speed=%d\n", PORT_ADAPT_SPEED_DEFAULT);
+    fprintf(f, "hdr_output=0\n");
+    fprintf(f, "hdr_peak=1000\n");
+    fprintf(f, "hdr_paper_white=200\n");
+    fprintf(f, "baked_lighting=%d\n", PORT_BAKED_LIGHTING_DEFAULT);
+    fprintf(f, "baked_lighting_strength=100\n");
+    fprintf(f, "graphics_viewmodel=1\n");
     fprintf(f, "allow_noclip=0\n"); /* PORT_NOCLIP_ALLOW_DEFAULT (FORK-072) */
     fprintf(f, "noclip_view=4\n");  /* PORT_NOCLIP_VIEW_DEFAULT (FORK-072) */
     fprintf(f, "sprint=1\nludicrous_sprint=0\n");
@@ -3411,6 +3437,7 @@ static void videoLoadConfig(void)
     int recBinds;         /* the keyboard's record had a [binds] section */
 
     videoBindCountCheck();
+    portGraphicsCaptureDefaults(); /* FORK-082: capture runs start with Graphics off */
     SDL_memset(sPortBindSeen, 0, sizeof(sPortBindSeen));
     sAdsMouseUpgraded = 0;
 

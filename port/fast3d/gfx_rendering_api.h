@@ -14,6 +14,24 @@ struct GfxClipParameters {
 
 enum FilteringMode { FILTER_NONE, FILTER_LINEAR, FILTER_THREE_POINT };
 
+/* FORK-082, Tone Mapping (gfx_grade.inl), every field from the Graphics page
+ * except exposure and expand (fixed): exposure keeps mid grey put under the
+ * filmic curve, expand recovers white to 1 / (1 - expand); brightness is a
+ * gain (1 = stock), contrast a power around mid grey (1 = none), filmic the
+ * share of the filmic roll-off (0..1), vibrance / clarity / sharpen / glow
+ * 0..1 strengths, peak the display's peak over paper white (HDR Output).
+ * saturation 0..2 (1 = stock), temperature the white-balance gains (rgb,
+ * luminance 1), split_tone 0..1 with its shadow and highlight tints (rgb,
+ * luminance 1), fade / vignette / grain 0..1. split: the left half of the view
+ * stays stock (Compare). */
+struct GfxGradeParams {
+    bool tonemap;
+    float exposure, expand, brightness, contrast, filmic, vibrance, clarity, sharpen, glow, peak;
+    float saturation, temperature[3], split_tone, shadow_tint[3], high_tint[3], fade, vignette, grain;
+    float auto_exposure, adapt_speed; /* 0..1 strength; 1 = normal speed */
+    bool split;
+};
+
 struct GfxRenderingAPI {
     const char* (*get_name)(void);
     int (*get_max_texture_size)(void);
@@ -151,6 +169,10 @@ struct GfxRenderingAPI {
      * mip level. split: only the right half of the viewport (a review aid).
      * NULL on backends without it. */
     void (*glass_draw)(const float* buf, size_t vertex_count, bool cube, bool split);
+    /* FORK-082, Tone Mapping (gfx_grade.inl): regrade the current viewport of
+     * the bound target in place - see GfxGradeParams. NULL on backends
+     * without it. */
+    void (*grade)(const struct GfxGradeParams* p);
 };
 
 #endif
