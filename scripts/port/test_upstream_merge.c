@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <string.h> /* memset before gunfire.c calls it unprototyped; drop when gunfire.c declares it (LP64-002 Task 9) */
 #include "../../src/game/gunfire.c"
 #include "../../port/src/port_sight.c"
 #include "../../port/src/port_crosshair.c"

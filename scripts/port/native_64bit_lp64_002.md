@@ -182,9 +182,12 @@ today (`gfx_shiny.cpp`, see Task 9).
 
 Expected: step 1 builds the headless tree (which is also a 32-bit Linux
 compile and link check) and the total is lower than before; step 2 exits 0 with 20 of 20
-missions `PASS`; step 3 exits 0. Also run each `scripts/port/test_*.sh` that
-compiles a file the task changed (`grep -l` the file name in
-`scripts/port/test_*.sh`), in the i686 container. The browser build is checked
+missions `PASS`; step 3 exits 0. Also run every harness line of the CI tests
+step (the `bash scripts/port/test_*.sh` and `python3 scripts/port/test_*.py`
+lines of the step `Test gameplay, cache and release tooling without a ROM` in
+`.github/workflows/windows-release.yml`), in the i686 container where a line
+needs `-m32`, because a header change reaches harnesses that never name the
+changed file. The browser build is checked
 by CI after the push; a red browser build is the task's to fix.
 
 ### Behaviour-sensitive sites

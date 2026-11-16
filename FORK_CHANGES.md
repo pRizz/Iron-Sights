@@ -906,6 +906,32 @@ store it into `s32`, but `front.c:8053` and `:9133` index with
 so the length is never 0 there. The `(char *)` cast at `front.c:1294` exists
 only because `gunfire.c:5415` declares the watch text as `u16 *`; Task 9 can
 remove it when it corrects that type.
+*Task 3 CI fix (local commit "Declare memset before gunfire.c in the upstream
+merge test"; not pushed):* after the two Task 3 commits were pushed, the CI
+tests job failed in `bash scripts/port/test_upstream_merge.sh`:
+`scripts/port/test_upstream_merge.c` includes `src/game/gunfire.c` first, which
+calls `memset` with no prototype (an implicit `int()` declaration), and then
+`port/src/port_crosshair.c`, whose `<string.h>` (the repository's
+`include/string.h`) now declares `void *memset(void *, int, size_t)`, a
+conflicting type. The task check missed it because it ran only the
+`test_*.sh` that name a changed file; this harness names none, and reaches
+`include/string.h` through `port_crosshair.c`. Fix: the driver includes
+`<string.h>` before `gunfire.c`, with a comment that the line can go once
+`gunfire.c` declares what it calls (Task 9); `gunfire.c` (strict) and
+`include/string.h` are unchanged. The plan's "Task check" now runs every
+harness line of the CI tests step, in the i686 container where a line needs
+`-m32`. *What ran,* in the i686 container from a linked worktree at 200230b:
+all 36 harness lines of the step "Test gameplay, cache and release tooling
+without a ROM". Before the fix `test_upstream_merge.sh` failed with CI's
+error; after it, it passes. The other 35 lines ran once, in
+the same pass (the fix touches only that driver, which no other line
+compiles): 33 passed and two could not be judged locally, for reasons unrelated to the
+change: `MIDAS_BUFFER_SANITIZE=1 bash scripts/port/test_buffers.sh` hung in
+its first AddressSanitizer binary under the Mac's emulated `qemu-i386` (over
+15 minutes at full CPU, and the same in another session's run); without the
+sanitizer the same harness passed in 4 s. `python3 scripts/port/lp64_casts.py
+check` exited 2 in the container because `git ls-files` cannot follow a linked
+worktree's `.git` file to a path outside the mount; on the host it passed.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
