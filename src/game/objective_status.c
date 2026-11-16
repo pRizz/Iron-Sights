@@ -20,7 +20,7 @@ struct objective_entry * objective_ptrs[OBJECTIVES_MAX];
 OBJECTIVESTATUS         objectiveStatuses[OBJECTIVES_MAX]; //This is an array of 10 OBJECTIVESTATUS,
 
 //CODE.bss:80075D80
-u32 *ptr_last_tag_entry_type16;
+struct TagObjectRecord *ptr_last_tag_entry_type16;
 //CODE.bss:80075D84
 struct watchMenuObjectiveText *ptr_last_briefing_setup_entry_type23;
 //CODE.bss:80075D88

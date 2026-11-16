@@ -6,7 +6,7 @@
 extern struct objective_entry * objective_ptrs[OBJECTIVES_MAX];
 extern  OBJECTIVESTATUS objectiveStatuses[OBJECTIVES_MAX]; //This is an array of 10 OBJECTIVESTATUS,
 
-extern u32 *ptr_last_tag_entry_type16;
+extern struct TagObjectRecord *ptr_last_tag_entry_type16;
 extern struct watchMenuObjectiveText *ptr_last_briefing_setup_entry_type23;
 extern struct criteria_roomentered *ptr_last_enter_room_subobject_entry_type20;
 extern struct criteria_deposit *ptr_last_deposit_in_room_subobject_entry_type21;

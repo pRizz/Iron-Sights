@@ -11,6 +11,8 @@
 #include "sched.h"
 #include "game/bg.h"
 #include "game/objecthandler.h"
+#include "game/vtxstore.h"
+#include "game/bondview.h"
 #include "port_hostptr.h"
 
 /* Fixed at every width: the renderer reads these as N64 formats. */
@@ -89,6 +91,11 @@ POINTER_SIZED(ModelRoData_ShadowRecord, image);
 POINTER_SIZED(ModelRoData_ShadowRecord, Header);
 POINTER_SIZED(ModelRoData_DisplayListPrimaryRecord, Vertices);
 POINTER_SIZED(ModelRoData_DisplayListPrimaryRecord, Primary);
+/* bondview2.c passes this as the collision walk's record, which
+ * stanTileDistanceRelated clears and its callbacks write by name (LP64-003). */
+_Static_assert(sizeof(struct move_bond_temp_struct) >= sizeof(struct StandTileLocusCallbackRecord)
+               && _Alignof(struct move_bond_temp_struct) >= _Alignof(struct StandTileLocusCallbackRecord),
+               "movement locus storage holds a collision walk record");
 /* The host-pointer test (LP64-003): a segment word is never a host address;
  * at 64 bits a host address has one of its upper 32 bits set. */
 _Static_assert(!PORT_IS_HOST_ADDR(0x0E000000u), "a segment-14 word is not a host address");
@@ -103,6 +110,9 @@ _Static_assert(sizeof(resource_lookup_data_entry) == 20, "ROM lookup layout");
 /* Hilite's alignment member is `long int[4]` (include/PR/gbi.h), so it grows
  * from 16 to 32 bytes on LP64, where long is 8 bytes. */
 _Static_assert(sizeof(Hilite) == 16, "32-bit highlight layout");
+/* vtxstore.c allocates its slot arrays by this record's size, which was the
+ * literal 0x14 before LP64-003 (32 bytes at 64 bits). */
+_Static_assert(sizeof(struct unk_09B7A0_struct_parent) == 0x14, "32-bit vertex store slot layout");
 #endif
 
 int main(void)

@@ -245,14 +245,14 @@ void sub_GAME_7F0AEFE0(StandTile *tile)
 
 
 //stanChecksf
-u32 stanRemovedAnimationRoutine(s32 arg0) 
+u32 stanRemovedAnimationRoutine(u8 *arg0) 
 {
 #ifdef DEBUG
     if (arg0 < ptr_firstroom_0)
     {
         osSyncPrintf("checksf: ERROR line %d %08x<%08x", __LINE__, arg0, ptr_firstroom_0);
     }
-    if (stanTileEnd < arg0)
+    if ((u8 *) stanTileEnd < arg0)
     {
         osSyncPrintf("checksf: ERROR line %d %08x>%08x", __LINE__, arg0, stanTileEnd);
     }
@@ -2722,7 +2722,6 @@ s32 stanIsSpecialBit1Set(StandTile *arg0, struct StandTileLocusCallbackRecord *a
 s32 stanCheckLinkedSpecialTile(StandTile *tile, s32 pointIdx, f32 arg2, f32 arg3, f32 arg4, struct StandTileLocusCallbackRecord *record)
 {
     /* The walker supplies three floats even though this callback ignores them. */
-    s32 *outFlags = (s32 *)record;
     u16 link;
     StandTile *target;
     s32 mid;
@@ -2735,7 +2734,7 @@ s32 stanCheckLinkedSpecialTile(StandTile *tile, s32 pointIdx, f32 arg2, f32 arg3
         mid = target->mid.half;
 
         if (g_StanTileSpecialFlags[STAN_MID_NIB(mid, 12)] & STANTILEFLAG_FORCECROUCH) {
-            outFlags[0] = 1;
+            record->rooms = (s32 *) (intptr_t) 1;
             return 1;
         }
 
@@ -2743,7 +2742,7 @@ s32 stanCheckLinkedSpecialTile(StandTile *tile, s32 pointIdx, f32 arg2, f32 arg3
 
         if (g_StanTileSpecialFlags[STAN_MID_NIB(mid, 12)] & STANTILEFLAG_LADDER) {
             dword_CODE_bss_8007BA0C = target;
-            outFlags[1] = 1;
+            record->count = 1;
             return 0;
         }
     }
@@ -2775,10 +2774,7 @@ s32 stanTileDistanceRelated(StandTile **arg0, f32 arg1, f32 arg2, f32 arg3, stru
      * IDO's stack layout and under GCC wiped the caller's locals (crashing
      * Dam). Zero just one record; every caller and callback only uses fields
      * inside it. */
-    ((s32 *) arg4)[0] = 0;
-    ((s32 *) arg4)[1] = 0;
-    ((s32 *) arg4)[2] = 0;
-    ((s32 *) arg4)[3] = 0;
+    *arg4 = (struct StandTileLocusCallbackRecord) {0};
     (void) i;
 #endif
 

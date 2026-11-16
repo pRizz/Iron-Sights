@@ -2405,6 +2405,11 @@ typedef struct Weapon1PTransformKeyframe {
 
 // placeholder while matching
 struct move_bond_temp_struct {
+#if IS_64_BIT
+    /* At 64 bits the record is 24 bytes and starts with a pointer, and
+     * stanTileDistanceRelated writes its fields by name (LP64-003). */
+    struct StandTileLocusCallbackRecord record;
+#else
     s32 unk00;
     s32 unk04;
 #ifndef TARGET_N64
@@ -2412,6 +2417,7 @@ struct move_bond_temp_struct {
      * StandTileLocusCallbackRecord through this; N64 keeps the 8-byte layout. */
     s32 pad08;
     s32 pad0C;
+#endif
 #endif
 };
 

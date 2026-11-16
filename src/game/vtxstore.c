@@ -6,17 +6,6 @@
 #include "chrai.h"
 #include "model.h"
 
-// unsure if these structs are defined as something else, elsewhere
-struct unk_09B7A0_struct_parent {
-    Vertex* unk00;
-    void *unk04;
-    s32 unk08;
-    s16 unk0C;
-    s16 unk0E;
-    s16 unk10;
-    s16 unk12;
-};
-
 // bss
 //CODE.bss:8007A0D0
 s32 dword_CODE_bss_8007A0D0; // item count for dword_CODE_bss_8007A0E0
@@ -108,7 +97,7 @@ void sub_GAME_7F09B820(void)
     dword_CODE_bss_8007A0D8 *= 2;
     dword_CODE_bss_8007A0DC *= 2;
 
-    tmp = 0x14;
+    tmp = sizeof(struct unk_09B7A0_struct_parent);
     dword_CODE_bss_8007A0E8 = mempAllocBytesInBank(dword_CODE_bss_8007A0D4 * tmp, MEMPOOL_STAGE);
     dword_CODE_bss_8007A0E0 = mempAllocBytesInBank(dword_CODE_bss_8007A0D0 * 0x10, MEMPOOL_STAGE);
     dword_CODE_bss_8007A0EC = mempAllocBytesInBank(dword_CODE_bss_8007A0DC * tmp, MEMPOOL_STAGE);

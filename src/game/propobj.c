@@ -191,7 +191,7 @@ static void portFadeNote(PropRecord *prop, s32 state, s32 alpha, f32 foga);
 #define PROP_PROJECTILE_GRAVITY_MODIFIER 0.27777779f
 
 /* 0x80030AC8 */ s32 alarm_timer = 0;
-/* 0x80030ACC */ s32 *ptr_alarm_sfx = 0;
+/* 0x80030ACC */ struct ALSoundState_s *ptr_alarm_sfx = 0;
 /* 0x80030AD0 */ f32 toxic_gas_sound_timer = 0.0;
 /* 0x80030AD4 */ s32 activate_gas_sound_timer = FALSE;
 /* 0x80030AD8 */ coord3d gasLeakSource = { 0.0f, 0.0f, 0.0f };
@@ -856,7 +856,7 @@ void sub_GAME_7F04088C(ObjectRecord *baseobj, struct coord3d *pos, Mtxf *matrix,
     {
         ObjectRecord *roomObj;
         f32 distfromTileCenter;
-        f32 byrefA;
+        struct rect4f *byrefA;
         f32 byrefB;
         f32 byrefC;
         f32 byrefD;
@@ -7207,7 +7207,7 @@ void save_ptr_monitor_ani_code_to_obj_ani_slot(MonitorRecord *mon, void *image)
 
 void monitorSetImageByNum(MonitorRecord *mon, s32 monAnimID)
 {
-    s32 *image = &monAnim00Bond;
+    uintptr_t *image = &monAnim00Bond[0];
     switch (monAnimID)
     {
          default:

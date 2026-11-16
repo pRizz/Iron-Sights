@@ -13,8 +13,33 @@ _Static_assert(__builtin_types_compatible_p(__typeof__(&stanCheckLinkedSpecialTi
 _Static_assert(__builtin_types_compatible_p(__typeof__(&stanLocusEdgeAboveYCallback),
     standTileLocusCallback_B_t), "Threshold adapter must match the walker's context type");
 
+/* A tile whose edge links to a ladder tile is reported through the record's
+ * count, which the movement code reads with stanGetLocusCount. */
+static void testLadderLinkIsCounted(void)
+{
+    /* Arrange: tile 16 of a synthetic tile array is a ladder (special 3) and
+     * the source tile's first edge links to it. */
+    _Alignas(StandTile) u8 tiles[17 * sizeof(StandTile)] = {0};
+    _Alignas(StandTile) u8 source[sizeof(StandTile) + 3 * sizeof(StandTilePoint)] = {0};
+    StandTile *ladder = (StandTile *)(tiles + 16 * sizeof(StandTile));
+    StandTile *tile = (StandTile *)source;
+    struct StandTileLocusCallbackRecord record = {0};
+    ladder->mid.half = 3;
+    tile->points[0].link = 16;
+    standTileStart = (StandTile *)tiles;
+
+    /* Act */
+    s32 result = stanCheckLinkedSpecialTile(tile, 0, 0.0f, 0.0f, 0.0f, &record);
+    standTileStart = NULL;
+
+    /* Assert: the ladder is counted and the crouch flag stays clear. */
+    if (result != 0 || stanGetLocusCount(&record) != 1 || stanGetLocusField0(&record) != 0) abort();
+}
+
 int main(void)
 {
+    testLadderLinkIsCounted();
+
     /* Arrange: a triangular tile with three solid edges, no ROM-backed links. */
     _Alignas(StandTile) u8 storage[sizeof(StandTile) + 3 * sizeof(StandTilePoint)] = {0};
     StandTile *tile = (StandTile *)storage;
