@@ -621,6 +621,37 @@ pending state that began at Task 5b (be840ef) is cleared. Before it, CI run
 headless tree on the runner, and the diagnostics check then printed `OK: 1432
 diagnostics, baseline 1432`. The plan's status table marks LP64-001 `Done`.
 
+**Milestone LP64-002 (type hygiene), planned on 2026-11-16, not started:**
+[the milestone's plan](scripts/port/native_64bit_lp64_002.md) lists eleven
+tasks. No source, build file or tool changed for it; this records the plan and
+the measurements it rests on, taken on `main` at ce60a74 in the Mac's
+containers. *Root causes:* each of the 1,432 recorded places was attributed
+from its compiler message and source line: 1,384 to 66 declarations or idioms
+(the largest: `frontPrintText`'s two font parameters typed `s32`, 252 places;
+the monitor animation script tables and their jump macros, 121, which include
+all 59 hard errors; font locals in `options.c`, 102; calls to pointer-returning
+functions with no prototype in scope, 102; the image bank's relocation offset,
+87) and 48 to one-off sites. 167 places are in the gallery's strict-tier files
+(`bondview2.c` 82, `model.c` 47, `gunfire.c` 38). *A real 64-bit compile:*
+with `-DGE_POINTER_BITS=64 -DGE_HEADLESS=ON`, 328 of 329 translation units
+compiled in both the aarch64 and the x86_64 container; only
+`src/game/propobj.c` failed, on those 59 errors. With `GE_VIDEO=ON` and the
+distribution's `libsdl2-dev` installed in a throwaway container (neither image
+has a 64-bit SDL2), 356 of 360 compiled; the other three failures are C++
+files under `port/fast3d/` and none is an int/pointer conversion
+(`gfx_pc.cpp` and `gfx_opengl.cpp` on `system.h`'s `s64` typedef, which
+conflicts with the game's at 64 bits; `gfx_shiny.cpp` on six C-linkage
+conflicts that also occur at 32 bits in that container). Linking was not
+tried. *Found on the way:* the build's `-w` also switches off
+`-Werror=int-conversion` and its siblings, so the 64-bit gate cannot keep
+`-w`; `src/game/gunfire.c`, `gun.c`, `lv.c` and `src/libultrare/audio/env.c`
+use `#line`, so compiler line numbers for them are not file lines; the
+pre-commit hook refuses a strict-tier change on the Mac on any branch, which
+the plan's Task 2 puts to the owner. Not covered by the planned gate and
+recorded for later milestones: about 527 calls to functions without a
+prototype, of which the pointer-returning ones are in the plan, and about
+1,780 incompatible-pointer-type places, both present at 32 bits too.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),
