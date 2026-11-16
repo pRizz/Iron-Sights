@@ -379,6 +379,18 @@ not compile or link inside the game's include paths, use the image's own
 Record which one worked; Task 5b builds on that answer.
 `audit_buffers.py` accepts `--frames` from 600 upward.
 
+The stock headless build also fails to link: `portRenderAsyncActive`
+(`s32 portRenderAsyncActive(void)`, defined only in `port/src/video.c`, which
+headless builds remove) is called from `port_bench.c`, `hitchlog.c` and
+`pcsched.c`. Until Task 5b adds it to `port/src/headless_stubs.c`, supply it
+from a scratch object outside the tracked tree: write
+`build/lp64/headless-stub/stub.c` defining it to return 0 (no render thread
+exists without video), compile it with `gcc -m32 -c` in the i686 container,
+and append the object's container path to `-DCMAKE_C_STANDARD_LIBRARIES`. If
+further symbols turn out to be undefined, add only those whose headless
+meaning is plainly "nothing" or 0, at most five; list every one for Task 5b,
+and stop and report if there are more or if one needs real behaviour.
+
 ```bash
 python3 scripts/port/lp64_env.py run --arch i686 -- sh -c 'cmake -S . -B build/lp64/ref-i686 -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_C_FLAGS=-I/home/dev/project/scripts/port/sdl_shim && cmake --build build/lp64/ref-i686 -j"$(nproc)"'
 python3 scripts/port/lp64_env.py run --arch i686 -- python3 scripts/port/audit_buffers.py --mission-smoke build/lp64/ref-i686/IronSights --rom /rom/baserom.u.z64 --frames 600 --jobs 2 --output build/lp64/ref-i686/smoke.json
@@ -746,6 +758,7 @@ has to build without special flags.
 
 **Files:**
 - Modify: `CMakeLists.txt` (the `GE_HEADLESS` block near line 338)
+- Modify: `port/src/headless_stubs.c` (compiled only in headless builds)
 - Create: `scripts/port/test_headless_configure.sh`
 - Modify: `FORK_CHANGES.md` (FORK-089, and FORK-082 where it describes Baked
   Lighting's build)
@@ -775,6 +788,12 @@ shim worked: under `GE_HEADLESS`, give `port/src/port_baked_trace.c` the
 include directory `scripts/port/sdl_shim`, so the bake runs in its
 time-sliced, thread-free path. Do not edit `port_baked_trace.c`.
 
+Then fix the link. Add to `port/src/headless_stubs.c` every symbol Task 2's
+scratch stub had to supply (its report and FORK-089 list them), starting with
+`s32 portRenderAsyncActive(void)` returning 0. Each stub gets a one-line
+comment saying why that is the right answer without video. Delete nothing
+from `video.c`.
+
 - [ ] **Step 4: Run and confirm the test passes, then build and run in full**
 
 ```bash
@@ -797,8 +816,8 @@ Expected: exit 0.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add CMakeLists.txt scripts/port/test_headless_configure.sh FORK_CHANGES.md
-git commit -m "Make the headless build compile again without SDL"
+git add CMakeLists.txt port/src/headless_stubs.c scripts/port/test_headless_configure.sh FORK_CHANGES.md
+git commit -m "Make the headless build compile and link again"
 git push origin main
 ```
 
