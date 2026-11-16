@@ -75,12 +75,14 @@ def parse(stderr: str, root: Path) -> set[tuple[str, int, int, str]]:
 
 
 def summarize(found: set, compiler: str) -> dict:
-    """Return the compiler, total, and the counts by kind and by file."""
+    """Return the compiler, total, and the counts by kind, by file and compile errors by file."""
     return dict(
         compiler=compiler,
         total=len(found),
         by_kind=dict(Counter(kind for _, _, _, kind in found)),
-        by_file=dict(Counter(path for path, _, _, _ in found)))
+        by_file=dict(sorted(Counter(path for path, _, _, _ in found).items())),
+        errors_by_file=dict(sorted(Counter(
+            path for path, _, _, kind in found if kind == 'error').items())))
 
 
 def regressions(baseline: dict, current: dict) -> list[str]:
@@ -88,9 +90,15 @@ def regressions(baseline: dict, current: dict) -> list[str]:
     if baseline['compiler'] != current['compiler']:
         return [f"baseline was recorded with {baseline['compiler']} but this is "
                 f"{current['compiler']}; counts from different compilers are not compared"]
-    return [f'{path}: {count} diagnostics, baseline {baseline["by_file"].get(path, 0)}'
-            for path, count in sorted(current['by_file'].items())
-            if count > baseline['by_file'].get(path, 0)]
+    found = [f'{path}: {count} diagnostics, baseline {baseline["by_file"].get(path, 0)}'
+             for path, count in sorted(current['by_file'].items())
+             if count > baseline['by_file'].get(path, 0)]
+    baseline_errors = baseline.get('errors_by_file', {})
+    found += [f'{path}: {count} compile errors, baseline {baseline_errors.get(path, 0)}; '
+              'an error can hide other diagnostics'
+              for path, count in sorted(current.get('errors_by_file', {}).items())
+              if count > baseline_errors.get(path, 0)]
+    return found
 
 
 def compiler_id() -> str:
@@ -103,11 +111,17 @@ def compiler_id() -> str:
     return f'gcc-{versions[-1]}'
 
 
-def compile_one(entry: dict, root: Path) -> set:
+def c_entries(entries: list[dict], source: Path) -> list[tuple[dict, list[str]]]:
+    """Return each C entry with its syntax-only command; raise when there is none."""
+    commands = [(entry, argv) for entry in entries
+                if (argv := syntax_command(entry)) is not None]
+    if not commands:
+        raise RuntimeError(f'{source} holds no C compile commands; refusing to report zero')
+    return commands
+
+
+def compile_one(entry: dict, argv: list[str], root: Path) -> set:
     """Compile one entry and return its diagnostics; a failure to run is an error."""
-    argv = syntax_command(entry)
-    if argv is None:
-        return set()
     try:
         done = subprocess.run(argv, cwd=entry['directory'], capture_output=True,
                               text=True, timeout=COMPILE_TIMEOUT_SECONDS)
@@ -122,9 +136,9 @@ def compile_one(entry: dict, root: Path) -> set:
 
 def measure(compile_commands: Path, root: Path) -> dict:
     """Compile every C file in `compile_commands` and return the summary."""
-    entries = json.loads(compile_commands.read_text())
+    commands = c_entries(json.loads(compile_commands.read_text()), compile_commands)
     with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, os.cpu_count() or 1)) as pool:
-        results = list(pool.map(lambda entry: compile_one(entry, root), entries))
+        results = list(pool.map(lambda pair: compile_one(*pair, root), commands))
     return summarize(set().union(*results), compiler_id())
 
 

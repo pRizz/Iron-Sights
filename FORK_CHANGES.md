@@ -30,12 +30,14 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
-### FORK-089 — Native 64-bit port: accepted plan, no code yet
+### FORK-089 — Native 64-bit port: accepted plan, scaffolding in progress
 
-**Status:** Plan accepted by the owner on 2026-11-15. Documentation and
-repository rules only: no source, build or gallery change, and no 64-bit build
-exists. Nothing in the plan has been built or verified; its milestone status
-table says so.
+**Status:** Plan accepted by the owner on 2026-11-15. Milestone LP64-001's
+tooling is in progress: the container runner, the layout probe and the
+diagnostics ratchet exist and have run (below). No game, engine, port or
+renderer source has changed, no 64-bit build of the game exists, and no
+milestone is complete. The rest of the plan has not been built or verified; its
+milestone status table says so.
 
 Inherited behaviour: upstream builds only as a 32-bit program (`-m32`, and
 32-bit WebAssembly), by design, and this fork inherited that. FORK-031 recorded
@@ -133,9 +135,9 @@ warnings or `error` (any compile error). `count` prints the tally as JSON,
 newline, so an unchanged tree gives an empty `git diff`), and `check` exits 1
 naming every file whose count rose above the baseline (a new file counts from
 zero), refuses to compare across compilers (the baseline records `gcc-13`), and
-prints `Baseline can be lowered: run update.` when the total fell. Default input
+prints `Baseline can be lowered: run update.` only when the total fell and nothing regressed. The baseline also records `errors_by_file`, and `check` fails when a file's compile-error count rises even if its total falls, since a hard error such as a missing header can hide the file's other diagnostics. A `compile_commands.json` with no C entries is an error, never a zero. Default input
 is `build/lp64/diag/compile_commands.json`. `scripts/port/test_lp64_diagnostics.py`
-(11 ROM-free, compiler-free tests) covers the pure functions. Nothing wires the
+(16 ROM-free, compiler-free tests) covers the pure functions. Nothing wires the
 check into CI or the hook yet. No game, engine, port or renderer source was changed.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
@@ -150,7 +152,7 @@ in the aarch64 and x86_64 images, and a `gcc -m32` program in the i686
 container, which printed `i686-runs`); and the i686 headless reference build
 and 20-mission smoke, which worked only with the two workarounds named above
 (the SDL shim include and a scratch `portRenderAsyncActive` stub) and not with
-the stock configuration. Task 3, in the containers: `python3 scripts/port/lp64_env.py run --arch x86_64 -- bash scripts/port/test_abi_probe.sh` exited 0 and printed `ABI probe OK (64-bit)` and `ABI probe OK (32-bit)`; the same with `--arch aarch64` exited 0 and printed `ABI probe OK (64-bit)`, then `gcc: error: unrecognized command-line option '-m32'` (the availability check's own output) and `ABI probe: -m32 unavailable on this host, skipped`. Changing `sizeof(Vtx) == 16` to `24` temporarily made the x86_64 run fail with `static assertion failed: "Vertex stride"`; the line was restored. Task 4: the 11 tests in `scripts/port/test_lp64_diagnostics.py` pass with plain `python3` on the host. In the x86_64 container, `cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-I/home/dev/project/scripts/port/sdl_shim` configured (the game was not built), then `lp64_diagnostics.py update` (about 9 s) recorded 1,432 diagnostics in 93 files with GCC 13: 709 `int-conversion`, 432 `pointer-to-int-cast`, 229 `int-to-pointer-cast` and 62 `error` (for example `initializer element is not computable at load time` in `src/game/propobj.c`). The largest files are `src/game/front.c` 261, `options.c` 158, `propobj.c` 148, `image_bank.c` 86, `chraction.c` 83. 54 of the 93 files are under `src/game` and 14 under `port/src`. This is lower than the planning figure (about 1,600 in 70 files, a different compiler, game and engine files only) although this run also covers the port layer. A second `update` left the file byte-identical and `check` exited 0 (`OK: 1432 diagnostics, baseline 1432`). `check` in the aarch64 container, reusing the x86_64 `compile_commands.json`, exited 0, and its `count` output equals the baseline exactly. Nothing else in the plan has run. The Bright Builds
+the stock configuration. Task 3, in the containers: `python3 scripts/port/lp64_env.py run --arch x86_64 -- bash scripts/port/test_abi_probe.sh` exited 0 and printed `ABI probe OK (64-bit)` and `ABI probe OK (32-bit)`; the same with `--arch aarch64` exited 0 and printed `ABI probe OK (64-bit)`, then `gcc: error: unrecognized command-line option '-m32'` (the availability check's own output) and `ABI probe: -m32 unavailable on this host, skipped`. Changing `sizeof(Vtx) == 16` to `24` temporarily made the x86_64 run fail with `static assertion failed: "Vertex stride"`; the line was restored. Task 4: the 16 tests in `scripts/port/test_lp64_diagnostics.py` pass with plain `python3` on the host. In the x86_64 container, `cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-I/home/dev/project/scripts/port/sdl_shim` configured (the game was not built), then `lp64_diagnostics.py update` (about 9 s) recorded 1,432 diagnostics in 93 files with GCC 13: 709 `int-conversion`, 432 `pointer-to-int-cast`, 229 `int-to-pointer-cast` and 62 `error` in 4 files (`src/game/propobj.c` 59, and one each in `port/crash/reporting_linux.c`, `port/src/port_startup.c`, `port/src/sysstubs.c`; for example `initializer element is not computable at load time` in `src/game/propobj.c`). The largest files are `src/game/front.c` 261, `options.c` 158, `propobj.c` 148, `image_bank.c` 86, `chraction.c` 83. 54 of the 93 files are under `src/game` and 14 under `port/src`. This is lower than the planning figure (about 1,600 in 70 files, a different compiler, game and engine files only) although this run also covers the port layer. A second `update` left the file byte-identical and `check` exited 0 (`OK: 1432 diagnostics, baseline 1432`). `check` in the aarch64 container, reusing the x86_64 `compile_commands.json`, exited 0, and its `count` output equals the baseline exactly. After adding `errors_by_file`, `update` was re-run in the x86_64 container (totals unchanged), a second `update` was byte-identical, `check` exited 0 in the x86_64 and aarch64 containers, and `check` on a `compile_commands.json` holding only a C++ entry exited 1 with an error naming the file. Nothing else in the plan has run. The Bright Builds
 checks, the settings placement check and the ROM-free gallery verification
 were run for the documentation changes.
 

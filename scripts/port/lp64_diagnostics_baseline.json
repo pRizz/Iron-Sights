@@ -101,5 +101,11 @@
     "pointer-to-int-cast": 432
   },
   "compiler": "gcc-13",
+  "errors_by_file": {
+    "port/crash/reporting_linux.c": 1,
+    "port/src/port_startup.c": 1,
+    "port/src/sysstubs.c": 1,
+    "src/game/propobj.c": 59
+  },
   "total": 1432
 }

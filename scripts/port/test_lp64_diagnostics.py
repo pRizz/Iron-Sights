@@ -88,6 +88,49 @@ class Summarize(unittest.TestCase):
         self.assertEqual(summary['by_file'], {'src/game/front.c': 1, 'src/game/chr.c': 1, 'src/crash.c': 1})
 
 
+class Errors(unittest.TestCase):
+    def test_summary_lists_errors_by_file_only_for_files_with_errors(self):
+        # Arrange
+        found = {('b.c', 1, 1, 'error'), ('b.c', 2, 1, 'error'), ('b.c', 3, 1, 'int-conversion'),
+                 ('a.c', 1, 1, 'int-conversion')}
+        # Act
+        summary = diag.summarize(found, 'gcc-13')
+        # Assert
+        self.assertEqual(summary['errors_by_file'], {'b.c': 2})
+
+    def test_a_file_whose_errors_rise_is_a_regression_even_if_its_total_falls(self):
+        # Arrange
+        baseline = dict(report('gcc-13', {'a.c': 261}), errors_by_file={})
+        current = dict(report('gcc-13', {'a.c': 1}), errors_by_file={'a.c': 1})
+        # Act
+        found = diag.regressions(baseline, current)
+        # Assert
+        self.assertEqual(len(found), 1)
+        self.assertIn('a.c', found[0])
+
+    def test_an_unchanged_error_count_is_not_a_regression(self):
+        # Arrange
+        baseline = dict(report('gcc-13', {'a.c': 5}), errors_by_file={'a.c': 2})
+        current = dict(report('gcc-13', {'a.c': 5}), errors_by_file={'a.c': 2})
+        # Act / Assert
+        self.assertEqual(diag.regressions(baseline, current), [])
+
+
+class CEntries(unittest.TestCase):
+    def test_no_c_commands_raises_naming_the_file(self):
+        # Arrange
+        entries = [dict(file='/w/a.cpp', command='g++ -c /w/a.cpp')]
+        # Act / Assert
+        with self.assertRaises(RuntimeError) as caught:
+            diag.c_entries(entries, Path('/w/compile_commands.json'))
+        self.assertIn('/w/compile_commands.json', str(caught.exception))
+
+    def test_an_empty_list_raises(self):
+        # Arrange / Act / Assert
+        with self.assertRaises(RuntimeError):
+            diag.c_entries([], Path('x.json'))
+
+
 class Regressions(unittest.TestCase):
     def test_a_file_rising_is_a_regression_even_if_the_total_falls(self):
         # Arrange
