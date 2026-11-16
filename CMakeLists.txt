@@ -1,14 +1,38 @@
 cmake_minimum_required(VERSION 3.16)
 project(ge007 C)
 
-# GoldenEye PC port build (docs/port/PORT-PLAN.md). Built 32-bit first, which
-# defuses the codebase's pointer<->s32 casts and keeps Gfx 8 bytes.
+# GoldenEye PC port build (docs/port/PORT-PLAN.md). 32-bit by default, which
+# defuses the codebase's pointer<->s32 casts and keeps Gfx 8 bytes; 64-bit
+# (Linux and macOS only) by -DGE_POINTER_BITS=64, per scripts/port/native_64bit_plan.md.
 # The N64 ROM build stays on the classic Makefile; this builds native and Wasm.
+
+# Pointer width of the native build. Code never reads this; it reads IS_64_BIT.
+# Validated before anything else can fail, so the message is the one reported.
+set(GE_POINTER_BITS 32 CACHE STRING "Pointer width of the native build: 32 (default) or 64")
+if(NOT GE_POINTER_BITS MATCHES "^(32|64)$")
+    message(FATAL_ERROR "GE_POINTER_BITS must be 32 or 64")
+endif()
+if(GE_POINTER_BITS EQUAL 64)
+    if(EMSCRIPTEN)
+        message(FATAL_ERROR "The web build is 32-bit; GE_POINTER_BITS=64 is not supported")
+    endif()
+    if(WIN32)
+        message(FATAL_ERROR "Windows x64 is outside the 64-bit plan; see scripts/port/native_64bit_plan.md")
+    endif()
+    # option() lives further down; the plain cache lookup is enough here.
+    if(GE_ROMDATA_FALLBACK)
+        message(FATAL_ERROR "GE_POINTER_BITS=64 requires runtime ROM loading (GE_ROMDATA_FALLBACK=OFF)")
+    endif()
+endif()
 
 set(CMAKE_C_STANDARD 11)
 
 if(EMSCRIPTEN)
     include(cmake/emscripten.cmake)
+elseif(GE_POINTER_BITS EQUAL 64)
+    # -ffp-contract=off: no fused multiply-add, so floats round as on the N64 FPU
+    # (the 32-bit build gets that from -mfpmath=sse; x86-64 and arm64 default to SSE/NEON).
+    add_compile_options(-ffp-contract=off)
 else()
     add_compile_options(-m32 -msse2 -mfpmath=sse)
 endif()
@@ -52,7 +76,7 @@ if(WIN32)
                      -Wl,--image-base=0x10000000 -Wl,--disable-dynamicbase
                      -Wl,--stack,16777216)
     link_libraries(dbghelp comctl32 comdlg32)
-elseif(NOT EMSCRIPTEN)
+elseif(NOT EMSCRIPTEN AND GE_POINTER_BITS EQUAL 32)
     add_link_options(-m32 -no-pie)
 endif()
 
@@ -453,7 +477,7 @@ if(GE_VIDEO)
             port/fast3d/hd_textures_download.cpp port/fast3d/hd_download_engine.cpp)
         set_target_properties(ge_hd_textures PROPERTIES
             INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/port/include")
-        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND GE_POINTER_BITS EQUAL 32)
             # i686 stat otherwise rejects large inode numbers on modern mounts.
             target_compile_definitions(ge_hd_textures PRIVATE _FILE_OFFSET_BITS=64 _TIME_BITS=64)
         endif()
@@ -477,7 +501,7 @@ if(GE_VIDEO)
         else()
             target_include_directories(ge_save_transfer PRIVATE /usr/include/SDL2)
         endif()
-        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND GE_POINTER_BITS EQUAL 32)
             target_compile_definitions(ge_save_transfer PRIVATE _FILE_OFFSET_BITS=64 _TIME_BITS=64)
         endif()
         list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_save_transfer>)
@@ -563,7 +587,11 @@ if(GE_VIDEO AND NOT EMSCRIPTEN)
         # 32-bit SDL2: needs libsdl2-dev:i386 (+ libgl-dev:i386), or set
         # SDL2_LINUX_ROOT to a self-built prefix (e.g. CI's cached, user-writable
         # install, avoiding a system-wide /usr install).
-        if(SDL2_LINUX_ROOT)
+        if(SDL2_LINUX_ROOT AND GE_POINTER_BITS EQUAL 64)
+            target_include_directories(ge PRIVATE ${SDL2_LINUX_ROOT}/include/SDL2)
+            target_link_directories(ge PRIVATE ${SDL2_LINUX_ROOT}/lib)
+            target_link_libraries(ge SDL2 GL dl pthread)
+        elseif(SDL2_LINUX_ROOT)
             target_include_directories(ge PRIVATE ${SDL2_LINUX_ROOT}/include/SDL2)
             target_link_libraries(ge ${SDL2_LINUX_ROOT}/lib/i386-linux-gnu/libSDL2.so GL dl pthread)
             set_target_properties(ge PROPERTIES BUILD_RPATH ${SDL2_LINUX_ROOT}/lib/i386-linux-gnu)

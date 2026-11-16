@@ -273,7 +273,7 @@ tasks: the two-tier gallery rule, a container runner for the Mac, a layout
 probe, a 64-bit diagnostics ratchet, a 32-bit executable comparison, a repair
 of the headless build (Task 5b), a `GE_POINTER_BITS` build option, and CI
 wiring. Only Task 2, the container runner, Task 3, the layout probe, Task 4, the
-64-bit diagnostics ratchet, and Task 5, the 32-bit executable comparison, have been built and run (below); the others have not. Each task extends this entry with what it built and ran.
+64-bit diagnostics ratchet, Task 5, the 32-bit executable comparison, and Task 6, the pointer-width option, have been built and run (below); the others have not. Each task extends this entry with what it built and ran.
 
 *LP64-001 task 2, the container runner (built 2026-11-15 on the owner's Apple
 Silicon Mac, Docker 29.9.2):* `scripts/port/lp64_env.py` runs a command in the
@@ -357,12 +357,46 @@ exports have no `.git`, so both builds report the commit as unknown. Logs stay i
 tests, synthetic PE files and temporary Git repositories, no Docker or compiler)
 passes. No game, engine, port, renderer or CMake source was changed.
 
+*LP64-001 task 6, the pointer-width build option (built 2026-11-15, not pushed):*
+`CMakeLists.txt` gains the cache variable `GE_POINTER_BITS` (string, `32` or
+`64`, default `32`; code never reads it and no compile definition carries it).
+Its checks run first, right after `project()`, which is early enough because
+`WIN32` and `EMSCRIPTEN` come from the toolchain file, so a missing SDL2 under
+the MinGW toolchain cannot pre-empt them. Any other value stops with
+`GE_POINTER_BITS must be 32 or 64`; `64` with Emscripten stops with `The web
+build is 32-bit; GE_POINTER_BITS=64 is not supported`; with `WIN32`, `Windows
+x64 is outside the 64-bit plan; see scripts/port/native_64bit_plan.md`; with
+`GE_ROMDATA_FALLBACK=ON`, `GE_POINTER_BITS=64 requires runtime ROM loading
+(GE_ROMDATA_FALLBACK=OFF)`. At `32` every flag is as before. At `64` the build
+drops `-m32`, `-msse2`, `-mfpmath=sse` and `-no-pie`, adds `-ffp-contract=off`,
+omits the `_FILE_OFFSET_BITS`/`_TIME_BITS` definitions on `ge_hd_textures` and
+`ge_save_transfer`, and links SDL2 by name from `${SDL2_LINUX_ROOT}/lib` (or the
+system) instead of the i386 library directory. The `-m32` in the compiled-in
+asset object flags (`ASSET_C_FLAGS`) is untouched: that pipeline is
+fallback-only, and fallback is refused at 64. Under `EMSCRIPTEN` the first
+branch is still `include(cmake/emscripten.cmake)` and every later guard keeps its
+`32` behaviour, so no line reached by the web build changes at the default
+value. `scripts/port/test_pointer_bits.sh` configures into temporary
+directories and checks five cases (default has `-m32`; `64` has none of
+`-m32`/`-msse2`/`-mfpmath=sse` and has `-ffp-contract=off`; `48` is refused;
+`64` with the fallback is refused; `64` with `cmake/mingw-i686.cmake` is refused,
+skipped with a message when `i686-w64-mingw32-gcc` is absent). Only configuring
+is tested; a 64-bit compile is not expected to work until LP64-002. Run in the
+x86_64 container: before the change the script stopped at case 2
+(`64-bit build still uses -m32`); after, all five cases passed. A default
+headless configure's `compile_commands.json` (build directory name
+normalised) is identical to the one captured before the edit
+(`commands-identical`), and `compare_win32.py commits HEAD WORKTREE` exited 0,
+`identical in loaded code and data`. The Emscripten case was not run (no emsdk
+here); the web build is shown unchanged by reading the diff only. CI does not
+run the script yet. No game, engine, port or renderer source was changed.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),
 [inherited 32-bit constraints](docs/port/abi-and-portability.md).
 
-**Validation:** Only LP64-001 Tasks 2, 3, 4, 5 and 5b have run; no milestone is complete. What
+**Validation:** Only LP64-001 Tasks 2, 3, 4, 5, 5b and 6 have run; no milestone is complete. What
 ran: the 11 ROM-free tests in `scripts/port/test_lp64_env.py` (passing); on the
 Mac, `build-images` (3 min 58 s) and three container checks (`gcc -dumpmachine`
 in the aarch64 and x86_64 images, and a `gcc -m32` program in the i686
