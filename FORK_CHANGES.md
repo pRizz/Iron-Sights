@@ -1133,9 +1133,10 @@ storage* (each keeps its in-place relocation, which LP64-004 replaces):
 `intptr_t`, so the 288 `PTR_ANIM_*` initialisers of the hit and death tables in
 `chr.c` are unchanged; the relocation in `initResolveAnimTable` reads the table
 address as `*(intptr_t *)` instead of `*(s32 *)` with an `intptr_t address`,
-and the four readers in `chraction.c` read it back with one
+and of its five readers in `chraction.c` four gained one
 `(ModelAnimation *)` cast (three `modelSetAnimationWithMerge` calls and the
-`death_neck` comparison). Typing the field rather than wrapping 288
+`death_neck` comparison); the fifth, at line 2306, already casts it to
+`u16 *`. Typing the field rather than wrapping 288
 initialisers is the smaller edit and the plan's rule for a field that carries
 offsets and pointers. `animation_table_ptrs1` (`initanitable.c` and
 `initanitable.h`) went from `s32[]` to `intptr_t[]` for the same reason (183
@@ -1223,6 +1224,54 @@ headless tree's 32-bit link included), then `update` (10 s) recorded 711 in
 incremental) and the 20-mission smoke exited 0 with 20 of 20 `PASS` (185 s).
 Step 3 as above. `lp64_casts.py check` passed on the host (23 casts,
 unchanged; this task adds none). Every line of CI's "Test gameplay, cache and release tooling without a ROM" step except the two `cmake` lines (step 1 builds that tree) ran in the i686 container, including the new `test_monitor_script.sh`: all 39 passed, with one exception in how they ran: `test_buffers.sh` ran without `MIDAS_BUFFER_SANITIZE=1`, whose AddressSanitizer binary hangs under the Mac's `qemu-i386` emulation (Tasks 3 and 4); without it the harness passed in 4 s. `test_upstream_merge.sh`, `test_states.sh`, `test_hud.sh`, `test_abi_probe.sh`, `lp64_casts.py check`, `lp64_diagnostics.py check` and `hand_gallery.py verify --allow-pending` (pending: deferred inputs changed) were among them.
+*Task 5 review fix round (local commit "Sign-extend signed monitor script
+operands and assert the table element width"; not pushed):* (1) A 64-bit bug
+the retyping introduced: the tables write negative operands as unsigned hex
+literals (`MONHORZSCROLL(0xFFFFE000, 120)`, `MONVERTSCROLL(0xFFFFFE00, 80)`;
+eight commands, `propobj.c` lines 2620, 2653, 2655, 2657, 2659, 2661, 2727,
+2778 at b4e409a), which zero-extended into a 64-bit `uintptr_t` element, so
+`intptr_t time` read 4294966784 instead of -512 and those scrolls moved about
+4 million units the wrong way (the 32-bit build was unaffected). *A general
+hazard for the rest of the milestone:* a `u32` table element that holds a
+negative value written as an unsigned hex literal zero-extends when the
+element is widened to `uintptr_t`, so each widened table must have its signed
+values sign-extended. Fix: `chrai.h` defines
+`MONSIGNED(v) ((uintptr_t) (intptr_t) (s32) (v))`, which sign-extends at 64
+bits and keeps the same bytes at 32 bits, and each macro operand is typed by
+how the interpreter reads it. Signed (read as `tvcmd.time` into a float, a
+signed `s16` or a rotation), now through `MONSIGNED`: the offset of
+`MONHORZSCROLL`, `MONVERTSCROLL`, `MONHORZSCROLLNA` and `MONVERTSCROLLNA`; the
+zoom factor of `MONZOOMWIDTH` and `MONZOOMHEIGHT` (so `MONZOOMSQUARE`); the
+count of `MONHOLDTIME` (`pause60 = m->time`, `assert(m->time > 0)`); the angle
+of `MONSETROTATION` and `MONROTATEIMAGE`. Unchanged: every duration `t` in
+`arg2` (used as `1.0f / m->arg2`, unsigned), the `MONJUMPCHANCE` chance in
+`arg2` (compared unsigned with `randomGetNext() >> 16`), the `MONUSEIMAGE`
+image number (stored as `tconfig`, compared unsigned `< 100`), the `MONRGBA`
+colour (masked or cast to `u32` at `propobj.c:7492-7501`), and the
+`MONJUMPTO`/`MONJUMPCHANCE` targets (addresses, `(uintptr_t)`). `lp64_casts.py
+check` does not flag the `MONSIGNED` form (it widens; the checker's pattern is
+a narrowing cast applied to a `uintptr_t`/`intptr_t` cast). (2)
+`test_monitor_script.c` now has four commands: after the rotation, a
+`MONHORZSCROLL(0xFFFFFE00, 20)` whose operand must read back as -512 through
+`monitorScriptCommand`, stepped past with `offset += 3`, then the jump to the
+stop at `&script[7]`. Before the macro fix it failed in the x86_64 container
+with `monitor script: scroll operand is 4294966784, expected -512` and passed
+at `-m32`; after it, it printed `OK (64-bit)` and `OK (32-bit)` in the x86_64
+and i686 containers. (3) `propobj.c` asserts beside the tables that a script
+element is pointer-sized (`_Static_assert(sizeof(monAnim00Bond[0]) ==
+sizeof(void *), ...)`), so reverting the tables to `u32` breaks the 64-bit
+compile; the test builds its own script and would not notice. (4) The
+reader count above was corrected (five readers, four casts added). (5) The
+plan now shows `initanitable.c:249` moving to Task 9: the Cluster table's
+animation pointer tables row says 1 of its 11 places moves, and Task 9's
+Interfaces widen `ModelAnimation.address` together with its reader
+`loadAnimationFrame` (`model.c:5915-5927`). *What ran:* step 1 of the task
+check exited 0 in 22 s and `update` recorded 711 in 76 files (unchanged; the
+count did not rise); the i686 headless build exited 0 (11 s);
+`compare_win32.py commits HEAD WORKTREE` against b4e409a exited 0,
+`identical in loaded code and data; .buildid differs` (112 s), so the
+mission smoke was not repeated; `lp64_casts.py check` passed (23 casts,
+unchanged).
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),

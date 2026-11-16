@@ -9,16 +9,23 @@
 #include <ultra64.h>
 #include "chrai.h"
 
+#define CMD_SCROLL 0x1
 #define CMD_JUMP 0x9
 #define CMD_STOP 0xC
 #define CMD_ROTATE 0xE
 #define ROTATION 0x100
+/* A leftward scroll written as the game's tables write it: an unsigned hex
+ * literal that the interpreter reads as a signed operand. */
+#define SCROLL_LEFT 0xFFFFFE00
+#define SCROLL_LEFT_VALUE (-512)
 
-/* Three commands: a two-element rotation, a jump to the third command, and a
- * one-element stop. The script tables in propobj.c are declared the same way. */
-static uintptr_t script[5] = {
+/* Four commands: a two-element rotation, a three-element scroll by a negative
+ * amount, a jump to the fourth command, and a one-element stop. The script
+ * tables in propobj.c are declared the same way. */
+static uintptr_t script[8] = {
     MONSETROTATION(ROTATION),
-    MONJUMPTO(&script[4]),
+    MONHORZSCROLL(SCROLL_LEFT, 20),
+    MONJUMPTO(&script[7]),
     MONSTOPANIM(),
 };
 
@@ -47,7 +54,19 @@ int main(void)
     /* The interpreter steps past a two-element command with offset += 2. */
     mon.offset += 2;
     cmd = monitorScriptCommand(&mon);
-    if (!expect("second command", cmd->type, CMD_JUMP)) {
+    if (!expect("second command", cmd->type, CMD_SCROLL)) {
+        return 1;
+    }
+    /* TVCMD_SCROLLRELX scales the signed operand: m->time * (1.0f / 1024.0f). */
+    if (cmd->time != SCROLL_LEFT_VALUE) {
+        fprintf(stderr, "monitor script: scroll operand is %lld, expected %d\n", (long long) cmd->time, SCROLL_LEFT_VALUE);
+        return 1;
+    }
+
+    /* A three-element command: offset += 3. */
+    mon.offset += 3;
+    cmd = monitorScriptCommand(&mon);
+    if (!expect("third command", cmd->type, CMD_JUMP)) {
         return 1;
     }
 
@@ -55,7 +74,7 @@ int main(void)
     mon.cmdlist = monitorScriptJumpTarget(cmd);
     mon.offset = 0;
     cmd = monitorScriptCommand(&mon);
-    if (!expect("jump destination", (uintptr_t) cmd, (uintptr_t) &script[4]) || !expect("third command", cmd->type, CMD_STOP)) {
+    if (!expect("jump destination", (uintptr_t) cmd, (uintptr_t) &script[7]) || !expect("fourth command", cmd->type, CMD_STOP)) {
         return 1;
     }
 

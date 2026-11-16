@@ -6,6 +6,12 @@
 
 #define CHRAI_TICKRATE_F 60.0f
 
+/* LP64-002: a script operand the interpreter reads as signed (tvcmd.time,
+ * an intptr_t). The tables write negative values as unsigned hex literals
+ * such as 0xFFFFFE00, which would zero-extend into a 64-bit element; going
+ * through s32 sign-extends them and leaves the 32-bit bytes unchanged. */
+#define MONSIGNED(v) ((uintptr_t) (intptr_t) (s32) (v))
+
 /*
 Stop Scolling:
 00000000
@@ -18,42 +24,42 @@ Horizontal Scroll:
 [x] 'width' value like in image mapping to shift the image; short hex percent
 [t]ime the move occurs in
 */
-#define MONHORZSCROLL(x,t) 0x1, x, t
+#define MONHORZSCROLL(x,t) 0x1, MONSIGNED(x), t
 /*
 Vertical Scroll:
 00000002	yyyyyyyy	tttttttt
 [y] 'height' value like in image mapping to shift image; short hex percent
 [t]ime the move occurs in
 */
-#define MONVERTSCROLL(y,t) 0x2, y, t
+#define MONVERTSCROLL(y,t) 0x2, MONSIGNED(y), t
 /*
 Horizontal Scroll Nonadditive:
 00000003	xxxxxxxx	tttttttt
 [x] 'width' value shifting the image from original position; short hex percent
 [t]ime the move occurs in
 */
-#define MONHORZSCROLLNA(x,t) 0x3, x, t
+#define MONHORZSCROLLNA(x,t) 0x3, MONSIGNED(x), t
 /*
 Vertical Scroll Nonadditive:
 00000004	yyyyyyyy	tttttttt
 [y] 'height' value shifting the image from original position; short hex percent
 [t]ime the move occurs in
 */
-#define MONVERTSCROLLNA(y,t) 0x4, y, t
+#define MONVERTSCROLLNA(y,t) 0x4, MONSIGNED(y), t
 /*
 Zoom Width:
 00000005	xxxxxxxx	tttttttt
 [x] zoom factor as a short hex percentage
 [t]ime for complete zoom
 */
-#define MONZOOMWIDTH(x,t) 0x5, x, t
+#define MONZOOMWIDTH(x,t) 0x5, MONSIGNED(x), t
 /*
 Zoom Height:
 00000006	yyyyyyyy	tttttttt
 [x] zoom factor as a short hex percentage
 [t]ime for complete zoom
 */
-#define MONZOOMHEIGHT(y,t) 0x6, y, t
+#define MONZOOMHEIGHT(y,t) 0x6, MONSIGNED(y), t
 
 #define MONZOOMSQUARE(w,t) MONZOOMWIDTH(w, t), MONZOOMHEIGHT(w, t)
 
@@ -68,7 +74,7 @@ Hold for Time:
 00000008	tttttttt
 [t]ime to hold; necessary to break loops, like the 03 action command
 */
-#define MONHOLDTIME(t) 0x8, t
+#define MONHOLDTIME(t) 0x8, MONSIGNED(t)
 /*
 Jump to Routine:
 00000009	pppppppp
@@ -107,14 +113,14 @@ Set Rotation:
 set image [r]otation; 0x2000 rotates 360 degrees
 primarily used to reset rotation to 0
 */
-#define MONSETROTATION(r) 0xE, r
+#define MONSETROTATION(r) 0xE, MONSIGNED(r)
 /*
 Rotate Image:
 0000000F	rrrr.rrrr
 [r]otate image incrementally rrrr.rrrr%;
 0x2000 rotates approximately 45 degrees, 0x1555 to mimic a clock
 */
-#define MONROTATEIMAGE(r) 0xF, r
+#define MONROTATEIMAGE(r) 0xF, MONSIGNED(r)
 
 #define COLOR_WHITE 0xFFFFFFFF
 

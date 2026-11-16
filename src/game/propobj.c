@@ -2515,6 +2515,8 @@ ModelRenderData D_80030B34 = {NULL,
 
 
 
+/* LP64-002: jump operands hold script addresses, so elements must be pointer-sized. */
+_Static_assert(sizeof(monAnim00Bond[0]) == sizeof(void *), "monitor script element holds an address");
 
 //[80030B74	00	Bond]
 uintptr_t monAnim00Bond[] = {

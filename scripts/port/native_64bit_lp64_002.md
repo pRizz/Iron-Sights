@@ -82,7 +82,7 @@ strict-tier files and therefore stay until Task 9.
 | 5 | Monitor scripts | `u32 monAnim*[]` (`src/game/propobj.c:2523` on), `MONJUMPTO`/`MONJUMPCHANCE` (`src/game/chrai.h:77,84`); read back at `propobj.c:7444-7480` | `u32` elements | `uintptr_t` elements | 121 | 0 |
 | 5 | Animation offsets | `PTR_ANIM_x + (s32)&ptr_animation_table->data` | integer maths | one helper macro yielding `ModelAnimation *` | 78 | 8 |
 | 5 | `struck_anim` tables | field `src/game/chr.h:34`, tables `chr.c:530` on, relocation `initactorpropstuff.c:180-200` | pointer field holding an offset | builder's choice; see Task 5 | 33 | 0 |
-| 5 | Animation pointer tables | `animation_table_ptrs1/2` (`src/game/initanitable.h:31`) | `s32[]` | `intptr_t[]` or pointers; see Task 5 | 11 | 0 |
+| 5 | Animation pointer tables | `animation_table_ptrs1/2` (`src/game/initanitable.h:31`); 1 of its 11 places (`initanitable.c:249`, which writes `ModelAnimation.address`) moves to Task 9 | `s32[]` | `intptr_t[]` or pointers; see Task 5 | 11 | 0 |
 | 6 | Image bank offset | `globalbank_rdram_offset` (`src/game/image_bank.c:21`) and its `base + (u32)&sym` uses | `s32` | `intptr_t` delta | 87 | 6 |
 | 6 | Model-file relocation | locals in `src/game/objecthandler_2.c:120-200` | `s32`/`u32` | `u8 *` / `uintptr_t` | 29 | 0 |
 | 6 | Texture index | `sImageTableEntry.index` (`src/bondtypes.h:3980`), written by `texLoad` | `u32` | `uintptr_t` | 5 | 1 |
@@ -642,6 +642,9 @@ the 64-bit include order if `gfx_shiny.cpp` needs it; baseline;
   `uintptr_t`/`u8 *`, keeping the mask `0x05000000` and the test
   `& 0x80000000` as they are.
 - `field_A48` becomes `ALSoundState *`; `start_stan` becomes `StandTile *`.
+- `ModelAnimation.address` (`src/bondtypes.h`), written at
+  `initanitable.c:249` and read by `loadAnimationFrame` (`model.c:5915-5927`),
+  is widened together with that reader.
 - `port/fast3d/system.h:12`: `s64` matches the game's `long long` type, so the
   two headers agree at both widths. `gfx_pc.cpp:8558`: an explicit conversion
   that states the intended width.
