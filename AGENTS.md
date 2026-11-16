@@ -66,6 +66,16 @@ integrity without a ROM. Install the clone's pre-commit hook with `install-hook`
 the hook never stages files automatically and rejects partially staged render
 inputs. See `scripts/port/hand_gallery.md` for the capture and hook workflow.
 
+The inputs are in two tiers. A change to a strict-tier file (`STRICT_FILES` in
+the tool: the hand, arm and wardrobe code, the game files the arm contracts
+name, `port/fast3d/`, the weapon icon files, the capture path and the tool
+itself) still needs a fresh, reviewed gallery. A change only to other rendering
+inputs may leave the gallery pending. Pending is opt-in per clone through the
+local Git setting `midas.galleryDefer` (`install-hook --defer` sets it); a clone
+that can render leaves it off, so its hook regenerates on any staleness. CI
+runs `verify --allow-pending`. A new file that draws hands, arms or wardrobe
+must be added to `STRICT_FILES` in the same change.
+
 ## Render performance
 
 A change that adds or alters something drawn or computed every frame gets a

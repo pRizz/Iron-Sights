@@ -65,6 +65,27 @@ def input_path(name):
                      'scripts/port/hand_gallery_template.html'))
 
 
+# Rendering inputs whose changes must come with a fresh gallery. Every other
+# input is deferred: a commit touching only those may leave the gallery pending
+# on a clone that sets midas.galleryDefer. A new file that draws hands, arms or
+# wardrobe belongs here.
+STRICT_FILES = (
+    'port/src/port_arm_mesh.c', 'port/src/port_native_arms.c',
+    'port/src/port_grip_mesh.c', 'port/src/port_wardrobe.c',
+    'port/src/ads_hands.c', 'port/src/port_knife_ads.c',
+    'port/src/port_graphics.c', 'port/src/port_shiny.c',
+    'src/game/gunfire.c', 'src/game/model.c', 'src/game/bondview2.c',
+    'port/src/port_weapon_images.c', 'port/src/port_hud_weapons.c',
+    'port/src/joy_port.c',
+    'scripts/port/hand_gallery.py', 'scripts/port/hand_gallery_template.html',
+)
+STRICT_PREFIXES = ('port/fast3d/',)
+
+
+def strict_path(name):
+    return input_path(name) and (name in STRICT_FILES or name.startswith(STRICT_PREFIXES))
+
+
 def blob_contents(entries, root):
     """Read an index snapshot in one Git process, including Windows CRLF blobs."""
     if not entries:
@@ -83,7 +104,7 @@ def blob_contents(entries, root):
     return output
 
 
-def source_fingerprint(root=ROOT, staged=False):
+def source_fingerprint(root=ROOT, staged=False, strict=False):
     entries = {}
     for record in git('ls-files', '--stage', '-z', root=root).split(b'\0'):
         if not record:
@@ -91,7 +112,7 @@ def source_fingerprint(root=ROOT, staged=False):
         info, raw_name = record.split(b'\t', 1)
         mode, blob, stage = info.decode().split()
         name = raw_name.decode('utf-8')
-        if input_path(name):
+        if strict_path(name) if strict else input_path(name):
             if stage != '0':
                 raise ValueError('Resolve merge conflicts before rendering: ' + name)
             entries[name] = blob
@@ -102,7 +123,7 @@ def source_fingerprint(root=ROOT, staged=False):
     else:
         names = git('ls-files', '--others', '--exclude-standard', '-z', root=root)
         for raw_name in names.split(b'\0'):
-            if raw_name and input_path(raw_name.decode('utf-8')):
+            if raw_name and (strict_path if strict else input_path)(raw_name.decode('utf-8')):
                 entries[raw_name.decode('utf-8')] = ''
         for name in list(entries):
             path = root / name
@@ -323,7 +344,23 @@ def page(manifest):
     return template.replace('@@MANIFEST@@', payload)
 
 
-def verify(root=ROOT, staged=False):
+def freshness(manifest, root=ROOT, staged=False):
+    """'stale' if a strict input changed, 'pending' if only deferred ones did, else 'fresh'."""
+    if manifest.get('strict_inputs_sha256') != source_fingerprint(root, staged, strict=True):
+        return 'stale'
+    return 'fresh' if manifest.get('inputs_sha256') == source_fingerprint(root, staged) else 'pending'
+
+
+def defer_enabled(root=ROOT):
+    """Whether this clone lets the gallery stay pending (git config midas.galleryDefer)."""
+    result = subprocess.run(['git', '-C', str(root), 'config', '--get', '--bool', 'midas.galleryDefer'],
+                            capture_output=True, text=True)
+    if result.returncode not in (0, 1):
+        raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
+    return result.returncode == 0 and result.stdout.strip() == 'true'
+
+
+def verify(root=ROOT, staged=False, allow_pending=False):
     indexed = {}
     if staged:
         entries = {}
@@ -343,9 +380,12 @@ def verify(root=ROOT, staged=False):
             return indexed[path]
         return (root/path).read_bytes()
     manifest = json.loads(read('manifest.json'))
-    if manifest.get('schema') != 1 or manifest.get('recipe') != RECIPE:
-        raise ValueError('Gallery recipe changed; regenerate references')
-    if manifest.get('inputs_sha256') != source_fingerprint(root, staged):
+    if manifest.get('schema') != 2 or manifest.get('recipe') != RECIPE:
+        raise ValueError('Gallery recipe or manifest schema changed; regenerate references')
+    state = freshness(manifest, root, staged)
+    if state == 'stale':
+        raise ValueError('Gallery is stale for strict rendering inputs; regenerate references')
+    if state == 'pending' and not allow_pending:
         raise ValueError('Gallery is stale for these rendering inputs; regenerate references')
     if not manifest.get('repeat_verified') or not manifest.get('independent_pass_verified'):
         raise ValueError('Unverified render determinism')
@@ -407,7 +447,7 @@ def build(root, work):
 
 
 def generate(root=ROOT, executable=None):
-    fingerprint = source_fingerprint(root)
+    fingerprint, strict_fingerprint = source_fingerprint(root), source_fingerprint(root, strict=True)
     rom = root/'baserom.u.z64'
     if not rom.is_file():
         raise ValueError('Rendering needs your own baserom.u.z64 in the repository root')
@@ -452,10 +492,11 @@ def generate(root=ROOT, executable=None):
                 renderer[match[1].lower()] = match[2].strip()
         if set(renderer) != {'version', 'vendor', 'renderer'}:
             raise ValueError('Renderer identity missing from capture logs')
-        manifest = dict(schema=1, recipe=RECIPE, inputs_sha256=fingerprint,
+        manifest = dict(schema=2, recipe=RECIPE, inputs_sha256=fingerprint,
+                        strict_inputs_sha256=strict_fingerprint,
                         rom_sha256=digest(rom.read_bytes()), renderer=renderer,
                         repeat_verified=True, independent_pass_verified=True, cases=rows, icons=icons)
-        if source_fingerprint(root) != fingerprint:
+        if (source_fingerprint(root), source_fingerprint(root, strict=True)) != (fingerprint, strict_fingerprint):
             raise ValueError('Rendering inputs changed during capture; rerun generation')
         (output/'manifest.json').write_text(json.dumps(manifest, indent=2, sort_keys=True)+'\n', encoding='utf-8', newline='\n')
         (output/'index.html').write_text(page(manifest), encoding='utf-8', newline='\n')
@@ -484,7 +525,7 @@ def generate(root=ROOT, executable=None):
             (game/exe.name).unlink(missing_ok=True)
 
 
-def install_hook(root=ROOT):
+def install_hook(root=ROOT, defer=False):
     result = subprocess.run(['git', '-C', str(root), 'config', '--get', 'core.hooksPath'], capture_output=True, text=True)
     if result.returncode == 0 and result.stdout.strip() != '.githooks':
         raise ValueError('Existing core.hooksPath is configured; integrate the gallery hook there instead of replacing it')
@@ -493,28 +534,42 @@ def install_hook(root=ROOT):
         raise ValueError('An existing pre-commit hook needs integration; it has not been overwritten')
     subprocess.run(['git', '-C', str(root), 'config', 'midas.galleryPython', sys.executable], check=True)
     subprocess.run(['git', '-C', str(root), 'config', 'core.hooksPath', '.githooks'], check=True)
+    if defer:
+        subprocess.run(['git', '-C', str(root), 'config', 'midas.galleryDefer', 'true'], check=True)
     print('Installed gallery pre-commit hook for this clone.')
 
 
 def pre_commit(root=ROOT):
     if source_fingerprint(root) != source_fingerprint(root, True):
         raise ValueError('Rendering inputs have unstaged changes. Stage those inputs first; the hook will not capture a different working tree than the commit.')
+    defer = defer_enabled(root)
     try:
-        verify(root, True)
-        print('Hand gallery is fresh and verified for staged rendering inputs.')
+        manifest = verify(root, True, allow_pending=defer)
+        if freshness(manifest, root, True) == 'pending':
+            print('Hand gallery is pending: strict inputs fresh, deferred inputs changed since the last render.')
+        else:
+            print('Hand gallery is fresh and verified for staged rendering inputs.')
         return
     except (ValueError, OSError, subprocess.CalledProcessError) as error:
         print('Gallery check: '+str(error), flush=True)
     try:
-        verify(root)
+        verify(root, allow_pending=defer)
     except (ValueError, OSError, subprocess.CalledProcessError):
-        generate(root)
+        try:
+            generate(root)
+        except (ValueError, OSError, subprocess.SubprocessError) as error:
+            if defer:
+                raise
+            raise ValueError(f'{error}. If this machine cannot render, set midas.galleryDefer '
+                             '(see scripts/port/hand_gallery.md).') from error
     raise ValueError('Fresh gallery is in review/hand-gallery. Review the images, stage that directory, and commit again. Nothing was automatically staged.')
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=('generate', 'verify', 'install-hook', 'pre-commit'))
+    parser.add_argument('--allow-pending', action='store_true', help='Accept a gallery whose only stale inputs are deferred')
+    parser.add_argument('--defer', action='store_true', help='With install-hook: also set midas.galleryDefer for this clone')
     parser.add_argument('--index', action='store_true', help='Verify the staged gallery and staged inputs')
     parser.add_argument('--executable', type=Path, help='Use an already built isolated executable; never rebuild the player binary')
     args = parser.parse_args()
@@ -522,10 +577,13 @@ def main():
         if args.command == 'generate':
             generate(executable=args.executable)
         elif args.command == 'verify':
-            verify(staged=args.index)
+            manifest = verify(staged=args.index, allow_pending=args.allow_pending)
+            if freshness(manifest, staged=args.index) == 'pending':
+                print('Gallery pending: strict inputs fresh; deferred inputs changed since the last render.')
+                return 0
             print(f'Gallery verified: {CASES} matrix cells, {ICON_COUNT} icons, input/pixel/file hashes and generated HTML.')
         elif args.command == 'install-hook':
-            install_hook()
+            install_hook(defer=args.defer)
         else:
             pre_commit()
     except (ValueError, OSError, KeyError, IndexError, StopIteration, subprocess.SubprocessError) as error:

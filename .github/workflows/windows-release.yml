@@ -81,7 +81,7 @@ jobs:
           python3 scripts/port/test_download_retry.py
           python3 scripts/port/test_ci_dependencies.py
           python3 scripts/port/test_hand_gallery.py
-          python3 scripts/port/hand_gallery.py verify
+          python3 scripts/port/hand_gallery.py verify --allow-pending
 
   # The builds start alongside the tests instead of after them; publish waits
   # for the tests, so a failing test still stops a release.

@@ -107,6 +107,34 @@ python scripts/port/hand_gallery.py verify --index
 git commit
 ```
 
+### Strict and deferred inputs
+
+The fingerprint has two tiers (design: [the native 64-bit plan](native_64bit_plan.md),
+"Gallery rule: two tiers"). The manifest (schema 2) records
+`inputs_sha256` over every rendering input and `strict_inputs_sha256` over the
+strict tier only: the files in `STRICT_FILES` in `hand_gallery.py` (the fork's
+hand, arm and wardrobe code, `src/game/gunfire.c`, `model.c` and `bondview2.c`,
+the weapon icon files, `port/src/joy_port.c`, the generator and its template)
+and everything under `port/fast3d/`. Every other rendering input is deferred.
+
+- A strict mismatch is stale: the hook, `verify` and CI all fail.
+- A mismatch only in the full fingerprint is pending. `verify` fails on it
+  unless `--allow-pending` is given, in which case it prints
+  `Gallery pending` and exits 0. Image, coverage and HTML checks still run.
+- Pending is opt-in per clone: `git config midas.galleryDefer true`, or
+  `python scripts/port/hand_gallery.py install-hook --defer`. With it set, the
+  hook passes a pending gallery and says so. Without it (a clone that can
+  render, such as the Windows laptop) the hook regenerates on any staleness,
+  which clears pending. If generation fails there, the error points at this
+  setting.
+- CI runs `verify --allow-pending`: it accepts pending and logs it, and still
+  fails on a strict mismatch.
+- Pending is cleared by running `generate` on a machine that can render, at
+  the end of each milestone at the latest, then reviewing and staging
+  `review/hand-gallery`.
+- A new file that draws hands, arms or wardrobe must be added to
+  `STRICT_FILES` in the same change.
+
 Rendering inputs conservatively include game/port source, headers, shader and
 build configuration, the generator/template and release build workflow.
 Documentation-only changes do not rerender. CI runs ROM-free workflow tests and
