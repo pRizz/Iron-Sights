@@ -10337,6 +10337,23 @@ references; unchanged input needs no ROM or render. Changed input regenerates
 when necessary, then stops for review and explicit staging. Nothing is staged
 automatically. Partially staged rendering inputs are rejected before capture.
 The same hook also runs the Bright Builds starter checks (FORK-023).
+
+Two-tier inputs (2026-11-15, owner decision; why and cost: "Gallery rule: two
+tiers" in `scripts/port/native_64bit_plan.md`). The manifest is schema 2 and
+records `strict_inputs_sha256` beside `inputs_sha256`. The strict tier is
+`STRICT_FILES` plus `STRICT_PREFIXES` (`port/fast3d/`) in `hand_gallery.py`;
+everything else the fingerprint covers is deferred. `freshness` reports
+`fresh`, `pending` (only deferred inputs changed) or `stale` (a strict input
+changed). A stale gallery fails `verify`, the hook and CI. A pending one fails
+unless the clone sets the local Git setting `midas.galleryDefer` (hook, set by
+`install-hook --defer`) or `verify --allow-pending` is used (CI's call in
+`.github/workflows/windows-release.yml`, which logs the pending state). A clone
+without the setting regenerates on any staleness and its error names the
+setting when generation fails. New hand, arm or wardrobe files must be added
+to `STRICT_FILES`. Tests: `scripts/port/test_hand_gallery.py`. Documented in
+`scripts/port/hand_gallery.md` and AGENTS.md. The checked-in gallery has not yet
+been regenerated under this rule (that happens on the owner's Windows laptop),
+so `verify` fails on it until then.
 CI performs ROM-free gallery integrity/freshness and workflow tests. The README
 links to the gallery and setup guide. This supplements the hand/arm contracts
 and geometry/material regressions (FORK-004/FORK-017), not automatic visual approval.

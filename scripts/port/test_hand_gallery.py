@@ -22,7 +22,9 @@ def fixture(root):
     command(root, 'init', '--initial-branch=main')
     (root/'src').mkdir()
     (root/'src/example.c').write_bytes(b'int image = 1;\n')
-    command(root, 'add', 'src/example.c')
+    (root/'port/fast3d').mkdir(parents=True)
+    (root/'port/fast3d/example.cpp').write_bytes(b'int renderer = 1;\n')
+    command(root, 'add', 'src/example.c', 'port/fast3d/example.cpp')
 
 
 def references(root):
@@ -36,12 +38,25 @@ def references(root):
         if slot and name:
             icons.append(dict(id=slot, name=name, **gallery.asset(
                 f'images/icons/{slot:02d}-{name}.png', 512, 160, 4, b'\x11\x22\x33\xff'*(512*160), directory)))
-    manifest = dict(schema=1, recipe=gallery.RECIPE, inputs_sha256=gallery.source_fingerprint(root),
+    manifest = dict(schema=2, recipe=gallery.RECIPE, inputs_sha256=gallery.source_fingerprint(root),
+                    strict_inputs_sha256=gallery.source_fingerprint(root, strict=True),
                     rom_sha256='fixture', renderer={'renderer': 'Synthetic test'},
                     repeat_verified=True, independent_pass_verified=True, cases=rows, icons=icons)
     (directory/'manifest.json').write_text(json.dumps(manifest, indent=2, sort_keys=True)+'\n')
     (directory/'index.html').write_text(gallery.page(manifest), encoding='utf-8', newline='\n')
     return manifest
+
+
+def staged_references(root):
+    fixture(root)
+    manifest = references(root)
+    command(root, 'add', 'review/hand-gallery')
+    return manifest
+
+
+def change_and_stage(root, name, text):
+    (root/name).write_text(text)
+    command(root, 'add', name)
 
 
 class Gallery(unittest.TestCase):
@@ -148,6 +163,92 @@ class Gallery(unittest.TestCase):
             path = root/gallery.OUTPUT/gallery.cases()[0]['file']
             path.write_bytes(path.read_bytes()[:-1])
             with self.assertRaises(ValueError):
+                gallery.verify(root)
+
+    def test_strict_tier_membership(self):
+        # Arrange / Act / Assert
+        for name in gallery.STRICT_FILES:
+            self.assertTrue(gallery.input_path(name), name)
+            self.assertTrue(gallery.strict_path(name), name)
+            self.assertTrue((gallery.ROOT/name).is_file(), name)
+        self.assertTrue(gallery.strict_path('port/fast3d/gfx_pc.cpp'))
+        for name in ('src/game/front.c', 'port/src/romdata.c', 'CMakeLists.txt',
+                     '.github/workflows/windows-release.yml', 'notes.md'):
+            self.assertFalse(gallery.strict_path(name), name)
+
+    def test_strict_fingerprint_ignores_deferred_files(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)
+            fixture(root)
+            strict = gallery.source_fingerprint(root, strict=True)
+            full = gallery.source_fingerprint(root)
+            # Act
+            (root/'src/example.c').write_bytes(b'int image = 2;\n')
+            # Assert
+            self.assertEqual(strict, gallery.source_fingerprint(root, strict=True))
+            self.assertNotEqual(full, gallery.source_fingerprint(root))
+
+    def test_deferred_change_is_pending(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)
+            manifest = staged_references(root)
+            change_and_stage(root, 'src/example.c', 'int image = 3;\n')
+            # Act / Assert
+            self.assertEqual(gallery.freshness(manifest, root, True), 'pending')
+            with self.assertRaisesRegex(ValueError, 'stale'):
+                gallery.verify(root, True)
+            gallery.verify(root, True, allow_pending=True)
+
+    def test_strict_change_is_stale_even_when_pending_allowed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)
+            manifest = staged_references(root)
+            change_and_stage(root, 'port/fast3d/example.cpp', 'int renderer = 2;\n')
+            # Act / Assert
+            self.assertEqual(gallery.freshness(manifest, root, True), 'stale')
+            with self.assertRaisesRegex(ValueError, 'strict'):
+                gallery.verify(root, True, allow_pending=True)
+
+    def test_hook_without_the_clone_setting_tries_to_generate(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)
+            staged_references(root)
+            change_and_stage(root, 'src/example.c', 'int image = 3;\n')
+            self.assertFalse(gallery.defer_enabled(root))
+            with mock.patch.object(gallery, 'generate', side_effect=OSError('no ROM')) as generate:
+                # Act / Assert
+                with self.assertRaisesRegex(ValueError, 'midas.galleryDefer'):
+                    gallery.pre_commit(root)
+                generate.assert_called_once()
+
+    def test_hook_with_the_clone_setting_passes_pending(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)
+            staged_references(root)
+            change_and_stage(root, 'src/example.c', 'int image = 3;\n')
+            command(root, 'config', 'midas.galleryDefer', 'true')
+            self.assertTrue(gallery.defer_enabled(root))
+            with mock.patch.object(gallery, 'generate') as generate:
+                # Act
+                gallery.pre_commit(root)
+                # Assert
+                generate.assert_not_called()
+
+    def test_schema_1_manifest_must_be_regenerated(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)
+            manifest = staged_references(root)
+            manifest.update(schema=1)
+            del manifest['strict_inputs_sha256']
+            (root/gallery.OUTPUT/'manifest.json').write_text(json.dumps(manifest))
+            # Act / Assert
+            with self.assertRaisesRegex(ValueError, 'regenerate'):
                 gallery.verify(root)
 
     def test_repeat_capture_rejects_missing_and_changing_pixels(self):
