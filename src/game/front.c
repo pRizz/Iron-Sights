@@ -1502,8 +1502,8 @@ Gfx *frontDrawCursor(Gfx *DL)
         if (dump && (calls++ % 61) == 0)
         {
             fprintf(stderr,
-                    "cursor: opt=%d img=%08x idx=%08x w=%d h=%d fmt=%d copyidx=%08x\n",
-                    option, (u32) image, image->index, image->width,
+                    "cursor: opt=%d img=%p idx=%08x w=%d h=%d fmt=%d copyidx=%08x\n",
+                    option, (void *) image, image->index, image->width,
                     image->height, image->format,
                     (mainfolderimages + IMG_COPY)->index);
             fflush(stderr);
@@ -2593,7 +2593,7 @@ void frontCleanUpWalletBond(void)
 void init_menu05_fileselect(void)
 {
     s32 size = 0x6e000;
-    Gfx* DL = (s32)(ptr_logo_and_walletbond_DL) + (s32)(4096*10);
+    Gfx* DL = (Gfx *)((intptr_t)(ptr_logo_and_walletbond_DL) + (s32)(4096*10));
     int i;
 
     prev_keypresses = FALSE;
@@ -17300,7 +17300,7 @@ void load_briefing_text_for_stage(void)
 #endif
 
     // what is this
-    temp_s0 = (s32)(ptr_logo_and_walletbond_DL) + (s32)(4096*10);
+    temp_s0 = (Gfx *)((intptr_t)(ptr_logo_and_walletbond_DL) + (s32)(4096*10));
 
     // alright
     argg = 0x200;

@@ -444,7 +444,7 @@ u8 * langGet(s32 slotID)
     /* PORT: compiled-in text banks (char *LxE[] = {...}) store absolute
      * pointers, not bank-relative offsets, so don't add the base. */
     #if defined(DEBUG) || !defined(TARGET_N64)
-    return (textslot_offset != 0) ? (u8 *)output_slot : "Sorry, string not loaded.";
+    return (textslot_offset != 0) ? (u8 *)(uintptr_t)output_slot /* LP64-004: text bank converter */ : "Sorry, string not loaded.";
     #endif
-    return (textslot_offset != 0) ? (u8*)output_slot : NULL;
+    return (textslot_offset != 0) ? (u8*)(uintptr_t)output_slot /* LP64-004: text bank converter */ : NULL;
 }

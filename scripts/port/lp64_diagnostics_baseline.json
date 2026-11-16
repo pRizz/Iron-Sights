@@ -2,44 +2,26 @@
   "by_file": {
     "include/PR/gbi.h": 1,
     "include/PR/os.h": 3,
-    "port/src/model_audit.c": 1,
-    "port/src/pcsched.c": 3,
     "port/src/port_sight.c": 2,
-    "port/src/port_state.c": 5,
-    "src/debugmenu.c": 2,
-    "src/game/bg.c": 25,
+    "src/game/bg.c": 23,
     "src/game/bondview2.c": 81,
     "src/game/chr.c": 1,
     "src/game/chr_b.c": 2,
-    "src/game/chraction.c": 8,
-    "src/game/cleanup_objects.c": 2,
-    "src/game/explosion.c": 4,
-    "src/game/front.c": 5,
+    "src/game/explosion.c": 2,
     "src/game/glass.c": 1,
     "src/game/glass2.c": 1,
     "src/game/gunfire.c": 38,
-    "src/game/image.c": 2,
     "src/game/initanitable.c": 1,
-    "src/game/initplayergaitobject.c": 2,
-    "src/game/initunk_0009E0.c": 1,
-    "src/game/language.c": 2,
-    "src/game/lightfixture.c": 4,
     "src/game/model.c": 46,
-    "src/game/ob.c": 1,
     "src/game/objecthandler_2.c": 5,
-    "src/game/prop.c": 4,
-    "src/game/propobj.c": 3,
-    "src/game/sky.c": 1,
-    "src/game/stan.c": 4,
-    "src/game/tex.c": 2,
-    "src/game/zlib.c": 16
+    "src/game/sky.c": 1
   },
   "by_kind": {
-    "int-conversion": 80,
-    "int-to-pointer-cast": 87,
-    "pointer-to-int-cast": 112
+    "int-conversion": 75,
+    "int-to-pointer-cast": 74,
+    "pointer-to-int-cast": 59
   },
   "compiler": "gcc-13",
   "errors_by_file": {},
-  "total": 279
+  "total": 208
 }

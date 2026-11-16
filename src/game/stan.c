@@ -2882,13 +2882,13 @@ void stanGetMoveBondCollisionTiles(StandTile **tile1, StandTile **tile2, coord3d
                             stanGetTileOrderedPointWorldPos(
                                 linktile,
                                 ((j >> 2) + k) % 3,
-                                (coord3d *)((s32)coords + (((j + k) & 3) * 0xc)));
+                                (coord3d *)((intptr_t)coords + (((j + k) & 3) * 0xc)));
                         }
 
                         stanGetTileOrderedPointWorldPos(
                             curtileStore,
                             curtilePointI,
-                            (coord3d *)((s32)coords + (((j + 3) & 3) * 0xc)));
+                            (coord3d *)((intptr_t)coords + (((j + 3) & 3) * 0xc)));
 
                         j++;
 

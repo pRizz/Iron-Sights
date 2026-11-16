@@ -56,6 +56,10 @@ typedef struct {
     u32 checksum;
 } StateHeader;
 typedef struct { StateHeader h; u8 **data; } StateImage;
+/* The header and region records keep 32-bit addresses; the image layout is
+ * read by embed_state_layout.py and is not changed here. */
+static u32 stateAddrWord(const void *p) { return (u32)(uintptr_t)p; /* LP64-003: suspend points are unavailable on 64-bit */ }
+static void *stateAddrPtr(u32 addr) { return (void *)(uintptr_t)addr; /* LP64-003: suspend points are unavailable on 64-bit */ }
 static StateRegion stateRegions[STATE_MAX_REGIONS];
 static u32 stateCount;
 static u8 stateBuild[32];
@@ -164,9 +168,9 @@ static int stateHeader(StateHeader *h)
     h->timestamp = (u32)time(NULL); h->seconds = g_CurrentPlayer ? getMissiontimer()/60 : 0;
     h->health = g_CurrentPlayer ? g_CurrentPlayer->bondhealth : 0;
     h->armour = g_CurrentPlayer ? g_CurrentPlayer->bondarmour : 0;
-    h->count = stateCount+3; h->mainBase = (u32)arena; h->mainSize = size;
-    h->highBase = (u32)high; h->highSize = used;
-    h->romBase = (u32)rom; h->romSize = romSize; h->romCRC = romdataFingerprint();
+    h->count = stateCount+3; h->mainBase = stateAddrWord(arena); h->mainSize = size;
+    h->highBase = stateAddrWord(high); h->highSize = used;
+    h->romBase = stateAddrWord(rom); h->romSize = romSize; h->romCRC = romdataFingerprint();
     memcpy(h->build, stateBuild, 32);
     h->checksum = stateCRC(h, sizeof(*h)-sizeof(h->checksum)); return 1;
 }
@@ -294,7 +298,7 @@ static int stateWrite(s32 slot)
     ok = fwrite(&h, sizeof(h), 1, f) == 1;
     for (i = 0; ok && i < h.count; i++) {
         StateRegion r = stateRegion(&h, i);
-        ok = fwrite(&r, sizeof(r), 1, f) == 1 && stateWriteRegion(f, (const void *)r.addr, r.size);
+        ok = fwrite(&r, sizeof(r), 1, f) == 1 && stateWriteRegion(f, stateAddrPtr(r.addr), r.size);
     }
     if (fflush(f)) ok = 0;
 #ifdef _WIN32
@@ -375,7 +379,7 @@ static void stateApply(StateImage *image)
     { extern void portRenderStateBarrier(void); portRenderStateBarrier(); }
 #endif
     for (i = 0; i < image->h.count; i++) {
-        StateRegion r = stateRegion(&image->h, i); memcpy((void *)r.addr, image->data[i], r.size);
+        StateRegion r = stateRegion(&image->h, i); memcpy(stateAddrPtr(r.addr), image->data[i], r.size);
     }
     portStateHighWater(image->h.highSize);
 #ifdef GE_VIDEO
@@ -424,9 +428,9 @@ static void stateAudit(void)
         if (!strcmp(mode,"reject")) {
             u32 i, before=0, after=0; StateHeader h; StateImage invalid={0};
             stateHeader(&h);
-            for (i=0;i<h.count;i++) { StateRegion r=stateRegion(&h,i); before^=stateCRC((void *)r.addr,r.size); }
+            for (i=0;i<h.count;i++) { StateRegion r=stateRegion(&h,i); before^=stateCRC(stateAddrPtr(r.addr),r.size); }
             if (stateRead(PORT_STATE_QUICK,&invalid)) { fprintf(stderr,"state-audit: damaged image accepted\n");exit(2); }
-            for (i=0;i<h.count;i++) { StateRegion r=stateRegion(&h,i); after^=stateCRC((void *)r.addr,r.size); }
+            for (i=0;i<h.count;i++) { StateRegion r=stateRegion(&h,i); after^=stateCRC(stateAddrPtr(r.addr),r.size); }
             if (before!=after) { fprintf(stderr,"state-audit: rejected load changed world\n");exit(2); }
             phase=7;ticks=0;return;
         }

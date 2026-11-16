@@ -1160,7 +1160,7 @@ s32 texLoadFromGdl(Gfx *src, s32 srcsize, Gfx *dst, void *texpool)
         lightFixtureEntryEnd(out);
     }
 
-    return ((s32)out) - ((s32)dst);
+    return ((intptr_t)out) - ((intptr_t)dst);
 }
 
 

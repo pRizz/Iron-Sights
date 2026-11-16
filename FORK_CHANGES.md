@@ -1647,6 +1647,49 @@ bits; the bank, the music sequence table and `RareALSeqData` keep their
 20-mission smoke 20 of 20 `PASS` (184 s); step 3 as above;
 `lp64_casts.py check` passed (27 casts). The harness lines ran in the i686 container as for the first commit: all 43 passed (122 s).
 
+*Task 8, third commit (port state, arenas, zlib, pointer differences and
+one-off sites; local, not pushed):* the suspend image keeps its layout and the
+`<II` region format: its `StateHeader` and `StateRegion` addresses stay `u32`,
+written through `stateAddrWord` and read through `stateAddrPtr`, whose one
+truncating cast carries `/* LP64-003: suspend points are unavailable on 64-bit */`
+(allowlist line `port/src/port_state.c 1`; 28 casts in 13 files). `pcsched.c`'s
+high-arena hints convert through `uintptr_t`. `zlib.c`'s overlap checks compare
+`(uintptr_t)` addresses and take `(intptr_t)` differences, as the `u32`/`s32`
+casts did. Pointer differences and compares keep their old signedness:
+unsigned (`uintptr_t`) in `debugmenu.c`, `bg.c:390`, `image.c`
+(`texFreeBytesInBuffer`), `lightfixture.c` (the `>> 4`) and `prop.c` (the
+`/ 4`); signed (`intptr_t`) in `chraction.c`, `stan.c`, `tex.c`, `propobj.c`
+and `front.c`'s two display-list offsets. The two `langGet` slot reads are
+`(u8 *)(uintptr_t)output_slot` with `/* LP64-004: text bank converter */`;
+that form widens rather than truncates, so `lp64_casts.py` finds no cast to
+allow and they have no allowlist line. One-offs: `model_audit.c`'s check holds
+a `uintptr_t`; `cleanup_objects.c` casts to `u32 *`; `explosion.c`'s particle
+cast goes through `uintptr_t`; `init_player_gait_object` stores a
+`ModelNode *`; `D_80036418` is an `OSMesgQueue *` (`objecthandler.c`/`.h`);
+`ob.c`'s `cand` is `uintptr_t`, still formed in 32-bit arithmetic; the
+`GE_DUMP_BOND` cursor trace in `front.c` prints the image with `%p` instead of
+`%08x`. *Counts:* 279 to 208 (`int-conversion` 80 to 75, `int-to-pointer-cast`
+87 to 74, `pointer-to-int-cast` 112 to 59; 33 files to 15). Cleared: `zlib.c`
+16, `chraction.c` 8, `port_state.c` and `front.c` 5, `lightfixture.c`,
+`prop.c` and `stan.c` 4, `pcsched.c` and `propobj.c` 3, `debugmenu.c`,
+`cleanup_objects.c`, `image.c`, `initplayergaitobject.c`, `language.c` and
+`tex.c` 2, `model_audit.c`, `initunk_0009E0.c` and `ob.c` 1; `bg.c` 25 to 23,
+`explosion.c` 4 to 2. *Windows comparison:* exited 1 (112 s; `.text` bytes, `.data` one word, `.rdata` and `.reloc`, `.reloc` VirtualSize 0x28310 to 0x28314). With addresses normalised no function differs; the `.text` and `.data` bytes are addresses of moved strings, and `.reloc` follows the pointer words that moved with them. In `.rdata`, split into strings, the only change is the `GE_DUMP_BOND` format string (two bytes shorter), and every other differing word is the address of a string after it. *Left for Task 9* (43 places outside the strict files, plus
+`bondview2.c` 81, `model.c` 46 and `gunfire.c` 38): the player matrix field
+`field_10E0` (`BONDDATAMTX`: `bg.c` 706, 747, 837, `explosion.c` 959 and 1761,
+`glass.c`, `glass2.c`, `sky.c`) and `field_10E4` (`gbi.h:2741` through
+`gSPLookAt` in `bg.c:1833`), both set from `bondview2.c`; the three `os.h`
+places, from `bondview2.c` calls of `buildGaugeBarDL` and `sub_GAME_7F0A3B40`;
+`port_sight.c` 26 and 56, which store a `Gfx *` through the `s32 *gdl` of
+`gunfire.c`'s `gunDrawSight`; `chr.c:1701`, `chr_b.c` 72 and 116 and
+`objecthandler_2.c`'s five places, which call `model.c` functions;
+`initanitable.c:249` (`ModelAnimation.address`, assigned to Task 9 by the
+plan). `bg.c`'s 20 stride places (4455, 4659, 6394, 6427), left by Task 7 for
+LP64-004, also remain. *64-bit problems left:* `ob.c` rebuilds compiled-in bg
+addresses in 32-bit arithmetic (the bg segment strip, LP64-004); the text bank
+slots are 32-bit words (LP64-004); the suspend image records 32-bit
+addresses (LP64-003). *What ran:* step 1 (`update`, 20 s, 208 in 15 files, no `--allow-rise`); the i686 build exited 0 (8 s) and the 20-mission smoke 20 of 20 `PASS` (185 s); step 3 as above; `lp64_casts.py check` passed (28 casts); the harness lines in the i686 container: all 43 passed (122 s), `test_buffers.sh` without the sanitizer.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),

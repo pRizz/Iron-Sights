@@ -166,7 +166,7 @@ void portAllocHighReserve(void)
 
     for (attempt = 0; attempt < 8 && s_HighArena == NULL && !portAllocHighSkipHints(); attempt++)
     {
-        s_HighArena = portAllocHighRaw((void *) (0x30000000u + 0x10000000u * (u32) attempt), PORT_HIGH_ARENA_SIZE);
+        s_HighArena = portAllocHighRaw((void *) (uintptr_t) (0x30000000u + 0x10000000u * (u32) attempt), PORT_HIGH_ARENA_SIZE);
     }
 #ifdef _WIN32
     if (s_HighArena == NULL)
@@ -228,7 +228,7 @@ void *portAllocHigh(u32 size)
 
     for (attempt = 0; attempt < 8 && !portAllocHighSkipHints(); attempt++)
     {
-        void *p = portAllocHighRaw((void *) (0x50000000u + 0x08000000u * (u32) attempt), size);
+        void *p = portAllocHighRaw((void *) (uintptr_t) (0x50000000u + 0x08000000u * (u32) attempt), size);
         if (p != NULL)
         {
             return p;
@@ -264,7 +264,7 @@ void *portAllocHighDedicated(u32 size)
     size = (size + 0xFFFFu) & ~0xFFFFu;
     for (attempt = 0; attempt < 8 && !portAllocHighSkipHints(); attempt++)
     {
-        void *p = portAllocHighRaw((void *) (0x50000000u + 0x08000000u * (u32) attempt), size);
+        void *p = portAllocHighRaw((void *) (uintptr_t) (0x50000000u + 0x08000000u * (u32) attempt), size);
         if (p != NULL)
         {
             return p;

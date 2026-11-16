@@ -4026,7 +4026,7 @@ s32 sub_GAME_7F0448A8(struct PropRecord *argProp)
             if ((prop->type == PROP_TYPE_VIEWER) || (prop->type == PROP_TYPE_CHR))
             {
                 temp_v0_2 = prop->obj;
-                if ((temp_v0_2 == NULL) || !((s32) temp_v0_2->model & 0x400))
+                if ((temp_v0_2 == NULL) || !((intptr_t) temp_v0_2->model & 0x400))
                 {
                     chrpropGetCollisionBounds(prop, &radius, &height, &arbitratyNumber);
 
@@ -16028,7 +16028,7 @@ void sub_GAME_7F056690(void)
                 if (sub_GAME_7F04B590(s1->model->obj, t0) != 0)
                 {
                     new_var = &s3->datas[s0->RwDataIndex];
-                    if ((s32)s0->Vertices != (s32)*new_var)
+                    if ((intptr_t)s0->Vertices != (intptr_t)*new_var)
                     {
                         objFreePermanently(s1, 1);
                         return;

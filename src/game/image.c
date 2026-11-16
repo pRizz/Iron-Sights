@@ -2437,7 +2437,7 @@ struct tex *texFindInPool(s32 texturenum, struct texpool *arg1)
 
 s32 texFreeBytesInBuffer(struct texpool *arg0)
 {
-	return (u32)arg0->rightpos - (u32)arg0->leftpos;
+	return (uintptr_t)arg0->rightpos - (uintptr_t)arg0->leftpos;
 }
 
 

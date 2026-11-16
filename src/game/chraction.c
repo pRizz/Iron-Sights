@@ -1240,7 +1240,7 @@ void chrlvInitActAttack(ChrRecord *self, struct anim_group_info **arg1, s32 arg2
     //     &arg1[anim_index]->table[next_anim]
     //     arg1[anim_index]->table + next_anim
     panim_float = (struct weapon_firing_animation_table *)(
-            (s32)arg1[anim_index]->table + (s32)((s32)next_anim * (s32)sizeof(struct weapon_firing_animation_table))
+            (intptr_t)arg1[anim_index]->table + (s32)((s32)next_anim * (s32)sizeof(struct weapon_firing_animation_table))
         );
 
     if ((self->chrflags & CHRSTART_FORCENOBLOOD)
@@ -1250,7 +1250,7 @@ void chrlvInitActAttack(ChrRecord *self, struct anim_group_info **arg1, s32 arg2
         //     panim_float = &arg1[anim_index]->table[(next_anim + 1) % len]
         // where `len = arg1[anim_index]->len`
         panim_float = (struct weapon_firing_animation_table *)(
-            (s32)arg1[anim_index]->table + (s32)(((next_anim + 1) % arg1[anim_index]->len) * (s32)sizeof(struct weapon_firing_animation_table))
+            (intptr_t)arg1[anim_index]->table + (s32)(((next_anim + 1) % arg1[anim_index]->len) * (s32)sizeof(struct weapon_firing_animation_table))
         );
     }
 
@@ -2275,11 +2275,11 @@ void triggered_on_shot_hit(ChrRecord *self, coord3d *arg1, f32 arg2, s32 req_ani
                     another_flag = 1;
                     something_ani = &g_HitReactionTable[animation_something_index];
 
-                    if (((s32)&g_HitReactionTable[9] == (s32)something_ani) && (temp_left != NULL))
+                    if (((intptr_t)&g_HitReactionTable[9] == (intptr_t)something_ani) && (temp_left != NULL))
                     {
                         animation_something_index = 10;
                     }
-                    else if (((s32)&g_HitReactionTable[12] == (s32)something_ani) && (temp_right != NULL))
+                    else if (((intptr_t)&g_HitReactionTable[12] == (intptr_t)something_ani) && (temp_right != NULL))
                     {
                         animation_something_index = 13;
                     }

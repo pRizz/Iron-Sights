@@ -1541,7 +1541,7 @@ static u32 portMeasurePads(u32 *pads)
         pad++;
     }
 
-    return ((u32) (pad + 1) - (u32) pads) / 4; /* include the terminator record */
+    return ((uintptr_t) (pad + 1) - (uintptr_t) pads) / 4; /* include the terminator record */
 }
 
 static u32 portMeasureBoundPads(u32 *pads)
@@ -1553,7 +1553,7 @@ static u32 portMeasureBoundPads(u32 *pads)
         vol++;
     }
 
-    return ((u32) (vol + 1) - (u32) pads) / 4;
+    return ((uintptr_t) (vol + 1) - (uintptr_t) pads) / 4;
 }
 
 /* Load-time setup lint: byte-swapped or garbled setup data shows up as

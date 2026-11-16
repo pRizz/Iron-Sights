@@ -387,7 +387,7 @@ void sub_GAME_7F0B37EC(void) {
         }
 
         ptr++;
-    } while ((u32)ptr < (u32)end);
+    } while ((uintptr_t)ptr < (uintptr_t)end);
 }
 
 

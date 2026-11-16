@@ -234,7 +234,7 @@ void obLoadBGFileBytesAtOffset(u8 *bgname, u8 *target, s32 offset, s32 len)
    * straight out of the linked blob, undoing the 0xF1000000 segment strip the
    * room loaders apply so real host pointers read their data directly. */
   {
-    u32 cand = (u32) offset + 0x0F000000u;
+    uintptr_t cand = (u32) offset + 0x0F000000u;
 
     /* pointer-vs-offset test must not assume a 0x10000000 address floor
      * (Windows image base is 0x400000) - same classification as
