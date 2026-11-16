@@ -7,7 +7,12 @@ cd "$(dirname "$0")/../.."
 build_dir=$(mktemp -d /tmp/midas-headless-configure.XXXXXX)
 trap 'rm -rf "$build_dir"' EXIT
 
-cmake -S . -B "$build_dir" -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null
+# Quiet when it passes; a failed configure prints CMake's own diagnostics.
+if ! cmake -S . -B "$build_dir" -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    >"$build_dir/configure.log" 2>&1; then
+    cat "$build_dir/configure.log" >&2
+    exit 1
+fi
 
 # Take the recorded compile command for the file, as the build would run it.
 command=$(python3 - "$build_dir/compile_commands.json" <<'PY'

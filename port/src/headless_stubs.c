@@ -5,6 +5,7 @@
  * null renderer; these satisfy the symbols their callers reference.
  */
 #include <ultra64.h>
+#include <stdlib.h>
 
 void portAudioPump(void)
 {
@@ -115,8 +116,10 @@ s32 portRenderAsyncActive(void)
     return 0;
 }
 
-/* port_load_tour.c and save_transfer.cpp post a window-close request; there
- * is no window or SDL event loop to receive it, so there is nothing to quit. */
+/* port_load_tour.c and save_transfer.cpp post a window-close request; no window
+ * or event loop exists to receive it, so the request ends the process directly,
+ * as front.c's Exit Game does without video. */
 void portRequestQuit(void)
 {
+    exit(0);
 }
