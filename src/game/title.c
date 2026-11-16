@@ -23,6 +23,7 @@
 #include "music.h"
 #include "ob.h"
 #include "objecthandler.h"
+#include "rle.h"
 #include "title.h"
 #include "title2.h"
 #include "title3.h"

@@ -38,6 +38,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <str.h>
 #include <ultra64.h>
 #include "bondtypes.h"
 #include "../generated/setup_kinds.h"

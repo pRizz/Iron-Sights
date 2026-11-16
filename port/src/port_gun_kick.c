@@ -4,6 +4,7 @@
  * A round kicks after the pose of the frame it is fired on is taken. */
 #include <math.h>
 #include <string.h>
+#include <str.h>
 #include <ultra64.h>
 #include <bondconstants.h>
 #include "port_ads_accuracy.h"

@@ -10,6 +10,7 @@
 #include "image_bank.h"
 #include "lv.h"
 #include "objective_status.h"
+#include "othermodemicrocode.h"
 #include "random.h"
 
 #define BULLET_SPARKS_MAX 20

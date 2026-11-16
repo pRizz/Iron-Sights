@@ -20,6 +20,7 @@
 #include "ob.h"
 #include "player.h"
 #include "stan.h"
+#include "tex.h"
 #include "explosion.h"
 #include "bgroomtrans.h"
 #include "port_gfxwords.h" /* LP64-003: GFX_W0, GFX_W1_DATA */

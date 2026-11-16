@@ -2,6 +2,7 @@
 #include <memp.h>
 #include "initanitable.h"
 #include "objecthandler.h"
+#include <ramrom.h>
 #include "bondgame.h"
 
 //bss

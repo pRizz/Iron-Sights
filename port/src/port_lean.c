@@ -1,6 +1,7 @@
 /* Leaning (FORK-073): the settings, the lean controls and Lean Tilt. The
  * rules are in port_lean.h. */
 #include <string.h>
+#include <str.h>
 #include <ultra64.h>
 #include <bondtypes.h>
 #include "game/bondview.h"

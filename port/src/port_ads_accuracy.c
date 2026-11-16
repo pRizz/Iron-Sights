@@ -1,6 +1,7 @@
 /* ADS Spread and ADS Recoil (FORK-045). gunfire.c keeps the native spread and
  * recoil math; these only scale the weapon stats it reads while in ADS. */
 #include <string.h>
+#include <str.h>
 #include <ultra64.h>
 #include <bondconstants.h>
 #include "port_ads.h"

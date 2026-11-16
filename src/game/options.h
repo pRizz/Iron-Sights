@@ -198,6 +198,7 @@ void init_watch_at_start_of_stage(void);
 Gfx *draw_watch_current_page(Gfx *gdl, Mtx *arg1, s32 watch_transitioning);
 void sub_GAME_7F0A69A8(void);
 
+int sub_GAME_7F0AC0E8(u8 *arg);
 #endif
 
 

@@ -10,6 +10,7 @@
 #include "frametiming.h" /* tickhz=hw texture decode price */
 #include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 #include <inttypes.h> /* PRIxPTR: texLoad's web traces print the whole slot */
+#include <stdio.h> /* printf: the texture pool warning */
 #endif
 
 
@@ -2675,10 +2676,6 @@ void texLoad(uintptr_t *updateword, struct texpool *pool)
                * floor hunt). */
                 extern char *getenv(const char *);
                 extern void *portRootFopen(const char *name, const char *mode);
-#ifndef __EMSCRIPTEN__
-                extern u32 fwrite(const void *, u32, u32, void *);
-                extern s32 fclose(void *);
-#endif
                 extern int sprintf(char *, const char *, ...);
                 static s32 wantnum = -2;
                 if (wantnum == -2)

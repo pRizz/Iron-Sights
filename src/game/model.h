@@ -126,5 +126,8 @@ bool modelTestRayIntersectsTransformedBBox(ModelRoData_BoundingBoxRecord *bbox, 
 void return_null(void);
 #endif
 
+bool modelTestRayIntersectsNodeBBox(Model *model, ModelNode *node, coord3d *pos, coord3d *dir);
+s32 sub_GAME_7F074CAC(Model *model, ModelNode *node, coord3d *raypos, coord3d *raydir);
+u32 modelFindNextProjectileHitCandidate(Model *model, coord3d *arg1, coord3d *arg2, ModelNode **nodeptr);
 #endif
 

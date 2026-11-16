@@ -1,6 +1,7 @@
 /* Explosive Rounds (FORK-078): the settings. The rules are in
  * port_explosive_rounds.h; the game hooks in port_explosive_rounds_game.c. */
 #include <string.h>
+#include <str.h>
 #include "port_explosive_rounds.h"
 
 static s32 explosiveRounds = PORT_EXPLOSIVE_ROUNDS_DEFAULT;

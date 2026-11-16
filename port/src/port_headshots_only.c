@@ -2,6 +2,7 @@
  * in port_headshots_only.h; the records in port_headshots_records.c and the
  * difficulty page in port_headshots_menu.c. */
 #include <string.h>
+#include <str.h>
 #include "port_headshots_only.h"
 
 static s32 headshotsOnly = PORT_HEADSHOTS_ONLY_DEFAULT;

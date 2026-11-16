@@ -1,6 +1,7 @@
 /* Reload Speed (FORK-071): the setting and the gunfire.c hooks. The rules
  * are in port_reload_speed.h. */
 #include <string.h>
+#include <str.h>
 #include "port_reload_speed.h"
 
 extern s32 get_is_ramrom_flag(void);

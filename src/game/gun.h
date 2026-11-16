@@ -427,4 +427,5 @@ s32 portMissionTimerShown(void); /* solo clock in its own top-left HUD area */
 s32 gunWeaponFovLaunch(s32 handnum, coord3d *spawnpos, coord3d *aimdir); /* gunfire.c: Weapon FOV, a projectile leaves the drawn gun */
 #endif
 
+void bullet_path_from_screen_center(coord3d* arg0, coord3d* result, enum GUNHAND arg2); /* gunfire.c */
 #endif

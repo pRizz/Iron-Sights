@@ -1,5 +1,6 @@
 /* Always-on crosshair sizing and the shared menu/watch slider presentation. */
 #include <string.h>
+#include <str.h>
 #include "port_crosshair.h"
 #include "port_hud.h"
 

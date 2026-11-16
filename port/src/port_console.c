@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <str.h>
 #include <ultra64.h>
 
 #include "port_console.h"

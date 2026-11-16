@@ -27,4 +27,7 @@ void sub_GAME_7F057D88(f32 *arg0, f32 *arg1, f32 arg2);
 void display_objective_status_text_on_status_change(void);
 u8 *get_ptr_text_for_watch_breifing_page(WATCH_BRIEFING_PAGE page);
 u8 *get_text_for_objective(int objectiveIndex);
+void mtxLoadRandomRotation(Mtxf *mtx);
+struct Mtxf; /* the tag objective_status2.c declares for this definition */
+void sub_GAME_7F057DF8(struct Mtxf *arg0, struct Mtxf *arg1, s32 count);
 #endif

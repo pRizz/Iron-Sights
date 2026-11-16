@@ -9,6 +9,7 @@
 #include "game/mp_weapon.h"
 #include "game/bondview_r.h"
 #include "bg.h"
+#include "bondinv.h"
 #include "bondview_r.h"
 #include "chr.h"
 #include "chrai.h"

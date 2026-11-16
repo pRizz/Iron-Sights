@@ -49,6 +49,7 @@
 #include "model.h"
 #include "objecthandler.h"
 #include "objective_status.h"
+#include "othermodemicrocode.h"
 #include "player.h"
 #include "quaternion.h"
 #include "random.h"

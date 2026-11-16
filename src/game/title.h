@@ -26,4 +26,7 @@ struct FolderSelectColour;
 Gfx *titleRenderFolderMenuBackground(Gfx *gdl, s32 xOffset, struct FolderSelectColour *topColour, struct FolderSelectColour *bottomColour);
 Gfx *retrieve_display_rareware_logo(Gfx *gdl);
 Gfx *renderGunbarrelEyeIntroSequence(Gfx *gdl);
+void setupRarewareLogoData(u8 *address, s32 size);
+void sub_GAME_7F008DE4(u8 **addr, s32 *size);
+void initializeGunBarrelIntro(u8 *gfxBuffer, s32 bufferSize);
 #endif

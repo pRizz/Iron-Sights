@@ -1,6 +1,7 @@
 #include <ultra64.h>
 #include <memp.h>
 #include "textrelated.h"
+#include <ramrom.h>
 #include "bondtypes.h"
 #include "game/language.h"
 

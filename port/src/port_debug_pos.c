@@ -2,6 +2,7 @@
  * The rules are in port_debug_pos.h. */
 #include <stdlib.h>
 #include <string.h>
+#include <str.h>
 #include "port_debug_pos.h"
 
 static s32 debugPosOn = PORT_DEBUG_POS_DEFAULT;

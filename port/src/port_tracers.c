@@ -3,6 +3,7 @@
  * native strip untouched. */
 #include <math.h>
 #include <string.h>
+#include <str.h>
 #include <ultra64.h>
 #include <bondconstants.h>
 #include <bondtypes.h>

@@ -330,4 +330,9 @@ void               sub_GAME_7F03F540(struct ModelRoData_BoundingBoxRecord *bbox,
 void               projectRectCornersTo2D(struct coord3d *arg0, struct coord2d *arg1, struct coord2d *arg2, struct coord2d *arg3, struct coord2d *arg4);
 void               sub_GAME_7F03E6A0(PropRecord *prop);
 struct PropRecord *propFindForInteract(void);
+void ai(PropDefHeaderRecord *Entityp, PROP_TYPE EntityType);
+void chrpropDetach(PropRecord* prop);
+s32 propDoorGetCdTypes(PropRecord* prop);
+s32 sub_GAME_7F03DB70(s32* roomids1, s32* roomids2);
+bool doorIsPadlockFree(DoorRecord* door);
 #endif

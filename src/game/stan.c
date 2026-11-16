@@ -10,12 +10,14 @@
 #include "bg.h"
 #include "chrai.h"
 #include "chr.h"
+#include "dyn.h"
 #include "stanintersection.h"
 #include "assert.h"
 
 #ifndef TARGET_N64
 #include <stdlib.h> /* calloc - portStanPack rebuilds the packed tile image */
 #include <string.h>
+#include <stdio.h> /* printf: portStanPack's failure */
 
 #ifndef TARGET_N64
 /* Records which blocker a move hit, stamped with the tick and the test that

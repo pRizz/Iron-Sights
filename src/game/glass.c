@@ -2,6 +2,8 @@
 #include <limits.h>
 #include <music.h>
 #include "glass.h"
+#include "othermodemicrocode.h"
+#include "propobj.h"
 #include "bondview.h"
 #include "dyn.h"
 #include "image_bank.h"

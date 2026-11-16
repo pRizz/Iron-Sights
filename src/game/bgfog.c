@@ -6,6 +6,7 @@
 #include "bg.h"
 #include "bondview.h"
 #include "bgfog.h"
+#include <stdlib.h> /* atof: GE_FARX */
 #include <limits.h>
 
 /**

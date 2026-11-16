@@ -8,6 +8,7 @@
 #include <math.h>
 #include "bondaicommands.h"
 #include "bg.h"
+#include "bgfog.h"
 #include "cheat.h"
 #include "chr.h"
 #include "chrai.h"

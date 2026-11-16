@@ -2861,4 +2861,9 @@ coord3d *bondviewGetCurrentPlayersPosition3(void);
 Mtx *currentPlayerGetMatrix10C8(void);
 void *currentPlayerSetMatrix10CC(Mtxf *matrix);
 
+void transform3Dto2DWithZScaling(coord3d *in, coord3d *out);
+void currentPlayerSetProjectionMatrix(Mtx *matrix);
+void currentPlayerSetProjectionMatrixF(Mtxf *matrix);
+void bondviewUpdateCameraMatrices(coord3d* cam_pos, coord3d* cam_look_dir, coord3d* cam_up); /* bondview2.c */
+s32 playerTick(PropRecord *prop); /* bondview2.c */
 #endif

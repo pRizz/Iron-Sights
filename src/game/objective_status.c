@@ -8,6 +8,10 @@
 #include "PR/os.h"
 #include "str.h"
 #include "bondview.h"
+#include "bondinv.h"
+#include "chraction.h"
+#include "propobj.h"
+#include "loadobjectmodel.h"
 #ifndef TARGET_N64
 #include "port_hud.h"
 #include "port_objective_messages.h"

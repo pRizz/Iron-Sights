@@ -2,6 +2,7 @@
  * widening, driven by one fade per player. The rules are in
  * port_sprint_feedback.h. */
 #include <string.h>
+#include <str.h>
 #include <ultra64.h>
 #include <bondtypes.h>
 #include <fr.h>

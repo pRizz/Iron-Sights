@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h> /* atexit: portOptSaveHold's quit-time flush */
 #include <string.h>
+#include <str.h>
 #include <ultra64.h>
 #include "port_crosshair.h"
 #include "port_enhanced_fonts.h"

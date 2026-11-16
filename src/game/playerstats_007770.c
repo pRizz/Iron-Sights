@@ -1,4 +1,5 @@
 #include <ultra64.h>
+#include "bondinv.h"
 
 void set_favorite_weapon_for_every_player(void) {
     int right_hand;

@@ -45,4 +45,6 @@ bool check_aztec_completed_any_folder_secret_00(void);
 bool fileIsEgyptCompletedOn00AnyFolder(void);
 LEVEL_SOLO_SEQUENCE fileGetHighestStageUnlockedAnyFolder(void);
 
+void fileCopySave(s32 folder, save_data *out_save);
+void fileCopyDemoSaveToRamRomSave(u32 folder, save_data *save);
 #endif

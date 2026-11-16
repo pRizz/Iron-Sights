@@ -2,6 +2,7 @@
 #include "initactorpropstuff.h"
 #include "initanitable.h"
 #include "chr.h"
+#include "model.h"
 #include "gun.h"
 #include "math.h"
 #include "math_floor.h"

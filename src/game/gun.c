@@ -42,6 +42,7 @@
 #include "matrixmath.h"
 #include "bondinv.h"
 #include "stan.h"
+#include "bg.h"
 #include "gbi_extension.h"
 #include "frametiming.h" /* speedgraphframes */
 

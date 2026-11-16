@@ -1,6 +1,7 @@
 /* Reinforcements (FORK-081): the setting. The rules are in
  * port_reinforcements.h; the game hooks in port_reinforcements_game.c. */
 #include <string.h>
+#include <str.h>
 #include "port_reinforcements.h"
 
 static s32 reinforcements = PORT_REINFORCEMENTS_DEFAULT;

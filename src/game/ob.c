@@ -7,6 +7,8 @@
 #include <assets/obseg/obseg.h>
 #include "decompress.h"
 #include "indy_comms.h"
+#include <stdio.h> /* printf: the missing-data warning */
+#include <str.h>
 #include "assets/obseg/file_resource_id_enums.h"
 #ifndef TARGET_N64
 #include "romdata.h" /* ROM loader: romdataFilesApply / romdataFileServed / romdataFilePreprocess */

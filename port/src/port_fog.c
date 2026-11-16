@@ -1,6 +1,7 @@
 /* Fog (FORK-074): the setting and the state the level was loaded with.
  * The rules are in port_fog.h. */
 #include <string.h>
+#include <str.h>
 #include "port_fog.h"
 
 static s32 fogOn = PORT_FOG_DEFAULT;

@@ -1,6 +1,7 @@
 #include <ultra64.h>
 #include <memp.h>
 #include <token.h>
+#include <str.h>
 #include "image.h"
 #include "initmttex.h"
 

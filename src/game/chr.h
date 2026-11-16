@@ -304,4 +304,5 @@ void        sub_GAME_7F03E134(PropRecord* p);
 bool chrCanUseDKModeScaling(s32 bodynum, s32 headnum);
 #endif
 
+s32 chrTick(PropRecord *prop);
 #endif

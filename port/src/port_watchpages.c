@@ -17,6 +17,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <str.h>
 #include <ultra64.h>
 #include <bondconstants.h>   /* PLAYER_OPTION_* - the real enum, not a copy */
 

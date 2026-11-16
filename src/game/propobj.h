@@ -158,7 +158,7 @@ void                 maybe_detonate_object_and_its_children(PropRecord *arg0, f3
 struct ModelRoData_BoundingBoxRecord* chrobjGetBboxFromObjectRecord(ObjectRecord *arg0);
 void                 deactivate_alarm_sound_effect(void);
 bool                 chrpropTestPointInPaddedBoundPad(coord3d* pos, f32 arg1, BoundPadRecord *boundpads);
-void                 sub_GAME_7F0A1DA0(f32*, f32*, f32*, f32*, f32, f32, f32, f32, f32, f32);
+void                 sub_GAME_7F0A1DA0(coord3d *pos, coord3d *xaxis, coord3d *yaxis, coord3d *zaxis, f32 xmin, f32 xmax, f32 ymin, f32 ymax, f32 arg8, f32 arg9);
 void                 modelGetXYExtents(Model *model, f32 *arg1, f32 *arg2, f32 *arg3, f32 *arg4);
 s32                  sub_GAME_7F0448A8(struct PropRecord *arg0);
 PropRecord*          sub_GAME_7F051DD8(struct ObjectRecord* arg0, ModelFileHeader* arg1);
@@ -180,4 +180,15 @@ Gfx                 *countdownTimerRender(Gfx *DL);
 PropRecord          *hatCreateForChr(ChrRecord *chr, s32 modelnum, u32 flags);
 PropRecord          *doorInit(DoorRecord *door, coord3d *pos, Mtxf *mtx, StandTile *stan, coord3d *coord, coord3d *centre);
 
+s32                  objTick(struct PropRecord *prop);
+bool                 objTestForInteract(PropRecord* prop);
+void                 objHit(ShotData *shotdata, BulletHit *hit);
+void                 sub_GAME_7F04E9BC(PropRecord* prop, struct ShotData* shotdata);
+bool                 propobjFindHit(Model *model, ModelNode *startNode, coord3d *rayPos, coord3d *rayDir, struct HitThing *hitthing, s32 *dstmtxindex, ModelNode **dstnode);
+bool                 objGetOnscreenRenderBounds(PropRecord *prop, coord3d *arg1, struct coord2d *arg2, struct coord2d *arg3);
+void                 hatAssignToChr(HatRecord* hat, ChrRecord* chr);
+void                 doorDeactivatePortal(DoorRecord *door);
+bool                 doorIsClosed(DoorRecord *door);
+bool                 doorTestForInteract(PropRecord *prop);
+TICKOP               propdoorInteract(PropRecord* doorprop);
 #endif

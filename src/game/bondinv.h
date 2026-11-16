@@ -41,4 +41,6 @@ u16 *bondinvGetSecondTitlebyIndex(s32 index);
 u8 *bondinvGetActivatedTextObject(ObjectRecord *obj);
 u8 *bondinvGetActivatedTextWeapon(ITEM_IDS weaponnum);
 
+int bondinvAddPropToInv(PropRecord *prop);
+int bondinvAddWeaponByProp(PropRecord *prop);
 #endif

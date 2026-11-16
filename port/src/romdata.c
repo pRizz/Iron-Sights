@@ -50,6 +50,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <str.h>
 #include <stdint.h>
 #include <errno.h>
 #include <sys/types.h>

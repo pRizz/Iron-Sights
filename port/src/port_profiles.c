@@ -54,6 +54,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <str.h>
 #include <dirent.h>
 #include <sys/stat.h>
 #ifdef _WIN32

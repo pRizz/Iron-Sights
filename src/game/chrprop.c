@@ -22,6 +22,7 @@
 #include "gun.h"
 #include "initanitable.h"
 #include "language.h"
+#include "lightfixture.h"
 #include "loadobjectmodel.h"
 #include "lv.h"
 #include "math.h"

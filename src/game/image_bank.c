@@ -2,6 +2,7 @@
 #include <ramrom.h>
 #include <memp.h>
 #include "image_bank.h"
+#include "image.h"
 
 #ifndef TARGET_N64
 #include <stdlib.h> /* texReset pristine-bank snapshot */

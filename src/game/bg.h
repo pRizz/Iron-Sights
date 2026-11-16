@@ -257,4 +257,12 @@ void bgFindRoomsAlongSegment(coord3d *pos1, coord3d *pos2, u8 *initialRooms, u8 
 s32 sub_GAME_7F0B9E04(coord3d *arg0, coord3d *arg1);
 void bgRoomCalcBB(s32 room);
 
+bool bgProjectRoomCoordToScreen(coord3d* src, coord3d* dst);
+bool bgTestRayIntersectsBbox(coord3d *origin, coord3d *dir, s32 *bbox_min, s32 *bbox_max);
+#if defined(VERSION_EU)
+void sub_GAME_7F0B7F84(s32 roomnum, s32 portalnum, s32 depth, bbox2d *parentbox);
+#else
+s32 sub_GAME_7F0B7F84(s32 value, s32 roomnum, s32 portalnum, s32 depth, bbox2d *parentbox);
+#endif
+s32 bgGetConnectedRooms(s32 roomIndex, s32* list, s32 max);
 #endif
