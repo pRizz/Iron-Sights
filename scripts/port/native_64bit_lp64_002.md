@@ -259,8 +259,8 @@ owns it.
     tree's command.
   - `sites --messages [FILE...]`: one line per place,
     `file:line: kind: message | source text`, the message and the quoted
-    source line as GCC printed them. The source text is how a place is found
-    in the four `#line` files.
+    source line as GCC printed them. For the four `#line`
+    files the line is the file's physical line and the text is read from it.
   - `update` exits 2 and writes nothing when the new total exceeds the
     recorded total, unless `--allow-rise REASON` is given; the reason is
     printed.
@@ -268,8 +268,9 @@ owns it.
   - `find_casts(text: str) -> list[int]`: line numbers of truncating
     round-trip casts, matching `(u32|s32|int|unsigned|unsigned int|u16|s16)`
     cast applied directly to a `(uintptr_t|intptr_t)` cast.
-  - CLI `check` (exit 1 listing every site not covered by the allowlist) and
-    `list`. It scans tracked `*.c`, `*.h`, `*.cpp`, `*.inl` under `src/`,
+  - CLI `check` (exit 1 unless every file's count equals its allowlist line:
+    more casts, or fewer, or a listed file that is gone, each listing the
+    sites and what to change) and `list`. It scans tracked `*.c`, `*.h`, `*.cpp`, `*.inl` under `src/`,
     `port/` and `include/`.
   - `lp64_casts_allowed.txt`: one `path<TAB>count<TAB>reason` line per file.
 

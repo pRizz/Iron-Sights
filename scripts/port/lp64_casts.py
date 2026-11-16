@@ -3,8 +3,10 @@
 
 A cast such as `(u32)(uintptr_t)p` silences the compiler's pointer-to-integer warning without
 fixing anything: at 64 bits it drops the high half. `lp64_casts_allowed.txt` records how many of
-them each tracked source file holds (`path<TAB>count<TAB>reason`). `check` fails when a file holds
-more than it is allowed, or any and is not listed; `list` prints every site. Only tracked
+them each tracked source file holds (`path<TAB>count<TAB>reason`). `check` requires an exact match:
+it fails when a file holds more than it is allowed (or any and is not listed), and when it holds
+fewer (or none, or is no longer tracked) so the line must be lowered or removed; `list` prints every
+site. Only tracked
 `*.c`, `*.h`, `*.cpp` and `*.inl` files under `src/`, `port/` and `include/` are read.
 """
 import argparse
@@ -41,10 +43,17 @@ def parse_allowlist(text: str) -> dict[str, int]:
     return allowed
 
 
-def violations(sites: dict[str, list[int]], allowed: dict[str, int]) -> list[str]:
-    """Return one message per file holding more casts than the allowlist grants it."""
-    return [f'{path}: {len(lines)} truncating casts, allowed {allowed.get(path, 0)}'
-            for path, lines in sorted(sites.items()) if len(lines) > allowed.get(path, 0)]
+def violations(sites: dict[str, list[int]], allowed: dict[str, int]) -> list[tuple[str, str]]:
+    """Return (path, message) for each file whose cast count differs from its allowlist line."""
+    found = []
+    for path in sorted(set(sites) | set(allowed)):
+        actual, granted = len(sites.get(path, [])), allowed.get(path, 0)
+        if actual > granted:
+            found.append((path, f'{path}: {actual} truncating casts, allowed {granted}'))
+        elif actual < granted:
+            fix = f'lower the allowlist line to {actual}' if actual else 'remove the allowlist line'
+            found.append((path, f'{path}: {actual} truncating casts, allowed {granted}; {fix}'))
+    return found
 
 
 def tracked_files(root: Path) -> list[str]:
@@ -82,12 +91,12 @@ def main(argv: list[str]) -> int:
             print('\n'.join(f'{path}:{line}' for line in lines))
         return 0
     problems = violations(sites, allowed)
-    for message in problems:
+    for path, message in problems:
         print(message)
-        print('\n'.join(f'  {message.split(":")[0]}:{line}' for line in sites[message.split(':')[0]]))
+        print('\n'.join(f'  {path}:{line}' for line in sites.get(path, [])))
     if problems:
-        print('A truncating round trip hides a 64-bit problem; fix the declaration instead. '
-              'Where the true fix belongs to a later milestone, comment it and raise the allowlist.')
+        print('The allowlist must match exactly. A truncating round trip hides a 64-bit problem: fix the '
+              'declaration instead; where the true fix belongs to a later milestone, comment it and raise the line.')
         return 1
     print(f'OK: {sum(map(len, sites.values()))} truncating casts in {len(sites)} files, all allowed')
     return 0

@@ -274,6 +274,21 @@ sys.exit(int(status))
 """
 
 
+LINE_COMPILER = """import sys
+source = next(arg for arg in sys.argv[1:] if arg.endswith('.c'))
+lines = open(source).read().split('\\n')
+logical = 0
+for physical, text in enumerate(lines, 1):
+    logical += 1
+    if text.startswith('#line '):
+        logical = int(text.split()[1]) - 1
+    if 'BAD' in text:
+        # GCC reports the logical line and quotes the file's line of that number.
+        quoted = lines[logical - 1] if logical <= len(lines) else ''
+        sys.stderr.write(f'{source}:{logical}:1: warning: bad [-Wint-conversion]\\n    {logical} | {quoted}\\n')
+"""
+
+
 class CommandLine(unittest.TestCase):
     """Runs `main` on a compile_commands.json whose compiler is FAKE_COMPILER: each C file holds the
     exit status on its first line and the compiler output to print after it."""
@@ -394,6 +409,88 @@ class CommandLine(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertEqual(json.loads(self.baseline.read_text())['total'], 1)
         self.assertIn('video configuration added', out + err)
+
+    def line_file_commands(self) -> Path:
+        compiler = self.folder/'linecc.py'  # run directly: the tool inserts options right after argv[0]
+        compiler.write_text(f'#!{sys.executable}\n{LINE_COMPILER}')
+        compiler.chmod(0o755)
+        source = self.folder/'a.c'
+        source.write_text('int a;\nint b;\n#line 100\nBAD here\n')
+        path = self.folder/'compile_commands.json'
+        path.write_text(json.dumps([dict(directory=str(self.folder), file=str(source),
+                                         arguments=[str(compiler), str(source)])]))
+        return path
+
+    def test_sites_report_the_physical_line_of_a_file_with_line_directives(self):
+        # Arrange
+        path = self.line_file_commands()
+        with mock.patch.object(diag, 'ROOT', self.folder):
+            # Act
+            status, out, err = self.run_main('sites', '--messages', '--compile-commands', str(path))
+        # Assert
+        self.assertEqual(status, 0, err)
+        self.assertEqual(out.strip(), 'a.c:4: int-conversion: bad | BAD here')
+
+    def test_sites_without_messages_also_report_the_physical_line(self):
+        # Arrange
+        path = self.line_file_commands()
+        with mock.patch.object(diag, 'ROOT', self.folder):
+            # Act
+            status, out, err = self.run_main('sites', '--compile-commands', str(path))
+        # Assert
+        self.assertEqual(out.strip(), 'a.c:4: int-conversion')
+
+    def test_count_keeps_the_compilers_own_line_numbers_and_writes_nothing_beside_the_source(self):
+        # Arrange
+        path = self.line_file_commands()
+        before = sorted(p.name for p in self.folder.iterdir())
+        with mock.patch.object(diag, 'ROOT', self.folder):
+            # Act
+            status, out, err = self.run_main('count', '--compile-commands', str(path))
+        # Assert
+        self.assertEqual(json.loads(out)['by_file'], {'a.c': 1})
+        self.assertEqual(sorted(p.name for p in self.folder.iterdir()), before)
+
+    def test_a_malformed_baseline_exits_2_naming_the_file(self):
+        # Arrange
+        path = self.commands({'a.c': "0\n"})
+        for text in ('{not json', '{"compiler": "gcc-13"}'):
+            self.baseline.write_text(text)
+            for command in ('check', 'update'):
+                with self.subTest(text=text, command=command):
+                    # Act
+                    status, out, err = self.run_main(command, '--compile-commands', str(path))
+                    # Assert
+                    self.assertEqual(status, 2)
+                    self.assertIn(str(self.baseline), err)
+
+    def test_allow_rise_is_silent_when_the_total_did_not_rise(self):
+        # Arrange
+        path = self.commands({'a.c': "0\n"})
+        self.baseline.write_text(diag.render(diag.summarize(set(), 'gcc-13')))
+        # Act
+        status, out, err = self.run_main('update', '--allow-rise', 'why', '--compile-commands', str(path))
+        # Assert
+        self.assertEqual(status, 0)
+        self.assertNotIn('Rise allowed', out + err)
+
+
+class PhysicalCommand(unittest.TestCase):
+    def test_the_copy_replaces_the_source_and_the_original_folder_is_searched_first(self):
+        # Arrange
+        argv = ['cc', '-iquote', 'other', '-I/inc', '/w/src/a.c', '-fsyntax-only']
+        # Act
+        result = diag.physical_command(argv, '/w/src/a.c', '/tmp/x/a.c')
+        # Assert
+        self.assertEqual(result, ['cc', '-iquote', '/w/src', '-iquote', 'other', '-I/inc', '/tmp/x/a.c', '-fsyntax-only'])
+
+    def test_stripping_line_directives_keeps_every_other_line_in_place(self):
+        # Act
+        stripped = diag.strip_line_directives('a\n  #  line 100\nb\n#line 7 "f.c"\nc')
+        # Assert
+        self.assertEqual(stripped, 'a\n\nb\n\nc')
+        self.assertTrue(diag.has_line_directives('x\n#line 5\n'))
+        self.assertFalse(diag.has_line_directives('// #line 5\nint x;'))
 
 
 if __name__ == '__main__':

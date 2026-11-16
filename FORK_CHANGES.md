@@ -664,10 +664,22 @@ The i686 SDL2 under `/home/dev/sdl2-linux-i686` is untouched. (2)
 the entries are merged and a source file several trees list is compiled once,
 with the first tree's command. `sites --messages [FILE...]` prints
 `file:line: kind: message | source text` (GCC's message without its `[-W...]`
-flag, and the source line GCC quotes under the diagnostic, stripped; for the
-four `#line` files that quoted text is how a place is found). `update` exits 2
+flag, and the source line GCC quotes under the diagnostic, stripped). *Fix
+round, `#line` files:* `src/game/gunfire.c`, `gun.c`, `lv.c` and
+`src/libultrare/audio/env.c` use bare `#line N` directives, so the compiler's
+line numbers for them are not the file's lines and the text it quotes is the
+wrong line. For a source file that contains such a directive, `sites` (with and
+without `--messages`) now reports the physical line and quotes the file's text
+there: the tool compiles a second copy of the file with the directive lines
+emptied (same line count), in a temporary folder outside the source tree, with
+the original's folder searched first for quoted includes, and takes that
+file's diagnostics from the copy (other files' diagnostics from the same
+compile are unchanged). `count`, `check` and `update` still use the
+compiler's own numbering, so the baseline is unaffected. `update` exits 2
 and writes nothing when the new total exceeds the recorded one, unless
-`--allow-rise REASON` is given, which is printed. The default input is still
+`--allow-rise REASON` is given; the reason is printed only when the total did
+rise. A baseline that is unreadable or lacks `total`, `compiler` or `by_file`
+makes `check` and `update` exit 2 naming the file. The default input is still
 `build/lp64/diag/compile_commands.json`. (3) `scripts/port/lp64_casts.py`
 (new): `find_casts(text)` returns the lines of a truncating round trip, an
 `(u32|s32|int|unsigned|unsigned int|u16|s16)` cast applied directly to a
@@ -676,6 +688,12 @@ and `*.inl` files under `src/`, `port/` and `include/` (`git ls-files`, so
 never build output or the ROM), exits 1 listing every site of a file whose
 count exceeds `scripts/port/lp64_casts_allowed.txt` (`path<TAB>count<TAB>reason`;
 a file not listed is allowed none) and 0 otherwise; `list` prints every site.
+*Fix round, exact match:* `check` now requires each file's count to equal its
+allowlist line. A file below its line (or at zero), or a listed file that is no
+longer tracked, fails with `lower the allowlist line to N` or `remove the
+allowlist line`, so the allowlist tightens as casts are removed and a freed
+allowance cannot be reused; `violations` returns each path with its message.
+`test_lp64_casts.py` has 16 tests after this round.
 The comment text is not excluded: a cast written inside a comment counts. The
 allowlist starts with today's 23 casts in 9 files (`port/src/port_arm_mesh.c`
 3, `port_grip_mesh.c` 1, `port_textures.c` 1, `romdata.c` 2,
@@ -716,6 +734,21 @@ later task's total falls, so the block needs no flag), then `update
 WORKTREE`, exited 0, `identical in loaded code and data`, in 114 s. The
 block's commands were correct, so the plan is unchanged by this task, and the
 status table's LP64-002 row was deliberately left to a parallel edit.
+*Task 1 review fix round (local commit "Report physical lines for #line files and
+make the cast allowlist exact"; not pushed):* the `#line` handling and the
+exact-match allowlist described above, plus three minors (the `--allow-rise`
+message, the unusable-baseline exit and `violations` returning paths).
+`test_lp64_diagnostics.py` now has 40 tests and `test_lp64_casts.py` 16, each
+new one seen failing first. The `#line` tests run the real compile path with a
+stand-in compiler that reports GCC's logical line and quotes the file's line of
+that number (the host has no GCC, only clang); GCC itself was checked in the
+x86_64 container. `count` over both trees printed byte-identical JSON from the
+old and the new tool, equal to the recorded baseline. In `src/game/gunfire.c`
+(directives at physical lines 353, 3095 and 4182) one place, `rwmtx = (Mtxf *)
+dynAllocate(...)` at physical line 1082, was reported by the old tool as line
+3381 quoting an unrelated comment, and by the new as `gunfire.c:1082` with
+`sed -n 1082p` showing exactly that statement. The mission smoke and the Windows
+comparison were not repeated: no game or build file changed in this round.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),

@@ -71,13 +71,41 @@ class Check(unittest.TestCase):
         self.assertIn('src/a.c', out + err)
         self.assertIn('src/a.c:2', out + err)
 
-    def test_equal_or_lower_counts_pass(self):
+    def test_equal_counts_pass(self):
+        # Arrange
+        self.write(1, 3, 'src/a.c\t1\tr\nsrc/b.c\t3\tr\n')
+        # Act
+        status, out, err = self.run_main('check')
+        # Assert
+        self.assertEqual(status, 0, out + err)
+
+    def test_a_file_below_its_allowed_count_fails_naming_the_file_and_both_counts(self):
         # Arrange
         self.write(1, 1, 'src/a.c\t1\tr\nsrc/b.c\t3\tr\n')
         # Act
         status, out, err = self.run_main('check')
         # Assert
-        self.assertEqual(status, 0, out + err)
+        self.assertEqual(status, 1)
+        self.assertIn('src/b.c: 1 truncating casts, allowed 3; lower the allowlist line to 1', out)
+
+    def test_a_file_whose_casts_are_all_gone_is_told_to_have_its_line_removed(self):
+        # Arrange
+        self.write(1, 0, 'src/a.c\t1\tr\nsrc/b.c\t2\tr\n')
+        # Act
+        status, out, err = self.run_main('check')
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('src/b.c', out)
+        self.assertIn('remove the allowlist line', out)
+
+    def test_a_listed_file_that_is_no_longer_tracked_fails(self):
+        # Arrange
+        self.write(1, 1, 'src/a.c\t1\tr\nsrc/b.c\t1\tr\nsrc/gone.c\t2\tr\n')
+        # Act
+        status, out, err = self.run_main('check')
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('src/gone.c', out)
 
     def test_a_file_absent_from_the_allowlist_with_one_cast_fails(self):
         # Arrange
@@ -104,6 +132,14 @@ class Check(unittest.TestCase):
         # Assert
         self.assertEqual(status, 0)
         self.assertIn('src/a.c:1', out)
+
+
+class Violations(unittest.TestCase):
+    def test_each_violation_carries_its_path(self):
+        # Act
+        found = casts.violations({'src/a.c': [1, 2]}, {'src/a.c': 1, 'src/b.c': 1})
+        # Assert
+        self.assertEqual([path for path, _ in found], ['src/a.c', 'src/b.c'])
 
 
 class Allowlist(unittest.TestCase):

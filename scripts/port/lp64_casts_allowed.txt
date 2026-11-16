@@ -1,4 +1,5 @@
-# Truncating round-trip casts per file: path<TAB>count<TAB>reason. Counts only fall; see lp64_casts.py.
+# Truncating round-trip casts per file: path<TAB>count<TAB>reason. `check` requires the counts to match
+# exactly: lower a line when casts are removed, delete it at zero; see lp64_casts.py.
 port/src/port_arm_mesh.c	3	existing before LP64-002
 port/src/port_grip_mesh.c	1	existing before LP64-002
 port/src/port_textures.c	1	existing before LP64-002

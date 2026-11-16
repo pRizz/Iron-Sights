@@ -5,7 +5,11 @@ Every C file in a `compile_commands.json` is compiled syntax-only with 64-bit
 pointers. `count` prints the tally, `update` records it as the baseline,
 `check` fails when any file has more diagnostics than the baseline records and
 then lists those files' sites, and `sites [FILE...]` prints every diagnostic as
-`file:line: kind` (`--messages` adds GCC's message and the quoted source line). `--compile-commands`
+`file:line: kind` (`--messages` adds GCC's message and the quoted source line). A source file that contains `#line`
+directives has compiler line numbers that are not its own lines, so `sites` reports its diagnostics
+at the PHYSICAL line, found by compiling a copy of the file without the directives (kept outside
+the source tree, with the original's folder searched first for quoted includes); `count`, `check`
+and `update` keep the compiler's own numbering and are unaffected. `--compile-commands`
 may be repeated to measure several configurations together. Build the tree first: a file that stops at a fatal error
 (such as a header the build generates) was not measured, so every command
 refuses to report and names the files.
@@ -20,6 +24,7 @@ import re
 import shlex
 import subprocess
 import sys
+import tempfile
 from typing import Optional
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -39,6 +44,7 @@ DIAGNOSTIC = re.compile(
     r'(?P<text>.*?)(?: \[-W(?P<flag>[\w=-]+)\])?$')
 # Any compiler line reporting an error, located or not (`gcc: error: ...`, `cc1: fatal error: ...`).
 QUOTED_SOURCE = re.compile(r'^\s*\d+ \| ?(?P<text>.*)$')
+LINE_DIRECTIVE = re.compile(r'^[ \t]*#[ \t]*line\b', re.MULTILINE)
 ERROR_LINE = re.compile(r'^\S.*?: (?:fatal )?error: ')
 FATAL_LINE = re.compile(r'^\S.*?: fatal error: ')
 
@@ -183,7 +189,40 @@ def risen_files(baseline: dict, current: dict) -> list[str]:
                      if count > errors.get(path, 0)})
 
 
-def compile_one(entry: dict, argv: list[str], root: Path) -> tuple[dict, bool]:
+def has_line_directives(text: str) -> bool:
+    """Return whether C source `text` contains a `#line` directive."""
+    return LINE_DIRECTIVE.search(text) is not None
+
+
+def strip_line_directives(text: str) -> str:
+    """Return `text` with each `#line` directive line emptied, so every other line keeps its number."""
+    return '\n'.join('' if LINE_DIRECTIVE.match(line) else line for line in text.split('\n'))
+
+
+def physical_command(argv: list[str], source: str, copy: str) -> list[str]:
+    """Return `argv` compiling `copy` in place of `source`, searching the original's folder first."""
+    return argv[:1] + ['-iquote', os.path.dirname(source)] + [copy if arg == source else arg for arg in argv[1:]]
+
+
+def physical_diagnostics(entry: dict, argv: list[str], root: Path) -> dict:
+    """Return the diagnostics in `entry`'s own file at their physical lines.
+
+    The file is compiled again from a copy without its `#line` directives, written to a temporary
+    folder outside the source tree; the copy's path is mapped back to the original in the output."""
+    source = os.path.normpath(os.path.join(entry['directory'], entry['file']))
+    with tempfile.TemporaryDirectory(prefix='lp64-physical-') as folder:
+        copy = os.path.join(folder, os.path.basename(source))
+        Path(copy).write_text(strip_line_directives(Path(source).read_text(errors='replace')))
+        command = physical_command([source if arg == entry['file'] else arg for arg in argv], source, copy)
+        try:
+            done = subprocess.run(command, cwd=entry['directory'], capture_output=True,
+                                  text=True, timeout=COMPILE_TIMEOUT_SECONDS)
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise RuntimeError(f"cannot compile a copy of {entry['file']}: {error}") from error
+    return parse_with_text(done.stderr.replace(copy, source), root)
+
+
+def compile_one(entry: dict, argv: list[str], root: Path, physical: bool = False) -> tuple[dict, bool]:
     """Compile one entry; return its diagnostics and whether it stopped at a fatal error.
 
     A failure to run, or a failing compile whose errors are not all located diagnostics (a driver
@@ -201,10 +240,16 @@ def compile_one(entry: dict, argv: list[str], root: Path) -> tuple[dict, bool]:
     if done.returncode != 0 and not fatal and (unlocated or not found):
         raise RuntimeError(f"{entry['file']} failed with status {done.returncode} "
                            f"and an unrecognised error:\n{done.stderr}")
+    source = os.path.normpath(os.path.join(entry['directory'], entry['file']))
+    if physical and not fatal and has_line_directives(Path(source).read_text(errors='replace')):
+        own = Path(source).relative_to(root).as_posix() if Path(source).is_relative_to(root) else source
+        found = {key: text for key, text in found.items() if key[0] != own}
+        found.update({key: text for key, text in physical_diagnostics(entry, argv, root).items()
+                      if key[0] == own})
     return found, fatal
 
 
-def measure(compile_commands: list[Path], root: Path) -> dict:
+def measure(compile_commands: list[Path], root: Path, physical: bool = False) -> dict:
     """Compile every C file in the compile databases once and return the diagnostics found, with text.
 
     A source file several databases list is compiled with the first database's command.
@@ -214,7 +259,7 @@ def measure(compile_commands: list[Path], root: Path) -> dict:
         c_entries(entries, path)
     commands = c_entries(merge_entries(trees), compile_commands[0])
     with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, os.cpu_count() or 1)) as pool:
-        results = list(pool.map(lambda pair: compile_one(*pair, root), commands))
+        results = list(pool.map(lambda pair: compile_one(*pair, root, physical), commands))
     stopped = sorted(entry['file'] for (entry, _), (_, fatal) in zip(commands, results) if fatal)
     if stopped:
         raise RuntimeError('stopped at a fatal error, so not measured (build the tree first?): '
@@ -224,6 +269,16 @@ def measure(compile_commands: list[Path], root: Path) -> dict:
         for key, text in found.items():
             merged.setdefault(key, text)
     return merged
+
+
+def load_baseline(path: Path) -> dict:
+    """Return the recorded baseline; raise RuntimeError naming `path` when it is unreadable or lacks fields."""
+    try:
+        baseline = json.loads(path.read_text())
+        baseline['total'], baseline['compiler'], baseline['by_file']
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        raise RuntimeError(f'cannot use the baseline {path}: {error!r}') from error
+    return baseline
 
 
 def render(summary: dict) -> str:
@@ -250,7 +305,8 @@ def main(argv: list[str]) -> int:
     if args.allow_rise is not None and args.command != 'update':
         parser.error('only update takes --allow-rise')
     try:
-        details = measure([path.resolve() for path in args.compile_commands or [DEFAULT_COMPILE_COMMANDS]], ROOT)
+        details = measure([path.resolve() for path in args.compile_commands or [DEFAULT_COMPILE_COMMANDS]],
+                          ROOT, physical=args.command == 'sites')
     except RuntimeError as error:
         print(f'error: {error}', file=sys.stderr)
         return 2
@@ -262,17 +318,25 @@ def main(argv: list[str]) -> int:
     if args.command == 'count':
         sys.stdout.write(render(current))
     elif args.command == 'update':
-        refusal = None if args.allow_rise is not None or not BASELINE.exists() else rise_refusal(
-            json.loads(BASELINE.read_text())['total'], current['total'])
-        if refusal:
+        try:
+            recorded = load_baseline(BASELINE)['total'] if BASELINE.exists() else None
+        except RuntimeError as error:
+            print(f'error: {error}', file=sys.stderr)
+            return 2
+        refusal = None if recorded is None else rise_refusal(recorded, current['total'])
+        if refusal and args.allow_rise is None:
             print(f'error: {refusal}', file=sys.stderr)
             return 2
-        if args.allow_rise is not None:
+        if refusal:
             print(f'Rise allowed: {args.allow_rise}')
         BASELINE.write_text(render(current))
         print(f"Baseline: {current['total']} diagnostics in {len(current['by_file'])} files")
     else:
-        baseline = json.loads(BASELINE.read_text())
+        try:
+            baseline = load_baseline(BASELINE)
+        except RuntimeError as error:
+            print(f'error: {error}', file=sys.stderr)
+            return 2
         problems = regressions(baseline, current)
         for line in problems:
             print(line)
