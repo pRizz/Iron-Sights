@@ -620,9 +620,12 @@ git push origin main
 - Produces, in `compare_win32.py`:
   - `pe_sections(data: bytes) -> dict[str, bytes]`: section name to its raw
     bytes. `ValueError` on anything that is not a PE file.
-  - `loaded(sections: dict[str, bytes]) -> dict[str, bytes]`: drops every
-    section whose name starts with `.debug` or `/` (long-name debug sections)
-    and keeps every other section.
+  - `loaded(sections: dict[str, tuple]) -> dict[str, tuple]`: takes
+    `pe_layout`'s section map (name to raw bytes, VirtualSize, VirtualAddress,
+    Characteristics) and drops every section whose name starts with `.debug`
+    or `/` (long-name debug sections) and whose Characteristics carry
+    `IMAGE_SCN_MEM_DISCARDABLE`, and the build-identity section `.buildid`;
+    it keeps every other section.
   - `differences(a: bytes, b: bytes) -> list[str]`: empty when the loaded
     sections of both files are byte-identical; otherwise one line per
     differing, missing or extra section.

@@ -355,7 +355,8 @@ dependency flags and `-fsanitize...`, and adds `-fsyntax-only` with
 parallel (at most 8 workers, 60 s per compile; a compile that cannot start,
 times out, or fails with no recognised diagnostic aborts the run). It counts
 distinct (file, line, column, kind) places, where kind is one of the three
-warnings or `error` (any compile error). `count` prints the tally as JSON,
+tracked flags (whether GCC reports it as a warning or an error) or `error` (any
+other compile error). `count` prints the tally as JSON,
 `update` rewrites `scripts/port/lp64_diagnostics_baseline.json` (sorted, trailing
 newline, so an unchanged tree gives an empty `git diff`), and `check` exits 1
 naming every file whose count rose above the baseline (a new file counts from
@@ -580,8 +581,9 @@ Milestone evidence: the emulated i686 headless reference builds and runs the
 20-mission smoke with the ROM (exit 0, 20 of 20 `PASS`, about 184 s); the
 Windows cross-build is reproducible with a fixed `SOURCE_DATE_EPOCH` (about
 56 s a build) and `compare_win32.py` reported the executable identical across
-the Task 5b and Task 6 changes; the diagnostics baseline is 1,432 places in 93
-files with GCC 13. Open: the gallery is pending, because Tasks 5b, 6 and 7
+the Task 5b and Task 6 changes; the diagnostics baseline was first recorded as 1,432
+places in 93 files with GCC 13, and is 1,432 places in 92 files after the fix
+wave's re-recording from a built tree. Open: the gallery is pending, because Tasks 5b, 6 and 7
 change deferred-tier gallery inputs on a machine that cannot render; a
 regeneration on the owner's Windows laptop clears it (the last full one was
 2026-11-15, 8d6760d; pending since Task 5b, be840ef). Across the milestone no
