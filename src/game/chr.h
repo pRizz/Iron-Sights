@@ -31,7 +31,7 @@ struct ChrHitReaction
 // Animations for when characters are wounded or killed.
 struct StruckAnim
 {
-    ModelAnimation *struck_anim;
+    intptr_t struck_anim; // PTR_ANIM_* offset until initResolveAnimTable, then the ModelAnimation's address (LP64-002)
     s32 flip; // Mirror flag selecting left/right variant
     f32 endframe;
     f32 speed;

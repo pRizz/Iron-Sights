@@ -1085,6 +1085,145 @@ reads in `langGet` as a third site allowed a commented
 banks row's 12 places moving to Task 8. No source changed; only the
 pre-commit hook ran.
 
+*LP64-002 task 5, monitor scripts and animation tables (2026-11-16, local
+commit "Hold monitor script jumps and animation offsets in pointer-sized
+storage"; not pushed):* the tables that held addresses or offsets in 32-bit
+integers now have pointer-sized storage, and `src/game/propobj.c` compiles at
+64 bits (no hard error is left anywhere). *Monitor scripts:* the 57 script
+tables in `propobj.c` (`monAnim*`, `monRandEffectChance*`,
+`monRandChanceScrollOrZoom*`) and their 32 `extern` declarations in
+`src/game/chrai.h` (including the never-defined `D_80031B10`) went from `u32[]`
+to `uintptr_t[]`; `MONJUMPTO(p)` and `MONJUMPCHANCE(p,x)` store
+`(uintptr_t) (p)`; `MonitorRecord.cmdlist` (`src/bondtypes.h`) went from
+`u32 *` to `uintptr_t *`. The interpreter
+(`process_monitor_animation_microcode`) lays `struct tvcmd` over the script at
+`&cmdlist[offset]` and advances with `offset += n`, where `offset` counts
+elements; `struct tvcmd`'s fields went from `u32 type; s32 time; u32 arg2` to
+`uintptr_t type; intptr_t time; uintptr_t arg2`, so at 64 bits each field is
+one element and the cursor steps by element (the same types at 32 bits: `time`
+stays signed for its float, `pause60` and rotation uses, and `type`/`arg2`
+stay unsigned for the switch, the colour shifts and the `randomGetNext()`
+comparison). To test that without pulling in all of `propobj.c`, `struct tvcmd`
+moved from `propobj.c` to `chrai.h` with two `static inline` functions that
+`propobj.c` now uses: `monitorScriptCommand(mon)` (the command at the cursor,
+`(struct tvcmd *) &mon->cmdlist[mon->offset]`) and
+`monitorScriptJumpTarget(cmd)` (the jump operand read back with one cast,
+`(uintptr_t *) cmd->time`). The texture command passes `(void *) m->time` to
+`save_img_index_to_obj_ani_slot`. No other code reads or steps a script:
+`monitorSetImageByNum`, `initobjects.c`'s initial controllers, `prop.c`'s
+copies and `chrai.c` only store a script's address, and `gunfire.c` (strict,
+not edited) calls `process_monitor_animation_microcode` and
+`save_img_index_to_obj_ani_slot` without a prototype; neither function's
+parameters changed. *Helper macro, for Task 9:* `src/game/initanitable.h`
+defines `#define ANIM_FROM_TABLE(offset) ((struct ModelAnimation *)
+(ptr_animation_table->data + (offset)))`, the animation at a byte offset in
+the loaded table; it replaces the idiom `(ModelAnimation *)(PTR_ANIM_x +
+(s32)&ptr_animation_table->data)` and its variants (`(s32)ptr_animation_table +
+x`, comparisons of `(s32)objecthandlerGetModelAnim(...)` with
+`(s32)&ptr_animation_table->data[x]`, `((u16 *)(x + base))[2]`) in
+`chraction.c` (29 uses), `bondhead.c`, `initBondDATAdefaults.c` (2),
+`initactorpropstuff.c` (line 111 and its local `ANIM_PTR` macro) and
+`title.c` (2). Where the offset was an `s32`/`u32` field, the existing `(s32)`
+conversion of the offset is kept as the argument. The eight places in strict
+`bondview2.c` stay for Task 9, which uses `ANIM_FROM_TABLE`. A second macro,
+`ANIM_TABLE_OFFSET(offset)`, `((struct ModelAnimation *) (uintptr_t)
+(offset))`, is an unrelocated offset held in a pointer slot. *Offset-then-pointer
+storage* (each keeps its in-place relocation, which LP64-004 replaces):
+`StruckAnim.struck_anim` (`src/game/chr.h`) went from `ModelAnimation *` to
+`intptr_t`, so the 288 `PTR_ANIM_*` initialisers of the hit and death tables in
+`chr.c` are unchanged; the relocation in `initResolveAnimTable` reads the table
+address as `*(intptr_t *)` instead of `*(s32 *)` with an `intptr_t address`,
+and the four readers in `chraction.c` read it back with one
+`(ModelAnimation *)` cast (three `modelSetAnimationWithMerge` calls and the
+`death_neck` comparison). Typing the field rather than wrapping 288
+initialisers is the smaller edit and the plan's rule for a field that carries
+offsets and pointers. `animation_table_ptrs1` (`initanitable.c` and
+`initanitable.h`) went from `s32[]` to `intptr_t[]` for the same reason (183
+initialisers unchanged); its readers in `chr.c` and `chraction.c` already
+cast, and `front.c`'s intro animation call gained a `(ModelAnimation *)`
+cast. `animation_table_ptrs2` was already declared as pointers (read without a
+cast in `chrai.c` and `propobj.c`), so it keeps that type and its three
+initialisers go through `ANIM_TABLE_OFFSET`. `expand_ani_table_entries` keeps
+its `s32 **` walk over pointer-sized elements; the relocation of an element is
+`(s32 *)((intptr_t)*var_v0 + (intptr_t)&ptr_animation_table->data)`, and in
+its `struct anim_entry` view of a ModelAnimation header, `unk08` and `unk10`
+went from `s32` to `intptr_t`: they are the fields `ModelAnimation` reads as
+the pointers `bitDescriptors` and `bitStream`, and with pointer-sized members
+`anim_entry` overlays `ModelAnimation` at both widths (the ROM file's 4-byte
+layout is LP64-004's converter problem). `port/src/animdata.c`, which reads
+both tables' raw offsets before the relocation, declares and walks them as
+`intptr_t` instead of `int32_t`, so it steps by the tables' element at both
+widths. The `initactorpropstuff.c` union (`weapon_firing_animation_table.anim`,
+`s32 offset` and `ModelAnimation *anim`) was reviewed and left alone: the
+offset member is read only before that entry's relocation writes `anim`, and
+neither member is read through the other. *Left:* `initanitable.c:249`,
+`**var_v0 += (s32)&_animation_entriesSegmentRomStart`, adds a host address to
+`ModelAnimation.address`, an `s32` whose reader is strict `model.c`
+(`anim->address & 0x80000000`, a behaviour-sensitive site), so it goes to
+Task 9 with that field; it is the one place of the plan's 11 animation-pointer
+places not removed here. *Files touched:* `src/bondtypes.h`; in `src/game/`:
+`chrai.h`, `propobj.c`, `chr.h`, `initanitable.h`, `initanitable.c`,
+`initactorpropstuff.c`, `chraction.c`, `bondhead.c`, `initBondDATAdefaults.c`,
+`title.c`, `front.c`; `port/src/animdata.c`; new
+`scripts/port/test_monitor_script.sh` and `test_monitor_script.c`;
+`.github/workflows/windows-release.yml` (the new test runs after
+`test_abi_probe.sh` in "Test gameplay, cache and release tooling without a
+ROM"); the baseline. *Stride test:* `test_monitor_script.sh` compiles
+`test_monitor_script.c` with `test_abi_probe.sh`'s flags natively and, where
+`-m32` works, at 32 bits. The driver builds a `uintptr_t` script of three
+commands (`MONSETROTATION(0x100)`, `MONJUMPTO(&script[4])`, `MONSTOPANIM()`),
+reads the first command through `monitorScriptCommand`, advances `offset` by 2
+as the interpreter does, reads the jump, follows `monitorScriptJumpTarget` as
+`save_ptr_monitor_ani_code_to_obj_ani_slot` does, and checks it lands on
+`&script[4]` with type `0xC`. Written after the helpers were extracted with the
+old types and before the types changed, it failed in the x86_64 container at
+64 bits with `monitor script: rotation operand is 0x0, expected 0x100` (the
+4-byte `struct tvcmd` read the upper half of the first 8-byte element) and
+passed at 32 bits. After the change it printed `monitor script OK (64-bit)`
+and `monitor script OK (32-bit)` with no warning in the x86_64 and i686
+containers, and `OK (64-bit)` in the aarch64 container (no `-m32` there).
+*Count:* 945 in 80 files (248 `int-conversion`, 224 `int-to-pointer-cast`, 414
+`pointer-to-int-cast`, 59 `error`) to 711 in 76 files (157, 199, 355, 0), 234
+fewer; `errors_by_file` is empty. To zero: `assets/animationtable_data.h` 28,
+`bondhead.c` 2, `initBondDATAdefaults.c` 4, `initactorpropstuff.c` 7. Lower:
+`propobj.c` 131 to 10, `chraction.c` 83 to 24, `chr.c` 8 to 5, `front.c` 7 to
+6, `initanitable.c` 8 to 3, `title.c` 18 to 14. No file rose; `bondview2.c`
+stays at 82. The remaining places in these files belong to other clusters
+(`tconfig`, `vtxstore_allocate`, segment sizes and the like). *Windows
+comparison:* `compare_win32.py commits HEAD WORKTREE` exited 1 in 113 s
+(`.text` 16 bytes longer, VirtualSize 0x335924 to 0x335934; `.CRT`, `.data`,
+`.rdata`, `.reloc` and `/4` differ). Every differing 32-bit word in `.rdata`
+(6,640), `.data` (175) and `.CRT` (3) is an address inside the image in both
+builds, so the script tables, `animation_table_ptrs1/2` and the struck tables
+have the same bytes; the `.ctors` lists differ only in constructor addresses
+16 bytes later. Disassembled by symbol with addresses normalised, four
+functions differ, all in files this task edited; the interpreter
+`process_monitor_animation_microcode` is identical.
+`_chrlvModelScaleAnimationRelated` (`chraction.c`, eight `ANIM_FROM_TABLE`
+comparisons): block order and branch direction; each comparison (`0x4070`,
+`0x40d4`, `0x77d4`, `0x777c`, `0x8204`, `0x77d4`, `0x8520`, `0x84c4` added to
+the table address) still selects the same float constant, now in an
+out-of-line block reached by `je` where before the match fell through and the
+miss took `jne`. `_chrlvTickAnim` (`chraction.c`): block order; the block
+calling `_chrlvKneelingAnimationRelated.part.0` moved, with the same calls on
+every path. `_initResolveAnimTable` (`initactorpropstuff.c`): the counter's
+`xorl %ecx, %ecx` moved after the empty-table test, and the empty path returns
+the `eax` it just tested as zero (register choice). `_initWeaponAnimGroups`
+(`initactorpropstuff.c`, which inlines `initResolveAnimTable` twice and uses
+`ANIM_PTR` in nine `ANIM_FRAC` blocks): the same counter change in both inlined copies (the
+empty path stores the tested-zero `eax`, the loop path `movl %ebx, %eax`
+first), two loads moved past the empty-table test that does not read them,
+and in each `ANIM_FRAC` block the animation address is computed with `addl`
+after the loop-count test instead of `leal` before it and the two spilled
+values swap stack slots (`-0x2c`/`-0x30`), the loads swapping with them; the
+same arguments reach `sub_GAME_7F06D2E4` and the same loop bound is compared.
+*What ran:* the plan's task check. Step 1 exited 0: both trees built with the per-site listing in 26 s (the
+headless tree's 32-bit link included), then `update` (10 s) recorded 711 in
+76 files without `--allow-rise`. Step 2: the i686 headless build exited 0 (14 s,
+incremental) and the 20-mission smoke exited 0 with 20 of 20 `PASS` (185 s).
+Step 3 as above. `lp64_casts.py check` passed on the host (23 casts,
+unchanged; this task adds none). Every line of CI's "Test gameplay, cache and release tooling without a ROM" step except the two `cmake` lines (step 1 builds that tree) ran in the i686 container, including the new `test_monitor_script.sh`: all 39 passed, with one exception in how they ran: `test_buffers.sh` ran without `MIDAS_BUFFER_SANITIZE=1`, whose AddressSanitizer binary hangs under the Mac's `qemu-i386` emulation (Tasks 3 and 4); without it the harness passed in 4 s. `test_upstream_merge.sh`, `test_states.sh`, `test_hud.sh`, `test_abi_probe.sh`, `lp64_casts.py check`, `lp64_diagnostics.py check` and `hand_gallery.py verify --allow-pending` (pending: deferred inputs changed) were among them.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),

@@ -24,11 +24,26 @@ struct animation_table_data {
 extern struct animation_table_data* ptr_animation_table;
 
 /**
+ * LP64-002: the animation at a byte offset (a PTR_ANIM_* value) in the loaded
+ * animation table, replacing `(ModelAnimation *)(off + (s32)&ptr_animation_table->data)`.
+ */
+#define ANIM_FROM_TABLE(offset) ((struct ModelAnimation *) (ptr_animation_table->data + (offset)))
+
+/**
+ * LP64-002: a PTR_ANIM_* offset held in a ModelAnimation pointer slot until
+ * expand_ani_table_entries adds the table's address in place (LP64-004
+ * replaces that relocation).
+ */
+#define ANIM_TABLE_OFFSET(offset) ((struct ModelAnimation *) (uintptr_t) (offset))
+
+/**
  * Contains offsets into ptr_animation_table for player and guard animations.
  * The index of each value corresponds to `enum ANIMATION`.
  * The value corresponds to (e.g. index=0) PTR_ANIM_idle (same as ANIM_DATA_idle)
+ * expand_ani_table_entries rewrites each offset to the animation's address in
+ * place, so the elements are pointer-sized (LP64-002).
 */
-extern s32 animation_table_ptrs1[];
+extern intptr_t animation_table_ptrs1[];
 
 /**
  * Contains offsets into ptr_animation_table for object/vehicle animations.

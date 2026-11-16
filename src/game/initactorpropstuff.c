@@ -108,7 +108,7 @@ s32 initResolveAnimGroupTable(struct weapon_firing_animation_table *animconfig)
 
         do
         {
-            config->anim.anim = (struct ModelAnimation *)(((0, animoffset)) + ((s32)ptr_animation_table));
+            config->anim.anim = ANIM_FROM_TABLE((0, animoffset));
             endframe = floorFloatToInt(config->unk04);
             angle16 = sub_GAME_7F0001F0(config->anim.anim, 0, endframe) & 0xffff;
             duration = config->unk04;
@@ -168,7 +168,7 @@ s32 initResolveAnimTable(struct StruckAnim *entries)
 {
     s32 count;
     struct StruckAnim *entry;
-    s32 address;
+    intptr_t address;
     struct StruckAnim *ptr_animation_table_addr;
 
     count = 0;
@@ -186,7 +186,7 @@ s32 initResolveAnimTable(struct StruckAnim *entries)
             count++;
             entry++;
             ptr_animation_table_addr = (struct StruckAnim *)(&ptr_animation_table);
-            entry[-1].struck_anim = (ModelAnimation *)((*((s32 *)entries)) + (0, address));
+            entry[-1].struck_anim = (*((intptr_t *)entries)) + (0, address);
         }
         while (entry->struck_anim != 0);
     }
@@ -196,7 +196,7 @@ s32 initResolveAnimTable(struct StruckAnim *entries)
 
 
 #define ANIM_PTR(anim) \
-    ((ModelAnimation *)((s32)&anim + ((s32)ptr_animation_table)))
+    ANIM_FROM_TABLE((intptr_t)&anim)
 
 #define ANIM_FRAC(anim) \
     ((((f32)sub_GAME_7F000290(ANIM_PTR(anim), 0, ANIM_PTR(anim)->unk04 - 1)) * 0.10000001f) / \

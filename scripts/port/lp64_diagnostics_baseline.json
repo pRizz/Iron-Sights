@@ -1,6 +1,5 @@
 {
   "by_file": {
-    "assets/animationtable_data.h": 28,
     "env.c": 2,
     "include/PR/R4300.h": 1,
     "include/PR/gbi.h": 1,
@@ -19,18 +18,17 @@
     "src/game/bg.c": 69,
     "src/game/bg.h": 7,
     "src/game/blood_decrypt.c": 4,
-    "src/game/bondhead.c": 2,
     "src/game/bondview2.c": 82,
     "src/game/bondview_r.c": 14,
-    "src/game/chr.c": 8,
+    "src/game/chr.c": 5,
     "src/game/chr_b.c": 2,
-    "src/game/chraction.c": 83,
+    "src/game/chraction.c": 24,
     "src/game/chrai.c": 1,
     "src/game/chrprop.c": 1,
     "src/game/cleanup_objects.c": 2,
     "src/game/decompress.c": 1,
     "src/game/explosion.c": 4,
-    "src/game/front.c": 7,
+    "src/game/front.c": 6,
     "src/game/glass.c": 1,
     "src/game/glass2.c": 1,
     "src/game/gun.c": 1,
@@ -39,9 +37,7 @@
     "src/game/image_bank.c": 86,
     "src/game/indy_commands.c": 6,
     "src/game/indy_comms.c": 2,
-    "src/game/initBondDATAdefaults.c": 4,
-    "src/game/initactorpropstuff.c": 7,
-    "src/game/initanitable.c": 8,
+    "src/game/initanitable.c": 3,
     "src/game/initmenus.c": 1,
     "src/game/initpathtablesomething.c": 2,
     "src/game/initplayergaitobject.c": 2,
@@ -54,7 +50,7 @@
     "src/game/objecthandler_2.c": 30,
     "src/game/othermodemicrocode.c": 1,
     "src/game/prop.c": 13,
-    "src/game/propobj.c": 131,
+    "src/game/propobj.c": 10,
     "src/game/ramromreplay.c": 13,
     "src/game/ramromreplay.h": 2,
     "src/game/rsp.c": 10,
@@ -62,7 +58,7 @@
     "src/game/stan.c": 28,
     "src/game/tex.c": 2,
     "src/game/textrelated.c": 4,
-    "src/game/title.c": 18,
+    "src/game/title.c": 14,
     "src/game/viewport.c": 1,
     "src/game/vtxstore.c": 1,
     "src/game/zlib.c": 16,
@@ -82,14 +78,11 @@
     "src/snd.c": 1
   },
   "by_kind": {
-    "error": 59,
-    "int-conversion": 248,
-    "int-to-pointer-cast": 224,
-    "pointer-to-int-cast": 414
+    "int-conversion": 157,
+    "int-to-pointer-cast": 199,
+    "pointer-to-int-cast": 355
   },
   "compiler": "gcc-13",
-  "errors_by_file": {
-    "src/game/propobj.c": 59
-  },
-  "total": 945
+  "errors_by_file": {},
+  "total": 711
 }

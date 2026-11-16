@@ -24,7 +24,7 @@ struct bondstruct_unk_animation_related D_80029D60 = {
     &animations_frame_buffer
 };
 
-s32 animation_table_ptrs1[] = {
+intptr_t animation_table_ptrs1[] = {
     PTR_ANIM_idle,
     PTR_ANIM_fire_standing,
     PTR_ANIM_fire_standing_fast,
@@ -212,9 +212,9 @@ s32 animation_table_ptrs1[] = {
 };
 
 struct ModelAnimation *animation_table_ptrs2[] = {
-    PTR_ANIM_helicopter_cradle,
-    PTR_ANIM_plane_runway,
-    PTR_ANIM_helicopter_takeoff,
+    ANIM_TABLE_OFFSET(PTR_ANIM_helicopter_cradle),
+    ANIM_TABLE_OFFSET(PTR_ANIM_plane_runway),
+    ANIM_TABLE_OFFSET(PTR_ANIM_helicopter_takeoff),
     0
 };
 
@@ -225,9 +225,9 @@ struct anim_entry
 {
     s32 unk00;
     s32 unk04;
-    s32 unk08;
+    intptr_t unk08; /* ModelAnimation.bitDescriptors once relocated */
     s32 unk0C;
-    s32 unk10;
+    intptr_t unk10; /* ModelAnimation.bitStream once relocated */
 };
 
 void expand_ani_table_entries(s32** arg0)
@@ -237,9 +237,9 @@ void expand_ani_table_entries(s32** arg0)
     var_v0 = arg0;
     while (*var_v0 != 0) {
         if (*var_v0 != (s32*)1) {
-            *var_v0 = (s32)((s32)*var_v0 + (s32)(&ptr_animation_table->data));
-            ((struct anim_entry *)*var_v0)->unk08 += (s32)&ptr_animation_table->data;
-            ((struct anim_entry *)*var_v0)->unk10 += (s32)&ptr_animation_table->data;
+            *var_v0 = (s32 *)((intptr_t)*var_v0 + (intptr_t)(&ptr_animation_table->data));
+            ((struct anim_entry *)*var_v0)->unk08 += (intptr_t)&ptr_animation_table->data;
+            ((struct anim_entry *)*var_v0)->unk10 += (intptr_t)&ptr_animation_table->data;
         }
         var_v0++;
     }
