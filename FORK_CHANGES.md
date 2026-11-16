@@ -211,7 +211,7 @@ Dam default 1% low 261 to 294 fps. One profiled run of each (matched Cradle):
 render thread 1.46 to 1.44 ms a frame, every function within 0.04 ms;
 `gfx_opengl_new_texture` went from 0.011 ms to nothing.
 
-### FORK-089 — Native 64-bit port: accepted plan, LP64-001 scaffolding and LP64-002 type hygiene done
+### FORK-089 — Native 64-bit port: accepted plan, LP64-001 scaffolding and LP64-002 type hygiene done, LP64-003 planned
 
 **Status:** Plan accepted by the owner on 2026-11-15. Every task of milestone
 LP64-001 is built (Tasks 1 to 7 were each reviewed before reaching `main`): the two-tier gallery rule, the container
@@ -242,10 +242,14 @@ and landed the branch by fast-forward in the commit "Fix the gallery hook's main
 (the task 11 note below has the runs). A 64-bit build now makes every
 int/pointer conversion a compile error: C with the three `-Werror=` flags, C++
 with `-Werror=int-to-pointer-cast` (it rejects the other two by itself). 64-bit
-builds compile and link in the containers, but none has been run, and LP64-003
-onward has not been built or verified; the plan's milestone status table says
-so. What LP64-002 leaves to later milestones is in one list, "LP64-002
-hand-off", at the end of the LP64-002 notes below.
+builds compile and link in the containers. LP64-003 (addresses and memory) is
+planned and waits for the owner's review; nothing of it is built. While it was
+planned on 2026-11-16 a 64-bit executable was run for the first time: it boots
+through the ROM load and crashes in the animation table, and passes none of
+the 20 smoke missions (the LP64-003 planning paragraph below). LP64-003 onward
+has not been built or verified; the plan's milestone status table says so.
+What LP64-002 leaves to later milestones is in one list, "LP64-002 hand-off",
+at the end of the LP64-002 notes below.
 
 Inherited behaviour: upstream builds only as a 32-bit program (`-m32`, and
 32-bit WebAssembly), by design, and this fork inherited that. FORK-031 recorded
@@ -2523,19 +2527,101 @@ gate's token check were added at the close):
   the gallery is fresh on `main` and the hook's branch test is fixed
   (FORK-022). Nothing is left of it.
 
+**Milestone LP64-003 (addresses and memory), planned on 2026-11-16, not built:**
+[the milestone's plan](scripts/port/native_64bit_lp64_003.md) lists twelve
+tasks and nine decisions for the owner, and waits for the owner's review. This
+paragraph records the plan and the measurements it rests on, taken on `main`
+at 2afe62d in the Mac's containers (GCC 13.3; aarch64 native, x86_64
+emulated). No source, build file or tool changed for it. *Link:* the 64-bit
+headless tree (`-DGE_POINTER_BITS=64 -DGE_HEADLESS=ON`) and the 64-bit video
+tree (`-DGE_VIDEO=ON`) configure, compile and link in both containers
+(headless on aarch64 in 5 s), and so does `-DGE_SANITIZE=ON` on aarch64.
+*Address space:* a probe program built position-independent has its image,
+heap, `mmap` regions and stack above 4 GB in both containers (`0xaaaa…` and
+`0xffff…` on aarch64, `0x5555…` and `0x7fff…` on x86_64); linked `-no-pie` its
+image is at `0x400000` and its heap below 4 GB; a hinted `mmap(0x20000000)` is
+honoured, so the 64-bit game still logs `memp arena: 64 MB at 0x20000000` and
+`portAllocHigh: 64 MB arena at 0x30000000`. *Boot:* with the ROM, the headless
+executable loads the image, inflates the compressed data, installs the 31 ROM
+segments and preprocesses the text banks, then dies with signal 11 in
+`modelAnimReadRootMotionValue` (`src/game/model.c:941`) under
+`initResolveAnimGroups` and `bossInitMainthreadData` (`src/boss.c:284`), on
+aarch64 and x86_64 alike. The sanitizer build stops at its first report, one
+call earlier: `src/game/initanitable.c:241`, `member access within misaligned
+address … for type 'struct anim_entry'`, in `expand_ani_table_entries`. Root
+cause: the animation table's 0x14-byte file headers read through
+`ModelAnimation`, whose address fields are 8 bytes at 64 bits (LP64-004's
+animation class). *Smoke:* `audit_buffers.py --mission-smoke
+build/lp64/m3-a64/IronSights --rom /rom/baserom.u.z64 --frames 600 --jobs 4`
+passed 0 of 20; all 20 logs end in that crash. *Scratch experiments* (a `git
+archive` copy under `build/lp64`, never committed): with no `mmap` hint the
+arenas landed at `0xffff90e00000` and `0xffff8ce00000` and the crash was the
+same; with the animation header also kept in its file layout, boot reached
+`alBnkfNew` (`port/src/audio_stubs.c:261`, the audio bank relocated in place)
+and crashed there; with the game's no-sound switch also set, boot reached
+`bossMainloop` and the title's `lvlStageLoad` (`src/game/lv.c:781`) and
+crashed in `src/snd.c:1541`, then `:1558`, which do not tolerate that switch
+on this port. Exploration stopped there. The 64-bit video executable could not
+open a window in the container (SDL's dummy driver has no OpenGL). *Static:*
+both trees compiled with `-Wconversion -Wno-sign-conversion
+-Wno-float-conversion` gave 1,402 warnings, 225 of them (51 files) narrowing a
+64-bit integer type, 111 with a `uintptr_t` or `intptr_t` source (18 files, 51
+places in strict-tier files, 15 debug traces to `float`); 41 assignments to
+`words.w0` in 20 files; with `-Wimplicit-function-declaration` restored and
+`-aux-info`, 401 calls without a prototype to 309 names, 106 of which are
+defined with a pointer or 64-bit parameter or result (157 call places in 73
+files, 20 in strict-tier files); 1,788 incompatible-pointer-type places, 51 of
+them pairing a pointer to a 4-byte word with a pointer to a struct or to a
+pointer; a widened `lp64_casts.py` pattern found 29 sites against 28. *The
+`-m32` harnesses:* of 30 `test_*.sh`, 18 compile with `-m32` (7 also with
+`-msse2 -mfpmath=sse`); with those flags removed 16 pass at 64 bits, and
+`test_ads` and `test_wardrobe` fail to compile on their drivers'
+`u32 osVirtualToPhysical` stub; with the stub corrected in a scratch copy,
+`test_ads` reads past a three-command list because the driver's
+`(u8) G_ENDDL << 24` sign-extends into the 8-byte `w0`, and `test_wardrobe`
+fails `paNativeFit` because `Vertex` is 24 bytes at 64 bits. *The hand-off
+list:* every LP64-003 item above was checked against the code. Still true as
+written: `texLoad`'s 4-byte write, `vtxstore.c`'s 0x14 stride, the `u32`
+copies of command words, the `(u32)` texture-ID tests, the sentinels, the
+Op11 union, the `Model` views, `Acmd`, the suspend image, the traces and the
+tooling gaps. Changed: `audi.c` no longer returns `osVirtualToPhysical` from
+an `s32` function (`amDmaCallback` returns `intptr_t`); of the eight
+`((u32 *) gdl)[1]` reads only `bg.c:4377` is compiled on PC; `prop.c:1523` is
+harmless and `:1521` (`SetupIntroCamera`, 14 words against 10 in the
+compiled-in intro) is the defect; `StandTileLocusCallbackRecord`'s ladder flag
+is lost at 64 bits, not merely misplaced. Not in the list:
+`port_textures.c:347` stores a truncated pointer and `:368`, `:779` refuse
+external textures at 64 bits; `objecthandler_2.c:304,306` and `bg.c:1116`
+(file layouts); `seg_addr` tests the tagged form before the host test;
+`struct ModelSlot` viewed as a `Model`; `model.c:90` sizes an array of
+pointers at 4 bytes each. The plan moves `Acmd`, the Op11 union,
+`SetupIntroCamera` and the bg env slot to LP64-004, because the design gives
+file layouts and `Acmd` to that milestone, and adds `Vertex` (16 bytes by the
+design, in no earlier plan). *Not measured:* anything after the title's stage
+load at 64 bits; the video executable at run time; real x86 hardware; `clang`
+and GCC 14; the browser build; which of the 157 unprototyped calls pass a
+wrong-width argument. The per-site tables and the scratch diffs are in the
+ignored folder `.superpowers/sdd/native_64bit_lp64_003/research/` of the Mac
+checkout; the temporary build folders under `build/lp64` were deleted.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [LP64-002 implementation plan](scripts/port/native_64bit_lp64_002.md),
+[LP64-003 implementation plan](scripts/port/native_64bit_lp64_003.md),
 main paths of the gate: `CMakeLists.txt` (`GE_WARNING_OPTIONS`),
 `scripts/port/lp64_diagnostics.py`, `scripts/port/abi_probe/probe.c`,
 `.github/workflows/windows-release.yml`,
 [repository rule](AGENTS.md),
 [inherited 32-bit constraints](docs/port/abi-and-portability.md).
 
-**Validation:** LP64-002's runs are in its task notes above; its close is the
+**Validation:** LP64-003 is a plan only; its planning paragraph above records
+the measurement runs, and the Bright Builds checks, the settings placement
+check and the ROM-free gallery verification ran for that documentation-only
+commit. LP64-002's runs are in its task notes above; its close is the
 task 11 note (CI runs 43918787641, 43918787608 and 43918787764 on 9fdb6ec
 passed every job, with the gate's `329 files compiled, 0 failed` and `360
-files compiled, 0 failed`; no 64-bit executable has been run). LP64-001 Tasks 2 to 7 have run (Task 1 is recorded in FORK-022 and in the gallery regeneration 8d6760d); LP64-001 is complete: the gallery was regenerated on the owner's Windows laptop in the commit "Regenerate the review gallery and close LP64-001" (0 changed images; `verify` exited 0, fresh). CI run 43803408580 on f4c2c10 passed every job (layout probe at 64 and 32 bits, headless configure test, `OK: 1432 diagnostics, baseline 1432`), and CI run 43807622647 on d2feae1, after the fix wave, passed every job (its tests job built and linked the headless tree on the runner; `OK: 1432 diagnostics, baseline 1432`). What
+files compiled, 0 failed`; no 64-bit executable had been run when LP64-002
+closed). LP64-001 Tasks 2 to 7 have run (Task 1 is recorded in FORK-022 and in the gallery regeneration 8d6760d); LP64-001 is complete: the gallery was regenerated on the owner's Windows laptop in the commit "Regenerate the review gallery and close LP64-001" (0 changed images; `verify` exited 0, fresh). CI run 43803408580 on f4c2c10 passed every job (layout probe at 64 and 32 bits, headless configure test, `OK: 1432 diagnostics, baseline 1432`), and CI run 43807622647 on d2feae1, after the fix wave, passed every job (its tests job built and linked the headless tree on the runner; `OK: 1432 diagnostics, baseline 1432`). What
 ran: the 11 ROM-free tests in `scripts/port/test_lp64_env.py` (passing); on the
 Mac, `build-images` (3 min 58 s) and three container checks (`gcc -dumpmachine`
 in the aarch64 and x86_64 images, and a `gcc -m32` program in the i686
