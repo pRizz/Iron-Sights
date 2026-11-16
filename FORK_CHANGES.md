@@ -214,11 +214,12 @@ render thread 1.46 to 1.44 ms a frame, every function within 0.04 ms;
 ### FORK-089 — Native 64-bit port: accepted plan, LP64-001 scaffolding built, gallery regeneration pending
 
 **Status:** Plan accepted by the owner on 2026-11-15. Every task of milestone
-LP64-001 is built and was reviewed: the two-tier gallery rule, the container
+LP64-001 is built (Tasks 1 to 6 were each reviewed before reaching `main`; Task 7 was reviewed before it was pushed, and its fix round is part of that review): the two-tier gallery rule, the container
 runner, the layout probe, the diagnostics ratchet, the unchanged-32-bit
 comparison, the headless repair, `GE_POINTER_BITS`, and the CI wiring (below).
-The milestone is not closed: the review gallery has been pending since commit
-36d7ed2, and clearing it needs a regeneration on the owner's Windows laptop,
+The milestone is not closed: the review gallery has been pending since Task 5b (be840ef,
+the first commit after the 8d6760d regeneration to edit a gallery input,
+`CMakeLists.txt` and `port/src/headless_stubs.c`), and clearing it needs a regeneration on the owner's Windows laptop,
 which the two-tier rule requires at the end of each milestone at the latest.
 CI's result for the commit that added the CI lines was not known when this was
 written. No game, engine, port or renderer source has changed, no 64-bit build
@@ -448,7 +449,7 @@ regeneration on the owner's Windows laptop clears it (the last full one was
 [repository rule](AGENTS.md),
 [inherited 32-bit constraints](docs/port/abi-and-portability.md).
 
-**Validation:** LP64-001 Tasks 2 to 7 have run; no milestone is complete (the gallery regeneration is open, and CI's result for Task 7 is not yet known). What
+**Validation:** LP64-001 Tasks 2 to 7 have run (Task 1 is recorded in FORK-022 and in the gallery regeneration 8d6760d); no milestone is complete (the gallery regeneration is open, and CI's result for Task 7 is not yet known). What
 ran: the 11 ROM-free tests in `scripts/port/test_lp64_env.py` (passing); on the
 Mac, `build-images` (3 min 58 s) and three container checks (`gcc -dumpmachine`
 in the aarch64 and x86_64 images, and a `gcc -m32` program in the i686
