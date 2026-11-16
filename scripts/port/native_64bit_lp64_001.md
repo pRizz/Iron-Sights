@@ -21,7 +21,9 @@ Ubuntu 24.04 containers, Docker Desktop on Apple Silicon, Bash for the
 ## Global Constraints
 
 - The 32-bit Windows, Linux and web builds keep working and keep shipping. No
-  task here changes game, engine, port or renderer source.
+  task here changes game, engine, port or renderer source, with one exception:
+  Task 5b changes `port/src/headless_stubs.c`, which only `GE_HEADLESS` builds
+  compile, so no shipped build's sources change.
 - No ROM-derived data in Git, including test fixtures. The ROM is the ignored
   file in the checkout root; tools find it through `GE_ROM`.
 - Python tools use the standard library only.
@@ -584,8 +586,12 @@ Expected: `OK`
 Configure stock: the headless configuration needs no extra flag.
 
 ```bash
-python3 scripts/port/lp64_env.py run --arch x86_64 -- sh -c 'cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && python3 scripts/port/lp64_diagnostics.py update && python3 scripts/port/lp64_diagnostics.py check'
+python3 scripts/port/lp64_env.py run --arch x86_64 -- sh -c 'cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && cmake --build build/lp64/diag -j"$(nproc)" && python3 scripts/port/lp64_diagnostics.py update && python3 scripts/port/lp64_diagnostics.py check'
 ```
+
+Build the tree before counting: the build writes `generated/port_buildinfo.h`,
+and a file that stops at a missing header was not measured. The script refuses
+to report while any file stops at a fatal error.
 
 Expected: a baseline with a `total` in the low thousands and `check` exiting
 0. The planning measurement, made with a different compiler over game and
@@ -622,9 +628,11 @@ git push origin main
     differing, missing or extra section.
   - `export_source(ref: str, destination: Path, root=ROOT) -> None`: writes
     the tracked files of `ref` into `destination`. The special ref
-    `WORKTREE` means the tracked files as they are on disk now, uncommitted
-    edits included.
-  - CLI: `compare EXE_A EXE_B` (exit 0 identical, 1 different) and
+    `WORKTREE` means the files on disk now: tracked files with uncommitted
+    edits, plus untracked files Git does not ignore (the build globs source
+    directories).
+  - CLI: `compare EXE_A EXE_B` (exit 0 identical, 1 different, 2 could not
+    compare: a build, Git or Docker failure, or an input that is not a PE) and
     `commits REF_A REF_B` (builds both, then compares). Either ref may be
     `WORKTREE`.
 
@@ -864,9 +872,9 @@ Expected: FAIL at case 2 (the 64-bit configure still contains `-m32`).
 
 Keep the edit to the existing flag blocks (near lines 10 to 60, the i686
 definitions near 452 and 476, and the Linux SDL link near 559). Do not touch
-the asset-object pipeline: its keep set is still built `-m32` and linked at
-every setting, which a 64-bit link cannot take, and that is LP64-002's work
-(see the plan's hazard inventory).
+the asset-object pipeline: it is fallback-only (the keep list is empty, so with
+`GE_ROMDATA_FALLBACK=OFF` no asset object is built or linked), and fallback is
+32-bit only.
 Update the file's opening comment to say the build is 32-bit by default and
 64-bit by option.
 
@@ -920,8 +928,12 @@ after `python3 scripts/port/test_hand_gallery.py`, add:
           bash scripts/port/test_pointer_bits.sh
           bash scripts/port/test_headless_configure.sh
           cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cmake --build build/lp64/diag -j"$(nproc)"
           python3 scripts/port/lp64_diagnostics.py check
 ```
+
+The build line was added by the fix wave after the milestone review: it links
+the headless build in CI and generates the header the count needs.
 
 - [ ] **Step 2: Run the same lines locally, in the x86_64 container**
 

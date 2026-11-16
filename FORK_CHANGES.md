@@ -214,17 +214,23 @@ render thread 1.46 to 1.44 ms a frame, every function within 0.04 ms;
 ### FORK-089 — Native 64-bit port: accepted plan, LP64-001 scaffolding built, gallery regeneration pending
 
 **Status:** Plan accepted by the owner on 2026-11-15. Every task of milestone
-LP64-001 is built (Tasks 1 to 6 were each reviewed before reaching `main`; Task 7 was reviewed before it was pushed, and its fix round is part of that review): the two-tier gallery rule, the container
+LP64-001 is built (Tasks 1 to 7 were each reviewed before reaching `main`): the two-tier gallery rule, the container
 runner, the layout probe, the diagnostics ratchet, the unchanged-32-bit
 comparison, the headless repair, `GE_POINTER_BITS`, and the CI wiring (below).
 The milestone is not closed: the review gallery has been pending since Task 5b (be840ef,
 the first commit after the 8d6760d regeneration to edit a gallery input,
 `CMakeLists.txt` and `port/src/headless_stubs.c`), and clearing it needs a regeneration on the owner's Windows laptop,
 which the two-tier rule requires at the end of each milestone at the latest.
-CI's result for the commit that added the CI lines was not known when this was
-written. No game, engine, port or renderer source has changed, no 64-bit build
-of the game exists, and the rest of the plan has not been built or verified;
-its milestone status table says so.
+CI run 43803408580 on f4c2c10 (the last commit before the fix wave) passed
+every job; on the runner the layout probe passed at 64 and 32 bits, the
+headless configure test passed, and the diagnostics check printed `OK: 1432
+diagnostics, baseline 1432`. A whole-milestone review followed the tasks; its
+fixes are the commits "Compare the Windows executable's load header and new untracked files", "Build the headless tree before counting 64-bit diagnostics", "Assert the light structs in the layout probe and the 32-bit link options", "Refuse a GE_ROM that is not an existing file" and "Correct the LP64-001 record after the milestone review", recorded in each task's note below. Nothing
+here says how CI fares on those commits. No game, engine or renderer source has
+changed; the one port source changed is `port/src/headless_stubs.c` (Task 5b),
+which only `GE_HEADLESS` builds compile, so no shipped build's sources changed.
+No 64-bit build of the game exists, and the rest of the plan has not been built
+or verified; its milestone status table says so.
 
 Inherited behaviour: upstream builds only as a 32-bit program (`-m32`, and
 32-bit WebAssembly), by design, and this fork inherited that. FORK-031 recorded
@@ -283,9 +289,9 @@ of the headless build (Task 5b), a `GE_POINTER_BITS` build option, and CI
 wiring. All eight have been built (below): Task 1 (the two-tier rule) in 2a3101e and
 2c4d7f1, Task 2 in 54b1209, 857398a, a0ed9b2 and 8167b54, Task 3 in 803e4c6,
 Task 4 in 59d1755 and 02e7c35, Task 5 in ebf3912 and c7f9701, Task 5b in
-be840ef and 36d7ed2, Task 6 in 72064fe and f126afc, and Task 7 in the commit
-named "Run the 64-bit scaffolding checks in CI". Each task extended this entry
-with what it built and ran.
+be840ef and 36d7ed2, Task 6 in 72064fe and f126afc, and Task 7 in 364fb13 and
+f4c2c10. Each task extended this entry with what it built and ran; the fix wave
+after the whole-milestone review extended the notes of the tasks it changed.
 
 *LP64-001 task 2, the container runner (built 2026-11-15 on the owner's Apple
 Silicon Mac, Docker 29.9.2):* `scripts/port/lp64_env.py` runs a command in the
@@ -309,7 +315,7 @@ becomes absolute, a missing path and a directory are refused naming the path,
 two images; a `gcc -m32` program ran in the i686 container, so 32-bit x86 runs
 under Docker Desktop here. **Reference run (found two workarounds, repaired in task 5b):** the stock headless build had defects. (1) `cmake ... -DGE_HEADLESS=ON` (with or without `-DGE_VIDEO=OFF`) failed to compile `port/src/port_baked_trace.c` (`SDL.h: No such file or directory`; headless builds do not exclude that SDL-using file). (2) Past that, linking failed with `port_bench.c:110: undefined reference to portRenderAsyncActive` (`s32 portRenderAsyncActive(void)`, defined only in `port/src/video.c`, which the headless list removes; also called from `hitchlog.c` and `pcsched.c`). Task 2 ran the reference with `-DCMAKE_C_FLAGS=-I/home/dev/project/scripts/port/sdl_shim` and a scratch object for that one symbol, and the 20-mission smoke (`audit_buffers.py --mission-smoke ... --frames 600 --jobs 2`, i686 container) exited 0 in 184 s with all 20 `PASS`.
 
-*LP64-001 task 5b, the headless build repair (2026-11-15):* the headless build now configures, compiles and links with no extra flags, and the flag and scratch object are no longer needed. `CMakeLists.txt` gives `port/src/port_baked_trace.c` the include directory `scripts/port/sdl_shim` under `GE_HEADLESS` only (a source-file `INCLUDE_DIRECTORIES` property), so the bake uses its time-sliced, thread-free path (FORK-082); `port_baked_trace.c` is unchanged and a `GE_VIDEO=ON` build's compile and link commands are unchanged. `port/src/headless_stubs.c` (compiled only in headless builds) gained two stubs: `portRenderAsyncActive` returning 0 (no render thread without video) and `portRequestQuit` calling `exit(0)` (no window or event loop receives a close request, so it ends the process as `front.c`'s Exit Game does without video; the commit 3ef28aa load tour and `save_transfer.cpp` reference it; the first version did nothing, which would have left a headless load tour with no bench end running forever). `scripts/port/test_headless_configure.sh` configures a headless build into a temporary directory with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` and compiles `port_baked_trace.c` from its recorded command; before the repair it failed in the i686 container with `fatal error: SDL.h: No such file or directory`, after it prints `Headless configure OK`. In the i686 container the stock configuration (`cmake -S . -B build/lp64/ref-i686-stock -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON`, no other flags) built and linked, and `audit_buffers.py --mission-smoke build/lp64/ref-i686-stock/IronSights --rom /rom/baserom.u.z64 --frames 600 --jobs 2` exited 0 with all 20 missions `PASS` in 3 min 4 s (Task 2's flagged run: 184 s). A stock x86_64 configure into a fresh directory followed by `lp64_diagnostics.py check` printed `OK: 1432 diagnostics, baseline 1432`, so the baseline (recorded with the old flag) is unchanged. `compare_win32.py commits HEAD WORKTREE` built the Windows executable twice (56 s each) and exited 0, `identical in loaded code and data`. No game, engine, port or renderer source was changed.
+*LP64-001 task 5b, the headless build repair (2026-11-15):* the headless build now configures, compiles and links with no extra flags, and the flag and scratch object are no longer needed. `CMakeLists.txt` gives `port/src/port_baked_trace.c` the include directory `scripts/port/sdl_shim` under `GE_HEADLESS` only (a source-file `INCLUDE_DIRECTORIES` property), so the bake uses its time-sliced, thread-free path (FORK-082); `port_baked_trace.c` is unchanged and a `GE_VIDEO=ON` build's compile and link commands are unchanged. `port/src/headless_stubs.c` (compiled only in headless builds) gained two stubs: `portRenderAsyncActive` returning 0 (no render thread without video) and `portRequestQuit` calling `exit(0)` (no window or event loop receives a close request, so it ends the process as `front.c`'s Exit Game does without video; the commit 3ef28aa load tour and `save_transfer.cpp` reference it; the first version did nothing, which would have left a headless load tour with no bench end running forever). `scripts/port/test_headless_configure.sh` configures a headless build into a temporary directory with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` and compiles `port_baked_trace.c` from its recorded command; before the repair it failed in the i686 container with `fatal error: SDL.h: No such file or directory`, after it prints `Headless configure OK`. In the i686 container the stock configuration (`cmake -S . -B build/lp64/ref-i686-stock -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON`, no other flags) built and linked, and `audit_buffers.py --mission-smoke build/lp64/ref-i686-stock/IronSights --rom /rom/baserom.u.z64 --frames 600 --jobs 2` exited 0 with all 20 missions `PASS` in 3 min 4 s (Task 2's flagged run: 184 s). A stock x86_64 configure into a fresh directory followed by `lp64_diagnostics.py check` printed `OK: 1432 diagnostics, baseline 1432`, so the baseline (recorded with the old flag) is unchanged. `compare_win32.py commits HEAD WORKTREE` built the Windows executable twice (56 s each) and exited 0, `identical in loaded code and data`. The one port source this task changed is `port/src/headless_stubs.c`, compiled only in `GE_HEADLESS` builds, so no shipped build's sources changed; no game, engine or renderer source was changed. *Which builds compile the two changes* (established by reading `CMakeLists.txt`, `cmake/emscripten.cmake`, `scripts/port/web_build.py` and `.github/workflows/web-pages.yml`; not built): the `GE_HEADLESS` block in `CMakeLists.txt` also applies to the Emscripten build, so the web `core` configuration (`python3 scripts/port/web_build.py core`, which configures `emcmake cmake -S . -B build/web/core -DCMAKE_BUILD_TYPE=Release -DGE_ROMDATA_FALLBACK=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DGE_WEB_LINK_OPT=2 -DGE_VIDEO=OFF -DGE_HEADLESS=ON`, and `web_spike.py`'s audit) compiles `port/src/headless_stubs.c` and gives `port_baked_trace.c` the `sdl_shim` include; `port/web` defines neither new stub, so no duplicate symbol was seen by reading. CI does not build that configuration: `web-pages.yml` builds `web_build.py video` (`GE_HEADLESS=OFF`) and `files`, and no job builds `core`. The web `core` build with these changes has not been run.
 
 *LP64-001 task 3, the layout probe:* `scripts/port/abi_probe/probe.c` holds
 compile-time `_Static_assert`s on the structs the renderer and ROM loader depend
@@ -482,7 +488,7 @@ section that is not discardable, `/4`, which the string table names
 `.eh_frame` (unwind data, flags 0x40000040); the old name-only rule had left it
 out of every comparison, and it is now compared.
 
-*LP64-001 task 6, the pointer-width build option (built 2026-11-15, not pushed):*
+*LP64-001 task 6, the pointer-width build option (built 2026-11-15, commits 72064fe and f126afc):*
 `CMakeLists.txt` gains the cache variable `GE_POINTER_BITS` (string, `32` or
 `64`, default `32`; code never reads it and no compile definition carries it).
 Its checks run first, right after `project()`, which is early enough because
@@ -497,13 +503,17 @@ drops `-m32`, `-msse2`, `-mfpmath=sse` and `-no-pie`, adds `-ffp-contract=off`,
 omits the `_FILE_OFFSET_BITS`/`_TIME_BITS` definitions on `ge_hd_textures` and
 `ge_save_transfer`, and links SDL2 by name from `${SDL2_LINUX_ROOT}/lib` (or the
 system) instead of the i386 library directory. The compiled-in asset objects are
-untouched and still 32-bit: the `ASSET_OBJS_KEEP` set is built by custom
-commands with `ASSET_C_FLAGS`, which still carries `-m32`, and is linked into
-every build, `GE_ROMDATA_FALLBACK=OFF` included (only the served set is
-dropped). So `GE_POINTER_BITS=64` configures but could not link until those
-objects are built at the target width. Custom commands are absent from
-`compile_commands.json`, so neither `test_pointer_bits.sh` nor the diagnostics
-count sees them; this is left for LP64-002. The 64-bit `SDL2_LINUX_ROOT` link
+untouched, and they do not reach a 64-bit build: `PORT_ASSET_KEEP_SYMS` is set
+empty (`CMakeLists.txt`, above `port_asset_record`, whose comment says that with
+`GE_ROMDATA_FALLBACK=OFF` all generated asset objects are dropped), so the keep
+list is empty and with the fallback off no asset object is built or linked; a
+default configure's `CMakeFiles/ge.dir/link.txt` and `build.make` name none
+(checked in the x86_64 container, headless and default configurations, by the
+fix wave). `ASSET_C_FLAGS` still carries `-m32`, but it is reached only with
+`GE_ROMDATA_FALLBACK=ON`, which `GE_POINTER_BITS=64` refuses. An earlier version
+of this entry (commit f126afc) said the keep set was built `-m32` and linked into
+every build so that a 64-bit build could not link; that was wrong, from a
+misreading of the empty list. The 64-bit `SDL2_LINUX_ROOT` link
 (`${root}/lib`) is unverified: untested, it ignores multiarch directories such
 as `lib/x86_64-linux-gnu`, and it sets no build rpath. Under `EMSCRIPTEN` the first
 branch is still `include(cmake/emscripten.cmake)` and every later guard keeps its
@@ -526,7 +536,9 @@ headless configure's `compile_commands.json` (build directory name
 normalised) is identical to the one captured before the edit
 (`commands-identical`), and `compare_win32.py commits HEAD WORKTREE` exited 0,
 `identical in loaded code and data`. The Emscripten case was not run (no emsdk
-here); the web build is shown unchanged by reading the diff only. Task 7 runs it in CI. No game, engine, port or renderer source was changed.
+here); the web build is shown unchanged by reading the diff only. Task 7 runs
+`test_pointer_bits.sh` in CI, where the Emscripten case is not run either. This
+task changed no game, engine, port or renderer source.
 
 *LP64-001 task 7, CI and milestone evidence (2026-11-15):* the `tests` job of
 `.github/workflows/windows-release.yml` (`ubuntu-24.04`), in its step
@@ -555,13 +567,15 @@ runner has no MinGW in this job, so `test_pointer_bits.sh` skips its case 5 with
 a message there; `test_abi_probe.sh` runs its `-m32` pass. The diagnostics
 baseline was recorded with GCC 13, which Ubuntu 24.04 provides in the container
 and on the runner; `check` refuses a different compiler. Each of the eight lines
-was run on the Mac in the x86_64 container (`lp64_env.py run --arch x86_64 --`,
+was run on the Mac in the x86_64 container before the push (`lp64_env.py run --arch x86_64 --`,
 the diagnostics configure into a wiped `build/lp64/diag`) and exited 0:
 11 and 16 and 22 tests passing, `ABI probe OK (64-bit)` and `(32-bit)`, five
 pointer-bits cases passing (the container has MinGW, so case 5 ran),
-`Headless configure OK`, and `OK: 1432 diagnostics, baseline 1432`. That the
-runner has the tools was established by reading, not by a run; only the CI run
-shows it, and CI's result for this commit was not known when this was written.
+`Headless configure OK`, and `OK: 1432 diagnostics, baseline 1432`. CI run
+43803408580 on f4c2c10 then passed every job, which showed the runner has the
+tools: the layout probe passed at 64 and 32 bits, the headless configure test
+passed, and the diagnostics check printed `OK: 1432 diagnostics, baseline
+1432`.
 Milestone evidence: the emulated i686 headless reference builds and runs the
 20-mission smoke with the ROM (exit 0, 20 of 20 `PASS`, about 184 s); the
 Windows cross-build is reproducible with a fixed `SOURCE_DATE_EPOCH` (about
@@ -570,14 +584,31 @@ the Task 5b and Task 6 changes; the diagnostics baseline is 1,432 places in 93
 files with GCC 13. Open: the gallery is pending, because Tasks 5b, 6 and 7
 change deferred-tier gallery inputs on a machine that cannot render; a
 regeneration on the owner's Windows laptop clears it (the last full one was
-2026-11-15, 8d6760d). No game, engine, port or renderer source was changed.
+2026-11-15, 8d6760d; pending since Task 5b, be840ef). Across the milestone no
+game, engine or renderer source changed, and the one port source changed is
+`port/src/headless_stubs.c` (Task 5b), compiled only in `GE_HEADLESS` builds.
+
+*Record corrections after the milestone review (the commit "Correct the LP64-001
+record after the milestone review"; documentation only):* the plan's hazard
+inventory loses the asset-object item f126afc added (it was false, see Task 6)
+and gains one for `long` being 8 bytes on LP64 (`Hilite`, `Gsetcolor`,
+`TexRect` in `include/PR/gbi.h`; Task 3's measurement); its verification item 3
+now says the Windows cross-build was shown reproducible, and its working-machine
+text describes the two-tier gallery rule instead of "every source commit needs
+that laptop". The LP64-001 status row records CI run 43803408580 and the fix
+wave, and the LP64-002 row records the narrower diagnostics coverage as open.
+The milestone plan's first Global Constraint names the `headless_stubs.c`
+exception, its Task 6 Step 4 sentence on the asset pipeline is true again, its
+Task 4 and Task 7 commands build the headless tree before counting, and its
+Task 5 interface gives the `WORKTREE` contents and exit status 2. FORK-022 now
+says the gallery was regenerated under the two-tier rule in 8d6760d.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),
 [inherited 32-bit constraints](docs/port/abi-and-portability.md).
 
-**Validation:** LP64-001 Tasks 2 to 7 have run (Task 1 is recorded in FORK-022 and in the gallery regeneration 8d6760d); no milestone is complete (the gallery regeneration is open, and CI's result for Task 7 is not yet known). What
+**Validation:** LP64-001 Tasks 2 to 7 have run (Task 1 is recorded in FORK-022 and in the gallery regeneration 8d6760d); no milestone is complete (the gallery regeneration is open). CI run 43803408580 on f4c2c10 passed every job (layout probe at 64 and 32 bits, headless configure test, `OK: 1432 diagnostics, baseline 1432`); nothing is recorded about CI on the fix-wave commits after it. What
 ran: the 11 ROM-free tests in `scripts/port/test_lp64_env.py` (passing); on the
 Mac, `build-images` (3 min 58 s) and three container checks (`gcc -dumpmachine`
 in the aarch64 and x86_64 images, and a `gcc -m32` program in the i686
@@ -10569,9 +10600,11 @@ unless the clone sets the local Git setting `midas.galleryDefer` (hook, set by
 without the setting regenerates on any staleness and its error names the
 setting when generation fails. New hand, arm or wardrobe files must be added
 to `STRICT_FILES`. Tests: `scripts/port/test_hand_gallery.py`. Documented in
-`scripts/port/hand_gallery.md` and AGENTS.md. The checked-in gallery has not yet
-been regenerated under this rule (that happens on the owner's Windows laptop),
-so `verify` fails on it until then.
+`scripts/port/hand_gallery.md` and AGENTS.md. The checked-in gallery was
+regenerated under this rule on the owner's Windows laptop in 8d6760d
+(2026-11-15; only `manifest.json` and `index.html` changed); later deferred-tier
+changes have left it pending since be840ef (FORK-089).
+
 CI performs ROM-free gallery integrity/freshness and workflow tests. The README
 links to the gallery and setup guide. This supplements the hand/arm contracts
 and geometry/material regressions (FORK-004/FORK-017), not automatic visual approval.
