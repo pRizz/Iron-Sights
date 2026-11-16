@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # GE_POINTER_BITS selects the 32-bit build (default) or the 64-bit one. Only
-# configuring is tested: a 64-bit compile is not expected to work until LP64-002.
+# configuring is tested (compile and link commands are read from the generated
+# build files): a 64-bit compile is not expected to work until LP64-002.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 work=$(mktemp -d /tmp/midas-pointer-bits.XXXXXX)
@@ -43,10 +44,22 @@ expect_failure() {
 # grep reads the file itself: grep -q on a pipe makes the writer die of SIGPIPE under pipefail.
 has_flag() { grep -qF -- "$2" "$work/$1/compile_commands.json"; }
 
+# The game's link command, as the Makefile generator writes it at configure time.
+link_file() { echo "$work/$1/CMakeFiles/ge.dir/link.txt"; }
+# Called outside any condition, so its failure stops the script.
+require_link() { [[ -f $(link_file "$1") ]] || fail "$1: no link command at $(link_file "$1")"; }
+# Whole words only: -no-pie must not match inside another option.
+has_link_flag() { grep -qE -- "(^| )$2( |\$)" "$(link_file "$1")"; }
+
 # 1. The default is today's 32-bit build.
 expect_configure default
 has_flag default '-m32' || fail "default build lacks -m32"
 echo "ok 1: default configure is 32-bit"
+require_link default
+for flag in -m32 -no-pie; do
+    has_link_flag default "$flag" || fail "default link lacks $flag"
+done
+echo "ok 1b: default link has -m32 and -no-pie"
 
 # 2. 64 drops every 32-bit-only flag and pins float contraction off.
 expect_configure bits64 -DGE_POINTER_BITS=64
@@ -57,6 +70,13 @@ for flag in -m32 -msse2 -mfpmath=sse; do
 done
 has_flag bits64 '-ffp-contract=off' || fail "64-bit build lacks -ffp-contract=off"
 echo "ok 2: 64-bit configure has no 32-bit flags and has -ffp-contract=off"
+require_link bits64
+for flag in -m32 -no-pie; do
+    if has_link_flag bits64 "$flag"; then
+        fail "64-bit link still uses $flag"
+    fi
+done
+echo "ok 2b: 64-bit link has neither -m32 nor -no-pie"
 
 # 3. Any other width is refused.
 expect_failure bad48 "GE_POINTER_BITS must be 32 or 64" -DGE_POINTER_BITS=48

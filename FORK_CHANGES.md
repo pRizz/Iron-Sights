@@ -315,7 +315,23 @@ at the host's native width and again with `-m32 -msse2 -mfpmath=sse`, runs
 each, and prints `ABI probe OK (N-bit)`; it skips the `-m32` pass, announcing
 it, when `-m32` does not compile. Flags follow `test_states.sh`. LP64-004 is to
 add each file layout's assertions here. No game, engine, port or renderer
-source was changed.
+source was changed. *Fix wave after the milestone review (the commit "Assert
+the light structs in the layout probe and the 32-bit link options"):* the probe
+also asserts the renderer's light formats at every width: `Light_t` 12, `Light`
+16, `Ambient_t` and `Ambient` 8, `Lights0` and `Lights1` 24, `Lights2` to
+`Lights7` 40 to 120 in steps of 16, `Lightsn` 120, `LookAt` 32 and `Hilite_t`
+16. `Hilite` is asserted at 16 bytes under 32-bit only: its alignment member is
+`long int[4]` (`include/PR/gbi.h`), so it is 32 bytes on LP64. Each size was
+measured first with a scratch program in the x86_64 container at both widths
+(64-bit: `Hilite` 32, `Gsetcolor` 16, `TexRect` 32; 32-bit: 16, 8 and 16; the
+light structs equal at both), and the 32-bit `Hilite` assertion without its
+guard failed at 64-bit with `static assertion failed: "32-bit highlight
+layout"`. `test_abi_probe.sh` now passes every definition `CMakeLists.txt` gives
+all builds (`VERSION_US LANG_US REFRESH_NTSC LEFTOVERDEBUG LEFTOVERSPECTRUM
+BUGFIX_R0 NONMATCHING AVOID_UB _LANGUAGE_C`; before, the five from
+`LEFTOVERDEBUG` to `AVOID_UB` were missing, and `bondview.h` has a typedef under
+`BUGFIX_R0`), so the layouts it asserts are the build's. In the x86_64
+container it printed `ABI probe OK (64-bit)` and `ABI probe OK (32-bit)`.
 
 *LP64-001 task 4, the 64-bit diagnostics ratchet:* `scripts/port/lp64_diagnostics.py`
 compiles every C file in a `compile_commands.json` syntax-only with 64-bit
@@ -485,13 +501,19 @@ as `lib/x86_64-linux-gnu`, and it sets no build rpath. Under `EMSCRIPTEN` the fi
 branch is still `include(cmake/emscripten.cmake)` and every later guard keeps its
 `32` behaviour, so no line reached by the web build changes at the default
 value. `scripts/port/test_pointer_bits.sh` configures into temporary
-directories and checks five cases (default has `-m32`; `64` has none of
-`-m32`/`-msse2`/`-mfpmath=sse` and has `-ffp-contract=off`; `48` is refused;
+directories and checks five cases (default has `-m32`, and its link command,
+read from `CMakeFiles/ge.dir/link.txt` without building, has `-m32` and
+`-no-pie` as whole words; `64` has none of `-m32`/`-msse2`/`-mfpmath=sse` and
+has `-ffp-contract=off`, and its link command has neither `-m32` nor `-no-pie`; `48` is refused;
 `64` with the fallback is refused; `64` with `cmake/mingw-i686.cmake` is refused,
 skipped with a message when `i686-w64-mingw32-gcc` is absent). Only configuring
 is tested; a 64-bit compile is not expected to work until LP64-002. Run in the
 x86_64 container: before the change the script stopped at case 2
-(`64-bit build still uses -m32`); after, all five cases passed. A default
+(`64-bit build still uses -m32`); after, all five cases passed. The link checks
+were added by the fix wave after the milestone review; run against an export of
+the working tree whose `CMakeLists.txt` had `-no-pie` removed from the 32-bit
+link, the script failed with `FAIL: default link lacks -no-pie`, and against the
+tree as committed it printed `ok 1b` and `ok 2b` with the five cases passing. A default
 headless configure's `compile_commands.json` (build directory name
 normalised) is identical to the one captured before the edit
 (`commands-identical`), and `compare_win32.py commits HEAD WORKTREE` exited 0,
