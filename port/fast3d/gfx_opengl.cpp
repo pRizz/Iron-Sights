@@ -1712,6 +1712,8 @@ static void gfx_opengl_init_extensions(void) {
     }
 }
 
+#include "gfx_gl_shadow.inl" /* FORK-088: GL state queries answered from memory */
+
 static void gfx_opengl_init(void) {
 #ifdef __EMSCRIPTEN__
     const bool loaded = gladLoadGLES2Loader(gl_load_proc);
@@ -1721,6 +1723,7 @@ static void gfx_opengl_init(void) {
     if (!loaded || glGetString == NULL || glEnable == NULL) {
         sysFatalError("Could not load OpenGL.\nReported SDL error: %s", SDL_GetError());
     }
+    gfx_gl_shadow_install();
 
     // check if we're using ES or core, which have more limited feature sets
     int val = 0;
@@ -1811,6 +1814,7 @@ static void gfx_opengl_on_resize(void) {
 
 static void gfx_opengl_start_frame(void) {
     frame_count++;
+    gfx_gl_shadow_frame(); /* FORK-088 */
 }
 
 static void gfx_opengl_end_frame(void) {

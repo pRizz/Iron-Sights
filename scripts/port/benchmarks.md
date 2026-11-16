@@ -161,6 +161,28 @@ Read browser results differently:
   none. `MIDAS_HEADED=1` shows the window (and plays the sound).
 - The runner has no guard against other programs. Keep the machine quiet.
 
+## Smoke check for a render change
+
+`AGENTS.md` asks for this before committing anything drawn or computed every
+frame. It takes about ten minutes:
+
+```sh
+python scripts/port/bench/stock.py --ref HEAD --name before
+```
+
+```sh
+python scripts/port/bench/bench.py run --smoke --build before=build_win/bench-before/build/IronSights.exe --build after=build_win/IronSights.exe
+```
+
+`--smoke` is three scenarios (Cradle, Dam, four-player Temple), both presets
+and three repeats. `--ref HEAD` builds the last commit, which is "before" while
+the change is still uncommitted. When the change sits behind a switch, one
+executable can be measured against itself instead:
+`--build off=build_win/IronSights.exe@GE_GLSHADOW=0 --build on=build_win/IronSights.exe`
+gives a build its own environment after the `@`. Then profile one scenario of
+each build as below and read the differences table, and record the before and
+after figures in the change's inventory entry.
+
 ## Profiling
 
 The benchmarks say how long a frame takes; the profilers say where the time

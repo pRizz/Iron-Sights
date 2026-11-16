@@ -428,6 +428,18 @@ static void paNativeSurface(const coord3d *source,u32 image,Vtx *vertex,f32 ligh
     }
 }
 
+/* The audit switches are fixed for the life of the process. Reading them once
+ * matters: this runs for every hand node of every view each frame, and three
+ * getenv calls a time were two thirds of its cost (FORK-088). */
+enum { PA_AUDIT_STOCK, PA_AUDIT_ADS, PA_AUDIT_ARM, PA_AUDIT_COUNT };
+static const char *paAuditEnv(s32 which)
+{
+    static const char *const names[PA_AUDIT_COUNT]={"GE_ARM_AUDIT_STOCK","GE_ADS_AUDIT","GE_ARM_AUDIT"};
+    static const char *values[PA_AUDIT_COUNT]; static s32 read;
+    if(!read) { s32 i; for(i=0;i<PA_AUDIT_COUNT;i++) values[i]=getenv(names[i]); read=TRUE; }
+    return values[which];
+}
+
 s32 portWardrobeRenderNode(ModelRenderData *renderdata, ModelNode *node,
     ModelRoData_DisplayListRecord *nativeHand)
 {
@@ -438,7 +450,7 @@ s32 portWardrobeRenderNode(ModelRenderData *renderdata, ModelNode *node,
     NativeArmPose pose;
     Gfx *stockHand;
     PortArmMesh native; NativeArmLayout layout;
-    const char *stockAudit=getenv("GE_ARM_AUDIT_STOCK"),*adsAudit=getenv("GE_ADS_AUDIT");
+    const char *stockAudit=paAuditEnv(PA_AUDIT_STOCK),*adsAudit=paAuditEnv(PA_AUDIT_ADS);
     s32 preserve=paItem!=ITEM_FIST;
     Gfx *gdl;
     if (!paItem || renderdata->unk18 || !(renderdata->flags&1) || !data->Primary
@@ -460,7 +472,7 @@ s32 portWardrobeRenderNode(ModelRenderData *renderdata, ModelNode *node,
         g_CurrentPlayer->bondtype,fileGetBondForCurrentFolder(),&pose,preserve ? &layout : NULL)) return FALSE;
     pose.stitch=TRUE;
     if(preserve) paSkinSetup(&pose,data,&layout);
-    if (getenv("GE_ARM_AUDIT") && preserve) {
+    if (paAuditEnv(PA_AUDIT_ARM) && preserve) {
         static u32 seen[32];
         s32 variant=portWardrobeVariant(g_CurrentPlayer->bondtype,fileGetBondForCurrentFolder());
         u32 flag=1u<<(variant*2+(paHand==GUNLEFT));

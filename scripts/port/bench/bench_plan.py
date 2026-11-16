@@ -155,6 +155,25 @@ def web_log_name(run):
     return f"{run['preset']}-{run['scenario']}-{run['repeat']}.csv"
 
 
+def split_build(item):
+    """Parse a --build value: 'label=path' or 'label=path@NAME=VALUE,NAME=VALUE'.
+
+    The part after '@' is environment for that build alone, which lets one
+    executable be measured against itself with a switch flipped.
+    """
+    label, separator, rest = item.partition('=')
+    path, _, settings = rest.partition('@')
+    if not separator or not label or not path:
+        raise ValueError(f'--build wants label=path[@NAME=VALUE,...], got {item!r}')
+    env = {}
+    for setting in filter(None, settings.split(',')):
+        name, equals, value = setting.partition('=')
+        if not equals or not name:
+            raise ValueError(f'--build environment wants NAME=VALUE, got {setting!r}')
+        env[name] = value
+    return label, path, env
+
+
 def other_games(tasklist_csv, own_pid):
     """Game processes in `tasklist /fo csv /nh` output, other than our own run.
 

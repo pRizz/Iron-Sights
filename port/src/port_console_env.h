@@ -92,6 +92,8 @@ static const char *const sPortConEnvNames[] = {
     "GE_FULLHEIGHT",
     "GE_GFX_STATS",
     "GE_GLASSDBG",
+    "GE_GLSHADOW",
+    "GE_GLSHADOW_CHECK",
     "GE_GLFARX",
     "GE_GLPOLL",
     "GE_GLYPHDUMP",

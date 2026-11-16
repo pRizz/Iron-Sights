@@ -215,6 +215,14 @@ class PlanTests(unittest.TestCase):
         self.assertEqual((runs[0]['first_tick'], runs[0]['end_tick']), (300, 3900))
         self.assertEqual(plan.web_log_name(runs[1]), 'matched-dam-2.csv')
 
+    def test_a_build_can_carry_its_own_environment(self):
+        self.assertEqual(plan.split_build('fork=build_win/IronSights.exe'), ('fork', 'build_win/IronSights.exe', {}))
+        self.assertEqual(plan.split_build('off=a.exe@GE_GLSHADOW=0,GE_X=1'),
+                         ('off', 'a.exe', {'GE_GLSHADOW': '0', 'GE_X': '1'}))
+        for bad in ('a.exe', '=a.exe', 'x=a.exe@NOVALUE'):
+            with self.assertRaises(ValueError):
+                plan.split_build(bad)
+
     def test_builds_alternate_within_a_repeat(self):
         order = plan.run_order(['fork', 'stock'], ['dam'], 2)
 

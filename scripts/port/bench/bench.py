@@ -30,6 +30,9 @@ BUILD_ROOT = REPO/'build_win'
 RUN_TIMEOUT_S = 300
 # A run another game process overlapped is repeated this many times, then kept and flagged.
 DISTURBED_RETRIES = 3
+# --smoke: the quick check AGENTS.md asks of a render change.
+SMOKE_SCENARIOS = ('cradle-fight', 'dam-walk', 'temple-4p')
+SMOKE_REPEATS = 3
 QUIET_WAIT_S = 900
 WATCH_EVERY_S = 2.0
 # First match of each in the game's own logs describes the run's host and build.
@@ -51,11 +54,14 @@ def find_rom():
 def parse_builds(items):
     builds = []
     for item in items:
-        label, separator, path = item.partition('=')
-        executable = (REPO/path).resolve() if separator else None
-        if executable is None or not executable.is_file():
-            raise SystemExit(f'bench: --build wants label=path to an executable, got {item!r}')
-        builds.append({'label': label, 'path': executable,
+        try:
+            label, path, env = bench_plan.split_build(item)
+        except ValueError as error:
+            raise SystemExit(f'bench: {error}') from error
+        executable = (REPO/path).resolve()
+        if not executable.is_file():
+            raise SystemExit(f'bench: no executable at {executable}')
+        builds.append({'label': label, 'path': executable, 'env': env,
                        'sha256': hashlib.sha256(executable.read_bytes()).hexdigest()})
     if len({build['label'] for build in builds}) != len(builds):
         raise SystemExit('bench: build labels must differ')
@@ -160,6 +166,7 @@ def measure(build, scenario, preset_lines, folder, options):
     frame_log = folder/'frames.csv'
     env = bench_plan.run_env(scenario, options.rom, options.resolution, frame_log, write_route(scenario, folder))
     env.update(item.split('=', 1) for item in options.env or [])
+    env.update(build['env'])
     code, disturbed, maybe_busy = launch(build['path'], folder, env, bench_plan.ini_text(preset_lines),
                                          options.visible)
     if code != 0 or not frame_log.exists():
@@ -205,6 +212,10 @@ def summarize(runs, presets, scenarios, builds):
 
 def command_run(options, config):
     builds = parse_builds(options.build or ['fork=build_win/IronSights.exe'])
+    if options.smoke:
+        options.scenario = options.scenario or list(SMOKE_SCENARIOS)
+        options.preset = options.preset or list(config['presets'])
+        options.repeats = min(options.repeats, SMOKE_REPEATS)
     scenarios = select(config, options.scenario, 'scenarios')
     presets = select(config, options.preset or ['default'], 'presets')
     stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
@@ -261,8 +272,9 @@ def main():
     commands = parser.add_subparsers(dest='command', required=True)
     run = commands.add_parser('run', help='measure builds over the scenarios')
     report = commands.add_parser('report', help='render a results file as Markdown')
-    run.add_argument('--build', action='append', metavar='LABEL=PATH',
-                     help='executable to measure, path from the repository root (repeatable)')
+    run.add_argument('--build', action='append', metavar='LABEL=PATH[@NAME=VALUE,...]',
+                     help='executable to measure, path from the repository root, with optional '
+                          'environment of its own (repeatable)')
     run.add_argument('--scenario', action='append', help='scenario name (repeatable; default all)')
     run.add_argument('--resolution', default='1920x1080')
     run.add_argument('--keep', action='store_true', help='keep run folders (logs, frame logs, routes)')
@@ -270,6 +282,8 @@ def main():
                      help='extra environment for the game, e.g. GE_PROFILE=profile.txt (repeatable)')
     run.add_argument('--preset', action='append', help='settings preset (repeatable; default: default)')
     run.add_argument('--repeats', type=int, default=5)
+    run.add_argument('--smoke', action='store_true',
+                     help='the quick check for a render change: three scenarios, every preset, three repeats')
     run.add_argument('--hidden', dest='visible', action='store_false',
                      help='hide the window; quicker to work beside, but frames run slower and noisier')
     run.add_argument('--out', help='results file (default: build_win/bench-results/<time>.json)')

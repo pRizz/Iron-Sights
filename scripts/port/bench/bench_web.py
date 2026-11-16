@@ -39,6 +39,7 @@ def command_plan(options, config):
     runs = bench_plan.web_runs(config, scenarios, presets, options.repeats)
     for run in runs:
         run['log_name'] = bench_plan.web_log_name(run)
+        run['env'].update(item.split('=', 1) for item in options.env or [])
     (folder/PLAN).write_text(json.dumps({'schema': 1, 'runs': runs}, indent=1)+'\n', encoding='utf-8')
     bench.log(f'{len(runs)} runs planned in {folder/PLAN}')
     return 0
@@ -102,6 +103,8 @@ def main():
     plan.add_argument('--scenario', action='append', help='scenario name (repeatable; default all)')
     plan.add_argument('--preset', action='append', help='settings preset (repeatable; default: default)')
     plan.add_argument('--repeats', type=int, default=3)
+    plan.add_argument('--env', action='append', metavar='NAME=VALUE',
+                      help='extra environment for the game in every run, e.g. GE_GLSHADOW=0 (repeatable)')
     collect = commands.add_parser('collect', help='turn measured sessions into results and a report')
     collect.add_argument('--build', action='append', required=True, metavar='LABEL=FOLDER',
                          help='a measured session folder, path from the repository root (repeatable)')

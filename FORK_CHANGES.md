@@ -30,6 +30,116 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-088 — Faster frames: GL state answered from memory, arm switches read once
+
+**Status:** Implemented on 2026-11-15 at the owner's request, as the first
+optimizations from the profile in FORK-087. Built and measured for Windows and
+the browser. The picture is unchanged (the review gallery regenerated with no
+changed image). The owner play-tested the Windows build on 2026-11-15 and
+reported that it works. Linux and Steam Deck builds were not built or run.
+
+Inherited behaviour: upstream's renderer sets GL state and does not ask for it
+back in a frame. The fork's added passes (Gun Glint and screen reflections,
+FORK-058; Glass Reflections, FORK-066; bloom; Tone Mapping and HDR Output,
+FORK-082) each save the state they change by querying the driver, about 120
+query calls in `port/fast3d/*.inl`, and restore it afterwards.
+
+**What changed:**
+
+- **GL state shadow** ([gfx_gl_shadow.inl](port/fast3d/gfx_gl_shadow.inl)).
+  After glad loads a context's functions, `gfx_gl_shadow_install` replaces 32
+  of its function pointers with recorders. Calls that set state the passes
+  later ask about (program, vertex array, array buffer, framebuffers,
+  renderbuffer, active texture, the 2D texture and sampler of each unit, blend
+  function, equation and colour, depth function and mask, colour mask, clear
+  colour, viewport, scissor box, and the blend, scissor, depth, cull and
+  stencil switches) are noted on their way to the driver, and `glGetIntegerv`,
+  `glGetBooleanv`, `glGetFloatv` and `glIsEnabled` answer from the note. A
+  value nobody has set is asked of the driver once and kept. Deleting an
+  object forgets the bindings it could have held; a viewport or colour the
+  driver might clamp is not kept. Anything untracked goes to the driver as
+  before, so the passes themselves are unchanged. `GE_GLSHADOW=0` leaves
+  glad's pointers alone (the old behaviour, and the "before" of a
+  measurement); `GE_GLSHADOW_CHECK=1` also asks the driver every time and
+  reports any difference.
+- **Arm audit switches read once**
+  ([port_native_arms.c](port/src/port_native_arms.c)).
+  `portWardrobeRenderNode` runs for every hand node of every view each frame
+  and called `getenv` three times a call (`GE_ARM_AUDIT_STOCK`,
+  `GE_ADS_AUDIT`, `GE_ARM_AUDIT`). It now reads them on first use. The mesh it
+  builds, and everything in the arm rendering contracts, is untouched.
+
+**Measured** (2026-11-15, the development laptop; "before" is the last commit
+`1e3df59` built by `stock.py --ref HEAD`, "after" this change):
+
+Windows, `bench.py run --smoke` (three repeats, medians, 1920x1080, a quiet
+machine: 27% median processor use, 1-5% between repeats), frames a second:
+
+| Scenario | Preset | Stock 1.0.2b | Before | After | Render ms | Game ms |
+|---|---|---:|---:|---:|---:|---:|
+| cradle-fight | default | 898 | 320 | 518 (+62%) | 2.88 to 1.54 | 0.55 to 0.33 |
+| dam-walk | default | 1411 | 559 | 815 (+46%) | 1.59 to 0.81 | 0.42 to 0.28 |
+| temple-4p | default | 1123 | 421 | 604 (+43%) | 2.32 to 1.41 | 0.87 to 0.59 |
+| cradle-fight | matched | 895 | 434 | 665 (+53%) | 2.08 to 1.34 | 0.54 to 0.33 |
+| dam-walk | matched | 1400 | 799 | 1120 (+40%) | 1.07 to 0.72 | 0.41 to 0.27 |
+| temple-4p | matched | 1112 | 769 | 775 (+1%) | 1.25 to 1.24 | 0.88 to 0.59 |
+
+Browser (headless Chromium 157, ANGLE/Direct3D 11, 1280x960 canvas; one run
+each with `GE_GLSHADOW=0` and without, same runtime), renderer milliseconds
+per frame:
+
+| Scenario | Default: before to after | Matched: before to after |
+|---|---:|---:|
+| cradle-fight | 11.64 to 3.08 (-74%) | 10.09 to 2.53 (-75%) |
+| dam-walk | 9.87 to 1.83 (-81%) | 8.27 to 1.45 (-82%) |
+| temple-4p | 6.35 to 3.45 (-46%) | 2.65 to 2.73 (within noise) |
+
+- The state shadow accounts for the frame-rate gain: the same executable with
+  `GE_GLSHADOW=0` against without gave +38% to +63% on Windows (four repeats)
+  wherever a gun or a graphics pass is drawn, and no change in four-player
+  Temple with settings matched, where neither is.
+- The arm change accounts for the game-code time: down by a third in every
+  scenario, including the one the shadow does not touch.
+- A browser single-player frame now costs 2.0-3.7 ms of processor time
+  (render plus game) against 8.8-12.3 ms, so a 120 Hz display is within
+  reach there.
+- FORK-087's reading of the Windows profile held: with the queries gone the
+  driver's worker thread is busy again (1.53 ms a frame on Cradle, from 0.27)
+  and the draw call no longer appears among the differences from stock.
+- Against stock with settings matched the fork is now at 74-80% in single
+  player (from 49-57%) and 70% in four-player. A profile of this build puts
+  what remains in per-triangle setup (`gfx_sp_tri1`, +0.34 ms on Cradle), the
+  arm mesh still rebuilt each frame (0.13 ms), and HUD rectangles (0.12 ms).
+
+**Checks:** a run of six scenario and preset combinations with
+`GE_GLSHADOW_CHECK=1` answered between 3,609 and 345,914 queries from memory
+per run with no mismatch against the driver, asking the driver 2 to 6 times.
+`python scripts/port/test_gl_queries.py` (new: every state the renderer
+queries is tracked by the shadow or listed as asked once at start-up),
+`test_bench.py` (37 tests) and `test_bench_profile.py` passed.
+`test_wardrobe.sh` and `test_ads.sh` passed in the build container. The
+Windows and browser builds passed; the gallery regenerated with zero changed
+cells; the Bright Builds checks and the settings placement check passed.
+
+**Limits:** the shadow keeps one record, for the one GL context the game
+creates; a second context sharing glad's pointers would need its own. State
+changed by code that does not go through glad (none today) would not be seen.
+Both are what `GE_GLSHADOW_CHECK=1` exists to catch.
+
+**Shared hooks for later merges:** [gfx_opengl.cpp](port/fast3d/gfx_opengl.cpp)
+(inherited) gains the include, one call to `gfx_gl_shadow_install` after glad
+loads in `gfx_opengl_init`, and one to `gfx_gl_shadow_frame` in
+`gfx_opengl_start_frame`. A new pass that needs another piece of state adds it
+to the shadow, setter and query together; `test_gl_queries.py` fails until it
+does.
+
+**Sources:** [gfx_gl_shadow.inl](port/fast3d/gfx_gl_shadow.inl),
+[port_native_arms.c](port/src/port_native_arms.c),
+[test_gl_queries.py](scripts/port/test_gl_queries.py), and the Render
+performance rule in `AGENTS.md`.
+
+**Input idioms:** no menu, prompt or setting was added.
+
 ### FORK-087 — Profilers for the benchmark runs, and where the time goes
 
 **Status:** Implemented on 2026-11-15 at the owner's request, as the second
@@ -105,7 +215,8 @@ Iron Sights at `d56205e` with the `matched` preset on Cradle unless noted):
      and the draw call itself takes 0.63 ms. In the fork's four-player run the
      worker is busy again. That the queries make the driver wait for its
      worker is my reading of this pattern, not something the profile shows
-     directly; removing the queries will confirm or refute it.
+     directly; removing the queries will confirm or refute it. (It held:
+     see FORK-088.)
 2. **The first-person arm mesh is rebuilt every frame** on the game thread
    (`portWardrobeRenderNode`, `portArmMeshBuildJoinedSurface`, `armCopyPart`):
    0.33 ms a frame, 0.56 ms with four players, 0.21 ms of it inside C runtime
@@ -371,6 +482,13 @@ change as real only when it exceeds the runs' own slowest-to-fastest range.
   browser its event loop at the top of every pump; `pcsched.c` now counts that
   wait as pacer sleep (browser build only), or it was charged to the game code
   before it.
+
+- **Smoke check and switches** (added with FORK-088): `bench.py run --smoke`
+  is three scenarios, every preset and three repeats, the check `AGENTS.md`
+  now asks of any change to what is drawn or computed every frame. A build
+  can carry environment of its own (`label=path@NAME=VALUE,...`), so one
+  executable can be measured against itself with a switch flipped, and
+  `bench_web.py plan --env` does the same for a browser session.
 
 **Findings while building it** (they shape how the numbers must be read):
 

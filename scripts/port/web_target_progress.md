@@ -672,8 +672,16 @@ browser and machine were measured.
 Chromium CPU profile of each benchmark run. On Dam with the Graphics features
 off, WebGL `getParameter` takes 6.50 ms of the 10.14 ms frame: the weapon glint
 draw queries twelve pieces of GL state on every call. Four-player Temple, with
-no gun drawn, spends none. Next action: make the fork's passes track the state
-they change instead of querying it, then measure again.
+no gun drawn, spends none.
+
+**GL state answered from memory (FORK-088), 2026-11-15:** the renderer now
+records the state it sets and answers its own queries from that record
+(`gfx_gl_shadow.inl`; `GE_GLSHADOW=0` restores driver queries). Same runtime,
+headless Chromium 157: renderer time per frame fell from 9.87 to 1.83 ms on
+Dam and from 11.64 to 3.08 ms on Cradle at default settings, and a
+single-player frame now costs 2.0-3.7 ms of processor time in all. Only this
+browser and machine were measured; phones were not. Next action: confirm on a
+phone and in Firefox and Safari when one is available.
 
 **Graphics in the browser (FORK-082), 2026-11-15:** Tone Mapping, the Looks,
 Auto Exposure and Baked Lighting now run in the browser, on by default in

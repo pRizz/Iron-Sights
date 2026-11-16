@@ -66,6 +66,33 @@ integrity without a ROM. Install the clone's pre-commit hook with `install-hook`
 the hook never stages files automatically and rejects partially staged render
 inputs. See `scripts/port/hand_gallery.md` for the capture and hook workflow.
 
+## Render performance
+
+A change that adds or alters something drawn or computed every frame gets a
+smoke benchmark and a profile before it is committed: a render pass or
+post-process, a shader, first-person or HUD drawing, an effect, a per-frame
+mesh or texture build, or renderer state handling. The weapon glint looked
+free and cost more than half of a browser frame (FORK-087); nobody could have
+known without measuring.
+
+- Build the commit from before the change (`stock.py --ref <commit> --name
+  before`) and run `bench.py run --smoke` with both builds, on a quiet machine.
+  Take one profiled run of each (`--env GE_PROFILE=profile.txt --keep`) and
+  read `bench_profile.py`'s differences table. For a change the browser build
+  compiles, also check its Render ms with the browser runner.
+- Put the before and after figures in the change's `FORK_CHANGES.md` entry. A
+  cost beyond the runs' own range is either fixed or stated there as the
+  feature's price, with the setting that turns it off.
+- Never ask the GL driver a question in a per-frame path: `glGet*`,
+  `glIsEnabled`, `glGetError`, `glReadPixels`, `glCheckFramebufferStatus`,
+  `glGetUniformLocation` and their like make the driver, and in a browser the
+  GPU process, finish everything first. Cache locations at link time. The
+  state shadow (`port/fast3d/gfx_gl_shadow.inl`, FORK-088) answers the state
+  queries it tracks from memory; a pass that needs another piece of state adds
+  it there, and a run with `GE_GLSHADOW_CHECK=1` must report no mismatch.
+- Documentation, tooling and gameplay-only changes need none of this. See
+  [the benchmark guide](scripts/port/benchmarks.md#smoke-check-for-a-render-change).
+
 ## Iron Sights settings
 
 Settings this fork adds live on the Iron Sights page, not on upstream's pages.
