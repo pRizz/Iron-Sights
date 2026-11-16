@@ -13,6 +13,7 @@
 #include "port_download_page.h"    /* FORK-052, FORK-053 */
 #include "port_reinforcements_menu.h"   /* FORK-081 */
 #include "port_headshots_menu.h"        /* FORK-083 */
+#include "port_options.h"
 #endif
 #include <assets/oddtextures.h>
 #include "assets/image_externs.h"

@@ -1,6 +1,7 @@
 #include <ultra64.h>
 #include <random.h>
 #include "file.h"
+#include "crc.h"
 
 /**
  * Get CRC of bytes from addressA to addressB and save to retval.chksum1 and retval.chksum2

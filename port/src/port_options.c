@@ -29,6 +29,7 @@
 #include <ultra64.h>
 #include "port_crosshair.h"
 #include "port_enhanced_fonts.h"
+#include "port_options.h"
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
 #include "port_crash.h"
 #endif

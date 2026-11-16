@@ -389,6 +389,7 @@ enum { PADSTYLE_XBOX, PADSTYLE_PS, PADSTYLE_NINTENDO };
 static int inputPadStyle(SDL_GameController *gc);
 static const char *inputPadButtonName(int style, SDL_GameControllerButton b);
 static const char *inputPadAxisName(int style, SDL_GameControllerAxis a, int dir);
+s32 portInputDeviceIniKey(s32 dev, const char *name, char *buf, s32 len);
 
 /* "tok1,tok2,...": first = primary, the rest = alternates; "-" = unbound.
  * markCustom = from midas.ini (the launcher wrote it) vs the built-in seed. */

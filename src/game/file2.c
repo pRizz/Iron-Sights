@@ -6,6 +6,7 @@
 #include "options.h"
 #include "file.h"
 #include "file2.h"
+#include "crc.h"
 #include "front.h"
 #include "cheat.h"
 #ifndef TARGET_N64

@@ -50,6 +50,7 @@
 #include "objecthandler.h"
 #include "objective_status.h"
 #include "othermodemicrocode.h"
+#include "line_tri_intersect.h"
 #include "player.h"
 #include "quaternion.h"
 #include "random.h"

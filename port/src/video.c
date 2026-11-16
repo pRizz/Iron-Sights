@@ -877,6 +877,8 @@ static void videoApplyVolumes(void);
  *  - Override tickhz=hw, the console's own frame pacing (an expert ini-only mode). */
 static void videoPersistDerivedTick(void);
 static int videoSetDisplayOption(const char *key, const char *value);
+s32 portIniWriteStrs(const char *section, const char *const *keys, const char *const *vals, s32 n);
+s32 portVideoIniSetKey(const char *key, const char *value);
 
 /* the room_cache that hw pacing switched off, put back when hw is left
  * (it is not a table row, so nothing else would until the next launch).
