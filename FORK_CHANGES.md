@@ -89,8 +89,8 @@ a native x86_64 port as assessed and deferred. Upstream has open, unmerged
 tasks: the two-tier gallery rule, a container runner for the Mac, a layout
 probe, a 64-bit diagnostics ratchet, a 32-bit executable comparison, a repair
 of the headless build (Task 5b), a `GE_POINTER_BITS` build option, and CI
-wiring. Only Task 2, the container runner, has been built and run (below); the
-others have not. Each task extends this entry with what it built and ran.
+wiring. Only Task 2, the container runner, and Task 3, the layout probe, have
+been built and run (below); the others have not. Each task extends this entry with what it built and ran.
 
 *LP64-001 task 2, the container runner (built 2026-11-15 on the owner's Apple
 Silicon Mac, Docker 29.9.2):* `scripts/port/lp64_env.py` runs a command in the
@@ -106,19 +106,33 @@ and passes. Run on the Mac: `build-images` succeeded (3 min 58 s);
 two images; a `gcc -m32` program ran in the i686 container, so 32-bit x86 runs
 under Docker Desktop here. **Reference run (with two workarounds):** the stock headless build has two defects. (1) `cmake ... -DGE_HEADLESS=ON` (with or without `-DGE_VIDEO=OFF`) fails to compile `port/src/port_baked_trace.c` (`SDL.h: No such file or directory`; headless builds do not exclude that SDL-using file). (2) Past that, linking fails with `port_bench.c:110: undefined reference to portRenderAsyncActive` (`s32 portRenderAsyncActive(void)`, defined only in `port/src/video.c`, which the headless list removes; also called from `hitchlog.c` and `pcsched.c`), with the shim or with the image's own 32-bit SDL2 alike. The reference run configured with `cmake -S . -B build/lp64/ref-i686 -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_C_FLAGS=-I/home/dev/project/scripts/port/sdl_shim -DCMAKE_C_STANDARD_LIBRARIES=/home/dev/project/build/lp64/headless-stub/stub.o` and a scratch stub (`build/lp64/headless-stub/stub.c`, ignored by Git, returning 0, compiled with `gcc -m32 -c` in the i686 container). That one stub was the only symbol needed; Task 5b should add exactly `portRenderAsyncActive` to `port/src/headless_stubs.c` and fix the SDL include. Configure and build took 20 s; `audit_buffers.py --mission-smoke ... --frames 600 --jobs 2` ran in the i686 container and exited 0 in 184 s with all 20 missions reported PASS. Task 5b in the LP64-001 plan will repair the stock configuration. No game, engine, port or renderer source was changed.
 
+*LP64-001 task 3, the layout probe:* `scripts/port/abi_probe/probe.c` holds
+compile-time `_Static_assert`s on the structs the renderer and ROM loader depend
+on; it includes `<ultra64.h>`, `<PR/abi.h>`, `"ob.h"` and `"platform_info.h"`,
+and all of them compile at 64-bit with GCC. At every width `s32`/`u32` are 4
+bytes, `Vtx` 16, `Mtx` 64, `Vp` 16 and `Acmd` 8; `IS_64_BIT` matches
+`sizeof(void *)`; `Gfx` is two pointer words with `words.w1` at one pointer
+width. Under 32-bit only, `Gfx` is 8 bytes, `fileentry` 12 and
+`resource_lookup_data_entry` 20. `scripts/port/test_abi_probe.sh` compiles it
+at the host's native width and again with `-m32 -msse2 -mfpmath=sse`, runs
+each, and prints `ABI probe OK (N-bit)`; it skips the `-m32` pass, announcing
+it, when `-m32` does not compile. Flags follow `test_states.sh`. LP64-004 is to
+add each file layout's assertions here. No game, engine, port or renderer
+source was changed.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),
 [inherited 32-bit constraints](docs/port/abi-and-portability.md).
 
-**Validation:** Only LP64-001 Task 2 has run; no milestone is complete. What
+**Validation:** Only LP64-001 Tasks 2 and 3 have run; no milestone is complete. What
 ran: the 11 ROM-free tests in `scripts/port/test_lp64_env.py` (passing); on the
 Mac, `build-images` (3 min 58 s) and three container checks (`gcc -dumpmachine`
 in the aarch64 and x86_64 images, and a `gcc -m32` program in the i686
 container, which printed `i686-runs`); and the i686 headless reference build
 and 20-mission smoke, which worked only with the two workarounds named above
 (the SDL shim include and a scratch `portRenderAsyncActive` stub) and not with
-the stock configuration. Nothing else in the plan has run. The Bright Builds
+the stock configuration. Task 3, in the containers: `python3 scripts/port/lp64_env.py run --arch x86_64 -- bash scripts/port/test_abi_probe.sh` exited 0 and printed `ABI probe OK (64-bit)` and `ABI probe OK (32-bit)`; the same with `--arch aarch64` exited 0 and printed `ABI probe OK (64-bit)`, then `gcc: error: unrecognized command-line option '-m32'` (the availability check's own output) and `ABI probe: -m32 unavailable on this host, skipped`. Changing `sizeof(Vtx) == 16` to `24` temporarily made the x86_64 run fail with `static assertion failed: "Vertex stride"`; the line was restored. Nothing else in the plan has run. The Bright Builds
 checks, the settings placement check and the ROM-free gallery verification
 were run for the documentation changes.
 
