@@ -103,12 +103,7 @@ list, never a shell. `scripts/port/test_lp64_env.py` (11 ROM-free tests) was run
 and passes. Run on the Mac: `build-images` succeeded (3 min 58 s);
 `gcc -dumpmachine` printed `aarch64-linux-gnu` and `x86_64-linux-gnu` in the
 two images; a `gcc -m32` program ran in the i686 container, so 32-bit x86 runs
-under Docker Desktop here. **Not achieved:** the headless i686 reference build
-(`cmake ... -DGE_HEADLESS=ON`, with and without `-DGE_VIDEO=OFF`) fails to
-compile `port/src/port_baked_trace.c` (`SDL.h: No such file or directory`),
-because headless builds do not exclude that SDL-using file. The mission smoke
-was therefore not run (it also rejects `--frames 300`; the minimum is 600).
-No game, engine, port or renderer source was changed.
+under Docker Desktop here. **Not achieved:** the headless i686 reference build. The stock `cmake ... -DGE_HEADLESS=ON` (with or without `-DGE_VIDEO=OFF`) fails to compile `port/src/port_baked_trace.c` (`SDL.h: No such file or directory`; headless builds do not exclude that SDL-using file). A configure flag does get past it, using `-DCMAKE_C_FLAGS=-I/home/dev/project/scripts/port/sdl_shim` or the image's own 32-bit SDL2, but both then fail identically at link time: `port_bench.c:110: undefined reference to portRenderAsyncActive`, defined in `port/src/video.c`, which the headless source list removes. So no configure flag yields a headless executable on this commit, and the mission smoke was not run. Task 5b in the LP64-001 plan will repair the stock configuration. No game, engine, port or renderer source was changed.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),

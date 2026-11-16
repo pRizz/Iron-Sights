@@ -56,8 +56,8 @@ Mac cannot regenerate it.
   **before** Task 2's Step 7 installs the hook on the Mac: with the hook
   installed, the Mac cannot commit a strict-tier change at all, which is the
   rule working as designed. Never use `--no-verify` to get around it.
-- **Tasks 6 and 7** change deferred-tier inputs. They wait until Task 1 is on
-  `main` and the Mac's clone has pending enabled.
+- **Tasks 5b, 6 and 7** change deferred-tier inputs. They wait until Task 1 is
+  on `main` and the Mac's clone has pending enabled. Task 5b goes first.
 
 ## Review Focus
 
@@ -368,9 +368,20 @@ spec depends on the i686 reference running here.
 
 - [ ] **Step 6: Run the i686 reference headless with the ROM**
 
+The stock headless configuration does not compile on `main`:
+`port/src/port_baked_trace.c` (FORK-082) includes `SDL.h` and is not excluded
+under `GE_HEADLESS`. Task 5b repairs that. Until it lands, pass a configure
+flag and change no source. Try the test shim first, as below. If that does
+not compile or link inside the game's include paths, use the image's own
+32-bit SDL2 instead: replace the `-DCMAKE_C_FLAGS=...` argument with
+`-DCMAKE_C_FLAGS=-I/home/dev/sdl2-linux-i686/include/SDL2` and add
+`-DCMAKE_C_STANDARD_LIBRARIES="-L/home/dev/sdl2-linux-i686/lib/i386-linux-gnu -Wl,-rpath,/home/dev/sdl2-linux-i686/lib/i386-linux-gnu -lSDL2"`.
+Record which one worked; Task 5b builds on that answer.
+`audit_buffers.py` accepts `--frames` from 600 upward.
+
 ```bash
-python3 scripts/port/lp64_env.py run --arch i686 -- sh -c 'cmake -S . -B build/lp64/ref-i686 -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON && cmake --build build/lp64/ref-i686 -j"$(nproc)"'
-python3 scripts/port/lp64_env.py run --arch i686 -- python3 scripts/port/audit_buffers.py --mission-smoke build/lp64/ref-i686/IronSights --rom /rom/baserom.u.z64 --frames 300 --jobs 2 --output build/lp64/ref-i686/smoke.json
+python3 scripts/port/lp64_env.py run --arch i686 -- sh -c 'cmake -S . -B build/lp64/ref-i686 -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_C_FLAGS=-I/home/dev/project/scripts/port/sdl_shim && cmake --build build/lp64/ref-i686 -j"$(nproc)"'
+python3 scripts/port/lp64_env.py run --arch i686 -- python3 scripts/port/audit_buffers.py --mission-smoke build/lp64/ref-i686/IronSights --rom /rom/baserom.u.z64 --frames 600 --jobs 2 --output build/lp64/ref-i686/smoke.json
 ```
 
 Expected: the build links `build/lp64/ref-i686/IronSights`, and the smoke run
@@ -573,8 +584,13 @@ Expected: `OK`
 
 - [ ] **Step 5: Record the baseline**
 
+Until Task 5b repairs the headless configuration, one file cannot find
+`SDL.h`, which would enter the baseline as an error. Add the flag Task 2
+found to work (the shim form is shown) so the baseline describes the code and
+not the missing header. `syntax_command` keeps `-I` flags, so no code changes.
+
 ```bash
-python3 scripts/port/lp64_env.py run --arch x86_64 -- sh -c 'cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && python3 scripts/port/lp64_diagnostics.py update && python3 scripts/port/lp64_diagnostics.py check'
+python3 scripts/port/lp64_env.py run --arch x86_64 -- sh -c 'cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-I/home/dev/project/scripts/port/sdl_shim && python3 scripts/port/lp64_diagnostics.py update && python3 scripts/port/lp64_diagnostics.py check'
 ```
 
 Expected: a baseline with a `total` in the low thousands and `check` exiting
@@ -721,6 +737,73 @@ git push origin main
 
 ---
 
+### Task 5b: Repair the headless build
+
+**Requires Task 1 on `main` and `midas.galleryDefer` set on the Mac.**
+Added on 2026-11-15, after Task 2 found the stock headless configuration
+broken. The 64-bit plan uses the headless i686 build as its reference, so it
+has to build without special flags.
+
+**Files:**
+- Modify: `CMakeLists.txt` (the `GE_HEADLESS` block near line 338)
+- Create: `scripts/port/test_headless_configure.sh`
+- Modify: `FORK_CHANGES.md` (FORK-089, and FORK-082 where it describes Baked
+  Lighting's build)
+
+**Interfaces:**
+- Produces: `cmake -S . -B DIR -DGE_HEADLESS=ON` followed by a build
+  succeeds in the i686 container with no extra flags.
+- Fixed behaviour: the change is confined to `GE_HEADLESS` builds. A
+  `GE_VIDEO=ON` build's compile and link commands do not change.
+
+- [ ] **Step 1: Write the failing test, `test_headless_configure.sh`**
+
+It configures a headless build into a temporary directory with
+`-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`, then compiles only
+`port/src/port_baked_trace.c` using its recorded command, and asserts the
+compile succeeds. Compiling one file keeps the test fast enough for CI.
+
+- [ ] **Step 2: Run and confirm failure**
+
+Run: `python3 scripts/port/lp64_env.py run --arch i686 -- bash scripts/port/test_headless_configure.sh`
+Expected: FAIL with `fatal error: SDL.h: No such file or directory`.
+
+- [ ] **Step 3: Repair it in `CMakeLists.txt`**
+
+Use the mechanism Task 2 proved (its report and FORK-089 say which). If the
+shim worked: under `GE_HEADLESS`, give `port/src/port_baked_trace.c` the
+include directory `scripts/port/sdl_shim`, so the bake runs in its
+time-sliced, thread-free path. Do not edit `port_baked_trace.c`.
+
+- [ ] **Step 4: Run and confirm the test passes, then build and run in full**
+
+```bash
+python3 scripts/port/lp64_env.py run --arch i686 -- bash scripts/port/test_headless_configure.sh
+python3 scripts/port/lp64_env.py run --arch i686 -- sh -c 'cmake -S . -B build/lp64/ref-i686-stock -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON && cmake --build build/lp64/ref-i686-stock -j"$(nproc)"'
+python3 scripts/port/lp64_env.py run --arch i686 -- python3 scripts/port/audit_buffers.py --mission-smoke build/lp64/ref-i686-stock/IronSights --rom /rom/baserom.u.z64 --frames 600 --jobs 2 --output build/lp64/ref-i686-stock/smoke.json
+```
+
+Expected: the test passes, the build links, and the smoke run matches the
+result Task 2 recorded with the flag.
+
+- [ ] **Step 5: Prove the shipped build is untouched**
+
+```bash
+python3 scripts/port/compare_win32.py commits HEAD WORKTREE
+```
+
+Expected: exit 0.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add CMakeLists.txt scripts/port/test_headless_configure.sh FORK_CHANGES.md
+git commit -m "Make the headless build compile again without SDL"
+git push origin main
+```
+
+---
+
 ### Task 6: Pointer-width build option
 
 **Requires Task 1 on `main` and `midas.galleryDefer` set on the Mac.**
@@ -832,6 +915,7 @@ after `python3 scripts/port/test_hand_gallery.py`, add:
           python3 scripts/port/test_lp64_diagnostics.py
           python3 scripts/port/test_compare_win32.py
           bash scripts/port/test_pointer_bits.sh
+          bash scripts/port/test_headless_configure.sh
           cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           python3 scripts/port/lp64_diagnostics.py check
 ```
