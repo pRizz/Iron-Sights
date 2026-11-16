@@ -233,12 +233,18 @@ diagnostics check then printed `OK: 1432 diagnostics, baseline 1432`. No game, e
 changed; the one port source changed is `port/src/headless_stubs.c` (Task 5b),
 which only `GE_HEADLESS` builds compile, so no shipped build's sources changed.
 (That paragraph is LP64-001's close.) Milestone LP64-002 (type hygiene) has
-built Tasks 1 to 10: Tasks 1 to 8 are on `main`; Tasks 9 and 10 are local
-commits on the branch `lp64/types-strict`, not pushed, and its Task 11 (landing
-through a gallery regeneration on the laptop) has not started. With Task 10 a
-64-bit build compiles every C and C++ file with the three int/pointer
-conversions as errors; no 64-bit build has been run, and the rest of the plan
-has not been built or verified; its milestone status table says so.
+built Tasks 1 to 10 and a final-review fix wave: Tasks 1 to 8 are on `main`;
+Tasks 9 and 10 are on the branch `lp64/types-strict`, pushed at dd408f1, where
+CI run 43880427784 ran the gate (below); the fix wave's three commits follow
+them on that branch, local and not pushed. Its Task 11 (landing through a
+gallery regeneration on the laptop) has not started, and the milestone is not
+done. With the fix wave, a 64-bit build makes every int/pointer conversion a
+compile error: C with the three `-Werror=` flags, C++ with
+`-Werror=int-to-pointer-cast` (it rejects the other two by itself). 64-bit
+builds compile and link in the containers, but none has been run, and the rest
+of the plan has not been built or verified; its milestone status table says
+so. What LP64-002 leaves to later milestones is in one list, "LP64-002
+hand-off", at the end of the LP64-002 notes below.
 
 Inherited behaviour: upstream builds only as a 32-bit program (`-m32`, and
 32-bit WebAssembly), by design, and this fork inherited that. FORK-031 recorded
@@ -656,7 +662,10 @@ pre-commit hook refuses a strict-tier change on the Mac on any branch, which
 the plan's Task 2 puts to the owner. Not covered by the planned gate and
 recorded for later milestones: about 527 calls to functions without a
 prototype, of which the pointer-returning ones are in the plan, and about
-1,780 incompatible-pointer-type places, both present at 32 bits too.
+1,780 incompatible-pointer-type places, both present at 32 bits too. (The 527
+were the `implicit-function-declaration` warnings of the 64-bit headless tree
+at ce60a74, pointer-returning functions included; the final review fix wave
+re-measured what is left, in the "LP64-002 hand-off" list.)
 
 *LP64-002 task 1, tooling (2026-11-16, local commit "Count the video configuration and guard against
 truncating casts"; not pushed):* no game, engine, port or renderer source changed. (1) Both
@@ -1764,7 +1773,8 @@ now listed with their declarations in the plan's Task 9. *What ran:* step 1
 i686 container, all 43 passed (122 s), `test_buffers.sh` without the
 sanitizer.
 
-*LP64-002 task 9, on the branch `lp64/types-strict` (local commits, not pushed;
+*LP64-002 task 9, on the branch `lp64/types-strict` (written as local commits;
+the branch was pushed with Task 10 at dd408f1 and CI ran on it, see Task 10;
 the strict-tier gallery is regenerated on a machine that can render before the
 branch reaches `main`).* *First commit, `model.c` and its declarations:*
 *Declarations* (old type to new): in `src/bondtypes.h`, `ModelAnimation.address`
@@ -2023,8 +2033,13 @@ conflicts (`sprintf`, `cos`, `sin`, `cosf`, `sinf`, `sqrtf`). Compiling the
 same command with `-std=gnu++17` succeeds, and GCC 13's `<chrono>` includes
 `<sstream>` only under `__cplusplus >= 202002L`. CI's `linux` job builds in
 `scripts/port/linux-release.Dockerfile`, Ubuntu 22.04 with GCC 11; that image was
-not built here, so that GCC 11's `<chrono>` stops short of `<pthread.h>`
-is inferred, not reproduced. `gfx_pc.cpp` also reaches `src/sched.h` this way
+not built for this commit, so that GCC 11's `<chrono>` stops short of `<pthread.h>`
+is inferred, not reproduced. Later, during the final review, that image
+(GCC 11.4.0, linux/amd64 under emulation on the Mac) built commit 79138e5 with
+`linux_build.py` to a linked `IronSights`; packaging and the Sentry smoke were
+not run. That shows GCC 11 compiles the 32-bit renderer with the game folders
+on its include path without the conflict; it does not show which header chain
+GCC 11 takes, so the cause stays inferred. `gfx_pc.cpp` also reaches `src/sched.h` this way
 in the containers and compiled only because it includes the game headers
 itself. The fix is in the 64-bit include order: `CMakeLists.txt` gathers
 `src src/game src/inflate` in `PORT_GAME_INCLUDE` and, only when
@@ -2114,8 +2129,10 @@ sounds. The strict-tier gallery images are expected to be unchanged; they are
 regenerated on a machine that can render before the branch reaches `main`.
 
 *LP64-002 task 10, the gate (2026-11-16, on the branch `lp64/types-strict`,
-local commit "Make 64-bit pointer conversions a compile error and gate CI on
-it"; not pushed):* the count and its ratchet are replaced by a compile gate.
+commit "Make 64-bit pointer conversions a compile error and gate CI on
+it", pushed with the branch at dd408f1; the final review fix wave below
+changed its C++ flags, its `gate` command and its canary):* the count and its
+ratchet are replaced by a compile gate.
 *Flags:* `CMakeLists.txt` keeps its warning options in `GE_WARNING_OPTIONS`:
 `-w` by default (the 32-bit and web builds, unchanged), and in the
 `GE_POINTER_BITS EQUAL 64` branch `-w` for C++ only, while 64-bit C gets
@@ -2129,14 +2146,17 @@ list). GCC 14 and later make implicit declarations and incompatible pointer
 types errors by default; naming them keeps the verdict the same there, but
 only GCC 13.3 was run (the containers' compiler). CI's tests job runs on
 `ubuntu-24.04`, whose default `gcc` is Ubuntu 24.04's GCC 13 according to the
-runner image's documentation; that was read, not checked on the runner. Nine warnings that have no `-W`
+runner image's documentation; CI run 43880427784 (`windows-release.yml` on
+the branch at dd408f1) then showed GCC 13.3.0 on the runner. Nine warnings that have no `-W`
 option remain in the headless log and eleven in the video log: `MIN`/`MAX`
 redefined (`include/math.h:87-88`, once each in the headless log, twice each in
 the video log), structs first declared in a parameter list (`title.h:26`
 twice, `indy_commands.c:262`, `objective_status2.c:59,69`), a useless storage
 class (`chraidata.c:50`) and a pointer mismatch in a conditional
 (`language.c:447`); only `-w` or a source edit removes them, and neither was
-done here. C++ keeps `-w`. *32-bit builds unchanged:* configured with the old
+done here. C++ keeps `-w`. (Both superseded by the final review fix wave:
+source edits cleared the nine and eleven C warnings, and 64-bit C++ dropped
+`-w` for `-Werror=int-to-pointer-cast`.) *32-bit builds unchanged:* configured with the old
 and the new `CMakeLists.txt` in the x86_64 container (the i686 container is
 the same image), the 32-bit `compile_commands.json` files are byte-identical:
 headless (329 entries), video with `SDL2_LINUX_ROOT` (360) and video with the
@@ -2191,10 +2211,14 @@ an integer field (`Op11Record.unk0c`, `uintptr_t`) the gate cannot see a
 narrowing and the probe is the only guard; a scratch header narrowing it to
 `u32` failed with `static assertion failed: "ModelRoData_Op11Record.unk0c[15]
 is pointer-sized"`. The first version of this task asserted only the first
-five cases' fields (fix round 1). The `bg.c` local
-`bg_envdata_entry_local.data` (`< PORTMAX`), `initanitable.c`'s file-local
+five cases' fields (fix round 1). `initanitable.c`'s file-local
 `struct anim_entry` and its `s32 *` table (`!= (s32 *)1`) and the bg globals
 of `BG_SEG_IS_OFFSET` cannot be named from the probe; the gate covers them.
+This note first said the same of the `bg.c` local
+`bg_envdata_entry_local.data` (`< PORTMAX`), but that field is an `s32`
+(`src/game/bg.c:1031-1035`) holding a bg segment offset and then a portal
+index, so neither the probe nor the gate covers it; the final review moved it
+to LP64-004 (the "LP64-002 hand-off" list).
 At 64 bits the probe also prints, without asserting,
 `sizeof(struct AnimModelSlot) 192, sizeof(Model) 264`. Swapping one assertion
 to `sImageTableEntry.width` failed with `static assertion failed:
@@ -2210,7 +2234,8 @@ build/lp64/gate-video`; these lines come before `hand_gallery.py verify
 --allow-pending`, which fails on this branch until the laptop regenerates the
 gallery. The x86_64 image (Ubuntu 24.04, amd64, as the runner) has
 `gcc-multilib`, `g++-multilib` and `libsdl2-dev` 2.30.0 installed together;
-the package download on the runner has not been tried. *Gate runs*
+on the runner, CI run 43880427784 installed `libsdl2-dev` 2.30.0 through
+that profile. *Gate runs*
 (configure and `ge_buildinfo` of both trees, then `gate`): aarch64 1 s, then
 329 headless and 360 video entries compiled with 0 failures (2 s per tree, 4 s
 for the CI line); x86_64 6 s, then the same with 0 failures (5 s and 8 s, 12 s
@@ -2230,12 +2255,21 @@ of CI's tests step in the i686 container (129 s): 45 passed, including
 inputs`). `test_buffers.sh` ran without `MIDAS_BUFFER_SANITIZE=1`, which hangs
 under i686 emulation. The browser build is checked by CI only (no emsdk image
 here). The 32-bit `compile_commands.json` comparison was repeated with the
-final `CMakeLists.txt`: identical. The gate has not yet run on the CI runner.
-*Left for later milestones:* the 28 allowlisted truncating casts in 13 files
+final `CMakeLists.txt`: identical. *On the runner* (after the commit, with
+the branch pushed at dd408f1): CI run 43880427784 (`windows-release.yml` on
+the branch, GCC 13.3.0, `libsdl2-dev` 2.30.0 installed) printed
+`build/lp64/gate: 329 files compiled, 0 failed` and `gate-video: 360 files
+compiled, 0 failed`, then stopped at the stale-gallery `verify`, as designed;
+run 43880503386 (`web-pages.yml` on the branch) built the browser build
+(deploy skipped, as it is off `main`).
+*Left for later milestones* (as first written; the "LP64-002 hand-off" list
+below supersedes it): the 28 allowlisted truncating casts in 13 files
 (`scripts/port/lp64_casts_allowed.txt` names each file's reason); the
 hard-coded sizes; the behaviour of the sentinel comparisons at 64 bits
-(LP64-003); the `-m32` test harnesses, which do not run at 64 bits; about 527
-calls to functions without a prototype that do not return pointers, and about
+(LP64-003); the `-m32` test harnesses, which do not run at 64 bits; the calls
+to functions without a prototype (this note said "about 527 ... that do not
+return pointers", a planning figure that also counted pointer-returning
+calls; re-measured in the hand-off list), and about
 1,780 incompatible-pointer-type places (the 64-bit build printed 397 / 404 and
 1,790 / 1,798 such warnings), neither covered by the gate. Owned by LP64-003,
 found in review and recorded here: `struct AnimModelSlot`
@@ -2322,6 +2356,128 @@ build of both trees compiled and linked in both containers with no error
 (aarch64 9 s and 25 s, x86_64 28 s and 36 s), warnings as above;
 `compare_win32.py commits HEAD WORKTREE` exit 0, `identical in loaded code and
 data` (1 min 59 s); `test_lp64_diagnostics.py` 36 tests OK.
+*Third commit, "Record the LP64-002 runs, the re-measured leftovers and one
+hand-off list" (documentation only):* the Task 9 and Task 10 notes, the status
+paragraph above and the plan's LP64-002 row now state what ran on the runner
+(CI run 43880427784 and run 43880503386, above); the `gfx_shiny.cpp` note
+records the Linux release image's build of 79138e5; the Task 10 probe note no
+longer claims the gate covers `bg_envdata_entry_local.data`; the LP64-002
+plan's Task 1 Step 3 test 2 and Task 10 Step 5 are corrected; FORK-022 records
+the open hook defect. *Calls to functions without a prototype, re-measured
+(2026-11-16, GCC 13.3, aarch64 container, the fix wave's 64-bit headless and
+video trees, configured as in the task check, in scratch directories in
+place of the two named here):* for every `.c` entry of
+`build/lp64/gate/compile_commands.json` and
+`build/lp64/gate-video/compile_commands.json`, the command run was the
+entry's own `command` without `-c` and `-o FILE`, followed by `-fsyntax-only
+-Wimplicit-function-declaration` (after the build's `-Wno-` flag, so it takes
+effect), in the entry's `directory`; the warnings matching `implicit
+declaration of function 'NAME' [-Wimplicit-function-declaration]` were merged
+by `file:line:column` across both trees: 408 places,
+311 names, 101 files (headless 396, video 403); GCC warns at a name's first
+call in a translation unit or scope, so later calls are not counted. `zlib.c`
+is included (1 place). The review's probe found 312 names at 409 places; the
+difference is `currentPlayerSetMatrix10CC`, declared by the fix wave's first
+commit. A search of the tree's definitions for a pointer return type among the
+311 names found one, `memcpy`, called without `<string.h>` at
+`port/src/port_native_arms.c:100` (strict tier) with its result unused; the
+search reads definitions with a regular expression and would miss a pointer
+return type hidden behind a typedef. The earlier "about 527" was the planning
+count of the same warning in the 64-bit headless tree at ce60a74, which also
+counted the calls to pointer-returning functions that Task 3 declared.
+*What ran before this commit* (the full task check, once): step 1 in the
+x86_64 container, exit 0, `329 files compiled, 0 failed` and `360 files
+compiled, 0 failed` (30 s); step 2, the i686 headless build and the 20-mission
+smoke, 20 of 20 passed (3 min 16 s); step 3, `compare_win32.py commits HEAD
+WORKTREE`, exit 0, `identical in loaded code and data` (1 min 55 s); every
+line of CI's tests step in the i686 container (2 min 30 s): 45 of 46 passed,
+including `test_pointer_bits.sh` (case 5 ran, that image has MinGW), the
+gate lines and `test_lp64_diagnostics.py`, and `hand_gallery.py verify
+--allow-pending` failed as expected (`Gallery is stale for strict rendering
+inputs`); `test_buffers.sh` ran without `MIDAS_BUFFER_SANITIZE=1`, which hangs
+under i686 emulation. `compare_win32.py commits dd408f1 HEAD` (the fix wave's
+second commit against the reviewed state) exited 0, `identical in loaded code
+and data; .buildid differs` (1 min 53 s), so against `main` at 5c77e73 the
+32-bit Windows executable still differs only in `_loadAnimationFrame` and
+`_gunTickHandState`. Not run: the browser build (CI only, no emsdk image
+here), GCC 14 or clang, and any 64-bit executable.
+
+**LP64-002 hand-off** (the one list of what LP64-002 leaves, by owner; each
+item was checked against the code of the fix wave's last commit, and the
+per-task notes above give the detail):
+
+- *LP64-003, layout and sentinels:* the behaviour at 64 bits of the sentinel
+  comparisons listed in the LP64-002 plan's "Behaviour-sensitive sites" (the
+  layout probe asserts their struct fields pointer-sized), among them
+  `lightfixture.c`'s `0x0E000000` segment test; `texLoad` writes a 4-byte
+  `osVirtualToPhysical` result through `s32 *updateword` (`image.c:2641` and
+  `:2738`) into words that are pointer-sized at 64 bits; `vtxstore.c`
+  allocates its records with a literal 0x14 stride (`tmp = 0x14`), short of
+  the 32-byte record at 64 bits; `StandTileLocusCallbackRecord` is cleared and
+  set as `s32` flag words (`stanCheckLinkedSpecialTile`,
+  `stanTileDistanceRelated` in `stan.c`), whose second word lands in `rooms`
+  at 64 bits; `mema7000A2F8` (`mema.c:568`) passes addresses to a
+  `void (*)(u32, memaspace *)` callback; the `(u32)` texture-ID truncations in
+  `othermodemicrocode.c:362` and `port_textures.c:82`, which would let a
+  64-bit pointer with a small low word pass as a texture number; `u32 vaddr` /
+  `u32 timg` copies of `Gfx` words (`propobj.c:9167`, `:9292`, `:9476`,
+  `bg.c:4513`, `:4714`) and `((u32 *)gdl)[1]` reading half of `w0` (`bg.c`,
+  `propobj.c`); the `sImageTableEntry` and `ModelFileTextures` strides, 12
+  bytes at 32 bits and 16 at 64; the Op11 union (`bondtypes.h:1085-1088`),
+  where `uintptr_t unk0c[16]` doubles to 0x80 bytes and moves
+  `BoundingVolumeRadius`, `RwDataIndex` and `BaseAddr`; `struct AnimModelSlot`
+  and `hand.field_B68` viewed as a `Model` (192 against 264 bytes);
+  `initobjects.c:9-11`'s `&monAnimNN` initialisers; `Acmd` words that hold host
+  buffer addresses in 32 bits; `audi.c` returning `osVirtualToPhysical` from
+  `s32` functions and the `ALIGN64_V1` callers; `stanGetLocusField0`'s
+  `(intptr_t) rooms` returned as `s32` (a flag, harmless); `prop.c:1523`
+  dividing a `sizeof` by 4; `stan.c:250` (DEBUG) comparing an `s32` with
+  `ptr_firstroom_0`; the suspend image's 32-bit addresses (suspend points are
+  unavailable at 64 bits). Traces that print pointer-sized `Gfx` words with
+  `%08x`: `port/fast3d/gfx_pc.cpp:8942` (`sysFatalError`) and its older
+  siblings `bg.c:4088` (`vtxbounds`) and `lightfixture.c:160` (`lightdbg`),
+  not changed.
+- *LP64-003, tooling (its first tooling task):* `lp64_casts.py` does not see
+  `(u32)((uintptr_t)p)` (an extra parenthesis) or `(uint32_t)(uintptr_t)p`
+  (`uint32_t` is not in its type list); the calls to functions without a
+  prototype (408 places, above) and the incompatible-pointer-type places
+  (1,790 / 1,798 warnings), neither gated; the `-m32` test harnesses, which do
+  not run at 64 bits.
+- *LP64-004, converters:* the in-place promotions of ROM data (model
+  `PROMOTE`, `SETUP_PROMOTE`, the `ailist` IDs passed as
+  `(intptr_t) ...->ailist` to `ailistFindById(s32)`, `struck_anim`, the
+  animation tables, `alBnkfNew` through `portBnkfOffset`); `port/src/animdata.c`
+  declares `animation_table_ptrs2` as `intptr_t[]` while `initanitable.c:214`
+  defines it as `struct ModelAnimation *[]`; `objecthandler_2.c:161`, `:184`
+  and `:191` pass `(intptr_t) name`, which holds a size, to narrower size
+  parameters; the widened `ModelFileTextures` (16 bytes at 64 bits) read in
+  place over the 12-byte file record (`romfile_model.c`); `bg.c`'s
+  `bg_envdata_entry_local.data`, an `s32` holding a bg segment offset and
+  then a portal index (`bg.c:1031-1035`, `:1214`); the text bank slots read
+  as 32-bit words (`langGet`); the `bg_room_data` stride lines (`bg.c` 4455,
+  4659, 6394, 6427); `ob.c` rebuilding compiled-in bg addresses in 32-bit
+  arithmetic; `BG_SEG` applied to `s32` file slots; the audio bank, music
+  sequence table and `RareALSeqData` 32-bit layouts; `SetupIntroCredits.unk04`
+  and `SetupIntroCamera.prev` in ROM records walked with `sizeof`;
+  `portStanPack`'s 4-byte room slots.
+- *The 28 allowlisted truncating casts* in 13 files
+  (`scripts/port/lp64_casts_allowed.txt` gives each file's reason): nine files
+  existing before LP64-002, `portStanPack` and `portBnkfOffset` (LP64-004's
+  stan and audio bank converters), the suspend image (LP64-003) and
+  `save_ramrom_to_devtool`'s development-host path (kept as on 32-bit).
+- *LP64-007 and the macOS project:* only GCC 13.3 has run the gate. GCC 14 and
+  later (LP64-007, a newer shipping host) make `implicit-function-declaration`,
+  `incompatible-pointer-types` and `int-conversion` errors by default; the
+  named `-Wno-` flags keep the verdict for the first two, untested. Clang (the
+  macOS project) has not compiled the tree and does not know
+  `-Wno-discarded-qualifiers`.
+- *The browser build:* the game's `<inttypes.h>` traces built for wasm32 in
+  the browser build on 5c77e73 and dd408f1 (run 43880503386); the fix wave
+  adds `<inttypes.h>` to `gun.c`, which CI's browser build checks after a push
+  (no emsdk image here).
+- *Task 11, the laptop trip:* regenerate the review gallery (stale for strict
+  inputs on the branch) and fix the open `current_branch` hook defect recorded
+  in FORK-022; neither is done.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
@@ -12357,6 +12513,18 @@ owner's Windows laptop for this change, since `hand_gallery.py` is a
 strict-tier input; `generate` reported 0 changed image cells, only
 `manifest.json` (both fingerprints) and `index.html` changed, and `verify`
 then reported it fresh.
+
+Open defect in that branch test (found by LP64-002's final review,
+2026-11-16; not fixed): `current_branch` (`hand_gallery.py`) compares the
+output of `git symbolic-ref --short HEAD` with `main`, which misses `main` in
+two cases. With a tag named `main`, `--short` prints `heads/main`. On a
+case-insensitive volume (the Mac's), `git switch Main` makes HEAD
+`refs/heads/Main`, which Git resolves to the `refs/heads/main` file, so a
+commit advances `main` while the hook sees the branch `Main` and lets a
+strict-tier change through with a stale gallery. `hand_gallery.py` is strict
+tier, so the fix is scheduled with the gallery regeneration on the Windows
+laptop (LP64-002 Task 11). Until then, check `git symbolic-ref HEAD` before
+committing on the Mac.
 
 CI performs ROM-free gallery integrity/freshness and workflow tests. The README
 links to the gallery and setup guide. This supplements the hand/arm contracts

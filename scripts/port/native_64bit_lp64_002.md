@@ -317,8 +317,9 @@ Tests, in `test_lp64_casts.py`:
 1. `find_casts("x = (u32)(uintptr_t)p;")` returns `[1]`;
    `find_casts("x = (uintptr_t)p;")` returns `[]`;
    `(s32) (intptr_t) p` with spaces is found.
-2. `check` exits 1 naming a file whose count exceeds its allowlist line, and 0
-   when counts are equal or lower.
+2. `check` exits 1 naming a file whose count differs from its allowlist line,
+   higher or lower, and 0 only when every count equals its line (the allowlist
+   has been exact-match since 82ada88).
 3. A file absent from the allowlist with one cast fails.
 
 Record today's sites in `lp64_casts_allowed.txt` with the reason
@@ -799,9 +800,14 @@ Then run the full task check. Record durations.
 `AGENTS.md`'s 64-bit paragraph describes the gate in place of the ratchet.
 FORK-089 and the LP64-002 row record every task's commits, counts and runs,
 and what is left for later milestones (the allowlisted casts, the hard-coded
-sizes, sentinel behaviour, the `-m32` test harnesses at 64 bits, the 527
-calls to functions without a prototype that do not return pointers, and the
-1,780 incompatible-pointer-type places, neither of which this gate covers).
+sizes, sentinel behaviour, the `-m32` test harnesses at 64 bits, the calls to
+functions without a prototype, and the 1,780 incompatible-pointer-type places,
+neither of which this gate covers). The calls were written here as "the 527
+... that do not return pointers"; 527 was the planning count at ce60a74, which
+included pointer-returning calls. The final review fix wave re-measured them
+on 2026-11-16 (GCC 13.3, both 64-bit trees): 408 places, 311 names, one of
+them (`memcpy`, result unused) returning a pointer; FORK-089's "LP64-002
+hand-off" list has the command and the rest of what is left.
 
 ```bash
 git commit -m "Make 64-bit pointer conversions a compile error and gate CI on it"
