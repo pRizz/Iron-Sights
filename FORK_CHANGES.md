@@ -371,9 +371,16 @@ x64 is outside the 64-bit plan; see scripts/port/native_64bit_plan.md`; with
 drops `-m32`, `-msse2`, `-mfpmath=sse` and `-no-pie`, adds `-ffp-contract=off`,
 omits the `_FILE_OFFSET_BITS`/`_TIME_BITS` definitions on `ge_hd_textures` and
 `ge_save_transfer`, and links SDL2 by name from `${SDL2_LINUX_ROOT}/lib` (or the
-system) instead of the i386 library directory. The `-m32` in the compiled-in
-asset object flags (`ASSET_C_FLAGS`) is untouched: that pipeline is
-fallback-only, and fallback is refused at 64. Under `EMSCRIPTEN` the first
+system) instead of the i386 library directory. The compiled-in asset objects are
+untouched and still 32-bit: the `ASSET_OBJS_KEEP` set is built by custom
+commands with `ASSET_C_FLAGS`, which still carries `-m32`, and is linked into
+every build, `GE_ROMDATA_FALLBACK=OFF` included (only the served set is
+dropped). So `GE_POINTER_BITS=64` configures but could not link until those
+objects are built at the target width. Custom commands are absent from
+`compile_commands.json`, so neither `test_pointer_bits.sh` nor the diagnostics
+count sees them; this is left for LP64-002. The 64-bit `SDL2_LINUX_ROOT` link
+(`${root}/lib`) is unverified: untested, it ignores multiarch directories such
+as `lib/x86_64-linux-gnu`, and it sets no build rpath. Under `EMSCRIPTEN` the first
 branch is still `include(cmake/emscripten.cmake)` and every later guard keeps its
 `32` behaviour, so no line reached by the web build changes at the default
 value. `scripts/port/test_pointer_bits.sh` configures into temporary

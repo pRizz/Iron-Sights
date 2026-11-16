@@ -864,7 +864,9 @@ Expected: FAIL at case 2 (the 64-bit configure still contains `-m32`).
 
 Keep the edit to the existing flag blocks (near lines 10 to 60, the i686
 definitions near 452 and 476, and the Linux SDL link near 559). Do not touch
-the asset-object pipeline: it is fallback-only, and fallback is 32-bit only.
+the asset-object pipeline: its keep set is still built `-m32` and linked at
+every setting, which a 64-bit link cannot take, and that is LP64-002's work
+(see the plan's hazard inventory).
 Update the file's opening comment to say the build is 32-bit by default and
 64-bit by option.
 
