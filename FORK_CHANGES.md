@@ -91,6 +91,25 @@ probe, a 64-bit diagnostics ratchet, a 32-bit executable comparison, a
 `GE_POINTER_BITS` build option, and CI wiring. Each task extends this entry
 with what it built and ran.
 
+*LP64-001 task 2, the container runner (built 2026-11-15 on the owner's Apple
+Silicon Mac, Docker 29.9.2):* `scripts/port/lp64_env.py` runs a command in the
+right container (`build-images`; `run --arch i686|x86_64|aarch64 -- COMMAND...`).
+i686 and x86_64 use the root `Dockerfile`'s `goldeneye` image under
+`linux/amd64`; aarch64 uses `scripts/port/lp64-arm64.Dockerfile`
+(`midas-lp64-arm64`, `linux/arm64`, Ubuntu 24.04 with build-essential, cmake,
+ninja, python3, git). The checkout mounts at `/home/dev/project`, and the ROM
+read-only at `/rom/baserom.u.z64` with `GE_ROM` set. Docker gets an argument
+list, never a shell. `scripts/port/test_lp64_env.py` (11 ROM-free tests) was run
+and passes. Run on the Mac: `build-images` succeeded (3 min 58 s);
+`gcc -dumpmachine` printed `aarch64-linux-gnu` and `x86_64-linux-gnu` in the
+two images; a `gcc -m32` program ran in the i686 container, so 32-bit x86 runs
+under Docker Desktop here. **Not achieved:** the headless i686 reference build
+(`cmake ... -DGE_HEADLESS=ON`, with and without `-DGE_VIDEO=OFF`) fails to
+compile `port/src/port_baked_trace.c` (`SDL.h: No such file or directory`),
+because headless builds do not exclude that SDL-using file. The mission smoke
+was therefore not run (it also rejects `--frames 300`; the minimum is 600).
+No game, engine, port or renderer source was changed.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),
