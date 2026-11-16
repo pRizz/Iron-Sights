@@ -47,7 +47,7 @@ void rmonHandleTestMsg(struct RmonMesgBase *msg);
 void rmonHandlePrintfMsg(struct RmonMesgPrintf *msg);
 
 // sprintf internal function to unwrap paramaters
-extern char *proutSprintf(char *dst, const char *src, size_t count);
+extern u8 *proutSprintf(u8 *dst, const u8 *src, size_t count);
 
 void rmonInit(void) {
     rmonCurrentMesgStack = 0;
