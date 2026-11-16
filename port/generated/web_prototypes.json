@@ -776,7 +776,7 @@
   ],
   [
     "set_BONDdata_field_10E0",
-    "void (s32)",
+    "void (Mtx *)",
     "src/game/bondview.c"
   ],
   [
@@ -946,7 +946,7 @@
   ],
   [
     "sub_GAME_7F078464",
-    "void (s32)",
+    "void (LookAt *)",
     "src/game/bondview.c"
   ],
   [

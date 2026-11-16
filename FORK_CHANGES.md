@@ -1852,6 +1852,79 @@ including `test_wardrobe.sh`, `test_ads.sh`, `test_upstream_merge.sh` and
 strict rendering inputs"). Building the changed files at 32 bits before and
 after: `model.c` and `chr_b.c` lose their `int-conversion` warnings and no
 warning was added.
+*Second commit, `bondview2.c` and its declarations:* *Declarations* (old type to
+new): in `src/game/bondview.h`'s `struct player`, `field_5C`, `field_60`,
+`field_64`, `field_68` `s32` to `Mtx *` (each is filled by `dynAllocateMatrix`
+and used as a matrix); `field_23C` `s32` to `RenderPosView *`; `field_10E0` `s32`
+to `intptr_t` with a `/* Mtx * */` note, not the `Mtx *` its accessors now take
+and return: with `Mtx *` GCC grouped `player.c`'s four zero stores at
+0x10d4 to 0x10e0 (three pointers and this field) into one 16-byte vector store
+in `initBONDdataforPlayer`, a kind of difference the brief does not accept,
+while an integer field keeps that function identical; `set_BONDdata_field_10E0`
+stores `(intptr_t) arg0` and `get_BONDdata_field_10E0` returns
+`(Mtx *) g_CurrentPlayer->field_10E0` (`bondview.c`); `field_10E4` `s32` to
+`LookAt *` (`sub_GAME_7F078464` stores and `sub_GAME_7F078474` returns it, now
+typed `LookAt *`); `players_cur_animation` `s32` to `intptr_t` (it holds
+`ptr_animation_table` plus an offset). The font table globals
+`copy_1stfonttable` and `copy_2ndfonttable` `s32` to `struct font *` and
+`struct fontchar *` (definitions in `bondview.c`, externs in `bondview.h` and
+`bondview_internal.h`), and `setFontTables` takes `(struct fontchar *, struct font *)`.
+The brief names `initBondDATA.h:29-32` for the matrix fields; the declarations
+are `bondview.h:347-351` (`initBondDATA.h` is unchanged). In `src/bondtypes.h`,
+`TankRecord.collision` `collision_data *` to `s32`: the word at 0x80 is the
+`edges` count of a `collision_data` overlaid there (`propobj.c` passes
+`&tank_render->collision` as a `collision_data *`, and `bondview2.c` passes the
+word as `chrpropTestPointInPolygon`'s `s32 edges`). *Locals and idioms in
+`bondview2.c`:* `helddst`, playerTick's `anim` and `cur` are `intptr_t` with
+`(intptr_t)` in place of `(s32)` on the buffer and animation-table bases; the
+intro walk advances `intro_record` through `(intptr_t)`; the intro animation
+uses `ANIM_FROM_TABLE`; the death animation keeps its own expression with
+`(intptr_t)` operands, because `ANIM_FROM_TABLE` reordered the table load
+across the second `randomGetNext()` call (an unsequenced argument, so legal, but
+needless); the swirl table index and `index * 0` comparison convert through
+`(intptr_t)`; the debug floats read `(f32)(uintptr_t)`; the matrix walk adds
+in `uintptr_t`; `start_stan` is `StandTile *`; `roomid` is `char *`
+(`bgDebPrintROOMID`'s type); `OS_K0_TO_PHYSICAL(ptr_copy)` is passed as
+`(s32 *)`, `OS_PHYSICAL_TO_K0(perspmtx)` uncast, and the two gauge-bar
+`OS_PHYSICAL_TO_K0` results as `(uintptr_t)` (`buildGaugeBarDL`'s integer
+address parameter); `draw_blackbox_to_screen` and the two `bondview.c` setters
+are called without `(s32)` casts; `dynAllocateLights(2)` is assigned to the
+`LookAt *` through `(LookAt *)` (it is declared `Light *`; both are display-list
+light blocks). `propobj.c` tests `get_BONDdata_field_10E0() != NULL`, which is
+the value the next line already normalises to 0 or 1. *Side-effect prototypes:*
+`bondview2.c` now includes `dyn.h` and the new `src/game/radar.h`
+(`display_red_blue_on_radar`, also included by `radar.c`), and gains
+`bgDebPrintROOMID` in `bg.h` and `get_ptr_itemheader_in_hand`,
+`getPlayerWeaponBufferForHand` and `getSizeBufferWeaponInHand` in `gun.h`
+(defined in `bg.c` and `gun.c`, so each prototype copies its definition). This
+declares ten functions `bondview2.c` called implicitly; every argument is a
+pointer, an `s32` or the `GUNHAND` enum, and every return is a pointer, `void`
+or `u32`, so no argument is narrower than `int`, none is a float and no return
+is narrower than `int`. `port/generated/web_prototypes.json` and the regenerated
+`web_prototypes.h` give `set_BONDdata_field_10E0` and `sub_GAME_7F078464`
+their pointer parameters. *Signedness:* each former `s32` address is `intptr_t`
+and each former `u32` is `uintptr_t`; `TankRecord.collision` keeps the `s32` the
+call already cast to. *Struct layout:* the new field types are 4 bytes with
+4-byte alignment on i686 and wasm32, so `struct player` and `TankRecord` keep
+their offsets at 32 bits; no unsigned hex literal initialises a widened field.
+*Count:* 133 to 40 (`int-conversion` 58 to 20, `int-to-pointer-cast` 41 to 14,
+`pointer-to-int-cast` 34 to 6; 10 files to 2): `bondview2.c` 81, `include/PR/os.h`
+3, `bg.c` 3, `explosion.c` 2, `include/PR/gbi.h` 1, `glass.c` 1, `glass2.c` 1 and
+`sky.c` 1 to zero (the header and caller sites were `get_BONDdata_field_10E0`'s
+`s32` result passed to `osVirtualToPhysical` and `gSPMatrix`, and
+`OS_K0_TO_PHYSICAL`/`OS_PHYSICAL_TO_K0` uses and a `gSPLookAt` of the `s32`
+`lookat` in `bondview2.c`); `gunfire.c` 38
+and `port_sight.c` 2 remain. *Windows comparison* (`compare_win32.py commits
+HEAD WORKTREE`, exit 0): "identical in loaded code and data; .buildid differs".
+No function differs. *What ran:* step 1 (`update`, 22 s with both builds, 40 in
+2 files, no `--allow-rise`); step 2, the i686 headless build (14 s) and the
+20-mission smoke, 20 of 20 `PASS` (185 s); step 3 as above; `lp64_casts.py check` (28 casts in 13 files, unchanged); the same harness lines as the first commit in the i686 container (120 s): 42 passed, `hand_gallery.py verify --allow-pending` failed as expected. Building every
+C file of the headless tree with the diagnostic warnings before and after:
+`bondview2.c` and `glass.c` lose their `int-conversion` warnings, `bondview2.c`
+loses ten implicit declarations, and no warning was added (`port_baked_trace.c`
+showed two `fabsf`/`powf` implicit declarations only in the current-tree half,
+an artefact of the comparison tool, whose HEAD copy lacks `scripts/`, where
+the SDL shim lives; that file and the shim are unchanged).
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),

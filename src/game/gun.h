@@ -418,6 +418,9 @@ u16 *get_ptr_first_title_line_item(ITEM_IDS item);
 u16 *get_ptr_second_title_line_item(ITEM_IDS item);
 u16 *get_ptr_long_watch_text_for_item(ITEM_IDS item);
 Gfx *gunDrawWatchAmmoDisplay(Gfx *gdl);
+ModelFileHeader *get_ptr_itemheader_in_hand(GUNHAND hand);
+u8 * getPlayerWeaponBufferForHand(GUNHAND hand);
+u32 getSizeBufferWeaponInHand(s32 hand);
 #ifndef TARGET_N64
 s32 portGadgetHudNameShown(void); /* gadget name drawn in the left-hand ammo slot (joy_port whitelist) */
 s32 portMissionTimerShown(void); /* solo clock in its own top-left HUD area */

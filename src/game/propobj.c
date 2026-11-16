@@ -7782,7 +7782,7 @@ void sub_GAME_7F04AC20(PropRecord *prop, ModelRenderData *mrData, s32 arg2)
 
         if (destroyed)
         {
-            destroyed = get_BONDdata_field_10E0();
+            destroyed = get_BONDdata_field_10E0() != NULL;
             destroyed = destroyed != 0;
         }
 

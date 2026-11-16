@@ -344,11 +344,11 @@ struct player
    * Used as parameter to gbi macro.
    * Offset 0x005c.
    */
-  s32 field_5C;
+  Mtx *field_5C;
 
-  /* 0x0060 */ s32 field_60;
-  /* 0x0064 */ s32 field_64;
-  /* 0x0068 */ s32 field_68;
+  /* 0x0060 */ Mtx *field_60;
+  /* 0x0064 */ Mtx *field_64;
+  /* 0x0068 */ Mtx *field_68;
 
   /**
    * Collision / clipping related.
@@ -697,7 +697,7 @@ struct player
 
   s32 field_234;
   s32 field_238;
-  s32 field_23C;
+  RenderPosView *field_23C;
   s32 field_240;
   f32 watch_scale_destination;
   s32 field_248;
@@ -1155,8 +1155,8 @@ struct player
   Mtxf* viewtoworldmtxf;
   Mtx* projmatrix;
   Mtxf* projmatrixf;
-  s32 field_10E0; // ptr
-  s32 field_10E4; // ptr
+  intptr_t field_10E0; /* Mtx * */
+  LookAt *field_10E4;
   Mtxf* field_10E8;
   Mtxf* field_10EC;
   f32 c_scalelod60; // canonical name
@@ -1215,7 +1215,7 @@ struct player
   f32 swayoffset0;
   f32 swayoffset2;
   f32 field_1280;
-  s32 players_cur_animation;
+  intptr_t players_cur_animation;
   f32 field_1288;
 
   /**
@@ -2650,9 +2650,9 @@ extern s32 status_bar_text_buffer_index;
 //D:8003689C
 extern s32 display_statusbar;
 //D:800368A0
-extern s32 copy_1stfonttable;
+extern struct font *copy_1stfonttable;
 //D:800368A4
-extern s32 copy_2ndfonttable;
+extern struct fontchar *copy_2ndfonttable;
 //D:800368A8
 extern s32 upper_text_buffer_index;
 //D:800368AC
@@ -2769,7 +2769,7 @@ void jp_hudmsgBottomShow(char *string);
 // VERSION_US
 #define HUDMESSAGEBOTTOM hudmsgBottomShow
 void hudmsgBottomShow(char *string);
-void setFontTables(s32 arg0, s32 arg1);
+void setFontTables(struct fontchar *arg0, struct font *arg1);
 #endif
 
 Gfx * bondviewRenderDebugBondView(Gfx *arg0);
@@ -2816,8 +2816,10 @@ f32 bondviewGetPlayerYawRadians(void);
 Mtxf *camGetWorldToScreenMtxf(void);
 void transformAndNormalizeByLength2Dto3D(struct coord2d *in, coord3d *out, f32 value);
 void bondviewTransformManyPosToViewMatrix(RenderPosView *arg0, s32 arg1);
-s32 sub_GAME_7F078474(void);
-s32 get_BONDdata_field_10E0(void);
+LookAt *sub_GAME_7F078474(void);
+Mtx *get_BONDdata_field_10E0(void);
+void sub_GAME_7F078464(LookAt *arg0);
+void set_BONDdata_field_10E0(Mtx *arg0);
 Mtx *currentPlayerGetProjectionMatrix(void);
 Gfx *bondviewRenderProp(PropRecord *arg0, Gfx *arg1, s32 arg2);
 f32 getPlayer_c_lodscalez(void);

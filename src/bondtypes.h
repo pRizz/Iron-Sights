@@ -3692,7 +3692,7 @@ typedef union
     typedef struct TankRecord
     {
         inherits ObjectRecord;
-        collision_data *collision /*0x80*/;
+        s32 collision /*0x80*/; /* edges of the collision_data at 0x80 (propobj.c passes &collision) */
         rect4f  rect;       /*0x84*/
         //s32 unk88;
         //s32 unk8C;

@@ -130,8 +130,8 @@ extern coord3d ZeroCoordSpawnPos;
 extern s32 status_bar_text_buffer_index;
 extern s32 display_statusbar;
 #ifdef BUGFIX_R0
-extern s32 copy_1stfonttable;
-extern s32 copy_2ndfonttable;
+extern struct font *copy_1stfonttable;
+extern struct fontchar *copy_2ndfonttable;
 #endif
 extern s32 upper_text_buffer_index;
 extern s32 display_upper_text_window;

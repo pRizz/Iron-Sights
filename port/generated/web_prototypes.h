@@ -480,7 +480,7 @@ void setSixExplosionAndSmokeEntries(void);
 void setTextOrientation(s32);
 
 /* src/game/bondview.c */
-void set_BONDdata_field_10E0(s32);
+void set_BONDdata_field_10E0(Mtx *);
 
 /* src/game/bondview2.c */
 void set_BONDdata_outside_watch_menu_flag(s32);
@@ -582,7 +582,7 @@ void sub_GAME_7F05E83C(GUNHAND);
 void sub_GAME_7F05E978(Model *, s32);
 
 /* src/game/bondview.c */
-void sub_GAME_7F078464(s32);
+void sub_GAME_7F078464(LookAt *);
 
 /* src/game/options.c */
 void sub_GAME_7F0A6A80(void);
