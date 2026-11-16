@@ -9172,7 +9172,7 @@ bool bgTestHitOnObj(coord3d *arg0, coord3d *arg1, coord3d *arg2, Gfx *gdl, Gfx *
                 }
                 else
                 {
-                    vtxbase = (Vertex *) ((((s32) vertices) + (vaddr & 0x00ffffff)) - (op << 4));
+                    vtxbase = (Vertex *) ((((intptr_t) vertices) + (vaddr & 0x00ffffff)) - (op << 4));
                 }
             }
 #endif
@@ -10330,7 +10330,7 @@ dummy_label_995911:
                     }
                 }
 
-                chrpropAddBulletHit(hitinfo, prop, -pos.z, hitpart, node, &hit, mtxindex, (s32) hitnode, model, penetrates, (obj->flags2 & PROPFLAG2_00100000) != FALSE);
+                chrpropAddBulletHit(hitinfo, prop, -pos.z, hitpart, node, &hit, mtxindex, hitnode, model, penetrates, (obj->flags2 & PROPFLAG2_00100000) != FALSE);
             }
         }
     }

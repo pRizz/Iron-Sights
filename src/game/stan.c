@@ -40,7 +40,7 @@ void getTileMidPoint(StandTile *tile, coord3d *out);
 // bss
 struct StanPrefixRecord {
     //CODE.bss:8007B120
-    s32 stanfile;
+    struct StanPrefixRecord *stanfile;
     //CODE.bss:8007B124
     StandTile *ptr_firstroom;    // read as offset 4, hence the struct
 };
@@ -110,7 +110,7 @@ u8 list_of_tilesizes[] = {
 //D:80040F58
 struct StandTile * standTileStart = NULL;
 //D:80040F5C
-s32 ptr_firstroom_0 = 0;
+u8 *ptr_firstroom_0 = 0;
 //D:80040F60
 struct StandTile* stanTileEnd = NULL;
 //D:80040F64
@@ -684,7 +684,7 @@ static struct StanPrefixRecord *portStanPack(struct StanPrefixRecord *file)
         return file;   /* unpacked - caller keeps the source stan */
     }
     dstw = (u32 *) packed;
-    dstw[1] = (u32) ((u8 *) packed + o_first);
+    dstw[1] = (u32) (uintptr_t) ((u8 *) packed + o_first); /* LP64-004: stan converter (4-byte room slots) */
 
     badrooms = 0;
     for (i = 0; i < nrooms; i++)
@@ -697,7 +697,7 @@ static struct StanPrefixRecord *portStanPack(struct StanPrefixRecord *file)
         {
             badrooms++;
         }
-        dstw[2 + i] = (u32) ((u8 *) packed + be);
+        dstw[2 + i] = (u32) (uintptr_t) ((u8 *) packed + be); /* LP64-004: stan converter (4-byte room slots) */
     }
 
     dst = (u8 *) packed + o_first;
@@ -735,8 +735,8 @@ static struct StanPrefixRecord *portStanPack(struct StanPrefixRecord *file)
         v[2] = (f32) o_first;
         v[3] = (f32) nrooms;
         v[4] = (f32) badrooms;
-        v[5] = (f32) (u32) packed;
-        v[6] = (f32) (u32) file->ptr_firstroom;
+        v[5] = (f32) (uintptr_t) packed;
+        v[6] = (f32) (uintptr_t) file->ptr_firstroom;
         ge_dbg_vec("stanpack ntiles/bytes/ofirst/rooms/bad/dst/src", v, 7);
     }
 
@@ -2501,11 +2501,11 @@ StanCollisionResult sub_GAME_7F0B1DDC(StandTile **startTile, f32 x, f32 z, f32 r
                 once++;
                 v[0] = (f32) visitedCount;
                 v[1] = (f32) cat;
-                v[2] = (f32) (u32) *startTile;
-                v[3] = (f32) (u32) standTileStart;
+                v[2] = (f32) (uintptr_t) *startTile;
+                v[3] = (f32) (uintptr_t) standTileStart;
                 for (h = 0; h < 4; h++)
                 {
-                    v[4 + h] = (f32) (u32) tileStack[h];
+                    v[4 + h] = (f32) (uintptr_t) tileStack[h];
                 }
                 ge_dbg_vec("locusnull visited/cat/start/stanbase/s0..s3", v, 8);
             }
@@ -2538,7 +2538,7 @@ StanCollisionResult sub_GAME_7F0B1DDC(StandTile **startTile, f32 x, f32 z, f32 r
                     {
                         if ((callbackB == NULL || !callbackB(tile, pointI, edgeDist, pointDistA, pointDistB, record)) && (tile->points[pointI].link >> 4))
                         {
-                            linkedTile = ((u32) standTileStart) + (tile->points[pointI].link << 3);
+                            linkedTile = (StandTile *) (((u8 *) standTileStart) + (tile->points[pointI].link << 3));
                             for (i = cat - 1; i >= 0; i--)
                             {
                                 if (linkedTile == tileStack[i])
@@ -2707,7 +2707,7 @@ s32 stanIsSpecialBit1Set(StandTile *arg0, struct StandTileLocusCallbackRecord *a
     s32 val = STAN_MID_NIB(arg0->mid.half, 12);
     if (g_StanTileSpecialFlags[val] & STANTILEFLAG_FORCECROUCH)
     {
-        arg1->rooms = 1;
+        arg1->rooms = (s32 *) 1;
     }
 
     return 0;
@@ -2797,7 +2797,7 @@ s32 stanTileDistanceRelated(StandTile **arg0, f32 arg1, f32 arg2, f32 arg3, stru
 
 s32 stanGetLocusField0(struct StandTileLocusCallbackRecord *arg0)
 {
-    return arg0->rooms;
+    return (intptr_t) arg0->rooms;
 }
 
 
@@ -3458,7 +3458,7 @@ struct StandTilePoint *stanMatchTileName(char *id)
             s32 walked = 0;
             f32 v[8];
             once = 1;
-            v[0] = (f32) (u32) t;
+            v[0] = (f32) (uintptr_t) t;
             v[1] = (f32) ((StandTile *) t)->id;
             while (*(u32 *) t != 0 && walked < 100000) {
                 s16 h = t->link;
@@ -3466,10 +3466,10 @@ struct StandTilePoint *stanMatchTileName(char *id)
                 t = (StandTilePoint *) ((u8 *) t + list_of_tilesizes[STAN_PTCOUNT(h)]);
             }
             v[2] = (f32) walked;
-            v[3] = (f32) (u32) t;
+            v[3] = (f32) (uintptr_t) t;
             v[4] = (f32) sizeof(StandTilePoint);
-            v[5] = (f32) (u32) &(((StandTilePoint *) 0)->link);
-            v[6] = (f32) (u32) &(((StandTile *) 0)->points);
+            v[5] = (f32) (uintptr_t) &(((StandTilePoint *) 0)->link);
+            v[6] = (f32) (uintptr_t) &(((StandTile *) 0)->points);
             v[7] = (f32) (u16) tile->link;
             ge_dbg_vec("stanmatch start/id0/walked/end/szpt/offlink/offpts/link0", v, 8);
         }
@@ -3537,12 +3537,12 @@ void sub_GAME_7F0B2F00(StandTilePoint** arg0) {
 
 void stanDetermineEOF(struct StanPrefixRecord *file /* canonically r */, s32 origBase, u8 *newBase)
 {
-    s32 delta;
+    intptr_t delta;
     void **roomPtr;
     StandTile *tile;
     u8 *tileSizes;
     
-    delta = ((s32) newBase) - origBase;
+    delta = ((intptr_t) newBase) - origBase;
 #ifndef TARGET_N64
     /* PC: compiled-in stan files already hold real pointers, so the
      * offset-to-pointer rebase must be zero or every room pointer is doubled. A
@@ -3568,8 +3568,8 @@ void stanDetermineEOF(struct StanPrefixRecord *file /* canonically r */, s32 ori
     assert(*r==0);
     #endif
   
-    standTileStart = (StandTile *)(((s32)file->ptr_firstroom + delta) - 0x80);
-    ptr_firstroom_0 = (s32)file->ptr_firstroom + delta;
+    standTileStart = (StandTile *)(((intptr_t)file->ptr_firstroom + delta) - 0x80);
+    ptr_firstroom_0 = (u8 *)((intptr_t)file->ptr_firstroom + delta);
     
     newBase = list_of_tilesizes;
     roomPtr = (void **)&file->ptr_firstroom;
@@ -3613,7 +3613,7 @@ void stanDetermineEOF(struct StanPrefixRecord *file /* canonically r */, s32 ori
                     f32 v[10];
                     s32 h;
                     steps++;
-                    v[0] = (f32) (u32) tile;
+                    v[0] = (f32) (uintptr_t) tile;
                     v[1] = (f32) ((u8 *) list_of_tilesizes)[STAN_PTCOUNT(tile->tail.half)];
                     for (h = 0; h < 8; h++) {
                         v[2 + h] = (f32) ((u16 *) tile)[h];
@@ -3623,7 +3623,7 @@ void stanDetermineEOF(struct StanPrefixRecord *file /* canonically r */, s32 ori
             }
 #endif
 
-            tile = (StandTile *)((s32)tile
+            tile = (StandTile *)((intptr_t)tile
                 + (tileSizes = newBase)[STAN_PTCOUNT(tile->tail.half)]);
         }
         while (*(s32 *) tile != 0);

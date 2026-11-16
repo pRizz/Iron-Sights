@@ -9,3 +9,4 @@ port/src/romfile_setup.c	7	existing before LP64-002
 port/src/romfile_stan.c	4	existing before LP64-002
 src/game/bg.c	3	existing before LP64-002
 src/game/propobj.c	1	existing before LP64-002
+src/game/stan.c	2	LP64-002 task 7: portStanPack writes room pointers into the packed image's 4-byte slots; LP64-004's stan converter replaces them

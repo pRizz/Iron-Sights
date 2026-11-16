@@ -1401,6 +1401,109 @@ changed). `test_buffers.sh` ran without `MIDAS_BUFFER_SANITIZE=1`, whose
 AddressSanitizer binary hangs under the Mac's `qemu-i386` emulation (Tasks 3
 to 5); without it the harness passed in 4 s.
 
+*LP64-002 task 7, background, collision and setup address arithmetic
+(2026-11-16, local commit "Do background, collision and setup address
+arithmetic in pointers"; not pushed):* *Declarations:* `ptr_bg_data`,
+`gptr_stan` and `ptr_bgdata_offsets` (`src/game/bg.c`, and the `extern`) went
+from `s32` to `u8 *`, so their loads drop the `(s32)` casts.
+`getIndexOfPORTALID` takes `uintptr_t` and is now declared in `bg.h` (bg.c
+called it without a prototype). `bgDebugRemoved7F0B9DE4` takes and returns
+`Gfx *` (its `lv.c` caller passes and stores one; that clears `lv.c`'s two
+places with no `lv.c` edit). `s_bound_info.next` (`bg.h`) is `uintptr_t`, not
+`void *`: it only ever holds the 0/1 flag passed as `s32 next`.
+`chrpropAddBulletHit`'s `unk44` is `ModelNode *` (`chr.h`, `chrprop.c`), so
+`propobj.c` passes `hitnode` without `(s32)`; `chrAllocate`'s fifth parameter is
+`struct AIListRecord *` (`chr.h`, `chr.c`), matching the
+`init_GUARDdata_with_set_values` it forwards to; `if_actor_able_set_on_path`
+takes `struct patrol_path *` (`chraction.h`, `.c`), matching
+`set_actor_on_path`. `stan.c`'s local `struct StanPrefixRecord` holds a
+`struct StanPrefixRecord *stanfile` (it overlays the pointer global
+`stan_prefix`) and `ptr_firstroom_0` is `u8 *`. `sub_GAME_7F0B7F84` (both
+copies) keeps the portal address in an `intptr_t`. *Idioms:* the PC
+`BG_SEG_IS_OFFSET`/`BG_SEG_TO_PTR` (`bg.h`) and `SETUP_PROMOTE` (`prop.c`) do
+their arithmetic in `uintptr_t` (the `TARGET_N64` macros are untouched); the
+ten intro-record steps in `bondview_r.c` went from `(s32)rec + sizeof(...)` to
+`(u8 *)rec + sizeof(...)`; stan's link step is
+`(StandTile *)((u8 *)standTileStart + (link << 3))`; `lightfixture.c`'s segment
+test and rebase use `uintptr_t` and a `u8 *` base; the vertex-table loop bound
+at bg.c:6436 is `(u8 *)vertices + size`. Where a `(u8 *)` form changed the
+generated code (GCC reassociated the address sum), the cast became `(intptr_t)`
+for a former `(s32)` and `(uintptr_t)` for a former `(u32)`, the same type at
+32 bits: the five room `csize` differences in `load_bg_file`, bg.c's vertex
+base sums, `stanDetermineEOF`'s relocation `delta` and its three uses, and
+`propobj.c:9175`. Nine `(s32)ptr != 0` tests in `chraction.c` became
+`ptr != NULL`; the debug float traces in `bondview_r.c`, `chraction.c`,
+`initpathtablesomething.c`, `stan.c` and `cseq.c` cast through `uintptr_t`.
+Each form gives the same address at 32 bits because the old one was a 32-bit
+sum of the same pointer and byte count, now added as a byte pointer or a
+pointer-sized integer of the same signedness. *Converter seams:* three places
+read a 32-bit word that holds a pointer or ID and are marked for LP64-004:
+`bondview_r.c:380` (`SetupIntroCredits.unk04`) and `prop.c`'s vehicle and
+aircraft `ailistFindById((intptr_t) ...->ailist)`; `portStanPack`'s two
+4-byte room-slot writes are `(u32)(uintptr_t)`, allowlisted
+(`lp64_casts_allowed.txt`, 25 casts in 10 files). *Signedness:* every
+replaced `(s32)` became `intptr_t` and every `(u32)` `uintptr_t`, so
+comparisons, shifts and the `% 1` at bg.c:6398 are unchanged. *Struct sizes:*
+at 32 bits `s_bound_info` stays 0x1C and `StanPrefixRecord` 8; no other struct
+changed. *Not changed:* the `bg_room_data` stride lines (bg.c 4455, 4659, 6394,
+6427; recorded under "Hard-coded sizes" in the plan for LP64-004) and the
+`TARGET_N64` blocks. *Files touched:* in `src/game/`: `bg.c`, `bg.h`,
+`bondview_r.c`, `chr.c`, `chr.h`, `chraction.c`, `chraction.h`, `chrprop.c`,
+`initpathtablesomething.c`, `lightfixture.c`, `prop.c`, `propobj.c`, `stan.c`
+(CRLF kept); `src/libultra/audio/cseq.c`; the baseline, the cast allowlist,
+the plan's hazard list, and the first "Global Constraints" bullet of
+`native_64bit_lp64_002.md`, which now also accepts functions that differ
+because a declaration they use changed in the same commit and lists the
+accepted kinds. *Count:* 587 in 72 files to 460 in 68 files (130
+`int-conversion`, 126 `int-to-pointer-cast`, 204 `pointer-to-int-cast`), 127
+fewer; the plan expected about 139, less the 20 stride places left, plus 8
+one-offs fixed. To zero: `bg.h` 7, `chrai.c` 1, `chrprop.c` 1,
+`initpathtablesomething.c` 2. Lower: `bg.c` 69 to 27, `bondview_r.c` 14 to 1,
+`chr.c` 3 to 1, `chraction.c` 24 to 8, `lightfixture.c` 8 to 4, `lv.c` 4 to 2,
+`prop.c` 13 to 4, `propobj.c` 6 to 3, `stan.c` 28 to 4, `cseq.c` 3 to 2. No file
+rose. At 32 bits the edits add two `incompatible-pointer-types` warnings where
+decomp aliases of one layout meet (`chraction.c:293`, `AIRecord *` to
+`struct AIListRecord *`; `chrai.c:1724`, `PathRecord *` to
+`struct patrol_path *`). *Left:* for Task 9, `chr.c:1701` (its callee is in
+strict `model.c`) and `bondview2.c`'s intro walk and traces; for Task 8, bg.c
+390, 3697, 4085, `lightfixture.c` 413 and 452, `prop.c` 1544 and 1556, `stan.c`
+2884 and 2890, `chraction.c`'s six pointer differences, `cseq.c:92`,
+`bondview_r.c:126` and `lv.c:273`; the `BONDDATAMTX` places at bg.c 706, 747
+and 837 are Task 9's. *Windows comparison:* `compare_win32.py commits HEAD
+WORKTREE` exited 1 (112 s; `.text` VirtualSize 0x3358d4 to 0x3358f4). Every
+differing word in `.data` (175), `.rdata` (7,828) and `.CRT` (3) is an image
+address in both builds, and `.ctors` differs only in constructor addresses.
+Two functions differ, both through changed declarations:
+`_if_actor_able_set_on_path` (register choice and block order; the same null,
+state and flag tests and the same `set_actor_on_path` call) and
+`_load_bg_file` (register choice, operand order, one extra register copy, the
+segment sum as load-mask-add instead of mask-add-from-memory, a load of
+`ptr_bg_data[1]` moved before the store to `ptr_bgdata_offsets`, and two
+independent global stores with no call between them in swapped order; the
+same tests and stored values). *64-bit problems found (LP64-003/004):*
+`((u32 *)gdl)[1]` reads half of `w0` at 64 bits (bg.c, `propobj.c`), and
+`propobj.c`'s `u32 vaddr = gdl->words.w1` truncates; the `lightfixture.c`
+`0x0E000000` segment test; `BG_SEG` applied to `s32` file slots
+(`((s32 *)ptr_bg_data)[n]`) and the env-data `s32` that holds a pointer and then
+a portal index; `portStanPack`'s 4-byte slots; `StandTileLocusCallbackRecord`
+used as `s32` flag words (`stanCheckLinkedSpecialTile`,
+`stanTileDistanceRelated`), whose second word lands in `rooms` at 64 bits;
+`SetupIntroCredits.unk04` and `SetupIntroCamera.prev` hold pointers in ROM
+records walked with `sizeof`, and `prop.c:1523` divides a `sizeof` by 4; the
+`TARGET_N64` branches of bg.c no longer type-check against the pointer
+globals (pointer plus pointer at 3021, 3116, 3206); `stan.c:250` (DEBUG only)
+compares an `s32` with `ptr_firstroom_0`. *What ran:* step 1 (`update`, 22 s,
+460 in 68 files, no `--allow-rise`). Step 2: the i686 headless build exited 0
+(10 s, incremental) and the 20-mission smoke exited 0 with 20 of 20 `PASS`
+(184 s). Step 3 as above. `lp64_casts.py check` passed on the host (25 casts).
+Every line of CI's "Test gameplay, cache and release tooling without a ROM"
+step except the two `cmake` lines ran in the i686 container, plus
+`test_stan_callbacks.sh`, `test_image_bank.sh` and `test_dyn.sh`: all 42
+passed (119 s), including `lp64_diagnostics.py check` and `hand_gallery.py
+verify --allow-pending`. `test_buffers.sh` ran without
+`MIDAS_BUFFER_SANITIZE=1` (its AddressSanitizer binary hangs under
+`qemu-i386`); without it, it passed in 4 s.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),

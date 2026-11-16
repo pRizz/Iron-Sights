@@ -65,7 +65,7 @@ void alCSeqNew(ALCSeq *seq, u8 *ptr)
                 v[1] = (f32)hdr[0];
                 v[2] = (f32)hdr[1];
                 v[3] = (f32)hdr[2];
-                v[4] = (f32)(u32)ptr;
+                v[4] = (f32)(uintptr_t)ptr;
                 ge_dbg_vec("cseq swap/div/trk0/trk1/base", v, 5);
             }
         }

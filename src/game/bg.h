@@ -30,10 +30,10 @@ struct levelentry
  * unchanged; only values below 0x400000 or tagged with segment 0x0F are treated
  * as offsets (a `>= 0x10000000` test breaks on Windows). */
 #define BG_SEG_IS_OFFSET(off) \
-    ((u32) (off) < 0x00400000u || (((u32) (off)) >> 24) == 0x0Fu)
+    ((uintptr_t) (off) < 0x00400000u || (((uintptr_t) (off)) >> 24) == 0x0Fu)
 #define BG_SEG_TO_PTR(base, off) \
-    (BG_SEG_IS_OFFSET(off) ? ((void *) (((u32) (base)) + (((u32) (off)) & 0x00FFFFFFu))) \
-                           : ((void *) (u32) (off)))
+    (BG_SEG_IS_OFFSET(off) ? ((void *) (((uintptr_t) (base)) + (((uintptr_t) (off)) & 0x00FFFFFFu))) \
+                           : ((void *) (uintptr_t) (off)))
 #endif
 
 typedef struct RoomVtxBatchBounds {
@@ -127,7 +127,7 @@ typedef struct s_bound_info
     // could be draw order?
     s32 unk1;
     struct bbox2d bbox;
-    void* next;
+    uintptr_t next;
     #endif
 
 
@@ -216,8 +216,9 @@ u32 bgDecompress(u8* source, u8 *target);
 bool bgTestBulletHitBackground(coord3d *from, coord3d *to, s32 roomnum, struct HitThing *hit);
 void delete_room_data(s32 roomID);
 void load_bg_file(LEVEL_INDEX stagenum);
+s32 getIndexOfPORTALID(uintptr_t portalID);
 
-s32 bgDebugRemoved7F0B9DE4(s32 arg0, s32 arg1, s32 arg2);
+Gfx *bgDebugRemoved7F0B9DE4(Gfx *arg0, s32 arg1, s32 arg2);
 void bgRemoved7F0B9DF4(s32 arg0);
 s8 bgSwapConnectedRooms(s32 index);
 s32 bgGetDataPortalsControlBytes1Bit1(s32 index);

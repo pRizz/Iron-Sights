@@ -1453,7 +1453,7 @@ void setupDoor(s32 arg0, struct DoorRecord *door, s32 arg2)
 /* ROM loading (port/src/romfile_setup.c): a setup loaded from the ROM is the
  * N64 image (offsets), so it uses the N64 promotion. Set right after the file loads, below. */
 s32 g_portSetupFromRom;
-#define SETUP_PROMOTE(base, val) (g_portSetupFromRom ? (void *) (((u32) (base)) + ((u32) (val))) : (void *) (u32) (val))
+#define SETUP_PROMOTE(base, val) (g_portSetupFromRom ? (void *) (((uintptr_t) (base)) + ((uintptr_t) (val))) : (void *) (uintptr_t) (val))
 
 /* bring-up (GE_DUMP_BOND): called at load milestones to find which step
  * corrupts the path waypoints data. */
@@ -2165,7 +2165,7 @@ void proplvreset2(enum LEVELID stageId)
                 /** Ugly matching hack. 
                 *   TODO: investigate if there's a way to get rid of this.
                 */
-                if ((((u32) local_stage) ^ 0) + ((u32)vol->plink));
+                if ((((uintptr_t) local_stage) ^ 0) + ((uintptr_t)vol->plink));
 
                 vol->plink = SETUP_PROMOTE(local_stage, vol->plink);
                 vol->pos.f[0] *= roompos_2;
@@ -2548,7 +2548,7 @@ void proplvreset2(enum LEVELID stageId)
                             pdef_veh->turnrot60    = 0.0f;
                             pdef_veh->roty         = 0.0f;
                             pdef_veh->speedtime60  = -1.0f;
-                            pdef_veh->ailist       = ailistFindById(pdef_veh->ailist);
+                            pdef_veh->ailist       = ailistFindById((intptr_t) pdef_veh->ailist); /* LP64-004: setup converter (an AI list ID read in place) */
                             pdef_veh->aioffset     = 0;
                             pdef_veh->aireturnlist = -1;
                             pdef_veh->path         = 0;
@@ -2570,7 +2570,7 @@ void proplvreset2(enum LEVELID stageId)
                             pdef_air->yrot            = 0.0f;
                             pdef_air->speedtime60     = -1.0f;
                             pdef_air->rotaryspeedtime = -1.0f;
-                            pdef_air->ailist          = ailistFindById(pdef_air->ailist);
+                            pdef_air->ailist          = ailistFindById((intptr_t) pdef_air->ailist); /* LP64-004: setup converter (an AI list ID read in place) */
                             pdef_air->aioffset        = 0;
                             pdef_air->aireturnlist    = -1;
                             pdef_air->nextstep        = 0;

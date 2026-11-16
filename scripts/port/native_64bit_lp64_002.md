@@ -107,10 +107,18 @@ in the task that owns its file.
 - **The 32-bit program does not change.** Before every commit,
   `python3 scripts/port/compare_win32.py commits HEAD WORKTREE` exits 0. Where
   it exits 1, the commit is acceptable only if every changed function is one
-  whose source the commit edited and the change is explained by name in the
+  whose source the commit edited, or one that differs because a declaration it
+  uses changed in the same commit, and the change is explained by name in the
   commit message and FORK-089 (find the functions by disassembling the two
   executables the tool leaves in `build/lp64/compare` with
-  `i686-w64-mingw32-objdump -d` and comparing by symbol). Otherwise change the
+  `i686-w64-mingw32-objdump -d` and comparing by symbol). The accepted kinds
+  of difference, each established by reading both versions instruction by
+  instruction, are: block order and branch direction; register and stack-slot
+  choice; an equivalent comparison; a load moved across a call or test that
+  cannot affect it; jump threading that duplicates code, when every path is
+  shown to make the same calls and stores; a loop written with an indexed
+  address instead of a stepped pointer, with the same accesses in the same
+  order. Otherwise change the
   fix: a type that keeps the 32-bit arithmetic identical (`intptr_t` for a
   signed quantity, `uintptr_t` for an unsigned one) is preferred to a pointer
   type that does not.

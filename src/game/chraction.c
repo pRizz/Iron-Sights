@@ -1583,7 +1583,7 @@ void chrlvInitActAttackWalk(ChrRecord *chr, s32 arg1)
     }
     else if (weaponIsOneHanded(left) || weaponIsOneHanded(right))
     {
-        sp78 = (s32)left != 0;
+        sp78 = left != NULL;
 
         if (arg1)
         {
@@ -1605,7 +1605,7 @@ void chrlvInitActAttackWalk(ChrRecord *chr, s32 arg1)
     }
     else
     {
-        sp78 = (s32)left != 0;
+        sp78 = left != NULL;
 
         if (arg1)
         {
@@ -1724,7 +1724,7 @@ void chrlvInitActAttackRoll(ChrRecord *chr, GUNHAND side)
         }
         else
         {
-            sp7C = (s32)right_2 == 0;
+            sp7C = right_2 == NULL;
             sp78 = 1;
             sp64.p[1] = sp7C;
             sp64.p[0] = sp7C == 0;
@@ -1732,14 +1732,14 @@ void chrlvInitActAttackRoll(ChrRecord *chr, GUNHAND side)
     }
     else if (weaponIsOneHanded(left) || weaponIsOneHanded(right))
     {
-        sp7C = (s32)left != 0;
+        sp7C = left != NULL;
         sp78 = 1;
         sp64.p[1] = sp7C;
         sp64.p[0] = sp7C == 0;
     }
     else
     {
-        sp7C = (s32)left != 0;
+        sp7C = left != NULL;
         sp64.p[1] = sp7C;
         sp64.p[0] = sp7C == 0;
     }
@@ -3700,13 +3700,13 @@ void get_sound_at_range(ChrRecord *self, s32 arg1, s32 arg2)
         {
             t = 0;
             flag = t;
-            ani_arg = (s32)left != 0;
+            ani_arg = left != NULL;
         }
         else
         {
             t = 1;
             flag = t;
-            ani_arg = (s32)left != 0;
+            ani_arg = left != NULL;
         }
     }
 
@@ -3871,13 +3871,13 @@ void chrlvWalkingAnimationRelated(ChrRecord *self)
         {
             t = 0;
             flag = t;
-            ani_arg = (s32)left != 0;
+            ani_arg = left != NULL;
         }
         else
         {
             t = 1;
             flag = t;
-            ani_arg = (s32)left != 0;
+            ani_arg = left != NULL;
         }
     }
 
@@ -3929,13 +3929,13 @@ void set_actor_on_path(ChrRecord *self, struct patrol_path *path)
                 {
                     f32 v[7];
                     once++;
-                    v[0] = (f32) (u32) path;
-                    v[1] = (f32) (u32) path->data;
+                    v[0] = (f32) (uintptr_t) path;
+                    v[1] = (f32) (uintptr_t) path->data;
                     v[2] = (f32) *dataptr;
                     v[3] = (f32) count;
-                    v[4] = (f32) (u32) pta;
+                    v[4] = (f32) (uintptr_t) pta;
                     v[5] = (f32) pta->padID;
-                    v[6] = (f32) (u32) g_CurrentSetup.pads;
+                    v[6] = (f32) (uintptr_t) g_CurrentSetup.pads;
                     ge_dbg_vec("pathbad path/data/wpidx/count/wp/padid/pads", v, 7);
                 }
             }
@@ -5160,7 +5160,7 @@ bool chrGoToPad(ChrRecord *self, s32 padid, SPEED speed)
 /**
  * Address 0x7F02AD54.
 */
-bool if_actor_able_set_on_path(ChrRecord *self, s32 pathid)
+bool if_actor_able_set_on_path(ChrRecord *self, struct patrol_path *pathid)
 {
     if (pathid && chrIsNotDeadOrShot(self))
     {

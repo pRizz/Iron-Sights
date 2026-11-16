@@ -211,7 +211,7 @@ void bondviewLoadSetupIntroSection(void)
 #endif
                     }
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroSpawn));
+                    intro_record = (struct SetupIntroEmpty*)((u8 *)intro_record + sizeof(struct SetupIntroSpawn));
                 }
                 break;
 
@@ -248,7 +248,7 @@ void bondviewLoadSetupIntroSection(void)
                         }
                     }
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroItem));
+                    intro_record = (struct SetupIntroEmpty*)((u8 *)intro_record + sizeof(struct SetupIntroItem));
                 }
                 break;
 
@@ -259,7 +259,7 @@ void bondviewLoadSetupIntroSection(void)
                         give_cur_player_ammo(((struct SetupIntroAmmo*)intro_record)->ammo_type, ((struct SetupIntroAmmo*)intro_record)->ammo_amount);
                     }
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroAmmo));
+                    intro_record = (struct SetupIntroEmpty*)((u8 *)intro_record + sizeof(struct SetupIntroAmmo));
                 }
                 break;
 
@@ -278,7 +278,7 @@ void bondviewLoadSetupIntroSection(void)
                     intro_swirl->unk14.fval = intro_swirl->unk14.ival / M_U16_MAX_VALUE_F;
                     intro_swirl->unk18.fval = intro_swirl->unk18.ival / M_U16_MAX_VALUE_F;
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroSwirl));
+                    intro_record = (struct SetupIntroEmpty*)((u8 *)intro_record + sizeof(struct SetupIntroSwirl));
                 }
                 break;
 
@@ -286,7 +286,7 @@ void bondviewLoadSetupIntroSection(void)
                 {
                     g_IntroAnimationIndex = ((struct SetupIntroAnim*)intro_record)->intro_anim;
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroAnim));
+                    intro_record = (struct SetupIntroEmpty*)((u8 *)intro_record + sizeof(struct SetupIntroAnim));
                 }
                 break;
 
@@ -308,7 +308,7 @@ void bondviewLoadSetupIntroSection(void)
                     }
 #endif
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroCuff));
+                    intro_record = (struct SetupIntroEmpty*)((u8 *)intro_record + sizeof(struct SetupIntroCuff));
                 }
                 break;
 
@@ -340,7 +340,7 @@ void bondviewLoadSetupIntroSection(void)
                         }
                     }
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroCamera));
+                    intro_record = (struct SetupIntroEmpty*)((u8 *)intro_record + sizeof(struct SetupIntroCamera));
                 }
                 break;
 
@@ -362,7 +362,7 @@ void bondviewLoadSetupIntroSection(void)
 
                     if (watch_time_0);
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroWatch));
+                    intro_record = (struct SetupIntroEmpty*)((u8 *)intro_record + sizeof(struct SetupIntroWatch));
                 }
                 break;
 
@@ -377,7 +377,7 @@ void bondviewLoadSetupIntroSection(void)
                     /* PORT: the compiled-in setup already stores a real pointer
                      * (&credits_data_0), so skip the N64 base+offset rebase
                      * that broke the Cuba credits. */
-                    credits = (CreditsEntry*)intro_credits->unk04;
+                    credits = (CreditsEntry*)(intptr_t)intro_credits->unk04; /* LP64-004: setup converter (the record holds a 32-bit word) */
 #endif
                     credits_pointer = credits;
 
@@ -387,7 +387,7 @@ void bondviewLoadSetupIntroSection(void)
                         credits++;
                     }
 
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroCredits));
+                    intro_record = (struct SetupIntroEmpty*)((u8 *)intro_record + sizeof(struct SetupIntroCredits));
                 }
                 break;
 
@@ -396,7 +396,7 @@ void bondviewLoadSetupIntroSection(void)
                     #ifdef DEBUG
                         ossyncprintf("unknown bondstart type %d!\n",INTRO_TYPE(intro_record));
                     #endif
-                    intro_record = (struct SetupIntroEmpty*)((s32)intro_record + sizeof(struct SetupIntroEmpty));
+                    intro_record = (struct SetupIntroEmpty*)((u8 *)intro_record + sizeof(struct SetupIntroEmpty));
                 }
                 break;
 
@@ -665,12 +665,12 @@ void bondviewLoadSetupIntroSection(void)
        * is the source of the NULL-tile crash in bondviewTryMoveToStan */
         extern void ge_dbg_vec(const char *tag, const f32 *v, s32 n);
         f32 v[6];
-        v[0] = (f32) (u32) start_stan;
+        v[0] = (f32) (uintptr_t) start_stan;
         v[1] = start_pos.f[0];
         v[2] = start_pos.f[1];
         v[3] = start_pos.f[2];
         v[4] = stan_height;
-        v[5] = (f32) (u32) g_CurrentPlayer;
+        v[5] = (f32) (uintptr_t) g_CurrentPlayer;
         ge_dbg_vec("bondspawn stan/x/y/z/h/plr", v, 6);
     }
 #endif
