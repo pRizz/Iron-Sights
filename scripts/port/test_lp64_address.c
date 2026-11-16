@@ -1,7 +1,9 @@
 /* ROM-free tests of the 64-bit address rules (LP64-003 Task 3): the
  * host-pointer test, the region predicate and the startup address check; of
  * the asset-class guard (Task 4); of the command-word predicates (Task 6); and
- * of the command-word accessors (Task 7). Built at both pointer widths by
+ * of the command-word accessors (Task 7); and of the game's strtol (src/str.c,
+ * linked in by the harness) and gu.h's FTOFIX32, whose results must not follow
+ * a 64-bit long (Task 10). Built at both pointer widths by
  * scripts/port/test_lp64_address.sh.
  *
  *   test_lp64_address              the unit cases
@@ -13,8 +15,11 @@
  *                                    status 5, at 32 bits it must return */
 #include <stdarg.h>
 #include <stdint.h>
+#include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include "PR/gu.h"
 #include "PR/mbi.h"
 #include "PR/ultratypes.h"
 #include "platform_info.h"
@@ -175,6 +180,44 @@ static void testEndDisplayListOpcode(void)
 #endif
 }
 
+/* The game's strtol reports overflow as -1. Its bound came from a ULONG_MAX
+ * of 64 bits at 64 bits, so 2^32 wrapped to 0 there. */
+static void testStrtolOverflowIsMinusOne(void)
+{
+    // Act
+    long value = strtol("4294967296", NULL, 10);
+
+    // Assert
+    expect(value == -1, "strtol reports a number past 32 bits as -1");
+}
+
+/* It negates in unsigned int; returned through a 64-bit long without a cast,
+ * -5 came back as 4294967291. */
+static void testStrtolNegativeKeepsSign(void)
+{
+    // Act
+    long value = strtol("-5", NULL, 10);
+
+    // Assert
+    expect(value == -5, "strtol(\"-5\") is -5");
+}
+
+/* Past 32768.0 the conversion is out of range. The hardware's 32-bit
+ * conversion gives INT_MIN (x86) or saturates (Arm); through a 64-bit long
+ * the value wrapped instead (40000.0 to -25536.0). The volatile keeps the
+ * compiler from folding it. */
+static void testFixedPointConversionDoesNotWrap(void)
+{
+    // Arrange
+    volatile float pastRange = 40000.0f;
+
+    // Act
+    int fixed = FTOFIX32(pastRange);
+
+    // Assert
+    expect(fixed == INT_MIN || fixed == INT_MAX, "FTOFIX32 past 32768.0 does not wrap");
+}
+
 #if IS_64_BIT
 static void testRegionEndingAtFourGbIsLow(void)
 {
@@ -288,6 +331,9 @@ int main(int argc, char **argv)
     testWordIsIndexTruthTable();
     testTexturePointerDecision();
     testEndDisplayListOpcode();
+    testStrtolOverflowIsMinusOne();
+    testStrtolNegativeKeepsSign();
+    testFixedPointConversionDoesNotWrap();
 #if IS_64_BIT
     testRegionEndingAtFourGbIsLow();
     testRegionStartingAtFourGbIsHigh();

@@ -35,7 +35,14 @@
 #define M_PI		3.14159265358979323846
 #define M_DTOR		(3.14159265358979323846/180.0)
 
+/* A 32-bit conversion at every width: through a 64-bit long, a value past
+ * 32768.0 would wrap where the 32-bit conversion gives the hardware's
+ * out-of-range result (gbi.h tests the size of long the same way). */
+#if defined(__SIZEOF_LONG__) && __SIZEOF_LONG__ > 4
+#define	FTOFIX32(x)	(int)((x) * (float)0x00010000)
+#else
 #define	FTOFIX32(x)	(long)((x) * (float)0x00010000)
+#endif
 
 // original: x * (1.0f / (float)0x00010000)
 #define	FIX32TOF(x)	((float)(x) / (float)0x00010000)

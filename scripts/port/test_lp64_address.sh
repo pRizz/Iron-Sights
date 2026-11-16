@@ -9,7 +9,9 @@
 # PORT_WORD_IS_INDEX at each width, and port_textures.c's external-texture slot,
 # which must hold the whole pixel address (above 4 GB at 64 bits). The
 # command-word accessors (Task 7): GFX_OP of a gbi.h-built command, and a slot
-# of texLoad's parameter type that keeps every byte of a 64-bit value.
+# of texLoad's parameter type that keeps every byte of a 64-bit value. The
+# game's strtol and gu.h's FTOFIX32 (Task 10): their results at 64 bits are the
+# 32-bit ones.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source scripts/port/harness_widths.sh
@@ -17,13 +19,24 @@ work=$(mktemp -d /tmp/midas-lp64-address.XXXXXX)
 trap 'rm -rf "$work"' EXIT
 compiler=${CC:-gcc}
 
+# The game's src/str.c with the game's definitions, so the driver's strtol is
+# the game's. -w: the driver's warning flags are not for upstream code.
+build_str() {
+    local out=$1
+    shift
+    "$compiler" "$@" -c -std=gnu11 -fms-extensions -fcommon -funsigned-char -w \
+        -DVERSION_US -DLANG_US -DREFRESH_NTSC -D_LANGUAGE_C -DNONMATCHING -DAVOID_UB \
+        -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \
+        src/str.c -o "$out"
+}
+
 # gbi.h (Task 7) includes <PR/...>; -idirafter finds those after the system
 # headers, so the driver's <string.h> is still the C library's.
 build() {
-    local out=$1
-    shift
+    local out=$1 str_object=$2
+    shift 2
     "$compiler" "$@" -std=gnu11 -D_LANGUAGE_C -Wall -Wextra -Werror -iquote include -iquote port/include \
-        -idirafter include scripts/port/test_lp64_address.c port/src/port_lp64.c -o "$out"
+        -idirafter include scripts/port/test_lp64_address.c port/src/port_lp64.c "$str_object" -o "$out"
 }
 
 # The external-texture slot (Task 6): port_textures.c linked with the stubs in
@@ -75,14 +88,15 @@ expect_driver() {
 widths=$(harness_widths)
 for width in $widths; do
     flags=($(harness_flags "$width"))
-    build "$work/unit-$width" ${flags[@]+"${flags[@]}"}
+    build_str "$work/str-$width.o" ${flags[@]+"${flags[@]}"}
+    build "$work/unit-$width" "$work/str-$width.o" ${flags[@]+"${flags[@]}"}
     "$work/unit-$width"
     build_textures "$work/textures-$width" ${flags[@]+"${flags[@]}"}
     expect_textures "$work/textures-$width" "$work/root-$width" "${width}-bit external-texture slot"
     if [[ $width == 64 ]]; then
-        build "$work/pie" -fPIE -pie
+        build "$work/pie" "$work/str-$width.o" -fPIE -pie
         expect_driver "$work/pie" address-space 0 "ge: lp64: address space OK" "position-independent driver"
-        build "$work/no-pie" -fno-pie -no-pie
+        build "$work/no-pie" "$work/str-$width.o" -fno-pie -no-pie
         expect_driver "$work/no-pie" address-space 4 "executable image" "-no-pie driver"
         expect_driver "$work/unit-$width" require-animations 5 \
             'ge: lp64: stopping: asset class "animation tables" has no 64-bit converter yet (LP64-004)' \

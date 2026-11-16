@@ -1474,9 +1474,25 @@ typedef struct {
     Light	l[2];
 } LookAt;
 
+/*
+ * The N64's long is 32 bits, and these formats are laid out with it. An LP64
+ * host (64-bit Linux and macOS) makes long 64 bits, so there the words are
+ * int. This tests the size of long rather than IS_64_BIT, which the renderer
+ * has not yet defined where it includes this header; a compiler that does not
+ * predefine __SIZEOF_LONG__ (IDO, MSVC, also for 64-bit Windows) has a 32-bit
+ * long.
+ */
+#if defined(__SIZEOF_LONG__) && __SIZEOF_LONG__ > 4
+typedef int		gbi_long;
+typedef unsigned int	gbi_ulong;
+#else
+typedef long		gbi_long;
+typedef unsigned long	gbi_ulong;
+#endif
+
 typedef union {
     Hilite_t	h;
-    long int	force_structure_alignment[4];
+    gbi_long	force_structure_alignment[4];
 } Hilite;
 
 #define gdSPDefLights0(ar,ag,ab)					\
@@ -1642,7 +1658,7 @@ typedef struct {
 		unsigned char	pad;
 		unsigned char	prim_min_level;
 		unsigned char	prim_level;
-		unsigned long	color;
+		gbi_ulong	color;
 } Gsetcolor;
 
 typedef struct {
@@ -1712,10 +1728,10 @@ typedef struct {
  * Textured rectangles are 128 bits not 64 bits
  */	
 typedef struct {
-    unsigned long w0;
-    unsigned long w1;
-    unsigned long w2;
-    unsigned long w3;
+    gbi_ulong w0;
+    gbi_ulong w1;
+    gbi_ulong w2;
+    gbi_ulong w3;
 } TexRect;
 #endif
 

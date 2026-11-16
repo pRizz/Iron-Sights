@@ -91,7 +91,13 @@ int isspace(unsigned char c) {
     return ((c == ' ') || (c == '\t') || (c == '\n') || (c == '\f') || (c == '\v'));
 }
 
+/* strtol accumulates in unsigned int, so the bound is the 32-bit maximum the
+ * N64's long had; a 64-bit long would raise it and let a large number wrap. */
+#if defined(__SIZEOF_LONG__) && __SIZEOF_LONG__ > 4
+#define	ULONG_MAX 0xFFFFFFFFu
+#else
 #define	ULONG_MAX ((unsigned long)(~0L)) /* 0xFFFFFFFF */
+#endif
 long int strtol(const char *str, char **endptr, int base) {
     int neg;
     unsigned char *ptr;
@@ -163,7 +169,8 @@ long int strtol(const char *str, char **endptr, int base) {
             if (overflow) {
                 return -1;
             }
-            return (neg ? -accum : accum);
+            /* Through int, so a 64-bit long gets the 32-bit result's sign. */
+            return (int) (neg ? -accum : accum);
         }
     }
     if (endptr != NULL) {
