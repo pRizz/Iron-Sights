@@ -12491,16 +12491,17 @@ Branch exception for deferring clones (2026-11-16, owner decision; LP64-002
 Task 2, the commit "Let a deferring clone commit strict-tier work on a branch"). As first built,
 a clone with `midas.galleryDefer` set could not commit any strict-tier change,
 so the Mac doing the 64-bit port had no way to prepare the strict-tier batch
-its plan calls for. Now `pre_commit`, when the staged gallery is stale for
-strict inputs, the setting is on and `current_branch(root)` is neither `None`
-(detached HEAD) nor `main`, verifies the staged gallery with
+its plan calls for. `pre_commit` then, when the staged gallery was stale for
+strict inputs, the setting was on and `current_branch(root)` was neither `None`
+(detached HEAD) nor `main` (that test was replaced; see the next paragraph), verified the staged gallery with
 `verify(..., allow_stale=True)` (every check but strict freshness: schema,
 determinism flags, coverage, image hashes, HTML) and, if that passes, prints
 `Hand gallery is STALE on branch <name>: strict inputs changed. Regenerate on a machine that can render before this reaches main.` and lets the commit through. Every other case, including a
 failing check there, behaves as before. The `verify` command line has no
-`allow_stale` option, so CI and `main` still fail on a strict mismatch. New in
-`hand_gallery.py`: `current_branch` (`git symbolic-ref --quiet --short HEAD`),
-`verify`'s `allow_stale` parameter and `stale_but_intact`. Six new tests in
+`allow_stale` option, so CI and `main` still fail on a strict mismatch. It
+added to `hand_gallery.py` `current_branch` (`git symbolic-ref --quiet --short
+HEAD`; replaced by `head_ref` and `is_main_ref`, below), `verify`'s
+`allow_stale` parameter and `stale_but_intact`. Six new tests in
 `scripts/port/test_hand_gallery.py` cover a branch (passes and prints the
 branch name), `main` and a detached HEAD (refused as before), a clone without
 the setting on a branch (still tries to generate), a corrupted staged image on
@@ -12514,17 +12515,34 @@ strict-tier input; `generate` reported 0 changed image cells, only
 `manifest.json` (both fingerprints) and `index.html` changed, and `verify`
 then reported it fresh.
 
-Open defect in that branch test (found by LP64-002's final review,
-2026-11-16; not fixed): `current_branch` (`hand_gallery.py`) compares the
-output of `git symbolic-ref --short HEAD` with `main`, which misses `main` in
-two cases. With a tag named `main`, `--short` prints `heads/main`. On a
-case-insensitive volume (the Mac's), `git switch Main` makes HEAD
-`refs/heads/Main`, which Git resolves to the `refs/heads/main` file, so a
-commit advances `main` while the hook sees the branch `Main` and lets a
-strict-tier change through with a stale gallery. `hand_gallery.py` is strict
-tier, so the fix is scheduled with the gallery regeneration on the Windows
-laptop (LP64-002 Task 11). Until then, check `git symbolic-ref HEAD` before
-committing on the Mac.
+How the branch test decides `main` (LP64-002 Task 11, the commit
+"Fix the gallery hook's main test and regenerate for the strict-tier type fixes",
+2026-11-16, the owner's Windows laptop). LP64-002's final review found that
+comparing `git symbolic-ref --short HEAD` with `main` missed `main` twice: with
+a tag named `main`, `--short` prints `heads/main`; and on a case-insensitive
+volume (the Mac's), `git switch Main` attaches HEAD to `refs/heads/Main`, which
+Git resolves to the `main` ref file, so a commit would advance `main` while the
+hook saw the branch `Main` and let a strict-tier change through with a stale
+gallery. `pre_commit` now reads the full ref with `head_ref(root)` (`git
+symbolic-ref --quiet HEAD`; `None` on a detached HEAD) and treats the checkout
+as `main` when `is_main_ref(ref)` holds: the ref, case-folded, equals
+`refs/heads/main`. The short name (the ref without `refs/heads/`) is used only
+in the printed message. A branch whose name merely contains `main`
+(`feature/main`, `maintenance`) is an ordinary branch. When the branch
+exception's own check fails, the hook now prints `Gallery check on this branch:
+<cause>` (for example `Truncated PNG`) before falling back to its usual path,
+so the cause is no longer hidden behind a generation error. Tests in
+`scripts/port/test_hand_gallery.py`: on `main` beside a tag named `main`, and
+with HEAD set to `refs/heads/Main` by `git symbolic-ref` (independent of the
+filesystem), a deferring clone's strict-stale commit is refused; `feature/main`
+and `maintenance` are allowed; the corrupted-image test asserts its cause. The
+two refusal tests and the corrupted-image assertion failed before the fix (the
+hook let both commits through, and printed no cause); the allowed-branches test
+passed before and after, since the old comparison allowed those names too. The
+file's 31 tests pass. The gallery was regenerated in the same commit, for the
+strict-tier type fixes on `lp64/types-strict`; `generate` reported 0 changed
+image cells, only `manifest.json` (both fingerprints) and `index.html`
+changed, and `verify` then reported it fresh.
 
 CI performs ROM-free gallery integrity/freshness and workflow tests. The README
 links to the gallery and setup guide. This supplements the hand/arm contracts

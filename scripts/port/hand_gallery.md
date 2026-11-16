@@ -129,12 +129,16 @@ and everything under `port/fast3d/`. Every other rendering input is deferred.
   setting.
 - A deferring clone may commit a strict-tier change on a branch (owner
   decision, 2026-11-16). When the staged gallery is stale for strict inputs,
-  `midas.galleryDefer` is set and the checked-out branch is neither `main` nor
-  a detached HEAD, the hook verifies the staged gallery with every check except
+  `midas.galleryDefer` is set and HEAD is attached to a branch whose full ref
+  is not `refs/heads/main` (compared case-folded, so `refs/heads/Main`, which
+  is `main` on a case-insensitive volume, counts as `main`, and a tag named
+  `main` does not hide it; `feature/main` is an ordinary branch), the hook
+  verifies the staged gallery with every check except
   strict freshness (schema, determinism flags, coverage, image hashes, HTML),
   then passes and prints
   `Hand gallery is STALE on branch <name>: strict inputs changed. Regenerate on a machine that can render before this reaches main.`
-  If any of those checks fails, the hook behaves as before. On `main`, on a
+  If any of those checks fails, the hook prints
+  `Gallery check on this branch: <cause>` and then behaves as before. On `main`, on a
   detached HEAD and in a clone without the setting nothing changed. The
   `verify` command has no such exception, so CI and `main` still fail on a
   strict mismatch; the branch lands only after `generate` on a machine that

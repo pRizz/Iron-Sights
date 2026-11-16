@@ -67,12 +67,16 @@ def switch_branch(root, name):
     command(root, 'symbolic-ref', 'HEAD', 'refs/heads/'+name)
 
 
-def detach(root):
-    """Detach HEAD at a commit of the index, without running any commit hook."""
+def commit_index(root):
+    """A commit of the index, made without running any commit hook; returns its ID."""
     tree = command(root, 'write-tree').decode().strip()
     identity = ('-c', 'user.name=Gallery test', '-c', 'user.email=gallery@example.invalid')
-    commit = command(root, *identity, 'commit-tree', tree, '-m', 'fixture').decode().strip()
-    command(root, 'update-ref', '--no-deref', 'HEAD', commit)
+    return command(root, *identity, 'commit-tree', tree, '-m', 'fixture').decode().strip()
+
+
+def detach(root):
+    """Detach HEAD at a commit of the index, without running any commit hook."""
+    command(root, 'update-ref', '--no-deref', 'HEAD', commit_index(root))
 
 
 def strict_change_with_defer(root):
@@ -403,7 +407,7 @@ class Gallery(unittest.TestCase):
             root = Path(folder)
             strict_change_with_defer(root)
             switch_branch(root, 'work')
-            self.assertEqual(gallery.current_branch(root), 'work')
+            self.assertEqual(gallery.head_ref(root), 'refs/heads/work')
             # Act
             error, output = run_hook(root)
             # Assert
@@ -415,7 +419,7 @@ class Gallery(unittest.TestCase):
             # Arrange
             root = Path(folder)
             strict_change_with_defer(root)
-            self.assertEqual(gallery.current_branch(root), 'main')
+            self.assertEqual(gallery.head_ref(root), 'refs/heads/main')
             # Act
             error, output = run_hook(root)
             # Assert
@@ -428,7 +432,7 @@ class Gallery(unittest.TestCase):
             root = Path(folder)
             strict_change_with_defer(root)
             detach(root)
-            self.assertIsNone(gallery.current_branch(root))
+            self.assertIsNone(gallery.head_ref(root))
             # Act
             error, output = run_hook(root)
             # Assert
@@ -462,7 +466,47 @@ class Gallery(unittest.TestCase):
             error, output = run_hook(root)
             # Assert
             self.assertIsNotNone(error)
+            self.assertIn('Gallery check on this branch: Truncated PNG', output)
             self.assertNotIn('STALE on branch', output)
+
+    def test_deferring_clone_refuses_strict_change_on_main_beside_a_main_tag(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange: with a tag named main, `symbolic-ref --short` prints heads/main.
+            root = Path(folder)
+            strict_change_with_defer(root)
+            commit = commit_index(root)
+            command(root, 'update-ref', 'refs/heads/main', commit)
+            command(root, 'tag', 'main', commit)
+            # Act
+            error, output = run_hook(root)
+            # Assert
+            self.assertIsInstance(error, OSError)
+            self.assertNotIn('STALE on branch', output)
+
+    def test_deferring_clone_refuses_strict_change_on_a_differently_cased_main(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange: refs/heads/Main is the main ref on a case-insensitive volume.
+            root = Path(folder)
+            strict_change_with_defer(root)
+            switch_branch(root, 'Main')
+            # Act
+            error, output = run_hook(root)
+            # Assert
+            self.assertIsInstance(error, OSError)
+            self.assertNotIn('STALE on branch', output)
+
+    def test_branches_that_only_contain_main_are_ordinary(self):
+        for name in ('feature/main', 'maintenance'):
+            with self.subTest(branch=name), tempfile.TemporaryDirectory() as folder:
+                # Arrange
+                root = Path(folder)
+                strict_change_with_defer(root)
+                switch_branch(root, name)
+                # Act
+                error, output = run_hook(root)
+                # Assert
+                self.assertIsNone(error)
+                self.assertIn(f'Hand gallery is STALE on branch {name}: strict inputs changed.', output)
 
     def test_cli_verify_rejects_strict_stale_on_a_branch(self):
         with tempfile.TemporaryDirectory() as folder:

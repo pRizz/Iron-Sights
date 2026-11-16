@@ -360,13 +360,18 @@ def defer_enabled(root=ROOT):
     return result.returncode == 0 and result.stdout.strip() == 'true'
 
 
-def current_branch(root=ROOT):
-    """The checked-out branch's short name, or None on a detached HEAD."""
-    result = subprocess.run(['git', '-C', str(root), 'symbolic-ref', '--quiet', '--short', 'HEAD'],
+def head_ref(root=ROOT):
+    """The full ref HEAD is attached to (refs/heads/...), or None on a detached HEAD."""
+    result = subprocess.run(['git', '-C', str(root), 'symbolic-ref', '--quiet', 'HEAD'],
                             capture_output=True, text=True)
     if result.returncode not in (0, 1):
         raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
     return result.stdout.strip() if result.returncode == 0 else None
+
+
+def is_main_ref(ref):
+    """Whether a full ref is main. Case-folded: refs/heads/Main is main on a case-insensitive volume."""
+    return ref.casefold() == 'refs/heads/main'
 
 
 def verify(root=ROOT, staged=False, allow_pending=False, allow_stale=False):
@@ -553,7 +558,8 @@ def stale_but_intact(root):
     """Whether the staged gallery is stale for strict inputs and passes every other check."""
     try:
         manifest = verify(root, True, allow_pending=True, allow_stale=True)
-    except (ValueError, OSError, subprocess.CalledProcessError):
+    except (ValueError, OSError, subprocess.CalledProcessError) as error:
+        print('Gallery check on this branch: '+str(error), flush=True)
         return False
     return freshness(manifest, root, True) == 'stale'
 
@@ -571,8 +577,9 @@ def pre_commit(root=ROOT):
         return
     except (ValueError, OSError, subprocess.CalledProcessError) as error:
         print('Gallery check: '+str(error), flush=True)
-    branch = current_branch(root) if defer else None
-    if branch not in (None, 'main') and stale_but_intact(root):
+    ref = head_ref(root) if defer else None
+    if ref is not None and not is_main_ref(ref) and stale_but_intact(root):
+        branch = ref.removeprefix('refs/heads/')
         print(f'Hand gallery is STALE on branch {branch}: strict inputs changed. '
               'Regenerate on a machine that can render before this reaches main.')
         return
