@@ -8,5 +8,4 @@ port/src/port_graphics.c	1	strict tier, left for Task 11
 port/src/port_knife_ads.c	1	strict tier, left for Task 11
 src/game/bondview2.c	7	strict tier, left for Task 11
 src/game/gunfire.c	2	strict tier, left for Task 11
-src/game/initanitable.c	1	blocked in Task 9: initAnimationsBuffer takes s32 unused and this caller passes a char array address, so its prototype is an int-conversion error at 64 bits; needs the parameter type changed
 src/game/model.c	4	strict tier, left for Task 11

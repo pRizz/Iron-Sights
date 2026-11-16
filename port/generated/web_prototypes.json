@@ -551,7 +551,7 @@
   ],
   [
     "initAnimationsBuffer",
-    "void (struct bondstruct_unk_animation_related *, OSMesgQueue *, s32)",
+    "void (struct bondstruct_unk_animation_related *, OSMesgQueue *, void *)",
     "src/game/initunk_0009E0.c"
   ],
   [

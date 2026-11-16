@@ -345,7 +345,7 @@ void indycommHostRamRomLoad(char *, u8 *, s32);
 void indycommHostSaveFile(char *, s32, u8 *);
 
 /* src/game/initunk_0009E0.c */
-void initAnimationsBuffer(struct bondstruct_unk_animation_related *, OSMesgQueue *, s32);
+void initAnimationsBuffer(struct bondstruct_unk_animation_related *, OSMesgQueue *, void *);
 
 /* src/game/initgamedata.c */
 void initGameData(void);

@@ -2,6 +2,7 @@
 #include <memp.h>
 #include "initanitable.h"
 #include "objecthandler.h"
+#include "initunk_0009E0.h"
 #include <ramrom.h>
 #include "bondgame.h"
 

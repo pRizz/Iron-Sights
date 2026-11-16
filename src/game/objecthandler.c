@@ -266,7 +266,7 @@ struct bondstruct_unk_animation_related* D_80036414 =  0;
 //D:80036418
 OSMesgQueue *D_80036418 =  0;
 //D:8003641C
-s32 D_8003641C =  0;
+void *D_8003641C =  0;
 
 
 

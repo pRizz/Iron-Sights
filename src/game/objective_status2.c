@@ -4,6 +4,7 @@
 #include "bondtypes.h"
 #include "random.h"
 #include "matrixmath.h"
+#include "objective_status.h"
 
 //D:80032300
 coord3d ZeroCoord = { 0, 0, 0 };

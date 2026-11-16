@@ -1,4 +1,5 @@
 #include <ultra64.h>
+#include "bondwalk2.h"
 #ifndef TARGET_N64
 #include "port_hud.h"
 #endif

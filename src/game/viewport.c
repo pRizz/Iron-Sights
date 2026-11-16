@@ -6,6 +6,7 @@
 #include <macro.h>
 #include "player.h"
 #include <fr.h>
+#include "viewport.h"
 
 // bss
 s32 z_buffer_width; // 0x8008e8f0

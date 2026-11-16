@@ -1,5 +1,6 @@
 #include <ultra64.h>
 #include <debugmenu.h>
+#include "debugmenu_handler.h"
 
 #if defined(LEFTOVERDEBUG)
 // data
