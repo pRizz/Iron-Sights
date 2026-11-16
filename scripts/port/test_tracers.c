@@ -150,12 +150,17 @@ static void testTracerStrips(void)
     s32 i;
 
     /* At scale 1 the strip is the native layout, truncated to s16 as natively
-     * (0.9f * 30 lands just under 27). */
+     * (0.9f * 30 is 27 in SSE or NEON float arithmetic, which every shipped
+     * and planned build uses, and just under 27, so 26, in the x87 extended
+     * precision of a plain -m32 compile such as test_ads.sh's). */
     memset(core, 0, sizeof(core));
     for (i = 0; i < 4; i++) core[i].v.cn[3] = 0xff;
     portTracerShapeStrip(core, right, flare, 1.0f, 1.0f);
     assert(core[0].v.ob[0] == 30 && core[1].v.ob[0] == -30 && core[0].v.ob[2] == -10);
-    assert(core[2].v.ob[0] == 26 && core[3].v.ob[0] == -26 && core[2].v.ob[1] == 500 && core[3].v.ob[2] == 2008);
+    assert((core[2].v.ob[0] == 26 && core[3].v.ob[0] == -26) || (core[2].v.ob[0] == 27 && core[3].v.ob[0] == -27));
+    /* The same rounding moves the far corner's depth: 2000 + 0.9f * 10 is 2009 in SSE or NEON, 2008 in x87. */
+    assert(core[2].v.ob[1] == 500);
+    assert((core[2].v.ob[0] == 26 && core[3].v.ob[2] == 2008) || (core[2].v.ob[0] == 27 && core[3].v.ob[2] == 2009));
 
     /* Per-end scales widen each end on its own. */
     portTracerShapeStrip(core, right, flare, 2.0f, 3.0f);

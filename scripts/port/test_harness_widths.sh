@@ -58,11 +58,11 @@ if [[ $status -ne 0 ]]; then echo "ok: no usable width fails"; else echo "FAIL: 
 
 # Arrange
 source scripts/port/harness_widths.sh
-HARNESS_PENDING=("test_ads 64" "test_wardrobe 64")
+HARNESS_PENDING=("test_wardrobe 64" "x 32")
 # Act and Assert
-if harness_pending test_ads 64; then echo "ok: test_ads 64 is pending"; else echo "FAIL: test_ads 64 is pending"; failures=$((failures + 1)); fi
+if harness_pending test_wardrobe 64; then echo "ok: test_wardrobe 64 is pending"; else echo "FAIL: test_wardrobe 64 is pending"; failures=$((failures + 1)); fi
 if harness_pending test_dyn 64; then echo "FAIL: test_dyn 64 is not pending"; failures=$((failures + 1)); else echo "ok: test_dyn 64 is not pending"; fi
-if harness_pending test_ads 32; then echo "FAIL: test_ads 32 is not pending"; failures=$((failures + 1)); else echo "ok: test_ads 32 is not pending"; fi
+if harness_pending test_wardrobe 32; then echo "FAIL: test_wardrobe 32 is not pending"; failures=$((failures + 1)); else echo "ok: test_wardrobe 32 is not pending"; fi
 
 expect "harness_flags 32 prints -m32" "-m32" "$(harness_flags 32)"
 expect "harness_flags 32 adds the harness's own flags" "-m32 -msse2 -mfpmath=sse" "$(harness_flags 32 -msse2 -mfpmath=sse)"

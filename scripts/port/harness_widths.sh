@@ -13,7 +13,6 @@
 # "NAME WIDTH" entries. The harness names each one and skips it. LP64-003 Task
 # 11 empties the list.
 HARNESS_PENDING=(
-    "test_ads 64"
     "test_wardrobe 64"
 )
 
