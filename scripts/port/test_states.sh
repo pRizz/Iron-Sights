@@ -119,16 +119,18 @@ for width in $widths; do
         echo "test_states: ${width}-bit half pending (LP64-003 task 11)"
         continue
     fi
+    # test_states.c includes port_state.c, which 64-bit builds do not compile;
+    # test_state_input.c tests joy_port.c's routing with its own stubs.
     if [[ $width == 64 ]]; then
-        echo "test_states: the suspend-point tests are 32-bit only by design: suspend images record 32-bit addresses, so 64-bit builds link port_state_unavailable.c instead of port_state.c"
+        echo "test_states: test_states.c (port_state.c's codec, menu and restore) is 32-bit only by design: suspend images record 32-bit addresses, so 64-bit builds link port_state_unavailable.c, checked here instead; test_state_input.c runs at both widths"
         compile "$width" "$test_bin" "$work/unavailable.c" port/src/port_state_unavailable.c
         "$test_bin"
     else
-        for test_source in scripts/port/test_states.c scripts/port/test_state_input.c; do
-            compile "$width" "$test_bin" "$test_source"
-            "$test_bin"
-        done
+        compile "$width" "$test_bin" scripts/port/test_states.c
+        "$test_bin"
     fi
+    compile "$width" "$test_bin" scripts/port/test_state_input.c
+    "$test_bin"
     echo "test_states: PASS (${width}-bit)"
 done
 python3 scripts/port/test_state_layout.py

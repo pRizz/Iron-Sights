@@ -131,10 +131,11 @@ State tests also cover immediate restore without a pause, automatic watch
 closure, slot/mission labels, replacement and wall-clock toast fade timing.
 Python tests cover linker ownership filters, COMMON sections, static host-cache
 exclusion, and bounded/idempotent executable overlays.
-The codec, menu and input tests run at 32 bits only. Where the compiler can
-build 64-bit code, `test_states.sh` instead links a small driver with
-`port_state_unavailable.c` and checks the message, the empty slot and the frame
-hook; `test_pointer_bits.sh` checks that each width's build compiles its own
+The codec, menu and restore tests (`test_states.c`, which includes
+`port_state.c`) run at 32 bits only; the input routing test runs at both
+widths. Where the compiler can build 64-bit code, `test_states.sh` also links a
+small driver with `port_state_unavailable.c` and checks the message, the empty
+slot and the frame hook; `test_pointer_bits.sh` checks that each width's build compiles its own
 file and that only the 32-bit build runs the layout step.
 
 On Windows with a built executable and the local ROM:
