@@ -223,7 +223,7 @@ static void portSwapInlineTextures(struct ModelFileHeader *objheader, u8 *fileda
 
     for (i = 0; i < objheader->numtextures; i++)
     {
-        u32 id = objheader->Textures[i].TextureID;
+        uintptr_t id = objheader->Textures[i].TextureID;
 
         if ((id >> 24) == 0x05)
         {

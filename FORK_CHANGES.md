@@ -2248,6 +2248,40 @@ pass `&monAnimNN` (a pointer to an array) where `uintptr_t *cmdlist` is
 expected, an incompatible pointer type that a compiler without
 `-Wno-incompatible-pointer-types` rejects.
 
+*LP64-002 final review fix wave (2026-11-16, on the branch
+`lp64/types-strict`, local commits; not pushed).* A whole-milestone review of
+ce60a74..dd408f1 found the items below. *First commit, "Clear the 64-bit C
+log and print the widened texture words whole":* (1) The traces that print
+words this milestone widened now use `"%08" PRIxPTR`: `src/game/front.c`'s
+`GE_DUMP_BOND` cursor line (`image->index` and the copy image's `index`, both
+`uintptr_t`; Task 8 had converted only `img=`) and `src/game/gun.c`'s
+`gunaudit` texture line (`id`, a `uintptr_t` copy of `TextureID`; `gun.c` now
+includes `<inttypes.h>` in its port-only block). `PRIxPTR` is `"x"` on i686,
+so the 32-bit output is byte-identical. (2) `src/game/objecthandler_2.c`'s
+texture fix-up loop reads `TextureID` into a `uintptr_t` (it was the one read
+Task 6 left as `u32`); the `>> 24` tag test and the `& 0x00FFFFFF` offset are
+the same at 32 bits. (3) The six warnings with no `-W` option are gone, each
+by an edit that shifts no line: `#undef MIN` and `#undef MAX` on two blank
+lines of `include/math.h` before its own definitions (which are the ones that
+won before, as the later definition); forward declarations
+`struct FolderSelectColour;` (`src/game/title.h`),
+`struct indy_resource_entry3;` (`src/game/indy_commands.c`) and
+`struct Mtxf;` (`src/game/objective_status2.c`) before the prototypes that
+first named them in a parameter list (the type each names is unchanged, so
+the declarations are compatible as before); `enum lbl` without the useless
+`static` (`src/game/chraidata.c`); and `(u8 *)"Sorry, string not loaded."`
+(`src/game/language.c`), so both arms of the conditional are `u8 *`. (4)
+`src/game/bondview.h` declares `void *currentPlayerSetMatrix10CC(Mtxf *)`
+(defined in `bondview.c`, called without a prototype at `bondview2.c:11789`,
+its result unused); `bondview2.c` itself is not edited. *What ran for it:*
+`compare_win32.py commits HEAD WORKTREE` exit 0, `identical in loaded code and
+data; .buildid differs` (58 s and 57 s, 116 s); a full 64-bit Debug build of
+the headless and the video tree in the aarch64 container compiled and linked
+with no warning and no error in either log (8 s and 15 s); the gate in the
+x86_64 container, 329 and 360 files compiled, 0 failed (configure 6 s, gate
+13 s); the i686 headless build and the 20-mission smoke, 20 of 20 passed
+(3 min 38 s); `lp64_casts.py check`, `OK: 28 truncating casts in 13 files`.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [LP64-002 implementation plan](scripts/port/native_64bit_lp64_002.md),

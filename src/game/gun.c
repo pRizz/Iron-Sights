@@ -2,6 +2,7 @@
 #ifndef TARGET_N64
 #include <stdio.h>  /* get_ptr_item_statistics out-of-range report */
 #include <string.h> /* memset - full-Model stack instances */
+#include <inttypes.h> /* PRIxPTR - port diagnostics */
 #endif
 #include <gbi_extension.h>
 #include "include/limits.h"
@@ -1027,7 +1028,7 @@ void portGunTexAudit(void)
             extern struct texpool *portModelTexPool(void);
             struct tex *rec = texFindInPool(texnum, portModelTexPool());
 
-            fprintf(stderr, "gunaudit:   tex[%02d] id=%4d %ux%u tiles=%u depth=%u -> %08x%s",
+            fprintf(stderr, "gunaudit:   tex[%02d] id=%4d %ux%u tiles=%u depth=%u -> %08" PRIxPTR "%s",
                     t, texnum,
                     h.Textures[t].Width, h.Textures[t].Height,
                     h.Textures[t].MipMapTiles,

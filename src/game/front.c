@@ -1503,7 +1503,7 @@ Gfx *frontDrawCursor(Gfx *DL)
         if (dump && (calls++ % 61) == 0)
         {
             fprintf(stderr,
-                    "cursor: opt=%d img=%08" PRIxPTR " idx=%08x w=%d h=%d fmt=%d copyidx=%08x\n",
+                    "cursor: opt=%d img=%08" PRIxPTR " idx=%08" PRIxPTR " w=%d h=%d fmt=%d copyidx=%08" PRIxPTR "\n",
                     option, (uintptr_t) image, image->index, image->width,
                     image->height, image->format,
                     (mainfolderimages + IMG_COPY)->index);

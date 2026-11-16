@@ -79,9 +79,9 @@
 #define RadToDeg(RAD)         (float)((RAD) * (360.0f / M_TAU_F))
 /* Gets the angle in radians represented by a byte */
 #define ByteToRadian(Byte)    ((Byte * M_TAU_F) * (1.0f / 256.0f))
-
+#undef MIN
 /* Macro Versions of functions */
-
+#undef MAX
 #define ABS(x)    ((x) < 0 ? -(x) : (x))          /* absolute value of x */
 #define SGN(x)    ((x) < 0 ? -1 : (x) > 0 ? 1 : 0)/* sign of x */
 #define MIN(x, y) ((x) < (y) ? (x) : (y))         /* minimum of x and y */

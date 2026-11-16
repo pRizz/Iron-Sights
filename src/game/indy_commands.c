@@ -258,7 +258,7 @@ void post_type8_indyrescmd_log_recieved(s32 rsize,s32 wsize,u32 data1,u32 data2,
    send2indyresourcecommands(&cmd,sizeof(indy_resource_entry_type8),cmd2,cmd2size);
 }
 
-
+struct indy_resource_entry3;
 void indyrescmdSendDump(s32 rsize,s32 wsize,char *strptr,u32 size2,struct indy_resource_entry3 *cmd2)
 {
   indy_resource_entry_type9 cmd;
