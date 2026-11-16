@@ -235,6 +235,8 @@ stage load. By reading: fonts come between the text banks and the animation
 table's relocation (`textInit`). The design lists animation tables fourth and
 audio ninth; the boot needs them first and fourth, and there is no way to
 boot without the audio bank.
+(Note from Task 4: measured, fonts load after the animation table's
+relocation, not before it; FORK-089's Task 4 note has the measured order.)
 
 ## Global Constraints
 
@@ -1236,3 +1238,5 @@ condition for this milestone, and the design records it.
    text banks, fonts, then audio banks and music, before any stage load. The
    design's class order has animation tables fourth and audio ninth. Noted
    by the owner; LP64-004's plan settles the order.
+   (Note from Task 4: measured, fonts load after the animation table's
+   relocation; FORK-089's Task 4 note has the measured order.)

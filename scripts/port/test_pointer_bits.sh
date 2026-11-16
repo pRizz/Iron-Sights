@@ -169,4 +169,27 @@ if command -v i686-w64-mingw32-gcc >/dev/null 2>&1; then
 else
     echo "skip 5: i686-w64-mingw32-gcc is not installed"
 fi
+
+# 6. Suspend images record 32-bit addresses, so a 64-bit build compiles the
+# unavailable stand-in instead of the serializer and skips the post-build
+# layout step; the 32-bit build keeps both. Each source is matched as a whole
+# path in the recorded "file" field.
+compiles() { grep -qF -- "/port/src/$2\"" "$work/$1/compile_commands.json"; }
+has_layout_step() { grep -qF -- "embed_state_layout.py" "$work/$1/CMakeFiles/ge.dir/build.make"; }
+compiles default port_state.c || fail "32-bit build does not compile port_state.c"
+if compiles default port_state_unavailable.c; then
+    fail "32-bit build compiles port_state_unavailable.c"
+fi
+has_layout_step default || fail "32-bit build lacks the embed_state_layout.py step"
+echo "ok 6: 32-bit build compiles port_state.c and runs the layout step"
+for tree in bits64 bits64video; do
+    compiles "$tree" port_state_unavailable.c || fail "$tree: 64-bit build does not compile port_state_unavailable.c"
+    if compiles "$tree" port_state.c; then
+        fail "$tree: 64-bit build still compiles port_state.c"
+    fi
+    if has_layout_step "$tree"; then
+        fail "$tree: 64-bit build still runs embed_state_layout.py"
+    fi
+done
+echo "ok 6b: 64-bit builds compile port_state_unavailable.c, not port_state.c, and skip the layout step"
 echo "Pointer-bits configure checks passed"

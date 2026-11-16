@@ -57,6 +57,21 @@ entire image before changing the world. Truncated, damaged or incompatible
 files are rejected. Checksums detect damage; they do not authenticate files.
 Load only your own local images.
 
+## 64-bit builds
+
+A suspend image records 32-bit addresses and needs the exact executable
+layout, and a 64-bit process loads at a different address on each run, so
+64-bit builds (`GE_POINTER_BITS=64`) do not compile `port_state.c`. They link
+`port/src/port_state_unavailable.c` instead, as the browser build links
+`port/web/state.c`: `portStateMessage()` returns "Suspend points are
+unavailable in 64-bit builds.", a save, load or the Suspend Points menu
+prints that message, slot queries report no slot, and the frame hook still
+runs `portGraphicsFrame()`. The post-build `embed_state_layout.py` step does
+not run, so a 64-bit build prints no `State layout:` line. Campaign saves are
+unaffected. A notice in the menus and the manual is LP64-007's
+([64-bit plan](native_64bit_plan.md#suspend-points)); a relocating format is a
+separate future project.
+
 ## Implementation
 
 This native port does not have an emulator's virtual machine to serialize.
@@ -116,6 +131,11 @@ State tests also cover immediate restore without a pause, automatic watch
 closure, slot/mission labels, replacement and wall-clock toast fade timing.
 Python tests cover linker ownership filters, COMMON sections, static host-cache
 exclusion, and bounded/idempotent executable overlays.
+The codec, menu and input tests run at 32 bits only. Where the compiler can
+build 64-bit code, `test_states.sh` instead links a small driver with
+`port_state_unavailable.c` and checks the message, the empty slot and the frame
+hook; `test_pointer_bits.sh` checks that each width's build compiles its own
+file and that only the 32-bit build runs the layout step.
 
 On Windows with a built executable and the local ROM:
 

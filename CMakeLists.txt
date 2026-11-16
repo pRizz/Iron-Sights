@@ -373,6 +373,13 @@ file(GLOB PORT_SRC CONFIGURE_DEPENDS port/src/*.c)
 if(NOT GE_POINTER_BITS EQUAL 64)
     list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_lp64.c)
 endif()
+# Suspend images record 32-bit addresses: 64-bit builds report suspend points
+# unavailable (port_state_unavailable.c) instead of compiling the serializer.
+if(GE_POINTER_BITS EQUAL 64)
+    list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_state.c)
+else()
+    list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_state_unavailable.c)
+endif()
 file(GLOB WEAPON_IMAGE_PACK CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/assets/port/weapon_icons/weapon_icons.rle")
 set_source_files_properties(port/src/port_weapon_images.c PROPERTIES
     OBJECT_DEPENDS "${WEAPON_IMAGE_PACK}"
@@ -580,13 +587,16 @@ else()
 # The suspend-point serializer records only registered game-owned sections;
 # the linker map supplies their exact bounds for this particular executable.
 target_link_options(ge PRIVATE "-Wl,-Map=${CMAKE_BINARY_DIR}/ProjectMidas.map")
-find_program(STATE_PYTHON NAMES python3 REQUIRED)
-set_property(TARGET ge APPEND PROPERTY LINK_DEPENDS ${CMAKE_SOURCE_DIR}/scripts/port/embed_state_layout.py)
-add_custom_command(TARGET ge POST_BUILD
-    COMMAND ${STATE_PYTHON} ${CMAKE_SOURCE_DIR}/scripts/port/embed_state_layout.py
-        --exe $<TARGET_FILE:ge> --map ${CMAKE_BINARY_DIR}/ProjectMidas.map
-        --root ${CMAKE_SOURCE_DIR} --nm ${CMAKE_NM}
-    VERBATIM)
+# 64-bit builds have no serializer (port_state_unavailable.c), so no registry.
+if(NOT GE_POINTER_BITS EQUAL 64)
+    find_program(STATE_PYTHON NAMES python3 REQUIRED)
+    set_property(TARGET ge APPEND PROPERTY LINK_DEPENDS ${CMAKE_SOURCE_DIR}/scripts/port/embed_state_layout.py)
+    add_custom_command(TARGET ge POST_BUILD
+        COMMAND ${STATE_PYTHON} ${CMAKE_SOURCE_DIR}/scripts/port/embed_state_layout.py
+            --exe $<TARGET_FILE:ge> --map ${CMAKE_BINARY_DIR}/ProjectMidas.map
+            --root ${CMAKE_SOURCE_DIR} --nm ${CMAKE_NM}
+        VERBATIM)
+endif()
 endif()
 # The exe's own icon (Explorer, a pinned taskbar entry): port/win/ProjectMidas.ico,
 # generated with the window icon by scripts/port/make_brand_art.py.
