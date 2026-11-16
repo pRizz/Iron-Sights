@@ -2228,11 +2228,11 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
             if (item == ITEM_ROCKETLAUNCH)
             {
                 save_img_index_to_obj_ani_slot(&g_UnknownAnimController, crosshairimage);
-                gdl = process_monitor_animation_microcode(model, (*(Model *)&handptr->field_B68).obj->Switches[16], (MonitorRecord *) &g_UnknownAnimController, gdl, 0, 4);
+                gdl = process_monitor_animation_microcode(model, (*(Model *)&handptr->field_B68).obj->Switches[16], &g_UnknownAnimController, gdl, 0, 4);
             }
             else
             {
-                gdl = process_monitor_animation_microcode(model, (*(Model *)&handptr->field_B68).obj->Switches[16], (MonitorRecord *) &g_TaserAnimController, gdl, 0, 1);
+                gdl = process_monitor_animation_microcode(model, (*(Model *)&handptr->field_B68).obj->Switches[16], &g_TaserAnimController, gdl, 0, 1);
             }
         }
 

@@ -153,7 +153,7 @@ s32 bss_80075C0C;
 /**
  * Address 0x80075C10.
 */
-struct object_animation_controller g_UnknownAnimController;
+MonitorRecord g_UnknownAnimController;
 
 /**
  * Unused / unreferenced (from padding / align?)
@@ -165,7 +165,7 @@ s32 bss_80075C84;
  * Unused / unreferenced (from padding / align?)
  * Address 0x80075C88.
 */
-struct object_animation_controller g_TaserAnimController;
+MonitorRecord g_TaserAnimController;
 
 /**
  * Address 0x80075CFC.

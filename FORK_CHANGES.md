@@ -1767,12 +1767,16 @@ branch reaches `main`).* *First commit, `model.c` and its declarations:*
 (the joint rotation bitstreams `loadAnimationFrame` returns and
 `sub_GAME_7F06DEC0`/`sub_GAME_7F06E540` read); `Model.animflipfunc` `s32` to
 `void (*)(void)` (its one callee, `bheadFlipAnimation`); `Model.unka0` `s32` to
-`intptr_t`, not the function-pointer type the plan names: with
-`s32 (*)(Model *, coord3d *, coord3d *, f32 *)` GCC predicted the callback as
-present and moved `sub_GAME_7F06D490`'s call block in line (block order and
-branch direction), while `intptr_t` keeps that function identical; the call
-site already casts it to that type, and the decomp's `while (model->unka0 * 0)`
-needs an integer; `ModelRoData_GunfireRecord.BaseAddr` `u32` to `void *` (it is
+`intptr_t`, not the function-pointer type the plan names, because the
+decompiled statement `while (model->unka0 * 0);` (`model.c:1079`), kept as
+written, multiplies the field and needs an integer; the call
+(`model.c:1102`) already casts it to `s32 (*)(Model *, coord3d *, coord3d *,
+f32 *)`, `sub_GAME_7F06FF5C` stores it from an `intptr_t`, and `chr.c` passes
+`(intptr_t) sub_GAME_7F01FC10`. Nothing is left for 64 bits: `intptr_t` holds
+the whole function address on every target, so the field needs no later
+retype (fix round 1 of task 9 corrected this reason; the earlier text also
+cited block order and branch direction in `sub_GAME_7F06D490`, which are
+accepted kinds and not a reason); `ModelRoData_GunfireRecord.BaseAddr` `u32` to `void *` (it is
 assigned `(void *)fileramaddr` and passed to `osVirtualToPhysical`, like the
 other records' `BaseAddr`); `ModelRoData_Op11Record`'s `unk0c[16]` `u32` to
 `uintptr_t` (element 15 is promoted in place to a pointer; nothing else reads
@@ -1926,13 +1930,12 @@ showed two `fabsf`/`powf` implicit declarations only in the current-tree half,
 an artefact of the comparison tool, whose HEAD copy lacks `scripts/`, where
 the SDL shim lives; that file and the shim are unchanged).
 *Third commit, `gunfire.c`:* *Declarations* (old type to new):
-`struct hand.field_A48` (`bondview.h:201`) `s32` to `intptr_t` with a
-`/* struct ALSoundState * */` note, not the `ALSoundState *` the plan names:
-with the pointer type GCC predicted the sound handle as present and laid out
-`gunTickHandState` differently (block order, branch direction, register
-choice, and a switch's case blocks swapped), while the integer keeps that
-function identical; its users already cast it to `struct ALSoundState *`, and
-the two initialisers (`initBondDATA.c`, `unk_092E50.c`) write `0`.
+`struct hand.field_A48` (`bondview.h:201`) `s32` to `struct ALSoundState *`,
+the type the plan names (this commit made it `intptr_t`; fix round 1 of task 9
+adopted the pointer, and its note below reads the resulting
+`gunTickHandState` difference); its users' existing casts to
+`struct ALSoundState *` are now casts to the same type, and the two
+initialisers (`initBondDATA.c`, `unk_092E50.c`) write `0`.
 `gunDrawSight` (`gun.h`, `gunfire.c`), `portHudGunSight` (`port_hud.h`,
 `port_sight.c`) and `port_sight.c`'s static `portDrawTarget` and
 `portDrawAlwaysTarget` take `Gfx **` instead of `s32 *` (`bondview2.c` already
@@ -1954,10 +1957,10 @@ The `GE_DUMP_BOND` diagnostic prints the root node and object with
 `"%08" PRIxPTR` and `(uintptr_t)` (`<inttypes.h>`; `PRIxPTR` is `"x"` on MinGW
 and glibc i686, so the format string is byte-identical). The four watch-text
 functions keep their `u16 *` return and return `(u16 *) langGet(...)`; the two
-monitor-microcode calls pass `(MonitorRecord *) &g_UnknownAnimController` and
-`&g_TaserAnimController` (a `struct object_animation_controller` is the same
-layout as the `MonitorRecord` fields `process_monitor_animation_microcode`
-reads). *Side-effect prototypes:* `gunfire.c` now includes `dyn.h` and
+monitor-microcode calls pass `&g_UnknownAnimController` and
+`&g_TaserAnimController`, which fix round 1 of task 9 retyped to
+`MonitorRecord` (this commit had passed them through `(MonitorRecord *)`
+casts, which hid a 64-bit layout mismatch; see that note). *Side-effect prototypes:* `gunfire.c` now includes `dyn.h` and
 `language.h`, and `<string.h>` (the repository's C stub, which declares
 `memset` on the PC) in its PC include block; `process_monitor_animation_microcode`
 gains a prototype in `src/game/propobj.h`, copied from its definition in
@@ -1977,9 +1980,8 @@ functions keep returning `u16 *`, because `bondinv.c`'s four text wrappers
 return their results as `u16 *` (16 places) to callers typed for `u16 *`, so
 retyping them to `u8 *` would move the mismatch into `bondinv.c` rather than
 remove it; that chain belongs to a text-type change, not to this task.
-*Signedness:* `intptr_t` replaces the former `s32` sound handle and
-`uintptr_t` the former `u32` addresses. *Struct layout:* `field_A48` stays 4
-bytes at 32 bits, so `struct hand` and `struct player` keep their offsets.
+*Signedness:* `uintptr_t` replaces the former `u32` addresses. *Struct
+layout:* `field_A48` stays 4 bytes at 32 bits, so `struct hand` and `struct player` keep their offsets.
 *Count:* 40 to 0 (`int-conversion` 20, `int-to-pointer-cast` 14 and
 `pointer-to-int-cast` 6 to zero; `gunfire.c` 38 and `port_sight.c` 2 to zero),
 with an empty `errors_by_file`. *Windows comparison* (`compare_win32.py commits
@@ -2048,19 +2050,62 @@ harness lines in the i686 container (119 s): 42 passed, including
 `test_wardrobe.sh` and `test_ads.sh` (Step 5), and `hand_gallery.py verify
 --allow-pending` failed as expected.
 
+*Fix round 1 of task 9* (review findings): `g_UnknownAnimController` and
+`g_TaserAnimController` (`chrprop.c`, `chrai.h`), their initial values
+`g_InitialUnknownAnimController`/`g_InitialTaserAnimController` and the two
+copies in `write_monitor_ani_control_blocks` (`initobjects.c`) are
+`MonitorRecord`, as `g_MonitorAnimController` already is, and `gunfire.c`
+passes them to `process_monitor_animation_microcode` without casts. The old
+`struct object_animation_controller` matches `MonitorRecord` only at 32 bits:
+its `u32 imagenum` at 0x08 is `MonitorRecord`'s `sImageTableEntry *tconfig`,
+so at 64 bits every later field moved by 8 and the microcode would have
+written past the smaller controller. Only declarations and initialisers
+changed (the 37-value initialisers leave `colinc` zero, as before); no other
+code uses the two globals or the struct, which stays declared and unused.
+`struct hand.field_A48` is `struct ALSoundState *`. `Model.unka0` stays
+`intptr_t` for the `* 0` statement (corrected reason in the first commit's
+note). *Windows comparison* (`compare_win32.py commits e5b7079 WORKTREE`,
+exit 1): two functions differ. `_gunTickHandState` (`gunfire.c`, strict
+tier), 2,713 to 2,715 instructions, read in both disassemblies: in the
+`GE_SNDDBG` trace's argument evaluation the likely path (both sound handles
+set) is now in line and the empty-handle paths out of line (block order and
+branch direction), with the handle values and states kept in other registers
+and stack slots (register and stack-slot choice), the same two
+`sndGetPlayingState` calls, then `bondwalkItemGetSoundTriggerRate`, and the
+same `printf` arguments on every path (`slot0`, `slot1`, `DROPPED`); the
+shared `sndPlaySfx` tail of the slot choice now follows the `audioHandle`
+block instead of the `field_A48` block, and each block still passes its own
+handle's address (block order); unchanged blocks (the `GE_GUNSND_OVERLAP` and
+`GE_SNDDBG` `getenv` setup, a `currentPlayerSetFadeColour` call, the
+automatic-fire rate test, a `0x8ac` store, the `atoi` and `sndDeactivate`
+tails) moved within the function (block order); two other loads use a
+different register (register choice); alignment padding changed. The six
+`.rdata` words that name different offsets are a jump table of this function
+whose targets moved by 0x20 with the code; the code at old and new targets is
+identical. `_init`: one displacement moved with the code (`-0x6fea7b20` to
+`-0x6fea7b10`), back to its value at 5c77e73. Every other differing data word
+names the same symbol and offset. *What ran:* step 1 (`update`, 22 s, 0 in 0
+files, no hard errors); the i686 headless build (10 s) and the 20-mission
+smoke, 20 of 20 `PASS` (186 s); `lp64_casts.py check` (28 casts in 13 files);
+`test_upstream_merge.sh`, `test_wardrobe.sh` and `test_ads.sh` in the i686
+container, all passing.
+
 *Gallery hand-off (task 9):* the whole branch against its base
-(`compare_win32.py commits 5c77e73 WORKTREE`, run with the fourth commit's
-files in place, exit 1) differs in exactly the two functions of the first
-commit, with the same instructions: `_loadAnimationFrame` (`model.c`, strict
-tier; register choice and an equivalent multiply on its RAM path) and `_init`
-(one displacement moved with the code). Every differing `.data` (175),
-`.rdata` (6,428) and `.CRT` (3) word names the same symbol and offset, and the
-constructor and destructor lists are equal by symbol. The second, third and
-fourth commits leave the executable identical in code and data. No renderer
-file (`port/fast3d`) and no function of `gunfire.c` or `bondview2.c` differs.
-`loadAnimationFrame` returns the frame data of every animated model (guards,
-Bond's body and head in cutscenes and multiplayer) and draws nothing itself,
-so the strict-tier gallery images are expected to be unchanged; they are
+(`compare_win32.py commits 5c77e73 WORKTREE`, run with fix round 1's files in
+place, exit 1) differs in two functions, both in strict-tier files:
+`_loadAnimationFrame` (`model.c`; register choice, the NULL path returning
+the register it tested as zero, and the frame-offset product formed from the
+other operand; the same `romCopy` call, stores and result) and
+`_gunTickHandState` (`gunfire.c`; block order and branch direction, register
+and stack-slot choice and alignment, as read above, in the `GE_SNDDBG` trace
+and the fire-sound slot choice). `_init` no longer differs. The differing
+`.rdata` words (289) name the same symbol and offset except the six
+jump-table words of `_gunTickHandState`, whose old and new targets hold the
+same code; `.data` and `.CRT` do not differ. No function of `bondview2.c` or
+of the renderer (`port/fast3d`) differs. Neither function draws:
+`loadAnimationFrame` returns the frame data of every animated model, and
+`gunTickHandState` advances the first-person weapon state and starts its fire
+sounds. The strict-tier gallery images are expected to be unchanged; they are
 regenerated on a machine that can render before the branch reaches `main`.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
