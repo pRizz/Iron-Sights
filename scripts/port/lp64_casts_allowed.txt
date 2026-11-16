@@ -3,7 +3,6 @@
 port/src/audio_stubs.c	1	LP64-002 task 8: alBnkfNew relocates the bank in place and reads the file's 32-bit offsets from its pointer slots (portBnkfOffset); LP64-004's audio bank converter replaces it
 port/src/port_arm_mesh.c	3	existing before LP64-002
 port/src/port_grip_mesh.c	1	existing before LP64-002
-port/src/port_textures.c	1	existing before LP64-002
 port/src/port_state.c	1	LP64-002 task 8: the suspend image's StateHeader/StateRegion records hold 32-bit addresses (stateAddrWord); since LP64-003 task 5 the file is compiled only at 32 bits (64-bit builds link port_state_unavailable.c, which reports suspend points unavailable)
 port/src/romdata.c	2	existing before LP64-002
 port/src/romfile_model.c	1	existing before LP64-002

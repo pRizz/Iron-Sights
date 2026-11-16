@@ -1,6 +1,6 @@
 /* ROM-free tests of the 64-bit address rules (LP64-003 Task 3): the
- * host-pointer test, the region predicate and the startup address check; and
- * of the asset-class guard (Task 4). Built at both pointer widths by
+ * host-pointer test, the region predicate and the startup address check; of
+ * the asset-class guard (Task 4); and of the command-word predicates (Task 6). Built at both pointer widths by
  * scripts/port/test_lp64_address.sh.
  *
  *   test_lp64_address              the unit cases
@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "PR/ultratypes.h"
 #include "platform_info.h"
 #include "port_hostptr.h"
 #include "port_lp64.h"
@@ -63,6 +64,66 @@ static void testHostAddrTruthTable(void)
 #else
     expect(!PORT_IS_HOST_ADDR(belowLine), "0x0FFFFFFF is not a host address at 32 bits");
     expect(PORT_IS_HOST_ADDR(atLine), "0x10000000 is a host address at 32 bits");
+#endif
+}
+
+static void testWordIsHostTruthTable(void)
+{
+    // Arrange
+    uintptr_t segmentWord = 0x0E001234u;
+#if IS_64_BIT
+    uintptr_t allLowBits = 0xFFFFFFFFu;
+    uintptr_t lowWordLikeSegment14 = (uintptr_t) 0x0000AAAA0E001234ull;
+#else
+    uintptr_t belowLine = 0x0FFFFFFFu;
+    uintptr_t atLine = 0x10000000u;
+#endif
+
+    // Act and Assert
+    expect(!PORT_WORD_IS_HOST(segmentWord), "a segment-14 word is not a host word");
+#if IS_64_BIT
+    expect(!PORT_WORD_IS_HOST(allLowBits), "0xFFFFFFFF is not a host word at 64 bits");
+    expect(PORT_WORD_IS_HOST(lowWordLikeSegment14),
+           "0x0000AAAA0E001234 is a host word although its low word looks like a segment-14 word");
+#else
+    expect(!PORT_WORD_IS_HOST(belowLine), "0x0FFFFFFF is not a host word at 32 bits");
+    expect(PORT_WORD_IS_HOST(atLine), "0x10000000 is a host word at 32 bits");
+#endif
+}
+
+static void testWordHasSegmentTruthTable(void)
+{
+    // Arrange
+    uintptr_t segment14Word = 0x0E001234u;
+    uintptr_t segment15Word = 0x0F001234u;
+#if IS_64_BIT
+    uintptr_t lowWordLikeSegment14 = (uintptr_t) 0x0000AAAA0E001234ull;
+#endif
+
+    // Act and Assert
+    expect(PORT_WORD_HAS_SEGMENT(segment14Word, 0x0E), "0x0E001234 is a segment-14 word");
+    expect(!PORT_WORD_HAS_SEGMENT(segment15Word, 0x0E), "0x0F001234 is not a segment-14 word");
+#if IS_64_BIT
+    expect(!PORT_WORD_HAS_SEGMENT(lowWordLikeSegment14, 0x0E),
+           "0x0000AAAA0E001234 is not a segment-14 word at 64 bits");
+#endif
+}
+
+static void testWordIsIndexTruthTable(void)
+{
+    // Arrange
+    uintptr_t lastIndex = 0xFFFu;
+    uintptr_t limit = 0x1000u;
+#if IS_64_BIT
+    uintptr_t lowWordLikeIndex = (uintptr_t) 0x0000AAAA00000123ull;
+#endif
+
+    // Act and Assert
+    expect(PORT_WORD_IS_INDEX(lastIndex, 0x1000), "0xFFF is an index below 0x1000");
+    expect(!PORT_WORD_IS_INDEX(limit, 0x1000), "0x1000 is not an index below 0x1000");
+#if IS_64_BIT
+    expect(!PORT_WORD_IS_INDEX(lowWordLikeIndex, 0x1000),
+           "0x0000AAAA00000123 is not an index below 0x1000 at 64 bits");
 #endif
 }
 
@@ -174,6 +235,9 @@ int main(int argc, char **argv)
     }
 
     testHostAddrTruthTable();
+    testWordIsHostTruthTable();
+    testWordHasSegmentTruthTable();
+    testWordIsIndexTruthTable();
 #if IS_64_BIT
     testRegionEndingAtFourGbIsLow();
     testRegionStartingAtFourGbIsHigh();

@@ -63,6 +63,7 @@
 #include "port_tracers.h"  /* Shotgun Tracers (FORK-063) */
 #include "port_glass.h"    /* Glass Reflections (FORK-066) */
 #include "port_projectile_arc.h" /* Projectile Arc (FORK-069) */
+#include "port_hostptr.h"  /* PORT_WORD_IS_HOST (LP64-003) */
 extern s32 g_PortFadeDbg;  /* the fade diagnostic (cl_fadedbg), defined beside posIsOnScreen */
 static void portFadeNote(PropRecord *prop, s32 state, s32 alpha, f32 foga);
 #endif
@@ -9164,9 +9165,9 @@ bool bgTestHitOnObj(coord3d *arg0, coord3d *arg1, coord3d *arg2, Gfx *gdl, Gfx *
              * host pointers are used directly. */
             op = (gdl->words.w0 >> 16) & 0xf;
             {
-                u32 vaddr = gdl->words.w1;
+                uintptr_t vaddr = gdl->words.w1;
 
-                if (vaddr >= 0x10000000u)
+                if (PORT_WORD_IS_HOST(vaddr))
                 {
                     vtxbase = (Vertex *) (((u8 *) (uintptr_t) vaddr) - (op << 4));
                 }
@@ -9289,9 +9290,9 @@ bool bgTestHitOnObj(coord3d *arg0, coord3d *arg1, coord3d *arg2, Gfx *gdl, Gfx *
                          * keep a raw segment word instead of a host pointer.
                          * Use the default material unless it is a real pointer
                          * or an IMAGESEG tag (0xABCDxxxx). */
-                        u32 timg = tcmd->words.w1;
+                        uintptr_t timg = tcmd->words.w1;
 
-                        if (timg >= 0x10000000u && (timg >> 16) != 0xABCDu)
+                        if (PORT_WORD_IS_HOST(timg) && ((u32) timg >> 16) != 0xABCDu)
                         {
                             texnum = *((u16 *) (uintptr_t) (timg - 8));
                         }
@@ -9473,9 +9474,9 @@ bool bgTestHitOnObj(coord3d *arg0, coord3d *arg1, coord3d *arg2, Gfx *gdl, Gfx *
                         else
                         {
                             /* see the G_TRI1 twin above */
-                            u32 timg = tcmd->words.w1;
+                            uintptr_t timg = tcmd->words.w1;
 
-                            if (timg >= 0x10000000u && (timg >> 16) != 0xABCDu)
+                            if (PORT_WORD_IS_HOST(timg) && ((u32) timg >> 16) != 0xABCDu)
                             {
                                 texnum = *((u16 *) (uintptr_t) (timg - 8));
                             }

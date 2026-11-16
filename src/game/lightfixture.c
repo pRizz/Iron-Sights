@@ -66,6 +66,7 @@
 #include <assets/image_externs.h>
 #include <PR/gbi.h>
 #include <gbi_extension.h>
+#include "port_hostptr.h" /* PORT_WORD_HAS_SEGMENT (LP64-003) */
 
 #define LIGHTFIXTURE_TABLE_MAX 200
 #define DARKENED_LIGHT_TABLE_MAX 1024
@@ -292,7 +293,7 @@ Vtx *lightFindVertexBaseForTri(Gfx *gfx, s32 room_index)
 
     ret = (Vtx *) gfx->words.w1;
 
-    if (((uintptr_t) ret & 0xFF000000) == 0x0E000000) 
+    if (PORT_WORD_HAS_SEGMENT(ret, 0x0E)) 
     {
         ret = (Vtx *)((u8 *)g_BgRoomInfo[room_index].vertices + ((uintptr_t) ret & 0xFFFFFF));
     }

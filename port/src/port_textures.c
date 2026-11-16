@@ -66,6 +66,7 @@
 #include <bondtypes.h>
 #include <PR/gbi.h>
 #include "game/image.h"   /* struct tex, TEXFORMAT_*, PORT_TEXTURES_MAX */
+#include "port_hostptr.h"  /* PORT_WORD_IS_INDEX */
 
 extern const char *portRootPath(const char *name); /* main.c: <exe dir>/name */
 extern void portConLogf(const char *fmt, ...);       /* port_console.c */
@@ -79,7 +80,7 @@ static s32 sXhairNum = -1;
 
 static s32 texCrosshairNum(void)
 {
-    if (crosshairimage != NULL && (u32) crosshairimage->index < 0x1000u)
+    if (crosshairimage != NULL && PORT_WORD_IS_INDEX(crosshairimage->index, 0x1000u))
     {
         sXhairNum = (s32) crosshairimage->index;
     }
@@ -344,7 +345,7 @@ static s32 texLoadSlot(struct portExtTex *t)
     free(rgba);
 
     memset(&t->entry, 0, sizeof(t->entry));
-    t->entry.index  = (u32) (uintptr_t) px;
+    t->entry.index  = (uintptr_t) px;
     t->entry.width  = (u8) w;
     t->entry.height = (u8) h;
     t->entry.level  = 0;
@@ -365,18 +366,6 @@ struct sImageTableEntry *portTexExternal(const char *name)
     struct portExtTex *t;
     s32 i;
 
-    if (sizeof(void *) > 4)
-    {   /* the entry's index is a u32; a 64-bit host pointer does not fit and
-         * the ROM image is the honest answer */
-        static s32 said;
-
-        if (!said)
-        {
-            said = 1;
-            portConLogf("ge: textures: external textures need the 32-bit build\n");
-        }
-        return NULL;
-    }
     if (!texNameOk(name))
     {
         return NULL;
@@ -776,7 +765,7 @@ s32 portTexReplaceRom(struct tex *tex, u8 *data, s32 bytes)
     struct portRomTex *r = NULL;
     s32 i, c, any = 0;
 
-    if (sizeof(void *) > 4 || num < 0 || num >= PORT_TEXTURES_MAX || data == NULL || bytes <= 0)
+    if (num < 0 || num >= PORT_TEXTURES_MAX || data == NULL || bytes <= 0)
     {
         return 0;
     }

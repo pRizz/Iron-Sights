@@ -43,6 +43,14 @@ POINTER_SIZED(ModelAnimation, address);             /* & 0x80000000: model.c */
 POINTER_SIZED(bg_portal_data_entry, offset_portal); /* BG_SEG_IS_OFFSET: bg.c */
 POINTER_SIZED(OSScClient, next);                    /* next = 1: audi.c */
 POINTER_SIZED(Gfx, words.w1);                       /* == 0x0E000000: lightfixture.c */
+/* The three slots that hold a number or a whole pointer and are tested
+ * against a small constant (LP64-003 Task 6): unsigned as well as
+ * pointer-sized, so the full-width comparisons stay unsigned. */
+#define UNSIGNED_FIELD(type, member) \
+    _Static_assert((__typeof__(((type *) 0)->member)) -1 > 0, #type "." #member " is unsigned")
+UNSIGNED_FIELD(ModelFileTextures, TextureID);
+UNSIGNED_FIELD(sImageTableEntry, index);
+UNSIGNED_FIELD(Gfx, words.w1);
 /* Every field modelPromoteNodeOffsetsToPointers (model.c) PROMOTEs, which
  * tests the 0x05000000 segment tag. PROMOTE casts through __typeof__, so on
  * an integer field (Op11's unk0c) only this assertion sees a narrowing. */

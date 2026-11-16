@@ -41,4 +41,31 @@ int portXboxIsHostAddr(unsigned int v);
 #endif
 #endif
 
+/*
+ * Command-word and slot predicates (LP64-003 Task 6). Each 32-bit form is the
+ * expression its sites had, so the 32-bit program is unchanged; each 64-bit
+ * form reads the whole word instead of a 32-bit copy of it.
+ *
+ * PORT_WORD_IS_HOST(w): is a display-list word a host pointer rather than a
+ * segment word or an IMAGESEG tag? At 32 bits the literal threshold stays,
+ * under GE_XBOX too (its PORT_IS_HOST_ADDR differs), and needs u32
+ * (PR/ultratypes.h) where it is used.
+ *
+ * PORT_WORD_HAS_SEGMENT(w, seg): is w a segment word of segment seg? At 64
+ * bits a host pointer whose bits 24-31 happen to equal seg is not one.
+ *
+ * PORT_WORD_IS_INDEX(w, limit): does a slot that holds a number or a pointer
+ * hold a number below limit? Compared at full width, so a pointer with a small
+ * low word is not taken for a number.
+ */
+#include "platform_info.h"
+#if IS_64_BIT
+#define PORT_WORD_IS_HOST(w) PORT_IS_HOST_ADDR(w)
+#define PORT_WORD_HAS_SEGMENT(w, seg) (((uintptr_t) (w) >> 24) == (uintptr_t) (seg))
+#else
+#define PORT_WORD_IS_HOST(w) ((u32) (w) >= 0x10000000u)
+#define PORT_WORD_HAS_SEGMENT(w, seg) (((uintptr_t) (w) & 0xFF000000) == ((uintptr_t) (seg) << 24))
+#endif
+#define PORT_WORD_IS_INDEX(w, limit) ((uintptr_t) (w) < (uintptr_t) (limit))
+
 #endif

@@ -4,7 +4,10 @@
 # position-independent executable and stop, naming the executable image, in
 # one linked -no-pie (the one deliberate -no-pie link: it proves the check
 # sees an image below 4 GB). The asset-class guard (Task 4): at 64 bits it
-# stops with status 5 naming the class, at 32 bits it returns.
+# stops with status 5 naming the class, at 32 bits it returns. The command-word
+# predicates (Task 6): PORT_WORD_IS_HOST, PORT_WORD_HAS_SEGMENT and
+# PORT_WORD_IS_INDEX at each width, and port_textures.c's external-texture slot,
+# which must hold the whole pixel address (above 4 GB at 64 bits).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source scripts/port/harness_widths.sh
@@ -15,8 +18,34 @@ compiler=${CC:-gcc}
 build() {
     local out=$1
     shift
-    "$compiler" "$@" -std=gnu11 -Wall -Wextra -Werror -iquote include -iquote port/include \
+    "$compiler" "$@" -std=gnu11 -D_LANGUAGE_C -Wall -Wextra -Werror -iquote include -iquote port/include \
         scripts/port/test_lp64_address.c port/src/port_lp64.c -o "$out"
+}
+
+# The external-texture slot (Task 6): port_textures.c linked with the stubs in
+# test_lp64_textures.c. -Iinclude puts the game's own string.h first, as in the
+# game build, hence -Wno-builtin-declaration-mismatch.
+build_textures() {
+    local out=$1
+    shift
+    "$compiler" "$@" -std=gnu11 -fms-extensions -fcommon -funsigned-char \
+        -DVERSION_US -DLANG_US -DREFRESH_NTSC -D_LANGUAGE_C -DNONMATCHING -DAVOID_UB \
+        -Wall -Wextra -Werror -Wno-builtin-declaration-mismatch \
+        -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \
+        scripts/port/test_lp64_textures.c port/src/port_textures.c -o "$out"
+}
+
+# Runs the texture driver in an empty root; prints its output only on failure.
+expect_textures() {
+    local bin=$1 root=$2 label=$3 status=0 output
+    mkdir "$root"
+    output=$("$bin" "$root" 2>&1) || status=$?
+    if [[ $status != 0 ]]; then
+        echo "test_lp64_address: $label: exit $status; output:" >&2
+        echo "$output" >&2
+        return 1
+    fi
+    return 0
 }
 
 # Runs the driver with MODE (address-space or require-animations); fails unless
@@ -44,6 +73,8 @@ for width in $widths; do
     flags=($(harness_flags "$width"))
     build "$work/unit-$width" ${flags[@]+"${flags[@]}"}
     "$work/unit-$width"
+    build_textures "$work/textures-$width" ${flags[@]+"${flags[@]}"}
+    expect_textures "$work/textures-$width" "$work/root-$width" "${width}-bit external-texture slot"
     if [[ $width == 64 ]]; then
         build "$work/pie" -fPIE -pie
         expect_driver "$work/pie" address-space 0 "ge: lp64: address space OK" "position-independent driver"

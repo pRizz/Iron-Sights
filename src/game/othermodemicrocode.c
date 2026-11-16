@@ -5,6 +5,7 @@
 #include "bondtypes.h"
 #include "othermodemicrocode.h"
 #include "gbi_extension.h"
+#include "port_hostptr.h" /* PORT_WORD_IS_INDEX (LP64-003) */
 
 s32 is_less_than_certain_power_of_2(int number)
 {
@@ -359,7 +360,7 @@ void texSelect(Gfx **gdlptr, struct sImageTableEntry *tconfig, u32 arg2, s32 arg
         width = tconfig->width;
         height = tconfig->height;
         
-        if ((u32) tconfig->index < NUM_TEXTURES)
+        if (PORT_WORD_IS_INDEX(tconfig->index, NUM_TEXTURES))
         {
             texLoad((s32 *)tconfig, NULL);
         }

@@ -36,7 +36,7 @@ The ROM is parsed as 32-bit big-endian data:
 - `port/include/romdata.h`'s host `struct romfile` uses native pointers and `u32` ROM offsets. The table is parsed field-by-field rather than overlaid as a host struct, so this particular path is not inherently 64-bit-hostile.
 - `port/src/romfile_model.c` treats model files as big-endian N64 memory images with `0x05000000`-based offsets and display lists in big-endian words. It byte-swaps typed fields in place, then relies on the game's existing promote step to rebase offsets to pointers.
 - `port/src/romfile_setup.c` and `romfile_stan.c` contain conversion paths that write host pointers into 32-bit fields with `(u32)(uintptr_t)`. That is lossless only in ILP32.
-- `port/src/port_textures.c` stores a texture address in `entry.index` (a `u32`) via `(u32)(uintptr_t)px`, and explicitly refuses external textures when `sizeof(void *) > 4`.
+- `port/src/port_textures.c` stores an external texture's pixel address in `entry.index`, a `uintptr_t`, whole (since LP64-003 Task 6; it used to truncate it through `(u32)(uintptr_t)px` and refuse external textures when `sizeof(void *) > 4`).
 
 The architectural issue is therefore field-by-field: some values are guest offsets or 32-bit words and should stay 32-bit; others are host pointers and must widen. The current snapshot can leave that distinction implicit because the host pointer is also 32-bit.
 

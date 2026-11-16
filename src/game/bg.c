@@ -32,6 +32,7 @@ extern void sysFatalError(const char *format, ...);
 #include "port_room_seams.h" /* FORK-086: portRoomSeamsTag */
 #include "port_graphics.h" /* FORK-082: Baked Lighting's capture and apply hooks */
 #include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
+#include "port_hostptr.h" /* LP64-003: PORT_WORD_IS_HOST */
 #endif
 
 
@@ -4513,9 +4514,9 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
                         {
                             /* unpromoted stragglers keep segment words -
                              * classify before dereferencing (propobj.c twin) */
-                            u32 timg = tcmd->words.w1;
+                            uintptr_t timg = tcmd->words.w1;
 
-                            if (timg >= 0x10000000u && (timg >> 16) != 0xABCDu)
+                            if (PORT_WORD_IS_HOST(timg) && ((u32) timg >> 16) != 0xABCDu)
                             {
                                 texnum = *((u16 *) (uintptr_t) (timg - 8));
                             }
@@ -4714,9 +4715,9 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
                                 else
                                 {
                                     /* see the G_TRI1 twin above */
-                                    u32 timg = tcmd->words.w1;
+                                    uintptr_t timg = tcmd->words.w1;
 
-                                    if (timg >= 0x10000000u && (timg >> 16) != 0xABCDu)
+                                    if (PORT_WORD_IS_HOST(timg) && ((u32) timg >> 16) != 0xABCDu)
                                     {
                                         texnum = *((u16 *) (uintptr_t) (timg - 8));
                                     }
