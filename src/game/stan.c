@@ -2797,6 +2797,7 @@ s32 stanTileDistanceRelated(StandTile **arg0, f32 arg1, f32 arg2, f32 arg3, stru
 
 s32 stanGetLocusField0(struct StandTileLocusCallbackRecord *arg0)
 {
+    /* rooms is only a flag here (zeroed by stanTileDistanceRelated, set to 1 by stanIsSpecialBit1Set), so narrowing to s32 loses nothing */
     return (intptr_t) arg0->rooms;
 }
 

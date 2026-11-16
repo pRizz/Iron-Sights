@@ -1441,9 +1441,21 @@ read a 32-bit word that holds a pointer or ID and are marked for LP64-004:
 `bondview_r.c:380` (`SetupIntroCredits.unk04`) and `prop.c`'s vehicle and
 aircraft `ailistFindById((intptr_t) ...->ailist)`; `portStanPack`'s two
 4-byte room-slot writes are `(u32)(uintptr_t)`, allowlisted
-(`lp64_casts_allowed.txt`, 25 casts in 10 files). *Signedness:* every
-replaced `(s32)` became `intptr_t` and every `(u32)` `uintptr_t`, so
-comparisons, shifts and the `% 1` at bg.c:6398 are unchanged. *Struct sizes:*
+(`lp64_casts_allowed.txt`, 25 casts in 10 files). *Implicit narrowings the
+cast allowlist does not see* (each truncates through an implicit conversion,
+not a cast): `stan.c`'s `stanGetLocusField0` returns
+`(intptr_t) arg0->rooms` from an `s32` function, harmless because there
+`rooms` is only a flag, zeroed by `stanTileDistanceRelated` and set to 1 by
+`stanIsSpecialBit1Set` (a source comment says so); `prop.c:2551` and `:2573`
+pass `(intptr_t) ...->ailist` to `ailistFindById(s32 ID)`, safe while the field
+holds the setup file's small AI list ID, and replaced by LP64-004's setup
+converter (marked there). *Signedness:* a former `(s32)` became `intptr_t`
+and a former `(u32)` `uintptr_t` wherever the cast stayed an integer, so
+comparisons, shifts and the `% 1` at bg.c:6398 are unchanged; other `(s32)`
+forms became `(u8 *)` arithmetic or `!= NULL` tests. The one `(s32)` that
+became `(uintptr_t)` is `lightfixture.c:295-297`, where signedness does not
+matter: the `0xFF000000` literal is already unsigned, so the masked test was
+unsigned before, and `& 0xFFFFFF` is non-negative either way. *Struct sizes:*
 at 32 bits `s_bound_info` stays 0x1C and `StanPrefixRecord` 8; no other struct
 changed. *Not changed:* the `bg_room_data` stride lines (bg.c 4455, 4659, 6394,
 6427; recorded under "Hard-coded sizes" in the plan for LP64-004) and the
@@ -1461,10 +1473,17 @@ one-offs fixed. To zero: `bg.h` 7, `chrai.c` 1, `chrprop.c` 1,
 `initpathtablesomething.c` 2. Lower: `bg.c` 69 to 27, `bondview_r.c` 14 to 1,
 `chr.c` 3 to 1, `chraction.c` 24 to 8, `lightfixture.c` 8 to 4, `lv.c` 4 to 2,
 `prop.c` 13 to 4, `propobj.c` 6 to 3, `stan.c` 28 to 4, `cseq.c` 3 to 2. No file
-rose. At 32 bits the edits add two `incompatible-pointer-types` warnings where
-decomp aliases of one layout meet (`chraction.c:293`, `AIRecord *` to
-`struct AIListRecord *`; `chrai.c:1724`, `PathRecord *` to
-`struct patrol_path *`). *Left:* for Task 9, `chr.c:1701` (its callee is in
+rose. At 32 bits the edits add two `incompatible-pointer-types` warnings.
+`chraction.c:293` passes `ailistFindById`'s result, an AI bytestream pointer
+(`AIRecord *`, `{u8 cmd; u8 val[];}`), to `chrAllocate`, whose fifth
+parameter is now declared `struct AIListRecord *` (`{AIRecord *ailist; int
+ID;}`, a different layout). That type follows the neighbouring decomp
+misnomer (`init_GUARDdata_with_set_values`, which `chrAllocate` forwards to,
+and `chrSpawnAtPad`); the pointer is only carried and cast back with
+`(AIRecord *) arg5` (`chr.c:1766`), so behaviour is unaffected at 32 and 64
+bits. Giving the chain its true type, `AIRecord *`, is left for later.
+`chrai.c:1724` passes a `PathRecord *` as `struct patrol_path *`, two decomp
+names for one layout. *Left:* for Task 9, `chr.c:1701` (its callee is in
 strict `model.c`) and `bondview2.c`'s intro walk and traces; for Task 8, bg.c
 390, 3697, 4085, `lightfixture.c` 413 and 452, `prop.c` 1544 and 1556, `stan.c`
 2884 and 2890, `chraction.c`'s six pointer differences, `cseq.c:92`,
@@ -1478,9 +1497,11 @@ Two functions differ, both through changed declarations:
 state and flag tests and the same `set_actor_on_path` call) and
 `_load_bg_file` (register choice, operand order, one extra register copy, the
 segment sum as load-mask-add instead of mask-add-from-memory, a load of
-`ptr_bg_data[1]` moved before the store to `ptr_bgdata_offsets`, and two
-independent global stores with no call between them in swapped order; the
-same tests and stored values). *64-bit problems found (LP64-003/004):*
+`ptr_bg_data[1]` moved before the store to `ptr_bgdata_offsets` and a load of
+`0xc(%edi)` moved before the `g_BgPortals` store, neither store able to
+affect the load, and two independent global stores with no read of either and
+no call between them in swapped order, a kind the controller accepted and the
+LP64-002 plan now lists; the same tests and stored values). *64-bit problems found (LP64-003/004):*
 `((u32 *)gdl)[1]` reads half of `w0` at 64 bits (bg.c, `propobj.c`), and
 `propobj.c`'s `u32 vaddr = gdl->words.w1` truncates; the `lightfixture.c`
 `0x0E000000` segment test; `BG_SEG` applied to `s32` file slots
@@ -1491,7 +1512,8 @@ used as `s32` flag words (`stanCheckLinkedSpecialTile`,
 `SetupIntroCredits.unk04` and `SetupIntroCamera.prev` hold pointers in ROM
 records walked with `sizeof`, and `prop.c:1523` divides a `sizeof` by 4; the
 `TARGET_N64` branches of bg.c no longer type-check against the pointer
-globals (pointer plus pointer at 3021, 3116, 3206); `stan.c:250` (DEBUG only)
+globals (pointer plus pointer at 3021, 3116, 3206), which an upstream merge
+touching them must allow for; `stan.c:250` (DEBUG only)
 compares an `s32` with `ptr_firstroom_0`. *What ran:* step 1 (`update`, 22 s,
 460 in 68 files, no `--allow-rise`). Step 2: the i686 headless build exited 0
 (10 s, incremental) and the 20-mission smoke exited 0 with 20 of 20 `PASS`
@@ -1502,7 +1524,15 @@ step except the two `cmake` lines ran in the i686 container, plus
 passed (119 s), including `lp64_diagnostics.py check` and `hand_gallery.py
 verify --allow-pending`. `test_buffers.sh` ran without
 `MIDAS_BUFFER_SANITIZE=1` (its AddressSanitizer binary hangs under
-`qemu-i386`); without it, it passed in 4 s.
+`qemu-i386`); without it, it passed in 4 s. *Review fix round* (local commit
+"Correct the Task 7 record and mark an implicit narrowing in stan.c"; not
+pushed): corrected the `chraction.c:293` warning's description, the
+signedness sentence and the comparison detail above, recorded the implicit
+narrowings, added the store-reordering kind to the LP64-002 plan's first
+Global Constraints bullet, and added the one comment line in `stan.c`
+(CRLF kept). A comment-only source change needs no new Windows comparison,
+smoke or harness run; the pre-commit hook, `lp64_casts.py check` and the
+i686 headless build ran.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),

@@ -118,7 +118,8 @@ in the task that owns its file.
   cannot affect it; jump threading that duplicates code, when every path is
   shown to make the same calls and stores; a loop written with an indexed
   address instead of a stepped pointer, with the same accesses in the same
-  order. Otherwise change the
+  order; two stores to distinct non-volatile objects reordered, with no read
+  of either and no call between them. Otherwise change the
   fix: a type that keeps the 32-bit arithmetic identical (`intptr_t` for a
   signed quantity, `uintptr_t` for an unsigned one) is preferred to a pointer
   type that does not.
