@@ -89,8 +89,8 @@ a native x86_64 port as assessed and deferred. Upstream has open, unmerged
 tasks: the two-tier gallery rule, a container runner for the Mac, a layout
 probe, a 64-bit diagnostics ratchet, a 32-bit executable comparison, a repair
 of the headless build (Task 5b), a `GE_POINTER_BITS` build option, and CI
-wiring. Only Task 2, the container runner, and Task 3, the layout probe, have
-been built and run (below); the others have not. Each task extends this entry with what it built and ran.
+wiring. Only Task 2, the container runner, Task 3, the layout probe, and Task 4, the
+64-bit diagnostics ratchet, have been built and run (below); the others have not. Each task extends this entry with what it built and ran.
 
 *LP64-001 task 2, the container runner (built 2026-11-15 on the owner's Apple
 Silicon Mac, Docker 29.9.2):* `scripts/port/lp64_env.py` runs a command in the
@@ -120,19 +120,37 @@ it, when `-m32` does not compile. Flags follow `test_states.sh`. LP64-004 is to
 add each file layout's assertions here. No game, engine, port or renderer
 source was changed.
 
+*LP64-001 task 4, the 64-bit diagnostics ratchet:* `scripts/port/lp64_diagnostics.py`
+compiles every C file in a `compile_commands.json` syntax-only with 64-bit
+pointers (it drops `-m32`, `-msse2`, `-mfpmath=sse`, `-w`, `-c`, `-o`, the
+dependency flags and `-fsanitize...`, and adds `-fsyntax-only` with
+`-Wint-conversion`, `-Wpointer-to-int-cast`, `-Wint-to-pointer-cast`), in
+parallel (at most 8 workers, 60 s per compile; a compile that cannot start,
+times out, or fails with no recognised diagnostic aborts the run). It counts
+distinct (file, line, column, kind) places, where kind is one of the three
+warnings or `error` (any compile error). `count` prints the tally as JSON,
+`update` rewrites `scripts/port/lp64_diagnostics_baseline.json` (sorted, trailing
+newline, so an unchanged tree gives an empty `git diff`), and `check` exits 1
+naming every file whose count rose above the baseline (a new file counts from
+zero), refuses to compare across compilers (the baseline records `gcc-13`), and
+prints `Baseline can be lowered: run update.` when the total fell. Default input
+is `build/lp64/diag/compile_commands.json`. `scripts/port/test_lp64_diagnostics.py`
+(11 ROM-free, compiler-free tests) covers the pure functions. Nothing wires the
+check into CI or the hook yet. No game, engine, port or renderer source was changed.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),
 [inherited 32-bit constraints](docs/port/abi-and-portability.md).
 
-**Validation:** Only LP64-001 Tasks 2 and 3 have run; no milestone is complete. What
+**Validation:** Only LP64-001 Tasks 2, 3 and 4 have run; no milestone is complete. What
 ran: the 11 ROM-free tests in `scripts/port/test_lp64_env.py` (passing); on the
 Mac, `build-images` (3 min 58 s) and three container checks (`gcc -dumpmachine`
 in the aarch64 and x86_64 images, and a `gcc -m32` program in the i686
 container, which printed `i686-runs`); and the i686 headless reference build
 and 20-mission smoke, which worked only with the two workarounds named above
 (the SDL shim include and a scratch `portRenderAsyncActive` stub) and not with
-the stock configuration. Task 3, in the containers: `python3 scripts/port/lp64_env.py run --arch x86_64 -- bash scripts/port/test_abi_probe.sh` exited 0 and printed `ABI probe OK (64-bit)` and `ABI probe OK (32-bit)`; the same with `--arch aarch64` exited 0 and printed `ABI probe OK (64-bit)`, then `gcc: error: unrecognized command-line option '-m32'` (the availability check's own output) and `ABI probe: -m32 unavailable on this host, skipped`. Changing `sizeof(Vtx) == 16` to `24` temporarily made the x86_64 run fail with `static assertion failed: "Vertex stride"`; the line was restored. Nothing else in the plan has run. The Bright Builds
+the stock configuration. Task 3, in the containers: `python3 scripts/port/lp64_env.py run --arch x86_64 -- bash scripts/port/test_abi_probe.sh` exited 0 and printed `ABI probe OK (64-bit)` and `ABI probe OK (32-bit)`; the same with `--arch aarch64` exited 0 and printed `ABI probe OK (64-bit)`, then `gcc: error: unrecognized command-line option '-m32'` (the availability check's own output) and `ABI probe: -m32 unavailable on this host, skipped`. Changing `sizeof(Vtx) == 16` to `24` temporarily made the x86_64 run fail with `static assertion failed: "Vertex stride"`; the line was restored. Task 4: the 11 tests in `scripts/port/test_lp64_diagnostics.py` pass with plain `python3` on the host. In the x86_64 container, `cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-I/home/dev/project/scripts/port/sdl_shim` configured (the game was not built), then `lp64_diagnostics.py update` (about 9 s) recorded 1,432 diagnostics in 93 files with GCC 13: 709 `int-conversion`, 432 `pointer-to-int-cast`, 229 `int-to-pointer-cast` and 62 `error` (for example `initializer element is not computable at load time` in `src/game/propobj.c`). The largest files are `src/game/front.c` 261, `options.c` 158, `propobj.c` 148, `image_bank.c` 86, `chraction.c` 83. 54 of the 93 files are under `src/game` and 14 under `port/src`. This is lower than the planning figure (about 1,600 in 70 files, a different compiler, game and engine files only) although this run also covers the port layer. A second `update` left the file byte-identical and `check` exited 0 (`OK: 1432 diagnostics, baseline 1432`). `check` in the aarch64 container, reusing the x86_64 `compile_commands.json`, exited 0, and its `count` output equals the baseline exactly. Nothing else in the plan has run. The Bright Builds
 checks, the settings placement check and the ROM-free gallery verification
 were run for the documentation changes.
 
