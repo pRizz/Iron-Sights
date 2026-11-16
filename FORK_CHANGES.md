@@ -864,9 +864,48 @@ different register, or lose a padding `nop`. The `-O2` differences are block
 order, branch polarity, register and stack-slot choice: GCC predicts a
 pointer result as non-null where it predicted nothing for an `int`, and the
 same calls with the same arguments follow. No argument changed width or
-promotion: every newly prototyped parameter is a pointer, `s32`/`u32`,
-`int`, `bool` (an `int` typedef here) or an enum, and the executable shows no
-other function whose calls changed.
+promotion. Every newly prototyped parameter is a pointer, `s32`/`u32`,
+`int`, `size_t`, `bool` (an `int` typedef here) or an enum, with one exception:
+`bg.c` now sees `void *_fileNameLoadToBank(char *filename, FILELOADMETHOD
+loadMethod, s32 size, u8 bank)` (`ob.h:40`, matching `ob.c:193`), whose only
+call there (`bg.c:1103`) passes the constant `4` for the `u8 bank`, a value the
+narrower type holds unchanged; the function containing that call is not among
+the symbols that differ (the reviewer checked). The executable shows no other
+function whose calls changed. *Correction (fix round):* the first version of
+this entry and the commit "Declare the pointer-returning functions that were
+called without a prototype" said no parameter narrower than `int` gained a
+prototype; the `u8 bank` above is the exception. *Side-effect prototypes:*
+including whole headers also declared functions that return no pointer and
+were implicit in these files before (from the same compile scan, before and
+after): `debugmenu_handler.c` (`bondview.h`): `get_bondata_invincible_flag`
+(`u8` return), `set_bondata_invincible_flag(u32)`,
+`bondviewGetVisibleToGuardsFlag`, `bondviewSetVisibleToGuardsFlag(s32)`,
+`bondviewKillCurrentPlayer`, `bondviewRemovePlayerBody`,
+`bondviewSetCameraMode(s32)`, `currentPlayerGetXAutoAimEnabled`,
+`currentPlayerGetYAutoAimEnabled`, `currentPlayerSetXAutoAimEnabled(bool)`,
+`currentPlayerSetYAutoAimEnabled(s32)`; `options.c` (`bondinv.h`, `gun.h`,
+`objective_status.h`): `bondinvCountTotalItemsInInv`,
+`currentPlayerUnEquipWeaponWrapper(GUNHAND, ITEM_IDS)`,
+`getCurrentPlayerWeaponId(GUNHAND)`, `get_status_of_objective(s32)`,
+`objectiveGetCount`, `objectiveIsAllComplete`; `bg.c` (`mema.h`, `ob.h`):
+`memaFree(void *, s32)`, `memaGetLongestFree`, `fileGetIndex(u8 *)`; `lv.c`
+(`sky.h`): `skyTick`, `skySetStageNum(s32)`; `player.c` (`propobj.h`):
+`chrSetWeaponFlag4(ChrRecord *, GUNHAND)`; `propobj.c`
+(`loadobjectmodel.h`): `modelLoad(s32)`, `setupUpdateObjectRoomPosition`;
+`ramromreplay.c` (`indy_comms.h`): `indycommHostRamRomLoad`,
+`indycommHostSaveFile`; `front.c` (`gun.h`, `str.h`, `string.h`):
+`get_curplayer_shot_register(SHOT_REGISTER)`, `strcmp`, `strlen`;
+`port_option_help.c` (`str.h`): `strcmp`, `strncmp`; `port_textures.c`
+(`str.h`): `strcmp`. None has a parameter narrower than `int` (the only
+narrower parameter in the whole change is `_fileNameLoadToBank`'s `u8 bank`),
+and the only return narrower than `int` is `get_bondata_invincible_flag`'s
+`u8`, whose caller change is described above. For later tasks: `strlen` now
+returns `size_t` in `front.c` (`include/string.h`); most uses cast it to or
+store it into `s32`, but `front.c:8053` and `:9133` index with
+`strlen(x) - 1` directly, on strings that end in a character just appended,
+so the length is never 0 there. The `(char *)` cast at `front.c:1294` exists
+only because `gunfire.c:5415` declares the watch text as `u16 *`; Task 9 can
+remove it when it corrects that type.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
