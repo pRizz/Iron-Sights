@@ -362,6 +362,10 @@ owns it.
   (Task 6)
 - `(timg >> 16) != 0xABCDu` beside them is a marker test on a 32-bit value;
   it stays a test of the low word. (Task 6)
+  (Note from Task 6's review: the marker test keeps its original uncast
+  expression, which reads the low word at 32 bits and the whole word at 64
+  bits, where a tag is already rejected by the host test; a `(u32)` cast
+  would reject host pointers whose bits 16-31 are `0xABCD`.)
 - `BG_SEG_IS_OFFSET` (`bg.h:32`) and `SETUP_PROMOTE` (`prop.c:1455`) are
   already full-width and belong to file layouts. Not changed. (LP64-004)
 - `StandTileLocusCallbackRecord`'s first two fields double as flags. The fix
@@ -811,6 +815,10 @@ git commit -m "Report suspend points as unavailable in 64-bit builds"
     `:4714-4716`: the `u32` copy becomes `uintptr_t`, the test becomes
     `PORT_WORD_IS_HOST`, and the pointer is rebuilt from the whole word. The
     `0xABCD` marker test reads the low word.
+    (Note from Task 6's review: the marker test keeps its original uncast
+    expression, which reads the low word at 32 bits and the whole word at 64
+    bits, where a tag is already rejected by the host test; a `(u32)` cast
+    would reject host pointers whose bits 16-31 are `0xABCD`.)
   - `lightfixture.c:295`: `PORT_WORD_HAS_SEGMENT(ret, 0x0E)`.
   - `othermodemicrocode.c:362` and `port_textures.c:82`:
     `PORT_WORD_IS_INDEX`, no `(u32)`.

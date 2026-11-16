@@ -56,7 +56,8 @@ int portXboxIsHostAddr(unsigned int v);
  *
  * PORT_WORD_IS_INDEX(w, limit): does a slot that holds a number or a pointer
  * hold a number below limit? Compared at full width, so a pointer with a small
- * low word is not taken for a number.
+ * low word is not taken for a number. limit must be non-negative: it is
+ * converted to uintptr_t.
  */
 #include "platform_info.h"
 #if IS_64_BIT

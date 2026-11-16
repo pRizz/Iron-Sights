@@ -14,8 +14,8 @@
  * before the pixels, and when no pool holds that number it uses the entry's own
  * format/depth and draws from the address. So a texture made here is a 16-byte
  * 0xFF header (a number no pool holds, since texturenum is 12 bits), then the
- * pixels. This relies on the port being a 32-bit process, so a host pointer
- * fits the entry's u32 `index`.
+ * pixels. The entry's `index` is a uintptr_t, so it holds the whole host
+ * pointer at either width (LP64-003 Task 6).
  *
  * Format: RGBA16 in host byte order (the renderer reads RAM textures as native
  * u16), 1-bit alpha with 128 and over opaque. File: Windows BMP, 24-bit or

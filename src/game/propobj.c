@@ -9292,7 +9292,7 @@ bool bgTestHitOnObj(coord3d *arg0, coord3d *arg1, coord3d *arg2, Gfx *gdl, Gfx *
                          * or an IMAGESEG tag (0xABCDxxxx). */
                         uintptr_t timg = tcmd->words.w1;
 
-                        if (PORT_WORD_IS_HOST(timg) && ((u32) timg >> 16) != 0xABCDu)
+                        if (PORT_WORD_IS_HOST(timg) && (timg >> 16) != 0xABCDu)
                         {
                             texnum = *((u16 *) (uintptr_t) (timg - 8));
                         }
@@ -9476,7 +9476,7 @@ bool bgTestHitOnObj(coord3d *arg0, coord3d *arg1, coord3d *arg2, Gfx *gdl, Gfx *
                             /* see the G_TRI1 twin above */
                             uintptr_t timg = tcmd->words.w1;
 
-                            if (PORT_WORD_IS_HOST(timg) && ((u32) timg >> 16) != 0xABCDu)
+                            if (PORT_WORD_IS_HOST(timg) && (timg >> 16) != 0xABCDu)
                             {
                                 texnum = *((u16 *) (uintptr_t) (timg - 8));
                             }

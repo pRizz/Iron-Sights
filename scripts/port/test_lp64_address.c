@@ -127,6 +127,31 @@ static void testWordIsIndexTruthTable(void)
 #endif
 }
 
+/* The decision the command-word sites in propobj.c and bg.c make before
+ * reading a texture number through w1: a host pointer and not an IMAGESEG tag
+ * (0xABCD0000 | id). Written with the sites' own two expressions, since the
+ * decision is inline there, not a function. */
+static int siteWordIsTexturePointer(uintptr_t timg)
+{
+    return PORT_WORD_IS_HOST(timg) && (timg >> 16) != 0xABCDu;
+}
+
+static void testTexturePointerDecision(void)
+{
+    // Arrange
+    uintptr_t imagesegTag = 0xABCD0012u;
+#if IS_64_BIT
+    uintptr_t pointerWithTagBits = (uintptr_t) 0x0000AAAAABCD1234ull;
+#endif
+
+    // Act and Assert
+    expect(!siteWordIsTexturePointer(imagesegTag), "0xABCD0012 is an IMAGESEG tag, not a texture pointer");
+#if IS_64_BIT
+    expect(siteWordIsTexturePointer(pointerWithTagBits),
+           "0x0000AAAAABCD1234 is a texture pointer although bits 16-31 are 0xABCD");
+#endif
+}
+
 #if IS_64_BIT
 static void testRegionEndingAtFourGbIsLow(void)
 {
@@ -238,6 +263,7 @@ int main(int argc, char **argv)
     testWordIsHostTruthTable();
     testWordHasSegmentTruthTable();
     testWordIsIndexTruthTable();
+    testTexturePointerDecision();
 #if IS_64_BIT
     testRegionEndingAtFourGbIsLow();
     testRegionStartingAtFourGbIsHigh();
