@@ -707,10 +707,19 @@ typedef union
                 s16 t; /* 0xa */
             };
 
+#if IS_64_BIT
+            /* PORT (LP64-003): a pointer here would make Vertex 24 bytes, but
+             * it is a 16-byte Vtx-shaped format. At 64 bits the slot is a
+             * 32-bit offset from the model file's base, 0 for none; read it
+             * through VERTEX_COLLISION_NODE. LP64-004's model converter
+             * fills it. */
+            u32 LinkOffset; /* 0x8 */
+#else
             struct Vertex *LinkedTo;
 
             /* Collision vertices only: points to related model node. */
             void *CollisionRelatedNode; /* 0x8 */
+#endif
         };
 
         union
@@ -738,6 +747,16 @@ typedef union
             };
         };
     } Vertex;
+
+    /* The model node a collision vertex links to (NULL for none). base is the
+     * model file's base, the collision record's BaseAddr, from which the
+     * 64-bit slot is an offset; the 32-bit form is the stored pointer. */
+#if IS_64_BIT
+    #define VERTEX_COLLISION_NODE(base, vertex) \
+        ((vertex).LinkOffset != 0 ? (void *) ((u8 *) (base) + (vertex).LinkOffset) : NULL)
+#else
+    #define VERTEX_COLLISION_NODE(base, vertex) ((vertex).CollisionRelatedNode)
+#endif
 
     #pragma region OpenFlight Records
     /*

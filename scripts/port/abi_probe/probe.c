@@ -34,6 +34,9 @@ _Static_assert(sizeof(Hilite_t) == 16, "Highlight offsets layout");
 _Static_assert(sizeof(Hilite) == 16, "Highlight layout");
 _Static_assert(sizeof(Gsetcolor) == 8, "Set-colour command layout");
 _Static_assert(sizeof(TexRect) == 16, "Textured rectangle layout");
+/* The game's Vertex is laid out as a Vtx; at 64 bits its +8 link is a 32-bit
+ * offset from the model file's base (bondtypes.h, LP64-003). */
+_Static_assert(sizeof(Vertex) == 16, "Game vertex stride");
 /* Scales with the pointer. */
 _Static_assert(IS_64_BIT == (sizeof(void *) == 8), "IS_64_BIT matches the host");
 _Static_assert(sizeof(Gfx) == 2 * sizeof(uintptr_t), "Display-list command is two pointer words");
@@ -76,7 +79,14 @@ POINTER_SIZED(ModelRoData_DisplayList_CollisionRecord, Secondary);
 POINTER_SIZED(ModelRoData_DisplayList_CollisionRecord, Vertices);
 POINTER_SIZED(ModelRoData_DisplayList_CollisionRecord, CollisionVertices);
 POINTER_SIZED(ModelRoData_DisplayList_CollisionRecord, PointUsage);
+#if IS_64_BIT
+/* At 64 bits the collision link is a 32-bit offset (bondtypes.h), which
+ * modelPromoteNodeOffsetsToPointers does not PROMOTE. */
+_Static_assert(sizeof(((Vertex *) 0)->LinkOffset) == 4 && offsetof(Vertex, LinkOffset) == 8,
+               "Vertex.LinkOffset is the 32-bit slot at 0x8");
+#else
 POINTER_SIZED(Vertex, LinkedTo);
+#endif
 POINTER_SIZED(ModelRoData_Op05Record, Children);
 POINTER_SIZED(ModelRoData_Op05Record, Vertices);
 POINTER_SIZED(ModelRoData_Op05Record, Images);

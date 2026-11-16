@@ -6047,6 +6047,13 @@ void modelPromoteNodeOffsetsToPointers(ModelNode *node, uintptr_t vma, uintptr_t
                     PROMOTE(rodata->Vertices);
                     PROMOTE(rodata->CollisionVertices);
                     PROMOTE(rodata->PointUsage);
+#if IS_64_BIT
+                    /* PORT (LP64-003): at 64 bits a collision vertex's link is
+                     * a 32-bit offset from BaseAddr (VERTEX_COLLISION_NODE,
+                     * bondtypes.h), not a pointer: there is nothing to unswap
+                     * or promote. LP64-004's model converter writes it; until
+                     * then the models guard stops the load. */
+#else
                     for (i = 0; i < rodata->numCollisionVertices; i++)
                     {
 #ifndef TARGET_N64
@@ -6079,6 +6086,7 @@ void modelPromoteNodeOffsetsToPointers(ModelNode *node, uintptr_t vma, uintptr_t
 #endif
                         PROMOTE(rodata->CollisionVertices[i].LinkedTo);
                     }
+#endif
                     rodata->BaseAddr = (void *)fileramaddr;
                     break;
                 }
@@ -6277,7 +6285,7 @@ void portModelCollisionAudit(ModelNode *node, const char *name)
 
             for (i = 0; i < rodata->numCollisionVertices; i++)
             {
-                ModelNode  *rel = (ModelNode *) rodata->CollisionVertices[i].CollisionRelatedNode;
+                ModelNode  *rel = (ModelNode *) VERTEX_COLLISION_NODE(rodata->BaseAddr, rodata->CollisionVertices[i]);
                 s32         idx = rodata->CollisionVertices[i].CollisionRelatedIndex;
                 const char *fault = NULL;
 

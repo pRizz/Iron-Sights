@@ -10,11 +10,9 @@
 # asked, as in the harnesses.
 
 # Halves that fail at that width on a defect in game or port source, as
-# "NAME WIDTH" entries. The harness names each one and skips it. LP64-003 Task
-# 11 empties the list.
-HARNESS_PENDING=(
-    "test_wardrobe 64"
-)
+# "NAME WIDTH" entries. The harness names each one and skips it. Empty since
+# LP64-003 Task 11 made Vertex 16 bytes, which let test_wardrobe pass at 64.
+HARNESS_PENDING=()
 
 # Prints the widths to run, one per line. 32 when the compiler accepts -m32;
 # 64 when the compiler's own pointers are 8 bytes (x86_64 and aarch64 use SSE
