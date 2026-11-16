@@ -6,10 +6,14 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import subprocess
-from ci_dependencies import apt_network, archive_record, verify_archives, compiler_identity
+from ci_dependencies import apt_network, archive_record, verify_archives, compiler_identity, packages
 
 
 class DependencyCache(unittest.TestCase):
+    def test_tests_profile_has_the_32_bit_compilers_and_64_bit_sdl2(self):
+        # The 64-bit video tree that CI's compile gate configures needs the native SDL2 headers.
+        self.assertEqual(packages("tests"), ["gcc-multilib", "g++-multilib", "libsdl2-dev"])
+
     def test_unreachable_mirror_repeats_the_apt_command(self):
         failure = subprocess.CalledProcessError(100, ["apt-get", "update"])
         sleeps = []

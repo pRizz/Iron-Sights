@@ -27,12 +27,38 @@ endif()
 
 set(CMAKE_C_STANDARD 11)
 
+# No warnings in the 32-bit and web builds; the 64-bit branch replaces this.
+set(GE_WARNING_OPTIONS -w)
 if(EMSCRIPTEN)
     include(cmake/emscripten.cmake)
 elseif(GE_POINTER_BITS EQUAL 64)
     # -ffp-contract=off: no fused multiply-add, so floats round as on the N64 FPU
     # (the 32-bit build gets that from -mfpmath=sse; x86-64 and arm64 default to SSE/NEON).
     add_compile_options(-ffp-contract=off)
+    # The LP64-002 gate: C mixing pointers with 32-bit integers does not
+    # compile at 64 bits, so C drops -w (which would switch -Werror= off).
+    # Every other class the 64-bit C build printed is switched off by name,
+    # with the warnings it printed (headless / video trees, GCC 13.3 on
+    # aarch64 and x86_64, identical): incompatible-pointer-types 1790 / 1798,
+    # implicit-function-declaration 397 / 404, discarded-qualifiers 7,
+    # format-truncation 4, overflow 2, format-overflow 2, unused-result 1.
+    # The first two are left for later milestones; GCC 14 and later make them
+    # errors by default, and naming them here keeps the verdict the same there
+    # (only GCC 13.3 was run). Nine warnings that have no -W option remain (eleven
+    # in the video tree): MIN/MAX redefined, structs first declared in a
+    # parameter list, a useless storage class, a conditional's pointer mismatch.
+    set(GE_WARNING_OPTIONS
+        $<$<NOT:$<COMPILE_LANGUAGE:C>>:-w>
+        $<$<COMPILE_LANGUAGE:C>:-Werror=int-conversion>
+        $<$<COMPILE_LANGUAGE:C>:-Werror=pointer-to-int-cast>
+        $<$<COMPILE_LANGUAGE:C>:-Werror=int-to-pointer-cast>
+        $<$<COMPILE_LANGUAGE:C>:-Wno-incompatible-pointer-types>
+        $<$<COMPILE_LANGUAGE:C>:-Wno-implicit-function-declaration>
+        $<$<COMPILE_LANGUAGE:C>:-Wno-discarded-qualifiers>
+        $<$<COMPILE_LANGUAGE:C>:-Wno-format-truncation>
+        $<$<COMPILE_LANGUAGE:C>:-Wno-overflow>
+        $<$<COMPILE_LANGUAGE:C>:-Wno-format-overflow>
+        $<$<COMPILE_LANGUAGE:C>:-Wno-unused-result>)
 else()
     add_compile_options(-m32 -msse2 -mfpmath=sse)
 endif()
@@ -54,9 +80,9 @@ add_compile_options(
     # -fwrapv -funsigned-char -msse2 -mfpmath=sse); verified pixel-identical to
     # the old -Og build (see docs/port/optimisation-inventory.md).
     -O2
-    # (Audit recipe: swap the -w below for -Wreturn-type and rebuild, since
-    # falling off a non-void function is live UB at -O2. Keep the tree clean.)
-    -w
+    # (Audit recipe: swap the -w in GE_WARNING_OPTIONS for -Wreturn-type and rebuild,
+    # since falling off a non-void function is live UB at -O2. Keep the tree clean.)
+    ${GE_WARNING_OPTIONS}
     # C-only: game code is self-contained against repo-local headers;
     # fast3d C++ needs hosted stdlib and no ms-extensions quirks.
     $<$<COMPILE_LANGUAGE:C>:-ffreestanding>

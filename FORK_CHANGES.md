@@ -211,7 +211,7 @@ Dam default 1% low 261 to 294 fps. One profiled run of each (matched Cradle):
 render thread 1.46 to 1.44 ms a frame, every function within 0.04 ms;
 `gfx_opengl_new_texture` went from 0.011 ms to nothing.
 
-### FORK-089 — Native 64-bit port: accepted plan, LP64-001 scaffolding done
+### FORK-089 — Native 64-bit port: accepted plan, LP64-001 scaffolding done, LP64-002 gate built
 
 **Status:** Plan accepted by the owner on 2026-11-15. Every task of milestone
 LP64-001 is built (Tasks 1 to 7 were each reviewed before reaching `main`): the two-tier gallery rule, the container
@@ -232,8 +232,13 @@ its tests job built and linked the headless tree on the runner, and the
 diagnostics check then printed `OK: 1432 diagnostics, baseline 1432`. No game, engine or renderer source has
 changed; the one port source changed is `port/src/headless_stubs.c` (Task 5b),
 which only `GE_HEADLESS` builds compile, so no shipped build's sources changed.
-No 64-bit build of the game exists, and the rest of the plan has not been built
-or verified; its milestone status table says so.
+(That paragraph is LP64-001's close.) Milestone LP64-002 (type hygiene) has
+built Tasks 1 to 10: Tasks 1 to 8 are on `main`; Tasks 9 and 10 are local
+commits on the branch `lp64/types-strict`, not pushed, and its Task 11 (landing
+through a gallery regeneration on the laptop) has not started. With Task 10 a
+64-bit build compiles every C and C++ file with the three int/pointer
+conversions as errors; no 64-bit build has been run, and the rest of the plan
+has not been built or verified; its milestone status table says so.
 
 Inherited behaviour: upstream builds only as a 32-bit program (`-m32`, and
 32-bit WebAssembly), by design, and this fork inherited that. FORK-031 recorded
@@ -351,7 +356,7 @@ BUGFIX_R0 NONMATCHING AVOID_UB _LANGUAGE_C`; before, the five from
 `BUGFIX_R0`), so the layouts it asserts are the build's. In the x86_64
 container it printed `ABI probe OK (64-bit)` and `ABI probe OK (32-bit)`.
 
-*LP64-001 task 4, the 64-bit diagnostics ratchet:* `scripts/port/lp64_diagnostics.py`
+*LP64-001 task 4, the 64-bit diagnostics ratchet (removed by LP64-002 task 10, which replaced it with the compile gate; see that note):* `scripts/port/lp64_diagnostics.py`
 compiles every C file in a `compile_commands.json` syntax-only with 64-bit
 pointers (it drops `-m32`, `-msse2`, `-mfpmath=sse`, `-w`, `-c`, `-o`, the
 dependency flags and `-fsanitize...`, and adds `-fsyntax-only` with
@@ -367,8 +372,8 @@ naming every file whose count rose above the baseline (a new file counts from
 zero), refuses to compare across compilers (the baseline records `gcc-13`), and
 prints `Baseline can be lowered: run update.` only when the total fell and nothing regressed. The baseline also records `errors_by_file`, and `check` fails when a file's compile-error count rises even if its total falls, since a hard error such as a missing header can hide the file's other diagnostics. A `compile_commands.json` with no C entries is an error, never a zero. Default input
 is `build/lp64/diag/compile_commands.json`, resolved against the repository root
-(before the fix wave, against the working directory). Task 7 runs `check` in CI; the
-pre-commit hook does not. No game, engine, port or renderer source was changed.
+(before the fix wave, against the working directory). Task 7 ran `check` in CI until LP64-002 task 10; the
+pre-commit hook never ran it. No game, engine, port or renderer source was changed.
 *Coverage:* the count covers exactly the C files of the headless configuration
 (329 entries in its `compile_commands.json`, all C). It does not cover the video, input
 and audio platform files that configuration removes (`port/src/video.c`,
@@ -622,10 +627,10 @@ pending state that began at Task 5b (be840ef) is cleared. Before it, CI run
 headless tree on the runner, and the diagnostics check then printed `OK: 1432
 diagnostics, baseline 1432`. The plan's status table marks LP64-001 `Done`.
 
-**Milestone LP64-002 (type hygiene), planned on 2026-11-16, not started:**
+**Milestone LP64-002 (type hygiene), planned on 2026-11-16; Tasks 1 to 10 built, Task 11 not started:**
 [the milestone's plan](scripts/port/native_64bit_lp64_002.md) lists eleven
-tasks. No source, build file or tool changed for it; this records the plan and
-the measurements it rests on, taken on `main` at ce60a74 in the Mac's
+tasks. This paragraph records the plan and
+the measurements it rests on (no source, build file or tool had changed for it then), taken on `main` at ce60a74 in the Mac's
 containers. *Root causes:* each of the 1,432 recorded places was attributed
 from its compiler message and source line: 1,384 to 66 declarations or idioms
 (the largest: `frontPrintText`'s two font parameters typed `s32`, 252 places;
@@ -2108,8 +2113,136 @@ of the renderer (`port/fast3d`) differs. Neither function draws:
 sounds. The strict-tier gallery images are expected to be unchanged; they are
 regenerated on a machine that can render before the branch reaches `main`.
 
+*LP64-002 task 10, the gate (2026-11-16, on the branch `lp64/types-strict`,
+local commit "Make 64-bit pointer conversions a compile error and gate CI on
+it"; not pushed):* the count and its ratchet are replaced by a compile gate.
+*Flags:* `CMakeLists.txt` keeps its warning options in `GE_WARNING_OPTIONS`:
+`-w` by default (the 32-bit and web builds, unchanged), and in the
+`GE_POINTER_BITS EQUAL 64` branch `-w` for C++ only, while 64-bit C gets
+`-Werror=int-conversion -Werror=pointer-to-int-cast -Werror=int-to-pointer-cast`
+and `-Wno-` for each other class the 64-bit C build printed, with GCC 13.3 in
+the aarch64 and x86_64 containers (identical on both; headless / video tree):
+`incompatible-pointer-types` 1,790 / 1,798, `implicit-function-declaration`
+397 / 404, `discarded-qualifiers` 7, `format-truncation` 4, `overflow` 2,
+`format-overflow` 2, `unused-result` 1 (the comment beside the flags has the
+list). GCC 14 and later make implicit declarations and incompatible pointer
+types errors by default; naming them keeps the verdict the same there, but
+only GCC 13.3 was run (the containers' compiler). CI's tests job runs on
+`ubuntu-24.04`, whose default `gcc` is Ubuntu 24.04's GCC 13 according to the
+runner image's documentation; that was read, not checked on the runner. Nine warnings that have no `-W`
+option remain in the headless log and eleven in the video log: `MIN`/`MAX`
+redefined (`include/math.h:87-88`, once each in the headless log, twice each in
+the video log), structs first declared in a parameter list (`title.h:26`
+twice, `indy_commands.c:262`, `objective_status2.c:59,69`), a useless storage
+class (`chraidata.c:50`) and a pointer mismatch in a conditional
+(`language.c:447`); only `-w` or a source edit removes them, and neither was
+done here. C++ keeps `-w`. *32-bit builds unchanged:* configured with the old
+and the new `CMakeLists.txt` in the x86_64 container (the i686 container is
+the same image), the 32-bit `compile_commands.json` files are byte-identical:
+headless (329 entries), video with `SDL2_LINUX_ROOT` (360) and video with the
+system SDL folder (360). *Canary:* `test_pointer_bits.sh` case 2c takes the
+first C entry's recorded command from a 64-bit configure and compiles three
+one-line sources, one per conversion; each must fail and name its `-Werror=`
+flag. Before the flag change it failed (`64-bit C flags accept the
+int-conversion canary`); after it, `ok 2c`.
+*Tool:* `scripts/port/lp64_diagnostics.py gate BUILD_DIR...` refuses (exit 2)
+a directory that is not a CMake tree with `compile_commands.json`, is not
+configured with `GE_POINTER_BITS=64`, or lacks `generated/port_buildinfo.h`
+(the message names `cmake --build DIR --target ge_buildinfo`); otherwise it
+compiles every C and C++ entry of each directory with the entry's own command
+made syntax-only (`-o`, `-c` and the dependency flags dropped), in parallel,
+600 s per file, and exits 1 listing each failing file with its first error
+line, 0 when none fails. `count`, `check`, `update`, `--allow-rise`,
+`--compile-commands` and `scripts/port/lp64_diagnostics_baseline.json` are
+removed. `sites [--messages] [--build-dir DIR]... [FILE...]` stays, takes the
+same directories (default `build/lp64/gate` and `build/lp64/gate-video`), and
+compiles each tree's C files with that tree's command: until now a file both
+trees listed was measured only with the first (headless) command. The parser
+also counts GCC's `[-Werror=KIND]` form under its kind. `test_lp64_diagnostics.py`
+has 32 tests (it had 40; the count, baseline, merge and rise tests went with
+their code); 17 failed before the change, among them the five gate command-line
+tests (a failing entry exits 1 naming the file, a clean directory exits 0, a
+missing generated header exits 2 naming the target, a 32-bit configure exits 2,
+each directory compiled with its own command) and the `-Werror=` parse.
+*Found by the gate:* the 64-bit video tree did not compile
+`port/src/port_state_effects_audit.c` (`(u8 *)address` at line 34, `address`
+a `u32` copy of `words.w1`; `-Werror=int-to-pointer-cast`). The count never
+saw it: the file is empty without `GE_VIDEO`, and the merged count compiled it
+with the headless command. `address` is now `uintptr_t` and the log line
+prints it with `"%08" PRIxPTR` (`<inttypes.h>` added); `PRIxPTR` is `"x"` on
+i686, and the Windows comparison below is identical. With the old file the
+gate exited 1 naming it with that error, and `sites` over both trees listed it.
+*Layout probe:* `scripts/port/abi_probe/probe.c` asserts at both widths that
+23 fields behind the sentinel comparisons are pointer-sized:
+`ModelFileTextures.TextureID`, `sImageTableEntry.index`,
+`MonitorRecord.tconfig`, `ModelAnimation.address`,
+`bg_portal_data_entry.offset_portal`, `OSScClient.next`, `Gfx` `words.w1`,
+and the fields model.c's `PROMOTE` tests for the 0x05000000 tag (`ModelNode`
+`Data`, `Parent`, `Next`, `Prev`, `Child`; `FirstGroup`, `ChildGroup`; the
+display-list records' `Primary`, `Secondary`, `Vertices`,
+`CollisionVertices`, `PointUsage`; `Vertex.LinkedTo`). The `bg.c` local
+`bg_envdata_entry_local.data` (`< PORTMAX`), `initanitable.c`'s file-local
+`struct anim_entry` and its `s32 *` table (`!= (s32 *)1`) and the bg globals
+of `BG_SEG_IS_OFFSET` cannot be named from the probe; the gate covers them.
+At 64 bits the probe also prints, without asserting,
+`sizeof(struct AnimModelSlot) 192, sizeof(Model) 264`. Swapping one assertion
+to `sImageTableEntry.width` failed with `static assertion failed:
+"sImageTableEntry.width is pointer-sized"`. *CI:* the tests profile of
+`scripts/port/ci_dependencies.py` adds `libsdl2-dev` (the runner's native,
+64-bit SDL2; `test_ci_dependencies.py` has a test for the profile, seen
+failing first). In the tests step the old configure and build of
+`build/lp64/diag` stay as the 32-bit link check, and `lp64_diagnostics.py
+check` is replaced by a 64-bit headless configure into `build/lp64/gate` and a
+64-bit video configure into `build/lp64/gate-video`, each followed by
+`--target ge_buildinfo`, then `lp64_diagnostics.py gate build/lp64/gate
+build/lp64/gate-video`; these lines come before `hand_gallery.py verify
+--allow-pending`, which fails on this branch until the laptop regenerates the
+gallery. The x86_64 image (Ubuntu 24.04, amd64, as the runner) has
+`gcc-multilib`, `g++-multilib` and `libsdl2-dev` 2.30.0 installed together;
+the package download on the runner has not been tried. *Gate runs*
+(configure and `ge_buildinfo` of both trees, then `gate`): aarch64 1 s, then
+329 headless and 360 video entries compiled with 0 failures (2 s per tree, 4 s
+for the CI line); x86_64 6 s, then the same with 0 failures (5 s and 8 s, 12 s
+for the CI line). A full `cmake --build` of both 64-bit trees (Debug) also
+compiled and linked in both containers (aarch64 4 s and 11 s, x86_64 18 s and
+30 s); nothing was run.
+*What ran* (the rewritten task check, once, before the commit): step 1 in the
+x86_64 container, exit 0 in 20 s, `0 failed` for both trees; step 2, the i686
+headless build (4 s, incremental) and the 20-mission smoke, 20 of 20 `PASS`
+(185 s); step 3, `compare_win32.py commits HEAD WORKTREE`, exit 0, `identical in
+loaded code and data; .buildid differs` (55 s per build, 113 s); then every line
+of CI's tests step in the i686 container (129 s): 45 passed, including
+`test_pointer_bits.sh` (`ok 2c`, and case 5 since that image has MinGW),
+`test_abi_probe.sh`, `test_lp64_diagnostics.py`, `test_ci_dependencies.py`,
+`lp64_casts.py check` and the gate lines, and `hand_gallery.py verify
+--allow-pending` failed as expected (`Gallery is stale for strict rendering
+inputs`). `test_buffers.sh` ran without `MIDAS_BUFFER_SANITIZE=1`, which hangs
+under i686 emulation. The browser build is checked by CI only (no emsdk image
+here). The 32-bit `compile_commands.json` comparison was repeated with the
+final `CMakeLists.txt`: identical. The gate has not yet run on the CI runner.
+*Left for later milestones:* the 28 allowlisted truncating casts in 13 files
+(`scripts/port/lp64_casts_allowed.txt` names each file's reason); the
+hard-coded sizes; the behaviour of the sentinel comparisons at 64 bits
+(LP64-003); the `-m32` test harnesses, which do not run at 64 bits; about 527
+calls to functions without a prototype that do not return pointers, and about
+1,780 incompatible-pointer-type places (the 64-bit build printed 397 / 404 and
+1,790 / 1,798 such warnings), neither covered by the gate. Owned by LP64-003,
+found in review and recorded here: `struct AnimModelSlot`
+(`src/game/objecthandler.h`), an all-`s32` storage view that `model.c:148`
+casts to `Model *`, and `hand.field_B68`, used the same way through
+`(*(Model *)&handptr->field_B68)`, are smaller than `Model` at 64 bits;
+`port/fast3d/gfx_pc.cpp`'s unknown-opcode `sysFatalError` still prints the
+pointer-sized `cmd->words.w0`/`w1` with `%08x`; and `src/game/initobjects.c:9-11`
+pass `&monAnimNN` (a pointer to an array) where `uintptr_t *cmdlist` is
+expected, an incompatible pointer type that a compiler without
+`-Wno-incompatible-pointer-types` rejects.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
+[LP64-002 implementation plan](scripts/port/native_64bit_lp64_002.md),
+main paths of the gate: `CMakeLists.txt` (`GE_WARNING_OPTIONS`),
+`scripts/port/lp64_diagnostics.py`, `scripts/port/abi_probe/probe.c`,
+`.github/workflows/windows-release.yml`,
 [repository rule](AGENTS.md),
 [inherited 32-bit constraints](docs/port/abi-and-portability.md).
 

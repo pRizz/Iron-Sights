@@ -2,6 +2,7 @@
 #if defined(GE_VIDEO) && !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h> /* PRIxPTR: the image source is a whole address */
 #include <math.h>
 #include <ultra64.h>
 #include <bondtypes.h>
@@ -27,12 +28,13 @@ static void auditTextureSources(s32 verify)
     Gfx *lists[] = { &globalDL_0x000, g_ExplosionDisplayLists[0] };
     s32 i, j;
     for (i = 0; i < 2; i++) for (j = 0; j < 64; j++) {
-        const u32 command = lists[i][j].words.w0, address = lists[i][j].words.w1;
+        const u32 command = lists[i][j].words.w0;
+        const uintptr_t address = lists[i][j].words.w1;
         if (command >> 24 == G_ENDDL) break;
         if (command >> 24 == G_SETTIMG) {
             u32 hash = 2166136261u, k;
             if (address >= 0x10000000u) for (k = 0; k < 256; k++) hash = (hash ^ ((u8 *)address)[k]) * 16777619u;
-            portConLogf("state-effects: list=%d image=%08x source=%08x hash=%08x\n", i, command, address, hash);
+            portConLogf("state-effects: list=%d image=%08x source=%08" PRIxPTR " hash=%08x\n", i, command, address, hash);
             if (verify && original[i][j] != hash) {
                 fputs("state-effects: effect texture memory changed\n", stderr);
                 exit(2);

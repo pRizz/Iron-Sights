@@ -7,6 +7,10 @@
 #include <PR/abi.h>
 #include "ob.h"
 #include "platform_info.h"
+#include <bondtypes.h>
+#include "sched.h"
+#include "game/bg.h"
+#include "game/objecthandler.h"
 
 /* Fixed at every width: the renderer reads these as N64 formats. */
 _Static_assert(sizeof(s32) == 4 && sizeof(u32) == 4, "32-bit integer types");
@@ -26,6 +30,35 @@ _Static_assert(sizeof(Hilite_t) == 16, "Highlight offsets layout");
 _Static_assert(IS_64_BIT == (sizeof(void *) == 8), "IS_64_BIT matches the host");
 _Static_assert(sizeof(Gfx) == 2 * sizeof(uintptr_t), "Display-list command is two pointer words");
 _Static_assert(offsetof(Gfx, words.w1) == sizeof(uintptr_t), "Display-list address word");
+/* Fields behind the LP64-002 sentinel comparisons (a small integer, a mask or
+ * a segment tag tested in pointer-sized storage): each must hold a whole
+ * pointer at every width. How they behave at 64 bits is LP64-003's to test. */
+#define POINTER_SIZED(type, member) \
+    _Static_assert(sizeof(((type *) 0)->member) == sizeof(void *), #type "." #member " is pointer-sized")
+POINTER_SIZED(ModelFileTextures, TextureID);        /* < MAX_TEXTURES: gun.c, objecthandler_2.c, image.c */
+POINTER_SIZED(sImageTableEntry, index);             /* < MAX_TEXTURES - 1: front.c */
+POINTER_SIZED(MonitorRecord, tconfig);              /* < 100: propobj.c */
+POINTER_SIZED(ModelAnimation, address);             /* & 0x80000000: model.c */
+POINTER_SIZED(bg_portal_data_entry, offset_portal); /* BG_SEG_IS_OFFSET: bg.c */
+POINTER_SIZED(OSScClient, next);                    /* next = 1: audi.c */
+POINTER_SIZED(Gfx, words.w1);                       /* == 0x0E000000: lightfixture.c */
+/* The 0x05000000 segment tag of model.c's PROMOTE. */
+POINTER_SIZED(ModelNode, Data);
+POINTER_SIZED(ModelNode, Parent);
+POINTER_SIZED(ModelNode, Next);
+POINTER_SIZED(ModelNode, Prev);
+POINTER_SIZED(ModelNode, Child);
+POINTER_SIZED(ModelRoData_HeaderRecord, FirstGroup);
+POINTER_SIZED(ModelRoData_GroupRecord, ChildGroup);
+POINTER_SIZED(ModelRoData_DisplayListRecord, Primary);
+POINTER_SIZED(ModelRoData_DisplayListRecord, Secondary);
+POINTER_SIZED(ModelRoData_DisplayListRecord, Vertices);
+POINTER_SIZED(ModelRoData_DisplayList_CollisionRecord, Primary);
+POINTER_SIZED(ModelRoData_DisplayList_CollisionRecord, Secondary);
+POINTER_SIZED(ModelRoData_DisplayList_CollisionRecord, Vertices);
+POINTER_SIZED(ModelRoData_DisplayList_CollisionRecord, CollisionVertices);
+POINTER_SIZED(ModelRoData_DisplayList_CollisionRecord, PointUsage);
+POINTER_SIZED(Vertex, LinkedTo);
 #if !IS_64_BIT
 _Static_assert(sizeof(Gfx) == 8, "32-bit display-list stride");
 _Static_assert(sizeof(fileentry) == 12, "ROM file table layout");
@@ -37,6 +70,12 @@ _Static_assert(sizeof(Hilite) == 16, "32-bit highlight layout");
 
 int main(void)
 {
+#if IS_64_BIT
+    /* Reported, not asserted: model.c views an AnimModelSlot, and the hand its
+     * field_B68, as a Model, which is larger at 64 bits (LP64-003). */
+    printf("ABI probe: sizeof(struct AnimModelSlot) %d, sizeof(Model) %d\n",
+           (int) sizeof(struct AnimModelSlot), (int) sizeof(Model));
+#endif
     printf("ABI probe OK (%d-bit)\n", (int) (sizeof(void *) * 8));
     return 0;
 }

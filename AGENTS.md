@@ -240,16 +240,21 @@ pass its isolated executable rather than rebuilding an active player binary.
   follows the accepted [64-bit plan](scripts/port/native_64bit_plan.md). Read it
   before resuming, keep the 32-bit and web builds working, do not reopen its
   recorded decisions, and update its milestone status table before handing off.
-- CI's tests job runs the 64-bit pointer-diagnostics ratchet on every push: it
-  builds the headless tree into `build/lp64/diag` and runs
-  `python3 scripts/port/lp64_diagnostics.py check`, which fails the job when
-  any file has more pointer/integer diagnostics than
-  `scripts/port/lp64_diagnostics_baseline.json` records, and prints the sites
-  of each file that rose. `lp64_diagnostics.py sites [FILE...]` lists sites as
-  `file:line: kind`. Run it in the x86_64 container (GCC 13) after the same
-  configure and build. Run `update` only when the count falls (in the same
-  change, so the ratchet tightens) or for a rise that `FORK_CHANGES.md` records
-  and explains.
+- At `GE_POINTER_BITS=64`, C that mixes pointers with 32-bit integers does not
+  compile: `CMakeLists.txt` gives 64-bit C `-Werror=int-conversion
+  -Werror=pointer-to-int-cast -Werror=int-to-pointer-cast` instead of `-w`,
+  and switches off by name each other warning class the 64-bit build printed
+  (the list and counts are in the comment beside the flags). CI's tests job
+  configures a 64-bit headless tree (`build/lp64/gate`) and a 64-bit video
+  tree (`build/lp64/gate-video`), builds only their `ge_buildinfo` target, and
+  runs `python3 scripts/port/lp64_diagnostics.py gate build/lp64/gate
+  build/lp64/gate-video`, which compiles every C and C++ file of both trees
+  with its own flags and fails naming each file that does not compile. Run the
+  same lines in the x86_64 or aarch64 container (GCC 13) before pushing a
+  change to C, C++ or the build; `lp64_diagnostics.py sites [--messages]
+  [FILE...]` lists the conversions of those trees as `file:line: kind`. A new
+  warning class in the 64-bit log gets fixed, or a named `-Wno-` flag with its
+  count in that comment; never `-w`.
 - Fonts, sharp text rendering and other original game assets follow the
   accepted [open assets plan](scripts/port/open_assets_plan.md). Read it before
   resuming, keep its provenance rules (drawn from scratch, MIT, no ROM-derived

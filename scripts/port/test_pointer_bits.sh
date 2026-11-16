@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # GE_POINTER_BITS selects the 32-bit build (default) or the 64-bit one. Only
 # configuring is tested (compile and link commands are read from the generated
-# build files): a 64-bit compile is not expected to work until LP64-002.
+# build files), plus small canary sources compiled with a recorded 64-bit C
+# command; CI's lp64_diagnostics.py gate compiles the game itself.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 work=$(mktemp -d /tmp/midas-pointer-bits.XXXXXX)
@@ -77,6 +78,50 @@ for flag in -m32 -no-pie; do
     fi
 done
 echo "ok 2b: 64-bit link has neither -m32 nor -no-pie"
+
+# 2c. At 64 bits the three int/pointer conversions are compile errors: a C
+# entry's own recorded command rejects one canary source per conversion, and
+# the message names the -Werror= flag (so -w or -Wno-error cannot hide it).
+c_command() {
+    python3 - "$work/$1/compile_commands.json" <<'PY'
+import json, shlex, sys
+for entry in json.load(open(sys.argv[1])):
+    if entry["file"].endswith(".c"):
+        argv = entry["arguments"] if "arguments" in entry else shlex.split(entry["command"])
+        kept, skip = [], False
+        for arg in argv:
+            if skip:
+                skip = False
+            elif arg in ("-o", "-MT", "-MF"):
+                skip = True
+            elif arg not in ("-c", "-MD", "-MMD", entry["file"]):
+                kept.append(arg)
+        print(entry["directory"])
+        print(shlex.join(kept + ["-fsyntax-only"]))
+        break
+else:
+    sys.exit("no C entry in compile_commands.json")
+PY
+}
+mapfile -t canary_cmd < <(c_command bits64)
+[[ ${#canary_cmd[@]} -eq 2 ]] || fail "bits64: no C compile command recorded"
+check_canary() {
+    local flag=$1 source=$2 status=0
+    printf '%s\n' "$source" >"$work/canary-$flag.c"
+    (cd "${canary_cmd[0]}" && eval "${canary_cmd[1]}" '"$work/canary-$flag.c"') \
+        >"$work/canary-$flag.log" 2>&1 || status=$?
+    if [[ $status -eq 0 ]]; then
+        fail "64-bit C flags accept the $flag canary: $source"
+    fi
+    grep -qF -- "-Werror=$flag" "$work/canary-$flag.log" || {
+        cat "$work/canary-$flag.log" >&2
+        fail "64-bit $flag canary did not fail on -Werror=$flag"
+    }
+}
+check_canary int-conversion 'int f(char *p) { return p; }'
+check_canary pointer-to-int-cast 'int g(char *p) { return (int)p; }'
+check_canary int-to-pointer-cast 'char *h(int i) { return (char *)i; }'
+echo "ok 2c: 64-bit C flags reject each int/pointer conversion"
 
 # 3. Any other width is refused.
 expect_failure bad48 "GE_POINTER_BITS must be 32 or 64" -DGE_POINTER_BITS=48

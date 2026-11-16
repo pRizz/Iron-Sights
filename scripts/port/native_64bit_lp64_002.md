@@ -148,7 +148,8 @@ in the task that owns its file.
   `port_graphics.c`, `port_shiny.c`, `port_weapon_images.c`,
   `port_hud_weapons.c`, `joy_port.c`, `scripts/port/hand_gallery.py` and its
   template.
-- **The recorded count falls with every fix task.** The commit runs
+- **The recorded count falls with every fix task** (Tasks 3 to 9; Task 10
+  removed the count and its baseline). The commit runs
   `lp64_diagnostics.py update` and includes the baseline. A file's count may
   rise only because a declaration fixed in this commit exposed a caller that a
   later task fixes; the commit message names the file and the later task.
@@ -165,18 +166,21 @@ in the task that owns its file.
 
 ### Task check
 
-Every fix task (3 to 9) ends by running these, in this order, and recording
-the results in FORK-089. Task 1 proves the commands and corrects this block in
-its own commit if a flag differs.
+Every fix task (3 to 9) ended by running the task check of its time, and
+recorded the results in FORK-089; until Task 10, step 1 recorded the count with
+`lp64_diagnostics.py update` against a baseline file. Task 10 replaced the
+count with the compile gate, and from then on the check is:
 
 ```bash
-# 1. Count, in the x86_64 container (both configurations, built first).
+# 1. The 64-bit compile gate, in the x86_64 container (the CI runner's
+#    architecture); run it in the aarch64 container too for a change to C, C++
+#    or the build, wiping the two trees first when switching containers.
 python3 scripts/port/lp64_env.py run --arch x86_64 -- sh -c '
-  cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON &&
-  cmake --build build/lp64/diag -j"$(nproc)" &&
-  cmake -S . -B build/lp64/diag-video -DCMAKE_BUILD_TYPE=Debug -DGE_VIDEO=ON -DSDL2_LINUX_ROOT=/home/dev/sdl2-linux-i686 -DCMAKE_EXPORT_COMPILE_COMMANDS=ON &&
-  cmake --build build/lp64/diag-video --target ge_buildinfo &&
-  python3 scripts/port/lp64_diagnostics.py --compile-commands build/lp64/diag/compile_commands.json --compile-commands build/lp64/diag-video/compile_commands.json update'
+  cmake -S . -B build/lp64/gate -DCMAKE_BUILD_TYPE=Debug -DGE_POINTER_BITS=64 -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON &&
+  cmake --build build/lp64/gate --target ge_buildinfo &&
+  cmake -S . -B build/lp64/gate-video -DCMAKE_BUILD_TYPE=Debug -DGE_POINTER_BITS=64 -DGE_VIDEO=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON &&
+  cmake --build build/lp64/gate-video --target ge_buildinfo &&
+  python3 scripts/port/lp64_diagnostics.py gate build/lp64/gate build/lp64/gate-video'
 
 # 2. The 32-bit game still builds and plays (i686, headless, with the ROM).
 python3 scripts/port/lp64_env.py run --arch i686 -- sh -c 'cmake -S . -B build/lp64/ref-i686-stock -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON && cmake --build build/lp64/ref-i686-stock -j"$(nproc)"'
@@ -187,12 +191,13 @@ python3 scripts/port/lp64_env.py run --arch i686 -- python3 scripts/port/audit_b
 python3 scripts/port/compare_win32.py commits HEAD WORKTREE
 ```
 
-The video tree is configured and only its generated header is built: the count
-needs nothing more, and a full video build does not complete in the container
-today (`gfx_shiny.cpp`, see Task 9).
+Both 64-bit trees are configured and only their generated header is built: the
+gate compiles syntax-only and needs nothing more. The video tree uses the
+container's 64-bit `libsdl2-dev` (CI installs it through the tests profile of
+`scripts/port/ci_dependencies.py`).
 
-Expected: step 1 builds the headless tree (which is also a 32-bit Linux
-compile and link check) and the total is lower than before; step 2 exits 0 with 20 of 20
+Expected: step 1 prints `0 failed` for both trees and exits 0; step 2 (which
+is also a 32-bit Linux compile and link check) exits 0 with 20 of 20
 missions `PASS`; step 3 exits 0. Also run every harness line of the CI tests
 step (the `bash scripts/port/test_*.sh` and `python3 scripts/port/test_*.py`
 lines of the step `Test gameplay, cache and release tooling without a ROM` in
@@ -244,10 +249,11 @@ owns it.
    Expected: the cast allowlist test fails. (Task 1, Step 3.)
 3. A header declaration is changed on `main` while its definition sits in a
    strict-tier file, breaking the 32-bit build. Expected: the i686 build in the
-   task check fails before the commit. (Task check, steps 1 and 2.)
+   task check fails before the commit. (Task check, step 2.)
 4. A new prototype reveals hidden diagnostics and the count is "fixed" by
-   re-recording a higher number. Expected: `update` refuses a higher total
-   without a stated reason. (Task 1, Step 2.)
+   re-recording a higher number. Expected, until Task 10: `update` refuses a
+   higher total without a stated reason (Task 1, Step 2). From Task 10 there
+   is no count to re-record: the gate fails on any conversion.
 5. The gate passes because `-w` or a `-Wno-error` still switches it off.
    Expected: a canary source with each conversion fails to compile with the
    64-bit flags. (Task 10, Step 1.)

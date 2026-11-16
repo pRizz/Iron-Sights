@@ -24,7 +24,8 @@ def run(args, capture=False):
 
 def packages(profile):
     if profile == "tests":
-        return ["gcc-multilib", "g++-multilib"]
+        # libsdl2-dev is the native (64-bit) SDL2 for the 64-bit video compile gate.
+        return ["gcc-multilib", "g++-multilib", "libsdl2-dev"]
     result = ["gcc-mingw-w64-i686-win32", "g++-mingw-w64-i686-win32",
               "binutils-mingw-w64-i686", "ccache"]
     # Hosted runners provide these outside dpkg; don't download another CMake.

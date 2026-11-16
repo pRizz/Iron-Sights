@@ -1,5 +1,5 @@
-"""ROM-free tests for the 64-bit diagnostics ratchet. No real compiler: the command-line tests run a
-stand-in compiler, a Python script that prints the diagnostics its input file asks for."""
+"""ROM-free tests for the 64-bit compile gate and the per-site listing. No real compiler: the
+command-line tests run a stand-in compiler, a Python script that prints what its input file asks for."""
 import contextlib
 import importlib.util
 import io
@@ -23,14 +23,14 @@ SAMPLE = (
     "In file included from /w/src/game/chr.c:3:\n")
 
 
-def report(compiler, by_file):
-    return dict(compiler=compiler, total=sum(by_file.values()), by_file=by_file, by_kind={})
+def keys(stderr: str) -> set:
+    return set(diag.parse_with_text(stderr, Path('/w')))
 
 
 class Parse(unittest.TestCase):
     def test_parse_keeps_tracked_kinds_and_errors_once_each(self):
-        # Arrange / Act
-        found = diag.parse(SAMPLE, Path('/w'))
+        # Act
+        found = keys(SAMPLE)
         # Assert
         self.assertEqual(found, {
             ('src/game/front.c', 1124, 13, 'int-conversion'),
@@ -40,19 +40,16 @@ class Parse(unittest.TestCase):
     def test_int_to_pointer_cast_is_tracked(self):
         # Arrange
         text = "/w/a.c:3:4: warning: cast to pointer from integer of different size [-Wint-to-pointer-cast]\n"
-        # Act
-        found = diag.parse(text, Path('/w'))
-        # Assert
-        self.assertEqual(found, {('a.c', 3, 4, 'int-to-pointer-cast')})
-
+        # Act / Assert
+        self.assertEqual(keys(text), {('a.c', 3, 4, 'int-to-pointer-cast')})
 
     def test_an_error_with_a_tracked_flag_counts_under_its_kind(self):
-        # Arrange
-        text = "/w/a.c:5:9: error: initialization of 'int' from 'void *' makes integer from pointer without a cast [-Wint-conversion]\n"
-        # Act
-        found = diag.parse(text, Path('/w'))
-        # Assert
-        self.assertEqual(found, {('a.c', 5, 9, 'int-conversion')})
+        # Arrange: the gate's -Werror= form and GCC 14's default error both name the flag
+        for flag in ('-Wint-conversion', '-Werror=int-conversion'):
+            text = f"/w/a.c:5:9: error: initialization of 'int' from 'void *' makes integer from pointer without a cast [{flag}]\n"
+            with self.subTest(flag=flag):
+                # Act / Assert
+                self.assertEqual(keys(text), {('a.c', 5, 9, 'int-conversion')})
 
 
 class Sites(unittest.TestCase):
@@ -103,38 +100,6 @@ class Messages(unittest.TestCase):
         self.assertEqual(lines, ['a.c:3: int-conversion: bad | p = 1;'])
 
 
-class Merge(unittest.TestCase):
-    def test_a_source_listed_by_two_trees_keeps_the_first_trees_command(self):
-        # Arrange
-        first = [dict(file='/w/a.c', command='cc first')]
-        second = [dict(file='/w/a.c', command='cc second'), dict(file='/w/b.c', command='cc second')]
-        # Act
-        merged = diag.merge_entries([first, second])
-        # Assert
-        self.assertEqual([(e['file'], e['command']) for e in merged],
-                         [('/w/a.c', 'cc first'), ('/w/b.c', 'cc second')])
-
-
-class Rise(unittest.TestCase):
-    def test_a_higher_total_is_refused_with_both_figures(self):
-        # Act
-        message = diag.rise_refusal(10, 12)
-        # Assert
-        self.assertIn('10', message)
-        self.assertIn('12', message)
-
-    def test_an_equal_or_lower_total_is_not_refused(self):
-        # Act / Assert
-        self.assertIsNone(diag.rise_refusal(10, 10))
-        self.assertIsNone(diag.rise_refusal(10, 3))
-
-
-class DefaultInput(unittest.TestCase):
-    def test_the_default_compile_commands_path_is_under_the_repository_root(self):
-        self.assertEqual(diag.DEFAULT_COMPILE_COMMANDS,
-                         Path(__file__).resolve().parents[2]/'build'/'lp64'/'diag'/'compile_commands.json')
-
-
 class SyntaxCommand(unittest.TestCase):
     def test_syntax_command_drops_32_bit_and_output_flags(self):
         # Arrange
@@ -171,45 +136,19 @@ class SyntaxCommand(unittest.TestCase):
         self.assertNotIn('-m32', argv)
 
 
-class Summarize(unittest.TestCase):
-    def test_summary_counts_by_kind_and_file(self):
+class GateCommand(unittest.TestCase):
+    def test_gate_command_keeps_the_entrys_own_flags_and_only_drops_output(self):
         # Arrange
-        found = diag.parse(SAMPLE, Path('/w'))
+        entry = dict(file='/w/a.c', command='cc -w -Werror=int-conversion -MD -MT a.o -MF a.d -o a.o -c /w/a.c')
         # Act
-        summary = diag.summarize(found, 'gcc-13')
+        argv = diag.gate_command(entry)
         # Assert
-        self.assertEqual(summary['total'], 3)
-        self.assertEqual(summary['compiler'], 'gcc-13')
-        self.assertEqual(summary['by_kind'], {'int-conversion': 1, 'pointer-to-int-cast': 1, 'error': 1})
-        self.assertEqual(summary['by_file'], {'src/game/front.c': 1, 'src/game/chr.c': 1, 'src/crash.c': 1})
+        self.assertEqual(argv, ['cc', '-w', '-Werror=int-conversion', '/w/a.c', '-fsyntax-only'])
 
-
-class Errors(unittest.TestCase):
-    def test_summary_lists_errors_by_file_only_for_files_with_errors(self):
-        # Arrange
-        found = {('b.c', 1, 1, 'error'), ('b.c', 2, 1, 'error'), ('b.c', 3, 1, 'int-conversion'),
-                 ('a.c', 1, 1, 'int-conversion')}
-        # Act
-        summary = diag.summarize(found, 'gcc-13')
-        # Assert
-        self.assertEqual(summary['errors_by_file'], {'b.c': 2})
-
-    def test_a_file_whose_errors_rise_is_a_regression_even_if_its_total_falls(self):
-        # Arrange
-        baseline = dict(report('gcc-13', {'a.c': 261}), errors_by_file={})
-        current = dict(report('gcc-13', {'a.c': 1}), errors_by_file={'a.c': 1})
-        # Act
-        found = diag.regressions(baseline, current)
-        # Assert
-        self.assertEqual(len(found), 1)
-        self.assertIn('a.c', found[0])
-
-    def test_an_unchanged_error_count_is_not_a_regression(self):
-        # Arrange
-        baseline = dict(report('gcc-13', {'a.c': 5}), errors_by_file={'a.c': 2})
-        current = dict(report('gcc-13', {'a.c': 5}), errors_by_file={'a.c': 2})
+    def test_gate_command_covers_cxx_and_skips_other_files(self):
         # Act / Assert
-        self.assertEqual(diag.regressions(baseline, current), [])
+        self.assertIsNotNone(diag.gate_command(dict(file='/w/gfx_pc.cpp', command='c++ -c /w/gfx_pc.cpp')))
+        self.assertIsNone(diag.gate_command(dict(file='/w/icon.rc', command='windres /w/icon.rc')))
 
 
 class CEntries(unittest.TestCase):
@@ -227,47 +166,8 @@ class CEntries(unittest.TestCase):
             diag.c_entries([], Path('x.json'))
 
 
-class Regressions(unittest.TestCase):
-    def test_a_file_rising_is_a_regression_even_if_the_total_falls(self):
-        # Arrange
-        baseline = report('gcc-13', {'a.c': 2, 'b.c': 8})
-        current = report('gcc-13', {'a.c': 3, 'b.c': 6})
-        # Act
-        found = diag.regressions(baseline, current)
-        # Assert
-        self.assertEqual(len(found), 1)
-        self.assertIn('a.c', found[0])
-
-    def test_a_new_file_with_diagnostics_is_a_regression(self):
-        # Arrange
-        baseline = report('gcc-13', {'a.c': 1})
-        current = report('gcc-13', {'a.c': 1, 'new.c': 1})
-        # Act
-        found = diag.regressions(baseline, current)
-        # Assert
-        self.assertIn('new.c', found[0])
-
-    def test_a_different_compiler_is_refused_not_compared(self):
-        # Arrange
-        baseline = report('gcc-13', {'a.c': 1})
-        current = report('gcc-14', {'a.c': 1})
-        # Act
-        message = diag.regressions(baseline, current)
-        # Assert
-        self.assertEqual(len(message), 1)
-        self.assertIn('gcc-13', message[0])
-        self.assertIn('gcc-14', message[0])
-
-    def test_fewer_diagnostics_is_not_a_regression(self):
-        # Arrange
-        baseline = report('gcc-13', {'a.c': 5})
-        current = report('gcc-13', {'a.c': 1})
-        # Act / Assert
-        self.assertEqual(diag.regressions(baseline, current), [])
-
-
 FAKE_COMPILER = """import sys
-source = next(arg for arg in sys.argv[1:] if arg.endswith('.c'))
+source = next(arg for arg in sys.argv[1:] if arg.endswith(('.c', '.cpp')))
 status, _, stderr = open(source).read().partition('\\n')
 sys.stderr.write(stderr)
 sys.exit(int(status))
@@ -290,189 +190,194 @@ for physical, text in enumerate(lines, 1):
 
 
 class CommandLine(unittest.TestCase):
-    """Runs `main` on a compile_commands.json whose compiler is FAKE_COMPILER: each C file holds the
-    exit status on its first line and the compiler output to print after it."""
+    """Runs `main` on build directories whose compiler is FAKE_COMPILER: each source holds the exit
+    status on its first line and the compiler output to print after it."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.folder = Path(self.tmp.name)
         (self.folder/'cc.py').write_text(FAKE_COMPILER)
-        self.baseline = self.folder/'baseline.json'
-        for patch in (mock.patch.object(diag, 'BASELINE', self.baseline),
-                      mock.patch.object(diag, 'compiler_id', lambda: 'gcc-13')):
-            patch.start()
-            self.addCleanup(patch.stop)
 
-    def commands(self, files: dict[str, str]) -> Path:
+    def build_dir(self, name: str, files: dict[str, str], bits: int = 64, header: bool = True) -> Path:
+        """Make a configured build directory whose compile_commands.json compiles `files` with FAKE_COMPILER."""
+        tree = self.folder/name
+        (tree/'generated').mkdir(parents=True)
+        (tree/'CMakeCache.txt').write_text(f'CMAKE_BUILD_TYPE:STRING=Debug\nGE_POINTER_BITS:STRING={bits}\n')
+        if header:
+            (tree/'generated'/'port_buildinfo.h').write_text('#define X 1\n')
         entries = []
-        for name, text in files.items():
-            (self.folder/name).write_text(text)
-            entries.append(dict(directory=str(self.folder), file=str(self.folder/name),
-                                arguments=[sys.executable, str(self.folder/'cc.py'), str(self.folder/name)]))
-        path = self.folder/'compile_commands.json'
-        path.write_text(json.dumps(entries))
-        return path
+        for source, text in files.items():
+            (self.folder/source).write_text(text)
+            entries.append(dict(directory=str(tree), file=str(self.folder/source),
+                                arguments=[sys.executable, str(self.folder/'cc.py'), '-o', 'x.o', '-c',
+                                           str(self.folder/source)]))
+        (tree/'compile_commands.json').write_text(json.dumps(entries))
+        return tree
 
     def run_main(self, *args):
-        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-            status = diag.main(list(args))
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err, \
+                mock.patch.object(diag, 'ROOT', self.folder):
+            status = diag.main([str(arg) for arg in args])
         return status, out.getvalue(), err.getvalue()
 
-    def test_a_fatal_error_fails_every_command_naming_the_file(self):
+    def test_gate_exits_1_naming_each_failing_file_and_its_first_error(self):
         # Arrange
-        path = self.commands({
+        tree = self.build_dir('t', {
+            'a.c': "0\n",
+            'b.c': f"1\n{self.folder}/b.c:3:1: error: cast to pointer from integer of different size [-Werror=int-to-pointer-cast]\n"
+                   f"{self.folder}/b.c:9:1: error: second\n",
+            'c.cpp': f"1\n{self.folder}/c.cpp:2:1: error: broken\n"})
+        # Act
+        status, out, err = self.run_main('gate', tree)
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('b.c:3:1: error: cast to pointer from integer of different size', out)
+        self.assertNotIn('second', out)
+        self.assertIn('c.cpp:2:1: error: broken', out)
+        self.assertNotIn('a.c', out)
+
+    def test_gate_exits_0_for_a_clean_directory(self):
+        # Arrange
+        tree = self.build_dir('t', {'a.c': f"0\n{self.folder}/a.c:1:1: warning: harmless [-Wfoo]\n", 'b.cpp': "0\n"})
+        # Act
+        status, out, err = self.run_main('gate', tree)
+        # Assert
+        self.assertEqual(status, 0, out + err)
+        self.assertIn('2 files', out)
+
+    def test_gate_exits_2_when_the_generated_header_is_missing(self):
+        # Arrange
+        tree = self.build_dir('t', {'a.c': "0\n"}, header=False)
+        # Act
+        status, out, err = self.run_main('gate', tree)
+        # Assert
+        self.assertEqual(status, 2)
+        self.assertIn('--target ge_buildinfo', err)
+        self.assertIn(str(tree), err)
+
+    def test_gate_exits_2_for_a_32_bit_configure(self):
+        # Arrange
+        tree = self.build_dir('t', {'a.c': "0\n"}, bits=32)
+        # Act
+        status, out, err = self.run_main('gate', tree)
+        # Assert
+        self.assertEqual(status, 2)
+        self.assertIn('GE_POINTER_BITS=64', err)
+
+    def test_gate_compiles_every_directory_with_its_own_commands(self):
+        # Arrange: one source, clean in the first tree, failing with the second tree's command
+        clean = self.build_dir('one', {'a.c': "0\n"})
+        failing = self.build_dir('two', {'b.c': "0\n"})
+        (self.folder/'bad.py').write_text('import sys\nsys.stderr.write("a.c:1:1: error: only here\\n")\nsys.exit(1)\n')
+        entries = json.loads((failing/'compile_commands.json').read_text())
+        entries.append(dict(directory=str(failing), file=str(self.folder/'a.c'),
+                            arguments=[sys.executable, str(self.folder/'bad.py'), str(self.folder/'a.c')]))
+        (failing/'compile_commands.json').write_text(json.dumps(entries))
+        # Act
+        status, out, err = self.run_main('gate', clean, failing)
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('only here', out)
+
+    def test_count_check_and_update_are_gone(self):
+        for command in ('count', 'check', 'update'):
+            with self.subTest(command=command), self.assertRaises(SystemExit):
+                # Act / Assert
+                self.run_main(command)
+
+    def test_a_fatal_error_fails_sites_naming_the_file(self):
+        # Arrange
+        tree = self.build_dir('t', {
             'a.c': f"0\n{self.folder}/a.c:1:1: warning: x [-Wint-conversion]\n",
             'b.c': f"1\n{self.folder}/b.c:2:10: fatal error: port_buildinfo.h: No such file or directory\n"
                    "compilation terminated.\n"})
-        self.baseline.write_text(diag.render(diag.summarize(set(), 'gcc-13')))
-        for command in ('count', 'check', 'update'):
-            with self.subTest(command=command):
-                # Act
-                status, out, err = self.run_main(command, '--compile-commands', str(path))
-                # Assert
-                self.assertNotEqual(status, 0)
-                self.assertIn('b.c', err)
-                self.assertEqual(json.loads(self.baseline.read_text())['total'], 0)
-
-    def test_an_unparsed_driver_error_fails_even_beside_tracked_warnings(self):
-        # Arrange
-        path = self.commands({'a.c': f"1\n{self.folder}/a.c:1:1: warning: x [-Wint-conversion]\n"
-                                     "gcc: error: unrecognized command-line option '-mfoo'\n"})
         # Act
-        status, out, err = self.run_main('count', '--compile-commands', str(path))
+        status, out, err = self.run_main('sites', '--build-dir', tree)
         # Assert
-        self.assertNotEqual(status, 0)
+        self.assertEqual(status, 2)
+        self.assertIn('b.c', err)
+
+    def test_an_unparsed_driver_error_fails_sites_even_beside_tracked_warnings(self):
+        # Arrange
+        tree = self.build_dir('t', {'a.c': f"1\n{self.folder}/a.c:1:1: warning: x [-Wint-conversion]\n"
+                                           "gcc: error: unrecognized command-line option '-mfoo'\n"})
+        # Act
+        status, out, err = self.run_main('sites', '--build-dir', tree)
+        # Assert
+        self.assertEqual(status, 2)
         self.assertIn('-mfoo', err)
 
-    def test_a_failing_check_prints_the_sites_of_each_file_that_rose(self):
-        # Arrange
-        path = self.commands({
-            'a.c': f"0\n{self.folder}/a.c:3:1: warning: x [-Wint-conversion]\n",
-            'b.c': f"0\n{self.folder}/b.c:9:1: warning: y [-Wint-conversion]\n"})
-        self.baseline.write_text(diag.render(diag.summarize({('b.c', 9, 1, 'int-conversion')}, 'gcc-13')))
-        with mock.patch.object(diag, 'ROOT', self.folder):
-            # Act
-            status, out, err = self.run_main('check', '--compile-commands', str(path))
-        # Assert
-        self.assertEqual(status, 1)
-        self.assertIn('a.c:3: int-conversion', out)
-        self.assertNotIn('b.c:9', out)
-
-    def test_two_compile_command_files_naming_one_source_measure_it_once_with_the_first_command(self):
-        # Arrange
-        text = f"0\n{self.folder}/a.c:3:1: warning: x [-Wint-conversion]\n"
-        first = self.commands({'a.c': text})
-        (self.folder/'bad.py').write_text('import sys\nsys.stderr.write("gcc: error: boom\\n")\nsys.exit(1)\n')
-        second = self.folder/'second.json'
-        second.write_text(json.dumps([dict(directory=str(self.folder), file=str(self.folder/'a.c'),
-                                           arguments=[sys.executable, str(self.folder/'bad.py')])]))
+    def test_sites_lists_a_site_that_only_the_second_directory_sees(self):
+        # Arrange: the same source compiles cleanly in one configuration and not in the other
+        first = self.build_dir('one', {'a.c': "0\n"})
+        second = self.build_dir('two', {})
+        (self.folder/'video.py').write_text(
+            f'import sys\nsys.stderr.write("{self.folder}/a.c:7:1: warning: v [-Wint-to-pointer-cast]\\n")\n')
+        (second/'compile_commands.json').write_text(json.dumps([dict(
+            directory=str(second), file=str(self.folder/'a.c'),
+            arguments=[sys.executable, str(self.folder/'video.py'), str(self.folder/'a.c')])]))
         # Act
-        status, out, err = self.run_main('count', '--compile-commands', str(first), '--compile-commands', str(second))
+        status, out, err = self.run_main('sites', '--build-dir', first, '--build-dir', second)
         # Assert
         self.assertEqual(status, 0, err)
-        self.assertEqual(json.loads(out)['total'], 1)
+        self.assertEqual(out.strip(), 'a.c:7: int-to-pointer-cast')
+
+    def test_sites_refuses_a_directory_missing_its_generated_header(self):
+        # Arrange
+        tree = self.build_dir('t', {'a.c': "0\n"}, header=False)
+        # Act
+        status, out, err = self.run_main('sites', '--build-dir', tree)
+        # Assert
+        self.assertEqual(status, 2)
+        self.assertIn('--target ge_buildinfo', err)
 
     def test_sites_messages_prints_the_message_and_source_text(self):
         # Arrange
-        path = self.commands({'a.c': f"0\n{self.folder}/a.c:3:1: warning: bad thing [-Wint-conversion]\n"
-                                     "    3 |   p = 1;\n"})
-        with mock.patch.object(diag, 'ROOT', self.folder):
-            # Act
-            status, out, err = self.run_main('sites', '--messages', '--compile-commands', str(path))
+        tree = self.build_dir('t', {'a.c': f"0\n{self.folder}/a.c:3:1: warning: bad thing [-Wint-conversion]\n"
+                                           "    3 |   p = 1;\n"})
+        # Act
+        status, out, err = self.run_main('sites', '--messages', '--build-dir', tree)
         # Assert
         self.assertEqual(status, 0)
         self.assertEqual(out.strip(), 'a.c:3: int-conversion: bad thing | p = 1;')
 
-    def test_update_with_a_higher_total_exits_2_and_leaves_the_baseline_untouched(self):
-        # Arrange
-        path = self.commands({'a.c': f"0\n{self.folder}/a.c:3:1: warning: x [-Wint-conversion]\n"})
-        self.baseline.write_text(diag.render(diag.summarize(set(), 'gcc-13')))
-        before = self.baseline.read_bytes()
-        with mock.patch.object(diag, 'ROOT', self.folder):
-            # Act
-            status, out, err = self.run_main('update', '--compile-commands', str(path))
-        # Assert
-        self.assertEqual(status, 2)
-        self.assertEqual(self.baseline.read_bytes(), before)
-        self.assertIn('--allow-rise', err)
-
-    def test_update_with_allow_rise_writes_and_prints_the_reason(self):
-        # Arrange
-        path = self.commands({'a.c': f"0\n{self.folder}/a.c:3:1: warning: x [-Wint-conversion]\n"})
-        self.baseline.write_text(diag.render(diag.summarize(set(), 'gcc-13')))
-        with mock.patch.object(diag, 'ROOT', self.folder):
-            # Act
-            status, out, err = self.run_main('update', '--allow-rise', 'video configuration added',
-                                             '--compile-commands', str(path))
-        # Assert
-        self.assertEqual(status, 0)
-        self.assertEqual(json.loads(self.baseline.read_text())['total'], 1)
-        self.assertIn('video configuration added', out + err)
-
-    def line_file_commands(self) -> Path:
+    def line_file_tree(self) -> Path:
         compiler = self.folder/'linecc.py'  # run directly: the tool inserts options right after argv[0]
         compiler.write_text(f'#!{sys.executable}\n{LINE_COMPILER}')
         compiler.chmod(0o755)
+        tree = self.build_dir('t', {})
         source = self.folder/'a.c'
         source.write_text('int a;\nint b;\n#line 100\nBAD here\n')
-        path = self.folder/'compile_commands.json'
-        path.write_text(json.dumps([dict(directory=str(self.folder), file=str(source),
-                                         arguments=[str(compiler), str(source)])]))
-        return path
+        (tree/'compile_commands.json').write_text(json.dumps([dict(directory=str(tree), file=str(source),
+                                                                   arguments=[str(compiler), str(source)])]))
+        return tree
 
     def test_sites_report_the_physical_line_of_a_file_with_line_directives(self):
         # Arrange
-        path = self.line_file_commands()
-        with mock.patch.object(diag, 'ROOT', self.folder):
-            # Act
-            status, out, err = self.run_main('sites', '--messages', '--compile-commands', str(path))
+        tree = self.line_file_tree()
+        # Act
+        status, out, err = self.run_main('sites', '--messages', '--build-dir', tree)
         # Assert
         self.assertEqual(status, 0, err)
         self.assertEqual(out.strip(), 'a.c:4: int-conversion: bad | BAD here')
 
     def test_sites_without_messages_also_report_the_physical_line(self):
         # Arrange
-        path = self.line_file_commands()
-        with mock.patch.object(diag, 'ROOT', self.folder):
-            # Act
-            status, out, err = self.run_main('sites', '--compile-commands', str(path))
+        tree = self.line_file_tree()
+        # Act
+        status, out, err = self.run_main('sites', '--build-dir', tree)
         # Assert
         self.assertEqual(out.strip(), 'a.c:4: int-conversion')
 
-    def test_count_keeps_the_compilers_own_line_numbers_and_writes_nothing_beside_the_source(self):
+    def test_sites_writes_nothing_beside_the_source(self):
         # Arrange
-        path = self.line_file_commands()
+        tree = self.line_file_tree()
         before = sorted(p.name for p in self.folder.iterdir())
-        with mock.patch.object(diag, 'ROOT', self.folder):
-            # Act
-            status, out, err = self.run_main('count', '--compile-commands', str(path))
-        # Assert
-        self.assertEqual(json.loads(out)['by_file'], {'a.c': 1})
-        self.assertEqual(sorted(p.name for p in self.folder.iterdir()), before)
-
-    def test_a_malformed_baseline_exits_2_naming_the_file(self):
-        # Arrange
-        path = self.commands({'a.c': "0\n"})
-        for text in ('{not json', '{"compiler": "gcc-13"}'):
-            self.baseline.write_text(text)
-            for command in ('check', 'update'):
-                with self.subTest(text=text, command=command):
-                    # Act
-                    status, out, err = self.run_main(command, '--compile-commands', str(path))
-                    # Assert
-                    self.assertEqual(status, 2)
-                    self.assertIn(str(self.baseline), err)
-
-    def test_allow_rise_is_silent_when_the_total_did_not_rise(self):
-        # Arrange
-        path = self.commands({'a.c': "0\n"})
-        self.baseline.write_text(diag.render(diag.summarize(set(), 'gcc-13')))
         # Act
-        status, out, err = self.run_main('update', '--allow-rise', 'why', '--compile-commands', str(path))
+        self.run_main('sites', '--build-dir', tree)
         # Assert
-        self.assertEqual(status, 0)
-        self.assertNotIn('Rise allowed', out + err)
+        self.assertEqual(sorted(p.name for p in self.folder.iterdir()), before)
 
 
 class PhysicalCommand(unittest.TestCase):
