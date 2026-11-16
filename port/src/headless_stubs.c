@@ -107,3 +107,16 @@ void portHudWideAdopt(s32 wide) { (void)wide; }
 /* The screenshot trigger, normally owned by gfx_sdl2.cpp; no renderer, no shot.
  * The hit-map probe (port_hitmap_probe.c) still sets it. */
 int ge_shot_force;
+
+/* pcsched.c, hitchlog.c and port_bench.c ask whether the render thread is
+ * decoupled; there is no renderer, so no render thread: the answer is no. */
+s32 portRenderAsyncActive(void)
+{
+    return 0;
+}
+
+/* port_load_tour.c and save_transfer.cpp post a window-close request; there
+ * is no window or SDL event loop to receive it, so there is nothing to quit. */
+void portRequestQuit(void)
+{
+}

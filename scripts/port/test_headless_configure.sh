@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# The headless build is the 32-bit reference for the 64-bit work, so it must
+# configure and compile with no extra flags. Compiling one file that includes
+# SDL.h keeps this fast; the full link is checked by the stock build.
+set -euo pipefail
+cd "$(dirname "$0")/../.."
+build_dir=$(mktemp -d /tmp/midas-headless-configure.XXXXXX)
+trap 'rm -rf "$build_dir"' EXIT
+
+cmake -S . -B "$build_dir" -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON >/dev/null
+
+# Take the recorded compile command for the file, as the build would run it.
+command=$(python3 - "$build_dir/compile_commands.json" <<'PY'
+import json, sys
+for entry in json.load(open(sys.argv[1])):
+    if entry["file"].endswith("port/src/port_baked_trace.c"):
+        print(entry["command"])
+        break
+else:
+    sys.exit("port_baked_trace.c is not in compile_commands.json")
+PY
+)
+
+# The recorded command writes its object under the build tree, which this
+# script removes on exit; it recorded relative paths from the build directory.
+cd "$build_dir"
+eval "$command"
+echo "Headless configure OK: port_baked_trace.c compiles"

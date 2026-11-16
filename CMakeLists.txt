@@ -341,6 +341,10 @@ if(GE_HEADLESS)
         ${CMAKE_SOURCE_DIR}/port/src/video.c
         ${CMAKE_SOURCE_DIR}/port/src/input_pc.c
         ${CMAKE_SOURCE_DIR}/port/src/raphnet.c)
+    # port_baked_trace.c includes SDL.h for its bake thread; headless has no
+    # SDL2, so give it the CI shim, which also selects the thread-free path.
+    set_source_files_properties(port/src/port_baked_trace.c PROPERTIES
+        INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/scripts/port/sdl_shim")
 else()
     list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/headless_stubs.c)
 endif()

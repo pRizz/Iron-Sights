@@ -368,35 +368,20 @@ spec depends on the i686 reference running here.
 
 - [ ] **Step 6: Run the i686 reference headless with the ROM**
 
-The stock headless configuration does not compile on `main`:
-`port/src/port_baked_trace.c` (FORK-082) includes `SDL.h` and is not excluded
-under `GE_HEADLESS`. Task 5b repairs that. Until it lands, pass a configure
-flag and change no source. Try the test shim first, as below. If that does
-not compile or link inside the game's include paths, use the image's own
-32-bit SDL2 instead: replace the `-DCMAKE_C_FLAGS=...` argument with
-`-DCMAKE_C_FLAGS=-I/home/dev/sdl2-linux-i686/include/SDL2` and add
-`-DCMAKE_C_STANDARD_LIBRARIES="-L/home/dev/sdl2-linux-i686/lib/i386-linux-gnu -Wl,-rpath,/home/dev/sdl2-linux-i686/lib/i386-linux-gnu -lSDL2"`.
-Record which one worked; Task 5b builds on that answer.
+The stock headless configuration needs no extra flags: Task 5b gave
+`port/src/port_baked_trace.c` the SDL shim include under `GE_HEADLESS` in
+`CMakeLists.txt` and added `portRenderAsyncActive` and `portRequestQuit` to
+`port/src/headless_stubs.c` (Task 2 first found the defects and ran the
+reference with a configure flag and a scratch object; both are obsolete).
+
 `audit_buffers.py` accepts `--frames` from 600 upward.
 
-The stock headless build also fails to link: `portRenderAsyncActive`
-(`s32 portRenderAsyncActive(void)`, defined only in `port/src/video.c`, which
-headless builds remove) is called from `port_bench.c`, `hitchlog.c` and
-`pcsched.c`. Until Task 5b adds it to `port/src/headless_stubs.c`, supply it
-from a scratch object outside the tracked tree: write
-`build/lp64/headless-stub/stub.c` defining it to return 0 (no render thread
-exists without video), compile it with `gcc -m32 -c` in the i686 container,
-and append the object's container path to `-DCMAKE_C_STANDARD_LIBRARIES`. If
-further symbols turn out to be undefined, add only those whose headless
-meaning is plainly "nothing" or 0, at most five; list every one for Task 5b,
-and stop and report if there are more or if one needs real behaviour.
-
 ```bash
-python3 scripts/port/lp64_env.py run --arch i686 -- sh -c 'cmake -S . -B build/lp64/ref-i686 -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_C_FLAGS=-I/home/dev/project/scripts/port/sdl_shim && cmake --build build/lp64/ref-i686 -j"$(nproc)"'
-python3 scripts/port/lp64_env.py run --arch i686 -- python3 scripts/port/audit_buffers.py --mission-smoke build/lp64/ref-i686/IronSights --rom /rom/baserom.u.z64 --frames 600 --jobs 2 --output build/lp64/ref-i686/smoke.json
+python3 scripts/port/lp64_env.py run --arch i686 -- sh -c 'cmake -S . -B build/lp64/ref-i686-stock -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON && cmake --build build/lp64/ref-i686-stock -j"$(nproc)"'
+python3 scripts/port/lp64_env.py run --arch i686 -- python3 scripts/port/audit_buffers.py --mission-smoke build/lp64/ref-i686-stock/IronSights --rom /rom/baserom.u.z64 --frames 600 --jobs 2 --output build/lp64/ref-i686-stock/smoke.json
 ```
 
-Expected: the build links `build/lp64/ref-i686/IronSights`, and the smoke run
+Expected: the build links `build/lp64/ref-i686-stock/IronSights`, and the smoke run
 reports every mission passing. Record the wall-clock time of both in the
 status table; it is the emulation cost later milestones plan around.
 
@@ -596,13 +581,10 @@ Expected: `OK`
 
 - [ ] **Step 5: Record the baseline**
 
-Until Task 5b repairs the headless configuration, one file cannot find
-`SDL.h`, which would enter the baseline as an error. Add the flag Task 2
-found to work (the shim form is shown) so the baseline describes the code and
-not the missing header. `syntax_command` keeps `-I` flags, so no code changes.
+Configure stock: the headless configuration needs no extra flag.
 
 ```bash
-python3 scripts/port/lp64_env.py run --arch x86_64 -- sh -c 'cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-I/home/dev/project/scripts/port/sdl_shim && python3 scripts/port/lp64_diagnostics.py update && python3 scripts/port/lp64_diagnostics.py check'
+python3 scripts/port/lp64_env.py run --arch x86_64 -- sh -c 'cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && python3 scripts/port/lp64_diagnostics.py update && python3 scripts/port/lp64_diagnostics.py check'
 ```
 
 Expected: a baseline with a `total` in the low thousands and `check` exiting
