@@ -3,6 +3,7 @@
 #include "deb.h"
 
 #ifndef TARGET_N64
+#include <inttypes.h> /* PRIxPTR: the traces print whole addresses */
 #include <stdio.h>  /* GE_ROOM_AUDIT heap validation (see bg.c) */
 #include <stdlib.h>
 #endif
@@ -194,12 +195,12 @@ static void memaAuditFree(intptr_t addr, s32 size)
         return;
     }
 
-    fprintf(stderr, "roomaudit: mema free  %08x +%06x\n", (unsigned) addr, size);
+    fprintf(stderr, "roomaudit: mema free  %08" PRIxPTR " +%06x\n", (uintptr_t) addr, size);
 
     if (addr < g_MemaHeapStart || (addr + size) > (g_MemaHeapStart + g_MemaHeapSize)) {
         fprintf(stderr,
-                "roomaudit: *** MEMA FREE OUT OF HEAP %08x +%06x (heap %08x +%06x)\n",
-                (unsigned) addr, size, (unsigned) g_MemaHeapStart, g_MemaHeapSize);
+                "roomaudit: *** MEMA FREE OUT OF HEAP %08" PRIxPTR " +%06x (heap %08" PRIxPTR " +%06x)\n",
+                (uintptr_t) addr, size, (uintptr_t) g_MemaHeapStart, g_MemaHeapSize);
     }
 
     for (i = 0; i < ALLOCATIONS_LENGTH - 1; i++) {
@@ -210,8 +211,8 @@ static void memaAuditFree(intptr_t addr, s32 size)
         }
         if (addr < (intptr_t)(s->addr + s->size) && s->addr < (uintptr_t)(addr + size)) {
             fprintf(stderr,
-                    "roomaudit: *** MEMA DOUBLE/BAD FREE %08x +%06x overlaps free space %08x +%06x\n",
-                    (unsigned) addr, size, (unsigned) s->addr, s->size);
+                    "roomaudit: *** MEMA DOUBLE/BAD FREE %08" PRIxPTR " +%06x overlaps free space %08" PRIxPTR " +%06x\n",
+                    (uintptr_t) addr, size, (uintptr_t) s->addr, s->size);
         }
     }
     fflush(stderr);
@@ -287,7 +288,7 @@ void memaReset(void *heapaddr, u32 heapsize)
     {
         extern void portRoomAuditOnHeapReset(void);
         if (portRoomAuditEnabled()) {
-            fprintf(stderr, "roomaudit: mema reset %08x +%06x\n", (unsigned) g_MemaHeapStart, g_MemaHeapSize);
+            fprintf(stderr, "roomaudit: mema reset %08" PRIxPTR " +%06x\n", (uintptr_t) g_MemaHeapStart, g_MemaHeapSize);
             fflush(stderr);
         }
         portRoomAuditOnHeapReset(); /* all shadows are stale now */
@@ -380,7 +381,7 @@ void *memaAlloc(u32 amount) {
 
 #ifndef TARGET_N64
     if (portRoomAuditEnabled()) {
-        fprintf(stderr, "roomaudit: mema alloc %08x +%06x\n", (unsigned) addr, amount);
+        fprintf(stderr, "roomaudit: mema alloc %08" PRIxPTR " +%06x\n", (uintptr_t) addr, amount);
         fflush(stderr);
     }
 #endif

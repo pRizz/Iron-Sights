@@ -153,7 +153,7 @@ Gfx *titleRenderFolderMenuBackground(Gfx *gdl, s32 xOffset, struct FolderSelectC
     gDPSetTextureFilter(gdl++, G_TF_POINT);
     gDPPipeSync(gdl++);
 
-    return titleRenderFolderMenuBackgroundLines(gdl, OS_K0_TO_PHYSICAL(dword_CODE_bss_8006958C), xOffset, topColour, bottomColour);
+    return titleRenderFolderMenuBackgroundLines(gdl, (u8 *)OS_K0_TO_PHYSICAL(dword_CODE_bss_8006958C), xOffset, topColour, bottomColour);
 }
 
 

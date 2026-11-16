@@ -10,6 +10,10 @@
  * - The heap-range check of the GE_ROOM_AUDIT free trace compares signed, as
  *   it has since the decompilation: at 32 bits a free at 0x80008000 in a heap
  *   that starts at 0x7FFF0000 is reported outside the heap.
+ * - The trace's overlap check compares the free's address with the end of a
+ *   free space signed: at 32 bits a free at 0x7FFFF800 inside a space that
+ *   ends at 0x80001000 is not reported, because that end reads as negative;
+ *   at 64 bits the end is positive and the overlap is reported.
  * - The list walks stop at the -1 end marker, at both widths. */
 #include <stdint.h>
 #include <stdio.h>
@@ -41,6 +45,9 @@ void debTryAdd(void *data, const char *name)
 #define HIGH_SPACE 0x80000000u
 #define SPACE_SIZE 0x1000u
 #define HIGH_FREE 0x80008000u
+#define STRADDLE_SPACE 0x7FFFF000u
+#define STRADDLE_SIZE 0x2000u
+#define STRADDLE_FREE 0x7FFFF800u
 
 static int check_unsigned_merge(void)
 {
@@ -67,7 +74,7 @@ static int check_unsigned_merge(void)
     return 1;
 }
 
-static int read_audit_of_free(char *out, size_t outsize)
+static int read_audit_of_free(uintptr_t addr, char *out, size_t outsize)
 {
     FILE *capture = tmpfile();
     int saved = dup(STDERR_FILENO);
@@ -80,7 +87,7 @@ static int read_audit_of_free(char *out, size_t outsize)
     fflush(stderr);
     dup2(fileno(capture), STDERR_FILENO);
     s_audit = 1;
-    memaFree((void *) (uintptr_t) HIGH_FREE, 0x100);
+    memaFree((void *) addr, 0x100);
     s_audit = 0;
     fflush(stderr);
     dup2(saved, STDERR_FILENO);
@@ -100,13 +107,37 @@ static int check_signed_audit_range(void)
     memaReset((void *) (uintptr_t) HEAP_START, HEAP_SIZE);
 
     // Act
-    if (!read_audit_of_free(audit, sizeof(audit))) {
+    if (!read_audit_of_free(HIGH_FREE, audit, sizeof(audit))) {
         return 0;
     }
 
     // Assert
     if (strstr(audit, "MEMA FREE OUT OF HEAP") == NULL) {
         fprintf(stderr, "mema order: the 32-bit audit compared unsigned; trace was:\n%s", audit);
+        return 0;
+    }
+    return 1;
+}
+
+static int check_overlap_compare(void)
+{
+    char audit[1024];
+    int reported;
+
+    // Arrange: one free space that straddles 0x80000000.
+    memaReset((void *) (uintptr_t) HEAP_START, HEAP_SIZE);
+    g_MemoryAllocations.spaces[0].addr = STRADDLE_SPACE;
+    g_MemoryAllocations.spaces[0].size = STRADDLE_SIZE;
+
+    // Act
+    if (!read_audit_of_free(STRADDLE_FREE, audit, sizeof(audit))) {
+        return 0;
+    }
+
+    // Assert
+    reported = strstr(audit, "MEMA DOUBLE/BAD FREE") != NULL;
+    if (reported != (sizeof(void *) != 4)) {
+        fprintf(stderr, "mema order: the overlap check's end compare changed signedness; trace was:\n%s", audit);
         return 0;
     }
     return 1;
@@ -120,6 +151,7 @@ int main(void)
     if (sizeof(void *) == 4) {
         ok = check_signed_audit_range() && ok;
     }
+    ok = check_overlap_compare() && ok;
     if (!ok) {
         return 1;
     }

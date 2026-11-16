@@ -4647,13 +4647,13 @@ Gfx *draw_fx_volume_slider(Gfx *gdl)
     cmd = gdl++;
     gDPSetRenderMode(cmd, G_RM_XLU_SURF, G_RM_XLU_SURF2);
 
-    gdl = sub_GAME_7F0A3B40(gdl, OS_K0_TO_PHYSICAL(vtx1));
+    gdl = sub_GAME_7F0A3B40(gdl, (s32 *)OS_K0_TO_PHYSICAL(vtx1));
     vtx = setup_watch_rectangles(vtx1, 0, 0, (s32) PORTWATCH_BAR_W, (s32) PORTWATCH_BAR_H, (s32) PORTWATCH_BAR_X, (s32) PORTWATCH_BAR_FX_Z);
 
-    gdl = sub_GAME_7F0A3B40(gdl, OS_K0_TO_PHYSICAL(vtx));
+    gdl = sub_GAME_7F0A3B40(gdl, (s32 *)OS_K0_TO_PHYSICAL(vtx));
     vtx = setup_watch_rectangles(vtx, 0, 0, (s32) PORTWATCH_BAR_W, (s32) PORTWATCH_BAR_H, (s32) PORTWATCH_BAR_X, (s32) PORTWATCH_BAR_FX_Z);
 
-    gdl = sub_GAME_7F0A3B40(gdl, OS_K0_TO_PHYSICAL(vtx));
+    gdl = sub_GAME_7F0A3B40(gdl, (s32 *)OS_K0_TO_PHYSICAL(vtx));
     setup_watch_rectangles(vtx, 0, 0, (s32) PORTWATCH_BAR_W, (s32) PORTWATCH_BAR_H, (s32) PORTWATCH_BAR_X, (s32) PORTWATCH_BAR_FX_Z);
 
     update_volume_slider_verts(vtx1, fvolume, 30);
@@ -4698,14 +4698,14 @@ Gfx *draw_music_volume_slider(Gfx *gdl)
     cmd = gdl++;
     gDPSetRenderMode(cmd, G_RM_XLU_SURF, G_RM_XLU_SURF2);
 
-    gdl = sub_GAME_7F0A3B40(gdl, OS_K0_TO_PHYSICAL(vtx1));
+    gdl = sub_GAME_7F0A3B40(gdl, (s32 *)OS_K0_TO_PHYSICAL(vtx1));
     vtx = setup_watch_rectangles(vtx1, 0, 0, (s32) PORTWATCH_BAR_W, (s32) PORTWATCH_BAR_H, (s32) PORTWATCH_BAR_X, (s32) PORTWATCH_BAR_MUSIC_Z);
 
 
-    gdl = sub_GAME_7F0A3B40(gdl, OS_K0_TO_PHYSICAL(vtx));
+    gdl = sub_GAME_7F0A3B40(gdl, (s32 *)OS_K0_TO_PHYSICAL(vtx));
     vtx = setup_watch_rectangles(vtx, 0, 0, (s32) PORTWATCH_BAR_W, (s32) PORTWATCH_BAR_H, (s32) PORTWATCH_BAR_X, (s32) PORTWATCH_BAR_MUSIC_Z);
 
-    gdl = sub_GAME_7F0A3B40(gdl, OS_K0_TO_PHYSICAL(vtx));
+    gdl = sub_GAME_7F0A3B40(gdl, (s32 *)OS_K0_TO_PHYSICAL(vtx));
     setup_watch_rectangles(vtx, 0, 0, (s32) PORTWATCH_BAR_W, (s32) PORTWATCH_BAR_H, (s32) PORTWATCH_BAR_X, (s32) PORTWATCH_BAR_MUSIC_Z);
 
     update_volume_slider_verts(vtx1, fvolume, 30);

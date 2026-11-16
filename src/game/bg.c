@@ -4452,7 +4452,7 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
 
                 if (bgTestRayIntersectsBbox(from, dir, (s32 *) (&bboxMin), (s32 *) (&bboxMax)))
                 {
-                    if (intersectRayTriangle((Vertex *)((s32)vtxbase - (0 - (idx[0] << 4))), (Vertex *)((s32)vtxbase - (0 - (idx[1] << 4))), (Vertex *)((s32)vtxbase - (0 - (idx[2] << 4))), (coord3d *) (((roomnum * 24) + ((s32) ptr_bgdata_room_fileposition_list)) + 12), from, to, dir, &hitbuf))
+                    if (intersectRayTriangle((Vertex *)((intptr_t)vtxbase - (0 - (idx[0] << 4))), (Vertex *)((intptr_t)vtxbase - (0 - (idx[1] << 4))), (Vertex *)((intptr_t)vtxbase - (0 - (idx[2] << 4))), (coord3d *) (((roomnum * 24) + ((intptr_t) ptr_bgdata_room_fileposition_list)) + 12), from, to, dir, &hitbuf)) /* LP64-004: bg_room_data stride */
                     {
                         tcmd = gdl;
                         dx = ((s32) hitbuf.hitpos.x) - ((s32) from->x);
@@ -4656,7 +4656,7 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
 
                         if (bgTestRayIntersectsBbox(from, dir, (s32 *) (&bboxMin2), (s32 *) (&bboxMax2)))
                         {
-                            if (intersectRayTriangle((Vertex *)((s32)vtxbase - (0 - (idx2[0] << 4))), (Vertex *)((s32)vtxbase - (0 - (idx2[1] << 4))), (Vertex *)((s32)vtxbase - (0 - (idx2[2] << 4))), (coord3d *) (((roomnum * 24) + ((s32) ptr_bgdata_room_fileposition_list)) + 12), from, to, dir, &hitbuf))
+                            if (intersectRayTriangle((Vertex *)((intptr_t)vtxbase - (0 - (idx2[0] << 4))), (Vertex *)((intptr_t)vtxbase - (0 - (idx2[1] << 4))), (Vertex *)((intptr_t)vtxbase - (0 - (idx2[2] << 4))), (coord3d *) (((roomnum * 24) + ((intptr_t) ptr_bgdata_room_fileposition_list)) + 12), from, to, dir, &hitbuf)) /* LP64-004: bg_room_data stride */
                             {
                                 tcmd = gdl;
                                 dx = ((s32) hitbuf.hitpos.x) - ((s32) from->x);
@@ -6391,7 +6391,7 @@ void bgRoomCalcBB(s32 room) // canonical name
     StanRoomBounds limits;
     u8 wasloaded;
 
-    roomdata = (bg_room_data *) ((s32) ptr_bgdata_room_fileposition_list + room * 24);
+    roomdata = (bg_room_data *) ((intptr_t) ptr_bgdata_room_fileposition_list + room * 24); /* LP64-004: bg_room_data stride */
 
     if (roomdata->pPointTableBin == NULL)
     {
@@ -6424,7 +6424,7 @@ void bgRoomCalcBB(s32 room) // canonical name
     }
 
     vertices = g_BgRoomInfo[room].vertices;
-    roomdata = (bg_room_data *) ((s32) ptr_bgdata_room_fileposition_list + room * 24);
+    roomdata = (bg_room_data *) ((intptr_t) ptr_bgdata_room_fileposition_list + room * 24); /* LP64-004: bg_room_data stride */
 
     limits.minX = 0x7fff;
     limits.minY = 0x7fff;

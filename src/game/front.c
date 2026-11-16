@@ -1,5 +1,6 @@
 #include <os_extension.h>
 #ifndef TARGET_N64
+#include <inttypes.h> /* frontDrawCursor GE_DUMP_BOND probe */
 #include <stdio.h> /* frontDrawCursor GE_DUMP_BOND probe */
 #include "port_hud.h"
 #include "port_crosshair.h"
@@ -1502,8 +1503,8 @@ Gfx *frontDrawCursor(Gfx *DL)
         if (dump && (calls++ % 61) == 0)
         {
             fprintf(stderr,
-                    "cursor: opt=%d img=%p idx=%08x w=%d h=%d fmt=%d copyidx=%08x\n",
-                    option, (void *) image, image->index, image->width,
+                    "cursor: opt=%d img=%08" PRIxPTR " idx=%08x w=%d h=%d fmt=%d copyidx=%08x\n",
+                    option, (uintptr_t) image, image->index, image->width,
                     image->height, image->format,
                     (mainfolderimages + IMG_COPY)->index);
             fflush(stderr);

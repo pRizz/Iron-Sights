@@ -119,7 +119,9 @@ in the task that owns its file.
   shown to make the same calls and stores; a loop written with an indexed
   address instead of a stepped pointer, with the same accesses in the same
   order; two stores to distinct non-volatile objects reordered, with no read
-  of either and no call between them. Otherwise change the
+  of either and no call between them; a load moved ahead of a store to
+  another, non-overlapping field of the same object, with every address
+  keeping its order of reads and writes. Otherwise change the
   fix: a type that keeps the 32-bit arithmetic identical (`intptr_t` for a
   signed quantity, `uintptr_t` for an unsigned one) is preferred to a pointer
   type that does not.
@@ -560,8 +562,9 @@ inventory).
   matches the checker).
 - Record in the spec's hazard inventory, under "Hard-coded sizes":
   `bg_room_data` (`bg.h:152`) is addressed with the literal stride
-  `room * 24` and offset `+ 12` at `bg.c:4453,4657,6392,6425`. Do not change
-  those four lines in this milestone; they are LP64-004's.
+  `room * 24` and offset `+ 12` at `bg.c:4453,4657,6392,6425`. The literals
+  `24` and `+ 12` are not changed in this milestone; the casts around them
+  were retyped in Task 8 and the lines carry an `LP64-004` comment.
 
 - [ ] **Step 1: Change the declarations and idioms; recount** (expected: about 139 go)
 - [ ] **Step 2: Run the task check; commit**
@@ -635,7 +638,16 @@ from current `main`. The hook prints the STALE-on-branch notice and passes.
 `initBondDATA.h`, `model.h`, `src/bondtypes.h` (the `Model` fields),
 `port/fast3d/system.h`, `port/fast3d/gfx_pc.cpp`; `CMakeLists.txt` only for
 the 64-bit include order if `gfx_shiny.cpp` needs it; baseline;
-`FORK_CHANGES.md`.
+`FORK_CHANGES.md`. Task 8 left these places outside the three strict files,
+each depending on a declaration or caller in them (counts after Task 8):
+`src/game/bg.c` 3 (706, 747, 837; its line 1833 counts at `gbi.h:2741`), `explosion.c` 2 (959, 1761),
+`glass.c` 1 (294), `glass2.c` 1 (702), `sky.c` 1 (1752), `chr.c` 1 (1701),
+`chr_b.c` 2 (72, 116), `objecthandler_2.c` 5 (138, 182, 355, 373 twice),
+`initanitable.c` 1 (249); `include/PR/os.h` 3 (877, 880 twice) and
+`include/PR/gbi.h` 1 (2741), reported at the header line; `port/src/port_sight.c`
+2 (26, 56); `src/game/gun.h`, `glass2.c` and `options.c` for the declarations
+below. `port/fast3d/glad/glad.c` (its one `strstr` place) counted 0 after
+Task 3's prototypes and stays in the 64-bit video configuration's count.
 
 **Interfaces:**
 - Font globals `copy_1stfonttable`/`copy_2ndfonttable` and `setFontTables`
@@ -654,6 +666,30 @@ the 64-bit include order if `gfx_shiny.cpp` needs it; baseline;
 - `ModelAnimation.address` (`src/bondtypes.h`), written at
   `initanitable.c:249` and read by `loadAnimationFrame` (`model.c:5915-5927`),
   is widened together with that reader.
+- `field_10E0` (`bondview.h:1158`, set by `set_BONDdata_field_10E0` from
+  `bondview2.c`, read through `get_BONDdata_field_10E0`): its `BONDDATAMTX`
+  users are `bg.c` 706, 747, 837, `explosion.c` 959 and 1761, `glass.c:294`,
+  `glass2.c:702` and `sky.c:1752`.
+- `field_10E4` (`bondview.h:1159`, set by `sub_GAME_7F078464` from
+  `bondview2.c`), read through `sub_GAME_7F078474` into `gSPLookAt`, reaches
+  `include/PR/gbi.h:2741` from `bg.c:1833` (and from `gunfire.c` and
+  `port_shiny.c`).
+- `include/PR/os.h:877` (`OS_K0_TO_PHYSICAL`, now `uintptr_t`):
+  `bondview2.c` 5014 and 5031 pass it to `sub_GAME_7F0A3B40(Gfx *, s32 *)`
+  (`glass2.c:447`, prototype at `options.c:386`); the same header place also
+  covers six `options.c` calls and `title.c:156`, cast to the parameter type in
+  Task 8, so the place goes only when `bondview2.c`'s calls are fixed.
+  `os.h:880` (`OS_PHYSICAL_TO_K0`): `bondview2.c` 12259 and 12270 pass a pointer
+  to `buildGaugeBarDL`'s integer parameter (`glass2.c`), and `bondview2.c:12087`
+  passes `(u32) perspmtx` (the int-to-pointer place).
+- `port/src/port_sight.c` 26 and 56: `portDrawTarget(s32 *gdl)` and
+  `portHudGunSight(s32 *gdl)` (`port/include/port_hud.h:40`) keep a `Gfx *` in
+  the `s32` that `gunDrawSight(s32 *gdl)` (`gun.h:341`, `gunfire.c`) passes;
+  they change together.
+- `chr.c:1701` (`sub_GAME_7F06FF5C`), `chr_b.c` 72 and 116
+  (`modelAttachHead`), `objecthandler_2.c` 138, 182, 355 and 373
+  (`modelNodeReplaceGdl`, `sub_GAME_7F075A90`): parameters of `model.c`
+  functions.
 - `port/fast3d/system.h:12`: `s64` matches the game's `long long` type, so the
   two headers agree at both widths. `gfx_pc.cpp:8558`: an explicit conversion
   that states the intended width.

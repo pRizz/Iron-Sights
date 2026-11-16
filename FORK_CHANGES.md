@@ -1605,8 +1605,8 @@ per-address order of memory accesses and no call between reordered ones.
 `u32` callback; `image.c` 2641 and 2738 store `osVirtualToPhysical` in an
 `s32 *`; `RZIPBUFADDR` and `jump_decompressfile`'s buffer stay `u32`
 (N64-only); `ALIGN64_V1` callers; `audi.c` returns `osVirtualToPhysical` from
-`s32` functions (the audio commit). The three `os.h` places come from
-`bondview2.c` calls and are Task 9's. *What ran:* step 1 (`update`, 16 s, 336 in 46 files, no `--allow-rise`). Step 2: the i686 headless build exited 0 (18 s) and the 20-mission smoke exited 0 with 20 of 20 `PASS` (about 185 s). Step 3 as above. `lp64_casts.py check` passed on the host (26 casts). The CI step's lines except the two `cmake` lines, plus `test_stan_callbacks.sh`, `test_image_bank.sh` and `test_dyn.sh`, ran in the i686 container: all 43 passed (118 s), `test_buffers.sh` without `MIDAS_BUFFER_SANITIZE=1` (it hangs under `qemu-i386`).
+`s32` functions (the audio commit). The three `os.h` places are attributed
+to their callers in the review fix note below. *What ran:* step 1 (`update`, 16 s, 336 in 46 files, no `--allow-rise`). Step 2: the i686 headless build exited 0 (18 s) and the 20-mission smoke exited 0 with 20 of 20 `PASS` (about 185 s). Step 3 as above. `lp64_casts.py check` passed on the host (26 casts). The CI step's lines except the two `cmake` lines, plus `test_stan_callbacks.sh`, `test_image_bank.sh` and `test_dyn.sh`, ran in the i686 container: all 43 passed (118 s), `test_buffers.sh` without `MIDAS_BUFFER_SANITIZE=1` (it hangs under `qemu-i386`).
 
 *Task 8, second commit (audio; local, not pushed):* `ALDMAproc` takes and
 returns `intptr_t` addresses (`libaudio.h`), so `ALLoadFilter.memin`, the
@@ -1618,8 +1618,9 @@ returns `intptr_t` addresses (`libaudio.h`), so `ALLoadFilter.memin`, the
 and `ALSndPlayer.target` (`libaudio.h`) `s32` to `intptr_t`. Integers carried
 through `ALSetParam`'s `void *` go through `intptr_t`: `env.c` passes
 `(void *)(intptr_t)data.i`, `save.c` reads the pointer into an `intptr_t`
-local, and `resample.c` reads the pitch bits into an `intptr_t` local before
-storing them in its `s32` union member (no `(s32)(intptr_t)` cast). The
+local, and `resample.c` stores `(intptr_t) param` in its `s32` union member
+(no `(s32)(intptr_t)` cast; the review fix replaced this commit's braced
+`intptr_t` local with that one line). The
 scheduler's `OSMesg` tests switch on `(intptr_t)msg`, and `audi.c` passes
 its `osScAddClient` sentinel as `(OSScClient *)(intptr_t)1`, as before. In
 `music.c` the sequence-file rebase offset and the music table address are
@@ -1662,33 +1663,101 @@ unsigned (`uintptr_t`) in `debugmenu.c`, `bg.c:390`, `image.c`
 and `front.c`'s two display-list offsets. The two `langGet` slot reads are
 `(u8 *)(uintptr_t)output_slot` with `/* LP64-004: text bank converter */`;
 that form widens rather than truncates, so `lp64_casts.py` finds no cast to
-allow and they have no allowlist line. One-offs: `model_audit.c`'s check holds
+allow and they have no allowlist line. The read is still wrong at 64 bits: it
+views the bank through a `u32 *`, while the compiled-in banks become 8-byte
+`char *` entries; the comment marks it for the converter, not as handled. One-offs: `model_audit.c`'s check holds
 a `uintptr_t`; `cleanup_objects.c` casts to `u32 *`; `explosion.c`'s particle
 cast goes through `uintptr_t`; `init_player_gait_object` stores a
 `ModelNode *`; `D_80036418` is an `OSMesgQueue *` (`objecthandler.c`/`.h`);
-`ob.c`'s `cand` is `uintptr_t`, still formed in 32-bit arithmetic; the
-`GE_DUMP_BOND` cursor trace in `front.c` prints the image with `%p` instead of
-`%08x`. *Counts:* 279 to 208 (`int-conversion` 80 to 75, `int-to-pointer-cast`
+`ob.c`'s `cand` is `uintptr_t`, still formed in 32-bit arithmetic; this
+commit printed the `GE_DUMP_BOND` cursor trace's image with `%p`, which the
+review fix replaced with `%08" PRIxPTR "` (the original 32-bit string). *Counts:* 279 to 208 (`int-conversion` 80 to 75, `int-to-pointer-cast`
 87 to 74, `pointer-to-int-cast` 112 to 59; 33 files to 15). Cleared: `zlib.c`
 16, `chraction.c` 8, `port_state.c` and `front.c` 5, `lightfixture.c`,
 `prop.c` and `stan.c` 4, `pcsched.c` and `propobj.c` 3, `debugmenu.c`,
 `cleanup_objects.c`, `image.c`, `initplayergaitobject.c`, `language.c` and
 `tex.c` 2, `model_audit.c`, `initunk_0009E0.c` and `ob.c` 1; `bg.c` 25 to 23,
-`explosion.c` 4 to 2. *Windows comparison:* exited 1 (112 s; `.text` bytes, `.data` one word, `.rdata` and `.reloc`, `.reloc` VirtualSize 0x28310 to 0x28314). With addresses normalised no function differs; the `.text` and `.data` bytes are addresses of moved strings, and `.reloc` follows the pointer words that moved with them. In `.rdata`, split into strings, the only change is the `GE_DUMP_BOND` format string (two bytes shorter), and every other differing word is the address of a string after it. *Left for Task 9* (43 places outside the strict files, plus
+`explosion.c` 4 to 2. *Windows comparison:* exited 1 (112 s; `.text` bytes, `.data` one word, `.rdata` and `.reloc`, `.reloc` VirtualSize 0x28310 to 0x28314). With addresses normalised no function differs; the `.text` and `.data` bytes are addresses of moved strings, and `.reloc` follows the pointer words that moved with them. In `.rdata`, split into strings, the only change is the `GE_DUMP_BOND` format string (two bytes shorter), and every other differing word is the address of a string after it (the review
+fix removed this difference). *Left for Task 9* (43 places outside the strict files, plus
 `bondview2.c` 81, `model.c` 46 and `gunfire.c` 38): the player matrix field
 `field_10E0` (`BONDDATAMTX`: `bg.c` 706, 747, 837, `explosion.c` 959 and 1761,
 `glass.c`, `glass2.c`, `sky.c`) and `field_10E4` (`gbi.h:2741` through
 `gSPLookAt` in `bg.c:1833`), both set from `bondview2.c`; the three `os.h`
-places, from `bondview2.c` calls of `buildGaugeBarDL` and `sub_GAME_7F0A3B40`;
+places (attributed in the review fix note below);
 `port_sight.c` 26 and 56, which store a `Gfx *` through the `s32 *gdl` of
 `gunfire.c`'s `gunDrawSight`; `chr.c:1701`, `chr_b.c` 72 and 116 and
 `objecthandler_2.c`'s five places, which call `model.c` functions;
 `initanitable.c:249` (`ModelAnimation.address`, assigned to Task 9 by the
 plan). `bg.c`'s 20 stride places (4455, 4659, 6394, 6427), left by Task 7 for
-LP64-004, also remain. *64-bit problems left:* `ob.c` rebuilds compiled-in bg
+LP64-004, remained after this commit; the review fix cleared them. *64-bit problems left:* `ob.c` rebuilds compiled-in bg
 addresses in 32-bit arithmetic (the bg segment strip, LP64-004); the text bank
 slots are 32-bit words (LP64-004); the suspend image records 32-bit
 addresses (LP64-003). *What ran:* step 1 (`update`, 20 s, 208 in 15 files, no `--allow-rise`); the i686 build exited 0 (8 s) and the 20-mission smoke 20 of 20 `PASS` (185 s); step 3 as above; `lp64_casts.py check` passed (28 casts); the harness lines in the i686 container: all 43 passed (122 s), `test_buffers.sh` without the sanitizer.
+
+*Task 8, review fix (local commit "Clear the bg stride casts and keep debug
+traces' 32-bit output"; not pushed):* the first commit's message did not name
+its changed functions; this commit's message does: `romCopyAligned` (a pure
+`ebx`/`esi` swap), `init` (one displacement moved with the code) and
+`replay_recorded_ramrom_at_address` (register choice, the header swap loop
+stepping one pointer over the same addresses, and loads moved ahead of stores
+to other, non-overlapping fields of the same buffer, every address keeping its
+read-before-write order). The LP64-002 plan's list of accepted differences now
+includes that last kind. *Stride places:* the ten `(s32)` casts on `bg.c`'s
+four `bg_room_data` stride lines (4455 and 4659: three `vtxbase` and one
+`ptr_bgdata_room_fileposition_list` each; 6394 and 6427: one each) are
+`(intptr_t)`, and each line carries `/* LP64-004: bg_room_data stride */`; the
+literals `24` and `+ 12` are unchanged, so the 32-bit arithmetic is the same.
+This clears 20 places; the plan's Task 7 sentence that kept the lines for
+LP64-004 now says the casts were retyped here. *Debug traces:* the
+`GE_DUMP_BOND` cursor trace (`front.c`) and the five `GE_ROOM_AUDIT` `mema.c`
+traces print addresses with `%08" PRIxPTR "` and a `(uintptr_t)` argument
+(`<inttypes.h>`, which resolved in the Windows, i686 headless and x86_64 count
+builds). On MinGW i686 and glibc i386 `PRIxPTR` is `"x"`, so the strings are
+byte-identical to the originals; at 64 bits the traces now print the whole
+address, where the `(unsigned)` casts of the first commit truncated it.
+*`os.h` places:* GCC reports a macro argument at the macro's definition, and
+the count records each header line and kind once. `os.h:877`
+(`OS_K0_TO_PHYSICAL`, int-conversion) is reached from `bondview2.c` 5014 and
+5031 (`sub_GAME_7F0A3B40(Gfx *, s32 *)`, `glass2.c`), from six `options.c`
+calls of the same function (4650 to 4708) and from `title.c:156`
+(`titleRenderFolderMenuBackgroundLines`' `u8 *image`, `title2.h:9`); the
+`options.c` and `title.c` calls now cast to the parameter type, and the place
+stays until `bondview2.c`'s two calls are fixed in Task 9. `os.h:880`
+(`OS_PHYSICAL_TO_K0`) int-conversion comes from `bondview2.c` 12259 and 12270
+(`buildGaugeBarDL`'s integer parameter), and its int-to-pointer-cast from
+`bondview2.c:12087` (`(u32) perspmtx`). *Other changes:* `resample.c` stores
+`(intptr_t) param` in one line instead of a braced local (the cast checker
+does not flag it, and the Windows functions are unchanged); the `mema` test
+adds the trace's overlap compare (old line 211: at 32 bits a free at
+0x7FFFF800 inside a space ending at 0x80001000 is not reported because the
+end reads negative; at 64 bits it is). Retyping that compare `uintptr_t` made
+the 32-bit run fail ("the overlap check's end compare changed signedness") in
+both containers, and restoring it passed. The test now builds with `-fwrapv`,
+as the game does, because `_memaFree`'s slot index wraps at 32 bits for these
+addresses. The N64-only branch at `title.c:537` now adds to a `void *`
+(`barrelDisplayListPtr`), a GNU extension. *Windows comparison of the whole
+task* (`compare_win32.py commits c6a5a69 WORKTREE`, exit 1, 112 s): the same
+three functions as the first commit, and `.ctors` entries that are
+constructor addresses; every differing word in `.data` (175), `.rdata`
+(5,543) and `.CRT` (3) is an image address in both builds, with no other
+differing word. The loaded `.eh_frame` section `/4` differs because the code
+moved (the reviewer's reading): 7,845 FDEs whose pc-relative start moved by
++0x10, 1,627 of them also in one pc-relative LSDA pointer, and the replay
+function's own FDE, whose range grew from 480 to 492 bytes. `.reloc` holds
+78,190 entries in 914 blocks in both builds (measured); its size differs by 28
+bytes (480 against 466 padding entries), the per-block padding changing as
+relocations crossed page boundaries. *Counts:* 208 to 188 in 15 files
+(`int-conversion` 75, `int-to-pointer-cast` 64, `pointer-to-int-cast` 49),
+which is what remains for Task 9: `bondview2.c` 81, `model.c` 46, `gunfire.c`
+38, and 23 places in their callers and declarations' users (`objecthandler_2.c`
+5, `bg.c` 3, `os.h` 3, `explosion.c` 2, `chr_b.c` 2, `port_sight.c` 2,
+`chr.c`, `glass.c`, `glass2.c`, `sky.c`, `initanitable.c` and `gbi.h` 1 each),
+now listed with their declarations in the plan's Task 9. *What ran:* step 1
+(`update`, 18 s, 188 in 15 files); the i686 build exited 0 (7 s) and the
+20-mission smoke 20 of 20 `PASS` (184 s); the comparison above;
+`lp64_casts.py check` passed (28 casts in 13 files); the harness lines in the
+i686 container, all 43 passed (122 s), `test_buffers.sh` without the
+sanitizer.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
