@@ -84,7 +84,15 @@ a native x86_64 port as assessed and deferred. Upstream has open, unmerged
 - A dry-run merge of upstream pull request 95 into this fork conflicted in 24
   of its 200 files. It was not merged.
 
+**Milestone LP64-001 (scaffolding), planned on 2026-11-15, not yet built:**
+[its implementation plan](scripts/port/native_64bit_lp64_001.md) lists seven
+tasks: the two-tier gallery rule, a container runner for the Mac, a layout
+probe, a 64-bit diagnostics ratchet, a 32-bit executable comparison, a
+`GE_POINTER_BITS` build option, and CI wiring. Each task extends this entry
+with what it built and ran.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
+[LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),
 [inherited 32-bit constraints](docs/port/abi-and-portability.md).
 
