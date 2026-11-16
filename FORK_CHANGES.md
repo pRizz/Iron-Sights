@@ -337,9 +337,12 @@ pre-commit hook does not. No game, engine, port or renderer source was changed.
 
 *LP64-001 task 5, the unchanged-32-bit comparison:* `scripts/port/compare_win32.py`
 proves a change leaves the 32-bit Windows program unchanged. `commits REF_A REF_B`
-(either may be `WORKTREE`, the tracked files as on disk now, uncommitted edits
-included, untracked files excluded) exports each state into
-`build/lp64/compare/a` and `b` (`git archive`, or a copy of `git ls-files`),
+(either may be `WORKTREE`: the files on disk now, tracked files with
+uncommitted edits plus untracked files Git does not ignore, because the build
+globs `src/game/*.c`, `src/*.c` and `port/src/*.c` and a new file is compared
+before it is added; ignored files such as the ROM and `build/` stay out) exports
+each state into `build/lp64/compare/a` and `b` (`git archive`, or a copy of
+`git ls-files --cached --others --exclude-standard`),
 builds each in the `goldeneye` container through `lp64_env.docker_command`
 mounted at the same `/home/dev/project` path (the compiler embeds source paths),
 one after the other, with the README's Windows configuration (Debug, `GE_VIDEO=ON`,
@@ -349,25 +352,68 @@ compares the executables. `compare EXE_A EXE_B` compares two existing files.
 The comparison parses the PE with `struct` and compares: every loaded section's
 bytes, VirtualSize, VirtualAddress and Characteristics (a `.bss` with no raw data
 included; a section in only one file is a difference, and one named twice in a
-file is an error); the optional header's AddressOfEntryPoint, ImageBase and
-SectionAlignment; and every data directory's address and size except Debug and
-Security. Not compared, deliberately: `.debug*` and `/N` sections (debug
-information is not loaded); `.buildid` (an identifier derived from the whole
-file, debug information included); the COFF TimeDateStamp and the optional
-header CheckSum (build stamps); SizeOfImage, NumberOfSections, the COFF
-symbol-table pointer and count, and section file offsets (they move when only
-debug information changes); the Debug directory (it points into debug
-information) and the Security directory (a file offset to data that is not
-loaded). When everything compared is identical but `.buildid` differs, the tool
-prints `identical in loaded code and data; .buildid differs` and exits 0; exit 1
-means a compared difference. Both builds run with
+file is an error); the COFF Machine and Characteristics; an explicit list of
+optional-header fields (`HEADER_FIELDS`: Magic, AddressOfEntryPoint, ImageBase,
+SectionAlignment, FileAlignment, the operating-system, image and subsystem
+versions, Subsystem, DllCharacteristics, SizeOfStackReserve and Commit,
+SizeOfHeapReserve and Commit, LoaderFlags, BaseOfCode, BaseOfData, SizeOfCode,
+SizeOfInitializedData and SizeOfUninitializedData; these carry what
+`CMakeLists.txt` sets with `--stack`, `--disable-dynamicbase` and
+`--subsystem`); and every data directory's address and size except Debug and
+Security. A list rather than "everything but the stamps", because some header
+fields describe the file, which debug information also fills. Not compared,
+deliberately: debug sections, meaning a section whose name marks it as debug
+(`.debug*` or a `/N` long name) and whose flags carry
+`IMAGE_SCN_MEM_DISCARDABLE` (a long-named section the loader keeps is compared;
+the flag alone sets nothing aside, since `.reloc` is discardable and matters at
+load); `.buildid`'s bytes (an identifier derived from the whole file, debug
+information included; a `.buildid` in only one file is a difference); the COFF
+TimeDateStamp and the optional header CheckSum (build stamps); SizeOfImage,
+SizeOfHeaders, NumberOfSections, the linker version, the COFF symbol-table
+pointer and count, and section file offsets (they describe the file rather than
+what is loaded); the Debug directory (it points into debug information) and the
+Security directory (a file offset to data that is not loaded). When everything
+compared is identical but `.buildid` differs, the tool prints `identical in
+loaded code and data; .buildid differs` and exits 0; exit 1 means a compared
+difference, and exit 2 means it could not compare (a build, Git or Docker
+failure, or an input that is not a PE file, named on stderr). The comparison
+build configures without `MIDAS_SENTRY_INCLUDE_DIR`, unlike the release
+workflow, so its `port/crash/reporting_win.c` compiles without
+`MIDAS_SENTRY_ENABLED`; that file is compared as the comparison build compiles
+it, not as the release does. Both builds run with
 `SOURCE_DATE_EPOCH=1700000000` exported: the build already honours it for the
 About-page build time (`scripts/port/build_info.py`), and GCC and the linker
 honour it for `__DATE__`/`__TIME__` and the PE export-directory stamp. The
 exports have no `.git`, so both builds report the commit as unknown. Logs stay in
-`build/lp64/compare/`, ignored by Git. `scripts/port/test_compare_win32.py` (22
+`build/lp64/compare/`, ignored by Git. `scripts/port/test_compare_win32.py` (36
 tests, synthetic PE files and temporary Git repositories, no Docker or compiler)
 passes. No game, engine, port, renderer or CMake source was changed.
+*Fix wave after the milestone review (the commit "Compare the Windows
+executable's load header and new untracked files"):* `WORKTREE` gained untracked
+unignored files (before, a new `port/src` file was absent from the "after"
+build and the tool said identical), the header fields above beyond the entry
+point, image base and section alignment, the discardable-flag condition for
+debug sections, the one-sided `.buildid` difference and exit status 2. Tests,
+each seen failing before the change: an untracked unignored file is exported
+and an ignored one is not; one test per header field group (COFF Machine and
+Characteristics; Magic; BaseOfCode, BaseOfData and FileAlignment; the six
+version fields; Subsystem and DllCharacteristics; stack, heap and LoaderFlags;
+the three size totals), each a synthetic PE differing in that field alone;
+a non-discardable `/4` is compared; a `.buildid` in one file is a difference;
+a non-PE input exits 2. The debug-only experiment was repeated with the new
+field list (working tree only, `src/game/bg.c` line 1504 in
+`addToByteSetMaxSize15`, `s32 i = 0;` to `int i = 0;`, then restored with `git
+checkout -- src/game/bg.c`, never committed): `commits HEAD WORKTREE` built
+twice (55 s each) and exited 0 with `identical in loaded code and data;
+.buildid differs`. Read directly from those two executables (35,176,161 bytes
+each), every listed header field was equal, so none is derived from debug data
+and none was dropped; only 16 bytes of `.buildid` and 2 bytes of the debug
+section `/29` (`.debug_info`) differed. `SizeOfInitializedData` (5,819,392)
+equals the raw size of the non-debug initialised-data sections; the debug
+sections (27,488,768 more bytes) are not in it. That build has one long-named
+section that is not discardable, `/4`, which the string table names
+`.eh_frame` (unwind data, flags 0x40000040); the old name-only rule had left it
+out of every comparison, and it is now compared.
 
 *LP64-001 task 6, the pointer-width build option (built 2026-11-15, not pushed):*
 `CMakeLists.txt` gains the cache variable `GE_POINTER_BITS` (string, `32` or

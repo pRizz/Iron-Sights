@@ -14,21 +14,42 @@ compare = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(compare)
 
 
+# Offsets inside a PE32 optional header and the COFF header, written out here rather than read from
+# the tool so a wrong offset in the tool cannot agree with itself.
+OPTIONAL_FIELDS = {
+    'SizeOfCode': ('<I', 4), 'SizeOfInitializedData': ('<I', 8), 'SizeOfUninitializedData': ('<I', 12),
+    'BaseOfCode': ('<I', 20), 'BaseOfData': ('<I', 24), 'FileAlignment': ('<I', 36),
+    'MajorOperatingSystemVersion': ('<H', 40), 'MinorOperatingSystemVersion': ('<H', 42),
+    'MajorImageVersion': ('<H', 44), 'MinorImageVersion': ('<H', 46),
+    'MajorSubsystemVersion': ('<H', 48), 'MinorSubsystemVersion': ('<H', 50),
+    'Subsystem': ('<H', 68), 'DllCharacteristics': ('<H', 70),
+    'SizeOfStackReserve': ('<I', 72), 'SizeOfStackCommit': ('<I', 76),
+    'SizeOfHeapReserve': ('<I', 80), 'SizeOfHeapCommit': ('<I', 84), 'LoaderFlags': ('<I', 88),
+}
+DEBUG_FLAGS = 0x42000040  # initialised data, discardable, readable: what ld gives .debug_* sections
+CODE_FLAGS = 0x60000020
+
+
 def pe(text=b'\x90' * 16, stamp=0, extra=None, *, entry=0x1000, image_base=0x400000, size_of_image=0x10000,
-       directories=None, vsizes=None, flags=None, sections=None):
+       directories=None, vsizes=None, flags=None, sections=None, header=None, machine=0x14C,
+       characteristics=0x102, magic=0x10B):
     """Build a minimal PE32 file: a .text section plus the `extra` name-to-bytes sections.
 
     `directories` maps a data-directory index to (address, size); `vsizes` and `flags` map a section
-    name to its VirtualSize and Characteristics; `sections` replaces the section list (name, bytes).
+    name to its VirtualSize and Characteristics (debug-named sections default to discardable);
+    `sections` replaces the section list (name, bytes); `header` sets OPTIONAL_FIELDS by name.
     """
     listed = sections if sections is not None else [('.text', text)] + list((extra or {}).items())
     optional = bytearray(224)
-    struct.pack_into('<H', optional, 0, 0x10B)
+    struct.pack_into('<H', optional, 0, magic)
     struct.pack_into('<IIII', optional, 16, entry, 0, 0, 0)
     struct.pack_into('<I', optional, 28, image_base)
     struct.pack_into('<II', optional, 32, 0x1000, 0x200)
     struct.pack_into('<I', optional, 56, size_of_image)
     struct.pack_into('<I', optional, 92, 16)
+    for name, value in (header or {}).items():
+        form, at = OPTIONAL_FIELDS[name]
+        struct.pack_into(form, optional, at, value)
     for index, (address, size) in (directories or {}).items():
         struct.pack_into('<II', optional, 96 + 8 * index, address, size)
     header_end = 0x40 + 4 + 20 + len(optional) + 40 * len(listed)
@@ -36,11 +57,12 @@ def pe(text=b'\x90' * 16, stamp=0, extra=None, *, entry=0x1000, image_base=0x400
     table = b''
     body = b''
     for name, data in listed:
+        default = DEBUG_FLAGS if name.startswith(('.debug', '/')) else CODE_FLAGS
         table += struct.pack('<8sIIIIIIHHI', name.encode(), (vsizes or {}).get(name, len(data)), 0x1000,
                              len(data), offset + len(body) if data else 0, 0, 0, 0, 0,
-                             (flags or {}).get(name, 0x60000020))
+                             (flags or {}).get(name, default))
         body += data
-    coff = struct.pack('<HHIIIHH', 0x14C, len(listed), stamp, 0, 0, len(optional), 0x102)
+    coff = struct.pack('<HHIIIHH', machine, len(listed), stamp, 0, 0, len(optional), characteristics)
     dos = b'MZ' + b'\0' * 0x3A + struct.pack('<I', 0x40)
     return dos + b'PE\0\0' + coff + bytes(optional) + table + b'\0' * (offset - header_end) + body
 
@@ -91,11 +113,32 @@ class Comparison(unittest.TestCase):
         with self.assertRaises(ValueError):
             compare.pe_sections(pe()[:0x50])
 
-    def test_loaded_drops_only_debug_sections(self):
+    def test_loaded_drops_only_discardable_debug_sections(self):
         # Arrange
-        sections = {'.text': b'a', '.debug_line': b'b', '/19': b'c', '.rdata': b'd'}
+        sections = {'.text': (b'a', 1, 0, CODE_FLAGS), '.debug_line': (b'b', 1, 0, DEBUG_FLAGS),
+                    '/19': (b'c', 1, 0, DEBUG_FLAGS), '.rdata': (b'd', 1, 0, CODE_FLAGS)}
         # Act / Assert
         self.assertEqual(sorted(compare.loaded(sections)), ['.rdata', '.text'])
+
+    def test_a_long_named_section_that_is_not_discardable_is_compared(self):
+        # Arrange
+        a = pe(extra={'/4': b'x' * 8}, flags={'/4': 0xC0000040})
+        b = pe(extra={'/4': b'y' * 8}, flags={'/4': 0xC0000040})
+        # Act
+        result = compare.differences(a, b)
+        # Assert
+        self.assertEqual(len(result), 1)
+        self.assertIn('/4', result[0])
+
+    def test_a_discardable_section_without_a_debug_name_is_compared(self):
+        # Arrange
+        a = pe(extra={'.reloc': b'x' * 8}, flags={'.reloc': 0x42000040})
+        b = pe(extra={'.reloc': b'y' * 8}, flags={'.reloc': 0x42000040})
+        # Act
+        result = compare.differences(a, b)
+        # Assert
+        self.assertEqual(len(result), 1)
+        self.assertIn('.reloc', result[0])
 
     def test_duplicate_section_names_are_rejected(self):
         # Arrange
@@ -106,7 +149,7 @@ class Comparison(unittest.TestCase):
 
     def test_loaded_drops_the_build_id(self):
         # Arrange
-        sections = {'.text': b'a', '.buildid': b'b'}
+        sections = {'.text': (b'a', 1, 0, CODE_FLAGS), '.buildid': (b'b', 1, 0, 0x40000040)}
         # Act / Assert
         self.assertEqual(list(compare.loaded(sections)), ['.text'])
 
@@ -165,6 +208,58 @@ class Comparison(unittest.TestCase):
         self.assertEqual(compare.differences(a, b), [])
         self.assertEqual(compare.identity_differences(a, b), ['.buildid'])
 
+    def test_a_build_id_in_only_one_file_is_a_difference(self):
+        # Act
+        result = compare.differences(pe(extra={'.buildid': b'a' * 32}), pe())
+        # Assert
+        self.assertEqual(len(result), 1)
+        self.assertIn('.buildid', result[0])
+
+    def assert_each_field_is_compared(self, fields, build):
+        for field in fields:
+            with self.subTest(field=field):
+                # Act
+                result = compare.differences(build(field, 1), build(field, 2))
+                # Assert
+                self.assertTrue(any(line.startswith(field + ' ') for line in result), result)
+
+    def test_coff_machine_and_characteristics_are_compared(self):
+        self.assert_each_field_is_compared(
+            ('Machine', 'Characteristics'),
+            lambda field, value: pe(machine=0x14C + value) if field == 'Machine'
+            else pe(characteristics=0x100 + value))
+
+    def test_optional_header_magic_is_compared(self):
+        # Act
+        result = compare.differences(pe(magic=0x10B), pe(magic=0x20B))
+        # Assert
+        self.assertTrue(any(line.startswith('Magic ') for line in result), result)
+
+    def test_code_and_file_layout_fields_are_compared(self):
+        self.assert_each_field_is_compared(
+            ('BaseOfCode', 'BaseOfData', 'FileAlignment'),
+            lambda field, value: pe(header={field: 0x1000 * value}))
+
+    def test_version_fields_are_compared(self):
+        self.assert_each_field_is_compared(
+            ('MajorOperatingSystemVersion', 'MinorOperatingSystemVersion', 'MajorImageVersion',
+             'MinorImageVersion', 'MajorSubsystemVersion', 'MinorSubsystemVersion'),
+            lambda field, value: pe(header={field: value}))
+
+    def test_subsystem_and_dll_characteristics_are_compared(self):
+        self.assert_each_field_is_compared(
+            ('Subsystem', 'DllCharacteristics'), lambda field, value: pe(header={field: value}))
+
+    def test_stack_heap_and_loader_fields_are_compared(self):
+        self.assert_each_field_is_compared(
+            ('SizeOfStackReserve', 'SizeOfStackCommit', 'SizeOfHeapReserve', 'SizeOfHeapCommit', 'LoaderFlags'),
+            lambda field, value: pe(header={field: 0x100000 * value}))
+
+    def test_section_size_totals_are_compared(self):
+        self.assert_each_field_is_compared(
+            ('SizeOfCode', 'SizeOfInitializedData', 'SizeOfUninitializedData'),
+            lambda field, value: pe(header={field: 0x200 * value}))
+
     def test_report_says_when_only_the_build_id_differs(self):
         # Arrange
         with tempfile.TemporaryDirectory() as folder:
@@ -179,6 +274,33 @@ class Comparison(unittest.TestCase):
         self.assertEqual(printed.getvalue().strip(), 'identical in loaded code and data; .buildid differs')
 
 
+class ExitStatus(unittest.TestCase):
+    def test_a_file_that_is_not_a_pe_cannot_be_compared(self):
+        # Arrange
+        with tempfile.TemporaryDirectory() as folder:
+            a, b = Path(folder)/'a.exe', Path(folder)/'b.exe'
+            a.write_bytes(pe())
+            b.write_bytes(b'\x7fELF' + b'\0' * 60)
+            # Act
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as errors:
+                status = compare.main(['compare', str(a), str(b)])
+        # Assert
+        self.assertEqual(status, 2)
+        self.assertIn('b.exe', errors.getvalue())
+
+    def test_differing_files_exit_1(self):
+        # Arrange
+        with tempfile.TemporaryDirectory() as folder:
+            a, b = Path(folder)/'a.exe', Path(folder)/'b.exe'
+            a.write_bytes(pe(text=b'\x90' * 16))
+            b.write_bytes(pe(text=b'\xcc' * 16))
+            # Act
+            with contextlib.redirect_stdout(io.StringIO()):
+                status = compare.main(['compare', str(a), str(b)])
+        # Assert
+        self.assertEqual(status, 1)
+
+
 class Export(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -190,17 +312,34 @@ class Export(unittest.TestCase):
         self.destination = base/'out'
         git(self.root, 'init', '-q')
         (self.root/'a.c').write_text('one')
-        git(self.root, 'add', 'a.c')
+        (self.root/'.gitignore').write_text('*.z64\nbuild/\n')
+        git(self.root, 'add', 'a.c', '.gitignore')
         git(self.root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'one')
         (self.root/'a.c').write_text('two')
-        (self.root/'b.c').write_text('untracked')
+        (self.root/'port').mkdir()
+        (self.root/'port'/'b.c').write_text('untracked')
+        (self.root/'rom.z64').write_text('ignored')
+        (self.root/'build').mkdir()
+        (self.root/'build'/'out.o').write_text('ignored')
 
-    def test_worktree_export_includes_uncommitted_edits_and_skips_untracked(self):
+    def test_worktree_export_includes_uncommitted_edits(self):
         # Act
         compare.export_source('WORKTREE', self.destination, self.root)
         # Assert
         self.assertEqual((self.destination/'a.c').read_text(), 'two')
-        self.assertFalse((self.destination/'b.c').exists())
+
+    def test_worktree_export_includes_an_untracked_unignored_file(self):
+        # Act
+        compare.export_source('WORKTREE', self.destination, self.root)
+        # Assert
+        self.assertEqual((self.destination/'port'/'b.c').read_text(), 'untracked')
+
+    def test_worktree_export_leaves_out_ignored_files(self):
+        # Act
+        compare.export_source('WORKTREE', self.destination, self.root)
+        # Assert
+        self.assertFalse((self.destination/'rom.z64').exists())
+        self.assertFalse((self.destination/'build').exists())
 
     def test_commit_export_ignores_uncommitted_edits(self):
         # Act

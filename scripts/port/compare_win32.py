@@ -5,30 +5,39 @@
 Windows configuration in the `goldeneye` container (mounted at the same path both
 times, because the compiler embeds source paths), and compares what the loader
 maps. `compare EXE_A EXE_B` compares two existing executables. Either ref may be
-`WORKTREE`: the tracked files as they are on disk now, uncommitted edits included.
+`WORKTREE`: the files on disk now, tracked files with uncommitted edits plus
+untracked files Git does not ignore (the build globs source directories, so a
+new file must be in the export before it is added). Ignored files stay out.
 
 Compared: every loaded section's bytes, VirtualSize, VirtualAddress and
 Characteristics (sections with no raw data, such as .bss, included; a section in
-only one file is a difference, one named twice in a file is an error); the
-optional header's AddressOfEntryPoint, ImageBase and SectionAlignment; every
-data directory's address and size except Debug and Security.
+only one file is a difference, one named twice in a file is an error); the COFF
+Machine and Characteristics; the optional-header fields in HEADER_FIELDS (entry
+point, image base, alignments, versions, subsystem, DLL characteristics, stack
+and heap sizes, loader flags, code and data bases and size totals); every data
+directory's address and size except Debug and Security.
 
 Deliberately not compared:
-  * .debug* and /N sections: debug information is not loaded.
-  * .buildid: an identifier derived from the whole file, debug information
-    included, so it changes when only debug types change. If everything else is
-    identical the tool says "identical in loaded code and data; .buildid
-    differs" and exits 0.
+  * Debug sections: a section whose name marks it as debug (`.debug*`, or a
+    `/N` long name) and whose flags mark it discardable. A long-named section
+    the loader keeps is compared.
+  * .buildid's bytes: an identifier derived from the whole file, debug
+    information included, so it changes when only debug types change. If
+    everything else is identical the tool says "identical in loaded code and
+    data; .buildid differs" and exits 0. A .buildid in only one file is a
+    difference.
   * COFF TimeDateStamp and optional-header CheckSum: build stamps.
-  * SizeOfImage, NumberOfSections, the COFF symbol-table pointer and count, and
-    section file offsets: they move when only debug information changes.
+  * SizeOfImage, SizeOfHeaders, NumberOfSections, the COFF symbol-table pointer
+    and count, the linker version, and section file offsets: they describe the
+    file, which debug information also fills, rather than what is loaded.
   * The Debug directory (it points into debug information) and the Security
     directory (a file offset to data that is not loaded).
 Both builds run with SOURCE_DATE_EPOCH exported so the build's own clock stamps
 (the About-page time, __DATE__/__TIME__, linker timestamps) match.
 
-Exit status: 0 identical in loaded code and data, 1 different. Build logs are
-kept in build/lp64/compare.
+Exit status: 0 identical in loaded code and data, 1 different, 2 could not
+compare (a build, Git or Docker failure, or an input that is not a PE file).
+Build logs are kept in build/lp64/compare.
 """
 import argparse
 import importlib.util
@@ -57,9 +66,40 @@ IDENTITY_SECTIONS = ('.buildid',)
 DIRECTORY_NAMES = {0: 'Export', 1: 'Import', 2: 'Resource', 3: 'Exception', 5: 'BaseRelocation', 9: 'TLS',
                    12: 'IAT'}
 IGNORED_DIRECTORIES = (4, 6)  # Security (a file offset, not loaded) and Debug (debug information)
+IMAGE_SCN_MEM_DISCARDABLE = 0x02000000
+COFF_FIELDS = (('Machine', '<H', 0), ('Characteristics', '<H', 18))
+# Optional-header fields compared: (name, format in PE32, offset in PE32, format in PE32+, offset in
+# PE32+); None where the field does not exist. An explicit list, not "every field but the stamps",
+# because some header fields describe the file, which debug information also fills.
+HEADER_FIELDS = (
+    ('Magic', '<H', 0, '<H', 0),
+    ('SizeOfCode', '<I', 4, '<I', 4),
+    ('SizeOfInitializedData', '<I', 8, '<I', 8),
+    ('SizeOfUninitializedData', '<I', 12, '<I', 12),
+    ('AddressOfEntryPoint', '<I', 16, '<I', 16),
+    ('BaseOfCode', '<I', 20, '<I', 20),
+    ('BaseOfData', '<I', 24, None, None),
+    ('ImageBase', '<I', 28, '<Q', 24),
+    ('SectionAlignment', '<I', 32, '<I', 32),
+    ('FileAlignment', '<I', 36, '<I', 36),
+    ('MajorOperatingSystemVersion', '<H', 40, '<H', 40),
+    ('MinorOperatingSystemVersion', '<H', 42, '<H', 42),
+    ('MajorImageVersion', '<H', 44, '<H', 44),
+    ('MinorImageVersion', '<H', 46, '<H', 46),
+    ('MajorSubsystemVersion', '<H', 48, '<H', 48),
+    ('MinorSubsystemVersion', '<H', 50, '<H', 50),
+    ('Subsystem', '<H', 68, '<H', 68),
+    ('DllCharacteristics', '<H', 70, '<H', 70),
+    ('SizeOfStackReserve', '<I', 72, '<Q', 72),
+    ('SizeOfStackCommit', '<I', 76, '<Q', 80),
+    ('SizeOfHeapReserve', '<I', 80, '<Q', 88),
+    ('SizeOfHeapCommit', '<I', 84, '<Q', 96),
+    ('LoaderFlags', '<I', 88, '<I', 104),
+)
 GAME_EXECUTABLES = ('IronSights.exe', 'ProjectMidas.exe')
 DEFAULT_DEADLINE_SECONDS = 180  # a build took 55 s here, under emulation
 LOG_TAIL_LINES = 30
+COULD_NOT_COMPARE = 2
 
 
 def pe_layout(data: bytes) -> dict:
@@ -82,19 +122,17 @@ def pe_layout(data: bytes) -> dict:
     if optional_size < 96 or len(data) < optional + optional_size:
         raise ValueError('truncated PE file: optional header')
     (magic,) = struct.unpack_from('<H', data, optional)
-    if magic == 0x10B:
-        (entry,) = struct.unpack_from('<I', data, optional + 16)
-        (image_base,) = struct.unpack_from('<I', data, optional + 28)
-        directories_at = optional + 96
-        (directory_count,) = struct.unpack_from('<I', data, optional + 92)
-    elif magic == 0x20B:
-        (entry,) = struct.unpack_from('<I', data, optional + 16)
-        (image_base,) = struct.unpack_from('<Q', data, optional + 24)
-        directories_at = optional + 112
-        (directory_count,) = struct.unpack_from('<I', data, optional + 108)
-    else:
+    if magic not in (0x10B, 0x20B):
         raise ValueError(f'not a PE file: optional header magic {magic:#x}')
-    (alignment,) = struct.unpack_from('<I', data, optional + 32)
+    wide = magic == 0x20B
+    directories_at = optional + (112 if wide else 96)
+    if optional_size < directories_at - optional:
+        raise ValueError('truncated PE file: optional header')
+    (directory_count,) = struct.unpack_from('<I', data, directories_at - 4)
+    header = {name: struct.unpack_from(fmt, data, coff + at)[0] for name, fmt, at in COFF_FIELDS}
+    for name, narrow_fmt, narrow_at, wide_fmt, wide_at in HEADER_FIELDS:
+        fmt, at = (wide_fmt, wide_at) if wide else (narrow_fmt, narrow_at)
+        header[name] = None if fmt is None else struct.unpack_from(fmt, data, optional + at)[0]
     directory_count = min(directory_count, (optional + optional_size - directories_at) // 8)
     directories = [struct.unpack_from('<II', data, directories_at + 8 * i) for i in range(directory_count)]
     table = optional + optional_size
@@ -112,9 +150,7 @@ def pe_layout(data: bytes) -> dict:
             raise ValueError(f'truncated PE file: section {name}')
         raw = data[start:start + size] if size else b''
         sections[name] = (raw, virtual_size, virtual_address, characteristics)
-    return {'sections': sections,
-            'header': {'AddressOfEntryPoint': entry, 'ImageBase': image_base, 'SectionAlignment': alignment},
-            'directories': directories}
+    return {'sections': sections, 'header': header, 'directories': directories}
 
 
 def pe_sections(data: bytes) -> dict[str, bytes]:
@@ -123,14 +159,16 @@ def pe_sections(data: bytes) -> dict[str, bytes]:
     return {name: values[0] for name, values in pe_layout(data)['sections'].items()}
 
 
-def is_debug(name: str) -> bool:
-    """True for `.debug*` sections and the `/N` long names that hold them."""
-    return name.startswith(('.debug', '/'))
+def is_debug(name: str, characteristics: int) -> bool:
+    """True for a section named as debug information (`.debug*`, or a `/N` long name, which is where
+    the linker puts long `.debug_*` names) that is also marked discardable."""
+    return name.startswith(('.debug', '/')) and bool(characteristics & IMAGE_SCN_MEM_DISCARDABLE)
 
 
-def loaded(sections: dict[str, bytes]) -> dict[str, bytes]:
-    """Drop debug sections and the build-identity sections; keep the rest."""
-    return {name: data for name, data in sections.items() if not is_debug(name) and name not in IDENTITY_SECTIONS}
+def loaded(sections: dict[str, tuple]) -> dict[str, tuple]:
+    """Drop debug sections and the build-identity sections from a `pe_layout` section map."""
+    return {name: values for name, values in sections.items()
+            if not is_debug(name, values[3]) and name not in IDENTITY_SECTIONS}
 
 
 def section_differences(name: str, left: tuple, right: tuple) -> list[str]:
@@ -150,13 +188,10 @@ def section_differences(name: str, left: tuple, right: tuple) -> list[str]:
 def differences(a: bytes, b: bytes) -> list[str]:
     """Return one line per load-relevant difference between two executables; empty if identical.
 
-    Compared: every loaded section's bytes, VirtualSize, VirtualAddress and Characteristics (a
-    section in only one file is a difference); the optional header's AddressOfEntryPoint, ImageBase
-    and SectionAlignment; every data directory's address and size except Debug and Security.
+    What is compared and what is not is listed in this module's docstring.
     """
     first, second = pe_layout(a), pe_layout(b)
-    left = {n: v for n, v in first['sections'].items() if n in loaded(first['sections'])}
-    right = {n: v for n, v in second['sections'].items() if n in loaded(second['sections'])}
+    left, right = loaded(first['sections']), loaded(second['sections'])
     lines = []
     for name in sorted(left.keys() | right.keys()):
         if name not in right:
@@ -165,9 +200,15 @@ def differences(a: bytes, b: bytes) -> list[str]:
             lines.append(f'{name}: only in the second file ({len(right[name][0])} bytes)')
         else:
             lines += section_differences(name, left[name], right[name])
+    for name in IDENTITY_SECTIONS:
+        if (name in first['sections']) != (name in second['sections']):
+            where = 'first' if name in first['sections'] else 'second'
+            lines.append(f'{name}: only in the {where} file')
     for field, value in first['header'].items():
-        if value != second['header'][field]:
-            lines.append(f'{field} differs ({value:#x} vs {second["header"][field]:#x})')
+        other = second['header'][field]
+        if value != other:
+            lines.append(f'{field} differs ({value:#x} vs {other:#x})' if None not in (value, other)
+                         else f'{field} differs ({value} vs {other})')
     paired = zip(first['directories'], second['directories'])
     for index, (x, y) in enumerate(paired):
         if index not in IGNORED_DIRECTORIES and x != y:
@@ -185,11 +226,12 @@ def identity_differences(a: bytes, b: bytes) -> list[str]:
 
 
 def export_source(ref: str, destination: Path, root: Path = ROOT) -> None:
-    """Write the tracked files of `ref` into `destination`; WORKTREE means the files on disk now."""
+    """Write the tracked files of `ref` into `destination`. WORKTREE means the files on disk now:
+    tracked files and untracked files Git does not ignore."""
     destination.mkdir(parents=True)
     if ref == WORKTREE:
-        listing = subprocess.run(['git', '-C', str(root), 'ls-files', '-z'],
-                                 check=True, capture_output=True).stdout
+        listing = subprocess.run(['git', '-C', str(root), 'ls-files', '-z', '--cached', '--others',
+                                  '--exclude-standard'], check=True, capture_output=True).stdout
         for relative in filter(None, listing.decode('utf-8').split('\0')):
             source = root/relative
             if not source.is_symlink() and not source.exists():
@@ -237,8 +279,15 @@ def build(ref: str, name: str, deadline: int, jobs: int) -> tuple[Path, float]:
 
 
 def report(exe_a: Path, exe_b: Path) -> int:
-    """Print the comparison of two executables; return 0 if identical, else 1."""
+    """Print the comparison of two executables; return 0 if identical, else 1.
+
+    Raises ValueError naming the file when either is not a PE file."""
     data_a, data_b = exe_a.read_bytes(), exe_b.read_bytes()
+    for path, data in ((exe_a, data_a), (exe_b, data_b)):
+        try:
+            pe_layout(data)
+        except ValueError as error:
+            raise ValueError(f'{path}: {error}') from error
     lines = differences(data_a, data_b)
     if not lines:
         identity = identity_differences(data_a, data_b)
@@ -265,12 +314,16 @@ def main(argv: Optional[list[str]] = None) -> int:
                          help='seconds each build may take (default: %(default)s)')
     commits.add_argument('--jobs', type=int, default=8)
     options = parser.parse_args(argv)
-    if options.action == 'compare':
-        return report(options.exe_a, options.exe_b)
-    COMPARE_DIR.mkdir(parents=True, exist_ok=True)
-    exe_a, _ = build(options.ref_a, 'a', options.deadline, options.jobs)
-    exe_b, _ = build(options.ref_b, 'b', options.deadline, options.jobs)
-    return report(exe_a, exe_b)
+    try:
+        if options.action == 'compare':
+            return report(options.exe_a, options.exe_b)
+        COMPARE_DIR.mkdir(parents=True, exist_ok=True)
+        exe_a, _ = build(options.ref_a, 'a', options.deadline, options.jobs)
+        exe_b, _ = build(options.ref_b, 'b', options.deadline, options.jobs)
+        return report(exe_a, exe_b)
+    except (ValueError, RuntimeError, OSError, subprocess.SubprocessError) as error:
+        print(f'could not compare: {error}', file=sys.stderr)
+        return COULD_NOT_COMPARE
 
 
 if __name__ == '__main__':
