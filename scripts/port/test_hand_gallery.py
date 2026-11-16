@@ -1,5 +1,8 @@
 """ROM-free tests for gallery pixels, completeness, provenance and commit safety."""
+import contextlib
 import importlib.util
+import io
+import os
 import json
 from pathlib import Path
 import struct
@@ -57,6 +60,23 @@ def staged_references(root):
 def change_and_stage(root, name, text):
     (root/name).write_text(text)
     command(root, 'add', name)
+
+
+def run_main(root, *args):
+    """Run the CLI against a temporary repository; returns (exit code, stdout)."""
+    output = io.StringIO()
+    with contextlib.redirect_stdout(output), contextlib.redirect_stderr(io.StringIO()):
+        code = gallery.main(list(args), root)
+    return code, output.getvalue()
+
+
+@contextlib.contextmanager
+def no_global_git_config(folder):
+    """Hide the machine's own Git configuration from the code under test."""
+    empty = Path(folder)/'empty.gitconfig'
+    empty.write_text('')
+    with mock.patch.dict(os.environ, GIT_CONFIG_GLOBAL=str(empty), GIT_CONFIG_NOSYSTEM='1'):
+        yield
 
 
 class Gallery(unittest.TestCase):
@@ -238,6 +258,79 @@ class Gallery(unittest.TestCase):
                 gallery.pre_commit(root)
                 # Assert
                 generate.assert_not_called()
+
+    def test_defer_setting_outside_the_clone_is_ignored(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)/'repo'
+            root.mkdir()
+            fixture(root)
+            global_config = Path(folder)/'global.gitconfig'
+            global_config.write_text('[midas]\n\tgalleryDefer = true\n')
+            with mock.patch.dict(os.environ, GIT_CONFIG_GLOBAL=str(global_config)):
+                # Act / Assert
+                self.assertFalse(gallery.defer_enabled(root))
+
+    def test_cli_verify_allow_pending_accepts_pending(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)
+            staged_references(root)
+            change_and_stage(root, 'src/example.c', 'int image = 3;\n')
+            # Act
+            code, output = run_main(root, 'verify', '--allow-pending')
+            # Assert
+            self.assertEqual(code, 0)
+            self.assertIn('Gallery pending: strict inputs fresh; deferred inputs changed since the last render.', output)
+
+    def test_cli_verify_allow_pending_rejects_strict_stale(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)
+            staged_references(root)
+            change_and_stage(root, 'port/fast3d/example.cpp', 'int renderer = 2;\n')
+            # Act
+            code, output = run_main(root, 'verify', '--allow-pending')
+            # Assert
+            self.assertEqual(code, 1)
+            self.assertNotIn('Gallery pending', output)
+
+    def test_cli_plain_verify_rejects_pending(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)
+            staged_references(root)
+            change_and_stage(root, 'src/example.c', 'int image = 3;\n')
+            # Act
+            code, output = run_main(root, 'verify')
+            # Assert
+            self.assertEqual(code, 1)
+            self.assertNotIn('Gallery pending', output)
+
+    def test_install_hook_defer_sets_the_local_setting(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)/'repo'
+            root.mkdir()
+            fixture(root)
+            with no_global_git_config(folder):
+                # Act
+                gallery.install_hook(root, defer=True)
+                # Assert
+                self.assertEqual(command(root, 'config', '--local', 'midas.galleryDefer').strip(), b'true')
+
+    def test_install_hook_without_defer_leaves_the_setting_unset(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)/'repo'
+            root.mkdir()
+            fixture(root)
+            with no_global_git_config(folder):
+                # Act
+                gallery.install_hook(root)
+                # Assert
+                self.assertFalse(gallery.defer_enabled(root))
+                self.assertEqual(command(root, 'config', '--local', 'core.hooksPath').strip(), b'.githooks')
 
     def test_schema_1_manifest_must_be_regenerated(self):
         with tempfile.TemporaryDirectory() as folder:

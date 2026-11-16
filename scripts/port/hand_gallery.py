@@ -353,7 +353,7 @@ def freshness(manifest, root=ROOT, staged=False):
 
 def defer_enabled(root=ROOT):
     """Whether this clone lets the gallery stay pending (git config midas.galleryDefer)."""
-    result = subprocess.run(['git', '-C', str(root), 'config', '--get', '--bool', 'midas.galleryDefer'],
+    result = subprocess.run(['git', '-C', str(root), 'config', '--local', '--get', '--bool', 'midas.galleryDefer'],
                             capture_output=True, text=True)
     if result.returncode not in (0, 1):
         raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
@@ -565,27 +565,27 @@ def pre_commit(root=ROOT):
     raise ValueError('Fresh gallery is in review/hand-gallery. Review the images, stage that directory, and commit again. Nothing was automatically staged.')
 
 
-def main():
+def main(argv=None, root=ROOT):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=('generate', 'verify', 'install-hook', 'pre-commit'))
     parser.add_argument('--allow-pending', action='store_true', help='Accept a gallery whose only stale inputs are deferred')
     parser.add_argument('--defer', action='store_true', help='With install-hook: also set midas.galleryDefer for this clone')
     parser.add_argument('--index', action='store_true', help='Verify the staged gallery and staged inputs')
     parser.add_argument('--executable', type=Path, help='Use an already built isolated executable; never rebuild the player binary')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     try:
         if args.command == 'generate':
-            generate(executable=args.executable)
+            generate(root, executable=args.executable)
         elif args.command == 'verify':
-            manifest = verify(staged=args.index, allow_pending=args.allow_pending)
-            if freshness(manifest, staged=args.index) == 'pending':
+            manifest = verify(root, args.index, args.allow_pending)
+            if freshness(manifest, root, args.index) == 'pending':
                 print('Gallery pending: strict inputs fresh; deferred inputs changed since the last render.')
                 return 0
             print(f'Gallery verified: {CASES} matrix cells, {ICON_COUNT} icons, input/pixel/file hashes and generated HTML.')
         elif args.command == 'install-hook':
-            install_hook(defer=args.defer)
+            install_hook(root, args.defer)
         else:
-            pre_commit()
+            pre_commit(root)
     except (ValueError, OSError, KeyError, IndexError, StopIteration, subprocess.SubprocessError) as error:
         print('Hand gallery: '+str(error), file=sys.stderr)
         return 1
