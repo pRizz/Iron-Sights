@@ -979,16 +979,21 @@ assignments and `colour = q` keep `int` width on 32 bits. *Count:* 1,372 in
 animation table at 18896 and `ptr_menu_videobuffer` at 20350, all owned by
 later tasks), `language.c` 12 to 2. No file rose; `bondview2.c` stayed at 82
 (`copy_1stfonttable`, `copy_2ndfonttable` and `setFontTables` are used only
-there and stay for Task 9). *Left for later:* `language.c:447` and `:449`,
-`(u8 *) output_slot` with `u32 output_slot`. `langGet` reads each text bank
-as a table of `u32` slots that on the port hold absolute 32-bit addresses
-(`romdata.c` rebases ROM banks into them, through the allowlisted
-`(u32)(uintptr_t)` cast; the compiled-in `char *LxE[]` banks are read
-through the same `u32 *`). Widening `output_slot` would silence the warning
-while the 64-bit read stays wrong, so these two places wait for the text bank
-format to be decided (the converter work after this milestone); they are the
-two of the plan's 12 `g_LangBanks` places not removed here, hence 427 rather
-than 429. *Windows comparison:* `compare_win32.py commits HEAD WORKTREE`
+there and stay for Task 9). *Left for Task 8:* `language.c:447` and `:449`,
+`(u8 *) output_slot` with `u32 output_slot`, stay until Task 8, which owns
+them under the plan's rule for in-place ROM data: a cast commented
+`/* LP64-004: text bank converter */` with an allowlist line, like
+`alBnkfNew` (the plan's cluster table and Task 8 say so; correction round
+below). `langGet` reads each text bank as a table of 4-byte `u32` slots that
+on the port hold absolute 32-bit addresses (`romdata.c` rebases ROM banks
+into them, through the allowlisted `(u32)(uintptr_t)` cast; the compiled-in
+`char *LxE[]` banks are read through the same `u32 *`). A wider
+`output_slot` would only widen a value that was read from a 4-byte slot: it
+would silence the warning while the 64-bit read stays wrong. They are the two
+of the plan's 12 `g_LangBanks` places not removed here, hence 427 rather than
+429. `language.c:427`, `textbank_ptr = g_LangBanks[bank_id]`, is now a
+`u8 *` to `u32 *` conversion that the three counted kinds do not report; it
+belongs to the same text bank converter question. *Windows comparison:* `compare_win32.py commits HEAD WORKTREE`
 exited 1 in 112 s (`.text` 0xB0 bytes longer, VirtualSize 0x335874 to
 0x335924; `.CRT`, `.data`, `.rdata`, `.reloc` and the debug section `/4`
 differ). Disassembled by symbol with addresses normalised, seven functions
@@ -1009,12 +1014,22 @@ of line and `eax`/`edx` swapped roles (block order and registers).
 `_mp_watch_menu_display`: the first award's `textMeasure`/`textRender`
 block, now behind a pointer test predicted non-null, moved inline with the
 branch inverted (`jne` to `je`), its instructions unchanged but for the
-temporary register. `_mpCalculateAwards`, `_portPpoDraw`,
-`_constructor_menu1C_portsheet`: register and stack-slot choice (in
-`_mpCalculateAwards`, the `% 17` magic multiplier and the constant 1 swap
-`ebx` and `esi`). `_portOskDraw`: as well as registers, `cmpl $0x4,
-port_osk_row` became `cmp port_osk_row, r`, on a path where `r == 4` is
-already known (an equivalent comparison). `_constructor_menu08_difficulty`
+temporary register. `_portPpoDraw`, `_constructor_menu1C_portsheet`:
+register and stack-slot choice. `_mpCalculateAwards`: register and
+stack-slot choice (the `% 17` magic multiplier and the constant 1 swap
+`ebx` and `esi`), and at both award stores (`mpmenu.c:647` and `:666`,
+`g_playerPointers[i]->ptr_text_*_mp_award = langGet(...)`) the load of
+`g_playerPointers[i]` (`0x113273c4(,%esi,4)`) now happens before the
+`langGet` call and is spilled to `0x34(%esp)`, where before it was loaded
+after the call. That is equivalent: C leaves the two sides of `=`
+unsequenced, and `langGet` stores nothing (`language.c:413-450` only reads
+the bank table), so the pointer read is the same on either side of the call.
+(The first version of this note called the whole difference register and
+stack-slot choice; the GIMPLE check compared only call statements, so it
+missed a load moving across a call. Correction round below.) `_portOskDraw`:
+as well as registers, `cmpl $0x4, port_osk_row` became
+`cmp port_osk_row, r` at two sites, each on a path where `r == 4` is already
+known (two equivalent comparisons). `_constructor_menu08_difficulty`
 is more than that: from GCC's `dom2` pass on (identical, conversions aside,
 up to `thread1`), the jump threader specialised the difficulty loop's last
 iteration: on the path where `i == 3`, the second `frontPrintText` of the
@@ -1025,9 +1040,11 @@ function has one more `frontPrintText`, `viGetX`, `viGetY`,
 path still makes the same calls in the same order with the same arguments.
 The likely trigger is that the dropped `(int)` conversions of the two font
 pointers brought the copied block under the threader's statement limit.
-This is tail duplication rather than block order, and the review should
-decide whether to accept it; the requirement for pointer parameters leaves
-no type that keeps this function identical. *What ran:* the plan's task
+This is tail duplication rather than block order; the requirement for
+pointer parameters leaves no type that keeps this function identical. The
+review traced every path of this function and of `_langGet` in both
+executables and found the behaviour unchanged, and the controller accepted the
+jump threading as an equivalent difference. *What ran:* the plan's task
 check. Step 1 exited 0 in 22 s; `update` recorded 945 in 80 files without
 `--allow-rise`. Step 2: the i686 headless build exited 0 (10 s, incremental)
 and the 20-mission smoke exited 0 with 20 of 20 `PASS` (188 s). Step 3 as
@@ -1051,6 +1068,22 @@ touched:* `src/game/front.c`, `front.h`, `options.c`, `mpmenu.c`,
 `language.c`, `bondview.h`; `port/src/port_headshots_menu.c`,
 `port_mission_times.c`, `port_reinforcements_menu.c`, `port_startup.c`; the
 baseline.
+*Task 4 correction round (local commit "Correct the Task 4 record and give
+the text bank slot reads to Task 8"; not pushed; documentation only):* three
+corrections to the note above, from the review. `_mpCalculateAwards` also
+moves the load of `g_playerPointers[i]` before the `langGet` call at both
+award stores (checked in the two executables: before, `call _langGet` then
+`movl 0x113273c4(,%esi,4),%edx`; after, that load, `movl %edx,0x34(%esp)`,
+the call, then `movl 0x34(%esp),%edx`, before the stores to `0x2a14` and
+`0x2a10`); the commit "Type font and text pointers as pointers" described it
+as register and stack-slot choice only. `_portOskDraw` has two equivalent
+comparisons, not one. `language.c:447` and `:449` are owned by Task 8, not
+by work after this milestone: the plan's Task 8 now lists the text bank slot
+reads in `langGet` as a third site allowed a commented
+(`/* LP64-004: text bank converter */`), allowlisted cast and names
+`language.c` among its files, and the cluster table shows 2 of the Language
+banks row's 12 places moving to Task 8. No source changed; only the
+pre-commit hook ran.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),

@@ -78,7 +78,7 @@ strict-tier files and therefore stay until Task 9.
 | 4 | Text locals | `langGet()` results in `options.c`, `front.c`, `mpmenu.c` | `s32` | `char *` | 53 | 0 |
 | 4 | White-text fonts | `display_aligned_white_text_to_screen` args 7, 8 (`front.c:1802`; extern in `port/src/port_startup.c:11`) | `s32` | font pointers | 6 | 0 |
 | 4 | Award text | `ptr_text_first_mp_award`, `ptr_text_second_mp_award` (`src/game/bondview.h:2307`) | `s32` | `char *` | 4 | 0 |
-| 4 | Language banks | `g_LangBanks[45]` (`src/game/language.c:12`) | `s32` | `u8 *` | 12 | 0 |
+| 4 | Language banks | `g_LangBanks[45]` (`src/game/language.c:12`); 2 of its 12 places (the slot reads in `langGet`) move to Task 8 | `s32` | `u8 *` | 12 | 0 |
 | 5 | Monitor scripts | `u32 monAnim*[]` (`src/game/propobj.c:2523` on), `MONJUMPTO`/`MONJUMPCHANCE` (`src/game/chrai.h:77,84`); read back at `propobj.c:7444-7480` | `u32` elements | `uintptr_t` elements | 121 | 0 |
 | 5 | Animation offsets | `PTR_ANIM_x + (s32)&ptr_animation_table->data` | integer maths | one helper macro yielding `ModelAnimation *` | 78 | 8 |
 | 5 | `struck_anim` tables | field `src/game/chr.h:34`, tables `chr.c:530` on, relocation `initactorpropstuff.c:180-200` | pointer field holding an offset | builder's choice; see Task 5 | 33 | 0 |
@@ -569,7 +569,7 @@ git commit -m "Do background, collision and setup address arithmetic in pointers
 `macro.h`, `bondtypes.h`, `boot.h`, `init.c`, `music.c`, `audi.c`, `sched.c`,
 `src/game/rsp.c`, `rsp.h`, `title.c`, `title.h`, `ramromreplay.c`,
 `ramromreplay.h`, `indy_commands.c`, `indy_comms.c`, `zlib.c`, `viewport.c`,
-`bondview.c`, `front.h`, `lv.c`, `textrelated.c`, the libultra audio files;
+`bondview.c`, `front.h`, `lv.c`, `textrelated.c`, `language.c`, the libultra audio files;
 `include/PR/os.h`, `R4300.h`, `libaudio.h`; `port/src/libultra_shim.c`,
 `n64_stubs.c`, `audio_stubs.c`, `audio_pc.c`, `port_state.c`, `pcsched.c`,
 `glad.c`; baseline; allowlist; `FORK_CHANGES.md`.
@@ -585,9 +585,11 @@ git commit -m "Do background, collision and setup address arithmetic in pointers
   messages) convert through `intptr_t` at the call and back at the use.
 - Sites whose true fix is a later milestone get a truncating cast, a comment
   and an allowlist line: `alBnkfNew`'s in-place bank relocation
-  (`/* LP64-004: audio bank converter */`) and the suspend image's
+  (`/* LP64-004: audio bank converter */`), the suspend image's
   `StateHeader`/`StateRegion` addresses
-  (`/* LP64-003: suspend points are unavailable on 64-bit */`). Nothing else
+  (`/* LP64-003: suspend points are unavailable on 64-bit */`) and the text
+  bank slot reads in `langGet` (`src/game/language.c`, the two places
+  Task 4 left; `/* LP64-004: text bank converter */`). Nothing else
   in this task may add to the allowlist.
 - This task is large. If its diff passes about 600 changed lines, split it at
   the audio files into two commits with two task checks, and say so in the
