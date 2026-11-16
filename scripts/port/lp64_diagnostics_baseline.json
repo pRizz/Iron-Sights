@@ -1,14 +1,7 @@
 {
-  "by_file": {
-    "port/src/port_sight.c": 2,
-    "src/game/gunfire.c": 38
-  },
-  "by_kind": {
-    "int-conversion": 20,
-    "int-to-pointer-cast": 14,
-    "pointer-to-int-cast": 6
-  },
+  "by_file": {},
+  "by_kind": {},
   "compiler": "gcc-13",
   "errors_by_file": {},
-  "total": 40
+  "total": 0
 }

@@ -1925,6 +1925,72 @@ loses ten implicit declarations, and no warning was added (`port_baked_trace.c`
 showed two `fabsf`/`powf` implicit declarations only in the current-tree half,
 an artefact of the comparison tool, whose HEAD copy lacks `scripts/`, where
 the SDL shim lives; that file and the shim are unchanged).
+*Third commit, `gunfire.c`:* *Declarations* (old type to new):
+`struct hand.field_A48` (`bondview.h:201`) `s32` to `intptr_t` with a
+`/* struct ALSoundState * */` note, not the `ALSoundState *` the plan names:
+with the pointer type GCC predicted the sound handle as present and laid out
+`gunTickHandState` differently (block order, branch direction, register
+choice, and a switch's case blocks swapped), while the integer keeps that
+function identical; its users already cast it to `struct ALSoundState *`, and
+the two initialisers (`initBondDATA.c`, `unk_092E50.c`) write `0`.
+`gunDrawSight` (`gun.h`, `gunfire.c`), `portHudGunSight` (`port_hud.h`,
+`port_sight.c`) and `port_sight.c`'s static `portDrawTarget` and
+`portDrawAlwaysTarget` take `Gfx **` instead of `s32 *` (`bondview2.c` already
+passes `&gdl` of a `Gfx *`); `portDrawTarget` reads and writes `*gdl` without
+casts, and the N64 body of `gunDrawSight` keeps its display list in a `Gfx *`
+local (`sp54`, which it passes as `&sp54` to `texSelect` and
+`display_image_at_position`). `portAmmoIconPtr` returns `uintptr_t` and the
+three HUD ammo-icon locals (`imageoffset_r`, `imageoffset_l`, `imageoffset`)
+are `uintptr_t`; `ammo_related[].IconImage` stays the `u32` N64 segment
+address that `portAmmoIconPtr` maps to a compiled-in image. The unreferenced
+`sub_GAME_7F0634D8` and `sub_GAME_7F0634FC` take the `Gfx *`, `ITEM_IDS` and
+`Mtxf *` that `set_enviro_fog_for_items_in_solo_watch_menu` takes.
+`gunTickHandState`'s `var_a0_2` (the US, JP and EU declarations) is
+`uintptr_t` instead of `u32`, assigned `(uintptr_t) D_80034CA4`/`D_80034E0C`
+and passed as `(Weapon1PTransformKeyframe *)`; a `Weapon1PTransformKeyframe *`
+local changed that function's register choice. The two watch-model matrix
+copies pass `(Mtxf *)((uintptr_t)modelstack.render_pos + i * sizeof(Mtxf))`.
+The `GE_DUMP_BOND` diagnostic prints the root node and object with
+`"%08" PRIxPTR` and `(uintptr_t)` (`<inttypes.h>`; `PRIxPTR` is `"x"` on MinGW
+and glibc i686, so the format string is byte-identical). The four watch-text
+functions keep their `u16 *` return and return `(u16 *) langGet(...)`; the two
+monitor-microcode calls pass `(MonitorRecord *) &g_UnknownAnimController` and
+`&g_TaserAnimController` (a `struct object_animation_controller` is the same
+layout as the `MonitorRecord` fields `process_monitor_animation_microcode`
+reads). *Side-effect prototypes:* `gunfire.c` now includes `dyn.h` and
+`language.h`, and `<string.h>` (the repository's C stub, which declares
+`memset` on the PC) in its PC include block; `process_monitor_animation_microcode`
+gains a prototype in `src/game/propobj.h`, copied from its definition in
+`propobj.c`. This declares the four functions whose implicit `int` results
+were the conversions (`dynAllocate`, `langGet`, `memset`,
+`process_monitor_animation_microcode`); their arguments are pointers, `s32`,
+`int` and `size_t`, their results pointers, so no argument is narrower than
+`int`, none is a float and no result is narrower than `int`. The other 24
+functions `gunfire.c` calls without a prototype return `void`, `s32`, `bool`
+or (`viGetPerspNorm`) `u16` and are not conversions; they are left undeclared,
+because no conversion depends on them and declaring `viGetPerspNorm` (a `u16`
+result) could change the caller's code. *Workarounds:* `scripts/port/test_upstream_merge.c`
+no longer includes `<string.h>` before `gunfire.c`, which now declares
+`memset` itself; its test display lists are `Gfx *` instead of `s32`, matching
+`portHudGunSight`. `front.c:1295`'s `(char *)` cast stays: the watch-text
+functions keep returning `u16 *`, because `bondinv.c`'s four text wrappers
+return their results as `u16 *` (16 places) to callers typed for `u16 *`, so
+retyping them to `u8 *` would move the mismatch into `bondinv.c` rather than
+remove it; that chain belongs to a text-type change, not to this task.
+*Signedness:* `intptr_t` replaces the former `s32` sound handle and
+`uintptr_t` the former `u32` addresses. *Struct layout:* `field_A48` stays 4
+bytes at 32 bits, so `struct hand` and `struct player` keep their offsets.
+*Count:* 40 to 0 (`int-conversion` 20, `int-to-pointer-cast` 14 and
+`pointer-to-int-cast` 6 to zero; `gunfire.c` 38 and `port_sight.c` 2 to zero),
+with an empty `errors_by_file`. *Windows comparison* (`compare_win32.py commits
+HEAD WORKTREE`, exit 0): "identical in loaded code and data; .buildid differs".
+No function differs. *What ran:* step 1 (`update`, 15 s with both builds, 0 in 0 files); step 2, the
+i686 headless build and the 20-mission smoke, 10 s and 20 of 20 `PASS` (185 s); step 3 as above;
+`test_upstream_merge.sh` on its own after the test change; `lp64_casts.py check` (28 casts in 13 files, unchanged); the same harness lines in the i686 container (119 s): 42 passed, `hand_gallery.py verify --allow-pending` failed as expected.
+Building the changed files at 32 bits before and after: `gunfire.c` loses all
+its `int-conversion` warnings and four implicit declarations, `bondview2.c`
+loses its incompatible-pointer warning at `gunDrawSight(&gdl)`, and no warning
+was added.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),

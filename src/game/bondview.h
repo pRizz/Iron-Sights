@@ -198,7 +198,7 @@ struct hand
   f32 field_A3C;
   f32 field_A40;
   ALSoundState * audioHandle;
-  s32 field_A48;
+  intptr_t field_A48; /* struct ALSoundState * */
   s32 field_A4C;
   s32 field_A50;
   BeamRecord weapon_beam;

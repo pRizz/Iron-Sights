@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <string.h> /* memset before gunfire.c calls it unprototyped; drop when gunfire.c declares it (LP64-002 Task 9) */
 #include "../../src/game/gunfire.c"
 #include "../../port/src/port_sight.c"
 #include "../../port/src/port_crosshair.c"
@@ -86,7 +85,7 @@ static void projectionChecks(void)
 static void sightChecks(void)
 {
     Gfx commands[16];
-    s32 gdl = (s32)commands;
+    Gfx *gdl = commands;
     player.crosshair_angle.x = 100.25f; player.crosshair_angle.y = 90.5f;
     portHudGunSight(&gdl);
     assert(calls == 1 && ringDrawn && drawnX == 100.25f && drawnY == 90.5f);
@@ -113,7 +112,7 @@ static void sightChecks(void)
     /* Arc Impact Crosshair: the always-on cross at each arc's impact, through
      * the same wide-aim conversion; with none, at the aim point. */
     player.bonddead = 0; scopeBlend = 0.0f; adsBlend = 0.0f; reach = 2.0f;
-    gdl = (s32)commands;   /* each wide draw adds its anchor commands */
+    gdl = commands;   /* each wide draw adds its anchor commands */
     arcImpacts = 2;
     portHudGunSight(&gdl);
     assert(calls == 5 && !ringDrawn && drawnX == 140.0f && drawnY == 80.0f);
@@ -123,11 +122,11 @@ static void sightChecks(void)
     arcImpactAt[0][2] = 0.5f;                         /* out of sight: dashed, fainter */
     portHudGunSight(&gdl);
     assert(calls == 7 && drawnX == 100.0f && dashedDrawn && (drawnColor & 0xff) == 0xdc * 2 / 3);
-    arcImpactAt[0][2] = -1.0f; calls = 6; gdl = (s32)commands;
+    arcImpactAt[0][2] = -1.0f; calls = 6; gdl = commands;
     arcImpactAt[0][3] = 0.5f; hudScale = 0;            /* a far impact: half size */
     portHudGunSight(&gdl);
     assert(calls == 7 && drawnScaleY == 0.5f && drawnScaleX == 0.25f);
-    arcImpactAt[0][3] = 1.0f; hudScale = 1; calls = 6; gdl = (s32)commands;
+    arcImpactAt[0][3] = 1.0f; hudScale = 1; calls = 6; gdl = commands;
     adsBlend = 1.0f; portCrosshairAdsSet(1);          /* and with ADS Crosshair in ADS */
     portHudGunSight(&gdl);
     assert(calls == 7 && drawnX == 100.0f && drawnY == 60.0f);
@@ -142,7 +141,8 @@ static void crosshairSizingChecks(void)
 {
     /* Arrange: always-on target with fractional aim position and a custom colour. */
     Gfx commands[32];
-    s32 gdl = (s32)commands, i, high, wide;
+    Gfx *gdl = commands;
+    s32 i, high, wide;
     const s32 sizes[] = {10, 25, 50, 100, 200};
     player.mpmenuon = player.bonddead = 0;
     player.gunsightmode = GUNSIGHTREASON_NOTAIMING;

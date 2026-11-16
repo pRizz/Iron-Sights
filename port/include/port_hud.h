@@ -37,7 +37,7 @@ Gfx *portHudTouchClearTag(Gfx *gdl, s32 slot);
 /* buildGaugeBarDL's 46-vertex gauge: 22 loads, at most 22 quads, one end. */
 #define PORT_GAUGE_BAR_GFX 48
 Gfx *portHudDraw(Gfx *gdl);
-void portHudGunSight(s32 *gdl);
+void portHudGunSight(Gfx **gdl);
 /* Shared port overlay primitives, in native viewport coordinates. */
 Gfx *portHudPanel(Gfx *gdl, f32 x, f32 y, f32 w, f32 h, u32 color);
 Gfx *portHudLabel(Gfx *gdl, const char *text, s32 x, s32 y, f32 scale, u32 color, s32 maxWidth);

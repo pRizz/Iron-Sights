@@ -18,12 +18,12 @@ extern s32 portHudScaleActive(void);
  * point; at[2] >= 0: something hides that impact, so the cross is fainter
  * and dashed, its dashes marching outward with that phase; at[3]: its size
  * for the impact's distance (FORK-069). */
-static void portDrawTarget(s32 *gdl, s32 ring, f32 scopeBlend, const f32 *at)
+static void portDrawTarget(Gfx **gdl, s32 ring, f32 scopeBlend, const f32 *at)
 {
     extern f32 portAimReachX(void);
     extern f32 g_bondviewSceneWideFactor;
     extern s32 portPlayerCrosshairColor(s32 player);
-    Gfx *g = (Gfx *) *gdl;
+    Gfx *g = *gdl;
     f32 x = (at != NULL) ? at[0] : g_CurrentPlayer->crosshair_angle.x;
     f32 y = (at != NULL) ? at[1] : g_CurrentPlayer->crosshair_angle.y;
     f32 scaleX = 1.0f;
@@ -53,12 +53,12 @@ static void portDrawTarget(s32 *gdl, s32 ring, f32 scopeBlend, const f32 *at)
         g = portHudReticle(g, x, y, scaleX * hudScale, hudScale,
             ((u32)(color < 0 ? 0xff3a32 : color) << 8) | alpha, ring);
     if (reach > 1.001f) PORT_HUD_ANCHOR_OFF(g);
-    *gdl = (s32)g;
+    *gdl = g;
 }
 
 /* The always-on cross: at each arc's impact while the Arc Impact Crosshair
  * (FORK-069) has one, else at the aim point. */
-static void portDrawAlwaysTarget(s32 *gdl)
+static void portDrawAlwaysTarget(Gfx **gdl)
 {
     f32 impacts[PORT_ARC_SLOTS][4];
     const s32 n = portProjectileArcCrosshairs(impacts);
@@ -68,7 +68,7 @@ static void portDrawAlwaysTarget(s32 *gdl)
     for (i = 0; i < n; i++) portDrawTarget(gdl, FALSE, 0.0f, impacts[i]);
 }
 
-void portHudGunSight(s32 *gdl)
+void portHudGunSight(Gfx **gdl)
 {
     if (portAdsScopeBlend() > 0.0f)
     {

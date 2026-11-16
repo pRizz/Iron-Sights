@@ -41,6 +41,8 @@
 #include "matrixmath.h"
 #include "bondinv.h"
 #include "stan.h"
+#include "dyn.h"
+#include "language.h"
 #include "gbi_extension.h"
 #ifndef TARGET_N64
 #include "port_hud.h"
@@ -97,6 +99,8 @@ extern u32 D_80035CC0;
  * directly, which upstream's extern list does not carry because its own
  * code only ever reaches them through D_80035CC0's adjacency. */
 #include <stdio.h> /* stderr - port diagnostics */
+#include <string.h> /* memset */
+#include <inttypes.h> /* PRIxPTR - port diagnostics */
 #include "port_ads.h"
 #include "port_knife_ads.h"
 #include "port_projectile_arc.h"
@@ -2224,11 +2228,11 @@ void gunRenderFirstPersonGunModels(Gfx **gdlptr)
             if (item == ITEM_ROCKETLAUNCH)
             {
                 save_img_index_to_obj_ani_slot(&g_UnknownAnimController, crosshairimage);
-                gdl = process_monitor_animation_microcode(model, (*(Model *)&handptr->field_B68).obj->Switches[16], &g_UnknownAnimController, gdl, 0, 4);
+                gdl = process_monitor_animation_microcode(model, (*(Model *)&handptr->field_B68).obj->Switches[16], (MonitorRecord *) &g_UnknownAnimController, gdl, 0, 4);
             }
             else
             {
-                gdl = process_monitor_animation_microcode(model, (*(Model *)&handptr->field_B68).obj->Switches[16], &g_TaserAnimController, gdl, 0, 1);
+                gdl = process_monitor_animation_microcode(model, (*(Model *)&handptr->field_B68).obj->Switches[16], (MonitorRecord *) &g_TaserAnimController, gdl, 0, 1);
             }
         }
 
@@ -2588,9 +2592,9 @@ Gfx *set_enviro_fog_for_items_in_solo_watch_menu(Gfx *gdl, ITEM_IDS itemid, Mtxf
         if (dump < 0) dump = getenv("GE_DUMP_BOND") != NULL;
         if (dump && (calls++ % 31) == 0)
         {
-            printf("watch3d2: item=%d emitted=%d numMtx=%d root=%08x obj=%08x rootop=%04x\n",
+            printf("watch3d2: item=%d emitted=%d numMtx=%d root=%08" PRIxPTR " obj=%08" PRIxPTR " rootop=%04x\n",
                    itemid, (s32) (renderdata.gdl - gdl), bodymodel->numMatrices,
-                   (u32) bodymodel->RootNode, (u32) ((Model *) &model)->obj,
+                   (uintptr_t) bodymodel->RootNode, (uintptr_t) ((Model *) &model)->obj,
                    (bodymodel->RootNode != NULL) ? (u16) bodymodel->RootNode->Opcode : 0xDEAD);
         }
     }
@@ -2619,14 +2623,14 @@ earlyreturn:
 }
 
 
-void sub_GAME_7F0634D8(s32 arg0, s32 arg1, s32 arg2, s32 arg3)
+void sub_GAME_7F0634D8(Gfx *arg0, ITEM_IDS arg1, Mtxf *arg2, s32 arg3)
 {
     set_enviro_fog_for_items_in_solo_watch_menu(arg0, arg1, arg2, arg3, -256);
 }
 
 
 // Unreferenced
-void sub_GAME_7F0634FC(s32 arg0, s32 arg1, s32 arg2)
+void sub_GAME_7F0634FC(Gfx *arg0, ITEM_IDS arg1, Mtxf *arg2)
 {
     sub_GAME_7F0634D8(arg0, arg1, arg2, 0xFF);
 }
@@ -2764,7 +2768,7 @@ Gfx* watchRenderController(Gfx* gdl, Mtxf* basemtx, s32 envcolour, bool animateb
 
     for (i = 0; i < objheader->numMatrices; i++)
     {
-        matrix_4x4_copy((u32)modelstack.render_pos + i * sizeof(Mtxf), &sp41c);
+        matrix_4x4_copy((Mtxf *)((uintptr_t)modelstack.render_pos + i * sizeof(Mtxf)), &sp41c);
         matrix_4x4_f32_to_s32(&sp41c, &modelstack.render_pos[i]);
     }
 
@@ -2999,7 +3003,7 @@ Gfx* watchRenderController(Gfx* gdl, Mtxf* basemtx, s32 envcolour, bool animateb
 
         for (i = 0; i < objheader->numMatrices; i++)
         {
-            matrix_4x4_copy((u32)modelstack.render_pos + i * sizeof(Mtxf), &sp41c);
+            matrix_4x4_copy((Mtxf *)((uintptr_t)modelstack.render_pos + i * sizeof(Mtxf)), &sp41c);
             matrix_4x4_f32_to_s32(&sp41c, &modelstack.render_pos[i]);
         }
 
@@ -3515,7 +3519,7 @@ void gunTickHandState(enum GUNHAND hand, s32 triggerOn)
     struct PropRecord *temp_v0_8;
     Weapon1PTransformKeyframe *sp74;
     f32 temp_f0_2;
-    u32 var_a0_2;
+    uintptr_t var_a0_2;
     f32 temp_v1_9;
     struct hand *temp_v1_5;
     f32 un_f32_num = 0.0f;
@@ -3571,7 +3575,7 @@ void gunTickHandState(enum GUNHAND hand, s32 triggerOn)
     Weapon1PTransformKeyframe *sp74;
     struct PropRecord *temp_v0_8;
     f32 temp_f0_2;
-    u32 var_a0_2;
+    uintptr_t var_a0_2;
     f32 temp_v1_9;
     struct hand *temp_v1_5;
     f32 un_f32_num = 0.0f;
@@ -3626,7 +3630,7 @@ void gunTickHandState(enum GUNHAND hand, s32 triggerOn)
     Weapon1PTransformKeyframe *sp74;
     struct PropRecord *temp_v0_8;
     f32 temp_f0_2;
-    u32 var_a0_2;
+    uintptr_t var_a0_2;
     f32 temp_v1_9;
     struct hand *temp_v1_5;
     f32 un_f32_num = 0.0f;
@@ -4986,14 +4990,14 @@ void gunTickHandState(enum GUNHAND hand, s32 triggerOn)
             || (handptr->weapon_action_state == GUN_ANIM_STATE_KNIFE_SLASH1_STRIKE)
             || (handptr->weapon_action_state == GUN_ANIM_STATE_KNIFE_SLASH1_RECOVER))
         {
-            var_a0_2 = D_80034CA4;
+            var_a0_2 = (uintptr_t) D_80034CA4;
         }
         else
         {
-            var_a0_2 = D_80034E0C;
+            var_a0_2 = (uintptr_t) D_80034E0C;
         }
 
-        if (gunSample1PTransform(var_a0_2, sp88, &handptr->field_8EC, hand) != 0)
+        if (gunSample1PTransform((Weapon1PTransformKeyframe *) var_a0_2, sp88, &handptr->field_8EC, hand) != 0)
         {
             handptr->field_92C = 1;
         }
@@ -5396,25 +5400,25 @@ f32 get_45_degree_angle(s32 unk) {
 
 u16 *get_ptr_first_title_line_item(ITEM_IDS item)
 {
-  return langGet(gitem_structs[item].upper_watch_text);
+  return (u16 *) langGet(gitem_structs[item].upper_watch_text);
 }
 
 
 u16 *get_ptr_second_title_line_item(ITEM_IDS item)
 {
-    return langGet(gitem_structs[item].lower_watch_text);
+    return (u16 *) langGet(gitem_structs[item].lower_watch_text);
 }
 
 
 u16 *get_ptr_short_watch_text_for_item(ITEM_IDS item)
 {
-    return langGet(gitem_structs[item].watch_equipment_text);
+    return (u16 *) langGet(gitem_structs[item].watch_equipment_text);
 }
 
 
 u16 *get_ptr_long_watch_text_for_item(ITEM_IDS item)
 {
-    return langGet(gitem_structs[item].weapon_of_choice_text);
+    return (u16 *) langGet(gitem_structs[item].weapon_of_choice_text);
 }
 
 
@@ -7280,7 +7284,7 @@ Gfx *gunDrawHudInteger(Gfx *gdl, s32 value, s32 x, s32 halign, s32 y, s32 valign
  * (12-byte stride from the 9mm slot at 0x02000C84) that N64 rebased onto the
  * copied segment; on PC map the slot index onto the compiled-in entries
  * (image_bank.c order) instead of dereferencing the raw address. */
-u32 portAmmoIconPtr(u32 icon)
+uintptr_t portAmmoIconPtr(u32 icon)
 {
     extern struct sImageTableEntry *ammo9mmimage, *rifleammoimage,
         *shotgunammoimage, *knifeammoimage, *glaunchammoimage,
@@ -7307,7 +7311,7 @@ u32 portAmmoIconPtr(u32 icon)
     {
         return 0;
     }
-    return (u32) *slots[idx];
+    return (uintptr_t) *slots[idx];
 }
 #endif
 
@@ -7401,9 +7405,9 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
     s32 rightx;
     s32 reserveammo;
     s32 magammo;
-    u32 imageoffset_r;
+    uintptr_t imageoffset_r;
     s32 textwidth_r;
-    u32 imageoffset_l;
+    uintptr_t imageoffset_l;
     s32 textwidth_l;
 
     if (g_CurrentPlayer->gunammooff == 0)
@@ -7702,7 +7706,7 @@ Gfx *gunDrawWatchAmmoDisplay(Gfx *gdl)
     s32 ammotype;
     s32 reserveammo;
     s32 magammo;
-    u32 imageoffset;
+    uintptr_t imageoffset;
     s32 textwidth;
     s32 pad;
 
@@ -7800,12 +7804,12 @@ void gunSetSightVisible(s32 reason, bool visible)
 }
 
 
-void gunDrawSight(s32 *gdl)
+void gunDrawSight(Gfx **gdl)
 {
 #ifndef TARGET_N64
     portHudGunSight(gdl);
 #else
-    s32 sp54;
+    Gfx *sp54;
     f32 xypos[2];
     f32 halfedxy[2];
     if (g_CurrentPlayer->gunsightmode == 0 && g_CurrentPlayer->mpmenuon == FALSE)

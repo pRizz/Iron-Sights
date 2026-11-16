@@ -127,6 +127,7 @@ void                 doorActivatePortal(DoorRecord *door);
 void                 doorUpdateBbox(DoorRecord *door);
 s32                  sub_GAME_7F0539B8(f32 vol);
 void                 monitorSetImageByNum(MonitorRecord *mon, s32 monAnimID);
+Gfx                 *process_monitor_animation_microcode(Model *model, ModelNode *node, MonitorRecord *screen, Gfx *gdl, s32 arg4, s32 arg5);
 void                 propweaponSetDual(WeaponObjRecord *leftweapon, WeaponObjRecord *rightweapon);
 f32                  countdownTimerGetValue(void);
 bool                 countdownTimerIsRunning(void);
