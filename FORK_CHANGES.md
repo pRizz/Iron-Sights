@@ -296,7 +296,15 @@ i686 and x86_64 use the root `Dockerfile`'s `goldeneye` image under
 ninja, python3, git). The checkout mounts at `/home/dev/project`, and the ROM
 read-only at `/rom/baserom.u.z64` with `GE_ROM` set. Docker gets an argument
 list, never a shell. `scripts/port/test_lp64_env.py` (11 ROM-free tests) was run
-and passes. Run on the Mac: `build-images` succeeded (3 min 58 s);
+and passes. *Fix wave after the milestone review (the commit "Refuse a GE_ROM
+that is not an existing file"):* `GE_ROM` is resolved to an absolute path and
+must be an existing file; otherwise `run` prints an error naming the path and
+exits 2 before Docker is called (a relative path used to reach Docker as a
+named volume, and a mistyped absolute one could be created as a host
+directory). Two `*.z64` files in the root now also exit 2 with a message rather
+than a traceback. The file has 15 tests; the four new ones (a relative path
+becomes absolute, a missing path and a directory are refused naming the path,
+`run` exits 2 without calling Docker) were seen failing before the change. Run on the Mac: `build-images` succeeded (3 min 58 s);
 `gcc -dumpmachine` printed `aarch64-linux-gnu` and `x86_64-linux-gnu` in the
 two images; a `gcc -m32` program ran in the i686 container, so 32-bit x86 runs
 under Docker Desktop here. **Reference run (found two workarounds, repaired in task 5b):** the stock headless build had defects. (1) `cmake ... -DGE_HEADLESS=ON` (with or without `-DGE_VIDEO=OFF`) failed to compile `port/src/port_baked_trace.c` (`SDL.h: No such file or directory`; headless builds do not exclude that SDL-using file). (2) Past that, linking failed with `port_bench.c:110: undefined reference to portRenderAsyncActive` (`s32 portRenderAsyncActive(void)`, defined only in `port/src/video.c`, which the headless list removes; also called from `hitchlog.c` and `pcsched.c`). Task 2 ran the reference with `-DCMAKE_C_FLAGS=-I/home/dev/project/scripts/port/sdl_shim` and a scratch object for that one symbol, and the 20-mission smoke (`audit_buffers.py --mission-smoke ... --frames 600 --jobs 2`, i686 container) exited 0 in 184 s with all 20 `PASS`.

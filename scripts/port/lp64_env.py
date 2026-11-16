@@ -31,13 +31,18 @@ def image_and_platform(arch: str) -> tuple[str, str]:
 
 
 def find_rom(root: Path, environ: Mapping[str, str]) -> Optional[Path]:
-    """Return GE_ROM if set, else the only *.z64 in `root`, else None.
+    """Return GE_ROM as an absolute path if set, else the only *.z64 in `root`, else None.
 
-    Raises ValueError when `root` holds more than one *.z64 and GE_ROM is unset.
+    Raises ValueError when GE_ROM is not an existing file (Docker would otherwise mount a relative
+    path as a named volume and create a mistyped absolute one as a directory), or when `root` holds
+    more than one *.z64 and GE_ROM is unset.
     """
     explicit = environ.get('GE_ROM')
     if explicit:
-        return Path(explicit)
+        rom = Path(explicit).resolve()
+        if not rom.is_file():
+            raise ValueError(f'GE_ROM is not an existing file: {rom}')
+        return rom
     candidates = sorted(root.glob('*.z64'))
     if len(candidates) > 1:
         names = ', '.join(path.name for path in candidates)
@@ -85,8 +90,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     command = options.command[1:] if options.command[:1] == ['--'] else options.command
     if not command:
         parser.error('run needs a command after --')
-    docker = docker_command(options.arch, ROOT, find_rom(ROOT, os.environ), command)
-    return subprocess.run(docker).returncode
+    try:
+        maybe_rom = find_rom(ROOT, os.environ)
+    except ValueError as error:
+        print(f'error: {error}', file=sys.stderr)
+        return 2
+    return subprocess.run(docker_command(options.arch, ROOT, maybe_rom, command)).returncode
 
 
 if __name__ == '__main__':
