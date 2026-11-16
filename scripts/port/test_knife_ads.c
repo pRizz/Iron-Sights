@@ -39,11 +39,11 @@ static void testKnifeDrawCopies(void)
     ModelRenderData renderdata = {0};
     RenderPosView matrix = {0};
     s32 i;
-    commands[0].words.w0 = G_MTX << 24;
+    commands[0].words.w0 = (u32)G_MTX << 24;
     commands[0].words.w1 = 0x03000000;
-    commands[1].words.w0 = (u8)G_TRI1 << 24;
+    commands[1].words.w0 = (u32)G_TRI1 << 24;
     commands[1].words.w1 = 0x00000a14;
-    commands[2].words.w0 = (u8)G_ENDDL << 24;
+    commands[2].words.w0 = (u32)G_ENDDL << 24;
     for (i = 0; i < 3; i++) {
         data[i].DisplayList.Primary = commands;
         data[i].DisplayList.ModelType = 3;
@@ -73,7 +73,7 @@ static void testKnifeDrawCopies(void)
     {
         Gfx unknown[3];
         memcpy(unknown, commands, sizeof(commands));
-        unknown[1].words.w0 = G_DL << 24;
+        unknown[1].words.w0 = (u32)G_DL << 24;
         data[2].DisplayList.Primary = unknown;
         portKnifeAdsDraw(&renderdata, &model, ITEM_THROWKNIFE, GUNRIGHT);
         for (i = 0; i < 3; i++) assert(nodes[i].Data == &data[i]);

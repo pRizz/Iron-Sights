@@ -34,7 +34,7 @@ static s32 savedSprint = -1, savedLudicrousSprint = -1;
 static s32 savedKnifeStyle = -1;
 static s32 savedCrosshairSize = -1;
 static s32 savedHud[6] = {-1,-1,-1,-1,-1,-1};
-u32 osVirtualToPhysical(void *address) { return (u32)address; }
+uintptr_t osVirtualToPhysical(void *address) { return (uintptr_t)address; }
 
 s32 portVideoOptionGet(const char *key, s32 *out) { (void) key; (void) out; return 0; }
 const char *portEnhancedFontsValueText(const char *text) { return text; }   /* port_enhanced_fonts.c */

@@ -44,7 +44,7 @@ void osSyncPrintf(const char *fmt, ...) {
 void portConLogf(const char *fmt, ...) { (void)fmt; }
 void *dynAllocate(s32 size) { void *out=arena.bytes+used; used+=(size+15)&~15; assert(used<sizeof(arena)); return out; }
 Vtx *dynAllocateVertices(s32 count) { Vtx *out=dynAllocate(count*sizeof(Vtx)); assert(copies<16); copied[copies++]=out; return out; }
-u32 osVirtualToPhysical(void *p) { return (u32)p; }
+uintptr_t osVirtualToPhysical(void *p) { return (uintptr_t)p; }
 void *portAllocHigh(u32 size) { static u8 model[65536]; assert(size<=sizeof(model)); return model; }
 s32 fileGetBondForCurrentFolder(void) { return BOND_CONNERY; }
 void load_object_fill_header(ModelFileHeader *header, u8 *name, u8 *dst, s32 size, struct texpool *pool)
