@@ -3,12 +3,32 @@
 
 `commits REF_A REF_B` exports both source states, builds each with the README's
 Windows configuration in the `goldeneye` container (mounted at the same path both
-times, because the compiler embeds source paths), and compares the bytes the
-loader maps. `compare EXE_A EXE_B` compares two existing executables. Debug
-sections and the header's timestamp are ignored. Either ref may be `WORKTREE`:
-the tracked files as they are on disk now, uncommitted edits included.
+times, because the compiler embeds source paths), and compares what the loader
+maps. `compare EXE_A EXE_B` compares two existing executables. Either ref may be
+`WORKTREE`: the tracked files as they are on disk now, uncommitted edits included.
 
-Exit status: 0 identical, 1 different. Build logs are kept in build/lp64/compare.
+Compared: every loaded section's bytes, VirtualSize, VirtualAddress and
+Characteristics (sections with no raw data, such as .bss, included; a section in
+only one file is a difference, one named twice in a file is an error); the
+optional header's AddressOfEntryPoint, ImageBase and SectionAlignment; every
+data directory's address and size except Debug and Security.
+
+Deliberately not compared:
+  * .debug* and /N sections: debug information is not loaded.
+  * .buildid: an identifier derived from the whole file, debug information
+    included, so it changes when only debug types change. If everything else is
+    identical the tool says "identical in loaded code and data; .buildid
+    differs" and exits 0.
+  * COFF TimeDateStamp and optional-header CheckSum: build stamps.
+  * SizeOfImage, NumberOfSections, the COFF symbol-table pointer and count, and
+    section file offsets: they move when only debug information changes.
+  * The Debug directory (it points into debug information) and the Security
+    directory (a file offset to data that is not loaded).
+Both builds run with SOURCE_DATE_EPOCH exported so the build's own clock stamps
+(the About-page time, __DATE__/__TIME__, linker timestamps) match.
+
+Exit status: 0 identical in loaded code and data, 1 different. Build logs are
+kept in build/lp64/compare.
 """
 import argparse
 import importlib.util
@@ -31,13 +51,23 @@ CONFIGURE = ('cmake -S . -B build -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-i686.cmake 
 # Both builds see one clock: the build's About-page stamp (port/src/port_build_time.c via
 # scripts/port/build_info.py), GCC's __DATE__/__TIME__ and the linker's header stamps all honour it.
 SOURCE_DATE_EPOCH = '1700000000'
+# Sections that identify a build rather than make up its program: `.buildid` holds a hash of the
+# whole output file, debug information included, so it changes whenever only debug types change.
+IDENTITY_SECTIONS = ('.buildid',)
+DIRECTORY_NAMES = {0: 'Export', 1: 'Import', 2: 'Resource', 3: 'Exception', 5: 'BaseRelocation', 9: 'TLS',
+                   12: 'IAT'}
+IGNORED_DIRECTORIES = (4, 6)  # Security (a file offset, not loaded) and Debug (debug information)
 GAME_EXECUTABLES = ('IronSights.exe', 'ProjectMidas.exe')
 DEFAULT_DEADLINE_SECONDS = 180  # a build took 55 s here, under emulation
 LOG_TAIL_LINES = 30
 
 
-def pe_sections(data: bytes) -> dict[str, bytes]:
-    """Return each section's name mapped to its raw bytes; ValueError if `data` is not a PE file."""
+def pe_layout(data: bytes) -> dict:
+    """Parse the load-relevant parts of a PE file; ValueError if `data` is not one.
+
+    Returns {'sections': {name: (raw bytes, virtual size, virtual address, characteristics)},
+    'header': {field name: value}, 'directories': [(address, size), ...]}.
+    """
     if len(data) < 0x40 or data[:2] != b'MZ':
         raise ValueError('not a PE file: no DOS header')
     (pe_offset,) = struct.unpack_from('<I', data, 0x3C)
@@ -46,43 +76,112 @@ def pe_sections(data: bytes) -> dict[str, bytes]:
     coff = pe_offset + 4
     if len(data) < coff + 20:
         raise ValueError('truncated PE file: no COFF header')
-    count, = struct.unpack_from('<H', data, coff + 2)
-    optional_size, = struct.unpack_from('<H', data, coff + 16)
-    table = coff + 20 + optional_size
+    (count,) = struct.unpack_from('<H', data, coff + 2)
+    (optional_size,) = struct.unpack_from('<H', data, coff + 16)
+    optional = coff + 20
+    if optional_size < 96 or len(data) < optional + optional_size:
+        raise ValueError('truncated PE file: optional header')
+    (magic,) = struct.unpack_from('<H', data, optional)
+    if magic == 0x10B:
+        (entry,) = struct.unpack_from('<I', data, optional + 16)
+        (image_base,) = struct.unpack_from('<I', data, optional + 28)
+        directories_at = optional + 96
+        (directory_count,) = struct.unpack_from('<I', data, optional + 92)
+    elif magic == 0x20B:
+        (entry,) = struct.unpack_from('<I', data, optional + 16)
+        (image_base,) = struct.unpack_from('<Q', data, optional + 24)
+        directories_at = optional + 112
+        (directory_count,) = struct.unpack_from('<I', data, optional + 108)
+    else:
+        raise ValueError(f'not a PE file: optional header magic {magic:#x}')
+    (alignment,) = struct.unpack_from('<I', data, optional + 32)
+    directory_count = min(directory_count, (optional + optional_size - directories_at) // 8)
+    directories = [struct.unpack_from('<II', data, directories_at + 8 * i) for i in range(directory_count)]
+    table = optional + optional_size
     if len(data) < table + 40 * count:
         raise ValueError('truncated PE file: section table')
     sections = {}
     for index in range(count):
-        entry = table + 40 * index
-        name = data[entry:entry + 8].rstrip(b'\0').decode('latin-1')
-        size, start = struct.unpack_from('<II', data, entry + 16)
-        if start + size > len(data):
+        entry_at = table + 40 * index
+        name = data[entry_at:entry_at + 8].rstrip(b'\0').decode('latin-1')
+        virtual_size, virtual_address, size, start = struct.unpack_from('<IIII', data, entry_at + 8)
+        (characteristics,) = struct.unpack_from('<I', data, entry_at + 36)
+        if name in sections:
+            raise ValueError(f'PE file has two sections named {name}')
+        if size and start + size > len(data):
             raise ValueError(f'truncated PE file: section {name}')
-        sections[name] = data[start:start + size]
-    return sections
+        raw = data[start:start + size] if size else b''
+        sections[name] = (raw, virtual_size, virtual_address, characteristics)
+    return {'sections': sections,
+            'header': {'AddressOfEntryPoint': entry, 'ImageBase': image_base, 'SectionAlignment': alignment},
+            'directories': directories}
+
+
+def pe_sections(data: bytes) -> dict[str, bytes]:
+    """Return each section's name mapped to its raw bytes; ValueError if `data` is not a PE file
+    or names a section twice."""
+    return {name: values[0] for name, values in pe_layout(data)['sections'].items()}
+
+
+def is_debug(name: str) -> bool:
+    """True for `.debug*` sections and the `/N` long names that hold them."""
+    return name.startswith(('.debug', '/'))
 
 
 def loaded(sections: dict[str, bytes]) -> dict[str, bytes]:
-    """Drop debug sections (`.debug*` and the `/N` long names that hold them); keep the rest."""
-    return {name: data for name, data in sections.items() if not name.startswith(('.debug', '/'))}
+    """Drop debug sections and the build-identity sections; keep the rest."""
+    return {name: data for name, data in sections.items() if not is_debug(name) and name not in IDENTITY_SECTIONS}
+
+
+def section_differences(name: str, left: tuple, right: tuple) -> list[str]:
+    """One line per difference between two same-named sections' bytes, size, address and flags."""
+    lines = []
+    if left[0] != right[0]:
+        first = next((i for i, (x, y) in enumerate(zip(left[0], right[0])) if x != y), min(len(left[0]), len(right[0])))
+        count = sum(x != y for x, y in zip(left[0], right[0])) + abs(len(left[0]) - len(right[0]))
+        lines.append(f'{name}: bytes differ ({len(left[0])} vs {len(right[0])} bytes, '
+                     f'{count} bytes differ, first at offset {first:#x})')
+    for label, index in (('VirtualSize', 1), ('VirtualAddress', 2), ('Characteristics', 3)):
+        if left[index] != right[index]:
+            lines.append(f'{name}: {label} differs ({left[index]:#x} vs {right[index]:#x})')
+    return lines
 
 
 def differences(a: bytes, b: bytes) -> list[str]:
-    """Return one line per loaded section that differs, or exists in only one file; empty if identical."""
-    left, right = loaded(pe_sections(a)), loaded(pe_sections(b))
+    """Return one line per load-relevant difference between two executables; empty if identical.
+
+    Compared: every loaded section's bytes, VirtualSize, VirtualAddress and Characteristics (a
+    section in only one file is a difference); the optional header's AddressOfEntryPoint, ImageBase
+    and SectionAlignment; every data directory's address and size except Debug and Security.
+    """
+    first, second = pe_layout(a), pe_layout(b)
+    left = {n: v for n, v in first['sections'].items() if n in loaded(first['sections'])}
+    right = {n: v for n, v in second['sections'].items() if n in loaded(second['sections'])}
     lines = []
     for name in sorted(left.keys() | right.keys()):
         if name not in right:
-            lines.append(f'{name}: only in the first file ({len(left[name])} bytes)')
+            lines.append(f'{name}: only in the first file ({len(left[name][0])} bytes)')
         elif name not in left:
-            lines.append(f'{name}: only in the second file ({len(right[name])} bytes)')
-        elif left[name] != right[name]:
-            first = next((i for i, (x, y) in enumerate(zip(left[name], right[name])) if x != y),
-                         min(len(left[name]), len(right[name])))
-            count = sum(x != y for x, y in zip(left[name], right[name])) + abs(len(left[name]) - len(right[name]))
-            lines.append(f'{name}: differs ({len(left[name])} vs {len(right[name])} bytes, '
-                         f'{count} bytes differ, first at offset {first:#x})')
+            lines.append(f'{name}: only in the second file ({len(right[name][0])} bytes)')
+        else:
+            lines += section_differences(name, left[name], right[name])
+    for field, value in first['header'].items():
+        if value != second['header'][field]:
+            lines.append(f'{field} differs ({value:#x} vs {second["header"][field]:#x})')
+    paired = zip(first['directories'], second['directories'])
+    for index, (x, y) in enumerate(paired):
+        if index not in IGNORED_DIRECTORIES and x != y:
+            lines.append(f'data directory {DIRECTORY_NAMES.get(index, index)} differs '
+                         f'(address {x[0]:#x}, size {x[1]:#x} vs address {y[0]:#x}, size {y[1]:#x})')
+    if len(first['directories']) != len(second['directories']):
+        lines.append('data directory count differs')
     return lines
+
+
+def identity_differences(a: bytes, b: bytes) -> list[str]:
+    """Return the names of build-identity sections (`.buildid`) present in both files that differ."""
+    first, second = pe_sections(a), pe_sections(b)
+    return [name for name in IDENTITY_SECTIONS if name in first and name in second and first[name] != second[name]]
 
 
 def export_source(ref: str, destination: Path, root: Path = ROOT) -> None:
@@ -139,9 +238,12 @@ def build(ref: str, name: str, deadline: int, jobs: int) -> tuple[Path, float]:
 
 def report(exe_a: Path, exe_b: Path) -> int:
     """Print the comparison of two executables; return 0 if identical, else 1."""
-    lines = differences(exe_a.read_bytes(), exe_b.read_bytes())
+    data_a, data_b = exe_a.read_bytes(), exe_b.read_bytes()
+    lines = differences(data_a, data_b)
     if not lines:
-        print('identical: every loaded section matches (debug sections and the timestamp ignored)')
+        identity = identity_differences(data_a, data_b)
+        suffix = f'; {", ".join(identity)} differs' if identity else ''
+        print(f'identical in loaded code and data{suffix}')
         return 0
     print('different:')
     for line in lines:
