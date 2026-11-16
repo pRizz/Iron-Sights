@@ -86,6 +86,7 @@ jobs:
           bash scripts/port/test_monitor_script.sh
           bash scripts/port/test_mema_order.sh
           python3 scripts/port/test_lp64_diagnostics.py
+          python3 scripts/port/test_lp64_static_checks.py
           python3 scripts/port/test_lp64_casts.py
           python3 scripts/port/lp64_casts.py check
           python3 scripts/port/test_compare_win32.py
@@ -98,6 +99,8 @@ jobs:
           cmake -S . -B build/lp64/gate-video -DCMAKE_BUILD_TYPE=Debug -DGE_POINTER_BITS=64 -DGE_VIDEO=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cmake --build build/lp64/gate-video --target ge_buildinfo
           python3 scripts/port/lp64_diagnostics.py gate build/lp64/gate build/lp64/gate-video
+          python3 scripts/port/lp64_diagnostics.py narrowing --check build/lp64/gate build/lp64/gate-video
+          python3 scripts/port/lp64_diagnostics.py unprototyped --check build/lp64/gate build/lp64/gate-video
           python3 scripts/port/hand_gallery.py verify --allow-pending
 
   # The builds start alongside the tests instead of after them; publish waits

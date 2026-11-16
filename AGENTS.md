@@ -252,8 +252,15 @@ pass its isolated executable rather than rebuilding an active player binary.
   tree (`build/lp64/gate-video`), builds only their `ge_buildinfo` target, and
   runs `python3 scripts/port/lp64_diagnostics.py gate build/lp64/gate
   build/lp64/gate-video`, which refuses an entry lacking those flags or
-  carrying `-w`, then compiles every C and C++ file of both trees with its own
-  flags and fails naming each file that does not compile. Run the
+  carrying `-w`, `-Wno-error`, a `-Wno-` for a gated kind or a response file,
+  then compiles every C and C++ file of both trees with its own flags and fails
+  naming each file that does not compile. Two more checks follow it on the same
+  trees: `lp64_diagnostics.py narrowing --check` (implicit narrowing of a
+  `uintptr_t`, `intptr_t` or `romptr_t`) and `unprototyped --check` (calls
+  without a prototype to functions that take or return a pointer or 64-bit
+  value), each against an exact-match allowlist
+  (`lp64_narrowing_allowed.txt`, `lp64_unprototyped_allowed.txt`) that is
+  lowered as places are fixed and never raised without a reason. Run the
   same lines in the x86_64 or aarch64 container (GCC 13) before pushing a
   change to C, C++ or the build; `lp64_diagnostics.py sites [--messages]
   [FILE...]` lists the conversions of those trees as `file:line: kind`. A new

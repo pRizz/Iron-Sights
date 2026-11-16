@@ -37,6 +37,38 @@ class FindCasts(unittest.TestCase):
         self.assertEqual(casts.find_casts("a = (u64)(uintptr_t)p; b = (void *)(uintptr_t)n; c = (uintptr_t)(u32)n;"), [])
 
 
+class ParenthesisedCasts(unittest.TestCase):
+    def test_a_truncating_cast_of_a_parenthesised_pointer_width_cast_is_found(self):
+        # Act / Assert
+        self.assertEqual(casts.find_casts("x = (u32)((uintptr_t)p);"), [1])
+
+    def test_the_stdint_target_types_are_found(self):
+        # Arrange
+        text = '\n'.join(f'a = ({t})(uintptr_t)p;' for t in ('uint32_t', 'int32_t', 'uint16_t', 'int16_t'))
+        # Act / Assert
+        self.assertEqual(casts.find_casts(text), [1, 2, 3, 4])
+
+    def test_a_stdint_cast_of_a_parenthesised_cast_is_found(self):
+        # Act / Assert
+        self.assertEqual(casts.find_casts("a = (uint32_t)((intptr_t)p);\nb = (uint32_t)(uintptr_t)p;"), [1, 2])
+
+    def test_a_cast_of_a_difference_is_not_found(self):
+        # Act / Assert
+        self.assertEqual(casts.find_casts("n = (s32)((uintptr_t)a - (uintptr_t)b);"), [])
+
+    def test_a_member_access_arrow_is_not_a_difference(self):
+        # Act / Assert
+        self.assertEqual(casts.find_casts("n = (u32)((uintptr_t)p->next);"), [1])
+
+    def test_a_cast_of_a_sum_is_still_found(self):
+        # Act / Assert
+        self.assertEqual(casts.find_casts("n = (u32)((uintptr_t)a + 4);"), [1])
+
+    def test_a_difference_inside_a_call_does_not_hide_the_cast(self):
+        # Act / Assert
+        self.assertEqual(casts.find_casts("n = (u32)((uintptr_t)f(a - b));"), [1])
+
+
 class Check(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

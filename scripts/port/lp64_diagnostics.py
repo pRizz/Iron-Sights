@@ -19,9 +19,16 @@ not its own lines, so `sites` reports its diagnostics at the PHYSICAL line, foun
 copy of the file without the directives (kept outside the source tree, with the original's folder
 searched first for quoted includes). A file that stops at a fatal error was not measured, so
 `sites` refuses to report and names the files.
+
+`narrowing [--check] [--all] BUILD_DIR...` and `unprototyped [--check] BUILD_DIR...` list what the
+gate cannot see: implicit narrowing of `uintptr_t`, `intptr_t` and `romptr_t`, and calls without a
+prototype to functions that take or return pointers. `--check` compares each file's count with
+`lp64_narrowing_allowed.txt` or `lp64_unprototyped_allowed.txt`. They live in `lp64_static_checks.py`,
+which describes them; `--help` of each command says what it misses.
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -34,6 +41,8 @@ from typing import Optional
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_BUILD_DIRS = (ROOT/'build'/'lp64'/'gate', ROOT/'build'/'lp64'/'gate-video')
+NARROWING_ALLOWLIST = Path(__file__).with_name('lp64_narrowing_allowed.txt')
+UNPROTOTYPED_ALLOWLIST = Path(__file__).with_name('lp64_unprototyped_allowed.txt')
 GENERATED_HEADER = Path('generated')/'port_buildinfo.h'
 KINDS = ('int-conversion', 'pointer-to-int-cast', 'int-to-pointer-cast')
 COMPILE_TIMEOUT_SECONDS = 60
@@ -215,12 +224,16 @@ def gate_command(entry: dict) -> Optional[list[str]]:
 def ungated_reason(entry: dict, argv: list[str]) -> Optional[str]:
     """Return what keeps an entry's flags from making the int/pointer conversions errors, or None.
 
-    A C entry needs all three `-Werror=` flags, a C++ entry `-Werror=int-to-pointer-cast`; `-w`
-    switches every `-Werror=` off, so neither may carry it."""
+    A C entry needs all three `-Werror=` flags, a C++ entry `-Werror=int-to-pointer-cast`. `-w`
+    switches every `-Werror=` off, as do `-Wno-error`, `-Wno-error=KIND` and `-Wno-KIND` for a gated
+    kind; a response file (`@file`) could hide any of them from this check. No entry may carry them."""
     required = C_GATE_FLAGS if entry['file'].endswith('.c') else CXX_GATE_FLAGS
+    kinds = [flag.removeprefix('-Werror=') for flag in required]
+    switched_off = {'-w', '-Wno-error', *(f'-Wno-error={kind}' for kind in kinds),
+                    *(f'-Wno-{kind}' for kind in kinds)}
     reasons = [f'lacks {flag}' for flag in required if flag not in argv]
-    if '-w' in argv:
-        reasons.append('carries -w')
+    reasons += [f'carries {arg}' for arg in argv if arg in switched_off]
+    reasons += [f'carries the response file {arg}' for arg in argv if arg.startswith('@')]
     return ', '.join(reasons) or None
 
 
@@ -309,8 +322,59 @@ def measure(build_dirs: list[Path], root: Path) -> dict:
     return merged
 
 
+def static_checks():
+    """Load lp64_static_checks.py, which sits beside this file."""
+    path = Path(__file__).with_name('lp64_static_checks.py')
+    spec = importlib.util.spec_from_file_location('lp64_static_checks', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def static_commands(build_dirs: list[Path], languages: tuple) -> list[tuple[dict, list[str]]]:
+    """Return each entry of the trees whose file ends in `languages`, with its own command made syntax-only.
+
+    Raises RuntimeError for a tree that is not configured as `gate` needs, or holds no such entry."""
+    problems = [problem for build_dir in build_dirs if (problem := build_dir_problem(build_dir))]
+    if problems:
+        raise RuntimeError('\n'.join(problems))
+    commands = []
+    for build_dir in build_dirs:
+        path = build_dir/'compile_commands.json'
+        found = [(entry, argv) for entry in json.loads(path.read_text())
+                 if entry['file'].endswith(languages) and (argv := gate_command(entry)) is not None]
+        if not found:
+            names = 'C' if languages == ('.c',) else 'C or C++'
+            raise RuntimeError(f'{path} holds no {names} compile commands; refusing to report zero')
+        commands += found
+    return commands
+
+
+def static_check(args: argparse.Namespace) -> int:
+    """Run `narrowing` or `unprototyped`; return the process exit status."""
+    checks = static_checks()
+    narrowing = args.command == 'narrowing'
+    try:
+        commands = static_commands([path.resolve() for path in args.build_dirs],
+                                   GATE_SOURCES if narrowing else ('.c',))
+        if narrowing:
+            # The report-only types are never counted: only the pointer-sized sources are allowlisted.
+            lines = checks.narrowing_lines(checks.measure_narrowing(commands, ROOT, args.all and not args.check))
+        else:
+            lines = checks.measure_unprototyped(commands, ROOT)
+        if not args.check:
+            for line in lines:
+                print(line)
+            return 0
+        allowlist, noun = (NARROWING_ALLOWLIST, 'narrowings') if narrowing else (UNPROTOTYPED_ALLOWLIST, 'unprototyped calls')
+        return checks.check(lines, noun, allowlist, f'lp64_diagnostics.py {args.command} BUILD_DIR...')
+    except (RuntimeError, OSError, ValueError) as error:
+        print(f'error: {error}', file=sys.stderr)
+        return 2
+
+
 def main(argv: list[str]) -> int:
-    """Run `gate` or `sites`; return the process exit status."""
+    """Run `gate`, `sites`, `narrowing` or `unprototyped`; return the process exit status."""
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
     gate_parser = commands.add_parser('gate', help='compile every C and C++ file of 64-bit trees')
@@ -322,7 +386,22 @@ def main(argv: list[str]) -> int:
                                    '(default: build/lp64/gate and build/lp64/gate-video)')
     sites_parser.add_argument('--messages', action='store_true',
                               help="add GCC's message and the quoted source line")
+    for name, help_text in (
+            ('narrowing', 'list implicit narrowing of pointer-sized integers (a -Wconversion run); GCC drops the '
+                          'typedef name after arithmetic, so (uintptr_t) a + b narrowed to u32 is found only by --all'),
+            ('unprototyped', 'list calls without a prototype to functions that take or return pointers')):
+        static = commands.add_parser(name, help=help_text, description=help_text)
+        static.add_argument('build_dirs', nargs='+', type=Path, metavar='BUILD_DIR')
+        static.add_argument('--check', action='store_true',
+                            help='exit 1 unless each file\'s count equals its allowlist line')
+        if name == 'narrowing':
+            static.add_argument('--all', action='store_true',
+                                help='also list the other 64-bit source types (long, size_t, ptrdiff_t, 64-bit '
+                                     'fixed types) as a report; --check does not count them')
     args = parser.parse_args(argv)
+    if args.command in ('narrowing', 'unprototyped'):
+        args.all = getattr(args, 'all', False)
+        return static_check(args)
     if args.command == 'gate':
         return gate([path.resolve() for path in args.build_dirs])
     build_dirs = [path.resolve() for path in args.build_dirs or DEFAULT_BUILD_DIRS]

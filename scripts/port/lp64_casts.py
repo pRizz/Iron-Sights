@@ -22,12 +22,36 @@ SCANNED_SUFFIXES = ('.c', '.h', '.cpp', '.inl')
 GIT_TIMEOUT_SECONDS = 60
 
 TRUNCATING_CAST = re.compile(
-    r'\(\s*(?:u32|s32|int|unsigned\s+int|unsigned|u16|s16)\s*\)\s*\(\s*(?:uintptr_t|intptr_t)\s*\)')
+    r'\(\s*(?:u32|s32|int|unsigned\s+int|unsigned|u16|s16|uint32_t|int32_t|uint16_t|int16_t)\s*\)\s*'
+    r'(?P<wrapped>\(\s*)?\(\s*(?:uintptr_t|intptr_t)\s*\)')
+# A `-` that subtracts: after an operand (identifier, number, `)` or `]`), and not the `->` arrow.
+BINARY_MINUS = re.compile(r'[\w)\]]\s*-(?!>)')
+
+
+def wrapped_difference(text: str, start: int) -> bool:
+    """Return whether the parenthesis opened just before `start` encloses a top-level subtraction.
+
+    `(s32)((uintptr_t)a - (uintptr_t)b)` measures a distance of two addresses, which fits; it is not
+    a truncated address, so `find_casts` leaves it out."""
+    depth, top = 1, []
+    for char in text[start:]:
+        depth += (char == '(') - (char == ')')
+        if depth == 0:
+            break
+        top.append(char if depth == 1 else ' ')
+    return BINARY_MINUS.search(''.join(top)) is not None
 
 
 def find_casts(text: str) -> list[int]:
-    """Return the 1-based line of every truncating round-trip cast in `text`."""
-    return [text.count('\n', 0, match.start()) + 1 for match in TRUNCATING_CAST.finditer(text)]
+    """Return the 1-based line of every truncating round-trip cast in `text`.
+
+    Both `(u32)(uintptr_t)p` and `(u32)((uintptr_t)p)` count; a cast of a difference does not."""
+    found = []
+    for match in TRUNCATING_CAST.finditer(text):
+        if match['wrapped'] and wrapped_difference(text, match.start('wrapped') + 1):
+            continue
+        found.append(text.count('\n', 0, match.start()) + 1)
+    return found
 
 
 def parse_allowlist(text: str) -> dict[str, int]:

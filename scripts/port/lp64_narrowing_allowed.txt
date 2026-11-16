@@ -1,0 +1,21 @@
+# Allowed narrowings of a pointer-sized integer per file: path<TAB>count<TAB>reason. `--check` requires the counts to
+# match exactly: lower a line when places are fixed, delete it at zero; see lp64_diagnostics.py.
+port/fast3d/gfx_pc.cpp	16	existing before LP64-003
+port/src/audio_pc.c	6	existing before LP64-003
+port/src/port_arm_mesh.c	20	existing before LP64-003
+port/src/port_baked_light.c	2	existing before LP64-003
+port/src/port_grip_mesh.c	2	existing before LP64-003
+port/src/port_knife_ads.c	1	existing before LP64-003
+port/src/port_memp.c	1	existing before LP64-003
+port/src/port_native_arms.c	9	existing before LP64-003
+port/src/port_state_effects_audit.c	1	existing before LP64-003
+src/game/bg.c	9	existing before LP64-003
+src/game/front.c	5	existing before LP64-003
+src/game/gunfire.c	3	existing before LP64-003
+src/game/image.c	2	existing before LP64-003
+src/game/mpmenu.c	6	existing before LP64-003
+src/game/propobj.c	21	existing before LP64-003
+src/game/tex.c	1	existing before LP64-003
+src/init.c	1	existing before LP64-003
+src/macro.h	1	existing before LP64-003
+src/mema.c	5	existing before LP64-003

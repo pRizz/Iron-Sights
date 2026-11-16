@@ -310,6 +310,34 @@ class CommandLine(unittest.TestCase):
         # Act / Assert
         self.assert_refused_before_compiling(tree, 'b.cpp', 'carries -w')
 
+    def test_gate_refuses_flags_that_switch_a_gated_kind_off(self):
+        # Arrange: each source would fail if compiled, so a refusal must come first
+        cases = {'-Wno-error': 'carries -Wno-error',
+                 '-Wno-error=int-conversion': 'carries -Wno-error=int-conversion',
+                 '-Wno-int-to-pointer-cast': 'carries -Wno-int-to-pointer-cast',
+                 '@flags.rsp': 'carries the response file @flags.rsp'}
+        for index, (extra, reason) in enumerate(cases.items()):
+            with self.subTest(flag=extra):
+                tree = self.build_dir(f't{index}', {'b.c': "1\nb.c:1:1: error: compiled\n"},
+                                      flags={'b.c': [*C_GATED, extra]})
+                # Act / Assert
+                self.assert_refused_before_compiling(tree, 'b.c', reason)
+
+    def test_gate_refuses_a_cxx_entry_carrying_wno_error(self):
+        # Arrange
+        tree = self.build_dir('t', {'b.cpp': "1\nb.cpp:1:1: error: compiled\n"},
+                              flags={'b.cpp': [*CXX_GATED, '-Wno-error']})
+        # Act / Assert
+        self.assert_refused_before_compiling(tree, 'b.cpp', 'carries -Wno-error')
+
+    def test_gate_accepts_a_wno_flag_for_a_kind_that_is_not_gated(self):
+        # Arrange: C++ gates only int-to-pointer-cast
+        tree = self.build_dir('t', {'b.cpp': "0\n"}, flags={'b.cpp': [*CXX_GATED, '-Wno-int-conversion']})
+        # Act
+        status, out, err = self.run_main('gate', tree)
+        # Assert
+        self.assertEqual(status, 0, out + err)
+
     def test_gate_compiles_every_directory_with_its_own_commands(self):
         # Arrange: one source, clean in the first tree, failing with the second tree's command
         clean = self.build_dir('one', {'a.c': "0\n"})
