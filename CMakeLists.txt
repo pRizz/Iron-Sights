@@ -35,20 +35,25 @@ elseif(GE_POINTER_BITS EQUAL 64)
     # -ffp-contract=off: no fused multiply-add, so floats round as on the N64 FPU
     # (the 32-bit build gets that from -mfpmath=sse; x86-64 and arm64 default to SSE/NEON).
     add_compile_options(-ffp-contract=off)
-    # The LP64-002 gate: C mixing pointers with 32-bit integers does not
-    # compile at 64 bits, so C drops -w (which would switch -Werror= off).
-    # Every other class the 64-bit C build printed is switched off by name,
-    # with the warnings it printed (headless / video trees, GCC 13.3 on
-    # aarch64 and x86_64, identical): incompatible-pointer-types 1790 / 1798,
-    # implicit-function-declaration 397 / 404, discarded-qualifiers 7,
-    # format-truncation 4, overflow 2, format-overflow 2, unused-result 1.
-    # The first two are left for later milestones; GCC 14 and later make them
-    # errors by default, and naming them here keeps the verdict the same there
-    # (only GCC 13.3 was run). Nine warnings that have no -W option remain (eleven
-    # in the video tree): MIN/MAX redefined, structs first declared in a
-    # parameter list, a useless storage class, a conditional's pointer mismatch.
+    # The LP64-002 gate: code mixing pointers with 32-bit integers does not
+    # compile at 64 bits, so neither C nor C++ has -w (which would switch
+    # -Werror= off). C++ needs only int-to-pointer-cast: it rejects the other
+    # two conversions without a flag. Every other class the 64-bit build
+    # printed is switched off by name, with the warnings it printed (headless /
+    # video trees, GCC 13.3 on aarch64 and x86_64, identical). C:
+    # incompatible-pointer-types 1790 / 1798, implicit-function-declaration
+    # 397 / 404, discarded-qualifiers 7, format-truncation 4, overflow 2,
+    # format-overflow 2, unused-result 1. C++ (video only):
+    # deprecated-declarations 3 (std::filesystem::u8path, weapon_cache.cpp).
+    # The first two C classes are left for later milestones; GCC 14 and later
+    # make them errors by default, and naming them here keeps the verdict the
+    # same there (only GCC 13.3 was run). The C log is clean. The C++ log keeps
+    # eleven warnings that have no -W option, all in port/fast3d: ten
+    # "initialized and declared 'extern'" (gfx_pc.cpp 8, gfx_roomcache.inl 2)
+    # and one "null character(s) preserved in literal" (gfx_sdl2.cpp).
     set(GE_WARNING_OPTIONS
-        $<$<NOT:$<COMPILE_LANGUAGE:C>>:-w>
+        $<$<COMPILE_LANGUAGE:CXX>:-Werror=int-to-pointer-cast>
+        $<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-declarations>
         $<$<COMPILE_LANGUAGE:C>:-Werror=int-conversion>
         $<$<COMPILE_LANGUAGE:C>:-Werror=pointer-to-int-cast>
         $<$<COMPILE_LANGUAGE:C>:-Werror=int-to-pointer-cast>
@@ -130,7 +135,9 @@ if(GE_POINTER_BITS EQUAL 64)
     # The game's src/sched.h shadows the C library's <sched.h>, which GCC 13's
     # libstdc++ reaches from C++20 <chrono> through <pthread.h>; the C++ renderer
     # (port/fast3d) needs no header from the game folders. The 32-bit list is
-    # unchanged; CI's GCC 11 never reaches <sched.h> there.
+    # unchanged: the Linux release image's GCC 11 (Ubuntu 22.04) compiled and
+    # linked the 32-bit renderer with it (at 79138e5); that its <chrono> never
+    # reaches <sched.h> is inferred from that, not traced.
     set(PORT_GAME_INCLUDE $<$<COMPILE_LANGUAGE:C>:${CMAKE_SOURCE_DIR}/src>
         $<$<COMPILE_LANGUAGE:C>:${CMAKE_SOURCE_DIR}/src/game>
         $<$<COMPILE_LANGUAGE:C>:${CMAKE_SOURCE_DIR}/src/inflate>)

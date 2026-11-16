@@ -2281,6 +2281,47 @@ with no warning and no error in either log (8 s and 15 s); the gate in the
 x86_64 container, 329 and 360 files compiled, 0 failed (configure 6 s, gate
 13 s); the i686 headless build and the 20-mission smoke, 20 of 20 passed
 (3 min 38 s); `lp64_casts.py check`, `OK: 28 truncating casts in 13 files`.
+*Second commit, "Gate 64-bit C++ on int-to-pointer casts and refuse ungated
+entries":* (1) 64-bit C++ no longer has `-w`, which had switched the gate off
+for the renderer: a `(char *)some_int` in `port/fast3d` compiled. In the
+`GE_POINTER_BITS EQUAL 64` branch C++ now gets `-Werror=int-to-pointer-cast`
+(the other two conversions are C++ errors without a flag) and
+`-Wno-deprecated-declarations`, the one C++ class with a `-W` option the
+64-bit build printed (3, `std::filesystem::u8path` in
+`port/fast3d/weapon_cache.cpp`, in both containers). This overrides the
+LP64-002 plan's "C++ flags unchanged" (its Task 10 Interfaces say so). The
+video log keeps eleven C++ warnings that have no `-W` option, all in strict-tier
+`port/fast3d` files, not edited: ten "initialized and declared 'extern'"
+(`gfx_pc.cpp` 8, `gfx_roomcache.inl` 2) and one "null character(s) preserved
+in literal" (`gfx_sdl2.cpp:711`); the headless log and every C log have none.
+The comment beside the flags lists them. Every 32-bit flag is unchanged:
+configured in the x86_64 container with the first commit's `CMakeLists.txt`
+and with this one, in the same directories, the 32-bit `compile_commands.json`
+files are byte-identical (headless 329 entries, video with the system SDL
+folder 360, video with `SDL2_LINUX_ROOT` 360). (2) `lp64_diagnostics.py gate`
+refuses, before compiling anything, an entry that is not gated: exit 2 naming
+each file and what it lacks (a C entry without one of the three `-Werror=`
+flags, a C++ entry without `-Werror=int-to-pointer-cast`) or that it carries
+`-w`. Run on the first commit's 64-bit trees it exited 2 naming the 24 C++
+entries (`lacks -Werror=int-to-pointer-cast, carries -w`). Four new tests,
+one per refusal, failed before the code (the gate compiled the entry and
+exited 1) and pass after it; `test_lp64_diagnostics.py` has 36 tests. (3)
+`test_pointer_bits.sh` also configures a 64-bit video tree and compiles with
+its first C++ entry's command: case 2d requires the int-to-pointer canary to
+fail and print `[-Werror=int-to-pointer-cast]`. Cases 2c and 2d now match
+GCC's bracketed `[-Werror=flag]` text, and each first compiles a clean source
+(a round trip through `uintptr_t`) with the same command, which must succeed.
+Before the flag change, in the aarch64 container, the test exited 1 at
+`64-bit cxx flags accept the int-to-pointer-cast canary`; after it, exit 0
+(`ok 2c`, `ok 2d`) in the aarch64 and the x86_64 container. (4) The comment on
+the 64-bit include order names the Linux release image's GCC 11 (Ubuntu
+22.04) instead of CI's, and states its cause as inferred. *What ran for it:*
+the gate in all four combinations, 329 and 360 files compiled, 0 failed
+(aarch64: configure 2 s, gate 6 s; x86_64: 7 s and 21 s); a full 64-bit Debug
+build of both trees compiled and linked in both containers with no error
+(aarch64 9 s and 25 s, x86_64 28 s and 36 s), warnings as above;
+`compare_win32.py commits HEAD WORKTREE` exit 0, `identical in loaded code and
+data` (1 min 59 s); `test_lp64_diagnostics.py` 36 tests OK.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),

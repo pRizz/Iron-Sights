@@ -5,8 +5,11 @@
 `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`, then `--target ge_buildinfo` built so the generated header
 exists) and compiles every C and C++ entry of each directory's `compile_commands.json` syntax-only
 with the entry's own flags, in parallel. At 64 bits those flags make the three int/pointer
-conversions errors (`CMakeLists.txt`). It exits 1 listing every file that fails, with its first
-error, 2 when a directory is not such a configuration, and 0 otherwise. A source file two
+conversions errors (`CMakeLists.txt`). Before compiling anything it exits 2 naming every entry whose
+flags do not: a C entry lacking any of the three `-Werror=` flags, a C++ entry lacking
+`-Werror=int-to-pointer-cast` (the one conversion C++ only warns about), or either carrying `-w`.
+It exits 1 listing every file that fails, with its first error, 2 when a directory is not such a
+configuration, and 0 otherwise. A source file two
 directories list is compiled once in each, with that directory's command.
 
 `sites [--messages] [--build-dir DIR]... [FILE...]` prints every int/pointer diagnostic of the C
@@ -39,6 +42,10 @@ GATE_TIMEOUT_SECONDS = 600
 MAX_WORKERS = 8
 GATE_SOURCES = ('.c', '.cc', '.cpp', '.cxx')
 OUTPUT_FLAGS = {'-c', '-MD', '-MMD'}
+# The flags a gated entry must carry (CMakeLists.txt). In C++ the other two conversions are errors
+# without any flag; int-to-pointer-cast is only a warning there.
+C_GATE_FLAGS = tuple(f'-Werror={kind}' for kind in KINDS)
+CXX_GATE_FLAGS = ('-Werror=int-to-pointer-cast',)
 
 DROPPED_FLAGS = {'-m32', '-msse2', '-mfpmath=sse', '-w', '-c', '-MD', '-MMD'}
 DROPPED_WITH_VALUE = {'-o', '-MT', '-MF'}
@@ -205,6 +212,18 @@ def gate_command(entry: dict) -> Optional[list[str]]:
     return kept + ['-fsyntax-only']
 
 
+def ungated_reason(entry: dict, argv: list[str]) -> Optional[str]:
+    """Return what keeps an entry's flags from making the int/pointer conversions errors, or None.
+
+    A C entry needs all three `-Werror=` flags, a C++ entry `-Werror=int-to-pointer-cast`; `-w`
+    switches every `-Werror=` off, so neither may carry it."""
+    required = C_GATE_FLAGS if entry['file'].endswith('.c') else CXX_GATE_FLAGS
+    reasons = [f'lacks {flag}' for flag in required if flag not in argv]
+    if '-w' in argv:
+        reasons.append('carries -w')
+    return ', '.join(reasons) or None
+
+
 def build_dir_problem(build_dir: Path) -> Optional[str]:
     """Return why `build_dir` is not a configured 64-bit tree with its generated header, or None."""
     cache = build_dir/'CMakeCache.txt'
@@ -243,13 +262,23 @@ def gate(build_dirs: list[Path]) -> int:
         print(f'error: {problem}', file=sys.stderr)
     if problems:
         return 2
-    failed = False
+    trees = []
     for build_dir in build_dirs:
         entries = json.loads((build_dir/'compile_commands.json').read_text())
         commands = [(entry, argv) for entry in entries if (argv := gate_command(entry)) is not None]
         if not commands:
             print(f'error: {build_dir} holds no C or C++ compile commands', file=sys.stderr)
             return 2
+        trees.append((build_dir, commands))
+    ungated = [f"error: {build_dir}: {entry['file']} is not gated: {reason}"
+               for build_dir, commands in trees for entry, argv in commands
+               if (reason := ungated_reason(entry, argv))]
+    for line in ungated:
+        print(line, file=sys.stderr)
+    if ungated:
+        return 2
+    failed = False
+    for build_dir, commands in trees:
         with ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as pool:
             results = list(pool.map(lambda pair: gate_one(*pair), commands))
         failures = sorted((entry['file'], error) for (entry, _), error in zip(commands, results) if error)

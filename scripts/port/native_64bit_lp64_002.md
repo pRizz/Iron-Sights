@@ -749,6 +749,12 @@ On `lp64/types-strict`, after Task 9.
   plus a `-Wno-` flag for each other warning class the 64-bit build prints, so
   the 64-bit build log has no warnings. The classes and their counts go in a
   comment beside the flags. C++ flags and every 32-bit flag are unchanged.
+  *Changed by the final review (2026-11-16):* 64-bit C++ had kept `-w`, so a
+  C++ int-to-pointer cast (the likely mistake of LP64-004's display-list work
+  in `port/fast3d`) passed the gate. 64-bit C++ now drops `-w` and gets
+  `-Werror=int-to-pointer-cast` plus `-Wno-deprecated-declarations`; every
+  32-bit flag is still unchanged, and `gate` refuses an entry that lacks the
+  flags or carries `-w` (FORK-089, final review fix wave).
 - `lp64_diagnostics.py gate BUILD_DIR...`: for each directory (a real
   `GE_POINTER_BITS=64` configure whose generated header exists), compiles
   every C and C++ entry of its `compile_commands.json` syntax-only with the

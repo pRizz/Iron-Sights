@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # GE_POINTER_BITS selects the 32-bit build (default) or the 64-bit one. Only
 # configuring is tested (compile and link commands are read from the generated
-# build files), plus small canary sources compiled with a recorded 64-bit C
-# command; CI's lp64_diagnostics.py gate compiles the game itself.
+# build files), plus small canary sources compiled with recorded 64-bit C and
+# C++ commands; CI's lp64_diagnostics.py gate compiles the game itself.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 work=$(mktemp -d /tmp/midas-pointer-bits.XXXXXX)
@@ -79,14 +79,20 @@ for flag in -m32 -no-pie; do
 done
 echo "ok 2b: 64-bit link has neither -m32 nor -no-pie"
 
-# 2c. At 64 bits the three int/pointer conversions are compile errors: a C
-# entry's own recorded command rejects one canary source per conversion, and
-# the message names the -Werror= flag (so -w or -Wno-error cannot hide it).
-c_command() {
-    python3 - "$work/$1/compile_commands.json" <<'PY'
+# 2c. At 64 bits the int/pointer conversions are compile errors. One recorded
+# command per language compiles one canary source per conversion it gates and
+# must reject each with GCC's own bracketed "[-Werror=flag]" text (so -w or
+# -Wno-error cannot hide it), and must accept a clean source that converts
+# through uintptr_t (so the rejection is the conversion's, not a broken
+# command's). C gates all three; C++ gates int-to-pointer-cast, the one it
+# only warns about (the other two are C++ errors without any flag). Only the
+# video tree compiles C++.
+expect_configure bits64video -DGE_POINTER_BITS=64 -DGE_HEADLESS=OFF -DGE_VIDEO=ON
+entry_command() {
+    python3 - "$work/$1/compile_commands.json" "$2" <<'PY'
 import json, shlex, sys
 for entry in json.load(open(sys.argv[1])):
-    if entry["file"].endswith(".c"):
+    if entry["file"].endswith(sys.argv[2]):
         argv = entry["arguments"] if "arguments" in entry else shlex.split(entry["command"])
         kept, skip = [], False
         for arg in argv:
@@ -100,28 +106,51 @@ for entry in json.load(open(sys.argv[1])):
         print(shlex.join(kept + ["-fsyntax-only"]))
         break
 else:
-    sys.exit("no C entry in compile_commands.json")
+    sys.exit(f"no {sys.argv[2]} entry in {sys.argv[1]}")
 PY
 }
-mapfile -t canary_cmd < <(c_command bits64)
-[[ ${#canary_cmd[@]} -eq 2 ]] || fail "bits64: no C compile command recorded"
+mapfile -t c_cmd < <(entry_command bits64 .c)
+[[ ${#c_cmd[@]} -eq 2 ]] || fail "bits64: no C compile command recorded"
+mapfile -t cxx_cmd < <(entry_command bits64video .cpp)
+[[ ${#cxx_cmd[@]} -eq 2 ]] || fail "bits64video: no C++ compile command recorded"
+
+# Compile $3 as language $1 (c or cxx) into canary-$2; returns the compiler's status.
+compile_canary() {
+    local lang=$1 name=$2 source=$3 status=0 ext=c
+    local -n cmd=${lang}_cmd
+    [[ $lang == cxx ]] && ext=cpp
+    printf '%s\n' "$source" >"$work/canary-$name.$ext"
+    (cd "${cmd[0]}" && eval "${cmd[1]}" '"$work/canary-$name.$ext"') \
+        >"$work/canary-$name.log" 2>&1 || status=$?
+    return "$status"
+}
 check_canary() {
-    local flag=$1 source=$2 status=0
-    printf '%s\n' "$source" >"$work/canary-$flag.c"
-    (cd "${canary_cmd[0]}" && eval "${canary_cmd[1]}" '"$work/canary-$flag.c"') \
-        >"$work/canary-$flag.log" 2>&1 || status=$?
-    if [[ $status -eq 0 ]]; then
-        fail "64-bit C flags accept the $flag canary: $source"
+    local lang=$1 flag=$2 source=$3
+    if compile_canary "$lang" "$lang-$flag" "$source"; then
+        fail "64-bit $lang flags accept the $flag canary: $source"
     fi
-    grep -qF -- "-Werror=$flag" "$work/canary-$flag.log" || {
-        cat "$work/canary-$flag.log" >&2
-        fail "64-bit $flag canary did not fail on -Werror=$flag"
+    grep -qF -- "[-Werror=$flag]" "$work/canary-$lang-$flag.log" || {
+        cat "$work/canary-$lang-$flag.log" >&2
+        fail "64-bit $lang $flag canary did not fail with [-Werror=$flag]"
     }
 }
-check_canary int-conversion 'int f(char *p) { return p; }'
-check_canary pointer-to-int-cast 'int g(char *p) { return (int)p; }'
-check_canary int-to-pointer-cast 'char *h(int i) { return (char *)i; }'
-echo "ok 2c: 64-bit C flags reject each int/pointer conversion"
+check_clean() {
+    local lang=$1 source=$2
+    compile_canary "$lang" "$lang-clean" "$source" || {
+        cat "$work/canary-$lang-clean.log" >&2
+        fail "64-bit $lang flags reject a clean source: $source"
+    }
+}
+check_clean c '#include <stdint.h>
+char *ok(char *p) { return (char *)(uintptr_t)p; }'
+check_canary c int-conversion 'int f(char *p) { return p; }'
+check_canary c pointer-to-int-cast 'int g(char *p) { return (int)p; }'
+check_canary c int-to-pointer-cast 'char *h(int i) { return (char *)i; }'
+echo "ok 2c: 64-bit C flags reject each int/pointer conversion and accept a clean source"
+check_clean cxx '#include <cstdint>
+char *ok(char *p) { return (char *)(uintptr_t)p; }'
+check_canary cxx int-to-pointer-cast 'char *h(int i) { return (char *)i; }'
+echo "ok 2d: 64-bit C++ flags reject an int-to-pointer cast and accept a clean source"
 
 # 3. Any other width is refused.
 expect_failure bad48 "GE_POINTER_BITS must be 32 or 64" -DGE_POINTER_BITS=48

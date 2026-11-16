@@ -240,17 +240,20 @@ pass its isolated executable rather than rebuilding an active player binary.
   follows the accepted [64-bit plan](scripts/port/native_64bit_plan.md). Read it
   before resuming, keep the 32-bit and web builds working, do not reopen its
   recorded decisions, and update its milestone status table before handing off.
-- At `GE_POINTER_BITS=64`, C that mixes pointers with 32-bit integers does not
-  compile: `CMakeLists.txt` gives 64-bit C `-Werror=int-conversion
-  -Werror=pointer-to-int-cast -Werror=int-to-pointer-cast` instead of `-w`,
-  and switches off by name each other warning class the 64-bit build printed
-  that has a `-W` option; the few warnings without one stay in the log (the
-  comment beside the flags lists both, with counts). CI's tests job
+- At `GE_POINTER_BITS=64`, C and C++ that mix pointers with 32-bit integers do
+  not compile: `CMakeLists.txt` gives 64-bit C `-Werror=int-conversion
+  -Werror=pointer-to-int-cast -Werror=int-to-pointer-cast` and 64-bit C++
+  `-Werror=int-to-pointer-cast` (C++ rejects the other two by itself) instead
+  of `-w`, and switches off by name each other warning class the 64-bit build
+  printed that has a `-W` option. The C log is clean; the C++ log keeps
+  eleven warnings that have no option, in `port/fast3d` (the comment beside
+  the flags lists the classes, with counts). CI's tests job
   configures a 64-bit headless tree (`build/lp64/gate`) and a 64-bit video
   tree (`build/lp64/gate-video`), builds only their `ge_buildinfo` target, and
   runs `python3 scripts/port/lp64_diagnostics.py gate build/lp64/gate
-  build/lp64/gate-video`, which compiles every C and C++ file of both trees
-  with its own flags and fails naming each file that does not compile. Run the
+  build/lp64/gate-video`, which refuses an entry lacking those flags or
+  carrying `-w`, then compiles every C and C++ file of both trees with its own
+  flags and fails naming each file that does not compile. Run the
   same lines in the x86_64 or aarch64 container (GCC 13) before pushing a
   change to C, C++ or the build; `lp64_diagnostics.py sites [--messages]
   [FILE...]` lists the conversions of those trees as `file:line: kind`. A new

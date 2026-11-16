@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import sys
 import tempfile
+from typing import Optional
 import unittest
 from unittest import mock
 
@@ -189,6 +190,11 @@ for physical, text in enumerate(lines, 1):
 """
 
 
+C_GATED = ['-Werror=int-conversion', '-Werror=pointer-to-int-cast', '-Werror=int-to-pointer-cast']
+CXX_GATED = ['-Werror=int-to-pointer-cast']
+GATED_FLAGS = {'.c': C_GATED, '.cpp': CXX_GATED}
+
+
 class CommandLine(unittest.TestCase):
     """Runs `main` on build directories whose compiler is FAKE_COMPILER: each source holds the exit
     status on its first line and the compiler output to print after it."""
@@ -199,8 +205,11 @@ class CommandLine(unittest.TestCase):
         self.folder = Path(self.tmp.name)
         (self.folder/'cc.py').write_text(FAKE_COMPILER)
 
-    def build_dir(self, name: str, files: dict[str, str], bits: int = 64, header: bool = True) -> Path:
-        """Make a configured build directory whose compile_commands.json compiles `files` with FAKE_COMPILER."""
+    def build_dir(self, name: str, files: dict[str, str], bits: int = 64, header: bool = True,
+                  flags: Optional[dict[str, list[str]]] = None) -> Path:
+        """Make a configured build directory whose compile_commands.json compiles `files` with FAKE_COMPILER.
+
+        Each entry carries the gate's flags for its language (GATED_FLAGS) unless `flags` gives a source's own."""
         tree = self.folder/name
         (tree/'generated').mkdir(parents=True)
         (tree/'CMakeCache.txt').write_text(f'CMAKE_BUILD_TYPE:STRING=Debug\nGE_POINTER_BITS:STRING={bits}\n')
@@ -209,8 +218,9 @@ class CommandLine(unittest.TestCase):
         entries = []
         for source, text in files.items():
             (self.folder/source).write_text(text)
+            own = (flags or {}).get(source, GATED_FLAGS[Path(source).suffix])
             entries.append(dict(directory=str(tree), file=str(self.folder/source),
-                                arguments=[sys.executable, str(self.folder/'cc.py'), '-o', 'x.o', '-c',
+                                arguments=[sys.executable, str(self.folder/'cc.py'), *own, '-o', 'x.o', '-c',
                                            str(self.folder/source)]))
         (tree/'compile_commands.json').write_text(json.dumps(entries))
         return tree
@@ -265,6 +275,41 @@ class CommandLine(unittest.TestCase):
         self.assertEqual(status, 2)
         self.assertIn('GE_POINTER_BITS=64', err)
 
+    def assert_refused_before_compiling(self, tree: Path, source: str, reason: str):
+        """Run the gate on `tree`; require exit 2 naming `source` and `reason`, with nothing compiled."""
+        # Act
+        status, out, err = self.run_main('gate', tree)
+        # Assert
+        self.assertEqual(status, 2, out + err)
+        refusal = next((line for line in err.splitlines() if source in line), '')
+        self.assertIn(reason, refusal, err)
+        self.assertNotIn('files compiled', out)
+
+    def test_gate_refuses_a_c_entry_lacking_a_werror_flag(self):
+        # Arrange: the source would fail if compiled, so a refusal must come first
+        tree = self.build_dir('t', {'a.c': "0\n", 'b.c': "1\nb.c:1:1: error: compiled\n"},
+                              flags={'b.c': ['-Werror=int-conversion', '-Werror=int-to-pointer-cast']})
+        # Act / Assert
+        self.assert_refused_before_compiling(tree, 'b.c', 'lacks -Werror=pointer-to-int-cast')
+
+    def test_gate_refuses_a_c_entry_carrying_w(self):
+        # Arrange
+        tree = self.build_dir('t', {'b.c': "1\nb.c:1:1: error: compiled\n"}, flags={'b.c': [*C_GATED, '-w']})
+        # Act / Assert
+        self.assert_refused_before_compiling(tree, 'b.c', 'carries -w')
+
+    def test_gate_refuses_a_cxx_entry_lacking_int_to_pointer_cast(self):
+        # Arrange
+        tree = self.build_dir('t', {'b.cpp': "1\nb.cpp:1:1: error: compiled\n"}, flags={'b.cpp': []})
+        # Act / Assert
+        self.assert_refused_before_compiling(tree, 'b.cpp', 'lacks -Werror=int-to-pointer-cast')
+
+    def test_gate_refuses_a_cxx_entry_carrying_w(self):
+        # Arrange
+        tree = self.build_dir('t', {'b.cpp': "1\nb.cpp:1:1: error: compiled\n"}, flags={'b.cpp': ['-w', *CXX_GATED]})
+        # Act / Assert
+        self.assert_refused_before_compiling(tree, 'b.cpp', 'carries -w')
+
     def test_gate_compiles_every_directory_with_its_own_commands(self):
         # Arrange: one source, clean in the first tree, failing with the second tree's command
         clean = self.build_dir('one', {'a.c': "0\n"})
@@ -272,7 +317,7 @@ class CommandLine(unittest.TestCase):
         (self.folder/'bad.py').write_text('import sys\nsys.stderr.write("a.c:1:1: error: only here\\n")\nsys.exit(1)\n')
         entries = json.loads((failing/'compile_commands.json').read_text())
         entries.append(dict(directory=str(failing), file=str(self.folder/'a.c'),
-                            arguments=[sys.executable, str(self.folder/'bad.py'), str(self.folder/'a.c')]))
+                            arguments=[sys.executable, str(self.folder/'bad.py'), *C_GATED, str(self.folder/'a.c')]))
         (failing/'compile_commands.json').write_text(json.dumps(entries))
         # Act
         status, out, err = self.run_main('gate', clean, failing)
