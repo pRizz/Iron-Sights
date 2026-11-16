@@ -243,7 +243,7 @@ and landed the branch by fast-forward in the commit "Fix the gallery hook's main
 int/pointer conversion a compile error: C with the three `-Werror=` flags, C++
 with `-Werror=int-to-pointer-cast` (it rejects the other two by itself). 64-bit
 builds compile and link in the containers. LP64-003 (addresses and memory) is
-planned and waits for the owner's review; nothing of it is built. While it was
+planned, and the owner accepted its plan on 2026-11-16; nothing of it is built. While it was
 planned on 2026-11-16 a 64-bit executable was run for the first time: it boots
 through the ROM load and crashes in the animation table, and passes none of
 the 20 smoke missions (the LP64-003 planning paragraph below). LP64-003 onward
@@ -2527,9 +2527,15 @@ gate's token check were added at the close):
   the gallery is fresh on `main` and the hook's branch test is fixed
   (FORK-022). Nothing is left of it.
 
-**Milestone LP64-003 (addresses and memory), planned on 2026-11-16, not built:**
+**Milestone LP64-003 (addresses and memory), planned and accepted on 2026-11-16, not built:**
 [the milestone's plan](scripts/port/native_64bit_lp64_003.md) lists twelve
-tasks and nine decisions for the owner, and waits for the owner's review. This
+tasks and nine decisions for the owner. The owner accepted all nine
+recommendations on 2026-11-16: the done condition (a startup check, then a
+stop with status 5 at a guard naming `animation tables`), two new CI checks,
+`Vertex` at 16 bytes in this milestone, one strict-tier batch through one
+laptop trip, no low-address mode, the items moved to LP64-004, the
+suspend-point notice in LP64-007, and pool sizes with LP64-005 and LP64-006;
+the design's "Milestones" and "Decisions" record them. This
 paragraph records the plan and the measurements it rests on, taken on `main`
 at 2afe62d in the Mac's containers (GCC 13.3; aarch64 native, x86_64
 emulated). No source, build file or tool changed for it. *Link:* the 64-bit

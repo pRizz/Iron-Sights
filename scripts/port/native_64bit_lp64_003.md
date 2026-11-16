@@ -2,9 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Planned on 2026-11-16, not built. The owner reviews this plan
-before any task starts; "Decisions for the owner" at the end lists what is
-waiting for an answer.
+**Status:** Planned on 2026-11-16 and accepted by the owner the same day,
+with all nine recommendations under "Decisions for the owner" at the end. Not
+built. Acceptance is not evidence that any task works; the status table of
+[native_64bit_plan.md](native_64bit_plan.md) records what has been built and
+verified.
 
 **Goal:** A 64-bit headless build that keeps every address whole: no game data
 below 4 GB and a startup check that proves it, one host-pointer test that
@@ -1181,8 +1183,10 @@ this ROM lacks, and the pool budgets. A documentation-only commit.
 
 ## Decisions for the owner
 
-Each has a recommendation; the plan is written for it. Decisions 1 to 4
-change what gets built and need an answer before Task 1.
+**The owner accepted all nine recommendations on 2026-11-16.** They are
+kept here as put, each with the alternative that was not taken; the plan is
+written for the recommendations. Decision 1 changes the design's done
+condition for this milestone, and the design records it.
 
 1. **What "done" means.** The design says LP64-003 is done "when a headless
    64-bit build starts and reaches its first asset load". Measured, today's
@@ -1230,5 +1234,5 @@ change what gets built and need an answer before Task 1.
    LP64-006. *Recommended:* as planned.
 9. **For LP64-004's plan, not this one:** the boot needs animation tables,
    text banks, fonts, then audio banks and music, before any stage load. The
-   design's class order has animation tables fourth and audio ninth. No
-   answer is needed now.
+   design's class order has animation tables fourth and audio ninth. Noted
+   by the owner; LP64-004's plan settles the order.
