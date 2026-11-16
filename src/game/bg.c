@@ -3558,7 +3558,7 @@ void bgLoadRoomModelData(s32 roomID)
      * Keep this prototype visible here for IDO codegen.
      * Without it, the memaRealloc call below schedules a2 too early.
      */
-    s32 memaRealloc(s32 addr, u32 oldsize, u32 newsize);
+    s32 memaRealloc(intptr_t addr, u32 oldsize, u32 newsize);
 
     s32 allocsize;
     s32 used;
@@ -3694,7 +3694,7 @@ void bgLoadRoomModelData(s32 roomID)
     // If wasted space is detected, shrink allocated memory block.
     if (allocsize != ((used + 0x20) & ~0xf))
     {
-        memaRealloc((s32)data, allocsize, ((used + 0x20) & ~0xf));
+        memaRealloc((intptr_t)data, allocsize, ((used + 0x20) & ~0xf));
     }
 
     // Same branches, only the LUT parameter changes
@@ -4082,7 +4082,7 @@ void bgBuildRoomVtxBounds(s32 roomID)
                * dump the inputs for the first few batches to see whether w1
                * is a segment word, a host pointer, or byte-scrambled */
                 static s32 n;
-                if (((u32) vtx & 3) != 0) {
+                if (((uintptr_t) vtx & 3) != 0) {
                     if (n < 24) {
                         n++;
                         printf("ge: vtxbounds room=%d cmd=%d w0=%08x w1=%08x vertices=%p vtx=%p\n",

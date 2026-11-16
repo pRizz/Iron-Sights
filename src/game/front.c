@@ -375,7 +375,7 @@ s32 is_cheat_menu_available = FALSE;
  * docs/port/port-options-menu.md */
 
 u8 * ptr_logo_and_walletbond_DL = NULL;
-s32 ptr_menu_videobuffer = 0;
+u8 *ptr_menu_videobuffer = 0;
 struct Model *logoinst = NULL;
 struct Model * walletinst[] = { NULL, NULL, NULL, NULL};
 

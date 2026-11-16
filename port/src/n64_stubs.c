@@ -125,27 +125,27 @@ void resolve_TLBaddress_for_InvalidHit(void)
  * addresses are meaningless here; return 0. If the romdata track ever needs
  * real values it owns the segment symbols these wrapped.
  */
-u32 get_csegmentSegmentStart(void)
+u8 *get_csegmentSegmentStart(void)
 {
     return 0;
 }
 
-u32 get_cdataSegmentRomStart(void)
+u8 *get_cdataSegmentRomStart(void)
 {
     return 0;
 }
 
-u32 get_cdataSegmentRomEnd(void)
+u8 *get_cdataSegmentRomEnd(void)
 {
     return 0;
 }
 
-u32 get_inflateSegmentRomStart(void)
+u8 *get_inflateSegmentRomStart(void)
 {
     return 0;
 }
 
-u32 get_inflateSegmentRomEnd(void)
+u8 *get_inflateSegmentRomEnd(void)
 {
     return 0;
 }

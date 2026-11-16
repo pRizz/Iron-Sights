@@ -33,7 +33,7 @@ extern signed short sins(unsigned short x);
 
 // bss
 //CODE.bss:80069550
-s32 barrelDisplayListPtr;
+void *barrelDisplayListPtr;
 //CODE.bss:80069554
 Gfx *gunbarrelgfxListPointer;
 //CODE.bss:80069558
@@ -61,11 +61,11 @@ f32 titleTransitionY;
 //CODE.bss:80069584
 s16 word_CODE_bss_80069584;
 //CODE.bss:80069588
-s32 dword_CODE_bss_80069588;
+u8 *dword_CODE_bss_80069588;
 //CODE.bss:8006958C
-s32 dword_CODE_bss_8006958C;
+u8 *dword_CODE_bss_8006958C;
 //CODE.bss:80069590
-s32 virtualaddress;
+u8 *virtualaddress;
 
 /**
  * Address 80069594
@@ -412,13 +412,13 @@ Gfx *load_display_rare_logo(Gfx *gdl, s32 arg1, s32 arg2, s32 arg3, s32 arg4) {
 extern void *_rarewarelogoSegmentRomStart;
 extern void *_rarewarelogoSegmentStart;
 extern void *_rarewarelogoSegmentEnd; 
-void setupRarewareLogoData(s32 address, s32 size) {
+void setupRarewareLogoData(u8 *address, s32 size) {
     gunbarrel_mode = 0;
     g_TitleX = 880.0f;
     D_8002A89C = -40.0f;
     intro_eye_counter = 0;
     virtualaddress = address;
-    romCopy(virtualaddress, &_rarewarelogoSegmentRomStart, ALIGN64_V2((u32)&_rarewarelogoSegmentEnd - (u32)&_rarewarelogoSegmentStart));
+    romCopy(virtualaddress, &_rarewarelogoSegmentRomStart, ALIGN64_V2((uintptr_t)&_rarewarelogoSegmentEnd - (uintptr_t)&_rarewarelogoSegmentStart));
 
 #ifndef TARGET_N64
     { /* the logo data is typed host references throughout (the segment
@@ -501,7 +501,7 @@ void sub_GAME_7F008DE4(u8 **addr, s32 *size) {
     *size -= 0x40400;
     *addr += 0x40400;
     dword_CODE_bss_80069588 = *addr;
-    romCopy(dword_CODE_bss_80069588, (void *)(s32)&unknown2, ALIGN64_V2(((u32)&unknown2_end - (u32)&unknown2)));
+    romCopy(dword_CODE_bss_80069588, (void *)&unknown2, ALIGN64_V2(((uintptr_t)&unknown2_end - (uintptr_t)&unknown2)));
     rle_expand_8bit(dword_CODE_bss_80069588, dword_CODE_bss_8006958C);
 }
 

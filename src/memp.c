@@ -40,7 +40,7 @@ void mempInit(void)
 
 const char *tokenFind(s32 arg0, const char *arg1);
 long int strtol(const char *str, char **endptr, int base);
-void mempCheckMemflagTokens(s32 poolAreaStart, s32 poolAreaSize)
+void mempCheckMemflagTokens(u8 *poolAreaStart, s32 poolAreaSize)
 {
     s_mempMVALS poolSizes;
 
@@ -79,7 +79,7 @@ void mempSetBankStarts(s32 poolSizes[MEMPOOL_COUNT+1])
     s32 bankstarts[MEMPOOL_COUNT] = {0};
     s32 mempLen;
     s32 mempRequested;
-    s32 mempStart;
+    u8 *mempStart;
 
     //set MF, ML, ME first
     i = 0;
@@ -285,7 +285,7 @@ s32 mempGetBankSizeLeft(u8 bank) {
 }
 
 // Last three bits contains the bank, the rest contains the size.
-u32 mempAllocPackedBytesInBank(u32 sizeandbank) {
+void *mempAllocPackedBytesInBank(u32 sizeandbank) {
     return mempAllocBytesInBank((sizeandbank >> 3), (sizeandbank & 7));
 }
 

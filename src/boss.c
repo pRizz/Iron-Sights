@@ -192,7 +192,7 @@ void bossInitMainthreadData(void)
     OSMesg bossmsg;
     OSTimer bosstimer;
     OSMesgQueue bossmq;
-    u32 start;
+    u8 *start;
     u32 unused;
     s32 i;
 
@@ -246,7 +246,7 @@ void bossInitMainthreadData(void)
     }
 
 #ifdef TARGET_N64
-    start = (PHYS_TO_K0(osVirtualToPhysical(&_bssSegmentEnd)));
+    start = (u8 *)(PHYS_TO_K0(osVirtualToPhysical(&_bssSegmentEnd)));
     mempCheckMemflagTokens(start, ((u32)tlbmanageGetTlbAllocatedBlock() - (u32)start));
 #else
     /* PC: PHYS_TO_K0's OR-0x80000000 corrupts host pointers, and the arena
@@ -374,7 +374,7 @@ void bossMainloop(void)
     u32 pendingGfx = 0;
     s32 freeGfx;
     s32 mainTickElapsed;
-    s32 rspReplyMsg;
+    OSMesg rspReplyMsg;
 
     u32 unused_stackpadding_[56];
 
@@ -886,7 +886,7 @@ void bossMainloop(void)
                                 indycommHostSendDump(taskGrabBuffer, (u8*)0x80000000, 0x400000);
                             }
 
-                            rspReplyMsg = (s32)(&localGfxDoneMsg);
+                            rspReplyMsg = (OSMesg)(&localGfxDoneMsg);
                             rspGfxTaskStart(firstGdl, gdl, 0, (s32*)rspReplyMsg);
 
                             pendingGfx++;

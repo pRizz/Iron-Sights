@@ -123,7 +123,7 @@ void bondviewLoadSetupIntroSection(void)
 
     if (bossGetStageNum() == LEVELID_CUBA)
     {
-        resolution = (s32)mempAllocBytesInBank(0x46EA0, MEMPOOL_STAGE);
+        resolution = (intptr_t)mempAllocBytesInBank(0x46EA0, MEMPOOL_STAGE);
         resolution = (resolution + 0x3f) & ~0x3F;
         cameraFrameCounter1 = 1;
     }

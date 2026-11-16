@@ -846,7 +846,7 @@
   ],
   [
     "setupRarewareLogoData",
-    "void (s32, s32)",
+    "void (u8 *, s32)",
     "src/game/title.c"
   ],
   [
@@ -1021,7 +1021,7 @@
   ],
   [
     "zbufSetBuffer",
-    "void (s32, s32, s32)",
+    "void (intptr_t, s32, s32)",
     "src/game/viewport.c"
   ]
 ]

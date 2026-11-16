@@ -364,7 +364,7 @@ void texSelect(Gfx **gdlptr, struct sImageTableEntry *tconfig, u32 arg2, s32 arg
             texLoad((s32 *)tconfig, NULL);
         }
 
-        aa = PHYS_TO_K0(tconfig->index);
+        aa = (u16 *)PHYS_TO_K0(tconfig->index);
         tex = texFindInPool((aa)[-4], NULL);
 
 #ifndef TARGET_N64

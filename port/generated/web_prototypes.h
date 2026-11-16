@@ -522,7 +522,7 @@ void set_show_patrols_flag(s32);
 void set_sound_effect_for_weapontype_collection(ITEM_IDS);
 
 /* src/game/title.c */
-void setupRarewareLogoData(s32, s32);
+void setupRarewareLogoData(u8 *, s32);
 
 /* src/game/loadobjectmodel.c */
 void setupUpdateObjectRoomPosition(struct ObjectRecord *);
@@ -627,6 +627,6 @@ void viSetColorMode16Bit(void);
 void viSetColorMode32Bit(void);
 
 /* src/game/viewport.c */
-void zbufSetBuffer(s32, s32, s32);
+void zbufSetBuffer(intptr_t, s32, s32);
 
 #endif

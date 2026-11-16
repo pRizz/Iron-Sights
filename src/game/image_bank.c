@@ -189,9 +189,9 @@ void texReset(void)
     }
 #endif
 
-    size = (u32)&_GlobalimagetableSegmentEnd - (u32)&_GlobalimagetableSegmentStart;
+    size = (uintptr_t)&_GlobalimagetableSegmentEnd - (uintptr_t)&_GlobalimagetableSegmentStart;
     pGlobalimagetable = mempAllocBytesInBank(size + 0x1000, MEMPOOL_STAGE);
-    pGlobalimagetable = ((u32)pGlobalimagetable + 0xFFFU) & 0xFFFFF000;
+    pGlobalimagetable = (s32 *)(((uintptr_t)pGlobalimagetable + 0xFFFU) & ~(uintptr_t)0xFFF);
 
     romCopy(pGlobalimagetable, &_GlobalimagetableSegmentRomStart, size);
 

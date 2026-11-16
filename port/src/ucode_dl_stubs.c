@@ -111,7 +111,7 @@ void initTLBPrepareContext(void)
  * decompressed length on N64; 0 = "nothing decompressed" keeps the dead
  * caller's arithmetic inert if it ever ran.
  */
-u32 jump_decompressfile(u32 source, u32 target, u32 buffer)
+u32 jump_decompressfile(u8 *source, u8 *target, u32 buffer)
 {
     (void)source;
     (void)target;

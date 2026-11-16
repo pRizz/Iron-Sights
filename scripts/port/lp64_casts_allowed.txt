@@ -9,4 +9,5 @@ port/src/romfile_setup.c	7	existing before LP64-002
 port/src/romfile_stan.c	4	existing before LP64-002
 src/game/bg.c	3	existing before LP64-002
 src/game/propobj.c	1	existing before LP64-002
+src/game/ramromreplay.c	1	LP64-002 task 8: save_ramrom_to_devtool passes the demo address as indycommHostSaveFile's s32 size (the inherited arguments are swapped); Indy development-host path only, kept as on 32-bit
 src/game/stan.c	2	LP64-002 task 7: portStanPack writes room pointers into the packed image's 4-byte slots; LP64-004's stan converter replaces them

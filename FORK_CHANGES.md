@@ -1534,6 +1534,80 @@ Global Constraints bullet, and added the one comment line in `stan.c`
 smoke or harness run; the pre-commit hook, `lp64_casts.py check` and the
 i686 headless build ran.
 
+*Task 8, first commit (ROM and address plumbing, memory, boot; local, not
+pushed):* carries ROM, DMA, heap and frame-buffer addresses in pointer-sized
+types. *Declarations:* `romptr_t` `u32` to `uintptr_t` (`bondtypes.h`);
+`OSIoMesg.devAddr`, the `devAddr` parameters of `osPiRawStartDma` and
+`osPiStartDma`, and `osVirtualToPhysical`'s return `u32` to `uintptr_t`, with
+`OS_K0_TO_PHYSICAL`, `OS_K1_TO_PHYSICAL` and the seven PC-side K0/K1/KDM/PHYS
+macros of `R4300.h` cast to `uintptr_t` (`os.h`, `libultra_shim.c`); in
+`mema.c` `memaspace.addr` and `g_MemaHeapStart` `s32` to `intptr_t`, the
+`addr` parameters of `memaAuditFree`, `_memaFree` and `memaRealloc` `s32` to
+`intptr_t`, `memaGrow` `u32`/`s32` to `uintptr_t`/`intptr_t`, the
+`memaDefragPass` local `u32` to `uintptr_t`, and the `0xffffffff` end markers
+written as `-1` (an unsigned literal would zero-extend in the wider field and
+the walks would run past the end); `romCopyAligned` returns `void *` and works
+in `intptr_t`; the five `get_*Segment*` helpers return `u8 *` and
+`jump_decompressfile` takes `u8 *` source and target (`boot.h`, `n64_stubs.c`,
+`ucode_dl_stubs.c`); `cdataSegmentRomSize` `uintptr_t` (`init.c`);
+`mempCheckMemflagTokens` takes `u8 *`, `mempAllocPackedBytesInBank` returns
+`void *`; `GfxInfo_s.cfb`, `g_gfxRdpOutputBufferStart/End`,
+`ptr_menu_videobuffer`, the two title-screen buffers and
+`setupRarewareLogoData`'s address `u8 *`, `barrelDisplayListPtr` `void *`;
+`z_buffer`, `zbufSetBuffer`'s buffer and `resolution` `intptr_t`;
+`indycmdSendRamRomLoad`, `indyrescmdRamRomLoad` and `indycmdReceiveFile` take
+`u8 *` buffers; `boss.c`'s reply message is an `OSMesg`; `ALIGN64_V2` and the
+alignment tests in `bg.c`, `image.c`, `image_bank.c` and the Indy files go
+through `uintptr_t`/`intptr_t`; segment sizes are differences of
+`uintptr_t`/`intptr_t` addresses. `port/generated/web_prototypes.h` and `.json`
+follow the two changed prototypes listed there. *Signedness:* `mema`'s free
+list is ordered unsigned (the defrag local was `u32` and `memaSearch` cast to
+`u32`), so those compares stay unsigned through `uintptr_t`; the GE_ROOM_AUDIT
+heap-range check compared signed `s32` addresses and stays signed
+(`intptr_t`); stored addresses that are only added to or masked are
+`intptr_t` where they were `s32` and `uintptr_t` where they were `u32`; DMA
+device addresses, K0 conversions and ROM pointers were `u32` and are
+`uintptr_t`. In the changed code, the only unsigned hex literals standing for
+high bits were the `mema` markers and `image_bank.c`'s page mask
+`0xFFFFF000`, now `~(uintptr_t)0xFFF`. *Test:* `scripts/port/test_mema_order.sh` (added to the CI
+step) includes `mema.c` and runs it at both widths with made-up addresses
+either side of 0x80000000: two spaces that straddle it merge after two defrag
+passes, and at 32 bits a free at 0x80008000 in a heap at 0x7FFF0000 is
+reported out of the heap. It passed at the old types; typing the field,
+`g_MemaHeapStart` and the audit/free parameters `u32` failed it ("compared
+unsigned"), the defrag local `s32` failed it ("did not merge"), and the
+`0xffffffff` markers crashed it at 64 bits; it passes after the change in the
+x86_64 and i686 containers. *Allowlist:* one line, `ramromreplay.c`'s
+`indycommHostSaveFile` call, whose inherited arguments pass the demo address
+as the `s32` size (Indy host only, kept as on 32-bit); `check` reports 26
+casts in 11 files. *Counts:* 460 to 336 (`int-conversion` 130 to 81,
+`int-to-pointer-cast` 126 to 104, `pointer-to-int-cast` 204 to 151; 68 files
+to 46). Files cleared: `R4300.h`, `libultra_shim.c`, `boss.c`, `fr.c`,
+`bondview_r.c`, `image_bank.c`, `indy_commands.c`, `indy_comms.c`,
+`initmenus.c`, `lv.c`, `othermodemicrocode.c`, `ramromreplay.c`,
+`ramromreplay.h`, `rsp.c`, `textrelated.c`, `title.c`, `viewport.c`, `init.c`,
+`macro.h`, `mema.c`, `memp.c`, `ramrom.c`; reduced: `os.h` 4 to 3, `audi.c` 6
+to 5, `bg.c` 27 to 25, `bondview2.c` 82 to 81 (through `resolution`),
+`front.c` 6 to 5, `image.c` 14 to 2, `initanitable.c` 3 to 1. Building the
+changed files at 32 bits before and after adds no warning. *Windows
+comparison:* exited 1 (111 s; `.text` VirtualSize 0x3358f4 to 0x335904).
+Every differing word in `.data` (175), `.rdata` (5,543) and `.CRT` (3) is an
+image address in both builds. Three functions differ: `_romCopyAligned`
+(register choice), `_init` (one displacement, the address of
+`resolve_TLBaddress_for_InvalidHit` written relative to 0x80000000, moved by
+16 bytes with the code) and `_replay_recorded_ramrom_at_address`, whose
+callee's return type changed: its optimised GIMPLE is the same but for the
+removed cast and the inlined header swap stepping one pointer instead of two
+with equal addresses; in the object code the field swaps are scheduled
+differently and registers differ, with the same multiset and the same
+per-address order of memory accesses and no call between reordered ones.
+*64-bit problems left (LP64-003/004):* `mema7000A2F8` passes addresses to a
+`u32` callback; `image.c` 2641 and 2738 store `osVirtualToPhysical` in an
+`s32 *`; `RZIPBUFADDR` and `jump_decompressfile`'s buffer stay `u32`
+(N64-only); `ALIGN64_V1` callers; `audi.c` returns `osVirtualToPhysical` from
+`s32` functions (the audio commit). The three `os.h` places come from
+`bondview2.c` calls and are Task 9's. *What ran:* step 1 (`update`, 16 s, 336 in 46 files, no `--allow-rise`). Step 2: the i686 headless build exited 0 (18 s) and the 20-mission smoke exited 0 with 20 of 20 `PASS` (about 185 s). Step 3 as above. `lp64_casts.py check` passed on the host (26 casts). The CI step's lines except the two `cmake` lines, plus `test_stan_callbacks.sh`, `test_image_bank.sh` and `test_dyn.sh`, ran in the i686 container: all 43 passed (118 s), `test_buffers.sh` without `MIDAS_BUFFER_SANITIZE=1` (it hangs under `qemu-i386`).
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),

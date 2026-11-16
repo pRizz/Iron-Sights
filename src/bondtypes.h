@@ -67,7 +67,7 @@ extern f32 portFovDefault(void);
 typedef s32 bool; /* Boolean (TRUE/FALSE) */
 
 // forward declare for inherit structures
-typedef u32 romptr_t;
+typedef uintptr_t romptr_t;
 struct object_standard;
 struct ChrRecord;
 struct PropRecord;

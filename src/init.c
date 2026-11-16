@@ -95,7 +95,7 @@ void init(void)
     u8 *csegmentSegmentVaddrStart;
     u8 *cdataSegmentRomStart;
     u32 flags;
-    u32 cdataSegmentRomSize;
+    uintptr_t cdataSegmentRomSize;
     u8 *inflateSegmentRomStart;
     s32 i;
     s32 j;
@@ -126,10 +126,10 @@ void init(void)
     decompress_result = jump_decompressfile(datazipram, csegmentSegmentVaddrStart, RZIPBUFADDR);
     if (decompress_result);
 
-    inflate_code_size = (s32) ((u32) &_inflateSegmentRomStart - (u32) &_codeSegmentRomStart);
+    inflate_code_size = (s32) ((uintptr_t) &_inflateSegmentRomStart - (uintptr_t) &_codeSegmentRomStart);
     if (inflate_code_size > MAXCODESIZE)
     {
-        osPiRawStartDma(OS_READ, &_alt_startSegmentRomStart, &_alt_startSegmentStart, inflate_code_size - MAXCODESIZE);
+        osPiRawStartDma(OS_READ, (uintptr_t) &_alt_startSegmentRomStart, &_alt_startSegmentStart, inflate_code_size - MAXCODESIZE);
         while ((osPiGetStatus() & PI_STATUS_DMA_BUSY))
         {
         }

@@ -84,6 +84,7 @@ jobs:
           python3 scripts/port/test_lp64_env.py
           bash scripts/port/test_abi_probe.sh
           bash scripts/port/test_monitor_script.sh
+          bash scripts/port/test_mema_order.sh
           python3 scripts/port/test_lp64_diagnostics.py
           python3 scripts/port/test_lp64_casts.py
           python3 scripts/port/lp64_casts.py check
