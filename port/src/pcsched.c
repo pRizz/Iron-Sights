@@ -169,6 +169,13 @@ static void portAllocHighFail(const char *name, u32 size)
     exit(1);
 }
 
+static void portAllocHighTooLarge(const char *name, u32 size) __attribute__((noreturn));
+static void portAllocHighTooLarge(const char *name, u32 size)
+{
+    portConLogf("ge: %s: a request of %u bytes is too large to round up to the mapping size\n", name, size);
+    exit(1);
+}
+
 static void *portAllocHighOrExit(const char *name, u32 size)
 {
     void *p = portAllocHighRaw(NULL, size);
@@ -195,7 +202,9 @@ static int s_HighArenaTried;
  * Idempotent; the lazy path still calls it for any caller that runs earlier. */
 void portAllocHighReserve(void)
 {
+#if !IS_64_BIT
     int attempt;
+#endif
 
     if (s_HighArenaTried)
     {
@@ -242,7 +251,7 @@ void *portAllocHigh(u32 size)
     int attempt;
 
 #if IS_64_BIT
-    if (size > 0xffffffffu - 15u) portAllocHighFail("high allocation", size);
+    if (size > 0xffffffffu - 15u) portAllocHighTooLarge("high allocation", size);
 #endif
     if (size > 0xffffffffu - 15u) return NULL;
     size = (size + 15u) & ~15u;
@@ -303,14 +312,15 @@ void *portAllocHigh(u32 size)
 /* One dedicated high mapping, never the shared arena (the 12 MB ROM image would
  * eat a fifth of it), using the same hint ladder and scan as an oversize
  * request. It must stay >= 0x10000000 so the ROM buffer fails fast3d's
- * segment-reference test like every other asset; NULL means the caller keeps
- * its heap copy. */
+ * segment-reference test like every other asset. At 32 bits NULL means the
+ * caller keeps its heap copy; at 64 bits there is no NULL: the mapping is
+ * made above 4 GB with no hint, or the game stops naming the request. */
 void *portAllocHighDedicated(u32 size)
 {
     int attempt;
 
 #if IS_64_BIT
-    if (size > 0xffffffffu - 0xffffu) portAllocHighFail("high allocation", size);
+    if (size > 0xffffffffu - 0xffffu) portAllocHighTooLarge("high allocation", size);
 #endif
     if (size > 0xffffffffu - 0xffffu) return NULL;
     size = (size + 0xFFFFu) & ~0xFFFFu;

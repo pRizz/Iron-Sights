@@ -95,6 +95,13 @@ expect "harness_flags 32 prints -m32" "-m32" "$(harness_flags 32)"
 expect "harness_flags 32 adds the harness's own flags" "-m32 -msse2 -mfpmath=sse" "$(harness_flags 32 -msse2 -mfpmath=sse)"
 expect "harness_flags 64 prints nothing" "" "$(harness_flags 64 -msse2 -mfpmath=sse)"
 
+# A loop over "$(harness_widths)" runs zero times when the helper fails, and the
+# harness passes having run nothing: a harness takes widths=$(harness_widths) on
+# its own line so set -e stops it. Arrange / Act: the harnesses that loop directly.
+direct_loops=$(grep -lE 'in[[:space:]]+"?\$\(harness_widths\)' scripts/port/*.sh | tr '\n' ' ' || true)
+# Assert
+expect "no harness loops directly over \$(harness_widths)" "" "$direct_loops"
+
 if [[ $failures -ne 0 ]]; then
     echo "test_harness_widths: $failures failed"
     exit 1

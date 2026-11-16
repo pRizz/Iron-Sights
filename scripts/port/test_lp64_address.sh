@@ -36,7 +36,10 @@ expect_address_check() {
     return 0
 }
 
-for width in $(harness_widths); do
+# On its own line, so a failure of harness_widths stops the harness (set -e)
+# instead of running the loop zero times.
+widths=$(harness_widths)
+for width in $widths; do
     flags=($(harness_flags "$width"))
     build "$work/unit-$width" ${flags[@]+"${flags[@]}"}
     "$work/unit-$width"

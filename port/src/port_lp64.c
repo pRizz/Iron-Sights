@@ -5,8 +5,9 @@
  * its upper 32 bits, so a 64-bit build is only correct while nothing the game
  * addresses sits below 4 GB. A position-independent executable gets that from
  * the system (Linux and Apple's ARM platforms place image, heap, mappings and
- * stack above 4 GB); this file proves it at startup and stops the game, named,
- * when it does not hold. Tools that load programs low (Valgrind) trip it; the
+ * stack above 4 GB); this file checks it at startup (the executable image, the
+ * regions the allocators report, one heap block and one stack address) and
+ * stops the game, named, when a check fails. Tools that load programs low (Valgrind) trip it; the
  * design accepts that. Nothing here runs at 32 bits.
  */
 #define _GNU_SOURCE /* dl_iterate_phdr */
