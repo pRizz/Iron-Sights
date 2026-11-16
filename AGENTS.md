@@ -244,7 +244,8 @@ pass its isolated executable rather than rebuilding an active player binary.
   compile: `CMakeLists.txt` gives 64-bit C `-Werror=int-conversion
   -Werror=pointer-to-int-cast -Werror=int-to-pointer-cast` instead of `-w`,
   and switches off by name each other warning class the 64-bit build printed
-  (the list and counts are in the comment beside the flags). CI's tests job
+  that has a `-W` option; the few warnings without one stay in the log (the
+  comment beside the flags lists both, with counts). CI's tests job
   configures a 64-bit headless tree (`build/lp64/gate`) and a 64-bit video
   tree (`build/lp64/gate-video`), builds only their `ge_buildinfo` target, and
   runs `python3 scripts/port/lp64_diagnostics.py gate build/lp64/gate

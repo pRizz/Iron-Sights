@@ -2173,14 +2173,25 @@ prints it with `"%08" PRIxPTR` (`<inttypes.h>` added); `PRIxPTR` is `"x"` on
 i686, and the Windows comparison below is identical. With the old file the
 gate exited 1 naming it with that error, and `sites` over both trees listed it.
 *Layout probe:* `scripts/port/abi_probe/probe.c` asserts at both widths that
-23 fields behind the sentinel comparisons are pointer-sized:
+42 fields behind the sentinel comparisons are pointer-sized:
 `ModelFileTextures.TextureID`, `sImageTableEntry.index`,
 `MonitorRecord.tconfig`, `ModelAnimation.address`,
 `bg_portal_data_entry.offset_portal`, `OSScClient.next`, `Gfx` `words.w1`,
-and the fields model.c's `PROMOTE` tests for the 0x05000000 tag (`ModelNode`
-`Data`, `Parent`, `Next`, `Prev`, `Child`; `FirstGroup`, `ChildGroup`; the
-display-list records' `Primary`, `Secondary`, `Vertices`,
-`CollisionVertices`, `PointUsage`; `Vertex.LinkedTo`). The `bg.c` local
+and every field `modelPromoteNodeOffsetsToPointers` (model.c) applies
+`PROMOTE`, the 0x05000000 tag test, to: `ModelNode` `Data`, `Parent`, `Next`,
+`Prev`, `Child`; Header/Op20 `FirstGroup`; Group/Op03/Op17 `ChildGroup`; the
+DL record's `Primary`, `Secondary`, `Vertices`; the DL collision record's
+`Primary`, `Secondary`, `Vertices`, `CollisionVertices`, `PointUsage` and
+`Vertex.LinkedTo`; Op05's and Op07's `Children`, `Vertices`, `Images` and
+`ModelRoData_Child.unk04`, and Op07's `unk00`, `unk04`; `LOD.Affects`;
+`Switch.Controls`; `BSP.leftChild`, `rightChild`; `Op11Record.unk0c[15]`;
+`Gunfire.Image`; `Shadow.image`, `Header`; `DisplayListPrimary.Vertices`,
+`Primary` (Op06 promotes nothing). `PROMOTE` casts through `__typeof__`, so on
+an integer field (`Op11Record.unk0c`, `uintptr_t`) the gate cannot see a
+narrowing and the probe is the only guard; a scratch header narrowing it to
+`u32` failed with `static assertion failed: "ModelRoData_Op11Record.unk0c[15]
+is pointer-sized"`. The first version of this task asserted only the first
+five cases' fields (fix round 1). The `bg.c` local
 `bg_envdata_entry_local.data` (`< PORTMAX`), `initanitable.c`'s file-local
 `struct anim_entry` and its `s32 *` table (`!= (s32 *)1`) and the bg globals
 of `BG_SEG_IS_OFFSET` cannot be named from the probe; the gate covers them.

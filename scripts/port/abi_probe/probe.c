@@ -42,7 +42,9 @@ POINTER_SIZED(ModelAnimation, address);             /* & 0x80000000: model.c */
 POINTER_SIZED(bg_portal_data_entry, offset_portal); /* BG_SEG_IS_OFFSET: bg.c */
 POINTER_SIZED(OSScClient, next);                    /* next = 1: audi.c */
 POINTER_SIZED(Gfx, words.w1);                       /* == 0x0E000000: lightfixture.c */
-/* The 0x05000000 segment tag of model.c's PROMOTE. */
+/* Every field modelPromoteNodeOffsetsToPointers (model.c) PROMOTEs, which
+ * tests the 0x05000000 segment tag. PROMOTE casts through __typeof__, so on
+ * an integer field (Op11's unk0c) only this assertion sees a narrowing. */
 POINTER_SIZED(ModelNode, Data);
 POINTER_SIZED(ModelNode, Parent);
 POINTER_SIZED(ModelNode, Next);
@@ -59,6 +61,25 @@ POINTER_SIZED(ModelRoData_DisplayList_CollisionRecord, Vertices);
 POINTER_SIZED(ModelRoData_DisplayList_CollisionRecord, CollisionVertices);
 POINTER_SIZED(ModelRoData_DisplayList_CollisionRecord, PointUsage);
 POINTER_SIZED(Vertex, LinkedTo);
+POINTER_SIZED(ModelRoData_Op05Record, Children);
+POINTER_SIZED(ModelRoData_Op05Record, Vertices);
+POINTER_SIZED(ModelRoData_Op05Record, Images);
+POINTER_SIZED(ModelRoData_Child, unk04);
+POINTER_SIZED(ModelRoData_Op07Record, unk00);
+POINTER_SIZED(ModelRoData_Op07Record, unk04);
+POINTER_SIZED(ModelRoData_Op07Record, Children);
+POINTER_SIZED(ModelRoData_Op07Record, Vertices);
+POINTER_SIZED(ModelRoData_Op07Record, Images);
+POINTER_SIZED(ModelRoData_LODRecord, Affects);
+POINTER_SIZED(ModelRoData_SwitchRecord, Controls);
+POINTER_SIZED(ModelRoData_BSPRecord, leftChild);
+POINTER_SIZED(ModelRoData_BSPRecord, rightChild);
+POINTER_SIZED(ModelRoData_Op11Record, unk0c[15]);
+POINTER_SIZED(ModelRoData_GunfireRecord, Image);
+POINTER_SIZED(ModelRoData_ShadowRecord, image);
+POINTER_SIZED(ModelRoData_ShadowRecord, Header);
+POINTER_SIZED(ModelRoData_DisplayListPrimaryRecord, Vertices);
+POINTER_SIZED(ModelRoData_DisplayListPrimaryRecord, Primary);
 #if !IS_64_BIT
 _Static_assert(sizeof(Gfx) == 8, "32-bit display-list stride");
 _Static_assert(sizeof(fileentry) == 12, "ROM file table layout");
