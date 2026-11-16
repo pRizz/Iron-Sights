@@ -33,6 +33,7 @@
 #include "model.h"
 #include "token.h"
 #include "str.h"
+#include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 
 /**
  * EU .bss 0x80068480
@@ -1975,6 +1976,7 @@ void proplvreset2(enum LEVELID stageId)
          * the snapshot/restore exists only for the compiled-in files */
         if (!g_portSetupFromRom)
         {
+            portLp64RequireConverter(PORT_LP64_SETUPS); /* a compiled-in setup, walked as 4-byte words */
             portRestoreSetupRegion((u32 *) g_CurrentSetup.propDefs, portMeasurePropDefs);
             portRestoreSetupRegion((u32 *) g_CurrentSetup.intro, portMeasureIntro);
             portRestoreSetupRegion((u32 *) g_CurrentSetup.pads, portMeasurePads);

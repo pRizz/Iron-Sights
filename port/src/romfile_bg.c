@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <ultra64.h>
 #include "bondtypes.h"
+#include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console ring (spec section 7). */
@@ -64,6 +65,7 @@ s32 romfileBgConvert(u8 *data, u32 size, const char *name)
     s32 i;
     u32 rooms = 0, vis = 0, portals = 0;
 
+    portLp64RequireConverter(PORT_LP64_BACKGROUNDS); /* 4-byte offset words in the front matter */
     if (data == NULL || size < 0x14) {
         return 0;
     }

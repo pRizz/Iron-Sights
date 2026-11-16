@@ -8,6 +8,7 @@
 #include "decompress.h"
 #ifndef TARGET_N64
 #include "frametiming.h" /* tickhz=hw texture decode price */
+#include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 #endif
 
 
@@ -2536,6 +2537,9 @@ void texLoad(s32 *updateword, struct texpool *pool)
     s16 *texnumptr;
     s32 bytesout;
 
+#ifndef TARGET_N64
+    portLp64RequireConverter(PORT_LP64_TEXTURES); /* writes a data address into a 4-byte slot */
+#endif
     if (pool == NULL)
     {
         pool = (struct texpool*) &ptr_texture_alloc_start;

@@ -41,6 +41,7 @@
 #include <ultra64.h>
 #include "bondtypes.h"
 #include "../generated/setup_kinds.h"
+#include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 
 /* port_console.c: prints to stderr like the fprintf it replaced, and also
  * keeps a silent copy in the tilde console's log. */
@@ -497,6 +498,7 @@ s32 romfileSetupConvert(u8 *data, u32 size, const char *name, const u8 *compiled
     struct conv c;
     u32 i;
 
+    portLp64RequireConverter(PORT_LP64_SETUPS); /* records of 4-byte offset words */
     memset(&c, 0, sizeof(c));
     c.d = data;
     c.size = size;

@@ -27,6 +27,7 @@
 
 #include <ultra64.h>
 #include <PR/libaudio.h>
+#include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 
 /* ==== AUDIO PHASE 1c ===================================================== *
  * The REAL AL library is now compiled (see CMakeLists' audio block): sl.c
@@ -233,6 +234,8 @@ void alBnkfNew(ALBankFile *f, u8 *table)
     uintptr_t base = (uintptr_t)f;
     s32 i;
 
+    /* the bank is relocated in place through 8-byte pointer slots over 4-byte file offsets */
+    portLp64RequireConverter(PORT_LP64_AUDIO_BANKS);
     s_bnkfVisitedCount = 0;
 
     f->revision = (s16)portBSwap16((u16)f->revision);

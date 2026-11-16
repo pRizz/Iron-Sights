@@ -29,6 +29,7 @@
 #include <ultra64.h>
 #include "bondtypes.h"
 #include "bondconstants.h"
+#include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console's history. */
@@ -408,6 +409,7 @@ s32 romfileModelConvert(u8 *data, u32 size, s32 numSwitches, s32 numtextures, co
     struct mconv c;
     u32 rootoff, i;
 
+    portLp64RequireConverter(PORT_LP64_MODELS); /* 4-byte node and texture records */
     if (!data || size < 24 || numSwitches < 0 || numtextures < 0
         || (u64)(u32)numSwitches * 4 + (u64)(u32)numtextures * 12 > size - 24) {
         return 0;

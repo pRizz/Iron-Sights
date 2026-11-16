@@ -2,6 +2,7 @@
 #ifndef TARGET_N64
 #include <stdio.h>
 #include "romdata.h"
+#include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 #endif
 #include "chrobjdata.h"
 #include "image.h"
@@ -368,6 +369,7 @@ void load_object_fill_header(struct ModelFileHeader *objheader, u8 *name, u8* ds
         }
         else
         {
+            portLp64RequireConverter(PORT_LP64_MODELS); /* a compiled-in model, promoted in place */
             /* PORT: compiled-in model data already holds real pointers, so vma
              * == fileramaddr makes the promote a no-op. */
             sub_GAME_7F075A90(objheader, (uintptr_t) filedata, (uintptr_t) filedata);

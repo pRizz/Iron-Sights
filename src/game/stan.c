@@ -5,6 +5,7 @@
 #include "stan.h"
 #ifndef TARGET_N64
 #include "frametiming.h" /* tickhz=hw stage-load work counters */
+#include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 #endif
 #include "bg.h"
 #include "chrai.h"
@@ -599,6 +600,7 @@ static struct StanPrefixRecord *portStanPack(struct StanPrefixRecord *file)
     u32 *dstw;
     struct StanPrefixRecord *packed;
 
+    portLp64RequireConverter(PORT_LP64_COLLISION); /* a compiled-in stan: 4-byte room slots */
     for (i = 0; i < STAN_PACK_CACHE_MAX; i++)
     {
         if (s_PackedStanCache[i].firsttile == file->ptr_firstroom)

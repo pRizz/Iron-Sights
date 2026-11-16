@@ -14,6 +14,7 @@
 #include "ramrom.h"
 #include "snd.h"
 #include <macro.h>
+#include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 
 /**
  * EU .data, offset from start of data_seg : 0x3570
@@ -794,6 +795,7 @@ void musicSeqPlayerInit(void)
 
     // this area based on auReadSeqFileHeader
 
+    portLp64RequireConverter(PORT_LP64_MUSIC); /* RareALSeqData's address slot over a 4-byte file offset */
     // is this sizeof(RareALSeqBankFile) ? which implies the struct isn't right...
     size = 0x10;
     g_musicDataTable = alHeapAlloc(&g_musicHeap, 1, size);

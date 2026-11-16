@@ -31,6 +31,7 @@ extern void sysFatalError(const char *format, ...);
 #include "port_noclip.h" /* FORK-072: portNoclipAllRooms, portNoclipMatrixOffsetFits */
 #include "port_room_seams.h" /* FORK-086: portRoomSeamsTag */
 #include "port_graphics.h" /* FORK-082: Baked Lighting's capture and apply hooks */
+#include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 #endif
 
 
@@ -1093,6 +1094,8 @@ void load_bg_file(LEVEL_INDEX levelid)
          * as on N64. */
         if (romdataFileServed(bgidx)) {
             romfileBgConvert((u8 *) ptr_bg_data, obGetFileRomSize(bgidx), bgname);
+        } else {
+            portLp64RequireConverter(PORT_LP64_BACKGROUNDS); /* the compiled-in bg, read as s32 words */
         }
         ptr_bgdata_offsets = ptr_bg_data;
         ptr_bgdata_room_fileposition_list =

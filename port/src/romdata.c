@@ -896,6 +896,7 @@ static void romdataTextPreprocess(s32 index, u8 *data, u32 size)
     const char *bank = file_resource_table[index].filename;
     const char *const *compiled = (const char *const *) sCompiledData[index];
 
+    portLp64RequireConverter(PORT_LP64_TEXT_BANKS); /* 4-byte offsets rewritten as 4-byte pointers */
     if (size >= 2 && data[0] == 0x11 && data[1] == 0x72) {
         portConLogf("ge: romdata: text %s arrived still 1172-compressed (raw load) - not rebased\n",
                 file_resource_table[index].filename);

@@ -23,6 +23,7 @@
 #include <string.h>
 #include <ultra64.h>
 #include "bondtypes.h"
+#include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console ring (spec section 7). */
@@ -61,6 +62,7 @@ s32 romfileStanConvert(u8 *data, u32 size, const char *name, const u8 *compiled)
     u32 first, o, nrooms, ntiles = 0;
     u32 i;
 
+    portLp64RequireConverter(PORT_LP64_COLLISION); /* 4-byte room pointer slots */
     if (size < 16) {
         portConLogf("ge: romdata: stan %s: %u bytes is no stan file\n", name, size);
         return 0;

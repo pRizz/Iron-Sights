@@ -1,11 +1,15 @@
 /* ROM-free tests of the 64-bit address rules (LP64-003 Task 3): the
- * host-pointer test, the region predicate and the startup address check.
- * Built at both pointer widths by scripts/port/test_lp64_address.sh.
+ * host-pointer test, the region predicate and the startup address check; and
+ * of the asset-class guard (Task 4). Built at both pointer widths by
+ * scripts/port/test_lp64_address.sh.
  *
  *   test_lp64_address              the unit cases
  *   test_lp64_address address-space  the startup check alone, as main.c runs
  *                                    it (the harness links this driver
- *                                    position-independent and -no-pie) */
+ *                                    position-independent and -no-pie)
+ *   test_lp64_address require-animations  the animation guard alone: at 64
+ *                                    bits it must stop the process with
+ *                                    status 5, at 32 bits it must return */
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -114,11 +118,58 @@ static void testCheckIsNoOpAtThirtyTwoBits(void)
 }
 #endif
 
+#if IS_64_BIT
+static void testAssetNamesInDesignOrder(void)
+{
+    // Arrange
+    static const char *const expected[PORT_LP64_ASSET_COUNT] = {
+        "text banks", "fonts", "textures", "animation tables", "models",
+        "collision tiles", "setup files", "backgrounds", "audio banks", "music sequences",
+    };
+    int i;
+
+    for (i = 0; i < PORT_LP64_ASSET_COUNT; i++)
+    {
+        // Act
+        const char *name = portLp64AssetName((enum PortLp64Asset) i);
+
+        // Assert
+        expect(name != NULL && strcmp(name, expected[i]) == 0, expected[i]);
+    }
+}
+
+static void testAssetNameOutOfRange(void)
+{
+    // Act
+    const char *name = portLp64AssetName(PORT_LP64_ASSET_COUNT);
+
+    // Assert
+    expect(name != NULL && strcmp(name, "unknown asset class") == 0, "a value past the classes is named unknown");
+}
+#else
+static void testAssetGuardIsNoOpAtThirtyTwoBits(void)
+{
+    // Arrange: at 32 bits the in-place conversions are the shipped path.
+
+    // Act
+    portLp64RequireConverter(PORT_LP64_ANIMATIONS);
+
+    // Assert
+    expect(portLp64AssetConverted(PORT_LP64_ANIMATIONS), "every class counts as converted at 32 bits");
+}
+#endif
+
 int main(int argc, char **argv)
 {
     if (argc > 1 && strcmp(argv[1], "address-space") == 0)
     {
         portLp64CheckAddressSpace();
+        return 0;
+    }
+    if (argc > 1 && strcmp(argv[1], "require-animations") == 0)
+    {
+        portLp64RequireConverter(PORT_LP64_ANIMATIONS);
+        printf("require-animations: returned\n");
         return 0;
     }
 
@@ -127,8 +178,11 @@ int main(int argc, char **argv)
     testRegionEndingAtFourGbIsLow();
     testRegionStartingAtFourGbIsHigh();
     testEmptyRegionAtFourGbIsHigh();
+    testAssetNamesInDesignOrder();
+    testAssetNameOutOfRange();
 #else
     testCheckIsNoOpAtThirtyTwoBits();
+    testAssetGuardIsNoOpAtThirtyTwoBits();
 #endif
     return s_failures == 0 ? 0 : 1;
 }

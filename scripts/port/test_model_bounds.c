@@ -1,6 +1,13 @@
 #include "port/src/romfile_model.c"
 #include "test_buffer_helpers.h"
 
+#if IS_64_BIT
+/* At 64 bits the game stops at romfileModelConvert's asset-class guard
+ * (port_lp64.c, tested by test_lp64_address); this driver tests the
+ * converter's bounds checks behind it, so its guard lets every class pass. */
+void portLp64RequireConverter(enum PortLp64Asset asset) { (void) asset; }
+#endif
+
 static void truncated_records(void)
 {
     const u8 types[] = {MODELNODE_OPCODE_DL, MODELNODE_OPCODE_DLCOLLISION,

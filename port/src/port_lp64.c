@@ -8,7 +8,11 @@
  * stack above 4 GB); this file checks it at startup (the executable image, the
  * regions the allocators report, one heap block and one stack address) and
  * stops the game, named, when a check fails. Tools that load programs low (Valgrind) trip it; the
- * design accepts that. Nothing here runs at 32 bits.
+ * design accepts that.
+ *
+ * It also holds the asset-class guard (port_lp64.h): the table of classes that
+ * have a 64-bit converter, and the stop for those that do not. Nothing here
+ * runs at 32 bits.
  */
 #define _GNU_SOURCE /* dl_iterate_phdr */
 #include <stdint.h>
@@ -29,6 +33,7 @@ extern void portConLogf(const char *fmt, ...);
 
 #define LP64_FOUR_GB ((uintptr_t) 1 << 32)
 #define LP64_EXIT_LOW_ADDRESS 4
+#define LP64_EXIT_NO_CONVERTER 5
 
 /* Regions for the report. Only the report is bounded: a region past the
  * table's end is still checked, and counted. */
@@ -171,6 +176,62 @@ void portLp64CheckAddressSpace(void)
         snprintf(line + used, sizeof(line) - used, ", and %d more", s_RegionsUnlisted);
     }
     portConLogf("%s\n", line);
+}
+
+/* ==== the asset-class guard ============================================ */
+
+static const char *const s_AssetNames[PORT_LP64_ASSET_COUNT] = {
+    "text banks",
+    "fonts",
+    "textures",
+    "animation tables",
+    "models",
+    "collision tiles",
+    "setup files",
+    "backgrounds",
+    "audio banks",
+    "music sequences",
+};
+
+/* 1 = the class has a 64-bit converter. All zero in LP64-003; LP64-004 sets
+ * a class's entry in the commit that lands its converter. */
+static const unsigned char s_AssetConverted[PORT_LP64_ASSET_COUNT] = {
+    0, /* text banks */
+    0, /* fonts */
+    0, /* textures */
+    0, /* animation tables */
+    0, /* models */
+    0, /* collision tiles */
+    0, /* setup files */
+    0, /* backgrounds */
+    0, /* audio banks */
+    0, /* music sequences */
+};
+
+static int lp64AssetValid(enum PortLp64Asset asset)
+{
+    return (unsigned) asset < (unsigned) PORT_LP64_ASSET_COUNT;
+}
+
+const char *portLp64AssetName(enum PortLp64Asset asset)
+{
+    return lp64AssetValid(asset) ? s_AssetNames[asset] : "unknown asset class";
+}
+
+int portLp64AssetConverted(enum PortLp64Asset asset)
+{
+    return lp64AssetValid(asset) && s_AssetConverted[asset] != 0;
+}
+
+void portLp64RequireConverter(enum PortLp64Asset asset)
+{
+    if (portLp64AssetConverted(asset))
+    {
+        return;
+    }
+    portConLogf("ge: lp64: stopping: asset class \"%s\" has no 64-bit converter yet (LP64-004)\n",
+            portLp64AssetName(asset));
+    exit(LP64_EXIT_NO_CONVERTER);
 }
 
 #endif

@@ -51,6 +51,7 @@
 #include <string.h>
 #include "asmsym.h" /* ASM_SYM: COFF `_` prefix on Windows, bare on ELF */
 #include "romdata.h" /* romdataSeg: the ROM-resident copies */
+#include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console's history. */
@@ -343,6 +344,8 @@ void portFontBuildSegments(void)
     const u8 *j = romdataSeg("jfontchardata", &jsz);
     const u8 *e = romdataSeg("efontchardata", &esz);
 
+    /* the fontchar tables and fontdl are built as 4-byte words (both paths) */
+    portLp64RequireConverter(PORT_LP64_FONTS);
     /* Load the five font segments from the ROM: the Latin fonts' kerning and
      * fontchar tables and the fontdl Gfx words get word-swapped. Glyph bytes
      * and the Japanese glyph banks are raw bytes and are copied as-is. */

@@ -39,6 +39,7 @@
 #include <stdint.h>
 #include <ultra64.h>
 #include "romdata.h" /* animation segments are loaded from the ROM */
+#include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console ring (spec section 7). */
@@ -242,6 +243,9 @@ void portAnimDataInit(void)
     const u8 *romdata = romdataSeg("animation_data", &datasize);
     const u8 *roment = romdataSeg("animation_entries", &entsize);
 
+    /* ModelAnimation's 0x14-byte file header is read through 8-byte address
+     * fields at 64 bits (both paths; expand_ani_table_entries runs later) */
+    portLp64RequireConverter(PORT_LP64_ANIMATIONS);
     /* Both segments are byte-exact ROM spans (as on N64), and the header and
      * descriptor conversion below is the same either way; the compiled arrays
      * remain only for GE_ROMDATA_FALLBACK builds and the probe comparison. */

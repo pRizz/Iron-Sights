@@ -266,6 +266,15 @@ pass its isolated executable rather than rebuilding an active player binary.
   [FILE...]` lists the conversions of those trees as `file:line: kind`. A new
   warning class in the 64-bit log gets fixed, or a named `-Wno-` flag with its
   count in that comment; never `-w`.
+- A 64-bit game stops, exit status 5, at the first ROM asset class that has
+  no 64-bit converter: each in-place conversion starts with
+  `portLp64RequireConverter` (`port/include/port_lp64.h`), which logs the
+  class's name. A class is marked converted in the table in
+  `port/src/port_lp64.c` in the commit that lands its converter. With the
+  ROM, `python3 scripts/port/lp64_boot.py --rom ROM --expect-stop "NAME"
+  EXECUTABLE...` (the task check of the 64-bit plan's current milestone names
+  the class) boots each executable to that stop and fails on another class,
+  a crash, a missing address line, a sanitizer report or a timeout.
 - Fonts, sharp text rendering and other original game assets follow the
   accepted [open assets plan](scripts/port/open_assets_plan.md). Read it before
   resuming, keep its provenance rules (drawn from scratch, MIT, no ROM-derived
