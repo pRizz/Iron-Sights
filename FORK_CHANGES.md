@@ -1759,6 +1759,100 @@ now listed with their declarations in the plan's Task 9. *What ran:* step 1
 i686 container, all 43 passed (122 s), `test_buffers.sh` without the
 sanitizer.
 
+*LP64-002 task 9, on the branch `lp64/types-strict` (local commits, not pushed;
+the strict-tier gallery is regenerated on a machine that can render before the
+branch reaches `main`).* *First commit, `model.c` and its declarations:*
+*Declarations* (old type to new): in `src/bondtypes.h`, `ModelAnimation.address`
+`s32` to `intptr_t`; `Model.unk34`, `unk38`, `unk64`, `unk68` `s32` to `u8 *`
+(the joint rotation bitstreams `loadAnimationFrame` returns and
+`sub_GAME_7F06DEC0`/`sub_GAME_7F06E540` read); `Model.animflipfunc` `s32` to
+`void (*)(void)` (its one callee, `bheadFlipAnimation`); `Model.unka0` `s32` to
+`intptr_t`, not the function-pointer type the plan names: with
+`s32 (*)(Model *, coord3d *, coord3d *, f32 *)` GCC predicted the callback as
+present and moved `sub_GAME_7F06D490`'s call block in line (block order and
+branch direction), while `intptr_t` keeps that function identical; the call
+site already casts it to that type, and the decomp's `while (model->unka0 * 0)`
+needs an integer; `ModelRoData_GunfireRecord.BaseAddr` `u32` to `void *` (it is
+assigned `(void *)fileramaddr` and passed to `osVirtualToPhysical`, like the
+other records' `BaseAddr`); `ModelRoData_Op11Record`'s `unk0c[16]` `u32` to
+`uintptr_t` (element 15 is promoted in place to a pointer; nothing else reads
+the array). In `src/game/model.c` and `model.h`: `modelSetAnimFlipFunction`
+takes `void (*)(void)`; `sub_GAME_7F06FF5C` takes `intptr_t` (it stores into
+`unka0`; `chr.c` passes `(intptr_t) sub_GAME_7F01FC10`); the empty render
+helpers `sub_GAME_7F07306C`, `sub_GAME_7F0737EC`, `sub_GAME_7F0737FC` and
+`sub_GAME_7F074514` take `ModelRenderData *`; `loadAnimationFrame` returns
+`u8 *`; `modelPromoteNodeOffsetsToPointers` takes `uintptr_t` `vma` and
+`fileramaddr` and `sub_GAME_7F075A90` `uintptr_t` `vma` and `addr`, each with an
+`intptr_t diff` (all `u32`/`s32` before); `modelNodeReplaceGdl`'s unused first
+parameter is `ModelFileHeader *`; the unreferenced `sub_GAME_7F07549C` returns
+`u32`, the type of the hit-part value it forwards from
+`modelFindNextProjectileHitCandidate` (it was declared `u32 *`). *Locals and
+idioms:* `sub_GAME_7F06DB5C`'s reused `sp1C` and its alias `new_var` are
+`intptr_t` (the decomp's register reuse holds a node pointer, then a matrix
+pointer); in `loadAnimationFrame` `ret` and `source` are `intptr_t` and `dest`
+`uintptr_t`, with `return (u8 *)ret` (a `u8 *ret` moved the odd-address block
+out of line); the PC `PROMOTE` macro tests and rebases in `uintptr_t` and
+assigns through `__typeof__(var)` (every target is a pointer except the
+`uintptr_t` Op11 word, which the old `(void *)` assignment could not take),
+keeping the mask `0xFF000000`, the tag `0x05000000` and the `TARGET_N64`
+version unchanged; the collision-vertex byte swap reads the slot into a
+`uintptr_t`; `subdraw`'s `LEFTOVERDEBUG` message prints `(uintptr_t)mdl->obj`
+with `"0x%" PRIXPTR` (`<inttypes.h>` in the PC include block), which is `"X"`
+on MinGW and glibc i686, so the string is byte-identical; `subdraw` is called
+without the `(s32)`. Callers: `chr_b.c`'s `opcode` is `intptr_t` and is passed
+as `(ModelNode *) opcode` (a `ModelNode *` local changed `makeonebody`'s
+register allocation and spills); `objecthandler_2.c` (CRLF kept) passes
+`objheader` uncast and `(uintptr_t) filedata`; `initanitable.c`'s
+`struct anim_entry` view gains `intptr_t unk00` (`ModelAnimation.address`), and
+the relocation adds `(intptr_t)&_animation_entriesSegmentRomStart` through it,
+as the two relocations above it already do. `scripts/generate_prop_model_c.py`
+(an offline generator no build runs) now emits the Gunfire `BaseAddr` as
+`(void *)0x...` and documents the field as `void *`. *Signedness:* the
+`& 0x80000000` RAM test reads `intptr_t address`, which at 32 bits is the same
+`int` (the literal is unsigned, so the test is unchanged); the offset sums keep
+their old signedness (`intptr_t` for former `s32`, `uintptr_t` for former
+`u32`). No unsigned hex literal initialises a widened field: `address` and
+`unk0c` are filled at run time, and the model files are served from the ROM or
+built from compiled-in pointers. *Struct layout:* `intptr_t`, `uintptr_t`, data
+and function pointers are 4 bytes with 4-byte alignment on i686 (MinGW and
+glibc) and wasm32, like the `s32`/`u32` they replace, so `ModelAnimation`
+(0x40), `Model` (0xBC), the Op11 record (0x4C) and the Gunfire record (0x28)
+keep their sizes and offsets at 32 bits; at 64 bits `address` is 8 bytes and
+`anim_entry` keeps overlaying `ModelAnimation` (both put the next pointer at
+16). *Side-effect prototypes:* no header was newly included. *Count:* 188 to
+133 (`int-conversion` 75 to 58, `int-to-pointer-cast` 64 to 41,
+`pointer-to-int-cast` 49 to 34; 15 files to 10): `model.c` 46, `objecthandler_2.c`
+5, `chr_b.c` 2, `chr.c` 1 and `initanitable.c` 1 to zero; no file rose.
+*Windows comparison* (`compare_win32.py commits HEAD WORKTREE`, exit 1, 111 s;
+`.text` VirtualSize 0x335904 to 0x3358f4): disassembled by symbol with code
+addresses written as symbol and offset, two functions differ. `_loadAnimationFrame`
+(`model.c`): register choice (`edx`/`eax`/`esi`/`edi` renamed throughout); on the
+`D_80036414 == NULL` path it returns the register it just tested as zero instead
+of a zeroed `edi`; on the RAM path `frame * frameSize + address` is formed as
+`imull %edx,%eax; addl %ecx,%eax` from `frame` instead of `imull 0xc(%ebp),%eax;
+leal (%eax,%ecx)` from `frameSize` (the same product and sum); the same
+`romCopy` call with the same arguments, the same two stores to `D_80036414` and
+the same return value. `_init`: one displacement, the address of
+`resolve_TLBaddress_for_InvalidHit` written relative to 0x80000000
+(`-0x6fea7b10` to `-0x6fea7b20`), moved by the code's -0x10. Every differing
+word in `.data` (175), `.rdata` (6,428) and `.CRT` (3) is an image address
+naming the same symbol and offset in both builds, and the constructor and
+destructor lists are equal by symbol. Gallery note: `loadAnimationFrame`
+returns the animation frame data of every animated model (guards, Bond's body
+and head in cutscenes and multiplayer); it draws nothing itself.
+*What ran:* step 1 (`update`, 25 s with both builds, 133 in 10 files, no
+`--allow-rise`); step 2, the i686 headless build (14 s) and the 20-mission smoke,
+20 of 20 `PASS` (185 s); step 3 as above; `lp64_casts.py check` (28 casts in
+13 files, unchanged); the CI step's harness lines plus `test_stan_callbacks.sh`,
+`test_image_bank.sh` and `test_dyn.sh` in the i686 container (119 s): 42 passed,
+including `test_wardrobe.sh`, `test_ads.sh`, `test_upstream_merge.sh` and
+`test_hud.sh`, with `test_buffers.sh` run without `MIDAS_BUFFER_SANITIZE=1`
+(its AddressSanitizer binary hangs under `qemu-i386`); `hand_gallery.py verify
+--allow-pending` failed as expected on this branch ("Gallery is stale for
+strict rendering inputs"). Building the changed files at 32 bits before and
+after: `model.c` and `chr_b.c` lose their `int-conversion` warnings and no
+warning was added.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),

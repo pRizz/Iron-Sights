@@ -135,7 +135,7 @@ void sub_GAME_7F0762E0(ModelFileHeader *objheader, u8 *name, u8 *dst, struct tex
         replacement = portConvertModelGdl(curgdl, buffer);
         if (replacement != NULL)
         {
-            modelNodeReplaceGdl((u32) objheader, curnode, curgdl, replacement);
+            modelNodeReplaceGdl(objheader, curnode, curgdl, replacement);
         }
     }
     return;
@@ -179,7 +179,7 @@ void sub_GAME_7F0762E0(ModelFileHeader *objheader, u8 *name, u8 *dst, struct tex
                     name = (u8 *) ((((intptr_t) (filedata + pcremaining)) - ((intptr_t) objheader->Switches)) - (((uintptr_t) curgdl) & 0x00ffffff));
                 }
                 
-                modelNodeReplaceGdl((u32) objheader, curnode, curgdl, (Gfx *) replacementgdl);
+                modelNodeReplaceGdl(objheader, curnode, curgdl, (Gfx *) replacementgdl);
                 
                 replacementgdl += texLoadFromGdl( (Gfx *) ((((u8 *) objheader->Switches) + (((uintptr_t) curgdl) & 0x00ffffff)) + delta), (intptr_t) name, (Gfx *) (((u8 *) objheader->Switches) + (replacementgdl & 0x00ffffff)), buffer);
             } 
@@ -352,7 +352,7 @@ void load_object_fill_header(struct ModelFileHeader *objheader, u8 *name, u8* ds
 
             if (converted)
             {
-                sub_GAME_7F075A90(objheader, 0x5000000, (u32) filedata);
+                sub_GAME_7F075A90(objheader, 0x5000000, (uintptr_t) filedata);
             }
             else
             {
@@ -370,7 +370,7 @@ void load_object_fill_header(struct ModelFileHeader *objheader, u8 *name, u8* ds
         {
             /* PORT: compiled-in model data already holds real pointers, so vma
              * == fileramaddr makes the promote a no-op. */
-            sub_GAME_7F075A90(objheader, (s32) filedata, (u32) filedata);
+            sub_GAME_7F075A90(objheader, (uintptr_t) filedata, (uintptr_t) filedata);
         }
     }
     /* ROM-backed model buffers are fresh each load, including when the stage

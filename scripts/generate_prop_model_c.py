@@ -532,7 +532,7 @@ class BinaryModelParser:
             f32 Scale;           // 0x1C
             u16 RwDataIndex;     // 0x20
             u16 reserved;        // 0x22
-            u32 BaseAddr;        // 0x24
+            void *BaseAddr;      // 0x24
         Total: 40 bytes (0x28)
         """
         image_ptr = read_u32(self.data, offset + 0x18)
@@ -1498,7 +1498,7 @@ def generate_model_c(prop_name: str, parsed_model: Dict, metadata: Dict, image_m
             struct_lines.append(f"    {float_to_c(data['scale'])}, //{data['scale']:.6f}")
             struct_lines.append(f"    0x{data['rw_data_index']:X}, //RwDataIndex")
             struct_lines.append(f"    0x{data['reserved']:X}, //reserved")
-            struct_lines.append(f"    0x{data['base_addr']:08X} //BaseAddr")
+            struct_lines.append(f"    (void *)0x{data['base_addr']:08X} //BaseAddr")
             struct_lines.append("};")
             all_structures.append((node.data_offset, '\n'.join(struct_lines)))
 

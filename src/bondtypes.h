@@ -595,7 +595,7 @@ typedef union
 
     typedef struct ModelAnimation
     {
-        s32 address;
+        intptr_t address;
         u16 unk04; // number of frames in the animation
         u8 unk06;
         u8 unk07; // bit 0 is a loop flag: 0 means freeze anim at end, 1 means loop anim
@@ -1084,7 +1084,7 @@ typedef union
         {
             union {
                 coord3d pos;       /* 0x00 */
-                u32 unk0c[16];     /* 0x00 */
+                uintptr_t unk0c[16]; /* 0x00; [15] is promoted to a pointer */
             };
 
             f32 BoundingVolumeRadius; /* 0x40 */
@@ -1110,7 +1110,7 @@ typedef union
             f32     Scale;       /*0x1c*/
             u16     RwDataIndex; /*0x20*/
             u16     reserved;    /*0x22 padding*/
-            u32     BaseAddr;    /*0x24 padding*/
+            void   *BaseAddr;    /*0x24 padding*/
         } ModelRoData_GunfireRecord;
 
         typedef struct ModelRwData_GunfireRecord
@@ -1536,8 +1536,8 @@ typedef union
              * Offset 0x32.
             */
             s16               frameb;
-            s32               unk34;
-            s32               unk38;
+            u8               *unk34;
+            u8               *unk38;
             f32               endframe;
 
             f32               speed; /*0x40*/
@@ -1563,8 +1563,8 @@ typedef union
             */
             s16               frame2b;
 
-            s32               unk64;
-            s32               unk68;
+            u8               *unk64;
+            u8               *unk68;
             f32               unk6c;
             // 0x70
             f32               speed2;
@@ -1584,10 +1584,10 @@ typedef union
             // 0x90
             f32               animloopframe; /*0x90*/
             f32               animloopmerge; /*0x94*/
-            s32               animflipfunc; /*0x98*/
+            void            (*animflipfunc)(void); /*0x98*/
             s32               unk9c;
             // 0xa0
-            s32               unka0; // This is likely a function pointer, see sub_GAME_7F06D490()
+            intptr_t          unka0; // This is likely a function pointer, see sub_GAME_7F06D490()
             f32               playspeed; // used by ACT_STAND in chrlv
             f32               animrate;
             f32               unkac;

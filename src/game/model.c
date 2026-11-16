@@ -25,6 +25,7 @@
 #include "quaternion.h"
 #include "random.h"
 #ifndef TARGET_N64
+#include <inttypes.h> /* subdraw's LEFTOVERDEBUG message prints a whole address */
 #include "port_wardrobe.h"
 #include "port_shiny.h"
 #endif
@@ -1349,13 +1350,13 @@ void sub_GAME_7F06DB5C(ModelRenderData *arg0, Model *arg1, ModelNode *arg2, quat
     s32 sp4C;
     RenderPosView *sp48;
     s32 sp44;
-    s32 *new_var;
+    intptr_t *new_var;
     s32 sp40;
     quatf sp2C;
     Mtxf *sp28;
     f32 sp24;
     s32 _gap20;
-    s32 sp1C;
+    intptr_t sp1C;
 
     spA4 = arg2->Opcode;
     spA0 = (ModelRoData_GroupRecord *)arg2->Data;
@@ -1364,7 +1365,7 @@ void sub_GAME_7F06DB5C(ModelRenderData *arg0, Model *arg1, ModelNode *arg2, quat
     sp4C = spA0->MatrixID2;
     new_var = &sp1C;
     sp48 = arg1->render_pos;
-    sp1C = (s32)arg2->Parent;
+    sp1C = (intptr_t)arg2->Parent;
 
     if (*new_var != 0) {
         sp9C = arg0->basemtx;
@@ -1375,7 +1376,7 @@ void sub_GAME_7F06DB5C(ModelRenderData *arg0, Model *arg1, ModelNode *arg2, quat
 
     if (sp9C != 0) {
         quaternion_to_transform_matrix(&spA0->Origin, arg3, &sp58);
-        sp1C = (s32)&sp48[sp54];
+        sp1C = (intptr_t)&sp48[sp54];
         matrix_4x4_multiply_homogeneous(sp9C, &sp58, (Mtxf *)sp1C);
         if (g_ModelJointPositionedFunc != NULL) {
             g_ModelJointPositionedFunc(sp54, (Mtxf *)sp1C);
@@ -2753,7 +2754,7 @@ void modelSetAnimEndFrame(Model *model, f32 endframe) {
 #endif
 }
 
-void modelSetAnimFlipFunction(Model *model, void *callback) {
+void modelSetAnimFlipFunction(Model *model, void (*callback)(void)) {
     model->animflipfunc = callback;
 }
 
@@ -2820,7 +2821,7 @@ void modelSetAnimPlaySpeed(Model *model, f32 animation_rate, f32 startframe) {
 }
 
 
-void sub_GAME_7F06FF5C(Model *model, s32 arg1) {
+void sub_GAME_7F06FF5C(Model *model, intptr_t arg1) {
     model->unka0 = arg1;
 }
 
@@ -4652,7 +4653,7 @@ void sub_GAME_7F073038(ModelRenderData *renderdata, struct sImageTableEntry *tco
 }
 
 
-void sub_GAME_7F07306C(s32 param_1,struct Model *param_2,struct ModelNode *param_3)
+void sub_GAME_7F07306C(ModelRenderData *param_1,struct Model *param_2,struct ModelNode *param_3)
 {
     return;
 }
@@ -4918,13 +4919,13 @@ void dotube(ModelRenderData* renderdata, Model* model, ModelNode* node)
 }
 
 
-void sub_GAME_7F0737EC(s32 param_1,struct Model *param_2, struct ModelNode *param_3)
+void sub_GAME_7F0737EC(ModelRenderData *param_1,struct Model *param_2, struct ModelNode *param_3)
 {
     return;
 }
 
 
-void sub_GAME_7F0737FC(s32 param_1,struct Model *param_2,struct ModelNode *param_3)
+void sub_GAME_7F0737FC(ModelRenderData *param_1,struct Model *param_2,struct ModelNode *param_3)
 {
     return;
 }
@@ -5293,7 +5294,7 @@ void doshadow(ModelRenderData *renderdata, Model *model, ModelNode *node)
 }
 
 
-void sub_GAME_7F074514(s32 param_1,struct Model *param_2,struct ModelNode *param_3)
+void sub_GAME_7F074514(ModelRenderData *param_1,struct Model *param_2,struct ModelNode *param_3)
 {
     return;
 }
@@ -5384,7 +5385,7 @@ void subdraw(ModelRenderData *mrData, Model *mdl)
     }
     else
     {
-        osSyncPrintf("subdraw: object not initialised! (0x%X)\n", (u32)mdl->obj);
+        osSyncPrintf("subdraw: object not initialised! (0x%" PRIXPTR ")\n", (uintptr_t)mdl->obj);
         return_null();
     }
     #endif
@@ -5419,7 +5420,7 @@ void sub_GAME_7F074790(ModelRenderData* arg0, Model* arg1)
 {
     subcalcpos(arg1);
     subcalcmatrices(arg0, arg1);
-    subdraw((s32) arg0, arg1);
+    subdraw(arg0, arg1);
 }
 
 
@@ -5890,7 +5891,7 @@ u32 modelFindNextProjectileHitCandidate(Model *model, coord3d *arg1, coord3d *ar
 /**
  * Unreferenced
  */
-u32 *sub_GAME_7F07549C(void *arg0, f32 *arg1, f32 *arg2, ModelNode **nodeptr)
+u32 sub_GAME_7F07549C(void *arg0, f32 *arg1, f32 *arg2, ModelNode **nodeptr)
 {
     *nodeptr = NULL;
     return modelFindNextProjectileHitCandidate(arg0, arg1, arg2, nodeptr);
@@ -5901,12 +5902,12 @@ u32 *sub_GAME_7F07549C(void *arg0, f32 *arg1, f32 *arg2, ModelNode **nodeptr)
  * Address 7F0754BC.
  * Copy animation from ROM to RAM
 */
-s32 loadAnimationFrame(ModelAnimation* anim, s32 frame, ModelSkeleton* unused)
+u8 *loadAnimationFrame(ModelAnimation* anim, s32 frame, ModelSkeleton* unused)
 {
-    s32 ret;
-    s32 source;
+    intptr_t ret;
+    intptr_t source;
     s32 frameSize;
-    u32 dest;
+    uintptr_t dest;
     u32 size;
 
     ret = 0;
@@ -5920,7 +5921,7 @@ s32 loadAnimationFrame(ModelAnimation* anim, s32 frame, ModelSkeleton* unused)
     else if (D_80036414 != NULL) // should never be NULL after initAnimationsBuffer is called
     {
         // Get dest from this D_80036414 which points to an array. Align to 16 bytes.
-        dest = ((u32) (D_80036414->animBufferPtr2 + 15) >> 4) * 16;
+        dest = ((uintptr_t) (D_80036414->animBufferPtr2 + 15) >> 4) * 16;
         ret = dest;
 
         // Get source of this animation in ROM with the offset of the frame we'll load
@@ -5943,9 +5944,9 @@ s32 loadAnimationFrame(ModelAnimation* anim, s32 frame, ModelSkeleton* unused)
 
         // Set this to point to the end of the copied frame
         // This allows to copy another frame after this one
-        D_80036414->animBufferPtr2 = dest + size;
+        D_80036414->animBufferPtr2 = (char *)(dest + size);
     }
-    return ret;
+    return (u8 *)ret;
 }
 
 
@@ -5972,13 +5973,13 @@ void modelResetAnimationsScratchBuffer(void)
  * segment-5 words the asset generator left behind, so only 0x05-tagged values
  * are rebased onto the file base (real pointers and NULL never look like that). */
 #define PROMOTE(var) \
-    if (((u32)(var) & 0xFF000000) == 0x05000000) \
-        var = (void *)((u32)(var) - 0x05000000 + (u32)vma + (u32)diff)
+    if (((uintptr_t)(var) & 0xFF000000) == 0x05000000) \
+        var = (__typeof__(var))((uintptr_t)(var) - 0x05000000 + (uintptr_t)vma + (uintptr_t)diff)
 #endif
 
-void modelPromoteNodeOffsetsToPointers(ModelNode *node, u32 vma, u32 fileramaddr)
+void modelPromoteNodeOffsetsToPointers(ModelNode *node, uintptr_t vma, uintptr_t fileramaddr)
 {
-    s32 diff = fileramaddr - vma;
+    intptr_t diff = fileramaddr - vma;
     s32 i;
 
     while (node)
@@ -6056,7 +6057,7 @@ void modelPromoteNodeOffsetsToPointers(ModelNode *node, u32 vma, u32 fileramaddr
                              * texcoords, so on little-endian its halves are
                              * swapped; unswap it (low half 0x0500) or
                              * chrCreateBloodStain crashes. */
-                            u32 w = (u32) rodata->CollisionVertices[i].LinkedTo;
+                            uintptr_t w = (uintptr_t) rodata->CollisionVertices[i].LinkedTo;
 
                             if (w != 0 && (w & 0x0000FFFFu) == 0x00000500u)
                             {
@@ -6225,8 +6226,8 @@ void modelPromoteNodeOffsetsToPointers(ModelNode *node, u32 vma, u32 fileramaddr
 /**
  * Address 7F075A90.
 */
-void sub_GAME_7F075A90(ModelFileHeader *header, s32 vma, u32 addr) {
-    s32 diff = addr - vma;
+void sub_GAME_7F075A90(ModelFileHeader *header, uintptr_t vma, uintptr_t addr) {
+    intptr_t diff = addr - vma;
     s32 i;
 
     for(i = 0;i < header->numSwitches;i++)
@@ -6803,7 +6804,7 @@ void modelIterateDisplayLists(ModelFileHeader *fileheader, ModelNode **nodeptr, 
 }
 
 
-void modelNodeReplaceGdl(u32 arg0, ModelNode *node, Gfx *find, Gfx *replacement)
+void modelNodeReplaceGdl(ModelFileHeader *arg0, ModelNode *node, Gfx *find, Gfx *replacement)
 {
     union ModelRoData *rodata;
     u32 type = node->Opcode & 0xff;

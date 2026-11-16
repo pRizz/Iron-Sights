@@ -5,23 +5,18 @@
     "port/src/port_sight.c": 2,
     "src/game/bg.c": 3,
     "src/game/bondview2.c": 81,
-    "src/game/chr.c": 1,
-    "src/game/chr_b.c": 2,
     "src/game/explosion.c": 2,
     "src/game/glass.c": 1,
     "src/game/glass2.c": 1,
     "src/game/gunfire.c": 38,
-    "src/game/initanitable.c": 1,
-    "src/game/model.c": 46,
-    "src/game/objecthandler_2.c": 5,
     "src/game/sky.c": 1
   },
   "by_kind": {
-    "int-conversion": 75,
-    "int-to-pointer-cast": 64,
-    "pointer-to-int-cast": 49
+    "int-conversion": 58,
+    "int-to-pointer-cast": 41,
+    "pointer-to-int-cast": 34
   },
   "compiler": "gcc-13",
   "errors_by_file": {},
-  "total": 188
+  "total": 133
 }

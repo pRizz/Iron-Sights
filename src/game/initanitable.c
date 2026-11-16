@@ -223,7 +223,7 @@ extern u32 _animation_entriesSegmentRomStart[];
 
 struct anim_entry
 {
-    s32 unk00;
+    intptr_t unk00; /* ModelAnimation.address */
     s32 unk04;
     intptr_t unk08; /* ModelAnimation.bitDescriptors once relocated */
     s32 unk0C;
@@ -246,7 +246,7 @@ void expand_ani_table_entries(s32** arg0)
 
     for (var_v0 = arg0; *var_v0 != 0; var_v0++) {
         if (*var_v0 != (s32*)1) {
-            **var_v0 += (s32)&_animation_entriesSegmentRomStart;
+            ((struct anim_entry *)*var_v0)->unk00 += (intptr_t)&_animation_entriesSegmentRomStart;
         }
     }
 }
