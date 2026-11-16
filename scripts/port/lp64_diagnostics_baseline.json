@@ -1,15 +1,11 @@
 {
   "by_file": {
-    "env.c": 2,
     "include/PR/gbi.h": 1,
     "include/PR/os.h": 3,
-    "port/src/audio_pc.c": 8,
-    "port/src/audio_stubs.c": 11,
     "port/src/model_audit.c": 1,
     "port/src/pcsched.c": 3,
     "port/src/port_sight.c": 2,
     "port/src/port_state.c": 5,
-    "src/audi.c": 5,
     "src/debugmenu.c": 2,
     "src/game/bg.c": 25,
     "src/game/bondview2.c": 81,
@@ -36,23 +32,14 @@
     "src/game/sky.c": 1,
     "src/game/stan.c": 4,
     "src/game/tex.c": 2,
-    "src/game/zlib.c": 16,
-    "src/libultra/audio/cseq.c": 2,
-    "src/libultra/audio/heapinit.c": 1,
-    "src/libultra/audio/load.c": 6,
-    "src/libultra/audio/resample.c": 1,
-    "src/libultra/audio/save.c": 1,
-    "src/libultrare/audio/reverb.c": 1,
-    "src/music.c": 16,
-    "src/sched.c": 2,
-    "src/snd.c": 1
+    "src/game/zlib.c": 16
   },
   "by_kind": {
-    "int-conversion": 81,
-    "int-to-pointer-cast": 104,
-    "pointer-to-int-cast": 151
+    "int-conversion": 80,
+    "int-to-pointer-cast": 87,
+    "pointer-to-int-cast": 112
   },
   "compiler": "gcc-13",
   "errors_by_file": {},
-  "total": 336
+  "total": 279
 }

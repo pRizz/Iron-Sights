@@ -1608,6 +1608,45 @@ per-address order of memory accesses and no call between reordered ones.
 `s32` functions (the audio commit). The three `os.h` places come from
 `bondview2.c` calls and are Task 9's. *What ran:* step 1 (`update`, 16 s, 336 in 46 files, no `--allow-rise`). Step 2: the i686 headless build exited 0 (18 s) and the 20-mission smoke exited 0 with 20 of 20 `PASS` (about 185 s). Step 3 as above. `lp64_casts.py check` passed on the host (26 casts). The CI step's lines except the two `cmake` lines, plus `test_stan_callbacks.sh`, `test_image_bank.sh` and `test_dyn.sh`, ran in the i686 container: all 43 passed (118 s), `test_buffers.sh` without `MIDAS_BUFFER_SANITIZE=1` (it hangs under `qemu-i386`).
 
+*Task 8, second commit (audio; local, not pushed):* `ALDMAproc` takes and
+returns `intptr_t` addresses (`libaudio.h`), so `ALLoadFilter.memin`, the
+`dramLoc` locals of `load.c`, `amDmaCallback` (its parameter, return and the
+`addrEnd`/`buffEnd` locals) and `DMABuffer.startAddr` (`audi.c`) are
+`intptr_t`, all `s32`/`int` before; the buffer-order test
+`startAddr > addr` keeps its unsigned compare through `uintptr_t`, and the
+`addrEnd <= buffEnd` test stays signed. `ALSave.dramout` (`synthInternals.h`)
+and `ALSndPlayer.target` (`libaudio.h`) `s32` to `intptr_t`. Integers carried
+through `ALSetParam`'s `void *` go through `intptr_t`: `env.c` passes
+`(void *)(intptr_t)data.i`, `save.c` reads the pointer into an `intptr_t`
+local, and `resample.c` reads the pitch bits into an `intptr_t` local before
+storing them in its `s32` union member (no `(s32)(intptr_t)` cast). The
+scheduler's `OSMesg` tests switch on `(intptr_t)msg`, and `audi.c` passes
+its `osScAddClient` sentinel as `(OSScClient *)(intptr_t)1`, as before. In
+`music.c` the sequence-file rebase offset and the music table address are
+`intptr_t` (`s32` before), segment sizes are `uintptr_t` differences, the
+three track-buffer sums add `(intptr_t)` seqData, and the PC byte swap of the
+table's 32-bit offsets works on a `uintptr_t` with the low word masked (the
+same swap at 32 bits). `heapinit.c`, `reverb.c` alignment tests use
+`intptr_t` (they were `s32`), `cseq.c`'s track pointer `uintptr_t` (it was
+`u32`), and `audi.c`'s command-list size and boot-code size are `intptr_t`
+differences, keeping the signed `>> 3`. `audio_pc.c`'s command executor holds
+`w1` as `uintptr_t`; `Acmd`'s 32-bit words are unchanged (the plan's audio
+class). `alBnkfNew`'s eleven pointer-slot reads go through one helper,
+`portBnkfOffset`, whose single cast carries `/* LP64-004: audio bank converter */`
+and the allowlist line `port/src/audio_stubs.c 1` (27 casts in 12 files).
+*Counts:* 336 to 279 (`int-conversion` 81 to 80, `int-to-pointer-cast` 104 to
+87, `pointer-to-int-cast` 151 to 112; 46 files to 33): cleared `music.c` 16,
+`audio_stubs.c` 11, `audio_pc.c` 8, `load.c` 6, `audi.c` 5, `env.c`, `cseq.c`
+and `sched.c` 2 each, `heapinit.c`, `resample.c`, `save.c`, `reverb.c` and
+`snd.c` 1 each. *Windows comparison:* `compare_win32.py commits HEAD
+WORKTREE` exited 0, "identical in loaded code and data; .buildid differs"
+(113 s). *64-bit problems left:* `Acmd` words hold host buffer addresses in 32
+bits; the bank, the music sequence table and `RareALSeqData` keep their
+32-bit file layout until LP64-004. *What ran:* step 1 (`update`, 31 s, 279 in
+33 files, no `--allow-rise`); the i686 build exited 0 (18 s) and the
+20-mission smoke 20 of 20 `PASS` (184 s); step 3 as above;
+`lp64_casts.py check` passed (27 casts). The harness lines ran in the i686 container as for the first commit: all 43 passed (122 s).
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),

@@ -128,10 +128,14 @@ s32 alResampleParam(void *filter, s32 paramID, void *param)
                 (*f->source->setParam)(f->source, AL_FILTER_START, 0);
             break;
             
-        case (AL_FILTER_SET_PITCH):
-            data.i = (s32) param;
+        case (AL_FILTER_SET_PITCH): {
+            /* the f32 pitch bits, carried in the pointer (env.c) */
+            intptr_t bits = (intptr_t) param;
+
+            data.i = bits;
             r->ratio = data.f;
             break;
+        }
             
 	case (AL_FILTER_SET_UNITY_PITCH):
 	    r->upitch = 1;

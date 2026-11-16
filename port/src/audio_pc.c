@@ -480,7 +480,9 @@ void portAcmdRun(Acmd *list, s32 count)
 
     for (c = 0; c < count; c++) {
         u32 w0 = list[c].words.w0;
-        u32 w1 = list[c].words.w1;
+        /* pointer-sized: the address commands hand w1 to memcpy and the
+         * mixers as a host pointer */
+        uintptr_t w1 = list[c].words.w1;
         u32 op = w0 >> 24;
 
         switch (op) {
