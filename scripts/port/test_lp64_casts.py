@@ -56,6 +56,14 @@ class ParenthesisedCasts(unittest.TestCase):
         # Act / Assert
         self.assertEqual(casts.find_casts("n = (s32)((uintptr_t)a - (uintptr_t)b);"), [])
 
+    def test_a_truncating_cast_of_an_address_minus_a_plain_number_is_found(self):
+        # Act / Assert
+        self.assertEqual(casts.find_casts("n = (u32)((uintptr_t)p - 4);"), [1])
+
+    def test_a_difference_of_two_pointer_width_casts_is_not_found(self):
+        # Act / Assert
+        self.assertEqual(casts.find_casts("n = (s32)((uintptr_t)a - (uintptr_t)b);"), [])
+
     def test_a_member_access_arrow_is_not_a_difference(self):
         # Act / Assert
         self.assertEqual(casts.find_casts("n = (u32)((uintptr_t)p->next);"), [1])

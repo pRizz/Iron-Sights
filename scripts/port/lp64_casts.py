@@ -24,28 +24,31 @@ GIT_TIMEOUT_SECONDS = 60
 TRUNCATING_CAST = re.compile(
     r'\(\s*(?:u32|s32|int|unsigned\s+int|unsigned|u16|s16|uint32_t|int32_t|uint16_t|int16_t)\s*\)\s*'
     r'(?P<wrapped>\(\s*)?\(\s*(?:uintptr_t|intptr_t)\s*\)')
-# A `-` that subtracts: after an operand (identifier, number, `)` or `]`), and not the `->` arrow.
-BINARY_MINUS = re.compile(r'[\w)\]]\s*-(?!>)')
+# A `-` (not the `->` arrow) followed by another pointer-width cast.
+SUBTRACTED_ADDRESS = re.compile(r'-(?!>)\s*\(\s*u?intptr_t\s*\)')
 
 
 def wrapped_difference(text: str, start: int) -> bool:
-    """Return whether the parenthesis opened just before `start` encloses a top-level subtraction.
+    """Return whether the parenthesis opened just before `start` encloses a difference of two addresses.
 
-    `(s32)((uintptr_t)a - (uintptr_t)b)` measures a distance of two addresses, which fits; it is not
-    a truncated address, so `find_casts` leaves it out."""
-    depth, top = 1, []
-    for char in text[start:]:
+    `(s32)((uintptr_t)a - (uintptr_t)b)` measures a distance, which fits; it is not a truncated
+    address, so `find_casts` leaves it out. `(u32)((uintptr_t)p - 4)` is still a truncated address:
+    only a subtraction at the top level of the parenthesis whose right side is a second `(uintptr_t)`
+    or `(intptr_t)` cast counts."""
+    depth = 1
+    for index, char in enumerate(text[start:], start):
         depth += (char == '(') - (char == ')')
         if depth == 0:
-            break
-        top.append(char if depth == 1 else ' ')
-    return BINARY_MINUS.search(''.join(top)) is not None
+            return False
+        if char == '-' and depth == 1 and SUBTRACTED_ADDRESS.match(text, index):
+            return True
+    return False
 
 
 def find_casts(text: str) -> list[int]:
     """Return the 1-based line of every truncating round-trip cast in `text`.
 
-    Both `(u32)(uintptr_t)p` and `(u32)((uintptr_t)p)` count; a cast of a difference does not."""
+    Both `(u32)(uintptr_t)p` and `(u32)((uintptr_t)p)` count; a cast of a difference of two address casts does not."""
     found = []
     for match in TRUNCATING_CAST.finditer(text):
         if match['wrapped'] and wrapped_difference(text, match.start('wrapped') + 1):
