@@ -65,6 +65,8 @@
 #include "assets/obseg/file_resource_id_enums.h" /* OBJ_INDEX_MAX */
 #include "romdata.h"
 #include "../generated/romseg_list.h"
+#include "platform_info.h"
+#include "port_lp64.h" /* LP64-003: the ROM image must sit above 4 GB at 64 bits */
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console ring (spec section 7). */
@@ -688,15 +690,20 @@ static int romdataTryLoad(const char *path, enum romsource source, int strict)
 
     /* it is the stock GoldenEye image: move it high (see the file comment) */
     high = (u8 *) portAllocHighDedicated((u32) len);
+#if !IS_64_BIT
+    /* at 64 bits portAllocHighDedicated stops the game rather than return NULL */
     if (high == NULL) {
         portConLogf("ge: romdata: no high address for the %ld-byte ROM - keeping the heap copy (segment refs into it would misresolve in fast3d)\n", len);
         high = buf;
-    } else {
+    } else
+#endif
+    {
         memcpy(high, buf, (size_t) len);
         free(buf);
     }
     sRom = high;
     sRomSize = (u32) len;
+    portLp64CheckRegion("ROM image", sRom, sRomSize);
     sRomFingerprint = crc32;
     sRomSource = source;
     snprintf(sRomPath, sizeof(sRomPath), "%s", path);

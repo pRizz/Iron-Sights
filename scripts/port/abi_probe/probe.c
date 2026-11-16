@@ -11,6 +11,7 @@
 #include "sched.h"
 #include "game/bg.h"
 #include "game/objecthandler.h"
+#include "port_hostptr.h"
 
 /* Fixed at every width: the renderer reads these as N64 formats. */
 _Static_assert(sizeof(s32) == 4 && sizeof(u32) == 4, "32-bit integer types");
@@ -80,6 +81,13 @@ POINTER_SIZED(ModelRoData_ShadowRecord, image);
 POINTER_SIZED(ModelRoData_ShadowRecord, Header);
 POINTER_SIZED(ModelRoData_DisplayListPrimaryRecord, Vertices);
 POINTER_SIZED(ModelRoData_DisplayListPrimaryRecord, Primary);
+/* The host-pointer test (LP64-003): a segment word is never a host address;
+ * at 64 bits a host address has one of its upper 32 bits set. */
+_Static_assert(!PORT_IS_HOST_ADDR(0x0E000000u), "a segment-14 word is not a host address");
+#if IS_64_BIT
+_Static_assert(!PORT_IS_HOST_ADDR(0xFFFFFFFFu), "a 32-bit value is not a host address at 64 bits");
+_Static_assert(PORT_IS_HOST_ADDR(0x100000000ull), "4 GB is a host address at 64 bits");
+#endif
 #if !IS_64_BIT
 _Static_assert(sizeof(Gfx) == 8, "32-bit display-list stride");
 _Static_assert(sizeof(fileentry) == 12, "ROM file table layout");

@@ -12,6 +12,13 @@
  * image" (xbox_sys.c reads the image size from the XBE header at boot). Heap
  * allocations never hold display-list data, and every other display-list
  * allocation goes through the arenas. See docs/port/xbox-port.md.
+ *
+ * A 64-bit build tests "any of the upper 32 bits set": segment words and file
+ * offsets always fit in 32 bits, so the two cannot collide provided no game
+ * data lives below 4 GB. Nothing pins memory low at 64 bits, and the startup
+ * check (port_lp64.c, portLp64CheckAddressSpace) stops the game if the
+ * executable image, an arena or the ROM image sits below 4 GB
+ * (scripts/port/native_64bit_plan.md, "Addresses").
  */
 #ifndef PORT_HOSTPTR_H
 #define PORT_HOSTPTR_H
@@ -26,7 +33,12 @@ int portXboxIsHostAddr(unsigned int v);
 #endif
 #define PORT_IS_HOST_ADDR(v) (portXboxIsHostAddr((unsigned int) (v)))
 #else
+#include "platform_info.h"
+#if IS_64_BIT
+#define PORT_IS_HOST_ADDR(v) ((((uintptr_t) (v)) >> 32) != 0)
+#else
 #define PORT_IS_HOST_ADDR(v) ((unsigned int) (v) >= 0x10000000u)
+#endif
 #endif
 
 #endif

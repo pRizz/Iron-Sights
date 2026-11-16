@@ -14,6 +14,15 @@ MemoryPool *portMempPool(u8 bank)
     return g_mempPools + bank;
 }
 
+/* enum MEMPOOL's names (memp.h), for the exhaustion message. */
+static const char *bankName(u8 bank)
+{
+    static const char *const names[MEMPOOL_COUNT] = {
+        "total", "mf", "2", "ml", "stage", "me", "permanent",
+    };
+    return bank < MEMPOOL_COUNT ? names[bank] : "invalid";
+}
+
 static u32 remaining(const MemoryPool *pool)
 {
     const uintptr_t start = (uintptr_t)pool->start, pos = (uintptr_t)pool->pos, end = (uintptr_t)pool->end;
@@ -30,7 +39,7 @@ void *portMempAllocate(u32 bytes, u8 bank)
     if (bytes > remaining(pool)) {
         pool = portMempPool(MEMPOOL_PERMANENT);
         if (bytes > remaining(pool)) {
-            sysFatalError("Memory bank exhausted (bank %u, request %u bytes)", bank, bytes);
+            sysFatalError("Memory bank exhausted (bank %u \"%s\", request %u bytes)", bank, bankName(bank), bytes);
             return NULL;
         }
         needmemallocation = TRUE;

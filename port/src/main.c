@@ -13,6 +13,7 @@
 #include <stdarg.h>
 #include <ultra64.h>
 #include "port_modal.h"
+#include "port_lp64.h" /* LP64-003: portLp64CheckAddressSpace */
 #ifdef _WIN32
 #include <direct.h>   /* _mkdir: portLogPath */
 #else
@@ -882,6 +883,9 @@ int main(int argc, char **argv)
     {
         extern s32 romdataInit(int argc, char **argv);
         romdataInit(argc, argv);
+        /* LP64-003: the arenas are reserved and the ROM image is in place,
+         * and no ROM data is converted yet: prove all of it is above 4 GB */
+        portLp64CheckAddressSpace();
 #ifdef GE_VIDEO
         { extern const char *romdataPath(void);
           extern unsigned int romdataFingerprint(void);

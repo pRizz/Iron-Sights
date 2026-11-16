@@ -26,6 +26,8 @@
 #endif
 #include "sched.h"
 #include "game/frametiming.h"   /* portTickHz: GE_TICKHZ pump rate */
+#include "platform_info.h"
+#include "port_lp64.h"          /* LP64-003: 64-bit memory stays above 4 GB */
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console ring (spec section 7). */
@@ -52,6 +54,20 @@ static void *portAllocHighRaw(void *hint, u32 size)
     p = calloc(1, size);
 #elif defined(_WIN32)
     p = VirtualAlloc(hint, size, 0x3000 /* MEM_COMMIT|MEM_RESERVE */, 0x04 /* PAGE_READWRITE */);
+#elif IS_64_BIT
+    /* No hint at 64 bits: the system's placement is above 4 GB, which is what
+     * PORT_IS_HOST_ADDR needs; a hint would put the mapping low. */
+    (void) hint;
+    p = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (p == MAP_FAILED)
+    {
+        p = NULL;
+    }
+    else if (!portLp64RegionIsHigh(p, size))
+    {
+        munmap(p, size);
+        p = NULL;
+    }
 #else
     p = mmap(hint, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (p == MAP_FAILED)
@@ -143,6 +159,29 @@ static int portAllocHighSkipHints(void)
     return skip;
 }
 
+#if IS_64_BIT
+/* At 64 bits there is no low fallback and no NULL return: a mapping that
+ * cannot be had above 4 GB stops the game here, named. */
+static void portAllocHighFail(const char *name, u32 size) __attribute__((noreturn));
+static void portAllocHighFail(const char *name, u32 size)
+{
+    portConLogf("ge: %s: could not map %u bytes above 4 GB\n", name, size);
+    exit(1);
+}
+
+static void *portAllocHighOrExit(const char *name, u32 size)
+{
+    void *p = portAllocHighRaw(NULL, size);
+
+    if (p == NULL)
+    {
+        portAllocHighFail(name, size);
+    }
+    portLp64CheckRegion(name, p, size);
+    return p;
+}
+#endif
+
 /* Bump-allocate small requests from one reserved high arena instead of one
  * hinted VirtualAlloc per call, which used up the limited hints on stage
  * reloads. Oversize requests still walk the hints individually. */
@@ -164,10 +203,14 @@ void portAllocHighReserve(void)
     }
     s_HighArenaTried = 1;
 
+#if IS_64_BIT
+    s_HighArena = (u8 *) portAllocHighOrExit("high arena", PORT_HIGH_ARENA_SIZE);
+#else
     for (attempt = 0; attempt < 8 && s_HighArena == NULL && !portAllocHighSkipHints(); attempt++)
     {
         s_HighArena = portAllocHighRaw((void *) (uintptr_t) (0x30000000u + 0x10000000u * (u32) attempt), PORT_HIGH_ARENA_SIZE);
     }
+#endif
 #ifdef _WIN32
     if (s_HighArena == NULL)
     {
@@ -198,6 +241,9 @@ void *portAllocHigh(u32 size)
     u8 *arena;
     int attempt;
 
+#if IS_64_BIT
+    if (size > 0xffffffffu - 15u) portAllocHighFail("high allocation", size);
+#endif
     if (size > 0xffffffffu - 15u) return NULL;
     size = (size + 15u) & ~15u;
 
@@ -226,6 +272,9 @@ void *portAllocHigh(u32 size)
         }
     }
 
+#if IS_64_BIT
+    return portAllocHighOrExit("high allocation", size);
+#endif
     for (attempt = 0; attempt < 8 && !portAllocHighSkipHints(); attempt++)
     {
         void *p = portAllocHighRaw((void *) (uintptr_t) (0x50000000u + 0x08000000u * (u32) attempt), size);
@@ -260,8 +309,14 @@ void *portAllocHighDedicated(u32 size)
 {
     int attempt;
 
+#if IS_64_BIT
+    if (size > 0xffffffffu - 0xffffu) portAllocHighFail("high allocation", size);
+#endif
     if (size > 0xffffffffu - 0xffffu) return NULL;
     size = (size + 0xFFFFu) & ~0xFFFFu;
+#if IS_64_BIT
+    return portAllocHighOrExit("high allocation", size);
+#endif
     for (attempt = 0; attempt < 8 && !portAllocHighSkipHints(); attempt++)
     {
         void *p = portAllocHighRaw((void *) (uintptr_t) (0x50000000u + 0x08000000u * (u32) attempt), size);
@@ -405,6 +460,8 @@ void *portGetMempArena(u32 *outsize)
         {
             arena = VirtualAlloc(NULL, PORT_MEMP_ARENA_SIZE, 0x3000, 0x04);
         }
+#elif IS_64_BIT
+        arena = portAllocHighOrExit("memp arena", PORT_MEMP_ARENA_SIZE);
 #else
         /* glibc happens to mmap allocations this large (high addresses),
          * but make the >= 0x10000000 guarantee explicit. */

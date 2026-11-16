@@ -368,6 +368,11 @@ set_source_files_properties(assets/animationtable_data.c assets/animationtable_e
 
 # Port layer (grows as PD-derived pieces land; see docs/port/).
 file(GLOB PORT_SRC CONFIGURE_DEPENDS port/src/*.c)
+# port_lp64.c (the 64-bit address check) has no code at 32 bits, but even its
+# empty object adds a compiler ident to the Windows executable's .rdata.
+if(NOT GE_POINTER_BITS EQUAL 64)
+    list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_lp64.c)
+endif()
 file(GLOB WEAPON_IMAGE_PACK CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/assets/port/weapon_icons/weapon_icons.rle")
 set_source_files_properties(port/src/port_weapon_images.c PROPERTIES
     OBJECT_DEPENDS "${WEAPON_IMAGE_PACK}"
