@@ -211,22 +211,25 @@ Dam default 1% low 261 to 294 fps. One profiled run of each (matched Cradle):
 render thread 1.46 to 1.44 ms a frame, every function within 0.04 ms;
 `gfx_opengl_new_texture` went from 0.011 ms to nothing.
 
-### FORK-089 — Native 64-bit port: accepted plan, LP64-001 scaffolding built, gallery regeneration pending
+### FORK-089 — Native 64-bit port: accepted plan, LP64-001 scaffolding done
 
 **Status:** Plan accepted by the owner on 2026-11-15. Every task of milestone
 LP64-001 is built (Tasks 1 to 7 were each reviewed before reaching `main`): the two-tier gallery rule, the container
 runner, the layout probe, the diagnostics ratchet, the unchanged-32-bit
 comparison, the headless repair, `GE_POINTER_BITS`, and the CI wiring (below).
-The milestone is not closed: the review gallery has been pending since Task 5b (be840ef,
+The milestone is done: the review gallery, pending since Task 5b (be840ef,
 the first commit after the 8d6760d regeneration to edit a gallery input,
-`CMakeLists.txt` and `port/src/headless_stubs.c`), and clearing it needs a regeneration on the owner's Windows laptop,
-which the two-tier rule requires at the end of each milestone at the latest.
+`CMakeLists.txt` and `port/src/headless_stubs.c`), was regenerated on the
+owner's Windows laptop on 2026-11-15 in the commit "Regenerate the review gallery and close LP64-001",
+as the two-tier rule requires at the end of each milestone at the latest.
 CI run 43803408580 on f4c2c10 (the last commit before the fix wave) passed
 every job; on the runner the layout probe passed at 64 and 32 bits, the
 headless configure test passed, and the diagnostics check printed `OK: 1432
 diagnostics, baseline 1432`. A whole-milestone review followed the tasks; its
-fixes are the commits "Compare the Windows executable's load header and new untracked files", "Build the headless tree before counting 64-bit diagnostics", "Assert the light structs in the layout probe and the 32-bit link options", "Refuse a GE_ROM that is not an existing file" and "Correct the LP64-001 record after the milestone review", recorded in each task's note below. Nothing
-here says how CI fares on those commits. No game, engine or renderer source has
+fixes are the commits "Compare the Windows executable's load header and new untracked files", "Build the headless tree before counting 64-bit diagnostics", "Assert the light structs in the layout probe and the 32-bit link options", "Refuse a GE_ROM that is not an existing file" and "Correct the LP64-001 record after the milestone review", recorded in each task's note below. CI run
+43807622647 on d2feae1, the record commit after those fixes, passed every job:
+its tests job built and linked the headless tree on the runner, and the
+diagnostics check then printed `OK: 1432 diagnostics, baseline 1432`. No game, engine or renderer source has
 changed; the one port source changed is `port/src/headless_stubs.c` (Task 5b),
 which only `GE_HEADLESS` builds compile, so no shipped build's sources changed.
 No 64-bit build of the game exists, and the rest of the plan has not been built
@@ -267,8 +270,9 @@ a native x86_64 port as assessed and deferred. Upstream has open, unmerged
   clone (`midas.galleryDefer`), cleared on the development laptop at each
   milestone's end at the latest. Commits 2a3101e and 2c4d7f1 built it; the
   gallery was regenerated on the owner's Windows laptop in 8d6760d on
-  2026-11-15 (only `manifest.json` and `index.html` changed, no image), the
-  date of the last full regeneration. The rule is in `AGENTS.md` ("Render
+  2026-11-15 (only `manifest.json` and `index.html` changed, no image), and
+  again there at LP64-001's end, also on 2026-11-15, in the commit
+  "Regenerate the review gallery and close LP64-001" (no image changed). The rule is in `AGENTS.md` ("Render
   review gallery") and [the gallery guide](scripts/port/hand_gallery.md).
 
 **Measured while planning** (2026-11-15, not a check of any build):
@@ -281,7 +285,7 @@ a native x86_64 port as assessed and deferred. Upstream has open, unmerged
 - A dry-run merge of upstream pull request 95 into this fork conflicted in 24
   of its 200 files. It was not merged.
 
-**Milestone LP64-001 (scaffolding), planned on 2026-11-15, all tasks built, gallery regeneration open:**
+**Milestone LP64-001 (scaffolding), planned on 2026-11-15, done on 2026-11-15:**
 [its implementation plan](scripts/port/native_64bit_lp64_001.md) lists eight
 tasks: the two-tier gallery rule, a container runner for the Mac, a layout
 probe, a 64-bit diagnostics ratchet, a 32-bit executable comparison, a repair
@@ -583,10 +587,10 @@ Windows cross-build is reproducible with a fixed `SOURCE_DATE_EPOCH` (about
 56 s a build) and `compare_win32.py` reported the executable identical across
 the Task 5b and Task 6 changes; the diagnostics baseline was first recorded as 1,432
 places in 93 files with GCC 13, and is 1,432 places in 92 files after the fix
-wave's re-recording from a built tree. Open: the gallery is pending, because Tasks 5b, 6 and 7
-change deferred-tier gallery inputs on a machine that cannot render; a
-regeneration on the owner's Windows laptop clears it (the last full one was
-2026-11-15, 8d6760d; pending since Task 5b, be840ef). Across the milestone no
+wave's re-recording from a built tree. The gallery was pending from Task 5b
+(be840ef), because Tasks 5b, 6 and 7 changed deferred-tier gallery inputs on a
+machine that cannot render; the regeneration that closed the milestone cleared
+it (below). Across the milestone no
 game, engine or renderer source changed, and the one port source changed is
 `port/src/headless_stubs.c` (Task 5b), compiled only in `GE_HEADLESS` builds.
 
@@ -605,12 +609,24 @@ Task 4 and Task 7 commands build the headless tree before counting, and its
 Task 5 interface gives the `WORKTREE` contents and exit status 2. FORK-022 now
 says the gallery was regenerated under the two-tier rule in 8d6760d.
 
+*Milestone close (the commit "Regenerate the review gallery and close LP64-001", 2026-11-15, the
+owner's Windows laptop):* `python scripts/port/hand_gallery.py generate` rebuilt
+the default Windows executable and re-rendered every case; it reported 0 changed
+image cells. Only `review/hand-gallery/manifest.json` (its `inputs_sha256`; the
+`strict_inputs_sha256` was unchanged, since only deferred inputs had moved) and
+`index.html` changed. `verify` then printed `Gallery verified: 108 matrix cells,
+38 icons, input/pixel/file hashes and generated HTML.` and exited 0, so the
+pending state that began at Task 5b (be840ef) is cleared. Before it, CI run
+43807622647 on d2feae1 passed every job: its tests job built and linked the
+headless tree on the runner, and the diagnostics check then printed `OK: 1432
+diagnostics, baseline 1432`. The plan's status table marks LP64-001 `Done`.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),
 [inherited 32-bit constraints](docs/port/abi-and-portability.md).
 
-**Validation:** LP64-001 Tasks 2 to 7 have run (Task 1 is recorded in FORK-022 and in the gallery regeneration 8d6760d); no milestone is complete (the gallery regeneration is open). CI run 43803408580 on f4c2c10 passed every job (layout probe at 64 and 32 bits, headless configure test, `OK: 1432 diagnostics, baseline 1432`); nothing is recorded about CI on the fix-wave commits after it. What
+**Validation:** LP64-001 Tasks 2 to 7 have run (Task 1 is recorded in FORK-022 and in the gallery regeneration 8d6760d); LP64-001 is complete: the gallery was regenerated on the owner's Windows laptop in the commit "Regenerate the review gallery and close LP64-001" (0 changed images; `verify` exited 0, fresh). CI run 43803408580 on f4c2c10 passed every job (layout probe at 64 and 32 bits, headless configure test, `OK: 1432 diagnostics, baseline 1432`), and CI run 43807622647 on d2feae1, after the fix wave, passed every job (its tests job built and linked the headless tree on the runner; `OK: 1432 diagnostics, baseline 1432`). What
 ran: the 11 ROM-free tests in `scripts/port/test_lp64_env.py` (passing); on the
 Mac, `build-images` (3 min 58 s) and three container checks (`gcc -dumpmachine`
 in the aarch64 and x86_64 images, and a `gcc -m32` program in the i686
@@ -10604,8 +10620,10 @@ setting when generation fails. New hand, arm or wardrobe files must be added
 to `STRICT_FILES`. Tests: `scripts/port/test_hand_gallery.py`. Documented in
 `scripts/port/hand_gallery.md` and AGENTS.md. The checked-in gallery was
 regenerated under this rule on the owner's Windows laptop in 8d6760d
-(2026-11-15; only `manifest.json` and `index.html` changed); later deferred-tier
-changes have left it pending since be840ef (FORK-089).
+(2026-11-15; only `manifest.json` and `index.html` changed). Deferred-tier
+changes left it pending from be840ef until the regeneration at the end of
+LP64-001, the commit "Regenerate the review gallery and close LP64-001" (2026-11-15, the same
+laptop, no image changed; FORK-089).
 
 CI performs ROM-free gallery integrity/freshness and workflow tests. The README
 links to the gallery and setup guide. This supplements the hand/arm contracts
