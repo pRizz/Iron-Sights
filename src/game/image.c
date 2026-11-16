@@ -9,6 +9,7 @@
 #ifndef TARGET_N64
 #include "frametiming.h" /* tickhz=hw texture decode price */
 #include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
+#include <inttypes.h> /* PRIxPTR: texLoad's web traces print the whole slot */
 #endif
 
 
@@ -2469,7 +2470,7 @@ void texLoadFromDisplayList(Gfx *gdl, struct texpool *arg1)
         if ((cmd->words.w0 >> 24) == (u8)G_SETTIMG &&
             (cmd->words.w1 >> 16) == 0xABCDu)
         {
-            texLoad((s32 *)&cmd->words.w1, arg1);
+            texLoad(&cmd->words.w1, arg1);
         }
 
         cmd++;
@@ -2523,7 +2524,7 @@ extern u8 *port_imagesSegmentRomStart;
  * u = unknown z = texture is compressed with zlib l = number of levels of
  * detail within the texture
  */
-void texLoad(s32 *updateword, struct texpool *pool)
+void texLoad(uintptr_t *updateword, struct texpool *pool)
 {
     u8 compbuffer[4000];
     u8 *compptr;
@@ -2538,7 +2539,7 @@ void texLoad(s32 *updateword, struct texpool *pool)
     s32 bytesout;
 
 #ifndef TARGET_N64
-    portLp64RequireConverter(PORT_LP64_TEXTURES); /* writes a data address into a 4-byte slot */
+    portLp64RequireConverter(PORT_LP64_TEXTURES); /* builds the pool's struct tex records (texture class, LP64-004) */
 #endif
     if (pool == NULL)
     {
@@ -2548,7 +2549,7 @@ void texLoad(s32 *updateword, struct texpool *pool)
     g_TexNumToLoad = *updateword & 0xffff;
 #ifdef __EMSCRIPTEN__
     if (g_TexNumToLoad >= PORT_TEXTURES_MAX-1) {
-        fprintf(stderr, "ge: web invalid texture ID: word=%08x update=%p\n", *updateword, updateword);
+        fprintf(stderr, "ge: web invalid texture ID: word=%08" PRIxPTR " update=%p\n", *updateword, (void *) updateword);
         __builtin_trap();
     }
 #endif
@@ -2581,8 +2582,8 @@ void texLoad(s32 *updateword, struct texpool *pool)
         nextoffset = g_Textures[g_TexNumToLoad + 1].dataoffset;
 #ifdef __EMSCRIPTEN__
         if (nextoffset < thisoffset || nextoffset-thisoffset > sizeof(compbuffer)-16) {
-            fprintf(stderr, "ge: web invalid texture span: num=%d start=%d next=%d update=%p word=%08x\n",
-                    g_TexNumToLoad, thisoffset, nextoffset, updateword, *updateword);
+            fprintf(stderr, "ge: web invalid texture span: num=%d start=%d next=%d update=%p word=%08" PRIxPTR "\n",
+                    g_TexNumToLoad, thisoffset, nextoffset, (void *) updateword, *updateword);
             __builtin_trap();
         }
 #endif
@@ -2762,7 +2763,7 @@ void texLoadFromModelFileHeader(ModelFileHeader* arg0, struct texpool* arg1)
         if (textures[i].TextureID < (u32)MAX_TEXTURES)
 #endif
         {
-            texLoad(&textures[i], arg1);
+            texLoad(&textures[i].TextureID, arg1);
         }
     }
 }
@@ -2787,7 +2788,7 @@ u32 portTexRomBytes(s32 texnum)
 
 void texLoadFromTextureNum(s32 texturenum, struct texpool *arg1)
 {
-    u32 texturenumcopy;
+    uintptr_t texturenumcopy;
     texturenumcopy = texturenum;
     texLoad(&texturenumcopy, arg1);
 }

@@ -12,7 +12,6 @@ port/src/port_state_effects_audit.c	1	existing before LP64-003
 src/game/bg.c	7	existing before LP64-003
 src/game/front.c	5	existing before LP64-003
 src/game/gunfire.c	3	existing before LP64-003
-src/game/image.c	2	existing before LP64-003
 src/game/mpmenu.c	6	existing before LP64-003
 src/game/propobj.c	18	existing before LP64-003
 src/game/tex.c	1	existing before LP64-003

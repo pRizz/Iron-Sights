@@ -253,15 +253,15 @@ void texReset(void)
     texLoadFromDisplayList((Gfx *) ((u8 *)&globalDL_0x9a8 + globalbank_rdram_offset), 0);
     texLoadFromDisplayList((Gfx *) ((u8 *)&globalDL_0xa50 + globalbank_rdram_offset), 0);
 
-    texLoad(genericimage, 0);
+    texLoad(&genericimage->index, 0);
 
     for (i=0; i < 6; i++)
     {
-        texLoad(&explosion_smokeimages[i], 0);
+        texLoad(&explosion_smokeimages[i].index, 0);
     }
 
     for (i=0; i < 5; i++)
     {
-        texLoad(&scattered_explosions[i], 0);
+        texLoad(&scattered_explosions[i].index, 0);
     }
 }

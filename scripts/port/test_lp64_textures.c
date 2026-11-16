@@ -1,6 +1,8 @@
 /* ROM-free test of the external-texture slot (LP64-003 Task 6): the slot
  * loader in port/src/port_textures.c stores the whole pixel address in
- * sImageTableEntry.index, so a 64-bit pointer survives. Built at both pointer
+ * sImageTableEntry.index, so a 64-bit pointer survives. Also texLoad's slot
+ * type (Task 7): a stand-in declared with texLoad's own type (image.h) stores
+ * a 64-bit value through it and the slot keeps every byte. Built at both pointer
  * widths by scripts/port/test_lp64_address.sh, which links port_textures.c
  * with the stubs below.
  *
@@ -160,6 +162,33 @@ static void testSlotHoldsWholePixelAddress(void)
            "the external texture's index is the whole address of its pixels");
 }
 
+/* texLoad writes the texture's data address through its parameter. Declared
+ * with texLoad's type, so this definition stops compiling if that parameter
+ * stops being a whole pointer-sized slot. */
+static __typeof__(texLoad) stubTexLoad;
+
+static void stubTexLoad(uintptr_t *updateword, struct texpool *pool)
+{
+    (void) pool;
+    *updateword = (uintptr_t) 0x0000AAAA12345678ull;
+}
+
+static void testTexLoadSlotKeepsWholeWord(void)
+{
+    // Arrange
+    uintptr_t slot = 0;
+
+    // Act
+    stubTexLoad(&slot, NULL);
+
+    // Assert
+#if IS_64_BIT
+    expect(slot == (uintptr_t) 0x0000AAAA12345678ull, "a texLoad slot keeps all 8 bytes of 0x0000AAAA12345678");
+#else
+    expect(slot == 0x12345678u, "a texLoad slot keeps the 4-byte word 0x12345678");
+#endif
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 2)
@@ -169,5 +198,6 @@ int main(int argc, char **argv)
     }
     s_root = argv[1];
     testSlotHoldsWholePixelAddress();
+    testTexLoadSlotKeepsWholeWord();
     return s_failures == 0 ? 0 : 1;
 }
