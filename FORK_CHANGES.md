@@ -211,14 +211,19 @@ Dam default 1% low 261 to 294 fps. One profiled run of each (matched Cradle):
 render thread 1.46 to 1.44 ms a frame, every function within 0.04 ms;
 `gfx_opengl_new_texture` went from 0.011 ms to nothing.
 
-### FORK-089 — Native 64-bit port: accepted plan, scaffolding in progress
+### FORK-089 — Native 64-bit port: accepted plan, LP64-001 scaffolding built, gallery regeneration pending
 
-**Status:** Plan accepted by the owner on 2026-11-15. Milestone LP64-001's
-tooling is in progress: the container runner, the layout probe, the
-diagnostics ratchet and the unchanged-32-bit comparison exist and have run (below). No game, engine, port or
-renderer source has changed, no 64-bit build of the game exists, and no
-milestone is complete. The rest of the plan has not been built or verified; its
-milestone status table says so.
+**Status:** Plan accepted by the owner on 2026-11-15. Every task of milestone
+LP64-001 is built and was reviewed: the two-tier gallery rule, the container
+runner, the layout probe, the diagnostics ratchet, the unchanged-32-bit
+comparison, the headless repair, `GE_POINTER_BITS`, and the CI wiring (below).
+The milestone is not closed: the review gallery has been pending since commit
+36d7ed2, and clearing it needs a regeneration on the owner's Windows laptop,
+which the two-tier rule requires at the end of each milestone at the latest.
+CI's result for the commit that added the CI lines was not known when this was
+written. No game, engine, port or renderer source has changed, no 64-bit build
+of the game exists, and the rest of the plan has not been built or verified;
+its milestone status table says so.
 
 Inherited behaviour: upstream builds only as a 32-bit program (`-m32`, and
 32-bit WebAssembly), by design, and this fork inherited that. FORK-031 recorded
@@ -247,15 +252,17 @@ a native x86_64 port as assessed and deferred. Upstream has open, unmerged
   restore raw memory to fixed addresses. Campaign saves are unaffected.
 - **Where the work runs.** The owner's Apple Silicon Mac, with the US ROM in
   that checkout's root, ignored by Git.
-- **Review gallery rule, planned, not yet built.** The owner chose to loosen
-  the gallery requirement to two tiers: a strict list (the fork's hand, arm
-  and wardrobe code, the game files the arm contracts name, the renderer, the
-  weapon icons, the capture path and the tool) keeps today's rule; every other
-  rendering input may leave the gallery pending, opt-in per clone, cleared on
-  the development laptop at each milestone's end at the latest. Until
-  milestone LP64-001 builds this, the rule in `AGENTS.md` ("Render review
-  gallery") and [the gallery guide](scripts/port/hand_gallery.md) is unchanged
-  and still applies.
+- **Review gallery rule, two tiers (built in LP64-001 Task 1).** The owner
+  chose to loosen the gallery requirement to two tiers: a strict list (the
+  fork's hand, arm and wardrobe code, the game files the arm contracts name,
+  the renderer, the weapon icons, the capture path and the tool) keeps today's
+  rule; every other rendering input may leave the gallery pending, opt-in per
+  clone (`midas.galleryDefer`), cleared on the development laptop at each
+  milestone's end at the latest. Commits 2a3101e and 2c4d7f1 built it; the
+  gallery was regenerated on the owner's Windows laptop in 8d6760d on
+  2026-11-15 (only `manifest.json` and `index.html` changed, no image), the
+  date of the last full regeneration. The rule is in `AGENTS.md` ("Render
+  review gallery") and [the gallery guide](scripts/port/hand_gallery.md).
 
 **Measured while planning** (2026-11-15, not a check of any build):
 
@@ -267,13 +274,17 @@ a native x86_64 port as assessed and deferred. Upstream has open, unmerged
 - A dry-run merge of upstream pull request 95 into this fork conflicted in 24
   of its 200 files. It was not merged.
 
-**Milestone LP64-001 (scaffolding), planned on 2026-11-15, in progress:**
+**Milestone LP64-001 (scaffolding), planned on 2026-11-15, all tasks built, gallery regeneration open:**
 [its implementation plan](scripts/port/native_64bit_lp64_001.md) lists eight
 tasks: the two-tier gallery rule, a container runner for the Mac, a layout
 probe, a 64-bit diagnostics ratchet, a 32-bit executable comparison, a repair
 of the headless build (Task 5b), a `GE_POINTER_BITS` build option, and CI
-wiring. Only Task 2, the container runner, Task 3, the layout probe, Task 4, the
-64-bit diagnostics ratchet, Task 5, the 32-bit executable comparison, and Task 6, the pointer-width option, have been built and run (below); the others have not. Each task extends this entry with what it built and ran.
+wiring. All eight have been built (below): Task 1 (the two-tier rule) in 2a3101e and
+2c4d7f1, Task 2 in 54b1209, 857398a, a0ed9b2 and 8167b54, Task 3 in 803e4c6,
+Task 4 in 59d1755 and 02e7c35, Task 5 in ebf3912 and c7f9701, Task 5b in
+be840ef and 36d7ed2, Task 6 in 72064fe and f126afc, and Task 7 in the commit
+named "Run the 64-bit scaffolding checks in CI". Each task extended this entry
+with what it built and ran.
 
 *LP64-001 task 2, the container runner (built 2026-11-15 on the owner's Apple
 Silicon Mac, Docker 29.9.2):* `scripts/port/lp64_env.py` runs a command in the
@@ -320,8 +331,8 @@ naming every file whose count rose above the baseline (a new file counts from
 zero), refuses to compare across compilers (the baseline records `gcc-13`), and
 prints `Baseline can be lowered: run update.` only when the total fell and nothing regressed. The baseline also records `errors_by_file`, and `check` fails when a file's compile-error count rises even if its total falls, since a hard error such as a missing header can hide the file's other diagnostics. A `compile_commands.json` with no C entries is an error, never a zero. Default input
 is `build/lp64/diag/compile_commands.json`. `scripts/port/test_lp64_diagnostics.py`
-(16 ROM-free, compiler-free tests) covers the pure functions. Nothing wires the
-check into CI or the hook yet. No game, engine, port or renderer source was changed.
+(16 ROM-free, compiler-free tests) covers the pure functions. Task 7 runs it in CI; the
+pre-commit hook does not. No game, engine, port or renderer source was changed.
 
 *LP64-001 task 5, the unchanged-32-bit comparison:* `scripts/port/compare_win32.py`
 proves a change leaves the 32-bit Windows program unchanged. `commits REF_A REF_B`
@@ -395,22 +406,56 @@ headless configure's `compile_commands.json` (build directory name
 normalised) is identical to the one captured before the edit
 (`commands-identical`), and `compare_win32.py commits HEAD WORKTREE` exited 0,
 `identical in loaded code and data`. The Emscripten case was not run (no emsdk
-here); the web build is shown unchanged by reading the diff only. CI does not
-run the script yet. No game, engine, port or renderer source was changed.
+here); the web build is shown unchanged by reading the diff only. Task 7 runs it in CI. No game, engine, port or renderer source was changed.
+
+*LP64-001 task 7, CI and milestone evidence (2026-11-15):* the `tests` job of
+`.github/workflows/windows-release.yml` (`ubuntu-24.04`), in its step
+`Test gameplay, cache and release tooling without a ROM`, now also runs, after
+`test_hand_gallery.py`: `test_lp64_env.py`, `test_abi_probe.sh`,
+`test_lp64_diagnostics.py`, `test_compare_win32.py`, `test_pointer_bits.sh`,
+`test_headless_configure.sh`, a Debug `GE_HEADLESS=ON` configure into
+`build/lp64/diag` with `CMAKE_EXPORT_COMPILE_COMMANDS=ON`, and
+`lp64_diagnostics.py check`. No install step changed. What each needs on the
+runner, from reading the workflow and `scripts/port/ci_dependencies.py`: the
+`tests` profile installs `gcc-multilib` and `g++-multilib` (32-bit headers and
+`-m32`, which the job's `test_states.sh` and `test_save_transfer.sh` already
+use); CMake, make, bash, Python 3 and Git come from the hosted image (the
+dependency script's own comment says hosted runners provide CMake and make
+outside dpkg, and the job's `test_open_fonts.sh` already calls `cmake`). The
+runner has no MinGW in this job, so `test_pointer_bits.sh` skips its case 5 with
+a message there; `test_abi_probe.sh` runs its `-m32` pass. The diagnostics
+baseline was recorded with GCC 13, which Ubuntu 24.04 provides in the container
+and on the runner; `check` refuses a different compiler. Each of the eight lines
+was run on the Mac in the x86_64 container (`lp64_env.py run --arch x86_64 --`,
+the diagnostics configure into a wiped `build/lp64/diag`) and exited 0:
+11 and 16 and 22 tests passing, `ABI probe OK (64-bit)` and `(32-bit)`, five
+pointer-bits cases passing (the container has MinGW, so case 5 ran),
+`Headless configure OK`, and `OK: 1432 diagnostics, baseline 1432`. That the
+runner has the tools was established by reading, not by a run; only the CI run
+shows it, and CI's result for this commit was not known when this was written.
+Milestone evidence: the emulated i686 headless reference builds and runs the
+20-mission smoke with the ROM (exit 0, 20 of 20 `PASS`, about 184 s); the
+Windows cross-build is reproducible with a fixed `SOURCE_DATE_EPOCH` (about
+56 s a build) and `compare_win32.py` reported the executable identical across
+the Task 5b and Task 6 changes; the diagnostics baseline is 1,432 places in 93
+files with GCC 13. Open: the gallery is pending, because Tasks 5b, 6 and 7
+change deferred-tier gallery inputs on a machine that cannot render; a
+regeneration on the owner's Windows laptop clears it (the last full one was
+2026-11-15, 8d6760d). No game, engine, port or renderer source was changed.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),
 [inherited 32-bit constraints](docs/port/abi-and-portability.md).
 
-**Validation:** Only LP64-001 Tasks 2, 3, 4, 5, 5b and 6 have run; no milestone is complete. What
+**Validation:** LP64-001 Tasks 2 to 7 have run; no milestone is complete (the gallery regeneration is open, and CI's result for Task 7 is not yet known). What
 ran: the 11 ROM-free tests in `scripts/port/test_lp64_env.py` (passing); on the
 Mac, `build-images` (3 min 58 s) and three container checks (`gcc -dumpmachine`
 in the aarch64 and x86_64 images, and a `gcc -m32` program in the i686
 container, which printed `i686-runs`); and the i686 headless reference build
 and 20-mission smoke, which needed two workarounds at the time
 (the SDL shim include and a scratch `portRenderAsyncActive` stub); task 5b
-repaired the stock configuration. Task 3, in the containers: `python3 scripts/port/lp64_env.py run --arch x86_64 -- bash scripts/port/test_abi_probe.sh` exited 0 and printed `ABI probe OK (64-bit)` and `ABI probe OK (32-bit)`; the same with `--arch aarch64` exited 0 and printed `ABI probe OK (64-bit)`, then `gcc: error: unrecognized command-line option '-m32'` (the availability check's own output) and `ABI probe: -m32 unavailable on this host, skipped`. Changing `sizeof(Vtx) == 16` to `24` temporarily made the x86_64 run fail with `static assertion failed: "Vertex stride"`; the line was restored. Task 4: the 16 tests in `scripts/port/test_lp64_diagnostics.py` pass with plain `python3` on the host. In the x86_64 container, `cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-I/home/dev/project/scripts/port/sdl_shim` configured (the game was not built; the flag was a workaround for the headless defect that task 5b repaired, and the stock configure now gives the same count), then `lp64_diagnostics.py update` (about 9 s) recorded 1,432 diagnostics in 93 files with GCC 13: 709 `int-conversion`, 432 `pointer-to-int-cast`, 229 `int-to-pointer-cast` and 62 `error` in 4 files (`src/game/propobj.c` 59, and one each in `port/crash/reporting_linux.c`, `port/src/port_startup.c`, `port/src/sysstubs.c`; for example `initializer element is not computable at load time` in `src/game/propobj.c`). The largest files are `src/game/front.c` 261, `options.c` 158, `propobj.c` 148, `image_bank.c` 86, `chraction.c` 83. 54 of the 93 files are under `src/game` and 14 under `port/src`. This is lower than the planning figure (about 1,600 in 70 files, a different compiler, game and engine files only) although this run also covers the port layer. A second `update` left the file byte-identical and `check` exited 0 (`OK: 1432 diagnostics, baseline 1432`). `check` in the aarch64 container, reusing the x86_64 `compile_commands.json`, exited 0, and its `count` output equals the baseline exactly. After adding `errors_by_file`, `update` was re-run in the x86_64 container (totals unchanged), a second `update` was byte-identical, `check` exited 0 in the x86_64 and aarch64 containers, and `check` on a `compile_commands.json` holding only a C++ entry exited 1 with an error naming the file. Task 5, on the Mac under Docker emulation: `python3 scripts/port/compare_win32.py commits HEAD HEAD` built twice at 54 s and 55 s (110 s in all). Without `SOURCE_DATE_EPOCH` the two builds of one commit were not identical: it exited 1, reporting `.buildid` (the 16-byte build-id GUID), `.edata` (the export directory's 4-byte timestamp) and `.rdata` (12 bytes in four places: `__DATE__`/`__TIME__` in `src/game/compiletime.c` and `port/src/sysstubs.c`, and the ISO build time shown by the About page, twice). Exporting `SOURCE_DATE_EPOCH` in both builds made the same command exit 0, "identical", with no byte normalised by the tool (the build-id matched too). `commits 1e3df59 d76b6cf` (before and after FORK-088's renderer change) built at 54 s and 55 s and exited 1, reporting `.CRT`, `.buildid`, `.data`, `.edata`, `.idata`, `.rdata`, `.reloc`, `.rsrc` and `.text` as different (`.text` 3,312,640 vs 3,319,808 bytes). After review, the tool also compares section headers, entry point, image base, alignment and data directories, rejects a PE with two sections of one name, and excludes `.buildid`; the 22 tests in `scripts/port/test_compare_win32.py` pass. Debug-only experiment (working tree, not committed, restored with `git checkout -- src/game/bg.c`, `git status --short` then clean for it): in `src/game/bg.c` line 1504, `addToByteSetMaxSize15`, `s32 i = 0;` became `int i = 0;` (`s32` is `typedef int`). `commits HEAD WORKTREE` (54 s and 54 s) exited 0 and printed `identical in loaded code and data; .buildid differs`. Measured directly on those two executables: the only differences were 16 bytes of `.buildid`, 2 bytes in the debug section `/29` (18,481,152 bytes in both), and the optional header CheckSum; every compared header field, directory and section header was equal, and the sizes of the executables were equal (33,288,073 bytes). This edit did not move SizeOfImage or any section offset, so that experiment does not show the reason given for excluding them. After the changes: `commits HEAD HEAD` exited 0, `identical in loaded code and data` (54 s and 54 s); `commits 1e3df59 d76b6cf` exited 1 (55 s and 55 s), listing for `.text` different bytes and VirtualSize (0x328bf4 vs 0x32a634), and also `.CRT`, `.data`, `.edata`, `.idata`, `.rdata`, `.reloc` and `.rsrc` bytes, VirtualAddress differences in every section but `.buildid`, VirtualSize differences in `.bss`, `.idata`, `.rdata` and `.reloc`, and the Export, Import, Resource, BaseRelocation, TLS and IAT directories. Nothing else in the plan has run. The Bright Builds
+repaired the stock configuration. Task 3, in the containers: `python3 scripts/port/lp64_env.py run --arch x86_64 -- bash scripts/port/test_abi_probe.sh` exited 0 and printed `ABI probe OK (64-bit)` and `ABI probe OK (32-bit)`; the same with `--arch aarch64` exited 0 and printed `ABI probe OK (64-bit)`, then `gcc: error: unrecognized command-line option '-m32'` (the availability check's own output) and `ABI probe: -m32 unavailable on this host, skipped`. Changing `sizeof(Vtx) == 16` to `24` temporarily made the x86_64 run fail with `static assertion failed: "Vertex stride"`; the line was restored. Task 4: the 16 tests in `scripts/port/test_lp64_diagnostics.py` pass with plain `python3` on the host. In the x86_64 container, `cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-I/home/dev/project/scripts/port/sdl_shim` configured (the game was not built; the flag was a workaround for the headless defect that task 5b repaired, and the stock configure now gives the same count), then `lp64_diagnostics.py update` (about 9 s) recorded 1,432 diagnostics in 93 files with GCC 13: 709 `int-conversion`, 432 `pointer-to-int-cast`, 229 `int-to-pointer-cast` and 62 `error` in 4 files (`src/game/propobj.c` 59, and one each in `port/crash/reporting_linux.c`, `port/src/port_startup.c`, `port/src/sysstubs.c`; for example `initializer element is not computable at load time` in `src/game/propobj.c`). The largest files are `src/game/front.c` 261, `options.c` 158, `propobj.c` 148, `image_bank.c` 86, `chraction.c` 83. 54 of the 93 files are under `src/game` and 14 under `port/src`. This is lower than the planning figure (about 1,600 in 70 files, a different compiler, game and engine files only) although this run also covers the port layer. A second `update` left the file byte-identical and `check` exited 0 (`OK: 1432 diagnostics, baseline 1432`). `check` in the aarch64 container, reusing the x86_64 `compile_commands.json`, exited 0, and its `count` output equals the baseline exactly. After adding `errors_by_file`, `update` was re-run in the x86_64 container (totals unchanged), a second `update` was byte-identical, `check` exited 0 in the x86_64 and aarch64 containers, and `check` on a `compile_commands.json` holding only a C++ entry exited 1 with an error naming the file. Task 5, on the Mac under Docker emulation: `python3 scripts/port/compare_win32.py commits HEAD HEAD` built twice at 54 s and 55 s (110 s in all). Without `SOURCE_DATE_EPOCH` the two builds of one commit were not identical: it exited 1, reporting `.buildid` (the 16-byte build-id GUID), `.edata` (the export directory's 4-byte timestamp) and `.rdata` (12 bytes in four places: `__DATE__`/`__TIME__` in `src/game/compiletime.c` and `port/src/sysstubs.c`, and the ISO build time shown by the About page, twice). Exporting `SOURCE_DATE_EPOCH` in both builds made the same command exit 0, "identical", with no byte normalised by the tool (the build-id matched too). `commits 1e3df59 d76b6cf` (before and after FORK-088's renderer change) built at 54 s and 55 s and exited 1, reporting `.CRT`, `.buildid`, `.data`, `.edata`, `.idata`, `.rdata`, `.reloc`, `.rsrc` and `.text` as different (`.text` 3,312,640 vs 3,319,808 bytes). After review, the tool also compares section headers, entry point, image base, alignment and data directories, rejects a PE with two sections of one name, and excludes `.buildid`; the 22 tests in `scripts/port/test_compare_win32.py` pass. Debug-only experiment (working tree, not committed, restored with `git checkout -- src/game/bg.c`, `git status --short` then clean for it): in `src/game/bg.c` line 1504, `addToByteSetMaxSize15`, `s32 i = 0;` became `int i = 0;` (`s32` is `typedef int`). `commits HEAD WORKTREE` (54 s and 54 s) exited 0 and printed `identical in loaded code and data; .buildid differs`. Measured directly on those two executables: the only differences were 16 bytes of `.buildid`, 2 bytes in the debug section `/29` (18,481,152 bytes in both), and the optional header CheckSum; every compared header field, directory and section header was equal, and the sizes of the executables were equal (33,288,073 bytes). This edit did not move SizeOfImage or any section offset, so that experiment does not show the reason given for excluding them. After the changes: `commits HEAD HEAD` exited 0, `identical in loaded code and data` (54 s and 54 s); `commits 1e3df59 d76b6cf` exited 1 (55 s and 55 s), listing for `.text` different bytes and VirtualSize (0x328bf4 vs 0x32a634), and also `.CRT`, `.data`, `.edata`, `.idata`, `.rdata`, `.reloc` and `.rsrc` bytes, VirtualAddress differences in every section but `.buildid`, VirtualSize differences in `.bss`, `.idata`, `.rdata` and `.reloc`, and the Export, Import, Resource, BaseRelocation, TLS and IAT directories. Task 7's eight CI lines ran in the x86_64 container, as described above. Nothing else in the plan has run. The Bright Builds
 checks, the settings placement check and the ROM-free gallery verification
 were run for the documentation changes.
 

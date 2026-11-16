@@ -81,6 +81,14 @@ jobs:
           python3 scripts/port/test_download_retry.py
           python3 scripts/port/test_ci_dependencies.py
           python3 scripts/port/test_hand_gallery.py
+          python3 scripts/port/test_lp64_env.py
+          bash scripts/port/test_abi_probe.sh
+          python3 scripts/port/test_lp64_diagnostics.py
+          python3 scripts/port/test_compare_win32.py
+          bash scripts/port/test_pointer_bits.sh
+          bash scripts/port/test_headless_configure.sh
+          cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          python3 scripts/port/lp64_diagnostics.py check
           python3 scripts/port/hand_gallery.py verify --allow-pending
 
   # The builds start alongside the tests instead of after them; publish waits
