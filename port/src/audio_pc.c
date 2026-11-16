@@ -492,7 +492,7 @@ void portAcmdRun(Acmd *list, s32 count)
 
         case A_CLEARBUFF: {
             u32 d = w0 & 0xFFFFFF;
-            u32 n = w1;
+            u32 n = (u32) w1;
 
             if (n > 0 && d < DMEM_SIZE) {
                 if (n > DMEM_SIZE - d) {
@@ -506,12 +506,12 @@ void portAcmdRun(Acmd *list, s32 count)
         case A_SETBUFF:
             if (((w0 >> 16) & 0xFF) & A_AUX) {
                 s_MixMainR = w0 & 0xFFFF;
-                s_MixAuxL = w1 >> 16;
+                s_MixAuxL = (u16) (w1 >> 16);
                 s_MixAuxR = w1 & 0xFFFF;
             } else {
                 s_BufFlags = (w0 >> 16) & 0xFF;
                 s_BufIn = w0 & 0xFFFF;
-                s_BufOut = w1 >> 16;
+                s_BufOut = (u16) (w1 >> 16);
                 s_BufCount = w1 & 0xFFFF;
             }
             break;
@@ -580,7 +580,7 @@ void portAcmdRun(Acmd *list, s32 count)
 
         case A_DMEMMOVE: {
             u32 din = w0 & 0xFFFFFF;
-            u32 dout = w1 >> 16;
+            u32 dout = (u32) (w1 >> 16);
             u32 n = w1 & 0xFFFF;
 
             memmove(&s_Dmem[dout & (DMEM_SIZE - 1)], &s_Dmem[din & (DMEM_SIZE - 1)], n);
@@ -639,7 +639,7 @@ void portAcmdRun(Acmd *list, s32 count)
 
         case A_MIXER: {
             s32 gain = (s16)(w0 & 0xFFFF);
-            const s16 *min = dmem16(w1 >> 16);
+            const s16 *min = dmem16((u32) (w1 >> 16));
             s16 *mout = dmem16(w1 & 0xFFFF);
             s32 n = ((s_BufCount + 15) & ~15) >> 1;
             s32 i;
@@ -658,7 +658,7 @@ void portAcmdRun(Acmd *list, s32 count)
         }
 
         case A_INTERLEAVE: {
-            const s16 *l = dmem16(w1 >> 16);
+            const s16 *l = dmem16((u32) (w1 >> 16));
             const s16 *r = dmem16(w1 & 0xFFFF);
             s16 *o = dmem16(s_BufOut);
             s32 n = s_BufCount >> 1; /* per-channel sample count */

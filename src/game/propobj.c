@@ -64,6 +64,7 @@
 #include "port_glass.h"    /* Glass Reflections (FORK-066) */
 #include "port_projectile_arc.h" /* Projectile Arc (FORK-069) */
 #include "port_hostptr.h"  /* PORT_WORD_IS_HOST (LP64-003) */
+#include "port_gfxwords.h" /* GFX_W1_DATA (LP64-003) */
 extern s32 g_PortFadeDbg;  /* the fade diagnostic (cl_fadedbg), defined beside posIsOnScreen */
 static void portFadeNote(PropRecord *prop, s32 state, s32 alpha, f32 foga);
 #endif
@@ -7400,44 +7401,44 @@ Gfx *process_monitor_animation_microcode(Model *model, ModelNode *node, MonitorR
                 break;
             case TVCMD_SCROLLRELX:
                 screen->xmidfrac = 0.0f;
-                screen->xmidinc = 1.0f / m->arg2;
+                screen->xmidinc = 1.0f / (f32) m->arg2;
                 screen->xmidold = screen->xmid;
-                screen->xmidnew = screen->xmid + m->time * (1.0f / 1024.0f);
+                screen->xmidnew = screen->xmid + (f32) m->time * (1.0f / 1024.0f);
                 screen->offset += 3;
                 break;
             case TVCMD_SCROLLRELY:
                 screen->ymidfrac = 0.0f;
-                screen->ymidinc = 1.0f / m->arg2;
+                screen->ymidinc = 1.0f / (f32) m->arg2;
                 screen->ymidold = screen->ymid;
-                screen->ymidnew = screen->ymid + m->time * (1.0f / 1024.0f);
+                screen->ymidnew = screen->ymid + (f32) m->time * (1.0f / 1024.0f);
                 screen->offset += 3;
                 break;
             case TVCMD_SCROLLABSX:
                 screen->xmidfrac = 0.0f;
-                screen->xmidinc = 1.0f / m->arg2;
+                screen->xmidinc = 1.0f / (f32) m->arg2;
                 screen->xmidold = screen->xmid;
-                screen->xmidnew = m->time * (1.0f / 1024.0f);
+                screen->xmidnew = (f32) m->time * (1.0f / 1024.0f);
                 screen->offset += 3;
                 break;
             case TVCMD_SCROLLABSY:
                 screen->ymidfrac = 0.0f;
-                screen->ymidinc = 1.0f / m->arg2;
+                screen->ymidinc = 1.0f / (f32) m->arg2;
                 screen->ymidold = screen->ymid;
-                screen->ymidnew = m->time * (1.0f / 1024.0f);
+                screen->ymidnew = (f32) m->time * (1.0f / 1024.0f);
                 screen->offset += 3;
                 break;
             case TVCMD_SCALEABSX:
                 screen->xscalefrac = 0.0f;
-                screen->xscaleinc = 1.0f / m->arg2;
+                screen->xscaleinc = 1.0f / (f32) m->arg2;
                 screen->xscaleold = screen->xscale;
-                screen->xscalenew = m->time * (1.0f / 1024.0f);
+                screen->xscalenew = (f32) m->time * (1.0f / 1024.0f);
                 screen->offset += 3;
                 break;
             case TVCMD_SCALEABSY:
                 screen->yscalefrac = 0.0f;
-                screen->yscaleinc = 1.0f / m->arg2;
+                screen->yscaleinc = 1.0f / (f32) m->arg2;
                 screen->yscaleold = screen->yscale;
-                screen->yscalenew = m->time * (1.0f / 1024.0f);
+                screen->yscalenew = (f32) m->time * (1.0f / 1024.0f);
                 screen->offset += 3;
                 break;
             case TVCMD_SETTEXTURE:
@@ -7465,7 +7466,7 @@ Gfx *process_monitor_animation_microcode(Model *model, ModelNode *node, MonitorR
                     #endif
 
                     yielding = TRUE;
-                    screen->pause60 = m->time;
+                    screen->pause60 = (s16) m->time;
                 }
                 break;
             case TVCMD_SETCMDLIST:
@@ -7489,7 +7490,7 @@ Gfx *process_monitor_animation_microcode(Model *model, ModelNode *node, MonitorR
                 break;
             case TVCMD_SETCOLOUR:
                 screen->colfrac = 0.0f;
-                screen->colinc = 1.0f / m->arg2;
+                screen->colinc = 1.0f / (f32) m->arg2;
 
                 screen->redold = screen->red;
                 screen->rednew = ((u32)m->time >> 24) & 0xff;
@@ -7501,16 +7502,16 @@ Gfx *process_monitor_animation_microcode(Model *model, ModelNode *node, MonitorR
                 screen->bluenew = ((u32)m->time >> 8) & 0xff;
 
                 screen->alphaold = screen->alpha;
-                screen->alphanew = m->time & 0xff;
+                screen->alphanew = (u8) (m->time & 0xff);
 
                 screen->offset += 3;
                 break;
             case TVCMD_ROTATEABS:
-                screen->rot = m->time * M_TAU_F / M_U16_MAX_VALUE_F;
+                screen->rot = (f32) m->time * M_TAU_F / M_U16_MAX_VALUE_F;
                 screen->offset += 2;
                 break;
             case TVCMD_ROTATEREL:
-                screen->rot += MONITOR_TIMER_DELTA * m->time * M_TAU_F / M_U16_MAX_VALUE_F;
+                screen->rot += MONITOR_TIMER_DELTA * (f32) m->time * M_TAU_F / M_U16_MAX_VALUE_F;
 
                 if (screen->rot >= M_TAU_F) 
                 {
@@ -9382,7 +9383,7 @@ bool bgTestHitOnObj(coord3d *arg0, coord3d *arg1, coord3d *arg2, Gfx *gdl, Gfx *
                 else
                 {
                     idx2[0] = (gdl->words.w1 >> 24) & 0xf;
-                    idx2[1] = gdl->words.w1 >> 28;
+                    idx2[1] = GFX_W1_DATA(gdl) >> 28;
                     idx2[2] = (gdl->words.w0 >> 12) & 0xf;
                 }
 #endif

@@ -114,7 +114,7 @@ void init(void)
     cdataSegmentRomSize = (u8 *) get_cdataSegmentRomEnd() - cdataSegmentRomStart;
     inflateSegmentRomStart = get_inflateSegmentRomStart();
     inflateromSize = (u8 *) get_inflateSegmentRomEnd() - inflateSegmentRomStart;
-    copylen = cdataSegmentRomSize + inflateromSize;
+    copylen = (u32) (cdataSegmentRomSize + inflateromSize);
     datazipram = (u8 *) (RZIPLOADADDR - cdataSegmentRomSize);
     dataziprom = csegmentSegmentVaddrStart;
 

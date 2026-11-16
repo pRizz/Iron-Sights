@@ -7,7 +7,9 @@
 # stops with status 5 naming the class, at 32 bits it returns. The command-word
 # predicates (Task 6): PORT_WORD_IS_HOST, PORT_WORD_HAS_SEGMENT and
 # PORT_WORD_IS_INDEX at each width, and port_textures.c's external-texture slot,
-# which must hold the whole pixel address (above 4 GB at 64 bits).
+# which must hold the whole pixel address (above 4 GB at 64 bits). The
+# command-word accessors (Task 7): GFX_OP of a gbi.h-built command, and a slot
+# of texLoad's parameter type that keeps every byte of a 64-bit value.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source scripts/port/harness_widths.sh
@@ -15,11 +17,13 @@ work=$(mktemp -d /tmp/midas-lp64-address.XXXXXX)
 trap 'rm -rf "$work"' EXIT
 compiler=${CC:-gcc}
 
+# gbi.h (Task 7) includes <PR/...>; -idirafter finds those after the system
+# headers, so the driver's <string.h> is still the C library's.
 build() {
     local out=$1
     shift
     "$compiler" "$@" -std=gnu11 -D_LANGUAGE_C -Wall -Wextra -Werror -iquote include -iquote port/include \
-        scripts/port/test_lp64_address.c port/src/port_lp64.c -o "$out"
+        -idirafter include scripts/port/test_lp64_address.c port/src/port_lp64.c -o "$out"
 }
 
 # The external-texture slot (Task 6): port_textures.c linked with the stubs in

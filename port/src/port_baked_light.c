@@ -25,6 +25,7 @@
 #include <gbi_extension.h>
 #include "game/bg.h"
 #include "port_console.h"
+#include "port_gfxwords.h"
 #include "port_baked_light.h"
 #include "port_graphics.h"
 
@@ -98,7 +99,7 @@ static void walk_list(const Gfx* gdl, uint32_t max_cmds, uint32_t first, uint32_
     s32 slot[16];
     for (int i = 0; i < 16; i++) slot[i] = -1;
     for (uint32_t c = 0; gdl && c < max_cmds; c++, gdl++) {
-        const u32 w0 = gdl->words.w0, w1 = gdl->words.w1;
+        const u32 w0 = GFX_W0(gdl), w1 = GFX_W1_DATA(gdl);
         const s8 op = (s8) (w0 >> 24);
         if (op == (s8) G_ENDDL) break;
         if (op == (s8) G_VTX) {

@@ -13,6 +13,7 @@
 #include "game/explosion.h"
 #include "game/lv.h"
 #include "game/gun.h"
+#include "port_gfxwords.h"
 #include "port_state.h"
 #include <assets/oddtextures.h>
 
@@ -28,7 +29,7 @@ static void auditTextureSources(s32 verify)
     Gfx *lists[] = { &globalDL_0x000, g_ExplosionDisplayLists[0] };
     s32 i, j;
     for (i = 0; i < 2; i++) for (j = 0; j < 64; j++) {
-        const u32 command = lists[i][j].words.w0;
+        const u32 command = GFX_W0(&lists[i][j]);
         const uintptr_t address = lists[i][j].words.w1;
         if (command >> 24 == G_ENDDL) break;
         if (command >> 24 == G_SETTIMG) {

@@ -22,8 +22,10 @@
 #include "stan.h"
 #include "explosion.h"
 #include "bgroomtrans.h"
+#include "port_gfxwords.h" /* LP64-003: GFX_W0, GFX_W1_DATA */
 
 #ifndef TARGET_N64
+#include <inttypes.h> /* PRIxPTR: traces print whole display-list words */
 #include <stdio.h>  /* GE_ROOM_AUDIT portal-corruption diagnostic */
 #include <stdlib.h>
 #include <string.h>
@@ -479,7 +481,7 @@ s32 sub_GAME_7F0B39BC(int curroom,int unk1, bbox2d * screensize, s32 next)
                 dword_CODE_bss_8007FFA0[i].unk1 = unk1;
             }
             bgRectOutersect(screensize,&dword_CODE_bss_8007FFA0[i].bbox);
-            temp = dword_CODE_bss_8007FFA0[i].next;
+            temp = (int) dword_CODE_bss_8007FFA0[i].next;
             dword_CODE_bss_8007FFA0[i].bbox.min.x = screensize->min.x;
             dword_CODE_bss_8007FFA0[i].bbox.min.y = screensize->min.y;
             dword_CODE_bss_8007FFA0[i].bbox.max.x = screensize->max.x;
@@ -2960,7 +2962,7 @@ s32 getIndexOfPORTALID(uintptr_t portalID)
         }
     }
     #ifdef DEBUG
-    osSyncPrintf("bg: bgPortalIndexFromPtr(): No portal found for %08x ",portalID);
+    osSyncPrintf("bg: bgPortalIndexFromPtr(): No portal found for %08" PRIxPTR " ",portalID);
     #endif
     return 0;
 }
@@ -4089,9 +4091,9 @@ void bgBuildRoomVtxBounds(s32 roomID)
                 if (((uintptr_t) vtx & 3) != 0) {
                     if (n < 24) {
                         n++;
-                        printf("ge: vtxbounds room=%d cmd=%d w0=%08x w1=%08x vertices=%p vtx=%p\n",
-                               roomID, cmdindex, gdl[cmdindex].words.w0,
-                               gdl[cmdindex].words.w1, (void *) vertices, (void *) vtx);
+                        printf("ge: vtxbounds room=%d cmd=%d w0=%08" PRIxPTR " w1=%08" PRIxPTR " vertices=%p vtx=%p\n",
+                               roomID, cmdindex, (uintptr_t) gdl[cmdindex].words.w0,
+                               (uintptr_t) gdl[cmdindex].words.w1, (void *) vertices, (void *) vtx);
                     }
                     break; /* skip the batch rather than fault */
                 }
@@ -4370,15 +4372,15 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
      * load), but the byte-position operand reads below assume the big-endian
      * image, so the walker's opcode test always missed and the exact wall-hit
      * path (triangle, texture material, light fixture breaking) never ran. The
-     * w1 reads stay unconditional because ((u32 *) gdl)[1] yields the true word
-     * on both targets; same fix as propobj.c bgTestHitOnObj. */
+     * w1 reads stay unconditional because gdl->words.w1 is the true word on
+     * both targets; same fix as propobj.c bgTestHitOnObj. */
 #ifdef TARGET_N64
     vtxoff = ((u8 *) gdl)[1] & 0xf;
 #else
     vtxoff = (gdl->words.w0 >> 16) & 0xf;
 #endif
     temp.vertices = (Vertex *)g_BgRoomInfo[roomnum].vertices;
-    vtxbase = (Vertex *)((intptr_t)temp.vertices + (((u32 *)gdl)[1] & 0x00ffffff));
+    vtxbase = (Vertex *)((intptr_t)temp.vertices + (gdl->words.w1 & 0x00ffffff));
     temp.roominfo = &g_BgRoomInfo[roomnum];
     bestScore = 0x7FFFFFFF;
     found = 0;
@@ -4405,9 +4407,9 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
                 idx[1] = (((u8 *) gdl)[6] / 10) - vtxoff;
                 idx[2] = (((u8 *) gdl)[7] / 10) - vtxoff;
 #else
-                idx[0] = (((gdl->words.w1 >> 16) & 0xff) / 10) - vtxoff;
-                idx[1] = (((gdl->words.w1 >> 8) & 0xff) / 10) - vtxoff;
-                idx[2] = ((gdl->words.w1 & 0xff) / 10) - vtxoff;
+                idx[0] = (((GFX_W1_DATA(gdl) >> 16) & 0xff) / 10) - vtxoff;
+                idx[1] = (((GFX_W1_DATA(gdl) >> 8) & 0xff) / 10) - vtxoff;
+                idx[2] = ((GFX_W1_DATA(gdl) & 0xff) / 10) - vtxoff;
 #endif
                 i = 0;
                 
@@ -4612,7 +4614,7 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
                         else
                         {
                             idx2[0] = ((gdl->words.w1 >> 24) & 0xf) - vtxoff;
-                            idx2[1] = (gdl->words.w1 >> 28) - vtxoff;
+                            idx2[1] = (GFX_W1_DATA(gdl) >> 28) - vtxoff;
                             idx2[2] = ((gdl->words.w0 >> 12) & 0xf) - vtxoff;
                         }
 #endif
@@ -4898,7 +4900,7 @@ bool bgTestBulletHitBackground(coord3d *from, coord3d *to, s32 roomnum, struct H
         else 
         {
             hit->tileformat = ((u32)((u8 *)((Gfx*)point))[1]) >> 5;
-            hit->tilesize = (((Gfx*)point)->words.w0 << 11) >> 30;
+            hit->tilesize = (GFX_W0((Gfx*)point) << 11) >> 30;
         }
     }
 
@@ -5458,7 +5460,7 @@ s32 sub_GAME_7F0B7F84(s32 value, s32 roomnum, s32 portalnum /*canonically p*/, s
         {
             if ((otherroom == g_BgPortals[i].connectedRoom1) || (otherroom == g_BgPortals[i].connectedRoom2))
             {
-                bgQueuePortalTraversal(value, otherroom, i, depth + 1, &screenbox);
+                bgQueuePortalTraversal(value, otherroom, (s32) i, depth + 1, &screenbox);
             }
         }
     }

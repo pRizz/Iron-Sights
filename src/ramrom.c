@@ -73,7 +73,7 @@ void *romCopyAligned(void *target, void *source, s32 length)
     source_offset = (intptr_t)source - (intptr_t)source_aligned;
     target_aligned = (s32 *)ALIGN16_a((intptr_t)target);
     target_offset = source_offset;
-    romCopy(target_aligned, source_aligned, ALIGN16_a(source_offset + length));
+    romCopy(target_aligned, source_aligned, (u32) ALIGN16_a(source_offset + length));
     return (void *)((intptr_t)target_aligned + target_offset);
 }
 

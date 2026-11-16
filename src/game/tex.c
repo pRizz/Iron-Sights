@@ -5,6 +5,7 @@
 #include "image.h"
 #include "tex.h"
 #include "unk_092E50.h"
+#include "port_gfxwords.h" /* LP64-003: GFX_W0 */
 
 s32 g_TexLutMode;
 s32 dword_CODE_bss_8008D144; // unused/padding
@@ -502,7 +503,7 @@ Gfx* texWriteTextureCmd(Gfx* arg0, Gfx* arg1, struct tex* tex, s32 arg3)
     {
         if (arg1 != NULL)
         {
-            u32 v0 = (arg1->words.w0 & ~0x3800) | (lod << 11);
+            u32 v0 = (GFX_W0(arg1) & ~0x3800) | (lod << 11);
 
             if (v0 != arg1->words.w0)
             {

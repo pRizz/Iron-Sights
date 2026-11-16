@@ -93,6 +93,7 @@ s32 D_80046034[] = {0, 0, 0, 0, 0, 0, 0}; // unused
  * Diagnostic for shot lights going fully transparent: logs each fixture entry
  * as it opens (room, DL run, preceding render state, first tri's colours and
  * position) and every vertex darkening, to stderr with prefix "lightdbg:". */
+#include <inttypes.h> /* PRIxPTR: the dump prints whole display-list words */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -158,8 +159,8 @@ static void lightDbgDumpEntry(s32 slot)
         u8 op = (u8)(g->words.w0 >> 24);
         if (op == G_SETOTHERMODE_L || op == G_SETOTHERMODE_H || op == G_SETCOMBINE || op == G_RDPSETOTHERMODE ||
             op == G_SETGEOMETRYMODE || op == G_CLEARGEOMETRYMODE || op == G_SETENVCOLOR || op == G_SETPRIMCOLOR) {
-            fprintf(stderr, "lightdbg:   %+4d: op=%02x %08x %08x\n", (int)(g - e->ptr_start_pertinent_DL), op,
-                    g->words.w0, g->words.w1);
+            fprintf(stderr, "lightdbg:   %+4d: op=%02x %08" PRIxPTR " %08" PRIxPTR "\n", (int)(g - e->ptr_start_pertinent_DL), op,
+                    (uintptr_t) g->words.w0, (uintptr_t) g->words.w1);
         }
         if (g >= e->ptr_start_pertinent_DL) {
             if ((s8)op == G_TRI1) { ntri++; if (firstTri == NULL) { firstTri = g; firstType = 0; } }

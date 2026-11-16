@@ -11798,25 +11798,25 @@ void init_menu0f_mpcharsel(void)
         // upper left
         if (mpcharselimages[selected_photo * 4 + 0].index < (u32)(MAX_TEXTURES - 1))
         {
-            texLoadFromTextureNum(mpcharselimages[selected_photo * 4 + 0].index, 0);
+            texLoadFromTextureNum((s32) mpcharselimages[selected_photo * 4 + 0].index, 0);
         }
 
         // upper right
         if (mpcharselimages[selected_photo * 4 + 1].index < (u32)(MAX_TEXTURES - 1))
         {
-            texLoadFromTextureNum(mpcharselimages[selected_photo * 4 + 1].index, 0);
+            texLoadFromTextureNum((s32) mpcharselimages[selected_photo * 4 + 1].index, 0);
         }
 
         // lower left
         if (mpcharselimages[selected_photo * 4 + 2].index < (u32)(MAX_TEXTURES - 1))
         {
-            texLoadFromTextureNum(mpcharselimages[selected_photo * 4 + 2].index, 0);
+            texLoadFromTextureNum((s32) mpcharselimages[selected_photo * 4 + 2].index, 0);
         }
 
         // lower right
         if (mpcharselimages[selected_photo * 4 + 3].index < (u32)(MAX_TEXTURES - 1))
         {
-            texLoadFromTextureNum(mpcharselimages[selected_photo * 4 + 3].index, 0);
+            texLoadFromTextureNum((s32) mpcharselimages[selected_photo * 4 + 3].index, 0);
         }
     }
 
@@ -13176,7 +13176,7 @@ static void portPpoCharOpen(s32 i)
         {
             if (mpcharselimages[mp_chr_setup[c].select_photo * 4 + k].index < (u32)(MAX_TEXTURES - 1))
             {
-                texLoadFromTextureNum(mpcharselimages[mp_chr_setup[c].select_photo * 4 + k].index, 0);
+                texLoadFromTextureNum((s32) mpcharselimages[mp_chr_setup[c].select_photo * 4 + k].index, 0);
             }
         }
     }

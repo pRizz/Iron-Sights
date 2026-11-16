@@ -1,6 +1,7 @@
 /* ROM-free tests of the 64-bit address rules (LP64-003 Task 3): the
  * host-pointer test, the region predicate and the startup address check; of
- * the asset-class guard (Task 4); and of the command-word predicates (Task 6). Built at both pointer widths by
+ * the asset-class guard (Task 4); of the command-word predicates (Task 6); and
+ * of the command-word accessors (Task 7). Built at both pointer widths by
  * scripts/port/test_lp64_address.sh.
  *
  *   test_lp64_address              the unit cases
@@ -14,8 +15,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "PR/mbi.h"
 #include "PR/ultratypes.h"
 #include "platform_info.h"
+#include "port_gfxwords.h"
 #include "port_hostptr.h"
 #include "port_lp64.h"
 
@@ -152,6 +155,26 @@ static void testTexturePointerDecision(void)
 #endif
 }
 
+/* gbi.h's own macro builds the command word unsigned, so its opcode reads back
+ * through GFX_OP at both widths and the upper half stays zero at 64 bits. A
+ * writer that sign-extended (a signed (u8) G_ENDDL << 24) fails the second
+ * assertion: GFX_OP reads the low 32 bits, so the renderer's whole-word
+ * w0 >> 24 is what such a writer would break. */
+static void testEndDisplayListOpcode(void)
+{
+    // Arrange
+    Gfx command = gsSPEndDisplayList();
+
+    // Act
+    u32 opcode = GFX_OP(&command);
+
+    // Assert
+    expect(opcode == (u8) G_ENDDL, "GFX_OP of gsSPEndDisplayList() is G_ENDDL");
+#if IS_64_BIT
+    expect((command.words.w0 >> 32) == 0, "gsSPEndDisplayList() leaves the upper half of w0 zero");
+#endif
+}
+
 #if IS_64_BIT
 static void testRegionEndingAtFourGbIsLow(void)
 {
@@ -264,6 +287,7 @@ int main(int argc, char **argv)
     testWordHasSegmentTruthTable();
     testWordIsIndexTruthTable();
     testTexturePointerDecision();
+    testEndDisplayListOpcode();
 #if IS_64_BIT
     testRegionEndingAtFourGbIsLow();
     testRegionStartingAtFourGbIsHigh();

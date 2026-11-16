@@ -1,14 +1,14 @@
 # Truncating round-trip casts per file: path<TAB>count<TAB>reason. `check` requires the counts to match
 # exactly: lower a line when casts are removed, delete it at zero; see lp64_casts.py.
 port/src/audio_stubs.c	1	LP64-002 task 8: alBnkfNew relocates the bank in place and reads the file's 32-bit offsets from its pointer slots (portBnkfOffset); LP64-004's audio bank converter replaces it
-port/src/port_arm_mesh.c	3	existing before LP64-002
-port/src/port_grip_mesh.c	1	existing before LP64-002
+port/src/port_arm_mesh.c	3	existing before LP64-002; LP64-003 task 11 (strict tier): the arm mesh stores and compares texture data addresses as 32-bit words
+port/src/port_grip_mesh.c	1	existing before LP64-002; LP64-003 task 11 (strict tier): the grip mesh keeps a texture data address in a 32-bit pixel word
 port/src/port_state.c	1	LP64-002 task 8: the suspend image's StateHeader/StateRegion records hold 32-bit addresses (stateAddrWord); since LP64-003 task 5 the file is compiled only at 32 bits (64-bit builds link port_state_unavailable.c, which reports suspend points unavailable)
-port/src/romdata.c	2	existing before LP64-002
-port/src/romfile_model.c	1	existing before LP64-002
-port/src/romfile_setup.c	7	existing before LP64-002
-port/src/romfile_stan.c	4	existing before LP64-002
-src/game/bg.c	3	existing before LP64-002
-src/game/propobj.c	1	existing before LP64-002
+port/src/romdata.c	2	existing before LP64-002; LP64-004's text bank converter: the bank's string slots are 32-bit words patched in place
+port/src/romfile_model.c	1	existing before LP64-002; LP64-004's model converter: the compiled-in model file's 32-bit base address
+port/src/romfile_setup.c	7	existing before LP64-002; LP64-004's setup converter: the setup file's 32-bit pointer slots, rewritten in place
+port/src/romfile_stan.c	4	existing before LP64-002; LP64-004's collision (stan) converter: the tile file's 32-bit pointer slots, rewritten in place
+src/game/bg.c	3	existing before LP64-002; LP64-004's background converter: the bg file positions are 32-bit file offsets rebased by 0xf1000000
+src/game/propobj.c	1	existing before LP64-002; kept on purpose (LP64-003 task 7): a prop address hashed into a 512-entry table, which needs only its low bits
 src/game/ramromreplay.c	1	LP64-002 task 8: save_ramrom_to_devtool passes the demo address as indycommHostSaveFile's s32 size (the inherited arguments are swapped); Indy development-host path only, kept as on 32-bit
 src/game/stan.c	2	LP64-002 task 7: portStanPack writes room pointers into the packed image's 4-byte slots; LP64-004's stan converter replaces them

@@ -229,7 +229,7 @@ void _memaFree(intptr_t addr, s32 size)
 	// estimate and doesn't need to be any particular index, but the defrag
 	// function tries to order the spaces by address so the closer we get to it
 	// the less work the defrag function will have to do should it be called.
-    s32 index = ((addr - g_MemaHeapStart) * (ALLOCATIONS_LENGTH-1)) / g_MemaHeapSize;
+    intptr_t index = ((addr - g_MemaHeapStart) * (ALLOCATIONS_LENGTH-1)) / g_MemaHeapSize;
     struct memaspace *curr = &g_MemoryAllocations.spaces[index];
 
     // If the entry is taken, keep moving forward until a zero is found.
@@ -396,7 +396,7 @@ intptr_t memaGrow(uintptr_t addr, u32 amount)
     u32        size = 0;
     intptr_t   new_addr;
     memaspace *curr;
-    short      __unused_1 = addr + 3;
+    short      __unused_1 = (short) (addr + 3);
     u32        __unused_2;
     s32        __unused_3;
     short      __unused_4;
@@ -423,9 +423,9 @@ intptr_t memaGrow(uintptr_t addr, u32 amount)
         }
 
         if (__unused_3) {}
-        __unused_4 = new_addr + 2;
+        __unused_4 = (short) (new_addr + 2);
         if ((double)__unused_4) {}
-        __unused_5 = new_addr + 3;
+        __unused_5 = (short) (new_addr + 3);
         if ((double)__unused_5) {}
 
         curr++;
@@ -565,7 +565,7 @@ void memaDumpPrePostMerge(void) {
     memaDump();
 }
 
-void mema7000A2F8(void (*func)(u32, memaspace*)) {
+void mema7000A2F8(void (*func)(intptr_t, memaspace*)) {
     memaspace *curr = &g_MemoryAllocations.spaces[0];
     while (curr->addr != -1) {
         func((curr->addr + curr->size), curr);

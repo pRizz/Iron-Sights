@@ -1569,14 +1569,14 @@ Gfx *mp_watch_menu_display(Gfx *gdl)
                     else
                     {
                         q = MPMENU_SIDE(0) == MPMENU_SIDE(curplayernum) ? same_team_colour : other_team_colour;
-                        colour = q;
+                        colour = (s32) q;
                     }
  
                     gdl = display_text_for_playerdata_on_MP_menu(gdl, (viewleft + two_player_x_offset) + 80, x2 + (70 + MPMENU_YOFF), scores[0], colour);
                     viewleft = viGetViewLeft();
                     x2 = viGetViewTop();
 
-                    curplayernum == 1 ? (colour = current_colour) : (q = MPMENU_SIDE(1) == MPMENU_SIDE(curplayernum) ? same_team_colour : other_team_colour, colour = q);
+                    curplayernum == 1 ? (colour = current_colour) : (q = MPMENU_SIDE(1) == MPMENU_SIDE(curplayernum) ? same_team_colour : other_team_colour, colour = (s32) q);
 
                     gdl = display_text_for_playerdata_on_MP_menu(gdl, (viewleft + two_player_x_offset) + 80, x2 + (86 + MPMENU_YOFF), scores[1], colour);
                 }
@@ -1592,7 +1592,7 @@ Gfx *mp_watch_menu_display(Gfx *gdl)
                     else
                     {
                         q = MPMENU_SIDE(0) == MPMENU_SIDE(curplayernum) ? same_team_colour : other_team_colour;
-                        colour = q;
+                        colour = (s32) q;
                     }
  
                     gdl = display_text_for_playerdata_on_MP_menu(gdl, (viewleft + two_player_x_offset) + 64, x2 + (70 + MPMENU_YOFF), scores[0], colour);
@@ -1606,7 +1606,7 @@ Gfx *mp_watch_menu_display(Gfx *gdl)
                     else
                     {
                         q = MPMENU_SIDE(1) == MPMENU_SIDE(curplayernum) ? same_team_colour : other_team_colour;
-                        colour = q;
+                        colour = (s32) q;
                     }
  
                     gdl = display_text_for_playerdata_on_MP_menu(gdl, (viewleft + two_player_x_offset) + 96, x2 + (70 + MPMENU_YOFF), scores[1], colour);
@@ -1620,7 +1620,7 @@ Gfx *mp_watch_menu_display(Gfx *gdl)
                     else
                     {
                         q = MPMENU_SIDE(2) == MPMENU_SIDE(curplayernum) ? same_team_colour : other_team_colour;
-                        colour = q;
+                        colour = (s32) q;
                     }
  
                     gdl = display_text_for_playerdata_on_MP_menu(gdl, (viewleft + two_player_x_offset) + 64, x2 + (86 + MPMENU_YOFF), scores[2], colour);
@@ -1630,7 +1630,7 @@ Gfx *mp_watch_menu_display(Gfx *gdl)
                         viewleft = viGetViewLeft();
                         x2 = viGetViewTop();
 
-                        curplayernum == 3 ? (colour = current_colour) : (q = MPMENU_SIDE(3) == MPMENU_SIDE(curplayernum) ? same_team_colour : other_team_colour, colour = q);
+                        curplayernum == 3 ? (colour = current_colour) : (q = MPMENU_SIDE(3) == MPMENU_SIDE(curplayernum) ? same_team_colour : other_team_colour, colour = (s32) q);
                         gdl = display_text_for_playerdata_on_MP_menu(gdl, (viewleft + two_player_x_offset) + 96, x2 + (86 + MPMENU_YOFF), scores[3], colour);
                     }
                 }

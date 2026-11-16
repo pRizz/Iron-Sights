@@ -30,7 +30,7 @@ static u32 remaining(const MemoryPool *pool)
         sysFatalError("Invalid memory bank cursor");
         return 0;
     }
-    return end - pos;
+    return (u32) (end - pos);
 }
 
 void *portMempAllocate(u32 bytes, u8 bank)
