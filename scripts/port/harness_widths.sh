@@ -19,23 +19,38 @@ HARNESS_PENDING=(
 # Prints the widths to run, one per line. 32 when the compiler accepts -m32;
 # 64 when the compiler's own pointers are 8 bytes (x86_64 and aarch64 use SSE
 # or NEON arithmetic by default, so 64 needs no flag). Fails, naming what was
-# asked, when none can run.
+# asked, when none can run; on an x86 host a rejected -m32 is a failure too
+# (the 32-bit toolchain is missing) unless MIDAS_HARNESS_WIDTHS leaves 32 out.
 harness_widths() {
-    local cc=${CC:-gcc} requested=${MIDAS_HARNESS_WIDTHS:-"32 64"} width macros found=0
+    local cc=${CC:-gcc} requested=${MIDAS_HARNESS_WIDTHS:-"32 64"} width macros machine found=0
     for width in $requested; do
         case $width in
         32)
             if "$cc" -m32 -x c -fsyntax-only /dev/null 2>/dev/null; then
                 echo 32
                 found=1
+            else
+                # A compiler that cannot make 32-bit code at all (aarch64)
+                # just offers no 32. On an x86 host the missing piece is the
+                # 32-bit toolchain, which has always failed a harness.
+                machine=$("$cc" -dumpmachine 2>/dev/null || true)
+                case $machine in
+                x86_64* | i[3-6]86*)
+                    echo "harness_widths: $cc ($machine) rejects -m32: the 32-bit toolchain is missing" \
+                        "(install gcc-multilib), or run only the 64-bit half with MIDAS_HARNESS_WIDTHS=64" >&2
+                    return 1
+                    ;;
+                esac
             fi
             ;;
         64)
             # Read the macros whole: "grep -q" closing the pipe early made the
             # compiler fail with SIGPIPE, and pipefail then dropped this width.
-            # A compiler that fails offers no 64 here, and the error below
-            # names the request when that leaves no width at all.
-            macros=$("$cc" -E -dM -x c /dev/null 2>/dev/null || true)
+            if ! macros=$("$cc" -E -dM -x c /dev/null 2>&1); then
+                echo "harness_widths: $cc -E -dM failed:" >&2
+                echo "$macros" >&2
+                return 1
+            fi
             if [[ $macros == *$'__SIZEOF_POINTER__ 8\n'* || $macros == *'__SIZEOF_POINTER__ 8' ]]; then
                 echo 64
                 found=1

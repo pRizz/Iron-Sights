@@ -4,12 +4,16 @@ cd "$(dirname "$0")/../.."
 work=$(mktemp -d /tmp/midas-harness-widths.XXXXXX)
 trap 'rm -rf "$work"' EXIT
 
-# A stand-in compiler: FAKE_M32=reject refuses -m32 as aarch64 GCC does, and
-# FAKE_POINTER_BYTES is what its preprocessor reports as __SIZEOF_POINTER__.
+# A stand-in compiler: FAKE_M32=reject refuses -m32, FAKE_MACHINE is what
+# -dumpmachine prints (x86_64-linux-gnu unless set), FAKE_POINTER_BYTES is what
+# its preprocessor reports as __SIZEOF_POINTER__ and FAKE_DM_FAIL=1 makes the
+# macro probe fail with a message.
 cat >"$work/gcc" <<'FAKE'
 #!/usr/bin/env bash
 for arg in "$@"; do
     if [[ $arg == -m32 && ${FAKE_M32:-accept} == reject ]]; then exit 1; fi
+    if [[ $arg == -dumpmachine ]]; then echo "${FAKE_MACHINE:-x86_64-linux-gnu}"; exit 0; fi
+    if [[ $arg == -dM && -n ${FAKE_DM_FAIL:-} ]]; then echo "fake: cannot run cc1" >&2; exit 1; fi
     if [[ $arg == -dM ]]; then
         echo "#define __SIZEOF_POINTER__ ${FAKE_POINTER_BYTES:-8}"
         # A real compiler prints hundreds of macros after this one.
@@ -41,20 +45,43 @@ check_widths() {
 }
 
 # Arrange / Act / Assert for each case: the environment, the call, the printed widths.
-check_widths "a compiler without -m32 on a 64-bit host runs 64 only" "64 " FAKE_M32=reject FAKE_POINTER_BYTES=8
+check_widths "an aarch64 compiler without -m32 runs 64 only" "64 " FAKE_M32=reject FAKE_MACHINE=aarch64-linux-gnu FAKE_POINTER_BYTES=8
 check_widths "a compiler with -m32 on a 64-bit host runs 32 then 64" "32 64 " FAKE_M32=accept FAKE_POINTER_BYTES=8
 check_widths "a 32-bit host runs 32 only" "32 " FAKE_M32=accept FAKE_POINTER_BYTES=4
 check_widths "MIDAS_HARNESS_WIDTHS=32 restricts to 32" "32 " FAKE_M32=accept FAKE_POINTER_BYTES=8 MIDAS_HARNESS_WIDTHS=32
 check_widths "MIDAS_HARNESS_WIDTHS=64 restricts to 64" "64 " FAKE_M32=accept FAKE_POINTER_BYTES=8 MIDAS_HARNESS_WIDTHS=64
 check_widths "a long macro list does not hide 64 under pipefail" "32 64 " FAKE_M32=accept FAKE_POINTER_BYTES=8 FAKE_NOISY=1
-check_widths "a request for an unavailable width prints nothing" "" FAKE_M32=reject FAKE_POINTER_BYTES=8 MIDAS_HARNESS_WIDTHS=32
+check_widths "a request for an unavailable width prints nothing" "" FAKE_M32=reject FAKE_MACHINE=aarch64-linux-gnu FAKE_POINTER_BYTES=8 MIDAS_HARNESS_WIDTHS=32
+check_widths "an x86_64 compiler without -m32 fails and prints no width" "" FAKE_M32=reject FAKE_POINTER_BYTES=8
+check_widths "an x86_64 compiler without -m32 runs 64 when restricted to it" "64 " FAKE_M32=reject FAKE_POINTER_BYTES=8 MIDAS_HARNESS_WIDTHS=64
 
-# Arrange
-status=0
-# Act
-(PATH="$work:$PATH" CC=gcc FAKE_M32=reject FAKE_POINTER_BYTES=4 bash -c 'source scripts/port/harness_widths.sh && harness_widths' >/dev/null 2>&1) || status=$?
-# Assert
-if [[ $status -ne 0 ]]; then echo "ok: no usable width fails"; else echo "FAIL: no usable width must fail"; failures=$((failures + 1)); fi
+# Runs harness_widths with a stand-in compiler and prints its exit status and stderr on one line.
+widths_failure() {
+    local status=0 err
+    err=$(env PATH="$work:$PATH" CC=gcc "$@" \
+        bash -c 'set -euo pipefail; source scripts/port/harness_widths.sh && harness_widths' 2>&1 >/dev/null) || status=$?
+    echo "status=$status $err"
+}
+expect_failure() {
+    local name=$1 pattern=$2
+    shift 2
+    local actual
+    actual=$(widths_failure "$@")
+    if [[ $actual == status=[1-9]*"$pattern"* ]]; then
+        echo "ok: $name"
+    else
+        echo "FAIL: $name: expected a failure mentioning [$pattern], got [$actual]"
+        failures=$((failures + 1))
+    fi
+}
+
+# Arrange / Act / Assert: the environment, the call, the failure and what it says.
+expect_failure "no usable width fails" "cannot build any" FAKE_M32=reject FAKE_MACHINE=aarch64-linux-gnu FAKE_POINTER_BYTES=4
+expect_failure "an x86_64 compiler without -m32 names the missing 32-bit toolchain" "32-bit toolchain is missing" FAKE_M32=reject FAKE_POINTER_BYTES=8
+expect_failure "an i686 compiler without -m32 names the missing 32-bit toolchain" "32-bit toolchain is missing" FAKE_M32=reject FAKE_MACHINE=i686-linux-gnu FAKE_POINTER_BYTES=4
+expect_failure "the missing toolchain message says how to restrict the run" "MIDAS_HARNESS_WIDTHS=64" FAKE_M32=reject FAKE_POINTER_BYTES=8
+expect_failure "an unknown width is refused" "unknown width '16'" FAKE_M32=accept FAKE_POINTER_BYTES=8 MIDAS_HARNESS_WIDTHS="16"
+expect_failure "a failing macro probe fails and shows the compiler's message" "fake: cannot run cc1" FAKE_M32=accept FAKE_POINTER_BYTES=8 FAKE_DM_FAIL=1
 
 # Arrange
 source scripts/port/harness_widths.sh
