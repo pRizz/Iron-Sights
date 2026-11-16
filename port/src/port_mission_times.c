@@ -7,6 +7,7 @@
 #include <fr.h>
 #include "game/file2.h"
 #include "game/textrelated.h"
+#include "game/front.h"
 #include "game/image_bank.h"
 #include "game/othermodemicrocode.h"
 #include "game/bondwalk2.h"
@@ -16,8 +17,6 @@
 #include "port_headshots_menu.h"
 
 extern save_data *fileGetSaveForFoldernum(u32 folder);
-extern Gfx *frontPrintText(Gfx *dl, s32 *x, s32 *y, s8 *text, s32 chars, s32 font,
-    s32 color, s32 viewX, s32 viewY, s32 arg9, s32 arga);
 
 s32 portMissionBestTimeText(s32 mission, s32 folder, s32 difficulty, char *text, s32 size)
 {
@@ -61,7 +60,7 @@ static Gfx *portMissionTimeLabel(Gfx *dl, char *text, s32 columnCenterX, s32 y)
     textMeasure(&height, &width, text, ptrFontZurichBoldChars, ptrFontZurichBold, 0);
     x = columnCenterX - width / 2;
     dl = microcode_constructor(dl);
-    return frontPrintText(dl, &x, &y, text, (s32)ptrFontZurichBoldChars, (s32)ptrFontZurichBold,
+    return frontPrintText(dl, &x, &y, text, ptrFontZurichBoldChars, ptrFontZurichBold,
         0x000000ff, viGetX(), viGetY(), 0, 0);
 }
 

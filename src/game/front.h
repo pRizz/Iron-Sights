@@ -358,5 +358,7 @@ void unlock_all_mp_chars(void);
 u8 get_player_mp_char_gender(int player);
 s32 pull_and_display_text_for_folder_a0(s32 arg0);
 char *frontGetPlayersFavoriteWeaponInHand(int player, int hand);
+Gfx *frontPrintText(Gfx *gdl, s32 *x, s32 *y, s8 *text, struct fontchar *second_font_table, struct font *first_font_table, s32 arg6, s32 view_x, s32 view_y, s32 arg9, s32 arga);
+Gfx *display_aligned_white_text_to_screen(Gfx *dl, s32 arg1, s32 arg2, s32 halign, s32 valign, u8 *arg5, struct fontchar *arg6, struct font *arg7);
 
 #endif

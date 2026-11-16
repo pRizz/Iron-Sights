@@ -933,6 +933,125 @@ sanitizer the same harness passed in 4 s. `python3 scripts/port/lp64_casts.py
 check` exited 2 in the container because `git ls-files` cannot follow a linked
 worktree's `.git` file to a path outside the mount; on the host it passed.
 
+*LP64-002 task 4, fonts and text carried as integers (2026-11-16, local commit
+"Type font and text pointers as pointers"; not pushed):* the font and text
+pointers declared `s32` now have pointer types. *Declarations:*
+`frontPrintText` parameters 5 and 6 (`src/game/front.c`) and
+`display_aligned_white_text_to_screen` parameters 7 and 8 (its definition and
+the forward declaration in `front.c`) are `struct fontchar *` and
+`struct font *`, the types `textRender` takes; both are now declared in
+`src/game/front.h`, and the four `extern` copies in
+`port/src/port_headshots_menu.c`, `port_mission_times.c`,
+`port_reinforcements_menu.c` and `port_startup.c` are replaced by including
+`game/front.h` (no conflict), with their `(s32)` casts of
+`ptrFontZurichBoldChars`/`ptrFontZurichBold` dropped. `g_LangBanks`
+(`src/game/language.c`) is `u8 *[45]`. `ptr_text_first_mp_award` and
+`ptr_text_second_mp_award` (`src/game/bondview.h`, `struct player`) are
+`char *`. Locals in `src/game/options.c`: the font locals (`pFontFile`,
+`pFontFile2`, `sp7C` in `draw_current_hand_item_and_ammo` as
+`struct font *`; `pFontChars`, `pFontChars2`, `sp78` there as
+`struct fontchar *`) in `draw_abort_cancel_confirm`,
+`draw_text_mission_status`, `draw_text_q_watch_v201_beta`,
+`draw_current_hand_item_and_ammo`, `draw_watch_inventory_page` (both the
+US and the JP/EU declaration), `unused_draw_watch_inventory_page`,
+`draw_watch_control_options_page` and `draw_watch_game_options_page`; the
+`langGet()` text locals `sp54`/`sp50`/`sp4C` (`draw_abort_cancel_confirm`),
+`txtptr_1`/`txtptr_2`, `txtptr` and `textptr_aux` as `char *`. In
+`src/game/front.c`, `text` in `constructor_menu16_nocontrollers` is
+`char *`. In `src/game/mpmenu.c` (`mp_watch_menu_display`), `h2` is
+`char *` and its two `(s32) langGet(...)` casts became `(char *)`; `q` holds
+a text colour in some paths and the "P" text pointer in others, so it is
+`intptr_t` (the same `int` at 32 bits) and its two casts became
+`(intptr_t)`. *Arithmetic checked:* none of the retyped values takes part in
+arithmetic or an ordered comparison. The font values are only assigned and
+passed on; the text locals are only assigned and passed; the award fields
+are assigned `0` or a `langGet()` result, tested for non-zero (a pointer
+truth test, the same bits) and cast to `char *`; `g_LangBanks` entries are
+assigned `0` or a loader's result and read into `langGet`'s `u32 *`
+(`textbank_ptr == NULL` already tested the pointer); `q`'s colour
+assignments and `colour = q` keep `int` width on 32 bits. *Count:* 1,372 in
+86 files (649 `int-conversion`, 432 `pointer-to-int-cast`, 232
+`int-to-pointer-cast`, 59 `error`) to 945 in 80 files (248, 414, 224, 59),
+427 fewer. To zero: `port_headshots_menu.c` 6, `port_mission_times.c` 2,
+`port_reinforcements_menu.c` 4, `port_startup.c` 2, `mpmenu.c` 14,
+`options.c` 139. Lower: `front.c` 257 to 7 (left: the image `(u32)` at
+1506, the two `ptr_logo_and_walletbond_DL` sums at 2596 and 17303, the
+animation table at 18896 and `ptr_menu_videobuffer` at 20350, all owned by
+later tasks), `language.c` 12 to 2. No file rose; `bondview2.c` stayed at 82
+(`copy_1stfonttable`, `copy_2ndfonttable` and `setFontTables` are used only
+there and stay for Task 9). *Left for later:* `language.c:447` and `:449`,
+`(u8 *) output_slot` with `u32 output_slot`. `langGet` reads each text bank
+as a table of `u32` slots that on the port hold absolute 32-bit addresses
+(`romdata.c` rebases ROM banks into them, through the allowlisted
+`(u32)(uintptr_t)` cast; the compiled-in `char *LxE[]` banks are read
+through the same `u32 *`). Widening `output_slot` would silence the warning
+while the 64-bit read stays wrong, so these two places wait for the text bank
+format to be decided (the converter work after this milestone); they are the
+two of the plan's 12 `g_LangBanks` places not removed here, hence 427 rather
+than 429. *Windows comparison:* `compare_win32.py commits HEAD WORKTREE`
+exited 1 in 112 s (`.text` 0xB0 bytes longer, VirtualSize 0x335874 to
+0x335924; `.CRT`, `.data`, `.rdata`, `.reloc` and the debug section `/4`
+differ). Disassembled by symbol with addresses normalised, seven functions
+differ, all in files this task edited: `_portOskDraw`,
+`_constructor_menu1C_portsheet`, `_constructor_menu08_difficulty`,
+`_portPpoDraw` (`front.c`), `_langGet` (`language.c`), `_mpCalculateAwards`,
+`_mp_watch_menu_display` (`mpmenu.c`); the `.ctors` lists differ only in the
+constructor addresses they hold, and every differing 32-bit word in
+`.rdata` (7,026), `.data` (175) and `.CRT` (3) is an address inside the
+image in both builds. Recompiling the four game files and the four port files
+at both refs with the Windows flags gave the same seven at `-O2`, and nothing
+in `options.c` or the port files. In each of the seven, the optimised GIMPLE
+calls the same functions with the same arguments as before, except
+`_constructor_menu08_difficulty` (below). `_langGet`: the same loads, tests
+and strings; GCC now predicts the `NULL` test of a pointer bank at 18 % where
+it predicted the `int` test at 34 %, so the "bank not loaded" return moved out
+of line and `eax`/`edx` swapped roles (block order and registers).
+`_mp_watch_menu_display`: the first award's `textMeasure`/`textRender`
+block, now behind a pointer test predicted non-null, moved inline with the
+branch inverted (`jne` to `je`), its instructions unchanged but for the
+temporary register. `_mpCalculateAwards`, `_portPpoDraw`,
+`_constructor_menu1C_portsheet`: register and stack-slot choice (in
+`_mpCalculateAwards`, the `% 17` magic multiplier and the constant 1 swap
+`ebx` and `esi`). `_portOskDraw`: as well as registers, `cmpl $0x4,
+port_osk_row` became `cmp port_osk_row, r`, on a path where `r == 4` is
+already known (an equivalent comparison). `_constructor_menu08_difficulty`
+is more than that: from GCC's `dom2` pass on (identical, conversions aside,
+up to `thread1`), the jump threader specialised the difficulty loop's last
+iteration: on the path where `i == 3`, the second `frontPrintText` of the
+row, the loop exit and, when `hasCheatInfo` is 0, the tail
+(`frontAddPreviousTabText`, `portMissionBestTimesDraw`) are copied, so the
+function has one more `frontPrintText`, `viGetX`, `viGetY`,
+`frontAddPreviousTabText` and `portMissionBestTimesDraw` call site; every
+path still makes the same calls in the same order with the same arguments.
+The likely trigger is that the dropped `(int)` conversions of the two font
+pointers brought the copied block under the threader's statement limit.
+This is tail duplication rather than block order, and the review should
+decide whether to accept it; the requirement for pointer parameters leaves
+no type that keeps this function identical. *What ran:* the plan's task
+check. Step 1 exited 0 in 22 s; `update` recorded 945 in 80 files without
+`--allow-rise`. Step 2: the i686 headless build exited 0 (10 s, incremental)
+and the 20-mission smoke exited 0 with 20 of 20 `PASS` (188 s). Step 3 as
+above. `lp64_casts.py check` passed (23 casts, unchanged). Every line of
+CI's "Test gameplay, cache and release tooling without a ROM" step except
+the two `cmake` lines (step 1 builds that tree) ran in the i686 container:
+36 of 38 passed, including `test_mission_times.sh` (which compiles
+`port_mission_times.c` with `front.h`), `test_hud.sh`, `test_ads.sh`,
+`settings_placement.py`, `lp64_diagnostics.py check` and `hand_gallery.py
+verify --allow-pending`. Two did not: `test_upstream_merge.sh` failed with
+only the `memset` conflict (`include/string.h:19` against `gunfire.c`'s
+implicit declaration) that it already shows at 200230b and that a separate
+fix addresses; a scratch copy of its driver with `<string.h>` included
+first, not committed, built and printed its pass line with this change.
+`MIDAS_BUFFER_SANITIZE=1 test_buffers.sh` hit the 900 s limit: its
+AddressSanitizer binary `test_model_bounds` spun under the container's
+`qemu-i386` emulation; none of its sources (`romfile_model.c`, `memp.c`,
+`token.c`, `audio_pc.c`, `pcsched.c`, `port_memp.c`) is touched by this
+task, and the same script without the sanitizer passed in 4 s. *Files
+touched:* `src/game/front.c`, `front.h`, `options.c`, `mpmenu.c`,
+`language.c`, `bondview.h`; `port/src/port_headshots_menu.c`,
+`port_mission_times.c`, `port_reinforcements_menu.c`, `port_startup.c`; the
+baseline.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),

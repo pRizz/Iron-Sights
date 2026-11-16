@@ -9,11 +9,10 @@
 #include <bondconstants.h>
 #include <fr.h>
 #include "game/textrelated.h"
+#include "game/front.h"
 #include "port_reinforcements.h"
 #include "port_reinforcements_menu.h"
 
-extern Gfx *frontPrintText(Gfx *dl, s32 *x, s32 *y, s8 *text, s32 chars, s32 font,
-    s32 color, s32 viewX, s32 viewY, s32 arg9, s32 arga);
 extern s32 portOptFind(const char *key);
 extern void portOptStep(s32 i, s32 dir);
 extern const char *portOptValueText(s32 i);
@@ -74,11 +73,11 @@ Gfx *portReinforcementsMenuDraw(Gfx *dl, s32 highlighted)
     dl = microcode_constructor(dl);
     {
         s32 lx = x, ly = y;
-        dl = frontPrintText(dl, &lx, &ly, (s8 *)ROW_LABEL, (s32)ptrFontZurichBoldChars, (s32)ptrFontZurichBold,
+        dl = frontPrintText(dl, &lx, &ly, (s8 *)ROW_LABEL, ptrFontZurichBoldChars, ptrFontZurichBold,
             0x000000ff, viGetX(), viGetY(), 0, 0);
     }
     x += labelWidth;
     dl = microcode_constructor(dl);
-    return frontPrintText(dl, &x, &y, (s8 *)value, (s32)ptrFontZurichBoldChars, (s32)ptrFontZurichBold,
+    return frontPrintText(dl, &x, &y, (s8 *)value, ptrFontZurichBoldChars, ptrFontZurichBold,
         valueColor, viGetX(), viGetY(), 0, 0);
 }

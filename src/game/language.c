@@ -9,7 +9,7 @@
 
 // bss
 //CODE.bss:8008C640
-s32 g_LangBanks[45];
+u8 *g_LangBanks[45];
 
 
 //CODE.bss:8008C6F4
