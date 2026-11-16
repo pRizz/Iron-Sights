@@ -9,7 +9,7 @@
 // unsure if these structs are defined as something else, elsewhere
 struct unk_09B7A0_struct_parent {
     Vertex* unk00;
-    s32 unk04;
+    void *unk04;
     s32 unk08;
     s16 unk0C;
     s16 unk0E;
@@ -291,7 +291,7 @@ void sub_GAME_7F09BBBC(void)
 * PD name: vtxstore_allocate
 * Description: Allocation for batches within the storage space
 */
-s32 vtxstore_allocate(s32 arg0, s32 type, s32 arg2, s32 arg3) 
+Vertex *vtxstore_allocate(s32 arg0, s32 type, void *arg2, s32 arg3) 
 {
     s16* var_t3;
     s16 temp_t2;
@@ -385,7 +385,7 @@ s32 vtxstore_allocate(s32 arg0, s32 type, s32 arg2, s32 arg3)
         } else {
             *var_t3 -= temp_t2;
         }
-        return (s32)var_t0[var_a1].unk00;
+        return var_t0[var_a1].unk00;
     }
     return 0;
 }

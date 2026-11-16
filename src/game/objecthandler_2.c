@@ -102,11 +102,11 @@ void sub_GAME_7F0762E0(ModelFileHeader *objheader, u8 *name, u8 *dst, struct tex
     s32 romremaining;
     Gfx *gdl;
     s32 pcremaining;
-    u32 replacementgdl;
+    uintptr_t replacementgdl;
     ModelNode *curnode;
     Gfx *curgdl;
-    s32 delta;
-    s32 filedata;
+    intptr_t delta;
+    u8 *filedata;
     s32 filenum;
 
 #ifndef TARGET_N64
@@ -141,7 +141,7 @@ void sub_GAME_7F0762E0(ModelFileHeader *objheader, u8 *name, u8 *dst, struct tex
     return;
 #endif
 
-    filedata = (s32) objheader->Switches;
+    filedata = (u8 *) objheader->Switches;
     filenum = fileGetIndex((char *) name);
 
     romremaining = get_rom_remaining_buffer_for_index(filenum);
@@ -151,14 +151,14 @@ void sub_GAME_7F0762E0(ModelFileHeader *objheader, u8 *name, u8 *dst, struct tex
 
     if (gdl != 0)
     {
-        name = (u8 *) ((pcremaining - ((s32) (((u8 *) objheader->Switches) + (((u32) gdl) & 0x00ffffff)))) + ((s32) filedata));
+        name = (u8 *) ((pcremaining - ((intptr_t) (((u8 *) objheader->Switches) + (((uintptr_t) gdl) & 0x00ffffff)))) + ((intptr_t) filedata));
         
         /* The signed lvalue cast is required for the compiler to choose the target registers. */
-        replacementgdl = (u32)*(s32 *)&gdl;
+        replacementgdl = (uintptr_t)*(intptr_t *)&gdl;
         
-        delta = ((s32) ((romremaining + filedata) - (s32) name)) - ((s32) (((u8 *) objheader->Switches) + (((u32) gdl) & 0x00ffffff)));
+        delta = ((intptr_t) ((romremaining + filedata) - (intptr_t) name)) - ((intptr_t) (((u8 *) objheader->Switches) + (((uintptr_t) gdl) & 0x00ffffff)));
         
-        texCopyGdls((Gfx *) (((u8 *) objheader->Switches) + (((u32) gdl) & 0x00ffffff)), (Gfx *) ((romremaining + filedata) - (s32) name), (s32) name);
+        texCopyGdls((Gfx *) (((u8 *) objheader->Switches) + (((uintptr_t) gdl) & 0x00ffffff)), (Gfx *) ((romremaining + filedata) - (intptr_t) name), (intptr_t) name);
 
         texLoadFromModelFileHeader(objheader, buffer);
 
@@ -172,23 +172,23 @@ void sub_GAME_7F0762E0(ModelFileHeader *objheader, u8 *name, u8 *dst, struct tex
                 
                 if (gdl != 0)
                 {
-                    name = (u8 *) (((s32) gdl) - ((s32) curgdl));
+                    name = (u8 *) (((intptr_t) gdl) - ((intptr_t) curgdl));
                 }
                 else
                 {
-                    name = (u8 *) ((((s32) (filedata + pcremaining)) - ((s32) objheader->Switches)) - (((u32) curgdl) & 0x00ffffff));
+                    name = (u8 *) ((((intptr_t) (filedata + pcremaining)) - ((intptr_t) objheader->Switches)) - (((uintptr_t) curgdl) & 0x00ffffff));
                 }
                 
                 modelNodeReplaceGdl((u32) objheader, curnode, curgdl, (Gfx *) replacementgdl);
                 
-                replacementgdl += texLoadFromGdl( (Gfx *) ((((u8 *) objheader->Switches) + (((u32) curgdl) & 0x00ffffff)) + delta), (s32) name, (Gfx *) (((u8 *) objheader->Switches) + (replacementgdl & 0x00ffffff)), buffer);
+                replacementgdl += texLoadFromGdl( (Gfx *) ((((u8 *) objheader->Switches) + (((uintptr_t) curgdl) & 0x00ffffff)) + delta), (intptr_t) name, (Gfx *) (((u8 *) objheader->Switches) + (replacementgdl & 0x00ffffff)), buffer);
             } 
             while (node != 0);
         }
 
-        name = (u8 *) (((s32) (((u8 *) objheader->Switches) + (replacementgdl & 0x00ffffff))) - filedata);
+        name = (u8 *) ((((u8 *) objheader->Switches) + (replacementgdl & 0x00ffffff)) - filedata);
 
-        fileSetSize(filenum, (u8 *) filedata, (((s32) name + 0xf) & (~0xf)), dst == 0);
+        fileSetSize(filenum, (u8 *) filedata, (((intptr_t) name + 0xf) & (~0xf)), dst == 0);
     }
 }
 
@@ -407,7 +407,7 @@ void load_object_fill_header(struct ModelFileHeader *objheader, u8 *name, u8* ds
         {
             /* texLoad replaced TextureID with the data pointer; the texture
              * number sits 8 bytes before it (portGunTexAudit, gun.c) */
-            u32 id = objheader->Textures[t].TextureID;
+            uintptr_t id = objheader->Textures[t].TextureID;
             s32 texnum = (id >= (u32) MAX_TEXTURES) ? *(s16 *) ((u8 *) id - 8) : (s32) id;
 
             portHwNoteTexture(texnum, portTexRomBytes(texnum)); /* cart read + last-priced decode */

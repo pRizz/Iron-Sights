@@ -38,6 +38,7 @@ extern void sysFatalError(const char *format, ...);
 #include "stan.h"
 #include "model.h"
 #include "tex.h"
+#include "vtxstore.h"
 
 #ifndef TARGET_N64
 /* Sub-field smoothing (frametiming.c): chr animation advances by the TRUE

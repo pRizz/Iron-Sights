@@ -1273,6 +1273,134 @@ count did not rise); the i686 headless build exited 0 (11 s);
 mission smoke was not repeated; `lp64_casts.py check` passed (23 casts,
 unchanged).
 
+*LP64-002 task 6, image bank, textures and model-file relocation (2026-11-16,
+local commit "Type the image bank delta, texture slots and model relocation";
+not pushed):* *Declarations:* `globalbank_rdram_offset` (`src/game/image_bank.c`
+and its `extern` in `image_bank.h`) went from `s32` to `intptr_t`;
+`sImageTableEntry.index` (`src/bondtypes.h`) from `u32` to `uintptr_t`;
+`ModelFileTextures.TextureID` (`src/bondtypes.h`) from `u32` to `uintptr_t`,
+because `texLoad` overwrites it with a data pointer exactly as it does `index`,
+and the two audits that read it back (`gun.c`'s `portGunTexAudit`,
+`objecthandler_2.c`'s hardware-pace loop) need the whole value; their local
+`u32 id` became `uintptr_t id`. `texSetBitstring` takes `u8 *` (definition and
+`image_bank.h`); its third caller passes `rzipGetSomething()`, which returned
+`s32` while returning `rz_inbuf + rz_inptr`, so it now returns `u8 *`
+(`src/game/decompress.c` and `.h`; this also removes the one-off at
+`decompress.c:85`). `vtxstore_allocate` (`src/game/vtxstore.c` and `.h`) returns
+`Vertex *` and its third parameter, which `objDeform` passes `model->obj` and
+`chrCreateBloodStain` passes 0, is `void *`; the record field it is stored in,
+`unk04` of `vtxstore.c`'s local `struct unk_09B7A0_struct_parent`, is `void *`
+(only compared for equality). `chr.c` called `vtxstore_allocate` without a
+prototype (harmless while it returned `s32`), so it now includes `vtxstore.h`.
+In `bloodImgTranspose` (`blood_decrypt.c`), `rowend`, `var_t2` and `t1` are
+`u8 *` and the two loop tests compare pointers. In
+`sub_GAME_7F0762E0` (`objecthandler_2.c`), `filedata` is `u8 *`,
+`replacementgdl` `uintptr_t` and `delta` `intptr_t`. `propobj.c`'s monitor test
+reads `(uintptr_t)screen->tconfig < 100` (unsigned, as the `(u32)` was) and
+indexes `monitorimages[(intptr_t)screen->tconfig]` (signed, as the `(s32)`
+was). *The offset arithmetic:* every use was `(void *)(globalbank_rdram_offset +
+(u32)&sym)`, 32 image table pointers and 17 `texLoadFromDisplayList`
+arguments, all in `texReset`. Each is now `(u8 *)&sym +
+globalbank_rdram_offset` (the display-list ones cast to `Gfx *`, the type the
+web build's generated prototype declares): the symbol's address as a byte
+pointer plus a signed byte count, so the result is the same number of bytes
+from the symbol whatever its type, and at 32 bits the same sum modulo 2^32 as
+the old `u32` addition. The only writes are `= 0` (port) and, under
+`TARGET_N64` only, `(u32)pGlobalimagetable + 0xFE000000`, left as it was. The
+other readers, in strict `gunfire.c`, are all under `TARGET_N64` and add it to
+`u32` icon offsets; that file is not edited. *Model relocation:* the casts
+inside `sub_GAME_7F0762E0`'s N64 path became `(intptr_t)` (for the `(s32)`
+casts) and `(uintptr_t)` (for the `(u32)` casts), types identical to the old
+ones at 32 bits, so every sum and difference keeps its expression; with
+`filedata` a byte pointer, `(romremaining + filedata) - (intptr_t) name` is
+byte pointer arithmetic, and the final size is the byte difference
+`(Switches + (replacementgdl & 0x00ffffff)) - filedata`. The matching hack
+`(u32)*(s32 *)&gdl` reads `gdl` through an `intptr_t` lvalue instead, so it
+reads the whole pointer at 64 bits. On the PC this path is never reached: the
+function returns after its port block, and `modelNodeReplaceGdl`'s first
+argument and `sub_GAME_7F075A90` stay for Task 9. *Widened fields checked:*
+`uintptr_t` and `u32` are both `unsigned int` on i686 Linux and i686 MinGW
+(and `unsigned long`, also 4 bytes, on wasm32), so at 32 bits
+`sImageTableEntry` stays 12 bytes (4 + eight `u8`) and `ModelFileTextures`
+12 (4 + seven `u8`, padded to 4); at 64 bits they become 16 and 16. Every
+initialiser of `index` (the 32 tables in `assets/oddtextures.c`) is an
+`IMAGE_*` texture number, none with its top bit set; at run time `texLoad`
+replaces it with a pointer and `port_textures.c` stores one
+(`(u32)(uintptr_t) px`, its allowlisted cast, behind a 64-bit refusal). Every
+comparison stays unsigned: `index < (u32)(MAX_TEXTURES - 1)` in `front.c`,
+`(u32) tconfig->index < NUM_TEXTURES` in `othermodemicrocode.c`,
+`ent->index >= 0x10000000u` in `sky.c`, `TextureID < (u32)MAX_TEXTURES` in
+`image.c` (the signed N64 test is under `TARGET_N64`), and the two `id >=
+(u32)MAX_TEXTURES` audits. Noted for LP64-003, not changed: the `(u32)`
+truncations in `othermodemicrocode.c:362` and `port_textures.c:82` would let a
+64-bit pointer whose low word is small pass as a texture number, and
+`port_textures.c`'s cast and refusal can go now that `index` is pointer-sized;
+`texLoad` still writes through `s32 *updateword` (the 64-bit plan's texture
+item), and `ModelFileTextures` is a ROM record read in place as 12 bytes
+(`romfile_model.c`), LP64-004's converter question. `vtxstore.c` allocates its
+records with a literal 0x14 stride (`tmp = 0x14`), right at 32 bits and short at
+64 bits, where the record (with its existing `Vertex *` and the new `void *`)
+is 32 bytes. *Files touched:* `src/bondtypes.h`; in `src/game/`:
+`image_bank.c`, `image_bank.h`, `decompress.c`, `decompress.h`, `vtxstore.c`,
+`vtxstore.h`, `chr.c` (one include), `blood_decrypt.c`, `objecthandler_2.c`,
+`gun.c`, `propobj.c`; the baseline. `image.c` and `sky.c` needed no edit (their
+places went with the declarations). *Count:* 711 in 76 files (157
+`int-conversion`, 199 `int-to-pointer-cast`, 355 `pointer-to-int-cast`) to 587
+in 72 files (149, 154, 284), 124 fewer. To zero: `blood_decrypt.c` 4,
+`decompress.c` 1, `gun.c` 1, `vtxstore.c` 1. Lower: `image_bank.c` 86 to 4,
+`objecthandler_2.c` 30 to 5, `image.c` 16 to 14, `propobj.c` 10 to 6, `chr.c` 5
+to 3, `sky.c` 2 to 1, and strict `model.c` 47 to 46 (its
+`((u16 *)image->index)[-4]` needs no edit now). No file rose. The plan expected
+about 128: the 81 image bank places in `image_bank.c`, 24 of the 29
+model-relocation places, 3 texture index places, 3 for `texSetBitstring`, 4
+blood locals, 5 for `vtxstore_allocate`, 2 for `tconfig`, `decompress.c:85` and
+`model.c`'s side effect. *Left:* for Task 9, `objecthandler_2.c:138` and `:182`
+(`modelNodeReplaceGdl((u32) objheader, ...)`) and `:355` and `:373` (two, the
+`sub_GAME_7F075A90` arguments), 5 places, with the 6 image-bank places in
+`gunfire.c`; for Task 8, `othermodemicrocode.c:367` (`PHYS_TO_K0` yields `u32`
+on the PC, so the field's type cannot clear it; the K0 macros are Task 8's),
+`image_bank.c:192` and `:194` (segment size and alignment) and `image.c`'s 14
+(alignment, segment and pointer-difference clusters). *Windows comparison:*
+`compare_win32.py commits HEAD WORKTREE` exited 1 in 116 s (`.text` 0x60 bytes
+shorter, VirtualSize 0x335934 to 0x3358d4; `.CRT`, `.data`, `.rdata`, `.reloc`
+and `/4` differ). Every differing 32-bit word in `.rdata` (8,043), `.data`
+(175) and `.CRT` (3) is an address inside the image in both builds; the
+`.ctors` lists differ only in the constructor addresses. Disassembled by symbol
+with addresses normalised, four functions differ, all in files this task
+edited or whose callee's declaration it changed; `texReset`, the
+`objecthandler_2.c` functions and the `tconfig` function are identical.
+`_bloodImgTranspose`: the same inner loop (load, step, store, `cmp`/`jb`, an
+unsigned test both times); after it GCC computes the inner trip count `n`
+(`rowend - v1` when `rowend >= v1 + 1`, else 1) with one `cmovb` where it used
+`setae` and two `cmove`s, then advances the source, `var_t2` and destination by
+`n`, `n` and `n * srcheight - pixelcount + 1` as before (an equivalent
+comparison, and register choice). `_vtxstore_allocate`: `esi` and `edi` swap
+roles throughout, and the successful return duplicates the four-instruction
+epilogue instead of jumping to the shared one; every path stores the same
+fields and returns `var_t0[var_a1].unk00`. `_objDeform` (`propobj.c`) and
+`_chrCreateBloodStain` (`chr.c`), the two callers that copy vertices into the
+buffer `vtxstore_allocate` returns: the copy loop addresses destination
+`Vertex` `j` as base plus `j * 16` instead of a pointer stepped by 16 (the same
+16-byte loads from `Vertices[j]`, reloaded each iteration in both, and the same
+stores), with block order, branch direction (`jne` to `je` for the second
+allocation in `chrCreateBloodStain`) and register and stack-slot choice; in
+`_objDeform` the float block computing `(x - 60) / x` and the two constant
+stores moved, unchanged. *What ran:* the plan's task check. Step 1 exited 0: both trees
+built in 16 s, then `update` (10 s) recorded 587 in 72 files without
+`--allow-rise`. Step 2: the i686 headless build exited 0 (17 s, incremental)
+and the 20-mission smoke exited 0 with 20 of 20 `PASS` (187 s). Step 3 as
+above. `lp64_casts.py check` passed on the host (23 casts, unchanged; this task
+adds none). Every line of CI's "Test gameplay, cache and release tooling
+without a ROM" step except the two `cmake` lines (step 1 builds that tree) ran
+in the i686 container, plus `test_image_bank.sh` (it compiles `bondtypes.h`
+with the image tables): all 40 passed (116 s), including
+`test_upstream_merge.sh`, `test_monitor_script.sh`, `test_abi_probe.sh`,
+`lp64_diagnostics.py check` (headless tree only: "Baseline can be lowered",
+exit 0) and `hand_gallery.py verify --allow-pending` (pending: deferred inputs
+changed). `test_buffers.sh` ran without `MIDAS_BUFFER_SANITIZE=1`, whose
+AddressSanitizer binary hangs under the Mac's `qemu-i386` emulation (Tasks 3
+to 5); without it the harness passed in 4 s.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),

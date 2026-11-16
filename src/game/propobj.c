@@ -7628,9 +7628,9 @@ Gfx *process_monitor_animation_microcode(Model *model, ModelNode *node, MonitorR
         vertices[2] = rodata->DisplayListCollisions.Vertices[2];
         vertices[3] = rodata->DisplayListCollisions.Vertices[3];
 
-        if ((u32)screen->tconfig < 100) 
+        if ((uintptr_t)screen->tconfig < 100) 
         {
-            tconfig = &monitorimages[(s32)screen->tconfig];
+            tconfig = &monitorimages[(intptr_t)screen->tconfig];
         } 
         else 
         {

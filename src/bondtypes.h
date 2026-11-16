@@ -789,7 +789,7 @@ typedef union
 
     typedef struct ModelFileTextures
     {
-        u32 TextureID;
+        uintptr_t TextureID;
         u8  Width;
         u8  Height;
         u8  MipMapTiles;
@@ -3977,7 +3977,7 @@ struct objective_entry
 #pragma region Images
 typedef struct sImageTableEntry
 {
-    u32 index;
+    uintptr_t index;
     u8  width;
     u8  height;
     u8  level;

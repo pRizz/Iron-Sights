@@ -1022,7 +1022,7 @@ void portGunTexAudit(void)
             /* texLoad replaced TextureID with the pool data pointer; the
              * pool allocation writes the texture number 8 bytes before the
              * data (texLoad's left-side header), so it is recoverable. */
-            u32 id = h.Textures[t].TextureID;
+            uintptr_t id = h.Textures[t].TextureID;
             s32 texnum = (id >= (u32)MAX_TEXTURES) ? *(s16 *)((u8 *)id - 8) : (s32)id;
             extern struct texpool *portModelTexPool(void);
             struct tex *rec = texFindInPool(texnum, portModelTexPool());
