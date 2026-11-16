@@ -1,7 +1,7 @@
 #define NOMINMAX
 
 #include <cmath>
-#include <cstdint>
+#include <cinttypes> /* <cstdint>, plus PRIxPTR for the DL jump ring */
 #include <cstdlib>
 #include <cstring>
 #include <cassert>
@@ -8239,7 +8239,7 @@ extern "C" {
 #define DL_JUMP_RING_LEN 512
 static struct DlJumpEntry {
     const Gfx* cmd;
-    uint32_t w0, w1;
+    uintptr_t w0, w1; /* Gfx words: w1 holds a pointer at 64 bits */
 } s_DlJumpRing[DL_JUMP_RING_LEN];
 static uint32_t s_DlJumpRingIdx;
 
@@ -8935,7 +8935,7 @@ static void gfx_run_dl(Gfx* cmd) {
                     fprintf(stderr, "gfx: last %u DL jumps (cmdaddr: w0 w1):\n", n);
                     for (i = s_DlJumpRingIdx - n; i != s_DlJumpRingIdx; i++) {
                         const struct DlJumpEntry* e = &s_DlJumpRing[i & (DL_JUMP_RING_LEN - 1)];
-                        fprintf(stderr, "  %p: %08x %08x\n", (const void *)e->cmd, e->w0, e->w1);
+                        fprintf(stderr, "  %p: %08" PRIxPTR " %08" PRIxPTR "\n", (const void *)e->cmd, e->w0, e->w1);
                     }
                     fflush(stderr);
                 }

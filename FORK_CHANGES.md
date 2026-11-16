@@ -1991,6 +1991,77 @@ Building the changed files at 32 bits before and after: `gunfire.c` loses all
 its `int-conversion` warnings and four implicit declarations, `bondview2.c`
 loses its incompatible-pointer warning at `gunDrawSight(&gdl)`, and no warning
 was added.
+*Fourth commit, the three C++ items:* `port/fast3d/system.h` declares
+`typedef long long s64`, the game's type (`PR/ultratypes.h`), instead of
+`int64_t`: on i686 (glibc and MinGW) and wasm32 `int64_t` is already
+`long long`, so nothing changes at 32 bits, while at 64 bits on Linux it is
+`long`, and `gfx_pc.cpp` and `gfx_opengl.cpp`, which see both headers, stopped
+on the conflicting typedef; `sysSleep`, the one declaration using it, has C
+linkage. `gfx_pc.cpp`'s DL jump ring (`struct DlJumpEntry`) stores the two
+`Gfx` words as `uintptr_t` instead of `uint32_t`, so the brace initialiser at
+line 8558 copies them at their own width and the 64-bit narrowing is gone
+without a conversion; the brief asked for an explicit conversion that states
+the width, but the only width that keeps `w1` (a display-list pointer at 64
+bits) is the word's own, and a cast to 32 bits would be a truncating cast this
+task does not add. The fatal-error dump prints the two words with
+`"%08" PRIxPTR` (`<cinttypes>` replaces `<cstdint>` on the same line, so no
+line number and therefore no `assert` line constant moves; `PRIxPTR` is `"x"`
+on i686, so the format string is byte-identical). `gfx_shiny.cpp`: in the
+containers (Ubuntu 24.04, GCC 13) C++20 `<chrono>` includes `<sstream>`, whose
+`<ios>` reaches libstdc++'s `gthr-default.h`, which includes `<pthread.h>`, which
+includes `<sched.h>`; with `-I src` ahead of the system folders that resolves
+to the game's `src/sched.h`, which pulls in `ultra64.h` and the repository's C
+`stdio.h`/`math.h` stand-ins inside libstdc++ and gives six C-linkage
+conflicts (`sprintf`, `cos`, `sin`, `cosf`, `sinf`, `sqrtf`). Compiling the
+same command with `-std=gnu++17` succeeds, and GCC 13's `<chrono>` includes
+`<sstream>` only under `__cplusplus >= 202002L`. CI's `linux` job builds in
+`scripts/port/linux-release.Dockerfile`, Ubuntu 22.04 with GCC 11; that image was
+not built here, so that GCC 11's `<chrono>` stops short of `<pthread.h>`
+is inferred, not reproduced. `gfx_pc.cpp` also reaches `src/sched.h` this way
+in the containers and compiled only because it includes the game headers
+itself. The fix is in the 64-bit include order: `CMakeLists.txt` gathers
+`src src/game src/inflate` in `PORT_GAME_INCLUDE` and, only when
+`GE_POINTER_BITS` is 64, limits those three folders to C sources with
+`$<$<COMPILE_LANGUAGE:C>:...>`, as the Emscripten branch already does for
+`include`; no C++ file includes a header from them (every quoted include of
+`port/fast3d` and `port/include` resolves elsewhere). The source is unchanged.
+*32-bit compile commands:* configuring with the old and the new
+`CMakeLists.txt`, the `compile_commands.json` files are byte-identical (build
+folder normalised) for a headless tree (329 entries) and the two video trees
+(with `SDL2_LINUX_ROOT`, and with the system SDL folder; 360 entries each) in
+the x86_64 container, and for a headless tree in the i686 container.
+*64-bit video compile:* configured with `-DGE_POINTER_BITS=64 -DGE_VIDEO=ON`
+and compiled from the recorded commands (`-fsyntax-only`), every file
+compiles in both containers: aarch64 336 of 336 C files and 24 of 24 C++ files,
+x86_64 the same.
+Before this commit the aarch64 tree compiled all 336 C files and 21 of the 24
+C++ files (`gfx_pc.cpp`, `gfx_opengl.cpp` on `s64`, `gfx_shiny.cpp` on the
+C-linkage conflicts). *Count:* 0 (unchanged; the count covers C files) with an
+empty `errors_by_file`. *Windows comparison* (`compare_win32.py commits HEAD
+WORKTREE`, exit 0): "identical in loaded code and data; .buildid differs" (a
+first version that added `<cinttypes>` on its own line moved `assert` line
+constants in `gfx_run_dl` and three texture importers by one, so the include
+replaced `<cstdint>` instead). *What ran:* step 1 (`update`, 15 s, 0 in 0 files); step 2, the i686
+headless build (4 s) and the 20-mission smoke, 20 of 20 `PASS` (185 s); step 3
+as above; `lp64_casts.py check` (28 casts in 13 files, unchanged); the same
+harness lines in the i686 container (119 s): 42 passed, including
+`test_wardrobe.sh` and `test_ads.sh` (Step 5), and `hand_gallery.py verify
+--allow-pending` failed as expected.
+
+*Gallery hand-off (task 9):* the whole branch against its base
+(`compare_win32.py commits 5c77e73 WORKTREE`, run with the fourth commit's
+files in place, exit 1) differs in exactly the two functions of the first
+commit, with the same instructions: `_loadAnimationFrame` (`model.c`, strict
+tier; register choice and an equivalent multiply on its RAM path) and `_init`
+(one displacement moved with the code). Every differing `.data` (175),
+`.rdata` (6,428) and `.CRT` (3) word names the same symbol and offset, and the
+constructor and destructor lists are equal by symbol. The second, third and
+fourth commits leave the executable identical in code and data. No renderer
+file (`port/fast3d`) and no function of `gunfire.c` or `bondview2.c` differs.
+`loadAnimationFrame` returns the frame data of every animated model (guards,
+Bond's body and head in cutscenes and multiplayer) and draws nothing itself,
+so the strict-tier gallery images are expected to be unchanged; they are
+regenerated on a machine that can render before the branch reaches `main`.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),

@@ -99,7 +99,17 @@ if(EMSCRIPTEN)
     # libc++ must find its standard-header wrappers before the N64 headers.
     set(PORT_PUBLIC_INCLUDE $<$<COMPILE_LANGUAGE:C>:${CMAKE_SOURCE_DIR}/include>)
 endif()
-include_directories(. ${PORT_PUBLIC_INCLUDE} include/ultra64 include/PR src src/game src/inflate
+set(PORT_GAME_INCLUDE src src/game src/inflate)
+if(GE_POINTER_BITS EQUAL 64)
+    # The game's src/sched.h shadows the C library's <sched.h>, which GCC 13's
+    # libstdc++ reaches from C++20 <chrono> through <pthread.h>; the C++ renderer
+    # (port/fast3d) needs no header from the game folders. The 32-bit list is
+    # unchanged; CI's GCC 11 never reaches <sched.h> there.
+    set(PORT_GAME_INCLUDE $<$<COMPILE_LANGUAGE:C>:${CMAKE_SOURCE_DIR}/src>
+        $<$<COMPILE_LANGUAGE:C>:${CMAKE_SOURCE_DIR}/src/game>
+        $<$<COMPILE_LANGUAGE:C>:${CMAKE_SOURCE_DIR}/src/inflate>)
+endif()
+include_directories(. ${PORT_PUBLIC_INCLUDE} include/ultra64 include/PR ${PORT_GAME_INCLUDE}
                     port/include src/libultra)
 
 # Game logic: everything in src/game.
