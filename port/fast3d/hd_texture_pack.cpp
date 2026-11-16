@@ -177,6 +177,25 @@ Image resample(const Image &src, unsigned width, unsigned height) {
     return out;
 }
 
+uint8_t group_of_path(const std::string &path) {
+    const size_t at = path.find("Mission ");
+    if (at != std::string::npos && at + 10 <= path.size() && path[at + 8] >= '0' && path[at + 8] <= '9'
+        && path[at + 9] >= '0' && path[at + 9] <= '9') {
+        const int mission = (path[at + 8] - '0') * 10 + (path[at + 9] - '0');
+        if (mission >= 1 && mission <= 20) return uint8_t(mission);
+    }
+    if (path.find("/Gunbarrel/") != std::string::npos) return kGroupTitle;
+    return kGroupEffects;
+}
+
+std::map<Key, Entry> Pack::downloads() const {
+    std::map<Key, Entry> out;
+    for (const auto &item : entries_) {
+        if (!item.second.custom) out.emplace(item.first, item.second);
+    }
+    return out;
+}
+
 bool parse_scope(const std::vector<std::string> &sources, const std::vector<std::string> &aliases, Scope &scope) {
     for (const auto &text : sources) {
         picojson::value doc;
@@ -185,7 +204,10 @@ bool parse_scope(const std::vector<std::string> &sources, const std::vector<std:
         if (textures == doc.get<picojson::object>().end() || !textures->second.is<picojson::array>()) return false;
         for (const auto &name : textures->second.get<picojson::array>()) {
             Key key;
-            if (name.is<std::string>() && parse_name(name.get<std::string>(), key)) scope.keys.insert(key);
+            if (name.is<std::string>() && parse_name(name.get<std::string>(), key)) {
+                scope.keys.insert(key);
+                scope.groups.emplace(key, group_of_path(name.get<std::string>()));
+            }
         }
     }
     for (const auto &text : aliases) {
@@ -231,6 +253,8 @@ void Pack::add(const Key &key, const Entry &entry, const Scope &scope) {
     if (!scope.all && !scope.keys.count(key) && !scope.keys.count(any)) return;
     Entry found = entry;
     found.custom = scope.all;
+    const auto group = scope.groups.count(key) ? scope.groups.find(key) : scope.groups.find(any);
+    found.group = group != scope.groups.end() ? group->second : 0;
     entries_.emplace(key, found);  /* the first copy of a key wins */
     const auto range = scope.aliases.equal_range(key);
     for (auto it = range.first; it != range.second; ++it) {

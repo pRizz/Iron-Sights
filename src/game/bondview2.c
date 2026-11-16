@@ -9698,6 +9698,7 @@ void MoveBond(s8 stick_x, s8 stick_y, u16 buttons, u16 oldbuttons)
 #ifndef TARGET_N64
     portNoclipTick(); /* Noclip (FORK-072): take a press, start or end flight */
     portSprintFeedbackTick(); /* FORK-006: the indicator / widening fade */
+    { extern void portLoadTourTick(void); portLoadTourTick(); } /* GE_LOADTOUR audit (port_load_tour.c) */
 #endif
 
     if (lvlGetControlsLockedFlag())

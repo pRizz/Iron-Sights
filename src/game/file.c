@@ -55,6 +55,7 @@ f32 get_007_accuracy_mod(void)
 void portMissionEndLog(s32 stage, s32 allcomplete)
 {
     fprintf(stderr, "ge: mission end: levelid=%d all_objectives_complete=%d\n", stage, allcomplete);
+    { extern void portLoadTourMissionEnded(void); portLoadTourMissionEnded(); } /* GE_LOADTOUR: the run ends */
 }
 #endif
 

@@ -445,7 +445,7 @@ if(GE_VIDEO)
         include(port/fast3d/hd_texture_scope_embed.cmake)
         midas_embed_hd_texture_scope(HD_TEXTURE_SCOPE_SRC)
         add_library(ge_hd_textures OBJECT port/fast3d/hd_textures.cpp
-            port/fast3d/hd_texture_pack.cpp port/fast3d/hd_texture_format.cpp
+            port/fast3d/hd_texture_pack.cpp port/fast3d/hd_texture_format.cpp port/fast3d/hd_texture_prefetch.cpp
             port/fast3d/hd_textures_download.cpp port/fast3d/hd_download_engine.cpp)
         set_target_properties(ge_hd_textures PROPERTIES
             INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/port/include")

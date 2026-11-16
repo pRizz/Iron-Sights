@@ -98,6 +98,14 @@ static Scope fixture_scope() {
     assert(scope.keys.size() == 5 && scope.aliases.size() == 1 && scope.remaps.size() == 2);  // 5 of 4 rows is refused
     Scope none;
     assert(!parse_scope({sources}, {R"({"other": []})"}, none));
+    // Prefetch groups (hd_texture_prefetch.h): a mission folder's number, the
+    // gunbarrel, else effects; the fixture's folders carry no mission number.
+    assert(group_of_path("GOLDENEYE/Areas/Mission 03 - Runway/GOLDENEYE#1#2#1_all.png") == 3);
+    assert(group_of_path("GOLDENEYE/Areas/Mission 20 - Egyptian/x.png") == 20);
+    assert(group_of_path("GOLDENEYE/Areas/Mission 21 - Nowhere/x.png") == kGroupEffects);
+    assert(group_of_path("GOLDENEYE/UI/Gunbarrel/x.png") == kGroupTitle);
+    assert(group_of_path("GOLDENEYE/Effects/In-game/x.png") == kGroupEffects);
+    assert(scope.groups.size() == 5 && scope.groups.at(Key{0xAAAA0001, 0, 3, 1}) == kGroupEffects);
     return scope;
 }
 
@@ -174,6 +182,10 @@ static void custom_packs(const std::string &root) {
     assert(f && !f->zipped && Pack::read(*f, image) && image.width == 4 && image.rgba[3] == 255);
     const Entry *b = pack.find(Key{0xBBBB0002, 0, 2, 1});
     assert(b && !b->custom && b->file.filename() == "pack.zip");
+    // What a stage's prefetch may read: the download's entries only, groups kept.
+    const auto downloads = pack.downloads();
+    assert(downloads.size() == 4 && downloads.count(Key{0xBBBB0002, 0, 2, 1}) && !downloads.count(Key{0xAAAA0001, 0, 3, 1}));
+    assert(downloads.at(Key{0xBBBB0002, 0, 2, 1}).group == kGroupEffects);
     // Without a download every file is custom, read for every key it names;
     // between two custom copies the first path wins.
     assert(pack.index(root, scope, nullptr) == 10 && pack.custom() == 10);

@@ -1667,11 +1667,13 @@ static void gfx_dxlu_draw(void) {
  * program is compiled the first time a draw needs it, and that frame stalls
  * (one compile measured 42-66 ms on an RTX 5070 Ti). Every program compiled
  * is appended to Data/shaders.txt as "<id0> <id1>" in hex; from the next run
- * on, gfx_shader_prewarm_step compiles the listed ones a few ms per frame
- * from boot, so the front end pays for them instead of gameplay. A filter
+ * on, gfx_shader_prewarm_step compiles the listed ones while the title (or
+ * any stage) loads, so loading pays for them instead of gameplay. A filter
  * change clears the pool and restarts the walk. */
 extern "C" const char* portRootPath(const char* name); /* main.c */
 extern "C" unsigned long long portProfNow(void);        /* pcsched.c */
+extern "C" int portLateLoadActive(void);                /* port_late_loads.c: the stage is in play */
+extern "C" int portLoadAheadPart(int part);             /* port_late_loads.c: GE_LOAD_AHEAD */
 static std::vector<std::pair<uint64_t, uint32_t>> ge_prewarm_ids;
 static std::set<std::pair<uint64_t, uint32_t>> ge_prewarm_known;
 static size_t ge_prewarm_next;
@@ -1741,8 +1743,17 @@ static void gfx_shader_prewarm_step(void) {
     if (ge_prewarm_on != 1 || ge_prewarm_next >= ge_prewarm_ids.size()) {
         return;
     }
+    /* While a stage loads (the title at boot included), compile every listed
+     * program: a longer load rather than a stall in play, where one program
+     * can take 170 ms (scripts/port/late_loads.md). In play, after a filter
+     * change, the walk keeps to 3 ms a frame. The browser keeps its own pace. */
+#ifndef __EMSCRIPTEN__
+    const unsigned long long budget = (portLateLoadActive() || !portLoadAheadPart(2)) ? 3000ull : ~0ull;
+#else
+    const unsigned long long budget = 3000ull;
+#endif
     const unsigned long long t0 = portProfNow();
-    while (ge_prewarm_next < ge_prewarm_ids.size() && portProfNow() - t0 < 3000) {
+    while (ge_prewarm_next < ge_prewarm_ids.size() && portProfNow() - t0 < budget) {
         const std::pair<uint64_t, uint32_t>& id = ge_prewarm_ids[ge_prewarm_next++];
         gfx_lookup_or_create_shader_program(id.first, id.second);
     }
@@ -2175,6 +2186,7 @@ extern "C" void gfx_texture_cache_clear_c(void) {
 
 /* slow-upload line (import_texture): this miss evicted a node / reused a freed id */
 static bool ge_up_evicted, ge_up_recycled;
+static unsigned long long ge_up_name_us; /* this miss's wait for a new GL texture name */
 
 static bool gfx_texture_cache_lookup(int i, const TextureCacheKey& key) {
     ge_up_evicted = false;
@@ -2240,10 +2252,13 @@ static bool gfx_texture_cache_lookup(int i, const TextureCacheKey& key) {
     }
 
     uint32_t texture_id;
+    ge_up_name_us = 0;
     if (gfx_texture_cache.free_texture_ids.take(&texture_id)) {
         ge_up_recycled = true;
     } else {
+        const unsigned long long name_t0 = portProfNow();
         texture_id = gfx_rapi->new_texture();
+        ge_up_name_us = portProfNow() - name_t0;
     }
 
     it = gfx_texture_cache.map.insert(std::make_pair(key, TextureCacheValue())).first;
@@ -3019,7 +3034,9 @@ static int ge_texnum_of(const void* addr) {
 extern "C" unsigned g_GfxUploadError;
 extern "C" unsigned g_GfxUploadErrorCount;
 extern "C" unsigned long long portProfNow(void);
-extern "C" void portHitchNote(int cat, unsigned long long us);
+extern "C" void portHitchNoteItem(int cat, unsigned long long us, const char *what, unsigned int id);
+/* port_late_loads.c: what an upload was, for a late one (the HD import adds its read) */
+static char ge_upload_note[64];
 extern "C" unsigned long long g_GfxUpDrainUs, g_GfxUpTexUs, g_GfxUpMipUs, g_GfxUpErrUs; /* gfx_opengl.cpp */
 extern "C" unsigned g_GfxUpW, g_GfxUpH;
 
@@ -3469,8 +3486,13 @@ static void import_texture(int i, int tile, bool importReplacement) {
         unsigned fmt, siz;
         GeHitchUpload(unsigned f, unsigned z) : fmt(f), siz(z) { g_GfxUpW = 0; }
         ~GeHitchUpload() {
-            const unsigned long long us = portProfNow() - t0;
-            portHitchNote(4 /* uploads */, us);
+            /* the miss's new GL name counts too: a driver can stall on it */
+            const unsigned long long us = portProfNow() - t0 + ge_up_name_us;
+            char what[128];
+            snprintf(what, sizeof(what), "fmt %u siz %u %ux%u name %llu us%s", fmt, siz, g_GfxUpW, g_GfxUpH,
+                     ge_up_name_us, ge_upload_note);
+            ge_upload_note[0] = '\0';
+            portHitchNoteItem(4 /* uploads */, us, what, 0);
             ge_slow_upload_log(us, fmt, siz);
         }
     } ge_hitch_upload(fmt, siz);

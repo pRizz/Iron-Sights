@@ -30,6 +30,187 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-090 — Load before play: late-load audit, HD prefetch, warm-up frames
+
+**Status:** Implemented on 2026-11-15 at the owner's request, after the owner
+reported frames skipped when the shutter opens at the start of Runway. Built
+and measured for Windows (RTX 3070 Laptop GPU, NVIDIA driver). The owner
+play-tested the Windows build and confirmed the Runway hitch is gone. The
+browser, Linux and Steam Deck builds were not built or run.
+
+**The Runway hitch.** Opening the shutter makes the outdoor rooms visible for
+the first time. With the HD texture pack on, the renderer then read 60 HD
+images from the pack in that one frame, on the render thread, inflating each
+PNG with the vendored reference decompressor `puff`: a 330-365 ms frame
+(uploads 285-315 ms) against 25 ms with original textures. A profile of the
+frame put 98% of the render thread in `import_texture` -> `hd_textures::lookup`
+-> `Pack::read` -> `png_decode::rgba`: 69% inflating PNG data in `puff`, 16%
+unfiltering rows, 6% creating and uploading GL textures, 3% inflating the ZIP
+entry. FORK-053 had kept the download's images on that immediate read on
+purpose, so they never showed their originals first.
+
+Inherited behaviour: upstream loads everything on first use, as the N64 did.
+The fork's HD packs (FORK-053), shader prewarm (FORK-057) and room-cache and
+level-cube passes (FORK-058, FORK-066) added first-use work of their own.
+
+**The rule.** A slightly longer load is better than a stall during play:
+`AGENTS.md` ("Load before play") and
+[the guide](scripts/port/late_loads.md). First-use work belongs to the stage
+load or the boot, is recorded so later runs load it ahead, or runs in the
+background; leaving it on first use needs a reason here.
+
+**What changed:**
+
+- **Late-load reporting** ([port_late_loads.c](port/src/port_late_loads.c)).
+  A stage's load ends with its first frame shown. Every timed load event after
+  that is late: `ge: late load:` lines in the log for events of
+  `GE_LATEWARNMS` (default 3) ms or more, at most 20 a stage, and every event
+  in `GE_LATELOG=<file>`. The existing timing sites now name what they loaded
+  (`portHitchNoteItem`: room number, model file, texture number, shader ids,
+  the upload's format, size, GL-name wait and HD read). Uploads now include
+  the wait for a new GL texture name, and room-cache twin programs are timed
+  as shaders.
+- **Room tour** ([port_load_tour.c](port/src/port_load_tour.c)).
+  `GE_LOADTOUR=<ticks>[,<settle>]` puts Bond on one pad of every room and turns
+  him a full circle there, for audits; it ends the run after the last room or
+  when a room finishes the mission (`portLoadTourMissionEnded`, file.c), and
+  `portBenchRequestEnd` (port_bench.c) writes the frame log then.
+- **Audit** ([late_load_audit.py](scripts/port/late_load_audit.py),
+  [late_load_report.py](scripts/port/late_load_report.py)): every mission and
+  multiplayer-only arena, toured with an isolated copy of the executable, the
+  HD pack linked in and the shipped shader list; a report per stage, the
+  costliest late events, shaders compiled during play, `--check`,
+  `--env GE_LOAD_AHEAD=0` for the old behaviour, and `--learn-prefetch`.
+- **HD prefetch** ([hd_texture_prefetch.cpp](port/fast3d/hd_texture_prefetch.cpp)).
+  As a stage starts loading (`boss.c`, `portHdPrefetchStage`) the download's
+  images for it are read on 2-8 worker threads: its mission folder in the
+  scope (`group_of_path`, `Entry::group`), the in-game effects, and the other
+  folders' textures it was seen to draw,
+  [hd_stage_prefetch.json](port/fast3d/texture_packs/hd_stage_prefetch.json)
+  (788 native keys for 26 stages, written by `--learn-prefetch`; Runway draws
+  about 40 of Dam's). The title gets the gunbarrel. `boss.c` waits for them
+  after `lvlStageLoad` (`portHdPrefetchWait`, at most 20 s). A lookup takes the
+  image (moved, not copied); in play, a download image not prefetched is read
+  on the custom-pack workers and swapped in when ready instead of stalling the
+  frame. Images are dropped at the next stage.
+- **Shader prewarm at load** (gfx_pc.cpp). While a stage (the title at boot
+  included) loads, the prewarm compiles every listed program instead of 3 ms a
+  frame; in play, after a filter change, it keeps 3 ms a frame. A combiner
+  program made while loading builds its room-cache twin too (gfx_opengl.cpp).
+  The browser keeps its own pace.
+- **GL texture names ahead** (gfx_opengl.cpp): 64 at a time, stocked to 512
+  while loading. On Runway one `glGenTextures` waited up to 5.9 ms behind the
+  driver's queue.
+- **Warm-up frames** (port_late_loads.c, gfx_sdl2.cpp, gfx_opengl.cpp). A
+  stage's first three frames are drawn in full and presented black
+  (`gfx_sdl_blank_back_buffer`), and every loading frame ends in `glFinish`.
+  The frame after Runway's load had waited 185-290 ms for the driver when the
+  level cube was first built; that wait now falls in a black frame. Presenting
+  matters: with the frames drawn but not presented, the first real present
+  waited 180 ms instead.
+- `GE_LOAD_AHEAD=0` restores first-use loading in all of the above, for
+  before/after audits and benchmarks of one executable; a mask keeps parts
+  (1 HD prefetch, 2 prewarm at load and twins, 4 names, 8 warm-up frames).
+
+Tried and not kept: drawing every room during the warm-up frames (through
+closed portals; `bg.c` already has `GE_ALLROOMS`) did not help, because the
+game unloads rooms it has not seen for a while and the room cache forgets them
+with it; making the level cube's storage at load did not help, the wait was
+not the allocation; neither building the level cube in each warm-up frame nor
+a no-pixel draw with each prewarmed program changed the driver stall below.
+
+**Measured:**
+
+- **The Runway shutter**, with the owner's settings and HD pack (fixed
+  tick, walking into the shutter; one executable, `GE_LOAD_AHEAD=0` against
+  the default): the shutter frame 326.6 ms (uploads 312.0) to 34.5 ms
+  (uploads 13.0). The stage's frames before play, 1,462 ms to 745 ms: the
+  images are decoded on several threads instead of one.
+- **Every stage**, audited on 2026-11-15 (20 missions and 6 multiplayer-only
+  arenas, HD pack, room tour of 24 ticks a room, the shipped shader list, one
+  executable, before = `GE_LOAD_AHEAD=0`): late load work summed over the
+  stages 15,850 ms to 2,068 ms; frames of play that loaded 4 ms or more, 505
+  to 73; shaders compiled during play 881 to 0; frames before play
+  summed 11,418 ms to 6,491 ms. Per stage, late ms before/after: Dam 941/140,
+  Facility 735/113, Runway 1,264/46, Surface 1,840/57, Bunker 1,115/86, Silo
+  556/85, Frigate 440/61, Surface II 543/18, Bunker II 901/81, Statue 405/50,
+  Archives 1,118/268, Streets 1,014/95, Depot 634/119, Train 920/63, Jungle
+  462/75, Control 541/263, Caverns 650/76, Cradle 357/108, Aztec 597/84,
+  Egyptian 473/29, the arenas 18-124 to 12-41.
+- **Original textures** (Runway and Frigate): late load work 180/216 ms to
+  22/30 ms, mostly the GL texture-name waits (2-4 ms for each new texture
+  before); the worst frame of play 12/16 ms to 9/14 ms.
+- Bisected with `GE_LOAD_AHEAD` masks on Runway and Frigate: the prefetch
+  (bit 1) removes the HD reads, the prewarm at load (bit 2) the shader
+  compiles, the names (bit 4) the name waits.
+
+**Known remaining first-use costs:** With the HD pack, a frame that first draws several newly
+uploaded large textures can wait 100-250 ms in the NVIDIA driver with nothing
+timed: on Dam when the gun first shows after the intro (tick 545, 185 ms), and
+in about half the audited stages where the tour jumps into a large new area.
+With original textures it did not show, nor on Runway and Frigate with only
+the prefetch off (`GE_LOAD_AHEAD=14`), where the same places stalled about as
+long decoding instead (Runway 156 ms). Ruled out: the uploads (a `glFinish`
+after each took at most 3.5 ms), address space (a large-address-aware copy
+stalls the same), program first draws, the level cube's storage, and building
+the level cube during the warm-up frames. Suspected, not confirmed without GPU
+tools: the driver making the new textures resident on their first draw; the
+next thing to try is uploading and drawing each prefetched image while the
+stage loads. Also remaining: the room cache's capture and level-cube draws of
+a room seen for the first time (about 17 ms of Runway's shutter frame, the
+same with original textures), prefetched images' GL uploads (1-13 ms for the
+largest), and models read from the ROM when first spawned (1-3 ms each, as
+the original game does).
+
+**Not covered:** the watch and pause menus (the tour does not open them), MP
+with more than two players, weapons other than those a stage starts with,
+explosions, non-default display modes. Custom HD packs keep their background
+reads (FORK-053). The browser does not prefetch HD textures (it has no HD
+packs) and keeps its own prewarm pace; its warm-up frames and loading
+`glFinish` were not measured there.
+
+**Sources:** [port_late_loads.c](port/src/port_late_loads.c),
+[port_load_tour.c](port/src/port_load_tour.c),
+[hd_texture_prefetch.cpp](port/fast3d/hd_texture_prefetch.cpp),
+[hd_texture_prefetch.h](port/fast3d/hd_texture_prefetch.h),
+[hd_textures.cpp](port/fast3d/hd_textures.cpp),
+[hd_texture_pack.cpp](port/fast3d/hd_texture_pack.cpp),
+[hd_texture_import.inl](port/fast3d/hd_texture_import.inl),
+[gfx_pc.cpp](port/fast3d/gfx_pc.cpp) (prewarm, upload timing),
+[gfx_opengl.cpp](port/fast3d/gfx_opengl.cpp) (names, twins, loading finish),
+[gfx_sdl2.cpp](port/fast3d/gfx_sdl2.cpp) (warm-up presents),
+[late_load_audit.py](scripts/port/late_load_audit.py),
+[late_load_report.py](scripts/port/late_load_report.py),
+[late_loads.md](scripts/port/late_loads.md), `AGENTS.md`.
+
+**Shared hooks for later merges:** `src/boss.c` (stage begin, prefetch,
+prefetch wait, stage ready), `src/game/bg.c` (room load timing),
+`src/game/image.c` (texture load timing), `src/game/objecthandler_2.c` (model
+load timing), `src/game/bondview2.c` (tour tick), `src/game/file.c` (mission
+end), `port/src/hitchlog.c` (present), `port/src/port_bench.c` (end request).
+
+**Validation:** `python scripts/port/test_late_load_audit.py` (12 tests, new),
+`scripts/port/test_hd_textures.sh` (scope groups, `Pack::downloads`, the
+prefetch list's keys), `python scripts/port/test_bench.py`,
+`python scripts/port/test_bench_profile.py`,
+`python scripts/port/settings_placement.py` and
+`bun scripts/bright-builds-check.ts all` pass. The Windows build was built in
+the project container and audited as above. The review gallery regenerated
+with zero changed image cells. The browser runtime builds
+(`web_build.py video`); its Render ms was not measured with the browser
+runner, and no browser run was made.
+
+Smoke benchmark (`bench.py run --smoke`, 2026-11-15, before = `stock.py --ref
+HEAD`, three repeats, no HD pack): no cost in any scenario. Render ms,
+before/after: default Cradle 1.45/1.40, Dam 0.76/0.74, Temple 4P 1.31/1.30;
+matched Cradle 1.29/1.26, Dam 0.69/0.68, Temple 4P 1.18/1.16. Average fps
+within the runs' range (561/572, 910/907, 662/663; 702/722, 1180/1189,
+820/834). Beyond the range: Cradle's 99th-percentile frame 5.77 to 5.23 ms
+(default) and 3.66 to 3.32 ms (matched), Cradle matched 1% low 240 to 264 fps,
+Dam default 1% low 261 to 294 fps. One profiled run of each (matched Cradle):
+render thread 1.46 to 1.44 ms a frame, every function within 0.04 ms;
+`gfx_opengl_new_texture` went from 0.011 ms to nothing.
+
 ### FORK-089 — Native 64-bit port: accepted plan, scaffolding in progress
 
 **Status:** Plan accepted by the owner on 2026-11-15. Milestone LP64-001's
@@ -189,6 +370,7 @@ and 20-mission smoke, which worked only with the two workarounds named above
 the stock configuration. Task 3, in the containers: `python3 scripts/port/lp64_env.py run --arch x86_64 -- bash scripts/port/test_abi_probe.sh` exited 0 and printed `ABI probe OK (64-bit)` and `ABI probe OK (32-bit)`; the same with `--arch aarch64` exited 0 and printed `ABI probe OK (64-bit)`, then `gcc: error: unrecognized command-line option '-m32'` (the availability check's own output) and `ABI probe: -m32 unavailable on this host, skipped`. Changing `sizeof(Vtx) == 16` to `24` temporarily made the x86_64 run fail with `static assertion failed: "Vertex stride"`; the line was restored. Task 4: the 16 tests in `scripts/port/test_lp64_diagnostics.py` pass with plain `python3` on the host. In the x86_64 container, `cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-I/home/dev/project/scripts/port/sdl_shim` configured (the game was not built), then `lp64_diagnostics.py update` (about 9 s) recorded 1,432 diagnostics in 93 files with GCC 13: 709 `int-conversion`, 432 `pointer-to-int-cast`, 229 `int-to-pointer-cast` and 62 `error` in 4 files (`src/game/propobj.c` 59, and one each in `port/crash/reporting_linux.c`, `port/src/port_startup.c`, `port/src/sysstubs.c`; for example `initializer element is not computable at load time` in `src/game/propobj.c`). The largest files are `src/game/front.c` 261, `options.c` 158, `propobj.c` 148, `image_bank.c` 86, `chraction.c` 83. 54 of the 93 files are under `src/game` and 14 under `port/src`. This is lower than the planning figure (about 1,600 in 70 files, a different compiler, game and engine files only) although this run also covers the port layer. A second `update` left the file byte-identical and `check` exited 0 (`OK: 1432 diagnostics, baseline 1432`). `check` in the aarch64 container, reusing the x86_64 `compile_commands.json`, exited 0, and its `count` output equals the baseline exactly. After adding `errors_by_file`, `update` was re-run in the x86_64 container (totals unchanged), a second `update` was byte-identical, `check` exited 0 in the x86_64 and aarch64 containers, and `check` on a `compile_commands.json` holding only a C++ entry exited 1 with an error naming the file. Task 5, on the Mac under Docker emulation: `python3 scripts/port/compare_win32.py commits HEAD HEAD` built twice at 54 s and 55 s (110 s in all). Without `SOURCE_DATE_EPOCH` the two builds of one commit were not identical: it exited 1, reporting `.buildid` (the 16-byte build-id GUID), `.edata` (the export directory's 4-byte timestamp) and `.rdata` (12 bytes in four places: `__DATE__`/`__TIME__` in `src/game/compiletime.c` and `port/src/sysstubs.c`, and the ISO build time shown by the About page, twice). Exporting `SOURCE_DATE_EPOCH` in both builds made the same command exit 0, "identical", with no byte normalised by the tool (the build-id matched too). `commits 1e3df59 d76b6cf` (before and after FORK-088's renderer change) built at 54 s and 55 s and exited 1, reporting `.CRT`, `.buildid`, `.data`, `.edata`, `.idata`, `.rdata`, `.reloc`, `.rsrc` and `.text` as different (`.text` 3,312,640 vs 3,319,808 bytes). After review, the tool also compares section headers, entry point, image base, alignment and data directories, rejects a PE with two sections of one name, and excludes `.buildid`; the 22 tests in `scripts/port/test_compare_win32.py` pass. Debug-only experiment (working tree, not committed, restored with `git checkout -- src/game/bg.c`, `git status --short` then clean for it): in `src/game/bg.c` line 1504, `addToByteSetMaxSize15`, `s32 i = 0;` became `int i = 0;` (`s32` is `typedef int`). `commits HEAD WORKTREE` (54 s and 54 s) exited 0 and printed `identical in loaded code and data; .buildid differs`. Measured directly on those two executables: the only differences were 16 bytes of `.buildid`, 2 bytes in the debug section `/29` (18,481,152 bytes in both), and the optional header CheckSum; every compared header field, directory and section header was equal, and the sizes of the executables were equal (33,288,073 bytes). This edit did not move SizeOfImage or any section offset, so that experiment does not show the reason given for excluding them. After the changes: `commits HEAD HEAD` exited 0, `identical in loaded code and data` (54 s and 54 s); `commits 1e3df59 d76b6cf` exited 1 (55 s and 55 s), listing for `.text` different bytes and VirtualSize (0x328bf4 vs 0x32a634), and also `.CRT`, `.data`, `.edata`, `.idata`, `.rdata`, `.reloc` and `.rsrc` bytes, VirtualAddress differences in every section but `.buildid`, VirtualSize differences in `.bss`, `.idata`, `.rdata` and `.reloc`, and the Export, Import, Resource, BaseRelocation, TLS and IAT directories. Nothing else in the plan has run. The Bright Builds
 checks, the settings placement check and the ROM-free gallery verification
 were run for the documentation changes.
+
 
 ### FORK-088 — Faster frames: GL state answered from memory, arm switches read once
 
@@ -4440,8 +4622,13 @@ other compilers.
 target and ships to the browser too.
 
 The shader prewarm list (`tools/shaders_base.txt`, shipped as
-`Data/shaders_base.txt`) is compiled behind the front end, so a colour combiner
-program's first use does not stall gameplay. On mobile web each such stall costs
+`Data/shaders_base.txt`) is compiled before play, so a colour combiner
+program's first use does not stall gameplay. Since FORK-090 the native build
+compiles the whole list while a stage (the title at boot included) loads, not
+3 ms a frame behind the front end; a stage started straight from the command
+line, or before the front end had finished the walk, compiled the rest during
+play (one program took 170 ms at Runway's start). The late-load audit lists
+any program compiled during play. On mobile web each such stall costs
 hundreds of ms. The inherited recorder, `scripts/port/record_shaders.sh`,
 drives every solo stage, the front end, a watch open, 2P/4P multiplayer and the
 attract demos. That list dates from the 2026-10-18 import, and the recorder
@@ -4727,9 +4914,10 @@ FORK-033's ini values `hd`, `4k` and `2` read as HD.
   node at the next frame start (`hd_request`; a node evicted meanwhile is
   skipped). An image that cannot be read, or an allocation the 32-bit
   Windows build's address space refuses, keeps the original. Re-indexing
-  discards outstanding work. The download's images keep the immediate read,
-  so its reviewed look is unchanged. This matches the Original/HD choice:
-  there is still no 4K tier.
+  discards outstanding work. The download's images are read while the stage
+  loads (FORK-090), so its reviewed look shows from the first frame without
+  an immediate read in play. This matches the Original/HD choice: there is
+  still no 4K tier.
 - **Custom Texture Packs page (2026-11-06).** Gameplay > Iron Sights >
   System > **Custom Texture Packs**, after HD Textures in the Options folder
   and on the watch (native builds only, like HD Textures), explains in seven
@@ -4779,11 +4967,17 @@ FORK-033's ini values `hd`, `4k` and `2` read as HD.
   the 641 are present (640 keys with aliases, 610 before the coverage
   audit below); three Egyptian textures exist
   only in the artist repository and are used if the player adds those PNGs.
-- **Images.** A texture is read when a level first draws it: inflated with
-  the vendored puff and decoded by `png_decode.cpp` (8-bit RGB/RGBA,
-  non-interlaced; every image in the v2025.12.30 pack is one of these). An
-  image must keep the native aspect ratio and be at least the native size,
-  otherwise the original stays.
+- **Images.** Inflated with the vendored puff and decoded by
+  `png_decode.cpp` (8-bit RGB/RGBA, non-interlaced; every image in the
+  v2025.12.30 pack is one of these). An image must keep the native aspect
+  ratio and be at least the native size, otherwise the original stays. Since
+  FORK-090 the download's images for a stage are read on worker threads while
+  it loads (`hd_texture_prefetch.cpp`: its mission folder, the effects and
+  `hd_stage_prefetch.json`). One the stage was not known to draw is read on
+  the spot while the stage still loads, and in the background during play,
+  showing the original until it is ready. Before, every image was read on the
+  render thread when a level first drew it, which stalled Runway's shutter
+  frame for over 300 ms.
 - **Renderer.** Restored from FORK-033 (`hd_texture_import.inl`): the Rice
   fingerprint of each native tile (`hd_texture_format.cpp`), the upload at the
   authored scale with native UVs and masks, the `hd_bytes` cache field, deleting

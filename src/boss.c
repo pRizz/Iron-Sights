@@ -513,8 +513,24 @@ void bossMainloop(void)
             extern void portHwLoadStageBegin(void);
             portHwLoadStageBegin(); /* tickhz=hw: the stage load's own load rates (frametiming.c) */
         }
+        {
+            extern void portLateLoadStageBegin(void);
+            portLateLoadStageBegin(); /* port_late_loads.c: loads from here to the first frame are the load */
+        }
+#if defined(GE_VIDEO) && !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+        {
+            extern void portHdPrefetchStage(int stage);
+            portHdPrefetchStage(g_StageNum); /* HD images read while the stage loads (hd_texture_prefetch.h) */
+        }
+#endif
 #endif
         lvlStageLoad(g_StageNum);
+#if defined(GE_VIDEO) && !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
+        {
+            extern void portHdPrefetchWait(void);
+            portHdPrefetchWait(); /* a longer load, not a hitch in play (scripts/port/late_loads.md) */
+        }
+#endif
 #ifndef TARGET_N64
         {
             extern void ge_dbg_vec(const char *tag, const f32 *v, s32 n);
@@ -566,6 +582,10 @@ void bossMainloop(void)
 
 #ifndef TARGET_N64
         portStateStageReady();
+        {
+            extern void portLateLoadStageReady(void);
+            portLateLoadStageReady();
+        }
 #endif
         while (g_MainStageNum < 0 || pendingGfx != 0)
         {

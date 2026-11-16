@@ -93,6 +93,34 @@ known without measuring.
 - Documentation, tooling and gameplay-only changes need none of this. See
   [the benchmark guide](scripts/port/benchmarks.md#smoke-check-for-a-render-change).
 
+## Load before play
+
+A slightly longer load is better than a stall during play. Work done the first
+time something is seen (reading or decoding a file, building or uploading a
+texture, compiling a shader, making GL objects, anything that waits for the
+driver) belongs to the stage load or the boot. Runway's shutter decoded 60 HD
+textures in one 350 ms frame because the pack was read on first draw
+(FORK-090); a per-frame benchmark cannot see that.
+
+- Do new first-use work while loading: prefetch it in the stage load
+  (`port/fast3d/hd_texture_prefetch.cpp`, the shader prewarm, the warm-up
+  frames in `port/src/port_late_loads.c`), or record it on first use so later
+  runs load it ahead (`tools/shaders_base.txt`,
+  `port/fast3d/texture_packs/hd_stage_prefetch.json`). When neither can work,
+  do it in the background and show the old result until it is ready. Never
+  stall a frame of play for it.
+- Run `python scripts/port/late_load_audit.py` (the stages a change affects,
+  or all of them) for a change that adds an asset, texture, shader, pass, file
+  read or GL object, or changes when one loads. Compare its report with one
+  from the build before the change (`--env GE_LOAD_AHEAD=0` audits the old
+  first-use behaviour of one executable). A new late load, or a costlier one,
+  is fixed or recorded in the change's `FORK_CHANGES.md` entry with its reason.
+- `ge: late load:` lines in a game log name work done during play. Treat a new
+  one as a regression.
+- Leaving work on first use needs a reason in the inventory: memory the 32-bit
+  Windows build cannot spare, or behaviour the original game has on purpose
+  (the CLASSIC Load Hitches row). See [the guide](scripts/port/late_loads.md).
+
 ## Iron Sights settings
 
 Settings this fork adds live on the Iron Sights page, not on upstream's pages.

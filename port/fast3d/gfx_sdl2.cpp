@@ -1020,10 +1020,36 @@ static void gfx_sdl_update_title_stats(void) {
 
 extern "C" unsigned long long g_PortGfxRunT0Us;
 extern "C" unsigned long long portProfNow(void);
+extern "C" int portLateLoadHideFrame(void); /* port_late_loads.c */
 extern "C" void portHitchFrame(unsigned long long interval_us, unsigned long long run_us,
                                unsigned long long swap_us, unsigned long long lim_us, unsigned int draws);
 
 extern "C" bool gfx_opengl_hdr_present(int vsync); /* gfx_hdr.inl (FORK-082) */
+
+/* A loading frame (port_late_loads.c): drawn in full, so a program's first
+ * draw and the driver's background compiles happen now, then presented black.
+ * Presenting matters: the driver finishes those compiles at the present,
+ * which glFinish does not wait for (Runway's first frame shown waited 180 ms
+ * when warm-up frames were not presented). State goes back as it was; the
+ * GL state shadow answers the queries. */
+static void gfx_sdl_blank_back_buffer(void) {
+    GLint fbo = 0;
+    GLfloat clear[4];
+    GLboolean mask[4];
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &fbo);
+    glGetFloatv(GL_COLOR_CLEAR_VALUE, clear);
+    glGetBooleanv(GL_COLOR_WRITEMASK, mask);
+    const GLboolean scissor = glIsEnabled(GL_SCISSOR_TEST);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    glDisable(GL_SCISSOR_TEST);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(clear[0], clear[1], clear[2], clear[3]);
+    glColorMask(mask[0], mask[1], mask[2], mask[3]);
+    if (scissor) glEnable(GL_SCISSOR_TEST);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, (GLuint) fbo);
+}
 
 static void gfx_sdl_swap_buffers_begin(void) {
     gfx_sdl_maybe_screenshot();
@@ -1034,6 +1060,10 @@ static void gfx_sdl_swap_buffers_begin(void) {
         sync_framerate_with_timer();
     }
     const uint64_t t1 = SDL_GetPerformanceCounter();
+    /* port_late_loads.c: a stage's first frames are drawn, then shown black */
+    if (portLateLoadHideFrame()) {
+        gfx_sdl_blank_back_buffer();
+    }
     if (!gfx_opengl_hdr_present(vsync_enabled)) { /* FORK-082: HDR Output presents through DXGI */
         SDL_GL_SwapWindow(wnd);
     }

@@ -23,6 +23,10 @@ const char *portTexturePackValueText(const char *text);
 int portTexturePackCustomCount(void);
 /* Creates the pack folder if needed and returns its path, for Open Folder. */
 const char *portTexturePackFolder(void);
+/* boss.c: as a stage starts loading, read its HD images on worker threads;
+ * at the end of the load, wait for them (hd_texture_prefetch.h). */
+void portHdPrefetchStage(int stage);
+void portHdPrefetchWait(void);
 #ifdef __cplusplus
 }
 #endif

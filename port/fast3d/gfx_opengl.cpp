@@ -372,7 +372,12 @@ static void append_formula(char (&buf)[N], size_t* len, uint8_t c[2][4], bool do
 }
 
 extern "C" unsigned long long portProfNow(void);
-extern "C" void portHitchNote(int cat, unsigned long long us);
+extern "C" void portHitchNoteItem(int cat, unsigned long long us, const char *what, unsigned int id);
+extern "C" int portLateLoadActive(void); /* port_late_loads.c: the stage is in play */
+extern "C" int portLoadAheadPart(int part); /* port_late_loads.c: GE_LOAD_AHEAD */
+extern "C" uint32_t gfx_room_cache;        /* gfx_roomcache.inl: 2 = retained room draws */
+struct GlRetainedProgram;
+static GlRetainedProgram* gl_ret_program_get(struct ShaderProgram* prg);
 
 /* A program between glLinkProgram and its first status query. The browser can
  * keep several in this state at once (port/web/shader_parallel.inl); desktop
@@ -974,7 +979,13 @@ static struct ShaderProgram* gfx_opengl_create_and_load_new_shader(uint64_t shad
     gfx_opengl_shader_build_begin(&build, shader_id0, shader_id1);
     struct ShaderProgram* prg = gfx_opengl_shader_build_finish(&build);
 
-    portHitchNote(3 /* shaders */, portProfNow() - hitch_t0);
+    char what[40]; /* port_late_loads.c names it: the ids as Data/shaders.txt lists them */
+    snprintf(what, sizeof(what), "%016llx %08x", (unsigned long long)shader_id0, (unsigned)shader_id1);
+    portHitchNoteItem(3 /* shaders */, portProfNow() - hitch_t0, what, 0);
+    if (gfx_room_cache == 2 && !portLateLoadActive() && portLoadAheadPart(2)) {
+        gl_ret_program_get(prg); /* its room-cache twin, while loading (late_loads.md) */
+        glUseProgram(prg->opengl_program_id); /* the twin's build used its own; prg stays current */
+    }
     return prg;
 }
 
@@ -1009,9 +1020,26 @@ extern "C" void gfx_opengl_memstats(uint32_t* textures, uint32_t* fbs, uint32_t*
     *programs = (uint32_t) SDL_AtomicGet(&gl_stat_programs);
 }
 
+/* Texture names made ahead (scripts/port/late_loads.md). A threaded GL
+ * driver answers glGenTextures only once its queue drains, so one name for
+ * each texture first seen in play waited behind that frame's uploads (up to
+ * 6 ms each on Runway). Names come 64 at a time, and a loading stage tops the
+ * stock up to kSpareNamesLoad (gfx_opengl_start_frame). Unused names hold no
+ * texture object, so they cost the driver nothing. */
+static constexpr size_t kSpareNamesBatch = 64, kSpareNamesLoad = 512;
+static std::vector<GLuint> gl_spare_names;
+static void gl_spare_names_fill(size_t count) {
+    const size_t old = gl_spare_names.size();
+    gl_spare_names.resize(old + count);
+    glGenTextures((GLsizei) count, gl_spare_names.data() + old);
+}
+
 static GLuint gfx_opengl_new_texture(void) {
-    GLuint ret;
-    glGenTextures(1, &ret);
+    if (gl_spare_names.empty()) {
+        gl_spare_names_fill(portLoadAheadPart(4) ? kSpareNamesBatch : 1);
+    }
+    const GLuint ret = gl_spare_names.back();
+    gl_spare_names.pop_back();
     SDL_AtomicIncRef(&gl_stat_live_textures);
     return ret;
 }
@@ -1815,12 +1843,27 @@ static void gfx_opengl_on_resize(void) {
 static void gfx_opengl_start_frame(void) {
     frame_count++;
     gfx_gl_shadow_frame(); /* FORK-088 */
+    if (gl_spare_names.size() < kSpareNamesLoad && !portLateLoadActive() && portLoadAheadPart(4)) {
+        gl_spare_names_fill(kSpareNamesLoad - gl_spare_names.size()); /* while loading only */
+    }
 }
 
 static void gfx_opengl_end_frame(void) {
     SDL_AtomicSet(&gl_stat_framebuffers, (int) framebuffers.size());
     SDL_AtomicSet(&gl_stat_programs, (int) shader_program_pool.size());
-    glFlush();
+    if (!portLateLoadActive() && portLoadAheadPart(8)) {
+        /* A loading frame (scripts/port/late_loads.md): the driver finishes
+         * the load's uploads and draws now (5-12 ms on Runway), not in the
+         * first frames of play. */
+        const unsigned long long t0 = portProfNow();
+        glFinish();
+        const unsigned long long us = portProfNow() - t0;
+        if (us >= 5000) {
+            printf("ge: load: a loading frame waited %llu ms for the driver to finish its work\n", us / 1000);
+        }
+    } else {
+        glFlush();
+    }
 }
 
 static void gfx_opengl_finish_render(void) {
@@ -2344,11 +2387,26 @@ static void gl_ret_restore(void) {
     gl_ret_bound = nullptr;
 }
 
+static GlRetainedProgram* gl_ret_program_build(struct ShaderProgram* prg);
+
+/* A room-cache twin is a compile too (hitchlog.c, port_late_loads.c); a
+ * combiner program made while a stage loads builds its twin then
+ * (gfx_opengl_create_and_load_new_shader), so play rarely builds one. */
 static GlRetainedProgram* gl_ret_program_get(struct ShaderProgram* prg) {
     auto it = gl_ret_programs.find(prg);
     if (it != gl_ret_programs.end()) {
         return &it->second;
     }
+    const unsigned long long t0 = portProfNow();
+    GlRetainedProgram* rp = gl_ret_program_build(prg);
+    char what[48];
+    snprintf(what, sizeof(what), "retained %016llx %08x", (unsigned long long)prg->shader_id0,
+             (unsigned)prg->shader_id1);
+    portHitchNoteItem(3 /* shaders */, portProfNow() - t0, what, 0);
+    return rp;
+}
+
+static GlRetainedProgram* gl_ret_program_build(struct ShaderProgram* prg) {
     struct CCFeatures cc = { 0 };
     gfx_cc_get_features(prg->shader_id0, prg->shader_id1, &cc);
 

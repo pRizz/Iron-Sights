@@ -2554,7 +2554,7 @@ void texLoad(s32 *updateword, struct texpool *pool)
     {
 #ifndef TARGET_N64
         extern unsigned long long portProfNow(void);
-        extern void portHitchNote(int cat, unsigned long long us);
+        extern void portHitchNoteItem(int cat, unsigned long long us, const char *what, unsigned int id);
         const unsigned long long hitchT0 = portProfNow(); /* hitchlog.c */
 #endif
         alignedcompbuffer = (u8 *) (((u32)compbuffer + 0xF) >> 4 << 4);
@@ -2731,7 +2731,7 @@ void texLoad(s32 *updateword, struct texpool *pool)
 
         texFreeBytesInBuffer(pool);
 #ifndef TARGET_N64
-        portHitchNote(2 /* tex */, portProfNow() - hitchT0);
+        portHitchNoteItem(2 /* tex */, portProfNow() - hitchT0, NULL, (unsigned int) g_TexNumToLoad);
 #endif
     }
 

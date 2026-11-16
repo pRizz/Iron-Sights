@@ -61,7 +61,11 @@ static bool ge_hd_try_import(int i, int tile, bool firstPerson)
         }
         hd_textures::Image replacement;
         uint32_t request = 0;
-        switch (hd_textures::lookup(source, replacement, request, maskWrapped)) {
+        const unsigned long long hd_t0 = portProfNow();
+        const hd_textures::Found found = hd_textures::lookup(source, replacement, request, maskWrapped);
+        snprintf(ge_upload_note, sizeof(ge_upload_note), " | hd %ux%u lookup %llu us", replacement.width,
+                 replacement.height, portProfNow() - hd_t0);
+        switch (found) {
             case hd_textures::Found::now:
                 ge_hd_upload(rendering_state.textures[i] ? &rendering_state.textures[i]->second : nullptr,
                              replacement, crop);

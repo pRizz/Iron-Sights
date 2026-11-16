@@ -200,3 +200,16 @@ void portBenchFrame(unsigned long long interval_us, unsigned long long run_us,
         benchWrite("full");
     }
 }
+
+/** port_load_tour.c: end the run at the next frame, as the end tick would.
+ * Returns 0 when no frame log is being kept (the caller quits instead). */
+int portBenchRequestEnd(void)
+{
+    if (sState != BENCH_ON)
+    {
+        return 0;
+    }
+    sEndTick = 1;
+    sEndStage = BENCH_ANY_STAGE;
+    return 1;
+}

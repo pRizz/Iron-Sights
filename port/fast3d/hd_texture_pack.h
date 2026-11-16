@@ -32,8 +32,15 @@ struct Remap {
 /* Which pack textures may replace native ones, and the native palette
  * identities that stand for a pack key (reviewed aliases: native palettes
  * fingerprint differently from GLideN64's). */
+/* Where a scope texture is drawn (Entry::group, hd_texture_prefetch.h): a
+ * mission folder's number (1-20), the effects of every level, or the title. */
+constexpr uint8_t kGroupEffects = 100, kGroupTitle = 101;
+/* The group of a scope source path: "Mission NN" in it, UI/Gunbarrel, else effects. */
+uint8_t group_of_path(const std::string &path);
+
 struct Scope {
     std::set<Key> keys;                    /* pack keys; palette 0 = any palette */
+    std::map<Key, uint8_t> groups;         /* pack key -> its group, from the sources */
     std::multimap<Key, uint32_t> aliases;  /* pack key -> native palette */
     std::multimap<Key, Remap> remaps;      /* pack key -> native texture (its pack key joins keys) */
     bool all = false;                      /* every key (a custom pack), not just keys */
@@ -60,6 +67,7 @@ struct Entry {
     bool custom = false;         /* from a custom pack, not the download */
     unsigned keep_rows = 0, of_rows = 0;  /* read() keeps the top keep_rows/of_rows */
     bool masked = false;         /* covers the tile's wrap mask (Remap) */
+    uint8_t group = 0;           /* its scope group; 0 for none (a custom pack's own keys) */
 };
 
 class Pack {
@@ -74,6 +82,8 @@ public:
     size_t custom() const { return custom_; }
     void clear() { entries_.clear(); }
     size_t size() const { return entries_.size(); }
+    /* Every entry the download gave, by native key: what a prefetch may read. */
+    std::map<Key, Entry> downloads() const;
     /* The entry for a native key: exact, then any palette. */
     const Entry *find(const Key &key) const;
     /* The entry for a native tile whose identify() key is key, then for the

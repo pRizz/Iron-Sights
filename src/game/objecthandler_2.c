@@ -276,7 +276,7 @@ void load_object_fill_header(struct ModelFileHeader *objheader, u8 *name, u8* ds
 
 #ifndef TARGET_N64
     extern unsigned long long portProfNow(void);
-    extern void portHitchNote(int cat, unsigned long long us);
+    extern void portHitchNoteItem(int cat, unsigned long long us, const char *what, unsigned int id);
     const unsigned long long hitchT0 = portProfNow(); /* hitchlog.c */
 
     /* Load-hitch accounting (frametiming.c): on N64 a model with its own pool
@@ -413,7 +413,7 @@ void load_object_fill_header(struct ModelFileHeader *objheader, u8 *name, u8* ds
             portHwNoteTexture(texnum, portTexRomBytes(texnum)); /* cart read + last-priced decode */
         }
     }
-    portHitchNote(1 /* models */, portProfNow() - hitchT0);
+    portHitchNoteItem(1 /* models */, portProfNow() - hitchT0, (const char *) name, 0);
 #endif
 }
 

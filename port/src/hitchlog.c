@@ -121,6 +121,10 @@ void portHitchFrame(unsigned long long interval_us, unsigned long long run_us,
     unsigned long long us[HITCH_CATS];
     int i;
 
+    { /* port_late_loads.c: the first present after a stage loads ends its load */
+        extern void portLateLoadFramePresented(void);
+        portLateLoadFramePresented();
+    }
     for (i = 0; i < HITCH_CATS; i++)
     {
         n[i] = __atomic_exchange_n(&sHitchCount[i], 0u, __ATOMIC_RELAXED);

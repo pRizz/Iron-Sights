@@ -43,4 +43,12 @@ for r in remaps:
 effects = json.load(open('port/fast3d/texture_packs/hd_effect_sources.json'))['textures']
 assert len(set(effects)) == len(effects) and all(t.startswith('GOLDENEYE/') for t in effects)
 print(f'hd effects: {len(effects)} by key, {len(remaps)} remapped')
+# The stage prefetch list (late_load_audit.py --learn-prefetch): native keys
+# by LEVELID, each in the texture#format#size#palette form the game parses.
+import re
+learned = json.load(open('port/fast3d/texture_packs/hd_stage_prefetch.json'))['stages']
+for stage, keys in learned.items():
+    assert stage.isdigit() and 0 < int(stage) < 90 and keys == sorted(set(keys)), stage
+    assert all(re.fullmatch(r'[0-9A-F]{8}#[0-9]#[0-9]#[0-9A-F]{8}', key) for key in keys), stage
+print(f'hd stage prefetch: {sum(map(len, learned.values()))} keys for {len(learned)} stages')
 PY

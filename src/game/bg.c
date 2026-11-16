@@ -3565,7 +3565,7 @@ void bgLoadRoomModelData(s32 roomID)
 #ifndef TARGET_N64
     s32 auditCachedWas; /* GE_ROOM_AUDIT: cached size before this load overwrites it */
     extern unsigned long long portProfNow(void);
-    extern void portHitchNote(int cat, unsigned long long us);
+    extern void portHitchNoteItem(int cat, unsigned long long us, const char *what, unsigned int id);
     unsigned long long hitchT0 = 0; /* hitchlog.c: a room that really loaded */
 #endif
 
@@ -3745,12 +3745,12 @@ end:;
 #ifndef TARGET_N64
     if (hitchT0 != 0)
     {
-        portHitchNote(0 /* rooms */, portProfNow() - hitchT0);
+        portHitchNoteItem(0 /* rooms */, portProfNow() - hitchT0, NULL, (unsigned int) roomID);
     }
     return;
 
 fail:
-    portHitchNote(0 /* rooms */, portProfNow() - hitchT0);
+    portHitchNoteItem(0 /* rooms */, portProfNow() - hitchT0, NULL, (unsigned int) roomID);
     memaFree(data, allocsize);
     g_BgRoomInfo[roomID].vertices = NULL;
     g_BgRoomInfo[roomID].ptr_expanded_mapping_info = NULL;
