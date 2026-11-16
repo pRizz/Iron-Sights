@@ -11,6 +11,7 @@
 #include <music.h>
 #include <snd.h>
 #include "bondview.h"
+#include "dyn.h"
 #include "bondinv.h"
 #include "gun.h"
 #include "chrobjdata.h"

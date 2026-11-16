@@ -3,6 +3,7 @@
 #include "bondtypes.h"
 #include "vtxstore.h"
 #include "propobj.h"
+#include "chrai.h"
 #include "model.h"
 
 // unsure if these structs are defined as something else, elsewhere

@@ -1,5 +1,6 @@
 #include <ultra64.h>
 #include "indy_commands.h"
+#include <str.h>
 #include <PR/os.h>
 #include <PR/region.h>
 #include "rmon.h"

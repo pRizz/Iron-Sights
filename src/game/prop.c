@@ -32,6 +32,7 @@
 #include "stan.h"
 #include "model.h"
 #include "token.h"
+#include "str.h"
 
 /**
  * EU .bss 0x80068480

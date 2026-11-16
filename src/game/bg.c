@@ -6,6 +6,7 @@
 #include <deb.h>
 #include <fr.h>
 #include <memp.h>
+#include <mema.h>
 #include "bg.h"
 #include "bondview.h"
 #include "chr.h"
@@ -16,6 +17,7 @@
 #include "lv.h"
 #include "math_ceil.h"
 #include "matrixmath.h"
+#include "ob.h"
 #include "player.h"
 #include "stan.h"
 #include "explosion.h"

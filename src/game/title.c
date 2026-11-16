@@ -13,6 +13,7 @@
 #include "chr.h"
 #include "chr_b.h"
 #include "chrobjdata.h"
+#include "dyn.h"
 #include "image.h"
 #include "initanitable.h"
 #include "math.h"

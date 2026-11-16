@@ -2,6 +2,7 @@
 #include <PR/os.h>
 #include "sched.h"
 #include "audi.h"
+#include "init.h"
 #include "thread_config.h"
 #include "bondgame.h"
 #include "speed_graph.h"

@@ -2,6 +2,8 @@
 #include <limits.h>
 #include <music.h>
 #include "glass.h"
+#include "bondview.h"
+#include "dyn.h"
 #include "image_bank.h"
 #include "lv.h"
 #include "math_atan2f.h"
@@ -329,8 +331,8 @@ Gfx *glassRenderShards(Gfx *gdl)
 #endif
 
     gSPClearGeometryMode(gdl++, G_LIGHTING | G_TEXTURE_GEN);
-    gSPMatrix(gdl++, (u32)currentPlayerGetProjectionMatrix(), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
-    gSPMatrix(gdl++, (u32)currentPlayerGetMatrix10C8(), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+    gSPMatrix(gdl++, currentPlayerGetProjectionMatrix(), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION);
+    gSPMatrix(gdl++, currentPlayerGetMatrix10C8(), G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
 
     return gdl;
 }

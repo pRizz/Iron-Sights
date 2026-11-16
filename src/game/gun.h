@@ -413,6 +413,11 @@ Gfx *set_enviro_fog_for_items_in_solo_watch_menu(Gfx *gdl, ITEM_IDS itemid, Mtxf
 void gunRenderCasings(Gfx **gdl);
 void gunRenderFirstPersonGunModels(Gfx **gdl);
 Gfx *generate_ammo_total_microcode(Gfx *gdl);
+Gfx *sub_GAME_7F061E18(Gfx *gdl, BeamRecord *flash, s32 arg2);
+u16 *get_ptr_first_title_line_item(ITEM_IDS item);
+u16 *get_ptr_second_title_line_item(ITEM_IDS item);
+u16 *get_ptr_long_watch_text_for_item(ITEM_IDS item);
+Gfx *gunDrawWatchAmmoDisplay(Gfx *gdl);
 #ifndef TARGET_N64
 s32 portGadgetHudNameShown(void); /* gadget name drawn in the left-hand ammo slot (joy_port whitelist) */
 s32 portMissionTimerShown(void); /* solo clock in its own top-left HUD area */

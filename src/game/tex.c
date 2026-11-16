@@ -4,6 +4,7 @@
 #include "lv.h"
 #include "image.h"
 #include "tex.h"
+#include "unk_092E50.h"
 
 s32 g_TexLutMode;
 s32 dword_CODE_bss_8008D144; // unused/padding

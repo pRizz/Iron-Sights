@@ -13,5 +13,17 @@ extern void *memcpy(void *, const void *, size_t);
 extern unsigned char *strchr(const unsigned char *, int);
 extern size_t strlen(const unsigned char *);
 
+#ifndef TARGET_N64
+/* PC port: hosted C library functions the port's C code calls. Without a
+ * prototype their pointer results would be implicit ints (LP64-002). */
+extern void *memset(void *, int, size_t);
+extern void *memmove(void *, const void *, size_t);
+extern void *memchr(const void *, int, size_t);
+extern char *strrchr(const char *, int);
+extern char *strstr(const char *, const char *);
+extern char *strtok(char *, const char *);
+extern char *strerror(int);
+#endif
+
 #endif
 #endif /* TARGET_N64 */

@@ -9,6 +9,7 @@
 #include <macro.h>
 #include "file.h"
 #include "file2.h"
+#include "indy_comms.h"
 #include <random.h>
 #include "joy.h"
 #include "bondview.h" /* struct player, for the GE_DEMOPOS diagnostic */

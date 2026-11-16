@@ -8,9 +8,11 @@
 #include <music.h>
 #include <os_extension.h>
 #include <snd.h>
+#include <str.h>
 #include <random.h>
 #include "options.h"
 #include "bondview.h"
+#include "bondinv.h"
 #include "dyn.h"
 #include "file.h"
 #include "front.h"
@@ -18,6 +20,8 @@
 #include "player.h"
 #include "textrelated.h"
 #include "glass.h"
+#include "gun.h"
+#include "objective_status.h"
 #include "frametiming.h"
 #include "assets/obseg/text/LoptionE.h"
 #ifndef TARGET_N64
@@ -284,10 +288,6 @@ u16 mTrack2Vol = 0x7FFF;
 
 //D:80040B5C
 coord3d g_ControllerPos = {0.0f, 200.0f, -200.0f};
-
-typedef struct WatchContButtonPositions {
-    f32 words[55]; /* 0xdc bytes */
-} WatchContButtonPositions;
 
 //D:80040B68
 // 3D positions for the buttons at the sides of the screen for the 1x control styles.
@@ -5540,7 +5540,7 @@ Gfx *draw_watch_controller(Gfx *gdl)
     }
     else
     {
-        gdl = watchRenderControllerOpaque(gdl, &finalmtx, 1, (s32) watchTable, &contpadnum0);
+        gdl = watchRenderControllerOpaque(gdl, &finalmtx, 1, watchTable, &contpadnum0);
     }
 
     if (controllerCheckDualControllerTypesAllowed())
@@ -5591,7 +5591,7 @@ Gfx *draw_watch_controller(Gfx *gdl)
         }
         else
         {
-            gdl = watchRenderControllerOpaque(gdl, &finalmtx, 1, (s32) (&table2), &contpadnum1);
+            gdl = watchRenderControllerOpaque(gdl, &finalmtx, 1, &table2, &contpadnum1);
         }
     }
 

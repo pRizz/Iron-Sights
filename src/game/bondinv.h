@@ -35,5 +35,10 @@ s32 bondinvGetWeaponOfChoice(s32 *weapon1, s32 *weapon2);
 s32 bondinvItemAvailableForHand(ITEM_IDS right, ITEM_IDS left);
 s32 bondinvItemAvailable(ITEM_IDS weaponid);
 void bondinvAddTextOverride(textoverride *override);
+u16 *bondinvGetLongNameByIndex(s32 index);
+u16 *bondinvGetFirstTitlebyIndex(s32 index);
+u16 *bondinvGetSecondTitlebyIndex(s32 index);
+u8 *bondinvGetActivatedTextObject(ObjectRecord *obj);
+u8 *bondinvGetActivatedTextWeapon(ITEM_IDS weaponnum);
 
 #endif

@@ -1,6 +1,7 @@
 #include <ultra64.h>
 //#include <bondtypes.h>
 #include <deb.h>
+#include <token.h>
 #include "stan.h"
 #ifndef TARGET_N64
 #include "frametiming.h" /* tickhz=hw stage-load work counters */

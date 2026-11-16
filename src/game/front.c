@@ -26,6 +26,8 @@
 #include <random.h>
 #include <snd.h>
 #include <macro.h>  
+#include <str.h>
+#include <string.h>
 #include "bondview.h"
 #include "chr.h"
 #include "chr_b.h"
@@ -33,6 +35,7 @@
 #include "cheat.h"
 #include "chrobjdata.h"
 #include "file2.h"
+#include "gun.h"
 #include "front.h"
 #include "image_bank.h"
 #include "lv.h"
@@ -1287,8 +1290,8 @@ s32 frontCheckIfCheatIsUnlocked(s32 cheat)
 }
 
 
-int frontGetPlayersFavoriteWeaponInHand(int player,int hand) {
-    return get_ptr_long_watch_text_for_item(array_favweapon[player][hand]);
+char *frontGetPlayersFavoriteWeaponInHand(int player,int hand) {
+    return (char *)get_ptr_long_watch_text_for_item(array_favweapon[player][hand]);
 }
 
 

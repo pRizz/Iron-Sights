@@ -8,6 +8,7 @@
  * no entry shows no box. Keep each line short: one fragment, plain verbs.
  */
 #include <string.h>
+#include <str.h>
 #include <ultra64.h>
 
 struct PortOptHelp { const char *key; const char *text; };

@@ -750,6 +750,124 @@ dynAllocate(...)` at physical line 1082, was reported by the old tool as line
 `sed -n 1082p` showing exactly that statement. The mission smoke and the Windows
 comparison were not repeated: no game or build file changed in this round.
 
+*LP64-002 task 3, prototypes for pointer-returning functions (2026-11-16, local
+commit "Declare the pointer-returning functions that were called without a
+prototype"; not pushed):* every non-strict C file that called a
+pointer-returning function with no prototype in scope (so its result was an
+implicit `int`, truncated at 64 bits) now has the declaring header in scope.
+*How the list was made:* `sites --messages` over both trees, joined with a
+scratch pass that recompiled each file with `-Wimplicit-function-declaration`
+and the definitions' return types: the game functions below plus the hosted
+`memset`, `memmove`, `memchr`, `strrchr`, `strstr`, `strtok` and `strerror`.
+*Functions and their declaring headers* (existing prototype, header now
+included): `memaAlloc` `src/mema.h`; `_fileNameLoadToBank` `ob.h`;
+`chrpropGetActiveTail` `chrai.h`; `getCurrentPlayerProp` `bondview.h`;
+`dynAllocate`, `dynAllocateMatrix`, `dynAllocateVertices` `dyn.h`; `skyRender`
+`sky.h`; `bgScissorCurrentPlayerViewDefault` `bg.h`;
+`set_enviro_fog_for_items_in_solo_watch_menu`, `watchRenderController`,
+`watchRenderControllerOpaque` `gun.h`; `sub_GAME_7F09343C`,
+`sub_GAME_7F09365C` `unk_092E50.h`; `setSPToEnd` `src/init.h`;
+`indycommHostCheckFileExists` `indy_comms.h`; `tokenFind` `src/token.h`;
+`strcpy`, `strcat`, `strncpy` `src/str.h`; `memcpy`, `strchr`
+`include/string.h`; `something_with_generating_object` `propobj.h`.
+*Prototypes written by hand* (no header had one; added to the header that owns
+the defining file, copied from the definition): `bondview.h`:
+`bondviewGetCurrentPlayersPosition3` (defined in strict `bondview2.c`; the
+prototype matches it, the file is not edited) and `currentPlayerGetMatrix10C8`;
+`bondinv.h`: `bondinvGetLongNameByIndex`, `bondinvGetFirstTitlebyIndex`,
+`bondinvGetSecondTitlebyIndex`, `bondinvGetActivatedTextObject`,
+`bondinvGetActivatedTextWeapon`; `gun.h` (owner of strict `gunfire.c`, which is
+not edited): `sub_GAME_7F061E18`, `get_ptr_first_title_line_item`,
+`get_ptr_second_title_line_item`, `get_ptr_long_watch_text_for_item`,
+`gunDrawWatchAmmoDisplay`; `objective_status.h`:
+`get_ptr_text_for_watch_breifing_page`, `get_text_for_objective`; `title.h`:
+`retrieve_display_rareware_logo`, `renderGunbarrelEyeIntroSequence`;
+`loadobjectmodel.h`: `setupFindObjForReuse`; `propobj.h`: `hatCreateForChr`,
+`doorInit`; `front.h`: `frontGetPlayersFavoriteWeaponInHand`, whose definition
+in `front.c` returned `int` while returning a text pointer: it now returns
+`char *` (a pointer-to-pointer cast of the `u16 *` text, as both callers use
+`char *`). `include/string.h` (the C shadow of the hosted header) declares the
+seven hosted functions above with their standard signatures, under
+`#ifndef TARGET_N64`. *Conflict found:* `options.c` had its own
+`WatchContButtonPositions` typedef (`f32 words[55]`) against `gun.h`'s (19
+floats and twelve `coord3d`, also 55 floats, the type
+`watchRenderController`'s definition uses); the local copy was removed so
+`gun.h` can be included. No other prototype conflicted and no function was
+left out. *Newly visible places, fixed here:* `options.c` passed
+`(s32) watchTable` and `(s32) (&table2)` to `watchRenderControllerOpaque`
+(the casts were dropped); `glass.c` passed `(u32)` casts of
+`currentPlayerGetProjectionMatrix()` and `currentPlayerGetMatrix10C8()` to
+`gSPMatrix`, whose macro already stores through `uintptr_t` (casts dropped;
+the first was a one-off of no later task); `chrai.c` assigned
+`hatCreateForChr`'s result to `bool ok`, now `!= NULL`. *Left to later tasks:*
+`bg.c` `gptr_stan = (s32) _fileNameLoadToBank(...)` (Task 7, `gptr_stan`);
+`ramromreplay.c:268` and the macro at `ramromreplay.h:9`, where
+`indycommHostSaveFile(char *filename, s32 size, u8 *data)` is called with
+the address and the size swapped (Task 8, Indy commands); these raise
+`ramromreplay.c` from 12 to 13 and `ramromreplay.h` from 1 to 2. The plan
+expected about 30 hidden places, 17 of them in `image_bank.c`: those come from
+prototypes of functions that return no pointer (`texLoadFromDisplayList`,
+`initAnimationsBuffer`, `rle_expand_8bit`, `setupRarewareLogoData`), which this
+task does not add; `image_bank.c` calls no pointer-returning function without
+a prototype. *Not done here:* the strict files' own callers (`bondview2.c`,
+`gunfire.c`, `port_native_arms.c`'s `memcpy`) and `dyn.h` in `bondview2.c`
+stay for Task 9; the side effect of the new prototypes on strict files is one
+place fewer in `port/fast3d/glad/glad.c` (`strstr`). *Files touched:*
+`include/string.h`; `src/audi.c`, `src/sprintf.c`; in `src/game/`: `bg.c`,
+`bondinv.h`, `bondview.h`, `chrai.c`, `debugmenu_handler.c`, `front.c`,
+`front.h`, `glass.c`, `gun.c`, `gun.h`, `indy_commands.c`, `initmttex.c`,
+`loadobjectmodel.h`, `lv.c`, `mpmenu.c`, `objective_status.h`, `options.c`,
+`player.c`, `prop.c`, `propobj.c`, `propobj.h`, `ramromreplay.c`, `stan.c`,
+`tex.c`, `title.c`, `title.h`, `vtxstore.c`; `port/src/port_option_help.c`,
+`port_textures.c`; the baseline. *Count:* 1,441 in 94 files (711
+`int-conversion`, 434 `pointer-to-int-cast`, 237 `int-to-pointer-cast`, 59
+`error`) to 1,372 in 86 files (649, 432, 232, 59). Files that went to zero:
+`port/crash/reporting_linux.c` 1, `glad.c` 1, `port_build_time.c` 1,
+`port_hitmap_probe.c` 3, `port_soak.c` 2, `bondinv.c` 6,
+`debugmenu_handler.c` 1, `sprintf.c` 1. Lower: `audi.c` 7 to 6, `bg.c` 71 to
+69, `front.c` 261 to 257, `glass.c` 3 to 1, `gun.c` 2 to 1, `lv.c` 5 to 4,
+`mpmenu.c` 16 to 14, `options.c` 158 to 139, `prop.c` 14 to 13, `propobj.c`
+148 to 131, `tex.c` 4 to 2, `title.c` 20 to 18, `vtxstore.c` 2 to 1. *What
+ran:* the plan's task check. Step 1 exited 0 (16 s; both trees built, `update`
+recorded 1,372 in 86 files without `--allow-rise`). Step 2: the i686 headless
+build exited 0 (13 s, incremental) and the 20-mission smoke exited 0 with 20
+of 20 `PASS` (187 s). The ten `scripts/port/test_*.sh` that compile a changed
+file or header (`test_build_time`, `test_dyn`, `test_hitmap`, `test_hud`,
+`test_mission_cheats`, `test_image_bank`, `test_mission_times`,
+`test_states`, `test_web_logo`, `test_stan_callbacks`) passed in the i686
+container. `lp64_casts.py check` passed (23 casts, unchanged) and
+`settings_placement.py` passed. Step 3, `compare_win32.py commits HEAD
+WORKTREE`, exited 1 in 112 s (`different:`; `.text` 16 bytes longer, with
+addresses shifted after it). By symbol, 14 functions differ, all in files whose
+calls this task declared: `_ai` (`chrai.c`), `_bgBuildRoomVtxBounds.part.0`
+and `_bgLoadRoomModelData.part.0` (`bg.c`, `memaAlloc`),
+`_constructor_menu07_missionsel`, `_interface_menu11_mpcontrols`,
+`_portMpSetApply` (`front.c`, `str.h`/`string.h`), `_debug_menu_processor`
+(`debugmenu_handler.c`), `_hatCreate`, `_propPickupByPlayer` (`propobj.c`,
+`setupFindObjForReuse`, `bondinvGetActivatedTextWeapon`),
+`_load_ramrom_from_devtool` (`ramromreplay.c`,
+`indycommHostCheckFileExists`), `_set_mt_tex_alloc` (`initmttex.c`,
+`tokenFind`), `_sub_GAME_7F09B398` (`player.c`,
+`something_with_generating_object`), `_texLoadFromGdl` (`tex.c`,
+`sub_GAME_7F0936xx`) and `_portHitMapProbeTick` (`strstr`); nothing in a
+strict file changed. To tell code-generation noise from changed calls, those
+twelve files were compiled at both refs with the Windows flags at `-O0` and at
+`-O2` and compared function by function. At `-O0` everything is identical
+except: `_ai`, the deliberate `!= NULL` (`test`/`setne`/`movzx` before the
+store; `ok` is only tested for zero, so the branch is the same);
+`_debug_menu_processor`, where `bondview.h` now also declares
+`u8 get_bondata_invincible_flag(void)` (defined so in `bondview2.c`) and the
+caller tests `al` instead of `eax` — the declared return width, which is the
+correct reading; `_sub_GAME_7F09B398` and three `propobj.c` functions, which
+store the same values to the same argument slots and fields through a
+different register, or lose a padding `nop`. The `-O2` differences are block
+order, branch polarity, register and stack-slot choice: GCC predicts a
+pointer result as non-null where it predicted nothing for an `int`, and the
+same calls with the same arguments follow. No argument changed width or
+promotion: every newly prototyped parameter is a pointer, `s32`/`u32`,
+`int`, `bool` (an `int` typedef here) or an enum, and the executable shows no
+other function whose calls changed.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [repository rule](AGENTS.md),

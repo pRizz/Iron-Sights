@@ -28,6 +28,7 @@
 #include "initunk_005520.h"
 #include "initmttex.h"
 #include "glass.h"
+#include "sky.h"
 #include "image_bank.h"
 #include "textrelated.h"
 #include "initmenus.h"

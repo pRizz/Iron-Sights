@@ -16,6 +16,7 @@
 #include "gun.h"
 #include "front.h"
 #include "lv.h"
+#include "bg.h"
 #include "language.h"
 #include "mp_music.h"
 #include "file.h"

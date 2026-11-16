@@ -176,5 +176,7 @@ s32                  objDrop(PropRecord *prop);
 void                 sub_GAME_7F050DE8(Model* model);
 PropRecord          *something_with_generating_object(ChrRecord *self, s32 propid, ITEM_IDS itemid, s32 flags, WeaponObjRecord *weapon, ItemModelFileRecord *prop_header);
 Gfx                 *countdownTimerRender(Gfx *DL);
+PropRecord          *hatCreateForChr(ChrRecord *chr, s32 modelnum, u32 flags);
+PropRecord          *doorInit(DoorRecord *door, coord3d *pos, Mtxf *mtx, StandTile *stan, coord3d *coord, coord3d *centre);
 
 #endif

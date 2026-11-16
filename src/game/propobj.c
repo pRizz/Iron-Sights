@@ -20,6 +20,7 @@
 #include <music.h>
 #include <memp.h>
 #include <snd.h>
+#include <str.h>
 #include <gbi_extension.h>
 #include "propobj.h"
 #include "assets/obseg/text/LpropobjE.h"
@@ -32,12 +33,14 @@
 #include "chrai.h"
 #include "chraction.h"
 #include "chrobjdata.h"
+#include "dyn.h"
 #include "explosion.h"
 #include "fr.h"
 #include "glass.h"
 #include "gun.h"
 #include "image_bank.h"
 #include "lv.h"
+#include "loadobjectmodel.h"
 #include "language.h"
 #include "math_floor.h"
 #include "math_asinfacosf.h"
