@@ -1,7 +1,14 @@
-"""ROM-free, compiler-free tests for the 64-bit diagnostics ratchet's pure functions."""
+"""ROM-free tests for the 64-bit diagnostics ratchet. No real compiler: the command-line tests run a
+stand-in compiler, a Python script that prints the diagnostics its input file asks for."""
+import contextlib
 import importlib.util
+import io
+import json
 from pathlib import Path
+import sys
+import tempfile
 import unittest
+from unittest import mock
 
 spec = importlib.util.spec_from_file_location('lp64_diagnostics', Path(__file__).with_name('lp64_diagnostics.py'))
 diag = importlib.util.module_from_spec(spec)
@@ -37,6 +44,37 @@ class Parse(unittest.TestCase):
         found = diag.parse(text, Path('/w'))
         # Assert
         self.assertEqual(found, {('a.c', 3, 4, 'int-to-pointer-cast')})
+
+
+    def test_an_error_with_a_tracked_flag_counts_under_its_kind(self):
+        # Arrange
+        text = "/w/a.c:5:9: error: initialization of 'int' from 'void *' makes integer from pointer without a cast [-Wint-conversion]\n"
+        # Act
+        found = diag.parse(text, Path('/w'))
+        # Assert
+        self.assertEqual(found, {('a.c', 5, 9, 'int-conversion')})
+
+
+class Sites(unittest.TestCase):
+    FOUND = {('b.c', 7, 2, 'error'), ('a.c', 12, 4, 'int-conversion'), ('a.c', 3, 1, 'pointer-to-int-cast')}
+
+    def test_sites_lists_every_diagnostic_in_file_and_line_order(self):
+        # Act
+        lines = diag.site_lines(self.FOUND)
+        # Assert
+        self.assertEqual(lines, ['a.c:3: pointer-to-int-cast', 'a.c:12: int-conversion', 'b.c:7: error'])
+
+    def test_sites_can_be_limited_to_named_files(self):
+        # Act
+        lines = diag.site_lines(self.FOUND, ['b.c'])
+        # Assert
+        self.assertEqual(lines, ['b.c:7: error'])
+
+
+class DefaultInput(unittest.TestCase):
+    def test_the_default_compile_commands_path_is_under_the_repository_root(self):
+        self.assertEqual(diag.DEFAULT_COMPILE_COMMANDS,
+                         Path(__file__).resolve().parents[2]/'build'/'lp64'/'diag'/'compile_commands.json')
 
 
 class SyntaxCommand(unittest.TestCase):
@@ -168,6 +206,85 @@ class Regressions(unittest.TestCase):
         current = report('gcc-13', {'a.c': 1})
         # Act / Assert
         self.assertEqual(diag.regressions(baseline, current), [])
+
+
+FAKE_COMPILER = """import sys
+source = next(arg for arg in sys.argv[1:] if arg.endswith('.c'))
+status, _, stderr = open(source).read().partition('\\n')
+sys.stderr.write(stderr)
+sys.exit(int(status))
+"""
+
+
+class CommandLine(unittest.TestCase):
+    """Runs `main` on a compile_commands.json whose compiler is FAKE_COMPILER: each C file holds the
+    exit status on its first line and the compiler output to print after it."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.folder = Path(self.tmp.name)
+        (self.folder/'cc.py').write_text(FAKE_COMPILER)
+        self.baseline = self.folder/'baseline.json'
+        for patch in (mock.patch.object(diag, 'BASELINE', self.baseline),
+                      mock.patch.object(diag, 'compiler_id', lambda: 'gcc-13')):
+            patch.start()
+            self.addCleanup(patch.stop)
+
+    def commands(self, files: dict[str, str]) -> Path:
+        entries = []
+        for name, text in files.items():
+            (self.folder/name).write_text(text)
+            entries.append(dict(directory=str(self.folder), file=str(self.folder/name),
+                                arguments=[sys.executable, str(self.folder/'cc.py'), str(self.folder/name)]))
+        path = self.folder/'compile_commands.json'
+        path.write_text(json.dumps(entries))
+        return path
+
+    def run_main(self, *args):
+        with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
+            status = diag.main(list(args))
+        return status, out.getvalue(), err.getvalue()
+
+    def test_a_fatal_error_fails_every_command_naming_the_file(self):
+        # Arrange
+        path = self.commands({
+            'a.c': f"0\n{self.folder}/a.c:1:1: warning: x [-Wint-conversion]\n",
+            'b.c': f"1\n{self.folder}/b.c:2:10: fatal error: port_buildinfo.h: No such file or directory\n"
+                   "compilation terminated.\n"})
+        self.baseline.write_text(diag.render(diag.summarize(set(), 'gcc-13')))
+        for command in ('count', 'check', 'update'):
+            with self.subTest(command=command):
+                # Act
+                status, out, err = self.run_main(command, '--compile-commands', str(path))
+                # Assert
+                self.assertNotEqual(status, 0)
+                self.assertIn('b.c', err)
+                self.assertEqual(json.loads(self.baseline.read_text())['total'], 0)
+
+    def test_an_unparsed_driver_error_fails_even_beside_tracked_warnings(self):
+        # Arrange
+        path = self.commands({'a.c': f"1\n{self.folder}/a.c:1:1: warning: x [-Wint-conversion]\n"
+                                     "gcc: error: unrecognized command-line option '-mfoo'\n"})
+        # Act
+        status, out, err = self.run_main('count', '--compile-commands', str(path))
+        # Assert
+        self.assertNotEqual(status, 0)
+        self.assertIn('-mfoo', err)
+
+    def test_a_failing_check_prints_the_sites_of_each_file_that_rose(self):
+        # Arrange
+        path = self.commands({
+            'a.c': f"0\n{self.folder}/a.c:3:1: warning: x [-Wint-conversion]\n",
+            'b.c': f"0\n{self.folder}/b.c:9:1: warning: y [-Wint-conversion]\n"})
+        self.baseline.write_text(diag.render(diag.summarize({('b.c', 9, 1, 'int-conversion')}, 'gcc-13')))
+        with mock.patch.object(diag, 'ROOT', self.folder):
+            # Act
+            status, out, err = self.run_main('check', '--compile-commands', str(path))
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('a.c:3: int-conversion', out)
+        self.assertNotIn('b.c:9', out)
 
 
 if __name__ == '__main__':

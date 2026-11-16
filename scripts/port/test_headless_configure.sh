@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # The headless build is the 32-bit reference for the 64-bit work, so it must
 # configure and compile with no extra flags. Compiling one file that includes
-# SDL.h keeps this fast; the full link is checked by the stock build.
+# SDL.h keeps this fast; the full link is checked by CI's headless build, which
+# the tests job runs into build/lp64/diag before counting pointer diagnostics.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 build_dir=$(mktemp -d /tmp/midas-headless-configure.XXXXXX)

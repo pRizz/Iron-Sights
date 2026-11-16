@@ -2,8 +2,12 @@
 """Count places where C code mixes pointers with 32-bit integers, as 64-bit.
 
 Every C file in a `compile_commands.json` is compiled syntax-only with 64-bit
-pointers. `count` prints the tally, `update` records it as the baseline, and
-`check` fails when any file has more diagnostics than the baseline records.
+pointers. `count` prints the tally, `update` records it as the baseline,
+`check` fails when any file has more diagnostics than the baseline records and
+then lists those files' sites, and `sites [FILE...]` prints every diagnostic as
+`file:line: kind`. Build the tree first: a file that stops at a fatal error
+(such as a header the build generates) was not measured, so every command
+refuses to report and names the files.
 """
 import argparse
 from collections import Counter
@@ -19,7 +23,7 @@ from typing import Optional
 
 ROOT = Path(__file__).resolve().parents[2]
 BASELINE = Path(__file__).with_name('lp64_diagnostics_baseline.json')
-DEFAULT_COMPILE_COMMANDS = Path('build/lp64/diag/compile_commands.json')
+DEFAULT_COMPILE_COMMANDS = ROOT/'build'/'lp64'/'diag'/'compile_commands.json'
 KINDS = ('int-conversion', 'pointer-to-int-cast', 'int-to-pointer-cast')
 COMPILE_TIMEOUT_SECONDS = 60
 MAX_WORKERS = 8
@@ -32,6 +36,9 @@ ADDED_FLAGS = ['-fsyntax-only', '-Wint-conversion', '-Wpointer-to-int-cast',
 DIAGNOSTIC = re.compile(
     r'^(?P<file>.+?):(?P<line>\d+):(?P<col>\d+): (?P<level>warning|error|fatal error): '
     r'(?P<text>.*?)(?: \[-W(?P<flag>[\w=-]+)\])?$')
+# Any compiler line reporting an error, located or not (`gcc: error: ...`, `cc1: fatal error: ...`).
+ERROR_LINE = re.compile(r'^\S.*?: (?:fatal )?error: ')
+FATAL_LINE = re.compile(r'^\S.*?: fatal error: ')
 
 
 def syntax_command(entry: dict) -> Optional[list[str]]:
@@ -61,9 +68,9 @@ def parse(stderr: str, root: Path) -> set[tuple[str, int, int, str]]:
         if not match:
             continue
         flag = match['flag']
-        if flag in KINDS and match['level'] == 'warning':
-            kind = flag
-        elif match['level'] != 'warning' and flag not in KINDS:
+        if flag in KINDS:
+            kind = flag  # GCC 14 reports int-conversion as an error by default; it is still that kind
+        elif match['level'] != 'warning':
             kind = 'error'
         else:
             continue
@@ -120,26 +127,53 @@ def c_entries(entries: list[dict], source: Path) -> list[tuple[dict, list[str]]]
     return commands
 
 
-def compile_one(entry: dict, argv: list[str], root: Path) -> set:
-    """Compile one entry and return its diagnostics; a failure to run is an error."""
+def site_lines(found: set, files: Optional[list[str]] = None) -> list[str]:
+    """Return each diagnostic as `file:line: kind`, by file then line, limited to `files` if given."""
+    return [f'{path}:{line}: {kind}' for path, line, _, kind in sorted(found)
+            if files is None or path in files]
+
+
+def risen_files(baseline: dict, current: dict) -> list[str]:
+    """Return the files whose total or compile-error count rose above the baseline."""
+    errors = baseline.get('errors_by_file', {})
+    return sorted({path for path, count in current['by_file'].items() if count > baseline['by_file'].get(path, 0)}
+                  | {path for path, count in current.get('errors_by_file', {}).items()
+                     if count > errors.get(path, 0)})
+
+
+def compile_one(entry: dict, argv: list[str], root: Path) -> tuple[set, bool]:
+    """Compile one entry; return its diagnostics and whether it stopped at a fatal error.
+
+    A failure to run, or a failing compile whose errors are not all located diagnostics (a driver
+    error such as an unknown option), raises RuntimeError: such a file was not measured.
+    """
     try:
         done = subprocess.run(argv, cwd=entry['directory'], capture_output=True,
                               text=True, timeout=COMPILE_TIMEOUT_SECONDS)
     except (OSError, subprocess.TimeoutExpired) as error:
         raise RuntimeError(f"cannot compile {entry['file']}: {error}") from error
     found = parse(done.stderr, root)
-    if done.returncode != 0 and not found:
+    lines = done.stderr.splitlines()
+    fatal = any(FATAL_LINE.match(text) for text in lines)
+    unlocated = [text for text in lines if ERROR_LINE.match(text) and not DIAGNOSTIC.match(text)]
+    if done.returncode != 0 and not fatal and (unlocated or not found):
         raise RuntimeError(f"{entry['file']} failed with status {done.returncode} "
-                           f"and no recognised diagnostic:\n{done.stderr}")
-    return found
+                           f"and an unrecognised error:\n{done.stderr}")
+    return found, fatal
 
 
-def measure(compile_commands: Path, root: Path) -> dict:
-    """Compile every C file in `compile_commands` and return the summary."""
+def measure(compile_commands: Path, root: Path) -> set:
+    """Compile every C file in `compile_commands` and return the diagnostics found.
+
+    Raises RuntimeError naming every file that stopped at a fatal error."""
     commands = c_entries(json.loads(compile_commands.read_text()), compile_commands)
     with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, os.cpu_count() or 1)) as pool:
         results = list(pool.map(lambda pair: compile_one(*pair, root), commands))
-    return summarize(set().union(*results), compiler_id())
+    stopped = sorted(entry['file'] for (entry, _), (_, fatal) in zip(commands, results) if fatal)
+    if stopped:
+        raise RuntimeError('stopped at a fatal error, so not measured (build the tree first?): '
+                           + ', '.join(stopped))
+    return set().union(*(found for found, _ in results))
 
 
 def render(summary: dict) -> str:
@@ -148,12 +182,23 @@ def render(summary: dict) -> str:
 
 
 def main(argv: list[str]) -> int:
-    """Run `count`, `check` or `update`; return the process exit status."""
+    """Run `count`, `check`, `update` or `sites`; return the process exit status."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=('count', 'check', 'update'))
+    parser.add_argument('command', choices=('count', 'check', 'update', 'sites'))
+    parser.add_argument('files', nargs='*', help='sites only: repository-relative files to list')
     parser.add_argument('--compile-commands', type=Path, default=DEFAULT_COMPILE_COMMANDS)
     args = parser.parse_args(argv)
-    current = measure(args.compile_commands.resolve(), ROOT)
+    if args.files and args.command != 'sites':
+        parser.error('only sites takes file names')
+    try:
+        found = measure(args.compile_commands.resolve(), ROOT)
+    except RuntimeError as error:
+        print(f'error: {error}', file=sys.stderr)
+        return 2
+    if args.command == 'sites':
+        print('\n'.join(site_lines(found, args.files or None)))
+        return 0
+    current = summarize(found, compiler_id())
     if args.command == 'count':
         sys.stdout.write(render(current))
     elif args.command == 'update':
@@ -165,6 +210,10 @@ def main(argv: list[str]) -> int:
         for line in problems:
             print(line)
         if problems:
+            risen = risen_files(baseline, current)
+            if risen:
+                print('Sites in the files that rose:')
+                print('\n'.join(site_lines(found, risen)))
             return 1
         print(f"OK: {current['total']} diagnostics, baseline {baseline['total']}")
         if current['total'] < baseline['total']:

@@ -17,9 +17,8 @@
     "port/src/port_reinforcements_menu.c": 4,
     "port/src/port_sight.c": 2,
     "port/src/port_soak.c": 2,
-    "port/src/port_startup.c": 1,
+    "port/src/port_startup.c": 2,
     "port/src/port_state.c": 5,
-    "port/src/sysstubs.c": 1,
     "src/audi.c": 7,
     "src/boss.c": 3,
     "src/debugmenu.c": 2,
@@ -95,16 +94,13 @@
     "src/sprintf.c": 1
   },
   "by_kind": {
-    "error": 62,
-    "int-conversion": 709,
+    "error": 59,
+    "int-conversion": 710,
     "int-to-pointer-cast": 229,
-    "pointer-to-int-cast": 432
+    "pointer-to-int-cast": 434
   },
   "compiler": "gcc-13",
   "errors_by_file": {
-    "port/crash/reporting_linux.c": 1,
-    "port/src/port_startup.c": 1,
-    "port/src/sysstubs.c": 1,
     "src/game/propobj.c": 59
   },
   "total": 1432

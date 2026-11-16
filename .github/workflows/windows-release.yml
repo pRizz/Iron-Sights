@@ -88,6 +88,7 @@ jobs:
           bash scripts/port/test_pointer_bits.sh
           bash scripts/port/test_headless_configure.sh
           cmake -S . -B build/lp64/diag -DCMAKE_BUILD_TYPE=Debug -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cmake --build build/lp64/diag -j"$(nproc)"
           python3 scripts/port/lp64_diagnostics.py check
           python3 scripts/port/hand_gallery.py verify --allow-pending
 

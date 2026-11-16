@@ -232,6 +232,16 @@ pass its isolated executable rather than rebuilding an active player binary.
   follows the accepted [64-bit plan](scripts/port/native_64bit_plan.md). Read it
   before resuming, keep the 32-bit and web builds working, do not reopen its
   recorded decisions, and update its milestone status table before handing off.
+- CI's tests job runs the 64-bit pointer-diagnostics ratchet on every push: it
+  builds the headless tree into `build/lp64/diag` and runs
+  `python3 scripts/port/lp64_diagnostics.py check`, which fails the job when
+  any file has more pointer/integer diagnostics than
+  `scripts/port/lp64_diagnostics_baseline.json` records, and prints the sites
+  of each file that rose. `lp64_diagnostics.py sites [FILE...]` lists sites as
+  `file:line: kind`. Run it in the x86_64 container (GCC 13) after the same
+  configure and build. Run `update` only when the count falls (in the same
+  change, so the ratchet tightens) or for a rise that `FORK_CHANGES.md` records
+  and explains.
 - Fonts, sharp text rendering and other original game assets follow the
   accepted [open assets plan](scripts/port/open_assets_plan.md). Read it before
   resuming, keep its provenance rules (drawn from scratch, MIT, no ROM-derived
