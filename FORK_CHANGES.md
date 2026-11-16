@@ -211,7 +211,7 @@ Dam default 1% low 261 to 294 fps. One profiled run of each (matched Cradle):
 render thread 1.46 to 1.44 ms a frame, every function within 0.04 ms;
 `gfx_opengl_new_texture` went from 0.011 ms to nothing.
 
-### FORK-089 — Native 64-bit port: accepted plan, LP64-001 scaffolding done, LP64-002 gate built
+### FORK-089 — Native 64-bit port: accepted plan, LP64-001 scaffolding and LP64-002 type hygiene done
 
 **Status:** Plan accepted by the owner on 2026-11-15. Every task of milestone
 LP64-001 is built (Tasks 1 to 7 were each reviewed before reaching `main`): the two-tier gallery rule, the container
@@ -232,17 +232,18 @@ its tests job built and linked the headless tree on the runner, and the
 diagnostics check then printed `OK: 1432 diagnostics, baseline 1432`. No game, engine or renderer source has
 changed; the one port source changed is `port/src/headless_stubs.c` (Task 5b),
 which only `GE_HEADLESS` builds compile, so no shipped build's sources changed.
-(That paragraph is LP64-001's close.) Milestone LP64-002 (type hygiene) has
-built Tasks 1 to 10 and a final-review fix wave: Tasks 1 to 8 are on `main`;
-Tasks 9 and 10 are on the branch `lp64/types-strict`, pushed at dd408f1, where
-CI run 43880427784 ran the gate (below); the fix wave's three commits follow
-them on that branch, local and not pushed. Its Task 11 (landing through a
-gallery regeneration on the laptop) has not started, and the milestone is not
-done. With the fix wave, a 64-bit build makes every int/pointer conversion a
-compile error: C with the three `-Werror=` flags, C++ with
-`-Werror=int-to-pointer-cast` (it rejects the other two by itself). 64-bit
-builds compile and link in the containers, but none has been run, and the rest
-of the plan has not been built or verified; its milestone status table says
+(That paragraph is LP64-001's close.) Milestone LP64-002 (type hygiene) is
+done: its eleven tasks and the final-review fix wave are on `main` since
+9fdb6ec (2026-11-16). Tasks 1 to 8 went to `main` as they were built. Tasks 9
+and 10 and the fix wave change strict-tier gallery inputs, so they were built
+on the branch `lp64/types-strict`; the owner's Windows laptop then regenerated
+the gallery (no image cell changed), fixed the hook's `main` test (FORK-022)
+and landed the branch by fast-forward in the commit "Fix the gallery hook's main test and regenerate for the strict-tier type fixes". CI on that commit passed every job
+(the task 11 note below has the runs). A 64-bit build now makes every
+int/pointer conversion a compile error: C with the three `-Werror=` flags, C++
+with `-Werror=int-to-pointer-cast` (it rejects the other two by itself). 64-bit
+builds compile and link in the containers, but none has been run, and LP64-003
+onward has not been built or verified; the plan's milestone status table says
 so. What LP64-002 leaves to later milestones is in one list, "LP64-002
 hand-off", at the end of the LP64-002 notes below.
 
@@ -633,9 +634,12 @@ pending state that began at Task 5b (be840ef) is cleared. Before it, CI run
 headless tree on the runner, and the diagnostics check then printed `OK: 1432
 diagnostics, baseline 1432`. The plan's status table marks LP64-001 `Done`.
 
-**Milestone LP64-002 (type hygiene), planned on 2026-11-16; Tasks 1 to 10 built, Task 11 not started:**
+**Milestone LP64-002 (type hygiene), planned and done on 2026-11-16; all eleven tasks are on `main`:**
 [the milestone's plan](scripts/port/native_64bit_lp64_002.md) lists eleven
-tasks. This paragraph records the plan and
+tasks. The task notes below were written as each commit was made, so they say
+"not pushed", "local" or "on the branch `lp64/types-strict`"; every commit
+they name is on `main` since 9fdb6ec (the task 11 note, before the hand-off
+list). This paragraph records the plan and
 the measurements it rests on (no source, build file or tool had changed for it then), taken on `main` at ce60a74 in the Mac's
 containers. *Root causes:* each of the 1,432 recorded places was attributed
 from its compiler message and source line: 1,384 to 66 declarations or idioms
@@ -2282,8 +2286,9 @@ pass `&monAnimNN` (a pointer to an array) where `uintptr_t *cmdlist` is
 expected, an incompatible pointer type that a compiler without
 `-Wno-incompatible-pointer-types` rejects.
 
-*LP64-002 final review fix wave (2026-11-16, on the branch
-`lp64/types-strict`, local commits; not pushed).* A whole-milestone review of
+*LP64-002 final review fix wave (2026-11-16, built on the branch
+`lp64/types-strict`, commits 3a36ac6, df0346b and 093fe7b; on `main` since
+9fdb6ec).* A whole-milestone review of
 ce60a74..dd408f1 found the items below. *First commit, "Clear the 64-bit C
 log and print the widened texture words whole":* (1) The traces that print
 words this milestone widened now use `"%08" PRIxPTR`: `src/game/front.c`'s
@@ -2402,9 +2407,40 @@ and data; .buildid differs` (1 min 53 s), so against `main` at 5c77e73 the
 `_gunTickHandState`. Not run: the browser build (CI only, no emsdk image
 here), GCC 14 or clang, and any 64-bit executable.
 
+*LP64-002 task 11, landing and close (2026-11-16).* The branch was pushed at
+093fe7b. There, run 43890641797 (`windows-release.yml`, only its tests job
+runs off `main`) printed `329 files compiled, 0 failed` and `360 files
+compiled, 0 failed` with C++ gated, then stopped at the stale-gallery `verify`
+as designed; run 43890647368 (`web-pages.yml`) built the browser build with
+the fix wave's `<inttypes.h>` in `gun.c` (deploy skipped off `main`); run
+43890640758 (Bright Builds Checks) passed. On the owner's Windows laptop the
+commit "Fix the gallery hook's main test and regenerate for the strict-tier type fixes" (9fdb6ec) replaced the hook's branch test
+(FORK-022 has the detail) and regenerated the gallery: `generate` reported 0
+changed image cells, as the two-function difference in the 32-bit executable
+predicted, and only `manifest.json` (both fingerprints) and `index.html`
+changed. `main` was fast-forwarded to it and pushed. *CI on 9fdb6ec:* run
+43918787641 (`windows-release.yml`) passed all six jobs: `tests` (its log has
+`build/lp64/gate: 329 files compiled, 0 failed`, `build/lp64/gate-video: 360
+files compiled, 0 failed` and `Gallery verified: 108 matrix cells, 38 icons,
+input/pixel/file hashes and generated HTML.`), `linux` (the Ubuntu 22.04
+release image with GCC 11; that job runs only on `main`, so this is its first
+run with Tasks 9 and 10 and the fix wave), `windows`, `sentry-sdk`,
+`sentry-smoke` and `publish`. Run 43918787608 (`web-pages.yml`) passed `build`
+and `deploy`, and run 43918787764 (Bright Builds Checks) passed. *Checked on
+the Mac after the landing:* `hand_gallery.py verify` exited 0 with the same
+`Gallery verified` line; `test_hand_gallery.py` (31 tests) passes on the Mac's
+case-insensitive volume; with the old comparison put back by patching
+`head_ref` and `is_main_ref` in the test process, the two new refusal tests
+(a tag named `main`; HEAD on `refs/heads/Main`) fail and the allowed-branches
+test passes, so the tests do exercise the fix. The closing commit changes
+documentation only: this entry, the plan's status table and a note under the
+milestone plan's Task 11. *Not run in LP64-002:* any 64-bit executable; GCC 14
+or later and clang with the gate's flags; the browser build at run time.
+
 **LP64-002 hand-off** (the one list of what LP64-002 leaves, by owner; each
 item was checked against the code of the fix wave's last commit, and the
-per-task notes above give the detail):
+per-task notes above give the detail; the `gfx_pc.cpp:8352` trace and the
+gate's token check were added at the close):
 
 - *LP64-003, layout and sentinels:* the behaviour at 64 bits of the sentinel
   comparisons listed in the LP64-002 plan's "Behaviour-sensitive sites" (the
@@ -2436,10 +2472,17 @@ per-task notes above give the detail):
   unavailable at 64 bits). Traces that print pointer-sized `Gfx` words with
   `%08x`: `port/fast3d/gfx_pc.cpp:8942` (`sysFatalError`) and its older
   siblings `bg.c:4088` (`vtxbounds`) and `lightfixture.c:160` (`lightdbg`),
-  not changed.
+  not changed; and `port/fast3d/gfx_pc.cpp:8352` (`portXboxTrace` under
+  `GE_XBOX`), which prints a display-list command's `w0` and `w1` through
+  `(unsigned)` casts that neither the gate nor the cast check sees (strict
+  tier, older than this milestone, not changed).
 - *LP64-003, tooling (its first tooling task):* `lp64_casts.py` does not see
   `(u32)((uintptr_t)p)` (an extra parenthesis) or `(uint32_t)(uintptr_t)p`
-  (`uint32_t` is not in its type list); the calls to functions without a
+  (`uint32_t` is not in its type list); `lp64_diagnostics.py gate` refuses an
+  entry by looking for the `-Werror=` flags and `-w` among its tokens, so it
+  would not notice a later `-Wno-error=` or `-Wno-` form of a gated flag, or
+  flags that arrive through a response file (nothing in the tree does either,
+  and the canaries in `test_pointer_bits.sh` compile with the real flags); the calls to functions without a
   prototype (408 places, above) and the incompatible-pointer-type places
   (1,790 / 1,798 warnings), neither gated; the `-m32` test harnesses, which do
   not run at 64 bits.
@@ -2472,12 +2515,13 @@ per-task notes above give the detail):
   macOS project) has not compiled the tree and does not know
   `-Wno-discarded-qualifiers`.
 - *The browser build:* the game's `<inttypes.h>` traces built for wasm32 in
-  the browser build on 5c77e73 and dd408f1 (run 43880503386); the fix wave
-  adds `<inttypes.h>` to `gun.c`, which CI's browser build checks after a push
-  (no emsdk image here).
-- *Task 11, the laptop trip:* regenerate the review gallery (stale for strict
-  inputs on the branch) and fix the open `current_branch` hook defect recorded
-  in FORK-022; neither is done.
+  the browser build on 5c77e73 and dd408f1 (run 43880503386), and with the
+  fix wave's `<inttypes.h>` in `gun.c` on 093fe7b (run 43890647368) and on
+  `main` at 9fdb6ec (run 43918787608, deployed). None of these ran the game in
+  a browser; there is no emsdk image on the Mac.
+- *Task 11, the laptop trip:* done on 2026-11-16 (the task 11 note above):
+  the gallery is fresh on `main` and the hook's branch test is fixed
+  (FORK-022). Nothing is left of it.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
@@ -2488,7 +2532,10 @@ main paths of the gate: `CMakeLists.txt` (`GE_WARNING_OPTIONS`),
 [repository rule](AGENTS.md),
 [inherited 32-bit constraints](docs/port/abi-and-portability.md).
 
-**Validation:** LP64-001 Tasks 2 to 7 have run (Task 1 is recorded in FORK-022 and in the gallery regeneration 8d6760d); LP64-001 is complete: the gallery was regenerated on the owner's Windows laptop in the commit "Regenerate the review gallery and close LP64-001" (0 changed images; `verify` exited 0, fresh). CI run 43803408580 on f4c2c10 passed every job (layout probe at 64 and 32 bits, headless configure test, `OK: 1432 diagnostics, baseline 1432`), and CI run 43807622647 on d2feae1, after the fix wave, passed every job (its tests job built and linked the headless tree on the runner; `OK: 1432 diagnostics, baseline 1432`). What
+**Validation:** LP64-002's runs are in its task notes above; its close is the
+task 11 note (CI runs 43918787641, 43918787608 and 43918787764 on 9fdb6ec
+passed every job, with the gate's `329 files compiled, 0 failed` and `360
+files compiled, 0 failed`; no 64-bit executable has been run). LP64-001 Tasks 2 to 7 have run (Task 1 is recorded in FORK-022 and in the gallery regeneration 8d6760d); LP64-001 is complete: the gallery was regenerated on the owner's Windows laptop in the commit "Regenerate the review gallery and close LP64-001" (0 changed images; `verify` exited 0, fresh). CI run 43803408580 on f4c2c10 passed every job (layout probe at 64 and 32 bits, headless configure test, `OK: 1432 diagnostics, baseline 1432`), and CI run 43807622647 on d2feae1, after the fix wave, passed every job (its tests job built and linked the headless tree on the runner; `OK: 1432 diagnostics, baseline 1432`). What
 ran: the 11 ROM-free tests in `scripts/port/test_lp64_env.py` (passing); on the
 Mac, `build-images` (3 min 58 s) and three container checks (`gcc -dumpmachine`
 in the aarch64 and x86_64 images, and a `gcc -m32` program in the i686

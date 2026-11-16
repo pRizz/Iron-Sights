@@ -830,6 +830,13 @@ task's to fix.
 
 ### Task 11: Land through the laptop and close
 
+As run on 2026-11-16 (FORK-089, "LP64-002 task 11"): `main` had not moved, so
+no rebase was needed; the laptop's one commit, 9fdb6ec, carries the gallery
+regeneration (0 changed image cells) together with a fix to the hook's `main`
+test that the final review asked for (FORK-022), under the message "Fix the
+gallery hook's main test and regenerate for the strict-tier type fixes". Steps
+2 and 3 ran on the Mac as written.
+
 - [ ] **Step 1: Hand the branch to the laptop**
 
 On the Windows laptop:
