@@ -22,6 +22,9 @@ RUN echo ">> install PC port (Linux i686) build dependencies ..." &&  \
 RUN echo ">> install PC port (Windows x86) cross-build dependencies ..." &&  \
     apt -y install gcc-mingw-w64-i686 g++-mingw-w64-i686 binutils-mingw-w64-i686
 
+RUN echo ">> install 64-bit SDL2 (native architecture, for the LP64 diagnostics) ..." &&  \
+    apt -y install --no-install-recommends libsdl2-dev
+
 RUN echo ">> setup workspace ..." &&  \
     echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
     if getent passwd "${HOST_UID}" >/dev/null; then \

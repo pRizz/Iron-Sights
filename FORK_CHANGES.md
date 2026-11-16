@@ -375,7 +375,8 @@ and audio platform files that configuration removes (`port/src/video.c`,
 `input_pc.c`, `audio_pc.c`, `raphnet.c`), the vendored C (`glad.c`, `puff.c`),
 any C++ (the renderer in `port/fast3d` included), or `port/web`. Widening it to
 the video configuration and C++ is LP64-002's (recorded in the plan's status
-table). *Fix wave after the milestone review (the commit "Build the headless tree
+table; widened by LP64-002 Task 1, see the note after the milestone
+paragraph below). *Fix wave after the milestone review (the commit "Build the headless tree
 before counting 64-bit diagnostics"):* the procedure is now configure, build the
 whole headless tree, then count. Three files include `port_buildinfo.h`, which
 the `ge_buildinfo` build target writes, and the old configure-only procedure
@@ -651,6 +652,70 @@ the plan's Task 2 puts to the owner. Not covered by the planned gate and
 recorded for later milestones: about 527 calls to functions without a
 prototype, of which the pointer-returning ones are in the plan, and about
 1,780 incompatible-pointer-type places, both present at 32 bits too.
+
+*LP64-002 task 1, tooling (2026-11-16, local commit "Count the video configuration and guard against
+truncating casts"; not pushed):* no game, engine, port or renderer source changed. (1) Both
+toolchain images gain the distribution's 64-bit `libsdl2-dev`
+(`--no-install-recommends`): one added `RUN` in the root `Dockerfile` (the
+image the owner's Windows laptop also builds; nothing else in it changed) and
+the package on the existing install line of `scripts/port/lp64-arm64.Dockerfile`.
+The i686 SDL2 under `/home/dev/sdl2-linux-i686` is untouched. (2)
+`scripts/port/lp64_diagnostics.py`: `--compile-commands` may be repeated;
+the entries are merged and a source file several trees list is compiled once,
+with the first tree's command. `sites --messages [FILE...]` prints
+`file:line: kind: message | source text` (GCC's message without its `[-W...]`
+flag, and the source line GCC quotes under the diagnostic, stripped; for the
+four `#line` files that quoted text is how a place is found). `update` exits 2
+and writes nothing when the new total exceeds the recorded one, unless
+`--allow-rise REASON` is given, which is printed. The default input is still
+`build/lp64/diag/compile_commands.json`. (3) `scripts/port/lp64_casts.py`
+(new): `find_casts(text)` returns the lines of a truncating round trip, an
+`(u32|s32|int|unsigned|unsigned int|u16|s16)` cast applied directly to a
+`(uintptr_t|intptr_t)` cast; `check` scans the tracked `*.c`, `*.h`, `*.cpp`
+and `*.inl` files under `src/`, `port/` and `include/` (`git ls-files`, so
+never build output or the ROM), exits 1 listing every site of a file whose
+count exceeds `scripts/port/lp64_casts_allowed.txt` (`path<TAB>count<TAB>reason`;
+a file not listed is allowed none) and 0 otherwise; `list` prints every site.
+The comment text is not excluded: a cast written inside a comment counts. The
+allowlist starts with today's 23 casts in 9 files (`port/src/port_arm_mesh.c`
+3, `port_grip_mesh.c` 1, `port_textures.c` 1, `romdata.c` 2,
+`romfile_model.c` 1, `romfile_setup.c` 7, `romfile_stan.c` 4, `src/game/bg.c` 3,
+`src/game/propobj.c` 1), each with the reason `existing before LP64-002`. CI
+(`windows-release.yml`) runs `test_lp64_casts.py` and `lp64_casts.py check`
+after `test_lp64_diagnostics.py`; its diagnostics lines are unchanged and still
+count the headless tree only, so against the wider baseline its count can only
+read lower, never raise a false failure. *Tests* (each written first and seen
+failing): `test_lp64_diagnostics.py` went from 23 to 33 tests (10 failing
+before the change: the message and source parse, the merge, the rise refusal,
+and the command-line cases for two trees, `sites --messages` and `update`
+with and without `--allow-rise`); `test_lp64_casts.py` has 12 tests (it failed
+to load before `lp64_casts.py` existed). *Re-recorded baseline,* from the
+x86_64 container over both configurations (`build/lp64/diag`, headless, and
+`build/lp64/diag-video`, `GE_VIDEO=ON`): `update` without `--allow-rise`
+exited 2 with `the total would rise from 1432 to 1441` and wrote nothing;
+with `--allow-rise "video configuration added"` it recorded 1,441 diagnostics
+in 94 files. Before: 1,432 in 92 files (710 `int-conversion`, 434
+`pointer-to-int-cast`, 229 `int-to-pointer-cast`, 59 `error`). After: 1,441 in
+94 files (711, 434, 237, 59). The two files added are `port/src/audio_pc.c`
+(8 `int-to-pointer-cast`) and `port/fast3d/glad/glad.c` (1 `int-conversion`);
+no other file's count moved, and `errors_by_file` is unchanged. `sites
+--messages` printed 1,441 lines, each with a message and a quoted source
+text, and its messages agree with the research capture for the 1,432 headless
+places. *What ran:* `build-images` took 2 min 54 s. In each container
+(`aarch64` and `x86_64`), `cmake -S . -B build/lp64/t1-video64-ARCH
+-DGE_POINTER_BITS=64 -DGE_VIDEO=ON -DCMAKE_BUILD_TYPE=Debug` configured and
+`port/src/video.c` compiled from its recorded command (`-fsyntax-only`, exit
+0); the i686 SDL2 directory is present in the amd64 image (the arm64 image
+never had one). The plan's "Task check" ran: step 1 exactly as written, with
+the video tree built to its `ge_buildinfo` target, finished its build in 35 s
+and its `update` was refused as above (the expected first-time rise; every
+later task's total falls, so the block needs no flag), then `update
+--allow-rise` recorded the baseline; step 2 rebuilt the i686 headless tree
+(an incremental 5 s, the tree already existed) and the 20-mission smoke exited
+0 with all 20 `PASS` in 186 s; step 3, `compare_win32.py commits HEAD
+WORKTREE`, exited 0, `identical in loaded code and data`, in 114 s. The
+block's commands were correct, so the plan is unchanged by this task, and the
+status table's LP64-002 row was deliberately left to a parallel edit.
 
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),

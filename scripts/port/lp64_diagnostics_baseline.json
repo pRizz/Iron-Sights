@@ -6,6 +6,8 @@
     "include/PR/gbi.h": 1,
     "include/PR/os.h": 4,
     "port/crash/reporting_linux.c": 1,
+    "port/fast3d/glad/glad.c": 1,
+    "port/src/audio_pc.c": 8,
     "port/src/audio_stubs.c": 11,
     "port/src/libultra_shim.c": 5,
     "port/src/model_audit.c": 1,
@@ -95,13 +97,13 @@
   },
   "by_kind": {
     "error": 59,
-    "int-conversion": 710,
-    "int-to-pointer-cast": 229,
+    "int-conversion": 711,
+    "int-to-pointer-cast": 237,
     "pointer-to-int-cast": 434
   },
   "compiler": "gcc-13",
   "errors_by_file": {
     "src/game/propobj.c": 59
   },
-  "total": 1432
+  "total": 1441
 }

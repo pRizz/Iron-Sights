@@ -7,7 +7,7 @@ ARG HOST_GID=1000
 
 RUN apt-get update && \
     apt-get -y install --no-install-recommends \
-        build-essential cmake ninja-build python3 git ca-certificates && \
+        build-essential cmake ninja-build python3 git ca-certificates libsdl2-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN if getent passwd "${HOST_UID}" >/dev/null; then \

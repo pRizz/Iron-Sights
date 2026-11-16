@@ -5,7 +5,8 @@ Every C file in a `compile_commands.json` is compiled syntax-only with 64-bit
 pointers. `count` prints the tally, `update` records it as the baseline,
 `check` fails when any file has more diagnostics than the baseline records and
 then lists those files' sites, and `sites [FILE...]` prints every diagnostic as
-`file:line: kind`. Build the tree first: a file that stops at a fatal error
+`file:line: kind` (`--messages` adds GCC's message and the quoted source line). `--compile-commands`
+may be repeated to measure several configurations together. Build the tree first: a file that stops at a fatal error
 (such as a header the build generates) was not measured, so every command
 refuses to report and names the files.
 """
@@ -37,6 +38,7 @@ DIAGNOSTIC = re.compile(
     r'^(?P<file>.+?):(?P<line>\d+):(?P<col>\d+): (?P<level>warning|error|fatal error): '
     r'(?P<text>.*?)(?: \[-W(?P<flag>[\w=-]+)\])?$')
 # Any compiler line reporting an error, located or not (`gcc: error: ...`, `cc1: fatal error: ...`).
+QUOTED_SOURCE = re.compile(r'^\s*\d+ \| ?(?P<text>.*)$')
 ERROR_LINE = re.compile(r'^\S.*?: (?:fatal )?error: ')
 FATAL_LINE = re.compile(r'^\S.*?: fatal error: ')
 
@@ -62,8 +64,17 @@ def syntax_command(entry: dict) -> Optional[list[str]]:
 
 def parse(stderr: str, root: Path) -> set[tuple[str, int, int, str]]:
     """Return the distinct (repo-relative file, line, column, kind) diagnostics in compiler output."""
-    found = set()
-    for text in stderr.splitlines():
+    return set(parse_with_text(stderr, root))
+
+
+def parse_with_text(stderr: str, root: Path) -> dict[tuple[str, int, int, str], tuple[str, str]]:
+    """Return each diagnostic's (file, line, column, kind) key with its (message, quoted source line).
+
+    The source text is the line GCC quotes under the diagnostic, stripped; empty when it quotes none.
+    The first report of a place wins."""
+    found = {}
+    lines = stderr.splitlines()
+    for index, text in enumerate(lines):
         match = DIAGNOSTIC.match(text)
         if not match:
             continue
@@ -77,7 +88,9 @@ def parse(stderr: str, root: Path) -> set[tuple[str, int, int, str]]:
         path = Path(os.path.normpath(match['file']))
         if path.is_absolute() and path.is_relative_to(root):
             path = path.relative_to(root)
-        found.add((path.as_posix(), int(match['line']), int(match['col']), kind))
+        quoted = QUOTED_SOURCE.match(lines[index + 1]) if index + 1 < len(lines) else None
+        key = (path.as_posix(), int(match['line']), int(match['col']), kind)
+        found.setdefault(key, (match['text'], quoted['text'].strip() if quoted else ''))
     return found
 
 
@@ -127,10 +140,39 @@ def c_entries(entries: list[dict], source: Path) -> list[tuple[dict, list[str]]]
     return commands
 
 
-def site_lines(found: set, files: Optional[list[str]] = None) -> list[str]:
-    """Return each diagnostic as `file:line: kind`, by file then line, limited to `files` if given."""
-    return [f'{path}:{line}: {kind}' for path, line, _, kind in sorted(found)
-            if files is None or path in files]
+def site_lines(found, files: Optional[list[str]] = None, with_messages: bool = False) -> list[str]:
+    """Return each diagnostic as `file:line: kind`, by file then line, limited to `files` if given.
+
+    With `with_messages` (`found` is then the dict of `parse_with_text`) each line continues
+    `: message | source text`."""
+    lines = []
+    for key in sorted(found):
+        path, line, _, kind = key
+        if files is not None and path not in files:
+            continue
+        text = f'{path}:{line}: {kind}'
+        if with_messages:
+            message, source = found[key]
+            text += f': {message} | {source}'
+        lines.append(text)
+    return lines
+
+
+def merge_entries(trees: list[list[dict]]) -> list[dict]:
+    """Return the entries of several compile databases, one per source file; the first tree's wins."""
+    merged = {}
+    for entries in trees:
+        for entry in entries:
+            merged.setdefault(os.path.normpath(os.path.join(entry.get('directory', ''), entry['file'])), entry)
+    return list(merged.values())
+
+
+def rise_refusal(recorded_total: int, new_total: int) -> Optional[str]:
+    """Return why recording `new_total` over `recorded_total` is refused, or None when it may be written."""
+    if new_total <= recorded_total:
+        return None
+    return (f'the total would rise from {recorded_total} to {new_total}; the baseline only falls. '
+            'Pass --allow-rise REASON to record a rise deliberately')
 
 
 def risen_files(baseline: dict, current: dict) -> list[str]:
@@ -141,7 +183,7 @@ def risen_files(baseline: dict, current: dict) -> list[str]:
                      if count > errors.get(path, 0)})
 
 
-def compile_one(entry: dict, argv: list[str], root: Path) -> tuple[set, bool]:
+def compile_one(entry: dict, argv: list[str], root: Path) -> tuple[dict, bool]:
     """Compile one entry; return its diagnostics and whether it stopped at a fatal error.
 
     A failure to run, or a failing compile whose errors are not all located diagnostics (a driver
@@ -152,7 +194,7 @@ def compile_one(entry: dict, argv: list[str], root: Path) -> tuple[set, bool]:
                               text=True, timeout=COMPILE_TIMEOUT_SECONDS)
     except (OSError, subprocess.TimeoutExpired) as error:
         raise RuntimeError(f"cannot compile {entry['file']}: {error}") from error
-    found = parse(done.stderr, root)
+    found = parse_with_text(done.stderr, root)
     lines = done.stderr.splitlines()
     fatal = any(FATAL_LINE.match(text) for text in lines)
     unlocated = [text for text in lines if ERROR_LINE.match(text) and not DIAGNOSTIC.match(text)]
@@ -162,18 +204,26 @@ def compile_one(entry: dict, argv: list[str], root: Path) -> tuple[set, bool]:
     return found, fatal
 
 
-def measure(compile_commands: Path, root: Path) -> set:
-    """Compile every C file in `compile_commands` and return the diagnostics found.
+def measure(compile_commands: list[Path], root: Path) -> dict:
+    """Compile every C file in the compile databases once and return the diagnostics found, with text.
 
+    A source file several databases list is compiled with the first database's command.
     Raises RuntimeError naming every file that stopped at a fatal error."""
-    commands = c_entries(json.loads(compile_commands.read_text()), compile_commands)
+    trees = [json.loads(path.read_text()) for path in compile_commands]
+    for path, entries in zip(compile_commands, trees):
+        c_entries(entries, path)
+    commands = c_entries(merge_entries(trees), compile_commands[0])
     with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, os.cpu_count() or 1)) as pool:
         results = list(pool.map(lambda pair: compile_one(*pair, root), commands))
     stopped = sorted(entry['file'] for (entry, _), (_, fatal) in zip(commands, results) if fatal)
     if stopped:
         raise RuntimeError('stopped at a fatal error, so not measured (build the tree first?): '
                            + ', '.join(stopped))
-    return set().union(*(found for found, _ in results))
+    merged = {}
+    for found, _ in results:
+        for key, text in found.items():
+            merged.setdefault(key, text)
+    return merged
 
 
 def render(summary: dict) -> str:
@@ -186,22 +236,39 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=('count', 'check', 'update', 'sites'))
     parser.add_argument('files', nargs='*', help='sites only: repository-relative files to list')
-    parser.add_argument('--compile-commands', type=Path, default=DEFAULT_COMPILE_COMMANDS)
+    parser.add_argument('--compile-commands', type=Path, action='append',
+                        help='a compile_commands.json; repeat to measure several configurations together')
+    parser.add_argument('--messages', action='store_true',
+                        help='sites only: add GCC\'s message and the quoted source line')
+    parser.add_argument('--allow-rise', metavar='REASON',
+                        help='update only: record a total higher than the recorded one, for this reason')
     args = parser.parse_args(argv)
     if args.files and args.command != 'sites':
         parser.error('only sites takes file names')
+    if args.messages and args.command != 'sites':
+        parser.error('only sites takes --messages')
+    if args.allow_rise is not None and args.command != 'update':
+        parser.error('only update takes --allow-rise')
     try:
-        found = measure(args.compile_commands.resolve(), ROOT)
+        details = measure([path.resolve() for path in args.compile_commands or [DEFAULT_COMPILE_COMMANDS]], ROOT)
     except RuntimeError as error:
         print(f'error: {error}', file=sys.stderr)
         return 2
+    found = set(details)
     if args.command == 'sites':
-        print('\n'.join(site_lines(found, args.files or None)))
+        print('\n'.join(site_lines(details if args.messages else found, args.files or None, args.messages)))
         return 0
     current = summarize(found, compiler_id())
     if args.command == 'count':
         sys.stdout.write(render(current))
     elif args.command == 'update':
+        refusal = None if args.allow_rise is not None or not BASELINE.exists() else rise_refusal(
+            json.loads(BASELINE.read_text())['total'], current['total'])
+        if refusal:
+            print(f'error: {refusal}', file=sys.stderr)
+            return 2
+        if args.allow_rise is not None:
+            print(f'Rise allowed: {args.allow_rise}')
         BASELINE.write_text(render(current))
         print(f"Baseline: {current['total']} diagnostics in {len(current['by_file'])} files")
     else:

@@ -1,0 +1,10 @@
+# Truncating round-trip casts per file: path<TAB>count<TAB>reason. Counts only fall; see lp64_casts.py.
+port/src/port_arm_mesh.c	3	existing before LP64-002
+port/src/port_grip_mesh.c	1	existing before LP64-002
+port/src/port_textures.c	1	existing before LP64-002
+port/src/romdata.c	2	existing before LP64-002
+port/src/romfile_model.c	1	existing before LP64-002
+port/src/romfile_setup.c	7	existing before LP64-002
+port/src/romfile_stan.c	4	existing before LP64-002
+src/game/bg.c	3	existing before LP64-002
+src/game/propobj.c	1	existing before LP64-002

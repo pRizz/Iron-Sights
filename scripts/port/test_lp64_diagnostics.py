@@ -71,6 +71,64 @@ class Sites(unittest.TestCase):
         self.assertEqual(lines, ['b.c:7: error'])
 
 
+class Messages(unittest.TestCase):
+    TEXT = ("/w/a.c:3:9: warning: assignment to 'int *' from 'int' makes pointer from integer without a cast [-Wint-conversion]\n"
+            "    3 |   p = 0x10;\n"
+            "      |     ^\n"
+            "/w/a.c:5:2: warning: cast to pointer from integer of different size [-Wint-to-pointer-cast]\n"
+            "    5 | \tq = (int *)n;\n")
+
+    def test_parse_with_text_keeps_the_message_and_the_quoted_source_line(self):
+        # Act
+        found = diag.parse_with_text(self.TEXT, Path('/w'))
+        # Assert
+        self.assertEqual(found[('a.c', 3, 9, 'int-conversion')],
+                         ("assignment to 'int *' from 'int' makes pointer from integer without a cast", 'p = 0x10;'))
+        self.assertEqual(found[('a.c', 5, 2, 'int-to-pointer-cast')][1], 'q = (int *)n;')
+
+    def test_a_site_without_a_quoted_line_has_an_empty_source(self):
+        # Arrange
+        text = "/w/a.c:3:9: warning: x [-Wint-conversion]\n/w/a.c:4:1: warning: y [-Wint-conversion]\n"
+        # Act
+        found = diag.parse_with_text(text, Path('/w'))
+        # Assert
+        self.assertEqual(found[('a.c', 3, 9, 'int-conversion')], ('x', ''))
+
+    def test_message_lines_read_file_line_kind_message_and_source(self):
+        # Arrange
+        found = {('a.c', 3, 9, 'int-conversion'): ('bad', 'p = 1;'), ('b.c', 1, 1, 'error'): ('worse', '')}
+        # Act
+        lines = diag.site_lines(found, ['a.c'], with_messages=True)
+        # Assert
+        self.assertEqual(lines, ['a.c:3: int-conversion: bad | p = 1;'])
+
+
+class Merge(unittest.TestCase):
+    def test_a_source_listed_by_two_trees_keeps_the_first_trees_command(self):
+        # Arrange
+        first = [dict(file='/w/a.c', command='cc first')]
+        second = [dict(file='/w/a.c', command='cc second'), dict(file='/w/b.c', command='cc second')]
+        # Act
+        merged = diag.merge_entries([first, second])
+        # Assert
+        self.assertEqual([(e['file'], e['command']) for e in merged],
+                         [('/w/a.c', 'cc first'), ('/w/b.c', 'cc second')])
+
+
+class Rise(unittest.TestCase):
+    def test_a_higher_total_is_refused_with_both_figures(self):
+        # Act
+        message = diag.rise_refusal(10, 12)
+        # Assert
+        self.assertIn('10', message)
+        self.assertIn('12', message)
+
+    def test_an_equal_or_lower_total_is_not_refused(self):
+        # Act / Assert
+        self.assertIsNone(diag.rise_refusal(10, 10))
+        self.assertIsNone(diag.rise_refusal(10, 3))
+
+
 class DefaultInput(unittest.TestCase):
     def test_the_default_compile_commands_path_is_under_the_repository_root(self):
         self.assertEqual(diag.DEFAULT_COMPILE_COMMANDS,
@@ -285,6 +343,57 @@ class CommandLine(unittest.TestCase):
         self.assertEqual(status, 1)
         self.assertIn('a.c:3: int-conversion', out)
         self.assertNotIn('b.c:9', out)
+
+    def test_two_compile_command_files_naming_one_source_measure_it_once_with_the_first_command(self):
+        # Arrange
+        text = f"0\n{self.folder}/a.c:3:1: warning: x [-Wint-conversion]\n"
+        first = self.commands({'a.c': text})
+        (self.folder/'bad.py').write_text('import sys\nsys.stderr.write("gcc: error: boom\\n")\nsys.exit(1)\n')
+        second = self.folder/'second.json'
+        second.write_text(json.dumps([dict(directory=str(self.folder), file=str(self.folder/'a.c'),
+                                           arguments=[sys.executable, str(self.folder/'bad.py')])]))
+        # Act
+        status, out, err = self.run_main('count', '--compile-commands', str(first), '--compile-commands', str(second))
+        # Assert
+        self.assertEqual(status, 0, err)
+        self.assertEqual(json.loads(out)['total'], 1)
+
+    def test_sites_messages_prints_the_message_and_source_text(self):
+        # Arrange
+        path = self.commands({'a.c': f"0\n{self.folder}/a.c:3:1: warning: bad thing [-Wint-conversion]\n"
+                                     "    3 |   p = 1;\n"})
+        with mock.patch.object(diag, 'ROOT', self.folder):
+            # Act
+            status, out, err = self.run_main('sites', '--messages', '--compile-commands', str(path))
+        # Assert
+        self.assertEqual(status, 0)
+        self.assertEqual(out.strip(), 'a.c:3: int-conversion: bad thing | p = 1;')
+
+    def test_update_with_a_higher_total_exits_2_and_leaves_the_baseline_untouched(self):
+        # Arrange
+        path = self.commands({'a.c': f"0\n{self.folder}/a.c:3:1: warning: x [-Wint-conversion]\n"})
+        self.baseline.write_text(diag.render(diag.summarize(set(), 'gcc-13')))
+        before = self.baseline.read_bytes()
+        with mock.patch.object(diag, 'ROOT', self.folder):
+            # Act
+            status, out, err = self.run_main('update', '--compile-commands', str(path))
+        # Assert
+        self.assertEqual(status, 2)
+        self.assertEqual(self.baseline.read_bytes(), before)
+        self.assertIn('--allow-rise', err)
+
+    def test_update_with_allow_rise_writes_and_prints_the_reason(self):
+        # Arrange
+        path = self.commands({'a.c': f"0\n{self.folder}/a.c:3:1: warning: x [-Wint-conversion]\n"})
+        self.baseline.write_text(diag.render(diag.summarize(set(), 'gcc-13')))
+        with mock.patch.object(diag, 'ROOT', self.folder):
+            # Act
+            status, out, err = self.run_main('update', '--allow-rise', 'video configuration added',
+                                             '--compile-commands', str(path))
+        # Assert
+        self.assertEqual(status, 0)
+        self.assertEqual(json.loads(self.baseline.read_text())['total'], 1)
+        self.assertIn('video configuration added', out + err)
 
 
 if __name__ == '__main__':
