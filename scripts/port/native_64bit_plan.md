@@ -1,0 +1,601 @@
+# Native 64-bit port plan
+
+Iron Sights builds only as a 32-bit program today (Windows i686, Linux i686 and
+32-bit WebAssembly). This plan makes the same source also build and run with
+64-bit pointers, starting with Linux x86_64. It is the first of three projects:
+this one, then a native macOS build, then an Apple TV build. macOS and Apple TV
+get their own plans once this one has a playable 64-bit build.
+
+The owner accepted this plan on 2026-11-15. Acceptance is not evidence that any
+milestone works; the [milestone status](#milestone-status) table records what
+has been built and verified.
+
+## Why
+
+- The owner wants the game on their own Apple TV, and buildable by other
+  developers for theirs. Apple TV, and macOS on Apple Silicon, run only 64-bit
+  ARM code: the tvOS 27.2 SDK has `arm64` and `arm64e` slices and nothing else.
+- The owner also wants native macOS and 64-bit Linux builds. All three need the
+  same engine change, so it is done once, on the platform where it can be
+  compared with the 32-bit build.
+- A 64-bit Linux build removes the 32-bit SDL, Mesa and multilib requirements
+  that make today's Linux, Steam Deck and sanitizer builds awkward.
+
+## Goals
+
+1. One source tree builds 32-bit and 64-bit. The 32-bit Windows, Linux and web
+   builds keep working and keep shipping throughout.
+2. A Linux x86_64 build that plays the whole game: every solo stage,
+   multiplayer, the menus, the watch, and the fork's own features.
+3. Evidence, not impressions, that the 64-bit build behaves like the 32-bit
+   build: same simulation, same picture, same sound, on the same machine.
+4. Gates that stop new code from reintroducing 32-bit pointer assumptions.
+5. Nothing in the result that only works on x86, so macOS on ARM follows
+   without redoing this work.
+
+## Non-goals
+
+- macOS, Apple TV, iOS and Windows x64 builds. This plan must not block them,
+  and builds none of them.
+- Suspend points (save states) on 64-bit builds. See
+  [Suspend points](#suspend-points).
+- Changing how the 32-bit builds load ROM data. They are the reference the
+  64-bit build is compared with.
+- 64-bit WebAssembly.
+- Adopting upstream's open 64-bit pull requests. See [Approaches](#approaches).
+
+## Anti-goals
+
+These would make the project a failure even if a 64-bit build runs:
+
+- A 64-bit build that differs from the 32-bit build in ways nobody measured.
+- Any regression in the shipping 32-bit or web builds.
+- ROM-derived data committed to Git, including test fixtures.
+- Rewrites of upstream-owned game files beyond what pointer width requires.
+  Type and size corrections belong there; new logic belongs in `port/`.
+
+## Constraints
+
+- **ROM at runtime.** Player builds load every asset from the user's ROM
+  (`GE_ROMDATA_FALLBACK=OFF`). The compiled-in asset pipeline is a 32-bit-only
+  fallback and stays that way.
+- **Renderer formats are fixed.** `Vtx` (16 bytes), `Mtx` (64), `Vp` (16) and
+  the light structs keep their N64 sizes at both widths, because the renderer
+  reads them as such.
+- **Upstream merges continue.** The fork merges upstream releases, so edits to
+  upstream-owned files must stay small, mechanical and recorded in
+  `FORK_CHANGES.md` (see `AGENTS.md`, "Repo-Local Guidance").
+- **No ROM in CI.** Checks that need a ROM run locally; CI runs the ROM-free
+  ones at both widths.
+- **Float behaviour.** The game relies on single-precision arithmetic matching
+  the N64. x86_64 uses SSE by default; ARM builds will need
+  `-ffp-contract=off`, as the web build already uses.
+- **Hands and arms.** The first-person arm contracts
+  (`scripts/port/arm_rendering.md`) and the review gallery apply unchanged.
+
+## What was measured
+
+- A syntax-only 64-bit compile of the 161 game and engine C files reported
+  about 1,600 distinct places in 70 files that mix pointers with 32-bit
+  integers, and 40 hard errors. Most trace back to a few declarations: about
+  460 to font functions and variables that carry font pointers as `s32`, about
+  190 to animation table entries that start as integers and become pointers.
+  The port layer and renderer were not part of that compile.
+- A 64-bit ARM program on macOS 27.2 cannot map memory below 4 GB: `mmap`
+  there fails, and a program linked with a smaller zero page is killed at
+  launch. So no design may depend on low addresses.
+- Nearly every ROM asset class is converted in place today, overwriting 4-byte
+  offsets with 4-byte pointers: text banks, setup files, collision tiles,
+  models, backgrounds, animations, fonts, audio banks and music sequences.
+- Every ROM read passes its address through a `u32` (`osPiStartDma`'s
+  `devAddr`), and `osVirtualToPhysical` returns `u32` at 133 call sites.
+- The renderer steps through display lists by `sizeof(Gfx)` and has no
+  hard-coded 8-byte stride. The 8-byte assumptions are in game code
+  (`src/game/tex.c`, `bg.c`, `propobj.c`) and `port/src/romfile_model.c`.
+
+## Approaches
+
+**How pointers are represented.** Chosen by the owner: widen.
+
+| Approach | Outcome |
+|---|---|
+| Widen: 8-byte pointers everywhere, 16-byte display-list commands, ROM data converted to the wider layout at load | **Chosen.** Ordinary C, so debuggers and sanitizers work; the renderer already declares command words pointer-sized; proven by the Perfect Dark port, the same engine family. Costs a converter per asset class, larger memory budgets and a new suspend-point design. |
+| Keep 32-bit addresses as offsets into one reserved block, converted at each use | Rejected. Needs a wrapper at every access across upstream-owned game code, and data in the executable sits outside the block. |
+| Map all game memory below 4 GB so existing casts keep working | Ruled out by the measurement above. |
+| Translate the WebAssembly build to C and compile that for 64-bit | Set aside. It avoids the port but yields no native macOS or Linux build and an unmeasured speed cost. |
+
+**Where the code comes from.** Chosen by the owner: write our own.
+
+| Approach | Outcome |
+|---|---|
+| Write our own, following the Perfect Dark port's mechanisms | **Chosen.** Full control over structure and verification. |
+| Start from upstream's open pull request (murkantor/Project-Midas#95, a rebase of #42) | Not taken. It uses the same widening approach on the same 1.0.2b baseline and has been played on Apple Silicon, but it is unreviewed, macOS only, and conflicts with this fork in 24 of its 200 files. |
+
+Consequence to plan for: if upstream later merges its own 64-bit work, the next
+upstream merge will conflict widely with ours. The owner accepted that by
+choosing this route. Keeping our edits to upstream files mechanical limits the
+damage.
+
+Reading other ports for how they solved a problem is expected. Copying code
+from any of them needs a licence check first, and an entry in
+`tools/THIRD_PARTY_NOTICES.txt`.
+
+## Design
+
+### Build
+
+- An explicit CMake option selects the pointer width. It defaults to 32 on
+  every existing route, so no current build changes unless asked. Code never
+  tests the option; it tests `IS_64_BIT` (`include/platform_info.h`).
+- `-m32`, the i686 library paths, the `_` symbol prefix and the fixed image
+  base become conditional on the 32-bit choice.
+- 64-bit Linux links as a position-independent executable, the platform
+  default. The 32-bit ELF build keeps `-no-pie`.
+- The Linux containers gain x86_64 dependency sets beside the i386 ones, so one
+  container builds and runs both widths. That container is the comparison host.
+- `GE_ROMDATA_FALLBACK=ON` with 64-bit is a configure error.
+
+### Addresses
+
+- Host pointers are plain 64-bit values. The fixed arena addresses
+  (`0x20000000` and friends in `port/src/pcsched.c`) apply to 32-bit only.
+- **Telling a host pointer from an N64 segment word.** Today the test is
+  "at least `0x10000000`" (`port/include/port_hostptr.h`). On 64-bit the test
+  becomes "any of the upper 32 bits set". Segment words and file offsets always
+  fit in 32 bits, so the two cannot collide provided no game data lives below
+  4 GB. The 64-bit build checks that at startup (executable image, arenas, ROM
+  image) and stops with a clear message if it does not hold.
+  - This holds by construction on Apple's ARM platforms and for
+    position-independent Linux executables.
+  - Tools that load programs low (Valgrind, for one) will trip the check. That
+    is accepted; the sanitizers do not.
+  - The Perfect Dark port instead tags every segment word's low bit. That was
+    considered and not chosen, because it changes every site that creates a
+    segment word in upstream game code.
+- Everything that carries an address in 32 bits widens to `uintptr_t` or
+  `intptr_t`: `osPiStartDma`, `romCopy`, `osVirtualToPhysical` and the
+  `OS_K0_TO_PHYSICAL` family, `memp` and `mema` bookkeeping, and the globals
+  listed in the [hazard inventory](#hazard-inventory). Signedness is chosen per
+  field, since it changed behaviour in the Perfect Dark port.
+- Audio command words (`Acmd`, `include/PR/abi.h`) are 32-bit and can carry
+  buffer addresses. They get the same treatment as display-list words when the
+  audio class is converted.
+
+### Game code types
+
+- Fix declarations, not call sites. A field, parameter or global that carries
+  a pointer gets a pointer type or `intptr_t`/`uintptr_t`. Casts are the last
+  resort.
+- Hard-coded sizes become `sizeof`: the `Model` allocation (`0x20`), the
+  `rwdata` slot size (`numRecords*4`), the prop record word counts in
+  `sizepropdef`, node and record sizes in the model converter.
+- Sentinel tests that compare a pointer-or-number field with a small constant
+  (`TextureID < MAX_TEXTURES`, `< PORTMAX`, `address & 0x80000000`, menu text
+  IDs against function pointers) keep working only if the field is
+  pointer-sized and the comparison is unsigned. Each one is listed and given a
+  test.
+- Unions of a pointer and an integer are reviewed one by one; widening changes
+  which members overlap.
+- The game's `Vertex` has a pointer inside a 16-byte renderer format. It stays
+  16 bytes: the link becomes a 32-bit offset from a documented base, resolved
+  where it is used.
+
+### ROM data: file layouts and converters
+
+- Each ROM-loaded format gets a **file layout**: structs with fixed-width
+  fields that match the ROM bytes at any pointer width, with static assertions
+  on their sizes. The game's runtime structs (`src/bondtypes.h` and friends)
+  keep real pointers and grow on 64-bit.
+- Each asset class gets a **converter** in `port/src/` that reads the file
+  layout and writes the runtime layout into a new buffer, doing the byte swap
+  in the same pass. Where the game later turns offsets into pointers itself,
+  the converter emits those offsets into pointer-sized slots so the game's own
+  step runs unchanged.
+- Converters are written to be correct at either width. On 64-bit they are the
+  only path. On 32-bit the existing in-place path stays in use, and the
+  converter runs only under test (see the converter oracle below).
+- Destination sizes are never guessed silently. A converter either measures
+  first and allocates exactly, or allocates from a stated bound and fails
+  loudly on overflow. The choice per class is the builder's.
+- Classes, in the order the game needs them: text banks; fonts; texture
+  directory and image bank; animation tables; models; collision tiles; setup
+  files; backgrounds (front matter, portals, room data); audio banks; music
+  sequences. Briefings, demos, fog tables and AI command bytes carry no
+  pointers and need only confirming.
+
+### Display lists
+
+- `Gfx` is 16 bytes on 64-bit, with the N64 command word in the low 32 bits of
+  the first word. That is what `include/PR/gbi.h` already declares.
+- Every display list the renderer walks must be in host form. ROM lists (model
+  nodes, room geometry, the font list) are expanded from 8-byte big-endian
+  commands at load. Addresses inside a file are remapped through an old-to-new
+  offset table, because the data around them moves when structs grow.
+- Model files reference sub-lists and vertices by segment offset into the file.
+  The model converter expands every list in the file and rewrites those
+  offsets, so no 8-byte list survives.
+- Game and port code that walks or patches lists uses the command struct's
+  words and `sizeof(Gfx)`, never raw `u32` pairs, `>> 3` or literal 8.
+- Runtime list buffers and their per-stage budgets grow to match.
+
+### Memory budgets
+
+- Per-stage budgets (`memallocstringtable` in `src/boss.c`, already doubled on
+  PC) and the fixed pools get a 64-bit scale where their contents grow: room
+  display lists, the graphics buffer, model and setup allocations, texture
+  pools, the permanent bank, the music heap.
+- Exhausting any pool on 64-bit fails loudly with the pool's name. Final sizes
+  come from a soak run over every stage, with headroom, not from estimates.
+
+### Suspend points
+
+Suspend points copy raw memory back to the same addresses and verify the
+executable's hash. 64-bit processes load at a different address on each run,
+so that design cannot work there. 64-bit builds report suspend points as
+unavailable, as the web build does, and the menus say so. A relocating design
+is a separate future project. Campaign saves (`Data/Saves/eeprom.bin`) contain
+no pointers and work unchanged; the plan verifies that a save moves between
+widths.
+
+### Crash reports and the rest of the port layer
+
+- The x86 frame-pointer walks (`port/src/main.c`, `port_profile.c`) get a
+  portable replacement on 64-bit. Sentry is built for x86_64.
+- External textures stop being refused on 64-bit once their address slot is
+  pointer-sized (`port/src/port_textures.c`).
+- The 109 source files this fork has added are covered by the same gates as
+  upstream code. Their ROM-free tests run at both widths.
+
+## Verification
+
+Each item names what it proves. "Both builds" means the i686 and x86_64 Linux
+builds of one commit, run in one container.
+
+**What counts as measured.** Equivalence is claimed for this surface and no
+wider: every solo stage and every attract demo; one four-player route (the
+bench suite's `temple-4p`); a scripted walk through the menus and the watch;
+each of those under two settings profiles, the defaults and one with every fork
+feature switched on. The fork's Windows-only PowerShell audits are not ported
+to Linux; the fork's ROM-free tests run at both widths instead (item 10).
+
+**Rules for the comparison runs.**
+
+- *The reference must agree with itself first.* A trace, screenshot or
+  recording is evidence only if two runs of the 32-bit build produce the same
+  result. `FORK_CHANGES.md` records that hand-recorded input once drifted on
+  replay of the 32-bit build, so generated routes and the attract demos are
+  preferred, and each source is checked for repeatability before it is used.
+- *Differences from outside the port are removed in the test, not in the
+  shipped game.* The comparison builds share a test-only option that links one
+  in-tree `sinf`/`cosf` implementation at both widths, so C library rounding
+  cannot cause a divergence. Shipping builds keep their current maths. If a
+  divergence still needs a change to a shipping build, that goes to the owner
+  with the evidence.
+- *A difference is "explained" only when* its first differing tick or frame is
+  identified, its cause is named, and the runs match again with that cause
+  removed. Anything less stays open against LP64-006.
+
+1. **Compile gate.** The 64-bit build compiles with pointer/integer conversion
+   warnings as errors, across game, engine, port and renderer. CI builds both
+   widths. Proves: no conversion the compiler can see remains, and none
+   returns.
+2. **Layout probe.** A native test asserts the size and key offsets of every
+   file layout and renderer format at both widths, modelled on
+   `scripts/port/web_probe/probe.c`. Proves: file layouts do not drift.
+3. **Unchanged 32-bit program.** The 32-bit Windows executable's loaded code
+   and data are compared before and after each commit, ignoring the build
+   stamp. Proves: the commit did not alter the shipping build, and shows which
+   gallery-pending commits could have changed pixels at all. It does not gate
+   the gallery. Where the 32-bit program legitimately changes, the commit says
+   why. Whether the Windows cross-build is reproducible enough for this
+   comparison is unproven; LP64-001 establishes it, and reports back if not.
+4. **Converter oracle.** On a 32-bit build, each converter's output is compared
+   with what the in-place path produces for the same file, for every file of
+   that class in the ROM. On 32-bit the two layouts are the same, so they must
+   match byte for byte apart from the base address. Proves: the converter
+   reads the format correctly, before it is trusted on 64-bit. Runs locally
+   with a ROM; small hand-written fixtures cover the same converters in CI.
+5. **Simulation equivalence.** Both builds replay the ROM's attract demos with
+   per-tick tracing (`GE_DEMODIAG`, `GE_RNGTRACE`, `GE_DEMOSTRICT`) and replay
+   input recordings (`GE_INPUTPLAY`) across every stage, headless, with fixed
+   seed and tick. The traces are diffed. Proves: the simulation is the same.
+6. **Picture equivalence.** The primary check does not depend on a rasterizer:
+   both builds write a per-frame digest of what the renderer submits (vertex
+   data, texture uploads, draw state), and the digests are diffed. The digest
+   must be obtainable without drawing pixels, so the emulated i686 reference
+   stays practical. Proves: the
+   two builds ask for the same picture. Screenshots per stage (`GE_SHOT`) and
+   the hand gallery, rendered by both builds with the same software renderer,
+   are the secondary check; 32-bit and 64-bit builds of that renderer may round
+   differently, so a screenshot difference with matching digests is recorded as
+   the rasterizer's, and one with differing digests is a port bug.
+7. **Sound equivalence.** Both builds record a fixed route with
+   `GE_AUDIO_CAPTURE`; the recordings are compared. Proves: bank and sequence
+   conversion.
+8. **Sanitizers.** The 64-bit build runs the per-mission smoke
+   (`scripts/port/audit_buffers.py --mission-smoke`) with video under
+   AddressSanitizer and UndefinedBehaviorSanitizer. Proves: no overruns from
+   grown structs. The Perfect Dark port found latent original bugs this way.
+9. **Soak.** Every stage, several laps, with memory statistics. Proves: the
+   budgets hold.
+10. **Existing ROM-free tests.** The `scripts/port/test_*.sh` harnesses that
+    compile game code with `-m32` also run as 64-bit.
+11. **Saves.** A campaign save written by one width loads in the other.
+12. **ARM check.** A Linux aarch64 build is built from LP64-001 onward, since
+    it is the native one on the working machine. It runs the simulation traces
+    of item 5 and is compared with x86_64. It is not packaged or shipped.
+    Proves: goal 5, before the macOS project depends on it.
+
+## Working machine
+
+The owner decided on 2026-11-15 that this work runs on their Apple Silicon Mac.
+The US ROM is in that checkout's root, ignored by Git (`*.[zZnN]64`), and its
+SHA-1 matches `ge007.u.sha1`. Tools find it through `GE_ROM`; it is never
+copied into a tracked path.
+
+What that machine can and cannot do:
+
+- **Linux aarch64 containers run natively.** That is the fast loop: the
+  aarch64 build, the sanitizers and the soak run there.
+- **Linux x86_64 and i686 run under emulation.** They are slower, and i686
+  slowest. The i686 reference is therefore used headless wherever possible.
+- **A divergence seen only under emulation is not yet a finding.** It is
+  confirmed on real x86 hardware before it is treated as a port bug or as
+  explained.
+- **The review gallery cannot be regenerated here.** It was rendered on the
+  owner's Windows laptop (`review/hand-gallery/manifest.json` records an
+  NVIDIA RTX 3070), and a regeneration needs the 32-bit game running on that
+  graphics card. The gallery's fingerprint covers the game's source files, and
+  the pre-commit hook and CI reject a stale gallery, so today every source
+  commit needs that laptop.
+
+### Gallery rule: two tiers
+
+The owner chose on 2026-11-15 to loosen the gallery requirement to two tiers.
+This changes the gallery contract for the whole repository, not only for this
+project, and is built in LP64-001.
+
+**Strict tier.** A commit that touches any of these still needs a fresh,
+reviewed gallery, exactly as today:
+
+- The fork's hand, arm and wardrobe code: `port/src/port_arm_mesh.c`,
+  `port_native_arms.c`, `port_grip_mesh.c`, `port_wardrobe.c`, `ads_hands.c`,
+  `port_knife_ads.c`, `port_graphics.c`, `port_shiny.c`.
+- The game files the arm contracts name: `src/game/gunfire.c`,
+  `src/game/model.c`, `src/game/bondview2.c`.
+- The renderer: everything under `port/fast3d/`.
+- The weapon icons: `port/src/port_weapon_images.c`, `port_hud_weapons.c`.
+- The capture path and the tool: `port/src/joy_port.c`,
+  `scripts/port/hand_gallery.py`, `scripts/port/hand_gallery_template.html`.
+
+**Deferred tier.** Every other rendering input the fingerprint covers today,
+including the rest of `src/`, `include/` and `port/`, and the build files. A
+commit that touches only these may leave the gallery **pending**.
+
+How it works:
+
+- The manifest records two fingerprints, one over the strict tier and one over
+  everything. A strict mismatch fails the hook and CI, as a stale gallery does
+  today. A mismatch only in the full fingerprint is reported as pending and
+  passes.
+- Pending is opt-in per clone, through a local Git setting beside
+  `midas.galleryPython`. The Mac's clone sets it. A clone without it, such as
+  the laptop's, keeps today's behaviour: the hook regenerates on any staleness,
+  which clears anything pending.
+- CI accepts pending and says so in its log. It still fails on a strict
+  mismatch.
+- Pending is cleared on the laptop at the end of each milestone at the latest.
+  The milestone status table records the last full regeneration.
+
+What this costs, accepted by the owner: a deferred-tier commit that does alter
+the hands is caught at the next regeneration, not at the commit, and may ship
+in a development build first. Verification item 3 narrows the search: it shows
+which pending commits changed the 32-bit program at all.
+
+What it means for this project: 64-bit commits to strict-tier files are
+batched on a branch and reach `main` through a regeneration on the laptop. The
+three game files in the strict tier hold about 200 of the 1,600 measured
+places, so those batches are part of the plan, not an exception.
+
+`AGENTS.md` ("Render review gallery"), `scripts/port/hand_gallery.md`,
+`scripts/port/test_hand_gallery.py` and `FORK_CHANGES.md` change with the rule.
+
+The pre-commit hook is not yet installed in the Mac's clone; LP64-001 installs
+it (`hand_gallery.py install-hook`).
+
+## Milestones
+
+1. **LP64-001 Scaffolding.** The Mac's toolchain: containers that build i686,
+   x86_64 and aarch64, the hook installed, the i686 reference running headless
+   with the ROM. The two-tier gallery rule. The unchanged-32-bit comparison.
+   Pointer-width option; layout probe; a script that counts 64-bit
+   diagnostics, with CI failing if the count rises. No behaviour change.
+2. **LP64-002 Type hygiene.** Declarations fixed until the compile gate reaches
+   zero; the gate becomes an error. 32-bit code compared before and after.
+3. **LP64-003 Addresses and memory.** Address plumbing widened, arenas
+   unpinned on 64-bit, the host-pointer test and its startup check. Done when a
+   headless 64-bit build starts and reaches its first asset load.
+4. **LP64-004 Converters and display lists.** One asset class at a time, each
+   with its file layout, converter, oracle result and fixtures. Display-list
+   expansion lands with the first class that needs it.
+5. **LP64-005 First playable.** Headless 64-bit replays every attract demo and
+   loads every stage; then the same with video.
+6. **LP64-006 Equivalence.** Verification items 5 to 12 pass, or each
+   difference is explained under the rules above. Budgets set from the soak.
+7. **LP64-007 Shipping.** Linux x86_64 packages beside the i686 ones, a native
+   Steam Deck package, Sentry and crash reports, CI jobs, player and developer
+   documentation, the suspend-point notice.
+
+Milestones 2 to 4 land on `main` in small commits. Each must leave the 32-bit
+and web builds passing their existing checks. Commits to deferred-tier files go
+straight to `main` from the Mac. Commits to strict-tier files are batched on a
+branch and merged through a gallery regeneration on the laptop. The compile
+gate of LP64-002 becomes an error only after the strict-tier batch it depends
+on has landed.
+
+## Decisions
+
+Owner's decisions:
+
+- Targets: the owner's Apple TV and self-building developers; macOS; Linux
+  64-bit. No App Store distribution.
+- Widen pointers rather than keep 32-bit addresses.
+- Write our own rather than start from upstream's pull request.
+- The work runs on the owner's Mac, with the ROM in that checkout (2026-11-15).
+- The gallery requirement loosens to two tiers (2026-11-15).
+
+Calls made in drafting, accepted with the plan on 2026-11-15:
+
+- Which files are in the gallery's strict tier, and that the build files are
+  in the deferred tier.
+- Pending is opt-in per clone, and cleared at each milestone's end at the
+  latest.
+- Linux x86_64 is the first shipped 64-bit platform, compared with i686 in one
+  container; Linux aarch64 is built alongside as the fast local loop.
+- 32-bit builds keep their current loaders; converters are tested against
+  them.
+- The host-pointer test is "above 4 GB" with a startup check, not low-bit
+  tagging.
+- Suspend points are unavailable on 64-bit builds for now.
+- Windows x64 is out of scope.
+- Equivalence is claimed for the stated surface: all solo stages and demos,
+  one four-player route, a menu and watch walk, under default settings and
+  with every fork feature on.
+- Comparison builds share a test-only maths option; shipping builds are not
+  changed to make the comparison pass without the owner's say.
+- The Linux aarch64 build is a development and verification target, not
+  shipped.
+- A divergence seen only under emulation is confirmed on real x86 hardware.
+- The plan lives here, with the status table below, and gets a pointer from
+  `AGENTS.md` and a `FORK_CHANGES.md` entry when accepted.
+
+## Left to the builder
+
+- The option's name and the CMake structure.
+- File layout naming, and whether converters share a pointer-remap helper.
+- Measure-then-allocate or bounded allocation, per asset class.
+- The order of type fixes within LP64-002.
+- The trace and screenshot comparison tooling.
+- The replacement backtrace mechanism.
+
+## Milestone status
+
+Update this table before handing off. Record evidence in the notes; do not
+mark a milestone done without it.
+
+| ID | Status | Notes |
+|---|---|---|
+| LP64-001 | Not started | |
+| LP64-002 | Not started | |
+| LP64-003 | Not started | |
+| LP64-004 | Not started | |
+| LP64-005 | Not started | |
+| LP64-006 | Not started | |
+| LP64-007 | Not started | |
+
+## Hazard inventory
+
+Known places where 32-bit assumptions live, from a read of the tree on
+2026-11-15. It is a starting checklist, not a complete list; line numbers will
+move. The per-site compiler diagnostics are regenerated by LP64-001's script.
+
+**Addresses carried in 32 bits**
+
+- `osPiStartDma(..., u32 devAddr, ...)` (`port/src/libultra_shim.c`), reached
+  by every `romCopy` (`src/ramrom.c`); `romCopyAligned` does `s32` maths.
+- `osVirtualToPhysical` returns `u32` (133 call sites); the
+  `OS_K0_TO_PHYSICAL` family in `include/PR/os.h` (52 sites).
+- `memp`: `mempCheckMemflagTokens(s32, s32)`, `mempSetBankStarts`
+  (`src/memp.c`). `mema`: `s32 addr` (`src/mema.c`), `memaRealloc(s32 ...)`.
+- Globals: `ptr_bg_data`, `gptr_stan`, `ptr_bgdata_offsets` (`bg.c`);
+  `ptr_texture_alloc_end` and neighbours (`image.c`); `barrelDisplayListPtr`
+  (`title.c`); `globalbank_rdram_offset` (`image_bank.c`);
+  `ptr_text_first_mp_award` (`bondview.h`); `animation_table_ptrs1/2`
+  (`initanitable.c`); `GunfireRecord.BaseAddr`; `ModelAnimation.address`.
+- `StateRegion`/`StateHeader` in `port/src/port_state.c`, and
+  `scripts/port/embed_state_layout.py` (`<II`).
+- Arena hints and `u32` arithmetic in `port/src/pcsched.c`;
+  `PORT_IS_HOST_ADDR` casts to `unsigned int`.
+- The 23 `(u32)(uintptr_t)` sites: `romfile_setup.c`, `romfile_stan.c`,
+  `bg.c`, `port_arm_mesh.c`, `romdata.c`, `propobj.c`, `romfile_model.c`,
+  `port_textures.c`, `port_grip_mesh.c`.
+
+**In-place conversions to replace**
+
+- Text banks: `romdataTextPreprocess` (`romdata.c`), read by `langGet`.
+- Setup files: `romfileSetupConvert`; promotion in `src/game/prop.c`
+  (`SETUP_PROMOTE`); record sizes from `sizepropdef`
+  (`src/game/loadobjectmodel.c`). Structs: `stagesetup`, `PadRecord`,
+  `BoundPadRecord`, `waypoint`, `waygroup`, `PathRecord`, `AIListRecord`,
+  `pname`, `SetupIntroCredits`, and the prop records used in place as runtime
+  objects (`ObjectRecord`, `ChrRecord`, `GuardRecord`).
+- Collision tiles: `romfileStanConvert`, `portStanPack` (`src/game/stan.c`);
+  `StanPrefixRecord` and the room pointer table. `StandTile` has no pointers.
+- Models: `romfileModelConvert`, `load_object_fill_header`
+  (`src/game/objecthandler_2.c`), `modelPromoteNodeOffsetsToPointers`
+  (`src/game/model.c`). Structs: `ModelNode`, the `ModelRoData_*` family,
+  `ModelFileTextures`, `Switches[]`, `Vertex`.
+- Backgrounds: `romfileBgConvert`, `load_bg_file` (`src/game/bg.c`),
+  `BG_SEG_TO_PTR` (`bg.h`); `bg_room_data`, `bg_portal_data_entry`. The
+  background is converted inside the ROM image itself.
+- Animations: `portAnimDataInit` (`port/src/animdata.c`),
+  `expand_ani_table_entries`; `ModelAnimation`'s packed header.
+- Fonts: `portFontBuildSegments` (`port/src/segments.c`), fix-up in
+  `src/game/textrelated.c`; `struct fontchar`.
+- Textures: `texLoad(s32 *updateword)` (`src/game/image.c`) writes a data
+  pointer into model texture IDs, image table entries and display-list words;
+  `struct tex`.
+- Audio: `alBnkfNew` (`port/src/audio_stubs.c`); music sequence table in
+  `src/music.c`.
+
+**Display-list stride and layout**
+
+- `texCopyGdls`, `texLoadFromGdl` (`src/game/tex.c`): `>> 3`.
+- `((u32 *)gdl)[n]` reads in `bg.c` and `propobj.c`; a 32-bit `w0` shift in
+  `bg.c`.
+- `swapDL`, `modelRecordSize` and 24-byte nodes in `romfile_model.c`.
+- The font list copied into `u32 *ptr_font_DL` (`src/game/lv.c`).
+- Port code that writes command words directly: `port_hud.c`,
+  `port_console.c`, `port_arm_mesh.c`.
+
+**Sentinels and unions**
+
+- `TextureID < MAX_TEXTURES` (`image.c`, `front.c`, `objecthandler_2.c`);
+  `< PORTMAX` (`bg.c`); `anim->address & 0x80000000` (`model.c`);
+  `!= (s32 *)1` (`initanitable.c`); `BG_SEG_IS_OFFSET` (`bg.h`); the model
+  promote mask `0x05000000` (`model.c`).
+- Unions: `pname {char *; s32}`, `Vertex`'s link, `Gfx`.
+
+**Hard-coded sizes**
+
+- `Model` allocated as `0x20`; `rwdata` as `numRecords*4` (`model.c`);
+  `sizepropdef` word counts; `PORT_FONT_NATIVE_WORDS`; the permanent bank's
+  fixed size (`memp.c`); the music heap (`music.c`).
+
+**x86-only code**
+
+- Frame-pointer walks in `port/src/main.c` and `port_profile.c`; `cpuid` in
+  `sysstubs.c` (already guarded); the i386 PipeWire workaround in
+  `audio_pc.c`; top-level assembly blocks in `segments.c`, `ramrom_data.c`,
+  `ucode_dl_stubs.c` (including an absolute `.set` that assumes a
+  non-relocated link) and `port_weapon_images.c`.
+
+## Technical references
+
+- [ABI and portability constraints](../../docs/port/abi-and-portability.md):
+  the 32-bit lock as inherited.
+- [Save states](save_states.md), [buffer audit](buffer_audit.md),
+  [hand gallery](hand_gallery.md), [benchmarks](benchmarks.md),
+  [crash reporting](crash_reporting.md), [releases](releases.md).
+- `port/src/romdata.c` and `port/src/romfile_*.c`: today's in-place loaders.
+- `port/src/pcsched.c`: arenas and fixed addresses.
+- `port/src/port_state.c`, `scripts/port/embed_state_layout.py`: suspend
+  points.
+- Perfect Dark port, 64-bit work: fgsfdsfgs/perfect_dark pull request 521,
+  `port/src/preprocess/`, and its issues 317, 529, 541, 542, 545, 553, 567 and
+  652 for the bug classes it met: use-after-free exposed by layout change,
+  pointers passed through `u32` parameters, sentinel constants, alignment of
+  converted data, signedness of widened fields, and `sizeof` of structs ending
+  in a one-element array.
+- Upstream's unmerged 64-bit work: murkantor/Project-Midas pull requests 42
+  and 95, issue 79.

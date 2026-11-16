@@ -190,6 +190,10 @@ pass its isolated executable rather than rebuilding an active player binary.
   [milestone progress](scripts/port/web_target_progress.md). Read both before
   resuming; update only the relevant stable milestone block with changes,
   verification evidence, blockers and the next action before handing off.
+- The native 64-bit port (and the macOS and Apple TV builds that depend on it)
+  follows the accepted [64-bit plan](scripts/port/native_64bit_plan.md). Read it
+  before resuming, keep the 32-bit and web builds working, do not reopen its
+  recorded decisions, and update its milestone status table before handing off.
 - Fonts, sharp text rendering and other original game assets follow the
   accepted [open assets plan](scripts/port/open_assets_plan.md). Read it before
   resuming, keep its provenance rules (drawn from scratch, MIT, no ROM-derived

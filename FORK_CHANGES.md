@@ -30,6 +30,68 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-089 — Native 64-bit port: accepted plan, no code yet
+
+**Status:** Plan accepted by the owner on 2026-11-15. Documentation and
+repository rules only: no source, build or gallery change, and no 64-bit build
+exists. Nothing in the plan has been built or verified; its milestone status
+table says so.
+
+Inherited behaviour: upstream builds only as a 32-bit program (`-m32`, and
+32-bit WebAssembly), by design, and this fork inherited that. FORK-031 recorded
+a native x86_64 port as assessed and deferred. Upstream has open, unmerged
+64-bit macOS pull requests (murkantor/Project-Midas 42 and its rebase 95).
+
+**What was decided** ([plan](scripts/port/native_64bit_plan.md)):
+
+- **Why.** The owner wants the game on their own Apple TV, buildable by other
+  developers for theirs, and native macOS and 64-bit Linux builds. Apple TV and
+  Apple Silicon run only 64-bit ARM code. Three projects follow in order: the
+  64-bit engine port (this plan), a macOS build, an Apple TV build. The last
+  two get their own plans.
+- **Approach.** Widen: 8-byte pointers, 16-byte display-list commands, ROM data
+  converted to the wider layout at load. The fork writes its own
+  implementation, following the Perfect Dark port's mechanisms, and does not
+  adopt upstream's open pull requests. If upstream merges its own 64-bit work,
+  the next upstream merge will conflict widely with this one; the owner
+  accepted that.
+- **Scope.** Linux x86_64 is the first shipped 64-bit build, compared with
+  Linux i686 in one container; a Linux aarch64 build is a development and
+  verification target only. The 32-bit Windows, Linux and web builds keep
+  their current loaders and keep shipping. Windows x64, macOS, Apple TV and
+  64-bit WebAssembly are outside this plan.
+- **Suspend points.** Planned as unavailable on 64-bit builds, because they
+  restore raw memory to fixed addresses. Campaign saves are unaffected.
+- **Where the work runs.** The owner's Apple Silicon Mac, with the US ROM in
+  that checkout's root, ignored by Git.
+- **Review gallery rule, planned, not yet built.** The owner chose to loosen
+  the gallery requirement to two tiers: a strict list (the fork's hand, arm
+  and wardrobe code, the game files the arm contracts name, the renderer, the
+  weapon icons, the capture path and the tool) keeps today's rule; every other
+  rendering input may leave the gallery pending, opt-in per clone, cleared on
+  the development laptop at each milestone's end at the latest. Until
+  milestone LP64-001 builds this, the rule in `AGENTS.md` ("Render review
+  gallery") and [the gallery guide](scripts/port/hand_gallery.md) is unchanged
+  and still applies.
+
+**Measured while planning** (2026-11-15, not a check of any build):
+
+- A syntax-only 64-bit compile of the 161 game and engine C files reported
+  about 1,600 distinct places in 70 files that mix pointers with 32-bit
+  integers, and 40 hard errors. The port layer and renderer were not compiled.
+- On macOS 27.2 on Apple Silicon, a 64-bit program could not map memory below
+  4 GB, and one linked with a smaller zero page was killed at launch.
+- A dry-run merge of upstream pull request 95 into this fork conflicted in 24
+  of its 200 files. It was not merged.
+
+**Sources:** [plan](scripts/port/native_64bit_plan.md),
+[repository rule](AGENTS.md),
+[inherited 32-bit constraints](docs/port/abi-and-portability.md).
+
+**Validation:** None of the plan's milestones has run. The Bright Builds
+checks, the settings placement check and the ROM-free gallery verification
+were run for this documentation change.
+
 ### FORK-088 — Faster frames: GL state answered from memory, arm switches read once
 
 **Status:** Implemented on 2026-11-15 at the owner's request, as the first
