@@ -84,12 +84,13 @@ a native x86_64 port as assessed and deferred. Upstream has open, unmerged
 - A dry-run merge of upstream pull request 95 into this fork conflicted in 24
   of its 200 files. It was not merged.
 
-**Milestone LP64-001 (scaffolding), planned on 2026-11-15, not yet built:**
-[its implementation plan](scripts/port/native_64bit_lp64_001.md) lists seven
+**Milestone LP64-001 (scaffolding), planned on 2026-11-15, in progress:**
+[its implementation plan](scripts/port/native_64bit_lp64_001.md) lists eight
 tasks: the two-tier gallery rule, a container runner for the Mac, a layout
-probe, a 64-bit diagnostics ratchet, a 32-bit executable comparison, a
-`GE_POINTER_BITS` build option, and CI wiring. Each task extends this entry
-with what it built and ran.
+probe, a 64-bit diagnostics ratchet, a 32-bit executable comparison, a repair
+of the headless build (Task 5b), a `GE_POINTER_BITS` build option, and CI
+wiring. Only Task 2, the container runner, has been built and run (below); the
+others have not. Each task extends this entry with what it built and ran.
 
 *LP64-001 task 2, the container runner (built 2026-11-15 on the owner's Apple
 Silicon Mac, Docker 29.9.2):* `scripts/port/lp64_env.py` runs a command in the
@@ -110,9 +111,16 @@ under Docker Desktop here. **Reference run (with two workarounds):** the stock h
 [repository rule](AGENTS.md),
 [inherited 32-bit constraints](docs/port/abi-and-portability.md).
 
-**Validation:** None of the plan's milestones has run. The Bright Builds
+**Validation:** Only LP64-001 Task 2 has run; no milestone is complete. What
+ran: the 11 ROM-free tests in `scripts/port/test_lp64_env.py` (passing); on the
+Mac, `build-images` (3 min 58 s) and three container checks (`gcc -dumpmachine`
+in the aarch64 and x86_64 images, and a `gcc -m32` program in the i686
+container, which printed `i686-runs`); and the i686 headless reference build
+and 20-mission smoke, which worked only with the two workarounds named above
+(the SDL shim include and a scratch `portRenderAsyncActive` stub) and not with
+the stock configuration. Nothing else in the plan has run. The Bright Builds
 checks, the settings placement check and the ROM-free gallery verification
-were run for this documentation change.
+were run for the documentation changes.
 
 ### FORK-088 — Faster frames: GL state answered from memory, arm switches read once
 
