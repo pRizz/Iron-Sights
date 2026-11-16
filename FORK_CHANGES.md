@@ -10656,6 +10656,33 @@ changes left it pending from be840ef until the regeneration at the end of
 LP64-001, the commit "Regenerate the review gallery and close LP64-001" (2026-11-15, the same
 laptop, no image changed; FORK-089).
 
+Branch exception for deferring clones (2026-11-16, owner decision; LP64-002
+Task 2, the commit "Let a deferring clone commit strict-tier work on a branch"). As first built,
+a clone with `midas.galleryDefer` set could not commit any strict-tier change,
+so the Mac doing the 64-bit port had no way to prepare the strict-tier batch
+its plan calls for. Now `pre_commit`, when the staged gallery is stale for
+strict inputs, the setting is on and `current_branch(root)` is neither `None`
+(detached HEAD) nor `main`, verifies the staged gallery with
+`verify(..., allow_stale=True)` (every check but strict freshness: schema,
+determinism flags, coverage, image hashes, HTML) and, if that passes, prints
+`Hand gallery is STALE on branch <name>: strict inputs changed. Regenerate on a machine that can render before this reaches main.` and lets the commit through. Every other case, including a
+failing check there, behaves as before. The `verify` command line has no
+`allow_stale` option, so CI and `main` still fail on a strict mismatch. New in
+`hand_gallery.py`: `current_branch` (`git symbolic-ref --quiet --short HEAD`),
+`verify`'s `allow_stale` parameter and `stale_but_intact`. Six new tests in
+`scripts/port/test_hand_gallery.py` cover a branch (passes and prints the
+branch name), `main` and a detached HEAD (refused as before), a clone without
+the setting on a branch (still tries to generate), a corrupted staged image on
+a branch (refused), and the `verify` command on a branch (exits 1). Before the
+change the branch test failed with the hook refusing the commit. The file's 28
+tests pass. Documented in `scripts/port/hand_gallery.md`, AGENTS.md ("Render
+review gallery") and "Gallery rule: two tiers" in
+`scripts/port/native_64bit_plan.md`. The gallery was regenerated on the
+owner's Windows laptop for this change, since `hand_gallery.py` is a
+strict-tier input; `generate` reported 0 changed image cells, only
+`manifest.json` (both fingerprints) and `index.html` changed, and `verify`
+then reported it fresh.
+
 CI performs ROM-free gallery integrity/freshness and workflow tests. The README
 links to the gallery and setup guide. This supplements the hand/arm contracts
 and geometry/material regressions (FORK-004/FORK-017), not automatic visual approval.

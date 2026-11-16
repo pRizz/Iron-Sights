@@ -127,6 +127,18 @@ and everything under `port/fast3d/`. Every other rendering input is deferred.
   render, such as the Windows laptop) the hook regenerates on any staleness,
   which clears pending. If generation fails there, the error points at this
   setting.
+- A deferring clone may commit a strict-tier change on a branch (owner
+  decision, 2026-11-16). When the staged gallery is stale for strict inputs,
+  `midas.galleryDefer` is set and the checked-out branch is neither `main` nor
+  a detached HEAD, the hook verifies the staged gallery with every check except
+  strict freshness (schema, determinism flags, coverage, image hashes, HTML),
+  then passes and prints
+  `Hand gallery is STALE on branch <name>: strict inputs changed. Regenerate on a machine that can render before this reaches main.`
+  If any of those checks fails, the hook behaves as before. On `main`, on a
+  detached HEAD and in a clone without the setting nothing changed. The
+  `verify` command has no such exception, so CI and `main` still fail on a
+  strict mismatch; the branch lands only after `generate` on a machine that
+  can render.
 - CI runs `verify --allow-pending`: it accepts pending and logs it, and still
   fails on a strict mismatch.
 - Pending is cleared by running `generate` on a machine that can render, at

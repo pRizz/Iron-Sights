@@ -62,6 +62,42 @@ def change_and_stage(root, name, text):
     command(root, 'add', name)
 
 
+def switch_branch(root, name):
+    """Point HEAD at a branch; works before the first commit, as in the fixture."""
+    command(root, 'symbolic-ref', 'HEAD', 'refs/heads/'+name)
+
+
+def detach(root):
+    """Detach HEAD at a commit of the index, without running any commit hook."""
+    tree = command(root, 'write-tree').decode().strip()
+    identity = ('-c', 'user.name=Gallery test', '-c', 'user.email=gallery@example.invalid')
+    commit = command(root, *identity, 'commit-tree', tree, '-m', 'fixture').decode().strip()
+    command(root, 'update-ref', '--no-deref', 'HEAD', commit)
+
+
+def strict_change_with_defer(root):
+    """A deferring clone with a staged strict-tier change over a fresh gallery."""
+    staged_references(root)
+    change_and_stage(root, 'port/fast3d/example.cpp', 'int renderer = 2;\n')
+    command(root, 'config', 'midas.galleryDefer', 'true')
+
+
+STALE_ON_WORK = ('Hand gallery is STALE on branch work: strict inputs changed. '
+                 'Regenerate on a machine that can render before this reaches main.')
+
+
+def run_hook(root):
+    """Run pre_commit with generation failing as on a clone without a ROM; returns (error, stdout)."""
+    output = io.StringIO()
+    error = None
+    with contextlib.redirect_stdout(output), mock.patch.object(gallery, 'generate', side_effect=OSError('no ROM')):
+        try:
+            gallery.pre_commit(root)
+        except (ValueError, OSError) as raised:
+            error = raised
+    return error, output.getvalue()
+
+
 def run_main(root, *args):
     """Run the CLI against a temporary repository; returns (exit code, stdout)."""
     output = io.StringIO()
@@ -360,6 +396,85 @@ class Gallery(unittest.TestCase):
             with mock.patch.object(gallery, 'bmp_pixels', side_effect=[b'a', b'b']+[b'a']*214):
                 with self.assertRaisesRegex(ValueError, 'Non-deterministic'):
                     gallery.capture_pass(log, Path('.'))
+
+    def test_deferring_clone_commits_strict_change_on_a_branch(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)
+            strict_change_with_defer(root)
+            switch_branch(root, 'work')
+            self.assertEqual(gallery.current_branch(root), 'work')
+            # Act
+            error, output = run_hook(root)
+            # Assert
+            self.assertIsNone(error)
+            self.assertIn(STALE_ON_WORK, output)
+
+    def test_deferring_clone_refuses_strict_change_on_main(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)
+            strict_change_with_defer(root)
+            self.assertEqual(gallery.current_branch(root), 'main')
+            # Act
+            error, output = run_hook(root)
+            # Assert
+            self.assertIsInstance(error, OSError)
+            self.assertNotIn('STALE on branch', output)
+
+    def test_deferring_clone_refuses_strict_change_on_detached_head(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)
+            strict_change_with_defer(root)
+            detach(root)
+            self.assertIsNone(gallery.current_branch(root))
+            # Act
+            error, output = run_hook(root)
+            # Assert
+            self.assertIsInstance(error, OSError)
+            self.assertNotIn('STALE on branch', output)
+
+    def test_rendering_clone_on_a_branch_still_tries_to_generate(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)
+            staged_references(root)
+            change_and_stage(root, 'port/fast3d/example.cpp', 'int renderer = 2;\n')
+            switch_branch(root, 'work')
+            self.assertFalse(gallery.defer_enabled(root))
+            with mock.patch.object(gallery, 'generate', side_effect=OSError('no ROM')) as generate:
+                # Act / Assert
+                with self.assertRaisesRegex(ValueError, 'midas.galleryDefer'):
+                    gallery.pre_commit(root)
+                generate.assert_called_once()
+
+    def test_branch_exception_still_rejects_a_corrupted_image(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)
+            strict_change_with_defer(root)
+            switch_branch(root, 'work')
+            path = root/gallery.OUTPUT/gallery.cases()[0]['file']
+            path.write_bytes(path.read_bytes()[:-1])
+            command(root, 'add', 'review/hand-gallery')
+            # Act
+            error, output = run_hook(root)
+            # Assert
+            self.assertIsNotNone(error)
+            self.assertNotIn('STALE on branch', output)
+
+    def test_cli_verify_rejects_strict_stale_on_a_branch(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root = Path(folder)
+            strict_change_with_defer(root)
+            switch_branch(root, 'work')
+            # Act
+            code, output = run_main(root, 'verify', '--allow-pending')
+            # Assert
+            self.assertEqual(code, 1)
+            self.assertNotIn('STALE on branch', output)
 
     def test_installer_keeps_existing_hooks(self):
         with tempfile.TemporaryDirectory() as folder:

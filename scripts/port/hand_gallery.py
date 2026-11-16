@@ -360,7 +360,17 @@ def defer_enabled(root=ROOT):
     return result.returncode == 0 and result.stdout.strip() == 'true'
 
 
-def verify(root=ROOT, staged=False, allow_pending=False):
+def current_branch(root=ROOT):
+    """The checked-out branch's short name, or None on a detached HEAD."""
+    result = subprocess.run(['git', '-C', str(root), 'symbolic-ref', '--quiet', '--short', 'HEAD'],
+                            capture_output=True, text=True)
+    if result.returncode not in (0, 1):
+        raise subprocess.CalledProcessError(result.returncode, result.args, result.stdout, result.stderr)
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def verify(root=ROOT, staged=False, allow_pending=False, allow_stale=False):
+    """Check the gallery; allow_stale accepts a strict mismatch but still runs every other check."""
     indexed = {}
     if staged:
         entries = {}
@@ -383,7 +393,7 @@ def verify(root=ROOT, staged=False, allow_pending=False):
     if manifest.get('schema') != 2 or manifest.get('recipe') != RECIPE:
         raise ValueError('Gallery recipe or manifest schema changed; regenerate references')
     state = freshness(manifest, root, staged)
-    if state == 'stale':
+    if state == 'stale' and not allow_stale:
         raise ValueError('Gallery is stale for strict rendering inputs; regenerate references')
     if state == 'pending' and not allow_pending:
         raise ValueError('Gallery is stale for these rendering inputs; regenerate references')
@@ -539,6 +549,15 @@ def install_hook(root=ROOT, defer=False):
     print('Installed gallery pre-commit hook for this clone.')
 
 
+def stale_but_intact(root):
+    """Whether the staged gallery is stale for strict inputs and passes every other check."""
+    try:
+        manifest = verify(root, True, allow_pending=True, allow_stale=True)
+    except (ValueError, OSError, subprocess.CalledProcessError):
+        return False
+    return freshness(manifest, root, True) == 'stale'
+
+
 def pre_commit(root=ROOT):
     if source_fingerprint(root) != source_fingerprint(root, True):
         raise ValueError('Rendering inputs have unstaged changes. Stage those inputs first; the hook will not capture a different working tree than the commit.')
@@ -552,6 +571,11 @@ def pre_commit(root=ROOT):
         return
     except (ValueError, OSError, subprocess.CalledProcessError) as error:
         print('Gallery check: '+str(error), flush=True)
+    branch = current_branch(root) if defer else None
+    if branch not in (None, 'main') and stale_but_intact(root):
+        print(f'Hand gallery is STALE on branch {branch}: strict inputs changed. '
+              'Regenerate on a machine that can render before this reaches main.')
+        return
     try:
         verify(root, allow_pending=defer)
     except (ValueError, OSError, subprocess.CalledProcessError):

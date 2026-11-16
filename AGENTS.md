@@ -76,6 +76,14 @@ that can render leaves it off, so its hook regenerates on any staleness. CI
 runs `verify --allow-pending`. A new file that draws hands, arms or wardrobe
 must be added to `STRICT_FILES` in the same change.
 
+A clone with `midas.galleryDefer` set may also commit a strict-tier change on a
+branch other than `main` (owner decision, 2026-11-16): its hook still checks
+the staged gallery's images and HTML, then passes and prints that the gallery
+is stale on that branch. On `main`, on a detached HEAD, or without the setting,
+the hook is unchanged, and `verify` and CI still fail on a strict mismatch, so
+such a branch reaches `main` only through a regeneration on a machine that can
+render.
+
 ## Render performance
 
 A change that adds or alters something drawn or computed every frame gets a
