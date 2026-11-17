@@ -118,6 +118,74 @@ _Static_assert(!PORT_IS_HOST_ADDR(0x0E000000u), "a segment-14 word is not a host
 _Static_assert(!PORT_IS_HOST_ADDR(0xFFFFFFFFu), "a 32-bit value is not a host address at 64 bits");
 _Static_assert(PORT_IS_HOST_ADDR(0x100000000ull), "4 GB is a host address at 64 bits");
 #endif
+/* Model storage (LP64-003): model.c hands out slots as Models, gunfire.c
+ * builds the gun's Model in the hand from field_B68 with its read-write data
+ * from modeldatas (32 slots), and bondview2.c the pause watch's in the player
+ * from something_with_watch_object_instance with its data from field_2EC (50
+ * slots). At 32 bits the N64 layout stays; the slot fields alias the Model
+ * members MODEL_SLOT_OBJ and MODEL_SLOT_RWDATA name. */
+#define OFFSET(type, member, at) _Static_assert(offsetof(type, member) == (at), #type "." #member " offset")
+#if IS_64_BIT
+_Static_assert(sizeof(struct ModelSlot) >= sizeof(Model) && sizeof(struct AnimModelSlot) >= sizeof(Model),
+               "model slots hold a Model");
+OFFSET(struct ModelSlot, model, 0);
+OFFSET(struct AnimModelSlot, model, 0);
+OFFSET(struct ModelSlot, unk02, offsetof(Model, rwdatalen));
+OFFSET(struct AnimModelSlot, unk02, offsetof(Model, rwdatalen));
+_Static_assert(offsetof(struct hand, field_B68_model) == offsetof(struct hand, field_B68)
+               && offsetof(struct hand, modeldatas) - offsetof(struct hand, field_B68) >= sizeof(Model),
+               "the hand's gun model run holds a Model");
+_Static_assert(offsetof(struct hand, modeldatas_slots) == offsetof(struct hand, modeldatas)
+               && offsetof(struct hand, volley) - offsetof(struct hand, modeldatas) >= 32 * sizeof(void *),
+               "the hand's read-write run holds 32 slots");
+_Static_assert(offsetof(struct player, watch_model) == offsetof(struct player, something_with_watch_object_instance)
+               && offsetof(struct player, field_2EC) - offsetof(struct player, something_with_watch_object_instance)
+                      >= sizeof(Model),
+               "the player's watch model run holds a Model");
+_Static_assert(offsetof(struct player, watch_rwdata_slots) == offsetof(struct player, field_2EC)
+               && offsetof(struct player, buttons_pressed) - offsetof(struct player, field_2EC) >= 50 * sizeof(void *),
+               "the player's watch read-write run holds 50 slots");
+#else
+_Static_assert(sizeof(Model) == 0xbc, "32-bit Model layout");
+OFFSET(Model, rwdatalen, 0x02);
+OFFSET(Model, obj, 0x08);
+OFFSET(Model, datas, 0x10);
+_Static_assert(sizeof(struct ModelSlot) == 0x20, "32-bit model slot layout");
+OFFSET(struct ModelSlot, unk02, 0x02);
+OFFSET(struct ModelSlot, unk04, 0x04);
+OFFSET(struct ModelSlot, unk08, 0x08);
+OFFSET(struct ModelSlot, unk0c, 0x0c);
+OFFSET(struct ModelSlot, unk10, 0x10);
+OFFSET(struct ModelSlot, unk14, 0x14);
+OFFSET(struct ModelSlot, unk1c, 0x1c);
+/* Every field from unk14 to unkb8 is an s32, so these place all of them. */
+_Static_assert(sizeof(struct AnimModelSlot) == 0xbc, "32-bit animated model slot layout");
+OFFSET(struct AnimModelSlot, unk02, 0x02);
+OFFSET(struct AnimModelSlot, unk04, 0x04);
+OFFSET(struct AnimModelSlot, unk08, 0x08);
+OFFSET(struct AnimModelSlot, unk0c, 0x0c);
+OFFSET(struct AnimModelSlot, unk10, 0x10);
+OFFSET(struct AnimModelSlot, unk14, 0x14);
+OFFSET(struct AnimModelSlot, unkb8, 0xb8);
+/* The hand's fields from field_B68 to volley are s32 apart from mtxlist. */
+_Static_assert(sizeof(struct hand) == 0x3a8, "32-bit hand layout");
+OFFSET(struct hand, field_B68, 0x2f8);
+OFFSET(struct hand, mtxlist, 0x304);
+OFFSET(struct hand, modeldatas, 0x318);
+OFFSET(struct hand, field_C04, 0x394);
+OFFSET(struct hand, volley, 0x398);
+/* bondview2.c's raw offsets 0x220, 0x230 and 0x2ec, and the fields that
+ * alias the watch Model's render_pos, scale and animframe1. */
+_Static_assert(sizeof(struct player) == 0x2a80, "32-bit player layout");
+OFFSET(struct player, step_in_view_watch_animation, 0x220);
+OFFSET(struct player, something_with_watch_object_instance, 0x230);
+OFFSET(struct player, field_23C, 0x230 + 0x0c);
+OFFSET(struct player, watch_scale_destination, 0x230 + 0x14);
+OFFSET(struct player, pause_watch_related_adjust, 0x230 + 0x28);
+OFFSET(struct player, field_2EC, 0x2ec);
+OFFSET(struct player, field_3B0, 0x3b0);
+OFFSET(struct player, buttons_pressed, 0x3b4);
+#endif
 #if !IS_64_BIT
 _Static_assert(sizeof(Gfx) == 8, "32-bit display-list stride");
 _Static_assert(sizeof(fileentry) == 12, "ROM file table layout");
@@ -129,12 +197,6 @@ _Static_assert(sizeof(struct unk_09B7A0_struct_parent) == 0x14, "32-bit vertex s
 
 int main(void)
 {
-#if IS_64_BIT
-    /* Reported, not asserted: model.c views an AnimModelSlot, and the hand its
-     * field_B68, as a Model, which is larger at 64 bits (LP64-003). */
-    printf("ABI probe: sizeof(struct AnimModelSlot) %d, sizeof(Model) %d\n",
-           (int) sizeof(struct AnimModelSlot), (int) sizeof(Model));
-#endif
     printf("ABI probe OK (%d-bit)\n", (int) (sizeof(void *) * 8));
     return 0;
 }

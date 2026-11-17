@@ -215,6 +215,14 @@ struct hand
   Mtxf throw_item_pos_related_prev;
   coord3d field_B58;
   f32 field_B64;
+#if IS_64_BIT
+  /* gunfire.c views field_B68 as the gun's Model and passes &modeldatas as
+   * its read-write data (32 records at most). At 64 bits a Model and each
+   * read-write slot are larger, so both runs share their storage with ones
+   * of the right size (LP64-003); the 32-bit layout is unchanged. */
+  union {
+    struct {
+#endif
   s32 field_B68;
   s32 field_B6C;
   s32 field_B70;
@@ -223,6 +231,13 @@ struct hand
   s32 field_B7C;
   s32 field_B80;
   s32 field_B84;
+#if IS_64_BIT
+    };
+    Model field_B68_model;
+  };
+  union {
+    struct {
+#endif
   s32 modeldatas;
   s32 field_B8C;
   s32 field_B90;
@@ -255,6 +270,11 @@ struct hand
   s32 field_BFC;
   s32 field_C00;
   s32 field_C04;
+#if IS_64_BIT
+    };
+    union ModelRwData *modeldatas_slots[32];
+  };
+#endif
   s32 volley;  // Number of bullets discharged in a row. For pistols, it's always 1 even if the fire button is held.
   coord3d item_related;
 };
@@ -693,6 +713,17 @@ struct player
    */
   f32 pause_watch_related_scaled;
 
+#if IS_64_BIT
+  /* bondview2.c builds the pause watch's Model here (offset 0x230 at 32
+   * bits) with its read-write data from field_2EC (50 slots). At 64 bits a
+   * Model and each read-write slot are larger, so both runs share their
+   * storage with ones of the right size (LP64-003); the 32-bit layout is
+   * unchanged. The named fields inside the Model run are not its members
+   * there: field_23C, watch_scale_destination and pause_watch_related_adjust
+   * alias render_pos, scale and animframe1 only at 32 bits. */
+  union {
+    struct {
+#endif
   s32 something_with_watch_object_instance;
 
   s32 field_234;
@@ -746,6 +777,13 @@ struct player
   s32 field_2E0;
   s32 field_2E4;
   s32 field_2E8;
+#if IS_64_BIT
+    };
+    Model watch_model;
+  };
+  union {
+    struct {
+#endif
   s32 field_2EC;
   s32 field_2F0;
   s32 field_2F4;
@@ -796,6 +834,11 @@ struct player
   s32 field_3A8;
   s32 field_3AC;
   s32 field_3B0;
+#if IS_64_BIT
+    };
+    union ModelRwData *watch_rwdata_slots[50];
+  };
+#endif
 
   /**
    * Copy of buttons pressed.
@@ -2860,6 +2903,10 @@ void sub_GAME_7F08976C(f32 param_1);
 coord3d *bondviewGetCurrentPlayersPosition3(void);
 Mtx *currentPlayerGetMatrix10C8(void);
 void *currentPlayerSetMatrix10CC(Mtxf *matrix);
+void currentPlayerSetMatrix10C4(Mtx *matrix); /* bondview2.c */
+void currentPlayerSetMatrix10C8(Mtx *matrix); /* bondview2.c */
+void currentPlayerSetViewToWorldMtxf(Mtxf *matrix); /* bondview2.c */
+void bondviewSetCurrentPlayerPosition(coord3d *pos, coord3d *pos2, coord3d *offset, StandTile *tile, coord3d *stan_walk_start); /* bondview2.c */
 
 void transform3Dto2DWithZScaling(coord3d *in, coord3d *out);
 void currentPlayerSetProjectionMatrix(Mtx *matrix);

@@ -37,6 +37,7 @@
 #include "mp_music.h"
 #include "mpmenu.h"
 #include "objecthandler.h"
+#include "ob.h"
 #include "objective_status.h"
 #include "os_extension.h"
 #include "player.h"
@@ -4160,10 +4161,20 @@ void sub_GAME_7F07E7CC(void) {
         return_null();
     }
 #endif
+#if IS_64_BIT
+    /* The 32-bit offsets 0x230, 0x2ec and 0x220 are these members; at 64 bits
+     * the player's layout differs, and the watch's Model and read-write data
+     * have storage of their own size (bondview.h, LP64-003). */
+    animInit(&g_CurrentPlayer->watch_model, itemheader, (u32 *)g_CurrentPlayer->watch_rwdata_slots);
+    modelSetScale(&g_CurrentPlayer->watch_model, c_item_entries[41].scale * 0.10000001f);
+    modelSetAnimation(&g_CurrentPlayer->watch_model, (ModelAnimation *)&ptr_animation_table->data[PTR_ANIM_bond_watch], 0, 0.0f, 0.5f * bondviewWatchRate(), 0.0f);
+    g_CurrentPlayer->step_in_view_watch_animation = 0;
+#else
     animInit((Model *)((u8 *)g_CurrentPlayer + 0x230), itemheader, (u32 *)((u8 *)g_CurrentPlayer + 0x2ec));
     modelSetScale((Model *)((u8 *)g_CurrentPlayer + 0x230), c_item_entries[41].scale * 0.10000001f);
     modelSetAnimation((Model *)((u8 *)g_CurrentPlayer + 0x230), (ModelAnimation *)&ptr_animation_table->data[PTR_ANIM_bond_watch], 0, 0.0f, 0.5f * bondviewWatchRate(), 0.0f);
     *(s32 *)((u8 *)g_CurrentPlayer + 0x220) = 0;
+#endif
 }
 
 

@@ -16,7 +16,24 @@ struct bondstruct_unk_op07_related {
     s32 unk0C;
 };
 
+/*
+ * model.c hands out a slot as a Model (modelmgrInstantiateModel*): unk02 is
+ * its rwdatalen, unk08 its obj (0 while the slot is free) and unk10 its
+ * datas. At 64 bits a Model's pointers double, so the slot is a union with a
+ * whole Model, and obj and datas are read through MODEL_SLOT_OBJ and
+ * MODEL_SLOT_RWDATA, which name the 32-bit fields at 32 bits (LP64-003). The
+ * 32-bit layouts are unchanged; scripts/port/abi_probe/probe.c asserts them.
+ */
 struct AnimModelSlot {
+#if IS_64_BIT
+  union {
+    struct {
+      s16 unk00;
+      s16 unk02;
+    };
+    Model model;
+  };
+#else
     s16 unk00;
     s16 unk02;
     s32 unk04;
@@ -68,9 +85,19 @@ struct AnimModelSlot {
 
     // is this struct size 0xbc or 0xc0 ?
     //s32 unkbc;
+#endif
 };
 
 struct ModelSlot {
+#if IS_64_BIT
+  union {
+    struct {
+      s16 unk00;
+      s16 unk02;
+    };
+    Model model;
+  };
+#else
     s16 unk00;
     s16 unk02;
     s32 unk04;
@@ -80,7 +107,18 @@ struct ModelSlot {
     s32 unk14;
     s32 unk18;
     s32 unk1c;
+#endif
 };
+
+/* A slot's Model obj (0 while the slot is free) and its read-write data, as
+ * the void * that unk10 is at 32 bits. Both are lvalues. */
+#if IS_64_BIT
+#define MODEL_SLOT_OBJ(slot) ((slot).model.obj)
+#define MODEL_SLOT_RWDATA(slot) (*(void **) &(slot).model.datas)
+#else
+#define MODEL_SLOT_OBJ(slot) ((slot).unk08)
+#define MODEL_SLOT_RWDATA(slot) ((slot).unk10)
+#endif
 
 extern struct AnimModelSlot *g_AnimModelSlots;
 extern struct ModelSlot *g_ModelSlots;

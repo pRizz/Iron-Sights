@@ -47,15 +47,15 @@ void modelmgrAllocateModelSlots(s32 numobjs)
 
     for (i = 0; i < g_MaxModelSlots; i++)
     {
-        g_ModelSlots[i].unk08 = 0;
+        MODEL_SLOT_OBJ(g_ModelSlots[i]) = 0;
 
         if (i < numobjs)
         {
-            g_ModelSlots[i].unk10 = NULL;
+            MODEL_SLOT_RWDATA(g_ModelSlots[i]) = NULL;
         }
         else
         {
-            g_ModelSlots[i].unk10 = mempAllocBytesInBank(MODEL_SPARE_RWDATALEN * sizeof(u32), MEMPOOL_STAGE);
+            MODEL_SLOT_RWDATA(g_ModelSlots[i]) = mempAllocBytesInBank(MODEL_SPARE_RWDATALEN * sizeof(union ModelRwData *), MEMPOOL_STAGE);
             g_ModelSlots[i].unk02 = MODEL_SPARE_RWDATALEN;
         }
     }
@@ -78,15 +78,15 @@ void modelmgrAllocateAnimModelSlots(s32 numanimated)
 
     for (i = 0; i < g_MaxAnimModelSlots; i++)
     {
-        g_AnimModelSlots[i].unk08 = 0;
+        MODEL_SLOT_OBJ(g_AnimModelSlots[i]) = 0;
 
         if (i < numanimated)
         {
-            g_AnimModelSlots[i].unk10 = NULL;
+            MODEL_SLOT_RWDATA(g_AnimModelSlots[i]) = NULL;
         }
         else
         {
-            g_AnimModelSlots[i].unk10 = mempAllocBytesInBank(ANIM_MODEL_SPARE_RWDATALEN * sizeof(u32), MEMPOOL_STAGE);
+            MODEL_SLOT_RWDATA(g_AnimModelSlots[i]) = mempAllocBytesInBank(ANIM_MODEL_SPARE_RWDATALEN * sizeof(union ModelRwData *), MEMPOOL_STAGE);
             g_AnimModelSlots[i].unk02 = ANIM_MODEL_SPARE_RWDATALEN;
         }
     }

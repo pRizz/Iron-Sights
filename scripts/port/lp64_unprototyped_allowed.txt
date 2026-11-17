@@ -6,6 +6,5 @@ port/src/joy_port.c	2	strict tier, left for Task 11
 port/src/port_build_time.c	1	blocked in Task 9: strcmp; <str.h> includes <ultra64.h>, and test_build_time.sh (-Wall -Wextra -Werror, port/include only) fails with src/ and include/ added
 port/src/port_graphics.c	1	strict tier, left for Task 11
 port/src/port_knife_ads.c	1	strict tier, left for Task 11
-src/game/bondview2.c	7	strict tier, left for Task 11
 src/game/gunfire.c	2	strict tier, left for Task 11
-src/game/model.c	4	strict tier, left for Task 11
+src/game/model.c	1	left out in Task 11: texSelect; its prototype changes the 32-bit register use of dogfnegx, which draws the muzzle flash (a float add's operands swap), and the call passes only pointers and 32-bit integers

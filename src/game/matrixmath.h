@@ -52,6 +52,7 @@ void matrix_row_3_scalar_multiply(f32 scalar, f32 *matrix);
 
 // tenative guess
 void sub_GAME_7F058E78(Mtxf *arg0, Mtxf *arg1);
+void sub_GAME_7F059334(Mtx *src, Mtx *dst); /* bondview2.c */
 void matrix_7f05842c_eu(f32 src[][4], f32 dst[3][3]);
 void matrix_4x4_multiply_homogeneous_in_place_eu(f32 src[3][3], f32 dst[3][3]);
 void matrix_4x4_multiply_homogeneous_eu(f32 lhs[3][3], f32 rhs[3][3], f32 result[3][3]);

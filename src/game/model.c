@@ -21,11 +21,14 @@
 #include "math_floor.h"
 #include "math_ceil.h"
 #include "math_unk_05A9E0.h"
+#include <ramrom.h>
 #include "objecthandler.h"
 #include "quaternion.h"
 #include "random.h"
 #ifndef TARGET_N64
 #include <inttypes.h> /* subdraw's LEFTOVERDEBUG message prints a whole address */
+#include "port_hostptr.h" /* PORT_WORD_HAS_SEGMENT, PORT_IS_HOST_ADDR (LP64-003) */
+#include <stdio.h> /* printf - port diagnostics */
 #include "port_wardrobe.h"
 #include "port_shiny.h"
 #endif
@@ -73,7 +76,7 @@ Model *modelmgrInstantiateModel(ModelFileHeader *header)
 
         for (i = 0; i < (g_MaxModelSlots - MODEL_RESET_SPARE); i++)
         {
-            if (g_ModelSlots[i].unk08 == 0)
+            if (MODEL_SLOT_OBJ(g_ModelSlots[i]) == 0)
             {
                 model = (Model *)&g_ModelSlots[i];
                 break;
@@ -82,12 +85,12 @@ Model *modelmgrInstantiateModel(ModelFileHeader *header)
 
         if (model == NULL)
         {
-            model = mempAllocBytesInBank(0x20, MEMPOOL_STAGE);
+            model = mempAllocBytesInBank(sizeof(struct ModelSlot), MEMPOOL_STAGE);
         }
 
         if (header->numRecords > 0)
         {
-            rwdata = mempAllocBytesInBank((((header->numRecords * 4) + 0xf) | 0xf) ^ 0xf, MEMPOOL_STAGE);
+            rwdata = mempAllocBytesInBank((((header->numRecords * sizeof(*model->datas)) + 0xf) | 0xf) ^ 0xf, MEMPOOL_STAGE);
             rwdatalen = header->numRecords;
         }
     }
@@ -97,9 +100,9 @@ Model *modelmgrInstantiateModel(ModelFileHeader *header)
 
         for (i = 0; i < g_MaxModelSlots; i++)
         {
-            if (g_ModelSlots[i].unk08 == 0 && modelmgrCanSlotFitRwdata((Model *)&g_ModelSlots[i], header))
+            if (MODEL_SLOT_OBJ(g_ModelSlots[i]) == 0 && modelmgrCanSlotFitRwdata((Model *)&g_ModelSlots[i], header))
             {
-                rwdata = g_ModelSlots[i].unk10;
+                rwdata = MODEL_SLOT_RWDATA(g_ModelSlots[i]);
                 rwdatalen = g_ModelSlots[i].unk02;
                 model = (Model *)&g_ModelSlots[i];
                 break;
@@ -143,7 +146,7 @@ Model *modelmgrInstantiateModelWithAnim(ModelFileHeader *modelFileHeader)
     {
         for (i = 0; i < (g_MaxAnimModelSlots - ANIM_MODEL_RESET_SPARE); i++)
         {
-            if (g_AnimModelSlots[i].unk08 == 0)
+            if (MODEL_SLOT_OBJ(g_AnimModelSlots[i]) == 0)
             {
                 newModel = (Model *)&g_AnimModelSlots[i];
                 break;
@@ -152,7 +155,7 @@ Model *modelmgrInstantiateModelWithAnim(ModelFileHeader *modelFileHeader)
 
         if (newModel == NULL)
         {
-            newModel = mempAllocBytesInBank(0xc0, MEMPOOL_STAGE);
+            newModel = mempAllocBytesInBank(4 + sizeof(struct AnimModelSlot), MEMPOOL_STAGE);
         }
 
         requiredRwdatalen = modelFileHeader->numRecords;
@@ -164,7 +167,7 @@ Model *modelmgrInstantiateModelWithAnim(ModelFileHeader *modelFileHeader)
         if (requiredRwdatalen > 0)
         {
             i = requiredRwdatalen;
-            rwdatas = mempAllocBytesInBank((((i * 4) + 0xf) | 0xf) ^ 0xf, MEMPOOL_STAGE);
+            rwdatas = mempAllocBytesInBank((((i * sizeof(*newModel->datas)) + 0xf) | 0xf) ^ 0xf, MEMPOOL_STAGE);
             rwdatalen = modelFileHeader->numRecords;
         }
     }
@@ -174,10 +177,10 @@ Model *modelmgrInstantiateModelWithAnim(ModelFileHeader *modelFileHeader)
 
         for (i2 = 0; i2 < g_MaxAnimModelSlots; i2++)
         {
-            if ((g_AnimModelSlots[i2].unk08 == 0) && ((requiredRwdatalen <= 0) || ((g_AnimModelSlots[i2].unk10 != NULL) &&(g_AnimModelSlots[i2].unk02 >= requiredRwdatalen))))
+            if ((MODEL_SLOT_OBJ(g_AnimModelSlots[i2]) == 0) && ((requiredRwdatalen <= 0) || ((MODEL_SLOT_RWDATA(g_AnimModelSlots[i2]) != NULL) &&(g_AnimModelSlots[i2].unk02 >= requiredRwdatalen))))
             {
                 newModel = (Model *)&g_AnimModelSlots[i2];
-                rwdatas = g_AnimModelSlots[i2].unk10;
+                rwdatas = MODEL_SLOT_RWDATA(g_AnimModelSlots[i2]);
                 rwdatalen = g_AnimModelSlots[i2].unk02;
                 break;
             }
@@ -5913,7 +5916,19 @@ u8 *loadAnimationFrame(ModelAnimation* anim, s32 frame, ModelSkeleton* unused)
     ret = 0;
     frameSize = anim->unk0E >> 3; // divide by 8
 
+#if IS_64_BIT
+    /* PORT (LP64-003): on the N64 bit 31 marks an address in RDRAM, and a
+     * clear bit a ROM offset to copy from. On PC the field holds a host
+     * address of the animation data, which romCopy reads in place; measured
+     * on the i686 headless build over the 20-mission smoke (2026-11-16), the
+     * RAM branch never ran (every address lay in 0x08e96260..0x08fffe30).
+     * Bit 31 of a 64-bit host address is arbitrary, so a host address takes
+     * the copy branch, as every one measured does at 32 bits, and only a
+     * 32-bit word with bit 31 set is taken for RDRAM. */
+    if (!PORT_IS_HOST_ADDR(anim->address) && (anim->address & 0x80000000))
+#else
     if (anim->address & 0x80000000) // If animation's address is in RAM
+#endif
     {
         // Load that frame from RAM
         ret = anim->address + (frame * frameSize);
@@ -5973,7 +5988,7 @@ void modelResetAnimationsScratchBuffer(void)
  * segment-5 words the asset generator left behind, so only 0x05-tagged values
  * are rebased onto the file base (real pointers and NULL never look like that). */
 #define PROMOTE(var) \
-    if (((uintptr_t)(var) & 0xFF000000) == 0x05000000) \
+    if (PORT_WORD_HAS_SEGMENT(var, 0x05)) \
         var = (__typeof__(var))((uintptr_t)(var) - 0x05000000 + (uintptr_t)vma + (uintptr_t)diff)
 #endif
 
@@ -6260,6 +6275,7 @@ void sub_GAME_7F075A90(ModelFileHeader *header, uintptr_t vma, uintptr_t addr) {
  */
 void portModelCollisionAudit(ModelNode *node, const char *name)
 {
+    extern int portPtrLooksBad(const void *p); /* port/src/model_audit.c */
     static s32 armed = -1;
     s32 links = 0;
     s32 bad = 0;
