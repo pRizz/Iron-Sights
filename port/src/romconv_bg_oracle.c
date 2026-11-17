@@ -55,6 +55,7 @@ struct OracleBgFile
 };
 
 static struct OracleBgFile s_Files[ORACLE_BG_FILES];
+static const bg_room_data kZeroRoom;
 static u32 s_FileCount;
 static int s_Sweeping;
 
@@ -118,7 +119,7 @@ void portBgTablesOracle(const u8 *data, u32 size, const char *name)
     u32 nrooms, nportals, at;
     u8 *out = oracleConvert(data, size, name, &rooms, &portals, &nrooms, &nportals);
     const u8 *inrooms, *inportals;
-    char detail[128];
+    char detail[224];
 
     oracleKeepPristine(data, size);
     if (out == NULL)
@@ -143,8 +144,17 @@ void portBgTablesOracle(const u8 *data, u32 size, const char *name)
     }
     else
     {
-        snprintf(detail, sizeof(detail), "%u room records and %u portal entries, %u and %u bytes at 64 bits", nrooms,
-                nportals, nrooms * 40u, nportals * 16u);
+        /* The game ends the room table at its first record after record 0
+         * whose primary offset is 0 and reads nothing else of it; say what
+         * the rest of that closing record holds. */
+        const bg_room_data *closing = &rooms[nrooms - 1];
+        u32 rest = oracleFirstDifference(closing, &kZeroRoom, sizeof(bg_room_data));
+
+        snprintf(detail, sizeof(detail),
+                "%u room records and %u portal entries, %u and %u bytes at 64 bits; closing record %s (point 0x%X, "
+                "secondary 0x%X)", nrooms, nportals, nrooms * 40u, nportals * 16u,
+                rest == sizeof(bg_room_data) ? "all zeros" : "not all zeros",
+                (u32) (uintptr_t) closing->pPointTableBin, (u32) (uintptr_t) closing->pSecMappingBin);
         portLp64OracleResult(PORT_LP64_BACKGROUNDS, name, 1, detail);
         free(out);
         return;
@@ -293,35 +303,74 @@ void portBgTablesReloadOracle(const u8 *data, const char *name)
     free(out);
 }
 
+/* What the sweep does with bg file NAME, which levelinfotable names: 0 when
+ * the ROM's directory lacks it or lists it with no bytes (a cut stage, which
+ * romdata does not serve and a 64-bit game stops on by name in
+ * portBgTablesLoad), else 1, with *DATA and *SIZE the served file, or -1,
+ * counted as a difference, when the ROM holds bytes for it that the game
+ * does not serve. */
+static int oracleSweepFile(const char *name, const u8 **data, u32 *size)
+{
+    s32 r = romdataFileIndex(name);
+    s32 index = fileGetIndex((u8 *) name);
+
+    if (r < 0 || romdataFile(r)->size == 0)
+    {
+        return 0;
+    }
+    *size = (index > 0 && romdataFileServed(index)) ? obGetFileRomSize(index) : 0;
+    *data = *size != 0 ? obGetBGFileData((u8 *) name) : NULL;
+    if (*data == NULL)
+    {
+        portLp64OracleResult(PORT_LP64_BACKGROUNDS, name, 0, "the ROM holds it, but it is not served");
+        return -1;
+    }
+    return 1;
+}
+
+/* The game's string.h has no strcmp. */
+static int oracleSameName(const char *a, const char *b)
+{
+    while (*a != '\0' && *a == *b)
+    {
+        a++;
+        b++;
+    }
+    return *a == *b;
+}
+
 void portBgOracleSweep(void)
 {
-    s32 seen[ORACLE_BG_FILES];
+    const char *seen[ORACLE_BG_FILES];
     u8 *copies[ORACLE_BG_FILES];
-    u32 nseen = 0, ncopies = 0, named = 0, empty = 0, i;
+    u32 nseen = 0, ncopies = 0, absent = 0, i;
     struct levelentry *e;
 
     s_Sweeping = 1;
     for (e = levelinfotable; e->levelID != LEVELID_MAX; e++)
     {
-        s32 index = fileGetIndex((u8 *) e->bg_seg_filename);
+        const char *name = (const char *) e->bg_seg_filename;
+        const u8 *data;
         u32 size;
+        int found;
 
-        for (i = 0; i < nseen && seen[i] != index; i++)
+        for (i = 0; i < nseen && !oracleSameName(seen[i], name); i++)
         {
         }
-        if (i < nseen || nseen >= ORACLE_BG_FILES)
+        if (i < nseen)
         {
             continue;
         }
-        seen[nseen++] = index;
-        named++;
-        /* romdata serves no file the ROM's directory lacks or lists with no
-         * bytes (cut stages); a 64-bit game stops by name on one
-         * (portBgTablesLoad), so there is nothing to compare. */
-        size = (index > 0 && romdataFileServed(index)) ? obGetFileRomSize(index) : 0;
-        if (size == 0)
+        if (nseen >= ORACLE_BG_FILES)
         {
-            empty++;
+            portLp64OracleResult(PORT_LP64_BACKGROUNDS, name, 0, "the sweep holds no more files");
+            continue;
+        }
+        seen[nseen++] = name;
+        found = oracleSweepFile(name, &data, &size);
+        if (found <= 0)
+        {
+            absent += found == 0;
             continue;
         }
         /* Each copy lives to the sweep's end: romfileBgConvert keys its
@@ -329,11 +378,11 @@ void portBgOracleSweep(void)
         copies[ncopies] = (u8 *) malloc(size);
         if (copies[ncopies] == NULL)
         {
-            portLp64OracleResult(PORT_LP64_BACKGROUNDS, (const char *) e->bg_seg_filename, 0, "no memory for a copy");
+            portLp64OracleResult(PORT_LP64_BACKGROUNDS, name, 0, "no memory for a copy");
             continue;
         }
-        memcpy(copies[ncopies], obGetBGFileData((u8 *) e->bg_seg_filename), size);
-        romfileBgConvert(copies[ncopies], size, (const char *) e->bg_seg_filename);
+        memcpy(copies[ncopies], data, size);
+        romfileBgConvert(copies[ncopies], size, name);
         ncopies++;
     }
     for (i = 0; i < ncopies; i++)
@@ -342,7 +391,7 @@ void portBgOracleSweep(void)
     }
     s_Sweeping = 0;
     portConLogf("ge: lp64: oracle: backgrounds sweep: levelinfotable names %u files, %u not in the ROM or empty, "
-            "%u swept\n", named, empty, ncopies);
+            "%u swept\n", nseen, absent, ncopies);
 }
 
 #endif

@@ -21,13 +21,37 @@
 static int testRefusesARoomTableWithoutItsZeroRecord(void)
 {
     // Arrange: the closing record gets a primary offset, so the table runs
-    // into the visibility commands.
+    // into the visibility commands with no record whose primary offset is 0.
     buildFrontMatter();
     put32(FM_ROOMS + 4 * 24 + 4, 0x0F000A00u);
 
     // Act, Assert
-    return expectRefused(FM_SIZE, TABLES, "the room table at 0x14 reaches 0x8C with no record of zeros",
+    return expectRefused(FM_SIZE, TABLES,
+            "the room table at 0x14 reaches 0x8C with no record whose primary offset is 0",
             "a room table that runs into the visibility commands is refused, nothing written");
+}
+
+static int testAcceptsAClosingRecordWithItsOtherWordsSet(void)
+{
+    // Arrange: as in the game, only the closing record's primary offset ends
+    // the table; its point and secondary words are not read.
+    u32 size;
+    int result;
+
+    buildFrontMatter();
+    put32(FM_ROOMS + 4 * 24 + 0, 0x0F000A00u);
+    put32(FM_ROOMS + 4 * 24 + 8, 0x0F000B00u);
+    freshOut();
+
+    // Act
+    size = portBgTablesSize(s_Fm, FM_SIZE, "test");
+    result = portBgTablesConvert(s_Fm, FM_SIZE, s_Out.bytes, TABLES, &s_Rooms, &s_Portals);
+
+    // Assert
+    return expect(size == TABLES && result == 1 && (u8 *) s_Portals - (u8 *) s_Rooms == 5 * sizeof(bg_room_data)
+            && s_Rooms[4].pPriMappingBin == NULL && (uintptr_t) s_Rooms[4].pPointTableBin == 0x0F000A00u
+            && (uintptr_t) s_Rooms[4].pSecMappingBin == 0x0F000B00u,
+            "a closing record with only its primary offset 0 ends the table and is copied");
 }
 
 static int testRefusesARoomEightBytesShort(void)
@@ -129,7 +153,8 @@ static int testRefusesAPortalTableWithoutItsZeroEntry(void)
     }
 
     // Act, Assert
-    return expectRefused(FM_SIZE, TABLES, "the portal table at 0x9C reaches the file's end with no entry of zeros",
+    return expectRefused(FM_SIZE, TABLES,
+            "the portal table at 0x9C reaches the file's end with no entry whose offset is 0",
             "a portal table that runs to the file's end is refused, nothing written");
 }
 
@@ -311,9 +336,24 @@ static int expectListRefused(s32 listsize, const char *why, const char *what)
             && startsWith(s_Log, REFUSAL) && startsWith(s_Log + sizeof(REFUSAL) - 1, why), what);
 }
 
-static int testRefusesAnEmptyList(void)
+static int testAcceptsAnEmptyList(void)
 {
-    return expectListRefused(0, "room 7's list is 0 bytes", "a list of 0 bytes is refused, nothing written");
+    // Arrange: a 0-byte list loads at 32 bits (texCopyGdls copies nothing).
+    Gfx *list = NULL;
+    u8 before[sizeof(s_Block.bytes)];
+    s32 bytes;
+
+    buildBlock();
+    memcpy(before, s_Block.bytes, sizeof(before));
+    s_Log[0] = '\0';
+
+    // Act
+    bytes = portBgRoomListExpand(s_Block.bytes, (s32) (HOST_BYTES + 32), 0, "test", 7, &list);
+
+    // Assert
+    return expect(bytes == 0 && (u8 *) list == s_Block.bytes + HOST_BYTES + 32
+            && sameBytes(before, s_Block.bytes, sizeof(before)) && s_Log[0] == '\0',
+            "a list of 0 bytes is empty at the block's end, nothing written or refused");
 }
 
 static int testRefusesANegativeList(void)
@@ -332,6 +372,7 @@ int main(void)
     int failures = 0;
 
     failures += testRefusesARoomTableWithoutItsZeroRecord();
+    failures += testAcceptsAClosingRecordWithItsOtherWordsSet();
     failures += testRefusesARoomEightBytesShort();
     failures += testRefusesAMisalignedRoom();
     failures += testRefusesAFileShorterThanItsHeader();
@@ -348,7 +389,7 @@ int main(void)
     failures += testExpandsEachCommand();
     failures += testExpandsIntoABlockOfExactlyTheListsSize();
     failures += testRefusesABlockEightBytesShort();
-    failures += testRefusesAnEmptyList();
+    failures += testAcceptsAnEmptyList();
     failures += testRefusesANegativeList();
     failures += testRefusesAListOfPartCommands();
     if (failures != 0)

@@ -48,8 +48,9 @@ static int bgIsOffsetWord(u32 word)
     return word == 0 || (word >> 24) == BG_SEGMENT;
 }
 
-/* What a valid front matter measures to: the record counts, each with its
- * closing record of zeros, and where the two tables start in the file. */
+/* What a valid front matter measures to: the record counts, each including
+ * its closing record (a room record whose primary offset is 0, a portal entry
+ * whose offset is 0), and where the two tables start in the file. */
 struct BgShape
 {
     u32 roomsAt;
@@ -101,8 +102,10 @@ static u32 bgRoomLimit(const u8 *file, u32 size, u32 roomsAt)
 }
 
 /* Counts the room records up to and including the first, after record 0,
- * whose primary offset is 0, and checks every offset word and the end
- * marker; refuses otherwise. */
+ * whose primary offset is 0: the game's own end test (load_bg_file's room
+ * count reads pPriMappingBin and nothing else of that closing record).
+ * Checks every offset word up to it and the end marker before it; refuses
+ * otherwise. */
 static int bgMeasureRooms(const u8 *file, u32 size, const char *name, struct BgShape *shape)
 {
     u32 limit = bgRoomLimit(file, size, shape->roomsAt);
@@ -115,8 +118,9 @@ static int bgMeasureRooms(const u8 *file, u32 size, const char *name, struct BgS
 
         if (at + sizeof(RomBgRoom) > limit)
         {
-            portConvRefuse(PORT_LP64_BACKGROUNDS, name, "the room table at 0x%X reaches 0x%X with no record of zeros",
-                    shape->roomsAt, limit);
+            portConvRefuse(PORT_LP64_BACKGROUNDS, name,
+                    "the room table at 0x%X reaches 0x%X with no record whose primary offset is 0", shape->roomsAt,
+                    limit);
             return 0;
         }
         for (k = 0; k < 3; k++)
@@ -167,7 +171,8 @@ static int bgMeasurePortals(const u8 *file, u32 size, const char *name, struct B
         if (at + sizeof(RomBgPortal) > size)
         {
             portConvRefuse(PORT_LP64_BACKGROUNDS, name,
-                    "the portal table at 0x%X reaches the file's end with no entry of zeros", shape->portalsAt);
+                    "the portal table at 0x%X reaches the file's end with no entry whose offset is 0",
+                    shape->portalsAt);
             return 0;
         }
         if (bgWord(file + at + offsetof(RomBgPortal, offset)) == 0)
@@ -306,11 +311,18 @@ s32 portBgRoomListExpand(u8 *block, s32 allocsize, s32 listsize, const char *nam
     u32 commands;
     s64 bytes;
 
-    if (listsize <= 0 || listsize % 8 != 0)
+    if (listsize < 0 || listsize % 8 != 0)
     {
-        portConvRefuse(PORT_LP64_BACKGROUNDS, name, "room %d's list is %d bytes, not a positive multiple of 8",
+        portConvRefuse(PORT_LP64_BACKGROUNDS, name, "room %d's list is %d bytes, not a multiple of 8 of 0 or more",
                 roomnum, listsize);
         return -1;
+    }
+    if (listsize == 0)
+    {
+        /* As at 32 bits, where texCopyGdls copies nothing to the block's
+         * end and the loaders treat a 0-byte list as loaded. */
+        *list = (Gfx *) (block + allocsize);
+        return 0;
     }
     commands = (u32) listsize / 8u;
     bytes = (s64) commands * (s64) sizeof(Gfx);

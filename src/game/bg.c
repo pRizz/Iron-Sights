@@ -3171,9 +3171,10 @@ s32 bgLoadRoomPrimaryGdl(s32 roomnum, u8 *dst, s32 allocsize)
      * block's start become 2E bytes of 16-byte Gfx at the block's end, so the
      * destination ends at the block's end and starts at or after the source
      * when allocsize >= 2E, as portGfxFromRomBackward needs; when the block
-     * is smaller, or E is not a positive multiple of 8, nothing is written
-     * and -1 sends bgLoadRoomModelData to its "room memory" line. Sizes from
-     * here on are host bytes, which texLoadFromGdl counts in Gfx. */
+     * is smaller, or E is negative or not a multiple of 8, nothing is
+     * written and -1 sends bgLoadRoomModelData to its "room memory" line; an
+     * E of 0 is an empty list, as at 32 bits. Sizes from here on are host
+     * bytes, which texLoadFromGdl counts in Gfx. */
     {
         Gfx *list;
 

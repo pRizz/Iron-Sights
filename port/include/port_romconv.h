@@ -529,21 +529,23 @@ struct bg_portal_data_entry; /* bg.h */
  * file FILE (SIZE bytes, its front matter already in native byte order by
  * romfileBgConvert; port_romlayout.h's RomBg* layouts): one bg_room_data for
  * each room record from the header's room offset up to and including the
- * first record after the first whose primary offset is 0 (the record of
- * zeros after the end marker; the game counts its rooms the same way), then
- * one bg_portal_data_entry for each portal entry up to and including the
- * first whose offset is 0. A multiple of 8. Reads only FILE.
+ * first record after the first whose primary offset is 0 (the closing
+ * record after the end marker; load_bg_file counts its rooms by that field
+ * alone, and the closing record's other words are copied, not checked
+ * beyond being offset words), then one bg_portal_data_entry for each portal
+ * entry up to and including the first whose offset is 0 (the game's portal
+ * walks test that field alone). A multiple of 8. Reads only FILE.
  *
  * Returns 0 after portConvRefuse, naming NAME, when: SIZE is less than the
  * header; the header's room or portal offset, a room's three offsets or a
  * portal's offset is neither 0 nor a segment 0x0F word (BG_SEG_TO_PTR would
  * take it for an address); the header's room or portal offset is 0 or lies
  * outside the file; the room table reaches the visibility commands, the
- * portal table or the file's end before its record of zeros (the next of
+ * portal table or the file's end before that closing record (the next of
  * those the header places after the room table bounds it); the record
  * before it, the end marker, has an offset of 0 (the game's room walks,
  * getPointTableBinCount and its twins, would run past it); the portal table
- * reaches the file's end before its entry of zeros; or a portal's points
+ * reaches the file's end before its entry whose offset is 0; or a portal's points
  * (its count byte and that many coord3d) run past the file's end. The rooms'
  * offsets lead to their compressed data, which is read later by the room
  * loaders through obLoadBGFileBytesAtOffset, which bounds them by the file.
@@ -581,10 +583,10 @@ int portBgTablesConvert(const u8 *file, u32 size, u8 *out, u32 outsize, struct b
  * portGfxFromRomBackward's rule (destination at or after the source less
  * sizeof(Gfx) - 8) holds; at 32 bits this is texCopyGdls's placement.
  *
- * Returns -1, writing nothing, when ALLOCSIZE is less than D (the caller
- * then frees the block and logs the "room memory" pool line), or, after
- * portConvRefuse naming NAME and room ROOMNUM, when LISTSIZE is 0 or less
- * or not a multiple of 8.
+ * A LISTSIZE of 0 is an empty list, as at 32 bits (*LIST = BLOCK + ALLOCSIZE,
+ * 0 returned). Returns -1, writing nothing, when ALLOCSIZE is less than D
+ * (the caller then logs the "room memory" pool line), or, after portConvRefuse
+ * naming NAME and room ROOMNUM, when LISTSIZE is negative or not a multiple of 8.
  */
 s32 portBgRoomListExpand(u8 *block, s32 allocsize, s32 listsize, const char *name, s32 roomnum, Gfx **list);
 
