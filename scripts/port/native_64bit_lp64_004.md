@@ -428,6 +428,18 @@ container where a line needs `-m32`. Run step 4 once in the x86_64
 container at each task that moves the stop. The browser build is checked by
 CI after the push; a red browser build is the task's to fix.
 
+*Note (2026-11-17, Task 16 review):* from Task 16 on, steps 2, 5 and 6 run
+their missions with the smoke's `--fixed-tick` and `--frames 1800`
+(`audit_buffers.py ... --frames 1800 --fixed-tick`, `lp64_oracle.py ...
+--frames 1800 --fixed-tick`), and step 7 compares those step 2 and step 6
+folders. The census compares two widths that must play the same game fields,
+and the emulated 32-bit run passes more fields a frame on the game clock; one
+field a frame for 600 frames covered less than the game-clock runs (no weapon
+load in three missions, fewer oracle textures), so 1800 was measured as the
+frame by which every mission has loaded its first-person weapon (Dam, the
+last, by frame 1200) with a margin. FORK-089, "LP64-004 task 16", has the
+measurement and the commands verbatim. The commands above are unchanged.
+
 ### Behaviour-sensitive sites
 
 - `langGet` (`language.c:413`): at 64 bits it adds the bank's address to a

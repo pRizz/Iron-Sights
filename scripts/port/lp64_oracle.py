@@ -13,6 +13,8 @@ run succeeded and reported, and each class named in --classes has N above zero a
 
 --classes "" checks the runs and the report only (no class has a converter yet). The logs go to
 --logs (default: an oracle-logs folder beside the executable): boot.log and one per mission.
+--fixed-tick runs the missions through the smoke's --fixed-tick (one game field a frame) and
+--frames sets their frame count; the census runs of LP64-004 task 16 use both (FORK-089).
 """
 import argparse
 import importlib.util
@@ -103,6 +105,8 @@ def main(argv: list[str] | None = None) -> int:
                         help='the classes that must be clean, as the oracle names them; "" for none')
     parser.add_argument('--jobs', type=int, choices=range(1, 9), default=2, help='missions run at once')
     parser.add_argument('--logs', type=Path, metavar='DIR', help='where the logs go')
+    parser.add_argument('--frames', type=int, default=MISSION_FRAMES, help='frames a mission runs')
+    parser.add_argument('--fixed-tick', action='store_true', help='missions at one game field a frame')
     parser.add_argument('executable', type=Path, metavar='EXECUTABLE')
     options = parser.parse_args(argv)
     executable = options.executable.resolve(strict=True)
@@ -120,7 +124,8 @@ def main(argv: list[str] | None = None) -> int:
     totals = collect('boot', boot_log, {}, failures)
     print(f'boot: {"PASS" if status == 0 else "FAIL"}', flush=True)
 
-    if audit_buffers.mission_smoke(executable, rom, logs/'missions.json', MISSION_FRAMES, options.jobs) != 0:
+    if audit_buffers.mission_smoke(executable, rom, logs/'missions.json', options.frames, options.jobs,
+                                   fixed_tick=options.fixed_tick) != 0:
         failures.append('missions: the smoke failed (see each mission\'s line above)')
     for stage in audit_buffers.MISSIONS:
         totals = collect(stage, logs/(stage + '.log'), totals, failures)

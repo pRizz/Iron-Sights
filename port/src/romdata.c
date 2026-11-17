@@ -1102,7 +1102,7 @@ static u32 romdataSetupConvert(s32 index, u8 *data, u32 size, u32 capacity)
     }
     /* portSetupConvert logged the romdata line the in-place pass prints; the
      * image's bytes are a 64-bit line, outside the load census. */
-    portConLogf("ge: lp64: setup %s image: %u bytes from the file's %u, in a %u-byte block\n", name, need, size,
+    portConLogf("ge: romconv: setup %s image: %u bytes from the file's %u, in a %u-byte block\n", name, need, size,
             capacity);
     return need;
 }

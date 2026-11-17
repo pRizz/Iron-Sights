@@ -203,7 +203,7 @@ static int testStockFile(void)
         + expect(tileAt(STAN_FIRST)->room == 5, "tile 0's room")
         + expect(tileAt(STAN_FIRST)->points[1].link == 0x0033, "tile 0's point 1 link")
         + expect(sizeof(void *) == 4 ? s_Log[0] == '\0' : __builtin_strncmp(s_Log, "ge: romdata: stan  test ", 24) == 0,
-                "nothing is logged but the census line, at 64 bits (test_romconv_census.c)")
+                "nothing is logged but the ge: romdata: stan line, at 64 bits (test_romconv_census.c)")
         + expect(sameAsInPlace(STAN_SIZE), "at 32 bits the file equals the in-place pass's");
 }
 

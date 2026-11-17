@@ -92,8 +92,9 @@ def checker_report(path):
             'severities': dict(Counter(e['severity'] for e in records))}
 
 
-def mission_smoke(executable, rom, output, frames, jobs, leaks=False):
-    """Headless-only samples; every child owns its executable/runtime directory."""
+def mission_smoke(executable, rom, output, frames, jobs, leaks=False, fixed_tick=False):
+    """Headless-only samples; every child owns its executable/runtime directory. FIXED_TICK runs one
+    game field a frame with the 64-bit census lines, for lp64_census.py."""
     executable, rom = executable.resolve(strict=True), rom.resolve(strict=True)
     output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -103,12 +104,15 @@ def mission_smoke(executable, rom, output, frames, jobs, leaks=False):
             child = folder / executable.name
             shutil.copy2(executable, child)
             env = {key: value for key, value in os.environ.items() if not key.startswith('GE_')}
-            # One field a frame, so that a smoke loads the same at any speed (an emulated 32-bit run
-            # and a native 64-bit one are compared by lp64_census.py), and the census lines a 64-bit
-            # build's converters print for its `types` (a 32-bit build prints none).
             env.update(GE_ROM=str(rom), GE_STAGE=stage, GE_STAGE_AFTER='1',
                        GE_FRAMES=str(frames), GE_SEED='1', GE_CHEATS='invuln,invis',
-                       GE_NOINISAVE='1', GE_FIXEDTICK='1', GE_LP64_CENSUS='1', **sanitizer_env(leaks))
+                       GE_NOINISAVE='1', **sanitizer_env(leaks))
+            if fixed_tick:
+                # The same game fields at any speed: an emulated 32-bit run and a native 64-bit one,
+                # compared by lp64_census.py, otherwise reach different points in their frames. The
+                # census lines are a 64-bit build's (a 32-bit build prints none). Without the flag a
+                # slow or long frame advances several fields, so a run covers more game time.
+                env.update(GE_FIXEDTICK='1', GE_LP64_CENSUS='1')
             log_path = output.parent / (stage + '.log')
             with log_path.open('w', encoding='utf-8') as log:
                 result = subprocess.run([str(child)], cwd=folder, env=env, stdout=log,
@@ -139,12 +143,15 @@ def main():
     parser.add_argument('--frames', type=int, default=900)
     parser.add_argument('--jobs', type=int, choices=range(1, 9), default=4)
     parser.add_argument('--leaks', action='store_true', help='Mission smoke with LeakSanitizer enabled')
+    parser.add_argument('--fixed-tick', action='store_true',
+                        help='Mission smoke at one game field a frame with the 64-bit census lines '
+                             '(GE_FIXEDTICK=1, GE_LP64_CENSUS=1), for lp64_census.py')
     options = parser.parse_args()
     if options.mission_smoke:
         if not options.rom or not 600 <= options.frames <= 36000:
             parser.error('--mission-smoke needs --rom and 600..36000 frames')
         return mission_smoke(options.mission_smoke, options.rom, options.output,
-                             options.frames, options.jobs, options.leaks)
+                             options.frames, options.jobs, options.leaks, options.fixed_tick)
     names = subprocess.check_output(['git', '-C', str(ROOT), 'ls-files', '-z']).decode().split('\0')
     sources = [source_record(name, (ROOT/name).read_bytes()) for name in names
                if Path(name).suffix.lower() in EXTENSIONS and (ROOT/name).is_file()]

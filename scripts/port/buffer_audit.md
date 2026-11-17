@@ -177,6 +177,17 @@ the explicit stage launch, the requested 900-pump frame limit, exit zero and no
 ASan/UBSan report. All 20 solo mission startup samples passed on the final
 sanitized headless build. Logs are local under `build_win/buffer-audit/`.
 
+The smoke runs on the game clock: a slow frame (a sanitized build, an emulated
+run, a long load) advances several game fields, so a run covers at least its
+frames' worth of game time. `--fixed-tick` instead runs one game field a frame
+(`GE_FIXEDTICK=1`) and prints the 64-bit converters' census lines
+(`GE_LP64_CENSUS=1`); it is for `scripts/port/lp64_census.py`, which compares a
+32-bit and a 64-bit smoke that must play the same fields, and for the oracle's
+missions (`lp64_oracle.py --fixed-tick --frames N`). A flagged run covers only
+its frames' game time, so it needs more frames than an unflagged one: the
+LP64-004 census runs use 1800 (FORK-089, "LP64-004 task 16"). The ASan and LSan
+commands here keep the game clock.
+
 Windows/Linux video and optimized Wasm builds passed. All 176 browser unit
 tests passed. The final native executable passed synchronous full suspend
 checks, threaded fresh-process Dam/Facility restore, and both same-session

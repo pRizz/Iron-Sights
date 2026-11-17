@@ -126,6 +126,16 @@ class Types(unittest.TestCase):
                           'opcodes no mission loaded: 0 NULL, 2 GROUP,' in out,
                           'types no mission loaded: 0 NOTHING, 2 DOOR_SCALE,' in out), (0, True, True, True, True), out)
 
+    def test_an_opcode_beyond_the_table_is_unknown(self):
+        # Arrange
+        write_smoke(self.root, {'dam': FULL + 'ge: census: model CheadmarkZ opcodes 1=1 31=2\n'})
+
+        # Act
+        status, out = run('types', str(self.root))
+
+        # Assert
+        self.assertEqual((status, '31 unknown: 2 in 1 load' in out), (0, True), out)
+
     def test_no_census_lines_fails(self):
         # Arrange
         write_smoke(self.root, {})

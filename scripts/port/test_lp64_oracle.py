@@ -130,6 +130,20 @@ class CommandLine(unittest.TestCase):
         self.assertEqual(status, 0, out)
         self.assertIn('text banks: 47 files, 0 differ', out)
 
+    def test_fixed_tick_and_frames_reach_the_mission_smoke(self):
+        # Arrange
+        exe = self.fake(exit_lines({'text banks': (7, 0)}), exit_lines({'text banks': (2, 0)}))
+        smoke = mock.Mock(wraps=oracle.audit_buffers.mission_smoke)
+
+        # Act
+        with mock.patch.object(oracle.audit_buffers, 'mission_smoke', smoke), \
+                contextlib.redirect_stdout(io.StringIO()):
+            status = oracle.main(['--rom', str(self.rom), '--classes', 'text banks', '--frames', '1800',
+                                  '--fixed-tick', '--logs', str(self.folder/'logs'), str(exe)])
+
+        # Assert
+        self.assertEqual((status, smoke.call_args.args[3], smoke.call_args.kwargs), (0, 1800, {'fixed_tick': True}))
+
     def test_no_classes_pass_when_every_run_reports(self):
         # Arrange
         exe = self.fake(exit_lines({}), exit_lines({}))
