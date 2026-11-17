@@ -16,7 +16,7 @@
 #include <macro.h>
 #include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 #if IS_64_BIT || defined(GE_LP64_ORACLE)
-#include "port_romconv.h" /* LP64-004: the audio bank converter */
+#include "port_romconv.h" /* LP64-004: the audio bank and music sequence converters */
 #endif
 
 /**
@@ -812,6 +812,9 @@ void musicSeqPlayerInit(void)
     // this area based on auReadSeqFileHeader
 
     portLp64RequireConverter(PORT_LP64_MUSIC); /* RareALSeqData's address slot over a 4-byte file offset */
+#if IS_64_BIT
+    g_musicDataTable = portSeqTableLoad(&g_musicHeap, (const u8 *)tblSegmentRomStartAddress, "musicsampletbl");
+#else
     // is this sizeof(RareALSeqBankFile) ? which implies the struct isn't right...
     size = 0x10;
     g_musicDataTable = alHeapAlloc(&g_musicHeap, 1, size);
@@ -845,6 +848,10 @@ void musicSeqPlayerInit(void)
             (u16)((e->uncompressed_len >> 8) | (e->uncompressed_len << 8));
         e->len = (u16)((e->len >> 8) | (e->len << 8));
     }
+#endif
+#endif
+#ifdef GE_LP64_ORACLE
+    portSeqOracle(g_musicDataTable, (const u8 *)tblSegmentRomStartAddress, "musicsampletbl");
 #endif
 
     // end auReadSeqFileHeader

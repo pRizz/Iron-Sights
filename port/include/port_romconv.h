@@ -26,6 +26,7 @@
 #include <PR/ultratypes.h>
 #include <PR/libaudio.h> /* the audio bank records */
 #include "port_lp64.h"
+#include "music.h" /* RareALSeqBankFile */
 
 #ifdef __cplusplus
 extern "C" {
@@ -266,6 +267,58 @@ void portBankOracle(const char *name, const ALBankFile *inplace, const u8 *inpla
 /** audio_stubs.c, in the oracle build: alBnkfNew(FILE, TABLE) with
  * portBankOracle beside it; TBLNAME is the table's ROM segment. */
 void portBnkfOracle(ALBankFile *file, u32 size, u8 *table, const char *name, const char *tblname);
+#endif
+
+/* ---- music sequences (romconv_seq.c) ---------------------------------- */
+
+/**
+ * The bytes of the run-time RareALSeqBankFile for the big-endian sequence bank
+ * FILE (port_romlayout.h's RomSeqTable): offsetof(RareALSeqBankFile, seqArray)
+ * + count * sizeof(RareALSeqData). Reads the count only. The count is 16-bit,
+ * so the size is at most 1,048,568 bytes at 64 bits and never wraps.
+ *
+ * Precondition: FILE has at least sizeof(RomSeqTable) (4) readable bytes.
+ * The function has no size to check that against, so the caller checks the
+ * file's size first, as portSeqTableLoad and portSeqTableOracle do. The size
+ * returned says nothing about the file's length: only portSeqTableConvert
+ * checks that the count's entries fit the file.
+ */
+u32 portSeqTableSize(const u8 *file);
+
+/**
+ * Writes the run-time table of the sequence bank FILE (FILESIZE bytes) into
+ * OUT (OUTSIZE bytes): seqCount, then for each entry its offset zero-extended
+ * into address (the game's musicSeqFileNew adds the segment's address) and
+ * its two lengths, in native byte order. The bytes OUT's padding and unk
+ * occupy are written as zero, except unk itself, which keeps the file's two
+ * bytes as stored, as the 32-bit in-place copy leaves them; nothing reads it.
+ *
+ * Returns 1, or 0 after portConvRefuse, with nothing written to OUT, when
+ * FILESIZE is less than the header, or than the header and count entries,
+ * or OUTSIZE is less than portSeqTableSize. Each entry's offset and lengths
+ * are copied as they are: nothing here bounds offset + len by FILESIZE, since
+ * the entries' streams are read later by musicTrack1Play and its two twins.
+ */
+int portSeqTableConvert(const u8 *file, u32 filesize, RareALSeqBankFile *out, u32 outsize);
+
+/** audio_stubs.c, at 64 bits: converts the sequence bank SEGMENT, the ROM
+ * segment NAME, into a table allocated from HEAP at portSeqTableSize, and
+ * returns it; stops the game, naming NAME, when SEGMENT is not that segment,
+ * the segment is shorter than the header, or the converter refuses. */
+RareALSeqBankFile *portSeqTableLoad(ALHeap *heap, const u8 *segment, const char *name);
+
+#ifdef GE_LP64_ORACLE
+/**
+ * The oracle (32-bit, -DGE_LP64_ORACLE=ON), called after the game copied and
+ * swapped INPLACE and before musicSeqFileNew rebased it: converts FILE
+ * (FILESIZE bytes, the segment INPLACE was copied from) into new memory and
+ * compares the portSeqTableSize bytes of both, as the file musicsampletbl.
+ */
+void portSeqTableOracle(const RareALSeqBankFile *inplace, const u8 *file, u32 filesize);
+
+/** audio_stubs.c, in the oracle build: portSeqTableOracle for SEGMENT, the ROM
+ * segment NAME, with the segment's size from romdataSeg. */
+void portSeqOracle(const RareALSeqBankFile *inplace, const u8 *segment, const char *name);
 #endif
 
 #ifdef __cplusplus

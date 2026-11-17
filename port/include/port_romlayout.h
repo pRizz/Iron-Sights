@@ -187,4 +187,30 @@ _Static_assert(sizeof(RomWaveTable) == 20, "RomWaveTable is 20 bytes");
 #define ROM_BANK_ADPCMLOOP_BYTES 44u /* three u32, 16 s16 */
 #define ROM_BANK_RAWLOOP_BYTES 12u
 
+/* ==== music sequences (the musicsampletbl segment, music.sbk; music.h) == */
+
+/**
+ * The sequence bank's header, big-endian: a count, a half-word nothing reads,
+ * then count entries, each the sequence's offset from the file's start and
+ * its two lengths (after and before Rare's 1172 decompression). The
+ * compressed streams follow the entries. music.h's RareALSeqData puts the
+ * offset in a pointer slot, so at 64 bits a run-time entry is 16 bytes and the
+ * header 8.
+ */
+typedef struct RomSeqTable
+{
+    u16 count;
+    u16 unk;
+    /* then count RomSeqEntry */
+} RomSeqTable;
+_Static_assert(sizeof(RomSeqTable) == 4, "RomSeqTable is 4 bytes");
+
+typedef struct RomSeqEntry
+{
+    u32 offset; /* RareALSeqData.address, from the file's start */
+    u16 uncompressed_len;
+    u16 len;
+} RomSeqEntry;
+_Static_assert(sizeof(RomSeqEntry) == 8, "RomSeqEntry is 8 bytes");
+
 #endif

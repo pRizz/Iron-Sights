@@ -30,8 +30,9 @@
 #include "port_lp64.h" /* IS_64_BIT */
 #if IS_64_BIT || defined(GE_LP64_ORACLE)
 #include <stdlib.h>
-#include "port_romconv.h" /* LP64-004: the audio bank converter */
+#include "port_romconv.h" /* LP64-004: the audio bank and sequence table converters */
 #include "romdata.h"      /* romdataSeg: the wave table's size */
+#include "port_romlayout.h" /* RomSeqTable: the sequence bank header */
 #endif
 #ifdef GE_LP64_ORACLE
 #include "port_lp64_oracle.h"
@@ -299,6 +300,17 @@ void portBnkfOracle(ALBankFile *file, u32 size, u8 *table, const char *name, con
     free(pristine);
     free(tablecopy);
 }
+
+void portSeqOracle(const RareALSeqBankFile *inplace, const u8 *segment, const char *name)
+{
+    u32 filesize = 0;
+
+    if (romdataSeg(name, &filesize) != segment) {
+        portLp64OracleResult(PORT_LP64_MUSIC, name, 0, "the sequence bank is not its ROM segment");
+        return;
+    }
+    portSeqTableOracle(inplace, segment, filesize);
+}
 #endif
 
 #else /* IS_64_BIT */
@@ -327,6 +339,27 @@ ALBankFile *portBnkfConvert(ALHeap *heap, ALBankFile *file, u32 size, u8 *table,
     }
     portConLogf("ge: lp64: audio bank %s: %u bytes of run-time records\n", name, needed);
     return converted;
+}
+
+RareALSeqBankFile *portSeqTableLoad(ALHeap *heap, const u8 *segment, const char *name)
+{
+    u32 filesize = 0;
+    u32 size;
+    RareALSeqBankFile *table;
+
+    if (romdataSeg(name, &filesize) != segment) {
+        sysFatalError("The music sequence bank is not the ROM segment %s", name);
+    }
+    if (filesize < sizeof(RomSeqTable)) {
+        sysFatalError("The music sequence bank %s is %u bytes, shorter than its header", name, filesize);
+    }
+    size = portSeqTableSize(segment);
+    table = (RareALSeqBankFile *) alHeapAlloc(heap, 1, (s32) size);
+    if (table == NULL || !portSeqTableConvert(segment, filesize, table, size)) {
+        sysFatalError("Cannot convert the music sequence table %s", name);
+    }
+    portConLogf("ge: lp64: music sequence table %s: %u sequences, %u bytes\n", name, (u32) table->seqCount, size);
+    return table;
 }
 
 #endif /* IS_64_BIT */
