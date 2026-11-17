@@ -11,7 +11,10 @@
 # command-word accessors (Task 7): GFX_OP of a gbi.h-built command, and a slot
 # of texLoad's parameter type that keeps every byte of a 64-bit value. The
 # game's strtol and gu.h's FTOFIX32 (Task 10): their results at 64 bits are the
-# 32-bit ones.
+# 32-bit ones. The pool reports (LP64-004 Task 2): at 64 bits a pool report
+# prints at most eight lines a pool a stage, portLp64PoolFatal and the music
+# heap's allocator asked for more than its heap holds stop with status 6
+# naming the pool; at 32 bits they return.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source scripts/port/harness_widths.sh
@@ -30,13 +33,25 @@ build_str() {
         src/str.c -o "$out"
 }
 
+# The music heap's allocator (src/libultra/audio/heapalloc.c), compiled as the
+# game compiles it, so its pool report is the game's call.
+build_heap() {
+    local out=$1
+    shift
+    "$compiler" "$@" -c -std=gnu11 -fms-extensions -fcommon -funsigned-char -w \
+        -DVERSION_US -DLANG_US -DREFRESH_NTSC -D_LANGUAGE_C -DNONMATCHING -DAVOID_UB \
+        -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \
+        src/libultra/audio/heapalloc.c -o "$out"
+}
+
 # gbi.h (Task 7) includes <PR/...>; -idirafter finds those after the system
 # headers, so the driver's <string.h> is still the C library's.
 build() {
-    local out=$1 str_object=$2
-    shift 2
+    local out=$1 str_object=$2 heap_object=$3
+    shift 3
     "$compiler" "$@" -std=gnu11 -D_LANGUAGE_C -Wall -Wextra -Werror -iquote include -iquote port/include \
-        -idirafter include scripts/port/test_lp64_address.c port/src/port_lp64.c "$str_object" -o "$out"
+        -idirafter include scripts/port/test_lp64_address.c port/src/port_lp64.c "$str_object" "$heap_object" \
+        -o "$out"
 }
 
 # The external-texture slot (Task 6): port_textures.c linked with the stubs in
@@ -65,7 +80,8 @@ expect_textures() {
     return 0
 }
 
-# Runs the driver with MODE (address-space or require-animations); fails unless
+# Runs the driver with MODE (address-space, require-animations, pool-fatal or
+# music-heap); fails unless
 # it exits with WANT_STATUS and its output contains WANT_TEXT.
 expect_driver() {
     local bin=$1 mode=$2 want_status=$3 want_text=$4 label=$5 status=0 output
@@ -89,20 +105,27 @@ widths=$(harness_widths)
 for width in $widths; do
     flags=($(harness_flags "$width"))
     build_str "$work/str-$width.o" ${flags[@]+"${flags[@]}"}
-    build "$work/unit-$width" "$work/str-$width.o" ${flags[@]+"${flags[@]}"}
+    build_heap "$work/heap-$width.o" ${flags[@]+"${flags[@]}"}
+    build "$work/unit-$width" "$work/str-$width.o" "$work/heap-$width.o" ${flags[@]+"${flags[@]}"}
     "$work/unit-$width"
     build_textures "$work/textures-$width" ${flags[@]+"${flags[@]}"}
     expect_textures "$work/textures-$width" "$work/root-$width" "${width}-bit external-texture slot"
     if [[ $width == 64 ]]; then
-        build "$work/pie" "$work/str-$width.o" -fPIE -pie
+        build "$work/pie" "$work/str-$width.o" "$work/heap-$width.o" -fPIE -pie
         expect_driver "$work/pie" address-space 0 "ge: lp64: address space OK" "position-independent driver"
-        build "$work/no-pie" "$work/str-$width.o" -fno-pie -no-pie
+        build "$work/no-pie" "$work/str-$width.o" "$work/heap-$width.o" -fno-pie -no-pie
         expect_driver "$work/no-pie" address-space 4 "executable image" "-no-pie driver"
         expect_driver "$work/unit-$width" require-animations 5 \
             'ge: lp64: stopping: asset class "animation tables" has no 64-bit converter yet (LP64-004)' \
             "64-bit animation guard"
+        expect_driver "$work/unit-$width" pool-fatal 6 \
+            'ge: lp64: pool "music heap" exhausted (request 4096 bytes)' "64-bit fatal pool report"
+        expect_driver "$work/unit-$width" music-heap 6 \
+            'ge: lp64: pool "music heap" exhausted (request 4096 bytes)' "64-bit music heap exhausted"
     else
         expect_driver "$work/unit-$width" require-animations 0 "require-animations: returned" "32-bit animation guard"
+        expect_driver "$work/unit-$width" pool-fatal 0 "pool-fatal: returned" "32-bit fatal pool report"
+        expect_driver "$work/unit-$width" music-heap 0 "music-heap: returned NULL" "32-bit music heap exhausted"
     fi
     echo "test_lp64_address: PASS (${width}-bit)"
 done

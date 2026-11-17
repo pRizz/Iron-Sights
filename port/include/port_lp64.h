@@ -18,11 +18,20 @@
  * the commit that lands its converter. At 32 bits the in-place conversions
  * are the shipped path: the guard is a macro that generates no code and every
  * class counts as converted.
+ *
+ * The pool reports (LP64-004 Task 2): at 64 bits records and display-list
+ * commands grow, so some of the game's pools hold less than at 32 bits, and
+ * four of them fail without a word (the music heap, room memory, the graphics
+ * buffer and the texture pool). At 64 bits each failure calls
+ * portLp64PoolExhausted or portLp64PoolFatal, whose line
+ * scripts/port/lp64_boot.py treats as a failed boot. At 32 bits they are macros
+ * that generate no code, and each pool behaves as it always has.
  */
 #ifndef PORT_LP64_H
 #define PORT_LP64_H
 
 #include <stddef.h>
+#include <PR/ultratypes.h>
 #include "platform_info.h"
 
 /** The design's asset classes, in the design's order (not the boot's). */
@@ -73,6 +82,20 @@ int portLp64AssetConverted(enum PortLp64Asset asset);
  */
 void portLp64RequireConverter(enum PortLp64Asset asset);
 
+/**
+ * Logs: ge: lp64: pool "POOL" exhausted (request N bytes), then returns, for
+ * a pool whose failure the game survives as it does at 32 bits. At most eight
+ * lines a pool a stage. POOL is one of "music heap", "room memory",
+ * "graphics buffer" and "texture pool".
+ */
+void portLp64PoolExhausted(const char *pool, u32 request);
+
+/** Logs the same line, always, then stops the game with exit status 6. */
+void portLp64PoolFatal(const char *pool, u32 request);
+
+/** A stage load begins (port_late_loads.c): every pool may log eight lines again. */
+void portLp64PoolStageBegin(void);
+
 #ifdef __cplusplus
 }
 #endif
@@ -82,6 +105,9 @@ void portLp64RequireConverter(enum PortLp64Asset asset);
 #define portLp64CheckAddressSpace() ((void) 0)
 #define portLp64AssetConverted(asset) 1
 #define portLp64RequireConverter(asset) ((void) 0)
+#define portLp64PoolExhausted(pool, request) ((void) 0)
+#define portLp64PoolFatal(pool, request) ((void) 0)
+#define portLp64PoolStageBegin() ((void) 0)
 #endif
 
 #if IS_64_BIT || defined(GE_LP64_ORACLE)

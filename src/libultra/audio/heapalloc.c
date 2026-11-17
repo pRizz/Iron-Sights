@@ -22,6 +22,7 @@
 #include <libaudio.h>
 #include <os.h>
 #include <ultraerror.h>
+#include "port_lp64.h" /* LP64-004: portLp64PoolFatal */
 
 void *alHeapDBAlloc(u8 *file, s32 line, ALHeap *hp, s32 num, s32 size)
 {
@@ -59,6 +60,7 @@ void *alHeapDBAlloc(u8 *file, s32 line, ALHeap *hp, s32 num, s32 size)
 #ifdef _DEBUG
         __osError(ERR_ALHEAPNOFREE, 1, size);
 #endif        
+        portLp64PoolFatal("music heap", bytes); /* its callers copy into the result unchecked */
     }
 
     return ptr;

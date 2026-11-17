@@ -2643,6 +2643,7 @@ void texLoad(uintptr_t *updateword, struct texpool *pool)
                                (s32) g_TexNumToLoad, (void *) pool, texFreeBytesInBuffer(pool));
                     }
                 }
+                portLp64PoolExhausted("texture pool", iszlib ? 0xA28 : 0x10CC); /* LP64-004: the minimum it wanted */
 #endif
                 *updateword = osVirtualToPhysical(pool->start);
                 return;

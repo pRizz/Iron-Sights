@@ -3614,7 +3614,11 @@ void bgLoadRoomModelData(s32 roomID)
     */
     data = memaAlloc(allocsize);
 
-    if (data == NULL) goto end;
+    if (data == NULL)
+    {
+        portLp64PoolExhausted("room memory", allocsize); /* LP64-004: no room block; the room is not drawn */
+        goto end;
+    }
 
     if (g_BgRoomInfo[roomID].csize_point_index_binary)
     {
@@ -3760,6 +3764,7 @@ end:;
     return;
 
 fail:
+    portLp64PoolExhausted("room memory", allocsize); /* LP64-004: the block did not hold the room; it is not drawn */
     portHitchNoteItem(0 /* rooms */, portProfNow() - hitchT0, NULL, (unsigned int) roomID);
     memaFree(data, allocsize);
     g_BgRoomInfo[roomID].vertices = NULL;

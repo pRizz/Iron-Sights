@@ -33,6 +33,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "port_lp64.h" /* LP64-004: the pool reports' limit is a stage's */
 
 #define LATE_WARN_LINES 20
 #define LATE_HIDDEN_FRAMES 3
@@ -94,6 +95,7 @@ void portLateLoadStageBegin(void)
     sLateActive = 0;
     sLateReady = 0;
     sLateWarnLines = 0;
+    portLp64PoolStageBegin();
 }
 
 /** boss.c, once lvlStageLoad and its holds are done. */

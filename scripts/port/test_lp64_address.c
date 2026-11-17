@@ -12,7 +12,16 @@
  *                                    position-independent and -no-pie)
  *   test_lp64_address require-animations  the animation guard alone: at 64
  *                                    bits it must stop the process with
- *                                    status 5, at 32 bits it must return */
+ *                                    status 5, at 32 bits it must return
+ *   test_lp64_address pool-fatal     portLp64PoolFatal alone (LP64-004 Task 2):
+ *                                    at 64 bits status 6 naming the pool, at
+ *                                    32 bits it must return
+ *   test_lp64_address music-heap     the music heap's allocator asked for more
+ *                                    than its heap holds: status 6 at 64 bits,
+ *                                    NULL at 32 bits
+ *
+ * The unit cases also cover the pool reports' line, their eight-line limit a
+ * pool a stage, and their 32-bit no-op form. */
 #include <stdarg.h>
 #include <stdint.h>
 #include <limits.h>
@@ -20,6 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "PR/gu.h"
+#include "PR/libaudio.h"
 #include "PR/mbi.h"
 #include "PR/ultratypes.h"
 #include "platform_info.h"
@@ -29,15 +39,33 @@
 
 static int s_failures;
 
+/* What the logger has printed since the last reset: the pool lines it saw
+ * and the last of them, for the pool-report cases (LP64-004 Task 2). */
+static int s_poolLines;
+static char s_lastPoolLine[256];
+
 /* port_console.c's logger, which port_lp64.c prints through. */
 void portConLogf(const char *fmt, ...)
 {
+    char line[256];
     va_list args;
 
     va_start(args, fmt);
-    vprintf(fmt, args);
+    vsnprintf(line, sizeof(line), fmt, args);
     va_end(args);
+    if (strncmp(line, "ge: lp64: pool ", 15) == 0)
+    {
+        s_poolLines++;
+        snprintf(s_lastPoolLine, sizeof(s_lastPoolLine), "%s", line);
+    }
+    fputs(line, stdout);
     fflush(stdout);
+}
+
+static void resetPoolLines(void)
+{
+    s_poolLines = 0;
+    s_lastPoolLine[0] = '\0';
 }
 
 static void expect(int condition, const char *what)
@@ -311,6 +339,107 @@ static void testAssetGuardIsNoOpAtThirtyTwoBits(void)
 }
 #endif
 
+#if IS_64_BIT
+static void testPoolExhaustedLine(void)
+{
+    // Arrange
+    portLp64PoolStageBegin();
+    resetPoolLines();
+
+    // Act
+    portLp64PoolExhausted("texture pool", 2600);
+
+    // Assert
+    expect(strcmp(s_lastPoolLine, "ge: lp64: pool \"texture pool\" exhausted (request 2600 bytes)\n") == 0,
+           "a pool report names the pool and the request");
+}
+
+static void testPoolExhaustedStopsAfterEightLines(void)
+{
+    // Arrange
+    int i;
+
+    portLp64PoolStageBegin();
+    resetPoolLines();
+
+    // Act
+    for (i = 0; i < 9; i++)
+    {
+        portLp64PoolExhausted("room memory", 64);
+    }
+
+    // Assert
+    expect(s_poolLines == 8, "nine reports of one pool in a stage print eight lines");
+}
+
+static void testPoolLimitIsPerPool(void)
+{
+    // Arrange
+    int i;
+
+    portLp64PoolStageBegin();
+    for (i = 0; i < 8; i++)
+    {
+        portLp64PoolExhausted("room memory", 64);
+    }
+    resetPoolLines();
+
+    // Act
+    portLp64PoolExhausted("texture pool", 4300);
+
+    // Assert
+    expect(s_poolLines == 1, "a pool that has not used its eight lines still prints after another has");
+}
+
+static void testPoolLimitRestartsAtStageBegin(void)
+{
+    // Arrange
+    int i;
+
+    portLp64PoolStageBegin();
+    for (i = 0; i < 8; i++)
+    {
+        portLp64PoolExhausted("room memory", 64);
+    }
+    resetPoolLines();
+
+    // Act
+    portLp64PoolStageBegin();
+    portLp64PoolExhausted("room memory", 64);
+
+    // Assert
+    expect(s_poolLines == 1, "the next stage prints a pool's report again");
+}
+#else
+static void testPoolReportsAreNoOpsAtThirtyTwoBits(void)
+{
+    // Arrange
+    resetPoolLines();
+
+    // Act
+    portLp64PoolStageBegin();
+    portLp64PoolExhausted("room memory", 64);
+    portLp64PoolFatal("music heap", 4096);
+
+    // Assert
+    expect(s_poolLines == 0, "the pool reports print nothing and return at 32 bits");
+}
+#endif
+
+/* The music heap's allocator (src/libultra/audio/heapalloc.c, linked in by
+ * the harness) on a heap of 64 bytes asked for 4096: at 64 bits it must stop
+ * the game naming the pool, at 32 bits it returns NULL as it always has. */
+static int runMusicHeapRequest(void)
+{
+    static u8 heapBytes[64];
+    ALHeap heap = { heapBytes, heapBytes, (s32) sizeof(heapBytes), 0 };
+    void *result;
+
+    result = alHeapDBAlloc(NULL, 0, &heap, 1, 4096);
+    printf("music-heap: returned %s\n", result == NULL ? "NULL" : "a block");
+    return result == NULL ? 0 : 1;
+}
+
 int main(int argc, char **argv)
 {
     if (argc > 1 && strcmp(argv[1], "address-space") == 0)
@@ -323,6 +452,16 @@ int main(int argc, char **argv)
         portLp64RequireConverter(PORT_LP64_ANIMATIONS);
         printf("require-animations: returned\n");
         return 0;
+    }
+    if (argc > 1 && strcmp(argv[1], "pool-fatal") == 0)
+    {
+        portLp64PoolFatal("music heap", 4096);
+        printf("pool-fatal: returned\n");
+        return 0;
+    }
+    if (argc > 1 && strcmp(argv[1], "music-heap") == 0)
+    {
+        return runMusicHeapRequest();
     }
 
     testHostAddrTruthTable();
@@ -340,9 +479,14 @@ int main(int argc, char **argv)
     testEmptyRegionAtFourGbIsHigh();
     testAssetNamesInDesignOrder();
     testAssetNameOutOfRange();
+    testPoolExhaustedLine();
+    testPoolExhaustedStopsAfterEightLines();
+    testPoolLimitIsPerPool();
+    testPoolLimitRestartsAtStageBegin();
 #else
     testCheckIsNoOpAtThirtyTwoBits();
     testAssetGuardIsNoOpAtThirtyTwoBits();
+    testPoolReportsAreNoOpsAtThirtyTwoBits();
 #endif
     return s_failures == 0 ? 0 : 1;
 }

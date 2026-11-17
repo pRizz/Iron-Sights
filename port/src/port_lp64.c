@@ -11,9 +11,11 @@
  * design accepts that.
  *
  * It also holds the asset-class guard (port_lp64.h): the table of classes that
- * have a 64-bit converter, and the stop for those that do not. Nothing here
- * runs at 32 bits, except the class names in the 32-bit oracle build
- * (-DGE_LP64_ORACLE=ON), where the converters and the oracle print them.
+ * have a 64-bit converter, and the stop for those that do not. And the pool
+ * reports (port_lp64.h): the log line of a pool that ran dry, and the stop for
+ * the two whose failure the game cannot survive. Nothing here runs at 32 bits,
+ * except the class names in the 32-bit oracle build (-DGE_LP64_ORACLE=ON),
+ * where the converters and the oracle print them.
  */
 #define _GNU_SOURCE /* dl_iterate_phdr */
 #include <stdint.h>
@@ -244,6 +246,87 @@ void portLp64RequireConverter(enum PortLp64Asset asset)
     portConLogf("ge: lp64: stopping: asset class \"%s\" has no 64-bit converter yet (LP64-004)\n",
             portLp64AssetName(asset));
     exit(LP64_EXIT_NO_CONVERTER);
+}
+
+/* ==== the pool reports ================================================= */
+
+#define LP64_EXIT_POOL 6
+#define LP64_POOL_LINES_PER_STAGE 8
+
+/* Lines logged this stage, by pool name. Four pools report; a name past the
+ * table's end is logged without a limit rather than not at all. */
+#define LP64_MAX_POOLS 8
+
+typedef struct Lp64PoolLines
+{
+    const char *pool;
+    int lines;
+} Lp64PoolLines;
+
+static Lp64PoolLines s_PoolLines[LP64_MAX_POOLS];
+static int s_PoolCount;
+
+/* By text, since one name written in two files need not be one pointer. Not
+ * strcmp: the game's <string.h> (include/) does not declare it. */
+static int lp64SameName(const char *a, const char *b)
+{
+    while (*a != '\0' && *a == *b)
+    {
+        a++;
+        b++;
+    }
+    return *a == *b;
+}
+
+static Lp64PoolLines *lp64PoolLines(const char *pool)
+{
+    int i;
+
+    for (i = 0; i < s_PoolCount; i++)
+    {
+        if (lp64SameName(s_PoolLines[i].pool, pool))
+        {
+            return &s_PoolLines[i];
+        }
+    }
+    if (s_PoolCount == LP64_MAX_POOLS)
+    {
+        return NULL;
+    }
+    s_PoolLines[s_PoolCount].pool = pool;
+    s_PoolLines[s_PoolCount].lines = 0;
+    return &s_PoolLines[s_PoolCount++];
+}
+
+static void lp64LogPool(const char *pool, u32 request)
+{
+    portConLogf("ge: lp64: pool \"%s\" exhausted (request %u bytes)\n", pool, (unsigned) request);
+}
+
+void portLp64PoolExhausted(const char *pool, u32 request)
+{
+    Lp64PoolLines *counted = lp64PoolLines(pool);
+
+    if (counted != NULL)
+    {
+        if (counted->lines >= LP64_POOL_LINES_PER_STAGE)
+        {
+            return;
+        }
+        counted->lines++;
+    }
+    lp64LogPool(pool, request);
+}
+
+void portLp64PoolFatal(const char *pool, u32 request)
+{
+    lp64LogPool(pool, request);
+    exit(LP64_EXIT_POOL);
+}
+
+void portLp64PoolStageBegin(void)
+{
+    s_PoolCount = 0;
 }
 
 #endif

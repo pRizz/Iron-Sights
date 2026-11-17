@@ -9,6 +9,7 @@
 #ifndef TARGET_N64
 #include <stdio.h> /* GE_ROOM_AUDIT dyn-pool watch (see bg.c) */
 #include "port_dyn.h"
+#include "port_lp64.h" /* LP64-004: portLp64PoolFatal */
 #endif
 
 /**
@@ -62,6 +63,11 @@ void dynInitMemory(void) {
 #ifndef TARGET_N64
     // Double graphics buffers size on PC to avoid graphics corruption bugs
     g_GfxSizesByPlayerCount[getPlayerCount() - 1] *= 2;
+#if IS_64_BIT
+    /* LP64-004 decision 4: the buffer's unit is the display-list command,
+     * which is 16 bytes at 64 bits, so it holds as many commands as at 32. */
+    g_GfxSizesByPlayerCount[getPlayerCount() - 1] *= (s32) (sizeof(Gfx) / 8);
+#endif
     g_VtxSizesByPlayerCount[getPlayerCount() - 1] *= 2;
     g_VtxSizesByPlayerCount[getPlayerCount() - 1] = portDynVertexCapacity(
         g_VtxSizesByPlayerCount[getPlayerCount() - 1], getPlayerCount());
@@ -214,6 +220,14 @@ void portDynAuditFrameEnd(Gfx *gdlEnd)
     static s32 gfxHigh, vtxHigh;
     static u32 frames;
     s32 cap, used, vcap, vused;
+
+#if IS_64_BIT
+    /* LP64-004: past the end, the frame's commands have overwritten the next
+     * allocation. One comparison a frame; LP64-005 owes its benchmark. */
+    if ((u8 *)gdlEnd > g_GfxBuffers[g_GfxActiveBufferIndex + 1]) {
+        portLp64PoolFatal("graphics buffer", (u32)((u8 *)gdlEnd - g_GfxBuffers[g_GfxActiveBufferIndex]));
+    }
+#endif
 
     if (!portRoomAuditEnabled() || g_GfxBuffers[0] == NULL) {
         return;
