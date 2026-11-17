@@ -1070,16 +1070,23 @@ static void romdataTextOracle(s32 index, u8 *data, u32 size)
  * file's SIZE bytes in a block of CAPACITY: the load functions in ob.c record
  * the block in rom_remaining before loading (fileGetCapacity), and commit the
  * entry's poolRemaining after this pass, so the size returned here is the one
- * committed. The image is measured, refused by name when it passes CAPACITY,
- * and written into DATA from a copy in the converter scratch (reserved at
- * boot, so no stock setup allocates). Nothing can read a setup the converter
- * refuses, so a refusal stops the game, named. */
+ * committed. A capacity below SIZE (0 when no load recorded one) is refused.
+ * The image is measured, refused by name when it passes CAPACITY, and written
+ * into DATA from a copy in the converter scratch. The copy and the offset map
+ * use the scratch reserved at boot; the converter's checking pass mallocs and
+ * frees a buffer for the prop list's output on every load. Nothing can read a
+ * setup the converter refuses, so a refusal stops the game, named. */
 static u32 romdataSetupConvert(s32 index, u8 *data, u32 size, u32 capacity)
 {
     const char *name = file_resource_table[index].filename;
-    u32 need = portSetupConvertedSize(data, size, name);
+    u32 need;
     u8 *scratch;
 
+    if (capacity < size) {
+        sysFatalError("The setup file %s loaded into a block of %u bytes, below its %u; a 64-bit build cannot convert it",
+                name, capacity, size);
+    }
+    need = portSetupConvertedSize(data, size, name);
     if (need == 0) {
         sysFatalError("The setup file %s was refused by its converter; a 64-bit build cannot read it", name);
     }
@@ -1136,9 +1143,17 @@ void romdataFilePreprocess(s32 index, u8 *data, u32 size)
         break;
     case CLASS_SETUP:
 #if IS_64_BIT
-        /* LP64-004: the image grows; ob.c commits poolRemaining after this call */
-        resource_lookup_data_array[index].poolRemaining =
-            romdataSetupConvert(index, data, size, resource_lookup_data_array[index].rom_remaining);
+    {
+        /* LP64-004: the image grows; ob.c commits poolRemaining after this
+         * call. The capacity is consumed, so a load path that records none
+         * (fileIndexLoadToAddr's second branch) reads 0 and is refused,
+         * never an earlier load's block; after the load nothing else reads
+         * a setup entry's rom_remaining. */
+        const u32 capacity = resource_lookup_data_array[index].rom_remaining;
+
+        resource_lookup_data_array[index].rom_remaining = 0;
+        resource_lookup_data_array[index].poolRemaining = romdataSetupConvert(index, data, size, capacity);
+    }
 #elif defined(GE_LP64_ORACLE)
         romfileSetupOracle(data, size, file_resource_table[index].filename, sCompiledData[index]);
 #else

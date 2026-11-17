@@ -62,6 +62,10 @@ void romdataFilesApply(void);                       /* obInit's PC arm, after th
 s32 romdataFileServed(s32 index);                   /* 1 = the ROM copy, vanilla path */
 const u8 *romdataFileCompiled(s32 index);             /* the pristine compiled blob a served file replaced, or NULL */
 void romdataFilePreprocess(s32 index, u8 *data, u32 size); /* after load_resource */
+/* At 64 bits a served setup grows as it is converted (LP64-004):
+ * romdataFilePreprocess then reads the block's capacity from the file's
+ * rom_remaining, clears it, and writes the converted size to poolRemaining,
+ * which fileIndexLoadToBank commits after the call. */
 
 /* video.c's ini reader: 1 when `key` belongs to [data] (so it is not
  * reported as an unknown control) */
