@@ -18,7 +18,10 @@
  * data lives below 4 GB. Nothing pins memory low at 64 bits, and the startup
  * check (port_lp64.c, portLp64CheckAddressSpace) stops the game if the
  * executable image, an arena or the ROM image sits below 4 GB
- * (scripts/port/native_64bit_plan.md, "Addresses").
+ * (scripts/port/native_64bit_plan.md, "Addresses"). The argument must be
+ * pointer-sized or unsigned: at 64 bits it is converted to uintptr_t, so a
+ * signed 32-bit value with bit 31 set would sign-extend and read as a host
+ * pointer.
  */
 #ifndef PORT_HOSTPTR_H
 #define PORT_HOSTPTR_H

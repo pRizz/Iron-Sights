@@ -31,7 +31,11 @@ harness_widths() {
                 # A compiler that cannot make 32-bit code at all (aarch64)
                 # just offers no 32. On an x86 host the missing piece is the
                 # 32-bit toolchain, which has always failed a harness.
-                machine=$("$cc" -dumpmachine 2>/dev/null || true)
+                if ! machine=$("$cc" -dumpmachine 2>&1); then
+                    echo "harness_widths: $cc -dumpmachine failed:" >&2
+                    echo "$machine" >&2
+                    return 1
+                fi
                 case $machine in
                 x86_64* | i[3-6]86*)
                     echo "harness_widths: $cc ($machine) rejects -m32: the 32-bit toolchain is missing" \

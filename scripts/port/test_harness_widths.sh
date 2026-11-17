@@ -6,12 +6,14 @@ trap 'rm -rf "$work"' EXIT
 
 # A stand-in compiler: FAKE_M32=reject refuses -m32, FAKE_MACHINE is what
 # -dumpmachine prints (x86_64-linux-gnu unless set), FAKE_POINTER_BYTES is what
-# its preprocessor reports as __SIZEOF_POINTER__ and FAKE_DM_FAIL=1 makes the
-# macro probe fail with a message.
+# its preprocessor reports as __SIZEOF_POINTER__, FAKE_DM_FAIL=1 makes the
+# macro probe fail with a message and FAKE_DUMPMACHINE_FAIL=1 makes
+# -dumpmachine fail with one.
 cat >"$work/gcc" <<'FAKE'
 #!/usr/bin/env bash
 for arg in "$@"; do
     if [[ $arg == -m32 && ${FAKE_M32:-accept} == reject ]]; then exit 1; fi
+    if [[ $arg == -dumpmachine && -n ${FAKE_DUMPMACHINE_FAIL:-} ]]; then echo "fake: no machine" >&2; exit 1; fi
     if [[ $arg == -dumpmachine ]]; then echo "${FAKE_MACHINE:-x86_64-linux-gnu}"; exit 0; fi
     if [[ $arg == -dM && -n ${FAKE_DM_FAIL:-} ]]; then echo "fake: cannot run cc1" >&2; exit 1; fi
     if [[ $arg == -dM ]]; then
@@ -82,9 +84,14 @@ expect_failure "an i686 compiler without -m32 names the missing 32-bit toolchain
 expect_failure "the missing toolchain message says how to restrict the run" "MIDAS_HARNESS_WIDTHS=64" FAKE_M32=reject FAKE_POINTER_BYTES=8
 expect_failure "an unknown width is refused" "unknown width '16'" FAKE_M32=accept FAKE_POINTER_BYTES=8 MIDAS_HARNESS_WIDTHS="16"
 expect_failure "a failing macro probe fails and shows the compiler's message" "fake: cannot run cc1" FAKE_M32=accept FAKE_POINTER_BYTES=8 FAKE_DM_FAIL=1
+expect_failure "a failing -dumpmachine fails and shows the compiler's message" "fake: no machine" FAKE_M32=reject FAKE_POINTER_BYTES=8 FAKE_DUMPMACHINE_FAIL=1
 
 # Arrange
 source scripts/port/harness_widths.sh
+# Act and Assert: at the close of LP64-003 no harness half is pending, so every
+# harness runs at both widths (the plan's Review Focus 6).
+expect "the shipped HARNESS_PENDING is empty" "" "${HARNESS_PENDING[*]}"
+# Arrange
 HARNESS_PENDING=("test_wardrobe 64" "x 32")
 # Act and Assert
 if harness_pending test_wardrobe 64; then echo "ok: test_wardrobe 64 is pending"; else echo "FAIL: test_wardrobe 64 is pending"; failures=$((failures + 1)); fi

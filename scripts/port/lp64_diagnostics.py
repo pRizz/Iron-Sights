@@ -41,6 +41,9 @@ from typing import Optional
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_BUILD_DIRS = (ROOT/'build'/'lp64'/'gate', ROOT/'build'/'lp64'/'gate-video')
+# Normally absent: Task 11 of LP64-003 left no narrowing to allow and deleted the file. `narrowing --check`
+# still reads this path, and a missing file allows none, so a new narrowing fails until it is fixed or a
+# file with its allowlist line is added.
 NARROWING_ALLOWLIST = Path(__file__).with_name('lp64_narrowing_allowed.txt')
 UNPROTOTYPED_ALLOWLIST = Path(__file__).with_name('lp64_unprototyped_allowed.txt')
 GENERATED_HEADER = Path('generated')/'port_buildinfo.h'
