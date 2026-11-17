@@ -26,7 +26,6 @@ _Static_assert(sizeof(s32) == 4 && sizeof(u32) == 4, "32-bit integer types");
 _Static_assert(sizeof(Vtx) == 16, "Vertex stride");
 _Static_assert(sizeof(Mtx) == 64, "Matrix layout");
 _Static_assert(sizeof(Vp) == 16, "Viewport layout");
-_Static_assert(sizeof(Acmd) == 8, "Audio command stride");
 _Static_assert(sizeof(Light_t) == 12 && sizeof(Light) == 16, "Directional light layout");
 _Static_assert(sizeof(Ambient_t) == 8 && sizeof(Ambient) == 8, "Ambient light layout");
 _Static_assert(sizeof(Lights0) == 24 && sizeof(Lights1) == 24 && sizeof(Lights2) == 40
@@ -47,6 +46,8 @@ _Static_assert(sizeof(Vertex) == 16, "Game vertex stride");
 _Static_assert(IS_64_BIT == (sizeof(void *) == 8), "IS_64_BIT matches the host");
 _Static_assert(sizeof(Gfx) == 2 * sizeof(uintptr_t), "Display-list command is two pointer words");
 _Static_assert(offsetof(Gfx, words.w1) == sizeof(uintptr_t), "Display-list address word");
+/* An audio command carries a buffer address in w1 (abi.h, LP64-004). */
+_Static_assert(sizeof(Acmd) == 2 * sizeof(void *), "Audio command is two pointer words");
 /* sndPlaySfx reads the effects bank's instrument through ALInstrumentAlt_s
  * with 1-based sound indices: its index k must be ALInstrument's k - 1. */
 _Static_assert(offsetof(struct ALInstrumentAlt_s, soundArray) + sizeof(void *) == offsetof(ALInstrument, soundArray),

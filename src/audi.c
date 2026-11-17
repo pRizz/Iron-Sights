@@ -547,7 +547,7 @@ void amHandleFrameMessage(AudioInfo *info, AudioInfo *lastInfo)
     info->task.msg = info;
     info->task.flags = OS_SC_NEEDS_RSP;
     info->task.list.t.data_ptr = (u64*)(g_AudioManager.cmdList[g_CurrentAcmdList]);
-    info->task.list.t.data_size = (((intptr_t)cmdlp - (intptr_t)g_AudioManager.cmdList[g_CurrentAcmdList]) >> 3) * sizeof(Acmd);
+    info->task.list.t.data_size = (((intptr_t)cmdlp - (intptr_t)g_AudioManager.cmdList[g_CurrentAcmdList]) / sizeof(Acmd)) * sizeof(Acmd);
     info->task.list.t.type = M_AUDTASK;
     info->task.list.t.ucode_boot = (u64*)rspbootTextStart;
     info->task.list.t.ucode_boot_size = ((intptr_t)gsp3DTextStart - (intptr_t)rspbootTextStart);

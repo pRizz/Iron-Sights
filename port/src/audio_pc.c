@@ -43,6 +43,7 @@
 #include <SDL.h>
 #endif
 
+#include <inttypes.h>
 #include <ultra64.h>
 #include <PR/libaudio.h>
 #include <PR/abi.h>
@@ -418,7 +419,9 @@ static s32 portAcmdValidate(Acmd *list, s32 count)
 
     for (c = 0; c < count; c++) {
         u32 w0 = list[c].words.w0;
-        u32 w1 = list[c].words.w1;
+        /* pointer-sized, as in portAcmdRun: an address whose low word is
+         * below 0x01000000 must not read as garbage */
+        uintptr_t w1 = list[c].words.w1;
         u32 op = w0 >> 24;
         s32 bad = 0;
 
@@ -457,7 +460,7 @@ static s32 portAcmdValidate(Acmd *list, s32 count)
                     v[3 + k * 2] = (f32)list[lo + k].words.w1;
                 }
                 ge_dbg_vec("acmd INSANE op/idx/window7", v, 16);
-                portConLogf("ge: audio: WARNING - audio frame skipped (silent): command %d op 0x%02X has address 0x%08X\n",
+                portConLogf("ge: audio: WARNING - audio frame skipped (silent): command %d op 0x%02X has address 0x%08" PRIXPTR "\n",
                             c, op, w1);
             }
             s_StatSkipped++;

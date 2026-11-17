@@ -13,8 +13,12 @@ static int portAudioSpan(u32 offset, u32 bytes, u32 capacity)
     return offset <= capacity && bytes <= capacity - offset;
 }
 
-static int portAudioCommandFits(PortAudioBuffers *b, u32 w0, u32 w1)
+/* word1 is the command's whole second word. The commands that carry a buffer
+ * address in it check only their DMEM spans here; every case that reads it
+ * has 32 bits of data there, so the explicit narrowing below drops nothing. */
+static int portAudioCommandFits(PortAudioBuffers *b, u32 w0, uintptr_t word1)
 {
+    const u32 w1 = (u32) word1;
     const u32 op = w0 >> 24, flags = (w0 >> 16) & 255;
     const u32 input = b->in & 0xffe, output = b->out & 0xffe;
     const u32 samples = b->count & ~1u;
