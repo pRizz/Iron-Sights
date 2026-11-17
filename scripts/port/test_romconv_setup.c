@@ -319,7 +319,9 @@ static int testMatchesInPlaceAt32Bits(void)
      * is left half big-endian there (the converter swaps each word once). */
     sfBuildFixture(&f, 0);
     __builtin_memcpy(copy, g_File, g_Size);
-    word = f.intro + 12 + 40 + 4; /* the credits record's table word */
+    /* the credits record's table word, after the spawn and the camera (32-bit records are the file's) */
+    word = f.intro
+        + (u32) (sizeof(SetupIntroSpawn) + sizeof(SetupIntroCamera) + offsetof(struct SetupIntroCredits, unk04));
 
     // Act
     n = sfConvert();

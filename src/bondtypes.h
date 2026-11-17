@@ -3950,7 +3950,7 @@ typedef struct CreditsEntry_s
 
 /**
  * type == INTROTYPE_CREDITS
- * sizeof == 0x8
+ * sizeof == 0x8 (0x10 at 64 bits: type, 4 bytes of padding, unk04)
  */
 struct SetupIntroCredits
 {

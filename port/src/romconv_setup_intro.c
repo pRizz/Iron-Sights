@@ -12,6 +12,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <ultra64.h>
 #include "bondtypes.h"
@@ -329,11 +330,19 @@ int portSetupWriteCredits(const struct SetupWalk *w, const struct SetupItem *ite
 
 int portSetupWriteProps(const struct SetupWalk *w, const struct SetupItem *item, u32 to)
 {
-    if (w->out == NULL)
+    /* The checking pass converts into scratch memory, so that the write pass
+     * cannot refuse a prop list the checks accepted. */
+    u8 *scratch = w->out == NULL ? (u8 *) malloc(item->outBytes) : NULL;
+    s32 ok;
+
+    if (w->out == NULL && scratch == NULL)
     {
-        return 1;
+        setupRefuse(w, "no memory to check the prop list at 0x%X (%u bytes)", item->at, item->outBytes);
+        return 0;
     }
-    if (!portSetupPropsConvert(w->file + item->at, item->bytes, w->out + to, item->outBytes))
+    ok = portSetupPropsConvert(w->file + item->at, item->bytes, w->out != NULL ? w->out + to : scratch, item->outBytes);
+    free(scratch);
+    if (!ok)
     {
         setupRefuse(w, "the prop converter refused the prop list at 0x%X after measuring it", item->at);
         return 0;

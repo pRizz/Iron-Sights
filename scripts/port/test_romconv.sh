@@ -116,5 +116,13 @@ for width in $widths; do
     build "$work/setup-checks-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_setup_checks.c \
         "${setup[@]}"
     run "$work/setup-checks-$width" "${width}-bit setup file input checks"
+    # The intro test links its own prop converter double instead of the stubs.
+    setup_intro=()
+    for source in "${setup[@]}"; do
+        [[ $source == port/src/romconv_setup_props.c ]] || setup_intro+=("$source")
+    done
+    build "$work/setup-intro-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_setup_intro.c \
+        "${setup_intro[@]}"
+    run "$work/setup-intro-$width" "${width}-bit setup file intro of every kind"
     echo "test_romconv: PASS (${width}-bit)"
 done

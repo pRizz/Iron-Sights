@@ -130,7 +130,10 @@ u32 portSetupConvertedSize(const u8 *file, u32 size, const char *name);
  *
  * Returns 1, or 0 after portConvRefuse with OUT unwritten, for every refusal
  * of portSetupConvertedSize, an OUTSIZE below the measured size, and an OUT
- * that is NULL, misaligned or overlapping FILE.
+ * that is NULL, misaligned or overlapping FILE. OUT is written only after a
+ * checking pass has run every writer, its backstops and the prop converter
+ * (into scratch memory) without writing; the writing pass repeats that walk
+ * on the same input, so it refuses nothing the checks accepted.
  */
 s32 portSetupConvert(const u8 *file, u32 size, u8 *out, u32 outsize, const char *name);
 
@@ -140,7 +143,12 @@ s32 portSetupConvert(const u8 *file, u32 size, u8 *out, u32 outsize, const char 
  * record. portSetupPropsSize returns the converted bytes (0 when it cannot
  * convert them); portSetupPropsConvert writes them into OUT (OUTSIZE bytes)
  * and returns 1, or 0 with OUT unwritten. Neither logs: the setup converter
- * refuses by the file's name. In this task both are stubs that accept only a
+ * refuses by the file's name. portSetupConvert's promise that OUT stays
+ * unwritten on a refusal rests on one rule, which any replacement keeps:
+ * whether portSetupPropsConvert converts, and what it writes, depends only on
+ * PROPS and SIZE, so that the checking pass (converting into scratch memory)
+ * and the writing pass agree; every list portSetupPropsSize accepts it
+ * converts in exactly that many bytes. In this task both are stubs that accept only a
  * list that is the end record alone (4 bytes; 8 at 64 bits, padded to two
  * words); LP64-004 Task 15 converts the records.
  */
