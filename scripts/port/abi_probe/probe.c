@@ -312,6 +312,11 @@ _Static_assert(_Alignof(ModelAnimation) == 4, "64-bit ModelAnimation is 4-byte a
 _Static_assert(sizeof(ModelAnimation) == 0x40, "32-bit ModelAnimation is unchanged");
 #endif
 
+/* objecthandler.c sizes its ModelHitEntry pool (600 records, threaded by
+ * initModelHitEntryFreeList) by the record: 0x14 bytes at 32 bits, as the
+ * literal it replaced, and 40 at 64. */
+_Static_assert(sizeof(ModelHitEntry) == (IS_64_BIT ? 40 : 0x14), "model hit entry record");
+
 /* VERTEX_COLLISION_NODE (bondtypes.h): no link is NULL; at 64 bits a link is
  * the base plus the 32-bit offset, at 32 bits the stored pointer. */
 static int checkVertexCollisionNode(void)

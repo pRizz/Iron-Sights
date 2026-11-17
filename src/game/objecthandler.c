@@ -10,7 +10,7 @@
  * below, which the free-list init walks by adjacency. GCC doesn't keep bss
  * order (the init used to corrupt unrelated globals), so on PC the pool gets
  * its real size here and the stand-ins are N64-only. */
-char g_ModelHitEntries[600 * 0x14];
+char g_ModelHitEntries[600 * sizeof(ModelHitEntry)];
 #else
 char g_ModelHitEntries[0xC];
 //CODE.bss:80076A5C
