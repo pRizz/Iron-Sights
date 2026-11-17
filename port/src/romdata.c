@@ -756,6 +756,20 @@ extern s32 romfileStanOracle(u8 *data, u32 size, const char *name, const u8 *com
  * compiled-in with the ROM loaded - the per-class A/B knobs */
 static int romdataClassEnabled(enum romfileclass cls)
 {
+#if IS_64_BIT
+    /* LP64-004: a 64-bit build links no compiled-in file of any served class
+     * (GE_ROMDATA_FALLBACK is refused there), so a knob set to 0 would leave
+     * the class with nothing to read; it is ignored, and said so once. */
+    static int said[7];
+    static const char *const env[7] = { NULL, "GE_ROMTEXT", "GE_ROMBRIEF", "GE_ROMSETUP", "GE_ROMSTAN", "GE_ROMMODEL", "GE_ROMBG" };
+    const char *e = env[cls] ? getenv(env[cls]) : NULL;
+
+    if (e != NULL && e[0] == '0' && !said[cls]) {
+        said[cls] = 1;
+        portConLogf("ge: romdata: %s=0 ignored: a 64-bit build has no compiled-in %s files\n", env[cls], sClassName[cls]);
+    }
+    return 1;
+#else
     static int cache[7] = { -1, -1, -1, -1, -1, -1, -1 };
     static const char *const env[7] = { NULL, "GE_ROMTEXT", "GE_ROMBRIEF", "GE_ROMSETUP", "GE_ROMSTAN", "GE_ROMMODEL", "GE_ROMBG" };
     if (cache[cls] < 0) {
@@ -766,6 +780,7 @@ static int romdataClassEnabled(enum romfileclass cls)
         }
     }
     return cache[cls];
+#endif
 }
 
 static u8 sServed[OBJ_INDEX_MAX];          /* 1 = this compiled index now points at the ROM */
@@ -826,7 +841,11 @@ void romdataFilesApply(void)
         }
         r = romdataFileIndex(name);
         if (r < 0 || sFiles[r].size == 0) {
+#if IS_64_BIT
+            portConLogf("ge: romdata: file %-20s not in this ROM's directory - a load of it stops a 64-bit build\n", name);
+#else
             portConLogf("ge: romdata: file %-20s not in this ROM's directory - keeping the compiled-in copy\n", name);
+#endif
             missing++;
             continue;
         }
@@ -880,6 +899,24 @@ void romdataFilesApply(void)
 #endif
 }
 
+#if IS_64_BIT
+void romdataRequireServed(s32 index)
+{
+    const char *name;
+    enum romfileclass cls;
+
+    if (index <= 0 || index >= OBJ_INDEX_MAX || sServed[index]) {
+        return;
+    }
+    name = file_resource_table[index].filename;
+    cls = romdataClassOf(name);
+    if (cls != CLASS_NONE) {
+        sysFatalError("The %s file %s is not served from the ROM; a 64-bit build has no compiled-in copy to read", sClassName[cls],
+                name);
+    }
+}
+#endif
+
 s32 romdataFileServed(s32 index)
 {
     return (index > 0 && index < OBJ_INDEX_MAX) ? sServed[index] : 0;
@@ -929,7 +966,9 @@ static void romdataTextPreprocess(s32 index, u8 *data, u32 size)
 
     portLp64RequireConverter(PORT_LP64_TEXT_BANKS);
     if (size >= 2 && data[0] == 0x11 && data[1] == 0x72) {
-        portConLogf("ge: romdata: text %s arrived still 1172-compressed (raw load) - not rebased\n", bank);
+        /* langGet would add compressed words to the bank's address as offsets */
+        portConLogf("ge: romdata: text %s arrived still 1172-compressed (raw load) - zeroed, not rebased\n", bank);
+        memset(data, 0, size);
         return;
     }
     n = portTextBankConvert(data, size, (uintptr_t) data, bank, sTextPatches, TEXT_PATCH_COUNT);

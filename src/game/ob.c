@@ -290,6 +290,7 @@ void *fileIndexLoadToBank(s32 index, FILELOADMETHOD loadMethod, s32 size, u8 ban
 
 #ifndef TARGET_N64
     portHwNoteFile(index); /* tickhz=hw load hitch (frametiming.c) */
+    romdataRequireServed(index); /* LP64-004: stops a 64-bit build on a file the ROM does not serve */
     /* PORT: compiled-in assets are returned directly (hw_address is the linked
      * data, no copy or decompress); ROM-served files and NULL hw_address fall
      * through to the vanilla load path below. */
@@ -297,9 +298,8 @@ void *fileIndexLoadToBank(s32 index, FILELOADMETHOD loadMethod, s32 size, u8 ban
     {
         return file_resource_table[index].hw_address;
     }
-    /* the fall-through below returns an UNINITIALIZED bank allocation for
-     * any asset that never got compiled in - say so before the caller
-     * walks garbage */
+    /* the fall-through below returns an UNINITIALIZED bank allocation for any
+     * asset that never got compiled in - say so before the caller walks it */
     if (file_resource_table[index].hw_address == NULL)
     {
         printf("ge: fileIndexLoadToBank: NO LINKED DATA for file index %d (bank %d)\n",
@@ -392,6 +392,7 @@ void *fileIndexLoadToAddr(s32 index, FILELOADMETHOD loadMethod, void *ptrdata, s
 
 #ifndef TARGET_N64
     portHwNoteFile(index); /* tickhz=hw load hitch (frametiming.c) */
+    romdataRequireServed(index); /* LP64-004: stops a 64-bit build on a file the ROM does not serve */
     /* PORT: compiled-in assets return the linked data and ignore the caller's
      * buffer (callers use the returned pointer); ROM-served files take the
      * vanilla path into the caller's buffer. */

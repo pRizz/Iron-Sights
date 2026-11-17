@@ -779,6 +779,14 @@ void portRomdataSegsApply(void)
     for (i = 0; i < sizeof(segs) / sizeof(segs[0]); i++) {
         u32 size = 0;
         const u8 *p = romdataSeg(segs[i].name, &size);
+#if IS_64_BIT
+        /* LP64-004: a 64-bit build links none of these (GE_ROMDATA_FALLBACK
+         * is refused there): the textures, the audio banks' tables, the music
+         * samples and the gun barrel image come from the ROM or not at all */
+        if (p == NULL) {
+            sysFatalError("The ROM segment %s is missing; a 64-bit build has no compiled-in copy to read", segs[i].name);
+        }
+#endif
         if (p == NULL) {
             portConLogf("ge: romdata: seg %-18s NOT in this ROM - keeping the compiled-in copy%s\n", segs[i].name,
                     *segs[i].var == NULL ? " (NONE IN THIS BUILD - will crash)" : "");

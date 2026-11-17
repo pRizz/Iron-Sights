@@ -394,6 +394,13 @@ void load_object_fill_header(struct ModelFileHeader *objheader, u8 *name, u8* ds
         else
         {
             portLp64RequireConverter(PORT_LP64_MODELS); /* a compiled-in model, promoted in place */
+#if IS_64_BIT
+            {   /* LP64-004: a 64-bit build links no compiled-in model */
+                extern void sysFatalError(const char *format, ...);
+                sysFatalError("The model %s is not served from the ROM; a 64-bit build cannot read its compiled-in copy",
+                              (const char *) name);
+            }
+#endif
             /* PORT: compiled-in model data already holds real pointers, so vma
              * == fileramaddr makes the promote a no-op. */
             sub_GAME_7F075A90(objheader, (uintptr_t) filedata, (uintptr_t) filedata);
