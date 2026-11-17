@@ -30,9 +30,9 @@
 #include "port_lp64.h" /* IS_64_BIT */
 #if IS_64_BIT || defined(GE_LP64_ORACLE)
 #include <stdlib.h>
-#include "port_romconv.h" /* LP64-004: the audio bank and sequence table converters */
+#include "port_romconv_audio.h" /* LP64-004: the audio bank and sequence table converters */
 #include "romdata.h"      /* romdataSeg: the wave table's size */
-#include "port_romlayout.h" /* RomSeqTable: the sequence bank header */
+#include "port_romlayout_audio.h" /* RomSeqTable: the sequence bank header */
 #endif
 #ifdef GE_LP64_ORACLE
 #include "port_lp64_oracle.h"

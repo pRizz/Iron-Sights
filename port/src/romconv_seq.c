@@ -18,8 +18,8 @@
 #include <string.h>
 #include <ultra64.h>
 #include "platform_info.h"
-#include "port_romconv.h"
-#include "port_romlayout.h"
+#include "port_romconv_audio.h"
+#include "port_romlayout_audio.h"
 #ifdef GE_LP64_ORACLE
 #include <stdlib.h>
 #include "port_lp64_oracle.h"

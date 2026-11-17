@@ -16,8 +16,8 @@
 #include <string.h>
 #include <ultra64.h>
 #include <PR/libaudio.h>
-#include "port_romconv.h"
-#include "port_romlayout.h"
+#include "port_romconv_audio.h"
+#include "port_romlayout_audio.h"
 #include "port_lp64_oracle.h"
 
 #ifdef GE_LP64_ORACLE

@@ -16,7 +16,7 @@
 #include <macro.h>
 #include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 #if IS_64_BIT || defined(GE_LP64_ORACLE)
-#include "port_romconv.h" /* LP64-004: the audio bank and music sequence converters */
+#include "port_romconv_audio.h" /* LP64-004: the audio bank and music sequence converters */
 #endif
 
 /**

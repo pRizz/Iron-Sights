@@ -4,7 +4,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include "port_romconv.h"
+#include "port_romconv_stage.h"
 #include "test_romconv_bg_fixture.h"
 
 char s_Log[512];

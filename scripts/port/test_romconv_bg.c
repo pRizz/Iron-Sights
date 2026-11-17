@@ -13,7 +13,7 @@
 #include <ultra64.h>
 #include "platform_info.h"
 #include "bg.h"
-#include "port_romconv.h"
+#include "port_romconv_stage.h"
 #include "test_romconv_bg_fixture.h"
 
 /* ==== measuring and writing ============================================= */

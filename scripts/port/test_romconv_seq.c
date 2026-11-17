@@ -11,7 +11,7 @@
 #include <string.h>
 #include <ultra64.h>
 #include "platform_info.h"
-#include "port_romconv.h"
+#include "port_romconv_audio.h"
 
 #define SEQ_ENTRIES 3u
 #define FILE_SIZE (4u + SEQ_ENTRIES * 8u)

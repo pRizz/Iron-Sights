@@ -1,12 +1,12 @@
 /**
  * The ROM data converters of the stage classes (milestone LP64-004):
- * collision tiles and setup files. Their file
- * layouts are in port_romlayout_stage.h. port_romconv.h, which holds the
- * shared helpers (portConvBe32, portConvRefuse and the rest) and the other
- * classes' converters, is at the repository's file-length limit, so these
- * declarations have their own header; its rules are theirs: measure before
- * writing, never read what is being written, zero-extend every offset into
- * its pointer-sized slot, and refuse by name. The sources, port/src/romconv_*.c,
+ * collision tiles, setup files and backgrounds. The collision and setup file
+ * layouts are in port_romlayout_stage.h, the background's in port_romlayout.h.
+ * port_romconv.h holds the shared helpers (portConvBe32, portConvRefuse and
+ * the rest) and the other classes' converters; these have their own header to
+ * keep each under 500 lines, and its rules are theirs: measure before writing,
+ * never read what is being written, zero-extend every offset into its
+ * pointer-sized slot, and refuse by name. The sources, port/src/romconv_*.c,
  * are compiled only into 64-bit builds and into the opt-in 32-bit oracle
  * build (-DGE_LP64_ORACLE=ON); every call from shared code sits inside
  * `#if IS_64_BIT` or `#ifdef GE_LP64_ORACLE`.
@@ -189,6 +189,108 @@ s32 portSetupPropsConvert(const u8 *props, u32 size, u8 *out, u32 outsize);
  * compared by romfileSetupOracle when GE_ROMPROBE=1 loads it at boot.
  */
 void portSetupOracleSweep(void);
+
+/* ---- backgrounds (romconv_bg.c) --------------------------------------- */
+
+struct bg_room_data;         /* bg.h */
+struct bg_portal_data_entry; /* bg.h */
+
+/**
+ * The bytes of the two run-time tables portBgTablesConvert writes for the bg
+ * file FILE (SIZE bytes, its front matter already in native byte order by
+ * romfileBgConvert; port_romlayout.h's RomBg* layouts): one bg_room_data for
+ * each room record from the header's room offset up to and including the
+ * first record after the first whose primary offset is 0 (the closing
+ * record after the end marker; load_bg_file counts its rooms by that field
+ * alone, and the closing record's other words are copied, not checked
+ * beyond being offset words), then one bg_portal_data_entry for each portal
+ * entry up to and including the first whose offset is 0 (the game's portal
+ * walks test that field alone). A multiple of 8. Reads only FILE.
+ *
+ * Returns 0 after portConvRefuse, naming NAME, when: SIZE is less than the
+ * header; the header's room or portal offset, a room's three offsets or a
+ * portal's offset is neither 0 nor a segment 0x0F word (BG_SEG_TO_PTR would
+ * take it for an address); the header's room or portal offset is 0 or lies
+ * outside the file; the room table reaches the visibility commands, the
+ * portal table or the file's end before that closing record (the next of
+ * those the header places after the room table bounds it); the record
+ * before it, the end marker, has an offset of 0 (the game's room walks,
+ * getPointTableBinCount and its twins, would run past it); the portal table
+ * reaches the file's end before its entry whose offset is 0; or a portal's points
+ * (its count byte and that many coord3d) run past the file's end. The rooms'
+ * offsets lead to their compressed data, which is read later by the room
+ * loaders through obLoadBGFileBytesAtOffset, which bounds them by the file.
+ */
+u32 portBgTablesSize(const u8 *file, u32 size, const char *name);
+
+/**
+ * Writes the tables portBgTablesSize measures for FILE into OUT (OUTSIZE
+ * bytes, 8-byte aligned, not overlapping FILE): the rooms at OUT, then the
+ * portals, each field from its file word, every offset kept as the file's
+ * segment 0x0F word zero-extended into its pointer slot (0 stays 0), so that
+ * BG_SEG_TO_PTR, the room loaders' file-position arithmetic and
+ * load_bg_file's portal promotion run unchanged; the padding of a 64-bit
+ * record is zero. Sets *ROOMS and *PORTALS to the two tables. At 32 bits the
+ * records are the file's own bytes, the in-place result.
+ *
+ * Returns 1, or 0 after portConvRefuse, naming the file "bg file", with
+ * nothing written and *ROOMS and *PORTALS untouched, when portBgTablesSize
+ * refuses, OUTSIZE is less than it or OUT is not 8-byte aligned.
+ */
+int portBgTablesConvert(const u8 *file, u32 size, u8 *out, u32 outsize, struct bg_room_data **rooms,
+        struct bg_portal_data_entry **portals);
+
+/**
+ * A 64-bit room loader's list (bg.c's bgLoadRoomPrimaryGdl and
+ * bgLoadRoomSecondaryGdl): BLOCK holds ALLOCSIZE bytes, and bgDecompress has
+ * just written LISTSIZE bytes of 8-byte ROM commands at its start. Expands
+ * them with portGfxFromRomBackward into LISTSIZE / 8 host Gfx that end at
+ * the block's end, sets *LIST to the first and returns their bytes
+ * (LISTSIZE / 8 * sizeof(Gfx): LISTSIZE at 32 bits, twice it at 64).
+ *
+ * Placement: the source is [BLOCK, BLOCK + LISTSIZE), the destination
+ * [BLOCK + ALLOCSIZE - D, BLOCK + ALLOCSIZE) with D the returned bytes. With
+ * ALLOCSIZE at least D the destination never starts before the source, so
+ * portGfxFromRomBackward's rule (destination at or after the source less
+ * sizeof(Gfx) - 8) holds; at 32 bits this is texCopyGdls's placement.
+ *
+ * A LISTSIZE of 0 is an empty list, as at 32 bits (*LIST = BLOCK + ALLOCSIZE,
+ * 0 returned). Returns -1, writing nothing, when ALLOCSIZE is less than D
+ * (the caller then logs the "room memory" pool line), or, after portConvRefuse
+ * naming NAME and room ROOMNUM, when LISTSIZE is negative or not a multiple of 8.
+ */
+s32 portBgRoomListExpand(u8 *block, s32 allocsize, s32 listsize, const char *name, s32 roomnum, Gfx **list);
+
+#ifdef GE_LP64_ORACLE
+/**
+ * The oracle (32-bit, -DGE_LP64_ORACLE=ON; romconv_bg_oracle.c), called by
+ * romfileBgConvert when it has turned the front matter of the bg file DATA
+ * (SIZE bytes, named NAME) to native order, once a file, before load_bg_file's
+ * passes: compares the room and portal tables the game reads in DATA with
+ * portBgTablesConvert's, byte for byte, as the backgrounds file NAME, and
+ * keeps a copy of DATA as it is then (not during the sweep).
+ */
+void portBgTablesOracle(const u8 *data, u32 size, const char *name);
+
+/**
+ * Called by romfileBgConvert at every later load of DATA, before load_bg_file's
+ * passes: compares the tables in DATA with a fresh conversion of the copy
+ * portBgTablesOracle kept, field by field, logging each field that differs
+ * ("ge: lp64: oracle: bg reload NAME: ...") and a total. Counts no file: it
+ * measures what play left in the tables (decision 6 of the plan).
+ */
+void portBgTablesReloadOracle(const u8 *data, const char *name);
+
+/**
+ * Converts every bg file levelinfotable names that the ROM serves with data,
+ * each in a copy of its own, through romfileBgConvert and so through
+ * portBgTablesOracle, then logs
+ * ge: lp64: oracle: backgrounds sweep: levelinfotable names N files, Z not in the ROM or
+ * empty, M swept
+ * romdataFilesApply calls it when the oracle's sweeps are asked for.
+ */
+void portBgOracleSweep(void);
+#endif
 
 #ifdef __cplusplus
 }

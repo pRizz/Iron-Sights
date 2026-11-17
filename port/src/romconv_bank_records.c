@@ -10,8 +10,8 @@
 #include <ultra64.h>
 #include <PR/libaudio.h>
 #include "platform_info.h"
-#include "port_romconv.h"
-#include "port_romlayout.h"
+#include "port_romconv_audio.h"
+#include "port_romlayout_audio.h"
 #include "romconv_bank_walk.h"
 
 

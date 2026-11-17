@@ -26,7 +26,7 @@
 #include <ultra64.h>
 #include "platform_info.h"
 #include "bg.h"
-#include "port_romconv.h"
+#include "port_romconv_stage.h"
 #include "port_romlayout.h"
 
 #define BG_CONVERT_FILE "bg file"

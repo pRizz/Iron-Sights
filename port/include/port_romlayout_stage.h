@@ -1,7 +1,7 @@
 /**
  * The ROM's file layouts of the stage classes (milestone LP64-004): collision
- * tiles and setup files. The rules are those of
- * port_romlayout.h, whose 521 lines leave no room for these: each struct is
+ * tiles and setup files, kept apart from port_romlayout.h to hold each header
+ * under 500 lines. The rules are those of port_romlayout.h: each struct is
  * the bytes of a ROM file or record exactly as the cart holds them, the same
  * at every pointer width, with u8, u16, u32 and s16 fields only (an offset is
  * a u32, never a pointer) and a _Static_assert on its size beside it. The

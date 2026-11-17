@@ -16,18 +16,18 @@
  * portConvScratch); zero-extend every offset into its pointer-sized slot; and
  * look every reference up through a PortConvMap, refusing by name on a miss.
  *
- * This header holds the helpers every converter shares; each converter task
- * adds its own prototypes below them.
+ * This header holds the helpers every converter shares and the converters of
+ * the animation tables, text banks, textures, fonts and models; the audio
+ * classes' are in port_romconv_audio.h, the stage classes' (collision tiles,
+ * setup files and backgrounds) in port_romconv_stage.h.
  */
 #ifndef PORT_ROMCONV_H
 #define PORT_ROMCONV_H
 
 #include <stdint.h>
 #include <PR/ultratypes.h>
-#include <PR/libaudio.h> /* the audio bank records */
 #include <PR/gbi.h>      /* Gfx, for the display-list expanders */
 #include "port_lp64.h"
-#include "music.h" /* RareALSeqBankFile */
 
 #ifdef __cplusplus
 extern "C" {
@@ -193,135 +193,6 @@ struct PortTextPatch
 s32 portTextBankConvert(u8 *data, u32 size, uintptr_t base, const char *bank, const struct PortTextPatch *patches,
         u32 npatches);
 
-/* ---- audio banks (romconv_bank.c) ------------------------------------- */
-
-/**
- * The bytes of run-time records portBankConvert writes for the big-endian bank
- * file FILE (SIZE bytes, port_romlayout.h's RomBankFile) whose waves lead into
- * a wave table of TABLESIZE bytes: one ALBankFile and one record for each
- * distinct ALBank, ALInstrument, ALSound and ALWaveTable the file reaches, each
- * rounded up to 8. Reads only. Returns 0 after portConvRefuse, naming NAME (the
- * bank, as the caller knows it), when the revision is not AL_BANK_VERSION, a
- * count is negative, a record or array runs past the file's end, an offset is
- * not a multiple of 4, one offset is reached as two kinds of record, two
- * records reached share a byte (an instrument's or bank's offset array is part
- * of its record), or an ADPCM or raw wave's base + len passes TABLESIZE.
- */
-u32 portBankConvertedSize(const u8 *file, u32 size, u32 tablesize, const char *name);
-
-/**
- * Builds the run-time graph of the bank file FILE (SIZE bytes) in OUT (OUTSIZE
- * bytes, 8-byte aligned) and returns OUT as its ALBankFile. Each distinct
- * bank, instrument, sound and wave table is written once, its flags byte 1;
- * envelopes, key maps, ADPCM books and loops stay in FILE and are turned to
- * native byte order there, once each, as the 32-bit alBnkfNew does. A wave's
- * base is TABLE + its offset, and a 16-bit raw wave's samples are swapped in
- * TABLE (TABLESIZE bytes), once a base. An instrument or bank offset of 0 gives
- * a pointer to FILE itself and is not followed, as alBnkfNew does.
- *
- * Returns NULL after portConvRefuse, naming NAME, having written nothing to
- * FILE, TABLE or OUT, when portBankConvertedSize refuses, when OUTSIZE is less
- * than it, or when OUT is not 8-byte aligned. The file's flags bytes are not
- * read: a record already marked converted is converted again.
- */
-ALBankFile *portBankConvert(u8 *file, u32 size, u8 *table, u32 tablesize, u8 *out, u32 outsize, const char *name);
-
-/** audio_stubs.c, at 64 bits: converts the copied bank file FILE (SIZE bytes),
- * whose wave table TABLE is the ROM segment TBLNAME, into records allocated
- * from HEAP and returns them; stops the game, naming NAME, when the file is
- * refused or TABLE is not that segment. */
-ALBankFile *portBnkfConvert(ALHeap *heap, ALBankFile *file, u32 size, u8 *table, const char *name,
-        const char *tblname);
-
-#ifdef GE_LP64_ORACLE
-/** One bank graph for portBankGraphsEqual: its ALBankFile, the file image its
- * in-file records lie in (SIZE bytes), and the wave table its bases lead into. */
-struct PortBankGraph
-{
-    const ALBankFile *root;
-    const u8 *file;
-    u32 size;
-    const u8 *table;
-};
-
-/**
- * Walks A and B from their bank files down and compares every scalar field.
- * A pointer to a bank, instrument, sound or wave table is equal when both lead
- * to records that compare equal, or both to their file's start; one to an
- * envelope, key map, book or loop when both lie at the same offset of their
- * file and hold the same bytes; a wave's base when both are at the same offset
- * of their table. Returns 1, or 0 with WHY (WHYSIZE bytes) naming the first
- * difference.
- */
-int portBankGraphsEqual(const struct PortBankGraph *a, const struct PortBankGraph *b, char *why, u32 whysize);
-
-/**
- * The oracle (32-bit, -DGE_LP64_ORACLE=ON), called after alBnkfNew converted
- * INPLACE (the bank file NAME, SIZE bytes) with INPLACETABLE (TABLESIZE bytes):
- * converts PRISTINE, a copy of the file made before, with TABLECOPY, a copy of
- * the table made before, compares the two graphs and the two tables, and logs
- * one verdict for NAME.
- */
-void portBankOracle(const char *name, const ALBankFile *inplace, const u8 *inplacetable, u8 *pristine, u32 size,
-        u8 *tablecopy, u32 tablesize);
-
-/** audio_stubs.c, in the oracle build: alBnkfNew(FILE, TABLE) with
- * portBankOracle beside it; TBLNAME is the table's ROM segment. */
-void portBnkfOracle(ALBankFile *file, u32 size, u8 *table, const char *name, const char *tblname);
-#endif
-
-/* ---- music sequences (romconv_seq.c) ---------------------------------- */
-
-/**
- * The bytes of the run-time RareALSeqBankFile for the big-endian sequence bank
- * FILE (port_romlayout.h's RomSeqTable): offsetof(RareALSeqBankFile, seqArray)
- * + count * sizeof(RareALSeqData). Reads the count only. The count is 16-bit,
- * so the size is at most 1,048,568 bytes at 64 bits and never wraps.
- *
- * Precondition: FILE has at least sizeof(RomSeqTable) (4) readable bytes.
- * The function has no size to check that against, so the caller checks the
- * file's size first, as portSeqTableLoad and portSeqTableOracle do. The size
- * returned says nothing about the file's length: only portSeqTableConvert
- * checks that the count's entries fit the file.
- */
-u32 portSeqTableSize(const u8 *file);
-
-/**
- * Writes the run-time table of the sequence bank FILE (FILESIZE bytes) into
- * OUT (OUTSIZE bytes): seqCount, then for each entry its offset zero-extended
- * into address (the game's musicSeqFileNew adds the segment's address) and
- * its two lengths, in native byte order. The bytes OUT's padding and unk
- * occupy are written as zero, except unk itself, which keeps the file's two
- * bytes as stored, as the 32-bit in-place copy leaves them; nothing reads it.
- *
- * Returns 1, or 0 after portConvRefuse, with nothing written to OUT, when
- * FILESIZE is less than the header, or than the header and count entries,
- * or OUTSIZE is less than portSeqTableSize. Each entry's offset and lengths
- * are copied as they are: nothing here bounds offset + len by FILESIZE, since
- * the entries' streams are read later by musicTrack1Play and its two twins.
- */
-int portSeqTableConvert(const u8 *file, u32 filesize, RareALSeqBankFile *out, u32 outsize);
-
-/** audio_stubs.c, at 64 bits: converts the sequence bank SEGMENT, the ROM
- * segment NAME, into a table allocated from HEAP at portSeqTableSize, and
- * returns it; stops the game, naming NAME, when SEGMENT is not that segment,
- * the segment is shorter than the header, or the converter refuses. */
-RareALSeqBankFile *portSeqTableLoad(ALHeap *heap, const u8 *segment, const char *name);
-
-#ifdef GE_LP64_ORACLE
-/**
- * The oracle (32-bit, -DGE_LP64_ORACLE=ON), called after the game copied and
- * swapped INPLACE and before musicSeqFileNew rebased it: converts FILE
- * (FILESIZE bytes, the segment INPLACE was copied from) into new memory and
- * compares the portSeqTableSize bytes of both, as the file musicsampletbl.
- */
-void portSeqTableOracle(const RareALSeqBankFile *inplace, const u8 *file, u32 filesize);
-
-/** audio_stubs.c, in the oracle build: portSeqTableOracle for SEGMENT, the ROM
- * segment NAME, with the segment's size from romdataSeg. */
-void portSeqOracle(const RareALSeqBankFile *inplace, const u8 *segment, const char *name);
-#endif
-
 /* ---- display lists: the expander of the textures class (romconv_gfx.c) -- */
 
 /*
@@ -371,8 +242,8 @@ void portGfxFromWords(Gfx *dst, const u32 *words, u32 commands);
  * The oracle (32-bit, -DGE_LP64_ORACLE=ON) around texCopyGdls's 32-bit copy
  * of BYTES bytes of ROM commands from SRC to DST: before it, copies the span
  * both cover when they overlap (else the source alone) and runs
- * portGfxFromRomBackward in the copy with the same offsets; after it, compares DST's BYTES bytes with the converter's, as the
- * textures file "room list N" (N counts the calls). Only one copy is checked
+ * portGfxFromRomBackward in the copy with the same offsets; after it, compares
+ * DST's BYTES bytes with the converter's, as the textures file "room list N" (N counts the calls). Only one copy is checked
  * at a time: Before then After, with nothing between.
  */
 void portGfxCopyOracleBefore(const Gfx *src, const Gfx *dst, s32 bytes);
@@ -517,108 +388,6 @@ void portModelOracle(const u8 *file, u32 size, s32 numSwitches, s32 numtextures,
  * romdataFilesApply calls it when the oracle's sweeps are asked for.
  */
 void portModelOracleSweep(void);
-#endif
-
-/* ---- backgrounds (romconv_bg.c) --------------------------------------- */
-
-struct bg_room_data;         /* bg.h */
-struct bg_portal_data_entry; /* bg.h */
-
-/**
- * The bytes of the two run-time tables portBgTablesConvert writes for the bg
- * file FILE (SIZE bytes, its front matter already in native byte order by
- * romfileBgConvert; port_romlayout.h's RomBg* layouts): one bg_room_data for
- * each room record from the header's room offset up to and including the
- * first record after the first whose primary offset is 0 (the closing
- * record after the end marker; load_bg_file counts its rooms by that field
- * alone, and the closing record's other words are copied, not checked
- * beyond being offset words), then one bg_portal_data_entry for each portal
- * entry up to and including the first whose offset is 0 (the game's portal
- * walks test that field alone). A multiple of 8. Reads only FILE.
- *
- * Returns 0 after portConvRefuse, naming NAME, when: SIZE is less than the
- * header; the header's room or portal offset, a room's three offsets or a
- * portal's offset is neither 0 nor a segment 0x0F word (BG_SEG_TO_PTR would
- * take it for an address); the header's room or portal offset is 0 or lies
- * outside the file; the room table reaches the visibility commands, the
- * portal table or the file's end before that closing record (the next of
- * those the header places after the room table bounds it); the record
- * before it, the end marker, has an offset of 0 (the game's room walks,
- * getPointTableBinCount and its twins, would run past it); the portal table
- * reaches the file's end before its entry whose offset is 0; or a portal's points
- * (its count byte and that many coord3d) run past the file's end. The rooms'
- * offsets lead to their compressed data, which is read later by the room
- * loaders through obLoadBGFileBytesAtOffset, which bounds them by the file.
- */
-u32 portBgTablesSize(const u8 *file, u32 size, const char *name);
-
-/**
- * Writes the tables portBgTablesSize measures for FILE into OUT (OUTSIZE
- * bytes, 8-byte aligned, not overlapping FILE): the rooms at OUT, then the
- * portals, each field from its file word, every offset kept as the file's
- * segment 0x0F word zero-extended into its pointer slot (0 stays 0), so that
- * BG_SEG_TO_PTR, the room loaders' file-position arithmetic and
- * load_bg_file's portal promotion run unchanged; the padding of a 64-bit
- * record is zero. Sets *ROOMS and *PORTALS to the two tables. At 32 bits the
- * records are the file's own bytes, the in-place result.
- *
- * Returns 1, or 0 after portConvRefuse, naming the file "bg file", with
- * nothing written and *ROOMS and *PORTALS untouched, when portBgTablesSize
- * refuses, OUTSIZE is less than it or OUT is not 8-byte aligned.
- */
-int portBgTablesConvert(const u8 *file, u32 size, u8 *out, u32 outsize, struct bg_room_data **rooms,
-        struct bg_portal_data_entry **portals);
-
-/**
- * A 64-bit room loader's list (bg.c's bgLoadRoomPrimaryGdl and
- * bgLoadRoomSecondaryGdl): BLOCK holds ALLOCSIZE bytes, and bgDecompress has
- * just written LISTSIZE bytes of 8-byte ROM commands at its start. Expands
- * them with portGfxFromRomBackward into LISTSIZE / 8 host Gfx that end at
- * the block's end, sets *LIST to the first and returns their bytes
- * (LISTSIZE / 8 * sizeof(Gfx): LISTSIZE at 32 bits, twice it at 64).
- *
- * Placement: the source is [BLOCK, BLOCK + LISTSIZE), the destination
- * [BLOCK + ALLOCSIZE - D, BLOCK + ALLOCSIZE) with D the returned bytes. With
- * ALLOCSIZE at least D the destination never starts before the source, so
- * portGfxFromRomBackward's rule (destination at or after the source less
- * sizeof(Gfx) - 8) holds; at 32 bits this is texCopyGdls's placement.
- *
- * A LISTSIZE of 0 is an empty list, as at 32 bits (*LIST = BLOCK + ALLOCSIZE,
- * 0 returned). Returns -1, writing nothing, when ALLOCSIZE is less than D
- * (the caller then logs the "room memory" pool line), or, after portConvRefuse
- * naming NAME and room ROOMNUM, when LISTSIZE is negative or not a multiple of 8.
- */
-s32 portBgRoomListExpand(u8 *block, s32 allocsize, s32 listsize, const char *name, s32 roomnum, Gfx **list);
-
-#ifdef GE_LP64_ORACLE
-/**
- * The oracle (32-bit, -DGE_LP64_ORACLE=ON; romconv_bg_oracle.c), called by
- * romfileBgConvert when it has turned the front matter of the bg file DATA
- * (SIZE bytes, named NAME) to native order, once a file, before load_bg_file's
- * passes: compares the room and portal tables the game reads in DATA with
- * portBgTablesConvert's, byte for byte, as the backgrounds file NAME, and
- * keeps a copy of DATA as it is then (not during the sweep).
- */
-void portBgTablesOracle(const u8 *data, u32 size, const char *name);
-
-/**
- * Called by romfileBgConvert at every later load of DATA, before load_bg_file's
- * passes: compares the tables in DATA with a fresh conversion of the copy
- * portBgTablesOracle kept, field by field, logging each field that differs
- * ("ge: lp64: oracle: bg reload NAME: ...") and a total. Counts no file: it
- * measures what play left in the tables (decision 6 of the plan).
- */
-void portBgTablesReloadOracle(const u8 *data, const char *name);
-
-/**
- * Converts every bg file levelinfotable names that the ROM serves with data,
- * each in a copy of its own, through romfileBgConvert and so through
- * portBgTablesOracle, then logs
- * ge: lp64: oracle: backgrounds sweep: levelinfotable names N files, Z not in the ROM or
- * empty, M swept
- * romdataFilesApply calls it when the oracle's sweeps are asked for.
- */
-void portBgOracleSweep(void);
 #endif
 
 #ifdef __cplusplus

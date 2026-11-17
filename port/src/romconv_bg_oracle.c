@@ -31,7 +31,7 @@
 #include "bg.h"
 #include "ob.h"
 #include "romdata.h"
-#include "port_romconv.h"
+#include "port_romconv_stage.h"
 #include "port_lp64_oracle.h"
 
 #ifdef GE_LP64_ORACLE

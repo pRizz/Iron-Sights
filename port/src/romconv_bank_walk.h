@@ -10,7 +10,7 @@
 
 #include <stddef.h>
 #include <PR/ultratypes.h>
-#include "port_romconv.h"
+#include "port_romconv_audio.h"
 
 enum BankKind
 {

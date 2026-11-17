@@ -32,7 +32,7 @@
 #include <stdint.h>
 #include "bg.h"
 #include "memp.h"
-#include "port_romconv.h" /* LP64-004: the background converter and its oracle */
+#include "port_romconv_stage.h" /* LP64-004: the background converter and its oracle */
 #endif
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,

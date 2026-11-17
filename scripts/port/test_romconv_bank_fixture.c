@@ -9,7 +9,7 @@
 #include <ultra64.h>
 #include <PR/libaudio.h>
 #include "platform_info.h"
-#include "port_romconv.h"
+#include "port_romconv_audio.h"
 #include "test_romconv_bank_fixture.h"
 
 u8 s_File[FILE_SIZE];

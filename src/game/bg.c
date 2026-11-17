@@ -38,7 +38,7 @@ extern void sysFatalError(const char *format, ...);
 #include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 #include "port_hostptr.h" /* LP64-003: PORT_WORD_IS_HOST */
 #if IS_64_BIT
-#include "port_romconv.h" /* LP64-004: portBgRoomListExpand */
+#include "port_romconv_stage.h" /* LP64-004: portBgRoomListExpand */
 #endif
 #endif
 
