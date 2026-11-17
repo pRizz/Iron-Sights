@@ -228,6 +228,9 @@ MODEL_ALIAS(struct hand, field_B68, mtxlist, render_pos);
  * at 64 bits), BRANCHED (every reader takes gait_model_storage's field at 64
  * bits: bondhead.c) or UNREAD (no code names it; test_abi_probe.sh fails on a
  * reader). The 64-bit assertion fails for any name marked SAME that is not. */
+/* The number of GAIT_RUN lines below; test_abi_probe.sh fails unless it
+ * reads exactly this many, so a line it cannot parse does not drop out. */
+#define GAIT_RUN_NAMES 50
 #define GAIT_SAME 0
 #define GAIT_BRANCHED 1
 #define GAIT_UNREAD 2
