@@ -52,6 +52,10 @@
 #include "asmsym.h" /* ASM_SYM: COFF `_` prefix on Windows, bare on ELF */
 #include "romdata.h" /* romdataSeg: the ROM-resident copies */
 #include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
+#if IS_64_BIT || defined(GE_LP64_ORACLE)
+#include <stdint.h>
+#include "port_romconv.h" /* LP64-004: the font converter and its oracle */
+#endif
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console's history. */
@@ -184,27 +188,48 @@ u8 _animation_entriesSegmentRomStart[0x169EC0];
  * fine under the null renderer.
  * fontdl: 0xC0 (map:5686), copied by lvInit into ptr_font_DL; content is
  * RDP-only (never software-parsed), zeros are fine.
+ * At 64 bits (LP64-004 Task 9) each font is staged at its run-time layout,
+ * struct font being 0x2F4 bytes longer than the file's table (pixeldata is a
+ * pointer slot), and the font list's 24 commands are 16-byte Gfx: the two
+ * fonts' spans and staging arrays grow by 0x300, the 0x2F4 rounded up to 16
+ * (load_font_tables allocates each span from the stage bank, which does not
+ * round, so a span of 0x24B0 + 0x2F4 would leave Zurich Bold and everything
+ * after it 4 bytes off 8-byte alignment), and the list's span is 0x180, so
+ * load_font_tables and lvInit, which size by these labels, are unchanged.
+ * portFontBuildSegments checks the spans against what the converters write.
  */
 __asm__(
     ASM_BSS
     "    .balign 16\n"
     "    .globl " ASM_SYM("_fontbankgothicSegmentStart") "\n"
     ASM_SYM("_fontbankgothicSegmentStart") ":\n"
+#if IS_64_BIT
+    "    .space 0x24B0 + 0x300\n"
+#else
     "    .space 0x24B0\n"
+#endif
     "    .globl " ASM_SYM("_fontbankgothicSegmentEnd") "\n"
     ASM_SYM("_fontbankgothicSegmentEnd") ":\n"
     "    .space 16\n"
     "    .balign 16\n"
     "    .globl " ASM_SYM("_fontzurichboldSegmentStart") "\n"
     ASM_SYM("_fontzurichboldSegmentStart") ":\n"
+#if IS_64_BIT
+    "    .space 0x3540 + 0x300\n"
+#else
     "    .space 0x3540\n"
+#endif
     "    .globl " ASM_SYM("_fontzurichboldSegmentEnd") "\n"
     ASM_SYM("_fontzurichboldSegmentEnd") ":\n"
     "    .space 16\n"
     "    .balign 16\n"
     "    .globl " ASM_SYM("_fontdlSegmentRomStart") "\n"
     ASM_SYM("_fontdlSegmentRomStart") ":\n"
+#if IS_64_BIT
+    "    .space 0x180\n"
+#else
     "    .space 0xC0\n"
+#endif
     "    .globl " ASM_SYM("_fontdlSegmentRomEnd") "\n"
     ASM_SYM("_fontdlSegmentRomEnd") ":\n"
     "    .space 16\n"
@@ -217,8 +242,13 @@ __asm__(
     ASM_SIZE("_fontdlSegmentRomEnd", 16)
 );
 
+#if IS_64_BIT
+u8 _fontbankgothicSegmentRomStart[0x24B0 + 0x300];
+u8 _fontzurichboldSegmentRomStart[0x3540 + 0x300];
+#else
 u8 _fontbankgothicSegmentRomStart[0x24B0];
 u8 _fontzurichboldSegmentRomStart[0x3540];
+#endif
 
 /**
  * TEXT WAVE: compose the two Latin font segment images from the typed
@@ -332,6 +362,55 @@ static void portFontFromRom(u8 *dst, const u8 *rom, u32 size, u32 nativewords)
     }
 }
 
+#if IS_64_BIT
+extern void sysFatalError(const char *format, ...);
+
+_Static_assert(PORT_FONTDL_COMMANDS * sizeof(Gfx) == 0x180, "the font list's span holds its 24 commands");
+
+/* Stops the game, naming the segment, when the span load_font_tables or lvInit
+ * copies from START to END, or the STAGEDSIZE bytes it copies them from, is not
+ * SIZE, the span the converter's image needs. */
+static void portFontCheckSpan(const char *name, const u8 *start, const u8 *end, uintptr_t stagedsize, u32 size)
+{
+    uintptr_t span = (uintptr_t) end - (uintptr_t) start;
+
+    if (span != (uintptr_t) size || stagedsize != (uintptr_t) size) {
+        sysFatalError("The font segment %s is staged in %lu bytes and copied as %lu, its run-time image needs %u", name,
+                (unsigned long) stagedsize, (unsigned long) span, size);
+    }
+}
+
+/* LP64-004 Task 9: the ROM's three font segments staged at their run-time
+ * layout (port_romconv.h), so that load_font_tables only adds the copy's
+ * address to each pixeldata and lvInit copies 24 host commands. Stops the
+ * game, naming the segment, when a converter refuses or a staging span is not
+ * what it needs. */
+static void portFontConvertSegments(const u8 *g, u32 gsz, const u8 *z, u32 zsz, const u8 *d)
+{
+    extern u8 _fontbankgothicSegmentStart[], _fontbankgothicSegmentEnd[];
+    extern u8 _fontzurichboldSegmentStart[], _fontzurichboldSegmentEnd[];
+    extern u8 _fontdlSegmentRomStart[], _fontdlSegmentRomEnd[];
+
+    portFontCheckSpan("fontbankgothic", _fontbankgothicSegmentStart, _fontbankgothicSegmentEnd,
+            sizeof(_fontbankgothicSegmentRomStart), PORT_FONT_STAGED_SIZE(portFontConvertedSize(gsz)));
+    portFontCheckSpan("fontzurichbold", _fontzurichboldSegmentStart, _fontzurichboldSegmentEnd,
+            sizeof(_fontzurichboldSegmentRomStart), PORT_FONT_STAGED_SIZE(portFontConvertedSize(zsz)));
+    /* the list is staged in its own span, which lvInit copies */
+    portFontCheckSpan("fontdl", _fontdlSegmentRomStart, _fontdlSegmentRomEnd, PORT_FONTDL_COMMANDS * sizeof(Gfx),
+            PORT_FONTDL_COMMANDS * (u32) sizeof(Gfx));
+    if (!portFontConvert(g, gsz, _fontbankgothicSegmentRomStart, sizeof(_fontbankgothicSegmentRomStart))) {
+        sysFatalError("Cannot convert the font segment fontbankgothic");
+    }
+    if (!portFontConvert(z, zsz, _fontzurichboldSegmentRomStart, sizeof(_fontzurichboldSegmentRomStart))) {
+        sysFatalError("Cannot convert the font segment fontzurichbold");
+    }
+    /* d is the ROM image, the list's staging array is in .bss: no overlap. */
+    portGfxFromRom((Gfx *) _fontdlSegmentRomStart, d, PORT_FONTDL_COMMANDS);
+    portConLogf("ge: romdata: seg fonts (gothic, zurichbold, fontdl) -> ROM, at the 64-bit layout (%u, %u, %u bytes)\n",
+            portFontConvertedSize(gsz), portFontConvertedSize(zsz), PORT_FONTDL_COMMANDS * (u32) sizeof(Gfx));
+}
+#endif
+
 void portFontBuildSegments(void)
 {
     extern u8 _fontdlSegmentRomStart[];
@@ -350,6 +429,9 @@ void portFontBuildSegments(void)
      * fontchar tables and the fontdl Gfx words get word-swapped. Glyph bytes
      * and the Japanese glyph banks are raw bytes and are copied as-is. */
     if (g != NULL && z != NULL && d != NULL && gsz == 0x24B0 && zsz == 0x3540 && dsz == PORT_FONTDL_SIZE) {
+#if IS_64_BIT
+        portFontConvertSegments(g, gsz, z, zsz, d);
+#else
 #ifdef GE_ROMDATA_FALLBACK
         {
             static u8 gothic[0x24B0], zurich[0x3540], fontdl[PORT_FONTDL_SIZE];
@@ -375,6 +457,12 @@ void portFontBuildSegments(void)
         portFontFromRom(_fontzurichboldSegmentRomStart, z, zsz, PORT_FONT_NATIVE_WORDS);
         portFontFromRom(_fontdlSegmentRomStart, d, dsz, PORT_FONTDL_SIZE / 4);
         portConLogf("ge: romdata: seg fonts (gothic, zurichbold, fontdl) -> ROM\n");
+#endif
+#ifdef GE_LP64_ORACLE
+        portFontOracle("fontbankgothic", _fontbankgothicSegmentRomStart, g, gsz);
+        portFontOracle("fontzurichbold", _fontzurichboldSegmentRomStart, z, zsz);
+        portFontListOracle(_fontdlSegmentRomStart, d);
+#endif
 #endif
         if (j != NULL && jsz == PORT_JFONT_SIZE && e != NULL && esz == PORT_EFONT_SIZE) {
             memcpy(_jfontchardataSegmentRomStart, j, jsz);

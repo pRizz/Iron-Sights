@@ -317,6 +317,15 @@ _Static_assert(sizeof(ModelAnimation) == 0x40, "32-bit ModelAnimation is unchang
  * literal it replaced, and 40 at 64. */
 _Static_assert(sizeof(ModelHitEntry) == (IS_64_BIT ? 40 : 0x14), "model hit entry record");
 
+/* The font table (LP64-004 Task 9): 0xB74 bytes in the file. struct fontchar
+ * keeps the pixel offset in a pointer slot, so at 64 bits struct font is 0x2F4
+ * bytes longer (segments.c's staging arrays grow by that, rounded up to 0x300
+ * to keep the stage bank 16-aligned); at 32 it is the
+ * file's table. */
+_Static_assert(sizeof(RomFont) == 0xB74, "font table file layout");
+_Static_assert(sizeof(struct font) - sizeof(RomFont) == (IS_64_BIT ? 0x2F4 : 0), "struct font's growth");
+_Static_assert(sizeof(struct fontchar) == (IS_64_BIT ? 32 : 24), "fontchar stride");
+
 /* VERTEX_COLLISION_NODE (bondtypes.h): no link is NULL; at 64 bits a link is
  * the base plus the 32-bit offset, at 32 bits the stored pointer. */
 static int checkVertexCollisionNode(void)

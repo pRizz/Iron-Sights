@@ -213,4 +213,32 @@ typedef struct RomSeqEntry
 } RomSeqEntry;
 _Static_assert(sizeof(RomSeqEntry) == 8, "RomSeqEntry is 8 bytes");
 
+/* ==== fonts (the fontbankgothic and fontzurichbold segments; bondtypes.h) == */
+
+/**
+ * A Latin font segment, big-endian: the 13 x 13 kerning table, the 94
+ * characters' records, then the glyph bytes (8-bit intensity, read as bytes).
+ * A character's pixel_offset is from the segment's start, or 0. bondtypes.h's
+ * struct fontchar keeps it in a pointer slot (pixeldata), so at 64 bits a
+ * record is 32 bytes and struct font 0x2F4 bytes longer than this table.
+ */
+typedef struct RomFontChar
+{
+    u32 index;
+    u32 baseline;
+    u32 height;
+    u32 width;
+    u32 kerningindex;
+    u32 pixel_offset; /* struct fontchar.pixeldata */
+} RomFontChar;
+_Static_assert(sizeof(RomFontChar) == 24, "RomFontChar is 24 bytes");
+
+typedef struct RomFont
+{
+    u32 kerning[13 * 13];
+    RomFontChar chars[94];
+    /* then the glyph bytes */
+} RomFont;
+_Static_assert(sizeof(RomFont) == 0xB74, "RomFont is 0xB74 bytes");
+
 #endif

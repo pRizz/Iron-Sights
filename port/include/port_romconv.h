@@ -379,6 +379,64 @@ void portGfxCopyOracleBefore(const Gfx *src, const Gfx *dst, s32 bytes);
 void portGfxCopyOracleAfter(void);
 #endif
 
+/* ---- fonts (romconv_font.c) ------------------------------------------- */
+
+/** The commands of the font list (the fontdl segment, 0xC0 bytes in the ROM):
+ * 0xC0 bytes of Gfx at 32 bits, 0x180 at 64. */
+#define PORT_FONTDL_COMMANDS 24u
+
+/**
+ * The bytes of the run-time image of a font segment of ROMSIZE bytes
+ * (port_romlayout.h's RomFont, then glyph bytes): ROMSIZE - sizeof(RomFont) +
+ * sizeof(struct font), which is ROMSIZE at 32 bits and ROMSIZE + 0x2F4 at 64
+ * (0x24B0 + 0x2F4 for Bank Gothic, 0x3540 + 0x2F4 for Zurich Bold). Returns 0
+ * when ROMSIZE is less than sizeof(RomFont) or the size would pass
+ * 0xFFFFFFFF. Pure.
+ */
+u32 portFontConvertedSize(u32 romsize);
+
+/**
+ * The span segments.c stages a font image of CONVERTED bytes in, which
+ * load_font_tables allocates from the stage bank: CONVERTED rounded up to 16.
+ * The bank does not round, so this keeps the next allocation as aligned as at
+ * 32 bits, where both stock sizes are multiples of 16: 0x24B0 + 0x300 and
+ * 0x3540 + 0x300 at 64 bits. CONVERTED is at most 0xFFFFFFF0 here.
+ */
+#define PORT_FONT_STAGED_SIZE(converted) (((converted) + 15u) & ~15u)
+
+/**
+ * Writes the run-time image of the big-endian font segment ROM (ROMSIZE
+ * bytes) into OUT (OUTSIZE bytes; any alignment, and not overlapping ROM): a
+ * struct font with native kerning and character fields, each pixeldata the
+ * character's pixel_offset - sizeof(RomFont) + sizeof(struct font)
+ * zero-extended (0 stays 0), its padding zero, then the glyph bytes as they
+ * are. Nothing past portFontConvertedSize(ROMSIZE) bytes is written. The
+ * game's own fix-up in load_font_tables then adds the copy's address.
+ *
+ * Returns 1, or 0 after portConvRefuse with nothing written when ROMSIZE is
+ * less than sizeof(RomFont), portFontConvertedSize(ROMSIZE) would wrap,
+ * OUTSIZE is less than it, or a non-zero pixel_offset lies outside the glyph
+ * bytes (below sizeof(RomFont) or at or past ROMSIZE). Only where a glyph
+ * starts is checked: its width and height are copied as they are, and
+ * nothing here bounds the bytes the text renderer reads from pixeldata.
+ */
+int portFontConvert(const u8 *rom, u32 romsize, u8 *out, u32 outsize);
+
+#ifdef GE_LP64_ORACLE
+/**
+ * The oracle (32-bit, -DGE_LP64_ORACLE=ON), called after portFontBuildSegments
+ * staged the font segment NAME: converts ROM (ROMSIZE bytes, the segment the
+ * staging image was built from) into new memory and compares its
+ * portFontConvertedSize bytes with STAGED, as the fonts file NAME.
+ */
+void portFontOracle(const char *name, const u8 *staged, const u8 *rom, u32 romsize);
+
+/** As portFontOracle for the font list: expands its PORT_FONTDL_COMMANDS
+ * commands at ROM with portGfxFromRom and compares them with STAGED, as the
+ * fonts file "fontdl". */
+void portFontListOracle(const u8 *staged, const u8 *rom);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

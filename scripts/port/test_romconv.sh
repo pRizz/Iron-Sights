@@ -70,5 +70,12 @@ for width in $widths; do
     build "$work/gfx-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_gfx.c \
         port/src/romconv_gfx.c port/src/romconv_common.c port/src/port_lp64_oracle.c
     run "$work/gfx-$width" "${width}-bit display-list expanders"
+    font=(scripts/port/test_romconv_font_fixture.c port/src/romconv_font.c port/src/romconv_gfx.c
+        port/src/romconv_common.c port/src/port_lp64_oracle.c)
+    build "$work/font-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_font.c "${font[@]}"
+    run "$work/font-$width" "${width}-bit fonts"
+    build "$work/font-checks-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_font_checks.c \
+        "${font[@]}"
+    run "$work/font-checks-$width" "${width}-bit font input checks"
     echo "test_romconv: PASS (${width}-bit)"
 done
