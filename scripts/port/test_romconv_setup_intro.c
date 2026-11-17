@@ -87,22 +87,31 @@ static const u32 kPads[] = {0};
 /* PADS as an object, so that a 32-bit comparison with it is not always false. */
 static const u32 kPadCount = PADS;
 
-/* The main fixture (no nested lists) with its intro replaced by one of every
- * kind, appended after it; the old intro's bytes stay, unowned and unread. */
-static void sfBuildEveryKind(struct SetupFixture *f)
+/* The main fixture (no nested lists) with its intro replaced by the records
+ * of kRecords that ORDER names, appended after it; the old intro's bytes
+ * stay, unowned and unread. */
+static void sfBuildIntro(struct SetupFixture *f, const u32 *order, u32 count)
 {
     u32 i, k;
 
     sfBuildFixture(f, 0);
     f->intro = g_Size;
-    for (i = 0; i < RECORDS; i++)
+    for (i = 0; i < count; i++)
     {
-        for (k = 0; k < kRecords[i].words; k++)
+        for (k = 0; k < kRecords[order[i]].words; k++)
         {
-            sfWords(1, i == CREDITS && k == 1 ? f->credits : kRecords[i].w[k]);
+            sfWords(1, order[i] == CREDITS && k == 1 ? f->credits : kRecords[order[i]].w[k]);
         }
     }
     sfHeader(2, f->intro);
+}
+
+/* One record of every kind, in kRecords' order. */
+static void sfBuildEveryKind(struct SetupFixture *f)
+{
+    static const u32 order[RECORDS] = {0, 1, 2, 3, 4, 5, CAMERA, WATCH, CREDITS, END};
+
+    sfBuildIntro(f, order, RECORDS);
 }
 
 /* A type word swapped as romfile_setup.c's KSK: the u16's two bytes reversed,
@@ -343,6 +352,33 @@ static int testBondview2Walk(void)
     return expect(ok, "bondview2.c's walk, with its inherited WATCH misstep, goes where the game's does");
 }
 
+/* Stock Dam's order: a WATCH followed by a SPAWN, which needs no pad, then an
+ * ITEM. bondview2.c reads the WATCH's hours as a SPAWN and the next types 4
+ * bytes past each record's start, at both widths alike: it skips the SPAWN
+ * and the ITEM (whose item_right word it reads as a SPAWN) and lands on the
+ * end. bondview_r.c visits each record. */
+static int testWatchBeforeSpawnOvershootsAtBothWidths(void)
+{
+    // Arrange
+    static const u32 order[] = {WATCH, 0, 1, END};
+    static const u32 records[] = {0, 12, 24, 40}, bondview2[] = {0, 4, 16, 28, 40};
+    struct SetupFixture f;
+    u32 seen[32], n, m;
+    int ok;
+
+    sfBuildIntro(&f, order, sizeof(order) / sizeof(order[0]));
+
+    // Act
+    ok = sfConvert() != 0;
+    n = ok ? walk(BONDVIEW_R, seen, 32) : 0;
+    ok = ok && n == 4 && sameOffsets(seen, n, records, 4);
+    m = ok ? walk(BONDVIEW2, seen, 32) : 0;
+
+    // Assert
+    ok = ok && m == 5 && sameOffsets(seen, m, bondview2, 5);
+    return expect(ok, "a WATCH before a SPAWN: bondview2.c overshoots by 4 at both widths");
+}
+
 static int testMatchesInPlaceAt32Bits(void)
 {
 #if IS_64_BIT
@@ -391,7 +427,8 @@ static int testPropsRefusalIsTheChecks(void)
 int main(void)
 {
     int failures = testEveryRecordsWords() + testCreditsRecordFindsItsTable() + testPadWordsAt64Bits()
-        + testBondviewRAndPropWalksReachTheEnd() + testBondview2Walk() + testMatchesInPlaceAt32Bits()
+        + testBondviewRAndPropWalksReachTheEnd() + testBondview2Walk() + testWatchBeforeSpawnOvershootsAtBothWidths()
+        + testMatchesInPlaceAt32Bits()
         + testPropsRefusalIsTheChecks();
 
     if (failures != 0)
