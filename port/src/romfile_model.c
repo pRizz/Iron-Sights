@@ -515,3 +515,73 @@ s32 romfileModelConvert(u8 *data, u32 size, s32 numSwitches, s32 numtextures, co
     }
     return c.bad == 0;
 }
+
+#if IS_64_BIT
+#include "port_romconv.h"
+
+extern void sysFatalError(const char *format, ...);
+
+/* The bytes a 64-bit model's switch slots and texture entries take. */
+static u32 romfileModelTableBytes(s32 numSwitches, s32 numtextures)
+{
+    u32 nsw = numSwitches > 0 ? (u32) numSwitches : 0;
+    u32 ntex = numtextures > 0 ? (u32) numtextures : 0;
+
+    return nsw * (u32) sizeof(ModelNode *) + ntex * (u32) sizeof(ModelFileTextures);
+}
+
+/*
+ * LP64-004: the 64-bit model load (load_object_fill_header, objecthandler_2.c).
+ * DATA holds the served file (FILESIZE bytes) in a block of ROOM bytes: the
+ * caller's size for a load to an address, fileGetCapacity for a bank load. The
+ * converter measures first; an image that passes ROOM is refused by name. The
+ * file is then copied to the converter scratch (reserved at boot, so no stock
+ * model allocates during play) and converted back into DATA. Returns 1 with
+ * *COMMIT the image's size, or 0 after a logged refusal, having written
+ * nothing but zeros over the bytes the switch slots and texture entries take
+ * at 64 bits: the header's Switches and Textures point there, and the caller
+ * points RootNode at an empty node, so nothing reads the unconverted file as a
+ * converted model. *COMMIT is then the larger of FILESIZE and those bytes.
+ */
+s32 romfileModelConvertWide(u8 *data, u32 filesize, u32 room, s32 numSwitches, s32 numtextures, const char *name,
+        u32 *commit)
+{
+    static s32 timing = -1;
+    u32 size = portModelConvertedSize(data, filesize, numSwitches, numtextures, name);
+    u32 tables;
+
+    if (timing < 0)
+    {
+        timing = getenv("GE_MODELTIME") != NULL;
+    }
+    if (timing)
+    {
+        portConLogf("ge: modeltime: %-16s image %u bytes of a %u-byte room (file %u)\n", name, size, room, filesize);
+    }
+    if (size != 0 && size > room)
+    {
+        portConvRefuse(PORT_LP64_MODELS, name, "its %u-byte image does not fit the %u-byte room", size, room);
+        size = 0;
+    }
+    if (size != 0)
+    {
+        u8 *scratch = portConvScratch(filesize);
+
+        memcpy(scratch, data, filesize);
+        if (portModelConvert(scratch, filesize, data, size, numSwitches, numtextures, name))
+        {
+            *commit = size;
+            return 1;
+        }
+    }
+    tables = romfileModelTableBytes(numSwitches, numtextures);
+    if (tables > room)
+    {
+        sysFatalError("The model %s was refused and its %u bytes of tables do not fit its %u-byte room", name, tables,
+                room);
+    }
+    memset(data, 0, tables);
+    *commit = tables > filesize ? tables : filesize;
+    return 0;
+}
+#endif

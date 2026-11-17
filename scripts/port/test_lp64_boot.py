@@ -235,6 +235,16 @@ class CommandLine(StandIns):
         # Assert
         self.assertEqual(status, 0, out)
 
+    def test_stage_option_launches_the_mission_at_once(self):
+        # Arrange: GE_STAGE alone waits 120 ticks, the whole of an --expect-stop run.
+        exe = self.fake('stage-after', CLEAN, 5, script='[ "$GE_STAGE_AFTER" = 1 ] || exit 3')
+
+        # Act
+        status, out = self.run_main('--stage', 'dam', str(exe))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+
     def test_pool_line_fails_even_with_the_right_stop(self):
         # Arrange
         exe = self.fake('pool', BOOT + ADDRESS + POOL + stop('animation tables'), 5)

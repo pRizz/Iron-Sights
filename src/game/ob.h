@@ -45,6 +45,11 @@ void *_fileIndexLoadToBank(s32 index, FILELOADMETHOD param_2, s32 size, u8 bank)
 #endif
 
 void fileSetSize(s32 filenum, u8* ptr, u32 size, s32 reallocate);
+#if IS_64_BIT
+/* LP64-004: the bytes of the block a bank load of INDEX holds before
+ * fileSetSize trims it, the room a converted model may fill. */
+u32 fileGetCapacity(s32 index);
+#endif
 s32 get_pc_buffer_remaining_value(u8 *name);
 s32 get_rom_remaining_buffer_for_index(s32 index);
 s32 get_pc_remaining_buffer_for_index(s32 index);

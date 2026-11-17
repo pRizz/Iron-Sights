@@ -498,6 +498,27 @@ u32 portModelConvertedSize(const u8 *file, u32 size, s32 numSwitches, s32 numtex
 s32 portModelConvert(const u8 *file, u32 size, u8 *out, u32 outsize, s32 numSwitches, s32 numtextures,
         const char *name);
 
+#ifdef GE_LP64_ORACLE
+/**
+ * The oracle (32-bit, -DGE_LP64_ORACLE=ON; romconv_model_oracle.c): converts
+ * the model file FILE (SIZE bytes, never written) by romfile_model.c's
+ * in-place path in a copy and by portModelConvert into new memory, and
+ * compares the whole images, both before the game's promotion, as the models
+ * file NAME. A refusal by either path, or an image of another size, is a
+ * difference.
+ */
+void portModelOracle(const u8 *file, u32 size, s32 numSwitches, s32 numtextures, const char *name);
+
+/**
+ * Runs portModelOracle for every model file the compiled header tables name
+ * (gun, chr and prop), each loaded through the game's loader with its lookup
+ * entry put back, then logs
+ * ge: lp64: oracle: models sweep: the header tables name N files, M swept
+ * romdataFilesApply calls it when the oracle's sweeps are asked for.
+ */
+void portModelOracleSweep(void);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

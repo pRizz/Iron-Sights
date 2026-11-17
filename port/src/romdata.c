@@ -857,6 +857,13 @@ void romdataFilesApply(void)
         }
         portConLogf("ge: romdata: GE_ROMPROBE: %d served files loaded and probed\n", n);
     }
+#ifdef GE_LP64_ORACLE
+    /* LP64-004: the model oracle's sweep, which loads each model file the
+     * same way and converts it by both paths (romconv_model_oracle.c) */
+    if (portLp64OracleSweepRequested()) {
+        portModelOracleSweep();
+    }
+#endif
 }
 
 s32 romdataFileServed(s32 index)

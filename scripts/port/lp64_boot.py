@@ -15,8 +15,9 @@ status 0, logged the address line and the frame limit line with the expected cou
 
 Each run gets its own temporary directory under the system temp folder (the executable is copied
 there and runs there), GE_FRAMES (120 for --expect-stop, --frames for --expect-run, 600 by default),
-GE_SEED=1, GE_NOINISAVE=1, GE_ROM, and with --stage GE_STAGE; every other GE_ variable of the
-caller's environment is dropped. LeakSanitizer is off (ASAN_OPTIONS=detect_leaks=0): stopping
+GE_SEED=1, GE_NOINISAVE=1, GE_ROM, and with --stage GE_STAGE and GE_STAGE_AFTER=1 (the mission
+starts at once, as in the smoke); every other GE_ variable of the caller's environment is dropped.
+LeakSanitizer is off (ASAN_OPTIONS=detect_leaks=0): stopping
 mid-boot leaves the game's allocations unfreed by design. A run longer than TIMEOUT_SECONDS fails
 (for --expect-run, TIMEOUT_SECONDS for each 600 frames begun).
 """
@@ -132,7 +133,8 @@ def boot_environment(rom: Path, stage: str | None, frames: int) -> dict[str, str
     env.update(GE_ROM=str(rom), GE_FRAMES=str(frames), GE_SEED='1', GE_NOINISAVE='1',
                ASAN_OPTIONS='detect_leaks=0')
     if stage is not None:
-        env['GE_STAGE'] = stage
+        # At once, as the mission smoke launches: alone, GE_STAGE waits 120 ticks (front.c).
+        env.update(GE_STAGE=stage, GE_STAGE_AFTER='1')
     return env
 
 
@@ -180,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
                       help='the executable runs its frames and exits with status 0')
     parser.add_argument('--frames', type=int, metavar='N',
                         help=f'with --expect-run, the frames to run (GE_FRAMES; default {RUN_FRAMES})')
-    parser.add_argument('--stage', metavar='NAME', help='also set GE_STAGE (a mission name such as dam)')
+    parser.add_argument('--stage', metavar='NAME', help='also set GE_STAGE (a mission name such as dam) and GE_STAGE_AFTER=1')
     parser.add_argument('executables', nargs='+', type=Path, metavar='EXECUTABLE')
     options = parser.parse_args(argv)
     if options.frames is not None and not options.expect_run:

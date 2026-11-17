@@ -9,11 +9,11 @@
  * call sites (each inside #ifdef GE_LP64_ORACLE) feed the counts.
  *
  * GE_LP64_ORACLE_SWEEP=1 asks for the sweeps that also convert files a run
- * does not load (each class's task adds its sweep here); lp64_oracle.py sets
- * it for its boot run. No class has a sweep yet, so it is only read and
- * reported. GE_ROMPROBE=1, which the same run sets, is the game's own: it
- * loads every served text bank, briefing, setup and stan file through the
- * normal load path at boot (romdata.c).
+ * does not load; lp64_oracle.py sets it for its boot run. The models class has
+ * one (portModelOracleSweep, romconv_model_oracle.c), which romdata.c runs
+ * at boot when portLp64OracleSweepRequested says so. GE_ROMPROBE=1, which the
+ * same run sets, is the game's own: it loads every served text bank, briefing,
+ * setup and stan file through the normal load path at boot (romdata.c).
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,14 +69,15 @@ void portLp64OracleResult(enum PortLp64Asset asset, const char *file, int identi
     oracleCount(asset, identical);
 }
 
+int portLp64OracleSweepRequested(void)
+{
+    return s_SweepRequested;
+}
+
 static void oracleReport(void)
 {
     int asset;
 
-    if (s_SweepRequested)
-    {
-        portConLogf("ge: lp64: oracle: GE_LP64_ORACLE_SWEEP=1: no class has a sweep yet\n");
-    }
     for (asset = 0; asset < PORT_LP64_ASSET_COUNT; asset++)
     {
         portConLogf("ge: lp64: oracle: %s: %u files, %u differ\n", portLp64AssetName((enum PortLp64Asset) asset),

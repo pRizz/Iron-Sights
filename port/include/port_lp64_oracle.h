@@ -44,12 +44,17 @@ void portLp64OracleBytes(enum PortLp64Asset asset, const char *file, const void 
  */
 void portLp64OracleResult(enum PortLp64Asset asset, const char *file, int identical, const char *detail);
 
+/** True when the run asked for the oracle's sweeps of files it does not load
+ * (GE_LP64_ORACLE_SWEEP set, and neither empty nor 0). */
+int portLp64OracleSweepRequested(void);
+
 #ifdef __cplusplus
 }
 #endif
 #else
 #define portLp64OracleBytes(asset, file, inplace, converted, size) ((void) 0)
 #define portLp64OracleResult(asset, file, identical, detail) ((void) 0)
+#define portLp64OracleSweepRequested() 0
 #endif
 
 #endif

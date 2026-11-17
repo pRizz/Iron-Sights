@@ -301,8 +301,14 @@ void load_object_fill_header(struct ModelFileHeader *objheader, u8 *name, u8* ds
     
     objheader->Switches = (struct ModelNode **)filedata;
     
+#if IS_64_BIT
+    /* LP64-004: the switch slots are pointers, so the textures follow them by
+     * pointer stride (at 32 bits the same address as the s32 stride) */
+    objheader->Textures = (struct ModelFileTextures *) ((struct ModelNode **) filedata + objheader->numSwitches);
+#else
     // hmmmmmmmmmmmm
     objheader->Textures = (struct ModelFileTextures *)&((s32*)filedata)[objheader->numSwitches];
+#endif
     
     objheader->RootNode = (struct ModelNode *)&objheader->Textures[objheader->numtextures];
     
@@ -324,12 +330,26 @@ void load_object_fill_header(struct ModelFileHeader *objheader, u8 *name, u8* ds
              * collision fixup and G_SETTEX expansion below then run on the
              * converted image unchanged. */
             extern void fileSetSize(s32 filenum, u8 *ptr, u32 size, s32 reallocate);
+#if IS_64_BIT
+            /* LP64-004: the file is converted into the same block at its
+             * 64-bit layout, room permitting (romfile_model.c) */
+            extern s32 romfileModelConvertWide(u8 *data, u32 filesize, u32 room, s32 numSwitches, s32 numtextures,
+                                               const char *name, u32 *commit);
+            u32 poolsz = resource_lookup_data_array[idx].poolRemaining;
+            u32 commit = poolsz;
+            const unsigned long long convT0 = portProfNow();
+            s32 converted = romfileModelConvertWide((u8 *) filedata, poolsz,
+                                                    dst != 0 ? (u32) size : fileGetCapacity(idx),
+                                                    objheader->numSwitches, objheader->numtextures,
+                                                    (const char *) name, &commit);
+#else
             const u8 *comp = romdataFileCompiled(idx);
             u32 poolsz = resource_lookup_data_array[idx].poolRemaining;
             const unsigned long long convT0 = portProfNow();
             s32 converted = romfileModelConvert((u8 *) filedata, poolsz,
                                                 objheader->numSwitches, objheader->numtextures,
                                                 (const char *) name, comp);
+#endif
             {   /* GE_MODELTIME=1: where a model load's time goes */
                 static s32 mt = -1;
                 if (mt < 0) { mt = getenv("GE_MODELTIME") != NULL; }
@@ -348,7 +368,11 @@ void load_object_fill_header(struct ModelFileHeader *objheader, u8 *name, u8* ds
              * files never allocated STAGE and skip this. */
             if (poolsz > 0)
             {
+#if IS_64_BIT
+                fileSetSize(idx, (u8 *) filedata, (commit + 0xf) & ~0xfu, dst == 0);
+#else
                 fileSetSize(idx, (u8 *) filedata, (poolsz + 0xf) & ~0xfu, dst == 0);
+#endif
             }
 
             if (converted)

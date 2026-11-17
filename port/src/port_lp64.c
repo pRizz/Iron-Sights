@@ -224,7 +224,7 @@ static const unsigned char s_AssetConverted[PORT_LP64_ASSET_COUNT] = {
     1, /* fonts (romconv_font.c) */
     1, /* textures (romconv_gfx.c) */
     1, /* animation tables (romconv_anim.c) */
-    0, /* models */
+    1, /* models (romconv_model.c) */
     0, /* collision tiles */
     0, /* setup files */
     0, /* backgrounds */

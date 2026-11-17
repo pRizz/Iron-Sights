@@ -480,6 +480,15 @@ void fileSetSize(s32 filenum, u8* ptr, u32 size, s32 reallocate)
     }
 }
 
+#if IS_64_BIT
+/* fileIndexLoadToBank records the block it allocated in rom_remaining, which
+ * the load leaves alone until fileSetSize commits the file's size. */
+u32 fileGetCapacity(s32 index)
+{
+    return resource_lookup_data_array[index].rom_remaining;
+}
+#endif
+
 
 s32 get_pc_buffer_remaining_value(u8 *name)
 {
