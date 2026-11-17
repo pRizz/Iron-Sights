@@ -5,6 +5,10 @@
 #include "initunk_0009E0.h"
 #include <ramrom.h>
 #include "bondgame.h"
+#if IS_64_BIT || defined(GE_LP64_ORACLE)
+#include "port_romconv.h" /* LP64-004: the animation table converter */
+extern void sysFatalError(const char *format, ...);
+#endif
 
 //bss
 
@@ -265,6 +269,27 @@ void alloc_load_expand_ani_table(void)
     ptr_animation_table = mempAllocBytesInBank(animsDataSegmentSize, MEMPOOL_PERMANENT);
 
     romCopy(ptr_animation_table, &_animation_dataSegmentRomStart, animsDataSegmentSize);
+#if IS_64_BIT
+    {
+        /* PORT (LP64-004): the run-time headers are wider than the file's;
+         * the converter writes them in place, pointing into the staging image. */
+        intptr_t *const tables[2] = {animation_table_ptrs1, (intptr_t *) animation_table_ptrs2};
+
+        if (!portAnimHeadersConvert((u8 *) ptr_animation_table, (u32) animsDataSegmentSize, portAnimStagedData(),
+                (u32) animsDataSegmentSize, portAnimStagedEntries(), tables, 2)) {
+            sysFatalError("Cannot convert the animation table's headers");
+        }
+    }
+#else
     expand_ani_table_entries((s32*)&animation_table_ptrs1);
     expand_ani_table_entries((s32*)&animation_table_ptrs2);
+#ifdef GE_LP64_ORACLE
+    {
+        intptr_t *const tables[2] = {animation_table_ptrs1, (intptr_t *) animation_table_ptrs2};
+
+        portAnimHeadersOracle((const u8 *) ptr_animation_table, (u32) animsDataSegmentSize, portAnimStagedData(),
+                portAnimStagedEntries(), tables, 2);
+    }
+#endif
+#endif
 }

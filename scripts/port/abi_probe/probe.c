@@ -285,6 +285,25 @@ SAME_OFFSET(aim_option, aim_option);
 SAME_OFFSET(mp_flags, mp_flags);
 _Static_assert(sizeof(RomBrief) == 48, "briefing file layout");
 
+/* The animation header (LP64-004 Task 3): 0x14 bytes in the file. At 64 bits
+ * the run-time ModelAnimation is written over it, packed and 4-byte aligned
+ * so that its read fields end at 0x20; at 32 bits it is unchanged. */
+_Static_assert(sizeof(RomAnimHeader) == 0x14, "animation header file layout");
+#define ANIM_AT(member, at32, at64) \
+    _Static_assert(offsetof(ModelAnimation, member) == (IS_64_BIT ? (at64) : (at32)), "ModelAnimation." #member)
+ANIM_AT(address, 0x00, 0);
+ANIM_AT(unk04, 0x04, 8);
+ANIM_AT(bitDescriptors, 0x08, 12);
+ANIM_AT(unk0C, 0x0C, 20);
+ANIM_AT(unk0E, 0x0E, 22);
+ANIM_AT(bitStream, 0x10, 24);
+ANIM_AT(unk14, 0x14, 32);
+#if IS_64_BIT
+_Static_assert(_Alignof(ModelAnimation) == 4, "64-bit ModelAnimation is 4-byte aligned");
+#else
+_Static_assert(sizeof(ModelAnimation) == 0x40, "32-bit ModelAnimation is unchanged");
+#endif
+
 /* VERTEX_COLLISION_NODE (bondtypes.h): no link is NULL; at 64 bits a link is
  * the base plus the 32-bit offset, at 32 bits the stored pointer. */
 static int checkVertexCollisionNode(void)

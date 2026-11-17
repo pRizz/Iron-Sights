@@ -614,7 +614,14 @@ typedef union
         s32 unk34;
         s32 unk38;
         s32 unk3c; // end frame
+#if IS_64_BIT
+    /* PORT (LP64-004): the header is written over its 0x14-byte file header
+     * in the animation table, where the next file header can be 0x30 bytes
+     * on and at 4 mod 8; packed, the read fields end at 0x20. */
+    } __attribute__((packed, aligned(4))) ModelAnimation;
+#else
     } ModelAnimation;
+#endif
 
     struct object_animation_controller
     {

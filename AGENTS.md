@@ -249,8 +249,9 @@ pass its isolated executable rather than rebuilding an active player binary.
   the in-place conversion it replaces; with the ROM, in the i686 container,
   configure `build/lp64/oracle` with `-DGE_HEADLESS=ON -DGE_LP64_ORACLE=ON`,
   build it, and run `python3 scripts/port/lp64_oracle.py --rom
-  /rom/baserom.u.z64 --classes "A,B" build/lp64/oracle/IronSights` (no class
-  is converted yet, so today `--classes ""`). `scripts/port/lp64_boot.py
+  /rom/baserom.u.z64 --classes "A,B" build/lp64/oracle/IronSights` with the
+  classes converted so far (today `--classes "animation tables"`).
+  `scripts/port/lp64_boot.py
   --expect-stop NAME` passes a 64-bit executable that stops at class NAME;
   `--expect-run [--frames N]` one that runs N frames (600 by default),
   logging `ge: frame limit reached: frames=N`, and exits 0 with no stop,
@@ -285,7 +286,7 @@ pass its isolated executable rather than rebuilding an active player binary.
   warning class in the 64-bit log gets fixed, or a named `-Wno-` flag with its
   count in that comment; never `-w`.
 - A 64-bit game stops, exit status 5, at the first ROM asset class that has
-  no 64-bit converter: each in-place conversion starts with
+  no 64-bit converter (today `text banks`): each in-place conversion starts with
   `portLp64RequireConverter` (`port/include/port_lp64.h`), which logs the
   class's name. A class is marked converted in the table in
   `port/src/port_lp64.c` in the commit that lands its converter. With the

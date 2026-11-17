@@ -82,4 +82,27 @@ typedef struct RomBrief
 } RomBrief;
 _Static_assert(sizeof(RomBrief) == 48, "RomBrief is 48 bytes");
 
+/* ==== animation tables (animation_data; bondtypes.h's ModelAnimation) === */
+
+/**
+ * An animation's header inside the animation_data segment, at the offset a
+ * PTR_ANIM_* constant names: three offsets and four small fields, 0x14 bytes.
+ * portAnimDataInit (animdata.c) turns its fields to native byte order at
+ * every width, so the converter reads it as stored, not through portConvBe*.
+ * entries_offset is into the animation_entries segment (the frame streams);
+ * descriptors_offset and stream_offset are into animation_data itself.
+ */
+typedef struct RomAnimHeader
+{
+    u32 entries_offset;     /* ModelAnimation.address */
+    u16 frames;             /* unk04 */
+    u8 unk06;
+    u8 unk07;               /* bit 0: loop */
+    u32 descriptors_offset; /* bitDescriptors: 6-byte ModelAnimBitField records */
+    u16 unk0c;
+    u16 frame_bits;         /* unk0E: the bits of one frame */
+    u32 stream_offset;      /* bitStream */
+} RomAnimHeader;
+_Static_assert(sizeof(RomAnimHeader) == 0x14, "RomAnimHeader is 0x14 bytes");
+
 #endif

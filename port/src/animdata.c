@@ -40,6 +40,7 @@
 #include <ultra64.h>
 #include "romdata.h" /* animation segments are loaded from the ROM */
 #include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
+#include "port_romconv.h" /* LP64-004: the staging accessors */
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console ring (spec section 7). */
@@ -235,6 +236,22 @@ static void portAnimProbeRom(const char *name, const unsigned char *built, const
 }
 #endif
 
+#if IS_64_BIT || defined(GE_LP64_ORACLE)
+/* The staging images through their real declarations (port_romconv.h), for
+ * the converter: the game's own externs (bondgame.h) declare one u32 pointer,
+ * which the sanitizers' object-size check takes for the object's size. Not in
+ * a shipped 32-bit build, which has no converter. */
+const u8 *portAnimStagedData(void)
+{
+    return _animation_dataSegmentRomStart;
+}
+
+const u8 *portAnimStagedEntries(void)
+{
+    return _animation_entriesSegmentRomStart;
+}
+#endif
+
 void portAnimDataInit(void)
 {
     intptr_t *tables[2];
@@ -243,8 +260,10 @@ void portAnimDataInit(void)
     const u8 *romdata = romdataSeg("animation_data", &datasize);
     const u8 *roment = romdataSeg("animation_entries", &entsize);
 
-    /* ModelAnimation's 0x14-byte file header is read through 8-byte address
-     * fields at 64 bits (both paths; expand_ani_table_entries runs later) */
+    /* The class's guard. The byte-order pass below works on the file layout
+     * at every width; at 64 bits alloc_load_expand_ani_table writes the
+     * run-time headers through portAnimHeadersConvert (romconv_anim.c) in
+     * place of expand_ani_table_entries (LP64-004). */
     portLp64RequireConverter(PORT_LP64_ANIMATIONS);
     /* Both segments are byte-exact ROM spans (as on N64), and the header and
      * descriptor conversion below is the same either way; the compiled arrays

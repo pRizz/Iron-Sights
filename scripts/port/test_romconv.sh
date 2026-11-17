@@ -47,5 +47,12 @@ widths=$(harness_widths)
 for width in $widths; do
     build "$work/common-$width" "$width" scripts/port/test_romconv_common.c port/src/romconv_common.c
     run "$work/common-$width" "${width}-bit shared helpers"
+    # The 64-bit ModelAnimation is packed: the sanitizers check every access
+    # to it. The 32-bit half links the oracle, which romconv_anim.c calls.
+    sanitize=()
+    [[ $width == 64 ]] && sanitize=(-fsanitize=address,undefined -fno-sanitize-recover=all)
+    build "$work/anim-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_anim.c \
+        port/src/romconv_anim.c port/src/romconv_common.c port/src/port_lp64_oracle.c
+    run "$work/anim-$width" "${width}-bit animation tables"
     echo "test_romconv: PASS (${width}-bit)"
 done

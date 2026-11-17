@@ -22,6 +22,7 @@
 #ifndef PORT_ROMCONV_H
 #define PORT_ROMCONV_H
 
+#include <stdint.h>
 #include <PR/ultratypes.h>
 #include "port_lp64.h"
 
@@ -104,6 +105,49 @@ void portConvRefuse(enum PortLp64Asset asset, const char *file, const char *why,
     __attribute__((format(printf, 3, 4)));
 
 /* ==== converters (one section a class, added by each converter task) ==== */
+
+/* ---- animation tables (romconv_anim.c) -------------------------------- */
+
+/**
+ * Writes the run-time ModelAnimation of every header the animation tables
+ * list. TABLES holds NTABLES lists of TABLESIZE-relative offsets, each ended
+ * by 0, in which 1 is an empty entry. For each other entry it reads the
+ * native-order RomAnimHeader at STAGED + offset and writes, at TABLE + offset,
+ * address = ENTRIES + entries_offset, bitDescriptors = STAGED +
+ * descriptors_offset and bitStream = STAGED + stream_offset (each offset
+ * zero-extended), then replaces the entry with that header's address. A header
+ * listed twice is written once.
+ *
+ * At 64 bits ModelAnimation is packed and 4-byte aligned, so a header takes
+ * 0x20 bytes of TABLE and overwrites the 0xC bytes after its file header:
+ * the pointers lead into STAGED, which keeps the file layout. STAGED (of
+ * STAGEDSIZE bytes) is never written.
+ *
+ * Returns 1, or 0 after portConvRefuse with nothing written when an offset or
+ * offset + 0x20 is outside TABLE (or the file header outside STAGED) or two
+ * distinct headers are less than 0x20 apart.
+ */
+int portAnimHeadersConvert(u8 *table, u32 tablesize, const u8 *staged, u32 stagedsize, const u8 *entries,
+        intptr_t *const *tables, int ntables);
+
+#ifdef GE_LP64_ORACLE
+/**
+ * The oracle (32-bit, -DGE_LP64_ORACLE=ON), called after the game's
+ * expand_ani_table_entries has relocated INPLACE (the permanent copy, of
+ * TABLESIZE bytes) and the NTABLES TABLES: converts a copy of STAGED with
+ * copies of the tables and compares each header's 0x14 bytes, one "file" a
+ * header, and each table entry. Pointers into a table are compared as offsets
+ * from it (the in-place ones lead into INPLACE, the converter's into STAGED
+ * and the copy).
+ */
+void portAnimHeadersOracle(const u8 *inplace, u32 tablesize, const u8 *staged, const u8 *entries,
+        intptr_t *const *tables, int ntables);
+#endif
+
+/** The staging images portAnimDataInit fills (animdata.c), read through their
+ * own declarations rather than the game's externs. */
+const u8 *portAnimStagedData(void);
+const u8 *portAnimStagedEntries(void);
 
 #ifdef __cplusplus
 }

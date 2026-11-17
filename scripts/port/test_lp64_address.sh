@@ -80,9 +80,9 @@ expect_textures() {
     return 0
 }
 
-# Runs the driver with MODE (address-space, require-animations, pool-fatal or
-# music-heap); fails unless
-# it exits with WANT_STATUS and its output contains WANT_TEXT.
+# Runs the driver with MODE (address-space, require-animations, require-setup,
+# pool-fatal or music-heap); fails unless it exits with WANT_STATUS and its
+# output contains WANT_TEXT.
 expect_driver() {
     local bin=$1 mode=$2 want_status=$3 want_text=$4 label=$5 status=0 output
     output=$("$bin" "$mode" 2>&1) || status=$?
@@ -115,15 +115,18 @@ for width in $widths; do
         expect_driver "$work/pie" address-space 0 "ge: lp64: address space OK" "position-independent driver"
         build "$work/no-pie" "$work/str-$width.o" "$work/heap-$width.o" -fno-pie -no-pie
         expect_driver "$work/no-pie" address-space 4 "executable image" "-no-pie driver"
-        expect_driver "$work/unit-$width" require-animations 5 \
-            'ge: lp64: stopping: asset class "animation tables" has no 64-bit converter yet (LP64-004)' \
-            "64-bit animation guard"
+        expect_driver "$work/unit-$width" require-animations 0 "require-animations: returned" \
+            "64-bit animation guard (converted)"
+        expect_driver "$work/unit-$width" require-setup 5 \
+            'ge: lp64: stopping: asset class "setup files" has no 64-bit converter yet (LP64-004)' \
+            "64-bit setup files guard"
         expect_driver "$work/unit-$width" pool-fatal 6 \
             'ge: lp64: pool "music heap" exhausted (request 4096 bytes)' "64-bit fatal pool report"
         expect_driver "$work/unit-$width" music-heap 6 \
             'ge: lp64: pool "music heap" exhausted (request 4096 bytes)' "64-bit music heap exhausted"
     else
         expect_driver "$work/unit-$width" require-animations 0 "require-animations: returned" "32-bit animation guard"
+        expect_driver "$work/unit-$width" require-setup 0 "require-setup: returned" "32-bit setup files guard"
         expect_driver "$work/unit-$width" pool-fatal 0 "pool-fatal: returned" "32-bit fatal pool report"
         expect_driver "$work/unit-$width" music-heap 0 "music-heap: returned NULL" "32-bit music heap exhausted"
     fi

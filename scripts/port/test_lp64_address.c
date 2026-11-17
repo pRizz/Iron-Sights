@@ -10,9 +10,13 @@
  *   test_lp64_address address-space  the startup check alone, as main.c runs
  *                                    it (the harness links this driver
  *                                    position-independent and -no-pie)
- *   test_lp64_address require-animations  the animation guard alone: at 64
- *                                    bits it must stop the process with
- *                                    status 5, at 32 bits it must return
+ *   test_lp64_address require-animations  the animation guard alone: it
+ *                                    must return at both widths, since
+ *                                    LP64-004 Task 3 converted the class
+ *   test_lp64_address require-setup  the setup files guard alone, the last
+ *                                    class LP64-004 converts: at 64 bits it
+ *                                    must stop the process with status 5, at
+ *                                    32 bits it must return
  *   test_lp64_address pool-fatal     portLp64PoolFatal alone (LP64-004 Task 2):
  *                                    at 64 bits status 6 naming the pool, at
  *                                    32 bits it must return
@@ -451,6 +455,12 @@ int main(int argc, char **argv)
     {
         portLp64RequireConverter(PORT_LP64_ANIMATIONS);
         printf("require-animations: returned\n");
+        return 0;
+    }
+    if (argc > 1 && strcmp(argv[1], "require-setup") == 0)
+    {
+        portLp64RequireConverter(PORT_LP64_SETUPS);
+        printf("require-setup: returned\n");
         return 0;
     }
     if (argc > 1 && strcmp(argv[1], "pool-fatal") == 0)
