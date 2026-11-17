@@ -69,6 +69,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ultra64.h>
+#include <str.h>
 #include "game/bondview.h"
 #include "game/bondinv.h"
 #include "game/gun.h"

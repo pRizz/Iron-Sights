@@ -1,8 +1,6 @@
 # Truncating round-trip casts per file: path<TAB>count<TAB>reason. `check` requires the counts to match
 # exactly: lower a line when casts are removed, delete it at zero; see lp64_casts.py.
 port/src/audio_stubs.c	1	LP64-002 task 8: alBnkfNew relocates the bank in place and reads the file's 32-bit offsets from its pointer slots (portBnkfOffset); LP64-004's audio bank converter replaces it
-port/src/port_arm_mesh.c	3	existing before LP64-002; LP64-003 task 11 (strict tier): the arm mesh stores and compares texture data addresses as 32-bit words
-port/src/port_grip_mesh.c	1	existing before LP64-002; LP64-003 task 11 (strict tier): the grip mesh keeps a texture data address in a 32-bit pixel word
 port/src/port_state.c	1	LP64-002 task 8: the suspend image's StateHeader/StateRegion records hold 32-bit addresses (stateAddrWord); since LP64-003 task 5 the file is compiled only at 32 bits (64-bit builds link port_state_unavailable.c, which reports suspend points unavailable)
 port/src/romdata.c	2	existing before LP64-002; LP64-004's text bank converter: the bank's string slots are 32-bit words patched in place
 port/src/romfile_model.c	1	existing before LP64-002; LP64-004's model converter: the compiled-in model file's 32-bit base address

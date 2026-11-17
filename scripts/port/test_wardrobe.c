@@ -8,6 +8,7 @@
 #include "../../port/src/port_arm_mesh.c"
 #include "../../port/src/port_native_arms.c"
 #include "../../port/src/port_grip_mesh.c"
+#include "test_wardrobe_lp64.c" /* LP64-003: whole texture and matrix words */
 extern int strcmp(const char *, const char *);
 static struct player player;
 struct player *g_CurrentPlayer = &player;
@@ -53,7 +54,7 @@ void load_object_fill_header(ModelFileHeader *header, u8 *name, u8 *dst, s32 siz
 static void identity(const coord3d *s, coord3d *d, s32 part, void *context) { *d=*s; }
 static void reset(void) { used=copies=0; }
 static s32 surfaceCalls;
-static void testSurface(const coord3d *point,u32 image,Vtx *vertex,f32 light,void *context)
+static void testSurface(const coord3d *point,uintptr_t image,Vtx *vertex,f32 light,void *context)
 {
     assert(image==1001 || image==1002); ++surfaceCalls;
     vertex->v.tc[0]=17;vertex->v.tc[1]=29;
@@ -152,6 +153,7 @@ int main(void) {
     ModelRoData_DisplayListRecord stockHand;
     ModelRenderData render={.flags=1,.gdl=output};
     fixture();
+    lp64ArmWordChecks();
     for (i=0;i<8;i++) assert(portWardrobeDepthRequired(items[i])==(items[i]!=ITEM_FIST));
     assert(!portWardrobeDepthRequired(ITEM_AK47) && !portWardrobeDepthRequired(ITEM_WATCHLASER));
     { coord3d low,high;
@@ -383,6 +385,7 @@ int main(void) {
         }
         gSPEndDisplayList(&dl[8]); armFindCuff(&data,9,&cap);
         assert(cap.count==6 && cap.image==1050 && cap.center.v.ob[0]==-700);
+        lp64CuffImageCheck(&data,9,&dl[0]);
         for (i=0;i<6;i++) {
             assert(cap.a[i].v.ob[0]==-700 && cap.b[i].v.ob[0]==-700);
             assert(cap.a[i].v.tc[1]==512 && cap.b[i].v.tc[1]==512);
@@ -508,6 +511,7 @@ int main(void) {
         assert(mapped.v.tc[0]==1000 && mapped.v.tc[1]==2000);
         assert(mapped.v.cn[0]==50 && mapped.v.cn[1]==75 && mapped.v.cn[2]==100);
         saved=mapped;paNativeSurface(&fit.sourceMin,1040,&mapped,1,&fit);assert(!memcmp(&saved,&mapped,sizeof(mapped)));
+        lp64SurfaceImageCheck(&fit);
         {f32 weights[3]; coord3d p={point.x+2,point.y+3,point.z+5};
          f32 distance=paSkinWeights(&fit.skin[0],p,weights);
          assert(distance>24.99f && distance<25.01f && weights[0]>.499f && weights[0]<.501f);

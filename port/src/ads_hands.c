@@ -1,5 +1,6 @@
 #include <string.h>
 #include <ultra64.h>
+#include <str.h>
 #include <bondtypes.h>
 #include <bondconstants.h>
 #include <math.h>

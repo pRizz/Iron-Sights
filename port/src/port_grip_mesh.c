@@ -8,15 +8,16 @@
 #include "game/objecthandler.h"
 #include "port_arm_mesh.h"
 #include "port_console.h"
+#include "port_gfxwords.h"
 
-s32 portArmGripSkin(u32 image)
+s32 portArmGripSkin(uintptr_t image)
 {
     extern struct texpool *portModelTexPool(void);
-    static u32 pixels[6]; s32 i;
+    static uintptr_t pixels[6]; s32 i;
     for (i=0;i<6;i++) {
         if (!pixels[i]) {
             struct tex *tex=texFindInPool(1793+i,portModelTexPool());
-            if (tex) pixels[i]=(u32)(uintptr_t)tex->data;
+            if (tex) pixels[i]=(uintptr_t)tex->data;
         }
         if (pixels[i] && pixels[i]==image) return TRUE;
     }
@@ -48,9 +49,9 @@ const PortGripSource *portArmGripSource(void)
             s32 i,skin=FALSE,ended=FALSE,gripBone=TRUE,minZ=32767,maxZ=-32768;
             if (!data->Primary || !data->Vertices || !data->numVertices || data->numVertices>1024) continue;
             for (i=0;i<4096;i++) {
-                u32 op=data->Primary[i].words.w0>>24;
+                u32 op=GFX_OP(data->Primary+i);
                 if (op==(u8)G_ENDDL) { ended=TRUE; break; }
-                if (op==G_SETTIMG && portArmGripSkin(data->Primary[i].words.w1)) skin=TRUE;
+                if (op==G_SETTIMG && portArmGripSkin(GFX_W1_ADDR(data->Primary+i))) skin=TRUE;
                 /* Other bones contain the reload hand/loose magazine. The
                  * stationary grip is authored in the main gun bone only. */
                 if (op==G_MTX && data->Primary[i].words.w1!=0x03000000) gripBone=FALSE;

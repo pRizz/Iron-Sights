@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <ultra64.h>
+#include <str.h>
 #include <bondconstants.h>
 #include "game/dyn.h"
 #include "game/gun.h"
@@ -11,6 +12,7 @@
 #include "game/matrixmath.h"
 #include "game/player.h"
 #include "port_knife_ads.h"
+#include "port_gfxwords.h"
 
 extern void *memset(void *dst, int value, size_t size);
 extern void *memcpy(void *dst, const void *src, size_t size);
@@ -141,7 +143,7 @@ static s32 knifePatchNode(ModelNode *node, Mtxf *matrix, KnifePatch *patches, s3
     if (!node->Data->DisplayList.Primary || node->Data->DisplayList.Secondary) return FALSE;
     for (length = 0; length < 1024; length++) {
         const Gfx *command = &node->Data->DisplayList.Primary[length];
-        const u32 op = command->words.w0 >> 24;
+        const u32 op = GFX_OP(command);
         if (op == G_DL || (op == G_MTX && command->words.w1 != 0x03000000)) return FALSE;
         if (op == G_MTX) matrixLoad = TRUE;
         if (op == (u8)G_ENDDL) break;

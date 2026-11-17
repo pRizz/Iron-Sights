@@ -164,7 +164,9 @@ f32 gunSetHorizontalOffset(GUNHAND hand);
 f32 get_value_if_watch_is_on_hand_or_not(GUNHAND hand);
 void sub_GAME_7F05DA8C(GUNHAND hand, ITEM_IDS weaponnum_watchmenu);
 void sub_GAME_7F05E808(GUNHAND hand);
+void sub_GAME_7F05E978(Model *model, s32 val); /* gun.c */
 void sub_GAME_7F05EA94(Model *model, s32 val);
+void save_img_index_to_obj_ani_slot(MonitorRecord *mon, void *unk88); /* propobj.c */
 void sub_GAME_7F0649D8(enum GUNHAND hand);
 void sub_GAME_7F068508(GUNHAND handnum, f32 floor_y_pos);
 Vtx *dynAllocateVertices(s32 count);
@@ -1120,7 +1122,12 @@ void gunUpdateAndFire(GUNHAND handnum)
         {
             if (&node->Data->Switch);
 
+#if IS_64_BIT
+            /* PORT (LP64-003): each read-write slot is pointer-sized (bondview.h) */
+            flashvisptr = (s32 *) (hand->modeldatas_slots + node->Data->Switch.RwDataIndex);
+#else
             flashvisptr = ((s32 *) (&hand->modeldatas)) + node->Data->Switch.RwDataIndex;
+#endif
         }
 
         if (mdlhdr->Switches[3] != NULL)
@@ -1128,7 +1135,12 @@ void gunUpdateAndFire(GUNHAND handnum)
             flashdata = (f32 *) mdlhdr->Switches[3]->Data;
         }
 
-        hand->mtxlist = rwmtx;
+#if IS_64_BIT
+        /* PORT (LP64-003): the Model member is a RenderPosView, whose first member is the Mtxf */
+        hand->GUN_MODEL_RENDER_POS = (RenderPosView *) rwmtx;
+#else
+        hand->GUN_MODEL_RENDER_POS = rwmtx;
+#endif
 
         if ((bondwalkItemCheckBitflags(item, WEAPONSTATBITFLAG_MIRROR_DUAL) != 0) && (handnum == GUNLEFT))
         {
@@ -7455,7 +7467,7 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
                 {
                     imageoffset_r = ammo_related[ammotype].IconImage;
 #ifndef TARGET_N64
-                    imageoffset_r = portAmmoIconPtr(imageoffset_r);
+                    imageoffset_r = portAmmoIconPtr((u32) imageoffset_r);
 #endif
                     textwidth_r = 5;
 #ifndef TARGET_N64
@@ -7547,7 +7559,7 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
                 {
                     imageoffset_l = ammo_related[ammotype].IconImage;
 #ifndef TARGET_N64
-                    imageoffset_l = portAmmoIconPtr(imageoffset_l);
+                    imageoffset_l = portAmmoIconPtr((u32) imageoffset_l);
 #endif
                     textwidth_l = 5;
 #ifndef TARGET_N64
@@ -7724,7 +7736,7 @@ Gfx *gunDrawWatchAmmoDisplay(Gfx *gdl)
         {
             imageoffset = ammo_related[ammotype].IconImage;
 #ifndef TARGET_N64
-            imageoffset = portAmmoIconPtr(imageoffset);
+            imageoffset = portAmmoIconPtr((u32) imageoffset);
 #endif
             textwidth = 5;
 

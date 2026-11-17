@@ -3,6 +3,7 @@
 #include <bondtypes.h>
 #include <bondconstants.h>
 #include <stdint.h>
+#include <string.h>
 #include <math.h>
 #include "game/dyn.h"
 #include "game/file.h"
@@ -15,6 +16,7 @@
 #include "port_ads.h"
 #include "port_console.h"
 #include "port_shiny.h"
+#include "port_gfxwords.h"
 #include <stdlib.h>
 extern f32 fabsf(f32);
 
@@ -51,14 +53,14 @@ static s32 paTriangle(const Vtx **cache, s32 a, s32 b, s32 c, s32 *count)
     return TRUE;
 }
 
-static s32 paDecode(const ModelRoData_DisplayListRecord *data, u32 *matrix)
+static s32 paDecode(const ModelRoData_DisplayListRecord *data, uintptr_t *matrix)
 {
     const Vtx *cache[16] = {0};
     const Gfx *dl = data->Primary;
     s32 count = 0, i;
     *matrix = 0;
     for (i = 0; i < 4096; i++) {
-        u32 w0 = dl[i].words.w0, w1 = dl[i].words.w1;
+        u32 w0 = GFX_W0(&dl[i]); uintptr_t w1 = GFX_W1_ADDR(&dl[i]);
         u32 op = w0 >> 24;
         if (op == (u8)G_ENDDL) return *matrix ? count : -1;
         if (op == G_DL) return -1; /* Unexpected nested geometry: retain native draw. */
@@ -85,7 +87,7 @@ static s32 paDecode(const ModelRoData_DisplayListRecord *data, u32 *matrix)
 
 typedef struct { f32 cutoff; coord3d ring[32]; s32 count,kept,removed; } NativeArmLayout;
 
-static s32 paKeepHand(const Vtx *a,const Vtx *b,const Vtx *c,u32 image,void *context)
+static s32 paKeepHand(const Vtx *a,const Vtx *b,const Vtx *c,uintptr_t image,void *context)
 {
     const NativeArmLayout *layout=context;
     return a->v.ob[2]>=layout->cutoff && b->v.ob[2]>=layout->cutoff && c->v.ob[2]>=layout->cutoff;
@@ -99,7 +101,7 @@ static Gfx *paStockHandList(const ModelRoData_DisplayListRecord *data,const Nati
     if(length==4096) return NULL;
     copy=dynAllocate((length+1)*sizeof(Gfx)); memcpy(copy,data->Primary,(length+1)*sizeof(Gfx));
     for(i=0;i<length;i++) {
-        u32 w0=copy[i].words.w0,w1=copy[i].words.w1,op=w0>>24;
+        u32 w0=GFX_W0(&copy[i]); uintptr_t w1=GFX_W1_ADDR(&copy[i]); u32 op=w0>>24;
         if(op==G_VTX) {
             s32 n=(w0&65535)/sizeof(Vtx),first=(w0>>16)&15;
             const Vtx *v=(const Vtx *)((uintptr_t)data->BaseAddr+(w1&0xffffff));
@@ -136,7 +138,7 @@ static s32 paLayout(const ModelRoData_DisplayListRecord *data,NativeArmLayout *l
     }
     if (gap<30) return FALSE;
     for (i=0;i<4096;i++) {
-        const Gfx *command=data->Primary+i; u32 w0=command->words.w0,w1=command->words.w1,op=w0>>24;
+        const Gfx *command=data->Primary+i; u32 w0=GFX_W0(command); uintptr_t w1=GFX_W1_ADDR(command); u32 op=w0>>24;
         if (op==(u8)G_ENDDL) return layout->count>=3;
         if (op==G_VTX) {
             s32 count=(w0&65535)/sizeof(Vtx),first=(w0>>16)&15;
@@ -169,7 +171,7 @@ static s32 paLayout(const ModelRoData_DisplayListRecord *data,NativeArmLayout *l
     return FALSE;
 }
 
-typedef struct { Vtx v[3]; u32 image; } NativeSkinTriangle;
+typedef struct { Vtx v[3]; uintptr_t image; } NativeSkinTriangle;
 typedef struct {
     coord3d sourceMin, sourceMax, targetMin, targetMax;
     coord3d sourceElbowMin, sourceElbowMax, targetElbowMin, targetElbowMax;
@@ -357,10 +359,10 @@ static void paNativePoint(const coord3d *source, coord3d *target, s32 part, void
  * with the unchanged hand on the other side of their shared interface. */
 static void paSkinSetup(NativeArmPose *pose,const ModelRoData_DisplayListRecord *data,const NativeArmLayout *layout)
 {
-    const Vtx *cache[16]={0}; u32 image=0; s32 i,j;
+    const Vtx *cache[16]={0}; uintptr_t image=0; s32 i,j;
     pose->skinCount=0;
     for(i=0;i<4096;i++) {
-        const Gfx *cmd=data->Primary+i; u32 op=cmd->words.w0>>24,w0=cmd->words.w0,w1=cmd->words.w1;
+        const Gfx *cmd=data->Primary+i; u32 op=GFX_OP(cmd),w0=GFX_W0(cmd); uintptr_t w1=GFX_W1_ADDR(cmd);
         if(op==(u8)G_ENDDL) return;
         if(op==G_SETTIMG) image=w1;
         else if(op==G_VTX) {
@@ -407,7 +409,7 @@ static f32 paSkinWeights(const NativeSkinTriangle *triangle,coord3d point,f32 *w
     return best;
 }
 
-static void paNativeSurface(const coord3d *source,u32 image,Vtx *vertex,f32 light,void *context)
+static void paNativeSurface(const coord3d *source,uintptr_t image,Vtx *vertex,f32 light,void *context)
 {
     const NativeArmPose *pose=context; NativeArmPose sample; coord3d point;
     f32 best=1e30f,weights[3]; const NativeSkinTriangle *selected=NULL; s32 i,j;
@@ -446,7 +448,7 @@ s32 portWardrobeRenderNode(ModelRenderData *renderdata, ModelNode *node,
     ModelRoData_DisplayListRecord *data = &node->Data->DisplayList;
     f32 minZ = 32767, maxZ = -32768, light;
     s32 i;
-    u32 matrix;
+    uintptr_t matrix;
     NativeArmPose pose;
     Gfx *stockHand;
     PortArmMesh native; NativeArmLayout layout;
@@ -546,12 +548,12 @@ static s32 paGripJoin(const coord3d *a,const coord3d *b,PortArmJoinPoint *points
     }
     return count;
 }
-static s32 paGripKeep(const Vtx *a,const Vtx *b,const Vtx *c,u32 image,void *context)
+static s32 paGripKeep(const Vtx *a,const Vtx *b,const Vtx *c,uintptr_t image,void *context)
 {
     NativeGrip *grip=context;
     return portArmGripSkin(image) && paKeepHand(a,b,c,image,&grip->layout);
 }
-static void paGripSurface(const coord3d *source,u32 image,Vtx *vertex,f32 light,void *context)
+static void paGripSurface(const coord3d *source,uintptr_t image,Vtx *vertex,f32 light,void *context)
 {
     NativeGrip *grip=context;paNativeSurface(source,image,vertex,light,&grip->pose);
 }

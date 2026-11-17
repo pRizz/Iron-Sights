@@ -13,6 +13,7 @@
 #include "gbi_extension.h"
 #include "port_console.h"
 #include "port_ads.h"
+#include "port_gfxwords.h"
 extern float sinf(float);
 extern float cosf(float);
 extern float fabsf(float);
@@ -36,17 +37,17 @@ static const s32 armCuffSwitch[6] = {7,4,8,9,5,6};
 static coord3d armWrist[32];
 static s32 armWristCount;
 
-static s32 armSkinImage(u32 address, s32 part)
+static s32 armSkinImage(uintptr_t address, s32 part)
 {
     extern struct texpool *portModelTexPool(void);
-    static u32 pixels[2];
+    static uintptr_t pixels[2];
     static const s32 textures[2] = {1793,1796};
     s32 i;
     if (!(part & (PORT_ARM_HAND|PORT_ARM_FOREARM))) return FALSE;
     for (i = 0; i < 2; i++) {
         if (!pixels[i]) {
             struct tex *texture = texFindInPool(textures[i], portModelTexPool());
-            if (texture) pixels[i] = (u32)(uintptr_t)texture->data;
+            if (texture) pixels[i] = (uintptr_t)texture->data;
         }
         if (pixels[i] && pixels[i] == address) return TRUE;
     }
@@ -75,7 +76,7 @@ static s32 armSkinCommands(const ModelRoData_DisplayListRecord *source, s32 leng
 {
     s32 i, skin = FALSE, commands = 0;
     for (i = 0; i < length; i++) if ((source->Primary[i].words.w0 >> 24) == G_SETTIMG) {
-        s32 next = armSkinImage(source->Primary[i].words.w1, part);
+        s32 next = armSkinImage(GFX_W1_ADDR(source->Primary+i), part);
         if (next != skin) { commands += 3; skin = next; }
     }
     return commands + (skin ? 3 : 0);
@@ -204,7 +205,7 @@ static s32 armListLength(const ModelRoData_DisplayListRecord *data)
         || data->numVertices > ARM_SOURCE_VERTICES) return 0;
     for (i = 0; i < ARM_COMMANDS; i++) {
         const Gfx *command = data->Primary+i;
-        u32 op = command->words.w0 >> 24;
+        u32 op = GFX_OP(command);
         if (op == (u8)G_ENDDL) return i+1;
         if (op == G_DL) return 0;
         if (op == G_MTX && ((command->words.w1 >> 24) != 3 || (command->words.w1 & 0xffffff) > 192)) return 0;
@@ -266,7 +267,7 @@ s32 portArmSectionBounds(s32 cuff, s32 bond, f32 x, coord3d *minimum, coord3d *m
     if (!length) return FALSE;
     *minimum=(coord3d){x,32767,32767}; *maximum=(coord3d){x,-32768,-32768};
     for (i=0;i<length;i++) {
-        u32 w0=data->Primary[i].words.w0,w1=data->Primary[i].words.w1,op=w0>>24;
+        u32 w0=GFX_W0(data->Primary+i); uintptr_t w1=GFX_W1_ADDR(data->Primary+i); u32 op=w0>>24;
         s32 j;
         if (op==G_VTX) {
             s32 n=(w0&0xffff)/sizeof(Vtx),first=(w0>>16)&15;
@@ -284,7 +285,7 @@ s32 portArmSectionBounds(s32 cuff, s32 bond, f32 x, coord3d *minimum, coord3d *m
 
 static void armTriangleIndices(const Gfx *command, s32 triangle, s32 *indices)
 {
-    u32 w0=command->words.w0,w1=command->words.w1;
+    u32 w0=GFX_W0(command),w1=GFX_W1_DATA(command);
     if ((w0>>24)==(u8)G_TRI1) {
         indices[0]=((w1>>16)&255)/10; indices[1]=((w1>>8)&255)/10; indices[2]=(w1&255)/10;
     } else {
@@ -294,12 +295,12 @@ static void armTriangleIndices(const Gfx *command, s32 triangle, s32 *indices)
 
 typedef struct {
     const Gfx *key;
-    u32 image;
+    uintptr_t image;
     s32 count;
     Vtx a[32],b[32],center;
 } ArmCuffCap;
 
-typedef struct { const Vtx *a,*b; u32 image; s32 count,used; } ArmBoundaryEdge;
+typedef struct { const Vtx *a,*b; uintptr_t image; s32 count,used; } ArmBoundaryEdge;
 static s32 armSamePosition(const Vtx *a,const Vtx *b) { return !memcmp(a->v.ob,b->v.ob,sizeof(a->v.ob)); }
 
 /* The original sleeve rim is open. Close its nearest substantial clothing
@@ -309,13 +310,13 @@ static void armFindCuff(const ModelRoData_DisplayListRecord *source, s32 length,
 {
     s32 capacity=source->numVertices*6,edges=0,i,j,k;
     ArmBoundaryEdge *edge=calloc(capacity,sizeof(*edge));
-    const Vtx *cache[16]={0}; u32 image=0;
+    const Vtx *cache[16]={0}; uintptr_t image=0;
     f32 nearest=-32768;
     if (!edge) return;
     cap->count=0;
     for (i=0;i<length;i++) {
-        const Gfx *command=source->Primary+i; u32 op=command->words.w0>>24;
-        if (op==G_SETTIMG) image=command->words.w1;
+        const Gfx *command=source->Primary+i; u32 op=GFX_OP(command);
+        if (op==G_SETTIMG) image=GFX_W1_ADDR(command);
         else if (op==G_VTX) {
             s32 n=(command->words.w0&65535)/sizeof(Vtx),first=(command->words.w0>>16)&15;
             const Vtx *v=(const Vtx *)((uintptr_t)source->BaseAddr+(command->words.w1&0xffffff));
@@ -424,7 +425,7 @@ static void armJoinCounts(const ModelRoData_DisplayListRecord *source, s32 lengt
     *commands=*vertices=0;
     if (!join) return;
     for (i=0;i<length;i++) {
-        const Gfx *command=source->Primary+i; u32 op=command->words.w0>>24;
+        const Gfx *command=source->Primary+i; u32 op=GFX_OP(command);
         if (op==G_VTX) {
             s32 n=(command->words.w0&65535)/sizeof(Vtx),first=(command->words.w0>>16)&15;
             const Vtx *v=(const Vtx *)((uintptr_t)source->BaseAddr+(command->words.w1&0xffffff));
@@ -444,23 +445,23 @@ static void armJoinCounts(const ModelRoData_DisplayListRecord *source, s32 lengt
 
 /* Authored UV vertices have one material owner. Never resample a vertex also
  * used by clothing or by a different skin texture. */
-static void armSurfaceOwners(const ModelRoData_DisplayListRecord *source,s32 length,u32 *owners)
+static void armSurfaceOwners(const ModelRoData_DisplayListRecord *source,s32 length,uintptr_t *owners)
 {
-    s32 cache[16]={0},i,j; u32 image=0;
-    memset(owners,0,source->numVertices*sizeof(u32));
+    s32 cache[16]={0},i,j; uintptr_t image=0;
+    memset(owners,0,source->numVertices*sizeof(*owners));
     for(i=0;i<length;i++) {
-        const Gfx *command=source->Primary+i; u32 op=command->words.w0>>24;
-        if(op==G_SETTIMG) image=command->words.w1;
+        const Gfx *command=source->Primary+i; u32 op=GFX_OP(command);
+        if(op==G_SETTIMG) image=GFX_W1_ADDR(command);
         else if(op==G_VTX) {
             s32 n=(command->words.w0&65535)/sizeof(Vtx),first=(command->words.w0>>16)&15;
             s32 offset=((uintptr_t)source->BaseAddr+(command->words.w1&0xffffff)-(uintptr_t)source->Vertices)/sizeof(Vtx);
             for(j=0;j<n;j++) cache[first+j]=offset+j;
         } else if(op==(u8)G_TRI1 || op==(u8)G_TRI4) for(j=0;j<(op==(u8)G_TRI4?4:1);j++) {
-            s32 ids[3],k; u32 owner=armSkinImage(image,PORT_ARM_FOREARM)?image:1;
+            s32 ids[3],k; uintptr_t owner=armSkinImage(image,PORT_ARM_FOREARM)?image:1;
             armTriangleIndices(command,j,ids);
             if(ids[0]==ids[1] || ids[1]==ids[2] || ids[0]==ids[2]) continue;
             for(k=0;k<3;k++) {
-                u32 *entry=owners+cache[ids[k]];
+                uintptr_t *entry=owners+cache[ids[k]];
                 if(!*entry) *entry=owner; else if(*entry!=owner) *entry=1;
             }
         }
@@ -475,8 +476,8 @@ static void armCopyPart(const ModelRoData_DisplayListRecord *source, s32 length,
     f32 sine = sinf(angle), cosine = cosf(angle);
     const Vtx *cache[16]={0}, *mapped[16]={0};
     const ArmCuffCap *cap=part==PORT_ARM_FOREARM ? armCuff(source,length) : NULL;
-    Vtx *cuff=NULL,*joined=NULL; s32 capped=FALSE; u32 image=0;
-    u32 owners[ARM_SOURCE_VERTICES];
+    Vtx *cuff=NULL,*joined=NULL; s32 capped=FALSE; uintptr_t image=0;
+    uintptr_t owners[ARM_SOURCE_VERTICES];
     if(surface && part==PORT_ARM_FOREARM) armSurfaceOwners(source,length,owners);
     if (cap && cap->count) {
         cuff=dynAllocate((cap->count*3+16)*sizeof(Vtx));
@@ -501,7 +502,7 @@ static void armCopyPart(const ModelRoData_DisplayListRecord *source, s32 length,
     }
     for (i = 0; i < length; i++) {
         Gfx command = source->Primary[i];
-        u32 op = command.words.w0 >> 24;
+        u32 op = GFX_OP(&command);
         if (op == (u8)G_ENDDL) break;
         if (op == G_MTX || op == (u8)G_POPMTX || op == (u8)G_SETGEOMETRYMODE || op == (u8)G_CLEARGEOMETRYMODE
             || op == G_SETCOMBINE || op == (u8)G_SETOTHERMODE_L) continue;
@@ -578,8 +579,8 @@ static void armCopyPart(const ModelRoData_DisplayListRecord *source, s32 length,
             continue;
         }
         if (op == G_SETTIMG) {
-            s32 next = armSkinImage(command.words.w1, matchSkinTone ? part : 0);
-            image=command.words.w1;
+            s32 next = armSkinImage(GFX_W1_ADDR(&command), matchSkinTone ? part : 0);
+            image=GFX_W1_ADDR(&command);
             if (next != skin) { armSkinMaterial(color, next, light); skin = next; }
         }
         *(*color)++ = command;
@@ -736,7 +737,7 @@ static s32 armBandSlab(const ModelRoData_DisplayListRecord *data,f32 x0,f32 x1,c
     const Vtx *cache[16]={0}; s32 count=0,length=armListLength(data),i,j,k;
     if(!length) return 0;
     for(i=0;i<length;i++) {
-        const Gfx *cmd=data->Primary+i;u32 op=cmd->words.w0>>24,w0=cmd->words.w0,w1=cmd->words.w1;
+        const Gfx *cmd=data->Primary+i;u32 op=GFX_OP(cmd),w0=GFX_W0(cmd);uintptr_t w1=GFX_W1_ADDR(cmd);
         if(op==G_VTX) {
             s32 n=(w0&65535)/sizeof(Vtx),first=(w0>>16)&15;
             const Vtx *v=(const Vtx *)((uintptr_t)data->BaseAddr+(w1&0xffffff));
@@ -771,21 +772,21 @@ static s32 armWatchBackLayout(s32 cuff,s32 bond,ArmWatchBack *back)
     ModelNode *arm=header ? armFirstDisplay(header->Switches[armCuffSwitch[portWardrobeVariant(cuff,bond)]]) : NULL;
     coord3d points[256],hull[256],low={32767,32767,32767},high={-32768,-32768,-32768};
     const Vtx *cache[16]={0};u8 used[ARM_SOURCE_VERTICES]={0};
-    u32 image=0; s32 length=armListLength(body),i,j,k,n=0,h=0;Vtx left={0},right={0};
+    uintptr_t image=0; s32 length=armListLength(body),i,j,k,n=0,h=0;Vtx left={0},right={0};
     if(!texture || !texture->data || !body || !length || !arm || !arm->Data) return FALSE;
     back->prefix=0;
     for(i=0;i<length;i++) {
-        const Gfx *cmd=body->Primary+i;u32 op=cmd->words.w0>>24,w0=cmd->words.w0,w1=cmd->words.w1;
+        const Gfx *cmd=body->Primary+i;u32 op=GFX_OP(cmd),w0=GFX_W0(cmd);uintptr_t w1=GFX_W1_ADDR(cmd);
         if(op==G_SETTIMG) image=w1;
         else if(op==G_VTX) {
             s32 count=(w0&65535)/sizeof(Vtx),first=(w0>>16)&15;
             const Vtx *v=(const Vtx *)((uintptr_t)body->BaseAddr+(w1&0xffffff));
             if(!back->prefix) {
-                if(image!=(u32)(uintptr_t)texture->data) return FALSE;
+                if(image!=(uintptr_t)texture->data) return FALSE;
                 back->prefix=i;
             }
             for(j=0;j<count;j++) cache[first+j]=v+j;
-        } else if(image==(u32)(uintptr_t)texture->data && (op==(u8)G_TRI1 || op==(u8)G_TRI4)) {
+        } else if(image==(uintptr_t)texture->data && (op==(u8)G_TRI1 || op==(u8)G_TRI4)) {
             for(j=0;j<(op==(u8)G_TRI4 ? 4 : 1);j++) {
                 s32 ids[3];armTriangleIndices(cmd,j,ids);
                 for(k=0;k<3;k++) if(cache[ids[k]]) used[cache[ids[k]]-(const Vtx *)body->Vertices]=1;

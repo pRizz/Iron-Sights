@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <PR/gbi.h>
+#include <str.h>
 #include "port_graphics.h"
 #include "port_console.h"
 

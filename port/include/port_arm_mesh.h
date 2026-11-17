@@ -12,7 +12,7 @@ typedef struct {
     s32 count;
 } PortGripSource;
 const PortGripSource *portArmGripSource(void);
-s32 portArmGripSkin(u32 image);
+s32 portArmGripSkin(uintptr_t image);
 /* Bounds of the shared hand/forearm seam, excluding unrelated palm vertices. */
 s32 portArmWristBounds(coord3d *minimum, coord3d *maximum);
 s32 portArmWristContains(const coord3d *point);
@@ -26,7 +26,7 @@ typedef struct { coord3d target; f32 fraction; } PortArmJoinPoint;
 /* Intermediate native wrist corners along a source forearm edge, in order. */
 typedef s32 (*PortArmJoin)(const coord3d *a, const coord3d *b, PortArmJoinPoint *points, void *context);
 /* Retarget only skin UV/RGB on frame-owned copies; geometry/alpha stay fixed. */
-typedef void (*PortArmSurface)(const coord3d *source,u32 image,Vtx *vertex,f32 light,void *context);
+typedef void (*PortArmSurface)(const coord3d *source,uintptr_t image,Vtx *vertex,f32 light,void *context);
 s32 portArmMeshBuildJoinedSurface(PortArmMesh *mesh,s32 cuff,s32 bond,s32 parts,
     PortArmMap map,void *context,f32 light,u8 alpha,PortArmJoin join,PortArmSurface surface);
 s32 portArmMeshBuildJoined(PortArmMesh *mesh, s32 cuff, s32 bond, s32 parts,
@@ -34,7 +34,7 @@ s32 portArmMeshBuildJoined(PortArmMesh *mesh, s32 cuff, s32 bond, s32 parts,
 /* Preserve selected triangles from a mixed native hand/forearm node. Image is
  * the resolved texture address; original positions/UVs and vertex shade are retained.
  * matchSkinTone applies the forearm's correction to the shared wrist materials. */
-typedef s32 (*PortArmKeepTriangle)(const Vtx *a,const Vtx *b,const Vtx *c,u32 image,void *context);
+typedef s32 (*PortArmKeepTriangle)(const Vtx *a,const Vtx *b,const Vtx *c,uintptr_t image,void *context);
 s32 portArmMeshBuildFiltered(PortArmMesh *mesh,const ModelRoData_DisplayListRecord *source,
     PortArmMap map,void *context,f32 light,u8 alpha,PortArmKeepTriangle keep,s32 matchSkinTone);
 /* Read the watch's own meshes/UVs from the player's ROM, then retarget a
