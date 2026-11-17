@@ -17312,7 +17312,14 @@ void load_briefing_text_for_stage(void)
     ptrbriefingdata = _fileNameLoadToAddr(mission_folder_setup_entries[briefingpage].briefing_name_ptr, FILELOADMETHOD_DEFAULT, (u8 *) temp_s0, argg);
 
     // what is this
+#if IS_64_BIT
+    /* argg is the briefing's 0x200 bytes; stepping a Gfx * by argg / 8 would
+     * skip 0x400 with 16-byte commands and end the bank's span 0x200 bytes
+     * past the menu buffer. */
+    temp_s0 = (Gfx *) ((u8 *) temp_s0 + argg);
+#else
     temp_s0 += argg / 8;
+#endif
 
     // what is this
     argg *= 879;
