@@ -68,8 +68,11 @@
 #include "../generated/romseg_list.h"
 #include "platform_info.h"
 #include "port_lp64.h" /* LP64-003: the ROM image must sit above 4 GB at 64 bits */
-#if IS_64_BIT || defined(GE_LP64_ORACLE)
-#include "port_romconv.h" /* LP64-004: the converters' scratch buffer */
+/* LP64-004: the converters' scratch buffer and the text converter; at every
+ * width for struct PortTextPatch, the type of sTextPatches. */
+#include "port_romconv.h"
+#ifdef GE_LP64_ORACLE
+#include "port_lp64_oracle.h"
 #endif
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
@@ -877,11 +880,7 @@ const u8 *romdataFileCompiled(s32 index)
  * applied by bank + slot after the rebase (the probe compares after patching,
  * so a stock cart still reads "identical"). Append-only; keep each string's
  * trailing '\n'. */
-static const struct {
-    const char *bank;
-    u32 slot;
-    const char *text;
-} sTextPatches[] = {
+static const struct PortTextPatch sTextPatches[] = {
     { "LoptionsE", 24, "hud\n" },           /* was "ratio": Wide pushes the HUD to the window edges (options.h);
                                              * formerly "hud centering", before Health
                                              * got its own option */
@@ -889,6 +888,49 @@ static const struct {
     { "LoptionsE", 35, "wide\n" },          /* was "16:9" */
 };
 
+#define TEXT_PATCH_COUNT ((u32) (sizeof(sTextPatches) / sizeof(sTextPatches[0])))
+
+#if IS_64_BIT
+/* LP64-004: a 4-byte slot cannot hold a 64-bit address, so the slots stay
+ * bank-relative offsets in native order and langGet adds the bank's address
+ * (romconv_text.c); each relabel is copied over the string it replaces. A bank
+ * the converter refuses (logged, which fails lp64_boot.py) is zeroed, so that
+ * every slot reads as not loaded rather than as a big-endian offset. No
+ * compiled-in bank is compared: a 64-bit build has no GE_ROMDATA_FALLBACK, and
+ * the only linked copies are the four zero-filled JP stubs
+ * (asset_bin_stubs.c), which are not tables of pointers. */
+static void romdataTextPreprocess(s32 index, u8 *data, u32 size)
+{
+    const char *bank = file_resource_table[index].filename;
+    u32 patched = 0;
+    u32 p;
+    s32 n;
+
+    portLp64RequireConverter(PORT_LP64_TEXT_BANKS);
+    if (size >= 2 && data[0] == 0x11 && data[1] == 0x72) {
+        portConLogf("ge: romdata: text %s arrived still 1172-compressed (raw load) - not rebased\n", bank);
+        return;
+    }
+    n = portTextBankConvert(data, size, (uintptr_t) data, bank, sTextPatches, TEXT_PATCH_COUNT);
+    if (n < 0) {
+        memset(data, 0, size);
+        return;
+    }
+    if (n == 0) {
+        if (sDebug) {
+            portConLogf("ge: romdata: text %-8s empty bank (%u zero bytes)\n", bank, size);
+        }
+        return;
+    }
+    for (p = 0; p < TEXT_PATCH_COUNT; p++) {
+        if (sTextPatches[p].slot < (u32) n && strcmp(sTextPatches[p].bank, bank) == 0) {
+            patched++;
+        }
+    }
+    portConLogf("ge: romdata: text %-8s %3u slots from the ROM%s\n", bank, (u32) n,
+            patched ? " (port relabels applied)" : "");
+}
+#else
 static void romdataTextPreprocess(s32 index, u8 *data, u32 size)
 {
     u32 n = 0;
@@ -976,6 +1018,31 @@ static void romdataTextPreprocess(s32 index, u8 *data, u32 size)
         portConLogf("ge: romdata: text %-8s %3u slots from the ROM%s\n", bank, n, patched ? " (port relabels applied)" : "");
     }
 }
+#endif
+
+#ifdef GE_LP64_ORACLE
+/* LP64-004's oracle: the converter rebases a copy of the file on the real
+ * bank's address, and the whole bank is compared with the in-place result. */
+static void romdataTextOracle(s32 index, u8 *data, u32 size)
+{
+    const char *bank = file_resource_table[index].filename;
+    u8 *copy = (u8 *) malloc(size);
+
+    if (copy == NULL) {
+        portLp64OracleResult(PORT_LP64_TEXT_BANKS, bank, 0, "the oracle could not copy the bank");
+        romdataTextPreprocess(index, data, size);
+        return;
+    }
+    memcpy(copy, data, size);
+    romdataTextPreprocess(index, data, size);
+    if (portTextBankConvert(copy, size, (uintptr_t) data, bank, sTextPatches, TEXT_PATCH_COUNT) < 0) {
+        portLp64OracleResult(PORT_LP64_TEXT_BANKS, bank, 0, "the converter refused the bank");
+    } else {
+        portLp64OracleBytes(PORT_LP64_TEXT_BANKS, bank, data, copy, size);
+    }
+    free(copy);
+}
+#endif
 
 void romdataFilePreprocess(s32 index, u8 *data, u32 size)
 {
@@ -989,7 +1056,11 @@ void romdataFilePreprocess(s32 index, u8 *data, u32 size)
     }
     switch (romdataClassOf(file_resource_table[index].filename)) {
     case CLASS_TEXT:
+#ifdef GE_LP64_ORACLE
+        romdataTextOracle(index, data, size);
+#else
         romdataTextPreprocess(index, data, size);
+#endif
         break;
     case CLASS_BRIEF:
         /* struct BriefStruct: u16 brief[4] + 10 x {u16 text, u16 difficulty} = 24 halfwords */

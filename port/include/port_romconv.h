@@ -156,6 +156,40 @@ void portAnimHeadersOracle(const u8 *inplace, u32 tablesize, const u8 *staged, c
 const u8 *portAnimStagedData(void);
 const u8 *portAnimStagedEntries(void);
 
+/* ---- text banks (romconv_text.c) -------------------------------------- */
+
+/** A port relabel: slot SLOT of the bank named BANK reads TEXT (romdata.c's
+ * sTextPatches). Declared at both widths, since the 32-bit table uses it. */
+struct PortTextPatch
+{
+    const char *bank;
+    u32 slot;
+    const char *text;
+};
+
+/**
+ * Converts the text bank DATA (SIZE bytes, named BANK) in place. The file is a
+ * table of big-endian, bank-relative offsets followed by the strings; the
+ * table's size is the smallest non-zero offset, which must be a multiple of 4
+ * and at most SIZE. A slot of 0 stays 0, and a slot whose offset is at or past
+ * SIZE becomes 0 with a log line.
+ *
+ * At 64 bits each slot becomes the offset in native byte order (langGet adds
+ * the bank's address), and each of the NPATCHES PATCHES that names BANK and a
+ * slot of the table is copied, with its terminator, over the string that slot
+ * names. At 32 bits each slot becomes (u32) (BASE + offset) and a patched slot
+ * the patch's address, the in-place result; the strings are not written.
+ *
+ * Returns the slot count; 0, writing nothing, for an empty bank (every byte
+ * zero); or -1 after portConvRefuse, with nothing written, when no offset
+ * table is found, or when a patched slot names no string, a string with no
+ * terminator inside the bank, a string shorter than the patch, or bytes that
+ * another slot's string also covers. The patch checks apply at both widths, so
+ * the 32-bit oracle checks the stock relabels against the 64-bit rule.
+ */
+s32 portTextBankConvert(u8 *data, u32 size, uintptr_t base, const char *bank, const struct PortTextPatch *patches,
+        u32 npatches);
+
 #ifdef __cplusplus
 }
 #endif
