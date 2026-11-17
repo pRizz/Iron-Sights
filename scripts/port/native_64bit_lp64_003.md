@@ -3,10 +3,12 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Status:** Planned on 2026-11-16 and accepted by the owner the same day,
-with all nine recommendations under "Decisions for the owner" at the end. Not
-built. Acceptance is not evidence that any task works; the status table of
-[native_64bit_plan.md](native_64bit_plan.md) records what has been built and
-verified.
+with all nine recommendations under "Decisions for the owner" at the end.
+Built and landed on 2026-11-16: the status table of
+[native_64bit_plan.md](native_64bit_plan.md) records what was built and
+verified, and `FORK_CHANGES.md` (FORK-089) each task's note, the departures
+from this text and the hand-over to LP64-004. The task text below is kept as
+it was accepted, with dated notes where the work found it wrong.
 
 **Goal:** A 64-bit headless build that keeps every address whole: no game data
 below 4 GB and a startup check that proves it, one host-pointer test that
@@ -1127,6 +1129,12 @@ strict inputs; that is the rule working.
 ---
 
 ### Task 12: Land through the laptop and close
+
+As run on 2026-11-16 (FORK-089, "LP64-003 task 12"): `main` had not moved, so
+no rebase was needed; the laptop's one commit, 9abbe58, is the gallery
+regeneration (0 changed image cells); the hand-over lists were assembled in
+the final review fix wave before the laptop trip, so Step 3 only set the
+status row and corrected one sentence. Steps 2 and 3 ran on the Mac as written.
 
 - [ ] **Step 1: Hand the branch to the laptop**
 
