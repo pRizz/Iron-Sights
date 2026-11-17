@@ -88,6 +88,7 @@ jobs:
           python3 scripts/port/test_lp64_boot.py
           bash scripts/port/test_romconv.sh
           python3 scripts/port/test_lp64_oracle.py
+          python3 scripts/port/test_lp64_census.py
           bash scripts/port/test_monitor_script.sh
           bash scripts/port/test_mema_order.sh
           python3 scripts/port/test_lp64_diagnostics.py

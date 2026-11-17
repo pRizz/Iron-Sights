@@ -9,10 +9,8 @@
  * header does not build under these warnings). */
 #define INTRO_TYPE(rec) ((s32) (((u32) (rec)->type) >> 24))
 
-#if !IS_64_BIT
-/* romfile_setup.c, linked into the 32-bit half: the in-place pass. */
+/* romfile_setup.c: the in-place pass (its 32-bit image; its log line at both widths). */
 s32 romfileSetupConvert(u8 *data, u32 size, const char *name, const u8 *compiled);
-#endif
 
 static struct stagesetup *header(void)
 {
@@ -340,11 +338,35 @@ static int testMatchesInPlaceAt32Bits(void)
 #endif
 }
 
+static int testLogsTheInPlaceLine(void)
+{
+    // Arrange
+    struct SetupFixture f;
+    static u8 copy[SF_CAP];
+    char inPlace[sizeof(g_Log)];
+    u32 n;
+
+    sfBuildFixture(&f, 0);
+    __builtin_memcpy(copy, g_File, g_Size);
+    romfileSetupConvert(copy, g_Size, "UsetuptestZ", NULL);
+    __builtin_memcpy(inPlace, g_Log, sizeof(g_Log));
+    g_Log[0] = '\0';
+
+    // Act
+    n = sfConvert();
+
+    // Assert: at 64 bits the converter logs the in-place line (the load census); at 32 bits nothing
+    return expect(n != 0 && contains(inPlace, "converted (")
+            && (sizeof(void *) == 8 ? __builtin_strcmp(inPlace, g_Log) == 0 : g_Log[0] == '\0'),
+            "the converter logs the in-place pass's line and counts at 64 bits only");
+}
+
 int main(void)
 {
     int failures = testBrief() + testWritesExactlyTheMeasuredBytes() + testHeaderNamesEveryTable() + testPads()
         + testWaypointsAndLists() + testWaygroupsAndPaths() + testAiListsAndNameTables() + testIntroWalksBySizeof()
-        + testCameraAndCredits() + testBondview2StepsOverCredits() + testMatchesInPlaceAt32Bits();
+        + testCameraAndCredits() + testBondview2StepsOverCredits() + testMatchesInPlaceAt32Bits()
+        + testLogsTheInPlaceLine();
 
     if (failures != 0)
     {

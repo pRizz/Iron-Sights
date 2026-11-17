@@ -30,6 +30,9 @@
 #include "port_romconv.h"
 #include "port_romlayout.h"
 #include "romconv_model_walk.h"
+#include "romconv_census.h"
+
+extern void portConLogf(const char *fmt, ...);
 
 /* 8 at 64 bits. At 32 bits 4, which every item of a file the walk accepts
  * already has, so no padding moves anything from its file place. */
@@ -243,5 +246,15 @@ s32 portModelConvert(const u8 *file, u32 size, u8 *out, u32 outsize, s32 numSwit
         ok = writeAll(&w);
     }
     portConvMapFree(&w.map);
+#if IS_64_BIT
+    /* The line romfile_model.c's in-place pass prints, with its counts, for
+     * the load census (lp64_census.py); the in-place pass no longer runs here. */
+    if (ok)
+    {
+        portConLogf("ge: romdata: model %-16s converted (%u nodes, %u verts, %u DLs)\n", name, w.nodes, w.vertices,
+                w.lists);
+        portCensusLine("model", name, "opcodes", w.opcodes, sizeof(w.opcodes) / sizeof(w.opcodes[0]));
+    }
+#endif
     return ok;
 }

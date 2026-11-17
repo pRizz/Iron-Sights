@@ -26,6 +26,12 @@
 #include "port_romconv.h"
 #include "port_romconv_stage.h"
 #include "romconv_setup_walk.h"
+#include "romconv_census.h"
+#include "platform_info.h"
+#include "port_romlayout_stage.h"
+#include "bondconstants.h"
+
+extern void portConLogf(const char *fmt, ...);
 
 #define SETUP_ROUND8(n) (((n) + 7u) & ~(u64) 7u)
 
@@ -146,6 +152,39 @@ static int writeAll(const struct SetupWalk *w)
     return ok;
 }
 
+#if IS_64_BIT
+/* The line romfile_setup.c's in-place pass prints, with the file's counts
+ * (prop list and intro words to their end records, pads before the
+ * terminator), for the load census (lp64_census.py), and the census line of
+ * the prop record types; the in-place pass no longer runs here. */
+static void setupReport(const struct SetupWalk *w)
+{
+    u32 slot = 0, propWords = 0, introWords = 0, pads = 0, types[PROPDEF_MAX] = {0};
+    struct SetupItem it;
+
+    while (slot < w->slots && itemAt(w, slot, &it))
+    {
+        if (it.kind == SETUP_PROPS)
+        {
+            propWords = it.bytes / 4;
+            portSetupPropsCount(w->file + it.at, it.bytes, types);
+        }
+        else if (it.kind == SETUP_INTRO)
+        {
+            introWords = it.bytes / 4;
+        }
+        else if (it.kind == SETUP_PADS)
+        {
+            pads = it.bytes / (u32) sizeof(RomPad) - 1;
+        }
+        slot += (it.bytes + 3) / 4;
+    }
+    portConLogf("ge: romdata: setup %-16s converted (%u propdef words, %u intro words, %u pads)\n", w->name, propWords,
+            introWords, pads);
+    portCensusLine("setup", w->name, "props", types, PROPDEF_MAX);
+}
+#endif
+
 /* ==== the interface ==================================================== */
 
 /* Claims, lays out and checks FILE; the map stays live on success. */
@@ -221,6 +260,12 @@ s32 portSetupConvert(const u8 *file, u32 size, u8 *out, u32 outsize, const char 
         w.out = out;
         ok = writeAll(&w);
     }
+#if IS_64_BIT
+    if (ok)
+    {
+        setupReport(&w);
+    }
+#endif
     portConvMapFree(&w.map);
     return ok;
 }

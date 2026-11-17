@@ -41,6 +41,13 @@ s32 portSetupPropsConvert(const u8 *props, u32 size, u8 *out, u32 outsize)
     return 1;
 }
 
+/* The census's count of the end record alone. */
+void portSetupPropsCount(const u8 *props, u32 size, u32 *counts)
+{
+    __builtin_memset(counts, 0, PROPDEF_MAX * sizeof(counts[0]));
+    counts[PROPDEF_END] = portSetupPropsSize(props, size) != 0;
+}
+
 /* ==== the intro of every kind =========================================== */
 
 /* Each record's words as the file holds them (big-endian values), every value

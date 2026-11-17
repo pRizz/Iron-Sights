@@ -54,6 +54,28 @@ class AuditTests(unittest.TestCase):
             self.assertTrue(all(not path.exists() for path in child_paths))
             self.assertEqual(executable.read_bytes(), b'test')
 
+    def test_mission_runs_one_field_a_frame_with_the_census_lines(self):
+        # Arrange: lp64_census.py compares two smokes, which load the same only on the same game time
+        seen = {}
+
+        def run(args, cwd, env, stdout, **kwargs):
+            seen.update(env)
+            stdout.write('GE_STAGE direct launch: dam\nframe limit reached: frames=600')
+            return type('Result', (), {'returncode': 0})()
+
+        with tempfile.TemporaryDirectory() as temporary:
+            folder = Path(temporary)
+            (folder/'headless').write_bytes(b'test')
+            (folder/'rom').write_bytes(b'test')
+
+            # Act
+            with patch.object(audit, 'MISSIONS', ('dam',)), patch.object(audit.subprocess, 'run', side_effect=run), \
+                    redirect_stdout(StringIO()):
+                audit.mission_smoke(folder/'headless', folder/'rom', folder/'results.json', 600, 1)
+
+        # Assert
+        self.assertEqual((seen['GE_FIXEDTICK'], seen['GE_LP64_CENSUS']), ('1', '1'))
+
     def test_leak_mode_enables_lsan_and_rejects_leaks(self):
         self.assertEqual(audit.sanitizer_env(False), {'ASAN_OPTIONS': 'detect_leaks=0'})
         leaks = audit.sanitizer_env(True)

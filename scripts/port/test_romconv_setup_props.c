@@ -15,6 +15,7 @@
 #include "platform_info.h"
 #include "port_romconv_stage.h"
 #include "../../port/generated/setup_kinds.h"
+#include "../../port/src/romconv_setup_walk.h"
 
 #define PTR ((size_t) sizeof(void *))
 #define ROUND_PTR(n) (((size_t) (n) + PTR - 1) & ~(PTR - 1))
@@ -449,6 +450,31 @@ static void testListRefusals(void)
     CHECK(i == LIST_CAP);
 }
 
+/* The census's count: one record of each of the list's types, and nothing
+ * for a list the converter refuses. */
+static void testPropCounts(void)
+{
+    // Arrange
+    u32 counts[SETUP_PROPDEF_TYPES], type, r, expected;
+    buildList();
+
+    // Act
+    portSetupPropsCount(g_List, g_ListSize, counts);
+
+    // Assert
+    for (type = 0; type < SETUP_PROPDEF_TYPES; type++)
+    {
+        for (r = 0, expected = 0; r < LIST_RECORDS; r++)
+        {
+            expected += kListTypes[r] == type;
+        }
+        CHECK(counts[type] == expected);
+    }
+    g_List[g_ListAt[2] + 3] = SETUP_PROPDEF_TYPES;
+    portSetupPropsCount(g_List, g_ListSize, counts);
+    CHECK(counts[PROPDEF_GUARD] == 0 && counts[PROPDEF_END] == 0);
+}
+
 int main(void)
 {
     testObjectTypes();
@@ -456,6 +482,7 @@ int main(void)
     testEveryEntry();
     testPropList();
     testListRefusals();
+    testPropCounts();
     if (s_Failures != 0)
     {
         printf("test_romconv_setup_props: %d failed\n", s_Failures);

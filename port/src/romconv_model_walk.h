@@ -68,6 +68,9 @@ struct ModelWalk
     struct PortConvMap map; /* each item's new offset; every slot of a data block and of raw bytes */
     u32 nodes;              /* nodes claimed */
     u32 geometry;           /* vertex blocks and lists claimed */
+    u32 vertices;           /* render and collision vertices claimed, as romfile_model.c counts them */
+    u32 lists;              /* display lists claimed, the lists they call included */
+    u32 opcodes[256];       /* nodes claimed, by opcode (the census) */
     u32 total;              /* the output's bytes, once laid out */
     u8 *out;                /* NULL while checking */
     u32 listPath[MODEL_LIST_DEPTH + 1]; /* the lists being claimed, outermost first */

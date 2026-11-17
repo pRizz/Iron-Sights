@@ -171,6 +171,7 @@ static int claimList(struct ModelWalk *w, u32 at)
         return r != 0;
     }
     w->geometry++;
+    w->lists++;
     w->listPath[w->listDepth++] = at;
     for (i = 0, r = 1; r && i < n; i++)
     {
@@ -216,6 +217,7 @@ static int claimBlock(struct ModelWalk *w, u32 rec, u32 field, u32 count, u32 el
     }
     r = claim(w, off, (u64) count * element, kind, portModelKindName(kind));
     w->geometry += r == 1 && kind != MODEL_POINTUSAGE && kind != MODEL_POINTUSAGE_ODD;
+    w->vertices += r == 1 && (kind == MODEL_VERTEX || kind == MODEL_CVERTEX) ? count : 0;
     return r != 0;
 }
 
@@ -290,6 +292,7 @@ static int walkNode(struct ModelWalk *w, u32 off, u32 *stack, u32 *sp)
     }
     w->nodes++;
     opcode = modelBe16(w, off + offsetof(RomModelNode, opcode)) & 0xFFu;
+    w->opcodes[opcode]++;
     rsize = portModelRecordFileSize(opcode);
     if (!follow(w, modelBe32(w, off + offsetof(RomModelNode, data)), "node", off, &data, &hasData)
             || !follow(w, modelBe32(w, off + offsetof(RomModelNode, next)), "node", off, &next, &hasNext)

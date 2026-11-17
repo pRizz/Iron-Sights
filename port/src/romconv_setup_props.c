@@ -169,6 +169,27 @@ static u32 propsMeasure(const u8 *props, u32 size)
     }
 }
 
+/* romconv_setup.c sizes the counts by bondconstants.h's PROPDEF_MAX. */
+_Static_assert(SETUP_PROPDEF_TYPES == PROPDEF_MAX, "setup_kinds.h and PROPDEF_TYPE count the same prop types");
+
+void portSetupPropsCount(const u8 *props, u32 size, u32 *counts)
+{
+    u32 at = 0;
+
+    memset(counts, 0, SETUP_PROPDEF_TYPES * sizeof(counts[0]));
+    if (propsMeasure(props, size) == 0)
+    {
+        return;
+    }
+    while (at < size)
+    {
+        const u32 type = props[at + 3];
+
+        counts[type]++;
+        at += kPropWide[type].filewords * 4u;
+    }
+}
+
 u32 portSetupPropsSize(const u8 *props, u32 size)
 {
     return propsMeasure(props, size);

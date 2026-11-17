@@ -81,7 +81,8 @@ for width in $widths; do
     # result. Its field map for opcode 17 is unused (the walk swaps that
     # record with the group map), which -Wextra reports.
     model=(port/src/romconv_model.c port/src/romconv_model_walk.c port/src/romconv_model_refs.c
-        port/src/romconv_model_records.c port/src/romconv_gfx.c port/src/romconv_common.c port/src/port_lp64_oracle.c)
+        port/src/romconv_model_records.c port/src/romconv_gfx.c port/src/romconv_census.c port/src/romconv_common.c
+        port/src/port_lp64_oracle.c)
     [[ $width == 32 ]] && model+=(-Wno-unused-const-variable port/src/romfile_model.c)
     build "$work/model-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_model.c "${model[@]}"
     run "$work/model-$width" "${width}-bit model files"
@@ -91,6 +92,12 @@ for width in $widths; do
     build "$work/model-shapes-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} \
         scripts/port/test_romconv_model_shapes.c "${model[@]}"
     run "$work/model-shapes-$width" "${width}-bit model file shapes"
+    # The census lines: the model converter's against romfile_model.c's own,
+    # at both widths, and the stan converter's.
+    census=("${model[@]}" port/src/romconv_stan.c)
+    [[ $width == 64 ]] && census+=(-Wno-unused-const-variable port/src/romfile_model.c)
+    build "$work/census-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_census.c "${census[@]}"
+    run "$work/census-$width" "${width}-bit census lines"
     bg=(scripts/port/test_romconv_bg_fixture.c port/src/romconv_bg.c port/src/romconv_gfx.c
         port/src/romconv_common.c port/src/port_lp64_oracle.c)
     build "$work/bg-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_bg.c "${bg[@]}"
@@ -108,10 +115,14 @@ for width in $widths; do
     # result. Its header comment names assets/obseg/setup/*.c, which
     # -Wcomment reports.
     setup=(port/src/romconv_setup.c port/src/romconv_setup_walk.c port/src/romconv_setup_records.c
-        port/src/romconv_setup_intro.c port/src/romconv_setup_props.c port/src/romconv_common.c
-        port/src/port_lp64_oracle.c)
+        port/src/romconv_setup_intro.c port/src/romconv_setup_props.c port/src/romconv_census.c
+        port/src/romconv_common.c port/src/port_lp64_oracle.c)
     [[ $width == 32 ]] && setup+=(-Wno-comment port/src/romfile_setup.c)
-    build "$work/setup-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_setup.c "${setup[@]}"
+    # The main setup test compares the log line with romfile_setup.c's at both widths.
+    setup_main=("${setup[@]}")
+    [[ $width == 64 ]] && setup_main+=(-Wno-comment port/src/romfile_setup.c)
+    build "$work/setup-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_setup.c \
+        "${setup_main[@]}"
     run "$work/setup-$width" "${width}-bit setup files"
     build "$work/setup-checks-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_setup_checks.c \
         "${setup[@]}"

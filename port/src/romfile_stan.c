@@ -53,7 +53,7 @@ s32 romfileStanConvert(u8 *data, u32 size, const char *name, const u8 *compiled)
     if (!portStanConvert(data, size, (uintptr_t) data, name)) {
         sysFatalError("Cannot convert the collision file %s", name);
     }
-    portConLogf("ge: romdata: stan  %-18s converted (%u bytes)\n", name, size);
+    /* portStanConvert logged the line the in-place pass prints, with its counts */
     return 1;
 }
 

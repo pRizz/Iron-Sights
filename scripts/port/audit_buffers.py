@@ -103,9 +103,12 @@ def mission_smoke(executable, rom, output, frames, jobs, leaks=False):
             child = folder / executable.name
             shutil.copy2(executable, child)
             env = {key: value for key, value in os.environ.items() if not key.startswith('GE_')}
+            # One field a frame, so that a smoke loads the same at any speed (an emulated 32-bit run
+            # and a native 64-bit one are compared by lp64_census.py), and the census lines a 64-bit
+            # build's converters print for its `types` (a 32-bit build prints none).
             env.update(GE_ROM=str(rom), GE_STAGE=stage, GE_STAGE_AFTER='1',
                        GE_FRAMES=str(frames), GE_SEED='1', GE_CHEATS='invuln,invis',
-                       GE_NOINISAVE='1', **sanitizer_env(leaks))
+                       GE_NOINISAVE='1', GE_FIXEDTICK='1', GE_LP64_CENSUS='1', **sanitizer_env(leaks))
             log_path = output.parent / (stage + '.log')
             with log_path.open('w', encoding='utf-8') as log:
                 result = subprocess.run([str(child)], cwd=folder, env=env, stdout=log,

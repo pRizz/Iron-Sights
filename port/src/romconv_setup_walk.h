@@ -126,6 +126,13 @@ u32 portSetupKindAlign(u8 kind);
 /** The intro at AT's bytes in the image, walked as the writer walks it. */
 u32 portSetupIntroOutBytes(const struct SetupWalk *w, u32 at);
 
+/**
+ * The records of each type in the prop list PROPS (SIZE bytes in the file,
+ * its end record included) in COUNTS[SETUP_PROPDEF_TYPES]; all 0 for a list
+ * the converter would refuse (romconv_setup_props.c; the load census).
+ */
+void portSetupPropsCount(const u8 *props, u32 size, u32 *counts);
+
 /** The prop list at AT (BYTES in the file)'s bytes in the image, or 0 after refusing. */
 u32 portSetupPropsOutBytes(const struct SetupWalk *w, u32 at, u32 bytes);
 

@@ -30,6 +30,9 @@
 #include <ultra64.h>
 #include "port_romconv_stage.h"
 #include "port_romlayout_stage.h"
+#include "platform_info.h"
+
+extern void portConLogf(const char *fmt, ...);
 
 #define STAN_MAX_POINTS 10u
 #define STAN_SLOT 4u
@@ -257,5 +260,12 @@ int portStanConvert(u8 *data, u32 size, uintptr_t base, const char *name)
         record.ptr_firstroom = (StandTile *) (base + shape.first);
         memcpy(data, &record, sizeof(record));
     }
+#if IS_64_BIT
+    /* The line romfile_stan.c's in-place pass prints, with its counts (the
+     * bytes are the tiles' end, the zero word's offset), for the load census
+     * (lp64_census.py); the in-place pass does not run at 64 bits. */
+    portConLogf("ge: romdata: stan  %-18s converted (%u tiles, %u rooms, %u bytes)\n", name, shape.tiles, shape.rooms,
+            at);
+#endif
     return 1;
 }
