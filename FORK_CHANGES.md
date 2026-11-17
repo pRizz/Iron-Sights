@@ -211,7 +211,7 @@ Dam default 1% low 261 to 294 fps. One profiled run of each (matched Cradle):
 render thread 1.46 to 1.44 ms a frame, every function within 0.04 ms;
 `gfx_opengl_new_texture` went from 0.011 ms to nothing.
 
-### FORK-089 — Native 64-bit port: accepted plan; LP64-001 scaffolding, LP64-002 type hygiene and LP64-003 addresses and memory done
+### FORK-089 — Native 64-bit port: accepted plan; LP64-001 scaffolding, LP64-002 type hygiene and LP64-003 addresses and memory done; LP64-004 planned
 
 **Status:** Plan accepted by the owner on 2026-11-15. Every task of milestone
 LP64-001 is built (Tasks 1 to 7 were each reviewed before reaching `main`): the two-tier gallery rule, the container
@@ -253,8 +253,12 @@ game memory above 4 GB, proves it at startup, and stops with status 5 at a
 guard naming `animation tables`, the first in-place conversion of ROM data the
 boot reaches; no 64-bit build loads a stage, by design, until LP64-004 writes
 the converters (the "LP64-003 task 12" note below has the runs, and "LP64-003
-hand-over to LP64-004" what the next milestone inherits). LP64-004 onward
-has not been built or verified; the plan's milestone status table says so.
+hand-over to LP64-004" what the next milestone inherits). LP64-004 (the
+asset converters) is planned and waits for the owner's review:
+[its plan](scripts/port/native_64bit_lp64_004.md) was written on 2026-11-16
+from measurements on `main` at f73382a, which the "Milestone LP64-004"
+paragraph below records; nothing of it is built. LP64-005 onward has not
+been planned, built or verified; the plan's milestone status table says so.
 What LP64-002 leaves to later milestones is in one list, "LP64-002 hand-off",
 at the end of the LP64-002 notes below.
 
@@ -2873,10 +2877,140 @@ No converter and no in-place conversion changed: none of the fixed structures is
 
 Each was read instruction by instruction in its task's note; none changes a value drawn, so no image cell is expected to change. The fix wave changed strict-tier files (`gunfire.c`, `model.c`, `bondview2.c`, `port/fast3d/gfx_pc.cpp`) only in 64-bit code and in macros with their old 32-bit expansion, which is why `hand_gallery.py verify` reports the gallery stale on this branch; the laptop regenerates it and Task 12 closes the record.
 
+**Milestone LP64-004 (asset converters), planned on 2026-11-16 and waiting for the owner's review; nothing of it is built:**
+[the milestone's plan](scripts/port/native_64bit_lp64_004.md) lists seventeen
+tasks and ten decisions for the owner, each with a recommendation. This
+paragraph records the plan and the measurements it rests on, taken on `main`
+at f73382a in the Mac's containers (GCC 13.3; aarch64 native, x86_64 and i686
+emulated). No source, build file or tool changed for it; the scratch copies
+were `git archive`s of `main` under `build/lp64`, never committed and deleted
+afterwards. *Where `main` stands:* the 64-bit headless executable logs
+`ge: lp64: address space OK` and exits with status 5 at `animation tables`;
+the ten guards are at the lines the hand-over list gives. *Boot order of the
+ten classes*, measured by treating each class as converted in turn in a
+scratch copy (a bit mask read by `portLp64AssetConverted`, a stand-in for the
+class, and a trap at the guard for a backtrace), the same in the aarch64 and
+the x86_64 container: animation tables (`portAnimDataInit`, before the game's
+boot), text banks (`langInit`), audio banks and then music sequences
+(`musicSeqPlayerInit`), textures (the title's `lvlStageLoad`: `texReset`,
+`texLoadFromDisplayList`, `image_bank.c:240`), fonts (the same stage load:
+`load_font_tables`, `lv.c:802`), models (the legal screen:
+`init_menu00_legalscreen`, `load_object_fill_header`, `front.c:1742`).
+Backgrounds, collision tiles and setup files follow in a mission's load
+(`load_bg_file` at `bg.c:1100` and `:1111`, `proplvreset2` at `prop.c:1950`),
+by reading `lv.c:835-931`: that part was not run. `GE_STAGE` does not skip
+the title, so the model class is needed before any mission. This corrects the
+hand-over list, which had fonts before the audio banks. *The stand-ins and
+what each showed:* (1) animation headers are 0x14 bytes at
+`data + PTR_ANIM_x`, an address 83 sites in six files form from a constant;
+the 173 headers are at least 0x30 apart, the last at 0xE7C0 of 0xE7E0, and 102
+sit at 4 mod 8. A `ModelAnimation` declared packed and 4-byte aligned at 64
+bits (read fields end at 0x20), written over each header in the permanent
+copy with its descriptor and stream pointers into the static staging image,
+let the boot pass with no change to `model.c`; unpacked, the sanitizer build
+stops at a misaligned member access. (2) Text banks: the table kept as native
+4-byte offsets and `langGet` adding the bank's address (its N64 branch); the
+three relabelled strings fit in the bytes of the strings they replace.
+(3) Audio banks: new records for the five kinds that hold pointers, 448
+records and 16,448 bytes for the effects bank and 312 and 11,216 for the
+instruments, the other five kinds left in the file image. (4) Music: 63
+entries widened from 8 to 16 bytes (508 to 1,016). (5) Textures: treated as
+converted with no change, `texReset` ran clean, also under the sanitizers.
+(6) Fonts: `struct font` built at 3,688 bytes (2,932 at 32 bits) and the font
+list widened from 0xC0 to 0x180. With all six, the plain and the sanitizer
+executable reach the legal screen and stop at `models` with status 5 and no
+sanitizer report (aarch64; the plain one also on x86_64). With `models` also
+treated as converted and no converter, the boot dies in
+`modelPromoteNodeOffsetsToPointers` (`model.c:6006`). No stand-in was written
+for models, backgrounds, collision tiles or setup files: none is small.
+Reading a staging array through the game's own `extern` of it trips the
+sanitizer's object-size check, so the plan has converters read staging data
+through `port/src` declarations or after `romCopy`. *Sizes*, by a probe
+compiled at both widths in the x86_64 container (32 to 64 bits): `ModelNode`
+24 to 48; `ModelFileTextures` 12 to 16; the model records Header 16 to 24,
+Group 28 to 40, DL 20 to 40, DLCollision 32 to 64, DLPrimary 16 to 32, LOD 16
+to 24, BSP 36 to 48, Gunfire 40 to 48, Shadow 32 to 48, Switch 8 to 16, Op11
+76 to 144, Op05 424 to 448, Op07 432 to 464, Op06 24 to 32, Op17 32 to 40
+(BBox 28, GroupSimple 20, Interlink 28 unchanged); `bg_room_data` 24 to 40;
+`bg_portal_data_entry` 8 to 16; `stagesetup` 40 to 80; `PadRecord` 44 to 56;
+`BoundPadRecord` 68 to 80; `waypoint` 16 to 24; `waygroup` 12 to 24;
+`PathRecord` and `AIListRecord` 8 to 16; `pname` 4 to 8; `ObjectRecord` 128 to
+144; `fontchar` 24 to 32; `ALBankFile` 8 to 16; `ALBank` 16 to 24;
+`ALInstrument` 20 to 24; `ALSound` 16 to 32; `ALWaveTable` 20 to 32;
+`RareALSeqData` 8 to 16; `Gfx` 8 to 16; `Acmd` 8 at both;
+`ramromfilestructure` 228 to 232 (same field offsets; two `u64` raise its
+alignment, and the game steps past it by `sizeof`); `ALInstrumentAlt_s` has
+its array at 12 and at 16, so at 64 bits `sndPlaySfx`'s index would name the
+next sound. *Memory:* a 32-bit headless build with counters in
+`romfile_model.c` and `romfile_setup.c` ran the 20-mission smoke (20 of 20
+`PASS`); from its record counts and the sizes above, a mission's models (22 to
+55 files, 178 to 397 KB of file bytes in 600 frames) grow by 34 to 82 KB (1.16
+to 1.26 times), the smoke's 280 distinct model files from 1,921,952 to
+2,318,120 bytes (worst file 1.55 times), and a mission's setup file (24 to 103
+KB) by 4 to 17 KB (1.16 to 1.19 times). A read-only scan of the ROM by the
+planning agents gave: all 512 model files 3.29 MB to 4.01 MB estimated, 58,041
+list commands, no list calling another, model opcodes 3, 5, 6, 7, 11, 14, 16,
+17, 19 and 20 absent; converted `GtriggerZ` 42,648 of the 45,008 bytes
+`gun.c` gives it, `Csuit_lf_handZ` 46,052 of 48,496, `GautoshotZ` 26,744 of
+30,000, padding not counted; 25 bg files with data, at most 137 rooms and 194
+portals, room lists at most 114,992 inflated bytes a stage (Silo) against
+693,248 of vertices, every list a multiple of 8 bytes with `G_VTX` segment
+0x0E as its only address word. *Pools at 32 bits* (a scratch print of the
+banks at frame 60 of each mission, `GE_SNDDBG=1`, `GE_ROOM_AUDIT=1`): the
+stage bank is 66,805,760 bytes with 62.99 to 63.51 MB free; the permanent
+bank 303,104 with 189,280 free; the music heap 753,664 with 219,120 used; the
+graphics buffer's frame-end use peaks at 30,872 bytes (35,960 in Surface 2) of
+122,880 to 204,800, with no near-full, overrun or unloaded-room line in any
+mission. *The hand-over list:* every item was checked against the code; the
+plan's table has each verdict. Still true as written: the ten guards, the
+Op11 and `ModelFileTextures` layouts, `objecthandler_2.c`'s strides (now
+`:302-307`), the intro camera's 14 words, `Acmd` (eight of the nine macros
+have callers), the twelve unions, the prop walk by `sizepropdef`, the
+collision-vertex steps, the two allowlist lines, the pools. Corrected: the
+boot order (above); the eight missing bg files are zero-length on the cart
+(cut stages), three more alias one of them, and all eleven resolve to 64 KB
+zero arrays that are linked at 64 bits (`port/src/asset_bin_stubs.c`), so
+"not linked" holds for the eight stans only; the bg env slot holds an offset
+and then a portal index and never needs a host pointer; `Switches[n]->Data`
+is read as floats in more places than listed (`propobj.c:6084` and `:6126`,
+`bondview2.c`, `gunfire.c`, `prop.c:759`, `ads_hands.c:550`), all of leading
+floats that stay at offset 0; on PC the music heap is a static array, not the
+permanent bank. Not in the list: `ALInstrumentAlt_s` and
+`ramromfilestructure` (above); `initSetLevelLoadPropSafeItem`
+(`initobjects.c:191`) writes `ObjectRecord.prop` where the list's reader
+expects `SafeObjectRecord.next`, the same offset at 32 bits only; the intro
+credits record keeps a pointer in an `s32` (`bondview_r.c:380`);
+`texLoadFromGdl` counts commands as bytes `>> 3` (`tex.c:846`) while its model
+caller passes `n * sizeof(Gfx)`, and `texCopyGdls` (`tex.c:1177`) copies two
+`u32` a command into `Gfx` steps; one instrument sample is 16-bit raw, swapped
+in place inside the ROM image, though `audio_pc.c:31-33` says both banks are
+all ADPCM; `lvInit` copies the font list before it is built, at both widths,
+and nothing on PC reads the copy; the bg front matter is used and written in
+place inside the ROM image, so at 32 bits what play wrote there is still
+there at the stage's next load. *What the plan decides from this:* the tasks
+follow the boot order; animation headers, text banks and tile data keep the
+file's bytes while the other seven classes get new memory; converters are
+compiled only at 64 bits and in an opt-in 32-bit oracle build
+(`-DGE_LP64_ORACLE=ON`), so the shipped 32-bit program does not change; no
+strict-tier edit is planned, and whatever the first 64-bit runs need there
+goes to one branch and one laptop trip; done means the 64-bit headless
+executable runs the title and the 20 missions' smoke, plain and under the
+sanitizers. *Not measured:* any stage load at 64 bits, and so the first run
+of the model, background, collision and setup paths and the order of the last
+three stops; the 64-bit video executable and the mixer (a headless build
+emits no audio command); graphics buffer and room memory use in real play;
+whether the 32-bit game's second load of a stage differs from its first; real
+x86 hardware; `clang` and GCC 14; the browser build. With the plan, the
+design (`scripts/port/native_64bit_plan.md`) has its LP64-004 status row set
+to Planned and a "Found while planning LP64-004" list in its hazard
+inventory. The working notes are in the session group's notes folder outside
+the repository; the temporary build folders under `build/lp64` were deleted.
+
 **Sources:** [plan](scripts/port/native_64bit_plan.md),
 [LP64-001 implementation plan](scripts/port/native_64bit_lp64_001.md),
 [LP64-002 implementation plan](scripts/port/native_64bit_lp64_002.md),
 [LP64-003 implementation plan](scripts/port/native_64bit_lp64_003.md),
+[LP64-004 implementation plan](scripts/port/native_64bit_lp64_004.md),
 main paths of the gate: `CMakeLists.txt` (`GE_WARNING_OPTIONS`),
 `scripts/port/lp64_diagnostics.py`, `scripts/port/abi_probe/probe.c`,
 `.github/workflows/windows-release.yml`,
@@ -2890,7 +3024,10 @@ the display-list word accessors: `port/include/port_gfxwords.h`,
 [repository rule](AGENTS.md),
 [inherited 32-bit constraints](docs/port/abi-and-portability.md).
 
-**Validation:** LP64-003's planning paragraph above records the measurement
+**Validation:** LP64-004's planning paragraph above records its measurement
+runs; the Bright Builds checks, the settings placement check and the ROM-free
+gallery verification ran for that documentation-only commit, and nothing of
+LP64-004 is built. LP64-003's planning paragraph above records the measurement
 runs, and the Bright Builds checks, the settings placement check and the
 ROM-free gallery verification ran for that documentation-only commit; each
 LP64-003 task note above records what that task ran; its close is the "LP64-003 task 12" note (CI runs 44007720420, 44007721496 and 44007720532 on 9abbe58 passed every job; the 64-bit boot check stopped at `animation tables`, plain and sanitizer, in the aarch64 and x86_64 containers; no 64-bit stage load has been run). LP64-002's runs are in its task notes above; its close is the
