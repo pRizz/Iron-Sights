@@ -104,5 +104,17 @@ for width in $widths; do
     [[ $width == 32 ]] && stan+=(port/src/romfile_stan.c)
     build "$work/stan-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_stan.c "${stan[@]}"
     run "$work/stan-$width" "${width}-bit collision tiles"
+    # At 32 bits the setup tests compare with romfile_setup.c's in-place
+    # result. Its header comment names assets/obseg/setup/*.c, which
+    # -Wcomment reports.
+    setup=(port/src/romconv_setup.c port/src/romconv_setup_walk.c port/src/romconv_setup_records.c
+        port/src/romconv_setup_intro.c port/src/romconv_setup_props.c port/src/romconv_common.c
+        port/src/port_lp64_oracle.c)
+    [[ $width == 32 ]] && setup+=(-Wno-comment port/src/romfile_setup.c)
+    build "$work/setup-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_setup.c "${setup[@]}"
+    run "$work/setup-$width" "${width}-bit setup files"
+    build "$work/setup-checks-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_setup_checks.c \
+        "${setup[@]}"
+    run "$work/setup-checks-$width" "${width}-bit setup file input checks"
     echo "test_romconv: PASS (${width}-bit)"
 done

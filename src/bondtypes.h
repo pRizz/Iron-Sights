@@ -3955,7 +3955,14 @@ typedef struct CreditsEntry_s
 struct SetupIntroCredits
 {
     s32 type;
+#if IS_64_BIT
+    /* PORT (LP64-004): the credits table's offset from the setup file's
+     * start, which bondview_r.c adds the base to; the setup converter
+     * writes it. 16 bytes at 64 bits. */
+    uintptr_t unk04;
+#else
     s32 unk04;
+#endif
 };
 #define CharArrayFrom32(input) ((input) & 0xFF000000) >> 24, ((input) & 0x00FF0000) >> 16, ((input) & 0x0000FF00) >> 8, (input) & 0x000000FF
 #define CharArrayFrom16(input) ((input) & 0xFF00) >> 8, (input) & 0x00FF

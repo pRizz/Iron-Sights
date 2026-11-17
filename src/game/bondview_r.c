@@ -377,7 +377,12 @@ void bondviewLoadSetupIntroSection(void)
                     /* PORT: the compiled-in setup already stores a real pointer
                      * (&credits_data_0), so skip the N64 base+offset rebase
                      * that broke the Cuba credits. */
+#if IS_64_BIT
+                    /* LP64-004: the setup converter leaves the table's offset in the record. */
+                    credits = (CreditsEntry*)((uintptr_t)g_ptrStageSetupFile + intro_credits->unk04);
+#else
                     credits = (CreditsEntry*)(intptr_t)intro_credits->unk04; /* LP64-004: setup converter (the record holds a 32-bit word) */
+#endif
 #endif
                     credits_pointer = credits;
 

@@ -335,6 +335,30 @@ _Static_assert(sizeof(RomFont) == 0xB74, "font table file layout");
 _Static_assert(sizeof(struct font) - sizeof(RomFont) == (IS_64_BIT ? 0x2F4 : 0), "struct font's growth");
 _Static_assert(sizeof(struct fontchar) == (IS_64_BIT ? 32 : 24), "fontchar stride");
 
+/* The setup file's run-time records (LP64-004 Task 14): the converter writes
+ * each at its C size, the sizes the plan measured at both widths. The intro
+ * camera's text IDs sit at the start of their unions, its prev link after
+ * them, and the credits record's table offset is pointer-sized at 64 bits. */
+#define SETUP_SIZE(type, at32, at64) \
+    _Static_assert(sizeof(type) == (IS_64_BIT ? (at64) : (at32)), #type " size")
+SETUP_SIZE(struct stagesetup, 40, 80);
+SETUP_SIZE(PadRecord, 44, 56);
+SETUP_SIZE(BoundPadRecord, 68, 80);
+SETUP_SIZE(waypoint, 16, 24);
+SETUP_SIZE(waygroup, 12, 24);
+SETUP_SIZE(PathRecord, 8, 16);
+SETUP_SIZE(AIListRecord, 8, 16);
+SETUP_SIZE(pname, 4, 8);
+SETUP_SIZE(SetupIntroCamera, 40, 56);
+SETUP_SIZE(struct SetupIntroCredits, 8, 16);
+SETUP_SIZE(CreditsEntry, 12, 12);
+#define CAMERA_AT(member, at32, at64) \
+    _Static_assert(offsetof(SetupIntroCamera, member) == (IS_64_BIT ? (at64) : (at32)), "SetupIntroCamera." #member)
+CAMERA_AT(unk18, 0x18, 0x18);
+CAMERA_AT(lang1c, 0x1C, 0x20);
+CAMERA_AT(lang20, 0x20, 0x28);
+CAMERA_AT(prev, 0x24, 0x30);
+
 /* VERTEX_COLLISION_NODE (bondtypes.h): no link is NULL; at 64 bits a link is
  * the base plus the 32-bit offset, at 32 bits the stored pointer. */
 static int checkVertexCollisionNode(void)
