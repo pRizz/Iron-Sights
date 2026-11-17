@@ -8300,7 +8300,7 @@ static void gfx_run_dl(Gfx* cmd) {
         ge_hot_op[(uint8_t)G_NOOP] = 1;
     }
     for (;;) {
-#if IS_64_BIT && !defined(NDEBUG)
+#if IS_64_BIT && defined(GE_LP64_DL_CHECK)
         /* PORT (LP64-003): every writer builds w0 from an unsigned 32-bit value (port_gfxwords.h) */
         if ((cmd->words.w0 >> 32) != 0) {
             sysFatalError("Display-list command word with a non-zero upper half at %p: w0 %016" PRIxPTR, (void *)cmd, cmd->words.w0);
@@ -8381,8 +8381,8 @@ static void gfx_run_dl(Gfx* cmd) {
                 if (tf != NULL && tf[0] != '\0') { traceframe = atol(tf); trace = 1; }
             }
             if (trace && (traceframe < 0 || (long)num_dls == traceframe)) {
-                fprintf(stderr, "dl %p: %02x %08x %08x\n", (void *)cmd,
-                        (unsigned)opcode, (unsigned)cmd->words.w0, (unsigned)cmd->words.w1);
+                fprintf(stderr, "dl %p: %02x %08" PRIxPTR " %08" PRIxPTR "\n", (void *)cmd,
+                        (unsigned)opcode, (uintptr_t)cmd->words.w0, (uintptr_t)cmd->words.w1);
                 if (opcode == G_VTX) {
                     const Vtx* vv = (const Vtx*)seg_addr(cmd->words.w1);
                     size_t nv = C0(0, 16) / sizeof(Vtx);

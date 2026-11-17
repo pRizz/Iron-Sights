@@ -258,9 +258,12 @@ pass its isolated executable rather than rebuilding an active player binary.
   trees: `lp64_diagnostics.py narrowing --check` (implicit narrowing of a
   `uintptr_t`, `intptr_t` or `romptr_t`) and `unprototyped --check` (calls
   without a prototype to functions that take or return a pointer or 64-bit
-  value), each against an exact-match allowlist
-  (`lp64_narrowing_allowed.txt`, `lp64_unprototyped_allowed.txt`) that is
-  lowered as places are fixed and never raised without a reason. Run the
+  value). Each compares its places with an exact-match allowlist, and a
+  missing file allows none (`scripts/port/lp64_static_checks.py`): no
+  narrowing place is allowed, so `lp64_narrowing_allowed.txt` exists only if
+  one is deliberately allowed, with its reason; `lp64_unprototyped_allowed.txt`
+  lists the remaining calls with theirs. Allowlists are lowered as places are
+  fixed and never raised without a reason. Run the
   same lines in the x86_64 or aarch64 container (GCC 13) before pushing a
   change to C, C++ or the build; `lp64_diagnostics.py sites [--messages]
   [FILE...]` lists the conversions of those trees as `file:line: kind`. A new

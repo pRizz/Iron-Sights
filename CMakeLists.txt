@@ -405,6 +405,9 @@ if(GE_SANITIZE)
     add_compile_options(-g3 -fsanitize=address -fsanitize=undefined
                         -fno-omit-frame-pointer -fno-sanitize-recover=all)
     add_link_options(-fsanitize=address -fsanitize=undefined)
+    # gfx_pc.cpp's check of each display-list command word (LP64-003): a
+    # development build only. It compiles to nothing at 32 bits.
+    add_compile_definitions(GE_LP64_DL_CHECK)
     # ASan redzones put gaps between globals and break animdata's contiguous
     # tiling, so exempt the data-only TUs (manifest assets are already
     # uninstrumented).

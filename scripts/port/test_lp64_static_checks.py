@@ -199,6 +199,7 @@ class Narrowing(TreeCase):
         # Assert
         self.assertEqual(status, 1)
         self.assertIn('a.c: 1 narrowings, allowed 0', out)
+        self.assertIn('  a.c:1:', out)
 
     def test_a_malformed_allowlist_line_exits_2(self):
         # Act

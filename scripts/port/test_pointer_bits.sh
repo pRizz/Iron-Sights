@@ -152,6 +152,19 @@ char *ok(char *p) { return (char *)(uintptr_t)p; }'
 check_canary cxx int-to-pointer-cast 'char *h(int i) { return (char *)i; }'
 echo "ok 2d: 64-bit C++ flags reject an int-to-pointer cast and accept a clean source"
 
+# 2e. gfx_run_dl's command-word check (GE_LP64_DL_CHECK) is opt-in: the default
+# 64-bit video build, the kind a player build is, lacks it; a sanitizer build has it.
+mapfile -t gfx_cmd < <(entry_command bits64video port/fast3d/gfx_pc.cpp)
+[[ ${#gfx_cmd[@]} -eq 2 ]] || fail "bits64video: no gfx_pc.cpp compile command recorded"
+if [[ ${gfx_cmd[1]} == *-DGE_LP64_DL_CHECK* ]]; then
+    fail "default 64-bit video build compiles gfx_pc.cpp with GE_LP64_DL_CHECK"
+fi
+expect_configure bits64videosan -DGE_POINTER_BITS=64 -DGE_HEADLESS=OFF -DGE_VIDEO=ON -DGE_SANITIZE=ON
+mapfile -t gfx_san_cmd < <(entry_command bits64videosan port/fast3d/gfx_pc.cpp)
+[[ ${#gfx_san_cmd[@]} -eq 2 ]] || fail "bits64videosan: no gfx_pc.cpp compile command recorded"
+[[ ${gfx_san_cmd[1]} == *-DGE_LP64_DL_CHECK* ]] || fail "64-bit sanitizer video build lacks GE_LP64_DL_CHECK"
+echo "ok 2e: GE_LP64_DL_CHECK only in the sanitizer build, not the default 64-bit video build"
+
 # 3. Any other width is refused.
 expect_failure bad48 "GE_POINTER_BITS must be 32 or 64" -DGE_POINTER_BITS=48
 echo "ok 3: 48 is refused"
