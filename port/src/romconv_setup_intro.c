@@ -44,7 +44,7 @@ _Static_assert(offsetof(SetupIntroCamera, unk18) == 24, "the camera's scalars ar
 
 /* ==== byte order, as romfile_setup.c's kindApply ======================= */
 
-static void kindWord(const u8 *src, int kind, u8 *dst)
+void portSetupKindWord(const u8 *src, int kind, u8 *dst)
 {
     u8 b[4];
 
@@ -258,12 +258,12 @@ static int writeIntroRecord(const struct SetupWalk *w, u32 from, u32 type, u32 p
 
         for (k = 0; k < 7; k++)
         {
-            kindWord(w->file + from + k * 4, kinds[k], record + k * 4);
+            portSetupKindWord(w->file + from + k * 4, kinds[k], record + k * 4);
         }
         /* The text IDs in the low 32 bits of their unions, as the game reads them. */
-        kindWord(w->file + from + offsetof(RomIntroCamera, text1), kinds[7], (u8 *) &camera->lang1c);
-        kindWord(w->file + from + offsetof(RomIntroCamera, text2), kinds[8], (u8 *) &camera->lang20);
-        kindWord(w->file + from + offsetof(RomIntroCamera, prev), kinds[9], (u8 *) &value);
+        portSetupKindWord(w->file + from + offsetof(RomIntroCamera, text1), kinds[7], (u8 *) &camera->lang1c);
+        portSetupKindWord(w->file + from + offsetof(RomIntroCamera, text2), kinds[8], (u8 *) &camera->lang20);
+        portSetupKindWord(w->file + from + offsetof(RomIntroCamera, prev), kinds[9], (u8 *) &value);
         camera->prev = (SetupIntroCamera *) (uintptr_t) value;
     }
     else if (type == INTROTYPE_CREDITS)
@@ -276,7 +276,7 @@ static int writeIntroRecord(const struct SetupWalk *w, u32 from, u32 type, u32 p
         {
             return 0;
         }
-        kindWord(w->file + from, kinds[0], (u8 *) &credits->type);
+        portSetupKindWord(w->file + from, kinds[0], (u8 *) &credits->type);
 #if IS_64_BIT
         credits->unk04 = table; /* bondview_r.c adds the setup's base */
 #else
@@ -293,7 +293,7 @@ static int writeIntroRecord(const struct SetupWalk *w, u32 from, u32 type, u32 p
     {
         for (k = 0; k < kSetupIntroKinds[type].words; k++)
         {
-            kindWord(w->file + from + k * 4, kinds[k], record + k * 4);
+            portSetupKindWord(w->file + from + k * 4, kinds[k], record + k * 4);
         }
     }
     if (w->out != NULL)

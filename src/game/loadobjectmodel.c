@@ -10,6 +10,9 @@
 #include "stan.h"
 #include "model.h"
 #include "objecthandler.h"
+#if IS_64_BIT
+#include "port_romconv_stage.h" /* LP64-004: portSetupWide, the converted prop record sizes */
+#endif
 
 /**
  * Address 0x7F056850.
@@ -50,6 +53,14 @@ s32 getposstan(struct coord3d *pos, StandTile *stan, f32 radius, struct coord3d 
 */
 s32 sizepropdef(PropDefHeaderRecord *pdef)
 {
+#if IS_64_BIT
+    /* LP64-004: the converted record's size in words (romconv_setup_props.c),
+     * for every type; an unknown type, which no converted list holds, is one
+     * header padded to a pointer, as the default below is one header */
+    const struct PortSetupWide *wide = portSetupWide(pdef->type);
+
+    return wide != NULL ? (s32) wide->widewords : (s32) (sizeof(void *) / 4);
+#else
     #if 1
     switch (pdef->type)
     {
@@ -245,6 +256,7 @@ s32 sizepropdef(PropDefHeaderRecord *pdef)
             return sizeof(PropDefHeaderRecord) / 4;
     }
     #endif
+#endif
 }
 
 

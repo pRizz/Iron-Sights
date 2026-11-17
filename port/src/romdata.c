@@ -738,6 +738,15 @@ enum romfileclass { CLASS_NONE = 0, CLASS_TEXT, CLASS_BRIEF, CLASS_SETUP, CLASS_
 static const char *const sClassName[] = { "none", "text", "brief", "setup", "stan", "model", "bg" };
 
 extern s32 romfileSetupConvert(u8 *data, u32 size, const char *name, const u8 *compiled); /* romfile_setup.c */
+#ifdef GE_LP64_ORACLE
+extern s32 romfileSetupOracle(u8 *data, u32 size, const char *name, const u8 *compiled); /* LP64-004 */
+#endif
+#if IS_64_BIT || defined(GE_LP64_ORACLE)
+#include "port_romconv_stage.h" /* LP64-004: the setup converter and its oracle's sweep */
+#endif
+#if IS_64_BIT
+extern void sysFatalError(const char *format, ...);
+#endif
 extern s32 romfileStanConvert(u8 *data, u32 size, const char *name, const u8 *compiled);  /* romfile_stan.c */
 #ifdef GE_LP64_ORACLE
 extern s32 romfileStanOracle(u8 *data, u32 size, const char *name, const u8 *compiled); /* LP64-004 */
@@ -866,6 +875,7 @@ void romdataFilesApply(void)
     if (portLp64OracleSweepRequested()) {
         portModelOracleSweep();
         portBgOracleSweep(); /* LP64-004 Task 12: romconv_bg_oracle.c */
+        portSetupOracleSweep(); /* LP64-004 Task 15: romconv_setup_oracle.c */
     }
 #endif
 }
@@ -1055,6 +1065,40 @@ static void romdataTextOracle(s32 index, u8 *data, u32 size)
 }
 #endif
 
+#if IS_64_BIT
+/* LP64-004: romdataFilePreprocess's setup case at 64 bits. DATA holds the
+ * file's SIZE bytes in a block of CAPACITY: the load functions in ob.c record
+ * the block in rom_remaining before loading (fileGetCapacity), and commit the
+ * entry's poolRemaining after this pass, so the size returned here is the one
+ * committed. The image is measured, refused by name when it passes CAPACITY,
+ * and written into DATA from a copy in the converter scratch (reserved at
+ * boot, so no stock setup allocates). Nothing can read a setup the converter
+ * refuses, so a refusal stops the game, named. */
+static u32 romdataSetupConvert(s32 index, u8 *data, u32 size, u32 capacity)
+{
+    const char *name = file_resource_table[index].filename;
+    u32 need = portSetupConvertedSize(data, size, name);
+    u8 *scratch;
+
+    if (need == 0) {
+        sysFatalError("The setup file %s was refused by its converter; a 64-bit build cannot read it", name);
+    }
+    if (need > capacity) {
+        portConvRefuse(PORT_LP64_SETUPS, name, "its %u-byte image does not fit the %u-byte block", need, capacity);
+        sysFatalError("The setup file %s needs %u bytes converted and its block holds %u", name, need, capacity);
+    }
+    scratch = portConvScratch(size);
+    memcpy(scratch, data, size);
+    if (!portSetupConvert(scratch, size, data, need, name)) {
+        sysFatalError("The setup file %s was refused by its converter after measuring; a 64-bit build cannot read it",
+                name);
+    }
+    portConLogf("ge: romdata: setup %-16s converted: %u bytes from the file's %u, in a %u-byte block\n", name, need,
+            size, capacity);
+    return need;
+}
+#endif
+
 void romdataFilePreprocess(s32 index, u8 *data, u32 size)
 {
     if (!romdataFileServed(index) || data == NULL) {
@@ -1091,7 +1135,15 @@ void romdataFilePreprocess(s32 index, u8 *data, u32 size)
         }
         break;
     case CLASS_SETUP:
+#if IS_64_BIT
+        /* LP64-004: the image grows; ob.c commits poolRemaining after this call */
+        resource_lookup_data_array[index].poolRemaining =
+            romdataSetupConvert(index, data, size, resource_lookup_data_array[index].rom_remaining);
+#elif defined(GE_LP64_ORACLE)
+        romfileSetupOracle(data, size, file_resource_table[index].filename, sCompiledData[index]);
+#else
         romfileSetupConvert(data, size, file_resource_table[index].filename, sCompiledData[index]);
+#endif
         break;
     case CLASS_STAN:
 #ifdef GE_LP64_ORACLE

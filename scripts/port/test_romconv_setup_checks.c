@@ -180,11 +180,14 @@ static int testRecordTypes(void)
     sfPut32(f.props, 60);
     failures += !sfRefused("has type 60");
 
-    // Any prop record but the end record alone, in this task
+    // A prop record before the end record converts (Task 15), each at its converted size
     sfBuildMain(&f);
     sfHeader(3, sfWords(2, 0u, (u32) PROPDEF_END));
-    failures += !sfRefused("holds records the prop converter does not convert");
-    return expect(failures == 0, "unknown intro and prop types, and prop records the stub cannot convert");
+    failures += sfConvert() == 0
+        || AT(PropDefHeaderRecord, g_Out, AT(struct stagesetup, g_Out, 0)->propDefs)->type != PROPDEF_NOTHING
+        || AT(PropDefHeaderRecord, g_Out, (uintptr_t) AT(struct stagesetup, g_Out, 0)->propDefs
+               + portSetupWide(PROPDEF_NOTHING)->widewords * 4u)->type != PROPDEF_END;
+    return expect(failures == 0, "unknown intro and prop types refused, a known prop record converted");
 }
 
 static int testBuffersAndShortFiles(void)

@@ -1953,6 +1953,16 @@ void proplvreset2(enum LEVELID stageId)
         {
             extern s32 romdataFileServed(s32 index);
             g_portSetupFromRom = romdataFileServed(fileGetIndex((u8 *) strResource));
+#if IS_64_BIT
+            /* LP64-004: no compiled-in setup can be read at 64 bits, so a
+             * setup the ROM does not serve stops here, named, before anything
+             * walks it (the class guard below no longer stops it) */
+            if (!g_portSetupFromRom)
+            {
+                extern void sysFatalError(const char *format, ...);
+                sysFatalError("The setup file %s did not load from the ROM; a 64-bit build cannot read it", strResource);
+            }
+#endif
         }
 #endif
         local_stage = g_ptrStageSetupFile;
@@ -1998,6 +2008,67 @@ void proplvreset2(enum LEVELID stageId)
                 {
                     u32 w;
 
+#if IS_64_BIT
+                    /* LP64-004: the same fields by member, since the records
+                     * are at their converted layout (romconv_setup_props.c),
+                     * where ObjectRecord's damage is no longer word 29 */
+                    u32 *wp = NULL;
+                    s32 reverse = FALSE;
+
+                    switch (((PropDefHeaderRecord *) pd)->type)
+                    {
+                        case PROPDEF_GUARD:
+                            wp = (u32 *) &((GuardRecord *) pd)->Preset; /* Preset and chrpreset1 */
+                            break;
+                        case PROPDEF_DOOR:
+                        case PROPDEF_PROP:
+                        case PROPDEF_KEY:
+                        case PROPDEF_ALARM:
+                        case PROPDEF_CCTV:
+                        case PROPDEF_MAGAZINE:
+                        case PROPDEF_COLLECTABLE:
+                        case PROPDEF_MONITOR:
+                        case PROPDEF_MULTI_MONITOR:
+                        case PROPDEF_RACK:
+                        case PROPDEF_AUTOGUN:
+                        case PROPDEF_HAT:
+                        case PROPDEF_AMMO:
+                        case PROPDEF_ARMOUR:
+                        case PROPDEF_GAS_RELEASING:
+                        case PROPDEF_VEHICHLE:
+                        case PROPDEF_AIRCRAFT:
+                        case PROPDEF_UNK41:
+                        case PROPDEF_GLASS:
+                        case PROPDEF_SAFE:
+                        case PROPDEF_TANK:
+                        case PROPDEF_TINTED_GLASS:
+                            wp = (u32 *) &((ObjectRecord *) pd)->damage;
+                            break;
+                        case PROPDEF_OBJECTIVE_START:
+                            wp = (u32 *) &((struct objective_entry *) pd)->unkC; /* unkC, unkD and difficulty */
+                            w = *wp;
+                            *wp = (w >> 24) | ((w >> 8) & 0xff00) | ((w & 0xff00) << 8) | (w << 24);
+                            wp = (u32 *) &((struct objective_entry *) pd)->reserved; /* reserved and text */
+                            break;
+                        case PROPDEF_WATCH_MENU_OBJECTIVE_TEXT:
+                            wp = (u32 *) &((struct watchMenuObjectiveText *) pd)->reserved; /* reserved and text */
+                            break;
+                        case PROPDEF_GUARD_ATTRIBUTE:
+                            wp = (u32 *) &((GuardAttributeRecord *) pd)->unk8; /* unk8, unkA and GrenadeProb */
+                            reverse = TRUE;
+                            break;
+                    }
+
+                    if (wp != NULL && reverse)
+                    {
+                        w = *wp;
+                        *wp = (w >> 24) | ((w >> 8) & 0xff00) | ((w & 0xff00) << 8) | (w << 24);
+                    }
+                    else if (wp != NULL)
+                    {
+                        *wp = (*wp >> 16) | (*wp << 16);
+                    }
+#else
                     switch (((PropDefHeaderRecord *) pd)->type)
                     {
                         case PROPDEF_GUARD:
@@ -2052,6 +2123,7 @@ void proplvreset2(enum LEVELID stageId)
                             pd[2] = (w >> 24) | ((w >> 8) & 0xff00) | ((w & 0xff00) << 8) | (w << 24);
                             break;
                     }
+#endif
 
                     pd += sizepropdef((PropDefHeaderRecord *) pd);
                 }

@@ -217,8 +217,8 @@ const char *portLp64AssetName(enum PortLp64Asset asset)
 
 #define LP64_EXIT_NO_CONVERTER 5
 
-/* 1 = the class has a 64-bit converter. All zero in LP64-003; LP64-004 sets
- * a class's entry in the commit that lands its converter. */
+/* 1 = the class has a 64-bit converter. All zero in LP64-003; LP64-004 set
+ * each class's entry in the commit that landed its converter. */
 static const unsigned char s_AssetConverted[PORT_LP64_ASSET_COUNT] = {
     1, /* text banks (romconv_text.c) */
     1, /* fonts (romconv_font.c) */
@@ -226,7 +226,7 @@ static const unsigned char s_AssetConverted[PORT_LP64_ASSET_COUNT] = {
     1, /* animation tables (romconv_anim.c) */
     1, /* models (romconv_model.c) */
     1, /* collision tiles (romconv_stan.c) */
-    0, /* setup files */
+    1, /* setup files (romconv_setup.c) */
     1, /* backgrounds (romconv_bg.c) */
     1, /* audio banks (romconv_bank.c) */
     1, /* music sequences (romconv_seq.c) */
@@ -234,6 +234,15 @@ static const unsigned char s_AssetConverted[PORT_LP64_ASSET_COUNT] = {
 
 int portLp64AssetConverted(enum PortLp64Asset asset)
 {
+#ifdef GE_LP64_TEST_UNCONVERTED
+    /* A test build (test_lp64_address.sh) names one class to treat as having
+     * no converter, so that the guard's stop stays tested now that every class
+     * has one. CMake never defines it: no game build is affected. */
+    if (asset == GE_LP64_TEST_UNCONVERTED)
+    {
+        return 0;
+    }
+#endif
     return lp64AssetValid(asset) && s_AssetConverted[asset] != 0;
 }
 

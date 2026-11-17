@@ -108,8 +108,7 @@ int portStanRecordFill(const u8 *data, u32 size, uintptr_t base, struct StanPref
  * header field, the words of an s32 list for a list field, the unowned bytes
  * for a name or an AI list; a name whose NUL, or an AI list whose AI_EndList
  * byte, is not in the unowned bytes it starts in; prop records the prop
- * converter refuses (portSetupPropsSize: in this task anything but the end
- * record alone); an image that would pass 4 GB.
+ * converter refuses (portSetupPropsSize); an image that would pass 4 GB.
  */
 u32 portSetupConvertedSize(const u8 *file, u32 size, const char *name);
 
@@ -138,22 +137,58 @@ u32 portSetupConvertedSize(const u8 *file, u32 size, const char *name);
 s32 portSetupConvert(const u8 *file, u32 size, u8 *out, u32 outsize, const char *name);
 
 /**
+ * One prop record type's sizes (romconv_setup_props.c), from the record the
+ * game reads that type through at run time: FILEWORDS, the file's record in
+ * 4-byte words (setup_kinds.h's kSetupPropdefKinds); WIDEWORDS, the
+ * converted record in 4-byte words (FILEWORDS at 32 bits; a multiple of 2 at
+ * 64); and the NPOINTERS file words, in rising order in POINTERWORD, that are
+ * pointer-sized members of that record. The converter places a record's
+ * words in order, each pointer word at the next multiple of the pointer size
+ * and pointer-sized (its value zero-extended), every other word in 4 bytes,
+ * and pads the record to WIDEWORDS. sizepropdef (loadobjectmodel.c) returns
+ * WIDEWORDS at 64 bits, so every walk of the converted list steps by it.
+ */
+struct PortSetupWide
+{
+    u16 filewords;
+    u16 widewords;
+    u8 npointers;
+    u8 pointerword[16];
+};
+
+/** The sizes of prop record TYPE (one of the 49 PROPDEF_ values below PROPDEF_MAX), or NULL for another value. */
+const struct PortSetupWide *portSetupWide(u32 type);
+
+/**
  * The prop records' converter (romconv_setup_props.c). PROPS is the file's
  * prop list, SIZE bytes from its first record to the end of its PROPDEF_END
- * record. portSetupPropsSize returns the converted bytes (0 when it cannot
- * convert them); portSetupPropsConvert writes them into OUT (OUTSIZE bytes)
- * and returns 1, or 0 with OUT unwritten. Neither logs: the setup converter
- * refuses by the file's name. portSetupConvert's promise that OUT stays
- * unwritten on a refusal rests on one rule, which any replacement keeps:
- * whether portSetupPropsConvert converts, and what it writes, depends only on
- * PROPS and SIZE, so that the checking pass (converting into scratch memory)
- * and the writing pass agree; every list portSetupPropsSize accepts it
- * converts in exactly that many bytes. In this task both are stubs that accept only a
- * list that is the end record alone (4 bytes; 8 at 64 bits, padded to two
- * words); LP64-004 Task 15 converts the records.
+ * record. portSetupPropsSize returns the converted bytes, the sum of each
+ * record's WIDEWORDS (portSetupWide), or 0 for a list it cannot convert: a
+ * record of an unknown type, a record past SIZE, or bytes after the end
+ * record. portSetupPropsConvert writes each record into OUT (OUTSIZE bytes,
+ * 8-byte aligned at 64 bits) with its words swapped by their kinds
+ * (kSetupPropdefKinds; word 0 is always the KSK header, as romfile_setup.c
+ * swaps it) and placed by portSetupWide's rule, the padding zero, and
+ * returns 1, or 0 with OUT unwritten for a list portSetupPropsSize refuses or
+ * an OUTSIZE below its size. At 32 bits every record keeps its size and
+ * place, so OUT is romfile_setup.c's in-place result. Neither logs: the setup
+ * converter refuses by the file's name. portSetupConvert's promise that OUT
+ * stays unwritten on a refusal rests on one rule, which any replacement
+ * keeps: whether portSetupPropsConvert converts, and what it writes, depends
+ * only on PROPS and SIZE, so that the checking pass (converting into scratch
+ * memory) and the writing pass agree; every list portSetupPropsSize accepts
+ * it converts in exactly that many bytes.
  */
 u32 portSetupPropsSize(const u8 *props, u32 size);
 s32 portSetupPropsConvert(const u8 *props, u32 size, u8 *out, u32 outsize);
+
+/**
+ * The setup file oracle's sweep (romconv_setup_oracle.c; the 32-bit oracle
+ * build only, empty elsewhere): counts as differing every setup file the
+ * ROM's directory holds that the game does not serve. Each served one is
+ * compared by romfileSetupOracle when GE_ROMPROBE=1 loads it at boot.
+ */
+void portSetupOracleSweep(void);
 
 #ifdef __cplusplus
 }

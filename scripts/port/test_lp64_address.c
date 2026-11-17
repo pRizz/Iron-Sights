@@ -14,9 +14,12 @@
  *                                    must return at both widths, since
  *                                    LP64-004 Task 3 converted the class
  *   test_lp64_address require-setup  the setup files guard alone, the last
- *                                    class LP64-004 converts: at 64 bits it
- *                                    must stop the process with status 5, at
- *                                    32 bits it must return
+ *                                    class LP64-004 converts (Task 15): it
+ *                                    must return at both widths, and stop the
+ *                                    process with status 5 at 64 bits in a
+ *                                    driver built with
+ *                                    -DGE_LP64_TEST_UNCONVERTED=PORT_LP64_SETUPS,
+ *                                    which keeps the guard's stop tested
  *   test_lp64_address pool-fatal     portLp64PoolFatal alone (LP64-004 Task 2):
  *                                    at 64 bits status 6 naming the pool, at
  *                                    32 bits it must return

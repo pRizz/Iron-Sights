@@ -116,7 +116,12 @@ for width in $widths; do
     build "$work/setup-checks-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_setup_checks.c \
         "${setup[@]}"
     run "$work/setup-checks-$width" "${width}-bit setup file input checks"
-    # The intro test links its own prop converter double instead of the stubs.
+    # bondview.h, for textoverride, has a comment -Wcomment reports.
+    build "$work/setup-props-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} -Wno-comment \
+        scripts/port/test_romconv_setup_props.c "${setup[@]}"
+    run "$work/setup-props-$width" "${width}-bit setup file prop records"
+    # The intro test links its own prop converter double instead of the prop
+    # records' converter.
     setup_intro=()
     for source in "${setup[@]}"; do
         [[ $source == port/src/romconv_setup_props.c ]] || setup_intro+=("$source")

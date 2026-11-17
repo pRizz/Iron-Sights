@@ -90,6 +90,12 @@ struct SetupItem
 #define setupBe32(w, at) portConvBe32((w)->file + (at))
 #define setupBe16(w, at) portConvBe16((w)->file + (at))
 
+/**
+ * The file word at SRC swapped as romfile_setup.c's kindApply swaps a word of
+ * KIND (setup_kinds.h's SETUP_KIND_), written to DST (romconv_setup_intro.c).
+ */
+void portSetupKindWord(const u8 *src, int kind, u8 *dst);
+
 /** The name of an item of KIND, for refusals. */
 const char *portSetupKindName(u8 kind);
 

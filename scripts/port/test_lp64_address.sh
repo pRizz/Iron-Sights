@@ -3,8 +3,10 @@
 # portLp64RegionIsHigh, and the startup address check, which must pass in a
 # position-independent executable and stop, naming the executable image, in
 # one linked -no-pie (the one deliberate -no-pie link: it proves the check
-# sees an image below 4 GB). The asset-class guard (Task 4): at 64 bits it
-# stops with status 5 naming the class, at 32 bits it returns. The command-word
+# sees an image below 4 GB). The asset-class guard (Task 4): every class is
+# converted (LP64-004 Task 15), so it returns at both widths; at 64 bits a
+# driver built with -DGE_LP64_TEST_UNCONVERTED naming a class stops there with
+# status 5 naming the class. The command-word
 # predicates (Task 6): PORT_WORD_IS_HOST, PORT_WORD_HAS_SEGMENT and
 # PORT_WORD_IS_INDEX at each width, and port_textures.c's external-texture slot,
 # which must hold the whole pixel address (above 4 GB at 64 bits). The
@@ -117,9 +119,15 @@ for width in $widths; do
         expect_driver "$work/no-pie" address-space 4 "executable image" "-no-pie driver"
         expect_driver "$work/unit-$width" require-animations 0 "require-animations: returned" \
             "64-bit animation guard (converted)"
-        expect_driver "$work/unit-$width" require-setup 5 \
+        expect_driver "$work/unit-$width" require-setup 0 "require-setup: returned" \
+            "64-bit setup files guard (converted)"
+        # A test-only build keeps one class unconverted, so the status-5 stop
+        # that scripts/port/lp64_boot.py --expect-stop looks for stays tested.
+        build "$work/unconverted" "$work/str-$width.o" "$work/heap-$width.o" ${flags[@]+"${flags[@]}"} \
+            -DGE_LP64_TEST_UNCONVERTED=PORT_LP64_SETUPS
+        expect_driver "$work/unconverted" require-setup 5 \
             'ge: lp64: stopping: asset class "setup files" has no 64-bit converter yet (LP64-004)' \
-            "64-bit setup files guard"
+            "64-bit guard of a class a test build leaves unconverted"
         expect_driver "$work/unit-$width" pool-fatal 6 \
             'ge: lp64: pool "music heap" exhausted (request 4096 bytes)' "64-bit fatal pool report"
         expect_driver "$work/unit-$width" music-heap 6 \

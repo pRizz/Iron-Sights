@@ -188,7 +188,13 @@ void initSetLevelLoadPropLockDoor(struct LockDoorRecord *arg0)
 */
 void initSetLevelLoadPropSafeItem(struct ObjectRecord *arg0)
 {
+#if IS_64_BIT
+    /* LP64-004: the list's reader (chrprop.c) follows SafeObjectRecord.next,
+     * which shares ObjectRecord.prop's offset at 32 bits only */
+    ((struct SafeObjectRecord *) arg0)->next = (struct SafeObjectRecord *) g_LevelLoadPropSafeItem;
+#else
     arg0->prop = g_LevelLoadPropSafeItem;
+#endif
     g_LevelLoadPropSafeItem = arg0;
 }
 
