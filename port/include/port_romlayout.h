@@ -241,4 +241,238 @@ typedef struct RomFont
 } RomFont;
 _Static_assert(sizeof(RomFont) == 0xB74, "RomFont is 0xB74 bytes");
 
+/* ==== models (C<name>Z, G<name>Z and P<name>Z; bondtypes.h's model records) == */
+
+/*
+ * A model file, big-endian: numSwitches u32 node references, numtextures
+ * RomModelTexture entries, then the root RomModelNode; nodes, their records
+ * and the vertex, point-usage, inline-texel and display-list blocks follow,
+ * interleaved. Every reference is 0x05000000 plus an offset from the file's
+ * start, or 0. The counts are not in the file: they come from the compiled
+ * ModelFileHeader. Each record's size is romfile_model.c's modelRecordSize;
+ * opcodes 3 and 17 use the group record and 20 the header record there.
+ */
+typedef struct RomModelNode
+{
+    u16 opcode; /* the low byte; the high byte holds flags */
+    u16 pad;
+    u32 data;
+    u32 parent;
+    u32 next;
+    u32 prev;
+    u32 child;
+} RomModelNode;
+_Static_assert(sizeof(RomModelNode) == 24, "RomModelNode is 24 bytes");
+
+typedef struct RomModelTexture
+{
+    u32 textureid; /* a texture number, or a reference to inline texels */
+    u8 width;
+    u8 height;
+    u8 mipmaptiles;
+    u8 type;
+    u8 renderdepth;
+    u8 sflags;
+    u8 tflags;
+    u8 pad;
+} RomModelTexture;
+_Static_assert(sizeof(RomModelTexture) == 12, "RomModelTexture is 12 bytes");
+
+/** A render or collision vertex: six half-words, then a render vertex's s/t
+ * or a collision vertex's link, then four bytes (colour, or a collision
+ * vertex's related index and a spare half-word). */
+typedef struct RomModelVertex
+{
+    s16 coord[3];
+    s16 index;
+    u32 link;
+    u8 tail[4];
+} RomModelVertex;
+_Static_assert(sizeof(RomModelVertex) == 16, "RomModelVertex is 16 bytes");
+
+typedef struct RomModelHeader /* opcodes 1 and 20 */
+{
+    u16 animpart;
+    s16 matrixindex;
+    u32 firstgroup;
+    u16 group1;
+    u16 group2;
+    u16 rwdataindex;
+    u16 reserved;
+} RomModelHeader;
+_Static_assert(sizeof(RomModelHeader) == 16, "RomModelHeader is 16 bytes");
+
+typedef struct RomModelGroup /* opcodes 2, 3 and 17 */
+{
+    u32 origin[3];
+    u16 jointid;
+    s16 matrixids[3];
+    u32 childgroup;
+    u32 radius;
+} RomModelGroup;
+_Static_assert(sizeof(RomModelGroup) == 28, "RomModelGroup is 28 bytes");
+
+typedef struct RomModelDL /* opcode 4 */
+{
+    u32 primary;
+    u32 secondary;
+    u32 baseaddr;
+    u32 vertices;
+    u16 numvertices;
+    u8 modeltype;
+    u8 pad;
+} RomModelDL;
+_Static_assert(sizeof(RomModelDL) == 20, "RomModelDL is 20 bytes");
+
+typedef struct RomModelDLCollision /* opcode 24 */
+{
+    u32 primary;
+    u32 secondary;
+    u32 vertices;
+    u16 numvertices;
+    u16 numcollisionvertices;
+    u32 collisionvertices;
+    u32 pointusage;
+    u16 modeltype;
+    u16 rwdataindex;
+    u32 baseaddr;
+} RomModelDLCollision;
+_Static_assert(sizeof(RomModelDLCollision) == 32, "RomModelDLCollision is 32 bytes");
+
+typedef struct RomModelDLPrimary /* opcode 22; numvertices counts quads */
+{
+    u32 numvertices;
+    u32 vertices;
+    u32 primary;
+    u32 baseaddr;
+} RomModelDLPrimary;
+_Static_assert(sizeof(RomModelDLPrimary) == 16, "RomModelDLPrimary is 16 bytes");
+
+typedef struct RomModelLOD /* opcode 8 */
+{
+    u32 mindistance;
+    u32 maxdistance;
+    u32 affects;
+    u16 rwdataindex;
+    u16 reserved;
+} RomModelLOD;
+_Static_assert(sizeof(RomModelLOD) == 16, "RomModelLOD is 16 bytes");
+
+typedef struct RomModelBSP /* opcode 9 */
+{
+    u32 point[3];
+    u32 vector[3];
+    u32 leftchild;
+    u32 rightchild;
+    u16 reserved;
+    u16 rwdataindex;
+} RomModelBSP;
+_Static_assert(sizeof(RomModelBSP) == 36, "RomModelBSP is 36 bytes");
+
+typedef struct RomModelBBox /* opcode 10 */
+{
+    u32 modelnumber;
+    u32 bounds[6];
+} RomModelBBox;
+_Static_assert(sizeof(RomModelBBox) == 28, "RomModelBBox is 28 bytes");
+
+typedef struct RomModelGunfire /* opcode 12 */
+{
+    u32 offset[3];
+    u32 size[3];
+    u32 image; /* a texture entry */
+    u32 scale;
+    u16 rwdataindex;
+    u16 reserved;
+    u32 baseaddr;
+} RomModelGunfire;
+_Static_assert(sizeof(RomModelGunfire) == 40, "RomModelGunfire is 40 bytes");
+
+typedef struct RomModelShadow /* opcode 13 */
+{
+    u32 pos[2];
+    u32 size[2];
+    u32 image; /* a texture entry */
+    u32 header;
+    u32 scale;
+    u32 baseaddr;
+} RomModelShadow;
+_Static_assert(sizeof(RomModelShadow) == 32, "RomModelShadow is 32 bytes");
+
+typedef struct RomModelSwitch /* opcode 18 */
+{
+    u32 controls;
+    u16 rwdataindex;
+    u16 reserved;
+} RomModelSwitch;
+_Static_assert(sizeof(RomModelSwitch) == 8, "RomModelSwitch is 8 bytes");
+
+typedef struct RomModelOp06 /* opcode 6 */
+{
+    u32 unk[5];
+    u32 baseaddr;
+} RomModelOp06;
+_Static_assert(sizeof(RomModelOp06) == 24, "RomModelOp06 is 24 bytes");
+
+typedef struct RomModelGroupSimple /* opcode 21 */
+{
+    u32 origin[3];
+    u16 group1;
+    u16 group2;
+    u32 radius;
+} RomModelGroupSimple;
+_Static_assert(sizeof(RomModelGroupSimple) == 20, "RomModelGroupSimple is 20 bytes");
+
+typedef struct RomModelHead /* opcode 23 */
+{
+    u16 rwdataindex;
+    u8 pad[2];
+} RomModelHead;
+_Static_assert(sizeof(RomModelHead) == 4, "RomModelHead is 4 bytes");
+
+typedef struct RomModelInterlink /* opcode 15 */
+{
+    u32 pos[3];
+    u32 pos2[3];
+    u32 scale;
+} RomModelInterlink;
+_Static_assert(sizeof(RomModelInterlink) == 28, "RomModelInterlink is 28 bytes");
+
+typedef struct RomModelOp11 /* opcode 11; unk0c[0..2] are the position */
+{
+    u32 unk0c[16]; /* [15] is a reference */
+    u32 radius;
+    u16 rwdataindex;
+    u16 unk46;
+    u32 baseaddr;
+} RomModelOp11;
+_Static_assert(sizeof(RomModelOp11) == 76, "RomModelOp11 is 76 bytes");
+
+typedef struct RomModelOp05 /* opcode 5 */
+{
+    u32 numchildren;
+    u32 children;
+    u32 vertices;
+    u32 images;
+    u8 data[400];
+    u32 unk1a0;
+    u32 baseaddr;
+} RomModelOp05;
+_Static_assert(sizeof(RomModelOp05) == 424, "RomModelOp05 is 424 bytes");
+
+typedef struct RomModelOp07 /* opcode 7 */
+{
+    u32 unk00; /* a node */
+    u32 unk04; /* a node */
+    u32 numchildren;
+    u32 children;
+    u32 vertices;
+    u32 images;
+    u8 data[400];
+    u16 unk1a8;
+    u16 rwdataindex;
+    u32 baseaddr;
+} RomModelOp07;
+_Static_assert(sizeof(RomModelOp07) == 432, "RomModelOp07 is 432 bytes");
+
 #endif

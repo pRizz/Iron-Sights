@@ -437,6 +437,58 @@ void portFontOracle(const char *name, const u8 *staged, const u8 *rom, u32 romsi
 void portFontListOracle(const u8 *staged, const u8 *rom);
 #endif
 
+/* ---- models (romconv_model.c, _walk.c, _refs.c, _records.c) ------------ */
+
+/**
+ * The bytes of the run-time image of the big-endian model file FILE (SIZE
+ * bytes, port_romlayout.h's RomModel* layouts) with NUMSWITCHES switch slots
+ * and NUMTEXTURES texture entries (the compiled ModelFileHeader's counts), a
+ * multiple of 8. Reads only FILE.
+ *
+ * The image keeps the file's order: the switch slots (sizeof(ModelNode *)
+ * each), the texture entries (sizeof(ModelFileTextures) each), the root node
+ * and then every other item where the file has it, each node, record, block
+ * and list at its run-time size and aligned to a pointer, with the bytes no
+ * item owns copied between them as they are. At 32 bits every item keeps its
+ * size and place, so the image is romfile_model.c's in-place result.
+ *
+ * Returns 0 after portConvRefuse, naming NAME, for: a file too short for its
+ * counts and the root node; a node below the root; a node, record, block or
+ * list that runs past the file (each in 64-bit arithmetic); a list with no
+ * end command within 32,768 commands; more than 0x2000 quads in a DLPRIMARY;
+ * an inline texture's texel depth above 3; a file with no vertices and no
+ * lists (romfile_model.c refuses each of these). Beyond it: an item not at a
+ * multiple of 4; two items sharing a byte, or one place reached as two kinds;
+ * a reference neither 0 nor a segment-5 offset, or naming nothing of the kind
+ * it must (G_VTX words must load inside one vertex block or unclaimed bytes);
+ * a node whose opcode has a record and no data, or data and no record; a
+ * count above 32,768; more than 4,096 nodes pending in the walk; a list that
+ * calls itself, or calls nested more than 32 deep; node links the game's
+ * promotion would walk forever; a collision vertex linked to anything but a
+ * node, or to the node at new offset 0; children in an opcode 5 or 7 record;
+ * an output past 4 GB.
+ */
+u32 portModelConvertedSize(const u8 *file, u32 size, s32 numSwitches, s32 numtextures, const char *name);
+
+/**
+ * Writes the image portModelConvertedSize measures for FILE into OUT (OUTSIZE
+ * bytes, 8-byte aligned, not overlapping FILE): exactly that many bytes, the
+ * padding zero. Each reference to a node, record, texture entry, block or list
+ * is 0x05000000 plus the new offset, zero-extended into its field (0 stays 0),
+ * for the game's promotion; BaseAddr fields are copied as the file has them.
+ * Scalars are swapped into their C fields by romfile_model.c's field maps.
+ * Lists are expanded by portGfxFromRom; their segment-5 G_VTX, G_SETTIMG and
+ * list-call words are remapped, other words copied. At 64 bits a collision
+ * vertex's link is its node's new offset and its related index is swapped; at
+ * 32 bits both stay as the in-place path leaves them.
+ *
+ * Returns 1, or 0 after portConvRefuse with nothing written when
+ * portModelConvertedSize refuses, OUTSIZE is less than it, OUT is not 8-byte
+ * aligned or OUT overlaps FILE.
+ */
+s32 portModelConvert(const u8 *file, u32 size, u8 *out, u32 outsize, s32 numSwitches, s32 numtextures,
+        const char *name);
+
 #ifdef __cplusplus
 }
 #endif

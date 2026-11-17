@@ -118,6 +118,15 @@ POINTER_SIZED(ModelRoData_GunfireRecord, Image);
 POINTER_SIZED(ModelRoData_ShadowRecord, image);
 POINTER_SIZED(ModelRoData_ShadowRecord, Header);
 POINTER_SIZED(ModelRoData_DisplayListPrimaryRecord, Vertices);
+
+/* The model converter (romconv_model_records.c) writes these records' floats
+ * at their file places at both widths; the game reads a group's or an
+ * interlink's position from its record's first byte. A bounding box keeps its
+ * model number first, so its floats start at 4. */
+_Static_assert(offsetof(ModelRoData_GroupRecord, Origin) == 0, "a group's origin is its first float");
+_Static_assert(offsetof(ModelRoData_GroupSimpleRecord, Origin) == 0, "a simple group's origin is its first float");
+_Static_assert(offsetof(ModelRoData_InterlinkageRecord, pos) == 0, "an interlink's position is its first float");
+_Static_assert(offsetof(ModelRoData_BoundingBoxRecord, Bounds) == 4, "a bounding box's floats follow its model number");
 POINTER_SIZED(ModelRoData_DisplayListPrimaryRecord, Primary);
 /* bondview2.c passes this as the collision walk's record, which
  * stanTileDistanceRelated clears and its callbacks write by name (LP64-003). */

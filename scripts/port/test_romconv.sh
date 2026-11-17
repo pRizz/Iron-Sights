@@ -77,5 +77,16 @@ for width in $widths; do
     build "$work/font-checks-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_font_checks.c \
         "${font[@]}"
     run "$work/font-checks-$width" "${width}-bit font input checks"
+    # At 32 bits the model tests compare with romfile_model.c's in-place
+    # result. Its field map for opcode 17 is unused (the walk swaps that
+    # record with the group map), which -Wextra reports.
+    model=(port/src/romconv_model.c port/src/romconv_model_walk.c port/src/romconv_model_refs.c
+        port/src/romconv_model_records.c port/src/romconv_gfx.c port/src/romconv_common.c port/src/port_lp64_oracle.c)
+    [[ $width == 32 ]] && model+=(-Wno-unused-const-variable port/src/romfile_model.c)
+    build "$work/model-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_model.c "${model[@]}"
+    run "$work/model-$width" "${width}-bit model files"
+    build "$work/model-checks-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} \
+        scripts/port/test_romconv_model_checks.c "${model[@]}"
+    run "$work/model-checks-$width" "${width}-bit model file input checks"
     echo "test_romconv: PASS (${width}-bit)"
 done
