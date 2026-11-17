@@ -23,8 +23,8 @@ searched first for quoted includes). A file that stops at a fatal error was not 
 `narrowing [--check] [--all] BUILD_DIR...` and `unprototyped [--check] BUILD_DIR...` list what the
 gate cannot see: implicit narrowing of `uintptr_t`, `intptr_t` and `romptr_t`, and calls without a
 prototype to functions that take or return pointers. `--check` compares each file's count with
-`lp64_narrowing_allowed.txt` or `lp64_unprototyped_allowed.txt`. They live in `lp64_static_checks.py`,
-which describes them; `--help` of each command says what it misses.
+`lp64_narrowing_allowed.txt` or `lp64_unprototyped_allowed.txt`; a missing file allows none. They live
+in `lp64_static_checks.py`, which describes them; `--help` of each command says what it misses.
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor

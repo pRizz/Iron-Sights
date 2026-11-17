@@ -1,5 +1,4 @@
 # Allowed calls without a prototype to a function that takes or returns a pointer or 64-bit value per file: path<TAB>count<TAB>reason. `--check` requires the counts to
 # match exactly: lower a line when places are fixed, delete it at zero; see lp64_diagnostics.py.
-port/fast3d/glad/glad.c	2	strict tier, left for Task 11
 port/src/port_build_time.c	1	blocked in Task 9: strcmp; <str.h> includes <ultra64.h>, and test_build_time.sh (-Wall -Wextra -Werror, port/include only) fails with src/ and include/ added
 src/game/model.c	1	left out in Task 11: texSelect; its prototype changes the 32-bit register use of dogfnegx, which draws the muzzle flash (a float add's operands swap), and the call passes only pointers and 32-bit integers

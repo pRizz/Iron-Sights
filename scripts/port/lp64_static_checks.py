@@ -159,8 +159,8 @@ def parse_allowlist(text: str) -> dict[str, int]:
 def check(lines: list[str], noun: str, allowlist: Path, command: str) -> int:
     """Print each file whose count differs from its allowlist line; return 1 if any, else 0.
 
-    `lines` are `path:...` places; `noun` names what is counted ("narrowings")."""
-    allowed = parse_allowlist(allowlist.read_text())
+    `lines` are `path:...` places; `noun` names what is counted ("narrowings"). A missing allowlist allows none."""
+    allowed = parse_allowlist(allowlist.read_text()) if allowlist.exists() else {}
     sites: dict[str, list[str]] = {}
     for line in lines:
         sites.setdefault(line.split(':', 1)[0], []).append(line)

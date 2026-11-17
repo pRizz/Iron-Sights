@@ -181,6 +181,25 @@ class Narrowing(TreeCase):
         # Assert
         self.assertEqual(status, 0, out + err)
 
+    def test_check_treats_a_missing_allowlist_as_empty(self):
+        # Arrange
+        tree = self.build_dir('t', {'a.c': "0\n", 'b.c': "0\n"})
+        # Act
+        status, out, err = self.run_main('narrowing', '--check', tree)
+        # Assert
+        self.assertEqual(status, 0, out + err)
+        self.assertIn('OK: 0 narrowings in 0 files', out)
+
+    def test_check_against_a_missing_allowlist_fails_naming_each_place(self):
+        # Arrange
+        text = self.conversion('a.c', 1, "'uintptr_t' {aka 'long unsigned int'}")
+        tree = self.build_dir('t', {'a.c': "0\n" + text})
+        # Act
+        status, out, err = self.run_main('narrowing', '--check', tree)
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('a.c: 1 narrowings, allowed 0', out)
+
     def test_a_malformed_allowlist_line_exits_2(self):
         # Act
         status, out, err = self.check('a.c\tmany\texisting\n', '')

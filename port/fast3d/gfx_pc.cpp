@@ -32,7 +32,7 @@
 #include "hud_touch_clearance.h"
 
 #include "platform.h"
-
+#include "platform_info.h" /* IS_64_BIT; on a blank line, so assert() line numbers stay */
 #include "gfx_pc.h"
 #include "open_fonts.h" /* FORK-050: open-font MSDF glyphs */
 #include "enhanced_fonts.h" /* FORK-052: player-installed Enhanced font masks */
@@ -52,7 +52,7 @@ extern "C" void gfx_opengl_web_sampler_sync(void);
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
 #include "hd_textures.h" /* FORK-053: player-installed HD texture packs */
 #endif
-
+#include "port_gfxwords.h" /* GFX_W0, GFX_OP, GFX_W1_DATA (LP64-003); on a blank line, as above */
 #include "port_icon_cache.h"
 static const uint8_t *gfx_weapon_image(int item) { return portIconPixels(item); }
 /* FORK-019: the in-process icon stage's render size, the worker's window */
@@ -144,8 +144,8 @@ extern "C" void portRoomCacheClear(void);
 #define TEXTURE_CACHE_MAX_SIZE 1024
 #endif
 
-#define C0(pos, width) ((cmd->words.w0 >> (pos)) & ((1U << width) - 1))
-#define C1(pos, width) ((cmd->words.w1 >> (pos)) & ((1U << width) - 1))
+#define C0(pos, width) ((GFX_W0(cmd) >> (pos)) & ((1U << width) - 1))
+#define C1(pos, width) ((GFX_W1_DATA(cmd) >> (pos)) & ((1U << width) - 1))
 
 struct RGBA {
     uint8_t r, g, b, a;
@@ -6060,7 +6060,7 @@ static void gfx_sp_moveword(uint8_t index, uint16_t offset, uintptr_t data) {
             if (data < 0x80000000U || (data - 0x80000000U) % 32
                 || (data - 0x80000000U) / 32 < 1 || (data - 0x80000000U) / 32 > MAX_LIGHTS + 1)
                 sysFatalError("Graphics light count exceeds the light arrays");
-            rsp.current_num_lights = (data - 0x80000000U) / 32;
+            rsp.current_num_lights = (uint8_t) ((data - 0x80000000U) / 32); /* at most MAX_LIGHTS + 1, checked above */
             rsp.lights_changed = 1;
             break;
         case G_MW_FOG:
@@ -8200,6 +8200,12 @@ static void gfx_dp_set_other_mode(uint32_t h, uint32_t l) {
 }
 
 static inline void *seg_addr(uintptr_t w1) {
+#if IS_64_BIT
+    /* PORT (LP64-003): a host pointer has a non-zero upper half and is never a segment word */
+    if (PORT_IS_HOST_ADDR(w1)) {
+        return (void *)w1;
+    }
+#endif
     // PD's tagged form: segmented addresses carry bit 0 (their asset
     // preprocessor stamps it).
     if (w1 & 1) {
@@ -8294,7 +8300,13 @@ static void gfx_run_dl(Gfx* cmd) {
         ge_hot_op[(uint8_t)G_NOOP] = 1;
     }
     for (;;) {
-        uint32_t opcode = cmd->words.w0 >> 24;
+#if IS_64_BIT && !defined(NDEBUG)
+        /* PORT (LP64-003): every writer builds w0 from an unsigned 32-bit value (port_gfxwords.h) */
+        if ((cmd->words.w0 >> 32) != 0) {
+            sysFatalError("Display-list command word with a non-zero upper half at %p: w0 %016" PRIxPTR, (void *)cmd, cmd->words.w0);
+        }
+#endif
+        uint32_t opcode = GFX_OP(cmd);
         roc_cur_cmd = cmd;
         if (roc_walk != nullptr) {
             /* GPU part replay: the list's state and matrix commands run as
@@ -8349,7 +8361,7 @@ static void gfx_run_dl(Gfx* cmd) {
         if (ge_xbox_trace_dl) {
             ++ge_xbox_cmds;
             if (ge_xbox_cmds <= 2048 || (ge_xbox_cmds % 256u) == 0u) {
-                portXboxTrace("dl: cmd %u at %p op %02x w0 %08x w1 %08x", ge_xbox_cmds, (void*)cmd, (unsigned)opcode, (unsigned)cmd->words.w0, (unsigned)cmd->words.w1);
+                portXboxTrace("dl: cmd %u at %p op %02x w0 %08" PRIxPTR " w1 %08" PRIxPTR, ge_xbox_cmds, (void*)cmd, (unsigned)opcode, cmd->words.w0, cmd->words.w1);
             }
         }
 #endif
@@ -8517,7 +8529,7 @@ static void gfx_run_dl(Gfx* cmd) {
                 } else if ((cmd->words.w1 & 0xff000000u) == PORT_HUD_CLEAR_TAG) {
                     gfx_hud_clear_begin(cmd->words.w1 & 0xFFu);
                 } else if ((cmd->words.w1 & 0xff000000u) == PORT_HUD_TEXT_OFFSET_TAG) {
-                    s_GeTextPixelOffset = portHudTextOffsetDecode(cmd->words.w1);
+                    s_GeTextPixelOffset = portHudTextOffsetDecode(GFX_W1_DATA(cmd));
                 } else if ((cmd->words.w1 >> 24) == 0x59u) {
                     /* the next rect's edge fractions (bondwalk2.c portRectPreciseTag) */
                     for (int i = 0; i < 4; i++) {
@@ -8647,10 +8659,10 @@ static void gfx_run_dl(Gfx* cmd) {
             case (uint8_t)G_ENDDL:
                 return;
             case (uint8_t)G_SETGEOMETRYMODE:
-                gfx_sp_geometry_mode(0, cmd->words.w1);
+                gfx_sp_geometry_mode(0, GFX_W1_DATA(cmd));
                 break;
             case (uint8_t)G_CLEARGEOMETRYMODE:
-                gfx_sp_geometry_mode(cmd->words.w1, 0);
+                gfx_sp_geometry_mode(GFX_W1_DATA(cmd), 0);
                 break;
             case G_EXTRAGEOMETRYMODE_EXT:
                 /* GE: bit 24 = a HUD slide fraction in bits 16-23 (options.h PORT_HUD_ANCHOR) */
@@ -8679,7 +8691,7 @@ static void gfx_run_dl(Gfx* cmd) {
             }
             case G_SETTIMG_FB_EXT:
                 gfx_flush();
-                gfx_rapi->select_texture_fb(cmd->words.w1);
+                gfx_rapi->select_texture_fb(GFX_W1_DATA(cmd));
                 rdp.textures_changed[0] = false;
                 rdp.textures_changed[1] = false;
                 break;
@@ -8712,7 +8724,7 @@ static void gfx_run_dl(Gfx* cmd) {
                 gfx_dp_set_fog_color(C1(24, 8), C1(16, 8), C1(8, 8), C1(0, 8));
                 break;
             case G_SETFILLCOLOR:
-                gfx_dp_set_fill_color(cmd->words.w1);
+                gfx_dp_set_fill_color(GFX_W1_DATA(cmd));
                 break;
             case G_SETPRIMDEPTH: // 0xEE: boss.c VisCVG debug path emits it; z-from-prim-depth unsupported
                 break;
@@ -8816,7 +8828,7 @@ static void gfx_run_dl(Gfx* cmd) {
                 gfx_flush();
                 if (cmd->words.w1) {
                     // don't care about noise here
-                    gfx_set_framebuffer(cmd->words.w1, 1.f);
+                    gfx_set_framebuffer(GFX_W1_DATA(cmd), 1.f);
                     fbActive = true;
                 } else {
                     gfx_reset_framebuffer();
@@ -8827,7 +8839,7 @@ static void gfx_run_dl(Gfx* cmd) {
                 gfx_copy_framebuffer(C0(11, 11), C0(0, 11), (int16_t)C1(16, 16), (int16_t)C1(0, 16), C0(22, 1));
                 break;
             case G_RDPSETOTHERMODE:
-                gfx_dp_set_other_mode(C0(0, 24), cmd->words.w1);
+                gfx_dp_set_other_mode(C0(0, 24), GFX_W1_DATA(cmd));
                 break;
             case G_INVALTEXCACHE_EXT:
                 if (cmd->words.w1) {
@@ -8842,7 +8854,7 @@ static void gfx_run_dl(Gfx* cmd) {
                 /* skyRender computes raw RDP triangle commands on the CPU
                  * (G_TRI_FILL / G_TRI_SHADE_TXTR: sky and water) and streams
                  * them as half words; reassemble and rasterize them. */
-                gfx_rdp_half(cmd->words.w1);
+                gfx_rdp_half(GFX_W1_DATA(cmd));
                 break;
             case G_RDPFLUSH_EXT:
                 gfx_flush();
@@ -8855,7 +8867,7 @@ static void gfx_run_dl(Gfx* cmd) {
                 gfx_dxlu_new_view();
                 break;
             case G_DXLU_GROUP_EXT:
-                gfx_dxlu_group(cmd->words.w1);
+                gfx_dxlu_group(GFX_W1_DATA(cmd));
                 break;
             case G_PORTCACHE_EXT:
                 /* GE: the next G_DL is a room list (kind 1: room index) or a model
@@ -8866,7 +8878,7 @@ static void gfx_run_dl(Gfx* cmd) {
                 break;
             case G_HITMARKER_EXT: {
                 float x, y;
-                const uint32_t color = cmd->words.w1;
+                const uint32_t color = GFX_W1_DATA(cmd);
                 ++cmd;
                 memcpy(&x, &cmd->words.w0, sizeof(x));
                 memcpy(&y, &cmd->words.w1, sizeof(y));
@@ -8879,12 +8891,12 @@ static void gfx_run_dl(Gfx* cmd) {
                 gfx_ge_vector_overlay(0, 0, cmd->words.w1 & 32 ? 0x30343cff : cmd->words.w1 & 16 ? 0xffffffff : 0x000000ff,
                                       5, SCREEN_WIDTH, SCREEN_HEIGHT);
                 extern int ge_weapon_icon_capture;
-                ge_weapon_icon_capture = (cmd->words.w1 & 15) ? cmd->words.w1 : 0;
+                ge_weapon_icon_capture = (cmd->words.w1 & 15) ? GFX_W1_DATA(cmd) : 0;
                 break;
             }
             case G_HUD_VECTOR_EXT: {
                 const int shape = cmd->words.w0 & 0xffu;
-                const uint32_t color = cmd->words.w1;
+                const uint32_t color = GFX_W1_DATA(cmd);
                 float params[6];
                 for (int i = 0; i < 6; i += 2) {
                     ++cmd;
@@ -8939,7 +8951,7 @@ static void gfx_run_dl(Gfx* cmd) {
                     }
                     fflush(stderr);
                 }
-                sysFatalError("Unknown GBI opcode 0x%02x at %p.\nw0 %08x\nw1 %08x", opcode, cmd, cmd->words.w0, cmd->words.w1);
+                sysFatalError("Unknown GBI opcode 0x%02x at %p.\nw0 %08" PRIxPTR "\nw1 %08" PRIxPTR, opcode, cmd, cmd->words.w0, cmd->words.w1);
                 break;
         }
         ++cmd;

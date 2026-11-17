@@ -1,3 +1,0 @@
-# Allowed narrowings of a pointer-sized integer per file: path<TAB>count<TAB>reason. `--check` requires the counts to
-# match exactly: lower a line when places are fixed, delete it at zero; see lp64_diagnostics.py.
-port/fast3d/gfx_pc.cpp	16	existing before LP64-003

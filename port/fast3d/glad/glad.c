@@ -35,6 +35,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+/* PORT (LP64-003): the repository's include/string.h declares neither */
+int strcmp(const char *, const char *);
+int strncmp(const char *, const char *, size_t);
 #include "glad.h"
 
 struct gladGLversionStruct GLVersion = { 0, 0 };
