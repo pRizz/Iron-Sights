@@ -531,8 +531,10 @@ void initializeGunBarrelIntro(u8 *gfxBuffer, s32 bufferSize)
     createGunbarrelRenderHole(barrelDisplayListPtr, 0x1E);
     
     gunbarrelgfxListPointer = (Gfx*)gfxBuffer;
-    bufferSize -= 0x100;
-    gfxBuffer += 0x100;
+    /* sub_GAME_7F01BFF8 writes 31 commands for 0x1E vertices; 32 * sizeof(Gfx)
+     * is the N64's 0x100 at 32 bits. */
+    bufferSize -= 32 * sizeof(Gfx);
+    gfxBuffer += 32 * sizeof(Gfx);
     
 #ifdef TARGET_N64
     sub_GAME_7F01BFF8(gunbarrelgfxListPointer, barrelDisplayListPtr + 0x80000000, 0x1E);

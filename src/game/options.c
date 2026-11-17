@@ -3654,8 +3654,10 @@ Gfx *draw_background_health_and_armor(Gfx *gdl, Mtx *arg1, s32 zoom_squish)
 
     sp48 = dynAllocateVertices(WATCH_BACKGROUND_VERTEX_COUNT);
     sp44 = dynAllocateVertices(WATCH_BACKGROUND_VERTEX_COUNT);
-    sp40 = dynAllocate(0xF8);
-    sp3C = dynAllocate(0xF8);
+    /* draw_watch_background (glass2.c) writes 17 commands, or 29 with the
+     * fan; 31 * sizeof(Gfx) is the N64's 0xF8 at 32 bits. */
+    sp40 = dynAllocate(31 * sizeof(Gfx));
+    sp3C = dynAllocate(31 * sizeof(Gfx));
 
     /**
      * It seems at this point in rendering the background watch arms (hour,minute,second)

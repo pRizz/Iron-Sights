@@ -2326,6 +2326,14 @@ struct player
    * Watch static, not "static DL".
    * Offset 0x2998
   */
+#if IS_64_BIT
+  /* bondview2.c builds a 3-command list here on every pause (a vertex, a
+   * modify-vertex and the end). With 16-byte commands the N64 room, one Gfx
+   * and six fillers, holds 2.5 of them, so at 64 bits the run shares its
+   * storage with three commands; the 32-bit layout is unchanged. */
+  union {
+    struct {
+#endif
   Gfx buffer_for_watch_static_DL[1];
 
   s32 field_29A0;
@@ -2334,6 +2342,11 @@ struct player
   s32 field_29AC;
   s32 field_29B0;
   s32 field_29B4;
+#if IS_64_BIT
+    };
+    Gfx watch_static_dl_storage[3];
+  };
+#endif
 
   // Alt field_29C0 ?? Used in EU.
   s32 healthdamagetype; // canonical name

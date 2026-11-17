@@ -404,6 +404,25 @@ _Static_assert(sizeof(struct InvItem) == (IS_64_BIT ? 32 : 0x14), "inventory ite
 /* player.c allocates the player by the record at 64 bits; the 32-bit build
  * keeps the N64 literal, 0x2a80 (asserted with the player layout above). */
 _Static_assert(!IS_64_BIT || sizeof(struct player) > 0x2a80, "the 64-bit player outgrows the N64 literal");
+/* The pause code's display lists in the player (bondview2.c, strict tier,
+ * read for these counts; LP64-004 fix wave): each room runs from its first
+ * member to the next named one, and holds the commands its writer emits at
+ * either width. A writer that emits more must raise its count here; the
+ * backdrop's count follows WATCH_NUMBER_SCREENS and the bars' is counted at
+ * run time from buildGaugeBarDL's loop (checkGaugeBarRooms). */
+#define PLAYER_DL_ROOM(first, next) ((offsetof(struct player, next) - offsetof(struct player, first)) / sizeof(Gfx))
+#define PLAYER_DL_ALIGNED(first) (offsetof(struct player, first) % _Alignof(Gfx) == 0)
+/* The watch static: sub_GAME_7F0A3B40's two commands and the end, once. */
+#define WATCH_STATIC_DL_COMMANDS 3
+/* The screen select rectangles: the same two for each screen, and the end. */
+#define WATCH_BACKDROP_DL_COMMANDS (2 * WATCH_NUMBER_SCREENS + 1)
+_Static_assert(PLAYER_DL_ROOM(buffer_for_watch_static_DL, healthdamagetype) >= WATCH_STATIC_DL_COMMANDS,
+               "the watch static list's room");
+_Static_assert(PLAYER_DL_ROOM(buffer_for_watch_greenbackdrop_DL, buffer_for_watch_static_DL)
+                   >= WATCH_BACKDROP_DL_COMMANDS,
+               "the watch backdrop list's room");
+_Static_assert(PLAYER_DL_ALIGNED(buffer_for_watch_static_DL) && PLAYER_DL_ALIGNED(buffer_for_watch_greenbackdrop_DL),
+               "the watch lists are Gfx-aligned");
 /* initunk_005520.c's anim model slots: the array stride is the record, which
  * must keep the bank's 8-byte alignment at 64 bits (0xBC at 32 bits, whose
  * 0xC0 allocation stride keeps 16). */
@@ -493,9 +512,41 @@ static int checkRenderDataFromWords(void)
 }
 #endif
 
+/* The commands buildGaugeBarDL (glass2.c) emits for numvertices: its loop,
+ * counted instead of written. */
+static int gaugeBarCommands(int numvertices)
+{
+    int commands = 1; /* the end */
+    int i;
+
+    for (i = 0; i <= numvertices / 2 - 2; i++)
+    {
+        commands++; /* the vertex load */
+        commands += i >= 9 ? (i + 3) % 4 != 0 : (i & 1) == 0;
+    }
+    return commands;
+}
+
+/* bondview2.c builds both watch bars with 0x2E vertices, each in the run from
+ * its s32 to the next named member. */
+static int checkGaugeBarRooms(void)
+{
+    const size_t need = (size_t) gaugeBarCommands(0x2E);
+    int failures = 0;
+
+    failures += PLAYER_DL_ROOM(watch_body_armor_bar_gdl, watch_health_bar_gdl) < need;
+    failures += PLAYER_DL_ROOM(watch_health_bar_gdl, buffer_for_watch_greenbackdrop_DL) < need;
+    failures += !PLAYER_DL_ALIGNED(watch_body_armor_bar_gdl) || !PLAYER_DL_ALIGNED(watch_health_bar_gdl);
+    if (failures != 0)
+    {
+        printf("ABI probe FAIL: the watch bar lists need %zu commands each (%d cases)\n", need, failures);
+    }
+    return failures;
+}
+
 int main(void)
 {
-    if (checkVertexCollisionNode() != 0)
+    if (checkVertexCollisionNode() != 0 || checkGaugeBarRooms() != 0)
     {
         return 1;
     }
