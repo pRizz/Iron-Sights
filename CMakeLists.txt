@@ -25,6 +25,12 @@ if(GE_POINTER_BITS EQUAL 64)
     endif()
 endif()
 
+# The converter oracle (LP64-004, scripts/port/native_64bit_lp64_004.md): a
+# 32-bit headless build that also compiles the 64-bit ROM data converters and
+# compares their output with the game's in-place conversions. Never shipped;
+# validated where GE_HEADLESS is known, below.
+option(GE_LP64_ORACLE "32-bit headless test build that checks the 64-bit ROM data converters against the in-place conversions" OFF)
+
 set(CMAKE_C_STANDARD 11)
 
 # No warnings in the 32-bit and web builds; the 64-bit branch replaces this.
@@ -66,6 +72,11 @@ elseif(GE_POINTER_BITS EQUAL 64)
         $<$<COMPILE_LANGUAGE:C>:-Wno-unused-result>)
 else()
     add_compile_options(-m32 -msse2 -mfpmath=sse)
+    if(GE_LP64_ORACLE)
+        # GCC's -w also silences a -Werror=, so the oracle build gives -w to
+        # every source but the converters, after add_executable below.
+        set(GE_WARNING_OPTIONS)
+    endif()
 endif()
 
 add_compile_options(
@@ -370,8 +381,25 @@ set_source_files_properties(assets/animationtable_data.c assets/animationtable_e
 file(GLOB PORT_SRC CONFIGURE_DEPENDS port/src/*.c)
 # port_lp64.c (the 64-bit address check) has no code at 32 bits, but even its
 # empty object adds a compiler ident to the Windows executable's .rdata.
-if(NOT GE_POINTER_BITS EQUAL 64)
+# The 32-bit oracle build compiles it for the asset-class names.
+if(NOT GE_POINTER_BITS EQUAL 64 AND NOT GE_LP64_ORACLE)
     list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_lp64.c)
+endif()
+# The ROM data converters (port_romconv.h) exist for 64-bit builds; at 32 bits
+# only the oracle build compiles them, so no shipped 32-bit executable holds
+# one. They make incompatible pointer types an error at both widths: the
+# 64-bit build's -Wno-incompatible-pointer-types would hide a mismatched
+# pointer, which the browser build's audit rejects.
+file(GLOB ROMCONV_SRC CONFIGURE_DEPENDS port/src/romconv_*.c)
+if(ROMCONV_SRC)
+    if(NOT GE_POINTER_BITS EQUAL 64 AND NOT GE_LP64_ORACLE)
+        list(REMOVE_ITEM PORT_SRC ${ROMCONV_SRC})
+    else()
+        set_property(SOURCE ${ROMCONV_SRC} APPEND PROPERTY COMPILE_OPTIONS -Werror=incompatible-pointer-types)
+    endif()
+endif()
+if(NOT GE_LP64_ORACLE)
+    list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_lp64_oracle.c)
 endif()
 # Suspend images record 32-bit addresses: 64-bit builds report suspend points
 # unavailable (port_state_unavailable.c) instead of compiling the serializer.
@@ -416,6 +444,15 @@ if(GE_SANITIZE)
     set_source_files_properties(assets/oddtextures.c assets/rarewarelogo.c
         assets/font_dl.c assets/font/fontBankGothic.c assets/font/fontZurichBold.c
         PROPERTIES COMPILE_OPTIONS "-fno-sanitize=all")
+endif()
+if(GE_LP64_ORACLE)
+    if(NOT GE_POINTER_BITS EQUAL 32)
+        message(FATAL_ERROR "GE_LP64_ORACLE=ON is a 32-bit build (GE_POINTER_BITS=32)")
+    endif()
+    if(NOT GE_HEADLESS)
+        message(FATAL_ERROR "GE_LP64_ORACLE=ON needs a headless build (GE_HEADLESS=ON)")
+    endif()
+    add_compile_definitions(GE_LP64_ORACLE)
 endif()
 if(GE_HEADLESS)
     list(REMOVE_ITEM PORT_SRC
@@ -576,6 +613,12 @@ endif()
 
 add_executable(ge ${GAME_SRC} ${ENGINE_SRC} ${GU_SRC} ${PORT_SRC}
                ${ASSET_LOOSE_SRC} ${ASSET_OBJS} ${FAST3D_SRC})
+if(GE_LP64_ORACLE)
+    # The 32-bit build's -w, for every source but the converters (above).
+    get_target_property(GE_ORACLE_QUIET_SRC ge SOURCES)
+    list(FILTER GE_ORACLE_QUIET_SRC EXCLUDE REGEX "/romconv_[^/]*\\.c$")
+    set_property(SOURCE ${GE_ORACLE_QUIET_SRC} APPEND PROPERTY COMPILE_OPTIONS -w)
+endif()
 include(scripts/port/sentry.cmake)
 # Native player filenames use the fork identity. Keep the `ge` target, logs,
 # profile identities and deployed Wasm runtime filenames stable.

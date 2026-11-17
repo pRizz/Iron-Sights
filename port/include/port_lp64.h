@@ -63,10 +63,6 @@ void portLp64CheckRegion(const char *name, const void *start, size_t size);
  */
 void portLp64CheckAddressSpace(void);
 
-/** The class's name as the guard prints it ("animation tables");
- * "unknown asset class" for a value outside the enum. */
-const char *portLp64AssetName(enum PortLp64Asset asset);
-
 /** True once the class has a 64-bit converter (the table in port_lp64.c). */
 int portLp64AssetConverted(enum PortLp64Asset asset);
 
@@ -86,6 +82,20 @@ void portLp64RequireConverter(enum PortLp64Asset asset);
 #define portLp64CheckAddressSpace() ((void) 0)
 #define portLp64AssetConverted(asset) 1
 #define portLp64RequireConverter(asset) ((void) 0)
+#endif
+
+#if IS_64_BIT || defined(GE_LP64_ORACLE)
+#ifdef __cplusplus
+extern "C" {
+#endif
+/** The class's name as the guard prints it ("animation tables");
+ * "unknown asset class" for a value outside the enum. Also in the 32-bit
+ * oracle build (-DGE_LP64_ORACLE=ON), whose converters and oracle lines name
+ * classes; a shipped 32-bit build has no use for it. */
+const char *portLp64AssetName(enum PortLp64Asset asset);
+#ifdef __cplusplus
+}
+#endif
 #endif
 
 #endif

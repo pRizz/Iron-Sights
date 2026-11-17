@@ -240,6 +240,20 @@ pass its isolated executable rather than rebuilding an active player binary.
   follows the accepted [64-bit plan](scripts/port/native_64bit_plan.md). Read it
   before resuming, keep the 32-bit and web builds working, do not reopen its
   recorded decisions, and update its milestone status table before handing off.
+- ROM data converters (LP64-004) are `port/src/romconv_*.c`. CMake compiles
+  that pattern only at 64 bits and in the 32-bit headless oracle build
+  (`-DGE_LP64_ORACLE=ON`), never in a shipped 32-bit build, and with
+  `-Werror=incompatible-pointer-types`. Call one from shared code only inside
+  `#if IS_64_BIT` or `#ifdef GE_LP64_ORACLE`, leaving the existing code
+  unedited in the other branch. The oracle build compares each converter with
+  the in-place conversion it replaces; with the ROM, in the i686 container,
+  configure `build/lp64/oracle` with `-DGE_HEADLESS=ON -DGE_LP64_ORACLE=ON`,
+  build it, and run `python3 scripts/port/lp64_oracle.py --rom
+  /rom/baserom.u.z64 --classes "A,B" build/lp64/oracle/IronSights` (no class
+  is converted yet, so today `--classes ""`). `scripts/port/lp64_boot.py
+  --expect-stop NAME` passes a 64-bit executable that stops at class NAME;
+  `--expect-run [--frames N]` one that runs N frames (600 by default) and
+  exits 0 with no stop, pool or `cannot convert` line.
 - At `GE_POINTER_BITS=64`, C and C++ that mix pointers with 32-bit integers do
   not compile: `CMakeLists.txt` gives 64-bit C `-Werror=int-conversion
   -Werror=pointer-to-int-cast -Werror=int-to-pointer-cast` and 64-bit C++

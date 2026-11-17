@@ -86,6 +86,8 @@ jobs:
           bash scripts/port/test_abi_probe.sh
           bash scripts/port/test_lp64_address.sh
           python3 scripts/port/test_lp64_boot.py
+          bash scripts/port/test_romconv.sh
+          python3 scripts/port/test_lp64_oracle.py
           bash scripts/port/test_monitor_script.sh
           bash scripts/port/test_mema_order.sh
           python3 scripts/port/test_lp64_diagnostics.py

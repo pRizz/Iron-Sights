@@ -205,4 +205,54 @@ for tree in bits64 bits64video; do
     fi
 done
 echo "ok 6b: 64-bit builds compile port_state_unavailable.c, not port_state.c, and skip the layout step"
+
+# 7. The ROM data converters (port/src/romconv_*.c) and the oracle
+# (port_lp64_oracle.c) never reach a shipped 32-bit build: converters compile
+# at 64 bits and in the opt-in 32-bit headless oracle build only, the oracle
+# in that build only, and each converter source turns incompatible pointer
+# types into errors (the 32-bit oracle build leaves -w off them, since GCC's
+# -w silences a -Werror= too).
+expect_failure oracle64 "GE_LP64_ORACLE=ON is a 32-bit build (GE_POINTER_BITS=32)" \
+    -DGE_POINTER_BITS=64 -DGE_LP64_ORACLE=ON
+expect_failure oraclevideo "GE_LP64_ORACLE=ON needs a headless build (GE_HEADLESS=ON)" \
+    -DGE_HEADLESS=OFF -DGE_LP64_ORACLE=ON
+echo "ok 7: the oracle is refused at 64 bits and outside a headless build"
+lists_romconv() { grep -qF -- "/port/src/romconv_" "$work/$1/compile_commands.json"; }
+if lists_romconv default; then
+    fail "32-bit build without GE_LP64_ORACLE compiles a romconv_ source"
+fi
+for source in port_lp64_oracle.c port_lp64.c; do
+    if compiles default "$source"; then
+        fail "32-bit build without GE_LP64_ORACLE compiles $source"
+    fi
+done
+echo "ok 7b: the default 32-bit build lists no romconv_ source, no oracle and no port_lp64.c"
+for tree in bits64 bits64video; do
+    compiles "$tree" romconv_common.c || fail "$tree: 64-bit build does not compile romconv_common.c"
+    if compiles "$tree" port_lp64_oracle.c; then
+        fail "$tree: 64-bit build compiles port_lp64_oracle.c"
+    fi
+done
+echo "ok 7c: 64-bit builds compile the converters and not the oracle"
+expect_configure oracle -DGE_LP64_ORACLE=ON
+for source in romconv_common.c port_lp64_oracle.c port_lp64.c; do
+    compiles oracle "$source" || fail "oracle build does not compile $source"
+done
+has_flag oracle '-m32' || fail "oracle build lacks -m32"
+echo "ok 7d: the 32-bit oracle build compiles the converters, the oracle and port_lp64.c"
+# Whole words of one recorded command: -w must not match inside -Wall.
+command_has() { [[ " $1 " == *" $2 "* ]]; }
+mapfile -t conv64 < <(entry_command bits64 port/src/romconv_common.c)
+command_has "${conv64[1]}" -Werror=incompatible-pointer-types ||
+    fail "64-bit romconv_common.c lacks -Werror=incompatible-pointer-types"
+mapfile -t conv32 < <(entry_command oracle port/src/romconv_common.c)
+command_has "${conv32[1]}" -Werror=incompatible-pointer-types ||
+    fail "oracle romconv_common.c lacks -Werror=incompatible-pointer-types"
+command_has "${conv32[1]}" -DGE_LP64_ORACLE || fail "oracle romconv_common.c lacks -DGE_LP64_ORACLE"
+if command_has "${conv32[1]}" -w; then
+    fail "oracle romconv_common.c is compiled with -w, which silences its -Werror="
+fi
+mapfile -t other32 < <(entry_command oracle port/src/port_lp64.c)
+command_has "${other32[1]}" -w || fail "oracle port_lp64.c lost -w"
+echo "ok 7e: converter sources make incompatible pointer types errors at both widths; the oracle build keeps -w elsewhere"
 echo "Pointer-bits configure checks passed"

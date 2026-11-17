@@ -7,6 +7,15 @@
 
 #define INDY_RAMROM_DEMO_ADDRESS 0x00F00000
 #define INDY_RAMROM_DEMO_POINTER ((void*)INDY_RAMROM_DEMO_ADDRESS)
+/* The demo header's size as the game copies and steps it. At 32 bits its
+ * sizeof: 228 on i686 Linux, 232 with MinGW, which aligns its two u64 fields
+ * to 8. At 64 bits 228, i686 Linux's (port/include/port_romlayout.h). Keyed
+ * on __SIZEOF_POINTER__: this header does not reach platform_info.h. */
+#if __SIZEOF_POINTER__ == 8
+#define RAMROM_FILE_HEADER_SIZE 228
+#else
+#define RAMROM_FILE_HEADER_SIZE sizeof(struct ramromfilestructure)
+#endif
 
 typedef struct ramromfilestructure {
     u64 randomseed;

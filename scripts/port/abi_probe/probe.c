@@ -17,6 +17,8 @@
 #include "game/model.h"
 #include "game/glass.h"
 #include "port_hostptr.h"
+#include "game/ramromreplay.h"
+#include "port_romlayout.h"
 
 /* Fixed at every width: the renderer reads these as N64 formats. */
 _Static_assert(sizeof(s32) == 4 && sizeof(u32) == 4, "32-bit integer types");
@@ -258,6 +260,17 @@ _Static_assert(sizeof(resource_lookup_data_entry) == 20, "ROM lookup layout");
 /* vtxstore.c allocates its slot arrays by this record's size, which was the
  * literal 0x14 before LP64-003 (32 bytes at 64 bits). */
 _Static_assert(sizeof(struct unk_09B7A0_struct_parent) == 0x14, "32-bit vertex store slot layout");
+#endif
+
+/* The demo header (LP64-004 Task 1): 228 bytes on i686 Linux, where its two
+ * u64 fields are 4-byte aligned, and 232 at 64 bits (and with MinGW, which this
+ * probe does not build), so the game steps past it by
+ * RAMROM_FILE_HEADER_SIZE, which is 228 on Linux at both widths. */
+_Static_assert(sizeof(RomDemoHeader) == 228, "demo header file layout");
+_Static_assert(RAMROM_FILE_HEADER_SIZE == sizeof(RomDemoHeader), "demo header step");
+_Static_assert(sizeof(RomBrief) == 48, "briefing file layout");
+#if !IS_64_BIT
+_Static_assert(sizeof(struct ramromfilestructure) == 228, "32-bit demo header layout");
 #endif
 
 /* VERTEX_COLLISION_NODE (bondtypes.h): no link is NULL; at 64 bits a link is

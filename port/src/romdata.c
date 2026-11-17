@@ -68,6 +68,9 @@
 #include "../generated/romseg_list.h"
 #include "platform_info.h"
 #include "port_lp64.h" /* LP64-003: the ROM image must sit above 4 GB at 64 bits */
+#if IS_64_BIT || defined(GE_LP64_ORACLE)
+#include "port_romconv.h" /* LP64-004: the converters' scratch buffer */
+#endif
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console ring (spec section 7). */
@@ -1373,6 +1376,12 @@ s32 romdataInit(int argc, char **argv)
 done:
     romdataCheckSegs(sRomSize);
     sLoaded = 1;
+#if IS_64_BIT || defined(GE_LP64_ORACLE)
+    /* LP64-004: the converters copy their input here; reserved at boot so
+     * that no model or setup load of the stock ROM allocates during play
+     * (the largest model file is 43,120 bytes, the largest setup 103,424). */
+    portConvScratchReserve(262144);
+#endif
     /* the texture directory + bank base from THIS cart, before the images
      * consumer is pointed at the bank */
     romdataImageTableApply();

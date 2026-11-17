@@ -28,6 +28,9 @@ FATAL = (BOOT + ADDRESS + '\nge: fatal signal 11, backtrace (9 frames):\n'
          './IronSights(modelAnimReadRootMotionValue+0x40)[0xaaaa00001234]\n')
 SANITIZED = (BOOT + ADDRESS + 'src/game/initanitable.c:241:9: runtime error: member access within misaligned address\n'
              + stop('animation tables'))
+POOL = 'ge: lp64: pool "music heap" exhausted\n'
+REFUSED = 'ge: lp64: cannot convert models "GtriggerZ": needs 46000 bytes, has 45008\n'
+RAN = BOOT + ADDRESS + 'ge: frame limit reached: frames=600 gfxtasks=600\n'
 
 
 class ParseLog(unittest.TestCase):
@@ -79,7 +82,9 @@ class ParseLog(unittest.TestCase):
         self.assertFalse(result.address_ok)
 
 
-class CommandLine(unittest.TestCase):
+class StandIns(unittest.TestCase):
+    """A temporary folder with a stand-in ROM, and stand-in executables made in it."""
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -101,6 +106,8 @@ class CommandLine(unittest.TestCase):
             status = boot.main(['--rom', str(self.rom), '--expect-stop', 'animation tables', *args])
         return status, out.getvalue()
 
+
+class CommandLine(StandIns):
     def test_clean_stop_with_status_five_passes(self):
         # Arrange
         exe = self.fake('good', CLEAN, 5)
@@ -227,6 +234,169 @@ class CommandLine(unittest.TestCase):
 
         # Assert
         self.assertEqual(status, 0, out)
+
+    def test_pool_line_fails_even_with_the_right_stop(self):
+        # Arrange
+        exe = self.fake('pool', BOOT + ADDRESS + POOL + stop('animation tables'), 5)
+
+        # Act
+        status, out = self.run_main(str(exe))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('ge: lp64: pool "music heap" exhausted', out)
+
+    def test_refused_conversion_fails_even_with_the_right_stop(self):
+        # Arrange
+        exe = self.fake('refused', BOOT + ADDRESS + REFUSED + stop('animation tables'), 5)
+
+        # Act
+        status, out = self.run_main(str(exe))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('ge: lp64: cannot convert models', out)
+
+
+class RunMode(StandIns):
+    """--expect-run: the executable runs its frames and exits 0 with no stop or refusal."""
+
+    def run_mode(self, *args: str) -> tuple[int, str]:
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            status = boot.main(['--rom', str(self.rom), '--expect-run', *args])
+        return status, out.getvalue()
+
+    def test_clean_run_with_status_zero_passes(self):
+        # Arrange
+        exe = self.fake('ran', BOOT + ADDRESS, 0)
+
+        # Act
+        status, out = self.run_mode(str(exe))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn(f'OK: ran 600 frames ({exe.resolve()})', out)
+
+    def test_stop_at_a_class_fails(self):
+        # Arrange
+        exe = self.fake('stopped', CLEAN, 0)
+
+        # Act
+        status, out = self.run_mode(str(exe))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('stopped at "animation tables", expected to run', out)
+
+    def test_pool_line_fails(self):
+        # Arrange
+        exe = self.fake('pool', RAN + POOL, 0)
+
+        # Act
+        status, out = self.run_mode(str(exe))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('ge: lp64: pool "music heap" exhausted', out)
+
+    def test_refused_conversion_fails(self):
+        # Arrange
+        exe = self.fake('refused', RAN + REFUSED, 0)
+
+        # Act
+        status, out = self.run_mode(str(exe))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('ge: lp64: cannot convert models', out)
+
+    def test_exit_status_five_fails(self):
+        # Arrange
+        exe = self.fake('five', RAN, 5)
+
+        # Act
+        status, out = self.run_mode(str(exe))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('exit status 5, expected 0', out)
+
+    def test_missing_address_line_fails(self):
+        # Arrange
+        exe = self.fake('noaddress', BOOT, 0)
+
+        # Act
+        status, out = self.run_mode(str(exe))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('no "ge: lp64: address space OK" line', out)
+
+    def test_fatal_signal_line_fails(self):
+        # Arrange
+        exe = self.fake('signalled', FATAL, 0)
+
+        # Act
+        status, out = self.run_mode(str(exe))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('fatal signal', out)
+
+    def test_sanitizer_report_fails(self):
+        # Arrange
+        exe = self.fake('sanitized', RAN + 'src/game/bg.c:10:2: runtime error: load of misaligned address\n', 0)
+
+        # Act
+        status, out = self.run_mode(str(exe))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('sanitizer report', out)
+
+    def test_frames_default_to_600(self):
+        # Arrange
+        exe = self.fake('frames', BOOT + ADDRESS, 0, script='[ "$GE_FRAMES" = 600 ] || exit 3')
+
+        # Act
+        status, out = self.run_mode(str(exe))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+
+    def test_frames_option_sets_ge_frames_and_the_verdict(self):
+        # Arrange
+        exe = self.fake('frames', BOOT + ADDRESS, 0, script='[ "$GE_FRAMES" = 90 ] || exit 3')
+
+        # Act
+        status, out = self.run_mode('--frames', '90', str(exe))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('OK: ran 90 frames', out)
+
+    def test_expect_run_with_expect_stop_is_refused(self):
+        # Arrange
+        exe = self.fake('both', BOOT + ADDRESS, 0)
+
+        # Act
+        with self.assertRaises(SystemExit) as raised:
+            self.run_mode('--expect-stop', 'animation tables', str(exe))
+
+        # Assert
+        self.assertEqual(raised.exception.code, 2)
+
+    def test_frames_with_expect_stop_is_refused(self):
+        # Arrange
+        exe = self.fake('stopframes', CLEAN, 5)
+
+        # Act
+        with self.assertRaises(SystemExit) as raised:
+            self.run_main('--frames', '90', str(exe))
+
+        # Assert
+        self.assertEqual(raised.exception.code, 2)
 
 
 if __name__ == '__main__':
