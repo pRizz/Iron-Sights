@@ -284,7 +284,7 @@ void load_ramrom_from_devtool(void)
     if (indycommHostCheckFileExists(&strDemoFileName, &size) != 0)
     {
         indycommHostRamRomLoad(&strDemoFileName, (u8 *)INDY_RAMROM_DEMO_ADDRESS, size);
-        ptr_active_demofile = romCopyAligned(&ramrom_data_target, (u8 *)INDY_RAMROM_DEMO_ADDRESS, RAMROM_FILE_HEADER_SIZE);
+        ptr_active_demofile = romCopyAligned(&ramrom_data_target, (u8 *)INDY_RAMROM_DEMO_ADDRESS, sizeof(struct ramromfilestructure));
     }
 }
 
@@ -705,7 +705,7 @@ void test_if_recording_demos_this_stage_load(enum LEVELID arg0, enum DIFFICULTY 
         joySetRecordFunc(record_player_input_as_packet);
         address_demo_loaded = INDY_RAMROM_DEMO_POINTER;
         romWrite(ptr_active_demofile, address_demo_loaded, 0xF0U);
-        address_demo_loaded += RAMROM_FILE_HEADER_SIZE;
+        address_demo_loaded += sizeof(struct ramromfilestructure);
         g_ramromRecordFlag = 0;
         
         return;
@@ -758,7 +758,7 @@ void stop_recording_ramrom(void)
 void replay_recorded_ramrom_at_address(ramromfilestructure *demofile)
 {
     address_demo_loaded = demofile;
-    ptr_active_demofile = romCopyAligned(&ramrom_data_target, address_demo_loaded, RAMROM_FILE_HEADER_SIZE);
+    ptr_active_demofile = romCopyAligned(&ramrom_data_target, address_demo_loaded, sizeof(struct ramromfilestructure));
 #ifdef TARGET_N64
     address_demo_loaded += sizeof(ramromfilestructure);
 #else

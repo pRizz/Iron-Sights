@@ -19,13 +19,13 @@
 /* ==== attract demo header (src/game/ramromreplay.h) ===================== */
 
 /**
- * The fields of ramromfilestructure. The game's struct has two u64 fields,
- * which make it 232 bytes where a u64 is 8-byte aligned in a struct (the N64,
- * MinGW and 64-bit builds) and 228 on i686 Linux; its field offsets are the
- * same everywhere. The cart's recordings reserve 0xE8 bytes for it (the N64
- * compiler's size, the last four padding). The game copies and steps by
- * RAMROM_FILE_HEADER_SIZE (ramromreplay.h): these 228 bytes at 64 bits and on
- * i686 Linux, the struct's own size on MinGW, so no 32-bit build changes.
+ * The header of an attract demo recording, as the cart holds it: 0xE8 bytes.
+ * The game's ramromfilestructure has two u64 fields, so it is 232 (0xE8) bytes
+ * wherever a u64 is 8-byte aligned in a struct (the N64, MinGW and every
+ * 64-bit build) and 228 on i686 Linux, which leaves out the last four padding
+ * bytes; the field offsets are the same everywhere. Playback steps past the
+ * header by RAMROM_HEADER_ROMSIZE (0xE8, ramromreplay.c), not by sizeof, and
+ * the header holds no pointer, so no converter is needed.
  */
 typedef struct RomDemoHeader
 {
@@ -60,8 +60,9 @@ typedef struct RomDemoHeader
     u32 mp_contstyle[4];
     u32 aim_option;
     u32 mp_flags[4];
+    u8 tail[4]; /* the N64 struct's trailing padding, to 8-byte alignment */
 } RomDemoHeader;
-_Static_assert(sizeof(RomDemoHeader) == 228, "RomDemoHeader is 228 bytes");
+_Static_assert(sizeof(RomDemoHeader) == 0xE8, "RomDemoHeader is 0xE8 bytes");
 
 /* ==== briefings (Ubrief<level>Z; front.c's struct BriefingData) ========= */
 

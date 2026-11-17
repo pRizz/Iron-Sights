@@ -262,16 +262,28 @@ _Static_assert(sizeof(resource_lookup_data_entry) == 20, "ROM lookup layout");
 _Static_assert(sizeof(struct unk_09B7A0_struct_parent) == 0x14, "32-bit vertex store slot layout");
 #endif
 
-/* The demo header (LP64-004 Task 1): 228 bytes on i686 Linux, where its two
- * u64 fields are 4-byte aligned, and 232 at 64 bits (and with MinGW, which this
- * probe does not build), so the game steps past it by
- * RAMROM_FILE_HEADER_SIZE, which is 228 on Linux at both widths. */
-_Static_assert(sizeof(RomDemoHeader) == 228, "demo header file layout");
-_Static_assert(RAMROM_FILE_HEADER_SIZE == sizeof(RomDemoHeader), "demo header step");
-_Static_assert(sizeof(RomBrief) == 48, "briefing file layout");
-#if !IS_64_BIT
-_Static_assert(sizeof(struct ramromfilestructure) == 228, "32-bit demo header layout");
+/* The attract demo header (LP64-004 Task 1). The cart reserves 0xE8 bytes for
+ * it; the game's struct is 0xE8 bytes where a u64 is 8-byte aligned in a struct
+ * (the N64, MinGW, every 64-bit build) and 228 on i686 Linux, with the same
+ * field offsets everywhere. Playback steps by RAMROM_HEADER_ROMSIZE (0xE8). */
+_Static_assert(sizeof(RomDemoHeader) == 0xE8, "demo header file layout");
+#if IS_64_BIT
+_Static_assert(sizeof(struct ramromfilestructure) == 0xE8, "64-bit demo header is the cart's size");
+#else
+_Static_assert(sizeof(struct ramromfilestructure) == 228, "i686 Linux demo header is 4 bytes short of the cart's");
 #endif
+#define SAME_OFFSET(game, rom) \
+    _Static_assert(offsetof(struct ramromfilestructure, game) == offsetof(RomDemoHeader, rom), \
+                   "demo header " #game " is at its file offset")
+SAME_OFFSET(randomizer, randomizer);
+SAME_OFFSET(stagenum, stagenum);
+SAME_OFFSET(savefile, save_chksum1);
+SAME_OFFSET(savefile.times, save_times);
+SAME_OFFSET(totaltime_ms, totaltime_ms);
+SAME_OFFSET(mp_weapon_set, mp_weapon_set);
+SAME_OFFSET(aim_option, aim_option);
+SAME_OFFSET(mp_flags, mp_flags);
+_Static_assert(sizeof(RomBrief) == 48, "briefing file layout");
 
 /* VERTEX_COLLISION_NODE (bondtypes.h): no link is NULL; at 64 bits a link is
  * the base plus the 32-bit offset, at 32 bits the stored pointer. */

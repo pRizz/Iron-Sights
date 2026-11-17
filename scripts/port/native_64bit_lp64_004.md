@@ -4,9 +4,9 @@
 
 **Status:** Planned on 2026-11-16 from measurements on `main` at f73382a and
 accepted by the owner the same day, with all ten recommendations under
-"Decisions for the owner" at the end. Nothing in it is built; the status
-table of [native_64bit_plan.md](native_64bit_plan.md) records what is built
-and verified as the tasks land. The tasks are written for the
+"Decisions for the owner" at the end. The status table of
+[native_64bit_plan.md](native_64bit_plan.md) records what is built and
+verified as the tasks land. The tasks are written for the
 recommendations.
 
 **Goal:** A 64-bit headless build that converts every class of ROM data it
@@ -204,7 +204,7 @@ the setup class's), and fog tables (read field by field). A fourth is not
 what the design assumed: the demo header `ramromfilestructure` has no
 pointer but is 228 bytes at 32 bits and 232 at 64 (two `u64` fields raise
 its alignment), and the game steps past it by `sizeof`. Task 1 fixes its
-size.
+size. *Note (built on 2026-11-16):* Task 1 found that the cart's demo header is 0xE8 bytes, the struct's size at 64 bits and with MinGW (i686 Linux's 228 is the exception), and that playback already steps past it by `RAMROM_HEADER_ROMSIZE` (0xE8, `ramromreplay.c`), so nothing was changed in `ramromreplay`, and `RomDemoHeader` is 0xE8 bytes.
 
 ## Hand-over items checked
 
@@ -241,7 +241,7 @@ Found while checking, not in the list:
   the effects bank, has its array at 12 at 32 bits and at 16 at 64. At 32
   bits its index k is the standard record's k - 1; at 64 bits it is k, so
   every effect would play its neighbour. (Task 5)
-- `ramromfilestructure` is 228 and 232 bytes. (Task 1)
+- `ramromfilestructure` is 228 and 232 bytes. (Task 1) *Note (built on 2026-11-16):* Task 1 found that the cart's demo header is 0xE8 bytes, the struct's size at 64 bits and with MinGW (i686 Linux's 228 is the exception), and that playback already steps past it by `RAMROM_HEADER_ROMSIZE` (0xE8, `ramromreplay.c`), so nothing was changed in `ramromreplay`, and `RomDemoHeader` is 0xE8 bytes.
 - `initSetLevelLoadPropSafeItem` (`initobjects.c:191`) writes `prop` of an
   `ObjectRecord` where the list's reader expects `SafeObjectRecord.next`;
   the two share an offset at 32 bits only. (Task 15)
@@ -537,7 +537,7 @@ CI after the push; a red browser build is the task's to fix.
 - `port_romlayout.h`: the file layouts, one section a class, each struct
   named `Rom...` with `u8`, `u16`, `u32` and `s16` fields only and a
   `_Static_assert` on its size beside it. Task 1 adds `RomDemoHeader`
-  (228 bytes) and `RomBrief` (48).
+  (228 bytes) and `RomBrief` (48). *Note (built on 2026-11-16):* Task 1 found that the cart's demo header is 0xE8 bytes, the struct's size at 64 bits and with MinGW (i686 Linux's 228 is the exception), and that playback already steps past it by `RAMROM_HEADER_ROMSIZE` (0xE8, `ramromreplay.c`), so nothing was changed in `ramromreplay`, and `RomDemoHeader` is 0xE8 bytes.
 - CMake: `port/src/romconv_*.c` leave `PORT_SRC` unless
   `GE_POINTER_BITS EQUAL 64 OR GE_LP64_ORACLE`; `port_lp64_oracle.c` unless
   `GE_LP64_ORACLE`. `option(GE_LP64_ORACLE ...)` is a configure error
@@ -564,6 +564,7 @@ CI after the push; a red browser build is the task's to fix.
   last two refusals as well.
 - `ramromreplay.h`: `#define RAMROM_FILE_HEADER_SIZE 228`, used in place of
   `sizeof(struct ramromfilestructure)` at `ramromreplay.c:287,708,761`.
+  *Note (built on 2026-11-16):* Task 1 found that the cart's demo header is 0xE8 bytes, the struct's size at 64 bits and with MinGW (i686 Linux's 228 is the exception), and that playback already steps past it by `RAMROM_HEADER_ROMSIZE` (0xE8, `ramromreplay.c`), so nothing was changed in `ramromreplay`, and `RomDemoHeader` is 0xE8 bytes.
 
 - [ ] **Step 1: Write the failing tests**
 
