@@ -28,6 +28,12 @@
 #include <ultra64.h>
 #include "bondtypes.h"
 #include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
+#if IS_64_BIT || defined(GE_LP64_ORACLE)
+#include <stdint.h>
+#include "bg.h"
+#include "memp.h"
+#include "port_romconv.h" /* LP64-004: the background converter and its oracle */
+#endif
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console ring (spec section 7). */
@@ -71,6 +77,9 @@ s32 romfileBgConvert(u8 *data, u32 size, const char *name)
     }
     for (i = 0; i < bg_convertedCount; i++) {
         if (bg_converted[i] == data) {
+#ifdef GE_LP64_ORACLE
+            portBgTablesReloadOracle(data, name ? name : "?"); /* LP64-004: what this load sees */
+#endif
             return 1; /* already converted (stage reload) */
         }
     }
@@ -164,5 +173,47 @@ s32 romfileBgConvert(u8 *data, u32 size, const char *name)
     }
     portConLogf("ge: romdata: bg %-20s converted (%u rooms, %u vis cmds, %u portals)\n",
             name ? name : "?", rooms, vis, portals);
+#ifdef GE_LP64_ORACLE
+    portBgTablesOracle(data, size, name ? name : "?"); /* LP64-004: before load_bg_file's passes */
+#endif
     return 1;
 }
+
+#if IS_64_BIT
+extern void sysFatalError(const char *format, ...);
+
+/* LP64-004, at 64 bits: load_bg_file's room and portal tables. The 32-bit
+ * game reads them in the file, 24- and 8-byte records; at 64 bits they are 40
+ * and 16 bytes, so they are built from the file (after the byte-order pass
+ * above) in the stage pool at each load, where the 32-bit game takes their
+ * address, before any of load_bg_file's passes. DATA is the bg file NAME
+ * (SIZE bytes; SERVED 0 for the compiled-in copy, which holds no ROM layout
+ * a converter reads). Every failure stops the game by name: the compiled-in
+ * copy, a file the converter refuses, and (inside mempAllocBytesInBank) a
+ * stage pool that cannot give the bytes. */
+void portBgTablesLoad(u8 *data, u32 size, s32 served, const char *name, bg_room_data **rooms,
+        bg_portal_data_entry **portals)
+{
+    u32 n, nrooms;
+    u8 *out;
+
+    if (!served) {
+        sysFatalError("The bg file %s is not served from the ROM; a 64-bit build cannot read its compiled-in copy",
+                name);
+    }
+    n = portBgTablesSize(data, size, name);
+    if (n == 0) {
+        sysFatalError("Cannot convert the room and portal tables of the bg file %s", name);
+    }
+    /* The pool does not round: 8 more bytes let the tables start 8-byte
+     * aligned wherever it stands, and keep its position's alignment. */
+    out = (u8 *) mempAllocBytesInBank(n + 8, MEMPOOL_STAGE);
+    out = (u8 *) (((uintptr_t) out + 7) & ~(uintptr_t) 7);
+    if (!portBgTablesConvert(data, size, out, n, rooms, portals)) {
+        sysFatalError("Cannot write the room and portal tables of the bg file %s", name);
+    }
+    nrooms = (u32) ((u8 *) *portals - (u8 *) *rooms) / (u32) sizeof(bg_room_data);
+    portConLogf("ge: lp64: bg tables %s: %u room records, %u portal entries, %u bytes of the stage pool\n", name,
+            nrooms, (n - nrooms * (u32) sizeof(bg_room_data)) / (u32) sizeof(bg_portal_data_entry), n + 8);
+}
+#endif

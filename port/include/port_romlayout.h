@@ -475,4 +475,47 @@ typedef struct RomModelOp07 /* opcode 7 */
 } RomModelOp07;
 _Static_assert(sizeof(RomModelOp07) == 432, "RomModelOp07 is 432 bytes");
 
+/* ==== backgrounds (bg/bg_<stage>_all_p.seg; src/game/bg.h) ============== */
+
+/*
+ * A bg file's front matter, as the cart holds it: the header, the room table
+ * (from the header's rooms offset, a record of zeros first, the rooms, an end
+ * marker whose three offsets mark where the last room's data ends, and a
+ * record of zeros), the global visibility commands, the portal table (ended
+ * by an entry whose offset is 0) and the portal points; the rooms'
+ * compressed data follows. Every offset is a segment 0x0F word: 0x0F000000
+ * plus the distance from the file's start. romfile_bg.c turns the words to
+ * native byte order in place; the background converter (romconv_bg.c) reads
+ * them after that pass.
+ */
+typedef struct RomBgHeader
+{
+    u32 reserved;
+    u32 rooms;   /* the room table */
+    u32 portals; /* the portal table */
+    u32 vis;     /* the global visibility commands, or 0 */
+    u32 padding; /* a float table on the N64 path, 0 in every stock file */
+} RomBgHeader;
+_Static_assert(sizeof(RomBgHeader) == 0x14, "RomBgHeader is 0x14 bytes");
+
+typedef struct RomBgRoom
+{
+    u32 point;     /* the compressed vertex table, or 0 */
+    u32 primary;   /* the compressed primary display list, or 0 */
+    u32 secondary; /* the compressed secondary display list, or 0 */
+    u32 pos[3];    /* the room's position, three big-endian floats */
+} RomBgRoom;
+_Static_assert(sizeof(RomBgRoom) == 24, "RomBgRoom is 24 bytes");
+
+typedef struct RomBgPortal
+{
+    u32 offset; /* the portal's points: a byte count, three pad bytes, then
+                 * that many coord3d; 0 ends the table */
+    u8 room1;
+    u8 room2;
+    u8 cb1; /* the control bytes, in the run-time order (bg.h) */
+    u8 cb2;
+} RomBgPortal;
+_Static_assert(sizeof(RomBgPortal) == 8, "RomBgPortal is 8 bytes");
+
 #endif

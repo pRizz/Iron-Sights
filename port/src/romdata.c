@@ -862,6 +862,7 @@ void romdataFilesApply(void)
      * same way and converts it by both paths (romconv_model_oracle.c) */
     if (portLp64OracleSweepRequested()) {
         portModelOracleSweep();
+        portBgOracleSweep(); /* LP64-004 Task 12: romconv_bg_oracle.c */
     }
 #endif
 }

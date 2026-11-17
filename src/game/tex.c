@@ -1186,10 +1186,10 @@ s32 texLoadFromGdl(Gfx *src, s32 srcsize, Gfx *dst, void *texpool)
  * so ARG1 may lie later in the same buffer. Its callers on PC are the two
  * room loaders (bg.c); the third, sub_GAME_7F0762E0 (objecthandler_2.c), is
  * dead on PC, where that function returns before it. At 64 bits each 8-byte
- * command becomes a 16-byte Gfx (LP64-004): ARG1 then needs ARG2 * 2 bytes,
- * which the room loaders do not yet give it (they place ARG1 ARG2 bytes from
- * their block's end); they are not reached at 64 bits until the backgrounds
- * class is converted, whose task changes them.
+ * command becomes a 16-byte Gfx (LP64-004): ARG1 then needs ARG2 * 2 bytes.
+ * The 64-bit room loaders do not call this: portBgRoomListExpand
+ * (romconv_bg.c) places their lists ARG2 * 2 bytes from the block's end, so
+ * at 64 bits this branch has no caller that runs on PC.
 */
 void texCopyGdls(Gfx *arg0, Gfx *arg1, s32 arg2)
 {

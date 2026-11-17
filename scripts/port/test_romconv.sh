@@ -91,5 +91,12 @@ for width in $widths; do
     build "$work/model-shapes-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} \
         scripts/port/test_romconv_model_shapes.c "${model[@]}"
     run "$work/model-shapes-$width" "${width}-bit model file shapes"
+    bg=(scripts/port/test_romconv_bg_fixture.c port/src/romconv_bg.c port/src/romconv_gfx.c
+        port/src/romconv_common.c port/src/port_lp64_oracle.c)
+    build "$work/bg-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_bg.c "${bg[@]}"
+    run "$work/bg-$width" "${width}-bit background tables"
+    build "$work/bg-checks-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_bg_checks.c \
+        "${bg[@]}"
+    run "$work/bg-checks-$width" "${width}-bit background input checks and room lists"
     echo "test_romconv: PASS (${width}-bit)"
 done

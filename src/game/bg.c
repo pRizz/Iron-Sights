@@ -37,6 +37,9 @@ extern void sysFatalError(const char *format, ...);
 #include "port_graphics.h" /* FORK-082: Baked Lighting's capture and apply hooks */
 #include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 #include "port_hostptr.h" /* LP64-003: PORT_WORD_IS_HOST */
+#if IS_64_BIT
+#include "port_romconv.h" /* LP64-004: portBgRoomListExpand */
+#endif
 #endif
 
 
@@ -380,7 +383,11 @@ void sub_GAME_7F0B37EC(void) {
             do {
                 portal = ptr[0];
                 while (ptr[1] >= portal) {
+#if IS_64_BIT
+                    g_BgPortals[portal].controlbytes1 |= 2; /* LP64-004: bg_portal_data_entry stride */
+#else
                     ((u8 *)g_BgPortals)[(portal << 3) + 6] |= 2;
+#endif
                     portal++;
                 }
 
@@ -1103,8 +1110,21 @@ void load_bg_file(LEVEL_INDEX levelid)
             portLp64RequireConverter(PORT_LP64_BACKGROUNDS); /* the compiled-in bg, read as s32 words */
         }
         ptr_bgdata_offsets = ptr_bg_data;
+#if IS_64_BIT
+        { /* LP64-004: the room and portal tables at their 64-bit layout, built
+           * in the stage pool at each load (romfile_bg.c); the visibility
+           * commands and portal points stay in the file */
+            extern void portBgTablesLoad(u8 *data, u32 size, s32 served, const char *name, bg_room_data **rooms,
+                    bg_portal_data_entry **portals);
+            s32 served = romdataFileServed(bgidx);
+
+            portBgTablesLoad((u8 *) ptr_bg_data, served ? obGetFileRomSize(bgidx) : 0, served, bgname,
+                    &ptr_bgdata_room_fileposition_list, &g_BgPortals);
+        }
+#else
         ptr_bgdata_room_fileposition_list =
             (bg_room_data *) BG_SEG_TO_PTR(ptr_bg_data, ((s32 *) ptr_bg_data)[1]);
+#endif
     }
 #endif
  
@@ -1146,7 +1166,11 @@ void load_bg_file(LEVEL_INDEX levelid)
     {
         dword_CODE_bss_8007FF88 = 2;
         ptr_bgdata_offsets = (u8 *)data;
+#if IS_64_BIT
+        /* LP64-004: the converted room table, set above (portBgTablesLoad) */
+#else
         ptr_bgdata_room_fileposition_list = (bg_room_data *) BG_SEG_TO_PTR(data, ((s32 *)ptr_bgdata_offsets)[1]);
+#endif
         
         // Keep this fake goto for matching.
         goto dummy_label_543534; dummy_label_543534: ;
@@ -1158,7 +1182,11 @@ void load_bg_file(LEVEL_INDEX levelid)
             g_MaxNumRooms++;  
         }
  
+#if IS_64_BIT
+        /* LP64-004: the converted portal table, set above (portBgTablesLoad) */
+#else
         g_BgPortals = (bg_portal_data_entry *) BG_SEG_TO_PTR(data, ((s32 *)ptr_bgdata_offsets)[2]);
+#endif
 
         if (1);
 
@@ -3138,9 +3166,29 @@ s32 bgLoadRoomPrimaryGdl(s32 roomnum, u8 *dst, s32 allocsize)
      * texLoadFromGdl can then read from scratch and write the final
      * texture-processed GDL/data back to dst.
      */
+#if IS_64_BIT
+    /* LP64-004: the E bytes of 8-byte commands bgDecompress left at the
+     * block's start become 2E bytes of 16-byte Gfx at the block's end, so the
+     * destination ends at the block's end and starts at or after the source
+     * when allocsize >= 2E, as portGfxFromRomBackward needs; when the block
+     * is smaller, or E is not a positive multiple of 8, nothing is written
+     * and -1 sends bgLoadRoomModelData to its "room memory" line. Sizes from
+     * here on are host bytes, which texLoadFromGdl counts in Gfx. */
+    {
+        Gfx *list;
+
+        expanded_size = portBgRoomListExpand(dst, allocsize, expanded_size,
+                levelinfotable[levelentry_index].bg_seg_filename, roomnum, &list);
+        if (expanded_size < 0) {
+            return -1;
+        }
+        scratch = (u8 *) list;
+    }
+#else
     scratch = dst + (allocsize - expanded_size);
 
     texCopyGdls((Gfx *)dst, (Gfx *)scratch, expanded_size);
+#endif
 
     clear_light_fixturetable_in_room(roomnum);
 
@@ -3228,9 +3276,23 @@ s32 bgLoadRoomSecondaryGdl(s32 roomnum, u8 *dst, s32 allocsize)
      * texLoadFromGdl can then read from scratch and write the final
      * texture-processed GDL/data back to dst.
      */
+#if IS_64_BIT
+    /* LP64-004: as in bgLoadRoomPrimaryGdl */
+    {
+        Gfx *list;
+
+        expanded_size = portBgRoomListExpand(dst, allocsize, expanded_size,
+                levelinfotable[levelentry_index].bg_seg_filename, roomnum, &list);
+        if (expanded_size < 0) {
+            return -1;
+        }
+        scratch = (u8 *) list;
+    }
+#else
     scratch = dst + (allocsize - expanded_size);
 
     texCopyGdls((Gfx *)dst, (Gfx *)scratch, expanded_size);
+#endif
 
 #ifndef TARGET_N64
     { extern s32 g_LightDbgRoomLoad; g_LightDbgRoomLoad = 1; }
@@ -4465,7 +4527,7 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
 
                 if (bgTestRayIntersectsBbox(from, dir, (s32 *) (&bboxMin), (s32 *) (&bboxMax)))
                 {
-                    if (intersectRayTriangle((Vertex *)((intptr_t)vtxbase - (0 - (idx[0] << 4))), (Vertex *)((intptr_t)vtxbase - (0 - (idx[1] << 4))), (Vertex *)((intptr_t)vtxbase - (0 - (idx[2] << 4))), (coord3d *) (((roomnum * 24) + ((intptr_t) ptr_bgdata_room_fileposition_list)) + 12), from, to, dir, &hitbuf)) /* LP64-004: bg_room_data stride */
+                    if (intersectRayTriangle((Vertex *)((intptr_t)vtxbase - (0 - (idx[0] << 4))), (Vertex *)((intptr_t)vtxbase - (0 - (idx[1] << 4))), (Vertex *)((intptr_t)vtxbase - (0 - (idx[2] << 4))), (coord3d *) (((roomnum * sizeof(bg_room_data)) + ((intptr_t) ptr_bgdata_room_fileposition_list)) + offsetof(bg_room_data, pos)), from, to, dir, &hitbuf)) /* LP64-004: bg_room_data stride */
                     {
                         tcmd = gdl;
                         dx = ((s32) hitbuf.hitpos.x) - ((s32) from->x);
@@ -4669,7 +4731,7 @@ bool bgTestRayIntersectionInRoom(coord3d *from, coord3d *to, coord3d *dir, RoomV
 
                         if (bgTestRayIntersectsBbox(from, dir, (s32 *) (&bboxMin2), (s32 *) (&bboxMax2)))
                         {
-                            if (intersectRayTriangle((Vertex *)((intptr_t)vtxbase - (0 - (idx2[0] << 4))), (Vertex *)((intptr_t)vtxbase - (0 - (idx2[1] << 4))), (Vertex *)((intptr_t)vtxbase - (0 - (idx2[2] << 4))), (coord3d *) (((roomnum * 24) + ((intptr_t) ptr_bgdata_room_fileposition_list)) + 12), from, to, dir, &hitbuf)) /* LP64-004: bg_room_data stride */
+                            if (intersectRayTriangle((Vertex *)((intptr_t)vtxbase - (0 - (idx2[0] << 4))), (Vertex *)((intptr_t)vtxbase - (0 - (idx2[1] << 4))), (Vertex *)((intptr_t)vtxbase - (0 - (idx2[2] << 4))), (coord3d *) (((roomnum * sizeof(bg_room_data)) + ((intptr_t) ptr_bgdata_room_fileposition_list)) + offsetof(bg_room_data, pos)), from, to, dir, &hitbuf)) /* LP64-004: bg_room_data stride */
                             {
                                 tcmd = gdl;
                                 dx = ((s32) hitbuf.hitpos.x) - ((s32) from->x);
@@ -6143,7 +6205,11 @@ s32 sub_GAME_7F0B8DF4(s32 room, s32 *portalnums, s32 max)
                 return count;
             }
 
+#if IS_64_BIT
+            offset += sizeof(bg_portal_data_entry); /* LP64-004: bg_portal_data_entry stride */
+#else
             offset += 8;
+#endif
             i++;
             portal = (bg_portal_data_entry *) (((u8 *) g_BgPortals) + offset);
         }
@@ -6404,7 +6470,7 @@ void bgRoomCalcBB(s32 room) // canonical name
     StanRoomBounds limits;
     u8 wasloaded;
 
-    roomdata = (bg_room_data *) ((intptr_t) ptr_bgdata_room_fileposition_list + room * 24); /* LP64-004: bg_room_data stride */
+    roomdata = (bg_room_data *) ((intptr_t) ptr_bgdata_room_fileposition_list + room * sizeof(bg_room_data)); /* LP64-004: bg_room_data stride */
 
     if (roomdata->pPointTableBin == NULL)
     {
@@ -6437,7 +6503,7 @@ void bgRoomCalcBB(s32 room) // canonical name
     }
 
     vertices = g_BgRoomInfo[room].vertices;
-    roomdata = (bg_room_data *) ((intptr_t) ptr_bgdata_room_fileposition_list + room * 24); /* LP64-004: bg_room_data stride */
+    roomdata = (bg_room_data *) ((intptr_t) ptr_bgdata_room_fileposition_list + room * sizeof(bg_room_data)); /* LP64-004: bg_room_data stride */
 
     limits.minX = 0x7fff;
     limits.minY = 0x7fff;
