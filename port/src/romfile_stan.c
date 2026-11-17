@@ -24,6 +24,12 @@
 #include <ultra64.h>
 #include "bondtypes.h"
 #include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
+#if IS_64_BIT || defined(GE_LP64_ORACLE)
+#include <stdint.h>
+#include <stdlib.h>
+#include "port_lp64_oracle.h"
+#include "port_romconv_stage.h" /* LP64-004: portStanConvert */
+#endif
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console ring (spec section 7). */
@@ -32,6 +38,41 @@ extern void portConLogf(const char *fmt, ...);
 extern u8 list_of_tilesizes[];                                  /* stan.c: bytes per pointCount */
 extern struct StanPrefixRecord *portStanPackForProbe(struct StanPrefixRecord *file); /* stan.c */
 
+#if IS_64_BIT
+extern void sysFatalError(const char *format, ...);
+
+/* LP64-004: the record the game reads is two 8-byte pointers, which do not
+ * fit before a first tile at 0x0C (18 of the 27 stock files). The converter
+ * checks the whole file and converts the tiles, leaving the header as the
+ * file has it; a refused file stops the game by name (its bytes are
+ * untouched). No compiled-in stan is linked at 64 bits, so COMPILED is NULL;
+ * load_bg_file refuses a stan the cart does not serve before portStanPack. */
+s32 romfileStanConvert(u8 *data, u32 size, const char *name, const u8 *compiled)
+{
+    (void) compiled;
+    if (!portStanConvert(data, size, (uintptr_t) data, name)) {
+        sysFatalError("Cannot convert the collision file %s", name);
+    }
+    portConLogf("ge: romdata: stan  %-18s converted (%u bytes)\n", name, size);
+    return 1;
+}
+
+/* The record of the one stan the game has loaded: load_bg_file is the only
+ * caller of stanDetermineEOF and stanLoadFile, and stan.c reaches the file
+ * only through the global stan_prefix, which they set to this record. */
+static struct StanPrefixRecord s_StanRecord;
+
+/* LP64-004: fills the record for the stan file DATA (SIZE bytes, named NAME)
+ * that load_bg_file has just loaded, and returns it in place of the file's
+ * address; a refused header stops the game by name. */
+struct StanPrefixRecord *romfileStanRecord(u8 *data, u32 size, const char *name)
+{
+    if (!portStanRecordFill(data, size, (uintptr_t) data, &s_StanRecord, name)) {
+        sysFatalError("Cannot read the header of the collision file %s", name);
+    }
+    return &s_StanRecord;
+}
+#else
 static u32 be32(const u8 *p)
 {
     return ((u32) p[0] << 24) | ((u32) p[1] << 16) | ((u32) p[2] << 8) | (u32) p[3];
@@ -153,3 +194,32 @@ s32 romfileStanConvert(u8 *data, u32 size, const char *name, const u8 *compiled)
     }
     return 1;
 }
+
+#ifdef GE_LP64_ORACLE
+/* LP64-004 oracle (32-bit, -DGE_LP64_ORACLE=ON): romdataFilePreprocess calls
+ * this in place of romfileStanConvert. It converts a copy of the file with
+ * portStanConvert, read at DATA's own address, converts DATA in place as
+ * always, and compares the whole file byte for byte. */
+s32 romfileStanOracle(u8 *data, u32 size, const char *name, const u8 *compiled)
+{
+    u8 *copy = (u8 *) malloc(size);
+    s32 inplace;
+
+    if (copy == NULL) {
+        portLp64OracleResult(PORT_LP64_COLLISION, name, 0, "the oracle could not copy the file");
+        return romfileStanConvert(data, size, name, compiled);
+    }
+    memcpy(copy, data, size);
+    inplace = romfileStanConvert(data, size, name, compiled);
+    if (!portStanConvert(copy, size, (uintptr_t) data, name)) {
+        portLp64OracleResult(PORT_LP64_COLLISION, name, 0, "the converter refused the file");
+    } else if (!inplace) {
+        portLp64OracleResult(PORT_LP64_COLLISION, name, 0, "the in-place pass refused the file");
+    } else {
+        portLp64OracleBytes(PORT_LP64_COLLISION, name, data, copy, size);
+    }
+    free(copy);
+    return inplace;
+}
+#endif
+#endif

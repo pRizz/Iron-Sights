@@ -98,5 +98,11 @@ for width in $widths; do
     build "$work/bg-checks-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_bg_checks.c \
         "${bg[@]}"
     run "$work/bg-checks-$width" "${width}-bit background input checks and room lists"
+    # At 32 bits the collision tile tests compare with romfile_stan.c's
+    # in-place result.
+    stan=(port/src/romconv_stan.c port/src/romconv_common.c port/src/port_lp64_oracle.c)
+    [[ $width == 32 ]] && stan+=(port/src/romfile_stan.c)
+    build "$work/stan-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_stan.c "${stan[@]}"
+    run "$work/stan-$width" "${width}-bit collision tiles"
     echo "test_romconv: PASS (${width}-bit)"
 done

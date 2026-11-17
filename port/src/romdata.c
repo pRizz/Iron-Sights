@@ -739,6 +739,9 @@ static const char *const sClassName[] = { "none", "text", "brief", "setup", "sta
 
 extern s32 romfileSetupConvert(u8 *data, u32 size, const char *name, const u8 *compiled); /* romfile_setup.c */
 extern s32 romfileStanConvert(u8 *data, u32 size, const char *name, const u8 *compiled);  /* romfile_stan.c */
+#ifdef GE_LP64_ORACLE
+extern s32 romfileStanOracle(u8 *data, u32 size, const char *name, const u8 *compiled); /* LP64-004 */
+#endif
 
 /* GE_ROMTEXT / GE_ROMBRIEF / GE_ROMSETUP / GE_ROMSTAN = 0: that class stays
  * compiled-in with the ROM loaded - the per-class A/B knobs */
@@ -1091,7 +1094,11 @@ void romdataFilePreprocess(s32 index, u8 *data, u32 size)
         romfileSetupConvert(data, size, file_resource_table[index].filename, sCompiledData[index]);
         break;
     case CLASS_STAN:
+#ifdef GE_LP64_ORACLE
+        romfileStanOracle(data, size, file_resource_table[index].filename, sCompiledData[index]);
+#else
         romfileStanConvert(data, size, file_resource_table[index].filename, sCompiledData[index]);
+#endif
         break;
     case CLASS_MODEL:
         /* models are converted in load_object_fill_header (objecthandler_2.c),

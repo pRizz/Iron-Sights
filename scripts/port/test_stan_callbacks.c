@@ -36,9 +36,35 @@ static void testLadderLinkIsCounted(void)
     if (result != 0 || stanGetLocusCount(&record) != 1 || stanGetLocusField0(&record) != 0) abort();
 }
 
+/* A tile whose edge links to a crouch tile sets the record's first field,
+ * which stanGetLocusField0 returns as a flag (LP64-004 Task 13: the branch
+ * that stores 1 in the record's pointer-sized field). */
+static void testCrouchLinkSetsTheFlag(void)
+{
+    /* Arrange: tile 16 of a synthetic tile array is a crouch tile (special
+     * 1) and the source tile's first edge links to it. */
+    _Alignas(StandTile) u8 tiles[17 * sizeof(StandTile)] = {0};
+    _Alignas(StandTile) u8 source[sizeof(StandTile) + 3 * sizeof(StandTilePoint)] = {0};
+    StandTile *crouch = (StandTile *)(tiles + 16 * sizeof(StandTile));
+    StandTile *tile = (StandTile *)source;
+    struct StandTileLocusCallbackRecord record = {0};
+    crouch->mid.half = 1;
+    tile->points[0].link = 16;
+    standTileStart = (StandTile *)tiles;
+
+    /* Act */
+    s32 result = stanCheckLinkedSpecialTile(tile, 0, 0.0f, 0.0f, 0.0f, &record);
+    standTileStart = NULL;
+
+    /* Assert: the crouch flag is set and read back; no ladder is counted. */
+    if (result != 1 || record.rooms != (s32 *)(intptr_t)1 || stanGetLocusField0(&record) == 0
+        || stanGetLocusCount(&record) != 0) abort();
+}
+
 int main(void)
 {
     testLadderLinkIsCounted();
+    testCrouchLinkSetsTheFlag();
 
     /* Arrange: a triangular tile with three solid edges, no ROM-backed links. */
     _Alignas(StandTile) u8 storage[sizeof(StandTile) + 3 * sizeof(StandTilePoint)] = {0};

@@ -1144,9 +1144,30 @@ void load_bg_file(LEVEL_INDEX levelid)
     }
     { /* bring-up (sanitizer sweep): a stage whose stan asset is missing
        * hands stanDetermineEOF garbage - identify the stage FIRST */
+#if IS_64_BIT
+        /* LP64-004: the header record is two pointers and does not fit in the
+         * file, so the game reads it from romfile_stan.c's record for this
+         * file (romconv_stan.c); a stan that did not load, or that the cart
+         * does not serve (no compiled-in stan is linked at 64 bits), is
+         * refused before stanDetermineEOF reads it */
+        extern s32 g_portStanFromRom;
+        extern struct StanPrefixRecord *romfileStanRecord(u8 *data, u32 size, const char *name);
+        extern s32 get_pc_remaining_buffer_for_index(s32 index);
+        char *stanname = levelinfotable[levelentry_index].bg_stan_filename;
+        u8 *stanfile = gptr_stan;
+
+        if (stanfile == NULL || !g_portStanFromRom) {
+            sysFatalError("The collision file %s did not load from the ROM; a 64-bit build cannot read it", stanname);
+        }
+        gptr_stan = (u8 *) romfileStanRecord(stanfile,
+                (u32) get_pc_remaining_buffer_for_index(fileGetIndex((u8 *) stanname)), stanname);
+        printf("ge: load_bg_file levelid=%d stan=%s file=%p record=%p first=%p\n", levelid, stanname,
+               (void *) stanfile, (void *) gptr_stan, ((void **) gptr_stan)[1]);
+#else
         printf("ge: load_bg_file levelid=%d stan=%s hdr=%p first=%08x\n",
                levelid, levelinfotable[levelentry_index].bg_stan_filename,
                (void *) gptr_stan, gptr_stan ? ((u32 *) gptr_stan)[1] : 0);
+#endif
     }
 #endif
 
