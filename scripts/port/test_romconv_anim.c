@@ -25,6 +25,9 @@ _Static_assert(sizeof(ModelAnimation) == 0x40, "32-bit ModelAnimation is unchang
 #endif
 
 #define IMAGE_SIZE 0x100u
+/* The bytes the converter writes at a header: 0x20 at 64 bits, the file
+ * header's 0x14 at 32. */
+#define HEADER_WRITTEN offsetof(ModelAnimation, unk14)
 
 /* port_console.c's log, captured so the refusal line can be read back. */
 static char s_Log[512];
@@ -141,6 +144,32 @@ static int convert(AnimFixture *f)
     return portAnimHeadersConvert(f->table, IMAGE_SIZE, f->staged, IMAGE_SIZE, s_Entries, f->lists, 1);
 }
 
+static int convertStaged(AnimFixture *f, u32 stagedsize)
+{
+    return portAnimHeadersConvert(f->table, IMAGE_SIZE, f->staged, stagedsize, s_Entries, f->lists, 1);
+}
+
+/* Replaces the header at OFFSET in both images (the table is a copy). */
+static void replaceHeader(AnimFixture *f, u32 offset, u32 descriptors, u32 stream)
+{
+    putHeader(f->staged, offset, 0x300, 9, descriptors, 0x40, stream);
+    memcpy(f->table + offset, f->staged + offset, sizeof(RomAnimHeader));
+}
+
+static int inWritten(u32 i, const u32 *headers, int count)
+{
+    int h;
+
+    for (h = 0; h < count; h++)
+    {
+        if (i >= headers[h] && i < headers[h] + HEADER_WRITTEN)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static int testWritesTheRunTimeHeader(void)
 {
     // Arrange
@@ -187,6 +216,44 @@ static int testDescriptorsReadThroughThePointer(void)
             "the second descriptor reads back through bitDescriptors");
 }
 
+static int testWritesEveryHeader(void)
+{
+    // Arrange
+    static AnimFixture f;
+    arrange(&f, kStockList, 6);
+
+    // Act
+    int ok = convert(&f);
+
+    // Assert
+    ModelAnimation *b = (ModelAnimation *) (f.table + 0x60);
+    ModelAnimation *c = (ModelAnimation *) (f.table + 0xA4);
+    return expect(ok == 1 && b->unk04 == 10 && b->address == (intptr_t) (s_Entries + 0x100)
+            && b->bitStream == f.staged + 0x90 && c->unk04 == 12 && c->unk0E == 0x50
+            && (u8 *) c->bitDescriptors == f.staged + 0xB8,
+            "the headers at 0x60 and 0xA4 are written too");
+}
+
+static int testConvertsAcrossTwoTables(void)
+{
+    // Arrange
+    static AnimFixture f;
+    static intptr_t first[] = {0x1C, 0x60, 0};
+    static intptr_t second[] = {0xA4, 1, 0x1C, 0};
+    intptr_t *lists[2] = {first, second};
+    arrange(&f, kStockList, 6);
+
+    // Act
+    int ok = portAnimHeadersConvert(f.table, IMAGE_SIZE, f.staged, IMAGE_SIZE, s_Entries, lists, 2);
+
+    // Assert
+    ModelAnimation *c = (ModelAnimation *) (f.table + 0xA4);
+    return expect(ok == 1 && (u8 *) first[0] == f.table + 0x1C && (u8 *) first[1] == f.table + 0x60
+            && (u8 *) second[0] == f.table + 0xA4 && second[1] == 1 && second[2] == first[0] && second[3] == 0
+            && c->unk04 == 12 && c->address == (intptr_t) (s_Entries + 0x200),
+            "a second table is converted, and a header repeated across the tables is the same address");
+}
+
 static int testReplacesTheEntries(void)
 {
     // Arrange
@@ -213,15 +280,15 @@ static int testWritesNothingPastTheHeader(void)
     int ok = convert(&f);
 
     // Assert
+    static const u32 headers[] = {0x1C, 0x60, 0xA4};
     int outsideChanged = 0;
     u32 i;
     for (i = 0; i < IMAGE_SIZE; i++)
     {
-        int inHeader = (i >= 0x1C && i < 0x3C) || (i >= 0x60 && i < 0x80) || (i >= 0xA4 && i < 0xC4);
-        outsideChanged += !inHeader && f.table[i] != f.staged[i];
+        outsideChanged += !inWritten(i, headers, 3) && f.table[i] != f.staged[i];
     }
     return expect(ok == 1 && f.table[0x1C + 0x20] == f.staged[0x1C + 0x20] && outsideChanged == 0,
-            "no byte outside a header's 0x20 is written");
+            "no byte past a header's written fields (0x20 at 64 bits, 0x14 at 32) is written");
 }
 
 static int testLeavesTheStagingImage(void)
@@ -239,16 +306,58 @@ static int testLeavesTheStagingImage(void)
     return expect(ok == 1 && sameBytes(before, f.staged, IMAGE_SIZE), "the staging image is not written");
 }
 
-static int expectRefused(AnimFixture *f, const intptr_t *list, size_t count, const char *what)
+static int expectRefusedStaged(AnimFixture *f, u32 stagedsize, const intptr_t *list, size_t count,
+        const char *what)
 {
     int ok;
 
     s_Log[0] = '\0';
-    ok = convert(f);
+    ok = convertStaged(f, stagedsize);
     return expect(ok == 0 && sameBytes(f->table, f->staged, IMAGE_SIZE)
             && sameBytes(f->list, list, count * sizeof(*list))
             && startsWith(s_Log, "ge: lp64: cannot convert animation tables \"animation_data\": "),
             what);
+}
+
+static int expectRefused(AnimFixture *f, const intptr_t *list, size_t count, const char *what)
+{
+    return expectRefusedStaged(f, IMAGE_SIZE, list, count, what);
+}
+
+static int testRefusesAHeaderOutsideTheStagedImage(void)
+{
+    // Arrange: the table holds 0x20 at 0xA4, the staged image ends at 0xB0,
+    // and the header's own references lie inside it.
+    static AnimFixture f;
+    arrange(&f, kStockList, 6);
+    replaceHeader(&f, 0xA4, 0x40, 0x40);
+
+    // Act, Assert
+    return expectRefusedStaged(&f, 0xB0, kStockList, 6,
+            "a file header past the staged image's end is refused, nothing written");
+}
+
+static int testRefusesDescriptorsOutsideTheStagedImage(void)
+{
+    // Arrange
+    static AnimFixture f;
+    arrange(&f, kStockList, 6);
+    replaceHeader(&f, 0x60, IMAGE_SIZE, 0x90);
+
+    // Act, Assert
+    return expectRefused(&f, kStockList, 6,
+            "a descriptor offset at the staged image's end is refused, nothing written");
+}
+
+static int testRefusesAStreamOutsideTheStagedImage(void)
+{
+    // Arrange
+    static AnimFixture f;
+    arrange(&f, kStockList, 6);
+    replaceHeader(&f, 0xA4, 0xB8, 0x1F0);
+
+    // Act, Assert
+    return expectRefused(&f, kStockList, 6, "a stream offset past the staged image is refused, nothing written");
 }
 
 static int testRefusesAHeaderPastTheEnd(void)
@@ -280,10 +389,15 @@ int main(void)
     failures += testWritesTheRunTimeHeader();
     failures += testPointsIntoTheStagingImage();
     failures += testDescriptorsReadThroughThePointer();
+    failures += testWritesEveryHeader();
+    failures += testConvertsAcrossTwoTables();
     failures += testReplacesTheEntries();
     failures += testWritesNothingPastTheHeader();
     failures += testLeavesTheStagingImage();
     failures += testRefusesAHeaderPastTheEnd();
     failures += testRefusesOverlappingHeaders();
+    failures += testRefusesAHeaderOutsideTheStagedImage();
+    failures += testRefusesDescriptorsOutsideTheStagedImage();
+    failures += testRefusesAStreamOutsideTheStagedImage();
     return failures == 0 ? 0 : 1;
 }

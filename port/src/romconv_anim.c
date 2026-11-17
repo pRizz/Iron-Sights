@@ -103,9 +103,28 @@ static int animListedBefore(const AnimEntryCursor *c, uintptr_t offset)
     return 0;
 }
 
-/* Refuses, naming it, a header that does not fit or that overlaps one listed
- * earlier. Reads offsets only. */
-static int animHeadersFit(intptr_t *const *tables, int ntables, u32 tablesize, u32 stagedsize)
+/* Refuses, naming it, a header whose descriptor table or stream starts at or
+ * past the staged image's end, so that no pointer the converter builds into
+ * STAGED leads outside it. The header itself is inside STAGED. */
+static int animReferencesFit(const u8 *staged, u32 stagedsize, uintptr_t offset)
+{
+    RomAnimHeader file;
+
+    memcpy(&file, staged + offset, sizeof(file));
+    if (file.descriptors_offset >= stagedsize || file.stream_offset >= stagedsize)
+    {
+        portConvRefuse(PORT_LP64_ANIMATIONS, ANIM_FILE,
+                "header at 0x%lX has descriptors at 0x%X and stream at 0x%X, outside the 0x%X-byte staged image",
+                (unsigned long) offset, file.descriptors_offset, file.stream_offset, stagedsize);
+        return 0;
+    }
+    return 1;
+}
+
+/* Refuses, naming it, a header that does not fit, that overlaps one listed
+ * earlier, or whose references lead outside STAGED. Reads offsets and STAGED
+ * only. */
+static int animHeadersFit(intptr_t *const *tables, int ntables, u32 tablesize, const u8 *staged, u32 stagedsize)
 {
     AnimEntryCursor c;
 
@@ -125,6 +144,10 @@ static int animHeadersFit(intptr_t *const *tables, int ntables, u32 tablesize, u
         {
             portConvRefuse(PORT_LP64_ANIMATIONS, ANIM_FILE, "header at 0x%lX is outside the 0x%X-byte staged image",
                     (unsigned long) offset, stagedsize);
+            return 0;
+        }
+        if (!animReferencesFit(staged, stagedsize, offset))
+        {
             return 0;
         }
         animCursorStart(&earlier, tables, ntables);
@@ -165,7 +188,7 @@ int portAnimHeadersConvert(u8 *table, u32 tablesize, const u8 *staged, u32 stage
 {
     AnimEntryCursor c;
 
-    if (!animHeadersFit(tables, ntables, tablesize, stagedsize))
+    if (!animHeadersFit(tables, ntables, tablesize, staged, stagedsize))
     {
         return 0;
     }

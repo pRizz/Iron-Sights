@@ -124,8 +124,15 @@ void portConvRefuse(enum PortLp64Asset asset, const char *file, const char *why,
  * STAGEDSIZE bytes) is never written.
  *
  * Returns 1, or 0 after portConvRefuse with nothing written when an offset or
- * offset + 0x20 is outside TABLE (or the file header outside STAGED) or two
+ * offset + 0x20 is outside TABLE, the file header is outside STAGED, a
+ * header's descriptor or stream offset is at or past STAGEDSIZE, or two
  * distinct headers are less than 0x20 apart.
+ *
+ * Precondition: ENTRIES + entries_offset, and the frames read from it, lie in
+ * the entries image. The converter has no entries size and does not check it;
+ * nor does any code today: portAnimDataInit (animdata.c) checks that the
+ * animation_entries segment is its full 0x169EC0 bytes but not the offsets
+ * into it, and at 32 bits expand_ani_table_entries adds them unchecked too.
  */
 int portAnimHeadersConvert(u8 *table, u32 tablesize, const u8 *staged, u32 stagedsize, const u8 *entries,
         intptr_t *const *tables, int ntables);
