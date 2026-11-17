@@ -82,5 +82,71 @@ class AuditTests(unittest.TestCase):
                 self.assertEqual(status, 0 if expected else 1)
 
 
+CLEAN_LOG = 'GE_STAGE direct launch: dam\nframe limit reached: frames=900\n'
+POOL_LINE = 'ge: lp64: pool "room memory" exhausted (request 65536 bytes)'
+REFUSAL_LINE = 'ge: lp64: cannot convert models "GtriggerZ": too large'
+
+
+class RefusalLineTests(unittest.TestCase):
+    """A 64-bit pool report or converter refusal (LP64-004 Task 2) fails the mission whatever its
+    exit status, and the record names the first such line."""
+
+    def smoke(self, sample):
+        """Runs the one-mission smoke on SAMPLE as the log of a child that exits 0; returns the
+        status, the mission's record and what the smoke printed."""
+        with tempfile.TemporaryDirectory() as temporary:
+            folder = Path(temporary)
+            executable, rom = folder/'headless', folder/'rom'
+            executable.write_bytes(b'test')
+            rom.write_bytes(b'test')
+
+            def run(args, cwd, env, stdout, **kwargs):
+                stdout.write(sample)
+                return type('Result', (), {'returncode': 0})()
+
+            printed = StringIO()
+            with patch.object(audit, 'MISSIONS', ('dam',)), \
+                    patch.object(audit.subprocess, 'run', side_effect=run), redirect_stdout(printed):
+                status = audit.mission_smoke(executable, rom, folder/'results.json', 900, 1)
+            record = json.loads((folder/'results.json').read_text())[0]
+        return status, record, printed.getvalue()
+
+    def test_pool_line_fails_the_mission_naming_the_line(self):
+        # Arrange
+        sample = CLEAN_LOG + POOL_LINE + '\n' + POOL_LINE.replace('65536', '128') + '\n'
+
+        # Act
+        status, record, printed = self.smoke(sample)
+
+        # Assert
+        self.assertEqual((status, record['passed'], record['refusal']), (1, False, POOL_LINE))
+        self.assertIn('dam: FAIL (' + POOL_LINE + ')', printed)
+
+    def test_refused_conversion_fails_the_mission(self):
+        # Arrange
+        sample = CLEAN_LOG + REFUSAL_LINE + '\n'
+
+        # Act
+        status, record, _ = self.smoke(sample)
+
+        # Assert
+        self.assertEqual((status, record['passed'], record['refusal']), (1, False, REFUSAL_LINE))
+
+    def test_clean_log_passes(self):
+        # Act
+        status, record, printed = self.smoke(CLEAN_LOG)
+
+        # Assert
+        self.assertEqual((status, record['passed'], record['refusal']), (0, True, None))
+        self.assertIn('dam: PASS', printed)
+
+    def test_markers_are_the_boot_checks(self):
+        # Act
+        markers = audit.REFUSAL_MARKERS
+
+        # Assert
+        self.assertIs(markers, audit.lp64_boot.REFUSAL_MARKERS)
+
+
 if __name__ == '__main__':
     unittest.main()

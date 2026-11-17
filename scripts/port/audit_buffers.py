@@ -8,6 +8,7 @@ import argparse
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import re
@@ -32,6 +33,13 @@ MISSIONS = ('dam', 'facility', 'runway', 'surface', 'bunker1', 'silo', 'frigate'
             'train', 'jungle', 'control', 'caverns', 'cradle', 'aztec', 'egypt')
 LSAN_SUPPRESSIONS = ROOT/'scripts/port/lsan_suppressions.txt'
 SANITIZER_ERRORS = ('runtime error:', 'ERROR: AddressSanitizer', 'ERROR: LeakSanitizer')
+# A pool too small at 64 bits or a converter's refusal (LP64-004) fails a mission whatever its exit
+# status. The markers are the boot check's own (lp64_boot.py), loaded by path as lp64_oracle.py loads
+# this file, so the two tools cannot drift apart. A 32-bit game never prints either line.
+_lp64_boot_spec = importlib.util.spec_from_file_location('lp64_boot', Path(__file__).with_name('lp64_boot.py'))
+lp64_boot = importlib.util.module_from_spec(_lp64_boot_spec)
+_lp64_boot_spec.loader.exec_module(lp64_boot)
+REFUSAL_MARKERS = lp64_boot.REFUSAL_MARKERS
 
 
 def sanitizer_env(leaks):
@@ -103,11 +111,15 @@ def mission_smoke(executable, rom, output, frames, jobs, leaks=False):
                 result = subprocess.run([str(child)], cwd=folder, env=env, stdout=log,
                                         stderr=subprocess.STDOUT, timeout=300 if leaks else 120)
             text = log_path.read_text(errors='replace')
+            refusal = next((line for line in text.splitlines()
+                            if any(marker in line for marker in REFUSAL_MARKERS)), None)
             passed = (result.returncode == 0 and 'GE_STAGE direct launch:' in text
                       and f'frame limit reached: frames={frames}' in text
-                      and not any(error in text for error in SANITIZER_ERRORS))
-            print(stage + (': PASS' if passed else ': FAIL'), flush=True)
-            return dict(stage=stage, exit=result.returncode, passed=passed, log=str(log_path))
+                      and not any(error in text for error in SANITIZER_ERRORS)
+                      and refusal is None)
+            verdict = ': PASS' if passed else ': FAIL' + (f' ({refusal})' if refusal else '')
+            print(stage + verdict, flush=True)
+            return dict(stage=stage, exit=result.returncode, passed=passed, refusal=refusal, log=str(log_path))
 
     with ThreadPoolExecutor(max_workers=jobs) as pool:
         results = list(pool.map(check, MISSIONS))
