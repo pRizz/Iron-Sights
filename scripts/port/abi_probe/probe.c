@@ -222,6 +222,73 @@ MODEL_ALIAS(struct player, something_with_watch_object_instance, watch_scale_des
 MODEL_ALIAS(struct player, something_with_watch_object_instance, pause_watch_related_adjust, animframe1);
 MODEL_ALIAS(struct hand, field_B68, mtxlist, render_pos);
 #endif
+/* The player's gait model run (bondview.h, model to field_650): at 32 bits
+ * each named word is the Model field it overlays. At 64 bits the Model is
+ * larger and the names land elsewhere, so each is SAME (the names still meet
+ * at 64 bits), BRANCHED (every reader takes gait_model_storage's field at 64
+ * bits: bondhead.c) or UNREAD (no code names it; test_abi_probe.sh fails on a
+ * reader). The 64-bit assertion fails for any name marked SAME that is not. */
+#define GAIT_SAME 0
+#define GAIT_BRANCHED 1
+#define GAIT_UNREAD 2
+#define GAIT_OFF(name) (offsetof(struct player, name) - offsetof(struct player, model))
+#if IS_64_BIT
+#define GAIT_RUN(name, field, how) \
+    _Static_assert((how) != GAIT_SAME || GAIT_OFF(name) == offsetof(Model, field), "gait run " #name " is Model." #field)
+#else
+#define GAIT_RUN(name, field, how) \
+    _Static_assert(GAIT_OFF(name) == offsetof(Model, field), "gait run " #name " is Model." #field)
+#endif
+GAIT_RUN(model, unk00, GAIT_SAME);
+GAIT_RUN(field_59C, chr, GAIT_SAME);
+GAIT_RUN(field_5A0, obj, GAIT_UNREAD);
+GAIT_RUN(field_5A4, render_pos, GAIT_UNREAD);
+GAIT_RUN(field_5A8, datas, GAIT_UNREAD);
+GAIT_RUN(field_5AC, scale, GAIT_UNREAD);
+GAIT_RUN(field_5B0, attachedto, GAIT_UNREAD);
+GAIT_RUN(field_5B4, attachedto_objinst, GAIT_UNREAD);
+GAIT_RUN(field_5B8, anim, GAIT_UNREAD);
+GAIT_RUN(animFlipFlag, gunhand, GAIT_BRANCHED);
+GAIT_RUN(field_5BD, unk25, GAIT_UNREAD);
+GAIT_RUN(field_5BE, animlooping, GAIT_UNREAD);
+GAIT_RUN(field_5BF, unk27, GAIT_UNREAD);
+GAIT_RUN(field_5C0, animframe1, GAIT_BRANCHED);
+GAIT_RUN(field_5C4, unk2c, GAIT_UNREAD);
+GAIT_RUN(field_5C8, framea, GAIT_UNREAD);
+GAIT_RUN(field_5CC, unk34, GAIT_UNREAD);
+GAIT_RUN(field_5D0, unk38, GAIT_UNREAD);
+GAIT_RUN(field_5D4, endframe, GAIT_UNREAD);
+GAIT_RUN(field_5D8, speed, GAIT_UNREAD);
+GAIT_RUN(field_5DC, newspeed, GAIT_UNREAD);
+GAIT_RUN(field_5E0, oldspeed, GAIT_UNREAD);
+GAIT_RUN(field_5E4, timespeed, GAIT_UNREAD);
+GAIT_RUN(field_5E8, elapsespeed, GAIT_UNREAD);
+GAIT_RUN(field_5EC, anim2, GAIT_UNREAD);
+GAIT_RUN(field_5F0, animframe2, GAIT_UNREAD);
+GAIT_RUN(field_5F4, unk5c, GAIT_UNREAD);
+GAIT_RUN(field_5F8, frame2a, GAIT_UNREAD);
+GAIT_RUN(field_5FC, unk64, GAIT_UNREAD);
+GAIT_RUN(field_600, unk68, GAIT_UNREAD);
+GAIT_RUN(field_604, unk6c, GAIT_UNREAD);
+GAIT_RUN(field_608, speed2, GAIT_UNREAD);
+GAIT_RUN(field_60C, unk74, GAIT_UNREAD);
+GAIT_RUN(field_610, unk78, GAIT_UNREAD);
+GAIT_RUN(field_614, unk7c, GAIT_UNREAD);
+GAIT_RUN(field_618, unk80, GAIT_UNREAD);
+GAIT_RUN(field_61C, unk84, GAIT_UNREAD);
+GAIT_RUN(field_620, unk88, GAIT_UNREAD);
+GAIT_RUN(field_624, unk8c, GAIT_UNREAD);
+GAIT_RUN(field_628, animloopframe, GAIT_UNREAD);
+GAIT_RUN(field_62C, animloopmerge, GAIT_UNREAD);
+GAIT_RUN(field_630, animflipfunc, GAIT_UNREAD);
+GAIT_RUN(field_634, unk9c, GAIT_UNREAD);
+GAIT_RUN(field_638, unka0, GAIT_UNREAD);
+GAIT_RUN(field_63C, playspeed, GAIT_UNREAD);
+GAIT_RUN(field_640, animrate, GAIT_UNREAD);
+GAIT_RUN(field_644, unkac, GAIT_UNREAD);
+GAIT_RUN(field_648, unkb0, GAIT_UNREAD);
+GAIT_RUN(field_64C, unkb4, GAIT_UNREAD);
+GAIT_RUN(field_650, anim_translation_scale, GAIT_UNREAD);
 /* Model read-write data (LP64-003 final review): a record covers
  * MODEL_RWDATA_UNITS slots of Model.datas, and no record takes more slots at
  * 64 bits than at 32, so the runs sized for the N64's counts hold every model

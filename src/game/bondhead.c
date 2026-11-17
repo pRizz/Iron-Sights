@@ -44,7 +44,12 @@ void bheadSetdamp(f32 headdamp);
 
 void bheadFlipAnimation()
 {
+#if IS_64_BIT
+    /* animFlipFlag is Model.gunhand only in the 32-bit run (bondview.h) */
+    g_CurrentPlayer->gait_model_storage.gunhand = !g_CurrentPlayer->gait_model_storage.gunhand;
+#else
     g_CurrentPlayer->animFlipFlag = !g_CurrentPlayer->animFlipFlag;
+#endif
 }
 
 void bheadUpdateIdleRoll()
@@ -483,8 +488,14 @@ void bheadAdjustAnimation(f32 speed)
 
                 if (g_CurrentPlayer->headanim >= 0)
                 {
+#if IS_64_BIT
+                    /* field_5C0 is Model.animframe1 only in the 32-bit run */
+                    startframe = (g_CurrentPlayer->gait_model_storage.animframe1 - g_BondMoveAnimationSetup[g_CurrentPlayer->headanim].loopframe)
+                        / (g_BondMoveAnimationSetup[g_CurrentPlayer->headanim].endframe - g_BondMoveAnimationSetup[g_CurrentPlayer->headanim].loopframe);
+#else
                     startframe = (g_CurrentPlayer->field_5C0 - g_BondMoveAnimationSetup[g_CurrentPlayer->headanim].loopframe)
                         / (g_BondMoveAnimationSetup[g_CurrentPlayer->headanim].endframe - g_BondMoveAnimationSetup[g_CurrentPlayer->headanim].loopframe);
+#endif
 
                     startframe = g_BondMoveAnimationSetup[i].loopframe + ((g_BondMoveAnimationSetup[i].endframe - g_BondMoveAnimationSetup[i].loopframe) * startframe);
                 }
@@ -493,7 +504,11 @@ void bheadAdjustAnimation(f32 speed)
                     &g_CurrentPlayer->model,
                     // match hack: addu address backwards
                     ANIM_FROM_TABLE((s32)g_BondMoveAnimationSetup[i].anim_id),
+#if IS_64_BIT
+                    (s32) g_CurrentPlayer->gait_model_storage.gunhand,
+#else
                     (s32) g_CurrentPlayer->animFlipFlag,
+#endif
                     startframe,
                     0.5f,
                     12.0f);
