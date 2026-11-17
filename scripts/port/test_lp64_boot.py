@@ -269,7 +269,7 @@ class RunMode(StandIns):
 
     def test_clean_run_with_status_zero_passes(self):
         # Arrange
-        exe = self.fake('ran', BOOT + ADDRESS, 0)
+        exe = self.fake('ran', RAN, 0)
 
         # Act
         status, out = self.run_mode(str(exe))
@@ -277,6 +277,28 @@ class RunMode(StandIns):
         # Assert
         self.assertEqual(status, 0, out)
         self.assertIn(f'OK: ran 600 frames ({exe.resolve()})', out)
+
+    def test_exit_zero_without_the_frame_limit_line_fails(self):
+        # Arrange: a run that quits early, cleanly, before its frames are up.
+        exe = self.fake('early', BOOT + ADDRESS, 0)
+
+        # Act
+        status, out = self.run_mode(str(exe))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('no "ge: frame limit reached: frames=600" line', out)
+
+    def test_frame_limit_line_with_another_count_fails(self):
+        # Arrange
+        exe = self.fake('short', BOOT + ADDRESS + 'ge: frame limit reached: frames=120 gfxtasks=120\n', 0)
+
+        # Act
+        status, out = self.run_mode(str(exe))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('ran 120 frames, expected 600', out)
 
     def test_stop_at_a_class_fails(self):
         # Arrange
@@ -357,7 +379,7 @@ class RunMode(StandIns):
 
     def test_frames_default_to_600(self):
         # Arrange
-        exe = self.fake('frames', BOOT + ADDRESS, 0, script='[ "$GE_FRAMES" = 600 ] || exit 3')
+        exe = self.fake('frames', RAN, 0, script='[ "$GE_FRAMES" = 600 ] || exit 3')
 
         # Act
         status, out = self.run_mode(str(exe))
@@ -367,7 +389,8 @@ class RunMode(StandIns):
 
     def test_frames_option_sets_ge_frames_and_the_verdict(self):
         # Arrange
-        exe = self.fake('frames', BOOT + ADDRESS, 0, script='[ "$GE_FRAMES" = 90 ] || exit 3')
+        exe = self.fake('frames', BOOT + ADDRESS + 'ge: frame limit reached: frames=90 gfxtasks=90\n', 0,
+                        script='[ "$GE_FRAMES" = 90 ] || exit 3')
 
         # Act
         status, out = self.run_mode('--frames', '90', str(exe))

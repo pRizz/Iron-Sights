@@ -7,7 +7,8 @@ only if every run exited with status 5, logged the startup address line, stopped
 class, and logged no fatal signal, no sanitizer report, no `ge: lp64: pool` line (a pool too small
 at 64 bits) and no `ge: lp64: cannot convert` line (a converter's refusal). With --expect-run, for
 an executable that converts every class its run reaches, it passes only if every run exited with
-status 0, logged the address line, and logged no asset-class stop and none of those four.
+status 0, logged the address line and the frame limit line with the expected count (pcsched.c's
+`ge: frame limit reached: frames=N`), and logged no asset-class stop and none of those four.
 
     python3 scripts/port/lp64_boot.py --rom ROM --expect-stop "animation tables" EXECUTABLE...
     python3 scripts/port/lp64_boot.py --rom ROM --expect-run [--frames N] EXECUTABLE...
@@ -38,6 +39,8 @@ RUN_FRAMES = 600
 TAIL_LINES = 20
 ADDRESS_LINE = 'ge: lp64: address space OK'
 STOP_PATTERN = re.compile(r'ge: lp64: stopping: asset class "([^"]+)" has no 64-bit converter yet \(LP64-004\)')
+# pcsched.c prints this, then exits 0, once GE_FRAMES frames have run.
+FRAME_LIMIT_PATTERN = re.compile(r'ge: frame limit reached: frames=(\d+)')
 FATAL_SIGNAL = 'ge: fatal signal'
 SANITIZER_MARKERS = ('runtime error:', 'ERROR: AddressSanitizer', 'ERROR: LeakSanitizer',
                      'ERROR: UndefinedBehaviorSanitizer')
@@ -53,6 +56,7 @@ class BootResult:
     fatal_signal: bool
     sanitizer_errors: list[str] = field(default_factory=list)
     refusals: list[str] = field(default_factory=list)
+    frames_run: int | None = None
 
 
 @dataclass
@@ -76,8 +80,10 @@ class Expectation:
 
 def parse_log(text: str) -> BootResult:
     """Reads a boot log: the address line, the class of the first guard stop, a fatal signal,
-    every sanitizer report line, and every pool or refused-conversion line."""
+    every sanitizer report line, every pool or refused-conversion line, and the frames the frame
+    limit line reports."""
     match = STOP_PATTERN.search(text)
+    frame_limit = FRAME_LIMIT_PATTERN.search(text)
     lines = text.splitlines()
     return BootResult(
         address_ok=any(line.startswith(ADDRESS_LINE) for line in lines),
@@ -85,6 +91,7 @@ def parse_log(text: str) -> BootResult:
         fatal_signal=any(FATAL_SIGNAL in line for line in lines),
         sanitizer_errors=[line for line in lines if any(marker in line for marker in SANITIZER_MARKERS)],
         refusals=[line for line in lines if any(marker in line for marker in REFUSAL_MARKERS)],
+        frames_run=int(frame_limit.group(1)) if frame_limit else None,
     )
 
 
@@ -103,6 +110,10 @@ def problems(status: int | None, result: BootResult, expect: Expectation) -> lis
     if expect.stop_class is None:
         if result.stop_class is not None:
             found.append(f'stopped at "{result.stop_class}", expected to run')
+        if result.frames_run is None:
+            found.append(f'no "ge: frame limit reached: frames={expect.frames}" line')
+        elif result.frames_run != expect.frames:
+            found.append(f'ran {result.frames_run} frames, expected {expect.frames}')
     elif result.stop_class is None:
         found.append(f'no asset-class stop, expected "{expect.stop_class}"')
     elif result.stop_class != expect.stop_class:

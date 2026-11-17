@@ -613,12 +613,6 @@ endif()
 
 add_executable(ge ${GAME_SRC} ${ENGINE_SRC} ${GU_SRC} ${PORT_SRC}
                ${ASSET_LOOSE_SRC} ${ASSET_OBJS} ${FAST3D_SRC})
-if(GE_LP64_ORACLE)
-    # The 32-bit build's -w, for every source but the converters (above).
-    get_target_property(GE_ORACLE_QUIET_SRC ge SOURCES)
-    list(FILTER GE_ORACLE_QUIET_SRC EXCLUDE REGEX "/romconv_[^/]*\\.c$")
-    set_property(SOURCE ${GE_ORACLE_QUIET_SRC} APPEND PROPERTY COMPILE_OPTIONS -w)
-endif()
 include(scripts/port/sentry.cmake)
 # Native player filenames use the fork identity. Keep the `ge` target, logs,
 # profile identities and deployed Wasm runtime filenames stable.
@@ -716,4 +710,13 @@ if(GE_VIDEO AND NOT EMSCRIPTEN)
         COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:ge>/Data
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             ${CMAKE_SOURCE_DIR}/tools/shaders_base.txt $<TARGET_FILE_DIR:ge>/Data/shaders_base.txt)
+endif()
+
+if(GE_LP64_ORACLE)
+    # The 32-bit build's -w, for every source but the converters (above). Last,
+    # so it also reaches the sources added after add_executable (sentry.cmake's
+    # crash adapter).
+    get_target_property(GE_ORACLE_QUIET_SRC ge SOURCES)
+    list(FILTER GE_ORACLE_QUIET_SRC EXCLUDE REGEX "/romconv_[^/]*\\.c$")
+    set_property(SOURCE ${GE_ORACLE_QUIET_SRC} APPEND PROPERTY COMPILE_OPTIONS -w)
 endif()

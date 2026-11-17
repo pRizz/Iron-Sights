@@ -3,6 +3,7 @@
  * pointer width by test_romconv.sh, linked with port/src/romconv_common.c and
  * port/src/port_lp64.c (the class names). Every input is written here. */
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include "port_romconv.h"
@@ -132,15 +133,124 @@ static int testScratchIsWritableAndGrows(void)
 
 static int testReservedScratchDoesNotMove(void)
 {
-    // Arrange
+    // Arrange: the test before leaves the buffer at 200,000 bytes, so a request
+    // of 262,144 reallocates unless the reserve grew it. A freed block's address
+    // can come straight back (both sizes are mmap'd), so the check is also that
+    // the bytes written through it survive: a fresh mapping is zeroed, and a
+    // recycled heap block starts with the allocator's free-list links.
     portConvScratchReserve(262144);
+    u8 *reserved = portConvScratch(1);
+    for (u32 i = 0; i < 64; i++)
+    {
+        reserved[i] = (u8) (0xA5 ^ i);
+    }
 
     // Act
-    u8 *first = portConvScratch(262144);
-    u8 *second = portConvScratch(262144);
+    u8 *full = portConvScratch(262144);
 
     // Assert
-    return expect(first != NULL && first == second, "after portConvScratchReserve(262144) a request of 262,144 does not move");
+    int kept = full == reserved;
+    for (u32 i = 0; kept && i < 64; i++)
+    {
+        kept = full[i] == (u8) (0xA5 ^ i);
+    }
+    return expect(reserved != NULL && kept,
+            "after portConvScratchReserve(262144) a request of 262,144 returns the reserved block untouched");
+}
+
+static int testMapMissesAtAndPastTheEnd(void)
+{
+    // Arrange
+    struct PortConvMap map;
+    u32 moved = 0x5555;
+    int ok = portConvMapInit(&map, 64);
+    portConvMapPut(&map, 0x40, 0x10);
+    portConvMapPut(&map, 0x44, 0x10);
+
+    // Act
+    int foundEnd = portConvMapGet(&map, 0x40, &moved);
+    int foundPast = portConvMapGet(&map, 0x44, &moved);
+    int foundLast = portConvMapGet(&map, 0x3c, &moved);
+
+    // Assert
+    portConvMapFree(&map);
+    return expect(ok && !foundEnd && !foundPast && !foundLast && moved == 0x5555,
+            "a 64-byte map misses 0x40 and 0x44, and putting them writes no slot");
+}
+
+static int testMapMissesAHalfWordOffset(void)
+{
+    // Arrange
+    struct PortConvMap map;
+    u32 moved = 0x5555;
+    int ok = portConvMapInit(&map, 64);
+    portConvMapPut(&map, 0x08, 0x40);
+    portConvMapPut(&map, 0x0a, 0x50);
+
+    // Act
+    int foundHalf = portConvMapGet(&map, 0x0a, &moved);
+    int foundWord = portConvMapGet(&map, 0x08, &moved);
+
+    // Assert
+    portConvMapFree(&map);
+    return expect(ok && !foundHalf && foundWord && moved == 0x40,
+            "0x0a (a multiple of 2, not of 4) misses and does not alias 0x08");
+}
+
+static int testReservedMapReusesItsStorage(void)
+{
+    // Arrange: the scratch test above reserved 262,144 bytes, which also sizes
+    // the map's store for a file that large.
+    struct PortConvMap small;
+    struct PortConvMap large;
+    int okSmall = portConvMapInit(&small, 64);
+    u32 *smallStore = small.newOffset;
+    portConvMapFree(&small);
+
+    // Act
+    int okLarge = portConvMapInit(&large, 0x40000);
+    u32 *largeStore = large.newOffset;
+    portConvMapFree(&large);
+
+    // Assert
+    return expect(okSmall && okLarge && smallStore != NULL && largeStore == smallStore,
+            "after the reserve, maps of 64 and 0x40000 bytes use the same storage");
+}
+
+static int testSecondLiveMapIsRefused(void)
+{
+    // Arrange
+    struct PortConvMap first;
+    struct PortConvMap second;
+    int okFirst = portConvMapInit(&first, 64);
+    s_Log[0] = '\0';
+
+    // Act
+    int okSecond = portConvMapInit(&second, 64);
+
+    // Assert
+    portConvMapFree(&second);
+    portConvMapFree(&first);
+    return expect(okFirst && !okSecond && second.slots == 0
+            && sameText(s_Log, "ge: lp64: converter map: a second map while one is in use\n"),
+            "a second map while one is live fails, named, and the first is untouched");
+}
+
+static int testMapRefusesASizeItCannotHold(void)
+{
+#if UINTPTR_MAX == 0xFFFFFFFFu
+    // Arrange
+    struct PortConvMap map;
+
+    // Act
+    int ok = portConvMapInit(&map, 0xFFFFFFFDu);
+
+    // Assert
+    portConvMapFree(&map);
+    return expect(!ok && map.slots == 0, "at 32 bits a map of 0xFFFFFFFD bytes is refused, not wrapped");
+#else
+    return 0; /* at 64 bits the slot array's size cannot wrap */
+#endif
 }
 
 static int testRefuseLogsTheClassFileAndReason(void)
@@ -167,6 +277,11 @@ int main(void)
     failures += testMapMissesAnOddOffset();
     failures += testScratchIsWritableAndGrows();
     failures += testReservedScratchDoesNotMove();
+    failures += testMapMissesAtAndPastTheEnd();
+    failures += testMapMissesAHalfWordOffset();
+    failures += testReservedMapReusesItsStorage();
+    failures += testSecondLiveMapIsRefused();
+    failures += testMapRefusesASizeItCannotHold();
     failures += testRefuseLogsTheClassFileAndReason();
     return failures == 0 ? 0 : 1;
 }

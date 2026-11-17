@@ -252,8 +252,9 @@ pass its isolated executable rather than rebuilding an active player binary.
   /rom/baserom.u.z64 --classes "A,B" build/lp64/oracle/IronSights` (no class
   is converted yet, so today `--classes ""`). `scripts/port/lp64_boot.py
   --expect-stop NAME` passes a 64-bit executable that stops at class NAME;
-  `--expect-run [--frames N]` one that runs N frames (600 by default) and
-  exits 0 with no stop, pool or `cannot convert` line.
+  `--expect-run [--frames N]` one that runs N frames (600 by default),
+  logging `ge: frame limit reached: frames=N`, and exits 0 with no stop,
+  pool or `cannot convert` line.
 - At `GE_POINTER_BITS=64`, C and C++ that mix pointers with 32-bit integers do
   not compile: `CMakeLists.txt` gives 64-bit C `-Werror=int-conversion
   -Werror=pointer-to-int-cast -Werror=int-to-pointer-cast` and 64-bit C++

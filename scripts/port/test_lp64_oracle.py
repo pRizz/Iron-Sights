@@ -8,6 +8,7 @@ from pathlib import Path
 import stat
 import tempfile
 import unittest
+from unittest import mock
 
 spec = importlib.util.spec_from_file_location('lp64_oracle', Path(__file__).with_name('lp64_oracle.py'))
 oracle = importlib.util.module_from_spec(spec)
@@ -195,6 +196,18 @@ class CommandLine(unittest.TestCase):
         # Assert
         self.assertEqual(status, 1, out)
         self.assertIn('dam: FAIL', out)
+
+    def test_a_mission_log_the_smoke_never_wrote_fails_by_name(self):
+        # Arrange: a smoke that fails before any mission writes its log.
+        exe = self.fake(exit_lines({}), exit_lines({}))
+
+        # Act
+        with mock.patch.object(oracle.audit_buffers, 'mission_smoke', return_value=1):
+            status, out = self.run_main('', exe)
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn(f'dam: no log at {self.folder/"logs"/"dam.log"}', out)
 
 
 if __name__ == '__main__':

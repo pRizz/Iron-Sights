@@ -562,6 +562,7 @@ CI after the push; a red browser build is the task's to fix.
   sanitizer line and no `ge: lp64: pool` or `ge: lp64: cannot convert`
   line; prints `OK: ran N frames (EXECUTABLE)`. `--expect-stop` gains the
   last two refusals as well.
+  *Note (built on 2026-11-16):* by the review of Task 1, `--expect-run` also requires `pcsched.c`'s `ge: frame limit reached: frames=N` with N the expected count, so a run that quits cleanly early fails.
 - `ramromreplay.h`: `#define RAMROM_FILE_HEADER_SIZE 228`, used in place of
   `sizeof(struct ramromfilestructure)` at `ramromreplay.c:287,708,761`.
   *Note (built on 2026-11-16):* Task 1 found that the cart's demo header is 0xE8 bytes, the struct's size at 64 bits and with MinGW (i686 Linux's 228 is the exception), and that playback already steps past it by `RAMROM_HEADER_ROMSIZE` (0xE8, `ramromreplay.c`), so nothing was changed in `ramromreplay`, and `RomDemoHeader` is 0xE8 bytes.
@@ -574,7 +575,7 @@ CI after the push; a red browser build is the task's to fix.
 64-byte file returns what was put, misses an offset never put, and misses
 an odd offset; `portConvScratch(100)` then `(200000)` return writable
 memory; after `portConvScratchReserve(262144)` a request of 262,144 returns
-the same address twice. `test_lp64_oracle.py`: the summing on three sample
+the same address twice. *Note (built on 2026-11-16):* that check passed against a reserve stubbed out (the freed block's address came back), so it also writes bytes through the reserved block and requires them intact. `test_lp64_oracle.py`: the summing on three sample
 logs (all identical; one `differ`; a class with no file) and the command
 line against stand-in scripts. `test_lp64_boot.py`: `--expect-run` passes a
 stand-in that prints the address line and exits 0, and fails one that

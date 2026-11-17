@@ -7,8 +7,10 @@
  * romconv_ rule), never into a shipped 32-bit executable.
  */
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "port_romconv.h"
 
 /* port_console.c: the game's log (stderr plus the tilde console ring). */
@@ -54,26 +56,96 @@ u8 *portConvScratch(u32 bytes)
     return s_Scratch;
 }
 
-void portConvScratchReserve(u32 bytes)
+/* ==== the offset map ===================================================
+ *
+ * Every map uses one grow-only store, so that once the reserve has sized it
+ * converting a file allocates nothing. Converters run one file at a time, so
+ * only one map may be live; a second Init while one is refuses, by name.
+ */
+
+static u32 *s_MapOffsets;
+static u8 *s_MapPresent;
+static u32 s_MapCapacity; /* slots */
+static int s_MapLive;
+
+/* The slots a file of FILESIZE bytes needs, or 0 with *SLOTS untouched when
+ * their arrays' byte sizes would not fit a size_t (only at 32 bits). */
+static int convMapSlots(u32 filesize, u32 *slots)
 {
-    (void) portConvScratch(bytes);
+    u32 needed = filesize / 4 + (filesize % 4 != 0);
+
+#if SIZE_MAX / 4 < 0x40000000u /* a 4 GiB file's slots, in bytes, overflow */
+    if ((size_t) needed > SIZE_MAX / sizeof(u32))
+    {
+        return 0;
+    }
+#endif
+    *slots = needed;
+    return 1;
 }
 
-/* ==== the offset map =================================================== */
+static int convMapGrow(u32 slots)
+{
+    u32 *offsets;
+    u8 *present;
+    u32 size = slots == 0 ? 1 : slots;
+
+    if (size <= s_MapCapacity)
+    {
+        return 1;
+    }
+    free(s_MapOffsets);
+    free(s_MapPresent);
+    s_MapOffsets = NULL;
+    s_MapPresent = NULL;
+    s_MapCapacity = 0;
+    offsets = (u32 *) malloc((size_t) size * sizeof(u32));
+    present = (u8 *) malloc(size);
+    if (offsets == NULL || present == NULL)
+    {
+        free(offsets);
+        free(present);
+        return 0;
+    }
+    s_MapOffsets = offsets;
+    s_MapPresent = present;
+    s_MapCapacity = size;
+    return 1;
+}
+
+void portConvScratchReserve(u32 bytes)
+{
+    u32 slots;
+
+    (void) portConvScratch(bytes);
+    if (!convMapSlots(bytes, &slots) || !convMapGrow(slots))
+    {
+        portConLogf("ge: lp64: converter map: cannot reserve %u bytes\n", bytes);
+        exit(EXIT_FAILURE);
+    }
+}
 
 int portConvMapInit(struct PortConvMap *map, u32 filesize)
 {
-    u32 slots = filesize / 4 + (filesize % 4 != 0);
+    u32 slots;
 
+    map->newOffset = NULL;
+    map->present = NULL;
     map->slots = 0;
-    map->newOffset = (u32 *) malloc((size_t) (slots == 0 ? 1 : slots) * sizeof(u32));
-    map->present = (u8 *) calloc(slots == 0 ? 1 : slots, 1);
-    if (map->newOffset == NULL || map->present == NULL)
+    if (s_MapLive)
     {
-        portConvMapFree(map);
+        portConLogf("ge: lp64: converter map: a second map while one is in use\n");
         return 0;
     }
+    if (!convMapSlots(filesize, &slots) || !convMapGrow(slots))
+    {
+        return 0;
+    }
+    memset(s_MapPresent, 0, slots);
+    map->newOffset = s_MapOffsets;
+    map->present = s_MapPresent;
     map->slots = slots;
+    s_MapLive = 1;
     return 1;
 }
 
@@ -113,8 +185,11 @@ int portConvMapGet(const struct PortConvMap *map, u32 old, u32 *to)
 
 void portConvMapFree(struct PortConvMap *map)
 {
-    free(map->newOffset);
-    free(map->present);
+    /* The store stays for the next map; only the live one gives it back. */
+    if (map->present != NULL && map->present == s_MapPresent)
+    {
+        s_MapLive = 0;
+    }
     map->newOffset = NULL;
     map->present = NULL;
     map->slots = 0;

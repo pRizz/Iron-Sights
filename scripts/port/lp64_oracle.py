@@ -85,7 +85,11 @@ def run_boot(executable: Path, rom: Path, log_path: Path) -> int | None:
 
 
 def collect(label: str, log_path: Path, totals: Counts, failures: list[str]) -> Counts:
-    """TOTALS with LOG_PATH's exit lines added; a log without them is a failure named LABEL."""
+    """TOTALS with LOG_PATH's exit lines added; a log that is missing or lacks them is a failure
+    named LABEL."""
+    if not log_path.is_file():
+        failures.append(f'{label}: no log at {log_path}')
+        return totals
     run = summarize(log_path.read_text(errors='replace'))
     if not run:
         failures.append(f'{label}: no oracle exit lines in {log_path} (not a -DGE_LP64_ORACLE=ON build?)')

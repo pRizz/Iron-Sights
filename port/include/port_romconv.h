@@ -44,17 +44,20 @@ u32 portConvBe32(const u8 *p);
 u8 *portConvScratch(u32 bytes);
 
 /**
- * Grows the scratch buffer to at least BYTES now, so that no later request up
- * to that size allocates. romdataInit calls it once with 262,144: the largest
- * stock model file is 43,120 bytes and the largest setup file 103,424, so no
- * model or setup load during play allocates ("Load before play").
+ * Grows the scratch buffer to at least BYTES now, and the offset map's store
+ * to a file of BYTES, so that no later scratch request or map up to that size
+ * allocates. romdataInit calls it once with 262,144: the largest stock model
+ * file is 43,120 bytes and the largest setup file 103,424, so no model or
+ * setup load during play allocates ("Load before play").
  */
 void portConvScratchReserve(u32 bytes);
 
 /**
  * Where each record of a file moved: one slot for each 4 bytes of the file,
  * holding the record's new offset. Converters look every reference up here,
- * so an offset the remap missed is a miss, never a stale address.
+ * so an offset the remap missed is a miss, never a stale address. The grain is
+ * 4 bytes: a reference that can point at any byte is remapped as its owning
+ * block's new offset plus the distance into it.
  */
 struct PortConvMap
 {
@@ -63,8 +66,14 @@ struct PortConvMap
     u32 slots;
 };
 
-/** Sets MAP up for a file of FILESIZE bytes, every slot empty. Returns 1, or
- * 0 when its memory cannot be had (MAP is then empty and safe to free). */
+/**
+ * Sets MAP up for a file of FILESIZE bytes, every slot empty, in the one store
+ * all maps share. Returns 1, or 0 (MAP then empty and safe to free) when the
+ * memory cannot be had, when FILESIZE's slots cannot be addressed (a file of
+ * 0xFFFFFFFD bytes or more at 32 bits), or when another map is still live:
+ * converters handle one file at a time, and that case logs
+ * "ge: lp64: converter map: a second map while one is in use".
+ */
 int portConvMapInit(struct PortConvMap *map, u32 filesize);
 
 /**
@@ -81,7 +90,8 @@ void portConvMapPut(struct PortConvMap *map, u32 old, u32 to);
  */
 int portConvMapGet(const struct PortConvMap *map, u32 old, u32 *to);
 
-/** Releases MAP's memory and empties it; safe on an empty map. */
+/** Empties MAP and, if it is the live map, gives the store back for the next
+ * one (the store is kept, not freed); safe on an empty map. */
 void portConvMapFree(struct PortConvMap *map);
 
 /**

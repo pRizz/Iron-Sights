@@ -254,5 +254,8 @@ if command_has "${conv32[1]}" -w; then
 fi
 mapfile -t other32 < <(entry_command oracle port/src/port_lp64.c)
 command_has "${other32[1]}" -w || fail "oracle port_lp64.c lost -w"
-echo "ok 7e: converter sources make incompatible pointer types errors at both widths; the oracle build keeps -w elsewhere"
+# sentry.cmake adds the crash adapter after add_executable; it needs -w too.
+mapfile -t adapter32 < <(entry_command oracle port/crash/reporting_linux.c)
+command_has "${adapter32[1]}" -w || fail "oracle port/crash/reporting_linux.c lacks -w"
+echo "ok 7e: converter sources make incompatible pointer types errors at both widths; the oracle build keeps -w elsewhere, the crash adapter included"
 echo "Pointer-bits configure checks passed"
