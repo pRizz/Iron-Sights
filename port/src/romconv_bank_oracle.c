@@ -252,9 +252,10 @@ void portBankOracle(const char *name, const ALBankFile *inplace, const u8 *inpla
         u8 *tablecopy, u32 tablesize)
 {
     char why[256];
-    u32 needed = portBankConvertedSize(pristine, size);
+    u32 needed = portBankConvertedSize(pristine, size, tablesize, name);
     u8 *out = needed != 0 ? (u8 *) malloc(needed) : NULL;
-    ALBankFile *converted = out != NULL ? portBankConvert(pristine, size, tablecopy, out, needed) : NULL;
+    ALBankFile *converted =
+            out != NULL ? portBankConvert(pristine, size, tablecopy, tablesize, out, needed, name) : NULL;
     struct PortBankGraph a = {inplace, (const u8 *) inplace, size, inplacetable};
     struct PortBankGraph b = {converted, pristine, size, tablecopy};
     u32 i;

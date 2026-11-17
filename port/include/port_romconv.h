@@ -195,14 +195,17 @@ s32 portTextBankConvert(u8 *data, u32 size, uintptr_t base, const char *bank, co
 
 /**
  * The bytes of run-time records portBankConvert writes for the big-endian bank
- * file FILE (SIZE bytes, port_romlayout.h's RomBankFile): one ALBankFile and
- * one record for each distinct ALBank, ALInstrument, ALSound and ALWaveTable
- * the file reaches, each rounded up to 8. Reads only. Returns 0 after
- * portConvRefuse when the revision is not AL_BANK_VERSION, a count is negative,
- * a record or array runs past the file's end, an offset is not a multiple of
- * 4, or one offset is reached as two kinds of record.
+ * file FILE (SIZE bytes, port_romlayout.h's RomBankFile) whose waves lead into
+ * a wave table of TABLESIZE bytes: one ALBankFile and one record for each
+ * distinct ALBank, ALInstrument, ALSound and ALWaveTable the file reaches, each
+ * rounded up to 8. Reads only. Returns 0 after portConvRefuse, naming NAME (the
+ * bank, as the caller knows it), when the revision is not AL_BANK_VERSION, a
+ * count is negative, a record or array runs past the file's end, an offset is
+ * not a multiple of 4, one offset is reached as two kinds of record, two
+ * records reached share a byte (an instrument's or bank's offset array is part
+ * of its record), or an ADPCM or raw wave's base + len passes TABLESIZE.
  */
-u32 portBankConvertedSize(const u8 *file, u32 size);
+u32 portBankConvertedSize(const u8 *file, u32 size, u32 tablesize, const char *name);
 
 /**
  * Builds the run-time graph of the bank file FILE (SIZE bytes) in OUT (OUTSIZE
@@ -211,21 +214,22 @@ u32 portBankConvertedSize(const u8 *file, u32 size);
  * envelopes, key maps, ADPCM books and loops stay in FILE and are turned to
  * native byte order there, once each, as the 32-bit alBnkfNew does. A wave's
  * base is TABLE + its offset, and a 16-bit raw wave's samples are swapped in
- * TABLE, once a base. An instrument or bank offset of 0 gives a pointer to
- * FILE itself and is not followed, as alBnkfNew does.
+ * TABLE (TABLESIZE bytes), once a base. An instrument or bank offset of 0 gives
+ * a pointer to FILE itself and is not followed, as alBnkfNew does.
  *
- * Returns NULL after portConvRefuse, having written nothing to FILE, TABLE or
- * OUT, when portBankConvertedSize refuses, when OUTSIZE is less than it, or
- * when OUT is not 8-byte aligned. The file's flags bytes are not read: a
- * record already marked converted is converted again. TABLE's size is not
- * known here and not checked, as at 32 bits.
+ * Returns NULL after portConvRefuse, naming NAME, having written nothing to
+ * FILE, TABLE or OUT, when portBankConvertedSize refuses, when OUTSIZE is less
+ * than it, or when OUT is not 8-byte aligned. The file's flags bytes are not
+ * read: a record already marked converted is converted again.
  */
-ALBankFile *portBankConvert(u8 *file, u32 size, u8 *table, u8 *out, u32 outsize);
+ALBankFile *portBankConvert(u8 *file, u32 size, u8 *table, u32 tablesize, u8 *out, u32 outsize, const char *name);
 
-/** audio_stubs.c, at 64 bits: converts the copied bank file FILE (SIZE bytes)
- * into records allocated from HEAP and returns them; stops the game, naming
- * NAME, when the file is refused. */
-ALBankFile *portBnkfConvert(ALHeap *heap, ALBankFile *file, u32 size, u8 *table, const char *name);
+/** audio_stubs.c, at 64 bits: converts the copied bank file FILE (SIZE bytes),
+ * whose wave table TABLE is the ROM segment TBLNAME, into records allocated
+ * from HEAP and returns them; stops the game, naming NAME, when the file is
+ * refused or TABLE is not that segment. */
+ALBankFile *portBnkfConvert(ALHeap *heap, ALBankFile *file, u32 size, u8 *table, const char *name,
+        const char *tblname);
 
 #ifdef GE_LP64_ORACLE
 /** One bank graph for portBankGraphsEqual: its ALBankFile, the file image its

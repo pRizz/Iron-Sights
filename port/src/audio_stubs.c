@@ -31,10 +31,10 @@
 #if IS_64_BIT || defined(GE_LP64_ORACLE)
 #include <stdlib.h>
 #include "port_romconv.h" /* LP64-004: the audio bank converter */
+#include "romdata.h"      /* romdataSeg: the wave table's size */
 #endif
 #ifdef GE_LP64_ORACLE
 #include "port_lp64_oracle.h"
-#include "romdata.h" /* romdataSeg: the wave table's size */
 #endif
 
 /* ==== AUDIO PHASE 1c ===================================================== *
@@ -306,13 +306,21 @@ void portBnkfOracle(ALBankFile *file, u32 size, u8 *table, const char *name, con
 extern void sysFatalError(const char *format, ...);
 extern void portConLogf(const char *fmt, ...);
 
-ALBankFile *portBnkfConvert(ALHeap *heap, ALBankFile *file, u32 size, u8 *table, const char *name)
+ALBankFile *portBnkfConvert(ALHeap *heap, ALBankFile *file, u32 size, u8 *table, const char *name,
+        const char *tblname)
 {
-    u32 needed = portBankConvertedSize((const u8 *) file, size);
+    u32 tablesize = 0;
+    const u8 *segment = romdataSeg(tblname, &tablesize);
+    u32 needed;
     ALBankFile *converted = NULL;
 
+    if (segment != table) {
+        sysFatalError("The audio bank %s's wave table is not the ROM segment %s", name, tblname);
+    }
+    needed = portBankConvertedSize((const u8 *) file, size, tablesize, name);
     if (needed != 0) {
-        converted = portBankConvert((u8 *) file, size, table, (u8 *) alHeapAlloc(heap, 1, (s32) needed), needed);
+        converted = portBankConvert((u8 *) file, size, table, tablesize, (u8 *) alHeapAlloc(heap, 1, (s32) needed),
+                needed, name);
     }
     if (converted == NULL) {
         sysFatalError("Cannot convert the audio bank %s", name);

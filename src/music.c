@@ -783,7 +783,7 @@ void musicSeqPlayerInit(void)
         sfxBank = alHeapAlloc(&g_musicHeap, 1, size);
         romCopy(sfxBank, &_sfxctlSegmentRomStart, size);
 #if IS_64_BIT
-        sfxBank = portBnkfConvert(&g_musicHeap, sfxBank, size, (u8 *)&_sfxtblSegmentRomStart, "sfxctl");
+        sfxBank = portBnkfConvert(&g_musicHeap, sfxBank, size, (u8 *)&_sfxtblSegmentRomStart, "sfxctl", "sfxtbl");
 #elif defined(GE_LP64_ORACLE)
         portBnkfOracle(sfxBank, size, (u8 *)&_sfxtblSegmentRomStart, "sfxctl", "sfxtbl");
 #else
@@ -800,7 +800,7 @@ void musicSeqPlayerInit(void)
         romCopy(instrumentBank, &_instrumentsctlSegmentRomStart, size);
 #if IS_64_BIT
         instrumentBank = portBnkfConvert(&g_musicHeap, instrumentBank, size, (u8 *)&_instrumentstblSegmentRomStart,
-                "instrumentsctl");
+                "instrumentsctl", "instrumentstbl");
 #elif defined(GE_LP64_ORACLE)
         portBnkfOracle(instrumentBank, size, (u8 *)&_instrumentstblSegmentRomStart, "instrumentsctl", "instrumentstbl");
 #else

@@ -57,8 +57,12 @@ for width in $widths; do
     build "$work/text-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_text.c \
         port/src/romconv_text.c port/src/romconv_common.c
     run "$work/text-$width" "${width}-bit text banks"
-    build "$work/bank-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_bank.c \
-        port/src/romconv_bank.c port/src/romconv_bank_oracle.c port/src/romconv_common.c port/src/port_lp64_oracle.c
+    bank=(scripts/port/test_romconv_bank_fixture.c port/src/romconv_bank.c port/src/romconv_bank_records.c
+        port/src/romconv_bank_oracle.c port/src/romconv_common.c port/src/port_lp64_oracle.c)
+    build "$work/bank-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_bank.c "${bank[@]}"
     run "$work/bank-$width" "${width}-bit audio banks"
+    build "$work/bank-checks-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_bank_checks.c \
+        "${bank[@]}"
+    run "$work/bank-checks-$width" "${width}-bit audio bank input checks"
     echo "test_romconv: PASS (${width}-bit)"
 done

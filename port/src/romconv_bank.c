@@ -9,10 +9,12 @@
  * turned to native byte order there once each, as alBnkfNew does.
  *
  * Measuring and writing walk the graph in one order, so measuring's places
- * are writing's. The offset map holds each record reached, its kind in the
- * low 3 bits of its new offset (an in-file record's entry is its kind alone).
- * Compiled only at 64 bits and in the 32-bit oracle build
- * (romconv_bank_oracle.c compares the two graphs there).
+ * are writing's: no two records may share a byte (portBankClaim,
+ * romconv_bank_records.c), so the byte swaps the write pass makes in the file
+ * never change a byte it reads later. The offset map holds each record
+ * reached, its kind in the low 3 bits of its new offset (an in-file record's
+ * entry is its kind alone). Compiled only at 64 bits and in the 32-bit oracle
+ * build (romconv_bank_oracle.c compares the two graphs there).
  */
 #include <stddef.h>
 #include <stdint.h>
@@ -22,140 +24,17 @@
 #include "platform_info.h"
 #include "port_romconv.h"
 #include "port_romlayout.h"
+#include "romconv_bank_walk.h"
 
-#define BANK_FILE "ctl image"
 #define BANK_ROUND8(n) (((n) + 7u) & ~7u)
-/* The run-time bytes of a record whose pointer ARRAY has COUNT entries. */
-#define BANK_ARRAY_BYTES(type, array, count) ((u32) offsetof(type, array) + (u32) (count) * (u32) sizeof(void *))
-
-enum BankKind
-{
-    KIND_RAWLOOP, /* 0: in-file kinds are stored as their kind alone */
-    KIND_BANK,
-    KIND_INST,
-    KIND_SOUND,
-    KIND_WAVE,
-    KIND_ENVELOPE,
-    KIND_BOOK,
-    KIND_LOOP,
-    KIND_KEYMAP, /* checked, never stored: nothing in it is converted */
-    KIND_HEADER  /* the file's header and bank list, named in messages */
-};
-
-static const char *const kKindNames[] = {
-    "raw loop", "bank", "instrument", "sound", "wave table", "envelope", "ADPCM book", "ADPCM loop", "key map",
-    "bank list",
-};
-
-/* The bytes of each in-file kind, by kind (0 for the built ones). */
-static const u32 kInFileBytes[] = {ROM_BANK_RAWLOOP_BYTES, 0, 0, 0, 0, ROM_BANK_ENVELOPE_BYTES, ROM_BANK_BOOK_HEAD,
-    ROM_BANK_ADPCMLOOP_BYTES, ROM_BANK_KEYMAP_BYTES};
-
-/* Whether KIND's records are built in OUT; the others stay in the file. */
-#define bankKindIsBuilt(kind) ((kind) >= KIND_BANK && (kind) <= KIND_WAVE)
-struct BankWalk
-{
-    u8 *file;
-    u32 size;
-    u8 *table;
-    u8 *out; /* NULL while measuring */
-    u32 cursor;
-    struct PortConvMap map;
-};
-
-#define bankRefuse(...) portConvRefuse(PORT_LP64_AUDIO_BANKS, BANK_FILE, __VA_ARGS__)
-#define bankBe32(w, at) portConvBe32((w)->file + (at))
-#define bankBe16(w, at) ((s16) portConvBe16((w)->file + (at)))
-
-/* Refuses a record of KIND at OFFSET that is not 4-byte aligned or whose
- * BYTES do not lie in the file. */
-static int bankFits(const struct BankWalk *w, u32 offset, u64 bytes, int kind)
-{
-    if (offset % 4 != 0)
-    {
-        bankRefuse("the %s offset 0x%X is not a multiple of 4", kKindNames[kind], offset);
-        return 0;
-    }
-    if (offset > w->size || bytes > w->size - offset)
-    {
-        bankRefuse("the %s at 0x%X needs 0x%llX bytes, past the 0x%X-byte file", kKindNames[kind], offset,
-                (unsigned long long) bytes, w->size);
-        return 0;
-    }
-    return 1;
-}
-
-/* Refuses a negative COUNT in the record of KIND at OFFSET. */
-static int bankCountValid(s32 count, u32 offset, int kind)
-{
-    if (count >= 0)
-    {
-        return 1;
-    }
-    bankRefuse("the %s at 0x%X has count %d", kKindNames[kind], offset, (int) count);
-    return 0;
-}
-
-/* Checks the record of KIND at OFFSET against the file and gives in *BYTES
- * the bytes it takes in OUT (0 for an in-file kind). Reads only. */
-static int bankMeasure(const struct BankWalk *w, u32 offset, int kind, u32 *bytes)
-{
-    s32 count, order, npredictors;
-
-    *bytes = 0;
-    switch (kind)
-    {
-    case KIND_BANK:
-    case KIND_INST:
-    {
-        u32 head = kind == KIND_BANK ? sizeof(RomBank) : sizeof(RomInstrument);
-        u32 field = kind == KIND_BANK ? offsetof(RomBank, instCount) : offsetof(RomInstrument, soundCount);
-
-        if (!bankFits(w, offset, head, kind))
-        {
-            return 0;
-        }
-        count = bankBe16(w, offset + field);
-        if (!bankCountValid(count, offset, kind) || !bankFits(w, offset, head + (u64) count * 4, kind))
-        {
-            return 0;
-        }
-        *bytes = kind == KIND_BANK ? BANK_ARRAY_BYTES(ALBank, instArray, count)
-                                   : BANK_ARRAY_BYTES(ALInstrument, soundArray, count);
-        return 1;
-    }
-    case KIND_SOUND:
-        *bytes = sizeof(ALSound);
-        return bankFits(w, offset, sizeof(RomSound), kind);
-    case KIND_WAVE:
-        *bytes = sizeof(ALWaveTable);
-        return bankFits(w, offset, sizeof(RomWaveTable), kind);
-    default: /* the in-file kinds; a book's entries follow its header */
-        if (!bankFits(w, offset, kInFileBytes[kind], kind))
-        {
-            return 0;
-        }
-        if (kind != KIND_BOOK)
-        {
-            return 1;
-        }
-        order = (s32) bankBe32(w, offset);
-        npredictors = (s32) bankBe32(w, offset + 4);
-        if (order < 0 || npredictors < 0)
-        {
-            bankRefuse("the ADPCM book at 0x%X has order %d and %d predictors", offset, (int) order, (int) npredictors);
-            return 0;
-        }
-        return bankFits(w, offset, ROM_BANK_BOOK_HEAD + (u64) order * (u64) npredictors * 16, kind);
-    }
-}
 
 /* Reaches the record of KIND at OFFSET. A record seen before must be of the
- * same kind; one not seen is checked and, if built, given the next place in
- * OUT. *TO is that place; *FIRST says whether this is the first reach. */
+ * same kind; one not seen is checked, claims its file bytes and, if built, is
+ * given the next place in OUT. *TO is that place; *FIRST says whether this is
+ * the first reach. */
 static int bankReach(struct BankWalk *w, u32 offset, int kind, u32 *to, int *first)
 {
-    u32 entry, bytes;
+    u32 entry, bytes, extent;
 
     *first = 0;
     *to = 0;
@@ -163,20 +42,27 @@ static int bankReach(struct BankWalk *w, u32 offset, int kind, u32 *to, int *fir
     {
         if ((int) (entry & 7) != kind)
         {
-            bankRefuse("offset 0x%X is reached as two kinds of record: %s and %s", offset, kKindNames[entry & 7],
-                    kKindNames[kind]);
+            bankRefuse(w, "offset 0x%X is reached as two kinds of record: %s and %s", offset,
+                    kPortBankKindNames[entry & 7], kPortBankKindNames[kind]);
             return 0;
         }
         *to = entry & ~7u;
         return 1;
     }
-    if (!bankMeasure(w, offset, kind, &bytes))
+    if (!portBankMeasure(w, offset, kind, &bytes, &extent) || !portBankClaim(w, offset, extent, kind))
     {
         return 0;
     }
     if (bytes > 0xFFFFFFF0u - w->cursor)
     {
-        bankRefuse("the run-time records pass 4 GB at the %s at 0x%X", kKindNames[kind], offset);
+        bankRefuse(w, "the run-time records pass 4 GB at the %s at 0x%X", kPortBankKindNames[kind], offset);
+        return 0;
+    }
+    /* A backstop: the claims keep the write pass's bytes the measured ones. */
+    if (w->out != NULL && BANK_ROUND8(bytes) > w->limit - w->cursor)
+    {
+        bankRefuse(w, "the run-time records outgrow the %u bytes measured at the %s at 0x%X", w->limit,
+                kPortBankKindNames[kind], offset);
         return 0;
     }
     if (bankKindIsBuilt(kind))
@@ -187,41 +73,6 @@ static int bankReach(struct BankWalk *w, u32 offset, int kind, u32 *to, int *fir
     portConvMapPut(&w->map, offset, *to | (u32) kind);
     *first = 1;
     return 1;
-}
-
-/* Rewrites COUNT big-endian values of WIDTH bytes (2 or 4) at P in native
- * order. Only while writing. */
-static void bankNative(u8 *p, u32 count, u32 width)
-{
-    u32 i;
-
-    for (i = 0; i < count; i++, p += width)
-    {
-        u32 v32 = width == 4 ? portConvBe32(p) : portConvBe16(p);
-        u16 v16 = (u16) v32;
-
-        memcpy(p, width == 4 ? (const void *) &v32 : (const void *) &v16, width);
-    }
-}
-
-/* Turns the in-file record of KIND at OFFSET to native order, as alBnkfNew
- * does. Called once a record, while writing. */
-static void bankNativeInFile(struct BankWalk *w, u32 offset, int kind)
-{
-    u8 *p = w->file + offset;
-
-    if (kind == KIND_BOOK)
-    {
-        /* order * npredictors * 8 entries, measured to lie in the file */
-        bankNative(p + ROM_BANK_BOOK_HEAD, bankBe32(w, offset) * bankBe32(w, offset + 4) * 8, 2);
-        bankNative(p, 2, 4);
-        return;
-    }
-    bankNative(p, 3, 4); /* an envelope's three times, a loop's start, end and count */
-    if (kind == KIND_LOOP)
-    {
-        bankNative(p + 12, 16, 2);
-    }
 }
 
 static int bankLink(struct BankWalk *w, u32 offset, int kind, void **ptr);
@@ -320,27 +171,6 @@ static int bankWriteSound(struct BankWalk *w, u32 offset, u32 to)
     return 1;
 }
 
-/* Whether a raw wave table other than the one at WAVE, reached before it, has
- * its samples at BASE: alBnkfNew swaps each base's samples once. Every wave
- * table in the map has been written, since each is written when first reached. */
-static int bankRawBaseSwapped(const struct BankWalk *w, u32 wave, u32 base)
-{
-    u32 slot;
-
-    for (slot = 0; slot < w->map.slots; slot++)
-    {
-        u32 at = slot * 4;
-
-        if (w->map.present[slot] && (w->map.newOffset[slot] & 7) == KIND_WAVE && at != wave
-                && w->file[at + offsetof(RomWaveTable, type)] == AL_RAW16_WAVE
-                && bankBe32(w, at + offsetof(RomWaveTable, base)) == base)
-        {
-            return 1;
-        }
-    }
-    return 0;
-}
-
 static int bankWriteWave(struct BankWalk *w, u32 offset, u32 to)
 {
     ALWaveTable *wave = w->out != NULL ? (ALWaveTable *) (w->out + to) : NULL;
@@ -375,13 +205,12 @@ static int bankWriteWave(struct BankWalk *w, u32 offset, u32 to)
     }
     else if (type == AL_RAW16_WAVE)
     {
-        /* The mixer plays native s16; ADPCM is decoded from bytes. */
+        /* The mixer plays native s16; ADPCM is decoded from bytes. The
+         * samples were measured to lie in the table. */
         wave->waveInfo.rawWave.loop = (ALRawLoop *) lp;
-        s32 samples = (s32) len >> 1;
-
-        if (samples > 0 && !bankRawBaseSwapped(w, offset, base))
+        if (portBankRawBaseFirst(w, base))
         {
-            bankNative(wave->base, (u32) samples, 2);
+            portBankNative(wave->base, len >> 1, 2);
         }
     }
     return 1;
@@ -391,13 +220,13 @@ static int bankWriteWave(struct BankWalk *w, u32 offset, u32 to)
  * gives in *PTR its run-time address (NULL while measuring a built kind). */
 static int bankLink(struct BankWalk *w, u32 offset, int kind, void **ptr)
 {
-    u32 to;
+    u32 to, extent;
     int first, ok = 1;
 
     if (kind == KIND_KEYMAP)
     {
         *ptr = w->file + offset;
-        return bankMeasure(w, offset, kind, &to);
+        return portBankMeasure(w, offset, kind, &to, &extent) && portBankClaim(w, offset, extent, kind);
     }
     if (!bankReach(w, offset, kind, &to, &first))
     {
@@ -408,7 +237,7 @@ static int bankLink(struct BankWalk *w, u32 offset, int kind, void **ptr)
         *ptr = w->file + offset;
         if (first && w->out != NULL)
         {
-            bankNativeInFile(w, offset, kind);
+            portBankNativeInFile(w, offset, kind);
         }
         return 1;
     }
@@ -423,6 +252,30 @@ static int bankLink(struct BankWalk *w, u32 offset, int kind, void **ptr)
     return ok;
 }
 
+/* Checks the header and bank list, which claim their bytes, and sets W up. */
+static int bankWalkStart(struct BankWalk *w, s16 *count)
+{
+    if (w->size < sizeof(RomBankFile) || portConvBe16(w->file) != AL_BANK_VERSION)
+    {
+        bankRefuse(w, "revision 0x%04X, not 0x%04X (B1)", w->size < 2 ? 0u : portConvBe16(w->file), AL_BANK_VERSION);
+        return 0;
+    }
+    *count = bankBe16(w, offsetof(RomBankFile, bankCount));
+    if (!portBankCountValid(w, *count, 0, KIND_HEADER)
+            || !portBankFits(w, 0, sizeof(RomBankFile) + (u64) *count * 4, KIND_HEADER) || !portBankChecksInit(w)
+            || !portBankClaim(w, 0, sizeof(RomBankFile) + (u32) *count * 4, KIND_HEADER))
+    {
+        return 0;
+    }
+    if (!portConvMapInit(&w->map, w->size))
+    {
+        bankRefuse(w, "no offset map for the %u-byte file", w->size);
+        return 0;
+    }
+    w->cursor = BANK_ROUND8(BANK_ARRAY_BYTES(ALBankFile, bankArray, *count));
+    return 1;
+}
+
 /* Measures (OUT NULL) or writes the whole graph; W->cursor ends as its size. */
 static int bankWalk(struct BankWalk *w)
 {
@@ -430,22 +283,10 @@ static int bankWalk(struct BankWalk *w)
     s16 count, i;
     int ok = 1;
 
-    if (w->size < sizeof(RomBankFile) || portConvBe16(w->file) != AL_BANK_VERSION)
-    {
-        bankRefuse("revision 0x%04X, not 0x%04X (B1)", w->size < 2 ? 0u : portConvBe16(w->file), AL_BANK_VERSION);
-        return 0;
-    }
-    count = bankBe16(w, offsetof(RomBankFile, bankCount));
-    if (!bankCountValid(count, 0, KIND_HEADER) || !bankFits(w, 0, sizeof(RomBankFile) + (u64) count * 4, KIND_HEADER))
+    if (!bankWalkStart(w, &count))
     {
         return 0;
     }
-    if (!portConvMapInit(&w->map, w->size))
-    {
-        bankRefuse("no offset map for the %u-byte file", w->size);
-        return 0;
-    }
-    w->cursor = BANK_ROUND8(BANK_ARRAY_BYTES(ALBankFile, bankArray, count));
     if (f != NULL)
     {
         f->revision = AL_BANK_VERSION;
@@ -466,34 +307,47 @@ static int bankWalk(struct BankWalk *w)
     return ok;
 }
 
-u32 portBankConvertedSize(const u8 *file, u32 size)
+u32 portBankConvertedSize(const u8 *file, u32 size, u32 tablesize, const char *name)
 {
-    struct BankWalk w = {(u8 *) file, size, NULL, NULL, 0, {NULL, NULL, 0}}; /* measuring writes nothing */
+    struct BankWalk w;
 
+    memset(&w, 0, sizeof(w)); /* OUT and TABLE NULL: measuring writes nothing */
+    w.file = (u8 *) file;
+    w.size = size;
+    w.tablesize = tablesize;
+    w.name = name;
     return bankWalk(&w) ? w.cursor : 0;
 }
 
-ALBankFile *portBankConvert(u8 *file, u32 size, u8 *table, u8 *out, u32 outsize)
+ALBankFile *portBankConvert(u8 *file, u32 size, u8 *table, u32 tablesize, u8 *out, u32 outsize, const char *name)
 {
-    struct BankWalk w = {file, size, table, out, 0, {NULL, NULL, 0}};
-    u32 needed = portBankConvertedSize(file, size);
+    struct BankWalk w;
+    u32 needed = portBankConvertedSize(file, size, tablesize, name);
 
+    memset(&w, 0, sizeof(w));
+    w.file = file;
+    w.size = size;
+    w.table = table;
+    w.tablesize = tablesize;
+    w.name = name;
+    w.out = out;
+    w.limit = needed;
     if (needed == 0)
     {
         return NULL;
     }
     if (needed > outsize)
     {
-        bankRefuse("the run-time records need %u bytes, the buffer has %u", needed, outsize);
+        bankRefuse(&w, "the run-time records need %u bytes, the buffer has %u", needed, outsize);
         return NULL;
     }
     if ((uintptr_t) out % 8 != 0)
     {
-        bankRefuse("the output buffer at %p is not 8-byte aligned", (void *) out);
+        bankRefuse(&w, "the output buffer at %p is not 8-byte aligned", (void *) out);
         return NULL;
     }
     memset(out, 0, needed);
-    /* Measured above, so the walk refuses nothing and ends at NEEDED. */
+    /* The claims keep every record's bytes as measured, so this walk refuses
+     * nothing and ends at NEEDED; bankReach stops it at NEEDED regardless. */
     return bankWalk(&w) ? (ALBankFile *) out : NULL;
 }
-
