@@ -94,6 +94,16 @@ class Narrowing(TreeCase):
         self.assertEqual([line.split(' | ')[0] for line in out.splitlines()],
                          ['a.c:1:7: intptr_t -> u32', 'a.c:2:7: romptr_t -> u32'])
 
+    def test_an_aword_source_is_listed_too(self):
+        # Arrange: an audio command word (PR/abi.h's Aword is uintptr_t at 64 bits)
+        tree = self.build_dir('t', {'a.c': "0\n" + self.conversion('a.c', 5, "'Aword' {aka 'long unsigned int'}",
+                                                                    'u32 x = cmd.words.w1;')})
+        # Act
+        status, out, err = self.run_main('narrowing', tree)
+        # Assert
+        self.assertEqual(status, 0, err)
+        self.assertEqual(out.strip(), 'a.c:5:7: Aword -> u32 | u32 x = cmd.words.w1;')
+
     def test_a_long_source_is_listed_only_with_all(self):
         # Arrange
         tree = self.build_dir('t', {'a.c': "0\n" + self.conversion('a.c', 3, "'long int'")})

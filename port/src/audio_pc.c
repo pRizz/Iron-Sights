@@ -418,7 +418,7 @@ static s32 portAcmdValidate(Acmd *list, s32 count)
     if (!list || count < 0 || count > 3072 * 4) return 0;
 
     for (c = 0; c < count; c++) {
-        u32 w0 = list[c].words.w0;
+        u32 w0 = (u32) list[c].words.w0; /* the opcode word's data is 32 bits */
         /* pointer-sized, as in portAcmdRun: an address whose low word is
          * below 0x01000000 must not read as garbage */
         uintptr_t w1 = list[c].words.w1;
@@ -482,7 +482,7 @@ void portAcmdRun(Acmd *list, s32 count)
 #endif
 
     for (c = 0; c < count; c++) {
-        u32 w0 = list[c].words.w0;
+        u32 w0 = (u32) list[c].words.w0; /* the opcode word's data is 32 bits */
         /* pointer-sized: the address commands hand w1 to memcpy and the
          * mixers as a host pointer */
         uintptr_t w1 = list[c].words.w1;

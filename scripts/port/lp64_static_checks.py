@@ -3,7 +3,8 @@ ordinary C by the 64-bit compile gate.
 
 `narrowing` compiles every C and C++ entry syntax-only with `-Wconversion -Wno-sign-conversion
 -Wno-float-conversion` under `LC_ALL=C` and keeps each implicit conversion whose source type is
-`uintptr_t`, `intptr_t` or `romptr_t`. `--all` adds the other 64-bit source types as a report.
+`uintptr_t`, `intptr_t`, `romptr_t` or `Aword` (`PR/abi.h`'s audio command word, `uintptr_t` at
+64 bits). `--all` adds the other 64-bit source types as a report.
 GCC drops the typedef name after arithmetic, so `(uintptr_t) a + b` narrowed to `u32` shows as
 `long unsigned int` and is found only under `--all`. A file with `#line` directives (`gunfire.c`,
 `gun.c`, `lv.c`, `env.c`) is listed at the compiler's line numbers, which are not its own lines.
@@ -26,7 +27,7 @@ import tempfile
 from typing import Optional
 
 COMPILE_TIMEOUT_SECONDS = 600
-POINTER_SIZED = {'uintptr_t', 'intptr_t', 'romptr_t'}
+POINTER_SIZED = {'uintptr_t', 'intptr_t', 'romptr_t', 'Aword'}  # Aword: PR/abi.h's audio command word
 OTHER_64_BIT = {'long int', 'long unsigned int', 'long long int', 'long long unsigned int', 'size_t',
                 'ptrdiff_t', 'ssize_t', 'u64', 's64', 'uint64_t', 'int64_t', 'Uint64', 'Sint64'}
 NARROWING_FLAGS = ['-Wconversion', '-Wno-sign-conversion', '-Wno-float-conversion', '-Wno-error',
