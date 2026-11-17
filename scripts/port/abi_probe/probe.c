@@ -15,6 +15,7 @@
 #include "game/vtxstore.h"
 #include "game/bondview.h"
 #include "game/model.h"
+#include "game/glass.h"
 #include "port_hostptr.h"
 
 /* Fixed at every width: the renderer reads these as N64 formats. */
@@ -222,6 +223,14 @@ _Static_assert(MODEL_STORAGE_PAD == sizeof(Model) + 0x3f, "bondview2.c's Model s
 _Static_assert(offsetof(struct player, bondheadmatrices) - offsetof(struct player, field_654)
                    >= 31 * sizeof(union ModelRwData *),
                "the player's gait read-write run holds 31 slots");
+/* glass2.c's bullet spark steps its image table by the element and reads its
+ * colour by name (LP64-003 final review): the entry is 12 bytes at 32 bits and
+ * 16 at 64, and the colour moves with the pointer before it. */
+_Static_assert(sizeof(struct sImageTableEntry) == (IS_64_BIT ? 16 : 12), "image table entry stride");
+#if !IS_64_BIT
+OFFSET(s_bullet_spark, unk28, 0x28);
+OFFSET(s_bullet_spark, unk2B, 0x2b);
+#endif
 #if !IS_64_BIT
 /* gunfire.c's render templates are 16 words, one per member in this order
  * (port_model_words.h maps them by member at 64 bits). */

@@ -176,7 +176,7 @@ LP64-004's by the design, whatever the hand-off list said.
 | Sentinel `address & 0x80000000` (`model.c:5916`) | Yes | Tests bit 31 of a host address: arbitrary | file | Task 11 (strict) |
 | Sentinels in `gun.c:1027,1036`, `objecthandler_2.c:411`, `image.c:2758`, `front.c:11799-11817,13177`, `propobj.c:7631`, `initanitable.c:239,248`, `bg.h:32`, `audi.c:439` | Yes | Already full-width unsigned comparisons; correct once `texLoad` stores whole pointers | mixed | Task 6 pins them |
 | Sentinel `< PORTMAX` (`bg.c:1214`) | Yes; the slot is `s32`, not pointer-sized | Cannot hold a host pointer | file | LP64-004 (already in its list) |
-| `sImageTableEntry` stride (12 / 16) | Yes | Compiled-in arrays, indexed in C: consistent | compiled-in | none |
+| `sImageTableEntry` stride (12 / 16) | Yes | Compiled-in arrays, indexed in C: consistent (note from the final review: not everywhere; `glass2.c`'s bullet spark stepped its table by a literal 12 and read its colour at raw byte offsets, fixed in the final review fix wave) | compiled-in | none |
 | `ModelFileTextures` stride (12 / 16) | Yes | `romfile_model.c` walks 12, C indexes 16 | file | LP64-004 (already in its list) |
 | Op11 union (`bondtypes.h:1083-1094`) | Yes | Fields move from 0x40 to 0x80 | file | LP64-004 (moved; see decision 6) |
 | `AnimModelSlot` and `hand.field_B68` viewed as `Model` | Yes | 192 against 264 bytes; also `ModelSlot` (40), `model.c:155` (`0xc0`) and `:85` (`0x20`) | run time | Task 11 (strict) |
