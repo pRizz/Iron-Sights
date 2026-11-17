@@ -88,5 +88,8 @@ for width in $widths; do
     build "$work/model-checks-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} \
         scripts/port/test_romconv_model_checks.c "${model[@]}"
     run "$work/model-checks-$width" "${width}-bit model file input checks"
+    build "$work/model-shapes-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} \
+        scripts/port/test_romconv_model_shapes.c "${model[@]}"
+    run "$work/model-shapes-$width" "${width}-bit model file shapes"
     echo "test_romconv: PASS (${width}-bit)"
 done

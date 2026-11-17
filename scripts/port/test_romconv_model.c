@@ -6,10 +6,6 @@
  * here (test_romconv_model_build.h). */
 #include "test_romconv_model_build.h"
 
-#if !IS_64_BIT
-s32 romfileModelConvert(u8 *data, u32 size, s32 numSwitches, s32 numtextures, const char *name, const u8 *compiled);
-#endif
-
 /* The bits of the f32 at P. */
 static u32 bits(const void *p)
 {
@@ -17,24 +13,6 @@ static u32 bits(const void *p)
 
     __builtin_memcpy(&v, p, 4);
     return v;
-}
-
-/* At 32 bits, the N bytes converted into g_Out are the in-place result of
- * g_File, then zero to the next multiple of 8; at 64 bits, nothing to check. */
-static int sameAsInPlace(u32 switches, u32 textures, u32 n)
-{
-#if IS_64_BIT
-    (void) switches;
-    (void) textures;
-    (void) n;
-    return 1;
-#else
-    static u8 copy[MF_CAP];
-
-    __builtin_memcpy(copy, g_File, g_Size);
-    return romfileModelConvert(copy, g_Size, (s32) switches, (s32) textures, "Ptest", NULL) == 1
-        && n == ((g_Size + 7) & ~7u) && sameBytes(copy, g_Out, g_Size) && allBytes(g_Out + g_Size, n - g_Size, 0);
-#endif
 }
 
 static int testBrief(void)

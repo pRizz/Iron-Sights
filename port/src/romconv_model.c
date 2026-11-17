@@ -35,7 +35,11 @@
  * already has, so no padding moves anything from its file place. */
 #define MODEL_ALIGN ((u32) sizeof(void *))
 #define MODEL_ROUND8(n) (((n) + 7u) & ~(u64) 7u)
-#define MODEL_MAX_BYTES 0xFFFFFFF0u
+/* A reference is 0x05000000 | offset and the game and renderer take its low
+ * 24 bits as the offset, so every converted byte lies below 16 MB: then each
+ * offset a reference can name (an item's start, or a place inside a block or
+ * raw bytes) is below it too. An item may end exactly at the limit. */
+#define MODEL_SEGMENT_BYTES 0x01000000u
 
 /* ==== the layout and the writing ====================================== */
 
@@ -50,7 +54,7 @@ static void itemAt(const struct ModelWalk *w, u32 slot, struct ModelItem *it)
     {
         end++;
     }
-    it->bytes = end * 4 <= w->size ? (end - slot) * 4 : w->size - it->at; /* the file's last partial slot */
+    it->bytes = (u64) end * 4 <= w->size ? (end - slot) * 4 : w->size - it->at; /* the file's last partial slot */
     switch (MODEL_KIND(kind))
     {
     case MODEL_SWITCH: it->outBytes = sizeof(ModelNode *); break;
@@ -83,9 +87,10 @@ static int layout(struct ModelWalk *w)
         itemAt(w, slot, &it);
         span = (it.bytes + 3) / 4;
         to = it.kind == MODEL_RAW ? cursor : (cursor + MODEL_ALIGN - 1) & ~(u64) (MODEL_ALIGN - 1);
-        if (to + it.outBytes > MODEL_MAX_BYTES)
+        if (to + it.outBytes > MODEL_SEGMENT_BYTES)
         {
-            modelRefuse(w, "the converted file passes 4 GB at the %s at 0x%X", portModelKindName(it.kind), it.at);
+            modelRefuse(w, "the %s at 0x%X would end at 0x%llX in the converted file, past the 16 MB a segment-5 offset "
+                    "can name", portModelKindName(it.kind), it.at, (unsigned long long) (to + it.outBytes));
             return 0;
         }
         portConvMapPut(&w->map, it.at, (u32) to);

@@ -19,7 +19,7 @@
 #include "port_romlayout.h"
 #include "romconv_model_walk.h"
 
-#define MODEL_MAX_COUNT 0x8000u /* romfile_model.c's vertex, point-usage and list command caps */
+#define MODEL_MAX_COUNT 0x8000u /* romfile_model.c's list command cap; it skips larger blocks */
 #define MODEL_MAX_QUADS 0x2000u /* its DLPRIMARY cap: 0x8000 vertices */
 #define MODEL_NODE_STACK 4096u  /* its MSTACK */
 
@@ -203,14 +203,16 @@ static int claimBlock(struct ModelWalk *w, u32 rec, u32 field, u32 count, u32 el
     {
         return 0;
     }
+    if (!has || count == 0)
+    {
+        return 1;
+    }
+    /* romfile_model.c leaves such a block unswapped; the converter refuses it
+     * rather than copy a block the game would read as converted. */
     if (count > MODEL_MAX_COUNT)
     {
         modelRefuse(w, "the record at 0x%X counts %u elements, more than the %u converted", rec, count, MODEL_MAX_COUNT);
         return 0;
-    }
-    if (!has || count == 0)
-    {
-        return 1;
     }
     r = claim(w, off, (u64) count * element, kind, portModelKindName(kind));
     w->geometry += r == 1 && kind != MODEL_POINTUSAGE && kind != MODEL_POINTUSAGE_ODD;

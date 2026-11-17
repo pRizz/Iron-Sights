@@ -8,9 +8,6 @@
  * pointer width by test_romconv.sh. */
 #include "test_romconv_model_build.h"
 
-#if !IS_64_BIT
-s32 romfileModelConvert(u8 *data, u32 size, s32 numSwitches, s32 numtextures, const char *name, const u8 *compiled);
-#endif
 
 static int refusedMain(void (*change)(const struct MainFile *m), const char *why, const char *what)
 {
@@ -153,6 +150,86 @@ static int testOutputBuffer(void)
             "an output over the file is refused with nothing written");
 }
 
+/* A segment-5 w1 in a command whose w1 is an address the converter does not
+ * move (no stock list has one) refuses the file, naming the command. */
+static int testOtherAddressCommands(void)
+{
+    static const u8 ops[] = {0x01, 0x03, 0x09, 0x34, 0xFE, 0xFF};
+    struct MainFile m;
+    u32 i;
+    int failures = 0;
+
+    for (i = 0; i < sizeof(ops); i++)
+    {
+        buildMain(&m);
+        mfPut32(m.dlList + 8, (u32) ops[i] << 24);
+        mfPut32(m.dlList + 12, SEG(m.texels));
+        failures += expectRefused(MAIN_SWITCHES, MAIN_TEXTURES, "an address the converter does not move",
+                "a segment-5 address in another command");
+    }
+    return failures;
+}
+
+/* romfile_model.c skips a block counted above 0x8000; the converter refuses
+ * one that is there, and ignores the count of one that is not. */
+static void largeCountWithBlock(const struct MainFile *m) { mfPut16(m->dlRec + 0x10, 0x9000); }
+
+static int testLargeCounts(void)
+{
+    struct MainFile m;
+    u32 n;
+    int failures = refusedMain(largeCountWithBlock, "counts 36864 elements", "a block counted above 0x8000");
+
+    buildMain(&m);
+    mfPut32(m.dlRec + 0xC, 0);
+    mfPut16(m.dlRec + 0x10, 0x9000);
+    mfPut32(m.dlList, 0xB8000000); /* nothing loads the vertices now unowned */
+    mfPut32(m.dlList + 4, 0);
+    n = convertFile(MAIN_SWITCHES, MAIN_TEXTURES);
+    return failures + expect(n != 0 && sameAsInPlace(MAIN_SWITCHES, MAIN_TEXTURES, n),
+            "a count above 0x8000 with no block converts as the in-place path does");
+}
+
+/* A raw tail of TAIL bytes after the small file in BIG; its measure. */
+static u32 measureWithTail(u8 *big, u32 small, u32 tail)
+{
+    return portModelConvertedSize(big, small + tail, 0, 0, "Ptest");
+}
+
+/* Every reference is 0x05000000 | offset, so no item may reach past
+ * 0x01000000: one ending there converts, one 4 bytes longer is refused. */
+static int testSixteenMegabytes(void)
+{
+    static const u32 end[] = {0xB8000000, 0};
+    const u32 limit = 0x01000000u;
+    u32 rec, small, at4, at8, cursor, tail, n, refused;
+    u8 *big;
+
+    mfBegin(0, 0);
+    rec = mfRecord(mfNode(MODELNODE_OPCODE_DL), 20); /* the root first: argument order is unspecified */
+    mfPut32(rec, SEG(mfList(end, 1)));
+    small = g_Size; /* a multiple of 4 */
+    big = (u8 *) calloc(limit + 64, 1);
+    if (expect(big != NULL, "16 MB for the big file"))
+    {
+        return 1;
+    }
+    __builtin_memcpy(big, g_File, small);
+    /* The converted items end at CURSOR, which the measure rounds to 8. */
+    at4 = measureWithTail(big, small, 4);
+    at8 = measureWithTail(big, small, 8);
+    cursor = at8 == at4 ? at8 - 8 : at4 - 4;
+    tail = limit - cursor;
+    n = measureWithTail(big, small, tail);
+    g_Log[0] = '\0';
+    refused = measureWithTail(big, small, tail + 4);
+    free(big);
+    return expect(n == limit, "a file whose last item ends at 16 MB converts")
+        + expect(refused == 0 && contains(g_Log, "cannot convert models \"Ptest\": the raw bytes at 0x")
+                    && contains(g_Log, "past the 16 MB"),
+                "a file whose last item ends past 16 MB is refused, naming the item");
+}
+
 /* ==== bounds and malformed files ======================================== */
 
 static u32 s_Accepted;
@@ -258,6 +335,7 @@ int main(void)
 {
     int failures = testBriefRefusals() + testCollisionLinkToOffsetZero() + testMalformedGraphs()
         + testListsCallingInACircle() + testNoGeometry() + testChildrenOfOpcode5() + testOutputBuffer()
+        + testOtherAddressCommands() + testLargeCounts() + testSixteenMegabytes()
         + testBoundsInputs() + testRandomFiles() + testMutatedFiles();
 
     if (failures != 0)

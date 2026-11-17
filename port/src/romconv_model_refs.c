@@ -123,7 +123,7 @@ int portModelWriteList(const struct ModelWalk *w, const struct ModelItem *item, 
         u32 op = w0 >> 24;
         int ok;
 
-        /* Segment 3 and 4 words, and every other command, are copied. */
+        /* Segment 3 and 4 words are copied. */
         if ((w1 >> 24) != 0x05)
         {
             continue;
@@ -140,9 +140,17 @@ int portModelWriteList(const struct ModelWalk *w, const struct ModelItem *item, 
         {
             ok = portModelResolve(w, w1, REF_LIST, 0, "display-list call", c, &moved);
         }
+        else if (op == 0x01 || op == 0x03 || op == 0x09 || op == 0x34 || op == 0xFE || op == 0xFF)
+        {
+            /* G_MTX, G_MOVEMEM, G_SPRITE2D_BASE, G_INVALTEXCACHE_EXT,
+             * G_SETZIMG, G_SETCIMG: no stock list has one with segment 5 */
+            modelRefuse(w, "the display list at 0x%X has command 0x%02X at 0x%X whose word 0x%08X is an address the "
+                    "converter does not move", item->at, op, c, w1);
+            return 0;
+        }
         else
         {
-            continue;
+            continue; /* not an address (G_TRI4's indices, a tile's settings) */
         }
         if (!ok)
         {

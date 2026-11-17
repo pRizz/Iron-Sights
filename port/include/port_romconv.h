@@ -461,12 +461,15 @@ void portFontListOracle(const u8 *staged, const u8 *rom);
  * multiple of 4; two items sharing a byte, or one place reached as two kinds;
  * a reference neither 0 nor a segment-5 offset, or naming nothing of the kind
  * it must (G_VTX words must load inside one vertex block or unclaimed bytes);
- * a node whose opcode has a record and no data, or data and no record; a
- * count above 32,768; more than 4,096 nodes pending in the walk; a list that
+ * a node whose opcode has a record and no data, or data and no record; more
+ * than 4,096 nodes pending in the walk; a list that
  * calls itself, or calls nested more than 32 deep; node links the game's
  * promotion would walk forever; a collision vertex linked to anything but a
  * node, or to the node at new offset 0; children in an opcode 5 or 7 record;
- * an output past 4 GB.
+ * a block counted above 32,768 (romfile_model.c leaves one unswapped); a
+ * segment-5 word in a list command that carries an address the converter
+ * does not move (below); an item that would end past 16 MB in the image,
+ * where 0x05000000 | offset would run into the segment byte.
  */
 u32 portModelConvertedSize(const u8 *file, u32 size, s32 numSwitches, s32 numtextures, const char *name);
 
@@ -477,8 +480,14 @@ u32 portModelConvertedSize(const u8 *file, u32 size, s32 numSwitches, s32 numtex
  * is 0x05000000 plus the new offset, zero-extended into its field (0 stays 0),
  * for the game's promotion; BaseAddr fields are copied as the file has them.
  * Scalars are swapped into their C fields by romfile_model.c's field maps.
- * Lists are expanded by portGfxFromRom; their segment-5 G_VTX, G_SETTIMG and
- * list-call words are remapped, other words copied. At 64 bits a collision
+ * Lists are expanded by portGfxFromRom. In GE's F3D, w1 is an address in
+ * G_VTX (0x04), G_SETTIMG (0xFD), the list calls (0x06, and F3DEX2's 0xDE),
+ * whose segment-5 words are remapped, and in G_MTX (0x01), G_MOVEMEM (0x03),
+ * G_SPRITE2D_BASE (0x09), G_INVALTEXCACHE_EXT (0x34), G_SETZIMG (0xFE) and
+ * G_SETCIMG (0xFF), whose segment-5 words refuse the file (no stock list has
+ * one). Every other command's w1 is not an address (G_TRI4's vertex indices,
+ * G_SETTILE's and G_SETTILESIZE's settings, colours, masks) and is copied,
+ * as are segment 3 and 4 words. At 64 bits a collision
  * vertex's link is its node's new offset and its related index is swapped; at
  * 32 bits both stay as the in-place path leaves them.
  *
