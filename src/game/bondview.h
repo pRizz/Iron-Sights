@@ -219,7 +219,8 @@ struct hand
   /* gunfire.c views field_B68 as the gun's Model and passes &modeldatas as
    * its read-write data (32 records at most). At 64 bits a Model and each
    * read-write slot are larger, so both runs share their storage with ones
-   * of the right size (LP64-003); the 32-bit layout is unchanged. */
+   * of the right size (LP64-003); the 32-bit layout is unchanged. mtxlist is
+   * the Model's render_pos only at 32 bits: name it GUN_MODEL_RENDER_POS. */
   union {
     struct {
 #endif
@@ -718,9 +719,10 @@ struct player
    * bits) with its read-write data from field_2EC (50 slots). At 64 bits a
    * Model and each read-write slot are larger, so both runs share their
    * storage with ones of the right size (LP64-003); the 32-bit layout is
-   * unchanged. The named fields inside the Model run are not its members
-   * there: field_23C, watch_scale_destination and pause_watch_related_adjust
-   * alias render_pos, scale and animframe1 only at 32 bits. */
+   * unchanged. field_23C, watch_scale_destination and
+   * pause_watch_related_adjust are the Model's render_pos, scale and
+   * animframe1 only at 32 bits: read them as WATCH_MODEL_RENDER_POS,
+   * WATCH_MODEL_SCALE and WATCH_MODEL_ANIMFRAME1 (after this struct). */
   union {
     struct {
 #endif
@@ -2381,6 +2383,24 @@ struct player
   s32 field_2A7C;
 };
 
+/*
+ * Member names for the fields that are a Model's members only at 32 bits
+ * (LP64-003): the pause watch's in struct player and the gun's in struct
+ * hand. Written after -> or ., e.g. g_CurrentPlayer->WATCH_MODEL_SCALE: at 32
+ * bits each is the field's own name, at 64 bits the Model member.
+ */
+#if IS_64_BIT
+#define WATCH_MODEL_RENDER_POS watch_model.render_pos
+#define WATCH_MODEL_SCALE watch_model.scale
+#define WATCH_MODEL_ANIMFRAME1 watch_model.animframe1
+#define GUN_MODEL_RENDER_POS field_B68_model.render_pos
+#else
+#define WATCH_MODEL_RENDER_POS field_23C
+#define WATCH_MODEL_SCALE watch_scale_destination
+#define WATCH_MODEL_ANIMFRAME1 pause_watch_related_adjust
+#define GUN_MODEL_RENDER_POS mtxlist
+#endif
+
 struct firing_anim_struct {
     struct weapon_firing_animation_table * pointer;
     u32 anim;
@@ -2903,10 +2923,10 @@ void sub_GAME_7F08976C(f32 param_1);
 coord3d *bondviewGetCurrentPlayersPosition3(void);
 Mtx *currentPlayerGetMatrix10C8(void);
 void *currentPlayerSetMatrix10CC(Mtxf *matrix);
-void currentPlayerSetMatrix10C4(Mtx *matrix); /* bondview2.c */
-void currentPlayerSetMatrix10C8(Mtx *matrix); /* bondview2.c */
-void currentPlayerSetViewToWorldMtxf(Mtxf *matrix); /* bondview2.c */
-void bondviewSetCurrentPlayerPosition(coord3d *pos, coord3d *pos2, coord3d *offset, StandTile *tile, coord3d *stan_walk_start); /* bondview2.c */
+void currentPlayerSetMatrix10C4(Mtx *matrix); /* bondview.c */
+void currentPlayerSetMatrix10C8(Mtx *matrix); /* bondview.c */
+void currentPlayerSetViewToWorldMtxf(Mtxf *matrix); /* bondview.c */
+void bondviewSetCurrentPlayerPosition(coord3d *pos, coord3d *pos2, coord3d *offset, StandTile *tile, coord3d *stan_walk_start); /* bondview.c */
 
 void transform3Dto2DWithZScaling(coord3d *in, coord3d *out);
 void currentPlayerSetProjectionMatrix(Mtx *matrix);

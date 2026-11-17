@@ -291,7 +291,7 @@ void               chraiCheckUseHeldItems(void);
 bool               bond_interact_object(void);
 void               propsTickPlayer(void);
 void               chrpropRegisterRoom(PropRecord *, s16);
-void               chrpropDeregisterRoom(PropRecord *, s16); /* bondview2.c */
+void               chrpropDeregisterRoom(PropRecord *, s16); /* chrprop.c */
 PropRecord*        chrpropAllocate(void);
 void               chrpropReparent(PropRecord *newChild, PropRecord *host);
 void               chrpropDelist(PropRecord *prop);

@@ -6048,7 +6048,7 @@ void modelPromoteNodeOffsetsToPointers(ModelNode *node, uintptr_t vma, uintptr_t
             case MODELNODE_OPCODE_DLCOLLISION:
                 {
                     ModelRoData_DisplayList_CollisionRecord* rodata = &node->Data->DisplayListCollisions;
-#ifndef TARGET_N64
+#if !defined(TARGET_N64) && !IS_64_BIT
                     /* PORT: the byte-order fixups below must run exactly once
                      * per record, but on PC this walk re-runs over the same
                      * compiled-in bytes on every reload; BaseAddr (0 until set
@@ -6065,9 +6065,13 @@ void modelPromoteNodeOffsetsToPointers(ModelNode *node, uintptr_t vma, uintptr_t
 #if IS_64_BIT
                     /* PORT (LP64-003): at 64 bits a collision vertex's link is
                      * a 32-bit offset from BaseAddr (VERTEX_COLLISION_NODE,
-                     * bondtypes.h), not a pointer: there is nothing to unswap
-                     * or promote. LP64-004's model converter writes it; until
-                     * then the models guard stops the load. */
+                     * bondtypes.h), not a pointer, so this branch does not run
+                     * the 32-bit loop below: it neither unswaps nor promotes
+                     * the +0x8 link, and it does not unswap the +0xc
+                     * CollisionRelatedIndex of a generator-emitted record
+                     * either. Both fixups are LP64-004's model converter's
+                     * (FORK-089 names them); until it exists the models guard
+                     * stops a 64-bit load. */
 #else
                     for (i = 0; i < rodata->numCollisionVertices; i++)
                     {

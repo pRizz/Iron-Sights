@@ -185,6 +185,16 @@ OFFSET(struct player, pause_watch_related_adjust, 0x230 + 0x28);
 OFFSET(struct player, field_2EC, 0x2ec);
 OFFSET(struct player, field_3B0, 0x3b0);
 OFFSET(struct player, buttons_pressed, 0x3b4);
+/* These named fields are the watch's and the gun's Model members at 32 bits;
+ * the WATCH_MODEL_* and GUN_MODEL_* names in bondview.h read them through the
+ * Model at 64 bits. */
+#define MODEL_ALIAS(type, base, field, member)                                                            \
+    _Static_assert(offsetof(type, field) - offsetof(type, base) == offsetof(Model, member),             \
+                   #type "." #field " is " #base "'s Model." #member)
+MODEL_ALIAS(struct player, something_with_watch_object_instance, field_23C, render_pos);
+MODEL_ALIAS(struct player, something_with_watch_object_instance, watch_scale_destination, scale);
+MODEL_ALIAS(struct player, something_with_watch_object_instance, pause_watch_related_adjust, animframe1);
+MODEL_ALIAS(struct hand, field_B68, mtxlist, render_pos);
 #endif
 #if !IS_64_BIT
 _Static_assert(sizeof(Gfx) == 8, "32-bit display-list stride");
@@ -195,8 +205,38 @@ _Static_assert(sizeof(resource_lookup_data_entry) == 20, "ROM lookup layout");
 _Static_assert(sizeof(struct unk_09B7A0_struct_parent) == 0x14, "32-bit vertex store slot layout");
 #endif
 
+/* VERTEX_COLLISION_NODE (bondtypes.h): no link is NULL; at 64 bits a link is
+ * the base plus the 32-bit offset, at 32 bits the stored pointer. */
+static int checkVertexCollisionNode(void)
+{
+    static u8 file[0x100];
+    Vertex vertex = {0};
+    int failures = 0;
+
+#if IS_64_BIT
+    vertex.LinkOffset = 0;
+    failures += VERTEX_COLLISION_NODE(file, vertex) != NULL;
+    vertex.LinkOffset = 0x40;
+    failures += VERTEX_COLLISION_NODE(file, vertex) != (void *) &file[0x40];
+#else
+    vertex.CollisionRelatedNode = NULL;
+    failures += VERTEX_COLLISION_NODE(file, vertex) != NULL;
+    vertex.CollisionRelatedNode = &file[0x40];
+    failures += VERTEX_COLLISION_NODE(file, vertex) != (void *) &file[0x40];
+#endif
+    if (failures != 0)
+    {
+        printf("ABI probe FAIL: VERTEX_COLLISION_NODE (%d cases)\n", failures);
+    }
+    return failures;
+}
+
 int main(void)
 {
+    if (checkVertexCollisionNode() != 0)
+    {
+        return 1;
+    }
     printf("ABI probe OK (%d-bit)\n", (int) (sizeof(void *) * 8));
     return 0;
 }
