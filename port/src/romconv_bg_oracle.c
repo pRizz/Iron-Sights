@@ -22,6 +22,7 @@
  * the ROM-free converter tests, which have no file loader. Compiled with the
  * other romconv_ sources, and empty outside the oracle build.
  */
+#include <inttypes.h> /* PRIXPTR: the offsets print at full width */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -151,10 +152,10 @@ void portBgTablesOracle(const u8 *data, u32 size, const char *name)
         u32 rest = oracleFirstDifference(closing, &kZeroRoom, sizeof(bg_room_data));
 
         snprintf(detail, sizeof(detail),
-                "%u room records and %u portal entries, %u and %u bytes at 64 bits; closing record %s (point 0x%X, "
-                "secondary 0x%X)", nrooms, nportals, nrooms * 40u, nportals * 16u,
+                "%u room records and %u portal entries, %u and %u bytes at 64 bits; closing record %s "
+                "(point 0x%" PRIXPTR ", secondary 0x%" PRIXPTR ")", nrooms, nportals, nrooms * 40u, nportals * 16u,
                 rest == sizeof(bg_room_data) ? "all zeros" : "not all zeros",
-                (u32) (uintptr_t) closing->pPointTableBin, (u32) (uintptr_t) closing->pSecMappingBin);
+                (uintptr_t) closing->pPointTableBin, (uintptr_t) closing->pSecMappingBin);
         portLp64OracleResult(PORT_LP64_BACKGROUNDS, name, 1, detail);
         free(out);
         return;
@@ -164,11 +165,11 @@ void portBgTablesOracle(const u8 *data, u32 size, const char *name)
 }
 
 /* Logs one differing word of a reload: record INDEX's FIELD. */
-static void oracleReloadField(const char *name, const char *kind, u32 index, const char *field, u32 inplace,
-        u32 fresh, u32 *count)
+static void oracleReloadField(const char *name, const char *kind, u32 index, const char *field, uintptr_t inplace,
+        uintptr_t fresh, u32 *count)
 {
-    portConLogf("ge: lp64: oracle: bg reload %s: %s %u %s in-place 0x%08X fresh 0x%08X\n", name, kind, index, field,
-            inplace, fresh);
+    portConLogf("ge: lp64: oracle: bg reload %s: %s %u %s in-place 0x%08" PRIXPTR " fresh 0x%08" PRIXPTR "\n", name,
+            kind, index, field, inplace, fresh);
     (*count)++;
 }
 
@@ -190,18 +191,18 @@ static void oracleCompareRooms(const char *name, const bg_room_data *in, const b
     {
         if (in[i].pPointTableBin != fresh[i].pPointTableBin)
         {
-            oracleReloadField(name, "room", i, "pPointTableBin", (u32) (uintptr_t) in[i].pPointTableBin,
-                    (u32) (uintptr_t) fresh[i].pPointTableBin, count);
+            oracleReloadField(name, "room", i, "pPointTableBin", (uintptr_t) in[i].pPointTableBin,
+                    (uintptr_t) fresh[i].pPointTableBin, count);
         }
         if (in[i].pPriMappingBin != fresh[i].pPriMappingBin)
         {
-            oracleReloadField(name, "room", i, "pPriMappingBin", (u32) (uintptr_t) in[i].pPriMappingBin,
-                    (u32) (uintptr_t) fresh[i].pPriMappingBin, count);
+            oracleReloadField(name, "room", i, "pPriMappingBin", (uintptr_t) in[i].pPriMappingBin,
+                    (uintptr_t) fresh[i].pPriMappingBin, count);
         }
         if (in[i].pSecMappingBin != fresh[i].pSecMappingBin)
         {
-            oracleReloadField(name, "room", i, "pSecMappingBin", (u32) (uintptr_t) in[i].pSecMappingBin,
-                    (u32) (uintptr_t) fresh[i].pSecMappingBin, count);
+            oracleReloadField(name, "room", i, "pSecMappingBin", (uintptr_t) in[i].pSecMappingBin,
+                    (uintptr_t) fresh[i].pSecMappingBin, count);
         }
         for (k = 0; k < 3; k++)
         {
@@ -236,8 +237,8 @@ static void oracleComparePortals(const char *name, const u8 *base, const bg_port
             }
             else
             {
-                oracleReloadField(name, "portal", i, "offset_portal", (u32) (uintptr_t) in[i].offset_portal,
-                        (u32) (uintptr_t) fresh[i].offset_portal, count);
+                oracleReloadField(name, "portal", i, "offset_portal", (uintptr_t) in[i].offset_portal,
+                        (uintptr_t) fresh[i].offset_portal, count);
             }
         }
         if (in[i].connectedRoom1 != fresh[i].connectedRoom1)
