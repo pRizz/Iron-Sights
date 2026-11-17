@@ -395,6 +395,17 @@ _Static_assert(sizeof(ModelAnimation) == 0x40, "32-bit ModelAnimation is unchang
  * initModelHitEntryFreeList) by the record: 0x14 bytes at 32 bits, as the
  * literal it replaced, and 40 at 64. */
 _Static_assert(sizeof(ModelHitEntry) == (IS_64_BIT ? 40 : 0x14), "model hit entry record");
+/* inititemslots.c sizes the inventory by the record: 0x14 bytes at 32 bits,
+ * the N64 literal it replaced, and 32 at 64 bits (LP64-004). */
+_Static_assert(sizeof(struct InvItem) == (IS_64_BIT ? 32 : 0x14), "inventory item record");
+/* player.c allocates the player by the record at 64 bits; the 32-bit build
+ * keeps the N64 literal, 0x2a80 (asserted with the player layout above). */
+_Static_assert(!IS_64_BIT || sizeof(struct player) > 0x2a80, "the 64-bit player outgrows the N64 literal");
+/* initunk_005520.c's anim model slots: the array stride is the record, which
+ * must keep the bank's 8-byte alignment at 64 bits (0xBC at 32 bits, whose
+ * 0xC0 allocation stride keeps 16). */
+_Static_assert(IS_64_BIT ? sizeof(struct AnimModelSlot) % 8 == 0 : sizeof(struct AnimModelSlot) == 0xbc,
+               "anim model slot record");
 
 /* The font table (LP64-004 Task 9): 0xB74 bytes in the file. struct fontchar
  * keeps the pixel offset in a pointer slot, so at 64 bits struct font is 0x2F4

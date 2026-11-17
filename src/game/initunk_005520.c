@@ -74,7 +74,14 @@ void modelmgrAllocateAnimModelSlots(s32 numanimated)
 
     // mips2c says: g_AnimModelSlots = mempAllocBytesInBank(temp_t6 * 0xC0, 4);
     // however, the pointer is incremented by 0xbc in the loop below.
+#if IS_64_BIT
+    /* LP64-004: the N64's 4 spare bytes a slot leave the bank at 4 mod 8
+     * after an odd count of 264-byte slots; keep them, rounded to 16 as the
+     * 32-bit 0xC0 stride keeps the bank */
+    g_AnimModelSlots = mempAllocBytesInBank((g_MaxAnimModelSlots * (4 + sizeof(struct AnimModelSlot)) + 0xF) & ~0xFu, MEMPOOL_STAGE);
+#else
     g_AnimModelSlots = mempAllocBytesInBank(g_MaxAnimModelSlots * (4 + sizeof(struct AnimModelSlot)), MEMPOOL_STAGE);
+#endif
 
     for (i = 0; i < g_MaxAnimModelSlots; i++)
     {
