@@ -946,6 +946,14 @@ struct player
 
   // offset 0x594
   s32 standcnt;
+#if IS_64_BIT
+  /* initBondDATAdefaults.c and bondhead.c use &model as the gait model
+   * itself, held in the words from here to field_650 (0xBC bytes at 32 bits).
+   * The 64-bit Model is larger, so the storage is a union with one; otherwise
+   * the gait model's tail runs into its read-write data after field_650. */
+  union {
+    struct {
+#endif
   Model *model;
   s32 field_59C;
   s32 field_5A0;
@@ -999,6 +1007,9 @@ struct player
   s32 field_64C;
   s32 field_650;
 #if IS_64_BIT
+    };
+    Model gait_model_storage;
+  };
   /* initBondDATAdefaults.c passes &field_654 as the gait model's read-write
    * data (31 records at most). At 64 bits each slot is pointer-sized, so the
    * run shares its storage with 31 slots (LP64-003); the 32-bit layout is

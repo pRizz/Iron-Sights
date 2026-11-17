@@ -168,6 +168,9 @@ _Static_assert(offsetof(struct player, watch_rwdata_slots) == offsetof(struct pl
                && offsetof(struct player, buttons_pressed) - offsetof(struct player, field_2EC) >= 50 * sizeof(void *),
                "the player's watch read-write run holds 50 slots");
 OFFSET(struct player, gait_rwdata_slots, offsetof(struct player, field_654));
+_Static_assert(offsetof(struct player, gait_model_storage) == offsetof(struct player, model)
+                   && offsetof(struct player, field_654) - offsetof(struct player, model) >= sizeof(Model),
+               "the player's gait model run holds a Model");
 #else
 _Static_assert(sizeof(Model) == 0xbc, "32-bit Model layout");
 OFFSET(Model, rwdatalen, 0x02);
