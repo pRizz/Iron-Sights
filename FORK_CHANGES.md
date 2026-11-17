@@ -211,7 +211,7 @@ Dam default 1% low 261 to 294 fps. One profiled run of each (matched Cradle):
 render thread 1.46 to 1.44 ms a frame, every function within 0.04 ms;
 `gfx_opengl_new_texture` went from 0.011 ms to nothing.
 
-### FORK-089 — Native 64-bit port: accepted plan; LP64-001 scaffolding, LP64-002 type hygiene and LP64-003 addresses and memory done; LP64-004 planned
+### FORK-089 — Native 64-bit port: accepted plan; LP64-001 scaffolding, LP64-002 type hygiene and LP64-003 addresses and memory done; LP64-004 planned and accepted
 
 **Status:** Plan accepted by the owner on 2026-11-15. Every task of milestone
 LP64-001 is built (Tasks 1 to 7 were each reviewed before reaching `main`): the two-tier gallery rule, the container
@@ -254,8 +254,9 @@ guard naming `animation tables`, the first in-place conversion of ROM data the
 boot reaches; no 64-bit build loads a stage, by design, until LP64-004 writes
 the converters (the "LP64-003 task 12" note below has the runs, and "LP64-003
 hand-over to LP64-004" what the next milestone inherits). LP64-004 (the
-asset converters) is planned and waits for the owner's review:
-[its plan](scripts/port/native_64bit_lp64_004.md) was written on 2026-11-16
+asset converters) is planned, and the owner accepted its plan with all ten
+recommendations on 2026-11-16:
+[the plan](scripts/port/native_64bit_lp64_004.md) was written that day
 from measurements on `main` at f73382a, which the "Milestone LP64-004"
 paragraph below records; nothing of it is built. LP64-005 onward has not
 been planned, built or verified; the plan's milestone status table says so.
@@ -2877,9 +2878,19 @@ No converter and no in-place conversion changed: none of the fixed structures is
 
 Each was read instruction by instruction in its task's note; none changes a value drawn, so no image cell is expected to change. The fix wave changed strict-tier files (`gunfire.c`, `model.c`, `bondview2.c`, `port/fast3d/gfx_pc.cpp`) only in 64-bit code and in macros with their old 32-bit expansion, which is why `hand_gallery.py verify` reports the gallery stale on this branch; the laptop regenerates it and Task 12 closes the record.
 
-**Milestone LP64-004 (asset converters), planned on 2026-11-16 and waiting for the owner's review; nothing of it is built:**
+**Milestone LP64-004 (asset converters), planned and accepted on 2026-11-16; nothing of it is built:**
 [the milestone's plan](scripts/port/native_64bit_lp64_004.md) lists seventeen
-tasks and ten decisions for the owner, each with a recommendation. This
+tasks and ten decisions for the owner, each with a recommendation. The owner
+accepted all ten on 2026-11-16 (commit "Record the owner's acceptance of the LP64-004 plan"): the task order
+follows the boot; animation headers, text banks and tile data keep the
+file's bytes; the done condition (the title for 600 frames and the 20-mission
+smoke 20 of 20, plain and under the sanitizers, the oracle clean, the load
+census equal, the 32-bit program unchanged); the graphics buffer scaled at 64
+bits in this milestone; the three fixed model buffers scaled by 13/8; the
+background tables built fresh at each load; the cut stages left stopped
+until LP64-005; the oracle as a build option; one laptop trip at the end;
+and `Acmd` widened here. The design's "Milestones" and "Decisions" record
+them. This
 paragraph records the plan and the measurements it rests on, taken on `main`
 at f73382a in the Mac's containers (GCC 13.3; aarch64 native, x86_64 and i686
 emulated). No source, build file or tool changed for it; the scratch copies
@@ -3026,8 +3037,8 @@ the display-list word accessors: `port/include/port_gfxwords.h`,
 
 **Validation:** LP64-004's planning paragraph above records its measurement
 runs; the Bright Builds checks, the settings placement check and the ROM-free
-gallery verification ran for that documentation-only commit, and nothing of
-LP64-004 is built. LP64-003's planning paragraph above records the measurement
+gallery verification ran for that documentation-only commit and for the one
+recording the owner's acceptance, and nothing of LP64-004 is built. LP64-003's planning paragraph above records the measurement
 runs, and the Bright Builds checks, the settings placement check and the
 ROM-free gallery verification ran for that documentation-only commit; each
 LP64-003 task note above records what that task ran; its close is the "LP64-003 task 12" note (CI runs 44007720420, 44007721496 and 44007720532 on 9abbe58 passed every job; the 64-bit boot check stopped at `animation tables`, plain and sanitizer, in the aarch64 and x86_64 containers; no 64-bit stage load has been run). LP64-002's runs are in its task notes above; its close is the

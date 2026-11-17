@@ -2,10 +2,12 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Planned on 2026-11-16 from measurements on `main` at f73382a.
-Waiting for the owner's review; nothing in it is built. The decisions the
-owner has to make are listed at the end, each with a recommendation; the
-tasks are written for the recommendations.
+**Status:** Planned on 2026-11-16 from measurements on `main` at f73382a and
+accepted by the owner the same day, with all ten recommendations under
+"Decisions for the owner" at the end. Nothing in it is built; the status
+table of [native_64bit_plan.md](native_64bit_plan.md) records what is built
+and verified as the tasks land. The tasks are written for the
+recommendations.
 
 **Goal:** A 64-bit headless build that converts every class of ROM data it
 loads, so that it boots through the title and the menus and loads and runs
@@ -1809,8 +1811,12 @@ second-load measurement; the late-load audit owed; the cut stages.
 
 ## Decisions for the owner
 
-Each is put with a recommendation and the alternative not taken. The plan
-is written for the recommendations.
+**The owner accepted all ten recommendations on 2026-11-16.** They are kept
+here as put, each with the alternative that was not taken; the plan is
+written for the recommendations. Decision 3 defines the milestone's done
+condition, decisions 1 and 2 depart from the design's class order and from
+its "new buffer" rule for three classes, and decision 4 scales one pool
+ahead of LP64-005; the design records all four.
 
 1. **Task order follows the boot, not the design's list.** Measured, the
    boot needs animation tables, text banks, audio banks and the music
