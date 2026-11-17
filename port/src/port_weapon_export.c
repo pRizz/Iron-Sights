@@ -57,7 +57,7 @@ static Gfx *portWeaponExportTank(Gfx *gdl)
     s32 i, oldDistanceDisabled;
     if (header->RootNode == NULL) fileLoad(header, record->filename);
     modelCalculateRwDataLen(header);
-    modelInit(&model, header, dynAllocate(header->numRecords * 4 + 16));
+    modelInit(&model, header, dynAllocate(MODEL_RWDATA_BYTES(header->numRecords) + 16));
     /* Match the parked tank's parts (propobj.c): no cannon muzzle flash. */
     if (header->numSwitches > 8 && header->Switches[7] != NULL)
         modelGetNodeRwData(&model, header->Switches[7])->Gunfire.visible = 0;

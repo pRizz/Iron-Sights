@@ -566,7 +566,7 @@ void solo_char_load(void)
                 load_object_fill_header(headheader, (u8 *)c_item_entries[head].filename, weaponbuf0 + cursor, size0 - cursor, &pool);
                 cursor = ALIGN64_V3(get_pc_buffer_remaining_value((u8 *)c_item_entries[head].filename) + cursor + 0x3f);
                 model  = (Model *)(weaponbuf0 + cursor);
-                cursor = ALIGN64_V3(cursor + 0xfb);
+                cursor = ALIGN64_V3(cursor + MODEL_STORAGE_PAD); /* 0xfb at 32 bits */
                 modelCalculateRwDataLen(bodyheader);
                 modelCalculateRwDataLen(headheader);
 
@@ -575,7 +575,7 @@ void solo_char_load(void)
                     s32  nrec;
                     animdata = (u32 *)(weaponbuf0 + cursor);
                     nrec     = (bodyheader->numRecords + headheader->numRecords) + 0xa;
-                    cursor   = ALIGN64_V3(cursor + (nrec << 2) + 0x3f);
+                    cursor   = ALIGN64_V3(cursor + MODEL_RWDATA_BYTES(nrec) + 0x3f); /* nrec << 2 at 32 bits */
                     animInit(model, bodyheader, animdata);
                     model->rwdatalen = nrec;
                 }
@@ -11928,7 +11928,7 @@ void bondviewSelectCuff(Model *model, ModelFileHeader *header, s32 switchindex)
 
     local = fileGetBondForCurrentFolder();
     switches = header->Switches;
-    offset = switchindex << 2;
+    offset = MODEL_NODE_SLOT_BYTES(switchindex); /* switchindex << 2 at 32 bits */
 
     if (1);
 

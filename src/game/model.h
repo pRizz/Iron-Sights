@@ -4,6 +4,7 @@
 #include <ultra64.h>
 #include <bondtypes.h>
 #include "bondconstants.h"
+#include "port_model_words.h" /* LP64-003: read-write slots and render templates at both widths */
 
 
 extern s32 g_MaxModelSlots;

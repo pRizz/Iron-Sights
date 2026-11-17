@@ -6396,7 +6396,7 @@ s32 modelCalculateRwDataIndexes(ModelNode *basenode)
                 {
                     ModelRoData_HeaderRecord *rodata = &node->Data->Header;
                     rodata->RwDataIndex = len;
-                    len += sizeof(struct ModelRwData_HeaderRecord) / 4;
+                    len += MODEL_RWDATA_UNITS(struct ModelRwData_HeaderRecord);
                     break;
                 }
             case MODELNODE_OPCODE_OP07:
@@ -6404,7 +6404,7 @@ s32 modelCalculateRwDataIndexes(ModelNode *basenode)
                 {
                     ModelRoData_Op07Record *rodata = &node->Data->Op07;
                     rodata->RwDataIndex = len;
-                    len += sizeof(struct ModelRwData_Op07Record) / 4;
+                    len += MODEL_RWDATA_UNITS(struct ModelRwData_Op07Record);
                     break;
                 }
             case MODELNODE_OPCODE_LOD:
@@ -6412,7 +6412,7 @@ s32 modelCalculateRwDataIndexes(ModelNode *basenode)
                 {
                     ModelRoData_LODRecord *rodata = &node->Data->LOD;
                     rodata->RwDataIndex = len;
-                    len += sizeof(struct ModelRwData_LODRecord) / 4;
+                    len += MODEL_RWDATA_UNITS(struct ModelRwData_LODRecord);
                     node->Child = rodata->Affects;
                     break;
                 }
@@ -6421,7 +6421,7 @@ s32 modelCalculateRwDataIndexes(ModelNode *basenode)
                 {
                     ModelRoData_SwitchRecord *rodata = &node->Data->Switch;
                     rodata->RwDataIndex = len;
-                    len += sizeof(struct ModelRwData_SwitchRecord) / 4;
+                    len += MODEL_RWDATA_UNITS(struct ModelRwData_SwitchRecord);
                     node->Child = rodata->Controls;
                     break;
                 }
@@ -6430,7 +6430,7 @@ s32 modelCalculateRwDataIndexes(ModelNode *basenode)
                 {
                     ModelRoData_HeadPlaceholderRecord *rodata = &node->Data->HeadPlaceholder;
                     rodata->RwDataIndex = len;
-                    len += sizeof(struct ModelRwData_HeadPlaceholderRecord) / 4;
+                    len += MODEL_RWDATA_UNITS(struct ModelRwData_HeadPlaceholderRecord);
                     node->Child = NULL;
                     break;
                 }
@@ -6439,7 +6439,7 @@ s32 modelCalculateRwDataIndexes(ModelNode *basenode)
                 {
                     ModelRoData_BSPRecord *rodata = &node->Data->BSP;
                     rodata->RwDataIndex = len;
-                    len += sizeof(struct ModelRwData_BSPRecord) / 4;
+                    len += MODEL_RWDATA_UNITS(struct ModelRwData_BSPRecord);
                     modelApplyReorderRelationsByArg(node, FALSE);
                     break;
                 }
@@ -6448,7 +6448,7 @@ s32 modelCalculateRwDataIndexes(ModelNode *basenode)
                 {
                     ModelRoData_Op11Record *rodata = &node->Data->Op11;
                     rodata->RwDataIndex = len;
-                    len += sizeof(struct ModelRwData_Op11Record) / 4;
+                    len += MODEL_RWDATA_UNITS(struct ModelRwData_Op11Record);
                     break;
                 }
             case MODELNODE_OPCODE_GUNFIRE:
@@ -6456,7 +6456,7 @@ s32 modelCalculateRwDataIndexes(ModelNode *basenode)
                 {
                     ModelRoData_GunfireRecord *rodata = &node->Data->Gunfire;
                     rodata->RwDataIndex = len;
-                    len += sizeof(struct ModelRwData_GunfireRecord) / 4;
+                    len += MODEL_RWDATA_UNITS(struct ModelRwData_GunfireRecord);
                     break;
                 }
             case MODELNODE_OPCODE_DLCOLLISION:
@@ -6464,7 +6464,7 @@ s32 modelCalculateRwDataIndexes(ModelNode *basenode)
                 {
                     ModelRoData_DisplayList_CollisionRecord *rodata = &node->Data->DisplayListCollisions;
                     rodata->RwDataIndex = len;
-                    len += sizeof(struct ModelRwData_DisplayList_CollisionRecord) / 4;
+                    len += MODEL_RWDATA_UNITS(struct ModelRwData_DisplayList_CollisionRecord);
                     break;
                 }
             default:

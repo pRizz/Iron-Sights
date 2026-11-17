@@ -998,6 +998,14 @@ struct player
   s32 field_648;
   s32 field_64C;
   s32 field_650;
+#if IS_64_BIT
+  /* initBondDATAdefaults.c passes &field_654 as the gait model's read-write
+   * data (31 records at most). At 64 bits each slot is pointer-sized, so the
+   * run shares its storage with 31 slots (LP64-003); the 32-bit layout is
+   * unchanged. */
+  union {
+    struct {
+#endif
   s32 field_654;
   s32 field_658;
   s32 field_65C;
@@ -1029,6 +1037,11 @@ struct player
   s32 field_6C4;
   s32 field_6C8;
   s32 field_6CC;
+#if IS_64_BIT
+    };
+    union ModelRwData *gait_rwdata_slots[31];
+  };
+#endif
 
   Mtxf bondheadmatrices[4];
 

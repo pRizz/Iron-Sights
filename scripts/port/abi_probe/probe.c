@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <ultra64.h>
 #include <PR/abi.h>
 #include "ob.h"
@@ -13,6 +14,7 @@
 #include "game/objecthandler.h"
 #include "game/vtxstore.h"
 #include "game/bondview.h"
+#include "game/model.h"
 #include "port_hostptr.h"
 
 /* Fixed at every width: the renderer reads these as N64 formats. */
@@ -145,6 +147,7 @@ _Static_assert(offsetof(struct player, watch_model) == offsetof(struct player, s
 _Static_assert(offsetof(struct player, watch_rwdata_slots) == offsetof(struct player, field_2EC)
                && offsetof(struct player, buttons_pressed) - offsetof(struct player, field_2EC) >= 50 * sizeof(void *),
                "the player's watch read-write run holds 50 slots");
+OFFSET(struct player, gait_rwdata_slots, offsetof(struct player, field_654));
 #else
 _Static_assert(sizeof(Model) == 0xbc, "32-bit Model layout");
 OFFSET(Model, rwdatalen, 0x02);
@@ -196,6 +199,49 @@ MODEL_ALIAS(struct player, something_with_watch_object_instance, watch_scale_des
 MODEL_ALIAS(struct player, something_with_watch_object_instance, pause_watch_related_adjust, animframe1);
 MODEL_ALIAS(struct hand, field_B68, mtxlist, render_pos);
 #endif
+/* Model read-write data (LP64-003 final review): a record covers
+ * MODEL_RWDATA_UNITS slots of Model.datas, and no record takes more slots at
+ * 64 bits than at 32, so the runs sized for the N64's counts hold every model
+ * once their slots are pointer-sized. */
+#define RWDATA_UNITS(record, at32, at64) \
+    _Static_assert(MODEL_RWDATA_UNITS(struct record) == (IS_64_BIT ? (at64) : (at32)), #record " read-write slots")
+RWDATA_UNITS(ModelRwData_HeaderRecord, 24, 12);
+RWDATA_UNITS(ModelRwData_Op07Record, 1, 1);
+RWDATA_UNITS(ModelRwData_LODRecord, 1, 1);
+RWDATA_UNITS(ModelRwData_SwitchRecord, 1, 1);
+RWDATA_UNITS(ModelRwData_HeadPlaceholderRecord, 2, 2);
+RWDATA_UNITS(ModelRwData_BSPRecord, 1, 1);
+RWDATA_UNITS(ModelRwData_Op11Record, 1, 1);
+RWDATA_UNITS(ModelRwData_GunfireRecord, 1, 1);
+RWDATA_UNITS(ModelRwData_DisplayList_CollisionRecord, 2, 2);
+_Static_assert(MODEL_RWDATA_BYTES(1) == sizeof(union ModelRwData *), "a read-write slot's bytes");
+_Static_assert(MODEL_NODE_SLOT_BYTES(1) == sizeof(ModelNode *), "a node-array entry's bytes");
+_Static_assert(MODEL_STORAGE_PAD == sizeof(Model) + 0x3f, "bondview2.c's Model step in weaponbuf0");
+/* initBondDATAdefaults.c gives the player's gait model field_654 to
+ * field_6CC as its read-write data: 31 slots (it complains at 31 records). */
+_Static_assert(offsetof(struct player, bondheadmatrices) - offsetof(struct player, field_654)
+                   >= 31 * sizeof(union ModelRwData *),
+               "the player's gait read-write run holds 31 slots");
+#if !IS_64_BIT
+/* gunfire.c's render templates are 16 words, one per member in this order
+ * (port_model_words.h maps them by member at 64 bits). */
+_Static_assert(sizeof(ModelRenderData) == 0x40, "32-bit render data layout");
+OFFSET(ModelRenderData, zbufferenabled, 0x04);
+OFFSET(ModelRenderData, flags, 0x08);
+OFFSET(ModelRenderData, gdl, 0x0c);
+OFFSET(ModelRenderData, mtxlist, 0x10);
+OFFSET(ModelRenderData, unk14, 0x14);
+OFFSET(ModelRenderData, unk2c, 0x2c);
+OFFSET(ModelRenderData, PropType, 0x30);
+OFFSET(ModelRenderData, envcolour, 0x34);
+OFFSET(ModelRenderData, fogcolour, 0x38);
+OFFSET(ModelRenderData, cullmode, 0x3c);
+/* gunfire.c's casing code adds these to the player plus a hand's offset:
+ * the hand's throw matrix and the position rows of it and its previous. */
+OFFSET(struct player, hands[0].throw_item_pos_related, 0xad8);
+OFFSET(struct player, hands[0].throw_item_pos_related.m[3], 0xb08);
+OFFSET(struct player, hands[0].throw_item_pos_related_prev.m[3], 0xb48);
+#endif
 #if !IS_64_BIT
 _Static_assert(sizeof(Gfx) == 8, "32-bit display-list stride");
 _Static_assert(sizeof(fileentry) == 12, "ROM file table layout");
@@ -231,12 +277,42 @@ static int checkVertexCollisionNode(void)
     return failures;
 }
 
+#if IS_64_BIT
+/* portRenderDataFromWords (port_model_words.h) puts each 32-bit template word
+ * in the member at that word's 32-bit offset; pointer words are NULL. */
+static int checkRenderDataFromWords(void)
+{
+    static const u32 words[15] = {1, 3, 0, 0, 5, 6, 7, 8, 9, 10, 11, 12, 0x11223344, 0x55667788, 15};
+    ModelRenderData rd;
+    int failures = 0;
+
+    memset(&rd, 0xff, sizeof(rd));
+    portRenderDataFromWords(&rd, words);
+    failures += rd.basemtx != NULL || rd.gdl != NULL || rd.mtxlist != NULL;
+    failures += rd.zbufferenabled != 1 || rd.flags != 3;
+    failures += rd.unk14 != 5 || rd.unk18 != 6 || rd.unk1c != 7 || rd.unk20 != 8;
+    failures += rd.unk24 != 9 || rd.unk28 != 10 || rd.unk2c != 11 || rd.PropType != 12;
+    failures += rd.envcolour.word != 0x11223344 || rd.fogcolour.word != 0x55667788 || rd.cullmode != 15;
+    if (failures != 0)
+    {
+        printf("ABI probe FAIL: portRenderDataFromWords (%d cases)\n", failures);
+    }
+    return failures;
+}
+#endif
+
 int main(void)
 {
     if (checkVertexCollisionNode() != 0)
     {
         return 1;
     }
+#if IS_64_BIT
+    if (checkRenderDataFromWords() != 0)
+    {
+        return 1;
+    }
+#endif
     printf("ABI probe OK (%d-bit)\n", (int) (sizeof(void *) * 8));
     return 0;
 }
