@@ -38,6 +38,9 @@ extern s32 romfileSetupConvert(u8 *data, u32 size, const char *name, const u8 *c
 
 #define ORACLE_INTRO_OFFSET 8u /* struct stagesetup's intro field */
 
+/* The oracle build is 32-bit: the credits word is a whole address there. */
+_Static_assert(sizeof(uintptr_t) == 4, "the setup oracle runs in the 32-bit oracle build");
+
 static u32 readNative32(const u8 *p)
 {
     u32 v;
@@ -68,9 +71,10 @@ static int rebaseCredits(u8 *image, u32 size, uintptr_t base)
         }
         if (type == INTROTYPE_CREDITS)
         {
-            const u32 word = readNative32(image + at + 4) - (u32) (uintptr_t) image + (u32) base;
+            uintptr_t word = readNative32(image + at + 4);
 
-            memcpy(image + at + 4, &word, 4);
+            word = word - (uintptr_t) image + base;
+            memcpy(image + at + 4, &word, sizeof(word));
         }
         if (type == INTROTYPE_END)
         {
