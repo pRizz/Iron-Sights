@@ -4,7 +4,8 @@
  * type (Task 7): a stand-in declared with texLoad's own type (image.h) stores
  * a 64-bit value through it and the slot keeps every byte. Built at both pointer
  * widths by scripts/port/test_lp64_address.sh, which links port_textures.c
- * with the stubs below.
+ * with the stubs below. And portTexReplaceRom (LP64-004 Task 8): a ROM
+ * texture with a t<num>.bmp is rewritten where its record points.
  *
  *   test_lp64_textures DIR   DIR is an empty scratch directory, used as the
  *                            game's root; the driver writes
@@ -108,11 +109,13 @@ static void putLe(u8 *p, u32 v, int bytes)
     }
 }
 
-/* A 4x4 opaque 24-bit BMP, drawn here: no game data. */
-static int writeTestBmp(void)
+/* A 4x4 opaque grey 24-bit BMP named FILE under Data/Textures/Base, drawn
+ * here: no game data. */
+static int writeTestBmp(const char *file)
 {
     enum { ROW = TEST_SIDE * 3, PIXELS = ROW * TEST_SIDE, SIZE = 54 + PIXELS };
-    u8 file[SIZE];
+    u8 bmp[SIZE];
+    char path[64];
     const char *dirs[] = { "Data", "Data/Textures", "Data/Textures/Base" };
     FILE *f;
     size_t i;
@@ -121,25 +124,26 @@ static int writeTestBmp(void)
     {
         mkdir(portRootPath(dirs[i]), 0755);
     }
-    memset(file, 0x80, sizeof(file));
-    memset(file, 0, 54);
-    file[0] = 'B';
-    file[1] = 'M';
-    putLe(file + 2, SIZE, 4);
-    putLe(file + 10, 54, 4);
-    putLe(file + 14, 40, 4);
-    putLe(file + 18, TEST_SIDE, 4);
-    putLe(file + 22, TEST_SIDE, 4);
-    putLe(file + 26, 1, 2);
-    putLe(file + 28, 24, 2);
-    putLe(file + 34, PIXELS, 4);
-    f = fopen(portRootPath("Data/Textures/Base/option.bmp"), "wb");
+    memset(bmp, 0x80, sizeof(bmp));
+    memset(bmp, 0, 54);
+    bmp[0] = 'B';
+    bmp[1] = 'M';
+    putLe(bmp + 2, SIZE, 4);
+    putLe(bmp + 10, 54, 4);
+    putLe(bmp + 14, 40, 4);
+    putLe(bmp + 18, TEST_SIDE, 4);
+    putLe(bmp + 22, TEST_SIDE, 4);
+    putLe(bmp + 26, 1, 2);
+    putLe(bmp + 28, 24, 2);
+    putLe(bmp + 34, PIXELS, 4);
+    snprintf(path, sizeof(path), "Data/Textures/Base/%s.bmp", file);
+    f = fopen(portRootPath(path), "wb");
     if (f == NULL)
     {
         return 0;
     }
-    i = fwrite(file, 1, sizeof(file), f);
-    return fclose(f) == 0 && i == sizeof(file);
+    i = fwrite(bmp, 1, sizeof(bmp), f);
+    return fclose(f) == 0 && i == sizeof(bmp);
 }
 
 static void testSlotHoldsWholePixelAddress(void)
@@ -148,7 +152,7 @@ static void testSlotHoldsWholePixelAddress(void)
     extern struct sImageTableEntry *portTexExternal(const char *name);
     struct sImageTableEntry *entry;
 
-    expect(writeTestBmp(), "the test BMP is written");
+    expect(writeTestBmp("option"), "the test BMP is written");
 #if IS_64_BIT
     expect(PORT_IS_HOST_ADDR(s_arena), "the slot's arena is above 4 GB (a position-independent executable)");
 #endif
@@ -189,6 +193,114 @@ static void testTexLoadSlotKeepsWholeWord(void)
 #endif
 }
 
+/* portTexReplaceRom (LP64-004 Task 8), reached from texLoad once the textures
+ * class is converted: a ROM texture with a t<num>.bmp has its pool bytes
+ * rewritten where its struct tex points, and the record keeps the whole
+ * address of those bytes; one without a file is left alone. The pool is a
+ * static array, above 4 GB at 64 bits. */
+#define REPLACED_TEX 42
+#define PLAIN_TEX 43
+#define TEX_BYTES (TEST_SIDE * TEST_SIDE * 2) /* RGBA16, one level */
+
+static u8 s_pool[TEX_BYTES] __attribute__((aligned(16)));
+
+extern s32 portTexReplaceRom(struct tex *tex, u8 *data, s32 bytes);
+
+/* A 4x4 RGBA16 record of texture NUM whose data is the zeroed pool. */
+static struct tex poolTexture(s32 num)
+{
+    struct tex t;
+
+    memset(&t, 0, sizeof(t));
+    memset(s_pool, 0, sizeof(s_pool));
+    t.texturenum = (u16) num;
+    t.data = s_pool;
+    t.width = TEST_SIDE;
+    t.height = TEST_SIDE;
+    t.gbiformat = G_IM_FMT_RGBA;
+    t.depth = G_IM_SIZ_16b;
+    return t;
+}
+
+static int poolIsZero(void)
+{
+    size_t i;
+
+    for (i = 0; i < sizeof(s_pool); i++)
+    {
+        if (s_pool[i] != 0)
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static void testReplacementRewritesTheBytesTheRecordAddresses(void)
+{
+    // Arrange
+    struct tex t = poolTexture(REPLACED_TEX);
+    s32 replaced;
+
+    expect(writeTestBmp("t00042"), "the replacement BMP is written");
+
+    // Act
+    replaced = portTexReplaceRom(&t, t.data, TEX_BYTES);
+
+    // Assert
+    expect(replaced == 1 && !poolIsZero(), "a registered replacement rewrites the bytes its record addresses");
+}
+
+static void testReplacementKeepsTheRecordsWholeAddress(void)
+{
+    // Arrange
+    struct tex t = poolTexture(REPLACED_TEX);
+
+    expect(writeTestBmp("t00042"), "the replacement BMP is written");
+#if IS_64_BIT
+    expect(PORT_IS_HOST_ADDR(s_pool), "the pool is above 4 GB (a position-independent executable)");
+#endif
+
+    // Act
+    portTexReplaceRom(&t, t.data, TEX_BYTES);
+
+    // Assert
+    expect(t.data == s_pool && (uintptr_t) t.data == (uintptr_t) s_pool,
+           "the replaced texture's record still holds the whole address of its bytes");
+}
+
+/* The game's string.h, first on the include path, has no memcmp. */
+static int sameBytes(const void *a, const void *b, size_t n)
+{
+    const u8 *x = (const u8 *) a;
+    const u8 *y = (const u8 *) b;
+    size_t i;
+
+    for (i = 0; i < n; i++)
+    {
+        if (x[i] != y[i])
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+static void testTextureWithoutReplacementIsLeftAlone(void)
+{
+    // Arrange
+    struct tex t = poolTexture(PLAIN_TEX);
+    struct tex before = t;
+    s32 replaced;
+
+    // Act
+    replaced = portTexReplaceRom(&t, t.data, TEX_BYTES);
+
+    // Assert
+    expect(replaced == 0 && poolIsZero() && sameBytes(&t, &before, sizeof(t)),
+           "a texture without a file keeps its record and its bytes");
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 2)
@@ -199,5 +311,8 @@ int main(int argc, char **argv)
     s_root = argv[1];
     testSlotHoldsWholePixelAddress();
     testTexLoadSlotKeepsWholeWord();
+    testReplacementRewritesTheBytesTheRecordAddresses();
+    testReplacementKeepsTheRecordsWholeAddress();
+    testTextureWithoutReplacementIsLeftAlone();
     return s_failures == 0 ? 0 : 1;
 }

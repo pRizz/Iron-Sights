@@ -67,5 +67,8 @@ for width in $widths; do
     build "$work/seq-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_seq.c \
         port/src/romconv_seq.c port/src/romconv_common.c port/src/port_lp64_oracle.c
     run "$work/seq-$width" "${width}-bit music sequences"
+    build "$work/gfx-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_gfx.c \
+        port/src/romconv_gfx.c port/src/romconv_common.c port/src/port_lp64_oracle.c
+    run "$work/gfx-$width" "${width}-bit display-list expanders"
     echo "test_romconv: PASS (${width}-bit)"
 done

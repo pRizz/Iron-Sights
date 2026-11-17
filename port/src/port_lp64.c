@@ -222,7 +222,7 @@ const char *portLp64AssetName(enum PortLp64Asset asset)
 static const unsigned char s_AssetConverted[PORT_LP64_ASSET_COUNT] = {
     1, /* text banks (romconv_text.c) */
     0, /* fonts */
-    0, /* textures */
+    1, /* textures (romconv_gfx.c) */
     1, /* animation tables (romconv_anim.c) */
     0, /* models */
     0, /* collision tiles */

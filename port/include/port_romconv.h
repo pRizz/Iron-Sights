@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <PR/ultratypes.h>
 #include <PR/libaudio.h> /* the audio bank records */
+#include <PR/gbi.h>      /* Gfx, for the display-list expanders */
 #include "port_lp64.h"
 #include "music.h" /* RareALSeqBankFile */
 
@@ -319,6 +320,63 @@ void portSeqTableOracle(const RareALSeqBankFile *inplace, const u8 *file, u32 fi
 /** audio_stubs.c, in the oracle build: portSeqTableOracle for SEGMENT, the ROM
  * segment NAME, with the segment's size from romdataSeg. */
 void portSeqOracle(const RareALSeqBankFile *inplace, const u8 *segment, const char *name);
+#endif
+
+/* ---- display lists: the expander of the textures class (romconv_gfx.c) -- */
+
+/*
+ * A ROM display-list command is 8 bytes, two big-endian 32-bit words; a host
+ * Gfx is two pointer-sized words, 8 bytes at 32 bits and 16 at 64. The three
+ * expanders below turn COMMANDS commands into COMMANDS Gfx, each word
+ * zero-extended (an unsigned 32-bit value, never a signed one), so a
+ * command's upper halves are zero at 64 bits and a segment word stays a
+ * segment word.
+ *
+ * Each reads exactly 8 * COMMANDS bytes from its source and writes exactly
+ * COMMANDS * sizeof(Gfx) bytes at DST, nothing before or after; COMMANDS 0
+ * reads and writes nothing (either pointer may then be NULL). The functions
+ * take no size for DST: the caller guarantees COMMANDS * sizeof(Gfx) bytes
+ * there, which at 64 bits is twice the source's size. Each command's two
+ * words are read before either is written, so a command may overlap its own
+ * destination.
+ *
+ * Overlap. With G = sizeof(Gfx) - 8 (0 at 32 bits, 8 at 64), the source and
+ * DST may share a buffer only as follows; any other overlap corrupts commands
+ * not yet read:
+ *   portGfxFromRom, portGfxFromWords (first command to last): DST at or
+ *     before SRC - G * (COMMANDS - 1). At 32 bits, DST == SRC (in place).
+ *     At 64 bits the tightest is DST 8 * (COMMANDS - 1) bytes before SRC;
+ *     a source at the end of room for COMMANDS Gfx, with DST at that room's
+ *     start, is 8 * COMMANDS bytes before and so legal.
+ *   portGfxFromRomBackward (last command to first): DST at or after SRC - G.
+ *     At 64 bits the tightest is DST 8 bytes before SRC; DST == SRC, or DST
+ *     later in the same buffer (texCopyGdls's room lists), is legal.
+ * Buffers that do not overlap are legal for all three.
+ */
+
+/** Expands COMMANDS big-endian ROM commands at SRC into host Gfx at DST,
+ * first to last. Overlap: see above. */
+void portGfxFromRom(Gfx *dst, const u8 *src, u32 commands);
+
+/** As portGfxFromRom, last command to first, for a DST at or after SRC - G
+ * (see above). */
+void portGfxFromRomBackward(Gfx *dst, const u8 *src, u32 commands);
+
+/** As portGfxFromRom for commands already in native 4-byte words: WORDS[2i]
+ * and WORDS[2i + 1] are command i's w0 and w1. Overlap: as portGfxFromRom. */
+void portGfxFromWords(Gfx *dst, const u32 *words, u32 commands);
+
+#ifdef GE_LP64_ORACLE
+/**
+ * The oracle (32-bit, -DGE_LP64_ORACLE=ON) around texCopyGdls's 32-bit copy
+ * of BYTES bytes of ROM commands from SRC to DST: before it, copies the span
+ * both cover when they overlap (else the source alone) and runs
+ * portGfxFromRomBackward in the copy with the same offsets; after it, compares DST's BYTES bytes with the converter's, as the
+ * textures file "room list N" (N counts the calls). Only one copy is checked
+ * at a time: Before then After, with nothing between.
+ */
+void portGfxCopyOracleBefore(const Gfx *src, const Gfx *dst, s32 bytes);
+void portGfxCopyOracleAfter(void);
 #endif
 
 #ifdef __cplusplus

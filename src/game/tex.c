@@ -6,6 +6,9 @@
 #include "tex.h"
 #include "unk_092E50.h"
 #include "port_gfxwords.h" /* LP64-003: GFX_W0 */
+#if IS_64_BIT || defined(GE_LP64_ORACLE)
+#include "port_romconv.h" /* LP64-004: the display-list expander */
+#endif
 
 s32 g_TexLutMode;
 s32 dword_CODE_bss_8008D144; // unused/padding
@@ -843,7 +846,12 @@ s32 texLoadFromGdl(Gfx *src, s32 srcsize, Gfx *dst, void *texpool)
     s32 dbgSeen = 0, dbgFound = 0, dbgMissed = 0, dbgFirstMiss = -1;
 #endif
 
+#if IS_64_BIT
+    /* SRC is host Gfx, 16 bytes a command at 64 bits (LP64-004). */
+    count = srcsize / (s32) sizeof(Gfx);
+#else
     count = srcsize >> 3;
+#endif
 
     sub_GAME_7F0CC4C8();
 
@@ -1173,9 +1181,24 @@ s32 texLoadFromGdl(Gfx *src, s32 srcsize, Gfx *dst, void *texpool)
 
 /***
  * NTSC address 0x7F0CE794.
+ *
+ * Copies ARG2 bytes of ROM display list from ARG0 to ARG1, last command first,
+ * so ARG1 may lie later in the same buffer. Its callers on PC are the two
+ * room loaders (bg.c); the third, sub_GAME_7F0762E0 (objecthandler_2.c), is
+ * dead on PC, where that function returns before it. At 64 bits each 8-byte
+ * command becomes a 16-byte Gfx (LP64-004): ARG1 then needs ARG2 * 2 bytes,
+ * which the room loaders do not yet give it (they place ARG1 ARG2 bytes from
+ * their block's end); they are not reached at 64 bits until the backgrounds
+ * class is converted, whose task changes them.
 */
 void texCopyGdls(Gfx *arg0, Gfx *arg1, s32 arg2)
 {
+#if IS_64_BIT
+    portGfxFromRomBackward(arg1, (const u8 *) arg0, (u32) arg2 >> 3);
+#else
+#ifdef GE_LP64_ORACLE
+    portGfxCopyOracleBefore(arg0, arg1, arg2);
+#endif
     arg2 = (arg2 >> 3);
     arg0 = arg0 + (arg2 - 1);
     arg1 = arg1 + (arg2 - 1);
@@ -1204,4 +1227,8 @@ void texCopyGdls(Gfx *arg0, Gfx *arg1, s32 arg2)
         arg1--;
         arg0--;
     }
+#ifdef GE_LP64_ORACLE
+    portGfxCopyOracleAfter();
+#endif
+#endif
 }
