@@ -33,9 +33,11 @@ MISSIONS = ('dam', 'facility', 'runway', 'surface', 'bunker1', 'silo', 'frigate'
             'train', 'jungle', 'control', 'caverns', 'cradle', 'aztec', 'egypt')
 LSAN_SUPPRESSIONS = ROOT/'scripts/port/lsan_suppressions.txt'
 SANITIZER_ERRORS = ('runtime error:', 'ERROR: AddressSanitizer', 'ERROR: LeakSanitizer')
-# A pool too small at 64 bits or a converter's refusal (LP64-004) fails a mission whatever its exit
-# status. The markers are the boot check's own (lp64_boot.py), loaded by path as lp64_oracle.py loads
-# this file, so the two tools cannot drift apart. A 32-bit game never prints either line.
+# A pool too small at 64 bits, a converter's refusal (LP64-004) or any other `ge: lp64:` line outside
+# the boot check's informational list fails a mission whatever its exit status. The markers, the list
+# and the rule are the boot check's own (lp64_boot.py), loaded by path as lp64_oracle.py loads this
+# file, so the two tools cannot drift apart. A 32-bit game prints none of these lines; the oracle
+# build's `ge: lp64: oracle:` lines are informational here and judged by lp64_oracle.py's totals.
 _lp64_boot_spec = importlib.util.spec_from_file_location('lp64_boot', Path(__file__).with_name('lp64_boot.py'))
 lp64_boot = importlib.util.module_from_spec(_lp64_boot_spec)
 _lp64_boot_spec.loader.exec_module(lp64_boot)
@@ -118,8 +120,7 @@ def mission_smoke(executable, rom, output, frames, jobs, leaks=False, fixed_tick
                 result = subprocess.run([str(child)], cwd=folder, env=env, stdout=log,
                                         stderr=subprocess.STDOUT, timeout=300 if leaks else 120)
             text = log_path.read_text(errors='replace')
-            refusal = next((line for line in text.splitlines()
-                            if any(marker in line for marker in REFUSAL_MARKERS)), None)
+            refusal = next(iter(lp64_boot.failing_lp64_lines(text.splitlines())), None)
             passed = (result.returncode == 0 and 'GE_STAGE direct launch:' in text
                       and f'frame limit reached: frames={frames}' in text
                       and not any(error in text for error in SANITIZER_ERRORS)

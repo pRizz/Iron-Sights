@@ -206,6 +206,38 @@ class RefusalLineTests(unittest.TestCase):
         # Assert
         self.assertEqual(results, [(1, False, line) for line in failing])
 
+    def test_an_unknown_lp64_line_fails_the_mission(self):
+        # Arrange: a kind on no informational list, printed by a run that still exits 0
+        unknown = 'ge: lp64: converter map: a second map while one is in use'
+
+        # Act
+        status, record, printed = self.smoke(CLEAN_LOG + unknown + '\n')
+
+        # Assert
+        self.assertEqual((status, record['passed'], record['refusal']), (1, False, unknown))
+        self.assertIn('dam: FAIL (' + unknown + ')', printed)
+
+    def test_each_informational_kind_passes_alone(self):
+        # Arrange: one line of each kind the informational list names, the oracle build's included
+        kinds = ('ge: lp64: address space OK: executable image 0x5555 stack 0x7fff',
+                 'ge: lp64: audio bank sfxctl: 16448 bytes of run-time records',
+                 'ge: lp64: audio bank instrumentsctl: 10520 bytes of run-time records',
+                 'ge: lp64: music sequence table musicsampletbl: 63 sequences, 1016 bytes',
+                 'ge: lp64: bg tables bg/bg_dam_all_p.seg: 139 room records, 195 portal entries, '
+                 '8688 bytes of the stage pool',
+                 'ge: lp64: oracle: models: 512 files, 0 differ',
+                 'ge: lp64: oracle: text banks LdamE identical (4096 bytes)',
+                 'ge: lp64: oracle: stan sweep: the ROM holds 27 stan files')
+        results = []
+
+        # Act
+        for line in kinds:
+            status, record, _ = self.smoke(CLEAN_LOG + line + '\n')
+            results.append((line, status, record['passed']))
+
+        # Assert
+        self.assertEqual(results, [(line, 0, True) for line in kinds])
+
     def test_a_stop_fails_the_mission_by_its_exit_status(self):
         # Arrange
         stop = 'ge: lp64: stopping: asset class "models" has no 64-bit converter yet (LP64-004)\n'

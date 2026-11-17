@@ -177,6 +177,18 @@ the explicit stage launch, the requested 900-pump frame limit, exit zero and no
 ASan/UBSan report. All 20 solo mission startup samples passed on the final
 sanitized headless build. Logs are local under `build_win/buffer-audit/`.
 
+A 64-bit executable's log is also checked for `ge: lp64:` lines (LP64-004). A
+mission fails, whatever its exit status, on a pool line (`ge: lp64: pool`), a
+converter's refusal (`ge: lp64: cannot convert`), or any other `ge: lp64:` line
+whose kind is not informational. The informational kinds are the address
+check's success (`address space OK`), the two audio banks' sizes (`audio
+bank`), the music sequence table's (`music sequence table`), a background's
+tables (`bg tables`) and the 32-bit oracle build's `oracle:` lines, which
+`lp64_oracle.py` judges by their totals. The list and the rule are
+`lp64_boot.py`'s (`INFORMATIONAL_PREFIXES`, `failing_lp64_lines`), which the
+boot check applies too (the asset-class stop line aside, which it judges
+itself), so a new kind of line fails both tools until it is added to the list.
+
 The smoke runs on the game clock: a slow frame (a sanitized build, an emulated
 run, a long load) advances several game fields, so a run covers at least its
 frames' worth of game time. `--fixed-tick` instead runs one game field a frame

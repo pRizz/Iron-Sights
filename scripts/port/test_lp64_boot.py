@@ -343,6 +343,28 @@ class RunMode(StandIns):
         self.assertEqual(status, 1, out)
         self.assertIn('ge: lp64: cannot convert models', out)
 
+    def test_unknown_lp64_line_fails(self):
+        # Arrange: a kind on no informational list, in a run that exits 0 (fix wave G)
+        exe = self.fake('unknown', RAN + 'ge: lp64: converter map: a second map while one is in use\n', 0)
+
+        # Act
+        status, out = self.run_mode(str(exe))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('logged: ge: lp64: converter map: a second map while one is in use', out)
+
+    def test_informational_lp64_lines_pass(self):
+        # Arrange
+        exe = self.fake('informational', RAN + 'ge: lp64: audio bank sfxctl: 16448 bytes of run-time records\n'
+                        'ge: lp64: music sequence table musicsampletbl: 63 sequences, 1016 bytes\n', 0)
+
+        # Act
+        status, out = self.run_mode(str(exe))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+
     def test_exit_status_five_fails(self):
         # Arrange
         exe = self.fake('five', RAN, 5)

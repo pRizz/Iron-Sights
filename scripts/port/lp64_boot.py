@@ -5,7 +5,8 @@ the boot reaches, logging `ge: lp64: stopping: asset class "NAME" ...` and exiti
 (port/src/port_lp64.c). This runs each executable once, with the ROM. With --expect-stop it passes
 only if every run exited with status 5, logged the startup address line, stopped at the expected
 class, and logged no fatal signal, no sanitizer report, no `ge: lp64: pool` line (a pool too small
-at 64 bits) and no `ge: lp64: cannot convert` line (a converter's refusal). With --expect-run, for
+at 64 bits), no `ge: lp64: cannot convert` line (a converter's refusal) and no other `ge: lp64:`
+line outside INFORMATIONAL_PREFIXES (the stop line aside). With --expect-run, for
 an executable that converts every class its run reaches, it passes only if every run exited with
 status 0, logged the address line and the frame limit line with the expected count (pcsched.c's
 `ge: frame limit reached: frames=N`), and logged no asset-class stop and none of those four.
@@ -47,6 +48,29 @@ SANITIZER_MARKERS = ('runtime error:', 'ERROR: AddressSanitizer', 'ERROR: LeakSa
                      'ERROR: UndefinedBehaviorSanitizer')
 # A pool too small at 64 bits (LP64-004 Task 2) and a converter's refusal (port_romconv.h).
 REFUSAL_MARKERS = ('ge: lp64: pool', 'ge: lp64: cannot convert')
+# The `ge: lp64:` lines a passing run may print (owner decision 3 as the controller read it,
+# FORK-089 "LP64-004 task 16"): the address check's success, the two audio banks' and the music
+# sequence table's sizes, a background's tables, and the 32-bit oracle build's lines, which
+# lp64_oracle.py judges by their totals. Any other kind fails a run as a refusal does (fix wave G);
+# the asset-class stop is judged by STOP_PATTERN instead.
+LP64_PREFIX = 'ge: lp64: '
+INFORMATIONAL_PREFIXES = ('ge: lp64: address space OK', 'ge: lp64: audio bank ',
+                          'ge: lp64: music sequence table ', 'ge: lp64: bg tables ', 'ge: lp64: oracle: ')
+
+
+def failing_lp64_lines(lines: list[str]) -> list[str]:
+    """The lines of LINES that fail a run: each with a pool or refusal marker, and each other
+    `ge: lp64:` line that is neither of an informational kind nor the asset-class stop."""
+    found = []
+    for line in lines:
+        at = line.find(LP64_PREFIX)
+        if at < 0:
+            continue
+        text = line[at:]
+        known = text.startswith(INFORMATIONAL_PREFIXES) or STOP_PATTERN.match(text)
+        if any(marker in line for marker in REFUSAL_MARKERS) or not known:
+            found.append(line)
+    return found
 
 
 @dataclass
@@ -81,8 +105,8 @@ class Expectation:
 
 def parse_log(text: str) -> BootResult:
     """Reads a boot log: the address line, the class of the first guard stop, a fatal signal,
-    every sanitizer report line, every pool or refused-conversion line, and the frames the frame
-    limit line reports."""
+    every sanitizer report line, every failing `ge: lp64:` line (failing_lp64_lines), and the
+    frames the frame limit line reports."""
     match = STOP_PATTERN.search(text)
     frame_limit = FRAME_LIMIT_PATTERN.search(text)
     lines = text.splitlines()
@@ -91,7 +115,7 @@ def parse_log(text: str) -> BootResult:
         stop_class=match.group(1) if match else None,
         fatal_signal=any(FATAL_SIGNAL in line for line in lines),
         sanitizer_errors=[line for line in lines if any(marker in line for marker in SANITIZER_MARKERS)],
-        refusals=[line for line in lines if any(marker in line for marker in REFUSAL_MARKERS)],
+        refusals=failing_lp64_lines(lines),
         frames_run=int(frame_limit.group(1)) if frame_limit else None,
     )
 
