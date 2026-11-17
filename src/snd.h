@@ -166,7 +166,11 @@ struct ALInstrumentAlt_s
 {
     s32 unk0;
     s32 unk4;
+#if !(defined(__SIZEOF_POINTER__) && __SIZEOF_POINTER__ == 8)
     s32 unk8;
+#endif
+    /* LP64-004: one pointer before ALInstrument.soundArray at every width,
+     * so that sndPlaySfx's 1-based index k is the instrument's sound k - 1. */
     ALSound *soundArray[1];
 };
 

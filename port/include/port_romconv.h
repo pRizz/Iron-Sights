@@ -24,6 +24,7 @@
 
 #include <stdint.h>
 #include <PR/ultratypes.h>
+#include <PR/libaudio.h> /* the audio bank records */
 #include "port_lp64.h"
 
 #ifdef __cplusplus
@@ -189,6 +190,79 @@ struct PortTextPatch
  */
 s32 portTextBankConvert(u8 *data, u32 size, uintptr_t base, const char *bank, const struct PortTextPatch *patches,
         u32 npatches);
+
+/* ---- audio banks (romconv_bank.c) ------------------------------------- */
+
+/**
+ * The bytes of run-time records portBankConvert writes for the big-endian bank
+ * file FILE (SIZE bytes, port_romlayout.h's RomBankFile): one ALBankFile and
+ * one record for each distinct ALBank, ALInstrument, ALSound and ALWaveTable
+ * the file reaches, each rounded up to 8. Reads only. Returns 0 after
+ * portConvRefuse when the revision is not AL_BANK_VERSION, a count is negative,
+ * a record or array runs past the file's end, an offset is not a multiple of
+ * 4, or one offset is reached as two kinds of record.
+ */
+u32 portBankConvertedSize(const u8 *file, u32 size);
+
+/**
+ * Builds the run-time graph of the bank file FILE (SIZE bytes) in OUT (OUTSIZE
+ * bytes, 8-byte aligned) and returns OUT as its ALBankFile. Each distinct
+ * bank, instrument, sound and wave table is written once, its flags byte 1;
+ * envelopes, key maps, ADPCM books and loops stay in FILE and are turned to
+ * native byte order there, once each, as the 32-bit alBnkfNew does. A wave's
+ * base is TABLE + its offset, and a 16-bit raw wave's samples are swapped in
+ * TABLE, once a base. An instrument or bank offset of 0 gives a pointer to
+ * FILE itself and is not followed, as alBnkfNew does.
+ *
+ * Returns NULL after portConvRefuse, having written nothing to FILE, TABLE or
+ * OUT, when portBankConvertedSize refuses, when OUTSIZE is less than it, or
+ * when OUT is not 8-byte aligned. The file's flags bytes are not read: a
+ * record already marked converted is converted again. TABLE's size is not
+ * known here and not checked, as at 32 bits.
+ */
+ALBankFile *portBankConvert(u8 *file, u32 size, u8 *table, u8 *out, u32 outsize);
+
+/** audio_stubs.c, at 64 bits: converts the copied bank file FILE (SIZE bytes)
+ * into records allocated from HEAP and returns them; stops the game, naming
+ * NAME, when the file is refused. */
+ALBankFile *portBnkfConvert(ALHeap *heap, ALBankFile *file, u32 size, u8 *table, const char *name);
+
+#ifdef GE_LP64_ORACLE
+/** One bank graph for portBankGraphsEqual: its ALBankFile, the file image its
+ * in-file records lie in (SIZE bytes), and the wave table its bases lead into. */
+struct PortBankGraph
+{
+    const ALBankFile *root;
+    const u8 *file;
+    u32 size;
+    const u8 *table;
+};
+
+/**
+ * Walks A and B from their bank files down and compares every scalar field.
+ * A pointer to a bank, instrument, sound or wave table is equal when both lead
+ * to records that compare equal, or both to their file's start; one to an
+ * envelope, key map, book or loop when both lie at the same offset of their
+ * file and hold the same bytes; a wave's base when both are at the same offset
+ * of their table. Returns 1, or 0 with WHY (WHYSIZE bytes) naming the first
+ * difference.
+ */
+int portBankGraphsEqual(const struct PortBankGraph *a, const struct PortBankGraph *b, char *why, u32 whysize);
+
+/**
+ * The oracle (32-bit, -DGE_LP64_ORACLE=ON), called after alBnkfNew converted
+ * INPLACE (the bank file NAME, SIZE bytes) with INPLACETABLE (TABLESIZE bytes):
+ * converts PRISTINE, a copy of the file made before, with TABLECOPY, a copy of
+ * the table made before, compares the two graphs and the two tables, and logs
+ * one verdict for NAME.
+ */
+void portBankOracle(const char *name, const ALBankFile *inplace, const u8 *inplacetable, u8 *pristine, u32 size,
+        u8 *tablecopy, u32 tablesize);
+
+/** audio_stubs.c, in the oracle build: alBnkfNew(FILE, TABLE) with
+ * portBankOracle beside it; TBLNAME is the table's ROM segment. */
+void portBnkfOracle(ALBankFile *file, u32 size, u8 *table, const char *name, const char *tblname);
+#endif
 
 #ifdef __cplusplus
 }

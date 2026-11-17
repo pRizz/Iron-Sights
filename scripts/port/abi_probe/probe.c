@@ -19,6 +19,7 @@
 #include "port_hostptr.h"
 #include "game/ramromreplay.h"
 #include "port_romlayout.h"
+#include "snd.h"
 
 /* Fixed at every width: the renderer reads these as N64 formats. */
 _Static_assert(sizeof(s32) == 4 && sizeof(u32) == 4, "32-bit integer types");
@@ -46,6 +47,12 @@ _Static_assert(sizeof(Vertex) == 16, "Game vertex stride");
 _Static_assert(IS_64_BIT == (sizeof(void *) == 8), "IS_64_BIT matches the host");
 _Static_assert(sizeof(Gfx) == 2 * sizeof(uintptr_t), "Display-list command is two pointer words");
 _Static_assert(offsetof(Gfx, words.w1) == sizeof(uintptr_t), "Display-list address word");
+/* sndPlaySfx reads the effects bank's instrument through ALInstrumentAlt_s
+ * with 1-based sound indices: its index k must be ALInstrument's k - 1. */
+_Static_assert(offsetof(struct ALInstrumentAlt_s, soundArray) + sizeof(void *) == offsetof(ALInstrument, soundArray),
+               "ALInstrumentAlt_s's sound array starts one pointer before ALInstrument's");
+/* g_musicSfxBufferPtr, an ALBank *, is passed to sndPlaySfx as an ALBankAlt_s *. */
+_Static_assert(offsetof(struct ALBankAlt_s, instArray) == offsetof(ALBank, instArray), "ALBankAlt_s's instrument array");
 /* Fields behind the LP64-002 sentinel comparisons (a small integer, a mask or
  * a segment tag tested in pointer-sized storage): each must hold a whole
  * pointer at every width. How they behave at 64 bits is LP64-003's to test. */

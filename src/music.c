@@ -15,6 +15,9 @@
 #include "snd.h"
 #include <macro.h>
 #include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
+#if IS_64_BIT || defined(GE_LP64_ORACLE)
+#include "port_romconv.h" /* LP64-004: the audio bank converter */
+#endif
 
 /**
  * EU .data, offset from start of data_seg : 0x3570
@@ -779,7 +782,13 @@ void musicSeqPlayerInit(void)
 
         sfxBank = alHeapAlloc(&g_musicHeap, 1, size);
         romCopy(sfxBank, &_sfxctlSegmentRomStart, size);
+#if IS_64_BIT
+        sfxBank = portBnkfConvert(&g_musicHeap, sfxBank, size, (u8 *)&_sfxtblSegmentRomStart, "sfxctl");
+#elif defined(GE_LP64_ORACLE)
+        portBnkfOracle(sfxBank, size, (u8 *)&_sfxtblSegmentRomStart, "sfxctl", "sfxtbl");
+#else
         alBnkfNew(sfxBank, (u8 *)&_sfxtblSegmentRomStart);
+#endif
         g_musicSfxBufferPtr = sfxBank->bankArray[0];
     }
 
@@ -789,7 +798,14 @@ void musicSeqPlayerInit(void)
 
         instrumentBank = alHeapAlloc(&g_musicHeap, 1, size);
         romCopy(instrumentBank, &_instrumentsctlSegmentRomStart, size);
+#if IS_64_BIT
+        instrumentBank = portBnkfConvert(&g_musicHeap, instrumentBank, size, (u8 *)&_instrumentstblSegmentRomStart,
+                "instrumentsctl");
+#elif defined(GE_LP64_ORACLE)
+        portBnkfOracle(instrumentBank, size, (u8 *)&_instrumentstblSegmentRomStart, "instrumentsctl", "instrumentstbl");
+#else
         alBnkfNew(instrumentBank, (u8 *)&_instrumentstblSegmentRomStart);
+#endif
         g_musicInstrumentBufferPtr = instrumentBank->bankArray[0];
     }
 

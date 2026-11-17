@@ -27,7 +27,15 @@
 
 #include <ultra64.h>
 #include <PR/libaudio.h>
-#include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
+#include "port_lp64.h" /* IS_64_BIT */
+#if IS_64_BIT || defined(GE_LP64_ORACLE)
+#include <stdlib.h>
+#include "port_romconv.h" /* LP64-004: the audio bank converter */
+#endif
+#ifdef GE_LP64_ORACLE
+#include "port_lp64_oracle.h"
+#include "romdata.h" /* romdataSeg: the wave table's size */
+#endif
 
 /* ==== AUDIO PHASE 1c ===================================================== *
  * The REAL AL library is now compiled (see CMakeLists' audio block): sl.c
@@ -62,7 +70,12 @@
  * soundCount 261, soundArray at +16} - STANDARD layout (GE's snd.h "Alt"
  * view reads soundArray at +12 with 1-based sfx indices; the addresses
  * coincide, so both views work off this patch).
+ *
+ * LP64-004: at 64 bits the records outgrow the file's, so this in-place
+ * patch is compiled only at 32 bits; 64-bit builds build the records in new
+ * memory with portBankConvert (romconv_bank.c) through portBnkfConvert below.
  */
+#if !IS_64_BIT
 
 static u16 portBSwap16(u16 v)
 {
@@ -78,7 +91,7 @@ static u32 portBSwap32(u32 v)
  * before the slot is overwritten with the host pointer. */
 static u32 portBnkfOffset(const void *slot)
 {
-    return portBSwap32((u32)(uintptr_t)slot); /* LP64-004: audio bank converter */
+    return portBSwap32((u32)(uintptr_t)slot); /* 32-bit only; LP64-004's portBankConvert replaces it at 64 */
 }
 
 #define BNKF_VISIT_MAX 4096
@@ -234,8 +247,6 @@ void alBnkfNew(ALBankFile *f, u8 *table)
     uintptr_t base = (uintptr_t)f;
     s32 i;
 
-    /* the bank is relocated in place through 8-byte pointer slots over 4-byte file offsets */
-    portLp64RequireConverter(PORT_LP64_AUDIO_BANKS);
     s_bnkfVisitedCount = 0;
 
     f->revision = (s16)portBSwap16((u16)f->revision);
@@ -267,6 +278,50 @@ void alBnkfNew(ALBankFile *f, u8 *table)
         ge_dbg_vec("bnkf banks/insts/rate/sounds/wt0type/len/base", v, 7);
     }
 }
+
+#ifdef GE_LP64_ORACLE
+void portBnkfOracle(ALBankFile *file, u32 size, u8 *table, const char *name, const char *tblname)
+{
+    u32 tablesize = 0;
+    const u8 *segment = romdataSeg(tblname, &tablesize);
+    u8 *pristine = (u8 *) malloc(size);
+    u8 *tablecopy = (u8 *) malloc(tablesize == 0 ? 1 : tablesize);
+
+    if (segment != table || pristine == NULL || tablecopy == NULL) {
+        portLp64OracleResult(PORT_LP64_AUDIO_BANKS, name, 0, "the oracle could not copy the file and its wave table");
+        alBnkfNew(file, table);
+    } else {
+        memcpy(pristine, file, size);
+        memcpy(tablecopy, table, tablesize);
+        alBnkfNew(file, table);
+        portBankOracle(name, file, table, pristine, size, tablecopy, tablesize);
+    }
+    free(pristine);
+    free(tablecopy);
+}
+#endif
+
+#else /* IS_64_BIT */
+
+extern void sysFatalError(const char *format, ...);
+extern void portConLogf(const char *fmt, ...);
+
+ALBankFile *portBnkfConvert(ALHeap *heap, ALBankFile *file, u32 size, u8 *table, const char *name)
+{
+    u32 needed = portBankConvertedSize((const u8 *) file, size);
+    ALBankFile *converted = NULL;
+
+    if (needed != 0) {
+        converted = portBankConvert((u8 *) file, size, table, (u8 *) alHeapAlloc(heap, 1, (s32) needed), needed);
+    }
+    if (converted == NULL) {
+        sysFatalError("Cannot convert the audio bank %s", name);
+    }
+    portConLogf("ge: lp64: audio bank %s: %u bytes of run-time records\n", name, needed);
+    return converted;
+}
+
+#endif /* IS_64_BIT */
 
 /* ==== compressed-midi seq / seq player =================================== */
 

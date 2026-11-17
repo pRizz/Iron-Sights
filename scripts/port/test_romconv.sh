@@ -57,5 +57,8 @@ for width in $widths; do
     build "$work/text-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_text.c \
         port/src/romconv_text.c port/src/romconv_common.c
     run "$work/text-$width" "${width}-bit text banks"
+    build "$work/bank-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_bank.c \
+        port/src/romconv_bank.c port/src/romconv_bank_oracle.c port/src/romconv_common.c port/src/port_lp64_oracle.c
+    run "$work/bank-$width" "${width}-bit audio banks"
     echo "test_romconv: PASS (${width}-bit)"
 done

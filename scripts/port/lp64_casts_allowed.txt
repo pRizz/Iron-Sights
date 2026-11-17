@@ -1,6 +1,6 @@
 # Truncating round-trip casts per file: path<TAB>count<TAB>reason. `check` requires the counts to match
 # exactly: lower a line when casts are removed, delete it at zero; see lp64_casts.py.
-port/src/audio_stubs.c	1	LP64-002 task 8: alBnkfNew relocates the bank in place and reads the file's 32-bit offsets from its pointer slots (portBnkfOffset); LP64-004's audio bank converter replaces it
+port/src/audio_stubs.c	1	LP64-002 task 8: alBnkfNew relocates the bank in place and reads the file's 32-bit offsets from its pointer slots (portBnkfOffset); since LP64-004 Task 5 it is compiled only at 32 bits, and portBankConvert (romconv_bank.c) builds the 64-bit records
 port/src/port_state.c	1	LP64-002 task 8: the suspend image's StateHeader/StateRegion records hold 32-bit addresses (stateAddrWord); since LP64-003 task 5 the file is compiled only at 32 bits (64-bit builds link port_state_unavailable.c, which reports suspend points unavailable)
 port/src/romdata.c	2	existing before LP64-002; LP64-004's text bank converter: the bank's string slots are 32-bit words patched in place
 port/src/romconv_text.c	1	LP64-004 task 4: the text converter's 32-bit branch (oracle build only, never compiled at 64 bits) gives a relabelled slot the patch's address, as the in-place rebase does; kept on purpose

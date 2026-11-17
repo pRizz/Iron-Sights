@@ -105,4 +105,86 @@ typedef struct RomAnimHeader
 } RomAnimHeader;
 _Static_assert(sizeof(RomAnimHeader) == 0x14, "RomAnimHeader is 0x14 bytes");
 
+/* ==== audio banks (the sfxctl and instrumentsctl images; libaudio.h) ==== */
+
+/**
+ * The five records of an SGI bank file (revision 'B1') that hold offsets, as
+ * the cart holds them, big-endian. Each offset is from the file's start, except
+ * a wave table's base, which is into the matching .tbl segment. Four more
+ * kinds hold no offset and stay in the file image at every width: ALEnvelope
+ * (three s32, two u8), ALKeyMap (six u8), ALADPCMBook (two s32, then
+ * order * npredictors * 8 s16), ALADPCMloop (three u32, then 16 s16) and
+ * ALRawLoop (three u32).
+ */
+typedef struct RomBankFile
+{
+    u16 revision; /* AL_BANK_VERSION */
+    u16 bankCount;
+    /* then bankCount u32 offsets of RomBank */
+} RomBankFile;
+_Static_assert(sizeof(RomBankFile) == 4, "RomBankFile is 4 bytes");
+
+typedef struct RomBank
+{
+    u16 instCount;
+    u8 flags;
+    u8 pad;
+    u32 sampleRate;
+    u32 percussion; /* a RomInstrument, or 0 for none */
+    /* then instCount u32 offsets of RomInstrument (0 names the file's start) */
+} RomBank;
+_Static_assert(sizeof(RomBank) == 12, "RomBank is 12 bytes");
+
+typedef struct RomInstrument
+{
+    u8 volume;
+    u8 pan;
+    u8 priority;
+    u8 flags;
+    u8 tremType;
+    u8 tremRate;
+    u8 tremDepth;
+    u8 tremDelay;
+    u8 vibType;
+    u8 vibRate;
+    u8 vibDepth;
+    u8 vibDelay;
+    u16 bendRange;
+    u16 soundCount;
+    /* then soundCount u32 offsets of RomSound */
+} RomInstrument;
+_Static_assert(sizeof(RomInstrument) == 16, "RomInstrument is 16 bytes");
+
+typedef struct RomSound
+{
+    u32 envelope;  /* an ALEnvelope */
+    u32 keyMap;    /* an ALKeyMap */
+    u32 wavetable; /* a RomWaveTable */
+    u8 samplePan;
+    u8 sampleVolume;
+    u8 flags;
+    u8 pad;
+} RomSound;
+_Static_assert(sizeof(RomSound) == 16, "RomSound is 16 bytes");
+
+typedef struct RomWaveTable
+{
+    u32 base; /* into the .tbl segment */
+    u32 len;
+    u8 type;  /* AL_ADPCM_WAVE or AL_RAW16_WAVE */
+    u8 flags;
+    u8 pad[2];
+    u32 loop; /* an ALADPCMloop or ALRawLoop, or 0 */
+    u32 book; /* an ALADPCMBook, or 0; ADPCM only */
+} RomWaveTable;
+_Static_assert(sizeof(RomWaveTable) == 20, "RomWaveTable is 20 bytes");
+
+/* The bytes of the in-file kinds that the game reads (libaudio.h's structs
+ * have the same fields at every width); a book's entries follow its header. */
+#define ROM_BANK_ENVELOPE_BYTES 14u  /* three s32, two u8 */
+#define ROM_BANK_KEYMAP_BYTES 6u
+#define ROM_BANK_BOOK_HEAD 8u        /* order, npredictors */
+#define ROM_BANK_ADPCMLOOP_BYTES 44u /* three u32, 16 s16 */
+#define ROM_BANK_RAWLOOP_BYTES 12u
+
 #endif

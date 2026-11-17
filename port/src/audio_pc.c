@@ -28,9 +28,9 @@
  *     slight high-frequency rolloff difference, inaudible for bring-up.
  *   - A_POLEF is a pass-through copy: the reverb wet path plays untinted
  *     (section filters off). Reverb timing/feedback still applies.
- *   - RAW16 wavetables would need a byteswap at A_LOADBUFF that is not
- *     detectable at that layer; both GE banks are 100% ADPCM (verified),
- *     so this never triggers. The bnkf dump would show type != 0.
+ *   - RAW16 waves play as native s16, unswapped at A_LOADBUFF: the stock
+ *     instruments bank's one RAW16 wave is swapped once in the ROM image's
+ *     .tbl by alBnkfNew (32-bit) or portBankConvert (64-bit, LP64-004).
  *
  * State blobs (ADPCM/resampler/envmixer state RAM the driver hands us via
  * command words) are only ever read/written by THIS interpreter, so their
