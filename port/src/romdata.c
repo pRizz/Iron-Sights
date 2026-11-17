@@ -818,6 +818,30 @@ static enum romfileclass romdataClassOf(const char *name)
     return CLASS_NONE;
 }
 
+#ifdef GE_LP64_ORACLE
+/* LP64-004 fix wave: GE_ROMPROBE=1 loads every served stan through
+ * romfileStanOracle, so a stan the ROM's directory holds but the game does
+ * not serve is never compared; count it as differing, as the background and
+ * setup sweeps do for theirs. */
+static void romdataStanOracleSweep(void)
+{
+    s32 r, index;
+    u32 held = 0;
+
+    for (r = 0; r < sFileCount; r++) {
+        if (sFiles[r].size == 0 || romdataClassOf(sFiles[r].name) != CLASS_STAN) {
+            continue;
+        }
+        held++;
+        index = fileGetIndex((u8 *) sFiles[r].name);
+        if (index <= 0 || !romdataFileServed(index)) {
+            portLp64OracleResult(PORT_LP64_COLLISION, sFiles[r].name, 0, "the ROM holds it, but it is not served");
+        }
+    }
+    portConLogf("ge: lp64: oracle: stan sweep: the ROM holds %u stan files\n", held);
+}
+#endif
+
 /* Called by obInit after its size loop: for each compiled-in entry of a served
  * class that the ROM's directory also has (matched by name), point hw_address
  * at the ROM bytes and set rom_size. The vanilla fileIndexLoadTo* path then
@@ -895,6 +919,7 @@ void romdataFilesApply(void)
         portModelOracleSweep();
         portBgOracleSweep(); /* LP64-004 Task 12: romconv_bg_oracle.c */
         portSetupOracleSweep(); /* LP64-004 Task 15: romconv_setup_oracle.c */
+        romdataStanOracleSweep(); /* LP64-004 fix wave: above */
     }
 #endif
 }
@@ -937,7 +962,12 @@ const u8 *romdataFileCompiled(s32 index)
 /* PORT STRING PATCHES: the port relabelled a few vanilla strings, so they are
  * applied by bank + slot after the rebase (the probe compares after patching,
  * so a stock cart still reads "identical"). Append-only; keep each string's
- * trailing '\n'. */
+ * trailing '\n'.
+ * LP64-004: at 64 bits a relabel is copied over the ROM string it replaces
+ * (romconv_text.c), so it must fit that string and share no byte with another
+ * slot's string; otherwise the whole bank is refused at 64 bits, while the
+ * 32-bit build, which points the slot at the relabel, still works. Only the
+ * oracle build or a 64-bit boot with the ROM catches that; CI has no ROM. */
 static const struct PortTextPatch sTextPatches[] = {
     { "LoptionsE", 24, "hud\n" },           /* was "ratio": Wide pushes the HUD to the window edges (options.h);
                                              * formerly "hud centering", before Health

@@ -56,6 +56,10 @@
 #include <stdint.h>
 #include "port_romconv.h" /* LP64-004: the font converter and its oracle */
 #endif
+#if IS_64_BIT
+#include <bondtypes.h>     /* struct font, for the staging arrays' sizes */
+#include "port_romlayout.h" /* RomFont */
+#endif
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console's history. */
@@ -366,6 +370,14 @@ static void portFontFromRom(u8 *dst, const u8 *rom, u32 size, u32 nativewords)
 extern void sysFatalError(const char *format, ...);
 
 _Static_assert(PORT_FONTDL_COMMANDS * sizeof(Gfx) == 0x180, "the font list's span holds its 24 commands");
+/* The two staging arrays hold what portFontConvert writes for the stock
+ * segments, portFontConvertedSize's ROMSIZE - sizeof(RomFont) + sizeof(struct
+ * font), rounded as the stage bank needs (LP64-004 fix wave): ASan does not
+ * check these -fcommon arrays, and the boot check below sees only this ROM. */
+_Static_assert(sizeof(_fontbankgothicSegmentRomStart) == PORT_FONT_STAGED_SIZE(0x24B0 - sizeof(RomFont) + sizeof(struct font)),
+        "Bank Gothic's staging array holds its converted table and glyphs");
+_Static_assert(sizeof(_fontzurichboldSegmentRomStart) == PORT_FONT_STAGED_SIZE(0x3540 - sizeof(RomFont) + sizeof(struct font)),
+        "Zurich Bold's staging array holds its converted table and glyphs");
 
 /* Stops the game, naming the segment, when the span load_font_tables or lvInit
  * copies from START to END, or the STAGEDSIZE bytes it copies them from, is not

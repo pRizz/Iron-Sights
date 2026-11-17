@@ -2037,7 +2037,8 @@ void proplvreset2(enum LEVELID stageId)
                         case PROPDEF_GAS_RELEASING:
                         case PROPDEF_VEHICHLE:
                         case PROPDEF_AIRCRAFT:
-                        case PROPDEF_UNK41:
+                        /* not PROPDEF_UNK41: its record is 8 bytes here, far
+                         * short of ObjectRecord's damage (LP64-004 fix wave) */
                         case PROPDEF_GLASS:
                         case PROPDEF_SAFE:
                         case PROPDEF_TANK:

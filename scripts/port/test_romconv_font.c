@@ -2,7 +2,9 @@
  * run-time image of a big-endian font segment, and portFontConvert writes it
  * (a struct font with native fields, each pixel offset moved by the growth of
  * the table and zero-extended into pixeldata, then the glyph bytes). The stock
- * segments' sizes are pinned against segments.c's staging arrays. The
+ * segments' sizes are checked against the numbers segments.c's spans and
+ * staging arrays are written with; this program never sees those arrays, which
+ * segments.c asserts against the same formula at compile time. The
  * refusals and the oracle are in test_romconv_font_checks.c. Built and run at
  * each pointer width by test_romconv.sh. Every input is written here and in
  * test_romconv_font_fixture.c. */
@@ -38,7 +40,7 @@ static int testMeasuresBankGothicAtItsStagingSize(void)
     // Act
     u32 n = portFontConvertedSize(GOTHIC_SIZE);
 
-    // Assert: segments.c's staging array and its labels at each width.
+    // Assert: the number segments.c's staging array and labels are written with.
     return expect(n == (IS_64_BIT ? 0x24B0u + 0x2F4u : 0x24B0u), "Bank Gothic measures 0x24B0 + 0x2F4 at 64 bits");
 }
 
@@ -47,7 +49,7 @@ static int testMeasuresZurichBoldAtItsStagingSize(void)
     // Act
     u32 n = portFontConvertedSize(ZURICH_SIZE);
 
-    // Assert: segments.c's staging array and its labels at each width.
+    // Assert: the number segments.c's staging array and labels are written with.
     return expect(n == (IS_64_BIT ? 0x3540u + 0x2F4u : 0x3540u), "Zurich Bold measures 0x3540 + 0x2F4 at 64 bits");
 }
 
@@ -56,7 +58,7 @@ static int testStagesBankGothicInWholeSixteens(void)
     // Act
     u32 staged = PORT_FONT_STAGED_SIZE(portFontConvertedSize(GOTHIC_SIZE));
 
-    // Assert: segments.c's span and array, which the stage bank allocates.
+    // Assert: the number segments.c's span and array are written with.
     return expect(staged == (IS_64_BIT ? 0x24B0u + 0x300u : 0x24B0u), "Bank Gothic is staged in 0x24B0 + 0x300 bytes");
 }
 
@@ -65,13 +67,13 @@ static int testStagesZurichBoldInWholeSixteens(void)
     // Act
     u32 staged = PORT_FONT_STAGED_SIZE(portFontConvertedSize(ZURICH_SIZE));
 
-    // Assert: segments.c's span and array, which the stage bank allocates.
+    // Assert: the number segments.c's span and array are written with.
     return expect(staged == (IS_64_BIT ? 0x3540u + 0x300u : 0x3540u), "Zurich Bold is staged in 0x3540 + 0x300 bytes");
 }
 
 static int testTheFontListFillsItsStagingSize(void)
 {
-    // Assert: segments.c's font list label at each width.
+    // Assert: the number segments.c's font list label is written with.
     return expect(PORT_FONTDL_COMMANDS * sizeof(Gfx) == (IS_64_BIT ? 0x180u : 0xC0u),
             "the font list's 24 commands are 0x180 bytes at 64 bits");
 }
