@@ -8306,7 +8306,13 @@ static void gfx_run_dl(Gfx* cmd) {
             sysFatalError("Display-list command word with a non-zero upper half at %p: w0 %016" PRIxPTR, (void *)cmd, cmd->words.w0);
         }
 #endif
+#if IS_64_BIT
+        /* PORT (LP64-003): the whole word, so a non-zero upper half gives an
+         * opcode above 0xFF, which no case matches (port_gfxwords.h) */
+        uint32_t opcode = (uint32_t) (cmd->words.w0 >> 24);
+#else
         uint32_t opcode = GFX_OP(cmd);
+#endif
         roc_cur_cmd = cmd;
         if (roc_walk != nullptr) {
             /* GPU part replay: the list's state and matrix commands run as
@@ -8352,9 +8358,16 @@ static void gfx_run_dl(Gfx* cmd) {
                 }
             }
         }
+#if IS_64_BIT
+        /* the tables have 256 entries; an opcode above 0xFF reaches the default */
+        roc_dbg_ops[(uint8_t) opcode]++;
+        g_PortHwLoad.cmds++;
+        if (!ge_hot_op[(uint8_t) opcode]) {
+#else
         roc_dbg_ops[opcode]++;
         g_PortHwLoad.cmds++;
         if (!ge_hot_op[opcode]) {
+#endif
             ge_state_serial++;
         }
 #ifdef GE_XBOX
