@@ -45,10 +45,12 @@ _Static_assert(sizeof(((struct StanPrefixRecord *) 0)->stanfile) == sizeof(void 
                "the stan prefix record's first room is its second pointer");
 
 /* Model node records whose first three words are floats at both widths.
- * gunUpdateAndFire reads a gun's switch slot 2 or 4 node's Data as three
- * floats without testing its opcode, and the gun models' nodes come from the
- * ROM, so every record that begins with a position is pinned: its position
- * has the position type and its floats sit at 0, 4 and 8. */
+ * gunUpdateAndFire and other sites read a switch slot node's Data as three
+ * floats without testing its opcode. What those slots hold is stock ROM data,
+ * measured by scripts/port/lp64_model_scan.py (`slots`): a group or simple
+ * group node in every non-empty slot read so. These pin the position of every
+ * record that begins with one, so the read is the same at both widths for any
+ * of them; no code checks that a slot holds one. */
 #define POSITION_FIRST(type, member, postype)                                                        \
     _Static_assert(IS_TYPE(((type *) 0)->member, postype) && offsetof(type, member.y) == sizeof(f32), \
                    #type "." #member " is the floats at 0, 4 and 8")
@@ -137,8 +139,14 @@ _Static_assert(sizeof(Vertex) == sizeof(Vtx) && offsetof(Vertex, coord.x) == off
                    && offsetof(Vertex, coord.y) == offsetof(Vtx, v.ob[1]) && offsetof(Vertex, coord.z) == offsetof(Vtx, v.ob[2])
                    && IS_TYPE(((Vertex *) 0)->coord.z, s16),
                "a Vertex's coordinates are a Vtx's three s16 at both widths");
-/* The watch's sliders fill dyn Vtx as WatchVertex. */
+/* The watch's sliders fill dyn Vtx as WatchVertex: coord1 is the position,
+ * coord2 the flag and texture coordinates, color the colour. */
 _Static_assert(sizeof(struct WatchVertex) == sizeof(Vtx), "a WatchVertex is a Vtx's 16 bytes");
+_Static_assert(offsetof(struct WatchVertex, coord1.x) == offsetof(Vtx, v.ob[0]) && offsetof(struct WatchVertex, coord1.z) == offsetof(Vtx, v.ob[2])
+                   && offsetof(struct WatchVertex, coord2.x) == offsetof(Vtx, v.flag)
+                   && offsetof(struct WatchVertex, coord2.z) == offsetof(Vtx, v.tc[1])
+                   && offsetof(struct WatchVertex, color) == offsetof(Vtx, v.cn),
+               "a WatchVertex's members are a Vtx's at both widths");
 /* bgIsRoomOnScreen reads a bbox2d as a struct rectbbox. */
 _Static_assert(sizeof(bbox2d) == sizeof(struct rectbbox) && sizeof(struct rectbbox) == 4 * sizeof(f32)
                    && offsetof(bbox2d, min.y) == offsetof(struct rectbbox, up)
@@ -171,6 +179,11 @@ _Static_assert(sizeof(struct beam) == sizeof(BeamRecord) && sizeof(BeamRecord) <
                    && offsetof(struct beam, mindist) == offsetof(BeamRecord, unk24)
                    && offsetof(struct beam, dist) == offsetof(BeamRecord, unk28),
                "struct beam is a BeamRecord at both widths");
+/* gunAdvanceBeamTimer and sub_GAME_7F061E18 also use unk00, item_id and
+ * unk02: age, weaponnum and the padding byte before from. */
+_Static_assert(offsetof(struct beam, weaponnum) == offsetof(BeamRecord, item_id) && IS_TYPE(((BeamRecord *) 0)->item_id, s8)
+                   && offsetof(BeamRecord, unk02) < offsetof(struct beam, from),
+               "a BeamRecord's item_id is a beam's weaponnum and its unk02 a beam's padding");
 /* Three adjacent floats read as a coord3d. */
 _Static_assert(offsetof(struct s_bullet_spark, unk14) == offsetof(struct s_bullet_spark, unk10) + sizeof(f32)
                    && offsetof(struct s_bullet_spark, unk18) == offsetof(struct s_bullet_spark, unk10) + 2 * sizeof(f32)
@@ -194,6 +207,11 @@ _Static_assert(offsetof(AttachedObj, child) == offsetof(ObjectRecord, prop) && o
                    && offsetof(AttachedObj, position) == offsetof(ObjectRecord, runtime_pos)
                    && IS_TYPE(((ObjectRecord *) 0)->runtime_pos, coord3d),
                "an AttachedObj is an ObjectRecord's prop, model, mtx and runtime_pos at both widths");
+/* AttachedObj.child is the rocket's PropRecord seen as an AttachmentChild.
+ * flags1 is PropRecord.flags; unk18 is zDepth at 32 bits only (a defect,
+ * gun.c gunUpdateAttachedRocket, in scripts/port/lp64_overlays_reviewed.txt). */
+_Static_assert(offsetof(AttachmentChild, flags1) == offsetof(PropRecord, flags) && IS_TYPE(((PropRecord *) 0)->flags, u8),
+               "an AttachmentChild's flags1 is PropRecord.flags");
 /* A model root's header read-write record read as a modeldata_root. */
 _Static_assert(sizeof(struct modeldata_root) == sizeof(ModelRwData_HeaderRecord)
                    && offsetof(struct modeldata_root, ground) == offsetof(ModelRwData_HeaderRecord, ground)
@@ -204,6 +222,11 @@ _Static_assert(sizeof(struct modeldata_root) == sizeof(ModelRwData_HeaderRecord)
                    && offsetof(struct modeldata_root, unk58) == offsetof(ModelRwData_HeaderRecord, unk58)
                    && offsetof(struct modeldata_root, unk5c) == offsetof(ModelRwData_HeaderRecord, unk5c),
                "modeldata_root is a ModelRwData_HeaderRecord at both widths");
+/* modelCopyAnimForMerge also writes unk02 and unk40 and reads unk24. */
+_Static_assert(offsetof(struct modeldata_root, unk02) == offsetof(ModelRwData_HeaderRecord, unk02)
+                   && offsetof(struct modeldata_root, unk24) == offsetof(ModelRwData_HeaderRecord, unk24)
+                   && offsetof(struct modeldata_root, unk40) == offsetof(ModelRwData_HeaderRecord, unk40),
+               "modeldata_root's unk02, unk24 and unk40 are a ModelRwData_HeaderRecord's");
 /* A switch slot array read as a ModelNode: ->Child is slot 5. */
 _Static_assert(offsetof(ModelNode, Child) == 5 * sizeof(ModelNode *), "a ModelNode's Child is its sixth pointer-sized word");
 /* Records defined in .c files, which the probe cannot see, are pinned from the
@@ -222,6 +245,32 @@ _Static_assert(offsetof(Model, rwdatalen) == sizeof(s16) && offsetof(Model, chr)
                    && offsetof(Model, attachedto_objinst) == PTR_WORDS(7),
                "Model's first nine members are at the offsets gunfire.c's ModelHeader and ModelHead declare");
 #undef PTR_WORDS
+
+/* The same records compared with the .c files' own declarations, which
+ * test_abi_probe.sh extracts into this generated header (it fails by name
+ * when an extraction finds nothing). */
+#include "probe_extracted.h"
+#define SAME_MODEL_PREFIX(view, second)                                                                                    \
+    _Static_assert(offsetof(view, unk00) == offsetof(Model, unk00) && offsetof(view, second) == offsetof(Model, rwdatalen)       \
+                       && offsetof(view, chr) == offsetof(Model, chr) && offsetof(view, obj) == offsetof(Model, obj)             \
+                       && offsetof(view, render_pos) == offsetof(Model, render_pos)                                             \
+                       && offsetof(view, datas) == offsetof(Model, datas) && offsetof(view, scale) == offsetof(Model, scale)     \
+                       && offsetof(view, attachedto) == offsetof(Model, attachedto)                                             \
+                       && offsetof(view, attachedto_objinst) == offsetof(Model, attachedto_objinst)                             \
+                       && sizeof(view) <= offsetof(Model, anim),                                                                \
+                   #view " is the first nine members of a Model at both widths")
+SAME_MODEL_PREFIX(ModelHeader, Type);
+SAME_MODEL_PREFIX(ModelHead, rwdatalen);
+#undef SAME_MODEL_PREFIX
+_Static_assert(offsetof(struct HitThingSub, normal) == offsetof(struct HitThing, normal)
+                   && offsetof(struct HitThingSub, vtx0) == offsetof(struct HitThing, vtx0)
+                   && offsetof(struct HitThingSub, vtx1) == offsetof(struct HitThing, vtx1)
+                   && offsetof(struct HitThingSub, vtx2) == offsetof(struct HitThing, vtx2)
+                   && offsetof(struct HitThingSub, tricmd) == offsetof(struct HitThing, tricmd)
+                   && offsetof(struct HitThingSub, unk28) == offsetof(struct HitThing, unk28)
+                   && offsetof(struct HitThingSub, texturenum) == offsetof(struct HitThing, texturenum)
+                   && IS_TYPE(((struct HitThingSub *) 0)->hitpos, coord3d),
+               "bg.c's HitThingSub is a HitThing's members to texturenum at both widths");
 
 /* chrprop.c tests an image entry's hitSound as the low nibble of its first
  * byte: GCC allocates the first bit-field there at both widths. */
