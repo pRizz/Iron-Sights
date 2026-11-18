@@ -39,6 +39,9 @@
 #include "options.h"
 #include "mpmenu.h"
 #include "joy.h"
+#if IS_64_BIT
+#include "port_hostptr.h" /* LP64-005: PORT_WORD_IS_HOST */
+#endif
 #include "matrixmath.h"
 #include "bondinv.h"
 #include "stan.h"
@@ -1048,7 +1051,12 @@ void portGunTexAudit(void)
              * pool allocation writes the texture number 8 bytes before the
              * data (texLoad's left-side header), so it is recoverable. */
             uintptr_t id = h.Textures[t].TextureID;
+#if IS_64_BIT
+            /* LP64-005: an inline texture's segment word is no host pointer */
+            s32 texnum = (PORT_WORD_IS_HOST(id) && id >= (u32)MAX_TEXTURES) ? *(s16 *)((u8 *)id - 8) : (s32)id;
+#else
             s32 texnum = (id >= (u32)MAX_TEXTURES) ? *(s16 *)((u8 *)id - 8) : (s32)id;
+#endif
             extern struct texpool *portModelTexPool(void);
             struct tex *rec = texFindInPool(texnum, portModelTexPool());
 
