@@ -1072,7 +1072,9 @@ Gfx *explosionRenderPart(struct ExplosionPart *arg0, Gfx *gdl, struct coord3d *c
     vertices[1] = spA0;
     vertices[2] = spA0;
     vertices[3] = spA0;
-    vertices[4] = spA0;
+#ifdef TARGET_N64
+    vertices[4] = spA0; /* one past the four allocated; nothing reads it (LP64-005 Task 2) */
+#endif
 
     sp8C.f[0] = sp9C->m[0][0] * sp54;
     sp8C.f[1] = sp9C->m[0][1] * sp54;
