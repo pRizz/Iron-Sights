@@ -5925,7 +5925,8 @@ f32 chrlvGetSubrotySideback(ChrRecord *self)
     {
         if (self->act_bondmulti.unk2c != NULL)
         {
-            phi_f12 = self->act_bondmulti.unk2c[3];
+            /* playerTick stores the player's firing table here (LP64-005) */
+            phi_f12 = ((struct weapon_firing_animation_table *) self->act_bondmulti.unk2c)->angle_offset;
         }
     }
 

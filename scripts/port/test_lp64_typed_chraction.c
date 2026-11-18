@@ -196,8 +196,31 @@ static void testDeathJumpUsesTheAnimationFrameCount(void)
            "chrlvTickDie reads ModelAnimation.unk04");
 }
 
+/* Another player's body turns by the firing table's angle_offset. */
+static void testRemotePlayerTurnsByTheAngleOffset(void)
+{
+    // Arrange: a right-handed remote player at subroty 1.0 whose table offsets 0.5.
+    static RecordRoom room;
+    Model model = {0};
+    struct weapon_firing_animation_table table = {0};
+    memset(&room, 0, sizeof(room));
+    model.gunhand = GUNRIGHT;
+    room.chr.model = &model;
+    room.chr.actiontype = ACT_BONDMULTI;
+    room.chr.act_bondmulti.unk2c = (f32 *) &table;
+    table.angle_offset = 0.5f;
+    subroty = 1.0f;
+
+    // Act
+    f32 turned = chrlvGetSubrotySideback(&room.chr);
+
+    // Assert
+    expect(turned == 1.5f, "chrlvGetSubrotySideback reads the firing table's angle_offset");
+}
+
 int main(void)
 {
+    testRemotePlayerTurnsByTheAngleOffset();
     testDeathJumpUsesTheAnimationFrameCount();
     testAimLimitsComeFromTheFiringTable();
     testOneHandedReadsTheWeaponNumber();

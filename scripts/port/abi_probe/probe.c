@@ -415,6 +415,8 @@ _Static_assert(4 * sizeof(Gfx) + offsetof(Gfx, words.w0) == 8 * sizeof(u32) && s
 _Static_assert(offsetof(ChrRecord, act_patrol.lastvisible60) == offsetof(ChrRecord, act_init.padding[0x13])
                    && IS_TYPE(((ChrRecord *) 0)->act_patrol.lastvisible60, s32),
                "act_patrol.lastvisible60 is the int ChrRecord.act_init.padding[0x13] wrote at 32 bits");
+_Static_assert(offsetof(struct weapon_firing_animation_table, angle_offset) == 3 * sizeof(f32),
+               "a firing table's angle_offset is its f32 word 3 at 32 bits");
 #endif
 
 /* objecthandler.c sizes its ModelHitEntry pool (600 records, threaded by
