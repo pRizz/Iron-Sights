@@ -3769,7 +3769,7 @@ void get_sound_at_range(ChrRecord *self, s32 arg1, s32 arg2)
 */
 void play_hit_soundeffect_and_proper_volume( ChrRecord *self)
 {
-    get_sound_at_range(self, self->act_ubytes.padding[45], c_item_entries[self->bodynum].isMale);
+    get_sound_at_range(self, self->act_gopos.unk59, c_item_entries[self->bodynum].isMale);
 }
 
 

@@ -34,6 +34,27 @@ u32 bondwalkItemCheckBitflags(ITEM_IDS item, u32 mask)
     return item == ONE_HANDED_ITEM && mask == WEAPONSTATBITFLAG_ONLY_1_HANDED;
 }
 
+/* The functions the animation choosers call, recording what they are given. */
+struct ChrModelFileRecord c_item_entries[1];
+static u8 animTable[sizeof(struct animation_table_data) + 64];
+struct animation_table_data *ptr_animation_table = (struct animation_table_data *) animTable;
+static ModelAnimation *lastAnimation;
+
+PropRecord *chrGetEquippedWeaponProp(ChrRecord *self, GUNHAND hand)
+{
+    return self->weapons_held[hand];
+}
+
+u32 randomGetNext(void)
+{
+    return 0;
+}
+
+void modelSetAnimation(Model *model, ModelAnimation *animation, s32 flip, f32 startframe, f32 speed, f32 merge)
+{
+    lastAnimation = animation;
+}
+
 /* weaponIsOneHanded reads the weapon prop's WeaponObjRecord.weaponnum. */
 static void testOneHandedReadsTheWeaponNumber(void)
 {
@@ -52,9 +73,29 @@ static void testOneHandedReadsTheWeaponNumber(void)
     expect(onehanded != 0, "weaponIsOneHanded reads WeaponObjRecord.weaponnum");
 }
 
+/* A guard sent along a course runs at the speed act_gopos.unk59 holds. */
+static void testCourseSpeedIsTheGoposSpeed(void)
+{
+    // Arrange: an unarmed male guard told to sprint (speed 2).
+    static RecordRoom room;
+    memset(&room, 0, sizeof(room));
+    room.chr.actiontype = ACT_GOPOS;
+    room.chr.act_gopos.unk59 = SPEED_SPRINT;
+    c_item_entries[0].isMale = 1;
+    lastAnimation = NULL;
+
+    // Act
+    play_hit_soundeffect_and_proper_volume(&room.chr);
+
+    // Assert
+    expect(lastAnimation == ANIM_FROM_TABLE(PTR_ANIM_sprinting_one_handed_weapon),
+           "play_hit_soundeffect_and_proper_volume reads act_gopos.unk59");
+}
+
 int main(void)
 {
     testOneHandedReadsTheWeaponNumber();
+    testCourseSpeedIsTheGoposSpeed();
     if (failures != 0)
     {
         return 1;

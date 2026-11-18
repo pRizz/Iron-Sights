@@ -400,6 +400,9 @@ _Static_assert(sizeof(ModelAnimation) == 0x40, "32-bit ModelAnimation is unchang
 _Static_assert(offsetof(WeaponObjRecord, weaponnum) == 0x80 && sizeof(((WeaponObjRecord *) 0)->weaponnum) == 1
                    && offsetof(ChrRecord, act_bytes.padding[84]) == 0x80,
                "a weapon's weaponnum is the byte ChrRecord.act_bytes.padding[84] read at 32 bits");
+_Static_assert(offsetof(ChrRecord, act_gopos.unk59) == offsetof(ChrRecord, act_ubytes.padding[45])
+                   && sizeof(((ChrRecord *) 0)->act_gopos.unk59) == 1,
+               "act_gopos.unk59 is the byte ChrRecord.act_ubytes.padding[45] read at 32 bits");
 #endif
 
 /* objecthandler.c sizes its ModelHitEntry pool (600 records, threaded by
