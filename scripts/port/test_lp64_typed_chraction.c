@@ -38,7 +38,8 @@ u32 bondwalkItemCheckBitflags(ITEM_IDS item, u32 mask)
 struct ChrModelFileRecord c_item_entries[1];
 static u8 animTable[sizeof(struct animation_table_data) + 64];
 struct animation_table_data *ptr_animation_table = (struct animation_table_data *) animTable;
-static ModelAnimation *lastAnimation;
+static ModelAnimation *lastAnimation, *currentAnimation;
+static f32 lastMerge, lastSpeedStartFrame, animFrame, animEndFrame;
 
 PropRecord *chrGetEquippedWeaponProp(ChrRecord *self, GUNHAND hand)
 {
@@ -53,6 +54,60 @@ u32 randomGetNext(void)
 void modelSetAnimation(Model *model, ModelAnimation *animation, s32 flip, f32 startframe, f32 speed, f32 merge)
 {
     lastAnimation = animation;
+    lastMerge = merge;
+}
+
+void modelSetAnimSpeed(Model *model, f32 speed, f32 startframe)
+{
+    lastSpeedStartFrame = startframe;
+}
+
+ModelAnimation *objecthandlerGetModelAnim(Model *model)
+{
+    return currentAnimation;
+}
+
+s8 objecthandlerGetModelGunhand(Model *model)
+{
+    return 0;
+}
+
+f32 modelGetAnimFrame(Model *model)
+{
+    return animFrame;
+}
+
+f32 modelGetAnimEndFrame(Model *model)
+{
+    return animEndFrame;
+}
+
+/* Called only on paths these tests do not take. */
+ChrRecord *g_ChrSlots;
+ALBank *g_musicSfxBufferPtr;
+
+static void unreached(const char *name)
+{
+    printf("test_lp64_typed_chraction: unexpected call to %s\n", name);
+    abort();
+}
+
+void chrSetMoving(ChrRecord *guard, s32 moving) { unreached("chrSetMoving"); }
+s32 get_numguards(void) { unreached("get_numguards"); return 0; }
+void chrobjSndCreatePostEventDefault(ALSoundState *state, coord3d *pos) { unreached("chrobjSndCreatePostEventDefault"); }
+void weaponSetGunfireVisible(PropRecord *prop, s32 firing) { unreached("weaponSetGunfireVisible"); }
+ALSoundState *sndPlaySfx(struct ALBankAlt_s *bank, s16 index, ALSoundState *state) { unreached("sndPlaySfx"); return NULL; }
+s32 stanTestLineUnobstructed(StandTile **tile, f32 x, f32 z, f32 dx, f32 dz, int cdtypes, f32 h, f32 a, f32 b, f32 c)
+{
+    unreached("stanTestLineUnobstructed");
+    return 0;
+}
+
+static f32 subroty;
+
+f32 getsubroty(Model *model)
+{
+    return subroty;
 }
 
 /* weaponIsOneHanded reads the weapon prop's WeaponObjRecord.weaponnum. */
@@ -116,8 +171,34 @@ static void testAimLimitsComeFromTheFiringTable(void)
            "chrlvUpdateAimendbackShoulders reads max_down and free_arm_frac_down");
 }
 
+/* A guard whose left-leg death ends jumps backwards, timed by that animation's frame count. */
+static void testDeathJumpUsesTheAnimationFrameCount(void)
+{
+    // Arrange: the jump's header says 120 frames; the left-leg death has ended.
+    static RecordRoom room;
+    Model model = {0};
+    memset(&room, 0, sizeof(room));
+    memset(animTable, 0, sizeof(animTable));
+    room.chr.model = &model;
+    room.chr.act_die.thudframe1 = -1.0f;
+    room.chr.act_die.thudframe2 = -1.0f;
+    ANIM_FROM_TABLE(PTR_ANIM_jump_backwards)->unk04 = 120;
+    currentAnimation = ANIM_FROM_TABLE(PTR_ANIM_death_left_leg);
+    animFrame = 10.0f;
+    animEndFrame = 5.0f;
+    lastSpeedStartFrame = 0.0f;
+
+    // Act
+    chrlvTickDie(&room.chr);
+
+    // Assert: (120 - 1) - 50.
+    expect(lastAnimation == ANIM_FROM_TABLE(PTR_ANIM_jump_backwards) && lastMerge == 69.0f && lastSpeedStartFrame == 69.0f,
+           "chrlvTickDie reads ModelAnimation.unk04");
+}
+
 int main(void)
 {
+    testDeathJumpUsesTheAnimationFrameCount();
     testAimLimitsComeFromTheFiringTable();
     testOneHandedReadsTheWeaponNumber();
     testCourseSpeedIsTheGoposSpeed();

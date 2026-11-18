@@ -2237,7 +2237,7 @@ void triggered_on_shot_hit(ChrRecord *self, coord3d *arg1, f32 arg2, s32 req_ani
                     }
                     else
                     {
-                        modelSetAnimEndFrame(model, chrlvGetGuard007ArghRating(self, (f32) (((u16*)sp80)[2] - 1), 8.0f));
+                        modelSetAnimEndFrame(model, chrlvGetGuard007ArghRating(self, (f32) (((struct ModelAnimation *) sp80)->unk04 - 1), 8.0f));
                     }
                 }
                 else
@@ -2255,7 +2255,7 @@ void triggered_on_shot_hit(ChrRecord *self, coord3d *arg1, f32 arg2, s32 req_ani
                     }
                     else
                     {
-                        modelSetAnimEndFrame(model, chrlvGetGuard007ArghRating(self, (f32) (((u16*)sp80)[2] - 1), 8.0f));
+                        modelSetAnimEndFrame(model, chrlvGetGuard007ArghRating(self, (f32) (((struct ModelAnimation *) sp80)->unk04 - 1), 8.0f));
                     }
                 }
 
@@ -2303,7 +2303,7 @@ void triggered_on_shot_hit(ChrRecord *self, coord3d *arg1, f32 arg2, s32 req_ani
                     }
                     else
                     {
-                        modelSetAnimEndFrame(model, chrlvGetGuard007ArghRating(self, (f32)((s32)((u16*)struck_ani->struck_anim)[2] - (s32)1), 8.0f));
+                        modelSetAnimEndFrame(model, chrlvGetGuard007ArghRating(self, (f32)((s32)((struct ModelAnimation *) struck_ani->struck_anim)->unk04 - (s32)1), 8.0f));
                     }
                 }
             }
@@ -5261,7 +5261,7 @@ void chrlvTickStand(ChrRecord *self)
 
                     modelSetAnimEndFrame(
                         self->model,
-                        (((u16*)ANIM_FROM_TABLE(PTR_ANIM_walking_unarmed))[2] - 1));
+                        (ANIM_FROM_TABLE(PTR_ANIM_walking_unarmed)->unk04 - 1));
                 }
                 else if ((right != NULL) || (left != NULL))
                 {
@@ -5276,7 +5276,7 @@ void chrlvTickStand(ChrRecord *self)
 
                     modelSetAnimEndFrame(
                         self->model,
-                        (((u16*)ANIM_FROM_TABLE(PTR_ANIM_walking))[2] - 1));
+                        (ANIM_FROM_TABLE(PTR_ANIM_walking)->unk04 - 1));
                 }
             }
             else if (self->act_stand.face_entitytype & 0x10)
@@ -5632,9 +5632,9 @@ void chrlvTickDie(ChrRecord *self)
                 objecthandlerGetModelGunhand(model) == 0,
                 50.0f,
                 0.3f,
-                (((u16*)ANIM_FROM_TABLE(PTR_ANIM_jump_backwards))[2] - 1.0f) - 50.0f);
+                (ANIM_FROM_TABLE(PTR_ANIM_jump_backwards)->unk04 - 1.0f) - 50.0f);
 
-            modelSetAnimSpeed(model, 0.5f, (((u16*)ANIM_FROM_TABLE(PTR_ANIM_jump_backwards))[2] - 1.0f) - 50.0f);
+            modelSetAnimSpeed(model, 0.5f, (ANIM_FROM_TABLE(PTR_ANIM_jump_backwards)->unk04 - 1.0f) - 50.0f);
 
             return;
         }
