@@ -123,8 +123,9 @@ _Static_assert(offsetof(save_data, unlocked_cheats_1) == 0xe && offsetof(save_da
 /* stan.c's walks end at a tile whose first word is 0: id and room fill it. */
 _Static_assert(offsetof(StandTile, mid) == sizeof(u32) && sizeof(StandTile) == 8, "a stan tile's first word is its id and room");
 #if IS_64_BIT
-/* MODEL_SLOT_RWDATA (objecthandler.h) reads a slot's Model datas as a void *. */
-_Static_assert(sizeof(((Model *) 0)->datas) == sizeof(void *), "a model slot's read-write data is the Model's datas pointer");
+/* MODEL_SLOT_RWDATA (objecthandler.h) reads a slot's Model datas as a void *:
+ * datas must stay an object pointer, which a void * represents. */
+_Static_assert(IS_TYPE(((Model *) 0)->datas, union ModelRwData **), "a model slot's read-write data is the Model's datas pointer");
 #endif
 
 /* chrprop.c tests an image entry's hitSound as the low nibble of its first
