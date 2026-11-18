@@ -93,7 +93,10 @@ LAUNCHED_ARENA = (Required('ge: GE_MP direct launch:', MP_LAUNCH),
 # ---- demos ------------------------------------------------------------------------------------
 # The tick at which each demo ends with "totaltime end (timer/limit)", measured on 2026-11-17 at
 # 98a76dd (plan "What was measured"): the i686 build and the 64-bit build, plain and sanitized
-# (aarch64), end each demo at the same tick. ramrom_table order (src/game/front.c, GE_DEMO).
+# (aarch64), end each demo at the same tick. On 2026-11-18 at 4aeaa95 the plain 64-bit build in
+# the x86_64 container ended each at these ticks too, and its per-tick traces were identical to
+# the aarch64 build's for all fourteen (FORK-089, LP64-005 task 6). ramrom_table order
+# (src/game/front.c, GE_DEMO).
 DEMO_END_TICKS = {
     'dam1': 438, 'dam2': 445, 'facility1': 410, 'facility2': 538, 'facility3': 380,
     'runway1': 388, 'runway2': 388, 'bunker1': 482, 'bunker2': 771, 'silo1': 501,
