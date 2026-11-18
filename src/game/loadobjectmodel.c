@@ -12,6 +12,7 @@
 #include "objecthandler.h"
 #if IS_64_BIT
 #include "port_romconv_stage.h" /* LP64-004: portSetupWide, the converted prop record sizes */
+#include "port_setup_objects.h" /* LP64-005: the command types that have a prop */
 #endif
 
 /**
@@ -335,7 +336,11 @@ s32 setupGetCommandIndexByProp(struct PropRecord *prop)
     {
         for (i = 0; object->type != PROPDEF_END; i++)
         {
+#if IS_64_BIT
+            if (portSetupTypeIsObject(object->type) && (void*)((struct ObjectRecord *)object)->prop == (void*)prop)
+#else
             if ((void*)((struct ObjectRecord *)object)->prop == (void*)prop)
+#endif
             {
                 return i;
             }
