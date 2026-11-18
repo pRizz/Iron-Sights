@@ -266,6 +266,24 @@ pass its isolated executable rather than rebuilding an active player binary.
   boot check or the mission smoke, fails on any `ge: lp64:` line outside the
   informational list (`INFORMATIONAL_PREFIXES` in `lp64_boot.py`); a new
   informational line is added there deliberately.
+- `scripts/port/lp64_play.py` (LP64-005) runs named sets of 64-bit game runs
+  and judges each by what its log shows: `python3 scripts/port/lp64_play.py
+  run --rom /rom/baserom.u.z64 --set demos,stages,stops,menus,tours,attract
+  --output build/lp64/play/NAME EXECUTABLE`, in the container of the
+  executable's architecture. A case passes only with the exit status it
+  expects, no sanitizer report, fatal signal, `ASSERTION FAULT` or failing
+  `ge: lp64:` line, and every line that proves its subject ran (a demo's
+  start and its exit at the measured tick, a stage's launch and background,
+  a tour's rooms); the cases and their measured figures are in
+  `lp64_play_cases.py`. `traces --expect scripts/port/lp64_demo_traces.txt
+  DIR_REF DIR_NEW` compares each demo's per-tick trace with the i686 build's,
+  whose two runs must first agree (`traces --reference-check`); a fix that
+  makes a demo match lowers its line in that file. Runs are paced in real
+  time, 60 retraces a second, so the sets take their frames' time. Never run
+  them with `GE_FIXEDTICK` (a demo then advances one field a tick instead of
+  at its recorded pace and ends at another tick) or `GE_NOSLEEP` (the frame
+  limit, which counts retraces, then passes before the game has done
+  anything); the tool refuses both from `--env`.
 - Storage for a record or a display list is sized by `sizeof` of what it
   holds, never by a literal byte count or by filler members, and a member
   that overlays another record by position is pinned at both widths in the

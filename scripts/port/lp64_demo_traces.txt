@@ -1,0 +1,17 @@
+# Each demo's per-tick trace on a 64-bit build against the i686 build (lp64_play.py traces --expect).
+# One line a demo: NAME identical, or NAME differs-from TICK REASON. Lower a line when a fix makes
+# the demo match; written from the runs of 2026-11-17 on acb1adc (FORK-089, LP64-005 task 1).
+dam1 differs-from 2 weaponIsOneHanded reads a weapon record by position (Task 4)
+dam2 differs-from 2 weaponIsOneHanded reads a weapon record by position (Task 4)
+facility1 differs-from 2 weaponIsOneHanded reads a weapon record by position (Task 4)
+facility2 differs-from 2 weaponIsOneHanded reads a weapon record by position (Task 4)
+facility3 differs-from 2 weaponIsOneHanded reads a weapon record by position (Task 4)
+runway1 differs-from 2 weaponIsOneHanded reads a weapon record by position (Task 4)
+runway2 differs-from 2 weaponIsOneHanded reads a weapon record by position (Task 4)
+bunker1 differs-from 2 weaponIsOneHanded reads a weapon record by position (Task 4)
+bunker2 differs-from 2 weaponIsOneHanded reads a weapon record by position (Task 4)
+silo1 differs-from 2 weaponIsOneHanded reads a weapon record by position (Task 4)
+silo2 differs-from 2 weaponIsOneHanded reads a weapon record by position (Task 4)
+frigate1 differs-from 2 weaponIsOneHanded reads a weapon record by position (Task 4)
+frigate2 differs-from 2 weaponIsOneHanded reads a weapon record by position (Task 4)
+train differs-from 2 weaponIsOneHanded reads a weapon record by position (Task 4)
