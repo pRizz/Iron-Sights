@@ -42,7 +42,7 @@ EMPTY, OUT_OF_RANGE, UNREADABLE = 'empty', 'out of range', 'unreadable'
 
 
 class ScanError(Exception):
-    """The file is not shaped as the walk expects: a reference outside it."""
+    """The input is not shaped as the walk expects: a reference outside a file, a header name defined twice."""
 
 
 class Model:
@@ -118,10 +118,14 @@ def read_filelist(path):
 
 
 def read_headers(assets):
-    headers = {}
+    """{name: (numSwitches, numTextures)}; a name two files define raises ScanError naming both."""
+    headers, where = {}, {}
     for path in sorted(Path(assets).rglob('*.inc.c')):
         for match in HEADER_RE.finditer(path.read_text(encoding='utf-8', errors='replace')):
-            headers[match.group(1).lower()] = (int(match.group(2), 0), int(match.group(3), 0))
+            name = match.group(1).lower()
+            if name in where:
+                raise ScanError('MODELFILEHEADER %s is defined in %s and %s' % (name, where[name], path))
+            headers[name], where[name] = (int(match.group(2), 0), int(match.group(3), 0)), path
     return headers
 
 
@@ -295,8 +299,12 @@ def main(argv=None):
         print('setups: %d' % found[0])
         print_counts({(k,): v for k, v in found[1].items()})
         return 0 if report_unreadable({(k,): v for k, v in found[1].items()}) else 1
-    headers_ok = check_headers(args)
-    models = select(load_models(rom, args.filelist, args.assets), args.cls, args.match, args.exclude)
+    try:
+        headers_ok = check_headers(args)
+        models = select(load_models(rom, args.filelist, args.assets), args.cls, args.match, args.exclude)
+    except ScanError as error:
+        print('lp64_model_scan: %s' % error, file=sys.stderr)
+        return 1
     if not models:
         print('lp64_model_scan: no model found (check --rom, --filelist, --assets and the filters)', file=sys.stderr)
         return 1

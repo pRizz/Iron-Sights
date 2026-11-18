@@ -5,7 +5,8 @@
  * scripts/port/test_abi_probe.sh. Each assertion holds at both widths and
  * fails when the layout drifts in the way that would make its sites read the
  * wrong bytes; none states what C already guarantees (a first member at 0, a
- * later member after an earlier one). */
+ * later member after an earlier one), except that a member a site needs first
+ * is pinned at offset 0, since a member declared before it would move it. */
 #include "game/chr.h"
 #include "game/image.h"
 #include "game/explosion.h"
@@ -280,14 +281,27 @@ _Static_assert(offsetof(struct objective_entry, text) == offsetof(struct watchMe
                    && IS_TYPE(((struct objective_entry *) 0)->text, u16)
                    && IS_TYPE(((struct watchMenuObjectiveText *) 0)->text, u16),
                "an objective entry's text is a watch menu text record's");
-/* propobj.c reads a DLCOLLISION node's read-write slot as its Vertex pointer. */
-_Static_assert(IS_TYPE(((ModelRwData_DisplayList_CollisionRecord *) 0)->Vertices, Vertex *)
+/* propobj.c reads a DLCOLLISION node's read-write slot as its Vertex pointer
+ * (8288, 7892, 13415). The read depends on Vertices being declared first, so
+ * its offset of zero is pinned here, against the no-first-member convention. */
+_Static_assert(offsetof(ModelRwData_DisplayList_CollisionRecord, Vertices) == 0
+                   && IS_TYPE(((ModelRwData_DisplayList_CollisionRecord *) 0)->Vertices, Vertex *)
                    && sizeof(Vertex *) == sizeof(union ModelRwData *),
                "a DLCOLLISION read-write record's Vertices fills its first slot");
 /* objTick passes a tank's collision word as a collision_data, whose edges
- * sub_GAME_7F03ECC0 writes (and nothing else of it). */
-_Static_assert(IS_TYPE(((collision_data *) 0)->edges, s32) && IS_TYPE(((TankRecord *) 0)->collision, s32),
+ * sub_GAME_7F03ECC0 writes (and nothing else of it). That write lands on the
+ * word only while edges is declared first, so its offset of zero is pinned
+ * here, against the no-first-member convention. */
+_Static_assert(offsetof(collision_data, edges) == 0
+                   && IS_TYPE(((collision_data *) 0)->edges, s32) && IS_TYPE(((TankRecord *) 0)->collision, s32),
                "a tank's collision word is a collision_data's edges");
+/* prop.c links a RENAME record as the textoverride bondinv.c walks: the
+ * converter writes it at textoverride's layout (test_romconv_setup_props.c
+ * CHECK_WIDE, CHECK_AT words 8 and 9), and prop.c writes renobj first. */
+_Static_assert(sizeof(RenameObjectRecord) == sizeof(struct textoverride)
+                   && offsetof(RenameObjectRecord, unk20) == offsetof(struct textoverride, next)
+                   && offsetof(RenameObjectRecord, renobj) == offsetof(struct textoverride, obj),
+               "a RENAME record is a textoverride: next over unk20, obj over renobj");
 /* chrRenderHeldWeapon reads a chr's PropRecord as a ChrRenderContext. */
 _Static_assert(offsetof(ChrRenderContext, chr) == offsetof(PropRecord, chr)
                    && IS_TYPE(((ChrRenderContext *) 0)->chr, ChrRecord *),
@@ -320,7 +334,8 @@ _Static_assert(IS_TYPE(((ALEventListItem *) 0)->node, ALLink) && offsetof(ALEven
 _Static_assert(IS_TYPE(((DMABuffer *) 0)->node, ALLink) && offsetof(DMABuffer, node) == 0,
                "audi.c's DMABuffer starts with its ALLink");
 /* snd.c posts its ALSndpEvent locals as ALEvent: the queue copies an ALEvent. */
-_Static_assert(sizeof(ALSndpEvent) == sizeof(ALEvent) && IS_TYPE(((ALSndpEvent *) 0)->common.type, u16)
+_Static_assert(sizeof(ALSndpEvent) == sizeof(ALEvent) && offsetof(ALSndpEvent, common.type) == offsetof(ALEvent, type)
+                   && IS_TYPE(((ALSndpEvent *) 0)->common.type, u16)
                    && sizeof(((ALEvent *) 0)->type) == sizeof(u16),
                "snd.c's ALSndpEvent is an ALEvent's size with its type first");
 /* sndCountAllocList reads D_800243E4 as an ALEventQueue: freeList, then allocList.next. */

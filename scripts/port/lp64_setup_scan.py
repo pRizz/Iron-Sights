@@ -17,8 +17,11 @@ assets/obseg/prop/propItemModelFileRecord.inc.c); only object records (the types
 setupCommandGetObject returns) name one. `refs` resolves the command at the record's own index plus
 the s32 at --word, as setupGetPtrToCommandByIndex does (NULL off either end); --attached keeps the
 records setupSingleMonitor fixes to an owner (pad below zero, not PROPFLAG_INSIDEANOTHEROBJ). `slots` and `path` count
-each record once, through its model. Exits 1 when no setup or no record matches, and when a setup or
-a model is unreadable (its row names it).
+each record once, through its model. Exits 1 when no setup or no record matches, when a setup or a
+record's model is unreadable (its row names it: a list without END or with a type of no size, a model
+index past the prop table, a prop entry without a PROPFILERECORD line, a model without a skeleton line
+where one is asked for), when a model header name is defined twice, and when --word or a --mask word
+is past a record's file words (it would read the next record; the error names the type).
 """
 import argparse
 import collections
@@ -53,19 +56,22 @@ def read_kinds(path):
 
 
 def read_prop_names(assets):
-    """PitemZ_entries' model names in index order."""
+    """PitemZ_entries' model names in index order; None for an entry whose file has no PROPFILERECORD line."""
     names = []
     for directory in INCLUDE_RE.findall((Path(assets)/'prop/propItemModelFileRecord.inc.c').read_text()):
         match = RECORD_RE.search((Path(assets)/'prop'/directory/'propFileRecord.inc.c').read_text())
-        names.append(match.group(1).lower() if match else directory.lower())
+        names.append(match.group(1).lower() if match else None)
     return names
 
 
 def read_skeletons(assets):
-    skeletons = {}
+    """{model name: skeleton}; a name two files define raises ScanError naming both."""
+    skeletons, where = {}, {}
     for path in sorted(Path(assets).rglob('ModelFileHeader.inc.c')):
         for name, skeleton in SKELETON_RE.findall(path.read_text(encoding='utf-8', errors='replace')):
-            skeletons[name.lower()] = skeleton
+            if name.lower() in where:
+                raise models_scan.ScanError('MODELFILEHEADER %s is defined in %s and %s' % (name, where[name.lower()], path))
+            skeletons[name.lower()], where[name.lower()] = skeleton, path
     return skeletons
 
 
@@ -101,11 +107,17 @@ def attached(data, rec):
     return pad < 0 and not flags & 0x8000
 
 
+def check_word(rec, word, kinds, option):
+    """Refuses (ScanError) a word past the record: it would read the next record."""
+    if word >= kinds[rec.kind][1]:
+        raise models_scan.ScanError('%s %d is past %s\'s %d file words' % (option, word, kinds[rec.kind][0], kinds[rec.kind][1]))
+
+
 def masked(data, rec, mask, kinds):
     """True when the record's big-endian word WORD has a bit of MASK set (`WORD:MASK`)."""
     word, _, bits = mask.partition(':')
-    word = int(word, 0)
-    return word < kinds[rec.kind][1] and struct.unpack_from('>I', data, rec.at + 4 * word)[0] & int(bits, 0) != 0
+    check_word(rec, int(word, 0), kinds, '--mask word')
+    return struct.unpack_from('>I', data, rec.at + 4 * int(word, 0))[0] & int(bits, 0) != 0
 
 
 def type_name(kinds, kind):
@@ -129,21 +141,24 @@ def count(args, rom, kinds, setups):
                 continue
             name = names[rec.model] if rec.model is not None and rec.model < len(names) else None
             if args.command == 'types':
-                if args.skeleton is None or (name and skeletons.get(name) == args.skeleton):
+                if args.skeleton is not None and rec.model is not None and name not in skeletons:
+                    counts[('%s (model %d)' % (UNREADABLE, rec.model),)] += 1
+                elif args.skeleton is None or (name and skeletons[name] == args.skeleton):
                     counts[(type_name(kinds, rec.kind),)] += 1
                 continue
             if args.command == 'refs':
                 if args.attached and not attached(data, rec):
                     continue
+                check_word(rec, args.word, kinds, '--word')
                 target = rec.index + struct.unpack_from('>i', data, rec.at + 4 * args.word)[0]
                 counts[(type_name(kinds, records[target].kind) if 0 <= target < len(records) else NULL,)] += 1
                 continue
             if rec.model is None:
                 continue
-            if name is None or name not in prop_models:
+            if name is None or name not in prop_models or (args.command == 'models' and name not in skeletons):
                 counts[('%s (model %d)' % (UNREADABLE, rec.model),)] += 1
             elif args.command == 'models':
-                counts[(name, skeletons.get(name, '?'))] += 1
+                counts[(name, skeletons[name])] += 1
             else:
                 counts.update(model_counts(args, prop_models[name]))
     return counts
@@ -198,7 +213,11 @@ def main(argv=None):
     if not setups:
         print('lp64_setup_scan: no setup matches %r' % args.match, file=sys.stderr)
         return 1
-    counts = count(args, rom, kinds, setups)
+    try:
+        counts = count(args, rom, kinds, setups)
+    except models_scan.ScanError as error:
+        print('lp64_setup_scan: %s' % error, file=sys.stderr)
+        return 1
     found = {k: v for k, v in counts.items() if not str(k[-1]).startswith(UNREADABLE)}
     print('setups: %d' % len(setups))
     models_scan.print_counts(counts)

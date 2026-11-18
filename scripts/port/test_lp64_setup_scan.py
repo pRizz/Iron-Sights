@@ -155,6 +155,70 @@ class Commands(Fixture):
         self.assertIn('unreadable (Ump_setupbarZ.bin)', out)
         self.assertIn('Ump_setupbarZ.bin', err)
 
+    def test_a_skeleton_count_names_a_record_whose_model_is_past_the_prop_table_and_fails(self):
+        # Arrange: a PROP naming model 5 of 2
+        words = record(1, 0, 0, 0) + record(3, 5, 0) + [48]
+        self.write(struct.pack('>4i', 0, 0, 0, 16) + struct.pack('>%di' % len(words), *words))
+        # Act
+        status, out, err = self.run_main('types', '--skeleton', 'door')
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('unreadable (model 5)', out)
+        self.assertIn('model 5', err)
+
+    def test_a_skeleton_count_names_a_model_without_a_skeleton_line_and_fails(self):
+        # Arrange
+        (self.root/'assets/prop/bar/ModelFileHeader.inc.c').write_text('/* no header */\n')
+        # Act
+        status, out, _ = self.run_main('types', '--skeleton', 'door')
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('unreadable (model 1)', out)
+
+    def test_a_prop_directory_without_a_record_line_is_unreadable_not_its_directory_name(self):
+        # Arrange
+        (self.root/'assets/prop/bar/propFileRecord.inc.c').write_text('/* no record */\n')
+        # Act
+        status, out, _ = self.run_main('models', '--type', 'PROP')
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('unreadable (model 1)', out)
+        self.assertNotIn('bar', out)
+
+    def test_a_word_past_the_records_size_is_refused_naming_it(self):
+        # Act
+        status, _, err = self.run_main('refs', '--type', 'MONITOR', '--word', '4')
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('MONITOR', err)
+        self.assertIn('4', err)
+
+    def test_a_mask_word_past_the_records_size_is_refused_naming_it(self):
+        # Act
+        status, _, err = self.run_main('models', '--type', 'PROP', '--mask', '3:0x1')
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('PROP', err)
+
+    def test_a_list_that_runs_off_the_file_without_end_is_unreadable_and_fails(self):
+        # Arrange
+        words = record(1, 0, 0, 0) + record(3, 1, 0)
+        self.write(struct.pack('>4i', 0, 0, 0, 16) + struct.pack('>%di' % len(words), *words))
+        # Act
+        status, out, _ = self.run_main('types')
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('unreadable (Ump_setupbarZ.bin)', out)
+
+    def test_a_filelist_with_no_setup_fails(self):
+        # Arrange
+        (self.root/'filelist.csv').write_text('64,10,assets/obseg/prop/PfooZ.bin,1,1\n')
+        # Act
+        status, _, err = self.run_main('types')
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('no setup matches', err)
+
     def test_a_type_no_record_has_fails(self):
         # Act
         status, _, err = self.run_main('models', '--type', 'UNK41')

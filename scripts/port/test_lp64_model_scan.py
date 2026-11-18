@@ -212,6 +212,18 @@ class Command(Fixture):
         self.assertEqual(status, 1)
         self.assertIn('bar', err)
 
+    def test_two_files_defining_one_header_name_fail_naming_both(self):
+        # Arrange
+        other = Path(self.directory.name)/'assets/gun/copy'
+        other.mkdir()
+        (other/'ModelFileHeader.inc.c').write_text('MODELFILEHEADER(foo, 0, &SKELETON(standard_gun), 0, 5, 1, 12.5, 0, 1)\n')
+        # Act
+        status, _, err = self.run_main('roots')
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('foo', err)
+        self.assertIn('copy', err)
+
     def test_a_filelist_without_models_fails(self):
         # Arrange
         Path(self.args[3]).write_text('0,64,assets/other.bin,0,0\n')
