@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../../src/game/loadobjectmodel.c"
+#include "../../src/game/cleanup_objects.c"
 #if IS_64_BIT
 #include "../../port/src/romconv_setup_props.c"
 #endif
@@ -14,6 +15,12 @@ stagesetup g_CurrentSetup;
 u32 g_PortHwWork[PORTHW_WORK_COUNT];
 
 static int failures;
+static s32 freedCount;
+
+void objFreePermanently(ObjectRecord *obj, bool freeprop)
+{
+    freedCount++;
+}
 
 static void expect(int ok, const char *what)
 {
@@ -119,8 +126,60 @@ static void testOnlyObjectCommandsAreReadAsProps(void)
 }
 #endif
 
+/* The types setupCommandGetObject lets fall through to `return obj;` at 32
+ * bits, inherited (FORK-089, entry 12): at 64 bits they get NULL. */
+static int isFallThroughType(s32 type)
+{
+    return type == PROPDEF_NOTHING || type == PROPDEF_DEBRIS || type == PROPDEF_UNK16 || type == PROPDEF_UNK41;
+}
+
+/* setupCommandGetObject returns a command as an object only for an object type. */
+static void testOnlyObjectCommandsAreReturnedAsObjects(void)
+{
+    char what[96];
+    s32 type;
+
+    for (type = 0; type < PROPDEF_END; type++)
+    {
+        // Arrange: a list of one command of this type.
+        PropDefHeaderRecord *cmd = startCommands();
+        cmd->type = type;
+        nextCommand(cmd)->type = PROPDEF_END;
+        const int object = isObjectType(type) || (!IS_64_BIT && isFallThroughType(type));
+
+        // Act
+        ObjectRecord *obj = setupCommandGetObject(0, 0);
+
+        // Assert
+        snprintf(what, sizeof(what), "setupCommandGetObject on a command of type %d", (int) type);
+        expect(obj == (object ? (ObjectRecord *) cmd : NULL), what);
+    }
+}
+
+/* cleanupObjects frees an object command and, at 64 bits, skips an UNK41 one. */
+static void testCleanupFreesOnlyObjects(void)
+{
+    // Arrange: a prop, an UNK41 record and a prop.
+    PropDefHeaderRecord *cmd = startCommands();
+    cmd->type = PROPDEF_PROP;
+    cmd = nextCommand(cmd);
+    cmd->type = PROPDEF_UNK41;
+    cmd = nextCommand(cmd);
+    cmd->type = PROPDEF_PROP;
+    nextCommand(cmd)->type = PROPDEF_END;
+    freedCount = 0;
+
+    // Act
+    cleanupObjects(0);
+
+    // Assert: the UNK41 record is freed as an object only at 32 bits (inherited).
+    expect(freedCount == (IS_64_BIT ? 2 : 3), "cleanupObjects frees the object commands");
+}
+
 int main(void)
 {
+    testOnlyObjectCommandsAreReturnedAsObjects();
+    testCleanupFreesOnlyObjects();
     testDoorIsFoundPastTheSwitchThatLinksIt();
 #if IS_64_BIT
     testOnlyObjectCommandsAreReadAsProps();

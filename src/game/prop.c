@@ -2527,7 +2527,11 @@ void proplvreset2(enum LEVELID stageId)
                     case PROPDEF_ALARM:
                     case PROPDEF_MAGAZINE:
                     case PROPDEF_GAS_RELEASING:
+#if IS_64_BIT
+                    /* LP64-005: an UNK41 record is no object; the walk steps past it */
+#else
                     case PROPDEF_UNK41:
+#endif
                     case PROPDEF_GLASS:
                     case PROPDEF_SAFE:
                         if (withobjs && (!(((ObjectRecord *) phead)->flags2 & flags)))
@@ -2736,7 +2740,11 @@ void proplvreset2(enum LEVELID stageId)
                     case PROPDEF_AMMO:
                     case PROPDEF_ARMOUR:
                     case PROPDEF_GAS_RELEASING:
+#if IS_64_BIT
+                    /* LP64-005: an UNK41 record is no object; the walk steps past it */
+#else
                     case PROPDEF_UNK41:
+#endif
                     case PROPDEF_GLASS:
                     case PROPDEF_SAFE:
                     case PROPDEF_TINTED_GLASS:

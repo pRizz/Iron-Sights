@@ -43,7 +43,11 @@ void cleanupObjects(s32 stage)
                 case PROPDEF_GAS_RELEASING:
                 case PROPDEF_VEHICHLE:
                 case PROPDEF_AIRCRAFT:
+#if IS_64_BIT
+                /* LP64-005: an UNK41 record is no object; the walk steps past it */
+#else
                 case PROPDEF_UNK41:
+#endif
                 case PROPDEF_GLASS:
                 case PROPDEF_SAFE:
                 case PROPDEF_TANK:

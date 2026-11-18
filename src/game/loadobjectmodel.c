@@ -508,7 +508,11 @@ void setupUpdateObjectRoomPosition(ObjectRecord *obj)
             case PROPDEF_GAS_RELEASING: //36:
             case PROPDEF_VEHICHLE: //39:
             case PROPDEF_AIRCRAFT: //40:
+#if IS_64_BIT
+            /* LP64-005: UNK41 is no object (FORK-089 entry 12) */
+#else
             case PROPDEF_UNK41: //41:
+#endif
             case PROPDEF_GLASS: //42:
             case PROPDEF_SAFE: //43:
             case PROPDEF_TANK: //45:
@@ -541,6 +545,10 @@ void setupUpdateObjectRoomPosition(ObjectRecord *obj)
             case PROPDEF_CAMERAPOS:                 //46:
                 return NULL;
             break;
+#if IS_64_BIT
+            default: /* LP64-005: NOTHING, DEBRIS, UNK16, UNK41 and any later type */
+                return NULL;
+#endif
 
             // not included:
             //case PROPDEF_DEBRIS: //15:
