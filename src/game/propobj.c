@@ -3993,7 +3993,7 @@ s32 sub_GAME_7F0448A8(struct PropRecord *argProp)
     f32 radius;
     f32 ground;
     PropRecord *propss;
-    ObjectRecord *temp_v0_2;
+    ChrRecord *temp_v0_2;
     struct rect4f *polygon;
     s32 edges;
     f32 top;
@@ -4029,8 +4029,8 @@ s32 sub_GAME_7F0448A8(struct PropRecord *argProp)
         {
             if ((prop->type == PROP_TYPE_VIEWER) || (prop->type == PROP_TYPE_CHR))
             {
-                temp_v0_2 = prop->obj;
-                if ((temp_v0_2 == NULL) || !((intptr_t) temp_v0_2->model & 0x400))
+                temp_v0_2 = prop->chr;
+                if ((temp_v0_2 == NULL) || !(temp_v0_2->chrflags & CHRFLAG_HIDDEN))
                 {
                     chrpropGetCollisionBounds(prop, &radius, &height, &arbitratyNumber);
 
