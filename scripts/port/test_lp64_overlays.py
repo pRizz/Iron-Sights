@@ -84,6 +84,47 @@ class Kinds(unittest.TestCase):
         # The shape of src/sched.c's read of a client's third word.
         self.assertEqual(keys(wrap('if (*((s32*)client + 2) == 0) {}')), ['src/game/a.c:f:offset:*((s32*)client+2)'])
 
+    def test_a_parenthesised_cast_of_a_sum_is_an_offset(self):
+        self.assertEqual(keys(wrap('n = *((s32 *) ((u8 *) x + 8));')), ['src/game/a.c:f:offset:*((s32*)((u8*)x+8))'])
+
+    def test_a_cast_of_a_computed_offset_is_an_offset(self):
+        # The shape of propobj.c's vertex copy, `*((Word4 *) (((u8 *) p) + offset))`.
+        self.assertEqual(keys(wrap('w = *((Word4 *)(((u8 *) t) + o));')),
+                         ['src/game/a.c:f:offset:*((Word4*)(((u8*)t)+o))'])
+
+    def test_an_integer_cast_between_the_pointer_cast_and_the_sum_is_an_offset(self):
+        self.assertEqual(keys(wrap('n = *(u16 *)(uintptr_t)(timg - 8);')),
+                         ['src/game/a.c:f:offset:*(u16*)(uintptr_t)(timg-8)'])
+
+    def test_the_parenthesised_texture_number_read_is_an_offset(self):
+        # The shape of bg.c's and propobj.c's `texnum = *((u16 *) (uintptr_t) (timg - 8))`.
+        self.assertEqual(keys(wrap('n = *((u16 *) (uintptr_t) (timg - 8));')),
+                         ['src/game/a.c:f:offset:*((u16*)(uintptr_t)(timg-8))'])
+
+    def test_a_dereference_of_a_parenthesised_cast_plus_a_constant_is_an_offset(self):
+        self.assertEqual(keys(wrap('n = *(((u16 *) h) + 2);')), ['src/game/a.c:f:offset:*(((u16*)h)+2)'])
+
+    def test_an_index_through_doubled_parentheses_is_an_index(self):
+        self.assertEqual(keys(wrap('n = (((u16 *) h))[2];')), ['src/game/a.c:f:index:(((u16*)h))[2]'])
+
+    def test_a_dereference_after_an_if_condition_or_else_is_an_offset(self):
+        # Arrange
+        text = wrap('if (c) *(s32 *)((u8 *)x + 4) = 0;\nelse *(s32 *)((u8 *)x + 8) = 0;')
+        # Act / Assert
+        self.assertEqual(keys(text), ['src/game/a.c:f:offset:*(s32*)((u8*)x+4)',
+                                      'src/game/a.c:f:offset:*(s32*)((u8*)x+8)'])
+
+    def test_a_multiplication_by_a_cast_sum_is_not_an_offset(self):
+        self.assertEqual(keys(wrap('n = (a) * (int)(x + 1); m = b * (int)(x + 1);')), [])
+
+    def test_a_dereference_of_a_cast_address_is_an_offset(self):
+        # The shapes of rle.c's `*(u16 *)&src[2]` and prop.c's `*(s32 *) &door->maxFrac`.
+        self.assertEqual(keys(wrap('a = *(u16 *)&src[2]; b = *(s32 *) &door->maxFrac;')),
+                         ['src/game/a.c:f:offset:*(u16*)&src[2]', 'src/game/a.c:f:offset:*(s32*)&door->maxFrac'])
+
+    def test_a_dereference_of_a_plain_cast_is_not_an_offset(self):
+        self.assertEqual(keys(wrap('a = *(u32 *) p;')), [])
+
     def test_a_union_and_a_struct_tag_are_records(self):
         # Act
         found = keys(wrap('a = (Param *) x; b = (struct fontchar *) x;'))
@@ -157,6 +198,15 @@ class Regions(unittest.TestCase):
         text = wrap(f'#ifdef GE_VIDEO\n{INDEX}\n#elif IS_64_BIT\nn = ((u16 *) x)[3];\n#else\nn = ((u16 *) x)[4];\n#endif')
         # Act / Assert
         self.assertEqual(keys(text), [INDEX_KEY, 'src/game/a.c:f:index:((u16*)x)[3]'])
+
+    def test_a_condition_with_arithmetic_it_does_not_evaluate_is_kept(self):
+        self.assertEqual(self.listed('if 0 + GE_VIDEO', otherwise='else'), (True, True))
+
+    def test_an_extern_c_block_leaves_its_functions_named(self):
+        # Arrange
+        text = '#ifdef __cplusplus\nextern "C" {\n#endif\n' + wrap(INDEX) + '#ifdef __cplusplus\n}\n#endif\n'
+        # Act / Assert
+        self.assertEqual(keys(text), [INDEX_KEY])
 
     def test_a_symbol_a_pc_build_may_define_keeps_both_branches(self):
         self.assertEqual(self.listed('ifdef GE_VIDEO', otherwise='else'), (True, True))
@@ -267,6 +317,9 @@ class Scope(unittest.TestCase):
         self.assertEqual(taken, ['src/game/a.c', 'src/libultra/io/b.c', 'port/src/c.c', 'port/include/d.h',
                                  'src/game/e.h'])
 
+    def test_an_included_inl_file_is_read(self):
+        self.assertTrue(overlays.in_scope('port/src/port_hud_audit.inl'))
+
 
 class Check(unittest.TestCase):
     def setUp(self):
@@ -327,6 +380,27 @@ class Check(unittest.TestCase):
         self.assertIn('unreviewed: src/game/a.c:f:index:((u16*)x)[3]', out)
         self.assertIn(f'stale: {INDEX_KEY}', out)
 
+    def test_a_repeated_key_in_the_listing_is_refused(self):
+        # Arrange
+        site = overlays.list_sites(self.root, self.files)[0]
+        # Act
+        with contextlib.redirect_stdout(io.StringIO()):
+            status = overlays.report([site, site], {site.key: ('typed', 'r')})
+        # Assert
+        self.assertEqual(status, 2)
+
+    def test_no_sites_is_not_ok(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(overlays.report([], {}), 2)
+
+    def test_a_run_declared_in_a_c_file_is_listed(self):
+        # Arrange
+        (self.root/'src/game/a.c').write_text('struct local { Model m; s32 unk04; };\n' + wrap(INDEX))
+        # Act
+        found = [site.key for site in overlays.list_sites(self.root, self.files)]
+        # Assert
+        self.assertIn('src/game/a.c:local:run:Model m; +1 fillers', found)
+
     def test_a_line_with_an_unknown_verdict_is_refused(self):
         with self.assertRaises(ValueError):
             overlays.parse_reviewed(f'{INDEX_KEY}\tfixed\tgone\n')
@@ -338,6 +412,16 @@ class Check(unittest.TestCase):
     def test_the_checked_in_list_parses(self):
         # Act / Assert
         overlays.parse_reviewed(overlays.REVIEWED.read_text())
+
+
+class Locals(unittest.TestCase):
+    def test_a_scalar_pointer_cast_stored_in_a_local_or_member_is_reported(self):
+        # Arrange
+        text = wrap('u16 *p = (u16 *) anim;\nq->bytes = (u8 *) rec;\nr = (u16 *) NULL;\nn = p[2];')
+        # Act
+        found = [aid.key for aid in overlays.locals_in('src/game/a.c', text)]
+        # Assert
+        self.assertEqual(found, ['src/game/a.c:f:p=(u16*)anim', 'src/game/a.c:f:q->bytes=(u8*)rec'])
 
 
 if __name__ == '__main__':

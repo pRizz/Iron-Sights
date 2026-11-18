@@ -6,9 +6,9 @@ the `#define` bodies it does compile, and the owner of every offset: the functio
 object a file-scope initializer defines.
 
 Preprocessor regions: a condition is evaluated with three values. `TARGET_N64`, `!IS_64_BIT`, `0` and
-the symbols of `UNDEFINED_ON_PC` and `UNDEFINED_AT_64` are false; `IS_64_BIT`, `1`, `__SIZEOF_POINTER__ == 8` and the symbols
+the symbols of `UNDEFINED_ON_PC`, `UNDEFINED_AT_64` and `UNDEFINED_IN_C` are false; `IS_64_BIT`, `1`, `__SIZEOF_POINTER__ == 8` and the symbols
 of `DEFINED_ON_PC` (CMakeLists.txt's `add_compile_definitions`) are true; every other symbol is unknown,
-and a branch whose condition is unknown is kept, together with its `#else`. `&&`, `||`, `!` and
+as is a condition with arithmetic, a comma or a macro call, and a branch whose condition is unknown is kept, together with its `#else`. `&&`, `||`, `!` and
 parentheses combine them (false && unknown is false, true || unknown is true). A region nested in one
 left out is left out. `#include`, `#undef` and the like are blanked; `#define` lines inside a region
 left out are not read.
@@ -25,6 +25,9 @@ UNDEFINED_ON_PC = ('TARGET_N64', 'VERSION_EU', 'VERSION_JP', 'DEBUG', 'BUGFIX_R1
 # Never defined in a 64-bit build: CMakeLists.txt refuses GE_POINTER_BITS=64 on Windows and with
 # Emscripten, and only cmake/emscripten.cmake defines GE_WEB. The 32-bit builds do define them.
 UNDEFINED_AT_64 = ('_WIN32', '__EMSCRIPTEN__', 'GE_WEB')
+# The lister reads C: a C compiler never defines __cplusplus (an `extern "C" {` block would hide its
+# functions' names otherwise). A C++ file named explicitly is read as C too.
+UNDEFINED_IN_C = ('__cplusplus',)
 TRUE_ATOMS = {'IS_64_BIT', '1'}
 
 DIRECTIVE = re.compile(r'^[ \t]*#[ \t]*(\w*)(.*)$')
@@ -71,12 +74,17 @@ def blank_comments_and_literals(text: str) -> str:
     return ''.join(out)
 
 
+TOKEN = re.compile(r'defined|\w+|&&|\|\||==|!=|>=|<=|[!()<>]')
+
+
 def _tokens(expression: str) -> list[str]:
-    return re.findall(r'defined|\w+|&&|\|\||==|!=|>=|<=|[!()<>]', expression)
+    return TOKEN.findall(expression)
 
 
 def evaluate(expression: str):
     """Return True, False or None (unknown) for an `#if` expression, as a 64-bit PC build sees it."""
+    if TOKEN.sub('', expression).strip():
+        return None  # arithmetic, a comma or a macro call this evaluator does not model: keep the branch
     tokens = _tokens(expression)
     position = 0
 
@@ -134,7 +142,7 @@ def evaluate(expression: str):
 
 def symbol(name: str):
     """Return whether a 64-bit PC build defines `name`: True, False or None (unknown)."""
-    if name in UNDEFINED_ON_PC or name in UNDEFINED_AT_64:
+    if name in UNDEFINED_ON_PC or name in UNDEFINED_AT_64 or name in UNDEFINED_IN_C:
         return False
     if name in DEFINED_ON_PC or name == 'IS_64_BIT':
         return True
@@ -144,7 +152,7 @@ def symbol(name: str):
 def literal(token: str):
     if token in TRUE_ATOMS:
         return True
-    if token == '0' or token in UNDEFINED_ON_PC or token in UNDEFINED_AT_64:
+    if token == '0' or token in UNDEFINED_ON_PC or token in UNDEFINED_AT_64 or token in UNDEFINED_IN_C:
         return False
     return None
 

@@ -2,12 +2,16 @@
 
 These are patterns on C text after `lp64_overlays_source.prepare`, not a C parser:
 
-- `index`: `(` CAST EXPR `)` `[` INDEX `]`, where CAST is a cast to a pointer to a scalar type (`u8` to
+- `index`: `(` CAST EXPR `)` `[` INDEX `]` (also through redundant parentheses, `(((u16 *) h))[2]`), where CAST is a cast to a pointer to a scalar type (`u8` to
   `u64`, `s8` to `s64`, `f32`, `f64`, `int`, `char`, `short`, `long`, `float`, `double`, the `stdint.h`
   and pointer-width names), or to a pointer to a pointer (`void **`, `u32 **`), with any index.
-- `offset`: a unary `*` applied to a cast of a parenthesised sum or difference, `*(T *) ((u8 *) x + K)`,
-  or to a parenthesised sum or difference whose left operand starts with a cast, `*((s32 *) x + 2)`;
-  T is any pointer type, and K any operand, constant or not.
+- `offset`: a unary `*` applied to an expression that reads by position through a pointer cast
+  (`positional`): after redundant parentheses and a chain of pointer and integer casts are unwrapped,
+  a pointer cast of a sum or difference, `*(T *) ((u8 *) x + K)`, `*((u16 *) (uintptr_t) (t - 8))`;
+  a sum or difference whose left operand is a pointer cast, `*((s32 *) x + 2)`; or a pointer cast of
+  an address, `*(u16 *) &src[2]`, `*(s32 *) &door->maxFrac`. T is any pointer type and K any operand,
+  constant or computed (`+ offset` is a read by position too). A `*` after `return`, `case`, `else`, `do`
+  or the `)` of an `if`, `while`, `for` or `switch` condition is a dereference.
 - `opaque`: a member named `pad`, `pad_...`, `padN...`, `padding...` or `unk...` (not `pads`), reached by `.` or `->`, indexed by an
   integer literal: `x->act_bytes.padding[84]`. The text includes the chain of postfix operators before it.
 - `record`: a cast to a pointer (or pointer to pointer) to a struct or union type that `RecordTypes`
@@ -34,6 +38,9 @@ RECORD_CAST = re.compile(r'\(\s*(?:(?:const|volatile)\s+)?(?:(struct|union)\s+)?
 OPAQUE = re.compile(r'(?:->|\.)\s*(pad(?:ding\w*|[_\d]\w*)?|unk\w*)\s*\[\s*(0[xX][0-9a-fA-F]+|\d+)[uUlL]*\s*\]')
 OPERAND_START = re.compile(r'\s*[\w(&*\-!~+]')
 CAST_PREFIX_WORDS = {'return', 'case'}
+STATEMENT_WORDS = {'else', 'do'}
+CONDITION_WORDS = {'if', 'while', 'for', 'switch'}
+INT_CAST = re.compile(rf'\(\s*{QUALIFIER}(?:{SCALAR})\s*\)')
 
 
 @dataclass(frozen=True)
@@ -173,13 +180,23 @@ def postfix_start(code: str, end: int) -> int:
 
 
 def unary_star(code: str, index: int) -> bool:
-    """Return whether the `*` at `index` is a dereference rather than a multiplication."""
+    """Return whether the `*` at `index` is a dereference rather than a multiplication.
+
+    After an identifier, `)` or `]` it multiplies, except after `return`/`case`, after `else`/`do`, and after
+    the `)` that closes an `if`, `while`, `for` or `switch` condition, where a statement starts."""
     before = previous_token(code, index)
-    return not (before[:1].isalnum() or before[:1] == '_' or before in (')', ']')) or before in CAST_PREFIX_WORDS
+    if before in CAST_PREFIX_WORDS or before in STATEMENT_WORDS:
+        return True
+    if before == ')':
+        close = index - 1
+        while code[close].isspace():
+            close -= 1
+        return previous_token(code, opening(code, close + 1)) in CONDITION_WORDS
+    return not (before[:1].isalnum() or before[:1] == '_' or before == ']')
 
 
-def top_level_additive(code: str, start: int, end: int) -> bool:
-    """Return whether code[start:end] has a binary `+` or `-` outside any brackets."""
+def first_additive(code: str, start: int, end: int) -> int:
+    """Return the index of the first binary `+` or `-` of code[start:end] outside brackets, or -1."""
     depth, previous = 0, ''
     for index in range(start, end):
         char = code[index]
@@ -189,9 +206,49 @@ def top_level_additive(code: str, start: int, end: int) -> bool:
             depth -= 1
         elif char in '+-' and depth == 0 and previous and previous not in '(+-*/=<>!&|,~?:' \
                 and code[index + 1:index + 2] not in ('>', char) and code[index - 1:index] != char:
-            return True
+            return index
         if not char.isspace():
             previous = char
+    return -1
+
+
+def top_level_additive(code: str, start: int, end: int) -> bool:
+    """Return whether code[start:end] has a binary `+` or `-` outside any brackets."""
+    return first_additive(code, start, end) >= 0
+
+
+def unwrap(text: str) -> str:
+    """Return `text` stripped of whitespace and of parentheses that enclose all of it."""
+    text = text.strip()
+    while text.startswith('(') and matching(text, 0) == len(text):
+        text = text[1:-1].strip()
+    return text
+
+
+def left_operand(text: str) -> str:
+    """Return the text before the first binary `+` or `-` outside brackets (all of `text` if none)."""
+    index = first_additive(text, 0, len(text))
+    return text if index < 0 else text[:index]
+
+
+def positional(text: str, casted: bool = False) -> bool:
+    """Return whether dereferencing `text` reads memory by position through a pointer cast.
+
+    Redundant parentheses and chains of casts (pointer or integer, `(u16 *) (uintptr_t)`) are unwrapped. It
+    is positional when, under a pointer cast, the rest is a sum or difference (constant or computed) or the
+    address of an object (`&x[2]`, `&p->member`); or when a sum's left operand is a pointer cast."""
+    text = unwrap(text)
+    cast = ANY_POINTER_CAST.match(text) or SCALAR_CAST.match(text) or INT_CAST.match(text)
+    if cast:
+        pointer = cast.re is not INT_CAST
+        return positional(text[cast.end():], casted or pointer)
+    if casted and text.startswith('&'):
+        return True
+    if top_level_additive(text, 0, len(text)):
+        if casted:
+            return True
+        left = unwrap(left_operand(text))
+        return bool(ANY_POINTER_CAST.match(left) or SCALAR_CAST.match(left))
     return False
 
 
@@ -202,36 +259,29 @@ def find_index(code: str):
             outer -= 1
         if outer < 0 or code[outer] != '(' or not is_cast(code, cast.start(), cast.end()):
             continue
-        close = matching(code, outer)
-        after = close
-        while after < len(code) and code[after].isspace():
-            after += 1
-        if after < len(code) and code[after] == '[':
-            yield outer, matching(code, after)
+        while True:  # climb parentheses that only wrap this group: (((u16 *) h))[2]
+            close = matching(code, outer)
+            after = close
+            while after < len(code) and code[after].isspace():
+                after += 1
+            if after < len(code) and code[after] == '[':
+                yield outer, matching(code, after)
+                break
+            parent = outer - 1
+            while parent >= 0 and code[parent].isspace():
+                parent -= 1
+            if parent < 0 or code[parent] != '(' or code[close:matching(code, parent) - 1].strip():
+                break
+            outer = parent
 
 
 def find_offset(code: str):
     for star in re.finditer(r'\*\s*\(', code):
         if not unary_star(code, star.start()):
             continue
-        paren = star.end() - 1
-        cast = ANY_POINTER_CAST.match(code, paren)
-        if cast and is_cast(code, cast.start(), cast.end()):
-            group = cast.end()
-            while group < len(code) and code[group].isspace():
-                group += 1
-            if group < len(code) and code[group] == '(':
-                close = matching(code, group)
-                if top_level_additive(code, group + 1, close - 1):
-                    yield star.start(), close
-            continue
-        close = matching(code, paren)
-        inner = paren + 1
-        while inner < close and code[inner].isspace():
-            inner += 1
-        first = ANY_POINTER_CAST.match(code, inner)
-        if first and is_cast(code, first.start(), first.end()) and top_level_additive(code, paren + 1, close - 1):
-            yield star.start(), close
+        end = operand_end(code, star.start() + 1)
+        if positional(code[star.start() + 1:end]):
+            yield star.start(), end
 
 
 def find_opaque(code: str):

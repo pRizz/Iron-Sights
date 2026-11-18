@@ -9,6 +9,12 @@
 # occurrence of one key in a file. A site whose text changes is a new site and needs a new verdict; its
 # old line becomes stale and must be removed.
 #
+# Kinds (`lp64_overlays.py --help` has the exact patterns): index `((u16 *) x)[n]`; offset, a dereference
+# of a pointer cast of a sum (constant or computed offset) or of an address, `*(T *) ((u8 *) x + K)`,
+# `*((s32 *) x + 2)`, `*(s32 *) &p->member`; opaque `x->padding[84]`; record `(ChrRecord *) p->voidp`;
+# run, a Gfx, Model or record member followed by filler members. `list --locals` (stored scalar-pointer
+# casts) is a survey aid and has no lines here.
+#
 # Verdicts:
 #   typed       the object is of the type it is read as.
 #   same        the layout read is the same at both widths; the reason names the _Static_assert in
