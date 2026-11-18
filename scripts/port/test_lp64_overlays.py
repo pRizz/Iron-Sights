@@ -8,7 +8,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lp64_overlays as overlays  # noqa: E402
 
-PINNED_COUNTS = {'index': 113, 'offset': 165, 'opaque': 56, 'record': 995, 'run': 26, 'stored': 286}
+PINNED_COUNTS = {'index': 90, 'offset': 165, 'opaque': 52, 'record': 1000, 'run': 26, 'stored': 286}
 
 HEADER = """
 typedef struct ChrRecord { struct { u8 padding[160]; } act_bytes; } ChrRecord;

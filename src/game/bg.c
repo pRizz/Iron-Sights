@@ -4976,12 +4976,21 @@ bool bgTestBulletHitBackground(coord3d *from, coord3d *to, s32 roomnum, struct H
     {
         point = (RoomVtxBatchBounds *)hit->tricmd;
 
+#if IS_64_BIT
+        /* LP64-005: the opcode is w0's top byte on a little-endian host */
+        if ((GFX_W0((Gfx *) point) >> 24) != G_SETTILE)
+#else
         if (((u8 *)((Gfx*)point))[0] != G_SETTILE) 
+#endif
         {
             while ((Gfx *)g_BgRoomInfo[roomnum].ptr_expanded_mapping_info < ((Gfx*)point)) 
             {
                 point = (RoomVtxBatchBounds *)((Gfx *)point - 1);
+#if IS_64_BIT
+                if ((GFX_W0((Gfx *) point) >> 24) == G_SETTILE)
+#else
                 if (((u8 *)((Gfx*)point))[0] == G_SETTILE) 
+#endif
                 {
                     break;
                 }
@@ -4995,7 +5004,11 @@ bool bgTestBulletHitBackground(coord3d *from, coord3d *to, s32 roomnum, struct H
         } 
         else 
         {
+#if IS_64_BIT
+            hit->tileformat = (GFX_W0((Gfx *) point) >> 21) & 7;
+#else
             hit->tileformat = ((u32)((u8 *)((Gfx*)point))[1]) >> 5;
+#endif
             hit->tilesize = (GFX_W0((Gfx*)point) << 11) >> 30;
         }
     }
