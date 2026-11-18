@@ -18,9 +18,11 @@ These are patterns on C text after `lp64_overlays_source.prepare`, not a C parse
   integer literal: `x->act_bytes.padding[84]`. The text includes the chain of postfix operators before it.
 - `record`: a cast to a pointer (or pointer to pointer) to a struct or union type that `RecordTypes`
   holds, with its operand: `(ChrRecord *) prop->voidp`. A cast of `NULL` or `0` is not listed.
-- `stored`: a scalar-pointer cast (as `index` has it) stored by `=` or a compound assignment in a
-  local, a member or any other target, `u16 *p = (u16 *) anim;`, its text `target=value` with the
-  whole value stored, the cast and anything added to it (`p=(u16*)anim`, `q=(u8*)p+size`). What is later done through the stored pointer (`p[2]`) has no text tied to the
+- `stored` (lp64_overlays_stored.py): a scalar-pointer cast (as `index` has it) whose value is stored by
+  `=` or a compound assignment in a local, a member or any other target, `u16 *p = (u16 *) anim;`,
+  directly or through grouping parentheses, a conditional arm, a comma expression, a binary `+` or an
+  initializer list; its text `target=value` with the whole value stored, the cast and anything added
+  to it (`p=(u16*)anim`, `q=(u8*)p+size`, `r=c?(u8*)x:y`). What is later done through the stored pointer (`p[2]`) has no text tied to the
   cast, so a change to those uses changes no key: the verdict's reason names the uses that were read.
   A store of a cast of `NULL` or `0` is not listed.
 
@@ -333,59 +335,22 @@ def find_record(code: str, types: RecordTypes):
         yield cast.start(), end
 
 
-def compound_start(code: str, equals: int):
-    """Return where the assignment operator ending in the `=` at `equals` starts (`+=`, `<<=`), or None
-    when that `=` belongs to a comparison (`==`, `!=`, `<=`, `>=`)."""
-    if code[equals - 2:equals] in ('<<', '>>'):
-        return equals - 2
-    if code[equals - 1:equals] in ('=', '!', '<', '>'):
-        return None
-    return equals - 1 if code[equals - 1:equals] in tuple('+-*/%&|^') else equals
-
-
-def find_stored(code: str):
-    """Yield (start, text) for each assignment or initialization of a scalar-pointer cast."""
-    for cast in SCALAR_CAST.finditer(code):
-        if previous_token(code, cast.start()) != '=' or not is_cast(code, cast.start(), cast.end()):
-            continue
-        equals = code.rindex('=', 0, cast.start())
-        operator = compound_start(code, equals)
-        if operator is None:
-            continue
-        end = value_end(code, cast.end())
-        if code[cast.end():end].strip() in ('NULL', '0'):
-            continue
-        target = normalize(code[postfix_start(code, operator):operator])
-        yield cast.start(), f'{target}{code[operator:equals]}={normalize(code[cast.start():end])}'
-
-
-def value_end(code: str, index: int) -> int:
-    """Return the end of the assigned value starting at `index`: the `;`, the `,` or the unmatched
-    closing bracket that ends it, so an offset added after the cast (`(u8 *) p + size`) is in the text."""
-    depth = 0
-    for position in range(index, len(code)):
-        char = code[position]
-        if char in '([{':
-            depth += 1
-        elif char in ')]}':
-            if depth == 0:
-                return position
-            depth -= 1
-        elif char in ';,' and depth == 0:
-            return position
-    return len(code)
-
-
 def texts(code: str, spans):
     for start, end in spans:
         yield start, normalize(code[start:end])
+
+
+def stored_finder():
+    """Return `find_stored`; imported here because lp64_overlays_stored builds on this module."""
+    from lp64_overlays_stored import find_stored
+    return find_stored
 
 
 def sites_in_code(path: str, code: str, owner, line, types: RecordTypes, base: int = 0) -> list[Site]:
     """Return the sites of `code`, owned by `owner(offset)`; offsets are shifted by `base`."""
     finders = (('index', texts(code, find_index(code))), ('offset', texts(code, find_offset(code))),
                ('opaque', texts(code, find_opaque(code))), ('record', texts(code, find_record(code, types))),
-               ('stored', find_stored(code)))
+               ('stored', stored_finder()(code)))
     found = sorted((start, kind, text) for kind, found_texts in finders for start, text in found_texts)
     return [Site(path, owner(base + start), kind, text, line(base + start)) for start, kind, text in found]
 

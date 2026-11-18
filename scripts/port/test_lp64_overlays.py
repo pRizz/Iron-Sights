@@ -1,4 +1,5 @@
 """ROM-free tests for the overlay lister: every record read through another type (LP64-005 Task 3)."""
+from collections import Counter
 from pathlib import Path
 import re
 import sys
@@ -6,6 +7,8 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lp64_overlays as overlays  # noqa: E402
+
+PINNED_COUNTS = {'index': 113, 'offset': 165, 'opaque': 56, 'record': 995, 'run': 26, 'stored': 286}
 
 HEADER = """
 typedef struct ChrRecord { struct { u8 padding[160]; } act_bytes; } ChrRecord;
@@ -397,6 +400,35 @@ class Stored(unittest.TestCase):
         self.assertEqual((before, after), (['src/game/a.c:f:stored:p=(u16*)anim'],) * 2)
 
 
+    def test_a_cast_in_a_conditional_arm_is_stored_once_with_the_whole_value(self):
+        self.assertEqual(keys(wrap('p = c ? (u8 *) x : y;\nq = c ? y : (u8 *) x;\nr = c ? (u8 *) x : (u8 *) y;')),
+                         ['src/game/a.c:f:stored:p=c?(u8*)x:y', 'src/game/a.c:f:stored:q=c?y:(u8*)x',
+                          'src/game/a.c:f:stored:r=c?(u8*)x:(u8*)y'])
+
+    def test_a_cast_in_the_condition_of_a_conditional_is_not_stored(self):
+        self.assertEqual(keys(wrap('n = (u8 *) x ? 1 : 2;')), [])
+
+    def test_a_cast_ending_a_comma_expression_is_stored(self):
+        self.assertEqual(keys(wrap('p = (n++, (u8 *) x);')), ['src/game/a.c:f:stored:p=(n++,(u8*)x)'])
+
+    def test_a_parenthesised_cast_is_stored_with_what_is_added(self):
+        self.assertEqual(keys(wrap('p = ((u16 *) x) + 2;\nq = ((u16 *) x);')),
+                         ['src/game/a.c:f:stored:p=((u16*)x)+2', 'src/game/a.c:f:stored:q=((u16*)x)'])
+
+    def test_a_cast_added_to_a_base_is_stored(self):
+        self.assertEqual(keys(wrap('p = base + (u8 *) x;')), ['src/game/a.c:f:stored:p=base+(u8*)x'])
+
+    def test_a_cast_in_an_initializer_list_is_stored(self):
+        self.assertEqual(keys(wrap('u8 *t[] = { a, (u8 *) x };')), ['src/game/a.c:f:stored:t[]={a,(u8*)x}'])
+
+    def test_a_cast_passed_to_a_call_or_indexed_through_a_group_is_not_stored(self):
+        found = keys(wrap('p = g((u8 *) x);\nn = ((u16 *) x)[2];\n{ (u8 *) x; }'))
+        self.assertEqual([key for key in found if ':stored:' in key], [])
+
+    def test_a_store_through_a_dereferenced_target_keeps_its_star(self):
+        self.assertEqual(keys(wrap('*p = (u8 *) x;\nu8 **q = (u8 **) y;')),
+                         ['src/game/a.c:f:stored:*p=(u8*)x', 'src/game/a.c:f:stored:q=(u8**)y'])
+
 class Tree(unittest.TestCase):
     def test_the_stored_kind_changes_no_site_of_the_other_kinds_on_the_tree(self):
         # Arrange
@@ -407,6 +439,13 @@ class Tree(unittest.TestCase):
         # Assert
         self.assertEqual(sorted(site.key for site in sites if site.kind != 'stored'), expected)
 
+
+    def test_the_tree_holds_the_pinned_number_of_sites_of_each_kind(self):
+        # Act
+        sites = overlays.list_sites(overlays.ROOT, overlays.tracked_files(overlays.ROOT))
+        # Assert: a finder regression cannot hide behind a reviewed list edited in the same commit;
+        # a change that adds or removes sites updates these numbers with its reviewed lines.
+        self.assertEqual(dict(sorted(Counter(site.kind for site in sites).items())), PINNED_COUNTS)
 
 if __name__ == '__main__':
     unittest.main()

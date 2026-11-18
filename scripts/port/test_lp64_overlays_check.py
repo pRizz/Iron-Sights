@@ -185,11 +185,31 @@ class Defects(unittest.TestCase):
 
     def test_check_counts_the_measured_lines_after_the_defects(self):
         # Arrange
-        measured = f'{INDEX_KEY}\ttyped\tthe ROM holds no other form (measured: lp64_model_scan.py scan)'
+        measured = f'{INDEX_KEY}\ttyped\tmeasured: the ROM holds no other form (lp64_model_scan.py roots)'
         # Act
         status, out = self.run_check(measured)
         # Assert
         self.assertEqual((status, out.strip().splitlines()[1:]), (0, ['0 defect lines', '1 measured lines']))
+
+    def test_a_reason_using_the_word_later_is_not_measured(self):
+        # Act
+        status, out = self.run_check(f'{INDEX_KEY}\ttyped\tthe offsets, measured: 4 and 8')
+        # Assert
+        self.assertEqual((status, out.strip().splitlines()[-1]), (0, '0 measured lines'))
+
+    def test_a_defect_measured_after_its_owner_is_counted(self):
+        # Act
+        status, out = self.run_check(f'{INDEX_KEY}\tdefect\tTask 4: measured: none (lp64_setup_scan.py types)')
+        # Assert
+        self.assertEqual((status, out.strip().splitlines()[-1]), (0, '1 measured lines'))
+
+    def test_a_measured_reason_without_a_scanner_command_is_refused_by_line(self):
+        # Act
+        with self.assertRaises(ValueError) as caught:
+            overlays.parse_reviewed(f'# header\n{INDEX_KEY}\ttyped\tmeasured: a scratch reader found none\n')
+        # Assert
+        self.assertIn('reviewed line 2', str(caught.exception))
+        self.assertIn('lp64_model_scan.py', str(caught.exception))
 
     def test_check_counts_no_measured_lines_as_zero(self):
         # Act

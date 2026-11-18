@@ -5,8 +5,9 @@
 after a tab). `check` requires every site to have exactly one line in `lp64_overlays_reviewed.txt`,
 `file:function:kind:text<TAB>VERDICT<TAB>reason`, and every line there to match a site; it prints
 `OK: N sites, all reviewed`, or each `unreviewed:` site and `stale:` line and exits 1, then `N defect
-lines` and `N measured lines` (reasons resting on a stock-ROM fact, which say `measured:` and name the
-scanner command that measured it). It refuses (exit 2) a listing with a repeated key or with no site at all.
+lines` and `N measured lines`: reasons that rest on a stock-ROM fact start `measured:` (after the owner
+for a defect) and name the lp64_model_scan.py or lp64_setup_scan.py command; one that names neither is
+refused, by line. It refuses (exit 2) a listing with a repeated key or with no site at all.
 
 Verdicts: typed (the object is of the type it is read as; for a run, every access through the head
 uses the head's type), same (the bytes read are at the same place at both widths; the reason names the
@@ -29,9 +30,13 @@ Kinds (patterns on C text, not a C parser; see lp64_overlays_kinds.py and lp64_o
   opaque  x->act_bytes.padding[84]  a literal index into a member named pad, pad_..., padding... or unk...
   record  (ChrRecord *) p->voidp    a cast to a pointer to a struct or union of the record headers
   run     Gfx dl[2]; +2 fillers     a Gfx, Model or record member followed by field_/pad/unk fillers
-  stored  u16 *p = (u16 *) anim;    a scalar-pointer cast stored in a local, a member or any target
-          p = (u8 *) q + size       (`=` or a compound assignment), its text `target=value` with the
-                                    whole value stored; what is later done through the pointer (`p[2]`)
+  stored  u16 *p = (u16 *) anim;    a scalar-pointer cast whose value is stored in a local, a member or
+          p = (u8 *) q + size       any target (`=` or a compound assignment; a leading `*` of the target
+          p = c ? (u8 *) x : y      is kept): directly, through grouping parentheses, as a conditional
+          p = ((u16 *) x) + 2       arm, as the last operand of a comma expression, as an operand of a
+          u8 *t[] = { (u8 *) x };   binary `+`, or as an initializer-list element; one site per store,
+                                    its text `target=value` with the whole value stored (the whole
+                                    list for an initializer); what is later done through the pointer (`p[2]`)
                                     is not in the key, so a change to those uses changes no key: the
                                     reason names every use that was read
 
@@ -66,7 +71,9 @@ What it cannot see (FORK-089's "LP64-005 task 3" notes say which other check cov
 - a union read through another member, except a literal index into a member named as filler;
 - a `record` cast to a type not declared in the record headers (Gfx, the port's own structs);
 - each expansion of a macro (its definition is the one site), and macros defined outside the scope;
-- a `//` comment ending in a backslash, which C continues on the next line.
+- a `//` comment ending in a backslash, which C continues on the next line;
+- a stored cast inside a compound literal (`(T){ (u8 *) x }`), or reached from its store through any
+  operator other than those `stored` names (`p = n - (u8 *) x` is no pointer).
 A file whose compiled code leaves braces unbalanced is refused (exit 2), not misread.
 """
 import argparse
@@ -91,6 +98,8 @@ EXPLICIT_SUFFIXES = ('.c', '.h', '.cpp', '.inl', '.cc')
 LIBAUDIO = 'include/PR/libaudio.h'
 VERDICTS = ('typed', 'same', 'overlay-64', 'dead', 'defect')
 DEFECT_OWNER = re.compile(r'(Task [0-9]+|strict|undecided):')
+MEASURED = re.compile(r'((Task [0-9]+|strict|undecided): )?measured:')
+SCANNER = re.compile(r'lp64_(model|setup)_scan\.py')
 GIT_TIMEOUT_SECONDS = 60
 
 
@@ -154,6 +163,9 @@ def parse_reviewed(text: str) -> dict[str, tuple[str, str]]:
         if fields[1] == 'defect' and not DEFECT_OWNER.match(fields[2]):
             raise ValueError(f'reviewed line {number} is a defect whose reason does not start with its owner, '
                              f'`Task N:`, `strict:` or `undecided:`: {line!r}')
+        if MEASURED.match(fields[2]) and not SCANNER.search(fields[2]):
+            raise ValueError(f'reviewed line {number} starts `measured:` but names no scanner command '
+                             f'(lp64_model_scan.py or lp64_setup_scan.py): {line!r}')
         if fields[0] in reviewed:
             raise ValueError(f'reviewed line {number} repeats a key: {fields[0]!r}')
         reviewed[fields[0]] = (fields[1], fields[2])
@@ -173,7 +185,7 @@ def report(sites: list[Site], reviewed: dict[str, tuple[str, str]], no_defects: 
     status = review_status(keys, reviewed)
     defects = [(key, reason) for key, (verdict, reason) in reviewed.items() if verdict == 'defect']
     print(f'{len(defects)} defect lines')
-    print(f"{sum('measured:' in reason for _, reason in reviewed.values())} measured lines")
+    print(f'{sum(bool(MEASURED.match(reason)) for _, reason in reviewed.values())} measured lines')
     if no_defects and defects:
         for key, reason in defects:
             print(f'defect: {key}\t{reason}')
