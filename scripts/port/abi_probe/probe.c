@@ -412,6 +412,9 @@ _Static_assert(offsetof(ModelAnimation, unk04) == 2 * sizeof(u16) && IS_TYPE(((M
                "an animation's frame count unk04 is its u16 halfword 2 at 32 bits");
 _Static_assert(4 * sizeof(Gfx) + offsetof(Gfx, words.w0) == 8 * sizeof(u32) && sizeof(((Gfx *) 0)->words.w0) == sizeof(u32),
                "a display list's fifth command's w0 is its u32 word 8 at 32 bits");
+_Static_assert(offsetof(ChrRecord, act_patrol.lastvisible60) == offsetof(ChrRecord, act_init.padding[0x13])
+                   && IS_TYPE(((ChrRecord *) 0)->act_patrol.lastvisible60, s32),
+               "act_patrol.lastvisible60 is the int ChrRecord.act_init.padding[0x13] wrote at 32 bits");
 #endif
 
 /* objecthandler.c sizes its ModelHitEntry pool (600 records, threaded by

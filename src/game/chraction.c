@@ -3976,7 +3976,7 @@ void set_actor_on_path(ChrRecord *self, struct patrol_path *path)
     self->act_patrol.forward = 1;
     self->act_patrol.waydata.age = randomGetNext() % 0x64U;
     self->act_patrol.waydata.unk03 = 0;
-    self->act_init.padding[0x13] = -1;
+    self->act_patrol.lastvisible60 = -1;
     self->act_patrol.speed = 0.0f;
 
     chrlvSetNextActPatrolStepPadPos(self);
