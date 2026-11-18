@@ -105,7 +105,10 @@ add_compile_options(
     $<$<COMPILE_LANGUAGE:C>:-fms-extensions>
     # A sanitizer build gives each global its own red zone (LP64-005 Task 2):
     # common symbols get none, and -fno-common makes a global defined twice a
-    # link error. Shipped builds keep -fcommon.
+    # link error. Shipped builds keep -fcommon. GE_SANITIZE is read here, before
+    # its option() line below: a -DGE_SANITIZE=ON is already in the cache, and an
+    # unset one reads as false, as the option's OFF default would. The choice
+    # stays in -fcommon's place so the plain build's flags keep their order.
     $<$<COMPILE_LANGUAGE:C>:$<IF:$<BOOL:${GE_SANITIZE}>,-fno-common,-fcommon>>
 )
 # -no-pie: the compiled-in asset objects (below) are built -fno-pic so their

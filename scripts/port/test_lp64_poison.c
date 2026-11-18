@@ -14,7 +14,11 @@
 #include "port/src/port_dyn.c"
 #include "test_buffer_helpers.h"
 char *strstr(const char *haystack, const char *needle);
+#include <fcntl.h>
+#include <poll.h>
+#include <signal.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 #if !defined(__SANITIZE_ADDRESS__)
@@ -234,12 +238,55 @@ static void graphicsPoolStaleHalf(void)
     touch(block, 0);
 }
 
-/* Runs probe in a child; returns its wait status and its standard error. */
-static int runChild(void (*probe)(void), char *errors, size_t capacity)
+/* Every probe has a deadline: a child still running after it is killed and
+ * the probe fails by name. The parent reads the child's standard error only
+ * until the child exits, never waiting for an end of file that a process the
+ * child left behind could hold off. */
+#define PROBE_SECONDS 10
+/* The whole run's bound, which also covers the sanitizer's checks at exit:
+ * under qemu-i386, LeakSanitizer's exit check hangs even in an empty main. */
+#define RUN_SECONDS 120
+#define SECONDS_TEXT(n) #n
+#define SECONDS(n) SECONDS_TEXT(n)
+
+static int s_ProbesRun, s_ProbesPassed;
+
+static void probeFailed(const char *name, const char *why, const char *errors)
 {
-    int pipes[2], status;
+    fprintf(stderr, "FAIL: %s: %s%s%s\n", name, why, errors[0] ? ":\n" : "", errors);
+    exit(1);
+}
+
+static void runTimedOut(int signum)
+{
+    static const char message[] =
+        "FAIL: test_lp64_poison: timed out after " SECONDS(RUN_SECONDS) " s (the probes, or the sanitizer's checks at exit)\n";
+    (void)signum;
+    write(2, message, sizeof(message) - 1);
+    _exit(1);
+}
+
+static long nowMilliseconds(void)
+{
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    return (long)now.tv_sec * 1000 + now.tv_nsec / 1000000;
+}
+
+/* Appends what the pipe holds now; returns 0 at its end, 1 otherwise. */
+static int readAvailable(int reader, char *errors, size_t capacity, size_t *used)
+{
+    ssize_t got = 0;
+    while (*used + 1 < capacity && (got = read(reader, errors + *used, capacity - 1 - *used)) > 0) *used += (size_t)got;
+    return got != 0;
+}
+
+/* Runs probe in a child; returns its wait status and its standard error. */
+static int runChild(const char *name, void (*probe)(void), char *errors, size_t capacity)
+{
+    int pipes[2], status, pipeOpen = 1;
     size_t used = 0;
-    ssize_t got;
+    long deadline = nowMilliseconds() + PROBE_SECONDS * 1000L;
     pid_t child;
     assert(pipe(pipes) == 0);
     fflush(NULL);
@@ -248,45 +295,67 @@ static int runChild(void (*probe)(void), char *errors, size_t capacity)
     if (child == 0) {
         close(pipes[0]);
         dup2(pipes[1], 2);
+        signal(SIGALRM, SIG_DFL);
+        alarm(PROBE_SECONDS);
         probe();
         _exit(0);
     }
     close(pipes[1]);
-    while (used + 1 < capacity && (got = read(pipes[0], errors + used, capacity - 1 - used)) > 0) used += (size_t)got;
+    assert(fcntl(pipes[0], F_SETFL, O_NONBLOCK) == 0);
+    errors[0] = '\0';
+    for (;;) {
+        struct pollfd ready = {pipes[0], POLLIN, 0};
+        pid_t done = waitpid(child, &status, WNOHANG);
+        assert(done >= 0);
+        if (done == child) break;
+        if (nowMilliseconds() >= deadline) {
+            kill(child, SIGKILL);
+            assert(waitpid(child, &status, 0) == child);
+            readAvailable(pipes[0], errors, capacity, &used);
+            errors[used] = '\0';
+            close(pipes[0]);
+            probeFailed(name, "timed out", errors);
+        }
+        if (pipeOpen && poll(&ready, 1, 20) > 0) pipeOpen = readAvailable(pipes[0], errors, capacity, &used);
+        else if (!pipeOpen) poll(NULL, 0, 20);
+    }
+    readAvailable(pipes[0], errors, capacity, &used);
     errors[used] = '\0';
     close(pipes[0]);
-    assert(waitpid(child, &status, 0) == child);
+    if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM) probeFailed(name, "timed out", errors);
     return status;
 }
 
 static void expectDies(const char *name, void (*probe)(void))
 {
     static char errors[1 << 16];
-    int status = runChild(probe, errors, sizeof(errors));
-    if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-        fprintf(stderr, "FAIL: %s: the child exited 0; nothing reported the write\n", name);
-        exit(1);
-    }
-    if (!strstr(errors, "use-after-poison")) {
-        fprintf(stderr, "FAIL: %s: the child died without use-after-poison:\n%s\n", name, errors);
-        exit(1);
-    }
+    int status;
+    s_ProbesRun++;
+    status = runChild(name, probe, errors, sizeof(errors));
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0) probeFailed(name, "the child exited 0; nothing reported the write", "");
+    if (!strstr(errors, "use-after-poison")) probeFailed(name, "the child died without use-after-poison", errors);
+    s_ProbesPassed++;
     printf("%s: died with use-after-poison\n", name);
 }
 
 static void expectLives(const char *name, void (*probe)(void))
 {
     static char errors[1 << 16];
-    int status = runChild(probe, errors, sizeof(errors));
-    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-        fprintf(stderr, "FAIL: %s: the child failed (status %d):\n%s\n", name, status, errors);
-        exit(1);
-    }
+    char why[48];
+    int status;
+    s_ProbesRun++;
+    status = runChild(name, probe, errors, sizeof(errors));
+    snprintf(why, sizeof(why), "the child failed (status %d)", status);
+    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) probeFailed(name, why, errors);
+    s_ProbesPassed++;
     printf("%s: exited 0\n", name);
 }
 
 int main(void)
 {
+    setvbuf(stdout, NULL, _IOLBF, 0);
+    signal(SIGALRM, runTimedOut);
+    alarm(RUN_SECONDS);
     expectDies("bank: one byte past the first of two blocks", bankPastFirstBlock);
     expectLives("bank: inside both blocks", bankInsideBothBlocks);
     expectLives("bank: whole remainder, trimmed, then another block", remainderLoadInside);
@@ -304,6 +373,7 @@ int main(void)
     expectDies("graphics pool: one byte past a block", graphicsPoolPastBlock);
     expectLives("graphics pool: the finished half while the next is built", graphicsPoolFinishedHalf);
     expectDies("graphics pool: a block two frames old", graphicsPoolStaleHalf);
-    puts("Arena poisoning checks passed");
+    assert(s_ProbesPassed == s_ProbesRun);
+    printf("test_lp64_poison: PASS (%d-bit, %d probes)\n", (int)(sizeof(void *) * 8), s_ProbesPassed);
     return 0;
 }

@@ -162,7 +162,9 @@ arenas limit what a clean run establishes.
 
 Since LP64-005 Task 2 (FORK-089) a sanitizer build also sees inside the game's
 own arenas and its uninitialized globals. `GE_SANITIZE` compiles C with
-`-fno-common`, so every global array gets a red zone and a global defined twice
+`-fno-common`, so every instrumented global array gets a red zone (the
+animation-table data files and the manifest assets stay uninstrumented, as
+`CMakeLists.txt` says) and a global defined twice
 fails to link (shipped builds keep `-fcommon`). `port/include/port_poison.h`
 poisons what each arena has not handed out: a stage-bank reset poisons the
 bank, `portMempAllocate` unpoisons exactly the bytes asked for and leaves a
@@ -174,11 +176,27 @@ half a frame writes is poisoned at the frame's start (`dynGetMasterDisplayList`,
 not at the swap, because the renderer reads the finished half after it) and
 `portDynAllocate` unpoisons each block. A touch of a byte no block owns is
 reported as `use-after-poison`. Without the sanitizer the macros are empty and
-the allocators place every block as before. What this cannot see is an overrun
-inside one block that its user carves up itself: the synthesizer's parameter
+the allocators place every block as before. What this cannot see: an overrun
+inside one block that its user carves up itself (the synthesizer's parameter
 pool, the gun barrel list inside the front end's 0x78000-byte buffer, a
-display list inside the player record. `scripts/port/test_lp64_poison.c`, built
-by the sanitized half of `test_buffers.sh`, pins each hook.
+display list inside the player record); up to 15 bytes past a music-heap
+request, which the whole-line rounding leaves unpoisoned; and, where a
+room-heap or pool block does not start on an 8-byte boundary, the tail of the
+previous block's last 8-byte shadow unit, which ASan cannot poison apart from
+the bytes before it. `scripts/port/test_lp64_poison.c`, built by the sanitized
+half of `test_buffers.sh`, pins each hook, each probe with a deadline.
+
+Two readers a later task must handle in the hooks before a sanitizer run
+reaches them. `portStateFrame()` (`src/boss.c`, every frame) in
+`port/src/port_state.c` reads and writes whole saved regions when it writes,
+restores or audits a suspend point, which would touch poisoned arena bytes and
+global red zones; that file is compiled only in 32-bit builds (64-bit builds
+compile `port_state_unavailable.c`, whose `portStateFrame` only calls
+`portGraphicsFrame`), so this is a 32-bit sanitizer build's risk. And
+`portDynAllocate` unpoisons only the bytes asked for, leaving `dynAllocate`'s
+rounding to 16 poisoned, so a renderer that reads a graphics-pool block
+rounded up to 16 (the video build) would hit that pad; not checked against
+`port/fast3d` here, and no headless run reads the pool.
 
 The local GCC headless build was configured with `GE_HEADLESS=ON`,
 `GE_VIDEO=OFF`, `GE_SANITIZE=ON`, and both C/C++ flags set to
