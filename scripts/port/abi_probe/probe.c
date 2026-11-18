@@ -21,6 +21,7 @@
 #include "port_romlayout.h"
 #include "snd.h"
 #include "probe_overlays.h"
+#include "probe_stored.h"
 
 /* Fixed at every width: the renderer reads these as N64 formats. */
 _Static_assert(sizeof(s32) == 4 && sizeof(u32) == 4, "32-bit integer types");

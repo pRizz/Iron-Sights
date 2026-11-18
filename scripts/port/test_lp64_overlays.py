@@ -20,12 +20,13 @@ struct holder {
 };
 """
 
-# One site of each of the four kinds the C files hold.
+# One site of each of the five kinds the C files hold.
 SAMPLE = """
 u32 sample(PropRecord *prop, void *header)
 {
     ChrRecord *v = (ChrRecord *) prop->voidp;
-    s32 n = ((u16 *) header)[2];
+    u16 *w = (u16 *) header;
+    s32 n = ((u16 *) header)[2] + w[2];
     s32 m = *(s32 *) ((u8 *) header + 8);
     return v->act_bytes.padding[84] + n + m;
 }
@@ -57,6 +58,7 @@ class Kinds(unittest.TestCase):
             'src/game/a.c:sample:index:((u16*)header)[2]',
             'src/game/a.c:sample:offset:*(s32*)((u8*)header+8)',
             'src/game/a.c:sample:opaque:v->act_bytes.padding[84]',
+            'src/game/a.c:sample:stored:w=(u16*)header',
         ]))
 
     def test_a_run_is_a_record_member_followed_by_filler_members(self):
@@ -149,7 +151,7 @@ class Kinds(unittest.TestCase):
 
     def test_a_dereference_after_a_pointer_cast_is_an_offset(self):
         # The shape of objecthandler_2.c's `(uintptr_t)*(intptr_t *)&gdl`, through a pointer cast here.
-        self.assertEqual(keys(wrap('x = (u8 *) *(u8 **) &gdl;')), ['src/game/a.c:f:offset:*(u8**)&gdl'])
+        self.assertEqual(keys(wrap('f((u8 *) *(u8 **) &gdl);')), ['src/game/a.c:f:offset:*(u8**)&gdl'])
 
     def test_a_multiplication_by_a_cast_after_an_identifier_is_not_an_offset(self):
         self.assertEqual(keys(wrap('x = a * (u8) b; y = a * ((u8 *) p - q);')), [])
@@ -171,7 +173,7 @@ class Kinds(unittest.TestCase):
         self.assertEqual(found, ['src/game/a.c:f:record:(Param*)x', 'src/game/a.c:f:record:(struct fontchar*)x'])
 
     def test_a_cast_to_a_type_not_declared_in_the_record_headers_is_not_a_record(self):
-        self.assertEqual(keys(wrap('a = (Other *) x; b = (u8 *) x;')), [])
+        self.assertEqual(keys(wrap('a = (Other *) x; f((u8 *) x);')), [])
 
     def test_a_prototype_a_sizeof_and_a_null_pointer_are_not_casts(self):
         # Arrange
@@ -183,7 +185,7 @@ class Kinds(unittest.TestCase):
         self.assertEqual(keys(wrap('return (ChrRecord *) x;')), ['src/game/a.c:f:record:(ChrRecord*)x'])
 
     def test_a_scalar_cast_without_an_index_or_dereference_is_not_listed(self):
-        self.assertEqual(keys(wrap('p = (u16 *) x + 2; q = (u8 *) x;')), [])
+        self.assertEqual([key for key in keys(wrap('p = (u16 *) x + 2; f((u8 *) x);')) if ':stored:' not in key], [])
 
     def test_a_variable_index_into_a_padding_member_is_not_opaque(self):
         self.assertEqual(keys(wrap('a = x->padding[i]; b = x->unk10[3];')), ['src/game/a.c:f:opaque:x->unk10[3]'])
@@ -360,22 +362,50 @@ class Scope(unittest.TestCase):
         self.assertTrue(overlays.in_scope('port/src/port_hud_audit.inl'))
 
 
-class Locals(unittest.TestCase):
-    def test_a_scalar_pointer_cast_stored_in_a_local_or_member_is_reported(self):
-        # Arrange
-        text = wrap('u16 *p = (u16 *) anim;\nq->bytes = (u8 *) rec;\nr = (u16 *) NULL;\nn = p[2];')
+class Stored(unittest.TestCase):
+    def test_a_scalar_pointer_cast_stored_in_a_local_or_member_is_a_stored_site(self):
         # Act
-        found = [aid.key for aid in overlays.locals_in('src/game/a.c', text)]
+        found = keys(wrap('u16 *p = (u16 *) anim;\nq->bytes = (u8 *) rec;\nr = (u16 *) NULL;\nn = p[2];'))
         # Assert
-        self.assertEqual(found, ['src/game/a.c:f:p=(u16*)anim', 'src/game/a.c:f:q->bytes=(u8*)rec'])
+        self.assertEqual(found, ['src/game/a.c:f:stored:p=(u16*)anim', 'src/game/a.c:f:stored:q->bytes=(u8*)rec'])
 
     def test_a_compound_store_of_a_cast_names_its_target(self):
-        # Arrange
-        text = wrap('p += (u8 *) x;\nq->r <<= (u32 *) y;')
         # Act
-        found = [aid.key for aid in overlays.locals_in('src/game/a.c', text)]
+        found = keys(wrap('p += (u8 *) x;\nq->r <<= (u32 *) y;'))
         # Assert
-        self.assertEqual(found, ['src/game/a.c:f:p+=(u8*)x', 'src/game/a.c:f:q->r<<=(u32*)y'])
+        self.assertEqual(found, ['src/game/a.c:f:stored:p+=(u8*)x', 'src/game/a.c:f:stored:q->r<<=(u32*)y'])
+
+    def test_an_offset_added_to_a_stored_cast_is_in_its_text(self):
+        self.assertEqual(keys(wrap('p = (u8 *) x + size, q = 0;\nf(r = (u16 *) y - 2);')),
+                         ['src/game/a.c:f:stored:p=(u8*)x+size', 'src/game/a.c:f:stored:r=(u16*)y-2'])
+
+    def test_a_comparison_with_a_cast_is_not_a_store(self):
+        self.assertEqual(keys(wrap('n = p == (u8 *) x;')), [])
+
+    def test_the_same_store_twice_in_one_function_is_two_sites(self):
+        self.assertEqual(keys(wrap('p = (u8 *) x;\np = (u8 *) x;')),
+                         ['src/game/a.c:f:stored:p=(u8*)x', 'src/game/a.c:f:stored:p=(u8*)x #2'])
+
+    def test_a_store_in_a_macro_definition_is_owned_by_the_macro(self):
+        self.assertEqual(keys('#define LOAD(x) p = (u16 *) (x)\n'), ['src/game/a.c:#define LOAD:stored:p=(u16*)(x)'])
+
+    def test_a_change_to_the_uses_of_a_stored_pointer_changes_no_key(self):
+        # Act
+        before = keys(wrap('u16 *p = (u16 *) anim;\nn = p[2];'))
+        after = keys(wrap('u16 *p = (u16 *) anim;\nn = p[3] + p[4];'))
+        # Assert
+        self.assertEqual((before, after), (['src/game/a.c:f:stored:p=(u16*)anim'],) * 2)
+
+
+class Tree(unittest.TestCase):
+    def test_the_stored_kind_changes_no_site_of_the_other_kinds_on_the_tree(self):
+        # Arrange
+        reviewed = overlays.parse_reviewed(overlays.REVIEWED.read_text())
+        expected = sorted(key for key in reviewed if ':stored:' not in key)
+        # Act
+        sites = overlays.list_sites(overlays.ROOT, overlays.tracked_files(overlays.ROOT))
+        # Assert
+        self.assertEqual(sorted(site.key for site in sites if site.kind != 'stored'), expected)
 
 
 if __name__ == '__main__':

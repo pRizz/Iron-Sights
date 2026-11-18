@@ -71,6 +71,16 @@ class Check(unittest.TestCase):
         self.assertIn('unreviewed: src/game/a.c:f:index:((u16*)x)[3]', out)
         self.assertIn(f'stale: {INDEX_KEY}', out)
 
+    def test_a_new_stored_cast_is_unreviewed(self):
+        # Arrange
+        reviewed = self.reviewed_text(RUN_KEY, INDEX_KEY)
+        (self.root/'src/game/a.c').write_text(wrap(INDEX + '\nu16 *p = (u16 *) x;'))
+        # Act
+        status, out = self.run_check(reviewed)
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('unreviewed: src/game/a.c:f:stored:p=(u16*)x', out)
+
     def test_a_repeated_key_in_the_listing_is_refused(self):
         # Arrange
         site = overlays.list_sites(self.root, self.files)[0]

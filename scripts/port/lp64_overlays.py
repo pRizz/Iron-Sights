@@ -28,6 +28,11 @@ Kinds (patterns on C text, not a C parser; see lp64_overlays_kinds.py and lp64_o
   opaque  x->act_bytes.padding[84]  a literal index into a member named pad, pad_..., padding... or unk...
   record  (ChrRecord *) p->voidp    a cast to a pointer to a struct or union of the record headers
   run     Gfx dl[2]; +2 fillers     a Gfx, Model or record member followed by field_/pad/unk fillers
+  stored  u16 *p = (u16 *) anim;    a scalar-pointer cast stored in a local, a member or any target
+          p = (u8 *) q + size       (`=` or a compound assignment), its text `target=value` with the
+                                    whole value stored; what is later done through the pointer (`p[2]`)
+                                    is not in the key, so a change to those uses changes no key: the
+                                    reason names every use that was read
 
 Files: tracked `.c`, `.h` and `.inl` files under src/, port/src/ and port/include/, except the
 romconv_, romfile_ and romdata loaders (their inputs are file layouts). Left out: port/fast3d (the C++
@@ -49,16 +54,10 @@ A site's key has no line number, so moving code changes no key; whitespace is no
 reformatting. Any other change to the text is a new site, which must be reviewed. The Nth occurrence
 of one key in a file has ` #N` appended to its text.
 
-`list --locals` is a survey aid, not part of `check`: it prints every scalar-pointer cast stored in a
-local or a member (`u16 *p = (u16 *) anim;`), `file:function:lhs=cast operand` and its line. What is
-later done through the stored pointer (`p[2]`) has no text tied to the cast, so it has no stable
-identity to review once and check for ever; a review batch reads these stores once instead.
-
 What it cannot see (FORK-089's "LP64-005 task 3" notes say which other check covers each):
-- a scalar-pointer cast stored in a local and indexed later (`u16 *p = (u16 *) anim; p[2]`): not a site;
-  `list --locals` prints the stores;
-- a scalar-pointer cast passed as an argument and indexed in the callee (`f((u16 *) anim)`): not a site,
-  and not printed by `list --locals`;
+- a new or changed use of a stored pointer (`p[3]` added after the `stored` site `p=(u16*)anim`): the
+  store is the site, its uses are not, so the change is not a new site;
+- a scalar-pointer cast passed as an argument and indexed in the callee (`f((u16 *) anim)`): not a site;
 - a cast written through a typedef'd pointer type;
 - a `void *` assigned to a record pointer without a cast (C needs none);
 - an offset added to a pointer variable in an earlier statement (`p += 4; *(u16 *) p`);
@@ -77,12 +76,11 @@ import subprocess
 import sys
 
 from lp64_overlays_kinds import RecordTypes, Site, sites_in_prepared
-from lp64_overlays_locals import Store, locals_in
 from lp64_overlays_source import DEFINED_ON_PC, UNDEFINED_AT_64, UNDEFINED_ON_PC, SourceError, prepare
 from lp64_overlays_types import record_types, runs_in
 
 __all__ = ['DEFINED_ON_PC', 'UNDEFINED_AT_64', 'UNDEFINED_ON_PC', 'SourceError', 'record_types', 'runs_in', 'sites_in',
-           'in_scope', 'list_sites', 'list_locals', 'locals_in', 'parse_reviewed', 'report', 'REVIEWED', 'main']
+           'in_scope', 'list_sites', 'tracked_files', 'parse_reviewed', 'report', 'REVIEWED', 'main']
 
 ROOT = Path(__file__).resolve().parents[2]
 REVIEWED = Path(__file__).with_name('lp64_overlays_reviewed.txt')
@@ -111,7 +109,7 @@ def is_record_header(path: str) -> bool:
 
 
 def sites_in(path: str, text: str, types: RecordTypes) -> list[Site]:
-    """Return the index, offset, opaque and record sites of one file's text."""
+    """Return the index, offset, opaque, record and stored sites of one file's text."""
     return sites_in_prepared(path, prepare(text), types)
 
 
@@ -140,14 +138,6 @@ def list_sites(root: Path, files: list[str], paths: list[str] | None = None) -> 
     for path in run_sources:
         sites += runs_in(path, headers.get(path) or read(root, path), types)
     return sorted(sites, key=lambda site: (site.path, site.line, site.key))
-
-
-def list_locals(root: Path, files: list[str]) -> list[Store]:
-    """Return the stored scalar-pointer casts of the scope (the `--locals` survey aid)."""
-    stores = []
-    for path in (f for f in files if in_scope(f)):
-        stores += locals_in(path, read(root, path))
-    return stores
 
 
 def parse_reviewed(text: str) -> dict[str, tuple[str, str]]:
@@ -216,19 +206,11 @@ def main(argv: list[str]) -> int:
     parser.add_argument('paths', nargs='*', help='list: only the files under these paths')
     parser.add_argument('--lines', action='store_true', help='list: add each site\'s line after a tab')
     parser.add_argument('--no-defects', action='store_true', help='check: also fail while any defect line remains')
-    parser.add_argument('--locals', action='store_true',
-                        help='list: print the stored scalar-pointer casts instead (a survey aid, not checked)')
     args = parser.parse_args(argv)
     if args.no_defects and args.command != 'check':
         parser.error('--no-defects is a check option')
     if args.command == 'check' and args.paths:
         parser.error('check reads the whole scope; it takes no paths')
-    if args.locals:
-        if args.command != 'list' or args.paths:
-            parser.error('--locals is a list option over the whole scope')
-        for store in list_locals(ROOT, tracked_files(ROOT)):
-            print(f'{store.key}\t{store.line}')
-        return 0
     try:
         sites = list_sites(ROOT, tracked_files(ROOT), args.paths)
         reviewed = parse_reviewed(REVIEWED.read_text()) if args.command == 'check' else {}
