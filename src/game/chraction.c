@@ -6397,6 +6397,8 @@ s32 chrlvUpdateAimendsideback(ChrRecord *self, struct weapon_firing_animation_ta
 */
 void chrlvUpdateAimendbackShoulders(ChrRecord *self, void *arg1, s32 same, s32 swap, f32 next)
 {
+    /* arg1 is the firing table both callers pass; its floats move at 64 bits (LP64-005) */
+    struct weapon_firing_animation_table *table = (struct weapon_firing_animation_table *) arg1;
     f32 next_lshoulder;
     f32 next_rshoulder;
     f32 next_aimendback;
@@ -6405,27 +6407,27 @@ void chrlvUpdateAimendbackShoulders(ChrRecord *self, void *arg1, s32 same, s32 s
     next_aimendback = 0.0f;
     next_lshoulder = next;
 
-    if (arg1 != NULL)
+    if (table != NULL)
     {
-        if (((f32*)arg1)[12] < next)
+        if (table->max_up < next)
         {
-            next_aimendback = next - ((f32*)arg1)[12];
-            next_lshoulder = ((f32*)arg1)[12];
+            next_aimendback = next - table->max_up;
+            next_lshoulder = table->max_up;
         }
 
-        else if (next < ((f32*)arg1)[13])
+        else if (next < table->max_down)
         {
-            next_aimendback = next - ((f32*)arg1)[13];
-            next_lshoulder = ((f32*)arg1)[13];
+            next_aimendback = next - table->max_down;
+            next_lshoulder = table->max_down;
         }
 
         if (next_lshoulder > 0.0f)
         {
-            next_rshoulder = ((f32*)arg1)[16] * next_lshoulder;
+            next_rshoulder = table->free_arm_frac_up * next_lshoulder;
         }
         else
         {
-            next_rshoulder = ((f32*)arg1)[17] * next_lshoulder;
+            next_rshoulder = table->free_arm_frac_down * next_lshoulder;
         }
     }
 

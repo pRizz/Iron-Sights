@@ -92,8 +92,33 @@ static void testCourseSpeedIsTheGoposSpeed(void)
            "play_hit_soundeffect_and_proper_volume reads act_gopos.unk59");
 }
 
+/* An aiming guard's shoulders and back follow its firing table's limits. */
+static void testAimLimitsComeFromTheFiringTable(void)
+{
+    // Arrange: aim 1.0 up and -1.0 down against limits of 0.5 and -0.5.
+    static RecordRoom up, down;
+    struct weapon_firing_animation_table table = {0};
+    memset(&up, 0, sizeof(up));
+    memset(&down, 0, sizeof(down));
+    table.max_up = 0.5f;
+    table.max_down = -0.5f;
+    table.free_arm_frac_up = 0.25f;
+    table.free_arm_frac_down = 0.75f;
+
+    // Act
+    chrlvUpdateAimendbackShoulders(&up.chr, &table, 0, 0, 1.0f);
+    chrlvUpdateAimendbackShoulders(&down.chr, &table, 0, 0, -1.0f);
+
+    // Assert
+    expect(up.chr.aimendback == 0.5f && up.chr.aimendlshoulder == 0.5f && up.chr.aimendrshoulder == 0.125f,
+           "chrlvUpdateAimendbackShoulders reads max_up and free_arm_frac_up");
+    expect(down.chr.aimendback == -0.5f && down.chr.aimendlshoulder == -0.5f && down.chr.aimendrshoulder == -0.375f,
+           "chrlvUpdateAimendbackShoulders reads max_down and free_arm_frac_down");
+}
+
 int main(void)
 {
+    testAimLimitsComeFromTheFiringTable();
     testOneHandedReadsTheWeaponNumber();
     testCourseSpeedIsTheGoposSpeed();
     if (failures != 0)

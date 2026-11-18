@@ -403,6 +403,11 @@ _Static_assert(offsetof(WeaponObjRecord, weaponnum) == 0x80 && sizeof(((WeaponOb
 _Static_assert(offsetof(ChrRecord, act_gopos.unk59) == offsetof(ChrRecord, act_ubytes.padding[45])
                    && sizeof(((ChrRecord *) 0)->act_gopos.unk59) == 1,
                "act_gopos.unk59 is the byte ChrRecord.act_ubytes.padding[45] read at 32 bits");
+_Static_assert(offsetof(struct weapon_firing_animation_table, max_up) == 12 * sizeof(f32)
+                   && offsetof(struct weapon_firing_animation_table, max_down) == 13 * sizeof(f32)
+                   && offsetof(struct weapon_firing_animation_table, free_arm_frac_up) == 16 * sizeof(f32)
+                   && offsetof(struct weapon_firing_animation_table, free_arm_frac_down) == 17 * sizeof(f32),
+               "a firing table's max_up, max_down and free arm fractions are its f32 words 12, 13, 16 and 17 at 32 bits");
 #endif
 
 /* objecthandler.c sizes its ModelHitEntry pool (600 records, threaded by
