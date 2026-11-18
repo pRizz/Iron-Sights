@@ -11,8 +11,9 @@ These are patterns on C text after `lp64_overlays_source.prepare`, not a C parse
   a sum or difference whose left operand is a pointer cast, `*((s32 *) x + 2)`; or a pointer cast of
   an address, `*(u16 *) &src[2]`, `*(s32 *) &door->maxFrac`; or a pointer cast of any other operand, an
   offset of zero that reads the first bytes, `*(s32 *) node->Data`. T is any pointer type and K any operand,
-  constant or computed (`+ offset` is a read by position too). A `*` after `return`, `case`, `else`, `do`
-  or the `)` of an `if`, `while`, `for` or `switch` condition is a dereference.
+  constant or computed (`+ offset` is a read by position too). A `*` after `return`, `case`, `else`, `do`,
+  the `)` of an `if`, `while`, `for` or `switch` condition, or the `)` of a cast (`(s32) *(u16 *) p`; a
+  one-name group `(x)` counts as a cast, see `cast_group_before`) is a dereference.
 - `opaque`: a member named `pad`, `pad_...`, `padN...`, `padding...` or `unk...` (not `pads`), reached by `.` or `->`, indexed by an
   integer literal: `x->act_bytes.padding[84]`. The text includes the chain of postfix operators before it.
 - `record`: a cast to a pointer (or pointer to pointer) to a struct or union type that `RecordTypes`
@@ -42,6 +43,7 @@ CAST_PREFIX_WORDS = {'return', 'case'}
 STATEMENT_WORDS = {'else', 'do'}
 CONDITION_WORDS = {'if', 'while', 'for', 'switch'}
 INT_CAST = re.compile(rf'\(\s*{QUALIFIER}(?:{SCALAR})\s*\)')
+NAME_GROUP = re.compile(r'\(\s*(?:(?:const|volatile)\s+)*[A-Za-z_]\w*\s*\)')
 
 
 @dataclass(frozen=True)
@@ -180,11 +182,32 @@ def postfix_start(code: str, end: int) -> int:
             return position
 
 
+def cast_group_before(code: str, index: int) -> bool:
+    """Return whether the `)` just before `index` closes a cast: a scalar, pointer or one-name type group.
+
+    A one-name group, `(x)`, may be a typedef name or a parenthesised variable, which text cannot tell
+    apart; it counts as a cast, so a doubtful `(x) * (T *) p` is listed (a false site costs one review,
+    a missed read costs silence). A group after an identifier (`sizeof (u32)`, a call) or after `]` is not
+    a cast; after `)` it is one only when that group is a cast too (`(s32)(u32) *p`)."""
+    close = index - 1
+    while close >= 0 and code[close].isspace():
+        close -= 1
+    start = opening(code, close + 1)
+    group = code[start:close + 1]
+    if not any(pattern.fullmatch(group) for pattern in (INT_CAST, SCALAR_CAST, ANY_POINTER_CAST, NAME_GROUP)):
+        return False
+    before = previous_token(code, start)
+    if before == ')':
+        return cast_group_before(code, start)
+    return not (before == ']' or (before[:1].isalnum() or before[:1] == '_') and before not in CAST_PREFIX_WORDS)
+
+
 def unary_star(code: str, index: int) -> bool:
     """Return whether the `*` at `index` is a dereference rather than a multiplication.
 
-    After an identifier, `)` or `]` it multiplies, except after `return`/`case`, after `else`/`do`, and after
-    the `)` that closes an `if`, `while`, `for` or `switch` condition, where a statement starts."""
+    After an identifier, `)` or `]` it multiplies, except after `return`/`case`, after `else`/`do`, after
+    the `)` that closes an `if`, `while`, `for` or `switch` condition, where a statement starts, and after
+    the `)` of a cast (`cast_group_before`), whose operand it starts."""
     before = previous_token(code, index)
     if before in CAST_PREFIX_WORDS or before in STATEMENT_WORDS:
         return True
@@ -192,7 +215,9 @@ def unary_star(code: str, index: int) -> bool:
         close = index - 1
         while code[close].isspace():
             close -= 1
-        return previous_token(code, opening(code, close + 1)) in CONDITION_WORDS
+        if previous_token(code, opening(code, close + 1)) in CONDITION_WORDS:
+            return True
+        return cast_group_before(code, index)
     return not (before[:1].isalnum() or before[:1] == '_' or before == ']')
 
 

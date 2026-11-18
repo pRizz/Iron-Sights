@@ -141,6 +141,29 @@ class Kinds(unittest.TestCase):
         self.assertEqual(keys(wrap('a = *(u8 *) s; b = *(const u8 *) p;')),
                          ['src/game/a.c:f:offset:*(u8*)s', 'src/game/a.c:f:offset:*(const u8*)p'])
 
+    def test_a_dereference_after_an_integer_cast_is_an_offset(self):
+        self.assertEqual(keys(wrap('x = (s32) *(u16 *) p;')), ['src/game/a.c:f:offset:*(u16*)p'])
+
+    def test_a_dereference_of_an_address_after_a_float_cast_is_an_offset(self):
+        self.assertEqual(keys(wrap('x = (f32) *(s32 *) &p->m;')), ['src/game/a.c:f:offset:*(s32*)&p->m'])
+
+    def test_a_dereference_after_a_chain_of_integer_casts_is_an_offset(self):
+        self.assertEqual(keys(wrap('x = (s32)(u32) *(u16 *) p;')), ['src/game/a.c:f:offset:*(u16*)p'])
+
+    def test_a_dereference_after_a_pointer_cast_is_an_offset(self):
+        # The shape of objecthandler_2.c's `(uintptr_t)*(intptr_t *)&gdl`, through a pointer cast here.
+        self.assertEqual(keys(wrap('x = (u8 *) *(u8 **) &gdl;')), ['src/game/a.c:f:offset:*(u8**)&gdl'])
+
+    def test_a_multiplication_by_a_cast_after_an_identifier_is_not_an_offset(self):
+        self.assertEqual(keys(wrap('x = a * (u8) b; y = a * ((u8 *) p - q);')), [])
+
+    def test_a_multiplication_after_sizeof_of_a_type_is_not_an_offset(self):
+        self.assertEqual(keys(wrap('n = sizeof (u32) * ((u8 *) p - q);')), [])
+
+    def test_a_parenthesised_identifier_before_a_star_is_taken_as_a_cast(self):
+        # `(x)` may be a typedef name or a variable; the text cannot tell, so the tool errs towards a site.
+        self.assertEqual(keys(wrap('y = (x) * (s32 *) p; z = (x) * (y + 1);')), ['src/game/a.c:f:offset:*(s32*)p'])
+
     def test_a_dereference_without_a_pointer_cast_is_not_an_offset(self):
         self.assertEqual(keys(wrap('a = *p; b = *(p); c = *(q + 1); d = x * (s32) y;')), [])
 
@@ -441,6 +464,14 @@ class Locals(unittest.TestCase):
         found = [aid.key for aid in overlays.locals_in('src/game/a.c', text)]
         # Assert
         self.assertEqual(found, ['src/game/a.c:f:p=(u16*)anim', 'src/game/a.c:f:q->bytes=(u8*)rec'])
+
+    def test_a_compound_store_of_a_cast_names_its_target(self):
+        # Arrange
+        text = wrap('p += (u8 *) x;\nq->r <<= (u32 *) y;')
+        # Act
+        found = [aid.key for aid in overlays.locals_in('src/game/a.c', text)]
+        # Assert
+        self.assertEqual(found, ['src/game/a.c:f:p+=(u8*)x', 'src/game/a.c:f:q->r<<=(u32*)y'])
 
 
 if __name__ == '__main__':

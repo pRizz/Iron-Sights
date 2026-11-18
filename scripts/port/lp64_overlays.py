@@ -14,6 +14,8 @@ Kinds (patterns on C text, not a C parser; see lp64_overlays_kinds.py and lp64_o
           *(s32 *) &p->member       an address (`&x[K]`, `&p->member`); through redundant parentheses
           *((u16 *) (uintptr_t) a)  and chains of pointer and integer casts; or of any other operand,
           *(s32 *) node->Data       an offset of zero (also a cast changing only signedness or const)
+          (s32) *(u16 *) p          also right after a cast; a one-name group `(x)` counts as a cast (it
+                                    may be a typedef), so a doubtful `(x) * (T *) p` is listed
   opaque  x->act_bytes.padding[84]  a literal index into a member named pad, pad_..., padding... or unk...
   record  (ChrRecord *) p->voidp    a cast to a pointer to a struct or union of the record headers
   run     Gfx dl[2]; +2 fillers     a Gfx, Model or record member followed by field_/pad/unk fillers
@@ -46,6 +48,8 @@ identity to review once and check for ever; a review batch reads these stores on
 What it cannot see (FORK-089's "LP64-005 task 3" notes say which other check covers each):
 - a scalar-pointer cast stored in a local and indexed later (`u16 *p = (u16 *) anim; p[2]`): not a site;
   `list --locals` prints the stores;
+- a scalar-pointer cast passed as an argument and indexed in the callee (`f((u16 *) anim)`): not a site,
+  and not printed by `list --locals`;
 - a cast written through a typedef'd pointer type;
 - a `void *` assigned to a record pointer without a cast (C needs none);
 - an offset added to a pointer variable in an earlier statement (`p += 4; *(u16 *) p`);
