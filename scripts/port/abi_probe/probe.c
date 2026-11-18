@@ -393,6 +393,15 @@ _Static_assert(_Alignof(ModelAnimation) == 4, "64-bit ModelAnimation is 4-byte a
 _Static_assert(sizeof(ModelAnimation) == 0x40, "32-bit ModelAnimation is unchanged");
 #endif
 
+/* Reads by position that LP64-005 Task 4 made reads by name: at 32 bits each
+ * member is the bytes the old read reached, so the 32-bit program keeps its
+ * loads and stores (compare_win32.py shows it); at 64 bits the member moved. */
+#if !IS_64_BIT
+_Static_assert(offsetof(WeaponObjRecord, weaponnum) == 0x80 && sizeof(((WeaponObjRecord *) 0)->weaponnum) == 1
+                   && offsetof(ChrRecord, act_bytes.padding[84]) == 0x80,
+               "a weapon's weaponnum is the byte ChrRecord.act_bytes.padding[84] read at 32 bits");
+#endif
+
 /* objecthandler.c sizes its ModelHitEntry pool (600 records, threaded by
  * initModelHitEntryFreeList) by the record: 0x14 bytes at 32 bits, as the
  * literal it replaced, and 40 at 64. */

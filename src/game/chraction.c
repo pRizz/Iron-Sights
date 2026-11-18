@@ -344,9 +344,9 @@ u32 weaponIsOneHanded(PropRecord *arg0)
 {
     if (arg0 != NULL)
     {
-        ChrRecord *v = (ChrRecord*)arg0->voidp;
-
-        return bondwalkItemCheckBitflags(v->act_bytes.padding[84], WEAPONSTATBITFLAG_ONLY_1_HANDED);
+        /* arg0 is a held weapon's prop (chrGetEquippedWeaponProp): its record
+         * is a WeaponObjRecord, whose weaponnum moves at 64 bits (LP64-005). */
+        return bondwalkItemCheckBitflags(((WeaponObjRecord *) arg0->voidp)->weaponnum, WEAPONSTATBITFLAG_ONLY_1_HANDED);
     }
 
     return 0U;
