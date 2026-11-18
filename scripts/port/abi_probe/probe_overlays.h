@@ -9,6 +9,8 @@
 #include "game/chr.h"
 #include "game/image.h"
 #include "game/explosion.h"
+#include "game/file.h"
+#include "game/initanitable.h"
 #include "port_romconv_stage.h"
 
 #define IS_TYPE(expr, type) _Generic((expr), type: 1, default: 0)
@@ -83,6 +85,47 @@ _Static_assert(offsetof(struct act_attack, unk38) == offsetof(struct act_attackr
  * with the tank's count: the room up to is_firing_tank holds the 8. */
 _Static_assert(offsetof(TankRecord, is_firing_tank) - offsetof(TankRecord, rect) >= 8 * sizeof(struct coord2d),
                "TankRecord.rect run holds 8 * sizeof(struct coord2d)");
+
+/* Batch 2, the offset sites. A float and an integer reinterpreted in place
+ * (`*(s32 *) &f`, `*(f32 *) &i`) read the same 4 bytes at both widths. */
+_Static_assert(sizeof(f32) == 4 && sizeof(s32) == 4, "f32 and s32 are both 4 bytes");
+/* prop.c and propobj.c read these setup members as the s32 the file holds,
+ * then store them back as floats: each must stay a 4-byte f32. */
+#define SETUP_F32(type, member) IS_TYPE(((type *) 0)->member, f32)
+_Static_assert(SETUP_F32(ObjectRecord, damage) && SETUP_F32(CCTVRecord, unkCC) && SETUP_F32(CCTVRecord, unkD0)
+                   && SETUP_F32(CCTVRecord, unkDC) && SETUP_F32(CCTVRecord, unkE8) && SETUP_F32(AutogunRecord, speed)
+                   && SETUP_F32(AutogunRecord, aimdist) && SETUP_F32(AutogunRecord, unk88)
+                   && SETUP_F32(AutogunRecord, unk8C) && SETUP_F32(MonitorObjRecord, damage)
+                   && SETUP_F32(DoorRecord, maxFrac) && SETUP_F32(DoorRecord, perimFrac) && SETUP_F32(DoorRecord, accel)
+                   && SETUP_F32(DoorRecord, decel) && SETUP_F32(DoorRecord, maxSpeed)
+                   && SETUP_F32(struct BodyArmourRecord, initialamount) && SETUP_F32(struct TintedGlassRecord, unk90)
+                   && SETUP_F32(struct CutsceneRecord, pos.f[0]) && SETUP_F32(struct CutsceneRecord, theta)
+                   && SETUP_F32(struct CutsceneRecord, verta) && SETUP_F32(HatRecord, damage)
+                   && SETUP_F32(WeaponObjRecord, damage),
+               "the setup values converted in place are 4-byte f32 members");
+/* initResolveAnimTable reads the animation bank's address as one intptr_t. */
+_Static_assert(IS_TYPE(ptr_animation_table, struct animation_table_data *), "ptr_animation_table is read as one intptr_t");
+/* projectileTestObjectCollision reads a model file header as its root node. */
+_Static_assert(IS_TYPE(((ModelFileHeader *) 0)->RootNode, ModelNode *) && offsetof(ModelFileHeader, RootNode) == 0,
+               "a model file header starts with its root node pointer");
+/* gunfire.c and propobj.c write a switch slot's read-write record as one s32
+ * without testing its opcode: each record those slots can hold that has a
+ * scalar first is a 4-byte int. */
+_Static_assert(IS_TYPE(((ModelRwData_SwitchRecord *) 0)->visible, s32) && IS_TYPE(((ModelRwData_LODRecord *) 0)->visible, s32)
+                   && IS_TYPE(((ModelRwData_BSPRecord *) 0)->visible, s32)
+                   && IS_TYPE(((ModelRwData_DisplayListRecord *) 0)->unk00, s32)
+                   && IS_TYPE(((ModelRwData_Op07Record *) 0)->index, s32),
+               "a switch, LOD, BSP, display-list and Op07 read-write record starts with a 4-byte int");
+/* fileSetSaveCheatUnlocked sets a cheat bit at byte 14 + i, i 0 to 2. */
+_Static_assert(offsetof(save_data, unlocked_cheats_1) == 0xe && offsetof(save_data, unlocked_cheats_3) == 0x10
+                   && sizeof(((save_data *) 0)->unlocked_cheats_1) == 1 && sizeof(((save_data *) 0)->unlocked_cheats_3) == 1,
+               "save_data's cheat bytes are bytes 14 to 16");
+/* stan.c's walks end at a tile whose first word is 0: id and room fill it. */
+_Static_assert(offsetof(StandTile, mid) == sizeof(u32) && sizeof(StandTile) == 8, "a stan tile's first word is its id and room");
+#if IS_64_BIT
+/* MODEL_SLOT_RWDATA (objecthandler.h) reads a slot's Model datas as a void *. */
+_Static_assert(sizeof(((Model *) 0)->datas) == sizeof(void *), "a model slot's read-write data is the Model's datas pointer");
+#endif
 
 /* chrprop.c tests an image entry's hitSound as the low nibble of its first
  * byte: GCC allocates the first bit-field there at both widths. */
