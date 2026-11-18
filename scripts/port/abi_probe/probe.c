@@ -20,6 +20,7 @@
 #include "game/ramromreplay.h"
 #include "port_romlayout.h"
 #include "snd.h"
+#include "probe_overlays.h"
 
 /* Fixed at every width: the renderer reads these as N64 formats. */
 _Static_assert(sizeof(s32) == 4 && sizeof(u32) == 4, "32-bit integer types");
@@ -546,7 +547,7 @@ static int checkGaugeBarRooms(void)
 
 int main(void)
 {
-    if (checkVertexCollisionNode() != 0 || checkGaugeBarRooms() != 0)
+    if (checkVertexCollisionNode() != 0 || checkGaugeBarRooms() != 0 || checkImageEntryHitSound() != 0)
     {
         return 1;
     }

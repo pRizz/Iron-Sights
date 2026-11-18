@@ -4,8 +4,16 @@
 `list [PATH...]` prints one site a line, `file:function:kind:text` (`--lines` adds each site's line
 after a tab). `check` requires every site to have exactly one line in `lp64_overlays_reviewed.txt`,
 `file:function:kind:text<TAB>VERDICT<TAB>reason`, and every line there to match a site; it prints
-`OK: N sites, all reviewed`, or each `unreviewed:` site and `stale:` line and exits 1. It refuses (exit 2)
-a listing with a repeated key or with no site at all.
+`OK: N sites, all reviewed`, or each `unreviewed:` site and `stale:` line and exits 1, then `N defect
+lines`. It refuses (exit 2) a listing with a repeated key or with no site at all.
+
+Verdicts: typed (the object is of the type it is read as), same (the bytes read are at the same place at
+both widths; the reason names the probe assertion), overlay-64 (deliberately different at 64 bits behind
+IS_64_BIT; the reason names the assertion), dead (not compiled or not reached on PC; the reason says why),
+and defect: the site reads or writes the wrong thing at 64 bits, recorded until its fix takes the site off
+the list. A defect's reason starts with its owner, `Task N:` (the task that fixes it), `strict:` (a
+strict-tier file, fixed on the strict branch) or `undecided:` (not decidable from the code; what was
+established follows). `check --no-defects` also fails (exit 1) while any defect line remains, naming each.
 
 Kinds (patterns on C text, not a C parser; see lp64_overlays_kinds.py and lp64_overlays_types.py):
   index   ((u16 *) x)[n]            an index through a cast to a pointer to a scalar or to a pointer
@@ -61,6 +69,7 @@ What it cannot see (FORK-089's "LP64-005 task 3" notes say which other check cov
 A file whose compiled code leaves braces unbalanced is refused (exit 2), not misread.
 """
 import argparse
+import re
 from collections import Counter
 from pathlib import Path
 import subprocess
@@ -80,7 +89,8 @@ SCOPE_DIRS = ('src/', 'port/src/', 'port/include/')
 SUFFIXES = ('.c', '.h', '.inl')
 EXPLICIT_SUFFIXES = ('.c', '.h', '.cpp', '.inl', '.cc')
 LIBAUDIO = 'include/PR/libaudio.h'
-VERDICTS = ('typed', 'same', 'overlay-64', 'dead')
+VERDICTS = ('typed', 'same', 'overlay-64', 'dead', 'defect')
+DEFECT_OWNER = re.compile(r'(Task [0-9]+|strict|undecided):')
 GIT_TIMEOUT_SECONDS = 60
 
 
@@ -149,14 +159,17 @@ def parse_reviewed(text: str) -> dict[str, tuple[str, str]]:
         if len(fields) != 3 or fields[1] not in VERDICTS or not fields[2].strip():
             raise ValueError(f'reviewed line {number} is not key<TAB>VERDICT<TAB>reason with VERDICT one of '
                              f'{", ".join(VERDICTS)}: {line!r}')
+        if fields[1] == 'defect' and not DEFECT_OWNER.match(fields[2]):
+            raise ValueError(f'reviewed line {number} is a defect whose reason does not start with its owner, '
+                             f'`Task N:`, `strict:` or `undecided:`: {line!r}')
         if fields[0] in reviewed:
             raise ValueError(f'reviewed line {number} repeats a key: {fields[0]!r}')
         reviewed[fields[0]] = (fields[1], fields[2])
     return reviewed
 
 
-def report(sites: list[Site], reviewed: dict[str, tuple[str, str]]) -> int:
-    """Print the result of `check` and return its exit status."""
+def report(sites: list[Site], reviewed: dict[str, tuple[str, str]], no_defects: bool = False) -> int:
+    """Print the result of `check` and return its exit status; `no_defects` also fails on a defect line."""
     keys = {site.key: site for site in sites}
     if len(keys) != len(sites):
         repeated = sorted(key for key, count in Counter(site.key for site in sites).items() if count > 1)
@@ -165,6 +178,17 @@ def report(sites: list[Site], reviewed: dict[str, tuple[str, str]]) -> int:
     if not keys:
         print('error: no sites listed; the scope or the finders are broken')
         return 2
+    status = review_status(keys, reviewed)
+    defects = [(key, reason) for key, (verdict, reason) in reviewed.items() if verdict == 'defect']
+    print(f'{len(defects)} defect lines')
+    if no_defects and defects:
+        for key, reason in defects:
+            print(f'defect: {key}\t{reason}')
+        return 1
+    return status
+
+
+def review_status(keys: dict[str, Site], reviewed: dict[str, tuple[str, str]]) -> int:
     unreviewed = [site for key, site in keys.items() if key not in reviewed]
     stale = [key for key in reviewed if key not in keys]
     for site in unreviewed:
@@ -190,9 +214,12 @@ def main(argv: list[str]) -> int:
     parser.add_argument('command', choices=('list', 'check'))
     parser.add_argument('paths', nargs='*', help='list: only the files under these paths')
     parser.add_argument('--lines', action='store_true', help='list: add each site\'s line after a tab')
+    parser.add_argument('--no-defects', action='store_true', help='check: also fail while any defect line remains')
     parser.add_argument('--locals', action='store_true',
                         help='list: print the stored scalar-pointer casts instead (a survey aid, not checked)')
     args = parser.parse_args(argv)
+    if args.no_defects and args.command != 'check':
+        parser.error('--no-defects is a check option')
     if args.command == 'check' and args.paths:
         parser.error('check reads the whole scope; it takes no paths')
     if args.locals:
@@ -208,7 +235,7 @@ def main(argv: list[str]) -> int:
         print(f'error: {error}', file=sys.stderr)
         return 2
     if args.command == 'check':
-        return report(sites, reviewed)
+        return report(sites, reviewed, args.no_defects)
     for site in sites:
         print(f'{site.key}\t{site.line}' if args.lines else site.key)
     return 0

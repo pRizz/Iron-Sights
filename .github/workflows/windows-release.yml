@@ -99,6 +99,7 @@ jobs:
           python3 scripts/port/test_lp64_casts.py
           python3 scripts/port/lp64_casts.py check
           python3 scripts/port/test_lp64_overlays.py
+          python3 scripts/port/test_lp64_overlays_check.py
           python3 scripts/port/test_compare_win32.py
           bash scripts/port/test_pointer_bits.sh
           bash scripts/port/test_headless_configure.sh

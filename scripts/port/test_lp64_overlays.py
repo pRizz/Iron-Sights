@@ -1,10 +1,7 @@
 """ROM-free tests for the overlay lister: every record read through another type (LP64-005 Task 3)."""
-import contextlib
-import io
 from pathlib import Path
 import re
 import sys
-import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -361,99 +358,6 @@ class Scope(unittest.TestCase):
 
     def test_an_included_inl_file_is_read(self):
         self.assertTrue(overlays.in_scope('port/src/port_hud_audit.inl'))
-
-
-class Check(unittest.TestCase):
-    def setUp(self):
-        self.directory = tempfile.TemporaryDirectory()
-        self.root = Path(self.directory.name)
-        (self.root/'src/game').mkdir(parents=True)
-        (self.root/'src/bondtypes.h').write_text(HEADER)
-        (self.root/'src/game/a.c').write_text(wrap(INDEX))
-        self.files = ['src/bondtypes.h', 'src/game/a.c']
-
-    def tearDown(self):
-        self.directory.cleanup()
-
-    def run_check(self, reviewed):
-        """Return (status, output) of `check` against `reviewed`."""
-        sites = overlays.list_sites(self.root, self.files)
-        out = io.StringIO()
-        with contextlib.redirect_stdout(out):
-            status = overlays.report(sites, overlays.parse_reviewed(reviewed))
-        return status, out.getvalue()
-
-    def reviewed_text(self, *keys_):
-        return '# header\n' + ''.join(f'{key}\ttyped\tthe object is of that type\n' for key in keys_)
-
-    def test_every_site_reviewed_passes(self):
-        # Arrange
-        reviewed = self.reviewed_text('src/bondtypes.h:holder:run:Gfx dl[2]; +2 fillers', INDEX_KEY)
-        # Act
-        status, out = self.run_check(reviewed)
-        # Assert
-        self.assertEqual((status, out.strip()), (0, 'OK: 2 sites, all reviewed'))
-
-    def test_a_site_missing_from_the_list_fails(self):
-        # Act
-        status, out = self.run_check(self.reviewed_text('src/bondtypes.h:holder:run:Gfx dl[2]; +2 fillers'))
-        # Assert
-        self.assertEqual(status, 1)
-        self.assertIn(f'unreviewed: {INDEX_KEY}', out)
-
-    def test_a_stale_line_fails(self):
-        # Arrange
-        reviewed = self.reviewed_text('src/bondtypes.h:holder:run:Gfx dl[2]; +2 fillers', INDEX_KEY,
-                                      'src/game/a.c:gone:index:((u8*)x)[1]')
-        # Act
-        status, out = self.run_check(reviewed)
-        # Assert
-        self.assertEqual(status, 1)
-        self.assertIn('stale: src/game/a.c:gone:index:((u8*)x)[1]', out)
-
-    def test_a_changed_text_is_unreviewed_and_its_old_line_stale(self):
-        # Arrange
-        reviewed = self.reviewed_text('src/bondtypes.h:holder:run:Gfx dl[2]; +2 fillers', INDEX_KEY)
-        (self.root/'src/game/a.c').write_text(wrap('n = ((u16 *) x)[3];'))
-        # Act
-        status, out = self.run_check(reviewed)
-        # Assert
-        self.assertEqual(status, 1)
-        self.assertIn('unreviewed: src/game/a.c:f:index:((u16*)x)[3]', out)
-        self.assertIn(f'stale: {INDEX_KEY}', out)
-
-    def test_a_repeated_key_in_the_listing_is_refused(self):
-        # Arrange
-        site = overlays.list_sites(self.root, self.files)[0]
-        # Act
-        with contextlib.redirect_stdout(io.StringIO()):
-            status = overlays.report([site, site], {site.key: ('typed', 'r')})
-        # Assert
-        self.assertEqual(status, 2)
-
-    def test_no_sites_is_not_ok(self):
-        with contextlib.redirect_stdout(io.StringIO()):
-            self.assertEqual(overlays.report([], {}), 2)
-
-    def test_a_run_declared_in_a_c_file_is_listed(self):
-        # Arrange
-        (self.root/'src/game/a.c').write_text('struct local { Model m; s32 unk04; };\n' + wrap(INDEX))
-        # Act
-        found = [site.key for site in overlays.list_sites(self.root, self.files)]
-        # Assert
-        self.assertIn('src/game/a.c:local:run:Model m; +1 fillers', found)
-
-    def test_a_line_with_an_unknown_verdict_is_refused(self):
-        with self.assertRaises(ValueError):
-            overlays.parse_reviewed(f'{INDEX_KEY}\tfixed\tgone\n')
-
-    def test_a_line_without_a_reason_is_refused(self):
-        with self.assertRaises(ValueError):
-            overlays.parse_reviewed(f'{INDEX_KEY}\ttyped\t\n')
-
-    def test_the_checked_in_list_parses(self):
-        # Act / Assert
-        overlays.parse_reviewed(overlays.REVIEWED.read_text())
 
 
 class Locals(unittest.TestCase):
