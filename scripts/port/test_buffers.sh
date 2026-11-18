@@ -14,7 +14,7 @@ for width in $widths; do
     if [[ ${MIDAS_BUFFER_SANITIZE:-0} == 1 ]]; then
         flags+=(-fsanitize=address,undefined -fno-sanitize=alignment,shift,signed-integer-overflow -fno-sanitize-recover=all)
     fi
-    sources=(test_model_bounds test_audio_buffers test_memory_banks test_token_bounds test_high_alloc)
+    sources=(test_model_bounds test_audio_buffers test_memory_banks test_token_bounds test_high_alloc test_indy_file_name)
     if [[ ${MIDAS_BUFFER_SANITIZE:-0} == 1 ]]; then
         sources+=(test_lp64_poison) # the arenas' poisoning exists only under the sanitizer
     fi

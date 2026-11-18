@@ -200,7 +200,7 @@ void indyrescmdCheckFileExists(s32 rsize,s32 wsize,char *name)
     cmd.entry.size = sizeof(cmd);
     cmd.entry.readsize = rsize;
     cmd.entry.writesize = wsize;
-    strncpy(cmd.strbuffer,name,sizeof(cmd.strbuffer));
+    strncpy(cmd.strbuffer,name,sizeof(cmd.strbuffer) - 1); /* src/str.c's strncpy writes n + 1 bytes for a shorter name */
     cmd.strbuffer[255] = '\0';
 
     indycmdSendCommand((u8 *)&cmd, sizeof(cmd));
