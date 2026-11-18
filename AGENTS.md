@@ -317,7 +317,9 @@ pass its isolated executable rather than rebuilding an active player binary.
   1, on a file of one of these classes that the ROM does not serve and on a
   missing ROM segment. A converter that refuses a file logs `ge: lp64:
   cannot convert CLASS "FILE": ...`; the game then stops by name, except that
-  a refused model or text bank loads empty. A pool whose overrun is fatal
+  a refused text bank is zeroed and the game carries on, and a refused model
+  loads with empty tables (or stops by name if even those do not fit its
+  room). A pool whose overrun is fatal
   (the music heap, the graphics buffer) stops it with exit status 6.
 - Fonts, sharp text rendering and other original game assets follow the
   accepted [open assets plan](scripts/port/open_assets_plan.md). Read it before
