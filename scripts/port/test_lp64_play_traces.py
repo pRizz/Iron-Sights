@@ -10,15 +10,26 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lp64_play  # noqa: E402
-from lp64_play_cases import DEMOS  # noqa: E402
+from lp64_play_cases import DEMO_END_TICKS, DEMOS  # noqa: E402
+
+# The game goes on ticking a while after a demo's time ends (the fade), so a whole trace runs
+# past the demo's end tick.
+AFTER_END = 20
 
 
-def trace(ticks: int, differ_from: int | None = None) -> str:
-    """A demo log with TICKS tick lines; from tick DIFFER_FROM on, the live seed is another."""
-    lines = ['ge: demo start: stage=33 diff=0 pads=2 totaltime=1200 vsyncs (~20s)']
-    for tick in range(1, ticks + 1):
+def trace(name: str, ticks: int | None = None, differ_from: int | None = None,
+          end_reason: str = 'totaltime end (timer/limit)') -> str:
+    """NAME's log with TICKS tick lines (by default to AFTER_END past its measured end) and, if
+    the trace reaches the end tick, its exit line there; from tick DIFFER_FROM on, the live seed
+    is another."""
+    end = DEMO_END_TICKS[name]
+    lines = ['ge: demo start: stage=33 diff=0 pads=2 totaltime=1200 vsyncs (~20s)',
+             f'ge: GE_DEMO direct playback: {name} (index {DEMOS.index(name)})']
+    for tick in range(1, (end + AFTER_END if ticks is None else ticks) + 1):
         live = 0x10 + tick % 200 if differ_from is None or tick < differ_from else 0xEE
         lines.append(f'ge: demo tick {tick} draws=4 live={live:02x} rec={0x10 + tick % 200:02x} p0=0,0 p1=0,0 b=0000,0000')
+        if tick == end:
+            lines.append(f'ge: demo exit: {end_reason} at tick {end}, gametime 1300 vsyncs (~21s), detail 1/1')
     return '\n'.join(lines) + '\n'
 
 
@@ -29,11 +40,11 @@ class Folders(unittest.TestCase):
         self.folder = Path(self.tmp.name)
 
     def run_folder(self, name: str, logs: dict[str, str]) -> Path:
-        """A run folder with a 400-tick log for every demo, LOGS replacing some."""
+        """A run folder with a whole log for every demo, LOGS replacing some."""
         folder = self.folder/name
         folder.mkdir()
         for demo in DEMOS:
-            (folder/f'{demo}.log').write_text(logs.get(demo, trace(400)))
+            (folder/f'{demo}.log').write_text(logs.get(demo, trace(demo)))
         return folder
 
     def expectations(self, lines: dict[str, str]) -> Path:
@@ -58,12 +69,12 @@ class Traces(Folders):
 
         # Assert
         self.assertEqual(status, 0, out)
-        self.assertIn('dam1: identical (400 ticks)', out)
+        self.assertIn('dam1: identical (458 ticks)', out)
         self.assertIn('OK: 14 demos, 14 identical, 0 differing as recorded', out)
 
     def test_difference_at_35_recorded_as_such_passes(self):
         # Arrange
-        ref, new = self.run_folder('ref', {}), self.run_folder('new', {'facility2': trace(400, 35)})
+        ref, new = self.run_folder('ref', {}), self.run_folder('new', {'facility2': trace('facility2', differ_from=35)})
         expect = self.expectations({'facility2': 'differs-from 35 a cause (Task 5)'})
 
         # Act
@@ -76,7 +87,7 @@ class Traces(Folders):
 
     def test_difference_at_35_recorded_identical_fails(self):
         # Arrange
-        ref, new = self.run_folder('ref', {}), self.run_folder('new', {'facility2': trace(400, 35)})
+        ref, new = self.run_folder('ref', {}), self.run_folder('new', {'facility2': trace('facility2', differ_from=35)})
 
         # Act
         status, out = self.main('traces', '--expect', str(self.expectations({})), str(ref), str(new))
@@ -99,15 +110,15 @@ class Traces(Folders):
 
     def test_shorter_trace_differs_at_its_first_missing_tick(self):
         # Arrange
-        ref, new = self.run_folder('ref', {}), self.run_folder('new', {'train': trace(300)})
-        expect = self.expectations({'train': 'differs-from 301 the run ended early'})
+        ref, new = self.run_folder('ref', {}), self.run_folder('new', {'train': trace('train', 470)})
+        expect = self.expectations({'train': 'differs-from 471 the run ended early'})
 
         # Act
         status, out = self.main('traces', '--expect', str(expect), str(ref), str(new))
 
         # Assert
         self.assertEqual(status, 0, out)
-        self.assertIn('train: first differs at tick 301', out)
+        self.assertIn('train: first differs at tick 471', out)
 
     def test_log_without_tick_lines_fails(self):
         # Arrange
@@ -123,7 +134,7 @@ class Traces(Folders):
     def test_second_playback_is_not_part_of_the_trace(self):
         # Arrange
         ref = self.run_folder('ref', {})
-        new = self.run_folder('new', {'dam2': trace(400) + trace(50, 1)})
+        new = self.run_folder('new', {'dam2': trace('dam2') + trace('dam1', 50, 1)})
 
         # Act
         status, out = self.main('traces', '--expect', str(self.expectations({})), str(ref), str(new))
@@ -146,7 +157,7 @@ class Traces(Folders):
 
     def test_reference_check_prints_unstable_for_a_pair_that_differs(self):
         # Arrange
-        a, b = self.run_folder('a', {}), self.run_folder('b', {'bunker2': trace(400, 120)})
+        a, b = self.run_folder('a', {}), self.run_folder('b', {'bunker2': trace('bunker2', differ_from=120)})
 
         # Act
         status, out = self.main('traces', '--reference-check', str(a), str(b))
@@ -154,7 +165,73 @@ class Traces(Folders):
         # Assert
         self.assertEqual(status, 1, out)
         self.assertIn('bunker2: unstable (first differs at tick 120)', out)
-        self.assertIn('dam1: identical (400 ticks)', out)
+        self.assertIn('dam1: identical (458 ticks)', out)
+
+    def test_reference_check_refuses_two_equally_truncated_traces(self):
+        # Arrange
+        a = self.run_folder('a', {'silo2': trace('silo2', 100)})
+        b = self.run_folder('b', {'silo2': trace('silo2', 100)})
+
+        # Act
+        status, out = self.main('traces', '--reference-check', str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('silo2: refused: missing line: ge: demo exit: totaltime end (timer/limit) at tick 503; '
+                      'last tick 100 in', out)
+        self.assertNotIn('silo2: identical', out)
+        self.assertIn('FAIL: 1 of 14 demos unstable or missing: silo2', out)
+
+    def test_expect_refuses_a_truncated_run_recorded_as_differing(self):
+        # Arrange
+        ref = self.run_folder('ref', {})
+        new = self.run_folder('new', {'dam1': trace('dam1', 100, differ_from=2)})
+        expect = self.expectations({'dam1': 'differs-from 2 weaponIsOneHanded (Task 4)'})
+
+        # Act
+        status, out = self.main('traces', '--expect', str(expect), str(ref), str(new))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('dam1: refused: missing line: ge: demo exit: totaltime end (timer/limit) at tick 438; '
+                      'last tick 100 in', out)
+        self.assertIn('FAIL: 1 of 14 demos not as recorded: dam1', out)
+
+    def test_expect_refuses_a_reference_whose_first_exit_is_a_checksum_mismatch(self):
+        # Arrange
+        ref = self.run_folder('ref', {'frigate1': trace('frigate1', end_reason='CHECKSUM mismatch (stored/computed)')})
+        new = self.run_folder('new', {})
+
+        # Act
+        status, out = self.main('traces', '--expect', str(self.expectations({})), str(ref), str(new))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('frigate1: refused: missing line: ge: demo exit: totaltime end (timer/limit) at tick 328; '
+                      'the log has: ge: demo exit: CHECKSUM mismatch', out)
+
+    def test_reference_check_refuses_a_missing_log(self):
+        # Arrange
+        a, b = self.run_folder('a', {}), self.run_folder('b', {})
+        (b/'train.log').unlink()
+
+        # Act
+        status, out = self.main('traces', '--reference-check', str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('train: no log', out)
+
+    def test_reference_check_refuses_an_empty_log(self):
+        # Arrange
+        a, b = self.run_folder('a', {'dam2': ''}), self.run_folder('b', {})
+
+        # Act
+        status, out = self.main('traces', '--reference-check', str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('dam2: no "ge: demo tick" lines in', out)
 
     def test_reference_check_of_agreeing_runs_passes(self):
         # Arrange

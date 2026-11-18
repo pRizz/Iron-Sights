@@ -21,6 +21,12 @@ DEMO_EXIT = re.compile(r'ge: demo exit: ')
 # The same line with the reason iterate_ramrom_entries_handle_camera_out gives when the
 # recording's time runs out.
 DEMO_EXIT_TOTALTIME = re.compile(r'ge: demo exit: totaltime end \(timer/limit\) at tick (\d+),')
+# Any other demo exit (a checksum or seed mismatch, a clean end, an input press): headless, no
+# input can end a demo, so every playback should end by its time.
+DEMO_EXIT_OTHER = re.compile(r'ge: demo exit: (?!totaltime end \(timer/limit\) at tick )')
+# src/game/front.c, portDirectLaunchDemoTick, right after the demo's start line:
+#   "ge: GE_DEMO direct playback: %s (index %d)\n"
+DEMO_PLAYBACK = 'ge: GE_DEMO direct playback: {name} (index '
 # port/src/pcsched.c, once GE_FRAMES frames have run (the pattern is lp64_boot.py's):
 #   "ge: frame limit reached: frames=%u gfxtasks=%u\n"
 FRAME_LIMIT = re.compile(r'ge: frame limit reached: frames=(\d+)')
@@ -55,6 +61,10 @@ class Required:
     at_least: int | None = None
     equals: int | None = None
     near: re.Pattern | None = None
+    # Only the lines of the log's first playback count: from its first `ge: demo start:` line up
+    # to its second. After a demo ends the attract loop starts another, chosen at random, whose
+    # exit line could otherwise stand in for the first one's.
+    first_playback: bool = False
 
 
 @dataclass(frozen=True)
@@ -67,6 +77,8 @@ class Case:
     frames: int
     required: tuple[Required, ...]
     status: int = 0
+    # Lines that fail the case wherever they appear.
+    forbidden: tuple[re.Pattern, ...] = ()
 
 
 def frame_limit(frames: int) -> Required:
@@ -92,12 +104,21 @@ DEMO_FRAMES = 3000
 
 
 def demo_case(name: str) -> Case:
-    tick = DEMO_END_TICKS[name]
     return Case(name, 'demos', (('GE_DEMO', name), ('GE_DEMODIAG', '1')), DEMO_FRAMES, (
         Required('ge: demo start:', DEMO_START),
-        Required(f'ge: demo exit: totaltime end (timer/limit) at tick {tick}', DEMO_EXIT_TOTALTIME,
-                 equals=tick, near=DEMO_EXIT),
+        *demo_playback_required(name),
         frame_limit(DEMO_FRAMES)))
+
+
+def demo_playback_required(name: str) -> tuple[Required, ...]:
+    """What shows that NAME's own first playback reached its end: its direct-playback line and
+    its first exit line, at the measured tick, both before any second demo starts. The `demos`
+    case and lp64_play_traces.py both judge a demo's log by these."""
+    tick = DEMO_END_TICKS[name]
+    playback = DEMO_PLAYBACK.format(name=name)
+    return (Required(playback, re.compile(re.escape(playback)), first_playback=True),
+            Required(f'ge: demo exit: totaltime end (timer/limit) at tick {tick}', DEMO_EXIT_TOTALTIME,
+                     equals=tick, near=DEMO_EXIT, first_playback=True))
 
 
 # ---- stages -----------------------------------------------------------------------------------
@@ -181,6 +202,8 @@ def menu_case(menu: str) -> Case:
 # end early "(the mission ended there)"; Task 7 finds out why before these become the floor.
 TOUR_ROOMS = {
     'dam': 54, 'facility': 50, 'runway': 11, 'surface': 11, 'bunker1': 21, 'silo': 64,
+    # surface2's floor of 0: that tour ends at once, so the case proves only the launch, the
+    # background and the done line, until a later task (Task 7) finds why.
     'frigate': 35, 'surface2': 0, 'bunker2': 24, 'statue': 6, 'archives': 55, 'streets': 54,
     'depot': 33, 'train': 50, 'jungle': 43, 'control': 57, 'caverns': 45, 'cradle': 28,
     'aztec': 55, 'egypt': 26,
@@ -214,7 +237,8 @@ def attract_cases() -> list[Case]:
     return [
         Case('attract', 'attract', (), ATTRACT_FRAMES, (
             Required('ge: demo start: (twice)', DEMO_START, count=2),
-            Required('ge: demo exit: (twice)', DEMO_EXIT, count=2), limit)),
+            Required('ge: demo exit: totaltime end (timer/limit) (twice)', DEMO_EXIT_TOTALTIME, count=2),
+            limit), forbidden=(DEMO_EXIT_OTHER,)),
         Case('soak', 'attract', (('GE_SOAK', 'all:600:1'),), ATTRACT_FRAMES,
              (Required('ge: soak: complete after 1 laps', SOAK_COMPLETE),)),
         Case('death', 'attract', (('GE_MP', 'temple'), ('GE_MPPLAYERS', '4'), ('GE_KILLBOND', '600')),
@@ -234,8 +258,35 @@ SETS = {
 }
 
 
+# The prefixes that keep case names unique where a demo and a mission share a name. `--only`
+# also takes a name without its prefix when that selects exactly one case of the sets.
+CASE_PREFIXES = ('stage-', 'mp-', 'stop-', 'menu-', 'tour-')
+
+
+def bare_name(name: str) -> str:
+    return next((name[len(prefix):] for prefix in CASE_PREFIXES if name.startswith(prefix)), name)
+
+
+def select_cases(cases: list[Case], wanted: list[str]) -> list[Case]:
+    """The cases of CASES that WANTED names, each by its full name or, when that selects exactly
+    one case, by its name without the prefix. Raises ValueError for a name that selects none, or
+    more than one (naming them)."""
+    chosen = []
+    for name in wanted:
+        matches = [case for case in cases if name in (case.name, bare_name(case.name))]
+        if not matches:
+            raise ValueError(f'--only names no case of the sets: {name}')
+        if len(matches) > 1:
+            raise ValueError(f'--only {name} names more than one case: '
+                             + ', '.join(case.name for case in matches))
+        chosen.append(matches[0])
+    return [case for case in cases if case in chosen]
+
+
 def cases_of(set_names: list[str]) -> list[Case]:
     """The cases of SET_NAMES in order; raises ValueError naming an unknown set."""
+    if not set_names:
+        raise ValueError(f'--set names no set; the sets are {", ".join(SETS)}')
     unknown = [name for name in set_names if name not in SETS]
     if unknown:
         raise ValueError(f'unknown set {", ".join(unknown)}; the sets are {", ".join(SETS)}')

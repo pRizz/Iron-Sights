@@ -10,13 +10,17 @@ playback of the log (the attract loop may start another demo, whose ticks count 
 lp64_demo_traces.txt: one line a demo, `NAME identical` or `NAME differs-from T REASON`. A demo
 passes only if it is exactly as its line says, so a demo recorded as differing that now matches
 fails too and the file is lowered when a fix lands. `reference_check` compares two runs of one
-build: a demo that differs from itself is `unstable`, and its trace proves nothing.
+build: a demo that differs from itself is `unstable`, and its trace proves nothing. Both refuse a
+demo whose log, on either side, does not show its playback reaching its end by the `demos` case's
+rule (its own first playback, ended by its time at the measured tick): two runs that stop at the
+same early tick would otherwise agree.
 """
 from dataclasses import dataclass
 from pathlib import Path
 import re
 
-from lp64_play_cases import DEMOS
+from lp64_play_cases import DEMOS, demo_playback_required
+from lp64_play_judge import requirement_problem
 
 TICK_LINE = re.compile(r'^ge: demo tick (\d+) (.*)$')
 
@@ -59,15 +63,26 @@ def compare_ticks(reference: list[tuple[int, str]], new: list[tuple[int, str]]) 
     return Comparison(len(reference), None)
 
 
+def playback_problem(name: str, text: str) -> str | None:
+    """Why TEXT does not show NAME's first playback reaching its end, or None when it does."""
+    lines = text.splitlines()
+    return next((problem for problem in (requirement_problem(lines, required)
+                                         for required in demo_playback_required(name)) if problem), None)
+
+
 def compare_demo(name: str, dir_a: Path, dir_b: Path) -> Comparison:
     traces = []
     for folder in (dir_a, dir_b):
         log = folder/f'{name}.log'
         if not log.is_file():
             return Comparison(0, None, f'no log {log}')
-        ticks = read_ticks(log.read_text(errors='replace'))
+        text = log.read_text(errors='replace')
+        ticks = read_ticks(text)
         if not ticks:
             return Comparison(0, None, f'no "ge: demo tick" lines in {log}')
+        unfinished = playback_problem(name, text)
+        if unfinished is not None:
+            return Comparison(0, None, f'refused: {unfinished}; last tick {ticks[-1][0]} in {log}')
         traces.append(ticks)
     return compare_ticks(traces[0], traces[1])
 

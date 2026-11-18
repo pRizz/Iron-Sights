@@ -1,10 +1,9 @@
 """ROM-free tests for lp64_play.py run: each kind of required line, the forbidden lines, the status
 and the timeout, through stand-in executables (shell scripts that print a log and exit with a
-chosen status), as test_lp64_boot.py does. The traces and callers tests are in
-test_lp64_play_traces.py."""
+chosen status), as test_lp64_boot.py does. The options, environment and set sizes are tested in
+test_lp64_play_options.py, traces and callers in test_lp64_play_traces.py."""
 import contextlib
 import io
-import json
 from pathlib import Path
 import stat
 import sys
@@ -14,12 +13,12 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lp64_play  # noqa: E402
-import lp64_play_cases  # noqa: E402
 import lp64_play_run  # noqa: E402
 
 BOOT = ('ge007 pc port: booting (GE_FRAMES=n limits the run)\n'
         'ge: lp64: address space OK: memp arena 0x7f0000000000, executable image 0x555500000000\n')
 DEMO_START = 'ge: demo start: stage=33 diff=0 pads=2 totaltime=1200 vsyncs (~20s)\n'
+DAM1_START = DEMO_START + 'ge: GE_DEMO direct playback: dam1 (index 0)\n'
 
 
 def demo_exit(tick: int, reason: str = 'totaltime end (timer/limit)') -> str:
@@ -30,7 +29,7 @@ def frames(count: int) -> str:
     return f'ge: frame limit reached: frames={count} gfxtasks={count // 2}\n'
 
 
-DAM1_GOOD = BOOT + DEMO_START + 'ge: demo tick 1 draws=3 live=01 rec=01\n' + demo_exit(438) + frames(3000)
+DAM1_GOOD = BOOT + DAM1_START + 'ge: demo tick 1 draws=3 live=01 rec=01\n' + demo_exit(438) + frames(3000)
 STAGE_GOOD = (BOOT + 'ge: GE_STAGE direct launch: levelid=33 diff=0\n'
               'ge: load_bg_file levelid=33 stan=Tbg_dam_all_p_stanZ file=0x1 record=0x2 first=0x3\n'
               + frames(1800))
@@ -85,7 +84,7 @@ class Demos(StandIns):
 
     def test_exit_at_another_tick_fails(self):
         # Arrange
-        exe = self.fake(BOOT + DEMO_START + demo_exit(437) + frames(3000))
+        exe = self.fake(BOOT + DAM1_START + demo_exit(437) + frames(3000))
 
         # Act
         status, out = self.play(exe, 'demos', 'dam1')
@@ -97,7 +96,7 @@ class Demos(StandIns):
 
     def test_exit_for_another_reason_fails_naming_it(self):
         # Arrange
-        exe = self.fake(BOOT + DEMO_START + demo_exit(217, 'RANDSEED desync (recorded/live)') + frames(3000))
+        exe = self.fake(BOOT + DAM1_START + demo_exit(217, 'RANDSEED desync (recorded/live)') + frames(3000))
 
         # Act
         status, out = self.play(exe, 'demos', 'dam1')
@@ -130,7 +129,7 @@ class Demos(StandIns):
 
     def test_frame_limit_at_another_count_fails(self):
         # Arrange
-        exe = self.fake(BOOT + DEMO_START + demo_exit(438) + frames(600))
+        exe = self.fake(BOOT + DAM1_START + demo_exit(438) + frames(600))
 
         # Act
         status, out = self.play(exe, 'demos', 'dam1')
@@ -138,6 +137,31 @@ class Demos(StandIns):
         # Assert
         self.assertEqual(status, 1, out)
         self.assertIn('frames=600: expected 3000', out)
+
+    def test_first_exit_a_checksum_mismatch_fails_though_a_later_demo_ends_at_the_tick(self):
+        # Arrange
+        later = DEMO_START + 'ge: GE_DEMO direct playback: runway2 (index 6)\n' + demo_exit(438)
+        exe = self.fake(BOOT + DAM1_START + demo_exit(201, 'CHECKSUM mismatch (stored/computed)') + later
+                        + frames(3000))
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('the log has: ge: demo exit: CHECKSUM mismatch (stored/computed) at tick 201', out)
+
+    def test_first_playback_of_another_demo_fails(self):
+        # Arrange
+        exe = self.fake(BOOT + DEMO_START + 'ge: GE_DEMO direct playback: dam2 (index 1)\n' + demo_exit(438)
+                        + frames(3000))
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('dam1: FAIL (missing line: ge: GE_DEMO direct playback: dam1 (index )', out)
 
 
 class ForbiddenLines(StandIns):
@@ -315,6 +339,30 @@ class OtherSets(StandIns):
         # Assert
         self.assertEqual(status, 0, out)
 
+    def test_attract_with_a_checksum_exit_in_the_loop_fails(self):
+        # Arrange
+        exe = self.fake(BOOT + (DEMO_START + demo_exit(438)) * 2 + DEMO_START
+                        + demo_exit(90, 'CHECKSUM mismatch (stored/computed)') + frames(30000))
+
+        # Act
+        status, out = self.play(exe, 'attract', 'attract')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('attract: FAIL (ge: demo exit: CHECKSUM mismatch', out)
+
+    def test_attract_with_one_timed_end_and_one_clean_end_fails(self):
+        # Arrange
+        exe = self.fake(BOOT + DEMO_START + demo_exit(438) + DEMO_START
+                        + demo_exit(455, 'clean end (terminator block)') + frames(30000))
+
+        # Act
+        status, out = self.play(exe, 'attract', 'attract')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('attract: FAIL (ge: demo exit: clean end (terminator block)', out)
+
     def test_soak_without_its_completion_line_fails(self):
         # Arrange
         exe = self.fake(BOOT + frames(30000))
@@ -325,87 +373,6 @@ class OtherSets(StandIns):
         # Assert
         self.assertEqual(status, 1, out)
         self.assertIn('soak: FAIL (missing line: ge: soak: complete after 1 laps)', out)
-
-
-class Environment(StandIns):
-    def test_env_ge_nosleep_is_refused(self):
-        # Arrange
-        exe = self.fake(DAM1_GOOD)
-
-        # Act
-        status, out = self.play(exe, 'demos', 'dam1', '--env', 'GE_NOSLEEP=1')
-
-        # Assert
-        self.assertEqual(status, 2, out)
-        self.assertIn('--env GE_NOSLEEP is refused', out)
-        self.assertFalse(self.output.exists())
-
-    def test_env_ge_fixedtick_is_refused(self):
-        # Arrange
-        exe = self.fake(DAM1_GOOD)
-
-        # Act
-        status, out = self.play(exe, 'demos', 'dam1', '--env', 'GE_FIXEDTICK=1')
-
-        # Assert
-        self.assertEqual(status, 2, out)
-        self.assertIn('--env GE_FIXEDTICK is refused', out)
-
-    def test_caller_ge_variables_are_dropped_and_the_case_gets_its_own(self):
-        # Arrange
-        exe = self.fake(DAM1_GOOD, script='env | grep -E "^(GE_|ASAN_OPTIONS)" | sort >&2')
-
-        # Act
-        with mock.patch.dict('os.environ', GE_NOSLEEP='1', GE_STAGE='dam'):
-            status, out = self.play(exe, 'demos', 'dam1', '--env', 'GE_EXTRA=yes')
-
-        # Assert
-        log = (self.output/'dam1.log').read_text()
-        self.assertEqual(status, 0, out)
-        self.assertEqual([line for line in log.splitlines() if line.startswith(('GE_', 'ASAN'))],
-                         ['ASAN_OPTIONS=detect_leaks=0', 'GE_DEMO=dam1', 'GE_DEMODIAG=1', 'GE_EXTRA=yes',
-                          'GE_FRAMES=3000', 'GE_NOINISAVE=1', f'GE_ROM={self.rom.resolve()}', 'GE_SEED=1'])
-
-    def test_play_json_records_each_case(self):
-        # Arrange
-        exe = self.fake(BOOT + frames(3000))
-
-        # Act
-        self.play(exe, 'demos', 'dam1,dam2')
-
-        # Assert
-        record = json.loads((self.output/'play.json').read_text())
-        self.assertEqual([(case['name'], case['passed'], case['status'], case['problems'][0])
-                          for case in record['cases']],
-                         [('dam1', False, 0, 'missing line: ge: demo start:'),
-                          ('dam2', False, 0, 'missing line: ge: demo start:')])
-
-    def test_unknown_case_is_refused(self):
-        # Arrange
-        exe = self.fake(DAM1_GOOD)
-
-        # Act
-        status, out = self.play(exe, 'demos', 'dam3')
-
-        # Assert
-        self.assertEqual(status, 2, out)
-        self.assertIn('--only names no case of the sets: dam3', out)
-
-
-class SetSizes(unittest.TestCase):
-    def test_each_set_has_the_planned_number_of_cases(self):
-        # Act
-        sizes = {name: len(build()) for name, build in lp64_play_cases.SETS.items()}
-
-        # Assert
-        self.assertEqual(sizes, {'demos': 14, 'stages': 54, 'stops': 12, 'menus': 7, 'tours': 26, 'attract': 4})
-
-    def test_case_names_are_unique(self):
-        # Act
-        names = [case.name for case in lp64_play_cases.cases_of(['demos', 'stages', 'stops', 'menus', 'tours', 'attract'])]
-
-        # Assert
-        self.assertEqual(len(names), len(set(names)))
 
 
 if __name__ == '__main__':

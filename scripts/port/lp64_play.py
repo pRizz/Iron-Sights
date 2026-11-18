@@ -9,8 +9,9 @@
 
 run: each case of the named sets (lp64_play_cases.py: demos, stages, stops, menus, tours,
 attract) on a copy of EXECUTABLE in a fresh temporary folder (lp64_play_run.py), JOBS at a time
-(7 by default). Prints `CASE: PASS` or `CASE: FAIL (first failing or missing line)` as each ends,
-then `OK: N of N cases` (exit 0) or `FAIL: M of N cases` (exit 1). Logs go to DIR/CASE.log, the
+(7 by default); --only names a case, or names it without its set's prefix (`dam` for
+`stage-dam`) when that selects exactly one case. Prints `CASE: PASS` or `CASE: FAIL (first
+failing or missing line)` as each ends, then `OK: N of N cases` (exit 0) or `FAIL: M of N cases` (exit 1). Logs go to DIR/CASE.log, the
 outcomes to DIR/play.json. A case fails on a status other than its own (0, or 1 for a stop), a
 timeout, a sanitizer marker, `ge: fatal signal`, `ASSERTION FAULT`, a failing `ge: lp64:` line
 or a missing required line (lp64_play_judge.py). Runs are paced in real time: never set
@@ -30,7 +31,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lp64_play_callers import callers  # noqa: E402
-from lp64_play_cases import cases_of  # noqa: E402
+from lp64_play_cases import cases_of, select_cases  # noqa: E402
 from lp64_play_run import FORBIDDEN_VARIABLES, run_cases  # noqa: E402
 from lp64_play_traces import compare_with_expectations, reference_check  # noqa: E402
 
@@ -59,11 +60,10 @@ def command_run(parser: argparse.ArgumentParser, options: argparse.Namespace) ->
     except ValueError as error:
         parser.error(str(error))
     if options.only:
-        wanted = options.only.split(',')
-        unknown = [name for name in wanted if name not in {case.name for case in cases}]
-        if unknown:
-            parser.error(f'--only names no case of the sets: {", ".join(unknown)}')
-        cases = [case for case in cases if case.name in wanted]
+        try:
+            cases = select_cases(cases, [name for name in options.only.split(',') if name])
+        except ValueError as error:
+            parser.error(str(error))
     outcomes = run_cases(cases, options.executable.resolve(strict=True), options.rom.resolve(strict=True),
                          extra, options.output, options.jobs)
     failed = [outcome for outcome in outcomes if not outcome.passed]
