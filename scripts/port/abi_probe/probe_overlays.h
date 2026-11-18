@@ -11,6 +11,8 @@
 #include "game/explosion.h"
 #include "game/file.h"
 #include "game/initanitable.h"
+#include "game/chrai.h"
+#include "game/lv.h"
 #include "port_romconv_stage.h"
 
 #define IS_TYPE(expr, type) _Generic((expr), type: 1, default: 0)
@@ -127,6 +129,99 @@ _Static_assert(offsetof(StandTile, mid) == sizeof(u32) && sizeof(StandTile) == 8
  * datas must stay an object pointer, which a void * represents. */
 _Static_assert(IS_TYPE(((Model *) 0)->datas, union ModelRwData **), "a model slot's read-write data is the Model's datas pointer");
 #endif
+
+/* Batch 3, the first half of the record sites (bg.c to options.c). */
+_Static_assert(sizeof(coord2d) == 2 * sizeof(f32) && offsetof(coord2d, y) == sizeof(f32), "coord2d is two floats");
+/* Room and model vertices are Vtx read through Vertex's coordinates. */
+_Static_assert(sizeof(Vertex) == sizeof(Vtx) && offsetof(Vertex, coord.x) == offsetof(Vtx, v.ob[0])
+                   && offsetof(Vertex, coord.y) == offsetof(Vtx, v.ob[1]) && offsetof(Vertex, coord.z) == offsetof(Vtx, v.ob[2])
+                   && IS_TYPE(((Vertex *) 0)->coord.z, s16),
+               "a Vertex's coordinates are a Vtx's three s16 at both widths");
+/* The watch's sliders fill dyn Vtx as WatchVertex. */
+_Static_assert(sizeof(struct WatchVertex) == sizeof(Vtx), "a WatchVertex is a Vtx's 16 bytes");
+/* bgIsRoomOnScreen reads a bbox2d as a struct rectbbox. */
+_Static_assert(sizeof(bbox2d) == sizeof(struct rectbbox) && sizeof(struct rectbbox) == 4 * sizeof(f32)
+                   && offsetof(bbox2d, min.y) == offsetof(struct rectbbox, up)
+                   && offsetof(bbox2d, max.x) == offsetof(struct rectbbox, right)
+                   && offsetof(bbox2d, max.y) == offsetof(struct rectbbox, down),
+               "bbox2d and struct rectbbox are four floats at both widths");
+/* Setup commands: a BoundPadRecord read as a PadRecord (R4). */
+_Static_assert(offsetof(BoundPadRecord, up) == offsetof(PadRecord, up) && offsetof(BoundPadRecord, look) == offsetof(PadRecord, look)
+                   && offsetof(BoundPadRecord, plink) == offsetof(PadRecord, plink)
+                   && offsetof(BoundPadRecord, stan) == offsetof(PadRecord, stan)
+                   && offsetof(BoundPadRecord, bbox) == sizeof(PadRecord) && IS_TYPE(((BoundPadRecord *) 0)->pos, coord3d)
+                   && IS_TYPE(((BoundPadRecord *) 0)->stan, StandTile *),
+               "a BoundPadRecord starts with a PadRecord's members at both widths");
+/* mp_respawn_handler reads an item intro record's flag through SetupIntroAmmo. */
+_Static_assert(offsetof(struct SetupIntroAmmo, is_demo_playback) == offsetof(struct SetupIntroItem, is_demo_playback),
+               "SetupIntroAmmo's is_demo_playback is SetupIntroItem's");
+/* A monitor's script is a run of uintptr_t elements, read in threes. */
+_Static_assert(sizeof(struct tvcmd) == 3 * sizeof(uintptr_t) && offsetof(struct tvcmd, time) == sizeof(uintptr_t)
+                   && offsetof(struct tvcmd, arg2) == 2 * sizeof(uintptr_t),
+               "a monitor script command is three script elements at both widths");
+/* lvlTick allocates 0x3000 bytes for 3000 entries. */
+_Static_assert(sizeof(struct LvlMpUnknown) == 4 && 3000 * sizeof(struct LvlMpUnknown) <= 0x3000,
+               "a LvlMpUnknown is 4 bytes, so 3000 fit 0x3000");
+/* An autogun's struct beam (0x30 bytes, setupAutogun) is read as a BeamRecord. */
+_Static_assert(sizeof(struct beam) == sizeof(BeamRecord) && sizeof(BeamRecord) <= 0x30
+                   && offsetof(struct beam, from) == offsetof(BeamRecord, pos)
+                   && offsetof(struct beam, dir) == offsetof(BeamRecord, delta)
+                   && offsetof(struct beam, maxdist) == offsetof(BeamRecord, unk1c)
+                   && offsetof(struct beam, speed) == offsetof(BeamRecord, unk20)
+                   && offsetof(struct beam, mindist) == offsetof(BeamRecord, unk24)
+                   && offsetof(struct beam, dist) == offsetof(BeamRecord, unk28),
+               "struct beam is a BeamRecord at both widths");
+/* Three adjacent floats read as a coord3d. */
+_Static_assert(offsetof(struct s_bullet_spark, unk14) == offsetof(struct s_bullet_spark, unk10) + sizeof(f32)
+                   && offsetof(struct s_bullet_spark, unk18) == offsetof(struct s_bullet_spark, unk10) + 2 * sizeof(f32)
+                   && IS_TYPE(((struct s_bullet_spark *) 0)->unk18, f32),
+               "a bullet spark's unk10, unk14 and unk18 are three adjacent floats at both widths");
+_Static_assert(offsetof(struct hand, field_8E0) == offsetof(struct hand, field_8DC) + sizeof(f32)
+                   && offsetof(struct hand, field_8E4) == offsetof(struct hand, field_8DC) + 2 * sizeof(f32)
+                   && IS_TYPE(((struct hand *) 0)->field_8E4, f32),
+               "a hand's field_8DC, field_8E0 and field_8E4 are three adjacent floats at both widths");
+_Static_assert(offsetof(Projectile, unkD8) == offsetof(Projectile, unkd4) + 4 && offsetof(Projectile, unkDC) == offsetof(Projectile, unkd4) + 8
+                   && sizeof(((Projectile *) 0)->unkDC) == 4,
+               "a Projectile's unkd4, unkD8 and unkDC are three adjacent 4-byte words at both widths");
+/* gun.c's knife keyframes are u32 arrays read as Weapon1PTransformKeyframe. */
+_Static_assert(sizeof(Weapon1PTransformKeyframe) == 9 * sizeof(u32) && offsetof(Weapon1PTransformKeyframe, pos) == sizeof(u32)
+                   && offsetof(Weapon1PTransformKeyframe, rot) == 4 * sizeof(u32)
+                   && offsetof(Weapon1PTransformKeyframe, interpParam) == 7 * sizeof(u32),
+               "a Weapon1PTransformKeyframe is nine 4-byte words at both widths");
+/* A rocket's ObjectRecord is used through the hand's AttachedObj view. */
+_Static_assert(offsetof(AttachedObj, child) == offsetof(ObjectRecord, prop) && offsetof(AttachedObj, model) == offsetof(ObjectRecord, model)
+                   && offsetof(AttachedObj, transform) == offsetof(ObjectRecord, mtx)
+                   && offsetof(AttachedObj, position) == offsetof(ObjectRecord, runtime_pos)
+                   && IS_TYPE(((ObjectRecord *) 0)->runtime_pos, coord3d),
+               "an AttachedObj is an ObjectRecord's prop, model, mtx and runtime_pos at both widths");
+/* A model root's header read-write record read as a modeldata_root. */
+_Static_assert(sizeof(struct modeldata_root) == sizeof(ModelRwData_HeaderRecord)
+                   && offsetof(struct modeldata_root, ground) == offsetof(ModelRwData_HeaderRecord, ground)
+                   && offsetof(struct modeldata_root, pos) == offsetof(ModelRwData_HeaderRecord, pos)
+                   && offsetof(struct modeldata_root, subroty) == offsetof(ModelRwData_HeaderRecord, unk14)
+                   && offsetof(struct modeldata_root, unk34) == offsetof(ModelRwData_HeaderRecord, unk34)
+                   && offsetof(struct modeldata_root, unk4c) == offsetof(ModelRwData_HeaderRecord, unk4c)
+                   && offsetof(struct modeldata_root, unk58) == offsetof(ModelRwData_HeaderRecord, unk58)
+                   && offsetof(struct modeldata_root, unk5c) == offsetof(ModelRwData_HeaderRecord, unk5c),
+               "modeldata_root is a ModelRwData_HeaderRecord at both widths");
+/* A switch slot array read as a ModelNode: ->Child is slot 5. */
+_Static_assert(offsetof(ModelNode, Child) == 5 * sizeof(ModelNode *), "a ModelNode's Child is its sixth pointer-sized word");
+/* Records defined in .c files, which the probe cannot see, are pinned from the
+ * header side: their declared members' offsets, as the .c types lay them out. */
+#define PTR_WORDS(n) ((n) * sizeof(void *))
+_Static_assert(offsetof(struct HitThing, vtx0) == 6 * sizeof(f32) && offsetof(struct HitThing, vtx1) == 6 * sizeof(f32) + PTR_WORDS(1)
+                   && offsetof(struct HitThing, vtx2) == 6 * sizeof(f32) + PTR_WORDS(2)
+                   && offsetof(struct HitThing, tricmd) == 6 * sizeof(f32) + PTR_WORDS(3)
+                   && offsetof(struct HitThing, unk28) == 6 * sizeof(f32) + PTR_WORDS(4)
+                   && offsetof(struct HitThing, texturenum) == 6 * sizeof(f32) + PTR_WORDS(4) + sizeof(s16)
+                   && IS_TYPE(((struct HitThing *) 0)->normal, coord3d),
+               "HitThing's members to texturenum are at the offsets bg.c's HitThingSub declares");
+_Static_assert(offsetof(Model, rwdatalen) == sizeof(s16) && offsetof(Model, chr) == PTR_WORDS(1) && offsetof(Model, obj) == PTR_WORDS(2)
+                   && offsetof(Model, render_pos) == PTR_WORDS(3) && offsetof(Model, datas) == PTR_WORDS(4)
+                   && offsetof(Model, scale) == PTR_WORDS(5) && offsetof(Model, attachedto) == PTR_WORDS(6)
+                   && offsetof(Model, attachedto_objinst) == PTR_WORDS(7),
+               "Model's first nine members are at the offsets gunfire.c's ModelHeader and ModelHead declare");
+#undef PTR_WORDS
 
 /* chrprop.c tests an image entry's hitSound as the low nibble of its first
  * byte: GCC allocates the first bit-field there at both widths. */
