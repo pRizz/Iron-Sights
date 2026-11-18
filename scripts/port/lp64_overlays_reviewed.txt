@@ -10,8 +10,8 @@
 # old line becomes stale and must be removed.
 #
 # Kinds (`lp64_overlays.py --help` has the exact patterns): index `((u16 *) x)[n]`; offset, a dereference
-# of a pointer cast of a sum (constant or computed offset) or of an address, `*(T *) ((u8 *) x + K)`,
-# `*((s32 *) x + 2)`, `*(s32 *) &p->member`; opaque `x->padding[84]`; record `(ChrRecord *) p->voidp`;
+# of a pointer cast of a sum (constant or computed offset), of an address or of any other operand (an
+# offset of zero), `*(T *) ((u8 *) x + K)`, `*((s32 *) x + 2)`, `*(s32 *) &p->member`, `*(s32 *) p`; opaque `x->padding[84]`; record `(ChrRecord *) p->voidp`;
 # run, a Gfx, Model or record member followed by filler members. `list --locals` (stored scalar-pointer
 # casts) is a survey aid and has no lines here.
 #

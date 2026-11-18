@@ -122,8 +122,27 @@ class Kinds(unittest.TestCase):
         self.assertEqual(keys(wrap('a = *(u16 *)&src[2]; b = *(s32 *) &door->maxFrac;')),
                          ['src/game/a.c:f:offset:*(u16*)&src[2]', 'src/game/a.c:f:offset:*(s32*)&door->maxFrac'])
 
-    def test_a_dereference_of_a_plain_cast_is_not_an_offset(self):
-        self.assertEqual(keys(wrap('a = *(u32 *) p;')), [])
+    def test_a_dereference_of_a_plain_cast_is_an_offset_of_zero(self):
+        # The shape of objecthandler.c's `*(s32 *) node->Data`.
+        self.assertEqual(keys(wrap('a = *(s32 *) node->Data;')), ['src/game/a.c:f:offset:*(s32*)node->Data'])
+
+    def test_a_dereference_of_a_parenthesised_plain_cast_is_an_offset(self):
+        self.assertEqual(keys(wrap('a = *((u32 *) tile);')), ['src/game/a.c:f:offset:*((u32*)tile)'])
+
+    def test_a_store_through_a_plain_cast_is_an_offset(self):
+        self.assertEqual(keys(wrap('*(s32 *) p = v;')), ['src/game/a.c:f:offset:*(s32*)p'])
+
+    def test_a_plain_cast_dereference_after_if_and_else_is_an_offset(self):
+        self.assertEqual(keys(wrap('if (c) *(s32 *) p = 0;\nelse *(s32 *) q = 1;')),
+                         ['src/game/a.c:f:offset:*(s32*)p', 'src/game/a.c:f:offset:*(s32*)q'])
+
+    def test_a_cast_that_changes_only_signedness_or_constness_is_listed(self):
+        # No type information: `*(u8 *) s` of a `char *` is another type in the text, so it is a site.
+        self.assertEqual(keys(wrap('a = *(u8 *) s; b = *(const u8 *) p;')),
+                         ['src/game/a.c:f:offset:*(u8*)s', 'src/game/a.c:f:offset:*(const u8*)p'])
+
+    def test_a_dereference_without_a_pointer_cast_is_not_an_offset(self):
+        self.assertEqual(keys(wrap('a = *p; b = *(p); c = *(q + 1); d = x * (s32) y;')), [])
 
     def test_a_union_and_a_struct_tag_are_records(self):
         # Act

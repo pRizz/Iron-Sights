@@ -9,7 +9,8 @@ These are patterns on C text after `lp64_overlays_source.prepare`, not a C parse
   (`positional`): after redundant parentheses and a chain of pointer and integer casts are unwrapped,
   a pointer cast of a sum or difference, `*(T *) ((u8 *) x + K)`, `*((u16 *) (uintptr_t) (t - 8))`;
   a sum or difference whose left operand is a pointer cast, `*((s32 *) x + 2)`; or a pointer cast of
-  an address, `*(u16 *) &src[2]`, `*(s32 *) &door->maxFrac`. T is any pointer type and K any operand,
+  an address, `*(u16 *) &src[2]`, `*(s32 *) &door->maxFrac`; or a pointer cast of any other operand, an
+  offset of zero that reads the first bytes, `*(s32 *) node->Data`. T is any pointer type and K any operand,
   constant or computed (`+ offset` is a read by position too). A `*` after `return`, `case`, `else`, `do`
   or the `)` of an `if`, `while`, `for` or `switch` condition is a dereference.
 - `opaque`: a member named `pad`, `pad_...`, `padN...`, `padding...` or `unk...` (not `pads`), reached by `.` or `->`, indexed by an
@@ -236,7 +237,8 @@ def positional(text: str, casted: bool = False) -> bool:
 
     Redundant parentheses and chains of casts (pointer or integer, `(u16 *) (uintptr_t)`) are unwrapped. It
     is positional when, under a pointer cast, the rest is a sum or difference (constant or computed) or the
-    address of an object (`&x[2]`, `&p->member`); or when a sum's left operand is a pointer cast."""
+    address of an object (`&x[2]`, `&p->member`), or any other operand (an offset of zero, `*(s32 *) p`);
+    or when a sum's left operand is a pointer cast."""
     text = unwrap(text)
     cast = ANY_POINTER_CAST.match(text) or SCALAR_CAST.match(text) or INT_CAST.match(text)
     if cast:
@@ -249,7 +251,7 @@ def positional(text: str, casted: bool = False) -> bool:
             return True
         left = unwrap(left_operand(text))
         return bool(ANY_POINTER_CAST.match(left) or SCALAR_CAST.match(left))
-    return False
+    return casted and bool(text)
 
 
 def find_index(code: str):
