@@ -11,7 +11,7 @@ source scripts/port/harness_widths.sh
 work=$(mktemp -d /tmp/midas-typed-reads.XXXXXX)
 trap 'rm -rf "$work"' EXIT
 compiler=${CC:-gcc}
-tests=(chraction mipmap rocket)
+tests=(chraction mipmap rocket font)
 
 # On its own line, so a failure of harness_widths stops the harness (set -e).
 widths=$(harness_widths)
