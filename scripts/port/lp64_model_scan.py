@@ -9,7 +9,8 @@ names, per model class and slot), never bytes of the ROM.
     python3 scripts/port/lp64_model_scan.py --rom ROM roots [--class chr] [--match RE] [--exclude RE]
     python3 scripts/port/lp64_model_scan.py --rom ROM slots --slots 0,3-7 [--class gun] [--match RE]
     python3 scripts/port/lp64_model_scan.py --rom ROM shadows | links
-    python3 scripts/port/lp64_model_scan.py --rom ROM intros [--match mp_setup]
+    python3 scripts/port/lp64_model_scan.py --rom ROM textures [--class prop] [--match RE]
+    python3 scripts/port/lp64_model_scan.py --rom ROM intros [--match mp_setup] [--items]
 
 The ROM path is --rom or GE_ROM. A model's switch slot count and texture count are not in its
 file; they come from the MODELFILEHEADER lines under assets/obseg. Exits 1 when the scan finds no
@@ -18,7 +19,10 @@ model or setup is unreadable (its row names it, and the rest of that model is no
 when a chr, gun or prop model in the file list has no MODELFILEHEADER line, unless
 --allow-missing names it (and an allowance that names no skipped model fails too). A slot index at
 or past a model's numSwitches counts as `out of range`, not `empty`: the game would read past the
-slot table there, not find NULL.
+slot table there, not find NULL. `textures` counts the models whose texture table holds an inline
+entry (a TextureID that is a segment-5 word, texels in the file, not a texture number), naming each
+with how many of its entries are inline. `intros --items` also counts each ITEM record by its right
+and left item numbers and demo field, and the setups by how many ITEM records they hold.
 """
 import argparse
 import collections
@@ -53,6 +57,7 @@ class Model:
         self.name = name
         self.data = data
         self.num_switches = num_switches
+        self.num_textures = num_textures
         self.root = num_switches * 4 + num_textures * TEXTURE_SIZE
 
     def u16(self, at):
@@ -213,7 +218,26 @@ def collision_links(model, record):
     return [link for link in links if link is not None]
 
 
-def count_intros(rom, filelist, match):
+def count_textures(models):
+    """Per model with an inline texture entry, (class, name, 'inline k of n'); the others by class."""
+    counts = collections.Counter()
+    for model in models:
+        table = model.num_switches * 4
+        try:
+            words = [model.u16(table + i * TEXTURE_SIZE) << 16 | model.u16(table + i * TEXTURE_SIZE + 2)
+                     for i in range(model.num_textures)]
+        except ScanError:
+            counts[(model.cls, unreadable(model))] += 1
+            continue
+        inline = sum(word >> 24 == 5 for word in words)
+        if inline:
+            counts[(model.cls, model.name, 'inline %d of %d' % (inline, len(words)))] += 1
+        else:
+            counts[(model.cls, 'no inline entry')] += 1
+    return counts
+
+
+def count_intros(rom, filelist, match, items=False):
     """Intro record types in the setups whose path matches; None when no setup matches."""
     counts, setups = collections.Counter(), 0
     for offset, size, path in read_filelist(filelist):
@@ -221,7 +245,7 @@ def count_intros(rom, filelist, match):
             continue
         data = inflate(rom[offset:offset + size])
         setups += 1
-        at = struct.unpack_from('>I', data, 8)[0]
+        at, item_records = struct.unpack_from('>I', data, 8)[0], 0
         while True:
             kind = struct.unpack_from('>i', data, at)[0]
             if kind == 9:
@@ -230,7 +254,12 @@ def count_intros(rom, filelist, match):
                 counts['%s (%s)' % (UNREADABLE, os.path.basename(path))] += 1
                 break
             counts[INTRO_NAMES[kind]] += 1
+            if items and kind == 1:
+                item_records += 1
+                counts['ITEM right=%d left=%d demo=%d' % struct.unpack_from('>iii', data, at + 4)] += 1
             at += 4 * INTRO_WORDS[kind]
+        if items:
+            counts['setups with %d ITEM' % item_records] += 1
     return (setups, counts) if setups else None
 
 
@@ -255,7 +284,7 @@ def parse_args(argv):
     parser.add_argument('--allow-missing', action='append', default=[], metavar='NAME',
                         help='a model file that may lack a MODELFILEHEADER line (repeat for each)')
     sub = parser.add_subparsers(dest='command', required=True)
-    for name in ('roots', 'slots', 'shadows', 'links'):
+    for name in ('roots', 'slots', 'shadows', 'links', 'textures'):
         command = sub.add_parser(name)
         command.add_argument('--class', dest='cls', choices=('chr', 'gun', 'prop'))
         command.add_argument('--match', help='regular expression a model name must match')
@@ -264,6 +293,7 @@ def parse_args(argv):
             command.add_argument('--slots', required=True, help='slot numbers, e.g. 0,3-7')
     intros = sub.add_parser('intros')
     intros.add_argument('--match', default='mp_setup', help='regular expression a setup path must match')
+    intros.add_argument('--items', action='store_true', help='also count ITEM records by their fields')
     return parser.parse_args(argv)
 
 
@@ -292,7 +322,7 @@ def main(argv=None):
         return 1
     rom = Path(args.rom).read_bytes()
     if args.command == 'intros':
-        found = count_intros(rom, args.filelist, args.match)
+        found = count_intros(rom, args.filelist, args.match, args.items)
         if found is None:
             print('lp64_model_scan: no setup matches %r' % args.match, file=sys.stderr)
             return 1
@@ -314,6 +344,8 @@ def main(argv=None):
         counts = count_roots(models)
     elif args.command == 'slots':
         counts = count_slots(models, parse_slots(args.slots))
+    elif args.command == 'textures':
+        counts = count_textures(models)
     elif args.command == 'shadows':
         counts = count_targets(models, SHADOW, shadow_header)
     else:

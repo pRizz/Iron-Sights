@@ -167,7 +167,7 @@ class Defects(unittest.TestCase):
         # Act
         status, out = self.run_check(f'{INDEX_KEY}\tdefect\tTask 4: wrong at 64 bits')
         # Assert
-        self.assertEqual((status, out.strip().splitlines()), (0, ['OK: 2 sites, all reviewed', '1 defect lines']))
+        self.assertEqual((status, out.strip().splitlines()[:2]), (0, ['OK: 2 sites, all reviewed', '1 defect lines']))
 
     def test_check_counts_the_defects_after_its_failure_line(self):
         # Arrange
@@ -175,13 +175,27 @@ class Defects(unittest.TestCase):
         # Act
         status, out = self.run_check(f'{INDEX_KEY}\tdefect\tTask 4: wrong\n{stale}')
         # Assert
-        self.assertEqual((status, out.strip().splitlines()[-1]), (1, '2 defect lines'))
+        self.assertEqual((status, out.strip().splitlines()[-2]), (1, '2 defect lines'))
 
     def test_check_counts_no_defects_as_zero(self):
         # Act
         status, out = self.run_check(f'{INDEX_KEY}\ttyped\tdeclared so')
         # Assert
-        self.assertEqual((status, out.strip().splitlines()[-1]), (0, '0 defect lines'))
+        self.assertEqual((status, out.strip().splitlines()[-2]), (0, '0 defect lines'))
+
+    def test_check_counts_the_measured_lines_after_the_defects(self):
+        # Arrange
+        measured = f'{INDEX_KEY}\ttyped\tthe ROM holds no other form (measured: lp64_model_scan.py scan)'
+        # Act
+        status, out = self.run_check(measured)
+        # Assert
+        self.assertEqual((status, out.strip().splitlines()[1:]), (0, ['0 defect lines', '1 measured lines']))
+
+    def test_check_counts_no_measured_lines_as_zero(self):
+        # Act
+        status, out = self.run_check(f'{INDEX_KEY}\ttyped\tdeclared so')
+        # Assert
+        self.assertEqual((status, out.strip().splitlines()[-1]), (0, '0 measured lines'))
 
     def test_no_defects_fails_on_a_defect_and_names_it(self):
         # Act

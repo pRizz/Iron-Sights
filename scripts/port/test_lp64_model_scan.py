@@ -44,7 +44,7 @@ def invented_gun():
 
 
 def invented_setup():
-    words = [0, 0, 16, 0] + [0, 1, 2] + [5, 9, 9] + [9]  # SPAWN (3 words), CUFF (2), END
+    words = [0, 0, 16, 0] + [0, 1, 2] + [1, 1, -1, 0] + [5, 9, 9] + [9]  # SPAWN (3 words), ITEM (4), CUFF (2), END
     return struct.pack('>%di' % len(words), *words)
 
 
@@ -110,6 +110,19 @@ class Walk(Fixture):
         counts = scan.count_targets(self.models, scan.DLCOLLISION, scan.collision_links)
         self.assertEqual(counts, {('gun', '24 DLCOLLISION'): 1})
 
+    def test_a_texture_entry_holding_a_number_is_not_inline(self):
+        self.assertEqual(scan.count_textures(self.models), {('gun', 'no inline entry'): 1})
+
+    def test_a_texture_entry_holding_a_segment_word_is_inline(self):
+        # Arrange
+        model = self.models[0]
+        model.data = bytearray(model.data)
+        struct.pack_into('>I', model.data, 12, SEG | 96)  # the one texture entry, after three slots
+        # Act
+        counts = scan.count_textures([model])
+        # Assert
+        self.assertEqual(counts, {('gun', 'foo', 'inline 1 of 1'): 1})
+
     def test_a_reference_outside_the_file_is_unreadable_not_a_count(self):
         # Arrange
         model = self.models[0]
@@ -151,6 +164,21 @@ class Command(Fixture):
         self.assertIn('setups: 1', out)
         self.assertIn('SPAWN: 1', out)
         self.assertIn('CUFF: 1', out)
+
+    def test_intros_items_counts_each_item_record_and_records_per_setup(self):
+        # Act
+        status, out, _ = self.run_main('intros', '--items')
+        # Assert
+        self.assertEqual(status, 0)
+        self.assertIn('ITEM right=1 left=-1 demo=0: 1', out)
+        self.assertIn('setups with 1 ITEM: 1', out)
+
+    def test_textures_command_prints_counts(self):
+        # Act
+        status, out, _ = self.run_main('textures')
+        # Assert
+        self.assertEqual(status, 0)
+        self.assertIn('gun  no inline entry: 1', out)
 
     def test_a_filter_matching_no_model_fails(self):
         # Act

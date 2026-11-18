@@ -294,6 +294,26 @@ pass its isolated executable rather than rebuilding an active player binary.
   record, and the pause list `buffer_for_watch_static_DL`
   (`src/game/bondview.h`) was one `Gfx` and six `s32` fillers for three
   commands.
+- Every place the C sources read a record through another type has one
+  reviewed line in `scripts/port/lp64_overlays_reviewed.txt`:
+  `python3 scripts/port/lp64_overlays.py list` finds six kinds (`index`,
+  `offset`, `opaque`, `record`, `run`, `stored`; `--help` says what each
+  covers and what the tool cannot see), and `check` fails on a site without a
+  line or a line without a site. A line's verdict is `typed`, `same`,
+  `overlay-64`, `dead` or `defect`, with its reason. A `same` names, by its
+  message, a layout assertion in the probe (`scripts/port/abi_probe/`) that
+  was seen failing at both widths when the bytes it pins drift. A reason that
+  rests on what the stock ROM holds says `measured:` and gives the scanner
+  command that measured it (`lp64_model_scan.py`, `lp64_setup_scan.py`);
+  a scratch reader's figure is not a measurement. A type that a 64-bit build
+  reaches only through pointers (`python3 scripts/port/lp64_pointer_types.py
+  scan` on a configured 64-bit tree lists them) is judged over its real
+  record and every member read through it anywhere, not only at the line
+  that casts to it (R11, FORK-089's table). A `defect` line is temporary: its
+  reason starts with its owner (`Task N:`, `strict:` or `undecided:`), and
+  the fix takes the site off the list or changes its verdict in the same
+  change. `check` runs in CI's tests step; run it before pushing a change to
+  C or C++.
 - At `GE_POINTER_BITS=64`, C and C++ that mix pointers with 32-bit integers do
   not compile: `CMakeLists.txt` gives 64-bit C `-Werror=int-conversion
   -Werror=pointer-to-int-cast -Werror=int-to-pointer-cast` and 64-bit C++

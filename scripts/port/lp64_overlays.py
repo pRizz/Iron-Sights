@@ -5,7 +5,8 @@
 after a tab). `check` requires every site to have exactly one line in `lp64_overlays_reviewed.txt`,
 `file:function:kind:text<TAB>VERDICT<TAB>reason`, and every line there to match a site; it prints
 `OK: N sites, all reviewed`, or each `unreviewed:` site and `stale:` line and exits 1, then `N defect
-lines`. It refuses (exit 2) a listing with a repeated key or with no site at all.
+lines` and `N measured lines` (reasons resting on a stock-ROM fact, which say `measured:` and name the
+scanner command that measured it). It refuses (exit 2) a listing with a repeated key or with no site at all.
 
 Verdicts: typed (the object is of the type it is read as; for a run, every access through the head
 uses the head's type), same (the bytes read are at the same place at both widths; the reason names the
@@ -172,6 +173,7 @@ def report(sites: list[Site], reviewed: dict[str, tuple[str, str]], no_defects: 
     status = review_status(keys, reviewed)
     defects = [(key, reason) for key, (verdict, reason) in reviewed.items() if verdict == 'defect']
     print(f'{len(defects)} defect lines')
+    print(f"{sum('measured:' in reason for _, reason in reviewed.values())} measured lines")
     if no_defects and defects:
         for key, reason in defects:
             print(f'defect: {key}\t{reason}')
