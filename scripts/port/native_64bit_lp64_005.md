@@ -4,8 +4,10 @@
 
 **Status:** Planned on 2026-11-17 from measurements on `main` at 98a76dd.
 Nothing is built. Execution starts only after the owner has answered the
-fourteen items under "Decisions for the owner" at the end; the tasks are
-written for the recommendations. The status table of
+thirteen open items under "Decisions for the owner" at the end (the
+first of its fourteen is settled: the owner accepted the reading of "no
+`ge: lp64:` line" on 2026-11-17); the tasks are written for the
+recommendations. The status table of
 [native_64bit_plan.md](native_64bit_plan.md) records what is built and
 verified as the tasks land.
 
@@ -289,7 +291,7 @@ own runs above already executed the path at 64 bits without a fault.
 
 | Hand-over item | Where it goes |
 |---|---|
-| The reading of "no `ge: lp64:` line" | Decision 1 |
+| The reading of "no `ge: lp64:` line" | Accepted by the owner on 2026-11-17: a rule of this plan (Global Constraints), no longer a decision |
 | `bondview2.c`'s intro walk after a WATCH record | Decision 2; Task 8 runs the walk (a respawn needs a button) |
 | The wallet Bond's room | Decision 3; Task 12 |
 | Attract demos | Measured (14 of 14 play). Tasks 1, 5 and 6 |
@@ -370,9 +372,13 @@ test-only shared maths option to remove it.
 - **The reference must agree with itself first** (the design's rule). A
   demo's i686 trace is used only if two i686 runs of it are identical.
 - **Sound is verified by recording, not by arithmetic** (`AGENTS.md`).
-- **A new `ge: lp64:` line kind that a passing run prints** is added to
-  `INFORMATIONAL_PREFIXES` (`scripts/port/lp64_boot.py`) in the same
-  commit, with its reason (`AGENTS.md`; decision 1).
+- **No `ge: lp64:` line but the informational ones** (the owner's
+  reading of LP64-004's decision 3, accepted on 2026-11-17). A 64-bit run
+  prints no pool, refusal, converter or stop line; the kinds on
+  `INFORMATIONAL_PREFIXES` (`scripts/port/lp64_boot.py`) are allowed, and
+  the tools fail any other `ge: lp64:` line. A new kind that a passing run
+  prints is added to that list in the same commit, with its reason
+  (`AGENTS.md`); this plan adds one, `ge: lp64: peak` (Task 13).
 - **Sanitizer-only code changes no shipped build.** The poisoning hooks
   expand to nothing unless the compiler defines `__SANITIZE_ADDRESS__`;
   `-fno-common` is given only with `GE_SANITIZE`.
@@ -1433,11 +1439,16 @@ does not do".
 
 ## Decisions for the owner
 
-Nothing in this plan is built until these are answered. The first three
-were left waiting by LP64-004. The tasks are written for the
-recommendations.
+Nothing in this plan is built until the open ones are answered. The
+first three were left waiting by LP64-004; the first of them is now
+settled and is kept here as put, and items 2 to 14 are open. The tasks
+are written for the recommendations.
 
 1. **How "with no `ge: lp64:` line" is read** (LP64-004's decision 3).
+   *Settled, not open: the owner accepted the reading below on 2026-11-17
+   ("Accept the reading", in the session that closed LP64-004, as that
+   session relayed it). It is a rule of this plan under Global
+   Constraints.*
    The tools read it as: no pool, refusal, converter or stop line, with a
    short list of informational kinds allowed, and they fail any other
    `ge: lp64:` line (`INFORMATIONAL_PREFIXES`, five kinds today).
