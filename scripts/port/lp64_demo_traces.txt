@@ -1,6 +1,6 @@
 # Each demo's per-tick trace on a 64-bit build against the i686 build (lp64_play.py traces --expect).
 # One line a demo: NAME identical, or NAME differs-from TICK REASON. Lower a line when a fix makes
-# the demo match; written from the runs of 2026-11-18 (FORK-089, LP64-005 task 5).
+# the demo match; written from the runs of 2026-11-18 on the tree of 5cc40ba (FORK-089, LP64-005 task 5).
 dam1 identical
 dam2 identical
 facility1 identical

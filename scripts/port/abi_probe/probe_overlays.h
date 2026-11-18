@@ -342,6 +342,34 @@ _Static_assert(offsetof(ALEventQueue, freeList) == offsetof(struct D_800243E4_s,
                    && offsetof(ALEventQueue, allocList) == offsetof(struct D_800243E4_s, g_sndPlayerSoundStatePtr),
                "snd.c's D_800243E4 is an ALEventQueue's freeList then allocList.next");
 
+/* Reads of PropRecord's union through a member other than the record the
+ * prop's type holds (LP64-005 Task 5, fix round 1; the search is described in
+ * FORK-089). Each holds at both widths, so the reads mean the same bytes. */
+/* chrlvInitActAttack, chrlvInitActAttackWalk, chrlvInitActAttackRoll,
+ * sub_GAME_7F02BFE4 and chrlvFireWeaponRelated read a held weapon prop's
+ * WeaponObjRecord through prop->chr. */
+_Static_assert(offsetof(ChrRecord, act_attack.attack_item) == offsetof(WeaponObjRecord, weaponnum)
+                   && offsetof(ChrRecord, act_attackwalk.attack_item) == offsetof(WeaponObjRecord, weaponnum)
+                   && offsetof(ChrRecord, act_attackroll.attack_item) == offsetof(WeaponObjRecord, weaponnum)
+                   && IS_TYPE(((ChrRecord *) 0)->act_attack.attack_item, s8)
+                   && IS_TYPE(((ChrRecord *) 0)->act_attackwalk.attack_item, s8)
+                   && IS_TYPE(((ChrRecord *) 0)->act_attackroll.attack_item, s8)
+                   && IS_TYPE(((WeaponObjRecord *) 0)->weaponnum, s8),
+               "a held weapon's weaponnum is ChrRecord's act_attack, act_attackwalk and act_attackroll attack_item");
+/* sub_GAME_7F04F218 sets and clears bit 0x20 of an object, door or weapon
+ * prop's ObjectRecord.state (PROPSTATE_20, which sub_GAME_7F04F244 tests)
+ * through prop->chr->accuracyrating. */
+_Static_assert(offsetof(ChrRecord, accuracyrating) == offsetof(ObjectRecord, state)
+                   && sizeof(((ChrRecord *) 0)->accuracyrating) == 1 && sizeof(((ObjectRecord *) 0)->state) == 1,
+               "an object's state is the byte ChrRecord.accuracyrating");
+/* explosionRenderBulletImpactOnProp reads a held weapon, hat or object prop's
+ * ObjectRecord through prop->scorch: its model, and bits of its state. */
+_Static_assert(offsetof(struct Scorch, unk02) == offsetof(ObjectRecord, state)
+                   && sizeof(((struct Scorch *) 0)->unk02) == 1
+                   && offsetof(struct Scorch, model) == offsetof(ObjectRecord, model)
+                   && IS_TYPE(((struct Scorch *) 0)->model, Model *) && IS_TYPE(((ObjectRecord *) 0)->model, Model *),
+               "an object read as a Scorch: unk02 is its state and model its model");
+
 /* chrprop.c tests an image entry's hitSound as the low nibble of its first
  * byte: GCC allocates the first bit-field there at both widths. */
 static int checkImageEntryHitSound(void)

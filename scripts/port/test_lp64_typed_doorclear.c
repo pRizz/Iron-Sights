@@ -3,7 +3,8 @@
  * test_lp64_typed_reads.sh). propobj.c is included whole, with stubs for what
  * sub_GAME_7F0448A8 calls; --gc-sections drops the rest. Each check sets the
  * guard's chrflags and its prop pointer to opposite answers, so a read of
- * ObjectRecord.model, which overlays ChrRecord.prop at 64 bits, fails. */
+ * ObjectRecord.model, which overlays ChrRecord.prop at 64 bits, fails; a
+ * third puts a viewer without a body (chr NULL) in the swing. */
 #include <stdio.h>
 #include <stdlib.h>
 #include "../../src/game/propobj.c"
@@ -96,10 +97,26 @@ static void testAHiddenGuardInTheSwingDoesNotBlockTheDoor(void)
     expect(clear == 1, "a guard with CHRFLAG_HIDDEN in the door's swing does not block it");
 }
 
+static void testABodilessViewerInTheSwingBlocksTheDoor(void)
+{
+    // Arrange: a viewer prop without a body (chr NULL, as bondview_r.c stores
+    // it), standing in the door's swing.
+    g_Props[DOOR_PROP].type = PROP_TYPE_DOOR;
+    g_Props[GUARD_PROP].type = PROP_TYPE_VIEWER;
+    g_Props[GUARD_PROP].chr = NULL;
+
+    // Act
+    s32 clear = sub_GAME_7F0448A8(&g_Props[DOOR_PROP]);
+
+    // Assert
+    expect(clear == 0, "a viewer without a body in the door's swing blocks it");
+}
+
 int main(void)
 {
     testAVisibleGuardInTheSwingBlocksTheDoor();
     testAHiddenGuardInTheSwingDoesNotBlockTheDoor();
+    testABodilessViewerInTheSwingBlocksTheDoor();
     if (failures != 0)
     {
         return 1;
