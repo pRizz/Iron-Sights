@@ -306,10 +306,15 @@ pass its isolated executable rather than rebuilding an active player binary.
   rests on what the stock ROM holds says `measured:` and gives the scanner
   command that measured it (`lp64_model_scan.py`, `lp64_setup_scan.py`);
   a scratch reader's figure is not a measurement. A type that a 64-bit build
-  reaches only through pointers (`python3 scripts/port/lp64_pointer_types.py
-  scan` on a configured 64-bit tree lists them) is judged over its real
-  record and every member read through it anywhere, not only at the line
-  that casts to it (R11, FORK-089's table). A `defect` line is temporary: its
+  reaches only through pointers is judged over its real record and every
+  member read through it anywhere, not only at the line that casts to it
+  (R11, FORK-089's table). `scripts/port/lp64_pointer_types.txt` pins the
+  list: `python3 scripts/port/lp64_pointer_types.py check build/lp64/gate
+  build/lp64/gate-video` runs in CI, in the tree's own container after its
+  `ge_buildinfo` target is built (the compile commands hold container
+  paths), and a new pointer-only type fails it until the type has its row.
+  A new member access through a listed view type is not caught: it updates
+  that type's row and its probe assertion by hand. A `defect` line is temporary: its
   reason starts with its owner (`Task N:`, `strict:` or `undecided:`), and
   the fix takes the site off the list or changes its verdict in the same
   change. `check` runs in CI's tests step; run it before pushing a change to

@@ -62,3 +62,13 @@ _Static_assert(sizeof(struct BriefingDataSomething) == 2 * sizeof(u16)
 /* model.c reads the staged animation data's bit descriptors in place. */
 _Static_assert(sizeof(ModelAnimBitField) == 6 && offsetof(ModelAnimBitField, valueOffset) == 4,
                "an animation bit descriptor is the file's 6 bytes");
+
+/* gun.c sub_GAME_7F05E978 writes ->DisplayList.unk00 into the read-write record of gun slots 8 to 13
+ * and 35: a switch's record (visible) in the stock guns; in the joypad, whose slots 8 to 12 hold group
+ * nodes, modelGetNodeRwData returns record 0, the joypad's first switch (lp64_model_scan.py rwfirst).
+ * A header's record there would take the s32 over unk00 to unk02 and the padding before ground. */
+_Static_assert(offsetof(ModelRwData_DisplayListRecord, unk00) == offsetof(ModelRwData_SwitchRecord, visible)
+                   && sizeof(((ModelRwData_DisplayListRecord *) 0)->unk00) == sizeof(((ModelRwData_SwitchRecord *) 0)->visible)
+                   && sizeof(((ModelRwData_SwitchRecord *) 0)->visible) == 4
+                   && offsetof(struct ModelRwData_HeaderRecord, ground) == 4,
+               "a display-list read-write record's unk00 is a switch's visible, and the 4 bytes before a header's ground");

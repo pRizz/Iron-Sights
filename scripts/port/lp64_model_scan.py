@@ -10,6 +10,7 @@ names, per model class and slot), never bytes of the ROM.
     python3 scripts/port/lp64_model_scan.py --rom ROM slots --slots 0,3-7 [--class gun] [--match RE]
     python3 scripts/port/lp64_model_scan.py --rom ROM shadows | links
     python3 scripts/port/lp64_model_scan.py --rom ROM textures [--class prop] [--match RE]
+    python3 scripts/port/lp64_model_scan.py --rom ROM rwfirst [--class gun] [--match RE]
     python3 scripts/port/lp64_model_scan.py --rom ROM intros [--match mp_setup] [--items]
 
 The ROM path is --rom or GE_ROM. A model's switch slot count and texture count are not in its
@@ -21,7 +22,9 @@ when a chr, gun or prop model in the file list has no MODELFILEHEADER line, unle
 or past a model's numSwitches counts as `out of range`, not `empty`: the game would read past the
 slot table there, not find NULL. `textures` counts the models whose texture table holds an inline
 entry (a TextureID that is a segment-5 word, texels in the file, not a texture number), naming each
-with how many of its entries are inline. `intros --items` also counts each ITEM record by its right
+with how many of its entries are inline. `rwfirst` counts, per class, the opcode of the first node the
+game's read-write walk (modelCalculateRwDataLen) gives a record, the record at index 0 that
+modelGetNodeRwData returns for a node without one. `intros --items` also counts each ITEM record by its right
 and left item numbers and demo field, and the setups by how many ITEM records they hold.
 """
 import argparse
@@ -38,6 +41,8 @@ OPCODES = ['NULL', 'HEADER', 'GROUP', 'OP03', 'DL', 'OP05', 'OP06', 'OP07', 'LOD
            'GUNFIRE', 'SHADOW', 'OP14', 'INTERLINK', 'OP16', 'OP17', 'SWITCH', 'OP19', 'OP20', 'GROUPSIMPLE',
            'DLPRIMARY', 'HEAD', 'DLCOLLISION']
 SHADOW, DLCOLLISION = 13, 24
+LOD, SWITCH, HEAD = 8, 18, 23
+RW_OPCODES = {1, 7, LOD, 9, 11, 12, SWITCH, HEAD, DLCOLLISION}  # the nodes modelCalculateRwDataLen gives a record
 NODE_SIZE, TEXTURE_SIZE, VERTEX_SIZE = 24, 12, 16
 INTRO_WORDS = {0: 3, 1: 4, 2: 4, 3: 8, 4: 2, 5: 2, 6: 10, 7: 3, 8: 2}
 INTRO_NAMES = ['SPAWN', 'ITEM', 'AMMO', 'SWIRL', 'ANIM', 'CUFF', 'CAMERA', 'WATCH', 'CREDITS', 'END']
@@ -206,6 +211,42 @@ def count_targets(models, opcode, targets):
     return counts
 
 
+def walk_children(model, node):
+    """The node modelCalculateRwDataLen's walk descends to from `node`: an LOD's Affects, a switch's
+    Controls, nothing under a head placeholder, otherwise the node's Child."""
+    opcode = model.opcode(node)
+    if opcode == LOD:
+        return model.ref(model.ref(node + 4) + 8)
+    if opcode == SWITCH:
+        return model.ref(model.ref(node + 4))
+    if opcode == HEAD:
+        return None
+    return model.ref(node + 0x14)
+
+
+def count_rw_first(models):
+    """Per class, the opcode of the first node the read-write walk gives a record: the record at index 0,
+    which modelGetNodeRwData returns for a node that has none."""
+    counts = collections.Counter()
+    for model in models:
+        try:
+            stack, seen, first = [model.root], set(), None
+            while stack and first is None:
+                node = stack.pop()
+                if node is None or node in seen:
+                    continue
+                seen.add(node)
+                if model.opcode(node) in RW_OPCODES:
+                    first = model.opcode(node)
+                    break
+                stack.append(model.ref(node + 0x0c))
+                stack.append(walk_children(model, node))
+            counts[(model.cls, EMPTY if first is None else opcode_name(first))] += 1
+        except ScanError:
+            counts[(model.cls, unreadable(model))] += 1
+    return counts
+
+
 def shadow_header(model, record):
     return [model.ref(record + 0x14)]
 
@@ -284,7 +325,7 @@ def parse_args(argv):
     parser.add_argument('--allow-missing', action='append', default=[], metavar='NAME',
                         help='a model file that may lack a MODELFILEHEADER line (repeat for each)')
     sub = parser.add_subparsers(dest='command', required=True)
-    for name in ('roots', 'slots', 'shadows', 'links', 'textures'):
+    for name in ('roots', 'slots', 'shadows', 'links', 'textures', 'rwfirst'):
         command = sub.add_parser(name)
         command.add_argument('--class', dest='cls', choices=('chr', 'gun', 'prop'))
         command.add_argument('--match', help='regular expression a model name must match')
@@ -344,6 +385,8 @@ def main(argv=None):
         counts = count_roots(models)
     elif args.command == 'slots':
         counts = count_slots(models, parse_slots(args.slots))
+    elif args.command == 'rwfirst':
+        counts = count_rw_first(models)
     elif args.command == 'textures':
         counts = count_textures(models)
     elif args.command == 'shadows':

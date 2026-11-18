@@ -123,6 +123,19 @@ class Walk(Fixture):
         # Assert
         self.assertEqual(counts, {('gun', 'foo', 'inline 1 of 1'): 1})
 
+    def test_the_first_read_write_node_in_the_walk_is_the_root_header(self):
+        self.assertEqual(scan.count_rw_first(self.models), {('gun', '1 HEADER'): 1})
+
+    def test_the_first_read_write_node_skips_nodes_without_a_record(self):
+        # Arrange: the root becomes a group, so the walk's first record is the collision node's
+        model = self.models[0]
+        model.data = bytearray(model.data)
+        struct.pack_into('>H', model.data, 24, 2)
+        # Act
+        counts = scan.count_rw_first([model])
+        # Assert
+        self.assertEqual(counts, {('gun', '24 DLCOLLISION'): 1})
+
     def test_a_reference_outside_the_file_is_unreadable_not_a_count(self):
         # Arrange
         model = self.models[0]

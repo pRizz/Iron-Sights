@@ -2,9 +2,12 @@
  * the sites are in scripts/port/lp64_overlays_reviewed.txt, each `same` line
  * naming its assertion here by its message). Included by probe.c after
  * probe_overlays.h, whose IS_TYPE and POSITION_FIRST it uses, so it is built
- * at both pointer widths by scripts/port/test_abi_probe.sh. Each assertion
- * holds at both widths and fails when a member is inserted before the one it
- * pins. */
+ * at both pointer widths by scripts/port/test_abi_probe.sh. Each holds at both
+ * widths. The position and fog assertions fail when a member is inserted
+ * before the one they pin; the SWAP_WORD ones pin alignment, size and
+ * adjacency instead (the first member 4-aligned and 2 bytes, the next ones
+ * right after it, filling one word), so they fail when a member between them
+ * or a change of size breaks that word, not on a shift of the whole group. */
 
 /* objecthandler.c sub_GAME_7F06B29C reads an Op16 node's data as three floats. */
 POSITION_FIRST(ModelNode_Op16Record, pos, coord3d);

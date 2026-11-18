@@ -2,6 +2,7 @@
 """Print the record types a 64-bit PC build only ever reaches through a pointer (LP64-005 Task 3, R11).
 
     python3 scripts/port/lp64_pointer_types.py scan BUILD_DIR [BUILD_DIR...] [--explain TYPE]
+    python3 scripts/port/lp64_pointer_types.py check BUILD_DIR [BUILD_DIR...]
 
 Each BUILD_DIR is a 64-bit CMake tree configured with `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` (and its
 `ge_buildinfo` target built), as the CI tests step configures `build/lp64/gate` and `gate-video`; run it
@@ -14,9 +15,20 @@ The types are the structs and unions defined in the record headers (`src/bondtyp
 `port/include/`), each known by its tag and its typedef names (`typedef struct X Name;` included). A
 type is printed when no compiled line declares an object of it (a variable, a member, a by-value
 parameter or return, a cast to the type itself or a compound literal), embeds it in a definition, or
-takes its `sizeof`: the build then holds no object of that type, and whatever its pointers point to
+takes its `sizeof`, and no record type that the build holds an object of embeds it by value (an
+embedding counts only when its container is itself an object, transitively): the build then holds
+no object of that type, and whatever its pointers point to
 is some other record seen through it. That is R11's question: which record it really is, and whether
 every member read through it is the same at both widths.
+
+String and character literals are blanked first, and a name used as a variable or parameter that
+shares a type's name (`ALSynth *ALSynth`, `waypoint->x`) is not a use of the type. `--explain` on a
+name that is no record type fails, naming it.
+
+`check` compares the scan's type names with the committed list `lp64_pointer_types.txt` and fails
+(exit 1), naming each type added or removed: a new pointer-only type needs its row in FORK-089's R11
+table before it is added there. What `check` cannot see is a new member read through a type already
+listed: that change updates the table row and the probe assertion by hand.
 
 What it does not see: a `sizeof *p` or `sizeof(p[0])` of a pointer to the type counts as nothing,
 and a type named only through a macro the compiler expands elsewhere is read as expanded, so the
@@ -47,7 +59,9 @@ MAX_WORKERS = 8
 MARKER = re.compile(r'^# (\d+) "([^"]*)"')
 QUALIFIERS = re.compile(r'(?:\s|\bconst\b|\bvolatile\b|\brestrict\b|\b__restrict\b)*')
 DEFINITION = re.compile(r'\b(struct|union)\s+(\w+)?\s*\{')
+LITERAL = re.compile(r'"(?:\\.|[^"\\\n])*"|\'(?:\\.|[^\'\\\n])*\'')
 OBJECT, POINTER, SIZED, OTHER = 'object', 'pointer', 'sized', 'other'
+PINNED = Path(__file__).with_name('lp64_pointer_types.txt')
 
 
 class Unit:
@@ -68,7 +82,8 @@ class Unit:
             lines.append(line)
             offset += len(line) + 1
             number += 1
-        self.code = '\n'.join(lines)
+        self.code = LITERAL.sub(lambda m: m.group(0)[0] + ' ' * (len(m.group(0)) - 2) + m.group(0)[-1],
+                              '\n'.join(lines))
 
     def origin(self, offset: int) -> tuple[str, int]:
         return self.origins[bisect.bisect_right(self.starts, offset) - 1]
@@ -203,11 +218,46 @@ def inside(ranges: list[tuple[int, int]], offset: int) -> bool:
     return index >= 0 and ranges[index][0] <= offset < ranges[index][1]
 
 
-def uses_in(unit: Unit, types: Types, skip: set) -> list[tuple[str, str, tuple[str, int]]]:
-    """Return (canonical type, use, origin) for every reference to a record type in one unit.
+def definitions(code: str, types: Types) -> list[tuple[int, int, str | None, bool]]:
+    """Return (open, close, canonical type or None, named) for each struct or union body in `code`."""
+    found = []
+    for match in DEFINITION.finditer(code):
+        close = matching(code, match.end() - 1)
+        typedef = code[max(0, match.start() - 40):match.start()].rstrip().endswith('typedef')
+        names = [name for name, pointer in declarators(code, close)[0] if not pointer] if typedef else []
+        tag = match.group(2)
+        canonical = types.tags.get(tag) if tag else next((types.names[n] for n in names if n in types.names), None)
+        found.append((match.end() - 1, close, canonical, bool(tag or names)))
+    return found
+
+
+def container(bodies: list[tuple[int, int, str | None, bool]], offset: int) -> str | None:
+    """Return the record type whose body holds `offset` (an anonymous body is part of the one around
+    it), or None at file scope, in a function or in a struct that is not a record type."""
+    for start, end, canonical, named in sorted(bodies, key=lambda body: body[1] - body[0]):
+        if start < offset < end and (named or canonical):
+            return canonical
+    return None
+
+
+def declarator_named_like(code: str, start: int, end: int, types: Types) -> bool:
+    """Return whether the name at code[start:end] is a variable or parameter that shares a type's name
+    (`ALSynth *ALSynth`, `waypoint->x`), not the type."""
+    before = code[max(0, start - 40):start].rstrip()
+    previous = re.search(r'(\w+|\S)$', before)
+    if previous and (previous.group(1) == '*' or previous.group(1) in types.names):
+        return True
+    after = code[end:end + 3].lstrip()
+    return after.startswith(('->', '.', '[', '++', '--')) or (after.startswith('=') and not after.startswith('=='))
+
+
+def uses_in(unit: Unit, types: Types, skip: set) -> list[tuple[str, str, tuple[str, int], str | None]]:
+    """Return (canonical type, use, origin, container) for every reference to a record type in one unit;
+    the container is the record type whose definition holds the reference (an embedding), or None.
 
     `skip` collects origins already counted (a header line seen in many units is counted once)."""
     code, found = unit.code, []
+    bodies = definitions(code, types)
     excluded = []
     for match in DEFINITION.finditer(code):
         close = matching(code, match.end() - 1)
@@ -218,13 +268,15 @@ def uses_in(unit: Unit, types: Types, skip: set) -> list[tuple[str, str, tuple[s
             continue
         canonical = types.tags.get(match.group(2) or '')
         if canonical and any(not pointer for _, pointer in names):
-            found.append((canonical, OBJECT, unit.origin(close)))
+            found.append((canonical, OBJECT, unit.origin(close), container(bodies, match.start())))
     for match in re.finditer(r'\b(?:(struct|union)\s+)?(\w+)\b', code):
         keyword, name = match.group(1), match.group(2)
         canonical = types.tags.get(name) if keyword else types.names.get(name)
         if not canonical or inside(excluded, match.start()):
             continue
         if not keyword and re.search(r'(\.|->|\bstruct|\bunion|\benum)\s*$', code[max(0, match.start() - 8):match.start()]):
+            continue
+        if not keyword and declarator_named_like(code, match.start(), match.end(), types):
             continue
         if keyword and code[match.end():match.end() + 8].lstrip().startswith('{'):
             continue
@@ -235,8 +287,23 @@ def uses_in(unit: Unit, types: Types, skip: set) -> list[tuple[str, str, tuple[s
         if key in skip:
             continue
         skip.add(key)
-        found.append((canonical, classify(code, match.start(), match.end()), origin))
+        found.append((canonical, classify(code, match.start(), match.end()), origin, container(bodies, match.start())))
     return found
+
+
+def objects(uses: list[tuple[str, str, tuple[str, int], str | None]]) -> set[str]:
+    """Return the types the build holds an object of: declared or sized outside any record type, or
+    embedded in a type that is itself an object (transitively)."""
+    held = {canonical for canonical, use, _, outer in uses if use == SIZED or (use == OBJECT and outer is None)}
+    embedded = [(canonical, outer) for canonical, use, _, outer in uses if use == OBJECT and outer is not None]
+    changed = True
+    while changed:
+        changed = False
+        for canonical, outer in embedded:
+            if outer in held and canonical not in held:
+                held.add(canonical)
+                changed = True
+    return held
 
 
 def report(types: Types, uses: list[tuple[str, str, tuple[str, int]]], place) -> list[str]:
@@ -246,13 +313,14 @@ def report(types: Types, uses: list[tuple[str, str, tuple[str, int]]], place) ->
     count: no compiled code reaches anything through it."""
     counts = collections.defaultdict(collections.Counter)
     files = collections.defaultdict(collections.Counter)
-    for canonical, use, origin in uses:
+    held = objects(uses)
+    for canonical, use, origin, _ in uses:
         counts[canonical][use] += 1
         if use == POINTER:
             files[canonical][origin[0] or '(system)'] += 1
     lines = []
     for canonical, origin in sorted(types.defined.items(), key=lambda item: (item[1], item[0])):
-        if counts[canonical][OBJECT] or counts[canonical][SIZED]:
+        if canonical in held:
             continue
         names = sorted({name for name, target in types.names.items() if target == canonical} - {canonical})
         where = ', '.join(f'{f} {n}' for f, n in sorted(files[canonical].items(), key=lambda i: (-i[1], i[0]))[:4])
@@ -289,7 +357,8 @@ def preprocess(entry: dict, argv: list[str]) -> str:
 
 def explain(uses: list[tuple[str, str, tuple[str, int]]], name: str, place) -> list[str]:
     """Return each counted use of the type `name` as `file:line: use`."""
-    return sorted(f'{place(origin)}: {use}' for canonical, use, origin in uses if canonical == name)
+    return sorted(f'{place(origin)}: {use}' + (f' (in {outer})' if outer else '')
+                  for canonical, use, origin, outer in uses if canonical == name)
 
 
 def scan(build_dirs: list[Path], maybe_explain: str | None = None) -> list[str]:
@@ -315,9 +384,26 @@ def scan(build_dirs: list[Path], maybe_explain: str | None = None) -> list[str]:
         uses += uses_in(unit, types, skip)
     place = Physical(ROOT)
     if maybe_explain:
-        name = types.names.get(maybe_explain) or types.tags.get(maybe_explain) or maybe_explain
+        name = types.names.get(maybe_explain) or types.tags.get(maybe_explain)
+        if name is None:
+            raise RuntimeError(f'{maybe_explain!r} is not a struct or union of the record files')
         return explain(uses, name, place)
     return report(types, uses, place)
+
+
+def read_pinned(path: Path) -> list[str]:
+    """Return the type names of the pinned list, skipping `#` lines and blank lines."""
+    return [line.strip() for line in path.read_text().splitlines() if line.strip() and not line.startswith('#')]
+
+
+def compare(pinned: list[str], found: list[str]) -> list[str]:
+    """Return one problem line for each type found but not pinned, then each pinned but not found."""
+    added = sorted(set(found) - set(pinned))
+    removed = sorted(set(pinned) - set(found))
+    return ([f'new pointer-only type: {name}: judge it in FORK-089\'s R11 table (its real record, the members '
+             f'read, a probe assertion when needed), then add it to {PINNED.name}' for name in added]
+            + [f'no longer pointer-only: {name}: the build now holds an object of it; update FORK-089\'s R11 table '
+               f'and remove it from {PINNED.name}' for name in removed])
 
 
 def main(argv: list[str]) -> int:
@@ -326,12 +412,23 @@ def main(argv: list[str]) -> int:
     scan_command = commands.add_parser('scan', help='print the types reached only through pointers')
     scan_command.add_argument('build_dirs', nargs='+', type=Path)
     scan_command.add_argument('--explain', metavar='TYPE', help='print every counted use of one type instead')
+    check_command = commands.add_parser('check', help=f'compare a fresh scan with {PINNED.name}')
+    check_command.add_argument('build_dirs', nargs='+', type=Path)
     args = parser.parse_args(argv)
     try:
-        lines = scan(args.build_dirs, args.explain)
-    except (RuntimeError, ValueError, subprocess.TimeoutExpired) as error:
+        lines = scan(args.build_dirs, getattr(args, 'explain', None))
+        pinned = read_pinned(PINNED) if args.command == 'check' else []
+    except (OSError, RuntimeError, ValueError, subprocess.TimeoutExpired) as error:
         print(f'lp64_pointer_types: {error}', file=sys.stderr)
         return 1
+    if args.command == 'check':
+        problems = compare(pinned, [line.split('\t')[0].split(' (also ')[0] for line in lines])
+        for problem in problems:
+            print(problem)
+        if problems:
+            return 1
+        print(f'OK: {len(pinned)} pointer-only types, as pinned in {PINNED.name}')
+        return 0
     print('\n'.join(lines))
     if not args.explain:
         print(f'{len(lines)} types reached only through pointers', file=sys.stderr)
