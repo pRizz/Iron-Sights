@@ -2620,17 +2620,9 @@ typedef union
     } Embedment;
 
     // Not exactly sure where this belongs or if it may even already have an existing struct
-    typedef struct AttachmentChild {
-        u8 pad00[0x01];
-        u8 flags1;        // 0x01
-        u8 pad02[0x16];
-        f32 unk18;        // 0x18
-    } AttachmentChild;
-
-    // Not exactly sure where this belongs or if it may even already have an existing struct
     typedef struct AttachedObj {
         u8 pad00[0x10];
-        AttachmentChild *child;   // 0x10
+        struct PropRecord *child; // 0x10: the object's prop (LP64-005: was an AttachmentChild view)
         Model *model;             // 0x14
         Mtxf transform;           // 0x18
         coord3d position;         // 0x58

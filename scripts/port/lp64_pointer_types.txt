@@ -22,7 +22,6 @@ AircraftRecord
 AnimTable2
 ArmBoundaryEdge
 AttachedObj
-AttachmentChild
 AudioMessage_u
 AutogunRecord
 BONDdata_item_control_blocks

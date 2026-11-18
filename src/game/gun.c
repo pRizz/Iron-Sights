@@ -2484,7 +2484,7 @@ void gunUpdateAttachedRocket(s32 handIndex)
     Model *rocketModel;
     Mtxf worldMtx;
     PropRecord *prop;
-    AttachmentChild *attachmentChild;
+    PropRecord *attachmentChild;
 
     entry = &g_CurrentPlayer->hands[handIndex];
 
@@ -2524,8 +2524,8 @@ void gunUpdateAttachedRocket(s32 handIndex)
     matrix_4x4_multiply_homogeneous(camGetWorldToScreenMtxf(), &worldMtx, rocketModel->render_pos);
     modelUpdateRelationsQuick(rocketModel, rocketModel->obj->RootNode);
 
-    attachmentChild->flags1 |= 2;
-    attachmentChild->unk18 = -rocketModel->render_pos->pos.m[3][2];
+    attachmentChild->flags |= 2;
+    attachmentChild->zDepth = -rocketModel->render_pos->pos.m[3][2];
 }
 
 

@@ -210,11 +210,10 @@ _Static_assert(offsetof(AttachedObj, child) == offsetof(ObjectRecord, prop) && o
                    && offsetof(AttachedObj, position) == offsetof(ObjectRecord, runtime_pos)
                    && IS_TYPE(((ObjectRecord *) 0)->runtime_pos, coord3d),
                "an AttachedObj is an ObjectRecord's prop, model, mtx and runtime_pos at both widths");
-/* AttachedObj.child is the rocket's PropRecord seen as an AttachmentChild.
- * flags1 is PropRecord.flags; unk18 is zDepth at 32 bits only (a defect,
- * gun.c gunUpdateAttachedRocket, in scripts/port/lp64_overlays_reviewed.txt). */
-_Static_assert(offsetof(AttachmentChild, flags1) == offsetof(PropRecord, flags) && IS_TYPE(((PropRecord *) 0)->flags, u8),
-               "an AttachmentChild's flags1 is PropRecord.flags");
+/* AttachedObj.child is the rocket's prop, declared PropRecord * since
+ * LP64-005 Task 4 (it was an AttachmentChild view whose unk18 was zDepth at
+ * 32 bits only); gun.c writes its flags and zDepth by name. */
+_Static_assert(IS_TYPE(((AttachedObj *) 0)->child, PropRecord *), "an AttachedObj's child is the object's PropRecord");
 /* A model root's header read-write record read as a modeldata_root. */
 _Static_assert(sizeof(struct modeldata_root) == sizeof(ModelRwData_HeaderRecord)
                    && offsetof(struct modeldata_root, ground) == offsetof(ModelRwData_HeaderRecord, ground)
