@@ -45,3 +45,13 @@ SWAP_WORD_OF3(GuardAttributeRecord, unk8, unkA, GrenadeProb);
  * by sizeof and swaps it at fixed file offsets. */
 _Static_assert(sizeof(EnvironmentRecord) == 92 && sizeof(EnvironmentFoglessRecord) == 56,
                "the fog tables' records are the ROM's 92 and 56 bytes at both widths");
+
+/* initanitable.c alloc_load_expand_ani_table hands animation_table_ptrs2, defined as
+ * struct ModelAnimation *[] (initanitable.c:220, declared so in initanitable.h), to
+ * portAnimHeadersConvert as an intptr_t *, which reads and writes each slot as an
+ * intptr_t (port/src/animdata.c also declares it extern intptr_t[]): a slot must be
+ * a pointer of intptr_t's size and alignment. */
+_Static_assert(IS_TYPE(animation_table_ptrs2[0], struct ModelAnimation *)
+                   && sizeof(animation_table_ptrs2[0]) == sizeof(intptr_t)
+                   && _Alignof(struct ModelAnimation *) == _Alignof(intptr_t),
+               "an animation table slot is a pointer of intptr_t's size and alignment");

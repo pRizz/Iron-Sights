@@ -64,7 +64,7 @@ _Static_assert(sizeof(ModelAnimBitField) == 6 && offsetof(ModelAnimBitField, val
                "an animation bit descriptor is the file's 6 bytes");
 
 /* gun.c sub_GAME_7F05E978 writes ->DisplayList.unk00 into the read-write record of gun slots 8 to 13
- * and 35: a switch's record (visible) in the stock guns; in the joypad, whose slots 8 to 12 hold group
+ * and 35, and sub_GAME_7F05EA94 into slots 14 and 15: a switch's record (visible) in the stock guns; in the joypad, whose slots 8 to 12 hold group
  * nodes, modelGetNodeRwData returns record 0, the joypad's first switch (lp64_model_scan.py rwfirst).
  * A header's record there would take the s32 over unk00 to unk02 and the padding before ground. */
 _Static_assert(offsetof(ModelRwData_DisplayListRecord, unk00) == offsetof(ModelRwData_SwitchRecord, visible)

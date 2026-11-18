@@ -310,9 +310,9 @@ pass its isolated executable rather than rebuilding an active player binary.
   member read through it anywhere, not only at the line that casts to it
   (R11, FORK-089's table). `scripts/port/lp64_pointer_types.txt` pins the
   list: `python3 scripts/port/lp64_pointer_types.py check build/lp64/gate
-  build/lp64/gate-video` runs in CI, in the tree's own container after its
-  `ge_buildinfo` target is built (the compile commands hold container
-  paths), and a new pointer-only type fails it until the type has its row.
+  build/lp64/gate-video` runs in CI after the trees' `ge_buildinfo`
+  targets are built; run it on the machine or container that configured
+  the tree (its compile commands hold that machine's paths), and a new pointer-only type fails it until the type has its row.
   A new member access through a listed view type is not caught: it updates
   that type's row and its probe assertion by hand. A `defect` line is temporary: its
   reason starts with its owner (`Task N:`, `strict:` or `undecided:`), and

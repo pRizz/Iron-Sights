@@ -382,6 +382,14 @@ class Stored(unittest.TestCase):
         self.assertEqual(keys(wrap('p = (u8 *) x + size, q = 0;\nf(r = (u16 *) y - 2);')),
                          ['src/game/a.c:f:stored:p=(u8*)x+size', 'src/game/a.c:f:stored:r=(u16*)y-2'])
 
+    def test_a_later_declarator_of_a_declaration_is_not_a_dereference(self):
+        # Act
+        found = keys(wrap('u8 *a = 0, *b = (u8 *) x;\nfor (u16 *c = 0, **d = (u16 **) y; c; c++) {}\n'
+                          'n = 0, *e = (u8 *) z;'))
+        # Assert
+        self.assertEqual(found, ['src/game/a.c:f:stored:b=(u8*)x', 'src/game/a.c:f:stored:d=(u16**)y',
+                                 'src/game/a.c:f:stored:*e=(u8*)z'])
+
     def test_a_comparison_with_a_cast_is_not_a_store(self):
         self.assertEqual(keys(wrap('n = p == (u8 *) x;')), [])
 

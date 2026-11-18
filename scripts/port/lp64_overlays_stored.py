@@ -3,9 +3,15 @@
 See `find_stored` for the forms taken and lp64_overlays_kinds.py's docstring for the kind. Patterns on C
 text, not a C parser: a store reached through a compound literal, `(T){ (u8 *) x }`, is not taken.
 """
+import re
+
 from lp64_overlays_kinds import (ANY_POINTER_CAST, CAST_PREFIX_WORDS, INT_CAST, SCALAR_CAST, is_cast, matching,
                                  opening, postfix_start, previous_token, unary_star)
 from lp64_overlays_source import KEYWORDS, normalize
+
+# The start of a declaration: specifiers, a type name, then a declarator's stars and name.
+DECLARATION_START = re.compile(r'(?:(?:static|const|volatile|extern|register|unsigned|signed|struct|union|enum)\s+)*'
+                               r'[A-Za-z_]\w*(?:\s*\*|\s)[\s*]*[A-Za-z_]')
 
 
 def compound_start(code: str, equals: int):
@@ -194,7 +200,36 @@ def target_start(code: str, operator: int) -> int:
         if cursor < 0 or code[cursor] != '*':
             break
         stars = cursor
-    return stars if stars != start and unary_star(code, stars) else start
+    if stars == start:
+        return start
+    cursor = before(code, stars)
+    if cursor >= 0 and code[cursor] == ',' and declaration_comma(code, cursor):
+        return start
+    return stars if unary_star(code, stars) else start
+
+
+def declaration_comma(code: str, comma: int) -> bool:
+    """Return whether the `,` at `comma` separates two declarators of one declaration
+    (`u8 *a = 0, *b = ...`, also in a `for` header), not two operands of an expression."""
+    depth, cursor = 0, comma - 1
+    while cursor >= 0:
+        char = code[cursor]
+        if char in ')]}':
+            if char == '}' and depth == 0:
+                break
+            depth += 1
+        elif char in '([{':
+            if depth == 0:
+                if char == '(' and previous_token(code, cursor) != 'for':
+                    return False
+                break
+            depth -= 1
+        elif char == ';' and depth == 0:
+            break
+        cursor -= 1
+    statement = code[cursor + 1:comma].lstrip()
+    first = statement.split(None, 1)[0] if statement else ''
+    return first not in ('return', 'case', 'goto', 'else', 'do') and DECLARATION_START.match(statement) is not None
 
 
 def value_end(code: str, index: int) -> int:
