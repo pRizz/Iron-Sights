@@ -78,6 +78,9 @@ void indycommHostSaveFile(char *filename, s32 size, u8 * data)
 u8 * indycommHostCheckFileExists(char *name, s32 *size)
 {
     u8 *response;  
+#if IS_64_BIT
+    response = NULL; /* no host answers on PC (osReadHost reads nothing), so the ack never writes it */
+#endif
     if (!indy_ready) {
         return NULL;
     } else {

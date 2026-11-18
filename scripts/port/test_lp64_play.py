@@ -33,7 +33,7 @@ DAM1_GOOD = BOOT + DAM1_START + 'ge: demo tick 1 draws=3 live=01 rec=01\n' + dem
 STAGE_GOOD = (BOOT + 'ge: GE_STAGE direct launch: levelid=33 diff=0\n'
               'ge: load_bg_file levelid=33 stan=Tbg_dam_all_p_stanZ file=0x1 record=0x2 first=0x3\n'
               + frames(1800))
-STOP_CITADEL = 'ge: FATAL: The setup file UsetupcatZ is not served from the ROM; a 64-bit build has no copy\n'
+STOP_CITADEL = 'ge: FATAL: The setup file UsetupcatZ did not load from the ROM; a 64-bit build cannot read it\n'
 TOUR_ARCHIVES = (BOOT + 'ge: GE_STAGE direct launch: levelid=24 diff=0\n'
                  'ge: load_bg_file levelid=24 stan=Tbg_arch_all_p_stanZ file=0x1 record=0x2 first=0x3\n')
 
@@ -285,6 +285,18 @@ class OtherSets(StandIns):
         # Assert
         self.assertEqual(status, 1, out)
         self.assertIn('the log has: ge: FATAL: The setup file UsetuprefZ', out)
+
+    def test_setup_stop_through_a_registered_name_fails(self):
+        # Arrange: the stop a dangling host answer used to reach (romdata.c's message)
+        exe = self.fake(BOOT + 'ge: FATAL: The setup file UsetupcatZ is not served from the ROM; a 64-bit build '
+                        'has no compiled-in copy to read\n', status=1)
+
+        # Act
+        status, out = self.play(exe, 'stops', 'stop-citadel')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('stop-citadel: FAIL (missing line: ge: FATAL: The setup file UsetupcatZ did not load', out)
 
     def test_menu_without_the_harness_line_fails(self):
         # Arrange

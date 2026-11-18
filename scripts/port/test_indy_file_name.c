@@ -4,9 +4,15 @@
  * count only for the characters before the terminator, so asked for the whole
  * field it writes one byte past it for any shorter name: under the sanitizer
  * that is a stack-buffer-overflow. Every build also checks the command sent.
+ *
+ * fileGetIndex asks the absent host about a file the ROM lacks; the answer
+ * indycommHostCheckFileExists returns was never written, so whether a 64-bit
+ * build registered a dangling name or stopped on index 0 depended on what the
+ * stack held. At 64 bits the answer is now no file, whatever the stack holds.
  */
 #include "src/str.c"
 #include "src/game/indy_commands.c"
+#include "src/game/indy_comms.c"
 #include "test_buffer_helpers.h"
 
 static u8 sentCommand[sizeof(indy_resource_entry_type5) + 8];
@@ -33,6 +39,38 @@ static void assertFieldHolds(const char *name, u32 kept)
     }
 }
 
+/* Leaves nonzero bytes where the next call's frame will be. */
+__attribute__((noinline)) static void dirtyTheStack(void)
+{
+    volatile u8 garbage[4096];
+    for (u32 i = 0; i < sizeof(garbage); i++) garbage[i] = 0xA5;
+}
+
+__attribute__((noinline)) static u8 *checkOnADirtyStack(char *name)
+{
+    s32 size;
+    dirtyTheStack();
+    return indycommHostCheckFileExists(name, &size);
+}
+
+static void testAMissGetsNoAnswerFromAnAbsentHost(void)
+{
+#if IS_64_BIT
+    /* Arrange: the link up, as indycommInit leaves it, and a dirty stack. */
+    indy_ready = 1;
+
+    /* Act */
+    u8 *answer = checkOnADirtyStack("UsetupnoneZ");
+
+    /* Assert */
+    if (answer != NULL) {
+        fprintf(stderr, "FAIL: indycommHostCheckFileExists answered %p for a file no host has\n", (void *)answer);
+        exit(1);
+    }
+    indy_ready = 0;
+#endif
+}
+
 int main(void)
 {
     /* Arrange: a 12-character name, and one longer than the field. */
@@ -48,6 +86,8 @@ int main(void)
     /* Act/assert: the long name is cut to 255 characters and terminated. */
     indyrescmdCheckFileExists(0, 0, longName);
     assertFieldHolds(longName, 255);
+
+    testAMissGetsNoAnswerFromAnAbsentHost();
 
     puts("Indy file-name command bound checks passed");
     return 0;

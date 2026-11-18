@@ -159,14 +159,16 @@ def stage_cases() -> list[Case]:
 
 # ---- stops ------------------------------------------------------------------------------------
 # Stage numbers whose files the ROM does not hold; a 64-bit build stops on each by name with
-# status 1, measured on 2026-11-17 at 98a76dd. The setup files are named by port/src/romdata.c's
-# romdataRequireServed ("The %s file %s is not served from the ROM; ..."), the backgrounds by
+# status 1, measured on 2026-11-17 at 98a76dd. The setup files are named by src/game/prop.c's
+# 64-bit stop ("The setup file %s did not load from the ROM; ..."), reached since LP64-005 Task 7
+# because the absent host's answer to fileGetIndex's miss is no file (before, romdata.c's
+# "is not served" stop was reached through a name the unwritten answer registered), the backgrounds by
 # port/src/romfile_bg.c ("The bg file %s is not served from the ROM; ..."); the level ids'
 # background names are src/game/bg.c's levelinfotable.
 STOPS = (
-    ('citadel', 'The setup file UsetupcatZ is not served from the ROM'),
-    ('complex', 'The setup file UsetuprefZ is not served from the ROM'),
-    ('temple', 'The setup file UsetupdishZ is not served from the ROM'),
+    ('citadel', 'The setup file UsetupcatZ did not load from the ROM'),
+    ('complex', 'The setup file UsetuprefZ did not load from the ROM'),
+    ('temple', 'The setup file UsetupdishZ did not load from the ROM'),
     ('42', 'The bg file bg/bg_sho_all_p.seg is not served from the ROM'),
     ('44', 'The bg file bg/bg_eld_all_p.seg is not served from the ROM'),
     ('47', 'The bg file bg/bg_lue_all_p.seg is not served from the ROM'),
