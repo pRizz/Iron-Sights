@@ -2,11 +2,12 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Planned on 2026-11-17 from measurements on `main` at 98a76dd.
-Nothing is built. Execution starts only after the owner has answered the
-thirteen open items under "Decisions for the owner" at the end (the
-first of its fourteen is settled: the owner accepted the reading of "no
-`ge: lp64:` line" on 2026-11-17); the tasks are written for the
+**Status:** Planned on 2026-11-17 from measurements on `main` at 98a76dd
+and accepted by the owner the same day, with all fourteen
+recommendations under "Decisions for the owner" at the end (the first,
+the reading of "no `ge: lp64:` line", in the session that closed
+LP64-004; the other thirteen together, "Accept all 13"). Nothing is
+built; execution starts at Task 1. The tasks are written for the
 recommendations. The status table of
 [native_64bit_plan.md](native_64bit_plan.md) records what is built and
 verified as the tasks land.
@@ -1439,10 +1440,16 @@ does not do".
 
 ## Decisions for the owner
 
-Nothing in this plan is built until the open ones are answered. The
-first three were left waiting by LP64-004; the first of them is now
-settled and is kept here as put, and items 2 to 14 are open. The tasks
-are written for the recommendations.
+**The owner accepted all fourteen recommendations on 2026-11-17**: item 1
+in the session that closed LP64-004, and items 2 to 14 together ("Accept
+all 13") in the session that wrote this plan. They are kept here as put,
+each with the alternative that was not taken; the plan is written for
+the recommendations. Decision 6 defines the milestone's done condition
+and decision 4 what "every stage" means; decisions 5, 7 and 8 bring part
+of LP64-006's comparison forward, let a headless build replay recorded
+pads and accept a software renderer in a container as "with video"; the
+design records all of them. The first three were left waiting by
+LP64-004.
 
 1. **How "with no `ge: lp64:` line" is read** (LP64-004's decision 3).
    *Settled, not open: the owner accepted the reading below on 2026-11-17
