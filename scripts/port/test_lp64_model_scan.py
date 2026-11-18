@@ -90,10 +90,15 @@ class Walk(Fixture):
 
     def test_slot_opcodes_and_an_empty_slot(self):
         # Act
-        counts = scan.count_slots(self.models, [0, 1, 2, 3])
+        counts = scan.count_slots(self.models, [0, 1, 2])
         # Assert
-        self.assertEqual(counts, {('gun', 0, '2 GROUP'): 1, ('gun', 1, 'empty'): 1,
-                                  ('gun', 2, '24 DLCOLLISION'): 1, ('gun', 3, 'empty'): 1})
+        self.assertEqual(counts, {('gun', 0, '2 GROUP'): 1, ('gun', 1, 'empty'): 1, ('gun', 2, '24 DLCOLLISION'): 1})
+
+    def test_a_slot_past_num_switches_is_out_of_range_not_empty(self):
+        # Act
+        counts = scan.count_slots(self.models, [3])
+        # Assert
+        self.assertEqual(counts, {('gun', 3, 'out of range'): 1})
 
     def test_walk_reaches_every_node_by_child_and_next(self):
         self.assertEqual(sorted(self.models[0].nodes()), [24, 48, 72, 96])
@@ -113,10 +118,23 @@ class Walk(Fixture):
         # Act
         counts = scan.count_slots([model], [2])
         # Assert
-        self.assertEqual(counts, {('gun', 2, 'unreadable'): 1})
+        self.assertEqual(counts, {('gun', 2, 'unreadable (foo)'): 1})
 
 
 class Command(Fixture):
+    def rewrite(self, gun=None, extra_rows='', header=None):
+        """Replace the fixture's gun file, add filelist rows, or replace its header line."""
+        root = Path(self.directory.name)
+        if gun is not None:
+            packed = compress(bytes(gun))
+            (root/'rom.z64').write_bytes(bytes(64) + packed)
+            (root/'filelist.csv').write_text('64,%d,assets/obseg/gun/GfooZ.bin,1,1\n' % len(packed))
+        if extra_rows:
+            with open(root/'filelist.csv', 'a') as handle:
+                handle.write(extra_rows)
+        if header is not None:
+            (root/'assets/gun/foo/ModelFileHeader.inc.c').write_text(header)
+
     def test_slots_command_prints_counts(self):
         # Act
         status, out, _ = self.run_main('slots', '--slots', '0-2')
@@ -147,6 +165,52 @@ class Command(Fixture):
         # Assert
         self.assertEqual(status, 1)
         self.assertIn('no ROM', err)
+
+    def test_an_unreadable_model_fails_the_command_naming_it(self):
+        # Arrange
+        gun = bytearray(invented_gun())
+        struct.pack_into('>I', gun, 8, SEG | 0xfff0)  # slot 2 points past the end
+        self.rewrite(gun=gun)
+        # Act
+        status, out, err = self.run_main('slots', '--slots', '2')
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('unreadable (foo)', out)
+        self.assertIn('foo', err)
+
+    def test_a_header_line_with_spaces_after_the_parenthesis_is_read(self):
+        # Arrange
+        self.rewrite(header='MODELFILEHEADER(   foo,  0, &SKELETON(standard_gun),  0,  3,  1,  12.5,  0,  1)\n')
+        # Act
+        status, out, _ = self.run_main('roots')
+        # Assert
+        self.assertEqual(status, 0)
+        self.assertIn('models: 1 (gun 1)', out)
+
+    def test_a_model_without_a_header_fails_naming_it(self):
+        # Arrange
+        self.rewrite(extra_rows='0,64,assets/obseg/prop/PbarZ.bin,1,1\n')
+        # Act
+        status, _, err = self.run_main('roots')
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('bar', err)
+
+    def test_an_allowance_naming_the_skipped_model_passes(self):
+        # Arrange
+        self.rewrite(extra_rows='0,64,assets/obseg/prop/PbarZ.bin,1,1\n')
+        # Act
+        status, out, _ = self.run_main('--allow-missing', 'bar', 'roots')
+        # Assert
+        self.assertEqual(status, 0)
+        self.assertIn('models: 1 (gun 1)', out)
+
+    def test_an_allowance_naming_no_skipped_model_fails(self):
+        # Act
+        status, _, err = self.run_main('--allow-missing', 'bar', 'roots')
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('bar', err)
 
     def test_a_filelist_without_models_fails(self):
         # Arrange

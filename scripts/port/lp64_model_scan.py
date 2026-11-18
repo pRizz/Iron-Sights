@@ -13,7 +13,12 @@ names, per model class and slot), never bytes of the ROM.
 
 The ROM path is --rom or GE_ROM. A model's switch slot count and texture count are not in its
 file; they come from the MODELFILEHEADER lines under assets/obseg. Exits 1 when the scan finds no
-model (or no setup), so a wrong path or filter cannot print zeros that read as "none".
+model (or no setup), so a wrong path or filter cannot print zeros that read as "none"; when any
+model or setup is unreadable (its row names it, and the rest of that model is not counted); and
+when a chr, gun or prop model in the file list has no MODELFILEHEADER line, unless
+--allow-missing names it (and an allowance that names no skipped model fails too). A slot index at
+or past a model's numSwitches counts as `out of range`, not `empty`: the game would read past the
+slot table there, not find NULL.
 """
 import argparse
 import collections
@@ -32,8 +37,8 @@ SHADOW, DLCOLLISION = 13, 24
 NODE_SIZE, TEXTURE_SIZE, VERTEX_SIZE = 24, 12, 16
 INTRO_WORDS = {0: 3, 1: 4, 2: 4, 3: 8, 4: 2, 5: 2, 6: 10, 7: 3, 8: 2}
 INTRO_NAMES = ['SPAWN', 'ITEM', 'AMMO', 'SWIRL', 'ANIM', 'CUFF', 'CAMERA', 'WATCH', 'CREDITS', 'END']
-HEADER_RE = re.compile(r'MODELFILEHEADER\((\w+),[^,]*,[^,]*,[^,]*,\s*(\w+),\s*\w+,\s*[-\d.e]+,\s*\w+,\s*(\w+)\)')
-EMPTY, UNREADABLE = 'empty', 'unreadable'
+HEADER_RE = re.compile(r'MODELFILEHEADER\(\s*(\w+),[^,]*,[^,]*,[^,]*,\s*(\w+),\s*\w+,\s*[-\d.e]+,\s*\w+,\s*(\w+)\s*\)')
+EMPTY, OUT_OF_RANGE, UNREADABLE = 'empty', 'out of range', 'unreadable'
 
 
 class ScanError(Exception):
@@ -87,14 +92,16 @@ class Model:
             stack.append(self.ref(node + 0x14))
 
     def slot(self, index):
-        """The node a switch slot names; None for an empty slot or one past numSwitches."""
-        if index >= self.num_switches:
-            return None
+        """The node a switch slot names; None for an empty slot. The caller tests numSwitches."""
         return self.ref(index * 4)
 
 
 def opcode_name(opcode):
     return '%d %s' % (opcode, OPCODES[opcode] if opcode < len(OPCODES) else '?')
+
+
+def unreadable(model):
+    return '%s (%s)' % (UNREADABLE, model.name)
 
 
 def inflate(raw):
@@ -118,19 +125,30 @@ def read_headers(assets):
     return headers
 
 
-def load_models(rom, filelist, assets):
-    """The chr, gun and prop model files that have a MODELFILEHEADER, inflated."""
-    headers = read_headers(assets)
-    models = []
+def model_rows(filelist):
+    """(offset, size, class, name) for each chr, gun and prop model file in the file list."""
     for offset, size, path in read_filelist(filelist):
         parts = path.split('/')
         if len(parts) < 4 or parts[1] != 'obseg' or parts[2] not in ('chr', 'gun', 'prop'):
             continue
-        name = os.path.basename(path)[1:-5].lower()  # C/G/P + name + Z.bin
+        yield offset, size, parts[2], os.path.basename(path)[1:-5].lower()  # C/G/P + name + Z.bin
+
+
+def missing_headers(filelist, assets):
+    """The model files in the file list that have no MODELFILEHEADER line, so load_models skips them."""
+    headers = read_headers(assets)
+    return sorted(name for _, _, _, name in model_rows(filelist) if name not in headers)
+
+
+def load_models(rom, filelist, assets):
+    """The chr, gun and prop model files that have a MODELFILEHEADER, inflated."""
+    headers = read_headers(assets)
+    models = []
+    for offset, size, cls, name in model_rows(filelist):
         if name not in headers:
             continue
         num_switches, num_textures = headers[name]
-        models.append(Model(parts[2], name, inflate(rom[offset:offset + size]), num_switches, num_textures))
+        models.append(Model(cls, name, inflate(rom[offset:offset + size]), num_switches, num_textures))
     return models
 
 
@@ -145,7 +163,7 @@ def count_roots(models):
         try:
             counts[(model.cls, opcode_name(model.opcode(model.root)))] += 1
         except ScanError:
-            counts[(model.cls, UNREADABLE)] += 1
+            counts[(model.cls, unreadable(model))] += 1
     return counts
 
 
@@ -153,11 +171,14 @@ def count_slots(models, slots):
     counts = collections.Counter()
     for model in models:
         for index in slots:
+            if index >= model.num_switches:
+                counts[(model.cls, index, OUT_OF_RANGE)] += 1
+                continue
             try:
                 node = model.slot(index)
                 counts[(model.cls, index, EMPTY if node is None else opcode_name(model.opcode(node)))] += 1
             except ScanError:
-                counts[(model.cls, index, UNREADABLE)] += 1
+                counts[(model.cls, index, unreadable(model))] += 1
     return counts
 
 
@@ -172,7 +193,7 @@ def count_targets(models, opcode, targets):
                 for target in targets(model, model.ref(node + 4)):
                     counts[(model.cls, EMPTY if target is None else opcode_name(model.opcode(target)))] += 1
         except ScanError:
-            counts[(model.cls, UNREADABLE)] += 1
+            counts[(model.cls, unreadable(model))] += 1
     return counts
 
 
@@ -202,7 +223,7 @@ def count_intros(rom, filelist, match):
             if kind == 9:
                 break
             if kind not in INTRO_WORDS:
-                counts[UNREADABLE] += 1
+                counts['%s (%s)' % (UNREADABLE, os.path.basename(path))] += 1
                 break
             counts[INTRO_NAMES[kind]] += 1
             at += 4 * INTRO_WORDS[kind]
@@ -227,6 +248,8 @@ def parse_args(argv):
     parser.add_argument('--rom', default=os.environ.get('GE_ROM'), help='the US ROM (default: GE_ROM)')
     parser.add_argument('--filelist', default=str(ROOT/'scripts/filelist.u.csv'))
     parser.add_argument('--assets', default=str(ROOT/'assets/obseg'))
+    parser.add_argument('--allow-missing', action='append', default=[], metavar='NAME',
+                        help='a model file that may lack a MODELFILEHEADER line (repeat for each)')
     sub = parser.add_subparsers(dest='command', required=True)
     for name in ('roots', 'slots', 'shadows', 'links'):
         command = sub.add_parser(name)
@@ -238,6 +261,24 @@ def parse_args(argv):
     intros = sub.add_parser('intros')
     intros.add_argument('--match', default='mp_setup', help='regular expression a setup path must match')
     return parser.parse_args(argv)
+
+
+def report_unreadable(counts):
+    """Names every unreadable row on stderr; True when there is none."""
+    rows = sorted(str(key[-1]) for key in counts if str(key[-1]).startswith(UNREADABLE))
+    for row in rows:
+        print('lp64_model_scan: %s: the counts above are incomplete' % row, file=sys.stderr)
+    return not rows
+
+
+def check_headers(args):
+    """True when the models without a header are exactly those --allow-missing names."""
+    missing, allowed = set(missing_headers(args.filelist, args.assets)), set(args.allow_missing)
+    for name in sorted(missing - allowed):
+        print('lp64_model_scan: model %s has no MODELFILEHEADER line and was not scanned' % name, file=sys.stderr)
+    for name in sorted(allowed - missing):
+        print('lp64_model_scan: --allow-missing %s names no skipped model' % name, file=sys.stderr)
+    return missing == allowed
 
 
 def main(argv=None):
@@ -253,7 +294,8 @@ def main(argv=None):
             return 1
         print('setups: %d' % found[0])
         print_counts({(k,): v for k, v in found[1].items()})
-        return 0
+        return 0 if report_unreadable({(k,): v for k, v in found[1].items()}) else 1
+    headers_ok = check_headers(args)
     models = select(load_models(rom, args.filelist, args.assets), args.cls, args.match, args.exclude)
     if not models:
         print('lp64_model_scan: no model found (check --rom, --filelist, --assets and the filters)', file=sys.stderr)
@@ -261,14 +303,16 @@ def main(argv=None):
     print('models: %d (%s)' % (len(models), ', '.join('%s %d' % kv for kv in
                                                      sorted(collections.Counter(m.cls for m in models).items()))))
     if args.command == 'roots':
-        print_counts(count_roots(models))
+        counts = count_roots(models)
     elif args.command == 'slots':
-        print_counts(count_slots(models, parse_slots(args.slots)))
+        counts = count_slots(models, parse_slots(args.slots))
     elif args.command == 'shadows':
-        print_counts(count_targets(models, SHADOW, shadow_header))
+        counts = count_targets(models, SHADOW, shadow_header)
     else:
-        print_counts(count_targets(models, DLCOLLISION, collision_links))
-    return 0
+        counts = count_targets(models, DLCOLLISION, collision_links)
+    print_counts(counts)
+    readable = report_unreadable(counts)
+    return 0 if readable and headers_ok else 1
 
 
 if __name__ == '__main__':
