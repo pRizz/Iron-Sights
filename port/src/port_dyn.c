@@ -1,6 +1,7 @@
 /* Native frame-pool headroom and a guard before any auxiliary-data write. */
 #include <stdint.h>
 #include "port_dyn.h"
+#include "port_poison.h"
 
 extern u8 *g_VtxBuffers[3], *g_GfxMemPos;
 extern u8 g_GfxActiveBufferIndex;
@@ -24,5 +25,6 @@ void *portDynAllocate(s32 count, u32 elementBytes, u32 alignment)
         return NULL; /* The fatal handler terminates; never advance into textures. */
     }
     g_GfxMemPos += (u32)bytes;
+    PORT_UNPOISON((void *)pos, (u64)(u32)count * elementBytes); /* the alignment pad stays poisoned */
     return (void *)pos;
 }

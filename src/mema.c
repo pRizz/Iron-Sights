@@ -6,6 +6,7 @@
 #include <inttypes.h> /* PRIxPTR: the traces print whole addresses */
 #include <stdio.h>  /* GE_ROOM_AUDIT heap validation (see bg.c) */
 #include <stdlib.h>
+#include "port_poison.h"
 #endif
 
 /**
@@ -223,6 +224,7 @@ void _memaFree(intptr_t addr, s32 size)
 {
 #ifndef TARGET_N64
     memaAuditFree(addr, size);
+    PORT_POISON((void *)addr, size);
 #endif
     // Choose an index in the spaces array which we'll mark a space as free,
 	// based on how far into the heap the allocation is. This is a rough
@@ -293,6 +295,9 @@ void memaReset(void *heapaddr, u32 heapsize)
         }
         portRoomAuditOnHeapReset(); /* all shadows are stale now */
     }
+    /* The free-space list lives in g_MemoryAllocations, not in the heap, so
+     * no free byte of the heap is ever read by mema itself. */
+    PORT_POISON(heapaddr, heapsize);
 #endif
 }
 
@@ -384,6 +389,7 @@ void *memaAlloc(u32 amount) {
         fprintf(stderr, "roomaudit: mema alloc %08" PRIxPTR " +%06x\n", (uintptr_t) addr, amount);
         fflush(stderr);
     }
+    PORT_UNPOISON((void *)addr, amount);
 #endif
 
     return (void*)addr;
@@ -434,6 +440,9 @@ intptr_t memaGrow(uintptr_t addr, u32 amount)
     return 0;
 
 found:
+#ifndef TARGET_N64
+    PORT_UNPOISON((void *)curr->addr, amount); /* memaRealloc's growth takes these */
+#endif
     curr->addr += amount;
     curr->size -= amount;
 

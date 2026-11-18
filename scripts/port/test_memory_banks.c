@@ -1,3 +1,7 @@
+/* This test pins the plain build's bank layout, which LP64-005 Task 2's
+ * poisoning must not change: its sanitized run keeps the poisoning but not
+ * the gap after each block, whose layout test_lp64_poison.c pins. */
+#define PORT_POISON_GAP 0
 #include <setjmp.h>
 #include "src/memp.c"
 #include "port/src/port_memp.c"

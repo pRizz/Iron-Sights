@@ -10,6 +10,7 @@
 #include <stdio.h> /* GE_ROOM_AUDIT dyn-pool watch (see bg.c) */
 #include "port_dyn.h"
 #include "port_lp64.h" /* LP64-004: portLp64PoolFatal */
+#include "port_poison.h"
 #endif
 
 /**
@@ -104,6 +105,14 @@ void dynInitMemory(void) {
 
 Gfx *dynGetMasterDisplayList(void) {
     g_GfxRequestedDisplayList = TRUE;
+#ifndef TARGET_N64
+    /* Sanitizer builds: the half this frame writes is poisoned past what it
+     * has allocated so far, and portDynAllocate unpoisons each block. Not at
+     * dynSwapBuffers: the half the last frame wrote is read by the renderer
+     * after the swap (rspGfxTaskStart, video.c's render thread), and the half
+     * before it may be in flight until boss.c admits this frame. */
+    PORT_POISON(g_GfxMemPos, g_VtxBuffers[g_GfxActiveBufferIndex + 1] - g_GfxMemPos);
+#endif
 
     return (Gfx*)g_GfxBuffers[g_GfxActiveBufferIndex];
 }

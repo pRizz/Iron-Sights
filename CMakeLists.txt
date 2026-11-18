@@ -103,7 +103,10 @@ add_compile_options(
     # fast3d C++ needs hosted stdlib and no ms-extensions quirks.
     $<$<COMPILE_LANGUAGE:C>:-ffreestanding>
     $<$<COMPILE_LANGUAGE:C>:-fms-extensions>
-    $<$<COMPILE_LANGUAGE:C>:-fcommon>
+    # A sanitizer build gives each global its own red zone (LP64-005 Task 2):
+    # common symbols get none, and -fno-common makes a global defined twice a
+    # link error. Shipped builds keep -fcommon.
+    $<$<COMPILE_LANGUAGE:C>:$<IF:$<BOOL:${GE_SANITIZE}>,-fno-common,-fcommon>>
 )
 # -no-pie: the compiled-in asset objects (below) are built -fno-pic so their
 # pointer-laden .data needs no PIC indirection; a PIE final link would reject

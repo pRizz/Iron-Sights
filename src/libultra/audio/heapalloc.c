@@ -23,6 +23,7 @@
 #include <os.h>
 #include <ultraerror.h>
 #include "port_lp64.h" /* LP64-004: portLp64PoolFatal */
+#include "port_poison.h"
 
 void *alHeapDBAlloc(u8 *file, s32 line, ALHeap *hp, s32 num, s32 size)
 {
@@ -40,6 +41,9 @@ void *alHeapDBAlloc(u8 *file, s32 line, ALHeap *hp, s32 num, s32 size)
 
         ptr = hp->cur;
         hp->cur += bytes;
+        /* The whole cache-line block, not just num*size: callers DMA whole
+         * lines into it (music.c copies ALIGN16 of its request). */
+        PORT_UNPOISON(ptr, bytes);
 
 #ifdef _DEBUG    
         ((HeapInfo *)ptr)->magic = AL_HEAP_MAGIC;

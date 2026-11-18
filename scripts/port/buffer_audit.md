@@ -67,6 +67,7 @@ Cppcheck. Raw XML and progress logs remain local under `build_win/`.
 | Engine limits          | A full character pool was dereferenced as NULL; multiplayer ammo type zero indexed `slots[-1]`; visible-room insertion had no non-EU capacity check.                               | Character/visibility exhaustion fails before the invalid access. Ammo without a valid slot is omitted. Room diagnostics use the real room-array capacity. These are source-confirmed edge cases, not failures observed in normal campaign play. |
 | Save-state ownership   | Fresh-process Dam restoration from Facility reproduced a native arm-rendering failure. Saved arena bytes and live model-header caches could belong to different worlds.            | Arm/grip cache owners and selected arena-backed texture/crosshair pointers travel with the world image. Heap copies, files, settings and GPU resources stay process-owned. Fresh-process threaded restoration now passes.                       |
 | Menu return value      | A native non-void Files controller path fell through without returning.                                                                                                            | It returns zero; its caller does not use the value.                                                                                                                                                                                             |
+| Explosion sprites      | With the graphics pool poisoned (LP64-005 Task 2), every demo, Jungle and the attract loop died with `use-after-poison` in `explosionRenderPart`: it allocated four vertices and wrote a fifth, at both widths (inherited from the N64 code). | The fifth write is kept only in the N64 build; the four vertices drawn are unchanged. |
 
 The previously fixed auxiliary frame-data overflow remains documented in
 FORK-014/FORK-017. This audit preserves its 256 KiB/player/half capacity floor
@@ -158,6 +159,26 @@ headless build uses `GE_SANITIZE=ON` and its existing generated-asset exclusions
 the original 2026-10-30 mission samples disabled leak detection, which the
 [leak-detection pass](#leak-detection) below adds. These exclusions and custom
 arenas limit what a clean run establishes.
+
+Since LP64-005 Task 2 (FORK-089) a sanitizer build also sees inside the game's
+own arenas and its uninitialized globals. `GE_SANITIZE` compiles C with
+`-fno-common`, so every global array gets a red zone and a global defined twice
+fails to link (shipped builds keep `-fcommon`). `port/include/port_poison.h`
+poisons what each arena has not handed out: a stage-bank reset poisons the
+bank, `portMempAllocate` unpoisons exactly the bytes asked for and leaves a
+32-byte poisoned gap before the next block (dropped at the bank's end), and a
+resize re-poisons what a shrink gives back; `memaReset` poisons the room heap,
+`memaAlloc` and `memaGrow` unpoison, `_memaFree` poisons; `alHeapInit` poisons
+the music heap and `alHeapDBAlloc` unpoisons each block in whole 16-byte lines; the graphics pool's
+half a frame writes is poisoned at the frame's start (`dynGetMasterDisplayList`,
+not at the swap, because the renderer reads the finished half after it) and
+`portDynAllocate` unpoisons each block. A touch of a byte no block owns is
+reported as `use-after-poison`. Without the sanitizer the macros are empty and
+the allocators place every block as before. What this cannot see is an overrun
+inside one block that its user carves up itself: the synthesizer's parameter
+pool, the gun barrel list inside the front end's 0x78000-byte buffer, a
+display list inside the player record. `scripts/port/test_lp64_poison.c`, built
+by the sanitized half of `test_buffers.sh`, pins each hook.
 
 The local GCC headless build was configured with `GE_HEADLESS=ON`,
 `GE_VIDEO=OFF`, `GE_SANITIZE=ON`, and both C/C++ flags set to

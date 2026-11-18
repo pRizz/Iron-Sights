@@ -4,6 +4,7 @@
 #include "game/language.h"
 #ifndef TARGET_N64
 #include "port_memp.h"
+#include "port_poison.h"
 #endif
 
 /**
@@ -297,6 +298,7 @@ void mempResetBank(u8 bank) {
 
         portTexCrosshairForget(g_mempPools[bank].start, g_mempPools[bank].end);
     }
+    PORT_POISON(g_mempPools[bank].start, g_mempPools[bank].end - g_mempPools[bank].start);
 #endif
     g_mempPools[bank].prevpos = 0;
     g_mempPools[bank].pos = g_mempPools[bank].start;

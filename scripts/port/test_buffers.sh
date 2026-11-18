@@ -14,7 +14,11 @@ for width in $widths; do
     if [[ ${MIDAS_BUFFER_SANITIZE:-0} == 1 ]]; then
         flags+=(-fsanitize=address,undefined -fno-sanitize=alignment,shift,signed-integer-overflow -fno-sanitize-recover=all)
     fi
-    for source in test_model_bounds test_audio_buffers test_memory_banks test_token_bounds test_high_alloc; do
+    sources=(test_model_bounds test_audio_buffers test_memory_banks test_token_bounds test_high_alloc)
+    if [[ ${MIDAS_BUFFER_SANITIZE:-0} == 1 ]]; then
+        sources+=(test_lp64_poison) # the arenas' poisoning exists only under the sanitizer
+    fi
+    for source in "${sources[@]}"; do
         "${CC:-gcc}" "${flags[@]}" -std=gnu11 -fms-extensions -fcommon -w -fno-builtin -fwrapv -funsigned-char \
             -DVERSION_US -DLANG_US -DREFRESH_NTSC -D_LANGUAGE_C -DLEFTOVERDEBUG \
             -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \

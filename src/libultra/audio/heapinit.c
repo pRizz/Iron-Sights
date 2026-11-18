@@ -20,6 +20,7 @@
 
 #include "synthInternals.h"
 #include <libaudio.h>
+#include "port_poison.h"
 
 void alHeapInit(ALHeap *hp, u8 *base, s32 len)
 {
@@ -33,4 +34,5 @@ void alHeapInit(ALHeap *hp, u8 *base, s32 len)
     hp->len  = len;
     hp->cur  = hp->base;
     hp->count = 0;
+    PORT_POISON(base, len); /* the caller's region; alHeapDBAlloc unpoisons each block */
 }
