@@ -1,0 +1,22 @@
+# Reviewed overlay sites: every place the C sources read a record through another type (LP64-005 Task 3).
+#
+# `python3 scripts/port/lp64_overlays.py list` prints the sites; `check` requires each to have exactly one
+# line here and each line here to match a site. Format, one line a site, fields separated by tabs:
+#
+#   file:function:kind:text<TAB>VERDICT<TAB>reason
+#
+# The key is the site as `list` prints it: no line number, whitespace normalized, ` #N` on the Nth
+# occurrence of one key in a file. A site whose text changes is a new site and needs a new verdict; its
+# old line becomes stale and must be removed.
+#
+# Verdicts:
+#   typed       the object is of the type it is read as.
+#   same        the layout read is the same at both widths; the reason names the _Static_assert in
+#               scripts/port/abi_probe/probe.c that pins it.
+#   overlay-64  deliberately different at 64 bits, behind IS_64_BIT; the reason names the assertion.
+#   dead        not compiled or not reached on PC; the reason says why.
+# `fixed` is not a verdict: a fixed site leaves the list. A site that reads the wrong member at 64 bits
+# is a defect: it is listed in FORK-089 and fixed (Task 4, or the strict branch), not given a verdict.
+#
+# Task 3, first part: the tool is built and the list is not yet reviewed, so this file holds no site
+# lines and `check` is not yet run in CI. The review batches add the lines; the last adds `check` to CI.
