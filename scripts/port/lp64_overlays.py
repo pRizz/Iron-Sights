@@ -7,9 +7,10 @@ after a tab). `check` requires every site to have exactly one line in `lp64_over
 `OK: N sites, all reviewed`, or each `unreviewed:` site and `stale:` line and exits 1, then `N defect
 lines`. It refuses (exit 2) a listing with a repeated key or with no site at all.
 
-Verdicts: typed (the object is of the type it is read as), same (the bytes read are at the same place at
-both widths; the reason names the probe assertion), overlay-64 (deliberately different at 64 bits behind
-IS_64_BIT; the reason names the assertion), dead (not compiled or not reached on PC; the reason says why),
+Verdicts: typed (the object is of the type it is read as; for a run, every access through the head
+uses the head's type), same (the bytes read are at the same place at both widths; the reason names the
+probe assertion), overlay-64 (deliberately different at 64 bits behind IS_64_BIT; the reason names the
+assertion), dead (not compiled or not reached on PC; the reason says why),
 and defect: the site reads or writes the wrong thing at 64 bits, recorded until its fix takes the site off
 the list. A defect's reason starts with its owner, `Task N:` (the task that fixes it), `strict:` (a
 strict-tier file, fixed on the strict branch) or `undecided:` (not decidable from the code; what was
