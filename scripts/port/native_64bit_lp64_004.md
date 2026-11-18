@@ -1754,6 +1754,22 @@ git commit -m "Run the 20 missions on a 64-bit build and compare what they load"
 
 ### Task 17: Land the strict batch and close
 
+*As run on 2026-11-17:* `lp64/conv-strict` was never created, because no
+task and no review fix needed an edit to a strict-tier file (the final
+review's three strict-tier candidates went to the owner or the hand-over,
+and its pause list fix is in `bondview.h`). Step 1 was therefore a
+regeneration on `main`: the owner's Windows laptop made bbcac00, which
+changed only `review/hand-gallery/index.html` and `manifest.json`, with 0
+changed image cells. Step 3 did not do what its text says. The allowlist
+held 24 truncating casts in 11 files (Task 4 added `romconv_text.c`'s
+32-bit branch), not 23 in 10, and compiling functions out could lower no
+count: `lp64_casts.py` reads the source text whatever the build compiles,
+and the 64-bit ROM-free tests link `romfile_model.c` and `romfile_setup.c`.
+So the step kept every cast, 24 in 11 files before and after, and rewrote
+each line's reason to say why the cast stays now, without naming a
+milestone that removes it. The step's text below is kept as written;
+FORK-089, "LP64-004 task 17", has the reasons and the runs.
+
 - [ ] **Step 1: If `lp64/conv-strict` has commits, hand it to the laptop**
 
 On the Windows laptop, as in LP64-003's Task 12:

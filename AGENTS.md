@@ -240,21 +240,42 @@ pass its isolated executable rather than rebuilding an active player binary.
   follows the accepted [64-bit plan](scripts/port/native_64bit_plan.md). Read it
   before resuming, keep the 32-bit and web builds working, do not reopen its
   recorded decisions, and update its milestone status table before handing off.
-- ROM data converters (LP64-004) are `port/src/romconv_*.c`. CMake compiles
-  that pattern only at 64 bits and in the 32-bit headless oracle build
-  (`-DGE_LP64_ORACLE=ON`), never in a shipped 32-bit build, and with
-  `-Werror=incompatible-pointer-types`. Call one from shared code only inside
-  `#if IS_64_BIT` or `#ifdef GE_LP64_ORACLE`, leaving the existing code
+- ROM data converters (LP64-004) are `port/src/romconv_*.c`, declared in
+  `port/include/port_romconv.h`, `port_romconv_audio.h` and
+  `port_romconv_stage.h`, with the file layouts they read in
+  `port_romlayout.h`, `port_romlayout_audio.h` and `port_romlayout_stage.h`.
+  CMake compiles that pattern only at 64 bits and in the 32-bit headless
+  oracle build (`-DGE_LP64_ORACLE=ON`), never in a shipped 32-bit build, and
+  with `-Werror=incompatible-pointer-types`. Call one from shared code only
+  inside `#if IS_64_BIT` or `#ifdef GE_LP64_ORACLE`, leaving the existing code
   unedited in the other branch. The oracle build compares each converter with
   the in-place conversion it replaces; with the ROM, in the i686 container,
   configure `build/lp64/oracle` with `-DGE_HEADLESS=ON -DGE_LP64_ORACLE=ON`,
   build it, and run `python3 scripts/port/lp64_oracle.py --rom
-  /rom/baserom.u.z64 --classes "A,B" build/lp64/oracle/IronSights`, naming
-  the classes converted so far. `scripts/port/lp64_boot.py --expect-stop
-  NAME` passes a 64-bit executable that stops at class NAME;
-  `--expect-run [--frames N]` one that runs N frames (600 by default),
-  logging `ge: frame limit reached: frames=N`, and exits 0 with no stop,
-  pool or `cannot convert` line.
+  /rom/baserom.u.z64 --classes "animation tables,text banks,audio
+  banks,music sequences,textures,fonts,models,backgrounds,collision
+  tiles,setup files" --frames 1800 --fixed-tick
+  build/lp64/oracle/IronSights`; it passes when each class reports `N files,
+  0 differ` with N above zero. `scripts/port/lp64_census.py compare DIR32
+  DIR64` compares what the missions load at both widths, from the folders of
+  a 32-bit and a 64-bit `audit_buffers.py --mission-smoke ... --frames 1800
+  --fixed-tick` run. `scripts/port/lp64_boot.py --expect-run [--frames N]` is
+  the normal boot check: it passes a 64-bit executable that runs N frames
+  (600 by default), logs `ge: frame limit reached: frames=N` and exits 0;
+  `--expect-stop NAME` remains for the test hook below. A 64-bit run, in the
+  boot check or the mission smoke, fails on any `ge: lp64:` line outside the
+  informational list (`INFORMATIONAL_PREFIXES` in `lp64_boot.py`); a new
+  informational line is added there deliberately.
+- Storage for a record or a display list is sized by `sizeof` of what it
+  holds, never by a literal byte count or by filler members, and a member
+  that overlays another record by position is pinned at both widths in the
+  layout probe (`scripts/port/abi_probe/probe.c`). Records and commands that
+  hold pointers grow at 64 bits, and the sanitizers do not see an overrun
+  inside one allocation or a common symbol. `g_ModelHitEntries`
+  (`src/game/objecthandler.c`) was 600 times 0x14 bytes for a 40-byte
+  record, and the pause list `buffer_for_watch_static_DL`
+  (`src/game/bondview.h`) was one `Gfx` and six `s32` fillers for three
+  commands.
 - At `GE_POINTER_BITS=64`, C and C++ that mix pointers with 32-bit integers do
   not compile: `CMakeLists.txt` gives 64-bit C `-Werror=int-conversion
   -Werror=pointer-to-int-cast -Werror=int-to-pointer-cast` and 64-bit C++
@@ -284,17 +305,20 @@ pass its isolated executable rather than rebuilding an active player binary.
   [FILE...]` lists the conversions of those trees as `file:line: kind`. A new
   warning class in the 64-bit log gets fixed, or a named `-Wno-` flag with its
   count in that comment; never `-w`.
-- A 64-bit game stops, exit status 5, at the first ROM asset class the boot
-  reaches whose entry in `port/src/port_lp64.c`'s table is 0: each in-place
-  conversion starts with `portLp64RequireConverter`
-  (`port/include/port_lp64.h`), which logs the class's name. A class's entry
-  becomes 1 in the commit that lands its converter, and the LP64-004 row of
-  the status table in `scripts/port/native_64bit_plan.md` says which classes
-  are converted. With the
-  ROM, `python3 scripts/port/lp64_boot.py --rom ROM --expect-stop "NAME"
-  EXECUTABLE...` (the task check of the 64-bit plan's current milestone names
-  the class) boots each executable to that stop and fails on another class,
-  a crash, a missing address line, a sanitizer report or a timeout.
+- All ten ROM asset classes are converted at 64 bits: each entry of
+  `port/src/port_lp64.c`'s table is 1. Each in-place conversion still starts
+  with `portLp64RequireConverter` (`port/include/port_lp64.h`), so a 64-bit
+  game stops with exit status 5, naming the class, only when an entry is set
+  back to 0 or when a test driver is built with `GE_LP64_TEST_UNCONVERTED`
+  naming a class (`test_lp64_address.sh` does, so that the stop and
+  `lp64_boot.py --expect-stop "NAME"` stay tested); CMake never defines it.
+  A 64-bit build has no compiled-in asset copy to fall back to, and the
+  `GE_ROM*=0` switches are ignored there: it stops by name, with exit status
+  1, on a file of one of these classes that the ROM does not serve and on a
+  missing ROM segment. A converter that refuses a file logs `ge: lp64:
+  cannot convert CLASS "FILE": ...`; the game then stops by name, except that
+  a refused model or text bank loads empty. A pool whose overrun is fatal
+  (the music heap, the graphics buffer) stops it with exit status 6.
 - Fonts, sharp text rendering and other original game assets follow the
   accepted [open assets plan](scripts/port/open_assets_plan.md). Read it before
   resuming, keep its provenance rules (drawn from scratch, MIT, no ROM-derived
