@@ -14,6 +14,8 @@
 #include "game/chrai.h"
 #include "game/lv.h"
 #include "port_romconv_stage.h"
+#include "game/bgfog.h"
+#include "libultra/audio/synthInternals.h"
 
 #define IS_TYPE(expr, type) _Generic((expr), type: 1, default: 0)
 
@@ -271,6 +273,60 @@ _Static_assert(offsetof(struct HitThingSub, normal) == offsetof(struct HitThing,
                    && offsetof(struct HitThingSub, texturenum) == offsetof(struct HitThing, texturenum)
                    && IS_TYPE(((struct HitThingSub *) 0)->hitpos, coord3d),
                "bg.c's HitThingSub is a HitThing's members to texturenum at both widths");
+
+/* Batch 4, the second half of the record sites (prop.c to the audio files). */
+/* portLintSetup reads a watch menu text record's text through objective_entry. */
+_Static_assert(offsetof(struct objective_entry, text) == offsetof(struct watchMenuObjectiveText, text)
+                   && IS_TYPE(((struct objective_entry *) 0)->text, u16)
+                   && IS_TYPE(((struct watchMenuObjectiveText *) 0)->text, u16),
+               "an objective entry's text is a watch menu text record's");
+/* propobj.c reads a DLCOLLISION node's read-write slot as its Vertex pointer. */
+_Static_assert(IS_TYPE(((ModelRwData_DisplayList_CollisionRecord *) 0)->Vertices, Vertex *)
+                   && sizeof(Vertex *) == sizeof(union ModelRwData *),
+               "a DLCOLLISION read-write record's Vertices fills its first slot");
+/* objTick passes a tank's collision word as a collision_data, whose edges
+ * sub_GAME_7F03ECC0 writes (and nothing else of it). */
+_Static_assert(IS_TYPE(((collision_data *) 0)->edges, s32) && IS_TYPE(((TankRecord *) 0)->collision, s32),
+               "a tank's collision word is a collision_data's edges");
+/* chrRenderHeldWeapon reads a chr's PropRecord as a ChrRenderContext. */
+_Static_assert(offsetof(ChrRenderContext, chr) == offsetof(PropRecord, chr)
+                   && IS_TYPE(((ChrRenderContext *) 0)->chr, ChrRecord *),
+               "a ChrRenderContext's chr is a PropRecord's chr");
+/* sub_GAME_7F054C58 reads the near fog record as a coord3d's y and z. */
+_Static_assert(sizeof(NearFogRecord) == sizeof(coord3d) && offsetof(NearFogRecord, MaxVisRange) == offsetof(coord3d, y)
+                   && offsetof(NearFogRecord, MaxObfuscationRange) == offsetof(coord3d, z)
+                   && IS_TYPE(((NearFogRecord *) 0)->MaxObfuscationRange, f32),
+               "the US NearFogRecord is coord3d's three floats");
+/* stanMatchTileName walks tiles as StandTilePoint and reads ->link as the tail. */
+_Static_assert(offsetof(StandTilePoint, link) == offsetof(StandTile, tail)
+                   && sizeof(((StandTilePoint *) 0)->link) == sizeof(((StandTile *) 0)->tail),
+               "a stan tile point's link is the tile's tail half");
+/* csplayer.c and music.c pass an ALCSPlayer to seqplayer.c's helpers. */
+_Static_assert(offsetof(ALCSPlayer, drvr) == offsetof(ALSeqPlayer, drvr) && offsetof(ALCSPlayer, curTime) == offsetof(ALSeqPlayer, curTime)
+                   && offsetof(ALCSPlayer, vol) == offsetof(ALSeqPlayer, vol)
+                   && offsetof(ALCSPlayer, maxChannels) == offsetof(ALSeqPlayer, maxChannels)
+                   && offsetof(ALCSPlayer, evtq) == offsetof(ALSeqPlayer, evtq)
+                   && offsetof(ALCSPlayer, chanState) == offsetof(ALSeqPlayer, chanState)
+                   && offsetof(ALCSPlayer, vAllocHead) == offsetof(ALSeqPlayer, vAllocHead)
+                   && offsetof(ALCSPlayer, vAllocTail) == offsetof(ALSeqPlayer, vAllocTail)
+                   && offsetof(ALCSPlayer, vFreeList) == offsetof(ALSeqPlayer, vFreeList)
+                   && offsetof(ALCSPlayer, stopOsc) == offsetof(ALSeqPlayer, stopOsc),
+               "an ALCSPlayer is an ALSeqPlayer's members to stopOsc");
+/* The audio lists link records by their first member and cast the link back. */
+_Static_assert(IS_TYPE(((ALEventListItem *) 0)->node, ALLink) && offsetof(ALEventListItem, node) == 0
+                   && IS_TYPE(((PVoice *) 0)->node, ALLink) && offsetof(PVoice, node) == 0
+                   && IS_TYPE(((ALSoundState *) 0)->link, ALLink) && offsetof(ALSoundState, link) == 0,
+               "an event list item, a physical voice and a sound state start with their ALLink");
+_Static_assert(IS_TYPE(((DMABuffer *) 0)->node, ALLink) && offsetof(DMABuffer, node) == 0,
+               "audi.c's DMABuffer starts with its ALLink");
+/* snd.c posts its ALSndpEvent locals as ALEvent: the queue copies an ALEvent. */
+_Static_assert(sizeof(ALSndpEvent) == sizeof(ALEvent) && IS_TYPE(((ALSndpEvent *) 0)->common.type, u16)
+                   && sizeof(((ALEvent *) 0)->type) == sizeof(u16),
+               "snd.c's ALSndpEvent is an ALEvent's size with its type first");
+/* sndCountAllocList reads D_800243E4 as an ALEventQueue: freeList, then allocList.next. */
+_Static_assert(offsetof(ALEventQueue, freeList) == offsetof(struct D_800243E4_s, node)
+                   && offsetof(ALEventQueue, allocList) == offsetof(struct D_800243E4_s, g_sndPlayerSoundStatePtr),
+               "snd.c's D_800243E4 is an ALEventQueue's freeList then allocList.next");
 
 /* chrprop.c tests an image entry's hitSound as the low nibble of its first
  * byte: GCC allocates the first bit-field there at both widths. */
