@@ -14,6 +14,11 @@ build: a demo that differs from itself is `unstable`, and its trace proves nothi
 demo whose log, on either side, does not show its playback reaching its end by the `demos` case's
 rule (its own first playback, ended by its time at the measured tick): two runs that stop at the
 same early tick would otherwise agree.
+
+The tick lines go to stdout and other lines to stderr, both into the log, so a line of the other
+stream can cut a tick line in two (seen once: facility1 at tick 331 in an i686 run). Such a torn
+line is neither a difference nor agreement: the comparison names it, `torn line at tick T`, and
+the demo fails.
 """
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,21 +27,41 @@ import re
 from lp64_play_cases import DEMOS, demo_playback_required
 from lp64_play_judge import requirement_problem
 
-TICK_LINE = re.compile(r'^ge: demo tick (\d+) (.*)$')
+# A whole tick line, field by field as ramromreplay.c prints it.
+TICK_LINE = re.compile(r'^ge: demo tick (\d+) (draws=-?\d+ live=[0-9a-f]{2} rec=[0-9a-f]{2} '
+                       r'p0=-?\d+,-?\d+ p1=-?\d+,-?\d+ b=[0-9a-f]{4},[0-9a-f]{4})$')
+# A part of one: a cut after "demo tick" leaves it in the first part, and a cut before it leaves
+# " p1=" in the second (no other line the game prints holds either).
+TICK_PART = re.compile(r'demo tick| p1=')
+TICK_NUMBER = re.compile(r'tick (\d+)')
 
 
-def read_ticks(text: str) -> list[tuple[int, str]]:
-    """The (tick, rest of line) pairs of TEXT's first playback, in order."""
+@dataclass(frozen=True)
+class Trace:
+    """The (tick, rest of line) pairs of a log's first playback, in order, up to the first torn
+    tick line; TORN is the tick that line belongs to, or None when there is none."""
+    ticks: list[tuple[int, str]]
+    torn: int | None = None
+
+
+def read_trace(text: str) -> Trace:
+    """TEXT's first playback. A part of a tick line that is not a whole one is torn, wherever it
+    falls before the playback ends: its tick is the number it holds when that is past the last
+    whole tick, else the tick after it (a cut inside the number leaves a smaller one)."""
     ticks: list[tuple[int, str]] = []
     for line in text.splitlines():
         match = TICK_LINE.match(line.strip())
         if match is None:
-            continue
+            if TICK_PART.search(line) is None:
+                continue
+            last = ticks[-1][0] if ticks else -1
+            number = TICK_NUMBER.search(line)
+            return Trace(ticks, max(int(number.group(1)), last + 1) if number else last + 1)
         tick = int(match.group(1))
         if ticks and tick <= ticks[-1][0]:
             break
         ticks.append((tick, match.group(2)))
-    return ticks
+    return Trace(ticks)
 
 
 @dataclass(frozen=True)
@@ -77,7 +102,10 @@ def compare_demo(name: str, dir_a: Path, dir_b: Path) -> Comparison:
         if not log.is_file():
             return Comparison(0, None, f'no log {log}')
         text = log.read_text(errors='replace')
-        ticks = read_ticks(text)
+        trace = read_trace(text)
+        if trace.torn is not None:
+            return Comparison(0, None, f'torn line at tick {trace.torn} in {log} (another stream cut it)')
+        ticks = trace.ticks
         if not ticks:
             return Comparison(0, None, f'no "ge: demo tick" lines in {log}')
         unfinished = playback_problem(name, text)

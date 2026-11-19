@@ -33,6 +33,19 @@ def trace(name: str, ticks: int | None = None, differ_from: int | None = None,
     return '\n'.join(lines) + '\n'
 
 
+OTHER_STREAM = 'ge: romdata: model GtriggerZ converted'
+
+
+def torn(text: str, tick: int, cut: int) -> str:
+    """TEXT with tick TICK's line cut CUT characters in by a whole line of the other output stream,
+    the line's remainder following on a line of its own (seen in an i686 run: facility1, tick 331)."""
+    head = f'ge: demo tick {tick} '
+    start = text.index(head)
+    end = text.index('\n', start)
+    line = text[start:end]
+    return text[:start] + line[:cut] + OTHER_STREAM + '\n' + line[cut:] + text[end:]
+
+
 class Folders(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -232,6 +245,69 @@ class Traces(Folders):
         # Assert
         self.assertEqual(status, 1, out)
         self.assertIn('dam2: no "ge: demo tick" lines in', out)
+
+    def test_torn_tick_line_is_named_and_fails_where_it_would_differ(self):
+        # Arrange: the remainder carries the same values, so only the tear separates the traces.
+        ref = self.run_folder('ref', {})
+        new = self.run_folder('new', {'facility1': torn(trace('facility1'), 331, 40)})
+
+        # Act
+        status, out = self.main('traces', '--expect', str(self.expectations({})), str(ref), str(new))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('facility1: torn line at tick 331 in', out)
+        self.assertNotIn('facility1: first differs', out)
+        self.assertIn('FAIL: 1 of 14 demos not as recorded: facility1', out)
+
+    def test_torn_tick_line_does_not_pass_where_a_difference_is_recorded(self):
+        # Arrange: a torn line must not hide a recorded difference either.
+        ref = self.run_folder('ref', {})
+        new = self.run_folder('new', {'facility1': torn(trace('facility1', differ_from=331), 331, 40)})
+        expect = self.expectations({'facility1': 'differs-from 331 a cause'})
+
+        # Act
+        status, out = self.main('traces', '--expect', str(expect), str(ref), str(new))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('facility1: torn line at tick 331 in', out)
+
+    def test_tear_before_the_tick_number_is_named_at_the_tick_it_hides(self):
+        # Arrange: the cut falls inside "demo tick", so neither part reads as tick 331's line.
+        a = self.run_folder('a', {'facility1': torn(trace('facility1'), 331, 9)})
+        b = self.run_folder('b', {})
+
+        # Act
+        status, out = self.main('traces', '--reference-check', str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('facility1: torn line at tick 331 in', out)
+        self.assertNotIn('facility1: unstable', out)
+
+    def test_tear_inside_the_tick_number_is_named_at_its_tick(self):
+        # Arrange: "ge: demo tick 33" then "1 draws=...": the first part's number is a smaller one.
+        ref = self.run_folder('ref', {})
+        new = self.run_folder('new', {'facility1': torn(trace('facility1'), 331, 16)})
+
+        # Act
+        status, out = self.main('traces', '--expect', str(self.expectations({})), str(ref), str(new))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('facility1: torn line at tick 331 in', out)
+
+    def test_tear_in_a_later_playback_is_not_part_of_the_trace(self):
+        # Arrange
+        ref = self.run_folder('ref', {})
+        new = self.run_folder('new', {'dam2': trace('dam2') + torn(trace('dam1', 50), 30, 40)})
+
+        # Act
+        status, out = self.main('traces', '--expect', str(self.expectations({})), str(ref), str(new))
+
+        # Assert
+        self.assertEqual(status, 0, out)
 
     def test_reference_check_of_agreeing_runs_passes(self):
         # Arrange
