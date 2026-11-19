@@ -511,10 +511,11 @@ Owner's decisions:
   buffers in `gun.c` are scaled by 13/8 at 64 bits; the background's room and
   portal tables are built fresh at each stage load at 64 bits, as on the N64,
   and whether the 32-bit build's reloads differ is measured and left to
-  LP64-006; the eleven cut stages keep stopping by name, which LP64-005's
-  decision 4 made the design: the twelve stage numbers without their files
-  (the nine cut level ids, Citadel, and solo Temple and Complex) stop by name
-  with status 1, checked by the `stops` set; the
+  LP64-006; the eleven cut stages (eleven background files, which belong to
+  nine level ids) keep stopping by name, and LP64-005's decision 4 made that
+  the design: each stage number without its files stops by name with status
+  1, the `stops` set checking all twelve (those nine level ids, Citadel, and
+  solo Temple and Complex); the
   converter oracle is a build option (`-DGE_LP64_ORACLE=ON`, 32-bit and
   headless only), never part of a shipped build; strict-tier fixes the first
   64-bit runs need land through one laptop trip at the milestone's end;

@@ -39,7 +39,15 @@ static void assertFieldHolds(const char *name, u32 kept)
     }
 }
 
-/* Leaves nonzero bytes where the next call's frame will be. */
+/* Leaves nonzero bytes where the next call's frame will be. The absent-host
+ * case rests on this: indycommHostCheckFileExists's `response` must lie in
+ * the bytes this frame filled, which holds for these two sibling calls at
+ * -O1 with GCC 13. A compiler or flag change (another optimization level,
+ * a stack protector, ASan's fake stack, inlining) could put it elsewhere,
+ * and the case would then pass against the old code without testing
+ * anything. If those change, revert the IS_64_BIT line in indy_comms.c and
+ * check that the case still fails with the 0xa5 pattern (or dump the frame
+ * addresses of `garbage` and `response`). */
 __attribute__((noinline)) static void dirtyTheStack(void)
 {
     volatile u8 garbage[4096];
