@@ -4,6 +4,7 @@ chosen status), as test_lp64_boot.py does. The options, environment and set size
 test_lp64_play_options.py, traces and callers in test_lp64_play_traces.py."""
 import contextlib
 import io
+import json
 from pathlib import Path
 import stat
 import sys
@@ -436,6 +437,29 @@ class Video(StandIns):
         # Assert
         self.assertEqual(status, 1, out)
         self.assertIn('dam1: FAIL (missing line: ge: video: window + GL context up)', out)
+
+    def test_video_case_whose_frame_limit_line_lacks_gfxtasks_fails(self):
+        # Arrange
+        exe = self.fake(DAM1_VIDEO + 'ge: frame limit reached: frames=3000\n')
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('dam1: FAIL (missing line: ge: frame limit reached: ... gfxtasks=N)', out)
+
+    def test_video_case_without_a_frame_limit_line_fails(self):
+        # Arrange
+        exe = self.fake(DAM1_VIDEO)
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video')
+
+        # Assert
+        problems = json.loads((self.output/'play.json').read_text())['cases'][0]['problems']
+        self.assertEqual(status, 1, out)
+        self.assertIn('missing line: ge: frame limit reached: ... gfxtasks=N', problems)
 
     def test_headless_case_needs_neither_video_line(self):
         # Arrange

@@ -4,13 +4,16 @@ Each case runs on a copy of the executable in a fresh temporary folder, with eve
 of the caller dropped and GE_ROM, GE_FRAMES, GE_SEED=1, GE_NOINISAVE=1,
 ASAN_OPTIONS=detect_leaks=0, the case's own variables and the caller's --env set. Its combined
 output goes to DIR/CASE.log; DIR/play.json records every case's variables, status, time and
-problems. The runs are paced in real time (60 retraces a second), so a case's frames fix its
-wall time; a case still running at timeout_seconds(frames) is killed and fails with its last line.
+problems. The runs are paced in real time (60 retraces a second; with --video GE_TICKHZ=60 keeps
+that rate, but the pump then waits for each picture, so a renderer slower than 60 pictures a second
+stretches the case), so a case's frames fix its wall time; a case still running at
+timeout_seconds(frames) is killed and fails with its last line.
 
 With video (`run --video`) a case also gets SDL_VIDEODRIVER=offscreen (Mesa's software GL; the
-dummy driver cannot make a GL context), SDL_AUDIODRIVER=dummy, GE_WINDOW=640x480, GE_NOINPUT=1, and
-a HOME and GE_ICON_CACHE_DIR inside its temporary folder; `--shots N` adds GE_SHOT=N, and the last
-shot_*.bmp the case wrote is copied to DIR/CASE.bmp. These are ROM-derived pictures: they stay in
+dummy driver cannot make a GL context), SDL_AUDIODRIVER=dummy, GE_WINDOW=640x480, GE_NOINPUT=1,
+GE_TICKHZ=60, a HOME and GE_ICON_CACHE_DIR inside its temporary folder, and a midas.ini there with
+`[display] fullscreen=windowed`; `--shots N` adds GE_SHOT=N, and the last shot_*.bmp the case wrote
+is copied to DIR/CASE.bmp. These are ROM-derived pictures: they stay in
 the output folder and are never committed.
 
 A case with a route (the `input` set) gets GE_INPUTPLAY=DIR/CASE.route. A route of steps is built
@@ -43,8 +46,18 @@ RETRACES_PER_SECOND = 60
 TIMEOUT_FACTOR = 5
 TIMEOUT_BOOT_SECONDS = 120
 # What every run with video gets (plan "What was measured": video needs no display server).
+# GE_TICKHZ=60 (src/game/frametiming.c, portTickHz; it wins over midas.ini's tickhz): a video
+# build's retrace pump runs at tickhz, 120 in the ini it writes by default, while every case's
+# frames were measured headless at 60 retraces a second; at 120 a case ends at half its time.
 VIDEO_VARIABLES = {'SDL_VIDEODRIVER': 'offscreen', 'SDL_AUDIODRIVER': 'dummy', 'GE_WINDOW': '640x480',
-                   'GE_NOINPUT': '1'}
+                   'GE_NOINPUT': '1', 'GE_TICKHZ': '60'}
+# The variables a run with video sets in its folder at launch (folder_environment).
+FOLDER_VARIABLES = ('HOME', 'GE_ICON_CACHE_DIR')
+# GE_WINDOW sets only the windowed size (port/src/video.c, videoInit); the default midas.ini has
+# fullscreen=1, a borderless window the size of the display (1024x768 offscreen). The game reads
+# midas.ini from its root, the executable's folder; a file with only this key keeps every other
+# setting at its code default.
+WINDOWED_INI = '[display]\nfullscreen=windowed\n'
 
 
 @dataclass(frozen=True)
@@ -103,12 +116,14 @@ def case_environment(case: Case, rom: Path, extra: dict[str, str],
 
 def folder_environment(env: dict[str, str], folder: Path, display: Display) -> dict[str, str]:
     """ENV with, for a run with video, a HOME and GE_ICON_CACHE_DIR made inside FOLDER, the run's
-    temporary folder: the video build writes its settings and icon cache there."""
+    temporary folder, where the video build writes its settings and icon cache, and FOLDER's
+    midas.ini written to run windowed (WINDOWED_INI)."""
     if not display.video:
         return env
     home, icons = folder/'home', folder/'icons'
     home.mkdir()
     icons.mkdir()
+    (folder/'midas.ini').write_text(WINDOWED_INI)
     return dict(env, HOME=str(home), GE_ICON_CACHE_DIR=str(icons))
 
 

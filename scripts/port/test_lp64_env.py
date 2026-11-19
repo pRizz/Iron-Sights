@@ -93,13 +93,17 @@ class DockerCommand(unittest.TestCase):
 class BuildCommands(unittest.TestCase):
     def test_the_i686_video_image_is_built_after_the_image_it_extends(self):
         # Arrange / Act
-        commands = env.build_commands(Path('/repo'), 501, 20)
+        commands = env.build_commands(Path('/repo'), 501, 20, Path('/empty'))
         # Assert
         tags = [command[command.index('-t') + 1] for command in commands]
         self.assertEqual(tags, ['goldeneye', 'midas-lp64-arm64', 'midas-lp64-i686-video'])
-        video = commands[2]
-        self.assertEqual(video[video.index('-f') + 1], '/repo/scripts/port/lp64-i686-video.Dockerfile')
-        self.assertIn('linux/amd64', video)
+
+    def test_the_i686_video_image_is_built_from_an_empty_context(self):
+        # Arrange / Act
+        video = env.build_commands(Path('/repo'), 501, 20, Path('/empty'))[2]
+        # Assert: its Dockerfile copies nothing, so the checkout (ROM, build trees) is not sent
+        self.assertEqual(video, ['docker', 'build', '--platform', 'linux/amd64', '-t', 'midas-lp64-i686-video',
+                                 '-f', '/repo/scripts/port/lp64-i686-video.Dockerfile', '/empty'])
 
 
 class FindRom(unittest.TestCase):

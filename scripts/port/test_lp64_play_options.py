@@ -134,7 +134,7 @@ class VideoOptions(StandIns):
     def test_video_runs_offscreen_with_home_and_icon_cache_inside_the_run_folder(self):
         # Arrange
         exe = self.fake(DAM1_VIDEO + frames(3000), script=(
-            'env | grep -E "^(SDL_|GE_WINDOW|GE_NOINPUT|GE_SHOT)" | sort >&2\n'
+            'env | grep -E "^(SDL_|GE_WINDOW|GE_NOINPUT|GE_SHOT|GE_TICKHZ)" | sort >&2\n'
             'here=$(pwd -P)\n'
             'case "$(cd "$HOME" && pwd -P)" in "$here"/*) echo HOME-INSIDE >&2;; esac\n'
             'case "$(cd "$GE_ICON_CACHE_DIR" && pwd -P)" in "$here"/*) echo ICONS-INSIDE >&2;; esac'))
@@ -145,10 +145,57 @@ class VideoOptions(StandIns):
         # Assert
         log = (self.output/'dam1.log').read_text().splitlines()
         self.assertEqual(status, 0, out)
-        self.assertEqual([line for line in log if line.startswith(('SDL_', 'GE_WINDOW', 'GE_NOINPUT', 'GE_SHOT'))],
-                         ['GE_NOINPUT=1', 'GE_WINDOW=640x480', 'SDL_AUDIODRIVER=dummy', 'SDL_VIDEODRIVER=offscreen'])
+        self.assertEqual([line for line in log if line.startswith(('SDL_', 'GE_WINDOW', 'GE_NOINPUT', 'GE_SHOT',
+                                                                   'GE_TICKHZ'))],
+                         ['GE_NOINPUT=1', 'GE_TICKHZ=60', 'GE_WINDOW=640x480', 'SDL_AUDIODRIVER=dummy',
+                          'SDL_VIDEODRIVER=offscreen'])
         self.assertIn('HOME-INSIDE', log)
         self.assertIn('ICONS-INSIDE', log)
+
+    def test_video_runs_windowed_through_a_midas_ini_in_the_run_folder(self):
+        # Arrange
+        exe = self.fake(DAM1_VIDEO + frames(3000), script='sed "s/^/INI: /" midas.ini >&2')
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video')
+
+        # Assert
+        log = (self.output/'dam1.log').read_text().splitlines()
+        self.assertEqual(status, 0, out)
+        self.assertEqual([line for line in log if line.startswith('INI: ')], ['INI: [display]', 'INI: fullscreen=windowed'])
+
+    def test_headless_run_gets_no_midas_ini(self):
+        # Arrange
+        exe = self.fake(DAM1_GOOD, script='test -e midas.ini && echo HAS-INI >&2')
+
+        # Act
+        self.play(exe, 'demos', 'dam1')
+
+        # Assert
+        self.assertNotIn('HAS-INI', (self.output/'dam1.log').read_text())
+
+    def test_video_refuses_env_for_what_it_sets(self):
+        for name in ('GE_TICKHZ', 'GE_WINDOW', 'SDL_VIDEODRIVER', 'HOME', 'GE_ICON_CACHE_DIR'):
+            # Arrange
+            exe = self.fake(DAM1_VIDEO + frames(3000))
+
+            # Act
+            status, out = self.play(exe, 'demos', 'dam1', '--video', '--env', f'{name}=x')
+
+            # Assert
+            self.assertEqual(status, 2, out)
+            self.assertIn(f'--env {name} is refused with --video', out)
+
+    def test_shots_refuse_env_ge_shot(self):
+        # Arrange
+        exe = self.fake(DAM1_VIDEO + frames(3000))
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video', '--shots', '5', '--env', 'GE_SHOT=1')
+
+        # Assert
+        self.assertEqual(status, 2, out)
+        self.assertIn('--env GE_SHOT is refused with --shots', out)
 
     def test_shots_set_ge_shot_and_keep_the_last_screenshot_of_each_case(self):
         # Arrange

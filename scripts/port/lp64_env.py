@@ -17,6 +17,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 from typing import Mapping, Optional
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -72,15 +73,18 @@ def docker_command(arch: str, root: Path, maybe_rom: Optional[Path], command: li
     return argv + [image] + command
 
 
-def build_commands(root: Path, uid: int, gid: int) -> list[list[str]]:
-    """Return the `docker build` argument lists for the toolchain images, each after the one it extends."""
+def build_commands(root: Path, uid: int, gid: int, empty_context: Path) -> list[list[str]]:
+    """Return the `docker build` argument lists for the toolchain images, each after the one it extends.
+
+    The i686 video image's Dockerfile copies nothing, so it is built from EMPTY_CONTEXT, an empty
+    folder, and the checkout (the ROM, the build trees) is not sent to the Docker daemon."""
     ids = ['--build-arg', f'HOST_UID={uid}', '--build-arg', f'HOST_GID={gid}']
     return [
         ['docker', 'build', '--platform', 'linux/amd64', *ids, '-t', AMD64_IMAGE, str(root)],
         ['docker', 'build', '--platform', 'linux/arm64', *ids, '-t', ARM64_IMAGE,
          '-f', str(root/ARM64_DOCKERFILE), str(root)],
         ['docker', 'build', '--platform', 'linux/amd64', '-t', I686_VIDEO_IMAGE,
-         '-f', str(root/I686_VIDEO_DOCKERFILE), str(root)],
+         '-f', str(root/I686_VIDEO_DOCKERFILE), str(empty_context)],
     ]
 
 
@@ -97,10 +101,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     options = parser.parse_args(argv)
 
     if options.action == 'build-images':
-        for command in build_commands(ROOT, os.getuid(), os.getgid()):
-            status = subprocess.run(command).returncode
-            if status:
-                return status
+        with tempfile.TemporaryDirectory(prefix='midas-lp64-context-') as empty:
+            for command in build_commands(ROOT, os.getuid(), os.getgid(), Path(empty)):
+                status = subprocess.run(command).returncode
+                if status:
+                    return status
         return 0
 
     command = options.command[1:] if options.command[:1] == ['--'] else options.command

@@ -287,14 +287,22 @@ pass its isolated executable rather than rebuilding an active player binary.
 - `lp64_play.py run --video [--shots N] ...` runs a `GE_VIDEO` executable
   offscreen (`SDL_VIDEODRIVER=offscreen`, Mesa's software GL; the dummy
   driver cannot make a GL context), with `SDL_AUDIODRIVER=dummy`,
-  `GE_WINDOW=640x480`, `GE_NOINPUT=1` and a `HOME` and `GE_ICON_CACHE_DIR`
-  in each case's folder; each case must also log `ge: video: window + GL
+  `GE_WINDOW=640x480` (windowed through a `midas.ini` holding `[display]
+  fullscreen=windowed` that the tool writes in each case's folder, since
+  `GE_WINDOW` sets only the windowed size), `GE_NOINPUT=1`, a `HOME` and
+  `GE_ICON_CACHE_DIR` in each case's folder, and `GE_TICKHZ=60`: a video
+  build's retrace pump runs at its `tickhz`, 120 in the shipped default
+  `midas.ini`, and the cases' frames were measured at 60 retraces a second,
+  so video runs count retraces at 60 like headless ones. At 60 the render
+  thread is off and the pump waits for each picture, so a renderer slower
+  than 60 pictures a second stretches a case's wall time (the emulated
+  32-bit reference took 769 s for a demo case's 3,000 frames, past the
+  tool's timeout). `--env` refuses those names with `--video`. Each case must also log `ge: video: window + GL
   context up` and a frame-limit line with `gfxtasks=` at least its
-  `pictures` (30). `--shots N` adds `GE_SHOT=N` and keeps each case's last
-  screenshot as `DIR/CASE.bmp`, a ROM-derived picture that stays under
-  `build/lp64/`. A video build's retrace pump runs at its `tickhz` (120 in
-  the default `midas.ini` it writes), so a case's frames last half the wall
-  time they take headless. The 32-bit video reference runs in its own image:
+  `pictures` (30). `--shots N` adds `GE_SHOT=N` (a screenshot every N
+  pictures) and keeps each case's last screenshot as `DIR/CASE.bmp`, a
+  ROM-derived picture that stays under `build/lp64/`. The 32-bit video
+  reference runs in its own image, `midas-lp64-i686-video`:
   `python3 scripts/port/lp64_env.py run --arch i686 --video -- sh -c 'cmake
   -S . -B build/lp64/ref-i686-video -DCMAKE_BUILD_TYPE=Debug -DGE_VIDEO=ON
   -DSDL2_LINUX_ROOT=/home/dev/sdl2-linux-i686
@@ -302,7 +310,7 @@ pass its isolated executable rather than rebuilding an active player binary.
   build/lp64/ref-i686-video -j"$(nproc)"'` (the `-D_scheduler_h_` keeps
   `src/sched.h`'s game definitions out of GCC 13's C++ `<chrono>` at 32
   bits; FORK-089 says why), built by `lp64_env.py build-images` from
-  `scripts/port/lp64-i686-video.Dockerfile`.
+  `scripts/port/lp64-i686-video.Dockerfile` with an empty build context.
 - Storage for a record or a display list is sized by `sizeof` of what it
   holds, never by a literal byte count or by filler members, and a member
   that overlays another record by position is pinned at both widths in the

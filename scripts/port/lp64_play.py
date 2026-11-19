@@ -17,8 +17,11 @@ timeout, a sanitizer marker, `ge: fatal signal`, `ASSERTION FAULT`, a failing `g
 or a missing required line (lp64_play_judge.py). Runs are paced in real time: never set
 GE_FIXEDTICK or GE_NOSLEEP, which --env refuses.
 --video runs a GE_VIDEO executable offscreen (SDL_VIDEODRIVER=offscreen, SDL_AUDIODRIVER=dummy,
-GE_WINDOW=640x480, GE_NOINPUT=1, HOME and GE_ICON_CACHE_DIR in the case's folder); every case
-must then log `ge: video: window + GL context up` and a frame-limit line with `gfxtasks=` at
+GE_WINDOW=640x480 windowed through a midas.ini in the case's folder, GE_NOINPUT=1, HOME and
+GE_ICON_CACHE_DIR in the case's folder, and GE_TICKHZ=60, so video runs count retraces at 60 a
+second as headless ones do, not at the shipped default of 120 (at 60 the pump waits for each
+picture, so a renderer slower than 60 a second stretches a case's wall time); --env refuses these
+names with --video, and GE_SHOT with --shots); every case must then log `ge: video: window + GL context up` and a frame-limit line with `gfxtasks=` at
 least its `pictures` (30). --shots N adds GE_SHOT=N and keeps each case's last screenshot as
 DIR/CASE.bmp (ROM-derived: never commit it).
 
@@ -37,7 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lp64_play_callers import callers  # noqa: E402
 from lp64_play_cases import cases_of, select_cases  # noqa: E402
-from lp64_play_run import FORBIDDEN_VARIABLES, Display, run_cases  # noqa: E402
+from lp64_play_run import FOLDER_VARIABLES, FORBIDDEN_VARIABLES, VIDEO_VARIABLES, Display, run_cases  # noqa: E402
 from lp64_play_traces import compare_with_expectations, reference_check  # noqa: E402
 
 DEFAULT_JOBS = 7
@@ -64,6 +67,12 @@ def command_run(parser: argparse.ArgumentParser, options: argparse.Namespace) ->
         parser.error('--shots needs --video: a headless build draws no picture')
     if options.shots is not None and options.shots < 1:
         parser.error('--shots must be at least 1')
+    if options.video:
+        for name in extra:
+            if name in VIDEO_VARIABLES or name in FOLDER_VARIABLES:
+                parser.error(f'--env {name} is refused with --video: the tool sets it for every case')
+    if options.shots is not None and 'GE_SHOT' in extra:
+        parser.error('--env GE_SHOT is refused with --shots: --shots sets it')
     try:
         cases = cases_of([name for name in options.set.split(',') if name])
     except ValueError as error:
