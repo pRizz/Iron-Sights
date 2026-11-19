@@ -152,9 +152,7 @@ static std::unordered_map<uint64_t, int> roc_part_by_key;
 static RocRoom* roc_walk = nullptr;      /* the part being walk-replayed */
 static size_t roc_walk_next = 0;         /* next draw to issue */
 static uint32_t roc_stat_parts_replayed, roc_stat_part_draws, roc_stat_part_misses;
-static inline uint64_t roc_part_key(const void* dl, const void* vtx) {
-    return ((uint64_t)(uintptr_t)dl << 20) ^ (uint64_t)(uintptr_t)vtx;
-}
+#include "gfx_roomcache_key.h" /* roc_part_key */
 static RocRoom* roc_part_find(const Gfx* dl, const void* vtx) {
     auto it = roc_part_by_key.find(roc_part_key(dl, vtx));
     return it == roc_part_by_key.end() ? nullptr : &roc_parts[it->second];
