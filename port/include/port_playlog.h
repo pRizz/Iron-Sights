@@ -12,13 +12,18 @@
  * PORT_PLAY_WATCH_STEADY_DRAWS times in a row with the watch open and the
  * game paused, WATCH_ANIMATION_0x5, so it names the tab that stays on
  * screen; the watch reaches that state a few draws before bondview2.c's
- * GE_PAUSEDBG line says so) and, from portPlayPlayerTick, `kill`, `shots`
- * and `moved`.
+ * GE_PAUSEDBG line says so) and, from portPlayPlayerTick, `kill`, `shots`,
+ * `moved` and `weapon`.
  *
  * portPlayPlayerTick, from lv.c's frame loop over the players, reads player
  * 0's record only (the game's own counters, never changed here):
  * - `shots N` each time player 0's total shot count (shot_count's
  *   SHOT_REGISTER_TOTAL, player.h) changes, N the new count;
+ * - `weapon N` each time the weapons in player 0's hands change after the
+ *   first pass, N the right hand's item id | the left hand's << 8 (0 when the
+ *   left hand holds nothing), so a change to the dual version of the same gun
+ *   is a change; the starting pair is recorded silently, and two lines in a
+ *   row never hold the same N;
  * - `moved N` once, when the distance player 0 has walked (distance_traveled,
  *   which lv.c's lvlViewMoveTick adds up) first reaches PORT_PLAY_MOVED_UNITS,
  *   N that distance in whole units;

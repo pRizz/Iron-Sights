@@ -88,12 +88,33 @@ PLAYKILL = 600
 # The hands (LP64-005 Task 11 Step 4): Dam with every gun (GE_CHEATS=guns), from after its opening
 # swirl (PAUSE_TICK) the next weapon (A) every WEAPON_TICKS ticks WEAPON_CHANGES times, and the
 # trigger (Z) held WEAPON_FIRE_TICKS ticks, WEAPON_FIRE_DELAY ticks after each change, once the new
-# weapon is up. The first run of port_arm_mesh.c's alias cases at 64 bits.
+# weapon is up.
 WEAPON_CHANGES = 30
 WEAPON_TICKS = 120
 WEAPON_FIRE_DELAY = 60
 WEAPON_FIRE_TICKS = 30
 WEAPONS_FRAMES = PAUSE_TICK + WEAPON_CHANGES * WEAPON_TICKS + 300
+# The hands each press leaves, as port_playlog.c's `weapon N` logs them (N = right | left << 8,
+# src/bondconstants.h's ITEM_IDS), measured on 2026-11-19 (FORK-089): Bond draws his silenced PP7
+# (5) at tick 1160, and each A then takes the next stop of the cheat's list, the dual version of a
+# gun and then the next gun: PP7 x2, TT-33, TT-33 x2, ... Spectre x2 (19 x2), M16 (20). The last
+# change passes through 19 alone for 3 ticks, so the judge matches each press's state in order
+# rather than counting lines.
+WEAPON_STATES = tuple(state for gun in range(5, 20) for state in (gun | gun << 8, gun + 1))
+# Player 0's total shot count at the end of the run, measured on 2026-11-19 in the headless,
+# video and sanitizer video builds (FORK-089).
+WEAPON_SHOTS = 122
+SHOTS = re.compile(r'ge: play: shots (\d+)$')
+
+
+def weapons_required() -> tuple[Required | Ordered, ...]:
+    """Each press's weapons in order, a shot after the last, and the measured shot count."""
+    changes = tuple((f'ge: play: weapon {state} (change {index} of {WEAPON_CHANGES}: right {state & 0xff}, '
+                     f'left {state >> 8})', play_line('weapon', state))
+                    for index, state in enumerate(WEAPON_STATES, start=1))
+    after = ('ge: play: shots N (a shot after the last change)', SHOTS)
+    return (Ordered(changes + (after,)),
+            Required(f'ge: play: shots N, N at least {WEAPON_SHOTS}', SHOTS, at_least=WEAPON_SHOTS))
 
 
 def weapons_route() -> Route:
@@ -106,7 +127,7 @@ def weapons_route() -> Route:
 
 def weapons_case() -> Case:
     env = (('GE_STAGE', 'dam'), ('GE_STAGE_AFTER', '1'), ('GE_CHEATS', 'guns')) + PLAY_ENV
-    required = LAUNCHED_STAGE + (Required('ge: play: shots 1 (Bond fired)', FIRST_SHOT), frame_limit(WEAPONS_FRAMES))
+    required = LAUNCHED_STAGE + weapons_required() + (frame_limit(WEAPONS_FRAMES),)
     return Case('weapons-dam', 'input', env, WEAPONS_FRAMES, required, route=weapons_route())
 
 

@@ -81,7 +81,25 @@ static void playKill(void)
     }
 }
 
-/* `shots` and `moved` (port_playlog.h), from player 0's own counters. */
+/* `weapon` (port_playlog.h): player 0's hands after a change, right | left << 8. */
+static void playWeapon(void)
+{
+    static s32 held = -1; /* -1 until the first pass records the starting pair */
+    const s32 left = g_CurrentPlayer->hands[GUNLEFT].weaponnum;
+    const s32 now = g_CurrentPlayer->hands[GUNRIGHT].weaponnum | ((left > 0 ? left : 0) << 8);
+
+    if (now == held)
+    {
+        return;
+    }
+    if (held >= 0)
+    {
+        portPlayLog("weapon", now);
+    }
+    held = now;
+}
+
+/* `shots`, `moved` and `weapon` (port_playlog.h), from player 0's own counters. */
 static void playStats(void)
 {
     static s32 shots;
@@ -92,6 +110,7 @@ static void playStats(void)
     {
         return;
     }
+    playWeapon();
     now = g_playerPerm->shot_count[SHOT_REGISTER_TOTAL];
     if (now != shots)
     {

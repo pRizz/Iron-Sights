@@ -291,9 +291,25 @@ class WeaponsDam(StandIns):
                             for change, (tick, hold) in zip(changes, triggers)))
         self.assertGreater(case.frames, changes[-1] + 120)
 
-    def test_weapons_dam_that_fired_passes(self):
+    def weapon_log(self, states, shots_at=4755, shots=122):
+        """Dam with Bond's first gun drawn, then STATES (tick, right | left << 8), his first shot and SHOTS
+        at SHOTS_AT (no shot at all when SHOTS_AT is None)."""
+        events = [(1160, 'weapon', 5)] + [(tick, 'weapon', state) for tick, state in states]
+        if shots_at is not None:
+            events += [(1260, 'shots', 1), (shots_at, 'shots', shots)]
+        events.sort(key=lambda event: event[0])
+        return self.fake(DAM + ''.join(play(*event) for event in events) + frames(self.case().frames))
+
+    def thirty_changes(self):
+        """The measured run's states: each gun's dual and then the next gun, 19 alone on the way."""
+        states = [(1218 + 120 * index, state)
+                  for index, state in enumerate(gun | gun << 8 if half == 0 else gun + 1
+                                                for gun in range(5, 20) for half in (0, 1))]
+        return states[:-1] + [(4725, 19), (4728, 20)]
+
+    def test_weapons_dam_with_thirty_changes_and_a_later_shot_passes(self):
         # Arrange
-        exe = self.fake(DAM + play(1260, 'shots', 1) + frames(self.case().frames))
+        exe = self.weapon_log(self.thirty_changes())
 
         # Act
         status, out = self.play(exe, 'input', 'weapons-dam')
@@ -301,17 +317,60 @@ class WeaponsDam(StandIns):
         # Assert
         self.assertEqual(status, 0, out)
 
-    def test_weapons_dam_that_never_fired_fails(self):
+    def test_weapons_dam_with_twenty_nine_changes_fails(self):
         # Arrange
-        exe = self.fake(DAM + frames(self.case().frames))
+        exe = self.weapon_log(self.thirty_changes()[:-2])
 
         # Act
         status, out = self.play(exe, 'input', 'weapons-dam')
 
         # Assert
         self.assertEqual(status, 1, out)
-        self.assertIn('weapons-dam: FAIL (missing line: ge: play: shots 1 (Bond fired))', out)
+        self.assertIn('weapons-dam: FAIL (missing line: ge: play: weapon 20 (change 30 of 30', out)
 
+    def test_weapons_dam_with_no_shot_after_the_last_change_fails(self):
+        # Arrange
+        exe = self.weapon_log(self.thirty_changes(), shots_at=4700)
+
+        # Act
+        status, out = self.play(exe, 'input', 'weapons-dam')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('(a shot after the last change)', out)
+
+    def test_weapons_dam_with_the_same_weapon_thirty_times_fails(self):
+        # Arrange
+        exe = self.weapon_log([(1218 + 120 * index, 5 | 5 << 8) for index in range(30)])
+
+        # Act
+        status, out = self.play(exe, 'input', 'weapons-dam')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('weapons-dam: FAIL (missing line: ge: play: weapon 6 (change 2 of 30', out)
+
+    def test_weapons_dam_with_fewer_shots_than_measured_fails(self):
+        # Arrange
+        exe = self.weapon_log(self.thirty_changes(), shots=121)
+
+        # Act
+        status, out = self.play(exe, 'input', 'weapons-dam')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('ge: play: shots 121: expected at least 122', out)
+
+    def test_weapons_dam_that_never_fired_fails(self):
+        # Arrange
+        exe = self.weapon_log(self.thirty_changes(), shots_at=None)
+
+        # Act
+        status, out = self.play(exe, 'input', 'weapons-dam')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('(a shot after the last change)', out)
 
 if __name__ == '__main__':
     unittest.main()
