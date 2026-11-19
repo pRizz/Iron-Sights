@@ -61,6 +61,9 @@
 #include "unk_092E50.h"
 #include "frametiming.h"
 #include "chr.h"
+#ifndef TARGET_N64
+#include "port_playlog.h" /* LP64-005 Task 8 */
+#endif
 
 // bss
 //CODE.bss:8008C260
@@ -732,6 +735,7 @@ void lvlStageLoad(s32 stage)
     g_CurrentStageToLoad = stage;
 
 #ifndef TARGET_N64
+    portPlayLog("stage-load", stage); /* GE_PLAYLOG (port_playlog.h) */
     g_PortCheatCountdown = 60; /* apply GE_CHEATS ~1s into the mission */
     g_PortSpawnWepCountdown = 120; /* GE_SPAWNWEAPON drops ~2s in */
     portCheatApplyLoadTimeSafe(); /* GE_CHEATS=rockets must be live before
@@ -1213,6 +1217,7 @@ Gfx* lvlRender(Gfx* DL)
             chrpropUpdateAutoaimTarget();
             chraiCheckUseHeldItems();
 #ifndef TARGET_N64
+            portPlayKillTick(); /* GE_PLAYKILL (port_playlog.h) */
             { extern void portHitMapProbeTick(void); portHitMapProbeTick(); } /* GE_HITMAP_PROBE: fires as Bond does */
             { extern void portProjectileArcTick(void); portProjectileArcTick(); } /* FORK-069: after the props tick, as a real round */
             { extern void portReinforcementsDirectorTick(void); portReinforcementsDirectorTick(); } /* FORK-081: rooms drawn this frame are fresh here */
@@ -2319,6 +2324,7 @@ void lvlUnloadStageTextData(void)
     cleanupplayersoundrelated();
     set_missionstate_zero();
 #ifndef TARGET_N64
+    portPlayLog("stage-unload", g_CurrentStageToLoad); /* GE_PLAYLOG (port_playlog.h) */
     /* Stage unload (every restart / return to title): the state change
      * above can be a no-op, so stop any music player the state machine lost
      * track of, or it would play into the next stage (music.c

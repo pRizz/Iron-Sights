@@ -608,6 +608,12 @@ if(GE_VIDEO)
         list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_save_transfer>)
     endif()
     add_compile_definitions(GE_VIDEO=1)
+    # The play log (port_playlog.h, LP64-005 Task 8) is empty in a 32-bit
+    # build with video, the shipped kind; like port_lp64.c, its empty object
+    # would add a compiler ident to the Windows executable's .rdata.
+    if(NOT GE_POINTER_BITS EQUAL 64)
+        list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_playlog.c)
+    endif()
 else()
     set(FAST3D_SRC)
     # video.c/input_pc.c/raphnet.c are GE_VIDEO-only; exclude them from the port glob.

@@ -8,7 +8,7 @@
     python3 scripts/port/lp64_play.py callers --tick T LOG EXECUTABLE
 
 run: each case of the named sets (lp64_play_cases.py: demos, stages, stops, menus, tours,
-attract) on a copy of EXECUTABLE in a fresh temporary folder (lp64_play_run.py), JOBS at a time
+attract; lp64_play_input.py: input, whose cases replay a route as pad 0) on a copy of EXECUTABLE in a fresh temporary folder (lp64_play_run.py), JOBS at a time
 (7 by default); --only names a case, or names it without its set's prefix (`dam` for
 `stage-dam`) when that selects exactly one case. Prints `CASE: PASS` or `CASE: FAIL (first
 failing or missing line)` as each ends, then `OK: N of N cases` (exit 0) or `FAIL: M of N cases` (exit 1). Logs go to DIR/CASE.log, the

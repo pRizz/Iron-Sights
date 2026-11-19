@@ -135,11 +135,13 @@ class SetSizes(unittest.TestCase):
         sizes = {name: len(build()) for name, build in lp64_play_cases.SETS.items()}
 
         # Assert
-        self.assertEqual(sizes, {'demos': 14, 'stages': 54, 'stops': 12, 'menus': 7, 'tours': 26, 'attract': 4})
+        self.assertEqual(sizes, {'demos': 14, 'stages': 54, 'stops': 12, 'menus': 7, 'tours': 26, 'attract': 4,
+                                 'input': 27})
 
     def test_case_names_are_unique(self):
         # Act
-        names = [case.name for case in lp64_play_cases.cases_of(['demos', 'stages', 'stops', 'menus', 'tours', 'attract'])]
+        names = [case.name for case in lp64_play_cases.cases_of(['demos', 'stages', 'stops', 'menus', 'tours', 'attract',
+                                                                'input'])]
 
         # Assert
         self.assertEqual(len(names), len(set(names)))

@@ -6,7 +6,8 @@ rule) and on each line it requires that the log lacks. The markers and the `ge: 
 lp64_boot.py's own, so the two tools cannot drift apart.
 """
 from lp64_boot import FATAL_SIGNAL, SANITIZER_MARKERS, failing_lp64_lines
-from lp64_play_cases import DEMO_START, Case, Required
+from lp64_play_cases import DEMO_START, Case, Ordered, Required
+from lp64_play_route import PLAY_EVENT, PLAY_MARK, PLAY_TICK
 
 # include/assert.h and the game's own asserts: "\n--- ASSERTION FAULT - %s - %s, line %d\n\n".
 ASSERTION_FAULT = 'ASSERTION FAULT'
@@ -25,8 +26,30 @@ def first_playback(lines: list[str]) -> list[str]:
     return lines[starts[0]:starts[1]] if len(starts) > 1 else lines[starts[0]:]
 
 
-def requirement_problem(lines: list[str], required: Required) -> str | None:
+def torn_play_lines(lines: list[str]) -> list[str]:
+    """The lines that hold `ge: play:` but not a whole play log line: another stream's output cut
+    them (the play log writes each line whole, after flushing what stdout holds)."""
+    return [line for line in lines
+            if PLAY_MARK in line and not (PLAY_EVENT.search(line) or PLAY_TICK.search(line))]
+
+
+def ordered_problem(lines: list[str], required: Ordered) -> str | None:
+    """Why LINES do not hold REQUIRED's lines in order, or None when they do."""
+    at = 0
+    for index, (label, pattern) in enumerate(required.steps):
+        found = next((number for number in range(at, len(lines)) if pattern.search(lines[number])), None)
+        if found is None:
+            if index > 0 and any(pattern.search(line) for line in lines[:at]):
+                return f'out of order: {label} only before {required.steps[index - 1][0]}'
+            return f'missing line: {label}'
+        at = found + 1
+    return None
+
+
+def requirement_problem(lines: list[str], required: Required | Ordered) -> str | None:
     """Why LINES do not satisfy REQUIRED, or None when they do."""
+    if isinstance(required, Ordered):
+        return ordered_problem(lines, required)
     if required.first_playback:
         lines = first_playback(lines)
     matches = [match for match in map(required.pattern.search, lines) if match is not None]
@@ -72,6 +95,9 @@ def problems(case: Case, status: int | None, text: str, timeout: float) -> list[
     refusals = failing_lp64_lines(lines)
     if refusals:
         found.append(refusals[0].strip())
+    torn = torn_play_lines(lines)
+    if torn:
+        found.append(f'torn line (another stream cut it): {torn[0].strip()}')
     for required in case.required:
         problem = requirement_problem(lines, required)
         if problem is not None:

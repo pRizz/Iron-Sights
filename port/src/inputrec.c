@@ -24,6 +24,12 @@
  * runs the same way (GE_STAGE, GE_SPAWNXYZ, GE_SEED, same midas.ini tickhz) or
  * replay desyncs.
  *
+ * A headless build (no GE_VIDEO) has no live source and no mouse tick: its
+ * osContGetReadData bumps the tick and replays pad 0 on every call, so its
+ * tick is the count of pad reads. Only P records act there; nothing reads
+ * the A, M, D and T kinds in that build. portInputRecTickNow gives the tick
+ * to the play log (port_playlog.c), which lp64_play.py's routes are built by.
+ *
  * Read when touching: osContGetReadData, portJoyPortPollCommit, the mouse
  * sample in bondviewProcessInput, portInputDigitalMove,
  * portInputMouseTickConsume.
@@ -32,6 +38,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "port_playlog.h"
 
 extern void portConLogf(const char *fmt, ...);
 
@@ -116,6 +123,14 @@ void portInputRecTick(void)
 {
     sTick++;
 }
+
+#if PORT_PLAY_HARNESS
+/** port_playlog.c: the tick a replayed record is matched by */
+u32 portInputRecTickNow(void)
+{
+    return sTick;
+}
+#endif
 
 /* the record of kind k for this call: the next one made in the current tick,
  * else (no record left in this tick) the tick's last one again when `repeat`,

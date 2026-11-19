@@ -14,6 +14,7 @@
 #include "port_reinforcements_menu.h"   /* FORK-081 */
 #include "port_headshots_menu.h"        /* FORK-083 */
 #include "port_options.h"
+#include "port_playlog.h"               /* LP64-005 Task 8 */
 #endif
 #include <assets/oddtextures.h>
 #include "assets/image_externs.h"
@@ -19506,6 +19507,9 @@ Gfx * constructor_menu19_spectrum(Gfx * DL)
 
 void frontChangeMenu(MENU menu, s32 reload)
 {
+#ifndef TARGET_N64
+    portPlayLog("menu", menu); /* GE_PLAYLOG (port_playlog.h) */
+#endif
     if ((menu == MENU_RUN_STAGE) || (menu == MENU_SPECTRUM_EMU))
     {
         is_emulating_spectrum = TRUE;
@@ -19759,7 +19763,7 @@ static void portDirectLaunchTick(void)
     state = 2;
 }
 
-/* GE_MENU=files|select|options|gameplay|control|display|credits[,after]: frontend
+/* GE_MENU=files|select|options|gameplay|control|display|credits|briefing[,after]: frontend
  * test harness. After `after` menu ticks (default 120, boot menus settled) it
  * jumps to the Files folder menu (MENU_MODE_SELECT, folder 1), the Files screen
  * (MENU_FILE_SELECT), its Options page (MENU_PORT_OPTIONS) or one of the
@@ -19891,6 +19895,9 @@ static void portMenuHarnessTick(void)
                     target = MENU_MP_OPTIONS;
                 }
             }
+#if PORT_PLAY_HARNESS
+            else if (e[0] == 'b' && e[1] == 'r') target = MENU_BRIEFING; /* GE_MENU=briefing: Dam's, at Agent (LP64-005 Task 8) */
+#endif
             else if (e[0] == 'g' || e[0] == 'd' || e[0] == 'c' || e[0] == 'p' || e[0] == 'a' || e[0] == 'v'
                      || e[0] == 'h' || e[0] == 'm' || e[0] == 'b' || e[0] == 'z')
             {   /* GE_MENU=gameplay|general|hud|graphics|control|display|video|audio|credits|player[1-4]
@@ -19968,6 +19975,14 @@ static void portMenuHarnessTick(void)
             selected_stage = mission_folder_setup_entries[briefingpage].stage_id;
         }
     }
+#if PORT_PLAY_HARNESS
+    if (target == MENU_BRIEFING)
+    {   /* what the folder, mission and difficulty pages leave set for Dam at Agent */
+        selected_difficulty = DIFFICULTY_AGENT;
+        briefingpage = pull_and_display_text_for_folder_a0(0);
+        selected_stage = mission_folder_setup_entries[briefingpage].stage_id;
+    }
+#endif
     frontChangeMenu(target, FALSE);
     printf("ge: GE_MENU harness: menu=%d\n", target);
     state = 2;

@@ -386,6 +386,19 @@ class OtherSets(StandIns):
         self.assertEqual(status, 1, out)
         self.assertIn('soak: FAIL (missing line: ge: soak: complete after 1 laps)', out)
 
+    def test_input_case_without_its_play_line_fails_though_it_exits_zero(self):
+        # Arrange: the abort route's stage loads and the title comes back, but Dam never unloads
+        exe = self.fake(BOOT + 'ge: play: tick 5\nge: play: stage-load 33\n'
+                        'ge: play: tick 1430\nge: play: stage-load 90\nge: play: tick 1550\nge: play: menu 13\n'
+                        + frames(2400))
+
+        # Act
+        status, out = self.play(exe, 'input', 'abort')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('abort: FAIL (missing line: ge: play: stage-unload 33)', out)
+
 
 if __name__ == '__main__':
     unittest.main()

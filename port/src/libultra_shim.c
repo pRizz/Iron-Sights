@@ -1371,7 +1371,8 @@ s32 osContStartQuery(OSMesgQueue *mq)
 /**
  * errno mirrors osContGetQuery. With video built, pad 0 = keyboard per
  * midas.ini bindings (videoGetPad) merged with SDL controller 0; pads 1-3 =
- * SDL controllers (input_pc.c). Headless builds keep neutral pads.
+ * SDL controllers (input_pc.c). Headless builds keep neutral pads, except
+ * pad 0 replayed from a GE_INPUTPLAY route (inputrec.c, LP64-005 Task 8).
  */
 void osContGetReadData(OSContPad *data)
 {
@@ -1474,6 +1475,14 @@ void osContGetReadData(OSContPad *data)
             extern void portInputRecPad(OSContPad *pad);
             portInputRecPad(&data[0]);
         }
+    }
+#else
+    { /* GE_INPUTPLAY (inputrec.c) headless: the replay's tick is the count of
+       * these calls; with no route set pad 0 stays neutral */
+        extern void portInputRecTick(void);
+        extern void portInputRecPad(OSContPad *pad);
+        portInputRecTick();
+        portInputRecPad(&data[0]);
     }
 #endif
 }

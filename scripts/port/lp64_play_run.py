@@ -6,6 +6,10 @@ ASAN_OPTIONS=detect_leaks=0, the case's own variables and the caller's --env set
 output goes to DIR/CASE.log; DIR/play.json records every case's variables, status, time and
 problems. The runs are paced in real time (60 retraces a second), so a case's frames fix its
 wall time; a case still running at timeout_seconds(frames) is killed and fails with its last line.
+
+A case with a route (the `input` set) gets GE_INPUTPLAY=DIR/CASE.route. A route of steps is built
+first (lp64_play_route.build_presses): recording run K replays the presses found so far from
+DIR/CASE.stepK.route, logs to DIR/CASE.stepK.log and is stopped at the line its step waits for.
 """
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
@@ -15,10 +19,12 @@ from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import threading
 import time
 
 from lp64_play_cases import Case
 from lp64_play_judge import problems
+from lp64_play_route import RouteError, Step, build_presses, event_tick, route_text
 
 # GE_FIXEDTICK=1 makes a demo advance one field a tick instead of at its recorded pace, and
 # GE_NOSLEEP=1 lets the frame limit, which counts retraces, pass before the game has done
@@ -43,6 +49,8 @@ class Outcome:
     status: int | None
     seconds: float
     problems: list[str]
+    # The ticks of the route's presses, for a case with a route.
+    route_ticks: list[int] | None = None
 
     @property
     def passed(self) -> bool:
@@ -68,12 +76,63 @@ def case_environment(case: Case, rom: Path, extra: dict[str, str],
     return env
 
 
+def recording_tick(case: Case, executable: Path, env: dict[str, str], output: Path, route: str, step: Step,
+                   after: int, index: int) -> int | None:
+    """Runs CASE with ROUTE until STEP's line appears at or after tick AFTER and gives its tick (None
+    when the run ends or times out first). Its log is OUTPUT/CASE.stepINDEX.log."""
+    route_path = (output/f'{case.name}.step{index}.route').resolve()
+    route_path.write_text(route)
+    env = dict(env, GE_INPUTPLAY=str(route_path))
+    found = None
+    with tempfile.TemporaryDirectory(prefix='midas-lp64-play-') as temporary, \
+            (output/f'{case.name}.step{index}.log').open('w') as log:
+        child = Path(temporary)/executable.name
+        shutil.copy2(executable, child)
+        process = subprocess.Popen([str(child)], cwd=temporary, env=env, stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT, text=True, errors='replace')
+        watchdog = threading.Timer(timeout_seconds(case.frames), process.kill)
+        watchdog.start()
+        try:
+            seen = []
+            for line in process.stdout:
+                log.write(line)
+                seen.append(line)
+                if step.wait.search(line.rstrip('\n')):
+                    found = event_tick(seen, step.wait, after)
+                    if found is not None:
+                        break
+        finally:
+            watchdog.cancel()
+            process.kill()
+            process.wait()
+    return found
+
+
+def route_file(case: Case, executable: Path, env: dict[str, str], output: Path) -> tuple[Path, list[int]]:
+    """Writes CASE's route to OUTPUT/CASE.route, building a route of steps first; gives the file and
+    the presses' ticks. Raises RouteError when a step's line never appears."""
+    presses = list(case.route.presses)
+    if case.route.steps:
+        presses = build_presses(case.route.steps, lambda route, step, after, index: recording_tick(
+            case, executable, env, output, route, step, after, index))
+    path = (output/f'{case.name}.route').resolve()
+    path.write_text(route_text(presses))
+    return path, sorted(tick for tick, _ in presses)
+
+
 def run_case(case: Case, executable: Path, rom: Path, extra: dict[str, str], output: Path) -> Outcome:
     """Runs CASE and judges it; its log is OUTPUT/CASE.log."""
     timeout = timeout_seconds(case.frames)
     log_path = output/f'{case.name}.log'
     env = case_environment(case, rom, extra)
     started = time.monotonic()
+    route_ticks = None
+    if case.route is not None:
+        try:
+            path, route_ticks = route_file(case, executable, env, output)
+        except RouteError as error:
+            return Outcome(case, None, time.monotonic() - started, [str(error)])
+        env['GE_INPUTPLAY'] = str(path)
     with tempfile.TemporaryDirectory(prefix='midas-lp64-play-') as temporary:
         folder = Path(temporary)
         child = folder/executable.name
@@ -86,7 +145,7 @@ def run_case(case: Case, executable: Path, rom: Path, extra: dict[str, str], out
                 status = None
     seconds = time.monotonic() - started
     text = log_path.read_text(errors='replace')
-    return Outcome(case, status, seconds, problems(case, status, text, timeout))
+    return Outcome(case, status, seconds, problems(case, status, text, timeout), route_ticks)
 
 
 def record(outcomes: list[Outcome], executable: Path, extra: dict[str, str], path: Path) -> None:
@@ -99,6 +158,7 @@ def record(outcomes: list[Outcome], executable: Path, extra: dict[str, str], pat
             'frames': outcome.case.frames, 'expected_status': outcome.case.status,
             'status': outcome.status, 'seconds': round(outcome.seconds, 1),
             'passed': outcome.passed, 'problems': outcome.problems, 'log': f'{outcome.case.name}.log',
+            **({} if outcome.route_ticks is None else {'route_ticks': outcome.route_ticks}),
         } for outcome in outcomes],
     }
     path.write_text(json.dumps(data, indent=2) + '\n')

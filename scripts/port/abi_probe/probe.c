@@ -451,6 +451,20 @@ _Static_assert(PLAYER_DL_ROOM(buffer_for_watch_greenbackdrop_DL, buffer_for_watc
                "the watch backdrop list's room");
 _Static_assert(PLAYER_DL_ALIGNED(buffer_for_watch_static_DL) && PLAYER_DL_ALIGNED(buffer_for_watch_greenbackdrop_DL),
                "the watch lists are Gfx-aligned");
+/* load_briefing_text_for_stage (front.c, read for these figures; LP64-004
+ * fix wave, a657b4b): the briefing's 0x200-byte file at 4096 * 10 bytes into
+ * the front end's 0x78000-byte block (initmenus.c), then its language bank,
+ * 879 times that, from the next byte. front.c steps past the file in bytes
+ * at 64 bits; a step of 0x200 / 8 commands would end the bank 0x200 bytes
+ * past the block. Both widths start the bank inside the block and end it at
+ * the block's last byte. */
+#define MENU_BLOCK_BYTES 0x78000
+#define BRIEFING_FILE_AT (4096 * 10)
+#define BRIEFING_FILE_BYTES 0x200
+#define BRIEFING_BANK_AT (BRIEFING_FILE_AT + BRIEFING_FILE_BYTES)
+#define BRIEFING_BANK_BYTES (BRIEFING_FILE_BYTES * 879)
+_Static_assert(BRIEFING_BANK_AT < MENU_BLOCK_BYTES && BRIEFING_BANK_AT + BRIEFING_BANK_BYTES <= MENU_BLOCK_BYTES,
+               "the briefing's language bank lies inside the front end's block");
 /* initunk_005520.c's anim model slots: the array stride is the record, which
  * must keep the bank's 8-byte alignment at 64 bits (0xBC at 32 bits, whose
  * 0xC0 allocation stride keeps 16). */

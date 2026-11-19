@@ -11,6 +11,8 @@ only deliberately, with the new measurement recorded in FORK_CHANGES.md (FORK-08
 from dataclasses import dataclass
 import re
 
+from lp64_play_route import Route
+
 # ---- the lines a case can require, each quoted from the source that prints it ----------------
 # src/game/ramromreplay.c, replay_recorded_ramrom_at_address:
 #   "ge: demo start: stage=%d diff=%d pads=%d totaltime=%d vsyncs (~%ds)\n"
@@ -68,6 +70,14 @@ class Required:
 
 
 @dataclass(frozen=True)
+class Ordered:
+    """Lines the log must hold in this order, each after the one before: STEPS are (label,
+    pattern). A missing step is named by its label; one that appears only before the step it must
+    follow is reported out of order."""
+    steps: tuple[tuple[str, re.Pattern], ...]
+
+
+@dataclass(frozen=True)
 class Case:
     """One run: NAME (also its log's file name), the SET it belongs to, its own variables, its
     frame count, the status it must exit with and the lines it must log."""
@@ -75,10 +85,12 @@ class Case:
     set_name: str
     env: tuple[tuple[str, str], ...]
     frames: int
-    required: tuple[Required, ...]
+    required: tuple[Required | Ordered, ...]
     status: int = 0
     # Lines that fail the case wherever they appear.
     forbidden: tuple[re.Pattern, ...] = ()
+    # The pad 0 an `input` case replays (lp64_play_route.py), written to DIR/CASE.route.
+    route: Route | None = None
 
 
 def frame_limit(frames: int) -> Required:
@@ -255,6 +267,12 @@ def attract_cases() -> list[Case]:
     ]
 
 
+def input_cases() -> list[Case]:
+    # lp64_play_input.py builds its cases from this file's, so it is imported when the set is asked.
+    from lp64_play_input import input_cases as build
+    return build()
+
+
 SETS = {
     'demos': lambda: [demo_case(name) for name in DEMOS],
     'stages': stage_cases,
@@ -262,6 +280,7 @@ SETS = {
     'menus': lambda: [menu_case(menu) for menu in MENUS],
     'tours': tour_cases,
     'attract': attract_cases,
+    'input': input_cases,
 }
 
 
