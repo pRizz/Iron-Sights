@@ -104,8 +104,9 @@ def command_run(parser: argparse.ArgumentParser, options: argparse.Namespace) ->
             cases = select_cases(cases, [name for name in options.only.split(',') if name])
         except ValueError as error:
             parser.error(str(error))
-    if CAPTURE_VARIABLE in extra and any(case.capture for case in cases):
-        parser.error(f'--env {CAPTURE_VARIABLE} is refused: each recording case records to DIR/CASE.wav')
+    if CAPTURE_VARIABLE in extra:
+        parser.error(f'--env {CAPTURE_VARIABLE} is refused: parallel cases would write one file, and each'
+                     ' recording case records to DIR/CASE.wav')
     outcomes = run_cases(cases, options.executable.resolve(strict=True), options.rom.resolve(strict=True),
                          extra, options.output, options.jobs, Display(options.video, options.shots, timeout_scale))
     failed = [outcome for outcome in outcomes if not outcome.passed]

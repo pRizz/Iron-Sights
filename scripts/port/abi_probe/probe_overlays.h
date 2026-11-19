@@ -337,21 +337,32 @@ _Static_assert(sizeof(ALSndpEvent) == sizeof(ALEvent) && offsetof(ALSndpEvent, c
                    && IS_TYPE(((ALSndpEvent *) 0)->common.type, u16)
                    && sizeof(((ALEvent *) 0)->type) == sizeof(u16),
                "snd.c's ALSndpEvent is an ALEvent's size with its type first");
-/* The queue copies an ALSndpEvent as an ALEvent: it fits one, and its sound
- * state pointer sits where an ALEvent's message, whose members hold pointers,
- * starts. Both are 32 bytes at 64 bits by coincidence (LP64-005 Task 10). */
-_Static_assert(sizeof(ALSndpEvent) <= sizeof(ALEvent)
-                   && offsetof(ALSndpEvent, common.state) == offsetof(ALEvent, msg)
+/* The queue copies an ALSndpEvent as an ALEvent (their sizes are pinned equal
+ * just above), and its sound state pointer sits where an ALEvent's message,
+ * whose members hold pointers, starts. Both are 32 bytes at 64 bits by
+ * coincidence (LP64-005 Task 10). */
+_Static_assert(offsetof(ALSndpEvent, common.state) == offsetof(ALEvent, msg)
                    && offsetof(ALSndpEvent, common.state) == offsetof(ALEvent, msg.osc.vs),
                "snd.c's ALSndpEvent fits an ALEvent with its state pointer where the message starts");
 /* synthesizer.c's parameter pool: each record is written as an ALParam,
  * ALStartParam, ALStartParamAlt or ALFreeParam, so it holds the largest. At 64
  * bits ALStartParamAlt is 40 bytes and ALParam 32; at 32 bits all four fit the
- * 28 bytes the pool has always had (LP64-005 Task 10). */
+ * 28 bytes the pool has always had (LP64-005 Task 10).
+ * The first assertion is kept as the statement of that rule, but a union is
+ * never smaller than a member, so it fails only if one of the four views is
+ * dropped from ALParamRoom; it cannot see a fifth record type written into the
+ * pool that the union leaves out, nor alSynNew sizing the pool by another type.
+ * The second pins the size the pool really has: the largest view, 40 bytes at
+ * 64 bits; it fails if the union gains a larger member or its largest view
+ * changes size. */
 _Static_assert(sizeof(ALParamRoom) >= sizeof(ALStartParamAlt) && sizeof(ALParamRoom) >= sizeof(ALParam)
                    && sizeof(ALParamRoom) >= sizeof(ALStartParam) && sizeof(ALParamRoom) >= sizeof(ALFreeParam),
                "a parameter pool record holds every update written into it");
-#if !IS_64_BIT
+_Static_assert(sizeof(ALParamRoom) == sizeof(ALStartParamAlt) && sizeof(ALStartParamAlt) >= sizeof(ALParam),
+               "a parameter pool record is the size of its largest update, ALStartParamAlt");
+#if IS_64_BIT
+_Static_assert(sizeof(ALParamRoom) == 40, "a parameter pool record is 40 bytes at 64 bits");
+#else
 _Static_assert(sizeof(ALParamRoom) == 28, "a parameter pool record is 28 bytes at 32 bits");
 #endif
 /* sndCountAllocList reads D_800243E4 as an ALEventQueue: freeList, then allocList.next. */

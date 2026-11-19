@@ -4,7 +4,9 @@ Each case runs a video executable with GE_AUDIO_CAPTURE naming DIR/CASE.wav, the
 that port/src/port_audio_capture.c records before the unfocused-window mute, whether or not a device
 plays it (the play tool's SDL_AUDIODRIVER=dummy opens SDL's dummy device, which takes queued audio
 at the device's rate). A case fails on any `audio frame skipped` line (port/src/audio_pc.c drops such
-a frame as silence and prints the line once) and on a recording that is not 22,050 Hz 16-bit stereo,
+a frame as silence and prints the line once), on a 10-second health line that counts a refusal (every
+refused frame, ADPCM block header and resample span; the line is printed only for a window with
+something to report) or a log without such a line, and on a recording that is not 22,050 Hz 16-bit stereo,
 lasts less than 10 seconds or peaks below 1,000: the planning run's recording of Dam had a peak of 0.
 `lp64_play.py sound DIR` prints each recording's length, peak and share of non-zero samples, which
 are compared with the 32-bit reference's recordings rather than held to a floor. Recordings are
@@ -27,6 +29,10 @@ MIN_SECONDS = 10.0
 MIN_PEAK = 1000
 # port/src/audio_pc.c, portAcmdValidate: "ge: audio: WARNING - audio frame skipped (silent): ..."
 FRAME_SKIPPED = re.compile(r'audio frame skipped')
+# port/src/audio_pc.c, portAudioHealth: "ge: audio: last %u s: queue ran dry %u times, %u frames over the
+# cap dropped, %u frames skipped as invalid | ..."; the last count is s_StatSkipped.
+HEALTH_LINE = re.compile(r'ge: audio: last \d+ s: .*\d+ frames skipped as invalid')
+HEALTH_REFUSED = re.compile(r'ge: audio: last \d+ s: .*, [1-9]\d* frames skipped as invalid')
 # port/src/port_audio_capture.c, captureOpen: "ge: audio capture: recording %s\n"
 CAPTURE_OPEN = re.compile(r'ge: audio capture: recording ')
 
@@ -52,7 +58,8 @@ def read_recording(path: Path) -> Recording:
             data = recording.readframes(frames)
     except (OSError, EOFError, wave.Error) as error:
         raise ValueError(f'{path.name} is not a readable WAV file: {error}') from error
-    seconds = frames / rate if rate else 0.0
+    # The bytes read, not the header's frame count: a truncated file must not pass on its header's claim.
+    seconds = len(data) / (rate * channels * sample_bytes) if rate and channels and sample_bytes else 0.0
     if sample_bytes != SAMPLE_BYTES:
         return Recording(rate, channels, sample_bytes, seconds, 0, 0.0)
     samples = array('h')
@@ -112,8 +119,9 @@ def sound_report(folder: Path) -> int:
 
 
 def sound_case(name: str, env: tuple[tuple[str, str], ...], launched: tuple[Required, ...]) -> Case:
-    required = (Required('ge: audio capture: recording', CAPTURE_OPEN),) + launched + (frame_limit(SOUND_FRAMES),)
-    return Case(name, 'sound', env, SOUND_FRAMES, required, forbidden=(FRAME_SKIPPED,), capture=True)
+    required = ((Required('ge: audio capture: recording', CAPTURE_OPEN),) + launched
+                + (Required('an audio health line', HEALTH_LINE), frame_limit(SOUND_FRAMES)))
+    return Case(name, 'sound', env, SOUND_FRAMES, required, forbidden=(FRAME_SKIPPED, HEALTH_REFUSED), capture=True)
 
 
 def sound_cases() -> list[Case]:

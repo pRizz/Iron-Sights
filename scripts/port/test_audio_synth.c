@@ -308,13 +308,20 @@ static int runTest(const char *name, void (*test)(void))
     pid_t child;
 
     fflush(NULL);
+    /* Checked without assert, so a build with NDEBUG still forks and waits. */
     child = fork();
-    assert(child >= 0);
+    if (child < 0) {
+        perror("test_audio_synth: fork");
+        exit(2);
+    }
     if (child == 0) {
         test();
         exit(0);
     }
-    assert(waitpid(child, &status, 0) == child);
+    if (waitpid(child, &status, 0) != child) {
+        perror("test_audio_synth: waitpid");
+        exit(2);
+    }
     if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
         return 1;
     }

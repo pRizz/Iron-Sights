@@ -19,9 +19,18 @@ BOOT = 'ge007 pc port: booting (GE_FRAMES=n limits the run)\n'
 VIDEO_UP = 'ge: video: window + GL context up\n'
 RECORDING = 'ge: audio capture: recording /tmp/x/capture-title.wav\n'
 FRAME_LIMIT = 'ge: frame limit reached: frames=1800 gfxtasks=900\n'
-TITLE_GOOD = BOOT + VIDEO_UP + RECORDING + FRAME_LIMIT
+
+
+def health(skipped: int) -> str:
+    """port/src/audio_pc.c's 10-second health line with SKIPPED refusals."""
+    return (f'ge: audio: last 10 s: queue ran dry 3 times, 2 frames over the cap dropped, {skipped} frames skipped'
+            ' as invalid | longest gap between pumps 900 ms | queue target 52 ms\n')
+
+
+TITLE_GOOD = BOOT + VIDEO_UP + RECORDING + health(0) + health(0) + FRAME_LIMIT
 DAM_GOOD = (BOOT + VIDEO_UP + RECORDING + 'ge: GE_STAGE direct launch: levelid=33 diff=0\n'
-            'ge: load_bg_file levelid=33 stan=Tbg_dam_all_p_stanZ file=0x1 record=0x2 first=0x3\n' + FRAME_LIMIT)
+            'ge: load_bg_file levelid=33 stan=Tbg_dam_all_p_stanZ file=0x1 record=0x2 first=0x3\n' + health(0)
+            + FRAME_LIMIT)
 SKIPPED = 'ge: audio: WARNING - audio frame skipped (silent): command 15 op 0x04 has address 0xAAAC00000000\n'
 
 
@@ -113,6 +122,95 @@ class SoundSet(StandIns):
         # Assert
         self.assertEqual(status, 1)
         self.assertIn('audio frame skipped', output)
+
+    def test_a_health_line_with_refused_audio_fails(self):
+        # Arrange
+        exe = self.fake(BOOT + VIDEO_UP + RECORDING + health(0) + health(12) + FRAME_LIMIT, self.wave('title.wav'))
+
+        # Act
+        status, output = self.play(exe, 'capture-title', '--video')
+
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('12 frames skipped as invalid', output)
+
+    def test_a_log_without_a_health_line_fails(self):
+        # Arrange
+        exe = self.fake(BOOT + VIDEO_UP + RECORDING + FRAME_LIMIT, self.wave('title.wav'))
+
+        # Act
+        status, output = self.play(exe, 'capture-title', '--video')
+
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('missing line: an audio health line', output)
+
+    def test_health_lines_that_all_report_no_refusal_pass(self):
+        # Arrange
+        exe = self.fake(BOOT + VIDEO_UP + RECORDING + health(0) + health(0) + health(0) + FRAME_LIMIT,
+                        self.wave('title.wav'))
+
+        # Act
+        status, output = self.play(exe, 'capture-title', '--video')
+
+        # Assert
+        self.assertEqual(status, 0, output)
+
+    def test_a_truncated_recording_is_measured_by_what_it_holds(self):
+        # Arrange: the header claims 12 s, the file holds the first 4 s of it
+        path = self.wave('title.wav')
+        path.write_bytes(path.read_bytes()[:44 + 4 * 22050 * 4])
+        exe = self.fake(TITLE_GOOD, path)
+
+        # Act
+        status, output = self.play(exe, 'capture-title', '--video')
+
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('4.00 s recorded; expected at least 10 s', output)
+
+    def test_an_empty_recording_fails(self):
+        # Arrange
+        path = self.folder/'title.wav'
+        path.write_bytes(b'')
+        exe = self.fake(TITLE_GOOD, path)
+
+        # Act
+        status, output = self.play(exe, 'capture-title', '--video')
+
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('capture-title.wav is not a readable WAV file', output)
+
+    def test_a_recording_that_is_not_a_wave_file_fails(self):
+        # Arrange
+        path = self.folder/'title.wav'
+        path.write_bytes(b'OggS' + bytes(4000))
+        exe = self.fake(TITLE_GOOD, path)
+
+        # Act
+        status, output = self.play(exe, 'capture-title', '--video')
+
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('capture-title.wav is not a readable WAV file', output)
+
+    def test_an_8_bit_recording_fails(self):
+        # Arrange
+        path = self.folder/'title.wav'
+        with wave.open(str(path), 'wb') as recording:
+            recording.setnchannels(2)
+            recording.setsampwidth(1)
+            recording.setframerate(22050)
+            recording.writeframes(bytes([200, 56]) * 22050 * 12)
+        exe = self.fake(TITLE_GOOD, path)
+
+        # Act
+        status, output = self.play(exe, 'capture-title', '--video')
+
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('2 channels, 8-bit; expected 22050 Hz 16-bit stereo', output)
 
     def test_a_silent_recording_fails(self):
         # Arrange
@@ -223,6 +321,18 @@ class SoundSet(StandIns):
         self.assertEqual(status, 2)
         self.assertIn('--env GE_AUDIO_CAPTURE is refused', output)
 
+    def test_the_capture_path_is_refused_from_env_on_a_set_that_does_not_record(self):
+        # Arrange
+        exe = self.fake(TITLE_GOOD, None)
+
+        # Act
+        status, output = self.main('run', '--rom', str(self.rom), '--set', 'demos', '--only', 'dam1', '--env',
+                                   'GE_AUDIO_CAPTURE=/tmp/x.wav', '--output', str(self.output), str(exe))
+
+        # Assert
+        self.assertEqual(status, 2)
+        self.assertIn('--env GE_AUDIO_CAPTURE is refused', output)
+
 
 class SoundReport(StandIns):
     def test_prints_length_peak_and_nonzero_share(self):
@@ -248,6 +358,26 @@ class SoundReport(StandIns):
         # Assert
         self.assertEqual(status, 0, output)
         self.assertIn('capture-dam: 11.00 s, peak 0, non-zero 0.0%', output)
+
+    def test_a_recording_long_only_by_zero_padding_passes_and_reports_its_share(self):
+        # Arrange: 1.2 s of sound and 10.8 s of zeros; the judge holds length and peak, not the share
+        path = self.wave('title.wav', seconds=1.2)
+        with wave.open(str(path), 'rb') as recording:
+            sound = recording.readframes(recording.getnframes())
+        with wave.open(str(path), 'wb') as recording:
+            recording.setnchannels(2)
+            recording.setsampwidth(2)
+            recording.setframerate(22050)
+            recording.writeframes(sound + bytes(4 * int(10.8 * 22050)))
+        exe = self.fake(TITLE_GOOD, path)
+
+        # Act
+        status, output = self.play(exe, 'capture-title', '--video')
+        report_status, report = self.main('sound', str(self.output))
+
+        # Assert
+        self.assertEqual((status, report_status), (0, 0), output + report)
+        self.assertRegex(report, r'capture-title: 12\.00 s, peak \d+, non-zero (9\.\d|10\.0)%')
 
     def test_a_folder_without_recordings_fails(self):
         # Arrange
