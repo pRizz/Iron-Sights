@@ -134,6 +134,17 @@ typedef struct {
     struct PVoice_s     *pvoice;
 } ALFreeParam;
 
+/* PORT (LP64-005): one record of the parameter pool (synthesizer.c). Each
+ * update is written through one of these views, so a record holds the
+ * largest: 28 bytes at 32 bits, as the pool always had, and 40 at 64, where
+ * ALStartParamAlt's wave pointer overran an ALParam-sized record. */
+typedef union {
+    ALParam             param;
+    ALStartParam        start;
+    ALStartParamAlt     startAlt;
+    ALFreeParam         free;
+} ALParamRoom;
+
 typedef Acmd *(*ALCmdHandler)(void *, s16 *, s32, s32, Acmd *);
 typedef s32   (*ALSetParam)(void *, s32, void *);
 

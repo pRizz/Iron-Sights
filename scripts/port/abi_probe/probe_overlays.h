@@ -337,6 +337,23 @@ _Static_assert(sizeof(ALSndpEvent) == sizeof(ALEvent) && offsetof(ALSndpEvent, c
                    && IS_TYPE(((ALSndpEvent *) 0)->common.type, u16)
                    && sizeof(((ALEvent *) 0)->type) == sizeof(u16),
                "snd.c's ALSndpEvent is an ALEvent's size with its type first");
+/* The queue copies an ALSndpEvent as an ALEvent: it fits one, and its sound
+ * state pointer sits where an ALEvent's message, whose members hold pointers,
+ * starts. Both are 32 bytes at 64 bits by coincidence (LP64-005 Task 10). */
+_Static_assert(sizeof(ALSndpEvent) <= sizeof(ALEvent)
+                   && offsetof(ALSndpEvent, common.state) == offsetof(ALEvent, msg)
+                   && offsetof(ALSndpEvent, common.state) == offsetof(ALEvent, msg.osc.vs),
+               "snd.c's ALSndpEvent fits an ALEvent with its state pointer where the message starts");
+/* synthesizer.c's parameter pool: each record is written as an ALParam,
+ * ALStartParam, ALStartParamAlt or ALFreeParam, so it holds the largest. At 64
+ * bits ALStartParamAlt is 40 bytes and ALParam 32; at 32 bits all four fit the
+ * 28 bytes the pool has always had (LP64-005 Task 10). */
+_Static_assert(sizeof(ALParamRoom) >= sizeof(ALStartParamAlt) && sizeof(ALParamRoom) >= sizeof(ALParam)
+                   && sizeof(ALParamRoom) >= sizeof(ALStartParam) && sizeof(ALParamRoom) >= sizeof(ALFreeParam),
+               "a parameter pool record holds every update written into it");
+#if !IS_64_BIT
+_Static_assert(sizeof(ALParamRoom) == 28, "a parameter pool record is 28 bytes at 32 bits");
+#endif
 /* sndCountAllocList reads D_800243E4 as an ALEventQueue: freeList, then allocList.next. */
 _Static_assert(offsetof(ALEventQueue, freeList) == offsetof(struct D_800243E4_s, node)
                    && offsetof(ALEventQueue, allocList) == offsetof(struct D_800243E4_s, g_sndPlayerSoundStatePtr),

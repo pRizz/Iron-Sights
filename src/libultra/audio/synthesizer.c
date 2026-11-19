@@ -47,7 +47,7 @@ void alSynNew(ALSynth *drvr, ALSynConfig *c)
     ALHeap      *hp = c->heap;
     ALSave      *save;
     ALFilter    *sources;
-    ALParam     *params;
+    ALParamRoom *params;
     ALParam     *paramPtr;
     
     drvr->head            = NULL;
@@ -124,10 +124,10 @@ void alSynNew(ALSynth *drvr, ALSynConfig *c)
     /*
      * build the parameter update list
      */
-    params = alHeapAlloc(hp, c->maxUpdates, sizeof(ALParam));
+    params = alHeapAlloc(hp, c->maxUpdates, sizeof(ALParamRoom));
     drvr->paramList = 0;
     for (i = 0; i < c->maxUpdates; i++) {
-        paramPtr= &params[i];
+        paramPtr= &params[i].param;
         paramPtr->next = drvr->paramList;
         drvr->paramList = paramPtr;
     }
