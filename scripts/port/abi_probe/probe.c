@@ -20,6 +20,7 @@
 #include "game/ramromreplay.h"
 #include "port_romlayout.h"
 #include "port_briefing_span.h"
+#include "game/front.h"
 #include "snd.h"
 #include "probe_overlays.h"
 #include "probe_stored.h"
@@ -463,6 +464,12 @@ _Static_assert(PLAYER_DL_ALIGNED(buffer_for_watch_static_DL) && PLAYER_DL_ALIGNE
 _Static_assert(BRIEFING_BANK_AT < PORT_BRIEFING_BLOCK_BYTES
                    && BRIEFING_BANK_AT + BRIEFING_BANK_BYTES <= PORT_BRIEFING_BLOCK_BYTES,
                "the briefing's language bank lies inside the front end's block");
+/* load_walletbond (front.c): the wallet Bond's room at the front end block's
+ * start. At 64 bits the stock PwalletbondZ converts to a 38,368-byte image;
+ * its room is 13/8 of the 32-bit 0xA000 (LP64-005 decision 3), which leaves
+ * at least 0x6000 bytes to spare. */
+_Static_assert(IS_64_BIT ? FRONT_WALLET_ROOM >= 38368 + 0x6000 : FRONT_WALLET_ROOM == 0xA000,
+               "the wallet Bond's room");
 /* initunk_005520.c's anim model slots: the array stride is the record, which
  * must keep the bank's 8-byte alignment at 64 bits (0xBC at 32 bits, whose
  * 0xC0 allocation stride keeps 16). */

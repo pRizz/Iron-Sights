@@ -13,19 +13,22 @@
  * header and asserts that the bank starts and ends inside the block at both
  * widths, so it checks the step front.c compiles, not a copy of it.
  *
- * The offsets and sizes are front.c's literals and the block size is
- * initmenus.c's allocation; the N64 build keeps its own literals and step
- * (front.c, under TARGET_N64), which this header does not reach.
+ * The briefing's offset is front.h's FRONT_WALLET_ROOM, which front.c uses,
+ * the sizes are front.c's literals and the block size is initmenus.c's
+ * allocation; the N64 build keeps its own step (front.c, under TARGET_N64),
+ * which this header does not reach.
  */
 #ifndef PORT_BRIEFING_SPAN_H
 #define PORT_BRIEFING_SPAN_H
 
 #include <stddef.h>
 #include "platform_info.h"
+#include "game/front.h"
 
-/* ptr_logo_and_walletbond_DL's allocation (src/game/initmenus.c) */
-#define PORT_BRIEFING_BLOCK_BYTES 0x78000
-#define PORT_BRIEFING_FILE_AT (4096 * 10)
+/* ptr_logo_and_walletbond_DL's allocation (src/game/initmenus.c), which
+ * grows with the wallet Bond's room at 64 bits (LP64-005 Task 12) */
+#define PORT_BRIEFING_BLOCK_BYTES (0x78000 + (FRONT_WALLET_ROOM - 0xA000))
+#define PORT_BRIEFING_FILE_AT FRONT_WALLET_ROOM
 #define PORT_BRIEFING_FILE_BYTES 0x200
 #define PORT_BRIEFING_BANK_SCALE 879
 

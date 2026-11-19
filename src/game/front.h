@@ -3,6 +3,17 @@
 #include <ultra64.h>
 #include <bondgame.h>
 #include <bondconstants.h>
+#include "platform_info.h"
+
+/* The wallet Bond's room at the start of the front end's block
+ * (load_walletbond); the file-select background and the briefing start
+ * after it. 13/8 of the N64's 0xA000 at 64 bits, as gun.c's rooms (LP64-005
+ * decision 3): the stock model's image is 38,368 bytes there. */
+#if IS_64_BIT
+#define FRONT_WALLET_ROOM 0x10400
+#else
+#define FRONT_WALLET_ROOM 0xA000
+#endif
 
 
 #define TABS_LEFT_EDGE 390.0f

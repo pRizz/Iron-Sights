@@ -40,7 +40,7 @@ STOP_FRAMES = 120
 RUN_FRAMES = 600
 TAIL_LINES = 20
 ADDRESS_LINE = 'ge: lp64: address space OK'
-STOP_PATTERN = re.compile(r'ge: lp64: stopping: asset class "([^"]+)" has no 64-bit converter yet \(LP64-004\)')
+STOP_PATTERN = re.compile(r'ge: lp64: stopping: asset class "([^"]+)" is marked unconverted in this build')
 # pcsched.c prints this, then exits 0, once GE_FRAMES frames have run.
 FRAME_LIMIT_PATTERN = re.compile(r'ge: frame limit reached: frames=(\d+)')
 FATAL_SIGNAL = 'ge: fatal signal'

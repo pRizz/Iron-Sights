@@ -76,9 +76,10 @@ void portLp64CheckAddressSpace(void);
 int portLp64AssetConverted(enum PortLp64Asset asset);
 
 /**
- * Stops the game with exit status 5 when the class has no 64-bit converter,
- * logging: ge: lp64: stopping: asset class "NAME" has no 64-bit converter yet
- * (LP64-004). Returns when it has one.
+ * Stops the game with exit status 5 when the class is marked unconverted (an
+ * entry of port_lp64.c's table set to 0, or GE_LP64_TEST_UNCONVERTED in a test
+ * build), logging: ge: lp64: stopping: asset class "NAME" is marked
+ * unconverted in this build. Returns when it is converted.
  */
 void portLp64RequireConverter(enum PortLp64Asset asset);
 

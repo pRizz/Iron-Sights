@@ -2533,7 +2533,7 @@ void load_walletbond(void)
             PitemZ_entries[PROP_WALLETBOND].header,
             (s8*)PitemZ_entries[PROP_WALLETBOND].filename,
             (u8*)ptr_logo_and_walletbond_DL,
-            0xA000,
+            FRONT_WALLET_ROOM,
             0);
 
         modelCalculateRwDataLen(PitemZ_entries[PROP_WALLETBOND].header);
@@ -2600,7 +2600,7 @@ void frontCleanUpWalletBond(void)
 void init_menu05_fileselect(void)
 {
     s32 size = 0x6e000;
-    Gfx* DL = (Gfx *)((intptr_t)(ptr_logo_and_walletbond_DL) + (s32)(4096*10));
+    Gfx* DL = (Gfx *)((intptr_t)(ptr_logo_and_walletbond_DL) + (s32)(FRONT_WALLET_ROOM));
     int i;
 
     prev_keypresses = FALSE;
@@ -17307,7 +17307,7 @@ void load_briefing_text_for_stage(void)
 #endif
 
     // what is this
-    temp_s0 = (Gfx *)((intptr_t)(ptr_logo_and_walletbond_DL) + (s32)(4096*10));
+    temp_s0 = (Gfx *)((intptr_t)(ptr_logo_and_walletbond_DL) + (s32)(FRONT_WALLET_ROOM));
 
     // alright
     argg = 0x200;

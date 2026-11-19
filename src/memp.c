@@ -126,6 +126,9 @@ void mempSetBankStarts(s32 poolSizes[MEMPOOL_COUNT+1])
         g_mempPools[i + 1].start = bankstarts[i] + mempStart;
         g_mempPools[i + 1].pos   = 0;
         g_mempPools[i + 1].end   = bankstarts[i + 1] + mempStart;
+#if IS_64_BIT
+        portMempCheckBankStart(i + 1, g_mempPools[i + 1].start);
+#endif
     }
     /*
                            rel-start              size

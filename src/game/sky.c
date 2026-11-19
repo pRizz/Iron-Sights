@@ -1163,7 +1163,8 @@ Gfx *skyRender(Gfx *gdl)
                         ge_dbg_vec("waterpool texnum/rec", w2, 2);
                         if (rec != NULL)
                         {
-                            ge_dbg_gfxdump("waterrec", rec, 2);
+                            /* the whole record, by its own size: two 8-byte rows at 32 bits, three at 64 */
+                            ge_dbg_gfxdump("waterrec", rec, (int) (sizeof(*rec) / 8));
                         }
                     }
                 }

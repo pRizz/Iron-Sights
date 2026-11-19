@@ -217,8 +217,9 @@ const char *portLp64AssetName(enum PortLp64Asset asset)
 
 #define LP64_EXIT_NO_CONVERTER 5
 
-/* 1 = the class has a 64-bit converter. All zero in LP64-003; LP64-004 set
- * each class's entry in the commit that landed its converter. */
+/* 1 = the class has a 64-bit converter. Every class has one, so the stop
+ * below is reached only when an entry is set back to 0 or a test build names
+ * a class in GE_LP64_TEST_UNCONVERTED. */
 static const unsigned char s_AssetConverted[PORT_LP64_ASSET_COUNT] = {
     1, /* text banks (romconv_text.c) */
     1, /* fonts (romconv_font.c) */
@@ -252,7 +253,7 @@ void portLp64RequireConverter(enum PortLp64Asset asset)
     {
         return;
     }
-    portConLogf("ge: lp64: stopping: asset class \"%s\" has no 64-bit converter yet (LP64-004)\n",
+    portConLogf("ge: lp64: stopping: asset class \"%s\" is marked unconverted in this build\n",
             portLp64AssetName(asset));
     exit(LP64_EXIT_NO_CONVERTER);
 }

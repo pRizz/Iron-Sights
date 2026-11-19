@@ -16,7 +16,9 @@
 # 32-bit ones. The pool reports (LP64-004 Task 2): at 64 bits a pool report
 # prints at most eight lines a pool a stage, portLp64PoolFatal and the music
 # heap's allocator asked for more than its heap holds stop with status 6
-# naming the pool; at 32 bits they return.
+# naming the pool; at 32 bits they return. The bank start check (LP64-005
+# Task 12): at 64 bits a bank whose start is not 8-aligned stops the game
+# naming the bank, and an aligned one returns.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source scripts/port/harness_widths.sh
@@ -46,14 +48,25 @@ build_heap() {
         src/libultra/audio/heapalloc.c -o "$out"
 }
 
+# The stage bank's allocator (port/src/port_memp.c), compiled as the game
+# compiles it, for the bank start check; 64 bits only, where the check exists.
+build_memp() {
+    local out=$1
+    shift
+    "$compiler" "$@" -c -std=gnu11 -fms-extensions -fcommon -funsigned-char -w \
+        -DVERSION_US -DLANG_US -DREFRESH_NTSC -D_LANGUAGE_C -DNONMATCHING -DAVOID_UB \
+        -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \
+        port/src/port_memp.c -o "$out"
+}
+
 # gbi.h (Task 7) includes <PR/...>; -idirafter finds those after the system
 # headers, so the driver's <string.h> is still the C library's.
 build() {
-    local out=$1 str_object=$2 heap_object=$3
-    shift 3
+    local out=$1 str_object=$2 heap_object=$3 memp_object=$4
+    shift 4
     "$compiler" "$@" -std=gnu11 -D_LANGUAGE_C -Wall -Wextra -Werror -iquote include -iquote port/include \
-        -idirafter include scripts/port/test_lp64_address.c port/src/port_lp64.c "$str_object" "$heap_object" \
-        -o "$out"
+        -iquote src -idirafter include scripts/port/test_lp64_address.c port/src/port_lp64.c "$str_object" \
+        "$heap_object" ${memp_object:+"$memp_object"} -o "$out"
 }
 
 # The external-texture slot (Task 6): port_textures.c linked with the stubs in
@@ -83,7 +96,7 @@ expect_textures() {
 }
 
 # Runs the driver with MODE (address-space, require-animations, require-setup,
-# pool-fatal or music-heap); fails unless it exits with WANT_STATUS and its
+# pool-fatal, music-heap, bank-start-aligned or bank-start-misaligned); fails unless it exits with WANT_STATUS and its
 # output contains WANT_TEXT.
 expect_driver() {
     local bin=$1 mode=$2 want_status=$3 want_text=$4 label=$5 status=0 output
@@ -108,14 +121,19 @@ for width in $widths; do
     flags=($(harness_flags "$width"))
     build_str "$work/str-$width.o" ${flags[@]+"${flags[@]}"}
     build_heap "$work/heap-$width.o" ${flags[@]+"${flags[@]}"}
-    build "$work/unit-$width" "$work/str-$width.o" "$work/heap-$width.o" ${flags[@]+"${flags[@]}"}
+    memp=""
+    if [[ $width == 64 ]]; then
+        memp="$work/memp-$width.o"
+        build_memp "$memp" ${flags[@]+"${flags[@]}"}
+    fi
+    build "$work/unit-$width" "$work/str-$width.o" "$work/heap-$width.o" "$memp" ${flags[@]+"${flags[@]}"}
     "$work/unit-$width"
     build_textures "$work/textures-$width" ${flags[@]+"${flags[@]}"}
     expect_textures "$work/textures-$width" "$work/root-$width" "${width}-bit external-texture slot"
     if [[ $width == 64 ]]; then
-        build "$work/pie" "$work/str-$width.o" "$work/heap-$width.o" -fPIE -pie
+        build "$work/pie" "$work/str-$width.o" "$work/heap-$width.o" "$memp" -fPIE -pie
         expect_driver "$work/pie" address-space 0 "ge: lp64: address space OK" "position-independent driver"
-        build "$work/no-pie" "$work/str-$width.o" "$work/heap-$width.o" -fno-pie -no-pie
+        build "$work/no-pie" "$work/str-$width.o" "$work/heap-$width.o" "$memp" -fno-pie -no-pie
         expect_driver "$work/no-pie" address-space 4 "executable image" "-no-pie driver"
         expect_driver "$work/unit-$width" require-animations 0 "require-animations: returned" \
             "64-bit animation guard (converted)"
@@ -123,15 +141,20 @@ for width in $widths; do
             "64-bit setup files guard (converted)"
         # A test-only build keeps one class unconverted, so the status-5 stop
         # that scripts/port/lp64_boot.py --expect-stop looks for stays tested.
-        build "$work/unconverted" "$work/str-$width.o" "$work/heap-$width.o" ${flags[@]+"${flags[@]}"} \
+        build "$work/unconverted" "$work/str-$width.o" "$work/heap-$width.o" "$memp" ${flags[@]+"${flags[@]}"} \
             -DGE_LP64_TEST_UNCONVERTED=PORT_LP64_SETUPS
         expect_driver "$work/unconverted" require-setup 5 \
-            'ge: lp64: stopping: asset class "setup files" has no 64-bit converter yet (LP64-004)' \
+            'ge: lp64: stopping: asset class "setup files" is marked unconverted in this build' \
             "64-bit guard of a class a test build leaves unconverted"
         expect_driver "$work/unit-$width" pool-fatal 6 \
             'ge: lp64: pool "music heap" exhausted (request 4096 bytes)' "64-bit fatal pool report"
         expect_driver "$work/unit-$width" music-heap 6 \
             'ge: lp64: pool "music heap" exhausted (request 4096 bytes)' "64-bit music heap exhausted"
+        expect_driver "$work/unit-$width" bank-start-aligned 0 "bank-start-aligned: returned" \
+            "64-bit bank start check (8-aligned)"
+        expect_driver "$work/unit-$width" bank-start-misaligned 1 \
+            'ge: FATAL: Memory bank 4 "stage" starts at an address that is not 8-aligned' \
+            "64-bit bank start check (misaligned)"
     else
         expect_driver "$work/unit-$width" require-animations 0 "require-animations: returned" "32-bit animation guard"
         expect_driver "$work/unit-$width" require-setup 0 "require-setup: returned" "32-bit setup files guard"

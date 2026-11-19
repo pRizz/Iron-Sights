@@ -26,6 +26,11 @@
  *   test_lp64_address music-heap     the music heap's allocator asked for more
  *                                    than its heap holds: status 6 at 64 bits,
  *                                    NULL at 32 bits
+ *   test_lp64_address bank-start-aligned / bank-start-misaligned
+ *                                    portMempCheckBankStart (port_memp.c,
+ *                                    64 bits only; LP64-005 Task 12): returns
+ *                                    for an 8-aligned start, stops naming the
+ *                                    bank for one 4 bytes past it
  *
  * The unit cases also cover the pool reports' line, their eight-line limit a
  * pool a stage, and their 32-bit no-op form. */
@@ -43,6 +48,9 @@
 #include "port_gfxwords.h"
 #include "port_hostptr.h"
 #include "port_lp64.h"
+#if IS_64_BIT
+#include "memp.h"
+#endif
 
 static int s_failures;
 
@@ -447,6 +455,38 @@ static int runMusicHeapRequest(void)
     return result == NULL ? 0 : 1;
 }
 
+#if IS_64_BIT
+/* What port_memp.c links against in the game, here only for its bank start
+ * check: the pools, the permanent-bank flag and sysstubs.c's stop. */
+MemoryPool g_mempPools[MEMPOOL_COUNT];
+s32 needmemallocation;
+
+void sysFatalError(const char *fmt, ...)
+{
+    va_list args;
+
+    va_start(args, fmt);
+    printf("ge: FATAL: ");
+    vprintf(fmt, args);
+    printf("\n");
+    va_end(args);
+    fflush(stdout);
+    exit(1);
+}
+
+void portMempCheckBankStart(u8 bank, const void *start);
+
+/* A start MISALIGN bytes past an 8-aligned address in the stage bank. */
+static int runBankStart(uintptr_t misalign)
+{
+    static u64 storage[4];
+
+    portMempCheckBankStart(MEMPOOL_STAGE, (const u8 *) storage + misalign);
+    printf("bank-start-%s: returned\n", misalign == 0 ? "aligned" : "misaligned");
+    return 0;
+}
+#endif
+
 int main(int argc, char **argv)
 {
     if (argc > 1 && strcmp(argv[1], "address-space") == 0)
@@ -476,6 +516,16 @@ int main(int argc, char **argv)
     {
         return runMusicHeapRequest();
     }
+#if IS_64_BIT
+    if (argc > 1 && strcmp(argv[1], "bank-start-aligned") == 0)
+    {
+        return runBankStart(0);
+    }
+    if (argc > 1 && strcmp(argv[1], "bank-start-misaligned") == 0)
+    {
+        return runBankStart(4);
+    }
+#endif
 
     testHostAddrTruthTable();
     testWordIsHostTruthTable();

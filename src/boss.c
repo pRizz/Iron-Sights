@@ -467,6 +467,14 @@ void bossMainloop(void)
         }
 
         mempResetBank(MEMPOOL_STAGE);
+#if IS_64_BIT
+        /* LP64-005 Task 12: the room and portal tables are built in the stage
+         * bank at 64 bits (load_bg_file), so on a stage that does not load a
+         * background a reader would read the last stage's from reset memory;
+         * with NULL it faults at once instead */
+        g_BgPortals = NULL;
+        ptr_bgdata_room_fileposition_list = NULL;
+#endif
         obBlankResourcesLoadedInBank(MEMPOOL_STAGE);
         if (tokenFind(1, "-ma"))
         {

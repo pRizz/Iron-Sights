@@ -240,7 +240,7 @@ class RefusalLineTests(unittest.TestCase):
 
     def test_a_stop_fails_the_mission_by_its_exit_status(self):
         # Arrange
-        stop = 'ge: lp64: stopping: asset class "models" has no 64-bit converter yet (LP64-004)\n'
+        stop = 'ge: lp64: stopping: asset class "models" is marked unconverted in this build\n'
 
         # Act
         status, record, _ = self.smoke('GE_STAGE direct launch: dam\n' + stop, returncode=5)

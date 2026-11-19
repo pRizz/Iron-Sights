@@ -19,7 +19,7 @@ BOOT = 'ge007 pc port: booting (GE_FRAMES=n limits the run)\nge: romdata: textur
 
 
 def stop(name: str) -> str:
-    return f'ge: lp64: stopping: asset class "{name}" has no 64-bit converter yet (LP64-004)\n'
+    return f'ge: lp64: stopping: asset class "{name}" is marked unconverted in this build\n'
 
 
 CLEAN = BOOT + ADDRESS + stop('animation tables')

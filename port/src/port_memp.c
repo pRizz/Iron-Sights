@@ -39,6 +39,19 @@ static u8 *cursorAfter(const MemoryPool *pool, u8 *blockEnd)
     const uintptr_t aligned = (used + 7) & ~(uintptr_t)7;
     return pool->start + (aligned < room ? aligned : room);
 }
+
+/* LP64-005 Task 12: cursorAfter keeps a cursor 8-aligned from its bank's
+ * start, so blocks are 8-aligned in memory only while the start is. Each
+ * start is 16-aligned from the arena's (mempSetBankStarts), which is aligned
+ * only because the arena is page-aligned (mmap); a port whose arena is not
+ * stops here, naming the bank, instead of misaligning every record. */
+void portMempCheckBankStart(u8 bank, const void *start)
+{
+    if (((uintptr_t)start & 7) != 0) {
+        sysFatalError("Memory bank %u \"%s\" starts at an address that is not 8-aligned (%p); a 64-bit build's "
+                      "bank cursor needs an 8-aligned start", bank, bankName(bank), start);
+    }
+}
 #endif
 
 #if PORT_POISON_GAP

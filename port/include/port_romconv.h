@@ -358,7 +358,14 @@ u32 portModelConvertedSize(const u8 *file, u32 size, s32 numSwitches, s32 numtex
  * G_SETCIMG (0xFF), whose segment-5 words refuse the file (no stock list has
  * one). Every other command's w1 is not an address (G_TRI4's vertex indices,
  * G_SETTILE's and G_SETTILESIZE's settings, colours, masks) and is copied,
- * as are segment 3 and 4 words. At 64 bits a collision
+ * as are segment 3 and 4 words. G_MOVEWORD (0xBC) is among those copied: its
+ * w1 is a value, and for G_MW_SEGMENT a segment's base, not a reference into
+ * the file. The walk reads every 8 bytes as a command, as the in-place path
+ * does, so G_TEXRECT's (0xE4) two G_RDPHALF words (0xB3, 0xB2) are read as
+ * commands of their own; their opcodes are no address command's, so a
+ * well-formed list is copied, but a crafted G_TEXRECT whose next word had
+ * opcode 0x04, 0xFD or 0x06 and a segment-5 w1 would be read as an address
+ * (no stock list has one; no test covers it). At 64 bits a collision
  * vertex's link is its node's new offset and its related index is swapped; at
  * 32 bits both stay as the in-place path leaves them.
  *
