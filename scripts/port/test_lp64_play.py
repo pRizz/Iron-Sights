@@ -447,7 +447,7 @@ class Video(StandIns):
 
         # Assert
         self.assertEqual(status, 1, out)
-        self.assertIn('dam1: FAIL (missing line: ge: frame limit reached: ... gfxtasks=N)', out)
+        self.assertIn('dam1: FAIL (missing line: ge: frame ... gfxtasks=N (the frame-limit line or the heartbeat))', out)
 
     def test_video_case_without_a_frame_limit_line_fails(self):
         # Arrange
@@ -459,7 +459,7 @@ class Video(StandIns):
         # Assert
         problems = json.loads((self.output/'play.json').read_text())['cases'][0]['problems']
         self.assertEqual(status, 1, out)
-        self.assertIn('missing line: ge: frame limit reached: ... gfxtasks=N', problems)
+        self.assertIn('missing line: ge: frame ... gfxtasks=N (the frame-limit line or the heartbeat)', problems)
 
     def test_video_stop_with_the_gl_line_and_its_fatal_line_passes_without_a_frame_limit(self):
         # Arrange: a stop ends at its FATAL line, before any frame-limit line could name its pictures
@@ -471,6 +471,18 @@ class Video(StandIns):
         # Assert
         self.assertEqual(status, 0, out)
         self.assertIn('stop-citadel: PASS', out)
+
+    def test_video_case_that_ends_itself_counts_pictures_from_the_heartbeat(self):
+        # Arrange: the soak exits after its lap, before any frame-limit line
+        exe = self.fake(BOOT + VIDEO_UP + 'ge: frame 13620 | gfx tasks submitted 13490\n'
+                        'ge: frame 13680 | gfx tasks submitted 13547\nge: soak: complete after 1 laps\n')
+
+        # Act
+        status, out = self.play(exe, 'attract', 'soak', '--video')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('soak: PASS (13547 pictures)', out)
 
     def test_video_stop_without_the_gl_line_fails(self):
         # Arrange

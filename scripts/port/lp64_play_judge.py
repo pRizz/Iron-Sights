@@ -14,25 +14,28 @@ from lp64_play_route import PLAY_EVENT, PLAY_MARK, PLAY_TICK
 
 # port/src/video.c, once SDL has made the window and its GL context: "ge: video: window + GL context up\n"
 VIDEO_UP = re.compile(r'ge: video: window \+ GL context up')
-# port/src/pcsched.c: "ge: frame limit reached: frames=%u gfxtasks=%u\n"; gfxtasks counts the
-# pictures the renderer was handed.
-GFXTASKS = re.compile(r'ge: frame limit reached: frames=\d+ gfxtasks=(\d+)')
+# port/src/pcsched.c counts the pictures the renderer was handed in two lines: "ge: frame limit
+# reached: frames=%u gfxtasks=%u\n" at the limit, and the heartbeat "ge: frame %u | gfx tasks
+# submitted %u\n" once a second, the only count of a case that ends itself (the soak). A case that
+# must reach its limit requires the frame-limit line among its own lines.
+GFXTASKS = re.compile(r'ge: frame (?:limit reached: frames=\d+ gfxtasks=|\d+ \| gfx tasks submitted )(\d+)')
+GFXTASKS_LABEL = 'ge: frame ... gfxtasks=N (the frame-limit line or the heartbeat)'
 
 
 def pictures_drawn(text: str) -> int | None:
-    """The pictures a run with video drew, from the last frame-limit line of its log TEXT; None
-    when the log has no such line."""
+    """The pictures a run with video drew, from the last picture count of its log TEXT; None when
+    the log has none."""
     counts = GFXTASKS.findall(text)
     return int(counts[-1]) if counts else None
 
 
 def video_required(case: Case) -> tuple[Required, ...]:
     """What a run with video must log besides the case's own lines: the GL line, and the pictures
-    drawn unless the case asks for none (a stop ends before any frame-limit line)."""
+    drawn unless the case asks for none (a stop ends before it has drawn many)."""
     up = Required('ge: video: window + GL context up', VIDEO_UP)
     if case.pictures == 0:
         return (up,)
-    return (up, Required('ge: frame limit reached: ... gfxtasks=N', GFXTASKS, at_least=case.pictures))
+    return (up, Required(GFXTASKS_LABEL, GFXTASKS, at_least=case.pictures))
 
 
 # include/assert.h and the game's own asserts: "\n--- ASSERTION FAULT - %s - %s, line %d\n\n".

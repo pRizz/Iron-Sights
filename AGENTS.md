@@ -301,10 +301,11 @@ pass its isolated executable rather than rebuilding an active player binary.
   (at least 1), which multiplies every case's wall-clock limit and changes
   nothing else; `play.json` records it. `--env` refuses those names with
   `--video`. Each case must also log `ge: video: window + GL
-  context up` and a frame-limit line with `gfxtasks=` at least its
-  `pictures` (30; a stop, which ends at its FATAL line before any
-  frame-limit line, needs only the GL line), and its verdict names the
-  pictures it drew. `--shots N` adds `GE_SHOT=N` (a screenshot every N
+  context up` and a picture count at least its `pictures` (30), read
+  from the last frame-limit line's `gfxtasks=` or, for a case that ends
+  itself such as the soak, the last once-a-second `gfx tasks submitted`
+  heartbeat; a stop, which ends at its FATAL line, needs only the GL
+  line. Its verdict names the pictures it drew. `--shots N` adds `GE_SHOT=N` (a screenshot every N
   pictures) and keeps each case's last screenshot as `DIR/CASE.bmp`, a
   ROM-derived picture that stays under `build/lp64/`; `--keep-shots` keeps
   every one in `DIR/CASE.shots/`. `--frames-scale K` runs each case for K
