@@ -16,6 +16,7 @@ succeeds, so there the test passes against either version and discriminates noth
 """
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import redirect_stdout
+import errno
 from io import StringIO
 from pathlib import Path
 import shutil
@@ -117,8 +118,10 @@ class ConcurrentStarts(unittest.TestCase):
             shutil.copy2(exe, folder/exe.name)
             try:
                 subprocess.run([str(folder/exe.name)], stdout=subprocess.DEVNULL, check=False)
-            except OSError:
-                pass  # ETXTBSY on Linux: the race itself, which this test does not need to see
+            except OSError as error:
+                if error.errno != errno.ETXTBSY:
+                    raise
+                # ETXTBSY on Linux: the race itself, which this test does not need to see
 
         # Act
         with HeldCopies() as held, ThreadPoolExecutor(2) as pool:

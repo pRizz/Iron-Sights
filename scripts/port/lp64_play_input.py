@@ -108,7 +108,9 @@ def weapons_required() -> tuple[Ordered, ...]:
     """Each press's weapons in order, each followed by a shot before the next change. The final
     shot count varies from run to run (120 and 122 headless, 214 with video, 341 under the
     sanitizers with video, measured 2026-11-19), so the case requires a shot with every weapon
-    instead of a total."""
+    instead of a total. Its limits: it passes if a previous weapon's shot is logged just after
+    the next weapon's line, with a single shot per weapon, if Bond dies after the thirtieth
+    shot, and it does not judge how a gun is drawn."""
     steps = []
     for index, state in enumerate(WEAPON_STATES, start=1):
         steps.append((f'ge: play: weapon {state} (change {index} of {WEAPON_CHANGES}: right {state & 0xff}, '
