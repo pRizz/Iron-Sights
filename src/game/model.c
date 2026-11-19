@@ -5253,13 +5253,14 @@ void doshadow(ModelRenderData *renderdata, Model *model, ModelNode *node)
                     v[1] = (f32)(recglobal != NULL);
                     v[2] = (f32)(recmodel != NULL);
                     ge_dbg_vec("shadowpool num/global/model", v, 3);
+                    /* each whole record, by its own size: two 8-byte rows at 32 bits, three at 64 */
                     if (recglobal != NULL)
                     {
-                        ge_dbg_gfxdump("shadowrec-global", recglobal, 2);
+                        ge_dbg_gfxdump("shadowrec-global", recglobal, (int) (sizeof(*recglobal) / 8));
                     }
                     if (recmodel != NULL)
                     {
-                        ge_dbg_gfxdump("shadowrec-model", recmodel, 2);
+                        ge_dbg_gfxdump("shadowrec-model", recmodel, (int) (sizeof(*recmodel) / 8));
                     }
                 }
             }
