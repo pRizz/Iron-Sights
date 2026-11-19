@@ -265,7 +265,10 @@ pass its isolated executable rather than rebuilding an active player binary.
   `--expect-stop NAME` remains for the test hook below. A 64-bit run, in the
   boot check or the mission smoke, fails on any `ge: lp64:` line outside the
   informational list (`INFORMATIONAL_PREFIXES` in `lp64_boot.py`); a new
-  informational line is added there deliberately.
+  informational line is added there deliberately. One of them is `ge: lp64:
+  peak POOL USED of SIZE bytes` (LP64-005 Task 13): a 64-bit build prints each
+  pool's largest use (`portLp64PoolUse`, `port/include/port_lp64.h`) at each
+  stage unload and at exit, never per frame.
 - `scripts/port/lp64_play.py` (LP64-005) runs named sets of 64-bit game runs
   and judges each by what its log shows: `python3 scripts/port/lp64_play.py
   run --rom /rom/baserom.u.z64 --set demos,stages,stops,menus,tours,attract
@@ -327,6 +330,10 @@ pass its isolated executable rather than rebuilding an active player binary.
   it holds) and peaking at 1,000 or more;
   `lp64_play.py sound DIR` prints each recording's length, peak and share of
   non-zero samples. Recordings are ROM-derived and stay under `build/lp64/`.
+  `lp64_play.py peaks DIR...` prints, for each pool, the largest `ge: lp64:
+  peak` share over the folders' logs with the case that had it, marked past
+  80 percent of the pool's size and with any exhaustion lines (decision 10 of
+  the LP64-005 plan raises such a pool at 64 bits to twice its peak).
 - Storage for a record or a display list is sized by `sizeof` of what it
   holds, never by a literal byte count or by filler members, and a member
   that overlays another record by position is pinned at both widths in the

@@ -1,6 +1,7 @@
 /* Overflow-safe native bank allocation; the N64 matching path stays separate. */
 #include <stdint.h>
 #include "port_memp.h"
+#include "port_lp64.h" /* LP64-005 Task 13: portLp64PoolUse */
 #include "port_poison.h"
 extern MemoryPool g_mempPools[MEMPOOL_COUNT];
 extern s32 needmemallocation;
@@ -38,6 +39,23 @@ static u8 *cursorAfter(const MemoryPool *pool, u8 *blockEnd)
     const uintptr_t room = (uintptr_t)pool->end - (uintptr_t)pool->start;
     const uintptr_t aligned = (used + 7) & ~(uintptr_t)7;
     return pool->start + (aligned < room ? aligned : room);
+}
+
+/* LP64-005 Task 13: the stage bank's use, by its cursor, after each block. A
+ * block that took all the bank had left (a file load, ob.c) is shrunk to the
+ * file at once (portMempResize), so it is held until then. */
+static void notePeak(const MemoryPool *pool, int tookTheRest)
+{
+    const u32 used = (u32)(pool->pos - pool->start), size = (u32)(pool->end - pool->start);
+
+    if (pool != g_mempPools + MEMPOOL_STAGE) {
+        return;
+    }
+    if (tookTheRest) {
+        portLp64PoolHold("stage bank", used, size);
+    } else {
+        portLp64PoolUse("stage bank", used, size);
+    }
 }
 
 /* LP64-005 Task 12: cursorAfter keeps a cursor 8-aligned from its bank's
@@ -81,6 +99,9 @@ static u32 remaining(const MemoryPool *pool)
 void *portMempAllocate(u32 bytes, u8 bank)
 {
     MemoryPool *pool = portMempPool(bank);
+#if IS_64_BIT
+    const int tookTheRest = bytes == remaining(pool);
+#endif
     if (bytes > remaining(pool)) {
         pool = portMempPool(MEMPOOL_PERMANENT);
         if (bytes > remaining(pool)) {
@@ -97,6 +118,9 @@ void *portMempAllocate(u32 bytes, u8 bank)
 #endif
 #if PORT_POISON_GAP
     pool->pos = gapAfter(pool, pool->pos);
+#endif
+#if IS_64_BIT
+    notePeak(pool, tookTheRest);
 #endif
     /* Everything from the cursor to the bank's end is poisoned (mempResetBank,
      * and the resize below); the block is exactly the bytes asked for. */
@@ -128,6 +152,9 @@ MEMP_ADD_ENTRY_RESULT portMempResize(void *allocation, s32 size, u8 bank)
 #endif
 #if PORT_POISON_GAP
     pool->pos = gapAfter(pool, pool->pos);
+#endif
+#if IS_64_BIT
+    notePeak(pool, 0);
 #endif
     return MEMP_ADD_ENTRY_SUCCESS;
 }

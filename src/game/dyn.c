@@ -9,7 +9,7 @@
 #ifndef TARGET_N64
 #include <stdio.h> /* GE_ROOM_AUDIT dyn-pool watch (see bg.c) */
 #include "port_dyn.h"
-#include "port_lp64.h" /* LP64-004: portLp64PoolFatal */
+#include "port_lp64.h" /* LP64-004: portLp64PoolFatal; LP64-005: portLp64PoolUse */
 #include "port_poison.h"
 #endif
 
@@ -236,6 +236,11 @@ void portDynAuditFrameEnd(Gfx *gdlEnd)
     if ((u8 *)gdlEnd > g_GfxBuffers[g_GfxActiveBufferIndex + 1]) {
         portLp64PoolFatal("graphics buffer", (u32)((u8 *)gdlEnd - g_GfxBuffers[g_GfxActiveBufferIndex]));
     }
+    /* LP64-005 Task 13: each half's use this frame, for the pool peaks. */
+    portLp64PoolUse("graphics buffer", (u32)((u8 *)gdlEnd - g_GfxBuffers[g_GfxActiveBufferIndex]),
+                    (u32)(g_GfxBuffers[g_GfxActiveBufferIndex + 1] - g_GfxBuffers[g_GfxActiveBufferIndex]));
+    portLp64PoolUse("vertex pool", (u32)(g_GfxMemPos - g_VtxBuffers[g_GfxActiveBufferIndex]),
+                    (u32)(g_VtxBuffers[g_GfxActiveBufferIndex + 1] - g_VtxBuffers[g_GfxActiveBufferIndex]));
 #endif
 
     if (!portRoomAuditEnabled() || g_GfxBuffers[0] == NULL) {

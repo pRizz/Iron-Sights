@@ -33,7 +33,8 @@
  *                                    bank for one 4 bytes past it
  *
  * The unit cases also cover the pool reports' line, their eight-line limit a
- * pool a stage, and their 32-bit no-op form. */
+ * pool a stage, and their 32-bit no-op form; and the pool peaks (LP64-005
+ * Task 13): one line a pool at the print, with its largest use. */
 #include <stdarg.h>
 #include <stdint.h>
 #include <limits.h>
@@ -59,6 +60,8 @@ static int s_failures;
  * and the last of them, for the pool-report cases (LP64-004 Task 2). */
 static int s_poolLines;
 static char s_lastPoolLine[256];
+static int s_peakLines;
+static char s_lastPeakLine[256];
 
 /* port_console.c's logger, which port_lp64.c prints through. */
 void portConLogf(const char *fmt, ...)
@@ -74,6 +77,11 @@ void portConLogf(const char *fmt, ...)
         s_poolLines++;
         snprintf(s_lastPoolLine, sizeof(s_lastPoolLine), "%s", line);
     }
+    if (strncmp(line, "ge: lp64: peak ", 15) == 0)
+    {
+        s_peakLines++;
+        snprintf(s_lastPeakLine, sizeof(s_lastPeakLine), "%s", line);
+    }
     fputs(line, stdout);
     fflush(stdout);
 }
@@ -82,6 +90,8 @@ static void resetPoolLines(void)
 {
     s_poolLines = 0;
     s_lastPoolLine[0] = '\0';
+    s_peakLines = 0;
+    s_lastPeakLine[0] = '\0';
 }
 
 static void expect(int condition, const char *what)
@@ -426,6 +436,37 @@ static void testPoolLimitRestartsAtStageBegin(void)
     // Assert
     expect(s_poolLines == 1, "the next stage prints a pool's report again");
 }
+
+static void testPeakPrintsLargestUse(void)
+{
+    // Arrange
+    portLp64PoolPeaks();
+    resetPoolLines();
+    portLp64PoolUse("test pool", 10, 100);
+    portLp64PoolUse("test pool", 30, 100);
+    portLp64PoolUse("test pool", 20, 100);
+
+    // Act
+    portLp64PoolPeaks();
+
+    // Assert
+    expect(s_peakLines == 1 && strcmp(s_lastPeakLine, "ge: lp64: peak test pool 30 of 100 bytes\n") == 0,
+           "three uses of a pool print one line with the largest at the print");
+}
+
+static void testPeakPrintsOnlyPoolsUsedSinceLastPrint(void)
+{
+    // Arrange
+    portLp64PoolUse("test pool", 10, 100);
+    portLp64PoolPeaks();
+    resetPoolLines();
+
+    // Act
+    portLp64PoolPeaks();
+
+    // Assert
+    expect(s_peakLines == 0, "a print with no use since the last prints nothing");
+}
 #else
 static void testPoolReportsAreNoOpsAtThirtyTwoBits(void)
 {
@@ -436,9 +477,11 @@ static void testPoolReportsAreNoOpsAtThirtyTwoBits(void)
     portLp64PoolStageBegin();
     portLp64PoolExhausted("room memory", 64);
     portLp64PoolFatal("music heap", 4096);
+    portLp64PoolUse("test pool", 30, 100);
+    portLp64PoolPeaks();
 
     // Assert
-    expect(s_poolLines == 0, "the pool reports print nothing and return at 32 bits");
+    expect(s_poolLines == 0 && s_peakLines == 0, "the pool reports print nothing and return at 32 bits");
 }
 #endif
 
@@ -545,6 +588,8 @@ int main(int argc, char **argv)
     testPoolExhaustedStopsAfterEightLines();
     testPoolLimitIsPerPool();
     testPoolLimitRestartsAtStageBegin();
+    testPeakPrintsLargestUse();
+    testPeakPrintsOnlyPoolsUsedSinceLastPrint();
 #else
     testCheckIsNoOpAtThirtyTwoBits();
     testAssetGuardIsNoOpAtThirtyTwoBits();

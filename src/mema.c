@@ -6,6 +6,7 @@
 #include <inttypes.h> /* PRIxPTR: the traces print whole addresses */
 #include <stdio.h>  /* GE_ROOM_AUDIT heap validation (see bg.c) */
 #include <stdlib.h>
+#include "port_lp64.h" /* LP64-005 Task 13: room memory's peak */
 #include "port_poison.h"
 #endif
 
@@ -225,6 +226,7 @@ void _memaFree(intptr_t addr, s32 size)
 #ifndef TARGET_N64
     memaAuditFree(addr, size);
     PORT_POISON((void *)addr, size);
+    portLp64RoomGive((uintptr_t)addr, (u32)size);
 #endif
     // Choose an index in the spaces array which we'll mark a space as free,
 	// based on how far into the heap the allocation is. This is a rough
@@ -295,6 +297,7 @@ void memaReset(void *heapaddr, u32 heapsize)
         }
         portRoomAuditOnHeapReset(); /* all shadows are stale now */
     }
+    portLp64RoomReset(heapsize);
     /* The free-space list lives in g_MemoryAllocations, not in the heap, so
      * no free byte of the heap is ever read by mema itself. */
     PORT_POISON(heapaddr, heapsize);
@@ -390,6 +393,7 @@ void *memaAlloc(u32 amount) {
         fflush(stderr);
     }
     PORT_UNPOISON((void *)addr, amount);
+    portLp64RoomTake((uintptr_t)addr, amount);
 #endif
 
     return (void*)addr;
@@ -442,6 +446,7 @@ intptr_t memaGrow(uintptr_t addr, u32 amount)
 found:
 #ifndef TARGET_N64
     PORT_UNPOISON((void *)curr->addr, amount); /* memaRealloc's growth takes these */
+    portLp64RoomTake((uintptr_t)curr->addr, amount);
 #endif
     curr->addr += amount;
     curr->size -= amount;
@@ -602,6 +607,10 @@ s32 memaGetLongestFree(void)
 
 		curr++;
 	}
+
+#ifndef TARGET_N64
+	portLp64RoomLongest((u32)biggest); /* LP64-005 Task 13: a room's first load asks for this */
+#endif
 
 	if (biggest) {
 		return biggest;

@@ -22,7 +22,7 @@
 #include <libaudio.h>
 #include <os.h>
 #include <ultraerror.h>
-#include "port_lp64.h" /* LP64-004: portLp64PoolFatal */
+#include "port_lp64.h" /* LP64-004: portLp64PoolFatal; LP64-005: portLp64PoolUse */
 #include "port_poison.h"
 
 void *alHeapDBAlloc(u8 *file, s32 line, ALHeap *hp, s32 num, s32 size)
@@ -41,6 +41,7 @@ void *alHeapDBAlloc(u8 *file, s32 line, ALHeap *hp, s32 num, s32 size)
 
         ptr = hp->cur;
         hp->cur += bytes;
+        portLp64PoolUse("music heap", (u32)(hp->cur - hp->base), (u32)hp->len); /* LP64-005 Task 13 */
         /* The whole cache-line block, not just num*size: callers DMA whole
          * lines into it (music.c copies ALIGN16 of its request). */
         PORT_UNPOISON(ptr, bytes);

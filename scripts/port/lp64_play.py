@@ -8,6 +8,7 @@
     python3 scripts/port/lp64_play.py traces --reference-check DIR_A DIR_B
     python3 scripts/port/lp64_play.py callers --tick T LOG EXECUTABLE
     python3 scripts/port/lp64_play.py sound DIR
+    python3 scripts/port/lp64_play.py peaks DIR...
 
 run: each case of the named sets (lp64_play_cases.py: demos, stages, stops, menus, tours,
 attract; lp64_play_input.py: input, whose cases replay a route as pad 0; lp64_play_sound.py: sound,
@@ -48,6 +49,10 @@ addr2line (lp64_play_callers.py).
 
 sound: each recording in DIR (its *.wav files) as `CASE: SECONDS s, peak PEAK, non-zero SHARE%`, to
 compare a run's recordings with the 32-bit reference's (lp64_play_sound.py).
+
+peaks: the largest `ge: lp64: peak` of each pool over every DIR/*.log, as `POOL: USED of SIZE bytes
+(SHARE%) in DIR/CASE`, marked past 80% of its size and with any exhaustion lines the pool printed
+(lp64_play_peaks.py).
 """
 import argparse
 import math
@@ -58,6 +63,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lp64_play_callers import callers  # noqa: E402
 from lp64_play_cases import VIDEO_SETS, cases_of, scale_frames, select_cases  # noqa: E402
+from lp64_play_peaks import peaks_report  # noqa: E402
 from lp64_play_run import (CAPTURE_VARIABLE, FOLDER_VARIABLES, FORBIDDEN_VARIABLES, TOOL_VARIABLES, VIDEO_VARIABLES,  # noqa: E402
                            Display, run_cases)
 from lp64_play_sound import sound_report  # noqa: E402
@@ -158,6 +164,10 @@ def command_sound(parser: argparse.ArgumentParser, options: argparse.Namespace) 
     return sound_report(options.dir)
 
 
+def command_peaks(parser: argparse.ArgumentParser, options: argparse.Namespace) -> int:
+    return peaks_report(options.dirs)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest='command', required=True)
@@ -196,6 +206,8 @@ def build_parser() -> argparse.ArgumentParser:
     who.add_argument('executable', type=Path, metavar='EXECUTABLE')
     sound = sub.add_parser('sound', help='the length, peak and non-zero share of each recording in a run folder')
     sound.add_argument('dir', type=Path, metavar='DIR')
+    peaks = sub.add_parser('peaks', help='the largest peak of each pool over run folders')
+    peaks.add_argument('dirs', type=Path, nargs='+', metavar='DIR')
     return parser
 
 
@@ -203,7 +215,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     options = parser.parse_args(argv)
     command = {'run': command_run, 'traces': command_traces, 'callers': command_callers,
-               'sound': command_sound}[options.command]
+               'sound': command_sound, 'peaks': command_peaks}[options.command]
     return command(parser, options)
 
 

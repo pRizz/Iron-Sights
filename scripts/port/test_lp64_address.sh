@@ -18,7 +18,11 @@
 # heap's allocator asked for more than its heap holds stop with status 6
 # naming the pool; at 32 bits they return. The bank start check (LP64-005
 # Task 12): at 64 bits a bank whose start is not 8-aligned stops the game
-# naming the bank, and an aligned one returns.
+# naming the bank, and an aligned one returns. The pool peaks (LP64-005 Task
+# 13): test_lp64_address.c checks one line a pool with its largest use, and
+# test_lp64_peaks.c the uses that are given back at once (a block that took
+# the rest of the stage bank, a room's first block); at 32 bits both print
+# nothing.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source scripts/port/harness_widths.sh
@@ -67,6 +71,14 @@ build() {
     "$compiler" "$@" -std=gnu11 -D_LANGUAGE_C -Wall -Wextra -Werror -iquote include -iquote port/include \
         -iquote src -idirafter include -idirafter src scripts/port/test_lp64_address.c port/src/port_lp64.c "$str_object" \
         "$heap_object" ${memp_object:+"$memp_object"} -o "$out"
+}
+
+# The pool peaks' given-back uses (LP64-005 Task 13): port_lp64.c alone.
+build_peaks() {
+    local out=$1
+    shift
+    "$compiler" "$@" -std=gnu11 -D_LANGUAGE_C -Wall -Wextra -Werror -iquote include -iquote port/include \
+        -idirafter include scripts/port/test_lp64_peaks.c port/src/port_lp64.c -o "$out"
 }
 
 # The external-texture slot (Task 6): port_textures.c linked with the stubs in
@@ -128,6 +140,8 @@ for width in $widths; do
     fi
     build "$work/unit-$width" "$work/str-$width.o" "$work/heap-$width.o" "$memp" ${flags[@]+"${flags[@]}"}
     "$work/unit-$width"
+    build_peaks "$work/peaks-$width" ${flags[@]+"${flags[@]}"}
+    "$work/peaks-$width"
     build_textures "$work/textures-$width" ${flags[@]+"${flags[@]}"}
     expect_textures "$work/textures-$width" "$work/root-$width" "${width}-bit external-texture slot"
     if [[ $width == 64 ]]; then

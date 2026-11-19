@@ -339,4 +339,195 @@ void portLp64PoolStageBegin(void)
     s_PoolCount = 0;
 }
 
+/* ==== the pool peaks =================================================== */
+
+/* Seven names report; a name past the table's end is logged at each use
+ * rather than not at all. */
+#define LP64_MAX_PEAKS 8
+
+typedef struct Lp64Use
+{
+    u32 used;
+    u32 size;
+} Lp64Use;
+
+typedef struct Lp64Peak
+{
+    const char *pool;
+    Lp64Use peak;
+    Lp64Use held; /* portLp64PoolHold's use, until the pool's next use or the print */
+    int holding;
+} Lp64Peak;
+
+static Lp64Peak s_Peaks[LP64_MAX_PEAKS];
+static int s_PeakCount;
+static int s_PeaksAtExit;
+
+static void lp64RoomSettle(void);
+
+static void lp64LogPeak(const char *pool, Lp64Use use)
+{
+    portConLogf("ge: lp64: peak %s %u of %u bytes\n", pool, (unsigned) use.used, (unsigned) use.size);
+}
+
+/* The larger share of its size; for a pool of one size, the larger use. */
+static void lp64KeepLarger(Lp64Use *peak, Lp64Use use)
+{
+    if ((u64) use.used * peak->size > (u64) peak->used * use.size)
+    {
+        *peak = use;
+    }
+}
+
+/* POOL's entry, made on its first use; NULL when the table is full. Called
+ * each frame for two pools (dyn.c), so a pointer test comes before the
+ * name's text. */
+static Lp64Peak *lp64Peak(const char *pool, u32 size)
+{
+    int i;
+
+    for (i = 0; i < s_PeakCount; i++)
+    {
+        if (s_Peaks[i].pool == pool || lp64SameName(s_Peaks[i].pool, pool))
+        {
+            return &s_Peaks[i];
+        }
+    }
+    if (!s_PeaksAtExit)
+    {
+        s_PeaksAtExit = 1;
+        atexit(portLp64PoolPeaks);
+    }
+    if (s_PeakCount == LP64_MAX_PEAKS)
+    {
+        return NULL;
+    }
+    s_Peaks[s_PeakCount].pool = pool;
+    s_Peaks[s_PeakCount].peak.used = 0;
+    s_Peaks[s_PeakCount].peak.size = size;
+    s_Peaks[s_PeakCount].holding = 0;
+    return &s_Peaks[s_PeakCount++];
+}
+
+void portLp64PoolUse(const char *pool, u32 used, u32 size)
+{
+    Lp64Use use = { used, size };
+    Lp64Peak *peak = lp64Peak(pool, size);
+
+    if (peak == NULL)
+    {
+        lp64LogPeak(pool, use);
+        return;
+    }
+    peak->holding = 0;
+    lp64KeepLarger(&peak->peak, use);
+}
+
+void portLp64PoolHold(const char *pool, u32 used, u32 size)
+{
+    Lp64Use use = { used, size };
+    Lp64Peak *peak = lp64Peak(pool, size);
+
+    if (peak == NULL)
+    {
+        lp64LogPeak(pool, use);
+        return;
+    }
+    peak->held = use;
+    peak->holding = 1;
+}
+
+void portLp64PoolPeaks(void)
+{
+    int i;
+
+    lp64RoomSettle();
+    for (i = 0; i < s_PeakCount; i++)
+    {
+        if (s_Peaks[i].holding)
+        {
+            lp64KeepLarger(&s_Peaks[i].peak, s_Peaks[i].held);
+        }
+        lp64LogPeak(s_Peaks[i].pool, s_Peaks[i].peak);
+    }
+    s_PeakCount = 0;
+}
+
+/* ==== room memory's use (mema.c) ======================================= */
+
+static u32 s_RoomSize;
+static u32 s_RoomInUse;
+static u32 s_RoomLongest; /* memaGetLongestFree's answer, until the next take or give */
+static uintptr_t s_GrabAddr;
+static u32 s_GrabSize; /* a block taken at that answer, until its tail comes back */
+
+static void lp64RoomNote(u32 request)
+{
+    if (request != 0)
+    {
+        portLp64PoolUse("room memory largest request", request, s_RoomSize);
+    }
+    portLp64PoolUse("room memory", s_RoomInUse, s_RoomSize);
+}
+
+/* A grab still whole at another call kept all it took. */
+static void lp64RoomSettle(void)
+{
+    u32 kept = s_GrabSize;
+
+    if (kept != 0)
+    {
+        s_GrabSize = 0;
+        lp64RoomNote(kept);
+    }
+}
+
+void portLp64RoomReset(u32 size)
+{
+    lp64RoomSettle();
+    s_RoomSize = size;
+    s_RoomInUse = 0;
+    s_RoomLongest = 0;
+}
+
+void portLp64RoomLongest(u32 bytes)
+{
+    s_RoomLongest = bytes;
+}
+
+void portLp64RoomTake(uintptr_t addr, u32 bytes)
+{
+    int grab = s_RoomLongest != 0 && bytes == s_RoomLongest;
+
+    lp64RoomSettle();
+    s_RoomLongest = 0;
+    s_RoomInUse += bytes;
+    if (grab)
+    {
+        s_GrabAddr = addr;
+        s_GrabSize = bytes;
+        return;
+    }
+    lp64RoomNote(bytes);
+}
+
+void portLp64RoomGive(uintptr_t addr, u32 bytes)
+{
+    int tail = s_GrabSize != 0 && addr >= s_GrabAddr && addr - s_GrabAddr + bytes == s_GrabSize;
+
+    s_RoomLongest = 0;
+    if (!tail)
+    {
+        lp64RoomSettle(); /* with the use before this free */
+    }
+    s_RoomInUse = bytes < s_RoomInUse ? s_RoomInUse - bytes : 0;
+    if (tail)
+    {
+        u32 kept = s_GrabSize - bytes; /* the room kept the rest */
+
+        s_GrabSize = 0;
+        lp64RoomNote(kept);
+    }
+}
+
 #endif

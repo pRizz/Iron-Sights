@@ -50,12 +50,14 @@ SANITIZER_MARKERS = ('runtime error:', 'ERROR: AddressSanitizer', 'ERROR: LeakSa
 REFUSAL_MARKERS = ('ge: lp64: pool', 'ge: lp64: cannot convert')
 # The `ge: lp64:` lines a passing run may print (owner decision 3 as the controller read it,
 # FORK-089 "LP64-004 task 16"): the address check's success, the two audio banks' and the music
-# sequence table's sizes, a background's tables, and the 32-bit oracle build's lines, which
-# lp64_oracle.py judges by their totals. Any other kind fails a run as a refusal does (fix wave G);
+# sequence table's sizes, a background's tables, the 32-bit oracle build's lines, which
+# lp64_oracle.py judges by their totals, and each pool's peak use (LP64-005 Task 13), which
+# `lp64_play.py peaks` reads. Any other kind fails a run as a refusal does (fix wave G);
 # the asset-class stop is judged by STOP_PATTERN instead.
 LP64_PREFIX = 'ge: lp64: '
 INFORMATIONAL_PREFIXES = ('ge: lp64: address space OK', 'ge: lp64: audio bank ',
-                          'ge: lp64: music sequence table ', 'ge: lp64: bg tables ', 'ge: lp64: oracle: ')
+                          'ge: lp64: music sequence table ', 'ge: lp64: bg tables ', 'ge: lp64: oracle: ',
+                          'ge: lp64: peak ')
 
 
 def failing_lp64_lines(lines: list[str]) -> list[str]:

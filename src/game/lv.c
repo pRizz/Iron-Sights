@@ -63,6 +63,7 @@
 #include "chr.h"
 #ifndef TARGET_N64
 #include "port_playlog.h" /* LP64-005 Task 8 */
+#include "port_lp64.h" /* LP64-005 Task 13: portLp64PoolPeaks */
 #endif
 
 // bss
@@ -2340,6 +2341,9 @@ void lvlUnloadStageTextData(void)
     }
 #endif
     cleanup_rooms();
+#ifndef TARGET_N64
+    portLp64PoolPeaks(); /* LP64-005 Task 13: the stage's pool peaks, once its rooms are given back */
+#endif
 }
 
 

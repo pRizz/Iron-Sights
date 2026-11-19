@@ -365,6 +365,17 @@ class RunMode(StandIns):
         # Assert
         self.assertEqual(status, 0, out)
 
+    def test_pool_peak_lines_pass(self):
+        # Arrange: LP64-005 Task 13's peaks, printed at a stage unload and at exit
+        exe = self.fake('peaks', RAN + 'ge: lp64: peak stage bank 2400000 of 3000000 bytes\n'
+                        'ge: lp64: peak room memory largest request 9000 of 600000 bytes\n', 0)
+
+        # Act
+        status, out = self.run_mode(str(exe))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+
     def test_exit_status_five_fails(self):
         # Arrange
         exe = self.fake('five', RAN, 5)

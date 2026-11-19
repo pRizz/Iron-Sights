@@ -2730,6 +2730,11 @@ void texLoad(uintptr_t *updateword, struct texpool *pool)
 #endif
 
             pool->leftpos += bytesout;
+#ifndef TARGET_N64
+            /* LP64-005 Task 13: both ends' use, for the pool peaks */
+            portLp64PoolUse("texture pool", (u32)((pool->leftpos - pool->start) + ((u8 *)pool->end - (u8 *)pool->rightpos)),
+                            (u32)((u8 *)pool->end - pool->start));
+#endif
         }
 
         texFreeBytesInBuffer(pool);
