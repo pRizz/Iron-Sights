@@ -314,6 +314,12 @@ pass its isolated executable rather than rebuilding an active player binary.
   `src/sched.h`'s game definitions out of GCC 13's C++ `<chrono>` at 32
   bits; FORK-089 says why), built by `lp64_env.py build-images` from
   `scripts/port/lp64-i686-video.Dockerfile` with an empty build context.
+  The `sound` set runs only with `--video`: each case records its mixed
+  output to `DIR/CASE.wav` through `GE_AUDIO_CAPTURE` (refused from
+  `--env`) and fails on an `audio frame skipped` line or a recording that is
+  not 22,050 Hz stereo, at least 10 s long and peaking at 1,000 or more;
+  `lp64_play.py sound DIR` prints each recording's length, peak and share of
+  non-zero samples. Recordings are ROM-derived and stay under `build/lp64/`.
 - Storage for a record or a display list is sized by `sizeof` of what it
   holds, never by a literal byte count or by filler members, and a member
   that overlays another record by position is pinned at both widths in the

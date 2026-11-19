@@ -16,6 +16,9 @@ GE_TICKHZ=60, a HOME and GE_ICON_CACHE_DIR inside its temporary folder, and a mi
 is copied to DIR/CASE.bmp. These are ROM-derived pictures: they stay in
 the output folder and are never committed.
 
+A case that records (the `sound` set, lp64_play_sound.py) gets GE_AUDIO_CAPTURE=DIR/CASE.wav, and
+its recording is judged with its log.
+
 A case with a route (the `input` set) gets GE_INPUTPLAY=DIR/CASE.route. A route of steps is built
 first (lp64_play_route.build_presses): recording run K replays the presses found so far from
 DIR/CASE.stepK.route, logs to DIR/CASE.stepK.log and is stopped at the line its step waits for.
@@ -34,6 +37,7 @@ import time
 from lp64_play_cases import Case
 from lp64_play_judge import problems
 from lp64_play_route import RouteError, Step, build_presses, event_tick, route_text
+from lp64_play_sound import capture_path, capture_problems
 
 # GE_FIXEDTICK=1 makes a demo advance one field a tick instead of at its recorded pace, and
 # GE_NOSLEEP=1 lets the frame limit, which counts retraces, pass before the game has done
@@ -51,6 +55,8 @@ TIMEOUT_BOOT_SECONDS = 120
 # frames were measured headless at 60 retraces a second; at 120 a case ends at half its time.
 VIDEO_VARIABLES = {'SDL_VIDEODRIVER': 'offscreen', 'SDL_AUDIODRIVER': 'dummy', 'GE_WINDOW': '640x480',
                    'GE_NOINPUT': '1', 'GE_TICKHZ': '60'}
+# A case that records its sound (Case.capture) gets this variable naming DIR/CASE.wav.
+CAPTURE_VARIABLE = 'GE_AUDIO_CAPTURE'
 # The variables a run with video sets in its folder at launch (folder_environment).
 FOLDER_VARIABLES = ('HOME', 'GE_ICON_CACHE_DIR')
 # GE_WINDOW sets only the windowed size (port/src/video.c, videoInit); the default midas.ini has
@@ -190,6 +196,8 @@ def run_case(case: Case, executable: Path, rom: Path, extra: dict[str, str], out
     timeout = timeout_seconds(case.frames, display.timeout_scale)
     log_path = output/f'{case.name}.log'
     env = case_environment(case, rom, extra, display=display)
+    if case.capture:
+        env[CAPTURE_VARIABLE] = str(capture_path(output, case))
     started = time.monotonic()
     route_ticks = None
     if case.route is not None:
@@ -212,7 +220,10 @@ def run_case(case: Case, executable: Path, rom: Path, extra: dict[str, str], out
             keep_last_shot(folder, output/f'{case.name}.bmp')
     seconds = time.monotonic() - started
     text = log_path.read_text(errors='replace')
-    return Outcome(case, status, seconds, problems(case, status, text, timeout, display.video), route_ticks)
+    found = problems(case, status, text, timeout, display.video)
+    if case.capture:
+        found += capture_problems(capture_path(output, case))
+    return Outcome(case, status, seconds, found, route_ticks)
 
 
 def record(outcomes: list[Outcome], executable: Path, extra: dict[str, str], path: Path,
@@ -230,6 +241,7 @@ def record(outcomes: list[Outcome], executable: Path, extra: dict[str, str], pat
             'status': outcome.status, 'seconds': round(outcome.seconds, 1),
             'passed': outcome.passed, 'problems': outcome.problems, 'log': f'{outcome.case.name}.log',
             **({} if outcome.route_ticks is None else {'route_ticks': outcome.route_ticks}),
+            **({'recording': f'{outcome.case.name}.wav'} if outcome.case.capture else {}),
         } for outcome in outcomes],
     }
     path.write_text(json.dumps(data, indent=2) + '\n')

@@ -7,9 +7,12 @@
     python3 scripts/port/lp64_play.py traces --expect FILE DIR_REF DIR_NEW
     python3 scripts/port/lp64_play.py traces --reference-check DIR_A DIR_B
     python3 scripts/port/lp64_play.py callers --tick T LOG EXECUTABLE
+    python3 scripts/port/lp64_play.py sound DIR
 
 run: each case of the named sets (lp64_play_cases.py: demos, stages, stops, menus, tours,
-attract; lp64_play_input.py: input, whose cases replay a route as pad 0) on a copy of EXECUTABLE in a fresh temporary folder (lp64_play_run.py), JOBS at a time
+attract; lp64_play_input.py: input, whose cases replay a route as pad 0; lp64_play_sound.py: sound,
+video only, whose cases record DIR/CASE.wav and fail on a skipped audio frame or a recording that is
+not 22,050 Hz stereo, at least 10 s long and peaking at 1,000 or more) on a copy of EXECUTABLE in a fresh temporary folder (lp64_play_run.py), JOBS at a time
 (7 by default); --only names a case, or names it without its set's prefix (`dam` for
 `stage-dam`) when that selects exactly one case. Prints `CASE: PASS` or `CASE: FAIL (first
 failing or missing line)` as each ends, then `OK: N of N cases` (exit 0) or `FAIL: M of N cases` (exit 1). Logs go to DIR/CASE.log, the
@@ -34,6 +37,9 @@ traces: the demos' `ge: demo tick` lines of two run folders, tick by tick
 
 callers: the `ge: rng draw` lines of a GE_RNGTRACE=T log as `tick function file:line`, through
 addr2line (lp64_play_callers.py).
+
+sound: each recording in DIR (its *.wav files) as `CASE: SECONDS s, peak PEAK, non-zero SHARE%`, to
+compare a run's recordings with the 32-bit reference's (lp64_play_sound.py).
 """
 import argparse
 import math
@@ -43,8 +49,10 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lp64_play_callers import callers  # noqa: E402
-from lp64_play_cases import cases_of, select_cases  # noqa: E402
-from lp64_play_run import FOLDER_VARIABLES, FORBIDDEN_VARIABLES, VIDEO_VARIABLES, Display, run_cases  # noqa: E402
+from lp64_play_cases import VIDEO_SETS, cases_of, select_cases  # noqa: E402
+from lp64_play_run import (CAPTURE_VARIABLE, FOLDER_VARIABLES, FORBIDDEN_VARIABLES, VIDEO_VARIABLES,  # noqa: E402
+                           Display, run_cases)
+from lp64_play_sound import sound_report  # noqa: E402
 from lp64_play_traces import compare_with_expectations, reference_check  # noqa: E402
 
 DEFAULT_JOBS = 7
@@ -83,8 +91,12 @@ def command_run(parser: argparse.ArgumentParser, options: argparse.Namespace) ->
                 parser.error(f'--env {name} is refused with --video: the tool sets it for every case')
     if options.shots is not None and 'GE_SHOT' in extra:
         parser.error('--env GE_SHOT is refused with --shots: --shots sets it')
+    set_names = [name for name in options.set.split(',') if name]
+    video_only = [name for name in set_names if name in VIDEO_SETS]
+    if video_only and not options.video:
+        parser.error(f'the {", ".join(video_only)} set needs --video: a headless build stubs the audio pump')
     try:
-        cases = cases_of([name for name in options.set.split(',') if name])
+        cases = cases_of(set_names)
     except ValueError as error:
         parser.error(str(error))
     if options.only:
@@ -92,6 +104,8 @@ def command_run(parser: argparse.ArgumentParser, options: argparse.Namespace) ->
             cases = select_cases(cases, [name for name in options.only.split(',') if name])
         except ValueError as error:
             parser.error(str(error))
+    if CAPTURE_VARIABLE in extra and any(case.capture for case in cases):
+        parser.error(f'--env {CAPTURE_VARIABLE} is refused: each recording case records to DIR/CASE.wav')
     outcomes = run_cases(cases, options.executable.resolve(strict=True), options.rom.resolve(strict=True),
                          extra, options.output, options.jobs, Display(options.video, options.shots, timeout_scale))
     failed = [outcome for outcome in outcomes if not outcome.passed]
@@ -120,6 +134,10 @@ def command_callers(parser: argparse.ArgumentParser, options: argparse.Namespace
         return 2
     print('\n'.join(lines))
     return 0
+
+
+def command_sound(parser: argparse.ArgumentParser, options: argparse.Namespace) -> int:
+    return sound_report(options.dir)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -153,13 +171,16 @@ def build_parser() -> argparse.ArgumentParser:
     who.add_argument('--addr2line', default='addr2line', help='the addr2line to use (default: addr2line)')
     who.add_argument('log', type=Path, metavar='LOG')
     who.add_argument('executable', type=Path, metavar='EXECUTABLE')
+    sound = sub.add_parser('sound', help='the length, peak and non-zero share of each recording in a run folder')
+    sound.add_argument('dir', type=Path, metavar='DIR')
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     options = parser.parse_args(argv)
-    command = {'run': command_run, 'traces': command_traces, 'callers': command_callers}[options.command]
+    command = {'run': command_run, 'traces': command_traces, 'callers': command_callers,
+               'sound': command_sound}[options.command]
     return command(parser, options)
 
 

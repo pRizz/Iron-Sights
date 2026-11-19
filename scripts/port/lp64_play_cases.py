@@ -94,6 +94,9 @@ class Case:
     # With --video, the pictures the run must draw at least (`gfxtasks=` of its frame-limit line):
     # 30 by the owner's decision 8 of the LP64-005 plan.
     pictures: int = 30
+    # The run records its mixed sound to DIR/CASE.wav (GE_AUDIO_CAPTURE), which must show sound
+    # running (lp64_play_sound.py; the `sound` set).
+    capture: bool = False
 
 
 def frame_limit(frames: int) -> Required:
@@ -270,6 +273,12 @@ def attract_cases() -> list[Case]:
     ]
 
 
+def sound_cases() -> list[Case]:
+    # lp64_play_sound.py builds its cases from this file's, so it is imported when the set is asked.
+    from lp64_play_sound import sound_cases as build
+    return build()
+
+
 def input_cases() -> list[Case]:
     # lp64_play_input.py builds its cases from this file's, so it is imported when the set is asked.
     from lp64_play_input import input_cases as build
@@ -284,7 +293,10 @@ SETS = {
     'tours': tour_cases,
     'attract': attract_cases,
     'input': input_cases,
+    'sound': sound_cases,
 }
+# The sets whose cases need a GE_VIDEO executable: a headless build stubs the audio pump.
+VIDEO_SETS = ('sound',)
 
 
 # The prefixes that keep case names unique where a demo and a mission share a name. `--only`

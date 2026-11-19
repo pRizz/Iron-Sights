@@ -288,12 +288,12 @@ class SetSizes(unittest.TestCase):
 
         # Assert
         self.assertEqual(sizes, {'demos': 14, 'stages': 54, 'stops': 12, 'menus': 7, 'tours': 26, 'attract': 4,
-                                 'input': 27})
+                                 'input': 27, 'sound': 2})
 
     def test_case_names_are_unique(self):
         # Act
         names = [case.name for case in lp64_play_cases.cases_of(['demos', 'stages', 'stops', 'menus', 'tours', 'attract',
-                                                                'input'])]
+                                                                'input', 'sound'])]
 
         # Assert
         self.assertEqual(len(names), len(set(names)))

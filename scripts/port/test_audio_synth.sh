@@ -20,7 +20,8 @@ synth_sources=(
     src/libultra/audio/filter.c src/libultra/audio/mainbus.c src/libultra/audio/auxbus.c
     src/libultrare/audio/drvrNew.c src/libultrare/audio/reverb.c src/libultrare/audio/env.c
 )
-for width in $(harness_widths); do
+widths=$(harness_widths)
+for width in $widths; do
     flags=($(harness_flags "$width" -msse2 -mfpmath=sse) -g -O1)
     "${CC:-gcc}" "${flags[@]}" -std=gnu11 -fms-extensions -fcommon -w -fno-builtin -fwrapv -funsigned-char \
         -DVERSION_US -DLANG_US -DREFRESH_NTSC -D_LANGUAGE_C -DLEFTOVERDEBUG -DLEFTOVERSPECTRUM -DBUGFIX_R0 -DNONMATCHING -DAVOID_UB \
