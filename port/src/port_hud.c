@@ -346,8 +346,17 @@ static Gfx *phVector(Gfx *g, s32 shape, f32 x, f32 y, f32 sx, f32 sy, f32 start,
     g->words.w1 = rgba;
     g++;
     for (i = 0; i < 6; i += 2) {
+#if IS_64_BIT
+        /* PORT (LP64-005): whole words, so a word's upper half is zero
+         * rather than what the buffer held */
+        u32 bits[2];
+        memcpy(bits, &values[i], sizeof(bits));
+        g->words.w0 = bits[0];
+        g->words.w1 = bits[1];
+#else
         memcpy(&g->words.w0, &values[i], sizeof(f32));
         memcpy(&g->words.w1, &values[i+1], sizeof(f32));
+#endif
         g++;
     }
     return g;

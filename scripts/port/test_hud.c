@@ -280,6 +280,7 @@ static void testMainObjectiveCue(void)
 
 #include "test_hud_objective_messages.inl"
 #include "test_hud_corner.inl"
+#include "test_hud_vector.inl"
 
 int main(void)
 {
@@ -297,6 +298,7 @@ int main(void)
     testMainObjectiveCue();
     testScriptedObjectiveEchoTable();
     testScriptedObjectiveEchoYields();
+    testHudVectorWholeWords();
     {
         char timer[64], tiny[5];
         bestTimes[0][DIFFICULTY_SECRET] = 123;
