@@ -12,7 +12,7 @@ build_and_run() {
         -DVERSION_US -DLANG_US -DREFRESH_NTSC -DLEFTOVERDEBUG -DLEFTOVERSPECTRUM -DBUGFIX_R0 \
         -DNONMATCHING -DAVOID_UB -D_LANGUAGE_C \
         -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include -I"$extracted_dir" \
-        scripts/port/abi_probe/probe.c -o "$test_bin"
+        scripts/port/abi_probe/probe.c -o "$test_bin" || return
     "$test_bin"
 }
 
@@ -101,9 +101,24 @@ mkdir -p "$extracted_dir"
 } > "$extracted.tmp"
 mv "$extracted.tmp" "$extracted"
 
-build_and_run
-if "$cc" -m32 -x c -fsyntax-only /dev/null; then
+# Some assertions only one width can break: a 64-bit layout's padding hides a
+# member added after ModelHead's scale (gunfire.c), and probe.c has branches
+# for each width. CI's tests job (gcc-multilib) runs both halves; a host that
+# cannot says which half did not run, rather than passing quietly.
+status=0
+first=$(build_and_run) || status=$?
+echo "$first"
+[[ $status == 0 ]] || exit "$status"
+if [[ $first != *"(64-bit)"* ]]; then
+    echo "ABI probe: the 64-bit half did not run: $cc does not build 64-bit programs by default. Not" \
+        "checked: every assertion at the 64-bit layout, including probe.c's IS_64_BIT branches. CI runs" \
+        "both halves."
+fi
+if "$cc" -m32 -x c -fsyntax-only /dev/null 2>/dev/null; then
     build_and_run -m32 -msse2 -mfpmath=sse
 else
-    echo "ABI probe: -m32 unavailable on this host, skipped"
+    echo "ABI probe: the 32-bit half did not run: $cc rejects -m32 on this host. Not checked: every" \
+        "assertion at the 32-bit layout, including those only it can break (probe.c's !IS_64_BIT" \
+        "branches, and the .c records whose difference 64-bit padding hides, such as gunfire.c's" \
+        "ModelHead with a member added after scale). CI runs both halves."
 fi
