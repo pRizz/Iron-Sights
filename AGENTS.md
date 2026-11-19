@@ -317,7 +317,7 @@ pass its isolated executable rather than rebuilding an active player binary.
   The `sound` set runs only with `--video`: each case records its mixed
   output to `DIR/CASE.wav` through `GE_AUDIO_CAPTURE` (refused from
   `--env`, on every set) and fails on an `audio frame skipped` line, on an
-  audio health line counting a refusal or a log with no health line, or on
+  audio health line counting a refusal (a log need not have one), or on
   a recording that is not 22,050 Hz stereo, at least 10 s long (by the bytes
   it holds) and peaking at 1,000 or more;
   `lp64_play.py sound DIR` prints each recording's length, peak and share of

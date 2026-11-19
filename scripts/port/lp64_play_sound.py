@@ -5,9 +5,11 @@ that port/src/port_audio_capture.c records before the unfocused-window mute, whe
 plays it (the play tool's SDL_AUDIODRIVER=dummy opens SDL's dummy device, which takes queued audio
 at the device's rate). A case fails on any `audio frame skipped` line (port/src/audio_pc.c drops such
 a frame as silence and prints the line once), on a 10-second health line that counts a refusal (every
-refused frame, ADPCM block header and resample span; the line is printed only for a window with
-something to report) or a log without such a line, and on a recording that is not 22,050 Hz 16-bit stereo,
+refused frame, ADPCM block header and resample span), and on a recording that is not 22,050 Hz 16-bit stereo,
 lasts less than 10 seconds or peaks below 1,000: the planning run's recording of Dam had a peak of 0.
+A health line is printed only for a window of 10 s or more with a dry queue, a frame over the cap or a
+refusal, so a log need not have one (a healthy run on a fast host prints none), and a block-header or
+resample refusal in the run's last window of under 10 s is seen by nothing.
 `lp64_play.py sound DIR` prints each recording's length, peak and share of non-zero samples, which
 are compared with the 32-bit reference's recordings rather than held to a floor. Recordings are
 ROM-derived: they stay in the output folder and are never committed.
@@ -31,7 +33,6 @@ MIN_PEAK = 1000
 FRAME_SKIPPED = re.compile(r'audio frame skipped')
 # port/src/audio_pc.c, portAudioHealth: "ge: audio: last %u s: queue ran dry %u times, %u frames over the
 # cap dropped, %u frames skipped as invalid | ..."; the last count is s_StatSkipped.
-HEALTH_LINE = re.compile(r'ge: audio: last \d+ s: .*\d+ frames skipped as invalid')
 HEALTH_REFUSED = re.compile(r'ge: audio: last \d+ s: .*, [1-9]\d* frames skipped as invalid')
 # port/src/port_audio_capture.c, captureOpen: "ge: audio capture: recording %s\n"
 CAPTURE_OPEN = re.compile(r'ge: audio capture: recording ')
@@ -119,8 +120,7 @@ def sound_report(folder: Path) -> int:
 
 
 def sound_case(name: str, env: tuple[tuple[str, str], ...], launched: tuple[Required, ...]) -> Case:
-    required = ((Required('ge: audio capture: recording', CAPTURE_OPEN),) + launched
-                + (Required('an audio health line', HEALTH_LINE), frame_limit(SOUND_FRAMES)))
+    required = (Required('ge: audio capture: recording', CAPTURE_OPEN),) + launched + (frame_limit(SOUND_FRAMES),)
     return Case(name, 'sound', env, SOUND_FRAMES, required, forbidden=(FRAME_SKIPPED, HEALTH_REFUSED), capture=True)
 
 

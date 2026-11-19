@@ -349,8 +349,10 @@ _Static_assert(offsetof(ALSndpEvent, common.state) == offsetof(ALEvent, msg)
  * bits ALStartParamAlt is 40 bytes and ALParam 32; at 32 bits all four fit the
  * 28 bytes the pool has always had (LP64-005 Task 10).
  * The first assertion is kept as the statement of that rule, but a union is
- * never smaller than a member, so it fails only if one of the four views is
- * dropped from ALParamRoom; it cannot see a fifth record type written into the
+ * never smaller than a member, so it fails only if the largest view is dropped
+ * from ALParamRoom (ALStartParamAlt at 64 bits; at 32 bits it ties with
+ * ALParam, so nothing fails); dropping a smaller view changes nothing. It
+ * cannot see a fifth record type written into the
  * pool that the union leaves out, nor alSynNew sizing the pool by another type.
  * The second pins the size the pool really has: the largest view, 40 bytes at
  * 64 bits; it fails if the union gains a larger member or its largest view
@@ -358,7 +360,7 @@ _Static_assert(offsetof(ALSndpEvent, common.state) == offsetof(ALEvent, msg)
 _Static_assert(sizeof(ALParamRoom) >= sizeof(ALStartParamAlt) && sizeof(ALParamRoom) >= sizeof(ALParam)
                    && sizeof(ALParamRoom) >= sizeof(ALStartParam) && sizeof(ALParamRoom) >= sizeof(ALFreeParam),
                "a parameter pool record holds every update written into it");
-_Static_assert(sizeof(ALParamRoom) == sizeof(ALStartParamAlt) && sizeof(ALStartParamAlt) >= sizeof(ALParam),
+_Static_assert(sizeof(ALParamRoom) == sizeof(ALStartParamAlt),
                "a parameter pool record is the size of its largest update, ALStartParamAlt");
 #if IS_64_BIT
 _Static_assert(sizeof(ALParamRoom) == 40, "a parameter pool record is 40 bytes at 64 bits");

@@ -134,16 +134,16 @@ class SoundSet(StandIns):
         self.assertEqual(status, 1)
         self.assertIn('12 frames skipped as invalid', output)
 
-    def test_a_log_without_a_health_line_fails(self):
-        # Arrange
+    def test_a_log_without_a_health_line_passes_since_a_healthy_fast_run_prints_none(self):
+        # Arrange: the game prints a health line only for a window with a dry queue, a frame over the
+        # cap or a refusal
         exe = self.fake(BOOT + VIDEO_UP + RECORDING + FRAME_LIMIT, self.wave('title.wav'))
 
         # Act
         status, output = self.play(exe, 'capture-title', '--video')
 
         # Assert
-        self.assertEqual(status, 1)
-        self.assertIn('missing line: an audio health line', output)
+        self.assertEqual(status, 0, output)
 
     def test_health_lines_that_all_report_no_refusal_pass(self):
         # Arrange
