@@ -7288,10 +7288,16 @@ extern void portInputAssignCancel(void);
 
 void portWatchAssignBegin(void)
 {
+    extern s32 get_is_ramrom_flag(void); /* ramromreplay.c */
+
     portWatchDropCloseNow();
     portWatchBindCaptureCancel();
     reset_watch_item_is_actively_selected();
-    if (portInputAssignBegin(get_cur_playernum()))
+    /* A replayed demo's press never arms "press a button": its wall-clock
+     * timeout and the modal back press that cancels it would make the replay
+     * depend on how fast the host draws (bunker2 left its watch open on a fast
+     * one). The row then does what a headless build's does. */
+    if (get_is_ramrom_flag() == 0 && portInputAssignBegin(get_cur_playernum()))
     {
         sndPlaySfx(g_musicSfxBufferPtr, CAMERA_BEEP1_SFX, NULL);
     }
