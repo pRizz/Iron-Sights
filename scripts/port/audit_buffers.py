@@ -13,7 +13,6 @@ import json
 from pathlib import Path
 import re
 import os
-import shutil
 import subprocess
 import tempfile
 import xml.etree.ElementTree as ET
@@ -41,6 +40,11 @@ SANITIZER_ERRORS = ('runtime error:', 'ERROR: AddressSanitizer', 'ERROR: LeakSan
 _lp64_boot_spec = importlib.util.spec_from_file_location('lp64_boot', Path(__file__).with_name('lp64_boot.py'))
 lp64_boot = importlib.util.module_from_spec(_lp64_boot_spec)
 _lp64_boot_spec.loader.exec_module(lp64_boot)
+# The mission smoke's one executable copy (run_copies.py), loaded by path for the same reason.
+_run_copies_spec = importlib.util.spec_from_file_location('run_copies', Path(__file__).with_name('run_copies.py'))
+_run_copies = importlib.util.module_from_spec(_run_copies_spec)
+_run_copies_spec.loader.exec_module(_run_copies)
+SharedExecutable = _run_copies.SharedExecutable
 REFUSAL_MARKERS = lp64_boot.REFUSAL_MARKERS
 
 
@@ -103,8 +107,7 @@ def mission_smoke(executable, rom, output, frames, jobs, leaks=False, fixed_tick
     def check(stage):
         with tempfile.TemporaryDirectory(prefix='midas-buffer-') as temporary:
             folder = Path(temporary)
-            child = folder / executable.name
-            shutil.copy2(executable, child)
+            child = shared.place(folder)
             env = {key: value for key, value in os.environ.items() if not key.startswith('GE_')}
             env.update(GE_ROM=str(rom), GE_STAGE=stage, GE_STAGE_AFTER='1',
                        GE_FRAMES=str(frames), GE_SEED='1', GE_CHEATS='invuln,invis',
@@ -129,7 +132,9 @@ def mission_smoke(executable, rom, output, frames, jobs, leaks=False, fixed_tick
             print(stage + verdict, flush=True)
             return dict(stage=stage, exit=result.returncode, passed=passed, refusal=refusal, log=str(log_path))
 
-    with ThreadPoolExecutor(max_workers=jobs) as pool:
+    # One copy made before any mission starts, linked into each mission's folder (run_copies.py): a copy
+    # made per mission inside the pool raced with the other missions' starts (Text file busy).
+    with SharedExecutable(executable) as shared, ThreadPoolExecutor(max_workers=jobs) as pool:
         results = list(pool.map(check, MISSIONS))
     output.write_text(json.dumps(results, indent=2) + '\n', encoding='utf-8')
     return 0 if all(record['passed'] for record in results) else 1

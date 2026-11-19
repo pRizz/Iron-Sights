@@ -92,6 +92,7 @@ jobs:
           python3 scripts/port/test_lp64_play_traces.py
           python3 scripts/port/test_lp64_play_input.py
           python3 scripts/port/test_lp64_play_sound.py
+          python3 scripts/port/test_run_copies.py
           bash scripts/port/test_inputrec_headless.sh
           bash scripts/port/test_audio_synth.sh
           bash scripts/port/test_romconv.sh

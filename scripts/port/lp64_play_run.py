@@ -1,6 +1,7 @@
 """Run lp64_play.py's cases on an executable, several at a time (LP64-005 Task 1).
 
-Each case runs on a copy of the executable in a fresh temporary folder, with every `GE_` variable
+Each case runs on the executable in a fresh temporary folder (a link to one copy made before any
+case starts, run_copies.py), with every `GE_` variable
 of the caller dropped and GE_ROM, GE_FRAMES, GE_SEED=1, GE_NOINISAVE=1,
 ASAN_OPTIONS=detect_leaks=0, the case's own variables and the caller's --env set. Its combined
 output goes to DIR/CASE.log; DIR/play.json records every case's variables, status, time and
@@ -38,6 +39,7 @@ from lp64_play_cases import Case
 from lp64_play_judge import problems
 from lp64_play_route import RouteError, Step, build_presses, event_tick, route_text
 from lp64_play_sound import capture_path, capture_problems
+from run_copies import SharedExecutable
 
 # GE_FIXEDTICK=1 makes a demo advance one field a tick instead of at its recorded pace, and
 # GE_NOSLEEP=1 lets the frame limit, which counts retraces, pass before the game has done
@@ -144,7 +146,7 @@ def keep_last_shot(folder: Path, target: Path) -> None:
         shutil.copy2(shots[-1], target)
 
 
-def recording_tick(case: Case, executable: Path, env: dict[str, str], output: Path, route: str, step: Step,
+def recording_tick(case: Case, executable: SharedExecutable, env: dict[str, str], output: Path, route: str, step: Step,
                    after: int, index: int, display: Display = HEADLESS) -> int | None:
     """Runs CASE with ROUTE until STEP's line appears at or after tick AFTER and gives its tick (None
     when the run ends or times out first). Its log is OUTPUT/CASE.stepINDEX.log."""
@@ -154,8 +156,7 @@ def recording_tick(case: Case, executable: Path, env: dict[str, str], output: Pa
     found = None
     with tempfile.TemporaryDirectory(prefix='midas-lp64-play-') as temporary, \
             (output/f'{case.name}.step{index}.log').open('w') as log:
-        child = Path(temporary)/executable.name
-        shutil.copy2(executable, child)
+        child = executable.place(Path(temporary))
         run_env = folder_environment(env, Path(temporary), display)
         process = subprocess.Popen([str(child)], cwd=temporary, env=run_env, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, text=True, errors='replace')
@@ -177,7 +178,7 @@ def recording_tick(case: Case, executable: Path, env: dict[str, str], output: Pa
     return found
 
 
-def route_file(case: Case, executable: Path, env: dict[str, str], output: Path,
+def route_file(case: Case, executable: SharedExecutable, env: dict[str, str], output: Path,
                display: Display = HEADLESS) -> tuple[Path, list[int]]:
     """Writes CASE's route to OUTPUT/CASE.route, building a route of steps first; gives the file and
     the presses' ticks. Raises RouteError when a step's line never appears."""
@@ -190,7 +191,7 @@ def route_file(case: Case, executable: Path, env: dict[str, str], output: Path,
     return path, sorted(tick for tick, _ in presses)
 
 
-def run_case(case: Case, executable: Path, rom: Path, extra: dict[str, str], output: Path,
+def run_case(case: Case, executable: SharedExecutable, rom: Path, extra: dict[str, str], output: Path,
              display: Display = HEADLESS) -> Outcome:
     """Runs CASE and judges it; its log is OUTPUT/CASE.log."""
     timeout = timeout_seconds(case.frames, display.timeout_scale)
@@ -208,8 +209,7 @@ def run_case(case: Case, executable: Path, rom: Path, extra: dict[str, str], out
         env['GE_INPUTPLAY'] = str(path)
     with tempfile.TemporaryDirectory(prefix='midas-lp64-play-') as temporary:
         folder = Path(temporary)
-        child = folder/executable.name
-        shutil.copy2(executable, child)
+        child = executable.place(folder)
         with log_path.open('wb') as log:
             try:
                 status = subprocess.run([str(child)], cwd=folder, env=folder_environment(env, folder, display),
@@ -255,8 +255,10 @@ def run_cases(cases: list[Case], executable: Path, rom: Path, extra: dict[str, s
         case_environment(case, rom, extra, display=display)  # refuse a forbidden variable before any run starts
     output.mkdir(parents=True, exist_ok=True)
     by_name = {}
-    with ThreadPoolExecutor(max_workers=jobs) as pool:
-        futures = [pool.submit(run_case, case, executable, rom, extra, output, display) for case in cases]
+    # One copy made here, before any case starts, and linked into each case's folder (run_copies.py):
+    # a copy made per case inside the pool raced with the other cases' starts (Text file busy).
+    with SharedExecutable(executable) as shared, ThreadPoolExecutor(max_workers=jobs) as pool:
+        futures = [pool.submit(run_case, case, shared, rom, extra, output, display) for case in cases]
         for future in as_completed(futures):
             outcome = future.result()
             by_name[outcome.case.name] = outcome
