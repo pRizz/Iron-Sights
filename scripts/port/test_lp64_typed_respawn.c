@@ -121,6 +121,7 @@ static void testWalkStepsAWatchRecordWhole(void)
     }
     else
     {
+        /* pins the inherited wrong 32-bit walk: FORK_CHANGES.md, "Inherited at 32 bits, for the owner", entry 16 */
         expect(itemsAdded == 0, "the 32-bit walk keeps the inherited 4-byte step past a watch record");
     }
 }
@@ -149,6 +150,7 @@ static void testWalkStepsACreditsRecordWhole(void)
     }
     else
     {
+        /* pins the inherited wrong 32-bit walk: FORK_CHANGES.md, "Inherited at 32 bits, for the owner", entry 16 */
         expect(itemsAdded == 0, "the 32-bit walk keeps the inherited 4-byte step past a credits record");
     }
 }
