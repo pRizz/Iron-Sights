@@ -362,6 +362,25 @@ static Gfx *phVector(Gfx *g, s32 shape, f32 x, f32 y, f32 sx, f32 sy, f32 start,
     return g;
 }
 
+#if IS_64_BIT
+/* PORT (LP64-005): the hit marker's two commands at 64 bits, whole words as
+ * phVector; the 32-bit build keeps its original lines in portHudDraw. */
+static Gfx *phHitMarker(Gfx *g, f32 x, f32 y, u32 color)
+{
+    u32 bits[2];
+    if (dynGetFreeGfx2(g) < 514) return g;
+    g->words.w0 = (u32)0x4d << 24;
+    g->words.w1 = color;
+    g++;
+    memcpy(&bits[0], &x, sizeof(x));
+    memcpy(&bits[1], &y, sizeof(y));
+    g->words.w0 = bits[0];
+    g->words.w1 = bits[1];
+    g++;
+    return g;
+}
+#endif
+
 Gfx *portHudReticle(Gfx *g, f32 x, f32 y, f32 scaleX, f32 scaleY, u32 color, s32 ring)
 {
     if (scaleX <= 0 || scaleY <= 0) return g;
@@ -580,6 +599,9 @@ Gfx *portHudDraw(Gfx *g)
         f32 x = g_CurrentPlayer->crosshair_angle.x, y = g_CurrentPlayer->crosshair_angle.y;
         const u32 color = (h->headshot ? 0xf6cf7900 : 0xf1f5f900) | (u32)((h->hitTime < 5 ? h->hitTime/5 : 1) * 255);
         if (portAdsActive()) { x = cx; y = cy; }
+#if IS_64_BIT
+        g = phHitMarker(g, x, y, color);
+#else
         if (dynGetFreeGfx2(g) >= 514) {
             /* G_HITMARKER_EXT (gbiex_compat.h): the PC renderer draws continuous
              * feathered lines, preserving fractional aim positions at any scale. */
@@ -590,6 +612,7 @@ Gfx *portHudDraw(Gfx *g)
             memcpy(&g->words.w1, &y, sizeof(y));
             g++;
         }
+#endif
     }
     return combiner_bayer_lod_perspective(g);
 }

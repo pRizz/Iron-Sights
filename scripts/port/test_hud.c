@@ -299,6 +299,9 @@ int main(void)
     testScriptedObjectiveEchoTable();
     testScriptedObjectiveEchoYields();
     testHudVectorWholeWords();
+#if IS_64_BIT
+    testHitMarkerWholeWords();
+#endif
     {
         char timer[64], tiny[5];
         bestTimes[0][DIFFICULTY_SECRET] = 123;
