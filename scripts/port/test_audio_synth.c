@@ -126,12 +126,12 @@ static void buildBank(void)
     s_Instrument.soundArray[0] = &s_Sound;
 }
 
-static ALSynth *startSynth(ALPlayer *client)
+static ALSynth *startSynth(ALPlayer *client, ALFxId effect)
 {
     static ALHeap heap;
     ALSynConfig config = {.maxVVoices = 4, .maxPVoices = 4, .maxUpdates = MAX_UPDATES, .maxFXbusses = 1,
                           .dmaproc = (void *)newDma, .heap = &heap, .outputRate = PORT_AUDIO_RATE,
-                          .fxType = AL_FX_NONE};
+                          .fxType = effect};
     ALParam *record = NULL;
 
     memset(s_Memory->heap, 0, sizeof(s_Memory->heap));
@@ -204,7 +204,7 @@ static void noFrameIsSkipped(void)
     /* Arrange */
     ALPlayer client;
     ALVoice voice;
-    ALSynth *synth = startSynth(&client);
+    ALSynth *synth = startSynth(&client, AL_FX_NONE);
     u32 skipped = 0;
     startNote(synth, &voice);
     /* Act */
@@ -218,12 +218,41 @@ static void noFrameIsSkipped(void)
     }
 }
 
+/* The reverb (reverb.c) reads its delay line at taps behind its write
+ * pointer, `&r->input[-d->output]` with an unsigned tap: at 64 bits the
+ * negated tap is a 32-bit number added to a 64-bit pointer, 8 GB ahead. */
+static void framesWithAnEffectAreNotSkipped(ALFxId effect, const char *name)
+{
+    /* Arrange */
+    ALPlayer client;
+    ALVoice voice;
+    ALSynth *synth = startSynth(&client, effect);
+    u32 skipped = 0;
+    startNote(synth, &voice);
+    /* Act */
+    for (s32 frame = 0; frame < FRAMES; frame++) {
+        skipped += runFrame();
+    }
+    /* Assert */
+    if (skipped != 0) {
+        fprintf(stderr, "test_audio_synth: with the %s effect the interpreter skipped %u of %d frames\n", name,
+                skipped, FRAMES);
+        exit(1);
+    }
+}
+
+/* The small room's taps go through alFxPull and _loadOutputBuffer's plain read. */
+static void noFrameIsSkippedWithTheRoomEffect(void) { framesWithAnEffectAreNotSkipped(AL_FX_SMALLROOM, "small room"); }
+
+/* The chorus modulates its output tap, _loadOutputBuffer's resampled read. */
+static void noFrameIsSkippedWithTheChorusEffect(void) { framesWithAnEffectAreNotSkipped(AL_FX_CHORUS, "chorus"); }
+
 static void theOutputIsNotSilence(void)
 {
     /* Arrange */
     ALPlayer client;
     ALVoice voice;
-    ALSynth *synth = startSynth(&client);
+    ALSynth *synth = startSynth(&client, AL_FX_NONE);
     s32 peak = 0;
     startNote(synth, &voice);
     /* Act */
@@ -247,7 +276,7 @@ static void noteStartsAndStopsGiveBackEveryParameter(void)
     /* Arrange */
     ALPlayer client;
     ALVoice voice;
-    ALSynth *synth = startSynth(&client);
+    ALSynth *synth = startSynth(&client, AL_FX_NONE);
     s32 before = freeParamCount(synth);
     s32 after;
     /* Act */
@@ -301,6 +330,8 @@ int main(void)
 {
     mapMemory();
     int passed = runTest("noFrameIsSkipped", noFrameIsSkipped);
+    passed &= runTest("noFrameIsSkippedWithTheRoomEffect", noFrameIsSkippedWithTheRoomEffect);
+    passed &= runTest("noFrameIsSkippedWithTheChorusEffect", noFrameIsSkippedWithTheChorusEffect);
     passed &= runTest("theOutputIsNotSilence", theOutputIsNotSilence);
     passed &= runTest("noteStartsAndStopsGiveBackEveryParameter", noteStartsAndStopsGiveBackEveryParameter);
     return passed ? 0 : 1;
