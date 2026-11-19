@@ -296,8 +296,11 @@ pass its isolated executable rather than rebuilding an active player binary.
   so video runs count retraces at 60 like headless ones. At 60 the render
   thread is off and the pump waits for each picture, so a renderer slower
   than 60 pictures a second stretches a case's wall time (the emulated
-  32-bit reference took 769 s for a demo case's 3,000 frames, past the
-  tool's timeout). `--env` refuses those names with `--video`. Each case must also log `ge: video: window + GL
+  32-bit reference took 769 s for a demo case's 3,000 frames). On such a
+  slow host, an emulated container in particular, add `--timeout-scale F`
+  (at least 1), which multiplies every case's wall-clock limit and changes
+  nothing else; `play.json` records it. `--env` refuses those names with
+  `--video`. Each case must also log `ge: video: window + GL
   context up` and a frame-limit line with `gfxtasks=` at least its
   `pictures` (30). `--shots N` adds `GE_SHOT=N` (a screenshot every N
   pictures) and keeps each case's last screenshot as `DIR/CASE.bmp`, a

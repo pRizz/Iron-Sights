@@ -12,6 +12,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lp64_play  # noqa: E402
 import lp64_play_cases  # noqa: E402
+import lp64_play_run  # noqa: E402
 from test_lp64_play import BOOT, DAM1_GOOD, DAM1_VIDEO, STAGE_GOOD, StandIns, frames  # noqa: E402
 
 
@@ -232,6 +233,53 @@ class VideoOptions(StandIns):
         self.assertEqual(status, 2, out)
         self.assertIn('--env GE_NOSLEEP is refused', out)
 
+
+
+class TimeoutScale(StandIns):
+    """Invented numbers: the boot allowance is 1 unit of 0.4 s and the per-frame part is zero, so a
+    case's timeout is 0.4 s times the scale; the stand-in takes two units (0.8 s)."""
+
+    def play_scaled(self, *extra: str) -> tuple[int, str]:
+        exe = self.fake(DAM1_GOOD, script='sleep 0.8')
+        with mock.patch.object(lp64_play_run, 'TIMEOUT_BOOT_SECONDS', 0.4), \
+                mock.patch.object(lp64_play_run, 'TIMEOUT_FACTOR', 0):
+            return self.play(exe, 'demos', 'dam1', *extra)
+
+    def test_a_case_needing_two_units_passes_at_scale_three(self):
+        # Act
+        status, out = self.play_scaled('--timeout-scale', '3')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('dam1: PASS', out)
+
+    def test_the_same_case_times_out_at_scale_one(self):
+        # Act
+        status, out = self.play_scaled('--timeout-scale', '1')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('dam1: FAIL (timed out after 0 s', out)
+
+    def test_play_json_records_the_scale(self):
+        # Act
+        self.play_scaled('--timeout-scale', '3')
+
+        # Assert
+        self.assertEqual(json.loads((self.output/'play.json').read_text())['timeout_scale'], 3.0)
+
+    def test_scales_below_one_and_non_numbers_are_refused(self):
+        for value in ('0.5', '0', '-2', 'fast', 'nan'):
+            # Arrange
+            exe = self.fake(DAM1_GOOD)
+
+            # Act
+            status, out = self.play(exe, 'demos', 'dam1', '--timeout-scale', value)
+
+            # Assert
+            self.assertEqual(status, 2, (value, out))
+            self.assertIn('--timeout-scale takes a number of at least 1', out)
+            self.assertFalse(self.output.exists())
 
 class SetSizes(unittest.TestCase):
     def test_each_set_has_the_planned_number_of_cases(self):

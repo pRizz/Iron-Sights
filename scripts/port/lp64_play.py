@@ -2,7 +2,8 @@
 """Run named sets of 64-bit game runs and judge each by what its log shows (LP64-005 Task 1).
 
     python3 scripts/port/lp64_play.py run --rom ROM --set NAME[,NAME...] [--jobs N]
-        [--only CASE[,CASE...]] [--env NAME=VALUE]... [--video [--shots N]] --output DIR EXECUTABLE
+        [--only CASE[,CASE...]] [--env NAME=VALUE]... [--video [--shots N]] [--timeout-scale F]
+        --output DIR EXECUTABLE
     python3 scripts/port/lp64_play.py traces --expect FILE DIR_REF DIR_NEW
     python3 scripts/port/lp64_play.py traces --reference-check DIR_A DIR_B
     python3 scripts/port/lp64_play.py callers --tick T LOG EXECUTABLE
@@ -23,7 +24,9 @@ second as headless ones do, not at the shipped default of 120 (at 60 the pump wa
 picture, so a renderer slower than 60 a second stretches a case's wall time); --env refuses these
 names with --video, and GE_SHOT with --shots); every case must then log `ge: video: window + GL context up` and a frame-limit line with `gfxtasks=` at
 least its `pictures` (30). --shots N adds GE_SHOT=N and keeps each case's last screenshot as
-DIR/CASE.bmp (ROM-derived: never commit it).
+DIR/CASE.bmp (ROM-derived: never commit it). --timeout-scale F multiplies every case's wall-clock
+limit (and its route's recording runs') by F >= 1; use it on a slow host, such as the emulated
+i686 container running the 32-bit video reference, where a case needs many times its frames' time.
 
 traces: the demos' `ge: demo tick` lines of two run folders, tick by tick
 (lp64_play_traces.py): against lp64_demo_traces.txt with --expect, or two runs of one build with
@@ -33,6 +36,7 @@ callers: the `ge: rng draw` lines of a GE_RNGTRACE=T log as `tick function file:
 addr2line (lp64_play_callers.py).
 """
 import argparse
+import math
 from pathlib import Path
 import sys
 
@@ -67,6 +71,12 @@ def command_run(parser: argparse.ArgumentParser, options: argparse.Namespace) ->
         parser.error('--shots needs --video: a headless build draws no picture')
     if options.shots is not None and options.shots < 1:
         parser.error('--shots must be at least 1')
+    try:
+        timeout_scale = float(options.timeout_scale)
+    except ValueError:
+        timeout_scale = math.nan
+    if not (math.isfinite(timeout_scale) and timeout_scale >= 1):
+        parser.error(f'--timeout-scale takes a number of at least 1, not {options.timeout_scale!r}')
     if options.video:
         for name in extra:
             if name in VIDEO_VARIABLES or name in FOLDER_VARIABLES:
@@ -83,7 +93,7 @@ def command_run(parser: argparse.ArgumentParser, options: argparse.Namespace) ->
         except ValueError as error:
             parser.error(str(error))
     outcomes = run_cases(cases, options.executable.resolve(strict=True), options.rom.resolve(strict=True),
-                         extra, options.output, options.jobs, Display(options.video, options.shots))
+                         extra, options.output, options.jobs, Display(options.video, options.shots, timeout_scale))
     failed = [outcome for outcome in outcomes if not outcome.passed]
     if failed:
         print(f'FAIL: {len(failed)} of {len(outcomes)} cases')
@@ -126,6 +136,10 @@ def build_parser() -> argparse.ArgumentParser:
                      help='run a GE_VIDEO executable offscreen; each case must draw its pictures')
     run.add_argument('--shots', type=int, metavar='N',
                      help='with --video: a screenshot every N pictures drawn, the last kept as DIR/CASE.bmp')
+    run.add_argument('--timeout-scale', default='1', metavar='F',
+                     help='multiply every case\'s wall-clock limit by F (at least 1; default 1), for a slow '
+                          'host such as an emulated container running a video build; frames, required '
+                          'lines and pictures do not change')
     run.add_argument('--output', type=Path, required=True, metavar='DIR')
     run.add_argument('executable', type=Path, metavar='EXECUTABLE')
     traces = sub.add_parser('traces', help='compare the demos\' per-tick traces of two run folders')

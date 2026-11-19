@@ -62,17 +62,21 @@ WINDOWED_INI = '[display]\nfullscreen=windowed\n'
 
 @dataclass(frozen=True)
 class Display:
-    """How the cases run: with VIDEO (a GE_VIDEO executable, offscreen), and with SHOTS, a
-    screenshot every SHOTS pictures drawn (GE_SHOT counts swaps), the last kept as DIR/CASE.bmp."""
+    """How the cases run: with VIDEO (a GE_VIDEO executable, offscreen), with SHOTS, a screenshot
+    every SHOTS pictures drawn (GE_SHOT counts swaps), the last kept as DIR/CASE.bmp, and with every
+    wall-clock limit (a case's and its recording runs') multiplied by TIMEOUT_SCALE."""
     video: bool = False
     shots: int | None = None
+    timeout_scale: float = 1.0
 
 
 HEADLESS = Display()
 
 
-def timeout_seconds(frames: int) -> float:
-    return TIMEOUT_BOOT_SECONDS + TIMEOUT_FACTOR * frames / RETRACES_PER_SECOND
+def timeout_seconds(frames: int, scale: float = 1.0) -> float:
+    """The wall-clock limit of a case of FRAMES frames, times SCALE (`--timeout-scale`, for hosts
+    slower than the factor allows, such as an emulated container running a video build)."""
+    return scale * (TIMEOUT_BOOT_SECONDS + TIMEOUT_FACTOR * frames / RETRACES_PER_SECOND)
 
 
 @dataclass
@@ -149,7 +153,7 @@ def recording_tick(case: Case, executable: Path, env: dict[str, str], output: Pa
         run_env = folder_environment(env, Path(temporary), display)
         process = subprocess.Popen([str(child)], cwd=temporary, env=run_env, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, text=True, errors='replace')
-        watchdog = threading.Timer(timeout_seconds(case.frames), process.kill)
+        watchdog = threading.Timer(timeout_seconds(case.frames, display.timeout_scale), process.kill)
         watchdog.start()
         try:
             seen = []
@@ -183,7 +187,7 @@ def route_file(case: Case, executable: Path, env: dict[str, str], output: Path,
 def run_case(case: Case, executable: Path, rom: Path, extra: dict[str, str], output: Path,
              display: Display = HEADLESS) -> Outcome:
     """Runs CASE and judges it; its log is OUTPUT/CASE.log."""
-    timeout = timeout_seconds(case.frames)
+    timeout = timeout_seconds(case.frames, display.timeout_scale)
     log_path = output/f'{case.name}.log'
     env = case_environment(case, rom, extra, display=display)
     started = time.monotonic()
@@ -219,6 +223,7 @@ def record(outcomes: list[Outcome], executable: Path, extra: dict[str, str], pat
         'extra_env': extra,
         'video': display.video,
         'shots': display.shots,
+        'timeout_scale': display.timeout_scale,
         'cases': [{
             'name': outcome.case.name, 'set': outcome.case.set_name, 'env': dict(outcome.case.env),
             'frames': outcome.case.frames, 'expected_status': outcome.case.status,
