@@ -34,6 +34,8 @@ STAGE_GOOD = (BOOT + 'ge: GE_STAGE direct launch: levelid=33 diff=0\n'
               'ge: load_bg_file levelid=33 stan=Tbg_dam_all_p_stanZ file=0x1 record=0x2 first=0x3\n'
               + frames(1800))
 STOP_CITADEL = 'ge: FATAL: The setup file UsetupcatZ did not load from the ROM; a 64-bit build cannot read it\n'
+VIDEO_UP = 'ge: video: window + GL context up\n'
+DAM1_VIDEO = BOOT + VIDEO_UP + DAM1_START + demo_exit(438)
 TOUR_ARCHIVES = (BOOT + 'ge: GE_STAGE direct launch: levelid=24 diff=0\n'
                  'ge: load_bg_file levelid=24 stan=Tbg_arch_all_p_stanZ file=0x1 record=0x2 first=0x3\n')
 
@@ -399,6 +401,52 @@ class OtherSets(StandIns):
         self.assertEqual(status, 1, out)
         self.assertIn('abort: FAIL (missing line: ge: play: stage-unload 33)', out)
 
+
+
+class Video(StandIns):
+    def test_video_case_with_the_gl_line_and_its_pictures_passes(self):
+        # Arrange
+        exe = self.fake(DAM1_VIDEO + 'ge: frame limit reached: frames=3000 gfxtasks=30\n')
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('dam1: PASS', out)
+
+    def test_video_case_with_fewer_pictures_than_required_fails(self):
+        # Arrange
+        exe = self.fake(DAM1_VIDEO + 'ge: frame limit reached: frames=3000 gfxtasks=3\n')
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('dam1: FAIL (ge: frame limit reached: frames=3000 gfxtasks=3: expected at least 30)', out)
+
+    def test_video_case_without_the_gl_line_fails(self):
+        # Arrange
+        exe = self.fake(BOOT + DAM1_START + demo_exit(438) + 'ge: frame limit reached: frames=3000 gfxtasks=900\n')
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('dam1: FAIL (missing line: ge: video: window + GL context up)', out)
+
+    def test_headless_case_needs_neither_video_line(self):
+        # Arrange
+        exe = self.fake(BOOT + DAM1_START + demo_exit(438) + 'ge: frame limit reached: frames=3000 gfxtasks=3\n')
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('dam1: PASS', out)
 
 if __name__ == '__main__':
     unittest.main()

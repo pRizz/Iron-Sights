@@ -12,7 +12,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lp64_play  # noqa: E402
 import lp64_play_cases  # noqa: E402
-from test_lp64_play import BOOT, DAM1_GOOD, STAGE_GOOD, StandIns, frames  # noqa: E402
+from test_lp64_play import BOOT, DAM1_GOOD, DAM1_VIDEO, STAGE_GOOD, StandIns, frames  # noqa: E402
 
 
 class Environment(StandIns):
@@ -127,6 +127,63 @@ class Environment(StandIns):
         # Assert
         self.assertEqual(stop.exception.code, 2, out.getvalue())
         self.assertIn('--set names no set', out.getvalue())
+
+
+
+class VideoOptions(StandIns):
+    def test_video_runs_offscreen_with_home_and_icon_cache_inside_the_run_folder(self):
+        # Arrange
+        exe = self.fake(DAM1_VIDEO + frames(3000), script=(
+            'env | grep -E "^(SDL_|GE_WINDOW|GE_NOINPUT|GE_SHOT)" | sort >&2\n'
+            'here=$(pwd -P)\n'
+            'case "$(cd "$HOME" && pwd -P)" in "$here"/*) echo HOME-INSIDE >&2;; esac\n'
+            'case "$(cd "$GE_ICON_CACHE_DIR" && pwd -P)" in "$here"/*) echo ICONS-INSIDE >&2;; esac'))
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video')
+
+        # Assert
+        log = (self.output/'dam1.log').read_text().splitlines()
+        self.assertEqual(status, 0, out)
+        self.assertEqual([line for line in log if line.startswith(('SDL_', 'GE_WINDOW', 'GE_NOINPUT', 'GE_SHOT'))],
+                         ['GE_NOINPUT=1', 'GE_WINDOW=640x480', 'SDL_AUDIODRIVER=dummy', 'SDL_VIDEODRIVER=offscreen'])
+        self.assertIn('HOME-INSIDE', log)
+        self.assertIn('ICONS-INSIDE', log)
+
+    def test_shots_set_ge_shot_and_keep_the_last_screenshot_of_each_case(self):
+        # Arrange
+        exe = self.fake(DAM1_VIDEO + frames(3000), script=(
+            'echo "GE_SHOT=$GE_SHOT" >&2\nprintf first > shot_00005.bmp\nprintf last > shot_00010.bmp'))
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video', '--shots', '5')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('GE_SHOT=5', (self.output/'dam1.log').read_text())
+        self.assertEqual((self.output/'dam1.bmp').read_text(), 'last')
+
+    def test_shots_without_video_are_refused(self):
+        # Arrange
+        exe = self.fake(DAM1_GOOD)
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--shots', '5')
+
+        # Assert
+        self.assertEqual(status, 2, out)
+        self.assertIn('--shots needs --video', out)
+
+    def test_video_still_refuses_ge_nosleep(self):
+        # Arrange
+        exe = self.fake(DAM1_VIDEO + frames(3000))
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video', '--env', 'GE_NOSLEEP=1')
+
+        # Assert
+        self.assertEqual(status, 2, out)
+        self.assertIn('--env GE_NOSLEEP is refused', out)
 
 
 class SetSizes(unittest.TestCase):

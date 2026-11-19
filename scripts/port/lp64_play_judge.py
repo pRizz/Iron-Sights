@@ -3,11 +3,27 @@
 A case fails on a status other than the one it expects, a timeout, any sanitizer marker,
 `ge: fatal signal`, `ASSERTION FAULT`, a failing `ge: lp64:` line (lp64_boot.py's default-deny
 rule) and on each line it requires that the log lacks. The markers and the `ge: lp64:` rule are
-lp64_boot.py's own, so the two tools cannot drift apart.
+lp64_boot.py's own, so the two tools cannot drift apart. A run with video (`run --video`) must
+also have opened its window and GL context and drawn at least the case's `pictures`.
 """
+import re
+
 from lp64_boot import FATAL_SIGNAL, SANITIZER_MARKERS, failing_lp64_lines
 from lp64_play_cases import DEMO_START, Case, Ordered, Required
 from lp64_play_route import PLAY_EVENT, PLAY_MARK, PLAY_TICK
+
+# port/src/video.c, once SDL has made the window and its GL context: "ge: video: window + GL context up\n"
+VIDEO_UP = re.compile(r'ge: video: window \+ GL context up')
+# port/src/pcsched.c: "ge: frame limit reached: frames=%u gfxtasks=%u\n"; gfxtasks counts the
+# pictures the renderer was handed.
+GFXTASKS = re.compile(r'ge: frame limit reached: frames=\d+ gfxtasks=(\d+)')
+
+
+def video_required(case: Case) -> tuple[Required, ...]:
+    """What a run with video must log besides the case's own lines."""
+    return (Required('ge: video: window + GL context up', VIDEO_UP),
+            Required('ge: frame limit reached: ... gfxtasks=N', GFXTASKS, at_least=case.pictures))
+
 
 # include/assert.h and the game's own asserts: "\n--- ASSERTION FAULT - %s - %s, line %d\n\n".
 ASSERTION_FAULT = 'ASSERTION FAULT'
@@ -71,10 +87,10 @@ def requirement_problem(lines: list[str], required: Required | Ordered) -> str |
     return None
 
 
-def problems(case: Case, status: int | None, text: str, timeout: float) -> list[str]:
+def problems(case: Case, status: int | None, text: str, timeout: float, video: bool = False) -> list[str]:
     """Every way the run of CASE differs from what it must do, in the order the first is reported:
     the status (None for a timeout, negative for a signal), then the forbidden lines, then the
-    required ones. Empty when the case passes."""
+    required ones (with VIDEO, the video lines after the case's own). Empty when the case passes."""
     lines = text.splitlines()
     found = []
     if status is None:
@@ -98,7 +114,7 @@ def problems(case: Case, status: int | None, text: str, timeout: float) -> list[
     torn = torn_play_lines(lines)
     if torn:
         found.append(f'torn line (another stream cut it): {torn[0].strip()}')
-    for required in case.required:
+    for required in case.required + (video_required(case) if video else ()):
         problem = requirement_problem(lines, required)
         if problem is not None:
             found.append(problem)

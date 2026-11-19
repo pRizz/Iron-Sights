@@ -91,6 +91,9 @@ class Case:
     forbidden: tuple[re.Pattern, ...] = ()
     # The pad 0 an `input` case replays (lp64_play_route.py), written to DIR/CASE.route.
     route: Route | None = None
+    # With --video, the pictures the run must draw at least (`gfxtasks=` of its frame-limit line):
+    # 30 by the owner's decision 8 of the LP64-005 plan.
+    pictures: int = 30
 
 
 def frame_limit(frames: int) -> Required:

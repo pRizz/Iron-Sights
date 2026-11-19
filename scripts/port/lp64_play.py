@@ -2,7 +2,7 @@
 """Run named sets of 64-bit game runs and judge each by what its log shows (LP64-005 Task 1).
 
     python3 scripts/port/lp64_play.py run --rom ROM --set NAME[,NAME...] [--jobs N]
-        [--only CASE[,CASE...]] [--env NAME=VALUE]... --output DIR EXECUTABLE
+        [--only CASE[,CASE...]] [--env NAME=VALUE]... [--video [--shots N]] --output DIR EXECUTABLE
     python3 scripts/port/lp64_play.py traces --expect FILE DIR_REF DIR_NEW
     python3 scripts/port/lp64_play.py traces --reference-check DIR_A DIR_B
     python3 scripts/port/lp64_play.py callers --tick T LOG EXECUTABLE
@@ -16,6 +16,11 @@ outcomes to DIR/play.json. A case fails on a status other than its own (0, or 1 
 timeout, a sanitizer marker, `ge: fatal signal`, `ASSERTION FAULT`, a failing `ge: lp64:` line
 or a missing required line (lp64_play_judge.py). Runs are paced in real time: never set
 GE_FIXEDTICK or GE_NOSLEEP, which --env refuses.
+--video runs a GE_VIDEO executable offscreen (SDL_VIDEODRIVER=offscreen, SDL_AUDIODRIVER=dummy,
+GE_WINDOW=640x480, GE_NOINPUT=1, HOME and GE_ICON_CACHE_DIR in the case's folder); every case
+must then log `ge: video: window + GL context up` and a frame-limit line with `gfxtasks=` at
+least its `pictures` (30). --shots N adds GE_SHOT=N and keeps each case's last screenshot as
+DIR/CASE.bmp (ROM-derived: never commit it).
 
 traces: the demos' `ge: demo tick` lines of two run folders, tick by tick
 (lp64_play_traces.py): against lp64_demo_traces.txt with --expect, or two runs of one build with
@@ -32,7 +37,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lp64_play_callers import callers  # noqa: E402
 from lp64_play_cases import cases_of, select_cases  # noqa: E402
-from lp64_play_run import FORBIDDEN_VARIABLES, run_cases  # noqa: E402
+from lp64_play_run import FORBIDDEN_VARIABLES, Display, run_cases  # noqa: E402
 from lp64_play_traces import compare_with_expectations, reference_check  # noqa: E402
 
 DEFAULT_JOBS = 7
@@ -55,6 +60,10 @@ def command_run(parser: argparse.ArgumentParser, options: argparse.Namespace) ->
     extra = parse_env(parser, options.env)
     if options.jobs < 1:
         parser.error('--jobs must be at least 1')
+    if options.shots is not None and not options.video:
+        parser.error('--shots needs --video: a headless build draws no picture')
+    if options.shots is not None and options.shots < 1:
+        parser.error('--shots must be at least 1')
     try:
         cases = cases_of([name for name in options.set.split(',') if name])
     except ValueError as error:
@@ -65,7 +74,7 @@ def command_run(parser: argparse.ArgumentParser, options: argparse.Namespace) ->
         except ValueError as error:
             parser.error(str(error))
     outcomes = run_cases(cases, options.executable.resolve(strict=True), options.rom.resolve(strict=True),
-                         extra, options.output, options.jobs)
+                         extra, options.output, options.jobs, Display(options.video, options.shots))
     failed = [outcome for outcome in outcomes if not outcome.passed]
     if failed:
         print(f'FAIL: {len(failed)} of {len(outcomes)} cases')
@@ -104,6 +113,10 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument('--only', metavar='CASE[,CASE...]', help='run only these cases of the sets')
     run.add_argument('--env', action='append', default=[], metavar='NAME=VALUE',
                      help='set a variable for every case (never GE_FIXEDTICK or GE_NOSLEEP)')
+    run.add_argument('--video', action='store_true',
+                     help='run a GE_VIDEO executable offscreen; each case must draw its pictures')
+    run.add_argument('--shots', type=int, metavar='N',
+                     help='with --video: a screenshot every N pictures drawn, the last kept as DIR/CASE.bmp')
     run.add_argument('--output', type=Path, required=True, metavar='DIR')
     run.add_argument('executable', type=Path, metavar='EXECUTABLE')
     traces = sub.add_parser('traces', help='compare the demos\' per-tick traces of two run folders')

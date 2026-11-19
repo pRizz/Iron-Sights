@@ -57,10 +57,49 @@ class DockerCommand(unittest.TestCase):
         # Assert
         self.assertEqual(argv[-3:], ['sh', '-c', 'echo "a b"'])
 
+    def test_i686_video_runs_in_the_i686_video_image(self):
+        # Arrange / Act
+        argv = env.docker_command('i686', Path('/repo'), None, ['true'], video=True)
+        # Assert
+        self.assertEqual(argv, ['docker', 'run', '--rm', '--platform', 'linux/amd64',
+                                '-v', '/repo:/home/dev/project', '-w', '/home/dev/project',
+                                'midas-lp64-i686-video', 'true'])
+
+    def test_64_bit_video_runs_in_the_plain_images(self):
+        for arch, image in (('x86_64', 'goldeneye'), ('aarch64', 'midas-lp64-arm64')):
+            # Arrange / Act
+            argv = env.docker_command(arch, Path('/repo'), None, ['true'], video=True)
+            # Assert
+            self.assertIn(image, argv)
+
+    def test_run_video_flag_reaches_docker(self):
+        # Arrange
+        with mock.patch.dict(os.environ, {'GE_ROM': ''}), \
+                mock.patch.object(env, 'find_rom', return_value=None), \
+                mock.patch.object(env.subprocess, 'run') as docker:
+            docker.return_value.returncode = 0
+            # Act
+            status = env.main(['run', '--arch', 'i686', '--video', '--', 'true'])
+        # Assert
+        self.assertEqual(status, 0)
+        self.assertIn('midas-lp64-i686-video', docker.call_args.args[0])
+
     def test_unknown_arch_is_rejected(self):
         # Arrange / Act / Assert
         with self.assertRaises(ValueError):
             env.docker_command('mips', Path('/repo'), None, ['true'])
+
+
+class BuildCommands(unittest.TestCase):
+    def test_the_i686_video_image_is_built_after_the_image_it_extends(self):
+        # Arrange / Act
+        commands = env.build_commands(Path('/repo'), 501, 20)
+        # Assert
+        tags = [command[command.index('-t') + 1] for command in commands]
+        self.assertEqual(tags, ['goldeneye', 'midas-lp64-arm64', 'midas-lp64-i686-video'])
+        video = commands[2]
+        self.assertEqual(video[video.index('-f') + 1], '/repo/scripts/port/lp64-i686-video.Dockerfile')
+        self.assertIn('linux/amd64', video)
 
 
 class FindRom(unittest.TestCase):
