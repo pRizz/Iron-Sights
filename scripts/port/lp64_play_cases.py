@@ -43,6 +43,13 @@ MP_LAUNCH = re.compile(r'ge: GE_MP direct launch: arena=')
 BG_LOADED = re.compile(r'ge: load_bg_file levelid=')
 # src/game/front.c, portMenuHarnessTick: "ge: GE_MENU harness: menu=%d\n"
 MENU_HARNESS = re.compile(r'ge: GE_MENU harness: menu=')
+# The file select draws the wallet Bond (front.c, load_walletbond) in its room, FRONT_WALLET_ROOM,
+# which is larger at 64 bits; loading the model from the ROM prints, at 64 bits
+# (romconv_model.c), "ge: romdata: model %-16s converted (...)". A 32-bit build prints the same
+# line from romfile_model.c's in-place pass, or, built with GE_ROMDATA_FALLBACK, "identical to the
+# compiled-in object" after comparing with its compiled-in copy, so either width proves the model
+# loaded. A model the converter refuses, or one that DIFFERS from that copy, fails the case.
+WALLET_LOADED = re.compile(r'ge: romdata: model PwalletbondZ +(converted|identical to the compiled-in object) ')
 # port/src/port_load_tour.c, tourFinish: "ge: loadtour: done, %d of %d rooms%s\n"
 TOUR_DONE = re.compile(r'ge: loadtour: done, (\d+) of \d+ rooms')
 # port/src/port_soak.c, portSoakNextStage: "ge: soak: complete after %d laps\n"
@@ -225,8 +232,9 @@ MENU_FRAMES = 900
 
 
 def menu_case(menu: str) -> Case:
+    wallet = (Required('ge: romdata: model PwalletbondZ converted', WALLET_LOADED),) if menu == 'select' else ()
     return Case(f'menu-{menu}', 'menus', (('GE_MENU', menu),), MENU_FRAMES,
-                (Required('ge: GE_MENU harness: menu=', MENU_HARNESS), frame_limit(MENU_FRAMES)))
+                (Required('ge: GE_MENU harness: menu=', MENU_HARNESS), *wallet, frame_limit(MENU_FRAMES)))
 
 
 # ---- tours ------------------------------------------------------------------------------------

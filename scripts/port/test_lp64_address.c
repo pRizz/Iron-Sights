@@ -50,6 +50,7 @@
 #include "port_lp64.h"
 #if IS_64_BIT
 #include "memp.h"
+#include "port_memp.h"
 #endif
 
 static int s_failures;
@@ -473,8 +474,6 @@ void sysFatalError(const char *fmt, ...)
     fflush(stdout);
     exit(1);
 }
-
-void portMempCheckBankStart(u8 bank, const void *start);
 
 /* A start MISALIGN bytes past an 8-aligned address in the stage bank. */
 static int runBankStart(uintptr_t misalign)

@@ -309,6 +309,20 @@ class Traces(Folders):
         # Assert
         self.assertEqual(status, 0, out)
 
+    def test_tear_in_the_next_playbacks_first_tick_line_is_named_after_the_first_playback(self):
+        # Arrange: only a whole tick line of a lower number ends the first playback, so a tear
+        # before it counts against the first playback, at the tick after its last (it fails safe).
+        ref = self.run_folder('ref', {})
+        new = self.run_folder('new', {'dam2': trace('dam2') + torn(trace('dam1', 50), 1, 9)})
+        after_last = DEMO_END_TICKS['dam2'] + AFTER_END + 1
+
+        # Act
+        status, out = self.main('traces', '--expect', str(self.expectations({})), str(ref), str(new))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn(f'dam2: torn line at tick {after_last} in', out)
+
     def test_reference_check_of_agreeing_runs_passes(self):
         # Arrange
         a, b = self.run_folder('a', {}), self.run_folder('b', {})

@@ -59,13 +59,13 @@ build_memp() {
         port/src/port_memp.c -o "$out"
 }
 
-# gbi.h (Task 7) includes <PR/...>; -idirafter finds those after the system
-# headers, so the driver's <string.h> is still the C library's.
+# gbi.h (Task 7) includes <PR/...> and port_memp.h <memp.h>; -idirafter finds
+# those after the system headers, so the driver's <string.h> is still the C library's.
 build() {
     local out=$1 str_object=$2 heap_object=$3 memp_object=$4
     shift 4
     "$compiler" "$@" -std=gnu11 -D_LANGUAGE_C -Wall -Wextra -Werror -iquote include -iquote port/include \
-        -iquote src -idirafter include scripts/port/test_lp64_address.c port/src/port_lp64.c "$str_object" \
+        -iquote src -idirafter include -idirafter src scripts/port/test_lp64_address.c port/src/port_lp64.c "$str_object" \
         "$heap_object" ${memp_object:+"$memp_object"} -o "$out"
 }
 

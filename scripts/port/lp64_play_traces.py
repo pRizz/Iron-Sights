@@ -45,9 +45,12 @@ class Trace:
 
 
 def read_trace(text: str) -> Trace:
-    """TEXT's first playback. A part of a tick line that is not a whole one is torn, wherever it
-    falls before the playback ends: its tick is the number it holds when that is past the last
-    whole tick, else the tick after it (a cut inside the number leaves a smaller one)."""
+    """TEXT's first playback, which ends at the first whole tick line whose number is not past the
+    last one's (the next playback's tick 1). A part of a tick line that is not a whole one is torn
+    wherever it falls before that line, including after the first playback's exit line and in the
+    next playback's tick-1 line itself: the first playback is then reported torn, which fails safe.
+    Its tick is the number it holds when that is past the last whole tick, else the tick after it
+    (a cut inside the number leaves a smaller one)."""
     ticks: list[tuple[int, str]] = []
     for line in text.splitlines():
         match = TICK_LINE.match(line.strip())

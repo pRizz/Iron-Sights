@@ -36,6 +36,9 @@ STAGE_GOOD = (BOOT + 'ge: GE_STAGE direct launch: levelid=33 diff=0\n'
               + frames(1800))
 STOP_CITADEL = 'ge: FATAL: The setup file UsetupcatZ did not load from the ROM; a 64-bit build cannot read it\n'
 VIDEO_UP = 'ge: video: window + GL context up\n'
+WALLET_CONVERTED = 'ge: romdata: model PwalletbondZ     converted (60 nodes, 900 verts, 40 DLs)\n'
+WALLET_IDENTICAL = ('ge: romdata: model PwalletbondZ     identical to the compiled-in object '
+                    '(60 nodes, 900 verts, 40 DLs)\n')
 DAM1_VIDEO = BOOT + VIDEO_UP + DAM1_START + demo_exit(438)
 TOUR_ARCHIVES = (BOOT + 'ge: GE_STAGE direct launch: levelid=24 diff=0\n'
                  'ge: load_bg_file levelid=24 stan=Tbg_arch_all_p_stanZ file=0x1 record=0x2 first=0x3\n')
@@ -311,6 +314,49 @@ class OtherSets(StandIns):
         # Assert
         self.assertEqual(status, 1, out)
         self.assertIn('menu-select: FAIL (missing line: ge: GE_MENU harness: menu=)', out)
+
+    def test_select_without_the_wallet_bond_fails(self):
+        # Arrange
+        exe = self.fake(BOOT + 'ge: GE_MENU harness: menu=10\n' + frames(900))
+
+        # Act
+        status, out = self.play(exe, 'menus', 'menu-select')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('menu-select: FAIL (missing line: ge: romdata: model PwalletbondZ converted)', out)
+
+    def test_select_with_the_wallet_bond_converted_passes(self):
+        # Arrange
+        exe = self.fake(BOOT + 'ge: GE_MENU harness: menu=10\n' + WALLET_CONVERTED + frames(900))
+
+        # Act
+        status, out = self.play(exe, 'menus', 'menu-select')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('menu-select: PASS', out)
+
+    def test_select_with_the_wallet_bond_matching_its_compiled_copy_passes(self):
+        # Arrange: a 32-bit GE_ROMDATA_FALLBACK build compares the converted file with its copy
+        exe = self.fake(BOOT + 'ge: GE_MENU harness: menu=10\n' + WALLET_IDENTICAL + frames(900))
+
+        # Act
+        status, out = self.play(exe, 'menus', 'menu-select')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('menu-select: PASS', out)
+
+    def test_other_menus_do_not_need_the_wallet_bond(self):
+        # Arrange
+        exe = self.fake(BOOT + 'ge: GE_MENU harness: menu=11\n' + frames(900))
+
+        # Act
+        status, out = self.play(exe, 'menus', 'menu-options')
+
+        # Assert
+        self.assertEqual(status, 0, out)
 
     def test_tour_short_of_its_rooms_fails(self):
         # Arrange
