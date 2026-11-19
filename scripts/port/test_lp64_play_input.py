@@ -203,5 +203,70 @@ class InputCases(StandIns):
         self.assertIn('briefing: FAIL (missing line: ge: play: menu 10)', out)
 
 
+    def test_walk_fire_that_walked_and_fired_passes(self):
+        # Arrange
+        exe = self.fake(DAM + play(1200, 'moved', 102) + play(1381, 'shots', 1) + frames(1800))
+
+        # Act
+        status, out = self.play(exe, 'input', 'walk-fire-dam')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+
+    def test_walk_fire_that_never_fired_fails(self):
+        # Arrange
+        exe = self.fake(DAM + play(1200, 'moved', 102) + frames(1800))
+
+        # Act
+        status, out = self.play(exe, 'input', 'walk-fire-dam')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('walk-fire-dam: FAIL (missing line: ge: play: shots 1 (Bond fired))', out)
+
+    def test_walk_fire_that_never_walked_fails(self):
+        # Arrange
+        exe = self.fake(DAM + play(1381, 'shots', 1) + frames(1800))
+
+        # Act
+        status, out = self.play(exe, 'input', 'walk-fire-dam')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('walk-fire-dam: FAIL (missing line: ge: play: moved N (Bond walked))', out)
+
+    def test_watch_showing_its_own_tab_after_the_pause_passes(self):
+        # Arrange
+        exe = self.fake(DAM + PAUSE_LINES + play(1317, 'watch-page', 1) + frames(1800))
+
+        # Act
+        status, out = self.play(exe, 'input', 'watch-inventory')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+
+    def test_watch_showing_another_tab_fails(self):
+        # Arrange
+        exe = self.fake(DAM + PAUSE_LINES + play(1317, 'watch-page', 0) + frames(1800))
+
+        # Act
+        status, out = self.play(exe, 'input', 'watch-inventory')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('watch-inventory: FAIL (missing line: ge: play: watch-page 1 (the inventory tab drawn', out)
+
+    def test_watch_tab_before_the_pause_fails_as_out_of_order(self):
+        # Arrange
+        exe = self.fake(DAM + play(1210, 'watch-page', 1) + PAUSE_LINES + frames(1800))
+
+        # Act
+        status, out = self.play(exe, 'input', 'watch-inventory')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('watch-inventory: FAIL (out of order: ge: play: watch-page 1', out)
+
+
 if __name__ == '__main__':
     unittest.main()

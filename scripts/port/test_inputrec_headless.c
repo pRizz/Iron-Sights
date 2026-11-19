@@ -37,9 +37,9 @@ static void expect(int ok, const char *what, int call)
     }
 }
 
-/* Reads pad 0 CALLS times; the call numbered PRESSED (1-based) must hold
- * BUTTON and every other call nothing. PRESSED 0 expects all calls neutral. */
-static int readPads(int pressed, u16 button)
+/* Reads pad 0 CALLS times; call N (1-based) must hold BUTTONS[N - 1] and no
+ * stick, and pad 1 nothing. */
+static int readPads(const u16 *buttons)
 {
     OSContPad pads[MAXCONTROLLERS];
     int call;
@@ -48,7 +48,7 @@ static int readPads(int pressed, u16 button)
     {
         memset(pads, 0xA5, sizeof(pads));
         osContGetReadData(pads);
-        expect(pads[0].button == (call == pressed ? button : 0), "pad 0's buttons", call);
+        expect(pads[0].button == buttons[call - 1], "pad 0's buttons", call);
         expect(pads[0].stick_x == 0 && pads[0].stick_y == 0, "pad 0's stick", call);
         expect(pads[1].button == 0 && pads[1].stick_x == 0 && pads[1].stick_y == 0, "pad 1", call);
     }
@@ -56,7 +56,7 @@ static int readPads(int pressed, u16 button)
 }
 
 /* Runs SCENARIO in a child with GE_INPUTPLAY set to PLAY (unset when NULL). */
-static int inChild(const char *name, const char *play, int pressed, u16 button)
+static int inChild(const char *name, const char *play, const u16 *buttons)
 {
     pid_t child;
     int status;
@@ -78,7 +78,7 @@ static int inChild(const char *name, const char *play, int pressed, u16 button)
         {
             unsetenv("GE_INPUTPLAY");
         }
-        status = readPads(pressed, button);
+        status = readPads(buttons);
         fflush(stdout); /* _exit skips stdio */
         _exit(status);
     }
@@ -90,31 +90,52 @@ static int inChild(const char *name, const char *play, int pressed, u16 button)
     return 0;
 }
 
-int main(int argc, char **argv)
+/* Writes TEXT to a new temporary route file and puts its path in PATH. */
+static int writeRoute(char *path, const char *text)
 {
-    char path[] = "/tmp/midas-inputrec-XXXXXX";
-    int fd;
-    int bad = 0;
+    int fd = mkstemp(path);
     FILE *route;
 
-    (void) argc;
-    (void) argv;
-    // Arrange: one START press recorded at tick 3, a line of each ignored kind
-    fd = mkstemp(path);
     if (fd < 0 || (route = fdopen(fd, "w")) == NULL)
     {
         perror("mkstemp");
         return 1;
     }
-    fprintf(route, "P 3 1000 0 0\nA 2 1 0\nM 2 0 1 1 0 0\nD 2 5 5\nT 2 0 0 0 0\n");
+    fputs(text, route);
     fclose(route);
+    return 0;
+}
 
-    // Act and Assert: the third read has START, the others nothing
-    bad |= inChild("a replayed START at tick 3", path, 3, START_BUTTON);
+int main(int argc, char **argv)
+{
+    static const u16 startAt3[CALLS] = { 0, 0, START_BUTTON, 0, 0 };
+    static const u16 heldFrom2To3[CALLS] = { 0, START_BUTTON, START_BUTTON, 0, 0 };
+    static const u16 neutral[CALLS] = { 0 };
+    char single[] = "/tmp/midas-inputrec-XXXXXX";
+    char held[] = "/tmp/midas-inputrec-XXXXXX";
+    int bad = 0;
+
+    (void) argc;
+    (void) argv;
+    // Arrange: one START press recorded at tick 3 with a line of each ignored
+    // kind; and START pressed at tick 2 and let go at tick 4
+    if (writeRoute(single, "P 3 1000 0 0\nA 2 1 0\nM 2 0 1 1 0 0\nD 2 5 5\nT 2 0 0 0 0\n")
+        || writeRoute(held, "P 2 1000 0 0\nP 4 0 0 0\n"))
+    {
+        return 1;
+    }
+
+    // Act and Assert: the third read has START, the others nothing (neutral
+    // before the first record and after the last)
+    bad |= inChild("a replayed START at tick 3", single, startAt3);
+    // Act and Assert: a record holds until the next one: START at reads 2 and
+    // 3, let go at 4, neutral after the last record
+    bad |= inChild("START held from tick 2 to tick 4", held, heldFrom2To3);
     // Act and Assert: with GE_INPUTPLAY unset all five reads are neutral
-    bad |= inChild("no replay", NULL, 0, 0);
+    bad |= inChild("no replay", NULL, neutral);
 
-    unlink(path);
+    unlink(single);
+    unlink(held);
     if (bad)
     {
         return 1;

@@ -8,9 +8,11 @@
 #include "port_playlog.h"
 
 #if PORT_PLAY_HARNESS
+#include <bondconstants.h>
+#include "game/bondview.h"
+#include "game/player.h"
 
 extern u32 portInputRecTickNow(void);
-extern s32 get_cur_playernum(void);
 extern void bondviewKillCurrentPlayer(void);
 
 /* -1 until the first call reads GE_PLAYLOG; nonzero tests true, so a run
@@ -45,10 +47,12 @@ void portPlayLog(const char *event, s32 value)
     fflush(stdout);
 }
 
-void portPlayKillTick(void)
+/* GE_PLAYKILL (port_playlog.h): player 0's N-th pass kills him. */
+static void playKill(void)
 {
     static s32 killAt = -1; /* -1 until GE_PLAYKILL is read, 0 when unset */
     static s32 passes;
+    s32 wasDead;
 
     if (!killAt)
     {
@@ -65,12 +69,71 @@ void portPlayKillTick(void)
             return;
         }
     }
-    if (get_cur_playernum() != 0 || ++passes != killAt)
+    if (++passes != killAt)
     {
         return;
     }
-    portPlayLog("kill", passes);
+    wasDead = g_CurrentPlayer->bonddead;
     bondviewKillCurrentPlayer();
+    if (!wasDead && g_CurrentPlayer->bonddead)
+    {
+        portPlayLog("kill", passes);
+    }
+}
+
+/* `shots` and `moved` (port_playlog.h), from player 0's own counters. */
+static void playStats(void)
+{
+    static s32 shots;
+    static s32 moved;
+    s32 now;
+
+    if (!sPlayLogOn || g_playerPerm == NULL)
+    {
+        return;
+    }
+    now = g_playerPerm->shot_count[SHOT_REGISTER_TOTAL];
+    if (now != shots)
+    {
+        shots = now;
+        portPlayLog("shots", now);
+    }
+    if (!moved && g_playerPerm->distance_traveled >= PORT_PLAY_MOVED_UNITS)
+    {
+        moved = 1;
+        portPlayLog("moved", (s32) g_playerPerm->distance_traveled);
+    }
+}
+
+void portPlayPlayerTick(void)
+{
+    if (get_cur_playernum() != 0 || g_CurrentPlayer == NULL)
+    {
+        return;
+    }
+    playKill();
+    playStats();
+}
+
+void portPlayWatchPage(s32 page)
+{
+    static s32 drawn = -1; /* the tab of the last draw with the watch open */
+    static s32 draws;      /* consecutive open draws of that tab */
+
+    if (g_CurrentPlayer == NULL || g_CurrentPlayer->watch_animation_state != WATCH_ANIMATION_0x5)
+    {
+        drawn = -1;
+        return;
+    }
+    if (page != drawn)
+    {
+        drawn = page;
+        draws = 0;
+    }
+    if (++draws == PORT_PLAY_WATCH_STEADY_DRAWS)
+    {
+        portPlayLog("watch-page", page);
+    }
 }
 
 #endif

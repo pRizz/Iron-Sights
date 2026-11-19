@@ -1,9 +1,10 @@
 """The `input` set of lp64_play.py: runs that need a button (LP64-005 Task 8).
 
 Each case replays a route (lp64_play_route.py) as pad 0 of a headless build, with GE_PLAYLOG=1,
-and requires the lines that show it reached what the button is for: the pause, each watch tab, a
-walk with the trigger held, the front end from boot to Dam, the watch's abort, the briefing and a
-multiplayer respawn.
+and requires the lines that show it reached what the button is for: the pause, each watch tab
+(`watch-page N`, the tab drawn once the watch is open), a walk with the trigger held (`moved` and
+`shots 1`, from player 0's own counters), the front end from boot to Dam, the watch's abort, the
+briefing and a multiplayer respawn. None of those lines appears without the route's presses.
 
 The pause has no `ge: play:` event: the only code that sets it is in src/game/bondview2.c (strict
 tier), so the pause cases read GE_PAUSEDBG's existing line there, printed on each change of the
@@ -31,6 +32,11 @@ PAUSE_OFF_STEP = ('pausebox: STATE N -> 0 (the watch put away)', PAUSE_OFF)
 # first spawn prints bondview_r.c's "ge: mp spawn p%d startpad=" instead.
 RESPAWN = re.compile(r'ge: mp spawn p0 pad=')
 RESPAWN_STEP = ('ge: mp spawn p0 pad= (the respawn)', RESPAWN)
+
+# port/src/port_playlog.c, from player 0's own counters: the distance walked first reaching
+# PORT_PLAY_MOVED_UNITS, and the total shot count's first change.
+MOVED = play_line('moved')
+FIRST_SHOT = play_line('shots', 1)
 
 PAUSE_TICK = 1200
 UNPAUSE_TICK = 1800
@@ -71,9 +77,9 @@ ABORT_FRAMES = 2400
 BRIEFING_FRAMES = 900
 RESPAWN_FRAMES = 1800
 RESPAWN_PRESSES = tuple(range(900, 1501, 60))
-# GE_PLAYKILL=N (port/src/port_playlog.c) kills player 1 on his N-th pass of the frame's player
-# loop and logs `ge: play: kill N`. The brief's GE_KILLBOND=600 (bondview2.c) counts both players'
-# MoveBond calls and kills only when the 600th is player 1's; the frame takes its players in a
+# GE_PLAYKILL=N (port/src/port_playlog.c) kills player 0 on his N-th pass of the frame's player
+# loop and logs `ge: play: kill N` when that left him dead. The brief's GE_KILLBOND=600
+# (bondview2.c) counts both players' MoveBond calls and kills only when the 600th is player 0's; the frame takes its players in a
 # shuffled order, so in a two-player run that kills in some runs and not others (measured
 # 2026-11-18: the same arena respawned in one run and not the next).
 PLAYKILL = 600
@@ -106,15 +112,18 @@ def pause_case(mission: str) -> Case:
 
 def watch_case(number: int, tab: str) -> Case:
     env = (('GE_STAGE', 'dam'),) + SOLO_CHEATS + PLAY_ENV + (('GE_PAUSEDBG', '1'), ('GE_WATCHPAGE', str(number)))
+    page = (f'ge: play: watch-page {number} (the {tab} tab drawn, the watch open)', play_line('watch-page', number))
     return Case(f'watch-{tab}', 'input', env, WATCH_FRAMES,
-                LAUNCHED_STAGE + (Ordered((PAUSE_ON_STEP,)), frame_limit(WATCH_FRAMES)),
+                LAUNCHED_STAGE + (Ordered((PAUSE_ON_STEP, page)), frame_limit(WATCH_FRAMES)),
                 route=press_at(PAUSE_TICK))
 
 
 def walk_fire_case(mission: str) -> Case:
     env = (('GE_STAGE', mission),) + SOLO_CHEATS + PLAY_ENV
-    return Case(f'walk-fire-{mission}', 'input', env, WALK_FRAMES, LAUNCHED_STAGE + (frame_limit(WALK_FRAMES),),
-                route=walk_fire_route(WALK_FRAMES))
+    required = LAUNCHED_STAGE + (Required('ge: play: moved N (Bond walked)', MOVED),
+                                 Required('ge: play: shots 1 (Bond fired)', FIRST_SHOT),
+                                 frame_limit(WALK_FRAMES))
+    return Case(f'walk-fire-{mission}', 'input', env, WALK_FRAMES, required, route=walk_fire_route(WALK_FRAMES))
 
 
 def front_end_case() -> Case:

@@ -27,6 +27,7 @@
 #ifndef TARGET_N64
 #include "port_watchpages.h" /* the port watch pages */
 #include "port_crosshair.h"
+#include "port_playlog.h"   /* LP64-005 Task 8 */
 /* Defined further down, next to the vanilla page drawer they replace; the
  * watch MOUSE layer needs them a few thousand lines earlier. */
 extern s32 g_portWatchPage;
@@ -8424,6 +8425,9 @@ Gfx *draw_watch_current_page(Gfx *gdl, Mtx *arg1, s32 watch_transitioning)
             watch_play_beep_sound();
         }
 
+#ifndef TARGET_N64
+        portPlayWatchPage((s32) watch_screen_index); /* GE_PLAYLOG: the tab drawn (port_playlog.h) */
+#endif
         switch (watch_screen_index)
         {
             case WATCH_INDEX_MISSION_STATUS:

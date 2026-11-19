@@ -15,6 +15,7 @@
 #include "port_headshots_menu.h"        /* FORK-083 */
 #include "port_options.h"
 #include "port_playlog.h"               /* LP64-005 Task 8 */
+#include "port_briefing_span.h"         /* LP64-005 Task 8 */
 #endif
 #include <assets/oddtextures.h>
 #include "assets/image_externs.h"
@@ -17313,11 +17314,9 @@ void load_briefing_text_for_stage(void)
     ptrbriefingdata = _fileNameLoadToAddr(mission_folder_setup_entries[briefingpage].briefing_name_ptr, FILELOADMETHOD_DEFAULT, (u8 *) temp_s0, argg);
 
     // what is this
-#if IS_64_BIT
-    /* argg is the briefing's 0x200 bytes; stepping a Gfx * by argg / 8 would
-     * skip 0x400 with 16-byte commands and end the bank's span 0x200 bytes
-     * past the menu buffer. */
-    temp_s0 = (Gfx *) ((u8 *) temp_s0 + argg);
+#ifndef TARGET_N64
+    /* the step per width, which the layout probe checks (port_briefing_span.h) */
+    temp_s0 = (Gfx *) ((u8 *) temp_s0 + PORT_BRIEFING_FILE_STEP(argg));
 #else
     temp_s0 += argg / 8;
 #endif

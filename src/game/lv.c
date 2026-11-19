@@ -1217,7 +1217,7 @@ Gfx* lvlRender(Gfx* DL)
             chrpropUpdateAutoaimTarget();
             chraiCheckUseHeldItems();
 #ifndef TARGET_N64
-            portPlayKillTick(); /* GE_PLAYKILL (port_playlog.h) */
+            portPlayPlayerTick(); /* GE_PLAYKILL, shots, moved (port_playlog.h) */
             { extern void portHitMapProbeTick(void); portHitMapProbeTick(); } /* GE_HITMAP_PROBE: fires as Bond does */
             { extern void portProjectileArcTick(void); portProjectileArcTick(); } /* FORK-069: after the props tick, as a real round */
             { extern void portReinforcementsDirectorTick(void); portReinforcementsDirectorTick(); } /* FORK-081: rooms drawn this frame are fresh here */
