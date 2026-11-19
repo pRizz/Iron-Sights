@@ -14875,7 +14875,7 @@ lean_return_to_centre:
 join_768:
         if ((firingtable != NULL) && (anim == 0))
         {
-            anim = *((s32 *) firingtable);
+            anim = (intptr_t) firingtable->anim.anim;
         }
  
         if (anim != cur)
