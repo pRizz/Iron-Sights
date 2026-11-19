@@ -12584,9 +12584,24 @@ void mp_respawn_handler(void)
                 case 6: // INTROTYPE_CAMERA
                     intro_record = (struct SetupIntroEmpty*)((intptr_t)intro_record + sizeof(struct SetupIntroCamera));
                     break;
+#if IS_64_BIT
+                /* LP64-005: each record stepped by its own size, as
+                 * bondviewLoadSetupIntroSection does; the 32-bit walk keeps
+                 * the N64's 4-byte step (FORK-089, entry 16). */
+                case 7: // INTROTYPE_WATCH
+                    intro_record = (struct SetupIntroEmpty*)((intptr_t)intro_record + sizeof(struct SetupIntroWatch));
+                    break;
+                case 8: // INTROTYPE_CREDITS
+                    intro_record = (struct SetupIntroEmpty*)((intptr_t)intro_record + sizeof(struct SetupIntroCredits));
+                    break;
+                default: // the setup converter's 4-byte pad words
+                    intro_record = (struct SetupIntroEmpty*)((intptr_t)intro_record + sizeof(struct SetupIntroEmpty));
+                    break;
+#else
                 default: // INTROTYPE_WATCH, INTROTYPE_CREDITS
                     intro_record = (struct SetupIntroEmpty*)((intptr_t)intro_record + sizeof(struct SetupIntroEmpty));
                     break;
+#endif
             }
     #ifdef DEBUG
             ossyncprintf("unknown bondstart type %d!\n", var_v0_2);
