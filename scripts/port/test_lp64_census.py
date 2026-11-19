@@ -2,6 +2,7 @@
 import contextlib
 import importlib.util
 import io
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -135,6 +136,36 @@ class Types(unittest.TestCase):
 
         # Assert
         self.assertEqual((status, '31 unknown: 2 in 1 load' in out), (0, True), out)
+
+    def test_reads_the_case_logs_of_a_play_folder(self):
+        # Arrange: lp64_play.py's folder, one CASE.log a case named in its play.json
+        cases = {'stage-dam': 'ge: census: model CheadmarkZ opcodes 1=1 4=3\n',
+                 'mp-temple-2p': 'ge: census: model CheadmarkZ opcodes 4=2\n'
+                                 'ge: census: setup UsetupdishZ props 3=7\n',
+                 'menu-files': ''}
+        for name, text in cases.items():
+            (self.root / f'{name}.log').write_text(text, encoding='utf-8')
+        (self.root / 'play.json').write_text(json.dumps(
+            {'cases': [{'name': name, 'log': f'{name}.log'} for name in cases]}), encoding='utf-8')
+
+        # Act
+        status, out = run('types', str(self.root))
+
+        # Assert
+        self.assertEqual((status, '4 DL: 5 in 2 loads' in out, '3 PROP: 7 in 1 load' in out), (0, True, True), out)
+
+    def test_a_play_folder_counts_only_the_logs_its_play_json_names(self):
+        # Arrange: a log left from another run is not one of this run's cases
+        (self.root / 'stage-dam.log').write_text('ge: census: model CheadmarkZ opcodes 4=3\n', encoding='utf-8')
+        (self.root / 'stage-old.log').write_text('ge: census: model CheadmarkZ opcodes 4=9\n', encoding='utf-8')
+        (self.root / 'play.json').write_text(json.dumps(
+            {'cases': [{'name': 'stage-dam', 'log': 'stage-dam.log'}]}), encoding='utf-8')
+
+        # Act
+        status, out = run('types', str(self.root))
+
+        # Assert
+        self.assertEqual((status, '4 DL: 3 in 1 load' in out), (0, True), out)
 
     def test_no_census_lines_fails(self):
         # Arrange

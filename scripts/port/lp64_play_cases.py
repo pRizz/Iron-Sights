@@ -204,11 +204,13 @@ def menu_case(menu: str) -> Case:
 # facility 65, runway 11, surface 35, bunker1 24, silo 65, frigate 42, surface2 37, bunker2 46,
 # statue 25, archives 59, streets 54, depot 36, train 50, jungle 44, control 66, caverns 46,
 # cradle 29, aztec 55, egypt 26; the arenas, two players, visit all of theirs). Fifteen missions
-# end early "(the mission ended there)"; Task 7 finds out why before these become the floor.
+# end early "(the mission ended there)": the mission ends when Bond is put in that room. LP64-005
+# Task 7 measured the i686 build ending each of them at the same room, pad and objective state
+# (surface2 at its first room, 36), so these counts are the tool's floor for each stage.
 TOUR_ROOMS = {
     'dam': 54, 'facility': 50, 'runway': 11, 'surface': 11, 'bunker1': 21, 'silo': 64,
-    # surface2's floor of 0: that tour ends at once, so the case proves only the launch, the
-    # background and the done line, until a later task (Task 7) finds why.
+    # surface2's floor of 0: its first room ends the mission at both widths, so the case proves
+    # only the launch, the background and the done line.
     'frigate': 35, 'surface2': 0, 'bunker2': 24, 'statue': 6, 'archives': 55, 'streets': 54,
     'depot': 33, 'train': 50, 'jungle': 43, 'control': 57, 'caverns': 45, 'cradle': 28,
     'aztec': 55, 'egypt': 26,

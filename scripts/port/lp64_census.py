@@ -29,11 +29,14 @@ types: the model node opcodes and the setup prop record types the missions loade
 it with --fixed-tick): `ge: census: model NAME opcodes OP=N ...` for each model converted,
 `ge: census: setup NAME props TYPE=N ...` for each setup. It prints, for each opcode and type, the
 records loaded and the file loads that held them (a model loaded twice counts twice), then the ones no
-mission loaded. Exit 1 if the logs hold no census line.
+mission loaded. Exit 1 if the logs hold no census line. DIR may also be an lp64_play.py output folder:
+then the logs read are the CASE.log files its play.json names (the `stages` set's solo cases set
+GE_LP64_CENSUS=1), and other files in the folder are left out.
 """
 import argparse
 from collections import Counter
 import importlib.util
+import json
 from pathlib import Path
 import re
 import sys
@@ -101,11 +104,19 @@ def compare(dir32: Path, dir64: Path) -> int:
     return 0 if passed == len(MISSIONS) else 1
 
 
+def run_logs(folder: Path) -> list[Path]:
+    """The logs of FOLDER's runs: the case logs its play.json names, or else one a smoke mission."""
+    summary = folder / 'play.json'
+    if summary.is_file():
+        cases = json.loads(summary.read_text(encoding='utf-8'))['cases']
+        return [folder / case['log'] for case in cases]
+    return [folder / f'{mission}.log' for mission in MISSIONS]
+
+
 def tally(folder: Path) -> dict[str, tuple[Counter, Counter]]:
-    """{'model'/'setup': (records by number, file loads by number)} over every mission log in FOLDER."""
+    """{'model'/'setup': (records by number, file loads by number)} over every run log in FOLDER."""
     found = {'model': (Counter(), Counter()), 'setup': (Counter(), Counter())}
-    for mission in MISSIONS:
-        path = folder / f'{mission}.log'
+    for path in run_logs(folder):
         if not path.is_file():
             continue
         for match in CENSUS_LINE.finditer(path.read_text(encoding='utf-8', errors='replace')):
@@ -129,7 +140,7 @@ def report_kind(title: str, names: tuple[str, ...], records: Counter, files: Cou
 def types(folder: Path) -> int:
     found = tally(folder)
     if not any(found[kind][0] for kind in found):
-        print(f'no census line in the mission logs of {folder} (was the 64-bit smoke run with --fixed-tick?)')
+        print(f'no census line in the run logs of {folder} (was the 64-bit smoke run with --fixed-tick?)')
         return 1
     report_kind('model node opcodes', OPCODES, *found['model'])
     report_kind('setup prop record types', PROP_TYPES, *found['setup'])
@@ -142,7 +153,7 @@ def main(argv: list[str]) -> int:
     both = commands.add_parser('compare', help='compare a 32-bit and a 64-bit smoke folder')
     both.add_argument('dir32', type=Path)
     both.add_argument('dir64', type=Path)
-    one = commands.add_parser('types', help='list the opcodes and prop types a 64-bit smoke loaded')
+    one = commands.add_parser('types', help='list the opcodes and prop types a 64-bit smoke or play run loaded')
     one.add_argument('dir', type=Path)
     options = parser.parse_args(argv)
     if options.command == 'compare':
