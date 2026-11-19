@@ -25,7 +25,11 @@ class SharedExecutable:
         self.executable = executable
         self._folder = tempfile.TemporaryDirectory(prefix='midas-run-copy-')
         self.copy = Path(self._folder.name)/executable.name
-        shutil.copy2(executable, self.copy)
+        try:
+            shutil.copy2(executable, self.copy)
+        except BaseException:
+            self._folder.cleanup()
+            raise
 
     def place(self, folder: Path) -> Path:
         """Links the copy into FOLDER and gives the link's path. Raises OSError naming both paths

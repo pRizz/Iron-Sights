@@ -91,9 +91,9 @@ class Case:
     forbidden: tuple[re.Pattern, ...] = ()
     # The pad 0 an `input` case replays (lp64_play_route.py), written to DIR/CASE.route.
     route: Route | None = None
-    # With --video, the pictures the run must draw at least (`gfxtasks=` of its frame-limit line):
-    # 30 by the owner's decision 8 of the LP64-005 plan. 0 for a case that ends before its frame
-    # limit (a stop, at its FATAL line), whose log has no frame-limit line to count them in.
+    # With --video, the pictures the run must draw at least (the last `gfxtasks=` count of its
+    # frame-limit line or once-a-second heartbeat, lp64_play_judge.py): 30 by the owner's decision 8
+    # of the LP64-005 plan. 0 for a stop, which ends at its FATAL line and needs only the GL line.
     pictures: int = 30
     # The run records its mixed sound to DIR/CASE.wav (GE_AUDIO_CAPTURE), which must show sound
     # running (lp64_play_sound.py; the `sound` set).

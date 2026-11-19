@@ -45,6 +45,10 @@ from run_copies import SharedExecutable
 # GE_NOSLEEP=1 lets the frame limit, which counts retraces, pass before the game has done
 # anything (plan "What was measured"); the tool never sets either and refuses them from --env.
 FORBIDDEN_VARIABLES = ('GE_FIXEDTICK', 'GE_NOSLEEP')
+# What the tool sets for every case (case_environment; GE_INPUTPLAY for a case with a route, its own
+# route file): --env refuses them, since a value of the caller's would contradict the case's frame
+# limit, wall-clock limit, ROM, seed or route.
+TOOL_VARIABLES = ('GE_ROM', 'GE_FRAMES', 'GE_SEED', 'GE_NOINISAVE', 'GE_INPUTPLAY')
 RETRACES_PER_SECOND = 60
 # A case may take this many times its paced length, plus the boot, before it is a timeout: the
 # sanitizers and emulation run the game slower than real time (17 to 35 frames a second measured
@@ -98,7 +102,8 @@ class Outcome:
     problems: list[str]
     # The ticks of the route's presses, for a case with a route.
     route_ticks: list[int] | None = None
-    # With video, the pictures the case drew (`gfxtasks=` of its frame-limit line), when it says.
+    # With video, the pictures the case drew (the last `gfxtasks=` count of its frame-limit line or
+    # once-a-second heartbeat, lp64_play_judge.py), when it says.
     pictures: int | None = None
 
     @property

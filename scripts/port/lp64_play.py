@@ -19,14 +19,17 @@ failing or missing line)` as each ends, then `OK: N of N cases` (exit 0) or `FAI
 outcomes to DIR/play.json. A case fails on a status other than its own (0, or 1 for a stop), a
 timeout, a sanitizer marker, `ge: fatal signal`, `ASSERTION FAULT`, a failing `ge: lp64:` line
 or a missing required line (lp64_play_judge.py). Runs are paced in real time: never set
-GE_FIXEDTICK or GE_NOSLEEP, which --env refuses.
+GE_FIXEDTICK or GE_NOSLEEP, which --env refuses, as it refuses what the tool sets for every case
+(GE_ROM, GE_FRAMES, GE_SEED, GE_NOINISAVE, GE_INPUTPLAY).
 --video runs a GE_VIDEO executable offscreen (SDL_VIDEODRIVER=offscreen, SDL_AUDIODRIVER=dummy,
 GE_WINDOW=640x480 windowed through a midas.ini in the case's folder, GE_NOINPUT=1, HOME and
 GE_ICON_CACHE_DIR in the case's folder, and GE_TICKHZ=60, so video runs count retraces at 60 a
 second as headless ones do, not at the shipped default of 120 (at 60 the pump waits for each
 picture, so a renderer slower than 60 a second stretches a case's wall time); --env refuses these
-names with --video, and GE_SHOT with --shots); every case must then log `ge: video: window + GL context up` and a frame-limit line with `gfxtasks=` at
-least its `pictures` (30). --shots N adds GE_SHOT=N and keeps each case's last screenshot as
+names with --video, and GE_SHOT with --shots); every case must then log `ge: video: window + GL context up` and draw at least its
+`pictures` (30), read from the last `gfxtasks=` count of its frame-limit line or of the once-a-second
+heartbeat (`ge: frame N | gfx tasks submitted M`) for a case that ends itself; a stop needs only the
+GL line. --shots N adds GE_SHOT=N and keeps each case's last screenshot as
 DIR/CASE.bmp (ROM-derived: never commit it). --timeout-scale F multiplies every case's wall-clock
 limit (and its route's recording runs') by F >= 1; use it on a slow host, such as the emulated
 i686 container running the 32-bit video reference, where a case needs many times its frames' time.
@@ -55,7 +58,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lp64_play_callers import callers  # noqa: E402
 from lp64_play_cases import VIDEO_SETS, cases_of, scale_frames, select_cases  # noqa: E402
-from lp64_play_run import (CAPTURE_VARIABLE, FOLDER_VARIABLES, FORBIDDEN_VARIABLES, VIDEO_VARIABLES,  # noqa: E402
+from lp64_play_run import (CAPTURE_VARIABLE, FOLDER_VARIABLES, FORBIDDEN_VARIABLES, TOOL_VARIABLES, VIDEO_VARIABLES,  # noqa: E402
                            Display, run_cases)
 from lp64_play_sound import sound_report  # noqa: E402
 from lp64_play_traces import compare_with_expectations, reference_check  # noqa: E402
@@ -72,6 +75,8 @@ def parse_env(parser: argparse.ArgumentParser, pairs: list[str]) -> dict[str, st
         if name in FORBIDDEN_VARIABLES:
             parser.error(f'--env {name} is refused: play runs are paced in real time '
                          '(GE_FIXEDTICK changes a demo\'s pace, GE_NOSLEEP passes the frame limit at once)')
+        if name in TOOL_VARIABLES:
+            parser.error(f'--env {name} is refused: the tool sets it for every case')
         extra[name] = value
     return extra
 

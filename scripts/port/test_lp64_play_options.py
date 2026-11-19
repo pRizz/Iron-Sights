@@ -69,6 +69,19 @@ class Environment(StandIns):
                          [('dam1', False, 0, 'missing line: ge: demo start:'),
                           ('dam2', False, 0, 'missing line: ge: demo start:')])
 
+    def test_env_variables_the_tool_sets_are_refused(self):
+        for name in ('GE_FRAMES', 'GE_ROM', 'GE_SEED', 'GE_NOINISAVE', 'GE_INPUTPLAY'):
+            with self.subTest(name=name):
+                # Arrange
+                exe = self.fake(DAM1_GOOD)
+
+                # Act
+                status, out = self.play(exe, 'demos', 'dam1', '--env', f'{name}=1')
+
+                # Assert
+                self.assertEqual(status, 2, out)
+                self.assertIn(f'--env {name} is refused: the tool sets it for every case', out)
+
     def test_unknown_case_is_refused(self):
         # Arrange
         exe = self.fake(DAM1_GOOD)
