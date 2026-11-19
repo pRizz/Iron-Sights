@@ -101,20 +101,20 @@ WEAPONS_FRAMES = PAUSE_TICK + WEAPON_CHANGES * WEAPON_TICKS + 300
 # change passes through 19 alone for 3 ticks, so the judge matches each press's state in order
 # rather than counting lines.
 WEAPON_STATES = tuple(state for gun in range(5, 20) for state in (gun | gun << 8, gun + 1))
-# Player 0's total shot count at the end of the run, measured on 2026-11-19 in the headless,
-# video and sanitizer video builds (FORK-089).
-WEAPON_SHOTS = 122
-SHOTS = re.compile(r'ge: play: shots (\d+)$')
+SHOTS = play_line('shots')
 
 
-def weapons_required() -> tuple[Required | Ordered, ...]:
-    """Each press's weapons in order, a shot after the last, and the measured shot count."""
-    changes = tuple((f'ge: play: weapon {state} (change {index} of {WEAPON_CHANGES}: right {state & 0xff}, '
-                     f'left {state >> 8})', play_line('weapon', state))
-                    for index, state in enumerate(WEAPON_STATES, start=1))
-    after = ('ge: play: shots N (a shot after the last change)', SHOTS)
-    return (Ordered(changes + (after,)),
-            Required(f'ge: play: shots N, N at least {WEAPON_SHOTS}', SHOTS, at_least=WEAPON_SHOTS))
+def weapons_required() -> tuple[Ordered, ...]:
+    """Each press's weapons in order, each followed by a shot before the next change. The final
+    shot count varies from run to run (120 and 122 headless, 214 with video, 341 under the
+    sanitizers with video, measured 2026-11-19), so the case requires a shot with every weapon
+    instead of a total."""
+    steps = []
+    for index, state in enumerate(WEAPON_STATES, start=1):
+        steps.append((f'ge: play: weapon {state} (change {index} of {WEAPON_CHANGES}: right {state & 0xff}, '
+                      f'left {state >> 8})', play_line('weapon', state)))
+        steps.append((f'ge: play: shots N (a shot with change {index} of {WEAPON_CHANGES})', SHOTS))
+    return (Ordered(tuple(steps)),)
 
 
 def weapons_route() -> Route:

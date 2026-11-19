@@ -291,23 +291,27 @@ class WeaponsDam(StandIns):
                             for change, (tick, hold) in zip(changes, triggers)))
         self.assertGreater(case.frames, changes[-1] + 120)
 
-    def weapon_log(self, states, shots_at=4755, shots=122):
-        """Dam with Bond's first gun drawn, then STATES (tick, right | left << 8), his first shot and SHOTS
-        at SHOTS_AT (no shot at all when SHOTS_AT is None)."""
-        events = [(1160, 'weapon', 5)] + [(tick, 'weapon', state) for tick, state in states]
-        if shots_at is not None:
-            events += [(1260, 'shots', 1), (shots_at, 'shots', shots)]
+    def weapon_log(self, states, silent=()):
+        """Dam with Bond's first gun drawn, then STATES (tick, right | left << 8), each followed 60
+        ticks later by a shot, except the entries of STATES numbered (from 1) in SILENT."""
+        events, shots = [(1160, 'weapon', 5)], 0
+        for number, (tick, state) in enumerate(states, start=1):
+            events.append((tick, 'weapon', state))
+            if number not in silent:
+                shots += 1
+                events.append((tick + 60, 'shots', shots))
         events.sort(key=lambda event: event[0])
         return self.fake(DAM + ''.join(play(*event) for event in events) + frames(self.case().frames))
 
     def thirty_changes(self):
-        """The measured run's states: each gun's dual and then the next gun, 19 alone on the way."""
+        """The measured run's 31 lines: each gun's dual and then the next gun, the 31st (20) reached
+        through 19 alone as the 30th."""
         states = [(1218 + 120 * index, state)
                   for index, state in enumerate(gun | gun << 8 if half == 0 else gun + 1
                                                 for gun in range(5, 20) for half in (0, 1))]
         return states[:-1] + [(4725, 19), (4728, 20)]
 
-    def test_weapons_dam_with_thirty_changes_and_a_later_shot_passes(self):
+    def test_weapons_dam_with_thirty_changes_each_followed_by_a_shot_passes(self):
         # Arrange
         exe = self.weapon_log(self.thirty_changes())
 
@@ -330,14 +334,25 @@ class WeaponsDam(StandIns):
 
     def test_weapons_dam_with_no_shot_after_the_last_change_fails(self):
         # Arrange
-        exe = self.weapon_log(self.thirty_changes(), shots_at=4700)
+        exe = self.weapon_log(self.thirty_changes(), silent=(30, 31))
 
         # Act
         status, out = self.play(exe, 'input', 'weapons-dam')
 
         # Assert
         self.assertEqual(status, 1, out)
-        self.assertIn('(a shot after the last change)', out)
+        self.assertIn('(a shot with change 30 of 30)', out)
+
+    def test_weapons_dam_with_a_weapon_that_never_fired_fails(self):
+        # Arrange
+        exe = self.weapon_log(self.thirty_changes(), silent=(12,))
+
+        # Act
+        status, out = self.play(exe, 'input', 'weapons-dam')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('weapons-dam: FAIL (out of order: ge: play: weapon 2827 (change 13 of 30', out)
 
     def test_weapons_dam_with_the_same_weapon_thirty_times_fails(self):
         # Arrange
@@ -350,27 +365,16 @@ class WeaponsDam(StandIns):
         self.assertEqual(status, 1, out)
         self.assertIn('weapons-dam: FAIL (missing line: ge: play: weapon 6 (change 2 of 30', out)
 
-    def test_weapons_dam_with_fewer_shots_than_measured_fails(self):
-        # Arrange
-        exe = self.weapon_log(self.thirty_changes(), shots=121)
-
-        # Act
-        status, out = self.play(exe, 'input', 'weapons-dam')
-
-        # Assert
-        self.assertEqual(status, 1, out)
-        self.assertIn('ge: play: shots 121: expected at least 122', out)
-
     def test_weapons_dam_that_never_fired_fails(self):
         # Arrange
-        exe = self.weapon_log(self.thirty_changes(), shots_at=None)
+        exe = self.weapon_log(self.thirty_changes(), silent=tuple(range(1, 32)))
 
         # Act
         status, out = self.play(exe, 'input', 'weapons-dam')
 
         # Assert
         self.assertEqual(status, 1, out)
-        self.assertIn('(a shot after the last change)', out)
+        self.assertIn('(a shot with change 1 of 30)', out)
 
 if __name__ == '__main__':
     unittest.main()
