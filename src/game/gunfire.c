@@ -7562,7 +7562,7 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
                             (viGetViewTop() + viGetViewHeight()) - 20, 0,
 #endif
                             ammo_related[ammotype].IconYOffset, 1);
-                        textwidth_r = ((u8 *)imageoffset_r)[4];
+                        textwidth_r = ((struct sImageTableEntry *)imageoffset_r)->width;
                     }
 
                     gdl = microcode_constructor(gdl);
@@ -7652,7 +7652,7 @@ Gfx *generate_ammo_total_microcode(Gfx *gdl)
                             (viGetViewTop() + viGetViewHeight()) - 20, 1,
 #endif
                             ammo_related[ammotype].IconYOffset, 1);
-                        textwidth_l = ((u8 *)imageoffset_l)[4];
+                        textwidth_l = ((struct sImageTableEntry *)imageoffset_l)->width;
                     }
 
                     gdl = microcode_constructor(gdl);
@@ -7821,7 +7821,7 @@ Gfx *gunDrawWatchAmmoDisplay(Gfx *gdl)
                 gdl = set_rgba_redirect_generate_microcode(gdl, (u8 *)imageoffset, 200.0f, 180.0f, (viGetViewTop() + viGetViewHeight()) - 20, 0, ammo_related[ammotype].IconYOffset, 1);
 #endif
 
-                textwidth = ((u8 *)imageoffset)[4];
+                textwidth = ((struct sImageTableEntry *)imageoffset)->width;
             }
 
             gdl = microcode_constructor(gdl);

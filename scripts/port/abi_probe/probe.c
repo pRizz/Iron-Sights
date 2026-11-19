@@ -422,6 +422,9 @@ _Static_assert(offsetof(struct weapon_firing_animation_table, angle_offset) == 3
 _Static_assert(91 * sizeof(struct fontchar) + offsetof(struct fontchar, height) == 0x224 * sizeof(s32)
                    && IS_TYPE(((struct fontchar *) 0)->height, s32),
                "a font's chars[91].height is its s32 word 0x224 at 32 bits");
+/* The same, for the strict batch on lp64/play-strict (gunfire.c). */
+_Static_assert(offsetof(struct sImageTableEntry, width) == 4 && IS_TYPE(((struct sImageTableEntry *) 0)->width, u8),
+               "an ammo icon's width is its byte 4 at 32 bits");
 #endif
 
 /* objecthandler.c sizes its ModelHitEntry pool (600 records, threaded by
