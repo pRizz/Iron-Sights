@@ -36,7 +36,7 @@ import threading
 import time
 
 from lp64_play_cases import Case
-from lp64_play_judge import problems
+from lp64_play_judge import pictures_drawn, problems
 from lp64_play_route import RouteError, Step, build_presses, event_tick, route_text
 from lp64_play_sound import capture_path, capture_problems
 from run_copies import SharedExecutable
@@ -76,6 +76,8 @@ class Display:
     video: bool = False
     shots: int | None = None
     timeout_scale: float = 1.0
+    # Every screenshot of a case copied to DIR/CASE.shots/ (`--keep-shots`), not only its last.
+    keep_shots: bool = False
 
 
 HEADLESS = Display()
@@ -96,13 +98,16 @@ class Outcome:
     problems: list[str]
     # The ticks of the route's presses, for a case with a route.
     route_ticks: list[int] | None = None
+    # With video, the pictures the case drew (`gfxtasks=` of its frame-limit line), when it says.
+    pictures: int | None = None
 
     @property
     def passed(self) -> bool:
         return not self.problems
 
     def verdict(self) -> str:
-        return f'{self.case.name}: PASS' if self.passed else f'{self.case.name}: FAIL ({self.problems[0]})'
+        drawn = '' if self.pictures is None else f' ({self.pictures} pictures)'
+        return f'{self.case.name}: PASS{drawn}' if self.passed else f'{self.case.name}: FAIL ({self.problems[0]})'
 
 
 def case_environment(case: Case, rom: Path, extra: dict[str, str],
@@ -144,6 +149,13 @@ def keep_last_shot(folder: Path, target: Path) -> None:
     shots = sorted(folder.glob('shot_*.bmp'))
     if shots:
         shutil.copy2(shots[-1], target)
+
+
+def keep_every_shot(folder: Path, target: Path) -> None:
+    """Copies every shot_*.bmp in FOLDER into the folder TARGET."""
+    target.mkdir(parents=True, exist_ok=True)
+    for shot in sorted(folder.glob('shot_*.bmp')):
+        shutil.copy2(shot, target/shot.name)
 
 
 def recording_tick(case: Case, executable: SharedExecutable, env: dict[str, str], output: Path, route: str, step: Step,
@@ -218,23 +230,27 @@ def run_case(case: Case, executable: SharedExecutable, rom: Path, extra: dict[st
                 status = None
         if display.shots is not None:
             keep_last_shot(folder, output/f'{case.name}.bmp')
+        if display.keep_shots:
+            keep_every_shot(folder, output/f'{case.name}.shots')
     seconds = time.monotonic() - started
     text = log_path.read_text(errors='replace')
     found = problems(case, status, text, timeout, display.video)
     if case.capture:
         found += capture_problems(capture_path(output, case))
-    return Outcome(case, status, seconds, found, route_ticks)
+    return Outcome(case, status, seconds, found, route_ticks, pictures_drawn(text) if display.video else None)
 
 
 def record(outcomes: list[Outcome], executable: Path, extra: dict[str, str], path: Path,
-           display: Display = HEADLESS) -> None:
-    """Writes play.json: the run's executable, extra variables and display, and each case's outcome."""
+           display: Display = HEADLESS, frames_scale: int = 1) -> None:
+    """Writes play.json: the run's executable, extra variables, display and frames scale, and each
+    case's outcome."""
     data = {
         'executable': str(executable),
         'extra_env': extra,
         'video': display.video,
         'shots': display.shots,
         'timeout_scale': display.timeout_scale,
+        'frames_scale': frames_scale,
         'cases': [{
             'name': outcome.case.name, 'set': outcome.case.set_name, 'env': dict(outcome.case.env),
             'frames': outcome.case.frames, 'expected_status': outcome.case.status,
@@ -242,15 +258,16 @@ def record(outcomes: list[Outcome], executable: Path, extra: dict[str, str], pat
             'passed': outcome.passed, 'problems': outcome.problems, 'log': f'{outcome.case.name}.log',
             **({} if outcome.route_ticks is None else {'route_ticks': outcome.route_ticks}),
             **({'recording': f'{outcome.case.name}.wav'} if outcome.case.capture else {}),
+            **({} if outcome.pictures is None else {'pictures': outcome.pictures}),
         } for outcome in outcomes],
     }
     path.write_text(json.dumps(data, indent=2) + '\n')
 
 
 def run_cases(cases: list[Case], executable: Path, rom: Path, extra: dict[str, str], output: Path,
-              jobs: int, display: Display = HEADLESS) -> list[Outcome]:
-    """Runs CASES, JOBS at a time, printing each verdict as it comes; returns the outcomes in the
-    cases' order after writing OUTPUT/play.json."""
+              jobs: int, display: Display = HEADLESS, frames_scale: int = 1) -> list[Outcome]:
+    """Runs CASES (already scaled by FRAMES_SCALE, which play.json records), JOBS at a time, printing
+    each verdict as it comes; returns the outcomes in the cases' order after writing OUTPUT/play.json."""
     for case in cases:
         case_environment(case, rom, extra, display=display)  # refuse a forbidden variable before any run starts
     output.mkdir(parents=True, exist_ok=True)
@@ -264,5 +281,5 @@ def run_cases(cases: list[Case], executable: Path, rom: Path, extra: dict[str, s
             by_name[outcome.case.name] = outcome
             print(outcome.verdict(), flush=True)
     outcomes = [by_name[case.name] for case in cases]
-    record(outcomes, executable, extra, output/'play.json', display)
+    record(outcomes, executable, extra, output/'play.json', display, frames_scale)
     return outcomes

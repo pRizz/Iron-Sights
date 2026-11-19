@@ -85,6 +85,31 @@ RESPAWN_PRESSES = tuple(range(900, 1501, 60))
 PLAYKILL = 600
 
 
+# The hands (LP64-005 Task 11 Step 4): Dam with every gun (GE_CHEATS=guns), from after its opening
+# swirl (PAUSE_TICK) the next weapon (A) every WEAPON_TICKS ticks WEAPON_CHANGES times, and the
+# trigger (Z) held WEAPON_FIRE_TICKS ticks, WEAPON_FIRE_DELAY ticks after each change, once the new
+# weapon is up. The first run of port_arm_mesh.c's alias cases at 64 bits.
+WEAPON_CHANGES = 30
+WEAPON_TICKS = 120
+WEAPON_FIRE_DELAY = 60
+WEAPON_FIRE_TICKS = 30
+WEAPONS_FRAMES = PAUSE_TICK + WEAPON_CHANGES * WEAPON_TICKS + 300
+
+
+def weapons_route() -> Route:
+    presses = []
+    for change in range(PAUSE_TICK, PAUSE_TICK + WEAPON_CHANGES * WEAPON_TICKS, WEAPON_TICKS):
+        presses.append((change, Press(A_BUTTON)))
+        presses.append((change + WEAPON_FIRE_DELAY, Press(Z_TRIG, hold=WEAPON_FIRE_TICKS)))
+    return Route(presses=tuple(presses))
+
+
+def weapons_case() -> Case:
+    env = (('GE_STAGE', 'dam'), ('GE_STAGE_AFTER', '1'), ('GE_CHEATS', 'guns')) + PLAY_ENV
+    required = LAUNCHED_STAGE + (Required('ge: play: shots 1 (Bond fired)', FIRST_SHOT), frame_limit(WEAPONS_FRAMES))
+    return Case('weapons-dam', 'input', env, WEAPONS_FRAMES, required, route=weapons_route())
+
+
 def press_at(*ticks: int, press: Press = Press(START_BUTTON)) -> Route:
     return Route(presses=tuple((tick, press) for tick in ticks))
 
@@ -162,4 +187,5 @@ def input_cases() -> list[Case]:
     cases += [walk_fire_case(mission) for mission in WALK_MISSIONS]
     cases += [front_end_case(), abort_case(), briefing_case()]
     cases += [respawn_case(arena) for arena in ARENAS]
+    cases.append(weapons_case())
     return cases

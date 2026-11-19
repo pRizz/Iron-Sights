@@ -461,6 +461,28 @@ class Video(StandIns):
         self.assertEqual(status, 1, out)
         self.assertIn('missing line: ge: frame limit reached: ... gfxtasks=N', problems)
 
+    def test_video_stop_with_the_gl_line_and_its_fatal_line_passes_without_a_frame_limit(self):
+        # Arrange: a stop ends at its FATAL line, before any frame-limit line could name its pictures
+        exe = self.fake(BOOT + VIDEO_UP + STOP_CITADEL, status=1)
+
+        # Act
+        status, out = self.play(exe, 'stops', 'citadel', '--video')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('stop-citadel: PASS', out)
+
+    def test_video_stop_without_the_gl_line_fails(self):
+        # Arrange
+        exe = self.fake(BOOT + STOP_CITADEL, status=1)
+
+        # Act
+        status, out = self.play(exe, 'stops', 'citadel', '--video')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('stop-citadel: FAIL (missing line: ge: video: window + GL context up)', out)
+
     def test_headless_case_needs_neither_video_line(self):
         # Arrange
         exe = self.fake(BOOT + DAM1_START + demo_exit(438) + 'ge: frame limit reached: frames=3000 gfxtasks=3\n')

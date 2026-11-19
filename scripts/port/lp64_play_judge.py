@@ -19,10 +19,20 @@ VIDEO_UP = re.compile(r'ge: video: window \+ GL context up')
 GFXTASKS = re.compile(r'ge: frame limit reached: frames=\d+ gfxtasks=(\d+)')
 
 
+def pictures_drawn(text: str) -> int | None:
+    """The pictures a run with video drew, from the last frame-limit line of its log TEXT; None
+    when the log has no such line."""
+    counts = GFXTASKS.findall(text)
+    return int(counts[-1]) if counts else None
+
+
 def video_required(case: Case) -> tuple[Required, ...]:
-    """What a run with video must log besides the case's own lines."""
-    return (Required('ge: video: window + GL context up', VIDEO_UP),
-            Required('ge: frame limit reached: ... gfxtasks=N', GFXTASKS, at_least=case.pictures))
+    """What a run with video must log besides the case's own lines: the GL line, and the pictures
+    drawn unless the case asks for none (a stop ends before any frame-limit line)."""
+    up = Required('ge: video: window + GL context up', VIDEO_UP)
+    if case.pictures == 0:
+        return (up,)
+    return (up, Required('ge: frame limit reached: ... gfxtasks=N', GFXTASKS, at_least=case.pictures))
 
 
 # include/assert.h and the game's own asserts: "\n--- ASSERTION FAULT - %s - %s, line %d\n\n".

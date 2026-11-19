@@ -8,7 +8,7 @@ The measured figures below (each demo's end tick, each tour's rooms) are constan
 and commit of their measurement; a run that gives another figure fails, and the figure is changed
 only deliberately, with the new measurement recorded in FORK_CHANGES.md (FORK-089).
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import re
 
 from lp64_play_route import Route
@@ -92,7 +92,8 @@ class Case:
     # The pad 0 an `input` case replays (lp64_play_route.py), written to DIR/CASE.route.
     route: Route | None = None
     # With --video, the pictures the run must draw at least (`gfxtasks=` of its frame-limit line):
-    # 30 by the owner's decision 8 of the LP64-005 plan.
+    # 30 by the owner's decision 8 of the LP64-005 plan. 0 for a case that ends before its frame
+    # limit (a stop, at its FATAL line), whose log has no frame-limit line to count them in.
     pictures: int = 30
     # The run records its mixed sound to DIR/CASE.wav (GE_AUDIO_CAPTURE), which must show sound
     # running (lp64_play_sound.py; the `sound` set).
@@ -101,6 +102,17 @@ class Case:
 
 def frame_limit(frames: int) -> Required:
     return Required(f'ge: frame limit reached: frames={frames}', FRAME_LIMIT, equals=frames)
+
+
+def scale_frames(case: Case, factor: int) -> Case:
+    """CASE run for FACTOR times its frames (`run --frames-scale`): GE_FRAMES and the frame-limit line
+    it requires change; ticks, routes and every other required line stay as they are."""
+    if factor == 1:
+        return case
+    frames = case.frames * factor
+    required = tuple(frame_limit(frames) if isinstance(item, Required) and item.pattern is FRAME_LIMIT
+                     and item.equals == case.frames else item for item in case.required)
+    return replace(case, frames=frames, required=required)
 
 
 LAUNCHED_STAGE = (Required('ge: GE_STAGE direct launch:', STAGE_LAUNCH),
@@ -203,7 +215,7 @@ STOP_STATUS = 1
 def stop_case(stage: str, message: str) -> Case:
     line = 'ge: FATAL: ' + message
     return Case(f'stop-{stage}', 'stops', (('GE_STAGE', stage), ('GE_STAGE_AFTER', '1')), STAGE_FRAMES,
-                (Required(line, re.compile(re.escape(line)), near=FATAL),), status=STOP_STATUS)
+                (Required(line, re.compile(re.escape(line)), near=FATAL),), status=STOP_STATUS, pictures=0)
 
 
 # ---- menus ------------------------------------------------------------------------------------

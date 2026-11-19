@@ -281,6 +281,114 @@ class TimeoutScale(StandIns):
             self.assertIn('--timeout-scale takes a number of at least 1', out)
             self.assertFalse(self.output.exists())
 
+
+class FramesScale(StandIns):
+    """`--frames-scale K` runs each case for K times its frames and requires the frame-limit line at
+    that count (Task 11: the sanitizer video runs, each case's frames tripled)."""
+
+    def test_frames_tripled_set_ge_frames_and_require_the_tripled_limit(self):
+        # Arrange
+        exe = self.fake(BOOT + 'ge: GE_STAGE direct launch: levelid=33 diff=0\n'
+                        'ge: load_bg_file levelid=33 stan=Tbg_dam_all_p_stanZ file=0x1 record=0x2 first=0x3\n'
+                        + frames(5400), script='echo "GE_FRAMES=$GE_FRAMES" >&2')
+
+        # Act
+        status, out = self.play(exe, 'stages', 'dam', '--frames-scale', '3')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('GE_FRAMES=5400', (self.output/'stage-dam.log').read_text())
+        self.assertEqual(json.loads((self.output/'play.json').read_text())['cases'][0]['frames'], 5400)
+
+    def test_frames_tripled_fail_a_run_that_stopped_at_the_unscaled_limit(self):
+        # Arrange
+        exe = self.fake(STAGE_GOOD)
+
+        # Act
+        status, out = self.play(exe, 'stages', 'dam', '--frames-scale', '3')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('stage-dam: FAIL (ge: frame limit reached: frames=1800: expected 5400)', out)
+
+    def test_play_json_records_the_frames_scale(self):
+        # Arrange
+        exe = self.fake(STAGE_GOOD)
+
+        # Act
+        self.play(exe, 'stages', 'dam')
+
+        # Assert
+        self.assertEqual(json.loads((self.output/'play.json').read_text())['frames_scale'], 1)
+
+    def test_scales_below_one_and_non_integers_are_refused(self):
+        for value in ('0', '-1', '1.5', 'three'):
+            # Arrange
+            exe = self.fake(STAGE_GOOD)
+
+            # Act
+            status, out = self.play(exe, 'stages', 'dam', '--frames-scale', value)
+
+            # Assert
+            self.assertEqual(status, 2, (value, out))
+            self.assertIn('--frames-scale takes a whole number of at least 1', out)
+
+
+class PicturesDrawn(StandIns):
+    """With video, each verdict and play.json give the pictures the case drew (gfxtasks=)."""
+
+    def test_video_verdict_names_the_pictures_drawn(self):
+        # Arrange
+        exe = self.fake(DAM1_VIDEO + 'ge: frame limit reached: frames=3000 gfxtasks=1234\n')
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('dam1: PASS (1234 pictures)', out)
+        self.assertEqual(json.loads((self.output/'play.json').read_text())['cases'][0]['pictures'], 1234)
+
+    def test_headless_verdict_names_no_pictures(self):
+        # Arrange
+        exe = self.fake(DAM1_GOOD)
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('dam1: PASS\n', out)
+        self.assertNotIn('pictures', json.loads((self.output/'play.json').read_text())['cases'][0])
+
+
+class KeepShots(StandIns):
+    def test_keep_shots_copies_every_screenshot_of_each_case(self):
+        # Arrange
+        exe = self.fake(DAM1_VIDEO + frames(3000), script=(
+            'printf first > shot_00005.bmp\nprintf last > shot_00010.bmp'))
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video', '--shots', '5', '--keep-shots')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        kept = sorted(path.name for path in (self.output/'dam1.shots').iterdir())
+        self.assertEqual(kept, ['shot_00005.bmp', 'shot_00010.bmp'])
+        self.assertEqual((self.output/'dam1.bmp').read_text(), 'last')
+
+    def test_keep_shots_without_shots_is_refused(self):
+        # Arrange
+        exe = self.fake(DAM1_VIDEO + frames(3000))
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video', '--keep-shots')
+
+        # Assert
+        self.assertEqual(status, 2, out)
+        self.assertIn('--keep-shots needs --shots', out)
+
+
 class SetSizes(unittest.TestCase):
     def test_each_set_has_the_planned_number_of_cases(self):
         # Act
@@ -288,7 +396,7 @@ class SetSizes(unittest.TestCase):
 
         # Assert
         self.assertEqual(sizes, {'demos': 14, 'stages': 54, 'stops': 12, 'menus': 7, 'tours': 26, 'attract': 4,
-                                 'input': 27, 'sound': 2})
+                                 'input': 28, 'sound': 2})
 
     def test_case_names_are_unique(self):
         # Act

@@ -302,9 +302,13 @@ pass its isolated executable rather than rebuilding an active player binary.
   nothing else; `play.json` records it. `--env` refuses those names with
   `--video`. Each case must also log `ge: video: window + GL
   context up` and a frame-limit line with `gfxtasks=` at least its
-  `pictures` (30). `--shots N` adds `GE_SHOT=N` (a screenshot every N
+  `pictures` (30; a stop, which ends at its FATAL line before any
+  frame-limit line, needs only the GL line), and its verdict names the
+  pictures it drew. `--shots N` adds `GE_SHOT=N` (a screenshot every N
   pictures) and keeps each case's last screenshot as `DIR/CASE.bmp`, a
-  ROM-derived picture that stays under `build/lp64/`. The 32-bit video
+  ROM-derived picture that stays under `build/lp64/`; `--keep-shots` keeps
+  every one in `DIR/CASE.shots/`. `--frames-scale K` runs each case for K
+  times its frames (the sanitizer video runs use 3). The 32-bit video
   reference runs in its own image, `midas-lp64-i686-video`:
   `python3 scripts/port/lp64_env.py run --arch i686 --video -- sh -c 'cmake
   -S . -B build/lp64/ref-i686-video -DCMAKE_BUILD_TYPE=Debug -DGE_VIDEO=ON

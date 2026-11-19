@@ -7,7 +7,8 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from lp64_play_route import START_BUTTON, Z_TRIG, Press, route_text  # noqa: E402
+import lp64_play_cases  # noqa: E402
+from lp64_play_route import A_BUTTON, START_BUTTON, Z_TRIG, Press, route_text  # noqa: E402
 from test_lp64_play import BOOT, StandIns, frames  # noqa: E402
 
 
@@ -266,6 +267,50 @@ class InputCases(StandIns):
         # Assert
         self.assertEqual(status, 1, out)
         self.assertIn('watch-inventory: FAIL (out of order: ge: play: watch-page 1', out)
+
+
+class WeaponsDam(StandIns):
+    """Task 11 Step 4: Dam with every gun, the next weapon (A) every 120 ticks thirty times and the
+    trigger (Z) held 30 ticks after each."""
+
+    def case(self):
+        return next(case for case in lp64_play_cases.cases_of(['input']) if case.name == 'weapons-dam')
+
+    def test_the_case_has_every_gun_and_thirty_weapon_changes_each_with_a_held_trigger(self):
+        # Act
+        case = self.case()
+
+        # Assert
+        self.assertIn(('GE_CHEATS', 'guns'), case.env)
+        changes = [tick for tick, press in case.route.presses if press.buttons == A_BUTTON]
+        triggers = [(tick, press.hold) for tick, press in case.route.presses if press.buttons == Z_TRIG]
+        self.assertEqual(len(changes), 30)
+        self.assertEqual({b - a for a, b in zip(changes, changes[1:])}, {120})
+        self.assertEqual(len(triggers), 30)
+        self.assertTrue(all(change < tick < change + 120 and tick + hold <= change + 120 and hold == 30
+                            for change, (tick, hold) in zip(changes, triggers)))
+        self.assertGreater(case.frames, changes[-1] + 120)
+
+    def test_weapons_dam_that_fired_passes(self):
+        # Arrange
+        exe = self.fake(DAM + play(1260, 'shots', 1) + frames(self.case().frames))
+
+        # Act
+        status, out = self.play(exe, 'input', 'weapons-dam')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+
+    def test_weapons_dam_that_never_fired_fails(self):
+        # Arrange
+        exe = self.fake(DAM + frames(self.case().frames))
+
+        # Act
+        status, out = self.play(exe, 'input', 'weapons-dam')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('weapons-dam: FAIL (missing line: ge: play: shots 1 (Bond fired))', out)
 
 
 if __name__ == '__main__':
