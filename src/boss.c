@@ -485,6 +485,16 @@ void bossMainloop(void)
         // Double MEMA on PC to avoid blackout bugs
         g_CurentMaMallocValue *= 2;
 #endif
+#if IS_64_BIT
+        /* LP64-005 Task 13, decision 10: room memory in multiplayer Statue
+         * (the token this branch takes for two or more players) peaked at
+         * 419,600 of 450,560 bytes (93.1%, mp-statue-2p, video build), so
+         * at 64 bits it gets twice its peak; LP64-006's soak sets final sizes. */
+        if (g_StageNum == LEVELID_STATUE && get_selected_num_players() >= 2 && g_CurentMaMallocValue < 2 * 419600)
+        {
+            g_CurentMaMallocValue = 2 * 419600;
+        }
+#endif
 
         memaReset(mempAllocBytesInBank(g_CurentMaMallocValue, MEMPOOL_STAGE), g_CurentMaMallocValue);
         reset_play_data_ptrs();
