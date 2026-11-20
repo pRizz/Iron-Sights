@@ -34,6 +34,13 @@ const char *tokenFind(s32 index, const char *token) { (void)index; (void)token; 
 s32 getPlayerCount(void) { return 1; }
 #if IS_64_BIT
 void portLp64PoolFatal(const char *pool, u32 request) { fprintf(stderr, "pool %s %u\n", pool, request); abort(); }
+/* The pool peaks (port_lp64.c, tested by test_lp64_peaks.c) have no part in the poisoning. */
+void portLp64PoolUse(const char *pool, u32 used, u32 size) { (void)pool; (void)used; (void)size; }
+void portLp64PoolHold(const char *pool, u32 used, u32 size) { (void)pool; (void)used; (void)size; }
+void portLp64RoomReset(u32 size) { (void)size; }
+void portLp64RoomLongest(u32 bytes) { (void)bytes; }
+void portLp64RoomTake(uintptr_t addr, u32 bytes) { (void)addr; (void)bytes; }
+void portLp64RoomGive(uintptr_t addr, u32 bytes) { (void)addr; (void)bytes; }
 #endif
 
 #define BLOCK 0x14

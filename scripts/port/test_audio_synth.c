@@ -40,6 +40,10 @@ void ge_dbg_vec(const char *tag, const f32 *values, s32 count) { (void)tag; (voi
 /* The game's own answers to what the synthesizer calls outside its sources. */
 OSIntMask osSetIntMask(OSIntMask mask) { return mask; }
 uintptr_t osVirtualToPhysical(void *address) { return (uintptr_t)address; }
+#if IS_64_BIT
+/* The music heap's peak (port_lp64.c, tested by test_lp64_peaks.c) has no part in synthesis. */
+void portLp64PoolUse(const char *pool, u32 used, u32 size) { (void)pool; (void)used; (void)size; }
+#endif
 void portLp64PoolFatal(const char *pool, u32 request)
 {
     fprintf(stderr, "test_audio_synth: the %s cannot give %u bytes\n", pool, request);

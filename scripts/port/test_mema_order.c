@@ -24,6 +24,14 @@
 
 static s32 s_audit;
 
+#if IS_64_BIT
+/* Room memory's peak (port_lp64.c, tested by test_lp64_peaks.c) is not this test's. */
+void portLp64RoomReset(u32 size) { (void)size; }
+void portLp64RoomLongest(u32 bytes) { (void)bytes; }
+void portLp64RoomTake(uintptr_t addr, u32 bytes) { (void)addr; (void)bytes; }
+void portLp64RoomGive(uintptr_t addr, u32 bytes) { (void)addr; (void)bytes; }
+#endif
+
 s32 portRoomAuditEnabled(void)
 {
     return s_audit;

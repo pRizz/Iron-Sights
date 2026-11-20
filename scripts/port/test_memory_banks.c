@@ -9,6 +9,10 @@
 static jmp_buf failure;
 void sysFatalError(const char *format, ...) { (void)format; longjmp(failure, 1); }
 void portTexCrosshairForget(const void *low, const void *high) { (void)low; (void)high; }
+#if IS_64_BIT /* the stage bank's peak (port_lp64.c, tested by test_lp64_peaks.c) is not this test's */
+void portLp64PoolUse(const char *pool, u32 used, u32 size) { (void)pool; (void)used; (void)size; }
+void portLp64PoolHold(const char *pool, u32 used, u32 size) { (void)pool; (void)used; (void)size; }
+#endif
 
 static void refused(u32 bytes, u8 bank)
 {
