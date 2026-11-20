@@ -88,6 +88,7 @@ jobs:
           bash scripts/port/test_lp64_address.sh
           python3 scripts/port/test_lp64_boot.py
           python3 scripts/port/test_lp64_play.py
+          python3 scripts/port/test_lp64_play_video.py
           python3 scripts/port/test_lp64_play_options.py
           python3 scripts/port/test_lp64_play_traces.py
           python3 scripts/port/test_lp64_play_input.py
@@ -99,6 +100,7 @@ jobs:
           bash scripts/port/test_romconv.sh
           python3 scripts/port/test_lp64_oracle.py
           python3 scripts/port/test_lp64_census.py
+          python3 scripts/port/test_late_load_audit.py
           bash scripts/port/test_monitor_script.sh
           bash scripts/port/test_mema_order.sh
           python3 scripts/port/test_lp64_diagnostics.py

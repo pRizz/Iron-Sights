@@ -150,7 +150,9 @@ folder (`lp64-005-planning-notes.md`).
   `UsetupdishZ`) and level ids 42, 44, 47, 49, 51, 52, 53, 55 and 56
   (`ge: FATAL: The bg file bg/bg_sho_all_p.seg is not served from the ROM;
   ...` and its eight siblings). "The eleven cut stages" of LP64-004 are
-  eleven background files but nine level ids.
+  eleven background files the ROM does not serve, nine of which `bg.c`'s
+  level table names (these nine level ids); `bg_imp` and `bg_ash` have no
+  level id (measured in the LP64-005 fix wave, FORK-089).
 - **The i686 build on those twelve:** Temple solo runs 1,800 frames;
   Complex solo and the nine ids end in a segmentation fault; Citadel hangs
   (no frame in 150 seconds).

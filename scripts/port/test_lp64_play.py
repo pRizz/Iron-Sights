@@ -1,10 +1,10 @@
 """ROM-free tests for lp64_play.py run: each kind of required line, the forbidden lines, the status
 and the timeout, through stand-in executables (shell scripts that print a log and exit with a
 chosen status), as test_lp64_boot.py does. The options, environment and set sizes are tested in
-test_lp64_play_options.py, traces and callers in test_lp64_play_traces.py."""
+test_lp64_play_options.py, traces and callers in test_lp64_play_traces.py, the video lines in
+test_lp64_play_video.py."""
 import contextlib
 import io
-import json
 from pathlib import Path
 import stat
 import sys
@@ -42,6 +42,8 @@ WALLET_IDENTICAL = ('ge: romdata: model PwalletbondZ     identical to the compil
 DAM1_VIDEO = BOOT + VIDEO_UP + DAM1_START + demo_exit(438)
 TOUR_ARCHIVES = (BOOT + 'ge: GE_STAGE direct launch: levelid=24 diff=0\n'
                  'ge: load_bg_file levelid=24 stan=Tbg_arch_all_p_stanZ file=0x1 record=0x2 first=0x3\n')
+TEMPLE_LAUNCH = (BOOT + 'ge: GE_MP direct launch: arena=0 levelid=38 scenario={scenario} players={players}\n'
+                 'ge: load_bg_file levelid=38 stan=Tbg_tem_all_p_stanZ file=0x1 record=0x2 first=0x3\n')
 
 
 class StandIns(unittest.TestCase):
@@ -258,7 +260,31 @@ class OtherSets(StandIns):
 
         # Assert
         self.assertEqual(status, 1, out)
-        self.assertIn('mp-temple-4p-s3: FAIL (missing line: ge: GE_MP direct launch:)', out)
+        self.assertIn('mp-temple-4p-s3: FAIL (missing line: ge: GE_MP direct launch: arena=N levelid=N '
+                      'scenario=3 players=4)', out)
+
+    def test_arena_launched_with_its_players_and_scenario_passes(self):
+        # Arrange
+        exe = self.fake(TEMPLE_LAUNCH.format(scenario=3, players=4) + frames(1800))
+
+        # Act
+        status, out = self.play(exe, 'stages', 'mp-temple-4p-s3')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+
+    def test_arena_launched_with_other_players_or_scenario_fails(self):
+        for scenario, players in ((0, 2), (3, 2), (0, 4)):
+            with self.subTest(scenario=scenario, players=players):
+                # Arrange
+                exe = self.fake(TEMPLE_LAUNCH.format(scenario=scenario, players=players) + frames(1800))
+
+                # Act
+                status, out = self.play(exe, 'stages', 'mp-temple-4p-s3')
+
+                # Assert
+                self.assertEqual(status, 1, out)
+                self.assertIn('missing line: ge: GE_MP direct launch: arena=N levelid=N scenario=3 players=4', out)
 
     def test_stop_with_status_one_and_its_fatal_line_passes(self):
         # Arrange
@@ -424,6 +450,28 @@ class OtherSets(StandIns):
         self.assertEqual(status, 1, out)
         self.assertIn('attract: FAIL (ge: demo exit: clean end (terminator block)', out)
 
+    def test_death_without_its_kill_line_fails(self):
+        # Arrange: four players launched and the run reached its limit, but nobody died
+        exe = self.fake(TEMPLE_LAUNCH.format(scenario=0, players=4) + frames(30000))
+
+        # Act
+        status, out = self.play(exe, 'attract', 'death')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('death: FAIL (missing line: ge: play: kill 600)', out)
+
+    def test_death_with_its_kill_line_passes(self):
+        # Arrange
+        exe = self.fake(TEMPLE_LAUNCH.format(scenario=0, players=4) + 'ge: play: tick 2400\nge: play: kill 600\n'
+                        + frames(30000))
+
+        # Act
+        status, out = self.play(exe, 'attract', 'death')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+
     def test_soak_without_its_completion_line_fails(self):
         # Arrange
         exe = self.fake(BOOT + frames(30000))
@@ -435,122 +483,6 @@ class OtherSets(StandIns):
         self.assertEqual(status, 1, out)
         self.assertIn('soak: FAIL (missing line: ge: soak: complete after 1 laps)', out)
 
-    def test_input_case_without_its_play_line_fails_though_it_exits_zero(self):
-        # Arrange: the abort route's stage loads and the title comes back, but Dam never unloads
-        exe = self.fake(BOOT + 'ge: play: tick 5\nge: play: stage-load 33\n'
-                        'ge: play: tick 1430\nge: play: stage-load 90\nge: play: tick 1550\nge: play: menu 13\n'
-                        + frames(2400))
-
-        # Act
-        status, out = self.play(exe, 'input', 'abort')
-
-        # Assert
-        self.assertEqual(status, 1, out)
-        self.assertIn('abort: FAIL (missing line: ge: play: stage-unload 33)', out)
-
-
-
-class Video(StandIns):
-    def test_video_case_with_the_gl_line_and_its_pictures_passes(self):
-        # Arrange
-        exe = self.fake(DAM1_VIDEO + 'ge: frame limit reached: frames=3000 gfxtasks=30\n')
-
-        # Act
-        status, out = self.play(exe, 'demos', 'dam1', '--video')
-
-        # Assert
-        self.assertEqual(status, 0, out)
-        self.assertIn('dam1: PASS', out)
-
-    def test_video_case_with_fewer_pictures_than_required_fails(self):
-        # Arrange
-        exe = self.fake(DAM1_VIDEO + 'ge: frame limit reached: frames=3000 gfxtasks=3\n')
-
-        # Act
-        status, out = self.play(exe, 'demos', 'dam1', '--video')
-
-        # Assert
-        self.assertEqual(status, 1, out)
-        self.assertIn('dam1: FAIL (ge: frame limit reached: frames=3000 gfxtasks=3: expected at least 30)', out)
-
-    def test_video_case_without_the_gl_line_fails(self):
-        # Arrange
-        exe = self.fake(BOOT + DAM1_START + demo_exit(438) + 'ge: frame limit reached: frames=3000 gfxtasks=900\n')
-
-        # Act
-        status, out = self.play(exe, 'demos', 'dam1', '--video')
-
-        # Assert
-        self.assertEqual(status, 1, out)
-        self.assertIn('dam1: FAIL (missing line: ge: video: window + GL context up)', out)
-
-    def test_video_case_whose_frame_limit_line_lacks_gfxtasks_fails(self):
-        # Arrange
-        exe = self.fake(DAM1_VIDEO + 'ge: frame limit reached: frames=3000\n')
-
-        # Act
-        status, out = self.play(exe, 'demos', 'dam1', '--video')
-
-        # Assert
-        self.assertEqual(status, 1, out)
-        self.assertIn('dam1: FAIL (missing line: ge: frame ... gfxtasks=N (the frame-limit line or the heartbeat))', out)
-
-    def test_video_case_without_a_frame_limit_line_fails(self):
-        # Arrange
-        exe = self.fake(DAM1_VIDEO)
-
-        # Act
-        status, out = self.play(exe, 'demos', 'dam1', '--video')
-
-        # Assert
-        problems = json.loads((self.output/'play.json').read_text())['cases'][0]['problems']
-        self.assertEqual(status, 1, out)
-        self.assertIn('missing line: ge: frame ... gfxtasks=N (the frame-limit line or the heartbeat)', problems)
-
-    def test_video_stop_with_the_gl_line_and_its_fatal_line_passes_without_a_frame_limit(self):
-        # Arrange: a stop ends at its FATAL line, before any frame-limit line could name its pictures
-        exe = self.fake(BOOT + VIDEO_UP + STOP_CITADEL, status=1)
-
-        # Act
-        status, out = self.play(exe, 'stops', 'citadel', '--video')
-
-        # Assert
-        self.assertEqual(status, 0, out)
-        self.assertIn('stop-citadel: PASS', out)
-
-    def test_video_case_that_ends_itself_counts_pictures_from_the_heartbeat(self):
-        # Arrange: the soak exits after its lap, before any frame-limit line
-        exe = self.fake(BOOT + VIDEO_UP + 'ge: frame 13620 | gfx tasks submitted 13490\n'
-                        'ge: frame 13680 | gfx tasks submitted 13547\nge: soak: complete after 1 laps\n')
-
-        # Act
-        status, out = self.play(exe, 'attract', 'soak', '--video')
-
-        # Assert
-        self.assertEqual(status, 0, out)
-        self.assertIn('soak: PASS (13547 pictures)', out)
-
-    def test_video_stop_without_the_gl_line_fails(self):
-        # Arrange
-        exe = self.fake(BOOT + STOP_CITADEL, status=1)
-
-        # Act
-        status, out = self.play(exe, 'stops', 'citadel', '--video')
-
-        # Assert
-        self.assertEqual(status, 1, out)
-        self.assertIn('stop-citadel: FAIL (missing line: ge: video: window + GL context up)', out)
-
-    def test_headless_case_needs_neither_video_line(self):
-        # Arrange
-        exe = self.fake(BOOT + DAM1_START + demo_exit(438) + 'ge: frame limit reached: frames=3000 gfxtasks=3\n')
-
-        # Act
-        status, out = self.play(exe, 'demos', 'dam1')
-
-        # Assert
-        self.assertEqual(status, 0, out)
-        self.assertIn('dam1: PASS', out)
 
 if __name__ == '__main__':
     unittest.main()

@@ -11,7 +11,7 @@ only deliberately, with the new measurement recorded in FORK_CHANGES.md (FORK-08
 from dataclasses import dataclass, replace
 import re
 
-from lp64_play_route import Route
+from lp64_play_route import Route, play_line
 
 # ---- the lines a case can require, each quoted from the source that prints it ----------------
 # src/game/ramromreplay.c, replay_recorded_ramrom_at_address:
@@ -36,7 +36,9 @@ FRAME_LIMIT = re.compile(r'ge: frame limit reached: frames=(\d+)')
 STAGE_LAUNCH = re.compile(r'ge: GE_STAGE direct launch: levelid=')
 # src/game/front.c, portDirectLaunchMpTick:
 #   "ge: GE_MP direct launch: arena=%d levelid=%d scenario=%d players=%d\n"
-MP_LAUNCH = re.compile(r'ge: GE_MP direct launch: arena=')
+# A case requires its own scenario and players (mp_launch); GE_MPSCENARIO unset is scenario 0,
+# SCENARIO_NORMAL (src/bondconstants.h).
+MP_LAUNCH_LINE = 'ge: GE_MP direct launch: arena=N levelid=N scenario={scenario} players={players}'
 # src/game/bg.c, load_bg_file, at both widths: "ge: load_bg_file levelid=%d stan=%s ..."; the
 # stage's background has loaded, which the launch line alone (printed when the menu changes)
 # does not show.
@@ -124,8 +126,15 @@ def scale_frames(case: Case, factor: int) -> Case:
 
 LAUNCHED_STAGE = (Required('ge: GE_STAGE direct launch:', STAGE_LAUNCH),
                   Required('ge: load_bg_file levelid=', BG_LOADED))
-LAUNCHED_ARENA = (Required('ge: GE_MP direct launch:', MP_LAUNCH),
-                  Required('ge: load_bg_file levelid=', BG_LOADED))
+
+
+def launched_arena(players: int, scenario: int = 0) -> tuple[Required, ...]:
+    """The launch line of an arena started with PLAYERS players in SCENARIO, then its background:
+    a launch with another count or scenario fails the case."""
+    line = MP_LAUNCH_LINE.format(scenario=scenario, players=players)
+    pattern = re.compile(rf'ge: GE_MP direct launch: arena=\d+ levelid=\d+ scenario={scenario} players={players}$')
+    return (Required(line, pattern), Required('ge: load_bg_file levelid=', BG_LOADED))
+
 
 # ---- demos ------------------------------------------------------------------------------------
 # The tick at which each demo ends with "totaltime end (timer/limit)", measured on 2026-11-17 at
@@ -184,7 +193,8 @@ def arena_case(arena: str, players: int, scenario: int | None) -> Case:
     if scenario is not None:
         env += (('GE_MPSCENARIO', str(scenario)),)
         name += f'-s{scenario}'
-    return Case(name, 'stages', env, STAGE_FRAMES, LAUNCHED_ARENA + (frame_limit(STAGE_FRAMES),))
+    required = launched_arena(players, 0 if scenario is None else scenario) + (frame_limit(STAGE_FRAMES),)
+    return Case(name, 'stages', env, STAGE_FRAMES, required)
 
 
 def stage_cases() -> list[Case]:
@@ -267,7 +277,7 @@ def tour_cases() -> list[Case]:
                   TOUR_FRAMES, LAUNCHED_STAGE + tour_required(rooms))
              for name, rooms in TOUR_ROOMS.items()]
     cases += [Case(f'tour-{arena}-2p', 'tours', (('GE_MP', arena), ('GE_MPPLAYERS', '2')) + TOUR_ENV,
-                   TOUR_FRAMES, LAUNCHED_ARENA + tour_required(rooms))
+                   TOUR_FRAMES, launched_arena(2) + tour_required(rooms))
               for arena, rooms in TOUR_ARENA_ROOMS.items()]
     return cases
 
@@ -275,6 +285,12 @@ def tour_cases() -> list[Case]:
 # ---- the attract loop and long runs -----------------------------------------------------------
 ATTRACT_FRAMES = 30000
 ALL_CHEATS = 'invuln,invis,guns,turbo,rockets,linemode,enemyff,doors,dualzmg'  # src/game/lv.c
+# The death: GE_PLAYKILL=N (port/src/port_playlog.c) kills player 0 on his own N-th pass of the
+# frame's player loop and, with GE_PLAYLOG=1, logs `ge: play: kill N` when that left him dead.
+# GE_KILLBOND=N (src/game/bondview2.c) counts every player's MoveBond call and kills only when the
+# N-th is player 0's, which with four players in the frame's shuffled order usually does not
+# happen (LP64-005 Task 8), so the case does not use it.
+DEATH_KILL = 600
 
 
 def attract_cases() -> list[Case]:
@@ -286,8 +302,10 @@ def attract_cases() -> list[Case]:
             limit), forbidden=(DEMO_EXIT_OTHER,)),
         Case('soak', 'attract', (('GE_SOAK', 'all:600:1'),), ATTRACT_FRAMES,
              (Required('ge: soak: complete after 1 laps', SOAK_COMPLETE),)),
-        Case('death', 'attract', (('GE_MP', 'temple'), ('GE_MPPLAYERS', '4'), ('GE_KILLBOND', '600')),
-             ATTRACT_FRAMES, LAUNCHED_ARENA + (limit,)),
+        Case('death', 'attract', (('GE_MP', 'temple'), ('GE_MPPLAYERS', '4'), ('GE_PLAYKILL', str(DEATH_KILL)),
+                                  ('GE_PLAYLOG', '1')),
+             ATTRACT_FRAMES, launched_arena(4) + (
+                 Required(f'ge: play: kill {DEATH_KILL}', play_line('kill', DEATH_KILL)), limit)),
         Case('cheats', 'attract', (('GE_STAGE', 'facility'), ('GE_STAGE_AFTER', '1'),
                                    ('GE_CHEATS', ALL_CHEATS)), ATTRACT_FRAMES, LAUNCHED_STAGE + (limit,)),
     ]

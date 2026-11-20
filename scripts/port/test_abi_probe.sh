@@ -103,20 +103,23 @@ mv "$extracted.tmp" "$extracted"
 
 # Some assertions only one width can break: a 64-bit layout's padding hides a
 # member added after ModelHead's scale (gunfire.c), and probe.c has branches
-# for each width. CI's tests job (gcc-multilib) runs both halves; a host that
-# cannot says which half did not run, rather than passing quietly.
-status=0
-first=$(build_and_run) || status=$?
-echo "$first"
-[[ $status == 0 ]] || exit "$status"
-if [[ $first != *"(64-bit)"* ]]; then
+# for each width. The widths are harness_widths.sh's, as in the other
+# harnesses: on an x86 host a compiler that rejects -m32 stops the test there
+# (install gcc-multilib, or set MIDAS_HARNESS_WIDTHS=64), and CI's tests job
+# runs both halves. A host that cannot build a width at all (aarch64 has no
+# -m32) says which half did not run, rather than passing quietly.
+source scripts/port/harness_widths.sh
+# On its own line, so a failure of harness_widths stops the test (set -e).
+widths=$(harness_widths)
+for width in $widths; do
+    build_and_run $(harness_flags "$width" -msse2 -mfpmath=sse)
+done
+if [[ $widths != *64* ]]; then
     echo "ABI probe: the 64-bit half did not run: $cc does not build 64-bit programs by default. Not" \
         "checked: every assertion at the 64-bit layout, including probe.c's IS_64_BIT branches. CI runs" \
         "both halves."
 fi
-if "$cc" -m32 -x c -fsyntax-only /dev/null 2>/dev/null; then
-    build_and_run -m32 -msse2 -mfpmath=sse
-else
+if [[ $widths != *32* ]]; then
     echo "ABI probe: the 32-bit half did not run: $cc rejects -m32 on this host. Not checked: every" \
         "assertion at the 32-bit layout, including those only it can break (probe.c's !IS_64_BIT" \
         "branches, and the .c records whose difference 64-bit padding hides, such as gunfire.c's" \

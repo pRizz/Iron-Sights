@@ -142,6 +142,18 @@ class Environment(StandIns):
         self.assertEqual(stop.exception.code, 2, out.getvalue())
         self.assertIn('--set names no set', out.getvalue())
 
+    def test_empty_only_list_is_refused(self):
+        # Arrange
+        exe = self.fake(DAM1_GOOD)
+
+        # Act
+        status, out = self.play(exe, 'demos', ',')
+
+        # Assert
+        self.assertEqual(status, 2, out)
+        self.assertIn('--only names no case', out)
+        self.assertFalse(self.output.exists())
+
 
 
 class VideoOptions(StandIns):
@@ -250,7 +262,8 @@ class VideoOptions(StandIns):
 
 class TimeoutScale(StandIns):
     """Invented numbers: the boot allowance is 1 unit of 0.4 s and the per-frame part is zero, so a
-    case's timeout is 0.4 s times the scale; the stand-in takes two units (0.8 s)."""
+    case's timeout is 0.4 s times the scale; the stand-in takes two units (0.8 s). At scale 10 the
+    limit is 4 s, leaving the stand-in seconds of headroom on a loaded runner."""
 
     def play_scaled(self, *extra: str) -> tuple[int, str]:
         exe = self.fake(DAM1_GOOD, script='sleep 0.8')
@@ -258,9 +271,9 @@ class TimeoutScale(StandIns):
                 mock.patch.object(lp64_play_run, 'TIMEOUT_FACTOR', 0):
             return self.play(exe, 'demos', 'dam1', *extra)
 
-    def test_a_case_needing_two_units_passes_at_scale_three(self):
+    def test_a_case_needing_two_units_passes_at_scale_ten(self):
         # Act
-        status, out = self.play_scaled('--timeout-scale', '3')
+        status, out = self.play_scaled('--timeout-scale', '10')
 
         # Assert
         self.assertEqual(status, 0, out)
@@ -276,10 +289,10 @@ class TimeoutScale(StandIns):
 
     def test_play_json_records_the_scale(self):
         # Act
-        self.play_scaled('--timeout-scale', '3')
+        self.play_scaled('--timeout-scale', '10')
 
         # Assert
-        self.assertEqual(json.loads((self.output/'play.json').read_text())['timeout_scale'], 3.0)
+        self.assertEqual(json.loads((self.output/'play.json').read_text())['timeout_scale'], 10.0)
 
     def test_scales_below_one_and_non_numbers_are_refused(self):
         for value in ('0.5', '0', '-2', 'fast', 'nan'):
@@ -409,7 +422,7 @@ class SetSizes(unittest.TestCase):
 
         # Assert
         self.assertEqual(sizes, {'demos': 14, 'stages': 54, 'stops': 12, 'menus': 7, 'tours': 26, 'attract': 4,
-                                 'input': 28, 'sound': 2})
+                                 'input': 29, 'sound': 2})
 
     def test_case_names_are_unique(self):
         # Act

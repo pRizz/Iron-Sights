@@ -3,8 +3,11 @@
 Each case replays a route (lp64_play_route.py) as pad 0 of a headless build, with GE_PLAYLOG=1,
 and requires the lines that show it reached what the button is for: the pause, each watch tab
 (`watch-page N`, the tab drawn once the watch is open), a walk with the trigger held (`moved` and
-`shots 1`, from player 0's own counters), the front end from boot to Dam, the watch's abort, the
-briefing and a multiplayer respawn. None of those lines appears without the route's presses.
+`shots 1`, from player 0's own counters), the front end from boot to Dam, the watch's abort, a
+multiplayer respawn and a multiplayer strafe. Those lines appear only after the route's presses,
+with two exceptions: the briefing case's route is empty (it requires the menu the harness sets),
+and the respawn cases' `kill` line comes from GE_PLAYKILL, not from a press; their respawn needs
+the presses.
 
 The pause has no `ge: play:` event: the only code that sets it is in src/game/bondview2.c (strict
 tier), so the pause cases read GE_PAUSEDBG's existing line there, printed on each change of the
@@ -16,8 +19,8 @@ skips it instead of pausing.
 """
 import re
 
-from lp64_play_cases import (LAUNCHED_ARENA, LAUNCHED_STAGE, MENU_HARNESS, ARENAS, Case, Ordered,
-                             Required, frame_limit)
+from lp64_play_cases import (LAUNCHED_STAGE, MENU_HARNESS, ARENAS, Case, Ordered, Required, frame_limit,
+                             launched_arena)
 from lp64_play_route import (A_BUTTON, START_BUTTON, Z_TRIG, Press, Route, Step, play_line)
 
 PLAY_ENV = (('GE_PLAYLOG', '1'),)
@@ -83,6 +86,18 @@ RESPAWN_PRESSES = tuple(range(900, 1501, 60))
 # shuffled order, so in a two-player run that kills in some runs and not others (measured
 # 2026-11-18: the same arena respawned in one run and not the next).
 PLAYKILL = 600
+# A remote player's strafe (strict batch 1, defect list entry 15): pad 0 holds the stick right
+# (STRAFE_STICK_X, inside the N64 stick's 85), which with this build's default control style moves
+# player 0 sideways, so in player 1's viewport playerTick handles player 0 as a remote player with
+# a non-zero sideways speed and reads the animation his firing table entry names (bondview2.c,
+# join_768). Before the branch lp64/play-strict's repair ("Read a remote player's animation
+# through its firing table") that read took the address's low half at 64 bits, and this route made
+# main's 64-bit build fault in modelConstrainOrWrapAnimFrame from playerTick (measured 2026-11-20,
+# FORK-089; C right moved nobody), so the case passes only on a 64-bit build of that branch until it
+# lands (LP64-005 Task 15).
+STRAFE_STICK_X = 70
+STRAFE_FRAMES = 1800
+STRAFE_PRESSES = ((300, 600), (1000, 600))
 
 
 # The hands (LP64-005 Task 11 Step 4): Dam with every gun (GE_CHEATS=guns), from after its opening
@@ -200,8 +215,16 @@ def briefing_case() -> Case:
 def respawn_case(arena: str) -> Case:
     env = (('GE_MP', arena), ('GE_MPPLAYERS', '2'), ('GE_PLAYKILL', str(PLAYKILL))) + PLAY_ENV
     kill = (f'ge: play: kill {PLAYKILL}', play_line('kill', PLAYKILL))
-    required = LAUNCHED_ARENA + (Ordered((kill, RESPAWN_STEP)), frame_limit(RESPAWN_FRAMES))
+    required = launched_arena(2) + (Ordered((kill, RESPAWN_STEP)), frame_limit(RESPAWN_FRAMES))
     return Case(f'respawn-{arena}', 'input', env, RESPAWN_FRAMES, required, route=press_at(*RESPAWN_PRESSES))
+
+
+def strafe_case() -> Case:
+    env = (('GE_MP', 'temple'), ('GE_MPPLAYERS', '2')) + PLAY_ENV
+    required = launched_arena(2) + (Required('ge: play: moved N (player 0 strafed)', MOVED),
+                                    frame_limit(STRAFE_FRAMES))
+    route = Route(presses=tuple((tick, Press(0, stick_x=STRAFE_STICK_X, hold=hold)) for tick, hold in STRAFE_PRESSES))
+    return Case('strafe-temple-2p', 'input', env, STRAFE_FRAMES, required, route=route)
 
 
 def input_cases() -> list[Case]:
@@ -211,4 +234,5 @@ def input_cases() -> list[Case]:
     cases += [front_end_case(), abort_case(), briefing_case()]
     cases += [respawn_case(arena) for arena in ARENAS]
     cases.append(weapons_case())
+    cases.append(strafe_case())
     return cases

@@ -148,6 +148,19 @@ class InputCases(StandIns):
         # Assert
         self.assertEqual(status, 0, out)
 
+    def test_input_case_without_its_play_line_fails_though_it_exits_zero(self):
+        # Arrange: the abort route's stage loads and the title comes back, but Dam never unloads
+        exe = self.fake(BOOT + 'ge: play: tick 5\nge: play: stage-load 33\n'
+                        'ge: play: tick 1430\nge: play: stage-load 90\nge: play: tick 1550\nge: play: menu 13\n'
+                        + frames(2400))
+
+        # Act
+        status, out = self.play(exe, 'input', 'abort')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('abort: FAIL (missing line: ge: play: stage-unload 33)', out)
+
     def test_respawn_with_only_the_first_spawn_fails(self):
         # Arrange
         exe = self.fake(TEMPLE + KILL + frames(1800))
@@ -169,6 +182,34 @@ class InputCases(StandIns):
         # Assert
         self.assertEqual(status, 1, out)
         self.assertIn('respawn-temple: FAIL (missing line: ge: play: kill 600)', out)
+
+    def test_strafe_that_moved_player_0_passes(self):
+        # Arrange
+        exe = self.fake(TEMPLE + play(420, 'moved', 101) + frames(1800))
+
+        # Act
+        status, out = self.play(exe, 'input', 'strafe-temple-2p')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+
+    def test_strafe_that_never_moved_player_0_fails(self):
+        # Arrange: the arena launched and the run reached its limit, but player 0 never moved
+        exe = self.fake(TEMPLE + frames(1800))
+
+        # Act
+        status, out = self.play(exe, 'input', 'strafe-temple-2p')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('strafe-temple-2p: FAIL (missing line: ge: play: moved N (player 0 strafed))', out)
+
+    def test_strafe_route_holds_the_stick_right(self):
+        # Act
+        route = route_text(lp64_play_cases.SETS['input']()[-1].route.presses)
+
+        # Assert
+        self.assertEqual(route, 'P 300 0 46 0\nP 900 0 0 0\nP 1000 0 46 0\nP 1600 0 0 0\n')
 
     def test_pause_on_and_off_passes(self):
         # Arrange

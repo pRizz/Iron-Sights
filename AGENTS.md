@@ -302,9 +302,10 @@ pass its isolated executable rather than rebuilding an active player binary.
   32-bit reference took 769 s for a demo case's 3,000 frames). On such a
   slow host, an emulated container in particular, add `--timeout-scale F`
   (at least 1), which multiplies every case's wall-clock limit and changes
-  nothing else; `play.json` records it. `--env` refuses those names with
-  `--video`. Each case must also log `ge: video: window + GL
-  context up` and a picture count at least its `pictures` (30), read
+  nothing else; `play.json` records it. With `--video`, `--env` refuses
+  the variables the tool sets for a video case (those above). Each case
+  must also log `ge: video: window + GL context up` and a picture count
+  at least its `pictures` (30), read
   from the last frame-limit line's `gfxtasks=` or, for a case that ends
   itself such as the soak, the last once-a-second `gfx tasks submitted`
   heartbeat; a stop, which ends at its FATAL line, needs only the GL

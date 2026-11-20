@@ -120,9 +120,12 @@ def command_run(parser: argparse.ArgumentParser, options: argparse.Namespace) ->
         cases = cases_of(set_names)
     except ValueError as error:
         parser.error(str(error))
-    if options.only:
+    if options.only is not None:
+        wanted = [name for name in options.only.split(',') if name]
+        if not wanted:
+            parser.error(f'--only names no case: {options.only!r}')
         try:
-            cases = select_cases(cases, [name for name in options.only.split(',') if name])
+            cases = select_cases(cases, wanted)
         except ValueError as error:
             parser.error(str(error))
     cases = [scale_frames(case, frames_scale) for case in cases]
