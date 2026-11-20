@@ -380,15 +380,23 @@ static void lp64KeepLarger(Lp64Use *peak, Lp64Use use)
 }
 
 /* POOL's entry, made on its first use; NULL when the table is full. Called
- * each frame for two pools (dyn.c), so a pointer test comes before the
- * name's text. */
+ * each frame for two pools (dyn.c), so the whole table is searched by
+ * pointer first and the names' text is compared only when no pointer
+ * matches (a name spelt at another call site). */
 static Lp64Peak *lp64Peak(const char *pool, u32 size)
 {
     int i;
 
     for (i = 0; i < s_PeakCount; i++)
     {
-        if (s_Peaks[i].pool == pool || lp64SameName(s_Peaks[i].pool, pool))
+        if (s_Peaks[i].pool == pool)
+        {
+            return &s_Peaks[i];
+        }
+    }
+    for (i = 0; i < s_PeakCount; i++)
+    {
+        if (lp64SameName(s_Peaks[i].pool, pool))
         {
             return &s_Peaks[i];
         }

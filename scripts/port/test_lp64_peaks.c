@@ -120,6 +120,23 @@ static void testRoomGrabKeptWholeCountsAtThePrint(void)
                            "ge: lp64: peak room memory 950 of 1000 bytes\n") == 0,
            "a room block held whole at the print counts whole");
 }
+static void testSameNameFromTwoPointersSharesOneEntry(void)
+{
+    // Arrange: two arrays holding the same name, as two call sites spelling it would
+    static const char first[] = "shared pool", second[] = "shared pool";
+    portLp64PoolPeaks();
+    resetPeaks();
+    portLp64PoolUse(first, 200, 1000);
+    portLp64PoolUse(second, 500, 1000);
+    portLp64PoolUse(first, 300, 1000);
+
+    // Act
+    portLp64PoolPeaks();
+
+    // Assert
+    expect(strcmp(s_peaks, "ge: lp64: peak shared pool 500 of 1000 bytes\n") == 0,
+           "one name at two addresses is one pool, printed once with its largest use");
+}
 #else
 static void testPeaksAreNoOpsAtThirtyTwoBits(void)
 {
@@ -146,6 +163,7 @@ int main(void)
     testHeldUseKeptCountsAtThePrint();
     testRoomGrabCountsWhatItKept();
     testRoomGrabKeptWholeCountsAtThePrint();
+    testSameNameFromTwoPointersSharesOneEntry();
 #else
     testPeaksAreNoOpsAtThirtyTwoBits();
 #endif
