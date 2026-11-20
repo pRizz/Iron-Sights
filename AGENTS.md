@@ -339,8 +339,16 @@ pass its isolated executable rather than rebuilding an active player binary.
   holds, never by a literal byte count or by filler members, and a member
   that overlays another record by position is pinned at both widths in the
   layout probe (`scripts/port/abi_probe/probe.c`). Records and commands that
-  hold pointers grow at 64 bits, and the sanitizers do not see an overrun
-  inside one allocation or a common symbol. `g_ModelHitEntries`
+  hold pointers grow at 64 bits. Sanitizer builds (`GE_SANITIZE`) poison the
+  game's arenas (`port/include/port_poison.h`: the bank with a 32-byte
+  poisoned gap after each block, the room heap, the music heap in whole
+  16-byte lines, the graphics pool from each frame's start) and compile C
+  with `-fno-common`, so a run of a block into the next and an overrun of a
+  global array are reported; shipped builds keep their layout. They still do
+  not see an overrun inside one block that its user carves up (the front
+  end's gun barrel list, the synthesizer's parameter pool), up to 15 bytes
+  past a music-heap request, or the tail of an 8-byte shadow unit shared
+  with the previous block. `g_ModelHitEntries`
   (`src/game/objecthandler.c`) was 600 times 0x14 bytes for a 40-byte
   record, and the pause list `buffer_for_watch_static_DL`
   (`src/game/bondview.h`) was one `Gfx` and six `s32` fillers for three
@@ -394,7 +402,10 @@ pass its isolated executable rather than rebuilding an active player binary.
   missing file allows none (`scripts/port/lp64_static_checks.py`): no
   narrowing place is allowed, so `lp64_narrowing_allowed.txt` exists only if
   one is deliberately allowed, with its reason; `lp64_unprototyped_allowed.txt`
-  lists the remaining calls with theirs. Allowlists are lowered as places are
+  lists the remaining calls with theirs. Beside them, `python3
+  scripts/port/lp64_casts.py check` holds the truncating casts to their
+  allowlist and `lp64_overlays.py check --no-defects` (above) the reviewed
+  reads; CI's tests step runs all four. Allowlists are lowered as places are
   fixed and never raised without a reason. Run the
   same lines in the x86_64 or aarch64 container (GCC 13) before pushing a
   change to C, C++ or the build; `lp64_diagnostics.py sites [--messages]
