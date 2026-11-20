@@ -527,7 +527,12 @@ Owner's decisions:
   [its plan](native_64bit_lp64_005.md)): "with no `ge: lp64:` line" is read
   as no pool, refusal, converter or stop line, the informational kinds
   allowed; `bondview2.c`'s intro walk, which mis-steps after a WATCH record
-  at both widths, is left as inherited; the wallet Bond's room is scaled by
+  at both widths, is left as inherited (on the branch `lp64/play-strict`:
+  decision 2's premise, that the 64-bit build behaves as the 32-bit one
+  does, was measured false at 64 bits in Task 3, so the walk steps each
+  record by its own size at 64 bits only and the 32-bit walk stays as
+  decision 2 says, pending the owner's review at the laptop step); the
+  wallet Bond's room is scaled by
   13/8 at 64 bits by moving the file-select background's start; what "every
   stage" and "with video" mean and its done condition, as settled under
   "Milestones"; the demos' per-tick traces are compared with the i686
