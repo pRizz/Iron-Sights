@@ -186,17 +186,23 @@ previous block's last 8-byte shadow unit, which ASan cannot poison apart from
 the bytes before it. `scripts/port/test_lp64_poison.c`, built by the sanitized
 half of `test_buffers.sh`, pins each hook, each probe with a deadline.
 
-Two readers a later task must handle in the hooks before a sanitizer run
-reaches them. `portStateFrame()` (`src/boss.c`, every frame) in
-`port/src/port_state.c` reads and writes whole saved regions when it writes,
-restores or audits a suspend point, which would touch poisoned arena bytes and
-global red zones; that file is compiled only in 32-bit builds (64-bit builds
-compile `port_state_unavailable.c`, whose `portStateFrame` only calls
-`portGraphicsFrame`), so this is a 32-bit sanitizer build's risk. And
-`portDynAllocate` unpoisons only the bytes asked for, leaving `dynAllocate`'s
-rounding to 16 poisoned, so a renderer that reads a graphics-pool block
-rounded up to 16 (the video build) would hit that pad; not checked against
-`port/fast3d` here, and no headless run reads the pool.
+Two readers were left open when the hooks went in. `portStateFrame()`
+(`src/boss.c`, every frame) in `port/src/port_state.c` reads and writes whole
+saved regions when it writes, restores or audits a suspend point, which would
+touch poisoned arena bytes and global red zones; that file is compiled only in
+32-bit builds (64-bit builds compile `port_state_unavailable.c`, whose
+`portStateFrame` only calls `portGraphicsFrame`), so this is a 32-bit
+sanitizer build's risk, and it is still open: no 32-bit sanitizer video build
+has run. And `portDynAllocate` unpoisons only the bytes asked for, leaving
+`dynAllocate`'s rounding to 16 poisoned, so a renderer that read a
+graphics-pool block rounded up to 16 would hit that pad. The 64-bit sanitizer
+video runs answer this one for `port/fast3d` as the play sets drive it: LP64-005
+Tasks 11 and 13 (`lp64_play.py run --video`, demos, stages, stops, menus,
+attract, input and sound, the renderer on the game's thread) and the final
+review's pass with the render thread forced on (`--env GE_RENDERTHREAD=1`,
+demos, stages, menus, attract and input, every log `render thread ON`)
+reported no `use-after-poison` or other sanitizer report (FORK-089). No
+headless run reads the pool.
 
 The local GCC headless build was configured with `GE_HEADLESS=ON`,
 `GE_VIDEO=OFF`, `GE_SANITIZE=ON`, and both C/C++ flags set to
