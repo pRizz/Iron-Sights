@@ -11,7 +11,8 @@ when a frame after the load spent --budget-ms or more loading, or a shader
 compiled during play. --learn-prefetch records which HD textures from other
 missions' folders each stage drew and writes them to
 port/fast3d/texture_packs/hd_stage_prefetch.json, so the next build reads them
-while the stage loads. Needs the ROM; see scripts/port/late_loads.md.
+while the stage loads. --video-driver offscreen runs it in a Linux container with
+no display (LP64-005 Task 14). Needs the ROM; see scripts/port/late_loads.md.
 """
 import argparse
 import datetime
@@ -39,6 +40,9 @@ LEARNED = REPO/'port'/'fast3d'/'texture_packs'/'hd_stage_prefetch.json'
 RUN_TIMEOUT_S = 600
 QUIET_WAIT_S = 900
 BASE_INI = ('[display]', 'fullscreen=window', 'vsync=0', 'maxfps=0')
+# With --video-driver, the folders of a run's own HOME and icon cache (GE_ICON_CACHE_DIR), as
+# lp64_play_run.py gives a video case: the game writes nothing outside the run's folder.
+CONTAINER_FOLDERS = ('home', 'icons')
 
 
 def log(message):
@@ -81,12 +85,21 @@ def link_pack(source, folder):
                 shutil.copy2(path, destination)
 
 
+def container_env(folder, options):
+    """With --video-driver, the SDL driver and a HOME and icon cache inside FOLDER; else nothing."""
+    if not options.video_driver:
+        return {}
+    home, icons = (str(folder/name) for name in CONTAINER_FOLDERS)
+    return {'SDL_VIDEODRIVER': options.video_driver, 'HOME': home, 'GE_ICON_CACHE_DIR': icons}
+
+
 def run_env(item, rom, folder, options):
     env = dict(os.environ)
     env.update(GE_ROM=str(rom), GE_WINDOW=options.window, GE_NOINPUT='1', GE_SEED='1', GE_NOINISAVE='1',
                GE_NOMSGBOX='1', GE_FRAMES='2000000000', GE_FIXEDTICK='1', GE_NOSLEEP='1', GE_HITCHMS='0',
                GE_LOADTOUR=f'{options.dwell},{options.settle}', GE_LATELOG=str(folder/'late.txt'),
                GE_BENCH=str(folder/'frames.csv'), GE_BENCH_END=str(options.max_ticks), SDL_AUDIODRIVER='dummy')
+    env.update(container_env(folder, options))
     env.update(options.env)
     if options.learn_prefetch:
         env['GE_HD_USED'] = str(folder/'hd_used.txt')
@@ -101,6 +114,9 @@ def play(item, rom, folder, options):
     """Run one stage to the tour's end; returns the process exit code."""
     shutil.rmtree(folder, ignore_errors=True)
     folder.mkdir(parents=True)
+    if options.video_driver:
+        for name in CONTAINER_FOLDERS:
+            (folder/name).mkdir()
     copy = folder/options.exe.name
     shutil.copy2(options.snapshot/options.exe.name, copy)
     for dll in options.snapshot.glob('*.dll'):
@@ -116,7 +132,7 @@ def play(item, rom, folder, options):
     try:
         with open(folder/'stdout.txt', 'w', encoding='utf-8') as out:
             process = subprocess.run([str(copy)], cwd=folder, env=run_env(item, rom, folder, options),
-                                     stdout=out, stderr=subprocess.STDOUT, timeout=RUN_TIMEOUT_S)
+                                     stdout=out, stderr=subprocess.STDOUT, timeout=options.run_timeout)
         return process.returncode
     except subprocess.TimeoutExpired:
         return 'timeout'
@@ -179,6 +195,10 @@ def parse_options(argv):
     parser.add_argument('--max-ticks', type=int, default=30000, help='end a run here if the tour has not')
     parser.add_argument('--budget-ms', type=float, default=4.0, help='load work a frame after the load may do')
     parser.add_argument('--window', default='1280x720')
+    parser.add_argument('--video-driver', help='SDL video driver for the game, with a HOME and icon cache in '
+                        'each run\'s folder (offscreen: a container with no display)')
+    parser.add_argument('--run-timeout', type=int, default=RUN_TIMEOUT_S,
+                        help='seconds a stage may run (raise it for an emulated host)')
     parser.add_argument('--out', type=Path, help='default build_win/late-load-audit/<time>')
     parser.add_argument('--keep', action='store_true', help='keep each run\'s folder (logs) after the report')
     parser.add_argument('--check', action='store_true', help='exit 1 on frames over budget or late shaders')
@@ -228,6 +248,8 @@ def main(argv=None):
         if not options.keep:
             for name in ('frames.csv', 'midas.ini'):
                 (folder/name).unlink(missing_ok=True)
+            for name in CONTAINER_FOLDERS:
+                shutil.rmtree(folder/name, ignore_errors=True)
     if options.learn_prefetch:
         learn(options)
     shaders = report.late_shaders(summaries)

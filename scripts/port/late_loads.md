@@ -103,6 +103,28 @@ Delete the audit folders when done (`build_win/late-load-audit`).
 
 `python scripts/port/test_late_load_audit.py` tests the report without a ROM.
 
+### In a Linux container (the 64-bit port)
+
+The 64-bit builds (FORK-089) are audited in the project's containers, with
+Mesa's software GL and no display:
+
+```sh
+python3 scripts/port/lp64_env.py run --arch aarch64 -- python3 scripts/port/late_load_audit.py \
+    --exe build/lp64/video/IronSights --no-pack --video-driver offscreen --keep --out build/lp64/lla/NAME
+```
+
+`--video-driver offscreen` sets `SDL_VIDEODRIVER` and gives each run its own
+`HOME` and icon cache (`GE_ICON_CACHE_DIR`) inside its folder, as
+`lp64_play.py run --video` does; without it SDL picked the offscreen driver by
+itself in the aarch64 container, but the choice is then SDL's. `--run-timeout`
+(default 600 seconds a stage) is for an emulated host: the 32-bit reference
+(`build/lp64/ref-i686-video`, `--arch i686 --video`) runs under qemu-i386 at a
+small fraction of native speed: Temple's tour took 15 minutes there, and Dam's
+intro alone did not end in 30. Software rendering changes how long uploads
+and shader compiles take, so compare such reports by kind and name of late
+event, not by milliseconds. The reports are ROM-derived run output: they stay
+under `build/lp64/` and are deleted when done.
+
 ## Known remaining first-use costs
 
 - With the HD pack, a frame that first draws several newly uploaded large

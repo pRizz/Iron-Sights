@@ -1,5 +1,8 @@
 """Check the late-load audit's pure parts: log parsing, the load split, findings, learning."""
+import os
+import shutil
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -7,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent/'bench'))
 
 import bench_metrics as metrics  # noqa: E402
+import late_load_audit as audit  # noqa: E402
 import late_load_report as report  # noqa: E402
 
 HEADER = '# ge-bench 1 tickhz=0 render_thread=1 fixedtick=1 nosleep=1 reason=end\n'+','.join(metrics.COLUMNS)+'\n'
@@ -160,6 +164,76 @@ class LearnTests(unittest.TestCase):
         self.assertEqual(merged['about'], 'x')
         self.assertEqual(merged['stages'], {'9': ['C'], '22': ['KEEP'], '33': ['A', 'B']})
         self.assertEqual(list(merged['stages']), ['9', '22', '33'])
+
+
+class ContainerOptionTests(unittest.TestCase):
+    """The options that run the audit in a container (LP64-005 Task 14); without them a run is unchanged."""
+
+    def setUp(self):
+        self.folder = Path(tempfile.mkdtemp(prefix='late-load-test-'))
+        self.exe = self.folder/'IronSights'
+        self.exe.write_bytes(b'')
+        self.addCleanup(shutil.rmtree, self.folder, ignore_errors=True)
+
+    def options(self, *extra):
+        return audit.parse_options(['--exe', str(self.exe), '--no-pack', '--out', str(self.folder/'out'), *extra])
+
+    def test_without_a_video_driver_the_run_keeps_the_callers_display_and_home(self):
+        # Arrange
+        options = self.options()
+
+        # Act
+        env = audit.run_env('dam', self.folder/'rom', self.folder/'dam', options)
+
+        # Assert
+        self.assertEqual(env.get('SDL_VIDEODRIVER'), os.environ.get('SDL_VIDEODRIVER'))
+        self.assertEqual(env.get('HOME'), os.environ.get('HOME'))
+        self.assertNotIn('GE_ICON_CACHE_DIR', env)
+
+    def test_a_video_driver_is_given_to_the_game(self):
+        # Arrange
+        options = self.options('--video-driver', 'offscreen')
+
+        # Act
+        env = audit.run_env('dam', self.folder/'rom', self.folder/'dam', options)
+
+        # Assert
+        self.assertEqual(env['SDL_VIDEODRIVER'], 'offscreen')
+
+    def test_a_video_driver_gives_the_run_its_own_home_and_icon_cache(self):
+        # Arrange
+        options = self.options('--video-driver', 'offscreen')
+
+        # Act
+        env = audit.run_env('temple', self.folder/'rom', self.folder/'temple', options)
+
+        # Assert
+        self.assertEqual(env['HOME'], str(self.folder/'temple'/'home'))
+        self.assertEqual(env['GE_ICON_CACHE_DIR'], str(self.folder/'temple'/'icons'))
+
+    def test_an_env_option_still_wins_over_the_container_variables(self):
+        # Arrange
+        options = self.options('--video-driver', 'offscreen', '--env', 'SDL_VIDEODRIVER=x11')
+
+        # Act
+        env = audit.run_env('dam', self.folder/'rom', self.folder/'dam', options)
+
+        # Assert
+        self.assertEqual(env['SDL_VIDEODRIVER'], 'x11')
+
+    def test_the_run_timeout_defaults_to_ten_minutes(self):
+        # Act
+        options = self.options()
+
+        # Assert
+        self.assertEqual(options.run_timeout, 600)
+
+    def test_the_run_timeout_can_be_raised_for_an_emulated_host(self):
+        # Act
+        options = self.options('--run-timeout', '2400')
+
+        # Assert
+        self.assertEqual(options.run_timeout, 2400)
 
 
 if __name__ == '__main__':
