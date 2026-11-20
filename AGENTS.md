@@ -369,7 +369,8 @@ pass its isolated executable rather than rebuilding an active player binary.
   row and its probe assertion by hand. A `defect` line is temporary: its
   reason starts with its owner (`Task N:`, `strict:` or `undecided:`), and
   the fix takes the site off the list or changes its verdict in the same
-  change. `check` runs in CI's tests step; run it before pushing a change to
+  change. CI's tests step runs `check --no-defects`, which also fails while
+  any `defect` line remains, naming each; run it before pushing a change to
   C or C++.
 - At `GE_POINTER_BITS=64`, C and C++ that mix pointers with 32-bit integers do
   not compile: `CMakeLists.txt` gives 64-bit C `-Werror=int-conversion

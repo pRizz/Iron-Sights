@@ -245,6 +245,14 @@ class Defects(unittest.TestCase):
         self.assertIn('defect', overlays.__doc__)
         self.assertTrue(any(line.lstrip('# ').startswith('defect ') for line in header))
 
+    def test_ci_fails_while_a_defect_line_remains(self):
+        # Arrange
+        workflow = overlays.ROOT/'.github/workflows/windows-release.yml'
+        # Act
+        lines = [line.strip() for line in workflow.read_text().splitlines() if 'lp64_overlays.py check' in line]
+        # Assert
+        self.assertEqual(lines, ['python3 scripts/port/lp64_overlays.py check --no-defects'])
+
 
 if __name__ == '__main__':
     unittest.main()
