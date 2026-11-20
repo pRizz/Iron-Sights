@@ -163,6 +163,18 @@ def collect(item, folder, budget_us):
     return summary
 
 
+def clean_run(folder, options, usable):
+    """Without --keep, delete a run's HOME and icon cache (ROM-derived icons), and with USABLE logs its frame log
+    and ini too; a run that left no usable logs keeps those for a look at what went wrong."""
+    if options.keep:
+        return
+    if usable:
+        for name in ('frames.csv', 'midas.ini'):
+            (folder/name).unlink(missing_ok=True)
+    for name in CONTAINER_FOLDERS:
+        shutil.rmtree(folder/name, ignore_errors=True)
+
+
 def learn(options):
     """Merge each run's GE_HD_USED records into hd_stage_prefetch.json."""
     found = {}
@@ -241,15 +253,12 @@ def main(argv=None):
         if summary is None:
             summaries.append({**report.summarize_run(item, -1, [], [], budget_us), 'events': [], 'toured': False,
                               'rooms': 'no logs'})
+            clean_run(folder, options, usable=False)
             continue
         log(f"{item}: exit {code}, load {summary['load_ms']:.0f} ms, {summary['late_count']} late events, "
             f"{summary['frames_over_budget']} frame(s) over budget, rooms {summary['rooms']}")
         summaries.append(summary)
-        if not options.keep:
-            for name in ('frames.csv', 'midas.ini'):
-                (folder/name).unlink(missing_ok=True)
-            for name in CONTAINER_FOLDERS:
-                shutil.rmtree(folder/name, ignore_errors=True)
+        clean_run(folder, options, usable=True)
     if options.learn_prefetch:
         learn(options)
     shaders = report.late_shaders(summaries)

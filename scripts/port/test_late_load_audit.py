@@ -1,4 +1,6 @@
 """Check the late-load audit's pure parts: log parsing, the load split, findings, learning."""
+import contextlib
+import io
 import os
 import shutil
 import sys
@@ -220,6 +222,45 @@ class ContainerOptionTests(unittest.TestCase):
 
         # Assert
         self.assertEqual(env['SDL_VIDEODRIVER'], 'x11')
+
+    def run_folder(self):
+        folder = self.folder/'dam'
+        for name in ('home', 'icons'):
+            (folder/name).mkdir(parents=True)
+        (folder/'midas.ini').write_text('[display]\n')
+        return folder
+
+    def test_a_run_with_no_usable_logs_leaves_no_home_or_icon_cache(self):
+        # Arrange: the stage's run times out and leaves no logs (play and collect stand in for the game)
+        def play(item, rom, folder, options):
+            for name in ('home', 'icons'):
+                (folder/name).mkdir(parents=True)
+            (folder/'midas.ini').write_text('[display]\n')
+            return 'timeout'
+        for name, stand_in in (('find_rom', lambda: self.folder/'rom'), ('play', play),
+                               ('collect', lambda item, folder, budget_us: None)):
+            original = getattr(audit, name)
+            setattr(audit, name, stand_in)
+            self.addCleanup(setattr, audit, name, original)
+
+        # Act
+        with contextlib.redirect_stdout(io.StringIO()):
+            audit.main(['--exe', str(self.exe), '--no-pack', '--out', str(self.folder/'out'), '--stage', 'dam',
+                        '--video-driver', 'offscreen'])
+
+        # Assert
+        self.assertEqual(sorted(path.name for path in (self.folder/'out'/'dam').iterdir()), ['midas.ini'])
+
+    def test_keep_leaves_a_run_folder_as_it_is(self):
+        # Arrange
+        folder = self.run_folder()
+        options = self.options('--video-driver', 'offscreen', '--keep')
+
+        # Act
+        audit.clean_run(folder, options, usable=False)
+
+        # Assert
+        self.assertEqual(sorted(path.name for path in folder.iterdir()), ['home', 'icons', 'midas.ini'])
 
     def test_the_run_timeout_defaults_to_ten_minutes(self):
         # Act
