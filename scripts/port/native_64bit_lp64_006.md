@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Planned on 2026-11-21 from measurements on `main` at bfc0271.
-Not yet accepted: the thirteen items under "Decisions for the owner" at
-the end are open, and the tasks are written for their recommendations.
+**Status:** Planned on 2026-11-21 from measurements on `main` at bfc0271
+and accepted by the owner the same day with all thirteen recommendations
+under "Decisions for the owner" at the end ("Accept all thirteen").
 Nothing is built; execution starts at Task 1. The status table of
 [native_64bit_plan.md](native_64bit_plan.md) records what is built and
 verified as the tasks land.
@@ -1616,7 +1616,8 @@ this milestone's folders under `build/lp64` before the push.
 ## Decisions for the owner
 
 Thirteen, each with a recommendation and what the other way costs. The
-tasks are written for the recommendations.
+tasks are written for the recommendations. **The owner accepted all
+thirteen recommendations on 2026-11-21.**
 
 1. **How item 5's "fixed seed and tick" is read.** `lp64_play.py`
    refuses `GE_FIXEDTICK` because a demo then ends at another tick, and
