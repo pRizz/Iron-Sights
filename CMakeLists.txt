@@ -608,13 +608,15 @@ if(GE_VIDEO)
         list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_save_transfer>)
     endif()
     add_compile_definitions(GE_VIDEO=1)
-    # The play log (port_playlog.h, LP64-005 Task 8) and lockstep
-    # (port_lockstep.h, LP64-006 Task 2) are empty in a 32-bit build with
-    # video, the shipped kind; like port_lp64.c, an empty object would add a
-    # compiler ident to the Windows executable's .rdata.
+    # The play log (port_playlog.h, LP64-005 Task 8), lockstep
+    # (port_lockstep.h, LP64-006 Task 2) and the simulation trace
+    # (port_simtrace.h, Task 3) are empty in a 32-bit build with video, the
+    # shipped kind; like port_lp64.c, an empty object would add a compiler
+    # ident to the Windows executable's .rdata.
     if(NOT GE_POINTER_BITS EQUAL 64)
         list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_playlog.c
-            ${CMAKE_SOURCE_DIR}/port/src/port_lockstep.c)
+            ${CMAKE_SOURCE_DIR}/port/src/port_lockstep.c
+            ${CMAKE_SOURCE_DIR}/port/src/port_simtrace.c)
     endif()
 else()
     set(FAST3D_SRC)

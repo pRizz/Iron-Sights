@@ -63,6 +63,7 @@
 #include "chr.h"
 #ifndef TARGET_N64
 #include "port_playlog.h" /* LP64-005 Task 8 */
+#include "port_simtrace.h" /* LP64-006 Task 3 */
 #include "port_lp64.h" /* LP64-005 Task 13: portLp64PoolPeaks */
 #endif
 
@@ -2176,6 +2177,9 @@ void lvlTick(void)
             break;
         }
     }
+#ifndef TARGET_N64
+    portSimTraceTick(); /* GE_SIMTRACE: one line a tick (port_simtrace.h) */
+#endif
 }
 
 

@@ -2,7 +2,8 @@
 # The ROM-free tests of LP64-006's comparison harness, at each pointer width
 # the host can build: lockstep (test_lockstep.c, Task 2) includes
 # libultra_shim.c and port_lockstep.c and links the real pump, pcsched.c,
-# built without GE_VIDEO as a headless build is.
+# built without GE_VIDEO as a headless build is; the simulation trace
+# (test_simtrace.c, Task 3) includes port_simtrace.c with fabricated game state.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source scripts/port/harness_widths.sh
@@ -21,5 +22,7 @@ for width in $widths; do
         -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include)
     "$compiler" "${flags[@]}" scripts/port/test_lockstep.c port/src/pcsched.c -lm -o "$work/lockstep-$width"
     "$work/lockstep-$width"
+    "$compiler" "${flags[@]}" scripts/port/test_simtrace.c -lm -o "$work/simtrace-$width"
+    "$work/simtrace-$width"
 done
 echo "test_lp64_compare: PASS"
