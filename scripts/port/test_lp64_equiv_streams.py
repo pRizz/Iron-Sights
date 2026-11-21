@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lp64_equiv_streams  # noqa: E402
@@ -93,6 +94,31 @@ class SimDifference(unittest.TestCase):
         # Act, Assert
         with self.assertRaises(lp64_equiv_streams.Unreadable):
             lp64_equiv_streams.first_difference('sim', a, b)
+
+    def test_player_in_another_slot_is_a_difference(self):
+        # Arrange
+        a = self.trace('a.txt', sim_line(1))
+        b = self.trace('b.txt', sim_line(1).replace(' p0=', ' p1='))
+
+        # Act
+        difference = lp64_equiv_streams.first_difference('sim', a, b)
+
+        # Assert
+        self.assertEqual((difference.index, difference.field, difference.a[:3], difference.b[:3]),
+                         (1, 'p0', 'p0=', 'p1='))
+
+    def test_record_with_an_extra_field_is_a_difference(self):
+        # Arrange: records the file reader cannot make, one field longer.
+        short = lp64_equiv_streams.Record('T', 1, (('n', '1'),))
+        long = lp64_equiv_streams.Record('T', 1, (('n', '1'), ('timer', '1')))
+        readers = {'sim': lambda path: [short] if str(path) == 'a' else [long]}
+
+        # Act
+        with mock.patch.dict(lp64_equiv_streams.READERS, readers):
+            difference = lp64_equiv_streams.first_difference('sim', Path('a'), Path('b'))
+
+        # Assert
+        self.assertEqual((difference.field, difference.a, difference.b), ('timer', '(none)', 'timer=1'))
 
     def test_detail_line_difference_names_its_record_field(self):
         # Arrange

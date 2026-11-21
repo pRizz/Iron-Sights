@@ -48,7 +48,9 @@ class Unreadable(Exception):
 class Difference:
     """The first place two files of a stream differ: `index` is the tick (a
     sim line's n), `field` the field's name (`G.` or `M.` before a detail
-    line's), `a` and `b` its values, `line` the 1-based line number."""
+    line's), `a` and `b` its values (each `name=value` when the two files
+    hold different fields there, as `p0` against `p1`), `line` the 1-based
+    line number."""
     index: int
     field: str
     a: str
@@ -134,11 +136,20 @@ def first_difference(kind: str, path_a: Path, path_b: Path) -> Difference | None
         prefix = '' if ra.kind == 'T' else f'{ra.kind}.'
         if ra.kind != rb.kind:
             return Difference(ra.tick, 'kind', ra.kind, rb.kind, number)
-        for (name, va), (_, vb) in zip(ra.fields, rb.fields):
+        for (name, va), (nb, vb) in zip(ra.fields, rb.fields):
+            if name != nb:  # a player in another slot: p0 against p1
+                return Difference(ra.tick, prefix + name, f'{name}={va}', f'{nb}={vb}', number)
             if va != vb:
                 return Difference(ra.tick, prefix + name, va, vb, number)
-        # Unreachable while `players` (checked against its pI fields) comes first.
-        raise AssertionError(f'line {number}: records differ in no field')
+        # Every shared field is equal, so one record has more fields than the
+        # other. The reader ties a T line's pI fields to its `players` value,
+        # so this needs records the reader did not make; it is still a
+        # difference, named by the first field only one side has.
+        longer, side = (ra, 'a') if len(ra.fields) > len(rb.fields) else (rb, 'b')
+        name, value = longer.fields[min(len(ra.fields), len(rb.fields))]
+        extra = f'{name}={value}'
+        return Difference(ra.tick, prefix + name, extra if side == 'a' else '(none)',
+                          extra if side == 'b' else '(none)', number)
     if len(a) != len(b):
         short = path_a if len(a) < len(b) else path_b
         raise Unreadable(f'{short} is short: {min(len(a), len(b))} of {max(len(a), len(b))} lines')
