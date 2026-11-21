@@ -334,8 +334,12 @@ or outside the gallery's inputs.
 Existing files that gain a hook: `src/game/lv.c` (one call),
 `port/src/pcsched.c`, `port/src/libultra_shim.c`,
 `src/game/frametiming.c`, `port/src/inputrec.c`, `port/src/video.c`,
-`port/src/audio_pc.c`, `port/src/port_playlog.c`, `CMakeLists.txt`.
-None is in the strict tier.
+`port/src/audio_pc.c`, `port/src/port_playlog.c`,
+`port/include/port_playlog.h`, `CMakeLists.txt`. Existing files that a
+fix or a pool change edits: `src/game/chraction.c`, the file of the
+index-0 load (Task 16), `port/src/romconv_model_records.c`,
+`include/PR/gu.h`, `port/src/port_lp64.c` and the source of each pool
+Task 11 hooks or raises. None is in the strict tier.
 
 ## Global Constraints
 
@@ -355,7 +359,9 @@ messages end with `Co-Authored-By: Claude Fable 5.2
   sound lock and the shared maths compile only with `-DGE_COMPARE=ON`.
   Lockstep and the simulation trace compile where `PORT_PLAY_HARNESS` is
   1, which gains `|| defined(GE_COMPARE)`; it stays 0 in a 32-bit build
-  with video, so the Windows comparison stays identical.
+  with video, so the Windows comparison stays identical. It is 1 in
+  every 64-bit video build; whether LP64-007's 64-bit packages keep the
+  play harness is LP64-007's to decide (see "What LP64-006 owns").
 - **The reference agrees with itself first** (the design's rule). No
   stream of a case is compared across builds until two runs of each
   build give the same file. A file that is short, torn or missing is
@@ -370,7 +376,10 @@ messages end with `Co-Authored-By: Claude Fable 5.2
   or only on the translated x86_64 build is marked `host:` in that file
   until a run on real x86 hardware confirms it (decision 5).
 - **`lp64_play.py` keeps refusing `GE_FIXEDTICK` and `GE_NOSLEEP`**, and
-  demos never run in lockstep (decision 1).
+  demos never run in lockstep (decision 1). It may hold a case marked
+  `lockstep=True`, which it runs with `GE_LOCKSTEP=1`; its `--env`
+  refuses `GE_LOCKSTEP`, and Task 2's `AGENTS.md` edit rewrites the
+  sentence that says its runs are paced in real time.
 - **Strict-tier files** (`STRICT_FILES` and `port/fast3d/` in
   `hand_gallery.py`) change only on the branch `lp64/equiv-strict`.
 - **Render performance, load before play, settings, input idioms**
@@ -407,14 +416,19 @@ picture or simulation difference names in `gunfire.c`, `model.c`,
 
 Every task ends by running this and recording the results in FORK-089.
 Steps 1 to 8 are the LP64-005 plan's task check as its Task 15 ran it.
-Step 9 exists from Task 5; `SETS` and `STREAMS` are what the task names.
+Step 9 exists from Task 5; `SETS`, `STREAMS`, `RUN`, `OPTIONS` and
+`SUFFIX` are what the task names. `RUN` is one of `sim`,
+`video-default`, `video-all`, `snd-default` and `snd-all`, so no task's
+folders overwrite another's; a task that names none uses `sim`.
+`SUFFIX` is empty for `sim` and `-video` for the others; `OPTIONS` are
+the run's (`--video`, `--profile default|all`).
 
 ```bash
 # 9. The comparison: each build agrees with itself, then the builds agree.
-python3 scripts/port/lp64_env.py run --arch i686 -- python3 scripts/port/lp64_equiv.py run --rom /rom/baserom.u.z64 --set SETS --repeat 2 --output build/lp64/equiv/i686 build/lp64/cmp-i686/IronSights
-python3 scripts/port/lp64_env.py run --arch x86_64 -- python3 scripts/port/lp64_equiv.py run --rom /rom/baserom.u.z64 --set SETS --repeat 2 --output build/lp64/equiv/x64 build/lp64/cmp-x64/IronSights
-python3 scripts/port/lp64_env.py run --arch aarch64 -- python3 scripts/port/lp64_equiv.py run --rom /rom/baserom.u.z64 --set SETS --repeat 2 --output build/lp64/equiv/a64 build/lp64/cmp-a64/IronSights
-python3 scripts/port/lp64_equiv.py compare --streams STREAMS --expect scripts/port/lp64_equiv_expected.txt build/lp64/equiv/i686 build/lp64/equiv/x64 build/lp64/equiv/a64
+python3 scripts/port/lp64_env.py run --arch i686 -- python3 scripts/port/lp64_equiv.py run --rom /rom/baserom.u.z64 --set SETS OPTIONS --repeat 2 --output build/lp64/equiv/RUN/i686 build/lp64/cmp-i686SUFFIX/IronSights
+python3 scripts/port/lp64_env.py run --arch x86_64 -- python3 scripts/port/lp64_equiv.py run --rom /rom/baserom.u.z64 --set SETS OPTIONS --repeat 2 --output build/lp64/equiv/RUN/x64 build/lp64/cmp-x64SUFFIX/IronSights
+python3 scripts/port/lp64_env.py run --arch aarch64 -- python3 scripts/port/lp64_equiv.py run --rom /rom/baserom.u.z64 --set SETS OPTIONS --repeat 2 --output build/lp64/equiv/RUN/a64 build/lp64/cmp-a64SUFFIX/IronSights
+python3 scripts/port/lp64_equiv.py compare --streams STREAMS --expect scripts/port/lp64_equiv_expected.txt build/lp64/equiv/RUN/i686 build/lp64/equiv/RUN/x64 build/lp64/equiv/RUN/a64
 ```
 
 Expected: each `run` prints one `CASE: RAN` line a case, `OK: N of N
@@ -467,7 +481,9 @@ that owns it.
    address-space randomisation on and must agree with itself; the
    digest's unit test passes the same bytes at two addresses and
    requires one digest; Task 3 lists every sort and list order the trace
-   walks and shows none compares pointers. (Tasks 3, 7.)
+   walks and shows none compares pointers; Task 5 records each
+   container's `/proc/sys/kernel/randomize_va_space` in FORK-089.
+   (Tasks 3, 5, 7.)
 3. **Comparison builds that are not the shipped program.** The shared
    maths changes results, so equivalence could hold only for a program
    nobody ships. Expected: the 14 demos on each comparison build give
@@ -497,7 +513,9 @@ first.
 **Files:**
 - Modify: `port/src/port_playlog.c`, `port/include/port_playlog.h`,
   `scripts/port/lp64_play_input.py` (the docstring's item names),
-  `scripts/port/test_lp64_play_input.py`, `FORK_CHANGES.md`
+  `scripts/port/test_lp64_play_input.py`,
+  `scripts/port/test_inputrec_headless.sh` (runs the new driver),
+  `FORK_CHANGES.md`
 - Create: `scripts/port/test_playlog_gun.c`, run by
   `scripts/port/test_inputrec_headless.sh`
 
@@ -512,18 +530,19 @@ first.
   `ge: play: gun tick=T clock=C global=G r=ITEM,STATE,ANIM,FIRING,HOLD,AMMO,NEXT l=...`.
   `GE_PLAYLOG=1` prints exactly what it prints today.
 - Produces: `GE_PLAYSTALL=T:MS` (harness builds only): one sleep of MS
-  milliseconds at input tick T, to force a missed retrace on purpose.
+  milliseconds at input tick T, to force a missed retrace on purpose,
+  through `void portPlaySleepMs(u32 ms);` so a test can stub the sleep.
 
 - [ ] **Step 1: Write the failing test**
 
 `test_playlog_gun.c`: `gun_line_has_both_hands` (a fabricated player
 with right `11,3,7,1,40,30,-1` and left the same prints those fields in
 that order); `level_one_prints_no_gun_line`; `stall_sleeps_once_at_its_tick`
-(a stubbed sleep is called once, with 250, at tick 100 and not at 99 or
-101). Run: `bash scripts/port/test_inputrec_headless.sh`. Expected:
-FAIL, `undefined reference to 'portPlayGunLine'`.
+(a stubbed `portPlaySleepMs` is called once, with 250, at tick 100 and
+not at 99 or 101). Run: `bash scripts/port/test_inputrec_headless.sh`.
+Expected: FAIL, `undefined reference to 'portPlayGunLine'`.
 
-- [ ] **Step 2: Implement** `void portPlayGunLine(s32 tick);` and the
+- [ ] **Step 2: Implement** `void portPlayGunLine(u32 tick);` and the
   stall in `port_playlog.c`, called from `portPlayPlayerTick`. Run the
   test. Expected: `test_inputrec_headless: PASS`.
 
@@ -604,7 +623,8 @@ git commit -m "Log player 0's gun state and name why weapons-dam misses a shot"
 `test_lockstep.c` (at both widths through `test_lp64_compare.sh`):
 `time_is_retraces_times_a_field` (`portLockstepMicroseconds()` is
 16,666 after one retrace and 1,000,000 after 60);
-`unset_reads_the_host_clock`;
+`unset_reads_the_host_clock` (with `GE_LOCKSTEP` unset, `osGetTime`
+equals the stubbed host clock's value converted as today);
 `one_retrace_a_frame` (a stub game loop that takes three pump calls a
 frame sees one retrace message a frame over 100 frames).
 `test_lp64_play.py`: `lockstep_case_sets_the_variable`,
@@ -629,7 +649,16 @@ weapon changes with a held trigger, 2,700 frames, `GE_LOCKSTEP=1`,
 `GE_PLAYLOG=2`; six at once, three rounds, on the plain aarch64 and the
 i686 headless executables. Expected: the 18 logs' `ge: play:` lines are
 identical within each build (today: 2 of 3 with `GE_FIXEDTICK`, 0 of 3
-paced). Also `GE_PLAYSTALL=1500:250` changes nothing in lockstep.
+paced). Also `GE_PLAYSTALL=1500:250` changes nothing in lockstep. The
+route is written once by `lp64_play_route.route_text` to
+`build/lp64/lockstep/route.txt`; each run, with K its number:
+
+```bash
+python3 scripts/port/lp64_env.py run --arch aarch64 -- env GE_ROM=/rom/baserom.u.z64 GE_STAGE=dam GE_CHEATS=guns GE_INPUTPLAY=build/lp64/lockstep/route.txt GE_FRAMES=2700 GE_LOCKSTEP=1 GE_PLAYLOG=2 build/lp64/boot/IronSights > build/lp64/lockstep/a64-K.log 2>&1
+```
+
+and the same with `--arch i686`, `build/lp64/ref-i686/IronSights` and
+`i686-K.log`.
 
 - [ ] **Step 5: `weapons-dam`, if Task 1 named its timing**
 
@@ -653,6 +682,7 @@ git commit -m "Add lockstep: one retrace a game frame and a clock that counts th
   `scripts/port/lp64_equiv_streams.py`,
   `scripts/port/test_lp64_equiv_streams.py`
 - Modify: `src/game/lv.c` (one call at the end of `lvlTick`),
+  `scripts/port/test_lp64_compare.sh`,
   `.github/workflows/windows-release.yml`, `FORK_CHANGES.md`
 
 **Interfaces:**
@@ -664,11 +694,19 @@ git commit -m "Add lockstep: one retrace a game frame and a clock that counts th
   (`g_portRandDrawCount`), each `pH` a player's position, facing and
   health as float bits, and each `count:hash` a count and an FNV-1a hash
   over values (for a guard: slot, action, flags, position bits, health
-  bits). Expands to nothing where `PORT_PLAY_HARNESS` is 0.
+  bits; for a prop: list index, type, flags, position bits; for a room:
+  room number and whether it is loaded). Expands to nothing where
+  `PORT_PLAY_HARNESS` is 0. The leading `T` is literal (the record's
+  kind, as `F` is the digest's); each `pH` is `pI=X,Y,Z,FACING,HEALTH`,
+  eight hex digits each, players separated by one space. One line:
+  `T n=1 timer=1 seed=00000000deadbeef draws=2 players=1
+  p0=3f800000,00000000,c2c80000,40490fdb,3f800000 chrs=3:0badf00d
+  props=12:01234567 rooms=4:89abcdef`, written on one line.
 - `GE_SIMTRACE_DETAIL=A-B` adds, for calls A to B, one line a guard and
   one a moving prop, so a difference can be read to its record.
 - `lp64_equiv_streams.py`: `first_difference(kind, path_a, path_b) ->
-  Difference | None` for `kind` in `sim`, `gfx`, `snd`; `Difference` has
+  Difference | None` for `kind` `sim` (Tasks 7 and 9 add `gfx` and
+  `snd`); `Difference` has
   `index`, `field` and both values. A file with no line, a last line
   without a newline or a line that does not parse raises `Unreadable`.
 
@@ -718,6 +756,7 @@ git commit -m "Write one simulation line a tick to a trace file"
   `scripts/port/test_compare_math.c` (run by `test_lp64_compare.sh`),
   `scripts/port/lp64_libm_sweep.c`
 - Modify: `CMakeLists.txt` (`option(GE_COMPARE ...)`),
+  `scripts/port/test_lp64_compare.sh`,
   `port/include/port_playlog.h` (`PORT_PLAY_HARNESS`),
   `scripts/port/test_pointer_bits.sh`, `scripts/port/package_linux.py`,
   `scripts/port/package_windows.py`, `AGENTS.md`, `FORK_CHANGES.md`
@@ -816,8 +855,8 @@ git commit -m "Add the comparison build with one tanf and atanf for every host"
 
 - `lp64_equiv.py run --rom ROM --set NAME[,NAME...] [--profile
   default|all] [--video [--draw] [--shots TICK]] [--repeat N] [--jobs N]
-  [--only CASE] [--maths-off] [--timeout-scale F] --output DIR
-  EXECUTABLE`: runs each case N
+  [--only CASE] [--maths-off] [--timeout-scale F] [--env NAME=VALUE]...
+  [--saves DIR] --output DIR EXECUTABLE`: runs each case N
   times into `DIR/runK/`, writing `CASE.log`, `CASE.sim`, and with
   `--video` `CASE.gfx` and `CASE.wav`. Prints `CASE: RAN (T ticks, S
   shots)` or `CASE: FAIL (reason)`, `OK: N of N cases ran`, then, with
@@ -826,8 +865,16 @@ git commit -m "Add the comparison build with one tanf and atanf for every host"
   `ge: lockstep: on` (demos excepted), its frame-limit line, its subject
   lines (a stage load; for a route with fire, 30 shots or more and
   `moved`), or with any line `lp64_play_judge.problems` fails. It
-  refuses an executable whose log lacks `ge: compare: on`, and with
-  `--maths-off` one whose log lacks `ge: compare: on (libm)`.
+  refuses an executable whose log lacks the exact line `ge: compare:
+  on`, refuses `ge: compare: on (libm)` without `--maths-off`, and with
+  `--maths-off` refuses one whose log lacks `ge: compare: on (libm)`.
+  `--env` passes a variable to every case and refuses those the runner
+  sets: `GE_LOCKSTEP`, `GE_FIXEDTICK`, `GE_NOSLEEP`, `GE_SIMTRACE`,
+  `GE_GFXDIGEST` and `GE_GFXDIGEST_NODRAW` (`GE_GFXDIGEST_DETAIL` and
+  `GE_SIMTRACE_DETAIL` pass), `GE_AUDIO_LOCK`, `GE_AUDIO_CAPTURE` and
+  `GE_SEED`. `--saves DIR` copies DIR into the folder of each case of
+  set `saves` (Task 13) before it runs; that set refuses to run without
+  it.
 - `lp64_equiv.py compare --streams sim[,gfx,snd] [--expect FILE] DIR...`:
   compares each later DIR with the first, case by case, run 1 with
   run 1. Prints `CASE STREAM A:B identical (N)` or `... first differs at
@@ -836,14 +883,19 @@ git commit -m "Add the comparison build with one tanf and atanf for every host"
   differs-from I explained: CAUSE; removed-by: RUN`, or `open:`,
   `strict:`, `host:` with a reason. A listed exception that now matches
   fails too.
-- `lp64_equiv.py sensitivity --rom ROM --output DIR EXECUTABLE`: one
-  `solo` case at `GE_SEED=1` and `GE_SEED=2`; exit 0 only if every
-  stream the run wrote differs.
+- `lp64_equiv.py sensitivity [--video] --rom ROM --output DIR
+  EXECUTABLE`: one `solo` case at `GE_SEED=1` and `GE_SEED=2`; exit 0
+  only if every stream the run wrote differs, printing `OK: STREAMS
+  differ between seeds` (for example `OK: sim differs between seeds`,
+  `OK: sim, gfx and snd differ between seeds`).
 - `lp64_equiv_profile.py`: `profile_ini('default')` is `[display]
   fullscreen=windowed`; `profile_ini('all')` sets every fork option key
   to the value in its table `ALL_ON`; `EXCLUDED` maps a key left out to
-  its reason (`crash_reporting`: it would call the network).
-  Only video builds read it.
+  its reason (`crash_reporting`: it would call the network;
+  `texture_pack`: no pack is in the containers, and packs are
+  ROM-derived). `ALL_ON` sets `font_style` to the Iron Sights style,
+  with that reason beside it: the Enhanced pack is downloaded only after
+  the player consents (`AGENTS.md`). Only video builds read it.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -858,7 +910,10 @@ has: `run_fails_a_case_without_the_lockstep_line`;
 `route_turns_with_c_buttons_only` (no `M` record in a `solo` route);
 `all_profile_covers_every_fork_key` (each key of `option_keys` not in
 `read_upstream` is in `ALL_ON` or `EXCLUDED`; today 72 keys);
-`demo_cases_never_get_lockstep`.
+`all_profile_keeps_fonts_local_and_packs_out` (`font_style` is the Iron
+Sights style; `texture_pack` is in `EXCLUDED`);
+`demo_cases_never_get_lockstep`; `env_refuses_runner_variables`;
+`plain_check_refuses_a_libm_build`; `saves_set_needs_saves_folder`.
 Run: `python3 scripts/port/test_lp64_equiv.py`. Expected: FAIL, `No
 module named 'lp64_equiv'`.
 
@@ -878,7 +933,8 @@ on `cmp-a64`, then `sensitivity`.
 Expected: `OK: 38 of 38 cases ran`, `OK: 38 of 38 cases agree with
 themselves`, and `OK: sim differs between seeds`. A case that does not
 agree with itself is this task's defect: find the host value Task 2
-Step 3 missed.
+Step 3 missed. Record each container's
+`/proc/sys/kernel/randomize_va_space` in FORK-089 (Review Focus 2).
 
 - [ ] **Step 5: Task check; commit**
 
@@ -900,22 +956,26 @@ git commit -m "Add the equivalence runner, its 38 cases and the two settings pro
 - Consumes: Tasks 2 to 5; `lp64_play.py callers` for the caller of a
   random draw; `GE_SIMTRACE_DETAIL`.
 - Produces: `lp64_equiv_expected.txt` with no `open:` line for stream
-  `sim` in the default profile; the wall time of one full pass on each
+  `sim` in the default profile except `open: owner` lines from Step 5;
+  the wall time of one full pass on each
   host, recorded. The second profile needs a video build, so its
   simulation is compared in Task 8 Step 2.
 
 - [ ] **Step 1: The reference agrees with itself**
 
-Run task check step 9 for i686 only, all five sets, `--repeat 2`.
-Expected: `OK: 38 of 38 cases agree with themselves`. A demo that does
-not is compared on its `ge: demo tick` lines only and marked `unstable`
-for stream `sim`, with the tick.
+Run task check step 9 (`RUN` `sim`) for i686 only, all five sets,
+`--repeat 2`. Expected: `OK: 38 of 38 cases agree with themselves`. A
+demo whose stream does not repeat is a defect this task finds; if it
+cannot be made to repeat, the task stops and brings the demo, its first
+differing tick and what was ruled out to the owner.
 
 - [ ] **Step 2: Compare, earliest difference first**
 
-Run step 9 whole with `--streams sim`. For each case that differs
-between i686 and x86_64: rerun both with `GE_SIMTRACE_DETAIL` around the
-tick, read the record that differs, and classify as the LP64-005 plan's
+Run step 9 whole (`RUN` `sim`) with `--streams sim`. For each case
+that differs between i686 and x86_64: rerun both with
+`GE_SIMTRACE_DETAIL` around the tick (`--env GE_SIMTRACE_DETAIL=A-B`),
+read the record that differs,
+and classify as the LP64-005 plan's
 Task 5 did: a 64-bit defect (write the check that shows it, fix it,
 rerun all 38); the C library (Step 4); the reference's own state
 (`dam-twice`, Step 3); or not repeatable.
@@ -959,8 +1019,10 @@ git commit -m "Record where each case's simulation matches the 32-bit build"
 - Modify: `port/src/video.c` (the choice of `set.rapi`),
   `CMakeLists.txt` (the file compiles only with `GE_COMPARE` and
   `GE_VIDEO`), `scripts/port/lp64_equiv_streams.py` (`gfx`),
+  `scripts/port/test_lp64_equiv_streams.py`,
   `.github/workflows/windows-release.yml`, `AGENTS.md`,
-  `FORK_CHANGES.md`
+  `FORK_CHANGES.md`. `test_gfx_digest.sh` runs at both widths through
+  `harness_widths.sh`.
 
 **Interfaces:**
 - Consumes: `struct GfxRenderingAPI` (`port/fast3d/gfx_rendering_api.h`,
@@ -970,15 +1032,20 @@ git commit -m "Record where each case's simulation matches the 32-bit build"
   then calls `inner`'s. With `GE_GFXDIGEST_NODRAW=1` it calls `inner`
   only for entries that return information the interpreter uses
   (shader creation, lookup and info, texture and framebuffer ids, clip
-  parameters, the texture size limit) and skips drawing, uploads,
-  copies, post passes and read-backs. An entry `inner` leaves NULL stays
-  NULL.
+  parameters, the texture size limit, `retained_create` and
+  `retained_build`, which return handles the interpreter keeps, and
+  `start_draw_to_framebuffer`, which returns a `bool`) and skips
+  drawing, uploads, copies, post passes and read-backs. An entry `inner`
+  leaves NULL stays NULL.
 - With `GE_GFXDIGEST=FILE`, one line at each `end_frame`:
   `F n=N tick=T draws=D tris=R vtx=H8 tex=U:H8 state=H8 post=H8`:
   `vtx` over every float of every vertex buffer drawn, as bits; `tex`
   over the bytes and sizes uploaded; `state` over depth, viewport,
   scissor, alpha, sampler and shader ids; `post` over the optional
-  passes' arguments. Buffers are hashed by content, never by address.
+  passes' arguments. Buffers are hashed by content, never by address:
+  a retained buffer is hashed once at `retained_build`, and each
+  `retained_draw*` adds that hash for its handle to `vtx`. `T` is
+  `g_GlobalTimer` when the frame ends.
 - `GE_GFXDIGEST_DETAIL=A-B` adds one line a call for frames A to B.
 
 - [ ] **Step 1: Write the failing test**
@@ -989,7 +1056,9 @@ calls: `same_calls_same_line`; `one_vertex_bit_changes_vtx_only`;
 (Review Focus 2); `nodraw_skips_draw_and_upload_and_forwards_shader_info`;
 `null_entries_stay_null`; `every_entry_of_the_table_is_wrapped` (a
 static assertion on the struct's size against the wrapper's list, so a
-new entry fails the build until it is hashed).
+new entry fails the build until it is hashed);
+`retained_draw_hashes_the_built_contents`. `test_lp64_equiv_streams.py`:
+`gfx_names_first_frame_and_field`.
 Run: `bash scripts/port/test_gfx_digest.sh`. Expected: FAIL,
 `port_gfx_digest.h: No such file or directory`.
 
@@ -1011,8 +1080,8 @@ plan's later steps assume less.
 
 - [ ] **Step 5: Sensitivity**
 
-`lp64_equiv.py sensitivity` on `cmp-a64-video`. Expected: `OK: sim, gfx
-and snd differ between seeds` (`snd` from Task 9; until then `sim` and
+`lp64_equiv.py sensitivity --video` on `cmp-a64-video`. Expected:
+`OK: sim, gfx and snd differ between seeds` (`snd` from Task 9; until then `sim` and
 `gfx`).
 
 - [ ] **Step 6: Task check; commit**
@@ -1055,12 +1124,13 @@ git commit -m "Hash what the renderer is asked to draw, a line a frame"
 
 - [ ] **Step 2: The primary check**
 
-Run step 9 with `--video --streams sim,gfx`, both profiles (`--profile
-default`, then `all`), all 38 cases, `--repeat 2`. Expected: each build
-agrees with itself; `sim` under the second profile is identical between
-i686 and x86_64 or classified as in Task 6; and for each case `gfx` is
-identical or classified the same way (`GE_GFXDIGEST_DETAIL` names the
-call). A difference in
+Run step 9 with `--streams sim,gfx`, both profiles (`RUN`
+`video-default` with `--video --profile default`, then `video-all` with
+`--video --profile all`), all 38 cases, `--repeat 2`. Expected: each
+build agrees with itself; `sim` under the second profile is identical
+between i686 and x86_64 or classified as in Task 6; and for each case
+`gfx` is identical or classified the same way (`--env
+GE_GFXDIGEST_DETAIL=A-B` names the call). A difference in
 `vtx` only, with `sim` identical, points at float code in the renderer
 or in a fork feature's drawing; name the function. Then run the `solo`
 set on `cmp-i686-video-libm` and `cmp-x64-video-libm` with
@@ -1087,7 +1157,7 @@ build (decision 4 has the estimate); it runs once.
 
 Lockstep turns the thread off, and a paced stage run does not repeat,
 so this uses a demo, which its recording paces: `dam1` on
-`cmp-a64-video` with `GE_RENDERTHREAD=1` and without. Expected: for
+`cmp-a64-video` with `--env GE_RENDERTHREAD=1` and without. Expected: for
 every tick both `gfx` files hold, the lines are equal, and at least
 nine tenths of the ticks are in both; record the result either way
 (decision 12).
@@ -1106,6 +1176,7 @@ git commit -m "Record where each case's picture matches the 32-bit build"
 - Create: `port/src/port_audio_lock.c`, `port/include/port_audio_lock.h`,
   `scripts/port/test_audio_lock.c` (run by `test_lp64_compare.sh`)
 - Modify: `port/src/audio_pc.c`, `CMakeLists.txt`,
+  `scripts/port/test_lp64_compare.sh`,
   `scripts/port/lp64_equiv_streams.py` (`snd`),
   `scripts/port/test_lp64_equiv_streams.py`,
   `scripts/port/lp64_equiv_expected.txt`, `FORK_CHANGES.md`
@@ -1114,7 +1185,9 @@ git commit -m "Record where each case's picture matches the 32-bit build"
 - `s32 portAudioLockFrames(s32 field_now);` in a comparison build with
   `GE_AUDIO_LOCK=1`, the audio frames due: the fields since the last
   call, 0 on the first; -1 when the lock is off. It includes no SDL
-  header, so a test can call it.
+  header, so a test can call it. Without `GE_COMPARE`,
+  `port_audio_lock.h` defines `portAudioLockFrames(f)` as `(-1)`, so
+  the shipped `audio_pc.c` compiles the call to today's path.
 - The pump (`audio_pc.c`) asks it first. When it answers 0 or more, the
   pump mixes exactly that many frames of the game's frame size and does
   nothing by the queue's level or the clock (no top-up, no trim, no
@@ -1131,7 +1204,8 @@ git commit -m "Record where each case's picture matches the 32-bit build"
 `test_lp64_equiv_streams.py`: `snd_names_first_sample_frame_and_field`;
 `snd_reports_length_when_one_is_longer`. `test_audio_lock.c`:
 `one_frame_a_field` (fields 5, 6, 6, 9 give 0, 1, 0, 3);
-`off_without_the_variable` (-1); `off_outside_a_comparison_build`.
+`off_without_the_variable` (-1); `off_outside_a_comparison_build` (the
+header included without `GE_COMPARE` gives -1).
 Expected: FAIL, `port_audio_lock.h: No such file or directory`.
 
 - [ ] **Step 2: Implement the lock**
@@ -1145,9 +1219,10 @@ two paced recordings of one build differ in length, 41.57 s and
 
 - [ ] **Step 4: Compare**
 
-Step 9 with `--video --streams snd`, all 38 cases, default profile.
-Expected: identical between i686 and x86_64, or the first differing
-sample is traced to its voice (`GE_SNDDBG`) and classified: bank or
+Step 9 with `--streams snd`, all 38 cases, both profiles (`RUN`
+`snd-default` with `--video --profile default`, then `snd-all` with
+`--video --profile all`). Expected: identical between i686 and
+x86_64, or the first differing sample is traced to its voice (`GE_SNDDBG`) and classified: bank or
 sequence conversion (a 64-bit defect, fixed with a fixture in
 `test_romconv.sh`), a float in the resampler (shown with both values),
 or the simulation (the case's `sim` already differs at that field).
@@ -1170,9 +1245,11 @@ git commit -m "Lock the comparison build's sound to game fields and compare it"
 - `audit_buffers.py --mission-smoke EXE --rom ROM --video [--frames N]`:
   the 20 missions on a `GE_VIDEO` executable with
   `lp64_play_run.VIDEO_VARIABLES`, a `HOME` and icon cache in each
-  folder, a wall-clock limit of `lp64_play_run.timeout_seconds(frames)`
-  in place of the headless 120 s, and a pass only if the log also holds
-  `ge: video: window + GL context up` and 30 pictures or more.
+  folder and the per-case `midas.ini` that `lp64_play_run` writes
+  (`[display] fullscreen=windowed`), a wall-clock limit of
+  `lp64_play_run.timeout_seconds(frames)` in place of the headless
+  120 s, and a pass only if the log also holds `ge: video: window + GL
+  context up` and 30 pictures or more.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1224,7 +1301,9 @@ git commit -m "Run the mission smoke with video under the sanitizers"
   memory (the soak saw room memory from 276,480 to 716,800 bytes). So
   peaks are kept by stage. `lp64_play.py peaks --by-stage DIR...`
   attributes each `ge: lp64: peak` line to the level id of the last
-  `ge: load_bg_file levelid=` line before it (0 for the front end).
+  `ge: load_bg_file levelid=` line before it (0 for the front end). It
+  reads the `runK/` subfolders of an `lp64_equiv.py` folder as well as
+  `lp64_play.py`'s flat ones.
 - `lp64_budgets.txt`: one line a pool and stage, `POOL LEVEL SIZE PEAK
   CASE`, written from the runs below.
 - `lp64_play.py peaks --budget FILE DIR...`: exit 1, naming the pool
@@ -1237,7 +1316,8 @@ git commit -m "Run the mission smoke with video under the sanitizers"
 
 `by_stage_attributes_a_peak_to_the_level_before_it`;
 `budget_fails_a_pool_past_half`; `budget_fails_an_unlisted_pair`;
-`budget_fails_a_changed_size`; `budget_passes_at_exactly_half`.
+`budget_fails_a_changed_size`; `budget_passes_at_exactly_half`;
+`by_stage_reads_run_subfolders`.
 Expected: FAIL, `unrecognized arguments: --by-stage`.
 
 - [ ] **Step 2: Every pool the design names has a peak line**
@@ -1287,9 +1367,11 @@ DIR...`. Expected: `OK: N pool and stage pairs within budget`.
 
 Rerun Step 3's soak and the comparison cases' `sim` and `gfx` on
 `cmp-a64` and `cmp-a64-video`. Expected: still within budget; `sim`
-unchanged; `gfx` unchanged, or the rooms that now stay loaded are named
-(a larger room budget can keep a room the smaller one dropped; compare
-with the i686 digest, which is the reference). Run
+unchanged; `gfx` unchanged against the i686 digest, which is the
+reference. A raise whose `gfx` then differs from the i686 digest (a
+larger room budget can keep a room the smaller one dropped) is
+withheld: the pool keeps its pre-raise size in that stage, and the
+figure goes to the owner with the rooms named. Run
 `late_load_audit.py` on the stages whose budgets changed and compare
 with the report from before.
 
@@ -1305,7 +1387,8 @@ git commit -m "Set the 64-bit pool sizes from the soak, twice each peak"
 
 **Files:**
 - Modify: `scripts/port/test_harness_widths.sh`,
-  `scripts/port/test_start_input.sh`,
+  `scripts/port/test_start_input.sh`, those of the five harnesses below
+  that gain a second width,
   `.github/workflows/windows-release.yml`, `FORK_CHANGES.md`
 
 **Interfaces:**
@@ -1315,17 +1398,25 @@ git commit -m "Set the 64-bit pool sizes from the soak, twice each peak"
   width and then at 32, or is on a short list with its reason
   (`test_pointer_bits`: reads CMake's flags; `test_web_touch`,
   `test_web_menu_pointer`: the browser's compiler); and every harness
-  is named in a workflow or on a second list with its reason.
+  is named in a workflow or on a second list with its reason. Five more
+  compile `port/` code at the host's width only today:
+  `test_baked_trace`, `test_enhanced_fonts`, `test_hd_textures`,
+  `test_open_fonts`, `test_headless_configure`. Each runs at both
+  widths through `harness_widths.sh` where it compiles game C whose
+  layout depends on the width, and is otherwise on the short list with
+  its reason.
 
 - [ ] **Step 1: Write the failing check**
 
-Expected today: FAIL, naming `test_hitmap.sh`, `test_image_bank.sh`,
-`test_room_seams.sh` and `test_start_input.sh` as run by no workflow.
+Expected today: FAIL, naming nine: `test_hitmap.sh`,
+`test_image_bank.sh`, `test_room_seams.sh` and `test_start_input.sh` as
+run by no workflow, and the five above as running at one width.
 
 - [ ] **Step 2: Put the four in CI's tests step; give
   `test_start_input.sh`'s 32-bit half the SDL shim** (`-Iscripts/port/
   sdl_shim`, as `port_baked_trace.c` gets) or skip that half by name
-  where the i386 SDL headers are missing.
+  where the i386 SDL headers are missing; give each of the five its
+  second width or its short-list line.
 
 - [ ] **Step 3: Count**
 
@@ -1358,11 +1449,15 @@ git commit -m "Check that every ROM-free harness runs at both widths and in CI"
   files. With `write DIR` it builds a campaign from numbers in the test
   (folder 1: twelve missions completed on Agent with times, three on
   007, two cheats earned, both volumes changed; folder 3: one mission)
-  and saves it; with `read DIR` it loads and prints every field.
+  and saves it; with `read DIR` it loads and prints every field. It
+  links `port/src/port_lockstep.c`, which `libultra_shim.c` calls since
+  Task 2.
 - The probe pins `sizeof(save_data) == 0x60` and `sizeof(smallSave) ==
   32` at both widths.
 - Set `saves`: two cases that boot the game on a save folder made by the
-  other width's test program and walk to mission select.
+  other width's test program and walk to mission select. The folder
+  reaches each case through `lp64_equiv.py run --saves DIR` (Task 5).
+  The set is outside the 38 cases of the surface.
 
 - [ ] **Step 1: Write the failing harness**
 
@@ -1378,8 +1473,9 @@ Expected: `test_save_widths: PASS (32-bit)`, `PASS (64-bit)`, `PASS
 
 - [ ] **Step 3: With the game**
 
-Copy the 32-bit program's folder under `cmp-a64`'s case and the 64-bit
-one's under `cmp-i686`'s; run set `saves`. Expected: each log holds `ge:
+Run set `saves` on `cmp-a64` with `--saves` naming the 32-bit
+program's folder and on `cmp-i686` with `--saves` naming the 64-bit
+one's. Expected: each log holds `ge:
 eeprom.bin loaded (512 bytes)` and the same `ge: play: menu` events as
 the other width; each route picks the thirteenth mission (Depot), which
 only a folder with twelve completed offers, and logs its `ge: play:
@@ -1397,15 +1493,19 @@ git commit -m "Show that a campaign save written at one width loads at the other
 
 **Files:**
 - Modify: `scripts/port/lp64_equiv_expected.txt`,
-  `scripts/port/abi_probe/probe.c`, `scripts/port/lp64_diagnostics.py`
+  `scripts/port/abi_probe/probe.c`, `include/PR/gu.h` (`FTOFIX32`),
+  `scripts/port/lp64_diagnostics.py`
   (`gate`), `scripts/port/test_lp64_diagnostics.py`, `FORK_CHANGES.md`
 
 **Interfaces:**
 - `lp64_diagnostics.py gate` also refuses a compile command of an
-  aarch64 tree without `-ffp-contract=off`.
+  aarch64 tree without `-ffp-contract=off`. `CMakeLists.txt` already
+  gives that flag to every 64-bit tree, and CI's gate trees are x86_64,
+  so the rule is exercised by its unit test only.
 - The probe asserts `FTOFIX32(40000.0f)` and `FTOFIX32(-40000.0f)` give
   the same `int` on every host (x86 gives `INT_MIN` for an out-of-range
-  conversion, Arm saturates).
+  conversion, Arm saturates), reading the input through a `volatile
+  float` so the compiler cannot fold the conversion.
 
 - [ ] **Step 1: Write the failing checks**
 
@@ -1416,14 +1516,16 @@ recorded.
 
 - [ ] **Step 2: Fix what fails** (an out-of-range `FTOFIX32` gives
   `INT_MIN` on Arm too, as x86 does; the x86 tokens do not move;
-  `guMtxF2L` is its user).
+  `guMtxF2L` is its user; `gbi.h` uses the macro in constant
+  expressions, so the Arm form stays one).
 
 - [ ] **Step 3: Compare**
 
-`lp64_equiv.py compare --streams sim,gfx,snd --expect ...
-build/lp64/equiv/x64 build/lp64/equiv/a64` over the folders of Tasks 6,
-8 and 9, both profiles. Expected: identical, or each difference
-explained as in Task 6. A difference here is between two 64-bit
+`lp64_equiv.py compare --expect ... build/lp64/equiv/RUN/x64
+build/lp64/equiv/RUN/a64` for each `RUN` of Tasks 6, 8 and 9: `sim`
+with `--streams sim`, `video-default` and `video-all` with `--streams
+sim,gfx`, `snd-default` and `snd-all` with `--streams snd`. Expected:
+identical, or each difference explained as in Task 6. A difference here is between two 64-bit
 programs, so its cause is the compiler, the C library or Arm's
 arithmetic: show the instruction or the call.
 
@@ -1456,16 +1558,18 @@ git commit -m "Compare the aarch64 build with x86_64 stream by stream"
 `check_fails_a_listed_symbol_that_is_gone`. Expected: FAIL, `No module
 named 'lp64_lto'`.
 
-- [ ] **Step 2: Link once and settle all 97**
+- [ ] **Step 2: Link once and settle every mismatch**
 
 Configure `build/lp64/lto` (64-bit headless, `-flto=auto
 -Wlto-type-mismatch` in the C, C++ and linker flags) and the same with
-`-DGE_VIDEO=ON`, in the x86_64 container. For each warning: make the
+`-DGE_VIDEO=ON`, in the x86_64 container. Record the two trees' counts
+first (97 was the aarch64 headless count). For each warning: make the
 declaration match its definition where the two differ in size, sign of
 a value used, or pointer against integer; allow the rest by name with a
 reason (an array declared without its bound, a libm built-in declared
 locally). Expected afterwards: `lp64_lto.py check` prints `OK: N
-mismatches, all allowed`, N below 97, with no entry whose two types
+mismatches, all allowed`, N below the recorded count, with no entry
+whose two types
 differ in size.
 
 - [ ] **Step 3: Unsigned differences added to pointers** (decision 11)
@@ -1498,7 +1602,8 @@ git commit -m "Settle the link-time type mismatches and hold them to a list"
 **Files:**
 - Modify: `port/src/romconv_model_records.c`,
   `scripts/port/test_romconv_model.c`, `src/game/chraction.c`,
-  `src/game/ob.c` or its caller, `port/src/video.c`,
+  `scripts/port/test_lp64_typed_chraction.c`, the file Step 3's
+  sanitizer report names for the index-0 load, `port/src/video.c`,
   `scripts/port/lp64_overlays_reviewed.txt`, `FORK_CHANGES.md`
 
 **Interfaces:**
@@ -1507,9 +1612,9 @@ git commit -m "Settle the link-time type mismatches and hold them to a list"
 
 - [ ] **Step 1: The census, on the landed code**
 
-`lp64_equiv.py run` and the `stages` and `tours` sets with
-`--env GE_LP64_CENSUS=1`; list the model opcodes and prop record types
-loaded. Expected: the fixtures-only lists of the hand-over (opcodes 0,
+`lp64_equiv.py run` and the `lp64_play.py` `stages` and `tours` sets,
+each with `--env GE_LP64_CENSUS=1`; list the model opcodes and prop
+record types loaded. Expected: the fixtures-only lists of the hand-over (opcodes 0,
 3, 5, 6, 7, 11, 14, 15, 16, 17, 19, 20; types 0, 15, 16, 31, 41) are
 unchanged or shorter; record which.
 
@@ -1538,8 +1643,10 @@ Where `PORT_PLAY_HARNESS` is 1, `portRenderThreadStop`
 (`port/src/video.c`) logs `ge: video: render thread stop: waiting
 (state S)` before it joins and `ge: video: render thread stop: joined`
 after, flushing each; nothing else changes and the 32-bit video build
-compiles neither line. Run 300 exits with `GE_RENDERTHREAD=1` (the
-`menus` set, 43 times) on `build/lp64/video`. Expected: 300 logs that
+compiles neither line. Run 301 exits, decision 12's 300 and one more,
+with `GE_RENDERTHREAD=1` (the
+`menus` set's 7 cases, 43 times) on `build/lp64/video`. Expected: 301
+logs that
 end with `joined`. A run that stalls leaves its state as its last line,
 and the cause becomes this step's work. Record the count for LP64-007.
 
@@ -1553,6 +1660,12 @@ git commit -m "Close the inherited items the comparison does not reach"
 
 ### Task 17: The laptop, the strict batch, and the close
 
+**Files:**
+- Modify: `scripts/port/native_64bit_plan.md` (the status table),
+  `AGENTS.md`, `FORK_CHANGES.md`, `scripts/port/late_load_report.py`
+  (Step 2, if decision 5's session runs); the gallery through the
+  laptop's regeneration (Step 1)
+
 - [ ] **Step 1: Hand the branch to the laptop**
 
 As in the LP64-005 plan's Task 15, with `lp64/equiv-strict`: the
@@ -1563,8 +1676,12 @@ regenerates once on `main`.
 - [ ] **Step 2: Real x86 hardware, if decision 5 is granted**
 
 On the laptop, in the `goldeneye` container it already builds with:
-build `cmp-i686`, `cmp-x64` and their video trees, run task check
-step 9 for those two with every set and stream, and
+build `cmp-i686`, `cmp-x64` and `cmp-x64-video`, and `cmp-i686-video`
+in the `midas-lp64-i686-video` image (made there by `lp64_env.py
+build-images`; the `goldeneye` image has no i386 SDL headers). If that
+image cannot be made on the laptop, the i686 side runs the headless
+streams only, and FORK-089 says so. Run task check step 9 for those
+two with every set and stream, and
 `lp64_equiv.py compare --expect`. Expected: the same lines as on the
 Mac. Each `host:` line of the expectation file is then confirmed or
 removed. The late-load comparison of the 32-bit build by kind and name
@@ -1575,7 +1692,8 @@ on the laptop.
 - [ ] **Step 3: Confirm on the Mac**
 
 `hand_gallery.py verify` reports fresh; CI passes on the landed commit;
-the whole task check runs once more with every set and stream;
+the whole task check runs once more with every set and stream (set
+`saves` with `--saves`, as in Task 13);
 `lp64_play.py peaks --budget` passes over that run's folders.
 
 - [ ] **Step 4: Close the record**
@@ -1590,12 +1708,21 @@ build, what real hardware did or did not confirm, the items of "What
 this plan does not do", and the owner's list carried forward. Delete
 this milestone's folders under `build/lp64` before the push.
 
+- [ ] **Step 5: Task check; commit**
+
+```bash
+git commit -m "Close LP64-006: the 64-bit game matches the 32-bit game"
+```
+
 ## What this plan does not do
 
 - It does not claim equivalence beyond the design's surface: the 21 solo
   stages, the 14 demos, `temple-4p`, the menu and watch walk and one
   reload, under two profiles. The other twelve arenas and the seven
   other scenarios run (LP64-005's sets) and are not compared.
+- It does not soak Cuba or the arenas in laps: `GE_SOAK` knows the 20
+  missions, and the others enter the budgets through single loads in
+  the `stages` and `tours` sets (Task 11 Step 3).
 - It does not run a 64-bit build on a GPU (decision 6) or, unless
   decision 5 is granted, on real x86 hardware.
 - It does not change the 32-bit game. Where the 32-bit build is the one
@@ -1613,6 +1740,65 @@ this milestone's folders under `build/lp64` before the push.
   bound the inherited unbounded reads, port the harnesses to macOS,
   define `A_PAN`, or build with `clang`, GCC 14 or for Windows x64.
 
+## Amendments after the pre-flight scan (2026-11-21)
+
+A read-only scan before Task 1 found 34 conflicts; the coordinator's
+rulings changed this text as follows, by finding number.
+
+1. `lp64_equiv.py run` gains `--env`, refusing the runner's own
+   variables, with a test (Task 5; Tasks 6, 8, 16 use it).
+2. Task check step 9 writes `build/lp64/equiv/RUN/ARCH` (`RUN` `sim`,
+   `video-default`, `video-all`, `snd-default`, `snd-all`); Tasks 6, 8,
+   9 name theirs and Task 14 Step 3 compares each.
+3. Task 6 Step 1: the `unstable` marking is dropped; a demo that cannot
+   be made to repeat stops the task for the owner.
+4. Task 9 Step 4 compares sound under both profiles.
+5. Task 5: `ALL_ON` sets `font_style` to the Iron Sights style and
+   `EXCLUDED` holds `texture_pack`, with reasons and a test.
+6. Task 11 Step 6: a raise whose `gfx` differs from the i686 digest is
+   withheld and goes to the owner with the rooms named.
+7. Global Constraints and decision 1: `lp64_play.py` may hold a
+   `lockstep=True` case; `--env` refuses `GE_LOCKSTEP`; Task 2's
+   `AGENTS.md` edit rewrites the pacing sentence.
+8. Task 17 Step 2 builds the i686 video tree in
+   `midas-lp64-i686-video`, falling back to headless streams.
+9. Task 12 decides five more harnesses' widths; Step 1 names nine.
+10. Task 6 Produces allows Step 5's `open: owner` lines.
+11. Global Constraints: the harness is 1 in 64-bit video builds;
+    LP64-007 decides for packages.
+12. Task 1: `test_inputrec_headless.sh` under Modify, `portPlaySleepMs`
+    named, `portPlayGunLine(u32)`.
+13. `test_lp64_compare.sh` is under Modify in Tasks 3, 4 and 9.
+14. Task 3's reader starts with `sim`; Task 7 adds the stream test file
+    and `gfx_names_first_frame_and_field`.
+15. Task 5 matches the exact `ge: compare: on` line, with a test.
+16. Task 5 `sensitivity [--video]` and its output line; Task 7 Step 5
+    passes `--video`.
+17. Task 7: `T` is `g_GlobalTimer`; retained and framebuffer entries
+    forwarded; retained buffers hashed at build, added at draw.
+18. Task 9: the header gives `(-1)` without `GE_COMPARE`; the test uses
+    it.
+19. Task 3: literal `T`, the `pH` form, prop and room fields, an
+    example line.
+20. Task 10 writes the per-case windowed `midas.ini`.
+21. Task 5 `--saves DIR`; Task 13 uses it; set `saves` is outside the
+    38; Task 17 Step 3 passes it.
+22. Task 13's driver links `port_lockstep.c`.
+23. Task 11 `peaks` reads `runK/` subfolders, with a test.
+24. Task 7: `test_gfx_digest.sh` runs at both widths.
+25. Task 14: `include/PR/gu.h` under Modify, a `volatile` probe, the
+    gate rule's coverage stated, the Arm form a constant expression.
+26. Task 2: the host-clock test's assertion and Step 4's command.
+27. Decision 4: the drawn checks run once, in Task 8.
+28. "What this plan does not do": no soak laps for Cuba or the arenas.
+29. Task 15 records the x86_64 counts first; N is below them.
+30. Task 16: the index-0 file named by the sanitizer report, the
+    typed-read test under Modify, 301 exits.
+31. Task 17 gains Files and a commit step.
+32. No change: the commit attribution stays as written.
+33. Review Focus 2 and Task 5 Step 4 record `randomize_va_space`.
+34. The file map lists every existing file a task edits.
+
 ## Decisions for the owner
 
 Thirteen, each with a recommendation and what the other way costs. The
@@ -1625,8 +1811,11 @@ thirteen recommendations on 2026-11-21.**
    `GE_FIXEDTICK`. *Recommended:* demos keep their recorded pace and
    stay with `lp64_play.py`, which keeps refusing both flags; stage
    routes run in a new lockstep mode through a separate runner (Tasks 2
-   and 5). *The other way:* fixed tick for everything costs the demos
-   (dam1 ends at tick 455, not the recorded 438); paced runs for
+   and 5). `lp64_play.py` may also hold a case marked `lockstep=True`,
+   its `--env` refuses `GE_LOCKSTEP`, and Task 2's `AGENTS.md` edit
+   rewrites the sentence on its pacing (clarified after the pre-flight
+   scan, 2026-11-21). *The other way:* fixed tick for everything costs
+   the demos (dam1 ends at tick 455, not the recorded 438); paced runs for
    everything cost the rule that a reference agrees with itself.
 2. **Which maths the comparison builds share.** The design says one
    in-tree `sinf` and `cosf`. Measured on this C library: `sinf`,
@@ -1648,7 +1837,8 @@ thirteen recommendations on 2026-11-21.**
    frames with drawing took 769 s there. *Recommended:* compare digests
    and sound without drawing (Task 7 measures the cost first; above
    1,200 s a case it stops and comes back to you), and run the drawn
-   checks once at the end: 22 screenshots (about 45 minutes if four run
+   checks once, in Task 8 (clarified after the pre-flight scan,
+   2026-11-21): 22 screenshots (about 45 minutes if four run
    at once at that rate) and the gallery's 216 captures (about an hour
    by the same rate; neither is measured). *The other way:* leaving the
    drawn checks to the laptop saves that time and makes item 6's
