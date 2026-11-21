@@ -34,7 +34,26 @@
  *   nothing to an invincible or dead player). GE_KILLBOND (bondview2.c)
  *   counts both players' MoveBond calls and kills only when the N-th is
  *   player 0's, which with two players depends on that order and kills in
- *   some runs and not others.
+ *   some runs and not others;
+ * - with GE_PLAYLOG=2 (LP64-006 Task 1), portPlayGunLine's line for player
+ *   0 at each `weapon` line and on each pass while pad 0 holds Z_TRIG:
+ *   `ge: play: gun tick=T clock=C global=G r=ITEM,STATE,ANIM,FIRING,HOLD,
+ *   AMMO,NEXT l=...`, T the input tick, C and G g_ClockTimer and
+ *   g_GlobalTimer, and each hand's weaponnum, weapon_action_state,
+ *   weapon_current_animation, weapon_firing_status, weapon_hold_time,
+ *   weapon_ammo_in_magazine and weapon_next_weapon (struct hand,
+ *   bondview.h). GE_PLAYLOG=1 prints no gun line;
+ * - GE_PLAYSTALL=T:MS sleeps MS milliseconds once, on player 0's first pass
+ *   at or after input tick T, through portPlaySleepMs (weak, so a test can
+ *   replace it), to make a frame miss retraces on purpose;
+ * - GE_PLAYHURT=T hits player 0 once, on his first pass at or after input
+ *   tick T, through the game's own record_damage_kills with
+ *   PORT_PLAY_HURT_DAMAGE (the health a guard's hit took in the measured
+ *   weapons-dam runs, 1.000 to 0.938), as propobj.c's hits that no player
+ *   made do: the game then drops the trigger while its damage display runs
+ *   (bondview2.c), which is why weapons-dam misses a shot (FORK-089,
+ *   LP64-006 Task 1). A value either variable cannot read is reported on
+ *   stderr and ignored.
  *
  * PORT_PLAY_HARNESS is 1 in every build the play sets run (headless at
  * either width, and a 64-bit build with video) and 0 in a 32-bit build with
@@ -51,9 +70,12 @@
 #define PORT_PLAY_HARNESS 1
 #define PORT_PLAY_MOVED_UNITS 100
 #define PORT_PLAY_WATCH_STEADY_DRAWS 30
+#define PORT_PLAY_HURT_DAMAGE 0.0625f
 void portPlayLog(const char *event, s32 value);
 void portPlayPlayerTick(void);
 void portPlayWatchPage(s32 page);
+void portPlayGunLine(u32 tick);
+void portPlaySleepMs(u32 ms);
 #else
 #define PORT_PLAY_HARNESS 0
 #define portPlayLog(event, value) ((void) 0)

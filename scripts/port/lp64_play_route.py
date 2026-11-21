@@ -24,6 +24,10 @@ PRESS_TICKS = 5
 # port/src/port_playlog.c, portPlayLog: "ge: play: tick %u\nge: play: %s %d\n".
 PLAY_TICK = re.compile(r'ge: play: tick (\d+)$')
 PLAY_EVENT = re.compile(r'ge: play: [a-z-]+ -?\d+$')
+# portPlayGunLine, with GE_PLAYLOG=2 (LP64-006 Task 1): "ge: play: gun tick=%u clock=%d global=%d r=%s l=%s\n",
+# each hand seven comma-separated integers.
+_HAND = r'-?\d+(?:,-?\d+){6}'
+PLAY_GUN = re.compile(rf'ge: play: gun tick=\d+ clock=-?\d+ global=-?\d+ r={_HAND} l={_HAND}$')
 PLAY_MARK = 'ge: play:'
 
 

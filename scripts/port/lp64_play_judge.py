@@ -10,7 +10,7 @@ import re
 
 from lp64_boot import FATAL_SIGNAL, SANITIZER_MARKERS, failing_lp64_lines
 from lp64_play_cases import DEMO_START, Case, Ordered, Required
-from lp64_play_route import PLAY_EVENT, PLAY_MARK, PLAY_TICK
+from lp64_play_route import PLAY_EVENT, PLAY_GUN, PLAY_MARK, PLAY_TICK
 
 # port/src/video.c, once SDL has made the window and its GL context: "ge: video: window + GL context up\n"
 VIDEO_UP = re.compile(r'ge: video: window \+ GL context up')
@@ -59,7 +59,8 @@ def torn_play_lines(lines: list[str]) -> list[str]:
     """The lines that hold `ge: play:` but not a whole play log line: another stream's output cut
     them (the play log writes each line whole, after flushing what stdout holds)."""
     return [line for line in lines
-            if PLAY_MARK in line and not (PLAY_EVENT.search(line) or PLAY_TICK.search(line))]
+            if PLAY_MARK in line
+            and not any(pattern.search(line) for pattern in (PLAY_EVENT, PLAY_TICK, PLAY_GUN))]
 
 
 def ordered_problem(lines: list[str], required: Ordered) -> str | None:

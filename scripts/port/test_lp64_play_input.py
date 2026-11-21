@@ -417,5 +417,31 @@ class WeaponsDam(StandIns):
         self.assertEqual(status, 1, out)
         self.assertIn('(a shot with change 1 of 30)', out)
 
+    def test_weapons_dam_with_whole_gun_lines_passes(self):
+        # Arrange: GE_PLAYLOG=2's gun line (port_playlog.c) after each change
+        gun = 'ge: play: gun tick=1218 clock=1 global=1213 r=5,7,0,0,0,0,5 l=-1,7,0,0,0,0,0\n'
+        exe = self.fake(DAM + play(1160, 'weapon', 5) + ''.join(
+            play(tick, 'weapon', state) + gun + play(tick + 60, 'shots', number)
+            for number, (tick, state) in enumerate(self.thirty_changes(), start=1)) + frames(self.case().frames))
+
+        # Act
+        status, out = self.play(exe, 'input', 'weapons-dam')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+
+    def test_a_cut_gun_line_is_named_as_torn(self):
+        # Arrange: another stream's line cut a gun line after its left hand's name
+        exe = self.fake(DAM + 'ge: play: gun tick=1218 clock=1 global=1213 r=5,7,0,0,0,0,5 l=ge: snd: x\n'
+                        + frames(self.case().frames))
+
+        # Act
+        status, out = self.play(exe, 'input', 'weapons-dam')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('weapons-dam: FAIL (torn line (another stream cut it): ge: play: gun tick=1218', out)
+
+
 if __name__ == '__main__':
     unittest.main()

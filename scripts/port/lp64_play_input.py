@@ -110,11 +110,13 @@ WEAPON_FIRE_DELAY = 60
 WEAPON_FIRE_TICKS = 30
 WEAPONS_FRAMES = PAUSE_TICK + WEAPON_CHANGES * WEAPON_TICKS + 300
 # The hands each press leaves, as port_playlog.c's `weapon N` logs them (N = right | left << 8,
-# src/bondconstants.h's ITEM_IDS), measured on 2026-11-19 (FORK-089): Bond draws his silenced PP7
-# (5) at tick 1160, and each A then takes the next stop of the cheat's list, the dual version of a
-# gun and then the next gun: PP7 x2, TT-33, TT-33 x2, ... Spectre x2 (19 x2), M16 (20). The last
-# change passes through 19 alone for 3 ticks, so the judge matches each press's state in order
-# rather than counting lines.
+# src/bondconstants.h's ITEM_IDS), measured on 2026-11-19 (FORK-089): Bond draws ITEM_WPPKSIL (5)
+# at tick 1160, and each A then takes the next stop of the cheat's list, the dual version of a gun
+# and then the next gun: ITEM_WPPKSIL x2, ITEM_TT33 (6), ITEM_TT33 x2, ... change 29 a pair of
+# ITEM_GOLDENGUN (19 x2), change 30 ITEM_SILVERWPPK (20). The last change passes through 19 alone
+# for 3 ticks, so the judge matches each press's state in order rather than counting lines.
+# Without an invincibility cheat a guard's hit can land just before a trigger window, and the game
+# then holds the trigger off while its damage display runs (LP64-006 Task 1, FORK-089).
 WEAPON_STATES = tuple(state for gun in range(5, 20) for state in (gun | gun << 8, gun + 1))
 SHOTS = play_line('shots')
 

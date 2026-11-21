@@ -1,7 +1,8 @@
 /**
- * The play log: `ge: play:` lines for scripted runs, and GE_PLAYKILL
- * (LP64-005 Task 8). port_playlog.h has the contract; this file is empty in a
- * build without PORT_PLAY_HARNESS.
+ * The play log: `ge: play:` lines for scripted runs, GE_PLAYKILL (LP64-005
+ * Task 8), the gun line, GE_PLAYSTALL and GE_PLAYHURT (LP64-006 Task 1).
+ * port_playlog.h has the contract; this file is empty in a build without
+ * PORT_PLAY_HARNESS.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,32 +11,50 @@
 #if PORT_PLAY_HARNESS
 #include <bondconstants.h>
 #include "game/bondview.h"
+#include "game/lv.h"
 #include "game/player.h"
+#include "joy.h"
+#ifdef _WIN32
+__declspec(dllimport) void __stdcall Sleep(unsigned long ms);
+#else
+#include <errno.h>
+#include <time.h>
+#endif
 
 extern u32 portInputRecTickNow(void);
 extern void bondviewKillCurrentPlayer(void);
 
-/* -1 until the first call reads GE_PLAYLOG; nonzero tests true, so a run
- * without it pays one test a call after the first. */
-static s32 sPlayLogOn = -1;
+/* GE_PLAYLOG's level: -1 until read, 0 off, 1 the events, 2 the events and
+ * the gun line. Any value but empty or one starting with 0 is at least 1, as
+ * before the gun line. */
+static s32 sPlayLogLevel = -1;
+
+static s32 playLogLevel(void)
+{
+    if (sPlayLogLevel < 0)
+    {
+        const char *e = getenv("GE_PLAYLOG");
+
+        if (e == NULL || e[0] == '\0' || e[0] == '0')
+        {
+            sPlayLogLevel = 0;
+        }
+        else
+        {
+            sPlayLogLevel = atoi(e) >= 2 ? 2 : 1;
+        }
+    }
+    return sPlayLogLevel;
+}
 
 void portPlayLog(const char *event, s32 value)
 {
     char line[128];
 
-    if (!sPlayLogOn)
+    /* the cached level first, so a run without the log pays one test */
+    if (!sPlayLogLevel || !playLogLevel())
     {
         return;
-    }
-    if (sPlayLogOn < 0)
-    {
-        const char *e = getenv("GE_PLAYLOG");
-
-        sPlayLogOn = (e != NULL && e[0] != '\0' && e[0] != '0');
-        if (!sPlayLogOn)
-        {
-            return;
-        }
     }
     /* Both lines in one write, after whatever stdout holds: lp64_play.py
      * matches whole lines, and a line cut by the other stream would read as
@@ -81,22 +100,122 @@ static void playKill(void)
     }
 }
 
-/* `weapon` (port_playlog.h): player 0's hands after a change, right | left << 8. */
-static void playWeapon(void)
+/* `weapon` (port_playlog.h): player 0's hands after a change, right | left << 8.
+ * Returns 1 when it logged a change. */
+static s32 playWeapon(void)
 {
     static s32 held = -1; /* -1 until the first pass records the starting pair */
     const s32 left = g_CurrentPlayer->hands[GUNLEFT].weaponnum;
     const s32 now = g_CurrentPlayer->hands[GUNRIGHT].weaponnum | ((left > 0 ? left : 0) << 8);
+    const s32 logged = (now != held && held >= 0);
 
-    if (now == held)
-    {
-        return;
-    }
-    if (held >= 0)
+    if (logged)
     {
         portPlayLog("weapon", now);
     }
     held = now;
+    return logged;
+}
+
+/* One hand's fields of the gun line, in the order port_playlog.h gives. */
+static void gunHand(char *out, size_t size, const struct hand *hand)
+{
+    snprintf(out, size, "%d,%d,%d,%d,%d,%d,%d", (int) hand->weaponnum, (int) hand->weapon_action_state,
+             (int) hand->weapon_current_animation, (int) hand->weapon_firing_status, (int) hand->weapon_hold_time,
+             (int) hand->weapon_ammo_in_magazine, (int) hand->weapon_next_weapon);
+}
+
+void portPlayGunLine(u32 tick)
+{
+    char right[96];
+    char left[96];
+    char line[288];
+
+    if (playLogLevel() < 2 || g_CurrentPlayer == NULL)
+    {
+        return;
+    }
+    gunHand(right, sizeof(right), &g_CurrentPlayer->hands[GUNRIGHT]);
+    gunHand(left, sizeof(left), &g_CurrentPlayer->hands[GUNLEFT]);
+    snprintf(line, sizeof(line), "ge: play: gun tick=%u clock=%d global=%d r=%s l=%s\n", (unsigned) tick,
+             (int) g_ClockTimer, (int) g_GlobalTimer, right, left);
+    fflush(stdout);
+    fputs(line, stdout);
+    fflush(stdout);
+}
+
+/* Weak, so test_playlog_gun.c can count the calls instead of sleeping. */
+__attribute__((weak)) void portPlaySleepMs(u32 ms)
+{
+#ifdef _WIN32
+    Sleep(ms);
+#else
+    struct timespec left = { (time_t) (ms / 1000), (long) (ms % 1000) * 1000000L };
+
+    while (nanosleep(&left, &left) != 0 && errno == EINTR)
+    {
+    }
+#endif
+}
+
+/* A harness action done once, on player 0's first pass at or after an input
+ * tick its variable names: GE_PLAYSTALL=T:MS and GE_PLAYHURT=T. */
+typedef struct PlayOnce
+{
+    const char *variable;
+    s32 wantsValue; /* 1 when the variable is TICK:VALUE, VALUE above 0 */
+    s32 armed;      /* -1 until the variable is read, 0 when unset or spent */
+    u32 tick;
+    u32 value;
+} PlayOnce;
+
+/* 1 on the pass ONCE is due, after which it is spent. */
+static s32 playOnceDue(PlayOnce *once)
+{
+    if (!once->armed)
+    {
+        return 0;
+    }
+    if (once->armed < 0)
+    {
+        const char *e = getenv(once->variable);
+        const s32 fields = (e != NULL) ? sscanf(e, "%u:%u", &once->tick, &once->value) : 0;
+
+        once->armed = 0;
+        if (e == NULL || e[0] == '\0')
+        {
+            return 0;
+        }
+        if (once->wantsValue ? (fields != 2 || once->value == 0) : fields != 1)
+        {
+            fprintf(stderr, "ge: %s=%s ignored: it takes %s\n", once->variable, e,
+                    once->wantsValue ? "TICK:VALUE, VALUE above 0" : "TICK");
+            return 0;
+        }
+        once->armed = 1;
+    }
+    if (portInputRecTickNow() < once->tick)
+    {
+        return 0;
+    }
+    once->armed = 0;
+    return 1;
+}
+
+/* GE_PLAYSTALL and GE_PLAYHURT (port_playlog.h). */
+static void playOnceActions(void)
+{
+    static PlayOnce stall = { "GE_PLAYSTALL", 1, -1, 0, 0 };
+    static PlayOnce hurt = { "GE_PLAYHURT", 0, -1, 0, 0 };
+
+    if (playOnceDue(&stall))
+    {
+        portPlaySleepMs(stall.value);
+    }
+    if (playOnceDue(&hurt))
+    {
+        record_damage_kills(PORT_PLAY_HURT_DAMAGE, 0.0f, 0.0f, -1, 0);
+    }
 }
 
 /* `shots`, `moved` and `weapon` (port_playlog.h), from player 0's own counters. */
@@ -105,12 +224,17 @@ static void playStats(void)
     static s32 shots;
     static s32 moved;
     s32 now;
+    s32 changed;
 
-    if (!sPlayLogOn || g_playerPerm == NULL)
+    if (!playLogLevel() || g_playerPerm == NULL)
     {
         return;
     }
-    playWeapon();
+    changed = playWeapon();
+    if (sPlayLogLevel >= 2 && (changed || joyGetButtons(0, Z_TRIG)))
+    {
+        portPlayGunLine(portInputRecTickNow());
+    }
     now = g_playerPerm->shot_count[SHOT_REGISTER_TOTAL];
     if (now != shots)
     {
@@ -130,6 +254,7 @@ void portPlayPlayerTick(void)
     {
         return;
     }
+    playOnceActions();
     playKill();
     playStats();
 }
