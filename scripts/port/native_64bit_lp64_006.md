@@ -423,6 +423,26 @@ folders overwrite another's; a task that names none uses `sim`.
 `SUFFIX` is empty for `sim` and `-video` for the others; `OPTIONS` are
 the run's (`--video`, `--profile default|all`).
 
+**When it runs in full (owner, 2026-11-21, "Yes, three checkpoints").**
+Steps 1 to 8 took about two and a half hours in Task 1, an hour of it the
+video sets, against 35 minutes of the task's own work. They run in full at
+three checkpoints: after Task 4, after Task 9, and before the final
+whole-milestone review. Task 17 Step 3 still runs the whole check once
+more. Between checkpoints:
+
+- a task that changes game C or C++ runs the plain aarch64 play sets and
+  the one other configuration its change touches (sanitizer, x86_64 or
+  video); the video sets run only in Tasks 7 to 10 and at the checkpoints;
+- a task that changes only tools, tests or documents runs no play sets:
+  its executable is the one last checked, and its FORK-089 note says so;
+- every task still runs `compare_win32.py`, the static checks, every
+  harness line of the CI tests step in the x86_64 container, and step 9
+  where the task names it. Reviews and CI after each push are unchanged.
+
+A regression may therefore surface up to a few tasks after its cause; a
+checkpoint that fails is bisected over the tasks since the last one
+before work continues.
+
 ```bash
 # 9. The comparison: each build agrees with itself, then the builds agree.
 python3 scripts/port/lp64_env.py run --arch i686 -- python3 scripts/port/lp64_equiv.py run --rom /rom/baserom.u.z64 --set SETS OPTIONS --repeat 2 --output build/lp64/equiv/RUN/i686 build/lp64/cmp-i686SUFFIX/IronSights
@@ -1798,6 +1818,14 @@ rulings changed this text as follows, by finding number.
 32. No change: the commit attribution stays as written.
 33. Review Focus 2 and Task 5 Step 4 record `randomize_va_space`.
 34. The file map lists every existing file a task edits.
+
+## Amendment by the owner: three checkpoints (2026-11-21)
+
+Asked how to shorten the run, the owner chose to run the task check's
+steps 1 to 8 in full at three checkpoints instead of after every task
+("Yes, three checkpoints"). The rule is in "Task check" above. It
+changes when the regression check runs, not what done means: decision 9
+and Task 17 Step 3 stand.
 
 ## Decisions for the owner
 
