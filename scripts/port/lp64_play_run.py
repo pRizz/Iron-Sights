@@ -35,7 +35,7 @@ import tempfile
 import threading
 import time
 
-from lp64_play_cases import Case
+from lp64_play_cases import DEMO_SETS, Case
 from lp64_play_judge import pictures_drawn, problems
 from lp64_play_route import RouteError, Step, build_presses, event_tick, route_text
 from lp64_play_sound import capture_path, capture_problems
@@ -45,6 +45,9 @@ from run_copies import SharedExecutable
 # GE_NOSLEEP=1 lets the frame limit, which counts retraces, pass before the game has done
 # anything (plan "What was measured"); the tool never sets either and refuses them from --env.
 FORBIDDEN_VARIABLES = ('GE_FIXEDTICK', 'GE_NOSLEEP')
+# A case marked lockstep=True runs with GE_LOCKSTEP=1 (one retrace a game frame and a clock that
+# counts them, LP64-006 Task 2); --env and a case's own variables never set it, and no demo gets it.
+LOCKSTEP_VARIABLE = 'GE_LOCKSTEP'
 # What the tool sets for every case (case_environment; GE_INPUTPLAY for a case with a route, its own
 # route file): --env refuses them, since a value of the caller's would contradict the case's frame
 # limit, wall-clock limit, ROM, seed or route.
@@ -128,8 +131,14 @@ def case_environment(case: Case, rom: Path, extra: dict[str, str],
         env.update(VIDEO_VARIABLES)
     if display.shots is not None:
         env['GE_SHOT'] = str(display.shots)
+    if LOCKSTEP_VARIABLE in dict(case.env) or LOCKSTEP_VARIABLE in extra:
+        raise ValueError(f'{LOCKSTEP_VARIABLE} is set only for a case marked lockstep=True')
+    if case.lockstep and case.set_name in DEMO_SETS:
+        raise ValueError(f'{case.name}: a demo never runs in lockstep')
     env.update(dict(case.env))
     env.update(extra)
+    if case.lockstep:
+        env[LOCKSTEP_VARIABLE] = '1'
     forbidden = [name for name in FORBIDDEN_VARIABLES if name in env]
     if forbidden:
         raise ValueError(f'{", ".join(forbidden)} must not be set for a play run')

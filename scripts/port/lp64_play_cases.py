@@ -107,6 +107,15 @@ class Case:
     # The run records its mixed sound to DIR/CASE.wav (GE_AUDIO_CAPTURE), which must show sound
     # running (lp64_play_sound.py; the `sound` set).
     capture: bool = False
+    # The run is in lockstep (GE_LOCKSTEP=1, port_lockstep.h, LP64-006 Task 2): one retrace a game
+    # frame and a clock that counts them, so it depends only on its seed, route and tick. Never a
+    # demo's, which its recording paces (DEMO_SETS).
+    lockstep: bool = False
+
+
+# The sets whose cases play demos: their runs never get GE_LOCKSTEP (the game stops a demo in
+# lockstep), whatever a case says.
+DEMO_SETS = ('demos', 'attract')
 
 
 def frame_limit(frames: int) -> Required:

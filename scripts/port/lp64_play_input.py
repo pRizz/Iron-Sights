@@ -116,7 +116,8 @@ WEAPONS_FRAMES = PAUSE_TICK + WEAPON_CHANGES * WEAPON_TICKS + 300
 # ITEM_GOLDENGUN (19 x2), change 30 ITEM_SILVERWPPK (20). The last change passes through 19 alone
 # for 3 ticks, so the judge matches each press's state in order rather than counting lines.
 # Without an invincibility cheat a guard's hit can land just before a trigger window, and the game
-# then holds the trigger off while its damage display runs (LP64-006 Task 1, FORK-089).
+# then holds the trigger off while its damage display runs (LP64-006 Task 1, FORK-089), so the case
+# runs with `invuln` beside `guns` (LP64-006 Task 2 Step 5).
 WEAPON_STATES = tuple(state for gun in range(5, 20) for state in (gun | gun << 8, gun + 1))
 SHOTS = play_line('shots')
 
@@ -145,7 +146,7 @@ def weapons_route() -> Route:
 
 
 def weapons_case() -> Case:
-    env = (('GE_STAGE', 'dam'), ('GE_STAGE_AFTER', '1'), ('GE_CHEATS', 'guns')) + PLAY_ENV
+    env = (('GE_STAGE', 'dam'), ('GE_STAGE_AFTER', '1'), ('GE_CHEATS', 'guns,invuln')) + PLAY_ENV
     required = LAUNCHED_STAGE + weapons_required() + (frame_limit(WEAPONS_FRAMES),)
     return Case('weapons-dam', 'input', env, WEAPONS_FRAMES, required, route=weapons_route())
 

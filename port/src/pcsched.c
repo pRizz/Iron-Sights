@@ -28,6 +28,7 @@
 #include "game/frametiming.h"   /* portTickHz: GE_TICKHZ pump rate */
 #include "platform_info.h"
 #include "port_lp64.h"          /* LP64-003: 64-bit memory stays above 4 GB */
+#include "port_lockstep.h"      /* LP64-006: one retrace a frame, no pacing */
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console ring (spec section 7). */
@@ -510,6 +511,45 @@ void portStateHighWater(u32 used)
 
 static OSScMsg s_PortRetraceMsg = { OS_SC_RETRACE_MSG };
 
+#if PORT_PLAY_HARNESS
+/* Lockstep: Q holds the retrace message, sent and not yet taken. */
+static s32 portQueueHoldsRetrace(const OSMesgQueue *q)
+{
+    s32 i;
+
+    for (i = 0; i < q->validCount; i++)
+    {
+        if (q->msg[(q->first + i) % q->msgCount] == (OSMesg) &s_PortRetraceMsg)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* Lockstep: a client queue holds no retrace (or none is registered yet), so
+ * this pump delivers one. The game's frame queue holds one from the pump until
+ * boss.c takes it; the audio client's queue, which nothing on PC reads, keeps
+ * its first one. */
+static s32 portLockstepRetraceDue(void)
+{
+    OSScClient *c;
+
+    if (os_scheduler.clientList == NULL)
+    {
+        return 1;
+    }
+    for (c = os_scheduler.clientList; c != NULL; c = c->next)
+    {
+        if (c->msgQ != NULL && !portQueueHoldsRetrace(c->msgQ))
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+#endif
+
 /* Post the task's own reply message (type OS_SC_DONE_MSG) to its reply queue,
  * as sched.c's __scTaskComplete did. It must never drop, or boss.c's
  * mission-start drain loop (pendingGfx != 0) waits forever; if the queue is
@@ -748,6 +788,14 @@ void portPumpEvents(void)
 
     static unsigned long long s_PumpExitUs, s_PumpExitSleepUs;
 
+#if PORT_PLAY_HARNESS
+    /* Lockstep: a pump while every queue still holds its retrace (a wait
+     * inside a frame, such as joy.c's poll handshake) runs the duties and
+     * delivers nothing, counts nothing and moves no clock. */
+    const s32 lockstepIdle = portLockstep() && !portLockstepRetraceDue();
+#else
+    const s32 lockstepIdle = 0;
+#endif
 #ifdef __EMSCRIPTEN__
     { extern void portWebWaitIfPaused(void); portWebWaitIfPaused(); }
     if (getenv("GE_NOSLEEP") != NULL)
@@ -774,7 +822,10 @@ void portPumpEvents(void)
         }
     }
 
-    g_PortFramesPumped++;
+    if (!lockstepIdle)
+    {
+        g_PortFramesPumped++;
+    }
 
     /* Bring-up harness: GE_FRAMES=n runs n frames then prints stats and
      * exits cleanly, so the prove-out is scriptable. Unset = run forever. */
@@ -796,8 +847,9 @@ void portPumpEvents(void)
 
     /* Pace the fake retrace to absolute wall-clock targets, resyncing if more
      * than two frames behind; a relative sleep drifts and makes motion judder.
-     * GE_NOSLEEP=1 turns pacing off for headless soaks. */
-    if (getenv("GE_NOSLEEP") == NULL)
+     * GE_NOSLEEP=1 turns pacing off for headless soaks; lockstep never
+     * sleeps. */
+    if (!portLockstep() && getenv("GE_NOSLEEP") == NULL)
     {
         /* The pump is the tick source, so GE_TICKHZ sets the interval of the
          * same absolute schedule; tickhz=0 (uncapped) skips pacing. */
@@ -1019,7 +1071,7 @@ pace_done:
     }
 
     /* Visible progress heartbeat: once a second on the console. */
-    if ((g_PortFramesPumped % 60u) == 0u)
+    if (!lockstepIdle && (g_PortFramesPumped % 60u) == 0u)
     {
         printf("ge: frame %u | gfx tasks submitted %u\n",
                g_PortFramesPumped, g_PortGfxTasksSubmitted);
@@ -1141,6 +1193,23 @@ pace_done:
 
     /* Always fanned out, at any depth: this message is what the blocking
      * wait that re-entered us is waiting for. */
+#if PORT_PLAY_HARNESS
+    if (portLockstep())
+    {   /* one retrace a queue at a time, and the clock counts it */
+        for (c = os_scheduler.clientList; c != NULL; c = c->next)
+        {
+            if (c->msgQ != NULL && !portQueueHoldsRetrace(c->msgQ))
+            {
+                osSendMesg(c->msgQ, (OSMesg) &s_PortRetraceMsg, OS_MESG_NOBLOCK);
+            }
+        }
+        if (!lockstepIdle)
+        {
+            portLockstepRetrace();
+        }
+    }
+    else
+#endif
     for (c = os_scheduler.clientList; c != NULL; c = c->next)
     {
         if (c->msgQ != NULL)

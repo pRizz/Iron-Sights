@@ -20,6 +20,7 @@
 #include "port_ads_accuracy.h"
 #include "port_gun_kick.h"
 #include "port_tracers.h"
+#include "port_lockstep.h"   /* LP64-006: lockstep keeps the render thread off */
 
 #ifdef GE_XBOX
 /* No SDL on the console: the string/keyboard/thread stand-ins live in the
@@ -5557,6 +5558,10 @@ static s32 portRenderThreadWanted(void)
     const char *e = getenv("GE_RENDERTHREAD");
     s32 mode = (e != NULL) ? atoi(e) : s_CfgRenderThread;
 
+    if (portLockstep())
+    {
+        return 0; /* one thread: the pump's retraces follow the game's frames */
+    }
     return (mode == 1) || (mode != 0 && portTickHz() != 60);
 #endif
 }

@@ -321,8 +321,8 @@ class WeaponsDam(StandIns):
         # Act
         case = self.case()
 
-        # Assert
-        self.assertIn(('GE_CHEATS', 'guns'), case.env)
+        # Assert: invuln keeps a guard's hit from holding the trigger off (LP64-006 Task 2 Step 5)
+        self.assertIn(('GE_CHEATS', 'guns,invuln'), case.env)
         changes = [tick for tick, press in case.route.presses if press.buttons == A_BUTTON]
         triggers = [(tick, press.hold) for tick, press in case.route.presses if press.buttons == Z_TRIG]
         self.assertEqual(len(changes), 30)

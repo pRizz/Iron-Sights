@@ -1,5 +1,8 @@
 #include <ultra64.h>
 #include "frametiming.h"
+#ifndef TARGET_N64
+#include "port_lockstep.h" /* LP64-006: a frame is one field at 60 Hz in lockstep */
+#endif
 
 // data
 s32 lastFrameCounter = -1;
@@ -173,8 +176,9 @@ s32 portTickHz(void)
     }
 
     /* The recorder stores speedgraphframes per block and a 0 there is the
-     * end-of-demo terminator, so recording always runs classic. */
-    if (g_ramromRecordFlag != 0)
+     * end-of-demo terminator, so recording always runs classic. Lockstep
+     * (port_lockstep.h) ignores GE_TICKHZ and midas.ini's tickhz too. */
+    if (g_ramromRecordFlag != 0 || portLockstep())
     {
         return 60;
     }
@@ -962,7 +966,7 @@ s32 portHwPaceFields(void)
 }
 #endif
 #ifndef TARGET_N64
-/** GE_FIXEDTICK is set: the capture harness's fixed one field per frame. */
+/** GE_FIXEDTICK or GE_LOCKSTEP is set: the capture harness's fixed one field per frame. */
 static s32 portFixedTick(void)
 {
     extern char *getenv(const char *);
@@ -970,7 +974,7 @@ static s32 portFixedTick(void)
 
     if (fixedtick < 0)
     {
-        fixedtick = (getenv("GE_FIXEDTICK") != NULL);
+        fixedtick = (getenv("GE_FIXEDTICK") != NULL) || portLockstep();
     }
     return fixedtick;
 }

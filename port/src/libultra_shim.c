@@ -37,6 +37,7 @@
 #include <ultra64.h>
 #include "libultra/io/controller.h" /* OSPifRam + the __osCont/__osSi internal API */
 #include "port_libultra.h"
+#include "port_lockstep.h" /* osGetTime's clock in lockstep (LP64-006) */
 #include "game/file.h"  /* save_data / smallSave: EEPROM import from big-endian saves */
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
@@ -906,6 +907,12 @@ static u64 portHostMicroseconds(void)
 
 OSTime osGetTime(void)
 {
+#if PORT_PLAY_HARNESS
+    if (portLockstep())
+    {   /* lockstep (port_lockstep.h): the retraces delivered, not the host */
+        return (portLockstepMicroseconds() * 46875ull) / 1000ull;
+    }
+#endif
     return (portHostMicroseconds() * 46875ull) / 1000ull;
 }
 

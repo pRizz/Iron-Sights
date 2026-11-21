@@ -286,7 +286,10 @@ pass its isolated executable rather than rebuilding an active player binary.
   them with `GE_FIXEDTICK` (a demo then advances one field a tick instead of
   at its recorded pace and ends at another tick) or `GE_NOSLEEP` (the frame
   limit, which counts retraces, then passes before the game has done
-  anything); the tool refuses both from `--env`.
+  anything); the tool refuses both from `--env`. A case marked
+  `lockstep=True` runs with `GE_LOCKSTEP=1` instead (one retrace a game
+  frame and a clock that counts them, `port/include/port_lockstep.h`);
+  `--env` refuses `GE_LOCKSTEP`, and demos never run in lockstep.
 - `lp64_play.py run --video [--shots N] ...` runs a `GE_VIDEO` executable
   offscreen (`SDL_VIDEODRIVER=offscreen`, Mesa's software GL; the dummy
   driver cannot make a GL context), with `SDL_AUDIODRIVER=dummy`,

@@ -4,6 +4,7 @@ chosen status), as test_lp64_boot.py does. The options, environment and set size
 test_lp64_play_options.py, traces and callers in test_lp64_play_traces.py, the video lines in
 test_lp64_play_video.py."""
 import contextlib
+from dataclasses import replace
 import io
 from pathlib import Path
 import stat
@@ -14,6 +15,7 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lp64_play  # noqa: E402
+import lp64_play_cases  # noqa: E402
 import lp64_play_run  # noqa: E402
 
 BOOT = ('ge007 pc port: booting (GE_FRAMES=n limits the run)\n'
@@ -482,6 +484,44 @@ class OtherSets(StandIns):
         # Assert
         self.assertEqual(status, 1, out)
         self.assertIn('soak: FAIL (missing line: ge: soak: complete after 1 laps)', out)
+
+
+class Lockstep(StandIns):
+    """A case marked lockstep=True runs with GE_LOCKSTEP=1 (LP64-006 Task 2); nothing else does."""
+
+    def test_lockstep_case_sets_the_variable(self):
+        # Arrange
+        case = replace(lp64_play_cases.cases_of(['stages'])[0], lockstep=True)
+
+        # Act
+        env = lp64_play_run.case_environment(case, self.rom, {}, base={})
+
+        # Assert
+        self.assertEqual(env.get('GE_LOCKSTEP'), '1')
+
+    def test_env_refuses_lockstep(self):
+        # Arrange
+        exe = self.fake(DAM1_GOOD)
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--env', 'GE_LOCKSTEP=1')
+
+        # Assert
+        self.assertEqual(status, 2, out)
+        self.assertIn('--env GE_LOCKSTEP is refused', out)
+
+    def test_demo_never_gets_lockstep(self):
+        # Arrange
+        demos = lp64_play_cases.cases_of(['demos', 'attract'])
+        marked = replace(demos[0], lockstep=True)
+
+        # Act
+        envs = [lp64_play_run.case_environment(case, self.rom, {}, base={}) for case in demos]
+
+        # Assert
+        self.assertEqual([case.name for case, env in zip(demos, envs) if 'GE_LOCKSTEP' in env], [])
+        with self.assertRaisesRegex(ValueError, 'never runs in lockstep'):
+            lp64_play_run.case_environment(marked, self.rom, {}, base={})
 
 
 if __name__ == '__main__':

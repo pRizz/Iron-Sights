@@ -21,7 +21,9 @@ outcomes to DIR/play.json. A case fails on a status other than its own (0, or 1 
 timeout, a sanitizer marker, `ge: fatal signal`, `ASSERTION FAULT`, a failing `ge: lp64:` line
 or a missing required line (lp64_play_judge.py). Runs are paced in real time: never set
 GE_FIXEDTICK or GE_NOSLEEP, which --env refuses, as it refuses what the tool sets for every case
-(GE_ROM, GE_FRAMES, GE_SEED, GE_NOINISAVE, GE_INPUTPLAY).
+(GE_ROM, GE_FRAMES, GE_SEED, GE_NOINISAVE, GE_INPUTPLAY). A case marked lockstep=True runs with
+GE_LOCKSTEP=1 instead (one retrace a game frame, LP64-006); --env refuses GE_LOCKSTEP, and a demo
+never runs in lockstep.
 --video runs a GE_VIDEO executable offscreen (SDL_VIDEODRIVER=offscreen, SDL_AUDIODRIVER=dummy,
 GE_WINDOW=640x480 windowed through a midas.ini in the case's folder, GE_NOINPUT=1, HOME and
 GE_ICON_CACHE_DIR in the case's folder, and GE_TICKHZ=60, so video runs count retraces at 60 a
@@ -64,8 +66,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lp64_play_callers import callers  # noqa: E402
 from lp64_play_cases import VIDEO_SETS, cases_of, scale_frames, select_cases  # noqa: E402
 from lp64_play_peaks import peaks_report  # noqa: E402
-from lp64_play_run import (CAPTURE_VARIABLE, FOLDER_VARIABLES, FORBIDDEN_VARIABLES, TOOL_VARIABLES, VIDEO_VARIABLES,  # noqa: E402
-                           Display, run_cases)
+from lp64_play_run import (CAPTURE_VARIABLE, FOLDER_VARIABLES, FORBIDDEN_VARIABLES, LOCKSTEP_VARIABLE,  # noqa: E402
+                           TOOL_VARIABLES, VIDEO_VARIABLES, Display, run_cases)
 from lp64_play_sound import sound_report  # noqa: E402
 from lp64_play_traces import compare_with_expectations, reference_check  # noqa: E402
 
@@ -81,6 +83,9 @@ def parse_env(parser: argparse.ArgumentParser, pairs: list[str]) -> dict[str, st
         if name in FORBIDDEN_VARIABLES:
             parser.error(f'--env {name} is refused: play runs are paced in real time '
                          '(GE_FIXEDTICK changes a demo\'s pace, GE_NOSLEEP passes the frame limit at once)')
+        if name == LOCKSTEP_VARIABLE:
+            parser.error(f'--env {name} is refused: a case marked lockstep=True sets it, and a demo never runs '
+                         'in lockstep')
         if name in TOOL_VARIABLES:
             parser.error(f'--env {name} is refused: the tool sets it for every case')
         extra[name] = value
@@ -180,7 +185,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument('--jobs', type=int, default=DEFAULT_JOBS, metavar='N')
     run.add_argument('--only', metavar='CASE[,CASE...]', help='run only these cases of the sets')
     run.add_argument('--env', action='append', default=[], metavar='NAME=VALUE',
-                     help='set a variable for every case (never GE_FIXEDTICK or GE_NOSLEEP)')
+                     help='set a variable for every case (never GE_FIXEDTICK, GE_NOSLEEP or GE_LOCKSTEP)')
     run.add_argument('--video', action='store_true',
                      help='run a GE_VIDEO executable offscreen; each case must draw its pictures')
     run.add_argument('--shots', type=int, metavar='N',
