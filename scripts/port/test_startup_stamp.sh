@@ -37,7 +37,8 @@ draw_lines() {
     TZ=UTC "$work/bin"
 }
 
-for width in $(harness_widths); do
+widths=$(harness_widths)
+for width in $widths; do
     shipped_one=$(draw_lines "$width" "$work/one")
     shipped_two=$(draw_lines "$width" "$work/two")
     if [[ "$shipped_one" == "$shipped_two" ]] || [[ "$shipped_one" != *d1170ef17* ]]; then

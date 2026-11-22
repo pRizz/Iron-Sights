@@ -1923,6 +1923,51 @@ Task 7 text above stays as accepted; where it conflicts, these govern.
 
 These are the controller's rulings, recorded for the owner at the milestone's close.
 
+## Amendments during Task 8 (2026-11-22)
+
+Task 8's runs changed six details of the brief. The Task 8 text above
+stays as accepted; where it conflicts, these govern.
+
+1. **Two phases, fixes first.** The first full runs showed three causes
+   of difference before any could be classified, so phase A fixed them
+   (commits of their own, each with its test and the regression checks)
+   and phase B ran Steps 2 to 5 on the fixed code and recorded what was
+   left.
+2. **Step 3 samples six of the 22 cases.** One drawn case took 3,319 s
+   on the emulated i686 build alone, so the 22 would not fit the run.
+   Step 3 runs `stage-dam`, `stage-frigate` and `stage-jungle` (the
+   cases with a known difference or fix), `stage-facility` (indoor,
+   many rooms and portals), `stage-cradle` (the last mission of the
+   campaign) and `temple-4p`. The other 16 are compared by digest only;
+   on the 32-bit side they have no screenshot.
+3. **Comparison builds wait for the bake and time the console by
+   pictures.** Under `GE_COMPARE` only, Baked Lighting finishes its
+   trace during the stage load instead of across frames by the wall
+   clock, and the console's message dwell counts pictures instead of
+   reading `osGetTime`. Shipped builds are unchanged.
+4. **`image.c` reads zero at 64 bits only.** An odd-width 4-bit texture
+   packs each row's last pixel with the byte after the decoder's output;
+   a 64-bit build zeroes that scratch buffer, and the 32-bit program
+   keeps its leftovers, so its pictures differ from the 64-bit builds'
+   in the cases that draw such a texture (recorded as explained).
+5. **Explosive Rounds' row numbers are fixed at every width.** The
+   rounds were numbered 22 to 24 against a table of 24 rows (0 to 23),
+   so a guard's round read past it. They are now 21 to 23; the 32-bit
+   Windows executable differs from before in six `.text` bytes
+   (`portExplosiveRoundsType` +0x34 and +0x41, `explosionCreate` +0x12,
+   +0x1a and +0x1b, `explosionInflictDamage` +0x5f5).
+6. **What phase B changed.** A comparison build draws a fixed build
+   stamp on the legal screen and the file select, since the stamp
+   carries the minute its tree was built. The C library's differences
+   in Step 2 are attributed by a scratch build pair with the in-tree
+   `tanf` and libm's `atanf` and `cosf`, which match, rather than by
+   detail lines. The video libm pair's folders are `i686-libm-video`
+   and `x64-libm-video`: its `sim` differs from the headless libm
+   pair's, which keeps the name `i686-libm:x64-libm`. Step 3's i686 runs
+   were stopped by the per-case limit after picture 1800, six at a
+   time, so the 32-bit side has screenshots and digests to that picture
+   and no complete run.
+
 ## Amendment by the owner: three checkpoints (2026-11-21)
 
 Asked how to shorten the run, the owner chose to run the task check's

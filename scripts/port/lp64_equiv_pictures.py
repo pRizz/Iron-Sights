@@ -123,10 +123,14 @@ def run_record(folder: Path) -> dict:
 
 def command_shots(args: argparse.Namespace) -> int:
     try:
-        record = run_record(args.dir_a)
+        record, record_b = run_record(args.dir_a), run_record(args.dir_b)
     except Unreadable as error:
         print(f'FAIL: {error}')
         return 2
+    for key, flag in (('cases', 'cases'), ('shots', '--shots')):
+        if record.get(key) != record_b.get(key):
+            print(f'FAIL: {args.dir_a} ran {flag} {record.get(key)} but {args.dir_b} ran {flag} {record_b.get(key)}')
+            return 2
     tick = args.tick if args.tick is not None else record.get('shots')
     if not isinstance(tick, int) or tick < 1:
         print(f'FAIL: {args.dir_a}/{RECORD} names no screenshot tick (a run without --shots): give --tick')
@@ -236,7 +240,11 @@ def command_gallery(args: argparse.Namespace) -> int:
     if args.timeout <= 0:
         print('error: --timeout takes a number of seconds above 0', file=sys.stderr)
         return 2
-    executable = args.executable.resolve(strict=True)
+    try:
+        executable, rom = args.executable.resolve(strict=True), args.rom.resolve(strict=True)
+    except OSError as error:
+        print(f'FAIL: {error}')
+        return 2
     output = args.output.resolve()
     game, home = output/'game', output/'home'
     for folder in (game, home):
@@ -247,7 +255,7 @@ def command_gallery(args: argparse.Namespace) -> int:
     copy = game/executable.name
     shutil.copy2(executable, copy)
     (game/'midas.ini').write_text(hand_gallery.FIXTURE_INI, encoding='utf-8')
-    env = dict(capture_environment(args.rom.resolve(strict=True), output/'icons'), HOME=str(home))
+    env = dict(capture_environment(rom, output/'icons'), HOME=str(home))
     try:
         exited, log = run_capture(copy, game, env, output, args.timeout)
     finally:

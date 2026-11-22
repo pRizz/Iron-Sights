@@ -346,7 +346,11 @@ pass its isolated executable rather than rebuilding an active player binary.
   the renderer's table when `GE_GFXDIGEST` is set. `-DGE_COMPARE_LIBM=ON` keeps
   libm's maths. It is never shipped: `package_linux.py` and
   `package_windows.py` refuse it. Its trees are `build/lp64/cmp-i686`,
-  `cmp-x64`, `cmp-a64` and their `-video` twins.
+  `cmp-x64`, `cmp-a64` and their `-video` twins. Nothing in its pictures may
+  follow the host's clock or the tree: it finishes Baked Lighting's trace
+  during the stage load, times the console's messages by pictures, and
+  draws a fixed build stamp (`port_baked_light.c`, `port_console.c`,
+  `port_startup.c`, each under `#ifdef GE_COMPARE`).
 - `scripts/port/lp64_equiv.py` (LP64-006) runs the comparison's 38 cases
   (`lp64_equiv_cases.py`: the `demos`, paced by their recordings; `solo`,
   `mp`, `menus` and `reload` in lockstep) on a comparison build:
@@ -393,7 +397,8 @@ pass its isolated executable rather than rebuilding an active player binary.
   moves them.
   `scripts/port/lp64_equiv_pictures.py` (Task 8) checks drawn pixels
   beside the digest: `shots DIR_A DIR_B` compares each case's screenshot
-  of two `run --video --draw --shots TICK` folders, `gallery --rom ROM
+  of two `run --video --draw --shots TICK` folders (and fails when the two
+  ran other cases or ticks), `gallery --rom ROM
   --output DIR EXECUTABLE` runs the hand gallery's capture mode offscreen
   (its fixture and variables read from `hand_gallery.py`, imported, never
   edited, and `generate` never called) and writes the 216 captures' pixel

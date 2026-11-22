@@ -106,6 +106,48 @@ class Pictures(unittest.TestCase):
         self.assertIn('shot_01800.bmp', out)
         self.assertNotIn('pixels differ', out)
 
+    def test_shots_fails_when_the_folders_ran_other_cases(self):
+        # Arrange
+        a = self.run_folder('i686', {'dam': bmp(4, 4, {})})
+        b = self.run_folder('x64', {'dam': bmp(4, 4, {}), 'facility': bmp(4, 4, {})})
+
+        # Act
+        status, out = self.tool('shots', str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 2, out)
+        self.assertIn('FAIL', out)
+        self.assertNotIn('identical', out)
+
+    def test_shots_fails_when_the_folders_took_other_ticks(self):
+        # Arrange
+        a = self.run_folder('i686', {'dam': bmp(4, 4, {})})
+        b = self.run_folder('x64', {'dam': bmp(4, 4, {})})
+        (b/'equiv.json').write_text(json.dumps({'shots': TICK * 2, 'cases': ['dam']}))
+
+        # Act
+        status, out = self.tool('shots', str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 2, out)
+        self.assertIn(f'--shots {TICK * 2}', out)
+        self.assertNotIn('identical', out)
+
+    def test_gallery_with_a_missing_rom_leaves_no_copy(self):
+        # Arrange
+        executable = self.folder/'IronSights'
+        executable.write_bytes(b'not a game')
+        output = self.folder/'gallery'
+
+        # Act
+        status, out = self.tool('gallery', '--rom', str(self.folder/'missing.z64'), '--output', str(output),
+                                str(executable))
+
+        # Assert
+        self.assertEqual(status, 2, out)
+        self.assertIn('missing.z64', out)
+        self.assertFalse((output/'game'/executable.name).exists())
+
     def test_gallery_compare_counts_differing_cases(self):
         # Arrange
         a = self.gallery_file('i686', set())
