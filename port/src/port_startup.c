@@ -9,6 +9,21 @@
 #include "port_build_time.h"
 #include "port_startup.h"
 
+#ifdef GE_COMPARE
+/* LP64-006: a comparison build draws one legal screen and file-select stamp
+ * whatever tree, commit, minute or time zone built it, so that two builds of
+ * one source draw the same picture. */
+#define STAMP_NUMBER  "comparison"
+#define STAMP_COMMIT  "build"
+#define STAMP_DIRTY   0
+#define STAMP_TIME    NULL
+#else
+#define STAMP_NUMBER  PORT_BUILD_STRING
+#define STAMP_COMMIT  PORT_BUILD_COMMIT
+#define STAMP_DIRTY   PORT_BUILD_DIRTY
+#define STAMP_TIME    PORT_BUILD_TIME
+#endif
+
 /* front.c's legal-screen primitive draws in its 440 x 330 logical viewport. */
 static Gfx *startupLine(Gfx *gdl, s32 y, const char *text)
 {
@@ -21,10 +36,10 @@ Gfx *portStartupAttribution(Gfx *gdl)
 {
     char line[128], builtAt[96];
     gdl = startupLine(gdl, 16, "Iron Sights - a fork of Project Midas\n");
-    snprintf(line, sizeof(line), "Build %s - %s%s\n", PORT_BUILD_STRING,
-        PORT_BUILD_COMMIT, PORT_BUILD_DIRTY ? " (modified)" : "");
+    snprintf(line, sizeof(line), "Build %s - %s%s\n", STAMP_NUMBER,
+        STAMP_COMMIT, STAMP_DIRTY ? " (modified)" : "");
     gdl = startupLine(gdl, 300, line);
-    portFormatBuildTime(builtAt, sizeof(builtAt), PORT_BUILD_TIME);
+    portFormatBuildTime(builtAt, sizeof(builtAt), STAMP_TIME);
     snprintf(line, sizeof(line), "Built at: %s\n", builtAt);
     return startupLine(gdl, 315, line);
 }
@@ -53,12 +68,12 @@ Gfx *portFileSelectBuildStamp(Gfx *gdl, s32 left, s32 top)
     s32 y = top + STAMP_GAP;
     gdl = microcode_constructor(gdl); /* text setup, not the art's combiner */
     portTextScale(STAMP_SCALE);
-    snprintf(line, sizeof(line), "Build %s - %s\n", PORT_BUILD_STRING, PORT_BUILD_COMMIT);
+    snprintf(line, sizeof(line), "Build %s - %s\n", STAMP_NUMBER, STAMP_COMMIT);
     gdl = stampLine(gdl, left, &y, line);
     /* "modified" rides the shorter line so neither reaches the button column
      * (Import/Export start near x 185 on web and save-transfer builds). */
-    portFormatBuildTimeCompact(builtAt, sizeof(builtAt), PORT_BUILD_TIME);
-    snprintf(line, sizeof(line), "Built %s%s\n", builtAt, PORT_BUILD_DIRTY ? " - modified" : "");
+    portFormatBuildTimeCompact(builtAt, sizeof(builtAt), STAMP_TIME);
+    snprintf(line, sizeof(line), "Built %s%s\n", builtAt, STAMP_DIRTY ? " - modified" : "");
     gdl = stampLine(gdl, left, &y, line);
     portTextScale(1.0f);
     return gdl;

@@ -100,6 +100,7 @@ jobs:
           bash scripts/port/test_lp64_compare.sh
           bash scripts/port/test_gfx_digest.sh
           bash scripts/port/test_image_inflate.sh
+          bash scripts/port/test_startup_stamp.sh
           python3 scripts/port/test_lp64_equiv_streams.py
           python3 scripts/port/test_lp64_equiv.py
           python3 scripts/port/test_lp64_equiv_compare.py
