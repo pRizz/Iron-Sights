@@ -144,8 +144,8 @@ s_explosiontype g_ExplosionTypes[] = {
     { 90.0f,  75.0f,    3.0f,               1.0f,                 250.0f,  375.0f,  600.0f,   150,        2,     5.0f,   200,     6.0f,   30.0f,    6.0f,   15.0f,         6,  EXPLOSION_4B_SFX,   4.0f},
     {160.0f, 120.0f,    7.19999980926514f,  2.40000009536743f,    600.0f,  450.0f,  640.0f,    50,        1,     2.0f,     0,     0.0f,    0.0f,    0.0f,    0.0f,         0,  EXPLOSION_4B_SFX,   4.0f},
 #ifndef TARGET_N64
-    /* Explosive Rounds (FORK-078, port_explosive_rounds.h): 22 Visual, 23 Bond's
-     * Explosive, 24 a guard's Explosive (the same blast, without Bond's hit marker).
+    /* Explosive Rounds (FORK-078, port_explosive_rounds.h): 21 Visual, 22 Bond's
+     * Explosive, 23 a guard's Explosive (the same blast, without Bond's hit marker).
      * Smaller and quicker than Rare's smallest damaging blast (2): a 1.5-tick flare
      * frame, a short life and smoke 9's brief puff, not smoke 7's lingering plume.
      * Three damage passes of 0.165 match that blast's four of 0.125 over 50 units. */
@@ -179,8 +179,8 @@ s_explosiontype g_ExplosionTypes[] = {
     { 90.0f,  75.0f,    2.5f, 0.87f,   250.0f,  375.0f,  600.0f,   180,        2,     5.0f,   200,     6.0f,   30.0f,    6.0f,   15.0f,         6,  EXPLOSION_4B_SFX,   4.0f},
     {160.0f, 120.0f,    6.0f,  2.0f,   600.0f,  450.0f,  640.0f,    60,        1,     2.0f,     0,     0.0f,    0.0f,    0.0f,    0.0f,         0,  EXPLOSION_4B_SFX,   4.0f},
 #ifndef TARGET_N64
-    /* Explosive Rounds (FORK-078, port_explosive_rounds.h): 22 Visual, 23 Bond's
-     * Explosive, 24 a guard's Explosive (the same blast, without Bond's hit marker).
+    /* Explosive Rounds (FORK-078, port_explosive_rounds.h): 21 Visual, 22 Bond's
+     * Explosive, 23 a guard's Explosive (the same blast, without Bond's hit marker).
      * Smaller and quicker than Rare's smallest damaging blast (2): a 1.5-tick flare
      * frame, a short life and smoke 9's brief puff, not smoke 7's lingering plume.
      * Three damage passes of 0.165 match that blast's four of 0.125 over 50 units. */
@@ -189,6 +189,12 @@ s_explosiontype g_ExplosionTypes[] = {
     {  6.0f,   6.0f,    0.0f,  0.0f,    12.0f,   30.0f,   50.0f,    24,        1,     1.5f,    20,     5.0f,    3.0f,    1.0f,    5.0f,         9,  EXPLOSION_1B_SFX, 0.165f},
 #endif
 };
+#endif
+#ifndef TARGET_N64
+/* FORK-078: the rounds' numbers name the last three rows, so adding or
+ * removing a row fails the build instead of reading past the table. */
+_Static_assert(sizeof(g_ExplosionTypes) / sizeof(g_ExplosionTypes[0]) == PORT_EXPLOSION_ROUND_GUARD + 1,
+               "port_explosive_rounds.h's round numbers must name g_ExplosionTypes' last three rows");
 #endif
 
 Gfx * g_ExplosionDisplayLists[] = {

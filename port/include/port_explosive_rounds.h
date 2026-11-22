@@ -35,12 +35,13 @@
 /* explosive_rounds_guards: 1 = everyone's rounds, 0 = players only */
 #define PORT_EXPLOSIVE_ROUNDS_GUARDS_DEFAULT 1
 
-/* The fork's rows after Rare's 22 in g_ExplosionTypes (explosion.c). The
- * player and guard Explosive rows are identical; the guard row only stops
- * a guard's blast from showing Bond's hit markers. */
-#define PORT_EXPLOSION_ROUND_VISUAL 22
-#define PORT_EXPLOSION_ROUND_PLAYER 23
-#define PORT_EXPLOSION_ROUND_GUARD 24
+/* The fork's rows after Rare's 21 (0 to 20; bondconstants.h's EXPLOSION_DEF_21
+ * names no row) in g_ExplosionTypes (explosion.c, which checks the count at
+ * build time). The player and guard Explosive rows are identical; the guard
+ * row only stops a guard's blast from showing Bond's hit markers. */
+#define PORT_EXPLOSION_ROUND_VISUAL 21
+#define PORT_EXPLOSION_ROUND_PLAYER 22
+#define PORT_EXPLOSION_ROUND_GUARD 23
 
 /* Free explosion slots a round leaves for everything else. */
 #define PORT_EXPLOSIVE_ROUNDS_RESERVE 2

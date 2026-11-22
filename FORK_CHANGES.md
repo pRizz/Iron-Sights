@@ -3572,7 +3572,9 @@ The CI test lines ran in the x86_64 container, each under `timeout 1200`: 79 run
 
 *Commit "Keep the host's clock out of comparison pictures under all options" (`port/src/port_baked_light.c`, `port/src/port_console.c`; both changes only under `#ifdef GE_COMPARE`, so shipped and other builds are unchanged).* Cause B: under `--profile all` every case's `gfx` disagreed with itself on all three builds while its `sim` agreed (i686 2354 s, x64 969 s, a64 907 s, before this commit). Two things on screen followed the host. Baked Lighting (FORK-082) finished on the frame its worker threads' speed picked and printed `Baked Lighting: ready (N vertices, M ms)` with wall-clock milliseconds; with `baked_lighting=0` in a scratch profile the lockstep cases agreed with themselves (`t8-all-nobake-a64` 193 s, `t8-all-nobake-x64` 206 s). A comparison build now waits for the bake at the end of `portBakeLevelLoaded`, so it is ready at the stage's first tick on every host, and its ready line names no time; the unbaked frames stay covered by the default profile, which has Baked Lighting off. With that alone, dam1's digest still parted between runs (`t8-demo-detail2-a64`, three runs with `GE_GFXDIGEST_DETAIL=1-400`, 213 s): the `C` lines name the call, a third `start_draw_to_framebuffer` pass of 33 textured quads (the console's transient top row) drawn in pictures 1 to 261 in two runs and 1 to 262 in the third, because the console times a message's 3 s dwell by `osGetTime`, which in a paced demo follows the host. A comparison build now reads, for that dwell only, a clock that counts the pictures `portConRender` has drawn at a sixtieth of a second each. With both, on `cmp-a64-video` built after them, stage-dam, stage-cuba, stage-frigate, temple-4p, dam-twice, walk, dam1 and runway1 under `--profile all --repeat 2` printed `OK: 8 of 8 cases agree with themselves` (`t8-pre-all-a64`, 179 s). Rule kept for any further option of this kind: a stream holds nothing of the host.
 
-Cause C, found and not fixed here: under `--profile all` the aarch64 build's simulation leaves the x86 builds' in 13 solo cases and dam-twice (stage-dam at tick 755: 493,462 random draws on i686 and x86_64, 38 on aarch64). Explosive Rounds (FORK-078) number its blasts 22, 23 and 24 (`port/include/port_explosive_rounds.h`, "after Rare's 22"), but Rare's US table has 21 rows, so `g_ExplosionTypes` holds 24 (0x600 bytes of 64-byte rows in the aarch64 binary): Visual rounds read the Explosive row, Bond's Explosive rounds the guard row, and a guard's round (type 24, logged 581 times in stage-dam with `GE_ROUNDS_LOG=1`, `t8-roundslog-a64`) reads past the table into the next objects, whose bytes differ by host, so its shrapnel count (`explosion.c`'s `numshrapnelbits` loop) is thousands on x86 and a few on aarch64. A float-cast-overflow sanitizer build (`build/lp64/t8-fco-x64-video`, `t8-fco-x64`) named no conversion on that path (its one report was `env.c:496:27`, a float of -44309.2 to `short` in the audio envelope). Moving the three numbers onto their rows (scratch patch `build/lp64/equiv/t8-rounds-table-index.patch`, trees `build/lp64/t8-rounds-{a64,x64}-video`) makes stage-dam's `sim` identical between aarch64 and x86_64 through tick 3,897 (`t8-rounds-{a64,x64}`). It changes what the shipped 32-bit game does (the feature's own defect), so it waits for the owner.
+Cause C, found and not fixed here: under `--profile all` the aarch64 build's simulation leaves the x86 builds' in 13 solo cases and dam-twice (stage-dam at tick 755: 493,462 random draws on i686 and x86_64, 38 on aarch64). Explosive Rounds (FORK-078) number its blasts 22, 23 and 24 (`port/include/port_explosive_rounds.h`, "after Rare's 22"), but Rare's US table has 21 rows, so `g_ExplosionTypes` holds 24 (0x600 bytes of 64-byte rows in the aarch64 binary): Visual rounds read the Explosive row, Bond's Explosive rounds the guard row, and a guard's round (type 24, logged 581 times in stage-dam with `GE_ROUNDS_LOG=1`, `t8-roundslog-a64`) reads past the table into the next objects, whose bytes differ by host, so its shrapnel count (`explosion.c`'s `numshrapnelbits` loop) is thousands on x86 and a few on aarch64. A float-cast-overflow sanitizer build (`build/lp64/t8-fco-x64-video`, `t8-fco-x64`) named no conversion on that path (its one report was `env.c:496:27`, a float of -44309.2 to `short` in the audio envelope). Moving the three numbers onto their rows (scratch patch `build/lp64/equiv/t8-rounds-table-index.patch`, trees `build/lp64/t8-rounds-{a64,x64}-video`) makes stage-dam's `sim` identical between aarch64 and x86_64 through tick 3,897 (`t8-rounds-{a64,x64}`). It changes what the shipped 32-bit game does (the feature's own defect), so it waited for the owner's ruling, below.
+
+*Commit "Number the Explosive Rounds rows as the table has them" (`port/include/port_explosive_rounds.h`, `src/game/explosion.c`, `scripts/port/test_explosive_rounds.c`; FORK-078 updated).* Cause C is fixed at every width by the owner's ruling (a defect of the fork's own feature against its own comments, and an out-of-bounds read at every width): the rounds are 21, 22 and 23, the rows the table has, and a `_Static_assert` after both version tables in `explosion.c` (inside `#ifndef TARGET_N64`) requires `g_ExplosionTypes` to end at the guard's row; with the guard set back to 24 in a scratch copy of the header, `explosion.c` fails to compile on that assertion (`build/lp64/equiv/t8c-assert.out`). `test_explosive_rounds.c` now pins the Visual row after `EXPLOSION_DEF_20`, Rare's last row (it had pinned it after `EXPLOSION_DEF_21`, an enum value with no row). The 32-bit Windows executable changes in exactly six `.text` bytes, all of them these three numbers (`compare_win32.py commits 9d3f61d WORKTREE` before the commit, `t8c-pre-compare-win32.out`, mapped to functions through the build's `ProjectMidas.map` by a scratch reader, `t8c-textdiff.py`): `portExplosiveRoundsType` (two immediates, the Explosive and Visual rows it returns), `explosionCreate` (three bytes, `portExplosionStartsShake`'s inlined test that a type is a round) and `explosionInflictDamage` (one byte, `portExplosionShowsHitMarker`'s guard row). The earlier phase A commits add nothing to the 32-bit program: the same command with the worktree at `a3dd635` printed `identical in loaded code and data` (`t8a-compare-win32.out`). The video play sets were not rerun for this commit: the constants are read only with `explosive_rounds` on, which the plain play sets leave off and the all-options comparison runs exercise.
 
 **LP64-005 hand-over to LP64-006** (assembled at the close from the plan's Task 15, the controller's ledger of the milestone's reviews and the notes above, each checked against `main` after the landing; an item that is LP64-007's says so):
 
@@ -5396,9 +5398,25 @@ value on the watch, where Players Only also overhung the value column. The
 shorter label and value replaced them; the midas.ini key is unchanged.
 
 The fork appends three rows to `g_ExplosionTypes` (both the NTSC and the EU
-tables, after Rare's 22; not on N64): 22 Visual, 23 Bond's Explosive and 24 a
-guard's Explosive. Rows 23 and 24 are identical, except that damage from a
-guard's round never shows Bond's hit marker. Rounds never start the screen
+tables, after Rare's 21, rows 0 to 20; not on N64): 21 Visual, 22 Bond's
+Explosive and 23 a guard's Explosive. Rows 22 and 23 are identical, except
+that damage from a guard's round never shows Bond's hit marker. A
+`_Static_assert` after the tables in `explosion.c` ties the guard's number to
+the table's last row, so adding or removing a row fails the build.
+
+*Row numbers fixed (2026-11-22, LP64-006 Task 8 cause C, commit "Number the
+Explosive Rounds rows as the table has them").* From the feature's landing
+until this fix the rounds were numbered 22, 23 and 24, on the belief that
+Rare's table had 22 rows (`bondconstants.h`'s enum ends at `EXPLOSION_DEF_21`,
+which names no row). The table has 24 rows, so at every width Visual rounds
+used row 22, Bond's damaging Explosive row (Visual blasts did splash damage
+and credited the shooter); Bond's Explosive rounds used row 23, the guard
+row, so they never showed his hit marker; and a guard's round, type 24, read
+`explosionCreate`'s row past the end of the table into the objects after it,
+so its size, shrapnel count, smoke and damage came from unrelated bytes that
+differ by build (thousands of shrapnel particles from one blast on i686 and
+x86_64, a few on aarch64). Now each mode uses the row its comment
+describes. Rounds never start the screen
 shake. A round is skipped unless more than two explosion slots are free
 under the cap, so grenades, mines and props still explode with Unlimited
 Explosions off. Demo playback (`get_is_ramrom_flag`) keeps the native
@@ -5435,7 +5453,8 @@ adjusts them as it does the other Combat Feedback rows.
 
 **Checks:** in the `goldeneye` Docker image, `test_ads.sh` passes with the new
 test: the defaults and menu entries; midas.ini clamping; which shooter,
-mode and demo state make which row; the row indices after Rare's 22; the
+mode and demo state make which row; the row indices after Rare's 21 (22 before
+the 2026-11-22 fix above); the
 two-slot reserve; Rare's shake exemptions kept and rounds added; the guard
 row's hidden hit marker; and the one-blast-per-shotgun-shot queue.
 `test_hud.sh`, `test_states.sh`, `test_upstream_merge.sh`,

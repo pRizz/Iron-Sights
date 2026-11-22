@@ -62,8 +62,10 @@ static void testExplosiveRoundsRules(void)
     assert(portExplosiveRoundsTypeFor(PORT_EXPLOSIVE_ROUNDS_VISUAL, 1, FALSE, PORT_ROUND_BY_GUARD) == PORT_EXPLOSION_ROUND_VISUAL);
     assert(portExplosiveRoundsTypeFor(PORT_EXPLOSIVE_ROUNDS_EXPLOSIVE, 1, FALSE, PORT_ROUND_BY_GUARD) == PORT_EXPLOSION_ROUND_GUARD);
 
-    /* The rows follow Rare's 22 (EXPLOSION_DEF_21 is the last). */
-    assert(PORT_EXPLOSION_ROUND_VISUAL == EXPLOSION_DEF_21 + 1);
+    /* The rows follow Rare's 21 (EXPLOSION_DEF_20 is the last row; EXPLOSION_DEF_21
+     * names none). explosion.c ties the guard's row to the table's end at build time. */
+    assert(PORT_EXPLOSION_ROUND_VISUAL == EXPLOSION_DEF_20 + 1);
+    assert(PORT_EXPLOSION_ROUND_PLAYER == PORT_EXPLOSION_ROUND_VISUAL + 1);
     assert(PORT_EXPLOSION_ROUND_GUARD == PORT_EXPLOSION_ROUND_VISUAL + 2);
 
     /* A round leaves the last two slots for grenades, mines and props. */
