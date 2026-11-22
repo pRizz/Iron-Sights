@@ -49,6 +49,7 @@
 #include <PR/abi.h>
 #include "port_audio_bounds.h"
 #include "port_audio_capture.h"
+#include "port_audio_lock.h"
 
 /* ---- config ------------------------------------------------------------ */
 
@@ -1119,6 +1120,44 @@ s32 portAudioRenderOffline(s16 *output, s32 samples)
 }
 
 /**
+ * The sound lock (port_audio_lock.h; comparison builds only): FIELDS frames of
+ * the game's frame size, or the one portAudioPumpForce asks for, mixed and
+ * recorded with no device, queue level or clock. A forced frame is mixed ahead
+ * of its field, so a frame stays a field: frame k is field k + 1's.
+ */
+static void portAudioPumpLocked(Acmd *cmdList, s16 *frameBuf, s32 fields)
+{
+    static s32 s_Owed; /* fields not mixed yet, less the frames forced ahead */
+    static s32 s_Logged;
+    u32 samples = g_FrameSize != 0 ? g_FrameSize : 368;
+    s32 frames;
+
+    if (!s_Logged) {
+        s_Logged = 1;
+        portConLogf("ge: audio: locked to game fields\n");
+    }
+    if (samples > PORT_MAX_FRAME_SAMPLES) {
+        samples = PORT_MAX_FRAME_SAMPLES;
+    }
+    s_Owed += fields;
+    frames = s_ForceOneFrame ? 1 : s_Owed > 0 ? s_Owed : 0;
+    for (; frames > 0; frames--) {
+        s32 cmdLen = 0;
+        u32 skipped = s_StatSkipped;
+
+        s_Owed--;
+        alAudioFrame(cmdList, &cmdLen, frameBuf, (s32)samples);
+        if (cmdLen > 0) {
+            portAcmdRun(cmdList, cmdLen);
+        }
+        if (cmdLen <= 0 || s_StatSkipped != skipped) {
+            memset(frameBuf, 0, samples * 4); /* the field's frame is silence */
+        }
+        portAudioCaptureFrame(frameBuf, samples);
+    }
+}
+
+/**
  * Called once per video frame from the main loop (pcsched). Replaces the
  * N64 audio thread: builds and executes as many audio frames as needed to
  * keep the SDL queue ahead of the DAC.
@@ -1154,6 +1193,16 @@ void portAudioPump(void)
     if (alGlobals == NULL || alGlobals->drvr.head == NULL) {
         s_InPump = 0;
         return; /* synthesizer not up yet (or no clients registered) */
+    }
+    { /* GE_AUDIO_LOCK in a comparison build; elsewhere the constant -1 */
+        extern s32 currentFrameCounter;
+        const s32 lockedFields = portAudioLockFrames(currentFrameCounter);
+
+        if (lockedFields >= 0) {
+            portAudioPumpLocked(cmdList, frameBuf, lockedFields);
+            s_InPump = 0;
+            return;
+        }
     }
     /* A failed or closed device is retried every PORT_AUDIO_RETRY_MS or more,
      * so a sink that appears later (a headset, a restarted sound server) is used. */

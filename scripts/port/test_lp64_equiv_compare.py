@@ -1,4 +1,4 @@
-"""ROM-free tests for lp64_equiv.py compare (LP64-006 Tasks 5 and 7): run folders written by hand, with the
+"""ROM-free tests for lp64_equiv.py compare (LP64-006 Tasks 5, 7 and 9): run folders written by hand, with the
 record `run` leaves (equiv.json), compared under lp64_equiv_expected.txt's rules."""
 import json
 from pathlib import Path
@@ -7,7 +7,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lp64_equiv  # noqa: E402
-from test_lp64_equiv import StandIns, sim  # noqa: E402
+from test_lp64_equiv import AUDIO_LOCKED, StandIns, sim, wav  # noqa: E402
 
 AGREED = {'ran': True, 'agreed': True}
 
@@ -127,19 +127,55 @@ class Compare(StandIns):
         self.assertEqual(status, 2, out)
         self.assertIn(f'error: {a} is refused: stage-dam did not agree with itself', out)
 
-    def test_compare_names_a_byte_stream_difference_by_its_offset(self):
-        # Arrange: a snd stream has no reader yet (Task 9), so it is compared byte for byte
+    def recorded(self, folder: Path, recording: bytes, case: str = 'stage-dam', log: str = AUDIO_LOCKED) -> None:
+        """RECORDING as CASE's run 1 in FOLDER, with a log holding LOG."""
+        (folder/'run1'/f'{case}.wav').write_bytes(recording)
+        (folder/'run1'/f'{case}.log').write_text(log)
+
+    def test_compare_names_a_recording_difference_by_its_sample_frame_and_field(self):
+        # Arrange
         a = self.run_folder('i686', sim(), video=True)
         b = self.run_folder('a64', sim(), video=True)
-        (a/'run1'/'stage-dam.wav').write_bytes(b'\x01\x02\x03\x04')
-        (b/'run1'/'stage-dam.wav').write_bytes(b'\x01\x02\xff\x04')
+        self.recorded(a, wav((1, 2), (3, 4)))
+        self.recorded(b, wav((1, 2), (5, 4)))
 
         # Act
         status, out = self.equiv('compare', '--streams', 'snd', str(a), str(b))
 
         # Assert
         self.assertEqual(status, 1, out)
-        self.assertIn('stage-dam snd i686:a64 first differs at 2 (byte)', out)
+        self.assertIn('stage-dam snd i686:a64 first differs at 1 (L frame=0 field=1)', out)
+
+    def test_compare_refuses_a_recording_made_without_the_lock(self):
+        # Arrange
+        a = self.run_folder('i686', sim(), video=True)
+        b = self.run_folder('a64', sim(), video=True)
+        self.recorded(a, wav((1, 2)))
+        self.recorded(b, wav((1, 2)), log='ge: compare: on\n')
+
+        # Act
+        status, out = self.equiv('compare', '--streams', 'snd', str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 2, out)
+        self.assertIn(f'error: {b} is refused: its stage-dam.wav was recorded without the sound lock '
+                      '(stage-dam.log lacks ge: audio: locked to game fields)', out)
+        self.assertNotIn('identical', out)
+
+    def test_compare_leaves_a_demo_recording_unjudged(self):
+        # Arrange: a paced demo's recordings differ in length; no folder needs a lock line for it
+        a = self.run_folder('i686', sim(), case='dam1', video=True)
+        b = self.run_folder('a64', sim(), case='dam1', video=True)
+        self.recorded(a, wav((1, 2)), case='dam1', log='')
+        self.recorded(b, wav((1, 2), (3, 4)), case='dam1', log='')
+
+        # Act
+        status, out = self.equiv('compare', '--streams', 'snd', str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('dam1 snd i686:a64 not judged: ' + lp64_equiv.DEMO_SND_REASON, out)
+        self.assertIn('OK: 1 cases, 0 streams, 0 identical, 0 as recorded', out)
 
     def test_compare_names_a_digest_difference_by_its_frame_and_field(self):
         # Arrange

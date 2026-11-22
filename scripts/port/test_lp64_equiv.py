@@ -1,4 +1,4 @@
-"""ROM-free tests for lp64_equiv.py (LP64-006 Task 5): run and sensitivity through stand-in
+"""ROM-free tests for lp64_equiv.py (LP64-006 Tasks 5 and 9): run and sensitivity through stand-in
 executables (shell scripts that print a log, write the simulation trace GE_SIMTRACE names and exit),
 as test_lp64_play.py does, and the cases and profiles as data. compare: test_lp64_equiv_compare.py."""
 import contextlib
@@ -6,6 +6,7 @@ import io
 import json
 from pathlib import Path
 import stat
+import struct
 import sys
 import tempfile
 import unittest
@@ -31,6 +32,17 @@ DAM1_GOOD = (COMPARE_ON + 'ge: demo start: stage=33 diff=0 pads=2 totaltime=1200
              'ge: GE_DEMO direct playback: dam1 (index 0)\n'
              'ge: demo exit: totaltime end (timer/limit) at tick 438, gametime 1300 vsyncs (~21s), detail 514/514\n'
              'ge: frame limit reached: frames=3000 gfxtasks=1500\n')
+
+
+AUDIO_LOCKED = 'ge: audio: locked to game fields\n'
+
+
+def wav(*samples: tuple[int, int]) -> bytes:
+    """A 22,050 Hz stereo recording of SAMPLES (left, right), as port_audio_capture.c writes one."""
+    data = b''.join(struct.pack('<hh', left, right) for left, right in samples)
+    return (b'RIFF' + struct.pack('<I', 36 + len(data)) + b'WAVEfmt '
+            + struct.pack('<IHHIIHH', 16, 1, 2, 22050, 22050 * 4, 4, 16) + b'data' + struct.pack('<I', len(data))
+            + data)
 
 
 def sim_line(tick: int, seed: str = '0000000000000001') -> str:
@@ -259,20 +271,28 @@ class Run(StandIns):
 
 class Video(StandIns):
     """`run --video` through a stand-in that writes the picture digest and the recording when named."""
-    VIDEO_LOG = DAM_GOOD.replace(LOCKSTEP_ON, LOCKSTEP_ON + 'ge: video: window + GL context up\n')
+    VIDEO_LOG = DAM_GOOD.replace(LOCKSTEP_ON, LOCKSTEP_ON + 'ge: video: window + GL context up\n' + AUDIO_LOCKED)
     GFX = 'F n=1 tick=1 draws=1 tris=2 vtx=3bee89fb tex=0:811c9dc5 state=0383debb post=e5d4f569\n'
-    # The recording differs from run to run, as an unlocked one does (Task 7, before Task 9's lock).
-    WRITE_STREAMS = (f'[ -n "$GE_GFXDIGEST" ] && printf "{GFX}" > "$GE_GFXDIGEST"\n'
-                     '[ -n "$GE_AUDIO_CAPTURE" ] && printf "wav $$" > "$GE_AUDIO_CAPTURE"\n')
+
+    def capture(self, recording: bytes = wav((1, -1), (2, -2))) -> str:
+        """A script line that writes RECORDING when the runner names a recording."""
+        path = self.folder/f'canned{len(list(self.folder.iterdir()))}.wav'
+        path.write_bytes(recording)
+        return f'[ -n "$GE_AUDIO_CAPTURE" ] && cp "{path}" "$GE_AUDIO_CAPTURE"\n'
+
+    def write_streams(self, recording: bytes = wav((1, -1), (2, -2))) -> str:
+        """A script that writes the digest and RECORDING when the runner names them."""
+        return f'[ -n "$GE_GFXDIGEST" ] && printf "{self.GFX}" > "$GE_GFXDIGEST"\n' + self.capture(recording)
 
     def env_seen(self) -> Path:
         return self.folder/'env.txt'
 
-    def video_fake(self, script: str = WRITE_STREAMS) -> Path:
-        """A stand-in that runs SCRIPT and, in a case's runs, saves its GE_ variables and midas.ini."""
+    def video_fake(self, script: str | None = None, log: str = VIDEO_LOG) -> Path:
+        """A stand-in that runs SCRIPT (by default write_streams') and, in a case's runs, saves its GE_
+        variables and midas.ini."""
         keep = (f'[ -n "$GE_SIMTRACE" ] && {{ env | grep "^GE_" | sort > "{self.env_seen()}"; '
                 f'cat midas.ini > "{self.folder/"ini.txt"}"; }}')
-        return self.fake(self.VIDEO_LOG, script=f'{script}\n{keep}')
+        return self.fake(log, script=f'{self.write_streams() if script is None else script}\n{keep}')
 
     def seen(self) -> dict[str, str]:
         return dict(line.split('=', 1) for line in self.env_seen().read_text().splitlines())
@@ -308,7 +328,7 @@ class Video(StandIns):
     def test_video_run_fails_a_torn_digest(self):
         # Act
         script = (f'[ -n "$GE_GFXDIGEST" ] && printf "%s" "{self.GFX.strip()}" > "$GE_GFXDIGEST"\n'
-                  '[ -n "$GE_AUDIO_CAPTURE" ] && printf wav > "$GE_AUDIO_CAPTURE"\n')
+                  + self.capture())
         status, out = self.run_dam(self.video_fake(script=script), '--video')
 
         # Assert
@@ -316,12 +336,56 @@ class Video(StandIns):
         self.assertIn('stage-dam: FAIL (gfx unreadable:', out)
         self.assertIn('the last line has no newline', out)
 
-    def test_video_agreement_judges_gfx_and_leaves_snd_out_until_its_lock(self):
-        # Act: each run's recording differs; its digest does not
-        status, out = self.run_dam(self.video_fake(), '--video', '--repeat', '2')
+    def test_video_run_fails_a_recording_that_is_not_a_wav(self):
+        # Act
+        script = (f'[ -n "$GE_GFXDIGEST" ] && printf "{self.GFX}" > "$GE_GFXDIGEST"\n'
+                  '[ -n "$GE_AUDIO_CAPTURE" ] && printf wav > "$GE_AUDIO_CAPTURE"\n')
+        status, out = self.run_dam(self.video_fake(script=script), '--video')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('stage-dam: FAIL (snd unreadable:', out)
+
+    def test_video_run_fails_without_the_sound_lock(self):
+        # Act
+        status, out = self.run_dam(self.video_fake(log=self.VIDEO_LOG.replace(AUDIO_LOCKED, '')), '--video')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('stage-dam: FAIL (missing line: ge: audio: locked to game fields)', out)
+
+    def test_video_agreement_fails_a_recording_that_differs_from_itself(self):
+        # Arrange: the second run of the case (the third start, after the build check) records another sample
+        counter = self.folder/'runs'
+        first, second = self.capture(wav((1, -1), (2, -2))), self.capture(wav((1, -1), (2, 9)))
+        script = (f'echo x >> "{counter}"\n'
+                  f'if [ "$(wc -l < "{counter}")" -gt 2 ]; then\n{second}else\n{first}fi\n'
+                  f'[ -n "$GE_GFXDIGEST" ] && printf "{self.GFX.strip()}\\n" > "$GE_GFXDIGEST"\n')
+
+        # Act
+        status, out = self.run_dam(self.video_fake(script=script), '--video', '--repeat', '2', '--jobs', '1')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('FAIL: stage-dam snd differs from itself at 1 (R frame=0 field=1, run2)', out)
+
+    def test_video_agreement_leaves_a_demo_recording_unjudged_and_says_why(self):
+        # Arrange: a paced demo's recording differs between runs; its playback does not
+        counter = self.folder/'runs'
+        first, second = self.capture(wav((1, -1))), self.capture(wav((1, -1), (2, -2)))
+        script = (f'echo x >> "{counter}"\n'
+                  f'if [ "$(wc -l < "{counter}")" -gt 2 ]; then\n{second}else\n{first}fi\n'
+                  f'[ -n "$GE_GFXDIGEST" ] && printf "{self.GFX.strip()} demo=1\\n" > "$GE_GFXDIGEST"\n')
+        exe = self.fake(DAM1_GOOD.replace(COMPARE_ON, COMPARE_ON + 'ge: video: window + GL context up\n' + AUDIO_LOCKED),
+                        trace=demo_sim(2), script=script)
+
+        # Act
+        status, out = self.equiv('run', '--rom', str(self.rom), '--set', 'demos', '--only', 'dam1', '--video',
+                                 '--repeat', '2', '--jobs', '1', '--output', str(self.output), str(exe))
 
         # Assert
         self.assertEqual(status, 0, out)
+        self.assertIn('dam1: snd not judged: ' + lp64_equiv.DEMO_SND_REASON, out)
         self.assertIn('OK: 1 of 1 cases agree with themselves', out)
 
     def test_video_agreement_fails_a_digest_that_differs_from_itself(self):
@@ -331,7 +395,7 @@ class Video(StandIns):
         script = (f'echo x >> "{counter}"\n'
                   f'if [ "$(wc -l < "{counter}")" -gt 2 ]; then g="{other}"; else g="{self.GFX}"; fi\n'
                   '[ -n "$GE_GFXDIGEST" ] && printf "$g" > "$GE_GFXDIGEST"\n'
-                  '[ -n "$GE_AUDIO_CAPTURE" ] && printf wav > "$GE_AUDIO_CAPTURE"\n')
+                  + self.capture())
 
         # Act
         status, out = self.run_dam(self.video_fake(script=script), '--video', '--repeat', '2', '--jobs', '1')
@@ -388,16 +452,19 @@ class Sensitivity(StandIns):
         self.assertEqual(status, 0, out)
         self.assertIn('OK: sim differs between seeds', out)
 
-    def test_video_sensitivity_judges_sim_and_gfx(self):
-        # Arrange: GE_SEED=2 changes the trace and the digest
+    def test_video_sensitivity_judges_sim_gfx_and_snd(self):
+        # Arrange: GE_SEED=2 changes the trace, the digest and the recording
         other = self.canned('other.sim', sim(seed_at={1: '0000000000000002'}))
         gfx = Video.GFX
         log = self.canned('seed2.log', Video.VIDEO_LOG)
+        one, two = self.canned('one.wav', ''), self.canned('two.wav', '')
+        one.write_bytes(wav((1, -1)))
+        two.write_bytes(wav((1, 5)))
         script = ('if [ "$GE_SEED" = 2 ]; then '
                   f'cp "{other}" "$GE_SIMTRACE"; printf "{gfx.replace("vtx=3bee89fb", "vtx=00000000")}" > "$GE_GFXDIGEST"; '
-                  f'printf wav > "$GE_AUDIO_CAPTURE"; cat "{log}" >&2; exit 0; fi\n'
+                  f'cp "{two}" "$GE_AUDIO_CAPTURE"; cat "{log}" >&2; exit 0; fi\n'
                   f'[ -n "$GE_GFXDIGEST" ] && printf "{gfx}" > "$GE_GFXDIGEST"\n'
-                  '[ -n "$GE_AUDIO_CAPTURE" ] && printf wav > "$GE_AUDIO_CAPTURE"\n')
+                  f'[ -n "$GE_AUDIO_CAPTURE" ] && cp "{one}" "$GE_AUDIO_CAPTURE"\n')
         exe = self.fake(Video.VIDEO_LOG, script=script)
 
         # Act
@@ -406,7 +473,7 @@ class Sensitivity(StandIns):
 
         # Assert
         self.assertEqual(status, 0, out)
-        self.assertIn('OK: sim and gfx differ between seeds', out)
+        self.assertIn('OK: sim, gfx and snd differ between seeds', out)
 
 
 class Cases(unittest.TestCase):

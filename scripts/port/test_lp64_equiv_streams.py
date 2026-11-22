@@ -1,7 +1,8 @@
-"""ROM-free tests for lp64_equiv_streams.py (LP64-006 Tasks 3 and 7): the first
-difference between two simulation traces or two picture digests, on files
-written here from invented values."""
+"""ROM-free tests for lp64_equiv_streams.py (LP64-006 Tasks 3, 7 and 9): the first
+difference between two simulation traces, two picture digests or two sound
+recordings, on files written here from invented values."""
 from pathlib import Path
+import struct
 import sys
 import tempfile
 import unittest
@@ -335,6 +336,71 @@ class GfxDemoDifference(TraceFiles):
 
         # Assert
         self.assertEqual((difference.index, difference.field, difference.a, difference.b), (4, 'demo', '4', '(none)'))
+
+
+def wav_bytes(samples: list[tuple[int, int]], rate: int = 22050, channels: int = 2) -> bytes:
+    """A 16-bit PCM WAV as port_audio_capture.c writes it, of SAMPLES (left, right)."""
+    data = b''.join(struct.pack('<hh', left, right) for left, right in samples)
+    block = channels * 2
+    return (b'RIFF' + struct.pack('<I', 36 + len(data)) + b'WAVEfmt '
+            + struct.pack('<IHHIIHH', 16, 1, channels, rate, rate * block, block, 16)
+            + b'data' + struct.pack('<I', len(data)) + data)
+
+
+class SndDifference(TraceFiles):
+    def recording(self, name: str, data: bytes) -> Path:
+        path = self.root / name
+        path.write_bytes(data)
+        return path
+
+    def test_snd_names_first_sample_frame_and_field(self):
+        # Arrange: three audio frames of 368 samples; the right channel of sample 400 differs, in
+        # frame 1 (from 0), which the lock mixed for field 2
+        samples = [(n % 7, -(n % 5)) for n in range(3 * 368)]
+        changed = list(samples)
+        changed[400] = (samples[400][0], 1234)
+        a = self.recording('a.wav', wav_bytes(samples))
+        b = self.recording('b.wav', wav_bytes(changed))
+
+        # Act
+        difference = lp64_equiv_streams.first_difference('snd', a, b)
+
+        # Assert
+        self.assertEqual((difference.index, difference.field, difference.a, difference.b, difference.line),
+                         (400, 'R frame=1 field=2', str(samples[400][1]), '1234', 2))
+
+    def test_snd_reports_length_when_one_is_longer(self):
+        # Arrange
+        samples = [(n % 7, n % 3) for n in range(2 * 368)]
+        a = self.recording('a.wav', wav_bytes(samples))
+        b = self.recording('b.wav', wav_bytes(samples[:368]))
+
+        # Act
+        difference = lp64_equiv_streams.first_difference('snd', a, b)
+
+        # Assert
+        self.assertEqual((difference.index, difference.field, difference.a, difference.b), (368, 'length', '736', '368'))
+
+    def test_snd_that_is_not_22050_hz_stereo_is_unreadable(self):
+        # Arrange
+        a = self.recording('a.wav', wav_bytes([(1, 2)] * 368))
+        b = self.recording('b.wav', wav_bytes([(1, 2)] * 368, rate=44100))
+
+        # Act, Assert
+        with self.assertRaisesRegex(lp64_equiv_streams.Unreadable, '22,050 Hz stereo'):
+            lp64_equiv_streams.first_difference('snd', a, b)
+
+    def test_identical_recordings_have_no_difference(self):
+        # Arrange
+        data = wav_bytes([(n, -n) for n in range(368)])
+        a = self.recording('a.wav', data)
+        b = self.recording('b.wav', data)
+
+        # Act
+        difference = lp64_equiv_streams.first_difference('snd', a, b)
+
+        # Assert
+        self.assertIsNone(difference)
 
 
 if __name__ == '__main__':

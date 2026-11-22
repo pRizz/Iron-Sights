@@ -7,9 +7,12 @@ equiv.json from before the verdicts were recorded included.
 
 A stream's file sits beside CASE.log (STREAM_FILES). A demo's `sim` and `gfx` streams are its
 playback: they are read as `sim-demo` and `gfx-demo` (lp64_equiv_streams.py), keyed by the
-recording's tick and blind to the host's pace, though they are still printed as `sim` and `gfx`. A
-stream without a reader yet (`snd` until Task 9) is compared byte for byte, its difference named by
-the offset (field `byte`).
+recording's tick and blind to the host's pace, though they are still printed as `sim` and `gfx`.
+
+`snd` (Task 9) is judged only where the sound lock makes it the game's alone: a recording is compared
+only when its case's log holds AUDIO_LOCKED (compare refuses the folder otherwise), and a demo's is
+never judged (DEMO_SND_REASON): neither in its agreement with itself, nor between seeds, nor between
+builds, where compare prints `CASE snd PAIR not judged: REASON` and leaves it out of the counts.
 """
 from dataclasses import dataclass
 import json
@@ -24,6 +27,18 @@ from lp64_equiv_streams import READERS, Difference, Unreadable, first_difference
 RECORD = 'equiv.json'
 STREAM_FILES = {'sim': '.sim', 'gfx': '.gfx', 'snd': '.wav'}
 VIDEO_STREAMS = ('gfx', 'snd')
+# audio_pc.c, once, when GE_AUDIO_LOCK locks a comparison build's sound to game fields.
+AUDIO_LOCKED = 'ge: audio: locked to game fields'
+# Why a demo's recording is not judged (measured in Task 9: two runs of dam1 and of facility1 on
+# cmp-a64-video and on cmp-i686-video, whose sim-demo and gfx-demo streams agreed, recorded
+# different sound, facility1 at different lengths).
+DEMO_SND_REASON = ("a paced demo: the host's pace sets its fields a recording tick, and the lock mixes one "
+                   'audio frame a field, so two runs of one build record different sound')
+
+
+def judged(case: str, stream: str) -> bool:
+    """Whether CASE's STREAM is judged at all: not a demo's recording (DEMO_SND_REASON)."""
+    return not (stream == 'snd' and is_demo(case))
 
 
 def stream_kind(case: str, stream: str) -> str:
@@ -31,26 +46,17 @@ def stream_kind(case: str, stream: str) -> str:
     return f'{stream}-demo' if stream in ('sim', 'gfx') and is_demo(case) else stream
 
 
-def stream_difference(kind: str, path_a: Path, path_b: Path) -> Difference | None:
-    """The first difference of two files of reader KIND, by its reader, or, for a kind without one
-    yet, the first differing byte. Raises Unreadable for a missing, empty or torn file."""
-    if kind in READERS:
-        return first_difference(kind, path_a, path_b)
-    try:
-        a, b = Path(path_a).read_bytes(), Path(path_b).read_bytes()
-    except OSError as error:
-        raise Unreadable(f'{error.filename}: {error.strerror}') from error
-    if not a or not b:
-        raise Unreadable(f'{path_a if not a else path_b}: empty')
-    if a == b:
-        return None
-    offset = next((index for index, (x, y) in enumerate(zip(a, b)) if x != y), min(len(a), len(b)))
-    return Difference(offset, 'byte', a[offset:offset + 1].hex(), b[offset:offset + 1].hex(), 0)
-
-
 def case_difference(case: str, stream: str, folder_a: Path, folder_b: Path) -> Difference | None:
+    """The first difference of CASE's STREAM between two run folders, by its reader. Raises Unreadable
+    for a missing, empty or torn file."""
     name = f'{case}{STREAM_FILES[stream]}'
-    return stream_difference(stream_kind(case, stream), folder_a/name, folder_b/name)
+    return first_difference(stream_kind(case, stream), folder_a/name, folder_b/name)
+
+
+def unlocked(case: str, folder: Path) -> bool:
+    """Whether CASE's log in FOLDER lacks AUDIO_LOCKED: its recording followed the host's clock."""
+    log = folder/f'{case}.log'
+    return not log.is_file() or AUDIO_LOCKED not in log.read_text(errors='replace').splitlines()
 
 
 def self_disagreements(cases: list[str], output: Path, streams: tuple[str, ...], repeat: int) -> dict[str, str]:
@@ -58,7 +64,7 @@ def self_disagreements(cases: list[str], output: Path, streams: tuple[str, ...],
     the line `FAIL: CASE STREAM differs from itself at I` naming its first such stream."""
     found = {}
     for case in cases:
-        for stream in streams:
+        for stream in (stream for stream in streams if judged(case, stream)):
             where = None
             for run in range(2, repeat + 1):
                 try:
@@ -81,7 +87,7 @@ def joined(names: list[str]) -> str:
 def seed_verdict(case: str, folder_a: Path, folder_b: Path, streams: tuple[str, ...]) -> tuple[bool, str]:
     """Whether every stream of CASE differs between two seeds' run folders, and the line saying so."""
     same, differ = [], []
-    for stream in streams:
+    for stream in (stream for stream in streams if judged(case, stream)):
         try:
             difference = case_difference(case, stream, folder_a, folder_b)
         except Unreadable as error:
@@ -173,9 +179,8 @@ def failure_of(label: str, difference: Difference | None, maybe_expected: Expect
 
 
 def record_count(case: str, stream: str, folder: Path) -> int:
-    """The records of CASE's STREAM file in FOLDER (bytes for a stream without a reader)."""
-    kind, path = stream_kind(case, stream), folder/f'{case}{STREAM_FILES[stream]}'
-    return len(READERS[kind](path)) if kind in READERS else path.stat().st_size
+    """The records of CASE's STREAM file in FOLDER (samples for a recording)."""
+    return len(READERS[stream_kind(case, stream)](folder/f'{case}{STREAM_FILES[stream]}'))
 
 
 def compare_folders(folders: list[Path], streams: list[str], maybe_expect: Path | None) -> int:
@@ -199,13 +204,23 @@ def compare_folders(folders: list[Path], streams: list[str], maybe_expect: Path 
     if any(stream in VIDEO_STREAMS for stream in streams) and not all(record['video'] for record in records):
         print('error: gfx and snd need run folders made with --video', file=sys.stderr)
         return 2
+    for folder in folders if 'snd' in streams else ():
+        maybe_case = next((case for case in records[0]['cases']
+                           if judged(case, 'snd') and unlocked(case, folder/'run1')), None)
+        if maybe_case is not None:
+            print(f'error: {folder} is refused: its {maybe_case}.wav was recorded without the sound lock '
+                  f'({maybe_case}.log lacks {AUDIO_LOCKED})', file=sys.stderr)
+            return 2
     total, identical, recorded, failures = 0, 0, 0, []
     for folder in folders[1:]:
         pair = f'{base.name}:{folder.name}'
         for case in records[0]['cases']:
             for stream in streams:
-                total += 1
                 label = f'{case} {stream} {pair}'
+                if not judged(case, stream):
+                    print(f'{label} not judged: {DEMO_SND_REASON}')
+                    continue
+                total += 1
                 try:
                     difference = case_difference(case, stream, base/'run1', folder/'run1')
                 except Unreadable as error:

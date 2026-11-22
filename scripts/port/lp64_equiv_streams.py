@@ -20,15 +20,25 @@ frame. A difference names the frame (an F line's n) and the field (`C.` before
 a call line's). `gfx-demo` is a demo's picture stream as `sim-demo` is its
 simulation's: the F lines that carry `demo=`, keyed by K and compared on every
 field but `n` and `tick`. Measured on dam1 (cmp-a64-video, two paced runs):
-one F line for each K. Task 9 adds `snd`.
+one F line for each K.
+
+`snd` (Task 9) is the mixed sound GE_AUDIO_CAPTURE records
+(port/src/port_audio_capture.c): a 16-bit PCM WAV, 22,050 Hz stereo. Under
+the sound lock (port_audio_lock.h) frame k of FRAME_SAMPLES samples (from 0)
+is the one mixed for field k + 1 counted from the lock's first pump. A
+difference names the first differing sample (its index from 0 is the index),
+its channel, frame and field (`R frame=1 field=2`); its line is the frame
+from 1. A file that is not such a WAV is unreadable; two files whose common
+part is equal but whose lengths differ differ at the shorter one's end (field
+`length`, values the sample counts).
 
 A file with no line, a last line without a newline, a line that does not
 parse, or a file that ends where the other goes on is neither equal nor
 different: it raises Unreadable.
 
-    python3 scripts/port/lp64_equiv_streams.py sim|sim-demo|gfx|gfx-demo FILE_A FILE_B
+    python3 scripts/port/lp64_equiv_streams.py sim|sim-demo|gfx|gfx-demo|snd FILE_A FILE_B
 
-prints `identical: N lines` (exit 0) or the first difference (exit 1); an
+prints `identical: N lines` (for snd, `N samples`; exit 0) or the first difference (exit 1); an
 unreadable file exits 2.
 """
 from __future__ import annotations
@@ -36,6 +46,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import re
+import struct
 import sys
 
 HEX8 = r'[0-9a-f]{8}'
@@ -241,7 +252,76 @@ def _demo_difference(kind: str, path_a: Path, path_b: Path) -> Difference | None
     return None
 
 
-READERS = {'sim': read_sim, 'sim-demo': read_sim_demo, 'gfx': read_gfx, 'gfx-demo': read_gfx_demo}
+# A recording's format (port_audio_capture.c) and the samples of one audio frame: audi.c's
+# g_FrameSize at 60 fields a second, 367.5 rounded up to a multiple of 16, which the lock mixes.
+SND_RATE = 22050
+SND_CHANNELS = 2
+FRAME_SAMPLES = 368
+SND_BLOCK = 1 << 16
+
+
+@dataclass(frozen=True)
+class Recording:
+    """A recording's PCM data, four bytes a stereo sample (left then right, little-endian)."""
+    pcm: bytes
+
+    def __len__(self) -> int:
+        return len(self.pcm) // 4
+
+
+def read_snd(path: Path) -> Recording:
+    """A recording, checked: RIFF WAVE, PCM 16-bit 22,050 Hz stereo, and a data chunk whose
+    declared size is the bytes the file holds, a whole number of samples and at least one."""
+    try:
+        data = Path(path).read_bytes()
+    except OSError as error:
+        raise Unreadable(f'{path}: {error.strerror}') from error
+    if len(data) < 12 or data[:4] != b'RIFF' or data[8:12] != b'WAVE':
+        raise Unreadable(f'{path}: not a RIFF WAVE file')
+    offset, maybe_format, maybe_pcm = 12, None, None
+    while offset + 8 <= len(data) and maybe_pcm is None:
+        name, size = data[offset:offset + 4], struct.unpack_from('<I', data, offset + 4)[0]
+        body = data[offset + 8:offset + 8 + size]
+        if name == b'fmt ' and size >= 16:
+            maybe_format = struct.unpack_from('<HHIIHH', body)
+        elif name == b'data':
+            if len(body) != size:
+                raise Unreadable(f'{path}: torn: its data chunk declares {size} bytes and holds {len(body)}')
+            maybe_pcm = body
+        offset += 8 + size + (size & 1)
+    if maybe_format is None or maybe_pcm is None:
+        raise Unreadable(f'{path}: no fmt or data chunk')
+    tag, channels, rate, _, _, bits = maybe_format
+    if (tag, channels, rate, bits) != (1, SND_CHANNELS, SND_RATE, 16):
+        raise Unreadable(f'{path}: not 16-bit PCM 22,050 Hz stereo (format {tag}, {channels} channels, '
+                         f'{rate} Hz, {bits} bits)')
+    if not maybe_pcm or len(maybe_pcm) % 4:
+        raise Unreadable(f'{path}: {len(maybe_pcm)} bytes of data, not a whole number of samples (one or more)')
+    return Recording(maybe_pcm)
+
+
+def _snd_difference(path_a: Path, path_b: Path) -> Difference | None:
+    a, b = read_snd(path_a).pcm, read_snd(path_b).pcm
+    common = min(len(a), len(b))
+    offset = 0
+    while offset < common and a[offset:offset + SND_BLOCK] == b[offset:offset + SND_BLOCK]:
+        offset += SND_BLOCK
+    offset = next((i for i in range(offset, min(offset + SND_BLOCK, common)) if a[i] != b[i]), common)
+    sample = offset // 4
+    frame = sample // FRAME_SAMPLES
+    if offset < common:
+        right = offset % 4 >= 2
+        channel = 4 * sample + (2 if right else 0)
+        value_a, value_b = (struct.unpack_from('<h', pcm, channel)[0] for pcm in (a, b))
+        return Difference(sample, f'{"R" if right else "L"} frame={frame} field={frame + 1}',
+                          str(value_a), str(value_b), frame + 1)
+    if len(a) != len(b):
+        return Difference(sample, 'length', str(len(a) // 4), str(len(b) // 4), frame + 1)
+    return None
+
+
+READERS = {'sim': read_sim, 'sim-demo': read_sim_demo, 'gfx': read_gfx, 'gfx-demo': read_gfx_demo,
+           'snd': read_snd}
 
 
 def first_difference(kind: str, path_a: Path, path_b: Path) -> Difference | None:
@@ -251,6 +331,8 @@ def first_difference(kind: str, path_a: Path, path_b: Path) -> Difference | None
         raise ValueError(f'unknown stream {kind!r}; known: {", ".join(READERS)}')
     if kind in DEMO_KINDS:
         return _demo_difference(kind, path_a, path_b)
+    if kind == 'snd':
+        return _snd_difference(path_a, path_b)
     a = READERS[kind](path_a)
     b = READERS[kind](path_b)
     for number, (ra, rb) in enumerate(zip(a, b), start=1):
@@ -291,10 +373,11 @@ def main(argv: list[str]) -> int:
         print(f'unreadable: {error}')
         return 2
     if difference is None:
-        print(f'identical: {count} lines')
+        print(f'identical: {count} {"samples" if kind == "snd" else "lines"}')
         return 0
-    print(f'differs: line {difference.line} tick {difference.index} {difference.field}: '
-          f'{difference.a} != {difference.b}')
+    where = (f'sample {difference.index}' if kind == 'snd'
+             else f'line {difference.line} tick {difference.index}')
+    print(f'differs: {where} {difference.field}: {difference.a} != {difference.b}')
     return 1
 
 

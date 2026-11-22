@@ -389,8 +389,15 @@ pass its isolated executable rather than rebuilding an active player binary.
   the drawing, unless `--draw`; both give one digest. A demo's `gfx` is its
   playback too (`gfx-demo`: the `F` lines with `demo=K`, one a recording
   tick, without `n` and `tick`). Self-agreement and `sensitivity` judge
-  `sim` and `gfx`; `snd` joins them with Task 9's sound lock, since an
-  unlocked recording follows the host's audio clock. `--env
+  `sim`, `gfx` and `snd`. `snd` is `CASE.wav` under the sound lock
+  (`port_audio_lock.h`, compiled only in a comparison build): with
+  `GE_AUDIO_LOCK` set, the audio pump mixes one frame of the game's frame
+  size a game field and nothing by the SDL queue or the host's clock, logs
+  `ge: audio: locked to game fields`, and frame k of the recording is field
+  k + 1's; elsewhere the variable does nothing. A video run fails without
+  that line, `compare --streams snd` refuses a recording made without it,
+  and a demo's `snd` is never judged (the runner and `compare` print why):
+  the host's pace sets a demo's fields a recording tick. `--env
   GE_GFXDIGEST_DETAIL=A-B` adds a `C` line a call for frames A to B, which
   names the call where two digests part.
   The pinned ticks of `walk` and `dam-twice` are measured again through `stepped(NAME)` when a front-end or watch change

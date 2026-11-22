@@ -418,12 +418,14 @@ endif()
 if(NOT GE_LP64_ORACLE)
     list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_lp64_oracle.c)
 endif()
-# The comparison build's maths: only in a GE_COMPARE build. Its arithmetic must
-# not fuse into multiply-adds at either width (64-bit builds already pass this).
+# The comparison build's maths and sound lock (port_audio_lock.h): only in a
+# GE_COMPARE build. Its arithmetic must not fuse into multiply-adds at either
+# width (64-bit builds already pass this).
 if(GE_COMPARE)
     set_property(SOURCE ${CMAKE_SOURCE_DIR}/port/src/port_compare_math.c APPEND PROPERTY COMPILE_OPTIONS -ffp-contract=off)
 else()
-    list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_compare_math.c)
+    list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_compare_math.c
+        ${CMAKE_SOURCE_DIR}/port/src/port_audio_lock.c)
 endif()
 # Suspend images record 32-bit addresses: 64-bit builds report suspend points
 # unavailable (port_state_unavailable.c) instead of compiling the serializer.

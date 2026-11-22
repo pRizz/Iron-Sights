@@ -4,6 +4,8 @@
 # libultra_shim.c and port_lockstep.c and links the real pump, pcsched.c,
 # built without GE_VIDEO as a headless build is; the simulation trace
 # (test_simtrace.c, Task 3) includes port_simtrace.c with fabricated game state;
+# the sound lock (test_audio_lock.c, Task 9) links port_audio_lock.c, and is
+# built once more without GE_COMPARE to check the shipped header's stand-in;
 # the comparison build's tanf, atanf and cosf (test_compare_math.c, Task 4) link
 # port_compare_math.c, as does the maths sweep (lp64_libm_sweep.c), which must
 # print one hash for each of its six functions, with tanf, atanf and cosf's
@@ -30,6 +32,11 @@ for width in $widths; do
     "$work/lockstep-$width"
     "$compiler" "${flags[@]}" scripts/port/test_simtrace.c -lm -o "$work/simtrace-$width"
     "$work/simtrace-$width"
+    "$compiler" "${flags[@]}" -DGE_COMPARE=1 scripts/port/test_audio_lock.c port/src/port_audio_lock.c \
+        -o "$work/audio-lock-$width"
+    "$work/audio-lock-$width"
+    "$compiler" "${flags[@]}" scripts/port/test_audio_lock.c -o "$work/audio-lock-shipped-$width"
+    "$work/audio-lock-shipped-$width"
     math_flags=("${flags[@]}" -fno-builtin -ffp-contract=off)
     "$compiler" "${math_flags[@]}" scripts/port/test_compare_math.c port/src/port_compare_math.c -lm \
         -o "$work/compare-math-$width"

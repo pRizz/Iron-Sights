@@ -24,8 +24,10 @@ on` but for a demo, the frame limit, the stage load, and for a route with fire `
 shots lp64_equiv_cases.fired names) and on a stream file that is missing, empty or torn; a demo's
 trace and digest must hold its playback (`demo=` lines). Self-agreement and compare read a demo's
 trace and digest as its playback (lp64_equiv_compare.py). Self-agreement judges `sim` and, with
---video, `gfx` (JUDGED_VIDEO_STREAMS; `snd` once Task 9 locks the sound). DIR/equiv.json records the run, written after the self-agreement
-check: each case's verdict, whether it ran and whether it agreed with itself.
+--video, `gfx` and `snd` (JUDGED_VIDEO_STREAMS): a video run fails without the sound lock's line `ge:
+audio: locked to game fields`, and a demo's recording is not judged (a line a demo says so and why).
+DIR/equiv.json records the run, written after the self-agreement check: each case's verdict, whether
+it ran and whether it agreed with itself.
 Before any case the executable is started once: it is refused without the exact line `ge: compare:
 on`, or with --maths-off without `ge: compare: on (libm)`. --env passes a variable to every case;
 it refuses what the runner sets (RUNNER_VARIABLES, and what lp64_play.py refuses). --saves DIR is
@@ -36,7 +38,8 @@ identical (N)` or `CASE STREAM A:B first differs at I (FIELD)`, A and B the fold
 --expect FILE (lp64_equiv_expected.txt), exit 0 only when every difference is the one FILE records
 and everything else is identical, printing `OK: N cases, S streams, I identical, D as recorded`.
 It refuses (exit 2) a folder whose record shows one run (--repeat 1), a compared case that did not
-run or did not agree with itself, or no verdicts at all (a record from before they were written).
+run or did not agree with itself, no verdicts at all (a record from before they were written), or,
+with snd, a case whose log lacks the sound lock's line. A demo's snd prints `not judged`.
 
 sensitivity: the solo case stage-dam at GE_SEED=1 (DIR/seed1) and GE_SEED=2 (DIR/seed2); exit 0
 only when every stream it judges differs (as self-agreement), printing `OK: STREAMS differ between
@@ -56,8 +59,8 @@ import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lp64_equiv_cases import SAVES_SETS, SHOTS, cases_of  # noqa: E402
-from lp64_equiv_compare import (RECORD, STREAM_FILES, VIDEO_STREAMS, compare_folders, seed_verdict,  # noqa: E402
-                                self_disagreements, stream_kind)
+from lp64_equiv_compare import (AUDIO_LOCKED, DEMO_SND_REASON, RECORD, STREAM_FILES, VIDEO_STREAMS,  # noqa: E402
+                                compare_folders, judged, seed_verdict, self_disagreements, stream_kind)
 from lp64_equiv_profile import PROFILES, profile_env, profile_ini  # noqa: E402
 from lp64_equiv_streams import READERS, Unreadable  # noqa: E402
 import lp64_play  # noqa: E402
@@ -75,11 +78,9 @@ RUNNER_VARIABLES = ('GE_LOCKSTEP', 'GE_FIXEDTICK', 'GE_NOSLEEP', 'GE_SIMTRACE', 
 COMPARE_ON = 'ge: compare: on'
 COMPARE_LIBM = 'ge: compare: on (libm)'
 SENSITIVITY_CASE = 'stage-dam'
-# The streams a video run is judged by, for its agreement with itself and in sensitivity. `snd` joins
-# with Task 9's lock: until then a recording follows the host's audio clock, so two runs of one build
-# differ (dam on cmp-a64-video, Task 7: at byte 4, 5,203,820 bytes against 5,196,524). Its file is
-# still required, and compare still takes `--streams snd`.
-JUDGED_VIDEO_STREAMS = ('gfx',)
+# The streams a video run is judged by, for its agreement with itself and in sensitivity. `snd` joined
+# with Task 9's sound lock (GE_AUDIO_LOCK, port_audio_lock.h), except a demo's (DEMO_SND_REASON).
+JUDGED_VIDEO_STREAMS = ('gfx', 'snd')
 SEEDS = ('1', '2')
 
 
@@ -154,6 +155,8 @@ def run_once(case: Case, run: int, shared: SharedExecutable, output: Path, optio
             found.append(f'{kind} unreadable: {error}')
     log_path = folder/f'{case.name}.log'
     log = log_path.read_text(errors='replace').splitlines() if log_path.is_file() else []
+    if options.display.video and AUDIO_LOCKED not in log:
+        found.append(f'missing line: {AUDIO_LOCKED}')
     shots = [int(match.group(1)) for match in map(SHOTS.search, log) if match]
     return RunResult(case, run, found, ticks, shots[-1] if shots else 0)
 
@@ -287,6 +290,9 @@ def command_run(parser: argparse.ArgumentParser, args: argparse.Namespace) -> in
         print(f'FAIL: {len(failed)} of {len(cases)} cases did not run')
         return 1
     print(f'OK: {len(cases)} of {len(cases)} cases ran')
+    for case in cases if args.video else ():
+        if not judged(case.name, 'snd'):
+            print(f'{case.name}: snd not judged: {DEMO_SND_REASON}')
     if args.repeat == 1:
         return 0
     if disagreements:
