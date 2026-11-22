@@ -1,6 +1,6 @@
-"""ROM-free tests for lp64_equiv.py (LP64-006 Task 5): run, compare and sensitivity through stand-in
+"""ROM-free tests for lp64_equiv.py (LP64-006 Task 5): run and sensitivity through stand-in
 executables (shell scripts that print a log, write the simulation trace GE_SIMTRACE names and exit),
-as test_lp64_play.py does, and the cases and profiles as data."""
+as test_lp64_play.py does, and the cases and profiles as data. compare: test_lp64_equiv_compare.py."""
 import contextlib
 import io
 import json
@@ -239,67 +239,90 @@ class Run(StandIns):
         # Assert
         self.assertEqual(status, 0, out)
 
-
-class Compare(StandIns):
-    def run_folder(self, label: str, trace: str, case: str = 'stage-dam', profile: str = 'default') -> Path:
-        folder = self.folder/label
-        (folder/'run1').mkdir(parents=True)
-        (folder/'run1'/f'{case}.sim').write_text(trace)
-        (folder/lp64_equiv.RECORD).write_text(json.dumps({'profile': profile, 'video': False, 'cases': [case]}))
-        return folder
-
-    def test_compare_names_first_difference_and_field(self):
-        # Arrange
-        a = self.run_folder('i686', sim())
-        b = self.run_folder('a64', sim(seed_at={2: '00000000000000ff'}))
+    def test_run_records_each_case_verdict_after_the_agreement_check(self):
+        # Arrange: run 2's trace (after the build check and run 1) has another seed at tick 2
+        other = self.canned('other.sim', sim(seed_at={2: '00000000000000ff'}))
+        counter = self.folder/'runs'
+        log = self.canned('run2.log', DAM_GOOD)
+        exe = self.fake(DAM_GOOD, script=f'echo x >> "{counter}"\n'
+                                         f'if [ "$(wc -l < "{counter}")" -gt 2 ]; then '
+                                         f'cp "{other}" "$GE_SIMTRACE"; cat "{log}" >&2; exit 0; fi')
 
         # Act
-        status, out = self.equiv('compare', '--streams', 'sim', str(a), str(b))
+        self.run_dam(exe, '--repeat', '2', '--jobs', '1')
+        record = json.loads((self.output/lp64_equiv.RECORD).read_text())
 
         # Assert
-        self.assertEqual(status, 1, out)
-        self.assertIn('stage-dam sim i686:a64 first differs at 2 (seed)', out)
+        self.assertEqual(record['repeat'], 2)
+        self.assertEqual(record['verdicts'], {'stage-dam': {'ran': True, 'agreed': False}})
 
-    def test_compare_fails_an_exception_that_now_matches(self):
-        # Arrange
-        a = self.run_folder('i686', sim())
-        b = self.run_folder('a64', sim())
-        expect = self.canned('expected.txt', 'i686:a64 stage-dam default sim differs-from 2 open: a seed\n')
 
+class Video(StandIns):
+    """`run --video` through a stand-in that writes the picture digest and the recording when named."""
+    VIDEO_LOG = DAM_GOOD.replace(LOCKSTEP_ON, LOCKSTEP_ON + 'ge: video: window + GL context up\n')
+    WRITE_STREAMS = ('[ -n "$GE_GFXDIGEST" ] && printf gfx > "$GE_GFXDIGEST"\n'
+                     '[ -n "$GE_AUDIO_CAPTURE" ] && printf wav > "$GE_AUDIO_CAPTURE"\n')
+
+    def env_seen(self) -> Path:
+        return self.folder/'env.txt'
+
+    def video_fake(self, script: str = WRITE_STREAMS) -> Path:
+        """A stand-in that runs SCRIPT and, in a case's runs, saves its GE_ variables and midas.ini."""
+        keep = (f'[ -n "$GE_SIMTRACE" ] && {{ env | grep "^GE_" | sort > "{self.env_seen()}"; '
+                f'cat midas.ini > "{self.folder/"ini.txt"}"; }}')
+        return self.fake(self.VIDEO_LOG, script=f'{script}\n{keep}')
+
+    def seen(self) -> dict[str, str]:
+        return dict(line.split('=', 1) for line in self.env_seen().read_text().splitlines())
+
+    def test_video_names_the_digest_and_recording_and_skips_drawing(self):
         # Act
-        status, out = self.equiv('compare', '--streams', 'sim', '--expect', str(expect), str(a), str(b))
-
-        # Assert
-        self.assertEqual(status, 1, out)
-        self.assertIn('stage-dam sim i686:a64 identical (3)', out)
-        self.assertIn('FAIL: stage-dam sim i686:a64 is recorded as differing from 2, but it is identical', out)
-
-    def test_compare_fails_a_difference_not_listed(self):
-        # Arrange
-        a = self.run_folder('i686', sim())
-        b = self.run_folder('a64', sim(seed_at={3: '00000000000000ff'}))
-        expect = self.canned('expected.txt', '# nothing differs\n')
-
-        # Act
-        status, out = self.equiv('compare', '--streams', 'sim', '--expect', str(expect), str(a), str(b))
-
-        # Assert
-        self.assertEqual(status, 1, out)
-        self.assertIn('FAIL: stage-dam sim i686:a64 differs at 3, which the file does not record', out)
-
-    def test_compare_accepts_a_recorded_difference(self):
-        # Arrange
-        a = self.run_folder('i686', sim())
-        b = self.run_folder('a64', sim(seed_at={2: '00000000000000ff'}))
-        expect = self.canned('expected.txt', 'i686:a64 stage-dam default sim differs-from 2 explained: a seed; '
-                                             'removed-by: sim-seeded\n')
-
-        # Act
-        status, out = self.equiv('compare', '--streams', 'sim', '--expect', str(expect), str(a), str(b))
+        status, out = self.run_dam(self.video_fake(), '--video')
 
         # Assert
         self.assertEqual(status, 0, out)
-        self.assertIn('OK: 1 cases, 1 streams, 0 identical, 1 as recorded', out)
+        env = self.seen()
+        self.assertTrue(env['GE_GFXDIGEST'].endswith('/run1/stage-dam.gfx'))
+        self.assertTrue(env['GE_AUDIO_CAPTURE'].endswith('/run1/stage-dam.wav'))
+        self.assertEqual(env['GE_AUDIO_LOCK'], '1')
+        self.assertEqual(env['GE_GFXDIGEST_NODRAW'], '1')
+
+    def test_draw_leaves_drawing_on(self):
+        # Act
+        status, out = self.run_dam(self.video_fake(), '--video', '--draw')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertNotIn('GE_GFXDIGEST_NODRAW', self.seen())
+
+    def test_video_run_fails_without_its_digest_and_recording(self):
+        # Act
+        status, out = self.run_dam(self.video_fake(script=''), '--video')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('stage-dam: FAIL (gfx: no stage-dam.gfx)', out)
+
+    def test_video_env_refuses_what_the_video_runner_sets(self):
+        # Arrange
+        exe = self.video_fake()
+
+        # Act
+        results = {name: self.run_dam(exe, '--video', '--env', f'{name}=1') for name in ('GE_SHOT', 'HOME')}
+
+        # Assert
+        for name, (status, out) in results.items():
+            self.assertEqual(status, 2, f'{name}: {out}')
+            self.assertIn(f'--env {name} is refused with --video', out)
+
+    def test_all_profile_writes_its_ini_and_loads_its_fonts(self):
+        # Act
+        status, out = self.run_dam(self.video_fake(), '--video', '--profile', 'all')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertEqual((self.folder/'ini.txt').read_text(), lp64_equiv_profile.profile_ini('all'))
+        self.assertEqual(self.seen()['GE_IRONSIGHTS_FONTS'], '1')
 
 
 class Sensitivity(StandIns):

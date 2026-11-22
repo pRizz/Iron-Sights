@@ -1,6 +1,10 @@
 """The comparing half of lp64_equiv.py (LP64-006 Task 5): a case's streams against themselves, two
 seeds' streams, and run folders against each other under lp64_equiv_expected.txt.
 
+A run folder is compared only when its record (equiv.json) shows two runs or more of every compared
+case, each of which ran and agreed with itself; `compare` refuses any other folder (exit 2), an
+equiv.json from before the verdicts were recorded included.
+
 A stream's file sits beside CASE.log (STREAM_FILES). A demo's `sim` stream is its playback: it is
 read as `sim-demo` (lp64_equiv_streams.py), keyed by the recording's tick and blind to the host's
 pace, though it is still printed as `sim`. A stream without a reader yet (`gfx`, `snd` until Tasks
@@ -48,12 +52,13 @@ def case_difference(case: str, stream: str, folder_a: Path, folder_b: Path) -> D
     return stream_difference(stream_kind(case, stream), folder_a/name, folder_b/name)
 
 
-def self_disagreements(cases: list[str], output: Path, streams: tuple[str, ...], repeat: int) -> list[str]:
-    """`FAIL: CASE STREAM differs from itself at I` for each case and stream whose later runs in
-    OUTPUT/runK differ from run 1 (or cannot be read)."""
-    found = []
+def self_disagreements(cases: list[str], output: Path, streams: tuple[str, ...], repeat: int) -> dict[str, str]:
+    """For each case of CASES whose later runs in OUTPUT/runK differ from run 1 (or cannot be read),
+    the line `FAIL: CASE STREAM differs from itself at I` naming its first such stream."""
+    found = {}
     for case in cases:
         for stream in streams:
+            where = None
             for run in range(2, repeat + 1):
                 try:
                     difference = case_difference(case, stream, output/'run1', output/f'run{run}')
@@ -61,8 +66,10 @@ def self_disagreements(cases: list[str], output: Path, streams: tuple[str, ...],
                 except Unreadable as error:
                     where = f'(cannot be read: {error})'
                 if where is not None:
-                    found.append(f'FAIL: {case} {stream} differs from itself {where}')
                     break
+            if where is not None:
+                found[case] = f'FAIL: {case} {stream} differs from itself {where}'
+                break
     return found
 
 
@@ -130,6 +137,24 @@ def read_record(folder: Path) -> dict:
         raise ValueError(f'{folder}: no readable {RECORD} (not a run folder of lp64_equiv.py run)') from error
 
 
+def refusal(record: dict, cases: list[str]) -> str | None:
+    """Why a run folder with RECORD cannot stand for its build in a comparison of CASES: no stream is
+    compared until two runs of the build gave the same file. None when it can."""
+    verdicts = record.get('verdicts')
+    if not isinstance(verdicts, dict):
+        return 'its record has no agreement verdict (made before run recorded one; run it again)'
+    if record.get('repeat', 1) < 2:
+        return f'it ran each case once (--repeat {record.get("repeat", 1)}): nothing shows its runs agree'
+    for case in cases:
+        verdict = verdicts.get(case, {})
+        if verdict.get('ran') is not True:
+            return f'{case} did not run' if case in verdicts else f'{case} has no verdict'
+        if verdict.get('agreed') is not True:
+            return (f'{case} did not agree with itself' if verdict.get('agreed') is False
+                    else f'{case} has no agreement verdict')
+    return None
+
+
 def failure_of(label: str, difference: Difference | None, maybe_expected: Expected | None,
                checking: bool) -> str | None:
     """Why the comparison LABEL is not as the file says (without one, not identical); None if it is."""
@@ -162,6 +187,11 @@ def compare_folders(folders: list[Path], streams: list[str], maybe_expect: Path 
         print(f'error: {error}', file=sys.stderr)
         return 2
     base, profile = folders[0], records[0]['profile']
+    for folder, record in zip(folders, records):
+        reason = refusal(record, records[0]['cases'])
+        if reason is not None:
+            print(f'error: {folder} is refused: {reason}', file=sys.stderr)
+            return 2
     if any(record['profile'] != profile for record in records):
         print('error: the run folders ran different profiles', file=sys.stderr)
         return 2

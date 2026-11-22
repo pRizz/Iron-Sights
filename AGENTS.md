@@ -353,7 +353,9 @@ pass its isolated executable rather than rebuilding an active player binary.
   EXECUTABLE` must print `OK: 38 of 38 cases ran` and `OK: 38 of 38 cases
   agree with themselves`; `compare --streams sim --expect
   scripts/port/lp64_equiv_expected.txt DIR...` then compares the builds
-  (`lp64_equiv_compare.py`), and `sensitivity` requires every stream to
+  (`lp64_equiv_compare.py`); it refuses a folder whose runs failed or did
+  not repeat (its `equiv.json` records whether each case ran and agreed
+  with itself), and `sensitivity` requires every stream to
   differ between two seeds. A demo is paced, so its `sim` stream is its
   playback only: the trace's `demo=K` lines (`port_simtrace.h`), keyed by
   the recording's tick and compared without `n` and `timer`, which the

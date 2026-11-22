@@ -23,7 +23,8 @@ A run fails on anything lp64_play_judge.problems fails, on a missing required li
 on` but for a demo, the frame limit, the stage load, and for a route with fire `moved` and the
 shots lp64_equiv_cases.fired names) and on a stream file that is missing, empty or torn; a demo's
 trace must hold its playback (`demo=` lines). Self-agreement and compare read a demo's trace as its
-playback (lp64_equiv_compare.py). DIR/equiv.json records the run.
+playback (lp64_equiv_compare.py). DIR/equiv.json records the run, written after the self-agreement
+check: each case's verdict, whether it ran and whether it agreed with itself.
 Before any case the executable is started once: it is refused without the exact line `ge: compare:
 on`, or with --maths-off without `ge: compare: on (libm)`. --env passes a variable to every case;
 it refuses what the runner sets (RUNNER_VARIABLES, and what lp64_play.py refuses). --saves DIR is
@@ -33,6 +34,8 @@ compare (lp64_equiv_compare.py): each later DIR against the first, case by case,
 identical (N)` or `CASE STREAM A:B first differs at I (FIELD)`, A and B the folders' names. With
 --expect FILE (lp64_equiv_expected.txt), exit 0 only when every difference is the one FILE records
 and everything else is identical, printing `OK: N cases, S streams, I identical, D as recorded`.
+It refuses (exit 2) a folder whose record shows one run (--repeat 1), a compared case that did not
+run or did not agree with itself, or no verdicts at all (a record from before they were written).
 
 sensitivity: the solo case stage-dam at GE_SEED=1 (DIR/seed1) and GE_SEED=2 (DIR/seed2); exit 0
 only when every stream the run wrote differs, printing `OK: STREAMS differ between seeds`.
@@ -236,13 +239,21 @@ def run_options(parser: argparse.ArgumentParser, args: argparse.Namespace) -> tu
     return cases, Options(args.rom.resolve(strict=True), extra, display, args.draw, args.saves)
 
 
-def write_record(path: Path, args: argparse.Namespace, cases: list[Case], done: dict[str, list[RunResult]]) -> None:
+def write_record(path: Path, args: argparse.Namespace, cases: list[Case], done: dict[str, list[RunResult]],
+                 failed: list[str], disagreements: dict[str, str]) -> None:
+    """DIR/equiv.json: the run's options, each run's figures and each case's verdict, whether it ran
+    and whether it agreed with itself (null when not checked: one run, or a case that failed)."""
+    checked = args.repeat > 1
+    verdicts = {case.name: {'ran': case.name not in failed,
+                            'agreed': (case.name not in disagreements) if checked and case.name not in failed else None}
+                for case in cases}
     path.write_text(json.dumps({
         'executable': str(args.executable), 'profile': args.profile, 'video': args.video, 'draw': args.draw,
         'shots': args.shots, 'repeat': args.repeat, 'maths_off': args.maths_off,
         'cases': [case.name for case in cases],
         'runs': {name: [{'run': result.run, 'ticks': result.ticks, 'shots': result.shots,
                          'problems': result.problems} for result in results] for name, results in done.items()},
+        'verdicts': verdicts,
     }, indent=2) + '\n')
 
 
@@ -253,17 +264,19 @@ def command_run(parser: argparse.ArgumentParser, args: argparse.Namespace) -> in
             return 2
         args.output.mkdir(parents=True, exist_ok=True)
         done = run_all(cases, shared, args.output, options, args.repeat, args.jobs)
-    write_record(args.output/RECORD, args, cases, done)
     failed = [name for name, results in done.items() if any(result.problems for result in results)]
+    ran = [case.name for case in cases if case.name not in failed]
+    disagreements = (self_disagreements(ran, args.output, options.streams(), args.repeat)
+                     if args.repeat > 1 else {})
+    write_record(args.output/RECORD, args, cases, done, failed, disagreements)
     if failed:
         print(f'FAIL: {len(failed)} of {len(cases)} cases did not run')
         return 1
     print(f'OK: {len(cases)} of {len(cases)} cases ran')
     if args.repeat == 1:
         return 0
-    disagreements = self_disagreements([case.name for case in cases], args.output, options.streams(), args.repeat)
     if disagreements:
-        print('\n'.join(disagreements))
+        print('\n'.join(disagreements.values()))
         return 1
     print(f'OK: {len(cases)} of {len(cases)} cases agree with themselves')
     return 0
