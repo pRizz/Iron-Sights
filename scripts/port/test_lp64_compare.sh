@@ -6,7 +6,8 @@
 # (test_simtrace.c, Task 3) includes port_simtrace.c with fabricated game state;
 # the comparison build's tanf, atanf and cosf (test_compare_math.c, Task 4) link
 # port_compare_math.c, as does the maths sweep (lp64_libm_sweep.c), which must
-# print one hash for each of its six functions. -fno-builtin keeps the compiler
+# print one hash for each of its six functions, with tanf, atanf and cosf's
+# pinned (the same on every host). -fno-builtin keeps the compiler
 # from folding a call; -ffp-contract=off is the comparison build's own flag
 # for port_compare_math.c (CMakeLists.txt).
 set -euo pipefail
@@ -43,6 +44,16 @@ for width in $widths; do
         echo "test_lp64_compare: FAIL ($width-bit): the sweep printed $sweep_lines of its six hashes" >&2
         exit 1
     fi
+    # The in-tree functions are host-independent by design: pin their hashes
+    # (FORK-089, Task 4's sweep). sinf, expf and powf are libm's and may differ.
+    for pinned in tanf:e3ccc704 atanf:f160154d cosf:4c162bf1; do
+        name=${pinned%%:*} want=${pinned#*:}
+        seen=$(awk -v name="$name" '$1 == name { print $2 }' "$work/sweep-$width.txt")
+        if [[ $seen != "$want" ]]; then
+            echo "test_lp64_compare: FAIL ($width-bit): the sweep's $name hash is $seen, expected $want" >&2
+            exit 1
+        fi
+    done
     echo "lp64_libm_sweep ($width-bit):" $(tr '\n' ' ' <"$work/sweep-$width.txt")
 done
 echo "test_lp64_compare: PASS"
