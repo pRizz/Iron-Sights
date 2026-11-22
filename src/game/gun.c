@@ -41,7 +41,9 @@
 #include "joy.h"
 #if IS_64_BIT
 #include "port_hostptr.h" /* LP64-005: PORT_WORD_IS_HOST */
+#include "ob.h" /* LP64-006 Task 11: get_pc_buffer_remaining_value */
 #endif
+#include "port_lp64.h" /* LP64-006 Task 11: portLp64PoolUse, no code at 32 bits */
 #include "matrixmath.h"
 #include "bondinv.h"
 #include "stan.h"
@@ -977,6 +979,7 @@ void used_to_load_1st_person_model_on_demand(GUNHAND hand)
 #if IS_64_BIT
                     texInitPool(&g_CurrentPlayer->item_related[hand], buffer_weapon + 0x133E0, size_buffer_weapon - 0x133E0);
                     load_object_fill_header(&g_CurrentPlayer->copy_of_body_obj_header[hand], (u8 *)ptr_item_text, buffer_weapon, 0x133E0, &g_CurrentPlayer->item_related[hand]);
+                    portLp64PoolUse("gun room left hand", (u32)get_pc_buffer_remaining_value((u8 *)ptr_item_text), 0x133E0); /* LP64-006 Task 11: the image, rounded to 16 */
 #else
                     texInitPool(&g_CurrentPlayer->item_related[hand], buffer_weapon + 0xBD70, size_buffer_weapon + 0xFFFF4290);
                     load_object_fill_header(&g_CurrentPlayer->copy_of_body_obj_header[hand], (u8 *)ptr_item_text, buffer_weapon, 0xBD70, &g_CurrentPlayer->item_related[hand]);
@@ -987,6 +990,7 @@ void used_to_load_1st_person_model_on_demand(GUNHAND hand)
 #if IS_64_BIT
                     texInitPool(&g_CurrentPlayer->item_related[hand], buffer_weapon + 0x11DC0, size_buffer_weapon - 0x11DC0);
                     load_object_fill_header(&g_CurrentPlayer->copy_of_body_obj_header[hand], (u8 *)ptr_item_text, buffer_weapon, 0x11DC0, &g_CurrentPlayer->item_related[hand]);
+                    portLp64PoolUse("gun room trigger", (u32)get_pc_buffer_remaining_value((u8 *)ptr_item_text), 0x11DC0); /* LP64-006 Task 11 */
 #else
                     texInitPool(&g_CurrentPlayer->item_related[hand], buffer_weapon + 0xAFD0, size_buffer_weapon + 0xFFFF5030);
                     load_object_fill_header(&g_CurrentPlayer->copy_of_body_obj_header[hand], (u8 *)ptr_item_text, buffer_weapon, 0xAFD0, &g_CurrentPlayer->item_related[hand]);
@@ -996,6 +1000,7 @@ void used_to_load_1st_person_model_on_demand(GUNHAND hand)
                 {
                     texInitPool(&g_CurrentPlayer->item_related[hand], &buffer_weapon[D_80032464[hand]], size_buffer_weapon - D_80032464[hand]);
                     load_object_fill_header(&g_CurrentPlayer->copy_of_body_obj_header[hand], (u8 *)ptr_item_text, buffer_weapon, D_80032464[hand], &g_CurrentPlayer->item_related[hand]);
+                    portLp64PoolUse("gun room weapon", (u32)get_pc_buffer_remaining_value((u8 *)ptr_item_text), D_80032464[hand]); /* LP64-006 Task 11; no code at 32 bits */
                 }
             }
 

@@ -56,18 +56,25 @@ void portMempCheckBankStart(u8 bank, const void *start)
 
 /* LP64-005 Task 13: the stage bank's use, by its cursor, after each block. A
  * block that took all the bank had left (a file load, ob.c) is shrunk to the
- * file at once (portMempResize), so it is held until then. */
+ * file at once (portMempResize), so it is held until then. LP64-006 Task 11:
+ * the permanent bank, which also takes a request its own bank cannot hold
+ * (portMempAllocate), reports the same way. */
 static void notePeak(const MemoryPool *pool, int tookTheRest)
 {
     const u32 used = (u32)(pool->pos - pool->start), size = (u32)(pool->end - pool->start);
+    const char *name;
 
-    if (pool != g_mempPools + MEMPOOL_STAGE) {
+    if (pool == g_mempPools + MEMPOOL_STAGE) {
+        name = "stage bank";
+    } else if (pool == g_mempPools + MEMPOOL_PERMANENT) {
+        name = "permanent bank";
+    } else {
         return;
     }
     if (tookTheRest) {
-        portLp64PoolHold("stage bank", used, size);
+        portLp64PoolHold(name, used, size);
     } else {
-        portLp64PoolUse("stage bank", used, size);
+        portLp64PoolUse(name, used, size);
     }
 }
 #endif

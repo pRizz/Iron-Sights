@@ -108,8 +108,11 @@ void portLp64PoolStageBegin(void);
  * with its SIZE. A pool name that several pools of other sizes share
  * ("texture pool") keeps the use that was the largest share of its size. POOL
  * is one of "stage bank", "room memory", "room memory largest request",
- * "graphics buffer", "vertex pool", "music heap" and "texture pool". The
- * first call registers portLp64PoolPeaks to run at exit.
+ * "graphics buffer", "vertex pool", "music heap" and "texture pool", and
+ * since LP64-006 Task 11 "permanent bank" (port_memp.c), "gun room left
+ * hand", "gun room trigger" and "gun room weapon" (gun.c), "wallet room"
+ * (front.c) and "synthesizer parameters" (synthesizer.c). The first call
+ * registers portLp64PoolPeaks to run at exit.
  */
 void portLp64PoolUse(const char *pool, u32 used, u32 size);
 
@@ -145,6 +148,17 @@ void portLp64RoomLongest(u32 bytes);
 void portLp64RoomTake(uintptr_t addr, u32 bytes);
 void portLp64RoomGive(uintptr_t addr, u32 bytes);
 
+/**
+ * The synthesizer's parameter pool (synthesizer.c, LP64-006 Task 11), which
+ * portLp64PoolUse is told of as "synthesizer parameters" in bytes:
+ * portLp64SynthParams: the pool of RECORDS records of RECORD_BYTES each is
+ * made, all free (alSynNew). portLp64SynthParamTake: a record left the free
+ * list (__allocParam). portLp64SynthParamGive: one came back (__freeParam).
+ */
+void portLp64SynthParams(u32 records, u32 recordBytes);
+void portLp64SynthParamTake(void);
+void portLp64SynthParamGive(void);
+
 #ifdef __cplusplus
 }
 #endif
@@ -164,6 +178,9 @@ void portLp64RoomGive(uintptr_t addr, u32 bytes);
 #define portLp64RoomLongest(bytes) ((void) 0)
 #define portLp64RoomTake(addr, bytes) ((void) 0)
 #define portLp64RoomGive(addr, bytes) ((void) 0)
+#define portLp64SynthParams(records, recordBytes) ((void) 0)
+#define portLp64SynthParamTake() ((void) 0)
+#define portLp64SynthParamGive() ((void) 0)
 #endif
 
 #if IS_64_BIT || defined(GE_LP64_ORACLE)

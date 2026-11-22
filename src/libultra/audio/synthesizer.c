@@ -132,7 +132,7 @@ void alSynNew(ALSynth *drvr, ALSynConfig *c)
         drvr->paramList = paramPtr;
     }
     
-    drvr->heap = hp;
+    drvr->heap = hp; portLp64SynthParams((u32)c->maxUpdates, (u32)sizeof(ALParamRoom)); /* LP64-006 Task 11 */
 }
 
 /*
@@ -245,7 +245,7 @@ ALParam *__allocParam()
     if (drvr->paramList) {        
         update = drvr->paramList;
         drvr->paramList = drvr->paramList->next;
-        update->next = 0;
+        update->next = 0; portLp64SynthParamTake(); /* LP64-006 Task 11 */
     }
     return update;
 }
@@ -254,7 +254,7 @@ void __freeParam(ALParam *param)
 {
     ALSynth *drvr = &alGlobals->drvr;
     param->next = drvr->paramList;
-    drvr->paramList = param;
+    drvr->paramList = param; portLp64SynthParamGive(); /* LP64-006 Task 11 */
 }
 
 void _collectPVoices(ALSynth *drvr) 

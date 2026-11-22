@@ -6,13 +6,22 @@
  *   GE_SOAK=<stages|all>[:<frames>[:<laps>]]  e.g. GE_SOAK=dam,facility:900:3
  *
  * GE_MEMSTATS=1 alone logs a line about a second into each stage. The web
- * build reads GE_SOAK from Module.ENV, which an audit sets before Play. */
+ * build reads GE_SOAK from Module.ENV, which an audit sets before Play.
+ *
+ * In a harness build on Linux (PORT_PLAY_HARNESS, port_playlog.h; never a
+ * shipped 32-bit build with video) each lap's end also logs the mappings of
+ * /proc/self/smaps whose resident size grew since the last lap's end
+ * (LP64-006 Task 11):
+ *   ge: smaps: lap=L grew=KB rss=KB START-END PERMS PATH
+ * then "ge: smaps: lap=L mappings=N grown=M grew=KB"; the first lap's end
+ * only takes the baseline. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <str.h>
 #include <ultra64.h>
 #include <bondconstants.h>
+#include "port_playlog.h" /* PORT_PLAY_HARNESS */
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -145,6 +154,96 @@ void portMemStatsLog(const char *where, s32 stage)
                 gfx[2]);
 }
 
+#if PORT_PLAY_HARNESS && defined(__linux__)
+#define SMAPS_MAX 8192
+typedef struct { unsigned long start; unsigned long rssKb; } SmapsEntry;
+static SmapsEntry sSmaps[2][SMAPS_MAX]; /* the last lap's end and this one's, by start, ascending */
+static s32 sSmapsLast, sSmapsCount = -1; /* -1 before the baseline */
+
+/* The resident size the last lap's end saw for the mapping at START, 0 if none
+ * (the kernel lists mappings by address, so each lap's list is sorted). */
+static unsigned long smapsLastRss(unsigned long start)
+{
+    const SmapsEntry *last = sSmaps[sSmapsLast];
+    s32 low = 0, high = sSmapsCount - 1;
+
+    while (low <= high) {
+        const s32 mid = low + (high - low) / 2;
+        if (last[mid].start == start) return last[mid].rssKb;
+        if (last[mid].start < start) low = mid + 1;
+        else high = mid - 1;
+    }
+    return 0;
+}
+
+/* A mapping's first line, START-END PERMS OFFSET DEV INODE PATH, against its
+ * fields' NAME: VALUE lines: its first word holds a '-' and ends in no ':'. */
+static s32 smapsIsHeader(const char *line)
+{
+    const char *space = strchr(line, ' ');
+    const char *dash = strchr(line, '-');
+
+    return space != NULL && space > line && dash != NULL && dash < space && space[-1] != ':';
+}
+
+/* One mapping's figures: logs it if it grew, and keeps it for the next lap. */
+static void smapsNote(s32 lap, char *header, unsigned long rssKb, s32 *kept, s32 *grown, unsigned long *grewKb)
+{
+    unsigned long start = strtoul(header, NULL, 16), last = sSmapsCount < 0 ? rssKb : smapsLastRss(start);
+    char *newline = strchr(header, '\n');
+
+    if (newline != NULL) *newline = '\0';
+    if (rssKb > last) {
+        portConLogf("ge: smaps: lap=%d grew=%luKB rss=%luKB %s\n", (int) lap, rssKb - last, rssKb, header);
+        (*grown)++;
+        *grewKb += rssKb - last;
+    }
+    if (*kept < SMAPS_MAX) {
+        sSmaps[!sSmapsLast][*kept].start = start;
+        sSmaps[!sSmapsLast][*kept].rssKb = rssKb;
+        (*kept)++;
+    }
+}
+
+/* Each lap's end: the mappings whose resident size grew since the last. */
+static void soakSmapsLap(s32 lap)
+{
+    static char header[512];
+    char line[512];
+    unsigned long rssKb = 0;
+    s32 kept = 0, grown = 0, mappings = 0, inMapping = 0;
+    unsigned long grewKb = 0;
+    FILE *f = fopen("/proc/self/smaps", "r");
+
+    if (f == NULL) {
+        portConLogf("ge: smaps: lap=%d cannot read /proc/self/smaps\n", (int) lap);
+        return;
+    }
+    while (fgets(line, sizeof(line), f) != NULL) {
+        if (strncmp(line, "Rss:", 4) == 0) {
+            rssKb = strtoul(line + 4, NULL, 10);
+            continue;
+        }
+        if (!smapsIsHeader(line)) continue;
+        if (inMapping) smapsNote(lap, header, rssKb, &kept, &grown, &grewKb);
+        snprintf(header, sizeof(header), "%s", line);
+        inMapping = 1;
+        mappings++;
+        rssKb = 0;
+    }
+    if (inMapping) smapsNote(lap, header, rssKb, &kept, &grown, &grewKb);
+    fclose(f);
+    if (sSmapsCount >= 0) {
+        portConLogf("ge: smaps: lap=%d mappings=%d grown=%d grew=%luKB\n", (int) lap, (int) mappings, (int) grown,
+                    grewKb);
+    } else {
+        portConLogf("ge: smaps: lap=%d mappings=%d baseline\n", (int) lap, (int) mappings);
+    }
+    sSmapsLast = !sSmapsLast;
+    sSmapsCount = kept;
+}
+#endif
+
 /** front.c, as a stage starts: its end then returns to the legal screen. */
 s32 portSoakIsCurrent(void)
 {
@@ -162,6 +261,9 @@ s32 portSoakNextStage(void)
     if (++sSoakSettle < 60) return -1;
     if (sSoakNext >= sSoakCount) {
         sSoakNext = 0;
+#if PORT_PLAY_HARNESS && defined(__linux__)
+        soakSmapsLap(sSoakLap);
+#endif
         if (++sSoakLap >= sSoakLaps) {
             portConLogf("ge: soak: complete after %d laps\n", (int) sSoakLaps);
 #ifndef __EMSCRIPTEN__

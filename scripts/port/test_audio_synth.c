@@ -43,12 +43,17 @@ uintptr_t osVirtualToPhysical(void *address) { return (uintptr_t)address; }
 #if IS_64_BIT
 /* The music heap's peak (port_lp64.c, tested by test_lp64_peaks.c) has no part in synthesis. */
 void portLp64PoolUse(const char *pool, u32 used, u32 size) { (void)pool; (void)used; (void)size; }
-#endif
+/* LP64-006 Task 11: synthesizer.c's parameter pool count (port_lp64_synth.c) */
+void portLp64SynthParams(u32 records, u32 recordBytes) { (void)records; (void)recordBytes; }
+void portLp64SynthParamTake(void) {}
+void portLp64SynthParamGive(void) {}
+/* At 32 bits port_lp64.h, which synthInternals.h now includes, makes this a macro. */
 void portLp64PoolFatal(const char *pool, u32 request)
 {
     fprintf(stderr, "test_audio_synth: the %s cannot give %u bytes\n", pool, request);
     exit(1);
 }
+#endif
 
 enum {
     WAVE_SAMPLES = 2000,

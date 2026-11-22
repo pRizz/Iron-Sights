@@ -345,4 +345,6 @@ void            _collectPVoices(ALSynth *drvr);
 s32             _timeToSamples(ALSynth *ALSynth, s32 micros);
 ALMicroTime     _samplesToTime(ALSynth *synth, s32 samples);
 
+#include "port_lp64.h" /* LP64-006 Task 11: the parameter pool's peak (synthesizer.c) */
+
 #endif

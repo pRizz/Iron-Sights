@@ -137,6 +137,30 @@ static void testSameNameFromTwoPointersSharesOneEntry(void)
     expect(strcmp(s_peaks, "ge: lp64: peak shared pool 500 of 1000 bytes\n") == 0,
            "one name at two addresses is one pool, printed once with its largest use");
 }
+static void testThirteenPoolsEachPrintOnceAtThePrint(void)
+{
+    // Arrange: the thirteen names port_lp64.h lists (LP64-006 Task 11), each used twice
+    static const char *const names[] = {
+        "stage bank", "room memory", "room memory largest request", "graphics buffer", "vertex pool",
+        "music heap", "texture pool", "permanent bank", "gun room left hand", "gun room trigger",
+        "gun room weapon", "wallet room", "synthesizer parameters",
+    };
+    int i, linesAtUse;
+    portLp64PoolPeaks();
+    resetPeaks();
+    for (i = 0; i < (int) (sizeof(names) / sizeof(names[0])); i++)
+    {
+        portLp64PoolUse(names[i], 10, 100);
+        portLp64PoolUse(names[i], 20, 100);
+    }
+    linesAtUse = s_peakLines;
+
+    // Act
+    portLp64PoolPeaks();
+
+    // Assert
+    expect(linesAtUse == 0 && s_peakLines == 13, "thirteen pools fit the table: one line each, at the print");
+}
 #else
 static void testPeaksAreNoOpsAtThirtyTwoBits(void)
 {
@@ -164,6 +188,7 @@ int main(void)
     testRoomGrabCountsWhatItKept();
     testRoomGrabKeptWholeCountsAtThePrint();
     testSameNameFromTwoPointersSharesOneEntry();
+    testThirteenPoolsEachPrintOnceAtThePrint();
 #else
     testPeaksAreNoOpsAtThirtyTwoBits();
 #endif

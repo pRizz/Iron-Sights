@@ -67,6 +67,7 @@
 #include <assets/font_dl.h>
 #include "image.h"
 #include "ob.h"
+#include "port_lp64.h" /* LP64-006 Task 11: portLp64PoolUse */
 #include "gbi_extension.h"
 #include "model.h"
 
@@ -2535,6 +2536,8 @@ void load_walletbond(void)
             (u8*)ptr_logo_and_walletbond_DL,
             FRONT_WALLET_ROOM,
             0);
+        portLp64PoolUse("wallet room", (u32)get_pc_buffer_remaining_value((u8 *)PitemZ_entries[PROP_WALLETBOND].filename),
+                        FRONT_WALLET_ROOM); /* LP64-006 Task 11: the image, rounded to 16; no code at 32 bits */
 
         modelCalculateRwDataLen(PitemZ_entries[PROP_WALLETBOND].header);
 
