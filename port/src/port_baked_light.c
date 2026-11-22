@@ -181,6 +181,14 @@ void portBakeLevelLoaded(void) {
     free(s_area);
     s_area = NULL;
     if (portBakedLightingOn()) start_bake();
+#ifdef GE_COMPARE
+    /* LP64-006: a comparison build finishes the bake during the load, so the
+     * frame that shows it is the first tick on every host, not the one the
+     * workers' speed picks; the unbaked frames stay covered by the default
+     * profile, which has Baked Lighting off. */
+    while (s_started && !portBakeTraceStep(4000)) {
+    }
+#endif
 }
 
 /* ---- apply ---------------------------------------------------------------- */
@@ -254,7 +262,11 @@ void portBakeTick(void) {
     if (s_started && !s_ready && portBakeTraceStep(4000)) {
         s_ready = 1;
         s_dirty = 1;
+#ifdef GE_COMPARE
+        portConPrintf(1, "Baked Lighting: ready (%u vertices)\n", s_lvl.nverts); /* LP64-006: no host time on screen */
+#else
         portConPrintf(1, "Baked Lighting: ready (%u vertices, %u ms)\n", s_lvl.nverts, portBakeTraceMillis());
+#endif
         log_bake();
     }
     if (s_dirty) {

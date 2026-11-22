@@ -55,6 +55,15 @@ static s32  conPrintRow;
 static s32  conPrintCol;
 static s32  conMsgRows;
 static OSTime conMsgTimer;         /* osGetTime() deadline for the top row */
+#ifdef GE_COMPARE
+/* LP64-006: a comparison build times the dwell by the pictures the console has
+ * drawn, a sixtieth of a second each, so a paced demo drops a message at the
+ * same picture on every host; osGetTime there follows the host's pace. */
+static u64 conPictures;
+static OSTime conClock(void) { return (OSTime) (conPictures * (CON_MSGDWELL / 180ull)); }
+#else
+#define conClock osGetTime
+#endif
 static s32  conInputCol;
 static s32  conOpen;
 static s32  conInited;
@@ -280,7 +289,7 @@ void portConPrint(s32 showmsg, const char *str)
                     conMsgRows = CON_MSGROWS;
                 }
             }
-            conMsgTimer = osGetTime() + CON_MSGDWELL;
+            conMsgTimer = conClock() + CON_MSGDWELL;
         }
     }
 
@@ -1165,6 +1174,9 @@ Gfx *portConRender(Gfx *gdl)
     const s32 hudReserved = portHudTakeTopReserved();
     s32 i;
 
+#ifdef GE_COMPARE
+    conPictures++;
+#endif
     conEnvHarness();
 
     /* the fonts are NULL before the frontend loads them (boot, early stage
@@ -1199,7 +1211,7 @@ Gfx *portConRender(Gfx *gdl)
             gdl = conSpaceEnd(gdl);
 
             {
-                const OSTime now = osGetTime();
+                const OSTime now = conClock();
 
                 if (now >= conMsgTimer)
                 {
@@ -1219,7 +1231,7 @@ Gfx *portConRender(Gfx *gdl)
      * `set` answer) is printed while open - so the dwell starts at close */
     if (conMsgRows > 0)
     {
-        conMsgTimer = osGetTime() + CON_MSGDWELL;
+        conMsgTimer = conClock() + CON_MSGDWELL;
     }
 
     {
