@@ -16,6 +16,7 @@
 #include "player.h" /* g_CurrentPlayer */
 #include "../../port/fast3d/gfx_api.h" /* PortHwLoad (GE_HWCAL) */
 #include "frametiming.h"
+#include "port_simtrace.h" /* LP64-006 Task 5 */
 //D:800483F0
 
 struct ramrom_struct
@@ -182,6 +183,14 @@ static void port_demo_exit_log(const char *reason, u32 detail_a, u32 detail_b)
                reason, port_demo_ticks, g_GlobalTimer, g_GlobalTimer / 60, detail_a, detail_b);
     }
 }
+
+#if PORT_PLAY_HARNESS
+/* The playing recording's tick for the simulation trace (port_simtrace.h); -1 when none plays. */
+s32 portRamromReplayTick(void)
+{
+    return is_ramrom_flag ? port_demo_ticks : -1;
+}
+#endif
 
 /* Playback pacing for boss.c's main loop: how many vsyncs the next demo tick
  * should take, read from byte 0 (speedframes) of the next unread seed block. 0

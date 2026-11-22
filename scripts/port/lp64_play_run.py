@@ -85,6 +85,8 @@ class Display:
     timeout_scale: float = 1.0
     # Every screenshot of a case copied to DIR/CASE.shots/ (`--keep-shots`), not only its last.
     keep_shots: bool = False
+    # The midas.ini a run with video gets in its folder (lp64_equiv_profile.py's profiles).
+    ini: str = WINDOWED_INI
 
 
 HEADLESS = Display()
@@ -148,13 +150,13 @@ def case_environment(case: Case, rom: Path, extra: dict[str, str],
 def folder_environment(env: dict[str, str], folder: Path, display: Display) -> dict[str, str]:
     """ENV with, for a run with video, a HOME and GE_ICON_CACHE_DIR made inside FOLDER, the run's
     temporary folder, where the video build writes its settings and icon cache, and FOLDER's
-    midas.ini written to run windowed (WINDOWED_INI)."""
+    midas.ini written from DISPLAY (WINDOWED_INI by default, to run windowed)."""
     if not display.video:
         return env
     home, icons = folder/'home', folder/'icons'
     home.mkdir()
     icons.mkdir()
-    (folder/'midas.ini').write_text(WINDOWED_INI)
+    (folder/'midas.ini').write_text(display.ini)
     return dict(env, HOME=str(home), GE_ICON_CACHE_DIR=str(icons))
 
 
@@ -218,8 +220,9 @@ def route_file(case: Case, executable: SharedExecutable, env: dict[str, str], ou
 
 
 def run_case(case: Case, executable: SharedExecutable, rom: Path, extra: dict[str, str], output: Path,
-             display: Display = HEADLESS) -> Outcome:
-    """Runs CASE and judges it; its log is OUTPUT/CASE.log."""
+             display: Display = HEADLESS, maybe_saves: Path | None = None) -> Outcome:
+    """Runs CASE and judges it; its log is OUTPUT/CASE.log. MAYBE_SAVES, a folder, is copied into
+    the run's folder first (lp64_equiv.py run --saves)."""
     timeout = timeout_seconds(case.frames, display.timeout_scale)
     log_path = output/f'{case.name}.log'
     env = case_environment(case, rom, extra, display=display)
@@ -236,6 +239,8 @@ def run_case(case: Case, executable: SharedExecutable, rom: Path, extra: dict[st
     with tempfile.TemporaryDirectory(prefix='midas-lp64-play-') as temporary:
         folder = Path(temporary)
         child = executable.place(folder)
+        if maybe_saves is not None:
+            shutil.copytree(maybe_saves, folder, dirs_exist_ok=True)
         with log_path.open('wb') as log:
             try:
                 status = subprocess.run([str(child)], cwd=folder, env=folder_environment(env, folder, display),

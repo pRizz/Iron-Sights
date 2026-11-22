@@ -1,0 +1,14 @@
+# The differences `lp64_equiv.py compare --expect` accepts between builds (LP64-006). Everything not
+# listed here must be identical, and a listed difference that is now identical fails too. One line a
+# difference:
+#
+#   PAIR CASE PROFILE STREAM differs-from I explained: CAUSE; removed-by: RUN
+#   PAIR CASE PROFILE STREAM differs-from I open: REASON
+#   PAIR CASE PROFILE STREAM differs-from I strict: REASON
+#   PAIR CASE PROFILE STREAM differs-from I host: REASON
+#
+# PAIR is the two run folders' names (`i686:a64`), CASE a case of lp64_equiv_cases.py, PROFILE
+# `default` or `all`, STREAM `sim`, `gfx` or `snd`, and I the first differing tick, frame or sample.
+# `explained` names the cause and the run that matched with it removed (the design's rule);
+# `open` is not yet classified; `strict` waits for a fix on lp64/equiv-strict; `host` is seen only
+# against the emulated i686 or translated x86_64 build until real x86 hardware confirms it.

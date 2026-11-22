@@ -345,6 +345,38 @@ pass its isolated executable rather than rebuilding an active player binary.
   libm's maths. It is never shipped: `package_linux.py` and
   `package_windows.py` refuse it. Its trees are `build/lp64/cmp-i686`,
   `cmp-x64`, `cmp-a64` and their `-video` twins.
+- `scripts/port/lp64_equiv.py` (LP64-006) runs the comparison's 38 cases
+  (`lp64_equiv_cases.py`: the `demos`, paced by their recordings; `solo`,
+  `mp`, `menus` and `reload` in lockstep) on a comparison build:
+  `python3 scripts/port/lp64_equiv.py run --rom /rom/baserom.u.z64 --set
+  demos,solo,mp,menus,reload --repeat 2 --output build/lp64/equiv/RUN/ARCH
+  EXECUTABLE` must print `OK: 38 of 38 cases ran` and `OK: 38 of 38 cases
+  agree with themselves`; `compare --streams sim --expect
+  scripts/port/lp64_equiv_expected.txt DIR...` then compares the builds
+  (`lp64_equiv_compare.py`), and `sensitivity` requires every stream to
+  differ between two seeds. A demo is paced, so its `sim` stream is its
+  playback only: the trace's `demo=K` lines (`port_simtrace.h`), keyed by
+  the recording's tick and compared without `n` and `timer`, which the
+  host's pace sets (`lp64_equiv_streams.py`'s `sim-demo`). The lockstep
+  routes are `P` records only, forward and sidestep legs: a headless
+  replay acts on nothing else, and nothing in a `P` record turns Bond, so
+  each lockstep case keeps one facing and the demos are the cases that
+  turn. A route with
+  fire needs `moved` and at least `SHOT_FLOOR` (15) shots, except the
+  cases `lp64_equiv_cases.py` lists as unarmed or without control. It
+  refuses an executable that does not log `ge: compare: on` (with
+  `--maths-off`, `ge: compare: on (libm)`), and `--env` refuses the
+  variables it sets (`GE_LOCKSTEP`, `GE_FIXEDTICK`, `GE_NOSLEEP`,
+  `GE_SIMTRACE`, `GE_GFXDIGEST`, `GE_GFXDIGEST_NODRAW`, `GE_AUDIO_LOCK`,
+  `GE_AUDIO_CAPTURE`, `GE_SEED`, `GE_IRONSIGHTS_FONTS`). The streams (`CASE.sim`, and with
+  `--video` `CASE.gfx` and `CASE.wav`) are ROM-derived and stay under
+  `build/lp64/`. `lp64_equiv_expected.txt` lists the only differences
+  allowed, each with its first tick and its cause; a listed difference that
+  now matches fails. `--profile all` (video only, `lp64_equiv_profile.py`)
+  sets every fork option, with `font_style` at Iron Sights, never Enhanced,
+  and `GE_IRONSIGHTS_FONTS=1` so that style loads, and no texture pack.
+  The pinned ticks of `walk` and `dam-twice` are measured again through `stepped(NAME)` when a front-end or watch change
+  moves them.
 - Storage for a record or a display list is sized by `sizeof` of what it
   holds, never by a literal byte count or by filler members, and a member
   that overlays another record by position is pinned at both widths in the

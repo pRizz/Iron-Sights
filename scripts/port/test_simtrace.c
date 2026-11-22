@@ -23,6 +23,13 @@ PropRecord g_Props[MAX_PROPS];
 PropRecord *g_ActivePropsHead;
 s_room_info g_BgRoomInfo[MAXROOMCOUNT];
 s32 g_MaxNumRooms;
+/* ramromreplay.c's: the playing recording's tick, -1 when none plays. */
+static s32 sReplayTick = -1;
+
+s32 portRamromReplayTick(void)
+{
+    return sReplayTick;
+}
 
 #define TEST_CHR_SLOTS 4
 #define TEST_ROOMS 8
@@ -116,6 +123,41 @@ static void format(char *line, size_t size)
     {
         line[0] = '\0';
     }
+}
+
+/* While a recording replays, the line ends with its tick (demo=K). */
+static void replayLineEndsWithItsDemoTick(void)
+{
+    char line[PORT_SIMTRACE_LINE_MAX];
+    char expected[PORT_SIMTRACE_LINE_MAX];
+
+    // Arrange
+    fabricate(0);
+    sReplayTick = 37;
+    snprintf(expected, sizeof(expected), "%.*s demo=37\n", (int) strlen(kFabricatedLine) - 1, kFabricatedLine);
+
+    // Act
+    format(line, sizeof(line));
+    sReplayTick = -1;
+
+    // Assert
+    expect(strcmp(line, expected) == 0, "replay_line_ends_with_its_demo_tick");
+}
+
+/* Outside a replay the line has no demo field. */
+static void lineWithoutAReplayHasNoDemoField(void)
+{
+    char line[PORT_SIMTRACE_LINE_MAX];
+
+    // Arrange
+    fabricate(0);
+
+    // Act
+    format(line, sizeof(line));
+
+    // Assert
+    expect(strstr(line, " demo=") == NULL && strcmp(line, kFabricatedLine) == 0,
+           "line_without_a_replay_has_no_demo_field");
 }
 
 /* The text of FIELD's value in LINE ("chrs" gives "3:0a1b2466"). */
@@ -348,6 +390,8 @@ int main(void)
     floatIsWrittenAsBits();
     oneBitInOneGuardChangesTheChrHash();
     noPointerReachesTheFile();
+    replayLineEndsWithItsDemoTick();
+    lineWithoutAReplayHasNoDemoField();
     inChild("detail_range_is_inclusive", detailRangeIsInclusive, 0);
     inChild("unopenable_file_stops_the_run", unopenableFileStopsTheRun, 1);
     if (failures)

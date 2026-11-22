@@ -7,7 +7,7 @@
  * FILE afresh, one line a call, and nothing to the log:
  *
  *   T n=N timer=G seed=S16 draws=D players=P pI=X,Y,Z,FACING,HEALTH ...
- *     chrs=C:H8 props=R:H8 rooms=L:H8
+ *     chrs=C:H8 props=R:H8 rooms=L:H8 [demo=K]
  *
  * N counts calls from 1; G is g_GlobalTimer; S16 the random seed as 16 hex
  * digits; D the draws since the last line (g_portRandDrawCount); P the
@@ -21,6 +21,11 @@
  *   index, type, flags, position bits;
  * - rooms: each loaded room (model_bin_loaded set), in room order from 1:
  *   room number and model_bin_loaded (which also holds the unload age).
+ * demo=K ends the line only while a recording replays (LP64-006 Task 5): K is
+ * the recording's tick, the one `ge: demo tick` prints (ramromreplay.c's
+ * port_demo_ticks, through portRamromReplayTick). A demo is paced, so its timer and tick count are the
+ * host's; lp64_equiv_streams.py's `sim-demo` compares a demo by K instead.
+ * Outside a replay the line has no such field.
  * No pointer, time, path or other host value reaches the file; a list is
  * walked in the game's own order, never one that follows an address.
  *
@@ -52,6 +57,8 @@
 /** The longest line portSimTraceFormat writes, newline and terminator included. */
 #define PORT_SIMTRACE_LINE_MAX 512
 
+/** src/game/ramromreplay.c: the playing recording's tick (`ge: demo tick`'s), -1 when none plays. */
+s32 portRamromReplayTick(void);
 /** lvlTick's last call: with GE_SIMTRACE set, writes call N's lines. */
 void portSimTraceTick(void);
 /**

@@ -203,9 +203,14 @@ s32 portSimTraceFormat(char *out, size_t size, u32 n, s32 draws)
     ok = append(out, size, &used, "T n=%u timer=%d seed=%016llx draws=%d", (unsigned) n, (int) g_GlobalTimer,
                 (unsigned long long) g_randomSeed, (int) draws);
     ok = ok && appendPlayers(out, size, &used);
-    ok = ok && append(out, size, &used, " chrs=%u:%08x props=%u:%08x rooms=%u:%08x\n", (unsigned) chrs.count,
+    ok = ok && append(out, size, &used, " chrs=%u:%08x props=%u:%08x rooms=%u:%08x", (unsigned) chrs.count,
                       (unsigned) chrs.hash, (unsigned) props.count, (unsigned) props.hash, (unsigned) rooms.count,
                       (unsigned) rooms.hash);
+    if (portRamromReplayTick() >= 0)
+    {
+        ok = ok && append(out, size, &used, " demo=%d", (int) portRamromReplayTick());
+    }
+    ok = ok && append(out, size, &used, "\n");
     return ok ? (s32) used : -1;
 }
 

@@ -11,14 +11,30 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lp64_equiv_streams  # noqa: E402
 
 
-def sim_line(n: int, seed: str = '00000000deadbeef', chrs: str = '3:0a1b2466') -> str:
-    """One trace line as port_simtrace.c writes it."""
-    return (f'T n={n} timer={n} seed={seed} draws=2 players=1 '
+def sim_line(n: int, seed: str = '00000000deadbeef', chrs: str = '3:0a1b2466', demo: int | None = None,
+             timer: int | None = None) -> str:
+    """One trace line as port_simtrace.c writes it; DEMO, while a recording replays, its tick."""
+    tail = '' if demo is None else f' demo={demo}'
+    return (f'T n={n} timer={n if timer is None else timer} seed={seed} draws=2 players=1 '
             'p0=3f800000,00000000,c2c80000,40490fdb,3f800000 '
-            f'chrs={chrs} props=12:01234567 rooms=4:89abcdef\n')
+            f'chrs={chrs} props=12:01234567 rooms=4:89abcdef{tail}\n')
 
 
-class SimDifference(unittest.TestCase):
+def playback(first_n: int, ticks: range, timer_shift: int = 0, changes: dict[int, dict] | None = None) -> str:
+    """Boot lines without a replay up to FIRST_N, then a replay of demo ticks TICKS, then two more
+    lines without one: a paced demo's trace. CHANGES gives a demo tick's own field values."""
+    lines = [sim_line(n, timer=n + timer_shift) for n in range(1, first_n)]
+    n = first_n
+    for tick in ticks:
+        lines.append(sim_line(n, demo=tick, timer=n + timer_shift, **(changes or {}).get(tick, {})))
+        n += 1
+    lines += [sim_line(n, timer=n + 7), sim_line(n + 1, timer=n + 9)]
+    return ''.join(lines)
+
+
+class TraceFiles(unittest.TestCase):
+    """A temporary folder for trace files."""
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
@@ -31,6 +47,8 @@ class SimDifference(unittest.TestCase):
         path.write_text(text)
         return path
 
+
+class SimDifference(TraceFiles):
     def test_identical_files_have_no_difference(self):
         # Arrange
         text = ''.join(sim_line(n) for n in range(1, 6))
@@ -131,6 +149,62 @@ class SimDifference(unittest.TestCase):
 
         # Assert
         self.assertEqual((difference.index, difference.field), (2, 'G.damage'))
+
+
+
+class DemoDifference(TraceFiles):
+    def test_playback_ignores_n_and_timer_and_lines_outside_it(self):
+        # Arrange: the replay starts at another line and with another timer
+        a = self.trace('a.txt', playback(4, range(1, 6)))
+        b = self.trace('b.txt', playback(6, range(1, 6), timer_shift=3))
+
+        # Act
+        difference = lp64_equiv_streams.first_difference('sim-demo', a, b)
+
+        # Assert
+        self.assertIsNone(difference)
+
+    def test_names_the_demo_tick_and_field(self):
+        # Arrange
+        a = self.trace('a.txt', playback(4, range(1, 6)))
+        b = self.trace('b.txt', playback(2, range(1, 6), changes={3: {'seed': '0000000000000001'}}))
+
+        # Act
+        difference = lp64_equiv_streams.first_difference('sim-demo', a, b)
+
+        # Assert
+        self.assertEqual((difference.index, difference.field), (3, 'seed'))
+
+    def test_trace_without_a_replay_is_unreadable(self):
+        # Arrange
+        a = self.trace('a.txt', ''.join(sim_line(n) for n in range(1, 4)))
+        b = self.trace('b.txt', playback(2, range(1, 4)))
+
+        # Act, Assert
+        with self.assertRaisesRegex(lp64_equiv_streams.Unreadable, 'no line of a replay'):
+            lp64_equiv_streams.first_difference('sim-demo', a, b)
+
+    def test_shorter_playback_differs_at_the_first_tick_it_lacks(self):
+        # Arrange
+        a = self.trace('a.txt', playback(3, range(1, 6)))
+        b = self.trace('b.txt', playback(3, range(1, 4)))
+
+        # Act
+        difference = lp64_equiv_streams.first_difference('sim-demo', a, b)
+
+        # Assert
+        self.assertEqual((difference.index, difference.field, difference.a, difference.b), (4, 'demo', '4', '(none)'))
+
+    def test_plain_sim_still_compares_the_demo_field(self):
+        # Arrange
+        a = self.trace('a.txt', sim_line(1, demo=1))
+        b = self.trace('b.txt', sim_line(1, demo=2))
+
+        # Act
+        difference = lp64_equiv_streams.first_difference('sim', a, b)
+
+        # Assert
+        self.assertEqual((difference.index, difference.field), (1, 'demo'))
 
 
 if __name__ == '__main__':

@@ -1819,6 +1819,70 @@ rulings changed this text as follows, by finding number.
 33. Review Focus 2 and Task 5 Step 4 record `randomize_va_space`.
 34. The file map lists every existing file a task edits.
 
+## Amendments during Task 5 (2026-11-21)
+
+Task 5's first Step 4 (`build/lp64/equiv/step4`, `cmp-a64`) printed
+`FAIL: 22 of 38 cases did not run`, and later measurements contradicted
+two of the plan's premises. These are the controller's rulings, recorded
+for the owner at the milestone's close. The Task 5 text above stays as
+accepted; where it conflicts, these rulings govern.
+
+1. **The shot rule.** The plan's 30 shots was arithmetic. The route has
+   30 trigger windows, but most missions start with a pistol that fires
+   once a window, and the opening takes the first windows. On the first
+   route the counts were caverns 140; 29 for thirteen missions; 28 for
+   dam, surface, silo and `dam-twice`; 20 for frigate; 0 for bunker2,
+   archives and `temple-4p`, which start unarmed (`ge: play: weapon 1`,
+   and punches are not counted); and cuba has no player control at all.
+   A route with fire now needs `SHOT_FLOOR` = 15 shots and `moved`. Each
+   case's measured count is recorded as a figure with its date and
+   commit, not judged for equality. The three unarmed cases need `moved`
+   only, and cuba needs only its stage load and frame limit. An armed
+   case measured under 15 would get its own lower floor, never 0 (none
+   does). `sensitivity` uses the same judge.
+2. **Routes sidestep; they do not turn.** The plan's C-button turn legs
+   do nothing in a headless replay. Such a replay acts on `P` records
+   only (`port/src/inputrec.c`), and nothing in a `P` record turns
+   Bond. Measured on `cmp-a64` in a lockstep Dam run, holding each input
+   from tick 1300 to 1600:
+   - stick X at -80 moved Bond sideways, from (20167.4, 16892.6) to
+     (19881.7, 17526.0);
+   - C-left left him where he was;
+   - his facing stayed at 90.3 in every run.
+
+   The legs therefore hold stick X at full deflection (80), left or
+   right by the sign of the benchmark's turn list, for 45 ticks with
+   stick Y released: they are sidestep legs. The route has no `M`
+   record and no C button, and the test is `route_uses_pad_records_only`.
+   Each lockstep case keeps one facing for its whole run, and the 14
+   demos are the cases that turn. Turning in a lockstep route would need
+   an `M` record or a look-stick field that headless replay acts on.
+   That is game C in input recording, and not this milestone's.
+   (Ruling 2 first asked for stick-X turns; it was replaced once the
+   measurement above showed that stick X sidesteps.)
+3. **A demo's stream is its playback.** Ten of the fourteen paced demos
+   did not agree with themselves. Each still exited at its measured
+   tick, but `timer` (the retraces consumed) and the trace's line count
+   followed the host's pace. Examples:
+   - facility1 first differed at tick 4, with 2,012 lines against 2,013;
+   - runway2 at tick 6, with a seed difference at tick 2060, outside its
+     playback;
+   - the others were runway1, frigate1, facility3, frigate2, dam2,
+     bunker1, facility2 and dam1.
+
+   In harness builds a `T` line now ends in `demo=K` while a recording
+   replays, where K is the recording's tick (`port_simtrace.c`, with a
+   seven-line accessor under `PORT_PLAY_HARNESS` in
+   `src/game/ramromreplay.c`). The reader kind `sim-demo` keys a demo's
+   lines by K and compares every field except `n` and `timer`. The
+   runner compares demos with it but still prints the stream as `sim`,
+   and a demo trace with no `demo=` line fails.
+4. **The split.** Comparing moved to `lp64_equiv_compare.py`, and
+   `lp64_equiv.py` stays the entry point with the same command lines.
+5. **The fonts gate.** `--profile all` sets `GE_IRONSIGHTS_FONTS=1`,
+   because `font_style=2` loads as Original without it. `--env` refuses
+   that variable.
+
 ## Amendment by the owner: three checkpoints (2026-11-21)
 
 Asked how to shorten the run, the owner chose to run the task check's

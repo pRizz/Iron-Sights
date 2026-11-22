@@ -4,13 +4,20 @@ difference between two files of one stream.
 `sim` (Task 3) is the simulation trace port/src/port_simtrace.c writes with
 GE_SIMTRACE (port/include/port_simtrace.h has its format): a `T` line a tick,
 and with GE_SIMTRACE_DETAIL `G` (guard) and `M` (moving prop) lines after the
-T line of their tick. Tasks 7 and 9 add `gfx` and `snd`.
+T line of their tick. While a recording replays, a T line ends with `demo=K`, the
+recording's tick (Task 5).
+
+`sim-demo` is a demo's stream: only the T lines that carry `demo=`, keyed by K
+and compared on every field but `n` and `timer`, which a paced run's host sets.
+A trace with no such line is unreadable, and a K repeated in one file cannot be
+keyed. Playbacks of unequal length differ at the first K one of them lacks
+(field `demo`). Tasks 7 and 9 add `gfx` and `snd`.
 
 A file with no line, a last line without a newline, a line that does not
 parse, or a file that ends where the other goes on is neither equal nor
 different: it raises Unreadable.
 
-    python3 scripts/port/lp64_equiv_streams.py sim FILE_A FILE_B
+    python3 scripts/port/lp64_equiv_streams.py sim|sim-demo FILE_A FILE_B
 
 prints `identical: N lines` (exit 0) or the first difference (exit 1); an
 unreadable file exits 2.
@@ -31,6 +38,10 @@ SUM = rf'\d+:{HEX8}'
 T_HEAD = (('n', r'\d+'), ('timer', r'-?\d+'), ('seed', r'[0-9a-f]{16}'), ('draws', r'-?\d+'),
           ('players', r'[0-4]'))
 T_TAIL = (('chrs', SUM), ('props', SUM), ('rooms', SUM))
+# Last on a T line, only while a recording replays: the recording's tick.
+DEMO = ('demo', r'\d+')
+# The fields a demo's stream leaves out: the host's pace sets them.
+DEMO_PACED = ('n', 'timer')
 PLAYER = re.compile(rf'p[0-3]={FLOATS3},{HEX8},{HEX8}')
 DETAIL = {
     'G': (('n', r'\d+'), ('slot', r'\d+'), ('chrnum', r'-?\d+'), ('action', r'\d+'), ('flags', HEX8),
@@ -86,11 +97,15 @@ def _sim_record(path: Path, number: int, text: str) -> Record:
     if kind != 'T' or len(tokens) < len(T_HEAD) + len(T_TAIL):
         raise Unreadable(f'{path}:{number}: not a simulation trace line')
     head = _fields(path, number, tokens[:len(T_HEAD)], T_HEAD)
+    demo = []
+    if tokens[-1].startswith('demo='):
+        demo = _fields(path, number, tokens[-1:], (DEMO,))
+        tokens = tokens[:-1]
     players = tokens[len(T_HEAD):-len(T_TAIL)]
     if len(players) != int(head[-1][1]) or not all(PLAYER.fullmatch(p) for p in players):
         raise Unreadable(f'{path}:{number}: players={head[-1][1]} but its player fields read {players}')
     tail = _fields(path, number, tokens[-len(T_TAIL):], T_TAIL)
-    return Record('T', int(head[0][1]), tuple(head + [tuple(p.split('=', 1)) for p in players] + tail))
+    return Record('T', int(head[0][1]), tuple(head + [tuple(p.split('=', 1)) for p in players] + tail + demo))
 
 
 def read_sim(path: Path) -> list[Record]:
@@ -120,7 +135,50 @@ def read_sim(path: Path) -> list[Record]:
     return records
 
 
-READERS = {'sim': read_sim}
+def _playback(path: Path) -> dict[int, tuple[int, Record]]:
+    """The replay's T lines of a trace by their demo tick, each with its line number, as records of
+    kind D without the paced fields."""
+    playback: dict[int, tuple[int, Record]] = {}
+    number = 0
+    for record in read_sim(path):
+        number += 1
+        fields = dict(record.fields)
+        if record.kind != 'T' or 'demo' not in fields:
+            continue
+        tick = int(fields['demo'])
+        if tick in playback:
+            raise Unreadable(f'{path}:{number}: demo={tick} again (first on line {playback[tick][0]})')
+        kept = tuple((name, value) for name, value in record.fields if name not in DEMO_PACED + ('demo',))
+        playback[tick] = (number, Record('D', tick, kept))
+    if not playback:
+        raise Unreadable(f'{path}: no line of a replay (demo=)')
+    return playback
+
+
+def read_sim_demo(path: Path) -> list[Record]:
+    """A demo's stream: its replay's records in demo-tick order."""
+    return [record for _, (_, record) in sorted(_playback(path).items())]
+
+
+def _demo_difference(path_a: Path, path_b: Path) -> Difference | None:
+    a, b = _playback(path_a), _playback(path_b)
+    for tick in sorted(a.keys() | b.keys()):
+        if tick not in a or tick not in b:
+            line = (a.get(tick) or b[tick])[0]
+            return Difference(tick, 'demo', str(tick) if tick in a else '(none)',
+                              str(tick) if tick in b else '(none)', line)
+        (line, ra), (_, rb) = a[tick], b[tick]
+        for (name, va), (nb, vb) in zip(ra.fields, rb.fields):
+            if name != nb:
+                return Difference(tick, name, f'{name}={va}', f'{nb}={vb}', line)
+            if va != vb:
+                return Difference(tick, name, va, vb, line)
+        if len(ra.fields) != len(rb.fields):
+            return Difference(tick, 'fields', str(len(ra.fields)), str(len(rb.fields)), line)
+    return None
+
+
+READERS = {'sim': read_sim, 'sim-demo': read_sim_demo}
 
 
 def first_difference(kind: str, path_a: Path, path_b: Path) -> Difference | None:
@@ -128,6 +186,8 @@ def first_difference(kind: str, path_a: Path, path_b: Path) -> Difference | None
     they hold the same records. Raises Unreadable as the module says."""
     if kind not in READERS:
         raise ValueError(f'unknown stream {kind!r}; known: {", ".join(READERS)}')
+    if kind == 'sim-demo':
+        return _demo_difference(path_a, path_b)
     a = READERS[kind](path_a)
     b = READERS[kind](path_b)
     for number, (ra, rb) in enumerate(zip(a, b), start=1):
