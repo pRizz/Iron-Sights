@@ -8,7 +8,7 @@
     python3 scripts/port/lp64_play.py traces --reference-check DIR_A DIR_B
     python3 scripts/port/lp64_play.py callers --tick T LOG EXECUTABLE
     python3 scripts/port/lp64_play.py sound DIR
-    python3 scripts/port/lp64_play.py peaks DIR...
+    python3 scripts/port/lp64_play.py peaks [--by-stage | --budget FILE] DIR...
 
 run: each case of the named sets (lp64_play_cases.py: demos, stages, stops, menus, tours,
 attract; lp64_play_input.py: input, whose cases replay a route as pad 0; lp64_play_sound.py: sound,
@@ -52,9 +52,15 @@ addr2line (lp64_play_callers.py).
 sound: each recording in DIR (its *.wav files) as `CASE: SECONDS s, peak PEAK, non-zero SHARE%`, to
 compare a run's recordings with the 32-bit reference's (lp64_play_sound.py).
 
-peaks: the largest `ge: lp64: peak` of each pool over every DIR/*.log, as `POOL: USED of SIZE bytes
-(SHARE%) in DIR/CASE`, marked past 80% of its size and with any exhaustion lines the pool printed
-(lp64_play_peaks.py).
+peaks: the largest `ge: lp64: peak` of each pool over every DIR/*.log and DIR/runK/*.log, as
+`POOL: USED of SIZE bytes (SHARE%) in DIR/CASE`, marked past 80% of its size and with any exhaustion
+lines the pool printed (lp64_play_peaks.py). --by-stage keeps them by the level whose background
+loaded since the print before (0, the front end, when none did), one line a pool, level and size:
+`POOL LEVEL SIZE PEAK DIR/CASE`, marked ` ABOVE HALF` past half its size. --budget FILE
+(scripts/port/lp64_budgets.txt, lines of that form) exits 1, naming the pool and level, when a pool,
+level and size of the logs is not in FILE, when its peak is above half its size (unless FILE's line
+ends ` withheld: REASON`, which is printed), or when it printed an exhaustion line; else it prints
+`OK: N pool and stage pairs within budget`.
 """
 import argparse
 import math
@@ -65,7 +71,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lp64_play_callers import callers  # noqa: E402
 from lp64_play_cases import VIDEO_SETS, cases_of, scale_frames, select_cases  # noqa: E402
-from lp64_play_peaks import peaks_report  # noqa: E402
+from lp64_play_peaks import budget_report, by_stage_report, peaks_report  # noqa: E402
 from lp64_play_run import (CAPTURE_VARIABLE, FOLDER_VARIABLES, FORBIDDEN_VARIABLES, LOCKSTEP_VARIABLE,  # noqa: E402
                            TOOL_VARIABLES, VIDEO_VARIABLES, Display, run_cases)
 from lp64_play_sound import sound_report  # noqa: E402
@@ -173,7 +179,9 @@ def command_sound(parser: argparse.ArgumentParser, options: argparse.Namespace) 
 
 
 def command_peaks(parser: argparse.ArgumentParser, options: argparse.Namespace) -> int:
-    return peaks_report(options.dirs)
+    if options.budget is not None:
+        return budget_report(options.budget, options.dirs)
+    return by_stage_report(options.dirs) if options.by_stage else peaks_report(options.dirs)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -215,6 +223,10 @@ def build_parser() -> argparse.ArgumentParser:
     sound = sub.add_parser('sound', help='the length, peak and non-zero share of each recording in a run folder')
     sound.add_argument('dir', type=Path, metavar='DIR')
     peaks = sub.add_parser('peaks', help='the largest peak of each pool over run folders')
+    stages = peaks.add_mutually_exclusive_group()
+    stages.add_argument('--by-stage', action='store_true', help='each pool\'s peak by level and size')
+    stages.add_argument('--budget', type=Path, metavar='FILE',
+                        help='fail on a pool, level and size not in FILE or past half its size')
     peaks.add_argument('dirs', type=Path, nargs='+', metavar='DIR')
     return parser
 
