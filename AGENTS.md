@@ -391,6 +391,17 @@ pass its isolated executable rather than rebuilding an active player binary.
   names the call where two digests part.
   The pinned ticks of `walk` and `dam-twice` are measured again through `stepped(NAME)` when a front-end or watch change
   moves them.
+  `scripts/port/lp64_equiv_pictures.py` (Task 8) checks drawn pixels
+  beside the digest: `shots DIR_A DIR_B` compares each case's screenshot
+  of two `run --video --draw --shots TICK` folders, `gallery --rom ROM
+  --output DIR EXECUTABLE` runs the hand gallery's capture mode offscreen
+  (its fixture and variables read from `hand_gallery.py`, imported, never
+  edited, and `generate` never called) and writes the 216 captures' pixel
+  hashes to `DIR/gallery.txt`, and `gallery-compare A B` counts those that
+  differ. Pixels that differ under equal digests are the rasterizer's,
+  recorded with their size; different digests are a defect or an
+  explained difference. Its screenshots and hash lists are ROM-derived
+  and stay under `build/lp64/`.
 - Storage for a record or a display list is sized by `sizeof` of what it
   holds, never by a literal byte count or by filler members, and a member
   that overlays another record by position is pinned at both widths in the
