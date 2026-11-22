@@ -11,6 +11,7 @@
 #include "port_lp64.h" /* LP64-003: portLp64RequireConverter */
 #include <inttypes.h> /* PRIxPTR: texLoad's web traces print the whole slot */
 #include <stdio.h> /* printf: the texture pool warning */
+#include <string.h> /* memset: texInflateNonZlib's scratch at 64 bits */
 #endif
 
 
@@ -934,6 +935,15 @@ s32 texInflateNonZlib(u8 *src, u8 *dst, s32 arg2, s32 forcenumimages, struct tex
     u8 *start;
     u8 *end;
     s32 writetocache = FALSE;
+
+#if IS_64_BIT
+    /* LP64-006: at an odd width the 4-bit formats pack each row's last pixel
+     * with the value after it (texChannelsToPixels, texInflateLookupFromBuffer),
+     * which for the image's last row is one past what the decoder wrote: the
+     * stack's leftovers, which change with the call depth and the host. A 64-bit
+     * build reads zero there; the 32-bit program keeps its leftovers. */
+    memset(scratch, 0, sizeof(scratch));
+#endif
 
     texSetBitstring(src);
 
