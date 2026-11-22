@@ -9,6 +9,7 @@ import unittest
 from unittest.mock import patch
 
 import audit_buffers as audit
+import lp64_play_run
 
 
 class AuditTests(unittest.TestCase):
@@ -114,6 +115,87 @@ class AuditTests(unittest.TestCase):
                         patch.object(audit.subprocess, 'run', side_effect=run), redirect_stdout(StringIO()):
                     status = audit.mission_smoke(executable, rom, folder/'results.json', 900, 1, leaks=True)
                 self.assertEqual(status, 0 if expected else 1)
+
+
+VIDEO_LOG = ('GE_STAGE direct launch: dam\nge: video: window + GL context up\n'
+             'ge: frame limit reached: frames=1800 gfxtasks={pictures}\n')
+
+
+class VideoSmokeTests(unittest.TestCase):
+    """`--mission-smoke ... --video` runs the missions on a GE_VIDEO executable offscreen, as
+    lp64_play.py run --video runs its cases (LP64-006 Task 10)."""
+
+    def video_smoke(self, pictures):
+        """Runs the one-mission smoke through main() with --video on a child that draws PICTURES;
+        returns the status, the mission's record and the child's environment, folder and timeout."""
+        seen = {}
+
+        def run(args, cwd, env, stdout, timeout, **kwargs):
+            seen.update(env=env, ini=(Path(cwd)/'midas.ini').read_text(), folder=Path(cwd), timeout=timeout)
+            stdout.write(VIDEO_LOG.format(pictures=pictures))
+            return type('Result', (), {'returncode': 0})()
+
+        with tempfile.TemporaryDirectory() as temporary:
+            folder = Path(temporary)
+            (folder/'video').write_bytes(b'test')
+            (folder/'rom').write_bytes(b'test')
+            argv = ['audit_buffers.py', '--mission-smoke', str(folder/'video'), '--rom', str(folder/'rom'),
+                    '--video', '--frames', '1800', '--jobs', '1', '--output', str(folder/'results.json')]
+            with patch.object(audit, 'MISSIONS', ('dam',)), patch.object(audit.subprocess, 'run', side_effect=run), \
+                    patch('sys.argv', argv), redirect_stdout(StringIO()):
+                status = audit.main()
+            record = json.loads((folder/'results.json').read_text())[0]
+        return status, record, seen
+
+    def test_video_smoke_sets_offscreen_variables(self):
+        # Arrange
+        expected = lp64_play_run.VIDEO_VARIABLES
+
+        # Act
+        _, _, seen = self.video_smoke(pictures=1800)
+
+        # Assert
+        self.assertEqual({name: seen['env'][name] for name in expected}, expected)
+        self.assertEqual((Path(seen['env']['HOME']).parent, Path(seen['env']['GE_ICON_CACHE_DIR']).parent),
+                         (seen['folder'], seen['folder']))
+        self.assertEqual(seen['ini'], lp64_play_run.WINDOWED_INI)
+
+    def test_video_smoke_limits_each_mission_by_its_frames(self):
+        # Act
+        _, _, seen = self.video_smoke(pictures=1800)
+
+        # Assert
+        self.assertEqual(seen['timeout'], lp64_play_run.timeout_seconds(1800))
+
+    def test_video_smoke_fails_under_thirty_pictures(self):
+        # Act
+        results = [self.video_smoke(pictures)[:2] for pictures in (29, 30)]
+
+        # Assert
+        self.assertEqual([(status, record['passed']) for status, record in results], [(1, False), (0, True)])
+
+    def test_video_smoke_fails_a_mission_past_its_limit(self):
+        # Arrange: the child is still drawing when its wall-clock limit runs out
+        def run(args, cwd, env, stdout, timeout, **kwargs):
+            stdout.write('GE_STAGE direct launch: dam\nge: video: window + GL context up\n')
+            raise audit.subprocess.TimeoutExpired(args, timeout)
+
+        with tempfile.TemporaryDirectory() as temporary:
+            folder = Path(temporary)
+            (folder/'video').write_bytes(b'test')
+            (folder/'rom').write_bytes(b'test')
+            printed = StringIO()
+
+            # Act
+            with patch.object(audit, 'MISSIONS', ('dam',)), patch.object(audit.subprocess, 'run', side_effect=run), \
+                    redirect_stdout(printed):
+                status = audit.mission_smoke(folder/'video', folder/'rom', folder/'results.json', 1800, 1,
+                                             video=True)
+            record = json.loads((folder/'results.json').read_text())[0]
+
+        # Assert
+        self.assertEqual((status, record['passed'], record['exit']), (1, False, None))
+        self.assertIn('dam: FAIL (timed out after 270 s)', printed.getvalue())
 
 
 CLEAN_LOG = 'GE_STAGE direct launch: dam\nframe limit reached: frames=900\n'

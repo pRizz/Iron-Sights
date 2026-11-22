@@ -3,6 +3,7 @@
 Run from any directory. Reports stay local under build_win/buffer-audit. Supply
 Cppcheck XML to summarize the separately executed compiler-configuration scan.
 --leaks turns on LeakSanitizer with the checked-in lsan_suppressions.txt.
+--video runs the mission smoke on a GE_VIDEO executable offscreen, as lp64_play.py run --video does.
 """
 import argparse
 from collections import Counter
@@ -46,6 +47,13 @@ _run_copies = importlib.util.module_from_spec(_run_copies_spec)
 _run_copies_spec.loader.exec_module(_run_copies)
 SharedExecutable = _run_copies.SharedExecutable
 REFUSAL_MARKERS = lp64_boot.REFUSAL_MARKERS
+# The smoke with video takes the play runs' offscreen variables, run folder, wall-clock limit and
+# picture rule (LP64-006 Task 10), imported so the two tools cannot drift apart. They sit beside
+# this file, the first entry of sys.path both when it runs and when lp64_oracle.py loads it.
+import lp64_play_run
+from lp64_play_cases import Case
+from lp64_play_judge import VIDEO_UP, pictures_drawn
+VIDEO_DISPLAY = lp64_play_run.Display(video=True)
 
 
 def sanitizer_env(leaks):
@@ -98,9 +106,23 @@ def checker_report(path):
             'severities': dict(Counter(e['severity'] for e in records))}
 
 
-def mission_smoke(executable, rom, output, frames, jobs, leaks=False, fixed_tick=False):
-    """Headless-only samples; every child owns its executable/runtime directory. FIXED_TICK runs one
-    game field a frame with the 64-bit census lines, for lp64_census.py."""
+def video_problem(text):
+    """Why the log TEXT of a mission run with video fails the video rule (the GL line and at least
+    lp64_play_cases.Case's 30 pictures), or None when it passes."""
+    if not VIDEO_UP.search(text):
+        return 'missing line: ge: video: window + GL context up'
+    pictures = pictures_drawn(text)
+    if pictures is None or pictures < Case.pictures:
+        return f'{pictures or 0} pictures drawn, expected at least {Case.pictures}'
+    return None
+
+
+def mission_smoke(executable, rom, output, frames, jobs, leaks=False, fixed_tick=False, video=False):
+    """Every child owns its executable/runtime directory. FIXED_TICK runs one game field a frame
+    with the 64-bit census lines, for lp64_census.py. VIDEO runs a GE_VIDEO executable offscreen with
+    lp64_play_run's variables, HOME, icon cache and windowed midas.ini in the child's folder, limited
+    to lp64_play_run.timeout_seconds(frames) instead of the headless 120 s, and requires the video
+    rule (video_problem)."""
     executable, rom = executable.resolve(strict=True), rom.resolve(strict=True)
     output.parent.mkdir(parents=True, exist_ok=True)
 
@@ -118,19 +140,36 @@ def mission_smoke(executable, rom, output, frames, jobs, leaks=False, fixed_tick
                 # census lines are a 64-bit build's (a 32-bit build prints none). Without the flag a
                 # slow or long frame advances several fields, so a run covers more game time.
                 env.update(GE_FIXEDTICK='1', GE_LP64_CENSUS='1')
+            timeout = 300 if leaks else 120
+            if video:
+                env.update(lp64_play_run.VIDEO_VARIABLES)
+                env = lp64_play_run.folder_environment(env, folder, VIDEO_DISPLAY)
+                timeout = lp64_play_run.timeout_seconds(frames)
             log_path = output.parent / (stage + '.log')
+            status = None
             with log_path.open('w', encoding='utf-8') as log:
-                result = subprocess.run([str(child)], cwd=folder, env=env, stdout=log,
-                                        stderr=subprocess.STDOUT, timeout=300 if leaks else 120)
+                try:
+                    status = subprocess.run([str(child)], cwd=folder, env=env, stdout=log,
+                                            stderr=subprocess.STDOUT, timeout=timeout).returncode
+                except subprocess.TimeoutExpired:
+                    # A headless mission still stops the smoke at its limit, as before; one with video
+                    # fails alone, naming its limit, and the other missions carry on.
+                    if not video:
+                        raise
             text = log_path.read_text(errors='replace')
             refusal = next(iter(lp64_boot.failing_lp64_lines(text.splitlines())), None)
-            passed = (result.returncode == 0 and 'GE_STAGE direct launch:' in text
+            maybe_video_problem = video_problem(text) if video else None
+            passed = (status == 0 and 'GE_STAGE direct launch:' in text
                       and f'frame limit reached: frames={frames}' in text
                       and not any(error in text for error in SANITIZER_ERRORS)
-                      and refusal is None)
-            verdict = ': PASS' if passed else ': FAIL' + (f' ({refusal})' if refusal else '')
+                      and refusal is None and maybe_video_problem is None)
+            reason = (f'timed out after {timeout:.0f} s' if status is None else None) or refusal or maybe_video_problem
+            verdict = ': PASS' if passed else ': FAIL' + (f' ({reason})' if reason else '')
             print(stage + verdict, flush=True)
-            return dict(stage=stage, exit=result.returncode, passed=passed, refusal=refusal, log=str(log_path))
+            record = dict(stage=stage, exit=status, passed=passed, refusal=refusal, log=str(log_path))
+            if video:
+                record.update(pictures=pictures_drawn(text), video_problem=maybe_video_problem)
+            return record
 
     # One copy made before any mission starts, linked into each mission's folder (run_copies.py): a copy
     # made per mission inside the pool raced with the other missions' starts (Text file busy).
@@ -152,12 +191,14 @@ def main():
     parser.add_argument('--fixed-tick', action='store_true',
                         help='Mission smoke at one game field a frame with the 64-bit census lines '
                              '(GE_FIXEDTICK=1, GE_LP64_CENSUS=1), for lp64_census.py')
+    parser.add_argument('--video', action='store_true',
+                        help='Mission smoke on a GE_VIDEO executable, offscreen as lp64_play.py run --video')
     options = parser.parse_args()
     if options.mission_smoke:
         if not options.rom or not 600 <= options.frames <= 36000:
             parser.error('--mission-smoke needs --rom and 600..36000 frames')
         return mission_smoke(options.mission_smoke, options.rom, options.output,
-                             options.frames, options.jobs, options.leaks, options.fixed_tick)
+                             options.frames, options.jobs, options.leaks, options.fixed_tick, options.video)
     names = subprocess.check_output(['git', '-C', str(ROOT), 'ls-files', '-z']).decode().split('\0')
     sources = [source_record(name, (ROOT/name).read_bytes()) for name in names
                if Path(name).suffix.lower() in EXTENSIONS and (ROOT/name).is_file()]

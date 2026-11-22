@@ -259,7 +259,16 @@ pass its isolated executable rather than rebuilding an active player binary.
   0 differ` with N above zero. `scripts/port/lp64_census.py compare DIR32
   DIR64` compares what the missions load at both widths, from the folders of
   a 32-bit and a 64-bit `audit_buffers.py --mission-smoke ... --frames 1800
-  --fixed-tick` run. `scripts/port/lp64_boot.py --expect-run [--frames N]` is
+  --fixed-tick` run. `audit_buffers.py --mission-smoke EXECUTABLE --rom
+  /rom/baserom.u.z64 --video --frames 1800 --jobs 4 --output
+  build/lp64/smoke/NAME/missions.json` (LP64-006 Task 10) runs the 20 missions
+  on a `GE_VIDEO` executable offscreen with what `lp64_play.py run --video`
+  gives a case (`lp64_play_run.py`'s variables, a `HOME` and icon cache in each
+  folder and its windowed `midas.ini`, imported, never copied), limits each to
+  `lp64_play_run.timeout_seconds(frames)` instead of the headless 120 s, and
+  passes a mission only with `ge: video: window + GL context up` and 30
+  pictures or more; on the Mac always pass `--output` under `build/lp64/`
+  (the default is `build_win/buffer-audit`). `scripts/port/lp64_boot.py --expect-run [--frames N]` is
   the normal boot check: it passes a 64-bit executable that runs N frames
   (600 by default), logs `ge: frame limit reached: frames=N` and exits 0;
   `--expect-stop NAME` remains for the test hook below. A 64-bit run, in the
