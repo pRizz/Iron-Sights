@@ -77,7 +77,19 @@ def package_steamdeck(appdir, output):
     return archive
 
 
+def refuse_comparison_build(build):
+    """Raise when `build` was configured with -DGE_COMPARE=ON: a comparison build is never shipped."""
+    cache = build / "CMakeCache.txt"
+    if not cache.is_file():
+        return
+    for line in cache.read_text(encoding="utf-8", errors="replace").splitlines():
+        name, _, value = line.partition("=")
+        if name.split(":")[0] == "GE_COMPARE" and value.strip().upper() in ("ON", "TRUE", "YES", "Y", "1"):
+            raise ValueError(f"{build} is a comparison build (GE_COMPARE=ON, LP64-006): it is never shipped")
+
+
 def package(build, output):
+    refuse_comparison_build(build)
     output.mkdir(parents=True, exist_ok=True)
     appdir = output / "Iron-Sights-linux-i686.AppDir"
     if appdir.exists():

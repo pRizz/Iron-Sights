@@ -3,7 +3,12 @@
 # the host can build: lockstep (test_lockstep.c, Task 2) includes
 # libultra_shim.c and port_lockstep.c and links the real pump, pcsched.c,
 # built without GE_VIDEO as a headless build is; the simulation trace
-# (test_simtrace.c, Task 3) includes port_simtrace.c with fabricated game state.
+# (test_simtrace.c, Task 3) includes port_simtrace.c with fabricated game state;
+# the comparison build's tanf, atanf and cosf (test_compare_math.c, Task 4) link
+# port_compare_math.c, as does the maths sweep (lp64_libm_sweep.c), which must
+# print one hash for each of its six functions. -fno-builtin keeps the compiler
+# from folding a call; -ffp-contract=off is the comparison build's own flag
+# for port_compare_math.c (CMakeLists.txt).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source scripts/port/harness_widths.sh
@@ -24,5 +29,20 @@ for width in $widths; do
     "$work/lockstep-$width"
     "$compiler" "${flags[@]}" scripts/port/test_simtrace.c -lm -o "$work/simtrace-$width"
     "$work/simtrace-$width"
+    math_flags=("${flags[@]}" -fno-builtin -ffp-contract=off)
+    "$compiler" "${math_flags[@]}" scripts/port/test_compare_math.c port/src/port_compare_math.c -lm \
+        -o "$work/compare-math-$width"
+    "$work/compare-math-$width"
+    "$compiler" "${math_flags[@]}" scripts/port/lp64_libm_sweep.c port/src/port_compare_math.c -lm \
+        -o "$work/sweep-$width"
+    "$work/sweep-$width" >"$work/sweep-$width.txt"
+    sweep_lines=$(awk '/^(sinf|cosf|tanf|atanf|expf|powf) [0-9a-f]+$/ && length($2) == 8 { n++ } END { print n + 0 }' \
+        "$work/sweep-$width.txt")
+    if [[ $sweep_lines != 6 ]]; then
+        cat "$work/sweep-$width.txt" >&2
+        echo "test_lp64_compare: FAIL ($width-bit): the sweep printed $sweep_lines of its six hashes" >&2
+        exit 1
+    fi
+    echo "lp64_libm_sweep ($width-bit):" $(tr '\n' ' ' <"$work/sweep-$width.txt")
 done
 echo "test_lp64_compare: PASS"

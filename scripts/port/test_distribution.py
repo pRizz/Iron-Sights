@@ -20,6 +20,7 @@ def module(name):
 
 build_info=module("build_info")
 packager=module("package_windows")
+linux_packager=module("package_linux")
 
 
 class Distribution(unittest.TestCase):
@@ -88,6 +89,29 @@ class Distribution(unittest.TestCase):
                 self.assertNotIn("midas.ini",names);self.assertNotIn("previous.exe",names)
             previous=path.read_bytes();packager.package(build,out,sdl_license=license)
             self.assertEqual(previous,path.read_bytes())
+
+    def test_packagers_refuse_a_comparison_build(self):
+        # Arrange
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);build=root/"build";out=root/"dist"
+            build.mkdir()
+            (build/"CMakeCache.txt").write_text("GE_COMPARE:BOOL=ON\nGE_VIDEO:BOOL=ON\n")
+            license=root/"SDL-LICENSE";license.write_text("license fixture")
+            # Act, Assert
+            with self.assertRaisesRegex(ValueError,"comparison build"):
+                packager.package(build,out,sdl_license=license)
+            with self.assertRaisesRegex(ValueError,"comparison build"):
+                linux_packager.package(build,out)
+            self.assertFalse(out.exists())
+
+    def test_packagers_accept_a_tree_without_the_comparison_option(self):
+        # Arrange
+        with tempfile.TemporaryDirectory() as folder:
+            build=Path(folder)
+            (build/"CMakeCache.txt").write_text("GE_COMPARE:BOOL=OFF\nGE_COMPARE_LIBM:BOOL=OFF\n")
+            # Act, Assert (no exception)
+            packager.refuse_comparison_build(build)
+            linux_packager.refuse_comparison_build(build)
 
     @unittest.skipUnless(shutil.which("gcc"),"Native cache codec test needs a C compiler")
     def test_native_cache_validation(self):

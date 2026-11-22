@@ -870,6 +870,12 @@ int main(int argc, char **argv)
 
     printf("ge007 pc port: booting (GE_FRAMES=n limits the run)\n");
     fflush(stdout);
+#ifdef GE_COMPARE
+    { /* LP64-006: port_compare_math.c, `ge: compare: on` (never shipped) */
+        extern void portCompareLogBuild(void);
+        portCompareLogBuild();
+    }
+#endif
 
 #if defined(__EMSCRIPTEN__) && defined(GE_VIDEO)
     { extern void portWebStartupProgress(const char *, unsigned, unsigned);

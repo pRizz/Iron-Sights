@@ -338,6 +338,13 @@ pass its isolated executable rather than rebuilding an active player binary.
   peak` share over the folders' logs with the case that had it, marked past
   80 percent of the pool's size and with any exhaustion lines (decision 10 of
   the LP64-005 plan raises such a pool at 64 bits to twice its peak).
+- `-DGE_COMPARE=ON` (LP64-006) configures a comparison build: the in-tree
+  `tanf`, `atanf` and `cosf` (`port/src/port_compare_math.c`, alike on every
+  host) replace libm's, and the play harness (`PORT_PLAY_HARNESS`) is on at
+  either width, a 32-bit video build included; `-DGE_COMPARE_LIBM=ON` keeps
+  libm's maths. It is never shipped: `package_linux.py` and
+  `package_windows.py` refuse it. Its trees are `build/lp64/cmp-i686`,
+  `cmp-x64`, `cmp-a64` and their `-video` twins.
 - Storage for a record or a display list is sized by `sizeof` of what it
   holds, never by a literal byte count or by filler members, and a member
   that overlays another record by position is pinned at both widths in the

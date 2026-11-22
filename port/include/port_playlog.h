@@ -56,9 +56,10 @@
  *   stderr and ignored.
  *
  * PORT_PLAY_HARNESS is 1 in every build the play sets run (headless at
- * either width, and a 64-bit build with video) and 0 in a 32-bit build with
- * video, the shipped kind: there every call expands to nothing and the
- * harness's other addition (GE_MENU=briefing, front.c) is not compiled, so a
+ * either width, and a 64-bit build with video) and in every comparison build
+ * (GE_COMPARE, LP64-006 Task 4, a 32-bit one with video included), and 0 in
+ * a 32-bit build with video, the shipped kind: there every call expands to
+ * nothing and the harness's other addition (GE_MENU=briefing, front.c) is not compiled, so a
  * shipped executable is unchanged.
  */
 #ifndef PORT_PLAYLOG_H
@@ -66,7 +67,7 @@
 
 #include <PR/ultratypes.h>
 
-#if !defined(GE_VIDEO) || __SIZEOF_POINTER__ == 8
+#if !defined(GE_VIDEO) || __SIZEOF_POINTER__ == 8 || defined(GE_COMPARE)
 #define PORT_PLAY_HARNESS 1
 #define PORT_PLAY_MOVED_UNITS 100
 #define PORT_PLAY_WATCH_STEADY_DRAWS 30

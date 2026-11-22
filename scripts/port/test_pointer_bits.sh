@@ -258,4 +258,50 @@ command_has "${other32[1]}" -w || fail "oracle port_lp64.c lost -w"
 mapfile -t adapter32 < <(entry_command oracle port/crash/reporting_linux.c)
 command_has "${adapter32[1]}" -w || fail "oracle port/crash/reporting_linux.c lacks -w"
 echo "ok 7e: converter sources make incompatible pointer types errors at both widths; the oracle build keeps -w elsewhere, the crash adapter included"
+
+# 8. The comparison build (LP64-006 Task 4): -DGE_COMPARE=ON defines GE_COMPARE
+# and compiles and links port_compare_math.c (the in-tree tanf, atanf and cosf); no
+# other build does either. In a 32-bit video comparison tree PORT_PLAY_HARNESS
+# is 1 (port_playlog.h), so lockstep and the simulation trace are compiled,
+# while the default 32-bit video build, the shipped kind, leaves them out.
+links_object() { grep -qF -- "port/src/$2.o" "$(link_file "$1")"; }
+expect_configure compare -DGE_COMPARE=ON
+require_link compare
+has_flag compare '-DGE_COMPARE' || fail "compare tree lacks -DGE_COMPARE"
+compiles compare port_compare_math.c || fail "compare tree does not compile port_compare_math.c"
+links_object compare port_compare_math.c || fail "compare tree does not link port_compare_math.c.o"
+echo "ok 8: compare tree defines GE_COMPARE and links port_compare_math.c"
+if has_flag default '-DGE_COMPARE'; then
+    fail "default tree defines GE_COMPARE"
+fi
+if compiles default port_compare_math.c || links_object default port_compare_math.c; then
+    fail "default tree compiles or links port_compare_math.c"
+fi
+echo "ok 8b: default tree does neither"
+expect_failure comparelibm "GE_COMPARE_LIBM=ON needs GE_COMPARE=ON" -DGE_COMPARE_LIBM=ON
+echo "ok 8c: GE_COMPARE_LIBM without GE_COMPARE is refused"
+expect_configure video32 -DGE_HEADLESS=OFF -DGE_VIDEO=ON
+for source in port_playlog.c port_lockstep.c port_simtrace.c port_compare_math.c; do
+    if compiles video32 "$source"; then
+        fail "default 32-bit video tree compiles $source"
+    fi
+done
+expect_configure compare32video -DGE_HEADLESS=OFF -DGE_VIDEO=ON -DGE_COMPARE=ON
+for source in port_playlog.c port_lockstep.c port_simtrace.c port_compare_math.c; do
+    compiles compare32video "$source" || fail "32-bit video compare tree does not compile $source"
+done
+if cc -m32 -x c -fsyntax-only /dev/null >/dev/null 2>&1; then
+    mapfile -t c_cmd < <(entry_command compare32video port/src/port_simtrace.c)
+    [[ ${#c_cmd[@]} -eq 2 ]] || fail "compare32video: no port_simtrace.c compile command recorded"
+    compile_canary c harness32 '#include "port_playlog.h"
+#if !PORT_PLAY_HARNESS
+#error PORT_PLAY_HARNESS is 0
+#endif' || {
+        cat "$work/canary-c-harness32.log" >&2
+        fail "a 32-bit video compare tree has PORT_PLAY_HARNESS 0"
+    }
+    echo "ok 8d: a 32-bit video compare tree has PORT_PLAY_HARNESS 1"
+else
+    echo "skip 8d: cc cannot compile 32-bit code here (the 32-bit video compare tree's sources are listed: ok)"
+fi
 echo "Pointer-bits configure checks passed"

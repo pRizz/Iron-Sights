@@ -31,6 +31,17 @@ endif()
 # validated where GE_HEADLESS is known, below.
 option(GE_LP64_ORACLE "32-bit headless test build that checks the 64-bit ROM data converters against the in-place conversions" OFF)
 
+# The comparison build (LP64-006 Task 4, FORK-089): at either width, headless or
+# with video, it links port_compare_math.c's tanf, atanf and cosf in place of
+# libm's, so the i686, x86_64 and aarch64 builds compute them alike, and turns on the
+# play harness (PORT_PLAY_HARNESS, port_playlog.h) in a 32-bit video build.
+# Never a shipped build: package_linux.py and package_windows.py refuse it.
+option(GE_COMPARE "LP64-006 comparison build: in-tree tanf/atanf/cosf and the play harness at either width. Never a shipped build" OFF)
+option(GE_COMPARE_LIBM "With GE_COMPARE: keep libm's tanf, atanf and cosf (the twin that shows what the C library changes)" OFF)
+if(GE_COMPARE_LIBM AND NOT GE_COMPARE)
+    message(FATAL_ERROR "GE_COMPARE_LIBM=ON needs GE_COMPARE=ON")
+endif()
+
 set(CMAKE_C_STANDARD 11)
 
 # No warnings in the 32-bit and web builds; the 64-bit branch replaces this.
@@ -407,6 +418,13 @@ endif()
 if(NOT GE_LP64_ORACLE)
     list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_lp64_oracle.c)
 endif()
+# The comparison build's maths: only in a GE_COMPARE build. Its arithmetic must
+# not fuse into multiply-adds at either width (64-bit builds already pass this).
+if(GE_COMPARE)
+    set_property(SOURCE ${CMAKE_SOURCE_DIR}/port/src/port_compare_math.c APPEND PROPERTY COMPILE_OPTIONS -ffp-contract=off)
+else()
+    list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_compare_math.c)
+endif()
 # Suspend images record 32-bit addresses: 64-bit builds report suspend points
 # unavailable (port_state_unavailable.c) instead of compiling the serializer.
 if(GE_POINTER_BITS EQUAL 64)
@@ -507,6 +525,13 @@ option(GE_VIDEO "Build the fast3d renderer (SDL2 + OpenGL)" OFF)
 option(GE_UNLOCK_ALL "Unlock all missions and difficulties (testing)" OFF)
 if(GE_UNLOCK_ALL)
     add_compile_definitions(GE_UNLOCK_ALL=1)
+endif()
+# GE_COMPARE (declared at the top): the comparison build's defines.
+if(GE_COMPARE)
+    add_compile_definitions(GE_COMPARE=1)
+    if(GE_COMPARE_LIBM)
+        add_compile_definitions(GE_COMPARE_LIBM=1)
+    endif()
 endif()
 
 # By default the exe carries none of Rare's data and exits without the user's ROM.
@@ -612,8 +637,9 @@ if(GE_VIDEO)
     # (port_lockstep.h, LP64-006 Task 2) and the simulation trace
     # (port_simtrace.h, Task 3) are empty in a 32-bit build with video, the
     # shipped kind; like port_lp64.c, an empty object would add a compiler
-    # ident to the Windows executable's .rdata.
-    if(NOT GE_POINTER_BITS EQUAL 64)
+    # ident to the Windows executable's .rdata. A comparison build
+    # (GE_COMPARE) keeps them: there PORT_PLAY_HARNESS is 1 at either width.
+    if(NOT GE_POINTER_BITS EQUAL 64 AND NOT GE_COMPARE)
         list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_playlog.c
             ${CMAKE_SOURCE_DIR}/port/src/port_lockstep.c
             ${CMAKE_SOURCE_DIR}/port/src/port_simtrace.c)
