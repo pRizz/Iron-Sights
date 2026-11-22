@@ -280,14 +280,20 @@ fi
 echo "ok 8b: default tree does neither"
 expect_failure comparelibm "GE_COMPARE_LIBM=ON needs GE_COMPARE=ON" -DGE_COMPARE_LIBM=ON
 echo "ok 8c: GE_COMPARE_LIBM without GE_COMPARE is refused"
+# The picture digest (port_gfx_digest.cpp, Task 7) needs both GE_COMPARE and GE_VIDEO.
+for tree in compare bits64video; do
+    if compiles "$tree" port_gfx_digest.cpp; then
+        fail "$tree tree compiles port_gfx_digest.cpp"
+    fi
+done
 expect_configure video32 -DGE_HEADLESS=OFF -DGE_VIDEO=ON
-for source in port_playlog.c port_lockstep.c port_simtrace.c port_compare_math.c; do
+for source in port_playlog.c port_lockstep.c port_simtrace.c port_compare_math.c port_gfx_digest.cpp; do
     if compiles video32 "$source"; then
         fail "default 32-bit video tree compiles $source"
     fi
 done
 expect_configure compare32video -DGE_HEADLESS=OFF -DGE_VIDEO=ON -DGE_COMPARE=ON
-for source in port_playlog.c port_lockstep.c port_simtrace.c port_compare_math.c; do
+for source in port_playlog.c port_lockstep.c port_simtrace.c port_compare_math.c port_gfx_digest.cpp; do
     compiles compare32video "$source" || fail "32-bit video compare tree does not compile $source"
 done
 if cc -m32 -x c -fsyntax-only /dev/null >/dev/null 2>&1; then

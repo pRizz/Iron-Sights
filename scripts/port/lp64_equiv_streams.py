@@ -11,13 +11,22 @@ recording's tick (Task 5).
 and compared on every field but `n` and `timer`, which a paced run's host sets.
 A trace with no such line is unreadable, and a K repeated in one file cannot be
 keyed. Playbacks of unequal length differ at the first K one of them lacks
-(field `demo`). Tasks 7 and 9 add `gfx` and `snd`.
+(field `demo`).
+
+`gfx` (Task 7) is the picture digest port/src/port_gfx_digest.cpp writes with
+GE_GFXDIGEST (port/include/port_gfx_digest.h has its format): an `F` line a
+frame, and with GE_GFXDIGEST_DETAIL a `C` line a call before the F line of its
+frame. A difference names the frame (an F line's n) and the field (`C.` before
+a call line's). `gfx-demo` is a demo's picture stream as `sim-demo` is its
+simulation's: the F lines that carry `demo=`, keyed by K and compared on every
+field but `n` and `tick`. Measured on dam1 (cmp-a64-video, two paced runs):
+one F line for each K. Task 9 adds `snd`.
 
 A file with no line, a last line without a newline, a line that does not
 parse, or a file that ends where the other goes on is neither equal nor
 different: it raises Unreadable.
 
-    python3 scripts/port/lp64_equiv_streams.py sim|sim-demo FILE_A FILE_B
+    python3 scripts/port/lp64_equiv_streams.py sim|sim-demo|gfx|gfx-demo FILE_A FILE_B
 
 prints `identical: N lines` (exit 0) or the first difference (exit 1); an
 unreadable file exits 2.
@@ -43,6 +52,15 @@ DEMO = ('demo', r'\d+')
 # The fields a demo's stream leaves out: the host's pace sets them.
 DEMO_PACED = ('n', 'timer')
 PLAYER = re.compile(rf'p[0-3]={FLOATS3},{HEX8},{HEX8}')
+# A picture digest's frame line and call line.
+F_FIELDS = (('n', r'\d+'), ('tick', r'-?\d+'), ('draws', r'\d+'), ('tris', r'\d+'), ('vtx', HEX8),
+            ('tex', SUM), ('state', HEX8), ('post', HEX8))
+C_FIELDS = (('n', r'\d+'), ('k', r'\d+'), ('entry', r'[a-z0-9_]+'), ('part', r'vtx|tex|state|post|none'),
+            ('hash', HEX8))
+# The fields a demo's picture stream leaves out: the host's pace sets them.
+GFX_PACED = ('n', 'tick')
+# The record kinds a stream counts by; others (detail) carry the count of the one they belong to.
+MAIN_KINDS = ('T', 'F')
 DETAIL = {
     'G': (('n', r'\d+'), ('slot', r'\d+'), ('chrnum', r'-?\d+'), ('action', r'\d+'), ('flags', HEX8),
           ('pos', FLOATS3), ('damage', HEX8)),
@@ -108,9 +126,8 @@ def _sim_record(path: Path, number: int, text: str) -> Record:
     return Record('T', int(head[0][1]), tuple(head + [tuple(p.split('=', 1)) for p in players] + tail + demo))
 
 
-def read_sim(path: Path) -> list[Record]:
-    """Every record of a simulation trace, checked: T lines count from 1 and
-    each detail line belongs to the T line before it."""
+def _lines(path: Path) -> list[str]:
+    """A stream file's lines, raising Unreadable for a missing, empty, torn or non-ASCII file."""
     try:
         data = Path(path).read_bytes()
     except OSError as error:
@@ -123,9 +140,15 @@ def read_sim(path: Path) -> list[Record]:
         lines = data.decode('ascii').split('\n')[:-1]
     except UnicodeDecodeError as error:
         raise Unreadable(f'{path}: not ASCII') from error
+    return lines
+
+
+def read_sim(path: Path) -> list[Record]:
+    """Every record of a simulation trace, checked: T lines count from 1 and
+    each detail line belongs to the T line before it."""
     records = []
     ticks = 0
-    for number, text in enumerate(lines, start=1):
+    for number, text in enumerate(_lines(path), start=1):
         record = _sim_record(Path(path), number, text)
         if record.kind == 'T':
             ticks += 1
@@ -135,20 +158,55 @@ def read_sim(path: Path) -> list[Record]:
     return records
 
 
-def _playback(path: Path) -> dict[int, tuple[int, Record]]:
-    """The replay's T lines of a trace by their demo tick, each with its line number, as records of
-    kind D without the paced fields."""
+def _gfx_record(path: Path, number: int, text: str) -> Record:
+    kind, *tokens = text.split(' ')
+    if kind == 'C':
+        fields = _fields(path, number, tokens, C_FIELDS)
+        return Record('C', int(fields[0][1]), tuple(fields))
+    if kind != 'F':
+        raise Unreadable(f'{path}:{number}: not a picture digest line')
+    demo = []
+    if tokens and tokens[-1].startswith('demo='):
+        demo = _fields(path, number, tokens[-1:], (DEMO,))
+        tokens = tokens[:-1]
+    fields = _fields(path, number, tokens, F_FIELDS)
+    return Record('F', int(fields[0][1]), tuple(fields + demo))
+
+
+def read_gfx(path: Path) -> list[Record]:
+    """Every record of a picture digest, checked: F lines count from 1 and each
+    call line belongs to the F line after it."""
+    records = []
+    frames = 0
+    for number, text in enumerate(_lines(path), start=1):
+        record = _gfx_record(Path(path), number, text)
+        if record.tick != frames + 1:
+            raise Unreadable(f'{path}:{number}: n={record.tick} after {frames} F lines')
+        frames += record.kind == 'F'
+        records.append(record)
+    return records
+
+
+# Each demo kind: the reader of its file, the kind of line a replay marks and the fields its host's
+# pace sets.
+DEMO_KINDS = {'sim-demo': (read_sim, 'T', DEMO_PACED), 'gfx-demo': (read_gfx, 'F', GFX_PACED)}
+
+
+def _playback(path: Path, kind: str = 'sim-demo') -> dict[int, tuple[int, Record]]:
+    """The replay's lines of a demo stream of KIND by their demo tick, each with its line number, as
+    records of kind D without the paced fields."""
+    read, marked, paced = DEMO_KINDS[kind]
     playback: dict[int, tuple[int, Record]] = {}
     number = 0
-    for record in read_sim(path):
+    for record in read(path):
         number += 1
         fields = dict(record.fields)
-        if record.kind != 'T' or 'demo' not in fields:
+        if record.kind != marked or 'demo' not in fields:
             continue
         tick = int(fields['demo'])
         if tick in playback:
             raise Unreadable(f'{path}:{number}: demo={tick} again (first on line {playback[tick][0]})')
-        kept = tuple((name, value) for name, value in record.fields if name not in DEMO_PACED + ('demo',))
+        kept = tuple((name, value) for name, value in record.fields if name not in paced + ('demo',))
         playback[tick] = (number, Record('D', tick, kept))
     if not playback:
         raise Unreadable(f'{path}: no line of a replay (demo=)')
@@ -160,8 +218,13 @@ def read_sim_demo(path: Path) -> list[Record]:
     return [record for _, (_, record) in sorted(_playback(path).items())]
 
 
-def _demo_difference(path_a: Path, path_b: Path) -> Difference | None:
-    a, b = _playback(path_a), _playback(path_b)
+def read_gfx_demo(path: Path) -> list[Record]:
+    """A demo's picture stream: its replay's frames in demo-tick order."""
+    return [record for _, (_, record) in sorted(_playback(path, 'gfx-demo').items())]
+
+
+def _demo_difference(kind: str, path_a: Path, path_b: Path) -> Difference | None:
+    a, b = _playback(path_a, kind), _playback(path_b, kind)
     for tick in sorted(a.keys() | b.keys()):
         if tick not in a or tick not in b:
             line = (a.get(tick) or b[tick])[0]
@@ -178,7 +241,7 @@ def _demo_difference(path_a: Path, path_b: Path) -> Difference | None:
     return None
 
 
-READERS = {'sim': read_sim, 'sim-demo': read_sim_demo}
+READERS = {'sim': read_sim, 'sim-demo': read_sim_demo, 'gfx': read_gfx, 'gfx-demo': read_gfx_demo}
 
 
 def first_difference(kind: str, path_a: Path, path_b: Path) -> Difference | None:
@@ -186,14 +249,14 @@ def first_difference(kind: str, path_a: Path, path_b: Path) -> Difference | None
     they hold the same records. Raises Unreadable as the module says."""
     if kind not in READERS:
         raise ValueError(f'unknown stream {kind!r}; known: {", ".join(READERS)}')
-    if kind == 'sim-demo':
-        return _demo_difference(path_a, path_b)
+    if kind in DEMO_KINDS:
+        return _demo_difference(kind, path_a, path_b)
     a = READERS[kind](path_a)
     b = READERS[kind](path_b)
     for number, (ra, rb) in enumerate(zip(a, b), start=1):
         if ra == rb:
             continue
-        prefix = '' if ra.kind == 'T' else f'{ra.kind}.'
+        prefix = '' if ra.kind in MAIN_KINDS else f'{ra.kind}.'
         if ra.kind != rb.kind:
             return Difference(ra.tick, 'kind', ra.kind, rb.kind, number)
         for (name, va), (nb, vb) in zip(ra.fields, rb.fields):

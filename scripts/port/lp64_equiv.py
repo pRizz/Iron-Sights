@@ -22,8 +22,9 @@ above 1 `OK: N of N cases agree with themselves` or `FAIL: CASE STREAM differs f
 A run fails on anything lp64_play_judge.problems fails, on a missing required line (`ge: lockstep:
 on` but for a demo, the frame limit, the stage load, and for a route with fire `moved` and the
 shots lp64_equiv_cases.fired names) and on a stream file that is missing, empty or torn; a demo's
-trace must hold its playback (`demo=` lines). Self-agreement and compare read a demo's trace as its
-playback (lp64_equiv_compare.py). DIR/equiv.json records the run, written after the self-agreement
+trace and digest must hold its playback (`demo=` lines). Self-agreement and compare read a demo's
+trace and digest as its playback (lp64_equiv_compare.py). Self-agreement judges `sim` and, with
+--video, `gfx` (JUDGED_VIDEO_STREAMS; `snd` once Task 9 locks the sound). DIR/equiv.json records the run, written after the self-agreement
 check: each case's verdict, whether it ran and whether it agreed with itself.
 Before any case the executable is started once: it is refused without the exact line `ge: compare:
 on`, or with --maths-off without `ge: compare: on (libm)`. --env passes a variable to every case;
@@ -38,7 +39,8 @@ It refuses (exit 2) a folder whose record shows one run (--repeat 1), a compared
 run or did not agree with itself, or no verdicts at all (a record from before they were written).
 
 sensitivity: the solo case stage-dam at GE_SEED=1 (DIR/seed1) and GE_SEED=2 (DIR/seed2); exit 0
-only when every stream the run wrote differs, printing `OK: STREAMS differ between seeds`.
+only when every stream it judges differs (as self-agreement), printing `OK: STREAMS differ between
+seeds`.
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -73,6 +75,11 @@ RUNNER_VARIABLES = ('GE_LOCKSTEP', 'GE_FIXEDTICK', 'GE_NOSLEEP', 'GE_SIMTRACE', 
 COMPARE_ON = 'ge: compare: on'
 COMPARE_LIBM = 'ge: compare: on (libm)'
 SENSITIVITY_CASE = 'stage-dam'
+# The streams a video run is judged by, for its agreement with itself and in sensitivity. `snd` joins
+# with Task 9's lock: until then a recording follows the host's audio clock, so two runs of one build
+# differ (dam on cmp-a64-video, Task 7: at byte 4, 5,203,820 bytes against 5,196,524). Its file is
+# still required, and compare still takes `--streams snd`.
+JUDGED_VIDEO_STREAMS = ('gfx',)
 SEEDS = ('1', '2')
 
 
@@ -96,7 +103,7 @@ class Options:
     maybe_saves: Path | None
 
     def streams(self) -> tuple[str, ...]:
-        return ('sim',) + (VIDEO_STREAMS if self.display.video else ())
+        return ('sim',) + (JUDGED_VIDEO_STREAMS if self.display.video else ())
 
 
 @dataclass
@@ -134,10 +141,17 @@ def run_once(case: Case, run: int, shared: SharedExecutable, output: Path, optio
         ticks = sum(1 for record in READERS[kind](folder/f'{case.name}.sim') if record.kind in ('T', 'D'))
     except Unreadable as error:
         found.append(f'{kind} unreadable: {error}')
-    for stream in options.streams()[1:]:
+    for stream in VIDEO_STREAMS if options.display.video else ():
         path = folder/f'{case.name}{STREAM_FILES[stream]}'
         if not path.is_file() or path.stat().st_size == 0:
             found.append(f'{stream}: no {path.name}')
+            continue
+        kind = stream_kind(case.name, stream)
+        try:
+            if kind in READERS:
+                READERS[kind](path)
+        except Unreadable as error:
+            found.append(f'{kind} unreadable: {error}')
     log_path = folder/f'{case.name}.log'
     log = log_path.read_text(errors='replace').splitlines() if log_path.is_file() else []
     shots = [int(match.group(1)) for match in map(SHOTS.search, log) if match]

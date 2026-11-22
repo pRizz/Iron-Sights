@@ -1883,6 +1883,46 @@ accepted; where it conflicts, these rulings govern.
    because `font_style=2` loads as Original without it. `--env` refuses
    that variable.
 
+## Amendments during Task 7 (2026-11-21)
+
+Task 7's runs on `cmp-a64-video` changed four details of the brief. The
+Task 7 text above stays as accepted; where it conflicts, these govern.
+
+1. **A demo's picture stream is its playback.** While a recording
+   replays, an `F` line ends with `demo=K` (K from
+   `portRamromReplayTick`). The reader kind `gfx-demo` keys a demo's `F`
+   lines by K and compares every field except `n` and `tick`; a stream
+   with no such line is unreadable. The runner reads demos with it and
+   still prints the stream as `gfx`. Measured before keying: `dam1` run
+   twice with `--video` wrote 453 `demo=` frames in each run, one for each
+   K from 1 to 453, and all 14 demos (28 files) wrote one frame for each K.
+2. **Textures are named by their contents.** With texture ids named by
+   the order the backend handed them out, the two `dam1` runs differed
+   from K = 13 in `state` alone, at a `select_texture`. The frames before
+   a recording plays follow the host's pace, and the texture cache's new
+   ids, recycled ids and frees follow those frames. A texture is now the
+   hash of its last upload. Each draw hashes the textures its shader
+   samples into `tex`, so `one_texel_changes_tex_only` still holds.
+   Bookkeeping (queries, lookups, new and freed ids, buffer and
+   framebuffer creation) hashes into no part; detail lines mark it
+   `part=none`. A retained draw is its descriptor's built contents, never
+   the buffer's handle.
+3. **What `GE_GFXDIGEST_NODRAW` forwards.** It also forwards
+   `update_framebuffer_parameters`, since `get_clip_parameters` answers
+   from it, and `set_texture_filter`, which `get_texture_filter` answers.
+   It forwards the frees (`delete_texture`, `retained_destroy`,
+   `clear_shaders`) and the frame's own entries (`init`, `on_resize`,
+   `start_frame`, `end_frame`, `finish_render`). Drawing and not drawing
+   gave one digest on the first try.
+4. **`snd` waits for its lock.** Two `dam` runs of one build recorded
+   different sounds (5,203,820 and 5,196,524 bytes, first differing at
+   byte 4). Self-agreement and `sensitivity` therefore judge `sim` and
+   `gfx` until Task 9's lock (`JUDGED_VIDEO_STREAMS` in `lp64_equiv.py`).
+   The `.wav` file is still required, and `compare --streams snd` still
+   compares it byte for byte.
+
+These are the controller's rulings, recorded for the owner at the milestone's close.
+
 ## Amendment by the owner: three checkpoints (2026-11-21)
 
 Asked how to shorten the run, the owner chose to run the task check's

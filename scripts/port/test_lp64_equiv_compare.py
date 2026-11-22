@@ -1,4 +1,4 @@
-"""ROM-free tests for lp64_equiv.py compare (LP64-006 Task 5): run folders written by hand, with the
+"""ROM-free tests for lp64_equiv.py compare (LP64-006 Tasks 5 and 7): run folders written by hand, with the
 record `run` leaves (equiv.json), compared under lp64_equiv_expected.txt's rules."""
 import json
 from pathlib import Path
@@ -128,18 +128,48 @@ class Compare(StandIns):
         self.assertIn(f'error: {a} is refused: stage-dam did not agree with itself', out)
 
     def test_compare_names_a_byte_stream_difference_by_its_offset(self):
-        # Arrange: a gfx stream has no reader yet, so it is compared byte for byte
+        # Arrange: a snd stream has no reader yet (Task 9), so it is compared byte for byte
         a = self.run_folder('i686', sim(), video=True)
         b = self.run_folder('a64', sim(), video=True)
-        (a/'run1'/'stage-dam.gfx').write_bytes(b'\x01\x02\x03\x04')
-        (b/'run1'/'stage-dam.gfx').write_bytes(b'\x01\x02\xff\x04')
+        (a/'run1'/'stage-dam.wav').write_bytes(b'\x01\x02\x03\x04')
+        (b/'run1'/'stage-dam.wav').write_bytes(b'\x01\x02\xff\x04')
+
+        # Act
+        status, out = self.equiv('compare', '--streams', 'snd', str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('stage-dam snd i686:a64 first differs at 2 (byte)', out)
+
+    def test_compare_names_a_digest_difference_by_its_frame_and_field(self):
+        # Arrange
+        a = self.run_folder('i686', sim(), video=True)
+        b = self.run_folder('a64', sim(), video=True)
+        frame = 'F n={} tick={} draws=1 tris=2 vtx={} tex=0:811c9dc5 state=0383debb post=e5d4f569\n'
+        (a/'run1'/'stage-dam.gfx').write_text(frame.format(1, 1, '3bee89fb') + frame.format(2, 2, '3bee89fb'))
+        (b/'run1'/'stage-dam.gfx').write_text(frame.format(1, 1, '3bee89fb') + frame.format(2, 2, '00000000'))
 
         # Act
         status, out = self.equiv('compare', '--streams', 'gfx', str(a), str(b))
 
         # Assert
         self.assertEqual(status, 1, out)
-        self.assertIn('stage-dam gfx i686:a64 first differs at 2 (byte)', out)
+        self.assertIn('stage-dam gfx i686:a64 first differs at 2 (vtx)', out)
+
+    def test_compare_reads_a_demo_digest_as_its_playback(self):
+        # Arrange: the replay starts one frame later and at another timer in the second folder
+        frame = 'F n={} tick={} draws=1 tris=2 vtx=3bee89fb tex=0:811c9dc5 state=0383debb post=e5d4f569{}\n'
+        a = self.run_folder('i686', sim(), case='dam1', video=True)
+        b = self.run_folder('a64', sim(), case='dam1', video=True)
+        (a/'run1'/'dam1.gfx').write_text(frame.format(1, 1, '') + frame.format(2, 2, ' demo=1'))
+        (b/'run1'/'dam1.gfx').write_text(frame.format(1, 4, '') + frame.format(2, 6, '') + frame.format(3, 9, ' demo=1'))
+
+        # Act
+        status, out = self.equiv('compare', '--streams', 'gfx', str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('dam1 gfx i686:a64 identical (1)', out)
 
 
 if __name__ == '__main__':

@@ -341,7 +341,9 @@ pass its isolated executable rather than rebuilding an active player binary.
 - `-DGE_COMPARE=ON` (LP64-006) configures a comparison build: the in-tree
   `tanf`, `atanf` and `cosf` (`port/src/port_compare_math.c`, alike on every
   host) replace libm's, and the play harness (`PORT_PLAY_HARNESS`) is on at
-  either width, a 32-bit video build included; `-DGE_COMPARE_LIBM=ON` keeps
+  either width, a 32-bit video build included; with `GE_VIDEO` it also
+  compiles the picture digest (`port/src/port_gfx_digest.cpp`), which wraps
+  the renderer's table when `GE_GFXDIGEST` is set. `-DGE_COMPARE_LIBM=ON` keeps
   libm's maths. It is never shipped: `package_linux.py` and
   `package_windows.py` refuse it. Its trees are `build/lp64/cmp-i686`,
   `cmp-x64`, `cmp-a64` and their `-video` twins.
@@ -377,6 +379,16 @@ pass its isolated executable rather than rebuilding an active player binary.
   now matches fails. `--profile all` (video only, `lp64_equiv_profile.py`)
   sets every fork option, with `font_style` at Iron Sights, never Enhanced,
   and `GE_IRONSIGHTS_FONTS=1` so that style loads, and no texture pack.
+  `CASE.gfx` is the picture digest (`port_gfx_digest.h`): an `F` line a
+  frame hashing what the renderer is asked to draw, by content, never by an
+  address or a handle. The runner sets `GE_GFXDIGEST_NODRAW=1`, which skips
+  the drawing, unless `--draw`; both give one digest. A demo's `gfx` is its
+  playback too (`gfx-demo`: the `F` lines with `demo=K`, one a recording
+  tick, without `n` and `tick`). Self-agreement and `sensitivity` judge
+  `sim` and `gfx`; `snd` joins them with Task 9's sound lock, since an
+  unlocked recording follows the host's audio clock. `--env
+  GE_GFXDIGEST_DETAIL=A-B` adds a `C` line a call for frames A to B, which
+  names the call where two digests part.
   The pinned ticks of `walk` and `dam-twice` are measured again through `stepped(NAME)` when a front-end or watch change
   moves them.
 - Storage for a record or a display list is sized by `sizeof` of what it

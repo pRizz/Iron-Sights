@@ -260,8 +260,10 @@ class Run(StandIns):
 class Video(StandIns):
     """`run --video` through a stand-in that writes the picture digest and the recording when named."""
     VIDEO_LOG = DAM_GOOD.replace(LOCKSTEP_ON, LOCKSTEP_ON + 'ge: video: window + GL context up\n')
-    WRITE_STREAMS = ('[ -n "$GE_GFXDIGEST" ] && printf gfx > "$GE_GFXDIGEST"\n'
-                     '[ -n "$GE_AUDIO_CAPTURE" ] && printf wav > "$GE_AUDIO_CAPTURE"\n')
+    GFX = 'F n=1 tick=1 draws=1 tris=2 vtx=3bee89fb tex=0:811c9dc5 state=0383debb post=e5d4f569\n'
+    # The recording differs from run to run, as an unlocked one does (Task 7, before Task 9's lock).
+    WRITE_STREAMS = (f'[ -n "$GE_GFXDIGEST" ] && printf "{GFX}" > "$GE_GFXDIGEST"\n'
+                     '[ -n "$GE_AUDIO_CAPTURE" ] && printf "wav $$" > "$GE_AUDIO_CAPTURE"\n')
 
     def env_seen(self) -> Path:
         return self.folder/'env.txt'
@@ -302,6 +304,41 @@ class Video(StandIns):
         # Assert
         self.assertEqual(status, 1, out)
         self.assertIn('stage-dam: FAIL (gfx: no stage-dam.gfx)', out)
+
+    def test_video_run_fails_a_torn_digest(self):
+        # Act
+        script = (f'[ -n "$GE_GFXDIGEST" ] && printf "%s" "{self.GFX.strip()}" > "$GE_GFXDIGEST"\n'
+                  '[ -n "$GE_AUDIO_CAPTURE" ] && printf wav > "$GE_AUDIO_CAPTURE"\n')
+        status, out = self.run_dam(self.video_fake(script=script), '--video')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('stage-dam: FAIL (gfx unreadable:', out)
+        self.assertIn('the last line has no newline', out)
+
+    def test_video_agreement_judges_gfx_and_leaves_snd_out_until_its_lock(self):
+        # Act: each run's recording differs; its digest does not
+        status, out = self.run_dam(self.video_fake(), '--video', '--repeat', '2')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('OK: 1 of 1 cases agree with themselves', out)
+
+    def test_video_agreement_fails_a_digest_that_differs_from_itself(self):
+        # Arrange: the second run of the case (the third start, after the build check) draws another frame
+        counter = self.folder/'runs'
+        other = self.GFX.replace('vtx=3bee89fb', 'vtx=00000000')
+        script = (f'echo x >> "{counter}"\n'
+                  f'if [ "$(wc -l < "{counter}")" -gt 2 ]; then g="{other}"; else g="{self.GFX}"; fi\n'
+                  '[ -n "$GE_GFXDIGEST" ] && printf "$g" > "$GE_GFXDIGEST"\n'
+                  '[ -n "$GE_AUDIO_CAPTURE" ] && printf wav > "$GE_AUDIO_CAPTURE"\n')
+
+        # Act
+        status, out = self.run_dam(self.video_fake(script=script), '--video', '--repeat', '2', '--jobs', '1')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn('FAIL: stage-dam gfx differs from itself at 1 (vtx, run2)', out)
 
     def test_video_env_refuses_what_the_video_runner_sets(self):
         # Arrange
@@ -350,6 +387,26 @@ class Sensitivity(StandIns):
         # Assert
         self.assertEqual(status, 0, out)
         self.assertIn('OK: sim differs between seeds', out)
+
+    def test_video_sensitivity_judges_sim_and_gfx(self):
+        # Arrange: GE_SEED=2 changes the trace and the digest
+        other = self.canned('other.sim', sim(seed_at={1: '0000000000000002'}))
+        gfx = Video.GFX
+        log = self.canned('seed2.log', Video.VIDEO_LOG)
+        script = ('if [ "$GE_SEED" = 2 ]; then '
+                  f'cp "{other}" "$GE_SIMTRACE"; printf "{gfx.replace("vtx=3bee89fb", "vtx=00000000")}" > "$GE_GFXDIGEST"; '
+                  f'printf wav > "$GE_AUDIO_CAPTURE"; cat "{log}" >&2; exit 0; fi\n'
+                  f'[ -n "$GE_GFXDIGEST" ] && printf "{gfx}" > "$GE_GFXDIGEST"\n'
+                  '[ -n "$GE_AUDIO_CAPTURE" ] && printf wav > "$GE_AUDIO_CAPTURE"\n')
+        exe = self.fake(Video.VIDEO_LOG, script=script)
+
+        # Act
+        status, out = self.equiv('sensitivity', '--video', '--rom', str(self.rom), '--output', str(self.output),
+                                 str(exe))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('OK: sim and gfx differ between seeds', out)
 
 
 class Cases(unittest.TestCase):

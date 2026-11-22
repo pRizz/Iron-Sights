@@ -5,10 +5,11 @@ A run folder is compared only when its record (equiv.json) shows two runs or mor
 case, each of which ran and agreed with itself; `compare` refuses any other folder (exit 2), an
 equiv.json from before the verdicts were recorded included.
 
-A stream's file sits beside CASE.log (STREAM_FILES). A demo's `sim` stream is its playback: it is
-read as `sim-demo` (lp64_equiv_streams.py), keyed by the recording's tick and blind to the host's
-pace, though it is still printed as `sim`. A stream without a reader yet (`gfx`, `snd` until Tasks
-7 and 9) is compared byte for byte, its difference named by the offset (field `byte`).
+A stream's file sits beside CASE.log (STREAM_FILES). A demo's `sim` and `gfx` streams are its
+playback: they are read as `sim-demo` and `gfx-demo` (lp64_equiv_streams.py), keyed by the
+recording's tick and blind to the host's pace, though they are still printed as `sim` and `gfx`. A
+stream without a reader yet (`snd` until Task 9) is compared byte for byte, its difference named by
+the offset (field `byte`).
 """
 from dataclasses import dataclass
 import json
@@ -26,8 +27,8 @@ VIDEO_STREAMS = ('gfx', 'snd')
 
 
 def stream_kind(case: str, stream: str) -> str:
-    """The reader kind of CASE's STREAM: `sim-demo` for a demo's simulation trace."""
-    return 'sim-demo' if stream == 'sim' and is_demo(case) else stream
+    """The reader kind of CASE's STREAM: `sim-demo` or `gfx-demo` for a demo's trace or digest."""
+    return f'{stream}-demo' if stream in ('sim', 'gfx') and is_demo(case) else stream
 
 
 def stream_difference(kind: str, path_a: Path, path_b: Path) -> Difference | None:

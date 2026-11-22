@@ -1,6 +1,6 @@
-"""ROM-free tests for lp64_equiv_streams.py (LP64-006 Task 3): the first
-difference between two simulation traces, on trace files written here from
-invented values."""
+"""ROM-free tests for lp64_equiv_streams.py (LP64-006 Tasks 3 and 7): the first
+difference between two simulation traces or two picture digests, on files
+written here from invented values."""
 from pathlib import Path
 import sys
 import tempfile
@@ -29,6 +29,26 @@ def playback(first_n: int, ticks: range, timer_shift: int = 0, changes: dict[int
         lines.append(sim_line(n, demo=tick, timer=n + timer_shift, **(changes or {}).get(tick, {})))
         n += 1
     lines += [sim_line(n, timer=n + 7), sim_line(n + 1, timer=n + 9)]
+    return ''.join(lines)
+
+
+def gfx_line(n: int, vtx: str = '0a1b2c3d', state: str = '01234567', demo: int | None = None,
+             tick: int | None = None) -> str:
+    """One picture digest line as port_gfx_digest.cpp writes it; DEMO, while a recording replays, its tick."""
+    tail = '' if demo is None else f' demo={demo}'
+    return (f'F n={n} tick={n if tick is None else tick} draws=12 tris=340 vtx={vtx} tex=2:89abcdef '
+            f'state={state} post=811c9dc5{tail}\n')
+
+
+def gfx_playback(first_n: int, ticks: range, tick_shift: int = 0, changes: dict[int, dict] | None = None) -> str:
+    """Frames without a replay up to FIRST_N, then one frame a demo tick of TICKS, then two more:
+    a paced demo's picture stream. CHANGES gives a demo tick's own field values."""
+    lines = [gfx_line(n, tick=n + tick_shift) for n in range(1, first_n)]
+    n = first_n
+    for tick in ticks:
+        lines.append(gfx_line(n, demo=tick, tick=n + tick_shift, **(changes or {}).get(tick, {})))
+        n += 1
+    lines += [gfx_line(n, tick=n + 7), gfx_line(n + 1, tick=n + 9)]
     return ''.join(lines)
 
 
@@ -205,6 +225,116 @@ class DemoDifference(TraceFiles):
 
         # Assert
         self.assertEqual((difference.index, difference.field), (1, 'demo'))
+
+
+class GfxDifference(TraceFiles):
+    def test_gfx_names_first_frame_and_field(self):
+        # Arrange
+        a = self.trace('a.gfx', ''.join(gfx_line(n) for n in range(1, 6)))
+        b = self.trace('b.gfx', ''.join(
+            gfx_line(n, vtx='ffffffff' if n >= 3 else '0a1b2c3d', state='76543210' if n >= 4 else '01234567')
+            for n in range(1, 6)))
+
+        # Act
+        difference = lp64_equiv_streams.first_difference('gfx', a, b)
+
+        # Assert
+        self.assertEqual((difference.index, difference.field, difference.a, difference.b, difference.line),
+                         (3, 'vtx', '0a1b2c3d', 'ffffffff', 3))
+
+    def test_gfx_call_line_difference_names_its_record_field(self):
+        # Arrange
+        call = 'C n=2 k=1 entry=draw_triangles part=vtx hash={}\n'
+        a = self.trace('a.gfx', gfx_line(1) + call.format('00000001') + gfx_line(2))
+        b = self.trace('b.gfx', gfx_line(1) + call.format('00000002') + gfx_line(2))
+
+        # Act
+        difference = lp64_equiv_streams.first_difference('gfx', a, b)
+
+        # Assert
+        self.assertEqual((difference.index, difference.field), (2, 'C.hash'))
+
+    def test_gfx_identical_files_have_no_difference(self):
+        # Arrange
+        text = ''.join(gfx_line(n) for n in range(1, 4))
+
+        # Act
+        difference = lp64_equiv_streams.first_difference('gfx', self.trace('a.gfx', text), self.trace('b.gfx', text))
+
+        # Assert
+        self.assertIsNone(difference)
+
+    def test_gfx_frame_out_of_order_is_unreadable(self):
+        # Arrange
+        a = self.trace('a.gfx', gfx_line(1) + gfx_line(2))
+        b = self.trace('b.gfx', gfx_line(1) + gfx_line(3))
+
+        # Act, Assert
+        with self.assertRaisesRegex(lp64_equiv_streams.Unreadable, 'n=3 after 1 F lines'):
+            lp64_equiv_streams.first_difference('gfx', a, b)
+
+    def test_gfx_line_that_does_not_parse_is_unreadable(self):
+        # Arrange
+        a = self.trace('a.gfx', gfx_line(1))
+        b = self.trace('b.gfx', gfx_line(1).replace('tex=2:', 'tex='))
+
+        # Act, Assert
+        with self.assertRaises(lp64_equiv_streams.Unreadable):
+            lp64_equiv_streams.first_difference('gfx', a, b)
+
+
+class GfxDemoDifference(TraceFiles):
+    def test_gfx_playback_ignores_n_and_tick_and_frames_outside_it(self):
+        # Arrange: the replay starts at another frame and with another timer
+        a = self.trace('a.gfx', gfx_playback(4, range(1, 6)))
+        b = self.trace('b.gfx', gfx_playback(7, range(1, 6), tick_shift=3))
+
+        # Act
+        difference = lp64_equiv_streams.first_difference('gfx-demo', a, b)
+
+        # Assert
+        self.assertIsNone(difference)
+
+    def test_gfx_playback_names_the_demo_tick_and_field(self):
+        # Arrange
+        a = self.trace('a.gfx', gfx_playback(4, range(1, 6)))
+        b = self.trace('b.gfx', gfx_playback(2, range(1, 6), changes={3: {'state': '76543210'}}))
+
+        # Act
+        difference = lp64_equiv_streams.first_difference('gfx-demo', a, b)
+
+        # Assert
+        self.assertEqual((difference.index, difference.field, difference.a, difference.b),
+                         (3, 'state', '01234567', '76543210'))
+
+    def test_gfx_stream_without_a_replay_is_unreadable(self):
+        # Arrange
+        a = self.trace('a.gfx', ''.join(gfx_line(n) for n in range(1, 4)))
+        b = self.trace('b.gfx', gfx_playback(2, range(1, 4)))
+
+        # Act, Assert
+        with self.assertRaisesRegex(lp64_equiv_streams.Unreadable, 'no line of a replay'):
+            lp64_equiv_streams.first_difference('gfx-demo', a, b)
+
+    def test_gfx_demo_tick_on_two_frames_is_unreadable(self):
+        # Arrange: one frame a demo tick is what dam1 measured; two cannot be keyed
+        a = self.trace('a.gfx', gfx_playback(2, range(1, 4)))
+        b = self.trace('b.gfx', gfx_line(1, demo=1) + gfx_line(2, demo=1) + gfx_line(3, demo=2))
+
+        # Act, Assert
+        with self.assertRaisesRegex(lp64_equiv_streams.Unreadable, 'demo=1 again'):
+            lp64_equiv_streams.first_difference('gfx-demo', a, b)
+
+    def test_gfx_shorter_playback_differs_at_the_first_tick_it_lacks(self):
+        # Arrange
+        a = self.trace('a.gfx', gfx_playback(3, range(1, 6)))
+        b = self.trace('b.gfx', gfx_playback(3, range(1, 4)))
+
+        # Act
+        difference = lp64_equiv_streams.first_difference('gfx-demo', a, b)
+
+        # Assert
+        self.assertEqual((difference.index, difference.field, difference.a, difference.b), (4, 'demo', '4', '(none)'))
 
 
 if __name__ == '__main__':

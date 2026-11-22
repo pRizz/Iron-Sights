@@ -633,6 +633,11 @@ if(GE_VIDEO)
         list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_save_transfer>)
     endif()
     add_compile_definitions(GE_VIDEO=1)
+    # The picture digest (port_gfx_digest.h, LP64-006 Task 7) wraps the
+    # renderer only in a comparison build; no shipped build compiles it.
+    if(GE_COMPARE)
+        list(APPEND FAST3D_SRC port/src/port_gfx_digest.cpp)
+    endif()
     # The play log (port_playlog.h, LP64-005 Task 8), lockstep
     # (port_lockstep.h, LP64-006 Task 2) and the simulation trace
     # (port_simtrace.h, Task 3) are empty in a 32-bit build with video, the

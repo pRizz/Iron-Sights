@@ -21,6 +21,9 @@
 #include "port_gun_kick.h"
 #include "port_tracers.h"
 #include "port_lockstep.h"   /* LP64-006: lockstep keeps the render thread off */
+#ifdef GE_COMPARE
+#include "port_gfx_digest.h" /* LP64-006 Task 7: GE_GFXDIGEST, the picture digest */
+#endif
 
 #ifdef GE_XBOX
 /* No SDL on the console: the string/keyboard/thread stand-ins live in the
@@ -5081,6 +5084,9 @@ s32 videoInit(void)
 
     set.wapi = &gfx_sdl;
     set.rapi = &gfx_opengl_api;
+#ifdef GE_COMPARE
+    set.rapi = portGfxDigestWrap(set.rapi); /* the same table unless GE_GFXDIGEST is set */
+#endif
     {   /* "Iron Sights - <branch> - Build <count>-<date>" */
         extern const char *portPlatformName(void);
         extern const char *portBuildString(void);
