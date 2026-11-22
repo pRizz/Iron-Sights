@@ -1923,6 +1923,34 @@ Task 7 text above stays as accepted; where it conflicts, these govern.
 
 These are the controller's rulings, recorded for the owner at the milestone's close.
 
+## Amendments during Task 9 (2026-11-22)
+
+Task 9's measurements changed four details of the brief. The Task 9 text
+above stays as accepted; where it conflicts, these govern.
+
+1. **A demo's sound is not judged.** A demo is paced by the host, and the
+   lock mixes one audio frame a game field, so the host's pace sets how
+   many frames a recording tick gets. Two runs each of dam1 and facility1
+   on `cmp-a64-video` and on `cmp-i686-video` agreed in `sim-demo` and
+   `gfx-demo` while their recordings differed (facility1 at different
+   lengths), and in Step 4 none of the 14 demos recorded the same sound
+   twice on any build under either profile (84 of 84 pairs differed).
+   `snd` is therefore judged on the 24 lockstep cases only; the runner and
+   `compare` print a `not judged` line for each demo with the reason
+   (`DEMO_SND_REASON`). The lockstep cases' check is not weakened.
+2. **Forced frames.** music.c's stop waits call `portAudioPumpForce`,
+   which must still mix a frame each spin or the wait never ends. Under
+   the lock that frame is mixed ahead of its field and the next pumps mix
+   one fewer, so frame k of a recording stays field k + 1's.
+3. **No device under the lock.** "Nothing by the queue's level or the
+   clock" is read as no device at all: a locked pump opens none, queues
+   nothing and runs no health or stall check. It only mixes and records.
+4. **A malformed recording is unreadable.** A file that is not 16-bit PCM
+   22,050 Hz stereo, or whose data chunk is torn, raises `Unreadable`
+   (neither equal nor different, as the global constraints say of a torn
+   stream) rather than reporting a length; two good files of different
+   lengths with equal common part report the length, as the brief says.
+
 ## Amendments during Task 8 (2026-11-22)
 
 Task 8's runs changed six details of the brief. The Task 8 text above
