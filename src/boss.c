@@ -43,6 +43,7 @@
 #include <stdio.h> /* intro timing log */
 #include "port_state.h"
 #include <stdlib.h>
+#include "port_lp64_budget.h" /* LP64-006 Task 11: portLp64StageBudget */
 #endif
 
 #ifndef TARGET_N64
@@ -494,6 +495,8 @@ void bossMainloop(void)
         {
             g_CurentMaMallocValue = 2 * 419600;
         }
+        /* LP64-006 Task 11: twice the soak's peak where it passed half (port_lp64_budget.c) */
+        g_CurentMaMallocValue = portLp64StageBudget("room memory", g_StageNum, g_CurentMaMallocValue);
 #endif
 
         memaReset(mempAllocBytesInBank(g_CurentMaMallocValue, MEMPOOL_STAGE), g_CurentMaMallocValue);

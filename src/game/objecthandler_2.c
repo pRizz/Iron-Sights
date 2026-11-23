@@ -81,8 +81,8 @@ struct texpool *portModelTexPool(void)
     if (s_ModelArena == NULL)
     {
         extern void *portAllocHigh(u32 size);
-        s_ModelArena = portAllocHigh(0x400000); /* pool pointers bake into DLs */
-        texInitPool(&s_ModelPool, s_ModelArena, 0x400000);
+        s_ModelArena = portAllocHigh(IS_64_BIT ? 0x444140 : 0x400000); /* pool pointers bake into DLs */
+        texInitPool(&s_ModelPool, s_ModelArena, IS_64_BIT ? 0x444140 : 0x400000); /* LP64-006 Task 11: 64-bit size twice the 2,236,576-byte peak */
     }
     return &s_ModelPool;
 }

@@ -91,7 +91,7 @@ static void portCSPWaitStopped(void *player)
 #define ROM_MUSIC_START_OFFSET 0x10000U
 
 #define MUSIC_SYN_CONFIG_MAX_P_VOICES   0x18
-#define MUSIC_SYN_CONFIG_MAX_UPDATES    0x80
+#define MUSIC_SYN_CONFIG_MAX_UPDATES    (IS_64_BIT ? 0x124 : 0x80) /* LP64-006 Task 11: 64-bit records at least twice the 290 bunker2 used at 0x100 */
 
 #define MUSIC_SEQ_CONFIG_MAX_VOICES     0x10
 #define MUSIC_SEQ_CONFIG_MAX_EVENTS     0x40

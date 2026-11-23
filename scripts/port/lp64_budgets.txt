@@ -1,0 +1,323 @@
+# The 64-bit pool budgets (LP64-006 Task 11): one line a pool, stage and size,
+#   POOL LEVEL SIZE PEAK CASE[ withheld: REASON]
+# SIZE is the pool's size at 64 bits in that stage (level 0 is the front end);
+# PEAK and CASE are its largest use over the Task 11 measurements: the soak,
+# the tours, stages and attract sets and the 38 comparison cases, headless
+# and with video, on the sizes before the raises; then the play sets of
+# ruling 9 (plain and sanitizer), the soaks and the comparison cases again
+# on the first raises, which found three more pairs past half (the weapon
+# room in Dam, room memory in Jungle and Cradle) and the stages only they visit.
+# Every pool whose peak was above half its size was raised to twice the
+# peak, rounded up to 16 (port_lp64_budget.c, gun.c, front.h,
+# objecthandler_2.c); the synthesizer's parameters hold 584 records of 40
+# bytes at the default GE_SNDSCALE of 2 (music.c), at least twice the 290
+# bunker2 used once the pool no longer filled (at 256 records it was full
+# and dropped updates). `lp64_play.py peaks --budget` checks a run's peak
+# lines against this file: each pool, stage and size it prints must be
+# listed and at most half full, unless the line is withheld. The texture
+# pool of 4,473,152 bytes is the persistent model pool, one pool in every
+# stage, so each stage lists it with its largest peak anywhere; a print
+# shows it only in a stage where it was the fullest texture pool.
+graphics buffer 0 327680 74256 t11-plain/menu-credits
+graphics buffer 9 409600 94400 t11-m-video/tour-bunker1
+graphics buffer 20 286720 89824 t11-san/tour-silo
+graphics buffer 22 286720 76608 t11-m-a64-video-all/run1/stage-statue
+graphics buffer 23 286720 89056 t11-m-video/tour-control
+graphics buffer 24 286720 83200 t11-m-a64-video-all/run1/stage-archives
+graphics buffer 24 327680 50080 t11-m-video/mp-archives-4p
+graphics buffer 25 409600 92464 t11-san/tour-train
+graphics buffer 26 286720 72608 t11-m-video/tour-frigate
+graphics buffer 27 409600 77472 t11-m-video/tour-bunker2
+graphics buffer 27 532480 46400 t11-m-video/mp-bunker-4p
+graphics buffer 28 251040 125520 t11-m-a64-video-all/run1/stage-aztec
+graphics buffer 29 245760 79648 t11-m-a64-video-all/run1/stage-streets
+graphics buffer 30 245760 62096 t11-m-a64-video-all/run1/stage-depot
+graphics buffer 31 532480 47696 t11-m-video/mp-complex-4p
+graphics buffer 32 409600 123232 t11-m-a64-video-all/run1/stage-egypt
+graphics buffer 32 450560 43296 t11-m-video/mp-egypt-4p
+graphics buffer 33 286720 91824 t11-m-video/tour-dam
+graphics buffer 34 286720 69488 t11-plain/attract
+graphics buffer 34 368640 47600 t11-m-video/mp-facility-4p
+graphics buffer 35 409600 85648 t11-m-video/tour-runway
+graphics buffer 36 286720 91376 t11-m-video/tour-surface
+graphics buffer 37 286720 139360 t11-m-a64-video-all/run1/stage-jungle
+graphics buffer 38 532480 76864 t11-m-a64-video-all/run1/temple-4p
+graphics buffer 39 409600 136416 t11-m-a64-video-all/run1/stage-caverns
+graphics buffer 39 532480 74672 t11-m-video/mp-caverns-4p
+graphics buffer 41 409600 131424 t11-m-a64-video-all/run1/stage-cradle
+graphics buffer 43 409600 89280 t11-m-a64-video-all/run1/stage-surface2
+graphics buffer 45 532480 52288 t11-m-video/mp-basement-4p
+graphics buffer 46 532480 52416 t11-m-video/tour-stack-2p
+graphics buffer 48 532480 51184 t11-m-video/mp-library-4p
+graphics buffer 50 532480 62928 t11-m-video/mp-caves-4p
+graphics buffer 54 409600 66752 t11-m-a64-video-all/run1/stage-cuba
+gun room left hand 9 92224 46112 t11-m-video/attract
+gun room left hand 20 92224 46112 t11-m-a64/run1/silo2
+gun room left hand 25 92224 46112 t11-plain/pause-train
+gun room left hand 33 92224 46112 t11-m-video/attract
+gun room left hand 34 92224 46112 t11-plain/pause-facility
+gun room trigger 34 85376 42688 t11-m-video/attract
+gun room weapon 9 53696 25392 t11-soak-plain/soak
+gun room weapon 20 53696 25392 t11-m-plain/attract
+gun room weapon 22 53696 24128 t11-m-plain/stage-statue
+gun room weapon 23 53696 24128 t11-soak-plain/soak
+gun room weapon 24 53696 18368 t11-soak-plain/soak
+gun room weapon 25 53696 24128 t11-soak-plain/soak
+gun room weapon 26 53696 18368 t11-m-a64/run1/stage-frigate
+gun room weapon 27 53696 18368 t11-soak-plain/soak
+gun room weapon 28 53696 24128 t11-soak-plain/soak
+gun room weapon 29 53696 24128 t11-soak-plain/soak
+gun room weapon 30 53696 24128 t11-soak-video/soak
+gun room weapon 31 53696 18368 t11-m-plain/mp-complex-2p
+gun room weapon 32 53696 24128 t11-soak-plain/soak
+gun room weapon 33 53696 26848 t11-plain/weapons-dam
+gun room weapon 34 53696 25392 t11-soak-plain/soak
+gun room weapon 35 53696 25392 t11-soak-video/soak
+gun room weapon 36 53696 25392 t11-m-plain/stage-surface
+gun room weapon 37 53696 24128 t11-soak-plain/soak
+gun room weapon 38 53696 18368 t11-m-plain/death
+gun room weapon 39 53696 18368 t11-m-plain/mp-caverns-2p
+gun room weapon 41 53696 24128 t11-soak-video/soak
+gun room weapon 43 53696 25392 t11-soak-video/soak
+gun room weapon 45 53696 18368 t11-m-plain/mp-basement-2p
+gun room weapon 46 53696 18368 t11-m-plain/mp-stack-2p
+gun room weapon 48 53696 18368 t11-m-plain/mp-library-2p
+gun room weapon 50 53696 18368 t11-m-plain/mp-caves-2p
+music heap 0 753664 344752 t11-plain/abort
+permanent bank 0 303104 114336 t11-san/abort
+room memory 9 307200 119824 t11-m-video/tour-bunker1
+room memory 20 316608 158304 t11-soak-plain/soak
+room memory 22 542240 271120 t11-m-plain/tour-statue
+room memory 22 839200 419600 t11-m-video/mp-statue-2p
+room memory 23 409600 150256 t11-m-plain/tour-control
+room memory 24 512000 219456 t11-m-plain/tour-archives
+room memory 25 409600 127472 t11-m-plain/tour-train
+room memory 26 460800 197440 t11-m-plain/tour-frigate
+room memory 27 307200 78720 t11-m-plain/tour-bunker2
+room memory 27 348160 105584 t11-m-video/mp-bunker-4p
+room memory 28 377152 188576 t11-m-plain/tour-aztec
+room memory 29 593920 244864 t11-m-plain/tour-streets
+room memory 30 614400 306144 t11-m-plain/tour-depot
+room memory 31 204800 72304 t11-plain/tour-complex-2p
+room memory 32 512000 195680 t11-m-plain/tour-egypt
+room memory 32 819200 233520 t11-m-plain/mp-egypt-4p
+room memory 33 616768 308384 t11-m-plain/tour-dam
+room memory 34 327680 148736 t11-m-plain/tour-facility
+room memory 34 471040 142544 t11-m-plain/mp-facility-4p
+room memory 35 614400 147856 t11-soak-plain/soak
+room memory 36 614400 205552 t11-m-plain/tour-surface
+room memory 37 478720 239360 t11-plain/tour-jungle
+room memory 38 204800 42064 t11-m-plain/death
+room memory 39 456672 228336 t11-m-video/mp-caverns-4p
+room memory 39 512000 98416 t11-m-plain/tour-caverns
+room memory 40 307200 11232 t11-plain/stop-citadel
+room memory 41 530912 265456 t11-plain/respawn-cradle
+room memory 43 716800 271696 t11-soak-plain/soak
+room memory 45 204800 69552 t11-m-video/mp-basement-4p
+room memory 46 204800 69008 t11-m-video/mp-stack-4p
+room memory 48 204800 54416 t11-m-video/mp-library-4p
+room memory 50 614400 61456 t11-m-plain/tour-caves-2p
+room memory 54 614400 16944 t11-m-plain/stage-cuba
+room memory largest request 9 307200 32704 t11-soak-plain/soak
+room memory largest request 20 316608 54112 t11-soak-plain/soak
+room memory largest request 22 542240 38928 t11-soak-plain/soak
+room memory largest request 22 839200 38928 t11-m-plain/mp-statue-2p
+room memory largest request 23 409600 52128 t11-soak-plain/soak
+room memory largest request 24 512000 29072 t11-soak-plain/soak
+room memory largest request 25 409600 40720 t11-soak-plain/soak
+room memory largest request 26 460800 56416 t11-soak-plain/soak
+room memory largest request 27 307200 32976 t11-soak-plain/soak
+room memory largest request 27 348160 32976 t11-m-plain/mp-bunker-2p
+room memory largest request 28 377152 45120 t11-soak-plain/soak
+room memory largest request 29 593920 44368 t11-soak-plain/soak
+room memory largest request 30 614400 44336 t11-soak-plain/soak
+room memory largest request 31 204800 17168 t11-m-plain/mp-complex-2p
+room memory largest request 32 512000 58240 t11-soak-plain/soak
+room memory largest request 32 819200 58240 t11-m-plain/mp-egypt-2p
+room memory largest request 33 616768 38288 t11-soak-plain/soak
+room memory largest request 34 327680 43280 t11-soak-plain/soak
+room memory largest request 34 471040 43280 t11-m-plain/mp-facility-2p
+room memory largest request 35 614400 26592 t11-soak-plain/soak
+room memory largest request 36 614400 37424 t11-soak-plain/soak
+room memory largest request 37 478720 35600 t11-soak-plain/soak
+room memory largest request 38 204800 6048 t11-m-plain/death
+room memory largest request 39 456672 37984 t11-m-plain/mp-caverns-2p
+room memory largest request 39 512000 37984 t11-soak-plain/soak
+room memory largest request 40 307200 10384 t11-plain/stop-citadel
+room memory largest request 41 530912 23232 t11-soak-plain/soak
+room memory largest request 43 716800 37424 t11-soak-plain/soak
+room memory largest request 45 204800 8400 t11-m-plain/mp-basement-2p
+room memory largest request 46 204800 8400 t11-m-plain/mp-stack-2p
+room memory largest request 48 204800 8400 t11-m-plain/mp-library-2p
+room memory largest request 50 614400 8192 t11-m-plain/mp-caves-2p
+room memory largest request 54 614400 15680 t11-m-plain/stage-cuba
+stage bank 0 66805760 3816152 t11-san/abort
+stage bank 9 66805760 4326728 a64/run1/stage-bunker1
+stage bank 20 66805760 4192120 a64/run1/stage-silo
+stage bank 22 66805760 6396512 t11-san/mp-statue-4p
+stage bank 23 66805760 4260912 a64/run1/stage-control
+stage bank 24 66805760 5807152 t11-san/mp-archives-4p
+stage bank 25 66805760 4435632 a64/run1/stage-train
+stage bank 26 66805760 4443800 a64/run1/stage-frigate
+stage bank 27 66805760 6075856 t11-san/mp-bunker-4p
+stage bank 28 66805760 4487448 a64/run1/stage-aztec
+stage bank 29 66805760 4301696 a64/run1/stage-streets
+stage bank 30 66805760 4229960 a64/run1/stage-depot
+stage bank 31 66805760 5491400 t11-san/mp-complex-4p
+stage bank 32 66805760 5881216 t11-san/mp-egypt-4p
+stage bank 33 66805760 4399360 a64/run1/dam-twice
+stage bank 34 66805760 5880832 t11-san/mp-facility-4p
+stage bank 35 66805760 4320792 a64/run1/stage-runway
+stage bank 36 66805760 4258728 a64/run1/stage-surface
+stage bank 37 66805760 4062992 a64/run1/stage-jungle
+stage bank 38 66805760 5466384 t11-san/mp-temple-4p-s2
+stage bank 39 66805760 5940720 t11-san/mp-caverns-4p
+stage bank 40 66805760 3143736 t11-san/stop-citadel
+stage bank 41 66805760 6105152 t11-san/mp-cradle-4p
+stage bank 43 66805760 4433752 a64/run1/stage-surface2
+stage bank 45 66805760 5491200 t11-san/mp-basement-4p
+stage bank 46 66805760 5518440 t11-san/mp-stack-4p
+stage bank 48 66805760 5524952 t11-san/mp-library-4p
+stage bank 50 66805760 5894616 t11-san/mp-caves-4p
+stage bank 54 66805760 3931296 a64/run1/stage-cuba
+synthesizer parameters 0 23360 1840 x64/run1/dam1
+synthesizer parameters 9 23360 11600 a64/run1/bunker2
+synthesizer parameters 20 23360 2640 x64/run2/silo2
+synthesizer parameters 22 23360 2240 t11-m-a64-video-all/run1/stage-statue
+synthesizer parameters 23 23360 1760 t11-m-video/tour-control
+synthesizer parameters 24 23360 1720 t11-m-a64-video-all/run1/stage-archives
+synthesizer parameters 25 23360 2520 t11-m-a64-video-all/run1/stage-train
+synthesizer parameters 26 23360 1800 t11-m-a64-video/run1/frigate1
+synthesizer parameters 27 23360 1080 t11-soak-video/soak
+synthesizer parameters 28 23360 3040 t11-m-a64-video-all/run1/stage-aztec
+synthesizer parameters 29 23360 1560 t11-m-a64-video-all/run1/stage-streets
+synthesizer parameters 30 23360 2480 t11-m-a64-video-all/run1/stage-depot
+synthesizer parameters 31 23360 880 t11-m-video/mp-complex-2p
+synthesizer parameters 32 23360 3000 t11-m-a64-video-all/run1/stage-egypt
+synthesizer parameters 33 23360 2680 t11-m-video/attract
+synthesizer parameters 34 23360 1760 t11-m-a64-video-all/run1/facility3
+synthesizer parameters 35 23360 2800 t11-m-a64-video-all/run1/stage-runway
+synthesizer parameters 36 23360 1160 t11-m-a64-video-all/run1/stage-surface
+synthesizer parameters 37 23360 2240 t11-m-a64-video-all/run1/stage-jungle
+synthesizer parameters 38 23360 1560 t11-m-video/death
+synthesizer parameters 39 23360 3000 t11-m-a64-video-all/run1/stage-caverns
+synthesizer parameters 41 23360 2960 t11-m-a64-video-all/run1/stage-cradle
+synthesizer parameters 43 23360 2200 t11-m-a64-video-all/run1/stage-surface2
+synthesizer parameters 45 23360 880 t11-m-video/mp-basement-2p
+synthesizer parameters 46 23360 880 t11-m-video/mp-stack-2p
+synthesizer parameters 48 23360 880 t11-m-video/mp-library-2p
+synthesizer parameters 50 23360 880 t11-m-video/mp-caves-2p
+synthesizer parameters 54 23360 1280 t11-m-video/stage-cuba
+texture pool 0 1323008 120184 t11-m-a64/run1/walk
+texture pool 0 1433600 105328 t11-plain/stop-42
+texture pool 0 4473152 2236576 t11-m-video/soak
+texture pool 9 1433600 268032 t11-m-video/tour-bunker1
+texture pool 9 4473152 2236576 t11-m-video/soak
+texture pool 20 1351680 282416 t11-m-plain/attract
+texture pool 20 4473152 2236576 t11-m-video/soak
+texture pool 22 1536000 393984 t11-m-a64/run1/stage-statue
+texture pool 22 4473152 2236576 t11-m-video/soak
+texture pool 23 1374208 337688 t11-m-a64/run1/stage-control
+texture pool 23 4473152 2236576 t11-m-video/soak
+texture pool 24 1126400 312672 t11-m-plain/mp-archives-2p
+texture pool 24 1228800 317800 t11-m-a64/run1/stage-archives
+texture pool 24 4473152 2236576 t11-m-video/soak
+texture pool 25 1228800 220104 t11-m-a64/run1/train
+texture pool 25 4473152 2236576 t11-m-video/soak
+texture pool 26 1536000 392392 t11-m-a64/run1/frigate2
+texture pool 26 4473152 2236576 t11-m-video/soak
+texture pool 27 1126400 245192 t11-m-plain/mp-bunker-2p
+texture pool 27 1484800 281720 t11-m-video/tour-bunker2
+texture pool 27 4473152 2236576 t11-m-video/soak
+texture pool 28 1751040 534720 t11-m-a64-video-all/run1/stage-aztec
+texture pool 28 4473152 2236576 t11-m-video/soak
+texture pool 29 1300480 310256 t11-m-a64/run1/stage-streets
+texture pool 29 4473152 2236576 t11-m-video/soak
+texture pool 30 1454080 402672 t11-m-plain/tour-depot
+texture pool 30 4473152 2236576 t11-m-video/soak
+texture pool 31 819200 148144 t11-m-plain/mp-complex-2p
+texture pool 31 4473152 2236576 t11-m-video/soak
+texture pool 32 716800 133896 t11-m-plain/mp-egypt-2p
+texture pool 32 1228800 146352 t11-m-a64/run1/stage-egypt
+texture pool 32 4473152 2236576 t11-m-video/soak
+texture pool 33 1280000 301816 t11-m-plain/attract
+texture pool 33 4473152 2236576 t11-m-video/soak
+texture pool 34 1126400 283880 t11-m-plain/mp-facility-2p
+texture pool 34 1331200 290088 t11-m-a64/run1/facility3
+texture pool 34 4473152 2236576 t11-m-video/soak
+texture pool 35 1249280 263080 t11-m-a64/run1/stage-runway
+texture pool 35 4473152 2236576 t11-m-video/soak
+texture pool 36 1228800 258840 t11-m-a64/run1/stage-surface
+texture pool 36 4473152 2236576 t11-m-video/soak
+texture pool 37 1024000 242664 t11-m-a64/run1/stage-jungle
+texture pool 37 4473152 2236576 t11-m-video/soak
+texture pool 38 798720 125248 t11-m-plain/death
+texture pool 38 4473152 2236576 t11-m-video/soak
+texture pool 39 901120 186792 t11-m-plain/mp-caverns-2p
+texture pool 39 1085440 196616 t11-m-a64-video/run1/stage-caverns
+texture pool 39 4473152 2236576 t11-m-video/soak
+texture pool 40 1331200 111392 t11-plain/stop-citadel
+texture pool 40 4473152 2236576 t11-m-video/soak
+texture pool 41 1331200 229096 t11-m-a64-video/run1/stage-cradle
+texture pool 41 4473152 2236576 t11-m-video/soak
+texture pool 43 1126400 260240 t11-m-a64/run1/stage-surface2
+texture pool 43 4473152 2236576 t11-m-video/soak
+texture pool 45 819200 136512 t11-m-plain/mp-basement-2p
+texture pool 45 4473152 2236576 t11-m-video/soak
+texture pool 46 819200 136512 t11-m-plain/mp-stack-2p
+texture pool 46 4473152 2236576 t11-m-video/soak
+texture pool 48 819200 136512 t11-m-plain/mp-library-2p
+texture pool 48 4473152 2236576 t11-m-video/soak
+texture pool 50 819200 114088 t11-m-plain/mp-caves-2p
+texture pool 50 4473152 2236576 t11-m-video/soak
+texture pool 54 614400 122136 t11-m-plain/stage-cuba
+texture pool 54 4473152 2236576 t11-m-video/soak
+vertex pool 0 262144 16896 t11-m-plain/attract
+vertex pool 9 262144 101280 t11-m-a64-video-all/run1/bunker2
+vertex pool 20 262144 94880 t11-m-a64-video-all/run1/silo1
+vertex pool 22 262144 44944 t11-m-a64-video-all/run1/stage-statue
+vertex pool 22 524288 35904 t11-san/respawn-statue
+vertex pool 22 1048576 47680 t11-m-plain/mp-statue-4p
+vertex pool 23 262144 26016 t11-m-plain/tour-control
+vertex pool 24 262144 44032 t11-m-a64-video-all/run1/stage-archives
+vertex pool 24 524288 35200 t11-san/respawn-archives
+vertex pool 24 1048576 44096 t11-m-plain/mp-archives-4p
+vertex pool 25 262144 44688 t11-m-a64-video-all/run1/stage-train
+vertex pool 26 262144 98528 t11-m-a64-video-all/run1/frigate2
+vertex pool 27 262144 37472 t11-soak-plain/soak
+vertex pool 27 524288 39488 t11-plain/respawn-bunker
+vertex pool 27 1048576 54912 t11-m-plain/mp-bunker-4p
+vertex pool 28 262144 57360 t11-m-a64-video-all/run1/stage-aztec
+vertex pool 29 262144 34768 t11-m-a64-video-all/run1/stage-streets
+vertex pool 30 262144 34960 t11-m-a64-video-all/run1/stage-depot
+vertex pool 31 524288 39680 t11-plain/respawn-complex
+vertex pool 31 1048576 54464 t11-m-plain/mp-complex-4p
+vertex pool 32 262144 67088 t11-m-a64-video-all/run1/stage-egypt
+vertex pool 32 524288 33920 t11-plain/respawn-egypt
+vertex pool 32 1048576 43264 t11-m-plain/mp-egypt-4p
+vertex pool 33 262144 98912 t11-m-a64-video-all/run1/dam2
+vertex pool 34 262144 98016 t11-m-a64-video-all/run1/facility3
+vertex pool 34 524288 40000 t11-plain/respawn-facility
+vertex pool 34 1048576 55040 t11-m-plain/mp-facility-4p
+vertex pool 35 262144 88352 t11-m-a64-video-all/run1/runway2
+vertex pool 36 262144 25520 t11-m-video/tour-surface
+vertex pool 37 262144 64800 t11-m-a64-video-all/run1/stage-jungle
+vertex pool 38 524288 42016 t11-plain/respawn-temple
+vertex pool 38 1048576 72000 t11-m-plain/death
+vertex pool 39 270272 135136 t11-m-a64-video-all/run1/stage-caverns
+vertex pool 39 524288 46304 t11-plain/respawn-caverns
+vertex pool 39 1048576 66624 t11-m-plain/mp-caverns-4p
+vertex pool 41 262144 67936 t11-m-a64-video-all/run1/stage-cradle
+vertex pool 41 524288 34432 t11-plain/respawn-cradle
+vertex pool 41 1048576 45440 t11-m-plain/mp-cradle-4p
+vertex pool 43 262144 43632 t11-m-a64-video-all/run1/stage-surface2
+vertex pool 45 524288 39808 t11-plain/respawn-basement
+vertex pool 45 1048576 55104 t11-m-plain/mp-basement-4p
+vertex pool 46 524288 39616 t11-san/respawn-stack
+vertex pool 46 1048576 54976 t11-m-plain/mp-stack-4p
+vertex pool 48 524288 40064 t11-plain/respawn-library
+vertex pool 48 1048576 55232 t11-m-plain/mp-library-4p
+vertex pool 50 524288 40384 t11-plain/respawn-caves
+vertex pool 50 1048576 60160 t11-san/mp-caves-4p
+vertex pool 54 262144 5664 t11-m-plain/stage-cuba
+wallet room 0 76736 38368 t11-m-a64/run1/dam-twice

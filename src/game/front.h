@@ -10,7 +10,8 @@
  * after it. 13/8 of the N64's 0xA000 at 64 bits, as gun.c's rooms (LP64-005
  * decision 3): the stock model's image is 38,368 bytes there. */
 #if IS_64_BIT
-#define FRONT_WALLET_ROOM 0x10400
+/* LP64-006 Task 11: twice the 38,368-byte peak, rounded to 16 (13/8 gave 0x10400) */
+#define FRONT_WALLET_ROOM 0x12BC0
 #else
 #define FRONT_WALLET_ROOM 0xA000
 #endif

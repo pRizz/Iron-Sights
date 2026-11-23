@@ -123,14 +123,18 @@ u32 D_80032458 = 0;
  * below, and the buffer they sit in, is the 32-bit size times 13/8, rounded up
  * to 16; the texture pool after each room moves with it. The loader refuses,
  * by name, a model whose converted image passes its room. */
-u32 size_item_buffer[] = {0x21540, 0x21540};
+/* LP64-006 Task 11: 0x3460 more than 13/8, the left hand room's raise
+ * below, so no room's texture pool shrinks */
+u32 size_item_buffer[] = {0x249A0, 0x249A0};
 #else
 u32 size_item_buffer[] = {0x14820, 0x14820};
 #endif
 
 //D:80032464
 #if IS_64_BIT
-u32 D_80032464[] ={0xBE70, 0xBE70};
+/* LP64-006 Task 11: twice the largest image measured, 26,848 bytes (the
+ * weapons-dam case), rounded up to 16; 13/8 gave 0xBE70 */
+u32 D_80032464[] ={0xD1C0, 0xD1C0};
 #else
 u32 D_80032464[] ={0x7530, 0x7530};
 #endif
@@ -977,9 +981,9 @@ void used_to_load_1st_person_model_on_demand(GUNHAND hand)
                 if (item == ITEM_SUIT_LF_HAND)
                 {
 #if IS_64_BIT
-                    texInitPool(&g_CurrentPlayer->item_related[hand], buffer_weapon + 0x133E0, size_buffer_weapon - 0x133E0);
-                    load_object_fill_header(&g_CurrentPlayer->copy_of_body_obj_header[hand], (u8 *)ptr_item_text, buffer_weapon, 0x133E0, &g_CurrentPlayer->item_related[hand]);
-                    portLp64PoolUse("gun room left hand", (u32)get_pc_buffer_remaining_value((u8 *)ptr_item_text), 0x133E0); /* LP64-006 Task 11: the image, rounded to 16 */
+                    texInitPool(&g_CurrentPlayer->item_related[hand], buffer_weapon + 0x16840, size_buffer_weapon - 0x16840);
+                    load_object_fill_header(&g_CurrentPlayer->copy_of_body_obj_header[hand], (u8 *)ptr_item_text, buffer_weapon, 0x16840, &g_CurrentPlayer->item_related[hand]);
+                    portLp64PoolUse("gun room left hand", (u32)get_pc_buffer_remaining_value((u8 *)ptr_item_text), 0x16840); /* LP64-006 Task 11: twice the 46,112-byte peak (bunker2), rounded to 16; 13/8 gave 0x133E0 */
 #else
                     texInitPool(&g_CurrentPlayer->item_related[hand], buffer_weapon + 0xBD70, size_buffer_weapon + 0xFFFF4290);
                     load_object_fill_header(&g_CurrentPlayer->copy_of_body_obj_header[hand], (u8 *)ptr_item_text, buffer_weapon, 0xBD70, &g_CurrentPlayer->item_related[hand]);
@@ -988,9 +992,9 @@ void used_to_load_1st_person_model_on_demand(GUNHAND hand)
                 else if ((item == ITEM_TRIGGER) || (item == ITEM_WATCHLASER))
                 {
 #if IS_64_BIT
-                    texInitPool(&g_CurrentPlayer->item_related[hand], buffer_weapon + 0x11DC0, size_buffer_weapon - 0x11DC0);
-                    load_object_fill_header(&g_CurrentPlayer->copy_of_body_obj_header[hand], (u8 *)ptr_item_text, buffer_weapon, 0x11DC0, &g_CurrentPlayer->item_related[hand]);
-                    portLp64PoolUse("gun room trigger", (u32)get_pc_buffer_remaining_value((u8 *)ptr_item_text), 0x11DC0); /* LP64-006 Task 11 */
+                    texInitPool(&g_CurrentPlayer->item_related[hand], buffer_weapon + 0x14D80, size_buffer_weapon - 0x14D80);
+                    load_object_fill_header(&g_CurrentPlayer->copy_of_body_obj_header[hand], (u8 *)ptr_item_text, buffer_weapon, 0x14D80, &g_CurrentPlayer->item_related[hand]);
+                    portLp64PoolUse("gun room trigger", (u32)get_pc_buffer_remaining_value((u8 *)ptr_item_text), 0x14D80); /* LP64-006 Task 11: twice the 42,688-byte peak (facility1); 13/8 gave 0x11DC0 */
 #else
                     texInitPool(&g_CurrentPlayer->item_related[hand], buffer_weapon + 0xAFD0, size_buffer_weapon + 0xFFFF5030);
                     load_object_fill_header(&g_CurrentPlayer->copy_of_body_obj_header[hand], (u8 *)ptr_item_text, buffer_weapon, 0xAFD0, &g_CurrentPlayer->item_related[hand]);

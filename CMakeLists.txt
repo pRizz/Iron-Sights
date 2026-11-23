@@ -401,7 +401,7 @@ file(GLOB PORT_SRC CONFIGURE_DEPENDS port/src/*.c)
 # The 32-bit oracle build compiles it for the asset-class names.
 if(NOT GE_POINTER_BITS EQUAL 64 AND NOT GE_LP64_ORACLE)
     list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_lp64.c
-        ${CMAKE_SOURCE_DIR}/port/src/port_lp64_synth.c)
+        ${CMAKE_SOURCE_DIR}/port/src/port_lp64_synth.c ${CMAKE_SOURCE_DIR}/port/src/port_lp64_budget.c)
 endif()
 # The ROM data converters (port_romconv.h) exist for 64-bit builds; at 32 bits
 # only the oracle build compiles them, so no shipped 32-bit executable holds

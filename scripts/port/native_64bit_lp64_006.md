@@ -1923,6 +1923,56 @@ Task 7 text above stays as accepted; where it conflicts, these govern.
 
 These are the controller's rulings, recorded for the owner at the milestone's close.
 
+## Amendments during Task 11 (2026-11-22)
+
+Task 11's measurements changed seven details of the brief. The Task 11 text
+above stays as accepted; where it conflicts, these govern.
+
+1. **A print's stage.** A batch of peak lines belongs to the level of a
+   `ge: load_bg_file levelid=` line logged since the batch before it, else
+   to level 0, the front end, rather than to the last stage loaded: a print
+   at a return to the menus would otherwise be charged to the stage left
+   behind. Over 354 logs the rule gave no batch two levels.
+2. **The key is pool, stage and size.** One stage gives a pool several
+   sizes: the multiplayer room-memory tokens, the vertex pool and graphics
+   buffer by player count, and the one name `texture pool` for the stage,
+   gun and persistent model pools. `lp64_budgets.txt` and `--budget` key
+   on all three; a size the file does not list fails.
+3. **The model pool is listed in every stage.** A `texture pool` print
+   shows whichever of those pools is fullest, so the persistent model pool
+   (4,473,152 bytes once raised) appeared in a stage only where it led, and
+   a final run showed it in Facility, where no measured run had. It is one
+   pool, so each stage lists it with its largest peak anywhere.
+4. **The measurement is every run, not Step 3's alone.** Ruling 9's play
+   sets (stops, menus, input, demos, plain and sanitizer) on the first
+   raises found three more pairs past half (the weapon room, room memory
+   in Jungle and Cradle; room memory follows the pace, Jungle's tour giving
+   202,624 bytes once and 239,360 the next), so those were raised too and
+   the file takes its peaks from every Task 11 run.
+5. **A full pool's peak is not its demand.** The synthesizer's parameter
+   pool was full in bunker2 (10,240 of 10,240 bytes) and dropped updates;
+   at twice that it used 11,600 bytes, so it holds 584 records, twice the
+   290 it used, at the default `GE_SNDSCALE` of 2. Another scale gives
+   another size, which the file does not list.
+6. **Stage pools raise through one table.** The room-memory, graphics
+   buffer and vertex pool sizes come from tokens shared with 32 bits, so
+   the 64-bit raises are a table (`port_lp64_budget.c`) keyed by pool,
+   level and the token's size, applied where each size is set; the 32-bit
+   program is unchanged (`compare_win32.py`: identical in loaded code and
+   data).
+7. **The resident growth is a leak, not fixed here.** Each model load's
+   converted display list takes a new block of the high arena
+   (`portConvertModelGdl`, `src/game/objecthandler_2.c`) and keeps it, at
+   both widths: 1,100,736 bytes a lap over dam and facility, 10,240 KB a
+   lap of the full soak. The lists hold pointers that live with the
+   persistent models, and the file records that scoping their pool by
+   stage regressed before, so the fix needs a lifetime design of its own;
+   a fifth lap was therefore not checked to add nothing. The allocator's
+   kept pages and llvmpipe's code mappings under video are recorded with
+   their figures in FORK-089.
+
+No raise was withheld: every comparison stream matched as before.
+
 ## Amendments during Task 9 (2026-11-22)
 
 Task 9's measurements changed four details of the brief. The Task 9 text

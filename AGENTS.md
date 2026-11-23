@@ -344,9 +344,18 @@ pass its isolated executable rather than rebuilding an active player binary.
   `lp64_play.py sound DIR` prints each recording's length, peak and share of
   non-zero samples. Recordings are ROM-derived and stay under `build/lp64/`.
   `lp64_play.py peaks DIR...` prints, for each pool, the largest `ge: lp64:
-  peak` share over the folders' logs with the case that had it, marked past
-  80 percent of the pool's size and with any exhaustion lines (decision 10 of
-  the LP64-005 plan raises such a pool at 64 bits to twice its peak).
+  peak` share over the folders' logs with the case that had it, and any
+  exhaustion lines. `--by-stage` prints each pool, stage and size with its
+  largest peak and case, marked `ABOVE HALF`; a print belongs to the level
+  of a `ge: load_bg_file levelid=` line logged since the print before it,
+  else to level 0, the front end. `--budget FILE` checks the same against
+  `scripts/port/lp64_budgets.txt` (LP64-006 Task 11) and prints `OK: N pool
+  and stage pairs within budget`. At 64 bits every pool in every stage is at
+  least twice its largest measured peak: a pool, stage and size that the
+  file does not list, that is past half its size or that logs an
+  exhaustion line fails, unless its line is marked `withheld:` with the
+  reason. A pool that passes half is raised at 64 bits only, to twice its
+  peak rounded up to its alignment, and its line updated.
 - `-DGE_COMPARE=ON` (LP64-006) configures a comparison build: the in-tree
   `tanf`, `atanf` and `cosf` (`port/src/port_compare_math.c`, alike on every
   host) replace libm's, and the play harness (`PORT_PLAY_HARNESS`) is on at

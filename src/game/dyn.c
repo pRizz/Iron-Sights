@@ -10,6 +10,7 @@
 #include <stdio.h> /* GE_ROOM_AUDIT dyn-pool watch (see bg.c) */
 #include "port_dyn.h"
 #include "port_lp64.h" /* LP64-004: portLp64PoolFatal; LP64-005: portLp64PoolUse */
+#include "port_lp64_budget.h" /* LP64-006 Task 11: portLp64StageBudget */
 #include "port_poison.h"
 #endif
 
@@ -72,6 +73,15 @@ void dynInitMemory(void) {
     g_VtxSizesByPlayerCount[getPlayerCount() - 1] *= 2;
     g_VtxSizesByPlayerCount[getPlayerCount() - 1] = portDynVertexCapacity(
         g_VtxSizesByPlayerCount[getPlayerCount() - 1], getPlayerCount());
+#if IS_64_BIT
+    { /* LP64-006 Task 11: twice the soak's peak where it passed half (port_lp64_budget.c) */
+        extern s32 g_StageNum;
+        g_GfxSizesByPlayerCount[getPlayerCount() - 1] = (s32)portLp64StageBudget("graphics buffer", g_StageNum,
+            (u32)g_GfxSizesByPlayerCount[getPlayerCount() - 1]);
+        g_VtxSizesByPlayerCount[getPlayerCount() - 1] = (s32)portLp64StageBudget("vertex pool", g_StageNum,
+            (u32)g_VtxSizesByPlayerCount[getPlayerCount() - 1]);
+    }
+#endif
 #endif
 
     g_GfxBuffers[0] = mempAllocBytesInBank(g_GfxSizesByPlayerCount[getPlayerCount() - 1] * 2, MEMPOOL_STAGE);
