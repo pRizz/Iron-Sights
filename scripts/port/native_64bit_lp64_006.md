@@ -1955,9 +1955,13 @@ Where this section and Task 14's text differ, this governs.
    `src/game/bondview2.c:5505` reported (a strict-tier file; same result on
    both hosts, so left); FORK-089's Task 14 note has the table.
 6. **`lp64_equiv_expected.txt` gains a comment only:** x64 against a64 needs
-   no line. `scripts/port/test_lp64_address.c` still accepts `INT_MIN` or
-   `INT_MAX` for `FTOFIX32` past range; it is not in this task's files and
-   still passes.
+   no line.
+7. **Additions before review (controller), in a second commit.**
+   `scripts/port/test_lp64_address.c`, outside the task's files, now requires
+   `INT_MIN` for `FTOFIX32` past range. The Arm form's price was measured with a
+   scratch program instead of the benchmark guide's smoke run, which needs an
+   aarch64 build that does not exist yet. A float-cast-overflow run of the
+   aarch64 video build (`stages` and `sound`) was added.
 
 ## Amendments during Task 13 (2026-11-23)
 

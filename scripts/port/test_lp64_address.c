@@ -256,10 +256,10 @@ static void testStrtolNegativeKeepsSign(void)
     expect(value == -5, "strtol(\"-5\") is -5");
 }
 
-/* Past 32768.0 the conversion is out of range. The hardware's 32-bit
- * conversion gives INT_MIN (x86) or saturates (Arm); through a 64-bit long
- * the value wrapped instead (40000.0 to -25536.0). The volatile keeps the
- * compiler from folding it. */
+/* Past 32768.0 the conversion is out of range. x86's 32-bit conversion gives
+ * INT_MIN and Arm's saturates, so gu.h gives INT_MIN on Arm too; through a
+ * 64-bit long the value wrapped instead (40000.0 to -25536.0). The volatile
+ * keeps the compiler from folding it. */
 static void testFixedPointConversionDoesNotWrap(void)
 {
     // Arrange
@@ -269,7 +269,7 @@ static void testFixedPointConversionDoesNotWrap(void)
     int fixed = FTOFIX32(pastRange);
 
     // Assert
-    expect(fixed == INT_MIN || fixed == INT_MAX, "FTOFIX32 past 32768.0 does not wrap");
+    expect(fixed == INT_MIN, "FTOFIX32 past 32768.0 gives INT_MIN on every host");
 }
 
 #if IS_64_BIT
