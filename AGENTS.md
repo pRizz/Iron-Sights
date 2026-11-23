@@ -427,7 +427,10 @@ pass its isolated executable rather than rebuilding an active player binary.
   GE_GFXDIGEST_DETAIL=A-B` adds a `C` line a call for frames A to B, which
   names the call where two digests part.
   The pinned ticks of `walk` and `dam-twice` are measured again through `stepped(NAME)` when a front-end or watch change
-  moves them.
+  moves them. Set `saves` (Task 13, outside the 38) holds `saves-depot`, which walks folder 1 of a
+  campaign `test_save_widths.sh` keeps (`MIDAS_SAVE_WIDTHS_KEEP=DIR`) to Depot, which only its twelve
+  completed missions offer; `run --saves DIR` copies DIR into each of its runs and its route's
+  recording runs, and a run that leaves one of DIR's files with other bytes fails.
   `scripts/port/lp64_equiv_pictures.py` (Task 8) checks drawn pixels
   beside the digest: `shots DIR_A DIR_B` compares each case's screenshot
   of two `run --video --draw --shots TICK` folders (and fails when the two

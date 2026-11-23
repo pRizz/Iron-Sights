@@ -175,9 +175,11 @@ def keep_every_shot(folder: Path, target: Path) -> None:
 
 
 def recording_tick(case: Case, executable: SharedExecutable, env: dict[str, str], output: Path, route: str, step: Step,
-                   after: int, index: int, display: Display = HEADLESS) -> int | None:
+                   after: int, index: int, display: Display = HEADLESS,
+                   maybe_saves: Path | None = None) -> int | None:
     """Runs CASE with ROUTE until STEP's line appears at or after tick AFTER and gives its tick (None
-    when the run ends or times out first). Its log is OUTPUT/CASE.stepINDEX.log."""
+    when the run ends or times out first). Its log is OUTPUT/CASE.stepINDEX.log. MAYBE_SAVES, a folder,
+    is copied into the run's folder first, as run_case does."""
     route_path = (output/f'{case.name}.step{index}.route').resolve()
     route_path.write_text(route)
     env = dict(env, GE_INPUTPLAY=str(route_path))
@@ -185,6 +187,8 @@ def recording_tick(case: Case, executable: SharedExecutable, env: dict[str, str]
     with tempfile.TemporaryDirectory(prefix='midas-lp64-play-') as temporary, \
             (output/f'{case.name}.step{index}.log').open('w') as log:
         child = executable.place(Path(temporary))
+        if maybe_saves is not None:
+            shutil.copytree(maybe_saves, temporary, dirs_exist_ok=True)
         run_env = folder_environment(env, Path(temporary), display)
         process = subprocess.Popen([str(child)], cwd=temporary, env=run_env, stdout=subprocess.PIPE,
                                    stderr=subprocess.STDOUT, text=True, errors='replace')
@@ -207,22 +211,44 @@ def recording_tick(case: Case, executable: SharedExecutable, env: dict[str, str]
 
 
 def route_file(case: Case, executable: SharedExecutable, env: dict[str, str], output: Path,
-               display: Display = HEADLESS) -> tuple[Path, list[int]]:
-    """Writes CASE's route to OUTPUT/CASE.route, building a route of steps first; gives the file and
-    the presses' ticks. Raises RouteError when a step's line never appears."""
+               display: Display = HEADLESS, maybe_saves: Path | None = None) -> tuple[Path, list[int]]:
+    """Writes CASE's route to OUTPUT/CASE.route, building a route of steps first (its recording runs
+    start from MAYBE_SAVES too); gives the file and the presses' ticks. Raises RouteError when a step's
+    line never appears."""
     presses = list(case.route.presses)
     if case.route.steps:
         presses = build_presses(case.route.steps, lambda route, step, after, index: recording_tick(
-            case, executable, env, output, route, step, after, index, display))
+            case, executable, env, output, route, step, after, index, display, maybe_saves))
     path = (output/f'{case.name}.route').resolve()
     path.write_text(route_text(presses))
     return path, sorted(tick for tick, _ in presses)
 
 
+def saves_changed(saves: Path, folder: Path) -> list[str]:
+    """A problem for each file of the folder SAVES whose copy in FOLDER, a run's folder, no longer
+    holds the same bytes, naming its first differing byte."""
+    found = []
+    for source in sorted(path for path in saves.rglob('*') if path.is_file()):
+        name = source.relative_to(saves)
+        copy = folder/name
+        before = source.read_bytes()
+        after = copy.read_bytes() if copy.is_file() else None
+        if after == before:
+            continue
+        if after is None:
+            found.append(f'saves: the run removed {name.as_posix()}')
+            continue
+        first = next((at for at, (old, new) in enumerate(zip(before, after)) if old != new),
+                     min(len(before), len(after)))
+        found.append(f'saves: the run changed {name.as_posix()} (first at byte {first})')
+    return found
+
+
 def run_case(case: Case, executable: SharedExecutable, rom: Path, extra: dict[str, str], output: Path,
              display: Display = HEADLESS, maybe_saves: Path | None = None) -> Outcome:
     """Runs CASE and judges it; its log is OUTPUT/CASE.log. MAYBE_SAVES, a folder, is copied into
-    the run's folder first (lp64_equiv.py run --saves)."""
+    the run's folder first, and into each recording run of a route of steps (lp64_equiv.py run
+    --saves); the case fails when the run leaves one of its files with other bytes."""
     timeout = timeout_seconds(case.frames, display.timeout_scale)
     log_path = output/f'{case.name}.log'
     env = case_environment(case, rom, extra, display=display)
@@ -232,7 +258,7 @@ def run_case(case: Case, executable: SharedExecutable, rom: Path, extra: dict[st
     route_ticks = None
     if case.route is not None:
         try:
-            path, route_ticks = route_file(case, executable, env, output, display)
+            path, route_ticks = route_file(case, executable, env, output, display, maybe_saves)
         except RouteError as error:
             return Outcome(case, None, time.monotonic() - started, [str(error)])
         env['GE_INPUTPLAY'] = str(path)
@@ -247,13 +273,14 @@ def run_case(case: Case, executable: SharedExecutable, rom: Path, extra: dict[st
                                         stdout=log, stderr=subprocess.STDOUT, timeout=timeout).returncode
             except subprocess.TimeoutExpired:
                 status = None
+        changed = [] if maybe_saves is None else saves_changed(maybe_saves, folder)
         if display.shots is not None:
             keep_last_shot(folder, output/f'{case.name}.bmp')
         if display.keep_shots:
             keep_every_shot(folder, output/f'{case.name}.shots')
     seconds = time.monotonic() - started
     text = log_path.read_text(errors='replace')
-    found = problems(case, status, text, timeout, display.video)
+    found = problems(case, status, text, timeout, display.video) + changed
     if case.capture:
         found += capture_problems(capture_path(output, case))
     return Outcome(case, status, seconds, found, route_ticks, pictures_drawn(text) if display.video else None)

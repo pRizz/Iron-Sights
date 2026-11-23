@@ -16,7 +16,9 @@ import lp64_equiv  # noqa: E402
 import lp64_equiv_cases  # noqa: E402
 import lp64_equiv_profile  # noqa: E402
 import lp64_play_run  # noqa: E402
-from lp64_play_route import Z_TRIG, route_text  # noqa: E402
+from lp64_play_cases import Case, frame_limit  # noqa: E402
+from lp64_play_route import START_BUTTON, Z_TRIG, Press, Route, Step, play_line, route_text  # noqa: E402
+from run_copies import SharedExecutable  # noqa: E402
 import settings_placement  # noqa: E402
 
 COMPARE_ON = 'ge: compare: on\n'
@@ -225,6 +227,42 @@ class Run(StandIns):
         # Assert
         self.assertEqual(status, 2, out)
         self.assertIn('the saves set needs --saves DIR', out)
+
+    def test_saves_reach_the_recording_runs_of_a_route_of_steps(self):
+        # Arrange: the stand-in shows the menu its step waits for only with the saves folder's file
+        saves = self.folder/'saves'
+        (saves/'Data'/'Saves').mkdir(parents=True)
+        (saves/'Data'/'Saves'/'eeprom.bin').write_bytes(bytes(512))
+        exe = self.fake('ge: frame limit reached: frames=60 gfxtasks=30\n',
+                        script='[ -f Data/Saves/eeprom.bin ] && printf "ge: play: tick 5\\nge: play: menu 7\\n" >&2')
+        step = Step(Press(START_BUTTON), 10, play_line('menu', 7), 'ge: play: menu 7')
+        case = Case('saves-steps', 'saves', (), 60, (frame_limit(60),), route=Route(steps=(step,)))
+        self.output.mkdir()
+
+        # Act
+        with SharedExecutable(exe) as shared:
+            outcome = lp64_play_run.run_case(case, shared, self.rom, {}, self.output, maybe_saves=saves)
+
+        # Assert
+        self.assertEqual(outcome.problems, [])
+        self.assertEqual(outcome.route_ticks, [15])
+
+    def test_a_run_that_changes_a_saves_file_fails_naming_it(self):
+        # Arrange: the stand-in rewrites the save it was given
+        saves = self.folder/'saves'
+        (saves/'Data'/'Saves').mkdir(parents=True)
+        (saves/'Data'/'Saves'/'eeprom.bin').write_bytes(bytes(512))
+        exe = self.fake('ge: frame limit reached: frames=60 gfxtasks=30\n',
+                        script='printf x | dd of=Data/Saves/eeprom.bin bs=1 seek=7 conv=notrunc 2>/dev/null')
+        case = Case('saves-write', 'saves', (), 60, (frame_limit(60),))
+        self.output.mkdir()
+
+        # Act
+        with SharedExecutable(exe) as shared:
+            outcome = lp64_play_run.run_case(case, shared, self.rom, {}, self.output, maybe_saves=saves)
+
+        # Assert
+        self.assertEqual(outcome.problems, ['saves: the run changed Data/Saves/eeprom.bin (first at byte 7)'])
 
     def test_env_refuses_runner_variables(self):
         # Arrange
@@ -530,6 +568,16 @@ class Cases(unittest.TestCase):
         # Assert
         self.assertEqual(len(lp64_equiv_cases.WALK_TICKS), len(lp64_equiv_cases.WALK_STEPS))
         self.assertEqual(len(lp64_equiv_cases.DAM_TWICE_TICKS), len(lp64_equiv_cases.DAM_TWICE_STEPS))
+        self.assertEqual(len(lp64_equiv_cases.SAVES_TICKS), len(lp64_equiv_cases.SAVES_STEPS))
+
+    def test_the_saves_set_is_one_lockstep_case_outside_the_38(self):
+        # Act
+        cases = lp64_equiv.cases_of(['saves'])
+
+        # Assert
+        self.assertEqual([(case.name, case.lockstep) for case in cases], [('saves-depot', True)])
+        self.assertNotIn('saves-depot', {case.name for case in lp64_equiv.cases_of(
+            ['demos', 'solo', 'mp', 'menus', 'reload'])})
 
 
 class Profiles(unittest.TestCase):

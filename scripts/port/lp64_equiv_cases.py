@@ -9,14 +9,16 @@
             back to the title, in lockstep
     reload  `dam-twice`: Dam, the watch's abort, Dam again from the front end and the generated
             route in the second load, in lockstep
-    saves   (Task 13) runs that start from a saves folder (`run --saves DIR`); none yet
+    saves   `saves-depot` (Task 13): from a campaign folder (`run --saves DIR`) through the front end
+            to Depot, which only that folder's twelve completed missions offer, in lockstep; outside
+            the 38
 
 Every case but a demo requires `ge: lockstep: on`. A case with the generated route requires
 SHOT_FLOOR shots or more and `moved` (player 0's own counters, port/src/port_playlog.c,
 GE_PLAYLOG=1), except as the tables below say. A guard's hit holds the trigger off while the damage display runs (LP64-006 Task 1), so the solo
 routes run with `invuln`.
 
-`walk` and `dam-twice` are routes of steps (lp64_play_route.py): their ticks were found by
+`walk`, `dam-twice` and `saves-depot` are routes of steps (lp64_play_route.py): their ticks were found by
 recording runs in lockstep and are pinned below with the date and commit of the measurement;
 `stepped(name)` gives a case's steps again, to measure them anew (lp64_play_run.route_file builds
 the presses). A pinned tick that no longer lands fails the case by its ordered lines.
@@ -210,6 +212,47 @@ def dam_twice_case(maybe_route: Route | None = None) -> Case:
     return Case('dam-twice', 'reload', env, DAM_TWICE_FRAMES, required, route=route, lockstep=True)
 
 
+# ---- saves-depot: a campaign written at the other width (Task 13) -------------------------------
+# `run --saves DIR` copies in the folder test_save_widths.sh keeps (MIDAS_SAVE_WIDTHS_KEEP): its
+# Data/Saves/eeprom.bin has folder 1's first twelve missions completed on Agent. START on each
+# front-end menu to mission select (`menu 7`, folder 1 and solo taken by START), then the stick down
+# and right for CORNER.hold ticks. The cursor starts on Dam (73, 62) and moves 5.75 a tick at this
+# deflection (frontUpdateControlStickPosition), so it stops near (280, 269): Train's column, the
+# lowest row. The grid then highlights the nearest mission the folder offers, up and to the left
+# (src/game/front.c, interface_menu07_missionsel): Depot, the thirteenth, only when the twelve before
+# it were read; a blank folder would leave it on Dam's row. Held longer, the cursor passes x 390 and
+# y 223 into the previous tab, whose START goes back to mode select. Then START on the mission, on
+# difficulty (Agent) and on the briefing.
+LEVEL_DEPOT = 30
+EEPROM_LOADED = Required('ge: eeprom.bin loaded (512 bytes)', re.compile(r'ge: eeprom\.bin loaded \(512 bytes\)$'))
+SAVES_MENUS = (1, 2, 3, 4, 5, 6)
+CORNER = Press(0, stick_x=SIDE_STICK_X, stick_y=-SIDE_STICK_X, hold=36)
+CORNER_SETTLE = 30
+
+
+def start_step(menu: int) -> Step:
+    return Step(Press(START_BUTTON), STEP_DELAY, play_line('menu', menu), f'ge: play: menu {menu}')
+
+
+SAVES_STEPS = (tuple(start_step(menu) for menu in SAVES_MENUS)
+               + (Step(CORNER, STEP_DELAY, play_line('menu', 7), 'ge: play: menu 7'),
+                  Step(Press(START_BUTTON), CORNER.hold + CORNER_SETTLE),
+                  start_step(8), start_step(10)))
+# Measured on 2026-11-23 on e45ef3b's tree with Task 13's changes, on cmp-a64 in lockstep from the
+# 32-bit test program's folder (lp64_play_run.run_case on stepped('saves-depot')): Depot's load at
+# tick 891, so SAVES_FRAMES leaves it 309 ticks. A blank folder on the same route loads Dam (33).
+SAVES_TICKS = (305, 365, 425, 485, 580, 640, 700, 766, 826, 886)
+SAVES_FRAMES = 1200
+
+
+def saves_depot_case(maybe_route: Route | None = None) -> Case:
+    order = ordered_play(*[('menu', menu) for menu in SAVES_MENUS + (7, 8, 10, 11)],
+                         ('stage-load', LEVEL_DEPOT))
+    required = (LOCKSTEP_ON, EEPROM_LOADED, order, frame_limit(SAVES_FRAMES))
+    route = pinned(SAVES_STEPS, SAVES_TICKS) if maybe_route is None else maybe_route
+    return Case('saves-depot', 'saves', PLAY_ENV, SAVES_FRAMES, required, route=route, lockstep=True)
+
+
 def pinned(steps: tuple[Step, ...], ticks: tuple[int, ...]) -> Route:
     """STEPS' presses at their pinned TICKS."""
     if len(steps) != len(ticks):
@@ -218,10 +261,12 @@ def pinned(steps: tuple[Step, ...], ticks: tuple[int, ...]) -> Route:
 
 
 def stepped(name: str) -> Case:
-    """The case NAME (`walk` or `dam-twice`) with its route of steps in place of the pinned ticks,
-    to measure them anew."""
+    """The case NAME (`walk`, `dam-twice` or `saves-depot`) with its route of steps in place of the
+    pinned ticks, to measure them anew."""
     if name == 'walk':
         return walk_case(Route(steps=WALK_STEPS))
+    if name == 'saves-depot':
+        return saves_depot_case(Route(steps=SAVES_STEPS))
     return dam_twice_case(Route(steps=DAM_TWICE_STEPS))
 
 
@@ -231,7 +276,7 @@ SETS = {
     'mp': lambda: [mp_case()],
     'menus': lambda: [walk_case()],
     'reload': lambda: [dam_twice_case()],
-    'saves': lambda: [],
+    'saves': lambda: [saves_depot_case()],
 }
 # The sets whose cases start from `run --saves DIR` (Task 13).
 SAVES_SETS = ('saves',)

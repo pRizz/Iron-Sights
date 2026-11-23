@@ -18,6 +18,7 @@
 #include "game/glass.h"
 #include "port_hostptr.h"
 #include "game/ramromreplay.h"
+#include "game/file.h"
 #include "port_romlayout.h"
 #include "port_briefing_span.h"
 #include "game/front.h"
@@ -375,6 +376,11 @@ SAME_OFFSET(mp_weapon_set, mp_weapon_set);
 SAME_OFFSET(aim_option, aim_option);
 SAME_OFFSET(mp_flags, mp_flags);
 _Static_assert(sizeof(RomBrief) == 48, "briefing file layout");
+/* The campaign save (LP64-006 Task 13): eeprom.bin is a 32-byte header and five
+ * 0x60-byte folder records, read and written whole (file2.c), so a file moves
+ * between widths only while neither record grows. */
+_Static_assert(sizeof(save_data) == 0x60, "campaign folder record is 0x60 bytes");
+_Static_assert(sizeof(smallSave) == 32, "campaign save header is 32 bytes");
 
 /* The animation header (LP64-004 Task 3): 0x14 bytes in the file. At 64 bits
  * the run-time ModelAnimation is written over it, packed and 4-byte aligned

@@ -104,6 +104,7 @@ jobs:
           python3 scripts/port/test_run_copies.py
           bash scripts/port/test_inputrec_headless.sh
           bash scripts/port/test_lp64_compare.sh
+          bash scripts/port/test_save_widths.sh
           bash scripts/port/test_gfx_digest.sh
           bash scripts/port/test_image_inflate.sh
           bash scripts/port/test_startup_stamp.sh

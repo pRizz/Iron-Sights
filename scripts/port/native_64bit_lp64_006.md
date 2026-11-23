@@ -1923,6 +1923,47 @@ Task 7 text above stays as accepted; where it conflicts, these govern.
 
 These are the controller's rulings, recorded for the owner at the milestone's close.
 
+## Amendments during Task 13 (2026-11-23)
+
+Where this section and Task 13's text differ, this governs.
+
+1. **The files differed, and a 64-bit fix makes them equal.** A folder
+   record (`save_data`, 0x60 bytes) ends in two padding bytes after its
+   times, which the checksum covers. `fileWriteSave` stored whatever memory
+   held there: the 64-bit test program's free slot (the record
+   `fileResetSave` builds from `BLANKSAVEDATA` on the stack) held `a4 2a`,
+   the 32-bit one's zeros, so the files differed in that slot's checksum
+   and padding (bytes 225 to 232 and 319 to 320) while both widths read
+   both files alike. At 64 bits `fileWriteSave` (`src/game/file2.c`) now
+   stores the padding as zeros, behind `IS_64_BIT`; the 32-bit program is
+   unchanged and still stores what its memory holds. The driver's
+   `padding DIR` mode tests it at 64 bits.
+2. **Three missions on 00 Agent, not on 007.** The save keeps no 007 time
+   (ten bits a mission at Agent, Secret Agent and 00 Agent fill
+   `times`, `fileSetDifficultyStageTime` ignores 007, and
+   `end_of_mission_briefing` never records a 007 completion; 007 mode is
+   `flag_007` or all twenty on 00 Agent). The game's writer marks the
+   three missions' Secret Agent times at the cap, 1023.
+3. **Set `saves` holds one case, `saves-depot`.** The two cases of the
+   task's text are its two runs: `cmp-a64` on the 32-bit program's folder
+   and `cmp-i686` on the 64-bit one's, each `--repeat 2`. The route
+   holds the stick down and right for 36 ticks on mission select and
+   presses START there: the grid highlights Depot only when folder 1's
+   twelve missions were read (a blank folder on the same route loads Dam).
+4. **`--saves` reaches a route's recording runs, and a changed save fails
+   the run.** Each repeat already got the folder; the recording runs of a
+   route of steps did not, which is the defect Task 5's review parked
+   (`lp64_play_run.py`). "The file is unchanged afterwards" is now judged
+   in every run of the set: `run_case` compares each file of `--saves DIR`
+   with its copy after the run and names the first byte that differs.
+   The video `midas.ini` overwrite is left as it was (the set runs
+   headless).
+5. **The driver also compiles `crc.c` and `n64_random.c`**, the save
+   checksum, and `MIDAS_SAVE_WIDTHS_KEEP=DIR` keeps each width's folder
+   for the game runs. On a compiler with one width (aarch64) the harness
+   runs that width and says it skipped the other half, the file
+   comparison and the cross-width reads.
+
 ## Amendments during Task 12 (2026-11-23)
 
 Task 12's text was written when there were 37 harnesses. Where this section

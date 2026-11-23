@@ -85,6 +85,16 @@ void fileWriteSave(save_data *save)
     {
         if ( fileGamePakProbe())
         {
+#if IS_64_BIT
+            { /* LP64-006 Task 13: the record's padding after its times is
+               * whatever memory held where BLANKSAVEDATA was built, and the
+               * checksum covers it; store zeros, so the file is the same at
+               * every width (test_save_widths.sh). */
+                u8 *tail = save->times + sizeof(save->times);
+
+                memset(tail, 0, (u8 *) (save + 1) - tail);
+            }
+#endif
             fileGenerateCRC(&save->completion_bitflags, save + 1, save);
             joyGamePakLongWrite((((u32)((save - &saves[SAVESLOT1]) * 0x60) >> 3) + 4), save, sizeof(save_data)); // 0x60 = sizeof(save_data) be sure to manually update if save changes
         }
