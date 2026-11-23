@@ -64,7 +64,6 @@ ModelNode_Op16Record
 ModelRoData
 ModelRoData_Child
 ModelRoData_Op14Record
-ModelRoData_Op17Record
 ModelRwData
 ModelRwData_DisplayListRecord
 MonitorObjRecord

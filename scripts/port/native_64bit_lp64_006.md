@@ -1923,6 +1923,47 @@ Task 7 text above stays as accepted; where it conflicts, these govern.
 
 These are the controller's rulings, recorded for the owner at the milestone's close.
 
+## Amendments during Task 16 (2026-11-23)
+
+Where this section and Task 16's text differ, this governs.
+
+1. **The census of an equivalence folder.** `lp64_census.py types` reads a
+   play folder's `play.json` or a smoke folder; `lp64_equiv.py` keeps its
+   logs under `runN/`, so its census was read by a scratch wrapper that
+   imports the tool and replaces only its log lookup. Neither runner refused
+   `GE_LP64_CENSUS` from `--env`. The equivalence sets loaded opcode 15 once
+   (`GtriggerZ`, the `facility1` demo), so the combined opcode list is one
+   shorter than the hand-over's; the type list is unchanged.
+2. **`lp64_model_scan.py` gains `opcodes`.** No command counted every node by
+   its opcode, so the measurement of whether the stock ROM holds an OP17
+   record needed one: per class, the nodes the Child and Next walk reaches,
+   then the opcodes no model holds.
+3. **OP17's 32-bit half.** The 32-bit converter keeps the group map, as
+   `romfile_model.c` does (decision 10), and `testOp17KeepsPosition` asserts
+   that inherited reading at 32 bits. The rare-opcode fixture's OP17 record
+   grew from 28 to 32 bytes, the size `model.c` reads.
+4. **The empty-hand tests run each call in a child process**, so a fault is
+   a result: the child must return at 64 bits and end by SIGSEGV at 32 bits,
+   where the read through NULL is kept. `chraction.c` includes
+   `platform_info.h` itself, as Task 15's corrections did.
+5. **The index-0 load fits neither branch of Step 3.** No sanitizer report,
+   and no poisoned gap covers the read: the load takes the rest of the stage
+   bank, the payload read lands on its end, which is the permanent bank's
+   live first block (measured with a scratch build; FORK-089's Task 16
+   note). The read is not bounded; the decision is left to the review.
+6. **The render thread's lines.** They print on standard output with
+   `printf` and `fflush`, the waiting line under the lock with the thread's
+   pending, executing and completed flags as its state, and also when a live
+   tick change restarts the thread. `lp64_play.py` runs the cases with
+   `GE_RENDERTHREAD=1` as it stands; the wait between the lines was measured
+   by a scratch runner that imports the tool's cases, environment and judge
+   and stamps each line as it arrives.
+7. **`ModelRoData_Op17Record` leaves the pointer-only list.** OP17's own map
+   takes the record's `sizeof` and member offsets, so
+   `lp64_pointer_types.py check` failed on the gate trees until the type was
+   removed from `lp64_pointer_types.txt` and its R11 row in FORK-089 said
+   why, as the list's header requires.
+
 ## Amendments during Task 15 (2026-11-23)
 
 Where this section and Task 15's text differ, this governs.
