@@ -1963,6 +1963,15 @@ Where this section and Task 16's text differ, this governs.
    `lp64_pointer_types.py check` failed on the gate trees until the type was
    removed from `lp64_pointer_types.txt` and its R11 row in FORK-089 said
    why, as the list's header requires.
+8. **The index-0 read is bounded (ruling 14).** After item 5, the controller
+   ruled the read a decision-10 defect: `resource_load_from_indy` returns size
+   0 at 64 bits when the host reports no file, with
+   `test_lp64_typed_ob.c` failing first, and the 32-bit fix goes to the owner
+   as `t16-index0-32bit.patch`. `ob.c` sat at the 628-line limit, so the guard
+   is three lines and four blank lines after the function went. Repeated: the
+   `stops` set on `boot`, `boot-san`, `boot-x64` and `video`, the static
+   checks and CI's tests-step lines; no other set or comparison, since only
+   the index-0 load reaches the changed lines.
 
 ## Amendments during Task 15 (2026-11-23)
 

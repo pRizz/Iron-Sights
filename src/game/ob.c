@@ -7,6 +7,7 @@
 #include <assets/obseg/obseg.h>
 #include "decompress.h"
 #include "indy_comms.h"
+#include "platform_info.h" /* IS_64_BIT: the missing host file guard (LP64-006 Task 16) */
 #include <stdio.h> /* printf: the missing-data warning */
 #include <str.h>
 #include "assets/obseg/file_resource_id_enums.h"
@@ -92,6 +93,9 @@ void resource_load_from_indy(u8 *ptrdata, s32 bytes,  fileentry *srcfile,  resou
         return;
     }
     indycommHostCheckFileExists(srcfile->filename, &lookupdata->pc_size);
+#if IS_64_BIT /* pc_size 0: no host file, so no payload; its header would be read past the allocation */
+    if (lookupdata->pc_size == 0) { lookupdata->poolRemaining = 0; return; } /* size 0, as for no header */
+#endif
     pPayload = (ptrdata + bytes) - ((lookupdata->pc_size + 7) & -8);
     if ((pPayload - ptrdata) < 8U)
     {
@@ -112,10 +116,6 @@ void resource_load_from_indy(u8 *ptrdata, s32 bytes,  fileentry *srcfile,  resou
         lookupdata->poolRemaining = size;
     }
 }
-
-
-
-
 
 void obInit(void)
 {
