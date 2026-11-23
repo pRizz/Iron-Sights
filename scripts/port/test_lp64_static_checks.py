@@ -261,22 +261,42 @@ class Unprototyped(TreeCase):
         # Assert
         self.assertEqual((status, out), (0, ''))
 
-    def test_a_name_with_no_definition_in_the_tree_is_not_listed(self):
-        # Arrange
-        tree = self.build_dir('t', {'a.c': "0\n" + self.implicit('a.c', 5, 'printf') + "--aux--\n"})
+    def test_a_name_with_no_definition_in_the_tree_is_listed_as_a_library_call(self):
+        # Arrange: the tree cannot show a library function's type (memset takes a size_t)
+        tree = self.build_dir('t', {'a.c': "0\n" + self.implicit('a.c', 5, 'memset') + "--aux--\n"})
         # Act
         status, out, err = self.run_main('unprototyped', tree)
         # Assert
-        self.assertEqual((status, out), (0, ''))
+        self.assertEqual((status, out.strip()), (0, 'a.c:5:3: memset | no definition in the tree'))
 
-    def test_a_declaration_without_a_definition_does_not_count(self):
+    def test_the_built_in_wording_alone_is_listed(self):
+        # Arrange: without -ffreestanding GCC can name a built-in this way
+        text = (f"0\n{self.folder}/a.c:5:3: warning: incompatible implicit declaration of built-in function "
+                "'memset' [-Wbuiltin-declaration-mismatch]\n--aux--\n")
+        tree = self.build_dir('t', {'a.c': text})
+        # Act
+        status, out, err = self.run_main('unprototyped', tree)
+        # Assert
+        self.assertEqual(out.strip(), 'a.c:5:3: memset | no definition in the tree')
+
+    def test_both_wordings_at_one_place_are_listed_once(self):
+        # Arrange
+        text = ("0\n" + self.implicit('a.c', 5, 'strlen') + f"{self.folder}/a.c:5:3: warning: incompatible implicit "
+                "declaration of built-in function 'strlen' [-Wbuiltin-declaration-mismatch]\n--aux--\n")
+        tree = self.build_dir('t', {'a.c': text})
+        # Act
+        status, out, err = self.run_main('unprototyped', tree)
+        # Assert
+        self.assertEqual(out.strip().splitlines(), ['a.c:5:3: strlen | no definition in the tree'])
+
+    def test_a_declaration_without_a_definition_is_not_taken_for_one(self):
         # Arrange: `C` marks a declaration, `F` a definition
         text = "0\n" + self.implicit('a.c', 5, 'f') + "--aux--\n/* a.c:1:NC */ extern void f (char *); \n"
         tree = self.build_dir('t', {'a.c': text})
         # Act
         status, out, err = self.run_main('unprototyped', tree)
         # Assert
-        self.assertEqual(out, '')
+        self.assertEqual(out.strip(), 'a.c:5:3: f | no definition in the tree')
 
     def test_a_definition_in_another_file_is_found(self):
         # Arrange

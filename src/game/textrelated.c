@@ -88,9 +88,9 @@ void setTextOverlapCorrection(s32 flag) {
 }
 
 extern u8 _fontbankgothicSegmentEnd;
-extern u8 _fontbankgothicSegmentRomStart;
+extern u8 _fontbankgothicSegmentRomStart[];
 extern u8 _fontzurichboldSegmentEnd;
-extern u8 _fontzurichboldSegmentRomStart;
+extern u8 _fontzurichboldSegmentRomStart[];
 extern u8 _fontzurichboldSegmentStart;
 extern u8 _fontbankgothicSegmentStart;
 

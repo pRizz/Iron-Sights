@@ -121,6 +121,7 @@ jobs:
           bash scripts/port/test_mema_order.sh
           python3 scripts/port/test_lp64_diagnostics.py
           python3 scripts/port/test_lp64_static_checks.py
+          python3 scripts/port/test_lp64_lto.py
           python3 scripts/port/test_lp64_casts.py
           python3 scripts/port/lp64_casts.py check
           python3 scripts/port/test_lp64_overlays.py
@@ -142,6 +143,11 @@ jobs:
           python3 scripts/port/lp64_diagnostics.py narrowing --check build/lp64/gate build/lp64/gate-video
           python3 scripts/port/lp64_diagnostics.py unprototyped --check build/lp64/gate build/lp64/gate-video
           python3 scripts/port/lp64_pointer_types.py check build/lp64/gate build/lp64/gate-video
+          cmake -S . -B build/lp64/lto -DCMAKE_BUILD_TYPE=Debug -DGE_POINTER_BITS=64 -DGE_HEADLESS=ON "-DCMAKE_C_FLAGS=-flto=auto -Wlto-type-mismatch" "-DCMAKE_CXX_FLAGS=-flto=auto -Wlto-type-mismatch" "-DCMAKE_EXE_LINKER_FLAGS=-flto=auto -Wlto-type-mismatch" "-DCMAKE_C_LINKER_LAUNCHER=env;-u;MAKEFLAGS" "-DCMAKE_CXX_LINKER_LAUNCHER=env;-u;MAKEFLAGS"
+          LC_ALL=C cmake --build build/lp64/lto --target ge -j"$(nproc)" > build/lp64/lto/lto-build.log 2>&1 || { tail -n 60 build/lp64/lto/lto-build.log; exit 1; }
+          cmake -S . -B build/lp64/lto-video -DCMAKE_BUILD_TYPE=Debug -DGE_POINTER_BITS=64 -DGE_VIDEO=ON "-DCMAKE_C_FLAGS=-flto=auto -Wlto-type-mismatch" "-DCMAKE_CXX_FLAGS=-flto=auto -Wlto-type-mismatch" "-DCMAKE_EXE_LINKER_FLAGS=-flto=auto -Wlto-type-mismatch" "-DCMAKE_C_LINKER_LAUNCHER=env;-u;MAKEFLAGS" "-DCMAKE_CXX_LINKER_LAUNCHER=env;-u;MAKEFLAGS"
+          LC_ALL=C cmake --build build/lp64/lto-video --target ge -j"$(nproc)" > build/lp64/lto-video/lto-build.log 2>&1 || { tail -n 60 build/lp64/lto-video/lto-build.log; exit 1; }
+          python3 scripts/port/lp64_lto.py check build/lp64/lto/lto-build.log build/lp64/lto-video/lto-build.log
           python3 scripts/port/hand_gallery.py verify --allow-pending
 
   # The builds start alongside the tests instead of after them; publish waits

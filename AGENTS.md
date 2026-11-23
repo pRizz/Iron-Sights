@@ -508,14 +508,33 @@ pass its isolated executable rather than rebuilding an active player binary.
   trees: `lp64_diagnostics.py narrowing --check` (implicit narrowing of a
   `uintptr_t`, `intptr_t` or `romptr_t`) and `unprototyped --check` (calls
   without a prototype to functions that take or return a pointer or 64-bit
-  value). Each compares its places with an exact-match allowlist, and a
+  value, or that the tree does not define, such as `memset` or `strlen`,
+  under either of GCC's wordings). Each compares its places with an
+  exact-match allowlist, and a
   missing file allows none (`scripts/port/lp64_static_checks.py`): no
   narrowing place is allowed, so `lp64_narrowing_allowed.txt` exists only if
   one is deliberately allowed, with its reason; `lp64_unprototyped_allowed.txt`
   lists the remaining calls with theirs. Beside them, `python3
   scripts/port/lp64_casts.py check` holds the truncating casts to their
   allowlist and `lp64_overlays.py check --no-defects` (above) the reviewed
-  reads; CI's tests step runs all four. Allowlists are lowered as places are
+  reads; CI's tests step runs all four. `python3 scripts/port/lp64_lto.py
+  check LOG...` (LP64-006 Task 15) holds the link-time type mismatches, a
+  declaration that disagrees with its definition in another file, to
+  `scripts/port/lp64_lto_allowed.txt` (`SYMBOL reason` a line): the logs'
+  mismatched symbols must equal its symbols exactly, a missing file allows
+  none, and it refuses a log without a finished link; `list LOG...` prints
+  each mismatch with both declarations. The logs come from two scratch trees
+  that nothing ships from, `build/lp64/lto` (with `-DGE_HEADLESS=ON`) and
+  `build/lp64/lto-video` (`-DGE_VIDEO=ON`), each configured with
+  `-DCMAKE_BUILD_TYPE=Debug -DGE_POINTER_BITS=64`, `-flto=auto
+  -Wlto-type-mismatch` in `CMAKE_C_FLAGS`, `CMAKE_CXX_FLAGS` and
+  `CMAKE_EXE_LINKER_FLAGS`, and `env;-u;MAKEFLAGS` as
+  `CMAKE_C_LINKER_LAUNCHER` and `CMAKE_CXX_LINKER_LAUNCHER` (under make's
+  jobserver GCC 13.3's `lto1` aborts in `jobserver_info::return_token`), and
+  built with `LC_ALL=C cmake --build TREE --target ge -j"$(nproc)" >
+  TREE/lto-build.log 2>&1`; CI's tests step runs those lines and the check
+  (about a minute a tree at four jobs). Never add `-flto` to another tree or
+  to the default flags. Allowlists are lowered as places are
   fixed and never raised without a reason. Run the
   same lines in the x86_64 or aarch64 container (GCC 13) before pushing a
   change to C, C++ or the build; `lp64_diagnostics.py sites [--messages]

@@ -23,6 +23,9 @@ extern char *strrchr(const char *, int);
 extern char *strstr(const char *, const char *);
 extern char *strtok(char *, const char *);
 extern char *strerror(int);
+extern int memcmp(const void *, const void *, size_t);
+extern size_t strspn(const char *, const char *);
+extern size_t strcspn(const char *, const char *);
 #endif
 
 #endif

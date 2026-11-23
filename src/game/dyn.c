@@ -8,6 +8,7 @@
 
 #ifndef TARGET_N64
 #include <stdio.h> /* GE_ROOM_AUDIT dyn-pool watch (see bg.c) */
+#include <string.h> /* strlen */
 #include "port_dyn.h"
 #include "port_lp64.h" /* LP64-004: portLp64PoolFatal; LP64-005: portLp64PoolUse */
 #include "port_lp64_budget.h" /* LP64-006 Task 11: portLp64StageBudget */

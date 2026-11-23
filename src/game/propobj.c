@@ -10,6 +10,7 @@
 #ifndef TARGET_N64
 #include <stdio.h> /* GE_DUMP_BOND glass hit-path probes */
 #include <stdlib.h>
+#include <string.h> /* strlen */
 #endif
 #include <math.h>
 #include <PR/libaudio.h>

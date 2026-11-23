@@ -12,7 +12,10 @@ GCC drops the typedef name after arithmetic, so `(uintptr_t) a + b` narrowed to 
 `unprototyped` compiles every C entry with `-Wimplicit-function-declaration` restored and
 `-aux-info`, and keeps each call without a prototype to a function whose definition in the tree
 takes or returns a pointer or a 64-bit type: such a call passes an `int`-sized argument where the
-callee reads a pointer.
+callee reads a pointer. A call to a function the tree does not define (a C library function such
+as `memset` or `strlen`, whose `size_t` and pointers the tree cannot show) is kept too, under
+either of GCC's wordings ("implicit declaration of function", and "incompatible implicit
+declaration of built-in function" where the built-ins are on).
 
 Both keep one line per place, `file:line:column: ...`, and `--check` requires each file's count to
 equal its line in an allowlist (`path<TAB>count<TAB>reason`), as `lp64_casts.py check` does.
@@ -38,7 +41,8 @@ CONVERSION = re.compile(
     r"^(?P<file>.+?):(?P<line>\d+):(?P<col>\d+): warning: conversion from '(?P<src>[^']+)'(?: \{aka '(?P<aka>[^']+)'\})? "
     r"to '(?P<dst>[^']+)'(?: \{aka '[^']+'\})? may change value")
 IMPLICIT = re.compile(
-    r"^(?P<file>.+?):(?P<line>\d+):(?P<col>\d+): (?:warning|error): implicit declaration of function '(?P<name>[^']+)'")
+    r"^(?P<file>.+?):(?P<line>\d+):(?P<col>\d+): (?:warning|error): (?:incompatible )?implicit declaration of "
+    r"(?:built-in )?function '(?P<name>[^']+)'")
 QUOTED_SOURCE = re.compile(r'^\s*\d+ \| ?(?P<text>.*)$')
 # `/* file:line:NF */ extern void f (char *); ` is a prototyped definition; `OF` an old-style one.
 DEFINITION = re.compile(r'^/\* (?P<file>.+?):\d+:[NO]F \*/ (?P<decl>.*?);\s*(?:/\*(?P<old>.*)\*/)?\s*$')
@@ -125,7 +129,9 @@ def measure_narrowing(commands: list[tuple[dict, list[str]]], root: Path, every_
 
 
 def measure_unprototyped(commands: list[tuple[dict, list[str]]], root: Path) -> list[str]:
-    """Compile every C command with `-aux-info`; return `file:line:column: NAME | PROTOTYPE` per call."""
+    """Compile every C command with `-aux-info`; return `file:line:column: NAME | PROTOTYPE` per call.
+
+    PROTOTYPE is the definition's, or `no definition in the tree` for a library function."""
     def one(pair):
         entry, argv = pair
         with tempfile.TemporaryDirectory(prefix='lp64-aux-') as folder:
@@ -135,11 +141,16 @@ def measure_unprototyped(commands: list[tuple[dict, list[str]]], root: Path) -> 
         return parse_unprototyped(stderr, entry['directory'], root), definitions(text)
     with ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as pool:
         results = list(pool.map(one, commands))
-    risky = {}
+    risky, defined_names = {}, set()
     for _, defined in results:
         for name, decl, rest in defined:
+            defined_names.add(name)
             if POINTER_OR_64_BIT.search(rest):
                 risky.setdefault(name, decl)
+    for found, _ in results:
+        for name in found.values():
+            if name not in defined_names:
+                risky.setdefault(name, 'no definition in the tree')
     calls = {key: name for found, _ in results for key, name in found.items() if name in risky}
     return [f'{path}:{line}:{col}: {name} | {risky[name]}' for (path, line, col), name in sorted(calls.items())]
 

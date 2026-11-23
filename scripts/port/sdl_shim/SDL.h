@@ -40,6 +40,8 @@ static inline Uint64 SDL_GetPerformanceCounter(void)
 #define SDL_getenv getenv
 #define SDL_atoi atoi
 #define SDL_sqrtf sqrtf
+extern float powf(float, float); /* include/math.h declares none of libm */
+extern float fabsf(float);
 #define SDL_powf powf
 #define SDL_cosf cosf
 #define SDL_sinf sinf

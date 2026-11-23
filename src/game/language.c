@@ -276,8 +276,8 @@ void langTick(void)
 }
 
 
-extern u8 _efontchardataSegmentRomStart;
-extern u8 _jfontchardataSegmentRomStart;
+extern u8 _efontchardataSegmentRomStart[];
+extern u8 _jfontchardataSegmentRomStart[];
 void romCopy(void *target, void *source, u32 size);
 
 #ifndef TARGET_N64

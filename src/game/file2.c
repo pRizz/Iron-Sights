@@ -11,6 +11,7 @@
 #include "cheat.h"
 #ifndef TARGET_N64
 #include <stdio.h> /* stderr - save-write diagnostics (see file.c portMissionEndLog) */
+#include <string.h> /* memset, memcmp */
 #include "port_headshots_only.h" /* FORK-083: records follow folder erase/copy */
 #endif
 

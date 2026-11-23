@@ -2,6 +2,7 @@
 #ifndef TARGET_N64
 #include <inttypes.h> /* frontDrawCursor GE_DUMP_BOND probe */
 #include <stdio.h> /* frontDrawCursor GE_DUMP_BOND probe */
+#include <string.h> /* strcspn */
 #include "port_hud.h"
 #include "port_crosshair.h"
 #include "port_mission_cheats.h"

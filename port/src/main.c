@@ -529,6 +529,7 @@ static void portArmWatchpoints(void)
 static void portCrashHandler(int sig) { exit(128 + sig); }
 #else
 #include <execinfo.h>
+#include <unistd.h> /* _exit */
 
 /* Bring-up crash handler: print a raw backtrace (addresses decode with
  * addr2line -e build_pc/ge) so crashes are diagnosable without gdb. */
