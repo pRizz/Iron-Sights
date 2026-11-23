@@ -1966,6 +1966,17 @@ Where this section and Task 15's text differ, this governs.
    accepts both wordings and also keeps every call to a function the tree
    does not define.
 6. **Step 3 also scanned the video tree**, with the same seven sites.
+7. **Three corrections apply at 64 bits only** (the controller's ruling 13,
+   before review; it narrows item 3). `strlen` in `src/game/options.c` and
+   `src/token.c`, `tanf` in `src/game/sky.c` and `atan2f` in
+   `port/src/port_projectile_arc_audit.c` get their prototypes inside
+   `#if IS_64_BIT`, after an explicit `#include "platform_info.h"` so the
+   guard cannot be silently false. The 32-bit program still reads them as
+   before (`compare_win32.py` identical); the unguarded patches wait for the
+   owner. Their lines left `lp64_lto_allowed.txt` (12 symbols) and
+   `lp64_unprototyped_allowed.txt` (4 calls). `fabsf` in strict-tier
+   `bondview2.c` stays allowed: a 64-bit-only correction there is possible
+   only on the strict branch, which the controller left for the owner.
 
 ## Amendments during Task 14 (2026-11-23)
 

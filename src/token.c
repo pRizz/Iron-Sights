@@ -6,6 +6,11 @@
 #include "str.h"
 #ifndef TARGET_N64
 #include <stdio.h>
+#include "platform_info.h"
+#if IS_64_BIT /* a prototype here would change the 32-bit program, so only
+                 64 bits gets one (LP64-006 Task 15) */
+#include <string.h> /* strlen */
+#endif
 #endif
 
 /**
