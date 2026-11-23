@@ -502,7 +502,9 @@ pass its isolated executable rather than rebuilding an active player binary.
   build/lp64/gate-video`, which refuses an entry lacking those flags or
   carrying `-w`, `-Wno-error`, a `-Wno-` for a gated kind or a response file,
   then compiles every C and C++ file of both trees with its own flags and fails
-  naming each file that does not compile. Two more checks follow it on the same
+  naming each file that does not compile. It also refuses an aarch64 tree's
+  command (its compiler's `-dumpmachine`) without `-ffp-contract=off` as its
+  last `-ffp-contract=`. Two more checks follow it on the same
   trees: `lp64_diagnostics.py narrowing --check` (implicit narrowing of a
   `uintptr_t`, `intptr_t` or `romptr_t`) and `unprototyped --check` (calls
   without a prototype to functions that take or return a pointer or 64-bit

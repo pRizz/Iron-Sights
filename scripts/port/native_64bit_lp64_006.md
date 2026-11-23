@@ -1923,6 +1923,42 @@ Task 7 text above stays as accepted; where it conflicts, these govern.
 
 These are the controller's rulings, recorded for the owner at the milestone's close.
 
+## Amendments during Task 14 (2026-11-23)
+
+Where this section and Task 14's text differ, this governs.
+
+1. **Step 3 ran on fresh folders.** The folders of Tasks 6, 8 and 9 predate
+   later game changes and the `FTOFIX32` change rebuilt the aarch64 trees, so
+   Step 3 ran on trees rebuilt from the final code: headless `t14-sim/{x64,a64}`
+   (`--streams sim`), and video `t14-default/{x64,a64}` and `t14-all/{x64,a64}`
+   (`--streams sim,gfx,snd`), whose folders hold all three streams and so stand
+   for the `video-*` and `snd-*` runs together. Each video folder was also
+   compared with the untouched 32-bit references `snd-default/i686` and
+   `snd-all/i686`.
+2. **The probe pins x86's result, in its own header.** The two assertions
+   require `INT_MIN` (x86's out-of-range result), not only one value on every
+   host, and a `_Static_assert` keeps `FTOFIX32` a constant expression. They
+   live in `scripts/port/abi_probe/probe_conversions.h`, because `probe.c` is
+   at the standards check's 628-line limit.
+3. **How the gate knows an aarch64 tree.** A `compile_commands.json` of an
+   aarch64 tree (`gate-a64`) holds the same command as an x86_64 one
+   (`/usr/bin/cc` and the same flags), so the gate asks each entry's compiler
+   `-dumpmachine` (the words before the command's first option, with any
+   `--target`). A compiler that names no machine is refused, and the last
+   `-ffp-contract=` must be `off`.
+4. **The Arm form also gives `INT_MIN` for NaN,** as x86 does; it reads its
+   argument three times (`guMtxF2L` and `gbi.h` pass expressions without side
+   effects).
+5. **Out-of-range float conversions were measured** on a scratch aarch64
+   headless tree with `-fsanitize=float-cast-overflow`, built with c972f8f's
+   `gu.h` so an out-of-range `FTOFIX32` would report too. Only
+   `src/game/bondview2.c:5505` reported (a strict-tier file; same result on
+   both hosts, so left); FORK-089's Task 14 note has the table.
+6. **`lp64_equiv_expected.txt` gains a comment only:** x64 against a64 needs
+   no line. `scripts/port/test_lp64_address.c` still accepts `INT_MIN` or
+   `INT_MAX` for `FTOFIX32` past range; it is not in this task's files and
+   still passes.
+
 ## Amendments during Task 13 (2026-11-23)
 
 Where this section and Task 13's text differ, this governs.

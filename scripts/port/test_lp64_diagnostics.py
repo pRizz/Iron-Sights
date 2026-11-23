@@ -168,6 +168,10 @@ class CEntries(unittest.TestCase):
 
 
 FAKE_COMPILER = """import sys
+from pathlib import Path
+if '-dumpmachine' in sys.argv:
+    print(Path(__file__).with_suffix('.machine').read_text())
+    sys.exit(0)
 source = next(arg for arg in sys.argv[1:] if arg.endswith(('.c', '.cpp')))
 status, _, stderr = open(source).read().partition('\\n')
 sys.stderr.write(stderr)
@@ -197,19 +201,27 @@ GATED_FLAGS = {'.c': C_GATED, '.cpp': CXX_GATED}
 
 class CommandLine(unittest.TestCase):
     """Runs `main` on build directories whose compiler is FAKE_COMPILER: each source holds the exit
-    status on its first line and the compiler output to print after it."""
+    status on its first line and the compiler output to print after it. Asked `-dumpmachine`, the
+    compiler names the machine its build directory was made for."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.folder = Path(self.tmp.name)
-        (self.folder/'cc.py').write_text(FAKE_COMPILER)
+
+    def compiler(self, machine: str) -> Path:
+        """Write FAKE_COMPILER for `machine` (its `-dumpmachine` answer) and return its path."""
+        script = self.folder/f'cc-{machine}.py'
+        script.write_text(FAKE_COMPILER)
+        script.with_suffix('.machine').write_text(machine)
+        return script
 
     def build_dir(self, name: str, files: dict[str, str], bits: int = 64, header: bool = True,
-                  flags: Optional[dict[str, list[str]]] = None) -> Path:
+                  flags: Optional[dict[str, list[str]]] = None, machine: str = 'x86_64-linux-gnu') -> Path:
         """Make a configured build directory whose compile_commands.json compiles `files` with FAKE_COMPILER.
 
         Each entry carries the gate's flags for its language (GATED_FLAGS) unless `flags` gives a source's own."""
+        compiler = self.compiler(machine)
         tree = self.folder/name
         (tree/'generated').mkdir(parents=True)
         (tree/'CMakeCache.txt').write_text(f'CMAKE_BUILD_TYPE:STRING=Debug\nGE_POINTER_BITS:STRING={bits}\n')
@@ -220,7 +232,7 @@ class CommandLine(unittest.TestCase):
             (self.folder/source).write_text(text)
             own = (flags or {}).get(source, GATED_FLAGS[Path(source).suffix])
             entries.append(dict(directory=str(tree), file=str(self.folder/source),
-                                arguments=[sys.executable, str(self.folder/'cc.py'), *own, '-o', 'x.o', '-c',
+                                arguments=[sys.executable, str(compiler), *own, '-o', 'x.o', '-c',
                                            str(self.folder/source)]))
         (tree/'compile_commands.json').write_text(json.dumps(entries))
         return tree
@@ -342,7 +354,8 @@ class CommandLine(unittest.TestCase):
         # Arrange: one source, clean in the first tree, failing with the second tree's command
         clean = self.build_dir('one', {'a.c': "0\n"})
         failing = self.build_dir('two', {'b.c': "0\n"})
-        (self.folder/'bad.py').write_text('import sys\nsys.stderr.write("a.c:1:1: error: only here\\n")\nsys.exit(1)\n')
+        (self.folder/'bad.py').write_text('import sys\nif "-dumpmachine" in sys.argv:\n    print("x86_64-linux-gnu")\n'
+                                          '    sys.exit(0)\nsys.stderr.write("a.c:1:1: error: only here\\n")\nsys.exit(1)\n')
         entries = json.loads((failing/'compile_commands.json').read_text())
         entries.append(dict(directory=str(failing), file=str(self.folder/'a.c'),
                             arguments=[sys.executable, str(self.folder/'bad.py'), *C_GATED, str(self.folder/'a.c')]))
@@ -352,6 +365,46 @@ class CommandLine(unittest.TestCase):
         # Assert
         self.assertEqual(status, 1)
         self.assertIn('only here', out)
+
+    def test_gate_refuses_an_arm_command_without_fp_contract_off(self):
+        # Arrange: without the flag an aarch64 compiler fuses a multiply and an add into one rounding
+        tree = self.build_dir('t', {'b.c': "1\nb.c:1:1: error: compiled\n"}, machine='aarch64-linux-gnu')
+        # Act / Assert
+        self.assert_refused_before_compiling(tree, 'b.c', 'lacks -ffp-contract=off')
+
+    def test_gate_refuses_an_arm_command_whose_last_fp_contract_is_not_off(self):
+        # Arrange: the last -ffp-contract= is the one the compiler keeps
+        tree = self.build_dir('t', {'b.cpp': "1\nb.cpp:1:1: error: compiled\n"}, machine='aarch64-linux-gnu',
+                              flags={'b.cpp': [*CXX_GATED, '-ffp-contract=off', '-ffp-contract=fast']})
+        # Act / Assert
+        self.assert_refused_before_compiling(tree, 'b.cpp', 'carries -ffp-contract=fast')
+
+    def test_gate_accepts_an_arm_command_with_fp_contract_off(self):
+        # Arrange
+        tree = self.build_dir('t', {'b.c': "0\n"}, machine='aarch64-linux-gnu',
+                              flags={'b.c': [*C_GATED, '-ffp-contract=off']})
+        # Act
+        status, out, err = self.run_main('gate', tree)
+        # Assert
+        self.assertEqual(status, 0, out + err)
+
+    def test_gate_accepts_an_x86_64_command_without_fp_contract_off(self):
+        # Arrange: x86-64's default code has no fused multiply-add instruction to contract into
+        tree = self.build_dir('t', {'b.c': "0\n"}, machine='x86_64-linux-gnu')
+        # Act
+        status, out, err = self.run_main('gate', tree)
+        # Assert
+        self.assertEqual(status, 0, out + err)
+
+    def test_gate_exits_2_when_a_compiler_cannot_name_its_machine(self):
+        # Arrange: a compiler that fails -dumpmachine, so the gate cannot tell which rule applies
+        tree = self.build_dir('t', {'b.c': "0\n"})
+        (self.folder/'mute.py').write_text('import sys\nsys.exit(3)\n')
+        entries = json.loads((tree/'compile_commands.json').read_text())
+        entries[0]['arguments'][1] = str(self.folder/'mute.py')
+        (tree/'compile_commands.json').write_text(json.dumps(entries))
+        # Act / Assert
+        self.assert_refused_before_compiling(tree, 'mute.py', '-dumpmachine')
 
     def test_count_check_and_update_are_gone(self):
         for command in ('count', 'check', 'update'):

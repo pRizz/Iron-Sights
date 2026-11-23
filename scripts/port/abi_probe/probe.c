@@ -26,6 +26,7 @@
 #include "probe_overlays.h"
 #include "probe_stored.h"
 #include "probe_views.h"
+#include "probe_conversions.h"
 
 /* Fixed at every width: the renderer reads these as N64 formats. */
 _Static_assert(sizeof(s32) == 4 && sizeof(u32) == 4, "32-bit integer types");
@@ -606,7 +607,8 @@ static int checkGaugeBarRooms(void)
 
 int main(void)
 {
-    if (checkVertexCollisionNode() != 0 || checkGaugeBarRooms() != 0 || checkImageEntryHitSound() != 0)
+    if (checkVertexCollisionNode() != 0 || checkGaugeBarRooms() != 0 || checkImageEntryHitSound() != 0 ||
+        checkFixedPointPastRange() != 0)
     {
         return 1;
     }

@@ -38,7 +38,13 @@
 /* A 32-bit conversion at every width: through a 64-bit long, a value past
  * 32768.0 would wrap where the 32-bit conversion gives the hardware's
  * out-of-range result (gbi.h tests the size of long the same way). */
-#if defined(__SIZEOF_LONG__) && __SIZEOF_LONG__ > 4
+#if defined(__SIZEOF_LONG__) && __SIZEOF_LONG__ > 4 && defined(__aarch64__)
+/* Arm saturates an out-of-range conversion and gives 0 for NaN, where x86
+ * gives INT_MIN for both: this gives x86's result on Arm too, and stays a
+ * constant expression for gbi.h. It reads x three times. */
+#define	FTOFIX32(x)	((x) * (float)0x00010000 >= -2147483648.0f && (x) * (float)0x00010000 < 2147483648.0f \
+			 ? (int)((x) * (float)0x00010000) : (int)(-2147483647 - 1))
+#elif defined(__SIZEOF_LONG__) && __SIZEOF_LONG__ > 4
 #define	FTOFIX32(x)	(int)((x) * (float)0x00010000)
 #else
 #define	FTOFIX32(x)	(long)((x) * (float)0x00010000)

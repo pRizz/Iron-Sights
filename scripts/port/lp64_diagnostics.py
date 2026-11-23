@@ -8,6 +8,10 @@ with the entry's own flags, in parallel. At 64 bits those flags make the three i
 conversions errors (`CMakeLists.txt`). Before compiling anything it exits 2 naming every entry whose
 flags do not: a C entry lacking any of the three `-Werror=` flags, a C++ entry lacking
 `-Werror=int-to-pointer-cast` (the one conversion C++ only warns about), or either carrying `-w`.
+An entry whose compiler names an aarch64 machine (`-dumpmachine`, asked of the words before the
+command's first option, with any `--target`) must also keep `-ffp-contract=off` as its last
+`-ffp-contract=`: Arm has a fused multiply-add that GCC would otherwise contract into, rounding once
+where x86-64 and the N64 round twice. A compiler that cannot name its machine is refused too.
 It exits 1 listing every file that fails, with its first error, 2 when a directory is not such a
 configuration, and 0 otherwise. A source file two
 directories list is compiled once in each, with that directory's command.
@@ -58,6 +62,9 @@ OUTPUT_FLAGS = {'-c', '-MD', '-MMD'}
 # without any flag; int-to-pointer-cast is only a warning there.
 C_GATE_FLAGS = tuple(f'-Werror={kind}' for kind in KINDS)
 CXX_GATE_FLAGS = ('-Werror=int-to-pointer-cast',)
+# Machines (`-dumpmachine`) whose entries must keep -ffp-contract=off (CMakeLists.txt gives it to all).
+CONTRACTING_MACHINES = ('aarch64', 'arm64')
+FP_CONTRACT_OFF = '-ffp-contract=off'
 
 DROPPED_FLAGS = {'-m32', '-msse2', '-mfpmath=sse', '-w', '-c', '-MD', '-MMD'}
 DROPPED_WITH_VALUE = {'-o', '-MT', '-MF'}
@@ -224,12 +231,51 @@ def gate_command(entry: dict) -> Optional[list[str]]:
     return kept + ['-fsyntax-only']
 
 
-def ungated_reason(entry: dict, argv: list[str]) -> Optional[str]:
+def machine_query(argv: list[str]) -> tuple[str, ...]:
+    """Return the command that asks an entry's compiler its machine: the words before its first
+    option (the compiler, or a launcher and the compiler), any target option, `-dumpmachine`."""
+    first_option = next((index for index, arg in enumerate(argv) if arg.startswith('-')), len(argv))
+    query = list(argv[:first_option])
+    for index, arg in enumerate(argv):
+        if arg.startswith('--target='):
+            query.append(arg)
+        elif arg in ('-target', '--target') and index + 1 < len(argv):
+            query += [arg, argv[index + 1]]
+    return (*query, '-dumpmachine')
+
+
+def compiler_machine(query: tuple[str, ...], directory: str) -> tuple[Optional[str], str]:
+    """Run a `machine_query`; return (machine, '') or (None, why it named none)."""
+    try:
+        done = subprocess.run(list(query), cwd=directory, capture_output=True, text=True,
+                              timeout=COMPILE_TIMEOUT_SECONDS)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return None, str(error)
+    machine = done.stdout.strip()
+    if done.returncode != 0 or not machine:
+        return None, first_error(done.stderr, done.returncode)
+    return machine, ''
+
+
+def fp_contract_reasons(argv: list[str], machine: str) -> list[str]:
+    """Return why an entry for `machine` may fuse a multiply and an add (empty: it may not)."""
+    if not machine.startswith(CONTRACTING_MACHINES):
+        return []
+    settings = [arg for arg in argv if arg.startswith('-ffp-contract=')]
+    if not settings:
+        return [f'lacks {FP_CONTRACT_OFF} (an {machine} compiler)']
+    if settings[-1] != FP_CONTRACT_OFF:
+        return [f'carries {settings[-1]} last (an {machine} compiler)']
+    return []
+
+
+def ungated_reason(entry: dict, argv: list[str], machine: str = '') -> Optional[str]:
     """Return what keeps an entry's flags from making the int/pointer conversions errors, or None.
 
     A C entry needs all three `-Werror=` flags, a C++ entry `-Werror=int-to-pointer-cast`. `-w`
     switches every `-Werror=` off, as do `-Wno-error`, `-Wno-error=KIND` and `-Wno-KIND` for a gated
-    kind; a response file (`@file`) could hide any of them from this check. No entry may carry them."""
+    kind; a response file (`@file`) could hide any of them from this check. No entry may carry them.
+    An entry for an aarch64 `machine` also needs `-ffp-contract=off` last (`fp_contract_reasons`)."""
     required = C_GATE_FLAGS if entry['file'].endswith('.c') else CXX_GATE_FLAGS
     kinds = [flag.removeprefix('-Werror=') for flag in required]
     switched_off = {'-w', '-Wno-error', *(f'-Wno-error={kind}' for kind in kinds),
@@ -237,6 +283,7 @@ def ungated_reason(entry: dict, argv: list[str]) -> Optional[str]:
     reasons = [f'lacks {flag}' for flag in required if flag not in argv]
     reasons += [f'carries {arg}' for arg in argv if arg in switched_off]
     reasons += [f'carries the response file {arg}' for arg in argv if arg.startswith('@')]
+    reasons += fp_contract_reasons(argv, machine)
     return ', '.join(reasons) or None
 
 
@@ -286,9 +333,18 @@ def gate(build_dirs: list[Path]) -> int:
             print(f'error: {build_dir} holds no C or C++ compile commands', file=sys.stderr)
             return 2
         trees.append((build_dir, commands))
+    queries = {(entry['directory'], machine_query(argv)) for _, commands in trees for entry, argv in commands}
+    machines = {key: compiler_machine(key[1], key[0]) for key in sorted(queries)}
+    mute = [f"error: {' '.join(query)} names no machine: {why}"
+            for (_, query), (machine, why) in machines.items() if machine is None]
+    for line in mute:
+        print(line, file=sys.stderr)
+    if mute:
+        return 2
     ungated = [f"error: {build_dir}: {entry['file']} is not gated: {reason}"
                for build_dir, commands in trees for entry, argv in commands
-               if (reason := ungated_reason(entry, argv))]
+               if (reason := ungated_reason(
+                   entry, argv, machines[(entry['directory'], machine_query(argv))][0]))]
     for line in ungated:
         print(line, file=sys.stderr)
     if ungated:
