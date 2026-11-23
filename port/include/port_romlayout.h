@@ -195,7 +195,7 @@ typedef struct RomModelHeader /* opcodes 1 and 20 */
 } RomModelHeader;
 _Static_assert(sizeof(RomModelHeader) == 16, "RomModelHeader is 16 bytes");
 
-typedef struct RomModelGroup /* opcodes 2, 3 and 17 */
+typedef struct RomModelGroup /* opcodes 2 and 3, and 17 at 32 bits */
 {
     u32 origin[3];
     u16 jointid;
@@ -330,6 +330,20 @@ typedef struct RomModelInterlink /* opcode 15 */
     u32 scale;
 } RomModelInterlink;
 _Static_assert(sizeof(RomModelInterlink) == 28, "RomModelInterlink is 28 bytes");
+
+/* Opcode 17 as model.c reads it (ModelRoData_Op17Record). A 64-bit build
+ * converts it with this map; the 32-bit in-place pass and the oracle's
+ * converter keep the group map (LP64-006 Task 16). */
+typedef struct RomModelOp17
+{
+    u32 hitpart;
+    u32 radiussq;
+    u32 pos[3];
+    u32 othernode; /* a node */
+    u32 scale1;
+    u32 scale2;
+} RomModelOp17;
+_Static_assert(sizeof(RomModelOp17) == 32, "RomModelOp17 is 32 bytes");
 
 typedef struct RomModelOp11 /* opcode 11; unk0c[0..2] are the position */
 {

@@ -12,6 +12,7 @@ names, per model class and slot), never bytes of the ROM.
     python3 scripts/port/lp64_model_scan.py --rom ROM textures [--class prop] [--match RE]
     python3 scripts/port/lp64_model_scan.py --rom ROM rwfirst [--class gun] [--match RE]
     python3 scripts/port/lp64_model_scan.py --rom ROM intros [--match mp_setup] [--items]
+    python3 scripts/port/lp64_model_scan.py --rom ROM opcodes [--class prop] [--match RE]
 
 The ROM path is --rom or GE_ROM. A model's switch slot count and texture count are not in its
 file; they come from the MODELFILEHEADER lines under assets/obseg. Exits 1 when the scan finds no
@@ -25,7 +26,10 @@ entry (a TextureID that is a segment-5 word, texels in the file, not a texture n
 with how many of its entries are inline. `rwfirst` counts, per class, the opcode of the first node the
 game's read-write walk (modelCalculateRwDataLen) gives a record, the record at index 0 that
 modelGetNodeRwData returns for a node without one. `intros --items` also counts each ITEM record by its right
-and left item numbers and demo field, and the setups by how many ITEM records they hold.
+and left item numbers and demo field, and the setups by how many ITEM records they hold. `opcodes` counts,
+per class, the nodes of each opcode reachable from the root by Child and Next (the walk `nodes` takes; a node
+reached only through a record's reference is not counted), then names the opcodes no scanned model holds
+(LP64-006 Task 16).
 """
 import argparse
 import collections
@@ -247,6 +251,24 @@ def count_rw_first(models):
     return counts
 
 
+def count_opcodes(models):
+    """Per class, the nodes of each opcode that the Child and Next walk reaches."""
+    counts = collections.Counter()
+    for model in models:
+        try:
+            for node in model.nodes():
+                counts[(model.cls, opcode_name(model.opcode(node)))] += 1
+        except ScanError:
+            counts[(model.cls, unreadable(model))] += 1
+    return counts
+
+
+def absent_opcodes(counts):
+    """The opcodes of OPCODES that no row of `counts` names."""
+    present = {key[-1] for key in counts}
+    return [opcode_name(opcode) for opcode in range(len(OPCODES)) if opcode_name(opcode) not in present]
+
+
 def shadow_header(model, record):
     return [model.ref(record + 0x14)]
 
@@ -325,7 +347,7 @@ def parse_args(argv):
     parser.add_argument('--allow-missing', action='append', default=[], metavar='NAME',
                         help='a model file that may lack a MODELFILEHEADER line (repeat for each)')
     sub = parser.add_subparsers(dest='command', required=True)
-    for name in ('roots', 'slots', 'shadows', 'links', 'textures', 'rwfirst'):
+    for name in ('roots', 'slots', 'shadows', 'links', 'textures', 'rwfirst', 'opcodes'):
         command = sub.add_parser(name)
         command.add_argument('--class', dest='cls', choices=('chr', 'gun', 'prop'))
         command.add_argument('--match', help='regular expression a model name must match')
@@ -389,11 +411,15 @@ def main(argv=None):
         counts = count_rw_first(models)
     elif args.command == 'textures':
         counts = count_textures(models)
+    elif args.command == 'opcodes':
+        counts = count_opcodes(models)
     elif args.command == 'shadows':
         counts = count_targets(models, SHADOW, shadow_header)
     else:
         counts = count_targets(models, DLCOLLISION, collision_links)
     print_counts(counts)
+    if args.command == 'opcodes':
+        print('no model holds: %s' % (', '.join(absent_opcodes(counts)) or 'none'))
     readable = report_unreadable(counts)
     return 0 if readable and headers_ok else 1
 

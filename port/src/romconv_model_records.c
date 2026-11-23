@@ -9,7 +9,8 @@
  * file: at 32 bits the two are equal, so the output is the in-place result
  * byte for byte, including that path's handling of the opcodes the ROM lacks
  * (opcode 17 read as a group record, OP11's last two half-words and the
- * OP05 and OP07 data bytes swapped as words). Compiled only at 64 bits and in
+ * OP05 and OP07 data bytes swapped as words); at 64 bits opcode 17 has its own
+ * map instead (LP64-006 Task 16). Compiled only at 64 bits and in
  * the 32-bit oracle build.
  */
 #include <stddef.h>
@@ -155,6 +156,16 @@ static const struct ModelField kOp07[] = {
     REF(RomModelOp07, images, COp07, Images, REF_UNCONVERTED), RUN(RomModelOp07, data, COp07, Data, 100, 4),
     SWAP(RomModelOp07, unk1a8, COp07, unk1A8), SWAP(RomModelOp07, rwdataindex, COp07, RwDataIndex),
     SWAP(RomModelOp07, baseaddr, COp07, BaseAddr)};
+#if IS_64_BIT
+/* model.c reads opcode 17 as ModelRoData_Op17Record; the group map would swap
+ * pos.y and pos.z as half-words and leave scale2 as the file has it. 32 bits
+ * keeps the in-place pass's reading (decision 10; LP64-006 Task 16). */
+typedef ModelRoData_Op17Record COp17;
+static const struct ModelField kOp17[] = {
+    SWAP(RomModelOp17, hitpart, COp17, hitpart), SWAP(RomModelOp17, radiussq, COp17, radiusSq),
+    RUN(RomModelOp17, pos, COp17, pos, 3, 4), REF(RomModelOp17, othernode, COp17, othernode, REF_NODE),
+    SWAP(RomModelOp17, scale1, COp17, scale1), SWAP(RomModelOp17, scale2, COp17, scale2)};
+#endif
 
 struct ModelRecordMap
 {
@@ -182,7 +193,11 @@ static const struct ModelRecordMap kRecordMaps[MODELNODE_OPCODE_MAX] = {
     [MODELNODE_OPCODE_GUNFIRE] = RECORD_MAP(kGunfire, RomModelGunfire, CGunfire),
     [MODELNODE_OPCODE_SHADOW] = RECORD_MAP(kShadow, RomModelShadow, CShadow),
     [MODELNODE_OPCODE_INTERLINK] = RECORD_MAP(kInterlink, RomModelInterlink, CInterlink),
+#if IS_64_BIT
+    [MODELNODE_OPCODE_OP17] = RECORD_MAP(kOp17, RomModelOp17, COp17),
+#else
     [MODELNODE_OPCODE_OP17] = RECORD_MAP(kGroup, RomModelGroup, CGroup),
+#endif
     [MODELNODE_OPCODE_SWITCH] = RECORD_MAP(kSwitch, RomModelSwitch, CSwitch),
     [MODELNODE_OPCODE_OP20] = RECORD_MAP(kHeader, RomModelHeader, CHeader),
     [MODELNODE_OPCODE_GROUPSIMPLE] = RECORD_MAP(kGroupSimple, RomModelGroupSimple, CGroupSimple),

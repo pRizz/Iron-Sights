@@ -193,6 +193,22 @@ class Command(Fixture):
         self.assertEqual(status, 0)
         self.assertIn('gun  no inline entry: 1', out)
 
+    def test_opcodes_counts_each_node_by_its_opcode(self):
+        # Act
+        counts = scan.count_opcodes(self.models)
+        # Assert
+        self.assertEqual(counts, {('gun', '1 HEADER'): 1, ('gun', '2 GROUP'): 1, ('gun', '13 SHADOW'): 1,
+                                  ('gun', '24 DLCOLLISION'): 1})
+
+    def test_opcodes_command_names_the_opcodes_no_model_holds(self):
+        # Act
+        status, out, _ = self.run_main('opcodes')
+        # Assert
+        self.assertEqual(status, 0)
+        self.assertIn('gun  13 SHADOW: 1', out)
+        self.assertIn('no model holds: 0 NULL, 3 OP03, 4 DL,', out)
+        self.assertIn(' 17 OP17,', out)
+
     def test_a_filter_matching_no_model_fails(self):
         # Act
         status, out, err = self.run_main('roots', '--class', 'chr')

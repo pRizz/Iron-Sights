@@ -5549,8 +5549,19 @@ static void portRenderThreadStop(void)
     SDL_LockMutex(s_RtMtx);
     s_RtQuit = 1;
     SDL_CondSignal(s_RtCondTask);
+#if PORT_PLAY_HARNESS
+    /* LP64-006 Task 16: a join that never returns leaves the render thread's
+     * state as the log's last line; flushed, as the process may be killed. */
+    printf("ge: video: render thread stop: waiting (state pending=%d executing=%d completed=%d)\n",
+           (int) s_RtTaskPending, (int) s_RtExecuting, (int) s_RtCompleted);
+    fflush(stdout);
+#endif
     SDL_UnlockMutex(s_RtMtx);
     SDL_WaitThread(s_RtThread, NULL);
+#if PORT_PLAY_HARNESS
+    printf("ge: video: render thread stop: joined\n");
+    fflush(stdout);
+#endif
     s_RtThread = NULL;
     s_RtActive = 0;
 }
