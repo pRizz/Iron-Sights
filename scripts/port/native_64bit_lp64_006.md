@@ -1923,6 +1923,50 @@ Task 7 text above stays as accepted; where it conflicts, these govern.
 
 These are the controller's rulings, recorded for the owner at the milestone's close.
 
+## Amendments during Task 15 (2026-11-23)
+
+Where this section and Task 15's text differ, this governs.
+
+1. **The LTO link runs outside make's jobserver.** In the x86_64 container
+   GCC 13.3's `lto1` aborts with an internal compiler error in
+   `jobserver_info::return_token` when the link runs under `make -j`, with
+   `-flto=auto` and with `-flto=16` alike. Both trees therefore add
+   `env;-u;MAKEFLAGS` as `CMAKE_C_LINKER_LAUNCHER` and
+   `CMAKE_CXX_LINKER_LAUNCHER`; `-flto=auto -Wlto-type-mismatch` stays in the
+   C, C++ and linker flags as written.
+2. **What a `list` line shows.** GCC prints a type only for a return value
+   (`type 'u8' should match type 'int'`), never for a variable, so each side
+   of a line is the declaration's source line as GCC quoted it, and GCC's
+   detail notes follow ` -- `. A symbol GCC warns about twice (two
+   declarations against one definition) has two lines. `check` takes several
+   logs, because one allowlist covers both trees, and refuses a log without
+   a finished link. Step 1's red run printed `FileNotFoundError` for
+   `lp64_lto.py`, not `No module named 'lp64_lto'`: the tests load the module
+   by its path, as the other `test_lp64_*.py` files do.
+3. **The judge of a mismatch is the 32-bit program** (the controller's
+   ruling 1), so Step 2's "no entry whose two types differ in size" does not
+   hold for every line: `strlen` (`size_t` against `int`) and the `u8`, `u16`
+   and `s16` returns read as `int` stay allowed, because each correction
+   changes the 32-bit Windows program (the object comparisons in FORK-089's
+   Task 15 note); so do the three float results read as `int` (`atan2f`,
+   `fabsf`, `tanf`), whose corrections are kept as patches under
+   `build/lp64/equiv/`. No allowed line is a pointer, a `long` or a record
+   whose size differs only at 64 bits.
+4. **No strict branch.** Every mismatch a strict-tier file takes part in
+   (`fabsf`, `get_player_mp_char_head` and `_body` in `bondview2.c`,
+   `viGetPerspNorm` in `gunfire.c`, and the correct `fabsf` declarations of
+   `port_arm_mesh.c` and `port_native_arms.c`) has a correction that changes
+   the 32-bit program, so it is allowed by name and `lp64/equiv-strict` was not
+   created.
+5. **The unprototyped check's gap was its filter, not GCC's wording.** The
+   game's C compiles with `-ffreestanding`, so GCC 13 never prints
+   "incompatible implicit declaration of built-in function" in these trees;
+   it prints "implicit declaration of function" for `memset` too, and the
+   check dropped the call because the tree defines no `memset`. The check now
+   accepts both wordings and also keeps every call to a function the tree
+   does not define.
+6. **Step 3 also scanned the video tree**, with the same seven sites.
+
 ## Amendments during Task 14 (2026-11-23)
 
 Where this section and Task 14's text differ, this governs.
