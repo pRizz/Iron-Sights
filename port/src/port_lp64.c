@@ -341,7 +341,7 @@ void portLp64PoolStageBegin(void)
 
 /* ==== the pool peaks =================================================== */
 
-/* Thirteen names report (port_lp64.h); a name past the table's end is
+/* Fourteen names report (port_lp64.h); a name past the table's end is
  * logged at each use rather than not at all. */
 #define LP64_MAX_PEAKS 16
 

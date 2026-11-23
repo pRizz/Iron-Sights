@@ -14,7 +14,10 @@
  * (LP64-006 Task 11):
  *   ge: smaps: lap=L grew=KB rss=KB START-END PERMS PATH
  * then "ge: smaps: lap=L mappings=N grown=M grew=KB"; the first lap's end
- * only takes the baseline. */
+ * only takes the baseline. A 64-bit harness build also logs what the high
+ * arena holds at each lap's end and what the lap added to it, with the
+ * models' list blocks (port_gdl_store.h, LP64-006 Task 11b):
+ *   ge: soak: lap=L high arena used=BYTES added=BYTES lists held=N spare=N bytes=BYTES */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +25,7 @@
 #include <ultra64.h>
 #include <bondconstants.h>
 #include "port_playlog.h" /* PORT_PLAY_HARNESS */
+#include "platform_info.h" /* IS_64_BIT */
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -244,6 +248,24 @@ static void soakSmapsLap(s32 lap)
 }
 #endif
 
+#if PORT_PLAY_HARNESS && IS_64_BIT
+/* Each lap's end: the high arena's use, what this lap added to it, and the
+ * list blocks that nodes hold and that wait to be taken again. */
+static void soakArenaLap(s32 lap)
+{
+    extern void *portStateHighArena(u32 *used); /* pcsched.c */
+    extern void portGdlStoreCounts(u32 *held, u32 *spare, u32 *bytes); /* port_gdl_store.c */
+    static u32 sLastUsed;
+    u32 used = 0, held = 0, spare = 0, bytes = 0;
+
+    portStateHighArena(&used);
+    portGdlStoreCounts(&held, &spare, &bytes);
+    portConLogf("ge: soak: lap=%d high arena used=%u added=%u lists held=%u spare=%u bytes=%u\n", (int) lap,
+                (unsigned) used, (unsigned) (used - sLastUsed), (unsigned) held, (unsigned) spare, (unsigned) bytes);
+    sLastUsed = used;
+}
+#endif
+
 /** front.c, as a stage starts: its end then returns to the legal screen. */
 s32 portSoakIsCurrent(void)
 {
@@ -263,6 +285,9 @@ s32 portSoakNextStage(void)
         sSoakNext = 0;
 #if PORT_PLAY_HARNESS && defined(__linux__)
         soakSmapsLap(sSoakLap);
+#endif
+#if PORT_PLAY_HARNESS && IS_64_BIT
+        soakArenaLap(sSoakLap);
 #endif
         if (++sSoakLap >= sSoakLaps) {
             portConLogf("ge: soak: complete after %d laps\n", (int) sSoakLaps);

@@ -111,7 +111,9 @@ void portLp64PoolStageBegin(void);
  * "graphics buffer", "vertex pool", "music heap" and "texture pool", and
  * since LP64-006 Task 11 "permanent bank" (port_memp.c), "gun room left
  * hand", "gun room trigger" and "gun room weapon" (gun.c), "wallet room"
- * (front.c) and "synthesizer parameters" (synthesizer.c). The first call
+ * (front.c) and "synthesizer parameters" (synthesizer.c), and since Task 11b
+ * "high arena" (pcsched.c: portAllocHigh's 64 MB, which only grows, so its
+ * use at a print is all it holds since the game started). The first call
  * registers portLp64PoolPeaks to run at exit.
  */
 void portLp64PoolUse(const char *pool, u32 used, u32 size);

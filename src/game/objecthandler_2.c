@@ -17,6 +17,7 @@
 #include "tex.h"
 #if IS_64_BIT
 #include "port_hostptr.h" /* LP64-005: PORT_WORD_IS_HOST */
+#include "port_gdl_store.h" /* LP64-006 Task 11b: the converted lists' blocks */
 #endif
 
 #ifndef TARGET_N64
@@ -33,10 +34,13 @@
  * allocation instead.
  *
  * DL length = scan to gSPEndDisplayList inclusive (node DLs are flat; embedded
- * gSPDisplayList words are copied through, as on N64). Known cost:
+ * gSPDisplayList words are copied through, as on N64). Known cost at 32 bits:
  * reloading a model reconverts an already-clean DL and leaks the previous
- * allocation.
+ * allocation. A 64-bit build converts through portModelGdlConvert
+ * (port_gdl_store.c, LP64-006 Task 11b), which takes a block again once a
+ * later model load has written over the node that pointed at it.
  */
+#if !IS_64_BIT
 static Gfx *portConvertModelGdl(Gfx *src, struct texpool *pool)
 {
     s32 n = 0;
@@ -68,6 +72,7 @@ static Gfx *portConvertModelGdl(Gfx *src, struct texpool *pool)
     texLoadFromGdl(src, n * (s32)sizeof(Gfx), dst, pool);
     return dst;
 }
+#endif
 
 /* Persistent texture pool for compiled-in model files, whose texture loads and
  * G_SETTEX expansions run once per file and bake data pointers in permanently.
@@ -123,6 +128,11 @@ void sub_GAME_7F0762E0(ModelFileHeader *objheader, u8 *name, u8 *dst, struct tex
      * pre-replacement pointer. */
     texLoadFromModelFileHeader(objheader, portModelTexPool());
     buffer = portModelTexPool();
+#if IS_64_BIT
+    /* LP64-006 Task 11b: this image stands where another model's nodes were,
+     * so the blocks those nodes pointed at are given back (port_gdl_store.h) */
+    portModelGdlImageLoaded(objheader->Switches, (u32) get_pc_remaining_buffer_for_index(fileGetIndex(name)), dst != NULL);
+#endif
 
     node = NULL;
     gdl = NULL;
@@ -136,7 +146,11 @@ void sub_GAME_7F0762E0(ModelFileHeader *objheader, u8 *name, u8 *dst, struct tex
         curgdl = gdl;
         modelIterateDisplayLists(objheader, &node, &gdl);
 
+#if IS_64_BIT
+        replacement = portModelGdlConvert(curnode, curgdl, buffer);
+#else
         replacement = portConvertModelGdl(curgdl, buffer);
+#endif
         if (replacement != NULL)
         {
             modelNodeReplaceGdl(objheader, curnode, curgdl, replacement);

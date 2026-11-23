@@ -266,6 +266,7 @@ void *portAllocHigh(u32 size)
         {
             void *p = arena + s_HighArenaUsed;
             s_HighArenaUsed += size;
+            portLp64PoolUse("high arena", s_HighArenaUsed, PORT_HIGH_ARENA_SIZE); /* LP64-006 Task 11b; no code at 32 bits */
             { /* Early warning: this arena is never freed, so a slow leak
                * shows up as a crash MUCH later (e.g. a NULL stan pack,
                * then a CCTV with no model). Announce each quarter used so
@@ -509,6 +510,17 @@ void portStateHighWater(u32 used)
     if (used > s_HighArenaUsed && used <= PORT_HIGH_ARENA_SIZE) s_HighArenaUsed = used;
 }
 
+#if IS_64_BIT
+/* LP64-006 Task 11b: the arena only grows, so its use now is its peak. The
+ * models' list store (port_gdl_store.c) calls this at each model load, so
+ * that every stage that loads a model prints the arena's peak line, also a
+ * stage whose lists all took blocks that were given back. */
+void portHighArenaReport(void)
+{
+    portLp64PoolUse("high arena", s_HighArenaUsed, PORT_HIGH_ARENA_SIZE);
+}
+#endif
+
 static OSScMsg s_PortRetraceMsg = { OS_SC_RETRACE_MSG };
 
 #if PORT_PLAY_HARNESS
@@ -578,6 +590,27 @@ static void schedPostDone(OSMesgQueue *q, OSMesg m)
  * in FIFO order, so 8 slots is pure margin. */
 static struct { OSMesgQueue *q; OSMesg m; } s_DonePending[8];
 static u32 s_DoneHead, s_DoneTail;
+#endif
+
+#if IS_64_BIT
+/* LP64-006 Task 11b (port_gdl_store.c): the frames handed to the renderer so
+ * far, and how many of them it has finished. They differ only while the
+ * render thread holds a frame: its DONE is posted by the pump below once the
+ * frame's swap has returned (portRenderDrainCompletions), and the
+ * synchronous path draws a frame before schedSubmitTask returns. */
+u32 portGfxFramesSubmitted(void)
+{
+    return g_PortGfxTasksSubmitted;
+}
+
+u32 portGfxFramesFinished(void)
+{
+#ifdef GE_VIDEO
+    return g_PortGfxTasksSubmitted - (s_DoneTail - s_DoneHead);
+#else
+    return g_PortGfxTasksSubmitted;
+#endif
+}
 #endif
 
 void schedSubmitTask(OSScTask *t)

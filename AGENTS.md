@@ -277,7 +277,15 @@ pass its isolated executable rather than rebuilding an active player binary.
   informational line is added there deliberately. One of them is `ge: lp64:
   peak POOL USED of SIZE bytes` (LP64-005 Task 13): a 64-bit build prints each
   pool's largest use (`portLp64PoolUse`, `port/include/port_lp64.h`) at each
-  stage unload and at exit, never per frame.
+  stage unload and at exit, never per frame. One pool is `high arena`
+  (LP64-006 Task 11b): `portAllocHigh`'s 64 MB (`port/src/pcsched.c`), which
+  only grows, so its line shows all it holds since the game started. At 64
+  bits the models' converted display lists are its blocks, and
+  `port/src/port_gdl_store.c` gives a block back when a later model load
+  writes its image over the node record that pointed at it, then hands it to
+  the next list it holds (`port/include/port_gdl_store.h` has the rule).
+  Code that keeps a model list's address must not keep it past that model's
+  image; a 32-bit build still takes a new block for every list of every load.
 - `scripts/port/lp64_play.py` (LP64-005) runs named sets of 64-bit game runs
   and judges each by what its log shows: `python3 scripts/port/lp64_play.py
   run --rom /rom/baserom.u.z64 --set demos,stages,stops,menus,tours,attract

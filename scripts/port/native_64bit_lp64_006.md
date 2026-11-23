@@ -1923,6 +1923,67 @@ Task 7 text above stays as accepted; where it conflicts, these govern.
 
 These are the controller's rulings, recorded for the owner at the milestone's close.
 
+## Amendments during Task 11b (2026-11-23)
+
+Task 11b is the controller's task, written from Task 11's measurements, and
+has no text of its own above. It finishes Task 11 Step 4 ("a leak is fixed
+with a check that a fifth lap adds nothing") at 64 bits. Where this section
+and Task 11's text or amendments differ, this governs.
+
+1. **The leak is fixed at 64 bits; amendment 7 of Task 11 called it not
+   fixed.** A 64-bit build converts a model's lists through a store
+   (`port/src/port_gdl_store.c`) that remembers which node record points at
+   each block and gives the block back when a later model load writes its
+   image over that record. A list then takes the smallest given-back block
+   that holds it. Nothing else gives a block back, in particular not a
+   stage change: scoping by stage is what regressed for the texture pool.
+   A 32-bit build keeps the leak (item 5).
+2. **The check reads the arena's bytes, not only its resident size.** The
+   arena's mapping is backed by 2 MB pages (the 10,240 KB a lap that Task 11
+   measured is five of them), so `ge: smaps:` cannot show growth below
+   2 MB. A 64-bit harness build logs `ge: soak: lap=L high arena used=BYTES
+   added=BYTES lists held=N spare=N bytes=BYTES` at each lap's end, and the
+   figures in FORK-089 are that line's.
+3. **"Adds nothing" holds once the store holds the fullest moment.** A
+   block is given back only as later loads reach its record, so while a
+   stage loads, the stage before it still holds the blocks its models have
+   not yet been written over; and laps differ, since guards' heads and
+   bodies are drawn at random (`initguards.c:73`). The headless five-lap
+   soak added 91,904 bytes in lap 2, none in lap 3, 43,904 in lap 4 (four
+   blocks) and none in lap 5, against 10,240 KB every lap before; with
+   video 76,672 in lap 2 and nothing in laps 3 to 5. A traced scratch
+   build named its lap 2's new blocks: seven lists of props (a truck, a
+   helicopter, the shuttle, wrecks), each larger than every block given
+   back so far while larger ones were still held; its laps 3 to 5 added
+   nothing. The store is bounded by what one stage holds while the next
+   loads over it. The rule that would bound it by one stage alone (give
+   back whatever lies above the bank's cursor when a model is loaded into
+   it) was not taken, for the reason in item 1; a sanitizer build poisons
+   the bank at its reset (`memp.c:304`), so the play sets would report a
+   read that rule forbids, should the owner want it later.
+4. **The high arena is a measured pool.** `ge: lp64: peak high arena USED of
+   SIZE bytes` joins the peak lines (`portAllocHigh` and each model load
+   report it), and `lp64_budgets.txt` lists it for every stage with its
+   largest use anywhere, since it only grows over a process.
+5. **A 32-bit build is unchanged** (`compare_win32.py`: identical in loaded
+   code and data) and the store would not work there as it stands: a
+   suspend image (`port_state.c`) restores nodes that point at blocks the
+   store may have handed on since, so the store's table would have to be
+   part of the image, and compiled-in models' nodes are never written over.
+6. **Bunker 1, Caverns, Bunker 1.** The two Bunker 1 visits of one run do
+   not draw the same frames in either build: the random seed differs at
+   the second visit's first tick (the simulation trace's `seed=`), and the
+   picture from that tick on. The run is therefore compared with the same
+   run of the build before the change, frame for frame (identical: 2,231
+   frames, under both profiles and with `room_cache=2`), and the second
+   visit's loaded state (its characters' and props' hashes at tick 1) with
+   the first's (equal).
+7. **No other caller grows the arena.** Its use and the store's bytes rise
+   by the same amount in every lap of both soaks. `stan.c`'s packed tiles
+   reuse one block and take a new one only for a larger stage; the port's
+   images (`port_textures.c`) and the arm and grip sources
+   (`port_arm_mesh.c`, `port_grip_mesh.c`) are taken once.
+
 ## Amendments during Task 11 (2026-11-22)
 
 Task 11's measurements changed seven details of the brief. The Task 11 text

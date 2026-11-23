@@ -18,6 +18,12 @@
 # pool of 4,473,152 bytes is the persistent model pool, one pool in every
 # stage, so each stage lists it with its largest peak anywhere; a print
 # shows it only in a stage where it was the fullest texture pool.
+# The high arena (LP64-006 Task 11b) is portAllocHigh's 67,108,864 bytes
+# (pcsched.c): the persistent model pool, the models' converted display
+# lists (port_gdl_store.h) and the port's own images. It only grows, and a
+# print shows all it holds since the game started, so each stage lists it
+# with its largest use in any Task 11b run: the end of the headless soak of
+# five laps.
 graphics buffer 0 327680 74256 t11-plain/menu-credits
 graphics buffer 9 409600 94400 t11-m-video/tour-bunker1
 graphics buffer 20 286720 89824 t11-san/tour-silo
@@ -83,6 +89,35 @@ gun room weapon 45 53696 18368 t11-m-plain/mp-basement-2p
 gun room weapon 46 53696 18368 t11-m-plain/mp-stack-2p
 gun room weapon 48 53696 18368 t11-m-plain/mp-library-2p
 gun room weapon 50 53696 18368 t11-m-plain/mp-caves-2p
+high arena 0 67108864 6917248 t11b-soak-plain/soak
+high arena 9 67108864 6917248 t11b-soak-plain/soak
+high arena 20 67108864 6917248 t11b-soak-plain/soak
+high arena 22 67108864 6917248 t11b-soak-plain/soak
+high arena 23 67108864 6917248 t11b-soak-plain/soak
+high arena 24 67108864 6917248 t11b-soak-plain/soak
+high arena 25 67108864 6917248 t11b-soak-plain/soak
+high arena 26 67108864 6917248 t11b-soak-plain/soak
+high arena 27 67108864 6917248 t11b-soak-plain/soak
+high arena 28 67108864 6917248 t11b-soak-plain/soak
+high arena 29 67108864 6917248 t11b-soak-plain/soak
+high arena 30 67108864 6917248 t11b-soak-plain/soak
+high arena 31 67108864 6917248 t11b-soak-plain/soak
+high arena 32 67108864 6917248 t11b-soak-plain/soak
+high arena 33 67108864 6917248 t11b-soak-plain/soak
+high arena 34 67108864 6917248 t11b-soak-plain/soak
+high arena 35 67108864 6917248 t11b-soak-plain/soak
+high arena 36 67108864 6917248 t11b-soak-plain/soak
+high arena 37 67108864 6917248 t11b-soak-plain/soak
+high arena 38 67108864 6917248 t11b-soak-plain/soak
+high arena 39 67108864 6917248 t11b-soak-plain/soak
+high arena 40 67108864 6917248 t11b-soak-plain/soak
+high arena 41 67108864 6917248 t11b-soak-plain/soak
+high arena 43 67108864 6917248 t11b-soak-plain/soak
+high arena 45 67108864 6917248 t11b-soak-plain/soak
+high arena 46 67108864 6917248 t11b-soak-plain/soak
+high arena 48 67108864 6917248 t11b-soak-plain/soak
+high arena 50 67108864 6917248 t11b-soak-plain/soak
+high arena 54 67108864 6917248 t11b-soak-plain/soak
 music heap 0 753664 344752 t11-plain/abort
 permanent bank 0 303104 114336 t11-san/abort
 room memory 9 307200 119824 t11-m-video/tour-bunker1

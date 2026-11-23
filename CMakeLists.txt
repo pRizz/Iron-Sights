@@ -403,6 +403,11 @@ if(NOT GE_POINTER_BITS EQUAL 64 AND NOT GE_LP64_ORACLE)
     list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_lp64.c
         ${CMAKE_SOURCE_DIR}/port/src/port_lp64_synth.c ${CMAKE_SOURCE_DIR}/port/src/port_lp64_budget.c)
 endif()
+# The models' list store (port_gdl_store.h, LP64-006 Task 11b) is the 64-bit
+# build's alone: a 32-bit build converts as it always has (objecthandler_2.c).
+if(NOT GE_POINTER_BITS EQUAL 64)
+    list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_gdl_store.c)
+endif()
 # The ROM data converters (port_romconv.h) exist for 64-bit builds; at 32 bits
 # only the oracle build compiles them, so no shipped 32-bit executable holds
 # one. They make incompatible pointer types an error at both widths: the
