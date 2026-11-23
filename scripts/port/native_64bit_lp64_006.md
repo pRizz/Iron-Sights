@@ -1923,6 +1923,37 @@ Task 7 text above stays as accepted; where it conflicts, these govern.
 
 These are the controller's rulings, recorded for the owner at the milestone's close.
 
+## Amendments during Task 12 (2026-11-23)
+
+Task 12's text was written when there were 37 harnesses. Where this section
+and the task's text differ, this governs.
+
+1. **41 harnesses, not 37.** Four were added after the plan was written:
+   `test_lp64_compare.sh` (Task 2), `test_gfx_digest.sh` (Task 7),
+   `test_image_inflate.sh` and `test_startup_stamp.sh` (both Task 8). All four source
+   `harness_widths.sh` and are in the tests step. Step 3 counted 40 of 41
+   exiting 0 in the x86_64 container (`test_web_touch.sh`: no `emcc`) and 39
+   of 41 in the aarch64 one (also `test_headless_configure.sh`).
+2. **The failing check named ten harnesses, not nine.** Besides the nine,
+   `test_stan_callbacks.sh` was in no workflow (it never was), and
+   `test_room_seams.sh` both ran at one width and was in no workflow; the
+   plan's measurement missed both. They join the tests step;
+   `test_room_seams.sh` goes on the width list (it tests
+   `port/fast3d/gfx_seam_grow.h`, maths with no pointer or record).
+3. **A harness run by a harness that a workflow names counts as run.**
+   `test_dyn.sh` is run by `test_ads.sh`, not by a workflow line.
+4. **A `--web` line does not count.** `test_web_logo.sh` was named only by
+   web-pages' `test_web_logo.sh --web`, which runs the browser build, so
+   its 32- and 64-bit halves ran in no workflow. The check now ignores a
+   line that passes `--web`, and the tests step runs the harness plainly.
+5. **`test_start_input.sh` skips its 32-bit half by name** where SDL.h does
+   not compile at 32 bits (CI's runner and the x86_64 container have only
+   the amd64 SDL2 package): the SDL shim covers 48 lines of SDL for
+   `port_baked_trace.c` and `video.c` uses SDL 545 times. Its 32-bit half
+   passed in `midas-lp64-i686-video` with
+   `SDL2_CONFIG=/home/dev/sdl2-linux-i686/bin/sdl2-config`.
+6. **The workflow list is empty.** No harness needed it.
+
 ## Amendments during Task 11b (2026-11-23)
 
 Task 11b is the controller's task, written from Task 11's measurements, and
