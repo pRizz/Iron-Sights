@@ -17,12 +17,13 @@
 # build's normalised stream in a run made with --video, and after it `headless-sha256=HEX`, the same
 # for a run made without (Task 17: a headless build's `sim` stream is not its video twin's). The
 # difference must then be that stream, not only start at I; `compare` checks the pin of the newer
-# folder's kind and judges a line without one by I alone, with a note. The owner allowed these hashes
-# in this file on 2026-11-23; set one only with `lp64_equiv.py pins`, after tracing why the stream
-# changed. The libm lines carry none (last exercised in Task 17 Step 2, on real x86).
+# folder's kind and judges a line pinned only for the other kind by I alone, with a note (a line
+# with no pin is judged so without one). The owner allowed these hashes in this file on
+# 2026-11-23; set one only with `lp64_equiv.py pins`, after tracing why the stream changed. The libm
+# lines carry none (last exercised in Task 17 Step 2, on real x86).
 #
-# The `build/lp64/` trees and folders a line names (its `removed-by:` runs, its measurements) were
-# deleted at LP64-006's close (2026-11-24): each line keeps its figures, and each removing run is
+# The Mac's `build/lp64/` trees and folders a line names (its `removed-by:` runs, its measurements)
+# were deleted at LP64-006's close (2026-11-24): each line keeps its figures, and each removing run is
 # reproduced from the patch and commit `scripts/port/lp64_patches/README.md` gives.
 #
 # `x64:a64` has no line: Task 14 (2026-11-23) found the two 64-bit builds identical in every judged

@@ -417,13 +417,14 @@ pass its isolated executable rather than rebuilding an active player binary.
   `--video`, and then `headless-sha256=HEX`, the same for a run made
   without (a headless build's `sim` stream is not its video twin's), and
   `compare` fails a matching difference whose stream hashes otherwise than
-  the pin of the newer folder's kind; a line with no pin of that kind is
-  judged by its first tick, and `compare` notes it. `lp64_equiv.py pins
+  the pin of the newer folder's kind; a line pinned only for the other
+  kind is judged by its first tick, and `compare` notes it (a line with
+  no pin is judged so without a note). `lp64_equiv.py pins
   --streams S --expect FILE DIR...` prints the lines with fresh hashes of
   the folders' kind, keeps the other kind's, and never writes the file.
   The owner allowed these pins in the committed file (2026-11-23): its 18
-  `i686:x64` and `i686:a64` lines carry a video pin, the two headless
-  Jungle `sim` lines also a headless one, and
+  `i686:x64` and `i686:a64` lines carry a video pin, the two Jungle
+  `default` `sim` lines also carry a headless one, and
   a pin changes only after the stream's change is traced; the streams and
   every other hash list of ROM-derived output stay under `build/lp64/`.
   `compare` also prints which of the

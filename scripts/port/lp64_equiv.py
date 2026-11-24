@@ -47,7 +47,8 @@ with snd, a case whose log lacks the sound lock's line. A demo's snd prints `not
 `explained:` line of FILE may carry `sha256=HEX` after its index, the hash of the newer folder's
 normalised stream in a run made with --video, and then `headless-sha256=HEX`, the same for a run
 made without: a matching difference whose stream hashes otherwise than the pin of the newer folder's
-kind fails, and a line with no pin of that kind is judged by its index alone, with a note. compare
+kind fails, and a line pinned only for the other kind is judged by its index alone, with a note (a
+line with no pin is judged so without one). compare
 notes which of FILE's lines it did not exercise, and when the folders' records name different commits.
 
 pins: prints FILE's lines with each exercised `explained:` line's pin of the folders' kind

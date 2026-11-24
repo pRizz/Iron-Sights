@@ -196,6 +196,18 @@ class HeadlessPins(RunFolders):
         self.assertEqual(status, 0, out)
         self.assertIn('note: line 1 has no pin for a video run; judged by its first index alone', out)
 
+    def test_a_line_with_no_pin_of_either_kind_prints_no_note(self):
+        # Arrange
+        a, b = self.seeded_pair(video=False)
+        expect = self.canned('expected.txt', EXPLAINED)
+
+        # Act
+        status, out = self.equiv('compare', '--streams', 'sim', '--expect', str(expect), str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertNotIn('no pin for', out)
+
     def test_a_video_run_checks_its_video_pin_and_not_the_headless_one(self):
         # Arrange: a right video pin beside a wrong headless one
         a, b = self.seeded_pair(video=True)
