@@ -1717,8 +1717,8 @@ on the laptop.
 the whole task check runs once more with every set and stream (set
 `saves` with `--saves`, as in Task 13);
 `lp64_play.py peaks --budget` passes over that run's folders. Step 9's
-comparison runs with the pins of "Amendments after the final review",
-item 3.
+comparison runs against the committed pins ("Amendments after the final
+review", items 2 and 3).
 
 - [ ] **Step 4: Close the record**
 
@@ -1954,19 +1954,23 @@ govern.
    difference whose stream hashes otherwise, prints the expectation lines
    it did not exercise, and notes folders run at different commits;
    `lp64_equiv.py pins` prints the lines with fresh hashes and never writes
-   the file. The committed file carries no pin: a stream's hash is
-   ROM-derived data, which stays out of Git, so the fix wave stopped there
-   and its pins stay under `build/lp64/equiv/` (`fw-pins-*.txt`).
+   the file (it prints only the explained lines the folders exercise). The
+   fix wave stopped short of committing a pin, a stream's hash being
+   derived from ROM data; the owner allowed the pins in the committed file
+   on 2026-11-23 ("Yes, commit pins"), and the 18 `i686:x64` and `i686:a64`
+   lines of both profiles now carry the hashes of the fix wave's head runs
+   (equal to Task 16's for `default` and Task 14's for `all`). Against the
+   pinned file the comparisons of those runs print `192 identical, 8 as
+   recorded` and `190 identical, 10 as recorded`, and a copy with one pin
+   altered fails both of that line's pairs. The libm lines carry no pin.
 3. **Task 17 Step 3, as amended.** Step 9 runs on all three builds at the
-   head under both profiles. Before the comparison, `lp64_equiv.py pins
-   --streams sim,gfx,snd --expect scripts/port/lp64_equiv_expected.txt`
-   over the 32-bit and each 64-bit folder writes a pinned copy of the file
-   under `build/lp64/equiv/`, whose hashes for the default profile must
-   equal those of the fix wave's `fw-pins-t16-default.txt`, and for `all`
-   those of `fw-pins-t14-all.txt`, unless a change since explains the
-   difference; `compare --expect` then runs against that copy, and its
-   note of lines not exercised may name only the libm lines, which were
-   last exercised in Tasks 6 and 8 and are not rerun.
+   head under both profiles. `compare --streams sim,gfx,snd --expect
+   scripts/port/lp64_equiv_expected.txt` runs against the committed file,
+   whose pins must hold unless a change since explains the difference (the
+   line is then re-pinned from `lp64_equiv.py pins`' output, with the
+   reason recorded); its note of lines not exercised may name only the
+   libm lines, which were last exercised in Tasks 6 and 8 and are not
+   rerun. The same holds for Step 2's real-hardware comparison.
 4. **`ob.c` keeps a length exception.** The index-0 guard of Task 16 is
    back on ordinary lines with its blank lines restored, so `src/game/ob.c`
    is 638 lines, past the 628-line limit, with an exact-file entry in
