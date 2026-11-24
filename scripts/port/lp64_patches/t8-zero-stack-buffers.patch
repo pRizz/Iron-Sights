@@ -1,0 +1,11 @@
+--- src/game/image.c	2026-11-22 02:22:26
++++ src/game/image.c	2026-11-22 04:30:47
+@@ -936,7 +936,7 @@
+     u8 *end;
+     s32 writetocache = FALSE;
+ 
+-#if IS_64_BIT
++#if 1 /* scratch (LP64-006 Task 8): also at 32 bits */
+     /* LP64-006: at an odd width the 4-bit formats pack each row's last pixel
+      * with the value after it (texChannelsToPixels, texInflateLookupFromBuffer),
+      * which for the image's last row is one past what the decoder wrote: the

@@ -1,0 +1,18 @@
+diff --git a/src/game/bg.c b/src/game/bg.c
+index 9ea5641..3492e6b 100644
+--- a/src/game/bg.c
++++ b/src/game/bg.c
+@@ -376,12 +376,8 @@ void sub_GAME_7F0B37EC(void) {
+     u32 masked;
+ 
+     ptr = (u8 *)specialportalarray;
+-#if IS_64_BIT
+-    /* LP64-004: the array's own end; the next global need not follow it */
++    /* scratch (LP64-006 Task 6): the array's own end at both widths */
+     end = (u8 *)specialportalarray + sizeof(specialportalarray);
+-#else
+-    end = (u8 *)&g_BgCurrentRoom;
+-#endif
+ 
+     do {
+         if (levelentry_index == *ptr++) {

@@ -1,0 +1,37 @@
+diff --git a/port/src/port_compare_math.c b/port/src/port_compare_math.c
+index 34ec0cd..3c55435 100644
+--- a/port/src/port_compare_math.c
++++ b/port/src/port_compare_math.c
+@@ -53,8 +53,8 @@ void portCompareLogBuild(void)
+ #ifndef GE_COMPARE_LIBM
+ 
+ float tanf(float x);
+-float cosf(float x);
+-float atanf(float x);
++float portScratchCosf(float x);
++float portScratchAtanf(float x);
+ 
+ #define COMPARE_PI_2 1.5707963267948966      /* pi/2, rounded to double */
+ #define COMPARE_PI_4 0.7853981633974483      /* pi/4 */
+@@ -192,8 +192,8 @@ float tanf(float x)
+     return (bits & 0x80000000u) ? -result : result;
+ }
+ 
+-/** cos of a float, alike on every host (the file's comment says how). */
+-float cosf(float x)
++/* scratch (LP64-006 Task 6): renamed so the game links libm cosf */
++float portScratchCosf(float x)
+ {
+     uint32_t magnitude = floatBits(x) & 0x7fffffffu;
+     uint32_t quarter = 0;
+@@ -241,8 +241,8 @@ static double atanSeries(double u)
+     return u * sum;
+ }
+ 
+-/** atan of a float, alike on every host (the file's comment says how). */
+-float atanf(float x)
++/* scratch (LP64-006 Task 6): renamed so the game links libm atanf */
++float portScratchAtanf(float x)
+ {
+     double a = (double) x;
+     double result;

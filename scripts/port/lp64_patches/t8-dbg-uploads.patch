@@ -1,0 +1,14 @@
+--- port/src/port_gfx_digest.cpp	2026-11-21 23:15:29
++++ build/lp64/equiv/t8-dbg-src/port/src/port_gfx_digest.cpp	2026-11-22 01:15:05
+@@ -273,6 +273,11 @@
+     content.u(width).u(height).bytes(rgba32_buf, (size_t)width * height * 4);
+     s.uploads++;
+     c.u(content.own());
++    if (const char* dir = std::getenv("GE_DBG_UPLOADS"); dir && s.frame >= s.detailFirst && s.frame <= s.detailLast) {
++        char name[512];
++        std::snprintf(name, sizeof(name), "%s/u_%u_%u_%ux%u.bin", dir, s.frame, s.calls, width, height);
++        if (FILE* f = std::fopen(name, "wb")) { std::fwrite(rgba32_buf, 4, (size_t)width * height, f); std::fclose(f); }
++    }
+     if (s.contents.count(s.bound) != 0) {
+         s.contents[s.bound] = content.own();
+     }

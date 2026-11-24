@@ -1,0 +1,12 @@
+diff --git a/src/game/bondview2.c b/src/game/bondview2.c
+index a1103ee..6d79024 100644
+--- a/src/game/bondview2.c
++++ b/src/game/bondview2.c
+@@ -25,6 +25,7 @@
+ #include "file.h"
+ #include "frametiming.h"
+ #include "front.h"
++extern f32 fabsf(f32);
+ #include "glass.h"
+ #include "gun.h"
+ #include "initanitable.h"

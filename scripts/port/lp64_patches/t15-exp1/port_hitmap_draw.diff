@@ -1,0 +1,15 @@
+diff --git a/port/src/port_hitmap_draw.c b/port/src/port_hitmap_draw.c
+index 0b9f361..8fad168 100644
+--- a/port/src/port_hitmap_draw.c
++++ b/port/src/port_hitmap_draw.c
+@@ -22,8 +22,8 @@
+ #include "port_hitmap_draw.h"
+ #include "port_hud.h"
+ 
+-extern s32 viGetX(void);
+-extern s32 viGetY(void);
++extern s16 viGetX(void);
++extern s16 viGetY(void);
+ 
+ /* With the map up, the debrief stacks its hit counts under the shot and kill
+  * totals, a little smaller, and the overview fills the lower-right corner as

@@ -1,0 +1,38 @@
+diff --git a/src/game/bondview.c b/src/game/bondview.c
+index d308b1f..85abf88 100644
+--- a/src/game/bondview.c
++++ b/src/game/bondview.c
+@@ -12,6 +12,7 @@
+ #include <str.h>
+ #include <options.h>
+ #include "bg.h"
++u8 getROOMID_isNeighborToRendered(s32 roomID);
+ #include "bgroomtrans.h"
+ #include "blood_animation.h"
+ #include "bondhead.h"
+diff --git a/src/game/bondview2.c b/src/game/bondview2.c
+index a1103ee..6d79024 100644
+--- a/src/game/bondview2.c
++++ b/src/game/bondview2.c
+@@ -25,6 +25,9 @@
+ #include "file.h"
+ #include "frametiming.h"
+ #include "front.h"
++extern f32 fabsf(f32);
++u16 get_player_mp_char_head(s32 player);
++u16 get_player_mp_char_body(s32 player);
+ #include "glass.h"
+ #include "gun.h"
+ #include "initanitable.h"
+diff --git a/src/game/gunfire.c b/src/game/gunfire.c
+index 8ca07e0..e991858 100644
+--- a/src/game/gunfire.c
++++ b/src/game/gunfire.c
+@@ -31,6 +31,7 @@
+ #include "tex.h"
+ #include "debugmenu_handler.h"
+ #include "fr.h"
++u16 viGetPerspNorm(void);
+ #include "assets/obseg/text/LgunE.h"
+ #include "textrelated.h"
+ #include "chrai.h"

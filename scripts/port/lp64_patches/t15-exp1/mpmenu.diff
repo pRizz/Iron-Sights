@@ -1,0 +1,12 @@
+diff --git a/src/game/mpmenu.c b/src/game/mpmenu.c
+index 221f085..16a7d18 100644
+--- a/src/game/mpmenu.c
++++ b/src/game/mpmenu.c
+@@ -1,6 +1,7 @@
+ #include <ultra64.h>
+ #ifndef TARGET_N64
+ #include <stdio.h> /* snprintf for the profile-name rank lines */
++#include <fr.h> /* viGetX and the view getters */
+ #endif
+ #include <music.h>
+ #include <bondgame.h>

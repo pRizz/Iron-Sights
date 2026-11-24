@@ -1,0 +1,20 @@
+diff --git a/src/libultrare/audio/env.c b/src/libultrare/audio/env.c
+index 70c4647..3b91634 100644
+--- a/src/libultrare/audio/env.c
++++ b/src/libultrare/audio/env.c
+@@ -503,7 +503,15 @@ static s16 _getRate(f32 vol, f32 tgt, s32 count, u16* ratel)
+     }
+     s = (s16) tempf2;
+ 
++#if IS_64_BIT && defined(__aarch64__)
++    /* Past int's range x86 gives INT_MIN, whose low half is 0; Arm saturates. */
++    {
++        f32 frac = 0xffff * (tempf2 - (f32) s);
++        *ratel = frac >= -2147483648.0f && frac < 2147483648.0f ? (s16)(s32)frac : 0;
++    }
++#else
+     *ratel = (s16)(0xffff * (tempf2 - (f32) s));
++#endif
+     return (s16)tempf2;
+ }
+ 

@@ -1,0 +1,11 @@
+--- src/game/image.c	2026-11-19 16:03:14
++++ build/lp64/equiv/t8-dbg-src/src/game/image.c	2026-11-22 01:32:45
+@@ -2564,6 +2564,8 @@
+         const unsigned long long hitchT0 = portProfNow(); /* hitchlog.c */
+ #endif
+         alignedcompbuffer = (u8 *) (((uintptr_t)compbuffer + 0xF) >> 4 << 4);
++        { extern char *getenv(const char *); const char *fill = getenv("GE_DBG_COMPFILL");
++          if (fill != NULL) { s32 k; for (k = 0; k < (s32)sizeof(compbuffer); k++) compbuffer[k] = (u8)(fill[0] - '0') * 0x11; } }
+ 
+         if (alignedcompbuffer);
+         if (tex);

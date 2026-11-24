@@ -1,0 +1,12 @@
+diff --git a/src/game/sky.c b/src/game/sky.c
+index 67a499e..d822ce9 100644
+--- a/src/game/sky.c
++++ b/src/game/sky.c
+@@ -40,6 +40,7 @@ static f32 skyConcavityPixels(void)
+     if (concavity != 0.0f)
+     {
+         f32 halffov = viGetFovY() * 0.5f * 0.017453292f;
++        extern f32 tanf(f32);
+         f32 t = tanf(halffov);
+ 
+         if (t > 0.0001f)

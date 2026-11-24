@@ -1,0 +1,12 @@
+diff --git a/src/game/options.c b/src/game/options.c
+index 3acd677..5bb38f1 100644
+--- a/src/game/options.c
++++ b/src/game/options.c
+@@ -25,6 +25,7 @@
+ #include "frametiming.h"
+ #include "assets/obseg/text/LoptionE.h"
+ #ifndef TARGET_N64
++#include <string.h> /* strlen */
+ #include "port_watchpages.h" /* the port watch pages */
+ #include "port_crosshair.h"
+ #include "port_playlog.h"   /* LP64-005 Task 8 */

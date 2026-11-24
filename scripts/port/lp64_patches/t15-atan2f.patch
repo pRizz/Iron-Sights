@@ -1,0 +1,12 @@
+diff --git a/port/src/port_projectile_arc_audit.c b/port/src/port_projectile_arc_audit.c
+index 82618a3..e5f9e08 100644
+--- a/port/src/port_projectile_arc_audit.c
++++ b/port/src/port_projectile_arc_audit.c
+@@ -27,6 +27,7 @@
+ #include "game/player.h"
+ #include "game/gun.h"
+ #include "game/chrai.h"
++#include "game/math_atan2f.h"
+ #include "port_projectile_arc.h"
+ 
+ extern s32 portBondControlsLive(void);

@@ -1,0 +1,12 @@
+diff --git a/src/token.c b/src/token.c
+index 85fb744..5c89d24 100644
+--- a/src/token.c
++++ b/src/token.c
+@@ -6,6 +6,7 @@
+ #include "str.h"
+ #ifndef TARGET_N64
+ #include <stdio.h>
++#include <string.h> /* strlen */
+ #endif
+ 
+ /**

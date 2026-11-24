@@ -1,0 +1,15 @@
+--- port/include/port_explosive_rounds.h	2026-11-15 18:07:30
++++ build/lp64/equiv/t8-rounds-src/port/include/port_explosive_rounds.h	2026-11-22 02:24:48
+@@ -38,9 +38,9 @@
+ /* The fork's rows after Rare's 22 in g_ExplosionTypes (explosion.c). The
+  * player and guard Explosive rows are identical; the guard row only stops
+  * a guard's blast from showing Bond's hit markers. */
+-#define PORT_EXPLOSION_ROUND_VISUAL 22
+-#define PORT_EXPLOSION_ROUND_PLAYER 23
+-#define PORT_EXPLOSION_ROUND_GUARD 24
++#define PORT_EXPLOSION_ROUND_VISUAL 21
++#define PORT_EXPLOSION_ROUND_PLAYER 22
++#define PORT_EXPLOSION_ROUND_GUARD 23
+ 
+ /* Free explosion slots a round leaves for everything else. */
+ #define PORT_EXPLOSIVE_ROUNDS_RESERVE 2

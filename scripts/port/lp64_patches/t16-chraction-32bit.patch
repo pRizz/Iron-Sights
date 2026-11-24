@@ -1,0 +1,75 @@
+diff -ru a/scripts/port/test_lp64_typed_chraction.c b/scripts/port/test_lp64_typed_chraction.c
+--- a/scripts/port/test_lp64_typed_chraction.c	2026-11-23 11:32:28
++++ b/scripts/port/test_lp64_typed_chraction.c	2026-11-23 11:32:28
+@@ -321,10 +321,7 @@
+     return WIFEXITED(status) && WEXITSTATUS(status) == 0 ? 0 : -1;
+ }
+ 
+-/* chrGetEquippedWeaponProp(...)->chr with no prop: a 64-bit build skips the
+- * empty hand; the 32-bit program keeps the inherited read through NULL
+- * (decision 10; the owner's patch is t16-chraction-32bit.patch), so its
+- * expectation is the fault. */
++/* chrGetEquippedWeaponProp(...)->chr with no prop: the empty hand is skipped. */
+ static void testAnEmptyHand(void (*call)(void), const char *what)
+ {
+     // Arrange: prepareUnarmed, in signalEnding.
+@@ -335,11 +332,7 @@
+     // Assert
+     char line[160];
+     snprintf(line, sizeof(line), "%s (ended by %d: 0 returned, %d SIGSEGV, -1 other)", what, ending, SIGSEGV);
+-#if IS_64_BIT
+     expect(ending == 0, line);
+-#else
+-    expect(ending == SIGSEGV, line);
+-#endif
+ }
+ 
+ int main(void)
+diff -ru a/src/game/chraction.c b/src/game/chraction.c
+--- a/src/game/chraction.c	2026-11-23 11:32:28
++++ b/src/game/chraction.c	2026-11-23 11:32:28
+@@ -1256,13 +1256,8 @@
+ 
+     for (i=0; i<2; i++)
+     {
+-#if IS_64_BIT
+-        /* A hand flagged with no prop in it would be read through NULL; a
+-         * 64-bit build skips it (LP64-006 Task 16, decision 10). */
++        /* a hand flagged with no prop in it is skipped (LP64-006 Task 16) */
+         if (arg3->p[i] != 0 && chrGetEquippedWeaponProp(self, i) != NULL)
+-#else
+-        if (arg3->p[i] != 0)
+-#endif
+         {
+             temp_chr = chrGetEquippedWeaponProp(self, i)->chr;
+ 
+@@ -1634,13 +1629,8 @@
+ 
+     for (i=0; i<2; i++)
+     {
+-#if IS_64_BIT
+-        /* A hand flagged with no prop in it would be read through NULL; a
+-         * 64-bit build skips it (LP64-006 Task 16, decision 10). */
++        /* a hand flagged with no prop in it is skipped (LP64-006 Task 16) */
+         if (sp70.p[i] != 0 && chrGetEquippedWeaponProp(chr, i) != NULL)
+-#else
+-        if (sp70.p[i])
+-#endif
+         {
+             tmp_chr = chrGetEquippedWeaponProp(chr, i)->chr;
+ 
+@@ -1784,13 +1774,8 @@
+ 
+     for (i=0; i<2; i++)
+     {
+-#if IS_64_BIT
+-        /* A hand flagged with no prop in it would be read through NULL; a
+-         * 64-bit build skips it (LP64-006 Task 16, decision 10). */
++        /* a hand flagged with no prop in it is skipped (LP64-006 Task 16) */
+         if (sp64.p[i] != 0 && chrGetEquippedWeaponProp(chr, i) != NULL)
+-#else
+-        if (sp64.p[i] != 0)
+-#endif
+         {
+             temp_v1_2 = chrGetEquippedWeaponProp(chr, i)->chr;
+ 

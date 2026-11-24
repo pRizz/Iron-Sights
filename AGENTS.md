@@ -358,10 +358,16 @@ pass its isolated executable rather than rebuilding an active player binary.
   of a `ge: load_bg_file levelid=` line logged since the print before it,
   else to level 0, the front end. `--budget FILE` checks the same against
   `scripts/port/lp64_budgets.txt` (LP64-006 Task 11) and prints `OK: N pool
-  and stage pairs within budget`. At 64 bits every pool in every stage is at
-  least twice its largest measured peak: a pool, stage and size that the
-  file does not list, that is past half its size or that logs an
-  exhaustion line fails, unless its line is marked `withheld:` with the
+  and stage pairs within budget`. `scripts/port/lp64_budgets.py` (standard
+  library only, `--help`) writes that file from run folders' peaks: it keeps
+  each line's larger peak, lists the persistent pools in every level,
+  `--retire POOL:SIZE` drops a size the source no longer builds and
+  `--withhold POOL:LEVEL:SIZE:REASON` marks a line `withheld:`; it refuses a
+  line past half that is not withheld and any exhaustion line. At 64 bits
+  every pool in every stage is at least twice its largest measured peak: a
+  pool, stage and size that the file does not list, that is past half its
+  size or that logs an exhaustion line fails, unless its line is marked
+  `withheld:` with the
   reason. A pool that passes half is raised at 64 bits only, to twice its
   peak rounded up to its alignment, and its line updated.
 - `-DGE_COMPARE=ON` (LP64-006) configures a comparison build: the in-tree

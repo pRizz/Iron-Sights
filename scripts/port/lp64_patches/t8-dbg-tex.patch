@@ -1,0 +1,25 @@
+--- port/fast3d/gfx_pc.cpp	2026-11-16 21:15:35
++++ build/lp64/equiv/t8-dbg-src/port/fast3d/gfx_pc.cpp	2026-11-22 01:35:02
+@@ -3227,6 +3227,7 @@
+     ~GeShinyUpload() { if (saved) gfx_rapi = saved; }
+ };
+ 
++extern "C" int32_t g_GlobalTimer;
+ static void import_texture(int i, int tile, bool importReplacement) {
+     LoadedTexture& loaded_texture = rdp.loaded_texture[rdp.texture_tile[tile].tmem];
+     const uint8_t fmt = rdp.texture_tile[tile].fmt;
+@@ -3600,6 +3601,14 @@
+         return;
+     }
+ 
++    if (const char* dir = getenv("GE_DBG_TEX"); dir && g_GlobalTimer >= atoi(getenv("GE_DBG_TEXFROM") ? getenv("GE_DBG_TEXFROM") : "520") && g_GlobalTimer <= atoi(getenv("GE_DBG_TEXTO") ? getenv("GE_DBG_TEXTO") : "528")) {
++        static int seq;
++        char name[512];
++        snprintf(name, sizeof(name), "%s/t%d_%04d_tex%d_fmt%u_siz%u_line%u_size%u.bin", dir, (int)g_GlobalTimer, seq++,
++                 ge_texnum_of(loaded_texture.addr), fmt, siz, (unsigned)rdp.texture_tile[tile].line_size_bytes,
++                 (unsigned)loaded_texture.size_bytes);
++        if (FILE* f = fopen(name, "wb")) { fwrite(loaded_texture.addr, 1, loaded_texture.size_bytes, f); fclose(f); }
++    }
+     if (fmt == G_IM_FMT_RGBA) {
+         if (siz == G_IM_SIZ_16b) {
+             import_texture_rgba16(tile, loaded_texture, importReplacement);

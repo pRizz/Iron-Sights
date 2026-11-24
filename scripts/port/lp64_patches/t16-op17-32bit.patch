@@ -1,0 +1,162 @@
+diff -ru a/port/src/romconv_model_records.c b/port/src/romconv_model_records.c
+--- a/port/src/romconv_model_records.c	2026-11-23 11:29:55
++++ b/port/src/romconv_model_records.c	2026-11-23 11:29:55
+@@ -8,9 +8,8 @@
+  * cases), with each field's place in the C record beside its place in the
+  * file: at 32 bits the two are equal, so the output is the in-place result
+  * byte for byte, including that path's handling of the opcodes the ROM lacks
+- * (opcode 17 read as a group record, OP11's last two half-words and the
+- * OP05 and OP07 data bytes swapped as words); at 64 bits opcode 17 has its own
+- * map instead (LP64-006 Task 16). Compiled only at 64 bits and in
++ * (OP11's last two half-words and the OP05 and OP07 data bytes swapped as
++ * words). Compiled only at 64 bits and in
+  * the 32-bit oracle build.
+  */
+ #include <stddef.h>
+@@ -156,16 +155,12 @@
+     REF(RomModelOp07, images, COp07, Images, REF_UNCONVERTED), RUN(RomModelOp07, data, COp07, Data, 100, 4),
+     SWAP(RomModelOp07, unk1a8, COp07, unk1A8), SWAP(RomModelOp07, rwdataindex, COp07, RwDataIndex),
+     SWAP(RomModelOp07, baseaddr, COp07, BaseAddr)};
+-#if IS_64_BIT
+-/* model.c reads opcode 17 as ModelRoData_Op17Record; the group map would swap
+- * pos.y and pos.z as half-words and leave scale2 as the file has it. 32 bits
+- * keeps the in-place pass's reading (decision 10; LP64-006 Task 16). */
++/* model.c reads opcode 17 as ModelRoData_Op17Record. */
+ typedef ModelRoData_Op17Record COp17;
+ static const struct ModelField kOp17[] = {
+     SWAP(RomModelOp17, hitpart, COp17, hitpart), SWAP(RomModelOp17, radiussq, COp17, radiusSq),
+     RUN(RomModelOp17, pos, COp17, pos, 3, 4), REF(RomModelOp17, othernode, COp17, othernode, REF_NODE),
+     SWAP(RomModelOp17, scale1, COp17, scale1), SWAP(RomModelOp17, scale2, COp17, scale2)};
+-#endif
+ 
+ struct ModelRecordMap
+ {
+@@ -193,11 +188,7 @@
+     [MODELNODE_OPCODE_GUNFIRE] = RECORD_MAP(kGunfire, RomModelGunfire, CGunfire),
+     [MODELNODE_OPCODE_SHADOW] = RECORD_MAP(kShadow, RomModelShadow, CShadow),
+     [MODELNODE_OPCODE_INTERLINK] = RECORD_MAP(kInterlink, RomModelInterlink, CInterlink),
+-#if IS_64_BIT
+     [MODELNODE_OPCODE_OP17] = RECORD_MAP(kOp17, RomModelOp17, COp17),
+-#else
+-    [MODELNODE_OPCODE_OP17] = RECORD_MAP(kGroup, RomModelGroup, CGroup),
+-#endif
+     [MODELNODE_OPCODE_SWITCH] = RECORD_MAP(kSwitch, RomModelSwitch, CSwitch),
+     [MODELNODE_OPCODE_OP20] = RECORD_MAP(kHeader, RomModelHeader, CHeader),
+     [MODELNODE_OPCODE_GROUPSIMPLE] = RECORD_MAP(kGroupSimple, RomModelGroupSimple, CGroupSimple),
+diff -ru a/port/src/romfile_model.c b/port/src/romfile_model.c
+--- a/port/src/romfile_model.c	2026-11-23 11:29:55
++++ b/port/src/romfile_model.c	2026-11-23 11:29:55
+@@ -237,9 +237,11 @@
+         break;
+     case MODELNODE_OPCODE_GROUP:
+     case MODELNODE_OPCODE_OP03:
+-    case MODELNODE_OPCODE_OP17:
+         if (mark(c, dataoff, 28)) swapFields(rd, fGroup, NF(fGroup));
+         break;
++    case MODELNODE_OPCODE_OP17: /* ModelRoData_Op17Record, as model.c reads it */
++        if (mark(c, dataoff, 32)) swapFields(rd, fOp17, NF(fOp17));
++        break;
+     case MODELNODE_OPCODE_DL: {
+         /* read the offsets/counts while the rodata is STILL big-endian, THEN
+          * swap the fields (swapping first makes segoff/be16 read native bytes and return null) */
+@@ -327,7 +329,8 @@
+ {
+     switch (opcode) {
+     case MODELNODE_OPCODE_HEADER: case MODELNODE_OPCODE_OP20: return 16;
+-    case MODELNODE_OPCODE_GROUP: case MODELNODE_OPCODE_OP03: case MODELNODE_OPCODE_OP17: return 28;
++    case MODELNODE_OPCODE_GROUP: case MODELNODE_OPCODE_OP03: return 28;
++    case MODELNODE_OPCODE_OP17: return 32;
+     case MODELNODE_OPCODE_DL: return 20;
+     case MODELNODE_OPCODE_DLCOLLISION: return 32;
+     case MODELNODE_OPCODE_DLPRIMARY: case MODELNODE_OPCODE_LOD: return 16;
+diff -ru a/scripts/port/test_romconv.sh b/scripts/port/test_romconv.sh
+--- a/scripts/port/test_romconv.sh	2026-11-23 11:29:55
++++ b/scripts/port/test_romconv.sh	2026-11-23 11:29:55
+@@ -78,12 +78,11 @@
+         "${font[@]}"
+     run "$work/font-checks-$width" "${width}-bit font input checks"
+     # At 32 bits the model tests compare with romfile_model.c's in-place
+-    # result. Its field map for opcode 17 is unused (the walk swaps that
+-    # record with the group map), which -Wextra reports.
++    # result.
+     model=(port/src/romconv_model.c port/src/romconv_model_walk.c port/src/romconv_model_refs.c
+         port/src/romconv_model_records.c port/src/romconv_gfx.c port/src/romconv_census.c port/src/romconv_common.c
+         port/src/port_lp64_oracle.c)
+-    [[ $width == 32 ]] && model+=(-Wno-unused-const-variable port/src/romfile_model.c)
++    [[ $width == 32 ]] && model+=(port/src/romfile_model.c)
+     build "$work/model-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_model.c "${model[@]}"
+     run "$work/model-$width" "${width}-bit model files"
+     build "$work/model-checks-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} \
+@@ -95,7 +94,7 @@
+     # The census lines: the model converter's against romfile_model.c's own,
+     # at both widths, and the stan converter's.
+     census=("${model[@]}" port/src/romconv_stan.c)
+-    [[ $width == 64 ]] && census+=(-Wno-unused-const-variable port/src/romfile_model.c)
++    [[ $width == 64 ]] && census+=(port/src/romfile_model.c)
+     build "$work/census-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_census.c "${census[@]}"
+     run "$work/census-$width" "${width}-bit census lines"
+     bg=(scripts/port/test_romconv_bg_fixture.c port/src/romconv_bg.c port/src/romconv_gfx.c
+diff -ru a/scripts/port/test_romconv_model.c b/scripts/port/test_romconv_model.c
+--- a/scripts/port/test_romconv_model.c	2026-11-23 11:29:55
++++ b/scripts/port/test_romconv_model.c	2026-11-23 11:30:08
+@@ -390,25 +390,13 @@
+             /* swapped as one word at 0x44, as romfile_model.c does */
+             && r11->RwDataIndex == mfGet16(f.op11Rec + 0x46) && r11->unk46 == mfGet16(f.op11Rec + 0x44)
+             && (uintptr_t) r11->BaseAddr == mfGet32(f.op11Rec + 0x48)
+-#if IS_64_BIT
+-            /* opcode 17 has its own map at 64 bits (testOp17KeepsPosition) */
++            /* opcode 17 has its own map (testOp17KeepsPosition) */
+             && wordsMatch((u8 *) r17, f.op17Rec, 5)
+-#else
+-            /* at 32 bits it is read with the group record's map, as romfile_model.c does */
+-            && wordsMatch((u8 *) &r17->Origin, f.op17Rec, 3) && r17->JointID == mfGet16(f.op17Rec + 0xC)
+-#endif
+             && (uintptr_t) ((ModelRoData_Op17Record *) r17)->othernode == NODE_REF(n3)
+             && bits(&((ModelRoData_Op17Record *) r17)->scale1) == mfGet32(f.op17Rec + 0x18),
+             "every scalar of opcodes 3, 5, 6, 7, 11, 17 and 20 in the field its pattern predicts");
+ }
+ 
+-/* The word at P with its two halves exchanged: a big-endian word read as two
+- * halfwords. */
+-static inline u32 halvesSwapped(u32 word)
+-{
+-    return (word << 16) | (word >> 16);
+-}
+-
+ /* model.c reads an opcode 17 record as ModelRoData_Op17Record: the hit part,
+  * the radius squared, the position at 8, the other node and two scales. */
+ static int testOp17KeepsPosition(void)
+@@ -443,24 +431,16 @@
+     {
+         return 1;
+     }
+-#if IS_64_BIT
+-    return (expect(r->hitpart == 7, "an OP17 record keeps its hit part at 64 bits")
+-               + expect(bits(&r->radiusSq) == words[1], "an OP17 record keeps its radius at 64 bits")
+-               + expect(bits(&r->pos.f[0]) == words[2], "an OP17 record keeps pos.x at 64 bits")
+-               + expect(bits(&r->pos.f[1]) == words[3], "an OP17 record keeps pos.y at 64 bits")
+-               + expect(bits(&r->pos.f[2]) == words[4], "an OP17 record keeps pos.z at 64 bits")
+-               + expect(r->othernode == NULL, "an OP17 record keeps its other node at 64 bits")
+-               + expect(bits(&r->scale1) == words[6], "an OP17 record keeps scale1 at 64 bits")
+-               + expect(bits(&r->scale2) == words[7], "an OP17 record keeps scale2 at 64 bits"))
++    return (expect(r->hitpart == 7, "an OP17 record keeps its hit part")
++               + expect(bits(&r->radiusSq) == words[1], "an OP17 record keeps its radius")
++               + expect(bits(&r->pos.f[0]) == words[2], "an OP17 record keeps pos.x")
++               + expect(bits(&r->pos.f[1]) == words[3], "an OP17 record keeps pos.y")
++               + expect(bits(&r->pos.f[2]) == words[4], "an OP17 record keeps pos.z")
++               + expect(r->othernode == NULL, "an OP17 record keeps its other node")
++               + expect(bits(&r->scale1) == words[6], "an OP17 record keeps scale1")
++               + expect(bits(&r->scale2) == words[7], "an OP17 record keeps scale2")
++               + expect(sameAsInPlace(0, 0, n), "at 32 bits the image is the in-place one"))
+         != 0;
+-#else
+-    /* The inherited reading, kept at 32 bits (decision 10): the group map
+-     * swaps pos.y and pos.z as halfwords and leaves scale2 unswapped. */
+-    return expect(sameAsInPlace(0, 0, n) && r->hitpart == 7 && bits(&r->pos.f[0]) == words[2]
+-            && bits(&r->pos.f[1]) == halvesSwapped(words[3]) && bits(&r->pos.f[2]) == halvesSwapped(words[4])
+-            && bits(&r->scale1) == words[6] && bits(&r->scale2) == __builtin_bswap32(words[7]),
+-            "at 32 bits an OP17 record is read with the group map, as romfile_model.c does");
+-#endif
+ }
+ 
+ static int testListCallsAnother(void)

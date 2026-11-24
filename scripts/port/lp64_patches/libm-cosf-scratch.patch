@@ -1,0 +1,24 @@
+diff --git a/port/src/port_compare_math.c b/port/src/port_compare_math.c
+index 34ec0cd..1827a71 100644
+--- a/port/src/port_compare_math.c
++++ b/port/src/port_compare_math.c
+@@ -53,7 +53,7 @@ void portCompareLogBuild(void)
+ #ifndef GE_COMPARE_LIBM
+ 
+ float tanf(float x);
+-float cosf(float x);
++float portScratchCosf(float x);
+ float atanf(float x);
+ 
+ #define COMPARE_PI_2 1.5707963267948966      /* pi/2, rounded to double */
+@@ -192,8 +192,8 @@ float tanf(float x)
+     return (bits & 0x80000000u) ? -result : result;
+ }
+ 
+-/** cos of a float, alike on every host (the file's comment says how). */
+-float cosf(float x)
++/* scratch (LP64-006 Task 6): renamed so the game links libm cosf */
++float portScratchCosf(float x)
+ {
+     uint32_t magnitude = floatBits(x) & 0x7fffffffu;
+     uint32_t quarter = 0;

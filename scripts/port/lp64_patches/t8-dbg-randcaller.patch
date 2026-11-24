@@ -1,0 +1,32 @@
+--- port/src/n64_random.c	2026-11-15 18:07:30
++++ build/lp64/equiv/t8-dbg-src/port/src/n64_random.c	2026-11-22 02:07:25
+@@ -14,6 +14,8 @@
+  * 0xfff) — against the MIXED value t, not the old seed ($a0 is
+  * clobbered by dsll32 before the last xor).
+  */
++#define _GNU_SOURCE
++#include <dlfcn.h>
+ #include <ultra64.h>
+ #include "random.h"
+ #include "tlb_random.h"
+@@ -45,6 +47,20 @@
+         extern s32 g_portRandDrawCount;
+         extern s32 g_portRandTraceArmed;
+         g_portRandDrawCount++;
++        { /* scratch (LP64-006 Task 8): the callers of one tick's draws */
++            extern char *getenv(const char *);
++            extern int atoi(const char *);
++            extern int printf(const char *, ...);
++            extern s32 g_GlobalTimer;
++            static int want = -2, printed, lasttimer = -1;
++            if (want == -2) { const char *e = getenv("GE_DBG_RANDTICK"); want = e ? atoi(e) : -1; }
++            if (want >= 0 && g_GlobalTimer == want) {
++                Dl_info info;
++                void *ra = __builtin_return_address(0);
++                if (lasttimer != g_GlobalTimer) { printed = 0; lasttimer = g_GlobalTimer; }
++                if ((printed++ < 120 || printed % 5000 == 0) && dladdr(ra, &info)) printf("ge: dbg rng caller +%lx\n", (unsigned long)((char *)ra - (char *)info.dli_fbase));
++            }
++        }
+         if (g_portRandTraceArmed)
+         {
+             extern int printf(const char *, ...);
