@@ -5,9 +5,9 @@
 **Status:** Planned on 2026-11-21 from measurements on `main` at bfc0271
 and accepted by the owner the same day with all thirteen recommendations
 under "Decisions for the owner" at the end ("Accept all thirteen").
-Tasks 1 to 16 and the final review's fixes are built (their boxes are
-ticked; Task 17 remains); this sentence said "Nothing is built" when the
-plan was written. The status table of
+All seventeen tasks and the final review's fixes are built and their
+boxes ticked; the milestone closed on 2026-11-24 (Task 17). This
+sentence said "Nothing is built" when the plan was written. The status table of
 [native_64bit_plan.md](native_64bit_plan.md) records what is built and
 verified as the tasks land.
 
@@ -1688,7 +1688,7 @@ git commit -m "Close the inherited items the comparison does not reach"
   (Step 2, if decision 5's session runs); the gallery through the
   laptop's regeneration (Step 1)
 
-- [ ] **Step 1: Hand the branch to the laptop**
+- [x] **Step 1: Hand the branch to the laptop** (done on the laptop, 2026-11-24: the branch was empty, so the laptop regenerated once on `main`, ba32c65, no image cell changed)
 
 As in the LP64-005 plan's Task 15, with `lp64/equiv-strict`: the
 hand-off names every function of the Windows executable that differs
@@ -1711,7 +1711,7 @@ runs in the same session (commit its reader in `late_load_report.py`
 first). Paste the tool's summary lines into FORK-089; the folders stay
 on the laptop.
 
-- [ ] **Step 3: Confirm on the Mac**
+- [x] **Step 3: Confirm on the Mac** (done, 2026-11-24: FORK-089's Task 17 Step 3 notes; a pin is now per kind of run, item 6 of "Amendments after the final review")
 
 `hand_gallery.py verify` reports fresh; CI passes on the landed commit;
 the whole task check runs once more with every set and stream (set
@@ -1720,7 +1720,7 @@ the whole task check runs once more with every set and stream (set
 comparison runs against the committed pins ("Amendments after the final
 review", items 2 and 3).
 
-- [ ] **Step 4: Close the record**
+- [x] **Step 4: Close the record** (done, 2026-11-24: the status row, `AGENTS.md`, FORK-089's hand-over)
 
 Set LP64-006 to Done in the status table with: each item's result and
 host, the expectation file's remaining lines, the budget table, and the
@@ -1732,10 +1732,15 @@ build, what real hardware did or did not confirm, the items of "What
 this plan does not do", and the owner's list carried forward. Delete
 this milestone's folders under `build/lp64` before the push; the patches
 the records cite are committed under `scripts/port/lp64_patches/` (its
-`README.md` lists them), so the deletion takes no evidence a committed
-line names (final review, I3).
+`README.md` lists them). *Corrected at Task 17 (2026-11-24):* the
+deletion does take folders that committed lines name (FORK-089's task
+notes, these amendments and `removed-by:` runs of the expectation file
+name `build/lp64` folders), so each such line stands without its folder:
+its figures are in its text, its run is reproduced from the patch and
+commit the README gives, and FORK-089's close says the folders were
+deleted at the close (final review, I3).
 
-- [ ] **Step 5: Task check; commit**
+- [x] **Step 5: Task check; commit** (done, 2026-11-24)
 
 ```bash
 git commit -m "Close LP64-006: the 64-bit game matches the 32-bit game"
@@ -1946,9 +1951,11 @@ govern.
    `lp64_budgets.txt` marks its lines past half `withheld:`, and the raise
    is `scripts/port/lp64_patches/synth-raise-64bit.patch`, the owner's
    eighth question. A comparison build counts dropped updates and logs
-   `ge: compare: synthesizer updates dropped N` at exit: bunker2 logs 24 on
-   `cmp-i686-video` and on `cmp-a64-video` (0 on the headless trees, which
-   mix no sound).
+   `ge: compare: synthesizer updates dropped N` at exit: bunker2 logged 24
+   on `cmp-i686-video` and on `cmp-a64-video` in the fix wave's first round
+   and 34 on both in its second (0 on the headless trees, which mix no
+   sound); the count follows the host's pace and is the same at both widths
+   in each round.
 2. **Pins (I2).** An `explained:` line may carry `sha256=HEX`, the hash of
    the newer build's normalised stream; `compare` fails a matching
    difference whose stream hashes otherwise, prints the expectation lines
@@ -2320,7 +2327,10 @@ above stays as accepted; where it conflicts, these govern.
    kept pages and llvmpipe's code mappings under video are recorded with
    their figures in FORK-089.
 
-No raise was withheld: every comparison stream matched as before.
+No raise was withheld at Task 11: every comparison stream matched as before.
+The final review later withheld one, the synthesizer's parameter pool
+("Amendments after the final review", item 1): it changed bunker2's demo
+sound, a stream the comparison does not judge.
 
 ## Amendments during Task 9 (2026-11-22)
 
