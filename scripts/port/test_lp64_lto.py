@@ -29,6 +29,26 @@ ARRAY = f"""{ROOT}/port/src/animdata.c:66:17: warning: type of 'animation_table_
       |                         ^
 {ROOT}/src/game/initanitable.c:220:25: note: code may be misoptimized unless '-fno-strict-aliasing' is used
 """
+# GCC prints the "previously declared here" note once for two warnings of one symbol (the shape of
+# build/lp64/lto/lto-build.log's viGetX lines).
+SHARED_NOTE = f"""{ROOT}/src/game/mpmenu.c:952:19: warning: type of 'viGetX' does not match original declaration [-Wlto-type-mismatch]
+  952 |             viX = viGetX();
+      |                   ^
+{ROOT}/src/fr.c:865:5: note: return value type mismatch
+  865 | s16 viGetX(void)
+      |     ^
+{ROOT}/src/fr.c:865:5: note: type 's16' should match type 'int'
+{ROOT}/port/src/port_hitmap_draw.c:25:12: warning: type of 'viGetX' does not match original declaration [-Wlto-type-mismatch]
+   25 | extern s32 viGetX(void);
+      |            ^
+{ROOT}/src/fr.c:865:5: note: return value type mismatch
+  865 | s16 viGetX(void)
+      |     ^
+{ROOT}/src/fr.c:865:5: note: type 's16' should match type 's32'
+{ROOT}/src/fr.c:865:5: note: 'viGetX' was previously declared here
+"""
+# Another compiler's wording of the same warning, which WARNING does not read.
+OTHER_WORDING = f"{ROOT}/src/game/fr.c:12:14: warning: 'viGetPerspNorm' violates the C++ One Definition Rule [-Wlto-type-mismatch]\n"
 
 LINKED = '[100%] Built target ge\n'
 
@@ -56,6 +76,16 @@ class ListMismatches(unittest.TestCase):
         self.assertEqual(lto.format_lines(found), [
             "animation_table_ptrs2: port/src/animdata.c:66 extern intptr_t animation_table_ptrs2[]; | "
             "src/game/initanitable.c:220 struct ModelAnimation *animation_table_ptrs2[] = {"])
+
+    def test_a_shared_previous_note_falls_back_to_the_return_value_notes_place(self):
+        # Act
+        lines = lto.format_lines(lto.parse_log(SHARED_NOTE, ROOT))
+        # Assert
+        self.assertEqual(lines[0], "viGetX: port/src/port_hitmap_draw.c:25 extern s32 viGetX(void); | "
+                                   "src/fr.c:865 s16 viGetX(void) -- return value type mismatch; "
+                                   "type 's16' should match type 's32'")
+        self.assertEqual(lines[1], "viGetX: src/game/mpmenu.c:952 viX = viGetX(); | src/fr.c:865 s16 viGetX(void) -- "
+                                   "return value type mismatch; type 's16' should match type 'int'")
 
     def test_a_warning_printed_twice_is_listed_once(self):
         # Act
@@ -118,6 +148,13 @@ class CheckAllowlist(unittest.TestCase):
         log = write(self.folder, 'partial.log', 'ninja: build stopped: subcommand failed.\n')
         # Act / Assert
         with self.assertRaisesRegex(ValueError, 'no finished link'):
+            lto.read_logs([log], ROOT)
+
+    def test_a_log_with_a_mismatch_line_the_pattern_cannot_read_is_refused(self):
+        # Arrange
+        log = write(self.folder, 'other.log', RETURN_TYPE + OTHER_WORDING + LINKED)
+        # Act / Assert
+        with self.assertRaisesRegex(ValueError, r'2 \[-Wlto-type-mismatch\] lines but reads 1 warning'):
             lto.read_logs([log], ROOT)
 
 

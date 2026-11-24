@@ -47,12 +47,12 @@ folder 4 secret: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 folder 4 00: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 TEXT
 
-# Builds the driver at WIDTH as $work/save-WIDTH.
+# Builds the driver at WIDTH as $work/save-WIDTH. -w silences every warning, a -Werror= one
+# included, so none is passed: the game's include/string.h, found first, declares no strcmp.
 build() {
     local width=$1
     "$compiler" $(harness_flags "$width" -msse2 -mfpmath=sse) \
         -std=gnu11 -fms-extensions -fcommon -funsigned-char -fno-strict-aliasing -w \
-        -Werror=implicit-function-declaration \
         -ffunction-sections -fdata-sections -Wl,--gc-sections \
         -DVERSION_US -DLANG_US -DREFRESH_NTSC -DNONMATCHING -DAVOID_UB -D_LANGUAGE_C \
         -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \

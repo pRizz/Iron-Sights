@@ -10,7 +10,11 @@ C++ and linker flags and linked outside make's jobserver (see AGENTS.md for the 
 `list LOG...` prints one line per mismatch:
     SYMBOL: FILE_A:LINE DECLARATION_A | FILE_B:LINE DECLARATION_B -- GCC's detail notes
 where A is the declaration GCC warns about, B the one it calls original, and each declaration is
-the source line GCC quoted. `check LOG...` requires the set of mismatched symbols over all the logs
+the source line GCC quoted; when GCC prints the "previously declared here" note once for several
+warnings of a symbol, B of the others is the place of their "return value type mismatch" note. A
+log whose count of `[-Wlto-type-mismatch]` lines differs from the warnings WARNING reads (another
+compiler's wording) is refused, never read as fewer mismatches. `check` matches by symbol: an
+allowed symbol that gains another mismatched declaration still passes. `check LOG...` requires the set of mismatched symbols over all the logs
 to equal the symbols of `lp64_lto_allowed.txt` (`SYMBOL reason` a line, `#` comments): exact match,
 and a missing file allows none.
 """
@@ -29,6 +33,8 @@ WARNING = re.compile(LOCATION + r"warning: type of '(?P<symbol>[^']+)' does not 
 NOTE = re.compile(LOCATION + r'note: (?P<text>.*)$')
 QUOTE = re.compile(r'^\s*(?P<line>\d+) \| (?P<text>.*)$')
 CARET = re.compile(r'^\s*\| ')
+RETURN_NOTE = 'return value type mismatch'
+MISMATCH_TAG = '[-Wlto-type-mismatch]'
 PREVIOUS = re.compile(r"^'(?P<symbol>[^']+)' was previously declared here$")
 IGNORED_NOTE = re.compile(r"^code may be misoptimized unless '-fno-strict-aliasing' is used$")
 FINISHED_LINK = re.compile(r'Built target ge$')
@@ -62,7 +68,7 @@ def parse_log(text: str, root: Optional[str] = None) -> tuple[dict[tuple, str], 
         warning = WARNING.match(text_line)
         if warning:
             blocks.append(dict(symbol=warning['symbol'], a=(relative(warning['file'], roots), int(warning['line'])),
-                               b=('', 0), notes=[]))
+                               b=('', 0), returned=('', 0), notes=[]))
             continue
         note = NOTE.match(text_line)
         if not note:
@@ -75,9 +81,13 @@ def parse_log(text: str, root: Optional[str] = None) -> tuple[dict[tuple, str], 
         previous = PREVIOUS.match(note['text'])
         if previous and previous['symbol'] == block['symbol']:
             block['b'] = (relative(note['file'], roots), int(note['line']))
-        elif not IGNORED_NOTE.match(note['text']) and note['text'] not in block['notes']:
+            continue
+        if note['text'] == RETURN_NOTE:
+            block['returned'] = (relative(note['file'], roots), int(note['line']))
+        if not IGNORED_NOTE.match(note['text']) and note['text'] not in block['notes']:
             block['notes'].append(note['text'])
-    found = {(block['symbol'], *block['a'], *block['b']): '; '.join(block['notes']) for block in blocks if block}
+    found = {(block['symbol'], *block['a'], *(block['b'] if block['b'][1] else block['returned'])):
+             '; '.join(block['notes']) for block in blocks if block}
     return found, quoted_lines(lines, roots)
 
 
@@ -100,6 +110,11 @@ def read_logs(paths: list[Path], root: Optional[str] = None) -> tuple[dict, dict
         text = path.read_text(errors='replace')
         if not any(FINISHED_LINK.search(line) for line in text.splitlines()):
             raise ValueError(f'{path} shows no finished link (no "Built target ge" line); refusing to report it')
+        tagged = sum(MISMATCH_TAG in line for line in text.splitlines())
+        read = sum(bool(WARNING.match(line)) for line in text.splitlines())
+        if tagged != read:
+            raise ValueError(f'{path} has {tagged} {MISMATCH_TAG} lines but reads {read} warnings of the form '
+                             'this tool knows (another wording?); refusing to report fewer mismatches')
         more_found, more_quotes = parse_log(text, root)
         found.update(more_found)
         for key, value in more_quotes.items():

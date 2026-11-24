@@ -303,7 +303,7 @@ if cc -m32 -x c -fsyntax-only /dev/null >/dev/null 2>&1; then
 #if !PORT_PLAY_HARNESS
 #error PORT_PLAY_HARNESS is 0
 #endif' || {
-        cat "$work/canary-c-harness32.log" >&2
+        cat "$work/canary-harness32.log" >&2
         fail "a 32-bit video compare tree has PORT_PLAY_HARNESS 0"
     }
     echo "ok 8d: a 32-bit video compare tree has PORT_PLAY_HARNESS 1"

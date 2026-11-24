@@ -196,6 +196,8 @@ harness_list_problems() {
         name=$(basename "$harness" .sh)
         # A --web line runs the browser build only, not the harness's widths.
         lines=$(grep -hF "scripts/port/$name.sh" "${workflows[@]}" || [[ $? -eq 1 ]])
+        # A commented-out line runs nothing.
+        lines=$(grep -vE '^[[:space:]]*#' <<<"$lines" || [[ $? -eq 1 ]])
         if grep -vqF "scripts/port/$name.sh --web" <<<"$lines" && [[ -n $lines ]]; then
             named[$name]=1
         fi
@@ -302,6 +304,14 @@ write_harness "$root" test_both "$both_widths"
 echo "          docker run image bash scripts/port/test_both.sh --web" >>"$root/.github/workflows/ci.yml"
 # Act and Assert
 expect "a harness named only with --web is run by no workflow" "$unnamed_message" "$(fixture_problems "$root")"
+
+# Arrange
+root=$(new_fixture commented)
+write_harness "$root" test_both "$both_widths"
+echo "          # bash scripts/port/test_both.sh" >>"$root/.github/workflows/ci.yml"
+# Act and Assert
+expect "a harness named only on a commented-out line is run by no workflow" "$unnamed_message" \
+    "$(fixture_problems "$root")"
 
 # Arrange
 root=$(new_fixture child)
