@@ -1,7 +1,8 @@
 /* The stage pools' 64-bit sizes set from the soak (LP64-006 Task 11;
- * port_lp64_budget.h). Each row: a pool whose largest peak over the Step 3
- * runs was above half the size its stage gave it, raised to twice that peak
- * rounded up to 16 (every pool here is carved in 16-byte units at 64 bits).
+ * port_lp64_budget.h). Each row: a pool whose largest peak over Task 11's
+ * runs (Step 3's and ruling 9's later sets) was above half the size its stage
+ * gave it, raised to twice that peak rounded up to 16 (every pool here is
+ * carved in 16-byte units at 64 bits).
  * The figures and their cases are in scripts/port/lp64_budgets.txt. No code
  * at 32 bits (CMakeLists.txt leaves the file out). */
 #include "port_lp64_budget.h"
@@ -29,8 +30,9 @@ static const StageBudget sBudgets[] = {
     { "room memory", LEVELID_CAVERNS, 450560, 456672 },
     /* peak 239,360 (tour-jungle, ruling 9's plain sets; Step 3's tour gave 202,624) */
     { "room memory", LEVELID_JUNGLE, 409600, 478720 },
-    /* peak 265,456 (respawn-cradle, the same) */
-    { "room memory", LEVELID_CRADLE, 512000, 530912 },
+    /* peak 268,768 (respawn-cradle, video; the final review's fix wave, past
+     * half of Task 11's 530,912 from 265,456: room memory follows the pace) */
+    { "room memory", LEVELID_CRADLE, 512000, 537536 },
     /* graphics buffer: peak 125,520 (stage-aztec, comparison build with video, every fork option) */
     { "graphics buffer", LEVELID_AZTEC, 245760, 251040 },
     /* vertex pool: peak 135,136 (stage-caverns, the same), one player */

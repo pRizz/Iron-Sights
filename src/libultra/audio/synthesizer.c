@@ -247,7 +247,7 @@ ALParam *__allocParam()
         drvr->paramList = drvr->paramList->next;
         update->next = 0; portLp64SynthParamTake(); /* LP64-006 Task 11 */
     }
-    return update;
+    portCompareSynthTaken(update); return update; /* LP64-006: a comparison build counts a drop */
 }
     
 void __freeParam(ALParam *param) 

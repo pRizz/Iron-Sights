@@ -296,7 +296,9 @@ static void attackWhileRolling(void)
     chrlvInitActAttackRoll(&unarmed.chr, GUNRIGHT);
 }
 
-/* How CALL ended in a child process: 0 when it returned, else the signal that ended it. */
+/* How CALL ended in a child process: 0 when it returned, else the signal that ended it. The 32-bit
+ * half expects SIGSEGV from a read through NULL (page 0), which is Linux's signal for it; macOS
+ * raises SIGBUS there, so the harness assumes Linux (its containers and CI). */
 static int signalEnding(void (*call)(void))
 {
     int status;

@@ -185,6 +185,16 @@ void portLp64SynthParamGive(void);
 #define portLp64SynthParamGive() ((void) 0)
 #endif
 
+/* __allocParam's result (synthesizer.c): a comparison build counts each update it
+ * dropped for want of a free record, and prints the count at exit
+ * (port_compare_math.c, LP64-006 final review); elsewhere nothing. */
+#ifdef GE_COMPARE
+void portCompareSynthDropped(void);
+#define portCompareSynthTaken(update) ((update) == 0 ? portCompareSynthDropped() : (void) 0)
+#else
+#define portCompareSynthTaken(update) ((void) 0)
+#endif
+
 #if IS_64_BIT || defined(GE_LP64_ORACLE)
 #ifdef __cplusplus
 extern "C" {

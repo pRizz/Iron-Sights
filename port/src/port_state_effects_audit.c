@@ -26,7 +26,7 @@ extern Gfx *g_ExplosionDisplayLists[];
 static void auditTextureSources(s32 verify)
 {
     static u32 original[2][64];
-    Gfx *lists[] = { &globalDL_0x000, g_ExplosionDisplayLists[0] };
+    Gfx *lists[] = { globalDL_0x000, g_ExplosionDisplayLists[0] };
     s32 i, j;
     for (i = 0; i < 2; i++) for (j = 0; j < 64; j++) {
         const u32 command = GFX_W0(&lists[i][j]);

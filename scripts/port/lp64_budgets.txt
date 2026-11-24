@@ -9,10 +9,13 @@
 # room in Dam, room memory in Jungle and Cradle) and the stages only they visit.
 # Every pool whose peak was above half its size was raised to twice the
 # peak, rounded up to 16 (port_lp64_budget.c, gun.c, front.h,
-# objecthandler_2.c); the synthesizer's parameters hold 584 records of 40
-# bytes at the default GE_SNDSCALE of 2 (music.c), at least twice the 290
-# bunker2 used once the pool no longer filled (at 256 records it was full
-# and dropped updates). `lp64_play.py peaks --budget` checks a run's peak
+# objecthandler_2.c), except the synthesizer's parameters: Task 11 raised
+# them to 584 records of 40 bytes (twice the 290 bunker2 used at the default
+# GE_SNDSCALE of 2), and the final review withheld that raise because it
+# changes bunker2's sound from the 32-bit build's; music.c keeps 0x80 at both
+# widths (256 records at that scale, 10,240 bytes), the lines past half are
+# marked withheld, and the raise is scripts/port/lp64_patches/synth-raise-64bit.patch
+# for the owner. `lp64_play.py peaks --budget` checks a run's peak
 # lines against this file: each pool, stage and size it prints must be
 # listed and at most half full, unless the line is withheld. The texture
 # pool of 4,473,152 bytes is the persistent model pool, one pool in every
@@ -24,9 +27,14 @@
 # print shows all it holds since the game started, so each stage lists it
 # with its largest use in any Task 11b run: the end of the headless soak of
 # five laps.
-graphics buffer 0 327680 74256 t11-plain/menu-credits
+# The final review's fix wave folded in its runs with lp64_budgets.py (the
+# play sets plain, sanitizer and video, and the comparison cases under both
+# profiles); its first round found room memory in Cradle at 268,768 bytes
+# (fw-video/respawn-cradle, at the old 530,912), so Cradle was raised to
+# 537,536 and its line keeps that peak.
+graphics buffer 0 327680 76336 fw2-video/front-end
 graphics buffer 9 409600 94400 t11-m-video/tour-bunker1
-graphics buffer 20 286720 89824 t11-san/tour-silo
+graphics buffer 20 286720 89984 fw2-plain/tour-silo
 graphics buffer 22 286720 76608 t11-m-a64-video-all/run1/stage-statue
 graphics buffer 23 286720 89056 t11-m-video/tour-control
 graphics buffer 24 286720 83200 t11-m-a64-video-all/run1/stage-archives
@@ -138,7 +146,7 @@ room memory 32 512000 195680 t11-m-plain/tour-egypt
 room memory 32 819200 233520 t11-m-plain/mp-egypt-4p
 room memory 33 616768 308384 t11-m-plain/tour-dam
 room memory 34 327680 148736 t11-m-plain/tour-facility
-room memory 34 471040 142544 t11-m-plain/mp-facility-4p
+room memory 34 471040 150480 fw2-video/respawn-facility
 room memory 35 614400 147856 t11-soak-plain/soak
 room memory 36 614400 205552 t11-m-plain/tour-surface
 room memory 37 478720 239360 t11-plain/tour-jungle
@@ -146,7 +154,7 @@ room memory 38 204800 42064 t11-m-plain/death
 room memory 39 456672 228336 t11-m-video/mp-caverns-4p
 room memory 39 512000 98416 t11-m-plain/tour-caverns
 room memory 40 307200 11232 t11-plain/stop-citadel
-room memory 41 530912 265456 t11-plain/respawn-cradle
+room memory 41 537536 268768 fw-video/respawn-cradle
 room memory 43 716800 271696 t11-soak-plain/soak
 room memory 45 204800 69552 t11-m-video/mp-basement-4p
 room memory 46 204800 69008 t11-m-video/mp-stack-4p
@@ -179,7 +187,7 @@ room memory largest request 38 204800 6048 t11-m-plain/death
 room memory largest request 39 456672 37984 t11-m-plain/mp-caverns-2p
 room memory largest request 39 512000 37984 t11-soak-plain/soak
 room memory largest request 40 307200 10384 t11-plain/stop-citadel
-room memory largest request 41 530912 23232 t11-soak-plain/soak
+room memory largest request 41 537536 23232 fw2-plain/mp-cradle-2p
 room memory largest request 43 716800 37424 t11-soak-plain/soak
 room memory largest request 45 204800 8400 t11-m-plain/mp-basement-2p
 room memory largest request 46 204800 8400 t11-m-plain/mp-stack-2p
@@ -208,41 +216,41 @@ stage bank 37 66805760 4062992 a64/run1/stage-jungle
 stage bank 38 66805760 5466384 t11-san/mp-temple-4p-s2
 stage bank 39 66805760 5940720 t11-san/mp-caverns-4p
 stage bank 40 66805760 3143736 t11-san/stop-citadel
-stage bank 41 66805760 6105152 t11-san/mp-cradle-4p
+stage bank 41 66805760 6111776 fw2-san/mp-cradle-4p
 stage bank 43 66805760 4433752 a64/run1/stage-surface2
 stage bank 45 66805760 5491200 t11-san/mp-basement-4p
 stage bank 46 66805760 5518440 t11-san/mp-stack-4p
 stage bank 48 66805760 5524952 t11-san/mp-library-4p
 stage bank 50 66805760 5894616 t11-san/mp-caves-4p
 stage bank 54 66805760 3931296 a64/run1/stage-cuba
-synthesizer parameters 0 23360 1840 x64/run1/dam1
-synthesizer parameters 9 23360 11600 a64/run1/bunker2
-synthesizer parameters 20 23360 2640 x64/run2/silo2
-synthesizer parameters 22 23360 2240 t11-m-a64-video-all/run1/stage-statue
-synthesizer parameters 23 23360 1760 t11-m-video/tour-control
-synthesizer parameters 24 23360 1720 t11-m-a64-video-all/run1/stage-archives
-synthesizer parameters 25 23360 2520 t11-m-a64-video-all/run1/stage-train
-synthesizer parameters 26 23360 1800 t11-m-a64-video/run1/frigate1
-synthesizer parameters 27 23360 1080 t11-soak-video/soak
-synthesizer parameters 28 23360 3040 t11-m-a64-video-all/run1/stage-aztec
-synthesizer parameters 29 23360 1560 t11-m-a64-video-all/run1/stage-streets
-synthesizer parameters 30 23360 2480 t11-m-a64-video-all/run1/stage-depot
-synthesizer parameters 31 23360 880 t11-m-video/mp-complex-2p
-synthesizer parameters 32 23360 3000 t11-m-a64-video-all/run1/stage-egypt
-synthesizer parameters 33 23360 2680 t11-m-video/attract
-synthesizer parameters 34 23360 1760 t11-m-a64-video-all/run1/facility3
-synthesizer parameters 35 23360 2800 t11-m-a64-video-all/run1/stage-runway
-synthesizer parameters 36 23360 1160 t11-m-a64-video-all/run1/stage-surface
-synthesizer parameters 37 23360 2240 t11-m-a64-video-all/run1/stage-jungle
-synthesizer parameters 38 23360 1560 t11-m-video/death
-synthesizer parameters 39 23360 3000 t11-m-a64-video-all/run1/stage-caverns
-synthesizer parameters 41 23360 2960 t11-m-a64-video-all/run1/stage-cradle
-synthesizer parameters 43 23360 2200 t11-m-a64-video-all/run1/stage-surface2
-synthesizer parameters 45 23360 880 t11-m-video/mp-basement-2p
-synthesizer parameters 46 23360 880 t11-m-video/mp-stack-2p
-synthesizer parameters 48 23360 880 t11-m-video/mp-library-2p
-synthesizer parameters 50 23360 880 t11-m-video/mp-caves-2p
-synthesizer parameters 54 23360 1280 t11-m-video/stage-cuba
+synthesizer parameters 0 10240 1840 fw2-video/bunker1
+synthesizer parameters 9 10240 10240 a64/run1/bunker2 withheld: the final review withheld Task 11's raise (0x124 at 64 bits), which removed the updates bunker2's demo drops at both widths; music.c keeps 0x80 until the owner rules (scripts/port/lp64_patches/synth-raise-64bit.patch)
+synthesizer parameters 20 10240 2360 a64/run2/silo2
+synthesizer parameters 22 10240 2240 a64/run1/stage-statue
+synthesizer parameters 23 10240 1320 a64/run1/stage-control
+synthesizer parameters 24 10240 1720 a64/run1/stage-archives
+synthesizer parameters 25 10240 2520 a64/run1/stage-train
+synthesizer parameters 26 10240 1920 x64/run1/frigate1
+synthesizer parameters 27 10240 1520 fw2-video/respawn-bunker
+synthesizer parameters 28 10240 3040 a64/run1/stage-aztec
+synthesizer parameters 29 10240 1560 a64/run1/stage-streets
+synthesizer parameters 30 10240 2480 a64/run1/stage-depot
+synthesizer parameters 31 10240 1440 fw2-video/respawn-complex
+synthesizer parameters 32 10240 3000 a64/run1/stage-egypt
+synthesizer parameters 33 10240 2280 a64/run1/dam-twice
+synthesizer parameters 34 10240 1720 a64/run1/facility1
+synthesizer parameters 35 10240 2800 a64/run1/stage-runway
+synthesizer parameters 36 10240 1160 a64/run1/stage-surface
+synthesizer parameters 37 10240 2240 a64/run1/stage-jungle
+synthesizer parameters 38 10240 1760 fw2-video/respawn-temple
+synthesizer parameters 39 10240 3000 a64/run1/stage-caverns
+synthesizer parameters 41 10240 2960 a64/run1/stage-cradle
+synthesizer parameters 43 10240 2200 a64/run1/stage-surface2
+synthesizer parameters 45 10240 1600 fw2-video/respawn-basement
+synthesizer parameters 46 10240 1600 fw2-video/respawn-stack
+synthesizer parameters 48 10240 1120 fw2-video/respawn-library
+synthesizer parameters 50 10240 1520 fw2-video/respawn-caves
+synthesizer parameters 54 10240 1280 fw2-video/stage-cuba
 texture pool 0 1323008 120184 t11-m-a64/run1/walk
 texture pool 0 1433600 105328 t11-plain/stop-42
 texture pool 0 4473152 2236576 t11-m-video/soak
@@ -320,7 +328,7 @@ vertex pool 24 1048576 44096 t11-m-plain/mp-archives-4p
 vertex pool 25 262144 44688 t11-m-a64-video-all/run1/stage-train
 vertex pool 26 262144 98528 t11-m-a64-video-all/run1/frigate2
 vertex pool 27 262144 37472 t11-soak-plain/soak
-vertex pool 27 524288 39488 t11-plain/respawn-bunker
+vertex pool 27 524288 39616 fw2-video/respawn-bunker
 vertex pool 27 1048576 54912 t11-m-plain/mp-bunker-4p
 vertex pool 28 262144 57360 t11-m-a64-video-all/run1/stage-aztec
 vertex pool 29 262144 34768 t11-m-a64-video-all/run1/stage-streets
@@ -340,7 +348,7 @@ vertex pool 37 262144 64800 t11-m-a64-video-all/run1/stage-jungle
 vertex pool 38 524288 42016 t11-plain/respawn-temple
 vertex pool 38 1048576 72000 t11-m-plain/death
 vertex pool 39 270272 135136 t11-m-a64-video-all/run1/stage-caverns
-vertex pool 39 524288 46304 t11-plain/respawn-caverns
+vertex pool 39 524288 46368 fw2-video/respawn-caverns
 vertex pool 39 1048576 66624 t11-m-plain/mp-caverns-4p
 vertex pool 41 262144 67936 t11-m-a64-video-all/run1/stage-cradle
 vertex pool 41 524288 34432 t11-plain/respawn-cradle
@@ -352,7 +360,7 @@ vertex pool 46 524288 39616 t11-san/respawn-stack
 vertex pool 46 1048576 54976 t11-m-plain/mp-stack-4p
 vertex pool 48 524288 40064 t11-plain/respawn-library
 vertex pool 48 1048576 55232 t11-m-plain/mp-library-4p
-vertex pool 50 524288 40384 t11-plain/respawn-caves
+vertex pool 50 524288 40448 fw2-video/respawn-caves
 vertex pool 50 1048576 60160 t11-san/mp-caves-4p
 vertex pool 54 262144 5664 t11-m-plain/stage-cuba
 wallet room 0 76736 38368 t11-m-a64/run1/dam-twice

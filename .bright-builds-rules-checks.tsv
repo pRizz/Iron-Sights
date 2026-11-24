@@ -68,6 +68,7 @@ file-lengths	src/game/lv.c	Pre-adoption cdd6b5f baseline: 2392 lines. Inherited 
 file-lengths	src/game/matrixmath.c	Pre-adoption cdd6b5f baseline: 1018 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
 file-lengths	src/game/model.c	Pre-adoption cdd6b5f baseline: 6837 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
 file-lengths	src/game/mpmenu.c	Pre-adoption cdd6b5f baseline: 2007 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
+file-lengths	src/game/ob.c	LP64-006 final review (2026-11-23): 638 lines, past the 628 limit only by Task 16's index-0 guard written on ordinary lines and the four blank lines it had removed; inherited decompiled engine layout (615 lines at cdd6b5f), so the file differs from upstream by the guard alone.
 file-lengths	src/game/objecthandler.c	Pre-adoption cdd6b5f baseline: 1299 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
 file-lengths	src/game/options.c	Pre-adoption cdd6b5f baseline: 8342 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.
 file-lengths	src/game/othermodemicrocode.c	Pre-adoption cdd6b5f baseline: 723 lines. Inherited decompiled engine layout; preserve ABI and behavior during scoped changes.

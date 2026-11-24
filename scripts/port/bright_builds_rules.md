@@ -30,7 +30,7 @@ the existing Python staged-gallery check. Other clones enable the hook using
 `python scripts/port/hand_gallery.py install-hook` after installing Bun.
 
 The initial file-size check found 195 existing findings at `cdd6b5f`.
-`.bright-builds-rules-checks.tsv` contains 96 exact-file and five generated/vendor
+`.bright-builds-rules-checks.tsv` contains 97 exact-file and seven generated/vendor
 directory exceptions, each with a reason. These preserve existing layouts while
 keeping new source files checked. See `standards-overrides.md`; this is an
 adoption baseline, not a completed whole-repository standards audit. Remove

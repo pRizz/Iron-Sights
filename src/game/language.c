@@ -376,7 +376,7 @@ struct jpncharpixels *langGetJpnCharPixels(s32 codepoint)
 		g_JpnCacheCacheItems[freeindexmulti + 1].codepoint = codepoint >> 1;
 
 #ifndef TARGET_N64
-		langCopyGlyph(&g_JpnCharCachePixels[freeindexmulti * 8], &_efontchardataSegmentRomStart, LANG_EFONT_SIZE,
+		langCopyGlyph(&g_JpnCharCachePixels[freeindexmulti * 8], _efontchardataSegmentRomStart, LANG_EFONT_SIZE,
 		              (u32) ((codepoint & 0x1fff) >> SHIFTAMOUNT) * 0x80, 0x80);
 #else
 		romCopy(&g_JpnCharCachePixels[freeindexmulti * 8], (romptr_t) &_efontchardataSegmentRomStart + ((codepoint & 0x1fff) >> SHIFTAMOUNT) * 0x80, 0x80);

@@ -58,8 +58,10 @@ elseif(GE_POINTER_BITS EQUAL 64)
     # two conversions without a flag. Every other class the 64-bit build
     # printed is switched off by name, with the warnings it printed (headless /
     # video trees, GCC 13.3 on aarch64 and x86_64, identical). C:
-    # incompatible-pointer-types 1790 / 1798, implicit-function-declaration
-    # 397 / 404, discarded-qualifiers 7, format-truncation 4, overflow 2,
+    # incompatible-pointer-types 1820 / 1828, implicit-function-declaration
+    # 226 / 226 (these two recounted at LP64-006's final review, each C file
+    # compiled with -fsyntax-only and the class on), discarded-qualifiers 7,
+    # format-truncation 4, overflow 2,
     # format-overflow 2, unused-result 1. C++ (video only):
     # deprecated-declarations 3 (std::filesystem::u8path, weapon_cache.cpp).
     # The first two C classes are left for later milestones; GCC 14 and later

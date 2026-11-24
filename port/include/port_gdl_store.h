@@ -13,8 +13,12 @@
  * address: the record that held the pointer is then another model's bytes.
  * Nothing else gives a block back. A list takes the smallest block that was
  * given back and holds its worst case, and only once every frame handed to
- * the renderer before the give-back has been drawn, so a display list built
- * while the old model stood cannot run a block that now holds another list.
+ * the renderer before the give-back has been drawn (portGfxFramesFinished),
+ * so a display list the renderer still holds cannot run a block that now
+ * holds another list. The frame being built is not counted: the rule relies
+ * on model loads happening between frame builds (the stage loads, the hand
+ * room loads of gun.c), as the original game's lists, which lived in the
+ * image, also did.
  * The block is zeroed first, as a new block of the arena is. A model loaded
  * anywhere else leaves the block alone, so two models that are both loaded
  * never share one. The arena then grows only when a list finds no block large

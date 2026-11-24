@@ -15,9 +15,10 @@ review refactoring opportunities when touching existing code, with native tests
 and render verification where relevant.
 
 The initial checker found 195 over-limit files at `cdd6b5f`. The user-owned
-`.bright-builds-rules-checks.tsv` records 96 exact-file exceptions and five
-generated/vendor directories (`assets/`, `port/fast3d/glad/`, `port/generated/`,
-`tools/gzipsrc/`, `tools/ido5.3_recomp/`). The latter preserve generated data and
+`.bright-builds-rules-checks.tsv` records 97 exact-file exceptions and seven
+generated/vendor directories (`assets/`, `port/fast3d/glad/`,
+`port/fast3d/third_party/picojson/`, `port/fast3d/third_party/puff/`,
+`port/generated/`, `tools/gzipsrc/`, `tools/ido5.3_recomp/`). The latter preserve generated data and
 third-party layout. These are adoption exceptions, not evidence of a full
 standards audit or a reason to grow large files casually. New files outside
 those generated/vendor directories remain subject to the 628-line check.

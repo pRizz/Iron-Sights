@@ -19,6 +19,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef GE_COMPARE
+#include <time.h> /* the comparison build's bake wait has a deadline */
+#define BAKE_WAIT_SECONDS 120
+#endif
 #include <ultra64.h>
 #include <bondconstants.h>
 #include <bondtypes.h>
@@ -185,8 +189,17 @@ void portBakeLevelLoaded(void) {
     /* LP64-006: a comparison build finishes the bake during the load, so the
      * frame that shows it is the first tick on every host, not the one the
      * workers' speed picks; the unbaked frames stay covered by the default
-     * profile, which has Baked Lighting off. */
-    while (s_started && !portBakeTraceStep(4000)) {
+     * profile, which has Baked Lighting off. A bake that has not finished
+     * after BAKE_WAIT_SECONDS of wall time stops the run with a line saying so. */
+    {
+        const time_t deadline = time(NULL) + BAKE_WAIT_SECONDS;
+        while (s_started && !portBakeTraceStep(4000)) {
+            if (time(NULL) > deadline) {
+                fprintf(stderr, "ge: FATAL: Baked Lighting's trace did not finish within %d s of the stage load "
+                        "(comparison build)\n", BAKE_WAIT_SECONDS);
+                exit(1);
+            }
+        }
     }
 #endif
 }

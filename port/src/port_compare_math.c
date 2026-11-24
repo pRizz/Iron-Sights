@@ -27,6 +27,7 @@
  */
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h> /* atexit */
 #include <string.h>
 
 #if defined(__i386__) && !defined(__SSE2_MATH__)
@@ -39,7 +40,23 @@
 #error "port_compare_math.c must not be built with -ffast-math: it reorders the arithmetic"
 #endif
 
-/** main.c: prints `ge: compare: on` once at boot, `on (libm)` in the twin. */
+static unsigned long s_SynthDropped;
+
+/** synthesizer.c's __allocParam: an update found the parameter pool empty and was dropped. */
+void portCompareSynthDropped(void)
+{
+    s_SynthDropped++;
+}
+
+/* At exit: how many synthesizer updates the run dropped (LP64-006 final review, I1: the pool keeps
+ * the 32-bit size at 64 bits, and this measures what that size drops at either width). */
+static void compareSynthReport(void)
+{
+    printf("ge: compare: synthesizer updates dropped %lu\n", s_SynthDropped);
+    fflush(stdout);
+}
+
+/** main.c: prints `ge: compare: on` once at boot, `on (libm)` in the twin, and arms the exit line. */
 void portCompareLogBuild(void)
 {
 #ifdef GE_COMPARE_LIBM
@@ -48,6 +65,7 @@ void portCompareLogBuild(void)
     printf("ge: compare: on\n");
 #endif
     fflush(stdout);
+    atexit(compareSynthReport);
 }
 
 #ifndef GE_COMPARE_LIBM
