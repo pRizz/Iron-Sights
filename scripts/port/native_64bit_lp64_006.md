@@ -1695,7 +1695,7 @@ hand-off names every function of the Windows executable that differs
 from the last regeneration. If the branch is empty the laptop
 regenerates once on `main`.
 
-- [ ] **Step 2: Real x86 hardware, if decision 5 is granted**
+- [x] **Step 2: Real x86 hardware, if decision 5 is granted** (done on the laptop, 2026-11-24: FORK-089's Task 17 Step 2 note. The `host:` lines are confirmed and now `explained:`; the headless `sim` pair fails line 23's pin, which was taken from a video run, a finding for Step 3)
 
 On the laptop, in the `goldeneye` container it already builds with:
 build `cmp-i686`, `cmp-x64` and `cmp-x64-video`, and `cmp-i686-video`
