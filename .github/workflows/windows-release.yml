@@ -111,6 +111,9 @@ jobs:
           bash scripts/port/test_startup_stamp.sh
           python3 scripts/port/test_lp64_equiv_streams.py
           python3 scripts/port/test_lp64_equiv.py
+          python3 scripts/port/test_lp64_equiv_video.py
+          python3 scripts/port/test_lp64_equiv_cases.py
+          python3 scripts/port/test_lp64_equiv_expect.py
           python3 scripts/port/test_lp64_equiv_compare.py
           python3 scripts/port/test_lp64_equiv_pictures.py
           bash scripts/port/test_audio_synth.sh

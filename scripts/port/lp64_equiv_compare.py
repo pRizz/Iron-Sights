@@ -13,8 +13,18 @@ recording's tick and blind to the host's pace, though they are still printed as 
 only when its case's log holds AUDIO_LOCKED (compare refuses the folder otherwise), and a demo's is
 never judged (DEMO_SND_REASON): neither in its agreement with itself, nor between seeds, nor between
 builds, where compare prints `CASE snd PAIR not judged: REASON` and leaves it out of the counts.
+
+An `explained:` line may pin its stream (final review, I2): `sha256=HEX` after its index is the hash
+of the newer build's stream as the comparison reads it (stream_sha256: a trace or digest by its
+records, a demo's by its playback, a recording by its samples), so a pinned stream passes only while
+everything after its first difference stays as it was; a line without the pin checks the first
+difference alone. `pins` prints the file's explained lines with fresh hashes for the pairs given and
+never writes the file: re-pinning is a deliberate edit. With --expect, compare also prints the lines
+it did not exercise (a pair, profile, case or stream not compared), and it notes run folders whose
+records name different commits.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -99,11 +109,12 @@ def seed_verdict(case: str, folder_a: Path, folder_b: Path, streams: tuple[str, 
 
 
 # ---- run folders against each other -------------------------------------------------------------
-# A line of lp64_equiv_expected.txt: PAIR CASE PROFILE STREAM differs-from I KIND: REASON, KIND one
-# of EXPECT_KINDS; an `explained:` reason ends with `; removed-by: RUN`.
+# A line of lp64_equiv_expected.txt: PAIR CASE PROFILE STREAM differs-from I [sha256=HEX] KIND: REASON,
+# KIND one of EXPECT_KINDS; an `explained:` reason ends with `; removed-by: RUN`, and only an
+# explained line carries the pin.
 EXPECT_KINDS = ('explained', 'open', 'strict', 'host')
-EXPECT_LINE = re.compile(r'^(\S+:\S+) (\S+) (\S+) (\S+) differs-from (\d+) (' + '|'.join(EXPECT_KINDS)
-                         + r'): (.+)$')
+EXPECT_LINE = re.compile(r'^(\S+:\S+) (\S+) (\S+) (\S+) differs-from (\d+)(?: sha256=([0-9a-f]{64}))? ('
+                         + '|'.join(EXPECT_KINDS) + r'): (.+)$')
 
 
 @dataclass(frozen=True)
@@ -111,6 +122,8 @@ class Expected:
     index: int
     kind: str
     reason: str
+    line: int = 0
+    maybe_sha256: str | None = None
 
 
 def read_expected(path: Path) -> dict[tuple[str, str, str, str], Expected]:
@@ -123,8 +136,10 @@ def read_expected(path: Path) -> dict[tuple[str, str, str, str], Expected]:
             continue
         match = EXPECT_LINE.match(text)
         if match is None:
-            raise ValueError(f'{path}:{number}: not PAIR CASE PROFILE STREAM differs-from I KIND: REASON')
-        pair, case, profile, stream, index, kind, reason = match.groups()
+            raise ValueError(f'{path}:{number}: not PAIR CASE PROFILE STREAM differs-from I [sha256=HEX] KIND: REASON')
+        pair, case, profile, stream, index, maybe_sha256, kind, reason = match.groups()
+        if maybe_sha256 is not None and kind != 'explained':
+            raise ValueError(f'{path}:{number}: only an explained line carries sha256=')
         if profile not in PROFILES or stream not in STREAM_FILES:
             raise ValueError(f'{path}:{number}: unknown profile {profile!r} or stream {stream!r}')
         if kind == 'explained' and '; removed-by: ' not in reason:
@@ -133,7 +148,7 @@ def read_expected(path: Path) -> dict[tuple[str, str, str, str], Expected]:
         key = (pair, case, profile, stream)
         if key in expected:
             raise ValueError(f'{path}:{number}: {" ".join(key)} is listed twice')
-        expected[key] = Expected(int(index), kind, reason)
+        expected[key] = Expected(int(index), kind, reason, number, maybe_sha256)
     return expected
 
 
@@ -162,6 +177,33 @@ def refusal(record: dict, cases: list[str]) -> str | None:
     return None
 
 
+def stream_sha256(case: str, stream: str, folder: Path) -> str:
+    """The SHA-256 of CASE's STREAM in FOLDER as the comparison reads it: a recording's samples, else one
+    line a record (kind, then each field as name=value), so a demo's playback hashes without its pace."""
+    path = folder/f'{case}{STREAM_FILES[stream]}'
+    read = READERS[stream_kind(case, stream)](path)
+    if stream == 'snd':
+        return hashlib.sha256(read.pcm).hexdigest()
+    digest = hashlib.sha256()
+    for record in read:
+        digest.update((' '.join([record.kind] + [f'{name}={value}' for name, value in record.fields]) + '\n')
+                      .encode('ascii'))
+    return digest.hexdigest()
+
+
+def pin_failure(label: str, expected: Expected, maybe_expect: Path | None, case: str, stream: str,
+                folder: Path) -> str | None:
+    """Why a recorded difference's stream in FOLDER is not the one its line pins; None if it is or the
+    line has no pin."""
+    if expected.maybe_sha256 is None:
+        return None
+    found = stream_sha256(case, stream, folder)
+    if found == expected.maybe_sha256:
+        return None
+    return (f'FAIL: {label} differs at {expected.index} as recorded, but its stream is not the one line '
+            f'{expected.line} of {maybe_expect} pins (sha256 {found})')
+
+
 def failure_of(label: str, difference: Difference | None, maybe_expected: Expected | None,
                checking: bool) -> str | None:
     """Why the comparison LABEL is not as the file says (without one, not identical); None if it is."""
@@ -183,35 +225,67 @@ def record_count(case: str, stream: str, folder: Path) -> int:
     return len(READERS[stream_kind(case, stream)](folder/f'{case}{STREAM_FILES[stream]}'))
 
 
-def compare_folders(folders: list[Path], streams: list[str], maybe_expect: Path | None) -> int:
-    """`compare`: each later folder's run 1 against the first's, printing a line a case and stream;
-    0 when everything is identical or as MAYBE_EXPECT records, 1 otherwise, 2 for unusable input."""
+def commit_note(folders: list[Path], records: list[dict]) -> str | None:
+    """A line naming each folder's commit when the records name more than one (a record from before
+    commits were recorded counts as `(not recorded)`), else None."""
+    commits = [record.get('commit') or '(not recorded)' for record in records]
+    if len(set(commits)) < 2:
+        return None
+    return 'note: the folders ran at different commits: ' + ', '.join(
+        f'{folder.name} {commit}' for folder, commit in zip(folders, commits))
+
+
+def unexercised_note(expected: dict[tuple[str, str, str, str], Expected], used: set) -> list[str]:
+    """The lines that say how many of EXPECTED's lines this comparison did not reach, and which."""
+    left = sorted((item.line, key) for key, item in expected.items() if key not in used)
+    if not left:
+        return []
+    return ([f'note: {len(left)} of {len(expected)} expectation lines not exercised (a pair, profile, case '
+             'or stream not compared here):'] + [f'  line {line}: {" ".join(key)}' for line, key in left])
+
+
+def usable(folders: list[Path], streams: list[str], maybe_expect: Path | None) \
+        -> tuple[list[dict], dict[tuple[str, str, str, str], Expected]] | None:
+    """The folders' records and the expectations, or None after saying why the input is unusable."""
     try:
         records = [read_record(folder) for folder in folders]
         expected = read_expected(maybe_expect) if maybe_expect is not None else {}
     except ValueError as error:
         print(f'error: {error}', file=sys.stderr)
-        return 2
-    base, profile = folders[0], records[0]['profile']
+        return None
     for folder, record in zip(folders, records):
         reason = refusal(record, records[0]['cases'])
         if reason is not None:
             print(f'error: {folder} is refused: {reason}', file=sys.stderr)
-            return 2
-    if any(record['profile'] != profile for record in records):
+            return None
+    if any(record['profile'] != records[0]['profile'] for record in records):
         print('error: the run folders ran different profiles', file=sys.stderr)
-        return 2
+        return None
     if any(stream in VIDEO_STREAMS for stream in streams) and not all(record['video'] for record in records):
         print('error: gfx and snd need run folders made with --video', file=sys.stderr)
-        return 2
+        return None
     for folder in folders if 'snd' in streams else ():
         maybe_case = next((case for case in records[0]['cases']
                            if judged(case, 'snd') and unlocked(case, folder/'run1')), None)
         if maybe_case is not None:
             print(f'error: {folder} is refused: its {maybe_case}.wav was recorded without the sound lock '
                   f'({maybe_case}.log lacks {AUDIO_LOCKED})', file=sys.stderr)
-            return 2
-    total, identical, recorded, failures = 0, 0, 0, []
+            return None
+    return records, expected
+
+
+def compare_folders(folders: list[Path], streams: list[str], maybe_expect: Path | None) -> int:
+    """`compare`: each later folder's run 1 against the first's, printing a line a case and stream;
+    0 when everything is identical or as MAYBE_EXPECT records, 1 otherwise, 2 for unusable input."""
+    found = usable(folders, streams, maybe_expect)
+    if found is None:
+        return 2
+    records, expected = found
+    base, profile = folders[0], records[0]['profile']
+    maybe_note = commit_note(folders, records)
+    if maybe_note is not None:
+        print(maybe_note)
+    total, identical, recorded, failures, used = 0, 0, 0, [], set()
     for folder in folders[1:]:
         pair = f'{base.name}:{folder.name}'
         for case in records[0]['cases']:
@@ -230,14 +304,19 @@ def compare_folders(folders: list[Path], streams: list[str], maybe_expect: Path 
                     print(f'{label} identical ({record_count(case, stream, base/"run1")})')
                 else:
                     print(f'{label} first differs at {difference.index} ({difference.field})')
-                failure = failure_of(label, difference, expected.get((pair, case, profile, stream)),
-                                     maybe_expect is not None)
+                key = (pair, case, profile, stream)
+                used.add(key)
+                failure = failure_of(label, difference, expected.get(key), maybe_expect is not None)
+                if failure is None and difference is not None and key in expected:
+                    failure = pin_failure(label, expected[key], maybe_expect, case, stream, folder/'run1')
                 if failure is not None:
                     failures.append(failure)
                 elif difference is None:
                     identical += 1
                 else:
                     recorded += 1
+    for line in unexercised_note(expected, used):
+        print(line)
     for failure in failures:
         print(failure)
     if failures:
@@ -245,4 +324,29 @@ def compare_folders(folders: list[Path], streams: list[str], maybe_expect: Path 
               + ('as recorded' if maybe_expect is not None else 'identical'))
         return 1
     print(f'OK: {len(records[0]["cases"])} cases, {total} streams, {identical} identical, {recorded} as recorded')
+    return 0
+
+
+def pin_lines(folders: list[Path], streams: list[str], expect: Path) -> int:
+    """`pins`: prints each explained line of EXPECT whose pair, profile, case and stream these folders
+    compare, with `sha256=` of the newer folder's stream as it is now; it never writes EXPECT. 0, or 2
+    for unusable input."""
+    found = usable(folders, streams, expect)
+    if found is None:
+        return 2
+    records, expected = found
+    base, profile, printed = folders[0], records[0]['profile'], 0
+    for folder in folders[1:]:
+        pair = f'{base.name}:{folder.name}'
+        for case in records[0]['cases']:
+            for stream in streams:
+                item = expected.get((pair, case, profile, stream))
+                if item is None or item.kind != 'explained' or not judged(case, stream):
+                    continue
+                fresh = replace(item, maybe_sha256=stream_sha256(case, stream, folder/'run1'))
+                print(f'{pair} {case} {profile} {stream} differs-from {fresh.index} sha256={fresh.maybe_sha256} '
+                      f'{fresh.kind}: {fresh.reason}')
+                printed += 1
+    print(f'# {printed} explained lines pinned from {", ".join(folder.name for folder in folders)}; '
+          f'{expect} is unchanged', file=sys.stderr)
     return 0

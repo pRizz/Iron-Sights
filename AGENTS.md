@@ -412,8 +412,18 @@ pass its isolated executable rather than rebuilding an active player binary.
   `--video` `CASE.gfx` and `CASE.wav`) are ROM-derived and stay under
   `build/lp64/`. `lp64_equiv_expected.txt` lists the only differences
   allowed, each with its first tick and its cause; a listed difference that
-  now matches fails. `--profile all` (video only, `lp64_equiv_profile.py`)
-  sets every fork option, with `font_style` at Iron Sights, never Enhanced,
+  now matches fails. An `explained:` line may carry `sha256=HEX` after its
+  tick, the hash of the newer build's normalised stream, and `compare` fails
+  a matching difference whose stream hashes otherwise; `lp64_equiv.py pins
+  --streams S --expect FILE DIR...` prints the lines with fresh hashes and
+  never writes the file (hashes of ROM-derived streams stay out of Git, so
+  the committed file carries none). `compare` also prints which of the
+  file's lines it did not exercise, and notes folders run at different
+  commits: `equiv.json` records the checkout's commit, the executable's
+  sha256 and the `--env` given. A video run fails a recording that peaks
+  below 1,000, as the play harness's `sound` set does. `--profile all`
+  (video only, `lp64_equiv_profile.py`) sets every fork option, with
+  `font_style` at Iron Sights, never Enhanced,
   and `GE_IRONSIGHTS_FONTS=1` so that style loads, and no texture pack.
   `CASE.gfx` is the picture digest (`port_gfx_digest.h`): an `F` line a
   frame hashing what the renderer is asked to draw, by content, never by an

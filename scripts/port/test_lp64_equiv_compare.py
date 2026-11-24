@@ -1,30 +1,15 @@
 """ROM-free tests for lp64_equiv.py compare (LP64-006 Tasks 5, 7 and 9): run folders written by hand, with the
 record `run` leaves (equiv.json), compared under lp64_equiv_expected.txt's rules."""
-import json
 from pathlib import Path
 import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lp64_equiv  # noqa: E402
-from test_lp64_equiv import AUDIO_LOCKED, StandIns, sim, wav  # noqa: E402
-
-AGREED = {'ran': True, 'agreed': True}
+from lp64_equiv_testkit import AUDIO_LOCKED, RunFolders, sim, wav  # noqa: E402
 
 
-class Compare(StandIns):
-    def run_folder(self, label: str, trace: str, case: str = 'stage-dam', profile: str = 'default',
-                   **record: object) -> Path:
-        """A run folder holding CASE's trace in run1 and a record of two runs that agreed, changed by RECORD."""
-        folder = self.folder/label
-        (folder/'run1').mkdir(parents=True)
-        (folder/'run1'/f'{case}.sim').write_text(trace)
-        written = {'profile': profile, 'video': False, 'repeat': 2, 'cases': [case], 'verdicts': {case: AGREED}}
-        written.update(record)
-        (folder/lp64_equiv.RECORD).write_text(json.dumps({key: value for key, value in written.items()
-                                                          if value is not None}))
-        return folder
-
+class Compare(RunFolders):
     def test_compare_names_first_difference_and_field(self):
         # Arrange
         a = self.run_folder('i686', sim())

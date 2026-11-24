@@ -5,6 +5,7 @@
         [--video [--draw] [--shots TICK]] [--repeat N] [--jobs N] [--only CASE[,CASE...]] [--maths-off]
         [--timeout-scale F] [--env NAME=VALUE]... [--saves DIR] --output DIR EXECUTABLE
     python3 scripts/port/lp64_equiv.py compare --streams sim[,gfx,snd] [--expect FILE] DIR...
+    python3 scripts/port/lp64_equiv.py pins --streams sim[,gfx,snd] --expect FILE DIR...
     python3 scripts/port/lp64_equiv.py sensitivity [--video] --rom ROM --output DIR EXECUTABLE
 
 run: each case of the named sets (lp64_equiv_cases.py: demos, solo, mp, menus, reload, saves) REPEAT
@@ -26,8 +27,11 @@ trace and digest must hold its playback (`demo=` lines). Self-agreement and comp
 trace and digest as its playback (lp64_equiv_compare.py). Self-agreement judges `sim` and, with
 --video, `gfx` and `snd` (JUDGED_VIDEO_STREAMS): a video run fails without the sound lock's line `ge:
 audio: locked to game fields`, and a demo's recording is not judged (a line a demo says so and why).
+A video run also fails on a recording whose peak is below lp64_play_sound.MIN_PEAK (1,000), the
+floor the play harness's sound set holds (final review, M1).
 DIR/equiv.json records the run, written after the self-agreement check: each case's verdict, whether
-it ran and whether it agreed with itself.
+it ran and whether it agreed with itself, the --env pairs given, the checkout's commit (and whether
+tracked files differed from it) and the executable's sha256 (final review, M2).
 Before any case the executable is started once: it is refused without the exact line `ge: compare:
 on`, or with --maths-off without `ge: compare: on (libm)`. --env passes a variable to every case;
 it refuses what the runner sets (RUNNER_VARIABLES, and what lp64_play.py refuses). --saves DIR is
@@ -39,7 +43,13 @@ identical (N)` or `CASE STREAM A:B first differs at I (FIELD)`, A and B the fold
 and everything else is identical, printing `OK: N cases, S streams, I identical, D as recorded`.
 It refuses (exit 2) a folder whose record shows one run (--repeat 1), a compared case that did not
 run or did not agree with itself, no verdicts at all (a record from before they were written), or,
-with snd, a case whose log lacks the sound lock's line. A demo's snd prints `not judged`.
+with snd, a case whose log lacks the sound lock's line. A demo's snd prints `not judged`. An
+`explained:` line of FILE may carry `sha256=HEX` after its index, the hash of the newer folder's
+normalised stream: a matching difference whose stream hashes otherwise fails. compare notes which
+of FILE's lines it did not exercise, and when the folders' records name different commits.
+
+pins: prints FILE's lines with each exercised `explained:` line's `sha256=` set from DIR's streams
+(the same refusals as compare), and never writes FILE.
 
 sensitivity: the solo case stage-dam at GE_SEED=1 (DIR/seed1) and GE_SEED=2 (DIR/seed2); exit 0
 only when every stream it judges differs (as self-agreement), printing `OK: STREAMS differ between
@@ -48,6 +58,7 @@ seeds`.
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
+import hashlib
 import json
 import math
 import os
@@ -60,11 +71,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lp64_equiv_cases import SAVES_SETS, SHOTS, cases_of  # noqa: E402
 from lp64_equiv_compare import (AUDIO_LOCKED, DEMO_SND_REASON, RECORD, STREAM_FILES, VIDEO_STREAMS,  # noqa: E402
-                                compare_folders, judged, seed_verdict, self_disagreements, stream_kind)
+                                compare_folders, judged, pin_lines, seed_verdict, self_disagreements, stream_kind)
 from lp64_equiv_profile import PROFILES, profile_env, profile_ini  # noqa: E402
 from lp64_equiv_streams import READERS, Unreadable  # noqa: E402
 import lp64_play  # noqa: E402
 from lp64_play_cases import Case, select_cases  # noqa: E402
+from lp64_play_sound import MIN_PEAK, read_recording  # noqa: E402
 from lp64_play_run import (FOLDER_VARIABLES, VIDEO_VARIABLES, Display, folder_environment, run_case,  # noqa: E402
                            timeout_seconds)
 from run_copies import SharedExecutable  # noqa: E402
@@ -153,12 +165,22 @@ def run_once(case: Case, run: int, shared: SharedExecutable, output: Path, optio
                 READERS[kind](path)
         except Unreadable as error:
             found.append(f'{kind} unreadable: {error}')
+            continue
+        if stream == 'snd':
+            found.extend(silence(path))
     log_path = folder/f'{case.name}.log'
     log = log_path.read_text(errors='replace').splitlines() if log_path.is_file() else []
     if options.display.video and AUDIO_LOCKED not in log:
         found.append(f'missing line: {AUDIO_LOCKED}')
     shots = [int(match.group(1)) for match in map(SHOTS.search, log) if match]
     return RunResult(case, run, found, ticks, shots[-1] if shots else 0)
+
+
+def silence(path: Path) -> list[str]:
+    """Why the recording at PATH holds no sound (its peak under lp64_play_sound's MIN_PEAK): two builds
+    that both recorded silence would compare identical."""
+    peak = read_recording(path).peak
+    return [] if peak >= MIN_PEAK else [f'snd: {path.name} peaks at {peak}; a recording must reach {MIN_PEAK}']
 
 
 def verdict(results: list[RunResult], repeat: int) -> str:
@@ -256,16 +278,43 @@ def run_options(parser: argparse.ArgumentParser, args: argparse.Namespace) -> tu
     return cases, Options(args.rom.resolve(strict=True), extra, display, args.draw, args.saves)
 
 
+def checkout_commit() -> tuple[str | None, bool | None]:
+    """The commit of the checkout this tool runs from and whether its worktree has changes to tracked
+    files; (None, None) where Git cannot answer (no git, or a checkout it will not read)."""
+    root = Path(__file__).resolve().parents[2]
+    try:
+        commit = subprocess.run(['git', '-C', str(root), 'rev-parse', 'HEAD'], capture_output=True, text=True,
+                                timeout=30, check=True).stdout.strip()
+        changes = subprocess.run(['git', '-C', str(root), 'status', '--porcelain', '--untracked-files=no'],
+                                 capture_output=True, text=True, timeout=60, check=True).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None, None
+    return commit, bool(changes.strip())
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open('rb') as stream:
+        for block in iter(lambda: stream.read(1 << 20), b''):
+            digest.update(block)
+    return digest.hexdigest()
+
+
 def write_record(path: Path, args: argparse.Namespace, cases: list[Case], done: dict[str, list[RunResult]],
                  failed: list[str], disagreements: dict[str, str]) -> None:
-    """DIR/equiv.json: the run's options, each run's figures and each case's verdict, whether it ran
-    and whether it agreed with itself (null when not checked: one run, or a case that failed)."""
+    """DIR/equiv.json: the run's options, what it was made from (the --env given, the checkout's commit
+    and whether its worktree had changes, the executable's SHA-256), each run's figures and each case's
+    verdict, whether it ran and whether it agreed with itself (null when not checked: one run, or a case
+    that failed)."""
     checked = args.repeat > 1
     verdicts = {case.name: {'ran': case.name not in failed,
                             'agreed': (case.name not in disagreements) if checked and case.name not in failed else None}
                 for case in cases}
+    commit, worktree_changed = checkout_commit()
     path.write_text(json.dumps({
-        'executable': str(args.executable), 'profile': args.profile, 'video': args.video, 'draw': args.draw,
+        'executable': str(args.executable), 'executable_sha256': file_sha256(args.executable),
+        'commit': commit, 'worktree_changed': worktree_changed,
+        'env': dict(pair.split('=', 1) for pair in args.env), 'profile': args.profile, 'video': args.video, 'draw': args.draw,
         'shots': args.shots, 'repeat': args.repeat, 'maths_off': args.maths_off,
         'cases': [case.name for case in cases],
         'runs': {name: [{'run': result.run, 'ticks': result.ticks, 'shots': result.shots,
@@ -321,13 +370,21 @@ def command_sensitivity(parser: argparse.ArgumentParser, args: argparse.Namespac
     return 0 if agreed else 1
 
 
-def command_compare(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+def compared_streams(parser: argparse.ArgumentParser, args: argparse.Namespace) -> list[str]:
     streams = [name for name in args.streams.split(',') if name]
     if not streams or any(name not in STREAM_FILES for name in streams):
         parser.error(f'--streams takes {",".join(STREAM_FILES)}, not {args.streams!r}')
     if len(args.dirs) < 2:
-        parser.error('compare needs two run folders or more')
-    return compare_folders(args.dirs, streams, args.expect)
+        parser.error(f'{args.command} needs two run folders or more')
+    return streams
+
+
+def command_compare(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+    return compare_folders(args.dirs, compared_streams(parser, args), args.expect)
+
+
+def command_pins(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+    return pin_lines(args.dirs, compared_streams(parser, args), args.expect)
 
 
 # ---- the command line ---------------------------------------------------------------------------
@@ -354,6 +411,10 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument('--streams', required=True, metavar='sim[,gfx,snd]')
     compare.add_argument('--expect', type=Path, metavar='FILE')
     compare.add_argument('dirs', type=Path, nargs='+', metavar='DIR')
+    pins = sub.add_parser('pins', help='print the explained lines with fresh sha256= pins (never writes FILE)')
+    pins.add_argument('--streams', required=True, metavar='sim[,gfx,snd]')
+    pins.add_argument('--expect', type=Path, required=True, metavar='FILE')
+    pins.add_argument('dirs', type=Path, nargs='+', metavar='DIR')
     sensitivity = sub.add_parser('sensitivity', help='every stream must differ between two seeds')
     sensitivity.add_argument('--video', action='store_true')
     sensitivity.add_argument('--rom', type=Path, required=True)
@@ -366,7 +427,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    command = {'run': command_run, 'compare': command_compare, 'sensitivity': command_sensitivity}[args.command]
+    command = {'run': command_run, 'compare': command_compare, 'pins': command_pins,
+               'sensitivity': command_sensitivity}[args.command]
     return command(parser, args)
 
 
