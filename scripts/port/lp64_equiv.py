@@ -45,10 +45,13 @@ It refuses (exit 2) a folder whose record shows one run (--repeat 1), a compared
 run or did not agree with itself, no verdicts at all (a record from before they were written), or,
 with snd, a case whose log lacks the sound lock's line. A demo's snd prints `not judged`. An
 `explained:` line of FILE may carry `sha256=HEX` after its index, the hash of the newer folder's
-normalised stream: a matching difference whose stream hashes otherwise fails. compare notes which
-of FILE's lines it did not exercise, and when the folders' records name different commits.
+normalised stream in a run made with --video, and then `headless-sha256=HEX`, the same for a run
+made without: a matching difference whose stream hashes otherwise than the pin of the newer folder's
+kind fails, and a line with no pin of that kind is judged by its index alone, with a note. compare
+notes which of FILE's lines it did not exercise, and when the folders' records name different commits.
 
-pins: prints FILE's lines with each exercised `explained:` line's `sha256=` set from DIR's streams
+pins: prints FILE's lines with each exercised `explained:` line's pin of the folders' kind
+(`sha256=` for --video, else `headless-sha256=`) set from DIR's streams and the other kind's kept
 (the same refusals as compare), and never writes FILE.
 
 sensitivity: the solo case stage-dam at GE_SEED=1 (DIR/seed1) and GE_SEED=2 (DIR/seed2); exit 0
@@ -411,7 +414,7 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument('--streams', required=True, metavar='sim[,gfx,snd]')
     compare.add_argument('--expect', type=Path, metavar='FILE')
     compare.add_argument('dirs', type=Path, nargs='+', metavar='DIR')
-    pins = sub.add_parser('pins', help='print the explained lines with fresh sha256= pins (never writes FILE)')
+    pins = sub.add_parser('pins', help='print the explained lines with fresh pins of the folders\' kind (never writes FILE)')
     pins.add_argument('--streams', required=True, metavar='sim[,gfx,snd]')
     pins.add_argument('--expect', type=Path, required=True, metavar='FILE')
     pins.add_argument('dirs', type=Path, nargs='+', metavar='DIR')

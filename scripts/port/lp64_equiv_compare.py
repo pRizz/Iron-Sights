@@ -18,8 +18,12 @@ An `explained:` line may pin its stream (final review, I2): `sha256=HEX` after i
 of the newer build's stream as the comparison reads it (stream_sha256: a trace or digest by its
 records, a demo's by its playback, a recording by its samples), so a pinned stream passes only while
 everything after its first difference stays as it was; a line without the pin checks the first
-difference alone. `pins` prints the file's explained lines with fresh hashes for the pairs given and
-never writes the file: re-pinning is a deliberate edit. With --expect, compare also prints the lines
+difference alone. A pin is per kind of run (Task 17): `sha256=` pins a run made with --video and
+`headless-sha256=`, after it, a run made without, since a headless build's `sim` stream is not its
+video twin's; the newer folder's record (`video`) picks the one checked, and a line pinned only for the
+other kind is judged by its first index, with a note naming it. `pins` prints the file's explained
+lines with a fresh hash of the folders' kind for the pairs given, keeps the other kind's, and never
+writes the file: re-pinning is a deliberate edit. With --expect, compare also prints the lines
 it did not exercise (a pair, profile, case or stream not compared), and it notes run folders whose
 records name different commits.
 """
@@ -109,12 +113,16 @@ def seed_verdict(case: str, folder_a: Path, folder_b: Path, streams: tuple[str, 
 
 
 # ---- run folders against each other -------------------------------------------------------------
-# A line of lp64_equiv_expected.txt: PAIR CASE PROFILE STREAM differs-from I [sha256=HEX] KIND: REASON,
-# KIND one of EXPECT_KINDS; an `explained:` reason ends with `; removed-by: RUN`, and only an
-# explained line carries the pin.
+# A line of lp64_equiv_expected.txt: PAIR CASE PROFILE STREAM differs-from I [sha256=HEX]
+# [headless-sha256=HEX] KIND: REASON, KIND one of EXPECT_KINDS; an `explained:` reason ends with
+# `; removed-by: RUN`, and only an explained line carries a pin.
 EXPECT_KINDS = ('explained', 'open', 'strict', 'host')
-EXPECT_LINE = re.compile(r'^(\S+:\S+) (\S+) (\S+) (\S+) differs-from (\d+)(?: sha256=([0-9a-f]{64}))? ('
-                         + '|'.join(EXPECT_KINDS) + r'): (.+)$')
+EXPECT_FORM = 'PAIR CASE PROFILE STREAM differs-from I [sha256=HEX] [headless-sha256=HEX] KIND: REASON'
+EXPECT_LINE = re.compile(r'^(\S+:\S+) (\S+) (\S+) (\S+) differs-from (\d+)(?: sha256=([0-9a-f]{64}))?'
+                         r'(?: headless-sha256=([0-9a-f]{64}))? (' + '|'.join(EXPECT_KINDS) + r'): (.+)$')
+# The key of each kind of run's pin, by the record's `video`.
+PIN_KEYS = {True: 'sha256', False: 'headless-sha256'}
+RUN_KINDS = {True: 'a video run', False: 'a headless run'}
 
 
 @dataclass(frozen=True)
@@ -124,6 +132,22 @@ class Expected:
     reason: str
     line: int = 0
     maybe_sha256: str | None = None
+    maybe_headless_sha256: str | None = None
+
+    def maybe_pin(self, video: bool) -> str | None:
+        """The pin of a run of this kind (made with --video or not), if the line has one."""
+        return self.maybe_sha256 if video else self.maybe_headless_sha256
+
+    def pinned(self, video: bool, sha256: str) -> 'Expected':
+        """This line with the pin of a run of this kind set to SHA256, the other kind's kept."""
+        return replace(self, **{'maybe_sha256' if video else 'maybe_headless_sha256': sha256})
+
+    def text(self, key: tuple[str, str, str, str]) -> str:
+        """The line as the file holds it."""
+        pins = ''.join(f' {name}={pin}' for name, pin in (('sha256', self.maybe_sha256),
+                                                          ('headless-sha256', self.maybe_headless_sha256))
+                       if pin is not None)
+        return f'{" ".join(key)} differs-from {self.index}{pins} {self.kind}: {self.reason}'
 
 
 def read_expected(path: Path) -> dict[tuple[str, str, str, str], Expected]:
@@ -136,10 +160,10 @@ def read_expected(path: Path) -> dict[tuple[str, str, str, str], Expected]:
             continue
         match = EXPECT_LINE.match(text)
         if match is None:
-            raise ValueError(f'{path}:{number}: not PAIR CASE PROFILE STREAM differs-from I [sha256=HEX] KIND: REASON')
-        pair, case, profile, stream, index, maybe_sha256, kind, reason = match.groups()
-        if maybe_sha256 is not None and kind != 'explained':
-            raise ValueError(f'{path}:{number}: only an explained line carries sha256=')
+            raise ValueError(f'{path}:{number}: not {EXPECT_FORM}')
+        pair, case, profile, stream, index, maybe_sha256, maybe_headless, kind, reason = match.groups()
+        if (maybe_sha256 is not None or maybe_headless is not None) and kind != 'explained':
+            raise ValueError(f'{path}:{number}: only an explained line carries a pin')
         if profile not in PROFILES or stream not in STREAM_FILES:
             raise ValueError(f'{path}:{number}: unknown profile {profile!r} or stream {stream!r}')
         if kind == 'explained' and '; removed-by: ' not in reason:
@@ -148,7 +172,7 @@ def read_expected(path: Path) -> dict[tuple[str, str, str, str], Expected]:
         key = (pair, case, profile, stream)
         if key in expected:
             raise ValueError(f'{path}:{number}: {" ".join(key)} is listed twice')
-        expected[key] = Expected(int(index), kind, reason, number, maybe_sha256)
+        expected[key] = Expected(int(index), kind, reason, number, maybe_sha256, maybe_headless)
     return expected
 
 
@@ -192,16 +216,24 @@ def stream_sha256(case: str, stream: str, folder: Path) -> str:
 
 
 def pin_failure(label: str, expected: Expected, maybe_expect: Path | None, case: str, stream: str,
-                folder: Path) -> str | None:
-    """Why a recorded difference's stream in FOLDER is not the one its line pins; None if it is or the
-    line has no pin."""
-    if expected.maybe_sha256 is None:
+                folder: Path, video: bool) -> str | None:
+    """Why a recorded difference's stream in FOLDER, a run of the kind VIDEO says, is not the one its
+    line pins for that kind; None if it is or the line has no pin for that kind."""
+    maybe_pin = expected.maybe_pin(video)
+    if maybe_pin is None:
         return None
     found = stream_sha256(case, stream, folder)
-    if found == expected.maybe_sha256:
+    if found == maybe_pin:
         return None
     return (f'FAIL: {label} differs at {expected.index} as recorded, but its stream is not the one line '
-            f'{expected.line} of {maybe_expect} pins (sha256 {found})')
+            f'{expected.line} of {maybe_expect} pins for {RUN_KINDS[video]} ({PIN_KEYS[video]} {found})')
+
+
+def other_kind_note(expected: Expected, video: bool) -> str | None:
+    """The note for a line pinned for the other kind of run only, which this run cannot check."""
+    if expected.maybe_pin(video) is not None or expected.maybe_pin(not video) is None:
+        return None
+    return f'note: line {expected.line} has no pin for {RUN_KINDS[video]}; judged by its first index alone'
 
 
 def failure_of(label: str, difference: Difference | None, maybe_expected: Expected | None,
@@ -285,9 +317,9 @@ def compare_folders(folders: list[Path], streams: list[str], maybe_expect: Path 
     maybe_note = commit_note(folders, records)
     if maybe_note is not None:
         print(maybe_note)
-    total, identical, recorded, failures, used = 0, 0, 0, [], set()
-    for folder in folders[1:]:
-        pair = f'{base.name}:{folder.name}'
+    total, identical, recorded, failures, used, notes = 0, 0, 0, [], set(), []
+    for folder, record in zip(folders[1:], records[1:]):
+        pair, video = f'{base.name}:{folder.name}', bool(record['video'])
         for case in records[0]['cases']:
             for stream in streams:
                 label = f'{case} {stream} {pair}'
@@ -308,14 +340,17 @@ def compare_folders(folders: list[Path], streams: list[str], maybe_expect: Path 
                 used.add(key)
                 failure = failure_of(label, difference, expected.get(key), maybe_expect is not None)
                 if failure is None and difference is not None and key in expected:
-                    failure = pin_failure(label, expected[key], maybe_expect, case, stream, folder/'run1')
+                    failure = pin_failure(label, expected[key], maybe_expect, case, stream, folder/'run1', video)
+                    maybe_kind_note = other_kind_note(expected[key], video)
+                    if maybe_kind_note is not None:
+                        notes.append(maybe_kind_note)
                 if failure is not None:
                     failures.append(failure)
                 elif difference is None:
                     identical += 1
                 else:
                     recorded += 1
-    for line in unexercised_note(expected, used):
+    for line in notes + unexercised_note(expected, used):
         print(line)
     for failure in failures:
         print(failure)
@@ -329,23 +364,23 @@ def compare_folders(folders: list[Path], streams: list[str], maybe_expect: Path 
 
 def pin_lines(folders: list[Path], streams: list[str], expect: Path) -> int:
     """`pins`: prints each explained line of EXPECT whose pair, profile, case and stream these folders
-    compare, with `sha256=` of the newer folder's stream as it is now; it never writes EXPECT. 0, or 2
-    for unusable input."""
+    compare, with the pin of the newer folder's kind of run (`sha256=` for --video, else
+    `headless-sha256=`) set from its stream as it is now and the other kind's pin kept; it never writes
+    EXPECT. 0, or 2 for unusable input."""
     found = usable(folders, streams, expect)
     if found is None:
         return 2
     records, expected = found
     base, profile, printed = folders[0], records[0]['profile'], 0
-    for folder in folders[1:]:
-        pair = f'{base.name}:{folder.name}'
+    for folder, record in zip(folders[1:], records[1:]):
+        pair, video = f'{base.name}:{folder.name}', bool(record['video'])
         for case in records[0]['cases']:
             for stream in streams:
-                item = expected.get((pair, case, profile, stream))
+                key = (pair, case, profile, stream)
+                item = expected.get(key)
                 if item is None or item.kind != 'explained' or not judged(case, stream):
                     continue
-                fresh = replace(item, maybe_sha256=stream_sha256(case, stream, folder/'run1'))
-                print(f'{pair} {case} {profile} {stream} differs-from {fresh.index} sha256={fresh.maybe_sha256} '
-                      f'{fresh.kind}: {fresh.reason}')
+                print(item.pinned(video, stream_sha256(case, stream, folder/'run1')).text(key))
                 printed += 1
     print(f'# {printed} explained lines pinned from {", ".join(folder.name for folder in folders)}; '
           f'{expect} is unchanged', file=sys.stderr)

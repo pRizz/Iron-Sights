@@ -1979,6 +1979,18 @@ govern.
    under `scripts/port/lp64_patches/`, with a `README.md` giving the commit
    each applies to and how to reproduce each `removed-by:` run; the budget
    file's generator is `scripts/port/lp64_budgets.py`.
+6. **A pin is per kind of run (2026-11-24, Task 17, the controller's
+   ruling).** Step 2's laptop found, and the Mac confirmed, that a headless
+   `sim` comparison fails the Jungle `default` `sim` pins: they hash a video
+   run's stream, and 25 of the 38 cases' `sim` streams differ between a
+   headless and a video run of one build. `sha256=` stays a video run's pin;
+   an optional `headless-sha256=` after it pins a run made without
+   `--video`. `compare` checks the pin of the newer folder's kind (its
+   `equiv.json`'s `video`) and judges a line pinned only for the other kind
+   by its first index, with a note naming the line; `pins` prints a fresh
+   pin of the folders' kind and keeps the other. The two Jungle `default`
+   `sim` lines carry a headless pin from Task 17's headless run at
+   3a67290; no video pin changed.
 
 ## Amendments during Task 16 (2026-11-23)
 

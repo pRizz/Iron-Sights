@@ -1,6 +1,7 @@
 """ROM-free tests of lp64_equiv.py compare's hold on its expectation file (LP64-006 final review): an
-`explained:` line's pin (`sha256=` of the newer build's stream), the `pins` command that prints fresh
-ones, the lines an invocation does not exercise, and what the runs' records say they were made from."""
+`explained:` line's pins (`sha256=` of a video run's stream, `headless-sha256=` of a headless run's), the
+`pins` command that prints fresh ones, the lines an invocation does not exercise, and what the runs'
+records say they were made from."""
 from pathlib import Path
 import re
 import sys
@@ -11,9 +12,15 @@ from lp64_equiv_testkit import RunFolders, sim  # noqa: E402
 
 SEEDED = {2: '00000000000000ff'}
 EXPLAINED = 'i686:a64 stage-dam default sim differs-from 2 explained: a seed; removed-by: sim-seeded\n'
+HEX = re.compile(r'[0-9a-f]{64}')
 
 
 class Pins(RunFolders):
+    """A video run's pin, `sha256=`: the folders here are made with --video."""
+
+    def run_folder(self, label: str, trace: str, **record: object) -> Path:
+        return super().run_folder(label, trace, video=True, **record)
+
     def pinned(self, a: Path, b: Path) -> str:
         """EXPLAINED as `pins` prints it for folders A and B."""
         expect = self.canned('unpinned.txt', EXPLAINED)
@@ -59,7 +66,7 @@ class Pins(RunFolders):
         # Assert
         self.assertEqual(status, 1, out)
         self.assertRegex(out, r'FAIL: stage-dam sim i686:a64 differs at 2 as recorded, but its stream is not the '
-                              r'one line 1 of \S+ pins \(sha256 [0-9a-f]{64}\)')
+                              r'one line 1 of \S+ pins for a video run \(sha256 [0-9a-f]{64}\)')
 
     def test_an_unpinned_line_still_accepts_its_first_difference_alone(self):
         # Arrange: no pin, so a later change goes unchecked, as before the pins
@@ -85,7 +92,149 @@ class Pins(RunFolders):
 
         # Assert
         self.assertEqual(status, 2, out)
-        self.assertIn('only an explained line carries sha256=', out)
+        self.assertIn('only an explained line carries a pin', out)
+
+
+class HeadlessPins(RunFolders):
+    """A headless run's pin, `headless-sha256=`, beside a video run's (Task 17, scope A): a pin is per
+    kind of run, the newer folder's `video` in its record."""
+
+    def pins(self, expect_text: str, a: Path, b: Path) -> str:
+        expect = self.canned('unpinned.txt', expect_text)
+        status, out = self.equiv('pins', '--streams', 'sim', '--expect', str(expect), str(a), str(b))
+        self.assertEqual(status, 0, out)
+        return next(line for line in out.splitlines() if line.startswith('i686:a64 ')) + '\n'
+
+    def seeded_pair(self, video: bool) -> tuple[Path, Path]:
+        return (self.run_folder('i686', sim(), video=video),
+                self.run_folder('a64', sim(seed_at=SEEDED), video=video))
+
+    def test_pins_of_a_headless_run_prints_a_headless_pin(self):
+        # Arrange
+        a, b = self.seeded_pair(video=False)
+
+        # Act
+        line = self.pins(EXPLAINED, a, b)
+
+        # Assert
+        self.assertRegex(line, r'^i686:a64 stage-dam default sim differs-from 2 headless-sha256=[0-9a-f]{64} '
+                               r'explained: ')
+
+    def test_pins_of_a_headless_run_keeps_the_video_pin_on_the_line(self):
+        # Arrange
+        a, b = self.seeded_pair(video=False)
+        video = 'f' * 64
+        expect = EXPLAINED.replace('differs-from 2 ', f'differs-from 2 sha256={video} ')
+
+        # Act
+        line = self.pins(expect, a, b)
+
+        # Assert
+        self.assertRegex(line, rf'differs-from 2 sha256={video} headless-sha256=[0-9a-f]{{64}} explained: ')
+
+    def test_pins_of_a_video_run_keeps_the_headless_pin_on_the_line(self):
+        # Arrange
+        a, b = self.seeded_pair(video=True)
+        headless = 'e' * 64
+        expect = EXPLAINED.replace('differs-from 2 ', f'differs-from 2 headless-sha256={headless} ')
+
+        # Act
+        line = self.pins(expect, a, b)
+
+        # Assert
+        self.assertRegex(line, rf'differs-from 2 sha256=[0-9a-f]{{64}} headless-sha256={headless} explained: ')
+
+    def test_a_headless_run_passes_its_headless_pin(self):
+        # Arrange
+        a, b = self.seeded_pair(video=False)
+        expect = self.canned('expected.txt', self.pins(EXPLAINED, a, b))
+
+        # Act
+        status, out = self.equiv('compare', '--streams', 'sim', '--expect', str(expect), str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('OK: 1 cases, 1 streams, 0 identical, 1 as recorded', out)
+
+    def test_a_headless_run_fails_a_headless_pin_its_stream_does_not_match(self):
+        # Arrange
+        a, b = self.seeded_pair(video=False)
+        expect = self.canned('expected.txt', EXPLAINED.replace('differs-from 2 ', 'differs-from 2 headless-sha256='
+                                                               + 'e' * 64 + ' '))
+
+        # Act
+        status, out = self.equiv('compare', '--streams', 'sim', '--expect', str(expect), str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertRegex(out, r'FAIL: stage-dam sim i686:a64 differs at 2 as recorded, but its stream is not the '
+                              r'one line 1 of \S+ pins for a headless run \(headless-sha256 [0-9a-f]{64}\)')
+
+    def test_a_headless_run_judges_a_line_pinned_only_for_video_by_its_first_index(self):
+        # Arrange: the video pin is another stream's; a headless run does not check it
+        a, b = self.seeded_pair(video=False)
+        expect = self.canned('expected.txt', EXPLAINED.replace('differs-from 2 ', 'differs-from 2 sha256='
+                                                               + 'f' * 64 + ' '))
+
+        # Act
+        status, out = self.equiv('compare', '--streams', 'sim', '--expect', str(expect), str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('note: line 1 has no pin for a headless run; judged by its first index alone', out)
+
+    def test_a_video_run_judges_a_line_pinned_only_for_headless_by_its_first_index(self):
+        # Arrange
+        a, b = self.seeded_pair(video=True)
+        expect = self.canned('expected.txt', EXPLAINED.replace('differs-from 2 ', 'differs-from 2 headless-sha256='
+                                                               + 'e' * 64 + ' '))
+
+        # Act
+        status, out = self.equiv('compare', '--streams', 'sim', '--expect', str(expect), str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('note: line 1 has no pin for a video run; judged by its first index alone', out)
+
+    def test_a_video_run_checks_its_video_pin_and_not_the_headless_one(self):
+        # Arrange: a right video pin beside a wrong headless one
+        a, b = self.seeded_pair(video=True)
+        video = HEX.search(self.pins(EXPLAINED, a, b)).group(0)
+        expect = self.canned('expected.txt', EXPLAINED.replace(
+            'differs-from 2 ', f'differs-from 2 sha256={video} headless-sha256={"e" * 64} '))
+
+        # Act
+        status, out = self.equiv('compare', '--streams', 'sim', '--expect', str(expect), str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertNotIn('no pin', out)
+
+    def test_the_pins_in_the_other_order_are_refused(self):
+        # Arrange
+        a, b = self.seeded_pair(video=False)
+        expect = self.canned('expected.txt', EXPLAINED.replace(
+            'differs-from 2 ', f'differs-from 2 headless-sha256={"e" * 64} sha256={"f" * 64} '))
+
+        # Act
+        status, out = self.equiv('compare', '--streams', 'sim', '--expect', str(expect), str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 2, out)
+        self.assertIn('[sha256=HEX] [headless-sha256=HEX]', out)
+
+    def test_a_headless_pin_on_a_line_that_is_not_explained_is_refused(self):
+        # Arrange
+        a, b = self.seeded_pair(video=False)
+        expect = self.canned('expected.txt', 'i686:a64 stage-dam default sim differs-from 2 headless-sha256='
+                             + 'e' * 64 + ' host: a seed\n')
+
+        # Act
+        status, out = self.equiv('compare', '--streams', 'sim', '--expect', str(expect), str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 2, out)
+        self.assertIn('only an explained line carries a pin', out)
 
 
 class Unexercised(RunFolders):
