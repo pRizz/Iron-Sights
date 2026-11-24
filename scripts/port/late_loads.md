@@ -125,6 +125,12 @@ and shader compiles take, so compare such reports by kind and name of late
 event, not by milliseconds. The reports are ROM-derived run output: they stay
 under `build/lp64/` and are deleted when done.
 
+To compare two such audits, keep both (`--keep`) and run
+`python3 scripts/port/late_load_audit.py --compare BEFORE AFTER`: it counts
+each stage's late events by stage, kind and name, with ticks and the
+microseconds in an upload's name left out, names every count that differs and
+exits 1 when any stage differs or is in one audit only.
+
 ## Known remaining first-use costs
 
 - With the HD pack, a frame that first draws several newly uploaded large

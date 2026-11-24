@@ -13,6 +13,12 @@ missions' folders each stage drew and writes them to
 port/fast3d/texture_packs/hd_stage_prefetch.json, so the next build reads them
 while the stage loads. --video-driver offscreen runs it in a Linux container with
 no display (LP64-005 Task 14). Needs the ROM; see scripts/port/late_loads.md.
+
+    python scripts/port/late_load_audit.py --compare BEFORE AFTER
+
+compares two audits kept with --keep: each stage's late events by stage, kind
+and name, ticks and timings left out (LP64-006 Task 17), and exits 1 when a
+stage differs or is in one audit only. It runs no game.
 """
 import argparse
 import datetime
@@ -216,7 +222,11 @@ def parse_options(argv):
     parser.add_argument('--check', action='store_true', help='exit 1 on frames over budget or late shaders')
     parser.add_argument('--learn-prefetch', action='store_true',
                         help=f'write the other-folder HD textures each stage drew to {LEARNED.relative_to(REPO)}')
+    parser.add_argument('--compare', nargs=2, type=Path, metavar=('BEFORE', 'AFTER'),
+                        help='compare two kept audits\' late events by kind and name; runs no game')
     options = parser.parse_args(argv)
+    if options.compare:
+        return options
     options.exe = options.exe.resolve()
     if not options.exe.is_file():
         raise SystemExit(f'late-load: no executable at {options.exe}')
@@ -232,8 +242,34 @@ def parse_options(argv):
     return options
 
 
+def compare_audits(before, after):
+    """Each stage's late events in two kept audits, by kind and name (report.compare_names); 1 on any difference."""
+    stages = sorted({path.parent.name for folder in (before, after) for path in folder.glob('*/late.txt')})
+    same = 0
+    for item in stages:
+        try:
+            logs = [report.parse_latelog((folder/item/'late.txt').read_text(encoding='utf-8'))[1]
+                    for folder in (before, after)]
+        except (OSError, ValueError) as error:
+            log(f'{item}: no late.txt in both audits ({error})')
+            continue
+        differences = report.compare_names(*logs)
+        if not differences:
+            same += 1
+            log(f'{item}: the same {len(logs[0])} late events')
+            continue
+        log(f'{item}: {len(logs[0])} late events against {len(logs[1])}')
+        for (stage, kind, name), count_before, count_after in differences:
+            log(f'  stage {stage} {kind} {name}: {count_before} against {count_after}')
+    verdict = 'OK' if stages and same == len(stages) else 'FAIL'
+    log(f'{verdict}: {same} of {len(stages)} stages logged the same late events by kind and name')
+    return 0 if verdict == 'OK' else 1
+
+
 def main(argv=None):
     options = parse_options(argv)
+    if options.compare:
+        return compare_audits(*options.compare)
     rom = find_rom()
     budget_us = int(options.budget_ms*1000)
     settings = ('HD texture pack' if options.pack else 'original textures')+''.join(

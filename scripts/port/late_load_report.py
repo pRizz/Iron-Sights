@@ -7,6 +7,8 @@ frame shown (the log's 'S <stage> <tick>' line); the frames before it are the
 load, the rest are play. An event is late when it happens in play. See
 scripts/port/late_loads.md.
 """
+import re
+from collections import Counter
 from typing import NamedTuple
 
 import bench_metrics
@@ -14,6 +16,8 @@ import bench_metrics
 FORMAT = '# ge-latelog 1'
 KINDS = ('rooms', 'models', 'tex', 'shaders', 'uploads', 'hd')
 TOP_EVENTS = 25
+# A duration inside an event's name: an upload names its GL name time and an HD lookup's ('name 12 us').
+NAME_TIMING = re.compile(r'\b\d+ us\b')
 
 Event = NamedTuple('Event', [('stage', int), ('tick', int), ('kind', str), ('us', int), ('what', str)])
 
@@ -35,6 +39,19 @@ def parse_latelog(text):
             what = fields[5] if len(fields) > 5 else ''
             events.append(Event(int(fields[1]), int(fields[2]), fields[3], int(fields[4]), what))
     return loaded, events
+
+
+def event_name(event):
+    """An event as (stage, kind, name), its durations blanked: what two runs can share however fast they ran."""
+    return event.stage, event.kind, NAME_TIMING.sub('us', event.what).strip()
+
+
+def compare_names(before, after):
+    """Two runs' late events by stage, kind and name, ticks and timings left out: ((stage, kind, name),
+    count in BEFORE, count in AFTER) for each name the runs logged a different number of times, sorted."""
+    counts_before, counts_after = Counter(map(event_name, before)), Counter(map(event_name, after))
+    return sorted((key, counts_before[key], counts_after[key])
+                  for key in counts_before.keys() | counts_after.keys() if counts_before[key] != counts_after[key])
 
 
 def stage_frames(frames, stage):

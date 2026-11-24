@@ -222,6 +222,19 @@ icon cache are deleted also when the run leaves no usable logs (a timeout or a
 crash), whose frame log and ini stay as before. `test_late_load_audit.py` has
 20 tests (eight new). The 64-bit audit's findings are in FORK-089.
 
+**Comparison by kind and name (2026-11-23, FORK-089's LP64-006 Task 17).**
+`late_load_audit.py --compare BEFORE AFTER` compares two audits kept with
+`--keep` and runs no game: for each stage folder's `late.txt` it counts the
+late events by stage, kind and name (`late_load_report.compare_names`, through
+`event_name`), leaving out ticks and durations, including the microseconds an
+upload's name carries (`name 12 us`, an HD `lookup 120 us`), prints each
+stage's verdict and each name whose count differs with both counts, and ends
+with `OK:` or `FAIL: N of M stages logged the same late events by kind and
+name`, exiting 1 when a stage differs or is in one audit only. It replaces the
+scratch reader LP64-006 Task 11 compared its audits with. Without `--compare`
+the audit is unchanged. `test_late_load_audit.py` has 26 tests (six new,
+`NameComparisonTests`), seen failing first without the two functions.
+
 ### FORK-089 — Native 64-bit port: accepted plan; LP64-001 scaffolding, LP64-002 type hygiene, LP64-003 addresses and memory, LP64-004 asset converters and LP64-005 first playable done
 
 **Status:** Plan accepted by the owner on 2026-11-15. Every task of milestone

@@ -277,5 +277,104 @@ class ContainerOptionTests(unittest.TestCase):
         self.assertEqual(options.run_timeout, 2400)
 
 
+class NameComparisonTests(unittest.TestCase):
+    """Two audits compared by stage, kind and name, without ticks or timings (LP64-006 Task 17)."""
+
+    def setUp(self):
+        self.folder = Path(tempfile.mkdtemp(prefix='late-compare-'))
+        self.addCleanup(shutil.rmtree, self.folder, ignore_errors=True)
+
+    def audit_folder(self, name, stages):
+        """An audit folder holding STAGES: {stage name: late.txt text}."""
+        for item, text in stages.items():
+            (self.folder/name/item).mkdir(parents=True)
+            (self.folder/name/item/'late.txt').write_text(text, encoding='utf-8')
+        return self.folder/name
+
+    def test_ticks_and_timings_are_left_out(self):
+        # Arrange: the same events at other ticks, with other durations and an upload's other name and lookup times
+        _, before = report.parse_latelog(LATELOG)
+        _, after = report.parse_latelog(LATELOG.replace('L 35 40 uploads 6000 fmt 2 siz 1 256x256 name 0 us | hd '
+                                                        '256x256 lookup 120 us',
+                                                        'L 35 52 uploads 7100 fmt 2 siz 1 256x256 name 31 us | hd '
+                                                        '256x256 lookup 9 us').replace('L 35 41 models 1500',
+                                                                                       'L 35 60 models 2200'))
+
+        # Act
+        differences = report.compare_names(before, after)
+
+        # Assert
+        self.assertEqual(differences, [])
+
+    def test_a_name_logged_a_different_number_of_times_is_named_with_both_counts(self):
+        # Arrange
+        _, before = report.parse_latelog(LATELOG)
+        _, after = report.parse_latelog(LATELOG+'L 35 70 models 900 CboilerbondZ\nL 35 71 tex 80 2317\n')
+
+        # Act
+        differences = report.compare_names(before, after)
+
+        # Assert
+        self.assertEqual(differences, [((35, 'models', 'CboilerbondZ'), 1, 2), ((35, 'tex', '2317'), 0, 1)])
+
+    def test_the_same_name_in_another_stage_is_another_event(self):
+        # Arrange
+        _, before = report.parse_latelog(LATELOG)
+        _, after = report.parse_latelog(LATELOG.replace('L 90 10 shaders', 'L 35 10 shaders'))
+
+        # Act
+        differences = report.compare_names(before, after)
+
+        # Assert
+        self.assertEqual(differences, [((35, 'shaders', '0000000010001000 10000001'), 0, 1),
+                                       ((90, 'shaders', '0000000010001000 10000001'), 1, 0)])
+
+    def test_audits_with_the_same_events_pass(self):
+        # Arrange
+        before = self.audit_folder('before', {'dam': LATELOG, 'temple': LATELOG})
+        after = self.audit_folder('after', {'dam': LATELOG.replace('L 35 41 models 1500', 'L 35 44 models 1800'),
+                                            'temple': LATELOG})
+        out = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stdout(out):
+            status = audit.main(['--compare', str(before), str(after)])
+
+        # Assert
+        self.assertEqual(status, 0)
+        self.assertIn('late-load: OK: 2 of 2 stages logged the same late events by kind and name', out.getvalue())
+
+    def test_audits_that_differ_fail_and_name_the_difference(self):
+        # Arrange
+        before = self.audit_folder('before', {'dam': LATELOG, 'temple': LATELOG})
+        after = self.audit_folder('after', {'dam': LATELOG+'L 35 70 tex 80 2317\n', 'temple': LATELOG})
+        out = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stdout(out):
+            status = audit.main(['--compare', str(before), str(after)])
+
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('late-load: dam: 4 late events against 5', out.getvalue())
+        self.assertIn('late-load:   stage 35 tex 2317: 0 against 1', out.getvalue())
+        self.assertIn('late-load: FAIL: 1 of 2 stages logged the same late events by kind and name', out.getvalue())
+
+    def test_a_stage_in_one_audit_only_fails(self):
+        # Arrange
+        before = self.audit_folder('before', {'dam': LATELOG, 'temple': LATELOG})
+        after = self.audit_folder('after', {'dam': LATELOG})
+        out = io.StringIO()
+
+        # Act
+        with contextlib.redirect_stdout(out):
+            status = audit.main(['--compare', str(before), str(after)])
+
+        # Assert
+        self.assertEqual(status, 1)
+        self.assertIn('late-load: temple: no late.txt in', out.getvalue())
+        self.assertIn('late-load: FAIL: 1 of 2 stages logged the same late events by kind and name', out.getvalue())
+
+
 if __name__ == '__main__':
     unittest.main()
