@@ -709,9 +709,23 @@ endif()
 # Project Midas build stamp: <git commit count>-<YYYYMMDD>, regenerated on
 # every build (scripts/port/buildinfo.cmake has the why). sysstubs.c owns the
 # string; the legal screen and the `ge: sys: build` log line both read it.
+# build-info.json's "architecture" uses portBuildArchitecture()'s names
+# (port/include/port_build_arch.h); a 32-bit native build is always x86 (-m32).
+if(EMSCRIPTEN)
+    set(GE_BUILD_ARCHITECTURE wasm32)
+elseif(GE_POINTER_BITS EQUAL 32)
+    set(GE_BUILD_ARCHITECTURE i686)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64|amd64)$")
+    set(GE_BUILD_ARCHITECTURE x86_64)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|ARM64)$")
+    set(GE_BUILD_ARCHITECTURE aarch64)
+else()
+    set(GE_BUILD_ARCHITECTURE unknown)
+endif()
 add_custom_target(ge_buildinfo
     COMMAND ${CMAKE_COMMAND} -DSRC=${CMAKE_SOURCE_DIR}
             -DOUT=${CMAKE_BINARY_DIR}/generated/port_buildinfo.h
+            -DARCH=${GE_BUILD_ARCHITECTURE}
             -P ${CMAKE_SOURCE_DIR}/scripts/port/buildinfo.cmake
     BYPRODUCTS ${CMAKE_BINARY_DIR}/generated/port_buildinfo.h
     COMMENT "build stamp"

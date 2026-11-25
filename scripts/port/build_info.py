@@ -47,8 +47,15 @@ def metadata(root, env):
                 downloads_url=base+"/releases", builder="GitHub Actions" if ci else "Local build")
 
 
-def write(root, output, env):
-    info = metadata(root, env)
+# portBuildArchitecture()'s names (port/include/port_build_arch.h)
+ARCHITECTURES = ("x86_64", "i686", "aarch64", "wasm32", "unknown")
+
+
+def write(root, output, env, architecture):
+    """Write the build stamp header and build-info.json. The architecture goes
+    into the JSON file only, so the header, which is compiled into the game,
+    is the same for every architecture."""
+    info = dict(metadata(root, env), architecture=architecture)
     fields = {"NUMBER": info["build_number"], "DATE": info["build_date"],
               "STRING": f'{info["build_number"]}-{info["build_date"]}',
               "COMMIT": info["commit"][:9], "SHA": info["commit"], "BRANCH": info["branch"],
@@ -68,5 +75,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--architecture", choices=ARCHITECTURES, required=True,
+                        help="what the build compiles for, for build-info.json")
     args = parser.parse_args()
-    write(args.root, args.output, os.environ)
+    write(args.root, args.output, os.environ, args.architecture)

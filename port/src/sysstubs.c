@@ -88,6 +88,8 @@ void sysLogPowerIfChanged(void);
  * ge_buildinfo target and only rewritten when it changes, so only this file
  * recompiles on a new commit or a new day. */
 #include "port_buildinfo.h"
+#include "platform_info.h"
+#include "port_build_arch.h"
 
 const char *portBuildString(void)
 {
@@ -115,8 +117,15 @@ void sysLogSystemInfo(void)
     /* the stamp names the BUILD; the commit hash is what identifies it (the
      * count is per branch), and the compile time is only as fresh as this
      * file's last recompile */
+#if IS_64_BIT
+    /* LP64-007: a 64-bit log names its architecture beside the 32-bit one's */
+    portConLogf("ge: sys: build %s commit %s branch %s (sysstubs.c compiled %s %s) arch %s\n", PORT_BUILD_STRING,
+                PORT_BUILD_COMMIT, (PORT_BUILD_BRANCH[0] != '\0') ? PORT_BUILD_BRANCH : "-", __DATE__, __TIME__,
+                portBuildArchitecture());
+#else
     portConLogf("ge: sys: build %s commit %s branch %s (sysstubs.c compiled %s %s)\n", PORT_BUILD_STRING, PORT_BUILD_COMMIT,
                 (PORT_BUILD_BRANCH[0] != '\0') ? PORT_BUILD_BRANCH : "-", __DATE__, __TIME__);
+#endif
 #if defined(__i386__) || defined(__x86_64__)
     {
         unsigned int r[12];

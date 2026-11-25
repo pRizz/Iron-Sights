@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include "port_crash.h"
+#include "port_build_arch.h"
 #include "port_buildinfo.h"
 #include "port_sentry_config.h"
 
@@ -160,7 +161,7 @@ static void startReporting(void)
     p_sentry_set_tag("build_time", PORT_BUILD_TIME);
     p_sentry_set_tag("build_number", PORT_BUILD_STRING);
     if (PORT_BUILD_RUN_URL[0]) p_sentry_set_tag("build_run", PORT_BUILD_RUN_URL);
-    p_sentry_set_tag("architecture", "i686");
+    p_sentry_set_tag("architecture", portBuildArchitecture());
     p_sentry_user_consent_give();
 }
 #endif

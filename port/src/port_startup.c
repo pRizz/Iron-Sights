@@ -8,6 +8,13 @@
 #include "port_buildinfo.h"
 #include "port_build_time.h"
 #include "port_startup.h"
+#include "platform_info.h"
+
+/* LP64-007: a 64-bit build says so on its legal screen; a comparison build
+ * keeps its fixed stamp. */
+#if IS_64_BIT && !defined(GE_COMPARE)
+#define STAMP_WIDTH " - 64-bit"
+#endif
 
 #ifdef GE_COMPARE
 /* LP64-006: a comparison build draws one legal screen and file-select stamp
@@ -36,8 +43,13 @@ Gfx *portStartupAttribution(Gfx *gdl)
 {
     char line[128], builtAt[96];
     gdl = startupLine(gdl, 16, "Iron Sights - a fork of Project Midas\n");
+#ifdef STAMP_WIDTH
+    snprintf(line, sizeof(line), "Build %s - %s%s" STAMP_WIDTH "\n", STAMP_NUMBER,
+        STAMP_COMMIT, STAMP_DIRTY ? " (modified)" : "");
+#else
     snprintf(line, sizeof(line), "Build %s - %s%s\n", STAMP_NUMBER,
         STAMP_COMMIT, STAMP_DIRTY ? " (modified)" : "");
+#endif
     gdl = startupLine(gdl, 300, line);
     portFormatBuildTime(builtAt, sizeof(builtAt), STAMP_TIME);
     snprintf(line, sizeof(line), "Built at: %s\n", builtAt);

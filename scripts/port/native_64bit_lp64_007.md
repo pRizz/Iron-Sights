@@ -440,21 +440,21 @@ likely first. Each has its test in the task named.
   field in a JSON file, not in the program). The About dialog is not
   edited: `port/fast3d/about.cpp` is strict tier.
 
-- [ ] **Step 1: Write the failing harness.** `test_build_arch.sh`
+- [x] **Step 1: Write the failing harness.** `test_build_arch.sh`
   sources `harness_widths.sh`; its driver asserts the string is `"i686"`
   when `sizeof(void *) == 4` on x86, and `"x86_64"` or `"aarch64"` when
   8, matching `__x86_64__` or `__aarch64__`.
-- [ ] **Step 2: Run it** at both widths in the x86_64 container, and at
+- [x] **Step 2: Run it** at both widths in the x86_64 container, and at
   64 bits in the aarch64 one. Expected: it does not compile.
-- [ ] **Step 3: Implement.** Run again. Expected: pass at every width.
-- [ ] **Step 4: Check the 32-bit program.** `compare_win32.py commits
+- [x] **Step 3: Implement.** Run again. Expected: pass at every width.
+- [x] **Step 4: Check the 32-bit program.** `compare_win32.py commits
   BASE WORKTREE`. Expected: identical (the header is used on Windows by
   nothing, and the two 64-bit edits are behind `IS_64_BIT`).
-- [ ] **Step 5: See it.** P1, then run the tree offscreen to the legal
+- [x] **Step 5: See it.** P1, then run the tree offscreen to the legal
   screen with `GE_SHOT` set and keep one screenshot of the stamp under
   `build/lp64/ship/`; the log's `ge: sys: build` line ends `arch x86_64`.
   Plain aarch64 play sets and the mission smoke.
-- [ ] **Step 6:** Name the harness in the workflow, record in FORK-020
+- [x] **Step 6:** Name the harness in the workflow, record in FORK-020
   and FORK-089, commit.
 
 ### Task 3: The packager at two architectures

@@ -48,6 +48,19 @@ class Distribution(unittest.TestCase):
             (root/"new.c").write_text("untracked source")
             self.assertTrue(build_info.metadata(root,env)['dirty'])
 
+    def test_architecture_reaches_the_manifest_but_not_the_compiled_header(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root=Path(folder);env={"SOURCE_DATE_EPOCH":"0"}
+            outputs={arch:root/arch/"port_buildinfo.h" for arch in ("i686","x86_64")}
+            # Act
+            for arch,output in outputs.items():
+                build_info.write(root,output,env,arch)
+            # Assert
+            for arch,output in outputs.items():
+                self.assertEqual(json.loads((output.parent/"build-info.json").read_text())['architecture'],arch)
+            self.assertEqual(outputs["i686"].read_text(),outputs["x86_64"].read_text())
+
     def test_metadata_without_git_and_with_fixed_epoch(self):
         with tempfile.TemporaryDirectory() as folder:
             info=build_info.metadata(Path(folder),{"SOURCE_DATE_EPOCH":"0"})

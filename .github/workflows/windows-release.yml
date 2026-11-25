@@ -56,6 +56,7 @@ jobs:
           bash scripts/port/test_ads.sh
           MIDAS_BUFFER_SANITIZE=1 bash scripts/port/test_buffers.sh
           bash scripts/port/test_build_time.sh
+          bash scripts/port/test_build_arch.sh
           MIDAS_SAVE_TEST_I686=1 bash scripts/port/test_save_transfer.sh
           bash scripts/port/test_upstream_merge.sh
           python3 scripts/port/test_native_tool_launchers.py
