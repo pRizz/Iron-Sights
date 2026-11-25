@@ -64,13 +64,23 @@ layout, and a 64-bit process loads at a different address on each run, so
 64-bit builds (`GE_POINTER_BITS=64`) do not compile `port_state.c`. They link
 `port/src/port_state_unavailable.c` instead, as the browser build links
 `port/web/state.c`: `portStateMessage()` returns "Suspend points are
-unavailable in 64-bit builds.", a save, load or the Suspend Points menu
-prints that message, slot queries report no slot, and the frame hook still
-runs `portGraphicsFrame()`. The post-build `embed_state_layout.py` step does
-not run, so a 64-bit build prints no `State layout:` line. Campaign saves are
-unaffected. A notice in the menus and the manual is LP64-007's
-([64-bit plan](native_64bit_plan.md#suspend-points)); a relocating format is a
-separate future project.
+unavailable in 64-bit builds. Campaign saves work as usual.", a save, load or
+the Suspend Points menu shows that message and logs it as a `ge: suspend:`
+line, slot queries report no slot, and the frame hook runs joy_port.c's
+`portStateInput()`, which takes the four suspend keys and runs
+`portGraphicsFrame()`. Nothing waits for an answer; play continues.
+
+The notice is up front: `port_state.h` defines `PORT_STATE_AVAILABLE`, 0 when
+`IS_64_BIT` and 1 otherwise, and Watch > Gameplay > Iron Sights draws the row
+as `Suspend Points: unavailable` (`portStateRowLabel()`, called by
+`port_watchpages.c` only where the macro is 0, so the 32-bit program keeps its
+bytes). The four bind rows and their `midas.ini` keys stay, so a file shared
+with a 32-bit install keeps them; `tools/midas_ini_help.txt` says the keys are
+not available in 64-bit builds. The browser build keeps the macro at 1 and its
+own message. The post-build `embed_state_layout.py` step does not run, so a
+64-bit build prints no `State layout:` line. Campaign saves are unaffected. A
+relocating format is a separate future project
+([64-bit plan](native_64bit_plan.md#suspend-points)).
 
 ## Implementation
 
@@ -134,8 +144,9 @@ exclusion, and bounded/idempotent executable overlays.
 The codec, menu and restore tests (`test_states.c`, which includes
 `port_state.c`) run at 32 bits only; the input routing test runs at both
 widths. Where the compiler can build 64-bit code, `test_states.sh` also links a
-small driver with `port_state_unavailable.c` and checks the message, the empty
-slot and the frame hook; `test_pointer_bits.sh` checks that each width's build compiles its own
+small driver with `port_state_unavailable.c` and checks the message, its
+`ge: suspend:` log line, the row label, the empty slot and the frame hook (the
+32-bit half checks that the label stays `Suspend Points`); `test_pointer_bits.sh` checks that each width's build compiles its own
 file and that only the 32-bit build runs the layout step.
 
 On Windows with a built executable and the local ROM:

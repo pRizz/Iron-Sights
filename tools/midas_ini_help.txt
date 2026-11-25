@@ -796,6 +796,10 @@ Port actions (extra actions beyond the N64 pad)
   These local images require the exact executable, ROM, and arena layout.
   Rebuilding invalidates older suspend points. Campaign saves/settings remain
   separate and are not rolled back. See scripts/port/save_states.md in source.
+  Suspend points are not available in 64-bit builds: the watch row reads
+  "Suspend Points: unavailable", and the row and the four suspend keys show a
+  message instead. Their bindings stay, so a midas.ini shared with a 32-bit
+  install keeps them. Campaign saves work as usual.
 
   Aim Mode (Iron Sights > Aiming and Movement) selects ADS or Red Reticle for Aim
   (Mouse Right by default). ADS is the default, including with an existing ini

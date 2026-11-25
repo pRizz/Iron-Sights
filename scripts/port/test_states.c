@@ -104,5 +104,7 @@ int main(void)
         g_CurrentPlayer=NULL;
     }
     assert(remove(menuPath)==0);
+    /* A build with suspend points keeps the watch row's plain label. */
+    assert(PORT_STATE_AVAILABLE && !strcmp(portStateRowLabel(),"Suspend Points\n"));
     free(data);free(out);puts("Suspend codec, compatibility, immediate restore and toast tests passed.");return 0;
 }

@@ -608,22 +608,22 @@ likely first. Each has its test in the task named.
   stay, so a `midas.ini` shared with a 32-bit install keeps its keys.
   No ini key or section changes. At 32 bits nothing changes.
 
-- [ ] **Step 1: Write the failing test.** Extend the `test_states`
+- [x] **Step 1: Write the failing test.** Extend the `test_states`
   driver: at 64 bits, `portStateRowLabel()` contains `unavailable` and
   `portStateMessage()` contains `Campaign saves`; at 32 bits the label is
   exactly `Suspend Points\n`.
-- [ ] **Step 2: Run** `bash scripts/port/test_states.sh` at both widths.
+- [x] **Step 2: Run** `bash scripts/port/test_states.sh` at both widths.
   Expected: the 64-bit half fails.
-- [ ] **Step 3: Implement.** Run again. Expected: both halves pass.
-- [ ] **Step 4: Check each input** on the 64-bit video tree with the
+- [x] **Step 3: Implement.** Run again. Expected: both halves pass.
+- [x] **Step 4: Check each input** on the 64-bit video tree with the
   `menus` set's watch walk plus one recorded pad press of the row and one
   keyboard F5 (`GE_INPUTPLAY`): the log shows the message each time and
   the run reaches its frame limit. Keep one screenshot of the row under
   `build/lp64/ship/`.
-- [ ] **Step 5: Write the manual.** `tools/midas_ini_help.txt` (the
+- [x] **Step 5: Write the manual.** `tools/midas_ini_help.txt` (the
   suspend keys: "not available in 64-bit builds"), `save_states.md`
   ("64-bit builds": the notice exists; remove "is LP64-007's").
-- [ ] **Step 6:** `settings_placement.py`, `compare_win32.py`
+- [x] **Step 6:** `settings_placement.py`, `compare_win32.py`
   (identical: the macro is 1 at 32 bits), static checks, plain aarch64
   play sets, mission smoke, package check; record in FORK-014 and
   FORK-089; commit.

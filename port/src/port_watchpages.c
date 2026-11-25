@@ -24,6 +24,7 @@
 #include "port_watchpages.h"
 #include "port_enhanced_fonts.h"
 #include "port_download_page.h"   /* FORK-052, FORK-053 */
+#include "port_state.h"           /* FORK-014: PORT_STATE_AVAILABLE */
 
 /* port_options.c */
 extern s32         portOptFind(const char *key);
@@ -1148,6 +1149,12 @@ static const char *rowLabelShared(s32 page, s32 row)
     {
         return "?\n";
     }
+#if !PORT_STATE_AVAILABLE
+    if (d->kind == PWROW_ACTION && d->arg == 100)
+    {
+        return portStateRowLabel();
+    }
+#endif
     if (d->label != NULL)
     {
         return d->label;

@@ -18,6 +18,7 @@ cat >"$work/unavailable.c" <<'C'
 /* The game's own string.h and assert.h shadow the C library's: declare
  * strcmp, and make the game's assert, which only prints, stop the test. */
 extern int strcmp(const char *, const char *);
+extern char *strstr(const char *, const char *);
 void osSyncPrintf(const char *fmt, ...)
 {
     va_list args;
@@ -26,10 +27,11 @@ void osSyncPrintf(const char *fmt, ...)
     va_end(args);
     abort();
 }
-static const char expected[] = "Suspend points are unavailable in 64-bit builds.";
-static int frames, prints;
+static const char expected[] = "Suspend points are unavailable in 64-bit builds. Campaign saves work as usual.";
+static int inputs, prints;
 static char printed[128];
-void portGraphicsFrame(void) { frames++; }
+/* joy_port.c: takes the suspend keys and runs the Graphics frame (test_state_input.c checks it) */
+void portStateInput(void) { inputs++; }
 void portConPrintf(s32 show, const char *fmt, ...)
 {
     va_list args;
@@ -56,6 +58,20 @@ static void messageNamesTheWidth(void)
     /* Assert */
     assert(strcmp(message, expected) == 0);
 }
+static void messageNamesCampaignSaves(void)
+{
+    /* Act */
+    const char *message = portStateMessage();
+    /* Assert */
+    assert(strstr(message, "Campaign saves") != NULL);
+}
+static void rowLabelSaysUnavailable(void)
+{
+    /* Act */
+    const char *label = portStateRowLabel();
+    /* Assert */
+    assert(strstr(label, "unavailable") != NULL);
+}
 static void menuOpenPrintsTheMessage(void)
 {
     /* Arrange */
@@ -76,14 +92,14 @@ static void requestPrintsTheMessage(void)
     /* Assert */
     assert(prints == 1 && strcmp(printed, expected) == 0);
 }
-static void frameRunsTheGraphicsFrame(void)
+static void frameTakesTheSuspendKeys(void)
 {
     /* Arrange */
-    frames = 0;
+    inputs = 0;
     /* Act */
     portStateFrame();
     /* Assert */
-    assert(frames == 1);
+    assert(inputs == 1);
 }
 static void neverPauses(void)
 {
@@ -94,9 +110,11 @@ int main(void)
 {
     infoReportsNoSlot();
     messageNamesTheWidth();
+    messageNamesCampaignSaves();
+    rowLabelSaysUnavailable();
     menuOpenPrintsTheMessage();
     requestPrintsTheMessage();
-    frameRunsTheGraphicsFrame();
+    frameTakesTheSuspendKeys();
     neverPauses();
     return 0;
 }
@@ -124,7 +142,20 @@ for width in $widths; do
     if [[ $width == 64 ]]; then
         echo "test_states: test_states.c (port_state.c's codec, menu and restore) is 32-bit only by design: suspend images record 32-bit addresses, so 64-bit builds link port_state_unavailable.c, checked here instead; test_state_input.c runs at both widths"
         compile "$width" "$test_bin" "$work/unavailable.c" port/src/port_state_unavailable.c
-        "$test_bin"
+        # Like port_state.c, each notice is also a `ge: suspend:` log line: one for the menu, one
+        # for the request.
+        "$test_bin" 2>"$work/stderr" || { cat "$work/stderr" >&2; exit 1; }
+        notices=0
+        while IFS= read -r line; do
+            if [[ $line == 'ge: suspend: Suspend points are unavailable in 64-bit builds. Campaign saves work as usual.' ]]; then
+                notices=$((notices + 1))
+            fi
+        done <"$work/stderr"
+        if [[ $notices != 2 ]]; then
+            echo "test_states: expected 2 'ge: suspend:' log lines from the 64-bit stand-in, got $notices:" >&2
+            cat "$work/stderr" >&2
+            exit 1
+        fi
     else
         compile "$width" "$test_bin" scripts/port/test_states.c
         "$test_bin"
