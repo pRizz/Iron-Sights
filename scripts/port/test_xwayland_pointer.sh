@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # The XWayland pointer reset on focus (FORK-091, port/src/port_xwayland_pointer.c):
 # which focus changes reset the cursor, and that a reset shows, then hides, it.
-# Compiled against a stand-in SDL.h written here, which declares only the two
-# calls the module makes; test_xwayland_pointer.c defines them. Runs at every
+# Compiled against a stand-in SDL.h written here, which declares only the calls
+# the module makes; test_xwayland_pointer.c defines the two that act. Runs at every
 # width harness_widths offers.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -13,6 +13,8 @@ compiler=${CC:-gcc}
 
 mkdir -p "$work/sdl"
 cat > "$work/sdl/SDL.h" <<'EOF'
+#include <string.h>
+#define SDL_strcmp strcmp
 #define SDL_QUERY -1
 #define SDL_DISABLE 0
 #define SDL_ENABLE 1

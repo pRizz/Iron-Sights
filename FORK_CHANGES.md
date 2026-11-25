@@ -82,7 +82,10 @@ It covers seven cases: XWayland with the cursor hidden and shown, plain X11,
 an empty Wayland display, SDL's Wayland and offscreen drivers, and no driver.
 A reset must show, then hide, the cursor, and leave it hidden. It passes at 32
 and 64 bits in the x86_64 container. A copy of the module without the show
-call fails it.
+call fails it. The module compares names with `SDL_strcmp`: the game's include
+path puts the N64 SDK's `string.h` first, which declares no `strcmp`. CI's
+`lp64_diagnostics.py unprototyped --check` failed the first push, `97ddab2`,
+on it.
 
 On the laptop, the minimal SDL window, given the same reset, recovered pointer
 motion after a warp and an alt-tab twice (524 and 71 events a second, against

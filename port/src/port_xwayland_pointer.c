@@ -4,12 +4,13 @@
 #if defined(__linux__) && !defined(__EMSCRIPTEN__)
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <SDL.h>
 
+/* SDL_strcmp, not strcmp: the game's include path puts the N64 SDK's string.h
+ * first, which declares no strcmp (lp64_diagnostics.py unprototyped). */
 int portXwaylandPointerNeedsReset(const char *videoDriver, const char *waylandDisplay, int cursorShown)
 {
-    if (videoDriver == NULL || strcmp(videoDriver, "x11") != 0)
+    if (videoDriver == NULL || SDL_strcmp(videoDriver, "x11") != 0)
     {
         return 0;
     }
