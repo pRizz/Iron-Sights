@@ -135,11 +135,12 @@ static void testHeadlessDoesNothing(void)
     unsetenv("GE_NOINPUT");
     unsetenv("SDL_VIDEODRIVER");
 
-    // Act: returns without a box function to call (this program links none)
+    // Act
     portLp64StopNotice("ge: lp64: a headless stop");
 
-    // Assert
-    expect(1, "a headless notice returns");
+    // Assert: the link is the assertion (this program defines no box
+    // function, so a headless notice that called one would not link), and
+    // reaching here shows that it returned
 }
 #endif
 

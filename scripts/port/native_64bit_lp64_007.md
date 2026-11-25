@@ -651,6 +651,8 @@ likely first. Each has its test in the task named.
   `portLp64StopNoticeWanted` over the eight combinations, at 64 bits
   (`harness_widths.sh`, 32 bits listed on `HARNESS_WIDTH_EXEMPT` with
   the reason "the file compiles at 64 bits only").
+  No `HARNESS_WIDTH_EXEMPT` entry was needed: `test_harness_widths.sh`
+  accepts a harness that takes `harness_widths` (the controller's ruling).
 - [x] **Step 2: Run it.** Expected: it does not link.
 - [x] **Step 3: Implement**, following how the no-ROM message
   (`port/src/romdata.c:1554-1565`) opens its box.

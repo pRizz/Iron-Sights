@@ -177,6 +177,13 @@ s32 portLp64StopNoticeWanted(const char *noInput, const char *videoDriver, s32 h
  */
 void portLp64StopNotice(const char *text);
 
+/**
+ * A 64-bit stop (port_lp64.c): logs the line FMT formats through portConLogf,
+ * shows it through portLp64StopNotice, then exits with STATUS. A stop's log
+ * line and status stay what they were when it called portConLogf and exit.
+ */
+void portLp64Stop(int status, const char *fmt, ...) __attribute__((noreturn, format(printf, 2, 3)));
+
 #ifdef __cplusplus
 }
 #endif

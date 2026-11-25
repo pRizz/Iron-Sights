@@ -35,10 +35,7 @@
 /* port_console.c: the game's log (stderr plus the tilde console ring). */
 extern void portConLogf(const char *fmt, ...);
 
-/* Logs a stop's line as portConLogf would, shows it in a message box when
- * someone is there to read it (port_lp64_notice.c), then exits with STATUS. */
-static void lp64Stop(int status, const char *fmt, ...) __attribute__((noreturn, format(printf, 2, 3)));
-static void lp64Stop(int status, const char *fmt, ...)
+void portLp64Stop(int status, const char *fmt, ...)
 {
     char line[1024];
     va_list args;
@@ -104,7 +101,7 @@ void portLp64CheckRegion(const char *name, const void *start, size_t size)
 {
     if (!portLp64RegionIsHigh(start, size))
     {
-        lp64Stop(LP64_EXIT_LOW_ADDRESS,
+        portLp64Stop(LP64_EXIT_LOW_ADDRESS,
                 "ge: lp64: %s at %p is below 4 GB; a 64-bit build needs every game address above 4 GB "
                 "(scripts/port/native_64bit_plan.md, \"Addresses\")\n",
                 name, start);
@@ -157,7 +154,7 @@ static void lp64CheckExecutableImage(void)
     dl_iterate_phdr(lp64ReadImage, &range);
     if (!range.found)
     {
-        lp64Stop(LP64_EXIT_LOW_ADDRESS, "ge: lp64: the executable image has no loaded segments to check\n");
+        portLp64Stop(LP64_EXIT_LOW_ADDRESS, "ge: lp64: the executable image has no loaded segments to check\n");
     }
     portLp64CheckRegion("executable image", (const void *) range.lowest, (size_t) (range.end - range.lowest));
 }
@@ -175,7 +172,7 @@ void portLp64CheckAddressSpace(void)
     block = malloc(64);
     if (block == NULL)
     {
-        lp64Stop(LP64_EXIT_LOW_ADDRESS, "ge: lp64: malloc block for the address check could not be allocated\n");
+        portLp64Stop(LP64_EXIT_LOW_ADDRESS, "ge: lp64: malloc block for the address check could not be allocated\n");
     }
     portLp64CheckRegion("malloc block", block, 64);
     free(block);
@@ -268,7 +265,7 @@ void portLp64RequireConverter(enum PortLp64Asset asset)
     {
         return;
     }
-    lp64Stop(LP64_EXIT_NO_CONVERTER, "ge: lp64: stopping: asset class \"%s\" is marked unconverted in this build\n",
+    portLp64Stop(LP64_EXIT_NO_CONVERTER, "ge: lp64: stopping: asset class \"%s\" is marked unconverted in this build\n",
             portLp64AssetName(asset));
 }
 
@@ -346,7 +343,7 @@ void portLp64PoolExhausted(const char *pool, u32 request)
 
 void portLp64PoolFatal(const char *pool, u32 request)
 {
-    lp64Stop(LP64_EXIT_POOL, LP64_POOL_LINE, pool, (unsigned) request);
+    portLp64Stop(LP64_EXIT_POOL, LP64_POOL_LINE, pool, (unsigned) request);
 }
 
 void portLp64PoolStageBegin(void)

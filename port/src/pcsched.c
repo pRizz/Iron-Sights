@@ -166,15 +166,13 @@ static int portAllocHighSkipHints(void)
 static void portAllocHighFail(const char *name, u32 size) __attribute__((noreturn));
 static void portAllocHighFail(const char *name, u32 size)
 {
-    portConLogf("ge: %s: could not map %u bytes above 4 GB\n", name, size);
-    exit(1);
+    portLp64Stop(1, "ge: %s: could not map %u bytes above 4 GB\n", name, size);
 }
 
 static void portAllocHighTooLarge(const char *name, u32 size) __attribute__((noreturn));
 static void portAllocHighTooLarge(const char *name, u32 size)
 {
-    portConLogf("ge: %s: a request of %u bytes is too large to round up to the mapping size\n", name, size);
-    exit(1);
+    portLp64Stop(1, "ge: %s: a request of %u bytes is too large to round up to the mapping size\n", name, size);
 }
 
 static void *portAllocHighOrExit(const char *name, u32 size)

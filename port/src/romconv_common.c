@@ -47,8 +47,12 @@ u8 *portConvScratch(u32 bytes)
     grown = (u8 *) malloc(size);
     if (grown == NULL)
     {
+#if IS_64_BIT /* LP64-007 Task 6: the line in a box too; the oracle build has none */
+        portLp64Stop(EXIT_FAILURE, "ge: lp64: converter scratch: cannot allocate %u bytes\n", size);
+#else
         portConLogf("ge: lp64: converter scratch: cannot allocate %u bytes\n", size);
         exit(EXIT_FAILURE);
+#endif
     }
     portLp64CheckRegion("converter scratch", grown, size);
     s_Scratch = grown;
@@ -120,8 +124,12 @@ void portConvScratchReserve(u32 bytes)
     (void) portConvScratch(bytes);
     if (!convMapSlots(bytes, &slots) || !convMapGrow(slots))
     {
+#if IS_64_BIT
+        portLp64Stop(EXIT_FAILURE, "ge: lp64: converter map: cannot reserve %u bytes\n", bytes);
+#else
         portConLogf("ge: lp64: converter map: cannot reserve %u bytes\n", bytes);
         exit(EXIT_FAILURE);
+#endif
     }
 }
 
