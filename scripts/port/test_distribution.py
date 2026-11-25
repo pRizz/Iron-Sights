@@ -255,7 +255,6 @@ class Distribution(unittest.TestCase):
                 self.assertEqual(linux_packager.has_symbol(root/"with","portPlayPlayerTick"),True)
                 self.assertEqual(linux_packager.has_symbol(root/"without","portPlayPlayerTick"),False)
 
-    @unittest.skipUnless(shutil.which("gcc"),"Native cache codec test needs a C compiler")
     def test_every_ci_build_folder_is_ignored_by_git(self):
         # Arrange: an unignored build folder makes the CI build dirty (build_info.py), failing its job.
         workflows=(ROOT/".github/workflows").glob("*.yml")
@@ -266,6 +265,7 @@ class Distribution(unittest.TestCase):
         self.assertIn("build_linux_x86_64_ci",folders)
         self.assertEqual(unignored,[])
 
+    @unittest.skipUnless(shutil.which("gcc"),"Native cache codec test needs a C compiler")
     def test_native_cache_validation(self):
         with tempfile.TemporaryDirectory() as folder:
             binary=Path(folder)/"cache-test"
