@@ -713,12 +713,12 @@ checkpoint.
   and refuses folders of mixed kinds with `--expect`, naming them. Test
   first: `test_a_record_without_the_field_reads_as_headless`,
   `test_mixed_kinds_are_refused_with_expect`.
-- [ ] **Step 2: The task check in full** on the GCC 13 trees (steps 1 to
+- [x] **Step 2: The task check in full** on the GCC 13 trees (steps 1 to
   9). Expected: as LP64-006's close recorded, with the comparison's
   counts `74 identical, 2 as recorded` headless, `192 identical, 8 as
   recorded` default and `190 identical, 10 as recorded` with every
   option.
-- [ ] **Step 3: The play sets on the packaged executable.** After the
+- [x] **Step 3: The play sets on the packaged executable.** After the
   package check: `DEV python3 scripts/port/lp64_play.py run --video --rom
   /rom/baserom.u.z64 --set demos,stages,stops,menus,tours,attract,sound
   --output build/lp64/ship/play
@@ -726,7 +726,7 @@ checkpoint.
   package is a video build, so there is no headless pass of it).
   Expected: `OK: 148 of 148 cases`. Then `lp64_play.py peaks --budget scripts/port/lp64_budgets.txt
   build/lp64/ship/play`. Expected: `OK: ... within budget`.
-- [ ] **Step 4: Same streams from both compilers.** In the release
+- [x] **Step 4: Same streams from both compilers.** In the release
   image, configure `build/lp64/ship/cmp-x64-gcc11` and
   `build/lp64/ship/cmp-x64-gcc11-video` as `cmp-x64` and `cmp-x64-video`
   are (`-DGE_COMPARE=ON`, the video one with the pinned SDL prefix), and
@@ -737,7 +737,7 @@ checkpoint.
   difference is traced to its first index and its cause before the task
   goes on; a cause that is the compiler's choice in undefined or
   unspecified code is fixed at the declaration.
-- [ ] **Step 5: A folder from the other width** (Review Focus 3). With
+- [x] **Step 5: A folder from the other width** (Review Focus 3). With
   one `HOME` and `GE_ICON_CACHE_DIR`: run `cmp-i686-video` to the title
   so it writes the icon cache, then the 64-bit video tree with `--shots`
   on a case that draws the HUD's weapon icons, and compare that
@@ -746,15 +746,15 @@ checkpoint.
   Put a file named like a 32-bit suspend image in the run's states
   folder first and assert its bytes are unchanged afterwards. A misread
   cache stops the task: `weapon_cache.cpp` is strict tier.
-- [ ] **Step 6: Late loads.** `late_load_audit.py --no-pack
+- [x] **Step 6: Late loads.** `late_load_audit.py --no-pack
   --video-driver offscreen --keep` for all stages on the GCC 13 x86_64
   video tree and on the packaged executable, then `--compare`. Expected:
   the same events by kind and name in every stage.
-- [ ] **Step 7: The sanitizers with the release compiler.** A
+- [x] **Step 7: The sanitizers with the release compiler.** A
   `-DGE_SANITIZE=ON` video tree in the release image
   (`build/lp64/ship/x64-san`), then the mission smoke with video.
   Expected: 20 of 20 with no report.
-- [ ] **Step 8:** Record every figure in FORK-089 with the host named.
+- [x] **Step 8:** Record every figure in FORK-089 with the host named.
 
 ### Task 9: The benchmark drives a Linux package
 
