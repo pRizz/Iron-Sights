@@ -577,14 +577,14 @@ likely first. Each has its test in the task named.
   the x86_64 runtime, the `architecture` tag, the bundled 64-bit
   libcurl; delete the stale paragraph at `:158-162` that says texture
   entries reject 64-bit pointers).
-- [ ] **Step 5: Push and read CI.** Expected: `linux-x86_64` passes on
+- [x] **Step 5: Push and read CI.** Expected: `linux-x86_64` passes on
   the runner's real x86_64 processor, its ten cases included, and the
   release that push publishes holds exactly the eleven assets it held
   before. Download the artifact's `SHA256SUMS-linux-x86_64.txt` and
   `linux-x86_64-build-inputs.json` with `gh run download` into
   `build/lp64/ship/ci/` and record the compiler line and the bundled
   library list in FORK-031.
-- [ ] **Step 6:** Record in FORK-030, FORK-031 and FORK-089.
+- [x] **Step 6:** Record in FORK-030, FORK-031 and FORK-089.
 
 ### Task 5: The suspend-point notice
 
