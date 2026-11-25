@@ -311,10 +311,11 @@ REL python3 scripts/port/linux_build.py --arch x86_64 --work build/lp64/ship/x64
 rm -rf build/lp64/ship/x64/dist && REL python3 scripts/port/package_linux.py --arch x86_64 --build build/lp64/ship/x64 --output build/lp64/ship/x64/dist
 # P3. The ten crash-report cases on the real packages.
 REL python3 scripts/port/test_sentry_linux.py --arch x86_64 --package build/lp64/ship/x64/dist/Iron-Sights-linux-x86_64.tar.gz --appimage build/lp64/ship/x64/dist/Iron-Sights-linux-x86_64.AppImage --steamdeck build/lp64/ship/x64/dist/Iron-Sights-steamdeck-x86_64.zip --output build/lp64/ship/x64/smoke
-# P4. The packaged executable boots and plays, in the newer container.
+# P4. The packaged executable boots and plays, in the newer container. Both tools run a copy
+# from a temporary folder, so the package's lib/ is given as LD_LIBRARY_PATH (the container's path).
 rm -rf build/lp64/ship/x64/run && mkdir -p build/lp64/ship/x64/run && tar -xzf build/lp64/ship/x64/dist/Iron-Sights-linux-x86_64.tar.gz -C build/lp64/ship/x64/run
-DEV python3 scripts/port/lp64_boot.py --rom /rom/baserom.u.z64 --expect-run --frames 600 build/lp64/ship/x64/run/Iron-Sights-linux-x86_64/IronSights
-DEV python3 scripts/port/audit_buffers.py --mission-smoke build/lp64/ship/x64/run/Iron-Sights-linux-x86_64/IronSights --rom /rom/baserom.u.z64 --video --frames 1800 --jobs 4 --output build/lp64/ship/x64/smoke-missions/missions.json
+DEV env LD_LIBRARY_PATH=/home/dev/project/build/lp64/ship/x64/run/Iron-Sights-linux-x86_64/lib python3 scripts/port/lp64_boot.py --rom /rom/baserom.u.z64 --expect-run --frames 600 build/lp64/ship/x64/run/Iron-Sights-linux-x86_64/IronSights
+DEV env LD_LIBRARY_PATH=/home/dev/project/build/lp64/ship/x64/run/Iron-Sights-linux-x86_64/lib python3 scripts/port/audit_buffers.py --mission-smoke build/lp64/ship/x64/run/Iron-Sights-linux-x86_64/IronSights --rom /rom/baserom.u.z64 --video --frames 1800 --jobs 4 --output build/lp64/ship/x64/smoke-missions/missions.json
 ```
 
 Expected: P1 and P2 exit 0 and P2 prints the three package paths; P3
@@ -500,7 +501,7 @@ likely first. Each has its test in the task named.
   menu entry is `iron-sights-steamdeck-x86_64.desktop` with
   `Name=Iron Sights (64-bit)`; class 1 keeps today's name and text.
 
-- [ ] **Step 1: Write the failing tests.** In `test_distribution.py`:
+- [x] **Step 1: Write the failing tests.** In `test_distribution.py`:
   `test_i686_target_keeps_its_names_and_runtime` (the record equals the
   literals at f04e0a7); `test_x86_64_outputs_are_named_for_the_architecture`;
   `test_packager_refuses_a_sanitizer_build`, `_an_oracle_build`,
@@ -512,15 +513,15 @@ likely first. Each has its test in the task named.
   naming `/usr/lib/i386-linux-gnu/libfoo.so`). In `test_steam_art.py`:
   `test_a_64_bit_folder_gets_its_own_menu_entry` and
   `test_two_installs_keep_two_entries_and_two_artwork_sets`.
-- [ ] **Step 2: Run them.** Expected: fail on missing names.
-- [ ] **Step 3: Pin the x86_64 runtime.** Download it once into
+- [x] **Step 2: Run them.** Expected: fail on missing names.
+- [x] **Step 3: Pin the x86_64 runtime.** Download it once into
   `build/lp64/ship/downloads/`, take its sha256, and confirm it equals
   the digest GitHub lists for that asset (`gh api
   repos/AppImage/type2-runtime/releases/tags/20251108 --jq '.assets[] |
   select(.name=="runtime-x86_64") | .digest'`). Write the hash into the
   table only if the two agree; otherwise stop. Confirm the runtime's
   licence file is the one already pinned (`RUNTIME_SOURCE`).
-- [ ] **Step 4: Implement** the table, `--arch`, the refusals, the
+- [x] **Step 4: Implement** the table, `--arch`, the refusals, the
   `ldd` path rule, the Deck names and the two text files. The x86_64
   texts say: a native 64-bit build; needs glibc 2.35 or newer and
   OpenGL 3.3 drivers, no 32-bit libraries; suspend points are not
@@ -528,12 +529,12 @@ likely first. Each has its test in the task named.
   `portStateMessage`); the i686 package remains for 32-bit systems and
   for suspend points. `STEAM-DECK-x86_64.txt` keeps the sentence that no
   Deck has run it until Task 10 says otherwise.
-- [ ] **Step 5: Run the tests.** Expected: all pass.
-- [ ] **Step 6: Run the package check, P1 to P4.** Record the tarball's
+- [x] **Step 5: Run the tests.** Expected: all pass.
+- [x] **Step 6: Run the package check, P1 to P4.** Record the tarball's
   file list and sizes in FORK-031. Assert by hand once, then in
   `test_sentry_linux.py`: no member is `midas.ini`, a ROM, a `.debug` or
   an envelope; nothing under `Data/TexturePacks` or `Data/FontPacks`.
-- [ ] **Step 7:** `compare_win32.py`, static checks, CI harness lines;
+- [x] **Step 7:** `compare_win32.py`, static checks, CI harness lines;
   record in FORK-031, FORK-046 and FORK-089; commit.
 
 ### Task 4: Crash reports from a 64-bit build, and the CI job

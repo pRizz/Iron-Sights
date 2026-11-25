@@ -5,6 +5,8 @@ Run it in Desktop Mode from the extracted folder:  python3 set-steam-art.py
 
 1. Installs an "Iron Sights" application-menu entry for this folder's run.sh with
    the bundled icon, so Steam's "Add a Non-Steam Game" list offers it by name.
+   A 64-bit folder gets its own entry, "Iron Sights (64-bit)", so both builds
+   can be installed side by side.
 2. Finds Steam shortcuts that launch this folder and copies the cover, banner,
    hero and logo from steam-art/ into each Steam user's grid folder.
 
@@ -24,6 +26,9 @@ import zlib
 HERE = Path(__file__).resolve().parent
 LAUNCHERS = ("run.sh", "IronSights")
 DESKTOP_NAME = "iron-sights-steamdeck.desktop"
+# The IronSights ELF class (1: 32-bit, 2: 64-bit) -> menu entry file, Name= and Comment=.
+MENU_ENTRIES = {1: (DESKTOP_NAME, "Iron Sights", "Iron Sights (Steam Deck ZIP)"),
+                2: ("iron-sights-steamdeck-x86_64.desktop", "Iron Sights (64-bit)", "Iron Sights (64-bit Steam Deck ZIP)")}
 # Bundled image -> Steam grid file stem for a shortcut's 32-bit app ID.
 ARTWORK = (("cover.png", "{}p"), ("banner.png", "{}"), ("hero.png", "{}_hero"), ("logo.png", "{}_logo"))
 GRID_EXTENSIONS = (".png", ".jpg", ".jpeg")
@@ -123,12 +128,23 @@ def desktop_string(path):
     return str(path).replace("\\", "\\\\")
 
 
+def menu_entry(folder):
+    """The menu entry of the game in FOLDER: a 64-bit IronSights gets its own; anything else the 32-bit one."""
+    try:
+        with open(folder / "IronSights", "rb") as game:
+            header = game.read(5)
+    except OSError:
+        header = b""
+    return MENU_ENTRIES[2 if header == b"\x7fELF\x02" else 1]
+
+
 def desktop_entry(folder):
+    _, name, comment = menu_entry(folder)
     return "\n".join((
         "[Desktop Entry]",
         "Type=Application",
-        "Name=Iron Sights",
-        "Comment=Iron Sights (Steam Deck ZIP)",
+        "Name=" + name,
+        "Comment=" + comment,
         "Exec=" + desktop_exec(folder / "run.sh"),
         "Path=" + desktop_string(folder),
         "Icon=" + desktop_string(folder / "iron-sights.png"),
@@ -152,7 +168,7 @@ def install_menu_entry(folder, data_home):
         launcher = folder / name
         if launcher.exists():
             launcher.chmod(launcher.stat().st_mode | 0o111)
-    target = data_home / "applications" / DESKTOP_NAME
+    target = data_home / "applications" / menu_entry(folder)[0]
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(desktop_entry(folder), encoding="utf-8")
     print(f"Menu entry: {target}")
@@ -192,7 +208,7 @@ def main(argv=None):
         print("Done. Restart Steam, or return to Gaming Mode, to see the artwork.")
         return 0
     print("No Steam shortcut for this folder yet. In Steam choose Games > Add a Non-Steam Game to My Library,\n"
-          "tick Iron Sights (or browse to run.sh) and run this script again. If the game is already in\n"
+          f"tick {menu_entry(HERE)[1]} (or browse to run.sh) and run this script again. If the game is already in\n"
           "your library, exit Steam once so it saves its shortcut list, then run this script again.")
     return 0
 

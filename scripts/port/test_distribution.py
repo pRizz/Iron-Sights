@@ -5,8 +5,10 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
+from unittest import mock
 import zipfile
 
 HERE=Path(__file__).resolve().parent
@@ -125,6 +127,132 @@ class Distribution(unittest.TestCase):
             # Act, Assert (no exception)
             packager.refuse_comparison_build(build)
             linux_packager.refuse_comparison_build(build)
+
+    def test_i686_target_keeps_its_names_and_runtime(self):
+        # Arrange: package_linux.py's literals at f04e0a7, before the table existed.
+        expected=dict(suffix="i686",elf_class=1,elf_machine=3,system_libdir="/usr/lib/i386-linux-gnu",
+                      runtime_url="https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-i686",
+                      runtime_sha256="e72ea0b140a0a16e680713238a6f30aad278b62c4ca17919c554864124515498",
+                      dockerfile="scripts/port/linux-release.Dockerfile",baseline="Ubuntu 22.04 / glibc 2.35",
+                      start_here="scripts/port/linux/START-HERE.txt",steam_deck="scripts/port/linux/STEAM-DECK.txt",
+                      sums_name="SHA256SUMS-linux.txt",info_prefix="linux",system_libraries=())
+        # Act
+        record=linux_packager.TARGETS["i686"]._asdict()
+        names=linux_packager.output_names(linux_packager.TARGETS["i686"])
+        # Assert
+        self.assertEqual(record,expected)
+        self.assertEqual(names,dict(appdir="Iron-Sights-linux-i686.AppDir",folder="Iron-Sights-linux-i686",
+                                    tarball="Iron-Sights-linux-i686.tar.gz",appimage="Iron-Sights-linux-i686.AppImage",
+                                    steamdeck="Iron-Sights-steamdeck-i686.zip",steamdeck_folder="Iron-Sights-steamdeck-i686",
+                                    runtime="runtime-i686",sums="SHA256SUMS-linux.txt",
+                                    build_info="linux-build-info.json",build_inputs="linux-build-inputs.json"))
+
+    def test_x86_64_outputs_are_named_for_the_architecture(self):
+        # Act
+        names=linux_packager.output_names(linux_packager.TARGETS["x86_64"])
+        # Assert
+        self.assertEqual(names,dict(appdir="Iron-Sights-linux-x86_64.AppDir",folder="Iron-Sights-linux-x86_64",
+                                    tarball="Iron-Sights-linux-x86_64.tar.gz",appimage="Iron-Sights-linux-x86_64.AppImage",
+                                    steamdeck="Iron-Sights-steamdeck-x86_64.zip",steamdeck_folder="Iron-Sights-steamdeck-x86_64",
+                                    runtime="runtime-x86_64",sums="SHA256SUMS-linux-x86_64.txt",
+                                    build_info="linux-x86_64-build-info.json",build_inputs="linux-x86_64-build-inputs.json"))
+
+    def assert_cache_refused(self,line,message):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange
+            root=Path(folder);build=root/"build";out=root/"dist"
+            build.mkdir()
+            (build/"CMakeCache.txt").write_text(line+"\n")
+            # Act, Assert
+            with self.assertRaisesRegex(ValueError,message):
+                linux_packager.package(build,out,arch="x86_64")
+            self.assertFalse(out.exists())
+
+    def test_packager_refuses_a_sanitizer_build(self):
+        self.assert_cache_refused("GE_SANITIZE:BOOL=ON","sanitizer build")
+
+    def test_packager_refuses_an_oracle_build(self):
+        self.assert_cache_refused("GE_LP64_ORACLE:BOOL=ON","oracle build")
+
+    def test_packager_refuses_a_headless_build(self):
+        self.assert_cache_refused("GE_HEADLESS:BOOL=ON","headless build")
+
+    def test_packager_refuses_a_build_without_video(self):
+        self.assert_cache_refused("GE_VIDEO:BOOL=OFF","without video")
+
+    def test_packager_refuses_a_build_with_compiled_in_assets(self):
+        self.assert_cache_refused("GE_ROMDATA_FALLBACK:BOOL=ON","compiled-in asset copies")
+
+    def test_packager_refuses_an_executable_of_the_other_width(self):
+        headers={"i686":b"\x7fELF\x01\x01\x01"+bytes(11)+b"\x03\x00","x86_64":b"\x7fELF\x02\x01\x01"+bytes(11)+b"\x3e\x00"}
+        for game,target in (("i686","x86_64"),("x86_64","i686")):
+            with self.subTest(game=game,target=target),tempfile.TemporaryDirectory() as folder:
+                # Arrange
+                root=Path(folder);build=root/"build";out=root/"dist"
+                build.mkdir();(build/"IronSights").write_bytes(headers[game])
+                # Act, Assert
+                with self.assertRaisesRegex(ValueError,"is not an "+target+" executable"):
+                    linux_packager.package(build,out,arch=target)
+                self.assertFalse(out.exists())
+
+    def test_library_from_a_32_bit_folder_is_refused_at_x86_64(self):
+        # Arrange
+        ldd="\tlinux-vdso.so.1 (0x00007ffd)\n\tlibfoo.so => /usr/lib/i386-linux-gnu/libfoo.so (0xf7e00000)\n"
+        # Act, Assert
+        with self.assertRaisesRegex(ValueError,"32-bit library folder"):
+            linux_packager.resolved_libraries(ldd,linux_packager.TARGETS["x86_64"])
+
+    def test_library_from_the_i386_folder_is_bundled_at_i686(self):
+        # Arrange
+        ldd="\tlinux-gate.so.1 (0xf7f00000)\n\tlibfoo.so => /usr/lib/i386-linux-gnu/libfoo.so (0xf7e00000)\n"
+        # Act
+        paths=linux_packager.resolved_libraries(ldd,linux_packager.TARGETS["i686"])
+        # Assert
+        self.assertEqual(paths,{"libfoo.so":Path("/usr/lib/i386-linux-gnu/libfoo.so")})
+
+    def test_x86_64_takes_the_cxx_runtime_from_the_system_and_i686_bundles_it(self):
+        # Arrange
+        ldd=("\tlibstdc++.so.6 => /usr/lib/x/libstdc++.so.6 (0x1)\n\tlibgcc_s.so.1 => /usr/lib/x/libgcc_s.so.1 (0x2)\n"
+             "\tlibfoo.so => /usr/lib/x/libfoo.so (0x3)\n")
+        # Act
+        bundled={arch:sorted(linux_packager.resolved_libraries(ldd,linux_packager.TARGETS[arch])) for arch in ("i686","x86_64")}
+        # Assert
+        self.assertEqual(bundled,{"i686":["libfoo.so","libgcc_s.so.1","libstdc++.so.6"],"x86_64":["libfoo.so"]})
+
+    def test_bundling_copies_strips_and_relinks_every_library(self):
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange: a fake tree and system folder of ELF64 files; ldd, strip and patchelf stood in for.
+            root=Path(folder);build=root/"build";system=root/"system";destination=root/"AppDir"
+            elf=b"\x7fELF\x02"+bytes(15)
+            for path in (build/"IronSights",build/"sentry-crash",build/"lib/libsentry.so",build/"lib/libSDL2-2.0.so.0",
+                         system/"libcurl.so.4",system/"libasound.so.2",system/"libpulse.so.0",system/"libfoo.so.1"):
+                path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(elf)
+            target=linux_packager.TARGETS["x86_64"]._replace(system_libdir=str(system))
+            ldd=f"\tlibfoo.so.1 => {system}/libfoo.so.1 (0x1)\n\tlibc.so.6 => /lib/libc.so.6 (0x2)\n"
+            with mock.patch.object(linux_packager.subprocess,"check_output",return_value=ldd), \
+                 mock.patch.object(linux_packager.subprocess,"run") as run:
+                # Act
+                paths=linux_packager.bundle_libraries(build,destination,target)
+            # Assert
+            names=["libsentry.so","libSDL2-2.0.so.0","libcurl.so.4","libasound.so.2","libpulse.so.0","libfoo.so.1"]
+            self.assertEqual(sorted(paths),sorted(names))
+            self.assertEqual(sorted(p.name for p in (destination/"lib").iterdir()),sorted(names))
+            self.assertEqual(run.call_count,2*len(names))
+
+    @unittest.skipUnless(sys.platform.startswith("linux") and shutil.which("gcc"),"needs a C compiler that writes ELF")
+    def test_build_inputs_record_whether_the_play_harness_is_compiled(self):
+        # Both ELF classes: the i686 package reads a 32-bit executable's symbols, the x86_64 one a 64-bit one's.
+        for width in ("-m32","-m64"):
+            with self.subTest(width=width),tempfile.TemporaryDirectory() as folder:
+                # Arrange
+                root=Path(folder);source=root/"probe.c"
+                source.write_text("void portPlayPlayerTick(void) {}\nint main(void) {return 0;}\n")
+                subprocess.run(["gcc",width,str(source),"-o",str(root/"with")],check=True)
+                source.write_text("int main(void) {return 0;}\n")
+                subprocess.run(["gcc",width,str(source),"-o",str(root/"without")],check=True)
+                # Act, Assert
+                self.assertEqual(linux_packager.has_symbol(root/"with","portPlayPlayerTick"),True)
+                self.assertEqual(linux_packager.has_symbol(root/"without","portPlayPlayerTick"),False)
 
     @unittest.skipUnless(shutil.which("gcc"),"Native cache codec test needs a C compiler")
     def test_native_cache_validation(self):

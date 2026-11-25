@@ -1,4 +1,4 @@
-"""ROM-free crash/opt-out tests for the packaged Linux ELF and AppImage."""
+"""ROM-free crash/opt-out tests for the packaged Linux ELF, AppImage and Steam Deck ZIP of an architecture."""
 import argparse
 import gzip
 import hashlib
@@ -14,6 +14,7 @@ import time
 import zipfile
 from http.server import ThreadingHTTPServer
 
+from package_linux import TARGETS, output_names
 from test_sentry_windows import Receiver
 
 
@@ -21,6 +22,13 @@ def assert_no_artwork(names):
     # Third-party texture packs are external mods the player adds, never release contents;
     # nor are the Enhanced fonts the game downloads on request (FORK-052).
     assert not any("Data/TexturePacks" in name or "Data/FontPacks" in name for name in names)
+
+
+def assert_allowlisted(names):
+    """No settings, ROM, debug file or crash envelope, and no texture or font pack, is packaged."""
+    names = list(names)
+    assert not any(Path(n).name == "midas.ini" or n.endswith((".z64", ".n64", ".v64", ".debug", ".envelope")) for n in names)
+    assert_no_artwork(names)
 
 
 def wait_upload(server, count, seconds=6):
@@ -40,7 +48,9 @@ def run(exe, directory, server, args, overrides=None):
                               stdout=out, stderr=err, timeout=30).returncode
 
 
-def check(package, appimage, steamdeck, output):
+def check(package, appimage, steamdeck, output, arch="i686"):
+    target, names_of = TARGETS[arch], output_names(TARGETS[arch])
+    folder, deck_folder = names_of["folder"], names_of["steamdeck_folder"]
     output.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix="run-", dir=output)).resolve()
     server = ThreadingHTTPServer(("127.0.0.1", 0), Receiver)
@@ -50,19 +60,17 @@ def check(package, appimage, steamdeck, output):
     try:
         with tarfile.open(package) as stream:
             names = stream.getnames()
-            assert not any(Path(n).name == "midas.ini" or n.endswith((".z64", ".n64", ".v64", ".debug", ".envelope")) for n in names)
-            assert stream.getmember("Iron-Sights-linux-i686/IronSights").mode & 0o111
-            game = stream.extractfile("Iron-Sights-linux-i686/IronSights").read()
+            assert_allowlisted(names)
+            assert stream.getmember(folder + "/IronSights").mode & 0o111
+            game = stream.extractfile(folder + "/IronSights").read()
             elf = game[:20]
-            assert elf[:5] == b"\x7fELF\x01" and elf[18:20] == b"\x03\x00"
-            assert_no_artwork(names)
+            assert elf[:5] == b"\x7fELF" + bytes([target.elf_class]) and elf[18:20] == target.elf_machine.to_bytes(2, "little")
         with zipfile.ZipFile(steamdeck) as stream:
             names = stream.namelist()
-            prefix = "Iron-Sights-steamdeck-i686/"
+            prefix = deck_folder + "/"
             assert all(name.startswith(prefix) and ".." not in Path(name).parts for name in names)
-            assert not any(Path(name).name == "midas.ini" or name.endswith((".z64", ".n64", ".v64", ".debug", ".envelope")) for name in names)
+            assert_allowlisted(names)
             assert hashlib.sha256(stream.read(prefix + "IronSights")).digest() == hashlib.sha256(game).digest()
-            assert_no_artwork(names)
             sums = dict(line.split("  ", 1)[::-1] for line in stream.read(prefix + "SHA256SUMS.txt").decode().splitlines())
             for name in ("run.sh", "STEAM-DECK.txt", "set-steam-art.py", "iron-sights.png", "steam-art/cover.png",
                          "steam-art/banner.png", "steam-art/hero.png", "steam-art/logo.png"):
@@ -72,20 +80,20 @@ def check(package, appimage, steamdeck, output):
         extracted.mkdir()
         subprocess.run([str(appimage.resolve()), "--appimage-extract"], cwd=extracted,
                        stdout=subprocess.DEVNULL, check=True, timeout=60)
-        assert_no_artwork(str(path) for path in (extracted / "squashfs-root").rglob("*"))
+        assert_allowlisted(str(path) for path in (extracted / "squashfs-root").rglob("*"))
         for name in ("enabled", "healthy", "optout", "toggle-off", "override-off", "missing-sdk", "symlink-cache", "offline-retry", "appimage", "steamdeck"):
             directory = work / name
             directory.mkdir()
             if name == "steamdeck":
                 with zipfile.ZipFile(steamdeck) as stream:
                     stream.extractall(directory)
-                directory = directory / "Iron-Sights-steamdeck-i686"
+                directory = directory / deck_folder
                 exe = directory / "run.sh"
                 exe.chmod(0o755)
             else:
                 with tarfile.open(package) as stream:
                     stream.extractall(directory)
-                directory = directory / "Iron-Sights-linux-i686"
+                directory = directory / folder
                 exe = directory / "IronSights"
             args = ["--test-crash-reporting"]
             overrides = {}
@@ -140,7 +148,7 @@ def check(package, appimage, steamdeck, output):
         assert event["level"] == "fatal" and event["release"].startswith("iron-sights@")
         assert event["extra"] == dict(stage=-1, menu=-1, frame=0)
         image = next(image for image in event["debug_meta"]["images"] if image["code_file"].endswith("/IronSights"))
-        assert image["debug_id"] and event["tags"]["architecture"] == "i686"
+        assert image["debug_id"] and event["tags"]["architecture"] == target.suffix
         result = dict(cases=cases, event_id=event["event_id"], debug_id=image["debug_id"], bytes=len(body))
         (output / "results.json").write_text(json.dumps(result, indent=2) + "\n")
         print(json.dumps(result, indent=2))
@@ -160,9 +168,10 @@ def check(package, appimage, steamdeck, output):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--arch", choices=sorted(TARGETS), default="i686")
     parser.add_argument("--package", type=Path, required=True)
     parser.add_argument("--appimage", type=Path, required=True)
     parser.add_argument("--steamdeck", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    check(args.package, args.appimage, args.steamdeck, args.output)
+    check(args.package, args.appimage, args.steamdeck, args.output, args.arch)

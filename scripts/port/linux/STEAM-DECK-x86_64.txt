@@ -1,0 +1,37 @@
+Iron Sights for Steam Deck / SteamOS (64-bit)
+
+This ZIP contains the same native 64-bit x86_64 game as the Linux x86_64
+tarball and AppImage, with a launcher for Steam Deck. glibc 2.35 or newer,
+OpenGL 3.3 drivers and the system's C++ runtime (libstdc++ from GCC 12 or
+newer, as Ubuntu 22.04 ships it, and libgcc_s) are used; no 32-bit libraries
+are needed. Suspend
+points are unavailable in 64-bit builds; campaign saves work as in the i686
+package. The i686 ZIP remains available for suspend points. A real Steam Deck
+has not yet been used to validate this package.
+
+1. In Desktop Mode, extract the ZIP to a writable folder under your home
+   directory. Keep the entire Iron-Sights-steamdeck-x86_64 folder together.
+2. Put your own stock GoldenEye 007 (USA) ROM in its Data folder. The ROM is
+   never included in the download.
+3. In Konsole, enter the extracted folder and run: sh run.sh
+4. To launch from Gaming Mode with its name, icon and library artwork:
+   a. In Konsole, in the extracted folder, run: python3 set-steam-art.py
+      This makes run.sh executable and adds Iron Sights (64-bit) to the
+      application menu, pointing at this folder. An i686 install keeps its
+      own Iron Sights entry, so both can be installed side by side.
+   b. In Steam, choose Games > Add a Non-Steam Game to My Library, tick
+      Iron Sights (64-bit) and choose Add Selected Programs.
+   c. Run python3 set-steam-art.py again. It finds that shortcut and copies the
+      cover, banner, background and logo from steam-art into Steam.
+   d. Restart Steam, or return to Gaming Mode, to see the artwork.
+   The script only reads Steam's shortcut list, never changes it, and keeps
+   artwork you already chose for the shortcut unless you add --force. A
+   shortcut added earlier by browsing to run.sh also gets the artwork. If the
+   script says no shortcut was found, exit Steam once so it saves the new
+   shortcut, then run it again. The launcher finds its own folder and bundled
+   libraries, even when Steam starts it from another working directory.
+
+Data, saves, profiles and midas.ini stay beside IronSights. Preserve them when
+updating. If you move the folder, run set-steam-art.py again and re-add the
+shortcut. See START-HERE.txt for settings, crash reporting and
+verification. The Linux x86_64 tarball and AppImage remain alternatives.

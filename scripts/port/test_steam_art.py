@@ -255,6 +255,53 @@ class Script(unittest.TestCase):
             self.assertIn("Exec=" + steam_art.desktop_exec(app.resolve() / "run.sh"), entry)
             self.assertEqual(vdf.read_bytes(), before)
 
+    def make_install(self, root, name, elf_class):
+        app = root / name
+        (app / "steam-art").mkdir(parents=True)
+        shutil.copy2(SCRIPT, app / "set-steam-art.py")
+        for image in ART.glob("*.png"):
+            shutil.copy2(image, app / "steam-art" / image.name)
+        (app / "run.sh").write_text("#!/bin/sh\n")
+        (app / "IronSights").write_bytes(b"\x7fELF" + bytes([elf_class]) + bytes(15))
+        return app
+
+    def run_install(self, root, app):
+        env = dict(os.environ, HOME=str(root / "home"), XDG_DATA_HOME=str(root / "xdg"))
+        subprocess.run([sys.executable, str(app / "set-steam-art.py")], env=env, capture_output=True, text=True, check=True)
+
+    def test_a_64_bit_folder_gets_its_own_menu_entry(self):
+        with tempfile.TemporaryDirectory() as work:
+            # Arrange
+            root = Path(work)
+            app = self.make_install(root, "Iron-Sights-steamdeck-x86_64", 2)
+            # Act
+            self.run_install(root, app)
+            # Assert
+            self.assertEqual(os.listdir(root / "xdg/applications"), ["iron-sights-steamdeck-x86_64.desktop"])
+            entry = (root / "xdg/applications/iron-sights-steamdeck-x86_64.desktop").read_text()
+            self.assertIn("Name=Iron Sights (64-bit)\n", entry)
+
+    def test_two_installs_keep_two_entries_and_two_artwork_sets(self):
+        with tempfile.TemporaryDirectory() as work:
+            # Arrange
+            root = Path(work)
+            apps = {elf_class: self.make_install(root, f"deck {elf_class}", elf_class) for elf_class in (1, 2)}
+            config = root / "home/.local/share/Steam/userdata/1234/config"
+            config.mkdir(parents=True)
+            (config / "shortcuts.vdf").write_bytes(encode_vdf({"shortcuts": {
+                "0": shortcut(apps[1] / "run.sh", name="Iron Sights", appid=11),
+                "1": shortcut(apps[2] / "run.sh", name="Iron Sights (64-bit)", appid=22)}}) + b"\x08")
+            # Act
+            for app in apps.values():
+                self.run_install(root, app)
+            # Assert
+            menu = root / "xdg/applications"
+            self.assertEqual(sorted(os.listdir(menu)), ["iron-sights-steamdeck-x86_64.desktop", "iron-sights-steamdeck.desktop"])
+            self.assertIn("Path=" + str(apps[1].resolve()) + "\n", (menu / "iron-sights-steamdeck.desktop").read_text())
+            self.assertIn("Path=" + str(apps[2].resolve()) + "\n", (menu / "iron-sights-steamdeck-x86_64.desktop").read_text())
+            stems = ("p", "", "_hero", "_logo")
+            self.assertEqual(sorted(os.listdir(config / "grid")), sorted(f"{n}{s}.png" for n in (11, 22) for s in stems))
+
     def test_reports_when_no_shortcut_exists(self):
         with tempfile.TemporaryDirectory() as work:
             root = Path(work)

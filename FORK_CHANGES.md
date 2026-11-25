@@ -3685,6 +3685,8 @@ Over all the laptop's comparisons, the lines not exercised are the nine `i686:a6
 
 *LP64-007 task 2, the build names its architecture (2026-11-24), on the Mac: aarch64 natively, x86_64 under Rosetta 2, i686 under qemu emulation.* Commit "Name the build's architecture in crash reports, the log and the stamp" (`port/include/port_build_arch.h`, `port/crash/reporting_linux.c`, `port/src/sysstubs.c`, `port/src/port_startup.c`, `scripts/port/build_info.py`, `scripts/port/buildinfo.cmake`, `CMakeLists.txt`, `scripts/port/test_build_arch.sh` and `.c`, a test in `scripts/port/test_distribution.py`, one line in the workflow's tests step, FORK-020, this note, the plan's Task 2 boxes). `portBuildArchitecture()` names `x86_64`, `i686`, `aarch64`, `wasm32` or `unknown` from the compiler's macros; the Linux Sentry tag `architecture` is that string; at 64 bits only (`#if IS_64_BIT`) the `ge: sys: build` line ends ` arch NAME` and the legal-screen line ends ` - 64-bit`, never in a comparison build; `build-info.json` gains `"architecture"` for every build, which CMake derives (`GE_BUILD_ARCHITECTURE`: Emscripten, else `GE_POINTER_BITS` 32, else `CMAKE_SYSTEM_PROCESSOR`) and passes as `build_info.py --architecture`, leaving `port_buildinfo.h` unchanged (the new test holds it equal for `i686` and `x86_64`). FORK-020 has the behaviour. *TDD.* Before the header existed `test_build_arch.sh` did not compile (`port_build_arch.h: No such file or directory`) at 32 and 64 bits in the x86_64 container and at 64 in the aarch64 one; after it, `PASS (32-bit)` and `PASS (64-bit)` in the x86_64 container and `PASS (64-bit)` in the aarch64 one. *Figures.* `compare_win32.py commits 40855fa WORKTREE`: `identical in loaded code and data; .buildid differs`. P1 exit 0 (incremental, about 51 s); the release tree run offscreen in the development container (`LD_LIBRARY_PATH` its `lib/`, `GE_SHOT=20`, 900 frames) logged `ge: sys: build 631-20261125 commit 40855fa89 branch main (sysstubs.c compiled Nov 25 2026 01:52:47) arch x86_64`, and its legal screen read `Build 631-20261125 - 40855fa89 (modified) - 64-bit` (the uncommitted tree; the screenshot stays under `build/lp64/ship/`); a 32-bit video build (`cmp-i686-video`, i686 under qemu) logged the line without `arch`; `build-info.json` named `x86_64` (the release tree), `aarch64` (`boot`, `video`) and `i686` (`ref-i686`). *Checks.* The plain aarch64 play sets `demos,stages,stops,menus,tours,attract,input` on `boot`: `OK: 146 of 146 cases` (944 s); the mission smoke on `video`: 20 of 20 missions PASS (471 s). The CI tests step in the x86_64 container (Rosetta 2), each line under a 1,200 s limit, the sanitized `test_buffers.sh` line run as its two halves as before and `hand_gallery.py verify --allow-pending` not run (this task does not run that tool): `harness lines: 102, failures: 0` (518 s), the gate `360 files compiled, 0 failed` and `391 files compiled, 0 failed`, and the static checks printing `OK: 24 truncating casts in 11 files, all allowed`, `OK: 1620 sites, all reviewed`, `OK: 0 narrowings in 0 files, all allowed`, `OK: 4 unprototyped calls in 4 files, all allowed`, `OK: 121 pointer-only types, as pinned in lp64_pointer_types.txt` and `OK: 15 mismatches, all allowed`. `test_sentry_linux.py` still expects `i686`; the package check, which takes it to two architectures, exists from Task 3.
 
+*LP64-007 task 3, the packager at two architectures (2026-11-24), on the Mac: x86_64 under Rosetta 2 in the project's containers; nothing ran on real x86 hardware or at i686.* Commit "Package the x86_64 tree as a tarball, an AppImage and a Steam Deck ZIP" (`scripts/port/package_linux.py`, `scripts/port/test_sentry_linux.py`, `scripts/port/linux/set-steam-art.py`, the new `scripts/port/linux/START-HERE-x86_64.txt` and `STEAM-DECK-x86_64.txt`, `scripts/port/test_distribution.py`, `scripts/port/test_steam_art.py`, FORK-031, FORK-046, this note, the plan's Task 3 boxes and its P4 lines). `package_linux.py --arch {i686,x86_64}` reads `TARGETS`; FORK-031 has the names, the runtime pin (sha256 `2fca8b44...260d` of the downloaded `runtime-x86_64`, equal to the digest GitHub's release API lists), the refusals, the file list and sizes; FORK-046 the Deck menu names. The i686 record is f04e0a7's literals; for i686 the packager runs the same commands with the same arguments (the symbol read for `play_harness` is Python, no new command). `test_sentry_linux.py --arch` takes its folder names, ELF bytes and expected `architecture` tag (`x86_64`) from the same table. **Seen failing first:** `test_distribution.py` 12 errors (no `TARGETS`, `output_names`, `resolved_libraries`; `package()` without `arch`), `test_steam_art.py` 2 failures (one menu entry where two were expected). P2's first run stopped on `AttributeError: 'PosixPath' object has no attribute 'elf_class'`: the old loop's local `target` hid the new parameter (renamed `bundled`); `test_bundling_copies_strips_and_relinks_every_library` now drives that loop on a fake tree with `ldd`, `strip` and `patchelf` stood in for by `unittest.mock`, and fails with that error when the shadowing is put back. **The C++ runtime.** With the package's `lib/`, the game could not open a GL context in the Ubuntu 24.04 development container (`ge: FATAL: Could not open SDL window with an OpenGL context of any supported version: Could not find a valid EGL device to initialize`; `LD_DEBUG=libs`: `lib/libstdc++.so.6: version GLIBCXX_3.4.32 not found (required by /lib/x86_64-linux-gnu/libLLVM.so.20.1)`, Mesa 25.2); with only that file removed from a scratch copy it ran 600 frames and 20 of 20 missions. By the controller's ruling the x86_64 target takes `libstdc++.so.6` and `libgcc_s.so.1` from the system (`system_libraries`), and a test holds that x86_64 leaves both out and i686 keeps them. `readelf -V` over the 58 shipped ELF files: at most `GLIBCXX_3.4.30` (the game's `std::condition_variable::wait`; `std::__throw_bad_array_new_length` is 3.4.29), `CXXABI_1.3.9`, `GCC_3.0`, `GLIBC_2.35`: GCC 11.4 links against the release image's installed libstdc++ 12.3, so the floor is GCC 12's C++ runtime (Ubuntu 22.04's own), not GCC 11's; the two text files say GCC 12. **Open question for the owner (untested on this Mac):** the i686 package bundles the same 22.04 `libstdc++.so.6` and `libgcc_s.so.1` and so probably fails the same way on a host whose 32-bit graphics driver was built with a newer GCC (what was seen above is x86_64 only; nothing was run at i686, whose packager cannot run here). The i686 package is unchanged, as the plan requires. **Package check.** P1 exit 0 (13 s, warm ccache). P2 exit 0, printing the three paths. P3: on the real AppImage the test stops at `--appimage-extract` with `OSError: [Errno 8] Exec format error`: Rosetta 2's ELF match does not accept the type-2 magic `AI\x02` in `e_ident[8..10]` (the AppImage run directly: `Exec format error`, exit 126). The unchanged test with `--appimage` set to a scratch copy differing only in those three bytes passed all ten cases on the real tarball and ZIP (exit codes and uploads: enabled 139/1, healthy 0/0, optout 139/0, toggle-off 139/0, override-off 139/0, missing-sdk 0/0, symlink-cache 0/0, offline-retry 139/1, steamdeck 139/1), the `appimage` case (139/1) only against that copy, which was then deleted; CI's real x86_64 runner judges the AppImage in Task 4. The test now also applies its allowlist (no `midas.ini`, ROM, `.debug`, envelope, texture or font pack) to the extracted AppImage. P4: `lp64_boot.py` and `audit_buffers.py` run a copy of the executable from a temporary folder, so as first written the copy loaded the container's `libSDL2` from `/lib/x86_64-linux-gnu`; the plan's P4 lines now pass the package's `lib/` as `LD_LIBRARY_PATH` (the container's absolute path; both tools keep the caller's non-`GE_` variables). With it: `OK: ran 600 frames` and 20 of 20 missions `PASS` (629 s for both). `LD_DEBUG=libs` on such a copy: `libSDL2-2.0.so.0` from the package's `lib/`, `libstdc++.so.6` and `libgcc_s.so.1` from `/lib/x86_64-linux-gnu`. libsentry is loaded only from the executable's own folder (`port/crash/reporting_linux.c` opens `<exe dir>/lib/libsentry.so`), so a copied run logs `crash reporting preference=ON active=0` and loads none; P3, which runs the extracted packages in place, is its check. `lp64_play.py run --video` copies the executable the same way (`run_copies.SharedExecutable`) and keeps the caller's non-`GE_` variables, so Task 8 needs the same `LD_LIBRARY_PATH`. **Checks.** `compare_win32.py commits 40855fa WORKTREE`: `identical in loaded code and data; .buildid differs`, exit 0 (no C changed). The CI tests step's 103 lines in the x86_64 container (Rosetta 2), each exit 0, with the sanitized `test_buffers.sh` line run as its two halves (`MIDAS_HARNESS_WIDTHS=64 MIDAS_BUFFER_SANITIZE=1`, `test_buffers: PASS (64-bit)`, and `MIDAS_HARNESS_WIDTHS=32`, `PASS (32-bit)`): gate 360 files compiled, 0 failed, gate-video 391, 0 failed, `OK: 0 narrowings in 0 files, all allowed`, `OK: 4 unprototyped calls in 4 files, all allowed`, `OK: 121 pointer-only types`, `OK: 15 mismatches, all allowed`, `OK: 1620 sites, all reviewed`, `OK: 24 truncating casts in 11 files, all allowed`, the gallery `pending` (strict inputs fresh). No play sets ran (tools, tests and text only).
+
 **LP64-006 hand-over to LP64-007** (written at the final review's fix wave from the review, the controller's ledger and the task notes above, and completed at Task 17 on 2026-11-24; each patch is under `scripts/port/lp64_patches/`, whose `README.md` says what it changes and the commit it applies to):
 
 - *The owner's open questions* (eight; none is applied, each would change the shipped 32-bit program or the 64-bit one's behaviour):
@@ -9737,6 +9739,18 @@ unless `--force` is given. Shortcuts without a stored `appid` use Steam's legacy
 CRC32-of-exe-plus-name ID. The other Linux packages and the Windows ZIP are
 unchanged.
 
+Since LP64-007 Task 3 (2026-11-24, local, not published) there are two Deck
+ZIPs, i686 and x86_64, and the helper names its menu entry after the build
+beside it: an `IronSights` of ELF class 2 gets
+`iron-sights-steamdeck-x86_64.desktop` with `Name=Iron Sights (64-bit)` and
+`Comment=Iron Sights (64-bit Steam Deck ZIP)`; any other folder keeps
+`iron-sights-steamdeck.desktop`, `Name=Iron Sights` and its comment, as
+before. Both installs can live side by side: each keeps its own menu entry,
+and each Steam shortcut (a different executable path, so a different app ID)
+gets its own artwork set; neither rewrites the other's. The x86_64 ZIP ships
+`STEAM-DECK-x86_64.txt` as its `STEAM-DECK.txt`, telling the player to tick
+"Iron Sights (64-bit)". The artwork is the same and was not regenerated.
+
 The artwork is generated by `make_brand_art.py` (named `make_steam_art.py` until
 FORK-059), using Pillow, and the PNGs are committed, so release packaging needs
 no Pillow.
@@ -9762,7 +9776,12 @@ release notes in [the workflow](.github/workflows/windows-release.yml) and
 **Checks:** [test_steam_art.py](scripts/port/test_steam_art.py) runs in CI. It
 checks the image sizes, VDF parsing, shortcut matching, app-ID conversion, grid
 names, preservation of existing artwork, menu-entry quoting, and an end-to-end
-run against a fake Steam folder that confirms `shortcuts.vdf` is unchanged. It
+run against a fake Steam folder that confirms `shortcuts.vdf` is unchanged. Since
+LP64-007 Task 3, `test_a_64_bit_folder_gets_its_own_menu_entry` and
+`test_two_installs_keep_two_entries_and_two_artwork_sets` (an i686 and an
+x86_64 folder in one home: two entries, each pointing at its own folder, and
+eight grid images for two app IDs) pass on macOS and in the x86_64 container;
+both failed before the change. It
 passes on Windows and under WSL Linux. A packaging check built a Steam Deck ZIP
 from a placeholder AppDir and listed the new files and their checksums. The
 packaged smoke test ([test_sentry_linux.py](scripts/port/test_sentry_linux.py))
@@ -10752,12 +10771,74 @@ For `i686` the three configure argument lists are those of f04e0a7, which
 `test_linux_build.py` holds literally. No x86_64 package is made or published
 yet; the `linux` job is unchanged.
 
+LP64-007 Task 3 (2026-11-24, local, not published) taught the packager the
+same two architectures. `package_linux.py --arch {i686,x86_64}` (default
+`i686`) reads what differs from `TARGETS` (`suffix`, `elf_class`,
+`elf_machine`, `system_libdir`, `runtime_url`, `runtime_sha256`,
+`dockerfile`, `baseline`, `start_here`, `steam_deck`, `sums_name`,
+`info_prefix`, `system_libraries`). The `i686` record holds f04e0a7's literals
+and an empty `system_libraries`, so its names, runtime and bundled libraries
+are unchanged (`test_i686_target_keeps_its_names_and_runtime`). The x86_64
+outputs are `Iron-Sights-linux-x86_64.tar.gz` (top folder
+`Iron-Sights-linux-x86_64`), `Iron-Sights-linux-x86_64.AppImage`,
+`Iron-Sights-steamdeck-x86_64.zip` (top folder
+`Iron-Sights-steamdeck-x86_64`), `SHA256SUMS-linux-x86_64.txt`,
+`linux-x86_64-build-info.json` and `linux-x86_64-build-inputs.json`, built in
+`linux-release-x86_64.Dockerfile` from `/usr/lib/x86_64-linux-gnu`, with
+`START-HERE-x86_64.txt` and `STEAM-DECK-x86_64.txt` shipped as `START-HERE.txt`
+and `STEAM-DECK.txt`. The x86_64 AppImage runtime is
+`type2-runtime` 20251108's `runtime-x86_64`, sha256
+`2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d`: the
+file downloaded on the Mac hashed to that value, and GitHub's release API
+listed the same digest for the asset (`gh api
+repos/AppImage/type2-runtime/releases/tags/20251108`); the tag is commit
+`dd6cebed...`, the pinned `RUNTIME_SOURCE`, so the licence file is the one
+already pinned. `refuse_unshippable_build(build, arch)` runs first: the
+comparison refusal as before, then a cache with `GE_SANITIZE`,
+`GE_LP64_ORACLE`, `GE_HEADLESS` or `GE_ROMDATA_FALLBACK` on or `GE_VIDEO` not
+on, then an `IronSights` of the other ELF class or machine; a tree without a
+cache skips the cache checks. At x86_64 an `ldd` line resolving from an
+`i386` or `lib32` folder is refused like a "not found" one. `build-inputs.json`
+gains `play_harness` (whether the executable's symbol tables name
+`portPlayPlayerTick`, read in Python with no new command; `true` in the x86_64
+tree). **The x86_64 package does not bundle `libstdc++.so.6` or
+`libgcc_s.so.1`** (its `system_libraries`): with the bundled 22.04 copy, the
+packaged game could not open a GL context in the Ubuntu 24.04 development
+container (`version GLIBCXX_3.4.32 not found (required by
+/lib/x86_64-linux-gnu/libLLVM.so.20.1)`, Mesa 25.2), because a system GPU
+driver built with a newer GCC loads into the game's process and finds the
+older C++ runtime already loaded. By `readelf -V`, the shipped ELF files need
+at most `GLIBCXX_3.4.30` (the game's `std::condition_variable::wait`; GCC 11.4
+links against the image's installed libstdc++ 12.3), `CXXABI_1.3.9`,
+`GCC_3.0` and `GLIBC_2.35`, so the player's system needs the C++ runtime of
+GCC 12 or newer, which Ubuntu 22.04 itself ships. The i686 package still
+bundles both (FORK-089 records the open question). The x86_64 tarball
+(373 files, 39,111,857 bytes unpacked; 14,999,859 bytes packed; AppImage
+15,596,024; Deck ZIP 15,820,487) holds AppImage-LICENSE.txt 1,678, AppRun
+830, Crash-Reporting.md 10,458, Data/README.txt 826, Data/shaders_base.txt
+2,340, IronSights 4,736,248, LICENSE.txt 1,965, Open-Assets-LICENSE.txt
+1,110, SDL2-LICENSE.txt 884, SHA256SUMS.txt 34,980, START-HERE.txt 3,470,
+Save-Transfer-LICENSE.txt 2,452, Sentry-LICENSE.txt 5,586, build-info.json
+551, build-inputs.json 17,948, gamecontrollerdb.txt 603,507,
+gamecontrollerdefault.txt 10,104, iron-sights.desktop 111, iron-sights.png
+161,363, midas_ini_help.txt 56,407, sentry-build.json 512, sentry-crash
+720,264, `lib/` (56 libraries, 28,536,312 bytes: libsentry, SDL2, libcurl,
+libasound, libpulse and their non-system dependencies) and `licenses/` (295
+copyright files, 4,201,951 bytes); no `midas.ini`, ROM, save, profile,
+`.debug`, envelope, texture pack or font pack (checked by hand, and by
+`test_sentry_linux.py`'s `assert_allowlisted` on the tarball, the ZIP and the
+extracted AppImage). All 58 ELF files are ELF64. Sizes are of one local
+packaging run (gzip timestamps vary). Nothing 64-bit is published; the
+`linux` and `publish` jobs are unchanged.
+
 **Sources:** [baseline container](scripts/port/linux-release.Dockerfile),
 [x86_64 baseline container](scripts/port/linux-release-x86_64.Dockerfile),
 [build](scripts/port/linux_build.py), [build tests](scripts/port/test_linux_build.py), [packager](scripts/port/package_linux.py),
 [AppImage launcher](scripts/port/linux/AppRun),
 [Steam Deck launcher](scripts/port/linux/steamdeck-run.sh),
 [Steam Deck instructions](scripts/port/linux/STEAM-DECK.txt),
+[x86_64 instructions](scripts/port/linux/START-HERE-x86_64.txt),
+[x86_64 Steam Deck instructions](scripts/port/linux/STEAM-DECK-x86_64.txt),
 [ELF export boundary](port/crash/linux_game_symbols.map),
 [player instructions](scripts/port/linux/START-HERE.txt),
 [workflow](.github/workflows/windows-release.yml), [root hook](port/src/main.c),
@@ -10793,6 +10874,14 @@ LP64-007 Task 1, on the Mac (x86_64 under Rosetta 2): `test_linux_build.py`
 (GCC 11.4.0) in 354 s; its `IronSights`, `sentry-crash`, `lib/libsentry.so` and
 `lib/libSDL2-2.0.so.0` are ELF 64-bit x86-64 and need at most `GLIBC_2.35`
 (the game) and `GLIBC_2.34` (the other three). FORK-089 has the details.
+LP64-007 Task 3, on the Mac (x86_64 under Rosetta 2): `test_distribution.py`,
+`test_steam_art.py` and `test_linux_build.py` pass in the x86_64 development
+container; P1 and P2 exit 0; the ten crash cases pass, the AppImage case only
+against a scratch copy (the real AppImage gives `Exec format error` under
+Rosetta 2; CI's x86_64 runner judges it in Task 4); the tarball's
+`IronSights`, with the package's `lib/`, runs 600 frames and passes 20 of 20
+missions with video in the Ubuntu 24.04 container. The i686 packager was not
+run on the Mac. FORK-089 has the details.
 
 ### FORK-030 — Native Sentry crash reporting and symbol uploads
 

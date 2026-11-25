@@ -1,0 +1,57 @@
+Iron Sights for Linux x86_64
+
+This is a native 64-bit build. Requires an x86_64 Linux system with glibc
+2.35 or newer and OpenGL 3.3 drivers; no 32-bit libraries are needed. SDL2,
+Sentry and their non-system dependencies are bundled. glibc, the C++ runtime
+(libstdc++ from GCC 12 or newer, as Ubuntu 22.04 ships it, and libgcc_s) and
+GPU drivers are provided by your distribution, so the GPU driver and the game
+share the system's newer C++ runtime. Suspend points are unavailable in 64-bit
+builds; campaign saves work as in the i686 package. The i686 package remains
+available for 32-bit systems and for suspend points.
+
+tar.gz: Extract, put your own stock USA ROM in Data, then run ./IronSights.
+Keep the entire folder together. Saves and midas.ini live beside the executable.
+
+AppImage: chmod +x Iron-Sights-linux-x86_64.AppImage, then run it. Writable
+data and the ROM belong in ${XDG_DATA_HOME:-$HOME/.local/share}/iron-sights/Data,
+the same folder the i686 AppImage uses. Settings live in the parent iron-sights
+folder. GE_DATA_ROOT can override the absolute writable root. FUSE is optional
+with --appimage-extract-and-run.
+
+Steam Deck ZIP: Extract to a writable home folder, put the ROM in Data and run
+sh run.sh in Desktop Mode. To add it as a Non-Steam Game with its icon and
+library artwork, run python3 set-steam-art.py, add Iron Sights (64-bit) in
+Steam and run the script again. Data and midas.ini stay beside the game. See
+STEAM-DECK.txt in that ZIP. This packages the same x86_64 binary and has not
+yet been tested on a Steam Deck device.
+
+Crash reporting is ON by default. Disable it in Port Options > Crash Reporting
+or set crash_reporting=0 under [diagnostics] in midas.ini before launching.
+Reports contain technical stack/system data, paths (possibly account names)
+and a generated installation ID. Sentry receives the network connection IP.
+No minidumps, ROMs, saves, screenshots or raw logs are attached. See
+Crash-Reporting.md for the complete payload and queue description.
+
+HD textures (optional, none included): Get HD Textures in Options downloads
+intermissionfb's GoldenEye 007 HD pack (150 MB) from its makers' GitHub when
+you choose Download (it needs libcurl), into Data/TexturePacks under the
+writable data folder above. Or put its PNG version's ZIP
+(...-gliden64-png-hd.zip, from https://github.com/GhostlyDark/GoldenEye-007-HD)
+or extracted folder there yourself. Texture Pack set to HD (the default) uses it
+for campaign environment textures, the gunbarrel intro, sky clouds, explosions,
+smoke, bullet-impact effects and the HUD's ammo icons. Any other PNG pack
+there (a ZIP or a folder, such as the repository's own Download ZIP or a pack
+you are making) is a custom pack, used for every texture it names, ahead of
+the download; the weapon and hands in your view keep their original look.
+System > Custom Texture Packs explains it and opens the folder.
+
+No ROM or extracted game data is included. Never copy Data/CrashReports into
+a bug report. Keep Data and midas.ini when updating.
+
+On the four-campaign Files screen, Export writes a JSON backup for desktop
+or web. Import confirms full replacement of campaigns, profiles, settings
+and custom controller mappings, then restarts the game. Export current progress
+first to keep it. ROMs, textures and suspend points are not transferred.
+File selection requires zenity or kdialog installed through your distribution.
+
+Verify the package with the release's SHA256SUMS-linux-x86_64.txt.
