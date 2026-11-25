@@ -820,7 +820,12 @@ FORK-089, as the LP64-006 laptop step did.
   whether the room loads are felt), an HD texture pack copied from the
   laptop's own `build_win/Data/TexturePacks` into this install and a
   mission played with it, the Enhanced font download and removal from the
-  Fonts page, and save transfer. Each is a line in FORK-089: seen, or
+  Fonts page, and save transfer. Also the weapon strip with Weapon HUD
+  Icons on: the cards must show their weapon pictures in the i686 and
+  the x86_64 game, each started once on the icon cache the other wrote
+  (Task 8 Step 5 found the two caches byte-identical, but its offscreen
+  software-GL screenshots drew blank cards at both widths, so no picture
+  of an icon has been compared). Each is a line in FORK-089: seen, or
   what went wrong.
 - [ ] **Step 5: A real crash report.** Run the game's
   `--test-crash-reporting`, and confirm in Sentry that the event is
@@ -834,7 +839,12 @@ FORK-089, as the LP64-006 laptop step did.
   build's price or sent back as a defect. `lp64_play.py peaks --budget`
   on any play folder made here: a line a few bytes past half is the
   ratchet (raise at 64 bits to twice the new peak), not a failure,
-  unless an exhaustion line accompanies it.
+  unless an exhaustion line accompanies it. Task 9 tried `bench.py` on
+  the x86_64 package only, offscreen in a container: `benchmarks.md`'s
+  "Linux packages" section names i686 and WSL before either ran, so
+  correct it from what happens here, and say whether the report's system
+  reads `unknown` (the game prints no `ge: sys: Linux` line; whether it
+  should is a question for the owner).
 - [ ] **Step 7 (optional): 32-bit pixels.** `lp64_equiv.py run --video
   --draw --shots` for the 22 cases on the i686 and x86_64 comparison
   builds in Docker there, then `lp64_equiv_pictures.py shots`.
