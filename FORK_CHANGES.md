@@ -30,6 +30,86 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-091 — XWayland pointer reset on focus
+
+**Status:** Implemented on 2026-11-25 at the owner's request, during LP64-007
+Task 10's hardware session, after the owner found the x86_64 Linux package's
+menus soft-locked under WSLg on the laptop (Windows 11, WSL 2.1.5, Ubuntu
+24.04) after an alt-tab.
+
+**The fault.** After the owner alt-tabbed out of the fullscreen game and back,
+the window still got key presses and clicks but no pointer motion. The red
+menu cursor stayed where it was, and each click pressed whatever lay under it.
+The game logged `mouse 0/s` from then on. F1 (take and release the mouse) did
+not bring motion back. A minimal SDL window built on the package's own
+`libSDL2`, with the same X11 driver and desktop fullscreen, reproduced it.
+With the cursor hidden it recovered from every alt-tab until it warped the
+pointer once. After that warp it still moved while focused, but after the next
+focus change it got no motion until the cursor was shown again. Showing the
+cursor brought motion back at once.
+
+XWayland emulates a pointer warp under a hidden cursor with a Wayland pointer
+lock. Under WSLg the emulation survives the focus change without receiving
+motion, and showing the cursor ends it. The same session showed the Windows
+arrow over the game: WSLg does not honour the hidden cursor either.
+
+Inherited behaviour: upstream's menus warp the real pointer to re-seat their
+cursor (`mouseWarpFree`, `port/src/input_pc.c`), and the game hides the
+system cursor for as long as mouse control is on. Upstream has no reset.
+
+**The fix.** On `SDL_WINDOWEVENT_FOCUS_GAINED`, a Linux native build shows the
+system cursor and hides it again, when SDL's video driver is `x11`,
+`WAYLAND_DISPLAY` is set (so X11 is XWayland) and the cursor is hidden.
+Nothing else changes: no setting, no new input, no change to the warp or to
+the mouse lock. Plain X11, SDL's Wayland driver, offscreen runs and a cursor
+the player has shown are left alone. The call sits behind
+`#if defined(__linux__) && !defined(__EMSCRIPTEN__)`, and the module compiles
+to nothing elsewhere, so the Windows and browser builds are unchanged. It runs
+once per focus gain, never per frame, so it needs no benchmark. It logs
+`ge: input: XWayland pointer reset on focus` each time.
+
+Keyboard, pads and browser touch are unaffected. Real Linux Wayland desktops
+(GNOME, KDE) were not tried. Their compositors may not show the fault, and the
+reset there costs one cursor change per focus gain.
+
+**Sources:** [interface](port/include/port_xwayland_pointer.h),
+[module](port/src/port_xwayland_pointer.c), with the hook in
+`port/src/input_pc.c`'s window-event case.
+
+**Checks:** [ROM-free test](scripts/port/test_xwayland_pointer.c) and its
+[runner](scripts/port/test_xwayland_pointer.sh), in the workflow's tests step.
+It covers seven cases: XWayland with the cursor hidden and shown, plain X11,
+an empty Wayland display, SDL's Wayland and offscreen drivers, and no driver.
+A reset must show, then hide, the cursor, and leave it hidden. It passes at 32
+and 64 bits in the x86_64 container. A copy of the module without the show
+call fails it.
+
+On the laptop, the minimal SDL window, given the same reset, recovered pointer
+motion after a warp and an alt-tab twice (524 and 71 events a second, against
+0 without it). An x86_64 package built with the fix in the release image
+(`linux-release-x86_64.Dockerfile`) was played in WSLg. After each alt-tab
+the menu cursor followed the mouse again, and the log showed one reset line
+for each return.
+
+`compare_win32.py commits HEAD WORKTREE` prints `identical in loaded code and
+data; .buildid differs`. CMake keeps the module out of every build but Linux
+video builds, as it does for `input_pc.c`. On Windows its empty object would
+still add a compiler identification string. A configure of 64-bit headless
+and video trees confirmed which builds compile it.
+
+The first comparisons on the laptop differed for an unrelated reason. The
+checkout held 34 files with CRLF line endings that Git stores with LF.
+`WORKTREE` exports files from disk, so `hd_texture_scope_embed.cmake`
+embedded `hd_level_native_aliases.json` with 2,114 extra bytes. Restoring the
+files' LF endings from Git made the two builds identical.
+
+Two other WSLg faults stay as they were; this fix does not reach them. WSLg
+still draws the Windows arrow over the game. In relative mode, which gameplay
+uses for mouse-look, WSLg hands SDL inverted motion of one count an event: the
+minimal window logged `xrel` −165 for a move to the right and `yrel` +126 for
+a move up, each event ±1. So mouse-look cannot be judged under WSL. The menus
+read absolute positions and are unaffected.
+
 ### FORK-090 — Load before play: late-load audit, HD prefetch, warm-up frames
 
 **Status:** Implemented on 2026-11-15 at the owner's request, after the owner

@@ -411,6 +411,12 @@ endif()
 if(NOT GE_POINTER_BITS EQUAL 64)
     list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_lp64_notice.c)
 endif()
+# The XWayland pointer reset (port_xwayland_pointer.c, FORK-091) is for Linux
+# native video builds (the video lists below drop it with input_pc.c); elsewhere
+# its empty object would still add a compiler ident.
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_xwayland_pointer.c)
+endif()
 # The models' list store (port_gdl_store.h, LP64-006 Task 11b) is the 64-bit
 # build's alone: a 32-bit build converts as it always has (objecthandler_2.c).
 if(NOT GE_POINTER_BITS EQUAL 64)
@@ -502,6 +508,7 @@ if(GE_HEADLESS)
         ${CMAKE_SOURCE_DIR}/port/src/audio_pc.c
         ${CMAKE_SOURCE_DIR}/port/src/video.c
         ${CMAKE_SOURCE_DIR}/port/src/input_pc.c
+        ${CMAKE_SOURCE_DIR}/port/src/port_xwayland_pointer.c
         ${CMAKE_SOURCE_DIR}/port/src/raphnet.c)
     # port_baked_trace.c includes SDL.h for its bake thread; headless has no
     # SDL2, so give it the CI shim, which also selects the thread-free path.
@@ -670,10 +677,12 @@ if(GE_VIDEO)
     endif()
 else()
     set(FAST3D_SRC)
-    # video.c/input_pc.c/raphnet.c are GE_VIDEO-only; exclude them from the port glob.
+    # video.c/input_pc.c/raphnet.c are GE_VIDEO-only; exclude them from the port glob,
+    # with input_pc.c's XWayland pointer reset.
     list(REMOVE_ITEM PORT_SRC
         ${CMAKE_SOURCE_DIR}/port/src/video.c
         ${CMAKE_SOURCE_DIR}/port/src/input_pc.c
+        ${CMAKE_SOURCE_DIR}/port/src/port_xwayland_pointer.c
         ${CMAKE_SOURCE_DIR}/port/src/raphnet.c)
 endif()
 

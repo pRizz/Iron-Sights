@@ -32,6 +32,7 @@
 #include <SDL.h>
 #include "port_console.h" /* the tilde console: fixed keys feed it below */
 #include "port_input_prompt.h"
+#include "port_xwayland_pointer.h"
 #ifdef __EMSCRIPTEN__
 #include "../web/menu_pointer.h"
 #endif
@@ -2032,6 +2033,9 @@ static int inputEventWatch(void *userdata, SDL_Event *event)
         if (event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED || event->window.event == SDL_WINDOWEVENT_FOCUS_LOST)
         {
             s_WindowFocused = (event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED);
+#if defined(__linux__) && !defined(__EMSCRIPTEN__)
+            if (s_WindowFocused) portXwaylandPointerFocusGained(); /* FORK-091 */
+#endif
         }
         break;
     case SDL_MOUSEWHEEL:
