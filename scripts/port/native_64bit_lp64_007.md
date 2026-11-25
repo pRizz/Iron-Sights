@@ -2,10 +2,10 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Planned on 2026-11-24 from measurements on `main` at f04e0a7.
-Not accepted yet: the owner's decisions are listed under "Decisions for
-the owner" at the end, and the tasks are written for the recommendations.
-Nothing is built. The status table of
+**Status:** Planned on 2026-11-24 from measurements on `main` at f04e0a7,
+and accepted by the owner the same day with all thirteen recommendations
+("Accept all thirteen"); "Decisions for the owner" at the end lists them,
+and the tasks are written for them. Execution started on 2026-11-24. The status table of
 [native_64bit_plan.md](native_64bit_plan.md) records what is built and
 verified as the tasks land.
 
@@ -954,7 +954,11 @@ is a note in FORK-089 and the hand-over keeps the list.
 ## Decisions for the owner
 
 Thirteen, each with a recommendation and what the other way costs. The
-tasks are written for the recommendations.
+tasks are written for the recommendations. **Accepted on 2026-11-24: all
+thirteen recommendations**, decision 12 with its picks as written (yes to
+questions 2, 4, 6 except `fabsf`, and 7; no for now to 3 and 5; 1 and 8
+wait for Task 10's session). Whether the owner has a Steam Deck is not
+yet answered; Task 10 asks.
 
 1. **What ships at 64 bits.** *Recommended:* all three formats for
    x86_64 (tarball, AppImage, Steam Deck ZIP), beside the three i686
