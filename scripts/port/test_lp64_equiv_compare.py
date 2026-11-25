@@ -206,6 +206,7 @@ class Compare(RunFolders):
 
         # Assert
         self.assertEqual(status, 0, out)
+        self.assertNotIn('has no pin for', out)
         self.assertIn('OK: 1 cases, 1 streams, 0 identical, 1 as recorded', out)
 
     def test_mixed_kinds_are_refused_with_expect(self):
@@ -220,6 +221,18 @@ class Compare(RunFolders):
         # Assert
         self.assertEqual(status, 2, out)
         self.assertIn(f'error: the run folders are of mixed kinds (a video run: {a}; a headless run: {b})', out)
+
+    def test_mixed_kinds_are_compared_without_expect(self):
+        # Arrange
+        a = self.run_folder('i686', sim(), video=True)
+        b = self.run_folder('a64', sim())
+
+        # Act
+        status, out = self.equiv('compare', '--streams', 'sim', str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('OK: 1 cases, 1 streams, 1 identical, 0 as recorded', out)
 
 
 if __name__ == '__main__':
