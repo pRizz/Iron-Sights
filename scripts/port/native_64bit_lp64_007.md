@@ -708,7 +708,7 @@ checkpoint.
 - Modify: `scripts/port/lp64_equiv_compare.py` and its test (Step 1),
   `FORK_CHANGES.md`
 
-- [ ] **Step 1: Guard `record['video']`** (the hand-over's pointer):
+- [x] **Step 1: Guard `record['video']`** (the hand-over's pointer):
   `compare` treats an `equiv.json` without the field as a headless run
   and refuses folders of mixed kinds with `--expect`, naming them. Test
   first: `test_a_record_without_the_field_reads_as_headless`,

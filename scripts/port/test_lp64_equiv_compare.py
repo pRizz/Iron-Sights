@@ -6,6 +6,7 @@ import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lp64_equiv  # noqa: E402
+import lp64_equiv_compare  # noqa: E402
 from lp64_equiv_testkit import AUDIO_LOCKED, RunFolders, sim, wav  # noqa: E402
 
 
@@ -191,6 +192,34 @@ class Compare(RunFolders):
         # Assert
         self.assertEqual(status, 0, out)
         self.assertIn('dam1 gfx i686:a64 identical (1)', out)
+
+    def test_a_record_without_the_field_reads_as_headless(self):
+        # Arrange: a record written before `video` was recorded, pinned only for a headless run
+        a = self.run_folder('i686', sim(), video=None)
+        b = self.run_folder('a64', sim(seed_at={2: '00000000000000ff'}), video=None)
+        pin = lp64_equiv_compare.stream_sha256('stage-dam', 'sim', b/'run1')
+        expect = self.canned('expected.txt', f'i686:a64 stage-dam default sim differs-from 2 headless-sha256={pin} '
+                                             'explained: a seed; removed-by: sim-seeded\n')
+
+        # Act
+        status, out = self.equiv('compare', '--streams', 'sim', '--expect', str(expect), str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('OK: 1 cases, 1 streams, 0 identical, 1 as recorded', out)
+
+    def test_mixed_kinds_are_refused_with_expect(self):
+        # Arrange
+        a = self.run_folder('i686', sim(), video=True)
+        b = self.run_folder('a64', sim())
+        expect = self.canned('expected.txt', '# nothing differs\n')
+
+        # Act
+        status, out = self.equiv('compare', '--streams', 'sim', '--expect', str(expect), str(a), str(b))
+
+        # Assert
+        self.assertEqual(status, 2, out)
+        self.assertIn(f'error: the run folders are of mixed kinds (a video run: {a}; a headless run: {b})', out)
 
 
 if __name__ == '__main__':

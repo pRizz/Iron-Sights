@@ -183,6 +183,24 @@ def read_record(folder: Path) -> dict:
         raise ValueError(f'{folder}: no readable {RECORD} (not a run folder of lp64_equiv.py run)') from error
 
 
+def made_with_video(record: dict) -> bool:
+    """Whether RECORD's run was made with --video; a record from before `video` was written is a
+    headless run's, as every run was then."""
+    return bool(record.get('video', False))
+
+
+def mixed_kinds(folders: list[Path], records: list[dict]) -> str | None:
+    """The refusal naming each folder by its kind of run when FOLDERS hold both kinds, else None: a pin
+    is per kind, so one comparison against an expectation file judges one kind."""
+    kinds = {video: [str(folder) for folder, record in zip(folders, records) if made_with_video(record) == video]
+             for video in (True, False)}
+    if not all(kinds.values()):
+        return None
+    return ('the run folders are of mixed kinds ('
+            + '; '.join(f'{RUN_KINDS[video]}: {", ".join(kinds[video])}' for video in (True, False))
+            + '); compare one kind against --expect')
+
+
 def refusal(record: dict, cases: list[str]) -> str | None:
     """Why a run folder with RECORD cannot stand for its build in a comparison of CASES: no stream is
     compared until two runs of the build gave the same file. None when it can."""
@@ -293,7 +311,11 @@ def usable(folders: list[Path], streams: list[str], maybe_expect: Path | None) \
     if any(record['profile'] != records[0]['profile'] for record in records):
         print('error: the run folders ran different profiles', file=sys.stderr)
         return None
-    if any(stream in VIDEO_STREAMS for stream in streams) and not all(record['video'] for record in records):
+    maybe_mixed = mixed_kinds(folders, records) if maybe_expect is not None else None
+    if maybe_mixed is not None:
+        print(f'error: {maybe_mixed}', file=sys.stderr)
+        return None
+    if any(stream in VIDEO_STREAMS for stream in streams) and not all(made_with_video(record) for record in records):
         print('error: gfx and snd need run folders made with --video', file=sys.stderr)
         return None
     for folder in folders if 'snd' in streams else ():
@@ -319,7 +341,7 @@ def compare_folders(folders: list[Path], streams: list[str], maybe_expect: Path 
         print(maybe_note)
     total, identical, recorded, failures, used, notes = 0, 0, 0, [], set(), []
     for folder, record in zip(folders[1:], records[1:]):
-        pair, video = f'{base.name}:{folder.name}', bool(record['video'])
+        pair, video = f'{base.name}:{folder.name}', made_with_video(record)
         for case in records[0]['cases']:
             for stream in streams:
                 label = f'{case} {stream} {pair}'
@@ -373,7 +395,7 @@ def pin_lines(folders: list[Path], streams: list[str], expect: Path) -> int:
     records, expected = found
     base, profile, printed = folders[0], records[0]['profile'], 0
     for folder, record in zip(folders[1:], records[1:]):
-        pair, video = f'{base.name}:{folder.name}', bool(record['video'])
+        pair, video = f'{base.name}:{folder.name}', made_with_video(record)
         for case in records[0]['cases']:
             for stream in streams:
                 key = (pair, case, profile, stream)
