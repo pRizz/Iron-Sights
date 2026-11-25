@@ -128,6 +128,13 @@ A clean checkout compiles without ROM extraction. Inherited checked-in
 scaffolding, tables, fonts and port resources remain part of the source tree;
 this is not a claim that every inherited source resource has been removed.
 
+The native x86_64 Linux packages (tarball, AppImage and Steam Deck ZIP, LP64-007)
+are built and crash-tested by the `linux-x86_64` job on every push to `main`
+and kept for 30 days as the `linux-x86_64-player-package` artifact, with
+`SHA256SUMS-linux-x86_64.txt` and `linux-x86_64-build-*.json`. They are not yet
+published: `publish` does not wait for that job, and no release asset, note or
+attestation names a 64-bit file.
+
 The ZIP and executable are both attested by the publish job in the same run.
 The player downloads the ZIP; the separate executable is passed between jobs
 only for its own attestation. `VERIFY.txt` describes checking the expected

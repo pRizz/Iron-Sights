@@ -5,12 +5,14 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tarfile
 import tempfile
 import threading
 import time
+import uuid
 import zipfile
 from http.server import ThreadingHTTPServer
 
@@ -29,6 +31,35 @@ def assert_allowlisted(names):
     names = list(names)
     assert not any(Path(n).name == "midas.ini" or n.endswith((".z64", ".n64", ".v64", ".debug", ".envelope")) for n in names)
     assert_no_artwork(names)
+
+
+def build_id(path):
+    """The GNU build id note of an ELF file, as lowercase hex, read with `readelf -n`."""
+    notes = subprocess.run(["readelf", "-n", str(path)], capture_output=True, text=True,
+                           check=True, timeout=30).stdout
+    match = re.search(r"Build ID: ([0-9a-f]+)", notes)
+    assert match, ("no GNU build id note", str(path))
+    return match.group(1)
+
+
+def sentry_debug_id(build):
+    """Sentry's debug id for an ELF build id: its first 16 bytes as a GUID with
+    little-endian first fields, at both architectures."""
+    return str(uuid.UUID(bytes_le=bytes.fromhex(build)[:16]))
+
+
+def assert_symbolicable(event, debug_file):
+    """The event names the game's image by the build id of its debug file, and
+    a frame of the crash lies inside that image, so the upload can symbolicate it."""
+    image = next(image for image in event["debug_meta"]["images"] if image["code_file"].endswith("/IronSights"))
+    assert image["debug_id"] == sentry_debug_id(build_id(debug_file)), (image, str(debug_file))
+    start = int(image["image_addr"], 16)
+    end = start + image["image_size"]
+    stacks = [value.get("stacktrace", {}) for key in ("exception", "threads")
+              for value in event.get(key, {}).get("values", [])]
+    addresses = [int(frame["instruction_addr"], 16) for stack in stacks for frame in stack.get("frames", [])]
+    assert any(start <= address < end for address in addresses), (image, [hex(a) for a in addresses])
+    return image
 
 
 def wait_upload(server, count, seconds=6):
@@ -51,6 +82,9 @@ def run(exe, directory, server, args, overrides=None):
 def check(package, appimage, steamdeck, output, arch="i686"):
     target, names_of = TARGETS[arch], output_names(TARGETS[arch])
     folder, deck_folder = names_of["folder"], names_of["steamdeck_folder"]
+    # The packager's build folder holds the split debug files beside its dist/.
+    debug_file = package.resolve().parent.parent / "symbols/IronSights.debug"
+    assert debug_file.is_file(), ("missing debug file", str(debug_file))
     output.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix="run-", dir=output)).resolve()
     server = ThreadingHTTPServer(("127.0.0.1", 0), Receiver)
@@ -147,8 +181,8 @@ def check(package, appimage, steamdeck, output, arch="i686"):
         assert b'"type":"attachment"' not in body.replace(b" ", b"")
         assert event["level"] == "fatal" and event["release"].startswith("iron-sights@")
         assert event["extra"] == dict(stage=-1, menu=-1, frame=0)
-        image = next(image for image in event["debug_meta"]["images"] if image["code_file"].endswith("/IronSights"))
-        assert image["debug_id"] and event["tags"]["architecture"] == target.suffix
+        image = assert_symbolicable(event, debug_file)
+        assert event["tags"]["architecture"] == target.suffix
         result = dict(cases=cases, event_id=event["event_id"], debug_id=image["debug_id"], bytes=len(body))
         (output / "results.json").write_text(json.dumps(result, indent=2) + "\n")
         print(json.dumps(result, indent=2))

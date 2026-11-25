@@ -3687,6 +3687,8 @@ Over all the laptop's comparisons, the lines not exercised are the nine `i686:a6
 
 *LP64-007 task 3, the packager at two architectures (2026-11-24), on the Mac: x86_64 under Rosetta 2 in the project's containers; nothing ran on real x86 hardware or at i686.* Commit "Package the x86_64 tree as a tarball, an AppImage and a Steam Deck ZIP" (`scripts/port/package_linux.py`, `scripts/port/test_sentry_linux.py`, `scripts/port/linux/set-steam-art.py`, the new `scripts/port/linux/START-HERE-x86_64.txt` and `STEAM-DECK-x86_64.txt`, `scripts/port/test_distribution.py`, `scripts/port/test_steam_art.py`, FORK-031, FORK-046, this note, the plan's Task 3 boxes and its P4 lines). `package_linux.py --arch {i686,x86_64}` reads `TARGETS`; FORK-031 has the names, the runtime pin (sha256 `2fca8b44...260d` of the downloaded `runtime-x86_64`, equal to the digest GitHub's release API lists), the refusals, the file list and sizes; FORK-046 the Deck menu names. The i686 record is f04e0a7's literals; for i686 the packager runs the same commands with the same arguments (the symbol read for `play_harness` is Python, no new command). `test_sentry_linux.py --arch` takes its folder names, ELF bytes and expected `architecture` tag (`x86_64`) from the same table. **Seen failing first:** `test_distribution.py` 12 errors (no `TARGETS`, `output_names`, `resolved_libraries`; `package()` without `arch`), `test_steam_art.py` 2 failures (one menu entry where two were expected). P2's first run stopped on `AttributeError: 'PosixPath' object has no attribute 'elf_class'`: the old loop's local `target` hid the new parameter (renamed `bundled`); `test_bundling_copies_strips_and_relinks_every_library` now drives that loop on a fake tree with `ldd`, `strip` and `patchelf` stood in for by `unittest.mock`, and fails with that error when the shadowing is put back. **The C++ runtime.** With the package's `lib/`, the game could not open a GL context in the Ubuntu 24.04 development container (`ge: FATAL: Could not open SDL window with an OpenGL context of any supported version: Could not find a valid EGL device to initialize`; `LD_DEBUG=libs`: `lib/libstdc++.so.6: version GLIBCXX_3.4.32 not found (required by /lib/x86_64-linux-gnu/libLLVM.so.20.1)`, Mesa 25.2); with only that file removed from a scratch copy it ran 600 frames and 20 of 20 missions. By the controller's ruling the x86_64 target takes `libstdc++.so.6` and `libgcc_s.so.1` from the system (`system_libraries`), and a test holds that x86_64 leaves both out and i686 keeps them. `readelf -V` over the 58 shipped ELF files: at most `GLIBCXX_3.4.30` (the game's `std::condition_variable::wait`; `std::__throw_bad_array_new_length` is 3.4.29), `CXXABI_1.3.9`, `GCC_3.0`, `GLIBC_2.35`: GCC 11.4 links against the release image's installed libstdc++ 12.3, so the floor is GCC 12's C++ runtime (Ubuntu 22.04's own), not GCC 11's; the two text files say GCC 12. **Open question for the owner (untested on this Mac):** the i686 package bundles the same 22.04 `libstdc++.so.6` and `libgcc_s.so.1` and so probably fails the same way on a host whose 32-bit graphics driver was built with a newer GCC (what was seen above is x86_64 only; nothing was run at i686, whose packager cannot run here). The i686 package is unchanged, as the plan requires. **Package check.** P1 exit 0 (13 s, warm ccache). P2 exit 0, printing the three paths. P3: on the real AppImage the test stops at `--appimage-extract` with `OSError: [Errno 8] Exec format error`: Rosetta 2's ELF match does not accept the type-2 magic `AI\x02` in `e_ident[8..10]` (the AppImage run directly: `Exec format error`, exit 126). The unchanged test with `--appimage` set to a scratch copy differing only in those three bytes passed all ten cases on the real tarball and ZIP (exit codes and uploads: enabled 139/1, healthy 0/0, optout 139/0, toggle-off 139/0, override-off 139/0, missing-sdk 0/0, symlink-cache 0/0, offline-retry 139/1, steamdeck 139/1), the `appimage` case (139/1) only against that copy, which was then deleted; CI's real x86_64 runner judges the AppImage in Task 4. The test now also applies its allowlist (no `midas.ini`, ROM, `.debug`, envelope, texture or font pack) to the extracted AppImage. P4: `lp64_boot.py` and `audit_buffers.py` run a copy of the executable from a temporary folder, so as first written the copy loaded the container's `libSDL2` from `/lib/x86_64-linux-gnu`; the plan's P4 lines now pass the package's `lib/` as `LD_LIBRARY_PATH` (the container's absolute path; both tools keep the caller's non-`GE_` variables). With it: `OK: ran 600 frames` and 20 of 20 missions `PASS` (629 s for both). `LD_DEBUG=libs` on such a copy: `libSDL2-2.0.so.0` from the package's `lib/`, `libstdc++.so.6` and `libgcc_s.so.1` from `/lib/x86_64-linux-gnu`. libsentry is loaded only from the executable's own folder (`port/crash/reporting_linux.c` opens `<exe dir>/lib/libsentry.so`), so a copied run logs `crash reporting preference=ON active=0` and loads none; P3, which runs the extracted packages in place, is its check. `lp64_play.py run --video` copies the executable the same way (`run_copies.SharedExecutable`) and keeps the caller's non-`GE_` variables, so Task 8 needs the same `LD_LIBRARY_PATH`. **Checks.** `compare_win32.py commits 40855fa WORKTREE`: `identical in loaded code and data; .buildid differs`, exit 0 (no C changed). The CI tests step's 103 lines in the x86_64 container (Rosetta 2), each exit 0, with the sanitized `test_buffers.sh` line run as its two halves (`MIDAS_HARNESS_WIDTHS=64 MIDAS_BUFFER_SANITIZE=1`, `test_buffers: PASS (64-bit)`, and `MIDAS_HARNESS_WIDTHS=32`, `PASS (32-bit)`): gate 360 files compiled, 0 failed, gate-video 391, 0 failed, `OK: 0 narrowings in 0 files, all allowed`, `OK: 4 unprototyped calls in 4 files, all allowed`, `OK: 121 pointer-only types`, `OK: 15 mismatches, all allowed`, `OK: 1620 sites, all reviewed`, `OK: 24 truncating casts in 11 files, all allowed`, the gallery `pending` (strict inputs fresh). No play sets ran (tools, tests and text only).
 
+*LP64-007 task 4, crash reports from a 64-bit build and the CI job (2026-11-24), on the Mac: x86_64 under Rosetta 2 in the project's containers; nothing ran on real x86 hardware or at i686. CI's verdict on the new job is not yet in (Step 5).* Commit "Check that a 64-bit crash report symbolicates, and build the x86_64 packages in CI" (`scripts/port/test_sentry_linux.py`, `.github/workflows/windows-release.yml`, `scripts/port/crash_reporting.md`, `scripts/port/releases.md`, FORK-030, FORK-031, this note, the plan's Task 4 Steps 1 to 4). **Step 1.** `test_sentry_linux.py` now requires, at both architectures, that the `enabled` case's event names the `IronSights` image by the debug id of `symbols/IronSights.debug` (the build folder beside the packages' `dist/`; build id read with `readelf -n`, debug id its first 16 bytes as a GUID with little-endian first fields) and that a frame of the exception or thread stacks lies inside that image. On fresh P1 and P2 packages it passed at once: build id `7138a859a9adcda1f3dc6a074e1c87d58295b4ef`, event debug id `59a83871-ada9-a1cd-f3dc-6a074e1c87d5`, image `0x555555554000` of 4,136,960 bytes, four of the exception's six frames inside it (`0x555555591fc5`, `0x55555558faac`, `0x55555579782c`, `0x555555797440`; the other two in `libc.so.6`). A scratch copy of the test expecting the build id with its first byte set to `00` failed on that assertion (`AssertionError` naming the image and the debug file), and the frame check, run on the captured event with `image_addr` moved to `0x10000`, failed too; both copies are deleted. At i686 the same rule holds by reading (Sentry's ELF debug id does not depend on the width, GCC on Ubuntu 22.04 links with `--build-id`, which an i686 tree here shows, and the release image has `readelf`), but the i686 crash test was not run here: the i686 packager cannot run on the Mac, so the `linux` job's run is its first. **Step 2, P3.** P1 exit 0 (warm ccache), P2 exit 0 printing the three paths. P3 on the real packages stops at `--appimage-extract` with `OSError: [Errno 8] Exec format error`: Rosetta 2 refuses the AppImage's `AI\x02` magic in `e_ident[8..10]`, as in Task 3. With `--appimage` set to a scratch copy differing only in those three bytes (deleted afterwards), all ten cases passed and the tag was `x86_64`; exit codes and uploads: enabled 139/1, healthy 0/0, optout 139/0, toggle-off 139/0, override-off 139/0, missing-sdk 0/0, symlink-cache 0/0, offline-retry 139/1, appimage 139/1 (on the copy only), steamdeck 139/1. The `appimage` case on the real AppImage fails on this Mac for that reason only; the new CI job is its first real judge. No workaround is in the test, the packager or the workflow. **Step 3.** `sentry_tools.py upload` (`--exe`, `--sdk`, `--work`; no dry mode) fetches the SHA-256-pinned `sentry-cli-Linux-x86_64` 3.8.2, runs `debug-files check` on the debug file, refuses without `SENTRY_AUTH_TOKEN`, then runs `debug-files upload --include-sources --wait` on the file and the SDK symbols folder; nothing names a width, so it is unchanged. Only `--help` ran here: the CLI is not cached on the Mac, and no token is used or anything sent from it. **Step 4.** The job `linux-x86_64` (FORK-031 lists its differences from `linux`) is not in `publish`'s `needs`, and `linux` and `publish` are byte-for-byte unchanged (the diff only adds lines). `actionlint` reports for it only the SC2155 note it already reports for `linux`'s identical compile step; Ruby's YAML parser loads the file. **Checks.** `compare_win32.py commits 9323465 WORKTREE`: `identical in loaded code and data`, exit 0 (no C changed). The CI tests step's lines in the x86_64 container (Rosetta 2), each under `timeout 1200`, from a scratch runner under `build/lp64/ship/` that is deleted: all passed, with the sanitized `test_buffers.sh` line run as its two halves (`MIDAS_HARNESS_WIDTHS=64 MIDAS_BUFFER_SANITIZE=1`, `test_buffers: PASS (64-bit)`, and `MIDAS_HARNESS_WIDTHS=32` unsanitized, `PASS (32-bit)`, as earlier tasks ran it; a first try of the 32-bit half with the sanitizer ran over 14 minutes under qemu and was stopped): gate 360 files compiled, 0 failed, gate-video 391, 0 failed, `OK: 0 narrowings in 0 files, all allowed`, `OK: 4 unprototyped calls in 4 files, all allowed`, `OK: 121 pointer-only types`, `OK: 15 mismatches, all allowed`, `OK: 1620 sites, all reviewed`, `OK: 24 truncating casts in 11 files, all allowed`, `test_harness_widths: PASS`, the gallery `pending` (strict inputs fresh). `bun scripts/bright-builds-check.ts all`: `findings=0`. No play sets ran (tools, tests, workflow and text only), and P4 was not rerun (no C, build script or packager change).
+
 **LP64-006 hand-over to LP64-007** (written at the final review's fix wave from the review, the controller's ledger and the task notes above, and completed at Task 17 on 2026-11-24; each patch is under `scripts/port/lp64_patches/`, whose `README.md` says what it changes and the commit it applies to):
 
 - *The owner's open questions* (eight; none is applied, each would change the shipped 32-bit program or the 64-bit one's behaviour):
@@ -10831,6 +10833,27 @@ extracted AppImage). All 58 ELF files are ELF64. Sizes are of one local
 packaging run (gzip timestamps vary). Nothing 64-bit is published; the
 `linux` and `publish` jobs are unchanged.
 
+LP64-007 Task 4 (2026-11-24, local, not pushed) adds the CI job
+`linux-x86_64` to `.github/workflows/windows-release.yml`, after `linux`: on
+every push to `main` it builds, uploads debug files for, packages and
+crash-tests the x86_64 packages on GitHub's x86_64 runner. It is a copy of
+`linux` whose only differences are the image `midas-linux-release-x86_64`
+built from `linux-release-x86_64.Dockerfile`, the folder
+`build_linux_x86_64_ci`, `--arch x86_64` on `linux_build.py`,
+`package_linux.py` and `test_sentry_linux.py`, the cache keys
+`linux-x86_64-ccache-` (hashing the new Dockerfile and `linux_build.py`) and
+`linux-x86_64-downloads-` (hashing `linux_build.py` and `package_linux.py`),
+the package file names, the artifacts `linux-x86_64-player-package` (the three
+packages, `SHA256SUMS-linux-x86_64.txt`, `linux-x86_64-build-*.json`, 30 days)
+and `linux-x86_64-smoke-diagnostics` (7 days), the compile step's name
+(`x86_64` for `i686`) and a two-line comment; `timeout-minutes: 35` as in
+`linux`. It is an artifact only: `publish`'s `needs`, attest list, assets and
+notes are unchanged, so a push still publishes the same eleven assets, and
+`linux`'s lines are unchanged. `releases.md` ("What is built and shipped")
+and `crash_reporting.md` ("Linux releases") say so; the latter loses its
+stale paragraph that called a 64-bit port a separate task whose texture
+entries reject 64-bit pointers.
+
 **Sources:** [baseline container](scripts/port/linux-release.Dockerfile),
 [x86_64 baseline container](scripts/port/linux-release-x86_64.Dockerfile),
 [build](scripts/port/linux_build.py), [build tests](scripts/port/test_linux_build.py), [packager](scripts/port/package_linux.py),
@@ -10882,6 +10905,11 @@ Rosetta 2; CI's x86_64 runner judges it in Task 4); the tarball's
 `IronSights`, with the package's `lib/`, runs 600 frames and passes 20 of 20
 missions with video in the Ubuntu 24.04 container. The i686 packager was not
 run on the Mac. FORK-089 has the details.
+LP64-007 Task 4, on the Mac: `actionlint` reports for the new job only the
+SC2155 note it reports for `linux`'s identical compile step; Ruby's YAML
+parser loads the file with `publish` needing `tests`, `windows`,
+`sentry-smoke` and `linux`. CI's verdict on the new job, and its compiler line
+and bundled library list, are not yet in. FORK-089 has the details.
 
 ### FORK-030 — Native Sentry crash reporting and symbol uploads
 
@@ -10922,6 +10950,23 @@ installation ID and technical system/CPU state; see the payload disclosure.
 Offline retry uses a dedicated queue with startup pruning of ten events, 5 MiB
 and seven days. Opt-out deletes pending data without traversing reparse points.
 
+LP64-007 Task 4 (2026-11-24, local, not pushed) applies the Linux reporting to
+the native x86_64 packages. The crash test, `test_sentry_linux.py`, now
+requires at both architectures that the `enabled` case's event names the
+`IronSights` image by the debug id of `symbols/IronSights.debug`'s GNU build
+id (read with `readelf -n`; the first 16 bytes as a GUID with little-endian
+first fields, Sentry's ELF rule) and that at least one crash frame's
+instruction address lies inside that image (`image_addr` to `image_addr +
+image_size`), so the uploaded debug file symbolicates the report; the debug
+file is taken from the build folder beside the packages' `dist/`. Before, it
+required only a non-empty debug id. `sentry_tools.py upload` needs no change
+for x86_64: it runs the pinned `sentry-cli-Linux-x86_64` (the host tool at
+both widths) `debug-files check` on the given file, then refuses without
+`SENTRY_AUTH_TOKEN`, then uploads the file and the SDK symbols folder with
+sources; nothing in it names a width. The CI job `linux-x86_64` (FORK-031)
+uploads the x86_64 debug files the same way. Every Linux event carries the tag
+`architecture` (`i686` or `x86_64`, LP64-007 Task 2, FORK-020).
+
 **Sources:** [Windows adapter](port/crash/reporting_win.c),
 [Linux adapter](port/crash/reporting_linux.c),
 [public API](port/include/port_crash.h), [startup/logger](port/src/main.c),
@@ -10949,6 +10994,18 @@ downloads. Real Linux/Windows downloads match the pins and report version 3.8.2;
 the native release workflow passes actionlint.
 Both independent gallery passes retain all 72 views and 35 icons with zero
 changed image cells after the CI ordering fix; nine gallery workflow tests pass.
+LP64-007 Task 4, on the Mac (x86_64 under Rosetta 2, in
+`midas-linux-release-x86_64`): the tightened test passed at once on fresh P1
+and P2 packages (debug image `0x555555554000`, 4,136,960 bytes, debug id
+`59a83871-ada9-a1cd-f3dc-6a074e1c87d5` from build id `7138a859...b4ef`; four
+of the event's frames inside it), and a scratch copy that expected a build id
+with its first byte changed failed on the debug-id assertion; the frame check
+was seen failing on that event with the image moved to `0x10000`. The
+`appimage` case cannot run on this Mac (Rosetta 2 refuses the AppImage's
+`AI\x02` magic: `Exec format error`); FORK-089 has the run. Not run: the i686
+crash test (no i686 packager here) and `sentry_tools.py upload` (no token on
+the Mac; it has no dry mode, and `--help` only lists `--exe`, `--sdk`,
+`--work`). CI's verdict on the new job is not yet in.
 
 ### FORK-029 — Shared presentation defaults and usable Video pagination
 

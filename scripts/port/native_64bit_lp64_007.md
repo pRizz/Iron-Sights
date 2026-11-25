@@ -557,21 +557,21 @@ likely first. Each has its test in the task named.
   `linux-x86_64-smoke-diagnostics`; `timeout-minutes: 35`. It is **not**
   added to `publish`'s `needs`.
 
-- [ ] **Step 1: Tighten the crash test, failing first.** In
+- [x] **Step 1: Tighten the crash test, failing first.** In
   `test_sentry_linux.py`, for the `enabled` case at either architecture,
   assert that the received event's debug image for `IronSights` carries
   the build id of `symbols/IronSights.debug` (read with `readelf -n`),
   and that at least one frame's instruction address lies inside that
   image. Run P3. Expected: it fails only if the report is not
   symbolicable; if it passes at once, say so in the report and keep it.
-- [ ] **Step 2: Run P3** for x86_64. Expected: ten cases pass, the tag is
+- [x] **Step 2: Run P3** for x86_64. Expected: ten cases pass, the tag is
   `x86_64`. A failure that also occurs with the crash daemon's tracing
   under Rosetta 2 and nowhere else is recorded and left to Step 5.
-- [ ] **Step 3: Check the upload tool without uploading.** Read
+- [x] **Step 3: Check the upload tool without uploading.** Read
   `sentry_tools.py upload`; run it with `--help` and, if it has a dry
   mode, on `build/lp64/ship/x64/symbols/IronSights.debug`. No token is
   used on the Mac and nothing is sent.
-- [ ] **Step 4: Add the job** and update `releases.md` ("What is built
+- [x] **Step 4: Add the job** and update `releases.md` ("What is built
   and shipped": the x86_64 artifacts are built and tested on every push
   and are not yet published) and `crash_reporting.md` ("Linux releases":
   the x86_64 runtime, the `architecture` tag, the bundled 64-bit

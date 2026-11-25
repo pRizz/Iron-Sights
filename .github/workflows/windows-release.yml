@@ -376,6 +376,84 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # The 64-bit packages are built and tested on every push to main, as
+  # artifacts only: publish does not need this job and attaches nothing from it.
+  linux-x86_64:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build pinned Linux baseline image
+        run: docker build -t midas-linux-release-x86_64 -f scripts/port/linux-release-x86_64.Dockerfile .
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: inputs.clean_build != true
+        with:
+          path: ${{ runner.temp }}/midas-linux-ccache
+          key: linux-x86_64-ccache-${{ hashFiles('scripts/port/linux-release-x86_64.Dockerfile', 'scripts/port/linux_build.py') }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: linux-x86_64-ccache-${{ hashFiles('scripts/port/linux-release-x86_64.Dockerfile', 'scripts/port/linux_build.py') }}-
+      # SHA256-pinned SDL source and AppImage runtime; both are verified again
+      # before use, so a cached copy needs no GitHub release download.
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: restore-linux-downloads
+        with:
+          path: |
+            build_linux_x86_64_ci/deps/downloads
+            build_linux_x86_64_ci/downloads
+          key: linux-x86_64-downloads-${{ hashFiles('scripts/port/linux_build.py', 'scripts/port/package_linux.py') }}
+      - name: Compile optimized x86_64 game and pinned reporter without a ROM
+        env:
+          CLEAN_BUILD: ${{ inputs.clean_build == true }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/midas-linux-ccache"
+          export MIDAS_BUILD_TIME_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          export MIDAS_RELEASE_TAG="build-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA:0:12}"
+          docker run --rm -v "$PWD:/src" -v "$RUNNER_TEMP/midas-linux-ccache:/ccache" -e CCACHE_DIR=/ccache -e CCACHE_BASEDIR=/src -e CCACHE_COMPILERCHECK=content -e CCACHE_MAXSIZE=256M -e MIDAS_CLEAN_BUILD="$CLEAN_BUILD" -e GITHUB_ACTIONS -e GITHUB_SHA -e GITHUB_REF_NAME -e GITHUB_REPOSITORY -e GITHUB_RUN_ID -e MIDAS_BUILD_TIME_UTC -e MIDAS_RELEASE_TAG midas-linux-release-x86_64 python3 scripts/port/linux_build.py --arch x86_64 --work /src/build_linux_x86_64_ci/deps --output /src/build_linux_x86_64_ci
+          git diff --exit-code HEAD
+          python3 -c "import json; m=json.load(open('build_linux_x86_64_ci/generated/build-info.json')); assert m['ci'] and not m['dirty']"
+      - name: Upload exact Linux debug information and source context
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          docker run --rm -v "$PWD:/src" -e SENTRY_AUTH_TOKEN midas-linux-release-x86_64 python3 scripts/port/sentry_tools.py upload --exe build_linux_x86_64_ci/symbols/IronSights.debug --sdk build_linux_x86_64_ci/symbols --work build_linux_x86_64_ci/sentry-cli
+      - name: Package Linux and Steam Deck downloads and test real crashes
+        run: |
+          docker run --rm -v "$PWD:/src" midas-linux-release-x86_64 python3 scripts/port/package_linux.py --arch x86_64 --build build_linux_x86_64_ci --output build_linux_x86_64_ci/dist
+          docker run --rm -v "$PWD:/src" midas-linux-release-x86_64 python3 scripts/port/test_sentry_linux.py --arch x86_64 --package build_linux_x86_64_ci/dist/Iron-Sights-linux-x86_64.tar.gz --appimage build_linux_x86_64_ci/dist/Iron-Sights-linux-x86_64.AppImage --steamdeck build_linux_x86_64_ci/dist/Iron-Sights-steamdeck-x86_64.zip --output build_linux_x86_64_ci/smoke
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.restore-linux-downloads.outputs.cache-hit != 'true'
+        with:
+          path: |
+            build_linux_x86_64_ci/deps/downloads
+            build_linux_x86_64_ci/downloads
+          key: linux-x86_64-downloads-${{ hashFiles('scripts/port/linux_build.py', 'scripts/port/package_linux.py') }}
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: inputs.clean_build != true
+        with:
+          path: ${{ runner.temp }}/midas-linux-ccache
+          key: linux-x86_64-ccache-${{ hashFiles('scripts/port/linux-release-x86_64.Dockerfile', 'scripts/port/linux_build.py') }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: linux-x86_64-player-package
+          path: |
+            build_linux_x86_64_ci/dist/*.tar.gz
+            build_linux_x86_64_ci/dist/*.AppImage
+            build_linux_x86_64_ci/dist/*.zip
+            build_linux_x86_64_ci/dist/SHA256SUMS-linux-x86_64.txt
+            build_linux_x86_64_ci/dist/linux-x86_64-build-*.json
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: linux-x86_64-smoke-diagnostics
+          path: build_linux_x86_64_ci/smoke
+          if-no-files-found: ignore
+          retention-days: 7
+
   sentry-smoke:
     needs: windows
     runs-on: windows-2022
