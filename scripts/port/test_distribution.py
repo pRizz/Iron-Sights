@@ -3,6 +3,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -255,6 +256,16 @@ class Distribution(unittest.TestCase):
                 self.assertEqual(linux_packager.has_symbol(root/"without","portPlayPlayerTick"),False)
 
     @unittest.skipUnless(shutil.which("gcc"),"Native cache codec test needs a C compiler")
+    def test_every_ci_build_folder_is_ignored_by_git(self):
+        # Arrange: an unignored build folder makes the CI build dirty (build_info.py), failing its job.
+        workflows=(ROOT/".github/workflows").glob("*.yml")
+        folders=sorted({name for path in workflows for name in re.findall(r"\bbuild_\w+_ci\b",path.read_text())})
+        # Act
+        unignored=[name for name in folders if subprocess.run(["git","-C",str(ROOT),"check-ignore","-q",name+"/"]).returncode!=0]
+        # Assert
+        self.assertIn("build_linux_x86_64_ci",folders)
+        self.assertEqual(unignored,[])
+
     def test_native_cache_validation(self):
         with tempfile.TemporaryDirectory() as folder:
             binary=Path(folder)/"cache-test"
