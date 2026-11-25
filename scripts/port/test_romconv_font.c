@@ -120,7 +120,7 @@ static int testWritesTheMetrics(void)
     struct font *f = convertTestFont();
 
     // Assert
-    return expect(f->chars[0].index == 0x21 && f->chars[0].baseline == 2 && f->chars[0].height == 7
+    return expect(f->chars[0].index == 0x21 && f->chars[0].baseline == 2 && f->chars[0].height == 1
             && f->chars[0].width == 5 && f->chars[0].kerningindex == 3,
             "glyph 0's index, baseline, height, width and kerning index are native");
 }

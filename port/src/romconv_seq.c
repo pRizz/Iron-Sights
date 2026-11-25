@@ -35,8 +35,31 @@ u32 portSeqTableSize(const u8 *file)
     return (u32) offsetof(RareALSeqBankFile, seqArray) + count * (u32) sizeof(RareALSeqData);
 }
 
-/* Refuses, naming the file, a FILESIZE too small for the header or for the
- * header and its entries. Reads only. */
+/* Refuses, naming the file, an entry whose len bytes from its offset are not
+ * all in the file: musicTrack1Play and its two twins (music.c) copy them from
+ * the segment's address plus the offset. Reads only. */
+static int seqSequencesInFile(const u8 *file, u32 filesize, u32 count)
+{
+    u32 i;
+
+    for (i = 0; i < count; i++)
+    {
+        const u8 *entry = file + sizeof(RomSeqTable) + i * sizeof(RomSeqEntry);
+        u32 offset = portConvBe32(entry + offsetof(RomSeqEntry, offset));
+        u32 len = portConvBe16(entry + offsetof(RomSeqEntry, len));
+
+        if ((u64) offset + len > filesize)
+        {
+            portConvRefuse(PORT_LP64_MUSIC, SEQ_FILE, "sequence %u's %u bytes at 0x%X pass the %u-byte file", i, len,
+                    offset, filesize);
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/* Refuses, naming the file, a FILESIZE too small for the header, for the
+ * header and its entries, or for an entry's sequence. Reads only. */
 static int seqFileHoldsEntries(const u8 *file, u32 filesize)
 {
     u32 count, needed;
@@ -56,7 +79,7 @@ static int seqFileHoldsEntries(const u8 *file, u32 filesize)
                 filesize);
         return 0;
     }
-    return 1;
+    return seqSequencesInFile(file, filesize, count);
 }
 
 int portSeqTableConvert(const u8 *file, u32 filesize, RareALSeqBankFile *out, u32 outsize)

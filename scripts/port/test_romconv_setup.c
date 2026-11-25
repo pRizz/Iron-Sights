@@ -41,7 +41,7 @@ static int testBrief(void)
     ai = AT(AIListRecord, g_Out, s->ailists);
     return expect(pads[1].pos.z == -40.0f && (uintptr_t) pads[1].plink != 0 && pads[2].plink == NULL
             && sameText((char *) g_Out + (uintptr_t) pads[1].plink, "p1") && ai[1].ID == 0x0401
-            && g_Out[(uintptr_t) ai[1].ailist] == 0xAD,
+            && g_Out[(uintptr_t) ai[1].ailist] == (u8) AI_Label,
         "the brief's assertions: pad 1's place and name, the terminator's NULL, AI list 1's code");
 }
 
@@ -185,7 +185,7 @@ static int testAiListsAndNameTables(void)
     boundNames = AT(pname, g_Out, header()->boundpadnames);
 
     // Assert: list 0 at an odd offset, list 1 starting inside its code
-    ok = ok && ai[0].ID == AI0_ID && (uintptr_t) ai[0].ailist % 2 == 1 && g_Out[(uintptr_t) ai[0].ailist] == 0x2A
+    ok = ok && ai[0].ID == AI0_ID && (uintptr_t) ai[0].ailist % 2 == 1 && g_Out[(uintptr_t) ai[0].ailist] == (u8) AI_Yield
         && ai[1].ailist == (AIRecord *) ((uintptr_t) ai[0].ailist + 1)
         && g_Out[(uintptr_t) ai[0].ailist + 3] == (u8) AI_EndList && ai[2].ailist == NULL
         && sameText((char *) g_Out + (uintptr_t) names[0].p, "p0")

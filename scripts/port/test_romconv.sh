@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The ROM data converters' ROM-free tests (LP64-004): each converter's test
 # program, built with the game's definitions and include order and run at each
-# pointer width. Every input is built inside the tests from numbers written
+# pointer width, and at 64 bits the loaders' damaged-ROM paths (LP64-007). Every input is built inside the tests from numbers written
 # there; no ROM-derived byte is read. At 32 bits a converter exists only in the
 # oracle build, so the 32-bit half compiles with GE_LP64_ORACLE, which also
 # gives port_lp64.c its class names. Converter sources get
@@ -114,9 +114,11 @@ for width in $widths; do
     # At 32 bits the setup tests compare with romfile_setup.c's in-place
     # result. Its header comment names assets/obseg/setup/*.c, which
     # -Wcomment reports.
+    # The AI list walk calls chrai.c's chraiitemsize; the tests link a
+    # stand-in with its sizes (test_romconv_ai_size.c).
     setup=(port/src/romconv_setup.c port/src/romconv_setup_walk.c port/src/romconv_setup_records.c
         port/src/romconv_setup_intro.c port/src/romconv_setup_props.c port/src/romconv_census.c
-        port/src/romconv_common.c port/src/port_lp64_oracle.c)
+        port/src/romconv_common.c port/src/port_lp64_oracle.c scripts/port/test_romconv_ai_size.c)
     [[ $width == 32 ]] && setup+=(-Wno-comment port/src/romfile_setup.c)
     # The main setup test compares the log line with romfile_setup.c's at both widths.
     setup_main=("${setup[@]}")
@@ -140,5 +142,15 @@ for width in $widths; do
     build "$work/setup-intro-$width" "$width" ${sanitize[@]+"${sanitize[@]}"} scripts/port/test_romconv_setup_intro.c \
         "${setup_intro[@]}"
     run "$work/setup-intro-$width" "${width}-bit setup file intro of every kind"
+    # LP64-004 fix wave C's two damaged-ROM paths (a missing ROM segment, a
+    # text bank still compressed) exist only at 64 bits. The test includes
+    # romdata.c; its and segments.c's sign and comment warnings, and the
+    # font helper segments.c uses only at 32 bits, are the game build's.
+    if [[ $width == 64 ]]; then
+        build "$work/damaged-$width" "$width" "${sanitize[@]}" -Wno-pointer-sign -Wno-comment -Wno-unused-function \
+            scripts/port/test_romdata_damaged.c port/src/segments.c port/src/romconv_text.c port/src/romconv_common.c \
+            port/src/romconv_font.c port/src/romconv_gfx.c
+        run "$work/damaged-$width" "${width}-bit damaged-ROM paths"
+    fi
     echo "test_romconv: PASS (${width}-bit)"
 done

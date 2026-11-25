@@ -129,6 +129,24 @@ static int follow(const struct ModelWalk *w, u32 value, const char *what, u32 wh
 
 /* ==== the walk ========================================================= */
 
+/* Refuses, naming it, a G_TEXRECT or G_TEXRECTFLIP at O, in the list at AT,
+ * whose next two words are not G_RDPHALF_2 (0xB3) and G_RDPHALF_CONT (0xB2),
+ * as gSPTextureRectangle writes them: the renderer takes those two words as
+ * its texture coordinates whatever they hold, past the list's end too, while
+ * this walk would end the list at one or move its word as an address
+ * (LP64-007 Task 7). */
+static int texRectTailFollows(const struct ModelWalk *w, u32 at, u32 o)
+{
+    if ((u64) o + 3 * MODEL_ROM_COMMAND > w->size || w->file[o + MODEL_ROM_COMMAND] != 0xB3
+            || w->file[o + 2 * MODEL_ROM_COMMAND] != 0xB2)
+    {
+        modelRefuse(w, "the texture rectangle at 0x%X in the display list at 0x%X is not followed by its "
+                "G_RDPHALF_2 and G_RDPHALF_CONT words", o, at);
+        return 0;
+    }
+    return 1;
+}
+
 /* Claims the display list at AT, to its end command, and the lists it calls. */
 static int claimList(struct ModelWalk *w, u32 at)
 {
@@ -163,6 +181,10 @@ static int claimList(struct ModelWalk *w, u32 at)
         if (w->file[o] == 0xB8 || w->file[o] == 0xDF) /* G_ENDDL, and F3DEX2's */
         {
             break;
+        }
+        if ((w->file[o] == 0xE4 || w->file[o] == 0xE5) && !texRectTailFollows(w, at, o))
+        {
+            return 0;
         }
     }
     r = claim(w, at, (u64) n * MODEL_ROM_COMMAND, MODEL_LIST, "display list");

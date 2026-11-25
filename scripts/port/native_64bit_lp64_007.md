@@ -681,20 +681,20 @@ likely first. Each has its test in the task named.
   missing ROM segment stops by name; a compressed text bank that fails to
   inflate is zeroed). The 32-bit loaders are not edited.
 
-- [ ] **Step 1: Locate each read.** `grep -n` FORK-089 for each phrase
+- [x] **Step 1: Locate each read.** `grep -n` FORK-089 for each phrase
   and write the file and line of each of the six into the task's report.
   A read that is in game code shared with the 32-bit build, not in a
   converter, is listed and left: this task does not edit it.
-- [ ] **Step 2: One failing fixture a read.** Each builds the smallest
+- [x] **Step 2: One failing fixture a read.** Each builds the smallest
   record that sends the read past its buffer and asserts the converter
   returns its refusal. Under the sanitizer harness the unfixed read is
   reported; record that output as the failure.
-- [ ] **Step 3: Bound each read**, refusing the file. Run the fixtures.
+- [x] **Step 3: Bound each read**, refusing the file. Run the fixtures.
   Expected: pass, plain and under the sanitizers.
-- [ ] **Step 4: Prove the stock ROM is untouched.** The oracle (`AGENTS.md`'s
+- [x] **Step 4: Prove the stock ROM is untouched.** The oracle (`AGENTS.md`'s
   line): every class `N files, 0 differ`. The 20-mission smoke at 64
   bits, plain and sanitizer. `lp64_census.py compare`: equal.
-- [ ] **Step 5:** `compare_win32.py` (identical: converters are not in a
+- [x] **Step 5:** `compare_win32.py` (identical: converters are not in a
   32-bit shipped build), static checks, plain aarch64 play sets, package
   check; record in FORK-089, with any read left in shared code named for
   upstream; commit.

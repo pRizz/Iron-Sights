@@ -105,10 +105,15 @@ static int animListedBefore(const AnimEntryCursor *c, uintptr_t offset)
 
 /* Refuses, naming it, a header whose descriptor table or stream starts at or
  * past the staged image's end, so that no pointer the converter builds into
- * STAGED leads outside it. The header itself is inside STAGED. */
-static int animReferencesFit(const u8 *staged, u32 stagedsize, uintptr_t offset)
+ * STAGED leads outside it; whose root-motion stream, frames times unk0c bits
+ * from its start (model.c's modelAnimReadRootMotionValue), runs past STAGED's
+ * end; or whose frames, frame_bits / 8 bytes each from entries_offset
+ * (loadAnimationFrame), run past the ENTRIESSIZE-byte entries image. The
+ * header itself is inside STAGED. */
+static int animReferencesFit(const u8 *staged, u32 stagedsize, u32 entriessize, uintptr_t offset)
 {
     RomAnimHeader file;
+    u64 streamEnd, framesEnd;
 
     memcpy(&file, staged + offset, sizeof(file));
     if (file.descriptors_offset >= stagedsize || file.stream_offset >= stagedsize)
@@ -118,13 +123,31 @@ static int animReferencesFit(const u8 *staged, u32 stagedsize, uintptr_t offset)
                 (unsigned long) offset, file.descriptors_offset, file.stream_offset, stagedsize);
         return 0;
     }
+    streamEnd = (u64) file.stream_offset + ((u64) file.frames * file.unk0c + 7) / 8;
+    if (streamEnd > stagedsize)
+    {
+        portConvRefuse(PORT_LP64_ANIMATIONS, ANIM_FILE,
+                "header at 0x%lX has %u frames of %u stream bits from 0x%X, past the 0x%X-byte staged image",
+                (unsigned long) offset, (u32) file.frames, (u32) file.unk0c, file.stream_offset, stagedsize);
+        return 0;
+    }
+    framesEnd = (u64) file.entries_offset + (u64) file.frames * (u32) (file.frame_bits >> 3);
+    if (framesEnd > entriessize)
+    {
+        portConvRefuse(PORT_LP64_ANIMATIONS, ANIM_FILE,
+                "header at 0x%lX has %u frames of %u bytes from 0x%X, past the 0x%X-byte entries image",
+                (unsigned long) offset, (u32) file.frames, (u32) (file.frame_bits >> 3), file.entries_offset,
+                entriessize);
+        return 0;
+    }
     return 1;
 }
 
 /* Refuses, naming it, a header that does not fit, that overlaps one listed
- * earlier, or whose references lead outside STAGED. Reads offsets and STAGED
- * only. */
-static int animHeadersFit(intptr_t *const *tables, int ntables, u32 tablesize, const u8 *staged, u32 stagedsize)
+ * earlier, or whose references, or what they lead to, lie outside STAGED or the
+ * entries image. Reads offsets and STAGED only. */
+static int animHeadersFit(intptr_t *const *tables, int ntables, u32 tablesize, const u8 *staged, u32 stagedsize,
+        u32 entriessize)
 {
     AnimEntryCursor c;
 
@@ -146,7 +169,7 @@ static int animHeadersFit(intptr_t *const *tables, int ntables, u32 tablesize, c
                     (unsigned long) offset, stagedsize);
             return 0;
         }
-        if (!animReferencesFit(staged, stagedsize, offset))
+        if (!animReferencesFit(staged, stagedsize, entriessize, offset))
         {
             return 0;
         }
@@ -184,11 +207,11 @@ static void animWriteHeader(u8 *table, const u8 *staged, const u8 *entries, uint
 }
 
 int portAnimHeadersConvert(u8 *table, u32 tablesize, const u8 *staged, u32 stagedsize, const u8 *entries,
-        intptr_t *const *tables, int ntables)
+        u32 entriessize, intptr_t *const *tables, int ntables)
 {
     AnimEntryCursor c;
 
-    if (!animHeadersFit(tables, ntables, tablesize, staged, stagedsize))
+    if (!animHeadersFit(tables, ntables, tablesize, staged, stagedsize, entriessize))
     {
         return 0;
     }
@@ -296,7 +319,7 @@ static void animOracleCompare(const u8 *inplace, const u8 *staged, const u8 *cop
     }
 }
 
-void portAnimHeadersOracle(const u8 *inplace, u32 tablesize, const u8 *staged, const u8 *entries,
+void portAnimHeadersOracle(const u8 *inplace, u32 tablesize, const u8 *staged, const u8 *entries, u32 entriessize,
         intptr_t *const *tables, int ntables)
 {
     static intptr_t lists[ANIM_ORACLE_TABLES][ANIM_ORACLE_ENTRIES];
@@ -315,7 +338,7 @@ void portAnimHeadersOracle(const u8 *inplace, u32 tablesize, const u8 *staged, c
         listp[t] = lists[t];
     }
     memcpy(copy, staged, tablesize);
-    if (!portAnimHeadersConvert(copy, tablesize, staged, tablesize, entries, listp, ntables))
+    if (!portAnimHeadersConvert(copy, tablesize, staged, tablesize, entries, entriessize, listp, ntables))
     {
         portLp64OracleResult(PORT_LP64_ANIMATIONS, ANIM_FILE, 0, "the converter refused the table");
     }

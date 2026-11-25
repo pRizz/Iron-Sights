@@ -40,10 +40,12 @@ int startsWith(const char *text, const char *prefix);
 int expect(int ok, const char *what);
 void putBe32(u8 *p, u32 v);
 /** The test font: kerning[0] -2 and kerning[168] 0x55; glyph 0 index 0x21,
- * baseline 2, height 7, width 5, kerning index 3, its eight bytes 0xA1 to
- * 0xA8 at 0xB80; every other glyph, 93 among them, at pixel_offset 0. */
+ * baseline 2, height 1, width 5, kerning index 3, its eight bytes (one row of
+ * width 5 rounded up to 8) 0xA1 to 0xA8 at 0xB80, ending at the file's end;
+ * every other glyph, 93 among them, at pixel_offset 0. */
 u8 *buildRom(void);
-/** The test font with glyph 0 at pixel_offset AT. */
+/** The test font with glyph 0 at pixel_offset AT and height 0, so that its
+ * extent is empty and only the offset is checked. */
 u8 *romWithGlyph0At(u32 at);
 /** s_Out with every byte FILL. */
 u8 *freshOut(void);

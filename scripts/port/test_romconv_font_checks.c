@@ -92,6 +92,41 @@ static int testAcceptsAnOffsetAtTheTablesEnd(void)
             "a glyph at the table's end converts to the struct's end");
 }
 
+/* LP64-007 Task 7: load_font_tables and the text drawing read a glyph's
+ * height rows of width rounded up to 8 bytes from its pixel offset. */
+static int testRefusesAGlyphWhoseRowsPassTheFile(void)
+{
+    // Arrange: two 8-byte rows at 0xB80 in a 0xB88-byte file
+    u8 *rom = buildRom();
+    putBe32(rom + CHAR_AT(0, height), 2);
+
+    // Act, Assert
+    return expectRefused(rom, ROM_SIZE, OUT_SIZE, "glyph 0's 2 rows of 8 bytes at 0xB80 pass the 2952-byte file",
+            "a glyph whose rows run past the file is refused, nothing written");
+}
+
+static int testRefusesAGlyphWhoseRoundedWidthPassesTheFile(void)
+{
+    // Arrange: width 9 rounds up to a 16-byte row
+    u8 *rom = buildRom();
+    putBe32(rom + CHAR_AT(0, width), 9);
+
+    // Act, Assert
+    return expectRefused(rom, ROM_SIZE, OUT_SIZE, "glyph 0's 1 rows of 16 bytes at 0xB80 pass the 2952-byte file",
+            "a glyph whose width rounded up to 8 runs past the file is refused, nothing written");
+}
+
+static int testRefusesAGlyphOfNegativeWidth(void)
+{
+    // Arrange: width -1, a row of 0xFFFFFFFF rounded up
+    u8 *rom = buildRom();
+    putBe32(rom + CHAR_AT(0, width), 0xFFFFFFFFu);
+
+    // Act, Assert
+    return expectRefused(rom, ROM_SIZE, OUT_SIZE, "glyph 0's 1 rows of 4294967296 bytes at 0xB80 pass",
+            "a glyph of width -1 is refused, nothing written");
+}
+
 #ifdef GE_LP64_ORACLE
 /* What the 32-bit staging writes for the test font: the table's words in
  * native order, the glyph bytes as they are (segments.c's portFontFromRom). */
@@ -210,6 +245,9 @@ int main(void)
     failures += testRefusesAnOffsetInsideTheTable();
     failures += testRefusesTheLastGlyphsOffset();
     failures += testAcceptsAnOffsetAtTheTablesEnd();
+    failures += testRefusesAGlyphWhoseRowsPassTheFile();
+    failures += testRefusesAGlyphWhoseRoundedWidthPassesTheFile();
+    failures += testRefusesAGlyphOfNegativeWidth();
 #ifdef GE_LP64_ORACLE
     failures += testOracleFindsTheStagedFontIdentical();
     failures += testOracleFindsAGlyphByteThatDiffers();

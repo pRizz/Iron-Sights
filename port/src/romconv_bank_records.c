@@ -72,7 +72,10 @@ static int bankMeasureArray(const struct BankWalk *w, u32 offset, int kind, u32 
     return 1;
 }
 
-/* A wave table, whose ADPCM or raw samples must lie in the table. */
+/* A wave table, whose samples must lie in the table: a wave of any type gets
+ * the table's address plus base (bankWriteWave, as alBnkfNew), which the mixer
+ * reads for len bytes (LP64-007 Task 7 bounded the types other than ADPCM and
+ * raw too). */
 static int bankMeasureWave(const struct BankWalk *w, u32 offset)
 {
     u8 type;
@@ -85,13 +88,21 @@ static int bankMeasureWave(const struct BankWalk *w, u32 offset)
     type = w->file[offset + offsetof(RomWaveTable, type)];
     base = bankBe32(w, offset + offsetof(RomWaveTable, base));
     len = bankBe32(w, offset + offsetof(RomWaveTable, len));
-    if ((type == AL_ADPCM_WAVE || type == AL_RAW16_WAVE) && (u64) base + len > w->tablesize)
+    if ((u64) base + len <= w->tablesize)
+    {
+        return 1;
+    }
+    if (type == AL_ADPCM_WAVE || type == AL_RAW16_WAVE)
     {
         bankRefuse(w, "the %s wave table at 0x%X has samples at 0x%X to 0x%llX, past the 0x%X-byte wave table",
                 type == AL_RAW16_WAVE ? "raw" : "ADPCM", offset, base, (unsigned long long) base + len, w->tablesize);
-        return 0;
     }
-    return 1;
+    else
+    {
+        bankRefuse(w, "the type %u wave table at 0x%X has samples at 0x%X to 0x%llX, past the 0x%X-byte wave table",
+                (u32) type, offset, base, (unsigned long long) base + len, w->tablesize);
+    }
+    return 0;
 }
 
 /* An in-file kind; a book's entries follow its header. */

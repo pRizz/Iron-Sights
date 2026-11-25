@@ -14,7 +14,8 @@
 #include "port_romconv_audio.h"
 
 #define SEQ_ENTRIES 3u
-#define FILE_SIZE (4u + SEQ_ENTRIES * 8u)
+#define FILE_SIZE (4u + SEQ_ENTRIES * 8u) /* the header and entries */
+#define BANK_SIZE 0x1200u                 /* the whole file, with room for the sequences */
 #define TABLE_SIZE (offsetof(RareALSeqBankFile, seqArray) + SEQ_ENTRIES * sizeof(RareALSeqData))
 #define FILL 0xA5u
 
@@ -51,12 +52,13 @@ static int expect(int ok, const char *what)
 }
 
 /* The header and three entries, big-endian: count 3, unk 0, then offsets
- * 0x1FC, 0x300 and 0x80000010 with lengths 6109/3948, 10/8 and 1/1. */
-static const u8 kFile[FILE_SIZE] = {
+ * 0x1FC, 0x300 and 0x1100 with lengths 6109/3948, 10/8 and 1/1, in a file of
+ * BANK_SIZE bytes that holds each sequence's len bytes. */
+static const u8 kFile[BANK_SIZE] = {
     0x00, 0x03, 0x00, 0x00,
     0x00, 0x00, 0x01, 0xFC, 0x17, 0xDD, 0x0F, 0x6C,
     0x00, 0x00, 0x03, 0x00, 0x00, 0x0A, 0x00, 0x08,
-    0x80, 0x00, 0x00, 0x10, 0x00, 0x01, 0x00, 0x01,
+    0x00, 0x00, 0x11, 0x00, 0x00, 0x01, 0x00, 0x01,
 };
 
 /* Room for the table, 8-byte aligned, every byte FILL before the call. */
@@ -90,7 +92,7 @@ static RareALSeqBankFile *convertStock(void)
 {
     RareALSeqBankFile *out = freshOut();
 
-    portSeqTableConvert(kFile, FILE_SIZE, out, portSeqTableSize(kFile));
+    portSeqTableConvert(kFile, BANK_SIZE, out, portSeqTableSize(kFile));
     return out;
 }
 
@@ -140,7 +142,7 @@ static int testConverts(void)
     RareALSeqBankFile *out = freshOut();
 
     // Act
-    int result = portSeqTableConvert(kFile, FILE_SIZE, out, portSeqTableSize(kFile));
+    int result = portSeqTableConvert(kFile, BANK_SIZE, out, portSeqTableSize(kFile));
 
     // Assert
     return expect(result == 1, "a three-entry table converts");
@@ -165,13 +167,54 @@ static int testZeroExtendsTheOffsets(void)
             "the offsets 0x1FC and 0x300 are in the address slots");
 }
 
-static int testDoesNotSignExtend(void)
+/* LP64-007 Task 7: musicTrack1Play and its twins read each sequence's len
+ * bytes from its offset. */
+static const u8 *fileWithSequence2(u32 offset, u16 len)
 {
+    static u8 file[BANK_SIZE];
+
+    memcpy(file, kFile, BANK_SIZE);
+    file[20] = (u8) (offset >> 24);
+    file[21] = (u8) (offset >> 16);
+    file[22] = (u8) (offset >> 8);
+    file[23] = (u8) offset;
+    file[26] = (u8) (len >> 8);
+    file[27] = (u8) len;
+    return file;
+}
+
+static int testRefusesASequencePastTheFile(void)
+{
+    // Arrange: sequence 2's two bytes start at the file's last byte
+    const u8 *file = fileWithSequence2(BANK_SIZE - 1, 2);
+
+    // Act, Assert
+    return expectRefused(file, BANK_SIZE, (u32) TABLE_SIZE, "sequence 2's 2 bytes at 0x11FF pass the 4608-byte file",
+            "a sequence that runs past the file is refused, nothing written");
+}
+
+static int testRefusesAnOffsetWithBit31Set(void)
+{
+    // Arrange: an offset a sign extension would turn negative
+    const u8 *file = fileWithSequence2(0x80000010u, 1);
+
+    // Act, Assert
+    return expectRefused(file, BANK_SIZE, (u32) TABLE_SIZE, "sequence 2's 1 bytes at 0x80000010 pass",
+            "an offset of 0x80000010 is refused, nothing written");
+}
+
+static int testAcceptsASequenceEndingAtTheFileEnd(void)
+{
+    // Arrange
+    const u8 *file = fileWithSequence2(BANK_SIZE - 1, 1);
+    RareALSeqBankFile *out = freshOut();
+
     // Act
-    RareALSeqBankFile *out = convertStock();
+    int result = portSeqTableConvert(file, BANK_SIZE, out, portSeqTableSize(file));
 
     // Assert
-    return expect((uintptr_t) out->seqArray[2].address == 0x80000010u, "0x80000010 is zero-extended");
+    return expect(result == 1 && (uintptr_t) out->seqArray[2].address == BANK_SIZE - 1,
+            "a sequence whose last byte is the file's last is converted");
 }
 
 static int testWritesTheLengths(void)
@@ -198,7 +241,7 @@ static int testWritesNothingPastTheTable(void)
 static int testRefusesARoomOneByteShort(void)
 {
     // Act, Assert
-    return expectRefused(kFile, FILE_SIZE, (u32) TABLE_SIZE - 1, "the table needs ",
+    return expectRefused(kFile, BANK_SIZE, (u32) TABLE_SIZE - 1, "the table needs ",
             "a room one byte short is refused, nothing written");
 }
 
@@ -245,7 +288,7 @@ static RareALSeqBankFile *inPlaceTable(void)
     t->seqArray[1].address = (u8 *) (uintptr_t) 0x300;
     t->seqArray[1].uncompressed_len = 10;
     t->seqArray[1].len = 8;
-    t->seqArray[2].address = (u8 *) (uintptr_t) 0x80000010u;
+    t->seqArray[2].address = (u8 *) (uintptr_t) 0x1100u;
     t->seqArray[2].uncompressed_len = 1;
     t->seqArray[2].len = 1;
     return t;
@@ -258,7 +301,7 @@ static int testOracleFindsTheInPlaceTableIdentical(void)
     s_Log[0] = '\0';
 
     // Act
-    portSeqTableOracle(inplace, kFile, FILE_SIZE);
+    portSeqTableOracle(inplace, kFile, BANK_SIZE);
 
     // Assert
     return expect(startsWith(s_Log, "ge: lp64: oracle: music sequences musicsampletbl identical (28 bytes)"),
@@ -273,7 +316,7 @@ static int testOracleFindsALengthThatDiffers(void)
     s_Log[0] = '\0';
 
     // Act
-    portSeqTableOracle(inplace, kFile, FILE_SIZE);
+    portSeqTableOracle(inplace, kFile, BANK_SIZE);
 
     // Assert
     return expect(startsWith(s_Log, "ge: lp64: oracle: music sequences musicsampletbl DIFFERS at +0x1A"),
@@ -290,7 +333,9 @@ int main(void)
     failures += testConverts();
     failures += testWritesTheCount();
     failures += testZeroExtendsTheOffsets();
-    failures += testDoesNotSignExtend();
+    failures += testRefusesASequencePastTheFile();
+    failures += testRefusesAnOffsetWithBit31Set();
+    failures += testAcceptsASequenceEndingAtTheFileEnd();
     failures += testWritesTheLengths();
     failures += testWritesNothingPastTheTable();
     failures += testRefusesARoomOneByteShort();

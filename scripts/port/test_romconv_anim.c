@@ -91,7 +91,8 @@ typedef struct AnimFixture
     intptr_t *lists[1];
 } AnimFixture;
 
-static u8 s_Entries[0x3000]; /* the animation_entries stand-in */
+#define ENTRIES_SIZE 0x4400u
+static u8 s_Entries[ENTRIES_SIZE]; /* the animation_entries stand-in */
 
 static void putHeader(u8 *image, u32 offset, u32 entries, u16 frames, u32 descriptors, u16 frameBits, u32 stream)
 {
@@ -141,12 +142,12 @@ static const intptr_t kStockList[] = {0x1C, 1, 0x60, 0xA4, 0x1C, 0};
 
 static int convert(AnimFixture *f)
 {
-    return portAnimHeadersConvert(f->table, IMAGE_SIZE, f->staged, IMAGE_SIZE, s_Entries, f->lists, 1);
+    return portAnimHeadersConvert(f->table, IMAGE_SIZE, f->staged, IMAGE_SIZE, s_Entries, ENTRIES_SIZE, f->lists, 1);
 }
 
 static int convertStaged(AnimFixture *f, u32 stagedsize)
 {
-    return portAnimHeadersConvert(f->table, IMAGE_SIZE, f->staged, stagedsize, s_Entries, f->lists, 1);
+    return portAnimHeadersConvert(f->table, IMAGE_SIZE, f->staged, stagedsize, s_Entries, ENTRIES_SIZE, f->lists, 1);
 }
 
 /* Replaces the header at OFFSET in both images (the table is a copy). */
@@ -244,7 +245,7 @@ static int testConvertsAcrossTwoTables(void)
     arrange(&f, kStockList, 6);
 
     // Act
-    int ok = portAnimHeadersConvert(f.table, IMAGE_SIZE, f.staged, IMAGE_SIZE, s_Entries, lists, 2);
+    int ok = portAnimHeadersConvert(f.table, IMAGE_SIZE, f.staged, IMAGE_SIZE, s_Entries, ENTRIES_SIZE, lists, 2);
 
     // Assert
     ModelAnimation *c = (ModelAnimation *) (f.table + 0xA4);
@@ -382,6 +383,48 @@ static int testRefusesOverlappingHeaders(void)
     return expectRefused(&f, list, 3, "headers at 0x1C and 0x30 (0x14 apart) are refused, nothing written");
 }
 
+/* LP64-007 Task 7: the frames a header names must lie in what it reads. */
+static int testRefusesFramesPastTheEntriesImage(void)
+{
+    // Arrange: ten 9-byte frames from 8 bytes before the entries image's end
+    static AnimFixture f;
+    arrange(&f, kStockList, 6);
+    putHeader(f.staged, 0x60, ENTRIES_SIZE - 8, 10, 0x80, 0x48, 0x90);
+    memcpy(f.table + 0x60, f.staged + 0x60, sizeof(RomAnimHeader));
+
+    // Act, Assert
+    return expectRefused(&f, kStockList, 6,
+            "frames that run past the entries image are refused, nothing written");
+}
+
+static int testRefusesAStreamPastTheStagedImage(void)
+{
+    // Arrange: 200 frames of 0x12 bits from 0xC0 need 450 bytes of a 0x100-byte image
+    static AnimFixture f;
+    arrange(&f, kStockList, 6);
+    putHeader(f.staged, 0xA4, 0x200, 200, 0xB8, 0x50, 0xC0);
+    memcpy(f.table + 0xA4, f.staged + 0xA4, sizeof(RomAnimHeader));
+
+    // Act, Assert
+    return expectRefused(&f, kStockList, 6,
+            "a root-motion stream that runs past the staged image is refused, nothing written");
+}
+
+static int testAcceptsFramesEndingAtTheEntriesImage(void)
+{
+    // Arrange: ten 9-byte frames that end exactly at the entries image's end
+    static AnimFixture f;
+    arrange(&f, kStockList, 6);
+    putHeader(f.staged, 0x60, ENTRIES_SIZE - 90, 10, 0x80, 0x48, 0x90);
+    memcpy(f.table + 0x60, f.staged + 0x60, sizeof(RomAnimHeader));
+
+    // Act
+    int ok = convert(&f);
+
+    // Assert
+    return expect(ok == 1, "frames that end at the entries image's end are converted");
+}
+
 int main(void)
 {
     int failures = 0;
@@ -399,5 +442,8 @@ int main(void)
     failures += testRefusesAHeaderOutsideTheStagedImage();
     failures += testRefusesDescriptorsOutsideTheStagedImage();
     failures += testRefusesAStreamOutsideTheStagedImage();
+    failures += testRefusesFramesPastTheEntriesImage();
+    failures += testRefusesAStreamPastTheStagedImage();
+    failures += testAcceptsFramesEndingAtTheEntriesImage();
     return failures == 0 ? 0 : 1;
 }

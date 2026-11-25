@@ -128,17 +128,17 @@ void portConvRefuse(enum PortLp64Asset asset, const char *file, const char *why,
  *
  * Returns 1, or 0 after portConvRefuse with nothing written when an offset or
  * offset + 0x20 is outside TABLE, the file header is outside STAGED, a
- * header's descriptor or stream offset is at or past STAGEDSIZE, or two
- * distinct headers are less than 0x20 apart.
- *
- * Precondition: ENTRIES + entries_offset, and the frames read from it, lie in
- * the entries image. The converter has no entries size and does not check it;
- * nor does any code today: portAnimDataInit (animdata.c) checks that the
- * animation_entries segment is its full 0x169EC0 bytes but not the offsets
- * into it, and at 32 bits expand_ani_table_entries adds them unchecked too.
+ * header's descriptor or stream offset is at or past STAGEDSIZE, its stream of
+ * frames times unk0c bits runs past STAGEDSIZE, its frames of frame_bits / 8
+ * bytes each from entries_offset run past ENTRIESSIZE (the bytes of ENTRIES),
+ * or two distinct headers are less than 0x20 apart. LP64-007 Task 7 added the
+ * stream and frame bounds; at 32 bits expand_ani_table_entries still adds the
+ * offsets unchecked. loadAnimationFrame (model.c) copies each frame rounded up
+ * to 16 bytes, which for the stock ROM's last header reads 8 bytes past the
+ * 0x169EC0-byte entries image: the shared reader's, not bounded here.
  */
 int portAnimHeadersConvert(u8 *table, u32 tablesize, const u8 *staged, u32 stagedsize, const u8 *entries,
-        intptr_t *const *tables, int ntables);
+        u32 entriessize, intptr_t *const *tables, int ntables);
 
 #ifdef GE_LP64_ORACLE
 /**
@@ -150,7 +150,7 @@ int portAnimHeadersConvert(u8 *table, u32 tablesize, const u8 *staged, u32 stage
  * from it (the in-place ones lead into INPLACE, the converter's into STAGED
  * and the copy).
  */
-void portAnimHeadersOracle(const u8 *inplace, u32 tablesize, const u8 *staged, const u8 *entries,
+void portAnimHeadersOracle(const u8 *inplace, u32 tablesize, const u8 *staged, const u8 *entries, u32 entriessize,
         intptr_t *const *tables, int ntables);
 #endif
 
@@ -158,6 +158,8 @@ void portAnimHeadersOracle(const u8 *inplace, u32 tablesize, const u8 *staged, c
  * own declarations rather than the game's externs. */
 const u8 *portAnimStagedData(void);
 const u8 *portAnimStagedEntries(void);
+/** The bytes of the animation_entries staging image (0x169EC0). */
+u32 portAnimStagedEntriesSize(void);
 
 /* ---- text banks (romconv_text.c) -------------------------------------- */
 
@@ -286,10 +288,11 @@ u32 portFontConvertedSize(u32 romsize);
  *
  * Returns 1, or 0 after portConvRefuse with nothing written when ROMSIZE is
  * less than sizeof(RomFont), portFontConvertedSize(ROMSIZE) would wrap,
- * OUTSIZE is less than it, or a non-zero pixel_offset lies outside the glyph
- * bytes (below sizeof(RomFont) or at or past ROMSIZE). Only where a glyph
- * starts is checked: its width and height are copied as they are, and
- * nothing here bounds the bytes the text renderer reads from pixeldata.
+ * OUTSIZE is less than it, a non-zero pixel_offset lies outside the glyph
+ * bytes (below sizeof(RomFont) or at or past ROMSIZE), or such a glyph's
+ * height rows of width rounded up to 8 bytes, the bytes load_font_tables and
+ * the text drawing read from pixeldata (textrelated.c), run past ROMSIZE,
+ * width and height read unsigned (LP64-007 Task 7).
  */
 int portFontConvert(const u8 *rom, u32 romsize, u8 *out, u32 outsize);
 
@@ -339,7 +342,8 @@ void portFontListOracle(const u8 *staged, const u8 *rom);
  * node, or to the node at new offset 0; children in an opcode 5 or 7 record;
  * a block counted above 32,768 (romfile_model.c leaves one unswapped); a
  * segment-5 word in a list command that carries an address the converter
- * does not move (below); an item that would end past 16 MB in the image,
+ * does not move (below); a texture rectangle without its two G_RDPHALF words
+ * (below); an item that would end past 16 MB in the image,
  * where 0x05000000 | offset would run into the segment byte.
  */
 u32 portModelConvertedSize(const u8 *file, u32 size, s32 numSwitches, s32 numtextures, const char *name);
@@ -363,9 +367,10 @@ u32 portModelConvertedSize(const u8 *file, u32 size, s32 numSwitches, s32 numtex
  * the file. The walk reads every 8 bytes as a command, as the in-place path
  * does, so G_TEXRECT's (0xE4) two G_RDPHALF words (0xB3, 0xB2) are read as
  * commands of their own; their opcodes are no address command's, so a
- * well-formed list is copied, but a crafted G_TEXRECT whose next word had
- * opcode 0x04, 0xFD or 0x06 and a segment-5 w1 would be read as an address
- * (no stock list has one; no test covers it). At 64 bits a collision
+ * well-formed list is copied. Since LP64-007 Task 7 portModelConvertedSize
+ * refuses a G_TEXRECT or G_TEXRECTFLIP (0xE5) not followed, inside the file,
+ * by those two words, which the renderer reads as its coordinates whatever
+ * they hold. At 64 bits a collision
  * vertex's link is its node's new offset and its related index is swapped; at
  * 32 bits both stay as the in-place path leaves them.
  *

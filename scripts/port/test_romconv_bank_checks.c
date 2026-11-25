@@ -133,6 +133,35 @@ static int testAcceptsARawWaveEndingAtTheTableEnd(void)
             "a raw wave whose samples end at the table's end is converted");
 }
 
+/* LP64-007 Task 7: a wave of any other type also gets table + base, which the
+ * mixer reads for len bytes. */
+static int testRefusesAWaveOfAnotherTypePastTheTable(void)
+{
+    // Arrange: wave 0 made type 2, its 0x20 bytes from 0xF0
+    buildBank();
+    s_File[F_WAVE0 + 8] = 2;
+    put32(F_WAVE0, 0xF0);
+
+    // Act, Assert
+    return expectRefused("type 2 wave table at 0xA8 has samples at 0xF0 to 0x110, past the 0x100-byte wave table",
+            "a wave of another type whose samples run past the table is refused");
+}
+
+static int testAcceptsAWaveOfAnotherTypeInsideTheTable(void)
+{
+    // Arrange: wave 0 made type 2, its samples left inside the table
+    buildBank();
+    s_File[F_WAVE0 + 8] = 2;
+
+    // Act
+    ALBankFile *f = convert();
+
+    // Assert
+    ALWaveTable *wave = f != NULL ? f->bankArray[0]->instArray[0]->soundArray[0]->wavetable : NULL;
+    return expect(wave != NULL && wave->type == 2 && wave->base >= s_Table && wave->base + wave->len <= s_Table + TABLE_SIZE,
+            "a wave of another type whose samples lie in the table is converted");
+}
+
 int main(void)
 {
     int failures = 0;
@@ -141,5 +170,7 @@ int main(void)
     failures += testAcceptsRecordsSharedByOffset();
     failures += testTableRefusals();
     failures += testAcceptsARawWaveEndingAtTheTableEnd();
+    failures += testRefusesAWaveOfAnotherTypePastTheTable();
+    failures += testAcceptsAWaveOfAnotherTypeInsideTheTable();
     return failures == 0 ? 0 : 1;
 }

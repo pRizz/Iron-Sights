@@ -35,7 +35,8 @@ extern "C" {
  * count is negative, a record or array runs past the file's end, an offset is
  * not a multiple of 4, one offset is reached as two kinds of record, two
  * records reached share a byte (an instrument's or bank's offset array is part
- * of its record), or an ADPCM or raw wave's base + len passes TABLESIZE.
+ * of its record), or a wave's base + len passes TABLESIZE, whatever its type
+ * (types other than ADPCM and raw since LP64-007 Task 7).
  */
 u32 portBankConvertedSize(const u8 *file, u32 size, u32 tablesize, const char *name);
 
@@ -125,10 +126,14 @@ u32 portSeqTableSize(const u8 *file);
  * bytes as stored, as the 32-bit in-place copy leaves them; nothing reads it.
  *
  * Returns 1, or 0 after portConvRefuse, with nothing written to OUT, when
- * FILESIZE is less than the header, or than the header and count entries,
- * or OUTSIZE is less than portSeqTableSize. Each entry's offset and lengths
- * are copied as they are: nothing here bounds offset + len by FILESIZE, since
- * the entries' streams are read later by musicTrack1Play and its two twins.
+ * FILESIZE is less than the header, or than the header and count entries, an
+ * entry's offset + len passes FILESIZE (the bytes musicTrack1Play and its two
+ * twins read; LP64-007 Task 7), or OUTSIZE is less than portSeqTableSize.
+ * Each entry's offset and lengths are otherwise copied as they are. Left to
+ * music.c, which reads them: it copies len rounded up to 16 bytes (9 bytes
+ * past the stock file for its last sequence, inside the ROM image), places
+ * the copy by uncompressed_len in a track buffer of its own size, and its
+ * init loop reads NUM_MUSIC_TRACKS (63) entries whatever the count.
  */
 int portSeqTableConvert(const u8 *file, u32 filesize, RareALSeqBankFile *out, u32 outsize);
 

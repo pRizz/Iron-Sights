@@ -107,7 +107,8 @@ int portStanRecordFill(const u8 *data, u32 size, uintptr_t base, struct StanPref
  * reference that names nothing of the kind it must: a table's start for a
  * header field, the words of an s32 list for a list field, the unowned bytes
  * for a name or an AI list; a name whose NUL, or an AI list whose AI_EndList
- * byte, is not in the unowned bytes it starts in; prop records the prop
+ * command (walked by chraiitemsize's sizes), is not in the unowned bytes it
+ * starts in; prop records the prop
  * converter refuses (portSetupPropsSize); an image that would pass 4 GB.
  */
 u32 portSetupConvertedSize(const u8 *file, u32 size, const char *name);

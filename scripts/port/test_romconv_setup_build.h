@@ -173,7 +173,9 @@ struct SetupFixture
 #define CAM_TEXT2 0x5678u
 
 /* Two pads and the terminator, one bound pad, three waypoints with neighbour
- * lists, one waygroup, one path, two AI lists with byte code, two pad names,
+ * lists, one waygroup, one path, two AI lists with byte code (list 0 a yield,
+ * a label whose ID is the AI_EndList byte, then the end; list 1 starting at
+ * that label), two pad names,
  * an intro of a spawn, a camera and credits with two entries, and only the
  * end record for props. Names and AI code sit between the tables. With
  * NESTED, waypoint 2's list starts inside waypoint 0's; without it, it has
@@ -181,9 +183,8 @@ struct SetupFixture
 static inline void sfBuildFixture(struct SetupFixture *f, int nested)
 {
     static const u8 names[] = {'x', 'p', '0', 0, 'p', '1', 0, 0};
-    u8 code[12] = {0x99, 0x2A, 0xAD, 0x11, 0, 0, 0, 0, 0, 0, 0, 0};
+    u8 code[12] = {0x99, (u8) AI_Yield, (u8) AI_Label, (u8) AI_EndList, (u8) AI_EndList, 0, 0, 0, 0, 0, 0, 0};
 
-    code[4] = (u8) AI_EndList;
     sfBegin();
     f->names = sfBytes(names, sizeof(names));
     f->p0 = f->names + 1;

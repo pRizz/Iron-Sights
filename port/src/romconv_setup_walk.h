@@ -149,8 +149,9 @@ int portSetupRefList(const struct SetupWalk *w, u32 value, const char *what, u32
 /**
  * The new offset of the byte at VALUE in the unowned bytes: its slot's new
  * offset plus its distance into the slot. Refuses a VALUE outside them, and
- * one whose terminator (a NUL for SB_NAME, an AI_EndList byte for SB_AILIST)
- * is not in the run of unowned bytes it starts in.
+ * one whose terminator (a NUL for SB_NAME; for SB_AILIST an AI_EndList
+ * command, the list walked command by command by chrai.c's chraiitemsize,
+ * LP64-007 Task 7) is not in the run of unowned bytes it starts in.
  */
 int portSetupRefBytes(const struct SetupWalk *w, u32 value, enum SetupBytes what, const char *field, u32 where,
         u32 *to);

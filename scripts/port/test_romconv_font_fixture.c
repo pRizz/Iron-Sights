@@ -65,7 +65,7 @@ u8 *buildRom(void)
     putBe32(s_Rom + offsetof(RomFont, kerning) + 168 * 4, 0x55);
     putBe32(s_Rom + CHAR_AT(0, index), 0x21);
     putBe32(s_Rom + CHAR_AT(0, baseline), 2);
-    putBe32(s_Rom + CHAR_AT(0, height), 7);
+    putBe32(s_Rom + CHAR_AT(0, height), 1);
     putBe32(s_Rom + CHAR_AT(0, width), 5);
     putBe32(s_Rom + CHAR_AT(0, kerningindex), 3);
     putBe32(s_Rom + CHAR_AT(0, pixel_offset), GLYPH0_AT);
@@ -82,6 +82,7 @@ u8 *romWithGlyph0At(u32 at)
     u8 *rom = buildRom();
 
     putBe32(rom + CHAR_AT(0, pixel_offset), at);
+    putBe32(rom + CHAR_AT(0, height), 0); /* no rows: only the offset is checked */
     return rom;
 }
 

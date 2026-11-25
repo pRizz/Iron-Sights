@@ -49,8 +49,28 @@ static const u8 *fontRomChar(const u8 *rom, u32 ch)
     return rom + offsetof(RomFont, chars) + ch * sizeof(RomFontChar);
 }
 
+/* Refuses, naming the glyph, character CH whose glyph at AT runs past ROMSIZE:
+ * load_font_tables and the text drawing (textrelated.c) read height rows of
+ * width rounded up to 8 bytes. Width and height are read unsigned, so a
+ * negative one is refused. Reads only. */
+static int fontGlyphInFile(const u8 *rom, u32 romsize, u32 ch, u32 at)
+{
+    const u8 *src = fontRomChar(rom, ch);
+    u64 height = portConvBe32(src + offsetof(RomFontChar, height));
+    u64 stride = ((u64) portConvBe32(src + offsetof(RomFontChar, width)) + 7) & ~(u64) 7;
+
+    /* Each factor is checked first, so the product cannot wrap 64 bits. */
+    if (height != 0 && stride != 0 && (height > romsize || stride > romsize || (u64) at + height * stride > romsize))
+    {
+        portConvRefuse(PORT_LP64_FONTS, FONT_FILE, "glyph %u's %llu rows of %llu bytes at 0x%X pass the %u-byte file",
+                ch, (unsigned long long) height, (unsigned long long) stride, at, romsize);
+        return 0;
+    }
+    return 1;
+}
+
 /* Refuses, naming the glyph, a non-zero pixel offset outside the glyph bytes
- * [sizeof(RomFont), ROMSIZE). Reads only. */
+ * [sizeof(RomFont), ROMSIZE), or a glyph that runs past ROMSIZE. Reads only. */
 static int fontOffsetsInGlyphBytes(const u8 *rom, u32 romsize)
 {
     u32 ch;
@@ -64,6 +84,10 @@ static int fontOffsetsInGlyphBytes(const u8 *rom, u32 romsize)
             portConvRefuse(PORT_LP64_FONTS, FONT_FILE,
                     "glyph %u's pixel offset 0x%X is outside the glyph bytes (0x%X to 0x%X)", ch, at,
                     (u32) sizeof(RomFont), romsize);
+            return 0;
+        }
+        if (at != 0 && !fontGlyphInFile(rom, romsize, ch, at))
+        {
             return 0;
         }
     }

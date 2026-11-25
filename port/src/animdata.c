@@ -250,6 +250,11 @@ const u8 *portAnimStagedEntries(void)
 {
     return _animation_entriesSegmentRomStart;
 }
+
+u32 portAnimStagedEntriesSize(void)
+{
+    return ANIM_ENTRIES_SEG_SIZE;
+}
 #endif
 
 void portAnimDataInit(void)

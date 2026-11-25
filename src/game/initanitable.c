@@ -276,7 +276,7 @@ void alloc_load_expand_ani_table(void)
         intptr_t *const tables[2] = {animation_table_ptrs1, (intptr_t *) animation_table_ptrs2};
 
         if (!portAnimHeadersConvert((u8 *) ptr_animation_table, (u32) animsDataSegmentSize, portAnimStagedData(),
-                (u32) animsDataSegmentSize, portAnimStagedEntries(), tables, 2)) {
+                (u32) animsDataSegmentSize, portAnimStagedEntries(), portAnimStagedEntriesSize(), tables, 2)) {
             sysFatalError("Cannot convert the animation table's headers");
         }
     }
@@ -288,7 +288,7 @@ void alloc_load_expand_ani_table(void)
         intptr_t *const tables[2] = {animation_table_ptrs1, (intptr_t *) animation_table_ptrs2};
 
         portAnimHeadersOracle((const u8 *) ptr_animation_table, (u32) animsDataSegmentSize, portAnimStagedData(),
-                portAnimStagedEntries(), tables, 2);
+                portAnimStagedEntries(), portAnimStagedEntriesSize(), tables, 2);
     }
 #endif
 #endif

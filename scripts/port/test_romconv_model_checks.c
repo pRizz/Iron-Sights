@@ -150,6 +150,62 @@ static int testOutputBuffer(void)
             "an output over the file is refused with nothing written");
 }
 
+/* LP64-007 Task 7: the renderer reads a G_TEXRECT's next two words as its
+ * texture coordinates, whatever they hold. A file with one DL node whose
+ * list is WORDS (N commands), at the offset returned; a second list, ending
+ * at once, after it, at *SECOND. */
+static u32 buildTexRectList(const u32 *words, u32 n, u32 *second)
+{
+    static const u32 end[] = {0xB8000000, 0};
+    u32 rec, list;
+
+    mfBegin(0, 0);
+    rec = mfRecord(mfNode(MODELNODE_OPCODE_DL), 20);
+    list = mfList(words, n);
+    mfPut32(rec, SEG(list));
+    *second = mfList(end, 1);
+    g_Size = (g_Size + 7) & ~7u;
+    return list;
+}
+
+static int testRefusesATexRectAtTheListsEnd(void)
+{
+    // Arrange: the end command is the first word of the tail
+    static const u32 words[] = {0xE4000000, 0, 0xB8000000, 0};
+    u32 second;
+    buildTexRectList(words, 2, &second);
+
+    // Act, Assert
+    return expectRefused(0, 0, "is not followed by its G_RDPHALF_2 and G_RDPHALF_CONT words",
+            "a G_TEXRECT whose tail is the list's end");
+}
+
+static int testRefusesATexRectWhoseTailIsACall(void)
+{
+    // Arrange: the tail's first word reads as a G_DL to the second list
+    static const u32 words[] = {0xE5000000, 0, 0x06000000, 0, 0xB2000000, 0, 0xB8000000, 0};
+    u32 second, list = buildTexRectList(words, 4, &second);
+    mfPut32(list + 8 + 4, SEG(second));
+
+    // Act, Assert
+    return expectRefused(0, 0, "is not followed by its G_RDPHALF_2 and G_RDPHALF_CONT words",
+            "a G_TEXRECTFLIP whose tail's first word is a list call");
+}
+
+static int testAcceptsATexRectWithItsTail(void)
+{
+    // Arrange
+    static const u32 words[] = {0xE4000000, 0, 0xB3000000, 0x00100020, 0xB2000000, 0x04000400, 0xB8000000, 0};
+    u32 second;
+    buildTexRectList(words, 4, &second);
+
+    // Act
+    u32 n = convertFile(0, 0);
+
+    // Assert
+    return expect(n != 0 && sameAsInPlace(0, 0, n), "a G_TEXRECT followed by its two words is converted");
+}
+
 /* A segment-5 w1 in a command whose w1 is an address the converter does not
  * move (no stock list has one) refuses the file, naming the command. */
 static int testOtherAddressCommands(void)
@@ -336,7 +392,8 @@ int main(void)
     int failures = testBriefRefusals() + testCollisionLinkToOffsetZero() + testMalformedGraphs()
         + testListsCallingInACircle() + testNoGeometry() + testChildrenOfOpcode5() + testOutputBuffer()
         + testOtherAddressCommands() + testLargeCounts() + testSixteenMegabytes()
-        + testBoundsInputs() + testRandomFiles() + testMutatedFiles();
+        + testBoundsInputs() + testRandomFiles() + testMutatedFiles() + testRefusesATexRectAtTheListsEnd()
+        + testRefusesATexRectWhoseTailIsACall() + testAcceptsATexRectWithItsTail();
 
     if (failures != 0)
     {

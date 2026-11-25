@@ -95,10 +95,27 @@ static int testEveryOtherWalkIsBounded(void)
     sfPut8(f.names + 7, 'z');
     failures += !sfRefused("whose NUL is not before");
 
-    // AI code with no AI_EndList byte before its unowned bytes end
+    // AI code with no AI_EndList command before its unowned bytes end
     sfBuildMain(&f);
     sfPut8(f.code + 4, 0x05);
-    failures += !sfRefused("whose AI_EndList byte is not before");
+    failures += !sfRefused("whose AI_EndList command is not before");
+
+    // LP64-007 Task 7: an AI_EndList byte that is a command's argument, the
+    // last of the unowned bytes, does not end the list
+    sfBuildMain(&f);
+    sfPut8(f.code + 10, AI_Label);
+    sfPut8(f.code + 11, AI_EndList);
+    sfPut32(f.ailists, f.code + 10);
+    failures += !sfRefused("whose AI_EndList command is not before");
+
+    // An AI_PRINT whose string has no NUL before the unowned bytes end
+    sfBuildMain(&f);
+    sfPut8(f.code + 8, AI_PRINT);
+    sfPut8(f.code + 9, 'a');
+    sfPut8(f.code + 10, AI_EndList);
+    sfPut8(f.code + 11, 'b');
+    sfPut32(f.ailists, f.code + 8);
+    failures += !sfRefused("whose AI_EndList command is not before");
 
     // An intro with no end record
     sfBuildMain(&f);

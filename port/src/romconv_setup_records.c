@@ -13,6 +13,7 @@
 #include <ultra64.h>
 #include "bondtypes.h"
 #include "bondconstants.h"
+#include "chrai.h" /* chraiitemsize: the AI list walk */
 #include "port_romconv.h"
 #include "port_romlayout_stage.h"
 #include "romconv_setup_walk.h"
@@ -58,10 +59,48 @@ int portSetupRefList(const struct SetupWalk *w, u32 value, const char *what, u32
     return lookup(w, value, what, where, to);
 }
 
+/* The first AT in [FROM, RUN_END) holding BYTE, or RUN_END. */
+static u32 byteBefore(const struct SetupWalk *w, u32 from, u32 run_end, u8 byte)
+{
+    u32 at;
+
+    for (at = from; at < run_end && w->file[at] != byte; at++)
+    {
+    }
+    return at;
+}
+
+/* Where the AI list at FROM ends, walked command by command as the
+ * interpreter steps (chrai.c's chraiitemsize), or RUN_END when no AI_EndList
+ * command starts before it: an AI_EndList byte that is another command's
+ * argument does not end the list. AI_PRINT, a NUL-terminated string, is
+ * sized here, so that its scan stays before RUN_END. */
+static u32 aiListEnd(const struct SetupWalk *w, u32 from, u32 run_end)
+{
+    u32 at = from;
+
+    while (at < run_end && w->file[at] != (u8) AI_EndList)
+    {
+        s32 size;
+
+        if (w->file[at] == (u8) AI_PRINT)
+        {
+            at = byteBefore(w, at + 1, run_end, 0) + 1;
+            continue;
+        }
+        size = chraiitemsize((u8 *) w->file, (s32) at);
+        if (size < 1 || (u32) size >= run_end - at)
+        {
+            return run_end;
+        }
+        at += (u32) size;
+    }
+    return at < run_end ? at : run_end;
+}
+
 int portSetupRefBytes(const struct SetupWalk *w, u32 value, enum SetupBytes what, const char *field, u32 where,
         u32 *to)
 {
-    const u8 end_byte = what == SB_NAME ? 0 : (u8) AI_EndList;
     u32 slot, run_end, at, base;
 
     if (value >= w->size || w->kinds[value / 4] != SETUP_RAW)
@@ -75,13 +114,11 @@ int portSetupRefBytes(const struct SetupWalk *w, u32 value, enum SetupBytes what
     {
     }
     run_end = (u64) slot * 4 < w->size ? slot * 4 : w->size;
-    for (at = value; at < run_end && w->file[at] != end_byte; at++)
-    {
-    }
+    at = what == SB_NAME ? byteBefore(w, value, run_end, 0) : aiListEnd(w, value, run_end);
     if (at == run_end)
     {
         setupRefuse(w, "the %s at 0x%X names 0x%X, whose %s is not before 0x%X, where its unowned bytes end", field,
-                where, value, what == SB_NAME ? "NUL" : "AI_EndList byte", run_end);
+                where, value, what == SB_NAME ? "NUL" : "AI_EndList command", run_end);
         return 0;
     }
     if (!lookup(w, value & ~3u, field, where, &base))
