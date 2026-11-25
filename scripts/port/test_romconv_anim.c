@@ -425,6 +425,21 @@ static int testAcceptsFramesEndingAtTheEntriesImage(void)
     return expect(ok == 1, "frames that end at the entries image's end are converted");
 }
 
+static int testAcceptsAStreamEndingAtTheStagedImage(void)
+{
+    // Arrange: 28 frames of 0x12 bits from 0xC1 need 63 bytes, to the 0x100-byte image's end
+    static AnimFixture f;
+    arrange(&f, kStockList, 6);
+    putHeader(f.staged, 0xA4, 0x200, 28, 0xB8, 0x50, 0xC1);
+    memcpy(f.table + 0xA4, f.staged + 0xA4, sizeof(RomAnimHeader));
+
+    // Act
+    int ok = convert(&f);
+
+    // Assert
+    return expect(ok == 1, "a root-motion stream that ends at the staged image's end is converted");
+}
+
 int main(void)
 {
     int failures = 0;
@@ -445,5 +460,6 @@ int main(void)
     failures += testRefusesFramesPastTheEntriesImage();
     failures += testRefusesAStreamPastTheStagedImage();
     failures += testAcceptsFramesEndingAtTheEntriesImage();
+    failures += testAcceptsAStreamEndingAtTheStagedImage();
     return failures == 0 ? 0 : 1;
 }

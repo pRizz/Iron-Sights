@@ -126,14 +126,20 @@ u32 portSeqTableSize(const u8 *file);
  * bytes as stored, as the 32-bit in-place copy leaves them; nothing reads it.
  *
  * Returns 1, or 0 after portConvRefuse, with nothing written to OUT, when
- * FILESIZE is less than the header, or than the header and count entries, an
- * entry's offset + len passes FILESIZE (the bytes musicTrack1Play and its two
- * twins read; LP64-007 Task 7), or OUTSIZE is less than portSeqTableSize.
- * Each entry's offset and lengths are otherwise copied as they are. Left to
- * music.c, which reads them: it copies len rounded up to 16 bytes (9 bytes
- * past the stock file for its last sequence, inside the ROM image), places
- * the copy by uncompressed_len in a track buffer of its own size, and its
- * init loop reads NUM_MUSIC_TRACKS (63) entries whatever the count.
+ * FILESIZE is less than the header, or than the header and count entries,
+ * the count is less than NUM_MUSIC_TRACKS (63, the entries musicInit reads
+ * whatever the count; more are converted and never read), an entry's
+ * offset + len passes FILESIZE (the bytes musicTrack1Play and its two twins
+ * read), an entry's len rounded up to 16 is more than the bytes its
+ * uncompressed_len leaves (made even, rounded up to 16, plus 64: the copy
+ * ends there and would start before the track buffer), or OUTSIZE is less
+ * than portSeqTableSize (the count, the copy and the len bounds since
+ * LP64-007 Task 7). Each entry's offset and lengths are otherwise copied as
+ * they are. Left to music.c, which reads them: it copies len rounded up to 16
+ * bytes (9 bytes past the stock file for its last sequence, inside the ROM
+ * image), and whether the uncompressed sequence fits its track buffer
+ * depends on which of the three players plays it (FORK-089's LP64-007 Task 7
+ * note).
  */
 int portSeqTableConvert(const u8 *file, u32 filesize, RareALSeqBankFile *out, u32 outsize);
 
