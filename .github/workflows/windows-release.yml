@@ -95,6 +95,7 @@ jobs:
           bash scripts/port/test_abi_probe.sh
           bash scripts/port/test_lp64_typed_reads.sh
           bash scripts/port/test_lp64_address.sh
+          bash scripts/port/test_lp64_notice.sh
           python3 scripts/port/test_lp64_boot.py
           python3 scripts/port/test_lp64_play.py
           python3 scripts/port/test_lp64_play_video.py

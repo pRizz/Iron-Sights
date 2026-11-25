@@ -22,7 +22,10 @@
 # 13): test_lp64_address.c checks one line a pool with its largest use, and
 # test_lp64_peaks.c the uses that are given back at once (a block that took
 # the rest of the stage bank, a room's first block); at 32 bits both print
-# nothing.
+# nothing. The stop notice (LP64-007 Task 6): at 64 bits each of those stops
+# shows its line in a box before it exits, with its status unchanged, and none
+# does under GE_NOINPUT=1; the driver prints the box (port_lp64_notice.c is
+# linked as in a video build, test_lp64_address.c stands in for video.c).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source scripts/port/harness_widths.sh
@@ -69,7 +72,8 @@ build() {
     local out=$1 str_object=$2 heap_object=$3 memp_object=$4
     shift 4
     "$compiler" "$@" -std=gnu11 -D_LANGUAGE_C -Wall -Wextra -Werror -iquote include -iquote port/include \
-        -iquote src -idirafter include -idirafter src scripts/port/test_lp64_address.c port/src/port_lp64.c "$str_object" \
+        -iquote src -idirafter include -idirafter src scripts/port/test_lp64_address.c port/src/port_lp64.c \
+        port/src/port_lp64_notice.c "$str_object" \
         "$heap_object" ${memp_object:+"$memp_object"} -o "$out"
 }
 
@@ -78,7 +82,8 @@ build_peaks() {
     local out=$1
     shift
     "$compiler" "$@" -std=gnu11 -D_LANGUAGE_C -Wall -Wextra -Werror -iquote include -iquote port/include \
-        -idirafter include scripts/port/test_lp64_peaks.c port/src/port_lp64.c -o "$out"
+        -idirafter include -DPORT_LP64_NOTICE_HEADLESS scripts/port/test_lp64_peaks.c port/src/port_lp64.c \
+        port/src/port_lp64_notice.c -o "$out"
 }
 
 # The external-texture slot (Task 6): port_textures.c linked with the stubs in
@@ -112,7 +117,7 @@ expect_textures() {
 # output contains WANT_TEXT.
 expect_driver() {
     local bin=$1 mode=$2 want_status=$3 want_text=$4 label=$5 status=0 output
-    output=$("$bin" "$mode" 2>&1) || status=$?
+    output=$(env -u GE_NOINPUT -u SDL_VIDEODRIVER "$bin" "$mode" 2>&1) || status=$?
     if [[ $status != "$want_status" ]]; then
         echo "test_lp64_address: $label: exit $status, expected $want_status; output:" >&2
         echo "$output" >&2
@@ -120,6 +125,24 @@ expect_driver() {
     fi
     if [[ $output != *"$want_text"* ]]; then
         echo "test_lp64_address: $label: output lacks '$want_text':" >&2
+        echo "$output" >&2
+        return 1
+    fi
+    return 0
+}
+
+# Runs the driver with MODE under GE_NOINPUT=1; fails unless it exits with
+# WANT_STATUS and opens no box.
+expect_no_box() {
+    local bin=$1 mode=$2 want_status=$3 label=$4 status=0 output
+    output=$(GE_NOINPUT=1 "$bin" "$mode" 2>&1) || status=$?
+    if [[ $status != "$want_status" ]]; then
+        echo "test_lp64_address: $label: exit $status, expected $want_status; output:" >&2
+        echo "$output" >&2
+        return 1
+    fi
+    if [[ $output == *"box: "* ]]; then
+        echo "test_lp64_address: $label: a box opened under GE_NOINPUT=1:" >&2
         echo "$output" >&2
         return 1
     fi
@@ -149,6 +172,9 @@ for width in $widths; do
         expect_driver "$work/pie" address-space 0 "ge: lp64: address space OK" "position-independent driver"
         build "$work/no-pie" "$work/str-$width.o" "$work/heap-$width.o" "$memp" -fno-pie -no-pie
         expect_driver "$work/no-pie" address-space 4 "executable image" "-no-pie driver"
+        expect_driver "$work/no-pie" address-space 4 "box: Iron Sights: ge: lp64: executable image at " \
+            "-no-pie driver's box"
+        expect_no_box "$work/no-pie" address-space 4 "-no-pie driver under GE_NOINPUT"
         expect_driver "$work/unit-$width" require-animations 0 "require-animations: returned" \
             "64-bit animation guard (converted)"
         expect_driver "$work/unit-$width" require-setup 0 "require-setup: returned" \
@@ -160,8 +186,15 @@ for width in $widths; do
         expect_driver "$work/unconverted" require-setup 5 \
             'ge: lp64: stopping: asset class "setup files" is marked unconverted in this build' \
             "64-bit guard of a class a test build leaves unconverted"
+        expect_driver "$work/unconverted" require-setup 5 \
+            'box: Iron Sights: ge: lp64: stopping: asset class "setup files" is marked unconverted in this build' \
+            "64-bit guard's box"
+        expect_no_box "$work/unconverted" require-setup 5 "64-bit guard under GE_NOINPUT"
         expect_driver "$work/unit-$width" pool-fatal 6 \
             'ge: lp64: pool "music heap" exhausted (request 4096 bytes)' "64-bit fatal pool report"
+        expect_driver "$work/unit-$width" pool-fatal 6 \
+            'box: Iron Sights: ge: lp64: pool "music heap" exhausted (request 4096 bytes)' "64-bit fatal pool's box"
+        expect_no_box "$work/unit-$width" pool-fatal 6 "64-bit fatal pool under GE_NOINPUT"
         expect_driver "$work/unit-$width" music-heap 6 \
             'ge: lp64: pool "music heap" exhausted (request 4096 bytes)' "64-bit music heap exhausted"
         expect_driver "$work/unit-$width" bank-start-aligned 0 "bank-start-aligned: returned" \

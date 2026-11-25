@@ -26,7 +26,7 @@ build() {
         -DVERSION_US -DLANG_US -DREFRESH_NTSC -D_LANGUAGE_C -DNONMATCHING -DAVOID_UB \
         -Wall -Wextra -Werror -Werror=incompatible-pointer-types -Wno-builtin-declaration-mismatch \
         -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \
-        "$@" port/src/port_lp64.c -o "$out"
+        "$@" port/src/port_lp64.c -DPORT_LP64_NOTICE_HEADLESS port/src/port_lp64_notice.c -o "$out"
 }
 
 # Runs one test program; prints its output only on failure.

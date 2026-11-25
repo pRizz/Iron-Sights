@@ -32,6 +32,9 @@
  *                                    for an 8-aligned start, stops naming the
  *                                    bank for one 4 bytes past it
  *
+ * At 64 bits each stop also shows its line in a box (port_lp64_notice.c,
+ * LP64-007 Task 6), which the driver prints as "box: TITLE: TEXT".
+ *
  * The unit cases also cover the pool reports' line, their eight-line limit a
  * pool a stage, and their 32-bit no-op form; and the pool peaks (LP64-005
  * Task 13): one line a pool at the print, with its largest use. */
@@ -500,6 +503,15 @@ static int runMusicHeapRequest(void)
 }
 
 #if IS_64_BIT
+/* video.c's message box, which port_lp64.c's stops open through
+ * port_lp64_notice.c (LP64-007 Task 6): printed, so that the harness sees
+ * which stops open one and with what text. */
+void portShowErrorBox(const char *title, const char *text)
+{
+    printf("box: %s: %s", title, text);
+    fflush(stdout);
+}
+
 /* What port_memp.c links against in the game, here only for its bank start
  * check: the pools, the permanent-bank flag and sysstubs.c's stop. */
 MemoryPool g_mempPools[MEMPOOL_COUNT];

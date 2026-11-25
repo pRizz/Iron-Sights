@@ -647,18 +647,18 @@ likely first. Each has its test in the task named.
   text, NULL)`; in a headless build it does nothing. Exit statuses and
   log lines do not change.
 
-- [ ] **Step 1: Write the failing harness**: a table test of
+- [x] **Step 1: Write the failing harness**: a table test of
   `portLp64StopNoticeWanted` over the eight combinations, at 64 bits
   (`harness_widths.sh`, 32 bits listed on `HARNESS_WIDTH_EXEMPT` with
   the reason "the file compiles at 64 bits only").
-- [ ] **Step 2: Run it.** Expected: it does not link.
-- [ ] **Step 3: Implement**, following how the no-ROM message
+- [x] **Step 2: Run it.** Expected: it does not link.
+- [x] **Step 3: Implement**, following how the no-ROM message
   (`port/src/romdata.c:1554-1565`) opens its box.
-- [ ] **Step 4: Check that nothing waits.** `lp64_play.py run --set
+- [x] **Step 4: Check that nothing waits.** `lp64_play.py run --set
   stops` plain and with `--video` on the 64-bit trees, and
   `test_lp64_address.sh`. Expected: every case passes with its status and
   none reaches its time limit.
-- [ ] **Step 5:** `compare_win32.py` (identical), static checks, plain
+- [x] **Step 5:** `compare_win32.py` (identical), static checks, plain
   aarch64 play sets, mission smoke, package check; record in FORK-089;
   commit.
 

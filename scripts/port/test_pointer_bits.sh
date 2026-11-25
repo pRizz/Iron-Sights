@@ -258,6 +258,21 @@ command_has "${other32[1]}" -w || fail "oracle port_lp64.c lost -w"
 mapfile -t adapter32 < <(entry_command oracle port/crash/reporting_linux.c)
 command_has "${adapter32[1]}" -w || fail "oracle port/crash/reporting_linux.c lacks -w"
 echo "ok 7e: converter sources make incompatible pointer types errors at both widths; the oracle build keeps -w elsewhere, the crash adapter included"
+# The 64-bit stops' message box (LP64-007 Task 6): 64-bit builds only, and a
+# headless one compiles it to do nothing.
+for tree in default oracle; do
+    if compiles "$tree" port_lp64_notice.c; then
+        fail "$tree: 32-bit build compiles port_lp64_notice.c"
+    fi
+done
+mapfile -t notice64 < <(entry_command bits64 port/src/port_lp64_notice.c)
+command_has "${notice64[1]}" -DPORT_LP64_NOTICE_HEADLESS ||
+    fail "headless 64-bit port_lp64_notice.c lacks -DPORT_LP64_NOTICE_HEADLESS"
+mapfile -t notice64video < <(entry_command bits64video port/src/port_lp64_notice.c)
+if command_has "${notice64video[1]}" -DPORT_LP64_NOTICE_HEADLESS; then
+    fail "video 64-bit port_lp64_notice.c has -DPORT_LP64_NOTICE_HEADLESS"
+fi
+echo "ok 7f: only 64-bit builds compile port_lp64_notice.c, a headless one with PORT_LP64_NOTICE_HEADLESS"
 
 # 8. The comparison build (LP64-006 Task 4): -DGE_COMPARE=ON defines GE_COMPARE
 # and compiles and links port_compare_math.c (the in-tree tanf, atanf and cosf); no

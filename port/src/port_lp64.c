@@ -18,6 +18,7 @@
  * where the converters and the oracle print them.
  */
 #define _GNU_SOURCE /* dl_iterate_phdr */
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,6 +34,22 @@
 
 /* port_console.c: the game's log (stderr plus the tilde console ring). */
 extern void portConLogf(const char *fmt, ...);
+
+/* Logs a stop's line as portConLogf would, shows it in a message box when
+ * someone is there to read it (port_lp64_notice.c), then exits with STATUS. */
+static void lp64Stop(int status, const char *fmt, ...) __attribute__((noreturn, format(printf, 2, 3)));
+static void lp64Stop(int status, const char *fmt, ...)
+{
+    char line[1024];
+    va_list args;
+
+    va_start(args, fmt);
+    vsnprintf(line, sizeof(line), fmt, args);
+    va_end(args);
+    portConLogf("%s", line);
+    portLp64StopNotice(line);
+    exit(status);
+}
 
 #define LP64_FOUR_GB ((uintptr_t) 1 << 32)
 #define LP64_EXIT_LOW_ADDRESS 4
@@ -87,10 +104,10 @@ void portLp64CheckRegion(const char *name, const void *start, size_t size)
 {
     if (!portLp64RegionIsHigh(start, size))
     {
-        portConLogf("ge: lp64: %s at %p is below 4 GB; a 64-bit build needs every game address above 4 GB "
-                    "(scripts/port/native_64bit_plan.md, \"Addresses\")\n",
+        lp64Stop(LP64_EXIT_LOW_ADDRESS,
+                "ge: lp64: %s at %p is below 4 GB; a 64-bit build needs every game address above 4 GB "
+                "(scripts/port/native_64bit_plan.md, \"Addresses\")\n",
                 name, start);
-        exit(LP64_EXIT_LOW_ADDRESS);
     }
     lp64Remember(name, (uintptr_t) start);
 }
@@ -140,8 +157,7 @@ static void lp64CheckExecutableImage(void)
     dl_iterate_phdr(lp64ReadImage, &range);
     if (!range.found)
     {
-        portConLogf("ge: lp64: the executable image has no loaded segments to check\n");
-        exit(LP64_EXIT_LOW_ADDRESS);
+        lp64Stop(LP64_EXIT_LOW_ADDRESS, "ge: lp64: the executable image has no loaded segments to check\n");
     }
     portLp64CheckRegion("executable image", (const void *) range.lowest, (size_t) (range.end - range.lowest));
 }
@@ -159,8 +175,7 @@ void portLp64CheckAddressSpace(void)
     block = malloc(64);
     if (block == NULL)
     {
-        portConLogf("ge: lp64: malloc block for the address check could not be allocated\n");
-        exit(LP64_EXIT_LOW_ADDRESS);
+        lp64Stop(LP64_EXIT_LOW_ADDRESS, "ge: lp64: malloc block for the address check could not be allocated\n");
     }
     portLp64CheckRegion("malloc block", block, 64);
     free(block);
@@ -253,9 +268,8 @@ void portLp64RequireConverter(enum PortLp64Asset asset)
     {
         return;
     }
-    portConLogf("ge: lp64: stopping: asset class \"%s\" is marked unconverted in this build\n",
+    lp64Stop(LP64_EXIT_NO_CONVERTER, "ge: lp64: stopping: asset class \"%s\" is marked unconverted in this build\n",
             portLp64AssetName(asset));
-    exit(LP64_EXIT_NO_CONVERTER);
 }
 
 /* ==== the pool reports ================================================= */
@@ -308,9 +322,11 @@ static Lp64PoolLines *lp64PoolLines(const char *pool)
     return &s_PoolLines[s_PoolCount++];
 }
 
+#define LP64_POOL_LINE "ge: lp64: pool \"%s\" exhausted (request %u bytes)\n"
+
 static void lp64LogPool(const char *pool, u32 request)
 {
-    portConLogf("ge: lp64: pool \"%s\" exhausted (request %u bytes)\n", pool, (unsigned) request);
+    portConLogf(LP64_POOL_LINE, pool, (unsigned) request);
 }
 
 void portLp64PoolExhausted(const char *pool, u32 request)
@@ -330,8 +346,7 @@ void portLp64PoolExhausted(const char *pool, u32 request)
 
 void portLp64PoolFatal(const char *pool, u32 request)
 {
-    lp64LogPool(pool, request);
-    exit(LP64_EXIT_POOL);
+    lp64Stop(LP64_EXIT_POOL, LP64_POOL_LINE, pool, (unsigned) request);
 }
 
 void portLp64PoolStageBegin(void)

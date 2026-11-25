@@ -405,6 +405,12 @@ if(NOT GE_POINTER_BITS EQUAL 64 AND NOT GE_LP64_ORACLE)
     list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_lp64.c
         ${CMAKE_SOURCE_DIR}/port/src/port_lp64_synth.c ${CMAKE_SOURCE_DIR}/port/src/port_lp64_budget.c)
 endif()
+# The 64-bit stops' message box (port_lp64_notice.c, LP64-007 Task 6): only a
+# 64-bit build has those stops (the oracle build compiles port_lp64.c for its
+# class names only).
+if(NOT GE_POINTER_BITS EQUAL 64)
+    list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_lp64_notice.c)
+endif()
 # The models' list store (port_gdl_store.h, LP64-006 Task 11b) is the 64-bit
 # build's alone: a 32-bit build converts as it always has (objecthandler_2.c).
 if(NOT GE_POINTER_BITS EQUAL 64)
@@ -489,6 +495,9 @@ if(GE_LP64_ORACLE)
     add_compile_definitions(GE_LP64_ORACLE)
 endif()
 if(GE_HEADLESS)
+    # No SDL, so no box: the 64-bit stop notice does nothing.
+    set_property(SOURCE ${CMAKE_SOURCE_DIR}/port/src/port_lp64_notice.c APPEND PROPERTY
+        COMPILE_DEFINITIONS PORT_LP64_NOTICE_HEADLESS)
     list(REMOVE_ITEM PORT_SRC
         ${CMAKE_SOURCE_DIR}/port/src/audio_pc.c
         ${CMAKE_SOURCE_DIR}/port/src/video.c

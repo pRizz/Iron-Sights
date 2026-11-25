@@ -2,6 +2,8 @@
 #include "port/src/pcsched.c"
 #if IS_64_BIT
 #include "port/src/port_lp64.c"
+#define PORT_LP64_NOTICE_HEADLESS /* port_lp64.c's stops: no box here */
+#include "port/src/port_lp64_notice.c"
 #include <sys/wait.h>
 #include <unistd.h>
 #endif

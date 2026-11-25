@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include "platform_info.h"
+#if IS_64_BIT
+#include "port_lp64.h" /* portLp64StopNotice */
+#endif
 
 #if defined(__i386__) || defined(__x86_64__)
 #include <cpuid.h>
@@ -36,7 +40,21 @@ const char *sysArgGetString(const char *arg)
 void sysFatalError(const char *fmt, ...)
 {
     va_list ap;
+#if IS_64_BIT
+    /* LP64-007 Task 6: the same line in a message box, when someone is there
+     * to read it (port_lp64_notice.c); the box may cut a long line short. */
+    char line[1024];
+    va_list copy;
+#endif
     va_start(ap, fmt);
+#if IS_64_BIT
+    va_copy(copy, ap);
+    {
+        size_t used = (size_t) snprintf(line, sizeof(line), "ge: FATAL: ");
+        vsnprintf(line + used, sizeof(line) - used, fmt, copy);
+    }
+    va_end(copy);
+#endif
     /* stderr only, not portConLogf: exit(1) follows, so a ring copy is never
      * seen, and shader info logs (gfx_opengl.cpp) can outgrow its buffer */
     fprintf(stderr, "ge: FATAL: ");
@@ -44,6 +62,9 @@ void sysFatalError(const char *fmt, ...)
     fprintf(stderr, "\n");
     va_end(ap);
     fflush(NULL);
+#if IS_64_BIT
+    portLp64StopNotice(line);
+#endif
     exit(1);
 }
 

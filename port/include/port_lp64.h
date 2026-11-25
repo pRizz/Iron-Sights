@@ -161,6 +161,22 @@ void portLp64SynthParams(u32 records, u32 recordBytes);
 void portLp64SynthParamTake(void);
 void portLp64SynthParamGive(void);
 
+/**
+ * The stop notice (port_lp64_notice.c, LP64-007 Task 6): whether a 64-bit
+ * stop shows its line in a message box. Pure: 0 when HAVEVIDEO is 0 (a
+ * headless build), when NOINPUT (GE_NOINPUT) is set and not "0", or when
+ * VIDEODRIVER (SDL_VIDEODRIVER) is "offscreen" or "dummy"; else 1.
+ */
+s32 portLp64StopNoticeWanted(const char *noInput, const char *videoDriver, s32 haveVideo);
+
+/**
+ * Shows TEXT, a stop's log line, in an "Iron Sights" error box when
+ * portLp64StopNoticeWanted says someone is there to read it, before the stop's
+ * exit. At most one box a process: a stop during another's box adds none. A
+ * headless build does nothing. Logs nothing and never changes the exit status.
+ */
+void portLp64StopNotice(const char *text);
+
 #ifdef __cplusplus
 }
 #endif
