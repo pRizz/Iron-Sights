@@ -11,6 +11,11 @@ lacks, so it runs in `midas-lp64-i686-video`, built on top of `goldeneye`
 (`lp64-i686-video.Dockerfile`). Configure such a tree with
 `-DSDL2_LINUX_ROOT=/home/dev/sdl2-linux-i686`, the i386 SDL `goldeneye`
 builds. The 64-bit video builds already run offscreen in the plain images.
+
+`--release` matters only for x86_64: it runs in `midas-linux-release-x86_64`
+(`linux-release-x86_64.Dockerfile`), the pinned Ubuntu 22.04 image the 64-bit
+Linux packages are built in. `build-images --release` builds it as well; plain
+`build-images` does not.
 """
 import argparse
 import os
@@ -29,10 +34,18 @@ ARM64_IMAGE = 'midas-lp64-arm64'
 ARM64_DOCKERFILE = Path('scripts/port/lp64-arm64.Dockerfile')
 I686_VIDEO_IMAGE = 'midas-lp64-i686-video'
 I686_VIDEO_DOCKERFILE = Path('scripts/port/lp64-i686-video.Dockerfile')
+RELEASE_IMAGE = 'midas-linux-release-x86_64'
+RELEASE_DOCKERFILE = Path('scripts/port/linux-release-x86_64.Dockerfile')
 
 
-def image_and_platform(arch: str, video: bool = False) -> tuple[str, str]:
-    """Return the Docker image name and platform that run `arch`, with video when `video`."""
+def image_and_platform(arch: str, video: bool = False, release: bool = False) -> tuple[str, str]:
+    """Return the Docker image name and platform that run `arch`, with video when `video`.
+
+    `release` picks the x86_64 release image and is refused for any other architecture."""
+    if release:
+        if arch != 'x86_64':
+            raise ValueError(f'--release has an image only for x86_64, not {arch!r}')
+        return RELEASE_IMAGE, 'linux/amd64'
     if arch == 'i686' and video:
         return I686_VIDEO_IMAGE, 'linux/amd64'
     if arch in ('i686', 'x86_64'):
@@ -63,9 +76,10 @@ def find_rom(root: Path, environ: Mapping[str, str]) -> Optional[Path]:
 
 
 def docker_command(arch: str, root: Path, maybe_rom: Optional[Path], command: list[str],
-                   video: bool = False) -> list[str]:
-    """Build the `docker run` argument list for `command` on `arch`, in a video image when `video`."""
-    image, platform = image_and_platform(arch, video)
+                   video: bool = False, release: bool = False) -> list[str]:
+    """Build the `docker run` argument list for `command` on `arch`, in a video image when `video`
+    and in the release image when `release`."""
+    image, platform = image_and_platform(arch, video, release)
     argv = ['docker', 'run', '--rm', '--platform', platform,
             '-v', f'{root}:{PROJECT_DIR}', '-w', PROJECT_DIR]
     if maybe_rom is not None:
@@ -73,18 +87,26 @@ def docker_command(arch: str, root: Path, maybe_rom: Optional[Path], command: li
     return argv + [image] + command
 
 
-def build_commands(root: Path, uid: int, gid: int, empty_context: Path) -> list[list[str]]:
+def build_commands(root: Path, maybe_uid: Optional[int], maybe_gid: Optional[int], empty_context: Path,
+                   release: bool = False) -> list[list[str]]:
     """Return the `docker build` argument lists for the toolchain images, each after the one it extends.
 
-    The i686 video image's Dockerfile copies nothing, so it is built from EMPTY_CONTEXT, an empty
-    folder, and the checkout (the ROM, the build trees) is not sent to the Docker daemon."""
-    ids = ['--build-arg', f'HOST_UID={uid}', '--build-arg', f'HOST_GID={gid}']
+    Without user ids (Windows has none) the images keep their Dockerfiles' default ids. The i686
+    video image's and the release image's Dockerfiles copy nothing, so they are built from
+    EMPTY_CONTEXT, an empty folder, and the checkout (the ROM, the build trees) is not sent to
+    the Docker daemon. `release` adds the x86_64 release image."""
+    ids = []
+    if maybe_uid is not None and maybe_gid is not None:
+        ids = ['--build-arg', f'HOST_UID={maybe_uid}', '--build-arg', f'HOST_GID={maybe_gid}']
+    release_commands = [['docker', 'build', '--platform', 'linux/amd64', '-t', RELEASE_IMAGE,
+                         '-f', str(root/RELEASE_DOCKERFILE), str(empty_context)]] if release else []
     return [
         ['docker', 'build', '--platform', 'linux/amd64', *ids, '-t', AMD64_IMAGE, str(root)],
         ['docker', 'build', '--platform', 'linux/arm64', *ids, '-t', ARM64_IMAGE,
          '-f', str(root/ARM64_DOCKERFILE), str(root)],
         ['docker', 'build', '--platform', 'linux/amd64', '-t', I686_VIDEO_IMAGE,
          '-f', str(root/I686_VIDEO_DOCKERFILE), str(empty_context)],
+        *release_commands,
     ]
 
 
@@ -92,17 +114,23 @@ def main(argv: Optional[list[str]] = None) -> int:
     """Run the CLI and return the exit status of the last Docker call."""
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='action', required=True)
-    sub.add_parser('build-images', help='Build the goldeneye (amd64), midas-lp64-arm64 and midas-lp64-i686-video images')
+    images = sub.add_parser('build-images',
+                            help='Build the goldeneye (amd64), midas-lp64-arm64 and midas-lp64-i686-video images')
+    images.add_argument('--release', action='store_true', help=f'also build {RELEASE_IMAGE}')
     run = sub.add_parser('run', help='Run a command in the container for an architecture')
     run.add_argument('--arch', choices=ARCHES, required=True)
     run.add_argument('--video', action='store_true',
                      help='run where a GE_VIDEO build of ARCH builds and runs offscreen')
+    run.add_argument('--release', action='store_true',
+                     help=f'run in {RELEASE_IMAGE}, where the x86_64 packages are built')
     run.add_argument('command', nargs=argparse.REMAINDER, help='after --')
     options = parser.parse_args(argv)
 
     if options.action == 'build-images':
         with tempfile.TemporaryDirectory(prefix='midas-lp64-context-') as empty:
-            for command in build_commands(ROOT, os.getuid(), os.getgid(), Path(empty)):
+            maybe_getuid, maybe_getgid = getattr(os, 'getuid', None), getattr(os, 'getgid', None)
+            ids = (maybe_getuid(), maybe_getgid()) if maybe_getuid and maybe_getgid else (None, None)
+            for command in build_commands(ROOT, *ids, Path(empty), options.release):
                 status = subprocess.run(command).returncode
                 if status:
                     return status
@@ -116,7 +144,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     except ValueError as error:
         print(f'error: {error}', file=sys.stderr)
         return 2
-    return subprocess.run(docker_command(options.arch, ROOT, maybe_rom, command, options.video)).returncode
+    try:
+        argv = docker_command(options.arch, ROOT, maybe_rom, command, options.video, options.release)
+    except ValueError as error:
+        print(f'error: {error}', file=sys.stderr)
+        return 2
+    return subprocess.run(argv).returncode
 
 
 if __name__ == '__main__':

@@ -3681,6 +3681,8 @@ Over all the laptop's comparisons, the lines not exercised are the nine `i686:a6
 
 **LP64-007 planned and accepted (2026-11-24, nothing built).** The owner accepted all thirteen recommendations of the plan that day; `native_64bit_plan.md`'s "Decisions" lists them. [The plan](scripts/port/native_64bit_lp64_007.md) has thirteen tasks and thirteen decisions for the owner, and is not accepted yet. It was written from six look-ups made on `main` at f04e0a7, in the Mac's containers with x86_64 translated by Rosetta 2 and video drawn by Mesa's llvmpipe through SDL's offscreen driver; no GPU and no real x86 hardware. *How packages are made today:* every push to `main` publishes a release; the `linux` job builds the i686 tarball, AppImage and Steam Deck ZIP in `linux-release.Dockerfile` (Ubuntu 22.04, GCC 11.4, glibc 2.35) with `linux_build.py` and `package_linux.py`, both i686-only (`-m32`, `lib/i386-linux-gnu`, `SENTRY_BUILD_FORCE32`, the `runtime-i686` pin, an ELF32 check, the names); the shipped build type is `Debug`, which `CMakeLists.txt` compiles at `-O2 -g`, as every 64-bit tree so far was. *A 64-bit video tree configured as the shipped build is* (`-DCMAKE_BUILD_TYPE=Debug -DGE_POINTER_BITS=64 -DGE_VIDEO=ON -DGE_ROMDATA_FALLBACK=OFF`, GCC 13.3, the x86_64 development container): built in 32 s with the usual eleven optionless C++ warnings; a 28.3 MB PIE needing GLIBC_2.38 and GLIBCXX_3.4.32 and, through the container's SDL 2.30.0, 49 libraries; `lp64_boot.py --expect-run --frames 600` printed `OK: ran 600 frames`; `lp64_play.py run --video --set demos` printed `OK: 14 of 14 cases` in 225 s; `package_linux.py` on it stopped at `FileNotFoundError: .../sentry-crash`, and Sentry was off (`ge: crash reporting preference=ON active=0`). *The packages' compiler:* in the unmodified `midas-linux-release` image (GCC 11.4.0, CMake 3.22.1), a 64-bit headless tree built all 360 C objects with 0 errors and 0 warnings, needs GLIBC_2.34 at most, ran 600 frames and replayed 14 of 14 demos in 101 s; the video sources, C++ renderer included, were not compiled there, since that image has only i386 `-dev` libraries. *What a 64-bit build does differently for a player:* the Suspend Points row, its four bind rows and keys say nothing until used; its stops (statuses 4, 5, 6 and `sysFatalError`'s 64-bit messages) only log; `port/crash/reporting_linux.c:163` tags every report `i686`; `PORT_PLAY_HARNESS` is 1 with no CMake switch; the icon cache file is named by the ROM's fingerprint alone, so an i686 and an x86_64 install share it. The Linux signal handler (`port/src/main.c`, glibc `backtrace`) is the same at both widths, so the design's "portable replacement" of the x86 frame walks has nothing to replace outside Windows-only code. The two scratch trees (`build/lp64/ship-probe/`) were deleted after planning. *Not run:* anything on a GPU, a Steam Deck or real x86 hardware; an x86_64 Sentry runtime (none exists yet); the i686 packaging on the Mac (`ldd` on 32-bit files cannot run under Rosetta 2).
 
+*LP64-007 task 1, the x86_64 release image and build (2026-11-24), on the Mac, x86_64 under Rosetta 2.* Commit "Build the x86_64 game in its own pinned release image" (`scripts/port/linux_build.py`, `scripts/port/linux-release-x86_64.Dockerfile`, `scripts/port/test_linux_build.py`, `scripts/port/lp64_env.py`, `scripts/port/test_lp64_env.py`, one line in the workflow's tests step, FORK-031, this note, the plan's Task 1 boxes). `linux_build.py --arch x86_64` builds SDL, the Sentry SDK and the 64-bit video game; its `i686` argument lists are f04e0a7's, which `test_linux_build.py`'s three golden tests hold. `lp64_env.py run --arch x86_64 --release` runs `midas-linux-release-x86_64` (refused for any other architecture, exit 2), `build-images --release` builds it from an empty context after the other three, plain `build-images` does not, and `build-images` reads the user ids through `getattr(os, "getuid", None)`, so on Windows it passes none and the images keep their default ids (the hand-over's pointer below). *Figures.* `build-images --release` exit 0 (it also rebuilt `goldeneye` from its Dockerfile). P1 (`REL python3 scripts/port/linux_build.py --arch x86_64 --work build/lp64/ship/x64/deps --output build/lp64/ship/x64`) exit 0 in 354 s, GCC 11.4.0, no compiler error: GCC 11 refused nothing in the video sources, so Step 6 changed nothing. `file` names `IronSights` and `sentry-crash` ELF 64-bit LSB pie executables, x86-64, and `lib/libsentry.so` and `lib/libSDL2-2.0.so.0` ELF 64-bit LSB shared objects, x86-64; the highest glibc symbol version each needs (`objdump -T`) is `GLIBC_2.35` for `IronSights` and `GLIBC_2.34` for the other three; their RUNPATHs are `$ORIGIN/lib` (the two executables) and `$ORIGIN` (`libsentry.so`). In the development container, `LD_LIBRARY_PATH=build/lp64/ship/x64/lib lp64_boot.py --rom /rom/baserom.u.z64 --expect-run --frames 600 build/lp64/ship/x64/IronSights` printed `OK: ran 600 frames`. *Checks.* `compare_win32.py commits HEAD WORKTREE`: `identical in loaded code and data`. The CI tests step in the x86_64 container (Rosetta 2), each line under a 1,200 s limit with `MIDAS_BUFFER_SANITIZE=1 bash scripts/port/test_buffers.sh` run as its two halves as before (`MIDAS_HARNESS_WIDTHS=64` sanitized, `MIDAS_HARNESS_WIDTHS=32` unsanitized; the combined line is not claimed passed here): `harness lines: 102, failures: 0` (546 s), `test_linux_build.py` and `test_lp64_env.py` among them, and the static checks printing `OK: 24 truncating casts in 11 files, all allowed`, `OK: 1620 sites, all reviewed`, `OK: 0 narrowings in 0 files, all allowed`, `OK: 4 unprototyped calls in 4 files, all allowed`, `OK: 121 pointer-only types, as pinned in lp64_pointer_types.txt` and `OK: 15 mismatches, all allowed`. The task changes only tools, tests, a Dockerfile and the workflow, so it runs no play sets and no mission smoke: the last checked executables are LP64-006's close.
+
 **LP64-006 hand-over to LP64-007** (written at the final review's fix wave from the review, the controller's ledger and the task notes above, and completed at Task 17 on 2026-11-24; each patch is under `scripts/port/lp64_patches/`, whose `README.md` says what it changes and the commit it applies to):
 
 - *The owner's open questions* (eight; none is applied, each would change the shipped 32-bit program or the 64-bit one's behaviour):
@@ -10734,8 +10736,23 @@ texture paths explicitly reject 64-bit host pointers. No unverified x86_64
 binary is published. ROM layouts, address conversions, graphics parsing and
 state serialization require a coordinated audit before changing that ABI.
 
+LP64-007 Task 1 (2026-11-24, local, not published) taught the build script a
+second architecture. `linux_build.py --arch {i686,x86_64}` (default `i686`)
+reads what differs from `ARCHITECTURES`: for `x86_64`, SDL has no `-m32` flags
+and installs to `lib` (the directory a 64-bit `SDL2_LINUX_ROOT` is linked
+from), the Sentry SDK has no `SENTRY_BUILD_FORCE32`, the game adds
+`-DGE_POINTER_BITS=64`, and `sentry-build.json` records `x86_64`; the SDL
+options are the i686 ones. The x86_64 tree is built in its own image,
+`linux-release-x86_64.Dockerfile` (`midas-linux-release-x86_64`): the same
+digest-pinned Ubuntu 22.04 base line as `linux-release.Dockerfile`, which is
+unchanged, with the 64-bit development packages and no i386 architecture.
+For `i686` the three configure argument lists are those of f04e0a7, which
+`test_linux_build.py` holds literally. No x86_64 package is made or published
+yet; the `linux` job is unchanged.
+
 **Sources:** [baseline container](scripts/port/linux-release.Dockerfile),
-[build](scripts/port/linux_build.py), [packager](scripts/port/package_linux.py),
+[x86_64 baseline container](scripts/port/linux-release-x86_64.Dockerfile),
+[build](scripts/port/linux_build.py), [build tests](scripts/port/test_linux_build.py), [packager](scripts/port/package_linux.py),
 [AppImage launcher](scripts/port/linux/AppRun),
 [Steam Deck launcher](scripts/port/linux/steamdeck-run.sh),
 [Steam Deck instructions](scripts/port/linux/STEAM-DECK.txt),
@@ -10769,6 +10786,11 @@ crash-reporting scenarios locally using the previously released Linux binary.
 The workflow fingerprint refresh completed two gallery passes with zero changed
 image cells across all 72 views and 35 icons.
 Physical Steam Deck validation remains pending.
+LP64-007 Task 1, on the Mac (x86_64 under Rosetta 2): `test_linux_build.py`
+(7 tests) passes, and the x86_64 tree built in `midas-linux-release-x86_64`
+(GCC 11.4.0) in 354 s; its `IronSights`, `sentry-crash`, `lib/libsentry.so` and
+`lib/libSDL2-2.0.so.0` are ELF 64-bit x86-64 and need at most `GLIBC_2.35`
+(the game) and `GLIBC_2.34` (the other three). FORK-089 has the details.
 
 ### FORK-030 — Native Sentry crash reporting and symbol uploads
 

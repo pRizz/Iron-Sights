@@ -382,7 +382,7 @@ likely first. Each has its test in the task named.
   Fcitx, DBus, Jack, sndio, libsamplerate off; X11, OpenGL, ALSA, Pulse
   on) are the i686 ones.
 
-- [ ] **Step 1: Write the failing tests** in `test_linux_build.py`:
+- [x] **Step 1: Write the failing tests** in `test_linux_build.py`:
   `test_i686_sdl_arguments_are_unchanged`,
   `test_i686_sdk_arguments_are_unchanged` and
   `test_i686_game_arguments_are_unchanged` compare each function's list
@@ -394,29 +394,29 @@ likely first. Each has its test in the task named.
   `test_unknown_architecture_is_refused` (argparse exits 2). In
   `test_lp64_env.py`: `test_release_image_is_chosen_only_with_the_flag`
   and `test_plain_build_images_does_not_build_the_release_image`.
-- [ ] **Step 2: Run them.** `python3 scripts/port/test_linux_build.py`.
+- [x] **Step 2: Run them.** `python3 scripts/port/test_linux_build.py`.
   Expected: errors, the functions do not exist.
-- [ ] **Step 3: Implement** the table, the three functions, `--arch`, the
+- [x] **Step 3: Implement** the table, the three functions, `--arch`, the
   Dockerfile and the `--release` flag. In `lp64_env.py`, read the user id
   through `getattr(os, "getuid", None)` so `build-images` runs on Windows
   (the hand-over's pointer).
-- [ ] **Step 4: Run the tests.** Expected: all pass. Add the test's line
+- [x] **Step 4: Run the tests.** Expected: all pass. Add the test's line
   to the workflow's tests step.
-- [ ] **Step 5: Build the image and the game.**
+- [x] **Step 5: Build the image and the game.**
   `python3 scripts/port/lp64_env.py build-images --release`, then package
   check P1. Expected: exit 0; `build/lp64/ship/x64/IronSights` is ELF
   64-bit; `sentry-crash`, `lib/libsentry.so` and `lib/libSDL2-2.0.so.0`
   exist and are ELF 64-bit.
-- [ ] **Step 6: Fix what GCC 11 refuses** in the video sources, if
+- [x] **Step 6: Fix what GCC 11 refuses** in the video sources, if
   anything (the planning probe compiled only the headless sources there).
   Each fix is at the declaration and compiles unchanged with GCC 13; a
   fix that would change the 32-bit program stops the task for a ruling.
-- [ ] **Step 7: Check the baseline.** For each of the four ELF files:
+- [x] **Step 7: Check the baseline.** For each of the four ELF files:
   `objdump -T FILE | grep -o 'GLIBC_[0-9.]*' | sort -Vu | tail -1` prints
   at most `GLIBC_2.35`. Then `lp64_boot.py --expect-run --frames 600` on
   `build/lp64/ship/x64/IronSights` in the development container with
   `LD_LIBRARY_PATH=build/lp64/ship/x64/lib`. Expected: `OK: ran 600 frames`.
-- [ ] **Step 8:** `compare_win32.py`, the static checks, the CI harness
+- [x] **Step 8:** `compare_win32.py`, the static checks, the CI harness
   lines; record in FORK-031 and FORK-089; commit.
 
 ### Task 2: The build says which architecture it is

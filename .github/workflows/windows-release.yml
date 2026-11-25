@@ -89,6 +89,7 @@ jobs:
           python3 scripts/port/test_ci_dependencies.py
           python3 scripts/port/test_hand_gallery.py
           python3 scripts/port/test_lp64_env.py
+          python3 scripts/port/test_linux_build.py
           bash scripts/port/test_harness_widths.sh
           bash scripts/port/test_abi_probe.sh
           bash scripts/port/test_lp64_typed_reads.sh

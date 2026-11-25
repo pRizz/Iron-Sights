@@ -84,6 +84,22 @@ class DockerCommand(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertIn('midas-lp64-i686-video', docker.call_args.args[0])
 
+    def test_release_image_is_chosen_only_with_the_flag(self):
+        # Arrange / Act
+        plain = env.docker_command('x86_64', Path('/repo'), None, ['true'])
+        release = env.docker_command('x86_64', Path('/repo'), None, ['true'], release=True)
+        # Assert
+        self.assertIn('goldeneye', plain)
+        self.assertNotIn('midas-linux-release-x86_64', plain)
+        self.assertIn('midas-linux-release-x86_64', release)
+        self.assertNotIn('goldeneye', release)
+
+    def test_release_image_is_refused_for_other_architectures(self):
+        for arch in ('i686', 'aarch64'):
+            # Arrange / Act / Assert
+            with self.assertRaises(ValueError):
+                env.docker_command(arch, Path('/repo'), None, ['true'], release=True)
+
     def test_unknown_arch_is_rejected(self):
         # Arrange / Act / Assert
         with self.assertRaises(ValueError):
@@ -104,6 +120,26 @@ class BuildCommands(unittest.TestCase):
         # Assert: its Dockerfile copies nothing, so the checkout (ROM, build trees) is not sent
         self.assertEqual(video, ['docker', 'build', '--platform', 'linux/amd64', '-t', 'midas-lp64-i686-video',
                                  '-f', '/repo/scripts/port/lp64-i686-video.Dockerfile', '/empty'])
+
+    def test_plain_build_images_does_not_build_the_release_image(self):
+        # Arrange / Act
+        commands = env.build_commands(Path('/repo'), 501, 20, Path('/empty'))
+        # Assert
+        self.assertFalse(any('midas-linux-release-x86_64' in command for command in commands))
+
+    def test_release_build_images_adds_the_release_image_from_an_empty_context(self):
+        # Arrange / Act
+        commands = env.build_commands(Path('/repo'), 501, 20, Path('/empty'), release=True)
+        # Assert
+        self.assertEqual(commands[-1], ['docker', 'build', '--platform', 'linux/amd64',
+                                        '-t', 'midas-linux-release-x86_64',
+                                        '-f', '/repo/scripts/port/linux-release-x86_64.Dockerfile', '/empty'])
+
+    def test_without_user_ids_the_images_keep_their_default_ids(self):
+        # Arrange / Act
+        commands = env.build_commands(Path('/repo'), None, None, Path('/empty'))
+        # Assert
+        self.assertFalse(any('--build-arg' in command for command in commands))
 
 
 class FindRom(unittest.TestCase):
