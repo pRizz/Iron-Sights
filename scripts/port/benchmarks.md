@@ -2,7 +2,8 @@
 
 The benchmark suite times the game on fixed work, several times over, and
 compares builds: Iron Sights before and after a change, and stock Project
-Midas 1.0.2b. It covers the Windows build and, with its own runner, the
+Midas 1.0.2b. It covers the Windows build, the
+[Linux packages](#linux-packages) and, with its own runner, the
 [browser build](#the-browser-build). It needs the local US ROM
 (`baserom.u.z64` in the repository root, or `GE_ROM`) and the project's build
 container. Nothing ROM-derived is committed: routes are generated controller
@@ -117,6 +118,38 @@ switches are its own. `--ref <commit> --name <name>` builds any other commit
 the same way, which is how a "before" executable is made without keeping old
 executables around. `--name <name> --clean` deletes a folder.
 
+## Linux packages
+
+`bench.py run` also drives a Linux package's executable, i686 or x86_64, on
+Linux (WSL included): give the extracted package's `IronSights` as `--build`.
+Each run copies the `lib/` folder beside it into the run folder, as it copies
+`SDL2.dll` on Windows, and puts that copy first on `LD_LIBRARY_PATH`, keeping
+any value already set after it, as the package's `AppRun` does. Pass `--out`:
+the default results file is under `build_win`, and off Windows the run folders
+go beside the `--out` file instead of `build_win`.
+
+```sh
+python3 scripts/port/bench/bench.py run --smoke --build i686=pkg/Iron-Sights-linux-i686/IronSights --build x64=pkg/Iron-Sights-linux-x86_64/IronSights --out build/bench/linux.json
+```
+
+- **Quiet machine.** The game processes the guard waits for are those named
+  `IronSights` in `/proc`. It also waits while the one-minute load average in
+  `/proc/loadavg` is at or above the processor count, within the same
+  15 minutes. The machine's processor use comes from `/proc/stat`.
+- **Host facts.** The report's GPU, processor and build come from the game's
+  log, as on Windows. Its system comes from a `ge: sys: Linux` line, which the
+  game does not yet print, so it reads `unknown`; name the system in your notes.
+- **Settings and data.** A run sets no `HOME`: the game's per-user folder (the
+  icon cache) is the caller's. Point `HOME` at a scratch folder for a run that
+  must leave yours alone; the bench passes it through, and every `GE_` variable
+  but its own is dropped, so give game variables with `--env`.
+- `--hidden` does nothing on Linux, and the profilers below are Windows only:
+  the sampler (`port_profile.c`) is compiled only under `_WIN32`, and
+  `bench_profile.py` reads symbols with the MinGW `nm`.
+- Offscreen with Mesa's software renderer (`SDL_VIDEODRIVER=offscreen`, as in
+  the project's containers) a run completes, but it times the software
+  renderer, not the game on a graphics card; such figures are not results.
+
 ## The browser build
 
 The browser runs the same scenarios, routes, presets and metrics. Three steps,
@@ -186,7 +219,8 @@ after figures in the change's inventory entry.
 ## Profiling
 
 The benchmarks say how long a frame takes; the profilers say where the time
-goes. Both use the same scenarios and tick window.
+goes. Both use the same scenarios and tick window. There is no profiler for
+the Linux packages: `GE_PROFILE` is a Windows sampler.
 
 **Windows.** The game samples itself. `GE_PROFILE=<file>` starts a sampler
 thread ([port_profile.c](../../port/src/port_profile.c)) that, a thousand times
@@ -258,6 +292,6 @@ DevTools Performance panel.
 ## Checks
 
 `python scripts/port/test_bench_profile.py` tests the profilers' sample
-parsing, naming and tables. `python scripts/port/test_bench.py` tests the metrics, run planning (Windows and
-browser), route generation, host checks, report and stock patching without a
-ROM.
+parsing, naming and tables. `python scripts/port/test_bench.py` tests the metrics, run planning (Windows, Linux
+and browser), route generation, host checks, report and stock patching without
+a ROM, a container or a game executable.

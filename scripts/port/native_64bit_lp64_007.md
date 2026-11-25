@@ -771,19 +771,19 @@ checkpoint.
   `/proc/stat`; the process list uses `IronSights`. Windows behaviour is
   unchanged. The profilers stay Windows-only, and the guide says so.
 
-- [ ] **Step 1: Failing tests** in the bench tests:
+- [x] **Step 1: Failing tests** in the bench tests:
   `test_linux_run_copies_the_library_folder`,
   `test_linux_run_sets_the_library_path`,
   `test_linux_guard_reads_loadavg` (from a fixture string),
   `test_windows_plan_is_unchanged` (the plan for an `.exe` equals the
   literal it gives at f04e0a7).
-- [ ] **Step 2: Run them.** Expected: fail.
-- [ ] **Step 3: Implement.** Run. Expected: pass.
-- [ ] **Step 4: Try it offscreen** on the packaged executable in the
+- [x] **Step 2: Run them.** Expected: fail.
+- [x] **Step 3: Implement.** Run. Expected: pass.
+- [x] **Step 4: Try it offscreen** on the packaged executable in the
   development container (`SDL_VIDEODRIVER=offscreen` passed through), one
   scenario. Expected: it completes and prints a table. Its figures are a
   software renderer's under translation and are not recorded as results.
-- [ ] **Step 5:** Add "Linux packages" to `benchmarks.md` (pass `--out`
+- [x] **Step 5:** Add "Linux packages" to `benchmarks.md` (pass `--out`
   on Linux: the default is under `build_win`); add `test_bench.py` to the
   workflow's tests step if it is not there; record in FORK-085 and
   FORK-089; commit.

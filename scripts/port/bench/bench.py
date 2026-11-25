@@ -36,8 +36,10 @@ SMOKE_REPEATS = 3
 QUIET_WAIT_S = 900
 WATCH_EVERY_S = 2.0
 # First match of each in the game's own logs describes the run's host and build.
-LOG_FACTS = (('gpu', 'GL: renderer: '), ('identity', 'ge: sys: build '), ('cpu', 'ge: sys: cpu '),
-             ('os', 'ge: sys: Windows '), ('power', 'ge: sys: power: '))
+# (fact, line prefix, the part of the prefix the fact keeps): a Linux system line keeps its word.
+LOG_FACTS = (('gpu', 'GL: renderer: ', ''), ('identity', 'ge: sys: build ', ''), ('cpu', 'ge: sys: cpu ', ''),
+             ('os', 'ge: sys: Windows ', ''), ('os', 'ge: sys: Linux', 'Linux'), ('power', 'ge: sys: power: ', ''))
+PROC = Path('/proc')
 
 
 def log(message):
@@ -68,18 +70,40 @@ def parse_builds(items):
     return builds
 
 
+def proc_names():
+    """(pid, name) of each process in /proc; one that exits meanwhile is skipped."""
+    entries = []
+    for entry in PROC.iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            entries.append((int(entry.name), (entry/'comm').read_text(encoding='utf-8').strip()))
+        except OSError:
+            continue  # the process exited between the listing and the read
+    return entries
+
+
 def other_games(own_pid=None):
     """Other running game processes (another session's audit, the player's game)."""
     if os.name != 'nt':
-        return []
+        return bench_plan.linux_other_games(proc_names(), own_pid) if PROC.is_dir() else []
     listing = subprocess.run(['tasklist', '/fo', 'csv', '/nh'], capture_output=True, text=True).stdout
     return bench_plan.other_games(listing, own_pid)
+
+
+def machine_busy():
+    """The one-minute load average on Linux when other work fills the processors, else None."""
+    loadavg = PROC/'loadavg'
+    if os.name == 'nt' or not loadavg.is_file():
+        return None
+    return bench_plan.busy_load(loadavg.read_text(encoding='utf-8'), os.cpu_count() or 1)
 
 
 def processor_times():
     """(idle, kernel, user) processor time totals, or None where unavailable."""
     if os.name != 'nt':
-        return None
+        stat = PROC/'stat'
+        return bench_plan.proc_stat_times(stat.read_text(encoding='utf-8')) if stat.is_file() else None
     import ctypes
     times = [ctypes.c_ulonglong() for _ in range(3)]
     if not ctypes.windll.kernel32.GetSystemTimes(*[ctypes.byref(value) for value in times]):
@@ -88,14 +112,36 @@ def processor_times():
 
 
 def wait_until_quiet():
-    """Hold the next run until no other game process is running."""
+    """Hold the next run until no other game process is running and, on Linux,
+    the load average is below the processor count."""
     deadline = time.monotonic()+QUIET_WAIT_S
-    waiting = False
-    while other_games() and time.monotonic() < deadline:
-        if not waiting:
-            log('another game process is running; waiting for it to finish')
-            waiting = True
+    maybe_said = None
+    while time.monotonic() < deadline:
+        if other_games():
+            reason = 'another game process is running; waiting for it to finish'
+        elif machine_busy() is not None:
+            reason = f'the load average has reached the {os.cpu_count()} processors; waiting for it to fall'
+        else:
+            return
+        if reason != maybe_said:
+            log(reason)
+            maybe_said = reason
         time.sleep(WATCH_EVERY_S)
+
+
+def prepare_run(executable, folder, env, environ):
+    """Copy the executable and what it loads from beside it into FOLDER.
+
+    Returns the copy and the environment to start it with (bench_plan.launch_plan).
+    """
+    siblings = {name for name in bench_plan.RUN_SIBLINGS if (executable.parent/name).exists()}
+    plan = bench_plan.launch_plan(executable, folder, siblings, environ, env)
+    for source, destination in plan['copies']:
+        if source.is_dir():
+            shutil.copytree(source, destination, dirs_exist_ok=True)
+        else:
+            shutil.copy2(source, destination)
+    return plan['copies'][0][1], plan['env']
 
 
 def launch(executable, folder, env, ini, visible):
@@ -105,14 +151,8 @@ def launch(executable, folder, env, ini, visible):
     ran alongside it, and the share of all processor time in use meanwhile.
     """
     folder.mkdir(parents=True, exist_ok=True)
-    copy = folder/executable.name
-    shutil.copy2(executable, copy)
-    maybe_sdl = executable.parent/'SDL2.dll'
-    if maybe_sdl.exists():
-        shutil.copy2(maybe_sdl, folder/'SDL2.dll')
+    copy, full_env = prepare_run(executable, folder, env, os.environ)
     (folder/'midas.ini').write_text(ini, encoding='utf-8')
-    full_env = {key: value for key, value in os.environ.items() if not key.startswith('GE_')}
-    full_env.update(env)
     startup = None
     if os.name == 'nt' and not visible:
         startup = subprocess.STARTUPINFO()
@@ -139,16 +179,21 @@ def launch(executable, folder, env, ini, visible):
     return maybe_code, disturbed, maybe_busy
 
 
+def facts_from_lines(lines):
+    """The host and build facts of a game log's lines (LOG_FACTS); the first match of each wins."""
+    facts = {}
+    for key, prefix, kept in LOG_FACTS:
+        maybe_line = next((line for line in lines if line.startswith(prefix)), None)
+        if maybe_line is not None and key not in facts:
+            facts[key] = (kept+maybe_line[len(prefix):]).strip()
+    return facts
+
+
 def log_facts(folder):
     lines = []
     for name in ('stdout.log', 'stderr.log'):
         lines += (folder/name).read_text(encoding='utf-8', errors='replace').splitlines()
-    facts = {}
-    for key, prefix in LOG_FACTS:
-        maybe_line = next((line for line in lines if line.startswith(prefix)), None)
-        if maybe_line is not None:
-            facts[key] = maybe_line[len(prefix):].strip()
-    return facts
+    return facts_from_lines(lines)
 
 
 def write_route(scenario, folder):
@@ -219,7 +264,10 @@ def command_run(options, config):
     scenarios = select(config, options.scenario, 'scenarios')
     presets = select(config, options.preset or ['default'], 'presets')
     stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-    session = BUILD_ROOT/('bench-run-'+stamp)
+    out = Path(options.out) if options.out else BUILD_ROOT/'bench-results'/(stamp+'.json')
+    # Off Windows, --out also takes the run folders beside the results, so a Linux run never makes build_win.
+    # Absolute: each run starts in its own folder.
+    session = (out.resolve().parent if options.out and os.name != 'nt' else BUILD_ROOT)/('bench-run-'+stamp)
     runs, host = [], {}
     order = bench_plan.run_order(builds, scenarios, options.repeats)
     for preset in presets:
@@ -248,7 +296,6 @@ def command_run(options, config):
         'presets': {name: config['presets'][name] for name in presets},
         'runs': runs, 'summary': summarize(runs, presets, scenarios, builds),
     }
-    out = Path(options.out) if options.out else BUILD_ROOT/'bench-results'/(stamp+'.json')
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(results, indent=1)+'\n', encoding='utf-8')
     log(f'results: {out}')
@@ -286,7 +333,8 @@ def main():
                      help='the quick check for a render change: three scenarios, every preset, three repeats')
     run.add_argument('--hidden', dest='visible', action='store_false',
                      help='hide the window; quicker to work beside, but frames run slower and noisier')
-    run.add_argument('--out', help='results file (default: build_win/bench-results/<time>.json)')
+    run.add_argument('--out', help='results file (default: build_win/bench-results/<time>.json); '
+                                   'off Windows the run folders go beside it')
     report.add_argument('results')
     report.add_argument('--out', help='write the Markdown here instead of printing it')
     for command in (run, report):

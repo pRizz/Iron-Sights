@@ -87,6 +87,7 @@ jobs:
           python3 scripts/port/test_steam_art.py
           python3 scripts/port/test_sentry_tools.py
           python3 scripts/port/test_download_retry.py
+          python3 scripts/port/test_bench.py
           python3 scripts/port/test_ci_dependencies.py
           python3 scripts/port/test_hand_gallery.py
           python3 scripts/port/test_lp64_env.py

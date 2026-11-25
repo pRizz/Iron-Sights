@@ -1,10 +1,12 @@
 """Check the benchmark suite's pure parts: metrics, run planning, the report."""
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent/'bench'))
 
+import bench  # noqa: E402
 import bench_metrics as metrics  # noqa: E402
 import bench_plan as plan  # noqa: E402
 import bench_report as report  # noqa: E402
@@ -227,6 +229,92 @@ class PlanTests(unittest.TestCase):
         order = plan.run_order(['fork', 'stock'], ['dam'], 2)
 
         self.assertEqual(order, [(1, 'dam', 'fork'), (1, 'dam', 'stock'), (2, 'dam', 'fork'), (2, 'dam', 'stock')])
+
+
+class LaunchTests(unittest.TestCase):
+    """What one isolated run copies and the environment it starts with, Windows and Linux."""
+    GAME = Path('/game')
+    RUN = Path('/runs/one')
+
+    def test_windows_plan_is_unchanged(self):
+        # Arrange: the plan f04e0a7's launch() gave an .exe; a lib folder and a library path change nothing
+        environ = {'PATH': '/bin', 'GE_STALE': '1', 'LD_LIBRARY_PATH': '/opt/lib'}
+
+        # Act
+        result = plan.launch_plan(self.GAME/'IronSights.exe', self.RUN, {'SDL2.dll', 'lib'}, environ,
+                                  {'GE_ROM': 'rom.z64'})
+
+        # Assert
+        self.assertEqual(result, {
+            'copies': [(self.GAME/'IronSights.exe', self.RUN/'IronSights.exe'),
+                       (self.GAME/'SDL2.dll', self.RUN/'SDL2.dll')],
+            'env': {'PATH': '/bin', 'LD_LIBRARY_PATH': '/opt/lib', 'GE_ROM': 'rom.z64'}})
+
+    def test_linux_run_copies_the_library_folder(self):
+        # Arrange: a package's executable with its bundled libraries beside it
+        with tempfile.TemporaryDirectory() as temporary:
+            package, folder = Path(temporary)/'package', Path(temporary)/'run'
+            (package/'lib').mkdir(parents=True)
+            (package/'IronSights').write_bytes(b'game')
+            (package/'lib'/'libSDL2-2.0.so.0').write_bytes(b'library')
+            folder.mkdir()
+
+            # Act
+            copy, _ = bench.prepare_run(package/'IronSights', folder, {}, {})
+
+            # Assert
+            self.assertEqual(copy, folder/'IronSights')
+            self.assertEqual((folder/'lib'/'libSDL2-2.0.so.0').read_bytes(), b'library')
+
+    def test_linux_run_sets_the_library_path(self):
+        # Act: one environment without a library path, one with
+        fresh = plan.launch_plan(self.GAME/'IronSights', self.RUN, {'lib'}, {'PATH': '/bin'}, {})
+        joined = plan.launch_plan(self.GAME/'IronSights', self.RUN, {'lib'}, {'LD_LIBRARY_PATH': '/opt/lib'}, {})
+
+        # Assert: the copied folder comes first, as the package's AppRun puts it
+        self.assertEqual(fresh['env']['LD_LIBRARY_PATH'], str(self.RUN/'lib'))
+        self.assertEqual(joined['env']['LD_LIBRARY_PATH'], f"{self.RUN/'lib'}:/opt/lib")
+        self.assertIn((self.GAME/'lib', self.RUN/'lib'), fresh['copies'])
+
+    def test_linux_run_without_a_library_folder_copies_the_executable_alone(self):
+        result = plan.launch_plan(self.GAME/'IronSights', self.RUN, set(), {'PATH': '/bin'}, {})
+
+        self.assertEqual(result, {'copies': [(self.GAME/'IronSights', self.RUN/'IronSights')],
+                                  'env': {'PATH': '/bin'}})
+
+    def test_linux_guard_reads_loadavg(self):
+        # Arrange: /proc/loadavg, one-minute load first
+        text = '6.50 3.20 1.10 7/912 40123\n'
+
+        # Act
+        busy, quiet = plan.busy_load(text, 4), plan.busy_load(text, 8)
+
+        # Assert: a machine is busy when its one-minute load reaches its processor count
+        self.assertEqual(busy, 6.5)
+        self.assertIsNone(quiet)
+
+    def test_linux_cpu_probe_reads_proc_stat(self):
+        # Arrange: user nice system idle iowait irq softirq steal guest guest_nice
+        text = 'cpu  100 20 30 700 50 5 5 10 40 0\ncpu0 1 2 3 4 5 6 7 8 9 0\n'
+
+        # Act
+        times = plan.proc_stat_times(text)
+
+        # Assert: (idle, kernel, user) as Windows counts them, idle inside kernel, guests inside user
+        self.assertEqual(times, (750, 800, 120))
+        self.assertAlmostEqual(plan.busy_fraction((0, 0, 0), times), 1-750/920)
+
+    def test_linux_process_list_finds_other_games(self):
+        entries = [(100, 'IronSights'), (200, 'IronSights'), (300, 'python3')]
+
+        self.assertEqual(plan.linux_other_games(entries, 100), ['IronSights'])
+        self.assertEqual(plan.linux_other_games(entries, None), ['IronSights', 'IronSights'])
+
+    def test_linux_log_names_its_system(self):
+        lines = ['ge: sys: build 1.2 commit abc', 'ge: sys: Linux 6.6.87 x86_64']
+
+        self.assertEqual(bench.facts_from_lines(lines)['os'], 'Linux 6.6.87 x86_64')
+        self.assertEqual(bench.facts_from_lines(['ge: sys: Windows 10.0 build 22631'])['os'], '10.0 build 22631')
 
 
 class ReportTests(unittest.TestCase):

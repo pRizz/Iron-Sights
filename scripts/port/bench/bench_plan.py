@@ -7,6 +7,11 @@ import csv
 import json
 
 GAME_PROCESSES = ('ironsights.exe', 'projectmidas.exe')
+LINUX_GAME_PROCESSES = ('IronSights',)
+# What a run copies from beside the executable: Windows' SDL, a Linux package's bundled libraries.
+WINDOWS_SDL = 'SDL2.dll'
+LINUX_LIBRARIES = 'lib'
+RUN_SIBLINGS = (WINDOWS_SDL, LINUX_LIBRARIES)
 WEB_FRAME_LOG = '/tmp/bench-frames.csv'
 WEB_ROUTE = '/tmp/bench-route.rec'
 # Harness settings every run uses, whatever the preset: a window, no vsync and
@@ -184,6 +189,50 @@ def other_games(tasklist_csv, own_pid):
         if len(row) >= 2 and row[0].lower() in GAME_PROCESSES and row[1] != str(own_pid):
             found.append(row[0])
     return found
+
+
+def launch_plan(executable, folder, siblings, environ, env):
+    """What one isolated run copies into FOLDER, as (source, destination) pairs, and its environment.
+
+    SIBLINGS names the RUN_SIBLINGS present beside the executable. An .exe takes
+    SDL2.dll along; any other executable is a Linux package's, which takes its
+    lib folder and finds it first on LD_LIBRARY_PATH, as the package's AppRun
+    does. The environment is ENVIRON without its GE_ variables, then ENV.
+    """
+    copies = [(executable, folder/executable.name)]
+    full_env = {key: value for key, value in environ.items() if not key.startswith('GE_')}
+    full_env.update(env)
+    if executable.suffix.lower() == '.exe':
+        if WINDOWS_SDL in siblings:
+            copies.append((executable.parent/WINDOWS_SDL, folder/WINDOWS_SDL))
+        return {'copies': copies, 'env': full_env}
+    if LINUX_LIBRARIES in siblings:
+        libraries = folder/LINUX_LIBRARIES
+        copies.append((executable.parent/LINUX_LIBRARIES, libraries))
+        maybe_path = full_env.get('LD_LIBRARY_PATH')
+        full_env['LD_LIBRARY_PATH'] = str(libraries)+(f':{maybe_path}' if maybe_path else '')
+    return {'copies': copies, 'env': full_env}
+
+
+def linux_other_games(entries, own_pid):
+    """Game processes among (pid, name) pairs read from /proc, other than our own run."""
+    return [name for pid, name in entries if name in LINUX_GAME_PROCESSES and pid != own_pid]
+
+
+def busy_load(loadavg_text, processors):
+    """The one-minute load average from /proc/loadavg when it reaches the processor
+    count, a machine busy with other work; None when the machine is quiet enough."""
+    load = float(loadavg_text.split()[0])
+    return load if load >= processors else None
+
+
+def proc_stat_times(stat_text):
+    """(idle, kernel, user) processor time totals from /proc/stat, counted as Windows
+    counts them for busy_fraction: idle inside kernel. Guest time is already in user."""
+    fields = next(line for line in stat_text.splitlines() if line.startswith('cpu ')).split()[1:]
+    user, nice, system, idle, iowait, irq, softirq, steal = (int(value) for value in fields[:8])
+    idle_all = idle+iowait
+    return idle_all, idle_all+system+irq+softirq+steal, user+nice
 
 
 def busy_fraction(before, after):

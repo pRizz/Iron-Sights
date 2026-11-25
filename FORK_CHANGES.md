@@ -3763,6 +3763,8 @@ Over all the laptop's comparisons, the lines not exercised are the nine `i686:a6
 
 The run, capture and scratch folders were deleted after this note was written, except `build/lp64/ship/icon-shots/`. That includes the plain and sanitizer GCC 13 x86_64 video trees configured for Steps 6 and 7. The standing trees and `build/lp64/ship/{x64,cmp-x64-gcc11,cmp-x64-gcc11-video,x64-san}` stay.
 
+*LP64-007 task 9, the benchmark drives a Linux package (2026-11-25), on the Mac: the try ran x86_64 under Rosetta 2 in the development container, offscreen on Mesa's llvmpipe; nothing ran on real x86 hardware or on a GPU. Local commit on `main`, not pushed.* Commit "Let the benchmark drive a Linux package" (`scripts/port/bench/bench.py`, `bench_plan.py`, `scripts/port/test_bench.py`, `scripts/port/benchmarks.md`, `.github/workflows/windows-release.yml`, FORK-085, this note, the plan's LP64-007 row and the Task 9 boxes; no C, C++ or CMake file, so the 32-bit builds are unchanged). FORK-085's "Linux packages" bullet and the guide's "Linux packages" section describe the behaviour: `bench_plan.launch_plan` gives an `.exe` the plan it had at f04e0a7 (the executable and `SDL2.dll`; the caller's environment without `GE_` variables, then the run's) and a Linux executable its `lib/` folder copied into the run folder, first on `LD_LIBRARY_PATH` with any value already set after it; on Linux the guard lists `IronSights` processes from `/proc/*/comm` and also waits while `/proc/loadavg`'s one-minute load is at or above the processor count, the processor-use probe reads `/proc/stat`, the `os` fact accepts `ge: sys: Linux`, and off Windows `--out` takes the run folders beside it. The profilers stay Windows only. Tests: `test_bench.py` gained 8 (`test_windows_plan_is_unchanged`, `test_linux_run_copies_the_library_folder`, `test_linux_run_sets_the_library_path`, `test_linux_run_without_a_library_folder_copies_the_executable_alone`, `test_linux_guard_reads_loadavg`, `test_linux_cpu_probe_reads_proc_stat`, `test_linux_process_list_finds_other_games`, `test_linux_log_names_its_system`), all failing first on the missing functions (`AttributeError`), then `Ran 45 tests ... OK`; it now runs in the CI tests step, where it did not before. **The try** (Step 4): `python3 scripts/port/lp64_env.py run --arch x86_64 -- env SDL_VIDEODRIVER=offscreen HOME=<scratch>/home GE_ROM=/rom/baserom.u.z64 python3 scripts/port/bench/bench.py run --smoke --build x64=build/lp64/ship/x64/run/Iron-Sights-linux-x86_64/IronSights --scenario dam-walk --preset default --repeats 1 --resolution 640x480 --keep --out <scratch>/results.json`, on the packaged x86_64 executable of 45720d5 (Task 8's package), with the scratch folder under `build/lp64/ship/`: exit 0, the run folder held the copied `lib/`, the frame log was written at its end tick and the report printed its table. Its figures are a software renderer's under translation and are not results; its machine line read the system as `unknown`, since the game prints no `ge: sys: Linux` line. The scratch folder was deleted. *Not run:* the i686 package (none was extracted here), a visible window, a GPU, Windows (the Windows path is held by the pinned plan test only), anything in CI.
+
 **LP64-006 hand-over to LP64-007** (written at the final review's fix wave from the review, the controller's ledger and the task notes above, and completed at Task 17 on 2026-11-24; each patch is under `scripts/port/lp64_patches/`, whose `README.md` says what it changes and the commit it applies to):
 
 - *The owner's open questions* (eight; none is applied, each would change the shipped 32-bit program or the 64-bit one's behaviour):
@@ -4304,7 +4306,8 @@ and the [unit test](scripts/port/test_room_seams.c)
 
 **Status:** Implemented on 2026-11-15 at the owner's request, as the first step
 of performance work (measure, then profile, then optimize). It covers the
-Windows build and, with its own runner, the browser build. No game behaviour
+Windows build, the Linux packages (since LP64-007 Task 9) and, with its own
+runner, the browser build. No game behaviour
 changes: the frame log is off unless `GE_BENCH` is set.
 
 Inherited behaviour: upstream has no benchmark. It does have the pieces one
@@ -4375,6 +4378,24 @@ change as real only when it exceeds the runs' own slowest-to-fastest range.
   wait as pacer sleep (browser build only), or it was charged to the game code
   before it.
 
+- **Linux packages** (added with LP64-007 Task 9, 2026-11-25; FORK-089's
+  Task 9 note): `bench.py run` also drives a Linux package's `IronSights`.
+  `bench_plan.launch_plan` says what a run copies and its environment: an
+  `.exe` exactly as before (itself and `SDL2.dll`, the caller's environment
+  without `GE_` variables, then the run's); any other executable takes the
+  `lib/` folder beside it into the run folder and puts that copy first on
+  `LD_LIBRARY_PATH`, keeping a value already set after it, as the package's
+  `AppRun` does. On Linux the guard lists processes named `IronSights` from
+  `/proc/*/comm`, also waits (within its 15 minutes) while the one-minute
+  load in `/proc/loadavg` is at or above the processor count, and the
+  processor-use probe reads `/proc/stat` (idle and iowait inside kernel time,
+  as Windows counts). A log's `ge: sys: Linux` line is the `os` fact; the
+  game does not print one yet, so a Linux report names it `unknown`. Off
+  Windows, `--out` also takes the run folders beside the results file, so a
+  Linux run makes no `build_win`. The profilers stay Windows only. Windows
+  runs are unchanged: `test_windows_plan_is_unchanged` pins the plan f04e0a7
+  gave an `.exe`. `test_bench.py` (45 tests, 8 new) now runs in the CI
+  tests step.
 - **Smoke check and switches** (added with FORK-088): `bench.py run --smoke`
   is three scenarios, every preset and three repeats, the check `AGENTS.md`
   now asks of any change to what is drawn or computed every frame. A build
