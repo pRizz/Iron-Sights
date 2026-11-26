@@ -28,6 +28,9 @@ STEAM_ART = tuple(ROOT / "scripts/port/linux/steam-art" / name for name in ("cov
 FOREIGN_LIBDIR = re.compile(r"/(i386[^/]*|lib32)/")
 TRUE = ("ON", "TRUE", "YES", "Y", "1")
 # Cache options a shipped build must not have on, with what such a build is.
+# A system GL driver built with a newer GCC loads into the game's process and needs the system's newer
+# C++ runtime (Mesa 25.2's libLLVM needs GLIBCXX_3.4.32); a bundled older copy loaded first breaks it.
+SYSTEM_CXX_RUNTIME = ("libstdc++.so.6", "libgcc_s.so.1")
 UNSHIPPABLE_OPTIONS = (("GE_SANITIZE", "a sanitizer build"), ("GE_LP64_ORACLE", "an oracle build"),
                        ("GE_HEADLESS", "a headless build"),
                        ("GE_ROMDATA_FALLBACK", "a build with compiled-in asset copies"))
@@ -57,16 +60,13 @@ TARGETS = {
                    "e72ea0b140a0a16e680713238a6f30aad278b62c4ca17919c554864124515498",
                    "scripts/port/linux-release.Dockerfile", "Ubuntu 22.04 / glibc 2.35",
                    "scripts/port/linux/START-HERE.txt", "scripts/port/linux/STEAM-DECK.txt",
-                   "SHA256SUMS-linux.txt", "linux", ()),
+                   "SHA256SUMS-linux.txt", "linux", SYSTEM_CXX_RUNTIME),
     "x86_64": Target("x86_64", 2, 62, "/usr/lib/x86_64-linux-gnu",
                      "https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64",
                      "2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d",
                      "scripts/port/linux-release-x86_64.Dockerfile", "Ubuntu 22.04 / glibc 2.35",
                      "scripts/port/linux/START-HERE-x86_64.txt", "scripts/port/linux/STEAM-DECK-x86_64.txt",
-                     "SHA256SUMS-linux-x86_64.txt", "linux-x86_64",
-                     # A system GL driver built with a newer GCC needs the system's newer C++ runtime
-                     # (Mesa 25.2's libLLVM needs GLIBCXX_3.4.32); a bundled older one breaks it.
-                     ("libstdc++.so.6", "libgcc_s.so.1")),
+                     "SHA256SUMS-linux-x86_64.txt", "linux-x86_64", SYSTEM_CXX_RUNTIME),
 }
 
 

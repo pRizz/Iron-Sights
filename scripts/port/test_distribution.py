@@ -130,13 +130,15 @@ class Distribution(unittest.TestCase):
             linux_packager.refuse_comparison_build(build)
 
     def test_i686_target_keeps_its_names_and_runtime(self):
-        # Arrange: package_linux.py's literals at f04e0a7, before the table existed.
+        # Arrange: package_linux.py's literals at f04e0a7, before the table existed, but for the C++ runtime,
+        # which the i686 package takes from the system since LP64-007 Task 11 (the owner, 2026-11-26).
         expected=dict(suffix="i686",elf_class=1,elf_machine=3,system_libdir="/usr/lib/i386-linux-gnu",
                       runtime_url="https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-i686",
                       runtime_sha256="e72ea0b140a0a16e680713238a6f30aad278b62c4ca17919c554864124515498",
                       dockerfile="scripts/port/linux-release.Dockerfile",baseline="Ubuntu 22.04 / glibc 2.35",
                       start_here="scripts/port/linux/START-HERE.txt",steam_deck="scripts/port/linux/STEAM-DECK.txt",
-                      sums_name="SHA256SUMS-linux.txt",info_prefix="linux",system_libraries=())
+                      sums_name="SHA256SUMS-linux.txt",info_prefix="linux",
+                      system_libraries=("libstdc++.so.6","libgcc_s.so.1"))
         # Act
         record=linux_packager.TARGETS["i686"]._asdict()
         names=linux_packager.output_names(linux_packager.TARGETS["i686"])
@@ -211,14 +213,14 @@ class Distribution(unittest.TestCase):
         # Assert
         self.assertEqual(paths,{"libfoo.so":Path("/usr/lib/i386-linux-gnu/libfoo.so")})
 
-    def test_x86_64_takes_the_cxx_runtime_from_the_system_and_i686_bundles_it(self):
+    def test_both_targets_take_the_cxx_runtime_from_the_system(self):
         # Arrange
         ldd=("\tlibstdc++.so.6 => /usr/lib/x/libstdc++.so.6 (0x1)\n\tlibgcc_s.so.1 => /usr/lib/x/libgcc_s.so.1 (0x2)\n"
              "\tlibfoo.so => /usr/lib/x/libfoo.so (0x3)\n")
         # Act
         bundled={arch:sorted(linux_packager.resolved_libraries(ldd,linux_packager.TARGETS[arch])) for arch in ("i686","x86_64")}
         # Assert
-        self.assertEqual(bundled,{"i686":["libfoo.so","libgcc_s.so.1","libstdc++.so.6"],"x86_64":["libfoo.so"]})
+        self.assertEqual(bundled,{"i686":["libfoo.so"],"x86_64":["libfoo.so"]})
 
     def test_bundling_copies_strips_and_relinks_every_library(self):
         with tempfile.TemporaryDirectory() as folder:

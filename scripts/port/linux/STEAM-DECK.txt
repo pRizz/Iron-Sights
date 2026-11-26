@@ -2,7 +2,8 @@ Iron Sights for Steam Deck / SteamOS
 
 This ZIP contains the same i686 game as the Linux tarball and AppImage, with a
 launcher for Steam Deck. It is not a native x86_64 build. A 32-bit ELF loader,
-glibc 2.35 or newer and working 32-bit OpenGL drivers are required. A real
+glibc 2.35 or newer, the system's 32-bit C++ runtime (libstdc++ from GCC 12 or
+newer and libgcc_s) and working 32-bit OpenGL drivers are required. A real
 Steam Deck has not yet been used to validate this package.
 
 1. In Desktop Mode, extract the ZIP to a writable folder under your home

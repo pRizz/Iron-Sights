@@ -962,6 +962,10 @@ is a note in FORK-089 and the hand-over keeps the list.
 - No notice in the browser build, which has the same silent suspend row
   (decision 7).
 - No change to the i686 or Windows packages, their image or their job.
+  (2026-11-26: the owner decided that the i686 packages take `libstdc++.so.6`
+  and `libgcc_s.so.1` from the player's system, as the x86_64 ones do; Task 11
+  makes that change, a deliberate departure from this line and decision 1.
+  The i686 executable, image and job are unchanged.)
 - No fix to reads the 32-bit loaders share, to the demos' headless
   against video difference, or to anything on the "Kept deferred" list.
 - No claim about a Steam Deck unless one ran in Task 10.

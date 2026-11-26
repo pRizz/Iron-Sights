@@ -160,14 +160,16 @@ adapter, built in `linux-release-x86_64.Dockerfile` (Ubuntu 22.04, glibc 2.35)
 with `--arch x86_64` on `linux_build.py`, `package_linux.py` and
 `test_sentry_linux.py`. Their crash helper loads the bundled 64-bit libcurl
 (`lib/libcurl.so.4` and its dependencies); `libstdc++.so.6` and `libgcc_s.so.1`
-come from the player's system at that width. Every event carries the tag
+come from the player's system, at both widths since LP64-007 Task 11 (the i686
+packages bundled them before). Every event carries the tag
 `architecture` (`i686` or `x86_64`), so the two builds' reports can be told
 apart. At both widths the crash test also checks that the event's debug image
 for `IronSights` carries the debug id of `symbols/IronSights.debug`'s GNU build
 id and that a crash frame lies inside that image, so the uploaded debug file
 symbolicates it. The CI job `linux-x86_64` builds, uploads debug files for,
 packages and tests the x86_64 packages on every push to `main`; its packages
-are kept as the `linux-x86_64-player-package` artifact and are not yet published.
+are kept as the `linux-x86_64-player-package` artifact and, from LP64-007
+Task 11, attached to each release and attested beside the i686 ones.
 
 Local graphics validation used Mesa softpipe with a private ROM and reporting
 active. The local llvmpipe/LLVM 15 software renderer also aborted with reporting

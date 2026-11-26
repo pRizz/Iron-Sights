@@ -148,7 +148,9 @@ python3 scripts/port/bench/bench.py run --smoke --build i686=pkg/Iron-Sights-lin
   25's i386 `libLLVM` (3.4.32) and no GLX window opens, so run the bench with
   `LD_PRELOAD=/usr/lib/i386-linux-gnu/libstdc++.so.6:/usr/lib/i386-linux-gnu/libgcc_s.so.1`
   (not a `GE_` variable, so it reaches the game; 64-bit helper programs print
-  `wrong ELF class` and ignore it). The x86_64 package reaches the GPU through
+  `wrong ELF class` and ignore it). From LP64-007 Task 11 the i686 package
+  bundles neither and takes the system's, so a package from that change on
+  should need no preload; that is not yet confirmed on Mesa 25. The x86_64 package reaches the GPU through
   Mesa's d3d12 driver only with `GALLIUM_DRIVER=d3d12` and, on a laptop with
   an Intel chip as well, `MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA`; without
   them it draws with `llvmpipe` or the Intel chip. There its frames are paced

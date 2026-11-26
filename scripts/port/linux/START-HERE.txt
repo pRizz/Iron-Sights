@@ -2,8 +2,11 @@ Iron Sights for Linux i686
 
 This is an optimized 32-bit build. Requires an x86 Linux system with the
 32-bit ELF loader, glibc 2.35 or newer and working 32-bit OpenGL drivers.
-SDL2, Sentry and their non-system dependencies are bundled. glibc and GPU
-drivers are provided by your distribution. This is not a native x86_64 port.
+SDL2, Sentry and their non-system dependencies are bundled. glibc, the 32-bit
+C++ runtime (libstdc++ from GCC 12 or newer, as Ubuntu 22.04 ships it, and
+libgcc_s; on Ubuntu or Debian libstdc++6:i386 and libgcc-s1:i386) and GPU
+drivers are provided by your distribution, so the GPU driver and the game
+share the system's newer C++ runtime. This is not a native x86_64 port.
 
 tar.gz: Extract, put your own stock USA ROM in Data, then run ./IronSights.
 Keep the entire folder together. Saves and midas.ini live beside the executable.

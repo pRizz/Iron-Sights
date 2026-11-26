@@ -149,9 +149,14 @@ process. No 32-bit library is needed.
   i386 `libLLVM` needs (3.4.32): on Ubuntu 24.04 with Mesa 25.2.8 no GLX
   window opened until the system's `libstdc++` and `libgcc_s` were preloaded
   (`LD_PRELOAD=/usr/lib/i386-linux-gnu/libstdc++.so.6:/usr/lib/i386-linux-gnu/libgcc_s.so.1`).
-  The i686 package still bundles both; this is not fixed in LP64-007 and is
-  an open question for the owner. WSL also has no 32-bit GPU path, so the
-  i686 package draws with `llvmpipe` there.
+  By the owner's decision of 2026-11-26, Task 11 makes the i686 packages take
+  those two from the system too (`SYSTEM_CXX_RUNTIME` in
+  `package_linux.py`), so the player's system needs its 32-bit C++ runtime
+  (GCC 12 or newer; `libstdc++6:i386` and `libgcc-s1:i386` on Ubuntu or
+  Debian). The i686 executable is unchanged. The fix is not yet confirmed on
+  a system with Mesa 25; the laptop can confirm it with the published
+  package. WSL also has no 32-bit GPU path, so the i686 package draws with
+  `llvmpipe` there.
 - **Steam Deck.** `Iron-Sights-steamdeck-x86_64.zip` has not been run on a
   Steam Deck; `STEAM-DECK-x86_64.txt` says so.
 

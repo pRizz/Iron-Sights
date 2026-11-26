@@ -4061,7 +4061,8 @@ The run, capture and scratch folders were deleted after this note was written, e
   - `benchmarks.md`'s "Linux packages" section is corrected from these runs (WSL: `llvmpipe` for i686, the preload, the d3d12 variables, the presentation cap, the exit crash, the figures).
 - **Step 7 (optional), 32-bit pixels:** not run.
 
-*LP64-007 task 11, publish with the documents (2026-11-26), on the Mac; committed on `main` locally and not pushed when written, so nothing 64-bit is published yet.* Commit "Publish the x86_64 Linux packages with the documents" (`.github/workflows/windows-release.yml`'s `publish` job and the `linux-x86_64` job's comment; `scripts/port/test_distribution.py`; the new `scripts/port/linux_64bit.md`; `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `scripts/port/releases.md`, `scripts/port/late_loads.md`, `scripts/port/linux/START-HERE-x86_64.txt`, `scripts/port/release/DATA-README.txt`, `.github/ISSUE_TEMPLATE/bug_report.md`, `docs/port/abi-and-portability.md`, `native_64bit_plan.md`, the plan's Task 11 boxes 1 to 4, FORK-018, FORK-031 and this note). **Publish** (FORK-031 has the job's lines): `needs` gains `linux-x86_64`; the artifact is downloaded; three more attest subjects; `sha256sum -c SHA256SUMS-linux-x86_64.txt`; `linux-x86_64-build-info.json` asserted to the commit, `ci` and not `dirty`; seventeen release assets; one notes paragraph. **TDD.** `test_publish_job_releases_every_linux_target` failed before the edit (`AssertionError: 'linux-x86_64' not found in ['tests', 'windows', 'sentry-smoke', 'linux']`) and passed after it. **Documents.** `linux_64bit.md` has the two x86_64 images (`goldeneye`, Ubuntu 24.04 and GCC 13, for development; `midas-linux-release-x86_64`, Ubuntu 22.04 and GCC 11.4, for the packages), the development build, boot check and play sets, the package check P1 to P4, what a 64-bit build lacks (suspend points) and prints (`ge: lp64:` lines), the hosts each check ran on, the known limits and what is not built (Windows x64, macOS, aarch64 packages). Its known limits are Task 10's: every x86_64 quit on NVIDIA's WSL driver ends in a segfault in `libnvwgf2umx.so` (status 139), an open defect whose fix needs that driver and is a follow-up for the laptop; WSL's `GALLIUM_DRIVER=d3d12` and `MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA`; no mouse-look under WSLg; the i686 package's bundled `libstdc++` (GLIBCXX_3.4.30) older than Mesa 25's i386 `libLLVM` needs (3.4.32), so on Ubuntu 24.04 with Mesa 25.2.8 no GLX window opened until the system's `libstdc++` and `libgcc_s` were preloaded, not fixed in this commit and an open question for the owner; and no Steam Deck run. The README names both architectures' downloads, the i686 Deck ZIP first (decision 2, no Deck), says the 64-bit Deck ZIP has not run on a Deck and that 64-bit builds have no suspend points. `native_64bit_plan.md`'s "Crash reports and the rest of the port layer" now says the frame-pointer walks are Windows-only, the Linux handler needed no replacement, and external textures were widened in LP64-003 Task 6 (9a92fa1); `abi-and-portability.md` gains a note that it predates the port; `late_loads.md` names the packaged executable's audit. **Checks** (no game C or C++, build script or packager changed, so neither the play sets nor the package check ran): in the x86_64 container `test_distribution.py`, `test_lp64_overlays_check.py`, `test_linux_build.py` and `test_steam_art.py` print `OK` and `bash scripts/port/test_harness_widths.sh` prints `test_harness_widths: PASS`; on the Mac `test_hand_gallery.py` `OK` (31 tests), `bun scripts/bright-builds-check.ts all` `SUMMARY all findings=0`, `settings_placement.py` passes, and `hand_gallery.py verify --allow-pending` prints `Gallery pending: strict inputs fresh; deferred inputs changed since the last render` (the workflow is a deferred input; no strict-tier file changed). On the Mac `test_distribution.py` also fails `test_runtime_inline_model_texels` (`gcc -m32`), as it does on the clean tree. Step 5 (reading the published release) and its record follow the push.
+*LP64-007 task 11, publish with the documents (2026-11-26), on the Mac; committed on `main` locally and not pushed when written, so nothing 64-bit is published yet.* Commit "Publish the x86_64 Linux packages with the documents" (`.github/workflows/windows-release.yml`'s `publish` job and the `linux-x86_64` job's comment; `scripts/port/test_distribution.py`; the new `scripts/port/linux_64bit.md`; `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `scripts/port/releases.md`, `scripts/port/late_loads.md`, `scripts/port/linux/START-HERE-x86_64.txt`, `scripts/port/release/DATA-README.txt`, `.github/ISSUE_TEMPLATE/bug_report.md`, `docs/port/abi-and-portability.md`, `native_64bit_plan.md`, the plan's Task 11 boxes 1 to 4, FORK-018, FORK-031 and this note). **Publish** (FORK-031 has the job's lines): `needs` gains `linux-x86_64`; the artifact is downloaded; three more attest subjects; `sha256sum -c SHA256SUMS-linux-x86_64.txt`; `linux-x86_64-build-info.json` asserted to the commit, `ci` and not `dirty`; seventeen release assets; one notes paragraph. **TDD.** `test_publish_job_releases_every_linux_target` failed before the edit (`AssertionError: 'linux-x86_64' not found in ['tests', 'windows', 'sentry-smoke', 'linux']`) and passed after it. **Documents.** `linux_64bit.md` has the two x86_64 images (`goldeneye`, Ubuntu 24.04 and GCC 13, for development; `midas-linux-release-x86_64`, Ubuntu 22.04 and GCC 11.4, for the packages), the development build, boot check and play sets, the package check P1 to P4, what a 64-bit build lacks (suspend points) and prints (`ge: lp64:` lines), the hosts each check ran on, the known limits and what is not built (Windows x64, macOS, aarch64 packages). Its known limits are Task 10's: every x86_64 quit on NVIDIA's WSL driver ends in a segfault in `libnvwgf2umx.so` (status 139), an open defect whose fix needs that driver and is a follow-up for the laptop; WSL's `GALLIUM_DRIVER=d3d12` and `MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA`; no mouse-look under WSLg; the i686 package's bundled `libstdc++` (GLIBCXX_3.4.30) older than Mesa 25's i386 `libLLVM` needs (3.4.32), so on Ubuntu 24.04 with Mesa 25.2.8 no GLX window opened until the system's `libstdc++` and `libgcc_s` were preloaded (fixed in the second commit, below); and no Steam Deck run. The README names both architectures' downloads, the i686 Deck ZIP first (decision 2, no Deck), says the 64-bit Deck ZIP has not run on a Deck and that 64-bit builds have no suspend points. `native_64bit_plan.md`'s "Crash reports and the rest of the port layer" now says the frame-pointer walks are Windows-only, the Linux handler needed no replacement, and external textures were widened in LP64-003 Task 6 (9a92fa1); `abi-and-portability.md` gains a note that it predates the port; `late_loads.md` names the packaged executable's audit. **Checks** (no game C or C++, build script or packager changed, so neither the play sets nor the package check ran): in the x86_64 container `test_distribution.py`, `test_lp64_overlays_check.py`, `test_linux_build.py` and `test_steam_art.py` print `OK` and `bash scripts/port/test_harness_widths.sh` prints `test_harness_widths: PASS`; on the Mac `test_hand_gallery.py` `OK` (31 tests), `bun scripts/bright-builds-check.ts all` `SUMMARY all findings=0`, `settings_placement.py` passes, and `hand_gallery.py verify --allow-pending` prints `Gallery pending: strict inputs fresh; deferred inputs changed since the last render` (the workflow is a deferred input; no strict-tier file changed). On the Mac `test_distribution.py` also fails `test_runtime_inline_model_texels` (`gcc -m32`), as it does on the clean tree. Step 5 (reading the published release) and its record follow the push.
+**Second commit, "Take the i686 packages' C++ runtime from the system"** (`scripts/port/package_linux.py`, `scripts/port/test_distribution.py`, `scripts/port/linux/START-HERE.txt` and `STEAM-DECK.txt`, `README.md`, the workflow's notes, `linux_64bit.md`, `benchmarks.md`, `crash_reporting.md` (its "Linux releases" now says both widths take the C++ runtime from the system, and drops "not yet published", which the first commit left stale), `native_64bit_plan.md`'s LP64-007 row, the LP64-007 plan's "What this plan does not do" by a dated parenthesis, FORK-031 and this note). The owner decided on 2026-11-26 that the i686 packages take `libstdc++.so.6` and `libgcc_s.so.1` from the player's system, as the x86_64 ones do; this departs deliberately from the plan's "No change to the i686 ... packages" and decision 1's "which do not change". Measured in Task 10 (above): the bundled GLIBCXX_3.4.30 against Mesa 25's i386 `libLLVM` needing 3.4.32, no GLX window on Ubuntu 24.04 with Mesa 25.2.8 without a preload. One tuple, `SYSTEM_CXX_RUNTIME`, serves both targets; the i686 executable is unchanged (no compiled file or build script changed). **TDD:** `test_i686_target_keeps_its_names_and_runtime` (now expecting the two names) and `test_both_targets_take_the_cxx_runtime_from_the_system` failed before the packager change and pass after it. Not yet confirmed on a system with Mesa 25 (the laptop can confirm with the published package); no i686 package was built on the Mac, and CI's `linux` job, whose steps name no bundled library, judges the package after the push. The release notes say the i686 Linux downloads now use the system's C++ runtime and their executables are unchanged. The NVIDIA WSL exit segfault stays a known limit.
 
 **LP64-006 hand-over to LP64-007** (written at the final review's fix wave from the review, the controller's ledger and the task notes above, and completed at Task 17 on 2026-11-24; each patch is under `scripts/port/lp64_patches/`, whose `README.md` says what it changes and the commit it applies to):
 
@@ -11207,8 +11208,8 @@ older C++ runtime already loaded. By `readelf -V`, the shipped ELF files need
 at most `GLIBCXX_3.4.30` (the game's `std::condition_variable::wait`; GCC 11.4
 links against the image's installed libstdc++ 12.3), `CXXABI_1.3.9`,
 `GCC_3.0` and `GLIBC_2.35`, so the player's system needs the C++ runtime of
-GCC 12 or newer, which Ubuntu 22.04 itself ships. The i686 package still
-bundles both (FORK-089 records the open question). The x86_64 tarball
+GCC 12 or newer, which Ubuntu 22.04 itself ships. The i686 package then still
+bundled both; from LP64-007 Task 11 it takes them from the system too (below). The x86_64 tarball
 (373 files, 39,111,857 bytes unpacked; 14,999,859 bytes packed; AppImage
 15,596,024; Deck ZIP 15,820,487) holds AppImage-LICENSE.txt 1,678, AppRun
 830, Crash-Reporting.md 10,458, Data/README.txt 826, Data/shaders_base.txt
@@ -11269,7 +11270,9 @@ downloads its `linux-x86_64-player-package` into `dist`, attests
 the two JSON files: seventeen assets where the release held eleven. The notes
 gain one paragraph on the 64-bit Linux and Deck downloads (glibc 2.35 or newer,
 OpenGL 3.3, no 32-bit libraries, the system's C++ runtime, no suspend points,
-the Deck ZIP not run on a Deck, the i686 downloads unchanged); the i686 Deck
+the Deck ZIP not run on a Deck, the i686 downloads for suspend points; a
+second commit adds that the i686 Linux downloads now use the system's C++
+runtime and their executables are unchanged); the i686 Deck
 ZIP stays named first, as decision 2 has it while no Deck has run either.
 `test_distribution.py`'s `test_publish_job_releases_every_linux_target` reads
 the job's text and requires, for every target in `package_linux.py`'s
@@ -11284,6 +11287,31 @@ they have run (GitHub's x86_64 runner and one WSL session) and that the 64-bit
 builds have no suspend points; `releases.md` lists the seventeen assets; the
 new `scripts/port/linux_64bit.md` is the developer's guide. The `linux` job's
 lines are unchanged.
+
+**The i686 packages take the C++ runtime from the system** (LP64-007 Task 11's
+second commit, 2026-11-26, the owner's decision that day; local, not pushed
+when written). This replaces the earlier decision to keep bundling them in the
+i686 packages (Task 3 above, and the LP64-007 plan's "No change to the i686
+... packages" and decision 1, which this departs from deliberately).
+Task 10 measured the published i686 package on Ubuntu 24.04 with Mesa 25.2.8
+in WSL: its bundled `libstdc++` (GLIBCXX_3.4.30) is older than Mesa 25's i386
+`libLLVM` needs (3.4.32), and no GLX window opened until the system's
+`libstdc++` and `libgcc_s` were preloaded. `package_linux.py` now has one
+tuple, `SYSTEM_CXX_RUNTIME` (`libstdc++.so.6`, `libgcc_s.so.1`), which both
+targets give as `system_libraries`; the i686 package no longer holds
+`lib/libstdc++.so.6` or `lib/libgcc_s.so.1`, and its `build-inputs.json`'s
+`bundled_libraries` lists neither. The i686 executable, image
+(`linux-release.Dockerfile`), build script and job are unchanged. The
+player's system provides its 32-bit C++ runtime (GCC 12 or newer; on Ubuntu
+or Debian `libstdc++6:i386` and `libgcc-s1:i386`): the bundled copy the
+executable ran with provided at most GLIBCXX_3.4.30, so the executable needs
+no newer version. `START-HERE.txt`, `STEAM-DECK.txt`, the README and the
+release notes say so, and `crash_reporting.md`'s "Linux releases" (which also loses its stale "not yet published"). Not yet confirmed on a system with Mesa 25; the laptop
+can confirm it with the published package, and CI's `linux` job (packaging
+and the ten crash cases in the i686 release image, whose i386 C++ runtime
+the build linked against) judges the package after the push. Nothing in that
+job's steps or in `test_sentry_linux.py` names the bundled copies (read
+2026-11-26).
 
 **Sources:** [baseline container](scripts/port/linux-release.Dockerfile),
 [x86_64 baseline container](scripts/port/linux-release-x86_64.Dockerfile),
@@ -11376,6 +11404,12 @@ edit (`'linux-x86_64' not found in ['tests', 'windows', 'sentry-smoke',
 `test_lp64_overlays_check.py`, `test_linux_build.py`, `test_steam_art.py` and
 `test_harness_widths.sh` pass. No package was built for this change; the
 published release is read after the push (FORK-089's Task 11 note).
+The i686 C++ runtime change, on the Mac: `test_distribution.py`'s
+`test_i686_target_keeps_its_names_and_runtime` and
+`test_both_targets_take_the_cxx_runtime_from_the_system` failed before the
+packager change (`'system_libraries': ()` against the two names; `i686` still
+bundling `libgcc_s.so.1` and `libstdc++.so.6`) and pass after it. No i686
+package was built on the Mac.
 
 ### FORK-030 — Native Sentry crash reporting and symbol uploads
 
