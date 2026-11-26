@@ -7,7 +7,9 @@ Sentry and their non-system dependencies are bundled. glibc, the C++ runtime
 GPU drivers are provided by your distribution, so the GPU driver and the game
 share the system's newer C++ runtime. Suspend points are unavailable in 64-bit
 builds; campaign saves work as in the i686 package. The i686 package remains
-available for 32-bit systems and for suspend points.
+available for 32-bit systems and for suspend points. Known issue: under WSL
+with NVIDIA's driver, quitting the game ends in a crash inside the driver
+(exit status 139).
 
 tar.gz: Extract, put your own stock USA ROM in Data, then run ./IronSights.
 Keep the entire folder together. Saves and midas.ini live beside the executable.

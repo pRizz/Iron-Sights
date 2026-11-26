@@ -99,7 +99,8 @@ attests the three packages (FORK-018, FORK-031).
 What a player's system provides: glibc 2.35 or newer, OpenGL 3.3 drivers,
 and the C++ runtime (`libstdc++.so.6` and `libgcc_s.so.1`, GCC 12 or newer:
 the shipped files need at most `GLIBCXX_3.4.30`). The packager does not
-bundle those two (`system_libraries` of the x86_64 target in
+bundle those two at either width (`SYSTEM_CXX_RUNTIME`, the
+`system_libraries` of both the i686 and the x86_64 target in
 `package_linux.py`), because a system GPU driver built with a newer GCC
 (Mesa 25.2's `libLLVM` needs `GLIBCXX_3.4.32`) loads into the game's
 process. No 32-bit library is needed.

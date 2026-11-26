@@ -11270,7 +11270,9 @@ downloads its `linux-x86_64-player-package` into `dist`, attests
 the two JSON files: seventeen assets where the release held eleven. The notes
 gain one paragraph on the 64-bit Linux and Deck downloads (glibc 2.35 or newer,
 OpenGL 3.3, no 32-bit libraries, the system's C++ runtime, no suspend points,
-the Deck ZIP not run on a Deck, the i686 downloads for suspend points; a
+the Deck ZIP not run on a Deck, the NVIDIA WSL exit crash (status 139) as a
+known issue, as also in the README and `START-HERE-x86_64.txt` since a review
+fix, the i686 downloads for suspend points; a
 second commit adds that the i686 Linux downloads now use the system's C++
 runtime and their executables are unchanged); the i686 Deck
 ZIP stays named first, as decision 2 has it while no Deck has run either.
@@ -11305,9 +11307,11 @@ targets give as `system_libraries`; the i686 package no longer holds
 player's system provides its 32-bit C++ runtime (GCC 12 or newer; on Ubuntu
 or Debian `libstdc++6:i386` and `libgcc-s1:i386`): the bundled copy the
 executable ran with provided at most GLIBCXX_3.4.30, so the executable needs
-no newer version. `START-HERE.txt`, `STEAM-DECK.txt`, the README and the
-release notes say so, and `crash_reporting.md`'s "Linux releases" (which also loses its stale "not yet published"). Not yet confirmed on a system with Mesa 25; the laptop
-can confirm it with the published package, and CI's `linux` job (packaging
+no newer version. `START-HERE.txt`, `STEAM-DECK.txt`, the README, the
+release notes and `crash_reporting.md`'s "Linux releases" say so, and the
+last also loses its stale "not yet published"; the first, the README and the
+release notes add that the change is not yet confirmed on Mesa 25. Not yet
+confirmed on a system with Mesa 25; the laptop can confirm it with the published package, and CI's `linux` job (packaging
 and the ten crash cases in the i686 release image, whose i386 C++ runtime
 the build linked against) judges the package after the push. Nothing in that
 job's steps or in `test_sentry_linux.py` names the bundled copies (read
