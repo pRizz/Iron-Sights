@@ -37,6 +37,9 @@ static const StageBudget sBudgets[] = {
     { "graphics buffer", LEVELID_AZTEC, 245760, 251040 },
     /* vertex pool: peak 135,136 (stage-caverns, the same), one player */
     { "vertex pool", LEVELID_CAVERNS, 262144, 270272 },
+    /* peak 144,624 (the owner's Dam, played on the x86_64 package in WSL,
+     * LP64-007 Task 10; the comparison cases' largest was 98,912), one player */
+    { "vertex pool", LEVELID_DAM, 262144, 289248 },
 };
 
 /* Not strcmp: the game's <string.h> (include/) does not declare it. */
