@@ -5,8 +5,8 @@
 # defines into DIR/Data/Saves/eeprom.bin and `read DIR` loads it and prints
 # every field. Each width writes and reads its own folder, then reads the
 # other's: the two files must hold the same bytes, every read must print
-# EXPECTED below and no read may change the file it read. At 64 bits `padding
-# DIR` checks that a stored record's padding is 0 (check_padding).
+# EXPECTED below and no read may change the file it read. At each width
+# `padding DIR` checks that a stored record's padding is 0 (check_padding).
 # MIDAS_SAVE_WIDTHS_KEEP=DIR keeps each width's folder as DIR/32 and DIR/64
 # (Task 13's game runs start from them). A compiler that offers one width
 # (aarch64 has no -m32) runs that width and names what it skipped.
@@ -89,14 +89,11 @@ own_width() {
     echo "test_save_widths: PASS (${width}-bit)"
 }
 
-# At 64 bits a stored folder record's padding is 0 whatever memory held there
-# (file2.c, fileWriteSave). The 32-bit program is left as it was: it stores
-# what its memory holds, which this campaign leaves at 0 (the file comparison).
+# At every width a stored folder record's padding is 0 whatever memory held
+# there (file2.c, fileWriteSave; at 32 bits since LP64-007 Task 12): the driver
+# fills it with 0xa5 before the write.
 check_padding() {
     local width=$1 folder=$work/padding-$1
-    if [[ $width != 64 ]]; then
-        return 0
-    fi
     mkdir "$folder"
     "$work/save-$width" padding "$folder" >/dev/null
 }

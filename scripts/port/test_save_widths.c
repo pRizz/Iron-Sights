@@ -7,7 +7,7 @@
  *
  *   test_save_widths write DIR   saves the campaign below into DIR/Data/Saves/eeprom.bin
  *   test_save_widths read DIR    loads that file and prints every field
- *   test_save_widths padding DIR checks that a stored folder record's padding is 0 (64 bits)
+ *   test_save_widths padding DIR checks that a stored folder record's padding is 0
  *
  * Both start as the game's boot does, with fileValidateSaves; write refuses a
  * folder that already holds a save, so the campaign is always built on a blank
@@ -246,7 +246,7 @@ static int readCampaign(void)
 }
 
 /* ---- padding ----------------------------------------------------------------------------------- */
-/* A folder record ends in padding after its times, which the checksum covers. At 64 bits
+/* A folder record ends in padding after its times, which the checksum covers. At every width
  * fileWriteSave stores it as zeros whatever the record in memory holds there. */
 static int writeClearsPadding(void)
 {
