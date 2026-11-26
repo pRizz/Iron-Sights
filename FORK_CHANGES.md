@@ -30,6 +30,168 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-092 — Linux weapon icons, icon cache and save transfer dialogs
+
+**Status:** Implemented on 2026-11-25 at the owner's request, during LP64-007
+Task 10's hardware session, after the owner played the x86_64 Linux package in
+WSLg on the laptop (RTX 3070 through Mesa's d3d12 driver; Ubuntu 24.04, Mesa
+25.2.8, zenity 4.0.1, GTK 4.14.5). Four faults; each fix below.
+
+**1. Weapon icons drew nothing under Mesa.** The weapon strip showed its cards,
+the active bar and the caption, but no picture, on the RTX 3070 (Mesa d3d12)
+and under llvmpipe. Task 8 Step 5 saw the same blank cards offscreen (FORK-089)
+and left it to this session. The Windows game draws them on the same GPU,
+with default settings: a scripted Dam start (`GE_STAGE=dam GE_CHEATS=guns`,
+screenshots) showed every icon on Windows and none in WSL. The cache was
+sound: its 38 images decode as weapon renders. A debug build in the x86_64
+container (offscreen llvmpipe) showed the vertices, UVs and the uploaded
+512x160 texture correct and bound to unit 0, with no GL error. The fragment
+shader was the fault: `texel = vec4(texVal0.rgb, mix(texel.a, texVal0.a,
+vInput1.a))` reads `texel` before it is set.
+
+The icon draw (`gfx_ge_vector_overlay`, shape 4, `port/fast3d/gfx_pc.cpp`,
+FORK-011) asked for `alpha_comb(G_ACMUX_TEXEL0, 0, G_ACMUX_SHADE, 0)`. In the
+N64 combiner, 0 in the B and D slots is COMBINED, the previous cycle's output,
+not zero (`G_ACMUX_COMBINED` is 0, `G_ACMUX_0` is 7). In a one-cycle draw that
+is undefined. NVIDIA's own driver happened to start it at zero, giving TEXEL0
+times SHADE; Mesa does not. Both icon passes (the rim and the picture) now use
+`alpha_comb(G_ACMUX_TEXEL0, G_ACMUX_0, G_ACMUX_SHADE, G_ACMUX_0)`, which is
+TEXEL0 times SHADE in any driver. The new shader is
+`texel = vec4(texVal0.rgb, texVal0.a * vInput1.a)`. The other overlay draws
+use `(0, 0, 0, D)`, where COMBINED cancels; a scan of the run's 180 compiled
+programs found no other read of `texel` before it is set.
+
+The two programs' ids change: the rim pass now maps to
+`0000000001081000 10000001`, already in `tools/shaders_base.txt`, and the
+picture to `0000000001088000 10000001`, added there. The old
+`00000000d1d81000` and `00000000d1d88000` lines are removed, so the strip's
+shaders still compile while loading (`web_target_progress.md`'s 2026-11-07
+note added the old two for the same reason).
+
+**2. A first launch on NVIDIA's WSL driver kept weapon names.** The icon worker
+(`port/fast3d/weapon_worker.cpp`) wrote a valid cache, then crashed at exit in
+NVIDIA's driver (`ge: icons: worker exited 139`; the game itself does the
+same at every quit, FORK-089's Task 10 record). The game read the exit status
+as a failure and showed names until the next launch. `prepare`
+(`port/fast3d/weapon_cache.cpp`) now accepts the cache when it validates after
+the worker ran, whatever the exit status: the file is replaced atomically and
+checked against its CRC and the ROM fingerprint, and the cache did not
+validate before the worker started. It logs `ge: icons: the worker failed
+after writing a valid cache; using it`. Checked in the x86_64 container with a
+fresh cache folder and an `LD_PRELOAD` library raising SIGSEGV from a
+destructor at exit: the run logged `worker exited 139`, then that line and
+`background preparation ready`. On the laptop the owner's first launch showed
+icons from the next mission.
+
+**3. The save transfer dialogs on Linux.** Export and Import (Files screen,
+`port/fast3d/save_transfer.cpp`) failed in WSLg in several ways, each found in
+the owner's runs:
+- **No click reached the picker.** zenity's dialog took typing but no click.
+  zenity alone took clicks, so the game was the cause. While the picker was
+  open the game thread blocked in `read()`, so requests SDL had queued in
+  Xlib's buffer were never sent, and XWayland kept the pointer lock it makes
+  from a warped hidden cursor (FORK-091). The game now shows the cursor and
+  leaves relative mode before a dialog, then waits with `poll()` and pumps
+  SDL's events every 50 ms. That sends the requests and keeps the window
+  answering; the events it queues reach the game after the dialog closes.
+  Taking the game out of fullscreen while the dialog was open was tried and
+  proved unnecessary: with pumping, a fullscreen game worked too, so that
+  change was removed.
+- **A chosen file was lost.** GTK 4 zenity inherited the game's
+  `GALLIUM_DRIVER=d3d12` and segfaulted at exit in NVIDIA's driver (a
+  self-closing `zenity --info --timeout=2` exits 139 with those variables), so
+  the game read the exit as Cancel. Dialogs now run with GTK's GL off
+  (`GDK_DEBUG=gl-disable` for GTK 4.14, `GDK_DISABLE=gl` for 4.16 and later):
+  the same test then exits cleanly (5, its timeout), and `GSK_RENDERER=cairo`
+  alone does not help. The picker also keeps a path it printed with its
+  newline even if it then fails; both tools print that only on a confirmed
+  choice.
+- **No message, and Import could not be confirmed.** SDL could not open its
+  message box under WSLg (`No message system available`), so the result
+  message never showed and Import's confirmation always read as Cancel. When
+  SDL's box fails, both use zenity (`--info`, `--error`, `--question`) or
+  kdialog. Only a clean exit 0 confirms an import; a failed or crashed dialog
+  is Cancel.
+- **Where the files go.** An exported name without an extension gets `.json`,
+  as the Windows picker's default extension does; Import lists only `*.json`,
+  so the owner's backup saved as `aab` could not be found. Both pickers start
+  in the folder of the last export, remembered in `.save-transfer-folder`
+  beside the data (not a setting, so not on the Iron Sights page or in
+  `midas.ini`; outside `save_backup.cpp`'s backup allowlist), else in the home
+  folder. Import passes a file in that folder, since zenity 4 opened a
+  folder's parent with the folder selected. The Windows dialog remembers its
+  own folder and is unchanged.
+- The game window is passed as the dialog's parent (zenity `--attach`,
+  kdialog `--attach`) when SDL's X11 driver gives its id. zenity 4 ignores it
+  ("DEPRECATED; does nothing") and still prints a warning; zenity 3 and kdialog
+  honour it.
+- Known limit: zenity 4.0.1 opens the suggested folder but leaves Export's
+  name field empty, so the player types a name.
+
+The runner is `port/fast3d/posix_dialog.{h,cpp}`: it finds zenity, else
+kdialog, on `PATH`, builds the argument and environment lists before `fork`,
+`execve`s without a shell, and reports the output and exit status. CMake adds
+it to `ge_save_transfer` on non-Windows builds only. Mouse, keyboard and pad
+reach the dialogs as the desktop gives them; browser touch has its own picker
+(`portWebFileMenuRequest`), unchanged.
+
+**4. Mouse-look under WSLg: not fixable here.** Turning stops at the screen
+edge and runs backwards. That is WSLg's relative motion (FORK-091's last
+paragraph, corrected today); no change was made.
+
+**Sources:** `port/fast3d/gfx_pc.cpp` (the icon combiner),
+`tools/shaders_base.txt`, `port/fast3d/weapon_cache.cpp` (`prepare`),
+`port/fast3d/save_transfer.cpp`, `port/fast3d/posix_dialog.h`,
+`port/fast3d/posix_dialog.cpp`, `CMakeLists.txt` (`ge_save_transfer`),
+`scripts/port/save_transfer.md`.
+
+**Checks:**
+- [ROM-free test](scripts/port/test_posix_dialog.cpp) and its
+  [runner](scripts/port/test_posix_dialog.sh), in the workflow's tests step,
+  against fake zenity and kdialog scripts: a chosen file with an argument
+  holding a space and a quote, a tool that prints and then dies of SIGSEGV,
+  Cancel, the kdialog fallback, no tool, and the GL switches (an existing
+  `GDK_DEBUG` keeps its flags). `PASS (32-bit): 7 cases`, `PASS (64-bit): 7
+  cases` in the x86_64 container; `test_harness_widths.sh` passes.
+- CI's 64-bit gate lines on task-owned trees in the x86_64 container
+  (`lp64_diagnostics.py gate`, `narrowing --check`, `unprototyped --check`,
+  `lp64_pointer_types.py check`, `lp64_lto.py check`, `lp64_overlays.py check
+  --no-defects`, `lp64_casts.py check`): all passed.
+- Offscreen llvmpipe in the x86_64 container, Dam: the strip draws every
+  card's weapon, pairs included, where it drew none before.
+- Laptop, a local x86_64 release package of `9d4e0cb` plus this change: the
+  owner saw the strip's icons, the first-launch icons, Export writing the
+  file, the result message, Import opening in the export's folder and its
+  confirmation.
+- Smoke benchmark, Windows, RTX 3070 (`bench.py run --smoke`, `before` built
+  from `HEAD` by `stock.py`, three repeats). Average fps before and after:
+  default cradle-fight 567 and 566, dam-walk 907 and 897, temple-4p 658 and
+  664; matched 717 and 718, 1182 and 1175, 809 and 836. Run-to-run ranges
+  1-7%; every difference is inside them except matched temple-4p's median
+  frame, 2% faster. One profiled matched dam-walk run of each:
+  `bench_profile.py`'s largest differences are all under 0.1 ms a frame, the
+  renderer's `gfx_run_dl` 0.697 and 0.663 ms. The browser runner was not run
+  (two more browser builds); the picture pass's shader drops one `mix`.
+- `late_load_audit.py --stage dam --keep` with both builds, then `--compare`:
+  the only difference is the old build compiling the two old icon programs
+  during play (the audit installs this checkout's shader list); the new build
+  compiles no shader during play.
+- `hand_gallery.py generate`: 0 image cells changed; `verify` passes.
+- The 32-bit Windows program changes, as LP64-007 decision 13 allows when
+  every changed function is named. `compare_win32.py commits HEAD WORKTREE`
+  reports `different` (sections moved). Only three objects differ
+  (`gfx_pc.cpp`, `weapon_cache.cpp`, `save_transfer.cpp`). Disassembled in the
+  `goldeneye` container and compared function by function, with addresses and
+  relocated immediates masked, the changed functions are
+  `gfx_ge_vector_overlay` (the icon combiner), `prepare`'s locked callback in
+  `weapon_cache.cpp`, and `portSaveTransferRequest` (with `message` and
+  `confirmImport` inlined into it). The rest only moved. The edit keeps
+  `gfx_pc.cpp`'s line count and changes only four lines, so its `assert`
+  line numbers stay; a first draft that shifted them changed five more
+  functions' constants and was corrected before this comparison. The smoke
+  benchmark and the late-load audit ran on that first draft, which differs
+  from this code only in those `assert` line numbers.
+
 ### FORK-091 — XWayland pointer reset on focus
 
 **Status:** Implemented on 2026-11-25 at the owner's request, during LP64-007
@@ -108,10 +270,17 @@ files' LF endings from Git made the two builds identical.
 
 Two other WSLg faults stay as they were; this fix does not reach them. WSLg
 still draws the Windows arrow over the game. In relative mode, which gameplay
-uses for mouse-look, WSLg hands SDL inverted motion of one count an event: the
-minimal window logged `xrel` −165 for a move to the right and `yrel` +126 for
-a move up, each event ±1. So mouse-look cannot be judged under WSL. The menus
-read absolute positions and are unaffected.
+uses for mouse-look, WSLg hands SDL the Windows cursor's own motion with its
+sign flipped, at full scale: the minimal window logged `xrel` −54 while the X
+pointer moved 55 to the right, and `yrel` +26 for a move of 27 up. That cursor
+is never recentred, so turning stops at the edge of the screen. A warp moves
+only the X server's pointer (to the window's centre, 506,427), never the
+Windows cursor, and the next motion puts it back where the Windows cursor is.
+SDL's warp-based relative mode therefore piles up phantom motion (+11,462 in
+five seconds). Nothing inside Linux can recentre the Windows cursor, so
+mouse-look cannot be played under WSL; the menus read absolute positions and
+are unaffected. Corrected 2026-11-25 from probes in LP64-007 Task 10's session
+(the first reading had the motion as one count an event).
 
 ### FORK-090 — Load before play: late-load audit, HD prefetch, warm-up frames
 
@@ -3834,6 +4003,7 @@ Over all the laptop's comparisons, the lines not exercised are the nine `i686:a6
   - The four screenshot runs (each width on a cache the other width wrote, and each width on a fresh cache from its own prep) logged `ge: icons: reusing validated cache`; the prep runs wrote the cache with `GE_ICON_CACHE_FORCE=1`. All five cache files written are byte-identical (`weapon-icons-v9-b6330846.cache`, 12,779,712 bytes). The screenshots are byte-identical: x86_64 on an i686 cache against a fresh one at all four ticks, i686 on an x86_64 cache against a fresh one, and across widths. The suspend image's bytes are unchanged, and `midas.ini`'s window setting is honoured at both widths. The cache was not misread.
   - **Concern:** in these offscreen llvmpipe runs the strip's cards draw blank, neither icon nor name, at both widths and in a plain GCC 13 x86_64 video tree too. With `weapon_hud_icons=0` they show the names. So the pictures compare blank cards, and the cross-width evidence rests on the identical cache files and the reuse lines.
   - The icon draw is in `port/fast3d/gfx_pc.cpp`, strict tier, and was not investigated. Whether icons show on real hardware is for Task 10. The screenshots are kept in `build/lp64/ship/icon-shots/` (ROM-derived, out of Git).
+  - Resolved in Task 10 (FORK-092): the icon draw's alpha combiner read COMBINED, undefined in one cycle, which NVIDIA's Windows driver zeroes and Mesa does not; Mesa now draws the icons.
 - **Step 6, late loads** (x86_64, offscreen, `late_load_audit.py --no-pack --video-driver offscreen --keep`, all stages).
   - No plain GCC 13 x86_64 video tree existed, so one was configured for this (`-DCMAKE_BUILD_TYPE=Debug -DGE_POINTER_BITS=64 -DGE_VIDEO=ON`, 37 s). Its audit took 3,041 s; for its first half it shared the machine with Step 5's i686 lockstep screenshot runs, which slowed it. The packaged executable's audit ran alone and took 1,723 s.
   - `--compare`: `FAIL: 20 of 26 stages logged the same late events by kind and name`. All 20 missions are the same.
@@ -3848,7 +4018,7 @@ The run, capture and scratch folders were deleted after this note was written, e
 
 *LP64-007 task 9, the benchmark drives a Linux package (2026-11-25), on the Mac: the try ran x86_64 under Rosetta 2 in the development container, offscreen on Mesa's llvmpipe; nothing ran on real x86 hardware or on a GPU. Local commit on `main`, not pushed.* Commit "Let the benchmark drive a Linux package" (`scripts/port/bench/bench.py`, `bench_plan.py`, `scripts/port/test_bench.py`, `scripts/port/benchmarks.md`, `.github/workflows/windows-release.yml`, FORK-085, this note, the plan's LP64-007 row and the Task 9 boxes; no C, C++ or CMake file, so the 32-bit builds are unchanged). FORK-085's "Linux packages" bullet and the guide's "Linux packages" section describe the behaviour: `bench_plan.launch_plan` gives an `.exe` the plan it had at f04e0a7 (the executable and `SDL2.dll`; the caller's environment without `GE_` variables, then the run's) and a Linux executable its `lib/` folder copied into the run folder, first on `LD_LIBRARY_PATH` with any value already set after it; on Linux the guard lists `IronSights` processes from `/proc/*/comm` and also waits while `/proc/loadavg`'s one-minute load is at or above the processor count, the processor-use probe reads `/proc/stat`, the `os` fact accepts `ge: sys: Linux`, and off Windows `--out` takes the run folders beside it. The profilers stay Windows only. Tests: `test_bench.py` gained 8 (`test_windows_plan_is_unchanged`, `test_linux_run_copies_the_library_folder`, `test_linux_run_sets_the_library_path`, `test_linux_run_without_a_library_folder_copies_the_executable_alone`, `test_linux_guard_reads_loadavg`, `test_linux_cpu_probe_reads_proc_stat`, `test_linux_process_list_finds_other_games`, `test_linux_log_names_its_system`), all failing first on the missing functions (`AttributeError`), then `Ran 45 tests ... OK`; it now runs in the CI tests step, where it did not before. **The try** (Step 4): `python3 scripts/port/lp64_env.py run --arch x86_64 -- env SDL_VIDEODRIVER=offscreen HOME=<scratch>/home GE_ROM=/rom/baserom.u.z64 python3 scripts/port/bench/bench.py run --smoke --build x64=build/lp64/ship/x64/run/Iron-Sights-linux-x86_64/IronSights --scenario dam-walk --preset default --repeats 1 --resolution 640x480 --keep --out <scratch>/results.json`, on the packaged x86_64 executable of 45720d5 (Task 8's package), with the scratch folder under `build/lp64/ship/`: exit 0, the run folder held the copied `lib/`, the frame log was written at its end tick and the report printed its table. Its figures are a software renderer's under translation and are not results; its machine line read the system as `unknown`, since the game prints no `ge: sys: Linux` line. The scratch folder was deleted. *Not run:* the i686 package (none was extracted here), a visible window, a GPU, Windows (the Windows path is held by the pinned plan test only), anything in CI.
 
-*LP64-007 Task 10's list, two additions (2026-11-25; documentation only, no source, build file or tool changed).* The plan's Task 10 (the owner's session on the laptop) gains two items that Tasks 8 and 9 left for real hardware. Step 4 also looks at the weapon strip with Weapon HUD Icons on, in the i686 and the x86_64 game, each started once on the icon cache the other wrote: Task 8 Step 5 found the caches byte-identical, but its offscreen software-GL screenshots drew blank cards at both widths, so no picture of an icon has been compared at either width. Step 6 also corrects `benchmarks.md`'s "Linux packages" section from what runs there (Task 9 tried `bench.py` on the x86_64 package only, offscreen in a container; i686 and WSL are named before either ran) and says whether the report's system reads `unknown`, since the game prints no `ge: sys: Linux` line. Why blank cards under Mesa's software GL, and whether a Linux build should print its system, are open questions for the owner; neither is changed here. *Checks:* none run; `bun scripts/bright-builds-check.ts all` runs in the commit hook.
+*LP64-007 Task 10's list, two additions (2026-11-25; documentation only, no source, build file or tool changed).* The plan's Task 10 (the owner's session on the laptop) gains two items that Tasks 8 and 9 left for real hardware. Step 4 also looks at the weapon strip with Weapon HUD Icons on, in the i686 and the x86_64 game, each started once on the icon cache the other wrote: Task 8 Step 5 found the caches byte-identical, but its offscreen software-GL screenshots drew blank cards at both widths, so no picture of an icon has been compared at either width. Step 6 also corrects `benchmarks.md`'s "Linux packages" section from what runs there (Task 9 tried `bench.py` on the x86_64 package only, offscreen in a container; i686 and WSL are named before either ran) and says whether the report's system reads `unknown`, since the game prints no `ge: sys: Linux` line. Why blank cards under Mesa's software GL, and whether a Linux build should print its system, are open questions for the owner; neither is changed here (the blank cards were later traced and fixed in FORK-092). *Checks:* none run; `bun scripts/bright-builds-check.ts all` runs in the commit hook.
 
 **LP64-006 hand-over to LP64-007** (written at the final review's fix wave from the review, the controller's ledger and the task notes above, and completed at Task 17 on 2026-11-24; each patch is under `scripts/port/lp64_patches/`, whose `README.md` says what it changes and the commit it applies to):
 

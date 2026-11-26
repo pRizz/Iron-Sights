@@ -2004,7 +2004,7 @@
     }
   ],
   "independent_pass_verified": true,
-  "inputs_sha256": "e72b34740de974cba8f45cca907fbf674743b3b01aef78fdfa99f3a1ce407678",
+  "inputs_sha256": "b0cd1990bed4cb2bd0c5d02bf12badf0e065ba0ce6f3144098c58190a56bbaa7",
   "recipe": {
     "background": "#30343c",
     "fov": 90,
@@ -2025,5 +2025,5 @@
   "repeat_verified": true,
   "rom_sha256": "2cdcec8a9f0cb6e36337f3ee39d8ad105dc8afa6ba1c02d466e8f5b771f9a162",
   "schema": 2,
-  "strict_inputs_sha256": "9691d6d72452fe5ba7b5ce0abc6c247791ee09b7ff0bc329f07233ed68053b4e"
+  "strict_inputs_sha256": "1ac9af351800e61a109a75596b1d47389e1db34707af582f53b035cd37646f2c"
 }

@@ -6883,13 +6883,13 @@ static void gfx_ge_vector_overlay(float x, float y, uint32_t rgba, int shape = 0
                 }
                 quad();
             };
-            /* A subtle alpha-derived edge keeps black metal readable against
-             * the translucent cards, especially in small split-screen views. */
-            gfx_dp_set_combine_mode(color_comb(0,0,0,G_CCMUX_SHADE), alpha_comb(G_ACMUX_TEXEL0,0,G_ACMUX_SHADE,0), 0, 0);
+            /* A subtle alpha-derived edge keeps black metal readable on the cards. Alpha is TEXEL0*SHADE:
+             * B, D = G_ACMUX_0, not 0 = COMBINED, undefined in one cycle (Mesa drew nothing, FORK-092). */
+            const uint32_t icon_alpha = alpha_comb(G_ACMUX_TEXEL0, G_ACMUX_0, G_ACMUX_SHADE, G_ACMUX_0); gfx_dp_set_combine_mode(color_comb(0,0,0,G_CCMUX_SHADE), icon_alpha, 0, 0);
             ge_state_serial++;
             image_quad(-0.25f,0,true); image_quad(0.25f,0,true);
             image_quad(0,-0.25f,true); image_quad(0,0.25f,true);
-            gfx_dp_set_combine_mode(color_comb(0,0,0,G_CCMUX_TEXEL0), alpha_comb(G_ACMUX_TEXEL0,0,G_ACMUX_SHADE,0), 0, 0);
+            gfx_dp_set_combine_mode(color_comb(0,0,0,G_CCMUX_TEXEL0), icon_alpha, 0, 0);
             ge_state_serial++;
             image_quad(0,0,false);
             gfx_flush();

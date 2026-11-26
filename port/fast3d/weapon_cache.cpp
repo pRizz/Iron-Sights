@@ -368,7 +368,13 @@ static int prepare(const fs::path &folder, const fs::path &cache, const std::str
     weapon_worker::withLock(folder,[&] {
         if (readCache(cache)) { result=kReady; return; }
         weapon_worker::removeStale(folder);
-        result=weapon_worker::generate(cache,rom.c_str(),romFingerprint) && readCache(cache) ? kReady : kFailed;
+        const bool exited=weapon_worker::generate(cache,rom.c_str(),romFingerprint);
+        /* The cache is replaced atomically and checked against its CRC and the
+         * ROM, so one that validates now is the worker's finished work, also when
+         * the worker then failed on its way out (NVIDIA's driver under WSL
+         * crashes at exit, FORK-092). The exit status alone used to discard it. */
+        result=readCache(cache) ? kReady : kFailed;
+        if (result==kReady && !exited) portConLogf("ge: icons: the worker failed after writing a valid cache; using it\n");
     });
     return result;
 }

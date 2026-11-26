@@ -639,6 +639,10 @@ if(GE_VIDEO)
         add_compile_definitions(GE_SAVE_TRANSFER=1)
         add_library(ge_save_transfer OBJECT port/fast3d/save_backup.cpp
             port/fast3d/save_restore.cpp port/fast3d/save_transfer.cpp)
+        if(NOT WIN32)
+            # FORK-092: zenity / kdialog runner for the Linux dialogs
+            target_sources(ge_save_transfer PRIVATE port/fast3d/posix_dialog.cpp)
+        endif()
         set_target_properties(ge_save_transfer PROPERTIES
             INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/port/include")
         if(WIN32)

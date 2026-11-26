@@ -16,7 +16,14 @@
 #include <SDL_syswm.h>
 #else
 #include <unistd.h>
+#include <fstream>
+#include <string>
 #include <sys/wait.h>
+#include <vector>
+#include "posix_dialog.h"
+#if __has_include(<X11/Xlib.h>)
+#include <SDL_syswm.h> /* the game window's X11 id, a dialog's parent */
+#endif
 #endif
 
 extern "C" {
@@ -38,11 +45,70 @@ static bool restarting;
 
 static fs::path rootPath() { return fs::path(portRootPath("")); }
 
+#ifndef _WIN32
+/* FORK-092: Linux dialogs (zenity, else kdialog) over the game. */
+static void pumpEvents(void) { SDL_PumpEvents(); }
+
+/* overGame: the game window still exists (not after shutdown). XWayland turns a
+ * warped hidden cursor into a pointer lock on the game's window, so a dialog took
+ * typing but never a click: a visible cursor ends the lock once pumpEvents sends
+ * it, and input_pc.c hides it again on the next poll. The game window is the
+ * dialog's parent where the tool honours it (zenity 3, kdialog; zenity 4
+ * ignores --attach). */
+static posix_dialog::Result dialog(std::vector<std::string> zenity, std::vector<std::string> kdialog, bool overGame = true)
+{
+    if (overGame) {
+        SDL_SetRelativeMouseMode(SDL_FALSE);
+        SDL_ShowCursor(SDL_ENABLE);
+#if defined(SDL_VIDEO_DRIVER_X11)
+        SDL_SysWMinfo native;
+        SDL_VERSION(&native.version);
+        SDL_Window *window = gfx_sdl_get_window();
+        if (window && SDL_GetWindowWMInfo(window, &native) && native.subsystem == SDL_SYSWM_X11) {
+            const std::string parent = std::to_string((unsigned long) native.info.x11.window);
+            zenity.push_back("--attach=" + parent);
+            kdialog.insert(kdialog.begin(), {"--attach", parent});
+        }
+#endif
+    }
+    return posix_dialog::run(zenity, kdialog, overGame ? pumpEvents : nullptr);
+}
+
+/* The folder of the last export, kept beside the data (not a setting, and not
+ * in backups: save_backup.cpp's allowedPath). */
+static fs::path folderFile() { return rootPath() / ".save-transfer-folder"; }
+
+/* Where the pickers start: the last export's folder if it still exists, else home. */
+static fs::path startFolder()
+{
+    std::ifstream in(folderFile());
+    std::string line;
+    std::error_code error;
+    if (in && std::getline(in, line) && !line.empty() && fs::is_directory(fs::path(line), error)) return fs::path(line);
+    const char *home = std::getenv("HOME");
+    return home && *home ? fs::path(home) : fs::current_path(error);
+}
+
+static void rememberFolder(const fs::path &file)
+{
+    std::ofstream out(folderFile(), std::ios::trunc);
+    if (out) out << fs::absolute(file).parent_path().string() << '\n';
+}
+#endif
+
 static void message(const char *text, bool error = false, bool afterShutdown = false)
 {
     std::fprintf(stderr, "ge: save transfer: %s\n", text);
-    SDL_ShowSimpleMessageBox(error ? SDL_MESSAGEBOX_ERROR : SDL_MESSAGEBOX_INFORMATION,
-        "Iron Sights - Save transfer", text, afterShutdown ? nullptr : gfx_sdl_get_window());
+    if (SDL_ShowSimpleMessageBox(error ? SDL_MESSAGEBOX_ERROR : SDL_MESSAGEBOX_INFORMATION,
+            "Iron Sights - Save transfer", text, afterShutdown ? nullptr : gfx_sdl_get_window()) == 0)
+        return;
+#ifndef _WIN32
+    /* FORK-092: under WSLg SDL could not open its message box ("No message
+     * system available"), and the player saw nothing. */
+    std::fprintf(stderr, "ge: save transfer: SDL message box unavailable (%s); using zenity or kdialog\n", SDL_GetError());
+    dialog({error ? "--error" : "--info", "--title=Iron Sights - Save transfer", "--no-markup", std::string("--text=") + text},
+        {"--title", "Iron Sights - Save transfer", error ? "--error" : "--msgbox", text}, !afterShutdown);
+#endif
 }
 
 static void restartAfterShutdown()
@@ -122,49 +188,61 @@ static fs::path chooseFile(bool exporting)
     if (CommDlgExtendedError()) throw std::runtime_error("Windows could not open the file picker.");
     return {};
 #else
-    const std::string filenameOption = "--filename=" + filename;
-    // Exec argv directly: file paths and labels never become shell commands.
-    int pipes[2];
-    if (pipe(pipes)) throw std::runtime_error("Could not open the file picker.");
-    pid_t child = fork();
-    if (child == 0) {
-        close(pipes[0]); dup2(pipes[1], STDOUT_FILENO); close(pipes[1]);
-        if (exporting)
-            execlp("zenity", "zenity", "--file-selection", "--save", "--confirm-overwrite",
-                "--title=Export Save", filenameOption.c_str(), "--file-filter=*.json", nullptr);
-        else execlp("zenity", "zenity", "--file-selection", "--title=Import Save", "--file-filter=*.json", nullptr);
-        if (exporting)
-            execlp("kdialog", "kdialog", "--getsavefilename", filename.c_str(), "*.json", nullptr);
-        else execlp("kdialog", "kdialog", "--getopenfilename", ".", "*.json", nullptr);
-        _exit(127);
+    /* FORK-092: the pickers start in the last export's folder, else home, with a
+     * full path: zenity 4 ignores the suggested name (4.0.1 opens the folder but
+     * leaves the name empty), and the launch folder (an AppImage's mount, say)
+     * is no place for a backup. */
+    const fs::path folder = startFolder();
+    std::vector<std::string> zenity = {"--file-selection", "--file-filter=*.json"};
+    std::vector<std::string> kdialog;
+    if (exporting) {
+        const std::string suggested = (folder / filename).string();
+        zenity.insert(zenity.end(), {"--save", "--confirm-overwrite", "--title=Export Save", "--filename=" + suggested});
+        kdialog = {"--getsavefilename", suggested, "*.json"};
+    } else {
+        /* A file in the folder, not the folder: zenity 4 opened a folder's
+         * parent with the folder selected. */
+        zenity.insert(zenity.end(), {"--title=Import Save", "--filename=" + (folder / "iron-sights-saves.json").string()});
+        kdialog = {"--getopenfilename", folder.string(), "*.json"};
     }
-    close(pipes[1]);
-    if (child < 0) { close(pipes[0]); throw std::runtime_error("Could not start the file picker."); }
-    std::string path;
-    char buffer[1024];
-    ssize_t count;
-    while ((count = ::read(pipes[0], buffer, sizeof(buffer))) > 0) path.append(buffer, count);
-    close(pipes[0]);
-    int status = 0;
-    while (waitpid(child, &status, 0) < 0 && errno == EINTR) {}
-    if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
-        throw std::runtime_error("Install zenity or kdialog to choose save backup files.");
-    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) return {};
-    if (!path.empty() && path.back() == '\n') path.pop_back();
-    return fs::path(path);
+    const auto run = dialog(zenity, kdialog);
+    if (!run.started) throw std::runtime_error("Install zenity or kdialog to choose save backup files.");
+    const std::string line = posix_dialog::chosenLine(run);
+    if (line.empty()) return {};
+    if (!posix_dialog::accepted(run))
+        std::fprintf(stderr, "ge: save transfer: the file picker %s %d after a choice; using it\n",
+            WIFSIGNALED(run.status) ? "died of signal" : "exited",
+            WIFSIGNALED(run.status) ? WTERMSIG(run.status) : WEXITSTATUS(run.status));
+    fs::path chosen(line);
+    /* As the Windows picker's default extension: Import lists only *.json, so a
+     * backup saved as a bare name could not be found. */
+    if (exporting && chosen.extension().empty()) chosen += ".json";
+    return chosen;
 #endif
 }
 
 static bool confirmImport()
 {
+    static const char question[] =
+        "Replace all local campaign saves, profiles, settings and controller mappings with this backup?\n\n"
+        "Iron Sights will restart to load the imported data. Export first to keep a copy of your current saves.";
     const SDL_MessageBoxButtonData buttons[] = {
         {SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, "Cancel"}, {0, 1, "Import and restart"}};
-    SDL_MessageBoxData box = {SDL_MESSAGEBOX_WARNING, gfx_sdl_get_window(), "Import Save",
-        "Replace all local campaign saves, profiles, settings and controller mappings with this backup?\n\n"
-        "Iron Sights will restart to load the imported data. Export first to keep a copy of your current saves.",
+    SDL_MessageBoxData box = {SDL_MESSAGEBOX_WARNING, gfx_sdl_get_window(), "Import Save", question,
         2, buttons, nullptr};
     int choice = 0;
-    return SDL_ShowMessageBox(&box, &choice) == 0 && choice == 1;
+    if (SDL_ShowMessageBox(&box, &choice) == 0) return choice == 1;
+#ifndef _WIN32
+    /* FORK-092: without SDL's box (WSLg) Import could never be confirmed. Only a
+     * clean Yes imports; a failed or crashed dialog is Cancel. */
+    std::fprintf(stderr, "ge: save transfer: SDL message box unavailable (%s); using zenity or kdialog\n", SDL_GetError());
+    return posix_dialog::accepted(dialog(
+        {"--question", "--title=Import Save", "--no-markup", "--ok-label=Import and restart", "--cancel-label=Cancel",
+            std::string("--text=") + question},
+        {"--title", "Import Save", "--yes-label", "Import and restart", "--no-label", "Cancel", "--warningyesno", question}));
+#else
+    return false;
+#endif
 }
 
 void portSaveTransferRequest(int exporting)
@@ -177,6 +255,9 @@ void portSaveTransferRequest(int exporting)
                 portOptSaveHold(0);
                 portProfileAutoSave(1);
                 savebackup::write(path, savebackup::encode(savebackup::collect(rootPath())));
+#ifndef _WIN32
+                rememberFolder(path); /* FORK-092: the pickers start there next time */
+#endif
                 message("Save backup exported. Import this JSON file in desktop or web Iron Sights.");
             } else {
                 const auto text = savebackup::read(path);

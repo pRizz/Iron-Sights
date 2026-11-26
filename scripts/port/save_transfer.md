@@ -28,6 +28,16 @@ Windows uses its standard Open/Save dialogs. Linux requires `zenity` or
 `kdialog` on `PATH`; install one through your distribution's package manager if
 neither is available. Canceling a picker or confirmation changes no saves.
 
+On Linux (FORK-092) both pickers start in the folder of the last export,
+remembered in `.save-transfer-folder` beside the data (not a setting, and not
+in backups), else in the home folder. An exported name without an extension
+gets `.json`, as on Windows, since Import lists only `*.json`. When SDL cannot
+open its own message box (WSLg), the result message and Import's confirmation
+use zenity or kdialog instead; only a clean "Import and restart" imports. The
+dialogs run with GTK's GL off, and keep the game's window events pumped while
+open (see `port/fast3d/posix_dialog.h`). zenity 4 ignores the suggested file
+name, so Export's name field starts empty there.
+
 The desktop adapter validates paths, file counts/sizes, base64 and SHA-256
 before confirmation. Confirmed imports are staged outside the export allowlist.
 The running game's files and cached EEPROM stay intact until shutdown; a fresh
