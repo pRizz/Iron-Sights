@@ -23,4 +23,9 @@ int portXwaylandPointerNeedsReset(const char *videoDriver, const char *waylandDi
  *  cursor when portXwaylandPointerNeedsReset says so. */
 void portXwaylandPointerFocusGained(void);
 
+/** The same reset, called after the game leaves relative mode (FORK-092):
+ *  SDL then warps the hidden cursor back, which XWayland turns into a lock
+ *  that left the menus without pointer motion after a mission under WSLg. */
+void portXwaylandPointerReleased(void);
+
 #endif

@@ -35,7 +35,8 @@ new areas. Status describes implementation state, not Git publication state.
 **Status:** Implemented on 2026-11-25 at the owner's request, during LP64-007
 Task 10's hardware session, after the owner played the x86_64 Linux package in
 WSLg on the laptop (RTX 3070 through Mesa's d3d12 driver; Ubuntu 24.04, Mesa
-25.2.8, zenity 4.0.1, GTK 4.14.5). Four faults; each fix below.
+25.2.8, zenity 4.0.1, GTK 4.14.5). Five faults; each fix below (the fifth
+found on CI's `f069653` package and fixed after it).
 
 **1. Weapon icons drew nothing under Mesa.** The weapon strip showed its cards,
 the active bar and the caption, but no picture, on the RTX 3070 (Mesa d3d12)
@@ -139,7 +140,26 @@ reach the dialogs as the desktop gives them; browser touch has its own picker
 edge and runs backwards. That is WSLg's relative motion (FORK-091's last
 paragraph, corrected today); no change was made.
 
-**Sources:** `port/fast3d/gfx_pc.cpp` (the icon combiner),
+**5. The menus lost the mouse after a mission.** On CI's `f069653` package the
+owner paused, quit a mission and found the menu cursor would not follow the
+mouse (keyboard only); the log read `mouse 0/s` from the release on. Leaving
+relative mode, SDL warps the hidden cursor back, and XWayland turns a warp
+under a hidden cursor into the pointer lock FORK-091 resets on focus; under
+WSLg it then gets no motion. The day's first probe showed it too: no motion
+for nine seconds after relative mode was switched off. `portMouseApplyCapture`
+(`port/src/input_pc.c`) now calls `portXwaylandPointerReleased` after
+releasing the mouse, which applies FORK-091's reset (show, then hide, the
+cursor; X11 under a Wayland display, cursor hidden) and logs
+`ge: input: XWayland pointer reset on release`. Linux native builds only.
+`test_xwayland_pointer.sh` runs its seven cases through both resets
+(`14 cases passed` at 32 and 64 bits). A local release package with it, on
+the laptop: after a pause and quit the menu cursor followed the mouse.
+`compare_win32.py commits HEAD WORKTREE` (this change against `f069653`):
+`identical in loaded code and data; .buildid differs`.
+
+**Sources:** `port/src/port_xwayland_pointer.c` and its header
+(`portXwaylandPointerReleased`), `port/src/input_pc.c` (`portMouseApplyCapture`),
+`scripts/port/test_xwayland_pointer.c`, `port/fast3d/gfx_pc.cpp` (the icon combiner),
 `tools/shaders_base.txt`, `port/fast3d/weapon_cache.cpp` (`prepare`),
 `port/fast3d/save_transfer.cpp`, `port/fast3d/posix_dialog.h`,
 `port/fast3d/posix_dialog.cpp`, `CMakeLists.txt` (`ge_save_transfer`),
@@ -236,7 +256,8 @@ reset there costs one cursor change per focus gain.
 
 **Sources:** [interface](port/include/port_xwayland_pointer.h),
 [module](port/src/port_xwayland_pointer.c), with the hook in
-`port/src/input_pc.c`'s window-event case.
+`port/src/input_pc.c`'s window-event case. FORK-092 adds the same reset after
+the game releases the mouse (`portXwaylandPointerReleased`).
 
 **Checks:** [ROM-free test](scripts/port/test_xwayland_pointer.c) and its
 [runner](scripts/port/test_xwayland_pointer.sh), in the workflow's tests step.

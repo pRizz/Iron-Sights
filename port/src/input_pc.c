@@ -8478,6 +8478,9 @@ static void portMouseApplyCapture(int on)
     SDL_SetRelativeMouseMode(on ? SDL_TRUE : SDL_FALSE);
 #endif
     SDL_ShowCursor(s_OptMouse ? SDL_DISABLE : SDL_ENABLE);
+#if defined(__linux__) && !defined(__EMSCRIPTEN__)
+    if (!on) portXwaylandPointerReleased(); /* FORK-092 */
+#endif
 }
 
 void portInputMouseUpdate(void)

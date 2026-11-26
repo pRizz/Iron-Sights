@@ -1,4 +1,4 @@
-/* ROM-free tests of the XWayland pointer reset (FORK-091,
+/* ROM-free tests of the XWayland pointer reset (FORK-091, on release FORK-092,
  * port/src/port_xwayland_pointer.c): when regaining focus resets the cursor,
  * and that a reset shows, then hides, the system cursor and leaves it hidden.
  * Built by scripts/port/test_xwayland_pointer.sh against a stand-in SDL.h
@@ -64,11 +64,11 @@ static const ResetCase kCases[] = {
     {"no video driver", NULL, "wayland-0", 0, 0},
 };
 
-static void runCase(const ResetCase *c)
+static void runCase(const ResetCase *c, void (*reset)(void), const char *when)
 {
     char what[160];
 
-    snprintf(what, sizeof(what), "%s: policy", c->name);
+    snprintf(what, sizeof(what), "%s (%s): policy", c->name, when);
     expect(portXwaylandPointerNeedsReset(c->driver, c->wayland, c->cursorShown) == c->wantReset, what);
 
     s_driver = c->driver;
@@ -82,35 +82,37 @@ static void runCase(const ResetCase *c)
     {
         unsetenv("WAYLAND_DISPLAY");
     }
-    portXwaylandPointerFocusGained();
+    reset();
 
     if (c->wantReset)
     {
-        snprintf(what, sizeof(what), "%s: shows, then hides, the cursor", c->name);
+        snprintf(what, sizeof(what), "%s (%s): shows, then hides, the cursor", c->name, when);
         expect(s_callCount == 2 && s_calls[0] == SDL_ENABLE && s_calls[1] == SDL_DISABLE, what);
     }
     else
     {
-        snprintf(what, sizeof(what), "%s: leaves the cursor alone", c->name);
+        snprintf(what, sizeof(what), "%s (%s): leaves the cursor alone", c->name, when);
         expect(s_callCount == 0, what);
     }
-    snprintf(what, sizeof(what), "%s: cursor ends as it began", c->name);
+    snprintf(what, sizeof(what), "%s (%s): cursor ends as it began", c->name, when);
     expect(s_cursorShown == c->cursorShown, what);
 }
 
 int main(void)
 {
-    size_t i;
+    size_t i, n = 0;
 
     for (i = 0; i < sizeof(kCases) / sizeof(kCases[0]); i++)
     {
-        runCase(&kCases[i]);
+        runCase(&kCases[i], portXwaylandPointerFocusGained, "focus"); /* FORK-091 */
+        runCase(&kCases[i], portXwaylandPointerReleased, "release");  /* FORK-092 */
+        n += 2;
     }
     if (s_failures != 0)
     {
         printf("test_xwayland_pointer: %d failure(s)\n", s_failures);
         return 1;
     }
-    printf("test_xwayland_pointer: %zu cases passed\n", i);
+    printf("test_xwayland_pointer: %zu cases passed\n", n);
     return 0;
 }

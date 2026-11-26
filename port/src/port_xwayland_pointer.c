@@ -21,7 +21,7 @@ int portXwaylandPointerNeedsReset(const char *videoDriver, const char *waylandDi
     return !cursorShown;
 }
 
-void portXwaylandPointerFocusGained(void)
+static void pointerReset(const char *when)
 {
     const int shown = SDL_ShowCursor(SDL_QUERY) == SDL_ENABLE;
 
@@ -31,7 +31,17 @@ void portXwaylandPointerFocusGained(void)
     }
     SDL_ShowCursor(SDL_ENABLE);
     SDL_ShowCursor(SDL_DISABLE);
-    printf("ge: input: XWayland pointer reset on focus\n");
+    printf("ge: input: XWayland pointer reset on %s\n", when);
+}
+
+void portXwaylandPointerFocusGained(void)
+{
+    pointerReset("focus");
+}
+
+void portXwaylandPointerReleased(void)
+{
+    pointerReset("release");
 }
 #else
 typedef int portXwaylandPointerUnused; /* nothing to compile off Linux */
