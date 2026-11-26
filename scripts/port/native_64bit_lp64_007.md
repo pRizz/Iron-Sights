@@ -876,26 +876,26 @@ FORK-089, as the LP64-006 laptop step did.
   i686 downloads unchanged. Which Deck ZIP the notes and README name
   first follows decision 2 and Task 10's result.
 
-- [ ] **Step 1: The developer's guide.** `linux_64bit.md`: the two
+- [x] **Step 1: The developer's guide.** `linux_64bit.md`: the two
   images and what each is for; the development build (`lp64_env.py run
   --arch x86_64`, the configure line, the boot check and play sets); the
   release build and package (the package check's commands); what a
   64-bit build lacks (suspend points) and prints (`ge: lp64:` lines);
   what is not built (Windows x64, macOS, aarch64 packages). Point to it
   from `README.md`'s build section, `CONTRIBUTING.md` and `AGENTS.md`.
-- [ ] **Step 2: The player's documents.** README: the Linux and Steam
+- [x] **Step 2: The player's documents.** README: the Linux and Steam
   Deck download paragraphs (`:40`, `:42`) name both architectures and
   what each needs; `:98` and the suspend section (`:336-358`) say 64-bit
   builds have none. `DATA-README.txt`'s Windows-only sentence gains the
   Linux wording. The issue template asks which package (Windows x86,
   Linux i686, Linux x86_64, Steam Deck i686 or x86_64, browser).
-- [ ] **Step 3: Stale statements.** `native_64bit_plan.md`, "Crash
+- [x] **Step 3: Stale statements.** `native_64bit_plan.md`, "Crash
   reports and the rest of the port layer": the Linux handler needed no
   replacement and external textures were widened in LP64-003. A note at
   the top of `docs/port/abi-and-portability.md` says it predates the
   64-bit port and points to the plan. `late_loads.md` names the packaged
   executable's audit.
-- [ ] **Step 4: Edit the `publish` job** as "Interfaces" says. Check it
+- [x] **Step 4: Edit the `publish` job** as "Interfaces" says. Check it
   offline: the Python tests that read the workflow's text,
   `bash scripts/port/test_harness_widths.sh` and
   `bun scripts/bright-builds-check.ts all`; then read the job's diff

@@ -1,5 +1,7 @@
 # ABI and Portability Constraints
 
+> **Note (2026-11-26):** this note predates the native 64-bit port. Its 32-bit-only statements describe the snapshot below, not the current tree: the game now also builds as a native 64-bit Linux program (`-DGE_POINTER_BITS=64`), shipped as the Linux x86_64 packages. See the [64-bit plan](../../scripts/port/native_64bit_plan.md) and the [64-bit Linux guide](../../scripts/port/linux_64bit.md).
+
 **Status:** second-opinion note, not maintainer documentation.
 
 **Snapshot:** `6be5920` ("Project Midas 1.0.1"), branch `main`.

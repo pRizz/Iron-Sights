@@ -60,7 +60,7 @@ Once Lua modding is developed and released, minor changes (tweaks to weapons, ru
 ## What a good pull request looks like
 
 1. **One focused change.** Fix one bug or add one feature per PR. Don't mix in unrelated cleanup.
-2. **Builds on both platforms.** CI builds Linux and Windows; it must pass.
+2. **Builds on both platforms.** CI builds Linux and Windows; it must pass. CI also builds and tests the native 64-bit Linux packages; the [64-bit Linux guide](scripts/port/linux_64bit.md) shows how to build and check them locally.
 3. **Tested in game.** Say what you tested and on which level or menu. "It compiles" is not enough.
 4. **Matches the code around it.** Keep the decompiled names. Keep comments short: what the code does and why, in at most two plain sentences.
 5. **No game assets.** Never commit ROM data or extracted assets. Rendered PNG

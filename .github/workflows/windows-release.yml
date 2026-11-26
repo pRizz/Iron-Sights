@@ -380,8 +380,8 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  # The 64-bit packages are built and tested on every push to main, as
-  # artifacts only: publish does not need this job and attaches nothing from it.
+  # The 64-bit packages are built and tested on every push to main; publish
+  # needs this job and attaches its three packages beside the i686 ones.
   linux-x86_64:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
@@ -480,7 +480,7 @@ jobs:
           retention-days: 7
 
   publish:
-    needs: [tests, windows, sentry-smoke, linux]
+    needs: [tests, windows, sentry-smoke, linux, linux-x86_64]
     runs-on: ubuntu-24.04
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     permissions:
@@ -496,6 +496,10 @@ jobs:
         with:
           name: linux-player-package
           path: dist
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: linux-x86_64-player-package
+          path: dist
       - name: Attest native player packages
         id: attest
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
@@ -506,6 +510,9 @@ jobs:
             dist/Iron-Sights-linux-i686.tar.gz
             dist/Iron-Sights-linux-i686.AppImage
             dist/Iron-Sights-steamdeck-i686.zip
+            dist/Iron-Sights-linux-x86_64.tar.gz
+            dist/Iron-Sights-linux-x86_64.AppImage
+            dist/Iron-Sights-steamdeck-x86_64.zip
       - name: Preserve provenance and publish versioned release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -514,6 +521,7 @@ jobs:
         run: |
           set -euo pipefail
           (cd dist && sha256sum -c SHA256SUMS-linux.txt)
+          (cd dist && sha256sum -c SHA256SUMS-linux-x86_64.txt)
           cp "$BUNDLE" dist/build-provenance.sigstore.json
           tag="build-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA:0:12}"
           python3 - <<'PY'
@@ -523,11 +531,15 @@ jobs:
           assert m['commit']==os.environ['GITHUB_SHA'] and m['ci'] and not m['dirty']
           linux=json.loads(Path('dist/linux-build-info.json').read_text())
           assert linux['commit']==m['commit'] and linux['ci'] and not linux['dirty']
+          linux64=json.loads(Path('dist/linux-x86_64-build-info.json').read_text())
+          assert linux64['commit']==m['commit'] and linux64['ci'] and not linux64['dirty']
           text=f'''Download **Iron-Sights-windows-x86.zip**, extract the entire ZIP, put your own stock USA ROM in its Data folder, then run IronSights.exe.
 
           Linux: download **Iron-Sights-linux-i686.tar.gz** or **Iron-Sights-linux-i686.AppImage**. Both require a 32-bit-capable x86 Linux with glibc 2.35+ and 32-bit OpenGL drivers. AppImage data lives in `~/.local/share/iron-sights` (or XDG_DATA_HOME); the tarball keeps data beside the executable. See START-HERE.txt.
 
           Steam Deck / SteamOS: **Iron-Sights-steamdeck-i686.zip** repackages the same 32-bit Linux game with a `run.sh` launcher and Deck setup instructions. Extract it in a writable folder, put your own ROM in `Data`, and run `sh run.sh` in Desktop Mode. `set-steam-art.py` gives the Non-Steam Game shortcut its name, icon and library artwork. Device compatibility has not yet been verified on a Steam Deck.
+
+          64-bit Linux: **Iron-Sights-linux-x86_64.tar.gz** and **Iron-Sights-linux-x86_64.AppImage** are a native 64-bit build for x86_64 Linux with glibc 2.35+ and OpenGL 3.3 drivers; no 32-bit libraries are needed, and the C++ runtime comes from your distribution. **Iron-Sights-steamdeck-x86_64.zip** packages the same 64-bit game for the Deck; it has not been run on a Steam Deck. Suspend points are unavailable in 64-bit builds (campaign saves work), so the i686 downloads remain for suspend points and 32-bit systems; they are unchanged. See START-HERE.txt in each package.
 
           This is a continuously published development build. Weapon icons are prepared locally on first launch; no Python or asset downloads are required.
 
@@ -546,7 +558,7 @@ jobs:
           '''
           Path('notes.md').write_text(text)
           PY
-          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --title "Native build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} (${GITHUB_SHA:0:9})" --notes-file notes.md dist/Iron-Sights-windows-x86.zip dist/SHA256SUMS.txt dist/build-info.json dist/build-inputs.json dist/build-provenance.sigstore.json dist/Iron-Sights-linux-i686.tar.gz dist/Iron-Sights-linux-i686.AppImage dist/Iron-Sights-steamdeck-i686.zip dist/SHA256SUMS-linux.txt dist/linux-build-info.json dist/linux-build-inputs.json
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --title "Native build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} (${GITHUB_SHA:0:9})" --notes-file notes.md dist/Iron-Sights-windows-x86.zip dist/SHA256SUMS.txt dist/build-info.json dist/build-inputs.json dist/build-provenance.sigstore.json dist/Iron-Sights-linux-i686.tar.gz dist/Iron-Sights-linux-i686.AppImage dist/Iron-Sights-steamdeck-i686.zip dist/SHA256SUMS-linux.txt dist/linux-build-info.json dist/linux-build-inputs.json dist/Iron-Sights-linux-x86_64.tar.gz dist/Iron-Sights-linux-x86_64.AppImage dist/Iron-Sights-steamdeck-x86_64.zip dist/SHA256SUMS-linux-x86_64.txt dist/linux-x86_64-build-info.json dist/linux-x86_64-build-inputs.json
           gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --latest
           echo "## Native downloads" >> "$GITHUB_STEP_SUMMARY"
           echo "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/$tag" >> "$GITHUB_STEP_SUMMARY"

@@ -2,6 +2,8 @@ Put your own stock GoldenEye 007 USA ROM in this folder.
 Supported byte orders: .z64, .v64, .n64; the filename does not matter.
 Extract archives first. Other regions, modified ROMs and bad dumps are rejected.
 You can also drag a ROM onto IronSights.exe or set [data] rom= in midas.ini.
+On Linux (i686 or x86_64) and Steam Deck, set [data] rom= in midas.ini or give
+the ROM's path as the program's first argument.
 
 Your campaign saves, profiles and other player data also live below Data.
 FontPacks/gepd holds the optional Enhanced fonts once you download them from

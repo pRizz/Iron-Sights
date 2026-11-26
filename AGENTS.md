@@ -240,6 +240,8 @@ pass its isolated executable rather than rebuilding an active player binary.
   follows the accepted [64-bit plan](scripts/port/native_64bit_plan.md). Read it
   before resuming, keep the 32-bit and web builds working, do not reopen its
   recorded decisions, and update its milestone status table before handing off.
+  The [64-bit Linux guide](scripts/port/linux_64bit.md) has the x86_64 images,
+  the development and release builds, the package check and the known limits.
 - ROM data converters (LP64-004) are `port/src/romconv_*.c`, declared in
   `port/include/port_romconv.h`, `port_romconv_audio.h` and
   `port_romconv_stage.h`, with the file layouts they read in

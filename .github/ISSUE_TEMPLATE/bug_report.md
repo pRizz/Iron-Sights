@@ -34,6 +34,7 @@ If it happens only 10% of the time, please tell us. Make sure you upload a video
 ## Environment
 
 - Operating System: e.g. Linux, Windows
+- Package: Windows x86, Linux i686, Linux x86_64, Steam Deck i686, Steam Deck x86_64, or the browser
 - Graphics card: e.g. GTX 5050
 - CPU: e.g. i9-14900K
 - Computer model (e.g. Stream Deck)

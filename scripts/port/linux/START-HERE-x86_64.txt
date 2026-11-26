@@ -54,4 +54,6 @@ and custom controller mappings, then restarts the game. Export current progress
 first to keep it. ROMs, textures and suspend points are not transferred.
 File selection requires zenity or kdialog installed through your distribution.
 
-Verify the package with the release's SHA256SUMS-linux-x86_64.txt.
+Verify the package with the release's SHA256SUMS-linux-x86_64.txt, or run:
+gh attestation verify Iron-Sights-linux-x86_64.tar.gz -R pRizz/Iron-Sights
+Use the AppImage filename instead to verify that package's signed provenance.

@@ -4061,6 +4061,8 @@ The run, capture and scratch folders were deleted after this note was written, e
   - `benchmarks.md`'s "Linux packages" section is corrected from these runs (WSL: `llvmpipe` for i686, the preload, the d3d12 variables, the presentation cap, the exit crash, the figures).
 - **Step 7 (optional), 32-bit pixels:** not run.
 
+*LP64-007 task 11, publish with the documents (2026-11-26), on the Mac; committed on `main` locally and not pushed when written, so nothing 64-bit is published yet.* Commit "Publish the x86_64 Linux packages with the documents" (`.github/workflows/windows-release.yml`'s `publish` job and the `linux-x86_64` job's comment; `scripts/port/test_distribution.py`; the new `scripts/port/linux_64bit.md`; `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `scripts/port/releases.md`, `scripts/port/late_loads.md`, `scripts/port/linux/START-HERE-x86_64.txt`, `scripts/port/release/DATA-README.txt`, `.github/ISSUE_TEMPLATE/bug_report.md`, `docs/port/abi-and-portability.md`, `native_64bit_plan.md`, the plan's Task 11 boxes 1 to 4, FORK-018, FORK-031 and this note). **Publish** (FORK-031 has the job's lines): `needs` gains `linux-x86_64`; the artifact is downloaded; three more attest subjects; `sha256sum -c SHA256SUMS-linux-x86_64.txt`; `linux-x86_64-build-info.json` asserted to the commit, `ci` and not `dirty`; seventeen release assets; one notes paragraph. **TDD.** `test_publish_job_releases_every_linux_target` failed before the edit (`AssertionError: 'linux-x86_64' not found in ['tests', 'windows', 'sentry-smoke', 'linux']`) and passed after it. **Documents.** `linux_64bit.md` has the two x86_64 images (`goldeneye`, Ubuntu 24.04 and GCC 13, for development; `midas-linux-release-x86_64`, Ubuntu 22.04 and GCC 11.4, for the packages), the development build, boot check and play sets, the package check P1 to P4, what a 64-bit build lacks (suspend points) and prints (`ge: lp64:` lines), the hosts each check ran on, the known limits and what is not built (Windows x64, macOS, aarch64 packages). Its known limits are Task 10's: every x86_64 quit on NVIDIA's WSL driver ends in a segfault in `libnvwgf2umx.so` (status 139), an open defect whose fix needs that driver and is a follow-up for the laptop; WSL's `GALLIUM_DRIVER=d3d12` and `MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA`; no mouse-look under WSLg; the i686 package's bundled `libstdc++` (GLIBCXX_3.4.30) older than Mesa 25's i386 `libLLVM` needs (3.4.32), so on Ubuntu 24.04 with Mesa 25.2.8 no GLX window opened until the system's `libstdc++` and `libgcc_s` were preloaded, not fixed in this commit and an open question for the owner; and no Steam Deck run. The README names both architectures' downloads, the i686 Deck ZIP first (decision 2, no Deck), says the 64-bit Deck ZIP has not run on a Deck and that 64-bit builds have no suspend points. `native_64bit_plan.md`'s "Crash reports and the rest of the port layer" now says the frame-pointer walks are Windows-only, the Linux handler needed no replacement, and external textures were widened in LP64-003 Task 6 (9a92fa1); `abi-and-portability.md` gains a note that it predates the port; `late_loads.md` names the packaged executable's audit. **Checks** (no game C or C++, build script or packager changed, so neither the play sets nor the package check ran): in the x86_64 container `test_distribution.py`, `test_lp64_overlays_check.py`, `test_linux_build.py` and `test_steam_art.py` print `OK` and `bash scripts/port/test_harness_widths.sh` prints `test_harness_widths: PASS`; on the Mac `test_hand_gallery.py` `OK` (31 tests), `bun scripts/bright-builds-check.ts all` `SUMMARY all findings=0`, `settings_placement.py` passes, and `hand_gallery.py verify --allow-pending` prints `Gallery pending: strict inputs fresh; deferred inputs changed since the last render` (the workflow is a deferred input; no strict-tier file changed). On the Mac `test_distribution.py` also fails `test_runtime_inline_model_texels` (`gcc -m32`), as it does on the clean tree. Step 5 (reading the published release) and its record follow the push.
+
 **LP64-006 hand-over to LP64-007** (written at the final review's fix wave from the review, the controller's ledger and the task notes above, and completed at Task 17 on 2026-11-24; each patch is under `scripts/port/lp64_patches/`, whose `README.md` says what it changes and the commit it applies to):
 
 - *The owner's open questions* (eight; none is applied, each would change the shipped 32-bit program or the 64-bit one's behaviour):
@@ -11144,11 +11146,12 @@ A Linux-only ELF export rule keeps the game's N64 libc/math replacements
 private, so shared graphics/audio/reporting libraries use standard libc calls.
 It retains the private symbol table and DWARF companions for source resolution.
 
-The requested native x86_64 port was assessed and deferred as substantial engine
-work: an ABI probe changes pointer size from 4 to 8 and `Gfx` from 8 to 16 bytes;
-texture paths explicitly reject 64-bit host pointers. No unverified x86_64
-binary is published. ROM layouts, address conversions, graphics parsing and
-state serialization require a coordinated audit before changing that ABI.
+The requested native x86_64 port was first assessed and deferred as substantial
+engine work: an ABI probe changes pointer size from 4 to 8 and `Gfx` from 8 to 16
+bytes; texture paths then rejected 64-bit host pointers. That assessment is
+superseded: FORK-089 (milestones LP64-001 to LP64-007) made the port, and from
+LP64-007 Task 11 the x86_64 packages are attached to each release beside the
+i686 ones (below).
 
 LP64-007 Task 1 (2026-11-24, local, not published) taught the build script a
 second architecture. `linux_build.py --arch {i686,x86_64}` (default `i686`)
@@ -11255,6 +11258,33 @@ and `crash_reporting.md` ("Linux releases") say so; the latter loses its
 stale paragraph that called a 64-bit port a separate task whose texture
 entries reject 64-bit pointers.
 
+LP64-007 Task 11 (2026-11-26, committed on `main` locally, not pushed when
+written) publishes the x86_64 packages. `publish` needs `linux-x86_64`,
+downloads its `linux-x86_64-player-package` into `dist`, attests
+`Iron-Sights-linux-x86_64.tar.gz`, `.AppImage` and
+`Iron-Sights-steamdeck-x86_64.zip` beside the Windows and i686 subjects, runs
+`sha256sum -c SHA256SUMS-linux-x86_64.txt` after the i686 sums, asserts that
+`linux-x86_64-build-info.json` has the Windows build's commit, `ci` and not
+`dirty`, and gives `gh release create` the three packages, the sums file and
+the two JSON files: seventeen assets where the release held eleven. The notes
+gain one paragraph on the 64-bit Linux and Deck downloads (glibc 2.35 or newer,
+OpenGL 3.3, no 32-bit libraries, the system's C++ runtime, no suspend points,
+the Deck ZIP not run on a Deck, the i686 downloads unchanged); the i686 Deck
+ZIP stays named first, as decision 2 has it while no Deck has run either.
+`test_distribution.py`'s `test_publish_job_releases_every_linux_target` reads
+the job's text and requires, for every target in `package_linux.py`'s
+`TARGETS`, its three packages in the attest list and the release, its sums
+file, build-info and build-inputs in the release, its `sha256sum -c` line and
+its build-info check, `linux-x86_64` in `needs`, and seventeen distinct
+release files. `START-HERE-x86_64.txt` gains the `gh attestation verify` lines
+the i686 one has (repository `pRizz/Iron-Sights`); `DATA-README.txt` (shipped
+as `Data/README.txt` in every native package) gains the Linux and Deck ways to
+name a ROM; the README names the x86_64 downloads, their requirements, where
+they have run (GitHub's x86_64 runner and one WSL session) and that the 64-bit
+builds have no suspend points; `releases.md` lists the seventeen assets; the
+new `scripts/port/linux_64bit.md` is the developer's guide. The `linux` job's
+lines are unchanged.
+
 **Sources:** [baseline container](scripts/port/linux-release.Dockerfile),
 [x86_64 baseline container](scripts/port/linux-release-x86_64.Dockerfile),
 [build](scripts/port/linux_build.py), [build tests](scripts/port/test_linux_build.py), [packager](scripts/port/package_linux.py),
@@ -11340,6 +11370,12 @@ libvorbisenc.so.2, libxcb.so.1, libz.so.1, libzstd.so.1. These are the same
 56 names as the Mac build's `build-inputs.json` (Rosetta 2); 54 have the same
 sha256, and the two the build compiles itself, `libsentry.so` and
 `libSDL2-2.0.so.0`, differ in bytes. FORK-089 has the details.
+LP64-007 Task 11, on the Mac: the new publish test failed before the workflow
+edit (`'linux-x86_64' not found in ['tests', 'windows', 'sentry-smoke',
+'linux']`) and passes after it; in the x86_64 container `test_distribution.py`,
+`test_lp64_overlays_check.py`, `test_linux_build.py`, `test_steam_art.py` and
+`test_harness_widths.sh` pass. No package was built for this change; the
+published release is read after the push (FORK-089's Task 11 note).
 
 ### FORK-030 — Native Sentry crash reporting and symbol uploads
 
@@ -13872,7 +13908,9 @@ FORK-022. Temporary audit executables are removed.
 
 **Status:** Implemented; publication is performed by the checked-in workflow.
 
-FORK-031 extends publication to Linux tar.gz/AppImage packages.
+FORK-031 extends publication to Linux tar.gz/AppImage packages; from LP64-007
+Task 11 (FORK-089) a release also carries and attests the three x86_64 Linux
+packages, seventeen assets in all.
 FORK-030 adds a separate MSVC x86 reporter build, exact symbol/source uploads and
 a packaged Windows crash-reporting smoke gate. The game itself remains a GCC x86
 build. The player ZIP now includes the optional Sentry runtime, license and

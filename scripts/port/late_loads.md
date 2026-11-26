@@ -125,6 +125,26 @@ and shader compiles take, so compare such reports by kind and name of late
 event, not by milliseconds. The reports are ROM-derived run output: they stay
 under `build/lp64/` and are deleted when done.
 
+The shipped x86_64 executable is audited from its package: extract
+`Iron-Sights-linux-x86_64.tar.gz` (P4 of the
+[64-bit Linux guide](linux_64bit.md) does, into `build/lp64/ship/x64/run`)
+and give its `IronSights` as `--exe`, with the package's `lib/` as
+`LD_LIBRARY_PATH`, since the audit runs a copy of the executable from each
+stage's folder:
+
+```sh
+python3 scripts/port/lp64_env.py run --arch x86_64 -- env \
+    LD_LIBRARY_PATH=/home/dev/project/build/lp64/ship/x64/run/Iron-Sights-linux-x86_64/lib \
+    python3 scripts/port/late_load_audit.py --exe build/lp64/ship/x64/run/Iron-Sights-linux-x86_64/IronSights \
+    --no-pack --video-driver offscreen --keep --out build/lp64/lla/package-x64
+```
+
+LP64-007 Task 8 compared that audit with a GCC 13 x86_64 video tree's: all
+20 missions logged the same late events, and the arenas differed by one
+build-stamp glyph (FORK-089). Task 10 audited both Linux packages with the HD
+pack in WSL; there the x86_64 package drew on the GPU and the i686 one on
+`llvmpipe` (`benchmarks.md`, "Linux packages").
+
 To compare two such audits, keep both (`--keep`) and run
 `python3 scripts/port/late_load_audit.py --compare BEFORE AFTER`: it counts
 each stage's late events by stage, kind and name, with ticks and the

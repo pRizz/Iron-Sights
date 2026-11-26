@@ -37,9 +37,11 @@ vector sights. Existing ADS, HUD and browser controls retain their defaults.
 
 Windows 10/11, an x86-compatible CPU and an OpenGL 3.3-capable graphics driver are required. The 32-bit build also runs on 64-bit Windows. These are continuously published development builds from successful pushes to `main`.
 
-**Linux i686:** [portable tar.gz](https://github.com/pRizz/Iron-Sights/releases/latest/download/Iron-Sights-linux-i686.tar.gz) · [AppImage](https://github.com/pRizz/Iron-Sights/releases/latest/download/Iron-Sights-linux-i686.AppImage). Both require glibc 2.35+ and a 32-bit loader/OpenGL driver stack. Extract the tarball and run `./IronSights`, with your ROM in its `Data` folder. The AppImage uses `${XDG_DATA_HOME:-$HOME/.local/share}/iron-sights` for writable data and the ROM; mark it executable before launching. See the included `START-HERE.txt`. AppImage packages the same 32-bit game; no native x86_64 release is provided.
+**Linux i686:** [portable tar.gz](https://github.com/pRizz/Iron-Sights/releases/latest/download/Iron-Sights-linux-i686.tar.gz) · [AppImage](https://github.com/pRizz/Iron-Sights/releases/latest/download/Iron-Sights-linux-i686.AppImage). Both require glibc 2.35+ and a 32-bit loader/OpenGL driver stack. Extract the tarball and run `./IronSights`, with your ROM in its `Data` folder. The AppImage uses `${XDG_DATA_HOME:-$HOME/.local/share}/iron-sights` for writable data and the ROM; mark it executable before launching. See the included `START-HERE.txt`. The AppImage packages the same 32-bit game. The i686 packages keep suspend points.
 
-**Steam Deck / SteamOS:** [Steam Deck ZIP](https://github.com/pRizz/Iron-Sights/releases/latest/download/Iron-Sights-steamdeck-i686.zip) packages the same i686 game with a `run.sh` launcher. Extract it to a writable folder, put your ROM in `Data`, then run `sh run.sh` in Desktop Mode. The ZIP includes Gaming Mode setup steps and a `set-steam-art.py` helper that gives the Steam shortcut its icon, cover and library artwork. It still needs the system's 32-bit loader, glibc 2.35+ and 32-bit OpenGL drivers; a Steam Deck device test remains pending.
+**Linux x86_64 (64-bit):** [portable tar.gz](https://github.com/pRizz/Iron-Sights/releases/latest/download/Iron-Sights-linux-x86_64.tar.gz) · [AppImage](https://github.com/pRizz/Iron-Sights/releases/latest/download/Iron-Sights-linux-x86_64.AppImage). A native 64-bit build: it requires an x86_64 Linux with glibc 2.35+ and OpenGL 3.3 drivers, takes the C++ runtime from your distribution, and needs no 32-bit libraries. It runs the same way and shares the AppImage data folder with the i686 AppImage. Suspend points are unavailable in 64-bit builds; campaign saves work. It has run on GitHub's x86_64 runner and in one WSL session on Windows 11 (an RTX 3070, through Mesa's d3d12 driver), not yet on a native Linux desktop; see its `START-HERE.txt`.
+
+**Steam Deck / SteamOS:** [Steam Deck ZIP](https://github.com/pRizz/Iron-Sights/releases/latest/download/Iron-Sights-steamdeck-i686.zip) packages the same i686 game with a `run.sh` launcher. Extract it to a writable folder, put your ROM in `Data`, then run `sh run.sh` in Desktop Mode. The ZIP includes Gaming Mode setup steps and a `set-steam-art.py` helper that gives the Steam shortcut its icon, cover and library artwork. It still needs the system's 32-bit loader, glibc 2.35+ and 32-bit OpenGL drivers; a Steam Deck device test remains pending. A 64-bit [Steam Deck ZIP](https://github.com/pRizz/Iron-Sights/releases/latest/download/Iron-Sights-steamdeck-x86_64.zip) packages the x86_64 game the same way, without 32-bit libraries and without suspend points; it has not been run on a Steam Deck either.
 
 For the embedded build time, commit and clickable source/build/release links, open **Options > Gameplay > Iron Sights > System > About / Build Info**; the watch has the same entry. Windows links are blue and underlined and open in your default browser. Local or modified builds are labeled accordingly. The release page supplies signed provenance, hashes and build-input details; see [verification and maintainer instructions](scripts/port/releases.md).
 
@@ -95,7 +97,7 @@ Successful `main` builds deploy automatically to GitHub Pages. See [compatibilit
 - **Fog (on by default):** **Gameplay > Iron Sights > System > Fog** turns the levels' distance fog off. How far you can see and how far guards see you stay the same.
 - **Debug Position (off by default):** **Gameplay > Iron Sights > System > Debug Position** shows your room, x/y/z position, heading and pitch across the top of the view, and turns on or off while you play. The `GE_DEBUGPOS` environment variable still overrides it (`0` hides it, anything else shows it).
 - **Graphics (on by default on Windows, Linux and desktop browsers, with the Vibrant Look):** **Gameplay > Iron Sights > Graphics** adds **Tone Mapping** (the 3D view regraded for richer colour and contrast without darkening it, with **Brightness**, **Contrast**, **Intensity**, **Vibrance**, **Clarity**, **Sharpen**, **Glow**, **Saturation**, **Temperature**, **Split Tone**, **Fade**, **Vignette**, **Film Grain**, **Auto Exposure** (eye adaptation: bright snow and walls are brought down, dark levels stay dark) and **Adaptation Speed** sliders, and **Looks** that set them all at once: Natural, Vibrant, Cinematic, Noir, Muted, Cold War, Warm Retro and Dark; the HUD keeps its colours), **Baked Lighting** (ray-traced shadowing in corners and under objects, with a touch of colour from nearby surfaces, baked into each level as it loads), **HDR Output** (Windows, while Windows HDR is on: graded highlights brighter than white, with **HDR Peak Brightness** and **HDR Paper White**) and **Gun and Hands** (whether these also reach your gun, hands and arms). Tone Mapping and Baked Lighting start on, HDR Output off; turn Tone Mapping off for the original look. In the browser they start off on phones and tablets, where they have not yet been measured. See [Graphics hotkeys](#graphics-hotkeys).
-- **Suspend points:** four manual slots, quicksave/quickload, and undo-load for solo missions.
+- **Suspend points:** four manual slots, quicksave/quickload, and undo-load for solo missions (Windows and the i686 Linux and Steam Deck builds; 64-bit builds have none).
 - **Reinforcements (Original by default):** each mission's difficulty page sets how many extra guards come after you: **Original**, **More** or **Relentless**, through clones of guards who hear you and fresh guards sent from out of sight once you are spotted. See [Reinforcements](#reinforcements).
 - **Headshots Only (off by default):** a second row on each mission's difficulty page makes only your head hits hurt guards. Runs completed this way get their own best-times column. See [Headshots Only](#headshots-only).
 
@@ -352,12 +354,19 @@ or from the title screen using the same campaign folder. Saving is
 limited to solo gameplay while Bond is alive, or the fully opened watch menu.
 Campaign progress and settings are not rolled back.
 
+**64-bit builds have no suspend points.** The Linux x86_64 and 64-bit Steam
+Deck packages show `Suspend Points: unavailable` on the watch row, and the
+keys above say that suspend points are unavailable and that campaign saves
+work as usual. Use a Windows or i686 Linux build for suspend points.
+
 **First-version compatibility:** keep the same executable and ROM. A rebuild or
 different executable makes existing suspend points incompatible; the game
 refuses those files. These are local game-state images, separate from ordinary
 campaign saves. See [save-state details and validation](scripts/port/save_states.md).
 
 ## Building
+
+The 64-bit Linux build, its images and its package checks are described in the [64-bit Linux guide](scripts/port/linux_64bit.md).
 
 The build runs in Docker, which has every tool and library both builds need. You also need the GE (USA) cart as `baserom.u.z64` in the repository root:
 

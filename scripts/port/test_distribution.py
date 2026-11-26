@@ -265,6 +265,31 @@ class Distribution(unittest.TestCase):
         self.assertIn("build_linux_x86_64_ci",folders)
         self.assertEqual(unignored,[])
 
+    def test_publish_job_releases_every_linux_target(self):
+        # Arrange: the release must carry, attest and check what each Linux target packages.
+        text=(ROOT/".github/workflows/windows-release.yml").read_text()
+        job=text[text.index("\n  publish:\n"):]
+        needs=re.search(r"needs: \[([^\]]*)\]",job).group(1).split(", ")
+        attested=re.search(r"subject-path: \|\n((?:\s+dist/\S+\n)+)",job).group(1).split()
+        released=re.search(r"gh release create .*--notes-file notes\.md (.*)",job).group(1).split()
+        # Act
+        missing=[]
+        for arch,target in sorted(linux_packager.TARGETS.items()):
+            names=linux_packager.output_names(target)
+            packages=["dist/"+names[key] for key in ("tarball","appimage","steamdeck")]
+            missing+=[(arch,"attest",name) for name in packages if name not in attested]
+            missing+=[(arch,"release",name) for name in packages+["dist/"+names[key] for key in ("sums","build_info","build_inputs")]
+                      if name not in released]
+            if f"sha256sum -c {names['sums']}" not in job:
+                missing.append((arch,"checksum",names["sums"]))
+            if names["build_info"] not in job.split("gh release create")[0]:
+                missing.append((arch,"identity",names["build_info"]))
+        # Assert
+        self.assertIn("linux-x86_64",needs)
+        self.assertEqual(missing,[])
+        self.assertEqual(len(released),17)
+        self.assertEqual(len(set(released)),17)
+
     @unittest.skipUnless(shutil.which("gcc"),"Native cache codec test needs a C compiler")
     def test_native_cache_validation(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -131,9 +131,23 @@ this is not a claim that every inherited source resource has been removed.
 The native x86_64 Linux packages (tarball, AppImage and Steam Deck ZIP, LP64-007)
 are built and crash-tested by the `linux-x86_64` job on every push to `main`
 and kept for 30 days as the `linux-x86_64-player-package` artifact, with
-`SHA256SUMS-linux-x86_64.txt` and `linux-x86_64-build-*.json`. They are not yet
-published: `publish` does not wait for that job, and no release asset, note or
-attestation names a 64-bit file.
+`SHA256SUMS-linux-x86_64.txt` and `linux-x86_64-build-*.json`. From LP64-007
+Task 11, `publish` also needs that job: it downloads the artifact, checks
+`SHA256SUMS-linux-x86_64.txt` with `sha256sum -c`, asserts that
+`linux-x86_64-build-info.json` names the release's commit, `ci` and not
+`dirty`, attests the three x86_64 packages beside the Windows and i686 ones,
+and attaches the three packages, the sums file and the two JSON files. A
+release then holds seventeen assets: the Windows ZIP, `SHA256SUMS.txt`,
+`build-info.json`, `build-inputs.json` and `build-provenance.sigstore.json`;
+the three i686 packages, `SHA256SUMS-linux.txt`, `linux-build-info.json` and
+`linux-build-inputs.json`; and the three x86_64 packages,
+`SHA256SUMS-linux-x86_64.txt`, `linux-x86_64-build-info.json` and
+`linux-x86_64-build-inputs.json`. `test_distribution.py`'s
+`test_publish_job_releases_every_linux_target` holds the job to that list
+for every target `package_linux.py` knows. Verify a 64-bit package with
+`gh attestation verify Iron-Sights-linux-x86_64.tar.gz -R pRizz/Iron-Sights`
+(or the AppImage or Deck ZIP's name). The developer's side is in the
+[64-bit Linux guide](linux_64bit.md).
 
 The ZIP and executable are both attested by the publish job in the same run.
 The player downloads the ZIP; the separate executable is passed between jobs
