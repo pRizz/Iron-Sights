@@ -801,19 +801,19 @@ FORK-089, as the LP64-006 laptop step did.
 - Modify: `review/hand-gallery/` (by `hand_gallery.py generate` only),
   `FORK_CHANGES.md`, `scripts/port/linux/STEAM-DECK*.txt` (only if a Deck ran)
 
-- [ ] **Step 1: Regenerate the gallery** for the rendering inputs this
+- [x] **Step 1: Regenerate the gallery** for the rendering inputs this
   plan changed (`port_startup.c`, `port_watchpages.c`), review the
   changed cells, commit. Expected: no hand, arm or weapon cell changes.
-- [ ] **Step 2: Get the packages CI built** for the commit under test:
+- [x] **Step 2: Get the packages CI built** for the commit under test:
   `gh run download` of `linux-x86_64-player-package` and
   `linux-player-package`; `sha256sum -c` both sums files.
-- [ ] **Step 3: Name the renderer.** Start the x86_64 tarball's game in
+- [x] **Step 3: Name the renderer.** Start the x86_64 tarball's game in
   WSL with the owner's ROM. The log's OpenGL renderer line must name the
   graphics card (through WSL, `D3D12 (NVIDIA GeForce RTX 3070 ...)`). If
   it names `llvmpipe`, the session records that no GPU was reached, does
   Steps 4 to 6 anyway, and the GPU items stay open for decision 5's
   other way.
-- [ ] **Step 4: Play.** With the tarball, then the AppImage: the title,
+- [x] **Step 4: Play.** With the tarball, then the AppImage: the title,
   one mission to its end, the watch and Options pages, a campaign save
   made by the Windows 32-bit game loading here, the suspend notice by key
   and by row, Jungle walked from start to end (owner question 1: say
@@ -826,11 +826,13 @@ FORK-089, as the LP64-006 laptop step did.
   (Task 8 Step 5 found the two caches byte-identical, but its offscreen
   software-GL screenshots drew blank cards at both widths, so no picture
   of an icon has been compared). Each is a line in FORK-089: seen, or
-  what went wrong.
-- [ ] **Step 5: A real crash report.** Run the game's
+  what went wrong. (2026-11-25: done in WSL; the mission, Jungle and pack
+  walks are gaps the owner accepted, since mouse-look cannot be played under
+  WSLg; FORK-089's Task 10 record.)
+- [x] **Step 5: A real crash report.** Run the game's
   `--test-crash-reporting`, and confirm in Sentry that the event is
   tagged `x86_64` and its frames carry function names.
-- [ ] **Step 6: Measure.** `bench.py run --smoke` with the i686 and the
+- [x] **Step 6: Measure.** `bench.py run --smoke` with the i686 and the
   x86_64 packaged executables in one session, visible window, quiet
   machine; then `late_load_audit.py --keep` on both with the pack and
   `--compare`. Expected: frame times within the runs' own range of each
@@ -845,10 +847,10 @@ FORK-089, as the LP64-006 laptop step did.
   correct it from what happens here, and say whether the report's system
   reads `unknown` (the game prints no `ge: sys: Linux` line; whether it
   should is a question for the owner).
-- [ ] **Step 7 (optional): 32-bit pixels.** `lp64_equiv.py run --video
+- [ ] **Step 7 (optional): 32-bit pixels.** (Not run in the 2026-11-25 session.) `lp64_equiv.py run --video
   --draw --shots` for the 22 cases on the i686 and x86_64 comparison
   builds in Docker there, then `lp64_equiv_pictures.py shots`.
-- [ ] **Step 8:** Commit the record and push.
+- [x] **Step 8:** Commit the record and push.
 
 ### Task 11: Publish, with the documents
 

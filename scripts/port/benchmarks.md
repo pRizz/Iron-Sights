@@ -138,7 +138,28 @@ python3 scripts/port/bench/bench.py run --smoke --build i686=pkg/Iron-Sights-lin
   15 minutes. The machine's processor use comes from `/proc/stat`.
 - **Host facts.** The report's GPU, processor and build come from the game's
   log, as on Windows. Its system comes from a `ge: sys: Linux` line, which the
-  game does not yet print, so it reads `unknown`; name the system in your notes.
+  game does not yet print, so it reads `unknown` (seen in WSL, LP64-007
+  Task 10); name the system in your notes.
+- **WSL (Windows 11, WSLg, Mesa 25.2.8; LP64-007 Task 10 on an i7-10870H and
+  RTX 3070).** WSL has no 32-bit GPU path, so an i686 package draws with
+  Mesa's software renderer, `llvmpipe`, about 5 fps in a 1920x1080 mission;
+  compare the two packages like for like there with `--resolution 640x480`.
+  The i686 package's bundled `libstdc++` (GLIBCXX_3.4.30) is too old for Mesa
+  25's i386 `libLLVM` (3.4.32) and no GLX window opens, so run the bench with
+  `LD_PRELOAD=/usr/lib/i386-linux-gnu/libstdc++.so.6:/usr/lib/i386-linux-gnu/libgcc_s.so.1`
+  (not a `GE_` variable, so it reaches the game; 64-bit helper programs print
+  `wrong ELF class` and ignore it). The x86_64 package reaches the GPU through
+  Mesa's d3d12 driver only with `GALLIUM_DRIVER=d3d12` and, on a laptop with
+  an Intel chip as well, `MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA`; without
+  them it draws with `llvmpipe` or the Intel chip. There its frames are paced
+  by WSLg's presentation (78-98 fps at 1920x1080 with 4-6 ms of render work a
+  frame), so a WSL GPU figure measures the presentation, not the renderer.
+  Every x86_64 run on NVIDIA's WSL driver ends in a segfault at exit
+  (`libnvwgf2umx.so`, status 139), after its frame log is written; the bench
+  still records it. Task 10's smoke run, both packages on `llvmpipe` at
+  640x480: the x86_64 package 14-18% faster in average fps with the default
+  preset and 32-41% with `matched`, Game ms 5-15% lower, every difference
+  beyond the runs' 1-7% range.
 - **Settings and data.** A run sets no `HOME`: the game's per-user folder (the
   icon cache) is the caller's. Point `HOME` at a scratch folder for a run that
   must leave yours alone; the bench passes it through, and every `GE_` variable
