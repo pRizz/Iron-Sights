@@ -919,7 +919,7 @@ is a note in FORK-089 and the hand-over keeps the list.
 - Modify: the files each applied patch names, `scripts/port/lp64_equiv_expected.txt`
   (only where a recorded difference now matches), `FORK_CHANGES.md`
 
-- [ ] **Step 1: Apply the patches answered yes** (decision 12), in
+- [x] **Step 1: Apply the patches answered yes** (decision 12), in
   one batch on one commit: apply each patch from
   `scripts/port/lp64_patches/`; `compare_win32.py` names every changed
   32-bit function, and each is one the patch's README names; the i686
@@ -931,6 +931,9 @@ is a note in FORK-089 and the hand-over keeps the list.
 - [ ] **Step 2:** The package check (a patch may touch code both widths
   compile); record in FORK-089; commit and push; read CI, and that the
   release it publishes still holds seventeen assets.
+  Done on the Mac in Task 12's local commit: the package check (P1, P2,
+  P4; P3 left to CI under Rosetta 2) and the FORK-089 record. Not done:
+  the push, CI and the release's asset count.
 
 ### Task 13: Close
 

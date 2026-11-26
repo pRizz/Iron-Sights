@@ -323,10 +323,7 @@ static int signalEnding(void (*call)(void))
     return WIFEXITED(status) && WEXITSTATUS(status) == 0 ? 0 : -1;
 }
 
-/* chrGetEquippedWeaponProp(...)->chr with no prop: a 64-bit build skips the
- * empty hand; the 32-bit program keeps the inherited read through NULL
- * (decision 10; the owner's patch is t16-chraction-32bit.patch), so its
- * expectation is the fault. */
+/* chrGetEquippedWeaponProp(...)->chr with no prop: the empty hand is skipped. */
 static void testAnEmptyHand(void (*call)(void), const char *what)
 {
     // Arrange: prepareUnarmed, in signalEnding.
@@ -337,11 +334,7 @@ static void testAnEmptyHand(void (*call)(void), const char *what)
     // Assert
     char line[160];
     snprintf(line, sizeof(line), "%s (ended by %d: 0 returned, %d SIGSEGV, -1 other)", what, ending, SIGSEGV);
-#if IS_64_BIT
     expect(ending == 0, line);
-#else
-    expect(ending == SIGSEGV, line);
-#endif
 }
 
 int main(void)

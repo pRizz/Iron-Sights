@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# ROM-free regression (LP64-006 Task 8): a 64-bit build's non-zlib texture
-# inflater reads zero, not stack leftovers, past an odd-width 4-bit image.
+# ROM-free regression (LP64-006 Task 8, both widths since LP64-007 Task 12): the
+# non-zlib texture inflater reads zero, not stack leftovers, past an odd-width
+# 4-bit image.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source scripts/port/harness_widths.sh

@@ -237,8 +237,10 @@ static void convNode(struct mconv *c, u32 nodeoff, u32 dataoff, u32 opcode)
         break;
     case MODELNODE_OPCODE_GROUP:
     case MODELNODE_OPCODE_OP03:
-    case MODELNODE_OPCODE_OP17:
         if (mark(c, dataoff, 28)) swapFields(rd, fGroup, NF(fGroup));
+        break;
+    case MODELNODE_OPCODE_OP17: /* ModelRoData_Op17Record, as model.c reads it */
+        if (mark(c, dataoff, 32)) swapFields(rd, fOp17, NF(fOp17));
         break;
     case MODELNODE_OPCODE_DL: {
         /* read the offsets/counts while the rodata is STILL big-endian, THEN
@@ -327,7 +329,8 @@ static u32 modelRecordSize(u32 opcode)
 {
     switch (opcode) {
     case MODELNODE_OPCODE_HEADER: case MODELNODE_OPCODE_OP20: return 16;
-    case MODELNODE_OPCODE_GROUP: case MODELNODE_OPCODE_OP03: case MODELNODE_OPCODE_OP17: return 28;
+    case MODELNODE_OPCODE_GROUP: case MODELNODE_OPCODE_OP03: return 28;
+    case MODELNODE_OPCODE_OP17: return 32;
     case MODELNODE_OPCODE_DL: return 20;
     case MODELNODE_OPCODE_DLCOLLISION: return 32;
     case MODELNODE_OPCODE_DLPRIMARY: case MODELNODE_OPCODE_LOD: return 16;

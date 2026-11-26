@@ -25,11 +25,7 @@
 #include "frametiming.h"
 #include "assets/obseg/text/LoptionE.h"
 #ifndef TARGET_N64
-#include "platform_info.h"
-#if IS_64_BIT /* a prototype here would change the 32-bit program, so only
-                 64 bits gets one (LP64-006 Task 15) */
 #include <string.h> /* strlen */
-#endif
 #include "port_watchpages.h" /* the port watch pages */
 #include "port_crosshair.h"
 #include "port_playlog.h"   /* LP64-005 Task 8 */

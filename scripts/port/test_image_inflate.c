@@ -1,7 +1,7 @@
 /* ROM-free regression (LP64-006 Task 8): an odd-width 4-bit texture packs each
  * row's last pixel with the value after it, which for the last row is one past
- * what the decoder wrote. A 64-bit build must read zero there, not the stack's
- * leftovers; the 32-bit program keeps its leftovers, so that half only runs. */
+ * what the decoder wrote. Every PC build must read zero there, not the stack's
+ * leftovers (at 32 bits too since LP64-007 Task 12). */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -77,12 +77,12 @@ int main(void)
     /* Act */
     bytes = texInflateNonZlib(stream, pixels, 0, 0, &pool);
 
-    /* Assert: the pixel after the image reads as zero at 64 bits. */
+    /* Assert: the pixel after the image reads as zero. */
     if (bytes != 8 || record.width != 1 || record.height != 1) {
         fprintf(stderr, "test_image_inflate: decoded %d bytes, %dx%d\n", (int) bytes, (int) record.width, (int) record.height);
         return 1;
     }
-    if (sizeof(void *) == 8 && pixels[0] != 0xA0) {
+    if (pixels[0] != 0xA0) {
         fprintf(stderr, "test_image_inflate: last pixel pair 0x%02x, want 0xa0 (the value after the image must be zero)\n", pixels[0]);
         return 1;
     }

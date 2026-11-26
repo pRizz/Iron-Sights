@@ -2,10 +2,8 @@
  * host reports no file (pc_size 0), as the index-0 load does on PC (LP64-006
  * Task 16, test_lp64_typed_reads.sh). The game file is included whole, as
  * test_lp64_typed_chraction.c does, with stubs for the functions the tested
- * one calls; --gc-sections drops everything else. A 64-bit build reads nothing
- * at or past the allocation's end; the 32-bit program keeps the inherited read
- * of two bytes there (decision 10; the owner's patch is
- * t16-index0-32bit.patch), so its expectations are the inherited behaviour. */
+ * one calls; --gc-sections drops everything else. At every width nothing at
+ * or past the allocation's end is read. */
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -121,11 +119,7 @@ static void testNoReadPastTheAllocation(void)
     char line[160];
     snprintf(line, sizeof(line), "a missing host file reads nothing past its allocation (ended by %d: 0 returned, %d SIGSEGV)",
              ending, SIGSEGV);
-#if IS_64_BIT
     expect(ending == 0, line);
-#else
-    expect(ending == SIGSEGV, line);
-#endif
 }
 
 static void testHeaderBytesPastTheAllocationAreNotInflated(void)
@@ -142,13 +136,8 @@ static void testHeaderBytesPastTheAllocationAreNotInflated(void)
     resource_load_from_indy(arena, ALLOCATION, &missingFile, &lookup);
 
     // Assert
-#if IS_64_BIT
     expect(decompressCalls == 0, "a missing host file does not enter the decompressor");
     expect(lookup.poolRemaining == 0, "a missing host file loads 0 bytes");
-#else
-    expect(decompressCalls == 1, "the 32-bit program inflates the header bytes past its allocation (inherited)");
-    expect(lookup.poolRemaining == INFLATED_SIZE, "the 32-bit program keeps the inflated size (inherited)");
-#endif
 }
 
 static void testAPresentHostFileStillLoads(void)

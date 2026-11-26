@@ -7,11 +7,7 @@
 #include <stdlib.h> /* GE_SKY_DOME knob */
 #include "matrixmath.h"
 #include "options.h" /* PORT_HUD_ANCHOR: the backdrop fills' SPAN marker */
-#include "platform_info.h"
-#if IS_64_BIT /* a prototype here would change the 32-bit program, so only 64
-                 bits gets one and passes tanf a float (LP64-006 Task 15) */
 extern f32 tanf(f32); /* include/math.h declares none of libm */
-#endif
 #endif
 #include "player.h"
 #include "unk_092E50.h"

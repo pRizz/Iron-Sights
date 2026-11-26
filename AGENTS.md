@@ -424,8 +424,9 @@ pass its isolated executable rather than rebuilding an active player binary.
   no pin is judged so without a note). `lp64_equiv.py pins
   --streams S --expect FILE DIR...` prints the lines with fresh hashes of
   the folders' kind, keeps the other kind's, and never writes the file.
-  The owner allowed these pins in the committed file (2026-11-23): its 18
-  `i686:x64` and `i686:a64` lines carry a video pin, the two Jungle
+  The owner allowed these pins in the committed file (2026-11-23): its 12
+  `i686:x64` and `i686:a64` lines carry a video pin (18 until LP64-007
+  Task 12's 32-bit fix made the six cause-A lines match), the two Jungle
   `default` `sim` lines also carry a headless one, and
   a pin changes only after the stream's change is traced; the streams and
   every other hash list of ROM-derived output stay under `build/lp64/`.

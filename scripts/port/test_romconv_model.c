@@ -390,23 +390,11 @@ static int testOpcodesTheRomLacks(void)
             /* swapped as one word at 0x44, as romfile_model.c does */
             && r11->RwDataIndex == mfGet16(f.op11Rec + 0x46) && r11->unk46 == mfGet16(f.op11Rec + 0x44)
             && (uintptr_t) r11->BaseAddr == mfGet32(f.op11Rec + 0x48)
-#if IS_64_BIT
-            /* opcode 17 has its own map at 64 bits (testOp17KeepsPosition) */
+            /* opcode 17 has its own map (testOp17KeepsPosition) */
             && wordsMatch((u8 *) r17, f.op17Rec, 5)
-#else
-            /* at 32 bits it is read with the group record's map, as romfile_model.c does */
-            && wordsMatch((u8 *) &r17->Origin, f.op17Rec, 3) && r17->JointID == mfGet16(f.op17Rec + 0xC)
-#endif
             && (uintptr_t) ((ModelRoData_Op17Record *) r17)->othernode == NODE_REF(n3)
             && bits(&((ModelRoData_Op17Record *) r17)->scale1) == mfGet32(f.op17Rec + 0x18),
             "every scalar of opcodes 3, 5, 6, 7, 11, 17 and 20 in the field its pattern predicts");
-}
-
-/* The word at P with its two halves exchanged: a big-endian word read as two
- * halfwords. */
-static inline u32 halvesSwapped(u32 word)
-{
-    return (word << 16) | (word >> 16);
 }
 
 /* model.c reads an opcode 17 record as ModelRoData_Op17Record: the hit part,
@@ -443,24 +431,16 @@ static int testOp17KeepsPosition(void)
     {
         return 1;
     }
-#if IS_64_BIT
-    return (expect(r->hitpart == 7, "an OP17 record keeps its hit part at 64 bits")
-               + expect(bits(&r->radiusSq) == words[1], "an OP17 record keeps its radius at 64 bits")
-               + expect(bits(&r->pos.f[0]) == words[2], "an OP17 record keeps pos.x at 64 bits")
-               + expect(bits(&r->pos.f[1]) == words[3], "an OP17 record keeps pos.y at 64 bits")
-               + expect(bits(&r->pos.f[2]) == words[4], "an OP17 record keeps pos.z at 64 bits")
-               + expect(r->othernode == NULL, "an OP17 record keeps its other node at 64 bits")
-               + expect(bits(&r->scale1) == words[6], "an OP17 record keeps scale1 at 64 bits")
-               + expect(bits(&r->scale2) == words[7], "an OP17 record keeps scale2 at 64 bits"))
+    return (expect(r->hitpart == 7, "an OP17 record keeps its hit part")
+               + expect(bits(&r->radiusSq) == words[1], "an OP17 record keeps its radius")
+               + expect(bits(&r->pos.f[0]) == words[2], "an OP17 record keeps pos.x")
+               + expect(bits(&r->pos.f[1]) == words[3], "an OP17 record keeps pos.y")
+               + expect(bits(&r->pos.f[2]) == words[4], "an OP17 record keeps pos.z")
+               + expect(r->othernode == NULL, "an OP17 record keeps its other node")
+               + expect(bits(&r->scale1) == words[6], "an OP17 record keeps scale1")
+               + expect(bits(&r->scale2) == words[7], "an OP17 record keeps scale2")
+               + expect(sameAsInPlace(0, 0, n), "at 32 bits the image is the in-place one"))
         != 0;
-#else
-    /* The inherited reading, kept at 32 bits (decision 10): the group map
-     * swaps pos.y and pos.z as halfwords and leaves scale2 unswapped. */
-    return expect(sameAsInPlace(0, 0, n) && r->hitpart == 7 && bits(&r->pos.f[0]) == words[2]
-            && bits(&r->pos.f[1]) == halvesSwapped(words[3]) && bits(&r->pos.f[2]) == halvesSwapped(words[4])
-            && bits(&r->scale1) == words[6] && bits(&r->scale2) == __builtin_bswap32(words[7]),
-            "at 32 bits an OP17 record is read with the group map, as romfile_model.c does");
-#endif
 }
 
 static int testListCallsAnother(void)

@@ -31,7 +31,6 @@
 #include "propobj.h"
 #include "stan.h"
 #include "frametiming.h" /* portTickCadence - see the guard accuracy note in chrlvUpdateShotbondsum */
-#include "platform_info.h" /* IS_64_BIT: the empty-hand guards (LP64-006 Task 16) */
 #ifndef TARGET_N64
 #include "cheat.h" /* cheatIsActive(CHEAT_PORT_ENEMY_FF) - chrlvFireWeaponRelated */
 #include "port_hud.h"
@@ -1257,13 +1256,8 @@ void chrlvInitActAttack(ChrRecord *self, struct anim_group_info **arg1, s32 arg2
 
     for (i=0; i<2; i++)
     {
-#if IS_64_BIT
-        /* A hand flagged with no prop in it would be read through NULL; a
-         * 64-bit build skips it (LP64-006 Task 16, decision 10). */
+        /* a hand flagged with no prop in it is skipped (LP64-006 Task 16) */
         if (arg3->p[i] != 0 && chrGetEquippedWeaponProp(self, i) != NULL)
-#else
-        if (arg3->p[i] != 0)
-#endif
         {
             temp_chr = chrGetEquippedWeaponProp(self, i)->chr;
 
@@ -1635,13 +1629,8 @@ void chrlvInitActAttackWalk(ChrRecord *chr, s32 arg1)
 
     for (i=0; i<2; i++)
     {
-#if IS_64_BIT
-        /* A hand flagged with no prop in it would be read through NULL; a
-         * 64-bit build skips it (LP64-006 Task 16, decision 10). */
+        /* a hand flagged with no prop in it is skipped (LP64-006 Task 16) */
         if (sp70.p[i] != 0 && chrGetEquippedWeaponProp(chr, i) != NULL)
-#else
-        if (sp70.p[i])
-#endif
         {
             tmp_chr = chrGetEquippedWeaponProp(chr, i)->chr;
 
@@ -1785,13 +1774,8 @@ void chrlvInitActAttackRoll(ChrRecord *chr, GUNHAND side)
 
     for (i=0; i<2; i++)
     {
-#if IS_64_BIT
-        /* A hand flagged with no prop in it would be read through NULL; a
-         * 64-bit build skips it (LP64-006 Task 16, decision 10). */
+        /* a hand flagged with no prop in it is skipped (LP64-006 Task 16) */
         if (sp64.p[i] != 0 && chrGetEquippedWeaponProp(chr, i) != NULL)
-#else
-        if (sp64.p[i] != 0)
-#endif
         {
             temp_v1_2 = chrGetEquippedWeaponProp(chr, i)->chr;
 
