@@ -900,14 +900,14 @@ FORK-089, as the LP64-006 laptop step did.
   `bash scripts/port/test_harness_widths.sh` and
   `bun scripts/bright-builds-check.ts all`; then read the job's diff
   line by line against "Interfaces".
-- [ ] **Step 5: Push and read the release.** `gh release view --json
+- [x] **Step 5: Push and read the release.** `gh release view --json
   assets` lists seventeen assets, the six packages among them. Download
   `Iron-Sights-linux-x86_64.tar.gz` and its sums file into
   `build/lp64/ship/published/`; `sha256sum -c`; `gh attestation verify
   Iron-Sights-linux-x86_64.tar.gz -R OWNER/REPO`; extract and run the
   package check's P4 on it. Expected: all pass; the published bytes are
   the checked build's.
-- [ ] **Step 6:** Record in FORK-018, FORK-031 and FORK-089. If the push
+- [x] **Step 6:** Record in FORK-018, FORK-031 and FORK-089. If the push
   fails to publish, fix forward; a release is never replaced.
 
 ### Task 12: The carried questions
