@@ -248,6 +248,11 @@ pass its isolated executable rather than rebuilding an active player binary.
   under `port/fast3d/` on its strict-tier branch, and update its milestone
   status table before handing off. The Apple TV build gets its own plan after
   it.
+- The native Windows x64 build (WIN64-001 to WIN64-004) follows the accepted
+  [Windows x64 plan](scripts/port/windows_x64_plan.md). Read it before
+  resuming, do not reopen its recorded decisions or the 64-bit plan's, keep
+  the 32-bit Windows exe in `build_win` and the 64-bit one in `build_win64`,
+  and update its milestone status table before handing off.
 - ROM data converters (LP64-004) are `port/src/romconv_*.c`, declared in
   `port/include/port_romconv.h`, `port_romconv_audio.h` and
   `port_romconv_stage.h`, with the file layouts they read in

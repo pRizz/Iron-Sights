@@ -32,8 +32,9 @@ new areas. Status describes implementation state, not Git publication state.
 
 ### FORK-094 — Native Windows x64 build plan
 
-**Status:** Drafted on 2026-11-27 at the owner's request; not accepted, and
-nothing is built. Documentation only: no source, build file or tool changed.
+**Status:** Planned and accepted; nothing is built. Drafted on 2026-11-27 at
+the owner's request and accepted by the owner the same day with all five
+recommendations. Documentation only: no source, build file or tool changed.
 
 **What it is.** [The Windows x64 plan](scripts/port/windows_x64_plan.md)
 proposes a native 64-bit Windows executable from the 64-bit source that
@@ -41,18 +42,21 @@ already ships for x86_64 Linux (FORK-089), ending with
 `Iron-Sights-windows-x64.zip` beside the 32-bit zip. It follows the 64-bit
 and macOS plans' form: why, goals, non-goals, anti-goals, constraints, what
 was measured, approaches, design, verification, four milestones (WIN64-001
-to WIN64-004), questions for the owner and a status table. It is not yet
-named in `AGENTS.md`, and the 64-bit plan's non-goal and the CMake refusal
-of Windows x64 (`CMakeLists.txt:19-21`) stay as they are until the owner
-accepts it.
+to WIN64-004), the owner's decisions and a status table. `AGENTS.md`'s
+Repo-Local Guidance points to it, and the 64-bit plan's "Windows x64 is out
+of scope" call now notes that the owner lifted it for this plan. The CMake
+refusal of Windows x64 (`CMakeLists.txt:19-21`) and the test case that
+asserts it stay until WIN64-001 changes them together.
 
 **Why it differs from upstream.** The inherited baseline builds Windows only
 as a 32-bit program, and so does this fork today.
 
-**Open for the owner.** Who it is for (recommended: a second download beside
-the 32-bit zip, which keeps suspend points), shipping without suspend points
-as every 64-bit build does, the four milestones, lifting the 64-bit plan's
-Windows x64 non-goal, and a `build_win64` tree beside `build_win`.
+**Owner's decisions (2026-11-27, "Accept the plan with your
+recommendations").** A second Windows download beside the 32-bit zip, which
+stays the default and keeps suspend points; the x64 zip ships without
+suspend points, as every 64-bit build does; four milestones; the 64-bit
+plan's Windows x64 non-goal lifted; and a `build_win64` tree beside
+`build_win`, so `build_win/IronSights.exe` stays 32-bit.
 
 **What was measured** (2026-11-27, `main` at 990f914, on the owner's laptop
 with its RTX 3070 Laptop GPU, in a throwaway copy of the `goldeneye` image

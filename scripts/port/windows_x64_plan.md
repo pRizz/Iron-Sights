@@ -8,11 +8,11 @@ the [64-bit port](native_64bit_plan.md) (done on 2026-11-26), which listed
 Windows x64 as a non-goal that it must not block. It is independent of the
 [macOS plan](macos_plan.md); neither waits for the other.
 
-**Drafted on 2026-11-27; not accepted.** The owner has not chosen the
-audience, the suspend-point answer or the outline. [Questions for the
-owner](#questions-for-the-owner) lists them with a recommendation each. Until
-the owner accepts it, this is a proposal: the
-[milestone status](#milestone-status) table records that nothing is built.
+**Drafted and accepted on 2026-11-27.** The owner accepted the plan with
+all five recommendations ("Accept the plan with your recommendations");
+[Owner's decisions](#owners-decisions) lists them with the alternatives not
+taken. Nothing is built, and execution has not been asked for: the
+[milestone status](#milestone-status) table says so.
 
 This plan was drafted under `AGENTS.md` (the fork inventory, the two-tier
 gallery rule, render performance, load before play, direct-to-main
@@ -43,7 +43,7 @@ delivery), `standards-overrides.md`, the 64-bit plan's decisions and its
    x86_64 Linux comparison build tick for tick, or each difference is traced
    and recorded.
 3. It has what the 32-bit Windows build has, except suspend points (see
-   [questions](#questions-for-the-owner)): crash reporting with symbols, the
+   [decision 2](#owners-decisions)): crash reporting with symbols, the
    profiler, HDR output, the Enhanced font and HD texture downloads, the
    weapon icon cache, save backup, restore and transfer.
 4. Players get `Iron-Sights-windows-x64.zip`, published and attested by CI
@@ -401,26 +401,25 @@ Every milestone leaves the 32-bit, web and 64-bit Linux builds passing
 their existing checks, updates `FORK_CHANGES.md` with each change, and
 updates the status table before handing off.
 
-## Questions for the owner
+## Owner's decisions
 
-Each has a recommendation; the plan above is written as if every
-recommendation is taken.
+The owner took every recommendation on 2026-11-27. The plan above is
+written to them; do not reopen them without the owner.
 
-1. **Who is it for?** Recommended: a second Windows download beside the
-   32-bit zip, which stays the default and the one with suspend points.
-   Alternatives: self-build only, or replace the 32-bit zip.
-2. **Suspend points.** Recommended: the x64 zip ships without them, as the
-   Linux x64 packages do, and says so in the watch row and the README.
-   Alternative: start a relocating suspend format first, a separate plan
-   that would also give them to Linux x64 and macOS.
-3. **Four milestones as above.** Recommended. Alternative: stop after
-   WIN64-002 (a self-built, verified exe) and decide on a release then.
-4. **Lift the 64-bit plan's non-goal.** That plan's decisions stand; this one
-   adds Windows x64 beside them, and its refusal in `CMakeLists.txt` and the
-   test that asserts it change in WIN64-001. Recommended: yes.
-5. **Tree name.** Recommended: `build_win64` beside `build_win`, so the
-   main 32-bit exe stays where the gallery, the audits and the owner's
-   shortcuts expect it.
+1. **Who it is for:** a second Windows download beside the 32-bit zip,
+   which stays the default and the one with suspend points. Not taken:
+   self-build only, or replacing the 32-bit zip.
+2. **Suspend points:** the x64 zip ships without them, as the Linux x64
+   packages do, and says so in the watch row and the README. Not taken: a
+   relocating suspend format first, which would be a separate plan.
+3. **Four milestones as above.** Not taken: stopping after WIN64-002 (a
+   self-built, verified exe) and deciding on a release then.
+4. **The 64-bit plan's Windows x64 non-goal is lifted.** That plan's other
+   decisions stand; this one adds Windows x64 beside them. The refusal in
+   `CMakeLists.txt:19-21` and case 5 of `test_pointer_bits.sh`, which
+   asserts it, stay until WIN64-001 changes them together.
+5. **Tree name:** `build_win64` beside `build_win`, so the main 32-bit exe
+   stays where the gallery, the audits and the owner's shortcuts expect it.
 
 ## Left to the builder
 
@@ -441,7 +440,7 @@ mark a milestone done without it.
 
 | ID | Status | Notes |
 |---|---|---|
-| WIN64-001 | Not started | The plan is not accepted. Measured starting point (2026-11-27, 990f914): with the CMake refusal off, 3 of 389 video compile steps fail (`main.c`, `port_profile.c`, `port_lp64.c`); patched in a scratch copy, it links, boots 600 front-end frames on the RTX 3070 and logs every checked address above 4 GB, with the memp arena at 0x20000000. |
+| WIN64-001 | Not started | The plan was accepted on 2026-11-27; this milestone's own detailed plan is not yet written. Measured starting point (2026-11-27, 990f914): with the CMake refusal off, 3 of 389 video compile steps fail (`main.c`, `port_profile.c`, `port_lp64.c`); patched in a scratch copy, it links, boots 600 front-end frames on the RTX 3070 and logs every checked address above 4 GB, with the memp arena at 0x20000000. |
 | WIN64-002 | Not started | Needs WIN64-001. |
 | WIN64-003 | Not started | Needs WIN64-001. |
 | WIN64-004 | Not started | Needs WIN64-002 and WIN64-003. |

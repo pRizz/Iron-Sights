@@ -630,7 +630,9 @@ Calls made in drafting, accepted with the plan on 2026-11-15:
 - The host-pointer test is "above 4 GB" with a startup check, not low-bit
   tagging.
 - Suspend points are unavailable on 64-bit builds for now.
-- Windows x64 is out of scope.
+- Windows x64 is out of scope. (Lifted by the owner on 2026-11-27 for the
+  [Windows x64 plan](windows_x64_plan.md), which builds it beside this
+  plan's decisions; it remains outside this plan.)
 - Equivalence is claimed for the stated surface: all solo stages and demos,
   one four-player route, a menu and watch walk, under default settings and
   with every fork feature on.
