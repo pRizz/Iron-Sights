@@ -26,11 +26,31 @@ def assert_no_artwork(names):
     assert not any("Data/TexturePacks" in name or "Data/FontPacks" in name for name in names)
 
 
+# Everything a package's Data folder holds (package_linux.py): its README and the shader list the game
+# prewarms. A save, profile, suspend image or ROM put under Data/ is refused by its path.
+PACKAGED_DATA = {"README.txt", "shaders_base.txt"}
+
+
+def data_entries(names):
+    """The paths under the Data folder among NAMES, relative to it; the folder itself is left out."""
+    entries = set()
+    for name in names:
+        parts = Path(name).parts
+        if "Data" in parts and parts[-1] != "Data":
+            entries.add("/".join(parts[parts.index("Data") + 1:]))
+    return entries
+
+
 def assert_allowlisted(names):
-    """No settings, ROM, debug file or crash envelope, and no texture or font pack, is packaged."""
+    """No settings, ROM, debug file or crash envelope, and no texture or font pack, is packaged, and
+    Data/ holds exactly PACKAGED_DATA."""
     names = list(names)
     assert not any(Path(n).name == "midas.ini" or n.endswith((".z64", ".n64", ".v64", ".debug", ".envelope")) for n in names)
     assert_no_artwork(names)
+    entries = data_entries(names)
+    assert entries == PACKAGED_DATA, ("Data/ must hold exactly " + ", ".join(sorted(PACKAGED_DATA)),
+                                      "unexpected: " + ", ".join(sorted(entries - PACKAGED_DATA)),
+                                      "missing: " + ", ".join(sorted(PACKAGED_DATA - entries)))
 
 
 def build_id(path):
@@ -114,7 +134,8 @@ def check(package, appimage, steamdeck, output, arch="i686"):
         extracted.mkdir()
         subprocess.run([str(appimage.resolve()), "--appimage-extract"], cwd=extracted,
                        stdout=subprocess.DEVNULL, check=True, timeout=60)
-        assert_allowlisted(str(path) for path in (extracted / "squashfs-root").rglob("*"))
+        contents = extracted / "squashfs-root"
+        assert_allowlisted(path.relative_to(contents).as_posix() for path in contents.rglob("*"))
         for name in ("enabled", "healthy", "optout", "toggle-off", "override-off", "missing-sdk", "symlink-cache", "offline-retry", "appimage", "steamdeck"):
             directory = work / name
             directory.mkdir()

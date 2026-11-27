@@ -3,6 +3,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent/'bench'))
 
@@ -309,6 +310,43 @@ class LaunchTests(unittest.TestCase):
 
         self.assertEqual(plan.linux_other_games(entries, 100), ['IronSights'])
         self.assertEqual(plan.linux_other_games(entries, None), ['IronSights', 'IronSights'])
+
+    def test_a_run_off_windows_without_out_is_refused(self):
+        # Act, Assert: the default would put results and run folders under build_win
+        with self.assertRaisesRegex(SystemExit, '--out'):
+            bench.run_paths(None, 'posix', '20261126-120000')
+
+    def test_a_run_off_windows_puts_its_run_folders_beside_out(self):
+        # Act
+        out, session = bench.run_paths('build/bench/linux.json', 'posix', '20261126-120000')
+
+        # Assert
+        self.assertEqual(out, Path('build/bench/linux.json'))
+        self.assertEqual(session, Path('build/bench').resolve()/'bench-run-20261126-120000')
+
+    def test_a_windows_run_keeps_its_default_folders(self):
+        # Act
+        out, session = bench.run_paths(None, 'nt', '20261126-120000')
+
+        # Assert
+        self.assertEqual(out, bench.BUILD_ROOT/'bench-results'/'20261126-120000.json')
+        self.assertEqual(session, bench.BUILD_ROOT/'bench-run-20261126-120000')
+
+    def test_the_quiet_wait_says_what_it_waited_for_when_it_gives_up(self):
+        # Arrange: a load that never falls, and a clock already past the deadline on its second reading
+        said = []
+        with mock.patch.object(bench, 'other_games', return_value=[]), \
+             mock.patch.object(bench, 'machine_busy', return_value=9.5), \
+             mock.patch.object(bench.time, 'monotonic', side_effect=[0.0, 0.0, bench.QUIET_WAIT_S+1]), \
+             mock.patch.object(bench.time, 'sleep'), \
+             mock.patch.object(bench, 'log', side_effect=said.append):
+            # Act
+            bench.wait_until_quiet()
+
+        # Assert: the last line names the wait, its reason and the last load seen; the run then goes on
+        self.assertIn(f'{bench.QUIET_WAIT_S} s', said[-1])
+        self.assertIn('load average', said[-1])
+        self.assertIn('9.5', said[-1])
 
     def test_linux_log_names_its_system(self):
         lines = ['ge: sys: build 1.2 commit abc', 'ge: sys: Linux 6.6.87 x86_64']

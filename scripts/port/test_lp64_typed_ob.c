@@ -67,9 +67,9 @@ u32 decompressdata(u8 *src, u8 *dst, struct huft *hlist)
 static fileentry missingFile = {0, "missing", NULL};
 
 /* An allocation of ALLOCATION bytes ending at a page that no access may
- * touch, so a read past its end ends the child by SIGSEGV. That is Linux's
- * signal for a PROT_NONE page (macOS raises SIGBUS), which the 32-bit half's
- * expectation assumes: the harness runs on Linux (its containers and CI). */
+ * touch, so a read past its end would end the child by SIGSEGV (Linux's
+ * signal for a PROT_NONE page; macOS raises SIGBUS). Both halves expect a
+ * clean exit since LP64-007 Task 12; the harness runs on Linux. */
 static void loadBeforeGuardPage(void)
 {
     long page = sysconf(_SC_PAGESIZE);

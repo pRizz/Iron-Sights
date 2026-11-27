@@ -123,9 +123,12 @@ process. No 32-bit library is needed.
 - **Stops by name.** A host address below 4 GB, an unconverted asset class,
   a file the ROM does not serve, a missing ROM segment, a converter that
   refuses a file or an exhausted fatal pool stops the game with the log's
-  sentence (in a message box too, unless the run has no one to dismiss it)
-  and a nonzero exit status (`AGENTS.md` and FORK-089's Task 6 note have
-  the cases).
+  sentence and a nonzero exit status (`AGENTS.md` and FORK-089's Task 6 note
+  have the cases). The build also asks SDL for a message box with that
+  sentence, unless the run has no one to dismiss it, but nobody has yet seen
+  the box on a real display, and under WSLg SDL cannot open a message box at
+  all (`No message system available`, FORK-092), so there the notice is the
+  log line only.
 - **The play harness** is compiled in (decision 4 of the LP64-007 plan) and
   reached only through environment variables; `build-inputs.json` records
   `play_harness: true`.
@@ -154,7 +157,9 @@ process. No 32-bit library is needed.
   those two from the system too (`SYSTEM_CXX_RUNTIME` in
   `package_linux.py`), so the player's system needs its 32-bit C++ runtime
   (GCC 12 or newer; `libstdc++6:i386` and `libgcc-s1:i386` on Ubuntu or
-  Debian). The i686 executable is unchanged. The fix is not yet confirmed on
+  Debian): by `readelf -V`, build 416's i686 `IronSights` needs at most
+  `GLIBCXX_3.4.30` and `GCC_7.0.0`, and no other packaged file needs
+  either. The fix is not yet confirmed on
   a system with Mesa 25; the laptop can confirm it with the published
   package. WSL also has no 32-bit GPU path, so the i686 package draws with
   `llvmpipe` there.

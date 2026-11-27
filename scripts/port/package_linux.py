@@ -192,6 +192,12 @@ def refuse_unshippable_build(build, arch):
     header = (build / "IronSights").read_bytes()[:20]
     if header[:4] != b"\x7fELF" or header[4] != target.elf_class or header[18:20] != target.elf_machine.to_bytes(2, "little"):
         raise ValueError(f"{build / 'IronSights'} is not an {arch} executable")
+    # CMake names the architecture in build-info.json and the compiler's macros name it in the program;
+    # the two must agree with the target.
+    info = build / "generated/build-info.json"
+    named = json.loads(info.read_text()).get("architecture") if info.is_file() else None
+    if named != target.suffix:
+        raise ValueError(f"{info} names architecture {named!r}, not {arch}")
 
 
 def refuse_comparison_build(build):
@@ -260,10 +266,10 @@ def package(build, output, arch="i686"):
     squashfs = output / "payload.squashfs"
     subprocess.run(["mksquashfs", str(appdir), str(squashfs), "-root-owned", "-noappend", "-comp", "gzip", "-processors", "2"], check=True)
     appimage = output / names["appimage"]
-    with appimage.open("wb") as target:
-        target.write(runtime.read_bytes())
+    with appimage.open("wb") as stream:
+        stream.write(runtime.read_bytes())
         with squashfs.open("rb") as payload:
-            shutil.copyfileobj(payload, target)
+            shutil.copyfileobj(payload, stream)
     appimage.chmod(0o755)
     squashfs.unlink()
     copy(appdir / "build-info.json", output / names["build_info"])

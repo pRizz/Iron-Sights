@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Build and run the game's toolchain containers for i686, x86_64 and aarch64.
 
-`build-images` builds the three images; `run --arch ARCH [--video] --
+`build-images` builds the three toolchain images (`goldeneye`,
+`midas-lp64-arm64` and `midas-lp64-i686-video`) and, with `--release`, the
+x86_64 release image too; `run --arch ARCH [--video] [--release] --
 COMMAND...` runs a command in the right one with the checkout and the ROM
 mounted. Docker is always called with an argument list, never through a shell.
 
@@ -115,7 +117,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='action', required=True)
     images = sub.add_parser('build-images',
-                            help='Build the goldeneye (amd64), midas-lp64-arm64 and midas-lp64-i686-video images')
+                            help='Build the goldeneye (amd64), midas-lp64-arm64 and midas-lp64-i686-video images, '
+                                 f'and {RELEASE_IMAGE} with --release')
     images.add_argument('--release', action='store_true', help=f'also build {RELEASE_IMAGE}')
     run = sub.add_parser('run', help='Run a command in the container for an architecture')
     run.add_argument('--arch', choices=ARCHES, required=True)

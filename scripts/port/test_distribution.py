@@ -24,6 +24,8 @@ def module(name):
 build_info=module("build_info")
 packager=module("package_windows")
 linux_packager=module("package_linux")
+sys.path.insert(0,str(HERE))  # test_sentry_linux imports package_linux and test_sentry_windows by name
+linux_smoke=module("test_sentry_linux")
 
 
 class Distribution(unittest.TestCase):
@@ -197,6 +199,49 @@ class Distribution(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,"is not an "+target+" executable"):
                     linux_packager.package(build,out,arch=target)
                 self.assertFalse(out.exists())
+
+    def test_packager_refuses_a_build_info_of_the_other_architecture(self):
+        headers={"i686":b"\x7fELF\x01\x01\x01"+bytes(11)+b"\x03\x00","x86_64":b"\x7fELF\x02\x01\x01"+bytes(11)+b"\x3e\x00"}
+        for named,target in (("i686","x86_64"),("x86_64","i686")):
+            with self.subTest(named=named,target=target),tempfile.TemporaryDirectory() as folder:
+                # Arrange: an executable of the target's width whose build-info.json names the other architecture
+                build=Path(folder)/"build";(build/"generated").mkdir(parents=True)
+                (build/"IronSights").write_bytes(headers[target])
+                (build/"generated/build-info.json").write_text(json.dumps({"architecture":named}))
+                # Act, Assert
+                with self.assertRaisesRegex(ValueError,"names architecture '"+named+"', not "+target):
+                    linux_packager.refuse_unshippable_build(build,target)
+
+    def test_packager_accepts_a_build_info_of_its_architecture(self):
+        headers={"i686":b"\x7fELF\x01\x01\x01"+bytes(11)+b"\x03\x00","x86_64":b"\x7fELF\x02\x01\x01"+bytes(11)+b"\x3e\x00"}
+        for arch in ("i686","x86_64"):
+            with self.subTest(arch=arch),tempfile.TemporaryDirectory() as folder:
+                # Arrange
+                build=Path(folder)/"build";(build/"generated").mkdir(parents=True)
+                (build/"IronSights").write_bytes(headers[arch])
+                (build/"generated/build-info.json").write_text(json.dumps({"architecture":arch}))
+                # Act, Assert (no exception)
+                linux_packager.refuse_unshippable_build(build,arch)
+
+    def test_package_data_folder_holds_its_readme_and_shader_list(self):
+        # Arrange: the Data entries of the published build-416 tarball, a directory entry included
+        names=["Iron-Sights-linux-x86_64/Data","Iron-Sights-linux-x86_64/Data/README.txt",
+               "Iron-Sights-linux-x86_64/Data/shaders_base.txt","Iron-Sights-linux-x86_64/IronSights"]
+        # Act, Assert (no exception)
+        linux_smoke.assert_allowlisted(names)
+
+    def test_a_save_or_profile_under_data_is_refused_by_name(self):
+        packaged=["Data/README.txt","Data/shaders_base.txt"]
+        for stray in ("Data/Saves/eeprom.bin","Data/Profiles/user.geprofile","Data/SaveStates/slot1.state"):
+            with self.subTest(stray=stray):
+                # Act, Assert
+                with self.assertRaisesRegex(AssertionError,re.escape(stray.removeprefix("Data/"))):
+                    linux_smoke.assert_allowlisted(packaged+[stray])
+
+    def test_a_package_without_its_shader_list_is_refused(self):
+        # Act, Assert
+        with self.assertRaisesRegex(AssertionError,"shaders_base.txt"):
+            linux_smoke.assert_allowlisted(["Data/README.txt"])
 
     def test_library_from_a_32_bit_folder_is_refused_at_x86_64(self):
         # Arrange

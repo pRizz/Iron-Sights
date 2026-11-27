@@ -116,10 +116,11 @@ def wait_until_quiet():
     the load average is below the processor count."""
     deadline = time.monotonic()+QUIET_WAIT_S
     maybe_said = None
+    maybe_load = None
     while time.monotonic() < deadline:
         if other_games():
             reason = 'another game process is running; waiting for it to finish'
-        elif machine_busy() is not None:
+        elif (maybe_load := machine_busy()) is not None:
             reason = f'the load average has reached the {os.cpu_count()} processors; waiting for it to fall'
         else:
             return
@@ -127,6 +128,8 @@ def wait_until_quiet():
             log(reason)
             maybe_said = reason
         time.sleep(WATCH_EVERY_S)
+    load = 'not read' if maybe_load is None else f'{maybe_load}'
+    log(f'still not quiet after {QUIET_WAIT_S} s ({maybe_said}); last load average {load}; running anyway')
 
 
 def prepare_run(executable, folder, env, environ):
@@ -255,7 +258,23 @@ def summarize(runs, presets, scenarios, builds):
     return summary
 
 
+def run_paths(maybe_out, os_name, stamp):
+    """Return (results file, session folder). Off Windows --out is required and the run folders go
+    beside it, so a Linux run never makes build_win; the session folder is absolute, since each run
+    starts in its own folder."""
+    if os_name != 'nt':
+        if not maybe_out:
+            raise SystemExit('bench: off Windows pass --out RESULTS.json; '
+                             'the default puts the results and run folders under build_win')
+        out = Path(maybe_out)
+        return out, out.resolve().parent/('bench-run-'+stamp)
+    out = Path(maybe_out) if maybe_out else BUILD_ROOT/'bench-results'/(stamp+'.json')
+    return out, BUILD_ROOT/('bench-run-'+stamp)
+
+
 def command_run(options, config):
+    stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+    out, session = run_paths(options.out, os.name, stamp)
     builds = parse_builds(options.build or ['fork=build_win/IronSights.exe'])
     if options.smoke:
         options.scenario = options.scenario or list(SMOKE_SCENARIOS)
@@ -263,11 +282,6 @@ def command_run(options, config):
         options.repeats = min(options.repeats, SMOKE_REPEATS)
     scenarios = select(config, options.scenario, 'scenarios')
     presets = select(config, options.preset or ['default'], 'presets')
-    stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
-    out = Path(options.out) if options.out else BUILD_ROOT/'bench-results'/(stamp+'.json')
-    # Off Windows, --out also takes the run folders beside the results, so a Linux run never makes build_win.
-    # Absolute: each run starts in its own folder.
-    session = (out.resolve().parent if options.out and os.name != 'nt' else BUILD_ROOT)/('bench-run-'+stamp)
     runs, host = [], {}
     order = bench_plan.run_order(builds, scenarios, options.repeats)
     for preset in presets:
@@ -333,8 +347,8 @@ def main():
                      help='the quick check for a render change: three scenarios, every preset, three repeats')
     run.add_argument('--hidden', dest='visible', action='store_false',
                      help='hide the window; quicker to work beside, but frames run slower and noisier')
-    run.add_argument('--out', help='results file (default: build_win/bench-results/<time>.json); '
-                                   'off Windows the run folders go beside it')
+    run.add_argument('--out', help='results file (default on Windows: build_win/bench-results/<time>.json); '
+                                   'required off Windows, where the run folders go beside it')
     report.add_argument('results')
     report.add_argument('--out', help='write the Markdown here instead of printing it')
     for command in (run, report):

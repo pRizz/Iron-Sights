@@ -331,9 +331,9 @@ typedef struct RomModelInterlink /* opcode 15 */
 } RomModelInterlink;
 _Static_assert(sizeof(RomModelInterlink) == 28, "RomModelInterlink is 28 bytes");
 
-/* Opcode 17 as model.c reads it (ModelRoData_Op17Record). A 64-bit build
- * converts it with this map; the 32-bit in-place pass and the oracle's
- * converter keep the group map (LP64-006 Task 16). */
+/* Opcode 17 as model.c reads it (ModelRoData_Op17Record). Both widths use
+ * this map: the 64-bit converter, and since LP64-007 Task 12 the 32-bit
+ * in-place pass and the oracle's converter (LP64-006 Task 16 added it). */
 typedef struct RomModelOp17
 {
     u32 hitpart;

@@ -124,9 +124,10 @@ executables around. `--name <name> --clean` deletes a folder.
 Linux (WSL included): give the extracted package's `IronSights` as `--build`.
 Each run copies the `lib/` folder beside it into the run folder, as it copies
 `SDL2.dll` on Windows, and puts that copy first on `LD_LIBRARY_PATH`, keeping
-any value already set after it, as the package's `AppRun` does. Pass `--out`:
-the default results file is under `build_win`, and off Windows the run folders
-go beside the `--out` file instead of `build_win`.
+any value already set after it, as the package's `AppRun` does. Off Windows
+`--out` is required (a run without it stops before it starts, naming the
+option): the default results file is under `build_win`, and off Windows the
+run folders go beside the `--out` file instead of `build_win`.
 
 ```sh
 python3 scripts/port/bench/bench.py run --smoke --build i686=pkg/Iron-Sights-linux-i686/IronSights --build x64=pkg/Iron-Sights-linux-x86_64/IronSights --out build/bench/linux.json
@@ -135,7 +136,9 @@ python3 scripts/port/bench/bench.py run --smoke --build i686=pkg/Iron-Sights-lin
 - **Quiet machine.** The game processes the guard waits for are those named
   `IronSights` in `/proc`. It also waits while the one-minute load average in
   `/proc/loadavg` is at or above the processor count, within the same
-  15 minutes. The machine's processor use comes from `/proc/stat`.
+  15 minutes; if the machine is still not quiet then, it logs what it waited
+  for and the last load average it read, and runs anyway. The machine's
+  processor use comes from `/proc/stat`.
 - **Host facts.** The report's GPU, processor and build come from the game's
   log, as on Windows. Its system comes from a `ge: sys: Linux` line, which the
   game does not yet print, so it reads `unknown` (seen in WSL, LP64-007
