@@ -1292,13 +1292,18 @@ void chraiDefaultWeaponFireHandler(s32 hand)
                  * gotbghit (the only path that sets besttexture >= 0,
                  * see the impact_sounds lookup above) gates this the
                  * same way.
-                 * PORT (WIN64-001): the field, not byte besttexture * 8.
-                 * Under GCC's layout that byte's low nibble is hitSound, so
-                 * Linux reads the same value; MinGW lays the record out by
-                 * Microsoft's bitfield rules, 12 bytes an entry, so on
-                 * Windows the byte stride read another texture's entry. */
+                 * PORT (WIN64-001): the field, not byte besttexture * 8,
+                 * since MinGW lays the record out by Microsoft's bitfield
+                 * rules, 12 bytes an entry, and the byte stride read another
+                 * texture's entry on Windows.
+                 * PORT: IDO packs the image_entry bitfields MSB-first, so
+                 * the N64's byte 0 low nibble is hitTexture (as in the
+                 * impact_sounds lookup above); GCC packs LSB-first and the
+                 * byte read took hitSound. The stock table's two fields
+                 * agree on water and snow for every texture, so only a
+                 * modded table can tell them apart. */
                 if ((besttexture >= 0) &&
-                    (g_Textures[besttexture].hitSound != 5) && (g_Textures[besttexture].hitSound != 6))
+                    (g_Textures[besttexture].hitTexture != 5) && (g_Textures[besttexture].hitTexture != 6))
                 {
                     rooms[0] = bestroom;
                     rooms[1] = 255;

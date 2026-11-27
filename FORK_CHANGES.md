@@ -106,8 +106,20 @@ of scope" call now notes that the owner lifted it for this plan.
   field, which on Linux is the same byte and nibble, and its two reviewed
   overlay lines are gone. The probe asserts 12 bytes under `_WIN32` and 8
   elsewhere. The N64 read this nibble as `hitTexture` (IDO packs bitfields
-  from the top bit, as `chrprop.c`'s impact-sound comment says); every PC
-  build reads `hitSound` there, which this change leaves as it was.
+  from the top bit, as `chrprop.c`'s impact-sound comment says, and
+  `romdataImageTableApply` takes `hitTexture` from bits 24 to 27 of an
+  entry's first word); every PC build read `hitSound` there. A follow-up
+  change makes the check read `hitTexture`, with a PORT comment. A scan of
+  the stock ROM's table (cdata+0x28570, 2,698 entries; output kept out of
+  Git) found the two fields differ only for textures 653 to 655 (`hitSound`
+  HIT_GLASS, `hitTexture` HIT_GLASS_XLU), and none is HIT_WATER or HIT_SNOW
+  in one field but not the other (8 entries are in both), so the check's
+  result is unchanged for every stock texture: no stock gameplay, picture
+  or comparison stream changes, and the pins in
+  `lp64_equiv_expected.txt` stand. Only a modded table whose two fields
+  disagree on water or snow sees the N64's behaviour now. The probe's
+  run-time `hitSound` nibble check stays, its comment saying no site
+  depends on it.
 - *Smaller fixes for the MinGW tree.* `include/string.h`'s PC block
   prototypes `strcmp` (and `_stricmp` on Windows), which also removes the
   `port_build_time.c` line from `lp64_unprototyped_allowed.txt`;

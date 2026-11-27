@@ -408,8 +408,11 @@ _Static_assert(offsetof(struct Scorch, unk02) == offsetof(ObjectRecord, state)
                    && IS_TYPE(((struct Scorch *) 0)->model, Model *) && IS_TYPE(((ObjectRecord *) 0)->model, Model *),
                "an object read as a Scorch: unk02 is its state and model its model");
 
-/* chrprop.c tests an image entry's hitSound as the low nibble of its first
- * byte: GCC allocates the first bit-field there at both widths. */
+/* GCC allocates an image entry's first bit-field, hitSound, in the low nibble
+ * of its first byte at both widths, where IDO puts hitTexture. chrprop.c's
+ * guard-shot impact check once read that byte; it now reads the hitTexture
+ * field, so no site depends on this, and it records why the byte read
+ * differed from the N64. */
 static int checkImageEntryHitSound(void)
 {
     struct image_entry entry;
