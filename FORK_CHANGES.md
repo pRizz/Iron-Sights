@@ -90,7 +90,7 @@ plan's inputs, not checks of this change; its run folder
 
 ### FORK-093 — Native macOS build plan
 
-**Status:** MAC-001 in progress (Tasks 1 and 2 of 11 built, below): the
+**Status:** MAC-001 in progress (Tasks 1 to 3 of 11 built, below): the
 headless 64-bit game builds, boots and plays its 20 missions on macOS.
 MAC-002 to MAC-006 are not started. The owner chose the
 audience, the graphics path and the outline on 2026-11-26, approved the
@@ -273,6 +273,65 @@ Linux containers of `scripts/port/lp64_env.py`.
   aarch64, `OK: ran 600 frames`. `compare_win32.py commits HEAD WORKTREE`:
   `identical in loaded code and data; .buildid differs` (exit 0; the
   identifier hashes debug information, which a header's new lines move).
+
+- **Task 3, clang's warnings named.** A clean headless build printed 9,343
+  compiler warnings in 18 classes where GCC's log is clean (the plan's
+  nineteenth, 362 `unknown-warning-option`, went with Task 2's GCC-only
+  flag). `CMakeLists.txt` now gives clang one `-Wno-` for each, with its
+  count in the comment beside the flags, as the GCC classes have; the three
+  `-Werror=` pointer checks are the same for both compilers, and GCC's
+  command lines are unchanged (361 entries of the x86_64 gate tree still
+  carry `-Wno-discarded-qualifiers`). Not read site by site, being
+  spellings rather than possible defects: `microsoft-anon-tag` 8,148
+  (anonymous struct members under `-fms-extensions`), `pointer-sign` 621,
+  `empty-body` 217, `comment` 81, `pragma-pack` 46, `parentheses` 9. Every
+  site of the other twelve was read before its class was switched off:
+  - `macro-redefined` 82: idiom. `src/bondconstants.h:4764-4765` defines
+    its own `ntohl` and `ntohs` over the macOS SDK's (`sys/_endian.h`) in
+    41 files; the game's definition is the later one and wins in each,
+    and only `src/game/chrai.c` uses them.
+  - `implicit-enum-enum-cast` 29: idiom. 27 in `src/game/language.c`
+    (text-bank indices returned as a `LEVELID`) and 2 in `propobj.c`.
+  - `implicit-const-int-float-conversion` 29: idiom. `1.0f / UINT_MAX`
+    and its macro forms, where 4294967295 becomes 4294967296.0f on every
+    compiler.
+  - `pointer-bool-conversion` 23: idiom. Decompiled `if (&x);` and
+    `if (array)` statements with no effect; `initpathtablelinks.c:187,190`
+    test `!(&g_CurrentSetup)`, always false, as decompiled.
+  - `unused-value` 21: idiom. Decompiled `(0, x)` comma expressions and
+    two `*pointnums++;`.
+  - `switch` 13: idiom. Switches over an enumeration that name some of
+    its values.
+  - `format-security` 12: idiom. `sprintf(buffer, langGet(...))` in
+    `mpmenu.c`, `options.c` and `gunfire.c`: the game's own text as the
+    format, as in the original.
+  - `tautological-constant-out-of-range-compare` 5: **two defects, in
+    debug traces on every build, recorded and not fixed here.**
+    `src/game/lightfixture.c:160-161` compares a `u8` opcode with
+    `G_SETOTHERMODE_L`, `G_SETOTHERMODE_H`, `G_SETGEOMETRYMODE` and
+    `G_CLEARGEOMETRYMODE`, which are negative constants (-71, -70, -73,
+    -74), so the `lightdbg` dump never prints those four commands.
+    `src/game/prop.c:839` writes `!isNotBoundPad(arg1->lookpad)`, which
+    expands to `!arg1->lookpad < 10000` and is always true, so the
+    `cctvprobe` trace reads `boundpads[lookpad - 10000]` for a pad that is
+    not a bound pad. Neither fix is a macOS-only line.
+  - `logical-not-parentheses` 2: `prop.c:839` again, and `src/joy.c:259`,
+    `!(g_ControllerStates) & (1 << i)`, which the source's own comment
+    calls a typo in the original game; kept as the original has it.
+  - `non-literal-null-conversion` 2: idiom. `RMON_THREAD_ID` (0) passed as
+    a thread pointer in `src/init.c`.
+  - `shift-op-parentheses` 2: idiom. `x + width << 2` in
+    `textrelated.c:800,816`, where the addition first is what is meant.
+  - `parentheses-equality` 1: idiom. `if ((a == b))` in `propobj.c:8215`.
+
+  *Ran:* the macOS build from clean has no compiler warning (its one
+  remaining line is the linker's `__common` alignment) and `OK: 705 weak
+  references, 0 strong`; gate `361 files compiled, 0 failed`; `OK: ran 600
+  frames`; mission smoke 20 of 20. x86_64 container: gate 361 and 394
+  files, 0 failed, `narrowing --check` and `unprototyped --check` `OK`,
+  `test_pointer_bits.sh` and `test_headless_configure.sh` pass; aarch64:
+  `OK: ran 600 frames`. `compare_win32.py commits HEAD WORKTREE`:
+  `identical in loaded code and data`.
 
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside

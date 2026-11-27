@@ -438,13 +438,13 @@ git commit -m "Build, link and boot the 64-bit headless game with Apple clang"
   comment beside the flags, as the GCC classes have. The three `-Werror=`
   pointer checks are the same for both. Never `-w`.
 
-- [ ] **Step 1: Count on the plain tree**
+- [x] **Step 1: Count on the plain tree**
 
 Build `build/mac/headless` from clean with the log kept; count `[-W...]`
 by class. Expected: the 19 classes of "What was measured" with counts near
 its figures; record the actual ones.
 
-- [ ] **Step 2: Read the classes that can mark a defect**
+- [x] **Step 2: Read the classes that can mark a defect**
 
 Before a class is switched off, read every site of `format-security`,
 `pointer-bool-conversion`, `tautological-constant-out-of-range-compare`,
@@ -456,14 +456,14 @@ count, and either "idiom: ..." or each site that is a defect with what it
 does. A defect is recorded, not fixed here, unless its fix is a macOS-only
 line.
 
-- [ ] **Step 3: Name the classes, rebuild**
+- [x] **Step 3: Name the classes, rebuild**
 
 Expected: the macOS build log has no compiler warning; the x86_64
 container's gate trees compile with the flags they had
 (`lp64_diagnostics.py gate` passes, and its entries show
 `-Wno-discarded-qualifiers` still present there).
 
-- [ ] **Step 4: Run the task check, commit**
+- [x] **Step 4: Run the task check, commit**
 
 ```bash
 git commit -m "Name each warning class Apple clang prints at 64 bits"

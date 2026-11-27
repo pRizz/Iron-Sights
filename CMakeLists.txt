@@ -96,6 +96,28 @@ elseif(GE_POINTER_BITS EQUAL 64)
         $<$<COMPILE_LANGUAGE:C>:-Wno-overflow>
         $<$<COMPILE_LANGUAGE:C>:-Wno-format-overflow>
         $<$<COMPILE_LANGUAGE:C>:-Wno-unused-result>)
+    # Clang (macOS, MAC-001) prints 18 more classes where GCC's log is clean.
+    # Each is switched off by name with the warnings a clean headless build
+    # printed (Apple clang 21.0.0, 9,343 in all); never -w. FORK-093 has one
+    # line a class for the twelve that can mark a defect, whose every site
+    # was read first. microsoft-anon-tag 8148 (-fms-extensions' anonymous
+    # struct members), pointer-sign 621, empty-body 217, macro-redefined 82,
+    # comment 81, pragma-pack 46, implicit-enum-enum-cast 29,
+    # implicit-const-int-float-conversion 29, pointer-bool-conversion 23,
+    # unused-value 21, switch 13, format-security 12, parentheses 9,
+    # tautological-constant-out-of-range-compare 5, shift-op-parentheses 2,
+    # non-literal-null-conversion 2, logical-not-parentheses 2,
+    # parentheses-equality 1. The three -Werror= checks above are the same for
+    # both compilers.
+    if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+        foreach(GE_CLANG_CLASS microsoft-anon-tag pointer-sign empty-body macro-redefined comment
+                pragma-pack implicit-enum-enum-cast implicit-const-int-float-conversion
+                pointer-bool-conversion unused-value switch format-security parentheses
+                tautological-constant-out-of-range-compare shift-op-parentheses
+                non-literal-null-conversion logical-not-parentheses parentheses-equality)
+            list(APPEND GE_WARNING_OPTIONS $<$<COMPILE_LANGUAGE:C>:-Wno-${GE_CLANG_CLASS}>)
+        endforeach()
+    endif()
 else()
     add_compile_options(-m32 -msse2 -mfpmath=sse)
     if(GE_LP64_ORACLE)
