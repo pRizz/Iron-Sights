@@ -27,6 +27,9 @@ done
 exit 0
 FAKE
 chmod +x "$work/gcc"
+# A stand-in uname, so a test chooses the host: FAKE_UNAME, Linux unless set.
+printf '#!/usr/bin/env bash\necho "${FAKE_UNAME:-Linux}"\n' >"$work/uname"
+chmod +x "$work/uname"
 
 failures=0
 expect() {
@@ -142,9 +145,13 @@ expect "an Apple linker is told each undefined weak reference by name" "-Wl,-U,_
 expect "no host source off macOS" "" "$(helper_output harness_host_sources)"
 expect "the macOS host functions are a source on an Apple compiler" "port/src/port_macos.c" \
     "$(helper_output harness_host_sources "${apple[@]}")"
-expect "a tool that is installed is not skipped" "status=0 " \
-    "$(helper_output 'status=0; out=$(harness_skip_unless_tool test_x bash) || status=$?; echo "status=$status $out"')"
-expect "a missing tool skips by name with its reason" "status=1 test_x: SKIP (no-such-tool-midas not installed)" \
+expect "a tool that is installed is not skipped on a Mac" "status=0 " \
+    "$(helper_output 'status=0; out=$(harness_skip_unless_tool test_x bash) || status=$?; echo "status=$status $out"' FAKE_UNAME=Darwin)"
+expect "a Mac without the tool skips by name with its reason" "status=1 test_x: SKIP (no-such-tool-midas not installed)" \
+    "$(helper_output 'status=0; out=$(harness_skip_unless_tool test_x no-such-tool-midas) || status=$?; echo "status=$status $out"' FAKE_UNAME=Darwin)"
+# Off macOS a missing tool is no reason to skip: the harness goes on and fails
+# on it, as CI's browser job, which runs test_web_touch, must.
+expect "a missing tool is not skipped off macOS" "status=0 " \
     "$(helper_output 'status=0; out=$(harness_skip_unless_tool test_x no-such-tool-midas) || status=$?; echo "status=$status $out"')"
 
 # A loop over "$(harness_widths)" runs zero times when the helper fails, and the

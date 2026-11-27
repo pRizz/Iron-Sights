@@ -10,7 +10,7 @@
 #   harness_quiet_flags                # -w, and what clang needs beside it
 #   harness_game_header_flags          # -Wno- classes for the game's headers
 #   harness_wrap_flags FUNCTION        # route FUNCTION to __wrap_FUNCTION
-#   harness_skip_unless_tool NAME TOOL # false, with a SKIP line, without TOOL
+#   harness_skip_unless_tool NAME TOOL # false, with a SKIP line, on a Mac without TOOL
 #   harness_weak_undefined SYMBOL...   # what a link needs for weak references
 #   harness_host_sources               # the host's own port sources (macOS)
 #
@@ -180,11 +180,13 @@ harness_wrap_flags() {
     return 0
 }
 
-# Returns 0 when TOOL is on the PATH. Otherwise prints "NAME: SKIP (TOOL not
-# installed)" and returns 1, so a harness that cannot run here says so by
-# name instead of failing or passing silently.
+# On a Mac without TOOL on the PATH, prints "NAME: SKIP (TOOL not installed)"
+# and returns 1, so a harness that cannot run there says so by name instead
+# of failing or passing silently. Returns 0 everywhere else: off macOS a
+# missing tool is no reason to skip, and the harness goes on to fail on it
+# (CI's browser job runs test_web_touch and must not pass without emcc).
 harness_skip_unless_tool() {
-    if command -v "$2" >/dev/null 2>&1; then
+    if [[ $(uname -s) != Darwin ]] || command -v "$2" >/dev/null 2>&1; then
         return 0
     fi
     echo "$1: SKIP ($2 not installed)"

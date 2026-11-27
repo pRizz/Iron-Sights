@@ -202,8 +202,11 @@ WIN64-001, on the owner's laptop (RTX 3070 Laptop GPU) and in the rebuilt
 
 ### FORK-093 — Native macOS build plan
 
-**Status:** MAC-001 in progress (Tasks 1 to 10 of 11 built, below): the
-headless 64-bit game builds, boots and plays its 20 missions on macOS.
+**Status:** MAC-001 is done (2026-11-27, its eleven tasks below): the
+headless 64-bit game builds with Apple clang, boots, plays its 20 missions
+and its play sets, runs them under the sanitizers, and its simulation is
+identical to the aarch64 Linux build's in all 38 comparison cases. It has
+no window, picture, sound or input, and nothing on macOS is shipped.
 MAC-002 to MAC-006 are not started. The owner chose the
 audience, the graphics path and the outline on 2026-11-26, approved the
 design on 2026-11-27 and accepted MAC-001's plan the same day.
@@ -265,8 +268,8 @@ is read; which of clang's undefined-behaviour checks a sanitizer build
 runs; Arm's MIT-licensed `sinf`, `expf` and `powf` for comparison builds
 only; a macOS build-and-test job in CI from this milestone; clang's
 narrowings read and listed; dynamic lookup with a link check for the weak
-references; and no 32-bit harness half on macOS. Nothing is built, and
-the status table says so. It was
+references; and no 32-bit harness half on macOS. Nothing was built when it
+was accepted; "MAC-001 as built" below records its execution. It was
 measured in a copy of the tree (`git archive` of 990f991) edited and built
 outside the repository, then discarded:
 
@@ -861,8 +864,177 @@ Linux containers of `scripts/port/lp64_env.py`.
   and `sentry-smoke` succeeded. `publish` failed after its checksums
   passed, at `gh release create`, with `HTTP 403: Resource not accessible
   by integration`: GitHub refused the job's token, and no release was
-  made for that commit. Task 8 changed no workflow file; the cause is not
-  known here and is left to the owner.
+  made for that commit. Task 8 changed no workflow file, and the cause is
+  not known here. It did not recur: the runs on the next two commits
+  (46073236837 on 4fde028, another session's, and 46073982716 on 36a280a,
+  Task 9's) passed in every job, `publish` and `macos-arm64-tests`
+  included.
+- **Task 11, the guide and the close.** [The macOS
+  guide](scripts/port/macos.md) is new: what exists (the headless game),
+  where it has run, what a developer needs, the build and its checks, the
+  play sets, the sanitizer build, the comparison with Linux, what differs
+  on macOS and what it lacks; it is finished in MAC-006. `AGENTS.md`
+  ("Repo-Local Guidance") gains one paragraph: the `build/mac/` trees, the
+  check of a change on a Mac, the link check, the clang forms of the
+  static checks, where macOS code goes, and the harness helpers. The
+  macOS plan's status table marks MAC-001 done, with its figures and the
+  hand-over to MAC-002.
+  *The closing runs,* at 36a280a (Task 9's commit, on top of another
+  session's WIN64-001, 4fde028) with this task's text, on the Mac:
+  - the headless build, no compiler warning, `OK: 705 weak references, 0
+    strong`; gate `361 files compiled, 0 failed`; `OK: 33 narrowings in 19
+    files, all allowed`; `OK: ran 600 frames`; 20 of 20 missions;
+    `macos_no_rom: OK (exit 3, ...)`; `macos_harnesses: 46 passed, 2
+    skipped by name, 0 failed` (the plan's 44 and 2, with
+    `test_macos_host` and `test_macos_harnesses` added by Tasks 1 and 10);
+    `test_macos_host: PASS (64-bit)`;
+  - the play sets on it: `OK: 117 of 117 cases`; `OK: 291 pool and stage
+    pairs within budget`; the 14 demos against the i686 reference of Task
+    7 (made at 2af7d4b's tree, not rebuilt): `OK: 14 demos, 14 identical,
+    0 differing as recorded`;
+  - the sanitizer build (`build/mac/san`), no compiler warning: `OK: ran
+    600 frames`, 20 of 20 missions, the play sets at three times their
+    frames `OK: 117 of 117 cases` (`OK: 293 pool and stage pairs within
+    budget`), and no AddressSanitizer or undefined-behaviour report in any
+    log, under decision 2's checks;
+  - the comparison build (`build/mac/cmp`) and the aarch64 container's, of
+    the same commit: `OK: 38 of 38 cases ran` and `agree with themselves`
+    on both, `OK: 38 cases, 38 streams, 38 identical, 0 as recorded`,
+    `OK: sim differs between seeds`.
+  In the containers: aarch64 `OK: ran 600 frames`; x86_64 gates of 361 and
+  394 files with 0 failed, `OK: 0 narrowings`, `OK: 3 unprototyped calls
+  in 3 files, all allowed` (4 before WIN64-001). Of the 110 lines of CI's
+  tests step, run on a snapshot in the x86_64 container (the sanitized
+  `test_buffers.sh` line unsanitized, as before), 100 passed; the five
+  that need Git passed in the checkout (`OK: 24 truncating casts`,
+  `test_lp64_overlays.py` `OK`, `OK: 1633 sites, all reviewed`, the
+  gallery pending with its strict inputs fresh, and
+  `test_every_ci_build_folder_is_ignored_by_git`). **Five were not run
+  here:** WIN64-001's MinGW x64 gate (`build/lp64/gate-mingw`: its
+  configure, its `ge_buildinfo` target and the three `lp64_diagnostics.py`
+  lines that now name that tree) needs `x86_64-w64-mingw32-gcc`, which the
+  Mac's `goldeneye` image, built before 4fde028's Dockerfile change, does
+  not have; CI runs them. The same three checks on the two Linux trees
+  alone are the figures above. `compare_win32.py commits HEAD WORKTREE`:
+  `identical in loaded code and data`.
+  *For MAC-002, measured at the close and edited nowhere:* a macOS video
+  tree (`-DGE_VIDEO=ON -DSDL2_LINUX_ROOT=/opt/homebrew`) configures, and 7
+  of its 396 steps fail, where the macOS plan measured 75 of 393 in 14
+  more files than the headless tree. The seven `port/src` files of that
+  measurement compile now (Task 2's `os.h` guards were all they needed).
+  The seven that remain are the renderer's, all strict tier:
+  `port/fast3d/about.cpp`, `gfx_cc.cpp`, `gfx_opengl.cpp`, `gfx_pc.cpp`,
+  `gfx_shiny.cpp`, `weapon_cache.cpp` and `hd_textures.cpp`. They fail
+  because the game's `include/math.h` is found in front of libc++'s
+  (`<cmath> tried including <math.h> but didn't find libc++'s`, then
+  `fabsf`, `expf`, `acosf`, `lroundf`, `fmodf`, `fminf`, `atan2f` and
+  `asinf` undeclared, unresolved using-declarations and an ambiguous
+  `to_string`); the link, which would still take the Linux line, was not
+  reached. Also handed over, each recorded in its task's paragraph above:
+  the three sanitizer sites in strict-tier files that decision 2's
+  switches cover (`src/game/gunfire.c:5455` by the compiler's numbering,
+  `src/game/model.c:5959`, `src/game/bondview2.c:5505`); the two defects
+  in debug traces that clang's warnings showed and no build fixes
+  (`src/game/lightfixture.c:160-161`, `src/game/prop.c:839`); the 705
+  undefined weak references, 702 of them asset symbols and three
+  video-only functions (`portHealthWide`, `portMpHudWide`,
+  `portInputPadDigMoveP1`) that a video build should define (not
+  measured: no video tree links yet); and `lp64_pointer_types.py`'s misreading of `offsetof` on GCC
+  trees, which Task 6's correction steps around and does not fix.
+  `build/mac/` and the session's scratch folder (the downloaded Arm
+  sources among them) were deleted at the close.
+- **The final review and its fix pass.** One fresh reviewer read the
+  eleven commits against the plan, its Review Focus and the executor's
+  rulings: nothing critical, three important findings, each fixed with a
+  test that failed first, and one question that a measurement answered.
+  1. *`src/game/stan.c` had lost its line endings.* Task 6's two-line edit
+     went through a tool that rewrites the whole file, and the commit
+     turned 3,747 of its lines from CRLF to LF: a reformatting of an
+     upstream-owned file that hid the edit in the diff, which neither the
+     commit nor this entry said, and which Task 6's correction left in
+     place. The file has its own endings again, written to the index
+     unfiltered (`.gitattributes` would otherwise normalise it once more);
+     against the commit before Task 6 it now differs by the five guarded
+     lines and nothing else. `scripts/port/test_line_endings.py` (new, in
+     CI's tests step) pins the 17 tracked files Git stores with CRLF or
+     mixed endings and fails when one loses them or another gains them; it
+     failed on `stan.c` first. No compiled byte depends on it (the Windows
+     comparison below).
+  2. *`test_web_touch.sh` could pass without its compiler off macOS.*
+     Task 4's `harness_skip_unless_tool` skipped wherever `emcc` was
+     missing, so CI's browser job (`web-pages.yml`), which runs that
+     harness in the SDK image, would have printed `SKIP` and passed if the
+     image ever lacked it. The helper now skips only on a Mac and returns 0
+     elsewhere, so the harness fails on the missing tool as it did before
+     Task 4 (`a missing tool is not skipped off macOS`, in
+     `test_harness_widths.sh`, failed first).
+  3. *The skip list saw one spelling.* `macos_harnesses.sh` matched only
+     `NAME: SKIP (`, so the partial skips of four harnesses were held by
+     nothing, and a harness that printed nothing passed. It now treats
+     every line that speaks of skipping ("skip", "skipped", "SKIP", "did
+     not run"; a line starting `ok: ` is a check's own name) as a skip
+     line that must start with one of its 17 listed lines, shows the
+     partial ones as `PART`, and fails a harness that prints nothing.
+     `test_macos_harnesses.sh` gained seven checks, which failed first.
+     This supersedes Task 10's "list of two": two harnesses still skip
+     whole, and 15 listed lines are parts (`test_pointer_bits`' 32-bit and
+     MinGW cases, `test_abi_probe`'s 32-bit and Windows x64 halves,
+     `test_save_widths`' other width, `test_lp64_address`'s `-no-pie`
+     case, `test_save_transfer`'s two Windows-only tests, and one game log
+     line of `test_enhanced_fonts`). The plan named three skips; its
+     as-built note now names the rest.
+  *The question: are Task 8's three functions glibc's bits?* The plan's
+  test was the sweep's 1,048,576 inputs, which passed. Compared in the
+  containers with the C library itself, in scratch (a NaN counted as one
+  value): against aarch64 glibc 2.39, `expf` is equal on all
+  4,294,967,296 floats, `sinf` differs on 12 (six values and their
+  negatives, |x| between 53 and 117, each by one unit in the last place),
+  and `powf` is equal on 300,000,000 scrambled pairs and differs on 19 of
+  about 940 million pairs chosen at its range edges. Against x86_64 glibc
+  on a processor with FMA (the container's, under Rosetta 2): the same 12
+  `sinf` inputs, 2 `expf` inputs and the same kind of `powf` pairs.
+  Against i686 glibc: equal on all 14 of the differing inputs listed and
+  on 20,000,000 scrambled pairs (not run over every float: 32-bit code is
+  emulated here). The cause is fused multiply-adds: Arm's originals built
+  with `-ffp-contract=fast` and their default aarch64 configuration equal
+  aarch64 glibc on every float for `sinf` and `expf` and on all the `powf`
+  pairs above, and built without fusing they equal this port. So glibc's
+  hosts never agreed with each other on every input, only on those the
+  sweep and the cases reach; the port, which must not fuse, follows the
+  i686 results, and every comparison build now agrees on all of them. The
+  Linux comparison streams did not move (Task 8's before-and-after run),
+  and no line of the expected file was exercised again at i686: the
+  reviewer advised an i686 `stage-jungle` run against its pins, which the
+  plan leaves out and this session did not make. `port_compare_math_arm.c`
+  and the guide say what was found. **This is for the owner to weigh
+  against decision 3,** whose wording was "reproduce glibc's bits".
+  *Left as the reviewer's minor notes, not acted on:* a NaN's sign is the
+  host's in these functions; no `#pragma STDC FP_CONTRACT OFF` in the Arm
+  files (flags alone prevent fusing); the Apple-Silicon-only refusal reads
+  `CMAKE_SYSTEM_PROCESSOR`; clang's narrowing warning misses narrowings to
+  16 or 8 bits, and `__APPLE__` branches are outside `unprototyped`;
+  `macos_no_rom.sh` and `macos_harnesses.sh` have no deadline of their
+  own; the two clang blocks in `CMakeLists.txt` would apply to a clang
+  off macOS; and three text slips (`CMakeLists.txt`'s "Linux gcc only"
+  beside the sanitizer options, "All eight failed" in Task 5's paragraph
+  where seven tests were added, one `nanosleep` in the plan's Task 1).
+  *Ran after the fix pass.* macOS: `test_line_endings.py` `OK`,
+  `test_harness_widths: PASS`, `test_macos_harnesses: PASS`,
+  `macos_harnesses: 46 passed, 2 skipped by name, 0 failed` with its 15
+  `PART` lines, the headless build rebuilt with `OK: 705 weak references,
+  0 strong`, gate `361 files compiled, 0 failed`, `OK: ran 600 frames`, 20
+  of 20 missions. The play sets, the sanitizer sets and the comparison run
+  were not repeated: the pass changed no compiled byte (line endings, a
+  comment, shell and Python). x86_64 container, on a snapshot: gates of 361
+  and 394 files with 0 failed, `narrowing --check` and `unprototyped
+  --check` `OK`; of the 111 lines of CI's tests step, 100 passed
+  (`test_harness_widths: PASS` and `test_macos_harnesses: PASS` among
+  them), the six that need Git passed in the checkout (the five of the
+  closing runs and `test_line_endings.py`), and the five MinGW x64 lines
+  could not run, as above; `test_web_touch.sh`, which that image cannot
+  run for want of `emcc`, now exits 127 there instead of printing `SKIP`.
+  aarch64: `OK: ran 600 frames`. `compare_win32.py commits HEAD WORKTREE`:
+  `identical in loaded code and data`.
 
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside

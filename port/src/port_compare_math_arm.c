@@ -23,8 +23,18 @@
  * simulation streams parted from aarch64 Linux's because of it. Built alone,
  * Arm's routines give the sweep the hashes glibc's had (sinf cc151db4, expf
  * 8be3a4cd, powf 648805d1) on macOS, aarch64 and x86_64, so every comparison
- * build now computes the three alike and the Linux builds' streams stay what
- * they were. test_lp64_compare.sh pins the hashes.
+ * build now computes the three alike, and the Linux builds' 38 streams stayed
+ * what they were (measured, FORK-093). test_lp64_compare.sh pins the hashes.
+ *
+ * They are not glibc's bits on every input, and nothing could be: glibc's
+ * hosts differ among themselves. glibc compiles these routines with fused
+ * multiply-adds on aarch64 and in the FMA variants an x86_64 processor with
+ * FMA selects, and without on i686. Compared with each over every float
+ * (FORK-093): this file equals i686 glibc wherever it was tried, and differs
+ * from the fused builds by one unit in the last place on 12 sinf inputs
+ * (|x| between 53 and 117), 2 expf inputs and a few powf pairs in a billion.
+ * No comparison case reaches one. A comparison build must not fuse
+ * (-ffp-contract=off), so it follows the i686 results.
  *
  * What was changed from Arm's sources. The arithmetic and its order were not:
  * each statement that computes is Arm's.

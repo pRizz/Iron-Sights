@@ -149,6 +149,7 @@ jobs:
           python3 scripts/port/test_lp64_static_checks.py
           python3 scripts/port/test_lp64_lto.py
           python3 scripts/port/test_macos_link_check.py
+          python3 scripts/port/test_line_endings.py
           python3 scripts/port/test_lp64_casts.py
           python3 scripts/port/lp64_casts.py check
           python3 scripts/port/test_lp64_overlays.py

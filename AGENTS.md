@@ -248,6 +248,30 @@ pass its isolated executable rather than rebuilding an active player binary.
   under `port/fast3d/` on its strict-tier branch, and update its milestone
   status table before handing off. The Apple TV build gets its own plan after
   it.
+- macOS trees and their run output live under `build/mac/` (`headless`,
+  `san`, `cmp`), never in `build_win` or `build/lp64`; a macOS configure is
+  64-bit and arm64 only, and CMake refuses another. The check of a change on
+  a Mac (MAC-001, [the macOS guide](scripts/port/macos.md)) is `cmake -S .
+  -B build/mac/headless -G Ninja -DCMAKE_BUILD_TYPE=Debug
+  -DGE_POINTER_BITS=64 -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+  && cmake --build build/mac/headless`, then `lp64_diagnostics.py gate
+  build/mac/headless`, `lp64_diagnostics.py narrowing --check
+  build/mac/headless` and `lp64_boot.py --expect-run`; `bash
+  scripts/port/macos_harnesses.sh` runs every harness and passes a `SKIP`
+  line only from its list. CI's `macos-arm64-tests` job runs these without
+  a ROM. Every macOS link runs `scripts/port/macos_link_check.py`: a 64-bit
+  build's undefined weak references need `-Wl,-undefined,dynamic_lookup`
+  on Mach-O, and the check fails the build on a strong undefined symbol,
+  which that flag would otherwise leave to fail in play. On a clang tree
+  `narrowing --check` reads clang's wording and holds its places to
+  `scripts/port/lp64_narrowing_clang.txt` (clang lists places GCC's check
+  cannot see; a new one is fixed, or read and given its line and reason),
+  and `unprototyped` exits 2, since it needs GCC: run it and the other
+  static checks in the x86_64 container as above. macOS-only code goes in
+  `port/src/port_macos.c`; an edit to a shared file is behind `__APPLE__`
+  or CMake's `APPLE` and still owes the Linux gate and `compare_win32.py`.
+  A harness takes compiler- and linker-specific flags from the helpers in
+  `scripts/port/harness_widths.sh`, never a GNU flag by name.
 - The native Windows x64 build (WIN64-001 to WIN64-004) follows the accepted
   [Windows x64 plan](scripts/port/windows_x64_plan.md). Read it before
   resuming, do not reopen its recorded decisions or the 64-bit plan's, keep

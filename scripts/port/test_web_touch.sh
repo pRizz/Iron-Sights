@@ -2,7 +2,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source scripts/port/harness_widths.sh
-# The browser's compiler: a host without it says so by name and runs nothing.
+# The browser's compiler: a Mac without it says so by name and runs nothing;
+# any other host without it fails below.
 harness_skip_unless_tool test_web_touch emcc || exit 0
 test_dir=$(mktemp -d /tmp/midas-touch-test.XXXXXX)
 trap 'rm -rf "$test_dir"' EXIT

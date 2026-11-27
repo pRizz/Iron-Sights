@@ -5,9 +5,10 @@
 **Status:** Planned on 2026-11-27 from measurements on `main` at 990f991
 and accepted by the owner the same day with all seven recommendations
 ("Accept all seven"); "Decisions for the owner" at the end lists them, and
-the tasks are written for them. Execution started the same day: a ticked
-box below is a step done, and FORK-093 in `FORK_CHANGES.md` records what
-ran for each task.
+the tasks are written for them. Carried out the same day, all eleven
+tasks: a ticked box below is a step done, FORK-093 in `FORK_CHANGES.md`
+records what ran for each task, and the macOS plan's status table has the
+close.
 
 **Goal:** The 64-bit headless game builds with Apple clang on Apple Silicon
 macOS, boots, plays its automated sets, passes the sanitizers and matches
@@ -512,7 +513,14 @@ git commit -m "Name each warning class Apple clang prints at 64 bits"
 and clang needs its own class names; three helpers were added for what lay
 behind the first errors (`harness_host_sources`, `harness_weak_undefined`,
 `harness_wrap_flags`); and the task is one commit, not one a cause, because
-the causes overlap inside single harnesses.
+the causes overlap inside single harnesses. The skips above are not all of
+them: on macOS `test_pointer_bits` also skips its 32-bit and MinGW cases
+by name, `test_save_widths` the other width's half, `test_abi_probe` its
+32-bit and Windows x64 halves, and `test_save_transfer` two Windows-only
+tests. After the final review `macos_harnesses.sh` lists every such line
+and fails on a new one, and `harness_skip_unless_tool` skips only on a
+Mac, so `test_web_touch` fails without `emcc` in CI's browser job as it
+did before.
 
 - [x] **Step 1: Write the failing helper tests, then the helpers**
 
@@ -609,7 +617,10 @@ Written for decision 2, as accepted.
   change.
 - `stan.c:3472-3473` uses `offsetof(StandTilePoint, link)` and
   `offsetof(StandTile, points)`.
-  **As built:** behind `__APPLE__` only. Unguarded, it made
+  **As built:** behind `__APPLE__` only, and with the file's own CRLF
+  line endings (the first commit rewrote every line with LF; the final
+  review found it and `test_line_endings.py` now pins the files that keep
+  CRLF). Unguarded, it made
   `lp64_pointer_types.py check` fail on GCC trees (FORK-093, Task 6's
   correction).
 
@@ -787,8 +798,9 @@ Written for decision 4, as accepted.
   `needs`: a red macOS job is visible and holds back no release.
 
 **As built** (FORK-093 has the detail): the job calls two small scripts,
-`macos_harnesses.sh` (every harness, with the SKIP lines held to a list of
-two) and `macos_no_rom.sh`, rather than carrying their logic in the
+`macos_harnesses.sh` (every harness, with its skip lines held to a list:
+two whole harnesses, and after the final review the partial skips too)
+and `macos_no_rom.sh`, rather than carrying their logic in the
 workflow file; `test_macos_harnesses.sh` tests the first. It was done
 before Tasks 8 and 9, which waited on the owner.
 
@@ -817,13 +829,13 @@ git commit -m "Build and test the macOS headless game in CI"
   `scripts/port/macos_plan.md` (status table, MAC-001 row),
   `FORK_CHANGES.md`
 
-- [ ] **Step 1: Write the guide's first part**
+- [x] **Step 1: Write the guide's first part**
 
 How a developer builds and checks the headless game on macOS, from the
 task check; what it lacks so far (no window); where its output lives. It
 is finished in MAC-006.
 
-- [ ] **Step 2: Close**
+- [x] **Step 2: Close**
 
 Run the whole task check, the harnesses, Tasks 6, 7 and 9's runs once
 more at the closing commit. Fill the status row with what ran and its
