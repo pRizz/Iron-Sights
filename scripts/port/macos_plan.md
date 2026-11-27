@@ -250,7 +250,11 @@ The comparison build replaces `tanf`, `atanf` and `cosf` with in-tree
 versions (`port/src/port_compare_math.c`); the others were swept only on
 glibc (`scripts/port/lp64_libm_sweep.c`). MAC-001 runs the sweep on macOS,
 and a function that differs there joins the comparison build's in-tree set.
-A shipped build keeps the system's maths.
+A shipped build keeps the system's maths. The sweep found three, `sinf`,
+`expf` and `powf`; MAC-001's decision 3 (accepted 2026-11-27) takes them
+from Arm's optimized-routines under its MIT licence, pinned to glibc's
+hashes so that the Linux comparison streams do not move, with a notice
+entry, in comparison builds only.
 
 ### Landing
 
@@ -328,14 +332,16 @@ Steam Deck zip, and one for the app bundle.
 ### Signing and release
 
 The app, its SDL2 and any crash handler are signed with the owner's
-Developer ID under the hardened runtime, notarized and stapled. A
+Developer ID under the hardened runtime, notarized and stapled. From
+MAC-001 a `macos-arm64-tests` job on GitHub's Apple Silicon runner builds
+and checks the headless tree without a ROM (MAC-001's decision 4). A
 `macos-arm64` job in `.github/workflows/windows-release.yml` on GitHub's
 Apple Silicon runner builds, packages, signs and notarizes on a push to
 `main`, and the release attaches and attests the download like the others.
-The `publish` job does not need the macOS job: a signing or notarization
-failure, or an Apple outage, fails the workflow run visibly but never holds
-back the Windows and Linux packages. Secrets live in GitHub, never in the
-repository.
+The `publish` job needs neither macOS job: a red test job, a signing or
+notarization failure, or an Apple outage, fails the workflow run visibly
+but never holds back the Windows and Linux packages. Secrets live in
+GitHub, never in the repository.
 
 ## Verification
 
@@ -414,8 +420,9 @@ itself as well as its containers.
   build is compared with; x86_64 runs under Rosetta 2.
 - **The owner's Windows laptop** regenerates the gallery and lands the
   strict-tier branch.
-- **CI** has no ROM and no GPU; from MAC-006 its Apple Silicon runner
-  builds, packages and signs.
+- **CI** has no ROM and no GPU; from MAC-001 its Apple Silicon runner
+  builds and checks the headless tree, and from MAC-006 it packages and
+  signs.
 
 ## Milestones
 
@@ -428,8 +435,14 @@ owner, as LP64-003 to LP64-007 did.
    `main`, a headless 64-bit macOS tree builds with Apple clang and passes
    verification 2, 4, 5 and 8 and the headless halves of 1 and 3, and
    verification 9 holds. *Planned on 2026-11-27 in
-   [its plan](macos_mac_001.md); the owner's answers to its seven
-   decisions are open.*
+   [its plan](macos_mac_001.md) and accepted by the owner the same day
+   with its seven decisions. They read the done condition so: verification
+   5 means no sanitizer report under the checks its decision 2 names;
+   verification 4 means all 38 simulation streams identical to aarch64
+   Linux's, with no line in the expected file; verification 8 means 44
+   harnesses pass and `test_web_touch` and `test_xwayland_pointer` are
+   skipped by name. They also bring the first macOS CI job, a build and
+   test of the headless tree, forward from MAC-006.*
 2. **MAC-002 Window, picture, sound and input.** The video tree builds and
    links SDL2 and Apple's OpenGL; the executable is found without
    `/proc/self/exe`, so the game starts; Retina resolution, desktop
@@ -449,7 +462,8 @@ owner, as LP64-003 to LP64-007 did.
 5. **MAC-005 Crash reporting.** Sentry on macOS and its symbols. Done when
    the packaged app sends the macOS crash cases of verification 11.
 6. **MAC-006 Signing, release and hand-over.** Developer ID signing,
-   notarization, the `macos-arm64` CI job, the release, a developer guide
+   notarization, the `macos-arm64` CI job (the packaging one; MAC-001
+   adds the test job), the release, a developer guide
    beside `linux_64bit.md`, the README's download, and the Apple TV
    hand-over. Done when one push to `main` publishes the notarized download
    beside the other packages, attested; verification 12 holds; nothing is
@@ -472,6 +486,16 @@ Owner's decisions:
   project.
 - Six milestones, Apple Silicon only (2026-11-26).
 - The design, with the calls below (2026-11-27).
+- MAC-001's plan with all seven of its recommendations (2026-11-27,
+  "Accept all seven"); [its plan](macos_mac_001.md) lists them with the
+  alternatives not taken. Four reach beyond that milestone: a clang
+  sanitizer build switches off `array-bounds`, `object-size` and
+  `float-cast-overflow` by name, and `pointer-overflow` for `model.c`,
+  rather than editing the upstream and strict-tier lines they fire on; the
+  comparison build's `sinf`, `expf` and `powf` are Arm's MIT-licensed
+  routines, third-party code that no shipped build compiles; a macOS job
+  builds and tests in CI from MAC-001 and holds back no release; and no
+  harness runs a 32-bit half on macOS.
 
 Calls made in drafting, which the owner accepted with the design and can
 still correct:
@@ -543,7 +567,7 @@ mark a milestone done without it.
 
 | ID | Status | Notes |
 |---|---|---|
-| MAC-001 | Planned, not accepted | [Its plan](macos_mac_001.md) was written on 2026-11-27 and waits for the owner's answers to its seven decisions. Nothing is built. Measured for it in a scratch copy outside the repository: seven guarded edits and two host functions build the headless game under Apple clang; it then ran 600 frames, 20 of 20 missions and 117 of 117 play cases, and 33 of 38 simulation streams matched the aarch64 Linux build, the other five differing through `sinf`, `expf` and `powf`. |
+| MAC-001 | Planned and accepted, not started | [Its plan](macos_mac_001.md) was written on 2026-11-27 and accepted by the owner the same day with all seven recommendations. Nothing is built, and execution has not been asked for. Measured for it in a scratch copy outside the repository: seven guarded edits and two host functions build the headless game under Apple clang; it then ran 600 frames, 20 of 20 missions and 117 of 117 play cases, and 33 of 38 simulation streams matched the aarch64 Linux build, the other five differing through `sinf`, `expf` and `powf`. |
 | MAC-002 | Not started | Needs MAC-001. Strict tier: lands through the laptop. |
 | MAC-003 | Not started | Needs MAC-002. Strict tier: lands through the laptop. |
 | MAC-004 | Not started | Needs the bundle identifier from the owner. |

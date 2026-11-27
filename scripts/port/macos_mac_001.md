@@ -2,9 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Planned on 2026-11-27. Not yet accepted: the owner's answers to
-"Decisions for the owner" at the end are open, and the plan is written for
-the recommendations. Nothing is built.
+**Status:** Planned on 2026-11-27 from measurements on `main` at 990f991
+and accepted by the owner the same day with all seven recommendations
+("Accept all seven"); "Decisions for the owner" at the end lists them, and
+the tasks are written for them. Nothing is built: execution has not been
+asked for.
 
 **Goal:** The 64-bit headless game builds with Apple clang on Apple Silicon
 macOS, boots, plays its automated sets, passes the sanitizers and matches
@@ -584,7 +586,7 @@ git commit -m "Make the narrowing check read clang, and refuse what it cannot re
 
 ### Task 6: The sanitizers under clang
 
-Written for decision 2's recommendation.
+Written for decision 2, as accepted.
 
 **Files:**
 - Modify: `CMakeLists.txt` (the `GE_SANITIZE` block, `:466-492`),
@@ -658,7 +660,7 @@ git commit -m "Record the macOS headless play sets"
 
 ### Task 8: One `sinf`, `expf` and `powf` for the comparison build
 
-Written for decision 3's recommendation.
+Written for decision 3, as accepted.
 
 **Files:**
 - Create: `port/src/port_compare_math_arm.c` (the three functions and
@@ -745,7 +747,7 @@ git commit -m "Compare the macOS simulation with the aarch64 Linux build"
 
 ### Task 10: A macOS job in CI
 
-Written for decision 4's recommendation.
+Written for decision 4, as accepted.
 
 **Files:**
 - Modify: `.github/workflows/windows-release.yml`,
@@ -819,8 +821,14 @@ git commit -m "Close MAC-001: the headless macOS build"
 
 ## Decisions for the owner
 
-Open. Each has the recommendation the plan is written for and the
-alternative.
+**The owner accepted all seven recommendations on 2026-11-27** ("Accept
+all seven"), in the session that wrote this plan. They are kept here as
+put, each with the alternative that was not taken; the plan is written for
+the recommendations. Decision 1 defines the milestone's done condition;
+decision 2 names the sanitizer checks a clang build runs; decision 3 brings
+third-party MIT code into comparison builds only, and returns to the owner
+if Task 8's first step finds its premise false; decision 4 moves the first
+macOS CI job from MAC-006 to this milestone.
 
 1. **What "done" means.** The macOS plan says MAC-001 is done when a
    headless tree builds with Apple clang and passes verification 2, 4, 5

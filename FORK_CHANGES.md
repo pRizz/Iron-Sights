@@ -34,7 +34,8 @@ new areas. Status describes implementation state, not Git publication state.
 
 **Status:** Planned; nothing is built. Documentation only: no source, build
 file or tool changed. The owner chose the audience, the graphics path and
-the outline on 2026-11-26 and approved the design on 2026-11-27.
+the outline on 2026-11-26, approved the design on 2026-11-27 and accepted
+MAC-001's plan the same day.
 
 **What it is.** [The macOS plan](scripts/port/macos_plan.md) is the
 project after the 64-bit port (FORK-089): a native Apple Silicon macOS build
@@ -87,8 +88,14 @@ the owner an Apple Developer Program membership, a bundle identifier, a
 Developer ID certificate and a notarization key.
 
 **MAC-001's plan (2026-11-27).** [macos_mac_001.md](scripts/port/macos_mac_001.md)
-plans the first milestone in eleven tasks and puts seven decisions to the
-owner; it is not yet accepted, and the status table says so. It was
+plans the first milestone in eleven tasks. The owner accepted it on
+2026-11-27 with all seven of its recommendations: how its done condition
+is read; which of clang's undefined-behaviour checks a sanitizer build
+runs; Arm's MIT-licensed `sinf`, `expf` and `powf` for comparison builds
+only; a macOS build-and-test job in CI from this milestone; clang's
+narrowings read and listed; dynamic lookup with a link check for the weak
+references; and no 32-bit harness half on macOS. Nothing is built, and
+the status table says so. It was
 measured in a copy of the tree (`git archive` of 990f991) edited and built
 outside the repository, then discarded:
 
