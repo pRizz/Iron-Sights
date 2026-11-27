@@ -3469,8 +3469,13 @@ struct StandTilePoint *stanMatchTileName(char *id)
             v[2] = (f32) walked;
             v[3] = (f32) (uintptr_t) t;
             v[4] = (f32) sizeof(StandTilePoint);
+#ifdef __APPLE__ /* clang's sanitizer reports a member access through a null pointer */
             v[5] = (f32) offsetof(StandTilePoint, link);
             v[6] = (f32) offsetof(StandTile, points);
+#else
+            v[5] = (f32) (uintptr_t) &(((StandTilePoint *) 0)->link);
+            v[6] = (f32) (uintptr_t) &(((StandTile *) 0)->points);
+#endif
             v[7] = (f32) (u16) tile->link;
             ge_dbg_vec("stanmatch start/id0/walked/end/szpt/offlink/offpts/link0", v, 8);
         }

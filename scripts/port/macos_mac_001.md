@@ -609,6 +609,9 @@ Written for decision 2, as accepted.
   change.
 - `stan.c:3472-3473` uses `offsetof(StandTilePoint, link)` and
   `offsetof(StandTile, points)`.
+  **As built:** behind `__APPLE__` only. Unguarded, it made
+  `lp64_pointer_types.py check` fail on GCC trees (FORK-093, Task 6's
+  correction).
 
 - [x] **Step 1: Reproduce**
 
@@ -783,7 +786,7 @@ before Tasks 8 and 9, which waited on the owner.
 Run each of the job's lines in a new clone with no ROM and no `build/`
 folder. Expected: each passes as the job expects.
 
-- [ ] **Step 2: Add the job, push, read the run**
+- [x] **Step 2: Add the job, push, read the run**
 
 Expected: the job passes; every other job is as before. A red job is this
 task's to fix.

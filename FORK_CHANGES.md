@@ -90,7 +90,7 @@ plan's inputs, not checks of this change; its run folder
 
 ### FORK-093 — Native macOS build plan
 
-**Status:** MAC-001 in progress (Tasks 1 to 7 of 11 built, below): the
+**Status:** MAC-001 in progress (Tasks 1 to 7 and 10 of 11 built, below): the
 headless 64-bit game builds, boots and plays its 20 missions on macOS.
 MAC-002 to MAC-006 are not started. The owner chose the
 audience, the graphics path and the outline on 2026-11-26, approved the
@@ -458,8 +458,9 @@ Linux containers of `scripts/port/lp64_env.py`.
   missions logged 43 distinct source lines that GCC's build never
   reported, and AddressSanitizer reported nothing. Two of them were the
   fork's own and are fixed: `stan.c:3472-3473`, a debug trace that took a
-  member's offset through a null pointer, now uses `offsetof` (the Windows
-  program is identical). The other 41 are decompiled idioms in
+  member's offset through a null pointer, uses `offsetof` on macOS, behind
+  `__APPLE__`; every other build compiles the lines it compiled before
+  (the correction below says why the guard). The other 41 are decompiled idioms in
   upstream-owned or strict-tier lines, so with `GE_SANITIZE` on a clang
   compiler `CMakeLists.txt` adds
   `-fno-sanitize=array-bounds,object-size,float-cast-overflow`, and
@@ -477,6 +478,31 @@ Linux containers of `scripts/port/lp64_env.py`.
     246.5 (GCC's `-fsanitize=undefined` has no such check);
   - `pointer-overflow`, 1: `model.c:5959`, `+= 1` on a null
     `uselessPointer`.
+
+  **Correction (same day).** This task first committed the `offsetof` form
+  for every build (2af7d4b), as its plan said, and that broke CI's Linux
+  tests job: `lp64_pointer_types.py check` reported `no longer
+  pointer-only: StandTile` (and the two records it embeds). GCC prints
+  `<stddef.h>`'s `offsetof` macro with each piece on its own indented
+  line, the tool looks only 40 characters behind a type name, so it missed
+  `__builtin_offsetof (` and took the type for an object held by value.
+  The tests job failed on the runs of 2af7d4b, 6b6c49d and 844f7de, and
+  their `publish` job was skipped; the task check here had run the gate,
+  the two static checks and the harness lines of that CI step, not its
+  other lines. The fix guards the `offsetof` form with `__APPLE__`, so the
+  trees that tool reads hold the original lines again. Before it was
+  pushed, every line of CI's tests step ran in the x86_64 container on a
+  snapshot (105 of 108 passed; the other three read Git's file list, which
+  a snapshot lacks, and pass in the checkout: `lp64_casts.py check`,
+  `test_lp64_overlays.py`, `lp64_overlays.py check --no-defects`), and
+  `lp64_pointer_types.py check` printed `OK: 121 pointer-only types, as
+  pinned`. Two ways not taken, for the record: taking the offsets from the
+  trace's own pointers adds a `(StandTile *)` cast, a new site for
+  `lp64_overlays.py`; widening the tool's look-behind fixes its reading of
+  `offsetof` but also changes how it counts `ALBank_s` and `ALInstrument`,
+  which needs FORK-089's R11 judgement. **That tool defect stands and is
+  for the owner:** an `offsetof` of a pointer-only type from a system
+  header's macro is misread on a GCC tree.
 
   **For MAC-002:** three of those sites are in strict-tier files and were
   not touched: `src/game/gunfire.c:5455` (compiler's numbering),
@@ -575,8 +601,18 @@ Linux containers of `scripts/port/lp64_env.py`.
   idle and was killed after 26 minutes; run again from a fresh snapshot it
   took 11 seconds, so that was the emulated container, not the change).
   aarch64: `OK: ran 600 frames`. `compare_win32.py commits HEAD WORKTREE`:
-  `identical in loaded code and data`. The job's first run on GitHub is
-  recorded below it once read.
+  `identical in loaded code and data`.
+  *The job's first run on GitHub* (run 46054927807, on 844f7de): `success`
+  in 2 minutes 12 seconds on image `macos-26-arm64`: macOS 26.7.2 (25G332),
+  Xcode 26.6 (17F113), Apple clang 21.0.0 (clang-2100.1.1.101), an older
+  Xcode than the Mac's 27.2. The build printed no compiler warning and
+  `OK: 705 weak references, 0 strong`; gate `361 files compiled, 0
+  failed`; `OK: 33 narrowings in 19 files, all allowed`; `test_macos_host:
+  PASS (64-bit)`; `macos_harnesses: 46 passed, 2 skipped by name, 0
+  failed`; `macos_no_rom: OK (exit 3, ...)`. On that run `linux`,
+  `linux-x86_64`, `windows`, `sentry-sdk` and `sentry-smoke` succeeded,
+  `tests` failed on Task 6's `lp64_pointer_types` line (its correction is
+  above) and `publish` was skipped.
 
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside

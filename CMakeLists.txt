@@ -543,7 +543,7 @@ if(GE_SANITIZE)
     #   pointer-overflow, model.c alone, 1: model.c:5959, += 1 on a null
     #     uselessPointer. Every other file keeps the check.
     # The other two lines, stan.c:3472-3473 (member access through a null
-    # pointer in a debug trace), were the fork's and are fixed with offsetof.
+    # pointer in a debug trace), were the fork's and use offsetof on macOS.
     # A report from AddressSanitizer is never switched off. GCC's options do
     # not change.
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
