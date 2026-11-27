@@ -86,10 +86,41 @@ of those files, so MAC-001 lands on `main` from the Mac. The plan needs from
 the owner an Apple Developer Program membership, a bundle identifier, a
 Developer ID certificate and a notarization key.
 
-**Validation.** Documentation only; no game was built from this change and
-no check of the game was run for it. The pre-commit hook's standards and
-settings placement checks ran on the commit. The measurements above are the
-plan's inputs, not checks of this change.
+**MAC-001's plan (2026-11-27).** [macos_mac_001.md](scripts/port/macos_mac_001.md)
+plans the first milestone in eleven tasks and puts seven decisions to the
+owner; it is not yet accepted, and the status table says so. It was
+measured in a copy of the tree (`git archive` of 990f991) edited and built
+outside the repository, then discarded:
+
+- Seven guarded edits (a seventh site, `include/bstring.h:28`, appeared once
+  `os.h` compiled) and two host functions (the executable's range from
+  dyld, a sleep to an absolute time) build the headless game. The link also
+  needs `-Wl,-map,` and `-Wl,-undefined,dynamic_lookup`: 705 weak
+  references are undefined, which ELF resolves to null and Mach-O does not.
+- That executable ran `lp64_boot.py --expect-run --frames 600` (`OK`), the
+  mission smoke (20 of 20) and the headless play sets (`OK: 117 of 117
+  cases`, 292 pool and stage pairs within budget).
+- Clang prints 9,706 warnings in 19 classes where GCC's log is clean.
+- `lp64_diagnostics.py narrowing --check` printed `OK` on the clang tree
+  without reading it (it knows only GCC's wording); clang itself reports 33
+  implicit narrowings of pointer-sized integers that GCC's check cannot
+  see. `unprototyped` needs GCC's `-aux-info`.
+- The sanitizer build boots; AddressSanitizer reported nothing; clang's
+  undefined-behaviour checks report 43 source lines of six kinds that
+  GCC's build never did, three of them in strict-tier files.
+- 7 of the 46 harnesses pass as they are; Apple clang's acceptance of
+  `-m32` is the main cause, and with the 32-bit half off 21 pass.
+- macOS's `sinf`, `expf` and `powf` differ from glibc's (`3990ade5`,
+  `027eb54f`, `e758d294` against `cc151db4`, `8be3a4cd`, `648805d1`). A
+  macOS comparison build agreed with itself in 38 of 38 cases and with the
+  aarch64 Linux build in 33; the other five matched once both builds were
+  given one `sinf`, `expf` and `powf`.
+
+**Validation.** Documentation only: no source, build file or tool of the
+repository changed, and no check was run on a build of it. The measurements
+above were taken on scratch copies outside the repository and are the
+plans' inputs, not checks of this change. The pre-commit hook's standards
+and settings placement checks ran on each commit.
 
 ### FORK-092 — Linux weapon icons, icon cache and save transfer dialogs
 

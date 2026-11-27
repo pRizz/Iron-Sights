@@ -427,7 +427,9 @@ owner, as LP64-003 to LP64-007 did.
    harnesses and the gate on clang. No strict-tier file. Done when, on
    `main`, a headless 64-bit macOS tree builds with Apple clang and passes
    verification 2, 4, 5 and 8 and the headless halves of 1 and 3, and
-   verification 9 holds.
+   verification 9 holds. *Planned on 2026-11-27 in
+   [its plan](macos_mac_001.md); the owner's answers to its seven
+   decisions are open.*
 2. **MAC-002 Window, picture, sound and input.** The video tree builds and
    links SDL2 and Apple's OpenGL; the executable is found without
    `/proc/self/exe`, so the game starts; Retina resolution, desktop
@@ -541,7 +543,7 @@ mark a milestone done without it.
 
 | ID | Status | Notes |
 |---|---|---|
-| MAC-001 | Not started | Next: its detailed plan. Measured starting point: 61 of 361 headless compile steps fail under Apple clang, from the six causes in "What was measured". |
+| MAC-001 | Planned, not accepted | [Its plan](macos_mac_001.md) was written on 2026-11-27 and waits for the owner's answers to its seven decisions. Nothing is built. Measured for it in a scratch copy outside the repository: seven guarded edits and two host functions build the headless game under Apple clang; it then ran 600 frames, 20 of 20 missions and 117 of 117 play cases, and 33 of 38 simulation streams matched the aarch64 Linux build, the other five differing through `sinf`, `expf` and `powf`. |
 | MAC-002 | Not started | Needs MAC-001. Strict tier: lands through the laptop. |
 | MAC-003 | Not started | Needs MAC-002. Strict tier: lands through the laptop. |
 | MAC-004 | Not started | Needs the bundle identifier from the owner. |
