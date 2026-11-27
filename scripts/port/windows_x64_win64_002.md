@@ -6,8 +6,8 @@ and booted now plays the game's run sets natively on Windows, matches the
 x86_64 Linux comparison build stream for stream, and is measured against
 the 32-bit exe.
 
-**Status:** Implemented and verified on the owner's laptop on 2026-11-27
-(FORK-094 has the figures); done once CI passes on its push. Planned on 2026-11-27 at
+**Status:** Done on 2026-11-27: verified on the owner's laptop (FORK-094
+has the figures) and on `main` as 1f3ea6f, where CI passed. Planned on 2026-11-27 at
 4fde028 (WIN64-001 on `main`) from the measurements below. Accepted by the
 owner the same day under their standing instruction to take sensible
 recommendations ("I accept your sensible recommendations"); the decisions

@@ -442,6 +442,6 @@ mark a milestone done without it.
 | ID | Status | Notes |
 |---|---|---|
 | WIN64-001 | Done (2026-11-27) | [Its plan](windows_x64_win64_001.md); FORK-094 has the change and its evidence. On `main` as 4fde028; CI passed on it, including the MinGW gate tree (`build/lp64/gate-mingw: 392 files compiled, 0 failed`). The 64-bit exe boots 600 frames with every checked region above 4 GB, the memp arena included; `compare_win32.py` names only `chraiDefaultWeaponFireHandler` (the `chrprop.c` fix) and the manifest. |
-| WIN64-002 | Implemented, verified locally | [Its plan](windows_x64_win64_002.md), accepted 2026-11-27 under the owner's standing instruction. On the laptop: play sets 119 of 119 natively with the pools within budget, mission smoke 20 of 20, the 38 comparison cases 100 of 100 streams identical to the Linux x64 build, bench +6 to +14% average fps over the 32-bit exe, late loads as the Linux 64-bit work explained (FORK-094). Done once CI passes on its push. |
-| WIN64-003 | Not started | WIN64-001 is done. |
+| WIN64-002 | Done (2026-11-27) | [Its plan](windows_x64_win64_002.md), accepted 2026-11-27 under the owner's standing instruction. On the laptop: play sets 119 of 119 natively with the pools within budget, mission smoke 20 of 20, the 38 comparison cases 100 of 100 streams identical to the Linux x64 build, bench +6 to +14% average fps over the 32-bit exe, late loads as the Linux 64-bit work explained (FORK-094). On `main` as 1f3ea6f; CI passed on it. |
+| WIN64-003 | Not started | WIN64-001 is done; MSVC 2022 is on the laptop, so the x64 Sentry runtime can be built there as well as in CI. |
 | WIN64-004 | Not started | Needs WIN64-002 and WIN64-003. |
