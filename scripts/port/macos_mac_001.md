@@ -742,7 +742,7 @@ git commit -m "Give the comparison build one sinf, expf and powf"
 - Modify: `scripts/port/lp64_equiv_expected.txt` (its header: the `a64:mac`
   pair), `FORK_CHANGES.md`
 
-- [ ] **Step 1: Run both, compare**
+- [x] **Step 1: Run both, compare**
 
 ```bash
 cmake -S . -B build/mac/cmp -G Ninja -DCMAKE_BUILD_TYPE=Debug -DGE_POINTER_BITS=64 -DGE_HEADLESS=ON -DGE_COMPARE=ON && cmake --build build/mac/cmp
@@ -759,7 +759,7 @@ passes. A stream that still differs is traced to its first tick and
 cause, by a run with the cause removed, before it gets a line; a line
 carries no hash pin (the macOS plan's decision).
 
-- [ ] **Step 2: Run the task check, commit**
+- [x] **Step 2: Run the task check, commit**
 
 ```bash
 git commit -m "Compare the macOS simulation with the aarch64 Linux build"

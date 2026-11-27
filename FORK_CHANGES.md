@@ -202,7 +202,7 @@ WIN64-001, on the owner's laptop (RTX 3070 Laptop GPU) and in the rebuilt
 
 ### FORK-093 — Native macOS build plan
 
-**Status:** MAC-001 in progress (Tasks 1 to 8 and 10 of 11 built, below): the
+**Status:** MAC-001 in progress (Tasks 1 to 10 of 11 built, below): the
 headless 64-bit game builds, boots and plays its 20 missions on macOS.
 MAC-002 to MAC-006 are not started. The owner chose the
 audience, the graphics path and the outline on 2026-11-26, approved the
@@ -830,6 +830,39 @@ Linux containers of `scripts/port/lp64_env.py`.
   in the container). A first run of those lines was spoiled from
   `test_distribution.py` on by this session, which replaced the
   snapshot's folder under it; the figures are the rerun's.
+- **Task 9, the simulation matches the aarch64 Linux build.** No source
+  changed. At 4d877cd, a headless comparison tree on macOS
+  (`build/mac/cmp`, Apple clang, native) and one in the aarch64 container
+  (GCC 13.3, glibc 2.39, native on the same Mac, built from an export of
+  the same commit) each ran `lp64_equiv.py run --set
+  demos,solo,mp,menus,reload --repeat 2`: `OK: 38 of 38 cases ran` and
+  `OK: 38 of 38 cases agree with themselves` on both. `compare --streams
+  sim --expect scripts/port/lp64_equiv_expected.txt` on the two folders:
+  `OK: 38 cases, 38 streams, 38 identical, 0 as recorded`, 100,975 ticks
+  in all, where the plan's measurement before Task 8 had 33 identical and
+  5 different. `lp64_equiv.py sensitivity` on the macOS build: `OK: sim
+  differs between seeds`. `scripts/port/lp64_equiv_expected.txt` gains no
+  line, only a comment in its header that `a64:mac` has none (as `x64:a64`
+  has none) and that a line for the pair would carry no hash pin. Only the
+  `sim` stream of the default profile is judged: a headless build has no
+  picture or sound, and those streams wait for MAC-002. The aarch64
+  folder's record names no commit, since an export is not a checkout; the
+  tool notes it.
+  *Ran.* The seven `test_lp64_equiv*.py` files `OK`. macOS: the build with
+  `OK: 705 weak references, 0 strong`, gate `361 files compiled, 0
+  failed`, `OK: ran 600 frames`, 20 of 20 missions. x86_64 container:
+  gates of 361 and 394 files with 0 failed, `narrowing --check` and
+  `unprototyped --check` `OK`. aarch64: `OK: ran 600 frames`.
+  `compare_win32.py commits HEAD WORKTREE`: `identical in loaded code and
+  data`. The harnesses and the rest of CI's tests step were not rerun:
+  the change is a comment in a data file and this text.
+  *CI on Task 8's commit* (4d877cd, run 46073108133): `tests`,
+  `macos-arm64-tests`, `linux`, `linux-x86_64`, `windows`, `sentry-sdk`
+  and `sentry-smoke` succeeded. `publish` failed after its checksums
+  passed, at `gh release create`, with `HTTP 403: Resource not accessible
+  by integration`: GitHub refused the job's token, and no release was
+  made for that commit. Task 8 changed no workflow file; the cause is not
+  known here and is left to the owner.
 
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside
