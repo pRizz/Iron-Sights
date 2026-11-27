@@ -610,18 +610,18 @@ Written for decision 2, as accepted.
 - `stan.c:3472-3473` uses `offsetof(StandTilePoint, link)` and
   `offsetof(StandTile, points)`.
 
-- [ ] **Step 1: Reproduce**
+- [x] **Step 1: Reproduce**
 
 Build `build/mac/san` (`-DGE_POINTER_BITS=64 -DGE_SANITIZE=ON`) and run
 the mission smoke. Expected: 20 `FAIL`, each log's first report at
 `stan.c:782`.
 
-- [ ] **Step 2: Fix the one line that is ours, name the rest**
+- [x] **Step 2: Fix the one line that is ours, name the rest**
 
 The `offsetof` edit must leave the Windows comparison identical. Then add
 the options.
 
-- [ ] **Step 3: Run until no report**
+- [x] **Step 3: Run until no report**
 
 Boot check, mission smoke and `lp64_play.py run --set
 demos,stages,stops,menus,tours,attract --frames-scale 3` on the sanitizer
@@ -631,7 +631,7 @@ is the fork's and whose fix leaves Windows identical, otherwise name the
 kind with its sites; a report from AddressSanitizer is never switched off.
 Record in FORK-093 the three strict-tier sites for MAC-002.
 
-- [ ] **Step 4: Run the task check, commit**
+- [x] **Step 4: Run the task check, commit**
 
 ```bash
 git commit -m "Run the sanitizer build under Apple clang"

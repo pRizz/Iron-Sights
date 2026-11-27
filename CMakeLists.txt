@@ -522,6 +522,35 @@ if(GE_SANITIZE)
     add_compile_options(-g3 -fsanitize=address -fsanitize=undefined
                         -fno-omit-frame-pointer -fno-sanitize-recover=all)
     add_link_options(-fsanitize=address -fsanitize=undefined)
+    # Clang's undefined-behaviour checks (macOS, MAC-001 Task 6) report 43
+    # source lines that GCC's build never did: GCC's -fsanitize=undefined
+    # lacks float-cast-overflow, and its bounds and object-size checks do not
+    # fire on these. None is a memory error AddressSanitizer sees, and all
+    # but one are decompiled idioms in upstream-owned or strict-tier lines,
+    # so three kinds are switched off by name, and a fourth for one file
+    # (the owner's decision 2 of scripts/port/macos_mac_001.md). The sites,
+    # from the 20 missions run with reports made non-fatal:
+    #   array-bounds, 38 lines: an index past struct coord2d[4] where
+    #     rect4f.points is used as a longer polygon (stan.c, chrprop.c,
+    #     propobj.c: 37 lines), and one past struct hand[2] (gunfire.c);
+    #   object-size, 1: stan.c:782, a record wider than the object it is
+    #     read through (prefix = &stan_prefix, as decompiled);
+    #   float-cast-overflow, 1: bondview2.c:5505, (s8)(frac * 255) with
+    #     246.5;
+    #   pointer-overflow, model.c alone, 1: model.c:5959, += 1 on a null
+    #     uselessPointer. Every other file keeps the check.
+    # The other two lines, stan.c:3472-3473 (member access through a null
+    # pointer in a debug trace), were the fork's and are fixed with offsetof.
+    # A report from AddressSanitizer is never switched off. GCC's options do
+    # not change.
+    if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+        add_compile_options(-fno-sanitize=array-bounds,object-size,float-cast-overflow)
+        set_property(SOURCE ${CMAKE_SOURCE_DIR}/src/game/model.c APPEND PROPERTY
+            COMPILE_OPTIONS -fno-sanitize=pointer-overflow)
+        # AddressSanitizer switches off the SDK's checked sprintf macro, and
+        # the plain function is marked deprecated there: 78 warnings.
+        add_compile_options($<$<COMPILE_LANGUAGE:C>:-Wno-deprecated-declarations>)
+    endif()
     # gfx_pc.cpp's check of each display-list command word (LP64-003): a
     # development build only. It compiles to nothing at 32 bits.
     add_compile_definitions(GE_LP64_DL_CHECK)

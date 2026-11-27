@@ -90,7 +90,7 @@ plan's inputs, not checks of this change; its run folder
 
 ### FORK-093 — Native macOS build plan
 
-**Status:** MAC-001 in progress (Tasks 1 to 5 of 11 built, below): the
+**Status:** MAC-001 in progress (Tasks 1 to 6 of 11 built, below): the
 headless 64-bit game builds, boots and plays its 20 missions on macOS.
 MAC-002 to MAC-006 are not started. The owner chose the
 audience, the graphics path and the outline on 2026-11-26, approved the
@@ -449,6 +449,54 @@ Linux containers of `scripts/port/lp64_env.py`.
   unprototyped calls in 4 files`, as before; aarch64 `OK: ran 600 frames`;
   `compare_win32.py commits HEAD WORKTREE`: `identical in loaded code and
   data`.
+
+- **Task 6, the sanitizers under clang** (the owner's decision 2). A
+  `-DGE_SANITIZE=ON` tree builds and boots under Apple clang, and before
+  this task its mission smoke failed 20 of 20, each log's first report at
+  `src/game/stan.c:782`. Clang's undefined-behaviour checks are stricter
+  than GCC's: with reports made non-fatal in a scratch tree, the 20
+  missions logged 43 distinct source lines that GCC's build never
+  reported, and AddressSanitizer reported nothing. Two of them were the
+  fork's own and are fixed: `stan.c:3472-3473`, a debug trace that took a
+  member's offset through a null pointer, now uses `offsetof` (the Windows
+  program is identical). The other 41 are decompiled idioms in
+  upstream-owned or strict-tier lines, so with `GE_SANITIZE` on a clang
+  compiler `CMakeLists.txt` adds
+  `-fno-sanitize=array-bounds,object-size,float-cast-overflow`, and
+  `-fno-sanitize=pointer-overflow` for `src/game/model.c` alone; the
+  comment beside the options has the sites. GCC's options do not change,
+  and no AddressSanitizer report is switched off. The 41, re-measured
+  after the fix:
+  - `array-bounds`, 38 lines: 37 index past `struct coord2d[4]` where
+    `rect4f.points` is used as a longer polygon (`stan.c` 18, `chrprop.c`
+    10, `propobj.c` 9), and `gunfire.c:5455` (the compiler's numbering: the file has `#line`
+    directives) indexes past `struct hand[2]`;
+  - `object-size`, 1: `stan.c:782` reads a record wider than the object it
+    is read through (`prefix = &stan_prefix`, as decompiled);
+  - `float-cast-overflow`, 1: `bondview2.c:5505`, `(s8)(frac * 255)` with
+    246.5 (GCC's `-fsanitize=undefined` has no such check);
+  - `pointer-overflow`, 1: `model.c:5959`, `+= 1` on a null
+    `uselessPointer`.
+
+  **For MAC-002:** three of those sites are in strict-tier files and were
+  not touched: `src/game/gunfire.c:5455` (compiler's numbering),
+  `src/game/model.c:5959` and
+  `src/game/bondview2.c:5505`. The same build also printed 78
+  `deprecated-declarations` warnings, all `sprintf`: AddressSanitizer
+  switches off the SDK's checked `sprintf` macro and the plain function is
+  marked deprecated there, so that class is named for a clang sanitizer
+  build too.
+  *Ran, on the macOS sanitizer build (`build/mac/san`):* no compiler
+  warning; `OK: 705 weak references, 0 strong`; `OK: ran 600 frames`; the
+  mission smoke 20 of 20 `PASS` (20 `FAIL` before); `lp64_play.py run --set
+  demos,stages,stops,menus,tours,attract --frames-scale 3`: `OK: 117 of
+  117 cases`, with no sanitizer report in any log. No new report kind
+  appeared beyond the mission smoke's. *Elsewhere:*
+  x86_64 container, gate 361 and 394 files with 0 failed, `narrowing
+  --check` and `unprototyped --check` `OK`, `test_pointer_bits.sh` passes,
+  and all 43 harness lines of CI's tests step pass (`test_buffers.sh`
+  as in Task 2); aarch64 `OK: ran 600 frames`; `compare_win32.py commits HEAD
+  WORKTREE`: `identical in loaded code and data`.
 
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside
