@@ -962,7 +962,12 @@ is a note in FORK-089 and the hand-over keeps the list.
   "Kept deferred" list.
 - [x] **Step 4: Delete the run folders** under `build/lp64/ship/` that
   no record names; keep the trees.
-- [ ] **Step 5:** Commit, push, read CI on all three workflows.
+- [x] **Step 5:** Commit, push, read CI on all three workflows. Pushed
+  9de2822..01ac39f on 2026-11-26; all three workflows green (the release
+  workflow's run 45926300895 in all seven jobs, P3 and the stricter
+  `Data/` check among them); release `build-417.1-01ac39f86d38` holds
+  seventeen assets. This line and the two that name that release in
+  `native_64bit_plan.md` and FORK-089 are a later, text-only commit.
 
 ## What this plan does not do
 
