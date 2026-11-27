@@ -384,8 +384,11 @@ pass its isolated executable rather than rebuilding an active player binary.
   reason. A pool that passes half is raised at 64 bits only, to twice its
   peak rounded up to its alignment, and its line updated.
 - `-DGE_COMPARE=ON` (LP64-006) configures a comparison build: the in-tree
-  `tanf`, `atanf` and `cosf` (`port/src/port_compare_math.c`, alike on every
-  host) replace libm's, and the play harness (`PORT_PLAY_HARNESS`) is on at
+  `tanf`, `atanf` and `cosf` (`port/src/port_compare_math.c`) and Arm's
+  `sinf`, `expf` and `powf` (`port/src/port_compare_math_arm.c` and
+  `port_compare_math_arm_sinf.c`, MIT, from optimized-routines; MAC-001), alike
+  on every host, replace libm's (`test_lp64_compare.sh` pins the six sweep
+  hashes), and the play harness (`PORT_PLAY_HARNESS`) is on at
   either width, a 32-bit video build included; with `GE_VIDEO` it also
   compiles the picture digest (`port/src/port_gfx_digest.cpp`), which wraps
   the renderer's table when `GE_GFXDIGEST` is set. `-DGE_COMPARE_LIBM=ON` keeps

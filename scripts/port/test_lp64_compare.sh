@@ -6,12 +6,13 @@
 # (test_simtrace.c, Task 3) includes port_simtrace.c with fabricated game state;
 # the sound lock (test_audio_lock.c, Task 9) links port_audio_lock.c, and is
 # built once more without GE_COMPARE to check the shipped header's stand-in;
-# the comparison build's tanf, atanf and cosf (test_compare_math.c, Task 4) link
-# port_compare_math.c, as does the maths sweep (lp64_libm_sweep.c), which must
-# print one hash for each of its six functions, with tanf, atanf and cosf's
-# pinned (the same on every host). -fno-builtin keeps the compiler
-# from folding a call; -ffp-contract=off is the comparison build's own flag
-# for port_compare_math.c (CMakeLists.txt).
+# the comparison build's six maths functions (test_compare_math.c) link
+# port_compare_math.c (tanf, atanf and cosf, Task 4), port_compare_math_arm.c
+# (expf and powf, MAC-001 Task 8) and port_compare_math_arm_sinf.c (sinf), as does the
+# maths sweep (lp64_libm_sweep.c), which must print one hash for each of the
+# six, every one pinned (the same on every host). -fno-builtin keeps the
+# compiler from folding a call; -ffp-contract=off is the comparison build's
+# own flag for the three files (CMakeLists.txt).
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source scripts/port/harness_widths.sh
@@ -38,10 +39,11 @@ for width in $widths; do
     "$compiler" "${flags[@]}" scripts/port/test_audio_lock.c -o "$work/audio-lock-shipped-$width"
     "$work/audio-lock-shipped-$width"
     math_flags=("${flags[@]}" -fno-builtin -ffp-contract=off)
-    "$compiler" "${math_flags[@]}" scripts/port/test_compare_math.c port/src/port_compare_math.c -lm \
+    math_sources=(port/src/port_compare_math.c port/src/port_compare_math_arm.c port/src/port_compare_math_arm_sinf.c)
+    "$compiler" "${math_flags[@]}" scripts/port/test_compare_math.c "${math_sources[@]}" -lm \
         -o "$work/compare-math-$width"
     "$work/compare-math-$width"
-    "$compiler" "${math_flags[@]}" scripts/port/lp64_libm_sweep.c port/src/port_compare_math.c -lm \
+    "$compiler" "${math_flags[@]}" scripts/port/lp64_libm_sweep.c "${math_sources[@]}" -lm \
         -o "$work/sweep-$width"
     "$work/sweep-$width" >"$work/sweep-$width.txt"
     sweep_lines=$(awk '/^(sinf|cosf|tanf|atanf|expf|powf) [0-9a-f]+$/ && length($2) == 8 { n++ } END { print n + 0 }' \
@@ -51,9 +53,11 @@ for width in $widths; do
         echo "test_lp64_compare: FAIL ($width-bit): the sweep printed $sweep_lines of its six hashes" >&2
         exit 1
     fi
-    # The in-tree functions are host-independent by design: pin their hashes
-    # (FORK-089, Task 4's sweep). sinf, expf and powf are libm's and may differ.
-    for pinned in tanf:e3ccc704 atanf:f160154d cosf:4c162bf1; do
+    # All six are the comparison build's own and host-independent by design:
+    # pin their hashes. tanf, atanf and cosf are FORK-089's (Task 4's sweep);
+    # sinf, expf and powf are Arm's routines, pinned to the hashes glibc's had
+    # on the i686, x86_64 and aarch64 hosts (FORK-093, MAC-001 Task 8).
+    for pinned in tanf:e3ccc704 atanf:f160154d cosf:4c162bf1 sinf:cc151db4 expf:8be3a4cd powf:648805d1; do
         name=${pinned%%:*} want=${pinned#*:}
         seen=$(awk -v name="$name" '$1 == name { print $2 }' "$work/sweep-$width.txt")
         if [[ $seen != "$want" ]]; then

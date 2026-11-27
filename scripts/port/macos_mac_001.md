@@ -691,7 +691,7 @@ Written for decision 3, as accepted.
 - Their sweep hashes are glibc's: `sinf cc151db4`, `expf 8be3a4cd`, `powf
   648805d1`, pinned in `test_lp64_compare.sh` beside the other three.
 
-- [ ] **Step 1: Measure before writing anything**
+- [x] **Step 1: Measure before writing anything**
 
 Take `sinf`, `expf` and `powf` from Arm's optimized-routines (MIT) at a
 recorded commit, build them alone with the sweep on macOS and in the
@@ -699,7 +699,7 @@ aarch64 container. Expected: all three hashes equal glibc's on both. If
 any differs, stop: the recommendation's premise is false, and the
 question goes back to the owner with the hashes.
 
-- [ ] **Step 2: Pin the hashes (failing), then add the file**
+- [x] **Step 2: Pin the hashes (failing), then add the file**
 
 `test_lp64_compare.sh` expects the three hashes; it fails on macOS today
 (`3990ade5`, `027eb54f`, `e758d294`). Add the file, its notice entry
@@ -708,7 +708,18 @@ and the CMake lines. `test_compare_math.c` gains, for each function, the
 check the other three have: within two ulp of the C library's double
 function over 100,000 inputs.
 
-- [ ] **Step 3: The Linux comparison builds did not move**
+*As built (2026-11-27).* The owner allowed the download in the executing
+session ("Yes, download"). The routines are optimized-routines v26.07,
+commit `4be260a5117480382690c6d8c300bc784e927d76`; Step 1's hashes were
+glibc's on macOS, aarch64 and x86_64. The code is two files and a header,
+not one file: `port/src/port_compare_math_arm.c` (`expf`, `powf`),
+`port/src/port_compare_math_arm_sinf.c` (`sinf`) and
+`port/include/port_compare_math_arm.h` (the refusals and shared helpers),
+because one file in this tree's layout was 645 lines and a new source file
+stays under 500. `test_pointer_bits.sh` also names the new files, so that
+a build without `GE_COMPARE` compiling one fails. FORK-093 has the rest.
+
+- [x] **Step 3: The Linux comparison builds did not move**
 
 Rebuild `build/lp64/cmp-a64` and `cmp-x64`, run `lp64_equiv.py run
 --set demos,solo,mp,menus,reload --repeat 2` on each, and `compare
@@ -717,7 +728,7 @@ folders. Expected: `OK`, with `x64:a64` still without a line. (The i686
 lines are exercised by their own runs, which this task does not repeat:
 all three Linux hosts' libm functions had the hashes now pinned.)
 
-- [ ] **Step 4: Run the task check, commit**
+- [x] **Step 4: Run the task check, commit**
 
 ```bash
 git commit -m "Give the comparison build one sinf, expf and powf"

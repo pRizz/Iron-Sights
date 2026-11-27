@@ -1,8 +1,9 @@
-/* ROM-free checks of the comparison build's tanf, atanf and cosf (LP64-006
- * Task 4, test_lp64_compare.sh links this with port/src/port_compare_math.c):
- * each is within two units in the last place of the C library's double tan,
- * atan or cos, rounded to float, over 100,000 inputs; tanf(+-0) is +-0; atanf
- * is odd.
+/* ROM-free checks of the comparison build's six functions: tanf, atanf and
+ * cosf (LP64-006 Task 4, port/src/port_compare_math.c) and sinf, expf and
+ * powf (MAC-001 Task 8, port/src/port_compare_math_arm.c and
+ * port_compare_math_arm_sinf.c); test_lp64_compare.sh links this with them. Each is within two units in the
+ * last place of the C library's double function, rounded to float, over
+ * 100,000 inputs; tanf(+-0) is +-0; atanf is odd.
  * The system <math.h> is shadowed by the tree's include/math.h, so the
  * functions are declared here. Compiled with -fno-builtin, so no call is
  * folded at compile time. */
@@ -13,9 +14,15 @@
 float tanf(float);
 float atanf(float);
 float cosf(float);
+float sinf(float);
+float expf(float);
+float powf(float, float);
 double tan(double);
 double atan(double);
 double cos(double);
+double sin(double);
+double exp(double);
+double pow(double, double);
 
 #define TEST_INPUTS 100000
 
@@ -130,6 +137,125 @@ static void cosf_is_within_two_ulp_of_double_cos(void)
     expect(worst <= 2, "cosf is within two ulp of double cos");
 }
 
+static void sinf_is_within_two_ulp_of_double_sin(void)
+{
+    // Arrange, Act
+    int64_t worst = worstUlp("sinf", sinf, sin);
+
+    // Assert
+    expect(worst <= 2, "sinf is within two ulp of double sin");
+}
+
+static void expf_is_within_two_ulp_of_double_exp(void)
+{
+    // Arrange, Act
+    int64_t worst = worstUlp("expf", expf, exp);
+
+    // Assert
+    expect(worst <= 2, "expf is within two ulp of double exp");
+}
+
+/* powf over a base of any magnitude from zero up (every second one below 16)
+ * and an exponent in [-16, 16): no negative base, whose result is a NaN for
+ * most exponents, and a NaN's sign is the host's. */
+static void powf_is_within_two_ulp_of_double_pow(void)
+{
+    // Arrange
+    int64_t worst = 0;
+    float worstBase = 0.0f;
+    float worstExponent = 0.0f;
+    uint32_t k;
+
+    // Act
+    for (k = 0; k < TEST_INPUTS; k++)
+    {
+        float base = bitsFloat(floatBits(testInput(k)) & 0x7fffffffu);
+        float exponent = testInput(2u * k + 1u);
+        int64_t d = ulpDistance(powf(base, exponent), (float) pow((double) base, (double) exponent));
+
+        if (d > worst)
+        {
+            worst = d;
+            worstBase = base;
+            worstExponent = exponent;
+        }
+    }
+    if (worst > 2)
+    {
+        printf("test_compare_math: powf(%a, %a) is %lld ulp from the double function\n", worstBase,
+               worstExponent, (long long) worst);
+    }
+
+    // Assert
+    expect(worst <= 2, "powf is within two ulp of double pow");
+}
+
+/* The cases the sweep and the ulp checks never reach: the branches of
+ * powf's special cases, expf past its range, sinf of a zero. Each answer is
+ * exact, so it is compared by its bits; a NaN only as being one. */
+static void sinf_expf_and_powf_special_cases_are_exact(void)
+{
+    // Arrange
+    static const struct
+    {
+        float base, exponent;
+        uint32_t bits;
+    } powers[] = {
+        {-8.0f, 3.0f, 0xc4000000u},        /* a negative base, odd power: -512 */
+        {-2.0f, 2.0f, 0x40800000u},        /* even power: 4 */
+        {4.0f, 0.5f, 0x40000000u},         /* 2 */
+        {0.0f, -1.0f, 0x7f800000u},        /* +0 to a negative power: +inf */
+        {-0.0f, -3.0f, 0xff800000u},       /* -0 to a negative odd power: -inf */
+        {-0.0f, 3.0f, 0x80000000u},        /* -0 */
+        {-0.0f, 2.0f, 0x00000000u},        /* +0 */
+        {123.0f, 0.0f, 0x3f800000u},       /* anything to 0: 1 */
+        {1.0f, -77.5f, 0x3f800000u},       /* 1 to anything: 1 */
+        {2.0f, 1.0f / 0.0f, 0x7f800000u},  /* above 1 to +inf: +inf */
+        {0.5f, 1.0f / 0.0f, 0x00000000u},  /* below 1 to +inf: 0 */
+        {2.0f, -1.0f / 0.0f, 0x00000000u}, /* above 1 to -inf: 0 */
+        {-1.0f, 1.0f / 0.0f, 0x3f800000u}, /* -1 to an infinity: 1 */
+        {2.0f, 200.0f, 0x7f800000u},       /* overflow */
+        {2.0f, -200.0f, 0x00000000u},      /* underflow */
+        {-2.0f, 201.0f, 0xff800000u},      /* overflow, negative */
+        {0x1p-140f, 0.5f, 0x1c800000u},    /* a subnormal base: 2^-70 */
+    };
+    volatile float zero = 0.0f;
+    volatile float negativeZero = -0.0f;
+    volatile float infinity = 1.0f / 0.0f;
+    volatile float negativeBase = -8.0f;
+    volatile float half = 0.5f;
+    int exact = 1;
+    uint32_t k;
+
+    // Act
+    for (k = 0; k < sizeof(powers) / sizeof(powers[0]); k++)
+    {
+        volatile float base = powers[k].base;
+        volatile float exponent = powers[k].exponent;
+
+        if (floatBits(powf(base, exponent)) != powers[k].bits)
+        {
+            printf("test_compare_math: powf(%a, %a) is %08x, expected %08x\n", (double) base, (double) exponent,
+                   (unsigned) floatBits(powf(base, exponent)), (unsigned) powers[k].bits);
+            exact = 0;
+        }
+    }
+    float rootOfNegative = powf(negativeBase, half);
+    float sineOfInfinity = sinf(infinity);
+
+    // Assert
+    expect(exact, "powf's special cases are exact");
+    expect(rootOfNegative != rootOfNegative, "powf of a negative base and a fraction is a NaN");
+    expect(sineOfInfinity != sineOfInfinity, "sinf of an infinity is a NaN");
+    expect(floatBits(sinf(zero)) == 0x00000000u, "sinf(0) is +0");
+    expect(floatBits(sinf(negativeZero)) == 0x80000000u, "sinf(-0) is -0");
+    expect(floatBits(expf(zero)) == 0x3f800000u, "expf(0) is 1");
+    expect(floatBits(expf(-infinity)) == 0x00000000u, "expf(-inf) is +0");
+    expect(floatBits(expf(infinity)) == 0x7f800000u, "expf(+inf) is +inf");
+    expect(floatBits(expf(negativeBase * -12.5f)) == 0x7f800000u, "expf(100) overflows to +inf");
+    expect(floatBits(expf(negativeBase * 25.0f)) == 0x00000000u, "expf(-200) underflows to +0");
+}
+
 static void tanf_of_zero_is_zero(void)
 {
     // Arrange
@@ -173,6 +299,10 @@ int main(void)
     tanf_is_within_two_ulp_of_double_tan();
     atanf_is_within_two_ulp_of_double_atan();
     cosf_is_within_two_ulp_of_double_cos();
+    sinf_is_within_two_ulp_of_double_sin();
+    expf_is_within_two_ulp_of_double_exp();
+    powf_is_within_two_ulp_of_double_pow();
+    sinf_expf_and_powf_special_cases_are_exact();
     tanf_of_zero_is_zero();
     atanf_is_odd();
     if (failures != 0)

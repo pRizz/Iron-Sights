@@ -338,26 +338,32 @@ fi
 echo "ok 7f: only 64-bit builds compile port_lp64_notice.c, a headless one with PORT_LP64_NOTICE_HEADLESS"
 
 # 8. The comparison build (LP64-006 Task 4): -DGE_COMPARE=ON defines GE_COMPARE
-# and compiles and links port_compare_math.c (the in-tree tanf, atanf and cosf); no
-# other build does either. In a 32-bit video comparison tree PORT_PLAY_HARNESS
-# is 1 (port_playlog.h), so lockstep and the simulation trace are compiled,
-# while the default 32-bit video build, the shipped kind, leaves them out.
+# and compiles and links port_compare_math.c (the in-tree tanf, atanf and cosf)
+# and port_compare_math_arm.c and port_compare_math_arm_sinf.c (expf, powf and
+# sinf, MAC-001 Task 8); no other build does either. In a 32-bit video
+# comparison tree PORT_PLAY_HARNESS is 1 (port_playlog.h), so lockstep and the
+# simulation trace are compiled, while the default 32-bit video build, the
+# shipped kind, leaves them out.
 links_object() { grep -qF -- "port/src/$2.o" "$(link_file "$1")"; }
 expect_configure compare -DGE_COMPARE=ON "${width64[@]}"
 require_link compare
 has_flag compare '-DGE_COMPARE' || fail "compare tree lacks -DGE_COMPARE"
-compiles compare port_compare_math.c || fail "compare tree does not compile port_compare_math.c"
-links_object compare port_compare_math.c || fail "compare tree does not link port_compare_math.c.o"
-echo "ok 8: compare tree defines GE_COMPARE and links port_compare_math.c"
+for source in port_compare_math.c port_compare_math_arm.c port_compare_math_arm_sinf.c; do
+    compiles compare "$source" || fail "compare tree does not compile $source"
+    links_object compare "$source" || fail "compare tree does not link $source.o"
+done
+echo "ok 8: compare tree defines GE_COMPARE and links its three maths files"
 # The plain tree: the default 32-bit one, or on a Mac the 64-bit one.
 plain=default
 [[ $has32 == 1 ]] || plain=bits64
 if has_flag "$plain" '-DGE_COMPARE'; then
     fail "$plain tree defines GE_COMPARE"
 fi
-if compiles "$plain" port_compare_math.c || links_object "$plain" port_compare_math.c; then
-    fail "$plain tree compiles or links port_compare_math.c"
-fi
+for source in port_compare_math.c port_compare_math_arm.c port_compare_math_arm_sinf.c; do
+    if compiles "$plain" "$source" || links_object "$plain" "$source"; then
+        fail "$plain tree compiles or links $source"
+    fi
+done
 echo "ok 8b: $plain tree does neither"
 expect_failure comparelibm "GE_COMPARE_LIBM=ON needs GE_COMPARE=ON" -DGE_COMPARE_LIBM=ON "${width64[@]}"
 echo "ok 8c: GE_COMPARE_LIBM without GE_COMPARE is refused"
@@ -373,14 +379,22 @@ if [[ $has32 == 0 ]]; then
     exit 0
 fi
 expect_configure video32 -DGE_HEADLESS=OFF -DGE_VIDEO=ON
-for source in port_playlog.c port_lockstep.c port_simtrace.c port_compare_math.c port_gfx_digest.cpp; do
+for source in port_playlog.c port_lockstep.c port_simtrace.c port_compare_math.c port_compare_math_arm.c \
+    port_compare_math_arm_sinf.c port_gfx_digest.cpp; do
     if compiles video32 "$source"; then
         fail "default 32-bit video tree compiles $source"
     fi
 done
 expect_configure compare32video -DGE_HEADLESS=OFF -DGE_VIDEO=ON -DGE_COMPARE=ON
-for source in port_playlog.c port_lockstep.c port_simtrace.c port_compare_math.c port_gfx_digest.cpp; do
+for source in port_playlog.c port_lockstep.c port_simtrace.c port_compare_math.c port_compare_math_arm.c \
+    port_compare_math_arm_sinf.c port_gfx_digest.cpp; do
     compiles compare32video "$source" || fail "32-bit video compare tree does not compile $source"
+done
+# A 32-bit build has no -ffp-contract=off of its own: the maths files get theirs by name.
+for source in port_compare_math.c port_compare_math_arm.c port_compare_math_arm_sinf.c; do
+    mapfile -t math_cmd < <(entry_command compare32video "port/src/$source")
+    command_has "${math_cmd[1]}" -ffp-contract=off ||
+        fail "32-bit video compare tree compiles $source without -ffp-contract=off"
 done
 if cc -m32 -x c -fsyntax-only /dev/null >/dev/null 2>&1; then
     mapfile -t c_cmd < <(entry_command compare32video port/src/port_simtrace.c)

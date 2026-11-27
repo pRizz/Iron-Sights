@@ -6,9 +6,12 @@
  * computed every one of those results alike.
  *
  * Linked with port/src/port_compare_math.c (or a comparison tree's object of
- * it), tanf, atanf and cosf are the comparison build's; linked without, they
- * are the C library's. test_lp64_compare.sh builds and runs it at each width;
- * FORK-089 records the hashes of the i686, x86_64 and aarch64 containers.
+ * it), tanf, atanf and cosf are the comparison build's, and with
+ * port_compare_math_arm.c and port_compare_math_arm_sinf.c so are expf, powf
+ * and sinf; linked without, they are the C library's. test_lp64_compare.sh
+ * builds and runs it at each width, with all of them, and pins the six
+ * hashes; FORK-089 records the hashes of the i686, x86_64 and aarch64
+ * containers' C library, and FORK-093 macOS's.
  * Build with -fno-builtin, so no call is folded at compile time. The inputs
  * come from integer arithmetic and single float operations, which every host
  * rounds alike. */

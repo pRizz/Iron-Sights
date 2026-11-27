@@ -31,6 +31,9 @@ license, reproduced here as its terms require.
     (tools/ido5.3_recomp/rabbitizer)
   ido-static-recomp                  none        build tools only, not shipped
     (tools/ido5.3_recomp)            published
+  Arm Optimized Routines             MIT         comparison builds only
+    (port/src/                                   (-DGE_COMPARE=ON), never
+    port_compare_math_arm*.c)                    shipped
 
 Iron Sights open assets
 -----------------------
@@ -322,3 +325,41 @@ tools/ido5.3_recomp is a vendored copy of ido-static-recomp by Emill, now
 maintained by decompals (https://github.com/decompals/ido-static-recomp).
 The upstream project publishes no license, so no license text is
 reproduced here and it is not covered by the Project Midas MIT license.
+
+
+Arm Optimized Routines
+----------------------
+sinf, expf and powf, with their tables and helpers, in
+port/src/port_compare_math_arm.c, port/src/port_compare_math_arm_sinf.c and
+port/include/port_compare_math_arm.h, are taken from Arm Optimized Routines
+v26.07 (https://github.com/ARM-software/optimized-routines, commit
+4be260a5117480382690c6d8c300bc784e927d76; math/sinf.c, sincosf.h,
+sincosf_data.c, expf.c, exp2f_data.c, powf.c, powf_common.h,
+powf_log2_data.c, math_errf.c and math_config.h) and modified: merged into
+those files, kept to one configuration, and without the code that only sets
+errno or raises floating-point exceptions. Arm offers the routines under
+"MIT OR Apache-2.0 WITH LLVM-exception"; Iron Sights takes them under the MIT
+licence below. They are compiled only in comparison builds (-DGE_COMPARE=ON),
+a developer's test build that no release ships.
+
+MIT License
+
+Copyright (c) 1999-2022, Arm Limited.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

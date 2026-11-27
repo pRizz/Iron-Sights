@@ -7,9 +7,12 @@
  * calls one. This file defines both for a comparison build, replacing libm's:
  * each computes in double with only + - * / and comparisons, in an order C
  * fixes, and rounds once to float, so every host that rounds IEEE double
- * arithmetic to nearest gets the same bits. sinf, expf and powf stay libm's
- * (decision 2 of the LP64-006 plan): the sweep (lp64_libm_sweep.c) found the
- * three hosts' results equal. cosf joined the pair by the plan's rule for
+ * arithmetic to nearest gets the same bits. sinf, expf and powf stayed libm's
+ * (decision 2 of the LP64-006 plan) while the sweep (lp64_libm_sweep.c) found
+ * every host's results equal; macOS's are not, so from MAC-001 Task 8 they are
+ * Arm's routines, which glibc's are derived from and whose results are the
+ * three hosts' (port_compare_math_arm.c, port_compare_math_arm_sinf.c;
+ * FORK-093). cosf joined the pair by the LP64-006 plan's rule for
  * the sweep: i686's glibc cosf is one ulp from the 64-bit hosts' at
  * +-0x1.0e1c8p+6 (about 67.53), two of the sweep's 1,048,576 inputs
  * (FORK-089).
