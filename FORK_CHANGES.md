@@ -90,7 +90,7 @@ plan's inputs, not checks of this change; its run folder
 
 ### FORK-093 — Native macOS build plan
 
-**Status:** MAC-001 in progress (Tasks 1 to 6 of 11 built, below): the
+**Status:** MAC-001 in progress (Tasks 1 to 7 of 11 built, below): the
 headless 64-bit game builds, boots and plays its 20 missions on macOS.
 MAC-002 to MAC-006 are not started. The owner chose the
 audience, the graphics path and the outline on 2026-11-26, approved the
@@ -497,6 +497,26 @@ Linux containers of `scripts/port/lp64_env.py`.
   and all 43 harness lines of CI's tests step pass (`test_buffers.sh`
   as in Task 2); aarch64 `OK: ran 600 frames`; `compare_win32.py commits HEAD
   WORKTREE`: `identical in loaded code and data`.
+
+- **Task 7, the play sets and the pool budgets.** No source changed. On
+  the plain macOS build (`build/mac/headless`, at the tree of Task 6):
+  `lp64_play.py run --set demos,stages,stops,menus,tours,attract`: `OK:
+  117 of 117 cases`, paced in real time; `lp64_play.py peaks --budget
+  scripts/port/lp64_budgets.txt`: `OK: 291 pool and stage pairs within
+  budget`, with no pool past half its size and no exhaustion line (the
+  plan's scratch run counted 292 pairs; the attract loop picks its demos
+  at random, so the stages it visits differ from run to run);
+  `lp64_play.py traces --expect scripts/port/lp64_demo_traces.txt` against
+  an i686 reference: `OK: 14 demos, 14 identical, 0 differing as
+  recorded`. The reference was built from the same tree in the x86 container
+  (`build/lp64/ref-i686`, the default 32-bit headless tree) and run twice;
+  `traces --reference-check` printed `OK: 14 demos agree with themselves`
+  after one demo of the first run, `silo2`, was run again (its log had a
+  torn line at tick 443, two streams cutting each other, which the tool
+  names and refuses). Nothing in these runs showed a dependence on the 4 KB
+  page the tree had always run on (macOS arm64 pages are 16 KB), and the
+  demos ended at their measured ticks, which they do only at the right
+  pace: `portMacSleepUntil` holds the game's 60 retraces a second.
 
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside

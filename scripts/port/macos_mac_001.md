@@ -644,7 +644,7 @@ git commit -m "Run the sanitizer build under Apple clang"
 **Files:**
 - Modify: `FORK_CHANGES.md` only, unless a run finds a fault
 
-- [ ] **Step 1: Run the sets on the plain build**
+- [x] **Step 1: Run the sets on the plain build**
 
 ```bash
 python3 scripts/port/lp64_play.py run --rom "$ROM" --set demos,stages,stops,menus,tours,attract --output build/mac/play/plain build/mac/headless/IronSights
@@ -658,7 +658,7 @@ the demo traces as `lp64_demo_traces.txt` expects of a 64-bit build
 pool past half its size is a finding for the owner: this plan resizes no
 pool.
 
-- [ ] **Step 2: Record, commit**
+- [x] **Step 2: Record, commit**
 
 ```bash
 git commit -m "Record the macOS headless play sets"
