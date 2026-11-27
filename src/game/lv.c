@@ -222,7 +222,7 @@ s32 g_DebugPortalsInputBuffer2 = 0;
 s32 g_DebugPortalsInputBuffer3 = 0;
 s32 g_DebugPortalsInputBuffer4 = 0;
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__APPLE__) /* Mach-O has no weak alias */
 #define g_DebugPortalsInputBufferSource1 g_DebugPortalsInputBuffer1
 #define g_DebugPortalsInputBufferSource2 g_DebugPortalsInputBuffer2
 #define g_DebugPortalsInputBufferSource3 g_DebugPortalsInputBuffer3

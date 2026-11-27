@@ -31,7 +31,10 @@ int portMacImageRange(uintptr_t *lowest, uintptr_t *end)
         const struct segment_command_64 *segment = (const struct segment_command_64 *) command;
 
         command = (const struct load_command *) ((const char *) command + command->cmdsize);
-        if (segment->cmd != LC_SEGMENT_64 || strncmp(segment->segname, SEG_PAGEZERO, sizeof segment->segname) == 0)
+        /* memcmp, not strncmp: in the game's build <string.h> is the game's
+         * own short header (include/string.h). The name with its NUL is 11
+         * of segname's 16 bytes. */
+        if (segment->cmd != LC_SEGMENT_64 || memcmp(segment->segname, SEG_PAGEZERO, sizeof SEG_PAGEZERO) == 0)
         {
             continue;
         }

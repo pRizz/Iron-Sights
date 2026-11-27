@@ -29,6 +29,9 @@
 #include "platform_info.h"
 #include "port_lp64.h"          /* LP64-003: 64-bit memory stays above 4 GB */
 #include "port_lockstep.h"      /* LP64-006: one retrace a frame, no pacing */
+#ifdef __APPLE__
+#include "port_macos.h"         /* MAC-001: the sleep to an absolute time */
+#endif
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console ring (spec section 7). */
@@ -1071,7 +1074,11 @@ void portPumpEvents(void)
                 }
                 if (remain <= 2000000LL)
                 {
+#ifdef __APPLE__ /* no clock_nanosleep: port_macos.c's twin, same return values */
+                    while (portMacSleepUntil(&s_PaceTarget) == EINTR)
+#else
                     while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &s_PaceTarget, NULL) == EINTR)
+#endif
                     {
                     }
                     break;
@@ -1080,7 +1087,11 @@ void portPumpEvents(void)
         }
         else
         {
+#ifdef __APPLE__
+            while (portMacSleepUntil(&s_PaceTarget) == EINTR)
+#else
             while (clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &s_PaceTarget, NULL) == EINTR)
+#endif
             {
                 /* interrupted by a signal: retry to the same absolute target */
             }

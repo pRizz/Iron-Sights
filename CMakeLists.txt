@@ -25,6 +25,17 @@ if(GE_POINTER_BITS EQUAL 64)
     endif()
 endif()
 
+# macOS (scripts/port/macos_plan.md): Apple Silicon and 64-bit pointers only.
+# APPLE is false for the browser build and a MinGW cross build made on a Mac.
+if(APPLE)
+    if(NOT GE_POINTER_BITS EQUAL 64)
+        message(FATAL_ERROR "macOS builds are 64-bit only: configure with -DGE_POINTER_BITS=64")
+    endif()
+    if(NOT CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+        message(FATAL_ERROR "macOS builds are Apple Silicon only")
+    endif()
+endif()
+
 # The converter oracle (LP64-004, scripts/port/native_64bit_lp64_004.md): a
 # 32-bit headless build that also compiles the 64-bit ROM data converters and
 # compares their output with the game's in-place conversions. Never shipped;
@@ -70,6 +81,8 @@ elseif(GE_POINTER_BITS EQUAL 64)
     # eleven warnings that have no -W option, all in port/fast3d: ten
     # "initialized and declared 'extern'" (gfx_pc.cpp 8, gfx_roomcache.inl 2)
     # and one "null character(s) preserved in literal" (gfx_sdl2.cpp).
+    # discarded-qualifiers is GCC's name: clang does not know it, and under
+    # port_macos.c's -Werror an unknown warning option is an error (MAC-001).
     set(GE_WARNING_OPTIONS
         $<$<COMPILE_LANGUAGE:CXX>:-Werror=int-to-pointer-cast>
         $<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-declarations>
@@ -78,7 +91,7 @@ elseif(GE_POINTER_BITS EQUAL 64)
         $<$<COMPILE_LANGUAGE:C>:-Werror=int-to-pointer-cast>
         $<$<COMPILE_LANGUAGE:C>:-Wno-incompatible-pointer-types>
         $<$<COMPILE_LANGUAGE:C>:-Wno-implicit-function-declaration>
-        $<$<COMPILE_LANGUAGE:C>:-Wno-discarded-qualifiers>
+        $<$<AND:$<COMPILE_LANGUAGE:C>,$<C_COMPILER_ID:GNU>>:-Wno-discarded-qualifiers>
         $<$<COMPILE_LANGUAGE:C>:-Wno-format-truncation>
         $<$<COMPILE_LANGUAGE:C>:-Wno-overflow>
         $<$<COMPILE_LANGUAGE:C>:-Wno-format-overflow>
@@ -713,7 +726,23 @@ if(EMSCRIPTEN)
 else()
 # The suspend-point serializer records only registered game-owned sections;
 # the linker map supplies their exact bounds for this particular executable.
-target_link_options(ge PRIVATE "-Wl,-Map=${CMAKE_BINARY_DIR}/ProjectMidas.map")
+if(APPLE)
+    # Apple's linker spells the map option differently. A 64-bit build has no
+    # compiled-in assets, so several hundred weak references (the file symbols
+    # of assets/obseg/obseg.h, and video-only functions a headless build tests
+    # for) are undefined: ELF makes such a reference null at link time, and
+    # Mach-O does only with dynamic lookup. That also lets a strong undefined
+    # symbol through, so macos_link_check.py refuses one after every link.
+    target_link_options(ge PRIVATE "-Wl,-map,${CMAKE_BINARY_DIR}/ProjectMidas.map"
+        "-Wl,-undefined,dynamic_lookup")
+    find_program(MAC_PYTHON NAMES python3 REQUIRED)
+    set_property(TARGET ge APPEND PROPERTY LINK_DEPENDS ${CMAKE_SOURCE_DIR}/scripts/port/macos_link_check.py)
+    add_custom_command(TARGET ge POST_BUILD
+        COMMAND ${MAC_PYTHON} ${CMAKE_SOURCE_DIR}/scripts/port/macos_link_check.py $<TARGET_FILE:ge>
+        VERBATIM)
+else()
+    target_link_options(ge PRIVATE "-Wl,-Map=${CMAKE_BINARY_DIR}/ProjectMidas.map")
+endif()
 # 64-bit builds have no serializer (port_state_unavailable.c), so no registry.
 if(NOT GE_POINTER_BITS EQUAL 64)
     find_program(STATE_PYTHON NAMES python3 REQUIRED)

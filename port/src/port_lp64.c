@@ -28,6 +28,8 @@
 
 #if defined(__linux__)
 #include <link.h>
+#elif defined(__APPLE__)
+#include "port_macos.h" /* portMacImageRange: the range from dyld's load commands */
 #else
 #error "port_lp64.c: this platform's port must supply the main executable's loaded address range for portLp64CheckAddressSpace (Linux reads it from dl_iterate_phdr)"
 #endif
@@ -116,6 +118,7 @@ typedef struct Lp64ImageRange
     int found;
 } Lp64ImageRange;
 
+#if defined(__linux__)
 /* The first object dl_iterate_phdr reports is the main executable: take the
  * span of its PT_LOAD segments, then stop. */
 static int lp64ReadImage(struct dl_phdr_info *info, size_t infosize, void *data)
@@ -146,12 +149,17 @@ static int lp64ReadImage(struct dl_phdr_info *info, size_t infosize, void *data)
     }
     return 1;
 }
+#endif
 
 static void lp64CheckExecutableImage(void)
 {
     Lp64ImageRange range = { 0, 0, 0 };
 
+#if defined(__linux__)
     dl_iterate_phdr(lp64ReadImage, &range);
+#elif defined(__APPLE__)
+    range.found = portMacImageRange(&range.lowest, &range.end);
+#endif
     if (!range.found)
     {
         portLp64Stop(LP64_EXIT_LOW_ADDRESS, "ge: lp64: the executable image has no loaded segments to check\n");

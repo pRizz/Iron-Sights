@@ -90,8 +90,9 @@ plan's inputs, not checks of this change; its run folder
 
 ### FORK-093 — Native macOS build plan
 
-**Status:** MAC-001 in progress (Task 1 of 11 built, below); no macOS game
-is built yet, and MAC-002 to MAC-006 are not started. The owner chose the
+**Status:** MAC-001 in progress (Tasks 1 and 2 of 11 built, below): the
+headless 64-bit game builds, boots and plays its 20 missions on macOS.
+MAC-002 to MAC-006 are not started. The owner chose the
 audience, the graphics path and the outline on 2026-11-26, approved the
 design on 2026-11-27 and accepted MAC-001's plan the same day.
 
@@ -215,6 +216,63 @@ Linux containers of `scripts/port/lp64_env.py`.
   `unprototyped --check` `OK`; in the aarch64 container `OK: ran 600
   frames`; `compare_win32.py commits HEAD WORKTREE` printed `identical in loaded code
   and data`.
+
+- **Task 2, the headless game builds, links and boots.** `CMakeLists.txt`
+  refuses a macOS configure that is not 64-bit ("macOS builds are 64-bit
+  only: configure with -DGE_POINTER_BITS=64") or not arm64 ("macOS builds
+  are Apple Silicon only"), links with `-Wl,-map,` in place of GNU ld's
+  `-Wl,-Map=` and with `-Wl,-undefined,dynamic_lookup`, and runs
+  `scripts/port/macos_link_check.py` on the executable after every link.
+  The compile causes are fixed behind `__APPLE__`, so every other compiler
+  sees the tokens it saw: `include/PR/os.h` and `include/bstring.h` take
+  `<strings.h>` there, and `os.h` and `src/game/image.c` skip their
+  `sprintf` declaration where macOS's `<stdio.h>` has made it a macro;
+  `port/include/asmsym.h` has Mach-O section names (`__DATA,__data`,
+  `__DATA,__const`); `src/game/lv.c` and `src/game/spectrum.c` share the
+  browser build's `#define` in place of `#pragma weak A = B`, which Mach-O
+  lacks; `port/src/romdata.c` reads `errno` through `__error()`;
+  `port/src/port_lp64.c` fills its range from `portMacImageRange` and
+  keeps its `#error` for any other platform; `port/src/pcsched.c`'s two
+  `clock_nanosleep` calls have a `portMacSleepUntil` twin. Two things the
+  plan did not foresee: `port_macos.c` compiled under the game's include
+  path sees the game's short `include/string.h`, so it compares the
+  segment name with `memcmp`; and clang's unknown `-Wno-discarded-qualifiers`
+  is an error under that file's `-Werror`, so the flag became GCC-only in
+  this task rather than the next (GCC's command lines are unchanged).
+  *Why dynamic lookup.* A 64-bit build has no compiled-in assets, so 705
+  weak references are undefined: 702 file symbols of
+  `assets/obseg/obseg.h` and `portHealthWide`, `portMpHudWide` and
+  `portInputPadDigMoveP1`, video-only functions the headless build tests
+  for. ELF makes such a reference null at link time; Mach-O does so only
+  with dynamic lookup, which would also let a strong undefined symbol
+  through. `macos_link_check.py` reads `nm -m` and fails the build naming
+  any strong one (`strong_lookups`, tested on any host by
+  `test_macos_link_check.py`, which CI's tests step runs); a line it
+  cannot classify counts as strong. The link prints one warning, `reducing
+  alignment of section __DATA,__common from 0x8000 to 0x4000`: two common
+  symbols of 0x8000 bytes (`sp_main`, `decompressdata.s_huftWorkspace`)
+  whose alignment no source asks for.
+  `scripts/port/test_pointer_bits.sh` gained case 0 for macOS (the refusal,
+  the link line, the link check, `port_macos.c` compiled) and, since a Mac
+  can no longer configure the default 32-bit tree, skips by name there the
+  cases that read one (1, 1b, 6, 7's video half, 7b, 7d, 8d and the 32-bit
+  halves of 7e); its Linux run is unchanged. Its canary cases still fail on
+  macOS on clang's wording, which is Task 4's.
+  *Ran, on macOS:* `build/mac/headless` builds with exit 0 and `OK: 705
+  weak references, 0 strong`; `lp64_diagnostics.py gate`: `361 files
+  compiled, 0 failed`; `lp64_boot.py --expect-run --frames 600`: `OK: ran
+  600 frames` (the tool requires the `ge: lp64: address space OK` line);
+  the mission smoke: 20 of 20 `PASS`; `test_macos_link_check.py`: 7 tests
+  `OK`; `test_macos_host: PASS (64-bit)`. *In the containers:* x86_64, the gate on `build/lp64/gate` and
+  `gate-video` (361 and 394 files compiled, 0 failed), `narrowing --check`
+  and `unprototyped --check` `OK`, and all 43 `bash scripts/port/test_*.sh`
+  lines of CI's tests step passed at the widths they ran before;
+  `test_buffers.sh` ran there without `MIDAS_BUFFER_SANITIZE=1`, whose
+  32-bit AddressSanitizer binary hangs under the Mac's i386 emulation
+  (FORK-089), and with it at 64 bits in the aarch64 container (`OK`);
+  aarch64, `OK: ran 600 frames`. `compare_win32.py commits HEAD WORKTREE`:
+  `identical in loaded code and data; .buildid differs` (exit 0; the
+  identifier hashes debug information, which a header's new lines move).
 
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside

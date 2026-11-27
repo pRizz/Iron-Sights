@@ -25,6 +25,13 @@
 #define ASM_DATA ".section .data.midas,\"\",@\n"
 #define ASM_RODATA ".section .rodata.midas,\"\",@\n"
 #define ASM_SIZE(name, size) ".size " ASM_SYM(name) ", " PORT_ASMSYM_STR(size) "\n"
+#elif defined(__APPLE__)
+/* Mach-O names a segment and a section (MAC-001). The zero-filled blocks are a
+ * few kilobytes, so they sit in __data rather than in a zero-fill section. */
+#define ASM_BSS ".section __DATA,__data\n"
+#define ASM_DATA ".section __DATA,__data\n"
+#define ASM_RODATA ".section __DATA,__const\n"
+#define ASM_SIZE(name, size) ""
 #else
 #define ASM_BSS ".section .bss\n"
 #define ASM_DATA ".section .data\n"

@@ -52,15 +52,46 @@ require_link() { [[ -f $(link_file "$1") ]] || fail "$1: no link command at $(li
 # Whole words only: -no-pie must not match inside another option.
 has_link_flag() { grep -qE -- "(^| )$2( |\$)" "$(link_file "$1")"; }
 
+# 0. macOS (MAC-001): a 64-bit build only, linked with Apple's spellings. Its
+# linker has no -Map=, and leaves an undefined weak reference undefined unless
+# told to look it up at load (macos_link_check.py then refuses a strong one).
+host=$(uname -s)
+# has32: the host configures the default 32-bit tree. A Mac does not (case 0),
+# so the cases that read a 32-bit tree are skipped there by name, and the
+# comparison tree of case 8 is configured at 64 bits (width64).
+has32=1
+width64=()
+if [[ $host == Darwin ]]; then
+    has32=0
+    width64=(-DGE_POINTER_BITS=64)
+    expect_failure mac32 "macOS builds are 64-bit only: configure with -DGE_POINTER_BITS=64"
+    expect_configure mac64 -DGE_POINTER_BITS=64
+    require_link mac64
+    has_link_flag mac64 '-Wl,-undefined,dynamic_lookup' || fail "macOS link lacks -Wl,-undefined,dynamic_lookup"
+    grep -qF -- '-Wl,-map,' "$(link_file mac64)" || fail "macOS link lacks -Wl,-map,"
+    if grep -qF -- '-Wl,-Map=' "$(link_file mac64)"; then
+        fail "macOS link still passes GNU ld's -Wl,-Map="
+    fi
+    grep -qF -- 'macos_link_check.py' "$work/mac64/CMakeFiles/ge.dir/build.make" ||
+        fail "macOS build does not run macos_link_check.py after the link"
+    compiles_mac() { grep -qF -- "/port/src/port_macos.c\"" "$work/mac64/compile_commands.json"; }
+    compiles_mac || fail "macOS build does not compile port_macos.c"
+    echo "ok 0: macOS refuses a 32-bit configure; its 64-bit link has -undefined,dynamic_lookup and -map, and runs the link check"
+fi
+
 # 1. The default is today's 32-bit build.
-expect_configure default
-has_flag default '-m32' || fail "default build lacks -m32"
-echo "ok 1: default configure is 32-bit"
-require_link default
-for flag in -m32 -no-pie; do
-    has_link_flag default "$flag" || fail "default link lacks $flag"
-done
-echo "ok 1b: default link has -m32 and -no-pie"
+if [[ $has32 == 1 ]]; then
+    expect_configure default
+    has_flag default '-m32' || fail "default build lacks -m32"
+    echo "ok 1: default configure is 32-bit"
+    require_link default
+    for flag in -m32 -no-pie; do
+        has_link_flag default "$flag" || fail "default link lacks $flag"
+    done
+    echo "ok 1b: default link has -m32 and -no-pie"
+else
+    echo "skip 1, 1b: $host has no 32-bit build"
+fi
 
 # 2. 64 drops every 32-bit-only flag and pins float contraction off.
 expect_configure bits64 -DGE_POINTER_BITS=64
@@ -189,12 +220,16 @@ fi
 # path in the recorded "file" field.
 compiles() { grep -qF -- "/port/src/$2\"" "$work/$1/compile_commands.json"; }
 has_layout_step() { grep -qF -- "embed_state_layout.py" "$work/$1/CMakeFiles/ge.dir/build.make"; }
-compiles default port_state.c || fail "32-bit build does not compile port_state.c"
-if compiles default port_state_unavailable.c; then
-    fail "32-bit build compiles port_state_unavailable.c"
+if [[ $has32 == 1 ]]; then
+    compiles default port_state.c || fail "32-bit build does not compile port_state.c"
+    if compiles default port_state_unavailable.c; then
+        fail "32-bit build compiles port_state_unavailable.c"
+    fi
+    has_layout_step default || fail "32-bit build lacks the embed_state_layout.py step"
+    echo "ok 6: 32-bit build compiles port_state.c and runs the layout step"
+else
+    echo "skip 6: $host has no 32-bit build"
 fi
-has_layout_step default || fail "32-bit build lacks the embed_state_layout.py step"
-echo "ok 6: 32-bit build compiles port_state.c and runs the layout step"
 for tree in bits64 bits64video; do
     compiles "$tree" port_state_unavailable.c || fail "$tree: 64-bit build does not compile port_state_unavailable.c"
     if compiles "$tree" port_state.c; then
@@ -214,19 +249,24 @@ echo "ok 6b: 64-bit builds compile port_state_unavailable.c, not port_state.c, a
 # -w silences a -Werror= too).
 expect_failure oracle64 "GE_LP64_ORACLE=ON is a 32-bit build (GE_POINTER_BITS=32)" \
     -DGE_POINTER_BITS=64 -DGE_LP64_ORACLE=ON
-expect_failure oraclevideo "GE_LP64_ORACLE=ON needs a headless build (GE_HEADLESS=ON)" \
-    -DGE_HEADLESS=OFF -DGE_LP64_ORACLE=ON
-echo "ok 7: the oracle is refused at 64 bits and outside a headless build"
 lists_romconv() { grep -qF -- "/port/src/romconv_" "$work/$1/compile_commands.json"; }
-if lists_romconv default; then
-    fail "32-bit build without GE_LP64_ORACLE compiles a romconv_ source"
-fi
-for source in port_lp64_oracle.c port_lp64.c; do
-    if compiles default "$source"; then
-        fail "32-bit build without GE_LP64_ORACLE compiles $source"
+if [[ $has32 == 1 ]]; then
+    expect_failure oraclevideo "GE_LP64_ORACLE=ON needs a headless build (GE_HEADLESS=ON)" \
+        -DGE_HEADLESS=OFF -DGE_LP64_ORACLE=ON
+    echo "ok 7: the oracle is refused at 64 bits and outside a headless build"
+    if lists_romconv default; then
+        fail "32-bit build without GE_LP64_ORACLE compiles a romconv_ source"
     fi
-done
-echo "ok 7b: the default 32-bit build lists no romconv_ source, no oracle and no port_lp64.c"
+    for source in port_lp64_oracle.c port_lp64.c; do
+        if compiles default "$source"; then
+            fail "32-bit build without GE_LP64_ORACLE compiles $source"
+        fi
+    done
+    echo "ok 7b: the default 32-bit build lists no romconv_ source, no oracle and no port_lp64.c"
+else
+    echo "ok 7: the oracle is refused at 64 bits"
+    echo "skip 7 (outside a headless build), 7b: $host has no 32-bit build"
+fi
 for tree in bits64 bits64video; do
     compiles "$tree" romconv_common.c || fail "$tree: 64-bit build does not compile romconv_common.c"
     if compiles "$tree" port_lp64_oracle.c; then
@@ -234,37 +274,45 @@ for tree in bits64 bits64video; do
     fi
 done
 echo "ok 7c: 64-bit builds compile the converters and not the oracle"
-expect_configure oracle -DGE_LP64_ORACLE=ON
-for source in romconv_common.c port_lp64_oracle.c port_lp64.c; do
-    compiles oracle "$source" || fail "oracle build does not compile $source"
-done
-has_flag oracle '-m32' || fail "oracle build lacks -m32"
-echo "ok 7d: the 32-bit oracle build compiles the converters, the oracle and port_lp64.c"
+if [[ $has32 == 1 ]]; then
+    expect_configure oracle -DGE_LP64_ORACLE=ON
+    for source in romconv_common.c port_lp64_oracle.c port_lp64.c; do
+        compiles oracle "$source" || fail "oracle build does not compile $source"
+    done
+    has_flag oracle '-m32' || fail "oracle build lacks -m32"
+    echo "ok 7d: the 32-bit oracle build compiles the converters, the oracle and port_lp64.c"
+else
+    echo "skip 7d: $host has no 32-bit oracle build"
+fi
 # Whole words of one recorded command: -w must not match inside -Wall.
 command_has() { [[ " $1 " == *" $2 "* ]]; }
 mapfile -t conv64 < <(entry_command bits64 port/src/romconv_common.c)
 command_has "${conv64[1]}" -Werror=incompatible-pointer-types ||
     fail "64-bit romconv_common.c lacks -Werror=incompatible-pointer-types"
-mapfile -t conv32 < <(entry_command oracle port/src/romconv_common.c)
-command_has "${conv32[1]}" -Werror=incompatible-pointer-types ||
-    fail "oracle romconv_common.c lacks -Werror=incompatible-pointer-types"
-command_has "${conv32[1]}" -DGE_LP64_ORACLE || fail "oracle romconv_common.c lacks -DGE_LP64_ORACLE"
-if command_has "${conv32[1]}" -w; then
-    fail "oracle romconv_common.c is compiled with -w, which silences its -Werror="
-fi
-mapfile -t other32 < <(entry_command oracle port/src/port_lp64.c)
-command_has "${other32[1]}" -w || fail "oracle port_lp64.c lost -w"
-# sentry.cmake adds the crash adapter after add_executable; it needs -w too.
-mapfile -t adapter32 < <(entry_command oracle port/crash/reporting_linux.c)
-command_has "${adapter32[1]}" -w || fail "oracle port/crash/reporting_linux.c lacks -w"
-echo "ok 7e: converter sources make incompatible pointer types errors at both widths; the oracle build keeps -w elsewhere, the crash adapter included"
-# The 64-bit stops' message box (LP64-007 Task 6): 64-bit builds only, and a
-# headless one compiles it to do nothing.
-for tree in default oracle; do
-    if compiles "$tree" port_lp64_notice.c; then
-        fail "$tree: 32-bit build compiles port_lp64_notice.c"
+if [[ $has32 == 1 ]]; then
+    mapfile -t conv32 < <(entry_command oracle port/src/romconv_common.c)
+    command_has "${conv32[1]}" -Werror=incompatible-pointer-types ||
+        fail "oracle romconv_common.c lacks -Werror=incompatible-pointer-types"
+    command_has "${conv32[1]}" -DGE_LP64_ORACLE || fail "oracle romconv_common.c lacks -DGE_LP64_ORACLE"
+    if command_has "${conv32[1]}" -w; then
+        fail "oracle romconv_common.c is compiled with -w, which silences its -Werror="
     fi
-done
+    mapfile -t other32 < <(entry_command oracle port/src/port_lp64.c)
+    command_has "${other32[1]}" -w || fail "oracle port_lp64.c lost -w"
+    # sentry.cmake adds the crash adapter after add_executable; it needs -w too.
+    mapfile -t adapter32 < <(entry_command oracle port/crash/reporting_linux.c)
+    command_has "${adapter32[1]}" -w || fail "oracle port/crash/reporting_linux.c lacks -w"
+    echo "ok 7e: converter sources make incompatible pointer types errors at both widths; the oracle build keeps -w elsewhere, the crash adapter included"
+    # The 64-bit stops' message box (LP64-007 Task 6): 64-bit builds only, and a
+    # headless one compiles it to do nothing.
+    for tree in default oracle; do
+        if compiles "$tree" port_lp64_notice.c; then
+            fail "$tree: 32-bit build compiles port_lp64_notice.c"
+        fi
+    done
+else
+    echo "ok 7e: converter sources make incompatible pointer types errors at 64 bits (skip: $host has no 32-bit oracle build)"
+fi
 mapfile -t notice64 < <(entry_command bits64 port/src/port_lp64_notice.c)
 command_has "${notice64[1]}" -DPORT_LP64_NOTICE_HEADLESS ||
     fail "headless 64-bit port_lp64_notice.c lacks -DPORT_LP64_NOTICE_HEADLESS"
@@ -280,20 +328,23 @@ echo "ok 7f: only 64-bit builds compile port_lp64_notice.c, a headless one with 
 # is 1 (port_playlog.h), so lockstep and the simulation trace are compiled,
 # while the default 32-bit video build, the shipped kind, leaves them out.
 links_object() { grep -qF -- "port/src/$2.o" "$(link_file "$1")"; }
-expect_configure compare -DGE_COMPARE=ON
+expect_configure compare -DGE_COMPARE=ON "${width64[@]}"
 require_link compare
 has_flag compare '-DGE_COMPARE' || fail "compare tree lacks -DGE_COMPARE"
 compiles compare port_compare_math.c || fail "compare tree does not compile port_compare_math.c"
 links_object compare port_compare_math.c || fail "compare tree does not link port_compare_math.c.o"
 echo "ok 8: compare tree defines GE_COMPARE and links port_compare_math.c"
-if has_flag default '-DGE_COMPARE'; then
-    fail "default tree defines GE_COMPARE"
+# The plain tree: the default 32-bit one, or on a Mac the 64-bit one.
+plain=default
+[[ $has32 == 1 ]] || plain=bits64
+if has_flag "$plain" '-DGE_COMPARE'; then
+    fail "$plain tree defines GE_COMPARE"
 fi
-if compiles default port_compare_math.c || links_object default port_compare_math.c; then
-    fail "default tree compiles or links port_compare_math.c"
+if compiles "$plain" port_compare_math.c || links_object "$plain" port_compare_math.c; then
+    fail "$plain tree compiles or links port_compare_math.c"
 fi
-echo "ok 8b: default tree does neither"
-expect_failure comparelibm "GE_COMPARE_LIBM=ON needs GE_COMPARE=ON" -DGE_COMPARE_LIBM=ON
+echo "ok 8b: $plain tree does neither"
+expect_failure comparelibm "GE_COMPARE_LIBM=ON needs GE_COMPARE=ON" -DGE_COMPARE_LIBM=ON "${width64[@]}"
 echo "ok 8c: GE_COMPARE_LIBM without GE_COMPARE is refused"
 # The picture digest (port_gfx_digest.cpp, Task 7) needs both GE_COMPARE and GE_VIDEO.
 for tree in compare bits64video; do
@@ -301,6 +352,11 @@ for tree in compare bits64video; do
         fail "$tree tree compiles port_gfx_digest.cpp"
     fi
 done
+if [[ $has32 == 0 ]]; then
+    echo "skip 8d: $host has no 32-bit video build"
+    echo "Pointer-bits configure checks passed"
+    exit 0
+fi
 expect_configure video32 -DGE_HEADLESS=OFF -DGE_VIDEO=ON
 for source in port_playlog.c port_lockstep.c port_simtrace.c port_compare_math.c port_gfx_digest.cpp; do
     if compiles video32 "$source"; then

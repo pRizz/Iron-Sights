@@ -2687,7 +2687,9 @@ void texLoad(uintptr_t *updateword, struct texpool *pool)
                * floor hunt). */
                 extern char *getenv(const char *);
                 extern void *portRootFopen(const char *name, const char *mode);
+#if !defined(__APPLE__) || !defined(sprintf) /* macOS: a checked macro from <stdio.h> */
                 extern int sprintf(char *, const char *, ...);
+#endif
                 static s32 wantnum = -2;
                 if (wantnum == -2)
                 {

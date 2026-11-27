@@ -381,7 +381,7 @@ git commit -m "Add the macOS host functions and keep harnesses off 32 bits there
   with `ASM_SIZE` empty, as measured. A zero-fill section for `ASM_BSS` is
   the implementer's choice if it links and the boot check passes.
 
-- [ ] **Step 1: Write the failing configure tests**
+- [x] **Step 1: Write the failing configure tests**
 
 In `test_pointer_bits.sh`, run only when `uname` is `Darwin`: a configure
 without `-DGE_POINTER_BITS=64` fails with "macOS builds are 64-bit only";
@@ -389,14 +389,14 @@ with it, the generated link line has `-undefined,dynamic_lookup` and
 `-map,` and no `-Map=`. Run it on macOS: the first case fails (the
 configure succeeds today).
 
-- [ ] **Step 2: Write the failing link-check tests, then implement it**
+- [x] **Step 2: Write the failing link-check tests, then implement it**
 
 `test_macos_link_check.py`: `strong_lookups` returns `[]` for
 `"(undefined) weak external _CarmourguardZ (dynamically looked up)"`,
 `["_missing"]` for `"(undefined) external _missing (dynamically looked
 up)"`, and ignores `"(undefined) external _printf (from libSystem)"`.
 
-- [ ] **Step 3: Make the tree compile**
+- [x] **Step 3: Make the tree compile**
 
 Apply the guarded edits listed under "What was measured". In `port_lp64.c`
 the Linux reader stays inside `#if defined(__linux__)` unedited and an
@@ -408,13 +408,13 @@ calling `portMacSleepUntil(&s_PaceTarget)`.
 
 Run: `cmake --build build/mac/headless`. Expected: every file compiles.
 
-- [ ] **Step 4: Make it link, and check what the link hid**
+- [x] **Step 4: Make it link, and check what the link hid**
 
 Expected: exit 0, `OK: 705 weak references, 0 strong`, and one linker
 warning (the `__common` alignment). Record the weak count and the warning
 in FORK-093.
 
-- [ ] **Step 5: Run the task check, commit**
+- [x] **Step 5: Run the task check, commit**
 
 Expected as the task check says, with the boot log holding `ge: lp64:
 address space OK`.

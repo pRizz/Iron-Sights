@@ -25,7 +25,7 @@ extern "C" {
 
 #ident "$Revision: 1.4 $"
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__) || defined(__APPLE__)
 #include <strings.h>
 #else
 extern void    bcopy(const void *, void *, int);

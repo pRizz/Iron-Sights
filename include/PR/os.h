@@ -1010,7 +1010,7 @@ extern void		osAckRamromWrite(void);
 
 /* byte string operations */
 
-#if (defined(__GLIBC__) || defined(__EMSCRIPTEN__)) && !defined(TARGET_N64)
+#if (defined(__GLIBC__) || defined(__EMSCRIPTEN__) || defined(__APPLE__)) && !defined(TARGET_N64)
 /* Linux port builds: SDL.h drags in <strings.h>, whose size_t prototypes
  * conflict with the N64 int forms below. Take the host's declarations
  * everywhere on glibc so TUs that include both agree. */
@@ -1030,7 +1030,9 @@ extern u32 		osGetMemSize(void);
 
 /* Printf */
 
+#if !defined(__APPLE__) || !defined(sprintf) /* macOS: <stdio.h> makes sprintf a checked macro */
 extern int		sprintf(char *s, const char *fmt, ...);
+#endif
 extern void		osSyncPrintf(const char *fmt, ...);
 extern void		osAsyncPrintf(const char *fmt, ...);
 extern int		osSyncGetChars(char *buf);
