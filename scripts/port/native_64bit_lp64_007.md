@@ -5,7 +5,9 @@
 **Status:** Planned on 2026-11-24 from measurements on `main` at f04e0a7,
 and accepted by the owner the same day with all thirteen recommendations
 ("Accept all thirteen"); "Decisions for the owner" at the end lists them,
-and the tasks are written for them. Execution started on 2026-11-24. The status table of
+and the tasks are written for them. Execution started on 2026-11-24; Tasks 1
+to 13 Step 4 were done by 2026-11-26, and Task 13 Step 5 (the closing push and
+its CI) is the controller's. The status table of
 [native_64bit_plan.md](native_64bit_plan.md) records what is built and
 verified as the tasks land.
 
@@ -928,19 +930,29 @@ is a note in FORK-089 and the hand-over keeps the list.
   leaves `lp64_equiv_expected.txt`. A question answered no, or not
   answered, changes nothing and stays in the hand-over. `t15-fabsf.patch`
   is strict tier and is not applied here.
-- [ ] **Step 2:** The package check (a patch may touch code both widths
+- [x] **Step 2:** The package check (a patch may touch code both widths
   compile); record in FORK-089; commit and push; read CI, and that the
   release it publishes still holds seventeen assets.
-  Done on the Mac in Task 12's local commit: the package check (P1, P2,
-  P4; P3 left to CI under Rosetta 2) and the FORK-089 record. Not done:
-  the push, CI and the release's asset count.
+  Done: on the Mac the package check (P1, P2, P4; P3 left to CI under
+  Rosetta 2) and the FORK-089 record; then pushed with 9de2822, CI run
+  45887053053 succeeded in all seven jobs (P3 among them, on GitHub's
+  x86_64 runner), and release `build-416.1-9de2822ae91e` holds seventeen
+  assets.
 
 ### Task 13: Close
 
-- [ ] **Step 1: The task check and the package check in full**, on
-  `main` as pushed.
-- [ ] **Step 2: The final whole-milestone review** and its one fix wave.
-- [ ] **Step 3: The record.** `native_64bit_plan.md`: LP64-007 Done with
+- [x] **Step 1: The task check and the package check in full**, on
+  `main` as pushed. Done at 9de2822 on the Mac, every result as expected
+  but one: `traces --reference-check` of the two i686 reference runs
+  failed on `silo2`, a stderr line torn into a stdout tick line at tick 443
+  of the second run's log; a third run agreed with the first on all 14
+  demos and the pair was not rerun (the controller's ruling). P3 and the
+  32-bit sanitized half of `test_buffers.sh` ran in CI (run 45887053053),
+  not on the Mac. FORK-089's close note has the figures.
+- [x] **Step 2: The final whole-milestone review** and its one fix wave
+  (50cca8b, "Settle the LP64-007 final review's fixes"; local, not pushed
+  when this was written).
+- [x] **Step 3: The record.** `native_64bit_plan.md`: LP64-007 Done with
   what ran where; milestone 7's settled reading; the plan's own status
   line. FORK-089's title names LP64-006 and LP64-007. A hand-over block,
   "After the 64-bit plan", for the macOS and Apple TV project and for
@@ -948,7 +960,7 @@ is a note in FORK-089 and the hand-over keeps the list.
   package, a relocating suspend format), the hand-over items this plan
   did not take (the table above), every open owner question, and the
   "Kept deferred" list.
-- [ ] **Step 4: Delete the run folders** under `build/lp64/ship/` that
+- [x] **Step 4: Delete the run folders** under `build/lp64/ship/` that
   no record names; keep the trees.
 - [ ] **Step 5:** Commit, push, read CI on all three workflows.
 
