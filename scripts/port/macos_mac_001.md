@@ -772,7 +772,13 @@ Written for decision 4, as accepted.
   the log line `ge: romdata: NO ROM`. The `publish` job does not list it under
   `needs`: a red macOS job is visible and holds back no release.
 
-- [ ] **Step 1: Check the job's commands in a fresh clone on the Mac**
+**As built** (FORK-093 has the detail): the job calls two small scripts,
+`macos_harnesses.sh` (every harness, with the SKIP lines held to a list of
+two) and `macos_no_rom.sh`, rather than carrying their logic in the
+workflow file; `test_macos_harnesses.sh` tests the first. It was done
+before Tasks 8 and 9, which waited on the owner.
+
+- [x] **Step 1: Check the job's commands in a fresh clone on the Mac**
 
 Run each of the job's lines in a new clone with no ROM and no `build/`
 folder. Expected: each passes as the job expects.

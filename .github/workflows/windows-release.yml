@@ -95,6 +95,7 @@ jobs:
           python3 scripts/port/test_lp64_env.py
           python3 scripts/port/test_linux_build.py
           bash scripts/port/test_harness_widths.sh
+          bash scripts/port/test_macos_harnesses.sh
           bash scripts/port/test_abi_probe.sh
           bash scripts/port/test_lp64_typed_reads.sh
           bash scripts/port/test_lp64_address.sh
@@ -479,6 +480,52 @@ jobs:
           path: build/sentry-smoke
           if-no-files-found: ignore
           retention-days: 7
+
+  # The headless macOS game on Apple clang, without a ROM (MAC-001, FORK-093;
+  # scripts/port/macos.md). publish does not need this job: a red macOS job is
+  # visible on the run and holds back no release.
+  macos-arm64-tests:
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Identify the runner image
+        # The image fixes the Xcode, and so the Apple clang, the game is built with.
+        run: |
+          sw_vers
+          xcodebuild -version
+          cc --version
+          uname -m
+      - name: Install what the harnesses need
+        # Bash 4 or later (the system's is 3.2), Ninja, and SDL2 for test_start_input.
+        timeout-minutes: 10
+        run: |
+          brew install bash ninja sdl2
+          echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+      - name: Build the headless game and check its link
+        timeout-minutes: 20
+        run: |
+          cmake -S . -B build/mac/headless -G Ninja -DCMAKE_BUILD_TYPE=Debug -DGE_POINTER_BITS=64 -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cmake --build build/mac/headless
+      - name: Run the 64-bit compile gate and the narrowing check
+        timeout-minutes: 10
+        run: |
+          python3 scripts/port/lp64_diagnostics.py gate build/mac/headless
+          python3 scripts/port/lp64_diagnostics.py narrowing --check build/mac/headless
+      - name: Test the host functions and run every harness
+        timeout-minutes: 30
+        run: |
+          bash scripts/port/test_macos_host.sh
+          bash scripts/port/macos_harnesses.sh
+      - name: Stop by name without a ROM
+        timeout-minutes: 2
+        run: bash scripts/port/macos_no_rom.sh build/mac/headless/IronSights
 
   publish:
     needs: [tests, windows, sentry-smoke, linux, linux-x86_64]

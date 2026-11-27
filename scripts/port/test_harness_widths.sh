@@ -170,9 +170,7 @@ HARNESS_WIDTH_EXEMPT=(
     "test_room_seams: port/fast3d/gfx_seam_grow.h, float and fixed-width integer maths with no pointer or record"
 )
 # Harnesses that no workflow runs.
-HARNESS_WORKFLOW_EXEMPT=(
-    "test_macos_host: runs only on macOS; named in the macOS job from MAC-001 Task 10"
-)
+HARNESS_WORKFLOW_EXEMPT=()
 
 # Prints FILE without its comment lines.
 harness_code() {

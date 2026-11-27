@@ -518,6 +518,66 @@ Linux containers of `scripts/port/lp64_env.py`.
   demos ended at their measured ticks, which they do only at the right
   pace: `portMacSleepUntil` holds the game's 60 retraces a second.
 
+- **Task 10, a macOS job in CI** (the owner's decision 4; done before
+  Tasks 8 and 9, which waited on the owner's answer about a download and
+  share nothing with it). `.github/workflows/windows-release.yml` gains
+  `macos-arm64-tests` on GitHub's `macos-26` runner (Apple Silicon; the
+  `macos-latest` image when this was written). It prints the image's
+  macOS, Xcode and clang, installs Bash, Ninja and SDL2 with Homebrew (the
+  system's Bash is 3.2 and the harnesses need 4; `test_start_input`
+  compiles against SDL2), configures and builds `build/mac/headless` (the
+  link check runs in the build), runs `lp64_diagnostics.py gate` and
+  `narrowing --check` on it, `test_macos_host.sh`, every harness, and the
+  game with no ROM. The `publish` job does not list it under `needs`: a
+  red macOS job shows on the run and holds back no release.
+  Two small scripts keep the job's logic out of the workflow file.
+  `scripts/port/macos_harnesses.sh` runs every `scripts/port/test_*.sh`,
+  shows a failing one with its exit status and carries on, and passes a
+  `NAME: SKIP (reason)` line only when it is on its list of two
+  (`test_web_touch` without `emcc`, `test_xwayland_pointer` off Linux), so
+  a harness cannot start skipping its body unnoticed; a folder with no
+  harness fails. `test_macos_harnesses.sh` tests it on fixture folders on
+  any host (its nine checks failed before the runner existed), and CI's
+  Linux tests step runs that too. `scripts/port/macos_no_rom.sh
+  EXECUTABLE` runs a copy of the game in an empty folder with `GE_ROM`
+  unset and `GE_NOINPUT=1` and requires exit status 3 and the line `ge:
+  romdata: NO ROM`. `test_macos_host` left `HARNESS_WORKFLOW_EXEMPT`, which
+  is empty again.
+  Two things the rehearsal and the runner's toolchain brought.
+  (1) Run in a fresh clone under the scratch folder, `narrowing --check`
+  listed nothing and failed every allowlist line: macOS's `/tmp` is a
+  symlink, CMake recorded the files through it, and
+  `lp64_static_checks.relative` compared those with the repository's real
+  path, so every place counted as outside the repository and was dropped.
+  It now compares real paths on both sides
+  (`test_a_tree_reached_through_a_symlink_is_still_read`, which failed
+  first). The same silent drop was possible on Linux for a checkout
+  reached through a symlink. (2) The runner's Xcode is not the Mac's, and
+  a clang that lacks one of the 18 class names answers with
+  `unknown-warning-option`, an error under `port_macos.c`'s `-Werror`; the
+  clang list in `CMakeLists.txt` now starts with
+  `-Wno-unknown-warning-option`, which silences nothing on the clang the
+  classes were counted with.
+  *Ran, before the push:* every command of the job in a fresh clone of the
+  repository (no ROM, no `build/` folder) with a `PATH` holding only the
+  system's folders and Bash, CMake, Ninja, SDL2's config tool, Python and
+  Node: the build with `OK: 705 weak references, 0 strong`; gate `361
+  files compiled, 0 failed`; `OK: 33 narrowings in 19 files, all allowed`;
+  `test_macos_host: PASS (64-bit)`; `macos_harnesses: 46 passed, 2 skipped
+  by name, 0 failed`; `macos_no_rom: OK (exit 3, ...)`. In the main tree:
+  `test_lp64_static_checks.py` 35 tests `OK`, the macOS build with no
+  compiler warning, `OK: ran 600 frames`, 20 of 20 missions. In the x86_64
+  container: gate 361 and 394 files with 0 failed, `narrowing --check` and
+  `unprototyped --check` `OK`, `test_lp64_static_checks.py` `OK`,
+  `test_harness_widths: PASS`, `test_macos_harnesses: PASS`,
+  `test_macos_host: SKIP (not macOS)`, `test_pointer_bits.sh` passes (the
+  first container run of these stalled in `unprototyped` with every thread
+  idle and was killed after 26 minutes; run again from a fresh snapshot it
+  took 11 seconds, so that was the emulated container, not the change).
+  aarch64: `OK: ran 600 frames`. `compare_win32.py commits HEAD WORKTREE`:
+  `identical in loaded code and data`. The job's first run on GitHub is
+  recorded below it once read.
+
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside
 the repository: they are the plans' inputs, not checks of a change. From

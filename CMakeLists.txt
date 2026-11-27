@@ -108,9 +108,12 @@ elseif(GE_POINTER_BITS EQUAL 64)
     # tautological-constant-out-of-range-compare 5, shift-op-parentheses 2,
     # non-literal-null-conversion 2, logical-not-parentheses 2,
     # parentheses-equality 1. The three -Werror= checks above are the same for
-    # both compilers.
+    # both compilers. unknown-warning-option comes first and counts nothing
+    # on the clang these were counted with: an older or newer clang (CI's
+    # runner image has its own Xcode) may not know one of these names, and
+    # says so with a warning that port_macos.c's -Werror would make an error.
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
-        foreach(GE_CLANG_CLASS microsoft-anon-tag pointer-sign empty-body macro-redefined comment
+        foreach(GE_CLANG_CLASS unknown-warning-option microsoft-anon-tag pointer-sign empty-body macro-redefined comment
                 pragma-pack implicit-enum-enum-cast implicit-const-int-float-conversion
                 pointer-bool-conversion unused-value switch format-security parentheses
                 tautological-constant-out-of-range-compare shift-op-parentheses

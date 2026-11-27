@@ -69,9 +69,14 @@ POINTER_OR_64_BIT = re.compile(r'\*|\blong\b|\b(?:uintptr_t|intptr_t|romptr_t|si
 
 
 def relative(path: str, directory: str, root: Path) -> Optional[str]:
-    """Return `path` (as the compiler printed it) relative to `root`, or None outside the repository."""
-    full = Path(os.path.normpath(os.path.join(directory, path)))
-    return full.relative_to(root).as_posix() if full.is_relative_to(root) else None
+    """Return `path` (as the compiler printed it) relative to `root`, or None outside the repository.
+
+    Both are compared by their real paths: a tree configured through a symlink (macOS's `/tmp` and
+    `/var` are symlinks) names its files that way, and every place in it would otherwise count as
+    outside the repository and be dropped, leaving the check to pass having read nothing."""
+    full = Path(os.path.realpath(os.path.join(directory, path)))
+    real_root = Path(os.path.realpath(root))
+    return full.relative_to(real_root).as_posix() if full.is_relative_to(real_root) else None
 
 
 def compiler_family(version_text: str) -> Optional[str]:

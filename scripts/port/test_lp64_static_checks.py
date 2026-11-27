@@ -151,6 +151,22 @@ class Narrowing(TreeCase):
         # Assert
         self.assertEqual(len(out.splitlines()), 1)
 
+    def test_a_tree_reached_through_a_symlink_is_still_read(self):
+        # Arrange: the compiler names the file through a link to the repository (macOS's /tmp is
+        # one), while the tool knows the repository by its real path.
+        link = self.folder.parent/(self.folder.name + '-link')
+        link.symlink_to(self.folder, target_is_directory=True)
+        self.addCleanup(link.unlink)
+        tree = self.build_dir('t', {'a.c': "0\n"})
+        (self.folder/'a.c').write_text(
+            "0\n" + f"{link}/a.c:4:7: warning: conversion from 'uintptr_t' {{aka 'long unsigned int'}} to {U32} "
+            "may change value [-Wconversion]\n    4 | x = p;\n")
+        # Act
+        status, out, err = self.run_main('narrowing', tree)
+        # Assert
+        self.assertEqual(status, 0, err)
+        self.assertEqual(out, 'a.c:4:7: uintptr_t -> u32 | x = p;\n')
+
     def test_a_compile_that_fails_is_not_measured(self):
         # Arrange
         tree = self.build_dir('t', {'a.c': f"1\n{self.folder}/a.c:1:1: error: broken\n"})
