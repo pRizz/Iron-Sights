@@ -54,6 +54,12 @@ static void loadBufferReadsTheWholeAddress(void)
 }
 
 #if UINTPTR_MAX > 0xFFFFFFFFu
+#ifndef MAP_FIXED_NOREPLACE
+/* macOS has no such flag: the address is a hint there, and lowWordZeroPage
+ * already checks that it got the page it asked for. */
+#define MAP_FIXED_NOREPLACE 0
+#endif
+
 /* A page whose address has a zero low word: cut to 32 bits it reads as 0,
  * which the validator refuses as a garbage address. */
 static u8 *lowWordZeroPage(size_t bytes)

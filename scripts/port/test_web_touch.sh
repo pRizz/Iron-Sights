@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/../.."
+source scripts/port/harness_widths.sh
+# The browser's compiler: a host without it says so by name and runs nothing.
+harness_skip_unless_tool test_web_touch emcc || exit 0
 test_dir=$(mktemp -d /tmp/midas-touch-test.XXXXXX)
 trap 'rm -rf "$test_dir"' EXIT
 emcc -std=gnu11 -fms-extensions -fcommon -ffreestanding -funsigned-char -Wno-microsoft-anon-tag \

@@ -73,7 +73,7 @@ build() {
     shift 4
     "$compiler" "$@" -std=gnu11 -D_LANGUAGE_C -Wall -Wextra -Werror -iquote include -iquote port/include \
         -iquote src -idirafter include -idirafter src scripts/port/test_lp64_address.c port/src/port_lp64.c \
-        port/src/port_lp64_notice.c "$str_object" \
+        $(harness_host_sources) port/src/port_lp64_notice.c "$str_object" \
         "$heap_object" ${memp_object:+"$memp_object"} -o "$out"
 }
 
@@ -83,18 +83,19 @@ build_peaks() {
     shift
     "$compiler" "$@" -std=gnu11 -D_LANGUAGE_C -Wall -Wextra -Werror -iquote include -iquote port/include \
         -idirafter include -DPORT_LP64_NOTICE_HEADLESS scripts/port/test_lp64_peaks.c port/src/port_lp64.c \
-        port/src/port_lp64_notice.c -o "$out"
+        $(harness_host_sources) port/src/port_lp64_notice.c -o "$out"
 }
 
 # The external-texture slot (Task 6): port_textures.c linked with the stubs in
 # test_lp64_textures.c. -Iinclude puts the game's own string.h first, as in the
-# game build, hence -Wno-builtin-declaration-mismatch.
+# game build, hence harness_game_header_flags (GCC's
+# -Wno-builtin-declaration-mismatch, or clang's name for the class).
 build_textures() {
     local out=$1
     shift
     "$compiler" "$@" -std=gnu11 -fms-extensions -fcommon -funsigned-char \
         -DVERSION_US -DLANG_US -DREFRESH_NTSC -D_LANGUAGE_C -DNONMATCHING -DAVOID_UB \
-        -Wall -Wextra -Werror -Wno-builtin-declaration-mismatch \
+        -Wall -Wextra -Werror $(harness_game_header_flags) \
         -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \
         scripts/port/test_lp64_textures.c port/src/port_textures.c -o "$out"
 }
@@ -168,13 +169,25 @@ for width in $widths; do
     build_textures "$work/textures-$width" ${flags[@]+"${flags[@]}"}
     expect_textures "$work/textures-$width" "$work/root-$width" "${width}-bit external-texture slot"
     if [[ $width == 64 ]]; then
-        build "$work/pie" "$work/str-$width.o" "$work/heap-$width.o" "$memp" -fPIE -pie
+        # Apple's linker makes every executable position-independent, and
+        # its compiler calls -pie unused (an error under -Werror).
+        pie_flags=(-fPIE -pie)
+        if harness_apple_compiler; then
+            pie_flags=(-fPIE)
+        fi
+        build "$work/pie" "$work/str-$width.o" "$work/heap-$width.o" "$memp" "${pie_flags[@]}"
         expect_driver "$work/pie" address-space 0 "ge: lp64: address space OK" "position-independent driver"
-        build "$work/no-pie" "$work/str-$width.o" "$work/heap-$width.o" "$memp" -fno-pie -no-pie
-        expect_driver "$work/no-pie" address-space 4 "executable image" "-no-pie driver"
-        expect_driver "$work/no-pie" address-space 4 "box: Iron Sights: ge: lp64: executable image at " \
-            "-no-pie driver's box"
-        expect_no_box "$work/no-pie" address-space 4 "-no-pie driver under GE_NOINPUT"
+        if harness_apple_compiler; then
+            # A macOS arm64 executable has a 4 GB __PAGEZERO, and Apple's
+            # linker will not make one without it: no image below 4 GB.
+            echo "test_lp64_address: -no-pie case SKIP (Apple's linker cannot place an arm64 image below 4 GB)"
+        else
+            build "$work/no-pie" "$work/str-$width.o" "$work/heap-$width.o" "$memp" -fno-pie -no-pie
+            expect_driver "$work/no-pie" address-space 4 "executable image" "-no-pie driver"
+            expect_driver "$work/no-pie" address-space 4 "box: Iron Sights: ge: lp64: executable image at " \
+                "-no-pie driver's box"
+            expect_no_box "$work/no-pie" address-space 4 "-no-pie driver under GE_NOINPUT"
+        fi
         expect_driver "$work/unit-$width" require-animations 0 "require-animations: returned" \
             "64-bit animation guard (converted)"
         expect_driver "$work/unit-$width" require-setup 0 "require-setup: returned" \

@@ -22,7 +22,7 @@ for width in $widths; do
     fi
     if [[ $width == web ]]; then flags=("${web_flags[@]}"); else flags=($(harness_flags "$width")); fi
     "$compiler" "${flags[@]}" -std=gnu11 -fms-extensions -fcommon -ffreestanding -funsigned-char \
-        -fno-strict-aliasing -ffunction-sections -fdata-sections -Wl,--gc-sections \
+        -fno-strict-aliasing $(harness_gc_flags) \
         -DVERSION_US -DLANG_US -DREFRESH_NTSC -D_LANGUAGE_C \
         -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \
         -include port/web/compat.h scripts/port/test_stan_callbacks.c -lm -o "$test_bin"

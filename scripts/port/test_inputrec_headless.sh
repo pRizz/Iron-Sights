@@ -16,9 +16,9 @@ compiler=${CC:-gcc}
 widths=$(harness_widths)
 for width in $widths; do
     flags=($(harness_flags "$width" -msse2 -mfpmath=sse)
-        -std=gnu11 -fms-extensions -fcommon -funsigned-char -fno-strict-aliasing -w
-        -Werror=implicit-function-declaration
-        -ffunction-sections -fdata-sections -Wl,--gc-sections
+        -std=gnu11 -fms-extensions -fcommon -funsigned-char -fno-strict-aliasing
+        -Werror=implicit-function-declaration $(harness_quiet_flags)
+        $(harness_gc_flags)
         -DVERSION_US -DLANG_US -DREFRESH_NTSC -DNONMATCHING -DAVOID_UB -D_LANGUAGE_C
         -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include)
     "$compiler" "${flags[@]}" scripts/port/test_inputrec_headless.c -lm -o "$work/inputrec-$width"

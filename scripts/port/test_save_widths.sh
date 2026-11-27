@@ -52,8 +52,8 @@ TEXT
 build() {
     local width=$1
     "$compiler" $(harness_flags "$width" -msse2 -mfpmath=sse) \
-        -std=gnu11 -fms-extensions -fcommon -funsigned-char -fno-strict-aliasing -w \
-        -ffunction-sections -fdata-sections -Wl,--gc-sections \
+        -std=gnu11 -fms-extensions -fcommon -funsigned-char -fno-strict-aliasing $(harness_quiet_flags) \
+        $(harness_gc_flags) \
         -DVERSION_US -DLANG_US -DREFRESH_NTSC -DNONMATCHING -DAVOID_UB -D_LANGUAGE_C \
         -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \
         scripts/port/test_save_widths.c src/game/crc.c port/src/n64_random.c -lm -o "$work/save-$width"

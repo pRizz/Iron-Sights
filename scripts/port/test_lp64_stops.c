@@ -3,7 +3,8 @@
  * allocation stops (port/src/romconv_common.c). Built at 64 bits by
  * scripts/port/test_lp64_notice.sh, linked with sysstubs.c,
  * port_lp64_notice.c, port_lp64.c and romconv_common.c, and with
- * -Wl,--wrap=malloc so that a request can be refused. Each mode runs one stop;
+ * -Wl,--wrap=malloc (on macOS -Dmalloc=__wrap_malloc: harness_wrap_flags) so
+ * that a request can be refused. Each mode runs one stop;
  * the harness checks its status, its log line and the box it prints.
  *
  *   test_lp64_stops fatal     sysFatalError with a message
@@ -22,6 +23,18 @@ static size_t s_RefuseFrom;
 
 void *__real_malloc(size_t bytes);
 void *__wrap_malloc(size_t bytes);
+
+#ifdef __APPLE__
+/* Apple's linker has no --wrap: the harness compiles every source with
+ * -Dmalloc=__wrap_malloc (harness_wrap_flags), and the real one is reached
+ * here, where the name is the C library's again. */
+#undef malloc
+extern void *malloc(size_t bytes);
+void *__real_malloc(size_t bytes)
+{
+    return malloc(bytes);
+}
+#endif
 
 void *__wrap_malloc(size_t bytes)
 {

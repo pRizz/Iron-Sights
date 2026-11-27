@@ -31,10 +31,10 @@ build_stops() {
         '#define PORT_BUILD_BRANCH ""' > "$work/gen/port_buildinfo.h"
     "$compiler" -std=gnu11 -fms-extensions -fcommon -funsigned-char \
         -DVERSION_US -DLANG_US -DREFRESH_NTSC -D_LANGUAGE_C -DNONMATCHING -DAVOID_UB \
-        -Wall -Wextra -Werror -Wno-builtin-declaration-mismatch \
+        -Wall -Wextra -Werror $(harness_game_header_flags) \
         -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include -I"$work/gen" \
-        scripts/port/test_lp64_stops.c port/src/sysstubs.c port/src/port_lp64_notice.c port/src/port_lp64.c \
-        port/src/romconv_common.c -Wl,--wrap=malloc -o "$out"
+        scripts/port/test_lp64_stops.c port/src/sysstubs.c port/src/port_lp64_notice.c port/src/port_lp64.c $(harness_host_sources) \
+        port/src/romconv_common.c $(harness_wrap_flags malloc) -o "$out"
 }
 
 # Runs the stops driver in MODE with NOINPUT as GE_NOINPUT (empty: unset);

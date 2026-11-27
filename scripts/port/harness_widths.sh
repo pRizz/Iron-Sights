@@ -6,6 +6,13 @@
 #   harness_flags WIDTH [EXTRA...]     # -m32 and EXTRA for 32; nothing for 64
 #   harness_pending NAME WIDTH         # true while NAME WIDTH is on the list
 #   harness_apple_compiler             # true when CC targets macOS
+#   harness_gc_flags                   # flags that drop unreached code
+#   harness_quiet_flags                # -w, and what clang needs beside it
+#   harness_game_header_flags          # -Wno- classes for the game's headers
+#   harness_wrap_flags FUNCTION        # route FUNCTION to __wrap_FUNCTION
+#   harness_skip_unless_tool NAME TOOL # false, with a SKIP line, without TOOL
+#   harness_weak_undefined SYMBOL...   # what a link needs for weak references
+#   harness_host_sources               # the host's own port sources (macOS)
 #
 # MIDAS_HARNESS_WIDTHS="32" or "64" restricts the widths. CC is the compiler
 # asked, as in the harnesses.
@@ -107,4 +114,104 @@ harness_pending() {
         fi
     done
     return 1
+}
+
+# True when the compiler is clang (Apple's or LLVM's), by its --version.
+harness_clang_compiler() {
+    local version
+    version=$("${CC:-gcc}" --version 2>/dev/null) || return 1
+    [[ $version == *clang* ]]
+}
+
+# Prints the flags that let a harness link a few functions of a game file
+# without the rest of the game: the linker drops code nothing reaches, and
+# with it that code's undefined references. GNU ld does so by section; Apple's
+# linker by symbol, with its own flag.
+harness_gc_flags() {
+    if harness_apple_compiler; then
+        echo -Wl,-dead_strip
+    else
+        echo -ffunction-sections -fdata-sections -Wl,--gc-sections
+    fi
+    return 0
+}
+
+# Prints the flags that silence a harness's compile of game code: -w, as the
+# 32-bit game build has. GCC's -w also silences an implicit function
+# declaration and an int/pointer conversion; clang makes those two errors,
+# which -w does not reach, so there they are made warnings again first. Put
+# this after any -Werror= the command names: the later flag wins on clang.
+harness_quiet_flags() {
+    if harness_clang_compiler; then
+        echo -w -Wno-error=implicit-function-declaration -Wno-error=int-conversion
+    else
+        echo -w
+    fi
+    return 0
+}
+
+# Prints the flags that let a -Wall -Wextra -Werror compile include the
+# game's headers. Its own include/string.h declares strchr and strlen unlike
+# the compiler's built-in ones: GCC and clang each have a class for that, and
+# clang refuses GCC's name. Clang also warns of three things GCC accepts
+# silently and the game build switches off by name (CMakeLists.txt):
+# anonymous struct members, the game's own ntohl and ntohs, and a header
+# that leaves #pragma pack changed.
+harness_game_header_flags() {
+    if harness_clang_compiler; then
+        echo -Wno-incompatible-library-redeclaration -Wno-microsoft-anon-tag -Wno-macro-redefined -Wno-pragma-pack
+    else
+        echo -Wno-builtin-declaration-mismatch
+    fi
+    return 0
+}
+
+# Prints the flags that send every call of FUNCTION in the harness's sources
+# to __wrap_FUNCTION, which the driver defines and which reaches the real one
+# as __real_FUNCTION. GNU ld does this at link time. Apple's linker cannot,
+# so there the compiler renames the calls, and the driver defines
+# __real_FUNCTION itself (under __APPLE__).
+harness_wrap_flags() {
+    if harness_apple_compiler; then
+        echo "-D$1=__wrap_$1"
+    else
+        echo "-Wl,--wrap=$1"
+    fi
+    return 0
+}
+
+# Returns 0 when TOOL is on the PATH. Otherwise prints "NAME: SKIP (TOOL not
+# installed)" and returns 1, so a harness that cannot run here says so by
+# name instead of failing or passing silently.
+harness_skip_unless_tool() {
+    if command -v "$2" >/dev/null 2>&1; then
+        return 0
+    fi
+    echo "$1: SKIP ($2 not installed)"
+    return 1
+}
+
+# Prints the link flags that let each SYMBOL, a weak reference the harness
+# leaves undefined (code that tests "portX != NULL"), stay undefined. ELF
+# makes such a reference null without a flag; Apple's linker must be told
+# each one by name, which keeps any other undefined symbol an error.
+harness_weak_undefined() {
+    local symbol flags=()
+    if harness_apple_compiler; then
+        for symbol in "$@"; do
+            flags+=("-Wl,-U,_$symbol")
+        done
+        echo "${flags[@]}"
+    fi
+    return 0
+}
+
+# Prints the port sources only this host compiles, for a harness that links
+# port files calling them: port/src/port_macos.c on an Apple compiler
+# (pcsched.c's sleep, port_lp64.c's image range), nothing elsewhere.
+harness_host_sources() {
+    if harness_apple_compiler; then
+        echo port/src/port_macos.c
+    fi
+    return 0
 }

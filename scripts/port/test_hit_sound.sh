@@ -11,7 +11,7 @@ for width in $widths; do
         continue
     fi
     "${CC:-gcc}" $(harness_flags "$width" -msse2 -mfpmath=sse) -std=gnu11 -fms-extensions -fcommon -ffreestanding -funsigned-char -Werror=implicit-function-declaration \
-        -ffunction-sections -fdata-sections -Wl,--gc-sections \
+        $(harness_gc_flags) \
         -DVERSION_US -DLANG_US -DREFRESH_NTSC -D_LANGUAGE_C \
         -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \
         scripts/port/test_hit_sound.c -lm -o "$test_bin"

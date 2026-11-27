@@ -10,11 +10,12 @@ for width in $widths; do
         echo "test_ads: ${width}-bit half pending (LP64-003 task 11)"
         continue
     fi
-    "${CC:-gcc}" $(harness_flags "$width") -std=gnu11 -fms-extensions -fcommon -w \
-        -fno-builtin -Werror=implicit-function-declaration -ffunction-sections -fdata-sections -Wl,--gc-sections \
+    "${CC:-gcc}" $(harness_flags "$width") -std=gnu11 -fms-extensions -fcommon \
+        -fno-builtin -Werror=implicit-function-declaration $(harness_quiet_flags) $(harness_gc_flags) \
         -DVERSION_US -DLANG_US -DREFRESH_NTSC -D_LANGUAGE_C \
         -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \
-        scripts/port/test_ads.c -lm -o "$test_bin"
+        scripts/port/test_ads.c -lm -o "$test_bin" \
+        $(harness_weak_undefined portVideoClassicSavedGet portVideoClassicSavedSet)
     "$test_bin"
     echo "test_ads: PASS (${width}-bit)"
 done

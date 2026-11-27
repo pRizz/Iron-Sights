@@ -7,6 +7,11 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 source scripts/port/harness_widths.sh
+# The module's body is compiled for Linux alone (it works around XWayland).
+if [[ $(uname -s) != Linux ]]; then
+    echo "test_xwayland_pointer: SKIP (X11 code, Linux only)"
+    exit 0
+fi
 work=$(mktemp -d /tmp/midas-xwayland-pointer.XXXXXX)
 trap 'rm -rf "$work"' EXIT
 compiler=${CC:-gcc}

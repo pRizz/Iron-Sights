@@ -18,8 +18,8 @@ widths=$(harness_widths)
 for width in $widths; do
     for name in "${tests[@]}"; do
         "$compiler" $(harness_flags "$width" -msse2 -mfpmath=sse) \
-            -std=gnu11 -fms-extensions -fcommon -ffreestanding -funsigned-char -fno-strict-aliasing -w -Werror=implicit-function-declaration \
-            -ffunction-sections -fdata-sections -Wl,--gc-sections \
+            -std=gnu11 -fms-extensions -fcommon -ffreestanding -funsigned-char -fno-strict-aliasing -Werror=implicit-function-declaration $(harness_quiet_flags) \
+            $(harness_gc_flags) \
             -DVERSION_US -DLANG_US -DREFRESH_NTSC -DLEFTOVERDEBUG -DLEFTOVERSPECTRUM -DBUGFIX_R0 \
             -DNONMATCHING -DAVOID_UB -D_LANGUAGE_C \
             -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \

@@ -15,7 +15,8 @@ compiler=${CC:-gcc}
 
 # Builds OUT from the test driver and the port sources after it. -Iinclude
 # puts the game's own string.h first, as in the game build, hence
-# -Wno-builtin-declaration-mismatch.
+# harness_game_header_flags (GCC's -Wno-builtin-declaration-mismatch, or
+# clang's name for the class).
 build() {
     local out=$1 width=$2
     shift 2
@@ -24,9 +25,9 @@ build() {
     "$compiler" $(harness_flags "$width" -msse2 -mfpmath=sse) ${oracle[@]+"${oracle[@]}"} \
         -std=gnu11 -fms-extensions -fcommon -funsigned-char \
         -DVERSION_US -DLANG_US -DREFRESH_NTSC -D_LANGUAGE_C -DNONMATCHING -DAVOID_UB \
-        -Wall -Wextra -Werror -Werror=incompatible-pointer-types -Wno-builtin-declaration-mismatch \
+        -Wall -Wextra -Werror -Werror=incompatible-pointer-types $(harness_game_header_flags) \
         -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include \
-        "$@" port/src/port_lp64.c -DPORT_LP64_NOTICE_HEADLESS port/src/port_lp64_notice.c -o "$out"
+        "$@" port/src/port_lp64.c $(harness_host_sources) -DPORT_LP64_NOTICE_HEADLESS port/src/port_lp64_notice.c -o "$out"
 }
 
 # Runs one test program; prints its output only on failure.

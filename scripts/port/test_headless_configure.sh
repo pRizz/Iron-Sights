@@ -8,9 +8,18 @@ cd "$(dirname "$0")/../.."
 build_dir=$(mktemp -d /tmp/midas-headless-configure.XXXXXX)
 trap 'rm -rf "$build_dir"' EXIT
 
+# A Mac configures only the 64-bit tree (CMakeLists.txt refuses another), so
+# there this checks that one, and says so.
+width_args=()
+width_note="32-bit"
+if [[ $(uname -s) == Darwin ]]; then
+    width_args=(-DGE_POINTER_BITS=64)
+    width_note="64-bit: a Mac has no 32-bit build"
+fi
+
 # Quiet when it passes; a failed configure prints CMake's own diagnostics.
 if ! cmake -S . -B "$build_dir" -DGE_HEADLESS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-    >"$build_dir/configure.log" 2>&1; then
+    ${width_args[@]+"${width_args[@]}"} >"$build_dir/configure.log" 2>&1; then
     cat "$build_dir/configure.log" >&2
     exit 1
 fi
@@ -31,4 +40,4 @@ PY
 # script removes on exit; it recorded relative paths from the build directory.
 cd "$build_dir"
 eval "$command"
-echo "Headless configure OK: port_baked_trace.c compiles"
+echo "Headless configure OK: port_baked_trace.c compiles ($width_note)"

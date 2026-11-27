@@ -507,16 +507,23 @@ git commit -m "Name each warning class Apple clang prints at 64 bits"
   code, Linux only), and `test_lp64_address`'s one `-no-pie` case (Apple's
   linker cannot place an arm64 image below 4 GB).
 
-- [ ] **Step 1: Write the failing helper tests, then the helpers**
+**As built** (FORK-093 has the detail): `harness_known_flag` became
+`harness_game_header_flags`, since GCC accepts an unknown `-Wno-` silently
+and clang needs its own class names; three helpers were added for what lay
+behind the first errors (`harness_host_sources`, `harness_weak_undefined`,
+`harness_wrap_flags`); and the task is one commit, not one a cause, because
+the causes overlap inside single harnesses.
 
-- [ ] **Step 2: Convert the 25 harnesses by cause, one cause a commit**
+- [x] **Step 1: Write the failing helper tests, then the helpers**
+
+- [x] **Step 2: Convert the 25 harnesses by cause, one cause a commit**
 
 After each cause, run all 46 on macOS and record how many print `PASS
 (64-bit)`. A harness that now fails on something else is read before it is
 changed: a difference in the game's code is a finding for FORK-093, not a
 test to loosen.
 
-- [ ] **Step 3: Every harness passes or is named**
+- [x] **Step 3: Every harness passes or is named**
 
 Expected on macOS: 44 of the 46, and `test_macos_host`, print `PASS
 (64-bit)`; `test_web_touch` and `test_xwayland_pointer` print their `SKIP`
@@ -526,7 +533,7 @@ that cannot be made to pass is listed in FORK-093 with its failure and
 goes to "Decisions for the owner" of the next plan; the milestone does not
 close on a silent skip.
 
-- [ ] **Step 4: Run the task check, commit**
+- [x] **Step 4: Run the task check, commit**
 
 ```bash
 git commit -m "Run the test harnesses on macOS"

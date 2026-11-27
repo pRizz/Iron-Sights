@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/../.."
+source scripts/port/harness_widths.sh
 cc=${CC:-gcc}
 test_bin=$(mktemp /tmp/midas-monitor-script.XXXXXX)
 trap 'rm -f "$test_bin"' EXIT
@@ -16,9 +17,10 @@ build_and_run() {
     "$test_bin"
 }
 
-build_and_run
-if "$cc" -m32 -x c -fsyntax-only /dev/null; then
-    build_and_run -m32 -msse2 -mfpmath=sse
-else
-    echo "monitor script: -m32 unavailable on this host, skipped"
-fi
+# On its own line, so a failure of harness_widths stops the harness (set -e).
+widths=$(harness_widths)
+for width in $widths; do
+    # shellcheck disable=SC2046 # harness_flags prints separate flags
+    build_and_run $(harness_flags "$width" -msse2 -mfpmath=sse)
+    echo "test_monitor_script: PASS (${width}-bit)"
+done

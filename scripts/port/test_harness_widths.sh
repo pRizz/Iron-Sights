@@ -8,10 +8,12 @@ trap 'rm -rf "$work"' EXIT
 # -dumpmachine prints (x86_64-linux-gnu unless set), FAKE_POINTER_BYTES is what
 # its preprocessor reports as __SIZEOF_POINTER__, FAKE_DM_FAIL=1 makes the
 # macro probe fail with a message and FAKE_DUMPMACHINE_FAIL=1 makes
-# -dumpmachine fail with one.
+# -dumpmachine fail with one. FAKE_VERSION is what --version prints (GCC's
+# unless set).
 cat >"$work/gcc" <<'FAKE'
 #!/usr/bin/env bash
 for arg in "$@"; do
+    if [[ $arg == --version ]]; then echo "${FAKE_VERSION:-gcc (GCC) 13.3.0}"; exit 0; fi
     if [[ $arg == -m32 && ${FAKE_M32:-accept} == reject ]]; then exit 1; fi
     if [[ $arg == -dumpmachine && -n ${FAKE_DUMPMACHINE_FAIL:-} ]]; then echo "fake: no machine" >&2; exit 1; fi
     if [[ $arg == -dumpmachine ]]; then echo "${FAKE_MACHINE:-x86_64-linux-gnu}"; exit 0; fi
@@ -104,6 +106,46 @@ if harness_pending test_wardrobe 32; then echo "FAIL: test_wardrobe 32 is not pe
 expect "harness_flags 32 prints -m32" "-m32" "$(harness_flags 32)"
 expect "harness_flags 32 adds the harness's own flags" "-m32 -msse2 -mfpmath=sse" "$(harness_flags 32 -msse2 -mfpmath=sse)"
 expect "harness_flags 64 prints nothing" "" "$(harness_flags 64 -msse2 -mfpmath=sse)"
+
+# The flags that differ by compiler (MAC-001 Task 4). Runs one helper call
+# with a stand-in compiler and prints what it printed.
+helper_output() {
+    local call=$1
+    shift
+    env PATH="$work:$PATH" CC=gcc "$@" bash -c "set -euo pipefail; source scripts/port/harness_widths.sh && $call" 2>/dev/null || true
+}
+apple=(FAKE_MACHINE=arm64-apple-darwin27.2.0 "FAKE_VERSION=Apple clang version 21.0.0 (clang-2100.4.1.1)")
+# Arrange / Act / Assert: the compiler, the helper, the flags it prints.
+expect "GCC drops unreached code by section" "-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+    "$(helper_output harness_gc_flags)"
+expect "an Apple linker drops unreached code with -dead_strip" "-Wl,-dead_strip" \
+    "$(helper_output harness_gc_flags "${apple[@]}")"
+expect "GCC is quiet with -w" "-w" "$(helper_output harness_quiet_flags)"
+expect "clang needs its default errors made warnings for -w to reach them" \
+    "-w -Wno-error=implicit-function-declaration -Wno-error=int-conversion" \
+    "$(helper_output harness_quiet_flags "${apple[@]}")"
+expect "clang on Linux is quiet the same way" \
+    "-w -Wno-error=implicit-function-declaration -Wno-error=int-conversion" \
+    "$(helper_output harness_quiet_flags "FAKE_VERSION=Ubuntu clang version 18.1.3")"
+expect "GCC compiles the game's headers under -Werror with one class off" "-Wno-builtin-declaration-mismatch" \
+    "$(helper_output harness_game_header_flags)"
+expect "clang needs its own name for that class and three the game build also switches off" \
+    "-Wno-incompatible-library-redeclaration -Wno-microsoft-anon-tag -Wno-macro-redefined -Wno-pragma-pack" \
+    "$(helper_output harness_game_header_flags "${apple[@]}")"
+expect "GNU ld wraps a function at link time" "-Wl,--wrap=malloc" "$(helper_output 'harness_wrap_flags malloc')"
+expect "an Apple linker cannot, so the compiler renames the calls" "-Dmalloc=__wrap_malloc" \
+    "$(helper_output 'harness_wrap_flags malloc' "${apple[@]}")"
+expect "ELF needs nothing for an undefined weak reference" "" \
+    "$(helper_output 'harness_weak_undefined portA portB')"
+expect "an Apple linker is told each undefined weak reference by name" "-Wl,-U,_portA -Wl,-U,_portB" \
+    "$(helper_output 'harness_weak_undefined portA portB' "${apple[@]}")"
+expect "no host source off macOS" "" "$(helper_output harness_host_sources)"
+expect "the macOS host functions are a source on an Apple compiler" "port/src/port_macos.c" \
+    "$(helper_output harness_host_sources "${apple[@]}")"
+expect "a tool that is installed is not skipped" "status=0 " \
+    "$(helper_output 'status=0; out=$(harness_skip_unless_tool test_x bash) || status=$?; echo "status=$status $out"')"
+expect "a missing tool skips by name with its reason" "status=1 test_x: SKIP (no-such-tool-midas not installed)" \
+    "$(helper_output 'status=0; out=$(harness_skip_unless_tool test_x no-such-tool-midas) || status=$?; echo "status=$status $out"')"
 
 # A loop over "$(harness_widths)" runs zero times when the helper fails, and the
 # harness passes having run nothing: a harness takes widths=$(harness_widths) on

@@ -155,13 +155,28 @@ compile_canary() {
         >"$work/canary-$name.log" 2>&1 || status=$?
     return "$status"
 }
+# Clang words an error from a -Werror= flag "[-Werror,-Wflag]", and one it makes
+# an error by itself (int-conversion) "[-Wflag]"; either way the line says
+# "error:". GCC's wording stays the only one accepted from GCC.
+canary_version=$("${c_cmd[1]%% *}" --version 2>&1) || fail "the recorded C compiler does not answer --version"
+canary_clang=0
+[[ $canary_version == *clang* ]] && canary_clang=1
 check_canary() {
-    local lang=$1 flag=$2 source=$3
+    local lang=$1 flag=$2 source=$3 log wording
     if compile_canary "$lang" "$lang-$flag" "$source"; then
         fail "64-bit $lang flags accept the $flag canary: $source"
     fi
-    grep -qF -- "[-Werror=$flag]" "$work/canary-$lang-$flag.log" || {
-        cat "$work/canary-$lang-$flag.log" >&2
+    log="$work/canary-$lang-$flag.log"
+    if [[ $canary_clang == 1 ]]; then
+        wording="error: .*\\[(-Werror,)?-W$flag\\]"
+        grep -qE -- "$wording" "$log" || {
+            cat "$log" >&2
+            fail "64-bit $lang $flag canary did not fail with an error marked [-Werror,-W$flag] or [-W$flag]"
+        }
+        return 0
+    fi
+    grep -qF -- "[-Werror=$flag]" "$log" || {
+        cat "$log" >&2
         fail "64-bit $lang $flag canary did not fail with [-Werror=$flag]"
     }
 }

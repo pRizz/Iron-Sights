@@ -10,7 +10,7 @@ for width in $widths; do
         echo "test_buffers: ${width}-bit half pending (LP64-003 task 11)"
         continue
     fi
-    flags=($(harness_flags "$width") -g -O1 -ffunction-sections -fdata-sections -Wl,--gc-sections)
+    flags=($(harness_flags "$width") -g -O1 $(harness_gc_flags))
     if [[ ${MIDAS_BUFFER_SANITIZE:-0} == 1 ]]; then
         flags+=(-fsanitize=address,undefined -fno-sanitize=alignment,shift,signed-integer-overflow -fno-sanitize-recover=all)
     fi

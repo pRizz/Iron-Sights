@@ -90,7 +90,7 @@ plan's inputs, not checks of this change; its run folder
 
 ### FORK-093 — Native macOS build plan
 
-**Status:** MAC-001 in progress (Tasks 1 to 3 of 11 built, below): the
+**Status:** MAC-001 in progress (Tasks 1 to 4 of 11 built, below): the
 headless 64-bit game builds, boots and plays its 20 missions on macOS.
 MAC-002 to MAC-006 are not started. The owner chose the
 audience, the graphics path and the outline on 2026-11-26, approved the
@@ -332,6 +332,78 @@ Linux containers of `scripts/port/lp64_env.py`.
   `test_pointer_bits.sh` and `test_headless_configure.sh` pass; aarch64:
   `OK: ran 600 frames`. `compare_win32.py commits HEAD WORKTREE`:
   `identical in loaded code and data`.
+
+- **Task 4, the harnesses run on macOS.** Of the 47 `scripts/port/test_*.sh`
+  (the plan's 46 and `test_macos_host`), 22 passed on macOS before this
+  task and 45 pass now; `test_web_touch` and `test_xwayland_pointer` print
+  a `SKIP` line with its reason and exit 0. The harnesses change only
+  where they name a flag a compiler or linker does not share, through
+  helpers in `scripts/port/harness_widths.sh`, each tested with a stand-in
+  compiler in `test_harness_widths.sh` (the tests failed before each
+  helper existed). GCC's command lines keep the flags they had. By cause,
+  with the macOS count after each:
+  - *The linker's flag for dropping unreached code* (28 pass):
+    `harness_gc_flags` prints `-ffunction-sections -fdata-sections
+    -Wl,--gc-sections`, or `-Wl,-dead_strip` for Apple's linker, in the 16
+    harnesses that named the GNU flags.
+  - *Clang's default errors, which `-w` does not reach* (35 pass):
+    `harness_quiet_flags` prints `-w`, and on clang also
+    `-Wno-error=implicit-function-declaration -Wno-error=int-conversion`,
+    in `test_ads`, `test_dyn`, `test_wardrobe`, `test_lp64_typed_reads`,
+    `test_save_widths`, `test_start_input`, `test_upstream_merge`, and
+    behind them `test_inputrec_headless` and `test_lp64_compare`. Where a
+    command also names `-Werror=implicit-function-declaration`, the helper
+    comes after it: GCC's `-w` silences that flag anyway, and on clang the
+    later flag wins.
+  - *The 32-bit flags and the named skips* (41 pass, 2 skip):
+    `test_mema_order` and `test_monitor_script` loop over `harness_widths`
+    instead of trying `-m32` themselves, which Apple clang accepts and
+    cannot build; `test_headless_configure` configures the 64-bit tree on a
+    Mac and says so; `harness_skip_unless_tool` skips `test_web_touch`
+    without `emcc`; `test_xwayland_pointer` skips off Linux;
+    `test_pointer_bits`'s canaries accept clang's wording (`error: ...
+    [-Werror,-Wflag]`, or `[-Wflag]` for the conversion clang makes an
+    error by itself) only from a clang compiler, and GCC's from GCC.
+  - *What lay behind those* (45 pass, 2 skip):
+    `harness_game_header_flags` replaces the bare
+    `-Wno-builtin-declaration-mismatch` in `test_lp64_address`,
+    `test_lp64_notice` and `test_romconv`: clang's name for that class is
+    `-Wno-incompatible-library-redeclaration`, and their `-Wall -Wextra
+    -Werror` compiles of the game's headers also need the three classes the
+    game build switches off there (`microsoft-anon-tag`, `macro-redefined`,
+    `pragma-pack`). The plan's `harness_known_flag` was dropped for it: GCC
+    accepts an unknown `-Wno-` silently, so a probe cannot tell it that a
+    flag is clang's. `harness_host_sources` adds `port/src/port_macos.c`
+    to the four harnesses that link `pcsched.c` or `port_lp64.c`.
+    `harness_weak_undefined` names `test_ads`'s two live weak references
+    to Apple's linker (`-Wl,-U,_name`), keeping any other undefined symbol
+    an error. `harness_wrap_flags` gives `test_lp64_notice` its refusing
+    `malloc` without GNU ld's `--wrap` (`-Dmalloc=__wrap_malloc`, with
+    `__real_malloc` defined under `__APPLE__` in `test_lp64_stops.c`).
+    `test_lp64_address` drops `-pie` on a Mac (every executable is
+    position-independent there, and clang calls the flag unused) and skips
+    its one `-no-pie` case by name: Apple's linker cannot place an arm64
+    image below 4 GB. `test_audio_buffers.c` defines `MAP_FIXED_NOREPLACE`
+    as 0 where the system lacks it; it already checks the page it got.
+  No harness was loosened on a difference in the game's code: every
+  second-layer failure was a flag, a linker feature or a Linux-only
+  constant. Three harnesses pass on macOS having said what they left out,
+  as they do on any one-width host: `test_abi_probe` (its 32-bit layout
+  half), `test_save_widths` (the other width's half and the cross-width
+  reads) and `test_pointer_bits` (the cases that read a 32-bit tree, by
+  number). The plan asked for one commit a cause; the causes overlap
+  inside single files (`test_ads` has three), so this is one commit with
+  the counts above.
+  *Ran, on macOS:* all 47: 45 pass, 2 `SKIP` by name, 0 fail;
+  `test_harness_widths: PASS`. *In the containers:* x86_64, all 43 `bash scripts/port/test_*.sh` lines
+  of CI's tests step pass at 32 and 64 bits as before (`test_buffers.sh`
+  without `MIDAS_BUFFER_SANITIZE=1`, as in Task 2), the gate compiles 361
+  and 394 files with 0 failed, and `narrowing --check` and `unprototyped
+  --check` are `OK`; aarch64, the same 43 lines give 42 passes and one
+  failure, `test_headless_configure.sh`, exactly as at the commit before
+  this task (it configures the default 32-bit tree, which an Arm host
+  cannot build), and `OK: ran 600 frames`. `compare_win32.py commits HEAD
+  WORKTREE`: `identical in loaded code and data`.
 
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside
