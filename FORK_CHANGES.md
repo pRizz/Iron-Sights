@@ -86,10 +86,10 @@ plan's inputs, not checks of this change; its run folder
 
 ### FORK-093 — Native macOS build plan
 
-**Status:** Planned; nothing is built. Documentation only: no source, build
-file or tool changed. The owner chose the audience, the graphics path and
-the outline on 2026-11-26, approved the design on 2026-11-27 and accepted
-MAC-001's plan the same day.
+**Status:** MAC-001 in progress (Task 1 of 11 built, below); no macOS game
+is built yet, and MAC-002 to MAC-006 are not started. The owner chose the
+audience, the graphics path and the outline on 2026-11-26, approved the
+design on 2026-11-27 and accepted MAC-001's plan the same day.
 
 **What it is.** [The macOS plan](scripts/port/macos_plan.md) is the
 project after the 64-bit port (FORK-089): a native Apple Silicon macOS build
@@ -177,11 +177,47 @@ outside the repository, then discarded:
   aarch64 Linux build in 33; the other five matched once both builds were
   given one `sinf`, `expf` and `powf`.
 
-**Validation.** Documentation only: no source, build file or tool of the
-repository changed, and no check was run on a build of it. The measurements
-above were taken on scratch copies outside the repository and are the
-plans' inputs, not checks of this change. The pre-commit hook's standards
-and settings placement checks ran on each commit.
+**MAC-001 as built.** One paragraph a task, each with what ran on the
+owner's Mac (macOS 27.2.1, Apple M4 Max, Apple clang 21.0.0) and in the
+Linux containers of `scripts/port/lp64_env.py`.
+
+- **Task 1, the harness helper and the two host functions.**
+  `harness_widths` (`scripts/port/harness_widths.sh`) never offers 32 on an
+  Apple compiler (`harness_apple_compiler`: its `-dumpmachine` names
+  `-apple-`), because Apple clang accepts `-m32` for arm64 and can then
+  build nothing with it; `test_harness_widths.sh` has the two cases, which
+  printed `32 64` and `32` before the fix. `port/src/port_macos.c`
+  (`port/include/port_macos.h`) holds `portMacImageRange`, the main
+  executable's span from dyld's `LC_SEGMENT_64` commands with the slide
+  applied and `__PAGEZERO` left out, and `portMacSleepUntil`, a sleep to an
+  absolute `CLOCK_MONOTONIC` time that returns 0 or `EINTR` as Linux's
+  `clock_nanosleep(..., TIMER_ABSTIME, ...)` does. It sleeps with
+  `nanosleep` and reads the clock again until the target is reached, since
+  `nanosleep` counts on another clock. Nothing calls them yet (Task 2).
+  `CMakeLists.txt` globs `port/src/*.c`, so the same change keeps the file
+  out of every build that is not macOS (it includes dyld's headers) and
+  compiles it there with `-Wall -Wextra -Werror`; the plan had those lines
+  in Task 2. `scripts/port/test_macos_host.sh` (driver
+  `test_macos_host.c`, no game header) checks five things: the range holds
+  `main` and a file-scope variable, it starts at or above 4 GB, a sleep
+  reaches a future time, returns at once for a past one, and says `EINTR`
+  when `SIGALRM` interrupts it and then finishes on retry. Off macOS it
+  prints `test_macos_host: SKIP (not macOS)`. It is on
+  `HARNESS_WORKFLOW_EXEMPT` until Task 10's macOS job names it.
+  *Ran:* on macOS `test_macos_host: PASS (64-bit)` (it failed to link
+  before `port_macos.c` existed) and `test_harness_widths: PASS`; in the
+  x86_64 container the `SKIP` line, `test_harness_widths: PASS`, the gate
+  on `build/lp64/gate` and `gate-video` (361 and 394 files compiled, 0 failed), `narrowing --check` and
+  `unprototyped --check` `OK`; in the aarch64 container `OK: ran 600
+  frames`; `compare_win32.py commits HEAD WORKTREE` printed `identical in loaded code
+  and data`.
+
+**Validation.** Through the plans' acceptance this entry was documentation
+only, and the measurements above it were taken on scratch copies outside
+the repository: they are the plans' inputs, not checks of a change. From
+MAC-001 Task 1 each task's paragraph above names what ran for it. The
+pre-commit hook's standards and settings placement checks ran on each
+commit.
 
 ### FORK-092 — Linux weapon icons, icon cache and save transfer dialogs
 

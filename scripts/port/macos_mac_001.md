@@ -5,8 +5,9 @@
 **Status:** Planned on 2026-11-27 from measurements on `main` at 990f991
 and accepted by the owner the same day with all seven recommendations
 ("Accept all seven"); "Decisions for the owner" at the end lists them, and
-the tasks are written for them. Nothing is built: execution has not been
-asked for.
+the tasks are written for them. Execution started the same day: a ticked
+box below is a step done, and FORK-093 in `FORK_CHANGES.md` records what
+ran for each task.
 
 **Goal:** The 64-bit headless game builds with Apple clang on Apple Silicon
 macOS, boots, plays its automated sets, passes the sanitizers and matches
@@ -296,9 +297,9 @@ after the push.
   (64-bit)`. Off macOS it prints `test_macos_host: SKIP (not macOS)` and
   exits 0. It goes on `HARNESS_WORKFLOW_EXEMPT`
   (`test_harness_widths.sh`) with the reason "runs only on macOS; named in
-  the macOS job from Task 9", and Task 9 takes it off.
+  the macOS job from MAC-001 Task 10", and Task 10 takes it off.
 
-- [ ] **Step 1: Write the failing helper test, then fix the helper**
+- [x] **Step 1: Write the failing helper test, then fix the helper**
 
 In `test_harness_widths.sh`: with a fake compiler that accepts `-m32` and
 answers `-dumpmachine` with `arm64-apple-darwin27.2.0`, `harness_widths`
@@ -307,7 +308,7 @@ prints `64` only. Run it: it fails with `32` then `64`. Fix
 scripts/port/test_harness_widths.sh` passes; in the x86_64 container it
 passes unchanged.
 
-- [ ] **Step 2: Write the failing host tests**
+- [x] **Step 2: Write the failing host tests**
 
 `test_macos_host.c`, each a function that prints its name and aborts on a
 failed check:
@@ -328,14 +329,14 @@ failed check:
 Run: `bash scripts/port/test_macos_host.sh`. Expected: it fails to link
 (`portMacImageRange` undefined).
 
-- [ ] **Step 3: Implement `port_macos.c`**
+- [x] **Step 3: Implement `port_macos.c`**
 
 The range walks the load commands of `_dyld_get_image_header(0)` with
 `_dyld_get_image_vmaddr_slide(0)`. The sleep reads the clock, returns 0
 for a time not ahead, else calls `nanosleep` once for the difference and
 returns `EINTR` if it was interrupted.
 
-- [ ] **Step 4: Run the tests, commit**
+- [x] **Step 4: Run the tests, commit**
 
 Run: `bash scripts/port/test_macos_host.sh`. Expected: `test_macos_host:
 PASS (64-bit)`. In the x86_64 container: the `SKIP` line, exit 0, and

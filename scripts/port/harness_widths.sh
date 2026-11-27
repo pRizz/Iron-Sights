@@ -5,6 +5,7 @@
 #   widths=$(harness_widths)           # "32", "64", or "32" and "64" on lines
 #   harness_flags WIDTH [EXTRA...]     # -m32 and EXTRA for 32; nothing for 64
 #   harness_pending NAME WIDTH         # true while NAME WIDTH is on the list
+#   harness_apple_compiler             # true when CC targets macOS
 #
 # MIDAS_HARNESS_WIDTHS="32" or "64" restricts the widths. CC is the compiler
 # asked, as in the harnesses.
@@ -14,9 +15,19 @@
 # LP64-003 Task 11 made Vertex 16 bytes, which let test_wardrobe pass at 64.
 HARNESS_PENDING=()
 
+# True when the compiler targets an Apple system (its -dumpmachine names
+# "-apple-", as arm64-apple-darwin27.2.0 does). A compiler that cannot say is
+# not Apple's.
+harness_apple_compiler() {
+    local machine
+    machine=$("${CC:-gcc}" -dumpmachine 2>/dev/null) || return 1
+    [[ $machine == *-apple-* ]]
+}
+
 # Prints the widths to run, one per line. 32 when the compiler accepts -m32;
 # 64 when the compiler's own pointers are 8 bytes (x86_64 and aarch64 use SSE
-# or NEON arithmetic by default, so 64 needs no flag). Fails, naming what was
+# or NEON arithmetic by default, so 64 needs no flag). An Apple compiler is
+# never offered 32, whatever it says to -m32. Fails, naming what was
 # asked, when none can run; on an x86 host a rejected -m32 is a failure too
 # (the 32-bit toolchain is missing) unless MIDAS_HARNESS_WIDTHS leaves 32 out.
 harness_widths() {
@@ -24,7 +35,11 @@ harness_widths() {
     for width in $requested; do
         case $width in
         32)
-            if "$cc" -m32 -x c -fsyntax-only /dev/null 2>/dev/null; then
+            if harness_apple_compiler; then
+                # Apple clang accepts -m32 for arm64 and then can compile and
+                # run nothing with it: a Mac has no 32-bit half (MAC-001).
+                :
+            elif "$cc" -m32 -x c -fsyntax-only /dev/null 2>/dev/null; then
                 echo 32
                 found=1
             else

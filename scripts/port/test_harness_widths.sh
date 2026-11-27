@@ -56,6 +56,9 @@ check_widths "a long macro list does not hide 64 under pipefail" "32 64 " FAKE_M
 check_widths "a request for an unavailable width prints nothing" "" FAKE_M32=reject FAKE_MACHINE=aarch64-linux-gnu FAKE_POINTER_BYTES=8 MIDAS_HARNESS_WIDTHS=32
 check_widths "an x86_64 compiler without -m32 fails and prints no width" "" FAKE_M32=reject FAKE_POINTER_BYTES=8
 check_widths "an x86_64 compiler without -m32 runs 64 when restricted to it" "64 " FAKE_M32=reject FAKE_POINTER_BYTES=8 MIDAS_HARNESS_WIDTHS=64
+# Apple clang accepts -m32 for arm64 and can build nothing with it (MAC-001).
+check_widths "an Apple compiler that accepts -m32 runs 64 only" "64 " FAKE_M32=accept FAKE_MACHINE=arm64-apple-darwin27.2.0 FAKE_POINTER_BYTES=8
+check_widths "an Apple compiler asked only for 32 prints nothing" "" FAKE_M32=accept FAKE_MACHINE=arm64-apple-darwin27.2.0 FAKE_POINTER_BYTES=8 MIDAS_HARNESS_WIDTHS=32
 
 # Runs harness_widths with a stand-in compiler and prints its exit status and stderr on one line.
 widths_failure() {
@@ -125,7 +128,9 @@ HARNESS_WIDTH_EXEMPT=(
     "test_room_seams: port/fast3d/gfx_seam_grow.h, float and fixed-width integer maths with no pointer or record"
 )
 # Harnesses that no workflow runs.
-HARNESS_WORKFLOW_EXEMPT=()
+HARNESS_WORKFLOW_EXEMPT=(
+    "test_macos_host: runs only on macOS; named in the macOS job from MAC-001 Task 10"
+)
 
 # Prints FILE without its comment lines.
 harness_code() {

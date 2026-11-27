@@ -417,6 +417,14 @@ endif()
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_xwayland_pointer.c)
 endif()
+# The macOS host functions (port_macos.h, MAC-001): the file includes dyld's
+# headers, so only a macOS build compiles it, and under every warning.
+if(APPLE)
+    set_property(SOURCE ${CMAKE_SOURCE_DIR}/port/src/port_macos.c APPEND PROPERTY
+        COMPILE_OPTIONS -Wall -Wextra -Werror)
+else()
+    list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_macos.c)
+endif()
 # The models' list store (port_gdl_store.h, LP64-006 Task 11b) is the 64-bit
 # build's alone: a 32-bit build converts as it always has (objecthandler_2.c).
 if(NOT GE_POINTER_BITS EQUAL 64)
