@@ -30,6 +30,60 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-094 — Native Windows x64 build plan
+
+**Status:** Drafted on 2026-11-27 at the owner's request; not accepted, and
+nothing is built. Documentation only: no source, build file or tool changed.
+
+**What it is.** [The Windows x64 plan](scripts/port/windows_x64_plan.md)
+proposes a native 64-bit Windows executable from the 64-bit source that
+already ships for x86_64 Linux (FORK-089), ending with
+`Iron-Sights-windows-x64.zip` beside the 32-bit zip. It follows the 64-bit
+and macOS plans' form: why, goals, non-goals, anti-goals, constraints, what
+was measured, approaches, design, verification, four milestones (WIN64-001
+to WIN64-004), questions for the owner and a status table. It is not yet
+named in `AGENTS.md`, and the 64-bit plan's non-goal and the CMake refusal
+of Windows x64 (`CMakeLists.txt:19-21`) stay as they are until the owner
+accepts it.
+
+**Why it differs from upstream.** The inherited baseline builds Windows only
+as a 32-bit program, and so does this fork today.
+
+**Open for the owner.** Who it is for (recommended: a second download beside
+the 32-bit zip, which keeps suspend points), shipping without suspend points
+as every 64-bit build does, the four milestones, lifting the 64-bit plan's
+Windows x64 non-goal, and a `build_win64` tree beside `build_win`.
+
+**What was measured** (2026-11-27, `main` at 990f914, on the owner's laptop
+with its RTX 3070 Laptop GPU, in a throwaway copy of the `goldeneye` image
+with Ubuntu's x86_64 MinGW-w64 GCC 13 added, building from `git archive`
+in the container; the scratch toolchain file, script and patch were under
+the ignored `build/win64-probe/`). The plan gives each with its file
+reference:
+
+- With the refusal commented out, 3 of 356 headless and 3 of 389 video
+  compile steps fail, all in the port layer: the crash handler
+  (`port/src/main.c`, x86-32 `CONTEXT` registers and an EBP walk), the
+  profiler (`port/src/port_profile.c`) and the `#error` off Linux in
+  `port/src/port_lp64.c`. No file in `src/` or `port/fast3d/` failed.
+- The Windows link options (`CMakeLists.txt:136-138`) carry `-m32`, a fixed
+  0x10000000 image base and `--disable-dynamicbase` at every width. Without
+  them, and with the three files patched, the video tree links a PE32+
+  x86-64 executable; the headless tree does not link on Windows.
+- The manifest's `processorArchitecture="x86"`
+  (`port/win/ProjectMidas.manifest`) stops the 64-bit exe before `main`
+  with `0xC000007B`. With `amd64` it booted 600 front-end frames from an
+  isolated folder, exit 0, on the RTX 3070, with every checked address above
+  4 GB, but logged the memp arena at 0x20000000: `port/src/pcsched.c`
+  tests `_WIN32` before `IS_64_BIT` there and never checks it.
+- Crash reporting, the profiler's samples, packaging, CI and several tools
+  are x86 or `build_win` only, read in the code and not run.
+
+**Validation.** Documentation only; no game was built from this change and
+no check of the game was run for it. The probe's build and boot are the
+plan's inputs, not checks of this change; its run folder
+(`build_win/win64-probe-run`) and scratch trees were deleted afterwards.
+
 ### FORK-093 — Native macOS build plan
 
 **Status:** Planned; nothing is built. Documentation only: no source, build
