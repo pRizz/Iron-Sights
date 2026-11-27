@@ -242,6 +242,12 @@ pass its isolated executable rather than rebuilding an active player binary.
   recorded decisions, and update its milestone status table before handing off.
   The [64-bit Linux guide](scripts/port/linux_64bit.md) has the x86_64 images,
   the development and release builds, the package check and the known limits.
+- The native macOS build (Apple Silicon, MAC-001 to MAC-006) follows the
+  accepted [macOS plan](scripts/port/macos_plan.md). Read it before resuming,
+  do not reopen its recorded decisions or the 64-bit plan's, keep every edit
+  under `port/fast3d/` on its strict-tier branch, and update its milestone
+  status table before handing off. The Apple TV build gets its own plan after
+  it.
 - ROM data converters (LP64-004) are `port/src/romconv_*.c`, declared in
   `port/include/port_romconv.h`, `port_romconv_audio.h` and
   `port_romconv_stage.h`, with the file layouts they read in

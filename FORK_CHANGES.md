@@ -30,6 +30,67 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-093 — Native macOS build plan
+
+**Status:** Planned; nothing is built. Documentation only: no source, build
+file or tool changed. The owner chose the audience, the graphics path and
+the outline on 2026-11-26 and approved the design on 2026-11-27.
+
+**What it is.** [The macOS plan](scripts/port/macos_plan.md) is the
+project after the 64-bit port (FORK-089): a native Apple Silicon macOS build
+that ends as a Developer ID signed, notarized download. It follows the
+64-bit plan's form: why, goals, non-goals, anti-goals, constraints, what was
+measured, approaches, design, verification, six milestones (MAC-001 to
+MAC-006), decisions and a status table. `AGENTS.md` ("Repo-Local Guidance")
+points to it, and `scripts/port/linux_64bit.md`'s last section now names it
+instead of calling macOS a later milestone of the 64-bit plan.
+
+**Why it differs from upstream.** The inherited baseline has no macOS
+build. Upstream's open pull requests #42 and #95 add one and ship an ad-hoc
+signed zip. Under the 64-bit plan's decision to write our own, they were
+read for approach only and no code was taken.
+
+**The owner's decisions.** A notarized download rather than self-build only
+or an ad-hoc signed zip; OpenGL 4.1 core as the renderer already has it,
+with ANGLE over Metal as the recorded fallback and a new backend rejected;
+six milestones, Apple Silicon only. The plan's "Decisions" lists the calls
+made in drafting that the owner accepted with the design.
+
+**What was measured** (2026-11-26, `main` at 843c143, macOS 27.2.1, Apple M4
+Max, Apple clang 21.0.0, in scratch trees outside the repository). The plan
+gives each with its file reference or command:
+
+- Apple clang configures the 64-bit headless tree as it is and fails 61 of
+  361 compile steps, from six causes: `include/PR/os.h:1019-1033`'s libc
+  redeclarations, the ELF section names of `port/include/asmsym.h`, the
+  `#error` in `port/src/port_lp64.c`, `clock_nanosleep` in
+  `port/src/pcsched.c`, `__errno_location` in `port/src/romdata.c`, and two
+  redeclarations in `src/game/lv.c` and `src/game/spectrum.c`. A video tree
+  fails 75 of 393: the same `os.h` lines in seven more C files, and seven
+  renderer files where the game's headers come before libc++'s.
+- An SDL2 probe on the Mac got an OpenGL "4.1 Metal" core context and none
+  for 3.0 compatibility, which the renderer asks for first; its context list
+  (`port/fast3d/gfx_sdl2.cpp:404-415`) then asks for 4.1 core. No shipped
+  build has yet run that path.
+- With no macOS code in the tree, save transfer would stop the game at
+  startup (`port/fast3d/save_transfer.cpp:141-146` reads `/proc/self/exe`),
+  and crash reporting, the downloads, the weapon icon worker and the file
+  pickers exist only for Windows and Linux.
+- SDL's offscreen driver cannot make a GL window on the Mac, so picture
+  checks there need a real window.
+
+**Constraints the plan carries.** Every edit under `port/fast3d/` is strict
+tier: it is committed on a branch and reaches `main` through a gallery
+regeneration on the owner's Windows laptop. A headless build compiles none
+of those files, so MAC-001 lands on `main` from the Mac. The plan needs from
+the owner an Apple Developer Program membership, a bundle identifier, a
+Developer ID certificate and a notarization key.
+
+**Validation.** Documentation only; no game was built from this change and
+no check of the game was run for it. The pre-commit hook's standards and
+settings placement checks ran on the commit. The measurements above are the
+plan's inputs, not checks of this change.
+
 ### FORK-092 — Linux weapon icons, icon cache and save transfer dialogs
 
 **Status:** Implemented on 2026-11-25 at the owner's request, during LP64-007

@@ -170,4 +170,5 @@ process. No 32-bit library is needed.
 
 No Windows x64, macOS (including Apple TV) or aarch64 package is built or
 published. The 64-bit build compiles and runs at aarch64 in the development
-containers, and the macOS work is a later milestone of the 64-bit plan.
+containers. The macOS build has its own [plan](macos_plan.md), accepted on
+2026-11-27 and not yet started.
