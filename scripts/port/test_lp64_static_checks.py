@@ -17,14 +17,30 @@ diag = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(diag)
 
 # A source file is: exit status, a line each of stderr up to `--aux--`, then the -aux-info text.
+# `--version` prints version.txt from the script's folder (GCC's text unless a test writes another).
+# Like the real compilers, it refuses the other one's flags: clang has no -fmax-errors or -aux-info.
+GCC_VERSION = 'cc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\n'
+CLANG_VERSION = 'Apple clang version 21.0.0 (clang-2100.4.1.1)\nTarget: arm64-apple-darwin27.2.0\n'
 FAKE_COMPILER = """import os, sys
+version = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'version.txt')
+text = open(version).read() if os.path.exists(version) else %r
+if '--version' in sys.argv:
+    sys.stdout.write(text)
+    sys.exit(0)
+clang = 'clang' in text
+for flag in sys.argv[1:]:
+    if clang and (flag.startswith('-fmax-errors') or flag == '-aux-info'):
+        sys.exit('clang: error: unknown argument: ' + flag)
+    if not clang and flag in ('-Wshorten-64-to-32', '-ferror-limit=0'):
+        sys.exit('cc: error: unrecognized command-line option ' + flag)
 source = next(arg for arg in sys.argv[1:] if arg.endswith(('.c', '.cpp')))
 status, _, rest = open(source).read().partition('\\n')
 stderr, _, aux = rest.partition('--aux--\\n')
-if '-Wconversion' in sys.argv and os.environ.get('LC_ALL') != 'C':
+if ('-Wconversion' in sys.argv or '-Wshorten-64-to-32' in sys.argv) and os.environ.get('LC_ALL') != 'C':
     sys.exit('narrowing must run under LC_ALL=C')
-needs = [flag for flag in ('-Wconversion', '-Wimplicit-function-declaration') if flag in sys.argv]
-if needs or '-aux-info' in sys.argv:
+narrowing = '-Wshorten-64-to-32' if clang else '-Wconversion'
+needs = [flag for flag in (narrowing, '-Wimplicit-function-declaration') if flag in sys.argv]
+""" % GCC_VERSION + """if needs or '-aux-info' in sys.argv:
     sys.stderr.write(stderr)
 if '-aux-info' in sys.argv:
     open(sys.argv[sys.argv.index('-aux-info') + 1], 'w').write(aux)
@@ -41,6 +57,7 @@ class TreeCase(unittest.TestCase):
         self.folder = Path(self.tmp.name)
         (self.folder/'cc.py').write_text(FAKE_COMPILER)
         self.narrowing_allowed = self.folder/'narrowing.txt'
+        self.narrowing_clang_allowed = self.folder/'narrowing_clang.txt'
         self.unprototyped_allowed = self.folder/'unprototyped.txt'
 
     def build_dir(self, name: str, files: dict[str, str]) -> Path:
@@ -61,6 +78,7 @@ class TreeCase(unittest.TestCase):
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err, \
                 mock.patch.object(diag, 'ROOT', self.folder), \
                 mock.patch.object(diag, 'NARROWING_ALLOWLIST', self.narrowing_allowed), \
+                mock.patch.object(diag, 'NARROWING_CLANG_ALLOWLIST', self.narrowing_clang_allowed), \
                 mock.patch.object(diag, 'UNPROTOTYPED_ALLOWLIST', self.unprototyped_allowed):
             status = diag.main([str(arg) for arg in args])
         return status, out.getvalue(), err.getvalue()
@@ -217,6 +235,99 @@ class Narrowing(TreeCase):
         # Assert
         self.assertEqual(status, 2)
         self.assertIn('allowlist line 1', err)
+
+
+class ClangNarrowing(TreeCase):
+    """A tree whose compiler is clang (MAC-001 Task 5): its wording, its flag, its own allowlist."""
+    def setUp(self):
+        super().setUp()
+        (self.folder/'version.txt').write_text(CLANG_VERSION)
+
+    def shorten(self, source: str, line: int, from_type: str, quoted: str = 'x = p;') -> str:
+        shown = f"    {line} | {quoted}\n" if quoted else ''
+        return (f"{self.folder}/{source}:{line}:7: warning: implicit conversion loses integer precision: "
+                f"{from_type} to 'u32' (aka 'unsigned int') [-Wshorten-64-to-32]\n{shown}")
+
+    def test_clangs_wording_for_a_uintptr_t_narrowed_to_u32_is_listed(self):
+        # Arrange
+        tree = self.build_dir('t', {'a.c': "0\n" + self.shorten('a.c', 4, "'uintptr_t' (aka 'unsigned long')")})
+        # Act
+        status, out, err = self.run_main('narrowing', tree)
+        # Assert
+        self.assertEqual(status, 0, err)
+        self.assertEqual(out, 'a.c:4:7: uintptr_t -> u32 | x = p;\n')
+
+    def test_an_unsigned_long_source_is_listed_only_with_all(self):
+        # Arrange
+        tree = self.build_dir('t', {'a.c': "0\n" + self.shorten('a.c', 2, "'unsigned long'")})
+        # Act
+        plain = self.run_main('narrowing', tree)
+        every = self.run_main('narrowing', '--all', tree)
+        # Assert
+        self.assertEqual(plain[1], '')
+        self.assertEqual(every[1], 'a.c:2:7: unsigned long -> u32 | x = p;\n')
+
+    def test_check_reads_the_clang_allowlist_not_gccs(self):
+        # Arrange: GCC's list allows none; clang's allows this file's one.
+        self.narrowing_clang_allowed.write_text('a.c\t1\ta difference of two addresses in one object\n')
+        tree = self.build_dir('t', {'a.c': "0\n" + self.shorten('a.c', 4, "'intptr_t' (aka 'long')")})
+        # Act
+        status, out, err = self.run_main('narrowing', '--check', tree)
+        # Assert
+        self.assertEqual(status, 0, out + err)
+        self.assertIn('OK: 1 narrowings in 1 files', out)
+
+    def test_check_fails_a_place_the_clang_allowlist_lacks(self):
+        # Arrange: only GCC's list has the line.
+        self.narrowing_allowed.write_text('a.c\t1\tallowed for GCC only\n')
+        tree = self.build_dir('t', {'a.c': "0\n" + self.shorten('a.c', 4, "'intptr_t' (aka 'long')")})
+        # Act
+        status, out, err = self.run_main('narrowing', '--check', tree)
+        # Assert
+        self.assertEqual(status, 1, out + err)
+        self.assertIn('a.c: 1 narrowings, allowed 0', out)
+        self.assertIn('narrowing_clang.txt', out)
+
+    def test_unprototyped_refuses_a_clang_tree(self):
+        # Arrange
+        tree = self.build_dir('t', {'a.c': "0\n"})
+        # Act
+        status, out, err = self.run_main('unprototyped', '--check', tree)
+        # Assert
+        self.assertEqual(status, 2)
+        self.assertIn("needs GCC's -aux-info: run it in the x86_64 or aarch64 container", err)
+        self.assertNotIn('OK', out)
+
+
+class UnknownCompiler(TreeCase):
+    def test_narrowing_refuses_a_compiler_it_cannot_read(self):
+        # Arrange: a compiler that is neither GCC nor clang, whose warnings would all go unread.
+        (self.folder/'version.txt').write_text('tcc version 0.9.27 (AArch64 Darwin)\n')
+        tree = self.build_dir('t', {'a.c': "0\n"})
+        # Act
+        status, out, err = self.run_main('narrowing', '--check', tree)
+        # Assert
+        self.assertEqual(status, 2)
+        self.assertIn('neither GCC nor clang', err)
+        self.assertNotIn('OK', out)
+
+    def test_trees_of_two_compilers_are_refused_together(self):
+        # Arrange: one GCC tree and one clang tree, each with its own stand-in compiler folder.
+        gcc_tree = self.build_dir('g', {'a.c': "0\n"})
+        other = self.folder/'clang'
+        other.mkdir()
+        (other/'cc.py').write_text(FAKE_COMPILER)
+        (other/'version.txt').write_text(CLANG_VERSION)
+        clang_tree = self.build_dir('c', {'b.c': "0\n"})
+        entries = json.loads((clang_tree/'compile_commands.json').read_text())
+        for entry in entries:
+            entry['arguments'][1] = str(other/'cc.py')
+        (clang_tree/'compile_commands.json').write_text(json.dumps(entries))
+        # Act
+        status, out, err = self.run_main('narrowing', '--check', gcc_tree, clang_tree)
+        # Assert
+        self.assertEqual(status, 2)
+        self.assertIn('GCC and clang trees together', err)
 
 
 class Unprototyped(TreeCase):

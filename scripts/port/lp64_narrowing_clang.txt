@@ -1,0 +1,27 @@
+# What `lp64_diagnostics.py narrowing` lists on a clang tree (macOS, MAC-001 Task 5): each implicit
+# narrowing of a uintptr_t, intptr_t or romptr_t, counted by file. `narrowing --check` on a clang tree
+# requires an exact match with this file; a GCC tree is checked against lp64_narrowing_allowed.txt
+# (absent: GCC lists none). Clang keeps the typedef's name through arithmetic, so it lists these 33
+# places where GCC's -Wconversion run shows only `long unsigned int` (found there with --all).
+# Every place was read on 2026-11-27: none carries a host address into 32 bits. A new place fails
+# the check until it is fixed, or read and given its line here with the reason.
+# path<TAB>count<TAB>reason
+src/audi.c	1	a difference of two microcode stub addresses in one block (the boot microcode size)
+src/debugmenu.c	1	a difference of two addresses in one display list buffer
+src/game/bg.c	5	differences of two file positions in one room table (a compressed size)
+src/game/front.c	3	a file size from get_pc_buffer_remaining_value (s32) rounded up through ALIGN64_V2's uintptr_t cast
+src/game/image.c	1	a difference of two addresses in one texture pool
+src/game/image_bank.c	1	a difference of two addresses of one segment (its size)
+src/game/initanitable.c	1	a difference of two addresses of one segment (its size)
+src/game/lightfixture.c	2	a difference of two addresses in one room's vertex block (a vertex index)
+src/game/lv.c	1	a difference of two addresses of one segment (its size)
+src/game/prop.c	4	two differences of addresses in one pad table (a word count), and two AI list IDs read in place from a pointer-sized field (LP64-004's setup converter leaves the ID there)
+src/game/ramromreplay.c	1	a difference of two addresses in one demo recording (its size)
+src/game/rsp.c	1	a difference of two microcode stub addresses in one block (the boot microcode size)
+src/game/stan.c	1	a flag (0 or 1) kept in a pointer-sized field, as the comment at the line says
+src/game/tex.c	1	a difference of two addresses in one output buffer
+src/game/textrelated.c	2	differences of two addresses of one font segment (its size)
+src/game/title.c	2	differences of two addresses of one segment (its size, rounded up)
+src/libultra/audio/load.c	2	an address past one sample table's end minus that end (an overflow byte count)
+src/libultra/audio/resample.c	1	a float's 32 bits carried through the filter's pointer-typed parameter, not an address
+src/music.c	2	differences of two addresses in the loaded ROM image (adjacent segments: a table size)

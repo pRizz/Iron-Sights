@@ -564,14 +564,14 @@ git commit -m "Run the test harnesses on macOS"
   it in the x86_64 or aarch64 container". `port_macos.c` is covered
   instead by its own `-Wall -Wextra -Werror`.
 
-- [ ] **Step 1: Write the failing tests, then implement**
+- [x] **Step 1: Write the failing tests, then implement**
 
 With the fake compiler the existing tests use: clang's wording for a
 `uintptr_t` to `u32` conversion is listed; a compiler whose `--version`
 names neither is refused with exit 2; `unprototyped` on a clang entry
 exits 2 with the message.
 
-- [ ] **Step 2: Record what clang sees**
+- [x] **Step 2: Record what clang sees**
 
 Run `narrowing` on `build/mac/headless`. Expected: 33 places in 18 files
 from `uintptr_t`, `intptr_t` or `romptr_t`; record the actual figures.
@@ -582,7 +582,7 @@ a defect of the 64-bit build on every host and is fixed here only if the
 Windows comparison stays identical; otherwise it is recorded for the
 owner.
 
-- [ ] **Step 3: Run the task check, commit**
+- [x] **Step 3: Run the task check, commit**
 
 `narrowing --check build/mac/headless` prints `OK`.
 

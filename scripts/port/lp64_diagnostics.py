@@ -29,6 +29,10 @@ gate cannot see: implicit narrowing of `uintptr_t`, `intptr_t` and `romptr_t`, a
 prototype to functions that take or return pointers. `--check` compares each file's count with
 `lp64_narrowing_allowed.txt` or `lp64_unprototyped_allowed.txt`; a missing file allows none. They live
 in `lp64_static_checks.py`, which describes them; `--help` of each command says what it misses.
+Both ask the trees' compiler which it is before reading its output. `narrowing` reads GCC's wording
+or clang's, and checks a clang tree (macOS) against `lp64_narrowing_clang.txt`, since clang sees
+places GCC's run cannot; `unprototyped` needs GCC's `-aux-info` and exits 2 on a clang tree; a
+compiler that is neither is refused with exit 2, never reported `OK`.
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -49,6 +53,9 @@ DEFAULT_BUILD_DIRS = (ROOT/'build'/'lp64'/'gate', ROOT/'build'/'lp64'/'gate-vide
 # still reads this path, and a missing file allows none, so a new narrowing fails until it is fixed or a
 # file with its allowlist line is added.
 NARROWING_ALLOWLIST = Path(__file__).with_name('lp64_narrowing_allowed.txt')
+# What clang (macOS, MAC-001) lists: it keeps a typedef's name through arithmetic, so it sees places GCC's
+# run cannot, and a clang tree is checked against this list instead.
+NARROWING_CLANG_ALLOWLIST = Path(__file__).with_name('lp64_narrowing_clang.txt')
 UNPROTOTYPED_ALLOWLIST = Path(__file__).with_name('lp64_unprototyped_allowed.txt')
 GENERATED_HEADER = Path('generated')/'port_buildinfo.h'
 KINDS = ('int-conversion', 'pointer-to-int-cast', 'int-to-pointer-cast')
@@ -416,16 +423,21 @@ def static_check(args: argparse.Namespace) -> int:
     try:
         commands = static_commands([path.resolve() for path in args.build_dirs],
                                    GATE_SOURCES if narrowing else ('.c',))
+        family = checks.tree_family(commands)
         if narrowing:
             # The report-only types are never counted: only the pointer-sized sources are allowlisted.
-            lines = checks.narrowing_lines(checks.measure_narrowing(commands, ROOT, args.all and not args.check))
+            lines = checks.narrowing_lines(
+                checks.measure_narrowing(commands, ROOT, args.all and not args.check, family))
+        elif family == checks.CLANG:
+            raise RuntimeError("unprototyped needs GCC's -aux-info: run it in the x86_64 or aarch64 container")
         else:
             lines = checks.measure_unprototyped(commands, ROOT)
         if not args.check:
             for line in lines:
                 print(line)
             return 0
-        allowlist, noun = (NARROWING_ALLOWLIST, 'narrowings') if narrowing else (UNPROTOTYPED_ALLOWLIST, 'unprototyped calls')
+        narrowing_allowlist = NARROWING_CLANG_ALLOWLIST if family == checks.CLANG else NARROWING_ALLOWLIST
+        allowlist, noun = (narrowing_allowlist, 'narrowings') if narrowing else (UNPROTOTYPED_ALLOWLIST, 'unprototyped calls')
         return checks.check(lines, noun, allowlist, f'lp64_diagnostics.py {args.command} BUILD_DIR...')
     except (RuntimeError, OSError, ValueError) as error:
         print(f'error: {error}', file=sys.stderr)
@@ -447,8 +459,11 @@ def main(argv: list[str]) -> int:
                               help="add GCC's message and the quoted source line")
     for name, help_text in (
             ('narrowing', 'list implicit narrowing of pointer-sized integers (a -Wconversion run); GCC drops the '
-                          'typedef name after arithmetic, so (uintptr_t) a + b narrowed to u32 is found only by --all'),
-            ('unprototyped', 'list calls without a prototype to functions that take or return pointers')):
+                          'typedef name after arithmetic, so (uintptr_t) a + b narrowed to u32 is found only by --all. '
+                          'A clang tree is run with -Wshorten-64-to-32, keeps the name, and is checked against '
+                          'lp64_narrowing_clang.txt; a compiler that is neither GCC nor clang is refused'),
+            ('unprototyped', 'list calls without a prototype to functions that take or return pointers '
+                             '(GCC trees only: it needs -aux-info, and exits 2 on a clang tree)')):
         static = commands.add_parser(name, help=help_text, description=help_text)
         static.add_argument('build_dirs', nargs='+', type=Path, metavar='BUILD_DIR')
         static.add_argument('--check', action='store_true',

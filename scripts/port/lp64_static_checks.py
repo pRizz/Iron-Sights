@@ -9,8 +9,15 @@ GCC drops the typedef name after arithmetic, so `(uintptr_t) a + b` narrowed to 
 `long unsigned int` and is found only under `--all`. A file with `#line` directives (`gunfire.c`,
 `gun.c`, `lv.c`, `env.c`) is listed at the compiler's line numbers, which are not its own lines.
 
-`unprototyped` compiles every C entry with `-Wimplicit-function-declaration` restored and
-`-aux-info`, and keeps each call without a prototype to a function whose definition in the tree
+Each compiler words the warning its own way, so the trees' compiler is asked first
+(`tree_family`, by `--version`). GCC's line is "conversion from ... may change value". A clang tree
+(macOS, MAC-001) is compiled with `-Wshorten-64-to-32` instead and its line is "implicit conversion
+loses integer precision: 'SRC' (aka 'X') to 'DST'"; clang keeps a typedef's name through
+arithmetic, so it lists places GCC's run cannot, and `--check` compares a clang tree with its own
+allowlist. A compiler that is neither is refused: an `OK` must never mean "nothing was read".
+
+`unprototyped` (GCC trees only: clang has no `-aux-info`) compiles every C entry with
+`-Wimplicit-function-declaration` restored and `-aux-info`, and keeps each call without a prototype to a function whose definition in the tree
 takes or returns a pointer or a 64-bit type: such a call passes an `int`-sized argument where the
 callee reads a pointer. A call to a function the tree does not define (a C library function such
 as `memset` or `strlen`, whose `size_t` and pointers the tree cannot show) is kept too, under
@@ -31,15 +38,25 @@ from typing import Optional
 
 COMPILE_TIMEOUT_SECONDS = 600
 POINTER_SIZED = {'uintptr_t', 'intptr_t', 'romptr_t', 'Aword'}  # Aword: PR/abi.h's audio command word
+# The second line holds clang's spellings of the first line's first four.
 OTHER_64_BIT = {'long int', 'long unsigned int', 'long long int', 'long long unsigned int', 'size_t',
+                'long', 'unsigned long', 'long long', 'unsigned long long',
                 'ptrdiff_t', 'ssize_t', 'u64', 's64', 'uint64_t', 'int64_t', 'Uint64', 'Sint64'}
-NARROWING_FLAGS = ['-Wconversion', '-Wno-sign-conversion', '-Wno-float-conversion', '-Wno-error',
-                   '-fmax-errors=0']
+GCC, CLANG = 'gcc', 'clang'
+NARROWING_FLAGS = {GCC: ['-Wconversion', '-Wno-sign-conversion', '-Wno-float-conversion', '-Wno-error',
+                         '-fmax-errors=0'],
+                   CLANG: ['-Wshorten-64-to-32', '-Wno-error', '-ferror-limit=0']}
+VERSION_TIMEOUT_SECONDS = 60
 IMPLICIT_FLAGS = ['-Wimplicit-function-declaration', '-Wno-error', '-fmax-errors=0']
 
-CONVERSION = re.compile(
-    r"^(?P<file>.+?):(?P<line>\d+):(?P<col>\d+): warning: conversion from '(?P<src>[^']+)'(?: \{aka '(?P<aka>[^']+)'\})? "
-    r"to '(?P<dst>[^']+)'(?: \{aka '[^']+'\})? may change value")
+CONVERSION = {
+    GCC: re.compile(
+        r"^(?P<file>.+?):(?P<line>\d+):(?P<col>\d+): warning: conversion from '(?P<src>[^']+)'"
+        r"(?: \{aka '(?P<aka>[^']+)'\})? to '(?P<dst>[^']+)'(?: \{aka '[^']+'\})? may change value"),
+    CLANG: re.compile(
+        r"^(?P<file>.+?):(?P<line>\d+):(?P<col>\d+): warning: implicit conversion loses integer precision: "
+        r"'(?P<src>[^']+)'(?: \(aka '(?P<aka>[^']+)'\))? to '(?P<dst>[^']+)'"),
+}
 IMPLICIT = re.compile(
     r"^(?P<file>.+?):(?P<line>\d+):(?P<col>\d+): (?:warning|error): (?:incompatible )?implicit declaration of "
     r"(?:built-in )?function '(?P<name>[^']+)'")
@@ -57,12 +74,54 @@ def relative(path: str, directory: str, root: Path) -> Optional[str]:
     return full.relative_to(root).as_posix() if full.is_relative_to(root) else None
 
 
-def parse_narrowing(stderr: str, directory: str, root: Path, every_type: bool) -> dict[tuple, str]:
-    """Return (file, line, column, source, target) -> quoted source text for each narrowing of interest."""
+def compiler_family(version_text: str) -> Optional[str]:
+    """Return GCC or CLANG for a compiler's `--version` text, or None for any other compiler.
+
+    Clang is asked first: Apple's `cc` and `gcc` are clang, and say so only in this text."""
+    if 'clang' in version_text:
+        return CLANG
+    if 'Free Software Foundation' in version_text:
+        return GCC
+    return None
+
+
+def version_query(argv: list[str]) -> tuple[str, ...]:
+    """Return the command that asks an entry's compiler its version: the words before its first
+    option (the compiler, or a launcher and the compiler), then `--version`."""
+    first_option = next((index for index, arg in enumerate(argv) if arg.startswith('-')), len(argv))
+    return (*argv[:first_option], '--version')
+
+
+def tree_family(commands: list[tuple[dict, list[str]]]) -> str:
+    """Return GCC or CLANG, the one family of every command's compiler.
+
+    Raises RuntimeError for a compiler that is neither (its warnings would go unread and the check
+    would pass having seen nothing), one that does not answer, and for GCC and clang together."""
+    families = {}
+    for query in sorted({version_query(argv) for _, argv in commands}):
+        try:
+            done = subprocess.run(list(query), capture_output=True, text=True, timeout=VERSION_TIMEOUT_SECONDS)
+        except (OSError, subprocess.TimeoutExpired) as error:
+            raise RuntimeError(f"cannot ask {' '.join(query)}: {error}") from error
+        family = compiler_family(done.stdout + done.stderr) if done.returncode == 0 else None
+        if family is None:
+            raise RuntimeError(f"{' '.join(query[:-1])} is neither GCC nor clang by its --version, so its "
+                               'warnings cannot be read; this check never reports on output it cannot read')
+        families[family] = query
+    if len(families) > 1:
+        raise RuntimeError('GCC and clang trees together: each compiler has its own wording and allowlist, '
+                           'so run their trees apart')
+    return next(iter(families))
+
+
+def parse_narrowing(stderr: str, directory: str, root: Path, every_type: bool,
+                    family: str = GCC) -> dict[tuple, str]:
+    """Return (file, line, column, source, target) -> quoted source text for each narrowing of interest,
+    read in `family`'s wording."""
     found = {}
     lines = stderr.splitlines()
     for index, text in enumerate(lines):
-        match = CONVERSION.match(text)
+        match = CONVERSION[family].match(text)
         if not match:
             continue
         wide = POINTER_SIZED | OTHER_64_BIT if every_type else POINTER_SIZED
@@ -118,11 +177,13 @@ def run_compiler(entry: dict, argv: list[str]) -> str:
     return done.stderr
 
 
-def measure_narrowing(commands: list[tuple[dict, list[str]]], root: Path, every_type: bool) -> dict[tuple, str]:
-    """Compile every command with the narrowing flags; return the merged narrowings."""
+def measure_narrowing(commands: list[tuple[dict, list[str]]], root: Path, every_type: bool,
+                      family: str = GCC) -> dict[tuple, str]:
+    """Compile every command with `family`'s narrowing flags; return the merged narrowings."""
     def one(pair):
         entry, argv = pair
-        return parse_narrowing(run_compiler(entry, argv + NARROWING_FLAGS), entry['directory'], root, every_type)
+        return parse_narrowing(run_compiler(entry, argv + NARROWING_FLAGS[family]), entry['directory'], root,
+                               every_type, family)
     with ThreadPoolExecutor(max_workers=os.cpu_count() or 1) as pool:
         results = list(pool.map(one, commands))
     return {key: text for found in results for key, text in found.items()}

@@ -90,7 +90,7 @@ plan's inputs, not checks of this change; its run folder
 
 ### FORK-093 — Native macOS build plan
 
-**Status:** MAC-001 in progress (Tasks 1 to 4 of 11 built, below): the
+**Status:** MAC-001 in progress (Tasks 1 to 5 of 11 built, below): the
 headless 64-bit game builds, boots and plays its 20 missions on macOS.
 MAC-002 to MAC-006 are not started. The owner chose the
 audience, the graphics path and the outline on 2026-11-26, approved the
@@ -404,6 +404,51 @@ Linux containers of `scripts/port/lp64_env.py`.
   this task (it configures the default 32-bit tree, which an Arm host
   cannot build), and `OK: ran 600 frames`. `compare_win32.py commits HEAD
   WORKTREE`: `identical in loaded code and data`.
+
+- **Task 5, the static checks on clang.** `lp64_diagnostics.py narrowing
+  --check` printed `OK: 0 narrowings in 0 files` on a clang tree without
+  reading a line of it: its pattern knew only GCC's wording. Both static
+  checks now ask the trees' compiler which it is first
+  (`lp64_static_checks.tree_family`, by `--version`, clang before GCC
+  because Apple's `cc` and `gcc` are clang). `narrowing` compiles a clang
+  tree with `-Wshorten-64-to-32` and reads clang's line, "implicit
+  conversion loses integer precision: 'SRC' (aka 'X') to 'DST'"; a GCC
+  tree is run and read as before. A compiler that is neither exits 2
+  ("neither GCC nor clang by its --version"), and so do GCC and clang
+  trees given together: an `OK` never means that nothing was read.
+  `unprototyped` exits 2 on a clang tree ("needs GCC's -aux-info: run it
+  in the x86_64 or aarch64 container"); `port_macos.c`, the one file only
+  clang compiles, is covered by its own `-Wall -Wextra -Werror`.
+  `narrowing --check` compares a clang tree with
+  `scripts/port/lp64_narrowing_clang.txt` (`path<TAB>count<TAB>reason`,
+  exact match) and never with GCC's list: clang keeps a typedef's name
+  through arithmetic and so lists places GCC's run shows only as `long
+  unsigned int`. On `build/mac/headless` it lists 33 places in 19 files
+  (the plan counted 18 files). Each was read: 26 are a difference of two
+  addresses in one object, segment or table; 3 (`front.c`) a file size
+  rounded up through `ALIGN64_V2`'s `uintptr_t` cast; 2 (`prop.c`) an AI
+  list ID read in place from a pointer-sized field; 1 (`stan.c:2801`) a
+  flag kept in one; 1 (`resample.c:132`) a float's bits passed through a
+  pointer-typed parameter. **None carries a host address into 32 bits**,
+  so nothing was fixed and nothing goes to the owner. The Linux check is
+  no stricter than before: GCC still cannot see these 33.
+  Tests (`test_lp64_static_checks.py`, where these checks' tests live; its
+  stand-in compiler now answers `--version` and refuses the other
+  compiler's flags): clang's wording is listed; `unsigned long` only with
+  `--all`; `--check` reads the clang list and fails a place only GCC's
+  list allows; `unprototyped` refuses a clang tree; an unknown compiler and
+  mixed trees exit 2. All eight failed before the change.
+  *Ran:* `test_lp64_static_checks.py` 34 tests and
+  `test_lp64_diagnostics.py` 44 tests `OK` on macOS; `narrowing --check
+  build/mac/headless`: `OK: 33 narrowings in 19 files, all allowed`;
+  `unprototyped --check build/mac/headless`: exit 2 with the message; the
+  macOS build, gate (361 files, 0 failed), `OK: ran 600 frames` and 20 of
+  20 missions. In the x86_64 container, where the compiler is GCC 13: both
+  test files `OK`, the gate 361 and 394 files with 0 failed, `narrowing
+  --check` `OK: 0 narrowings in 0 files` and `unprototyped --check` `OK: 4
+  unprototyped calls in 4 files`, as before; aarch64 `OK: ran 600 frames`;
+  `compare_win32.py commits HEAD WORKTREE`: `identical in loaded code and
+  data`.
 
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside
