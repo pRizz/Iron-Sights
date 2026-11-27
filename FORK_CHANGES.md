@@ -30,11 +30,14 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
-### FORK-094 — Native Windows x64 build plan
+### FORK-094 — Native Windows x64 build
 
-**Status:** Planned and accepted; nothing is built. Drafted on 2026-11-27 at
-the owner's request and accepted by the owner the same day with all five
-recommendations. Documentation only: no source, build file or tool changed.
+**Status:** WIN64-001 (build and boot) is implemented locally, not
+released; WIN64-002 to WIN64-004 are not started. The plan was drafted on
+2026-11-27 at the owner's request and accepted the same day with all five
+recommendations; [WIN64-001's plan](scripts/port/windows_x64_win64_001.md)
+was accepted under the owner's standing instruction to take sensible
+recommendations.
 
 **What it is.** [The Windows x64 plan](scripts/port/windows_x64_plan.md)
 proposes a native 64-bit Windows executable from the 64-bit source that
@@ -44,9 +47,73 @@ and macOS plans' form: why, goals, non-goals, anti-goals, constraints, what
 was measured, approaches, design, verification, four milestones (WIN64-001
 to WIN64-004), the owner's decisions and a status table. `AGENTS.md`'s
 Repo-Local Guidance points to it, and the 64-bit plan's "Windows x64 is out
-of scope" call now notes that the owner lifted it for this plan. The CMake
-refusal of Windows x64 (`CMakeLists.txt:19-21`) and the test case that
-asserts it stay until WIN64-001 changes them together.
+of scope" call now notes that the owner lifted it for this plan.
+
+**WIN64-001: build and boot (current behavior).**
+
+- *Build.* `cmake/mingw-x86_64.cmake` builds `GE_POINTER_BITS=64` for
+  Windows into `build_win64` (README step 6). The old refusal of Windows x64
+  is replaced by a width check: CMake refuses `GE_POINTER_BITS=64` with the
+  i686 toolchain and 32 with the x86_64 one (`test_pointer_bits.sh` case 5a
+  to 5c). At 64 bits the Windows link drops `-m32`, the fixed 0x10000000
+  image base and `--disable-dynamicbase`, so MinGW links a dynamic-base,
+  high-entropy image; the 32-bit line is unchanged. The SDL2 MinGW default
+  folder follows the width (`GE_MINGW_TRIPLE`). On Windows, include
+  directories go on the command line instead of `@` response files, so the
+  compile gate can read them. The manifest's `processorArchitecture` is
+  `*`, which Windows resolves to the process's own architecture; with
+  `x86` the 64-bit exe stopped before `main` with `0xC000007B`. The
+  `goldeneye` image (`Dockerfile`) gains the x86_64 MinGW packages, in a
+  layer that refreshes the package lists first, because the cached lists
+  named archives the mirror had dropped.
+- *Addresses.* `port_lp64.c` takes the executable's range from its PE
+  headers (`GetModuleHandleW`, `SizeOfImage`) on Windows. In `pcsched.c`,
+  64-bit Windows allocations use `VirtualAlloc` with no hint and refuse a
+  mapping below 4 GB, and the memp arena takes its fixed 0x20000000 hint
+  only at 32 bits, so at 64 bits it goes through `portAllocHighOrExit` and
+  the address check lists it.
+- *Crash handler.* `port/include/port_win_context.h` names the registers,
+  the address type and print format, the stack walk's machine and the PE
+  offsets by width, so `main.c`'s SEH dump, first-chance reporter, stall
+  watchdog and watchpoints serve both widths. At 64 bits the frame walks
+  use the unwind tables (`RtlLookupFunctionEntry`, `RtlVirtualUnwind`),
+  because MinGW x64's RBP points into its frame, not at the saved RBP, and
+  system DLLs keep no frame pointer; the SEH dump prints all 16 integer
+  registers. At 64 bits `main` installs no `SIGSEGV`, `SIGILL` or `SIGFPE`
+  handler: MinGW-w64's x64 start-up runs `main` inside an SEH scope whose
+  filter calls such a handler before Windows reaches the unhandled-exception
+  filter, so `portCrashHandler`'s `_exit(139)` pre-empted the dump (and
+  would pre-empt Sentry, WIN64-003).
+- *Profiler.* At 64 bits `port_profile.c` compiles a stand-in that says
+  `GE_PROFILE` is not available yet (WIN64-003); it tests `_WIN64`, since
+  `bench/stock.py` compiles the file into stock trees.
+- *Gates.* CI's tests job installs the x86_64 MinGW compilers
+  (`ci_dependencies.py`'s tests profile, with their win32 alternatives) and
+  the SDL2 MinGW package, configures `build/lp64/gate-mingw` and runs the
+  three `lp64_diagnostics.py` checks over it with the Linux gate trees.
+  `test_abi_probe.sh` compiles and links the layout probe with the x86_64
+  MinGW compiler (its static assertions; the run-time checks need Windows).
+  The overlay review (`lp64_overlays_source.py`) no longer treats `_WIN32`
+  as undefined at 64 bits; its 15 newly visible sites have verdicts
+  (13 `typed`, 2 `dead` in the 32-bit profiler).
+- *Windows ABI findings.* MinGW lays bitfields out by Microsoft's rules at
+  both widths, so `struct image_entry` and `Gsetcolor` are 12 bytes on
+  Windows, not 8 (the shipped 32-bit exe included). `Gsetcolor` is unused on
+  a PC. `chrprop.c`'s guard-shot impact check stepped `g_Textures` by 8
+  bytes, so on Windows it read another texture's `hitSound` and could
+  spark on water or snow or skip the effect elsewhere; it now reads the
+  field, which on Linux is the same byte and nibble, and its two reviewed
+  overlay lines are gone. The probe asserts 12 bytes under `_WIN32` and 8
+  elsewhere. The N64 read this nibble as `hitTexture` (IDO packs bitfields
+  from the top bit, as `chrprop.c`'s impact-sound comment says); every PC
+  build reads `hitSound` there, which this change leaves as it was.
+- *Smaller fixes for the MinGW tree.* `include/string.h`'s PC block
+  prototypes `strcmp` (and `_stricmp` on Windows), which also removes the
+  `port_build_time.c` line from `lp64_unprototyped_allowed.txt`;
+  `audio_pc.c` prototypes `memmove`, which MinGW's SDL headers do not
+  declare. `lp64_boot.py` copies `SDL2.dll` beside the executable it runs.
+  The 64-bit warning comment in `CMakeLists.txt` lists the MinGW tree's two
+  extra macro-redefinition warnings, which have no option.
 
 **Why it differs from upstream.** The inherited baseline builds Windows only
 as a 32-bit program, and so does this fork today.
@@ -83,10 +150,55 @@ reference:
 - Crash reporting, the profiler's samples, packaging, CI and several tools
   are x86 or `build_win` only, read in the code and not run.
 
-**Validation.** Documentation only; no game was built from this change and
-no check of the game was run for it. The probe's build and boot are the
-plan's inputs, not checks of this change; its run folder
-(`build_win/win64-probe-run`) and scratch trees were deleted afterwards.
+**Validation.** The plan's probe (above) was its input, not a check; its
+run folder (`build_win/win64-probe-run`) and scratch trees were deleted.
+WIN64-001, on the owner's laptop (RTX 3070 Laptop GPU) and in the rebuilt
+`goldeneye` image, on the tree merged with `main` at 97bd75d:
+
+- `build_win64/IronSights.exe` is a PE32+ x86-64 executable; the video
+  build prints the 11 known C++ warnings and the two MinGW ones.
+  `lp64_boot.py --expect-run --frames 600` passes it (`OK: ran 600
+  frames`), and its log has `ge: lp64: address space OK: memp arena
+  000002758AAE0000, high arena 000002758EAE0000, ROM image ..., executable
+  image 00007FF627520000, ...`: every region, the memp arena included, is
+  above 4 GB (verification 2).
+- `--test-crash-reporting` prints the full SEH dump at 64 bits; its unwind
+  backtrace symbolizes with `addr2line` to `testCrashFault`
+  (`reporting_win.c:247`), `portCrashTestMode`, `main` and
+  `__tmainCRTStartup`, and `StackWalk64` gives the same frames. Before the
+  signal-handler change the same test exited 139 after only the
+  first-chance lines. `GE_STALLTEST=1` makes the watchdog print three
+  samples walking through `ntdll.dll` and `KERNELBASE.dll` into the game's
+  `main`, then exit 3.
+- The three `lp64_diagnostics.py` checks pass over `build/lp64/gate`,
+  `gate-video` and `gate-mingw` together; `lp64_pointer_types.py check`
+  (121 types), `lp64_overlays.py check --no-defects` (1633 sites, all
+  reviewed) and `lp64_casts.py check` pass. `test_abi_probe.sh` passes its
+  32-bit, 64-bit and MinGW x64 halves, and the MinGW-built probe, run
+  natively on the laptop, passes its run-time checks too (`ABI probe OK
+  (64-bit)`). (A scratch compile with the i686 MinGW compiler fails only
+  the assertion written for i686 Linux's demo header; that half is not
+  part of the test.) Verification 1.
+- `compare_win32.py commits HEAD WORKTREE` (HEAD 97bd75d) reports `.text`
+  differing only in `chraiDefaultWeaponFireHandler` (1351 bytes, the
+  `chrprop.c` fix), with the `.reloc` and `/4` bytes that follow from it,
+  and `.rsrc` (the manifest). Before the `chrprop.c` fix an earlier
+  comparison named `portFirstChanceAV` too, which an ordering change in its
+  32-bit branch had caused; that branch now matches its old code exactly.
+  Verification 7.
+- In the container: `test_pointer_bits.sh` (cases 1 to 8d, 5a to 5c
+  included), `test_lp64_address.sh`, `test_lp64_notice.sh`,
+  `test_audio_synth.sh`, `test_hit_sound.sh`, `test_build_time.sh`,
+  `test_harness_widths.sh`, `test_mema_order.sh`,
+  `test_lp64_typed_reads.sh`, and the Python tests of the overlay,
+  static-check, diagnostics, boot, dependency, comparison and gallery tools
+  pass.
+- Not run: CI itself (it runs on the push), a mission or play set on the
+  64-bit Windows exe (WIN64-002), Sentry (WIN64-003), and the Linux play
+  sets; the Linux code paths changed only by the field read in
+  `chrprop.c`, the `strcmp` prototype and `audio_pc.c`'s `memmove`
+  prototype. No benchmark or late-load audit: nothing here runs per frame
+  or loads anything.
 
 ### FORK-093 — Native macOS build plan
 

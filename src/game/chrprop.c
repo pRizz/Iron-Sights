@@ -1291,9 +1291,14 @@ void chraiDefaultWeaponFireHandler(s32 hand)
                  * the array.
                  * gotbghit (the only path that sets besttexture >= 0,
                  * see the impact_sounds lookup above) gates this the
-                 * same way. */
+                 * same way.
+                 * PORT (WIN64-001): the field, not byte besttexture * 8.
+                 * Under GCC's layout that byte's low nibble is hitSound, so
+                 * Linux reads the same value; MinGW lays the record out by
+                 * Microsoft's bitfield rules, 12 bytes an entry, so on
+                 * Windows the byte stride read another texture's entry. */
                 if ((besttexture >= 0) &&
-                    ((0xf & ((u8 *) g_Textures)[besttexture * 8]) != 5) && ((((u8 *) g_Textures)[besttexture * 8] & 0xf) != 6))
+                    (g_Textures[besttexture].hitSound != 5) && (g_Textures[besttexture].hitSound != 6))
                 {
                     rooms[0] = bestroom;
                     rooms[1] = 255;

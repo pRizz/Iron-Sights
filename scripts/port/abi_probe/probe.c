@@ -44,7 +44,11 @@ _Static_assert(sizeof(Hilite_t) == 16, "Highlight offsets layout");
 /* gbi.h declared these alignment and command words `long`, which is 8 bytes
  * on LP64; they are 32-bit words at every width (LP64-003). */
 _Static_assert(sizeof(Hilite) == 16, "Highlight layout");
+#ifdef _WIN32 /* MinGW's bitfield rules give cmd:8 its own int; Gfx holds it only on big-endian (WIN64-001) */
+_Static_assert(sizeof(Gsetcolor) == 12, "Set-colour command layout under MinGW's bitfield layout");
+#else
 _Static_assert(sizeof(Gsetcolor) == 8, "Set-colour command layout");
+#endif
 _Static_assert(sizeof(TexRect) == 16, "Textured rectangle layout");
 /* The game's Vertex is laid out as a Vtx; at 64 bits its +8 link is a 32-bit
  * offset from the model file's base (bondtypes.h, LP64-003). */

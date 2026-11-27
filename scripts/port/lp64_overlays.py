@@ -50,8 +50,9 @@ declarations of every file listed (headers, `.c` and `.inl`) and include/PR/liba
 
 Lines a 64-bit PC build does not compile are left out: `#ifdef TARGET_N64`, `#if !IS_64_BIT`, `#if 0`,
 the `#else` of `#if IS_64_BIT`, the symbols no PC build defines (DEBUG, VERSION_EU, VERSION_JP and the
-rest of UNDEFINED_ON_PC), _WIN32, __EMSCRIPTEN__ and GE_WEB, which no 64-bit build defines
-(CMakeLists.txt refuses 64 bits on Windows and Emscripten), and __cplusplus (the files are C). A branch
+rest of UNDEFINED_ON_PC), __EMSCRIPTEN__ and GE_WEB, which no 64-bit build defines
+(CMakeLists.txt refuses 64 bits with Emscripten; _WIN32 is kept since the Windows x64 build, WIN64-001),
+and __cplusplus (the files are C). A branch
 on a symbol a PC build may define (GE_VIDEO, __APPLE__), or on a condition with arithmetic, a comma or a
 macro call, is kept with its `#else`. Macro definitions are read: a cast in a `#define` is a site owned
 by `#define NAME`.

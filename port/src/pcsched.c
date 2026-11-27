@@ -56,6 +56,16 @@ static void *portAllocHighRaw(void *hint, u32 size)
     /* GLOBAL_BASE keeps real data disjoint from N64 segment words. */
     (void)hint;
     p = calloc(1, size);
+#elif defined(_WIN32) && IS_64_BIT
+    /* WIN64-001: as on Linux at 64 bits, no hint, and a mapping below 4 GB is
+     * given back and refused, so the caller stops the game, named. */
+    (void) hint;
+    p = VirtualAlloc(NULL, size, 0x3000 /* MEM_COMMIT|MEM_RESERVE */, 0x04 /* PAGE_READWRITE */);
+    if (p != NULL && !portLp64RegionIsHigh(p, size))
+    {
+        VirtualFree(p, 0, MEM_RELEASE);
+        p = NULL;
+    }
 #elif defined(_WIN32)
     p = VirtualAlloc(hint, size, 0x3000 /* MEM_COMMIT|MEM_RESERVE */, 0x04 /* PAGE_READWRITE */);
 #elif IS_64_BIT
@@ -458,8 +468,10 @@ void *portGetMempArena(u32 *outsize)
         /* Pin the arena ABOVE the N64 segment-word range (< 0x10000000):
          * arena-backed pointers get embedded into display lists, and
          * fast3d's seg_addr resolves untagged low-range words as segment
-         * references (see gfx_pc.cpp). 0x20000000 keeps them disjoint. */
-#ifdef _WIN32
+         * references (see gfx_pc.cpp). 0x20000000 keeps them disjoint.
+         * At 64 bits, Windows included (WIN64-001), the arena must be above
+         * 4 GB instead, and portAllocHighOrExit checks that. */
+#if defined(_WIN32) && !IS_64_BIT
         arena = VirtualAlloc((void *) 0x20000000u, PORT_MEMP_ARENA_SIZE,
                              0x3000 /* MEM_COMMIT|MEM_RESERVE */, 0x04 /* PAGE_READWRITE */);
         if (arena == NULL)

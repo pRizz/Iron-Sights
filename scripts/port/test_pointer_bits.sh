@@ -220,13 +220,35 @@ expect_failure fallback "GE_POINTER_BITS=64 requires runtime ROM loading (GE_ROM
     -DGE_POINTER_BITS=64 -DGE_ROMDATA_FALLBACK=ON
 echo "ok 4: 64 with the ROM fallback is refused"
 
-# 5. Windows x64 is outside the plan. Needs the MinGW compiler the toolchain file names.
+# 5. On Windows the toolchain fixes the width (WIN64-001): a toolchain and a
+# GE_POINTER_BITS that disagree are refused, and the x86_64 toolchain at 64
+# bits configures without -m32, the fixed image base or the ASLR opt-out. Each
+# half needs the MinGW compiler its toolchain file names.
 if command -v i686-w64-mingw32-gcc >/dev/null 2>&1; then
-    expect_failure windows "Windows x64 is outside the 64-bit plan; see scripts/port/native_64bit_plan.md" \
+    expect_failure windows "GE_POINTER_BITS=64 on Windows needs the x86_64 MinGW toolchain (-DCMAKE_TOOLCHAIN_FILE=cmake/mingw-x86_64.cmake)" \
         -DGE_POINTER_BITS=64 -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-i686.cmake
-    echo "ok 5: 64 for Windows is refused"
+    echo "ok 5a: 64 with the i686 MinGW toolchain is refused"
 else
-    echo "skip 5: i686-w64-mingw32-gcc is not installed"
+    echo "skip 5a: i686-w64-mingw32-gcc is not installed"
+fi
+if command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
+    expect_failure windows32 "The x86_64 MinGW toolchain builds only GE_POINTER_BITS=64; a 32-bit Windows build uses cmake/mingw-i686.cmake" \
+        -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-x86_64.cmake
+    echo "ok 5b: 32 with the x86_64 MinGW toolchain is refused"
+    expect_configure windows64 -DGE_POINTER_BITS=64 -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-x86_64.cmake
+    require_link windows64
+    for flag in -m32 -Wl,--image-base=0x10000000 -Wl,--disable-dynamicbase; do
+        if has_link_flag windows64 "$flag"; then
+            fail "windows64: link command has $flag"
+        fi
+    done
+    has_link_flag windows64 -Wl,--stack,16777216 || fail "windows64: link command lacks the 16 MB stack"
+    if has_flag windows64 '-m32'; then
+        fail "windows64: compile commands have -m32"
+    fi
+    echo "ok 5c: 64 with the x86_64 MinGW toolchain configures without -m32, a fixed image base or the ASLR opt-out"
+else
+    echo "skip 5b, 5c: x86_64-w64-mingw32-gcc is not installed"
 fi
 
 # 6. Suspend images record 32-bit addresses, so a 64-bit build compiles the

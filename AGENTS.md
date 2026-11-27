@@ -252,7 +252,13 @@ pass its isolated executable rather than rebuilding an active player binary.
   [Windows x64 plan](scripts/port/windows_x64_plan.md). Read it before
   resuming, do not reopen its recorded decisions or the 64-bit plan's, keep
   the 32-bit Windows exe in `build_win` and the 64-bit one in `build_win64`,
-  and update its milestone status table before handing off.
+  and update its milestone status table before handing off. CI's tests job
+  also configures a MinGW x64 video tree (`build/lp64/gate-mingw`, with
+  `cmake/mingw-x86_64.cmake`) and runs `lp64_diagnostics.py gate`,
+  `narrowing --check` and `unprototyped --check` over it together with
+  `build/lp64/gate` and `gate-video`, since the allowlists must match the
+  trees' places exactly; `test_abi_probe.sh` compiles the layout probe with
+  the x86_64 MinGW compiler too.
 - ROM data converters (LP64-004) are `port/src/romconv_*.c`, declared in
   `port/include/port_romconv.h`, `port_romconv_audio.h` and
   `port_romconv_stage.h`, with the file layouts they read in

@@ -1,6 +1,5 @@
 # Allowed calls without a prototype to a function that takes or returns a pointer or 64-bit value, or that the tree does not define (a library function), per file: path<TAB>count<TAB>reason. `--check` requires the counts to
 # match exactly: lower a line when places are fixed, delete it at zero; see lp64_diagnostics.py.
-port/src/port_build_time.c	1	blocked in Task 9: strcmp; <str.h> includes <ultra64.h>, and test_build_time.sh (-Wall -Wextra -Werror, port/include only) fails with src/ and include/ added
 src/game/bondview2.c	1	kept in Task 15: fabsf, strict tier, for the GE_SWIRLDBG log's JUMP mark; its prototype changes the 32-bit program (bondview2.c.obj); a 64-bit-only correction is possible only on the strict branch, and the controller left it for the owner
 src/game/model.c	1	left out in Task 11: texSelect; its prototype changes the 32-bit register use of dogfnegx, which draws the muzzle flash (a float add's operands swap), and the call passes only pointers and 32-bit integers
 src/sched.c	1	kept in Task 15: assert in upstream's dead branch `if (avail & OS_SC_DP == 0)` (avail & 0), which GCC compiles away at both widths

@@ -10,9 +10,12 @@ from ci_dependencies import apt_network, archive_record, verify_archives, compil
 
 
 class DependencyCache(unittest.TestCase):
-    def test_tests_profile_has_the_32_bit_compilers_and_64_bit_sdl2(self):
-        # The 64-bit video tree that CI's compile gate configures needs the native SDL2 headers.
-        self.assertEqual(packages("tests"), ["gcc-multilib", "g++-multilib", "libsdl2-dev"])
+    def test_tests_profile_has_the_32_bit_compilers_64_bit_sdl2_and_mingw_x64(self):
+        # The 64-bit video tree that CI's compile gate configures needs the native SDL2 headers,
+        # and the Windows x64 gate tree the x86_64 MinGW compilers (WIN64-001).
+        self.assertEqual(packages("tests"), ["gcc-multilib", "g++-multilib", "libsdl2-dev",
+                                             "gcc-mingw-w64-x86-64-win32", "g++-mingw-w64-x86-64-win32",
+                                             "binutils-mingw-w64-x86-64"])
 
     def test_unreachable_mirror_repeats_the_apt_command(self):
         failure = subprocess.CalledProcessError(100, ["apt-get", "update"])

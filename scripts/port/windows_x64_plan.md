@@ -440,7 +440,7 @@ mark a milestone done without it.
 
 | ID | Status | Notes |
 |---|---|---|
-| WIN64-001 | Not started | The plan was accepted on 2026-11-27; this milestone's own detailed plan is not yet written. Measured starting point (2026-11-27, 990f914): with the CMake refusal off, 3 of 389 video compile steps fail (`main.c`, `port_profile.c`, `port_lp64.c`); patched in a scratch copy, it links, boots 600 front-end frames on the RTX 3070 and logs every checked address above 4 GB, with the memp arena at 0x20000000. |
+| WIN64-001 | Implemented locally, not released | [Its plan](windows_x64_win64_001.md) was written and accepted on 2026-11-27; FORK-094 has the change and its evidence. Done on `main` once pushed and CI passes. Measured before it starting point (2026-11-27, 990f914): with the CMake refusal off, 3 of 389 video compile steps fail (`main.c`, `port_profile.c`, `port_lp64.c`); patched in a scratch copy, it links, boots 600 front-end frames on the RTX 3070 and logs every checked address above 4 GB, with the memp arena at 0x20000000. |
 | WIN64-002 | Not started | Needs WIN64-001. |
 | WIN64-003 | Not started | Needs WIN64-001. |
 | WIN64-004 | Not started | Needs WIN64-002 and WIN64-003. |

@@ -51,6 +51,10 @@
 #include "port_audio_capture.h"
 #include "port_audio_lock.h"
 
+/* SDL.h declares it on Linux but not under MinGW, and the game's <string.h>
+ * clashes with MinGW's own declarations there (WIN64-001). */
+extern void *memmove(void *, const void *, size_t);
+
 /* ---- config ------------------------------------------------------------ */
 
 #define PORT_AUDIO_RATE      22050  /* both GE banks; alSynConfig outputRate */

@@ -3,16 +3,20 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 cc=${CC:-gcc}
 test_bin=$(mktemp /tmp/midas-abi-probe.XXXXXX)
-trap 'rm -f "$test_bin"' EXIT
+trap 'rm -f "$test_bin" "$test_bin.exe"' EXIT
 
 # The definitions are CMakeLists.txt's add_compile_definitions for every build,
 # so the layouts asserted are the game build's.
-build_and_run() {
+probe_build() { # OUTPUT FLAGS...: compile and link the probe with $cc
+    local output=$1; shift
     "$cc" "$@" -std=gnu11 -fms-extensions -fcommon -ffreestanding -funsigned-char -Werror=implicit-function-declaration \
         -DVERSION_US -DLANG_US -DREFRESH_NTSC -DLEFTOVERDEBUG -DLEFTOVERSPECTRUM -DBUGFIX_R0 \
         -DNONMATCHING -DAVOID_UB -D_LANGUAGE_C \
         -I. -Iinclude -Iinclude/ultra64 -Iinclude/PR -Isrc -Isrc/game -Iport/include -I"$extracted_dir" \
-        scripts/port/abi_probe/probe.c -o "$test_bin" || return
+        scripts/port/abi_probe/probe.c -o "$output"
+}
+build_and_run() {
+    probe_build "$test_bin" "$@" || return
     "$test_bin"
 }
 
@@ -124,4 +128,17 @@ if [[ $widths != *32* ]]; then
         "assertion at the 32-bit layout, including those only it can break (probe.c's !IS_64_BIT" \
         "branches, and the .c records whose difference 64-bit padding hides, such as gunfire.c's" \
         "ModelHead with a member added after scale). CI runs both halves."
+fi
+
+# The Windows x64 layout (WIN64-001): the x86_64 MinGW compiler compiles and links
+# the probe, so every _Static_assert in it holds under the Windows ABI (32-bit long,
+# MinGW's default -mms-bitfields). The executable needs Windows to run, so the
+# probe's run-time checks are not run here; a Windows host can run the .exe.
+mingw_cc=${MINGW64_CC:-x86_64-w64-mingw32-gcc}
+if command -v "$mingw_cc" >/dev/null 2>&1; then
+    cc=$mingw_cc probe_build "$test_bin.exe"
+    echo "ABI probe OK (Windows x64, MinGW: static assertions only; the run-time checks need Windows)"
+else
+    echo "ABI probe: the Windows x64 half did not run: $mingw_cc is not installed. Not checked: every" \
+        "assertion at the Windows x64 layout. CI runs it."
 fi

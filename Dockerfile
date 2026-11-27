@@ -22,6 +22,12 @@ RUN echo ">> install PC port (Linux i686) build dependencies ..." &&  \
 RUN echo ">> install PC port (Windows x86) cross-build dependencies ..." &&  \
     apt -y install gcc-mingw-w64-i686 g++-mingw-w64-i686 binutils-mingw-w64-i686
 
+# apt update: this layer and the ones after it rebuild while the earlier layers'
+# package lists stay cached, and a stale list names archives the mirror dropped.
+RUN echo ">> install PC port (Windows x64) cross-build dependencies (WIN64-001) ..." &&  \
+    apt update && \
+    apt -y install gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 binutils-mingw-w64-x86-64
+
 RUN echo ">> install 64-bit SDL2 (native architecture, for the LP64 diagnostics) ..." &&  \
     apt -y install --no-install-recommends libsdl2-dev
 

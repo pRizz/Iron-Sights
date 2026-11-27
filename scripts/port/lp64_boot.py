@@ -39,6 +39,9 @@ RUN_STATUS = 0
 STOP_FRAMES = 120
 RUN_FRAMES = 600
 TAIL_LINES = 20
+# Libraries copied from the executable's folder into each run's folder when present: a
+# Windows build finds its DLLs beside the executable, never on a library path.
+RUNTIME_LIBRARIES = ('SDL2.dll',)
 ADDRESS_LINE = 'ge: lp64: address space OK'
 STOP_PATTERN = re.compile(r'ge: lp64: stopping: asset class "([^"]+)" is marked unconverted in this build')
 # pcsched.c prints this, then exits 0, once GE_FRAMES frames have run.
@@ -171,6 +174,10 @@ def run_one(executable: Path, rom: Path, stage: str | None, expect: Expectation)
         folder = Path(temporary)
         child = folder/executable.name
         shutil.copy2(executable, child)
+        # A Windows video build loads SDL2.dll from its own folder (WIN64-001).
+        for library in RUNTIME_LIBRARIES:
+            if (executable.parent/library).is_file():
+                shutil.copy2(executable.parent/library, folder/library)
         log_path = folder/'boot.log'
         with log_path.open('wb') as log:
             try:

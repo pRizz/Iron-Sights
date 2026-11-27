@@ -8,7 +8,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lp64_overlays as overlays  # noqa: E402
 
-PINNED_COUNTS = {'index': 87, 'offset': 164, 'opaque': 52, 'record': 1005, 'run': 26, 'stored': 286}
+PINNED_COUNTS = {'index': 85, 'offset': 171, 'opaque': 52, 'record': 1005, 'run': 26, 'stored': 294}
 
 HEADER = """
 typedef struct ChrRecord { struct { u8 padding[160]; } act_bytes; } ChrRecord;
@@ -265,7 +265,11 @@ class Regions(unittest.TestCase):
         self.assertEqual(self.listed('ifndef VERSION_US', otherwise='else'), (False, True))
 
     def test_a_platform_the_64_bit_build_refuses_is_left_out(self):
-        self.assertEqual(self.listed('ifdef _WIN32', otherwise='else'), (False, True))
+        self.assertEqual(self.listed('ifdef __EMSCRIPTEN__', otherwise='else'), (False, True))
+
+    def test_windows_keeps_both_branches_since_the_windows_x64_build(self):
+        # WIN64-001: cmake/mingw-x86_64.cmake compiles the _WIN32 branches at 64 bits.
+        self.assertEqual(self.listed('ifdef _WIN32', otherwise='else'), (True, True))
 
     def test_the_64_bit_build_refuses_the_platforms_left_out(self):
         # Arrange
@@ -273,9 +277,10 @@ class Regions(unittest.TestCase):
         build = (root/'CMakeLists.txt').read_text()
         # Act
         refusals = re.findall(r'if\((WIN32|EMSCRIPTEN)\)\s*message\(FATAL_ERROR', build)
-        # Assert
-        self.assertEqual(overlays.UNDEFINED_AT_64, ('_WIN32', '__EMSCRIPTEN__', 'GE_WEB'))
-        self.assertEqual(sorted(refusals), ['EMSCRIPTEN', 'WIN32'])
+        # Assert: Windows builds at 64 bits with its own toolchain file (WIN64-001)
+        self.assertEqual(overlays.UNDEFINED_AT_64, ('__EMSCRIPTEN__', 'GE_WEB'))
+        self.assertEqual(sorted(refusals), ['EMSCRIPTEN'])
+        self.assertTrue((root/'cmake'/'mingw-x86_64.cmake').is_file())
         self.assertNotIn('GE_WEB', build)
 
     def test_a_conjunction_with_target_n64_is_left_out(self):

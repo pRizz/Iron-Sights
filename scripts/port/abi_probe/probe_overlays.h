@@ -31,7 +31,15 @@ _Static_assert(IS_TYPE(((Vtx *) 0)->v.ob[0], s16) && offsetof(Vtx, v.ob[2]) == 2
 _Static_assert(sizeof(ExplosionDetailsRecord) == 7 * sizeof(s16) && IS_TYPE(((ExplosionDetailsRecord *) 0)->Seed[0], s16)
                    && offsetof(ExplosionDetailsRecord, Seed) == sizeof(s16),
                "an explosion details record is a type and six seeds");
+#ifdef _WIN32
+/* MinGW lays bitfields out by Microsoft's rules at both widths: hitSound's u8
+ * unit does not share hitTexture's u32 one, so an entry is 12 bytes, not GCC's
+ * 8. Nothing steps through g_Textures by bytes any more (chrprop.c reads the
+ * field since WIN64-001), so only the size differs. */
+_Static_assert(sizeof(struct image_entry) == 12, "an image entry is 12 bytes under MinGW's bitfield layout");
+#else
 _Static_assert(sizeof(struct image_entry) == 8, "an image entry is 8 bytes");
+#endif
 _Static_assert(offsetof(ObjectRecord, type) == 3 && sizeof(((ObjectRecord *) 0)->type) == 1,
                "an object's type is its fourth byte");
 /* objBreakCCTVGlass reads a bounding box record as a model number and six

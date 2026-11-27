@@ -24,8 +24,12 @@ def run(args, capture=False):
 
 def packages(profile):
     if profile == "tests":
-        # libsdl2-dev is the native (64-bit) SDL2 for the 64-bit video compile gate.
-        return ["gcc-multilib", "g++-multilib", "libsdl2-dev"]
+        # libsdl2-dev is the native (64-bit) SDL2 for the 64-bit video compile gate;
+        # the x86_64 MinGW compilers build the Windows x64 gate tree and the layout
+        # probe's Windows half (WIN64-001).
+        return ["gcc-multilib", "g++-multilib", "libsdl2-dev",
+                "gcc-mingw-w64-x86-64-win32", "g++-mingw-w64-x86-64-win32",
+                "binutils-mingw-w64-x86-64"]
     result = ["gcc-mingw-w64-i686-win32", "g++-mingw-w64-i686-win32",
               "binutils-mingw-w64-i686", "ccache"]
     # Hosted runners provide these outside dpkg; don't download another CMake.
@@ -179,6 +183,12 @@ def install(root):
     verify_archives(root/"archives", plan["archives"], require=True)
     # Every needed archive was SHA256-verified against this run's signed indexes.
     apt(root, ["--no-download", *args])
+    if plan["profile"] == "tests":
+        # The unsuffixed names point at the win32 thread model, as the windows profile's do.
+        prefix = [] if os.geteuid() == 0 else ["sudo"]
+        for compiler in ("gcc", "g++"):
+            run([*prefix, "update-alternatives", "--set", "x86_64-w64-mingw32-"+compiler,
+                 "/usr/bin/x86_64-w64-mingw32-"+compiler+"-win32"])
     if plan["profile"] == "windows":
         prefix = [] if os.geteuid() == 0 else ["sudo"]
         for compiler in ("gcc", "g++"):

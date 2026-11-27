@@ -26,6 +26,12 @@ extern char *strerror(int);
 extern int memcmp(const void *, const void *, size_t);
 extern size_t strspn(const char *, const char *);
 extern size_t strcspn(const char *, const char *);
+/* Prototyped through other headers in the Linux trees; the MinGW x64 gate
+ * tree reaches these calls without one (WIN64-001). */
+extern int strcmp(const char *, const char *);
+#ifdef _WIN32
+extern int _stricmp(const char *, const char *); /* the C runtime's, for main.c */
+#endif
 #endif
 
 #endif

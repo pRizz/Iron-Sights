@@ -22,9 +22,10 @@ DEFINED_ON_PC = ('VERSION_US', 'LANG_US', 'REFRESH_NTSC', 'LEFTOVERDEBUG', 'LEFT
 # them is dead on PC. test_lp64_overlays.py checks the build files never name one.
 UNDEFINED_ON_PC = ('TARGET_N64', 'VERSION_EU', 'VERSION_JP', 'DEBUG', 'BUGFIX_R1', 'REFRESH_PAL',
                    'AUD_PROFILE', 'ENABLE_USB', 'AIPARSE', 'XBLADEBUG', 'LIBDRAGON')
-# Never defined in a 64-bit build: CMakeLists.txt refuses GE_POINTER_BITS=64 on Windows and with
-# Emscripten, and only cmake/emscripten.cmake defines GE_WEB. The 32-bit builds do define them.
-UNDEFINED_AT_64 = ('_WIN32', '__EMSCRIPTEN__', 'GE_WEB')
+# Never defined in a 64-bit build: CMakeLists.txt refuses GE_POINTER_BITS=64 with Emscripten, and
+# only cmake/emscripten.cmake defines GE_WEB. The 32-bit builds do define them. _WIN32 left this list
+# with WIN64-001: the Windows x64 build (cmake/mingw-x86_64.cmake) compiles its branches.
+UNDEFINED_AT_64 = ('__EMSCRIPTEN__', 'GE_WEB')
 # The lister reads C: a C compiler never defines __cplusplus (an `extern "C" {` block would hide its
 # functions' names otherwise). A C++ file named explicitly is read as C too.
 UNDEFINED_IN_C = ('__cplusplus',)

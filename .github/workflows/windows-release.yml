@@ -51,6 +51,21 @@ jobs:
         with:
           path: ${{ runner.temp }}/midas-deps/archives/*.deb
           key: ${{ steps.deps.outputs.cache_key }}
+      # The SDL2 MinGW headers for the Windows x64 gate tree (WIN64-001); the windows
+      # job saves the same cached archive.
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: third_party/sdl2.tar.gz
+          key: sdl2-mingw-${{ env.SDL2_VERSION }}-${{ env.SDL2_SHA256 }}
+      - name: Fetch or verify checksum-pinned SDL input
+        run: |
+          set -euo pipefail
+          mkdir -p third_party
+          if ! test -f third_party/sdl2.tar.gz || ! echo "$SDL2_SHA256  third_party/sdl2.tar.gz" | sha256sum -c - >/dev/null 2>&1; then
+            curl --fail --silent --show-error --location --retry 2 --connect-timeout 15 --max-time 180 "https://github.com/libsdl-org/SDL/releases/download/release-${SDL2_VERSION}/SDL2-devel-${SDL2_VERSION}-mingw.tar.gz" --output third_party/sdl2.tar.gz
+          fi
+          echo "$SDL2_SHA256  third_party/sdl2.tar.gz" | sha256sum -c -
+          tar -xzf third_party/sdl2.tar.gz -C third_party
       - name: Test gameplay, cache and release tooling without a ROM
         run: |
           bash scripts/port/test_ads.sh
@@ -151,9 +166,11 @@ jobs:
           cmake --build build/lp64/gate --target ge_buildinfo
           cmake -S . -B build/lp64/gate-video -DCMAKE_BUILD_TYPE=Debug -DGE_POINTER_BITS=64 -DGE_VIDEO=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           cmake --build build/lp64/gate-video --target ge_buildinfo
-          python3 scripts/port/lp64_diagnostics.py gate build/lp64/gate build/lp64/gate-video
-          python3 scripts/port/lp64_diagnostics.py narrowing --check build/lp64/gate build/lp64/gate-video
-          python3 scripts/port/lp64_diagnostics.py unprototyped --check build/lp64/gate build/lp64/gate-video
+          cmake -S . -B build/lp64/gate-mingw -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-x86_64.cmake -DCMAKE_BUILD_TYPE=Debug -DGE_POINTER_BITS=64 -DGE_VIDEO=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cmake --build build/lp64/gate-mingw --target ge_buildinfo
+          python3 scripts/port/lp64_diagnostics.py gate build/lp64/gate build/lp64/gate-video build/lp64/gate-mingw
+          python3 scripts/port/lp64_diagnostics.py narrowing --check build/lp64/gate build/lp64/gate-video build/lp64/gate-mingw
+          python3 scripts/port/lp64_diagnostics.py unprototyped --check build/lp64/gate build/lp64/gate-video build/lp64/gate-mingw
           python3 scripts/port/lp64_pointer_types.py check build/lp64/gate build/lp64/gate-video
           cmake -S . -B build/lp64/lto -DCMAKE_BUILD_TYPE=Debug -DGE_POINTER_BITS=64 -DGE_HEADLESS=ON "-DCMAKE_C_FLAGS=-flto=auto -Wlto-type-mismatch" "-DCMAKE_CXX_FLAGS=-flto=auto -Wlto-type-mismatch" "-DCMAKE_EXE_LINKER_FLAGS=-flto=auto -Wlto-type-mismatch" "-DCMAKE_C_LINKER_LAUNCHER=env;-u;MAKEFLAGS" "-DCMAKE_CXX_LINKER_LAUNCHER=env;-u;MAKEFLAGS"
           LC_ALL=C cmake --build build/lp64/lto --target ge -j"$(nproc)" > build/lp64/lto/lto-build.log 2>&1 || { tail -n 60 build/lp64/lto/lto-build.log; exit 1; }

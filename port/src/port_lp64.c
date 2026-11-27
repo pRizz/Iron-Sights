@@ -5,7 +5,8 @@
  * its upper 32 bits, so a 64-bit build is only correct while nothing the game
  * addresses sits below 4 GB. A position-independent executable gets that from
  * the system (Linux and Apple's ARM platforms place image, heap, mappings and
- * stack above 4 GB); this file checks it at startup (the executable image, the
+ * stack above 4 GB, and so does 64-bit Windows for a dynamic-base,
+ * high-entropy image, which MinGW links by default); this file checks it at startup (the executable image, the
  * regions the allocators report, one heap block and one stack address) and
  * stops the game, named, when a check fails. Tools that load programs low (Valgrind) trip it; the
  * design accepts that.
@@ -30,6 +31,8 @@
 #include <link.h>
 #elif defined(__APPLE__)
 #include "port_macos.h" /* portMacImageRange: the range from dyld's load commands */
+#elif defined(_WIN32)
+#include <windows.h> /* WIN64-001: the image range from the PE headers */
 #else
 #error "port_lp64.c: this platform's port must supply the main executable's loaded address range for portLp64CheckAddressSpace (Linux reads it from dl_iterate_phdr)"
 #endif
@@ -111,6 +114,28 @@ void portLp64CheckRegion(const char *name, const void *start, size_t size)
     lp64Remember(name, (uintptr_t) start);
 }
 
+#if defined(_WIN32)
+/* WIN64-001 (scripts/port/windows_x64_win64_001.md): the executable's module
+ * handle is its load address, and the optional header's SizeOfImage is the
+ * span the loader mapped from it. */
+static void lp64CheckExecutableImage(void)
+{
+    const unsigned char *base = (const unsigned char *) GetModuleHandleW(NULL);
+    const IMAGE_DOS_HEADER *dos = (const IMAGE_DOS_HEADER *) base;
+    const IMAGE_NT_HEADERS *nt;
+
+    if (base == NULL || dos->e_magic != IMAGE_DOS_SIGNATURE)
+    {
+        portLp64Stop(LP64_EXIT_LOW_ADDRESS, "ge: lp64: the executable image's headers could not be read\n");
+    }
+    nt = (const IMAGE_NT_HEADERS *) (base + dos->e_lfanew);
+    if (nt->Signature != IMAGE_NT_SIGNATURE || nt->OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+    {
+        portLp64Stop(LP64_EXIT_LOW_ADDRESS, "ge: lp64: the executable image is not a PE32+ image\n");
+    }
+    portLp64CheckRegion("executable image", base, (size_t) nt->OptionalHeader.SizeOfImage);
+}
+#else
 typedef struct Lp64ImageRange
 {
     uintptr_t lowest;
@@ -166,6 +191,7 @@ static void lp64CheckExecutableImage(void)
     }
     portLp64CheckRegion("executable image", (const void *) range.lowest, (size_t) (range.end - range.lowest));
 }
+#endif
 
 void portLp64CheckAddressSpace(void)
 {

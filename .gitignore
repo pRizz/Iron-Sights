@@ -265,6 +265,7 @@ third_party/
 !/port/fast3d/third_party/
 /dist/
 build_win/
+build_win64/
 build_pc_video/
 nm_v.log
 win_conf.log

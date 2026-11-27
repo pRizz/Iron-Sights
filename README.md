@@ -415,10 +415,16 @@ The commands below are for a Linux shell. On Windows, run them in WSL:
    cmake -B build_pc -DCMAKE_BUILD_TYPE=Debug -DGE_VIDEO=ON -DSDL2_LINUX_ROOT=$HOME/sdl2-linux-i686
    cmake --build build_pc -j$(nproc)
    ```
+6. Optionally, build for Windows x64. This is a development build, not yet released: it has no suspend points, no Sentry crash reports and no profiler yet (`Data/Logs/crash.log` still records crashes) ([the Windows x64 plan](scripts/port/windows_x64_plan.md)).
+   ```
+   cmake -B build_win64 -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-x86_64.cmake -DGE_POINTER_BITS=64 -DCMAKE_BUILD_TYPE=Debug -DGE_VIDEO=ON -DGE_ROMDATA_FALLBACK=OFF -DSDL2_MINGW_ROOT=$HOME/sdl2-mingw/SDL2-2.30.11/x86_64-w64-mingw32
+   cmake --build build_win64 -j$(nproc)
+   ```
 
 | Build | Game | Next to it |
 | --- | --- | --- |
 | Windows | `build_win/IronSights.exe` | `SDL2.dll`, the controller files, `Data/` |
+| Windows x64 | `build_win64/IronSights.exe` | `SDL2.dll`, the controller files, `Data/` |
 | Linux | `build_pc/IronSights` | the controller files, `Data/` |
 
 To play, put a copy of `baserom.u.z64` in that build's `Data/` folder. On Windows, copy the whole `build_win` folder somewhere in Windows (from WSL: `explorer.exe build_win`) and run `IronSights.exe` there. The Linux build needs 32-bit SDL2 and OpenGL on the machine that runs it. On Ubuntu or Debian:

@@ -3,7 +3,8 @@ project(ge007 C)
 
 # GoldenEye PC port build (docs/port/PORT-PLAN.md). 32-bit by default, which
 # defuses the codebase's pointer<->s32 casts and keeps Gfx 8 bytes; 64-bit
-# (Linux and macOS only) by -DGE_POINTER_BITS=64, per scripts/port/native_64bit_plan.md.
+# (Linux and macOS, per scripts/port/native_64bit_plan.md; Windows x64 with
+# cmake/mingw-x86_64.cmake, per scripts/port/windows_x64_plan.md) by -DGE_POINTER_BITS=64.
 # The N64 ROM build stays on the classic Makefile; this builds native and Wasm.
 
 # Pointer width of the native build. Code never reads this; it reads IS_64_BIT.
@@ -16,12 +17,25 @@ if(GE_POINTER_BITS EQUAL 64)
     if(EMSCRIPTEN)
         message(FATAL_ERROR "The web build is 32-bit; GE_POINTER_BITS=64 is not supported")
     endif()
-    if(WIN32)
-        message(FATAL_ERROR "Windows x64 is outside the 64-bit plan; see scripts/port/native_64bit_plan.md")
-    endif()
     # option() lives further down; the plain cache lookup is enough here.
     if(GE_ROMDATA_FALLBACK)
         message(FATAL_ERROR "GE_POINTER_BITS=64 requires runtime ROM loading (GE_ROMDATA_FALLBACK=OFF)")
+    endif()
+endif()
+# Windows x64 (WIN64-001, scripts/port/windows_x64_plan.md): the MinGW toolchain
+# fixes the width, so a toolchain and a GE_POINTER_BITS that disagree are
+# refused rather than one of them silently winning.
+if(WIN32)
+    if(GE_POINTER_BITS EQUAL 64 AND NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+        message(FATAL_ERROR "GE_POINTER_BITS=64 on Windows needs the x86_64 MinGW toolchain (-DCMAKE_TOOLCHAIN_FILE=cmake/mingw-x86_64.cmake)")
+    elseif(GE_POINTER_BITS EQUAL 32 AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+        message(FATAL_ERROR "The x86_64 MinGW toolchain builds only GE_POINTER_BITS=64; a 32-bit Windows build uses cmake/mingw-i686.cmake")
+    endif()
+    # The SDL2 MinGW development package's folder for this width.
+    if(GE_POINTER_BITS EQUAL 64)
+        set(GE_MINGW_TRIPLE x86_64-w64-mingw32)
+    else()
+        set(GE_MINGW_TRIPLE i686-w64-mingw32)
     endif()
 endif()
 
@@ -81,7 +95,11 @@ elseif(GE_POINTER_BITS EQUAL 64)
     # same there (only GCC 13.3 was run). The C log is clean. The C++ log keeps
     # eleven warnings that have no -W option, all in port/fast3d: ten
     # "initialized and declared 'extern'" (gfx_pc.cpp 8, gfx_roomcache.inl 2)
-    # and one "null character(s) preserved in literal" (gfx_sdl2.cpp).
+    # and one "null character(s) preserved in literal" (gfx_sdl2.cpp). The
+    # MinGW x64 video tree (WIN64-001, GCC 13-win32) prints those and two
+    # macro redefinitions, which have no option either: "M_PI" in
+    # audio_pc.c (SDL_stdinc.h, then include/math.h) and "_WIN32_WINNT" in
+    # about.cpp.
     # discarded-qualifiers is GCC's name: clang does not know it, and under
     # port_macos.c's -Werror an unknown warning option is an error (MAC-001).
     set(GE_WARNING_OPTIONS
@@ -172,9 +190,17 @@ if(WIN32)
     # image base above the N64 segment range so gfx_pc.cpp seg_addr can tell
     # addresses from segment refs, and use a 16MB stack (recursive room/portal
     # walks overflow 1MB).
-    add_link_options(-m32 -static-libgcc -static-libstdc++
-                     -Wl,--image-base=0x10000000 -Wl,--disable-dynamicbase
-                     -Wl,--stack,16777216)
+    if(GE_POINTER_BITS EQUAL 64)
+        # WIN64-001: no -m32, and no fixed low image base or ASLR opt-out.
+        # MinGW links x64 images dynamic-base and high-entropy, which puts the
+        # image, heaps and stacks above 4 GB as PORT_IS_HOST_ADDR needs;
+        # portLp64CheckAddressSpace (port_lp64.c) checks that at startup.
+        add_link_options(-static-libgcc -static-libstdc++ -Wl,--stack,16777216)
+    else()
+        add_link_options(-m32 -static-libgcc -static-libstdc++
+                         -Wl,--image-base=0x10000000 -Wl,--disable-dynamicbase
+                         -Wl,--stack,16777216)
+    endif()
     link_libraries(dbghelp comctl32 comdlg32)
 elseif(NOT EMSCRIPTEN AND GE_POINTER_BITS EQUAL 32)
     add_link_options(-m32 -no-pie)
@@ -697,7 +723,7 @@ if(GE_VIDEO)
             target_include_directories(ge_hdr_dxgi PRIVATE ${SDL2_MINGW_ROOT}/include/SDL2)
         else()
             target_include_directories(ge_hdr_dxgi PRIVATE
-                ${CMAKE_SOURCE_DIR}/third_party/SDL2-2.30.11/i686-w64-mingw32/include/SDL2)
+                ${CMAKE_SOURCE_DIR}/third_party/SDL2-2.30.11/${GE_MINGW_TRIPLE}/include/SDL2)
         endif()
     endif()
     list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_hdr_dxgi>)
@@ -732,7 +758,7 @@ if(GE_VIDEO)
                 target_include_directories(ge_save_transfer PRIVATE ${SDL2_MINGW_ROOT}/include/SDL2)
             else()
                 target_include_directories(ge_save_transfer PRIVATE
-                    ${CMAKE_SOURCE_DIR}/third_party/SDL2-2.30.11/i686-w64-mingw32/include/SDL2)
+                    ${CMAKE_SOURCE_DIR}/third_party/SDL2-2.30.11/${GE_MINGW_TRIPLE}/include/SDL2)
             endif()
         elseif(SDL2_LINUX_ROOT)
             target_include_directories(ge_save_transfer PRIVATE ${SDL2_LINUX_ROOT}/include/SDL2)
@@ -824,6 +850,13 @@ if(WIN32)
     # -mwindows, which wants WinMain). The log goes to ge_direct.log instead
     # (main.c portDirectLaunchLog); redirected runs keep their output.
     target_link_options(ge PRIVATE -Wl,--subsystem,windows)
+    # Include directories on the command line, not in @response files, which
+    # CMake's Windows-GNU platform module turns on each time a language is
+    # enabled (so this follows the last enable_language): lp64_diagnostics.py
+    # gate refuses a compile command whose flags it cannot see (WIN64-001),
+    # and the builds run on Linux hosts, whose command lines are long enough.
+    set(CMAKE_C_USE_RESPONSE_FILE_FOR_INCLUDES OFF)
+    set(CMAKE_CXX_USE_RESPONSE_FILE_FOR_INCLUDES OFF)
 endif()
 
 # Project Midas build stamp: <git commit count>-<YYYYMMDD>, regenerated on
@@ -860,11 +893,11 @@ if(GE_VIDEO AND NOT EMSCRIPTEN)
     if(WIN32)
         # the SDL2 MinGW development package: third_party/ by default, or
         # SDL2_MINGW_ROOT (the Docker image unpacks it in the home folder)
-        set(SDL2_MINGW_ROOT "" CACHE PATH "SDL2 MinGW package's i686-w64-mingw32 folder (default: third_party/SDL2-2.30.11/i686-w64-mingw32)")
+        set(SDL2_MINGW_ROOT "" CACHE PATH "SDL2 MinGW package's folder for this width, i686-w64-mingw32 or x86_64-w64-mingw32 (default: under third_party/SDL2-2.30.11)")
         if(SDL2_MINGW_ROOT)
             set(SDL2_ROOT ${SDL2_MINGW_ROOT})
         else()
-            set(SDL2_ROOT ${CMAKE_SOURCE_DIR}/third_party/SDL2-2.30.11/i686-w64-mingw32)
+            set(SDL2_ROOT ${CMAKE_SOURCE_DIR}/third_party/SDL2-2.30.11/${GE_MINGW_TRIPLE})
         endif()
         target_include_directories(ge PRIVATE ${SDL2_ROOT}/include ${SDL2_ROOT}/include/SDL2)
         target_link_libraries(ge ${SDL2_ROOT}/lib/libSDL2.dll.a opengl32 gdi32 imm32 winmm setupapi hid version ole32 oleaut32

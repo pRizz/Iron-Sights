@@ -21,8 +21,14 @@
  * Windows only. It starts itself from a constructor, so no other file needs
  * to call it, and the stock comparison build compiles this same file
  * (scripts/port/bench/stock.py).
+ *
+ * 32-bit only for now: a 64-bit build (_WIN64, not IS_64_BIT, since stock
+ * trees lack platform_info.h) compiles the stand-in at the end of the file,
+ * which says so when GE_PROFILE is set. WIN64-003
+ * (scripts/port/windows_x64_plan.md) widens the samples and teaches
+ * bench_profile.py to rebase them under ASLR.
  */
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(_WIN64)
 #include <windows.h>
 #include <tlhelp32.h>
 #include <stdio.h>
@@ -289,6 +295,24 @@ __attribute__((constructor)) static void profileStart(void)
     QueryPerformanceFrequency(&sClockHz);
     QueryPerformanceCounter(&sClockStart);
     CloseHandle(CreateThread(NULL, 0, profileThread, NULL, 0, NULL));
+}
+#elif defined(_WIN32)
+#include <stdio.h>
+#include <stdlib.h>
+
+void portProfileWrite(void)
+{
+}
+
+__attribute__((constructor)) static void profileStart(void)
+{
+    const char *maybePath = getenv("GE_PROFILE");
+
+    if (maybePath != NULL && maybePath[0] != '\0')
+    {
+        printf("ge: profile: GE_PROFILE is not available in a 64-bit Windows build yet (WIN64-003); no samples are taken\n");
+        fflush(stdout);
+    }
 }
 #else
 void portProfileWrite(void)
