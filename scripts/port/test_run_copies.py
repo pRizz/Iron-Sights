@@ -33,6 +33,7 @@ import warnings
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import audit_buffers  # noqa: E402
 import lp64_play  # noqa: E402
+import lp64_play_run  # noqa: E402
 from run_copies import SharedExecutable  # noqa: E402
 
 SPAWN_HOLD = 1.5
@@ -175,6 +176,44 @@ class FailedCopy(unittest.TestCase):
         # Assert: removed by the constructor, not left to the folder's finalizer
         self.assertEqual(set(Path(tempfile.gettempdir()).glob('midas-run-copy-*')), before)
         self.assertEqual([str(w.message) for w in caught if issubclass(w.category, ResourceWarning)], [])
+
+class RuntimeLibraries(unittest.TestCase):
+    def test_a_library_beside_the_executable_is_linked_beside_each_placed_copy(self):
+        # Arrange
+        with tempfile.TemporaryDirectory() as source, tempfile.TemporaryDirectory() as case:
+            executable = Path(source)/'IronSights.exe'
+            executable.write_bytes(b'exe')
+            (Path(source)/'SDL2.dll').write_bytes(b'dll')
+
+            # Act
+            with SharedExecutable(executable) as shared:
+                child = shared.place(Path(case))
+
+            # Assert
+            self.assertEqual(child.read_bytes(), b'exe')
+            self.assertEqual((Path(case)/'SDL2.dll').read_bytes(), b'dll')
+
+    def test_an_executable_without_a_library_beside_it_places_only_itself(self):
+        # Arrange
+        with tempfile.TemporaryDirectory() as source, tempfile.TemporaryDirectory() as case:
+            executable = Path(source)/'IronSights'
+            executable.write_bytes(b'exe')
+
+            # Act
+            with SharedExecutable(executable) as shared:
+                shared.place(Path(case))
+
+            # Assert
+            self.assertEqual(sorted(path.name for path in Path(case).iterdir()), ['IronSights'])
+
+
+class VideoDriver(unittest.TestCase):
+    def test_windows_uses_its_native_driver_and_other_hosts_offscreen(self):
+        # Act and assert: SDL's offscreen driver has no GL library to load on Windows
+        self.assertEqual(lp64_play_run.host_video_driver('nt'), 'windows')
+        self.assertEqual(lp64_play_run.host_video_driver('posix'), 'offscreen')
+        self.assertEqual(lp64_play_run.VIDEO_VARIABLES['SDL_VIDEODRIVER'], lp64_play_run.host_video_driver())
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -11,7 +11,8 @@ stretches the case), so a case's frames fix its wall time; a case still running 
 timeout_seconds(frames) is killed and fails with its last line.
 
 With video (`run --video`) a case also gets SDL_VIDEODRIVER=offscreen (Mesa's software GL; the
-dummy driver cannot make a GL context), SDL_AUDIODRIVER=dummy, GE_WINDOW=640x480, GE_NOINPUT=1,
+dummy driver cannot make a GL context; on Windows the native `windows` driver, a real window),
+SDL_AUDIODRIVER=dummy, GE_WINDOW=640x480, GE_NOINPUT=1,
 GE_TICKHZ=60, a HOME and GE_ICON_CACHE_DIR inside its temporary folder, and a midas.ini there with
 `[display] fullscreen=windowed`; `--shots N` adds GE_SHOT=N, and the last shot_*.bmp the case wrote
 is copied to DIR/CASE.bmp. These are ROM-derived pictures: they stay in
@@ -58,11 +59,21 @@ RETRACES_PER_SECOND = 60
 # under the sanitizers), and seven cases share the machine.
 TIMEOUT_FACTOR = 5
 TIMEOUT_BOOT_SECONDS = 120
+
+
+def host_video_driver(os_name: str = os.name) -> str:
+    """The SDL video driver a video case uses on a host whose os.name is OS_NAME. On Windows
+    (WIN64-002) SDL's offscreen driver has no GL library to load ("Could not initialize OpenGL /
+    GLES library"), so a case opens a real 640x480 window through the native driver."""
+    return 'windows' if os_name == 'nt' else 'offscreen'
+
+
 # What every run with video gets (plan "What was measured": video needs no display server).
 # GE_TICKHZ=60 (src/game/frametiming.c, portTickHz; it wins over midas.ini's tickhz): a video
 # build's retrace pump runs at tickhz, 120 in the ini it writes by default, while every case's
 # frames were measured headless at 60 retraces a second; at 120 a case ends at half its time.
-VIDEO_VARIABLES = {'SDL_VIDEODRIVER': 'offscreen', 'SDL_AUDIODRIVER': 'dummy', 'GE_WINDOW': '640x480',
+VIDEO_DRIVER = host_video_driver()
+VIDEO_VARIABLES = {'SDL_VIDEODRIVER': VIDEO_DRIVER, 'SDL_AUDIODRIVER': 'dummy', 'GE_WINDOW': '640x480',
                    'GE_NOINPUT': '1', 'GE_TICKHZ': '60'}
 # A case that records its sound (Case.capture) gets this variable naming DIR/CASE.wav.
 CAPTURE_VARIABLE = 'GE_AUDIO_CAPTURE'

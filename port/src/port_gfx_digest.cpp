@@ -482,7 +482,8 @@ extern "C" struct GfxRenderingAPI* portGfxDigestWrap(struct GfxRenderingAPI* inn
         return inner;
     }
     s.path = path;
-    s.file = std::fopen(path, "w");
+    // Binary, so a Windows build writes LF lines as Linux does (WIN64-002).
+    s.file = std::fopen(path, "wb");
     if (s.file == nullptr) {
         fail("cannot open");
     }

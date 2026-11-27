@@ -11,8 +11,9 @@ Windows x64 as a non-goal that it must not block. It is independent of the
 **Drafted and accepted on 2026-11-27.** The owner accepted the plan with
 all five recommendations ("Accept the plan with your recommendations");
 [Owner's decisions](#owners-decisions) lists them with the alternatives not
-taken. Nothing is built, and execution has not been asked for: the
-[milestone status](#milestone-status) table says so.
+taken. The owner then asked for the milestones to be carried out ("keep
+working on these plans and implementations"); the
+[milestone status](#milestone-status) table says where they stand.
 
 This plan was drafted under `AGENTS.md` (the fork inventory, the two-tier
 gallery rule, render performance, load before play, direct-to-main
@@ -440,7 +441,7 @@ mark a milestone done without it.
 
 | ID | Status | Notes |
 |---|---|---|
-| WIN64-001 | Implemented locally, not released | [Its plan](windows_x64_win64_001.md) was written and accepted on 2026-11-27; FORK-094 has the change and its evidence. Done on `main` once pushed and CI passes. Measured before it starting point (2026-11-27, 990f914): with the CMake refusal off, 3 of 389 video compile steps fail (`main.c`, `port_profile.c`, `port_lp64.c`); patched in a scratch copy, it links, boots 600 front-end frames on the RTX 3070 and logs every checked address above 4 GB, with the memp arena at 0x20000000. |
-| WIN64-002 | Not started | Needs WIN64-001. |
-| WIN64-003 | Not started | Needs WIN64-001. |
+| WIN64-001 | Done (2026-11-27) | [Its plan](windows_x64_win64_001.md); FORK-094 has the change and its evidence. On `main` as 4fde028; CI passed on it, including the MinGW gate tree (`build/lp64/gate-mingw: 392 files compiled, 0 failed`). The 64-bit exe boots 600 frames with every checked region above 4 GB, the memp arena included; `compare_win32.py` names only `chraiDefaultWeaponFireHandler` (the `chrprop.c` fix) and the manifest. |
+| WIN64-002 | Implemented, verified locally | [Its plan](windows_x64_win64_002.md), accepted 2026-11-27 under the owner's standing instruction. On the laptop: play sets 119 of 119 natively with the pools within budget, mission smoke 20 of 20, the 38 comparison cases 100 of 100 streams identical to the Linux x64 build, bench +6 to +14% average fps over the 32-bit exe, late loads as the Linux 64-bit work explained (FORK-094). Done once CI passes on its push. |
+| WIN64-003 | Not started | WIN64-001 is done. |
 | WIN64-004 | Not started | Needs WIN64-002 and WIN64-003. |

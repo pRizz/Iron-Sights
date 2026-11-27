@@ -226,6 +226,13 @@ pass its isolated executable rather than rebuilding an active player binary.
   verification can establish equivalent behavior. Do not force separation that
   adds needless indirection or weakens rendering/ABI contracts. Document shared
   hooks and overlapping upstream behavior in `FORK_CHANGES.md` for later merges.
+- When starting a job that should take more than a few minutes (a build,
+  a play or comparison set, a mission smoke, a benchmark, a gallery
+  regeneration, a CI wait), tell the owner roughly how long it should take
+  and what the estimate rests on: the frames it plays (60 a second, divided
+  among the jobs run at once), an earlier run of the same job, or the
+  timings recorded in the inventory. Say so when an estimate turns out
+  well wrong, and when two jobs share the machine and slow each other.
 - Default delivery is direct to `main`: sync remote state, complete the requested
   work, run the relevant checks, then commit and push to `main`. Do not create a
   feature branch or pull request by default. Use a PR only when the user requests
@@ -282,7 +289,13 @@ pass its isolated executable rather than rebuilding an active player binary.
   `narrowing --check` and `unprototyped --check` over it together with
   `build/lp64/gate` and `gate-video`, since the allowlists must match the
   trees' places exactly; `test_abi_probe.sh` compiles the layout probe with
-  the x86_64 MinGW compiler too.
+  the x86_64 MinGW compiler too. On Windows, `lp64_play.py run --video`,
+  `lp64_equiv.py run --video` and `audit_buffers.py --mission-smoke
+  --video` run natively from Windows' Python on a `build_win64` or
+  comparison exe: SDL's offscreen driver has no GL there, so each case opens
+  a real 640x480 window (`SDL_VIDEODRIVER=windows`), and `SDL2.dll` is linked
+  beside each case's copy (`run_copies.py`). The 64-bit headless tree does
+  not link on Windows, so Windows runs are video runs.
 - ROM data converters (LP64-004) are `port/src/romconv_*.c`, declared in
   `port/include/port_romconv.h`, `port_romconv_audio.h` and
   `port_romconv_stage.h`, with the file layouts they read in

@@ -814,7 +814,11 @@ static void portDirectLaunchLog(void)
         return;
     }
     if (type == FILE_TYPE_DISK || type == FILE_TYPE_PIPE) {
-        return;   /* redirected: keep it */
+        /* redirected: keep it, but unbuffered as glibc's stderr always is.
+         * The Windows CRT buffers a redirected stderr, so `ge:` lines came out
+         * late, out of order with stdout's and split mid-line (WIN64-002). */
+        setvbuf(stderr, NULL, _IONBF, 0);
+        return;
     }
     if (type == FILE_TYPE_CHAR && !(GetConsoleWindow() != NULL && GetConsoleProcessList(pids, 2) == 1)) {
         return;   /* a shell's console that outlives us */

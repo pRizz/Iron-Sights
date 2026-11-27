@@ -267,7 +267,9 @@ static FILE *traceFile(void)
     {
         return NULL;
     }
-    sFile = fopen(path, "w");
+    /* Binary, so a Windows build writes the same LF lines as Linux and the
+     * streams compare byte for byte (WIN64-002). */
+    sFile = fopen(path, "wb");
     if (sFile == NULL)
     {
         fail("cannot open", path);

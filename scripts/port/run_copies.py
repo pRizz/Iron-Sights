@@ -10,11 +10,17 @@ LP64-005 Task 10's step 8 and in CI on 4a9b541.
 
 SharedExecutable copies the executable once, before any case starts, and links that closed copy into
 each case's folder: placing it opens no file for writing, so no fork can inherit a writer.
+
+On Windows the game needs SDL2.dll beside it (WIN64-002): each of RUNTIME_LIBRARIES that sits beside
+the executable is copied with it and linked beside each placed copy.
 """
 import os
 from pathlib import Path
 import shutil
 import tempfile
+
+# The libraries a Windows build loads from its own folder (lp64_boot.py copies the same one).
+RUNTIME_LIBRARIES = ('SDL2.dll',)
 
 
 class SharedExecutable:
@@ -25,8 +31,12 @@ class SharedExecutable:
         self.executable = executable
         self._folder = tempfile.TemporaryDirectory(prefix='midas-run-copy-')
         self.copy = Path(self._folder.name)/executable.name
+        self.libraries = [executable.parent/name for name in RUNTIME_LIBRARIES
+                          if (executable.parent/name).is_file()]
         try:
             shutil.copy2(executable, self.copy)
+            for library in self.libraries:
+                shutil.copy2(library, Path(self._folder.name)/library.name)
         except BaseException:
             self._folder.cleanup()
             raise
@@ -38,6 +48,8 @@ class SharedExecutable:
         child = folder/self.executable.name
         try:
             os.link(self.copy, child)
+            for library in self.libraries:
+                os.link(self.copy.parent/library.name, folder/library.name)
         except OSError as error:
             raise OSError(error.errno, f'cannot link the executable copy {self.copy} into {folder}: '
                                        f'{error.strerror}; a per-case copy would race with concurrent '

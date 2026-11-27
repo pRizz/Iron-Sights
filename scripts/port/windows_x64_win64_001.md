@@ -7,7 +7,8 @@ every game address checked above 4 GB, the crash handler prints a correct
 x64 stack, the 64-bit compile gates run on a MinGW tree as well as on Linux,
 and the 32-bit executable stays byte-for-byte what it was.
 
-**Status:** Implemented locally on 2026-11-27, not yet on `main`. Planned on
+**Status:** Done on 2026-11-27: on `main` as 4fde028, where CI passed,
+including the MinGW gate tree (392 files compiled, 0 failed). Planned on
 2026-11-27 from the measurements recorded in the
 Windows x64 plan (`main` at 990f914) and a reading of the files named below
 at eb01b50. Accepted by the owner the same day under their standing
@@ -144,8 +145,10 @@ by these, each within the milestone's done condition:
 
 ## Left to the builder
 
-- `StackWalk64` with `IMAGE_FILE_MACHINE_AMD64` is used, with the
-  frame-pointer walk beside it as at 32 bits; MinGW x64 emits unwind
-  tables, so `RtlVirtualUnwind` is not needed for a correct stack.
-- How the MinGW gate tree reaches the SDL2 headers in CI (the Windows job's
-  cached package, or a download in the tests job).
+- The stack walk: at 64 bits the handler's own frame walks use the unwind
+  tables (`RtlLookupFunctionEntry`, `RtlVirtualUnwind`), since the
+  frame-pointer walk printed garbage under MinGW x64 ("What the build
+  found"); the SEH dump's `StackWalk64` with `IMAGE_FILE_MACHINE_AMD64`
+  gives the same frames.
+- How the MinGW gate tree reaches the SDL2 headers in CI: the tests job
+  restores the Windows job's cached SDL2 MinGW package, or downloads it.

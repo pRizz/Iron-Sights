@@ -32,12 +32,14 @@ new areas. Status describes implementation state, not Git publication state.
 
 ### FORK-094 — Native Windows x64 build
 
-**Status:** WIN64-001 (build and boot) is implemented locally, not
-released; WIN64-002 to WIN64-004 are not started. The plan was drafted on
+**Status:** WIN64-001 (build and boot) is done on `main` (4fde028, CI
+passed); WIN64-002 (plays and matches) is implemented and verified on the
+owner's laptop, done once CI passes on its push; WIN64-003 and WIN64-004
+are not started. No x64 zip is released yet. The plan was drafted on
 2026-11-27 at the owner's request and accepted the same day with all five
 recommendations; [WIN64-001's plan](scripts/port/windows_x64_win64_001.md)
-was accepted under the owner's standing instruction to take sensible
-recommendations.
+and [WIN64-002's](scripts/port/windows_x64_win64_002.md) were accepted under
+the owner's standing instruction to take sensible recommendations.
 
 **What it is.** [The Windows x64 plan](scripts/port/windows_x64_plan.md)
 proposes a native 64-bit Windows executable from the 64-bit source that
@@ -114,6 +116,106 @@ of scope" call now notes that the owner lifted it for this plan.
   declare. `lp64_boot.py` copies `SDL2.dll` beside the executable it runs.
   The 64-bit warning comment in `CMakeLists.txt` lists the MinGW tree's two
   extra macro-redefinition warnings, which have no option.
+
+**WIN64-002: plays and matches.**
+
+- *The run tools on Windows.* `lp64_play.py run --video`, `lp64_equiv.py
+  run --video` and `audit_buffers.py --mission-smoke --video` run natively
+  from Windows' Python. SDL's offscreen driver cannot make a GL context on
+  Windows ("Could not initialize OpenGL / GLES library"), so
+  `lp64_play_run.py` sets `SDL_VIDEODRIVER=windows` there
+  (`host_video_driver`) and each case opens a real 640x480 window on the
+  desktop, input off; elsewhere it stays `offscreen`. `run_copies.py`'s one
+  executable copy carries `SDL2.dll` and links it beside each case's copy.
+  Windows runs are video runs: the 64-bit headless tree does not link on
+  Windows.
+- *Windows logs in order.* The Windows C runtime buffers a redirected
+  stderr, unlike glibc, so a harness run's `ge:` lines (stderr) came out
+  late, out of order with stdout's `load_bg_file` lines and once split
+  mid-line by the frame-limit line; `lp64_play.py peaks` then put 27 of 341
+  pool and stage pairs in the wrong level. `portDirectLaunchLog`
+  (`port/src/main.c`) now makes a redirected stderr unbuffered on Windows,
+  as the direct-launch log already was. A pool use is printed at a stage
+  unload and at exit, never per frame.
+- *Streams byte for byte.* The simulation trace (`port_simtrace.c`) and
+  the picture digest (`port_gfx_digest.cpp`) open their files `"wb"`: in
+  text mode a Windows build wrote CRLF lines, which the stream readers
+  refused (`rooms=0:811c9dc5` with a trailing CR). Linux is unchanged.
+- *Maths.* `lp64_libm_sweep.c` built with MinGW x64 and the comparison
+  build's three maths files prints the six pinned hashes (`sinf cc151db4`,
+  `cosf 4c162bf1`, `tanf e3ccc704`, `atanf f160154d`, `expf 8be3a4cd`,
+  `powf 648805d1`). With MinGW's own C library, `tanf` and `atanf` match
+  and four differ: `sinf 902caeb5`, `cosf e4754375`, `expf 30a1a4f5`,
+  `powf 1c4c5c98`. Shipped builds keep their C library's maths (the plan's
+  anti-goal), so a shipped 64-bit Windows build computes those four
+  otherwise than a shipped Linux build, as the 32-bit Windows build always
+  has. `test_compare_math.c` fails under MinGW only in its reference:
+  MinGW's double `sin` is far off for huge arguments
+  (`sinf(0x1.59d074p+67)`); it is not one of the gates.
+
+- *WIN64-002 evidence* (2026-11-27, on the owner's laptop with its RTX 3070
+  Laptop GPU, Windows 11; the tree is 4fde028 with this change):
+  - The play sets `demos,stages,stops,menus,tours,attract,sound` on
+    `build_win64/IronSights.exe`, natively with `--video`: `OK: 119 of 119
+    cases` (about 45 minutes at 7 jobs), and `lp64_play.py peaks --budget
+    scripts/port/lp64_budgets.txt` over their logs: `OK: 320 pool and stage
+    pairs within budget`. The two sound recordings are 22,050 Hz stereo,
+    30 s, peaks 15,027 and 22,392. Before the stderr change the same sets
+    also passed 119 of 119 but the budget check failed 27 of 341 pairs.
+  - `audit_buffers.py --mission-smoke --video --frames 1800 --jobs 4`: 20 of
+    20 missions pass.
+  - The comparison (verification 4 and 5): `build/lp64/cmp-win64-video`
+    (MinGW x64) and the Linux `build/lp64/cmp-x64-video`, each `lp64_equiv.py
+    run --video --repeat 2` over the 38 cases: both `OK: 38 of 38 cases ran`
+    and `agree with themselves`, and `compare --streams sim,gfx,snd --expect
+    scripts/port/lp64_equiv_expected.txt` prints `OK: 38 cases, 100
+    streams, 100 identical, 0 as recorded`, so no `x64:win64` line is
+    needed; a comment in that file says so. The Linux run's executable predates the stderr and `"wb"`
+    changes, neither of which changes a Linux build's behaviour.
+  - Drawn pixels: `--draw --shots 1800` on six cases (Dam, Facility,
+    Surface, Jungle, Cradle, 4-player Temple) on both builds; under equal
+    digests 70,017 to 150,228 of 307,200 pixels differ, largest channel
+    difference 46 to 144, which is NVIDIA's GL against Mesa's llvmpipe.
+    Side by side, Cradle and Temple 4-player show the same geometry,
+    guards, HUD and split screens, with filtering and edge differences
+    only. The Linux drawn runs passed their screenshot tick but hit the
+    harness's 445 s limit before the end (llvmpipe drew about 8 pictures a
+    second); only their screenshots were used.
+  - `bench.py run --smoke` (32-bit `build_win/IronSights.exe` as w32 and
+    `build_win64/IronSights.exe` as w64, both built from this tree, visible
+    window, quiet machine), average fps and render ms, w32 to w64:
+    default preset cradle-fight 541 to 607 (+12%), render 1.43 to 1.33 ms;
+    dam-walk 872 to 996 (+14%), 0.76 to 0.69 ms; temple-4p 654 to 693
+    (+6%), 1.30 to 1.26 ms. Matched preset cradle-fight 696 to 749 (+8%);
+    dam-walk 1161 to 1249 (+8%); temple-4p 816 to 866 (+6%). Run-to-run
+    range 1 to 6%. The 64-bit exe is faster in every cell, as on Linux
+    (FORK-089).
+  - `late_load_audit.py` on every stage (26) with each exe (2 minutes
+    each, the machine otherwise idle), then `--compare` by kind and name:
+    19 of 26 stages logged the same late events. Jungle logged 1,648
+    against 829 on the 32-bit exe, its room loads: the 64-bit special-portal
+    walk marks Jungle's portals as the N64 does, the 32-bit one applies only
+    the first record (the `i686:x64 stage-jungle` lines of
+    `lp64_equiv_expected.txt`). Basement, Caves, Complex, Library and Temple
+    logged the title screen's `PlegalpageZ` late on the 64-bit exe (stage 90,
+    which LP64-006 Task 11 traced to that screen's timing) and one 8x12
+    upload fewer; Stack one 8x12 upload more. No mission or arena gained a
+    late load of its own.
+  - `compare_win32.py commits HEAD WORKTREE`: `.text`, `.rdata`, `.data`,
+    `.reloc` and `/4` differ. A per-function comparison of the two
+    disassemblies with addresses removed names only `_main`, where
+    `portDirectLaunchLog` is inlined; the trace's `"wb"` is a string in
+    `.rdata`, and the picture digest is compiled only into comparison
+    builds.
+  - The run folders (`build/lp64/play/win64-*`, `build/lp64/equiv/win64-*`,
+    `build/lp64/smoke/win64`), the Windows comparison tree
+    `build/lp64/cmp-win64-video`, the audits' and benchmark's output and the
+    scratch maths sweep were deleted after these figures were taken; the
+    commands above rebuild them.
+  - The ROM-free tests of the run tools pass in the container
+    (`test_run_copies.py`, with new tests for the DLL link and the driver
+    choice, the `test_lp64_play*.py`, `test_lp64_equiv*.py`,
+    `test_audit_buffers.py` and `test_late_load_audit.py` files).
 
 **Why it differs from upstream.** The inherited baseline builds Windows only
 as a 32-bit program, and so does this fork today.
@@ -193,8 +295,11 @@ WIN64-001, on the owner's laptop (RTX 3070 Laptop GPU) and in the rebuilt
   `test_lp64_typed_reads.sh`, and the Python tests of the overlay,
   static-check, diagnostics, boot, dependency, comparison and gallery tools
   pass.
-- Not run: CI itself (it runs on the push), a mission or play set on the
-  64-bit Windows exe (WIN64-002), Sentry (WIN64-003), and the Linux play
+- CI on 4fde028 (WIN64-001 rebased onto `main`) passed every job; the
+  tests job's MinGW gate tree logged `build/lp64/gate-mingw: 392 files
+  compiled, 0 failed`.
+- Not run in WIN64-001: a mission or play set on the 64-bit Windows exe
+  (WIN64-002), Sentry (WIN64-003), and the Linux play
   sets; the Linux code paths changed only by the field read in
   `chrprop.c`, the `strcmp` prototype and `audio_pc.c`'s `memmove`
   prototype. No benchmark or late-load audit: nothing here runs per frame
@@ -14418,6 +14523,9 @@ Bright Builds adoption (FORK-023) preserves these rules and the former project
 PR checklist while installing managed standards and extending the existing hook.
 The Iron Sights settings rule (FORK-044) keeps fork settings on their own menu
 pages, with a ROM-free check in the same hook.
+At the owner's request (2026-11-27), AGENTS.md also asks that a job expected
+to take more than a few minutes be announced with a rough duration and what the
+estimate rests on (frame counts, an earlier run or recorded timings).
 
 **Sources:** [AGENTS.md](AGENTS.md), [FORK_CHANGES.md](FORK_CHANGES.md),
 [CONTRIBUTING.md](CONTRIBUTING.md), [README.md](README.md),
