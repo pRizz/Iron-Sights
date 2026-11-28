@@ -494,7 +494,8 @@ endif()
 # them only where the updater is built.
 set(UPDATER_SRC ${CMAKE_SOURCE_DIR}/port/src/port_update.c ${CMAKE_SOURCE_DIR}/port/src/port_update_core.c
     ${CMAKE_SOURCE_DIR}/port/src/port_update_archive.c ${CMAKE_SOURCE_DIR}/port/src/port_update_files.c
-    ${CMAKE_SOURCE_DIR}/port/src/port_update_sha256.c ${CMAKE_SOURCE_DIR}/port/src/port_update_startup.c)
+    ${CMAKE_SOURCE_DIR}/port/src/port_update_sha256.c ${CMAKE_SOURCE_DIR}/port/src/port_update_startup.c
+    ${CMAKE_SOURCE_DIR}/port/src/port_update_swap.c)
 # The models' list store (port_gdl_store.h, LP64-006 Task 11b) is the 64-bit
 # build's alone: a 32-bit build converts as it always has (objecthandler_2.c).
 if(NOT GE_POINTER_BITS EQUAL 64)

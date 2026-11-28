@@ -174,7 +174,13 @@ the check there. `lp64_casts.py check` and `lp64_overlays.py check
 --no-defects` pass, after the updater dropped nine casts the overlay review
 flagged. `test_linux_launcher.py` passes with a new case for the AppImage
 refresh. A 64-bit Linux video link and the Linux packages are first built by
-CI. No benchmark or late-load audit was run: nothing is drawn or computed
+CI. CI's first run on 87c8d4a failed two jobs. GCC 13 at 64 bits
+flagged a 16-byte buffer for a `long` (`port_update_swap.c`; the local GCC
+11 image had not). And `port_update_swap.c` was missing from CMake's updater
+list, so the macOS headless build, which has no updater, kept it and left 17
+references undefined. Both were fixed in the next commit; `test_update.sh`
+then passed at both widths under GCC 13, and a 64-bit Linux headless tree
+linked. No benchmark or late-load audit was run: nothing is drawn or computed
 per frame, and the stage loads are unchanged. The work happens at boot
 before the window opens; the legal screen's first frame does one journal
 read, plus about twenty deletes on the start after an install.

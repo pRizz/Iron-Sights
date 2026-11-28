@@ -381,7 +381,7 @@ int portUpdateRecover(const struct PortUpdateEnv *env, char *msg, size_t msgsize
 {
     struct PortUpdatePaths paths;
     struct Journal journal;
-    char text[16];
+    char text[24];  /* a 64-bit long and a line break */
     long attempts;
     int restart = 0;
 
