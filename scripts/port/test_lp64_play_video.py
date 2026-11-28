@@ -102,6 +102,55 @@ class Video(StandIns):
         self.assertEqual(status, 1, out)
         self.assertIn('stop-citadel: FAIL (missing line: ge: video: window + GL context up)', out)
 
+    def test_video_case_with_a_shader_link_failure_fails(self):
+        # Arrange: a passing video log and one line of port/fast3d/gfx_opengl.cpp's link failure
+        fault = 'Failed to link the retained program (ID 1c8, 20): ERROR: Input of fragment shader not written'
+        exe = self.fake(DAM1_VIDEO + fault + '\nge: frame limit reached: frames=3000 gfxtasks=30\n')
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn(f'dam1: FAIL ({fault})', out)
+
+    def test_video_case_with_a_shader_compile_failure_fails(self):
+        # Arrange
+        fault = 'Failed to compile this retained vertex shader (ID 1c8, 20):'
+        exe = self.fake(DAM1_VIDEO + fault + '\nge: frame limit reached: frames=3000 gfxtasks=30\n')
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn(f'dam1: FAIL ({fault})', out)
+
+    def test_video_case_with_a_missing_gl_function_fails(self):
+        # Arrange
+        fault = 'GL: could not find function: glVertexP2ui'
+        exe = self.fake(DAM1_VIDEO + fault + '\nge: frame limit reached: frames=3000 gfxtasks=30\n')
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1', '--video')
+
+        # Assert
+        self.assertEqual(status, 1, out)
+        self.assertIn(f'dam1: FAIL ({fault})', out)
+
+    def test_headless_case_ignores_render_fault_lines(self):
+        # Arrange: a headless build has no renderer; such a line there is some other program's text
+        exe = self.fake(BOOT + DAM1_START + demo_exit(438) + 'GL: could not find function: glVertexP2ui\n'
+                        'Failed to link the retained program\nFailed to compile this vertex shader\n'
+                        'ge: frame limit reached: frames=3000 gfxtasks=3\n')
+
+        # Act
+        status, out = self.play(exe, 'demos', 'dam1')
+
+        # Assert
+        self.assertEqual(status, 0, out)
+        self.assertIn('dam1: PASS', out)
+
     def test_headless_case_needs_neither_video_line(self):
         # Arrange
         exe = self.fake(BOOT + DAM1_START + demo_exit(438) + 'ge: frame limit reached: frames=3000 gfxtasks=3\n')
