@@ -1,12 +1,17 @@
-/* Host tests for port/src/port_macos.c (MAC-001 Task 1): the executable's
- * loaded range and the sleep to an absolute time. No game header: the two
- * functions use only the system's. Each test prints its name and aborts on a
- * failed check. */
+/* Host tests for port/src/port_macos.c: the executable's loaded range and the
+ * sleep to an absolute time (MAC-001 Task 1), and the executable's real path
+ * (MAC-002 Task 2). No game header: the functions use only the system's. Each
+ * test prints its name and aborts on a failed check. Run with one argument, a
+ * path, it checks only that the executable's path is that file's real path:
+ * the harness runs it so through a symlink. */
 #include <errno.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/syslimits.h>
 #include <sys/time.h>
 #include <time.h>
 
@@ -44,7 +49,7 @@ static struct timespec timeAt(long long ns)
     return t;
 }
 
-static void imageRangeHoldsMain(int (*mainAddress)(void))
+static void imageRangeHoldsMain(uintptr_t mainAddress)
 {
     uintptr_t lowest = 0;
     uintptr_t end = 0;
@@ -53,8 +58,8 @@ static void imageRangeHoldsMain(int (*mainAddress)(void))
     /* Act */
     CHECK(portMacImageRange(&lowest, &end) == 1);
     /* Assert */
-    CHECK(lowest <= (uintptr_t) mainAddress);
-    CHECK((uintptr_t) mainAddress < end);
+    CHECK(lowest <= mainAddress);
+    CHECK(mainAddress < end);
     CHECK(lowest <= (uintptr_t) &s_FileScopeVariable);
     CHECK((uintptr_t) &s_FileScopeVariable < end);
 }
@@ -137,9 +142,61 @@ static void anInterruptedSleepSaysEintr(void)
     CHECK(sigaction(SIGALRM, &previous, NULL) == 0);
 }
 
-int main(void)
+static void executablePathNamesThisFile(const char *argv0)
 {
-    imageRangeHoldsMain(main);
+    char path[PATH_MAX];
+    struct stat self;
+    struct stat found;
+    size_t length;
+
+    puts("executable path names this file");
+    /* Arrange */
+    CHECK(stat(argv0, &self) == 0);
+    /* Act */
+    length = portMacExecutablePath(path, sizeof(path));
+    /* Assert */
+    CHECK(length > 0);
+    CHECK(path[0] == '/');
+    CHECK(strlen(path) == length);
+    CHECK(stat(path, &found) == 0);
+    CHECK(found.st_dev == self.st_dev);
+    CHECK(found.st_ino == self.st_ino);
+}
+
+static void aBufferTooSmallIsLeftAlone(void)
+{
+    char path[4] = { 'a', 'b', 'c', 'd' };
+
+    puts("a buffer too small is left alone");
+    /* Act and assert */
+    CHECK(portMacExecutablePath(path, sizeof(path)) == 0);
+    CHECK(memcmp(path, "abcd", 4) == 0);
+}
+
+static void executablePathResolvesASymlink(const char *realFile)
+{
+    char expected[PATH_MAX];
+    char path[PATH_MAX];
+
+    puts("executable path resolves a symlink");
+    /* Arrange: the harness started this program through a link to REALFILE. */
+    CHECK(realpath(realFile, expected) != NULL);
+    /* Act */
+    CHECK(portMacExecutablePath(path, sizeof(path)) == strlen(expected));
+    /* Assert */
+    CHECK(strcmp(path, expected) == 0);
+}
+
+int main(int argc, char **argv)
+{
+    if (argc == 2)
+    {
+        executablePathResolvesASymlink(argv[1]);
+        return 0;
+    }
+    executablePathNamesThisFile(argv[0]);
+    aBufferTooSmallIsLeftAlone();
+    imageRangeHoldsMain((uintptr_t) main);
     imageRangeIsAbove4Gb();
     sleepReachesAFutureTime();
     sleepReturnsAtOnceForAPastTime();

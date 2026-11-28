@@ -5,8 +5,13 @@
 #ifndef PORT_MACOS_H
 #define PORT_MACOS_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include <time.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* The main executable's loaded range: the span of its LC_SEGMENT_64 load
  * commands with dyld's slide applied, __PAGEZERO left out (it maps nothing
@@ -19,5 +24,16 @@ int portMacImageRange(uintptr_t *lowest, uintptr_t *end);
  * early: what clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, target, NULL)
  * returns on Linux, so a caller's retry loop is the same on both. */
 int portMacSleepUntil(const struct timespec *target);
+
+/* The running executable's real path (MAC-002): dyld's path for it with
+ * symlinks resolved, NUL-terminated, in buffer. Returns its length, or 0,
+ * leaving buffer unchanged, when it does not fit in size bytes or cannot be
+ * read. macOS has no /proc/self/exe; the data root and the restart after a
+ * save import start from this. */
+size_t portMacExecutablePath(char *buffer, size_t size);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

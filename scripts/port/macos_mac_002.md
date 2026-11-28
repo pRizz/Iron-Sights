@@ -457,7 +457,7 @@ to_string as a long long".
   `buffer`; returns its length, or 0 with `buffer` unchanged when it does
   not fit or cannot be read.
 
-- [ ] **Step 1: Write the failing host tests**
+- [x] **Step 1: Write the failing host tests**
 
 In `test_macos_host`: the path is absolute and names the same file as the
 test's own executable (`st_dev` and `st_ino` equal); a 4-byte buffer
@@ -465,17 +465,17 @@ returns 0 and is unchanged; run through a symlink placed in a folder
 whose name has a space, it returns the real file's path, not the link's.
 Run. Expected: FAIL (the function does not exist).
 
-- [ ] **Step 2: Implement it**
+- [x] **Step 2: Implement it**
 
 `_NSGetExecutablePath` and `realpath`. Run. Expected: PASS, and
 `test_macos_host: PASS` at 64 bits.
 
-- [ ] **Step 3: Use it in both places**
+- [x] **Step 3: Use it in both places**
 
 `main.c:727` and `save_transfer.cpp:143`, each in an `__APPLE__` branch
 beside the `readlink`, which the other platforms keep.
 
-- [ ] **Step 4: See it start (visible, about 5 s)**
+- [x] **Step 4: See it start (visible, about 5 s)**
 
 In a fresh folder holding a copy of `build/mac/video/IronSights` and a
 `midas.ini` of `[display]` and `fullscreen=windowed`: run it with
@@ -486,7 +486,7 @@ frames=300 gfxtasks=` with a count of 100 or more. Run it once more by a
 relative path from another folder: the `ge: root:` line names the
 executable's folder.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 `main`: "Find the macOS executable's path from dyld". Branch: "Start on
 macOS: the restart path without /proc".
