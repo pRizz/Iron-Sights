@@ -52,7 +52,9 @@ int portUpdatePaths(const struct PortUpdateEnv *env, struct PortUpdatePaths *pat
 struct PortUpdateState {
     long long last_check;  /* when the last check finished, 0 = never */
     long newest;           /* the newest build a check saw */
+    char newest_tag[64];   /* its release tag ("" when unknown) */
     long bad_build;        /* a build rolled back; never offered again */
+    int outcome;           /* the last run's enum PortUpdateResult */
     char result[160];      /* what the last check or install did */
 };
 

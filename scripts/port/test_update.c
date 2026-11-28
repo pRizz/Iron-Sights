@@ -391,6 +391,92 @@ static void testInterruptedSwapIsUndone(void)
     CHECK(oldBuildIntact(&c));
 }
 
+/* What the run reported (UPD-003's screens read these). */
+static struct {
+    int phases[8], count, cancelAt;
+    long build;
+    long long bytes;
+} sProgress;
+
+static void onProgress(void *user, int phase, long build, long long bytes)
+{
+    (void) user;
+    if (sProgress.count == 0 || sProgress.phases[sProgress.count - 1] != phase) {
+        if (sProgress.count < 8) {
+            sProgress.phases[sProgress.count++] = phase;
+        }
+    }
+    sProgress.build = build;
+    sProgress.bytes = bytes;
+}
+
+/* Cancelled once the run has reached phase cancelAt (-1: never). */
+static int onCancelled(void *user)
+{
+    (void) user;
+    return sProgress.cancelAt >= 0 && sProgress.count > 0 && sProgress.phases[sProgress.count - 1] >= sProgress.cancelAt;
+}
+
+static void watch(struct Case *c, int cancelAt)
+{
+    memset(&sProgress, 0, sizeof(sProgress));
+    sProgress.cancelAt = cancelAt;
+    c->env.progress = onProgress;
+    c->env.cancelled = onCancelled;
+}
+
+static void testCheckOnlyAndProgress(void)
+{
+    struct Case c;
+    struct PortUpdateState state;
+    char statePath[TEST_PATH];
+
+    setUp(&c, "zip-checkonly", "good");
+    snprintf(statePath, sizeof(statePath), "%sData/Updates/state.txt", c.dir);
+    CHECK(portUpdateEligible(&c.env, c.msg, sizeof(c.msg)) && c.msg[0] == '\0');
+    watch(&c, -1);
+    c.env.check_only = 1;
+    CHECK(run(&c, 0) == PORT_UPDATE_AVAILABLE && strstr(c.msg, "200") != NULL);
+    CHECK(sProgress.count == 1 && sProgress.phases[0] == PORT_UPDATE_PHASE_CHECKING);
+    CHECK(oldBuildIntact(&c));
+    portUpdateStateRead(statePath, &state);
+    CHECK(state.newest == 200 && strcmp(state.newest_tag, "build-200.1-0123456789ab") == 0);
+    CHECK(state.outcome == PORT_UPDATE_AVAILABLE && state.last_check == c.env.now);
+    CHECK(run(&c, 0) == PORT_UPDATE_NOT_DUE);
+
+    watch(&c, -1);
+    c.env.check_only = 0;
+    CHECK(run(&c, 1) == PORT_UPDATE_INSTALLED);
+    CHECK(sProgress.count == 3 && sProgress.phases[0] == PORT_UPDATE_PHASE_CHECKING &&
+          sProgress.phases[1] == PORT_UPDATE_PHASE_DOWNLOADING && sProgress.phases[2] == PORT_UPDATE_PHASE_INSTALLING);
+    CHECK(sProgress.build == 200 && holds(&c, "IronSights.exe", "new exe"));
+    portUpdateStateRead(statePath, &state);
+    CHECK(state.outcome == PORT_UPDATE_INSTALLED);
+    c.env.ci = 0;
+    CHECK(!portUpdateEligible(&c.env, c.msg, sizeof(c.msg)) && strstr(c.msg, "local build") != NULL);
+}
+
+static void testCancelMovesNothing(void)
+{
+    struct Case c;
+    struct PortUpdateState state;
+    char statePath[TEST_PATH];
+
+    setUp(&c, "zip-cancel", "good");
+    snprintf(statePath, sizeof(statePath), "%sData/Updates/state.txt", c.dir);
+    watch(&c, PORT_UPDATE_PHASE_CHECKING);  /* skipped while the check runs */
+    CHECK(run(&c, 1) == PORT_UPDATE_CANCELLED && strstr(c.msg, "before the download") != NULL);
+    CHECK(oldBuildIntact(&c));
+    watch(&c, PORT_UPDATE_PHASE_DOWNLOADING);  /* skipped during the download */
+    CHECK(run(&c, 1) == PORT_UPDATE_CANCELLED && strstr(c.msg, "during the download") != NULL);
+    CHECK(sProgress.phases[sProgress.count - 1] == PORT_UPDATE_PHASE_DOWNLOADING);
+    CHECK(oldBuildIntact(&c));
+    portUpdateStateRead(statePath, &state);
+    CHECK(state.outcome == PORT_UPDATE_CANCELLED && state.last_check == c.env.now);  /* a finished check */
+    watch(&c, -1);
+    CHECK(run(&c, 1) == PORT_UPDATE_INSTALLED && holds(&c, "IronSights.exe", "new exe"));
+}
+
 static void testTarballInstall(void)
 {
     struct Case c;
@@ -440,6 +526,8 @@ int main(int argc, char **argv)
     testFailureMidSwapUndoesEverything();
     testRefusedReleases();
     testInterruptedSwapIsUndone();
+    testCheckOnlyAndProgress();
+    testCancelMovesNothing();
     testTarballInstall();
     testAppImageInstall();
     if (sFailures != 0) {

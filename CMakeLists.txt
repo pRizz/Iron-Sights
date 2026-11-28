@@ -502,7 +502,7 @@ endif()
 set(UPDATER_SRC ${CMAKE_SOURCE_DIR}/port/src/port_update.c ${CMAKE_SOURCE_DIR}/port/src/port_update_core.c
     ${CMAKE_SOURCE_DIR}/port/src/port_update_archive.c ${CMAKE_SOURCE_DIR}/port/src/port_update_files.c
     ${CMAKE_SOURCE_DIR}/port/src/port_update_sha256.c ${CMAKE_SOURCE_DIR}/port/src/port_update_startup.c
-    ${CMAKE_SOURCE_DIR}/port/src/port_update_swap.c)
+    ${CMAKE_SOURCE_DIR}/port/src/port_update_swap.c ${CMAKE_SOURCE_DIR}/port/src/port_update_ui.c)
 # The models' list store (port_gdl_store.h, LP64-006 Task 11b) is the 64-bit
 # build's alone: a 32-bit build converts as it always has (objecthandler_2.c).
 if(NOT GE_POINTER_BITS EQUAL 64)
@@ -800,8 +800,13 @@ if(GE_VIDEO)
     # build number from the environment (scripts/port/update_fixture.py).
     option(GE_UPDATE_TEST "In-game updater test build: honour GE_UPDATE_TEST_* (never shipped)" OFF)
     if(NOT EMSCRIPTEN AND NOT GE_XBOX AND NOT APPLE AND NOT GE_COMPARE)
-        # Only the two files with its hooks need to know it is there.
+        # Only the files with its hooks need to know it is there: the
+        # startup hooks, the Updates option, the per-frame pump (boss.c's
+        # main loop) and the two menus' Updates pages (UPD-003).
         set_property(SOURCE ${CMAKE_SOURCE_DIR}/port/src/main.c ${CMAKE_SOURCE_DIR}/port/src/port_startup.c
+            ${CMAKE_SOURCE_DIR}/port/src/video.c ${CMAKE_SOURCE_DIR}/port/src/port_options.c
+            ${CMAKE_SOURCE_DIR}/port/src/port_watchpages.c ${CMAKE_SOURCE_DIR}/src/game/front.c
+            ${CMAKE_SOURCE_DIR}/src/boss.c
             APPEND PROPERTY COMPILE_DEFINITIONS GE_UPDATER=1)
         add_library(ge_update_http OBJECT port/src/port_update_http.cpp)
         set_target_properties(ge_update_http PROPERTIES INCLUDE_DIRECTORIES "")

@@ -52,27 +52,42 @@ static int fetchSmall(const struct PortUpdateEnv *env, const char *url, struct B
     return 1;
 }
 
+static void report(const struct PortUpdateEnv *env, int phase, long build, long long bytes)
+{
+    if (env->progress != NULL) {
+        env->progress(env->user, phase, build, bytes);
+    }
+}
+
+static int cancelled(const struct PortUpdateEnv *env)
+{
+    return env->cancelled != NULL && env->cancelled(env->user);
+}
+
 struct FileSink {
     FILE *f;
     struct PortSha256 sha;
     size_t written;
+    const struct PortUpdateEnv *env;
+    long build;
 };
 
 static int intoFile(void *user, const unsigned char *data, size_t size)
 {
     struct FileSink *sink = (struct FileSink *) user;
 
-    if (size > PACKAGE_LIMIT - sink->written || fwrite(data, 1, size, sink->f) != size) {
+    if (cancelled(sink->env) || size > PACKAGE_LIMIT - sink->written || fwrite(data, 1, size, sink->f) != size) {
         return 0;
     }
     portSha256Add(&sink->sha, data, size);
     sink->written += size;
+    report(sink->env, PORT_UPDATE_PHASE_DOWNLOADING, sink->build, (long long) sink->written);
     return 1;
 }
 
 /* Streams url to path and checks it against hex. */
-static int fetchPackage(const struct PortUpdateEnv *env, const char *url, const char *path, const char *hex,
-                        char *msg, size_t msgsize)
+static int fetchPackage(const struct PortUpdateEnv *env, long build, const char *url, const char *path,
+                        const char *hex, char *msg, size_t msgsize)
 {
     struct FileSink sink;
     char reason[96] = "", actual[65];
@@ -84,6 +99,9 @@ static int fetchPackage(const struct PortUpdateEnv *env, const char *url, const 
     }
     portSha256Init(&sink.sha);
     sink.written = 0;
+    sink.env = env;
+    sink.build = build;
+    report(env, PORT_UPDATE_PHASE_DOWNLOADING, build, 0);
     ok = env->http(url, 1, intoFile, &sink, reason, sizeof(reason));
     ok = fclose(sink.f) == 0 && ok;
     if (!ok) {
@@ -233,6 +251,7 @@ struct Run {
 
 static int finish(struct Run *run, int result, char *msg)
 {
+    run->state.outcome = result;
     snprintf(run->state.result, sizeof(run->state.result), "%s", msg);
     portUpdateStateWrite(run->paths.state, &run->state);
     portUpdateUnlock();
@@ -273,6 +292,7 @@ static int findRelease(struct Run *run, char *msg, size_t msgsize)
         return FOUND_FAILED;
     }
     run->state.newest = run->release.build;
+    snprintf(run->state.newest_tag, sizeof(run->state.newest_tag), "%s", run->release.tag);
     snprintf(number, sizeof(number), "%ld", run->release.build);
     if (!run->release.ci || run->release.dirty) {
         say(msg, msgsize, "the latest release is not a clean CI build", number);
@@ -363,6 +383,34 @@ static int installPackage(struct Run *run, char *msg, size_t msgsize)
     return ok;
 }
 
+/* The reasons a copy can never update itself; fills run's flavor and paths. */
+static int eligible(struct Run *run, char *msg, size_t msgsize)
+{
+    const struct PortUpdateEnv *env = run->env;
+
+    run->flavor = installedFlavor(env);
+    if (!env->ci || env->http == NULL || run->flavor == NULL || !portUpdatePaths(env, &run->paths)) {
+        say(msg, msgsize, !env->ci ? "a local build never updates" : run->flavor == NULL ?
+            "this copy has no package.txt" : "no HTTPS transport", NULL);
+        return 0;
+    }
+    if (run->flavor->kind == PORT_UPDATE_KIND_APPIMAGE && env->appimage == NULL) {
+        say(msg, msgsize, "an AppImage build without $APPIMAGE", NULL);
+        return 0;
+    }
+    return 1;
+}
+
+int portUpdateEligible(const struct PortUpdateEnv *env, char *msg, size_t msgsize)
+{
+    struct Run run;
+
+    memset(&run, 0, sizeof(run));
+    run.env = env;
+    say(msg, msgsize, "", NULL);
+    return eligible(&run, msg, msgsize);
+}
+
 int portUpdateRun(const struct PortUpdateEnv *env, int force, char *msg, size_t msgsize)
 {
     struct Run run;
@@ -371,14 +419,7 @@ int portUpdateRun(const struct PortUpdateEnv *env, int force, char *msg, size_t 
 
     memset(&run, 0, sizeof(run));
     run.env = env;
-    run.flavor = installedFlavor(env);
-    if (!env->ci || env->http == NULL || run.flavor == NULL || !portUpdatePaths(env, &run.paths)) {
-        say(msg, msgsize, !env->ci ? "a local build never updates" : run.flavor == NULL ?
-            "this copy has no package.txt" : "no HTTPS transport", NULL);
-        return PORT_UPDATE_NOT_ELIGIBLE;
-    }
-    if (run.flavor->kind == PORT_UPDATE_KIND_APPIMAGE && env->appimage == NULL) {
-        say(msg, msgsize, "an AppImage build without $APPIMAGE", NULL);
+    if (!eligible(&run, msg, msgsize)) {
         return PORT_UPDATE_NOT_ELIGIBLE;
     }
     portUpdateStateRead(run.paths.state, &run.state);
@@ -391,9 +432,16 @@ int portUpdateRun(const struct PortUpdateEnv *env, int force, char *msg, size_t 
         return PORT_UPDATE_FAILED;
     }
     run.state.last_check = env->now;
+    report(env, PORT_UPDATE_PHASE_CHECKING, 0, 0);
     found = findRelease(&run, msg, msgsize);
     if (found != FOUND_NEWER) {
         return finish(&run, found == FOUND_NONE ? PORT_UPDATE_UP_TO_DATE : PORT_UPDATE_FAILED, msg);
+    }
+    if (env->check_only) {
+        char number[24];
+        snprintf(number, sizeof(number), "%ld", run.release.build);
+        say(msg, msgsize, "a newer build is available", number);
+        return finish(&run, PORT_UPDATE_AVAILABLE, msg);
     }
     target = run.flavor->kind == PORT_UPDATE_KIND_APPIMAGE ? env->appimage : env->exe_dir;
     if (run.flavor->kind != PORT_UPDATE_KIND_APPIMAGE && !portUpdateFolderWritable(target)) {
@@ -408,14 +456,31 @@ int portUpdateRun(const struct PortUpdateEnv *env, int force, char *msg, size_t 
         say(msg, msgsize, "path too long", run.release.tag);
         return finish(&run, PORT_UPDATE_FAILED, msg);
     }
+    if (cancelled(env)) {
+        say(msg, msgsize, "cancelled before the download", NULL);
+        return finish(&run, PORT_UPDATE_CANCELLED, msg);
+    }
     {
         char url[PORT_UPDATE_PATH];
         snprintf(url, sizeof(url), "%s/download/%s/%s", env->downloads_url, run.release.tag, run.flavor->asset);
-        if (!fetchPackage(env, url, run.package, run.assetHex, msg, msgsize)) {
+        if (!fetchPackage(env, run.release.build, url, run.package, run.assetHex, msg, msgsize)) {
             portUpdateRemoveDir(run.tagDir);
+            if (cancelled(env)) {
+                say(msg, msgsize, "cancelled during the download", NULL);
+                return finish(&run, PORT_UPDATE_CANCELLED, msg);
+            }
             return finish(&run, PORT_UPDATE_FAILED, msg);
         }
     }
+    if (cancelled(env)) {
+        portUpdateRemove(run.package);
+        portUpdateRemoveDir(run.tagDir);
+        say(msg, msgsize, "cancelled before the install", NULL);
+        return finish(&run, PORT_UPDATE_CANCELLED, msg);
+    }
+    /* From here the swap runs to its end or undoes itself; it is not
+     * cancelled half way. */
+    report(env, PORT_UPDATE_PHASE_INSTALLING, run.release.build, 0);
     if (run.flavor->kind == PORT_UPDATE_KIND_APPIMAGE) {
         ok = portUpdateMarkExecutable(run.package) &&
              portUpdateSwapFile(&run.paths, run.package, env->appimage, run.release.tag, run.release.build, msg,

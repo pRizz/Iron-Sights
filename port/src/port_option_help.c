@@ -84,6 +84,8 @@ static const struct PortOptHelp sHelp[] = {
     { "texture_pack",       "HD: intermissionfb's pack from HD Textures, and any pack put in Data/TexturePacks." },
     { "close_hd_matches",   "Adds HD art for 17 textures whose colours only roughly match the pack." },
     { "show_debug_pos",     "Shows your room, x/y/z position, heading H and pitch P across the top." },
+    /* FORK-095 */
+    { "mode",               "Automatic installs a newer build at launch. Notify only tells you. Off checks only when asked." },
 
     /* HUD */
     { "sight_on_screen",    "Shows the aiming sight." },
@@ -179,6 +181,8 @@ static const struct PortOptHelp sHelp[] = {
     { "@enhanced_fonts_remove", "Deletes the downloaded font files. Asks first." },
     { "@hd_textures_get",   "Downloads the pack named above from GitHub and uses it, or cancels, or switches." },
     { "@hd_textures_remove", "Deletes the downloaded HD texture files. Asks first." },
+    { "@updates_action",    "Checks GitHub now, cancels, or installs the build found and restarts. Saves stay." },
+    { "@updates_news",      "Opens the newest build's release page in your browser. Asks first." },
 
     /* CLASSIC: what Classic Mode forces while it is on */
     { "classic_res",        "Classic Mode renders 3D at the N64's 240 lines." },
@@ -222,7 +226,8 @@ static const struct PortOptHelp sHelp[] = {
     { "@page_is_feedback",  "Hit markers, hit sounds, damage direction, tracers and explosive rounds." },
     { "@page_is_hud",       "Crosshair size, weapon strip, sprint indicator, health and mission alerts, touch controls opacity." },
     { "@page_is_enemies",   "Reinforcements and Headshots Only, both also on the mission's difficulty page." },
-    { "@page_is_system",    "Build info, fonts, reflections, fog, crash reports and debug position." },
+    { "@page_is_system",    "Build info, updates, fonts, reflections, fog, crash reports and debug position." },
+    { "@page_is_updates",   "Whether Iron Sights checks GitHub for new builds, at most twice a day." },
 #ifdef __EMSCRIPTEN__ /* FORK-082: no HDR Output in the browser, which keeps F11 */
     { "@page_is_graphics",  "Tone mapping and baked lighting. F8 compares; Home/End, PgUp/PgDn tune sliders in play." },
 #else

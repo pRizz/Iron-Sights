@@ -213,41 +213,78 @@ when its generator version changes (about 6 s).
 
 ### Screens
 
+As built in UPD-003 (`port/include/port_update_ui.h`, `port/src/port_update_ui.c`):
+
+- **The run.** `portUpdateStartup` (`main.c`) only recovers and decides
+  what the launch runs: Automatic or `--update-now` installs, Notify
+  checks, Off runs nothing. The run starts on the first frame
+  (`portUpdateFrame`, called from `boss.c`'s main loop beside
+  `portStateFrame`, on the game thread in menus and missions) on a thread of its own, so the
+  window and the legal screen are up while it works, and the crash-report
+  test modes, which exit before the first frame, never reach the network.
+  The run reports its phase and the bytes received, and stops before
+  anything moves when it is cancelled (`PortUpdateEnv`'s `progress` and
+  `cancelled`); once the swap starts it is not cancelled. A run that
+  `GE_FRAMES` limits (the audits and smoke runs) or that has `GE_NOUPDATE`
+  set never runs at launch, unless a `GE_UPDATE_TEST` build is pointed at a
+  local fixture.
 - **Indicator (Automatic, check due).** It is drawn on the legal screen
-  (`port/src/port_startup.c`), which every input already reaches and which
-  draws text in the game's fonts. Lines: "Checking for updates...", then
-  "Downloading build 452 - 12.4 of 24.1 MB", then "Installing...
-  restarting". Below them: "<control> to skip", naming the current input's
-  control (Esc, a click, B, a tap). Skip boots the installed build and counts
-  as a finished check. A launch with no check due shows nothing.
+  (`port/src/port_startup.c`, in the gap above the music credits), which
+  holds while the launch's install runs (`portUpdateLegalHold`, in
+  `front.c`'s legal-screen tick). Lines: "Checking for updates...", then
+  "Downloading build 452 - 12.4 MB", then "Installing build 452 -
+  restarting". The package's total size is not shown: the build-info files
+  are written before the packages exist, so nothing the check reads gives
+  it. Below them: "Press Esc or click to skip" for the keyboard and mouse,
+  "Press any button to skip" for a controller (player 1's last device,
+  `portInputP1PromptDevice`); Esc, a click and every pad button arrive as
+  player 1's buttons on that screen. Skip cancels the run and counts as a
+  finished check; it is refused once the install has begun. A launch with
+  no check due shows nothing, and a run the legal screen never holds (a
+  harness that boots into a stage) finishes in the background. The web
+  build has no updater, so touch needs no skip.
 - **Notification (Notify).** The check runs in the background at launch.
-  When it finds a build, a dim line appears beside the file-select build
-  stamp: "Build 452 is available - System > Updates". It never appears in a
-  mission.
+  When it finds a build, a dim line appears under the file-select build
+  stamp: "Build 452 is out - System > Updates". It shows in Automatic too
+  when a found build was not installed (skipped or failed), never in Off,
+  and never in a mission.
 - **Menu.** Gameplay > Iron Sights > System > **Updates**, in both the
   Options folder (`src/game/front.c`) and the watch
-  (`port/src/port_watchpages.c`):
+  (`port/src/port_watchpages.c`), drawn from one `PortDownloadPage`
+  (`portUpdatesPage`):
   - **Updates**: Off / Notify / Automatic (`[updates] mode=`).
-  - **Check for updates**: checks now, ignoring the throttle.
-  - A status line: "Up to date (build 446)", "Build 452 available",
-    "Last check failed: No connection", or "This copy cannot update itself".
-  - **Install build 452**: shown when one is found. It uses the indicator's
-    screen, then restarts.
-  - **What's new**: opens the new build's release page.
+  - Six lines saying what the modes do, then a status line: "Checking for
+    updates...", "Downloading: 12.4 MB", "Installing build 452...", "Build
+    452 is available.", "Build 452 is out (read-only)." (a folder it cannot
+    write), "Up to date (build 446).", "Last check failed." (the reason is
+    in the log; the transport's are too long for the watch), "Not checked
+    yet." or "This copy cannot update.".
+  - The first button follows the state: **Check for Updates** (ignores the
+    throttle), **Cancel** while a run checks or downloads, **Install Build
+    452** once one is found, and **Open Release Page** where this copy
+    cannot install it. The install shows its progress on the status line
+    and then restarts.
+  - **What's New** opens the newest build's release page (the latest
+    release when none is newer) in the browser; the folder asks first with
+    its Yes/No window.
+  - The watch is open in a mission, so its first button checks or cancels
+    and never installs, and What's New asks twice, as Remove does. A build
+    that finishes installing in a mission waits for the next start.
   All of these are ordinary rows and actions, which every supported input
   can already confirm, cancel and adjust.
 
 ### Settings
 
 `[updates] mode=off|notify|automatic`, `automatic` by default (decision 4)
-from UPD-003. In UPD-002 the updater reads the key from `midas.ini` itself
-(`portUpdateModeFromIni`) and defaults to `off` (`PORT_UPDATE_DEFAULT_MODE`):
-without the indicator, an automatic update would hold the launch with
-nothing on screen. `notify` does not check until UPD-003 gives it its line.
-UPD-003 makes the key an option row, with its help line in
-`port/src/port_option_help.c`, and flips the default.
-`tools/midas_ini_help.txt` documents it from UPD-002. `settings_placement.py`
-must pass.
+from UPD-003. In UPD-002 the updater read the key from `midas.ini` itself
+(`portUpdateModeFromIni`) and defaulted to `off` (`PORT_UPDATE_DEFAULT_MODE`):
+without the indicator, an automatic update would have held the launch with
+nothing on screen. UPD-003 made the key the option row `mode`
+(`port_options.c`, section `[updates]`, bridged to `port_update_ui.c` like
+Crash Reporting's), with its help line in `port/src/port_option_help.c`, and
+flipped the default. `video.c` loads it section-aware after the options'
+defaults are captured and no longer calls it an unknown control.
+`tools/midas_ini_help.txt` documents it. `settings_placement.py` passes.
 
 ### Where the code goes
 
@@ -272,8 +309,13 @@ all under `port/src/`:
   never a comparison build, and leaves them out elsewhere. `GE_UPDATER` is
   defined only for `main.c` and `port_startup.c`, which hold the hooks. The
   ROM-free harness compiles all but the startup and HTTP files.
-- UPD-003 adds the rows in `front.c` and `port_watchpages.c`, and the
-  indicator and file-select lines in `port_startup.c`.
+- UPD-003 added `port_update_ui.c` (the option, the worker, the screens'
+  text and the page) and `port_update_app.h` (the glue it shares with
+  `port_update_startup.c`), the rows in `front.c` and `port_watchpages.c`,
+  the hold in `front.c`'s legal screen, the indicator and file-select lines
+  in `port_startup.c`, the option hook in `port_options.c`, the option's load in
+  `video.c`, and the frame hook in `boss.c`. `GE_UPDATER` is defined for
+  those files too.
 - The game defines its own `isdigit` (`src/str.c`), and its include folders
   shadow `<limits.h>` and `<string.h>`; the latter declares no `strncmp`,
   `strcpy` or `strcat`. The updater uses none of these, so the Windows link
@@ -356,5 +398,5 @@ Options > Gameplay > Iron Sights > System > Updates"), and [releases.md](release
 |---|---|---|
 | UPD-001 | Done (2026-11-28) | On `main` as 0f82e0d; every CI job passed, including `test_distribution.py` (36 tests) and both Linux jobs' `test_sentry_linux.py`, which ran `package_identity.check` on the built tarballs, Steam Deck ZIPs and extracted AppImages; release `build-453.1-0f82e0da71ea` is the first with `package.txt`. `package_identity.py` writes `package.txt` and checks each package (FORK-095). Locally: `test_distribution.py`'s five new tests pass on Windows and in the x86_64 release image, and the zips packaged from `build_win` and `build_win64` (21 files each) pass `package_identity.check`. |
 | UPD-002 | Done (2026-11-28) | On `main` as 87c8d4a, with fixes a63b6fe and db85471 after CI caught a file missing from CMake's updater list, a buffer GCC 13 flagged, and two undeclared wide-string calls in the MinGW tree. Every CI job passed on db85471 (`test_update.sh` at both widths, the three gate trees, the narrowing and prototype checks, the macOS job, the packaged Windows and Linux builds), and release `build-457.1-db85471e61ea` is the first with the updater, off by default. The updater (FORK-095) with no screens yet: it runs only with `[updates] mode=automatic` or `--update-now`, and the default is `off` until UPD-003. No strict-tier file changed (libcurl already followed redirects). Locally: `test_update.sh` passes at 64 bits (x86_64 release image) and 32 bits (`midas-lp64-i686-video`); `update_e2e.py` passes all eleven checks on a 32-bit Windows `GE_UPDATE_TEST` build; `build_win`, `build_win64` and the test tree build and link; `lp64_diagnostics.py gate` compiles a 64-bit Linux video tree, 402 files with 0 failures; narrowing finds none; `unprototyped --check` passes; `lp64_casts.py` and `lp64_overlays.py check --no-defects` pass; `test_linux_launcher.py` passes. A MinGW x64 gate tree in this container lacked SDL headers for 11 renderer and input files (none of them the updater's), so CI's tree is the check there. A 64-bit Linux video link and the Linux packages are first built by CI. |
-| UPD-003 | Not started | Ready to start. |
+| UPD-003 | Built; waiting on CI | The Updates page in both menus, the legal-screen indicator with its skip, the file-select notice, the launch's run on a worker thread from the first frame, and Automatic as the default (FORK-095). Deviations from the design above: no total size in the indicator (nothing the check reads gives it), the folder's install shows its progress on the page's status line rather than the legal screen, the watch never installs (it is open in a mission), and the status line leaves out a failure's reason. Locally: `test_update.sh` passes at both widths with check-only and cancel cases; `update_e2e.py` passes 18 checks (Automatic held the legal screen, installed, restarted and confirmed; Notify found the build and installed nothing); captures of the legal-screen indicator and the folder's Updates page were reviewed; the watch's page was not captured, and Skip, Cancel, Install and What's New were not pressed in a run. `build_win`, `build_win64` and the test tree build; the 64-bit gate compiles 403 files with 0 failures; Dam's late loads match the build before. |
 | UPD-004 | Not started | Needs UPD-003. |

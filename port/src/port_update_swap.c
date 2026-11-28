@@ -50,15 +50,22 @@ void portUpdateStateRead(const char *path, struct PortUpdateState *state)
     if (portUpdateKeyValue(text, "last_check", value, sizeof(value))) state->last_check = strtoll(value, NULL, 10);
     if (portUpdateKeyValue(text, "newest", value, sizeof(value))) state->newest = strtol(value, NULL, 10);
     if (portUpdateKeyValue(text, "bad_build", value, sizeof(value))) state->bad_build = strtol(value, NULL, 10);
+    if (portUpdateKeyValue(text, "outcome", value, sizeof(value))) state->outcome = (int) strtol(value, NULL, 10);
+    if (!portUpdateKeyValue(text, "newest_tag", state->newest_tag, sizeof(state->newest_tag)) ||
+        !portUpdateTagValid(state->newest_tag)) {
+        state->newest_tag[0] = '\0';
+    }
     portUpdateKeyValue(text, "result", state->result, sizeof(state->result));
     free(text);
 }
 
 int portUpdateStateWrite(const char *path, const struct PortUpdateState *state)
 {
-    char text[512];
-    const int n = snprintf(text, sizeof(text), "last_check=%lld\nnewest=%ld\nbad_build=%ld\nresult=%s\n",
-                           state->last_check, state->newest, state->bad_build, state->result);
+    char text[640];
+    const int n = snprintf(text, sizeof(text),
+                           "last_check=%lld\nnewest=%ld\nnewest_tag=%s\nbad_build=%ld\noutcome=%d\nresult=%s\n",
+                           state->last_check, state->newest, state->newest_tag, state->bad_build, state->outcome,
+                           state->result);
 
     return n > 0 && (size_t) n < sizeof(text) && portUpdateMakeParents(path) &&
            portUpdateWriteFile(path, text, (size_t) n);

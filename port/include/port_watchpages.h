@@ -53,8 +53,10 @@ enum PortWatchPage {
                                  * tab's pages, which options.c tells apart by number */
     PORTWATCH_IS_HDTEX,         /* FORK-053: HD Textures, under System */
     PORTWATCH_IS_CUSTOMTEX,     /* FORK-053: Custom Texture Packs (help), under System */
-    PORTWATCH_IS_GRAPHICS,      /* FORK-082: Graphics; last of the Iron Sights pages so the
-                                 * numbers before it (capture recipes) stay put */
+    PORTWATCH_IS_GRAPHICS,      /* FORK-082: Graphics; the numbers before it (capture
+                                 * recipes) stay put */
+    PORTWATCH_IS_UPDATES,       /* FORK-095: Updates, under System; empty where the updater
+                                 * is not built. Last of the Iron Sights pages */
     PORTWATCH_CONTROLLER,       /* the Control Options tab */
     PORTWATCH_CONTROLLER_MORE,  /* the device's own page: mouse and keyboard, or controller */
     PORTWATCH_CTLGENERAL,       /* general control options */

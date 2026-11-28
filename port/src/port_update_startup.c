@@ -1,8 +1,9 @@
-/* The in-game updater's process glue (port_update.h): this executable's
- * paths and build, the hooks main.c and port_startup.c call, and the restart
- * into the build the files now hold. Compiled only where the updater is
- * (GE_UPDATER, CMakeLists.txt): desktop builds with video, never a
- * comparison build. */
+/* The in-game updater's process glue (port_update.h, port_update_app.h):
+ * this executable's paths and build, the hooks main.c and port_startup.c
+ * call, what the launch should run, and the restart into the build the files
+ * now hold. The run itself is port_update_ui.c's. Compiled only where the
+ * updater is (GE_UPDATER, CMakeLists.txt): desktop builds with video, never
+ * a comparison build. */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,8 +20,8 @@
 
 #include "port_buildinfo.h"
 #include "port_console.h"
-#include "port_modal.h"
 #include "port_update.h"
+#include "port_update_app.h"
 #include "port_update_files.h"
 
 extern const char *portRootPath(const char *name);
@@ -30,13 +31,16 @@ static char sAppImage[PORT_UPDATE_PATH];
 static char sDownloads[256];
 static struct PortUpdateEnv sEnv;
 static int sReady;
+static int sArgc;
+static char **sArgv;
+static int sLaunch, sLaunchForce;
 
 #define LOG_LIMIT (64 * 1024)
 
 /* A line in the run's log and in Data/Updates/log.txt, which keeps the
  * updater's lines across the restart (the restarted game starts its own
  * ge_direct.log). At LOG_LIMIT the file moves to log.old.txt. */
-static void note(const char *fmt, ...)
+void portUpdateAppNote(const char *fmt, ...)
 {
     char line[512], path[PORT_UPDATE_PATH], old[PORT_UPDATE_PATH];
     struct stat st;
@@ -109,7 +113,7 @@ static void testOverrides(void)
 #endif
 }
 
-static const struct PortUpdateEnv *environment(void)
+const struct PortUpdateEnv *portUpdateAppEnv(void)
 {
     const char *appimage = getenv("APPIMAGE");
 
@@ -140,9 +144,7 @@ static const struct PortUpdateEnv *environment(void)
     return &sEnv;
 }
 
-/* Starts the build the files now hold with this run's arguments, then
- * ends this one. Returns only when that is impossible. */
-static void restart(int argc, char **argv)
+void portUpdateAppRestart(void)
 {
 #ifdef _WIN32
     STARTUPINFOW startup;
@@ -152,8 +154,6 @@ static void restart(int argc, char **argv)
      * string.h shadows the C library's wide-string functions. */
     wchar_t *copy = malloc(((size_t) lstrlenW(line) + 1) * sizeof(wchar_t));
 
-    (void) argc;
-    (void) argv;
     memset(&startup, 0, sizeof(startup));
     startup.cb = sizeof(startup);
     portUpdateUnlock();
@@ -162,27 +162,28 @@ static void restart(int argc, char **argv)
         if (CreateProcessW(NULL, copy, NULL, NULL, FALSE, 0, NULL, NULL, &startup, &process)) {
             CloseHandle(process.hThread);
             CloseHandle(process.hProcess);
-            note("restarted into the installed build");
+            portUpdateAppNote("restarted into the installed build");
             exit(0);
         }
     }
-    note("cannot restart (error %lu); open Iron Sights again", (unsigned long) GetLastError());
+    portUpdateAppNote("cannot restart (error %lu); open Iron Sights again", (unsigned long) GetLastError());
     exit(1);
 #else
     char *path = sEnv.appimage != NULL ? sAppImage : sExePath;
-    char **args = calloc((size_t) argc + 1, sizeof(char *));
+    char **args = calloc((size_t) sArgc + 1, sizeof(char *));
     int i;
 
     portUpdateUnlock();
+    portUpdateAppNote("restarting into the installed build");
     fflush(NULL);
     if (args != NULL) {
         args[0] = path;
-        for (i = 1; i < argc; i++) {
-            args[i] = argv[i];
+        for (i = 1; i < sArgc; i++) {
+            args[i] = sArgv[i];
         }
         execv(path, args);
     }
-    note("cannot restart %s; open Iron Sights again", path);
+    portUpdateAppNote("cannot restart %s; open Iron Sights again", path);
     exit(1);
 #endif
 }
@@ -199,7 +200,7 @@ static int wantsUpdateNow(int argc, char **argv)
     return 0;
 }
 
-static int iniMode(void)
+int portUpdateAppIniMode(void)
 {
     size_t size;
     char *ini = portUpdateReadFile(portRootPath("midas.ini"), 1u << 20, &size);
@@ -209,42 +210,53 @@ static int iniMode(void)
     return mode;
 }
 
-static const char *const kResultNames[] = {
-    "not eligible", "not due", "up to date", "failed", "installed",
-};
+/* An automated run (GE_FRAMES limits it, as the audits and smoke runs do)
+ * never checks, unless a test build is pointed at a local fixture; neither
+ * does any run with GE_NOUPDATE set. */
+static int automated(void)
+{
+    if (getenv("GE_NOUPDATE") != NULL) {
+        return 1;
+    }
+#ifdef GE_UPDATE_TEST
+    if (getenv("GE_UPDATE_TEST_DOWNLOADS") != NULL) {
+        return 0;
+    }
+#endif
+    return getenv("GE_FRAMES") != NULL;
+}
+
+int portUpdateAppLaunch(int *force)
+{
+    *force = sLaunchForce;
+    return sLaunch;
+}
 
 void portUpdateStartup(int argc, char **argv)
 {
-    const struct PortUpdateEnv *env = environment();
+    const struct PortUpdateEnv *env = portUpdateAppEnv();
     char msg[256];
-    int mode, force, result;
+    int mode;
 
+    sArgc = argc;
+    sArgv = argv;
     if (env == NULL) {
-        note("cannot find this executable; updates off");
+        portUpdateAppNote("cannot find this executable; updates off");
         return;
     }
     if (portUpdateRecover(env, msg, sizeof(msg))) {
-        note("%s; restarting", msg);
-        restart(argc, argv);
+        portUpdateAppNote("%s; restarting", msg);
+        portUpdateAppRestart();
     } else if (msg[0] != '\0') {
-        note("%s", msg);
+        portUpdateAppNote("%s", msg);
     }
-    mode = iniMode();
-    force = wantsUpdateNow(argc, argv);
-    if (mode == PORT_UPDATE_NOTIFY && !force) {
-        note("notify mode needs the menus (UPD-003); not checking");
+    mode = portUpdateAppIniMode();
+    sLaunchForce = wantsUpdateNow(argc, argv);
+    if (automated() && !sLaunchForce) {
         return;
     }
-    if (mode != PORT_UPDATE_AUTOMATIC && !force) {
-        return;
-    }
-    portModalBegin();  /* the download may outlast the stall watchdog's grace */
-    result = portUpdateRun(env, force, msg, sizeof(msg));
-    portModalEnd();
-    note("%s (%s)", kResultNames[result], msg);
-    if (result == PORT_UPDATE_INSTALLED) {
-        restart(argc, argv);
-    }
+    sLaunch = sLaunchForce || mode == PORT_UPDATE_AUTOMATIC ? PORT_UPDATE_LAUNCH_INSTALL
+            : mode == PORT_UPDATE_NOTIFY ? PORT_UPDATE_LAUNCH_CHECK : PORT_UPDATE_LAUNCH_NONE;
 }
 
 void portUpdateLegalScreen(void)
@@ -257,8 +269,8 @@ void portUpdateLegalScreen(void)
         return;
     }
     done = 1;
-    env = environment();
+    env = portUpdateAppEnv();
     if (env != NULL && (build = portUpdateConfirm(env)) != 0) {
-        note("build %ld reached the legal screen; the previous build's files are removed", build);
+        portUpdateAppNote("build %ld reached the legal screen; the previous build's files are removed", build);
     }
 }

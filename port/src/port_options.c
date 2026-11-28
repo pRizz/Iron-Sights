@@ -33,6 +33,9 @@
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
 #include "port_crash.h"
 #endif
+#ifdef GE_UPDATER
+#include "port_update_ui.h"
+#endif
 
 /* strong on the owning side, weak no-op in libultra_shim.c */
 extern s32 portVideoOptionGet(const char *key, s32 *out);
@@ -231,6 +234,13 @@ static const char *const sStickSensIni[] = {
     "2.5", "2.6", "2.7", "2.8", "2.9", "3.0"
 };
 
+
+#ifdef GE_UPDATER
+/* FORK-095 UPD-003: [updates] mode= (port_update_ui.c) */
+static const s32 sUpdateModeVals[] = { 0, 1, 2 };
+static const char *const sUpdateModeText[] = { "Off\n", "Notify\n", "Automatic\n" };
+static const char *const sUpdateModeIni[]  = { "off", "notify", "automatic" };
+#endif
 
 #define TOGGLE(key, sec, label, cat)                 { key, sec, label, cat, KIND_TOGGLE, 0, 1, 1, "", 0, NULL, NULL, NULL }
 /* a toggle with its own words for off / on (valueText[0], [1]); still a toggle, so on still reads red */
@@ -490,6 +500,10 @@ static const struct PortOpt sOpts[] = {
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     TOGGLE("crash_reporting", "[diagnostics]", "Crash Reporting\n", PORTOPT_CAT_GAMEPLAY),
 #endif
+#ifdef GE_UPDATER
+    /* FORK-095: whether the game checks GitHub for builds (Iron Sights > System > Updates) */
+    ENUMR ("mode", "[updates]", "Updates\n", PORTOPT_CAT_GAMEPLAY, sUpdateModeVals, sUpdateModeText, sUpdateModeIni),
+#endif
 };
 
 #define PORTOPT_COUNT ((s32)(sizeof(sOpts) / sizeof(sOpts[0])))
@@ -506,6 +520,9 @@ static s32 optGet(const char *key, s32 *out)
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     if (portCrashOptionGet(key, out)) return 1;
 #endif
+#ifdef GE_UPDATER
+    if (portUpdateOptionGet(key, out)) return 1;
+#endif
     return portVideoOptionGet(key, out) || portInputOptionGet(key, out) || portJoyPortOptionGet(key, out);
 }
 
@@ -515,6 +532,9 @@ static s32 optSet(const char *key, s32 v)
 {
 #if defined(_WIN32) || defined(MIDAS_LINUX_CRASH)
     if (portCrashOptionSet(key, v)) return 1;
+#endif
+#ifdef GE_UPDATER
+    if (portUpdateOptionSet(key, v)) return 1;
 #endif
     if (portVideoOptionSet(key, v) || portInputOptionSet(key, v) || portJoyPortOptionSet(key, v))
     {

@@ -123,7 +123,8 @@ def make(root):
     release(root, "wrongflavor", windows=zip_bytes(files_of("new", "windows-x64-zip")))
     saves = files_of("new", "windows-x86-zip", {"Data/Saves/eeprom.bin": b"a package must not replace saves"})
     release(root, "saves", windows=zip_bytes(saves))
-    for name in ("zip-install", "zip-rollback", "zip-failmid", "zip-throttle", "zip-bad", "zip-interrupted"):
+    for name in ("zip-install", "zip-rollback", "zip-failmid", "zip-throttle", "zip-bad", "zip-interrupted",
+                 "zip-checkonly", "zip-cancel"):
         install(root, name, "windows-x86-zip")
     install(root, "tar-install", "linux-x86_64-tar")
     install(root, "appimage-install", "linux-x86_64-appimage")

@@ -35,10 +35,11 @@ new areas. Status describes implementation state, not Git publication state.
 **Status:** UPD-001 (package identity) is done on `main` (0f82e0d, every CI
 job passed; release `build-453.1-0f82e0da71ea` is the first with
 `package.txt`). UPD-002 (the updater core) is done on `main` (87c8d4a, fixed in a63b6fe and db85471; every CI job passed on db85471, and release `build-457.1-db85471e61ea` is the first with it): a
-release package updates itself only when its `midas.ini` sets
-`[updates] mode=automatic` or it is launched with `--update-now`, since the
-default stays `off` until UPD-003 adds the screens. UPD-003 and UPD-004 are
-not started. The plan
+release package updated itself only when its `midas.ini` set
+`[updates] mode=automatic` or it was launched with `--update-now`. UPD-003
+(the screens) is built locally and not yet pushed: the Updates page in both
+menus, the legal screen's indicator, the file-select notice, and Automatic
+as the default. UPD-004 is not started. The plan
 was drafted on 2026-11-27 and the owner accepted it
 the same day with five decisions. Every CI release counts as an update, with
 checks at most twice a day. Automatic mode holds the launch with an indicator
@@ -127,6 +128,64 @@ only on `port_update_startup.c`). The game's own `isdigit` (`src/str.c`) and
 `string.h` (no `strncmp`, `strcpy` or `strcat`) shadow the C library's, so
 the updater uses neither.
 
+**UPD-003: settings and screens.** `[updates] mode` is now the option row
+`mode` (`port_options.c`, section `[updates]`, labelled **Updates**: Off /
+Notify / Automatic), bridged to `port/src/port_update_ui.c` like Crash
+Reporting's, and **Automatic is the default** (`PORT_UPDATE_DEFAULT_MODE`).
+`video.c` loads the row section-aware after the options' defaults are
+captured and no longer logs `mode` as an unknown control. The launch's run
+no longer blocks `main`: `portUpdateStartup` recovers and decides what the
+launch runs (Automatic or `--update-now` installs, Notify checks), and
+`portUpdateFrame`, called once a game frame from `boss.c`'s main loop beside
+`portStateFrame`, starts it on the first frame on a worker thread and
+collects it. (`videoStartFrame` was the first choice, but with the render
+thread on, the default at 120 Hz, the sim thread never calls it.) A run
+`GE_FRAMES` limits, or one with `GE_NOUPDATE` set, never runs at launch, so
+the audits and CI's smoke runs of CI-built packages stay offline; a
+`GE_UPDATE_TEST` build pointed at a local fixture still does. The core
+gained `check_only`, progress and cancel callbacks (`PortUpdateEnv`),
+`portUpdateEligible`, two results (`PORT_UPDATE_AVAILABLE`,
+`PORT_UPDATE_CANCELLED`), and `newest_tag` and `outcome` in
+`Data/Updates/state.txt`; a cancel stops the run before anything moves, and
+the swap is never cancelled half way. While the launch's Automatic run
+works, the legal screen holds (`portUpdateLegalHold` in `front.c`'s
+legal-screen tick) and `port_startup.c` draws two lines in the gap above the
+music credits: "Checking for updates...", "Downloading build N - X MB" or
+"Installing build N - restarting", and "Press Esc or click to skip" (or
+"Press any button to skip" when player 1 last used a controller). Esc, a
+click and every pad button reach that screen as player 1's buttons; a skip
+cancels the run, counts as a finished check, and is refused once the swap
+has begun. The total size is not shown because no file the check reads
+gives it. After an install in the front end the game restarts; one that
+finishes in a mission waits for the next start. In Notify (and in Automatic
+when a found build was not installed) the file select's build stamp gains
+"Build N is out - System > Updates". Gameplay > Iron Sights > System >
+**Updates** in the Options folder and on the watch (`PORT_SHEET_IS_UPDATES`,
+`PORTWATCH_IS_UPDATES`, `GE_MENU=zupdates`) shows the mode row, six lines on
+what the modes do, a status line ("Up to date (build N).", "Build N is
+available.", "Last check failed.", "Downloading: X MB" and the like), a
+first button that follows the state (Check for Updates, Cancel, Install
+Build N, or Open Release Page where this copy cannot install), and What's
+New, which opens the newest build's release page after the folder's Yes/No
+window. Both menus draw it from one `PortDownloadPage` (`portUpdatesPage`).
+The watch is open in a mission, so its first button checks or cancels and
+never installs, and its What's New asks twice, as Remove does. The page's
+files (the state, `package.txt`, a write probe of the program folder) are
+read on the first frame, not when a menu opens. The status line leaves out
+the failure's reason, which is in `Data/Updates/log.txt`: the transport's
+reasons are too long for the watch's 29 characters. Help lines are in
+`port_option_help.c`, and `tools/midas_ini_help.txt` documents the modes,
+the skip, `GE_NOUPDATE` and `GE_FRAMES`. Sources:
+[`port_update_ui.h`](port/include/port_update_ui.h), `port_update_ui.c`,
+`port_update_app.h` (the glue `port_update_startup.c` now exports), and the
+hooks in `boss.c`, `front.c`, `port_watchpages.c`, `port_watchpages.h`,
+`port_options.c`, `port_startup.c`, `video.c` and `port_download_page.h`;
+`GE_UPDATER` is defined for those files too. Inputs: every row and button is
+an ordinary option or action, which keyboard, mouse and gamepad already
+confirm, adjust and back out of; the legal screen's skip takes each of
+them. The web build has no updater, so browser touch has none of these
+screens.
+
 **Why it differs from upstream.** Upstream has no updater. This fork
 publishes a release on every push to `main`, and updating by hand means
 replacing program files while keeping `Data` and `midas.ini`
@@ -188,6 +247,40 @@ updater call, and `build_win` and `build_win64` rebuild. No benchmark or late-lo
 per frame, and the stage loads are unchanged. The work happens at boot
 before the window opens; the legal screen's first frame does one journal
 read, plus about twenty deletes on the start after an install.
+
+UPD-003, locally: `test_update.sh` passes at 32 and 64 bits in
+`midas-lp64-i686-video`, with two new cases: a check-only run reports the
+build and its tag without moving a file and reports only the checking phase,
+a full run reports checking, downloading and installing in order, and a run
+cancelled while checking or while downloading moves nothing, counts as a
+check, and installs on the next try. `update_e2e.py` now runs two cases on a
+32-bit Windows `GE_UPDATE_TEST` build with the local ROM, both passing
+(18 checks): Automatic, with `--slow 6` stretching the package over six
+seconds, held the legal screen with "Downloading build 200 - 7.5 MB" and
+"Press Esc or click to skip" (screenshot reviewed), installed, restarted
+and confirmed about nine seconds after launch; Notify found build 200 at
+launch, recorded it with its tag, installed nothing and did not restart. A
+capture of `GE_MENU=zupdates` from that Notify install showed the Updates
+page with the mode row reading Notify, the six lines, "Build 200 is
+available." and the Install Build 200 and What's New buttons. The watch's
+page was not captured (the `GE_JOYPORT_AUTO` press did not open the watch
+in that run), and the skip, Cancel, Install from the folder and What's New
+were not pressed in a run. The first end-to-end attempt found the per-frame
+hook in `videoStartFrame` never ran with the render thread on, which moved
+it to `boss.c`. `build_win` and the test tree build and link.
+`lp64_diagnostics.py gate` compiles a 64-bit Linux video tree in the
+`goldeneye` image (403 files, 0 failures), `narrowing --check` finds none,
+`unprototyped --check` passes, and `lp64_casts.py check` and
+`lp64_overlays.py check --no-defects` pass. `settings_placement.py` passes.
+`late_load_audit.py --stage dam --keep` with the build of b796f65 (the
+commit before, through `stock.py --ref HEAD --name before`) and with this
+one, then `--compare`: the same 1,545 late events by kind and name. Both
+builds have frames over the audit's 4 ms budget in Dam (5 before, 4 after,
+the HD pack's uploads at tick 544), so those predate UPD-003; the updater
+does not run in a `GE_FRAMES` run or a local build. No benchmark was run:
+the only per-frame work in play is one call that reads a few counters and
+atomics, and the indicator and notice draw only on the legal and
+file-select screens.
 
 ### FORK-094 — Native Windows x64 build
 
