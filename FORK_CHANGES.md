@@ -178,9 +178,13 @@ CI. CI's first run on 87c8d4a failed two jobs. GCC 13 at 64 bits
 flagged a 16-byte buffer for a `long` (`port_update_swap.c`; the local GCC
 11 image had not). And `port_update_swap.c` was missing from CMake's updater
 list, so the macOS headless build, which has no updater, kept it and left 17
-references undefined. Both were fixed in the next commit; `test_update.sh`
-then passed at both widths under GCC 13, and a 64-bit Linux headless tree
-linked. No benchmark or late-load audit was run: nothing is drawn or computed
+references undefined. Both were fixed in a63b6fe. Its CI run then passed
+every gate tree (gate, gate-video and gate-mingw compiled with 0 failures),
+`test_update.sh` at both widths and the macOS job, but `unprototyped
+--check` found `wcslen` and `wcscpy` undeclared in the MinGW tree's
+`port_update_startup.c` (the game's `string.h` again). The restart now uses
+`lstrlenW` and `lstrcpyW` from `windows.h`; a local MinGW x64 tree lists no
+updater call, and `build_win` and `build_win64` rebuild. No benchmark or late-load audit was run: nothing is drawn or computed
 per frame, and the stage loads are unchanged. The work happens at boot
 before the window opens; the legal screen's first frame does one journal
 read, plus about twenty deletes on the start after an install.

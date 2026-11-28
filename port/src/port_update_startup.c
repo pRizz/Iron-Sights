@@ -148,7 +148,9 @@ static void restart(int argc, char **argv)
     STARTUPINFOW startup;
     PROCESS_INFORMATION process;
     const wchar_t *line = GetCommandLineW();
-    wchar_t *copy = (wchar_t *) malloc((wcslen(line) + 1) * sizeof(wchar_t));
+    /* lstrlenW and lstrcpyW: windows.h declares them, while the game's
+     * string.h shadows the C library's wide-string functions. */
+    wchar_t *copy = malloc(((size_t) lstrlenW(line) + 1) * sizeof(wchar_t));
 
     (void) argc;
     (void) argv;
@@ -156,7 +158,7 @@ static void restart(int argc, char **argv)
     startup.cb = sizeof(startup);
     portUpdateUnlock();
     if (copy != NULL) {
-        wcscpy(copy, line);
+        lstrcpyW(copy, line);
         if (CreateProcessW(NULL, copy, NULL, NULL, FALSE, 0, NULL, NULL, &startup, &process)) {
             CloseHandle(process.hThread);
             CloseHandle(process.hProcess);
