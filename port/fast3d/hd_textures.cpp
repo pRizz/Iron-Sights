@@ -249,7 +249,7 @@ std::string signature() {
         out += '|';
         if (it->is_regular_file(e)) out += std::to_string(it->file_size(e));
         out += '|';
-        out += std::to_string(it->last_write_time(e).time_since_epoch().count());
+        out += std::to_string(static_cast<long long>(it->last_write_time(e).time_since_epoch().count()));
         out += '\n';
     }
     return out;

@@ -1639,6 +1639,21 @@ MAC-001 Task 1 each task's paragraph above names what ran for it. The
 pre-commit hook's standards and settings placement checks ran on each
 commit.
 
+**MAC-002's strict-tier half, on `macos/strict`.** This paragraph is the
+branch's own record and exists only on it until the owner's laptop
+regenerates the gallery and lands the branch; "MAC-002 as built" above
+has each task's whole account and what ran. One line a commit: the file,
+the change, and whether any build but macOS compiles it. The Mac's hook
+passes these commits because `midas.galleryDefer` is set and the branch is
+not `main`; `review/hand-gallery` is stale on the branch and is not
+touched on the Mac.
+
+- *Task 1, "Give libc++'s file time to to_string as a long long".*
+  `port/fast3d/hd_textures.cpp:252`: `static_cast<long long>` on the file
+  time's count. Every build compiles it; it is the value's own type on
+  Windows and Linux, and `compare_win32.py commits main WORKTREE` with it
+  said `identical in loaded code and data; .buildid differs`.
+
 ### FORK-092 — Linux weapon icons, icon cache and save transfer dialogs
 
 **Status:** Implemented on 2026-11-25 at the owner's request, during LP64-007
