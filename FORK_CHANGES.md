@@ -36,9 +36,11 @@ new areas. Status describes implementation state, not Git publication state.
 passed); WIN64-002 (plays and matches) is done on `main` (1f3ea6f, CI
 passed); WIN64-003 (crash reporting and tooling) is done on `main`
 (7ca2347, CI passed, its `sentry-sdk` job building the x64 runtime);
-WIN64-004 (package, release and hand-over) published the first x64 zip
-(release `build-442.1-9352f2162b26`, from 9352f21, every CI job passed);
-the owner's play session and Sentry check remain. No x64 zip is released yet. The plan was drafted on
+WIN64-004 (package, release and hand-over) is done: the first x64 zip was
+published in release `build-442.1-9352f2162b26` (9352f21), and every push
+since publishes one beside the x86 zip; the owner closed the milestone
+after their session, leaving its gamepad, windowed and HDR-on parts
+untested. The Windows x64 plan is done. No x64 zip is released yet. The plan was drafted on
 2026-11-27 at the owner's request and accepted the same day with all five
 recommendations; [WIN64-001's plan](scripts/port/windows_x64_win64_001.md)
 and [WIN64-002's](scripts/port/windows_x64_win64_002.md) were accepted under
@@ -398,7 +400,10 @@ of scope" call now notes that the owner lifted it for this plan.
     The log's late loads are HD texture uploads from the owner's pack and
     the front end's, kinds the late-load audit found alike at both widths.
     Not covered by the log: a gamepad (none was used: "no pad pressed
-    anything during the intro"), a switch to windowed, and HDR on. The local package and
+    anything during the intro"), a switch to windowed, and HDR on. The
+    owner closed WIN64-004 without them ("Skip them, close it"), so those
+    three stay untested on the x64 build. CI on 0e6b432 passed every job
+    and published `build-446.1-0e6b43252098` with the raised pool. The local package and
   its extracted copy were deleted.
 
 **Why it differs from upstream.** The inherited baseline builds Windows only
