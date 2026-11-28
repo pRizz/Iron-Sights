@@ -30,6 +30,36 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
+### FORK-095 — In-game update plan
+
+**Status:** Plan only, proposed on 2026-11-27. Nothing is built. The owner
+decided three of its points the same day: every CI release counts as an
+update, with checks at most twice a day; Automatic mode holds the launch
+with an indicator while it downloads and installs, then restarts into the new
+build; and there is no manifest signing yet. Two decisions wait on the owner:
+the default mode with a first-launch consent question, and the held launch's
+time limits.
+
+**What it is.** [The in-game update plan](scripts/port/self_update_plan.md)
+proposes an **Updates: Off / Notify / Automatic** setting under Iron Sights >
+System in both menus. Desktop packages would find newer GitHub releases
+through each flavor's existing `build-info.json` asset and check the package
+against its `SHA256SUMS` file. They would replace only the allowlisted program
+files, with a rename-first swap and a journal, and restart with the same
+arguments through FORK-034's restart helper. `Data/`, `midas.ini` and the ROM
+stay untouched. A new build that fails to reach the legal screen puts the old
+files back by itself. Local, dirty and comparison builds never update. The web
+build and macOS are out of scope. The plan has four milestones (UPD-001 to
+UPD-004) and a status table.
+
+**Why it differs from upstream.** Upstream has no updater. This fork
+publishes a release on every push to `main`, and updating by hand means
+replacing program files while keeping `Data` and `midas.ini`
+([releases.md](scripts/port/releases.md)).
+
+**Validation.** Documentation only. The standards checks ran on the change.
+No game build is needed.
+
 ### FORK-094 — Native Windows x64 build
 
 **Status:** WIN64-001 (build and boot) is done on `main` (4fde028, CI
