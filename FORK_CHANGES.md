@@ -37,7 +37,9 @@ job passed; release `build-453.1-0f82e0da71ea` is the first with
 `package.txt`). UPD-002 (the updater core) is done on `main` (87c8d4a, fixed in a63b6fe and db85471; every CI job passed on db85471, and release `build-457.1-db85471e61ea` is the first with it): a
 release package updated itself only when its `midas.ini` set
 `[updates] mode=automatic` or it was launched with `--update-now`. UPD-003
-(the screens) is built locally and not yet pushed: the Updates page in both
+(the screens) is done on `main` (334e1d1, fixed in 8441b97; every CI job
+passed on 8441b97, and release `build-463.1-8441b979f9fa` is the first with
+it): the Updates page in both
 menus, the legal screen's indicator, the file-select notice, and Automatic
 as the default. UPD-004 is not started. The plan
 was drafted on 2026-11-27 and the owner accepted it
