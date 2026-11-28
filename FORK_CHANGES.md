@@ -34,7 +34,7 @@ new areas. Status describes implementation state, not Git publication state.
 
 **Status:** UPD-001 (package identity) is done on `main` (0f82e0d, every CI
 job passed; release `build-453.1-0f82e0da71ea` is the first with
-`package.txt`). UPD-002 (the updater core) is built and waiting on CI: a
+`package.txt`). UPD-002 (the updater core) is done on `main` (87c8d4a, fixed in a63b6fe and db85471; every CI job passed on db85471, and release `build-457.1-db85471e61ea` is the first with it): a
 release package updates itself only when its `midas.ini` sets
 `[updates] mode=automatic` or it is launched with `--update-now`, since the
 default stays `off` until UPD-003 adds the screens. UPD-003 and UPD-004 are
