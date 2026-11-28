@@ -25,6 +25,9 @@
 #include "port_enhanced_fonts.h"
 #include "port_download_page.h"   /* FORK-052, FORK-053 */
 #include "port_state.h"           /* FORK-014: PORT_STATE_AVAILABLE */
+#ifdef GE_UPDATER
+#include "port_update_ui.h"       /* FORK-095 */
+#endif
 
 /* port_options.c */
 extern s32         portOptFind(const char *key);
@@ -245,6 +248,9 @@ static const struct PortWatchRowDef sIsGraphics[] = {
 };
 static const struct PortWatchRowDef sIsSystem[] = {
     { PWROW_ACTION, NULL, "About / Build Info\n", 101, 0 },
+#ifdef GE_UPDATER
+    { PWROW_SUBSCREEN, NULL, "Updates\n", PORTWATCH_IS_UPDATES, 0 },   /* FORK-095 */
+#endif
     { PWROW_OPT,       "font_style",       NULL, 0, 0 },
     { PWROW_SUBSCREEN, NULL, "Enhanced Fonts\n", PORTWATCH_IS_FONTS, 0 },
     { PWROW_OPT,       "text_antialiasing", NULL, 0, 0 },
@@ -279,6 +285,12 @@ static const struct PortWatchRowDef sIsSystem[] = {
 #define PWACT_HDTEX 112
 #define PWACT_HDTEX_REMOVE 113
 #define PWACT_CUSTOMTEX 114
+/* UPDATES (FORK-095): the folder's page, but the watch runs in a mission, so
+ * its first button checks and never installs (portUpdatesWatchAction), and
+ * What's New asks twice, as Remove does, before it opens a browser. */
+#define PWHINT_UPDATES 4000
+#define PWACT_UPDATES 115
+#define PWACT_UPDATES_NEWS 116
 static const struct PortWatchRowDef sIsFonts[] = {
     { PWROW_HINT,   NULL, NULL, PWHINT_FONTS + 0, 0 },
     { PWROW_HINT,   NULL, NULL, PWHINT_FONTS + 1, 0 },
@@ -315,11 +327,29 @@ static const struct PortWatchRowDef sIsCustomTex[] = {
     { PWROW_ACTION, NULL, NULL, PWACT_CUSTOMTEX, 0 },
     { PWROW_BACK,   NULL, "Back\n", 0, 0 },
 };
+#ifdef GE_UPDATER
+static const struct PortWatchRowDef sIsUpdates[] = {
+    { PWROW_OPT,    "mode",       NULL, 0, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_UPDATES + 0, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_UPDATES + 1, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_UPDATES + 2, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_UPDATES + 3, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_UPDATES + 4, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_UPDATES + 5, 0 },
+    { PWROW_HINT,   NULL, NULL, PWHINT_UPDATES + 6, 0 },
+    { PWROW_ACTION, NULL, NULL, PWACT_UPDATES, 0 },
+    { PWROW_ACTION, NULL, NULL, PWACT_UPDATES_NEWS, 0 },
+    { PWROW_BACK,   NULL, "Back\n", 0, 0 },
+};
+#endif
 static s32 sDlRemoveArmed;
 
 /* The download page a hint row (and its line) or an action row belongs to. */
 static const struct PortDownloadPage *hintPage(s32 arg, s32 *line)
 {
+#ifdef GE_UPDATER
+    if (arg >= PWHINT_UPDATES) { *line = arg - PWHINT_UPDATES; return &portUpdatesPage; }
+#endif
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
     if (arg >= PWHINT_CUSTOMTEX) { *line = arg - PWHINT_CUSTOMTEX; return &portCustomTexturesPage; }
 #endif
@@ -943,6 +973,9 @@ static const struct PortWatchPageDef {
     [PORTWATCH_IS_HDTEX]    = PWPAGE(sIsHdTex),
     [PORTWATCH_IS_CUSTOMTEX] = PWPAGE(sIsCustomTex),
     [PORTWATCH_IS_GRAPHICS] = PWPAGE(sIsGraphics),
+#ifdef GE_UPDATER
+    [PORTWATCH_IS_UPDATES]  = PWPAGE(sIsUpdates),   /* FORK-095 */
+#endif
     /* PORTWATCH_CONTROLLER, _MORE and _BINDS are dynamic (dynBuild): { NULL, 0 } */
     /* PORTWATCH_CTLGENERAL too (the raphnet's gadget switch) */
 #undef PWPAGE
@@ -1171,6 +1204,16 @@ static const char *rowLabelShared(s32 page, s32 row)
     {   /* the line under Input: the device's name */
         return portWatchDeviceText();
     }
+#ifdef GE_UPDATER
+    if (d->kind == PWROW_ACTION && d->arg == PWACT_UPDATES)
+    {
+        return portUpdatesWatchActionLabel();
+    }
+    if (d->kind == PWROW_ACTION && d->arg == PWACT_UPDATES_NEWS)
+    {
+        return sDlRemoveArmed ? "Open in Browser?\n" : "What's New\n";
+    }
+#endif
     if (d->kind == PWROW_ACTION && (d->arg == PWACT_FONTS_REMOVE || d->arg == PWACT_HDTEX_REMOVE) && sDlRemoveArmed)
     {
         return "Confirm Remove\n";
@@ -1337,6 +1380,7 @@ s32 portWatchParentPage(s32 page)
         case PORTWATCH_IS_FONTS:
         case PORTWATCH_IS_HDTEX:
         case PORTWATCH_IS_CUSTOMTEX:
+        case PORTWATCH_IS_UPDATES:
             return PORTWATCH_IS_SYSTEM;
         case PORTWATCH_VIDEO:
         case PORTWATCH_AUDIO:
@@ -2056,6 +2100,20 @@ s32 portWatchRowAction(s32 page, s32 row)
         extern void portStateMenuOpen(void);
         portStateMenuOpen(); return 1;
     }
+#ifdef GE_UPDATER
+    if (d->arg == PWACT_UPDATES) {
+        sDlRemoveArmed = 0;
+        portUpdatesWatchAction();
+        return 1;
+    }
+    if (d->arg == PWACT_UPDATES_NEWS) {
+        sDlRemoveArmed = !sDlRemoveArmed;
+        if (!sDlRemoveArmed) {
+            portUpdatesOpenReleasePage();
+        }
+        return 1;
+    }
+#endif
     if (d->arg == PWACT_FONTS || d->arg == PWACT_HDTEX || d->arg == PWACT_CUSTOMTEX) {
         sDlRemoveArmed = 0;
         actionPage(d->arg)->primary_action();

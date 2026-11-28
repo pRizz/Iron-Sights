@@ -12,6 +12,9 @@
 #include "port_enhanced_fonts.h"
 #include "port_hd_download.h"      /* FORK-053 */
 #include "port_download_page.h"    /* FORK-052, FORK-053 */
+#ifdef GE_UPDATER
+#include "port_update_ui.h"         /* FORK-095 */
+#endif
 #include "port_reinforcements_menu.h"   /* FORK-081 */
 #include "port_headshots_menu.h"        /* FORK-083 */
 #include "port_options.h"
@@ -1782,6 +1785,14 @@ void interface_menu00_legalscreen(void)
     }
 #endif
     g_MenuTimer += g_ClockTimer;
+#ifdef GE_UPDATER
+    /* FORK-095: an Automatic update at launch holds the screen, showing its
+     * progress (port_startup.c); a press skips it */
+    if (portUpdateLegalHold(joyGetButtonsPressedThisFrame(PLAYER_1, ANY_BUTTON) != 0))
+    {
+        return;
+    }
+#endif
 
     if (g_MenuTimer >= MENU_LEGALSCREEN_MENU_TIMER_MAX)
     {
@@ -4104,7 +4115,9 @@ enum { PORT_SHEET_GAMEPLAY, PORT_SHEET_CONTROL, PORT_SHEET_DISPLAY, PORT_SHEET_C
         * player starts, opened from System (port_download_page.h) */
        PORT_SHEET_IS_FONTS, PORT_SHEET_IS_HDTEX, PORT_SHEET_IS_CUSTOMTEX,
        /* GRAPHICS (FORK-082): Tone Mapping, HDR Output, Baked Lighting */
-       PORT_SHEET_IS_GRAPHICS, PORT_SHEET_COUNT };
+       PORT_SHEET_IS_GRAPHICS,
+       /* UPDATES (FORK-095): the updater's mode, status and buttons, under System */
+       PORT_SHEET_IS_UPDATES, PORT_SHEET_COUNT };
 /* The Options folder's rows, top to bottom, at the Files menu's own row
  * coordinates (y 0xDC, pitch 0x20). Each is a submenu:
  *
@@ -4135,7 +4148,8 @@ static const char *const port_sheet_title[PORT_SHEET_COUNT] = { "GAMEPLAY\n", "C
         "GAMEPLAY OPTIONS\n", "CLASSIC\n",   /* GAMEPLAY OPTIONS is not drawn: the two-column sheet has no heading */
         "IRON SIGHTS\n", "AIMING AND MOVEMENT\n", "COMBAT FEEDBACK\n", "HUD ADDITIONS\n", "SYSTEM\n",
         "ENEMIES\n",   /* FORK-081 */
-        "ENHANCED FONTS\n", "HD TEXTURES\n", "CUSTOM TEXTURE PACKS\n", "GRAPHICS\n" };
+        "ENHANCED FONTS\n", "HD TEXTURES\n", "CUSTOM TEXTURE PACKS\n", "GRAPHICS\n",
+        "UPDATES\n" };   /* FORK-095 */
 static s32 port_options_row_highlighted = -1; /* row under the cursor, -1 = on a tab */
 /* The folder's hubs: GAMEPLAY and AUDIO VISUAL reuse this folder screen to list
  * their pages, numbered; -1 means the folder's own three rows. A page's
@@ -4177,6 +4191,9 @@ s32 portMenuHarnessSheet(char first, char second)
                         : (second == 't') ? PORT_SHEET_IS_HDTEX   /* GE_MENU=ztextures */
                         : (second == 'c') ? PORT_SHEET_IS_CUSTOMTEX   /* GE_MENU=zcustom */
                         : (second == 'g') ? PORT_SHEET_IS_GRAPHICS    /* GE_MENU=zgraphics (FORK-082) */
+#ifdef GE_UPDATER
+                        : (second == 'u') ? PORT_SHEET_IS_UPDATES     /* GE_MENU=zupdates (FORK-095) */
+#endif
                         : PORT_SHEET_IRONSIGHTS;
     }
     else if (first == 'd') port_sheet_kind = PORT_SHEET_DISPLAY;
@@ -4883,6 +4900,9 @@ static const struct PortSheetRow port_sheet_rows_is_hud[] = {
 };
 static const struct PortSheetRow port_sheet_rows_is_system[] = {
     { SHROW_ABOUT, NULL, "About / Build Info\n" },
+#ifdef GE_UPDATER
+    { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_UPDATES },   /* FORK-095 */
+#endif
     { SHROW_OPT, "font_style" },    /* FORK-051: applies live */
     { SHROW_GOSHEET, NULL, NULL, PORT_SHEET_IS_FONTS },
     { SHROW_OPT, "text_antialiasing" },  /* FORK-052: Enhanced text through mips */
@@ -4901,6 +4921,12 @@ static const struct PortSheetRow port_sheet_rows_is_system[] = {
 #endif
     { SHROW_OPT, "show_debug_pos" },     /* FORK-084: room, x/y/z and heading */
 };
+#ifdef GE_UPDATER
+/* UPDATES (FORK-095): the mode, then portUpdatesPage's text and buttons */
+static const struct PortSheetRow port_sheet_rows_is_updates[] = {
+    { SHROW_OPT, "mode" },
+};
+#endif
 /* AIMING page removed: every row on it was a repeat of the
  * Mouse and Keyboard or Controller page. */
 /* THE TWO PICKERS: each folder row that is a submenu, and its pages top to
@@ -4936,6 +4962,9 @@ static const struct PortDownloadPage *portSheetDownloadPage(s32 kind)
 {
     return (kind == PORT_SHEET_IS_FONTS) ? &portEnhancedFontsPage
          : (kind == PORT_SHEET_IS_HDTEX) ? &portHdTexturesPage
+#ifdef GE_UPDATER
+         : (kind == PORT_SHEET_IS_UPDATES) ? &portUpdatesPage   /* FORK-095 */
+#endif
 #if !defined(__EMSCRIPTEN__) && !defined(GE_XBOX)
          : (kind == PORT_SHEET_IS_CUSTOMTEX) ? &portCustomTexturesPage
 #endif
@@ -5003,6 +5032,7 @@ static const char *portSheetPageLabel(s32 kind)
         case PORT_SHEET_IS_HDTEX:    return "HD Textures\n";
         case PORT_SHEET_IS_CUSTOMTEX: return "Custom Texture Packs\n";
         case PORT_SHEET_IS_GRAPHICS: return "Graphics\n";   /* FORK-082 */
+        case PORT_SHEET_IS_UPDATES:  return "Updates\n";    /* FORK-095 */
         case PORT_SHEET_GRAPHICS: return "Graphics\n";
         case PORT_SHEET_MOUSEKB:    return "Mouse and Keyboard\n";
         case PORT_SHEET_PAD:        return "Controller\n";
@@ -5419,6 +5449,9 @@ static void portSheetBuild(s32 kind)
     if (kind == PORT_SHEET_IS_HUD)      { src = port_sheet_rows_is_hud;      n = sizeof(port_sheet_rows_is_hud)      / sizeof(port_sheet_rows_is_hud[0]);      }
     if (kind == PORT_SHEET_IS_SYSTEM)   { src = port_sheet_rows_is_system;   n = sizeof(port_sheet_rows_is_system)   / sizeof(port_sheet_rows_is_system[0]);   }
     if (kind == PORT_SHEET_IS_GRAPHICS) { src = port_sheet_rows_is_graphics; n = sizeof(port_sheet_rows_is_graphics) / sizeof(port_sheet_rows_is_graphics[0]); }
+#ifdef GE_UPDATER
+    if (kind == PORT_SHEET_IS_UPDATES)  { src = port_sheet_rows_is_updates;  n = sizeof(port_sheet_rows_is_updates)  / sizeof(port_sheet_rows_is_updates[0]);  }
+#endif
     port_sheet_twocol_split = PORT_SHEET_TWOCOL_ROWS;
     for (i = 0; i < n && port_sheet_rows < PORT_SHEET_ROWS_MAX; i++)
     {
@@ -7926,6 +7959,7 @@ static const char *portSheetHelpKey(s32 row)
                 case PORT_SHEET_IS_HDTEX:    return "@page_is_hdtex";
                 case PORT_SHEET_IS_CUSTOMTEX: return "@page_is_customtex";
                 case PORT_SHEET_IS_GRAPHICS: return "@page_is_graphics";
+                case PORT_SHEET_IS_UPDATES:  return "@page_is_updates";   /* FORK-095 */
             }
             break;
     }

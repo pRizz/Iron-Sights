@@ -42,6 +42,9 @@
 #endif
 #include "game/frametiming.h"   /* portTickSetHz: [display] tickhz */
 #include "romdata.h"            /* romdataIsIniKey: [data] keys are not "unknown controls" */
+#ifdef GE_UPDATER
+#include "port_update_ui.h"     /* FORK-095: the Updates option and the frame pump */
+#endif
 
 /* port_console.c: same output as the fprintf(stderr, ...) this replaced,
  * plus a silent copy in the tilde console ring (spec section 7). */
@@ -3514,7 +3517,11 @@ static void videoLoadConfig(void)
 
             if (!videoSetDisplayOption(key, val) && !portInputSetOption(key, val) && !portJoyPortSetOption(key, val)
                 && !romdataIsIniKey(key) /* [data] rom=: romdata.c reads it itself, section-aware */
-                && SDL_strcasecmp(key, "crash_reporting") != 0 /* early, section-aware Windows diagnostics */)
+                && SDL_strcasecmp(key, "crash_reporting") != 0 /* early, section-aware Windows diagnostics */
+#ifdef GE_UPDATER
+                && SDL_strcasecmp(key, "mode") != 0 /* [updates] mode=: port_update_ui.c reads it, section-aware */
+#endif
+                )
             {
                 portConLogf("ge: midas.ini: unknown control \"%s\"\n", key);
             }
@@ -5066,6 +5073,9 @@ s32 videoInit(void)
         portOptCaptureDefaults(); /* before the ini overwrites them */
     }
     videoLoadConfig(); /* midas.ini (needs no SDL init - scancode names are static) */
+#ifdef GE_UPDATER
+    portUpdateOptionsLoad(); /* FORK-095: [updates] mode=, read section-aware, after the defaults */
+#endif
     videoIniWritableCheck();
 
     { /* GE_WINDOW=WxH: override midas.ini window size (automated capture runs

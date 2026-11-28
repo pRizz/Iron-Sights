@@ -683,16 +683,24 @@ mipmaps is set by Classic Mode; leave it as it is.
 [updates]  optional
 ==============================================================================
 
-  Key  | Default | What it does
-  -----+---------+-----------------------------------------------------------
-  mode | off     | automatic: at launch, at most twice a day, check GitHub
-       |         | for a newer build of this package and install it, then
-       |         | restart into it. Keeps midas.ini, saves, profiles, packs
-       |         | and the ROM. Only release packages update; a build made
-       |         | from the source never does. Suspend points do not carry
-       |         | over. notify and off: no check (notify gets its banner
-       |         | with the menu row). Launching with --update-now checks
-       |         | once whatever this says.
+  Key  | Default   | What it does
+  -----+-----------+---------------------------------------------------------
+  mode | automatic | automatic: at launch, at most twice a day, check GitHub
+       |           | for a newer build of this package and install it, then
+       |           | restart into it. The legal screen shows the progress;
+       |           | Esc, a click or any controller button skips it until
+       |           | the next check. Keeps midas.ini, saves, profiles, packs
+       |           | and the ROM. Only release packages update; a build made
+       |           | from the source never does. Suspend points do not carry
+       |           | over.
+       |           | notify: the same check in the background; a newer build
+       |           | is named under the file select's build stamp and
+       |           | installed from Iron Sights > System > Updates.
+       |           | off: no check at launch. The Updates page in the menu
+       |           | sets this, and checks or installs when asked.
+       |           | Launching with --update-now installs once whatever this
+       |           | says. GE_NOUPDATE=1 in the environment, and any run that
+       |           | GE_FRAMES limits, never checks at launch.
 
 
 ==============================================================================

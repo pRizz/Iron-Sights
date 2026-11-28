@@ -747,6 +747,12 @@ void bossMainloop(void)
 #ifndef TARGET_N64
                             portStateFrame();
 #endif
+#ifdef GE_UPDATER
+                            {   /* FORK-095: the launch's update, and a finished run's restart */
+                                extern void portUpdateFrame(void);
+                                portUpdateFrame();
+                            }
+#endif
 
                             gdl = firstGdl = dynGetMasterDisplayList();
 

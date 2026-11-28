@@ -208,11 +208,35 @@ class RuntimeLibraries(unittest.TestCase):
 
 
 class VideoDriver(unittest.TestCase):
-    def test_windows_uses_its_native_driver_and_other_hosts_offscreen(self):
-        # Act and assert: SDL's offscreen driver has no GL library to load on Windows
-        self.assertEqual(lp64_play_run.host_video_driver('nt'), 'windows')
-        self.assertEqual(lp64_play_run.host_video_driver('posix'), 'offscreen')
+    def test_each_host_uses_the_driver_that_can_make_a_gl_window(self):
+        # Act and assert: SDL's offscreen driver has no GL library to load on Windows, and makes no
+        # GL window on macOS (MAC-002), where a case gets a real Cocoa window
+        self.assertEqual(lp64_play_run.host_video_driver('nt', 'win32'), 'windows')
+        self.assertEqual(lp64_play_run.host_video_driver('posix', 'linux'), 'offscreen')
+        self.assertEqual(lp64_play_run.host_video_driver('posix', 'darwin'), 'cocoa')
         self.assertEqual(lp64_play_run.VIDEO_VARIABLES['SDL_VIDEODRIVER'], lp64_play_run.host_video_driver())
+
+    def test_macos_keeps_its_window_hidden(self):
+        # Act and assert
+        self.assertEqual(lp64_play_run.host_video_variables('darwin')['GE_WINDOW_HIDDEN'], '1')
+        self.assertEqual(lp64_play_run.host_video_variables('darwin')['SDL_VIDEODRIVER'], 'cocoa')
+
+    def test_macos_runs_as_a_background_app_with_no_dock_icon(self):
+        # Act and assert: SDL's hint, read from the environment; without it every case is a
+        # foreground app with a Dock icon for as long as it runs
+        self.assertEqual(lp64_play_run.host_video_variables('darwin')['SDL_MAC_BACKGROUND_APP'], '1')
+
+    def test_linux_and_windows_variables_are_what_they_were(self):
+        # Arrange
+        shared = {'SDL_AUDIODRIVER': 'dummy', 'GE_WINDOW': '640x480', 'GE_NOINPUT': '1', 'GE_TICKHZ': '60'}
+
+        # Act and assert: no GE_WINDOW_HIDDEN, which only a macOS build reads
+        self.assertEqual(lp64_play_run.host_video_variables('linux'), dict(shared, SDL_VIDEODRIVER='offscreen'))
+        self.assertEqual(lp64_play_run.host_video_variables('win32'), dict(shared, SDL_VIDEODRIVER='windows'))
+
+    def test_the_modules_set_is_the_hosts_own(self):
+        # Act and assert
+        self.assertEqual(lp64_play_run.VIDEO_VARIABLES, lp64_play_run.host_video_variables())
 
 
 if __name__ == '__main__':

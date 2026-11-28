@@ -23,5 +23,7 @@ struct PortDownloadPage {
 extern const struct PortDownloadPage portEnhancedFontsPage;  /* port_enhanced_fonts.c */
 extern const struct PortDownloadPage portHdTexturesPage;     /* port_hd_download.c */
 extern const struct PortDownloadPage portCustomTexturesPage; /* port_hd_download.c */
+extern const struct PortDownloadPage portUpdatesPage;        /* port_update_ui.c (FORK-095);
+                                                              * action 1 is What's New */
 
 #endif

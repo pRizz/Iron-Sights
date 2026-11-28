@@ -1,5 +1,6 @@
 /* Fork identity on the inherited legal screen (original credits stay intact)
- * and a dim build stamp on the file select screen. */
+ * and a dim build stamp on the file select screen, with the updater's lines
+ * on both (FORK-095): its progress at launch, and a newer build's notice. */
 #include <stdio.h>
 #include <ultra64.h>
 #include <bondconstants.h>
@@ -9,6 +10,9 @@
 #include "port_build_time.h"
 #include "port_startup.h"
 #include "platform_info.h"
+#ifdef GE_UPDATER
+#include "port_update_ui.h"
+#endif
 
 /* LP64-007: a 64-bit build says so on its legal screen; a comparison build
  * keeps its fixed stamp. */
@@ -43,9 +47,18 @@ Gfx *portStartupAttribution(Gfx *gdl)
 {
     char line[128], builtAt[96];
 #ifdef GE_UPDATER
-    { /* FORK-095: a freshly installed build has started properly */
+    { /* FORK-095: a freshly installed build has started properly; an
+       * Automatic update at launch shows its progress in the gap above the
+       * music credits */
         extern void portUpdateLegalScreen(void);
+        const char *update;
+        s32 i;
+
         portUpdateLegalScreen();
+        for (i = 0; (update = portUpdateIndicatorLine(i)) != NULL; i++)
+        {
+            gdl = startupLine(gdl, 234 + 14 * i, update);
+        }
     }
 #endif
     gdl = startupLine(gdl, 16, "Iron Sights - a fork of Project Midas\n");
@@ -93,6 +106,17 @@ Gfx *portFileSelectBuildStamp(Gfx *gdl, s32 left, s32 top)
     portFormatBuildTimeCompact(builtAt, sizeof(builtAt), STAMP_TIME);
     snprintf(line, sizeof(line), "Built %s%s\n", builtAt, STAMP_DIRTY ? " - modified" : "");
     gdl = stampLine(gdl, left, &y, line);
+#ifdef GE_UPDATER
+    { /* FORK-095: Notify's line, when a check found a newer build */
+        const char *notice = portUpdateNotifyLine();
+
+        if (notice != NULL)
+        {
+            snprintf(line, sizeof(line), "%s", notice);
+            gdl = stampLine(gdl, left, &y, line);
+        }
+    }
+#endif
     portTextScale(1.0f);
     return gdl;
 }

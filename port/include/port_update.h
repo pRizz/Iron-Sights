@@ -24,9 +24,9 @@ extern "C" {
 
 enum PortUpdateMode { PORT_UPDATE_OFF, PORT_UPDATE_NOTIFY, PORT_UPDATE_AUTOMATIC };
 
-/* UPD-002 ships without screens, so a build only updates when its midas.ini
- * asks; UPD-003 makes Automatic the default together with the indicator. */
-#define PORT_UPDATE_DEFAULT_MODE PORT_UPDATE_OFF
+/* Owner's decision 4: Automatic unless midas.ini says otherwise (UPD-003,
+ * with the legal screen's indicator; UPD-002 shipped Off without screens). */
+#define PORT_UPDATE_DEFAULT_MODE PORT_UPDATE_AUTOMATIC
 /* Owner's decision 1: a check at launch at most twice a day. */
 #define PORT_UPDATE_CHECK_INTERVAL (12LL * 60 * 60)
 /* Owner's decision 5: the check's limit and the download's stall limit. */
@@ -155,7 +155,17 @@ struct PortUpdateEnv {
     const char *downloads_url;  /* https://github.com/OWNER/REPO/releases */
     long long now;              /* seconds since 1970 */
     PortUpdateHttp http;
+    int check_only;             /* find the newest build and install nothing */
+    /* Optional, NULL for none, called on the thread running portUpdateRun:
+     * progress hears each phase and the package bytes received so far;
+     * cancelled stops the run before anything moves once it returns
+     * nonzero (it is asked during the download and before the swap). */
+    void (*progress)(void *user, int phase, long build, long long bytes);
+    int (*cancelled)(void *user);
+    void *user;
 };
+
+enum PortUpdatePhase { PORT_UPDATE_PHASE_CHECKING, PORT_UPDATE_PHASE_DOWNLOADING, PORT_UPDATE_PHASE_INSTALLING };
 
 enum PortUpdateResult {
     PORT_UPDATE_NOT_ELIGIBLE,  /* local build, no package.txt, unknown flavor */
@@ -163,23 +173,31 @@ enum PortUpdateResult {
     PORT_UPDATE_UP_TO_DATE,
     PORT_UPDATE_FAILED,
     PORT_UPDATE_INSTALLED,     /* restart into the new build */
+    PORT_UPDATE_AVAILABLE,     /* check_only: a newer build is there */
+    PORT_UPDATE_CANCELLED,     /* cancelled before anything moved */
+    PORT_UPDATE_RESULTS
 };
+
+/* 0 with msg when this copy can never update itself (the same reasons
+ * portUpdateRun gives PORT_UPDATE_NOT_ELIGIBLE for). */
+int portUpdateEligible(const struct PortUpdateEnv *env, char *msg, size_t msgsize);
 
 /* At every start, before settings or saves load: finishes or undoes an
  * interrupted swap, counts a new build's starts and rolls back a build that
  * never reached the legal screen. 1 when the game must restart (it is not
  * the build the files now hold). */
 int portUpdateRecover(const struct PortUpdateEnv *env, char *msg, size_t msgsize);
-/* Checks and, when a newer build exists, installs it. force ignores the
- * throttle. msg says what happened. */
+/* Checks and, when a newer build exists, installs it (with check_only,
+ * reports it as PORT_UPDATE_AVAILABLE). force ignores the throttle. msg says
+ * what happened; Data/Updates/state.txt keeps it with the newest build. */
 int portUpdateRun(const struct PortUpdateEnv *env, int force, char *msg, size_t msgsize);
 /* The new build reached the legal screen: drop the old files and the
  * journal. Returns the build it confirmed, 0 when there was none. */
 long portUpdateConfirm(const struct PortUpdateEnv *env);
 
-/* main.c: recovery, then the check when midas.ini asks for Automatic or the
- * command line holds --update-now. Restarts the game itself after an install
- * or a rollback, and returns otherwise. */
+/* main.c: recovery (restarting the game itself after a rollback), then
+ * which run the launch wants: midas.ini's mode, or --update-now. The run
+ * itself starts on the first frame (port_update_ui.h). */
 void portUpdateStartup(int argc, char **argv);
 /* port_startup.c: the legal screen was drawn (once per run is enough). */
 void portUpdateLegalScreen(void);
