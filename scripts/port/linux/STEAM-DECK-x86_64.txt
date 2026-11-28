@@ -31,7 +31,9 @@ has not yet been used to validate this package.
    shortcut, then run it again. The launcher finds its own folder and bundled
    libraries, even when Steam starts it from another working directory.
 
-Data, saves, profiles and midas.ini stay beside IronSights. Preserve them when
-updating. If you move the folder, run set-steam-art.py again and re-add the
+Data, saves, profiles and midas.ini stay beside IronSights. The game updates
+itself from GitHub at most twice a day and never touches them (Options >
+Gameplay > Iron Sights > System > Updates turns it off; START-HERE.txt has
+the details); keep them if you update by hand. If you move the folder, run set-steam-art.py again and re-add the
 shortcut. See START-HERE.txt for settings, crash reporting and
 verification. The Linux x86_64 tarball and AppImage remain alternatives.

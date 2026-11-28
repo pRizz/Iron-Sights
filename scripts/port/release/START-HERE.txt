@@ -19,8 +19,23 @@ Options > Gameplay > Iron Sights > System > About / Build Info
 The same entry is available on the watch's Iron Sights > System page.
 
 UPDATING
-Extract a newer ZIP into the game folder and replace its supplied files.
-Keep your Data folder and midas.ini: they contain your ROM, saves and settings.
+This build checks GitHub for new builds at most twice a day and updates
+itself: when one is out, the legal screen shows it downloading, the game
+replaces its own files and restarts into the new build. Esc, a click or any
+controller button skips that launch's update. Turn it off, or down to Notify
+(a line on the file-select screen only), in
+Options > Gameplay > Iron Sights > System > Updates, or in midas.ini:
+[updates] mode=off. The check sends no player data.
+An update replaces only the files this ZIP supplied. Your Data folder and
+midas.ini, which hold your ROM, saves, packs and settings, stay as they are;
+a supplied file you edited is replaced and your copy kept as NAME.edited.
+A folder the game cannot write to (such as one under Program Files) cannot
+update itself; Updates then opens the release page instead.
+If a new build does not start three times in a row, the game puts the
+previous one back by itself. If it does not start at all, rename each
+NAME.old file in the game folder back to NAME.
+To update by hand, extract a newer ZIP into the game folder and replace its
+supplied files, keeping Data and midas.ini.
 Suspend points require the same executable and will not load on a newer build.
 Normal campaign saves and profiles remain separate.
 

@@ -11,4 +11,8 @@ Options (Gameplay > Iron Sights > System > Enhanced Fonts); releases never inclu
 TexturePacks holds the optional HD textures once you download them from Options
 (Get HD Textures), or packs you copy in yourself (any other PNG pack there is
 used for every texture it names); releases never include one.
-Keep this folder when updating the executable. No ROM is included in releases.
+Updates/ holds the in-game updater's state, log and downloads (Options >
+Gameplay > Iron Sights > System > Updates). This build checks GitHub for new
+builds at most twice a day and updates itself; turn it off there. An update
+never changes this folder's ROM, saves or packs, nor midas.ini.
+Keep this folder if you update by hand. No ROM is included in releases.

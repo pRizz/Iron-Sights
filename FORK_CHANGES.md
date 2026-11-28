@@ -42,7 +42,10 @@ passed on 8441b97, and release `build-463.1-8441b979f9fa` is the first with
 it): the Updates page in both
 menus, the legal screen's indicator, the file-select notice, and Automatic
 as the default. The page's What's New button was removed after UPD-003
-(owner decision, 2026-11-28). UPD-004 is not started. The plan
+(owner decision, 2026-11-28). UPD-004 (the real release cycle) is in
+progress: `update_cycle.py` ran every flavor from build-463.1 to build-467.1
+(14 of 16 cases passed) and found a 32-bit Linux large-inode bug, fixed and
+waiting for a cycle from a release that carries the fix. The plan
 was drafted on 2026-11-27 and the owner accepted it
 the same day with five decisions. Every CI release counts as an update, with
 checks at most twice a day. Automatic mode holds the launch with an indicator
@@ -307,7 +310,77 @@ private to the first button's Open Release Page. Validation: `build_win`,
 capture from that install was reviewed and shows the mode row, the six
 lines, "Build 200 is available." and Install Build 200 as the only button.
 `settings_placement.py` and `bright-builds-check.ts all` pass. The watch's
-page was not captured.
+page was not captured. On `main` as 323fb8b; every CI job passed, and
+release `build-467.1-323fb8bf21ae` is the first without the button.
+
+**UPD-004: the real release cycle and hand-over.**
+`scripts/port/update_cycle.py` (with `update_cycle_checks.py`, the layouts
+and verdicts, and `test_update_cycle.py`, 12 ROM-free tests in CI's tests
+step) runs the cycle on real releases. `prepare --from TAG --rom ROM`
+downloads TAG's eight packages, each checked against the release's
+`SHA256SUMS` file, into `build_win/update-cycle/download/TAG` and installs
+each flavor in Automatic and in Notify in `cases/FLAVOR-MODE`, with a
+player's data: the ROM in `Data`, a save, a texture pack, the Enhanced
+fonts' folder, a `midas.ini` with a changed setting and the mode, and
+(outside an AppImage) a `gamecontrollerdefault.txt` with a line the player
+added. `run` launches each case as a player would, with no test switches:
+the Windows zips natively (a 640x480 window for a few seconds, sound off),
+the Linux tarballs, the AppImages (`APPIMAGE_EXTRACT_AND_RUN=1`, data under
+the case's XDG folder) and the Steam Deck ZIPs (through `run.sh`)
+offscreen in `midas-lp64-i686-video`, whose Mesa has GL and EGL at both
+widths, as root, since files Windows wrote into the mount belong to root
+there. Each updates from the real latest release; the run stops a case
+once `Data/Updates/log.txt` shows its end (or its container ends) and
+checks it: Automatic must install a newer release, restart, confirm at the
+legal screen and leave no `.old` file, journal or staging folder, with the
+program files matching the new package's `SHA256SUMS.txt` (an AppImage:
+the new release's image) and the edited file kept as `NAME.edited`;
+Notify must find the newer build, install nothing and not restart; both
+must leave the ROM, save and packs byte for byte and `midas.ini`'s
+settings. It writes `cycle.json`. The cases hold a ROM copy each, so the
+folder is deleted afterwards (`releases.md` says so).
+
+The first full run (2026-11-28, from `build-463.1-8441b979f9fa`, build
+708, to the latest release, `build-467.1-323fb8bf21ae`, build 712) passed
+14 of the 16 cases: both Windows zips, both AppImages and every x86_64
+package installed and confirmed (Windows 8 to 10 s from launch, Linux 10 to
+35 s, most of it the download), and every Notify case found build 712 and
+installed nothing. The i686 tarball and i686 Steam Deck ZIP installed too,
+but lost the player's edited file. Cause: a 32-bit Linux `stat` fails with
+`EOVERFLOW` on a file whose inode number needs 64 bits (the Docker mount's
+were near 2^52; btrfs, XFS and network mounts have them too), so
+`portUpdateExists` took every installed file for missing. On such a disk an
+i686 install was overwritten without `.old` copies (no rollback of a build
+that does not start), without `NAME.edited`, and with files only the old
+package had left in place. `CMakeLists.txt` now gives
+`port_update_files.c` and `port_update_startup.c` (whose log rotation
+stats too) `_FILE_OFFSET_BITS=64 _TIME_BITS=64` in a 32-bit Linux build,
+as `ge_hd_textures` and `ge_save_transfer` already had, and
+`test_update.sh` compiles with them. A probe of `portUpdateExists` built
+with `gcc -m32` in that image read a file on the mount as missing without
+the flags and present with them; `test_update.sh` passes at 32 and 64
+bits. The fix acts in the installed build, so it is shown by a cycle from
+the first release that carries it to a later one. The i686 AppImage
+passed, since its swap replaces one file and needs no `stat`.
+
+Player documents: the Windows `START-HERE.txt` has a new UPDATING section
+(the twice-a-day check and self-update, the skip, Off and Notify in
+Options > Gameplay > Iron Sights > System > Updates or `[updates]
+mode=off`, what an update replaces and keeps, `NAME.edited`, unwritable
+folders, the automatic rollback and renaming `NAME.old` back by hand, and
+updating by hand); both Linux `START-HERE` files gain the same as an
+Updates paragraph, the Steam Deck notes point to it, and `DATA-README.txt`
+names `Data/Updates` and says an update never changes the ROM, saves,
+packs or `midas.ini`. `releases.md` gains In-game updates: which release
+assets and names every installed copy depends on, and when to run
+`update_cycle.py`. The plan's non-goal about What's New now says it was
+removed. `test_distribution.py`, `test_linux_launcher.py` and
+`test_steam_art.py` pass in the `goldeneye` image, except
+`test_every_ci_build_folder_is_ignored_by_git`, which fails there because
+the container's git refuses the mounted checkout's owner (`git
+check-ignore` exits 128 with git's safe-directory message; no
+`.gitignore` changed); on Windows `test_steam_art.py` and one
+`test_distribution.py` test fail on path handling with or without them.
 
 ### FORK-094 — Native Windows x64 build
 

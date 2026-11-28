@@ -52,7 +52,21 @@ the download; the weapon and hands in your view keep their original look.
 System > Custom Texture Packs explains it and opens the folder.
 
 No ROM or extracted game data is included. Never copy Data/CrashReports into
-a bug report. Keep Data and midas.ini when updating.
+a bug report.
+
+Updates: this build checks GitHub for new builds at most twice a day and
+updates itself. When one is out, the legal screen shows it downloading, the
+game replaces its own files (an AppImage replaces itself) and restarts into
+the new build; Esc, a click or any controller button skips that launch's
+update. Turn it off, or down to Notify, in
+Options > Gameplay > Iron Sights > System > Updates, or set mode=off under
+[updates] in midas.ini. The check sends no player data. An update replaces
+only the package's own files and never Data or midas.ini; a supplied file you
+edited is kept as NAME.edited. The game folder (or the AppImage's folder)
+must be writable. If a new build does not start three times in a row, the
+previous one comes back by itself; if it does not start at all, rename each
+NAME.old file back to NAME. To update by hand, replace the package's files and
+keep Data and midas.ini.
 
 On the four-campaign Files screen, Export writes a JSON backup for desktop
 or web. Import confirms full replacement of campaigns, profiles, settings

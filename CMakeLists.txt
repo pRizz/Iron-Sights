@@ -808,6 +808,15 @@ if(GE_VIDEO)
             ${CMAKE_SOURCE_DIR}/port/src/port_watchpages.c ${CMAKE_SOURCE_DIR}/src/game/front.c
             ${CMAKE_SOURCE_DIR}/src/boss.c
             APPEND PROPERTY COMPILE_DEFINITIONS GE_UPDATER=1)
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND GE_POINTER_BITS EQUAL 32)
+            # As ge_hd_textures: i686 stat fails (EOVERFLOW) on a file with a
+            # 64-bit inode number (btrfs, XFS, network and container mounts),
+            # and the updater then took every installed file for missing:
+            # no .old copies, no NAME.edited, obsolete files left (UPD-004).
+            set_property(SOURCE ${CMAKE_SOURCE_DIR}/port/src/port_update_files.c
+                ${CMAKE_SOURCE_DIR}/port/src/port_update_startup.c
+                APPEND PROPERTY COMPILE_DEFINITIONS _FILE_OFFSET_BITS=64 _TIME_BITS=64)
+        endif()
         add_library(ge_update_http OBJECT port/src/port_update_http.cpp)
         set_target_properties(ge_update_http PROPERTIES INCLUDE_DIRECTORIES "")
         list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_update_http>)
