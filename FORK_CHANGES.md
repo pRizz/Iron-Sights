@@ -686,9 +686,9 @@ headless 64-bit game builds with Apple clang, boots, plays its 20 missions
 and its play sets, runs them under the sanitizers, and its simulation is
 identical to the aarch64 Linux build's in all 38 comparison cases. It has
 no window, picture, sound or input, and nothing on macOS is shipped.
-MAC-002 is planned and not yet accepted
-([its plan](scripts/port/macos_mac_002.md), 2026-11-27, five decisions
-for the owner); none of it is built. MAC-003 to MAC-006 are not started.
+MAC-002 is planned and accepted
+([its plan](scripts/port/macos_mac_002.md), planned 2026-11-27, its five
+recommendations accepted by the owner on 2026-11-28); none of it is built. MAC-003 to MAC-006 are not started.
 The owner chose the
 audience, the graphics path and the outline on 2026-11-26, approved the
 design on 2026-11-27 and accepted MAC-001's plan the same day.
@@ -1563,12 +1563,15 @@ measurements found, each with its command or file reference in the plan:
   screenshot row into a 4,096-pixel stack buffer whatever the drawable's
   width.
 
-The plan's five decisions (hidden windows for automated runs; the strict
-branch `macos/strict` kept current by merging, never rebased; Retina on
-without a new setting; the screenshot row fixed for every build; the cost
-figures as a first macOS baseline) wait for the owner. The scratch copy
-and its run folders were deleted; the aarch64 reference run stayed under
-`build/lp64/` until the same cleanup.
+The owner accepted the plan's five recommendations on 2026-11-28 ("Accept
+all five"): hidden windows for automated runs; the strict branch
+`macos/strict` kept current by merging, never rebased, which the macOS
+plan's "Landing" now says in place of "kept rebased"; Retina on without a
+new setting; the screenshot row fixed for every build; the cost figures
+as a first macOS baseline. The same change corrected the plan's count of
+measurement runs that showed a window on the owner's screen (about ten,
+not three). The scratch copy and its run folders were deleted; the
+aarch64 reference run stayed under `build/lp64/` until the same cleanup.
 
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside

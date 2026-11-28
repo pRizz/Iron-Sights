@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Status:** Planned on 2026-11-27 from measurements on `main` at 567251f.
-**Not accepted yet.** "Decisions for the owner" at the end lists five
-decisions; the tasks are written for the recommendations. Nothing below is
-built: every measurement was taken on a scratch copy outside the
-repository.
+**Status:** Planned on 2026-11-27 from measurements on `main` at 567251f
+and accepted by the owner on 2026-11-28 with all five recommendations
+("Accept all five"); "Decisions for the owner" at the end lists them, and
+the tasks are written for them. Nothing below is built yet: every
+measurement was taken on a scratch copy outside the repository.
 
 **Goal:** The 64-bit game runs in a window on Apple Silicon macOS, drawn by
 the Mac's GPU through Apple's OpenGL 4.1, with sound, keyboard, mouse and
@@ -47,10 +47,14 @@ On the owner's Mac (macOS 27.2.1, Apple M4 Max, built-in display 1728x1117
 points at 120 Hz, Apple clang 21.0.0, Homebrew SDL2 2.32.10). A copy of the
 tree (`git archive HEAD`) was edited and built in a scratch folder outside
 the repository and then discarded; nothing below is on `main` or on any
-branch. The ROM was read through `GE_ROM`. Three of the runs opened a
-window on the owner's screen for a few seconds (one of them fullscreen:
-`GE_WINDOW` sets only the windowed size, and a new `midas.ini` starts
-borderless); every later run was hidden.
+branch. The ROM was read through `GE_ROM`. About ten of the runs opened a
+window on the owner's screen. The first three did for a few seconds each
+(one of them fullscreen: `GE_WINDOW` sets only the windowed size, and a
+new `midas.ini` starts borderless). About seven later ones showed a
+640x480 window for 20 to 25 seconds each, because they measured what only
+a shown window has: the pacing runs at both tick rates, the Main Thread
+Checker run, a Retina run and two same-frame screenshot runs. The play
+sets, the mission smoke, the comparison and the benchmark ran hidden.
 
 - **The video tree fails in seven files, for one cause, and then in one
   line.** `cmake -G Ninja -DGE_POINTER_BITS=64 -DGE_VIDEO=ON
@@ -1051,8 +1055,14 @@ git commit -m "MAC-002: ready for the laptop"
 
 ## Decisions for the owner
 
-The tasks are written for the recommendations. Each is put with the
-alternative not taken.
+**The owner accepted all five recommendations on 2026-11-28** ("Accept
+all five"), in the session that wrote this plan. They are kept here as
+put, each with the alternative that was not taken; the tasks are written
+for the recommendations. Decision 1 defines "a real window" for the
+automated runs; decision 2 replaces the macOS plan's "kept rebased" with
+merging; decision 3 adds no setting; decision 4 puts one change that is
+not macOS-only on the strict branch; decision 5 defines what verification
+10 means on a platform with no earlier build.
 
 1. **What "in a real window" means for the automated runs.** The macOS
    plan asks for the play sets and the `--video` tools in a real window.
