@@ -139,6 +139,13 @@ elseif(GE_POINTER_BITS EQUAL 64)
                 non-literal-null-conversion logical-not-parentheses parentheses-equality)
             list(APPEND GE_WARNING_OPTIONS $<$<COMPILE_LANGUAGE:C>:-Wno-${GE_CLANG_CLASS}>)
         endforeach()
+        # C++ (the video tree, MAC-002) prints two classes: macro-redefined 13
+        # (the game's M_PI family in include/math.h after the system's, which
+        # libc++'s <cmath> now reaches first) and null-character 1 (a NUL
+        # inside a string literal, port/fast3d/gfx_sdl2.cpp).
+        foreach(GE_CLANG_CLASS unknown-warning-option macro-redefined null-character)
+            list(APPEND GE_WARNING_OPTIONS $<$<COMPILE_LANGUAGE:CXX>:-Wno-${GE_CLANG_CLASS}>)
+        endforeach()
     endif()
 else()
     add_compile_options(-m32 -msse2 -mfpmath=sse)
@@ -658,6 +665,14 @@ list(APPEND PORT_SRC src/libultrare/io/vitbl.c)
 # GE microcode opcode work lands (docs/port/ge-microcode.md); the null
 # renderer in pcsched.c stays the headless default.
 option(GE_VIDEO "Build the fast3d renderer (SDL2 + OpenGL)" OFF)
+if(APPLE AND GE_VIDEO)
+    # MAC-002: the macOS video build takes SDL2 from one prefix, Homebrew's
+    # by default (MAC-004 pins and bundles its own build).
+    set(SDL2_MACOS_ROOT "/opt/homebrew" CACHE PATH "Prefix holding include/SDL2 and lib/libSDL2.dylib for the macOS video build")
+    if(NOT EXISTS "${SDL2_MACOS_ROOT}/lib/libSDL2.dylib")
+        message(FATAL_ERROR "SDL2_MACOS_ROOT (${SDL2_MACOS_ROOT}) has no lib/libSDL2.dylib: install SDL2 (brew install sdl2) or pass -DSDL2_MACOS_ROOT=<prefix>")
+    endif()
+endif()
 
 # Testing convenience: every solo mission, bonus stage and difficulty
 # (incl. 007 mode) selectable regardless of save state. Progression logic
@@ -766,6 +781,8 @@ if(GE_VIDEO)
                 target_include_directories(ge_save_transfer PRIVATE
                     ${CMAKE_SOURCE_DIR}/third_party/SDL2-2.30.11/${GE_MINGW_TRIPLE}/include/SDL2)
             endif()
+        elseif(APPLE)
+            target_include_directories(ge_save_transfer PRIVATE ${SDL2_MACOS_ROOT}/include/SDL2)
         elseif(SDL2_LINUX_ROOT)
             target_include_directories(ge_save_transfer PRIVATE ${SDL2_LINUX_ROOT}/include/SDL2)
         else()
@@ -932,6 +949,12 @@ if(GE_VIDEO AND NOT EMSCRIPTEN)
         # the game needs SDL2.dll beside the exe
         add_custom_command(TARGET ge POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${SDL2_ROOT}/bin/SDL2.dll $<TARGET_FILE_DIR:ge>)
+    elseif(APPLE)
+        # MAC-002: SDL2 and nothing else. macOS has no libGL (glad resolves
+        # every GL function through SDL) and dlopen and threads are in
+        # libSystem.
+        target_include_directories(ge PRIVATE ${SDL2_MACOS_ROOT}/include/SDL2)
+        target_link_libraries(ge ${SDL2_MACOS_ROOT}/lib/libSDL2.dylib)
     else()
         # 32-bit SDL2: needs libsdl2-dev:i386 (+ libgl-dev:i386), or set
         # SDL2_LINUX_ROOT to a self-built prefix (e.g. CI's cached, user-writable

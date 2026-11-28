@@ -392,13 +392,13 @@ step 3 prints `38 identical` for `sim` and `gfx` and `24 identical` for
   `/opt/homebrew`) holding `include/SDL2` and `lib/libSDL2.dylib`; the
   tree `build/mac/video`; the worktree `W` on `macos/strict`.
 
-- [ ] **Step 1: Make the worktree**
+- [x] **Step 1: Make the worktree**
 
 The command under "Landing". Check `git -C W config --get
 midas.galleryDefer` prints `true` and `git -C W branch --show-current`
 prints `macos/strict`.
 
-- [ ] **Step 2: Write the failing harness case**
+- [x] **Step 2: Write the failing harness case**
 
 In `test_pointer_bits.sh`, a Darwin-only case beside the existing ones
 (it replaces nothing; `skip 8d` stays): configure a 64-bit video tree in
@@ -408,7 +408,7 @@ configures, that the `IronSights` link line in `build.ninja` names
 `-DSDL2_MACOS_ROOT=/nonexistent` fails with a message naming the variable.
 Run it. Expected: FAIL (the link line is `SDL2 GL dl pthread`).
 
-- [ ] **Step 3: The macOS video link and SDL2's place**
+- [x] **Step 3: The macOS video link and SDL2's place**
 
 An `if(APPLE)` branch ahead of the Linux ones: include
 `${SDL2_MACOS_ROOT}/include/SDL2`, link
@@ -417,26 +417,26 @@ for `ge_save_transfer`; a `FATAL_ERROR` naming `SDL2_MACOS_ROOT` and `brew
 install sdl2` when the library is missing. Run the harness. Expected:
 PASS.
 
-- [ ] **Step 4: libc++ finds its own `<math.h>`**
+- [x] **Step 4: libc++ finds its own `<math.h>`**
 
 At the top of `include/math.h`, before its guard: for `__APPLE__` C++,
 `#include_next <math.h>`. C and every other platform read the file as
 today. Name `macro-redefined` (13) and `null-character` (1) for C++ in
 the clang list, with their counts in its comment.
 
-- [ ] **Step 5: The one strict-tier line**
+- [x] **Step 5: The one strict-tier line**
 
 `hd_textures.cpp:252`: `static_cast<long long>` on the file time's count.
 It is the value's own type on Windows and Linux; `compare_win32.py` must
 say `identical`, and if it does not, the cast goes behind `__APPLE__`.
 
-- [ ] **Step 6: Build and check**
+- [x] **Step 6: Build and check**
 
 Task check, steps 1, 4, 5 and 6. Expected: step 1 as written there, with
 `393 files compiled, 0 failed` and `OK: 33 narrowings in 19 files, all
 allowed`, and a compiler log with no warning.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 `main`: "Build the macOS video tree's C++ against libc++ and link SDL2".
 FORK-093 says that on `main` alone the macOS video tree fails in exactly

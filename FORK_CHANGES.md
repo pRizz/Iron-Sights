@@ -686,9 +686,11 @@ headless 64-bit game builds with Apple clang, boots, plays its 20 missions
 and its play sets, runs them under the sanitizers, and its simulation is
 identical to the aarch64 Linux build's in all 38 comparison cases. It has
 no window, picture, sound or input, and nothing on macOS is shipped.
-MAC-002 is planned and accepted
-([its plan](scripts/port/macos_mac_002.md), planned 2026-11-27, its five
-recommendations accepted by the owner on 2026-11-28); none of it is built. MAC-003 to MAC-006 are not started.
+MAC-002 ([its plan](scripts/port/macos_mac_002.md), planned 2026-11-27, its
+five recommendations accepted by the owner on 2026-11-28) is being built
+(started 2026-11-28; "MAC-002 as built" below has each finished task). Its
+strict-tier half is on the branch `macos/strict`, not on `main`. MAC-003 to
+MAC-006 are not started.
 The owner chose the
 audience, the graphics path and the outline on 2026-11-26, approved the
 design on 2026-11-27 and accepted MAC-001's plan the same day.
@@ -1572,6 +1574,63 @@ as a first macOS baseline. The same change corrected the plan's count of
 measurement runs that showed a window on the owner's screen (about ten,
 not three). The scratch copy and its run folders were deleted; the
 aarch64 reference run stayed under `build/lp64/` until the same cleanup.
+
+**MAC-002 as built.** One paragraph a task. Each task is made and checked
+in a second working tree on the branch `macos/strict`
+(`git worktree add -b macos/strict ../Iron-Sights-macos-strict main`), at
+that branch's tip; its files outside the strict tier are then committed on
+`main`, `main` is merged into the branch, and its strict-tier files are
+committed on the branch, which is pushed and never rebased. A paragraph
+names both halves; the branch's own record of its commits is a paragraph
+that exists only on the branch until the owner's laptop lands it. What ran
+is on the owner's Mac (macOS 27.2.1, Apple M4 Max, Apple clang 21.0.0,
+Homebrew SDL2 2.32.10) and in the containers of `scripts/port/lp64_env.py`.
+
+- **Task 1, the video tree builds and links.** *On `main`:*
+  `CMakeLists.txt` gives a macOS video build its own SDL2: the cache path
+  `SDL2_MACOS_ROOT` (default `/opt/homebrew`) must hold
+  `lib/libSDL2.dylib`, or the configure stops naming the variable and `brew
+  install sdl2`; the game and `ge_save_transfer` include
+  `${SDL2_MACOS_ROOT}/include/SDL2`, and the link names that one library
+  and nothing of Linux's line (`SDL2 GL dl pthread`): macOS has no `libGL`,
+  glad resolves every GL function through SDL, and `dlopen` and threads are
+  in libSystem. `include/math.h` starts with `#include_next <math.h>` for
+  `__APPLE__` C++ only, as `include/string.h` and `include/stdlib.h` do for
+  every hosted C++ build: libc++'s `<cmath>` includes `<math.h>` expecting
+  its own wrapper and found the game's, which `-I include` puts first, and
+  six renderer files failed on `fabsf`, `acosf` and `expf` undeclared. C,
+  and C++ on every other platform, read the file as before. The clang list
+  names two C++ classes with their counts, counted by compiling every C++
+  file without them: `macro-redefined` 13 (the game's `M_PI` family after
+  the system's) and `null-character` 1 (`port/fast3d/gfx_sdl2.cpp:711`
+  holds a NUL byte inside a character literal), with
+  `unknown-warning-option` first as for C.
+  `scripts/port/test_pointer_bits.sh` gained case 0b for macOS: a 64-bit
+  video tree's link names `/lib/libSDL2.dylib` and neither `-lGL` nor
+  `-ldl`, and a configure with `-DSDL2_MACOS_ROOT=/nonexistent` fails
+  naming the variable (it read the Makefile generator's `link.txt`, as the
+  harness's other cases do, not `build.ninja`; before the CMake change it
+  failed with "macOS video link does not name libSDL2.dylib").
+  *On `macos/strict`:* one line, `port/fast3d/hd_textures.cpp:252`, where
+  `std::to_string` of a file time's count is ambiguous on libc++ (its file
+  clock counts in `__int128`) and now takes a `static_cast<long long>`,
+  the value's own type on Windows and Linux. **On `main` alone the macOS
+  video tree fails in exactly that one file** (`cmake --build ... -- -k 0`
+  in the checkout: one `FAILED`, `call to 'to_string' is ambiguous`) until
+  the branch lands.
+  *Ran, at the branch's tip:* `build/mac/video` (`-DGE_POINTER_BITS=64
+  -DGE_VIDEO=ON`, Ninja) builds with no compiler warning and `OK: 702 weak
+  references, 0 strong`; `lp64_diagnostics.py gate`: `393 files compiled, 0
+  failed`; `narrowing --check`: `OK: 33 narrowings in 19 files, all
+  allowed`. The headless tree builds (`OK: 705 weak references, 0 strong`),
+  `lp64_boot.py --expect-run --frames 600`: `OK: ran 600 frames`, and
+  `macos_harnesses.sh`: `47 passed, 2 skipped by name, 0 failed`. In the
+  x86_64 container the gate compiled `build/lp64/gate` and `gate-video`
+  (361 and 402 files, 0 failed), `narrowing --check` `OK: 0 narrowings`,
+  `unprototyped --check` `OK: 3 unprototyped calls in 3 files, all
+  allowed`; in the aarch64 container `OK: ran 600 frames`.
+  `compare_win32.py commits main WORKTREE` in the branch's tree, with both
+  halves: `identical in loaded code and data; .buildid differs`.
 
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside

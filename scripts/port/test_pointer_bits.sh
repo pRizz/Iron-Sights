@@ -77,6 +77,20 @@ if [[ $host == Darwin ]]; then
     compiles_mac() { grep -qF -- "/port/src/port_macos.c\"" "$work/mac64/compile_commands.json"; }
     compiles_mac || fail "macOS build does not compile port_macos.c"
     echo "ok 0: macOS refuses a 32-bit configure; its 64-bit link has -undefined,dynamic_lookup and -map, and runs the link check"
+    # 0b. The macOS video tree (MAC-002) links SDL2 from SDL2_MACOS_ROOT and
+    # nothing of Linux's line: macOS has no libGL (glad resolves GL through
+    # SDL) and dlopen is in libSystem.
+    expect_configure mac64video -DGE_POINTER_BITS=64 -DGE_HEADLESS=OFF -DGE_VIDEO=ON
+    require_link mac64video
+    grep -qF -- '/lib/libSDL2.dylib' "$(link_file mac64video)" || fail "macOS video link does not name libSDL2.dylib"
+    for flag in -lGL -ldl; do
+        if has_link_flag mac64video "$flag"; then
+            fail "macOS video link still passes Linux's $flag"
+        fi
+    done
+    expect_failure mac64nosdl "SDL2_MACOS_ROOT" -DGE_POINTER_BITS=64 -DGE_HEADLESS=OFF -DGE_VIDEO=ON \
+        -DSDL2_MACOS_ROOT=/nonexistent
+    echo "ok 0b: the macOS video link names libSDL2.dylib and neither -lGL nor -ldl; a missing SDL2 is refused by name"
 fi
 
 # 1. The default is today's 32-bit build.

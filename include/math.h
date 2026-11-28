@@ -1,3 +1,8 @@
+#if defined(__APPLE__) && defined(__cplusplus)
+/* macOS (MAC-002): libc++'s <cmath> wants its own <math.h> wrapper, not this
+ * file, which -I include puts first. C and other platforms are unchanged. */
+#include_next <math.h>
+#endif
 
 
 #ifndef _MATH_EXT_H_
