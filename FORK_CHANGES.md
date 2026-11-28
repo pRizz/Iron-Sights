@@ -364,9 +364,18 @@ of scope" call now notes that the owner lifted it for this plan.
   (15,224,648 bytes), `SHA256SUMS-windows-x64.txt`,
   `windows-x64-build-info.json` and `windows-x64-build-inputs.json` beside
   the x86 zip; the downloaded zip matched its checksum, `gh attestation
-  verify` passed it, and the README's latest-download link resolves. Not
-  yet: the owner's play session (verification 11) and the check that a
-  crash from the packaged x64 exe reaches the Sentry project symbolicated. The local package and
+  verify` passed it, and the README's latest-download link resolves.
+  - The real Sentry project, with the owner's permission ("Yes, send it"):
+    the released zip's exe (CI's build of 9352f21), extracted into an
+    isolated folder and run once with `--test-crash-reporting`,
+    `GE_SENTRY_ENVIRONMENT=windows-x64-check` and `GE_SENTRY_DEBUG=1`,
+    crashed with 0xC0000005, and `sentry-crash.exe` sent the native-stack
+    envelope (20,436 bytes) to the project's ingest, which answered `HTTP/1.1
+    200 OK`; the event is `cf3a5f62a4494567ce6497b036c02b94`, level fatal,
+    release `iron-sights@9352f21...`, tag `architecture: x86_64`. Whether
+    Sentry symbolicated its stack to `testCrashFault` is for the owner to
+    read in the project. The folder was deleted afterwards.
+  - Not yet: the owner's play session (verification 11). The local package and
   its extracted copy were deleted.
 
 **Why it differs from upstream.** The inherited baseline builds Windows only
