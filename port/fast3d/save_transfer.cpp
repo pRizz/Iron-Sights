@@ -21,6 +21,9 @@
 #include <sys/wait.h>
 #include <vector>
 #include "posix_dialog.h"
+#ifdef __APPLE__
+#include "port_macos.h" /* MAC-002: portMacExecutablePath */
+#endif
 #if __has_include(<X11/Xlib.h>)
 #include <SDL_syswm.h> /* the game window's X11 id, a dialog's parent */
 #endif
@@ -140,7 +143,12 @@ int portSaveTransferStartup(int argc, char **argv)
         launchCommand = GetCommandLineW(); // Preserve quoted ROM paths and original arguments.
 #else
         char exe[4096];
+#ifdef __APPLE__
+        // macOS has no /proc: dyld names the executable (port_macos.c).
+        auto count = static_cast<ssize_t>(portMacExecutablePath(exe, sizeof(exe) - 1));
+#else
         auto count = readlink("/proc/self/exe", exe, sizeof(exe) - 1);
+#endif
         if (count <= 0) throw std::runtime_error("Cannot locate Iron Sights for restart.");
         exe[count] = 0;
         launchArgs[0] = exe;

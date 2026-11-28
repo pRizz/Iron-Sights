@@ -1689,6 +1689,12 @@ touched on the Mac.
   Windows and Linux, and `compare_win32.py commits main WORKTREE` with it
   said `identical in loaded code and data; .buildid differs`.
 
+- *Task 2, "Start on macOS: the restart path without /proc".*
+  `port/fast3d/save_transfer.cpp`: `portSaveTransferStartup` reads the
+  executable's path from `portMacExecutablePath` (`port_macos.h`) in an
+  `#ifdef __APPLE__` branch beside the `readlink` of `/proc/self/exe`, and
+  includes that header under the same guard. Compiled only on macOS.
+
 ### FORK-092 — Linux weapon icons, icon cache and save transfer dialogs
 
 **Status:** Implemented on 2026-11-25 at the owner's request, during LP64-007
