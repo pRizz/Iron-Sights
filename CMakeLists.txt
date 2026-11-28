@@ -497,6 +497,15 @@ if(APPLE)
 else()
     list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_macos.c)
 endif()
+# Points to pixels and back (port_hidpi.h, MAC-002): only a macOS window has
+# more than one pixel a point, and only macOS branches call these, so no
+# other build compiles the file. Under every warning, like port_macos.c.
+if(APPLE)
+    set_property(SOURCE ${CMAKE_SOURCE_DIR}/port/src/port_hidpi.c APPEND PROPERTY
+        COMPILE_OPTIONS -Wall -Wextra -Werror)
+else()
+    list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_hidpi.c)
+endif()
 # The in-game updater's C files (port_update.h); the GE_VIDEO block below keeps
 # them only where the updater is built.
 set(UPDATER_SRC ${CMAKE_SOURCE_DIR}/port/src/port_update.c ${CMAKE_SOURCE_DIR}/port/src/port_update_core.c
@@ -808,6 +817,15 @@ if(GE_VIDEO)
             ${CMAKE_SOURCE_DIR}/port/src/port_watchpages.c ${CMAKE_SOURCE_DIR}/src/game/front.c
             ${CMAKE_SOURCE_DIR}/src/boss.c
             APPEND PROPERTY COMPILE_DEFINITIONS GE_UPDATER=1)
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND GE_POINTER_BITS EQUAL 32)
+            # As ge_hd_textures: i686 stat fails (EOVERFLOW) on a file with a
+            # 64-bit inode number (btrfs, XFS, network and container mounts),
+            # and the updater then took every installed file for missing:
+            # no .old copies, no NAME.edited, obsolete files left (UPD-004).
+            set_property(SOURCE ${CMAKE_SOURCE_DIR}/port/src/port_update_files.c
+                ${CMAKE_SOURCE_DIR}/port/src/port_update_startup.c
+                APPEND PROPERTY COMPILE_DEFINITIONS _FILE_OFFSET_BITS=64 _TIME_BITS=64)
+        endif()
         add_library(ge_update_http OBJECT port/src/port_update_http.cpp)
         set_target_properties(ge_update_http PROPERTIES INCLUDE_DIRECTORIES "")
         list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_update_http>)

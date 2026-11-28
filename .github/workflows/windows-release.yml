@@ -100,6 +100,7 @@ jobs:
           bash scripts/port/test_posix_dialog.sh
           bash scripts/port/test_web_logo.sh
           python3 scripts/port/test_distribution.py
+          python3 scripts/port/test_update_cycle.py
           python3 scripts/port/test_open_assets.py
           python3 scripts/port/test_linux_launcher.py
           python3 scripts/port/test_steam_art.py
@@ -133,6 +134,7 @@ jobs:
           bash scripts/port/test_gfx_digest.sh
           bash scripts/port/test_image_inflate.sh
           bash scripts/port/test_startup_stamp.sh
+          bash scripts/port/test_hidpi.sh
           python3 scripts/port/test_lp64_equiv_streams.py
           python3 scripts/port/test_lp64_equiv.py
           python3 scripts/port/test_lp64_equiv_video.py

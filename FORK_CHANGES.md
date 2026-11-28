@@ -42,7 +42,12 @@ passed on 8441b97, and release `build-463.1-8441b979f9fa` is the first with
 it): the Updates page in both
 menus, the legal screen's indicator, the file-select notice, and Automatic
 as the default. The page's What's New button was removed after UPD-003
-(owner decision, 2026-11-28). UPD-004 is not started. The plan
+(owner decision, 2026-11-28). UPD-004 (the real release cycle) is in
+progress: `update_cycle.py` ran every flavor from build-463.1 to build-467.1
+(14 of 16 cases passed) and found a 32-bit Linux large-inode bug, fixed in
+11cc113 (every CI job passed; release `build-469.1-11cc113e0332` is the
+first with the fix) and waiting for a cycle from that release to a later
+one. The plan
 was drafted on 2026-11-27 and the owner accepted it
 the same day with five decisions. Every CI release counts as an update, with
 checks at most twice a day. Automatic mode holds the launch with an indicator
@@ -307,7 +312,77 @@ private to the first button's Open Release Page. Validation: `build_win`,
 capture from that install was reviewed and shows the mode row, the six
 lines, "Build 200 is available." and Install Build 200 as the only button.
 `settings_placement.py` and `bright-builds-check.ts all` pass. The watch's
-page was not captured.
+page was not captured. On `main` as 323fb8b; every CI job passed, and
+release `build-467.1-323fb8bf21ae` is the first without the button.
+
+**UPD-004: the real release cycle and hand-over.**
+`scripts/port/update_cycle.py` (with `update_cycle_checks.py`, the layouts
+and verdicts, and `test_update_cycle.py`, 12 ROM-free tests in CI's tests
+step) runs the cycle on real releases. `prepare --from TAG --rom ROM`
+downloads TAG's eight packages, each checked against the release's
+`SHA256SUMS` file, into `build_win/update-cycle/download/TAG` and installs
+each flavor in Automatic and in Notify in `cases/FLAVOR-MODE`, with a
+player's data: the ROM in `Data`, a save, a texture pack, the Enhanced
+fonts' folder, a `midas.ini` with a changed setting and the mode, and
+(outside an AppImage) a `gamecontrollerdefault.txt` with a line the player
+added. `run` launches each case as a player would, with no test switches:
+the Windows zips natively (a 640x480 window for a few seconds, sound off),
+the Linux tarballs, the AppImages (`APPIMAGE_EXTRACT_AND_RUN=1`, data under
+the case's XDG folder) and the Steam Deck ZIPs (through `run.sh`)
+offscreen in `midas-lp64-i686-video`, whose Mesa has GL and EGL at both
+widths, as root, since files Windows wrote into the mount belong to root
+there. Each updates from the real latest release; the run stops a case
+once `Data/Updates/log.txt` shows its end (or its container ends) and
+checks it: Automatic must install a newer release, restart, confirm at the
+legal screen and leave no `.old` file, journal or staging folder, with the
+program files matching the new package's `SHA256SUMS.txt` (an AppImage:
+the new release's image) and the edited file kept as `NAME.edited`;
+Notify must find the newer build, install nothing and not restart; both
+must leave the ROM, save and packs byte for byte and `midas.ini`'s
+settings. It writes `cycle.json`. The cases hold a ROM copy each, so the
+folder is deleted afterwards (`releases.md` says so).
+
+The first full run (2026-11-28, from `build-463.1-8441b979f9fa`, build
+708, to the latest release, `build-467.1-323fb8bf21ae`, build 712) passed
+14 of the 16 cases: both Windows zips, both AppImages and every x86_64
+package installed and confirmed (Windows 8 to 10 s from launch, Linux 10 to
+35 s, most of it the download), and every Notify case found build 712 and
+installed nothing. The i686 tarball and i686 Steam Deck ZIP installed too,
+but lost the player's edited file. Cause: a 32-bit Linux `stat` fails with
+`EOVERFLOW` on a file whose inode number needs 64 bits (the Docker mount's
+were near 2^52; btrfs, XFS and network mounts have them too), so
+`portUpdateExists` took every installed file for missing. On such a disk an
+i686 install was overwritten without `.old` copies (no rollback of a build
+that does not start), without `NAME.edited`, and with files only the old
+package had left in place. `CMakeLists.txt` now gives
+`port_update_files.c` and `port_update_startup.c` (whose log rotation
+stats too) `_FILE_OFFSET_BITS=64 _TIME_BITS=64` in a 32-bit Linux build,
+as `ge_hd_textures` and `ge_save_transfer` already had, and
+`test_update.sh` compiles with them. A probe of `portUpdateExists` built
+with `gcc -m32` in that image read a file on the mount as missing without
+the flags and present with them; `test_update.sh` passes at 32 and 64
+bits. The fix acts in the installed build, so it is shown by a cycle from
+the first release that carries it to a later one. The i686 AppImage
+passed, since its swap replaces one file and needs no `stat`.
+
+Player documents: the Windows `START-HERE.txt` has a new UPDATING section
+(the twice-a-day check and self-update, the skip, Off and Notify in
+Options > Gameplay > Iron Sights > System > Updates or `[updates]
+mode=off`, what an update replaces and keeps, `NAME.edited`, unwritable
+folders, the automatic rollback and renaming `NAME.old` back by hand, and
+updating by hand); both Linux `START-HERE` files gain the same as an
+Updates paragraph, the Steam Deck notes point to it, and `DATA-README.txt`
+names `Data/Updates` and says an update never changes the ROM, saves,
+packs or `midas.ini`. `releases.md` gains In-game updates: which release
+assets and names every installed copy depends on, and when to run
+`update_cycle.py`. The plan's non-goal about What's New now says it was
+removed. `test_distribution.py`, `test_linux_launcher.py` and
+`test_steam_art.py` pass in the `goldeneye` image, except
+`test_every_ci_build_folder_is_ignored_by_git`, which fails there because
+the container's git refuses the mounted checkout's owner (`git
+check-ignore` exits 128 with git's safe-directory message; no
+`.gitignore` changed); on Windows `test_steam_art.py` and one
+`test_distribution.py` test fail on path handling with or without them.
 
 ### FORK-094 — Native Windows x64 build
 
@@ -1964,6 +2039,91 @@ Homebrew SDL2 2.32.10) and in the containers of `scripts/port/lp64_env.py`.
   and `test_baked_trace: PASS` there at 32 and 64 bits; aarch64 `OK: ran
   600 frames`; `compare_win32.py commits main WORKTREE`: `identical in
   loaded code and data`.
+
+- **Task 6, Retina** (the owner's decision 3). On a HiDPI display SDL
+  measures the window, the mouse and the pointer warp in points and the GL
+  drawable in pixels. The rule: sizes saved to `midas.ini` and positions
+  given to SDL are points; sizes given to the renderer and compared with
+  the framebuffer are pixels. *On `main`:* `port/src/video.c` sets
+  `allow_hidpi` under `__APPLE__` unless `GE_WINDOW` is set, so a tool's
+  run keeps one pixel a point and its pictures and digests do not change
+  with the Mac's display; no setting and no ini key. `GE_HIDPI=1` or `0`
+  (macOS only, not in the plan) says it outright for a measuring run: the
+  benchmark sets `GE_WINDOW`, and Retina's cost is that run with
+  `GE_HIDPI=1` against it without. `port/src/port_hidpi.c`
+  (`port/include/port_hidpi.h`, new; CMake compiles the file only on
+  macOS, under `-Wall -Wextra -Werror`) has `portHidpiToPixels` and
+  `portHidpiToPoints`: a value scaled by the two sizes of one axis,
+  rounded to nearest, unchanged when the sizes are equal or either is not
+  positive. The header declares them with `int32_t`, the game's `s32`, so
+  the renderer's C++ and a harness without game headers can include it.
+  `port/src/input_pc.c` keeps everything in SDL's points and converts in
+  the three functions that hand a position to the menus or take one from
+  them (`portInputMouseWindowPos`, `portInputMouseWarp`,
+  `portInputMousePark`), reading the window's two sizes once a poll on the
+  main thread; the menus (`video.c`) go on measuring the window in the
+  renderer's pixels. The Resolution list (`videoResBuild`,
+  `portVideoResCurrent`) measures the window in points on macOS, as
+  display modes, `window_width` and `set_dimensions` are: the drawable's
+  pixel size would have added a bogus entry and matched none. The size
+  saved to the ini (`remember_window_geometry`) and the window fitted to
+  the display were already points. Every edit is inside `#if
+  defined(__APPLE__)`. `portBmpPackRows`, an inline function in
+  `port_hidpi.h`, repacks a screenshot's rows for a BMP file at any width
+  with no row buffer (last row first, each row from its last pixel, the
+  padding zeroed); nothing on `main` calls it yet. `scripts/port/test_hidpi.sh`
+  (driver `test_hidpi.c`, new; every width the host offers; named in the
+  workflow's tests step, and run by `macos_harnesses.sh`) has nine cases:
+  100 of 640 points on 1,280 pixels is 200 and 0 stays 0; the last point
+  maps inside the last pixel pair; equal sizes and a window with no size
+  return the value; a 1.5 scale rounds to nearest; a negative position
+  stays negative; to-points of to-pixels returns each of 1,728 points;
+  rows of 1, 2, 3, 4, 4,096, 4,097 and 5,120 pixels are packed whole with
+  a guard byte intact; an empty image is left alone. Each failed before
+  its function existed.
+  *On `macos/strict`:* `port/fast3d/gfx_sdl2.cpp`'s guard around
+  `SDL_WINDOW_ALLOW_HIGHDPI` is true on macOS (the name is an enumerator,
+  so `#ifdef` was false in every build and none ever asked for a HiDPI
+  window; the other builds still compile nothing there); its screenshot
+  calls `portBmpPackRows` in every build (decision 4: the 4,096-pixel row
+  buffer on the stack was overrun by a wider drawable); and
+  `port/fast3d/gfx_pc.cpp` sizes the first framebuffer from the drawable
+  on macOS, as every later frame's is.
+  *Ran, at the branch's tip.* Visible, 5 s: a `midas.ini` of
+  `fullscreen=windowed`, 640 by 480, and no `GE_WINDOW` logged `SDL:
+  window 640x480` and `SDL: drawable 1280x960`; hidden with `GE_WINDOW`
+  set, `drawable 640x480`; with `GE_WINDOW` and `GE_HIDPI=1`, 1280x960
+  (640x480 before the override existed); with `GE_HIDPI=0` alone, 640x480.
+  A hidden Retina run's `GE_SHOT` screenshot is 1,280x960 and shows the
+  whole picture (Dam's opening, read by eye). The pointer on a Retina
+  menu, by hand, is on Task 13's list: this Mac could not reach a
+  5,120-pixel screenshot end to end either (the game clamps a window to
+  the display, 3,456 pixels).
+  *Cost* (`bench.py run --smoke --resolution 1728x1117`, hidden, one
+  session, three repeats; `off` and `on` are one executable without and
+  with `GE_HIDPI=1`, so 1,728x1,117 against 3,456x2,234 pixels; run-to-run
+  range 1 to 5%). Default preset, pictures a second and render ms a frame:
+  `cradle-fight` 409 and 2.04 off, 348 and 2.39 on (-15%); `dam-walk` 610
+  and 1.24, 574 and 1.30 (-6%); `temple-4p` 399 and 2.10, 287 and 3.06
+  (-28%). Matched preset: 900 to 829, 1,299 to 1,245, 980 to 826. Retina
+  costs at most about 1 ms of render a frame here, a long way inside a
+  120 Hz frame's 8.3 ms, so it stays on with no setting; the Low Res row
+  is the player's way to fewer pixels.
+  *The task check:* video tree `OK: 702 weak references, 0 strong`, gate
+  394 files, 0 failed, `OK: 33 narrowings in 19 files, all allowed`;
+  mission smoke 20 of 20; the comparison builds again, default and
+  `--profile all`, 38 of 38 each and `sim` 38, `gfx` 38, `snd` 24
+  identical to the aarch64 runs of Task 5 under both; headless `OK: ran
+  600 frames`, `macos_harnesses: 48 passed, 2 skipped by name, 0 failed`
+  (`test_hidpi` is the 48th); the x86_64 gate 0 failed with both static
+  checks `OK`, `test_hidpi` and `test_harness_widths` passing there at 32
+  and 64 bits; aarch64 `OK: ran 600 frames`. `compare_win32.py commits
+  HEAD WORKTREE` in the checkout, the half on `main`: `identical in loaded
+  code and data`. In the branch's tree, with the screenshot change, it
+  differs as decision 4 expects: by symbol, `gfx_sdl_maybe_screenshot` no
+  longer exists as its own function and `gfx_sdl_swap_buffers_begin`, its
+  one caller, is 5,344 bytes where it was 4,112 (without the 12 KB row
+  array the compiler inlines it); no other function's size changed.
 
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside

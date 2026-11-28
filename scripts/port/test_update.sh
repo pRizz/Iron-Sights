@@ -14,7 +14,9 @@ for width in $widths; do
     # puff is upstream zlib code, built as the game builds it.
     "${CC:-gcc}" $(harness_flags "$width") $(harness_quiet_flags) -c port/fast3d/third_party/puff/puff.c \
         -o "$work/puff.o"
-    "${CC:-gcc}" $(harness_flags "$width") -std=gnu11 -Wall -Wextra -Werror -Iport/include -Iport/src \
+    # Large-file stat, as CMake gives port_update_files.c in a 32-bit Linux build.
+    "${CC:-gcc}" $(harness_flags "$width") -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64 \
+        -std=gnu11 -Wall -Wextra -Werror -Iport/include -Iport/src \
         scripts/port/test_update.c port/src/port_update.c port/src/port_update_core.c \
         port/src/port_update_archive.c port/src/port_update_files.c port/src/port_update_sha256.c \
         port/src/port_update_swap.c "$work/puff.o" -o "$work/test_update"

@@ -2,8 +2,11 @@
 
 The player executable is `IronSights.exe` inside `Iron-Sights-windows-x86.zip`.
 EXE attestations and launch/verification instructions use that filename. Older
-immutable releases retain their original executable name; updating means replacing
-program files while keeping `Data` and `midas.ini`.
+immutable releases retain their original executable name. Since build-463.1
+every desktop package updates itself from the latest release (Automatic by
+default, at most two checks a day; see [In-game updates](#in-game-updates));
+updating by hand still means replacing program files while keeping `Data` and
+`midas.ini`.
 
 The default branch is `main`. Every successful push (including documentation
 changes) runs ROM-free tests, builds Windows x86, packages player files and
@@ -121,6 +124,27 @@ the port's explicit -O2 optimization remains enabled, matching local builds.
 Every package carries `package.txt`, naming its flavor for the in-game updater,
 and its own `SHA256SUMS.txt`, listing every other file in it with its hash
 (`package_identity.py`, UPD-001 of the [in-game update plan](self_update_plan.md)).
+
+### In-game updates
+
+Each release is an update for the packages before it (FORK-095). The game
+reads its flavor's build-info file through
+`releases/latest/download/<file>`, offers the build when its `build_number` is
+larger and `ci` is true, and downloads the package and the flavor's
+`SHA256SUMS` file from that release's tag. So every release must keep these
+asset names and the four build-info and four `SHA256SUMS` files
+(`package_identity.FLAVORS` names each flavor's three), and a package's
+`SHA256SUMS.txt` must list every program file and only those: renaming an
+asset or a flavor, or moving player data into a package, breaks every
+installed copy's updates. Local, dirty and comparison builds never update.
+Before changing the packages, the release workflow or the updater, run the
+real release cycle (UPD-004): `python scripts/port/update_cycle.py prepare
+--from TAG --rom ROM` installs each flavor of an older release TAG (build-463.1
+or later) in Automatic and Notify with a player's data, and `update_cycle.py
+run` launches each as a player would (the Windows zips natively, the Linux
+packages offscreen in `midas-lp64-i686-video`) and checks that it updates
+itself to the latest release, or only finds it, and that the ROM, saves,
+packs and settings are unchanged. Delete `build_win/update-cycle` afterwards.
 `package_windows.py` uses an explicit file allow-list. It includes the EXE,
 SDL2 DLL/license, controller defaults, shader list, instructions and metadata;
 it never sweeps a local build directory or includes ROM files, personal settings,

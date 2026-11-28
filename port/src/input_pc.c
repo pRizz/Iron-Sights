@@ -33,6 +33,9 @@
 #include "port_console.h" /* the tilde console: fixed keys feed it below */
 #include "port_input_prompt.h"
 #include "port_xwayland_pointer.h"
+#if defined(__APPLE__)
+#include "port_hidpi.h" /* MAC-002: SDL's pointer is in points, the renderer's window in pixels */
+#endif
 #ifdef __EMSCRIPTEN__
 #include "../web/menu_pointer.h"
 #endif
@@ -817,6 +820,28 @@ static u32 s_MouseButtons;
 static int s_MouseVX, s_MouseVY;     /* virtual absolute pos, window px:
                                       * OS cursor when free, integrated
                                       * deltas while captured (menus) */
+#if defined(__APPLE__)
+/* MAC-002: on a Retina display SDL gives the pointer, the window's size and
+ * the warp in points, and the menus measure the window in the renderer's
+ * pixels (video.c). Everything in this file stays in SDL's points; the three
+ * functions that hand a position to the menus or take one from them convert
+ * (portInputMouseWindowPos, portInputMouseWarp, portInputMousePark). The
+ * window's two sizes are read once a poll, on the main thread. In a run with
+ * GE_WINDOW set they are equal and nothing changes. */
+static int s_MacPointsW, s_MacPointsH, s_MacPixelsW, s_MacPixelsH;
+
+static void inputMacReadWindowSizes(void)
+{
+    extern SDL_Window *gfx_sdl_get_window(void);
+    SDL_Window *window = gfx_sdl_get_window();
+
+    if (window != NULL)
+    {
+        SDL_GetWindowSize(window, &s_MacPointsW, &s_MacPointsH);
+        SDL_GL_GetDrawableSize(window, &s_MacPixelsW, &s_MacPixelsH);
+    }
+}
+#endif
 static int s_MouseMoved;
 static int s_MouseMovedAcc;   /* any poll since the last sim tick saw motion */
 static int s_MouseMovedTick;  /* ...latched for the whole tick, see portInputMouseMovedThisTick */
@@ -8492,6 +8517,9 @@ void portInputMouseUpdate(void)
     int ax = 0, ay = 0;
 
     s_MouseButtons = SDL_GetMouseState(&ax, &ay);
+#if defined(__APPLE__)
+    inputMacReadWindowSizes();
+#endif
     if (ax != s_PollX || ay != s_PollY || !s_PollValid)
     {
         /* previous DISTINCT position for the park's direction test (s_PollX) */
@@ -8769,6 +8797,10 @@ void portInputMouseWindowPos(s32 *x, s32 *y, s32 *moved)
 {
     if (x) *x = s_MouseVX;
     if (y) *y = s_MouseVY;
+#if defined(__APPLE__)
+    if (x) *x = portHidpiToPixels(*x, s_MacPointsW, s_MacPixelsW);
+    if (y) *y = portHidpiToPixels(*y, s_MacPointsH, s_MacPixelsH);
+#endif
     if (moved) *moved = s_MouseMoved;
 }
 
@@ -8829,6 +8861,10 @@ static void mouseWarpFree(s32 x, s32 y, s32 parkaxes)
 
 void portInputMouseWarp(s32 x, s32 y)
 {
+#if defined(__APPLE__)
+    x = portHidpiToPoints(x, s_MacPointsW, s_MacPixelsW);
+    y = portHidpiToPoints(y, s_MacPointsH, s_MacPixelsH);
+#endif
     s_MouseVX = x;
     s_MouseVY = y;
     if (!s_MouseLocked)
@@ -8847,6 +8883,10 @@ void portInputMouseWarp(s32 x, s32 y)
  */
 void portInputMousePark(s32 x, s32 y, s32 axes)
 {
+#if defined(__APPLE__)
+    x = portHidpiToPoints(x, s_MacPointsW, s_MacPixelsW);
+    y = portHidpiToPoints(y, s_MacPointsH, s_MacPixelsH);
+#endif
     s_MouseVX = x;
     s_MouseVY = y;
     if (!s_MouseLocked)
