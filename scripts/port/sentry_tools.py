@@ -15,6 +15,9 @@ ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = ROOT / "scripts/port/sentry_config.json"
 CONFIG = json.loads(CONFIG_PATH.read_text())
 RUNTIME_FILES = ("sentry.dll", "sentry-crash.exe", "sentry-wer.dll")
+# A runtime per Windows architecture (WIN64-003): the name its sentry-build.json records, and the
+# Visual Studio platform that builds it. x86 stays the default, so the 32-bit job is unchanged.
+ARCHITECTURES = {"x86": "Win32", "x64": "x64"}
 
 
 def run(*args, **kwargs):
@@ -58,9 +61,10 @@ def licenses(source, output):
         "\njsmn\n" + jsmn + "\nstb_sprintf (MIT)\n" + stb)
 
 
-def build(work, output):
+def build(work, output, arch="x86"):
     source, build_dir = checkout_source(work)
-    run("cmake", "-S", source, "-B", build_dir, "-G", "Visual Studio 17 2022", "-A", "Win32",
+    build_dir = build_dir.with_name(build_dir.name + ("" if arch == "x86" else "-" + arch))
+    run("cmake", "-S", source, "-B", build_dir, "-G", "Visual Studio 17 2022", "-A", ARCHITECTURES[arch],
         "-DCMAKE_SYSTEM_VERSION=10.0", "-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded",
         "-DSENTRY_BACKEND=native", "-DSENTRY_BUILD_SHARED_LIBS=ON",
         "-DSENTRY_BUILD_RUNTIMESTATIC=ON", "-DSENTRY_BUILD_TESTS=OFF", "-DSENTRY_BUILD_EXAMPLES=OFF")
@@ -80,15 +84,15 @@ def build(work, output):
     compiler_metadata = next((build_dir / "CMakeFiles").glob("*/CMakeCCompiler.cmake")).read_text()
     compiler_version = re.search(r'set\(CMAKE_C_COMPILER_VERSION "([^"]+)"\)', compiler_metadata).group(1)
     (output / "sentry-build.json").write_text(json.dumps(dict(
-        sdk_version=CONFIG["sdk_version"], sdk_commit=CONFIG["sdk_commit"], architecture="x86",
+        sdk_version=CONFIG["sdk_version"], sdk_commit=CONFIG["sdk_commit"], architecture=arch,
         backend="native", compiler="MSVC VS2022", compiler_version=compiler_version,
         runtime="static CRT", sha256=fingerprints), indent=2) + "\n")
 
 
-def stage(source, destination):
+def stage(source, destination, arch="x86"):
     info = json.loads((source / "sentry-build.json").read_text())
-    if info["sdk_commit"] != CONFIG["sdk_commit"] or info["architecture"] != "x86":
-        raise ValueError("Sentry artifact does not match the pinned x86 SDK")
+    if info["sdk_commit"] != CONFIG["sdk_commit"] or info["architecture"] != arch:
+        raise ValueError(f"Sentry artifact does not match the pinned {arch} SDK")
     for name in RUNTIME_FILES:
         if hashlib.sha256((source / name).read_bytes()).hexdigest() != info["sha256"][name]:
             raise ValueError("Sentry artifact hash mismatch: " + name)
@@ -132,17 +136,19 @@ def main():
     command = commands.add_parser("build")
     command.add_argument("--work", type=Path, required=True)
     command.add_argument("--output", type=Path, required=True)
+    command.add_argument("--arch", choices=sorted(ARCHITECTURES), default="x86")
     command = commands.add_parser("stage")
     command.add_argument("--source", type=Path, required=True)
     command.add_argument("--destination", type=Path, required=True)
+    command.add_argument("--arch", choices=sorted(ARCHITECTURES), default="x86")
     command = commands.add_parser("upload")
     command.add_argument("--exe", type=Path, required=True)
     command.add_argument("--sdk", type=Path, required=True)
     command.add_argument("--work", type=Path, required=True)
     args = parser.parse_args()
     if args.command == "header": header(args.output, args.dsn)
-    if args.command == "build": build(args.work, args.output)
-    if args.command == "stage": stage(args.source, args.destination)
+    if args.command == "build": build(args.work, args.output, args.arch)
+    if args.command == "stage": stage(args.source, args.destination, args.arch)
     if args.command == "upload": upload(args.exe, args.sdk, args.work)
 
 

@@ -8,6 +8,7 @@
 #include <string.h>
 #include "port_crash.h"
 #include "port_buildinfo.h"
+#include "port_build_arch.h"
 #include "port_sentry_config.h"
 
 static wchar_t sRoot[MAX_PATH], sIni[MAX_PATH], sDatabase[MAX_PATH];
@@ -141,6 +142,8 @@ static void startReporting(void)
     p_sentry_set_tag("build_time", PORT_BUILD_TIME);
     p_sentry_set_tag("build_number", PORT_BUILD_STRING);
     if (PORT_BUILD_RUN_URL[0]) p_sentry_set_tag("build_run", PORT_BUILD_RUN_URL);
+    /* "i686" or "x86_64", as the Linux reports say (WIN64-003). */
+    p_sentry_set_tag("architecture", portBuildArchitecture());
     p_sentry_user_consent_give();
     sSdkFilter = SetUnhandledExceptionFilter(reportException);
     portConLogf("ge: crash reporting ON (Sentry); opt out in Port Options or [diagnostics] crash_reporting=0\n");

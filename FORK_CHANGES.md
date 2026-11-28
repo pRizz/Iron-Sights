@@ -34,11 +34,15 @@ new areas. Status describes implementation state, not Git publication state.
 
 **Status:** WIN64-001 (build and boot) is done on `main` (4fde028, CI
 passed); WIN64-002 (plays and matches) is done on `main` (1f3ea6f, CI
-passed); WIN64-003 and WIN64-004 are not started. No x64 zip is released yet. The plan was drafted on
+passed); WIN64-003 (crash reporting and tooling) is implemented and
+checked on the owner's laptop, done once CI passes on its push; WIN64-004
+is not started. No x64 zip is released yet. The plan was drafted on
 2026-11-27 at the owner's request and accepted the same day with all five
 recommendations; [WIN64-001's plan](scripts/port/windows_x64_win64_001.md)
 and [WIN64-002's](scripts/port/windows_x64_win64_002.md) were accepted under
-the owner's standing instruction to take sensible recommendations.
+the owner's standing instruction to take sensible recommendations;
+[WIN64-003's](scripts/port/windows_x64_win64_003.md) when they asked to start
+it.
 
 **What it is.** [The Windows x64 plan](scripts/port/windows_x64_plan.md)
 proposes a native 64-bit Windows executable from the 64-bit source that
@@ -227,6 +231,90 @@ of scope" call now notes that the owner lifted it for this plan.
     (`test_run_copies.py`, with new tests for the DLL link and the driver
     choice, the `test_lp64_play*.py`, `test_lp64_equiv*.py`,
     `test_audit_buffers.py` and `test_late_load_audit.py` files).
+
+**WIN64-003: crash reporting and tooling.**
+
+- *Sentry x64.* `sentry_tools.py build` and `stage` take `--arch x86` (the
+  default, so the 32-bit CI job is unchanged) or `--arch x64` (`-A x64`, its
+  own build folder); `sentry-build.json` records the architecture and
+  `stage` refuses a runtime of another one. CI's `sentry-sdk` job builds and
+  caches both, the x64 runtime as the `sentry-msvc-x64` artifact, which
+  WIN64-004's job will package. `reporting_win.c` needed no width change (it
+  loads `sentry.dll` from the exe's folder by name); it now sets the
+  `architecture` tag from `portBuildArchitecture()` (`i686` or `x86_64`), as
+  `reporting_linux.c` does, so the 32-bit exe's events gain it too.
+  `test_sentry_windows.py` expects the image `arch` and tag the exe's PE
+  machine implies.
+- *Profiler at 64 bits.* `port_profile.c` samples a 64-bit exe again
+  (WIN64-001 had a stand-in). Sample words are pointer-sized at 64 bits
+  (96 MB of samples) and stay 32-bit at 32 bits. The walk unwinds with
+  `RtlVirtualUnwind`, finding each function's unwind entry by a binary
+  search of its module's own exception directory, from a module list the
+  sampler refreshes while no thread is suspended; `RtlLookupFunctionEntry`
+  is not called there, since it takes the loader's function-table lock,
+  which a suspended thread loading a DLL may hold, and the sampler starts
+  while DLLs load. A function without an entry is a leaf, its return
+  address on top of the stack. The file stays `# ge-profile 1`.
+  `bench_profile.py` reads the exe's PE header for its machine and
+  preferred image base, rebases each address in the exe from its `M` line
+  to that base, names symbols with the matching container `nm`, drops the
+  i686 compiler's leading underscore so 32-bit and 64-bit runs compare row
+  by row, and sets the pump aside under either spelling.
+- *Tooling.* `audit_mission_cheats.ps1` copies `SDL2.dll` from the exe's own
+  folder. `audit_states.ps1` and `audit_state_effects.ps1` read the exe's PE
+  machine and refuse a 64-bit exe by name (no suspend points at 64 bits)
+  before making any folder. `hand_gallery.py generate --executable`
+  refuses a 64-bit Windows exe by name: the references are the 32-bit
+  exe's pictures. That check lives in the new `scripts/port/pe_machine.py`
+  (tested by `test_pe_machine.py`, run in CI's tests job), so the gallery
+  tool stays within its recorded length baseline with one import line. `bench/stock.py --arch x64 --ref <commit>` builds a
+  64-bit ref with the x86_64 toolchain and SDL, and refuses `--arch x64`
+  for the stock 1.0.2b baseline. `late_load_audit.py`, `soak.py` and
+  `bench.py` already took `build_win64` (WIN64-002 ran two of them).
+- *WIN64-003 evidence* (2026-11-27, the owner's laptop, Windows 11 with
+  MSVC 19.40 from Visual Studio 2022 Community):
+  - `sentry_tools.py build --arch x64` built the pinned SDK (0.17.4,
+    7403135) with `-A x64` in a few minutes; `stage --arch x64` copied it
+    into `build_win64`, configured with `MIDAS_SENTRY_INCLUDE_DIR`.
+    `test_sentry_windows.py --build build_win64` passed all nine cases
+    against its loopback receiver (enabled, opt-out, missing SDK, override
+    off, healthy, toggle off, read-only toggle off, watchdog, offline
+    retry); the captured fatal event names its image `arch: x86_64`, has
+    the tag `architecture: x86_64` and a 7-frame stack, and `crash.log`
+    held the in-process handler's dump.
+  - One profiled `bench.py` run of dam-walk with each exe
+    (`--env GE_PROFILE=profile.txt`): 7,808 samples from the 32-bit exe,
+    7,600 from the 64-bit one; `bench_profile.py` named the 64-bit stacks
+    through `nvoglv64.dll`, `SDL2.dll` and `msvcrt.dll` back to
+    `bossMainloop`, `lvlRender`, `gfx_run` and `portRenderThreadProc`. Render
+    thread 1.29 ms a frame at 32 bits, 1.13 ms at 64; game thread 0.45 and
+    0.30 ms beside 0.84 and 0.83 ms waiting in the pump. The difference
+    table also shows the 64-bit walk's reach: the swap's driver time
+    (`gfx_sdl_swap_buffers_begin`, 0.39 ms inclusive) is charged to its
+    caller at 64 bits and lost at 32.
+  - The state audits refused `build_win64/IronSights.exe` with their
+    message; `audit_mission_cheats.ps1 -Executable
+    build_win64/IronSights.exe` ran and wrote its screenshot;
+    `hand_gallery.py generate --executable build_win64/IronSights.exe`
+    stopped with its message; `stock.py --ref HEAD --name win64check --arch
+    x64` built a PE32+ x86-64 ref with its `SDL2.dll` (deleted with
+    `--clean`), and `stock.py --arch x64` alone stopped at the baseline.
+  - `lp64_overlays.py check --no-defects`: 1633 sites, all reviewed (the
+    64-bit leaf read `*(const DWORD64 *) context->Rsp` is `typed`, the
+    32-bit `sWords` line is gone with its cast, and the frame-pointer read
+    is `dead` under `#ifndef _WIN64`); `lp64_casts.py check`: 24 truncating
+    casts, all allowed. On a MinGW gate tree configured as CI's,
+    `lp64_diagnostics.py gate` compiled 392 files with 0 failures and
+    `narrowing --check` found 0 narrowings. `compare_win32.py commits HEAD
+    WORKTREE`: `identical in loaded code and data; .buildid differs` (its
+    README configuration has no Sentry header, so it does not compile the
+    new tag; the released 32-bit exe, built with one, gains that call). The
+    tests of the Sentry tool, the profile reader, the gallery, `pe_machine`,
+    the overlays, the benchmark and the distribution pass in the container.
+  - Not done here: an event in the real Sentry project and symbolicated
+    with uploaded debug files, which needs CI's upload token and a package;
+    WIN64-004's Windows x64 job uploads them, and the owner checks the
+    event.
 
 **Why it differs from upstream.** The inherited baseline builds Windows only
 as a 32-bit program, and so does this fork today.

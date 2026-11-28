@@ -56,6 +56,42 @@ class NativeProfileTests(unittest.TestCase):
         self.assertEqual(names.name(0x70000100), '[driver.dll]')
         self.assertIsNone(names.name(0x50000000))
 
+    def test_a_64_bit_exe_loaded_elsewhere_is_rebased_to_its_preferred_base(self):
+        # Arrange: x86_64 names (no underscore) at the preferred base 0x140000000; ASLR loaded the
+        # exe at 0x7ff600000000
+        nm = '0000000140001000 T main\n0000000140002000 T lvlRender\n'
+        modules = [(0x7FF600000000, 0x100000, 'C:\\game\\IronSights.exe')]
+        names = native.Namer(modules, native.parse_symbols(nm), 'IronSights.exe', 0x140000000)
+
+        # Act / Assert
+        self.assertEqual(names.name(0x7FF600002ABC), 'lvlRender')
+        self.assertEqual(names.name(0x7FF600001010), 'main')
+
+    def test_the_pe_header_gives_machine_and_preferred_base(self):
+        # Arrange: a PE32+ header with ImageBase 0x140000000, and a PE32 one with 0x10000000
+        def header(machine, magic, base_offset, base, width):
+            data = bytearray(512)
+            data[0x3C:0x40] = (0x80).to_bytes(4, 'little')
+            data[0x80:0x84] = b'PE\0\0'
+            data[0x84:0x86] = machine.to_bytes(2, 'little')
+            data[0x98:0x9A] = magic.to_bytes(2, 'little')
+            data[0x98+base_offset:0x98+base_offset+width] = base.to_bytes(width, 'little')
+            return bytes(data)
+
+        # Act / Assert
+        self.assertEqual(native.pe_header(header(0x8664, 0x20B, 24, 0x140000000, 8)), (0x8664, 0x140000000))
+        self.assertEqual(native.pe_header(header(0x14C, 0x10B, 28, 0x10000000, 4)), (0x14C, 0x10000000))
+
+    def test_32_bit_names_lose_their_underscore_and_64_bit_names_keep_theirs(self):
+        symbols = [(1, '_main'), (2, '__ZL3fooi'), (3, 'plain')]
+
+        self.assertEqual(native.without_underscore(symbols, 0x14C), [(1, 'main'), (2, '_ZL3fooi'), (3, 'plain')])
+        self.assertEqual(native.without_underscore(symbols, 0x8664), symbols)
+
+    def test_the_pump_is_set_aside_under_either_spelling(self):
+        self.assertIn('portPumpEvents', native.PUMPS)
+        self.assertIn('_portPumpEvents', native.PUMPS)
+
     def test_window_is_chosen_by_tick_and_skips_the_title(self):
         _, samples = native.parse_profile(PROFILE)
 

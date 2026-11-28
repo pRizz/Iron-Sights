@@ -50,6 +50,14 @@ The game loads the DLL from its own directory with restricted dependency lookup;
 missing or incompatible reporting files do not prevent gameplay. The SDK and
 headers must always come from the same pinned revision.
 
+The 64-bit Windows exe (WIN64-003) loads the same SDK built for **x64**:
+`sentry_tools.py build --arch x64` builds it with `-A x64` and records
+`architecture: x64` in its `sentry-build.json`, and `stage --arch x64` refuses
+any other runtime, as the default `--arch x86` refuses an x64 one. CI's
+`sentry-sdk` job builds and caches both, the x64 one as the `sentry-msvc-x64`
+artifact. Windows events carry the `architecture` tag (`i686` or `x86_64`), as
+the Linux packages' do.
+
 `scripts/port/sentry_config.json` contains the SDK/CLI pins, project and **public
 DSN**. The DSN permits ingestion; it is not an administrative credential. Never
 put a privileged auth token in that file, a game binary, an artifact or a log.
@@ -78,7 +86,10 @@ python scripts/port/sentry_tools.py stage --source build_win/sentry-runtime --de
 ```
 
 Pass `-DMIDAS_SENTRY_INCLUDE_DIR=/home/dev/project/build_win/sentry-runtime/include`
-to the existing Docker GCC CMake configuration, then rebuild normally. A Windows
+to the existing Docker GCC CMake configuration, then rebuild normally. For the
+64-bit exe, build and stage with `--arch x64` into another folder (for example
+`build/sentry-runtime-x64`, staged into `build_win64`) and configure
+`build_win64` with that folder's `include`. A Windows
 build without this optional header path keeps local diagnostics and the opt-out,
 but cannot start Sentry. Browser reporting is unchanged.
 
@@ -91,8 +102,9 @@ python scripts/port/test_sentry_windows.py --build build_win --output build_win/
 
 The Windows suite checks an enabled access violation, INI opt-out and queued-data
 removal, runtime opt-out even with a read-only INI, process suppression, missing
-DLL fallback, normal shutdown, watchdog error reporting, connection-failure retry, x86 debug identification
-and event-only payloads. Each run uses a fresh audit directory, keeps diagnostic logs and removes its
+DLL fallback, normal shutdown, watchdog error reporting, connection-failure retry, debug identification
+of the image's architecture (x86 or x86_64, from the exe's PE machine) with the matching `architecture`
+tag, and event-only payloads; `--build build_win64` runs it on the 64-bit exe. Each run uses a fresh audit directory, keeps diagnostic logs and removes its
 copied executables. To deliberately crash an isolated copy of the game before ROM
 loading, run `IronSights.exe --test-crash-reporting`. `--check-crash-reporting`
 initializes and closes reporting without loading a ROM or crashing. These flags

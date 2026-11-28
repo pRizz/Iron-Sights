@@ -16,6 +16,7 @@ import tempfile
 import time
 import zlib
 
+from pe_machine import gallery_capture_build  # refuses a 64-bit Windows exe (WIN64-003)
 ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = Path('review/hand-gallery')
 RECIPE = dict(version=1, width=960, height=540, seed=1, tick_hz=60, fov=90,
@@ -606,7 +607,7 @@ def main(argv=None, root=ROOT):
     args = parser.parse_args(argv)
     try:
         if args.command == 'generate':
-            generate(root, executable=args.executable)
+            generate(root, executable=args.executable and gallery_capture_build(args.executable))
         elif args.command == 'verify':
             manifest = verify(root, args.index, args.allow_pending)
             if freshness(manifest, root, args.index) == 'pending':

@@ -18,8 +18,12 @@ checkout, since Git ignores them.
     python scripts/port/bench/stock.py                         # stock 1.0.2b
     python scripts/port/bench/stock.py --ref HEAD~1 --name before
     python scripts/port/bench/stock.py --name before --clean   # delete a folder
+    python scripts/port/bench/stock.py --ref HEAD~1 --name before64 --arch x64
 
-The executable lands in build_win/bench-<name>/build.
+The executable lands in build_win/bench-<name>/build. --arch x64 (WIN64-003)
+builds a 64-bit Windows ref with cmake/mingw-x86_64.cmake, for measuring a
+change to the 64-bit exe; stock 1.0.2b has no 64-bit build, so it is refused
+for the baseline.
 """
 import argparse
 import io
@@ -33,7 +37,12 @@ REPO = Path(__file__).resolve().parents[3]
 # FORK_CHANGES.md "Comparison baseline": change both together, deliberately.
 BASELINE_REF = '9062f9f120b7f64d39e5db59500ed50e8e7a6686'
 CONTAINER_ROOT = '/home/dev/project'
-SDL2_ROOT = '/home/dev/sdl2-mingw/SDL2-2.30.11/i686-w64-mingw32'
+# Each architecture's toolchain file, extra CMake options and SDL2 MinGW folder in the container.
+ARCHITECTURES = {
+    'x86': ('cmake/mingw-i686.cmake', '', '/home/dev/sdl2-mingw/SDL2-2.30.11/i686-w64-mingw32'),
+    'x64': ('cmake/mingw-x86_64.cmake', ' -DGE_POINTER_BITS=64',
+            '/home/dev/sdl2-mingw/SDL2-2.30.11/x86_64-w64-mingw32'),
+}
 REF_MARKER = 'BENCH_REF'
 HARNESS_FILES = ('port_bench.c', 'port_profile.c')
 
@@ -112,10 +121,11 @@ def container(command):
                            'bash', '-lc', command]).returncode
 
 
-def build(work, jobs):
+def build(work, jobs, arch='x86'):
     relative = work.relative_to(REPO).as_posix()
-    configure = (f'cmake -S {relative}/src -B {relative}/build -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-i686.cmake '
-                 f'-DCMAKE_BUILD_TYPE=Debug -DGE_VIDEO=ON -DGE_ROMDATA_FALLBACK=OFF -DSDL2_MINGW_ROOT={SDL2_ROOT}')
+    toolchain, options, sdl_root = ARCHITECTURES[arch]
+    configure = (f'cmake -S {relative}/src -B {relative}/build -DCMAKE_TOOLCHAIN_FILE={toolchain}{options} '
+                 f'-DCMAKE_BUILD_TYPE=Debug -DGE_VIDEO=ON -DGE_ROMDATA_FALLBACK=OFF -DSDL2_MINGW_ROOT={sdl_root}')
     log = f'{relative}/build.log'
     return container(f'({configure} && cmake --build {relative}/build -j{jobs}) > {log} 2>&1')
 
@@ -126,9 +136,13 @@ def main():
     parser.add_argument('--name', default='stock', help='folder name: build_win/bench-<name> (default: stock)')
     parser.add_argument('--jobs', type=int, default=8)
     parser.add_argument('--clean', action='store_true', help='delete the folder and stop')
+    parser.add_argument('--arch', choices=sorted(ARCHITECTURES), default='x86',
+                        help='x64 builds a 64-bit Windows ref (not for the stock baseline)')
     args = parser.parse_args()
     if not args.name.replace('-', '').isalnum():
         parser.error('--name takes letters, digits and dashes')
+    if args.arch == 'x64' and args.ref == BASELINE_REF:
+        parser.error('stock 1.0.2b has no 64-bit build; --arch x64 needs a --ref from this fork')
     work = REPO/'build_win'/('bench-'+args.name)
     source = work/'src'
     if args.clean:
@@ -145,7 +159,7 @@ def main():
         print('copied', copy_ignored_assets(source), 'generated asset files')
     apply_harness(source)
     print('building; log:', work/'build.log')
-    if build(work, args.jobs) != 0:
+    if build(work, args.jobs, args.arch) != 0:
         print('build failed; see', work/'build.log', file=sys.stderr)
         return 1
     executables = [path for path in (work/'build').glob('*.exe') if path.stem in ('IronSights', 'ProjectMidas')]

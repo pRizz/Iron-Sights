@@ -11,6 +11,11 @@ project container's `nm`, keeps the samples of the measured tick window, and
 prints processor milliseconds per frame by function: self time and inclusive
 time per thread, and with two runs, the functions whose inclusive time differs
 most. See scripts/port/benchmarks.md.
+
+A 64-bit exe (WIN64-003) loads where ASLR puts it: each address in the exe is
+moved from its module's M line to the exe's preferred image base, read from
+its PE header, before it is named, and its symbols come from the x86_64 `nm`.
+A 32-bit exe loads at its preferred base, so its addresses do not move.
 """
 import argparse
 import bisect
@@ -30,7 +35,10 @@ THREAD_FLOOR = 0.02  # threads below this share of a processor are left out
 # An unpaced run's game thread spins in the pump while the renderer catches up,
 # polling input and events tens of thousands of times a second. That is the
 # benchmark waiting, not the cost of a frame, so it is totalled and set aside.
-PUMP = '_portPumpEvents'
+# The 32-bit compiler prefixes C names with an underscore; the x86_64 one does not.
+PUMPS = ('_portPumpEvents', 'portPumpEvents')
+# The PE machine field's values, and the container's nm that reads each.
+NM_BY_MACHINE = {0x14C: 'i686-w64-mingw32-nm', 0x8664: 'x86_64-w64-mingw32-nm'}
 
 Sample = collections.namedtuple('Sample', 'thread stage tick wake micros addresses')
 
@@ -64,14 +72,35 @@ def parse_symbols(nm_text):
     return symbols
 
 
-class Namer:
-    """Names an address: a function of the game, or the module it lies in."""
+def pe_header(data):
+    """The PE machine and preferred image base of an executable's bytes DATA."""
+    pe = int.from_bytes(data[0x3C:0x40], 'little')
+    if data[pe:pe+4] != b'PE\0\0':
+        raise ValueError('not a PE executable')
+    machine = int.from_bytes(data[pe+4:pe+6], 'little')
+    optional = pe+24
+    magic = int.from_bytes(data[optional:optional+2], 'little')
+    if magic == 0x20B:  # PE32+: an 8-byte ImageBase at offset 24
+        return machine, int.from_bytes(data[optional+24:optional+32], 'little')
+    return machine, int.from_bytes(data[optional+28:optional+32], 'little')
 
-    def __init__(self, modules, symbols, executable_name):
+
+class Namer:
+    """Names an address: a function of the game, or the module it lies in. With PREFERRED_BASE, the
+    exe's image base, an address in the exe is first moved from where its M line says the exe loaded."""
+
+    def __init__(self, modules, symbols, executable_name, preferred_base=None):
         self.modules = sorted(modules)
         self.starts = [address for address, _ in symbols]
         self.names = [name for _, name in symbols]
         self.executable = executable_name.lower()
+        self.preferred_base = preferred_base
+
+    def loaded_base(self, module_name):
+        for base, _, path in self.modules:
+            if ntpath.basename(path).lower() == module_name.lower():
+                return base
+        return None
 
     def module_of(self, address):
         for base, size, path in self.modules:
@@ -85,6 +114,8 @@ class Namer:
             return None
         if maybe_module.lower() != self.executable:
             return f'[{maybe_module}]'
+        if self.preferred_base is not None:
+            address += self.preferred_base-self.loaded_base(maybe_module)
         index = bisect.bisect_right(self.starts, address)-1
         return self.names[index] if index >= 0 else f'[{maybe_module}]'
 
@@ -135,7 +166,7 @@ def aggregate(samples, namer, first_tick, last_tick):
         stack = named_stack(sample, namer)
         thread['samples'] += 1
         thread['roots'][thread_name(stack)] += 1
-        if PUMP in stack:
+        if any(pump in stack for pump in PUMPS):
             thread['pump'] += 1
             continue
         thread['self'][stack[0]] += 1
@@ -194,13 +225,25 @@ def render_difference(base_label, base, other_label, other, count):
 
 
 def read_symbols(executable):
-    """Function symbols of a game executable, from the project container's nm."""
+    """Function symbols of a game executable, from the project container's nm for its machine, and
+    its preferred image base."""
+    machine, preferred_base = pe_header(executable.read_bytes()[:4096])
+    if machine not in NM_BY_MACHINE:
+        raise SystemExit(f'bench: {executable} is neither an i686 nor an x86_64 PE executable')
     relative = executable.resolve().relative_to(REPO).as_posix()
     mount = f'{REPO.as_posix()}:{CONTAINER_ROOT}'
     listing = subprocess.run(['docker', 'run', '--rm', '-v', mount, '-w', CONTAINER_ROOT, 'goldeneye',
-                              'i686-w64-mingw32-nm', '-n', '--defined-only', relative],
+                              NM_BY_MACHINE[machine], '-n', '--defined-only', relative],
                              check=True, capture_output=True, text=True).stdout
-    return parse_symbols(listing)
+    return without_underscore(parse_symbols(listing), machine), preferred_base
+
+
+def without_underscore(symbols, machine):
+    """SYMBOLS with the i686 compiler's leading underscore taken off C and C++ names, so a 32-bit
+    and a 64-bit run name a function alike and compare row by row."""
+    if machine != 0x14C:
+        return symbols
+    return [(address, name[1:] if name.startswith('_') else name) for address, name in symbols]
 
 
 def labelled(items, what):
@@ -234,7 +277,8 @@ def main():
         if label not in executables:
             raise SystemExit(f'bench: no --exe for {label}')
         modules, samples = parse_profile((folder/'profile.txt').read_text(encoding='utf-8', errors='replace'))
-        namer = Namer(modules, read_symbols(executables[label]), executables[label].name)
+        symbols, preferred_base = read_symbols(executables[label])
+        namer = Namer(modules, symbols, executables[label].name, preferred_base)
         threads = aggregate(samples, namer, options.first_tick, options.last_tick)
         totals[label] = inclusive_totals(threads)
         lines += render_run(label, threads, options.top)

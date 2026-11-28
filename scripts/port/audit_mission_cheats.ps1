@@ -29,7 +29,8 @@ if (!$auditExe.StartsWith($repoDir+[IO.Path]::DirectorySeparatorChar,[StringComp
 New-Item -ItemType Directory -Path $dir | Out-Null
 $sourceExe=if ($Executable) { (Resolve-Path $Executable).Path } else { Join-Path $repoDir 'build_win/IronSights.exe' }
 Copy-Item -LiteralPath $sourceExe -Destination $auditExe
-Copy-Item -LiteralPath (Join-Path $repoDir 'build_win/SDL2.dll') -Destination $dir
+# SDL2.dll from the executable's own folder, so a build_win64 exe gets its 64-bit one (WIN64-003).
+Copy-Item -LiteralPath (Join-Path (Split-Path $sourceExe) 'SDL2.dll') -Destination $dir
 Set-Content -LiteralPath (Join-Path $dir 'midas.ini') -Value @('[display]','fullscreen=window','vsync=0','maxfps=60',"unlock_all=$([int][bool]$UnlockAll)","headshots_only=$([int][bool]$HeadshotsOnly)","reinforcements=$Reinforcements")
 $headshotLines=@('[headshots_only]','version=1')
 for ($d=0; $d -lt 3; $d++) { if ($HeadshotTimes[$d] -gt 0) { $headshotLines+=('f1_m{0:D2}_d{1}={2}' -f $Mission,$d,$HeadshotTimes[$d]) } }

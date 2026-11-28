@@ -97,6 +97,32 @@ class SentryTools(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "pinned"):
                 tools.stage(source, source / "player")
 
+    def test_stage_rejects_a_runtime_of_another_architecture(self):
+        # Arrange: an x64 runtime staged as the default x86 one
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary)
+            info = dict(sdk_commit=tools.CONFIG["sdk_commit"], architecture="x64", sha256={})
+            (source / "sentry-build.json").write_text(json.dumps(info))
+            # Act / Assert
+            with self.assertRaisesRegex(ValueError, "pinned x86 SDK"):
+                tools.stage(source, source / "player")
+
+    def test_stage_copies_an_x64_runtime_asked_for_by_architecture(self):
+        # Arrange
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "sdk"
+            source.mkdir()
+            info = dict(sdk_commit=tools.CONFIG["sdk_commit"], architecture="x64", sha256={})
+            for name in tools.RUNTIME_FILES:
+                (source / name).write_bytes(b"runtime")
+                info["sha256"][name] = tools.hashlib.sha256(b"runtime").hexdigest()
+            (source / "sentry-build.json").write_text(json.dumps(info))
+            (source / "Sentry-LICENSE.txt").write_text("license")
+            # Act
+            tools.stage(source, Path(temporary) / "player", "x64")
+            # Assert
+            self.assertEqual((Path(temporary) / "player" / "sentry.dll").read_bytes(), b"runtime")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -251,8 +251,15 @@ the Linux packages: `GE_PROFILE` is a Windows sampler.
 **Windows.** The game samples itself. `GE_PROFILE=<file>` starts a sampler
 thread ([port_profile.c](../../port/src/port_profile.c)) that, a thousand times
 a second (`GE_PROFILE_HZ`), suspends each thread that has used processor time,
-reads its program counter and walks its frame-pointer chain. Take a profiled
-run of each build and keep the folders:
+reads its program counter and walks its frame-pointer chain. The 64-bit exe
+(WIN64-003) walks its stack with the unwind tables instead, which also see
+through the GL driver and system DLLs; `bench_profile.py` rebases its
+addresses, which ASLR moves, and names its functions with the x86_64 `nm`.
+Names lose the 32-bit compiler's leading underscore, so a 32-bit and a 64-bit
+run compare row by row; between them, inclusive time can differ by what each
+walk sees, not only by cost. `stock.py --arch x64 --ref <commit>` builds a
+64-bit ref (stock 1.0.2b has none). Take a profiled run of each build and keep
+the folders:
 
 ```sh
 python scripts/port/bench/bench.py run --build stock=build_win/bench-stock/build/ProjectMidas.exe --build fork=build_win/IronSights.exe --scenario cradle-fight --preset matched --repeats 1 --keep --env GE_PROFILE=profile.txt
@@ -270,8 +277,8 @@ project container's `nm`. Delete the kept run folders afterwards.
 
 - Counts are processor time: a thread that has not run since the last sample
   is not sampled.
-- The GL driver and system DLLs have no frame pointers, so a walk that starts
-  inside one may stop there. Such samples are still charged to the module
+- At 32 bits the GL driver and system DLLs have no frame pointers, so a walk
+  that starts inside one may stop there. Such samples are still charged to the module
   (`[nvoglv32.dll]`), and usually to the game function that called it.
 - Time the game thread spends in the pump is set aside and reported as one
   figure. Unpaced, that thread spins there waiting for the renderer, polling

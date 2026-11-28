@@ -40,6 +40,15 @@ def run(exe, directory, receiver, arguments, overrides=None):
                               creationflags=subprocess.CREATE_NO_WINDOW).returncode
 
 
+def pe_architecture(executable):
+    """The crash image's `arch` and the event's `architecture` tag a Windows exe implies, from its
+    PE machine field (WIN64-003): ("x86", "i686") or ("x86_64", "x86_64")."""
+    data = executable.read_bytes()
+    pe = int.from_bytes(data[0x3C:0x40], "little")
+    machine = int.from_bytes(data[pe + 4:pe + 6], "little")
+    return {0x14C: ("x86", "i686"), 0x8664: ("x86_64", "x86_64")}[machine]
+
+
 def check(package, build, output):
     if os.name != "nt":
         raise RuntimeError("Run this integration suite on Windows")
@@ -136,7 +145,9 @@ def check(package, build, output):
         assert all(isinstance(event["extra"][key], int) for key in ("stage", "menu", "frame"))
         images = event["debug_meta"]["images"]
         image = next(item for item in images if item["code_file"].endswith("IronSights.exe"))
-        assert image["arch"] == "x86" and image.get("debug_id", "").strip("0-")
+        arch, tag = pe_architecture(directory / "IronSights.exe")
+        assert image["arch"] == arch and image.get("debug_id", "").strip("0-"), (image["arch"], arch)
+        assert event["tags"]["architecture"] == tag, event.get("tags")
         assert b'"type":"attachment"' not in envelope
         (output / "captured.envelope").write_bytes(envelope)
         result = json.dumps(dict(cases=cases, event_id=event["event_id"],

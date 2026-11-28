@@ -3,6 +3,14 @@ param([string]$Executable,[switch]$CrossProcessOnly,[switch]$RenderThread)
 $ErrorActionPreference='Stop'
 $repoDir=(Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 if (!$Executable) { $Executable=Join-Path $repoDir 'build_win/IronSights.exe' }
+$Executable=(Resolve-Path -LiteralPath $Executable).Path
+# Suspend points do not exist in a 64-bit build (the 64-bit plan; WIN64-003):
+# refuse one by name instead of auditing a feature it lacks.
+$peHeader = New-Object byte[] 4096
+$peStream = [IO.File]::OpenRead($Executable); [void]$peStream.Read($peHeader, 0, 4096); $peStream.Close()
+if ([BitConverter]::ToUInt16($peHeader, [BitConverter]::ToInt32($peHeader, 0x3C) + 4) -eq 0x8664) {
+    throw "$Executable is a 64-bit build, which has no suspend points; audit a 32-bit build (build_win/IronSights.exe)."
+}
 $dir=Join-Path $repoDir ('build_win/state-audit-'+(Get-Date -Format 'yyyyMMdd-HHmmss-fff'))
 $auditExe=[IO.Path]::GetFullPath((Join-Path $dir 'IronSights.exe'))
 if (!$auditExe.StartsWith($repoDir+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw 'Audit executable must stay inside the workspace.' }
