@@ -15,7 +15,8 @@ case is `CASE: FAIL (reason)`: neither equal nor different).
 
 gallery: the hand gallery's capture mode (GE_HAND_GALLERY=1, hand_gallery.py's FIXTURE_INI and the
 variables hand_gallery.run_game sets, read from it by capture_environment) on EXECUTABLE, offscreen
-(SDL_VIDEODRIVER=offscreen), in DIR/game/ (a copy of the executable, removed when it ends; HOME and
+(SDL_VIDEODRIVER=offscreen; on macOS a hidden Cocoa window), in DIR/game/ (a copy of the executable,
+removed when it ends; HOME and
 the icon cache inside DIR). The game's output goes to DIR/gallery.engine.log and
 DIR/gallery.stdout.log; a progress line every 12 captures gives the count and the seconds so far.
 When all hand_gallery.CASES cases' two samples are written, DIR/gallery.txt gets one line a capture,
@@ -49,6 +50,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import hand_gallery  # noqa: E402
+import lp64_play_run  # noqa: E402
 
 RECORD = 'equiv.json'
 GALLERY_FILE = 'gallery.txt'
@@ -56,6 +58,9 @@ SAMPLES = (1, 2)
 CAPTURES = hand_gallery.CASES * len(SAMPLES)
 DEFAULT_TIMEOUT = 3600
 PROGRESS_EVERY = 12
+# What a gallery capture takes from the play runs' video variables: the host's driver and, where the
+# set holds it (macOS), the hidden window. Never GE_WINDOW: the gallery has its own size.
+HOST_CAPTURE_VARIABLES = ('SDL_VIDEODRIVER', 'GE_WINDOW_HIDDEN', 'SDL_MAC_BACKGROUND_APP')
 # The game's lines for a capture (port/src/joy_port.c and gfx_sdl2.cpp), as hand_gallery.py reads them.
 CAPTURE_LINE = re.compile(r'hand-gallery capture case=(\d+) sample=(\d+)')
 WROTE_LINE = re.compile(r'gfx: wrote (shot_\d+\.bmp)')
@@ -153,8 +158,9 @@ def command_shots(args: argparse.Namespace) -> int:
 # ---- the gallery --------------------------------------------------------------------------------
 def capture_environment(rom: Path, cache: Path) -> dict[str, str]:
     """The environment hand_gallery.run_game gives a gallery capture, read by calling it with a
-    process that records its environment and ends at once (so the two cannot drift), and
-    SDL_VIDEODRIVER=offscreen, which needs no display (Mesa's software GL)."""
+    process that records its environment and ends at once (so the two cannot drift), and the host's
+    video driver as the play runs take it (lp64_play_run.host_video_variables): offscreen, which needs
+    no display (Mesa's software GL), or on macOS a Cocoa window kept hidden."""
     recorded: dict[str, str] = {}
 
     class Recorder:
@@ -176,7 +182,8 @@ def capture_environment(rom: Path, cache: Path) -> dict[str, str]:
         game.mkdir()
         with mock.patch.object(hand_gallery, 'subprocess', stand_in):
             hand_gallery.run_game(game/'IronSights', rom, game, cache, 'probe', gallery=True)
-    return dict(recorded, SDL_VIDEODRIVER='offscreen')
+    host = lp64_play_run.VIDEO_VARIABLES
+    return dict(recorded, **{name: host[name] for name in HOST_CAPTURE_VARIABLES if name in host})
 
 
 def captures_in(log: str) -> list[tuple[int, int, str]]:

@@ -1770,6 +1770,49 @@ Homebrew SDL2 2.32.10) and in the containers of `scripts/port/lp64_env.py`.
   static checks `OK`; aarch64 `OK: ran 600 frames`; `compare_win32.py
   commits main WORKTREE`: `identical in loaded code and data`.
 
+- **Task 3, the tools run the game in a hidden window** (the owner's
+  decision 1). *On `main`:* `scripts/port/lp64_play_run.py` picks the SDL
+  video driver by host, `host_video_driver(os_name, platform)`: `cocoa` on
+  macOS, `windows` on Windows, `offscreen` elsewhere (SDL's offscreen
+  driver makes no GL window on a Mac). `host_video_variables(platform)` is
+  the set a video case gets; `VIDEO_VARIABLES` stays the module's name for
+  the host's own. On macOS it adds `GE_WINDOW_HIDDEN=1` (the game creates
+  its window and never shows it) and `SDL_MAC_BACKGROUND_APP=1`, SDL's own
+  hint. The second is not in the plan: measured with `lsappinfo`, a hidden
+  case kept the frontmost app where it was but was listed as a foreground
+  app, with a Dock icon, for as long as it ran; with the hint it is
+  `BackgroundOnly` and draws the same (Dam, 900 frames, 890 pictures, its
+  screenshot read by eye). Linux's and Windows' sets are byte for byte
+  what they were, which a test now pins. `lp64_play.py`, `lp64_equiv.py`
+  and `audit_buffers.py` take the set unchanged, so each refuses `--env
+  GE_WINDOW_HIDDEN` with `--video` on a Mac; `lp64_equiv_pictures.py`'s
+  gallery mode takes the driver and the two macOS variables from the same
+  set instead of naming `offscreen`, and keeps the gallery's own window
+  size. Tests, each failing before its change: `test_run_copies.py` (the
+  driver for each host, the hidden window, the background app, the Linux
+  and Windows sets), `test_lp64_play_options.py` (`--env
+  GE_WINDOW_HIDDEN=0` refused where the tool sets it; the case's
+  environment is the host's set), `test_lp64_equiv_pictures.py` (the
+  gallery's environment on a macOS and a Linux set).
+  *On `macos/strict`:* `port/fast3d/gfx_sdl2.cpp` does not show its window
+  when `GE_WINDOW_HIDDEN` is set, inside `#ifdef __APPLE__`.
+  `port/src/port_console_env.h`, a list pasted by hand, is left alone.
+  *Ran, at the branch's tip, every window hidden:* `lp64_play.py run
+  --video --set demos,stages,stops,menus,tours,attract,sound`: `OK: 119 of
+  119 cases` in 15 min 49 s; `peaks --budget`: `OK: 319 pool and stage
+  pairs within budget`; `lp64_play.py sound`: `capture-dam` 27.80 s, peak
+  16,103, and `capture-title` 27.80 s, peak 23,568, both 22,050 Hz stereo;
+  `audit_buffers.py --mission-smoke --video --frames 1800 --jobs 4`: 20 of
+  20 `PASS` in 2 min 32 s, each with its pictures (Dam 1,792). The play
+  sets ran before the background-app hint was added and the mission smoke
+  again after it (20 of 20); Task 4 reruns the play sets with it. The six
+  changed or dependent Python tests pass on macOS and in the aarch64
+  container. The task check: the headless tree, `OK: ran 600 frames`,
+  `macos_harnesses: 47 passed, 2 skipped by name, 0 failed`; the x86_64
+  gate 361 and 402 files, 0 failed, both static checks `OK`; aarch64 `OK:
+  ran 600 frames`; `compare_win32.py commits main WORKTREE`: `identical in
+  loaded code and data`.
+
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside
 the repository: they are the plans' inputs, not checks of a change. From

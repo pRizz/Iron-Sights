@@ -11,7 +11,9 @@ stretches the case), so a case's frames fix its wall time; a case still running 
 timeout_seconds(frames) is killed and fails with its last line.
 
 With video (`run --video`) a case also gets SDL_VIDEODRIVER=offscreen (Mesa's software GL; the
-dummy driver cannot make a GL context; on Windows the native `windows` driver, a real window),
+dummy driver cannot make a GL context; on Windows the native `windows` driver, a real window; on
+macOS `cocoa` with GE_WINDOW_HIDDEN=1 and SDL_MAC_BACKGROUND_APP=1, a real window that is never shown
+and no Dock icon),
 SDL_AUDIODRIVER=dummy, GE_WINDOW=640x480, GE_NOINPUT=1,
 GE_TICKHZ=60, a HOME and GE_ICON_CACHE_DIR inside its temporary folder, and a midas.ini there with
 `[display] fullscreen=windowed`; `--shots N` adds GE_SHOT=N, and the last shot_*.bmp the case wrote
@@ -32,6 +34,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -61,20 +64,39 @@ TIMEOUT_FACTOR = 5
 TIMEOUT_BOOT_SECONDS = 120
 
 
-def host_video_driver(os_name: str = os.name) -> str:
-    """The SDL video driver a video case uses on a host whose os.name is OS_NAME. On Windows
-    (WIN64-002) SDL's offscreen driver has no GL library to load ("Could not initialize OpenGL /
-    GLES library"), so a case opens a real 640x480 window through the native driver."""
+def host_video_driver(os_name: str = os.name, platform: str = sys.platform) -> str:
+    """The SDL video driver a video case uses on a host whose os.name is OS_NAME and whose
+    sys.platform is PLATFORM. On Windows (WIN64-002) SDL's offscreen driver has no GL library to load
+    ("Could not initialize OpenGL / GLES library"), so a case opens a real 640x480 window through the
+    native driver. On macOS (MAC-002) the offscreen driver makes no GL window either, so a case gets a
+    real Cocoa window, which host_video_variables keeps hidden."""
+    if platform == 'darwin':
+        return 'cocoa'
     return 'windows' if os_name == 'nt' else 'offscreen'
 
 
-# What every run with video gets (plan "What was measured": video needs no display server).
-# GE_TICKHZ=60 (src/game/frametiming.c, portTickHz; it wins over midas.ini's tickhz): a video
-# build's retrace pump runs at tickhz, 120 in the ini it writes by default, while every case's
-# frames were measured headless at 60 retraces a second; at 120 a case ends at half its time.
+def host_video_variables(platform: str = sys.platform) -> dict[str, str]:
+    """What every run with video gets on a host whose sys.platform is PLATFORM (plan "What was
+    measured": video needs no display server). GE_TICKHZ=60 (src/game/frametiming.c, portTickHz; it
+    wins over midas.ini's tickhz): a video build's retrace pump runs at tickhz, 120 in the ini it
+    writes by default, while every case's frames were measured headless at 60 retraces a second; at
+    120 a case ends at half its time. On macOS GE_WINDOW_HIDDEN=1 as well (MAC-002 decision 1): the
+    game creates its window and never shows it, so the Mac's GPU draws every case and nothing takes
+    the screen. Only a macOS build reads that variable, and no other host's set holds it. With it
+    goes SDL_MAC_BACKGROUND_APP=1, SDL's own hint: SDL then leaves the process a background app, so
+    a case shows no Dock icon either (measured: without it each case is listed as a foreground app
+    while it runs; with it the hidden window is drawn the same)."""
+    driver = host_video_driver('nt' if platform == 'win32' else 'posix', platform)
+    variables = {'SDL_VIDEODRIVER': driver, 'SDL_AUDIODRIVER': 'dummy', 'GE_WINDOW': '640x480',
+                 'GE_NOINPUT': '1', 'GE_TICKHZ': '60'}
+    if platform == 'darwin':
+        variables.update(GE_WINDOW_HIDDEN='1', SDL_MAC_BACKGROUND_APP='1')
+    return variables
+
+
+# The host's own set (host_video_variables has the reasons).
 VIDEO_DRIVER = host_video_driver()
-VIDEO_VARIABLES = {'SDL_VIDEODRIVER': VIDEO_DRIVER, 'SDL_AUDIODRIVER': 'dummy', 'GE_WINDOW': '640x480',
-                   'GE_NOINPUT': '1', 'GE_TICKHZ': '60'}
+VIDEO_VARIABLES = host_video_variables()
 # A case that records its sound (Case.capture) gets this variable naming DIR/CASE.wav.
 CAPTURE_VARIABLE = 'GE_AUDIO_CAPTURE'
 # The variables a run with video sets in its folder at launch (folder_environment).

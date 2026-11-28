@@ -512,7 +512,7 @@ macOS: the restart path without /proc".
   today's `VIDEO_VARIABLES` plus `GE_WINDOW_HIDDEN=1` for `'darwin'`.
   `VIDEO_VARIABLES` stays the module's name for the host's own set.
 
-- [ ] **Step 1: Write the failing tool tests**
+- [x] **Step 1: Write the failing tool tests**
 
 In `test_run_copies.py`: `host_video_driver('posix', 'darwin') ==
 'cocoa'`; `('posix', 'linux') == 'offscreen'`; `('nt', 'win32') ==
@@ -523,18 +523,18 @@ holds it. In `test_lp64_equiv_pictures.py`: the gallery mode's
 environment takes its driver from `host_video_driver`. Run. Expected:
 FAIL.
 
-- [ ] **Step 2: Implement the tool side**
+- [x] **Step 2: Implement the tool side**
 
 Run the Python tests. Expected: PASS; on Linux and Windows the variables
 are byte for byte what they are today (the existing tests hold that).
 
-- [ ] **Step 3: The game side**
+- [x] **Step 3: The game side**
 
 `gfx_sdl2.cpp:513`, inside `#ifdef __APPLE__`: the window is not shown
 when `GE_WINDOW_HIDDEN` is set. `port/src/port_console_env.h` is a list
 pasted by hand and is left alone.
 
-- [ ] **Step 4: Play, hidden**
+- [x] **Step 4: Play, hidden**
 
 ```bash
 python3 scripts/port/lp64_play.py run --video --rom "$ROM" --set demos,stages,stops,menus,tours,attract,sound --output build/mac/play/video build/mac/video/IronSights
@@ -546,7 +546,7 @@ and the task check's step 2. Expected: `OK: 119 of 119 cases`, `OK: N
 pool and stage pairs within budget` (318 when measured), two recordings
 that pass; 20 `PASS`; no window on screen at any time.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 `main`: "Run the video tools in a hidden Cocoa window on macOS". Branch:
 "Keep the macOS window hidden when a tool asks".

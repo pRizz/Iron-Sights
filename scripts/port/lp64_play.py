@@ -24,7 +24,8 @@ GE_FIXEDTICK or GE_NOSLEEP, which --env refuses, as it refuses what the tool set
 (GE_ROM, GE_FRAMES, GE_SEED, GE_NOINISAVE, GE_INPUTPLAY). A case marked lockstep=True runs with
 GE_LOCKSTEP=1 instead (one retrace a game frame, LP64-006); --env refuses GE_LOCKSTEP, and a demo
 never runs in lockstep.
---video runs a GE_VIDEO executable offscreen (SDL_VIDEODRIVER=offscreen, SDL_AUDIODRIVER=dummy,
+--video runs a GE_VIDEO executable offscreen (SDL_VIDEODRIVER=offscreen; on Windows a real window, on
+macOS a real Cocoa window that is never shown, GE_WINDOW_HIDDEN=1; SDL_AUDIODRIVER=dummy,
 GE_WINDOW=640x480 windowed through a midas.ini in the case's folder, GE_NOINPUT=1, HOME and
 GE_ICON_CACHE_DIR in the case's folder, and GE_TICKHZ=60, so video runs count retraces at 60 a
 second as headless ones do, not at the shipped default of 120 (at 60 the pump waits for each
@@ -195,7 +196,8 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument('--env', action='append', default=[], metavar='NAME=VALUE',
                      help='set a variable for every case (never GE_FIXEDTICK, GE_NOSLEEP or GE_LOCKSTEP)')
     run.add_argument('--video', action='store_true',
-                     help='run a GE_VIDEO executable offscreen; each case must draw its pictures')
+                     help='run a GE_VIDEO executable offscreen (on macOS in a hidden window); each case must draw '
+                          'its pictures')
     run.add_argument('--shots', type=int, metavar='N',
                      help='with --video: a screenshot every N pictures drawn, the last kept as DIR/CASE.bmp')
     run.add_argument('--timeout-scale', default='1', metavar='F',

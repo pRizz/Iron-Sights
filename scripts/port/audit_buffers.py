@@ -3,7 +3,8 @@
 Run from any directory. Reports stay local under build_win/buffer-audit. Supply
 Cppcheck XML to summarize the separately executed compiler-configuration scan.
 --leaks turns on LeakSanitizer with the checked-in lsan_suppressions.txt.
---video runs the mission smoke on a GE_VIDEO executable offscreen, as lp64_play.py run --video does.
+--video runs the mission smoke on a GE_VIDEO executable offscreen (on macOS in a hidden Cocoa window),
+as lp64_play.py run --video does.
 """
 import argparse
 from collections import Counter
@@ -192,7 +193,8 @@ def main():
                         help='Mission smoke at one game field a frame with the 64-bit census lines '
                              '(GE_FIXEDTICK=1, GE_LP64_CENSUS=1), for lp64_census.py')
     parser.add_argument('--video', action='store_true',
-                        help='Mission smoke on a GE_VIDEO executable, offscreen as lp64_play.py run --video')
+                        help='Mission smoke on a GE_VIDEO executable, offscreen (on macOS in a hidden window) as '
+                             'lp64_play.py run --video')
     options = parser.parse_args()
     if options.mission_smoke:
         if not options.rom or not 600 <= options.frames <= 36000:

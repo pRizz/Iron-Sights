@@ -9,10 +9,12 @@ import struct
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import hand_gallery  # noqa: E402
 import lp64_equiv_pictures  # noqa: E402
+import lp64_play_run  # noqa: E402
 
 TICK = 1800
 GREY = (128, 128, 128)
@@ -185,7 +187,25 @@ class Pictures(unittest.TestCase):
         # Assert
         self.assertEqual((env['GE_HAND_GALLERY'], env['GE_WINDOW'], env['GE_ROM'], env['GE_ICON_CACHE_DIR']),
                          ('1', '960x540', str(rom), str(cache)))
-        self.assertEqual(env['SDL_VIDEODRIVER'], 'offscreen')
+        self.assertEqual(env['SDL_VIDEODRIVER'], lp64_play_run.host_video_driver())
+
+    def test_gallery_environment_takes_the_hosts_driver_and_hidden_window(self):
+        # Arrange
+        rom, cache = self.folder/'rom.z64', self.folder/'icons'
+        mac = lp64_play_run.host_video_variables('darwin')
+        linux = lp64_play_run.host_video_variables('linux')
+
+        # Act
+        with mock.patch.object(lp64_play_run, 'VIDEO_VARIABLES', mac):
+            on_mac = lp64_equiv_pictures.capture_environment(rom, cache)
+        with mock.patch.object(lp64_play_run, 'VIDEO_VARIABLES', linux):
+            on_linux = lp64_equiv_pictures.capture_environment(rom, cache)
+
+        # Assert: the gallery's own window size, never the play runs' 640x480
+        self.assertEqual((on_mac['SDL_VIDEODRIVER'], on_mac['GE_WINDOW_HIDDEN'], on_mac['GE_WINDOW']),
+                         ('cocoa', '1', '960x540'))
+        self.assertEqual(on_linux['SDL_VIDEODRIVER'], 'offscreen')
+        self.assertNotIn('GE_WINDOW_HIDDEN', on_linux)
 
 
 if __name__ == '__main__':

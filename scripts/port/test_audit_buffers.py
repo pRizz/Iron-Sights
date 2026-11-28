@@ -147,7 +147,7 @@ class VideoSmokeTests(unittest.TestCase):
             record = json.loads((folder/'results.json').read_text())[0]
         return status, record, seen
 
-    def test_video_smoke_sets_offscreen_variables(self):
+    def test_video_smoke_sets_the_hosts_video_variables(self):
         # Arrange
         expected = lp64_play_run.VIDEO_VARIABLES
 

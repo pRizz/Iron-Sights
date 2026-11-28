@@ -157,6 +157,20 @@ class Environment(StandIns):
 
 
 class VideoOptions(StandIns):
+    def test_env_ge_window_hidden_is_refused_with_video_where_the_tool_sets_it(self):
+        # Arrange: the set of a macOS host, whatever host the test runs on
+        exe = self.fake(DAM1_VIDEO + frames(3000))
+        mac = lp64_play_run.host_video_variables('darwin')
+
+        # Act
+        with mock.patch.object(lp64_play, 'VIDEO_VARIABLES', mac):
+            status, out = self.play(exe, 'demos', 'dam1', '--video', '--env', 'GE_WINDOW_HIDDEN=0')
+
+        # Assert
+        self.assertEqual(status, 2, out)
+        self.assertIn('--env GE_WINDOW_HIDDEN is refused with --video', out)
+        self.assertFalse(self.output.exists())
+
     def test_video_runs_offscreen_with_home_and_icon_cache_inside_the_run_folder(self):
         # Arrange
         exe = self.fake(DAM1_VIDEO + frames(3000), script=(
@@ -171,10 +185,11 @@ class VideoOptions(StandIns):
         # Assert
         log = (self.output/'dam1.log').read_text().splitlines()
         self.assertEqual(status, 0, out)
+        # the host's own set: offscreen on Linux, a real window on Windows, a hidden one on macOS
         self.assertEqual([line for line in log if line.startswith(('SDL_', 'GE_WINDOW', 'GE_NOINPUT', 'GE_SHOT',
                                                                    'GE_TICKHZ'))],
-                         ['GE_NOINPUT=1', 'GE_TICKHZ=60', 'GE_WINDOW=640x480', 'SDL_AUDIODRIVER=dummy',
-                          'SDL_VIDEODRIVER=offscreen'])
+                         sorted(f'{name}={value}' for name, value in lp64_play_run.host_video_variables().items()))
+        self.assertEqual(lp64_play_run.host_video_variables('linux')['SDL_VIDEODRIVER'], 'offscreen')
         self.assertIn('HOME-INSIDE', log)
         self.assertIn('ICONS-INSIDE', log)
 
