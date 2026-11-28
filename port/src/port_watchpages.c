@@ -286,11 +286,9 @@ static const struct PortWatchRowDef sIsSystem[] = {
 #define PWACT_HDTEX_REMOVE 113
 #define PWACT_CUSTOMTEX 114
 /* UPDATES (FORK-095): the folder's page, but the watch runs in a mission, so
- * its first button checks and never installs (portUpdatesWatchAction), and
- * What's New asks twice, as Remove does, before it opens a browser. */
+ * its first button checks and never installs (portUpdatesWatchAction). */
 #define PWHINT_UPDATES 4000
 #define PWACT_UPDATES 115
-#define PWACT_UPDATES_NEWS 116
 static const struct PortWatchRowDef sIsFonts[] = {
     { PWROW_HINT,   NULL, NULL, PWHINT_FONTS + 0, 0 },
     { PWROW_HINT,   NULL, NULL, PWHINT_FONTS + 1, 0 },
@@ -338,7 +336,6 @@ static const struct PortWatchRowDef sIsUpdates[] = {
     { PWROW_HINT,   NULL, NULL, PWHINT_UPDATES + 5, 0 },
     { PWROW_HINT,   NULL, NULL, PWHINT_UPDATES + 6, 0 },
     { PWROW_ACTION, NULL, NULL, PWACT_UPDATES, 0 },
-    { PWROW_ACTION, NULL, NULL, PWACT_UPDATES_NEWS, 0 },
     { PWROW_BACK,   NULL, "Back\n", 0, 0 },
 };
 #endif
@@ -1208,10 +1205,6 @@ static const char *rowLabelShared(s32 page, s32 row)
     if (d->kind == PWROW_ACTION && d->arg == PWACT_UPDATES)
     {
         return portUpdatesWatchActionLabel();
-    }
-    if (d->kind == PWROW_ACTION && d->arg == PWACT_UPDATES_NEWS)
-    {
-        return sDlRemoveArmed ? "Open in Browser?\n" : "What's New\n";
     }
 #endif
     if (d->kind == PWROW_ACTION && (d->arg == PWACT_FONTS_REMOVE || d->arg == PWACT_HDTEX_REMOVE) && sDlRemoveArmed)
@@ -2104,13 +2097,6 @@ s32 portWatchRowAction(s32 page, s32 row)
     if (d->arg == PWACT_UPDATES) {
         sDlRemoveArmed = 0;
         portUpdatesWatchAction();
-        return 1;
-    }
-    if (d->arg == PWACT_UPDATES_NEWS) {
-        sDlRemoveArmed = !sDlRemoveArmed;
-        if (!sDlRemoveArmed) {
-            portUpdatesOpenReleasePage();
-        }
         return 1;
     }
 #endif

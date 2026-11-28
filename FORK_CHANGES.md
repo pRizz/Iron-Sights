@@ -41,7 +41,8 @@ release package updated itself only when its `midas.ini` set
 passed on 8441b97, and release `build-463.1-8441b979f9fa` is the first with
 it): the Updates page in both
 menus, the legal screen's indicator, the file-select notice, and Automatic
-as the default. UPD-004 is not started. The plan
+as the default. The page's What's New button was removed after UPD-003
+(owner decision, 2026-11-28). UPD-004 is not started. The plan
 was drafted on 2026-11-27 and the owner accepted it
 the same day with five decisions. Every CI release counts as an update, with
 checks at most twice a day. Automatic mode holds the launch with an indicator
@@ -167,11 +168,15 @@ when a found build was not installed) the file select's build stamp gains
 what the modes do, a status line ("Up to date (build N).", "Build N is
 available.", "Last check failed.", "Downloading: X MB" and the like), a
 first button that follows the state (Check for Updates, Cancel, Install
-Build N, or Open Release Page where this copy cannot install), and What's
-New, which opens the newest build's release page after the folder's Yes/No
-window. Both menus draw it from one `PortDownloadPage` (`portUpdatesPage`).
-The watch is open in a mission, so its first button checks or cancels and
-never installs, and its What's New asks twice, as Remove does. The page's
+Build N, or Open Release Page, the newest build's release page, where this
+copy cannot install). Both menus draw it from one `PortDownloadPage`
+(`portUpdatesPage`). UPD-003 also shipped a What's New button that opened
+that page after the folder's Yes/No window (on the watch, after a second
+press); the owner removed it on 2026-11-28, because the releases CI
+publishes on every push do not yet say what changed, so the page has one
+button and no `@updates_news` help line.
+The watch is open in a mission, so its button checks or cancels and never
+installs. The page's
 files (the state, `package.txt`, a write probe of the program folder) are
 read on the first frame, not when a menu opens. The status line leaves out
 the failure's reason, which is in `Data/Updates/log.txt`: the transport's
@@ -291,6 +296,18 @@ run, so the Python tests that follow, `lp64_pointer_types.py check` (121
 types, as pinned) and an LTO video tree with `lp64_lto.py check` (15
 mismatches, all allowed, none the updater's) were run in the `goldeneye`
 image before the fix was pushed.
+
+What's New's removal (2026-11-28, after UPD-003): `port_update_ui.c`'s
+page returns no second button (the folder leaves out a page's action 1
+when its label is NULL, as on the Custom Texture Packs page), the watch
+loses its `PWACT_UPDATES_NEWS` row, and the release-page opener is now
+private to the first button's Open Release Page. Validation: `build_win`,
+`build_win64` and a `GE_UPDATE_TEST` tree build and link;
+`update_e2e.py --mode notify` passes its 6 checks; a `GE_MENU=zupdates`
+capture from that install was reviewed and shows the mode row, the six
+lines, "Build 200 is available." and Install Build 200 as the only button.
+`settings_placement.py` and `bright-builds-check.ts all` pass. The watch's
+page was not captured.
 
 ### FORK-094 — Native Windows x64 build
 

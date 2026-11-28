@@ -182,7 +182,6 @@ static const struct PortOptHelp sHelp[] = {
     { "@hd_textures_get",   "Downloads the pack named above from GitHub and uses it, or cancels, or switches." },
     { "@hd_textures_remove", "Deletes the downloaded HD texture files. Asks first." },
     { "@updates_action",    "Checks GitHub now, cancels, or installs the build found and restarts. Saves stay." },
-    { "@updates_news",      "Opens the newest build's release page in your browser. Asks first." },
 
     /* CLASSIC: what Classic Mode forces while it is on */
     { "classic_res",        "Classic Mode renders 3D at the N64's 240 lines." },

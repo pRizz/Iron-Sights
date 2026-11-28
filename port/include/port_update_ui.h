@@ -35,7 +35,5 @@ const char *portUpdateNotifyLine(void);
  * which runs in a mission and so never installs: its first button. */
 const char *portUpdatesWatchActionLabel(void);
 void portUpdatesWatchAction(void);
-/* The release page of the newest build seen, or the latest release. */
-void portUpdatesOpenReleasePage(void);
 
 #endif

@@ -264,12 +264,15 @@ As built in UPD-003 (`port/include/port_update_ui.h`, `port/src/port_update_ui.c
     452** once one is found, and **Open Release Page** where this copy
     cannot install it. The install shows its progress on the status line
     and then restarts.
-  - **What's New** opens the newest build's release page (the latest
-    release when none is newer) in the browser; the folder asks first with
-    its Yes/No window.
-  - The watch is open in a mission, so its first button checks or cancels
-    and never installs, and What's New asks twice, as Remove does. A build
-    that finishes installing in a mission waits for the next start.
+    Open Release Page opens the newest build's release page (the latest
+    release when none is newer) in the browser.
+  - There is no **What's New** button (owner decision, 2026-11-28): the
+    releases are published by CI on every push and do not yet say what
+    changed. It was built in UPD-003 and removed after it; bring it back
+    when the releases carry notes worth reading.
+  - The watch is open in a mission, so its button checks or cancels and
+    never installs. A build that finishes installing in a mission waits for
+    the next start.
   All of these are ordinary rows and actions, which every supported input
   can already confirm, cancel and adjust.
 
