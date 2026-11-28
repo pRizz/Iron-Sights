@@ -36,6 +36,11 @@
 # package in WSL, used 144,624 bytes of the vertex pool, past half of
 # 262,144 (the measurements' largest was 98,912, dam2); Dam's 64-bit pool
 # was raised to 289,248 and its line keeps that peak and case.
+# WIN64-004 (2026-11-27): the owner's Facility, played on the Windows x64
+# package (release build-443.1, c7bd037), used 143,024 bytes of the vertex
+# pool, past half of 262,144 (the measurements' largest was 98,016,
+# facility3); Facility's 64-bit pool was raised to 286,048 and its line keeps
+# that peak and case.
 graphics buffer 0 327680 76336 fw2-video/front-end
 graphics buffer 9 409600 94400 t11-m-video/tour-bunker1
 graphics buffer 20 286720 89984 fw2-plain/tour-silo
@@ -343,7 +348,7 @@ vertex pool 32 262144 67088 t11-m-a64-video-all/run1/stage-egypt
 vertex pool 32 524288 33920 t11-plain/respawn-egypt
 vertex pool 32 1048576 43264 t11-m-plain/mp-egypt-4p
 vertex pool 33 289248 144624 task10-laptop/x64-tar-203217
-vertex pool 34 262144 98016 t11-m-a64-video-all/run1/facility3
+vertex pool 34 286048 143024 win64-owner/ge_direct
 vertex pool 34 524288 40000 t11-plain/respawn-facility
 vertex pool 34 1048576 55040 t11-m-plain/mp-facility-4p
 vertex pool 35 262144 88352 t11-m-a64-video-all/run1/runway2

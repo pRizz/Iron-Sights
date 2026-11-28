@@ -381,7 +381,24 @@ of scope" call now notes that the owner lifted it for this plan.
     the tag and device architecture `x86_64`, the `build_run` of CI run
     46090571572 and `build_dirty: false`. This is the real-Sentry half of
     verification 6. The folder was deleted afterwards.
-  - Not yet: the owner's play session (verification 11). The local package and
+  - The owner's play session (verification 11, first part): the released
+    zip of build-443.1 (c7bd037, x86_64, CI, clean), extracted into
+    `Downloads`, played fullscreen with keyboard and mouse-look through Dam
+    and Facility, both ending `all_objectives_complete=1`, HDR off at the
+    end (`hdr_output=0`), the owner's texture pack in `Data/TexturePacks`.
+    `lp64_play.py peaks --budget` over its `ge_direct.log`: 27 of 28 pool
+    and level pairs within budget; Facility's vertex pool peaked at
+    143,024 of 262,144 bytes (the measurements' largest was 98,016). As
+    the 64-bit rule asks, and as the owner's Dam did in LP64-007 Task 10,
+    Facility's one-player vertex pool is raised at 64 bits to 286,048
+    bytes (`port_lp64_budget.c`, `lp64_budgets.txt`); Dam's 143,920 of
+    289,248 stayed under half. On the raised build the seven play cases
+    that visit Facility pass and `peaks --budget` over them gives `OK: 25
+    pool and stage pairs within budget`, Facility's pool printing 286,048.
+    The log's late loads are HD texture uploads from the owner's pack and
+    the front end's, kinds the late-load audit found alike at both widths.
+    Not covered by the log: a gamepad (none was used: "no pad pressed
+    anything during the intro"), a switch to windowed, and HDR on. The local package and
   its extracted copy were deleted.
 
 **Why it differs from upstream.** The inherited baseline builds Windows only

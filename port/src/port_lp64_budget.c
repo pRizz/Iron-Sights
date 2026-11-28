@@ -40,6 +40,9 @@ static const StageBudget sBudgets[] = {
     /* peak 144,624 (the owner's Dam, played on the x86_64 package in WSL,
      * LP64-007 Task 10; the comparison cases' largest was 98,912), one player */
     { "vertex pool", LEVELID_DAM, 262144, 289248 },
+    /* peak 143,024 (the owner's Facility, played on the Windows x64 package,
+     * WIN64-004; the measurements' largest was 98,016, facility3), one player */
+    { "vertex pool", LEVELID_FACILITY, 262144, 286048 },
 };
 
 /* Not strcmp: the game's <string.h> (include/) does not declare it. */
