@@ -619,7 +619,7 @@ and link what it can".
   the folders `build/mac/equiv/RUN/mac` and `build/lp64/equiv/RUN/a64`.
   Later tasks rerun this as the task check's step 3.
 
-- [ ] **Step 1: Build both and run both**
+- [x] **Step 1: Build both and run both**
 
 ```bash
 cmake -S . -B build/mac/cmp-video -G Ninja -DCMAKE_BUILD_TYPE=Debug -DGE_POINTER_BITS=64 -DGE_VIDEO=ON -DGE_COMPARE=ON && cmake --build build/mac/cmp-video
@@ -631,7 +631,7 @@ container, from the checkout at the commit of `main` the branch last
 merged. Expected, both: `OK: 38 of 38 cases ran`, `OK: 38 of 38 cases
 agree with themselves`.
 
-- [ ] **Step 2: Compare the three streams**
+- [x] **Step 2: Compare the three streams**
 
 `lp64_equiv.py compare --streams sim --expect
 scripts/port/lp64_equiv_expected.txt A64 MAC`, then `gfx`, then `snd`.
@@ -639,14 +639,14 @@ Expected: `38 identical`, `38 identical`, `24 identical`, and no
 `a64:mac` line in the expected file. A difference is traced to its cause
 before any line is written; no hash pin without the owner's word.
 
-- [ ] **Step 3: Every fork option**
+- [x] **Step 3: Every fork option**
 
 Both runs again with `--profile all`, and the same three comparisons.
 Then `lp64_equiv.py sensitivity` on the macOS build. Expected: identical
 streams, and every stream differs between two seeds. This was not
 measured for the plan.
 
-- [ ] **Step 4: The drawn pixels, by eye**
+- [x] **Step 4: The drawn pixels, by eye**
 
 Both builds once more with `--draw --shots 600` (a screenshot every 600
 pictures), then `lp64_equiv_pictures.py shots A64 MAC`. The two
@@ -655,7 +655,7 @@ Read the 38 macOS screenshots one by one beside Linux's. A picture that
 is wrong (a missing surface, a wrong colour, a seam) is a defect and
 stops the task; a difference of filtering or edges is recorded.
 
-- [ ] **Step 5: The hands, by eye**
+- [x] **Step 5: The hands, by eye**
 
 `lp64_equiv_pictures.py gallery --rom "$ROM" --output build/mac/gallery
 build/mac/cmp-video/IronSights`. Expected: 216 captures. Read twelve of
@@ -663,7 +663,7 @@ them (both hands, three weapons, two wardrobes) beside the committed
 images of `review/hand-gallery`. Nothing is written to that folder and
 `hand_gallery.py generate` is never run.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 `main`: "Compare the macOS pictures and sound with the aarch64 Linux
 build". The expected file's header says `a64:mac` has no `gfx` or `snd`

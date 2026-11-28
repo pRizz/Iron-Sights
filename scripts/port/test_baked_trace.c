@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include "../../port/src/port_baked_trace.c"
+#include "../../port/src/port_baked_sort.h"
 
 enum { FLOOR0, FLOOR1, FLOOR2, FLOOR3, WALL0, WALL1, WALL2, WALL3, CORNER, OPEN, AWAY, NVERTS };
 
@@ -27,6 +28,74 @@ static uint32_t tris[] = {
     FLOOR0, FLOOR1, FLOOR2,  FLOOR0, FLOOR2, FLOOR3,
     WALL0, WALL1, WALL2,     WALL0, WALL2, WALL3,
 };
+
+/* The stable sort a macOS build orders the tree's triangles with
+ * (port_baked_sort.h): equal keys keep the order they came in, which is what
+ * glibc's qsort gives the Linux builds and macOS's qsort does not. */
+static void stableSortKeepsEqualKeysInOrder(void)
+{
+    /* Arrange: the key of triangle i is cent[i * 3 + 1]; several are equal */
+    static const float cent[10 * 3] = {
+        0, 9.0f, 0,  0, 0.0f, 0,  0, 0.5f, 0,  0, 0.0f, 0,  0, 9.0f, 0,
+        0, 1.0f, 0,  0, 9.0f, 0,  0, 1.0f, 0,  0, 9.0f, 0,  0, 1.0f, 0,
+    };
+    uint32_t order[6] = { 5, 3, 9, 1, 7, 2 };
+    uint32_t scratch[6];
+    static const uint32_t expected[6] = { 3, 1, 2, 5, 9, 7 };
+
+    /* Act */
+    portBakeStableSort(order, 6, scratch, cent, 1);
+    /* Assert */
+    assert(memcmp(order, expected, sizeof(expected)) == 0);
+}
+
+static void stableSortMatchesAnInsertionSortOnManyTies(void)
+{
+    enum { COUNT = 1000 };
+    static float cent[COUNT * 3];
+    static uint32_t order[COUNT], reference[COUNT], scratch[COUNT];
+    uint32_t state = 12345u;
+
+    /* Arrange: 1,000 triangles in a shuffled order with only 7 distinct keys */
+    for (uint32_t i = 0; i < COUNT; i++) {
+        state = state * 1664525u + 1013904223u;
+        cent[i * 3 + 2] = (float) ((state >> 16) % 7u);
+        order[i] = i;
+    }
+    for (uint32_t i = COUNT - 1; i > 0; i--) {
+        uint32_t j, swap;
+        state = state * 1664525u + 1013904223u;
+        j = (state >> 8) % (i + 1);
+        swap = order[i]; order[i] = order[j]; order[j] = swap;
+    }
+    memcpy(reference, order, sizeof(order));
+    for (uint32_t i = 1; i < COUNT; i++) { /* an insertion sort is stable */
+        const uint32_t moved = reference[i];
+        uint32_t at = i;
+        while (at > 0 && cent[reference[at - 1] * 3 + 2] > cent[moved * 3 + 2]) {
+            reference[at] = reference[at - 1];
+            at--;
+        }
+        reference[at] = moved;
+    }
+    /* Act */
+    portBakeStableSort(order, COUNT, scratch, cent, 2);
+    /* Assert */
+    assert(memcmp(order, reference, sizeof(order)) == 0);
+}
+
+static void stableSortLeavesAnEmptyOrSingleListAlone(void)
+{
+    static const float cent[3] = { 1.0f, 2.0f, 3.0f };
+    uint32_t order[1] = { 0 };
+    uint32_t scratch[1] = { 77 };
+
+    /* Act */
+    portBakeStableSort(order, 0, scratch, cent, 0);
+    portBakeStableSort(order, 1, scratch, cent, 0);
+    /* Assert */
+    assert(order[0] == 0);
+}
 
 int main(void)
 {
@@ -68,6 +137,9 @@ int main(void)
         assert(portBakeSqrt(16.0f) == 4.0f);
     }
     portBakeTraceCancel();
+    stableSortKeepsEqualKeysInOrder();
+    stableSortMatchesAnInsertionSortOnManyTies();
+    stableSortLeavesAnEmptyOrSingleListAlone();
     printf("Baked Lighting trace tests passed (corner %u, open %u, away %u).\n", baked[CORNER * 3],
            baked[OPEN * 3], baked[AWAY * 3]);
     return 0;
