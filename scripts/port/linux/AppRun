@@ -7,13 +7,16 @@ case "$data_root" in
     *) printf '%s\n' 'Iron Sights: the writable data root must be absolute.' >&2; exit 1 ;;
 esac
 mkdir -p "$data_root/Data"
-# Seed only packaged defaults. Never replace existing settings or player data.
-for file in gamecontrollerdb.txt gamecontrollerdefault.txt midas_ini_help.txt; do
+# Seed the controller files only when missing: a player may edit them. Never
+# replace existing settings or player data.
+for file in gamecontrollerdb.txt gamecontrollerdefault.txt; do
     if [ ! -e "$data_root/$file" ]; then cp "$appdir/$file" "$data_root/$file"; fi
 done
-if [ ! -e "$data_root/Data/shaders_base.txt" ]; then
-    cp "$appdir/Data/shaders_base.txt" "$data_root/Data/shaders_base.txt"
-fi
+# The ini help and the shader list are the package's own: refresh them when
+# this AppImage carries other ones, as after an update (FORK-095).
+for file in midas_ini_help.txt Data/shaders_base.txt; do
+    if ! cmp -s "$appdir/$file" "$data_root/$file" 2>/dev/null; then cp "$appdir/$file" "$data_root/$file"; fi
+done
 export GE_DATA_ROOT="$data_root"
 export LD_LIBRARY_PATH="$appdir/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 exec "$appdir/IronSights" "$@"

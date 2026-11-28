@@ -34,8 +34,11 @@ new areas. Status describes implementation state, not Git publication state.
 
 **Status:** UPD-001 (package identity) is done on `main` (0f82e0d, every CI
 job passed; release `build-453.1-0f82e0da71ea` is the first with
-`package.txt`); UPD-002 to
-UPD-004 are not started, so the game does not update itself yet. The plan
+`package.txt`). UPD-002 (the updater core) is built and waiting on CI: a
+release package updates itself only when its `midas.ini` sets
+`[updates] mode=automatic` or it is launched with `--update-now`, since the
+default stays `off` until UPD-003 adds the screens. UPD-003 and UPD-004 are
+not started. The plan
 was drafted on 2026-11-27 and the owner accepted it
 the same day with five decisions. Every CI release counts as an update, with
 checks at most twice a day. Automatic mode holds the launch with an indicator
@@ -79,6 +82,51 @@ the built tarball, Steam Deck ZIP and extracted AppImage in CI. Player data
 under `Data/` is unchanged; the package's own `Data/README.txt` and
 `Data/shaders_base.txt` count as program files.
 
+**UPD-002: the updater core.** `portUpdateStartup` (`main.c`, before the
+arenas are pinned) first recovers. It undoes a swap that a crash
+interrupted, counts a new build's starts, and after a third start that never
+reached the legal screen it restores the previous files, records the build
+as bad and restarts. Then it checks when `[updates] mode=automatic` (read
+from `midas.ini` directly) or `--update-now` asks, at most every 12 hours
+unless forced. The check fetches the flavor's `build-info.json` from
+`releases/latest/download/`, offers only a clean CI build with a larger
+`build_number` whose `release_url` names this repository and a valid tag,
+then fetches that tag's `SHA256SUMS` file and the package. The package is
+streamed to `Data/Updates/<tag>/` and checked, and a zip or tarball is
+unpacked into `staged/`. Every file must be listed in the package's own
+`SHA256SUMS.txt` with its hash, every listed file must be present,
+`package.txt` must name the installed flavor, and no entry may be unsafe or
+player data (`midas.ini`, or `Data/` beyond its README and shader list). The
+swap renames each current file to `.old` before moving the new one in (a
+running Windows executable can be renamed but not overwritten), moves aside
+files only the old package listed, and journals each step so a failure
+undoes all of it. A file the player edited is kept as `NAME.edited`. An
+AppImage is one file renamed over `$APPIMAGE`. The game then restarts with
+its own command line (`CreateProcessW`, or `execv` on Linux). The legal
+screen's first frame (`portUpdateLegalScreen`, `port_startup.c`) confirms
+the build and deletes the `.old` files. A second copy of the game cannot
+install at the same time (`Data/Updates/lock`). Local, dirty and comparison
+builds never update, and only Windows and Linux desktop builds with video
+compile the updater. The updater's lines also go to `Data/Updates/log.txt`,
+which outlives the restart. Downloads use the Enhanced Fonts and HD textures
+stream transport through `port/src/port_update_http.cpp`, which enforces the
+owner's 5 s check and 15 s stall limits from a worker thread. libcurl
+already followed redirects, so no `port/fast3d/` file changed and the
+gallery is not involved. [`AppRun`](scripts/port/linux/AppRun) now refreshes
+`midas_ini_help.txt` and `Data/shaders_base.txt` in the AppImage's data
+folder when they differ, so an updated AppImage's own copies reach it; the
+controller files are still seeded only when missing, because players edit
+them. `tools/midas_ini_help.txt` documents `[updates] mode`. The key is read
+by the updater rather than registered as an option, so it is in neither
+menu until UPD-003, which adds the rows and makes Automatic the default.
+Sources: [`port_update.h`](port/include/port_update.h),
+`port/src/port_update*.c`, `port_update_files.h`, `port_update_http.cpp`,
+the hooks in `main.c` and `port_startup.c`, and `CMakeLists.txt`
+(`GE_UPDATER` only on those two files; `GE_UPDATE_TEST`, never shipped,
+only on `port_update_startup.c`). The game's own `isdigit` (`src/str.c`) and
+`string.h` (no `strncmp`, `strcpy` or `strcat`) shadow the C library's, so
+the updater uses neither.
+
 **Why it differs from upstream.** Upstream has no updater. This fork
 publishes a release on every push to `main`, and updating by hand means
 replacing program files while keeping `Data` and `midas.ini`
@@ -98,6 +146,38 @@ two tests that need a 32-bit compiler. The zips packaged from the local
 or benchmark is needed. In CI on 0f82e0d both Linux jobs' `test_sentry_linux.py`
 ran `check` on the built tarballs, Steam Deck ZIPs and extracted AppImages,
 and `test_distribution.py` ran its 36 tests; every job passed.
+
+UPD-002, locally: [`test_update.sh`](scripts/port/test_update.sh) passes at
+64 bits (in the `midas-linux-release-x86_64` image) and at 32 bits (in
+`midas-lp64-i686-video`). It covers SHA-256 vectors, settings, tags, paths,
+the flavor table against `package_identity.py`'s, a zip install and its
+confirmation (edited file kept, obsolete file removed, player data
+untouched), the throttle (a failed check counts), a rollback after three
+starts, a failure mid-swap that undoes every earlier step, refused releases
+(tampered file, unsafe path, player-data path, other flavor, not CI,
+missing, corrupt download), an interrupted swap, a tarball install with a
+pax long name, and an AppImage install, all against fake releases from
+[`update_fixture.py`](scripts/port/update_fixture.py). CI's tests job runs
+it. [`update_e2e.py`](scripts/port/update_e2e.py) passes all eleven of its
+checks on a 32-bit Windows `GE_UPDATE_TEST` build with the local ROM: the
+installed build found the release on 127.0.0.1, downloaded, unpacked and
+swapped its own files while running, restarted, and the new process counted
+its first start and confirmed at the legal screen, with player data and
+`midas.ini` untouched, about a second after launch. `build_win`,
+`build_win64` and the test tree build and link. `lp64_diagnostics.py gate`
+compiles a 64-bit Linux video tree (402 files, 0 failures); `narrowing
+--check` finds no narrowing, and `unprototyped --check` passes after the
+updater stopped using the C library's string functions that the game's
+`string.h` lacks. A MinGW x64 gate tree in this container lacked SDL headers
+for 11 renderer and input files, none of them the updater's, so CI's tree is
+the check there. `lp64_casts.py check` and `lp64_overlays.py check
+--no-defects` pass, after the updater dropped nine casts the overlay review
+flagged. `test_linux_launcher.py` passes with a new case for the AppImage
+refresh. A 64-bit Linux video link and the Linux packages are first built by
+CI. No benchmark or late-load audit was run: nothing is drawn or computed
+per frame, and the stage loads are unchanged. The work happens at boot
+before the window opens; the legal screen's first frame does one journal
+read, plus about twenty deletes on the start after an install.
 
 ### FORK-094 — Native Windows x64 build
 

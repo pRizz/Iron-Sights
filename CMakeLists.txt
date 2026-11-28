@@ -490,6 +490,11 @@ if(APPLE)
 else()
     list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_macos.c)
 endif()
+# The in-game updater's C files (port_update.h); the GE_VIDEO block below keeps
+# them only where the updater is built.
+set(UPDATER_SRC ${CMAKE_SOURCE_DIR}/port/src/port_update.c ${CMAKE_SOURCE_DIR}/port/src/port_update_core.c
+    ${CMAKE_SOURCE_DIR}/port/src/port_update_archive.c ${CMAKE_SOURCE_DIR}/port/src/port_update_files.c
+    ${CMAKE_SOURCE_DIR}/port/src/port_update_sha256.c ${CMAKE_SOURCE_DIR}/port/src/port_update_startup.c)
 # The models' list store (port_gdl_store.h, LP64-006 Task 11b) is the 64-bit
 # build's alone: a 32-bit build converts as it always has (objecthandler_2.c).
 if(NOT GE_POINTER_BITS EQUAL 64)
@@ -770,6 +775,26 @@ if(GE_VIDEO)
         endif()
         list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_save_transfer>)
     endif()
+    # The in-game updater (port_update.h, FORK-095 UPD-002): Windows and Linux
+    # desktop builds only, never a comparison build. Its HTTPS bridge builds
+    # without the game's include folders, as the transport it wraps does.
+    # GE_UPDATE_TEST=ON lets a test build take a local fixture's address and
+    # build number from the environment (scripts/port/update_fixture.py).
+    option(GE_UPDATE_TEST "In-game updater test build: honour GE_UPDATE_TEST_* (never shipped)" OFF)
+    if(NOT EMSCRIPTEN AND NOT GE_XBOX AND NOT APPLE AND NOT GE_COMPARE)
+        # Only the two files with its hooks need to know it is there.
+        set_property(SOURCE ${CMAKE_SOURCE_DIR}/port/src/main.c ${CMAKE_SOURCE_DIR}/port/src/port_startup.c
+            APPEND PROPERTY COMPILE_DEFINITIONS GE_UPDATER=1)
+        add_library(ge_update_http OBJECT port/src/port_update_http.cpp)
+        set_target_properties(ge_update_http PROPERTIES INCLUDE_DIRECTORIES "")
+        list(APPEND FAST3D_SRC $<TARGET_OBJECTS:ge_update_http>)
+        if(GE_UPDATE_TEST)
+            set_property(SOURCE ${CMAKE_SOURCE_DIR}/port/src/port_update_startup.c
+                APPEND PROPERTY COMPILE_DEFINITIONS GE_UPDATE_TEST=1)
+        endif()
+    else()
+        list(REMOVE_ITEM PORT_SRC ${UPDATER_SRC})
+    endif()
     add_compile_definitions(GE_VIDEO=1)
     # The picture digest (port_gfx_digest.h, LP64-006 Task 7) wraps the
     # renderer only in a comparison build; no shipped build compiles it.
@@ -795,7 +820,8 @@ else()
         ${CMAKE_SOURCE_DIR}/port/src/video.c
         ${CMAKE_SOURCE_DIR}/port/src/input_pc.c
         ${CMAKE_SOURCE_DIR}/port/src/port_xwayland_pointer.c
-        ${CMAKE_SOURCE_DIR}/port/src/raphnet.c)
+        ${CMAKE_SOURCE_DIR}/port/src/raphnet.c
+        ${UPDATER_SRC})
 endif()
 
 add_executable(ge ${GAME_SRC} ${ENGINE_SRC} ${GU_SRC} ${PORT_SRC}

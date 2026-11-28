@@ -954,6 +954,15 @@ int main(int argc, char **argv)
     }
 #endif
 
+#ifdef GE_UPDATER
+    { /* FORK-095: finish or undo an update, then check when midas.ini or
+       * --update-now asks; it restarts the game itself after an install.
+       * Before the arenas, so its buffers are gone before they are pinned. */
+        extern void portUpdateStartup(int argc, char **argv);
+        portUpdateStartup(argc, argv);
+    }
+#endif
+
     /* Pin both 64 MB arenas NOW (needed for Steam launches), while the
      * 2 GB space is still empty - see portAllocHighReserve (pcsched.c).
      * Same order as the lazy path used to produce (memp 0x20000000 hint

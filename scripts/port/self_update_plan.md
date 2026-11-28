@@ -141,9 +141,10 @@ latest build from GitHub."). An AppImage is the one file in `$APPIMAGE`; its
 
 1. Fetch `https://github.com/pRizz/Iron-Sights/releases/latest/download/<flavor's build-info file>`.
    This is a redirect to the asset, not the GitHub API, so the API's limit of
-   60 requests an hour does not apply. libcurl needs redirects turned on for
-   it (`CURLOPT_FOLLOWLOCATION`, HTTPS only, at most 5); WinHTTP follows them
-   already.
+   60 requests an hour does not apply. Both transports already follow it:
+   WinHTTP by default, and `enhanced_fonts_http.cpp` sets libcurl's
+   `CURLOPT_FOLLOWLOCATION`. (The plan first expected to add that switch;
+   UPD-002 found it there, so nothing under `port/fast3d/` changes.)
 2. Read `build_number`, `commit`, `ci` and `release_url`. Offer the build only
    when `ci` is true and `build_number` is larger than this build's. Take the
    tag from `release_url` and download everything else from
@@ -174,21 +175,35 @@ latest build from GitHub."). An AppImage is the one file in `$APPIMAGE`; its
      (`scripts/port/linux/AppRun`) copies `Data/shaders_base.txt` into the
      data folder only when it is missing, so an updated AppImage would keep
      the old list; UPD-002 makes AppRun refresh the copy when it differs.
-   - Copy the campaign save folder to `Data/Updates/saves-before-<tag>/`
-     first, with `save_backup.cpp`'s allowlist. Keep the newest two copies.
-5. Restart through FORK-034's restart helper: the original command line on
-   Windows, `execv` on Linux (`$APPIMAGE`, not `/proc/self/exe`, for an
-   AppImage). On Linux `execv` keeps the process ID, so Steam still tracks the
-   game.
+   - A package may not write player data: an entry named `midas.ini`, or one
+     under `Data/` other than `Data/README.txt` and `Data/shaders_base.txt`
+     (in any case), fails the install before anything moves
+     (`portUpdatePackagePath`). This replaced the first draft's copy of the
+     save folder before each swap: the swap cannot reach the saves at all.
+   - A program file whose bytes differ from the installed `SHA256SUMS.txt`
+     (one the player edited, such as `gamecontrollerdefault.txt`) is replaced
+     like the others, and the edited copy is kept as `NAME.edited`.
+5. Restart with the original command line on Windows (`CreateProcessW` with
+   `GetCommandLineW`, then exit) and `execv` on Linux (`$APPIMAGE`, not
+   `/proc/self/exe`, for an AppImage). On Linux `execv` keeps the process
+   ID, so Steam still tracks the game. FORK-034's restart helper does the
+   same, but it is a static function in `port/fast3d/save_transfer.cpp`
+   (strict tier), so `port_update_startup.c` carries its own small copy.
+6. The updater writes each line it logs to `Data/Updates/log.txt` as well
+   as the run's log, since the restarted game starts its own
+   `ge_direct.log`. The file moves to `log.old.txt` past 64 KB.
 
 ### Confirming the new build
 
-The new build finds `Data/Updates/pending.txt` early in startup, before
-settings and saves load, and counts the attempt. When it reaches the legal
-screen it deletes the `.old` files and the marker. If it finds the marker on
-a third attempt, it restores the `.old` files from the journal, restarts into
-the old build, and records the bad build so Automatic skips it until a newer
-one appears. A crash before that startup code (a missing DLL, say) cannot be
+Every start reads `Data/Updates/journal.txt` early, before settings and
+saves load (`portUpdateRecover`, called from `main.c` before the arenas are
+pinned). A journal without its closing `installed` line is an interrupted
+swap, and it is undone. A finished one counts the start in
+`Data/Updates/attempts.txt`. When the new build first draws the legal screen
+(`portUpdateLegalScreen`), it deletes the `.old` files, the journal and the
+count. On a third start without that, it restores the `.old` files from the
+journal, restarts into the old build, and records the bad build in
+`state.txt` so Automatic skips it until a newer one appears. A crash before that startup code (a missing DLL, say) cannot be
 caught this way. The player can still copy the `.old` files back by hand, and
 `START-HERE.txt` says how.
 
@@ -224,29 +239,50 @@ when its generator version changes (about 6 s).
 
 ### Settings
 
-`[updates] mode=off|notify|automatic`, `automatic` by default (decision 4).
-Help lines go in `port/src/port_option_help.c` and `tools/midas_ini_help.txt`.
-`settings_placement.py` must pass.
+`[updates] mode=off|notify|automatic`, `automatic` by default (decision 4)
+from UPD-003. In UPD-002 the updater reads the key from `midas.ini` itself
+(`portUpdateModeFromIni`) and defaults to `off` (`PORT_UPDATE_DEFAULT_MODE`):
+without the indicator, an automatic update would hold the launch with
+nothing on screen. `notify` does not check until UPD-003 gives it its line.
+UPD-003 makes the key an option row, with its help line in
+`port/src/port_option_help.c`, and flips the default.
+`tools/midas_ini_help.txt` documents it from UPD-002. `settings_placement.py`
+must pass.
 
 ### Where the code goes
 
-- `port/src/port_update.c` and `port/include/port_update.h`: state, throttle,
-  version check, the swap and the confirmation. These are plain C and can be
-  tested without a ROM or a network.
-- `port/src/port_update_archive.c`: the zip, gzip and ustar readers over
-  `puff`.
-- Downloads go through the existing transport. The only edit under
-  `port/fast3d/` is turning on libcurl's redirects, which is strict tier (see
-  [Constraints](#constraints)).
-- Hooks: the startup call beside `portSaveTransferStartup`, the legal-screen
-  and file-select lines in `port_startup.c`, and the rows in `front.c` and
-  `port_watchpages.c`.
+As built in UPD-002 (`port/include/port_update.h` documents the interface),
+all under `port/src/`:
+
+- `port_update_core.c`: settings, the flavor table, build-info parsing, tag
+  and path checks, checksum lists. No files and no network.
+- `port_update_sha256.c`: SHA-256 in C (the renderer's are C++ in
+  `port/fast3d/`).
+- `port_update_archive.c`: the zip, gzip and ustar/pax readers over `puff`.
+- `port_update_files.c` and `port_update_files.h`: files, folders, renames,
+  the install lock and the journal.
+- `port_update.c`: the check, download and staging. `port_update_swap.c`:
+  the swap, its undo, recovery and confirmation.
+- `port_update_startup.c`: this executable's paths and build, the restart,
+  the update log and the two hooks. `port_update_http.cpp`: the bridge onto
+  the existing stream transport. It runs the transport on a worker thread so
+  that the 5 s and 15 s limits hold whatever the transport's own timeouts
+  are.
+- CMake builds them only for Windows and Linux desktop builds with video,
+  never a comparison build, and leaves them out elsewhere. `GE_UPDATER` is
+  defined only for `main.c` and `port_startup.c`, which hold the hooks. The
+  ROM-free harness compiles all but the startup and HTTP files.
+- UPD-003 adds the rows in `front.c` and `port_watchpages.c`, and the
+  indicator and file-select lines in `port_startup.c`.
+- The game defines its own `isdigit` (`src/str.c`), and its include folders
+  shadow `<limits.h>` and `<string.h>`; the latter declares no `strncmp`,
+  `strcpy` or `strcat`. The updater uses none of these, so the Windows link
+  and `lp64_diagnostics.py unprototyped` stay clean.
 
 ## Constraints
 
 - **Strict tier.** Any edit under `port/fast3d/` needs a fresh, reviewed hand
-  gallery, so it lands from a machine that can render (AGENTS.md, Render
-  review gallery). Keep that edit to the redirect switch.
+  gallery. The updater makes none; it only includes the transport's header.
 - **Load before play.** The check and download run at launch, before play,
   which is where AGENTS.md wants first-use work. The Notify check runs on a
   background thread and must never stall a frame. Only its result is shown.
@@ -266,9 +302,16 @@ Help lines go in `port/src/port_option_help.c` and `tools/midas_ini_help.txt`.
   checking, archive reading (zip, tar.gz, refused entries), the swap and its
   undo on an injected failure, the rename-first rule, and the confirmation
   count and restore. It uses a temporary folder and needs no ROM or network.
-- An update fixture: a local HTTPS server, honoured only in test builds
-  (`GE_UPDATE_TEST`, never defined by a release CMake configuration), serves
-  a fake release for an end-to-end run on Windows and Linux.
+- An end-to-end run on a real executable: `scripts/port/update_e2e.py`
+  serves a fake release over plain HTTP on 127.0.0.1 to a test build
+  (`-DGE_UPDATE_TEST=ON`, which only `port_update_startup.c` sees and no
+  release configures). Only such a build reads `GE_UPDATE_TEST_DOWNLOADS`
+  (an `http://127.0.0.1:` address), `GE_UPDATE_TEST_BUILD` and
+  `GE_UPDATE_TEST_CI`. The run installs the test exe as build 100. It must
+  update itself to build 200 while it runs, restart, reach the legal screen
+  and confirm; the run then checks the files, the player data and the update
+  log. It covers the Windows zip flavor. The Linux flavors are covered by
+  the harness until UPD-004's release cycle.
 - A real release cycle on each flavor: install release N with a ROM in
   `Data`, saves and changed settings, push N+1, and check that Automatic
   installs it on launch and Notify offers it, with the ROM, saves, settings
@@ -283,10 +326,11 @@ Help lines go in `port/src/port_option_help.c` and `tools/midas_ini_help.txt`.
 and `test_sentry_linux.py` checks. Changes no game code. CI
 releases carry the files from then on.
 
-**UPD-002 - Updater core.** `port_update.c`, the archive readers, the
-libcurl redirect switch (strict tier), the swap, restart and confirmation,
-`test_update.sh` and the fixture. Reachable only through an ini key and
-`--update-now`, so it can be tested before there is any UI.
+**UPD-002 - Updater core.** The updater files above, the swap, restart and
+confirmation, the update log, `test_update.sh`, `update_fixture.py`,
+`update_e2e.py`, and AppRun's refresh of the AppImage's own files. Reachable
+only through `[updates] mode=automatic` and `--update-now`, so it can be
+tested before there is any UI.
 
 **UPD-003 - Settings and screens.** The menu rows in both menus, the
 indicator, the file-select line,
@@ -311,6 +355,6 @@ Options > Gameplay > Iron Sights > System > Updates"), and [releases.md](release
 | Milestone | Status | Notes |
 |---|---|---|
 | UPD-001 | Done (2026-11-28) | On `main` as 0f82e0d; every CI job passed, including `test_distribution.py` (36 tests) and both Linux jobs' `test_sentry_linux.py`, which ran `package_identity.check` on the built tarballs, Steam Deck ZIPs and extracted AppImages; release `build-453.1-0f82e0da71ea` is the first with `package.txt`. `package_identity.py` writes `package.txt` and checks each package (FORK-095). Locally: `test_distribution.py`'s five new tests pass on Windows and in the x86_64 release image, and the zips packaged from `build_win` and `build_win64` (21 files each) pass `package_identity.check`. |
-| UPD-002 | Not started | Ready to start. Strict tier for the redirect switch. |
+| UPD-002 | Built; waiting on CI | The updater (FORK-095) with no screens yet: it runs only with `[updates] mode=automatic` or `--update-now`, and the default is `off` until UPD-003. No strict-tier file changed (libcurl already followed redirects). Locally: `test_update.sh` passes at 64 bits (x86_64 release image) and 32 bits (`midas-lp64-i686-video`); `update_e2e.py` passes all eleven checks on a 32-bit Windows `GE_UPDATE_TEST` build; `build_win`, `build_win64` and the test tree build and link; `lp64_diagnostics.py gate` compiles a 64-bit Linux video tree, 402 files with 0 failures; narrowing finds none; `unprototyped --check` passes; `lp64_casts.py` and `lp64_overlays.py check --no-defects` pass; `test_linux_launcher.py` passes. A MinGW x64 gate tree in this container lacked SDL headers for 11 renderer and input files (none of them the updater's), so CI's tree is the check there. A 64-bit Linux video link and the Linux packages are first built by CI. |
 | UPD-003 | Not started | Needs UPD-002. |
 | UPD-004 | Not started | Needs UPD-003. |

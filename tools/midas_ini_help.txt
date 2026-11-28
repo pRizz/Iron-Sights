@@ -3,8 +3,8 @@ IRON SIGHTS - midas.ini HELP (a fork of Project Midas)
 
 midas.ini is the settings file for Iron Sights. It sits next to the game
 executable and holds plain key=value lines in the sections [input],
-[display] and an optional [data]. It has no comments; this file explains
-the keys. Keyboard and mouse binds are kept separately, in
+[display] and the optional [data] and [updates]. It has no comments;
+this file explains the keys. Keyboard and mouse binds are kept separately, in
 Data/Devices/kbm.gedevice (see the last section).
 
  - Most settings can be changed in the in-game menus, which save them here.
@@ -677,6 +677,22 @@ mipmaps is set by Classic Mode; leave it as it is.
   rom  | (none)  | Path to your GoldenEye 007 (USA) ROM. A relative path is
        |         | read from the game's folder. Not needed if the ROM is in
        |         | the Data folder. See Data/README.txt for the full order.
+
+
+==============================================================================
+[updates]  optional
+==============================================================================
+
+  Key  | Default | What it does
+  -----+---------+-----------------------------------------------------------
+  mode | off     | automatic: at launch, at most twice a day, check GitHub
+       |         | for a newer build of this package and install it, then
+       |         | restart into it. Keeps midas.ini, saves, profiles, packs
+       |         | and the ROM. Only release packages update; a build made
+       |         | from the source never does. Suspend points do not carry
+       |         | over. notify and off: no check (notify gets its banner
+       |         | with the menu row). Launching with --update-now checks
+       |         | once whatever this says.
 
 
 ==============================================================================

@@ -42,6 +42,12 @@ static Gfx *startupLine(Gfx *gdl, s32 y, const char *text)
 Gfx *portStartupAttribution(Gfx *gdl)
 {
     char line[128], builtAt[96];
+#ifdef GE_UPDATER
+    { /* FORK-095: a freshly installed build has started properly */
+        extern void portUpdateLegalScreen(void);
+        portUpdateLegalScreen();
+    }
+#endif
     gdl = startupLine(gdl, 16, "Iron Sights - a fork of Project Midas\n");
 #ifdef STAMP_WIDTH
     snprintf(line, sizeof(line), "Build %s - %s%s" STAMP_WIDTH "\n", STAMP_NUMBER,
