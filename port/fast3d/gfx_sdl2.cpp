@@ -510,7 +510,14 @@ static void gfx_sdl_init(const struct GfxWindowInitSettings *set) {
     SDL_GL_MakeCurrent(wnd, ctx);
     SDL_GL_SetSwapInterval(1);
 
+#ifdef __APPLE__
+    /* MAC-002: with GE_WINDOW_HIDDEN set the window is created and never
+     * shown. The tools' runs set it (lp64_play_run.py): a hidden Cocoa window
+     * is still drawn by the GPU, and nothing takes the screen or the focus. */
+    if (!SDL_getenv("GE_WEAPON_ICON_EXPORT") && !SDL_getenv("GE_WINDOW_HIDDEN")) SDL_ShowWindow(wnd);
+#else
     if (!SDL_getenv("GE_WEAPON_ICON_EXPORT")) SDL_ShowWindow(wnd);
+#endif
     if (fullscreen_state && fullscreen_flag == SDL_WINDOW_FULLSCREEN) {
         /* the display lines above were logged before an exclusive-fullscreen boot
          * switched modes, so also log the mode actually in use (its refresh caps the frame rate) */

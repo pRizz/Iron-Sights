@@ -1841,6 +1841,12 @@ touched on the Mac.
   `#ifdef __APPLE__` branch beside the `readlink` of `/proc/self/exe`, and
   includes that header under the same guard. Compiled only on macOS.
 
+- *Task 3, "Keep the macOS window hidden when a tool asks".*
+  `port/fast3d/gfx_sdl2.cpp`, `gfx_sdl_init`: inside `#ifdef __APPLE__`,
+  `SDL_ShowWindow` is skipped when `GE_WINDOW_HIDDEN` is set, as it already
+  is for `GE_WEAPON_ICON_EXPORT`; the `#else` branch is the line every
+  other build had. Compiled only on macOS.
+
 ### FORK-092 — Linux weapon icons, icon cache and save transfer dialogs
 
 **Status:** Implemented on 2026-11-25 at the owner's request, during LP64-007
