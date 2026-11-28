@@ -646,6 +646,11 @@ pass its isolated executable rather than rebuilding an active player binary.
   loads with empty tables (or stops by name if even those do not fit its
   room). A pool whose overrun is fatal
   (the music heap, the graphics buffer) stops it with exit status 6.
+- The in-game updater (UPD-001 to UPD-004) follows the accepted
+  [in-game update plan](scripts/port/self_update_plan.md). Read it before
+  resuming, do not reopen its recorded decisions, never let it update a local,
+  dirty or comparison build, and update its milestone status table before
+  handing off.
 - Fonts, sharp text rendering and other original game assets follow the
   accepted [open assets plan](scripts/port/open_assets_plan.md). Read it before
   resuming, keep its provenance rules (drawn from scratch, MIT, no ROM-derived

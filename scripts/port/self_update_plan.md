@@ -2,10 +2,10 @@
 
 Iron Sights will find newer builds on GitHub and install them itself. It will
 keep the player's ROM, settings, saves, profiles and packs, and restart into
-the new build. The owner asked for this on 2026-11-27 and made three decisions
-(below). The plan is **proposed**: two smaller decisions still wait on the
-owner, and nothing here is built. The [milestone status](#milestone-status)
-records what has been built and verified.
+the new build. The owner asked for this on 2026-11-27 and accepted the plan
+the same day with the five decisions below. Acceptance is not evidence that
+any milestone works; the [milestone status](#milestone-status) records what
+has been built and verified.
 
 ## Why
 
@@ -53,20 +53,20 @@ No new release asset is needed to find an update.
    An ed25519 signature with a key baked into the game is the planned
    hardening, recorded under [Later](#later-not-planned-here).
 
-## Open decisions (recommendations)
-
-4. **Default mode and consent.** Checking contacts GitHub and shows the
-   player's IP address. The Enhanced Fonts rule is "nothing over the network
-   until the player agrees". *Recommendation:* the first launch of a CI build
-   asks once: "Check GitHub for new builds? Automatic / Notify / Never", with
-   Automatic selected. Until the player answers, nothing is checked. An
-   existing `midas.ini` without the key counts as unanswered.
-5. **Limits for the held launch.** *Recommendation:* 5 s for the check (one
-   small JSON file), and the download gives up after 15 s without progress.
-   There is no overall cap, because a slow but moving download still finishes
-   and the player can skip it. A failed or skipped check counts as a finished
-   check for the throttle, so a bad connection holds the launch at most twice
-   a day.
+4. **Automatic is the default, with no consent screen.** The player already
+   downloaded the game from GitHub, so checking GitHub again needs no
+   separate question. The Enhanced Fonts rule ("nothing over the network
+   until the player agrees") covers third-party content and does not apply
+   here. A `midas.ini` without the key means Automatic. The player turns
+   checks off, or down to Notify, in System > Updates. `START-HERE.txt` and the
+   row's help text say that the game checks GitHub at most twice a day and
+   where to turn it off.
+5. **Limits for the held launch.** 5 s for the check (one small JSON file),
+   and the download gives up after 15 s without progress. There is no
+   overall cap, because a slow but moving download still finishes and the
+   player can skip it. A failed or skipped check counts as a finished check
+   for the throttle, so a bad connection holds the launch at most twice a
+   day.
 
 ## Goals
 
@@ -210,8 +210,8 @@ when its generator version changes (about 6 s).
 
 ### Settings
 
-`[updates] mode=off|notify|automatic`, plus `asked=0|1` for decision 4. Help
-lines go in `port/src/port_option_help.c` and `tools/midas_ini_help.txt`.
+`[updates] mode=off|notify|automatic`, `automatic` by default (decision 4).
+Help lines go in `port/src/port_option_help.c` and `tools/midas_ini_help.txt`.
 `settings_placement.py` must pass.
 
 ### Where the code goes
@@ -273,12 +273,13 @@ libcurl redirect switch (strict tier), the swap, restart and confirmation,
 `--update-now`, so it can be tested before there is any UI.
 
 **UPD-003 - Settings and screens.** The menu rows in both menus, the
-first-launch question (decision 4), the indicator, the file-select line,
+indicator, the file-select line,
 help text and settings placement, all checked with every input.
 
 **UPD-004 - Release and hand-over.** The real release cycle on every flavor,
-`START-HERE.txt` and `DATA-README.txt` updated ("This build updates itself;
-see System > Updates"), and [releases.md](releases.md) updated.
+`START-HERE.txt` and `DATA-README.txt` updated ("This build checks GitHub
+for new builds at most twice a day and updates itself; turn it off in
+Options > Gameplay > Iron Sights > System > Updates"), and [releases.md](releases.md) updated.
 
 ## Later (not planned here)
 
@@ -293,7 +294,7 @@ see System > Updates"), and [releases.md](releases.md) updated.
 
 | Milestone | Status | Notes |
 |---|---|---|
-| UPD-001 | Not started | Needs the plan accepted. |
+| UPD-001 | Not started | Ready to start. |
 | UPD-002 | Not started | Needs UPD-001 released. Strict tier for the redirect switch. |
-| UPD-003 | Not started | Needs UPD-002 and decision 4. |
+| UPD-003 | Not started | Needs UPD-002. |
 | UPD-004 | Not started | Needs UPD-003. |

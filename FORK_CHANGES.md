@@ -32,13 +32,15 @@ new areas. Status describes implementation state, not Git publication state.
 
 ### FORK-095 — In-game update plan
 
-**Status:** Plan only, proposed on 2026-11-27. Nothing is built. The owner
-decided three of its points the same day: every CI release counts as an
-update, with checks at most twice a day; Automatic mode holds the launch
-with an indicator while it downloads and installs, then restarts into the new
-build; and there is no manifest signing yet. Two decisions wait on the owner:
-the default mode with a first-launch consent question, and the held launch's
-time limits.
+**Status:** Plan only. It was drafted on 2026-11-27 and the owner accepted it
+the same day with five decisions. Every CI release counts as an update, with
+checks at most twice a day. Automatic mode holds the launch with an indicator
+while it downloads and installs, then restarts into the new build. There is
+no manifest signing yet. Automatic is the default with no consent screen,
+because the player already downloaded the game from GitHub; System > Updates
+turns checks off. The held launch allows 5 s for the check and gives up on a
+download after 15 s without progress. Nothing is built; UPD-001 is next.
+`AGENTS.md`'s Repo-Local Guidance points to the plan.
 
 **What it is.** [The in-game update plan](scripts/port/self_update_plan.md)
 proposes an **Updates: Off / Notify / Automatic** setting under Iron Sights >
