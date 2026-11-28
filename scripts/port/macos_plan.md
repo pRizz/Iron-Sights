@@ -455,7 +455,8 @@ owner, as LP64-003 to LP64-007 did.
    fullscreen, the render thread decision; the `--video` tools run in a real
    window. Done when the video halves of verification 1 and 3, and 6, 7, 10
    and 13 hold at the strict branch's tip, verification 9 holds, and the
-   branch is on `main` through the laptop.
+   branch is on `main` through the laptop. *Planned on 2026-11-27 in
+   [its plan](macos_mac_002.md); its five decisions wait for the owner.*
 3. **MAC-003 Platform features.** The player's folder and its first-run
    defaults, the no-ROM message, downloads, the weapon icon worker, the file
    pickers, the four recorded defects. Done when each works on macOS from a
@@ -574,7 +575,7 @@ mark a milestone done without it.
 | ID | Status | Notes |
 |---|---|---|
 | MAC-001 | Done (2026-11-27) | [Its plan](macos_mac_001.md), accepted with all seven recommendations, was carried out in eleven tasks on `main`; FORK-093 has each task's record and [the macOS guide](macos.md) the commands. At the close, on the owner's Mac (macOS 27.2.1, M4 Max, Apple clang 21.0.0): the headless 64-bit tree builds with no compiler warning and `OK: 705 weak references, 0 strong`; gate 361 files, 0 failed; clang's narrowing check `OK: 33 narrowings in 19 files, all allowed`; 600 frames; 20 of 20 missions; the play sets 117 of 117 with 291 pool and stage pairs within budget and 14 of 14 demo traces identical to i686's; the sanitizer build 600 frames, 20 of 20 and 117 of 117 at three times the frames with no report under decision 2's checks; all 38 simulation streams identical to aarch64 Linux's with no line added to the expected file (the comparison build takes Arm's `sinf`, `expf` and `powf`, decision 3); 46 harnesses pass and `test_web_touch` and `test_xwayland_pointer` skip by name. The `macos-arm64-tests` CI job builds and checks the headless tree on GitHub's `macos-26` runner without a ROM. The 32-bit Windows program is unchanged and the Linux gate and aarch64 boot pass. No strict-tier file was edited. **For MAC-002:** a macOS video tree now fails in 7 of 396 steps, all in the renderer (`port/fast3d/about.cpp`, `gfx_cc.cpp`, `gfx_opengl.cpp`, `gfx_pc.cpp`, `gfx_shiny.cpp`, `weapon_cache.cpp`, `hd_textures.cpp`): the game's `include/math.h` is found in front of libc++'s; the link line is still Linux's. Three sanitizer sites are in strict-tier files and stay switched off by name until fixed there (`src/game/gunfire.c:5455` by the compiler's numbering, `src/game/model.c:5959`, `src/game/bondview2.c:5505`). Two defects in debug traces are recorded, not fixed (`src/game/lightfixture.c:160-161`, `src/game/prop.c:839`). Of the 705 undefined weak references three are video-only functions. `lp64_pointer_types.py` misreads `offsetof` on GCC trees (FORK-093, Task 6's correction). |
-| MAC-002 | Not started | Needs MAC-001. Strict tier: lands through the laptop. |
+| MAC-002 | Planned (2026-11-27), not accepted | [Its plan](macos_mac_002.md) has 13 tasks and five decisions for the owner. Measured on a scratch copy, nothing built: five small edits (two outside the strict tier, three inside) make the video tree build, start and draw; with the window kept hidden, 119 of 119 video play cases and 20 of 20 missions pass, and the simulation, picture digest and sound match aarch64 Linux in 38, 38 and 24 streams. Strict tier: lands through the laptop. |
 | MAC-003 | Not started | Needs MAC-002. Strict tier: lands through the laptop. |
 | MAC-004 | Not started | Needs the bundle identifier from the owner. |
 | MAC-005 | Not started | |

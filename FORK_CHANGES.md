@@ -559,7 +559,10 @@ headless 64-bit game builds with Apple clang, boots, plays its 20 missions
 and its play sets, runs them under the sanitizers, and its simulation is
 identical to the aarch64 Linux build's in all 38 comparison cases. It has
 no window, picture, sound or input, and nothing on macOS is shipped.
-MAC-002 to MAC-006 are not started. The owner chose the
+MAC-002 is planned and not yet accepted
+([its plan](scripts/port/macos_mac_002.md), 2026-11-27, five decisions
+for the owner); none of it is built. MAC-003 to MAC-006 are not started.
+The owner chose the
 audience, the graphics path and the outline on 2026-11-26, approved the
 design on 2026-11-27 and accepted MAC-001's plan the same day.
 
@@ -1395,6 +1398,50 @@ Linux containers of `scripts/port/lp64_env.py`.
   (`9a1e389`, run 46082375237) passed in every job, `tests`,
   `macos-arm64-tests` and `publish` among them, so the five MinGW x64
   lines ran there.
+
+**MAC-002's plan (2026-11-27, documentation only).**
+[`scripts/port/macos_mac_002.md`](scripts/port/macos_mac_002.md) plans the
+window, picture, sound and input in 13 tasks. It was measured on a scratch
+copy of `main` at 567251f outside the repository; no source, tool or
+workflow file changed, and nothing it describes is built. What the
+measurements found, each with its command or file reference in the plan:
+
+- The macOS video tree fails 7 of 396 steps, all C++ under `port/fast3d/`,
+  because libc++'s `<cmath>` finds the game's `include/math.h`. Three
+  lines in that header clear six; the seventh needs one cast in
+  `hd_textures.cpp`, a strict-tier file. With a link line of SDL2 alone it
+  links (`OK: 702 weak references, 0 strong`), and the gate compiles its
+  393 files.
+- With the executable's path taken from dyld instead of `/proc/self/exe`
+  the game starts, gets Apple's OpenGL 4.1 core context and draws Dam
+  correctly. The log holds three faults the Linux logs do not: the two sky
+  programs' retained twins fail to link under the core profile, glad's
+  loader logs 36 functions the context does not export, and a 3.0 request
+  fails before the 4.1 one.
+- A window created and never shown is drawn by the GPU on macOS. With a
+  variable that keeps the game's window hidden and `cocoa` as the tools'
+  video driver: 119 of 119 video play cases (the two sound cases among
+  them), 318 pool and stage pairs within budget, 20 of 20 missions.
+- A macOS video comparison build against the aarch64 Linux one, both at
+  567251f: 38 of 38 simulation streams, 38 of 38 picture digests and 24 of
+  24 sound streams identical.
+- A sanitizer video build ran Dam with no report. The late-load audit and
+  the smoke benchmark run on macOS as they are.
+- Retina needs two edits, not one: `gfx_sdl2.cpp:396` tests an SDL
+  enumerator with `#ifdef`, so no build has ever asked for a HiDPI window.
+  With both, Dam is drawn at 3,456x2,234 and holds 120 pictures a second.
+- At the tools' 60 Hz tick a shown window on the 120 Hz panel logs frames
+  of 25 ms; at the shipped 120 Hz it does not.
+- A defect in every build, read and not run: `gfx_sdl2.cpp:827` copies a
+  screenshot row into a 4,096-pixel stack buffer whatever the drawable's
+  width.
+
+The plan's five decisions (hidden windows for automated runs; the strict
+branch `macos/strict` kept current by merging, never rebased; Retina on
+without a new setting; the screenshot row fixed for every build; the cost
+figures as a first macOS baseline) wait for the owner. The scratch copy
+and its run folders were deleted; the aarch64 reference run stayed under
+`build/lp64/` until the same cleanup.
 
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside
