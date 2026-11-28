@@ -280,7 +280,15 @@ the HD pack's uploads at tick 544), so those predate UPD-003; the updater
 does not run in a `GE_FRAMES` run or a local build. No benchmark was run:
 the only per-frame work in play is one call that reads a few counters and
 atomics, and the indicator and notice draw only on the legal and
-file-select screens.
+file-select screens. CI's first run on 334e1d1 passed every job but
+`tests`, where `test_lp64_equiv_cases.py` found the new key `mode` in
+neither the comparison's `all` profile nor its exclusions; it is now in
+`lp64_equiv_profile.EXCLUDED`, since a comparison build has no updater and
+the key would call the network. The lines after it in that step had not
+run, so the Python tests that follow, `lp64_pointer_types.py check` (121
+types, as pinned) and an LTO video tree with `lp64_lto.py check` (15
+mismatches, all allowed, none the updater's) were run in the `goldeneye`
+image before the fix was pushed.
 
 ### FORK-094 — Native Windows x64 build
 

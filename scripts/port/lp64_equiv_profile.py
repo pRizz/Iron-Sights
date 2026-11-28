@@ -17,6 +17,7 @@ PROFILES = ('default', 'all')
 EXCLUDED = {
     'crash_reporting': 'it would call the network',
     'texture_pack': 'no pack is in the containers, and packs are ROM-derived',
+    'mode': 'the updater (FORK-095) is never in a comparison build, and it would call the network',
 }
 
 # Toggles on (1), sliders away from their defaults, enums at their strongest choice, except two:
