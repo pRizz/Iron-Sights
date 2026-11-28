@@ -310,7 +310,7 @@ Options > Gameplay > Iron Sights > System > Updates"), and [releases.md](release
 
 | Milestone | Status | Notes |
 |---|---|---|
-| UPD-001 | Built; waiting on CI | `package_identity.py` writes `package.txt` and checks each package (FORK-095). Locally: `test_distribution.py`'s five new tests pass on Windows and in the x86_64 release image, and the zips packaged from `build_win` and `build_win64` (21 files each) pass `package_identity.check`. The Linux packages are first built and checked by CI. |
-| UPD-002 | Not started | Needs UPD-001 released. Strict tier for the redirect switch. |
+| UPD-001 | Done (2026-11-28) | On `main` as 0f82e0d; every CI job passed, including `test_distribution.py` (36 tests) and both Linux jobs' `test_sentry_linux.py`, which ran `package_identity.check` on the built tarballs, Steam Deck ZIPs and extracted AppImages; release `build-453.1-0f82e0da71ea` is the first with `package.txt`. `package_identity.py` writes `package.txt` and checks each package (FORK-095). Locally: `test_distribution.py`'s five new tests pass on Windows and in the x86_64 release image, and the zips packaged from `build_win` and `build_win64` (21 files each) pass `package_identity.check`. |
+| UPD-002 | Not started | Ready to start. Strict tier for the redirect switch. |
 | UPD-003 | Not started | Needs UPD-002. |
 | UPD-004 | Not started | Needs UPD-003. |

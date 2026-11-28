@@ -32,7 +32,9 @@ new areas. Status describes implementation state, not Git publication state.
 
 ### FORK-095 — In-game updater
 
-**Status:** UPD-001 (package identity) is built and waiting on CI; UPD-002 to
+**Status:** UPD-001 (package identity) is done on `main` (0f82e0d, every CI
+job passed; release `build-453.1-0f82e0da71ea` is the first with
+`package.txt`); UPD-002 to
 UPD-004 are not started, so the game does not update itself yet. The plan
 was drafted on 2026-11-27 and the owner accepted it
 the same day with five decisions. Every CI release counts as an update, with
@@ -93,7 +95,9 @@ are the same before the change: on Windows,
 two tests that need a 32-bit compiler. The zips packaged from the local
 `build_win` and `build_win64` trees (21 files each) pass
 `package_identity.check`. No game code changed, so no game build, gallery
-or benchmark is needed. The Linux packages' checks first run in CI.
+or benchmark is needed. In CI on 0f82e0d both Linux jobs' `test_sentry_linux.py`
+ran `check` on the built tarballs, Steam Deck ZIPs and extracted AppImages,
+and `test_distribution.py` ran its 36 tests; every job passed.
 
 ### FORK-094 — Native Windows x64 build
 
