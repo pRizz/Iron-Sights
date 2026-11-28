@@ -254,7 +254,12 @@ A shipped build keeps the system's maths. The sweep found three, `sinf`,
 `expf` and `powf`; MAC-001's decision 3 (accepted 2026-11-27) takes them
 from Arm's optimized-routines under its MIT licence, pinned to glibc's
 hashes so that the Linux comparison streams do not move, with a notice
-entry, in comparison builds only.
+entry, in comparison builds only. As built they are not glibc's bits on
+every input: glibc fuses multiply-adds on aarch64 and on x86_64 with FMA,
+the comparison build never does, and the two differ by one unit in the
+last place on a handful of inputs that no comparison case reaches
+(FORK-093 has the counts). The owner accepted them as built on
+2026-11-27; this is not reopened.
 
 ### Landing
 

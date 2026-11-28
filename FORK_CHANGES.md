@@ -1326,8 +1326,13 @@ Linux containers of `scripts/port/lp64_env.py`.
   and no line of the expected file was exercised again at i686: the
   reviewer advised an i686 `stage-jungle` run against its pins, which the
   plan leaves out and this session did not make. `port_compare_math_arm.c`
-  and the guide say what was found. **This is for the owner to weigh
-  against decision 3,** whose wording was "reproduce glibc's bits".
+  and the guide say what was found. This went to the owner against
+  decision 3, whose wording was "reproduce glibc's bits". **The owner
+  accepted the functions as built (2026-11-27, "Accept as built"):** the
+  comparison build's `sinf`, `expf` and `powf` are Arm's without fused
+  multiply-adds, equal to glibc's on the sweep and on every input the 38
+  cases reach, and not glibc's bits on the inputs counted above. The
+  i686 `stage-jungle` run was still not made.
   *Left as the reviewer's minor notes, not acted on:* a NaN's sign is the
   host's in these functions; no `#pragma STDC FP_CONTRACT OFF` in the Arm
   files (flags alone prevent fusing); the Apple-Silicon-only refusal reads
@@ -1354,7 +1359,10 @@ Linux containers of `scripts/port/lp64_env.py`.
   could not run, as above; `test_web_touch.sh`, which that image cannot
   run for want of `emcc`, now exits 127 there instead of printing `SKIP`.
   aarch64: `OK: ran 600 frames`. `compare_win32.py commits HEAD WORKTREE`:
-  `identical in loaded code and data`.
+  `identical in loaded code and data`. CI on the closing commit
+  (`9a1e389`, run 46082375237) passed in every job, `tests`,
+  `macos-arm64-tests` and `publish` among them, so the five MinGW x64
+  lines ran there.
 
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside

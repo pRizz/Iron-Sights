@@ -728,7 +728,13 @@ not one file: `port/src/port_compare_math_arm.c` (`expf`, `powf`),
 `port/include/port_compare_math_arm.h` (the refusals and shared helpers),
 because one file in this tree's layout was 645 lines and a new source file
 stays under 500. `test_pointer_bits.sh` also names the new files, so that
-a build without `GE_COMPARE` compiling one fails. FORK-093 has the rest.
+a build without `GE_COMPARE` compiling one fails. Step 1's test passed,
+but a wider comparison after the final review found the three functions
+are not glibc's bits on every input (glibc fuses multiply-adds on aarch64
+and on x86_64 with FMA; one unit in the last place on a handful of
+inputs). That returned to the owner as decision 3 says, and the owner
+accepted the functions as built ("Accept as built", 2026-11-27). FORK-093
+has the counts and the rest.
 
 - [x] **Step 3: The Linux comparison builds did not move**
 
