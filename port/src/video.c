@@ -3633,6 +3633,29 @@ static s32 s_ResKeyOk = 0;
 static s32 s_ResKeyModes, s_ResKeyDispW, s_ResKeyDispH; /* the display: mode count + current mode */
 static uint32_t s_ResKeyW, s_ResKeyH;                    /* the live drawable size */
 
+#if defined(__APPLE__)
+/* MAC-002: gfx_sdl.get_dimensions gives the drawable, which on a Retina
+ * display is in pixels. The Resolution list is in points: display modes,
+ * window_width and window_height, and what set_dimensions takes. So the list
+ * and its "current" entry measure the window in points. */
+static void videoMacWindowPoints(uint32_t *w, uint32_t *h)
+{
+    extern SDL_Window *gfx_sdl_get_window(void);
+    SDL_Window *window = gfx_sdl_get_window();
+    int pw = 0, ph = 0;
+
+    if (window != NULL)
+    {
+        SDL_GetWindowSize(window, &pw, &ph);
+    }
+    if (pw > 0 && ph > 0)
+    {
+        *w = (uint32_t) pw;
+        *h = (uint32_t) ph;
+    }
+}
+#endif
+
 static void videoResBuild(void)
 {
     s32 n, i;
@@ -3649,6 +3672,9 @@ static void videoResBuild(void)
 
     n = gfx_sdl.get_num_display_modes();
     gfx_sdl.get_dimensions(&cw, &ch, &cx, &cy);
+#if defined(__APPLE__)
+    videoMacWindowPoints(&cw, &ch);
+#endif
     if (!gfx_sdl.get_current_display_mode(&dw, &dh))
     {
         dw = 0;
@@ -3788,6 +3814,9 @@ s32 portVideoResCurrent(void)
         return -1;
     }
     gfx_sdl.get_dimensions(&cw, &ch, &cx, &cy);
+#if defined(__APPLE__)
+    videoMacWindowPoints(&cw, &ch);
+#endif
     for (i = 0; i < s_ResCount; i++)
     {
         if (s_ResList[i].w == (s16) cw && s_ResList[i].h == (s16) ch)
@@ -5120,6 +5149,21 @@ s32 videoInit(void)
         set.window_settings.width = s_CfgExclW;
         set.window_settings.height = s_CfgExclH;
     }
+#if defined(__APPLE__)
+    /* MAC-002: a Retina display is drawn at its own pixels, more than one a
+     * point, with no setting (the Low Res row is for fewer pixels). A run
+     * with GE_WINDOW set, which the tools' runs are, keeps one pixel a point:
+     * its pictures and digests must not change with the display the Mac
+     * happens to have, and they are compared with Linux's. GE_HIDPI=1 or 0
+     * says it outright, for a measuring run: the benchmark sets GE_WINDOW,
+     * and Retina's cost is that run with GE_HIDPI=1 against it without. */
+    {
+        const char *maybe_hidpi = getenv("GE_HIDPI");
+
+        set.window_settings.allow_hidpi = (maybe_hidpi != NULL && maybe_hidpi[0] != '\0')
+            ? (maybe_hidpi[0] != '0') : (getenv("GE_WINDOW") == NULL);
+    }
+#endif
     set.window_settings.fullscreen = s_CfgFullscreen != VIDEO_FS_WINDOWED;
     set.window_settings.fullscreen_is_exclusive = s_CfgFullscreen == VIDEO_FS_EXCLUSIVE;
     set.window_settings.maximized = false;

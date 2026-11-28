@@ -2040,6 +2040,91 @@ Homebrew SDL2 2.32.10) and in the containers of `scripts/port/lp64_env.py`.
   600 frames`; `compare_win32.py commits main WORKTREE`: `identical in
   loaded code and data`.
 
+- **Task 6, Retina** (the owner's decision 3). On a HiDPI display SDL
+  measures the window, the mouse and the pointer warp in points and the GL
+  drawable in pixels. The rule: sizes saved to `midas.ini` and positions
+  given to SDL are points; sizes given to the renderer and compared with
+  the framebuffer are pixels. *On `main`:* `port/src/video.c` sets
+  `allow_hidpi` under `__APPLE__` unless `GE_WINDOW` is set, so a tool's
+  run keeps one pixel a point and its pictures and digests do not change
+  with the Mac's display; no setting and no ini key. `GE_HIDPI=1` or `0`
+  (macOS only, not in the plan) says it outright for a measuring run: the
+  benchmark sets `GE_WINDOW`, and Retina's cost is that run with
+  `GE_HIDPI=1` against it without. `port/src/port_hidpi.c`
+  (`port/include/port_hidpi.h`, new; CMake compiles the file only on
+  macOS, under `-Wall -Wextra -Werror`) has `portHidpiToPixels` and
+  `portHidpiToPoints`: a value scaled by the two sizes of one axis,
+  rounded to nearest, unchanged when the sizes are equal or either is not
+  positive. The header declares them with `int32_t`, the game's `s32`, so
+  the renderer's C++ and a harness without game headers can include it.
+  `port/src/input_pc.c` keeps everything in SDL's points and converts in
+  the three functions that hand a position to the menus or take one from
+  them (`portInputMouseWindowPos`, `portInputMouseWarp`,
+  `portInputMousePark`), reading the window's two sizes once a poll on the
+  main thread; the menus (`video.c`) go on measuring the window in the
+  renderer's pixels. The Resolution list (`videoResBuild`,
+  `portVideoResCurrent`) measures the window in points on macOS, as
+  display modes, `window_width` and `set_dimensions` are: the drawable's
+  pixel size would have added a bogus entry and matched none. The size
+  saved to the ini (`remember_window_geometry`) and the window fitted to
+  the display were already points. Every edit is inside `#if
+  defined(__APPLE__)`. `portBmpPackRows`, an inline function in
+  `port_hidpi.h`, repacks a screenshot's rows for a BMP file at any width
+  with no row buffer (last row first, each row from its last pixel, the
+  padding zeroed); nothing on `main` calls it yet. `scripts/port/test_hidpi.sh`
+  (driver `test_hidpi.c`, new; every width the host offers; named in the
+  workflow's tests step, and run by `macos_harnesses.sh`) has nine cases:
+  100 of 640 points on 1,280 pixels is 200 and 0 stays 0; the last point
+  maps inside the last pixel pair; equal sizes and a window with no size
+  return the value; a 1.5 scale rounds to nearest; a negative position
+  stays negative; to-points of to-pixels returns each of 1,728 points;
+  rows of 1, 2, 3, 4, 4,096, 4,097 and 5,120 pixels are packed whole with
+  a guard byte intact; an empty image is left alone. Each failed before
+  its function existed.
+  *On `macos/strict`:* `port/fast3d/gfx_sdl2.cpp`'s guard around
+  `SDL_WINDOW_ALLOW_HIGHDPI` is true on macOS (the name is an enumerator,
+  so `#ifdef` was false in every build and none ever asked for a HiDPI
+  window; the other builds still compile nothing there); its screenshot
+  calls `portBmpPackRows` in every build (decision 4: the 4,096-pixel row
+  buffer on the stack was overrun by a wider drawable); and
+  `port/fast3d/gfx_pc.cpp` sizes the first framebuffer from the drawable
+  on macOS, as every later frame's is.
+  *Ran, at the branch's tip.* Visible, 5 s: a `midas.ini` of
+  `fullscreen=windowed`, 640 by 480, and no `GE_WINDOW` logged `SDL:
+  window 640x480` and `SDL: drawable 1280x960`; hidden with `GE_WINDOW`
+  set, `drawable 640x480`; with `GE_WINDOW` and `GE_HIDPI=1`, 1280x960
+  (640x480 before the override existed); with `GE_HIDPI=0` alone, 640x480.
+  A hidden Retina run's `GE_SHOT` screenshot is 1,280x960 and shows the
+  whole picture (Dam's opening, read by eye). The pointer on a Retina
+  menu, by hand, is on Task 13's list: this Mac could not reach a
+  5,120-pixel screenshot end to end either (the game clamps a window to
+  the display, 3,456 pixels).
+  *Cost* (`bench.py run --smoke --resolution 1728x1117`, hidden, one
+  session, three repeats; `off` and `on` are one executable without and
+  with `GE_HIDPI=1`, so 1,728x1,117 against 3,456x2,234 pixels; run-to-run
+  range 1 to 5%). Default preset, pictures a second and render ms a frame:
+  `cradle-fight` 409 and 2.04 off, 348 and 2.39 on (-15%); `dam-walk` 610
+  and 1.24, 574 and 1.30 (-6%); `temple-4p` 399 and 2.10, 287 and 3.06
+  (-28%). Matched preset: 900 to 829, 1,299 to 1,245, 980 to 826. Retina
+  costs at most about 1 ms of render a frame here, a long way inside a
+  120 Hz frame's 8.3 ms, so it stays on with no setting; the Low Res row
+  is the player's way to fewer pixels.
+  *The task check:* video tree `OK: 702 weak references, 0 strong`, gate
+  394 files, 0 failed, `OK: 33 narrowings in 19 files, all allowed`;
+  mission smoke 20 of 20; the comparison builds again, default and
+  `--profile all`, 38 of 38 each and `sim` 38, `gfx` 38, `snd` 24
+  identical to the aarch64 runs of Task 5 under both; headless `OK: ran
+  600 frames`, `macos_harnesses: 48 passed, 2 skipped by name, 0 failed`
+  (`test_hidpi` is the 48th); the x86_64 gate 0 failed with both static
+  checks `OK`, `test_hidpi` and `test_harness_widths` passing there at 32
+  and 64 bits; aarch64 `OK: ran 600 frames`. `compare_win32.py commits
+  HEAD WORKTREE` in the checkout, the half on `main`: `identical in loaded
+  code and data`. In the branch's tree, with the screenshot change, it
+  differs as decision 4 expects: by symbol, `gfx_sdl_maybe_screenshot` no
+  longer exists as its own function and `gfx_sdl_swap_buffers_begin`, its
+  one caller, is 5,344 bytes where it was 4,112 (without the 12 KB row
+  array the compiler inlines it); no other function's size changed.
+
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside
 the repository: they are the plans' inputs, not checks of a change. From

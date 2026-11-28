@@ -497,6 +497,15 @@ if(APPLE)
 else()
     list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_macos.c)
 endif()
+# Points to pixels and back (port_hidpi.h, MAC-002): only a macOS window has
+# more than one pixel a point, and only macOS branches call these, so no
+# other build compiles the file. Under every warning, like port_macos.c.
+if(APPLE)
+    set_property(SOURCE ${CMAKE_SOURCE_DIR}/port/src/port_hidpi.c APPEND PROPERTY
+        COMPILE_OPTIONS -Wall -Wextra -Werror)
+else()
+    list(REMOVE_ITEM PORT_SRC ${CMAKE_SOURCE_DIR}/port/src/port_hidpi.c)
+endif()
 # The in-game updater's C files (port_update.h); the GE_VIDEO block below keeps
 # them only where the updater is built.
 set(UPDATER_SRC ${CMAKE_SOURCE_DIR}/port/src/port_update.c ${CMAKE_SOURCE_DIR}/port/src/port_update_core.c

@@ -690,7 +690,7 @@ line either.
   given to SDL are points; sizes given to the renderer and compared with
   the framebuffer are pixels.
 
-- [ ] **Step 1: Write the failing harness**
+- [x] **Step 1: Write the failing harness**
 
 `test_hidpi.sh` (it sources `harness_widths.sh` and runs at every width
 it offers): 100 of 640 points on 1,280 pixels is 200; 0 stays 0; the last
@@ -698,11 +698,11 @@ point maps inside the last pixel pair; equal sizes return the value;
 `points == 0` returns the value; and to-points of to-pixels returns the
 value for every coordinate of a 1,728-point row. Run. Expected: FAIL.
 
-- [ ] **Step 2: Implement the two functions**
+- [x] **Step 2: Implement the two functions**
 
 Run. Expected: `test_hidpi: PASS` at each width.
 
-- [ ] **Step 3: Allow HiDPI on macOS, except in a test run**
+- [x] **Step 3: Allow HiDPI on macOS, except in a test run**
 
 `video.c:5061`, under `__APPLE__`: `allow_hidpi` is set unless `GE_WINDOW`
 is set. `gfx_sdl2.cpp:396`: the flag's guard becomes `#if
@@ -713,7 +713,7 @@ is an enumerator, so their guard has always been false). Expected (visible, 5 s,
 shows `SDL: window 640x480` and `SDL: drawable 1280x960`; with `GE_WINDOW`
 set, `drawable 640x480`.
 
-- [ ] **Step 4: Each place points meet pixels**
+- [x] **Step 4: Each place points meet pixels**
 
 The picture was measured right as the code is; the pointer was not
 checked. The sites under **Files**, each under `__APPLE__` where the code
@@ -726,7 +726,7 @@ moved by hand to each corner of a menu (visible, the builder asks the
 owner for one minute, or leaves it on Task 13's list), the row under the
 pointer is the one highlighted.
 
-- [ ] **Step 5: The screenshot's rows**
+- [x] **Step 5: The screenshot's rows**
 
 The repacking of `gfx_sdl2.cpp:824-835` moves to `void
 portBmpPackRows(uint8_t *pixels, int width, int height);` in
@@ -739,7 +739,7 @@ function), then PASS. `gfx_sdl2.cpp` calls it (decision 4 says in which
 builds). This Mac cannot reach the overrun end to end: the game clamps a
 window to the display, 3,456 pixels wide at most.
 
-- [ ] **Step 6: Check, measure and commit**
+- [x] **Step 6: Check, measure and commit**
 
 The task check (step 3 is unchanged: those runs set `GE_WINDOW`). Task
 9's cost commands with Retina on and with it off. `main`: "Draw at the
