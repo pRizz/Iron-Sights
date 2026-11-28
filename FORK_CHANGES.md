@@ -34,9 +34,9 @@ new areas. Status describes implementation state, not Git publication state.
 
 **Status:** WIN64-001 (build and boot) is done on `main` (4fde028, CI
 passed); WIN64-002 (plays and matches) is done on `main` (1f3ea6f, CI
-passed); WIN64-003 (crash reporting and tooling) is implemented and
-checked on the owner's laptop, done once CI passes on its push; WIN64-004
-is not started. No x64 zip is released yet. The plan was drafted on
+passed); WIN64-003 (crash reporting and tooling) is done on `main`
+(7ca2347, CI passed, its `sentry-sdk` job building the x64 runtime);
+WIN64-004 is not started. No x64 zip is released yet. The plan was drafted on
 2026-11-27 at the owner's request and accepted the same day with all five
 recommendations; [WIN64-001's plan](scripts/port/windows_x64_win64_001.md)
 and [WIN64-002's](scripts/port/windows_x64_win64_002.md) were accepted under

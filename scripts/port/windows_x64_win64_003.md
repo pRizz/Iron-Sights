@@ -6,9 +6,9 @@ working sampling profiler whose samples `bench_profile.py` can name under
 ASLR, and every tool the plan names under "Tooling" either runs against
 `build_win64` or refuses it by name.
 
-**Status:** Implemented and checked on the owner's laptop on 2026-11-27
-(FORK-094 has the evidence); done once CI passes on its push, except the
-real-Sentry part of verification 6, which moves to WIN64-004. Planned on 2026-11-27 at
+**Status:** Done on 2026-11-27: checked on the owner's laptop (FORK-094 has
+the evidence) and on `main` as 7ca2347, where CI passed and built the x64
+Sentry runtime. The real-Sentry part of verification 6 moves to WIN64-004. Planned on 2026-11-27 at
 544cc42 from a reading of the files named below. Accepted by the owner the
 same day: they asked to start it ("start win64-003") under their standing
 instruction to take sensible recommendations; the decisions below are this
