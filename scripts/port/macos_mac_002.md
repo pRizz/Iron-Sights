@@ -565,7 +565,7 @@ that pass; 20 `PASS`; no window on screen at any time.
   video case's log must not hold: `Failed to compile`, `Failed to link`,
   and `GL: could not find function`.
 
-- [ ] **Step 1: Write the failing judge tests**
+- [x] **Step 1: Write the failing judge tests**
 
 `test_video_case_with_a_shader_link_failure_fails`,
 `test_video_case_with_a_shader_compile_failure_fails`,
@@ -573,34 +573,34 @@ that pass; 20 `PASS`; no window on screen at any time.
 `test_headless_case_ignores_render_fault_lines`: each a passing video log
 with one such line added. Run. Expected: the first three FAIL.
 
-- [ ] **Step 2: Implement the judge's rule**
+- [x] **Step 2: Implement the judge's rule**
 
 On every host: the aarch64 Linux video logs of this plan's measurement
 hold none of the three. Run the Python tests. Expected: PASS. Rerun Task
 3's play sets. Expected: every video case now FAILS on macOS, naming the
 `GL: could not find function` lines.
 
-- [ ] **Step 3: Ask for the core profile first**
+- [x] **Step 3: Ask for the core profile first**
 
 Under `__APPLE__` the context list is 4.1 core, then 3.2 core, and
 nothing else. Expected in a log: `SDL: created GL4.1core context` with no
 `could not create` line before it.
 
-- [ ] **Step 4: The loader's 36 lines**
+- [x] **Step 4: The loader's 36 lines**
 
 Under `__APPLE__`, a function the context does not export is not logged
 by name at error level; one line gives the count (`GL: N functions not
 exported by this context`). Expected: 36, and none of them is a function
 the renderer calls (`grep` each name over `port/fast3d/`, glad excepted).
 
-- [ ] **Step 5: The sky programs' retained twin**
+- [x] **Step 5: The sky programs' retained twin**
 
 Under `__APPLE__`, no twin is linked for a program whose fragment shader
 reads `vGeSkyQ`, or its vertex shader writes it: whichever leaves the
 picture digest of Task 5 identical and logs no error. Record which, and
 why the sky is never drawn retained.
 
-- [ ] **Step 6: Check and commit**
+- [x] **Step 6: Check and commit**
 
 Task 3's play sets and the task check. Expected: all pass, and `grep -c`
 of the three patterns over the logs is 0. `main`: "Fail a video case on a

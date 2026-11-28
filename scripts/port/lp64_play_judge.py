@@ -4,7 +4,8 @@ A case fails on a status other than the one it expects, a timeout, any sanitizer
 `ge: fatal signal`, `ASSERTION FAULT`, a failing `ge: lp64:` line (lp64_boot.py's default-deny
 rule) and on each line it requires that the log lacks. The markers and the `ge: lp64:` rule are
 lp64_boot.py's own, so the two tools cannot drift apart. A run with video (`run --video`) must
-also have opened its window and GL context and drawn at least the case's `pictures`.
+also have opened its window and GL context and drawn at least the case's `pictures`, and fails on
+a render fault (RENDER_FAULTS): a shader that did not compile or link, a GL function not found.
 """
 import re
 
@@ -36,6 +37,19 @@ def video_required(case: Case) -> tuple[Required, ...]:
     if case.pictures == 0:
         return (up,)
     return (up, Required(GFXTASKS_LABEL, GFXTASKS, at_least=case.pictures))
+
+
+# What a video case's log must not hold (MAC-002 Task 4): the renderer's own reports of a shader it
+# could not compile or link and of a GL function the context did not give it
+# (port/fast3d/gfx_opengl.cpp). The game carries on after each, so nothing else fails the case; the
+# aarch64 Linux video logs hold none. A headless build has no renderer and is not judged by these.
+RENDER_FAULTS = (re.compile(r'Failed to compile'), re.compile(r'Failed to link'),
+                 re.compile(r'GL: could not find function'))
+
+
+def render_fault(lines: list[str]) -> str | None:
+    """The first of LINES that reports a render fault, or None."""
+    return next((line for line in lines if any(pattern.search(line) for pattern in RENDER_FAULTS)), None)
 
 
 # include/assert.h and the game's own asserts: "\n--- ASSERTION FAULT - %s - %s, line %d\n\n".
@@ -103,8 +117,8 @@ def requirement_problem(lines: list[str], required: Required | Ordered) -> str |
 
 def problems(case: Case, status: int | None, text: str, timeout: float, video: bool = False) -> list[str]:
     """Every way the run of CASE differs from what it must do, in the order the first is reported:
-    the status (None for a timeout, negative for a signal), then the forbidden lines, then the
-    required ones (with VIDEO, the video lines after the case's own). Empty when the case passes."""
+    the status (None for a timeout, negative for a signal), then the forbidden lines (with VIDEO,
+    the first render fault among them), then the required ones (with VIDEO, the video lines after the case's own). Empty when the case passes."""
     lines = text.splitlines()
     found = []
     if status is None:
@@ -120,6 +134,10 @@ def problems(case: Case, status: int | None, text: str, timeout: float, video: b
             found.append(line.strip())
     for pattern in case.forbidden:
         line = next((line for line in lines if pattern.search(line)), None)
+        if line is not None:
+            found.append(line.strip())
+    if video:
+        line = render_fault(lines)
         if line is not None:
             found.append(line.strip())
     refusals = failing_lp64_lines(lines)

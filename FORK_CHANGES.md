@@ -1813,6 +1813,51 @@ Homebrew SDL2 2.32.10) and in the containers of `scripts/port/lp64_env.py`.
   ran 600 frames`; `compare_win32.py commits main WORKTREE`: `identical in
   loaded code and data`.
 
+- **Task 4, the core profile first, and a clean log.** *On `main`:*
+  `scripts/port/lp64_play_judge.py` fails a video case whose log holds a
+  render fault (`RENDER_FAULTS`): `Failed to compile`, `Failed to link` or
+  `GL: could not find function`, the renderer's own reports
+  (`port/fast3d/gfx_opengl.cpp`), after each of which the game carries on,
+  so nothing else failed the case. A headless case is not judged by them.
+  It applies on every host; the 20 Linux video logs kept under
+  `build/lp64/smoke` hold none, and Task 5's aarch64 runs are judged by
+  it. `test_lp64_play_video.py` has the four cases (three failed before the
+  rule). With the rule and before the branch's edits, the macOS `sound` and
+  `stops` sets failed 14 of 14, each naming `GL: could not find function:
+  glVertexP2ui`.
+  *On `macos/strict`, all inside `#ifdef __APPLE__`:* the context list of
+  `port/fast3d/gfx_sdl2.cpp` is 4.1 core, then 3.2 core, and nothing else,
+  so the 3.0 compatibility request no longer makes and destroys a window
+  first. `gfx_opengl.cpp`'s loader counts the functions the context does
+  not export instead of logging each as an error, and one line gives the
+  count: `GL: 30 functions not exported by this context` (30, not the
+  plan's 36: the packed-vertex family, `glVertexP2ui` to
+  `glSecondaryColorP3uiv`; no file under `port/fast3d/` but glad names any
+  of them). No retained twin is linked for a program with
+  `opt_ge_sky_pixdiv`: its fragment shader reads `vGeSkyQ`, which only the
+  interpreter's vertex shader writes; the compatibility profile links such
+  a twin with the input unwritten and the core profile refuses it (`Failed
+  to link the retained program ... 'vGeSkyQ' not written by vertex
+  shader`, in 52 of the 119 logs before). The twin's program is 0, which
+  means what a failed link meant, without the error: a retained build with
+  it is refused and its list stays on the interpreter. Skipping was chosen
+  over writing the varying: a twin that wrote a constant would draw a
+  wrong texture divide if it were ever used, and it never is, because the
+  sky and water are RDP triangles (`gfx_rdp_triangle`) drawn outside any
+  room's display list, which is all the room cache captures.
+  *Ran, at the branch's tip, hidden, now with the background-app hint of
+  Task 3:* the play sets `OK: 119 of 119 cases` (15 min 49 s), `OK: 319
+  pool and stage pairs within budget`, recordings 27.78 s peaking 16,103
+  and 27.80 s peaking 22,400; the mission smoke 20 of 20. Over the 119
+  logs: 0 lines of the three patterns, 119 `SDL: created GL4.1core
+  context`, 0 `could not create`, 119 `GL: 30 functions not exported by
+  this context`. The task check: video tree `OK: 702 weak references, 0
+  strong`, gate 393 files, 0 failed, `OK: 33 narrowings in 19 files, all
+  allowed`; headless `OK: ran 600 frames` and `macos_harnesses: 47 passed,
+  2 skipped by name, 0 failed`; the x86_64 gate 0 failed with both static
+  checks `OK`; aarch64 `OK: ran 600 frames`; `compare_win32.py commits
+  main WORKTREE`: `identical in loaded code and data`.
+
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside
 the repository: they are the plans' inputs, not checks of a change. From
