@@ -44,8 +44,10 @@ menus, the legal screen's indicator, the file-select notice, and Automatic
 as the default. The page's What's New button was removed after UPD-003
 (owner decision, 2026-11-28). UPD-004 (the real release cycle) is in
 progress: `update_cycle.py` ran every flavor from build-463.1 to build-467.1
-(14 of 16 cases passed) and found a 32-bit Linux large-inode bug, fixed and
-waiting for a cycle from a release that carries the fix. The plan
+(14 of 16 cases passed) and found a 32-bit Linux large-inode bug, fixed in
+11cc113 (every CI job passed; release `build-469.1-11cc113e0332` is the
+first with the fix) and waiting for a cycle from that release to a later
+one. The plan
 was drafted on 2026-11-27 and the owner accepted it
 the same day with five decisions. Every CI release counts as an update, with
 checks at most twice a day. Automatic mode holds the launch with an indicator
