@@ -4,9 +4,9 @@ The last milestone of the [Windows x64 plan](windows_x64_plan.md). One push to
 `main` builds, symbol-uploads, packages, smoke-tests and publishes an attested
 `Iron-Sights-windows-x64.zip` beside the x86 zip, and the owner plays it.
 
-**Status:** Implemented and checked locally on 2026-11-27 (verification 10;
-FORK-094 has the evidence). Left: the first CI release, the owner's play
-session and the Sentry check. Planned on 2026-11-27 at ad82813
+**Status:** Published on 2026-11-27: release `build-442.1-9352f2162b26`
+carries the attested x64 zip, and verification 10 holds (FORK-094 has the
+evidence). Left: the owner's play session and the Sentry check. Planned on 2026-11-27 at ad82813
 from a reading of `package_windows.py`, `release_inputs.py`,
 `ci_dependencies.py`, `.github/workflows/windows-release.yml` and the release
 texts. Accepted by the owner the same day ("Start WIN64-004", after being told

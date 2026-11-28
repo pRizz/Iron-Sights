@@ -36,9 +36,9 @@ new areas. Status describes implementation state, not Git publication state.
 passed); WIN64-002 (plays and matches) is done on `main` (1f3ea6f, CI
 passed); WIN64-003 (crash reporting and tooling) is done on `main`
 (7ca2347, CI passed, its `sentry-sdk` job building the x64 runtime);
-WIN64-004 (package, release and hand-over) is implemented and checked on
-the owner's laptop; its push publishes the first x64 zip, and the owner's
-play session and Sentry check remain. No x64 zip is released yet. The plan was drafted on
+WIN64-004 (package, release and hand-over) published the first x64 zip
+(release `build-442.1-9352f2162b26`, from 9352f21, every CI job passed);
+the owner's play session and Sentry check remain. No x64 zip is released yet. The plan was drafted on
 2026-11-27 at the owner's request and accepted the same day with all five
 recommendations; [WIN64-001's plan](scripts/port/windows_x64_win64_001.md)
 and [WIN64-002's](scripts/port/windows_x64_win64_002.md) were accepted under
@@ -358,10 +358,15 @@ of scope" call now notes that the owner lifted it for this plan.
   (verification 10). The tests of the packager (31, with new ones for the
   x64 names, the machine refusals and the Windows half of the publish
   job), the dependency profiles, the gallery, the overlays check, the
-  Sentry tool and `pe_machine` pass in the container. Not yet: the first
-  CI run of the new jobs and the release it publishes, the owner's play
-  session (verification 11) and the check that a crash from the packaged
-  x64 exe reaches the Sentry project symbolicated. The local package and
+  Sentry tool and `pe_machine` pass in the container. CI on 9352f21 passed
+  every job, `windows-x64` and `sentry-smoke-x64` included, and `publish`
+  released `build-442.1-9352f2162b26` with `Iron-Sights-windows-x64.zip`
+  (15,224,648 bytes), `SHA256SUMS-windows-x64.txt`,
+  `windows-x64-build-info.json` and `windows-x64-build-inputs.json` beside
+  the x86 zip; the downloaded zip matched its checksum, `gh attestation
+  verify` passed it, and the README's latest-download link resolves. Not
+  yet: the owner's play session (verification 11) and the check that a
+  crash from the packaged x64 exe reaches the Sentry project symbolicated. The local package and
   its extracted copy were deleted.
 
 **Why it differs from upstream.** The inherited baseline builds Windows only
