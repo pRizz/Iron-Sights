@@ -8986,10 +8986,30 @@ extern "C" void gfx_init(const GfxInitSettings *settings) {
     gfx_rapi = settings->rapi;
     gfx_wapi->init(&settings->window_settings);
     gfx_rapi->init();
+#ifdef __APPLE__
+    /* MAC-002: the settings are the window's size in points; the framebuffer
+     * is in pixels, more than one a point on a Retina display, so the first
+     * one is sized from the drawable, as every later frame's is. */
+    uint32_t first_width = settings->window_settings.width, first_height = settings->window_settings.height;
+    {
+        uint32_t drawable_width = 0, drawable_height = 0;
+        int32_t window_x = 0, window_y = 0;
+        gfx_wapi->get_dimensions(&drawable_width, &drawable_height, &window_x, &window_y);
+        if (drawable_width > 0 && drawable_height > 0) {
+            first_width = drawable_width;
+            first_height = drawable_height;
+        }
+    }
+    gfx_rapi->update_framebuffer_parameters(0, first_width, first_height, 1, false, true, true, true);
+    gfx_current_dimensions.internal_mul = 1;
+    gfx_current_game_window_viewport.width = gfx_current_dimensions.width = first_width;
+    gfx_current_game_window_viewport.height = gfx_current_dimensions.height = first_height;
+#else
     gfx_rapi->update_framebuffer_parameters(0, settings->window_settings.width, settings->window_settings.height, 1, false, true, true, true);
     gfx_current_dimensions.internal_mul = 1;
     gfx_current_game_window_viewport.width = gfx_current_dimensions.width = settings->window_settings.width;
     gfx_current_game_window_viewport.height = gfx_current_dimensions.height = settings->window_settings.height;
+#endif
     game_framebuffer = gfx_rapi->create_framebuffer();
     game_framebuffer_msaa_resolved = gfx_rapi->create_framebuffer();
 

@@ -2170,6 +2170,29 @@ touched on the Mac.
   with `opt_ge_sky_pixdiv`, whose retained twin the core profile cannot
   link.
 
+- *Task 6, "Size the macOS framebuffer from the drawable".*
+  `port/fast3d/gfx_sdl2.cpp`: the guard around `SDL_WINDOW_ALLOW_HIGHDPI`
+  becomes `#if defined(SDL_WINDOW_ALLOW_HIGHDPI) || defined(__APPLE__)`
+  (the name is an enumerator, so the other builds' guard stays false and
+  they compile what they did); macOS only. `port/fast3d/gfx_pc.cpp`,
+  `gfx_init`: inside `#ifdef __APPLE__` the first framebuffer and viewport
+  take the drawable's size from `get_dimensions`; the `#else` branch is
+  the code every other build had; macOS only.
+  **Not macOS-only (decision 4):** `gfx_sdl2.cpp`'s screenshot repacks its
+  rows with `portBmpPackRows` (`port_hidpi.h`) in place of the loop that
+  copied each row through `uint8_t row[4096 * 3]` on the stack, which a
+  drawable wider than 4,096 pixels overran in every build. The picture
+  written is the same bytes, except that a row's padding (widths not a
+  multiple of 4) is now zero where it was whatever the buffer held.
+  `compare_win32.py commits main macos/strict` differs for this commit,
+  and by symbol only here: `gfx_sdl_maybe_screenshot` is no longer a
+  function of its own and `gfx_sdl_swap_buffers_begin`, its one caller, is
+  5,344 bytes where it was 4,112 (without the 12 KB array the compiler
+  inlines it); no other function changed size. The code that changed runs
+  when a screenshot is taken; the per-frame part is the same early return,
+  now inline. The landing rule asks the laptop session for a
+  before-and-after smoke benchmark of this one change.
+
 ### FORK-092 — Linux weapon icons, icon cache and save transfer dialogs
 
 **Status:** Implemented on 2026-11-25 at the owner's request, during LP64-007

@@ -1,4 +1,5 @@
 #include "port_icon_cache.h"
+#include "port_hidpi.h" /* portBmpPackRows: a screenshot's rows at any width */
 #include <stdio.h>
 #include <SDL.h>
 #include <unistd.h>
@@ -393,7 +394,11 @@ static void gfx_sdl_init(const struct GfxWindowInitSettings *set) {
         maximized_state = true;
     }
 
-#ifdef SDL_WINDOW_ALLOW_HIGHDPI
+/* SDL_WINDOW_ALLOW_HIGHDPI is an enumerator, not a macro, so this #ifdef
+ * has always been false and no build asked for a HiDPI window. macOS does
+ * (MAC-002: video.c sets allow_hidpi there); the other builds compile what
+ * they always have. */
+#if defined(SDL_WINDOW_ALLOW_HIGHDPI) || defined(__APPLE__)
     if (set->allow_hidpi) {
         flags |= SDL_WINDOW_ALLOW_HIGHDPI;
     }
@@ -837,18 +842,10 @@ static void gfx_sdl_maybe_screenshot(void) {
         portIconWorkerCapture(weapon_capture >> 8, weapon_capture & 15, w, h, px);
         SDL_free(px); return;
     }
-    /* repack in place bottom-up rows into padded stride, RGB->BGR */
-    for (int y = h - 1; y >= 0; y--) {
-        uint8_t *src = px + (size_t)y * stride;
-        uint8_t row[4096 * 3];
-        memcpy(row, src, stride);
-        uint8_t *dst = px + (size_t)y * padded;
-        for (int x = 0; x < w; x++) {
-            dst[x * 3 + 0] = row[x * 3 + 2];
-            dst[x * 3 + 1] = row[x * 3 + 1];
-            dst[x * 3 + 2] = row[x * 3 + 0];
-        }
-    }
+    /* repack in place bottom-up rows into padded stride, RGB->BGR: at any
+     * width (port_hidpi.h; a row buffer of 4,096 pixels was overrun here by
+     * a wider drawable) */
+    portBmpPackRows(px, w, h);
     char name[64];
     SDL_snprintf(name, sizeof(name), "shot_%05d.bmp", framenum);
     if (weapon_capture) SDL_snprintf(name, sizeof(name), "weapon_%02d_%d.bmp",
