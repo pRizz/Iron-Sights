@@ -1,5 +1,6 @@
 /* Native frame-pool headroom and a guard before any auxiliary-data write. */
 #include <stdint.h>
+#include <platform_info.h>
 #include "port_dyn.h"
 #include "port_poison.h"
 
@@ -9,7 +10,7 @@ extern void sysFatalError(const char *format, ...);
 
 s32 portDynVertexCapacity(s32 inheritedBytes, s32 players)
 {
-    const s32 minimum = 256 * 1024 * players;
+    const s32 minimum = PORT_DYN_VERTEX_MIN_PER_PLAYER * players;
     return inheritedBytes < minimum ? minimum : inheritedBytes;
 }
 

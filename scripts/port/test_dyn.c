@@ -30,9 +30,11 @@ int main(void)
     g_GfxActiveBufferIndex = 0; g_GfxMemPos = storage;
 
     /* Act/assert: capacity covers generated arms, preserving larger budgets. */
+    /* 512 KB a player at 64 bits (WIN64-004), 256 KB at 32. */
+    assert(PORT_DYN_VERTEX_MIN_PER_PLAYER == (IS_64_BIT ? 512 : 256) * 1024);
     for (s32 players = 1; players <= 4; players++)
-        assert(portDynVertexCapacity(81920, players) == 256 * 1024 * players);
-    assert(portDynVertexCapacity(2 * 1024 * 1024, 1) == 2 * 1024 * 1024);
+        assert(portDynVertexCapacity(81920, players) == PORT_DYN_VERTEX_MIN_PER_PLAYER * players);
+    assert(portDynVertexCapacity(4 * 1024 * 1024, 1) == 4 * 1024 * 1024);
 
     /* Act/assert: original alignment and all four allocation entry points. */
     assert(dynAllocate(1) == storage); assert(g_GfxMemPos == storage + 16);

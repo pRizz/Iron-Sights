@@ -41,6 +41,12 @@
 # pool, past half of 262,144 (the measurements' largest was 98,016,
 # facility3); Facility's 64-bit pool was raised to 286,048 and its line keeps
 # that peak and case.
+# Then (WIN64-004, the owner's ruling "Yes, raise all"): both owner peaks were
+# about 1.47 times the measurements' largest, so every stage's 64-bit vertex
+# pool takes at least 512 KB a player (port_dyn.h), and the Caverns, Dam and
+# Facility rows went from port_lp64_budget.c. Each vertex pool line keeps its
+# peak and case at its stage's new size: 524,288 (one player), 1,048,576 (two)
+# and 2,097,152 (four).
 graphics buffer 0 327680 76336 fw2-video/front-end
 graphics buffer 9 409600 94400 t11-m-video/tour-bunker1
 graphics buffer 20 286720 89984 fw2-plain/tour-silo
@@ -324,52 +330,52 @@ texture pool 50 819200 114088 t11-m-plain/mp-caves-2p
 texture pool 50 4473152 2236576 t11-m-video/soak
 texture pool 54 614400 122136 t11-m-plain/stage-cuba
 texture pool 54 4473152 2236576 t11-m-video/soak
-vertex pool 0 262144 16896 t11-m-plain/attract
-vertex pool 9 262144 101280 t11-m-a64-video-all/run1/bunker2
-vertex pool 20 262144 94880 t11-m-a64-video-all/run1/silo1
-vertex pool 22 262144 44944 t11-m-a64-video-all/run1/stage-statue
-vertex pool 22 524288 35904 t11-san/respawn-statue
-vertex pool 22 1048576 47680 t11-m-plain/mp-statue-4p
-vertex pool 23 262144 26016 t11-m-plain/tour-control
-vertex pool 24 262144 44032 t11-m-a64-video-all/run1/stage-archives
-vertex pool 24 524288 35200 t11-san/respawn-archives
-vertex pool 24 1048576 44096 t11-m-plain/mp-archives-4p
-vertex pool 25 262144 44688 t11-m-a64-video-all/run1/stage-train
-vertex pool 26 262144 98528 t11-m-a64-video-all/run1/frigate2
-vertex pool 27 262144 37472 t11-soak-plain/soak
-vertex pool 27 524288 39616 fw2-video/respawn-bunker
-vertex pool 27 1048576 54912 t11-m-plain/mp-bunker-4p
-vertex pool 28 262144 57360 t11-m-a64-video-all/run1/stage-aztec
-vertex pool 29 262144 34768 t11-m-a64-video-all/run1/stage-streets
-vertex pool 30 262144 34960 t11-m-a64-video-all/run1/stage-depot
-vertex pool 31 524288 39680 t11-plain/respawn-complex
-vertex pool 31 1048576 54464 t11-m-plain/mp-complex-4p
-vertex pool 32 262144 67088 t11-m-a64-video-all/run1/stage-egypt
-vertex pool 32 524288 33920 t11-plain/respawn-egypt
-vertex pool 32 1048576 43264 t11-m-plain/mp-egypt-4p
-vertex pool 33 289248 144624 task10-laptop/x64-tar-203217
-vertex pool 34 286048 143024 win64-owner/ge_direct
-vertex pool 34 524288 40000 t11-plain/respawn-facility
-vertex pool 34 1048576 55040 t11-m-plain/mp-facility-4p
-vertex pool 35 262144 88352 t11-m-a64-video-all/run1/runway2
-vertex pool 36 262144 25520 t11-m-video/tour-surface
-vertex pool 37 262144 64800 t11-m-a64-video-all/run1/stage-jungle
-vertex pool 38 524288 42016 t11-plain/respawn-temple
-vertex pool 38 1048576 72000 t11-m-plain/death
-vertex pool 39 270272 135136 t11-m-a64-video-all/run1/stage-caverns
-vertex pool 39 524288 46368 fw2-video/respawn-caverns
-vertex pool 39 1048576 66624 t11-m-plain/mp-caverns-4p
-vertex pool 41 262144 67936 t11-m-a64-video-all/run1/stage-cradle
-vertex pool 41 524288 34432 t11-plain/respawn-cradle
-vertex pool 41 1048576 45440 t11-m-plain/mp-cradle-4p
-vertex pool 43 262144 43632 t11-m-a64-video-all/run1/stage-surface2
-vertex pool 45 524288 39808 t11-plain/respawn-basement
-vertex pool 45 1048576 55104 t11-m-plain/mp-basement-4p
-vertex pool 46 524288 39616 t11-san/respawn-stack
-vertex pool 46 1048576 54976 t11-m-plain/mp-stack-4p
-vertex pool 48 524288 40064 t11-plain/respawn-library
-vertex pool 48 1048576 55232 t11-m-plain/mp-library-4p
-vertex pool 50 524288 40448 fw2-video/respawn-caves
-vertex pool 50 1048576 60160 t11-san/mp-caves-4p
-vertex pool 54 262144 5664 t11-m-plain/stage-cuba
+vertex pool 0 524288 16896 t11-m-plain/attract
+vertex pool 9 524288 101280 t11-m-a64-video-all/run1/bunker2
+vertex pool 20 524288 94880 t11-m-a64-video-all/run1/silo1
+vertex pool 22 524288 44944 t11-m-a64-video-all/run1/stage-statue
+vertex pool 22 1048576 35904 t11-san/respawn-statue
+vertex pool 22 2097152 47680 t11-m-plain/mp-statue-4p
+vertex pool 23 524288 26016 t11-m-plain/tour-control
+vertex pool 24 524288 44032 t11-m-a64-video-all/run1/stage-archives
+vertex pool 24 1048576 35200 t11-san/respawn-archives
+vertex pool 24 2097152 44096 t11-m-plain/mp-archives-4p
+vertex pool 25 524288 44688 t11-m-a64-video-all/run1/stage-train
+vertex pool 26 524288 98528 t11-m-a64-video-all/run1/frigate2
+vertex pool 27 524288 37472 t11-soak-plain/soak
+vertex pool 27 1048576 39616 fw2-video/respawn-bunker
+vertex pool 27 2097152 54912 t11-m-plain/mp-bunker-4p
+vertex pool 28 524288 57360 t11-m-a64-video-all/run1/stage-aztec
+vertex pool 29 524288 34768 t11-m-a64-video-all/run1/stage-streets
+vertex pool 30 524288 34960 t11-m-a64-video-all/run1/stage-depot
+vertex pool 31 1048576 39680 t11-plain/respawn-complex
+vertex pool 31 2097152 54464 t11-m-plain/mp-complex-4p
+vertex pool 32 524288 67088 t11-m-a64-video-all/run1/stage-egypt
+vertex pool 32 1048576 33920 t11-plain/respawn-egypt
+vertex pool 32 2097152 43264 t11-m-plain/mp-egypt-4p
+vertex pool 33 524288 144624 task10-laptop/x64-tar-203217
+vertex pool 34 524288 143024 win64-owner/ge_direct
+vertex pool 34 1048576 40000 t11-plain/respawn-facility
+vertex pool 34 2097152 55040 t11-m-plain/mp-facility-4p
+vertex pool 35 524288 88352 t11-m-a64-video-all/run1/runway2
+vertex pool 36 524288 25520 t11-m-video/tour-surface
+vertex pool 37 524288 64800 t11-m-a64-video-all/run1/stage-jungle
+vertex pool 38 1048576 42016 t11-plain/respawn-temple
+vertex pool 38 2097152 72000 t11-m-plain/death
+vertex pool 39 524288 135136 t11-m-a64-video-all/run1/stage-caverns
+vertex pool 39 1048576 46368 fw2-video/respawn-caverns
+vertex pool 39 2097152 66624 t11-m-plain/mp-caverns-4p
+vertex pool 41 524288 67936 t11-m-a64-video-all/run1/stage-cradle
+vertex pool 41 1048576 34432 t11-plain/respawn-cradle
+vertex pool 41 2097152 45440 t11-m-plain/mp-cradle-4p
+vertex pool 43 524288 43632 t11-m-a64-video-all/run1/stage-surface2
+vertex pool 45 1048576 39808 t11-plain/respawn-basement
+vertex pool 45 2097152 55104 t11-m-plain/mp-basement-4p
+vertex pool 46 1048576 39616 t11-san/respawn-stack
+vertex pool 46 2097152 54976 t11-m-plain/mp-stack-4p
+vertex pool 48 1048576 40064 t11-plain/respawn-library
+vertex pool 48 2097152 55232 t11-m-plain/mp-library-4p
+vertex pool 50 1048576 40448 fw2-video/respawn-caves
+vertex pool 50 2097152 60160 t11-san/mp-caves-4p
+vertex pool 54 524288 5664 t11-m-plain/stage-cuba
 wallet room 0 76736 38368 t11-m-a64/run1/dam-twice

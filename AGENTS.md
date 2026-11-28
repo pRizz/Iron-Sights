@@ -425,7 +425,10 @@ pass its isolated executable rather than rebuilding an active player binary.
   size or that logs an exhaustion line fails, unless its line is marked
   `withheld:` with the
   reason. A pool that passes half is raised at 64 bits only, to twice its
-  peak rounded up to its alignment, and its line updated.
+  peak rounded up to its alignment, and its line updated. The vertex pool
+  has a 64-bit floor of 512 KB a player in every stage
+  (`PORT_DYN_VERTEX_MIN_PER_PLAYER`, `port/include/port_dyn.h`), because
+  the owner's play used about 1.47 times the automated runs' peaks.
 - `-DGE_COMPARE=ON` (LP64-006) configures a comparison build: the in-tree
   `tanf`, `atanf` and `cosf` (`port/src/port_compare_math.c`) and Arm's
   `sinf`, `expf` and `powf` (`port/src/port_compare_math_arm.c` and

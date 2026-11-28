@@ -35,14 +35,10 @@ static const StageBudget sBudgets[] = {
     { "room memory", LEVELID_CRADLE, 512000, 537536 },
     /* graphics buffer: peak 125,520 (stage-aztec, comparison build with video, every fork option) */
     { "graphics buffer", LEVELID_AZTEC, 245760, 251040 },
-    /* vertex pool: peak 135,136 (stage-caverns, the same), one player */
-    { "vertex pool", LEVELID_CAVERNS, 262144, 270272 },
-    /* peak 144,624 (the owner's Dam, played on the x86_64 package in WSL,
-     * LP64-007 Task 10; the comparison cases' largest was 98,912), one player */
-    { "vertex pool", LEVELID_DAM, 262144, 289248 },
-    /* peak 143,024 (the owner's Facility, played on the Windows x64 package,
-     * WIN64-004; the measurements' largest was 98,016, facility3), one player */
-    { "vertex pool", LEVELID_FACILITY, 262144, 286048 },
+    /* vertex pool: no rows. Every stage's pool is at least 512 KB a player at
+     * 64 bits (port_dyn.h, WIN64-004), over twice every measured peak; the
+     * rows Caverns (peak 135,136), Dam (144,624) and Facility (143,024) had
+     * raised the old 256 KB to are below it. */
 };
 
 /* Not strcmp: the game's <string.h> (include/) does not declare it. */

@@ -397,6 +397,32 @@ of scope" call now notes that the owner lifted it for this plan.
     289,248 stayed under half. On the raised build the seven play cases
     that visit Facility pass and `peaks --budget` over them gives `OK: 25
     pool and stage pairs within budget`, Facility's pool printing 286,048.
+    That raise was then superseded by a floor (the next item).
+  - *The 64-bit vertex pool floor* (after WIN64-004, the owner's ruling
+    "Yes, raise all"). Both owner sessions used about 1.47 times the
+    automated runs' largest vertex peak (Dam 144,624 against 98,912,
+    Facility 143,024 against 98,016), and scaled so, Bunker 1, Silo, Runway
+    and one more stage would pass half of 256 KB; a full pool stops the
+    game ("Frame data buffer exhausted", `port_dyn.c`). So every stage's
+    vertex pool at 64 bits is at least 512 KB a player
+    (`PORT_DYN_VERTEX_MIN_PER_PLAYER` in `port/include/port_dyn.h`, read by
+    `portDynVertexCapacity`); 32-bit builds keep 256 KB. The Caverns, Dam
+    and Facility rows of `port_lp64_budget.c` (LP64-006 Task 11, LP64-007
+    Task 10 and the item above) fall below the floor and are gone, and
+    each vertex pool line of `lp64_budgets.txt` keeps its peak and case at
+    its stage's new size (524,288, 1,048,576 or 2,097,152 bytes for one,
+    two or four players). The cost is 512 KB more of the stage bank a
+    player (two frame buffers of 256 KB more each). `test_dyn.sh` checks the floor at both widths.
+    Checked on the owner's laptop: `test_dyn.sh` passes at 32 and 64 bits;
+    the play sets on the floored `build_win64` pass 119 of 119 and `peaks
+    --budget` gives `OK: 319 pool and stage pairs within budget`; the 38
+    comparison cases on a Windows x64 comparison build of the commit before
+    (3d09320) and of the change, `--video --repeat 2` each, both agree with
+    themselves, and `compare --streams sim,gfx,snd` of the two prints `OK:
+    38 cases, 100 streams, 100 identical, 0 as recorded`, so the floor
+    changes no simulation, picture or sound; `compare_win32.py commits HEAD
+    WORKTREE`: `identical in loaded code and data`. The trees and run
+    folders were deleted afterwards.
     The log's late loads are HD texture uploads from the owner's pack and
     the front end's, kinds the late-load audit found alike at both widths.
     Not covered by the log: a gamepad (none was used: "no pad pressed
