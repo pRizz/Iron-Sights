@@ -7,8 +7,8 @@ The last milestone of the [Windows x64 plan](windows_x64_plan.md). One push to
 **Status:** Published on 2026-11-27: release `build-442.1-9352f2162b26`
 carries the attested x64 zip, and verification 10 holds (FORK-094 has the
 evidence); a test crash from the released exe reached Sentry (event
-`cf3a5f62a4494567ce6497b036c02b94`). Left: the owner's play session and
-their look at that event's symbolicated stack. Planned on 2026-11-27 at ad82813
+`cf3a5f62a4494567ce6497b036c02b94`), symbolicated to `testCrashFault
+(reporting_win.c:250)`. Left: the owner's play session. Planned on 2026-11-27 at ad82813
 from a reading of `package_windows.py`, `release_inputs.py`,
 `ci_dependencies.py`, `.github/workflows/windows-release.yml` and the release
 texts. Accepted by the owner the same day ("Start WIN64-004", after being told

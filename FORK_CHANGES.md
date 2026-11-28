@@ -372,9 +372,15 @@ of scope" call now notes that the owner lifted it for this plan.
     crashed with 0xC0000005, and `sentry-crash.exe` sent the native-stack
     envelope (20,436 bytes) to the project's ingest, which answered `HTTP/1.1
     200 OK`; the event is `cf3a5f62a4494567ce6497b036c02b94`, level fatal,
-    release `iron-sights@9352f21...`, tag `architecture: x86_64`. Whether
-    Sentry symbolicated its stack to `testCrashFault` is for the owner to
-    read in the project. The folder was deleted afterwards.
+    release `iron-sights@9352f21...`, tag `architecture: x86_64`. The owner
+    saw it symbolicated and had it read in their Chrome: issue
+    IRON-SIGHTS-7, titled `testCrashFault`, its stack `testCrashFault
+    (reporting_win.c:250)`, `portCrashTestMode (reporting_win.c:264)`,
+    `main (main.c:976)`, `__tmainCRTStartup (crtexe.c:272)`,
+    `WinMainCRTStartup (crtexe.c:162)`, then `KERNEL32.DLL` and `ntdll`, with
+    the tag and device architecture `x86_64`, the `build_run` of CI run
+    46090571572 and `build_dirty: false`. This is the real-Sentry half of
+    verification 6. The folder was deleted afterwards.
   - Not yet: the owner's play session (verification 11). The local package and
   its extracted copy were deleted.
 
