@@ -17,6 +17,30 @@ class DependencyCache(unittest.TestCase):
                                              "gcc-mingw-w64-x86-64-win32", "g++-mingw-w64-x86-64-win32",
                                              "binutils-mingw-w64-x86-64"])
 
+    def test_windows_x64_profile_has_the_x86_64_mingw_compilers_and_ccache(self):
+        # The Windows x64 release job (WIN64-004); the 32-bit job's profile is unchanged.
+        x64, x86 = packages("windows-x64"), packages("windows")
+        self.assertEqual(x64[:4], ["gcc-mingw-w64-x86-64-win32", "g++-mingw-w64-x86-64-win32",
+                                   "binutils-mingw-w64-x86-64", "ccache"])
+        self.assertEqual(x86[:4], ["gcc-mingw-w64-i686-win32", "g++-mingw-w64-i686-win32",
+                                   "binutils-mingw-w64-i686", "ccache"])
+
+    def test_windows_x64_compiler_identity_reads_the_x86_64_compilers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for tool in ("x86_64-w64-mingw32-gcc", "x86_64-w64-mingw32-g++", "cc1", "cc1plus"):
+                (root/tool).write_bytes(tool.encode())
+            plan = dict(requested={"compiler": "1"}, ubuntu="noble", architecture="amd64", profile="windows-x64")
+            asked = []
+            def command(args, capture=False):
+                asked.append(args[0])
+                return "ccache fixture" if args[0] == "ccache" else str(root/args[1].split("=")[1])
+            with patch("ci_dependencies.run", side_effect=command), \
+                    patch("ci_dependencies.shutil.which", side_effect=lambda name: str(root/name)):
+                identity = compiler_identity(plan)
+            self.assertIn("x86_64-w64-mingw32-gcc", identity["binaries"])
+            self.assertIn("x86_64-w64-mingw32-gcc", asked)
+
     def test_unreachable_mirror_repeats_the_apt_command(self):
         failure = subprocess.CalledProcessError(100, ["apt-get", "update"])
         sleeps = []

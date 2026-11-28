@@ -21,6 +21,21 @@ def module(name):
     result=importlib.util.module_from_spec(spec);spec.loader.exec_module(result);return result
 
 
+def pe_stub(machine):
+    """The few header bytes package_windows.py reads to tell a PE file's machine."""
+    data=bytearray(512);data[:2]=b"MZ";data[0x3C:0x40]=(0x80).to_bytes(4,"little")
+    data[0x80:0x84]=b"PE\0\0";data[0x84:0x86]=machine.to_bytes(2,"little");return bytes(data)
+
+
+def windows_build(build,machine=0x14C,architecture="x86"):
+    """A build folder holding every file package_windows.py packs: PE stubs of MACHINE for its .exe
+    and .dll files and a Sentry runtime record of ARCHITECTURE."""
+    for source in packager.FILES:
+        path=build/source;path.parent.mkdir(parents=True,exist_ok=True)
+        path.write_bytes(pe_stub(machine) if source.endswith((".exe",".dll")) else b"test file")
+    (build/"sentry-build.json").write_text(json.dumps({"architecture":architecture}))
+
+
 build_info=module("build_info")
 packager=module("package_windows")
 linux_packager=module("package_linux")
@@ -78,8 +93,7 @@ class Distribution(unittest.TestCase):
             (build/"generated").mkdir(parents=True)
             info=build_info.metadata(root,{"SOURCE_DATE_EPOCH":"0"})
             (build/"generated/build-info.json").write_text(json.dumps(info))
-            for source in packager.FILES:
-                path=build/source;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b"test file")
+            windows_build(build)
             for source in ("Data/user.z64","Data/Saves/eeprom.bin","Data/Profiles/user.geprofile","midas.ini","previous.exe","ProjectMidas.exe"):
                 path=build/source;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b"must not ship")
             # Third-party texture packs are external mods; a stray copy in the build never ships.
@@ -107,6 +121,41 @@ class Distribution(unittest.TestCase):
                 self.assertNotIn("midas.ini",names);self.assertNotIn("previous.exe",names)
             previous=path.read_bytes();packager.package(build,out,sdl_license=license)
             self.assertEqual(previous,path.read_bytes())
+
+    def test_x64_package_has_its_own_names_beside_the_x86_ones(self):
+        # Arrange
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);build=root/"build";out=root/"dist"
+            (build/"generated").mkdir(parents=True)
+            (build/"generated/build-info.json").write_text(json.dumps(build_info.metadata(root,{"SOURCE_DATE_EPOCH":"0"})))
+            windows_build(build,0x8664,"x64")
+            license=root/"SDL-LICENSE";license.write_text("license fixture")
+            # Act
+            path=packager.package(build,out,sdl_license=license,arch="x64")
+            # Assert
+            self.assertEqual(path.name,"Iron-Sights-windows-x64.zip")
+            self.assertTrue((out/"SHA256SUMS-windows-x64.txt").is_file())
+            self.assertTrue((out/"windows-x64-build-info.json").is_file())
+            self.assertFalse((out/"SHA256SUMS.txt").exists())
+            with zipfile.ZipFile(path) as archive:
+                self.assertIn("IronSights.exe",archive.namelist());self.assertIn("SHA256SUMS.txt",archive.namelist())
+
+    def test_a_package_refuses_another_machine_or_sentry_runtime(self):
+        # Arrange: a 64-bit build packaged as x86, a 32-bit DLL in an x64 build, an x86 runtime in it
+        cases=(("x86",0x8664,"x64",None,"not a x86 PE file"),
+               ("x64",0x8664,"x64","sentry.dll","not a x64 PE file"),
+               ("x64",0x8664,"x86",None,"x86 Sentry runtime"))
+        for arch,machine,runtime,stray,message in cases:
+            with self.subTest(arch=arch,stray=stray,runtime=runtime),tempfile.TemporaryDirectory() as folder:
+                root=Path(folder);build=root/"build";out=root/"dist"
+                windows_build(build,machine,runtime)
+                if stray:
+                    (build/stray).write_bytes(pe_stub(0x14C))
+                license=root/"SDL-LICENSE";license.write_text("license fixture")
+                # Act, Assert
+                with self.assertRaisesRegex(ValueError,message):
+                    packager.package(build,out,sdl_license=license,arch=arch)
+                self.assertFalse(out.exists())
 
     def test_packagers_refuse_a_comparison_build(self):
         # Arrange
@@ -334,8 +383,30 @@ class Distribution(unittest.TestCase):
         # Assert
         self.assertIn("linux-x86_64",needs)
         self.assertEqual(missing,[])
-        self.assertEqual(len(released),17)
-        self.assertEqual(len(set(released)),17)
+        self.assertEqual(len(released),21)
+        self.assertEqual(len(set(released)),21)
+
+    def test_publish_job_releases_every_windows_target(self):
+        # Arrange: the release carries, attests and checks both Windows zips (WIN64-004).
+        text=(ROOT/".github/workflows/windows-release.yml").read_text()
+        job=text[text.index("\n  publish:\n"):]
+        needs=re.search(r"needs: \[([^\]]*)\]",job).group(1).split(", ")
+        attested=re.search(r"subject-path: \|\n((?:\s+dist/\S+\n)+)",job).group(1).split()
+        released=re.search(r"gh release create .*--notes-file notes\.md (.*)",job).group(1).split()
+        # Act
+        missing=[]
+        for arch,target in sorted(packager.TARGETS.items()):
+            missing+=[(arch,"attest")] if "dist/"+target.zip not in attested else []
+            missing+=[(arch,"release",name) for name in (target.zip,target.sums,target.build_info)
+                      if "dist/"+name not in released]
+        if "sha256sum -c "+packager.TARGETS["x64"].sums not in job:
+            missing.append(("x64","checksum"))
+        if packager.TARGETS["x64"].build_info not in job.split("gh release create")[0]:
+            missing.append(("x64","identity"))
+        # Assert
+        self.assertEqual(missing,[])
+        self.assertIn("dist/windows-x64-build-inputs.json",released)
+        self.assertIn("windows-x64",needs);self.assertIn("sentry-smoke-x64",needs)
 
     @unittest.skipUnless(shutil.which("gcc"),"Native cache codec test needs a C compiler")
     def test_native_cache_validation(self):

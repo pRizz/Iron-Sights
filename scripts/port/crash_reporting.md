@@ -55,8 +55,10 @@ The 64-bit Windows exe (WIN64-003) loads the same SDK built for **x64**:
 `architecture: x64` in its `sentry-build.json`, and `stage --arch x64` refuses
 any other runtime, as the default `--arch x86` refuses an x64 one. CI's
 `sentry-sdk` job builds and caches both, the x64 one as the `sentry-msvc-x64`
-artifact. Windows events carry the `architecture` tag (`i686` or `x86_64`), as
-the Linux packages' do.
+artifact, which the `windows-x64` job (WIN64-004) stages into
+`Iron-Sights-windows-x64.zip` after uploading the x64 exe's debug files the
+same way; `sentry-smoke-x64` tests that zip. Windows events carry the
+`architecture` tag (`i686` or `x86_64`), as the Linux packages' do.
 
 `scripts/port/sentry_config.json` contains the SDK/CLI pins, project and **public
 DSN**. The DSN permits ingestion; it is not an administrative credential. Never

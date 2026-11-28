@@ -22,6 +22,10 @@ def run(args, capture=False):
     return result.stdout if capture else ""
 
 
+# The MinGW triple each Windows build profile compiles with (WIN64-004 adds the x64 job's).
+WINDOWS_TRIPLES = {"windows": "i686-w64-mingw32", "windows-x64": "x86_64-w64-mingw32"}
+
+
 def packages(profile):
     if profile == "tests":
         # libsdl2-dev is the native (64-bit) SDL2 for the 64-bit video compile gate;
@@ -30,8 +34,12 @@ def packages(profile):
         return ["gcc-multilib", "g++-multilib", "libsdl2-dev",
                 "gcc-mingw-w64-x86-64-win32", "g++-mingw-w64-x86-64-win32",
                 "binutils-mingw-w64-x86-64"]
-    result = ["gcc-mingw-w64-i686-win32", "g++-mingw-w64-i686-win32",
-              "binutils-mingw-w64-i686", "ccache"]
+    if profile == "windows-x64":
+        result = ["gcc-mingw-w64-x86-64-win32", "g++-mingw-w64-x86-64-win32",
+                  "binutils-mingw-w64-x86-64", "ccache"]
+    else:
+        result = ["gcc-mingw-w64-i686-win32", "g++-mingw-w64-i686-win32",
+                  "binutils-mingw-w64-i686", "ccache"]
     # Hosted runners provide these outside dpkg; don't download another CMake.
     for tool in ("cmake", "make"):
         if not shutil.which(tool):
@@ -113,8 +121,9 @@ def compiler_identity(plan):
     identity = dict(requested=plan["requested"], ubuntu=plan["ubuntu"],
                     architecture=plan["architecture"],
                     ccache=run(["ccache", "--version"], True), binaries={})
+    triple = WINDOWS_TRIPLES[plan.get("profile", "windows")]
     for tool in ("gcc", "g++"):
-        compiler = "i686-w64-mingw32-"+tool
+        compiler = triple+"-"+tool
         for path in [shutil.which(compiler),
                      run([compiler, "-print-prog-name="+("cc1" if tool == "gcc" else "cc1plus")], True).strip()]:
             identity["binaries"][Path(path).name] = hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -189,11 +198,12 @@ def install(root):
         for compiler in ("gcc", "g++"):
             run([*prefix, "update-alternatives", "--set", "x86_64-w64-mingw32-"+compiler,
                  "/usr/bin/x86_64-w64-mingw32-"+compiler+"-win32"])
-    if plan["profile"] == "windows":
+    if plan["profile"] in WINDOWS_TRIPLES:
         prefix = [] if os.geteuid() == 0 else ["sudo"]
+        triple = WINDOWS_TRIPLES[plan["profile"]]
         for compiler in ("gcc", "g++"):
-            run([*prefix, "update-alternatives", "--set", "i686-w64-mingw32-"+compiler,
-                 "/usr/bin/i686-w64-mingw32-"+compiler+"-win32"])
+            run([*prefix, "update-alternatives", "--set", triple+"-"+compiler,
+                 "/usr/bin/"+triple+"-"+compiler+"-win32"])
         identity = compiler_identity(plan)
         plan["compiler_identity"] = identity
         key = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
@@ -210,7 +220,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("operation", choices=("prepare", "install"))
     parser.add_argument("--root", required=True, type=Path)
-    parser.add_argument("--profile", choices=("tests", "windows"), default="windows")
+    parser.add_argument("--profile", choices=("tests", *WINDOWS_TRIPLES), default="windows")
     args = parser.parse_args()
     task_root = args.root.resolve()
     prepare(task_root, args.profile) if args.operation == "prepare" else install(task_root)

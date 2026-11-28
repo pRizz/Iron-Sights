@@ -36,13 +36,16 @@ new areas. Status describes implementation state, not Git publication state.
 passed); WIN64-002 (plays and matches) is done on `main` (1f3ea6f, CI
 passed); WIN64-003 (crash reporting and tooling) is done on `main`
 (7ca2347, CI passed, its `sentry-sdk` job building the x64 runtime);
-WIN64-004 is not started. No x64 zip is released yet. The plan was drafted on
+WIN64-004 (package, release and hand-over) is implemented and checked on
+the owner's laptop; its push publishes the first x64 zip, and the owner's
+play session and Sentry check remain. No x64 zip is released yet. The plan was drafted on
 2026-11-27 at the owner's request and accepted the same day with all five
 recommendations; [WIN64-001's plan](scripts/port/windows_x64_win64_001.md)
 and [WIN64-002's](scripts/port/windows_x64_win64_002.md) were accepted under
 the owner's standing instruction to take sensible recommendations;
-[WIN64-003's](scripts/port/windows_x64_win64_003.md) when they asked to start
-it.
+[WIN64-003's](scripts/port/windows_x64_win64_003.md) and
+[WIN64-004's](scripts/port/windows_x64_win64_004.md) when they asked to start
+each, WIN64-004 after being told its push publishes the zip.
 
 **What it is.** [The Windows x64 plan](scripts/port/windows_x64_plan.md)
 proposes a native 64-bit Windows executable from the 64-bit source that
@@ -315,6 +318,51 @@ of scope" call now notes that the owner lifted it for this plan.
     with uploaded debug files, which needs CI's upload token and a package;
     WIN64-004's Windows x64 job uploads them, and the owner checks the
     event.
+
+**WIN64-004: package, release and hand-over.**
+
+- *Package.* `package_windows.py --arch x86|x64` (x86 the default) takes its
+  names from a table of two targets, as `package_linux.py` does: the x64
+  zip is `Iron-Sights-windows-x64.zip`, written beside
+  `SHA256SUMS-windows-x64.txt` and `windows-x64-build-info.json` so both
+  targets' files fit in one release (the x86 names are unchanged). Every
+  `.exe` and `.dll` packed must be the target's PE machine and
+  `sentry-build.json` the target's architecture; the packager refuses
+  otherwise. `release_inputs.py --arch` names the compiler and build folder
+  (`build_win64`) and records the architecture. `ci_dependencies.py` has a
+  `windows-x64` profile: the x86_64 MinGW packages and ccache, their win32
+  alternatives, and a ccache key from the x86_64 compilers.
+- *CI and release.* `windows-release.yml` gains `windows-x64` (the
+  `windows` job's steps with the x86_64 toolchain, `-DGE_POINTER_BITS=64`,
+  the `sentry-msvc-x64` artifact, the x64 exe's debug-file upload, `stage
+  --arch x64`, `package_windows.py --arch x64`, `release_inputs.py --arch
+  x64`, and a `windows-x64-player-package` artifact) and
+  `sentry-smoke-x64` (`test_sentry_windows.py` on the x64 zip, ROM-free, on
+  the Windows runner). `publish` needs both, checks the x64 checksum file
+  and that its build info names the release's commit and `x86_64`, attests
+  the x64 zip beside the others, and attaches it with its checksum, build
+  info and build inputs. The release notes say which Windows zip to choose.
+- *Texts.* The README's download section names the x64 zip and what it
+  lacks, and its build step no longer says the x64 build lacks Sentry and
+  the profiler (stale since WIN64-003). `START-HERE.txt`, shared by both
+  zips, says which is which and where `build-info.json` names the
+  architecture. The watch already says "Suspend points are unavailable in
+  64-bit builds".
+- *WIN64-004 evidence* (2026-11-27, the owner's laptop): `package_windows.py
+  --arch x64 --build build_win64` built the zip; extracted, its five PE
+  files (`IronSights.exe`, `SDL2.dll`, `sentry.dll`, `sentry-crash.exe`,
+  `sentry-wer.dll`) are all machine 0x8664 and its inner `SHA256SUMS.txt`
+  verifies; `test_sentry_windows.py --package` passed its nine cases on the
+  zip; `lp64_boot.py --expect-run --frames 600` passed the extracted exe,
+  and `audit_buffers.py --mission-smoke --video` passed 20 of 20 on it
+  (verification 10). The tests of the packager (31, with new ones for the
+  x64 names, the machine refusals and the Windows half of the publish
+  job), the dependency profiles, the gallery, the overlays check, the
+  Sentry tool and `pe_machine` pass in the container. Not yet: the first
+  CI run of the new jobs and the release it publishes, the owner's play
+  session (verification 11) and the check that a crash from the packaged
+  x64 exe reaches the Sentry project symbolicated. The local package and
+  its extracted copy were deleted.
 
 **Why it differs from upstream.** The inherited baseline builds Windows only
 as a 32-bit program, and so does this fork today.

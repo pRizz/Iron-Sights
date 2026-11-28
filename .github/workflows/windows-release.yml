@@ -346,6 +346,116 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  # The 64-bit Windows player (WIN64-004, scripts/port/windows_x64_plan.md):
+  # the windows job's steps with the x86_64 toolchain, the x64 Sentry runtime
+  # and their own artifact names, so both packages fit in one release.
+  windows-x64:
+    needs: sentry-sdk
+    # Publishing is restricted to main; compilation itself needs no ROM or secrets.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: sentry-msvc-x64
+          path: build/sentry-runtime-x64
+      - name: Resolve authenticated Windows dependencies
+        # The reporter is built separately with MSVC; the game with MinGW-w64 GCC x86_64.
+        id: deps
+        timeout-minutes: 5
+        run: python3 scripts/port/ci_dependencies.py prepare --profile windows-x64 --root "$RUNNER_TEMP/midas-deps"
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: restore-deps
+        with:
+          path: ${{ runner.temp }}/midas-deps/archives/*.deb
+          key: ${{ steps.deps.outputs.cache_key }}
+          restore-keys: ${{ steps.deps.outputs.cache_prefix }}
+      - name: Verify cached archives and install the x64 cross compiler
+        id: toolchain
+        timeout-minutes: 10
+        env:
+          MIDAS_DEPENDENCY_CACHE_HIT: ${{ steps.restore-deps.outputs.cache-hit }}
+        run: python3 scripts/port/ci_dependencies.py install --root "$RUNNER_TEMP/midas-deps"
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.restore-deps.outputs.cache-hit != 'true' && steps.deps.outputs.count != '0'
+        with:
+          path: ${{ runner.temp }}/midas-deps/archives/*.deb
+          key: ${{ steps.deps.outputs.cache_key }}
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: restore-sdl
+        with:
+          path: third_party/sdl2.tar.gz
+          key: sdl2-mingw-${{ env.SDL2_VERSION }}-${{ env.SDL2_SHA256 }}
+      - name: Fetch or verify checksum-pinned SDL input
+        run: |
+          set -euo pipefail
+          mkdir -p third_party
+          if ! test -f third_party/sdl2.tar.gz || ! echo "$SDL2_SHA256  third_party/sdl2.tar.gz" | sha256sum -c - >/dev/null 2>&1; then
+            curl --fail --silent --show-error --location --retry 2 --connect-timeout 15 --max-time 180 "https://github.com/libsdl-org/SDL/releases/download/release-${SDL2_VERSION}/SDL2-devel-${SDL2_VERSION}-mingw.tar.gz" --output third_party/sdl2.tar.gz
+          fi
+          echo "$SDL2_SHA256  third_party/sdl2.tar.gz" | sha256sum -c -
+          tar -xzf third_party/sdl2.tar.gz -C third_party
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.restore-sdl.outputs.cache-hit != 'true'
+        with:
+          path: third_party/sdl2.tar.gz
+          key: sdl2-mingw-${{ env.SDL2_VERSION }}-${{ env.SDL2_SHA256 }}
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: inputs.clean_build != true
+        with:
+          path: ${{ runner.temp }}/midas-ccache
+          key: ccache-v1-${{ steps.toolchain.outputs.compiler_key }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: ccache-v1-${{ steps.toolchain.outputs.compiler_key }}-
+      - name: Choose build identity
+        run: |
+          echo "MIDAS_BUILD_TIME_UTC=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+          echo "MIDAS_RELEASE_TAG=build-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA:0:12}" >> "$GITHUB_ENV"
+      - name: Compile exact checked-out commit
+        env:
+          CCACHE_DIR: ${{ runner.temp }}/midas-ccache
+          CCACHE_BASEDIR: ${{ github.workspace }}
+          CCACHE_COMPILERCHECK: content
+          CCACHE_MAXSIZE: 256M
+          CLEAN_BUILD: ${{ inputs.clean_build == true }}
+        run: |
+          if [ "$CLEAN_BUILD" = true ]; then export CCACHE_DISABLE=1; fi
+          ccache --zero-stats
+          cmake -B build_win64 -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-x86_64.cmake -DGE_POINTER_BITS=64 -DCMAKE_BUILD_TYPE=Debug -DGE_VIDEO=ON -DGE_ROMDATA_FALLBACK=OFF -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DMIDAS_SENTRY_INCLUDE_DIR="$PWD/build/sentry-runtime-x64/include"
+          cmake --build build_win64 --parallel "$(nproc)"
+          ccache --show-stats | tee build_win64/ccache-stats.txt
+          cat build_win64/ccache-stats.txt >> "$GITHUB_STEP_SUMMARY"
+          git diff --exit-code HEAD
+          python3 -c "import json; m=json.load(open('build_win64/generated/build-info.json')); assert m['ci'] and not m['dirty'] and m['architecture'] == 'x86_64'"
+      - name: Upload exact Windows debug information and source context
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: python3 scripts/port/sentry_tools.py upload --exe build_win64/IronSights.exe --sdk build/sentry-runtime-x64 --work build/sentry-cli
+      - uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: inputs.clean_build != true
+        with:
+          path: ${{ runner.temp }}/midas-ccache
+          key: ccache-v1-${{ steps.toolchain.outputs.compiler_key }}-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Package only player files
+        env:
+          MIDAS_DEPENDENCIES_FILE: ${{ runner.temp }}/midas-deps/verified-inputs.json
+          MIDAS_CLEAN_BUILD: ${{ inputs.clean_build == true }}
+        run: |
+          python3 scripts/port/sentry_tools.py stage --arch x64 --source build/sentry-runtime-x64 --destination build_win64
+          python3 scripts/port/package_windows.py --arch x64 --build build_win64 --output dist --sdl-license third_party/SDL2-${SDL2_VERSION}/LICENSE.txt
+          python3 scripts/port/release_inputs.py --arch x64 --output dist/windows-x64-build-inputs.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-x64-player-package
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
   linux:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
@@ -521,6 +631,27 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  sentry-smoke-x64:
+    needs: windows-x64
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: windows-x64-player-package
+          path: build/player-package
+      - name: Test the x64 package's reporting, opt-out and crash capture without a ROM
+        run: python scripts/port/test_sentry_windows.py --package build/player-package/Iron-Sights-windows-x64.zip --output build/sentry-smoke
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: sentry-smoke-x64-diagnostics
+          path: build/sentry-smoke
+          if-no-files-found: ignore
+          retention-days: 7
+
   # The headless macOS game on Apple clang, without a ROM (MAC-001, FORK-093;
   # scripts/port/macos.md). publish does not need this job: a red macOS job is
   # visible on the run and holds back no release.
@@ -568,7 +699,7 @@ jobs:
         run: bash scripts/port/macos_no_rom.sh build/mac/headless/IronSights
 
   publish:
-    needs: [tests, windows, sentry-smoke, linux, linux-x86_64]
+    needs: [tests, windows, sentry-smoke, windows-x64, sentry-smoke-x64, linux, linux-x86_64]
     runs-on: ubuntu-24.04
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     permissions:
@@ -579,6 +710,10 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           name: windows-player-package
+          path: dist
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: windows-x64-player-package
           path: dist
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
@@ -595,6 +730,7 @@ jobs:
           subject-path: |
             dist/IronSights.exe
             dist/Iron-Sights-windows-x86.zip
+            dist/Iron-Sights-windows-x64.zip
             dist/Iron-Sights-linux-i686.tar.gz
             dist/Iron-Sights-linux-i686.AppImage
             dist/Iron-Sights-steamdeck-i686.zip
@@ -608,6 +744,7 @@ jobs:
           ATTESTATION_URL: ${{ steps.attest.outputs.attestation-url }}
         run: |
           set -euo pipefail
+          (cd dist && sha256sum -c SHA256SUMS-windows-x64.txt)
           (cd dist && sha256sum -c SHA256SUMS-linux.txt)
           (cd dist && sha256sum -c SHA256SUMS-linux-x86_64.txt)
           cp "$BUNDLE" dist/build-provenance.sigstore.json
@@ -617,11 +754,15 @@ jobs:
           from pathlib import Path
           m=json.loads(Path('dist/build-info.json').read_text())
           assert m['commit']==os.environ['GITHUB_SHA'] and m['ci'] and not m['dirty']
+          win64=json.loads(Path('dist/windows-x64-build-info.json').read_text())
+          assert win64['commit']==m['commit'] and win64['ci'] and not win64['dirty'] and win64['architecture']=='x86_64'
           linux=json.loads(Path('dist/linux-build-info.json').read_text())
           assert linux['commit']==m['commit'] and linux['ci'] and not linux['dirty']
           linux64=json.loads(Path('dist/linux-x86_64-build-info.json').read_text())
           assert linux64['commit']==m['commit'] and linux64['ci'] and not linux64['dirty']
           text=f'''Download **Iron-Sights-windows-x86.zip**, extract the entire ZIP, put your own stock USA ROM in its Data folder, then run IronSights.exe.
+
+          64-bit Windows: **Iron-Sights-windows-x64.zip** is a native 64-bit build of the same game for 64-bit Windows 10/11, installed the same way. It has no suspend points (campaign saves work), so the x86 download stays the default and the one with suspend points. Keep the two in separate folders.
 
           Linux: download **Iron-Sights-linux-i686.tar.gz** or **Iron-Sights-linux-i686.AppImage**. Both require a 32-bit-capable x86 Linux with glibc 2.35+, 32-bit OpenGL drivers and the system's 32-bit C++ runtime (libstdc++ and libgcc_s). AppImage data lives in `~/.local/share/iron-sights` (or XDG_DATA_HOME); the tarball keeps data beside the executable. See START-HERE.txt.
 
@@ -646,7 +787,7 @@ jobs:
           '''
           Path('notes.md').write_text(text)
           PY
-          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --title "Native build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} (${GITHUB_SHA:0:9})" --notes-file notes.md dist/Iron-Sights-windows-x86.zip dist/SHA256SUMS.txt dist/build-info.json dist/build-inputs.json dist/build-provenance.sigstore.json dist/Iron-Sights-linux-i686.tar.gz dist/Iron-Sights-linux-i686.AppImage dist/Iron-Sights-steamdeck-i686.zip dist/SHA256SUMS-linux.txt dist/linux-build-info.json dist/linux-build-inputs.json dist/Iron-Sights-linux-x86_64.tar.gz dist/Iron-Sights-linux-x86_64.AppImage dist/Iron-Sights-steamdeck-x86_64.zip dist/SHA256SUMS-linux-x86_64.txt dist/linux-x86_64-build-info.json dist/linux-x86_64-build-inputs.json
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --draft --title "Native build ${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT} (${GITHUB_SHA:0:9})" --notes-file notes.md dist/Iron-Sights-windows-x86.zip dist/SHA256SUMS.txt dist/build-info.json dist/build-inputs.json dist/Iron-Sights-windows-x64.zip dist/SHA256SUMS-windows-x64.txt dist/windows-x64-build-info.json dist/windows-x64-build-inputs.json dist/build-provenance.sigstore.json dist/Iron-Sights-linux-i686.tar.gz dist/Iron-Sights-linux-i686.AppImage dist/Iron-Sights-steamdeck-i686.zip dist/SHA256SUMS-linux.txt dist/linux-build-info.json dist/linux-build-inputs.json dist/Iron-Sights-linux-x86_64.tar.gz dist/Iron-Sights-linux-x86_64.AppImage dist/Iron-Sights-steamdeck-x86_64.zip dist/SHA256SUMS-linux-x86_64.txt dist/linux-x86_64-build-info.json dist/linux-x86_64-build-inputs.json
           gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=false --latest
           echo "## Native downloads" >> "$GITHUB_STEP_SUMMARY"
           echo "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/$tag" >> "$GITHUB_STEP_SUMMARY"
