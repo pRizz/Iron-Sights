@@ -405,6 +405,12 @@ static void gfx_sdl_init(const struct GfxWindowInitSettings *set) {
         { 0, 0, 0                                    }, // for command line override
 #ifdef __EMSCRIPTEN__
         { 3, 0, SDL_GL_CONTEXT_PROFILE_ES            }, // WebGL 2 only
+#elif defined(__APPLE__)
+        /* MAC-002: macOS gives 4.1 core and 2.1 legacy and nothing else, so the
+         * 3.0 compatibility request below only made and destroyed a window
+         * before this one. Core first, and no entry that cannot work. */
+        { 4, 1, SDL_GL_CONTEXT_PROFILE_CORE          },
+        { 3, 2, SDL_GL_CONTEXT_PROFILE_CORE          },
 #else
         { 3, 0, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY }, // 3.0: default, has all the features required
         { 4, 1, SDL_GL_CONTEXT_PROFILE_CORE          }, // 4.1core: macs only have core profile and this is the latest

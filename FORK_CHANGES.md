@@ -1892,6 +1892,17 @@ touched on the Mac.
   is for `GE_WEAPON_ICON_EXPORT`; the `#else` branch is the line every
   other build had. Compiled only on macOS.
 
+- *Task 4, "Ask macOS for the core profile first and link what it
+  can".* Three edits, each inside `#ifdef __APPLE__` (or `#elif
+  defined(__APPLE__)`), so no other build compiles them.
+  `port/fast3d/gfx_sdl2.cpp`: the context list is 4.1 core, then 3.2 core.
+  `port/fast3d/gfx_opengl.cpp`: `gl_load_proc` counts a function the
+  context does not export and `gfx_opengl_init` logs `GL: N functions not
+  exported by this context` once (30 on macOS 27.2.1); and
+  `gl_ret_program_build` returns program 0, with no error, for a program
+  with `opt_ge_sky_pixdiv`, whose retained twin the core profile cannot
+  link.
+
 ### FORK-092 — Linux weapon icons, icon cache and save transfer dialogs
 
 **Status:** Implemented on 2026-11-25 at the owner's request, during LP64-007

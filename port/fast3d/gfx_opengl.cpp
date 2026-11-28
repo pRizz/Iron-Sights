@@ -1685,6 +1685,14 @@ static void gfx_opengl_log_info(void) {
     sysLogPrintf(LOG_NOTE, "GL: ARB_texture_mirror_clamp_to_edge: %s", GLAD_GL_ARB_texture_mirror_clamp_to_edge ? "yes" : "no");
 }
 
+#ifdef __APPLE__
+/* MAC-002: glad's 4.1 loader asks for entry points Apple's core context does
+ * not export (the packed-vertex family, glVertexP2ui and the like, which the
+ * renderer never calls). They are counted here and gfx_opengl_init logs the
+ * count in one line; elsewhere each is an error by name, as before. */
+static int gl_procs_not_exported;
+#endif
+
 static void *gl_load_proc(const char *name) {
     void *ret = SDL_GL_GetProcAddress(name);
     if (ret) {
@@ -1702,7 +1710,11 @@ static void *gl_load_proc(const char *name) {
         }
     }
 
+#ifdef __APPLE__
+    gl_procs_not_exported++;
+#else
     sysLogPrintf(LOG_ERROR, "GL: could not find function: %s", name);
+#endif
 
     return NULL;
 }
@@ -1751,6 +1763,11 @@ static void gfx_opengl_init(void) {
     if (!loaded || glGetString == NULL || glEnable == NULL) {
         sysFatalError("Could not load OpenGL.\nReported SDL error: %s", SDL_GetError());
     }
+#ifdef __APPLE__
+    if (gl_procs_not_exported > 0) {
+        sysLogPrintf(LOG_NOTE, "GL: %d functions not exported by this context", gl_procs_not_exported);
+    }
+#endif
     gfx_gl_shadow_install();
 
     // check if we're using ES or core, which have more limited feature sets
@@ -2409,6 +2426,23 @@ static GlRetainedProgram* gl_ret_program_get(struct ShaderProgram* prg) {
 static GlRetainedProgram* gl_ret_program_build(struct ShaderProgram* prg) {
     struct CCFeatures cc = { 0 };
     gfx_cc_get_features(prg->shader_id0, prg->shader_id1, &cc);
+
+#ifdef __APPLE__
+    /* MAC-002: no twin for a sky or water program. Its fragment shader reads
+     * vGeSkyQ, which only the interpreter's vertex shader writes (from
+     * aGeSkyQ, the RDP triangle's 1/W). The compatibility profile links a
+     * twin that leaves the input unwritten; the core profile refuses it with
+     * an error. Program 0 means what a failed link means: a retained build
+     * with this program is refused and its list stays on the interpreter.
+     * None is ever asked for: these are RDP triangles (gfx_rdp_triangle),
+     * drawn outside any room's display list, which is all the room cache
+     * captures. */
+    if (cc.opt_ge_sky_pixdiv) {
+        GlRetainedProgram& none = gl_ret_programs[prg];
+        none.program = 0;
+        return &none;
+    }
+#endif
 
     char vs_buf[8192];
     size_t vs_len = 0;
