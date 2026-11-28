@@ -1632,6 +1632,41 @@ Homebrew SDL2 2.32.10) and in the containers of `scripts/port/lp64_env.py`.
   `compare_win32.py commits main WORKTREE` in the branch's tree, with both
   halves: `identical in loaded code and data; .buildid differs`.
 
+- **Task 2, the game finds itself and starts.** *On `main`:*
+  `portMacExecutablePath` (`port/src/port_macos.c`, `port_macos.h`): the
+  running executable's real path, from `_NSGetExecutablePath` and
+  `realpath`, NUL-terminated; it returns the length, or 0 with the buffer
+  unchanged when the path does not fit or cannot be read. The header gained
+  `extern "C"` for the renderer's C++. `port/src/main.c` takes the data
+  root from it in an `__APPLE__` branch beside the `readlink` of
+  `/proc/self/exe`, which the other platforms keep; `argv[0]` stays the
+  fallback, and it was all macOS had (it worked only when the game was
+  started by a full path). `scripts/port/test_macos_host.sh` gained three
+  cases (driver `test_macos_host.c`): the path is absolute and names the
+  test's own file (`st_dev` and `st_ino` equal); a 4-byte buffer returns 0
+  and keeps its bytes; started through a symlink in a folder whose name has
+  a space, it is the real file's path. They failed to compile before the
+  function existed.
+  *On `macos/strict`:* `port/fast3d/save_transfer.cpp` reads the restart
+  path from the same function in an `__APPLE__` branch. Without it a macOS
+  game stops at startup with `ge: save transfer: Cannot locate Iron Sights
+  for restart.`, so **`main` alone still cannot start a macOS video game**
+  (nor build one, Task 1).
+  *Ran, at the branch's tip:* `test_macos_host: PASS (64-bit)` with eight
+  cases. The game started twice in a visible 640x480 window (about 5 s
+  each, `GE_FRAMES=300`, `GE_NOINPUT=1`, `SDL_AUDIODRIVER=dummy`, a
+  `midas.ini` of `[display] fullscreen=windowed`): by its full path, exit
+  0, `ge: video: window + GL context up`, `GL: version: 4.1 Metal - 91.7`
+  and `ge: frame limit reached: frames=300 gfxtasks=145`; and by a relative
+  path from another folder, exit 0, `gfxtasks=146`, its `ge: root:` line
+  naming the executable's folder. The task check: the video tree builds
+  (`OK: 702 weak references, 0 strong`), gate `393 files compiled, 0
+  failed`, `OK: 33 narrowings in 19 files, all allowed`; the headless tree
+  builds, `OK: ran 600 frames`, `macos_harnesses: 47 passed, 2 skipped by
+  name, 0 failed`; the x86_64 gate 361 and 402 files, 0 failed, with both
+  static checks `OK`; aarch64 `OK: ran 600 frames`; `compare_win32.py
+  commits main WORKTREE`: `identical in loaded code and data`.
+
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside
 the repository: they are the plans' inputs, not checks of a change. From

@@ -6,7 +6,9 @@
 #include <errno.h>
 #include <mach-o/dyld.h>
 #include <mach-o/loader.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/syslimits.h>
 
 #define NS_PER_S 1000000000LL
 
@@ -89,4 +91,31 @@ int portMacSleepUntil(const struct timespec *target)
             return errno;
         }
     }
+}
+
+size_t portMacExecutablePath(char *buffer, size_t size)
+{
+    char raw[PATH_MAX];
+    char real[PATH_MAX];
+    uint32_t rawSize = sizeof(raw);
+    size_t length = 0;
+
+    /* dyld's path may be relative or name a symlink; realpath makes it the
+     * file's own. */
+    if (_NSGetExecutablePath(raw, &rawSize) != 0 || realpath(raw, real) == NULL)
+    {
+        return 0;
+    }
+    /* Counted here, not with strlen: in the game's build <string.h> is the
+     * game's own short header, whose strlen takes unsigned chars. */
+    while (real[length] != '\0')
+    {
+        length++;
+    }
+    if (length + 1 > size)
+    {
+        return 0;
+    }
+    memcpy(buffer, real, length + 1);
+    return length;
 }

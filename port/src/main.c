@@ -695,6 +695,9 @@ static char sPortRootDir[1024]; /* with trailing separator; "" = cwd fallback */
 
 #ifndef _WIN32
 #include <unistd.h> /* readlink */
+#if defined(__APPLE__)
+#include "port_macos.h" /* MAC-002: portMacExecutablePath */
+#endif
 #endif
 
 static void portInitRootDir(const char *argv0)
@@ -724,7 +727,12 @@ static void portInitRootDir(const char *argv0)
     if (maybe_data_root && maybe_data_root[0] == '/') {
         n = snprintf(sPortRootDir, sizeof(sPortRootDir), "%s/IronSights", maybe_data_root);
     } else {
+#if defined(__APPLE__)
+        /* macOS has no /proc: dyld names the executable (port_macos.c). */
+        n = (ssize_t) portMacExecutablePath(sPortRootDir, sizeof(sPortRootDir) - 1);
+#else
         n = readlink("/proc/self/exe", sPortRootDir, sizeof(sPortRootDir) - 1);
+#endif
     }
     if (n > 0 && (size_t) n < sizeof(sPortRootDir) - 1) {
         sPortRootDir[n] = '\0';
