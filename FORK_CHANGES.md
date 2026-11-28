@@ -41,7 +41,8 @@ release package updated itself only when its `midas.ini` set
 passed on 8441b97, and release `build-463.1-8441b979f9fa` is the first with
 it): the Updates page in both
 menus, the legal screen's indicator, the file-select notice, and Automatic
-as the default. UPD-004 is not started. The plan
+as the default. The page's What's New button was removed after UPD-003
+(owner decision, 2026-11-28). UPD-004 is not started. The plan
 was drafted on 2026-11-27 and the owner accepted it
 the same day with five decisions. Every CI release counts as an update, with
 checks at most twice a day. Automatic mode holds the launch with an indicator
@@ -167,11 +168,15 @@ when a found build was not installed) the file select's build stamp gains
 what the modes do, a status line ("Up to date (build N).", "Build N is
 available.", "Last check failed.", "Downloading: X MB" and the like), a
 first button that follows the state (Check for Updates, Cancel, Install
-Build N, or Open Release Page where this copy cannot install), and What's
-New, which opens the newest build's release page after the folder's Yes/No
-window. Both menus draw it from one `PortDownloadPage` (`portUpdatesPage`).
-The watch is open in a mission, so its first button checks or cancels and
-never installs, and its What's New asks twice, as Remove does. The page's
+Build N, or Open Release Page, the newest build's release page, where this
+copy cannot install). Both menus draw it from one `PortDownloadPage`
+(`portUpdatesPage`). UPD-003 also shipped a What's New button that opened
+that page after the folder's Yes/No window (on the watch, after a second
+press); the owner removed it on 2026-11-28, because the releases CI
+publishes on every push do not yet say what changed, so the page has one
+button and no `@updates_news` help line.
+The watch is open in a mission, so its button checks or cancels and never
+installs. The page's
 files (the state, `package.txt`, a write probe of the program folder) are
 read on the first frame, not when a menu opens. The status line leaves out
 the failure's reason, which is in `Data/Updates/log.txt`: the transport's
@@ -291,6 +296,18 @@ run, so the Python tests that follow, `lp64_pointer_types.py check` (121
 types, as pinned) and an LTO video tree with `lp64_lto.py check` (15
 mismatches, all allowed, none the updater's) were run in the `goldeneye`
 image before the fix was pushed.
+
+What's New's removal (2026-11-28, after UPD-003): `port_update_ui.c`'s
+page returns no second button (the folder leaves out a page's action 1
+when its label is NULL, as on the Custom Texture Packs page), the watch
+loses its `PWACT_UPDATES_NEWS` row, and the release-page opener is now
+private to the first button's Open Release Page. Validation: `build_win`,
+`build_win64` and a `GE_UPDATE_TEST` tree build and link;
+`update_e2e.py --mode notify` passes its 6 checks; a `GE_MENU=zupdates`
+capture from that install was reviewed and shows the mode row, the six
+lines, "Build 200 is available." and Install Build 200 as the only button.
+`settings_placement.py` and `bright-builds-check.ts all` pass. The watch's
+page was not captured.
 
 ### FORK-094 — Native Windows x64 build
 
@@ -1857,6 +1874,96 @@ Homebrew SDL2 2.32.10) and in the containers of `scripts/port/lp64_env.py`.
   2 skipped by name, 0 failed`; the x86_64 gate 0 failed with both static
   checks `OK`; aarch64 `OK: ran 600 frames`; `compare_win32.py commits
   main WORKTREE`: `identical in loaded code and data`.
+
+- **Task 5, the same pictures, simulation and sound as aarch64 Linux.**
+  *On `main`; no strict-tier file.* A macOS video comparison build
+  (`build/mac/cmp-video`, `-DGE_COMPARE=ON -DGE_VIDEO=ON`) and the aarch64
+  Linux one (`build/lp64/cmp-a64-video`, in its container, at `main`
+  ee6c774, which the branch had merged) each ran `lp64_equiv.py run
+  --video --set demos,solo,mp,menus,reload --repeat 2`: `OK: 38 of 38
+  cases ran` and `OK: 38 of 38 cases agree with themselves` on both (about
+  7 min 35 s each; the macOS runs hidden). `compare --expect
+  lp64_equiv_expected.txt A64 MAC`: `sim` `38 streams, 38 identical`, `gfx`
+  `38 identical`, `snd` `24 streams, 24 identical` (a demo's sound is
+  never judged). So what the game asks the renderer to draw is the same on
+  Apple's 4.1 core context as on Mesa's 3.0 compatibility one.
+  **With every fork option on (`--profile all`), 11 of the 38 picture
+  digests differed** (`facility3`, `bunker2`, `frigate1`, `frigate2`,
+  `stage-bunker2`, `stage-statue`, `stage-archives`, `stage-streets`,
+  `stage-depot`, `stage-caverns`, `stage-cradle`), with `sim` and `snd`
+  identical. Traced: `GE_GFXDIGEST_DETAIL` named two calls of Bunker 2's
+  frame 6, the vertices of a `draw_triangles` and of a `retained_build`;
+  running that case with eight subsets of the profile's 70 keys, then with
+  each key of the differing subset alone, on both hosts, left one key,
+  `baked_lighting`. Its tracer (`port/src/port_baked_trace.c`) builds its
+  tree by sorting each node's triangles by centroid with `SDL_qsort`,
+  which is the host's `qsort`, and many centroids are equal (level
+  geometry is full of axis-aligned quads): glibc's `qsort` is a merge sort
+  and keeps equal keys in the order they came, macOS's does not. The trees
+  differed, and with them which of two surfaces at one distance a ray
+  hits. Routing the tracer's `powf`, `sinf` and `cosf` (which it calls
+  through SDL, so through the host's C library even in a comparison build)
+  to the in-tree functions changed nothing, which ruled the C library out;
+  a stable sort on macOS made Bunker 2's digest Linux's.
+  *The change:* `port/src/port_baked_sort.h` (new), `portBakeStableSort`,
+  a bottom-up merge sort of triangle indices by centroid; under
+  `#if defined(__APPLE__)` the tree build calls it, with working space
+  allocated once a build, and the comparator the other builds give
+  `SDL_qsort` is compiled out there (unused, it failed the harness's
+  `-Werror`). Every macOS build takes it, shipped ones too, so a Mac's
+  bake is a Linux build's; the other builds compile the tokens they had.
+  `scripts/port/test_baked_trace.sh` (driver `test_baked_trace.c`) gained
+  three cases on every host: equal keys keep their order; 1,000 triangles
+  with seven distinct keys sort as a stable insertion sort does; an empty
+  or single list is left alone. They failed before the header existed.
+  The working space's allocation is one more `stored` site of
+  `lp64_overlays.py` (a macOS-only line, which the scanner reads on every
+  host): it has its reviewed line, and `test_lp64_overlays.py`'s pinned
+  count of that kind is 294.
+  **A finding left as it is:** the bake therefore depends on the host's
+  `qsort` on the other builds too. Windows' is not glibc's, so a Windows
+  bake may colour a few vertices otherwise than a Linux one; that pair is
+  compared only under the default profile, where Baked Lighting is off. A
+  stable sort for every build would change the Windows program and, where
+  it moved a vertex, the pinned Linux streams, so it is the owner's call.
+  *Ran, at the branch's tip with this change (a scratch working tree,
+  since the branch's own tree held Task 6's work):* both macOS runs again,
+  default and `--profile all`, `38 of 38` and agreeing with themselves;
+  against the aarch64 runs of each profile, `sim` 38, `gfx` 38 and `snd`
+  24 identical, twice, and no `a64:mac` line was written
+  (`lp64_equiv_expected.txt`'s header now says so for `gfx` and `snd`).
+  `lp64_equiv.py sensitivity --video` on the macOS build: `OK: sim, gfx
+  and snd differ between seeds`.
+  *The drawn pixels, by eye.* Both builds once more with `--draw --shots
+  600` (two heavy stages, Control and Caverns, passed the aarch64
+  container's time limit drawn in software and were run again with
+  `--timeout-scale 4`). `lp64_equiv_pictures.py shots`: all 38 cases
+  differ, as expected of two rasterizers, by 23,626 to 203,443 of 307,200
+  pixels with a largest channel difference of 31 to 200. Read side by
+  side at picture 1,200: the 24 lockstep cases show the same frame on both
+  hosts and the same picture (level, sky, characters, the gun and hand,
+  the HUD, the four-player split, the cast list); macOS's minified
+  textures are a little sharper, and Mesa's pictures have faint lines
+  along some surfaces' edges that macOS's lack. Nothing is missing or
+  miscoloured on macOS. The 14 demos are paced, so a screenshot counted in
+  pictures is another moment of the intro on each host; their pictures
+  were read each on its own and rest on the digest, which is keyed by the
+  recording's tick.
+  *The hands, by eye.* `lp64_equiv_pictures.py gallery --keep-shots`
+  (hidden): `OK: 216 captures ...; 108 of 108 cases repeat their pose
+  between samples`. Twelve captures (the Blue and Snow wardrobes; PP7,
+  AK47 and Klobb; hip and aimed, the fork's arms) were read beside the
+  committed images of `review/hand-gallery`: hand, cuff, sleeve, watch and
+  the support hand are as committed. Nothing was written to that folder
+  and `hand_gallery.py generate` was not run.
+  *The task check,* in the same scratch tree: the video tree `OK: 702
+  weak references, 0 strong`, gate 393 files, 0 failed, `OK: 33 narrowings
+  in 19 files, all allowed`; the mission smoke 20 of 20; the headless
+  tree, `OK: ran 600 frames`, `macos_harnesses: 47 passed, 2 skipped by
+  name, 0 failed`; the x86_64 gate 0 failed with both static checks `OK`,
+  and `test_baked_trace: PASS` there at 32 and 64 bits; aarch64 `OK: ran
+  600 frames`; `compare_win32.py commits main WORKTREE`: `identical in
+  loaded code and data`.
 
 **Validation.** Through the plans' acceptance this entry was documentation
 only, and the measurements above it were taken on scratch copies outside

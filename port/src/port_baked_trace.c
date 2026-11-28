@@ -19,6 +19,9 @@
  * (include/string.h, stdlib.h, math.h), which clash with SDL's on MinGW */
 #include <SDL.h>
 #include "port_baked_light.h"
+#if defined(__APPLE__)
+#include "port_baked_sort.h" /* MAC-002: macOS's qsort is not stable; glibc's is */
+#endif
 
 struct BvhNode {
     float lo[3], hi[3];
@@ -48,11 +51,16 @@ static float s_probe_dir[PROBE_RAYS][3];
 
 static float* s_cent; /* build only: triangle centroids */
 static int s_axis;
+#if defined(__APPLE__)
+static uint32_t* s_sort_scratch; /* build only: portBakeStableSort's working space */
+#endif
 
+#if !defined(__APPLE__) /* macOS sorts with portBakeStableSort instead */
 static int cmp_centroid(const void* a, const void* b) {
     const float ca = s_cent[*(const uint32_t*) a * 3 + s_axis], cb = s_cent[*(const uint32_t*) b * 3 + s_axis];
     return (ca > cb) - (ca < cb);
 }
+#endif
 
 static void grow(float lo[3], float hi[3], const float* p) {
     for (int k = 0; k < 3; k++) {
@@ -84,7 +92,12 @@ static uint32_t build(uint32_t* order, uint32_t first, uint32_t count) {
         return ni;
     }
     s_axis = axis;
+#if defined(__APPLE__)
+    /* Equal centroids keep their order, as under glibc's qsort (port_baked_sort.h). */
+    portBakeStableSort(order + first, count, s_sort_scratch, s_cent, axis);
+#else
     SDL_qsort(order + first, count, sizeof(uint32_t), cmp_centroid);
+#endif
     const uint32_t half = count / 2;
     build(order, first, half);
     const uint32_t right = build(order, first + half, count - half);
@@ -109,7 +122,14 @@ static void build_bvh(void) {
                 (s_lvl->pos[t[0] * 3 + k] + s_lvl->pos[t[1] * 3 + k] + s_lvl->pos[t[2] * 3 + k]) * (1.0f / 3.0f);
         }
     }
+#if defined(__APPLE__)
+    s_sort_scratch = (uint32_t*) SDL_malloc(sizeof(uint32_t) * (nt ? nt : 1));
+#endif
     if (nt > 0) build(order, 0, nt);
+#if defined(__APPLE__)
+    SDL_free(s_sort_scratch);
+    s_sort_scratch = NULL;
+#endif
     for (uint32_t i = 0; i < nt; i++) {
         const uint32_t* t = &s_lvl->tris[order[i] * 3];
         const float *a = &s_lvl->pos[t[0] * 3], *b = &s_lvl->pos[t[1] * 3], *c = &s_lvl->pos[t[2] * 3];

@@ -32,8 +32,13 @@
 # `a64:mac` has no line: MAC-001 Task 9 (2026-11-27) found the headless macOS build (Apple Silicon,
 # Apple clang) identical to the aarch64 Linux build in the `sim` stream of all 38 cases, default
 # profile, once both took Arm's sinf, expf and powf (Task 8; before it five cases differed, by
-# macOS's C library). Its `gfx` and `snd` streams wait for the video build (MAC-002). A line for
-# this pair carries no hash pin (the macOS plan's decision).
+# macOS's C library). MAC-002 Task 5 (2026-11-28) found the macOS video build (Apple's OpenGL 4.1
+# core, a hidden Cocoa window) identical to the aarch64 Linux video build (Mesa's 3.0 compatibility,
+# offscreen) in `sim`, `gfx` and `snd` of all 38 cases under both profiles: 38, 38 and 24 streams
+# each. Under `all` 11 `gfx` streams differed until a macOS build sorted Baked Lighting's triangles
+# with a stable sort (port/src/port_baked_sort.h: glibc's qsort keeps equal keys in order, macOS's
+# does not). So it has no `gfx` or `snd` line either. A line for this pair carries no hash pin (the
+# macOS plan's decision).
 #
 # `x64:win64` has no line: WIN64-002 (2026-11-27) found the Windows x64 comparison video build
 # (MinGW-w64 GCC 13, run natively on Windows with a real window) identical to the x86_64 Linux one

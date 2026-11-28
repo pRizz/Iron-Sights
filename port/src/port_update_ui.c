@@ -317,7 +317,9 @@ const char *portUpdateNotifyLine(void)
 
 /* ---- the Updates page ------------------------------------------------------ */
 
-void portUpdatesOpenReleasePage(void)
+/* Open Release Page, where this copy cannot install: the newest build seen,
+ * or the latest release. */
+static void openReleasePage(void)
 {
     const struct PortUpdateEnv *env = portUpdateAppEnv();
     char url[320];
@@ -435,7 +437,7 @@ static void doAction(int action)
     switch (action) {
     case ACT_CANCEL:  SDL_AtomicSet(&sRun.cancel, 1); break;
     case ACT_WAIT:    break;
-    case ACT_PAGE:    portUpdatesOpenReleasePage(); break;
+    case ACT_PAGE:    openReleasePage(); break;
     case ACT_INSTALL: start(RUN_INSTALL, 1, 0, 0); break;
     default:          start(RUN_CHECK, 1, 0, 0); break;
     }
@@ -443,7 +445,8 @@ static void doAction(int action)
 
 static const char *actionLabel(int action)
 {
-    return action == 0 ? actionText(firstAction(0)) : "What's New\n";
+    /* One button: no What's New until the releases say what is new. */
+    return action == 0 ? actionText(firstAction(0)) : NULL;
 }
 
 static void primaryAction(void)
@@ -451,9 +454,9 @@ static void primaryAction(void)
     doAction(firstAction(0));
 }
 
-static int hasPage(void)
+static int noFiles(void)
 {
-    return portUpdateAppEnv() != NULL;
+    return 0;
 }
 
 const char *portUpdatesWatchActionLabel(void)
@@ -470,9 +473,9 @@ const struct PortDownloadPage portUpdatesPage = {
     infoLine,
     actionLabel,
     primaryAction,
-    hasPage,
-    portUpdatesOpenReleasePage,
-    "Open the Release Page?\n",
+    noFiles,
+    NULL,
+    NULL,
     "@updates_action",
-    "@updates_news",
+    NULL,
 };
