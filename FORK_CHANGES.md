@@ -30,17 +30,19 @@ new areas. Status describes implementation state, not Git publication state.
 
 ## Inventory
 
-### FORK-095 — In-game update plan
+### FORK-095 — In-game updater
 
-**Status:** Plan only. It was drafted on 2026-11-27 and the owner accepted it
+**Status:** UPD-001 (package identity) is built and waiting on CI; UPD-002 to
+UPD-004 are not started, so the game does not update itself yet. The plan
+was drafted on 2026-11-27 and the owner accepted it
 the same day with five decisions. Every CI release counts as an update, with
 checks at most twice a day. Automatic mode holds the launch with an indicator
 while it downloads and installs, then restarts into the new build. There is
 no manifest signing yet. Automatic is the default with no consent screen,
 because the player already downloaded the game from GitHub; System > Updates
 turns checks off. The held launch allows 5 s for the check and gives up on a
-download after 15 s without progress. Nothing is built; UPD-001 is next.
-`AGENTS.md`'s Repo-Local Guidance points to the plan.
+download after 15 s without progress. `AGENTS.md`'s Repo-Local Guidance
+points to the plan.
 
 **What it is.** [The in-game update plan](scripts/port/self_update_plan.md)
 proposes an **Updates: Off / Notify / Automatic** setting under Iron Sights >
@@ -54,13 +56,44 @@ files back by itself. Local, dirty and comparison builds never update. The web
 build and macOS are out of scope. The plan has four milestones (UPD-001 to
 UPD-004) and a status table.
 
+**UPD-001: package identity.** Every player package now has `package.txt`
+beside its executable (`schema=1`, `flavor=`, one of `windows-x86-zip`,
+`windows-x64-zip`, `linux-{i686,x86_64}-tar`, `linux-{i686,x86_64}-appimage`,
+`steamdeck-{i686,x86_64}`). [`package_identity.py`](scripts/port/package_identity.py)
+writes it, maps each flavor to the release package, checksum file and
+build-info file it updates from (`FLAVORS`), and checks a package
+(`check`): `package.txt` names the expected flavor, and the package's own
+`SHA256SUMS.txt` lists every other file with the right hash and nothing
+else. That file existed before; the updater will use it as its list of
+program files, so the plan's proposed `package-files.txt` was not added.
+[`package_windows.py`](scripts/port/package_windows.py) adds `package.txt`
+to the zip and builds the sums through the module (same format as before).
+[`package_linux.py`](scripts/port/package_linux.py) builds the tarball,
+Steam Deck ZIP and AppImage from one AppDir; `write_identity` now rewrites
+its `package.txt` and `SHA256SUMS.txt` before each of the three, and
+`checksums` writes LF line endings on every host.
+[`test_sentry_linux.py`](scripts/port/test_sentry_linux.py) runs `check` on
+the built tarball, Steam Deck ZIP and extracted AppImage in CI. Player data
+under `Data/` is unchanged; the package's own `Data/README.txt` and
+`Data/shaders_base.txt` count as program files.
+
 **Why it differs from upstream.** Upstream has no updater. This fork
 publishes a release on every push to `main`, and updating by hand means
 replacing program files while keeping `Data` and `midas.ini`
 ([releases.md](scripts/port/releases.md)).
 
-**Validation.** Documentation only. The standards checks ran on the change.
-No game build is needed.
+**Validation.** The plan commits were documentation only and ran the
+standards checks. For UPD-001, `test_distribution.py`'s new
+`PackageIdentity` tests (each Windows zip's flavor and full sums, the Steam
+Deck ZIP after the tarball's identity, every flavor against the packagers'
+asset names, refused packages, unknown flavors and schemas) pass on Windows
+and in the `midas-linux-release-x86_64` image. The suite's other failures
+are the same before the change: on Windows,
+`test_bundling_copies_strips_and_relinks_every_library`, and in that image the
+two tests that need a 32-bit compiler. The zips packaged from the local
+`build_win` and `build_win64` trees (21 files each) pass
+`package_identity.check`. No game code changed, so no game build, gallery
+or benchmark is needed. The Linux packages' checks first run in CI.
 
 ### FORK-094 — Native Windows x64 build
 

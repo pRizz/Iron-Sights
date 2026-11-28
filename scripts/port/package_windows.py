@@ -11,17 +11,19 @@ import json
 from pathlib import Path
 import zipfile
 
+import package_identity
 from pe_machine import AMD64, I386, pe_machine
 
 ROOT = Path(__file__).resolve().parents[2]
 # A target's zip, the checksum and build-info files written beside it (the x64 ones carry their own
 # names so both targets' files fit in one release), its PE machine and its Sentry runtime's
-# architecture.
-Target = namedtuple("Target", "zip sums build_info machine sentry_architecture")
+# architecture, and its package.txt flavor (UPD-001, package_identity.py).
+Target = namedtuple("Target", "zip sums build_info machine sentry_architecture flavor")
 TARGETS = {
-    "x86": Target("Iron-Sights-windows-x86.zip", "SHA256SUMS.txt", "build-info.json", I386, "x86"),
+    "x86": Target("Iron-Sights-windows-x86.zip", "SHA256SUMS.txt", "build-info.json", I386, "x86",
+                  "windows-x86-zip"),
     "x64": Target("Iron-Sights-windows-x64.zip", "SHA256SUMS-windows-x64.txt", "windows-x64-build-info.json",
-                  AMD64, "x64"),
+                  AMD64, "x64", "windows-x64-zip"),
 }
 NAME = TARGETS["x86"].zip
 FILES = {"IronSights.exe": "IronSights.exe", "SDL2.dll": "SDL2.dll",
@@ -65,14 +67,14 @@ def package(build, output, root=ROOT, sdl_license=None, arch="x86"):
                    "START-HERE.txt": (root/"scripts/port/release/START-HERE.txt").read_bytes(),
                    "Data/README.txt": (root/"scripts/port/release/DATA-README.txt").read_bytes(),
                    "VERIFY.txt": (root/"scripts/port/release/VERIFY.txt").read_bytes(),
-                   "build-info.json": (json.dumps(info,indent=2)+"\n").encode()})
+                   "build-info.json": (json.dumps(info,indent=2)+"\n").encode(),
+                   package_identity.NAME: package_identity.text(target.flavor)})
     if sdl_license is None:
         raise ValueError("The SDL2 license is required")
     inputs["SDL2-LICENSE.txt"] = sdl_license.read_bytes()
     inputs["Save-Transfer-LICENSE.txt"] = (root/"port/fast3d/third_party/save-backup-LICENSE.txt").read_bytes()
     inputs["Open-Assets-LICENSE.txt"] = (root/"port/fast3d/open_assets/LICENSE").read_bytes()
-    hashes = "".join(f"{hashlib.sha256(data).hexdigest()}  {name}\n" for name, data in sorted(inputs.items()))
-    inputs["SHA256SUMS.txt"] = hashes.encode("ascii")
+    inputs[package_identity.SUMS] = package_identity.sums(inputs).encode("ascii")
     path = output/target.zip
     with zipfile.ZipFile(path,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=9) as archive:
         for name, data in sorted(inputs.items()):

@@ -118,6 +118,9 @@ a claim of hermetic or byte-reproducible compilation across runner updates.
 The existing CMake Debug configuration retains crash symbols and assertions;
 the port's explicit -O2 optimization remains enabled, matching local builds.
 
+Every package carries `package.txt`, naming its flavor for the in-game updater,
+and its own `SHA256SUMS.txt`, listing every other file in it with its hash
+(`package_identity.py`, UPD-001 of the [in-game update plan](self_update_plan.md)).
 `package_windows.py` uses an explicit file allow-list. It includes the EXE,
 SDL2 DLL/license, controller defaults, shader list, instructions and metadata;
 it never sweeps a local build directory or includes ROM files, personal settings,

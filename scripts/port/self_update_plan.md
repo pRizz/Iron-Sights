@@ -73,9 +73,11 @@ No new release asset is needed to find an update.
 - One setting, **Updates: Off / Notify / Automatic**, on every desktop
   package: Windows x86 and x64 zips, Linux i686 and x86_64 tarballs and
   AppImages, and Steam Deck ZIPs.
-- Updating never touches `Data/` (ROM if kept there, saves, profiles, logs,
-  font and texture packs), `midas.ini`, or a ROM named by `[data] rom=` or on
-  the command line.
+- Updating never touches player data under `Data/` (ROM if kept there,
+  saves, profiles, logs, font and texture packs), `midas.ini`, or a ROM named
+  by `[data] rom=` or on the command line. The two files a package itself
+  puts in `Data/`, `README.txt` and `shaders_base.txt`, are program files and
+  are replaced like the rest.
 - The new build starts with the same arguments, so a dragged ROM path or a
   Steam launch option still applies.
 - A failed download, a bad checksum, an unwritable folder or no network
@@ -103,7 +105,8 @@ No new release asset is needed to find an update.
   replaced. This is checked in code, not left to the setting.
 - Never update during play. Checks and installs happen at launch or from the
   menu row only.
-- Never write outside the install's own program files and `Data/Updates/`.
+- Never write outside the install's own program files (those its
+  `SHA256SUMS.txt` lists) and `Data/Updates/`.
 - Never follow a URL from a response. The game builds every address itself
   from the repository name compiled into it and a tag that must match
   `build-[0-9]+\.[0-9]+-[0-9a-f]{12}`.
@@ -112,14 +115,22 @@ No new release asset is needed to find an update.
 
 ### Finding the install's package
 
-Each package gains two allowlisted files beside the executable, written by
-its packager:
+Two files beside the executable, written by the packagers
+(`scripts/port/package_identity.py`, UPD-001):
 
-- `package.txt`: `flavor=windows-x64-zip` (or `windows-x86-zip`,
-  `linux-i686-tar`, `linux-x86_64-tar`, `linux-i686-appimage`,
-  `linux-x86_64-appimage`, `steamdeck-i686`, `steamdeck-x86_64`).
-- `package-files.txt`: every program file the package installs, one relative
-  path a line, with its SHA-256.
+- `package.txt`: `schema=1` and `flavor=windows-x64-zip` (or
+  `windows-x86-zip`, `linux-i686-tar`, `linux-x86_64-tar`,
+  `linux-i686-appimage`, `linux-x86_64-appimage`, `steamdeck-i686`,
+  `steamdeck-x86_64`). `package_identity.FLAVORS` maps each flavor to its
+  release package, checksum file and build-info file; UPD-002's C table must
+  match it.
+- `SHA256SUMS.txt`: every other file the package installs, by path relative
+  to the executable's folder, with its SHA-256. Every package already had
+  this file before UPD-001; it is now checked to list every file and only
+  those, and it lists `package.txt`. It is the list of program files the
+  updater may replace. (The plan first proposed a separate
+  `package-files.txt`; UPD-001 used this existing list instead of adding a
+  second one.)
 
 Without `package.txt` (an older package, an unpacked developer tree) the
 updater is off and says so ("This copy cannot update itself. Download the
@@ -148,8 +159,8 @@ latest build from GitHub."). An AppImage is the one file in `$APPIMAGE`; its
 2. Unpack it into `Data/Updates/<tag>/staged/`: zips through a small central
    directory reader and `puff`, tarballs through gzip and ustar readers and
    `puff`. Strip the package's top folder if it has one. Refuse absolute paths, `..`,
-   links and any file not in the staged `package-files.txt`. Check every
-   file's hash against that list.
+   links and any file not in the staged `SHA256SUMS.txt`. Check every file's
+   hash against that list.
 3. Refuse the install when the program folder is not writable (an install
    under `Program Files`, a read-only mount). Notify mode then shows the
    download page instead.
@@ -157,9 +168,12 @@ latest build from GitHub."). An AppImage is the one file in `$APPIMAGE`; its
    to `<name>.old` and move the staged file into place. Windows lets a running
    executable and its loaded DLLs be renamed but not overwritten, so the
    rename comes first on every platform. Delete files that the old
-   `package-files.txt` listed and the new one does not. If any step fails,
+   `SHA256SUMS.txt` listed and the new one does not. If any step fails,
    undo the renames from the journal and boot the old build.
-   - AppImage: download beside `$APPIMAGE` and rename over it.
+   - AppImage: download beside `$APPIMAGE` and rename over it. Its launcher
+     (`scripts/port/linux/AppRun`) copies `Data/shaders_base.txt` into the
+     data folder only when it is missing, so an updated AppImage would keep
+     the old list; UPD-002 makes AppRun refresh the copy when it differs.
    - Copy the campaign save folder to `Data/Updates/saves-before-<tag>/`
      first, with `save_backup.cpp`'s allowlist. Keep the newest two copies.
 5. Restart through FORK-034's restart helper: the original command line on
@@ -240,9 +254,10 @@ Help lines go in `port/src/port_option_help.c` and `tools/midas_ini_help.txt`.
 - **Settings placement** and **input idioms** as above.
 - **Privacy.** The request carries no player data: a fixed `User-Agent:
   IronSights` and no query string.
-- **Packaging.** Both new files join the allowlists, and `test_distribution.py`
-  checks that every package has them and that `package-files.txt` matches the
-  package exactly.
+- **Packaging.** `package.txt` joins every package, and
+  `package_identity.check` holds each package to it: `test_distribution.py`
+  on the Windows zips and the Steam Deck ZIP, and `test_sentry_linux.py` on
+  the built tarball, Steam Deck ZIP and extracted AppImage in CI.
 
 ## Verification
 
@@ -263,8 +278,9 @@ Help lines go in `port/src/port_option_help.c` and `tools/midas_ini_help.txt`.
 
 ## Milestones
 
-**UPD-001 - Package identity.** `package.txt` and `package-files.txt` in
-every package, with `test_distribution.py` checks. Changes no game code. CI
+**UPD-001 - Package identity.** `package.txt` in every package and a
+`SHA256SUMS.txt` checked to list every file, with `test_distribution.py`
+and `test_sentry_linux.py` checks. Changes no game code. CI
 releases carry the files from then on.
 
 **UPD-002 - Updater core.** `port_update.c`, the archive readers, the
@@ -294,7 +310,7 @@ Options > Gameplay > Iron Sights > System > Updates"), and [releases.md](release
 
 | Milestone | Status | Notes |
 |---|---|---|
-| UPD-001 | Not started | Ready to start. |
+| UPD-001 | Built; waiting on CI | `package_identity.py` writes `package.txt` and checks each package (FORK-095). Locally: `test_distribution.py`'s five new tests pass on Windows and in the x86_64 release image, and the zips packaged from `build_win` and `build_win64` (21 files each) pass `package_identity.check`. The Linux packages are first built and checked by CI. |
 | UPD-002 | Not started | Needs UPD-001 released. Strict tier for the redirect switch. |
 | UPD-003 | Not started | Needs UPD-002. |
 | UPD-004 | Not started | Needs UPD-003. |

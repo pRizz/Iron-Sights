@@ -39,6 +39,7 @@ def windows_build(build,machine=0x14C,architecture="x86"):
 build_info=module("build_info")
 packager=module("package_windows")
 linux_packager=module("package_linux")
+identity=module("package_identity")
 sys.path.insert(0,str(HERE))  # test_sentry_linux imports package_linux and test_sentry_windows by name
 linux_smoke=module("test_sentry_linux")
 
@@ -423,6 +424,86 @@ class Distribution(unittest.TestCase):
             includes=[".","include","include/ultra64","include/PR","src","src/game","port/include"]
             subprocess.run(["gcc",*flags,*["-I"+str(ROOT/p) for p in includes],str(HERE/"test_inline_models.c"),"-o",str(binary)],check=True)
             subprocess.run([str(binary)],check=True)
+
+
+def zip_files(path,prefix=""):
+    """Every file entry of the zip at PATH as path -> bytes, with PREFIX/ removed when given."""
+    with zipfile.ZipFile(path) as archive:
+        files={name:archive.read(name) for name in archive.namelist() if not name.endswith("/")}
+    return identity.strip_folder(files,prefix) if prefix else files
+
+
+class PackageIdentity(unittest.TestCase):
+    """UPD-001: every package names its flavor in package.txt and lists every file in SHA256SUMS.txt."""
+
+    def windows_zip(self,root,arch):
+        build=root/"build";(build/"generated").mkdir(parents=True)
+        (build/"generated/build-info.json").write_text(json.dumps(build_info.metadata(root,{"SOURCE_DATE_EPOCH":"0"})))
+        machine,runtime={"x86":(0x14C,"x86"),"x64":(0x8664,"x64")}[arch]
+        windows_build(build,machine,runtime)
+        license=root/"SDL-LICENSE";license.write_text("license fixture")
+        return packager.package(build,root/"dist",sdl_license=license,arch=arch)
+
+    def test_each_windows_zip_names_its_flavor_and_lists_every_file(self):
+        for arch,flavor in (("x86","windows-x86-zip"),("x64","windows-x64-zip")):
+            with self.subTest(arch=arch),tempfile.TemporaryDirectory() as folder:
+                # Act
+                files=zip_files(self.windows_zip(Path(folder),arch))
+                # Assert
+                identity.check(files,flavor)
+                self.assertIn(b"flavor="+flavor.encode()+b"\n",files["package.txt"])
+
+    def test_steam_deck_zip_names_its_flavor_after_the_tarballs(self):
+        target=linux_packager.TARGETS["x86_64"]
+        with tempfile.TemporaryDirectory() as folder:
+            # Arrange: an AppDir made into the tarball's tree first, as package() does
+            appdir=Path(folder)/"AppDir";(appdir/"Data").mkdir(parents=True)
+            (appdir/"IronSights").write_bytes(b"\x7fELF fixture");(appdir/"Data/shaders_base.txt").write_text("list")
+            (appdir/"iron-sights.png").write_bytes(b"png fixture")
+            linux_packager.write_identity(appdir,"linux-x86_64-tar")
+            tarball={p.relative_to(appdir).as_posix():p.read_bytes() for p in appdir.rglob("*") if p.is_file()}
+            # Act
+            linux_packager.write_identity(appdir,linux_packager.flavors(target)["steamdeck"])
+            deck=linux_packager.package_steamdeck(appdir,Path(folder),target)
+            # Assert
+            identity.check(tarball,"linux-x86_64-tar")
+            files=zip_files(deck,linux_packager.output_names(target)["steamdeck_folder"])
+            identity.check(files,"steamdeck-x86_64")
+            self.assertIn("run.sh",files);self.assertIn("steam-art/cover.png",files)
+
+    def test_every_flavor_updates_from_its_own_packages_release_assets(self):
+        # Arrange
+        expected={}
+        for target in packager.TARGETS.values():
+            expected[target.flavor]=(target.zip,target.sums,target.build_info)
+        for target in linux_packager.TARGETS.values():
+            names=linux_packager.output_names(target)
+            for kind,flavor in linux_packager.flavors(target).items():
+                expected[flavor]=(names[kind],names["sums"],names["build_info"])
+        # Act, Assert
+        self.assertEqual(expected,identity.FLAVORS)
+
+    def test_a_package_that_does_not_match_its_sums_is_refused(self):
+        good={"IronSights.exe":b"exe","Data/README.txt":b"readme","package.txt":identity.text("windows-x86-zip")}
+        good["SHA256SUMS.txt"]=identity.sums(good).encode()
+        cases=(("no package.txt",{k:v for k,v in good.items() if k!="package.txt"},"no package.txt"),
+               ("unlisted file",{**good,"extra.dll":b"x"},r"omits \['extra.dll'\]"),
+               ("listed but absent",{k:v for k,v in good.items() if k!="Data/README.txt"},r"absent \['Data/README.txt'\]"),
+               ("changed file",{**good,"IronSights.exe":b"other"},"wrong hash"),
+               ("other flavor",{**good,"package.txt":identity.text("windows-x64-zip")},"names windows-x64-zip"))
+        identity.check(good,"windows-x86-zip")
+        for name,files,message in cases:
+            with self.subTest(name),self.assertRaisesRegex(AssertionError,message):
+                # Act, Assert
+                identity.check(files,"windows-x86-zip")
+
+    def test_an_unknown_flavor_or_schema_is_refused(self):
+        with self.assertRaisesRegex(ValueError,"unknown package flavor"):
+            identity.text("macos-app")
+        with self.assertRaisesRegex(ValueError,"schema"):
+            identity.read_flavor(b"schema=2\nflavor=windows-x86-zip\n")
+        with self.assertRaisesRegex(ValueError,"unknown flavor"):
+            identity.read_flavor(b"schema=1\nflavor=linux-arm-tar\n")
 
 
 if __name__ == "__main__":

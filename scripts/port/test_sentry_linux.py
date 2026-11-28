@@ -16,7 +16,8 @@ import uuid
 import zipfile
 from http.server import ThreadingHTTPServer
 
-from package_linux import TARGETS, output_names
+import package_identity
+from package_linux import TARGETS, flavors, output_names
 from test_sentry_windows import Receiver
 
 
@@ -102,6 +103,7 @@ def run(exe, directory, server, args, overrides=None):
 def check(package, appimage, steamdeck, output, arch="i686"):
     target, names_of = TARGETS[arch], output_names(TARGETS[arch])
     folder, deck_folder = names_of["folder"], names_of["steamdeck_folder"]
+    flavor = flavors(target)
     # The packager's build folder holds the split debug files beside its dist/.
     debug_file = package.resolve().parent.parent / "symbols/IronSights.debug"
     assert debug_file.is_file(), ("missing debug file", str(debug_file))
@@ -117,6 +119,8 @@ def check(package, appimage, steamdeck, output, arch="i686"):
             assert_allowlisted(names)
             assert stream.getmember(folder + "/IronSights").mode & 0o111
             game = stream.extractfile(folder + "/IronSights").read()
+            files = {member.name: stream.extractfile(member).read() for member in stream.getmembers() if member.isfile()}
+            package_identity.check(package_identity.strip_folder(files, folder), flavor["tarball"])
             elf = game[:20]
             assert elf[:5] == b"\x7fELF" + bytes([target.elf_class]) and elf[18:20] == target.elf_machine.to_bytes(2, "little")
         with zipfile.ZipFile(steamdeck) as stream:
@@ -124,6 +128,8 @@ def check(package, appimage, steamdeck, output, arch="i686"):
             prefix = deck_folder + "/"
             assert all(name.startswith(prefix) and ".." not in Path(name).parts for name in names)
             assert_allowlisted(names)
+            files = {name: stream.read(name) for name in names if not name.endswith("/")}
+            package_identity.check(package_identity.strip_folder(files, deck_folder), flavor["steamdeck"])
             assert hashlib.sha256(stream.read(prefix + "IronSights")).digest() == hashlib.sha256(game).digest()
             sums = dict(line.split("  ", 1)[::-1] for line in stream.read(prefix + "SHA256SUMS.txt").decode().splitlines())
             for name in ("run.sh", "STEAM-DECK.txt", "set-steam-art.py", "iron-sights.png", "steam-art/cover.png",
@@ -136,6 +142,8 @@ def check(package, appimage, steamdeck, output, arch="i686"):
                        stdout=subprocess.DEVNULL, check=True, timeout=60)
         contents = extracted / "squashfs-root"
         assert_allowlisted(path.relative_to(contents).as_posix() for path in contents.rglob("*"))
+        package_identity.check({path.relative_to(contents).as_posix(): path.read_bytes()
+                                for path in contents.rglob("*") if path.is_file()}, flavor["appimage"])
         for name in ("enabled", "healthy", "optout", "toggle-off", "override-off", "missing-sdk", "symlink-cache", "offline-retry", "appimage", "steamdeck"):
             directory = work / name
             directory.mkdir()

@@ -16,6 +16,7 @@ import zipfile
 from typing import NamedTuple
 
 from linux_build import download
+import package_identity
 
 ROOT = Path(__file__).resolve().parents[2]
 RUNTIME_SOURCE = "dd6cebedcbddde9c82f89b011e8e1d40b6e43868"
@@ -79,6 +80,19 @@ def output_names(target):
                 build_inputs=target.info_prefix + "-build-inputs.json")
 
 
+def flavors(target):
+    """Return the package.txt flavor (UPD-001, package_identity.py) of each package of TARGET."""
+    return dict(tarball=f"linux-{target.suffix}-tar", appimage=f"linux-{target.suffix}-appimage",
+                steamdeck=f"steamdeck-{target.suffix}")
+
+
+def write_identity(appdir, flavor):
+    """Make APPDIR one package's tree: its package.txt names FLAVOR and its SHA256SUMS.txt lists it.
+    The tarball, Steam Deck ZIP and AppImage are made from one AppDir in turn, each after its own call."""
+    (appdir / package_identity.NAME).write_bytes(package_identity.text(flavor))
+    checksums(appdir)
+
+
 def copy(source, target):
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, target)
@@ -121,8 +135,8 @@ def bundle_libraries(build, destination, target):
 
 def checksums(directory):
     files = sorted(p for p in directory.rglob("*") if p.is_file() and p.name != "SHA256SUMS.txt")
-    (directory / "SHA256SUMS.txt").write_text("".join(
-        f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.relative_to(directory).as_posix()}\n" for p in files))
+    (directory / "SHA256SUMS.txt").write_bytes("".join(
+        f"{hashlib.sha256(p.read_bytes()).hexdigest()}  {p.relative_to(directory).as_posix()}\n" for p in files).encode())
 
 
 def package_steamdeck(appdir, output, target):
@@ -257,11 +271,14 @@ def package(build, output, arch="i686"):
                 play_harness=has_symbol(build / "IronSights", "portPlayPlayerTick"),
                 reporting=json.loads((build / "sentry-build.json").read_text()))
     (appdir / "build-inputs.json").write_text(json.dumps(info, indent=2) + "\n")
-    checksums(appdir)
+    flavor = flavors(target)
+    write_identity(appdir, flavor["tarball"])
     archive = output / names["tarball"]
     with tarfile.open(archive, "w:gz") as stream:
         stream.add(appdir, arcname=names["folder"])
+    write_identity(appdir, flavor["steamdeck"])
     steamdeck = package_steamdeck(appdir, output, target)
+    write_identity(appdir, flavor["appimage"])
     runtime = download(target.runtime_url, target.runtime_sha256, build / "downloads" / names["runtime"])
     squashfs = output / "payload.squashfs"
     subprocess.run(["mksquashfs", str(appdir), str(squashfs), "-root-owned", "-noappend", "-comp", "gzip", "-processors", "2"], check=True)
